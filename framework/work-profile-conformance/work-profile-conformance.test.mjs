@@ -54,7 +54,7 @@ test('qualifies agent, calendar, and non-agent reference scenarios', () => {
       verdict,
     })),
     [
-      { scenarioId: 'agent-work-mission-control', verdict: 'compatible' },
+      { scenarioId: 'agent-work-control', verdict: 'compatible' },
       {
         scenarioId: 'week-day-action',
         verdict: 'compatible-with-constraints',

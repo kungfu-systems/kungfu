@@ -5,7 +5,7 @@
       "expectedVerdict": "compatible",
       "declaration": {
         "schema": "kungfu.work-profile-conformance-declaration/v1",
-        "scenarioId": "agent-work-mission-control",
+        "scenarioId": "agent-work-control",
         "domainKind": "agent-work",
         "bindings": {
           "actionGeometryRoot": "sha256:7714576ce33208544ca8a9ee1869ad988d815c07dacbf9e136e0475ce2fb9793",
@@ -66,63 +66,63 @@
             "status": "passed",
             "evidenceRoot": "sha256:f84f51a3e2ef65e2b90948c665149b69737227059f3d802fa29d1d62cdfd7696",
             "evidencePath": "framework/work-profile-conformance/qualification/retained-witnesses.json",
-            "evidencePointer": "/scenarios/agent-work-mission-control/behavior/repeat"
+            "evidencePointer": "/scenarios/agent-work-control/behavior/repeat"
           },
           {
             "case": "crash",
             "status": "passed",
             "evidenceRoot": "sha256:19277b56a47f36940c33aed9cf25da9b55deb1eac97e180fc856e531da1d7ca8",
             "evidencePath": "framework/work-profile-conformance/qualification/retained-witnesses.json",
-            "evidencePointer": "/scenarios/agent-work-mission-control/behavior/crash"
+            "evidencePointer": "/scenarios/agent-work-control/behavior/crash"
           },
           {
             "case": "interrupted",
             "status": "passed",
             "evidenceRoot": "sha256:2e7cf992e26526db25baa5c020d4ae3319ed7d00f25892cfe0046a21db178fe5",
             "evidencePath": "framework/work-profile-conformance/qualification/retained-witnesses.json",
-            "evidencePointer": "/scenarios/agent-work-mission-control/behavior/interrupted"
+            "evidencePointer": "/scenarios/agent-work-control/behavior/interrupted"
           },
           {
             "case": "stale",
             "status": "passed",
             "evidenceRoot": "sha256:a5d90d8a3209c009673e62a176363a82a75a7bcd886e19bfda71727a253c7ba6",
             "evidencePath": "framework/work-profile-conformance/qualification/retained-witnesses.json",
-            "evidencePointer": "/scenarios/agent-work-mission-control/behavior/stale"
+            "evidencePointer": "/scenarios/agent-work-control/behavior/stale"
           },
           {
             "case": "warrant-revoked",
             "status": "passed",
             "evidenceRoot": "sha256:9f434df552bb273cb0fa19dd728a9aa6f02fc43ffc1f6b2ea86e9b2ccf587908",
             "evidencePath": "framework/work-profile-conformance/qualification/retained-witnesses.json",
-            "evidencePointer": "/scenarios/agent-work-mission-control/behavior/warrant-revoked"
+            "evidencePointer": "/scenarios/agent-work-control/behavior/warrant-revoked"
           },
           {
             "case": "provider-switch",
             "status": "passed",
             "evidenceRoot": "sha256:7db830fffeab9705eb0f3118ce40a8709adcba462ba36ef78aa458922f72fa55",
             "evidencePath": "framework/work-profile-conformance/qualification/retained-witnesses.json",
-            "evidencePointer": "/scenarios/agent-work-mission-control/behavior/provider-switch"
+            "evidencePointer": "/scenarios/agent-work-control/behavior/provider-switch"
           },
           {
             "case": "projection-rebuild",
             "status": "passed",
             "evidenceRoot": "sha256:0dd34a1e332d57cd48b7e44c1c3ddfec62c8a793a9a3302665ecdeff0870d9aa",
             "evidencePath": "framework/work-profile-conformance/qualification/retained-witnesses.json",
-            "evidencePointer": "/scenarios/agent-work-mission-control/behavior/projection-rebuild"
+            "evidencePointer": "/scenarios/agent-work-control/behavior/projection-rebuild"
           },
           {
             "case": "external-effect",
             "status": "passed",
             "evidenceRoot": "sha256:9dc7a15e4389f91277bbd8fd5e39972652566a3db94e4afc5b47dbce3c00eef1",
             "evidencePath": "framework/work-profile-conformance/qualification/retained-witnesses.json",
-            "evidencePointer": "/scenarios/agent-work-mission-control/behavior/external-effect"
+            "evidencePointer": "/scenarios/agent-work-control/behavior/external-effect"
           },
           {
             "case": "recovery",
             "status": "passed",
             "evidenceRoot": "sha256:fdca95797d0a989f88039cd040a88bc6f66dcf6a582bd07942ea5dd5a5693b9f",
             "evidencePath": "framework/work-profile-conformance/qualification/retained-witnesses.json",
-            "evidencePointer": "/scenarios/agent-work-mission-control/behavior/recovery"
+            "evidencePointer": "/scenarios/agent-work-control/behavior/recovery"
           }
         ],
         "platformAdapters": [
@@ -189,7 +189,7 @@
           "compatible": true,
           "manualAllowlist": false,
           "evidencePath": "framework/work-profile-conformance/qualification/retained-witnesses.json",
-          "evidencePointer": "/scenarios/agent-work-mission-control/buildchain"
+          "evidencePointer": "/scenarios/agent-work-control/buildchain"
         },
         "workOperationModel": {
           "authority": "existing-work-lifecycle",

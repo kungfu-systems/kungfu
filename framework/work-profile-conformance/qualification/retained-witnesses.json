@@ -1,7 +1,7 @@
 {
   "schema": "kungfu.work-profile-conformance-retained-witnesses/v1",
   "scenarios": {
-    "agent-work-mission-control": {
+    "agent-work-control": {
       "behavior": {
         "repeat": { "case": "repeat", "status": "passed", "artifactRefs": ["framework/agent-work/evidence/kfd-7/concurrency-retry-compensation.json"] },
         "crash": { "case": "crash", "status": "passed", "artifactRefs": ["framework/agent-work/evidence/kfd-7/cold-start-continuation.json"] },
