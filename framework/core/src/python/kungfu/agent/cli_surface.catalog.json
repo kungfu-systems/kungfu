@@ -1,7 +1,7 @@
 {
-  "catalogRoot": "sha256:f00370ebf5e0a16c19ca0ce3d63225d0c8dddbe869fee0e6b2b3ad9ce1b4b370",
+  "catalogRoot": "sha256:688d9b5b090312e8898fd49579e7b0d8b3f506a1afce7d7ae048d6e87cf76275",
   "contractId": "kungfu-cli-surface",
-  "contractRoot": "sha256:53f98cd7ead9ce54b774b85e0fb34b62fdac3a7a60122bc99428fcee1bb6663b",
+  "contractRoot": "sha256:ae8d80dcd871bb169ddc87b395bffa2b352513bc22f7ae13cce70b211d684519",
   "kfd3Linkage": [
     {"apiIds":[],"reason":"navigation-only","state":"unlinked","surfaceId":"kungfu.cli.commands.kfc"},
     {"apiIds":[],"reason":"no-agent-first-api-declared","state":"unlinked","surfaceId":"kungfu.cli.commands.action.action"},
@@ -510,7 +510,7 @@
     "regeneration": "./shifu fix:cli-catalog-parity",
     "validation": "./shifu check:cli-catalog-parity"
   },
-  "registryRoot": "sha256:80cbc936799f73a786a47710e49574e4eab55353bb7143d268804ec5245e562d",
+  "registryRoot": "sha256:fcb33ba016f3309d1d31076d6386111a34f7bfa534c50710249a4d7d178a193e",
   "schema": "kungfu.cli-surface-catalog/v1",
   "schemaRoot": "sha256:30e0c49658aee967b24294362af12e977c8d62eaa455eb83ffdaa50072021569",
   "source": {
