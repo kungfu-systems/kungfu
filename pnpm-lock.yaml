@@ -47,11 +47,11 @@ importers:
         specifier: 3.0.0
         version: 3.0.0
       '@kungfu-tech/buildchain-alpha':
-        specifier: npm:@kungfu-tech/buildchain@3.0.2-alpha.3
-        version: '@kungfu-tech/buildchain@3.0.2-alpha.3'
+        specifier: npm:@kungfu-tech/buildchain@3.0.6-alpha.1
+        version: '@kungfu-tech/buildchain@3.0.6-alpha.1'
       '@kungfu-tech/kfd':
-        specifier: 1.0.0-alpha.47
-        version: 1.0.0-alpha.47
+        specifier: 1.0.0-alpha.53
+        version: 1.0.0-alpha.53
       '@types/fs-extra':
         specifier: ^11.0.4
         version: 11.0.4
@@ -95,8 +95,8 @@ importers:
         specifier: workspace:*
         version: link:../../framework/gui
       '@kungfu-tech/kfd':
-        specifier: 1.0.0-alpha.47
-        version: 1.0.0-alpha.47
+        specifier: 1.0.0-alpha.53
+        version: 1.0.0-alpha.53
       '@kungfu-tech/kfx':
         specifier: workspace:*
         version: link:../../framework/kfx
@@ -133,6 +133,10 @@ importers:
       '@kungfu-tech/sdk':
         specifier: workspace:*
         version: link:../../developer/sdk
+
+  extensions/agent-work-lab: {}
+
+  extensions/agent-work-lab/experience: {}
 
   extensions/config-manager:
     dependencies:
@@ -204,20 +208,6 @@ importers:
         version: 18.3.31
 
   extensions/langchain-adapter: {}
-
-  extensions/work-control:
-    dependencies:
-      '@kungfu-tech/kfx-view-work-dashboard':
-        specifier: workspace:*
-        version: link:../work-dashboard
-
-  extensions/work-control/work-control-actions: {}
-
-  extensions/work-control/work-control-assessment: {}
-
-  extensions/work-control/work-control-contract: {}
-
-  extensions/work-control/work-control-views: {}
 
   extensions/rewind-inspector:
     dependencies:
@@ -356,6 +346,20 @@ importers:
       '@types/react':
         specifier: ^18.3.3
         version: 18.3.31
+
+  extensions/work-control:
+    dependencies:
+      '@kungfu-tech/kfx-view-work-dashboard':
+        specifier: workspace:*
+        version: link:../work-dashboard
+
+  extensions/work-control/work-control-actions: {}
+
+  extensions/work-control/work-control-assessment: {}
+
+  extensions/work-control/work-control-contract: {}
+
+  extensions/work-control/work-control-views: {}
 
   extensions/work-dashboard:
     dependencies:
@@ -1442,8 +1446,8 @@ packages:
     engines: {node: '>=22.14.0'}
     hasBin: true
 
-  '@kungfu-tech/buildchain@3.0.2-alpha.3':
-    resolution: {integrity: sha512-B8CFwm/IzZPK/VHJsJSHzr6qvi08YxC8VP/1HZ8eATJvwShBtj0JPknna97gcJ0QO+uP4RZYpmiKaMPCS8CGAw==}
+  '@kungfu-tech/buildchain@3.0.6-alpha.1':
+    resolution: {integrity: sha512-rmElQ2qeK/hN3PWPseclXp2AeedvKhtRQUPc/gZ3zi3kXRWWD1EuPKVuHreBsYBYsOcfAZKz2N0/dWXkOE/WJg==}
     engines: {node: '>=22.14.0'}
     hasBin: true
 
@@ -1451,8 +1455,8 @@ packages:
     resolution: {integrity: sha512-e+iIuvsijDLSFotb3gPKqwn649lLGRX3xEWOwn7xfBeu8L8kvw5RPRznJ4xKVM+NYCrfYCRVmUzpJI58k97C+Q==}
     hasBin: true
 
-  '@kungfu-tech/kfd@1.0.0-alpha.47':
-    resolution: {integrity: sha512-tFyFev5UKm2snujWB0FXwHkwLpKhWxmE16MPjn1zSyl0X/y7QTERG7oCL0TIBuMpKC20QnNi6r0oVKRawyQ7fA==}
+  '@kungfu-tech/kfd@1.0.0-alpha.53':
+    resolution: {integrity: sha512-t7ZyBXhhfYKNYo+KgBan/SBsBK1UygTf8RaTxQ+toTStwuq4wR5Z85sSAO/kmC2F/oqHeYVaan6nU28e1sVERw==}
     hasBin: true
 
   '@kungfu-tech/libnode-darwin-arm64@22.22.3-kf.5-alpha.3':
@@ -5802,14 +5806,14 @@ snapshots:
       '@kungfu-tech/kfd': 1.0.0-alpha.41
       smol-toml: 1.7.0
 
-  '@kungfu-tech/buildchain@3.0.2-alpha.3':
+  '@kungfu-tech/buildchain@3.0.6-alpha.1':
     dependencies:
-      '@kungfu-tech/kfd': 1.0.0-alpha.47
+      '@kungfu-tech/kfd': 1.0.0-alpha.53
       smol-toml: 1.7.0
 
   '@kungfu-tech/kfd@1.0.0-alpha.41': {}
 
-  '@kungfu-tech/kfd@1.0.0-alpha.47': {}
+  '@kungfu-tech/kfd@1.0.0-alpha.53': {}
 
   '@kungfu-tech/libnode-darwin-arm64@22.22.3-kf.5-alpha.3':
     optional: true

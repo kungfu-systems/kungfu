@@ -7,7 +7,7 @@ capability negotiation, transport receipt separation, idempotency, Warrant
 attenuation and revocation, conflict visibility, progressive disclosure,
 completion assessment, recovery, and export/import observations.
 
-The current fixed input is `@kungfu-tech/kfd@1.0.0-alpha.47`. The package, profile,
+The current fixed input is `@kungfu-tech/kfd@1.0.0-alpha.53`. The package, profile,
 protocol, Hub 20 vector registry, failure inventory, and verifier roots are
 frozen in
 [`kfd-lock.json`](../../tests/qualification/agent-hub-20/kfd-lock.json).
