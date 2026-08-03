@@ -3,6 +3,7 @@
 import {
   classifyPrecondition,
   classifyRecovery,
+  rootStepReceipt,
   validateEnvelope,
 } from './action-loop.mjs';
 
@@ -114,11 +115,19 @@ function validateStepReceipt(receipt, request, stepId) {
     !validRoot(receipt.receiptRoot) ||
     !Array.isArray(receipt.preconditionRoots) ||
     !Array.isArray(receipt.resultRoots) ||
+    !validRoot(receipt.authorityReceiptRoot) ||
     ![...receipt.preconditionRoots, ...receipt.resultRoots].every(validRoot)
   ) {
     return failure(
       'invalid-adapter-receipt',
       `${stepId} adapter did not return an accepted authority receipt`,
+      { stepId },
+    );
+  }
+  if (rootStepReceipt(receipt).receiptRoot !== receipt.receiptRoot) {
+    return failure(
+      'invalid-adapter-receipt',
+      `${stepId} adapter returned a forged receiptRoot`,
       { stepId },
     );
   }

@@ -18,6 +18,22 @@
       ]
     },
     {
+      "id": "work-profile-conformance",
+      "kind": "command",
+      "level": "source",
+      "command": [
+        "./shifu",
+        "check:work-profile-conformance"
+      ],
+      "implementation": "framework/work-profile-conformance/work-profile-conformance.mjs",
+      "timeoutSeconds": 300,
+      "platforms": [
+        "darwin-arm64",
+        "linux-x64",
+        "win32-x64"
+      ]
+    },
+    {
       "id": "fact-native-characterization",
       "kind": "command",
       "level": "native",

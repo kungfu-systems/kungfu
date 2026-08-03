@@ -5,7 +5,7 @@
   "manifestPath": "framework/maintainability/semantic-amplification.manifest.json",
   "manifestRoot": "sha256:b64ab1daecaec8560dd649af61b7e175adaf562df3aa8b94e3733ef499a308aa",
   "baselineRef": "dbfed9ca1785d147b26f4f06e7e6895ac7368fee",
-  "sourceRoot": "sha256:e7b6e15a1242180bf890d41b57d92c8432e34017aef0a9baf1ede789438fc26f",
+  "sourceRoot": "sha256:a754241abadd488fca5ad7944316d02861106213916c96a226451d4136f6a3a1",
   "roles": {
     "authority": "exactly one authority route per family; the route may name multiple co-owned source files",
     "allowedProjectionRoles": [
@@ -25,7 +25,7 @@
     "families": 6,
     "authorities": 6,
     "mappedSurfaces": 81,
-    "changedMappedSurfaces": 54,
+    "changedMappedSurfaces": 55,
     "blockingIssues": 0
   },
   "families": [
@@ -263,10 +263,11 @@
       "amplification": {
         "mappedSurfaces": 15,
         "nonAuthoritySurfaces": 11,
-        "changedSurfaces": 9,
+        "changedSurfaces": 10,
         "changedPaths": [
           "framework/work-lifecycle/work-lifecycle-native.contract.json",
           "framework/work-lifecycle/kungfu-work-lifecycle-operation-matrix.contract.json",
+          "framework/core/src/libkungfu/src/runtime/profile/profile_lifecycle.cpp",
           "crates/kungfu-sdk/src/generated/work_lifecycle_v1.rs",
           "framework/storage/generated/work-lifecycle-v1.js",
           "framework/storage/python/kungfu_sdk/generated/work_lifecycle_v1.py",
@@ -352,11 +353,11 @@
         },
         {
           "path": "framework/core/src/libkungfu/src/runtime/profile/profile_lifecycle.cpp",
-          "currentLines": 1084,
+          "currentLines": 1211,
           "baselineLines": 1084,
-          "currentRoot": "sha256:fd1371c3544de910030b6e59f9ac9d2c8ed8e753af2f2429c1c02577cef61fc7",
+          "currentRoot": "sha256:6fbd448925cb8fdf80e57f86576f6d3bd2f4ebadb9637e9ed9d6eaa9e20914ce",
           "baselineRoot": "sha256:fd1371c3544de910030b6e59f9ac9d2c8ed8e753af2f2429c1c02577cef61fc7",
-          "changedSinceBaseline": false
+          "changedSinceBaseline": true
         },
         {
           "path": "scripts/materialize-work-lifecycle-operation-matrix.mjs",
@@ -408,9 +409,9 @@
         },
         {
           "path": "framework/core/src/python/kungfu/profile_sdk.py",
-          "currentLines": 1962,
+          "currentLines": 2068,
           "baselineLines": 3138,
-          "currentRoot": "sha256:e1f4c55c8c47ceab587f8e87efb328be35129f5b1be240cbf4211a047c316677",
+          "currentRoot": "sha256:c749c2f64c3ef8087d95286a9fd6cdc2b4f7e223947504da12476fb6cc107a0f",
           "baselineRoot": "sha256:fb62fb8c4e1e944811c954d22786ebaeb21ff45dbb3fc1db705feb37fbb5dc1c",
           "changedSinceBaseline": true
         },
@@ -547,9 +548,9 @@
       "measurements": [
         {
           "path": "framework/kfx/kungfu-kfx.contract.json",
-          "currentLines": 1486,
+          "currentLines": 1498,
           "baselineLines": 1244,
-          "currentRoot": "sha256:5df5537fa161de8a210b1facac7cec5cf054b3a5eff4096fb27fec4370fd9e6c",
+          "currentRoot": "sha256:f0e6cfddac711123a969d7d88c8995b95fcb397b99438674902372fb38ff8d0c",
           "baselineRoot": "sha256:09461dda185e075d08137b51d8fcada3e862ff8e4f3cecd725ec7410021bbb99",
           "changedSinceBaseline": true
         },
@@ -595,9 +596,9 @@
         },
         {
           "path": "framework/core/src/python/kungfu/profile_sdk.py",
-          "currentLines": 1962,
+          "currentLines": 2068,
           "baselineLines": 3138,
-          "currentRoot": "sha256:e1f4c55c8c47ceab587f8e87efb328be35129f5b1be240cbf4211a047c316677",
+          "currentRoot": "sha256:c749c2f64c3ef8087d95286a9fd6cdc2b4f7e223947504da12476fb6cc107a0f",
           "baselineRoot": "sha256:fb62fb8c4e1e944811c954d22786ebaeb21ff45dbb3fc1db705feb37fbb5dc1c",
           "changedSinceBaseline": true
         },

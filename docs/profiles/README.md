@@ -13,6 +13,7 @@ clear.
 
 - [KFX Profile Suite Lifecycle](profile-lifecycle.md)
 - [Agent-first Profile Authoring](profile-authoring.md)
+- [Work Profile Conformance](work-profile-conformance.md)
 - [Agent Work State](agent-work-state.md)
 - [Cost/State/Proof Profile](cost-state-proof-profile.md)
 - [Work Control](work-control.md)

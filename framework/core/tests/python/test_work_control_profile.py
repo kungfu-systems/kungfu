@@ -1,5 +1,6 @@
 # SPDX-License-Identifier: Apache-2.0
 
+import hashlib
 import json
 import re
 import shutil
@@ -30,6 +31,12 @@ def _copy_source(tmp_path: Path) -> Path:
         ignore=shutil.ignore_patterns("node_modules"),
     )
     return source
+
+
+def _write_json(path: Path, value: object) -> str:
+    data = (json.dumps(value, indent=2) + "\n").encode()
+    path.write_bytes(data)
+    return hashlib.sha256(data).hexdigest()
 
 
 def test_first_party_work_control_suite_closes_and_activates(tmp_path):
@@ -100,6 +107,90 @@ def test_first_party_work_control_suite_closes_and_activates(tmp_path):
         profile_composition.contract_materialization_plan(SOURCE, runtime)["operations"]
         == []
     )
+
+
+def test_public_profile_validate_and_qualify_share_work_conformance(tmp_path):
+    source = _copy_source(tmp_path)
+    repository = Path(__file__).resolve().parents[4]
+    reference = json.loads(
+        (
+            repository
+            / "framework"
+            / "work-profile-conformance"
+            / "qualification"
+            / "reference-scenarios.json"
+        ).read_text(encoding="utf-8")
+    )
+    declaration = reference["scenarios"][0]["declaration"]
+    declaration_path = source / "qualification" / "work-profile-conformance.json"
+    declaration_sha = _write_json(declaration_path, declaration)
+    profile_path = source / "profile.json"
+    profile = json.loads(profile_path.read_text(encoding="utf-8"))
+    profile["work"] = {
+        "conformance": {
+            "path": "qualification/work-profile-conformance.json",
+            "sha256": declaration_sha,
+        }
+    }
+    _write_json(profile_path, profile)
+
+    runtime = tmp_path / "runtime"
+    validated = profile_sdk.validate_source(source, runtime)["workConformance"]
+    qualified = profile_sdk.qualify_source(source, runtime)["workConformance"]
+
+    assert validated["publicSurface"] == "validate"
+    assert qualified["publicSurface"] == "qualify"
+    for key in (
+        "conformanceRoot",
+        "verdict",
+        "constraints",
+        "diagnostics",
+        "residualRisk",
+        "nonClaims",
+    ):
+        assert validated[key] == qualified[key]
+    assert validated["verdict"] == "compatible"
+
+
+def test_public_profile_validate_denies_failed_work_conformance(tmp_path):
+    source = _copy_source(tmp_path)
+    repository = Path(__file__).resolve().parents[4]
+    reference = json.loads(
+        (
+            repository
+            / "framework/work-profile-conformance/qualification/reference-scenarios.json"
+        ).read_text()
+    )
+    declaration = reference["scenarios"][0]["declaration"]
+    declaration["behaviorEvidence"][0]["status"] = "failed"
+    declaration_path = source / "qualification/work-profile-conformance.json"
+    declaration_sha = _write_json(declaration_path, declaration)
+    profile_path = source / "profile.json"
+    profile = json.loads(profile_path.read_text())
+    profile["work"] = {
+        "conformance": {
+            "path": "qualification/work-profile-conformance.json",
+            "sha256": declaration_sha,
+        }
+    }
+    _write_json(profile_path, profile)
+
+    with pytest.raises(profile_sdk.ProfileSdkError) as raised:
+        profile_sdk.validate_source(source, tmp_path / "runtime")
+    assert raised.value.diagnosis["code"] == "work-profile-conformance-denied"
+
+
+def test_work_capable_profile_rejects_missing_conformance_binding(tmp_path):
+    source = _copy_source(tmp_path)
+    profile_path = source / "profile.json"
+    profile = json.loads(profile_path.read_text(encoding="utf-8"))
+    profile.pop("work")
+    _write_json(profile_path, profile)
+
+    with pytest.raises(profile_sdk.ProfileSdkError) as raised:
+        profile_sdk.validate_source(source, tmp_path / "runtime")
+
+    assert raised.value.diagnosis["code"] == "work-profile-conformance-required"
 
 
 def test_first_party_work_control_suite_rejects_missing_member(tmp_path):
@@ -292,7 +383,9 @@ def test_work_control_domain_is_owned_by_the_profile_member():
     core = SOURCE.parents[1] / "framework" / "core" / "src" / "python" / "kungfu"
 
     assert (member / "domain" / "work_control.py").is_file()
-    assert (member / "domain" / "compatibility" / "mission_control_v3_bundle.py").is_file()
+    assert (
+        member / "domain" / "compatibility" / "mission_control_v3_bundle.py"
+    ).is_file()
     assert "from kungfu.atlas import mission_control" not in adapter
     assert "from kungfu.atlas import mission_bundle" not in adapter
 
