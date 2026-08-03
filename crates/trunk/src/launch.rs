@@ -312,9 +312,8 @@ fn tree_python() -> Result<PathBuf, String> {
     if !python.is_file() {
         return Err(format!(
             "assembled runtime tree not found at {} — the `kungfu` entry only \
-             runs next to the tree the product ships (dev: use `python -m \
-             kungfu` on the managed interpreter, or kungfu-trunk for env \
-             commands)",
+             runs next to the tree the product ships (dev: invoke repository \
+             tasks through `./shifu`, or use kungfu-trunk for env commands)",
             python.display()
         ));
     }

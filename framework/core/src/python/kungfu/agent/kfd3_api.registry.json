@@ -1140,7 +1140,6 @@
       "surface": "cli",
       "name": "kungfu-exit-verify --file <package.json> --json",
       "aliases": [
-        "python -m kungfu.exit_verifier --file <package.json> --json",
         "kungfu exit verify --file <package.json> --json",
         "kungfu exit history verify --file <exit.json> --json"
       ],
