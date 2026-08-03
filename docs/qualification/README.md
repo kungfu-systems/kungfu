@@ -8,6 +8,7 @@ implemented behavior, retained evidence, and released guarantees. Begin with
 - [Known Limits](known-limits.md)
 - [Runtime Activation and Product Delivery](runtime-activation-and-product-delivery.md)
 - [Node Watcher Runtime Boundary](node-watcher-runtime-boundary.md)
+- [Python KFX asyncio Performance Qualification](python-kfx-asyncio-performance.md)
 - [Native KFX Registry Foundation](evidence/native-kfx-registry-foundation/report.json)
 - [Unified Recovery Portable Qualification](unified-recovery.md)
 - [GUI Capability-boundary Qualification](gui-capability-boundary.md)
