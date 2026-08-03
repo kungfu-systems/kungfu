@@ -521,7 +521,7 @@ function remoteContains(reference, remote, queryStorageRoot) {
   return packageRevisionRefs(payload).includes(reference);
 }
 
-function withPartitionLock(storageRoot, partition, callback) {
+export function withPartitionLock(storageRoot, partition, callback) {
   const storage = assertStableStorageRoot(storageRoot);
   const partitionRoot = path.join(storageRoot, partition);
   const before = assertStablePartitionRoot(partitionRoot, null, storage);
@@ -585,15 +585,33 @@ function withPartitionLock(storageRoot, partition, callback) {
     if (identity.confidence !== 'exact')
       fail(`partition identity became ambiguous: ${partition}`);
     const packageTreeBefore = packageTreeFingerprint(before.packagesRoot);
-    const result = callback(identity, before.fingerprint, storage);
-    assertStableStorageRoot(storageRoot, storage);
-    const after = assertStablePartitionRoot(
-      partitionRoot,
-      before.fingerprint,
-      storage,
-    );
-    if (packageTreeFingerprint(after.packagesRoot) !== packageTreeBefore)
-      fail(`legacy package tree changed during migration: ${partition}`);
+    let result;
+    let operationError;
+    try {
+      result = callback(identity, before.fingerprint, storage);
+    } catch (error) {
+      operationError = error;
+    }
+    let verificationError;
+    try {
+      assertStableStorageRoot(storageRoot, storage);
+      const after = assertStablePartitionRoot(
+        partitionRoot,
+        before.fingerprint,
+        storage,
+      );
+      if (packageTreeFingerprint(after.packagesRoot) !== packageTreeBefore)
+        fail(`legacy package tree changed during migration: ${partition}`);
+    } catch (error) {
+      verificationError = error;
+    }
+    if (operationError && verificationError)
+      throw new AggregateError(
+        [operationError, verificationError],
+        `legacy migration operation and verification both failed for ${partition}: ${operationError.message}; ${verificationError.message}`,
+      );
+    if (operationError) throw operationError;
+    if (verificationError) throw verificationError;
     return result;
   } finally {
     for (const [signal, handler] of signalHandlers)
