@@ -263,8 +263,12 @@ export function installArgs(
 ) {
   const args = ['install', '--frozen-lockfile'];
   if (noOptional) {
-    args.push('--no-optional', '--config.confirmModulesPurge=false');
+    args.push('--no-optional');
   }
+  // Product distribution is an owned, non-interactive build boundary. A
+  // changed Shifu cache overlay may make the generated modules layout stale;
+  // authorize pnpm to replace it instead of requiring a TTY prompt.
+  args.push('--config.confirmModulesPurge=false');
   return args;
 }
 

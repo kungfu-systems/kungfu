@@ -2,7 +2,10 @@
 
 This harness binds [KF-ADR-019f86da-4f90-7bc8-a3ed-a7b0a6363d6c](../../../../../docs/adr/KF-ADR-019f86da-4f90-7bc8-a3ed-a7b0a6363d6c.md) Stage 7 to source-exact, retained machine evidence.
 It composes the existing broker/service, Profile action, surface parity,
-distribution, full verification, and local artifact-catalog checks. It does not
+distribution, full verification, and an exact current-build artifact-catalog
+check. The catalog check follows the worktree-local registration coordinate
+published by the preceding distribution and deep-verifies only that payload;
+retained user-global history is not a qualification input. It does not
 replace any lower authority or reinterpret a passing process-crash test as a
 power-loss result.
 

@@ -70,6 +70,120 @@ fn write_app_manifests(entry: &mut BuildEntry) {
     );
 }
 
+fn write_entry_meta(entry: &BuildEntry) {
+    fs::write(
+        entry.slot.join("meta.env"),
+        format!(
+            "KUNGFU_BUILD_SHA='{}'\n\
+             KUNGFU_BUILD_BRANCH='{}'\n\
+             KUNGFU_BUILD_REPO='{}'\n\
+             KUNGFU_BUILD_WORKTREE='{}'\n\
+             KUNGFU_BUILD_TIME='{}'\n\
+             KUNGFU_BUILD_KIND='{}'\n\
+             KUNGFU_BUILD_ARTIFACT='{}'\n\
+             KUNGFU_BUILD_SHA256='{}'\n\
+             KUNGFU_BUILD_CLI_ARCHIVE='{}'\n\
+             KUNGFU_BUILD_CLI_ARCHIVE_SHA256='{}'\n\
+             KUNGFU_BUILD_UPGRADE_MANIFEST='{}'\n\
+             KUNGFU_BUILD_UPGRADE_MANIFEST_SHA256='{}'\n\
+             KUNGFU_BUILD_PRODUCT_VERSION='{}'\n\
+             KUNGFU_BUILD_RELEASE_CUT_ROOT='{}'\n\
+             KUNGFU_BUILD_PLATFORM_SLICE_ROOT='{}'\n\
+             KUNGFU_BUILD_MAINLINE_REF='{}'\n\
+             KUNGFU_BUILD_MAINLINE_SHA='{}'\n\
+             KUNGFU_BUILD_INTEGRATED='{}'\n\
+             KUNGFU_BUILD_QUALIFIED='{}'\n",
+            entry.sha,
+            entry.branch,
+            entry.repo,
+            entry.worktree,
+            entry.built_at,
+            entry.kind,
+            entry.artifact,
+            entry.digest,
+            entry.cli_archive,
+            entry.cli_archive_digest,
+            entry.upgrade_manifest,
+            entry.upgrade_manifest_digest,
+            entry.product_version,
+            entry.release_cut_root,
+            entry.platform_slice_root,
+            entry.mainline_ref,
+            entry.mainline_sha,
+            entry.integrated,
+            entry.qualified,
+        ),
+    )
+    .unwrap();
+}
+
+#[test]
+fn current_build_verification_is_independent_of_unrelated_history() {
+    let root = shifu_core::host::unique_temp_dir("promote-current-registration").unwrap();
+    let registry = root.join("registry");
+    let slot = registry.join("current-build");
+    let mut entry = qualified_app(&slot);
+    entry.name = "current-build".into();
+    entry.integrated = false;
+    entry.qualified = false;
+    entry.mainline_sha = "2".repeat(40);
+    write_app_manifests(&mut entry);
+    write_entry_meta(&entry);
+
+    // These entries are deliberately unreadable as metadata files. Resolving
+    // the exact current registration must never enumerate or inspect them.
+    for index in 0..512 {
+        fs::create_dir_all(registry.join(format!("unrelated-{index}")).join("meta.env")).unwrap();
+    }
+    let pointer = root.join(CURRENT_REGISTRATION_RELATIVE);
+    fs::create_dir_all(pointer.parent().unwrap()).unwrap();
+    fs::write(
+        &pointer,
+        format!(
+            "SHIFU_REGISTERED_PRODUCT='kungfu'\n\
+             SHIFU_REGISTERED_PLATFORM='{}'\n\
+             SHIFU_REGISTERED_BUILD_ID='{}'\n\
+             SHIFU_REGISTERED_BUILD_SHA='{}'\n\
+             SHIFU_REGISTERED_ARTIFACT_SHA256='{}'\n",
+            host::os_arch(),
+            entry.name,
+            entry.sha,
+            entry.digest,
+        ),
+    )
+    .unwrap();
+
+    let mut selected = current_entry_at(&root, &registry, &entry.sha).unwrap();
+    assert_eq!(selected.name, entry.name);
+    assert!(current_payload_valid(&selected));
+    assert!(
+        !build_valid(&selected),
+        "pre-integration verification must not claim promotion eligibility"
+    );
+    assert!(current_entry_at(&root, &registry, &"2".repeat(40)).is_err());
+
+    selected.integrated = true;
+    selected.qualified = true;
+    selected.mainline_sha = selected.sha.clone();
+    fs::write(
+        selected
+            .slot
+            .join(&selected.artifact)
+            .join("Contents/MacOS/Kungfu Episodes"),
+        "tampered executable",
+    )
+    .unwrap();
+    assert!(
+        build_recorded_valid(&selected),
+        "metadata listing must not read retained payload bytes"
+    );
+    assert!(
+        !current_payload_valid(&selected),
+        "exact current-build verification must still fail closed on tampering"
+    );
+    let _ = fs::remove_dir_all(root);
+}
+
 #[test]
 fn qualified_app_requires_exact_product_manifests() {
     let root = shifu_core::host::unique_temp_dir("promote-manifests").unwrap();
