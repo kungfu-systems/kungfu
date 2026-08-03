@@ -43,7 +43,7 @@ test('anti-gaming corpus covers every required rejection family', () => {
   );
 });
 
-test('build-free entrypoint returns the retained zero-blocking report', () => {
+test('build-free entrypoint regenerates a zero-blocking exact-source report', () => {
   const result = spawnSync(pythonCommand(), checkerArgs(['--json']), {
     cwd: ROOT,
     encoding: 'utf8',

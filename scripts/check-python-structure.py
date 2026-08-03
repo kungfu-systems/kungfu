@@ -31,6 +31,10 @@ def digest(value: Any) -> str:
     return f"sha256:{hashlib.sha256(canonical(value)).hexdigest()}"
 
 
+def digest_bytes(value: bytes) -> str:
+    return f"sha256:{hashlib.sha256(value).hexdigest()}"
+
+
 def read_json(relative: Path) -> dict[str, Any]:
     value = json.loads((ROOT / relative).read_text(encoding="utf-8"))
     if not isinstance(value, dict):
@@ -597,7 +601,10 @@ def report_document(
     retained_measurement = compact_measurement(current)
     body = {
         "schema": "kungfu.abstraction-integrity-report/v1",
+        "sourceRevision": git("rev-parse", "HEAD^{commit}").decode().strip(),
         "manifestPath": MANIFEST_PATH.as_posix(),
+        "manifestRoot": digest(manifest),
+        "generatorRoot": digest_bytes(Path(__file__).read_bytes()),
         "baselineRoot": baseline["baselineRoot"],
         "sourceRoot": retained_measurement["sourceRoot"],
         "measurement": retained_measurement,
@@ -615,6 +622,7 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--emit-baseline", metavar="REF")
     parser.add_argument("--emit-report", action="store_true")
+    parser.add_argument("--check-legacy-report", action="store_true")
     parser.add_argument("--json", action="store_true")
     args = parser.parse_args()
     manifest = read_json(MANIFEST_PATH)
@@ -644,9 +652,10 @@ def main() -> int:
     if args.emit_report:
         print(json.dumps(report, indent=2, sort_keys=True))
         return int(report["summary"]["blockingIssues"] > 0)
-    retained = read_json(Path(manifest["reportPath"]))
-    if retained != report:
-        raise ValueError("abstraction integrity report is stale")
+    if args.check_legacy_report:
+        retained = read_json(Path(manifest["legacyReportPath"]))
+        if retained != report:
+            raise ValueError("legacy abstraction integrity snapshot is stale")
     if args.json:
         print(json.dumps(report, sort_keys=True))
     else:

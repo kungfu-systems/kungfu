@@ -29,7 +29,6 @@ function semanticAmplificationFixturePaths(manifest) {
     'framework/maintainability/semantic-amplification.manifest.json',
     'framework/maintainability/semantic-amplification.mjs',
     'framework/maintainability/terminal-evidence-matrix.json',
-    manifest.reportPath,
   ]);
   for (const family of manifest.families || []) {
     for (const relative of family.authority?.sources || []) paths.add(relative);
@@ -258,6 +257,7 @@ test('declared discovery routes are zero-write in a cold read-only fixture', (t)
     '.github/workflows/dev-gate-latency-patrol.yml',
     '.github/workflows/dev-verify-patrol.yml',
     '.github/workflows/gate-measurement.yml',
+    '.github/workflows/report-projection.yml',
     '.github/workflows/build.yml',
     '.github/workflows/publish-layer-artifacts.yml',
     '.github/workflows/python-structure.yml',
@@ -488,11 +488,15 @@ test('declared discovery routes are zero-write in a cold read-only fixture', (t)
     'framework/maintainability/abstraction-integrity.manifest.json',
     'framework/maintainability/abstraction-integrity.baseline.json',
     'framework/maintainability/abstraction-integrity-report.json',
+    'framework/report-projection/authority.json',
     'framework/maintainability/python-structure-negative-fixtures.json',
     'framework/maintainability/readonly-source-routes.json',
     'framework/maintainability/semantic-amplification.manifest.json',
     'framework/maintainability/semantic-amplification-report.json',
     'framework/maintainability/semantic-amplification.mjs',
+    'framework/report-projection/authority.mjs',
+    'framework/report-projection/authority.test.mjs',
+    'docs/qualification/evidence/generated-report-authority-queue/report.json',
     'framework/maintainability/waivers/README.md',
     'framework/work-history-selector/schema/work-history-selection-manifest-v1.schema.json',
     'framework/work-history-selector/schema/work-history-selection-request-v1.schema.json',
