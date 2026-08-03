@@ -138,10 +138,14 @@ def test_async_relay_correlates_callbacks_cancellation_shutdown_and_close():
     try:
         asyncio.run(qualify())
     finally:
+        try:
+            guest_socket.shutdown(socket.SHUT_RDWR)
+        except OSError:
+            pass
+        host_thread.join(timeout=2)
         guest_write.close()
         guest_read.close()
         guest_socket.close()
-        host_thread.join(timeout=2)
 
     assert not host_thread.is_alive()
     assert host_errors == []
