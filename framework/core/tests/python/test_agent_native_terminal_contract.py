@@ -17,7 +17,7 @@ def test_agent_session_resolves_the_current_project_runtime(monkeypatch, tmp_pat
     calls = []
     monkeypatch.delenv("KUNGFU_AGENT_SESSION_ENDPOINT", raising=False)
     monkeypatch.setattr(
-        agent_commands,
+        agent_commands.session_surface,
         "resolve_workspace_target",
         lambda *_args, **_kwargs: SimpleNamespace(runtime_dir=str(runtime_dir)),
     )
@@ -55,7 +55,7 @@ def test_agent_session_restarts_the_runtime_scoped_surface_for_postmortem(
     ensured = []
     monkeypatch.delenv("KUNGFU_AGENT_SESSION_ENDPOINT", raising=False)
     monkeypatch.setattr(
-        agent_commands,
+        agent_commands.session_surface,
         "resolve_workspace_target",
         lambda *_args, **_kwargs: SimpleNamespace(runtime_dir=str(runtime_dir)),
     )

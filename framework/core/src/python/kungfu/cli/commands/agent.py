@@ -32,7 +32,6 @@ from kungfu.cli.commands import agent_docs
 from kungfu.cli.commands import agent_work_lab as agent_work_lab_commands
 from kungfu.cli.commands import kfc, PrioritizedCommandGroup
 from kungfu.config import resolve_config
-from kungfu.workspace import WorkspaceTargetRequired, resolve_workspace_target
 
 agent_command_context = kfc.pass_context()
 
@@ -150,13 +149,6 @@ def _skill_dir(target, scope):
     root = Path.cwd() if scope == "project" else Path.home()
     provider_root = ".agents" if target == "codex" else ".claude"
     return root / provider_root / "skills" / "kungfu-agent-onboarding"
-
-
-def _session_runtime_dir(ctx):
-    try:
-        return str(resolve_workspace_target("read-only", cwd=os.getcwd()).runtime_dir)
-    except WorkspaceTargetRequired:
-        return str(ctx.runtime_dir)
 
 
 @agent.command(help=api_help("kungfu.agent.brief"))
@@ -1133,22 +1125,13 @@ def session_action(ctx, operation, input_file, endpoint, as_json):
             os.environ.get("KUNGFU_AGENT_SESSION_ACTOR", f"cli:{os.getpid()}"),
         ),
     }
-    runtime_dir = None
-    environment_endpoint = os.environ.get("KUNGFU_AGENT_SESSION_ENDPOINT")
-    endpoint_is_explicit = endpoint is not None or environment_endpoint is not None
-    resolved_endpoint = endpoint or environment_endpoint
-    if not resolved_endpoint:
-        runtime_dir = _session_runtime_dir(ctx)
-        resolved_endpoint = session_surface.endpoint_for_runtime(runtime_dir)
     try:
-        try:
-            payload = session_surface.invoke(request, endpoint=resolved_endpoint)
-        except OSError:
-            if endpoint_is_explicit:
-                raise
-            runtime_dir = runtime_dir or _session_runtime_dir(ctx)
-            resolved_endpoint = session_surface.ensure(runtime_dir)
-            payload = session_surface.invoke(request, endpoint=resolved_endpoint)
+        payload = session_surface.invoke_for_project(
+            request,
+            fallback_runtime_dir=ctx.runtime_dir,
+            endpoint=endpoint,
+            cwd=os.getcwd(),
+        )
     except (OSError, ValueError) as exc:
         raise click.ClickException(str(exc)) from exc
     if as_json:
