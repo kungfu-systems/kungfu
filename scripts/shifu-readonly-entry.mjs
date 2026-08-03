@@ -21,6 +21,8 @@ const READONLY_SOURCE_COMMANDS = [
   'maintainability:python-structure',
   'maintainability:amplification',
   'maintainability:query',
+  'work-design:open-card-preflight',
+  'work-design:feedback',
 ];
 
 function route(command, args) {

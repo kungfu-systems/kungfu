@@ -9,6 +9,11 @@ import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
 
 import { checkRoot, scanText } from './check-shifu-entry-contract.mjs';
+import {
+  assertSourceCheckoutUnchanged,
+  prepareSourceAcceptanceRuntime,
+  sourceCheckoutSnapshot,
+} from './readonly-source-toolchain.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -611,12 +616,36 @@ test('runtime guard rejects a direct task and accepts Shifu provenance', () => {
   assert.equal(accepted.status, 0);
 });
 
-test('package manager cannot run a guarded root task without a canonical Shifu correction', () => {
+test('real package manager cannot run a guarded task or write the checkout', (t) => {
+  const runtime = prepareSourceAcceptanceRuntime(ROOT);
+  t.after(runtime.cleanup);
+  const before = sourceCheckoutSnapshot(ROOT);
+  const fixture = fs.mkdtempSync(
+    path.join(runtime.runtimeRoot, 'kungfu-package-manager-guard-'),
+  );
+  const guard = path.join(ROOT, 'scripts', 'require-shifu.mjs');
+  const node = JSON.stringify(process.execPath);
+  const guardPath = JSON.stringify(guard);
+  fs.writeFileSync(
+    path.join(fixture, 'package.json'),
+    `${JSON.stringify(
+      {
+        name: 'kungfu-package-manager-guard-fixture',
+        private: true,
+        packageManager: 'pnpm@11.7.0',
+        scripts: {
+          'check:entry-contract': `${node} ${guardPath} check:entry-contract`,
+        },
+      },
+      null,
+      2,
+    )}\n`,
+  );
   const corepack = process.platform === 'win32' ? 'corepack.cmd' : 'corepack';
   const direct = spawnSync(corepack, ['pnpm', 'run', 'check:entry-contract'], {
-    cwd: ROOT,
+    cwd: fixture,
     encoding: 'utf8',
-    env: { ...process.env, SHIFU_ENTRYPOINT: '' },
+    env: { ...runtime.env, SHIFU_ENTRYPOINT: '' },
     shell: process.platform === 'win32',
   });
   const output = `${direct.stdout}\n${direct.stderr}`;
@@ -627,4 +656,10 @@ test('package manager cannot run a guarded root task without a canonical Shifu c
     /\[shifu-entry\] Run: \.\/shifu (?:install|check:entry-contract)(?:\r?\n|$)/,
   );
   assert.doesNotMatch(output, /\[shifu-entry\] Run: (?:corepack|node|pnpm)\b/);
+  assert.equal(
+    path.relative(runtime.runtimeRoot, fixture).startsWith('..'),
+    false,
+  );
+  assert.equal(fs.existsSync(path.join(fixture, 'package.json')), true);
+  assertSourceCheckoutUnchanged(before, sourceCheckoutSnapshot(ROOT));
 });
