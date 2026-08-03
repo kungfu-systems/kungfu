@@ -1779,7 +1779,7 @@ export const PROJECT_TOUR_PACING = {
 
 export const PROJECT_TOUR_SPEED_RANGE = {
   min: 0.25,
-  max: 2,
+  max: 4,
 } as const;
 
 export function parseProjectTourSpeed(value?: string): number {
