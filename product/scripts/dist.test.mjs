@@ -285,7 +285,7 @@ test('CLI product emits exact standalone demo metadata beside the launcher', (t)
         sha256: crypto.createHash('sha256').update('runtime\n').digest('hex'),
       },
       {
-        path: 'runtime/python/bin/python3.13',
+        path: 'runtime/python/bin/python3',
         sha256: crypto.createHash('sha256').update('python\n').digest('hex'),
       },
     ],
