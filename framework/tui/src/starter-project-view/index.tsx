@@ -1796,6 +1796,49 @@ export function parseProjectTourEpisode(value?: string): ProjectTourEpisode {
   return episode as ProjectTourEpisode;
 }
 
+export type ProjectTourLaunchOptions = {
+  root?: string;
+  speed: number;
+  episode: ProjectTourEpisode;
+};
+
+function projectTourOptionValue(
+  argv: readonly string[],
+  option: string,
+  missingMessage: string,
+): string | undefined {
+  const index = argv.indexOf(option);
+  const value = index >= 0 ? argv[index + 1] : undefined;
+  if (index >= 0 && !value) throw new Error(missingMessage);
+  return value;
+}
+
+export function parseProjectTourLaunchOptions(
+  argv: readonly string[],
+): ProjectTourLaunchOptions {
+  return {
+    root: projectTourOptionValue(
+      argv,
+      '--project-work-tour-root',
+      '--project-work-tour-root requires a destination',
+    ),
+    speed: parseProjectTourSpeed(
+      projectTourOptionValue(
+        argv,
+        '--project-tour-speed',
+        '--project-tour-speed requires a multiplier',
+      ),
+    ),
+    episode: parseProjectTourEpisode(
+      projectTourOptionValue(
+        argv,
+        '--project-tour-episode',
+        '--project-tour-episode requires 1, 2, or all',
+      ),
+    ),
+  };
+}
+
 export function parseProjectTourSpeed(value?: string): number {
   if (value === undefined) return 1;
   const speed = Number(value);
