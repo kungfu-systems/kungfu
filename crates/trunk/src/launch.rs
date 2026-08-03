@@ -211,6 +211,35 @@ fn product_tui_command(
     command
 }
 
+#[cfg(windows)]
+fn node_compatible_windows_path(path: &Path) -> PathBuf {
+    use std::ffi::OsString;
+    use std::os::windows::ffi::{OsStrExt, OsStringExt};
+
+    const VERBATIM_PREFIX: &[u16] = &[b'\\' as u16, b'\\' as u16, b'?' as u16, b'\\' as u16];
+    const VERBATIM_UNC_PREFIX: &[u16] = &[
+        b'\\' as u16,
+        b'\\' as u16,
+        b'?' as u16,
+        b'\\' as u16,
+        b'U' as u16,
+        b'N' as u16,
+        b'C' as u16,
+        b'\\' as u16,
+    ];
+
+    let wide: Vec<u16> = path.as_os_str().encode_wide().collect();
+    if let Some(rest) = wide.strip_prefix(VERBATIM_UNC_PREFIX) {
+        let mut normalized = vec![b'\\' as u16, b'\\' as u16];
+        normalized.extend_from_slice(rest);
+        return PathBuf::from(OsString::from_wide(&normalized));
+    }
+    if let Some(rest) = wide.strip_prefix(VERBATIM_PREFIX) {
+        return PathBuf::from(OsString::from_wide(rest));
+    }
+    path.to_path_buf()
+}
+
 /// Launch the bundled terminal product through the native libnode host.
 ///
 /// Returns `Ok(false)` when the fast path is not applicable, so callers can
@@ -232,6 +261,11 @@ pub fn launch_tui(args: &[String]) -> Result<bool, String> {
     let exe = env::current_exe()
         .and_then(|path| path.canonicalize())
         .map_err(|error| format!("cannot resolve the entry binary path: {error}"))?;
+    // Windows canonicalization returns an extended-length `\\?\` path. Node's
+    // module entry resolver does not accept that form and truncates the drive
+    // path to `C:`, so normalize only the argv/env boundary handed to libnode.
+    #[cfg(windows)]
+    let exe = node_compatible_windows_path(&exe);
     let runtime = exe
         .parent()
         .ok_or_else(|| "the entry binary has no parent directory".to_string())?;
@@ -527,5 +561,18 @@ mod tests {
             Some("xterm-256color"),
             Some("1")
         ));
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn native_tui_argv_removes_windows_verbatim_path_prefixes() {
+        assert_eq!(
+            node_compatible_windows_path(Path::new(r"\\?\C:\Users\dkr\Kungfu\tui\tui.mjs")),
+            PathBuf::from(r"C:\Users\dkr\Kungfu\tui\tui.mjs")
+        );
+        assert_eq!(
+            node_compatible_windows_path(Path::new(r"\\?\UNC\server\share\Kungfu\tui\tui.mjs")),
+            PathBuf::from(r"\\server\share\Kungfu\tui\tui.mjs")
+        );
     }
 }
