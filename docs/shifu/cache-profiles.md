@@ -91,15 +91,23 @@ Cargo is invoked through a temporary PATH wrapper that supplies highest-priority
 hierarchical config discovery, but the managed source alias and endpoint are
 overridden by the profile. Conan receives a disposable `CONAN_HOME` containing
 only the managed remote plus an explicitly declared development fallback, if
-any. When storage is selected, its `global.conf` points package and download
-data at a profile-owned host-local cache under `${SHIFU_CACHE_HOME}`.
-Each development worktree and named runner receives a deterministic partition,
-so independent checkouts do not share one mutable Conan database. Conan itself
-is invoked through a temporary PATH wrapper: non-Conan tasks never take the
-storage lock, while each real Conan process waits for the same-partition lock
-for a bounded interval. A lock whose recorded process is no longer running is
-reclaimed; an unreadable lock still fails closed. The persistent storage
-survives the task, while the temporary policy overlay and on-demand lock do not.
+any. When storage is selected, its `global.conf` keeps mutable package state in
+a profile-owned host-local partition under `${SHIFU_CACHE_HOME}`. Each
+development worktree and named runner still receives a deterministic writable
+partition, so independent checkouts never share one mutable Conan database.
+Immutable binary availability is instead owned by the hosted remote and
+identified by the full recipe revision, package ID, and package revision.
+Conan's content-addressed download cache is shared at the profile namespace
+layer, where Conan's own per-content locks coordinate source and package
+transport without broadening the mutable-package lock. Worktree-local Core
+build and generator folders remain outside both shared artifact layers.
+
+Conan itself is invoked through a temporary PATH wrapper: non-Conan tasks never
+take the storage lock, while each real Conan process waits for the same mutable
+partition lock for a bounded interval. A lock whose recorded process is no
+longer running is reclaimed; an unreadable lock still fails closed. The
+persistent partition and shared download artifacts survive the task, while the
+temporary policy overlay and on-demand partition lock do not.
 Kungfu detects a default compiler profile inside the isolated home. Both
 temporary overlays are removed after the child exits, including non-zero exits.
 The nested libwasm Cargo invocation inherits the same wrapper.
@@ -183,14 +191,30 @@ Hosted binary publication is an administrative Shifu execution, not a
 Buildchain lifecycle input. `scripts/shifu-conan-publish.mjs` provides a
 dry-run-first matrix for Mac arm64, Linux GCC 14 x64, and Windows MSVC x64. The
 execute path must run inside one `shifu cache apply`, detects and validates the
-ephemeral Conan profile, creates the pinned RocksDB recipe, selects only the
-binary matching that profile, authenticates with Conan's remote-scoped
-environment variables, uploads that exact package list, and reads it back.
+ephemeral Conan profile, resolves the complete pinned Core dependency closure
+with C++23, disables Conan's global compatibility plugin only in that
+disposable qualification `CONAN_HOME`, and derives each dependency's full
+RREV/package_id/PREV plus effective settings/options from the Conan graph. This
+strict path therefore publishes the requested package ID instead of silently
+substituting (for example) a `gnu17` package that Conan considers compatible
+with a C++23 consumer. It queries the hosted remote first, authenticates with Conan's
+remote-scoped environment variables, uploads only missing exact revisions
+without `--force`, and reads every revision back. It then resolves the remote's
+current PREV for each RREV/package_id, so an older partition-local PREV cannot
+define the published closure. The publisher emits a Conan lockfile that pins
+dependency RREVs; the receipt binds both that lockfile and the remote-current
+RREV/package_id/PREV closure with digests. The `macos-arm64` entry is explicitly bound to Macos armv8,
+Apple Clang 21, and C++23.
 Publisher credentials remain in the operator or CI secret surface and are
 never added to the cache profile, Buildchain arguments, or Shifu receipt.
 
+Ordinary `./shifu build:core` retains Conan's normal compatibility behavior;
+the strict override is qualification-local and does not alter persistent user
+configuration. Normal runtime evidence must therefore distinguish requested
+settings from each resolved binary's effective settings and package ID.
+
 ```sh
-node scripts/shifu-conan-publish.mjs --matrix-entry macos-arm64
+node scripts/shifu-conan-publish.mjs --matrix-entry macos-arm64 --lockfile-file <publish-lockfile> --receipt-file <publish-receipt>
 node scripts/shifu-conan-publish.mjs --matrix-entry linux-gcc14-x64
 node scripts/shifu-conan-publish.mjs --matrix-entry windows-msvc-x64
 ```
@@ -198,6 +222,57 @@ node scripts/shifu-conan-publish.mjs --matrix-entry windows-msvc-x64
 The inventory controller owns host routing and the approval to add `--execute`;
 normal builds consume the hosted repository anonymously and never receive the
 publisher identity.
+
+A cache hit is qualified separately from publication. Run the dry-run in the
+source worktree, then execute only in a fresh canonical worktree whose mutable
+package partition is empty:
+
+```sh
+node scripts/shifu-conan-hit-evidence.mjs --matrix-entry macos-arm64 --publish-lockfile <publish-lockfile> --publish-receipt <publish-receipt>
+```
+
+The execute path applies the same qualification-local compatibility override,
+uses `--build=never`, and accepts only dependency graph nodes whose binary
+state is `Download` from the selected hosted remote. It also requires exact-set
+equality with the same-source publisher receipt and verifies its closure
+digest. It consumes the digest-bound publisher lockfile so remote revision
+ordering cannot select a different RREV before equality is checked. Its
+evidence lists every exact RREV/package_id/PREV, effective
+settings/options, and an empty source-build set. A warm
+worktree-local `framework/core/build` directory or a pre-populated partition is
+rejected as hit proof.
+
+Legacy `development-*` partitions are user data. Their operator surface is
+read-only by default and reads Conan's SQLite index with a read-only database
+handle; it never imports persistent user configuration or reads package bodies:
+
+```sh
+node scripts/shifu-conan-legacy.mjs inventory --storage-root <profile-storage-root>
+node scripts/shifu-conan-legacy.mjs migrate --storage-root <profile-storage-root>
+```
+
+The inventory reports count, byte size, age, lock state, reference summaries,
+exact identity confidence, and migration eligibility. Migration planning skips
+live, stale, unreadable, corrupt, empty, identity-ambiguous, and
+snapshot-vanished partitions. It also skips legacy download, build, and
+generator directories because their
+paths do not prove Conan package identity. The plan emits an approval digest
+and an exact follow-up command. The digest binds the remote, storage root,
+eligible partition, and exact RREV/package_id/PREV set while ignoring newly
+created empty mutable partitions. Execution additionally requires that digest,
+the Shifu-managed publisher environment, a clean checkout, and an exclusive
+partition lock. While that lock is held, the migration invokes Conan from the
+original tool PATH instead of recursively entering the managed per-command
+wrapper lock. Remote queries use disposable storage, and any missing exact
+references are uploaded from a temporary copy of the partition package store,
+so Conan's archive generation cannot write into the legacy partition. It
+performs only additive exact uploads and readback. It never deletes,
+overwrites, links, moves, or compacts legacy artifacts.
+Partition roots, `packages`, the SQLite index, and indexed artifact paths must
+all be real in-root objects rather than symlinks. Execution fingerprints the
+partition root and complete package-tree metadata before and around every
+remote operation, fails if either changes, and releases its owned temporary
+lock on normal exit or termination signals.
 
 ## Developer operations
 

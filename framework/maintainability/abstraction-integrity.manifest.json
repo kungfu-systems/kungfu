@@ -263,6 +263,15 @@
       "paths": [
         "scripts/portable-atlas-bundle.mjs"
       ]
+    },
+    {
+      "owner": "shifu/conan-cache",
+      "paths": [
+        "scripts/shifu-conan-hit-evidence.mjs",
+        "scripts/shifu-conan-hit-evidence.test.mjs",
+        "scripts/shifu-conan-legacy.mjs",
+        "scripts/shifu-conan-legacy.test.mjs"
+      ]
     }
   ],
   "exceptions": []
