@@ -491,6 +491,12 @@ function checkKungfuGateCatalog() {
 }
 
 function checkLayerQualification() {
+  run('portable format authority bundle', 'pnpm', [
+    '--filter',
+    '@kungfu-tech/spec',
+    'run',
+    'build',
+  ]);
   run(
     'KF-ADR-019f86da-4f90-7c91-9cc2-6dbd18d68dff layer qualification harness tests',
     'node',
@@ -734,14 +740,17 @@ function touchesBuildchainKfdEvidence(files) {
 }
 
 function checkBuildchainKfdEvidence(files = [], { force = false } = {}) {
-  if (!force && !touchesBuildchainKfdEvidence(files)) {
-    log('[check] no Buildchain KFD evidence inputs changed');
-    return;
-  }
+  // The committed source binding depends on Git ancestry as well as file
+  // content. A rebase or merge can stale it without placing any KFD path in
+  // the changed-file set, so keep this fast check unconditional.
   run('Buildchain KFD evidence check', 'node', [
     path.join('scripts', 'buildchain-kfd-evidence.mjs'),
     '--check',
   ]);
+  if (!force && !touchesBuildchainKfdEvidence(files)) {
+    log('[check] no additional Buildchain KFD evidence inputs changed');
+    return;
+  }
   run('KFD-4 perspective qualification', 'node', [
     path.join(
       'framework',
