@@ -2,9 +2,11 @@
   "schema": "kungfu.semantic-amplification-report/v1",
   "verdict": "pass",
   "authoritySemantics": "navigation-only-projection-over-existing-authorities",
+  "sourceRevision": "e4669a2487ddb00c58a932b65a781370d63bece2",
   "manifestPath": "framework/maintainability/semantic-amplification.manifest.json",
   "manifestRoot": "sha256:3510a3caaf84d7224a167b0183615793b3234078486f5bf92f54b08cdba73923",
   "baselineRef": "dbfed9ca1785d147b26f4f06e7e6895ac7368fee",
+  "baselineRoot": "sha256:a6e7ee9aeea7213807abdf830f8b4e60aede2352289539ddc31ad0fa67b1da50",
   "sourceRoot": "sha256:4d5915972bce5a1277d1936a241fbdb330f520c4e85ccd1a438d84e89406307c",
   "roles": {
     "authority": "exactly one authority route per family; the route may name multiple co-owned source files",
@@ -1973,5 +1975,6 @@
     ],
     "findings": []
   },
-  "issues": []
+  "issues": [],
+  "reportRoot": "sha256:d143ab78417a32887e08dcdbad3f7ebde1e77e6d4e08d5c3f3fc8aefd51783f3"
 }
