@@ -348,6 +348,18 @@ export function prepareReleaseQualificationHistory(
   return prepare(root);
 }
 
+export function prepareReleaseQualificationOutput(root = ROOT) {
+  const output = path.join(root, 'product', 'release', 'qualification');
+  fs.rmSync(output, {
+    recursive: true,
+    force: true,
+    maxRetries: 20,
+    retryDelay: 50,
+  });
+  fs.mkdirSync(output, { recursive: true });
+  return output;
+}
+
 function gitRevision() {
   return spawnSync('git', ['rev-parse', 'HEAD'], {
     cwd: ROOT,
@@ -552,6 +564,7 @@ export function main(argv = process.argv.slice(2)) {
   }
   const options = parseReleaseQualificationOptions(argv);
   const execution = loadExecutionProfile(options.executionProfile);
+  prepareReleaseQualificationOutput();
   prepareReleaseQualificationHistory(
     ROOT,
     process.platform,
