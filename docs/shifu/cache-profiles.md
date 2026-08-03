@@ -261,7 +261,9 @@ and an exact follow-up command. The digest binds the remote, storage root,
 eligible partition, and exact RREV/package_id/PREV set while ignoring newly
 created empty mutable partitions. Execution additionally requires that digest,
 the Shifu-managed publisher environment, a clean checkout, and an exclusive
-partition lock; it performs only additive exact uploads and readback. It never
+partition lock. While that lock is held, the migration invokes Conan from the
+original tool PATH instead of recursively entering the managed per-command
+wrapper lock; it performs only additive exact uploads and readback. It never
 deletes, overwrites, links, moves, or compacts legacy artifacts.
 Partition roots, `packages`, the SQLite index, and indexed artifact paths must
 all be real in-root objects rather than symlinks. Execution fingerprints the

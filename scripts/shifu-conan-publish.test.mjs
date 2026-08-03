@@ -16,6 +16,7 @@ import {
   MATRIX,
   assertStrictDependencySettings,
   bindRemotePackageRevisions,
+  conanCommand,
   disableBinaryCompatibility,
   exactClosureDigest,
   graphDependencyRecords,
@@ -290,6 +291,44 @@ test('publisher disables global Conan binary compatibility only in managed overl
     'utf8',
   );
   assert.match(plugin, /return \[\]/);
+});
+
+test('migration can bypass the managed Conan wrapper while holding its own partition lock', (t) => {
+  if (process.platform === 'win32') {
+    t.skip('POSIX executable fixture');
+    return;
+  }
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'shifu-conan-path-'));
+  const wrapperDirectory = path.join(root, 'wrapper');
+  const originalDirectory = path.join(root, 'original');
+  fs.mkdirSync(wrapperDirectory);
+  fs.mkdirSync(originalDirectory);
+  fs.writeFileSync(
+    path.join(wrapperDirectory, 'conan'),
+    "#!/bin/sh\nprintf 'wrapper\\n'\n",
+    { mode: 0o755 },
+  );
+  fs.writeFileSync(
+    path.join(originalDirectory, 'conan'),
+    "#!/bin/sh\nprintf 'original\\n'\n",
+    { mode: 0o755 },
+  );
+  const previousPath = process.env.PATH;
+  const previousOriginalPath = process.env.SHIFU_CONAN_ORIGINAL_PATH;
+  t.after(() => {
+    fs.rmSync(root, { recursive: true, force: true });
+    process.env.PATH = previousPath;
+    if (previousOriginalPath === undefined)
+      Reflect.deleteProperty(process.env, 'SHIFU_CONAN_ORIGINAL_PATH');
+    else process.env.SHIFU_CONAN_ORIGINAL_PATH = previousOriginalPath;
+  });
+  process.env.PATH = `${wrapperDirectory}${path.delimiter}${previousPath}`;
+  process.env.SHIFU_CONAN_ORIGINAL_PATH = originalDirectory;
+  assert.equal(conanCommand([], { capture: true }).trim(), 'wrapper');
+  assert.equal(
+    conanCommand([], { capture: true, originalPath: true }).trim(),
+    'original',
+  );
 });
 
 test('execute fails closed outside Shifu before invoking Conan', () => {
