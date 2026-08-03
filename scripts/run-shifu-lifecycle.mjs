@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // SPDX-License-Identifier: Apache-2.0
 
-import { spawnSync } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -106,6 +106,63 @@ export function runShifu(args, options = {}) {
   return result.status ?? 1;
 }
 
+/** Run the canonical repository shim asynchronously for bounded parallel gates. */
+export function runShifuAsync(args, options = {}) {
+  const platform = options.platform || process.platform;
+  const root = options.root || ROOT;
+  const env = options.env || lifecycleEnvironment();
+  return new Promise((resolve, reject) => {
+    let child;
+    if (platform === 'win32') {
+      const pinnedBinary = env.SHIFU_BIN;
+      if (pinnedBinary && existsSync(pinnedBinary)) {
+        child = spawn(pinnedBinary, args, {
+          cwd: root,
+          env: {
+            ...env,
+            SHIFU_ENTRYPOINT: '1',
+            SHIFU_FROM_SHIM: '1',
+          },
+          stdio: options.stdio || 'inherit',
+          shell: false,
+          windowsHide: true,
+        });
+      } else {
+        const command =
+          options.comspec || env.ComSpec || env.COMSPEC || 'cmd.exe';
+        child = spawn(
+          command,
+          windowsCmdArgs(path.join(root, 'shifu.cmd'), args),
+          {
+            cwd: root,
+            env,
+            stdio: options.stdio || 'inherit',
+            shell: false,
+            windowsVerbatimArguments: true,
+            windowsHide: true,
+          },
+        );
+      }
+    } else {
+      child = spawn(path.join(root, 'shifu'), args, {
+        cwd: root,
+        env,
+        stdio: options.stdio || 'inherit',
+      });
+    }
+    child.once('error', reject);
+    child.once('close', (status, signal) => {
+      if (signal) {
+        const error = new Error(`Shifu exited on signal ${signal}`);
+        error.signal = signal;
+        reject(error);
+        return;
+      }
+      resolve(status ?? 1);
+    });
+  });
+}
+
 /** Build the canonical cache wrapper without relying on a platform shell. */
 export function cacheAppliedArgs(args, options = {}) {
   return [
@@ -133,6 +190,10 @@ export function cacheAwareArgs(args, options = {}) {
 /** Apply the resolved Shifu cache profile, then re-enter the canonical shim. */
 export function runShifuWithCache(args, options = {}) {
   return runShifu(cacheAwareArgs(args, options), options);
+}
+
+export function runShifuWithCacheAsync(args, options = {}) {
+  return runShifuAsync(cacheAwareArgs(args, options), options);
 }
 
 export function buildchainBuildPlan(
@@ -189,6 +250,17 @@ function main() {
     }
     process.exitCode = runShifuWithCache(args, {
       env: lifecycleEnvironment(process.env, args[0]),
+    });
+    return;
+  }
+  if (mode === 'cache-apply-command') {
+    if (args.length === 0) {
+      console.error('cache-apply-command requires a child command');
+      process.exit(2);
+    }
+    const [command, ...commandArgs] = args;
+    process.exitCode = runShifu(cacheAppliedCommandArgs(command, commandArgs), {
+      env: lifecycleEnvironment(process.env),
     });
     return;
   }
