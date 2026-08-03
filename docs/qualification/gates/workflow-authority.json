@@ -665,7 +665,7 @@
     {
       "path": ".github/workflows/gate-measurement.yml",
       "authority": "qualification",
-      "definitionDigest": "sha256:425a3daeeb6b055a73c5827d9af1b509e05b69dd2c3f282bac298b78b3f673b7",
+      "definitionDigest": "sha256:ffaf6a6c20090c16ca55fa8bd4af08b3475a076480cc980c50f3584f43e62b53",
       "jobs": [
         {
           "id": "focused",
@@ -682,10 +682,20 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "qualifying",
-          "definitionDigest": "sha256:c230c022e6405ce86ffe3c31d9ab9553947c9fc61b47d06b377276154723ade2",
+          "definitionDigest": "sha256:2d3116f96bac7ebd56ab4718e4ef84156545c0edeb096cb71cf260aa20aa0daf",
           "credentials": {"githubToken":"read","oidc":false,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
           "externalActions": ["kungfu-systems/buildchain/.github/workflows/.gate-profile.yml@9e904de2c85dbea7c799780ee166510b3336d812"],
           "steps": []
+        },
+        {
+          "id": "python-kfx-asyncio-performance",
+          "authority": "qualification",
+          "publication": "none",
+          "receipt": "diagnostic",
+          "definitionDigest": "sha256:7f3e18d38635b563c922dd80aa59777766ce8f661d266efb79f1abf5f9b43b7d",
+          "credentials": {"githubToken":"read","oidc":false,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
+          "externalActions": ["actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0","actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a"],
+          "steps": [{"index":1,"label":"name:Check out exact qualification source","definitionDigest":"sha256:28d3c9c0cfe3aef0882a953155f870ed684566c91e7fec5d59cf4f324dcdb868"},{"index":2,"label":"name:Prepare runner toolchain paths on Unix","definitionDigest":"sha256:66f529125f9f9df68209eadbe1fc10a77810a31a93c8eff940c7f1edc94b6792"},{"index":3,"label":"name:Prepare runner toolchain paths on Windows","authority":"evidence-publication","definitionDigest":"sha256:e58d1751d2a35e580a211cae20f65b089853551d6fbf514ca1fd4817ae11ba2f"},{"index":4,"label":"name:Setup Rust toolchain for qualification on Windows","definitionDigest":"sha256:bb7aa0d67b9e94501e9e66e3c9f4931286ed5180b34347f2e17a0f61ac36b729"},{"index":5,"label":"name:Run exact-revision qualification on Unix","definitionDigest":"sha256:faa1fdee98344c223a2058053304b9017da3c80365d499770ffb8f5e3ebd0b6c"},{"index":6,"label":"name:Run exact-revision qualification on Windows","authority":"evidence-publication","definitionDigest":"sha256:1006a119a1692e9f2be5925a386649b1d6f73c1e22c8c83a9d43889ab11b5bba"},{"index":7,"label":"name:Retain raw observations and derived report","authority":"evidence-publication","definitionDigest":"sha256:23342e59d6051c04b0f7b0b60357edf856fc105ae26c3f9332e1330bac28bdc6"}]
         }
       ]
     },
