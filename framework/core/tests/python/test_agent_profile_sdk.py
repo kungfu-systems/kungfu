@@ -88,6 +88,37 @@ def create_symlink_or_skip(link: Path, target: Path) -> None:
         raise
 
 
+def test_work_conformance_prefers_the_embedded_product_node_host(tmp_path, monkeypatch):
+    front_door = tmp_path / "kungfu"
+    front_door.write_bytes(b"")
+    checker = tmp_path / "work-profile-conformance.mjs"
+    checker.write_bytes(b"")
+    monkeypatch.setenv("KUNGFU_CONTROLLER_ENTRYPOINT", str(front_door))
+    monkeypatch.setattr(profile_sdk.shutil, "which", lambda _name: "/poison/node")
+
+    command, environment = profile_sdk._work_profile_conformance_invocation(checker)
+
+    assert command == [str(front_door.resolve()), str(checker)]
+    assert environment is not None
+    assert environment["KUNGFU_AS_VARIANT"] == "node"
+    assert environment["KUNGFU_NODE_VARIANT_ENTRY"] == str(checker)
+
+
+def test_work_conformance_falls_back_to_path_node_without_a_product_host(
+    tmp_path, monkeypatch
+):
+    checker = tmp_path / "work-profile-conformance.mjs"
+    checker.write_bytes(b"")
+    monkeypatch.delenv("KUNGFU_CONTROLLER_ENTRYPOINT", raising=False)
+    monkeypatch.delenv("KUNGFU_AGENT_SESSION_EXECUTABLE", raising=False)
+    monkeypatch.setattr(profile_sdk.shutil, "which", lambda _name: "/toolchain/node")
+
+    command, environment = profile_sdk._work_profile_conformance_invocation(checker)
+
+    assert command == ["/toolchain/node", str(checker)]
+    assert environment is None
+
+
 def test_scaffold_writes_the_exact_planned_utf8_bytes(tmp_path):
     source = tmp_path / "profile"
     plan = profile_sdk.scaffold_plan(brief(), source)

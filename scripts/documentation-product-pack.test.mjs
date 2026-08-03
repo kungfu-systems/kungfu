@@ -16,6 +16,7 @@ const require = createRequire(import.meta.url);
 const {
   assemblySelector,
   copyFirstPartyProfile,
+  copyWorkProfileConformance,
   documentationAtlasSource,
   firstPartyProfileFilter,
   requireAssemblySelector,
@@ -138,6 +139,34 @@ test('freeze assembly stages the selected verified Atlas into the product', () =
   assert.match(source, /documentationDestination/);
   assert.match(source, /portableAtlasBundleSource\(\)/);
   assert.match(source, /classification\.json\.gz/);
+});
+
+test('freeze assembly stages the complete Work conformance checker closure', (t) => {
+  const temporary = fs.mkdtempSync(
+    path.join(os.tmpdir(), 'kungfu-work-conformance-pack-'),
+  );
+  t.after(() => fs.rmSync(temporary, { recursive: true, force: true }));
+  copyWorkProfileConformance(temporary, ROOT);
+
+  assert.equal(
+    fs.existsSync(path.join(temporary, 'work-profile-conformance.mjs')),
+    true,
+  );
+  const manifest = JSON.parse(
+    fs.readFileSync(path.join(temporary, 'authority-manifest.json'), 'utf8'),
+  );
+  for (const coordinate of manifest.files) {
+    const installed = path.join(temporary, 'authority', coordinate.path);
+    assert.equal(fs.existsSync(installed), true, coordinate.path);
+    assert.equal(
+      `sha256:${crypto
+        .createHash('sha256')
+        .update(fs.readFileSync(installed))
+        .digest('hex')}`,
+      coordinate.sha256,
+      coordinate.path,
+    );
+  }
 });
 
 test('freeze assembly accepts only the assembled product selector', () => {

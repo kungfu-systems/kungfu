@@ -94,6 +94,26 @@ def _work_profile_conformance_script() -> Path | None:
     return next((candidate for candidate in candidates if candidate.is_file()), None)
 
 
+def _work_profile_conformance_invocation(
+    checker: Path,
+) -> tuple[list[str], dict[str, str] | None]:
+    for variable in (
+        "KUNGFU_CONTROLLER_ENTRYPOINT",
+        "KUNGFU_AGENT_SESSION_EXECUTABLE",
+    ):
+        value = os.environ.get(variable)
+        embedded = Path(value).expanduser().resolve() if value else None
+        if embedded is not None and embedded.is_file():
+            environment = os.environ.copy()
+            environment["KUNGFU_AS_VARIANT"] = "node"
+            environment["KUNGFU_NODE_VARIANT_ENTRY"] = str(checker)
+            return [str(embedded), str(checker)], environment
+    if node := shutil.which("node"):
+        return [node, str(checker)], None
+    message = "Work Profile conformance checker is unavailable"
+    raise ProfileSdkError("work-profile-conformance-checker-unavailable", message)
+
+
 def _work_profile_conformance(
     inspection: Mapping[str, Any], surface: str
 ) -> dict[str, Any] | None:
@@ -123,16 +143,16 @@ def _work_profile_conformance(
             expected=expected,
             actual=actual,
         )
-    checker, node = _work_profile_conformance_script(), shutil.which("node")
-    if checker is None or node is None:
+    checker = _work_profile_conformance_script()
+    if checker is None:
         raise ProfileSdkError(
             "work-profile-conformance-checker-unavailable",
             "Work Profile conformance checker is unavailable",
         )
+    command, environment = _work_profile_conformance_invocation(checker)
     completed = subprocess.run(
         [
-            node,
-            str(checker),
+            *command,
             "--declaration",
             str(declaration_path),
             "--surface",
@@ -141,6 +161,7 @@ def _work_profile_conformance(
         ],
         check=False,
         capture_output=True,
+        env=environment,
         text=True,
     )
     if completed.returncode != 0:

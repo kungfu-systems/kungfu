@@ -304,6 +304,42 @@ function copyFirstPartyProfile(source, destination) {
 }
 
 /**
+ * Stage the same Work Profile conformance closure as the wheel build.  The
+ * assembled product copies Python sources directly, so wheel build_py hooks do
+ * not run for this tree.
+ *
+ * @param {string} destination
+ * @param {string} repositoryRoot
+ */
+function copyWorkProfileConformance(
+  destination,
+  repositoryRoot = path.resolve(CORE, '..', '..'),
+) {
+  const source = path.join(
+    repositoryRoot,
+    'framework',
+    'work-profile-conformance',
+  );
+  fs.cpSync(source, destination, { recursive: true });
+  const manifest = JSON.parse(
+    fs.readFileSync(path.join(source, 'authority-manifest.json'), 'utf8'),
+  );
+  const authorityRoot = path.join(destination, 'authority');
+  const repositoryBoundary = path.resolve(repositoryRoot) + path.sep;
+  for (const coordinate of manifest.files) {
+    const sourceFile = path.resolve(repositoryRoot, coordinate.path);
+    if (!sourceFile.startsWith(repositoryBoundary)) {
+      throw new Error(
+        `[freeze] invalid Work conformance authority path: ${coordinate.path}`,
+      );
+    }
+    const destinationFile = path.join(authorityRoot, coordinate.path);
+    fs.mkdirSync(path.dirname(destinationFile), { recursive: true });
+    fs.copyFileSync(sourceFile, destinationFile);
+  }
+}
+
+/**
  * A hoisted pnpm install can satisfy a Suite dependency only from the
  * repository root, leaving the Suite's own node_modules absent.  Installed
  * Profiles cannot depend on that build-worktree layout, so copy every declared
@@ -900,6 +936,9 @@ function assembleTree(bt) {
     path.join(CORE, '..', 'exit', 'kungfu-exit-bundle.contract.json'),
     path.join(layout.sitePackages, 'kungfu', 'exit_bundle.contract.json'),
   );
+  copyWorkProfileConformance(
+    path.join(layout.sitePackages, 'kungfu', 'work_profile_conformance'),
+  );
   const documentationDestination = path.join(
     layout.sitePackages,
     'kungfu',
@@ -1100,6 +1139,7 @@ if (require.main === module) main();
 module.exports = {
   assemblySelector,
   copyFirstPartyProfile,
+  copyWorkProfileConformance,
   documentationAtlasSource,
   firstPartyProfileFilter,
   portableAtlasBundleSource,
