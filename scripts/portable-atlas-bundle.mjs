@@ -14,6 +14,10 @@ const SELECTOR = '.xinfa/product-documentation-pack.json';
 const OUTPUT = '.xinfa/product-atlas-bundle.json';
 const CLASSIFICATION_BUNDLE = '.xinfa/portable-atlas-classification.json.gz';
 const WITNESS = '.buildchain/kfd/kfd-1/documentation-pack.witness.json';
+const PORTABLE_GZIP_OPTIONS = {
+  level: 9,
+  strategy: zlib.constants.Z_HUFFMAN_ONLY,
+};
 const NATIVE_EMBEDDED = [
   'crates/shifu/agent/brief.md',
   'crates/shifu/agent/capabilities.json',
@@ -292,9 +296,10 @@ export function compilePortableBundle(options = {}) {
     silentOmissions: 0,
   };
   const classificationBytes = bytes(classificationCore);
-  const classificationCompressed = zlib.gzipSync(classificationBytes, {
-    level: 9,
-  });
+  const classificationCompressed = zlib.gzipSync(
+    classificationBytes,
+    PORTABLE_GZIP_OPTIONS,
+  );
   const nativeEmbeddedBytes = NATIVE_EMBEDDED.filter(
     (relative) => !relative.startsWith('.xinfa/'),
   ).reduce(
@@ -307,7 +312,7 @@ export function compilePortableBundle(options = {}) {
         (relative) => fs.readFileSync(path.join(ROOT, relative)),
       ),
     ),
-    { level: 9 },
+    PORTABLE_GZIP_OPTIONS,
   ).length;
   const totalCompressedBytes =
     compressedBytes +
@@ -532,7 +537,7 @@ if (
           );
         fs.writeFileSync(
           path.join(ROOT, CLASSIFICATION_BUNDLE),
-          zlib.gzipSync(classificationBytes, { level: 9 }),
+          zlib.gzipSync(classificationBytes, PORTABLE_GZIP_OPTIONS),
         );
       } else process.stdout.write(output);
     } else if (command === 'verify') {
