@@ -116,6 +116,7 @@ test('Project tour speed scales every presentation delay without changing the de
   assert.equal(parseProjectTourSpeed(undefined), 1);
   assert.equal(parseProjectTourSpeed('0.75'), 0.75);
   assert.equal(parseProjectTourSpeed('0.5'), 0.5);
+  assert.equal(parseProjectTourSpeed('4'), 4);
   assert.deepEqual(projectTourPacingForSpeed(1), PROJECT_TOUR_PACING);
   assert.deepEqual(projectTourPacingForSpeed(0.5), {
     guideDwellMs: 16000,
@@ -125,8 +126,8 @@ test('Project tour speed scales every presentation delay without changing the de
     summaryDwellMs: 3600,
     finalDwellMs: 6400,
   });
-  assert.throws(() => parseProjectTourSpeed('0.1'), /between 0.25 and 2/u);
-  assert.throws(() => parseProjectTourSpeed('fast'), /between 0.25 and 2/u);
+  assert.throws(() => parseProjectTourSpeed('0.1'), /between 0.25 and 4/u);
+  assert.throws(() => parseProjectTourSpeed('fast'), /between 0.25 and 4/u);
 });
 
 test('Project tour keeps playback speed at the right edge of the top bar', async () => {
