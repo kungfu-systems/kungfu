@@ -90,7 +90,7 @@
             "product-alpha",
             "product-binaries"
           ],
-          "sourceRoot": "sha256:ac59ab8ac7eafa7ff1829d94c33e7f5453aa4109ad95ddc5d1b35f7df1e6b9ce"
+          "sourceRoot": "sha256:26c486cda6e8c06f7f1da3ff033c5c3c32971a39b8727c10b05b5560a0efb961"
         },
         {
           "path": ".github/workflows/aws-us-linux-burst-qualification.yml",
@@ -122,7 +122,7 @@
             "product-stable",
             "product-binaries"
           ],
-          "sourceRoot": "sha256:1d1c0bdba86de714dc03e58f45208502ec7d98f8531a9f8558ab72b3e6bfd06b"
+          "sourceRoot": "sha256:2a048484f383035e23ce4e5c390cb35e2b64b7bef24fcb9a0b011f965ae8efad"
         },
         {
           "path": ".github/workflows/buildchain-validate.yml",
@@ -846,5 +846,5 @@
       }
     }
   ],
-  "registryRoot": "sha256:a911c02f9b2d30feba4c4b059e65e79d58fd98847b3cfe4c26bdd413d3bcba8c"
+  "registryRoot": "sha256:5cdcd5acab6a9b99018451d2ffbe4669c5abed13f640b9480456ff93216565ab"
 }
