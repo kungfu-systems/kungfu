@@ -145,6 +145,50 @@ test('migration approval ignores empty mutable partition churn', (t) => {
   );
 });
 
+test('legacy inventory skips a partition that vanishes after discovery', (t) => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'shifu-conan-race-'));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const vanished = path.join(root, 'development-888888888888');
+  fs.mkdirSync(vanished);
+  const originalStatSync = fs.statSync;
+  t.mock.method(fs, 'statSync', (candidate, ...args) => {
+    if (candidate === vanished) {
+      fs.rmSync(vanished, { recursive: true });
+      const error = new Error(
+        `ENOENT: no such file or directory, stat '${candidate}'`,
+      );
+      error.code = 'ENOENT';
+      throw error;
+    }
+    return originalStatSync(candidate, ...args);
+  });
+
+  const inventory = inventoryLegacyPartitions(root);
+  assert.equal(inventory.partitionCount, 1);
+  assert.equal(inventory.eligiblePartitionCount, 0);
+  assert.deepEqual(inventory.partitions[0], {
+    partition: 'development-888888888888',
+    partitionDigest: inventory.partitions[0].partitionDigest,
+    sizeBytes: 0,
+    ageDays: null,
+    modifiedAt: null,
+    lock: { state: 'unavailable' },
+    identity: {
+      state: 'vanished',
+      confidence: 'none',
+      recipeCount: 0,
+      packageCount: 0,
+      references: [],
+      exactReferences: [],
+    },
+    migrationEligibility: 'skipped-vanished',
+  });
+  assert.equal(
+    migrationPlan(inventory).skippedPartitions[0].reason,
+    'skipped-vanished',
+  );
+});
+
 test('legacy inventory rejects artifact paths that escape the package root', (t) => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'shifu-conan-path-'));
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));

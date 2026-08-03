@@ -235,8 +235,9 @@ node scripts/shifu-conan-legacy.mjs migrate --storage-root <profile-storage-root
 
 The inventory reports count, byte size, age, lock state, reference summaries,
 exact identity confidence, and migration eligibility. Migration planning skips
-live, stale, unreadable, corrupt, empty, and identity-ambiguous partitions. It
-also skips legacy download, build, and generator directories because their
+live, stale, unreadable, corrupt, empty, identity-ambiguous, and
+snapshot-vanished partitions. It also skips legacy download, build, and
+generator directories because their
 paths do not prove Conan package identity. The plan emits an approval digest
 and an exact follow-up command. The digest binds the remote, storage root,
 eligible partition, and exact RREV/package_id/PREV set while ignoring newly

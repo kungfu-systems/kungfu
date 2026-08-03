@@ -168,7 +168,29 @@ export function inventoryLegacyPartitions(storageRoot, now = Date.now()) {
   }
   const partitions = names.map((name) => {
     const partitionRoot = path.join(absoluteRoot, name);
-    const stat = fs.statSync(partitionRoot);
+    let stat;
+    try {
+      stat = fs.statSync(partitionRoot);
+    } catch (error) {
+      if (error?.code !== 'ENOENT') throw error;
+      return {
+        partition: name,
+        partitionDigest: digest(name),
+        sizeBytes: 0,
+        ageDays: null,
+        modifiedAt: null,
+        lock: { state: 'unavailable' },
+        identity: {
+          state: 'vanished',
+          confidence: 'none',
+          recipeCount: 0,
+          packageCount: 0,
+          references: [],
+          exactReferences: [],
+        },
+        migrationEligibility: 'skipped-vanished',
+      };
+    }
     const lock = lockState(partitionRoot);
     const identity = cacheIdentity(partitionRoot);
     let eligibility = 'eligible';
