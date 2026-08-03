@@ -17,6 +17,7 @@ import pytest
 from jsonschema import Draft202012Validator
 
 from kungfu import config
+from kungfu.agent import native_launch
 from kungfu.agent import run_agent
 from kungfu.agent import runtime_profiles
 from kungfu.agent import session_contract
@@ -1389,6 +1390,7 @@ def test_native_interactive_spawns_provider_before_observer_thread(
 
     monkeypatch.setattr(run_agent.subprocess, "Popen", ProviderProcess)
     monkeypatch.setattr(run_agent.threading, "Thread", ObserverThread)
+    monkeypatch.setattr(native_launch, "_native_terminal_route", lambda _provider: None)
 
     assert (
         run_agent.run_native_interactive(

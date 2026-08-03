@@ -10,6 +10,7 @@ import sys
 from typing import Protocol
 
 from kungfu.agent.session_contract import semantic_root
+from kungfu.workspace import WorkspaceTargetRequired, resolve_workspace_target
 
 
 MAX_RESPONSE_BYTES = 1024 * 1024
@@ -60,6 +61,32 @@ def endpoint_for_runtime(runtime_dir):
         return rf"\\.\pipe\kungfu-agent-session-{scope}"
     socket_root = Path("/tmp") / f"kungfu-agent-session-{os.getuid()}"
     return str(socket_root / f"{scope}.sock")
+
+
+def invoke_for_project(request, *, fallback_runtime_dir, endpoint=None, cwd=None):
+    """Invoke the project surface and revive its detached host when needed."""
+
+    environment_endpoint = os.environ.get("KUNGFU_AGENT_SESSION_ENDPOINT")
+    endpoint_is_explicit = endpoint is not None or environment_endpoint is not None
+    resolved_endpoint = endpoint or environment_endpoint
+    runtime_dir = None
+    if not resolved_endpoint:
+        try:
+            runtime_dir = str(
+                resolve_workspace_target(
+                    "read-only", cwd=cwd or os.getcwd()
+                ).runtime_dir
+            )
+        except WorkspaceTargetRequired:
+            runtime_dir = str(fallback_runtime_dir)
+        resolved_endpoint = endpoint_for_runtime(runtime_dir)
+    try:
+        return invoke(request, endpoint=resolved_endpoint)
+    except OSError:
+        if endpoint_is_explicit:
+            raise
+        resolved_endpoint = ensure(runtime_dir or str(fallback_runtime_dir))
+        return invoke(request, endpoint=resolved_endpoint)
 
 
 def _resolve_native_entry():

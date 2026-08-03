@@ -1126,7 +1126,12 @@ def session_action(ctx, operation, input_file, endpoint, as_json):
         ),
     }
     try:
-        payload = session_surface.invoke(request, endpoint=endpoint)
+        payload = session_surface.invoke_for_project(
+            request,
+            fallback_runtime_dir=ctx.runtime_dir,
+            endpoint=endpoint,
+            cwd=os.getcwd(),
+        )
     except (OSError, ValueError) as exc:
         raise click.ClickException(str(exc)) from exc
     if as_json:
