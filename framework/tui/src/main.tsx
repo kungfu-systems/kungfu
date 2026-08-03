@@ -980,6 +980,7 @@ function ProductHost({
   const [surface, setSurfaceState] = React.useState<ProductSurface>(
     initialProductSurface({ playbackMode, firstLaunch, emptyState }),
   );
+  const startupSurface = React.useRef(surface).current;
   const startupAnimationEnabled = React.useMemo(
     () => terminalAnimationsEnabled(process.env),
     [],
@@ -1178,7 +1179,7 @@ function ProductHost({
     if (
       !shouldStartContextualProjectRestore({
         playbackMode,
-        surface,
+        surface: startupSurface,
         emptyState,
         startupProjectRoot,
       })
@@ -1271,7 +1272,7 @@ function ProductHost({
     projects,
     setSurface,
     startupProjectRoot,
-    surface,
+    startupSurface,
   ]);
   const autoplay = React.useMemo(
     () =>

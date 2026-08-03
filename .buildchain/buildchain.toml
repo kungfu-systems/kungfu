@@ -61,7 +61,7 @@ minimum_soak_seconds = 86400
 required_checks = ["alpha-release"]
 ledger_ref = "buildchain/candidate-ledger/v4/v4.0"
 auto_promote = true
-auto_merge = false
+auto_merge = true
 
 [badges]
 release_passport = "https://github.com/kungfu-systems/kungfu/releases/latest/download/buildchain.release.json"

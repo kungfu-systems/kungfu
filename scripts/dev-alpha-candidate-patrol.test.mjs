@@ -32,7 +32,7 @@ test('candidate patrol is a thin Buildchain caller with exact channel and eviden
     /uses: kungfu-systems\/buildchain\/.github\/workflows\/dev-alpha-candidate-patrol\.yml@([0-9a-f]{40})/u,
   )?.[1];
   assert.match(reusableRef || '', /^[0-9a-f]{40}$/u);
-  assert.equal(reusableRef, 'f6b0cddea283495414ac3481364c1c27ae5c6485');
+  assert.equal(reusableRef, '978520e86134683f66b607bc70c2d18f623e2410');
   assert.match(
     source,
     new RegExp(
@@ -83,9 +83,11 @@ test('candidate patrol is a thin Buildchain caller with exact channel and eviden
     source,
     /promotion-token: \$\{\{ secrets\.KUNGFU_GITHUB_TOKEN \}\}/u,
   );
+  assert.match(source, /auto-merge: true/u);
+  assert.match(source, /merge-method: rebase/u);
   assert.doesNotMatch(
     source,
-    /npm publish|gh release create|git tag|auto-merge/iu,
+    /npm publish|gh release create|git tag|gh pr merge/iu,
   );
 });
 

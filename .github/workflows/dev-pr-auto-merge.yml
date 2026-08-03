@@ -1,0 +1,80 @@
+# SPDX-License-Identifier: Apache-2.0
+
+name: Dev PR Auto Merge
+
+on:
+  workflow_run:
+    workflows:
+      - Core affected native
+    types:
+      - completed
+  schedule:
+    # Recovery patrol for ready PRs whose final signal did not emit a usable event.
+    - cron: "23,53 * * * *"
+  workflow_dispatch:
+    inputs:
+      dry-run:
+        description: Evaluate eligible PRs without admitting them to the merge queue
+        required: false
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+  pull-requests: read
+
+concurrency:
+  group: dev-pr-auto-merge-${{ github.repository }}-${{ github.event.repository.default_branch }}
+  cancel-in-progress: false
+
+jobs:
+  resolve-target:
+    runs-on: ubuntu-24.04
+    permissions: {}
+    outputs:
+      target-branch: ${{ steps.target.outputs.target-branch }}
+    steps:
+      - name: Resolve the active dev channel
+        id: target
+        shell: bash
+        env:
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        run: |
+          set -euo pipefail
+          case "$DEFAULT_BRANCH" in
+            dev/v*/v*) ;;
+            *)
+              echo "repository default branch is not a dev channel: $DEFAULT_BRANCH" >&2
+              exit 1
+              ;;
+          esac
+          echo "target-branch=$DEFAULT_BRANCH" >>"$GITHUB_OUTPUT"
+
+  admission:
+    needs: resolve-target
+    if: >-
+      github.event_name != 'workflow_run' ||
+      github.event.workflow_run.event == 'pull_request'
+    permissions:
+      checks: read
+      contents: write
+      pull-requests: write
+      statuses: read
+    uses: kungfu-systems/buildchain/.github/workflows/dev-pr-auto-merge.yml@978520e86134683f66b607bc70c2d18f623e2410
+    with:
+      buildchain-ref: 978520e86134683f66b607bc70c2d18f623e2410
+      target-branch: ${{ needs.resolve-target.outputs.target-branch }}
+      required-status-checks: |-
+        Candidate source acceptance / check
+        affected-native / linux
+      ready-label: state/ready
+      block-labels: state/blocked,blocked,do-not-merge,work-in-progress
+      allowed-head-prefixes: feature/,fix/,chore/,docs/,ci/,refactor/
+      require-approval: true
+      same-repository-only: true
+      max-merges: 1
+      merge-method: rebase
+      landing-mode: queue
+      dry-run: ${{ github.event_name == 'workflow_dispatch' && inputs.dry-run }}
+    secrets:
+      github-token: ${{ secrets.KUNGFU_GITHUB_TOKEN }}
