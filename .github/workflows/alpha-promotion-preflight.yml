@@ -77,12 +77,15 @@ jobs:
           test -z "$(git status --porcelain)"
 
       - name: Verify early source contracts
+        if: ${{ matrix.platform == 'linux-x64' }}
         shell: bash
         run: |
           # shifu-entry-contract: allow setup-node to bypass the Windows Shifu bootstrap before native preparation
           node --test \
             scripts/alpha-promotion-preflight.test.mjs \
-            product/scripts/cli-surface-qualification.test.mjs
+            product/scripts/cli-surface-qualification.test.mjs \
+            scripts/check-upgrade-qualification.test.mjs \
+            scripts/upgrade-publication-admission.test.mjs
 
       - name: Verify ADR cutover history is locally available
         if: ${{ runner.os == 'Linux' }}
