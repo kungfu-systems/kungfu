@@ -131,10 +131,10 @@ jobs:
       issues: write
       id-token: write
       pull-requests: write
-    uses: kungfu-systems/buildchain/.github/workflows/release-candidate-promote.yml@5246afd4ff5608f6e8d09fb71003992119364880 # pre-upload transport smoke authority
+    uses: kungfu-systems/buildchain/.github/workflows/release-candidate-promote.yml@5f4d81bf79da5b8fbd62f3c7dc75361ec92cab46 # signing run-attempt and pre-upload transport smoke authority
     with:
       channel: ${{ startsWith(inputs.target-ref || github.event.pull_request.base.ref, 'alpha/') && 'alpha' || 'release' }}
-      buildchain-ref: 5246afd4ff5608f6e8d09fb71003992119364880
+      buildchain-ref: 5f4d81bf79da5b8fbd62f3c7dc75361ec92cab46
       target-ref: ${{ inputs.target-ref || github.event.pull_request.base.ref }}
       target-sha: ${{ inputs.target-sha || github.event.pull_request.merge_commit_sha || github.sha }}
       buildchain-contract-lock-path: ${{ startsWith(inputs.target-ref || github.event.pull_request.base.ref, 'alpha/') && '.buildchain/alpha-contract-lock.json' || '.buildchain/contract-lock.json' }}
