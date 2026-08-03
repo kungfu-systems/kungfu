@@ -80,11 +80,6 @@
       "prefix": "kungfu-exit-verify",
       "target": "kungfu exit verify",
       "source": "framework/core/src/python/kungfu/exit_verifier.py"
-    },
-    {
-      "prefix": "python -m kungfu.exit_verifier",
-      "target": "kungfu exit verify",
-      "source": "framework/core/src/python/kungfu/exit_verifier.py"
     }
   ],
   "mutationRules": {
