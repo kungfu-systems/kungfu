@@ -380,6 +380,14 @@ export function sourceAcceptancePlan(files, evidenceBaseCommit = '') {
     ['no Bash scripts', 'scripts/no-bash-guard.mjs'],
     ['Shifu entry contract', 'scripts/check-shifu-entry-contract.mjs'],
     ['Shifu cache contract', 'scripts/check-shifu-cache-contract.mjs'],
+    ...(coldReadOnlySourceAcceptance
+      ? []
+      : [
+          [
+            'Shifu Production Graph contract',
+            'framework/production-graph/check.mjs',
+          ],
+        ]),
     [
       'Shifu Documentation Protocol',
       'scripts/check-shifu-documentation-contract.mjs',
@@ -677,6 +685,9 @@ export function sourceAcceptancePlan(files, evidenceBaseCommit = '') {
         'scripts/check-readonly-source-routes.test.mjs',
         'scripts/check-shifu-entry-contract.test.mjs',
         'scripts/check-shifu-cache-contract.test.mjs',
+        ...(coldReadOnlySourceAcceptance
+          ? []
+          : ['framework/production-graph/check.test.mjs']),
         'scripts/check-health-diagnostics-contract.test.mjs',
         'scripts/shifu-cache-runtime.test.mjs',
         'scripts/shifu-conan-publish.test.mjs',
