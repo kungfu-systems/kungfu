@@ -19,7 +19,7 @@
     "dev": "tsx src/main.tsx",
     "build": "tsc",
     "test": "tsx --test src/*.test.ts src/compatibility/*.test.ts",
-    "clean": "rimraf dist",
+    "clean": "node -e \"fs.rmSync('dist',{recursive:true,force:true})\"",
     "bundle": "node build-bundle.mjs"
   },
   "dependencies": {
@@ -34,7 +34,6 @@
     "@types/node": "^22.0.0",
     "@types/react": "^18.3.3",
     "esbuild": "^0.28.1",
-    "rimraf": "^6.0.0",
     "tsx": "^4.19.0",
     "typescript": "^5.6.0"
   }

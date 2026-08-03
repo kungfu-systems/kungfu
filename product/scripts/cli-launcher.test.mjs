@@ -18,6 +18,12 @@ test('CLI launchers defer install ownership to the colocated product manifest', 
   const windows = cliLauncherContent('win32');
   assert.match(windows, /%~dp0runtime\\kungfu\.exe/);
   assert.match(windows, /KF_BUNDLED_EXTENSION_ROOT=%~dp0extensions/);
+  assert.match(windows, /set "PYTHONUTF8=1"/);
+  assert.match(windows, /set "PYTHONIOENCODING=utf-8"/);
+  assert.ok(
+    windows.indexOf('set "PYTHONIOENCODING=utf-8"') <
+      windows.indexOf('"%~dp0runtime\\kungfu.exe" %*'),
+  );
   assert.doesNotMatch(windows, /KUNGFU_INSTALL_SOURCE/);
   assert.doesNotMatch(windows, /electron/i);
 });

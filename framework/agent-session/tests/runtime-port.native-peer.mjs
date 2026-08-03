@@ -78,6 +78,7 @@ try {
       process.once('SIGINT', resolve);
     });
   } else {
+    await waitFor(() => port.canFollow(), 'reader coordinator command channel');
     port.follow({
       mode: 'live',
       role: 'system',

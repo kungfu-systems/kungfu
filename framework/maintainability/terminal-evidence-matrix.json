@@ -1,5 +1,5 @@
 {
-  "schema": "kungfu.maintainability-terminal-evidence-matrix/v2",
+  "schema": "kungfu.maintainability-terminal-evidence-matrix/v3",
   "goalId": "2026-07-29-kungfu-terminal-review-remediation",
   "predecessor": {
     "assignmentId": "2026-07-27-kungfu-maintainability-terminal-closure",
@@ -8,7 +8,7 @@
   "sourceBinding": {
     "repository": "kungfu-systems/kungfu",
     "protectedBranch": "dev/v4/v4.0",
-    "exactHeadRule": "The verifier reads Git HEAD, the protected ref, and a retained GitHub delivery snapshot. Evidence never chooses its own source, pull request, or merge identity.",
+    "exactHeadRule": "The verifier reads Git HEAD and independently observes the protected ref, pull request, approval, terminal-review attestation, workflow runs, jobs, and artifacts through GitHub APIs. Evidence never chooses its own live source, delivery, review, or qualification identity.",
     "alreadyMergedPrerequisites": [
       {
         "pullRequest": 1553,
@@ -21,34 +21,72 @@
     ]
   },
   "terminalEvidence": {
-    "schema": "kungfu.maintainability-terminal-evidence/v2",
+    "schema": "kungfu.maintainability-terminal-evidence/v3",
     "verifier": "framework/maintainability/terminal-evidence.mjs",
-    "sourceWorkflow": ".github/workflows/affected-native-pr.yml",
-    "platformPreflightWorkflow": ".github/workflows/alpha-promotion-preflight.yml",
-    "productWorkflow": ".github/workflows/build.yml",
-    "requiredSourceJobs": [
-      "Candidate source acceptance / check",
-      "affected-native / linux"
+    "runGroups": [
+      {
+        "role": "source",
+        "workflowPath": ".github/workflows/affected-native-pr.yml",
+        "events": ["merge_group"],
+        "requiredJobs": [
+          "Candidate source acceptance / check",
+          "affected-native / linux"
+        ]
+      },
+      {
+        "role": "preflight",
+        "workflowPath": ".github/workflows/alpha-promotion-preflight.yml",
+        "events": ["push", "workflow_dispatch"],
+        "requiredJobs": [
+          "Linux source and Cargo probe",
+          "macOS source and Cargo probe",
+          "Windows source and Cargo probe",
+          "Aggregate exact-source receipt"
+        ]
+      },
+      {
+        "role": "product",
+        "workflowPath": ".github/workflows/build.yml",
+        "events": ["workflow_dispatch"],
+        "requiredJobs": [
+          "build / Linux x64",
+          "build / macOS ARM64",
+          "build / Windows x64"
+        ],
+        "requiredArtifacts": [
+          {"platform": "linux-x64", "nameTemplate": "kungfu-relay-manifest-{platform}-{commit}"},
+          {"platform": "macos-arm64", "nameTemplate": "kungfu-relay-manifest-{platform}-{commit}"},
+          {"platform": "windows-x64", "nameTemplate": "kungfu-relay-manifest-{platform}-{commit}"}
+        ]
+      },
+      {
+        "role": "dev-verify",
+        "workflowPath": ".github/workflows/dev-verify-patrol.yml",
+        "events": ["schedule", "workflow_dispatch"],
+        "requiredJobs": [
+          "verify / Gate profile / macOS ARM64",
+          "verify / Gate profile / Windows x64",
+          "verify / Gate profile / Linux x64"
+        ]
+      },
+      {
+        "role": "agent-patrol",
+        "workflowPath": ".github/workflows/kungfu-agent-patrol.yml",
+        "events": ["schedule", "workflow_dispatch"],
+        "requiredJobs": ["agent-121 / OpenCode Qwen3-Coder patrol"]
+      }
     ],
-    "requiredPreflightPlatforms": [
-      "linux-x64",
-      "macos-arm64",
-      "windows-x64"
-    ],
-    "requiredProductPlatforms": [
-      "linux-x64",
-      "macos-arm64",
-      "windows-x64"
-    ],
-    "artifactIdentityRule": "Every platform run and artifact resolves to the live protected commit. Raw artifact roots recompute from retained bytes; native Assignment and normalized delivery roots recompute with their declared canonical-JSON protocol and are checked against role-specific fields.",
-    "reviewRule": {
+    "pullRequestReviewRule": {
       "reviewer": "kungfu-origin",
-      "decision": "APPROVED",
-      "commit": "exact protected commit",
-      "freshContext": true,
-      "maximumOpenSeverity": "no P0, no P1, and no material P2 in scope"
+      "decision": "APPROVED"
     },
-    "assignmentRule": "The current Assignment request, capture receipt, exact-head completion claim, fit independent native review, accepted close decision, and sealed state are retained under their native canonical roots. Predecessor rows are closed projections of the listed immutable predecessor seal, not actionable work."
+    "terminalReviewRule": {
+      "reviewer": "kungfu-origin",
+      "verdict": "fit",
+      "freshContext": true,
+      "maximumOpenSeverity": "none",
+      "attestationSchema": "kungfu.terminal-review-attestation/v1"
+    }
   },
   "exceptions": [],
   "rows": [

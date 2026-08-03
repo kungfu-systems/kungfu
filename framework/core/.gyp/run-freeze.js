@@ -6,7 +6,7 @@
 // 只触发 `conan build`（占位，不跑 freezer）。本脚本把 freeze 做成 `./shifu freeze`
 // 一步可复现；产物腿现只剩 assemble。
 //
-// 冻结腿（nuitka/pyinstaller）已于 2026-07-11 退役（KF-ADR-019f86da-4f90-73ff-9543-f0a4f0beef05 stage 2 收口：
+// 旧产品打包腿已于 2026-07-11 退役（KF-ADR-019f86da-4f90-73ff-9543-f0a4f0beef05 stage 2 收口：
 // macOS→Linux→Windows 全部组装完整 CPython 树，Windows 为最后一块平台）；去留记账
 // 见 docs/development/buildchain.md「Freeze retirement ledger」。
 //
@@ -45,14 +45,21 @@ function buildType() {
   return shell.getConfigValue('build_type') || 'Release';
 }
 
-function freezer() {
-  // KF-ADR-019f86da-4f90-73ff-9543-f0a4f0beef05 stage 2 rolled out platform by platform and is now complete:
-  // macOS, Linux, and Windows all ship the assembled runtime. The frozen legs
-  // retire with this last platform (docs/development/buildchain.md「Freeze retirement
-  // ledger」). An explicit config value can still select any surviving leg.
-  const explicit = shell.getConfigValue('freezer');
+function assemblySelector(explicit = shell.getConfigValue('freezer')) {
+  // The legacy config key remains only as a fail-closed compatibility input.
+  // Every supported platform ships the assembled runtime.
   if (explicit) return explicit;
   return 'assemble';
+}
+
+/** @param {string} selector */
+function requireAssemblySelector(selector) {
+  if (selector !== 'assemble') {
+    throw new Error(
+      `[assembly] retired product packager selector rejected; expected assemble, received ${selector}`,
+    );
+  }
+  return selector;
 }
 
 // kungfu/__init__ 读 pykungfu 同目录的 kungfubuildinfo.json 取 version；缺则生成。
@@ -81,7 +88,7 @@ function ensureBuildInfo(bt) {
   return info;
 }
 
-// app/electron 侧 node native：kfc python 进程不 import，Nuitka 不带，需从 build/<type> 补拷。
+// app/electron 侧 node native：Python 进程不 import，组装树需从 build/<type> 补拷。
 // app 栈通过 @kungfu-tech/core/dist/kungfu/<x> 解析它们（getKfcDir / webpack require.resolve）。
 const APP_NATIVE = [
   'drone.node',
@@ -491,13 +498,9 @@ function findFileShallow(root, re) {
 // kungfu.dll 补拷进 dist/kungfu。
 //
 // 缘由：MSVC 多配置生成器与 Mac/Linux 单配置生成器的产物布局不一致——Win 把
-// pykungfu.<abi>.pyd 产在 build/ 根、libnode.dll 产在 build/<bt>；而 Nuitka freeze 用
-// PYTHONPATH=build/<bt> 跟随 `import pykungfu`，于是在 Win 上既找不到 pykungfu(.pyd 不在
-// build/<bt>)、也不会连带 libnode.dll(非 pykungfu 同目录、Py3.8+ 扩展模块 DLL 依赖也不认
-// PATH)，冻结 kfc 运行时 `import pykungfu` 报 ModuleNotFound / DLL load failed。
-// Mac/Linux 无此问题：pykungfu.so 就在 build/<bt>，其 libnode 依赖经 rpath(@loader_path/
-// $ORIGIN) 解析、Nuitka 依赖扫描连带打包，故 freeze 自洽（本函数在非 Win 直接返回）。
-// 冻结 kfc 可执行会加载与其同目录的 pykungfu.pyd + libnode.dll（已实测通过），故补拷即可。
+// pykungfu.<abi>.pyd 产在 build/ 根、libnode.dll 产在 build/<bt>。组装树必须把两者
+// 显式放进扁平 dist 根，供完整 CPython 与 Rust trunk 的 variant dispatch 使用。
+// Mac/Linux 的 pykungfu.so 已位于 build/<bt>，且原生依赖由 origin-relative rpath 解析。
 /** @param {string} bt */
 function copyPyBindingWin(bt) {
   if (!isWin) return;
@@ -573,9 +576,8 @@ function copyPyBindingWin(bt) {
 
 // --------------------------------------------------------------- assemble
 //
-// KF-ADR-019f86da-4f90-73ff-9543-f0a4f0beef05 stage 2: the host runs a complete, exact CPython tree instead of a
-// frozen subset. The assembled dist keeps the flat dist/kungfu root (natives,
-// contract, wheels — identical to the frozen layout) and adds the interpreter
+// KF-ADR-019f86da-4f90-73ff-9543-f0a4f0beef05 stage 2: the host runs a complete, exact CPython tree. The assembled
+// dist keeps the flat dist/kungfu root (natives, contract, wheels) and adds the interpreter
 // tree under dist/kungfu/python. The kungfu package ships as sources at the
 // dist root, wired into the tree through a site-packages .pth (never through
 // PYTHON* environment variables, which would leak into satellite envs). The
@@ -1015,14 +1017,8 @@ function copyWheel() {
 
 function main() {
   const bt = buildType();
-  const fz = freezer();
-  console.log(`[freeze] freezer=${fz} build_type=${bt}`);
-  if (fz !== 'assemble') {
-    console.error(
-      `[freeze] 冻结腿（nuitka/pyinstaller）已于 2026-07-11 退役（KF-ADR-019f86da-4f90-73ff-9543-f0a4f0beef05 stage 2 收口）；现只剩 assemble，收到 freezer=${fz}`,
-    );
-    process.exit(1);
-  }
+  const selector = requireAssemblySelector(assemblySelector());
+  console.log(`[freeze] product_form=${selector} build_type=${bt}`);
   assembleTree(bt);
   copyWheel();
 }
@@ -1030,7 +1026,9 @@ function main() {
 if (require.main === module) main();
 
 module.exports = {
+  assemblySelector,
   copyFirstPartyProfile,
   documentationAtlasSource,
   firstPartyProfileFilter,
+  requireAssemblySelector,
 };

@@ -14,9 +14,11 @@ import zlib from 'node:zlib';
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const require = createRequire(import.meta.url);
 const {
+  assemblySelector,
   copyFirstPartyProfile,
   documentationAtlasSource,
   firstPartyProfileFilter,
+  requireAssemblySelector,
 } = require(path.join(ROOT, 'framework', 'core', '.gyp', 'run-freeze.js'));
 const SELECTOR = JSON.parse(
   fs.readFileSync(path.join(ROOT, '.xinfa', 'product-documentation-pack.json')),
@@ -94,6 +96,17 @@ test('freeze assembly stages the selected verified Atlas into the product', () =
   assert.match(source, /documentationAtlasSource\(\)/);
   assert.match(source, /product-documentation-pack\.json/);
   assert.match(source, /agent', 'documentation'/);
+});
+
+test('freeze assembly accepts only the assembled product selector', () => {
+  assert.equal(assemblySelector(''), 'assemble');
+  assert.equal(requireAssemblySelector('assemble'), 'assemble');
+  for (const retired of ['nuitka', ['py', 'installer'].join('')]) {
+    assert.throws(
+      () => requireAssemblySelector(retired),
+      /retired product packager selector rejected/u,
+    );
+  }
 });
 
 test('freeze replaces transient workspace links with stable Suite members', (t) => {

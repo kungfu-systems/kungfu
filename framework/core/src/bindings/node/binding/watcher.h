@@ -62,6 +62,8 @@ public:
 
   Napi::Value RequestReadFromPublic(const Napi::CallbackInfo &info);
 
+  Napi::Value CanRequestReadFromPublic(const Napi::CallbackInfo &info);
+
   Napi::Value DrainCustomData(const Napi::CallbackInfo &info);
 
   Napi::Value GetRuntimeStats(const Napi::CallbackInfo &info);

@@ -8,6 +8,7 @@ import os
 import platform
 import signal
 import subprocess
+import tempfile
 import threading
 import time
 from contextlib import contextmanager
@@ -58,7 +59,6 @@ SCHEMA_RESULT = runtime_service_config.SCHEMA_RESULT
 SERVICE_ID = runtime_service_config.SERVICE_ID
 SERVICE_NAME = runtime_service_config.SERVICE_NAME
 SUPERVISOR_ALWAYS_ON_ENV = runtime_service_config.SUPERVISOR_ALWAYS_ON_ENV
-sys = runtime_service_config.sys
 ServicePlan = runtime_service_config.ServicePlan
 _shell_join = runtime_service_config._shell_join
 shlex_quote = runtime_service_config.shlex_quote
@@ -68,7 +68,6 @@ supervisor_state_dir = runtime_service_config.supervisor_state_dir
 supervisor_log_path = runtime_service_config.supervisor_log_path
 entry_command = runtime_service_config.entry_command
 command_env = runtime_service_config.command_env
-_independent_process_env = runtime_service_config._independent_process_env
 coordinator_run_command = runtime_service_config.coordinator_run_command
 assessment_worker_command = runtime_service_config.assessment_worker_command
 run_assessment_worker = runtime_service_config.run_assessment_worker
@@ -177,17 +176,34 @@ def _now() -> float:
 
 def _json_write(path: Path, payload: dict[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    tmp = path.with_suffix(path.suffix + ".tmp")
-    tmp.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", "utf-8")
-    replace_attempts = 20 if platform.system() == "Windows" else 1
-    for attempt in range(replace_attempts):
-        try:
-            os.replace(tmp, path)
-            return
-        except PermissionError:
-            if attempt == replace_attempts - 1:
-                raise
-            time.sleep(0.05)
+    temporary: Path | None = None
+    try:
+        with tempfile.NamedTemporaryFile(
+            mode="w",
+            encoding="utf-8",
+            newline="\n",
+            dir=path.parent,
+            prefix=f".{path.name}.",
+            suffix=".tmp",
+            delete=False,
+        ) as output:
+            temporary = Path(output.name)
+            output.write(json.dumps(payload, indent=2, sort_keys=True) + "\n")
+        replace_attempts = 20 if platform.system() == "Windows" else 1
+        for attempt in range(replace_attempts):
+            try:
+                os.replace(temporary, path)
+                return
+            except PermissionError:
+                if attempt == replace_attempts - 1:
+                    raise
+                time.sleep(0.05)
+    finally:
+        if temporary is not None:
+            try:
+                temporary.unlink()
+            except FileNotFoundError:
+                pass
 
 
 def _json_read(path: Path) -> dict[str, Any]:
@@ -1355,15 +1371,13 @@ class ProcessRuntimeHost:
         )
         with supervisor_log_path(self.config_home).open("ab") as log:
             kwargs: dict[str, Any] = {
-                "env": _independent_process_env(
-                    command_env(
-                        home,
-                        runtime_dir,
-                        self.log_level,
-                        self.config_home,
-                        runtime_generation=runtime_generation,
-                        runtime_image=self.runtime_image,
-                    )
+                "env": command_env(
+                    home,
+                    runtime_dir,
+                    self.log_level,
+                    self.config_home,
+                    runtime_generation=runtime_generation,
+                    runtime_image=self.runtime_image,
                 ),
                 "stdout": log,
                 "stderr": log,

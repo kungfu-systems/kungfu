@@ -327,7 +327,7 @@ function copyPlatformPayload(packageRoot) {
 /**
  * npm excludes symbolic links from package archives. Materialize only the
  * platform interpreter entrypoint that consumers execute directly; preserve
- * the rest of the frozen runtime tree as assembled.
+ * the rest of the assembled runtime tree unchanged.
  * @param {string} packageRoot
  * @returns {void}
  */

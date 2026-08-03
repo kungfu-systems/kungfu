@@ -183,10 +183,10 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "diagnostic",
-          "definitionDigest": "sha256:c6ab21fa86ab188d7061e5ebf01856429763e448144812853c30b180d6604be7",
+          "definitionDigest": "sha256:27f3ae5634f6ffa99c21d94b005bb9ee09a9e2abab3a32ffe89d4166fd7695fe",
           "credentials": {"githubToken":"read","oidc":false,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
           "externalActions": ["actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0","actions/setup-node@v6.4.0","actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02"],
-          "steps": [{"index":1,"label":"name:Check out exact source with ADR history","definitionDigest":"sha256:d87b0b7113389d8d974e8bb6aec288204fdb71ef21294b590603744e9a550122"},{"index":2,"label":"uses:actions/setup-node@v6.4.0","definitionDigest":"sha256:789e56d63991440fb89fffa3b2795c1cab043e6b7df6237a0c830c5c89759690"},{"index":3,"label":"name:Verify exact clean source","definitionDigest":"sha256:008a3e6ea44c5263f9f3a02f399492c18475c64f0fc9e0a5c1290ebacc443aa8"},{"index":4,"label":"name:Verify early source contracts","definitionDigest":"sha256:11c7cfe93dce2aeb5fbc3ea1cbf16705f1636505938a1368f87910011043ce25"},{"index":5,"label":"name:Verify ADR cutover history is locally available","definitionDigest":"sha256:277833ae0b708489b598ab5cd169523dd13c202e088271a71c08dca55997f6ea"},{"index":6,"label":"name:Verify macOS codesign probe is available","definitionDigest":"sha256:bca3fb2eef2db43415dc56865a3706d57b08765b815adfb82e12b0dcfcbe0140"},{"index":7,"label":"name:Install pinned Rust toolchain","definitionDigest":"sha256:6a0303319d9a83ae1b31046aacf3d3afb063d0fca9fe35af0feaef3d1eba5b96"},{"index":8,"label":"name:Fetch locked Rust dependencies serially","definitionDigest":"sha256:1c3b6dc51f01dd6c1d4dcc55267d2a149269e8638b264279c6feba754a290887"},{"index":9,"label":"name:Write platform receipt","definitionDigest":"sha256:5b678360852f9cf2cb9a5420effcde7369ef46e40f75bae11e227095ff5f9bcf"},{"index":10,"label":"name:Upload platform receipt","authority":"evidence-publication","definitionDigest":"sha256:cfde7ab2bc368a94ceb06b956f371f0e2e6642b6dcd7a5d0e45aec2e1637a977"}]
+          "steps": [{"index":1,"label":"name:Check out exact source with ADR history","definitionDigest":"sha256:d87b0b7113389d8d974e8bb6aec288204fdb71ef21294b590603744e9a550122"},{"index":2,"label":"uses:actions/setup-node@v6.4.0","definitionDigest":"sha256:789e56d63991440fb89fffa3b2795c1cab043e6b7df6237a0c830c5c89759690"},{"index":3,"label":"name:Verify exact clean source","definitionDigest":"sha256:008a3e6ea44c5263f9f3a02f399492c18475c64f0fc9e0a5c1290ebacc443aa8"},{"index":4,"label":"name:Verify early source contracts","definitionDigest":"sha256:11c7cfe93dce2aeb5fbc3ea1cbf16705f1636505938a1368f87910011043ce25"},{"index":5,"label":"name:Verify ADR cutover history is locally available","definitionDigest":"sha256:277833ae0b708489b598ab5cd169523dd13c202e088271a71c08dca55997f6ea"},{"index":6,"label":"name:Verify macOS codesign probe is available","definitionDigest":"sha256:bca3fb2eef2db43415dc56865a3706d57b08765b815adfb82e12b0dcfcbe0140"},{"index":7,"label":"name:Install pinned Rust toolchain","definitionDigest":"sha256:0bead6b0518552f3d308ca352f78a43de816b17ed89c76c56500be92caf33d06"},{"index":8,"label":"name:Fetch locked Rust dependencies serially","definitionDigest":"sha256:1c3b6dc51f01dd6c1d4dcc55267d2a149269e8638b264279c6feba754a290887"},{"index":9,"label":"name:Write platform receipt","definitionDigest":"sha256:5b678360852f9cf2cb9a5420effcde7369ef46e40f75bae11e227095ff5f9bcf"},{"index":10,"label":"name:Upload platform receipt","authority":"evidence-publication","definitionDigest":"sha256:cfde7ab2bc368a94ceb06b956f371f0e2e6642b6dcd7a5d0e45aec2e1637a977"}]
         }
       ]
     },
@@ -234,10 +234,10 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "diagnostic",
-          "definitionDigest": "sha256:23b52a3000961fce92fce68508453a36ebbaefdb4808d41d478d6d24486a4865",
+          "definitionDigest": "sha256:3c83aee139d47df4e5275310ed936b20db7ef169aa06973f5371d0d8198d87ab",
           "credentials": {"githubToken":"read","oidc":false,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
           "externalActions": [],
-          "steps": [{"index":1,"label":"name:Confirm exact JIT runner identity","definitionDigest":"sha256:115bfd9234736a1da607e61a0bb1be98a191d35f0da57ad4bb419a447069b9d2"},{"index":2,"label":"name:Hold until the declared cleanup trigger","definitionDigest":"sha256:ebc15529c500b6f0e216a2a2ede2ade66d1f685f9b824e67cf3a5382af07cf84"}]
+          "steps": [{"index":1,"label":"name:Confirm exact JIT runner identity","definitionDigest":"sha256:c698b5435dd0cd908946051f13616670d9639cf4f482f0c5d313d1b6242c25b9"},{"index":2,"label":"name:Hold until the declared cleanup trigger","definitionDigest":"sha256:ebc15529c500b6f0e216a2a2ede2ade66d1f685f9b824e67cf3a5382af07cf84"}]
         },
         {
           "id": "full",
@@ -281,9 +281,9 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "qualifying",
-          "definitionDigest": "sha256:87f987854a7653316c1b455146b3502827bb64363ee3af5faad730133f6ff5a3",
+          "definitionDigest": "sha256:83d2455b5bc8f1558a44a19fb222a5d995da213a4c6401d5faff22f143a5f626",
           "credentials": {"githubToken":"write","oidc":false,"repositorySecrets":["KUNGFU_GITHUB_TOKEN"],"inheritedSecrets":false,"environment":null},
-          "externalActions": ["kungfu-systems/buildchain/.github/workflows/.declarative-auditable-demo.yml@4501f4832da19614a24cf81fc71483aadaaac0b7"],
+          "externalActions": ["kungfu-systems/buildchain/.github/workflows/.declarative-auditable-demo.yml@5f4d81bf79da5b8fbd62f3c7dc75361ec92cab46"],
           "steps": []
         },
         {
@@ -301,9 +301,9 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "qualifying",
-          "definitionDigest": "sha256:b6a06dcd26b06ef41a488cd779d2bd7557125d9e51425be84fa89ffc5b9eebe1",
+          "definitionDigest": "sha256:172491e1f5d1cf5122df8346541bd7dd1a1d74e94d3802dd2f833c6ce13ced18",
           "credentials": {"githubToken":"write","oidc":true,"repositorySecrets":["BUILDCHAIN_ARTIFACT_RELAY_S3_DOWNLOAD_ROLE_ARN","BUILDCHAIN_ARTIFACT_RELAY_S3_ROLE_ARN","BUILDCHAIN_ARTIFACT_RELAY_S3_UPLOAD_ROLE_ARN","KUNGFU_GITHUB_TOKEN"],"inheritedSecrets":false,"environment":null},
-          "externalActions": ["kungfu-systems/buildchain/.github/workflows/.build.yml@a5d2e312d083bc1b382c36e2ecb9179c7cd90dbe"],
+          "externalActions": ["kungfu-systems/buildchain/.github/workflows/.build.yml@5f4d81bf79da5b8fbd62f3c7dc75361ec92cab46"],
           "steps": []
         },
         {
@@ -466,9 +466,9 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "diagnostic",
-          "definitionDigest": "sha256:c50e857eb62f1c7e323d8e462261829889e50a683c70e4bcadf40e875b811096",
+          "definitionDigest": "sha256:c429cbf8300dc962fdc7f975241e9454b55f3a36caeb65239fdade78673bb85d",
           "credentials": {"githubToken":"write","oidc":false,"repositorySecrets":["KUNGFU_GITHUB_TOKEN"],"inheritedSecrets":false,"environment":null},
-          "externalActions": ["kungfu-systems/buildchain/.github/workflows/dev-alpha-candidate-patrol.yml@f6b0cddea283495414ac3481364c1c27ae5c6485"],
+          "externalActions": ["kungfu-systems/buildchain/.github/workflows/dev-alpha-candidate-patrol.yml@978520e86134683f66b607bc70c2d18f623e2410"],
           "steps": []
         },
         {
@@ -511,26 +511,80 @@
       ]
     },
     {
+      "path": ".github/workflows/dev-pr-auto-merge.yml",
+      "authority": "qualification",
+      "definitionDigest": "sha256:74edf240b06e26db64041f8b289b97b5e90733a3cacbbb20f1c03e4fcb2191dd",
+      "jobs": [
+        {
+          "id": "admission",
+          "authority": "qualification",
+          "publication": "none",
+          "receipt": "diagnostic",
+          "definitionDigest": "sha256:61069f0491d85bc0ea17e8f9ba15c2f30c7f550422baeaf599907187af00a27e",
+          "credentials": {"githubToken":"write","oidc":false,"repositorySecrets":["KUNGFU_GITHUB_TOKEN"],"inheritedSecrets":false,"environment":null},
+          "externalActions": ["kungfu-systems/buildchain/.github/workflows/dev-pr-auto-merge.yml@1659da98053f8ea8c75471e414b7732e3a491580"],
+          "steps": []
+        },
+        {
+          "id": "resolve-target",
+          "authority": "qualification",
+          "publication": "none",
+          "receipt": "diagnostic",
+          "definitionDigest": "sha256:7fb51914ba319dc98492fd4e94194a9a0bf4e5dfa6e094fd9658c60f105394ea",
+          "credentials": {"githubToken":"none","oidc":false,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
+          "externalActions": [],
+          "steps": [{"index":1,"label":"id:target","definitionDigest":"sha256:e28c3cc873e5e58537f7a17c05bc3b09a6492fe19efcc760a345e2c52bef4559"}]
+        }
+      ]
+    },
+    {
+      "path": ".github/workflows/dev-qualification-patrol.yml",
+      "authority": "qualification",
+      "definitionDigest": "sha256:00a0ae69c1caa91a8ecd32b4df7a10bf462d43aa699fce4d348af02583b63ea3",
+      "jobs": [
+        {
+          "id": "patrol",
+          "authority": "qualification",
+          "publication": "none",
+          "receipt": "diagnostic",
+          "definitionDigest": "sha256:57a029cf8190b4df23acdab9ba2607199f768e86544ea020c57a29dd22ca41be",
+          "credentials": {"githubToken":"write","oidc":false,"repositorySecrets":["KUNGFU_GITHUB_TOKEN"],"inheritedSecrets":false,"environment":null},
+          "externalActions": ["kungfu-systems/buildchain/.github/workflows/dev-qualification-patrol.yml@49da2cd118b04d502fd90deaa57acaf83b0eaed7"],
+          "steps": []
+        }
+      ]
+    },
+    {
       "path": ".github/workflows/dev-verify-patrol.yml",
       "authority": "diagnostic",
-      "definitionDigest": "sha256:9b20d3c16112715b00b0ffdee667d118cb14f2f47f5a45d0821c7ddb56e9a6ea",
+      "definitionDigest": "sha256:cc4961063e8a7b0203c82d559e625a3d5a52eaa539b6815ab0cb6062a29a71d0",
       "jobs": [
+        {
+          "id": "bind-source",
+          "authority": "qualification",
+          "publication": "none",
+          "receipt": "diagnostic",
+          "definitionDigest": "sha256:241876aaad1b05e78ec556d7a9d6c685cd146fe82bd02033bbed1ecffdb66801",
+          "credentials": {"githubToken":"read","oidc":false,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
+          "externalActions": [],
+          "steps": [{"index":1,"label":"id:source","definitionDigest":"sha256:062a9a480710a64e08b7ebcdd0f2ac4cee8c97503dde5a8b5704ed7d8b7206e0"}]
+        },
         {
           "id": "report",
           "authority": "diagnostic",
           "publication": "none",
           "receipt": "none",
-          "definitionDigest": "sha256:a05982a2c1f611924354bf60fa038b8de9e34188f638622bb1edc0c8032b9610",
+          "definitionDigest": "sha256:2f624de37d5d71ac909f04bd17f59e21f48c515ed7d44fd6db9ff4a0eecdc783",
           "credentials": {"githubToken":"write","oidc":false,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
           "externalActions": [],
-          "steps": [{"index":1,"label":"name:Sync tracking issue with patrol result","authority":"diagnostic-write","definitionDigest":"sha256:9a52c75f071708a68e46fe539e4714efde77cec2ec7d571f8e17c28fca4800b0"}]
+          "steps": [{"index":1,"label":"name:Sync tracking issue with patrol result","authority":"diagnostic-write","definitionDigest":"sha256:f33e4ab9673c51d1a245249276274a2af1f662756bcc213c502405a136cf9a76"}]
         },
         {
           "id": "verify",
           "authority": "qualification",
           "publication": "none",
           "receipt": "qualifying",
-          "definitionDigest": "sha256:aaf8f6119c6eae36fe5c7052ecd568541a6170d799db0fe92a849de9652f18ab",
+          "definitionDigest": "sha256:5c48dc34b7eab862016e0fe250421066fc17139476cec001f545eaa2f92f2d5c",
           "credentials": {"githubToken":"write","oidc":true,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
           "externalActions": ["kungfu-systems/buildchain/.github/workflows/.gate-profile.yml@f8ef93be41b0badd75eb35cc1506c2be12198984"],
           "steps": []
@@ -841,9 +895,9 @@
           "authority": "release-control",
           "publication": "channel",
           "receipt": "qualifying",
-          "definitionDigest": "sha256:ec8893b6fc8136bb6af7b5a857de8096a4422391da273e1a06bdae613f6c9220",
+          "definitionDigest": "sha256:9e93daa1a5bb2ca2cf53e369d5be4d1b92154f5a9e9d3e9223587adc84869d64",
           "credentials": {"githubToken":"write","oidc":true,"repositorySecrets":["BUILDCHAIN_ISSUE_APP_ID","BUILDCHAIN_ISSUE_APP_PRIVATE_KEY","KUNGFU_ALPHA_CHANNEL_SIGNING_PRIVATE_KEY","KUNGFU_GITHUB_TOKEN","KUNGFU_GOVERNANCE_AUDITOR_APP_PRIVATE_KEY"],"inheritedSecrets":false,"environment":null},
-          "externalActions": ["kungfu-systems/buildchain/.github/workflows/release-candidate-promote.yml@a5d2e312d083bc1b382c36e2ecb9179c7cd90dbe"],
+          "externalActions": ["kungfu-systems/buildchain/.github/workflows/release-candidate-promote.yml@5f4d81bf79da5b8fbd62f3c7dc75361ec92cab46"],
           "steps": []
         },
         {
@@ -949,9 +1003,9 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "diagnostic",
-          "definitionDigest": "sha256:d0becb5f9e12f3de6737e184b0d53857e93352077fcc24e1c28046d60407fc5b",
+          "definitionDigest": "sha256:3685dd2a6b5ff15009eda840c9c73ae2014d869454b67672b7354b227b9d28c0",
           "credentials": {"githubToken":"write","oidc":false,"repositorySecrets":["KUNGFU_GITHUB_TOKEN"],"inheritedSecrets":false,"environment":null},
-          "externalActions": ["kungfu-systems/buildchain/.github/workflows/stable-candidate-patrol.yml@7629c4b499cd2d4eebf4c020fbc81637ae1dcb39"],
+          "externalActions": ["kungfu-systems/buildchain/.github/workflows/stable-candidate-patrol.yml@978520e86134683f66b607bc70c2d18f623e2410"],
           "steps": []
         }
       ]

@@ -5,7 +5,6 @@ from __future__ import annotations
 import os
 import platform
 import subprocess
-import sys
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Mapping
@@ -111,15 +110,6 @@ def command_env(
                 }
             )
     return env
-
-
-def _independent_process_env(env: Mapping[str, str]) -> dict[str, str]:
-    """Detach a long-lived child from the current frozen application instance."""
-
-    child_env = dict(env)
-    if getattr(sys, "frozen", False):
-        child_env["PYINSTALLER_RESET_ENVIRONMENT"] = "1"
-    return child_env
 
 
 def coordinator_run_command(

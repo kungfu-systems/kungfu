@@ -181,7 +181,7 @@ jobs:
             throw "missing EC2 instance identity"
           }
           $labels = $env:BUILDCHAIN_RUNNER_LABELS_JSON | ConvertFrom-Json
-          if ($EXPECTED_LABEL -notin $labels) {
+          if ($env:EXPECTED_LABEL -notin $labels) {
             throw "JIT label mismatch"
           }
           "instance=$($env:AWS_EC2_INSTANCE_ID)"

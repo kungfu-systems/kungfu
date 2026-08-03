@@ -123,6 +123,65 @@ test('KFD tree-equivalence lookup stays first-parent and bounded', () => {
   ]);
 });
 
+test('KFD tree-equivalence admits an unchanged GitHub PR merge candidate parent', () => {
+  const sourceSha = 'a'.repeat(40);
+  const headSha = 'b'.repeat(40);
+  const baseParent = 'c'.repeat(40);
+  const candidateParent = 'd'.repeat(40);
+  const replayedSha = 'e'.repeat(40);
+  const sourceTree = '1'.repeat(40);
+  const checkedTree = '2'.repeat(40);
+  const calls = [];
+  assert.equal(
+    findGitTreeEquivalentAncestor(sourceSha, headSha, (args) => {
+      calls.push(args);
+      if (args[0] === 'cat-file') return 'commit';
+      if (args[0] === 'rev-list')
+        return `${headSha} ${baseParent} ${candidateParent}`;
+      if (args[0] === 'rev-parse') {
+        if (args[1] === `${sourceSha}^{tree}`) return sourceTree;
+        return checkedTree;
+      }
+      if (args.at(-1) === candidateParent)
+        return `${candidateParent} ${checkedTree}\n${replayedSha} ${sourceTree}`;
+      return `${headSha} ${checkedTree}\n${baseParent} ${'3'.repeat(40)}`;
+    }),
+    replayedSha,
+  );
+  assert.deepEqual(calls.slice(-2), [
+    ['rev-parse', `${candidateParent}^{tree}`],
+    [
+      'log',
+      '--first-parent',
+      '--max-count=4096',
+      '--format=%H %T',
+      candidateParent,
+    ],
+  ]);
+});
+
+test('KFD tree-equivalence rejects a PR merge whose tree differs from its candidate parent', () => {
+  const sourceSha = 'a'.repeat(40);
+  const headSha = 'b'.repeat(40);
+  const baseParent = 'c'.repeat(40);
+  const candidateParent = 'd'.repeat(40);
+  const sourceTree = '1'.repeat(40);
+  assert.equal(
+    findGitTreeEquivalentAncestor(sourceSha, headSha, (args) => {
+      if (args[0] === 'cat-file') return 'commit';
+      if (args[0] === 'rev-list')
+        return `${headSha} ${baseParent} ${candidateParent}`;
+      if (args[0] === 'rev-parse') {
+        if (args[1] === `${sourceSha}^{tree}`) return sourceTree;
+        if (args[1] === `${headSha}^{tree}`) return '2'.repeat(40);
+        return '3'.repeat(40);
+      }
+      return `${headSha} ${'2'.repeat(40)}`;
+    }),
+    '',
+  );
+});
+
 test('KFD tree-equivalence rejects non-commit Git objects', () => {
   const sourceSha = 'a'.repeat(40);
   const calls = [];

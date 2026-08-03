@@ -21,7 +21,7 @@ def _resolve_sdk_entry():
     if override and os.path.exists(override):
         return os.path.abspath(override)
     binding_dir = os.path.dirname(kungfu.__binding__.__file__)
-    # Packaged app: the SDK ships as a sibling of the frozen runtime.
+    # Packaged app: the SDK ships as a sibling of the assembled runtime.
     for candidate in (
         os.path.join(binding_dir, "..", "sdk", "sdk.js"),
         os.path.join(binding_dir, "sdk", "sdk.js"),

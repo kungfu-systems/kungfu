@@ -62,6 +62,12 @@
       "purpose": "Print the exact prompt, packaged roots, result constraints, receipt schema, and qualification non-claims."
     },
     {
+      "apiId": "kungfu.agent.first-value.start",
+      "name": "kungfu agent first-value start --json",
+      "maturity": "stable",
+      "purpose": "Verify the installed pack, run the declared read-only onboarding discovery, and emit one rooted receipt."
+    },
+    {
       "apiId": "kungfu.agent.first-value.receipt",
       "name": "kungfu agent first-value receipt --intent <id> --discovery <command> --question-count <0-or-1> --outcome <summary> --json",
       "maturity": "stable",

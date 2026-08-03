@@ -839,7 +839,7 @@ function finalizeDesktopReleaseManifest() {
   return manifest;
 }
 
-function assertCoreFrozen() {
+function assertCoreAssembled() {
   const kungfuBin = path.join(CORE_DIST, isWin ? 'kungfu.exe' : 'kungfu');
   if (!fs.existsSync(kungfuBin)) {
     throw new Error(`freeze did not produce ${rel(kungfuBin)}`);
@@ -880,7 +880,7 @@ function assertCoreFrozen() {
 }
 
 // KF-ADR-019f86da-4f90-73ff-9543-f0a4f0beef05 stage 1: kungfu-trunk (the product trunk carrying the kungfu-owned
-// env/package surface) ships next to the frozen binary, together with its
+// env/package surface) ships next to the assembled product, together with its
 // runtime-pins manifest. UV_VERSION in the manifest must equal the repo's
 // .uv-version so the product and the dev launcher pull the same pinned uv.
 function stageTrunk(runtimePinSnapshot) {
@@ -1107,6 +1107,9 @@ export function cliArchiveLayout(platform = process.platform) {
     runtimeEntrypoint: `${runtimeDirectory}/${
       platform === 'win32' ? 'kungfu.exe' : 'kungfu'
     }`,
+    pythonEntrypoint: `${runtimeDirectory}/python/${
+      platform === 'win32' ? 'python.exe' : 'bin/python3'
+    }`,
     compatibility: `${runtimeDirectory}/product-compatibility.json`,
   };
 }
@@ -1122,12 +1125,19 @@ export function writeAuditableDemoBinaryMetadata(
   stageRoot,
   layout,
   platform = platformId(),
+  artifactRoot = ROOT,
 ) {
   const binary = path.join(stageRoot, layout.launcherName);
+  const runtime = path.join(stageRoot, layout.runtimeEntrypoint);
+  const python = path.join(stageRoot, layout.pythonEntrypoint);
   const metadata = {
     contract: 'kungfu.declarative-demo-binary/v1',
     platformId: platform,
     sha256: sha256File(binary),
+    executableFiles: [binary, runtime, python].map((file) => ({
+      path: path.relative(artifactRoot, file).split(path.sep).join('/'),
+      sha256: sha256File(file).slice('sha256:'.length),
+    })),
     runtimeDependencies: [],
   };
   fs.writeFileSync(
@@ -2350,7 +2360,7 @@ function main() {
       compatibilityManifest: COMPATIBILITY_MANIFEST,
     },
     operations: {
-      assertCoreFrozen,
+      assertCoreAssembled,
       assertDeclaredKfx,
       assertKfxBundleExternals,
       assembleKfx,

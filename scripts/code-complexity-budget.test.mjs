@@ -592,6 +592,15 @@ test('waiver approval rejects fabricated, unknown, same-authority, and stale rec
   stale.value.approval_receipt.approved_at = '2026-05-01T00:01:00Z';
   stale.value.approval_receipt.expires_at = '2026-08-01T00:00:00Z';
   assert.ok(codes(stale).includes('stale-approval'));
+  assert.ok(
+    codes(fixture.record, fixture.policy, {
+      ...context,
+      evaluationTime: new Date(
+        fixture.record.value.approval_receipt.expires_at,
+      ),
+    }).includes('expired-approval'),
+    'an approval is expired at its exact expires_at boundary',
+  );
 });
 
 test('baseline integrity rejects forged measurements and artifact fields', () => {

@@ -5,7 +5,7 @@
   "manifestPath": "framework/maintainability/semantic-amplification.manifest.json",
   "manifestRoot": "sha256:b64ab1daecaec8560dd649af61b7e175adaf562df3aa8b94e3733ef499a308aa",
   "baselineRef": "dbfed9ca1785d147b26f4f06e7e6895ac7368fee",
-  "sourceRoot": "sha256:eb6c3311f13578f8bfcc9626fcb7e2bb99ca3ede9e71c6ef46461b036cf3121e",
+  "sourceRoot": "sha256:1eee7f5117f8af7b506e279480a22c15f312261f83873bd8907678eb84ff1bc8",
   "roles": {
     "authority": "exactly one authority route per family; the route may name multiple co-owned source files",
     "allowedProjectionRoles": [
@@ -124,7 +124,7 @@
           "path": "framework/core/src/python/kungfu/cli/surface_contract.registry.json",
           "currentLines": 157,
           "baselineLines": 155,
-          "currentRoot": "sha256:45fc67c305503c6f123ce98f8c6ebd8fd103e2bfd5799bd3d9b482158ce6ebbf",
+          "currentRoot": "sha256:6eaa0a615dc6cac22737e3e9bb48d4c35b90bc6fc64b1a9de17c5aeb73394f1f",
           "baselineRoot": "sha256:7af1893015500d9d54e2783e44af30cd4af8753787d9d9b70c77356b0e788c17",
           "changedSinceBaseline": true
         },
@@ -138,9 +138,9 @@
         },
         {
           "path": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json",
-          "currentLines": 2543,
+          "currentLines": 2553,
           "baselineLines": 2505,
-          "currentRoot": "sha256:50926f7f16e7a3d1b4c1f3ba647af19a3b3c52caa2821830722acc05b0f4ad37",
+          "currentRoot": "sha256:ec86da8274437dcb3cdc73d702bad6ab29097e606c618fe703c82d3622904055",
           "baselineRoot": "sha256:947a0cca02a357d4185dd4e945567549a57f1cbf37fb67e0539d1bfd6ce950d8",
           "changedSinceBaseline": true
         },
@@ -154,17 +154,17 @@
         },
         {
           "path": "framework/core/src/python/kungfu/agent/cli_surface.catalog.json",
-          "currentLines": 1014,
+          "currentLines": 1016,
           "baselineLines": 33927,
-          "currentRoot": "sha256:a12ee23e387a33a51e636e26bdf65bf8ae0ed9127800b69c570ea5aa3aee1327",
+          "currentRoot": "sha256:03e2c7d85c0a19263dd56785cb11afa2399f50c1da2d63bd68fc8e8fa22aab56",
           "baselineRoot": "sha256:9f2f17fca5aa4e4daa28a276c1e3a153fa263e791b497f7ea83a93796f7aeb1f",
           "changedSinceBaseline": true
         },
         {
           "path": "framework/core/src/python/kungfu/agent/commands.json",
-          "currentLines": 1141,
+          "currentLines": 1147,
           "baselineLines": 1117,
-          "currentRoot": "sha256:8c9ada7ac25558b76a3a1346b38350fac932522ff1714bb7b5ba581da4e251cb",
+          "currentRoot": "sha256:a2c04235939688a128132d1949f4d80571326d676ffe9231952ea20accc9102d",
           "baselineRoot": "sha256:969ac3d851c14196b7244ac1afaecfc237c82d45527fbe06a33d3fc064ea7fc4",
           "changedSinceBaseline": true
         },
@@ -180,15 +180,15 @@
           "path": "scripts/check-cli-catalog-parity.mjs",
           "currentLines": 348,
           "baselineLines": 346,
-          "currentRoot": "sha256:5f827a4aecb90e240c3ec7e829547c99ac4f33d8a24bf5e1432a3a5eac97159e",
+          "currentRoot": "sha256:5278a6073ac9c013d1d9496800878d6c4d1bad91971b79ffa5e0c450ef987b09",
           "baselineRoot": "sha256:a8e4c919d73120dd45c4a8f8c8f7187caa62ec819e74a83a9b2d3fdcbcc13c3e",
           "changedSinceBaseline": true
         },
         {
           "path": "scripts/verify-agent-pack.mjs",
-          "currentLines": 537,
+          "currentLines": 570,
           "baselineLines": 396,
-          "currentRoot": "sha256:041a052fd0a6d7c442cd6ff1c36afaeff8fa4fc5d3e2bfcf421300c8960b7aa4",
+          "currentRoot": "sha256:c137b536cfc06c6501d12209cbe1df22e7769d398f090a2c36d4745ef7718f7c",
           "baselineRoot": "sha256:3d5cf84d6cc561c681c68b51c92fa211f7993e1ca1a8da5d8bb9700b57a53bd2",
           "changedSinceBaseline": true
         },
@@ -408,9 +408,9 @@
         },
         {
           "path": "framework/core/src/python/kungfu/profile_sdk.py",
-          "currentLines": 1946,
+          "currentLines": 1962,
           "baselineLines": 3138,
-          "currentRoot": "sha256:14cb55d2d53ec7de294db5e6851f0044197adf89f61feb92d8a8926cf3cb06de",
+          "currentRoot": "sha256:e1f4c55c8c47ceab587f8e87efb328be35129f5b1be240cbf4211a047c316677",
           "baselineRoot": "sha256:fb62fb8c4e1e944811c954d22786ebaeb21ff45dbb3fc1db705feb37fbb5dc1c",
           "changedSinceBaseline": true
         },
@@ -595,9 +595,9 @@
         },
         {
           "path": "framework/core/src/python/kungfu/profile_sdk.py",
-          "currentLines": 1946,
+          "currentLines": 1962,
           "baselineLines": 3138,
-          "currentRoot": "sha256:14cb55d2d53ec7de294db5e6851f0044197adf89f61feb92d8a8926cf3cb06de",
+          "currentRoot": "sha256:e1f4c55c8c47ceab587f8e87efb328be35129f5b1be240cbf4211a047c316677",
           "baselineRoot": "sha256:fb62fb8c4e1e944811c954d22786ebaeb21ff45dbb3fc1db705feb37fbb5dc1c",
           "changedSinceBaseline": true
         },
@@ -637,7 +637,7 @@
           "path": "docs/qualification/kfd-native-sdk-release-gates.md",
           "currentLines": 506,
           "baselineLines": 495,
-          "currentRoot": "sha256:194b495014fc88e24868c61e84b6fcc99c5154eff3eebd363d9f8cb2823020eb",
+          "currentRoot": "sha256:d7064e1b9befdde83bf1f8dff15fa583969c1c5912df8911e674ab69d0ee7a70",
           "baselineRoot": "sha256:98328a6c59d603f82b03aee017e6bc490ee43decffa7dde63ddcaa644daf9462",
           "changedSinceBaseline": true
         },
@@ -651,9 +651,9 @@
         },
         {
           "path": "product/scripts/dist.mjs",
-          "currentLines": 2439,
+          "currentLines": 2449,
           "baselineLines": 2514,
-          "currentRoot": "sha256:bc46a90401a33ad95caa20505ddcac9a9428bae82f32dbeef3dcb31eb82779ee",
+          "currentRoot": "sha256:abfe349423e30aeb0638ca1a4c12588c1715926c672f521c4f1b71ea39ca0eb2",
           "baselineRoot": "sha256:6cfd6c55e296163ab863fb1d79a4a51198ad12943274fc0858338bb651a108da",
           "changedSinceBaseline": true
         },
@@ -661,7 +661,7 @@
           "path": "product/scripts/runtime-pin-snapshot.mjs",
           "currentLines": 242,
           "baselineLines": null,
-          "currentRoot": "sha256:cdfd975c2ede6cf3654d1b55df37e0578ef03a061a8dd59f99170937b8dd3a00",
+          "currentRoot": "sha256:897d95575dc0b7052bf84d1058e1a4b902c5d9caf7d33e0d9e87bb7499b1c920",
           "baselineRoot": null,
           "changedSinceBaseline": true
         }
@@ -1122,7 +1122,7 @@
           "path": "docs/qualification/gates/release-admission-policy.json",
           "currentLines": 49,
           "baselineLines": 41,
-          "currentRoot": "sha256:6951f04a5965ac24be54a26720f5886589f60c6d0c76c6d4ca0cf039003e2295",
+          "currentRoot": "sha256:6326278d19fa88aa1b6af240ece695c0dd27ea0a2d595eb20789ea624bbfa9dd",
           "baselineRoot": "sha256:e8a0f7037f2331610f3b9c07e7cdf5e47ea701045c73d0f67bf909372e77e0ac",
           "changedSinceBaseline": true
         },
@@ -1144,9 +1144,9 @@
         },
         {
           "path": "scripts/release-promotion-rehearsal.mjs",
-          "currentLines": 771,
+          "currentLines": 773,
           "baselineLines": 713,
-          "currentRoot": "sha256:1a4c9595a581c960691b98ab471928825b4019e83853f89afaee5790ad64ac43",
+          "currentRoot": "sha256:97d635a70a6ce52370814ed1c418c40bfcc856f6ebe9cec06e983df7126fa532",
           "baselineRoot": "sha256:12df72a7b881c2c3c83d5a19f1ab8d4189156a4d09ef759fe1e36328f5b4ed1d",
           "changedSinceBaseline": true
         },
@@ -1160,9 +1160,9 @@
         },
         {
           "path": "docs/qualification/gates/workflow-bindings.json",
-          "currentLines": 659,
+          "currentLines": 662,
           "baselineLines": 580,
-          "currentRoot": "sha256:fe06c30e8d51d985901f47aacc6a30d3c073af7722c3ae2fd37295147eb188ed",
+          "currentRoot": "sha256:99410a0974cab4a62a1e36a79095a63b9c3d9bdf3d3750d027d4fd24dd716303",
           "baselineRoot": "sha256:233cd22ebce4c9930e0e4889808b88661d77c202d5e5f73121823dcdc461576d",
           "changedSinceBaseline": true
         },
@@ -1170,7 +1170,7 @@
           "path": ".github/workflows/release-new-version.yml",
           "currentLines": 386,
           "baselineLines": 362,
-          "currentRoot": "sha256:3739372c9fc513c3da3eadc44f0cc4d8e57f6314fb74e8281e10f81506b45aea",
+          "currentRoot": "sha256:46f3eaa6a8614517046eb9b0b7aa490b4c47d55adbd4716c9a892bb5fb0e0fda",
           "baselineRoot": "sha256:3bdd847c80a05030de1d826282cef2e76a85e31dc0904df02c7f0cdda7a5eb74",
           "changedSinceBaseline": true
         },
@@ -1178,7 +1178,7 @@
           "path": "docs/qualification/gates/release-and-promotion.md",
           "currentLines": 206,
           "baselineLines": 141,
-          "currentRoot": "sha256:4fbbeaf1924c28fd42cc6b0fc80e6e9dabdc99ee3e5b30da1fdb8c8dea0ac0b1",
+          "currentRoot": "sha256:e7f7df34909129aff4280e4e19022cdf0cd5bedfd18949efd3fd388d94cdee5a",
           "baselineRoot": "sha256:5eb20fe886635e0464313023daa1a2b62529ad1d6977202dce9c91c6b8aacf9e",
           "changedSinceBaseline": true
         },
@@ -1186,7 +1186,7 @@
           "path": "docs/qualification/gates/release-admission.md",
           "currentLines": 75,
           "baselineLines": 75,
-          "currentRoot": "sha256:6c290f523aadc5b9d3af5458c8251a342df21b6cfb01e25bea4e59efc7473b3b",
+          "currentRoot": "sha256:5875a27871be462aedccbdc9f0b2731f6b0f8d7b7d569244809003809c75816f",
           "baselineRoot": "sha256:69f293fefb3c94df44051dc86ba4435416f5ea4348f2ffb245bef19bb494a280",
           "changedSinceBaseline": true
         },
@@ -1310,7 +1310,7 @@
   ],
   "terminalEvidenceProjection": {
     "matrixPath": "framework/maintainability/terminal-evidence-matrix.json",
-    "matrixSchema": "kungfu.maintainability-terminal-evidence-matrix/v2",
+    "matrixSchema": "kungfu.maintainability-terminal-evidence-matrix/v3",
     "predecessorAssignmentId": "2026-07-27-kungfu-maintainability-terminal-closure",
     "predecessorSealedStateRoot": "sha256:41449544ae9f64f6a6e6e7ae69f24c0fd9049e38beef4bba2bbed3e3e730e98c"
   },
@@ -1947,7 +1947,7 @@
         "topology": "product-assembly",
         "kind": "line-count",
         "status": "remediated",
-        "metric": 2439,
+        "metric": 2449,
         "threshold": 2450,
         "finding": null
       },

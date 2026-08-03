@@ -354,6 +354,10 @@ test('desktop finalization binds installer bytes and stays fail-closed locally',
       size: 9,
       digest: release.artifacts.at(-1).digest,
     });
+    assert.equal(
+      release.manifestIdentityRoot,
+      bundledManifest.manifestIdentityRoot,
+    );
     assert.throws(
       () => assertUpgradePublicationEligible(release),
       /qualification evidence/,
@@ -459,6 +463,10 @@ test('CLI finalization adds an exact archive without losing desktop evidence', (
       artifactUrl: 'https://example.invalid/kungfu-cli.tar.gz',
       output,
     });
+    assert.equal(
+      release.manifestIdentityRoot,
+      bundledManifest.manifestIdentityRoot,
+    );
     assert.deepEqual(
       release.artifacts.map((artifact) => artifact.kind),
       ['runtime', 'desktop', 'cli'],

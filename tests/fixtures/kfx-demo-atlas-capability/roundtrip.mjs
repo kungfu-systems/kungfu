@@ -19,7 +19,7 @@ const runtimeDir = path.join(tmpDir('atlas-capability-'), 'runtime');
 const bin = path.join(repoDir, 'framework', 'core', 'dist', 'kungfu', 'kungfu');
 
 if (!fs.existsSync(bin)) {
-  fail('kungfu CLI is not frozen (run ./shifu freeze first)');
+  fail('kungfu CLI is not assembled (run ./shifu freeze first)');
 }
 
 uvPython(coreDir, [

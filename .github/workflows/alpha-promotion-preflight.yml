@@ -54,8 +54,10 @@ jobs:
       CARGO_HTTP_TIMEOUT: "120"
       CARGO_NET_RETRY: "2"
       RUSTUP_TOOLCHAIN: "1.96.0"
-      RUSTUP_DIST_SERVER: https://rsproxy.cn
-      RUSTUP_UPDATE_ROOT: https://rsproxy.cn/rustup
+      RUSTUP_PRIMARY_DIST_SERVER: https://rsproxy.cn
+      RUSTUP_PRIMARY_UPDATE_ROOT: https://rsproxy.cn/rustup
+      RUSTUP_FALLBACK_DIST_SERVER: https://static.rust-lang.org
+      RUSTUP_FALLBACK_UPDATE_ROOT: https://static.rust-lang.org/rustup
     steps:
       - name: Check out exact source with ADR history
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
@@ -94,7 +96,33 @@ jobs:
 
       - name: Install pinned Rust toolchain
         shell: bash
-        run: rustup toolchain install "$RUSTUP_TOOLCHAIN" --profile minimal
+        run: |
+          install_toolchain() {
+            dist_server="$1"
+            update_root="$2"
+            attempts="$3"
+            attempt=1
+            while [ "$attempt" -le "$attempts" ]; do
+              if RUSTUP_DIST_SERVER="$dist_server" \
+                RUSTUP_UPDATE_ROOT="$update_root" \
+                rustup toolchain install "$RUSTUP_TOOLCHAIN" --profile minimal; then
+                return 0
+              fi
+              if [ "$attempt" -lt "$attempts" ]; then
+                sleep $((attempt * 5))
+              fi
+              attempt=$((attempt + 1))
+            done
+            return 1
+          }
+
+          install_toolchain \
+            "$RUSTUP_PRIMARY_DIST_SERVER" \
+            "$RUSTUP_PRIMARY_UPDATE_ROOT" \
+            3 || install_toolchain \
+            "$RUSTUP_FALLBACK_DIST_SERVER" \
+            "$RUSTUP_FALLBACK_UPDATE_ROOT" \
+            1
 
       - name: Fetch locked Rust dependencies serially
         shell: bash

@@ -140,7 +140,7 @@ export function runProductAssembly({
           event: 'product.core.freeze',
         },
       );
-      operations.assertCoreFrozen();
+      operations.assertCoreAssembled();
       operations.stageTrunk(trunkRuntimePinSnapshot);
       operations.runPnpm(
         'pack core npm artifacts',

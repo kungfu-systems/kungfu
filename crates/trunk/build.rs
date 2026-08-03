@@ -6,8 +6,8 @@
 // libkungfu so the trunk can FFI into the standard bootstrap interfaces: the trunk is the
 // first-party consumer, compiled against the same core it ships next to. Coreless
 // builds — the workspace CI gate, a dev checkout without a built core — keep the
-// feature off and link nothing, so the rlib-only members and the frozen-host
-// launch surface still build with no core in reach.
+// feature off and link nothing, so the rlib-only members and source launch
+// surface still build with no core in reach.
 //
 // Native dir resolution: KF_TRUNK_NATIVE_DIR if set, else the product build's own
 // output. On POSIX that is framework/core/build/<type> (where libkungfu.* lands);
