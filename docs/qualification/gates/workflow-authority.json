@@ -513,16 +513,16 @@
     {
       "path": ".github/workflows/dev-pr-auto-merge.yml",
       "authority": "qualification",
-      "definitionDigest": "sha256:74edf240b06e26db64041f8b289b97b5e90733a3cacbbb20f1c03e4fcb2191dd",
+      "definitionDigest": "sha256:317c515bae6c1ab37b4539f7ff1d3599c1d3e25e208ff7422da70a2c31168580",
       "jobs": [
         {
           "id": "admission",
           "authority": "qualification",
           "publication": "none",
           "receipt": "diagnostic",
-          "definitionDigest": "sha256:61069f0491d85bc0ea17e8f9ba15c2f30c7f550422baeaf599907187af00a27e",
+          "definitionDigest": "sha256:4f633dd04f861dd220e44041e780d7d52b790d8f22488d7a8739295c2ce766c8",
           "credentials": {"githubToken":"write","oidc":false,"repositorySecrets":["KUNGFU_GITHUB_TOKEN"],"inheritedSecrets":false,"environment":null},
-          "externalActions": ["kungfu-systems/buildchain/.github/workflows/dev-pr-auto-merge.yml@1659da98053f8ea8c75471e414b7732e3a491580"],
+          "externalActions": ["kungfu-systems/buildchain/.github/workflows/dev-pr-auto-merge.yml@633574453b8d0174f1e8d8b3aa76cf56e4a24773"],
           "steps": []
         },
         {
@@ -530,10 +530,10 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "diagnostic",
-          "definitionDigest": "sha256:7fb51914ba319dc98492fd4e94194a9a0bf4e5dfa6e094fd9658c60f105394ea",
+          "definitionDigest": "sha256:8929e60383dd5e02fde2bc63068c66b217a40ad5e70ee662d17046e4cf8879fe",
           "credentials": {"githubToken":"none","oidc":false,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
           "externalActions": [],
-          "steps": [{"index":1,"label":"id:target","definitionDigest":"sha256:e28c3cc873e5e58537f7a17c05bc3b09a6492fe19efcc760a345e2c52bef4559"}]
+          "steps": [{"index":1,"label":"id:target","definitionDigest":"sha256:fd720e0b090fca1b5be2909cc57d11cba097392f53f888024b01e7a798166db0"}]
         }
       ]
     },
