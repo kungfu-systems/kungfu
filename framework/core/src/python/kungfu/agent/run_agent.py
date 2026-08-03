@@ -140,6 +140,30 @@ def bind_current_native_work(
     return {"workRef": work_ref, "session": session, "receipt": receipt}
 
 
+_WINDOWS_PROCESS_ENV_ALLOWLIST = (
+    # Windows command shims and runtimes resolve their installation and system
+    # paths through these variables.  In particular, npm ``*.cmd`` launchers
+    # commonly dispatch through ``%APPDATA%``.  They are process coordinates,
+    # not credentials, and must survive the credential-safe environment cut.
+    "APPDATA",
+    "LOCALAPPDATA",
+    "USERPROFILE",
+    "SYSTEMROOT",
+    "WINDIR",
+    "COMSPEC",
+    "PATHEXT",
+    "TEMP",
+    "TMP",
+    "PROGRAMDATA",
+    "PROGRAMFILES",
+    "PROGRAMFILES(X86)",
+    "PROGRAMW6432",
+    "ALLUSERSPROFILE",
+    "HOMEDRIVE",
+    "HOMEPATH",
+)
+
+
 _COMMON_ENV_ALLOWLIST = (
     "HOME",
     "PATH",
@@ -173,6 +197,7 @@ _COMMON_ENV_ALLOWLIST = (
     "https_proxy",
     "no_proxy",
     "KUNGFU_CLI_BIN",
+    *_WINDOWS_PROCESS_ENV_ALLOWLIST,
 )
 _PROVIDER_ENV_ALLOWLIST = {
     "codex": ("OPENAI_API_KEY", "CODEX_HOME"),
