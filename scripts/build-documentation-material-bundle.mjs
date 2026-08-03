@@ -23,6 +23,24 @@ function semanticRoot(value) {
   return sha(Buffer.from(`${canonicalJson(value)}\n`, 'utf8'));
 }
 
+/** @param {object} manifest @param {object} receipt */
+function verifyCompileRecords(manifest, receipt) {
+  const { manifest_root: manifestRoot, ...manifestPreimage } = manifest;
+  const { receipt_root: receiptRoot, ...receiptPreimage } = receipt;
+  if (
+    manifest.schema !== 'xinfa.atlas-manifest/v1' ||
+    !/^sha256:[0-9a-f]{64}$/.test(String(manifest.atlas_root || '')) ||
+    semanticRoot(manifestPreimage) !== manifestRoot ||
+    receipt.schema !== 'xinfa.atlas-compile-receipt/v1' ||
+    semanticRoot(receiptPreimage) !== receiptRoot ||
+    receipt.verdict !== 'pass' ||
+    receipt.atlas_root !== manifest.atlas_root ||
+    receipt.manifest_root !== manifestRoot
+  ) {
+    throw new Error('compiled Documentation Atlas fails semantic verification');
+  }
+}
+
 /** @param {string} relative */
 function safeArtifact(relative) {
   if (
@@ -61,30 +79,12 @@ let receipt;
 let readArtifact;
 
 if (parsed.source) {
-  execFileSync('git', ['cat-file', '-e', `${parsed.originCommit}^{commit}`], {
-    cwd: ROOT,
-    stdio: 'ignore',
-  });
   manifest = JSON.parse(
     fs.readFileSync(path.join(parsed.source, 'manifest.json'), 'utf8'),
   );
   receipt = JSON.parse(
     fs.readFileSync(path.join(parsed.source, 'receipt.json'), 'utf8'),
   );
-  const { manifest_root: manifestRoot, ...manifestPreimage } = manifest;
-  const { receipt_root: receiptRoot, ...receiptPreimage } = receipt;
-  if (
-    manifest.schema !== 'xinfa.atlas-manifest/v1' ||
-    !/^sha256:[0-9a-f]{64}$/.test(String(manifest.atlas_root || '')) ||
-    semanticRoot(manifestPreimage) !== manifestRoot ||
-    receipt.schema !== 'xinfa.atlas-compile-receipt/v1' ||
-    semanticRoot(receiptPreimage) !== receiptRoot ||
-    receipt.verdict !== 'pass' ||
-    receipt.atlas_root !== manifest.atlas_root ||
-    receipt.manifest_root !== manifestRoot
-  ) {
-    throw new Error('compiled Documentation Atlas fails semantic verification');
-  }
   const atlasDigest = manifest.atlas_root.slice('sha256:'.length);
   selector = {
     schema: 'kungfu.product-documentation-pack/v1',
@@ -108,7 +108,6 @@ if (parsed.source) {
     ),
   );
   const atlasDigest = String(selector.atlasRoot || '').slice('sha256:'.length);
-  const sourceCommit = String(selector.materialSource?.originCommit || '');
   const baselineRelative = `.xinfa/baselines/sha256/${atlasDigest}`;
   manifest = JSON.parse(
     fs.readFileSync(path.join(ROOT, baselineRelative, 'manifest.json')),
@@ -116,13 +115,16 @@ if (parsed.source) {
   receipt = JSON.parse(
     fs.readFileSync(path.join(ROOT, baselineRelative, 'receipt.json')),
   );
+  const materialRelative = String(selector.materialSource?.bundleRoot || '');
   readArtifact = (relative) =>
-    execFileSync(
-      'git',
-      ['show', `${sourceCommit}:${baselineRelative}/${relative}`],
-      { cwd: ROOT, maxBuffer: 32 * 1024 * 1024 },
+    zlib.gunzipSync(
+      fs.readFileSync(
+        `${path.join(ROOT, materialRelative, ...relative.split('/'))}.gz`,
+      ),
     );
 }
+
+verifyCompileRecords(manifest, receipt);
 
 const atlasDigest = String(selector.atlasRoot || '').slice('sha256:'.length);
 const sourceCommit = String(selector.materialSource?.originCommit || '');
@@ -136,6 +138,10 @@ if (
 ) {
   throw new Error('invalid tracked-gzip Documentation Atlas selector');
 }
+execFileSync('git', ['cat-file', '-e', `${sourceCommit}^{commit}`], {
+  cwd: ROOT,
+  stdio: 'ignore',
+});
 const baselineRelative = `.xinfa/baselines/sha256/${atlasDigest}`;
 const baseline = path.join(ROOT, baselineRelative);
 fs.mkdirSync(baseline, { recursive: true });
