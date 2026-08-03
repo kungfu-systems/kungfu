@@ -17,6 +17,7 @@ import {
   createLogBundle,
   defaultOutputDir,
   evaluateQualification,
+  executeQualificationSuites,
   qualificationPlan,
   retainQualificationArtifacts,
   suiteEnvironment,
@@ -159,6 +160,53 @@ test('product catalog qualification is bound to the build from this checkout', (
     '--json',
     '--verify-current',
   ]);
+});
+
+test('runtime activation uses a bounded producer and consumer DAG without hiding sibling failures', async () => {
+  const suites = qualificationPlan({ mode: 'execute', withProduct: true });
+  const events = [];
+  let active = 0;
+  let peak = 0;
+  const runner = async (suite) => {
+    active += 1;
+    peak = Math.max(peak, active);
+    events.push(`start:${suite.id}`);
+    await new Promise((resolve) => setTimeout(resolve, 2));
+    events.push(`end:${suite.id}`);
+    active -= 1;
+    return {
+      ...suite,
+      status: suite.id === 'profile-action-admission' ? 'failed' : 'passed',
+      exit_code: suite.id === 'profile-action-admission' ? 1 : 0,
+      duration_ms: 2,
+      raw_log: `${suite.id}.log`,
+      raw_sha256: 'a'.repeat(64),
+    };
+  };
+  const result = await executeQualificationSuites(suites, '/unused', runner, 2);
+  assert.equal(peak, 2);
+  assert.deepEqual(
+    result.map((suite) => suite.id),
+    suites.map((suite) => suite.id),
+  );
+  assert.equal(
+    result.find((suite) => suite.id === 'profile-action-admission').status,
+    'failed',
+  );
+  assert.ok(result.every((suite) => suite.status !== 'planned'));
+  const firstConsumer = Math.min(
+    ...['product-runtime-smoke', 'product-verification', 'product-catalog'].map(
+      (id) => events.indexOf(`start:${id}`),
+    ),
+  );
+  for (const id of [
+    'activation-core',
+    'product-distribution',
+    'profile-action-admission',
+    'runtime-surface-parity',
+    'activation-performance',
+  ])
+    assert.ok(events.indexOf(`end:${id}`) < firstConsumer, id);
 });
 
 test('source qualification uv runs preserve the exact tracked lockfile', () => {
