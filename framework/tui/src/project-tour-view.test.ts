@@ -17,6 +17,7 @@ import {
   PROJECT_TOUR_STREAM_TRANSITIONS,
   ProjectTourHeader,
   parseProjectTourEpisode,
+  parseProjectTourLaunchOptions,
   parseProjectTourSpeed,
   projectTourActivityCells,
   projectTourActivityWidth,
@@ -32,6 +33,31 @@ import {
   projectTourSummaryTitles,
   updateProjectTourStream,
 } from './starter-project-view/index.js';
+
+test('Project tour launch options preserve defaults and validate explicit values', () => {
+  assert.deepEqual(parseProjectTourLaunchOptions(['node', 'tui']), {
+    root: undefined,
+    speed: 1,
+    episode: '1',
+  });
+  assert.deepEqual(
+    parseProjectTourLaunchOptions([
+      'node',
+      'tui',
+      '--project-work-tour-root',
+      '/tmp/project',
+      '--project-tour-speed',
+      '0.5',
+      '--project-tour-episode',
+      '2',
+    ]),
+    { root: '/tmp/project', speed: 0.5, episode: '2' },
+  );
+  assert.throws(
+    () => parseProjectTourLaunchOptions(['--project-tour-episode']),
+    /requires 1, 2, or all/u,
+  );
+});
 
 class CaptureOutput extends Writable {
   readonly isTTY = false;
