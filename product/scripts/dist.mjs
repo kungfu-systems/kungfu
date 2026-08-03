@@ -48,7 +48,7 @@ import {
   runLibwasmArtifactSelfTest,
   runLibwasmExecutionQualification,
 } from './libwasm-artifact.mjs';
-import { normalizeCopiedSymlinks } from './portable-symlinks.mjs';
+import * as portable from './portable-symlinks.mjs';
 import { productReleaseChannelConfig } from './release-channel-trust.mjs';
 import {
   assertSupportedProductHost,
@@ -975,7 +975,7 @@ export function copyTree(source, target, options = {}) {
       );
     },
   });
-  normalizeCopiedSymlinks({ source, target });
+  portable.normalizeCopiedSymlinks({ source, target });
   return true;
 }
 
@@ -1140,7 +1140,8 @@ export function writeAuditableDemoBinaryMetadata(
 ) {
   const binary = path.join(stageRoot, layout.launcherName);
   const runtime = path.join(stageRoot, layout.runtimeEntrypoint);
-  const python = path.join(stageRoot, layout.pythonEntrypoint);
+  const pythonPath = path.join(stageRoot, layout.pythonEntrypoint);
+  const python = portable.resolveInternalPath(stageRoot, pythonPath);
   const metadata = {
     contract: 'kungfu.declarative-demo-binary/v1',
     platformId: platform,
