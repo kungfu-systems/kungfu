@@ -201,6 +201,22 @@ test('bootstrap publication is deterministic and pins signed release identity', 
     assert.match(shell.bytes.toString(), /--dry-run/);
     assert.match(shell.bytes.toString(), /sha256sum/);
     assert.match(shell.bytes.toString(), /archive-unsafe/);
+    assert.match(
+      shell.bytes.toString(),
+      /export KUNGFU_INSTALL_SOURCE=archive/,
+    );
+    assert.match(
+      shell.bytes.toString(),
+      /export KUNGFU_DIR="\$version_root\/runtime"/,
+    );
+    assert.match(
+      shell.bytes.toString(),
+      /ln -s "\$version_root\/install\/kungfu-archive-launcher"/,
+    );
+    assert.ok(
+      shell.bytes.toString().indexOf('export KUNGFU_INSTALL_SOURCE=archive') <
+        shell.bytes.toString().indexOf('exec "$version_root/kungfu" "$@"'),
+    );
     assert.equal(shell.bytes.toString().includes(INTEL_MACOS_DIAGNOSTIC), true);
     const shellPath = path.join(value.root, 'install.sh');
     fs.writeFileSync(shellPath, shell.bytes);
@@ -214,6 +230,40 @@ test('bootstrap publication is deterministic and pins signed release identity', 
     if (!shellcheck.error || shellcheck.error.code !== 'ENOENT') {
       assert.equal(shellcheck.status, 0, shellcheck.stdout + shellcheck.stderr);
     }
+    const installedLauncher = shell.bytes
+      .toString()
+      .match(
+        /<<'KUNGFU_ARCHIVE_LAUNCHER'\n([\s\S]+?)\nKUNGFU_ARCHIVE_LAUNCHER/,
+      )?.[1];
+    assert.ok(installedLauncher);
+    const installedRoot = path.join(value.root, 'installed product');
+    const installedBin = path.join(value.root, 'bin');
+    fs.mkdirSync(path.join(installedRoot, 'install'), { recursive: true });
+    fs.mkdirSync(installedBin, { recursive: true });
+    const installedLauncherPath = path.join(
+      installedRoot,
+      'install',
+      'kungfu-archive-launcher',
+    );
+    fs.writeFileSync(installedLauncherPath, `${installedLauncher}\n`, {
+      mode: 0o755,
+    });
+    fs.writeFileSync(
+      path.join(installedRoot, 'kungfu'),
+      '#!/bin/sh\nprintf \'%s\\n\' "$KUNGFU_INSTALL_SOURCE" "$KUNGFU_DIR" "$1"\n',
+      { mode: 0o755 },
+    );
+    const installedEntrypoint = path.join(installedBin, 'kungfu');
+    fs.symlinkSync(installedLauncherPath, installedEntrypoint);
+    const installedInvocation = spawnSync(installedEntrypoint, ['probe'], {
+      encoding: 'utf8',
+    });
+    assert.equal(installedInvocation.status, 0, installedInvocation.stderr);
+    assert.deepEqual(installedInvocation.stdout.trim().split('\n'), [
+      'archive',
+      path.join(installedRoot, 'runtime'),
+      'probe',
+    ]);
 
     const powershell = first.assets.find(
       (asset) => asset.name === 'install.ps1',
@@ -228,6 +278,15 @@ test('bootstrap publication is deterministic and pins signed release identity', 
     assert.match(powershell.bytes.toString(), /\$PlatformSliceRoot = 'sha256:/);
     assert.match(powershell.bytes.toString(), /PATH, profiles, registry/);
     assert.match(powershell.bytes.toString(), /RequestedVersion/);
+    assert.match(powershell.bytes.toString(), /KUNGFU_INSTALL_SOURCE=archive/);
+    assert.match(
+      powershell.bytes.toString(),
+      /KUNGFU_DIR=\$VersionRoot\\runtime/,
+    );
+    assert.ok(
+      powershell.bytes.toString().indexOf('KUNGFU_INSTALL_SOURCE=archive') <
+        powershell.bytes.toString().indexOf('@call'),
+    );
   } finally {
     fs.rmSync(value.root, { recursive: true, force: true });
   }

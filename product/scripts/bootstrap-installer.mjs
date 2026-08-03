@@ -292,7 +292,12 @@ mkdir -p "$install_root/versions" "$bin_dir"
 lock="$install_root/.bootstrap-install.lock"
 mkdir "$lock" 2>/dev/null || fail concurrent-install "another Kungfu installer owns $lock"
 stage="$install_root/.bootstrap-stage.$$"
-cleanup() { rm -rf "$stage"; rmdir "$lock" 2>/dev/null || true; }
+published_temporary=
+cleanup() {
+  if [ -n "$published_temporary" ]; then rm -f "$published_temporary"; fi
+  rm -rf "$stage"
+  rmdir "$lock" 2>/dev/null || true
+}
 trap cleanup EXIT HUP INT TERM
 [ ! -e "$stage" ] || fail staging-conflict "staging path already exists: $stage"
 umask 077
@@ -336,13 +341,36 @@ mkdir -p "$candidate/install"
   > "$candidate/install/bootstrap-receipt.json" ||
   fail signed-authority-mismatch "staged CLI did not verify the signed channel and release identity"
 
+cat > "$candidate/install/kungfu-archive-launcher" <<'KUNGFU_ARCHIVE_LAUNCHER'
+#!/bin/sh
+set -e
+target=$0
+while [ -L "$target" ]; do
+  link=$(readlink "$target")
+  case $link in
+    /*) target=$link ;;
+    *) target=$(dirname "$target")/$link ;;
+  esac
+done
+version_root=$(CDPATH= cd -- "$(dirname "$target")/.." && pwd)
+export KUNGFU_INSTALL_SOURCE=archive
+export KUNGFU_DIR="$version_root/runtime"
+exec "$version_root/kungfu" "$@"
+KUNGFU_ARCHIVE_LAUNCHER
+chmod 755 "$candidate/install/kungfu-archive-launcher"
+
 if [ -d "$version_root" ]; then
   debug "verified version already installed"
+  published_temporary="$version_root/install/.kungfu-archive-launcher.$$"
+  cp "$candidate/install/kungfu-archive-launcher" "$published_temporary"
+  chmod 755 "$published_temporary"
+  mv -f "$published_temporary" "$version_root/install/kungfu-archive-launcher"
+  published_temporary=
 else
   mv "$candidate" "$version_root" || fail activation-failed "could not publish the verified version"
 fi
 temporary_link="$bin_dir/.kungfu.bootstrap.$$"
-ln -s "$version_root/kungfu" "$temporary_link"
+ln -s "$version_root/install/kungfu-archive-launcher" "$temporary_link"
 mv -f "$temporary_link" "$launcher"
 trap - EXIT HUP INT TERM
 cleanup
@@ -459,7 +487,7 @@ try {
   )
   if (-not (Test-Path $VersionRoot)) { Move-Item -LiteralPath $Candidate -Destination $VersionRoot }
   $Temporary = "$Launcher.$PID.tmp"
-  "@rem kungfu-archive-bootstrap/v1\`r\`n@call \`"$VersionRoot\\kungfu.cmd\`" %*\`r\`n" | Set-Content -LiteralPath $Temporary -Encoding Ascii
+  "@rem kungfu-archive-bootstrap/v1\`r\`n@setlocal\`r\`n@set \`"KUNGFU_INSTALL_SOURCE=archive\`"\`r\`n@set \`"KUNGFU_DIR=$VersionRoot\\runtime\`"\`r\`n@call \`"$VersionRoot\\kungfu.cmd\`" %*\`r\`n" | Set-Content -LiteralPath $Temporary -Encoding Ascii
   Move-Item -Force -LiteralPath $Temporary -Destination $Launcher
   Write-Host "kungfu-install: installed: $Launcher"
   Write-Host "kungfu-install: PATH, profiles, registry, services, and scheduled tasks were not modified"
