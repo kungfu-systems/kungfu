@@ -942,9 +942,23 @@ function stageTrunk(runtimePinSnapshot) {
     runtimePinSnapshot.runtimePins,
     'utf8',
   );
+  materializeProductRuntimeEntrypoints(CORE_DIST);
   console.log(
     '[product] kungfu-trunk + runtime-pins.env staged into core dist',
   );
+}
+
+export function materializeProductRuntimeEntrypoints(
+  runtimeRoot,
+  platform = process.platform,
+) {
+  if (platform === 'win32') return;
+  for (const executable of [
+    path.join(runtimeRoot, 'kungfu'),
+    path.join(runtimeRoot, 'python', 'bin', 'python3'),
+  ]) {
+    symlinks.materializeRegularFile(executable);
+  }
 }
 
 function platformId() {
