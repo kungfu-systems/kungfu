@@ -151,7 +151,34 @@ test('early source contracts bypass the platform-specific Shifu bootstrap', () =
   assert.doesNotMatch(workflow, /scripts\/require-shifu\.mjs/u);
   assert.match(
     workflow,
-    /node --test[\s\S]*scripts\/alpha-promotion-preflight\.test\.mjs[\s\S]*product\/scripts\/cli-surface-qualification\.test\.mjs/u,
+    /if: \$\{\{ matrix\.platform == 'linux-x64' \}\}[\s\S]*node --test[\s\S]*scripts\/alpha-promotion-preflight\.test\.mjs[\s\S]*product\/scripts\/cli-surface-qualification\.test\.mjs[\s\S]*scripts\/check-upgrade-qualification\.test\.mjs[\s\S]*scripts\/upgrade-publication-admission\.test\.mjs/u,
+  );
+  assert.equal(
+    workflow.match(/scripts\/check-upgrade-qualification\.test\.mjs/gu)?.length,
+    1,
+  );
+});
+
+test('Alpha build lanes reuse one exact-tree source receipt and emit verify substages', () => {
+  const workflow = fs.readFileSync(
+    path.join(process.cwd(), '.github/workflows/build.yml'),
+    'utf8',
+  );
+  assert.match(
+    workflow,
+    /receipt-root: \$\{\{ steps\.receipt\.outputs\.receipt-root \}\}/u,
+  );
+  assert.match(
+    workflow,
+    /source-tree: \$\{\{ steps\.receipt\.outputs\.source-tree \}\}/u,
+  );
+  assert.match(
+    workflow,
+    /cache-apply-command node scripts\/run-release-qualification\.mjs[\s\S]*--source-only-receipt-root \$\{\{ needs\.preflight\.outputs\.receipt-root \}\}[\s\S]*--source-only-source-tree \$\{\{ needs\.preflight\.outputs\.source-tree \}\}/u,
+  );
+  assert.match(
+    workflow,
+    /verify-substage-evidence-path: product\/release\/qualification\/layer-qualification-summary\.json/u,
   );
 });
 
