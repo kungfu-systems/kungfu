@@ -690,9 +690,20 @@ export function conanStoragePartition(
   return `${kind}-${sha256(Buffer.from(identity)).slice(7, 19)}`;
 }
 
-function conanGlobalConfig(storageRoot) {
+export function conanStorageLayout(storageBase, partition) {
+  const storageRoot = path.join(storageBase, partition);
+  const artifactRoot = path.join(storageBase, 'artifacts');
+  return {
+    storageRoot,
+    packageRoot: path.join(storageRoot, 'packages'),
+    artifactRoot,
+    downloadRoot: path.join(artifactRoot, 'downloads'),
+  };
+}
+
+function conanGlobalConfig(storageRoot, artifactRoot) {
   const packages = safePath(path.join(storageRoot, 'packages'));
-  const downloads = safePath(path.join(storageRoot, 'downloads'));
+  const downloads = safePath(path.join(artifactRoot, 'downloads'));
   return [
     `core.cache:storage_path = ${packages}`,
     `core.download:download_cache = ${downloads}`,
@@ -990,8 +1001,15 @@ function prepareConfigOverlays(configBindings, baseEnv, scope, cwd) {
           baseEnv,
         );
         const partition = conanStoragePartition(scope, baseEnv, cwd);
-        const storageRoot = path.join(storageBase, partition);
+        const { storageRoot, artifactRoot, downloadRoot } = conanStorageLayout(
+          storageBase,
+          partition,
+        );
         fs.mkdirSync(storageRoot, { recursive: true, mode: 0o700 });
+        fs.mkdirSync(downloadRoot, {
+          recursive: true,
+          mode: 0o700,
+        });
         const wrapperDir = ensureWrapperDir();
         const wrapperModule = path.join(wrapperDir, 'conan-wrapper.mjs');
         fs.writeFileSync(wrapperModule, conanWrapperSource(), { mode: 0o600 });
@@ -1010,9 +1028,11 @@ function prepareConfigOverlays(configBindings, baseEnv, scope, cwd) {
           'SHIFU_CONAN_ORIGINAL_PATH',
         );
         overlayEnv.SHIFU_CONAN_STORAGE_ROOT = storageRoot;
+        overlayEnv.SHIFU_CONAN_STORAGE_BASE = storageBase;
+        overlayEnv.SHIFU_CONAN_SHARED_DOWNLOAD_ROOT = downloadRoot;
         fs.writeFileSync(
           path.join(conanHome, 'global.conf'),
-          conanGlobalConfig(storageRoot),
+          conanGlobalConfig(storageRoot, artifactRoot),
           { mode: 0o600 },
         );
         conanStorage = {
@@ -1026,6 +1046,14 @@ function prepareConfigOverlays(configBindings, baseEnv, scope, cwd) {
             pathDigest: sha256(Buffer.from(storageRoot)),
             partitionDigest: sha256(Buffer.from(partition)),
             lock: 'on-demand',
+            artifactLayer: {
+              binaryAuthority: 'hosted-remote',
+              identity: 'rrev-package-id-prev',
+              downloadCache: 'shared-content-addressed',
+              downloadPathDigest: sha256(Buffer.from(downloadRoot)),
+              concurrency: 'conan-content-locks',
+              worktreeIndependent: true,
+            },
           },
         };
       }
