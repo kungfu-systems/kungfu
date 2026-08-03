@@ -20,7 +20,7 @@ function sha(value) {
 
 /** @param {object} value */
 function semanticRoot(value) {
-  return sha(Buffer.from(`${JSON.stringify(canonicalJson(value))}\n`, 'utf8'));
+  return sha(Buffer.from(`${canonicalJson(value)}\n`, 'utf8'));
 }
 
 /** @param {string} relative */
