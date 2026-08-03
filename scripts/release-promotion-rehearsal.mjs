@@ -80,11 +80,14 @@ export function validateWorkflowSources(root, contract, overrides = {}) {
   const promote = extractWorkflowJob(promotion, 'promote');
   const rehearsal = extractWorkflowJob(validation, 'promotion-rehearsal');
   const attestation = contract.buildchain.artifact_attestation;
+  const buildWorkflowShellSha =
+    contract.buildchain.build_workflow_shell_sha ||
+    contract.buildchain.workflow_shell_sha;
 
   requirePattern(
     build,
     new RegExp(
-      `uses: kungfu-systems/buildchain/\\.github/workflows/\\.build\\.yml@${contract.buildchain.workflow_shell_sha}`,
+      `uses: kungfu-systems/buildchain/\\.github/workflows/\\.build\\.yml@${buildWorkflowShellSha}`,
     ),
     findings,
     'release-candidate build must consume the exact stable Buildchain workflow shell',
@@ -92,7 +95,7 @@ export function validateWorkflowSources(root, contract, overrides = {}) {
   requirePattern(
     build,
     new RegExp(
-      `buildchain-ref: \\$\\{\\{ inputs\\.buildchain-ref \\|\\| '${contract.buildchain.workflow_shell_sha}' \\}\\}`,
+      `buildchain-ref: \\$\\{\\{ inputs\\.buildchain-ref \\|\\| '${buildWorkflowShellSha}' \\}\\}`,
     ),
     findings,
     'manual validation must retain the Buildchain ref pass-through and default to the reviewed workflow shell',
