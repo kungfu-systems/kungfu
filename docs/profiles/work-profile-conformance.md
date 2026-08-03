@@ -28,6 +28,10 @@ qualification:
 ./shifu check:work-profile-conformance
 ```
 
+Protected delivery also carries the repository's typed ADR release manifest in
+the pull-request body; that declaration is governance input, not conformance
+evidence and cannot replace any rooted Profile or runtime witness.
+
 Every platform and Profile surface in the closed product set must be declared,
 required, supported, and rooted. `not-relevant`, `unsupported`, and omission are
 invalid; the declaration cannot erase a product surface to obtain conformance.
