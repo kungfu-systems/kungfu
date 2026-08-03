@@ -167,6 +167,31 @@ test('automatic hosted preflight does not inherit a private Cargo mirror', () =>
   );
 });
 
+test('hosted preflight retries the public mirror before the official Rust fallback', () => {
+  const workflow = fs.readFileSync(
+    path.join(process.cwd(), '.github/workflows/alpha-promotion-preflight.yml'),
+    'utf8',
+  );
+  assert.match(workflow, /RUSTUP_PRIMARY_DIST_SERVER: https:\/\/rsproxy\.cn/u);
+  assert.match(
+    workflow,
+    /RUSTUP_FALLBACK_DIST_SERVER: https:\/\/static\.rust-lang\.org/u,
+  );
+  assert.match(
+    workflow,
+    /install_toolchain[\s\S]*RUSTUP_PRIMARY_DIST_SERVER[\s\S]*3 \|\| install_toolchain[\s\S]*RUSTUP_FALLBACK_DIST_SERVER[\s\S]*1/u,
+  );
+});
+
+test('formal Build uses Buildchain official Rust defaults after exact-source preflight', () => {
+  const workflow = fs.readFileSync(
+    path.join(process.cwd(), '.github/workflows/build.yml'),
+    'utf8',
+  );
+  assert.doesNotMatch(workflow, /rustup-dist-server:/u);
+  assert.doesNotMatch(workflow, /rustup-update-root:/u);
+});
+
 test('consumer workflow delegates every declared signing request to Buildchain', () => {
   const workflow = fs.readFileSync(
     path.join(process.cwd(), '.github/workflows/build.yml'),
