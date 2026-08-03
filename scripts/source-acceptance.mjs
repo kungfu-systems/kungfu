@@ -11,6 +11,13 @@ import {
   checkDevChannelAuthority,
   devMergeBaseCandidates,
 } from './candidate-timeline-events.cjs';
+import {
+  SOURCE_ACCEPTANCE_RECOVERY,
+  SOURCE_ACCEPTANCE_RUNTIME_OWNER,
+  assertSourceCheckoutUnchanged,
+  prepareSourceAcceptanceRuntime,
+  sourceCheckoutSnapshot,
+} from './readonly-source-toolchain.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const CPP = /\.(?:c|cc|cpp|cxx|h|hh|hpp|hxx)$/;
@@ -663,7 +670,6 @@ export function sourceAcceptancePlan(files, evidenceBaseCommit = '') {
       env:
         label === 'documentation contracts' && evidenceBaseCommit
           ? {
-              ...process.env,
               KUNGFU_ADR_EVIDENCE_BASE_SHA: evidenceBaseCommit,
             }
           : undefined,
@@ -878,13 +884,6 @@ export function sourceAcceptancePlan(files, evidenceBaseCommit = '') {
 
   const python = files.filter((file) => file.endsWith('.py'));
   if (python.length) {
-    const ruffEnv = {
-      ...process.env,
-      RUFF_CACHE_DIR: path.join(
-        process.env.XDG_CACHE_HOME || process.env.RUNNER_TEMP || '/tmp',
-        'kungfu-source-ruff',
-      ),
-    };
     const format = sourcePythonCommand([
       'format',
       '--no-cache',
@@ -906,12 +905,10 @@ export function sourceAcceptancePlan(files, evidenceBaseCommit = '') {
       {
         label: 'changed Python format',
         ...format,
-        env: ruffEnv,
       },
       {
         label: 'changed Python lint',
         ...lint,
-        env: ruffEnv,
       },
     );
   }
@@ -925,13 +922,6 @@ export function sourceAcceptancePlan(files, evidenceBaseCommit = '') {
       label: 'Python type baseline',
       ...mypy,
       cwd: path.join(ROOT, 'framework/core'),
-      env: {
-        ...process.env,
-        MYPY_CACHE_DIR: path.join(
-          process.env.RUNNER_TEMP || '/tmp',
-          'kungfu-source-mypy',
-        ),
-      },
     });
   }
 
@@ -951,18 +941,52 @@ export function sourceAcceptancePlan(files, evidenceBaseCommit = '') {
   return plan;
 }
 
-/** @param {Command} step */
-function run(step) {
+const SOURCE_ACCEPTANCE_RUNTIME_ENV = [
+  'TMPDIR',
+  'TMP',
+  'TEMP',
+  'XDG_CACHE_HOME',
+  'XDG_STATE_HOME',
+  'COREPACK_HOME',
+  'COREPACK_ENABLE_DOWNLOAD_PROMPT',
+  'PNPM_HOME',
+  'npm_config_cache',
+  'NPM_CONFIG_CACHE',
+  'UV_CACHE_DIR',
+  'RUFF_CACHE_DIR',
+  'MYPY_CACHE_DIR',
+  'SHIFU_CACHE_RECEIPT',
+  'KUNGFU_SOURCE_ACCEPTANCE_RUNTIME_ROOT',
+];
+
+export function sourceAcceptanceChildEnv(sourceEnv, stepEnv = {}) {
+  const childEnv = { ...sourceEnv, ...stepEnv };
+  for (const key of SOURCE_ACCEPTANCE_RUNTIME_ENV) {
+    if (sourceEnv[key] !== undefined) childEnv[key] = sourceEnv[key];
+  }
+  return childEnv;
+}
+
+/**
+ * @param {Command} step
+ * @param {NodeJS.ProcessEnv} sourceEnv
+ * @param {typeof spawnSync} spawn
+ */
+export function runSourceAcceptanceStep(
+  step,
+  sourceEnv = process.env,
+  spawn = spawnSync,
+) {
   console.log(`\n[source-acceptance] ${step.label}`);
   console.log(`[source-acceptance] $ ${step.command} ${step.args.join(' ')}`);
-  const result = spawnSync(step.command, step.args, {
+  const result = spawn(step.command, step.args, {
     cwd: step.cwd || ROOT,
-    env: step.env || process.env,
+    env: sourceAcceptanceChildEnv(sourceEnv, step.env),
     stdio: 'inherit',
   });
   if (result.error || result.status !== 0) {
     throw new Error(
-      `${step.label} failed: ${result.error?.message || result.status}`,
+      `${step.label} failed: ${result.error?.message || result.status}; owner=${SOURCE_ACCEPTANCE_RUNTIME_OWNER}; recovery=${SOURCE_ACCEPTANCE_RECOVERY}`,
     );
   }
   if (process.env.KUNGFU_READONLY_NESTED_SOURCE_ACCEPTANCE === '1') {
@@ -976,25 +1000,46 @@ function run(step) {
 }
 
 function main() {
-  const files = sourceChangedFiles();
-  console.log(`[source-acceptance] changed files: ${files.length}`);
-  if (process.env.KUNGFU_READONLY_NESTED_SOURCE_ACCEPTANCE !== '1') {
-    assertYijinjingWriterInterface();
-    console.log('[source-acceptance] yijinjing writer interface passed');
-  }
-  const devChannels = checkDevChannelAuthority();
+  const before = sourceCheckoutSnapshot(ROOT);
+  const runtime = prepareSourceAcceptanceRuntime(ROOT);
   console.log(
-    `\n[source-acceptance] dev channel authority\n${JSON.stringify(devChannels, null, 2)}`,
+    `[source-acceptance] trackedTreeRoot=${before.trackedTreeRoot} untrackedInventoryRoot=${before.untrackedInventoryRoot}`,
   );
-  if (devChannels.verdict !== 'pass')
-    throw new Error('dev channel authority failed');
-  if (process.env.KUNGFU_READONLY_NESTED_SOURCE_ACCEPTANCE === '1') {
-    console.warn(
-      '[source-acceptance] cold read-only lane: the installed TypeScript dependency graph is absent; normal source acceptance and CI enforce tooling type checks.',
+  let failure;
+  try {
+    const files = sourceChangedFiles();
+    console.log(`[source-acceptance] changed files: ${files.length}`);
+    if (process.env.KUNGFU_READONLY_NESTED_SOURCE_ACCEPTANCE !== '1') {
+      assertYijinjingWriterInterface();
+      console.log('[source-acceptance] yijinjing writer interface passed');
+    }
+    const devChannels = checkDevChannelAuthority();
+    console.log(
+      `\n[source-acceptance] dev channel authority\n${JSON.stringify(devChannels, null, 2)}`,
     );
+    if (devChannels.verdict !== 'pass')
+      throw new Error('dev channel authority failed');
+    if (process.env.KUNGFU_READONLY_NESTED_SOURCE_ACCEPTANCE === '1') {
+      console.warn(
+        '[source-acceptance] cold read-only lane: the installed TypeScript dependency graph is absent; normal source acceptance and CI enforce tooling type checks.',
+      );
+    }
+    for (const step of sourceAcceptancePlan(files, sourceMergeBase().sha))
+      runSourceAcceptanceStep(step, runtime.env);
+  } catch (error) {
+    failure = error;
+  } finally {
+    try {
+      const after = sourceCheckoutSnapshot(ROOT);
+      assertSourceCheckoutUnchanged(before, after);
+      console.log(
+        `[source-acceptance] zero-write trackedTreeRoot=${after.trackedTreeRoot} untrackedInventoryRoot=${after.untrackedInventoryRoot}`,
+      );
+    } finally {
+      runtime.cleanup();
+    }
   }
-  for (const step of sourceAcceptancePlan(files, sourceMergeBase().sha))
-    run(step);
+  if (failure) throw failure;
   console.log('\n[source-acceptance] build-free source gate passed');
 }
 

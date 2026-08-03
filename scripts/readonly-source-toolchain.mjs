@@ -1,7 +1,12 @@
 // SPDX-License-Identifier: Apache-2.0
 // @ts-check
 
+import { spawnSync } from 'node:child_process';
+import crypto from 'node:crypto';
+import fs from 'node:fs';
 import { createRequire } from 'node:module';
+import os from 'node:os';
+import path from 'node:path';
 
 // A bounded YAML 1.2 reader for committed GitHub workflow contracts. It covers
 // mappings, sequences, quoted/plain scalars, flow collections, and literal or
@@ -312,4 +317,162 @@ export function optionalAjv2020() {
     else throw error;
   }
   return cachedAjv;
+}
+
+export const SOURCE_ACCEPTANCE_RUNTIME_OWNER = 'source-acceptance-runtime';
+export const SOURCE_ACCEPTANCE_RECOVERY =
+  'move disposable writes to the declared OS runtime root; run legitimate materialization in an isolated worktree and exclude it from ./shifu check:source';
+
+function digestRows(rows) {
+  const hash = crypto.createHash('sha256');
+  for (const row of rows) hash.update(row).update('\0');
+  return `sha256:${hash.digest('hex')}`;
+}
+
+function gitNull(root, args) {
+  const result = spawnSync('git', args, {
+    cwd: root,
+    encoding: 'buffer',
+    maxBuffer: 64 * 1024 * 1024,
+  });
+  if (result.status !== 0)
+    throw new Error(
+      `git ${args.join(' ')} failed: ${String(result.stderr || '').trim()}`,
+    );
+  return result.stdout.toString('utf8').split('\0').filter(Boolean);
+}
+
+function pathInside(root, target) {
+  const relative = path.relative(path.resolve(root), path.resolve(target));
+  return (
+    relative === '' ||
+    (!relative.startsWith(`..${path.sep}`) &&
+      relative !== '..' &&
+      !path.isAbsolute(relative))
+  );
+}
+
+function resolveThroughExistingAncestor(target) {
+  let cursor = path.resolve(target);
+  const suffix = [];
+  while (!fs.existsSync(cursor)) {
+    const parent = path.dirname(cursor);
+    if (parent === cursor) break;
+    suffix.unshift(path.basename(cursor));
+    cursor = parent;
+  }
+  return path.resolve(fs.realpathSync(cursor), ...suffix);
+}
+
+export function assertExternalSourceAcceptanceTarget(
+  checkoutRoot,
+  target,
+  label = 'write target',
+) {
+  const canonicalCheckout = fs.realpathSync(checkoutRoot);
+  const canonicalTarget = resolveThroughExistingAncestor(target);
+  if (pathInside(canonicalCheckout, canonicalTarget))
+    throw new Error(
+      `${label} is inside the protected checkout; owner=${SOURCE_ACCEPTANCE_RUNTIME_OWNER}; recovery=${SOURCE_ACCEPTANCE_RECOVERY}`,
+    );
+  return canonicalTarget;
+}
+
+export function sourceCheckoutSnapshot(root) {
+  const rows = (kind, paths) =>
+    paths.sort().map((relative) => {
+      const absolute = path.join(root, relative);
+      const stat = fs.lstatSync(absolute);
+      const bytes = stat.isSymbolicLink()
+        ? Buffer.from(fs.readlinkSync(absolute))
+        : fs.readFileSync(absolute);
+      return `${kind}:${stat.isSymbolicLink() ? 'link' : 'file'}:${relative}:${crypto
+        .createHash('sha256')
+        .update(bytes)
+        .digest('hex')}`;
+    });
+  const tracked = gitNull(root, ['ls-files', '-z']);
+  const untracked = gitNull(root, [
+    'ls-files',
+    '--others',
+    '--exclude-standard',
+    '-z',
+  ]);
+  return {
+    trackedTreeRoot: digestRows(rows('tracked', tracked)),
+    untrackedInventoryRoot: digestRows(rows('untracked', untracked)),
+    trackedCount: tracked.length,
+    untrackedCount: untracked.length,
+  };
+}
+
+export function assertSourceCheckoutUnchanged(before, after) {
+  for (const key of ['trackedTreeRoot', 'untrackedInventoryRoot'])
+    if (before[key] !== after[key])
+      throw new Error(
+        `protected checkout ${key} changed during source acceptance; owner=${SOURCE_ACCEPTANCE_RUNTIME_OWNER}; recovery=${SOURCE_ACCEPTANCE_RECOVERY}`,
+      );
+}
+
+export function prepareSourceAcceptanceRuntime(
+  checkoutRoot,
+  baseEnv = process.env,
+) {
+  // tsx opens an IPC socket below TMPDIR. Darwin's Unix-domain socket path is
+  // short enough that the normal per-user os.tmpdir() prefix can overflow it,
+  // so POSIX source acceptance owns a deliberately short OS runtime root.
+  // Windows has no Unix socket path limit and retains its runner/system temp.
+  const runtimeParent =
+    process.platform === 'win32' ? baseEnv.RUNNER_TEMP || os.tmpdir() : '/tmp';
+  const osTemp = assertExternalSourceAcceptanceTarget(
+    checkoutRoot,
+    runtimeParent,
+    'OS temporary root',
+  );
+  const runtimeRoot = fs.mkdtempSync(path.join(osTemp, 'kf-sa-'));
+  const directories = Object.fromEntries(
+    [
+      'tmp',
+      'cache',
+      'state',
+      'corepack',
+      'pnpm-home',
+      'npm-cache',
+      'uv-cache',
+      'ruff-cache',
+      'mypy-cache',
+      'diagnostics',
+    ].map((name) => [name, path.join(runtimeRoot, name)]),
+  );
+  for (const directory of Object.values(directories))
+    fs.mkdirSync(directory, { recursive: true });
+  return {
+    owner: SOURCE_ACCEPTANCE_RUNTIME_OWNER,
+    recovery: SOURCE_ACCEPTANCE_RECOVERY,
+    runtimeRoot,
+    env: {
+      ...baseEnv,
+      TMPDIR: directories.tmp,
+      TMP: directories.tmp,
+      TEMP: directories.tmp,
+      XDG_CACHE_HOME: directories.cache,
+      XDG_STATE_HOME: directories.state,
+      COREPACK_HOME: directories.corepack,
+      COREPACK_ENABLE_DOWNLOAD_PROMPT: '0',
+      PNPM_HOME: directories['pnpm-home'],
+      npm_config_cache: directories['npm-cache'],
+      NPM_CONFIG_CACHE: directories['npm-cache'],
+      UV_CACHE_DIR: directories['uv-cache'],
+      RUFF_CACHE_DIR: directories['ruff-cache'],
+      MYPY_CACHE_DIR: directories['mypy-cache'],
+      SHIFU_CACHE_RECEIPT: path.join(
+        directories.diagnostics,
+        'shifu-cache-resolution.json',
+      ),
+      KUNGFU_SOURCE_ACCEPTANCE_RUNTIME_ROOT: runtimeRoot,
+    },
+    cleanup() {
+      fs.rmSync(runtimeRoot, { recursive: true, force: true });
+    },
+  };
 }

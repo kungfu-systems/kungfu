@@ -95,6 +95,16 @@ function executableOnPath(name) {
   throw new Error(`${name} is not available on PATH`);
 }
 
+function declaredExecutable(name, candidate) {
+  if (!candidate) return null;
+  try {
+    fs.accessSync(candidate, fs.constants.X_OK);
+    return candidate;
+  } catch {
+    throw new Error(`${name} is not executable: ${candidate}`);
+  }
+}
+
 function snapshotSource(root) {
   const rows = [];
   const visit = (directory) => {
@@ -119,6 +129,36 @@ function snapshotSource(root) {
   };
   visit(root);
   return rows;
+}
+
+function sourceAuditRoot(rows) {
+  const hash = crypto.createHash('sha256');
+  for (const row of rows) hash.update(row).update('\0');
+  return `sha256:${hash.digest('hex')}`;
+}
+
+function boundedDiagnosticTail(...values) {
+  const [stderr] = values;
+  if (stderr) return stderr.slice(-24 * 1024);
+  const output = values.filter(Boolean).join('\n');
+  const lines = output.split(/\r?\n/u);
+  const failingTestsIndex = lines.findLastIndex(
+    (line) => line.trim() === '✖ failing tests:',
+  );
+  if (failingTestsIndex >= 0)
+    return lines
+      .slice(failingTestsIndex, failingTestsIndex + 120)
+      .join('\n')
+      .slice(0, 24 * 1024);
+  const failureSummaryIndex = lines.findLastIndex((line) =>
+    /^(?:ℹ fail [1-9]|# fail [1-9])/u.test(line.trimStart()),
+  );
+  if (failureSummaryIndex >= 0)
+    return lines
+      .slice(Math.max(0, failureSummaryIndex - 8), failureSummaryIndex + 40)
+      .join('\n')
+      .slice(0, 24 * 1024);
+  return output.slice(-24 * 1024);
 }
 
 function makeReadOnly(root) {
@@ -197,9 +237,11 @@ test('declared discovery routes are zero-write in a cold read-only fixture', (t)
   assert.equal(fixtureHead.stdout.trim(), exactSourceSha);
   const base = sourceMergeBase();
   const corePytest = path.join(ROOT, 'framework/core/.venv/bin/pytest');
-  const pytest = fs.existsSync(corePytest)
-    ? corePytest
-    : executableOnPath('pytest');
+  const pytest =
+    declaredExecutable(
+      'KUNGFU_READONLY_PYTEST',
+      process.env.KUNGFU_READONLY_PYTEST,
+    ) || (fs.existsSync(corePytest) ? corePytest : executableOnPath('pytest'));
   const fixedBase = spawnSync(
     git,
     ['update-ref', 'refs/heads/dev/v4/v4.0', base.sha],
@@ -629,6 +671,7 @@ test('declared discovery routes are zero-write in a cold read-only fixture', (t)
   }
 
   const before = snapshotSource(fixture);
+  const beforeAuditRoot = sourceAuditRoot(before);
   const protectedRef = base.sha;
   makeReadOnly(fixture);
   fs.chmodSync(home, 0o555);
@@ -738,11 +781,18 @@ test('declared discovery routes are zero-write in a cold read-only fixture', (t)
   assert.equal(
     sourceAcceptance.status,
     0,
-    `check:source:\n${[sourceAcceptance.stderr, sourceAcceptance.stdout]
-      .filter(Boolean)
-      .join('\n')}`,
+    `check:source (bounded tail):\n${boundedDiagnosticTail(
+      sourceAcceptance.stderr,
+      sourceAcceptance.stdout,
+    )}`,
   );
-  assert.deepEqual(snapshotSource(fixture), before);
+  const after = snapshotSource(fixture);
+  const afterAuditRoot = sourceAuditRoot(after);
+  assert.deepEqual(after, before);
+  assert.equal(afterAuditRoot, beforeAuditRoot);
+  console.log(
+    `[readonly-source] filesystem-write-audit before=${beforeAuditRoot} after=${afterAuditRoot} byteUnchanged=true`,
+  );
   assert.equal(fs.existsSync(toolLog), false, 'bootstrap tool was invoked');
   assert.deepEqual(fs.readdirSync(home), [], 'read-only route wrote into HOME');
   assert.equal(
