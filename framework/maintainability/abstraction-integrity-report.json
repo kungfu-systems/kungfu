@@ -5,13 +5,13 @@
   "manifestPath": "framework/maintainability/abstraction-integrity.manifest.json",
   "measurement": {
     "aggregates": {
-      "kungfu-cli": 20462,
+      "kungfu-cli": 20536,
       "kungfu-flat-root": 36500,
       "kungfu-runtime-family": 6246
     },
     "counts": {
-      "productionFiles": 253,
-      "productionPhysicalLines": 86720,
+      "productionFiles": 254,
+      "productionPhysicalLines": 86888,
       "testFiles": 106,
       "testPhysicalLines": 47341
     },
@@ -43,7 +43,7 @@
       },
       {
         "path": "framework/core/src/python/kungfu/cli/commands/agent.py",
-        "physicalLines": 1597
+        "physicalLines": 1560
       },
       {
         "path": "framework/core/src/python/kungfu/cli/commands/assignment.py",
@@ -150,9 +150,9 @@
         "responsibilities": 39
       },
       {
-        "contentRoot": "sha256:84c95e12e317bcb5b74f335b905a6677471a8778d4f85830417be7de6316354b",
+        "contentRoot": "sha256:93f2968c2e614c42ec025c3b0e4c74ca92080ae59fb96e8fd7ca6a328348adf2",
         "path": "framework/core/src/python/kungfu/cli/commands/agent.py",
-        "physicalLines": 1597,
+        "physicalLines": 1560,
         "responsibilities": 61
       },
       {
@@ -350,7 +350,7 @@
       }
     ],
     "schema": "kungfu.python-structure-measurement/v1",
-    "sourceRoot": "sha256:a958d980508f3b855a4d046eb2cbd77ee5e49ee2312bc5d3bcca61ef58130200",
+    "sourceRoot": "sha256:b8ecca4a88cefe102e8afca6182d350b4dcbb0049f811e187220fe8d9f7f0e05",
     "sourceRoots": {
       "production": [
         "framework/core/src/python"
@@ -544,9 +544,9 @@
     "kungfu.runtime_broker.NativeReadinessAuthority",
     "kungfu.runtime_service.ProcessRuntimeHost"
   ],
-  "reportRoot": "sha256:e9d8590420290e2cc3dde5ec42a671f6e8d85045dcd16fec72cf78fdbe354f51",
+  "reportRoot": "sha256:ba8d81c5f90f6bf108f2d08daefa0377fb54d166ebbb444aeac673ddf53b4097",
   "schema": "kungfu.abstraction-integrity-report/v1",
-  "sourceRoot": "sha256:a958d980508f3b855a4d046eb2cbd77ee5e49ee2312bc5d3bcca61ef58130200",
+  "sourceRoot": "sha256:b8ecca4a88cefe102e8afca6182d350b4dcbb0049f811e187220fe8d9f7f0e05",
   "summary": {
     "blockingIssues": 0
   },
