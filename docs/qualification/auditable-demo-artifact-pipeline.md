@@ -26,7 +26,7 @@ The single source of scenario intent is
 | Demo | Exact installed-binary argv | Bound |
 | --- | --- | --- |
 | Agent Work Lab autoplay | `kungfu agent-work-lab autoplay` | 90 seconds |
-| Guided Project Tour | `kungfu agent-work-lab project-tour --speed 0.8` | 180 seconds |
+| Full Guided Project Tour | `kungfu agent-work-lab project-tour --episode all` | 180 seconds |
 
 Both playback commands are self-driving, deterministic under the declared
 isolated environment, credential-free, and bounded by the `long-form` duration
