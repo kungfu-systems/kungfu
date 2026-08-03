@@ -69,11 +69,11 @@
       "buildchain"
     ],
     "packageVersions": {
-      "kfd": "1.0.0-alpha.47",
+      "kfd": "1.0.0-alpha.53",
       "libnode": "22.22.3-kf.5-alpha.3",
       "buildchain": "3.0.0"
     },
-    "digest": "sha256:4b6a6b2f5519c7cc8379bbac57bcf3bf65297e44b5b70c17afdeb9d769244277"
+    "digest": "sha256:4f50ffa1cda5d6f68e9849a6b8de2c92fd8923419d6becf2cf54dcdc45568802"
   },
   "surfaces": [
     {
