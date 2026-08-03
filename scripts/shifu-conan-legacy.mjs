@@ -263,9 +263,24 @@ export function migrationPlan(inventory, remote = 'workhub-conan') {
     rollback:
       'No local rollback is needed because legacy bytes are retained; remote artifacts are additive and remain subject to repository retention policy.',
   };
-  const approvalDigest = digest(JSON.stringify(plan));
+  const approvalBasis = {
+    schema: 'shifu.conan-legacy-migration-approval/v1',
+    remote,
+    identity: plan.identity,
+    storageRootDigest: plan.storageRootDigest,
+    exactReferences,
+  };
+  const approvalDigest = digest(JSON.stringify(approvalBasis));
   plan.approval = {
+    schema: approvalBasis.schema,
     digest: approvalDigest,
+    binds: [
+      'remote',
+      'storage-root',
+      'eligible-partition',
+      'rrev-package-id-prev',
+    ],
+    ignores: ['read-only-inventory-timestamp', 'empty-mutable-partition-churn'],
     executeCommand:
       `SHIFU_CONAN_MIGRATION_APPROVAL=${approvalDigest} ` +
       `./shifu cache apply -- node scripts/shifu-conan-legacy.mjs migrate --remote ${remote} --execute`,
