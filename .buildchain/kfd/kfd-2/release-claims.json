@@ -38,7 +38,7 @@
           "pointer": {
             "kind": "file",
             "path": "framework/core/src/python/kungfu/agent/cli_surface.catalog.json",
-            "sha256": "77e6ae9a2f1567572fafb098b17f21451b77eca7949267045364a4f09c488781"
+            "sha256": "5e6d7e4dae20f12cb05e378a1bcbb96727125bd5924164ce7be828d15b83c53a"
           },
           "description": "Complete deterministic CLI surface graph shared by offline Agent capabilities and catalog parity checks."
         },
@@ -267,7 +267,7 @@
           "pointer": {
             "kind": "file",
             "path": "framework/core/src/python/kungfu/cli/commands/agent.py",
-            "sha256": "84c95e12e317bcb5b74f335b905a6677471a8778d4f85830417be7de6316354b"
+            "sha256": "93f2968c2e614c42ec025c3b0e4c74ca92080ae59fb96e8fd7ca6a328348adf2"
           },
           "description": "Agent command surface including mode selection and bootstrap status."
         }

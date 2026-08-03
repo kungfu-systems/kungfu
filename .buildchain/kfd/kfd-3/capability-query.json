@@ -9,8 +9,8 @@
   "status": "passed",
   "verificationMode": "product-declared-registry",
   "summary": {
-    "detected": 183,
-    "declared": 183,
+    "detected": 186,
+    "declared": 186,
     "enforced": 0,
     "detectedButUnregistered": 0,
     "declaredButMissing": 0
@@ -2920,6 +2920,75 @@
     {"id":"shifu.agent.map","kind":"cli","name":"shifu agent map --json","state":"declared","detected":true,"enforced":false,"sourcePath":"crates/shifu/agent/kfd3_api.registry.json","artifactPath":"crates/shifu/agent/kfd3_api.registry.json","evidencePath":"crates/shifu/agent/kfd3_api.registry.json","kfd1Basis":{"registryPath":".buildchain/kfd/kfd-3/surfaces.json","sourcePath":"crates/shifu/agent/kfd3_api.registry.json","artifactPath":"crates/shifu/agent/kfd3_api.registry.json","digest":"sha256:0aad6755fe623d5b6292df61a62b7b70f5b19eb3a304b0636eca8bd86b87f203"},"kfd2Trust":{"status":"unknown","trustImpact":"passport-claim-not-found","residualRisk":[]},"residualRisk":[]},
     {"id":"shifu.agent.schema","kind":"cli","name":"shifu agent schema --json","state":"declared","detected":true,"enforced":false,"sourcePath":"crates/shifu/agent/kfd3_api.registry.json","artifactPath":"crates/shifu/agent/kfd3_api.registry.json","evidencePath":"crates/shifu/agent/kfd3_api.registry.json","kfd1Basis":{"registryPath":".buildchain/kfd/kfd-3/surfaces.json","sourcePath":"crates/shifu/agent/kfd3_api.registry.json","artifactPath":"crates/shifu/agent/kfd3_api.registry.json","digest":"sha256:616e2149953fbe0956e61320831ff7544c3f367a0fed9e19b97a02b187103567"},"kfd2Trust":{"status":"unknown","trustImpact":"passport-claim-not-found","residualRisk":[]},"residualRisk":[]},
     {"id":"shifu.agent.verify","kind":"cli","name":"shifu agent verify --json","state":"declared","detected":true,"enforced":false,"sourcePath":"crates/shifu/agent/kfd3_api.registry.json","artifactPath":"crates/shifu/agent/kfd3_api.registry.json","evidencePath":"crates/shifu/agent/kfd3_api.registry.json","kfd1Basis":{"registryPath":".buildchain/kfd/kfd-3/surfaces.json","sourcePath":"crates/shifu/agent/kfd3_api.registry.json","artifactPath":"crates/shifu/agent/kfd3_api.registry.json","digest":"sha256:53b2142bf870796770e46c13160f3d5166f0debe33f080c1b4c7e76146a3db05"},"kfd2Trust":{"status":"unknown","trustImpact":"passport-claim-not-found","residualRisk":[]},"residualRisk":[]},
+    {
+      "id": "shifu.source.acquire",
+      "kind": "cli",
+      "name": "shifu source acquire ... --execute --json",
+      "state": "declared",
+      "detected": true,
+      "enforced": false,
+      "sourcePath": "crates/shifu/agent/kfd3_api.registry.json",
+      "artifactPath": "crates/shifu/agent/kfd3_api.registry.json",
+      "evidencePath": "crates/shifu/agent/kfd3_api.registry.json",
+      "kfd1Basis": {
+        "registryPath": ".buildchain/kfd/kfd-3/surfaces.json",
+        "sourcePath": "crates/shifu/agent/kfd3_api.registry.json",
+        "artifactPath": "crates/shifu/agent/kfd3_api.registry.json",
+        "digest": "sha256:2a690db4d7a559e4b500af85bfb87645a2fa9e070656a3888280b426408b832d"
+      },
+      "kfd2Trust": {
+        "status": "unknown",
+        "trustImpact": "passport-claim-not-found",
+        "residualRisk": []
+      },
+      "residualRisk": []
+    },
+    {
+      "id": "shifu.source.plan",
+      "kind": "cli",
+      "name": "shifu source plan ... --json",
+      "state": "declared",
+      "detected": true,
+      "enforced": false,
+      "sourcePath": "crates/shifu/agent/kfd3_api.registry.json",
+      "artifactPath": "crates/shifu/agent/kfd3_api.registry.json",
+      "evidencePath": "crates/shifu/agent/kfd3_api.registry.json",
+      "kfd1Basis": {
+        "registryPath": ".buildchain/kfd/kfd-3/surfaces.json",
+        "sourcePath": "crates/shifu/agent/kfd3_api.registry.json",
+        "artifactPath": "crates/shifu/agent/kfd3_api.registry.json",
+        "digest": "sha256:91821ce74fbfb976321416f82f07715f7e7cad1ce7fc8c955c2ab3544008f6fc"
+      },
+      "kfd2Trust": {
+        "status": "unknown",
+        "trustImpact": "passport-claim-not-found",
+        "residualRisk": []
+      },
+      "residualRisk": []
+    },
+    {
+      "id": "shifu.source.verify",
+      "kind": "cli",
+      "name": "shifu source verify ... --json",
+      "state": "declared",
+      "detected": true,
+      "enforced": false,
+      "sourcePath": "crates/shifu/agent/kfd3_api.registry.json",
+      "artifactPath": "crates/shifu/agent/kfd3_api.registry.json",
+      "evidencePath": "crates/shifu/agent/kfd3_api.registry.json",
+      "kfd1Basis": {
+        "registryPath": ".buildchain/kfd/kfd-3/surfaces.json",
+        "sourcePath": "crates/shifu/agent/kfd3_api.registry.json",
+        "artifactPath": "crates/shifu/agent/kfd3_api.registry.json",
+        "digest": "sha256:331cbc1d05702cc7f72f609d690478da54825f3a59a7ae6fad36ece3c20d070d"
+      },
+      "kfd2Trust": {
+        "status": "unknown",
+        "trustImpact": "passport-claim-not-found",
+        "residualRisk": []
+      },
+      "residualRisk": []
+    },
     {"id":"xinfa.agent.brief","kind":"cli","name":"xinfa agent brief","state":"declared","detected":true,"enforced":false,"sourcePath":"crates/xinfa/agent/kfd3_api.registry.json","artifactPath":"crates/xinfa/agent/kfd3_api.registry.json","evidencePath":"crates/xinfa/agent/kfd3_api.registry.json","kfd1Basis":{"registryPath":".buildchain/kfd/kfd-3/surfaces.json","sourcePath":"crates/xinfa/agent/kfd3_api.registry.json","artifactPath":"crates/xinfa/agent/kfd3_api.registry.json","digest":"sha256:119681282b0bb4987505af618361f4fd0d70c5ec6502872147dcb74d4d0aa2f8"},"kfd2Trust":{"status":"unknown","trustImpact":"passport-claim-not-found","residualRisk":[]},"residualRisk":[]},
     {"id":"xinfa.agent.capabilities","kind":"cli","name":"xinfa agent capabilities --json","state":"declared","detected":true,"enforced":false,"sourcePath":"crates/xinfa/agent/kfd3_api.registry.json","artifactPath":"crates/xinfa/agent/kfd3_api.registry.json","evidencePath":"crates/xinfa/agent/kfd3_api.registry.json","kfd1Basis":{"registryPath":".buildchain/kfd/kfd-3/surfaces.json","sourcePath":"crates/xinfa/agent/kfd3_api.registry.json","artifactPath":"crates/xinfa/agent/kfd3_api.registry.json","digest":"sha256:530882e72654978ccb9b3dc8d6525d27f5c151dc3590e50efd0600285c2943b7"},"kfd2Trust":{"status":"unknown","trustImpact":"passport-claim-not-found","residualRisk":[]},"residualRisk":[]},
     {"id":"xinfa.agent.map","kind":"cli","name":"xinfa agent map --json","state":"declared","detected":true,"enforced":false,"sourcePath":"crates/xinfa/agent/kfd3_api.registry.json","artifactPath":"crates/xinfa/agent/kfd3_api.registry.json","evidencePath":"crates/xinfa/agent/kfd3_api.registry.json","kfd1Basis":{"registryPath":".buildchain/kfd/kfd-3/surfaces.json","sourcePath":"crates/xinfa/agent/kfd3_api.registry.json","artifactPath":"crates/xinfa/agent/kfd3_api.registry.json","digest":"sha256:e14ff8be9df02d9c5642aef7b9c25ce6deb9f7f5cebc11f2e5d7ac911694d0c5"},"kfd2Trust":{"status":"unknown","trustImpact":"passport-claim-not-found","residualRisk":[]},"residualRisk":[]},

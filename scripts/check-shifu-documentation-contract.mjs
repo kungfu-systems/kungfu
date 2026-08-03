@@ -7,7 +7,13 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
+import crypto from 'node:crypto';
+import zlib from 'node:zlib';
 import { documentationWitness } from './buildchain-documentation-witness.mjs';
+import {
+  compilePortableBundle,
+  verifyPortableBundle,
+} from './portable-atlas-bundle.mjs';
 import { validateQualificationMatrix } from './shifu-documentation-qualification.mjs';
 import { validateDocumentationSubmission } from './shifu-documentation-runtime.mjs';
 import { buildHumanSurfaceInventory } from './shifu-documentation-surfaces.mjs';
@@ -121,6 +127,23 @@ export async function checkShifuDocumentationContract(root = ROOT) {
     path.join(root, 'docs/qualification/documentation-control-plane.json'),
   );
   assert.deepEqual(validateQualificationMatrix(qualificationMatrix), []);
+  const portableManifest = readJson(
+    path.join(root, '.xinfa/product-atlas-bundle.json'),
+  );
+  assert.deepEqual(portableManifest, compilePortableBundle());
+  assert.equal(verifyPortableBundle(portableManifest).valid, true);
+  assert.equal(portableManifest.classification.unknown, 0);
+  assert.equal(portableManifest.classification.silentOmissions, 0);
+  assert.equal(portableManifest.routes.incompleteRoutes, 0);
+  assert.equal(portableManifest.budgets.passed, true);
+  const classificationCompressed = fs.readFileSync(
+    path.join(root, '.xinfa/portable-atlas-classification.json.gz'),
+  );
+  const classificationBytes = zlib.gunzipSync(classificationCompressed);
+  assert.equal(
+    `sha256:${crypto.createHash('sha256').update(classificationBytes).digest('hex')}`,
+    portableManifest.classification.classificationRoot,
+  );
 
   const invalidRoot = path.join(
     root,
@@ -153,6 +176,22 @@ export async function checkShifuDocumentationContract(root = ROOT) {
     const validate = ajv.compile(submissionSchema);
     ajv.compile(receiptSchema);
     const validateSurfacePolicy = ajv.compile(surfacePolicySchema);
+    const validatePortableBundle = ajv.compile(
+      readJson(
+        path.join(
+          root,
+          'docs/shifu/schema/portable-atlas-bundle-v1.schema.json',
+        ),
+      ),
+    );
+    ajv.compile(
+      readJson(path.join(root, 'docs/shifu/schema/source-plan-v1.schema.json')),
+    );
+    ajv.compile(
+      readJson(
+        path.join(root, 'docs/shifu/schema/source-receipt-v1.schema.json'),
+      ),
+    );
     assert.equal(validate(submission), true, JSON.stringify(validate.errors));
     assert.equal(
       validateSurfacePolicy(
@@ -160,6 +199,11 @@ export async function checkShifuDocumentationContract(root = ROOT) {
       ),
       true,
       JSON.stringify(validateSurfacePolicy.errors),
+    );
+    assert.equal(
+      validatePortableBundle(portableManifest),
+      true,
+      JSON.stringify(validatePortableBundle.errors),
     );
     schemaValidation = 'passed';
   }

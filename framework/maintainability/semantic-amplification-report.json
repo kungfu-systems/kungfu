@@ -5,7 +5,7 @@
   "manifestPath": "framework/maintainability/semantic-amplification.manifest.json",
   "manifestRoot": "sha256:b64ab1daecaec8560dd649af61b7e175adaf562df3aa8b94e3733ef499a308aa",
   "baselineRef": "dbfed9ca1785d147b26f4f06e7e6895ac7368fee",
-  "sourceRoot": "sha256:f2c5bead73f9e2f4b58d49f7015723de53881f3ae1f85be24302a9296470b045",
+  "sourceRoot": "sha256:ba63607c401eee9efb322a930b7288f7d65fd7540ede8cd05fd64a23f6d09a9c",
   "roles": {
     "authority": "exactly one authority route per family; the route may name multiple co-owned source files",
     "allowedProjectionRoles": [
@@ -124,7 +124,7 @@
           "path": "framework/core/src/python/kungfu/cli/surface_contract.registry.json",
           "currentLines": 152,
           "baselineLines": 155,
-          "currentRoot": "sha256:7182ca8954fa787361217fc0b3282bff53f0f6ada0ef4d5e6db3f1ef8b0b852a",
+          "currentRoot": "sha256:76be9e250a1c2d9d3a9617c71f34260e34d1ea2b65f5a413ef7b80b0346d5cb1",
           "baselineRoot": "sha256:7af1893015500d9d54e2783e44af30cd4af8753787d9d9b70c77356b0e788c17",
           "changedSinceBaseline": true
         },
@@ -156,7 +156,7 @@
           "path": "framework/core/src/python/kungfu/agent/cli_surface.catalog.json",
           "currentLines": 1016,
           "baselineLines": 33927,
-          "currentRoot": "sha256:77e6ae9a2f1567572fafb098b17f21451b77eca7949267045364a4f09c488781",
+          "currentRoot": "sha256:5e6d7e4dae20f12cb05e378a1bcbb96727125bd5924164ce7be828d15b83c53a",
           "baselineRoot": "sha256:9f2f17fca5aa4e4daa28a276c1e3a153fa263e791b497f7ea83a93796f7aeb1f",
           "changedSinceBaseline": true
         },
@@ -651,9 +651,9 @@
         },
         {
           "path": "product/scripts/dist.mjs",
-          "currentLines": 1937,
+          "currentLines": 1938,
           "baselineLines": 2514,
-          "currentRoot": "sha256:033b7bda4f390dd9017918371b87bda1e8c75eed0d6ba24c721708e783c7fc77",
+          "currentRoot": "sha256:ff33ae87fb0a644fd2f9829403a19fe72edf914a8236a7f2d33cc7ee44cc81fe",
           "baselineRoot": "sha256:6cfd6c55e296163ab863fb1d79a4a51198ad12943274fc0858338bb651a108da",
           "changedSinceBaseline": true
         },
@@ -1947,7 +1947,7 @@
         "topology": "product-assembly",
         "kind": "line-count",
         "status": "remediated",
-        "metric": 1937,
+        "metric": 1938,
         "threshold": 2450,
         "finding": null
       },
