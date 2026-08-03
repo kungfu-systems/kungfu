@@ -90,8 +90,22 @@ test('validates the exact KFD-1 through KFD-13 authority', (t) => {
     [
       'docs/qualification/evidence/assignment-organization-rollout/7aae2c562a/report.json',
       'framework/core/tests/python/test_assignment_orchestration.py',
+      'docs/architecture/primitive-management-plane.md',
+      'framework/incubation/incubation-passport.registry.json',
+      'framework/primitive/kungfu-primitive-catalog.contract.json',
     ],
   );
+  const kfd6 = BASE.rows.find((row) => row.key === 'kfd-6');
+  assert.equal(kfd6.supportStatus, 'unsupported');
+  assert.equal(kfd6.implementation.status, 'not-implemented');
+  assert.equal(kfd6.verification.status, 'none');
+  assert.equal(kfd6.precursorEvidence.status, 'non-conforming-evidence');
+  assert.deepEqual(kfd6.precursorEvidence.surfaces, [
+    'framework/work-design-advisor/work-design-advisor.contract.json',
+    'framework/work-design-policy-replay/work-design-policy-replay.contract.json',
+    'framework/project-cut/README.md',
+  ]);
+  assert.equal(kfd6.releaseQualification.shippedSupport, false);
 });
 
 test('fails closed when the KFD-5 candidate loses its passed product gate', (t) => {
@@ -103,6 +117,14 @@ test('fails closed when the KFD-5 candidate loses its passed product gate', (t) 
     result.stderr,
     /kfd-5 must remain a verified, Buildchain-gated, non-shipped candidate/,
   );
+});
+
+test('fails closed when KFD-5 loses Primitive Management evidence', (t) => {
+  const matrix = clone(BASE);
+  matrix.rows[4].verification.evidenceRoots.pop();
+  const result = validateFixture(t, matrix);
+  assert.equal(result.status, 1);
+  assert.match(result.stderr, /KFD-5 Primitive Management evidence drifted/);
 });
 
 test('fails closed when a KFD row is omitted', (t) => {
@@ -127,6 +149,29 @@ test('fails closed when KFD-6 implies adoption', (t) => {
   const result = validateFixture(t, matrix);
   assert.equal(result.status, 1);
   assert.match(result.stderr, /KFD-6 must remain an explicit unsupported/);
+});
+
+test('fails closed when KFD-6 precursor evidence implies conformance', (t) => {
+  const matrix = clone(BASE);
+  matrix.rows[5].precursorEvidence.status = 'passed';
+  const result = validateFixture(t, matrix);
+  assert.equal(result.status, 1);
+  assert.match(
+    result.stderr,
+    /precursor evidence must remain bounded and non-conforming/,
+  );
+});
+
+test('fails closed when KFD-6 precursor evidence widens its claim', (t) => {
+  const matrix = clone(BASE);
+  matrix.rows[5].precursorEvidence.claimBoundary =
+    'Work Design implements KFD-6 discovery.';
+  const result = validateFixture(t, matrix);
+  assert.equal(result.status, 1);
+  assert.match(
+    result.stderr,
+    /precursor evidence must remain bounded and non-conforming/,
+  );
 });
 
 test('fails closed when draft evidence becomes shipped support', (t) => {

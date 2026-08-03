@@ -262,6 +262,8 @@ test('reactivated AWS burst workflows pin reviewed immutable Buildchain v3 sourc
       assert.match(workflow, /jobs:\n {2}trust:/);
       assert.match(workflow, /runs-on: ubuntu-24\.04/);
       assert.match(workflow, /Require write-capable actor/);
+      assert.match(workflow, /\$env:EXPECTED_LABEL -notin \$labels/);
+      assert.doesNotMatch(workflow, /if \(\$EXPECTED_LABEL -notin \$labels\)/);
     }
     const shellPins =
       workflow.match(
