@@ -4,9 +4,9 @@ doc_type: architecture-decision
 adr_id: SHIFU-ADR-019f86da-4f90-7015-bdde-ae4cc649ed82
 decision_status: accepted
 implementation_status: implemented
-implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/910]
+implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/910, https://github.com/kungfu-systems/kungfu/pull/2296]
 closure_pr: https://github.com/kungfu-systems/kungfu/pull/910
-qualification_refs: [scripts/check-shifu-documentation-contract.mjs, scripts/shifu-documentation-runtime.test.mjs]
+qualification_refs: [scripts/check-shifu-documentation-contract.mjs, scripts/shifu-documentation-runtime.test.mjs, scripts/portable-atlas-bundle.test.mjs, crates/shifu/tests/source_cli.rs]
 review_state: self-reviewed
 sensitivity: public
 sources: [local-files, user-consensus]
@@ -14,7 +14,7 @@ period: ongoing
 theme: shifu-documentation-protocol
 confidence: high
 evidence_grade: B
-last_reviewed: 2026-07-15
+last_reviewed: 2026-08-03
 ---
 
 # SHIFU-ADR-019f86da-4f90-7015-bdde-ae4cc649ed82: Documentation Protocol and provider boundary
@@ -115,9 +115,13 @@ shifu docs validate [--submission FILE|-] [--json]
 shifu docs show [--submission FILE] [--json]
 ```
 
-The graph, impact, context, pack, and qualification surfaces remain later
-stages. They must consume these roots and provider seams rather than invent a
-parallel submission format.
+The graph, impact, context, pack, and qualification surfaces consume these
+roots and provider seams rather than inventing a parallel submission format.
+The current product projection compiles one content-addressed Portable Kungfu
+Atlas Bundle, closes every declared human and Agent route, and retains explicit
+classification for material that still requires a source checkout. Native
+`shifu source` plan, acquire, and verify receipts keep that checkout boundary
+exact without restoring the retired `shifu clone` surface.
 
 ## Consequences
 

@@ -73,6 +73,33 @@ def _json(root, relative):
     return json.loads(_artifact_bytes(root, relative).decode("utf-8"))
 
 
+def _portable_artifact(root, name):
+    direct = root / name
+    if direct.is_file():
+        return direct.read_bytes()
+    override = os.environ.get("KUNGFU_PORTABLE_ATLAS_BUNDLE")
+    if override:
+        candidate = Path(override)
+        if name == "bundle.json" and candidate.is_file():
+            return candidate.read_bytes()
+        sibling = candidate.parent / "portable-atlas-classification.json.gz"
+        if name == "classification.json.gz" and sibling.is_file():
+            return sibling.read_bytes()
+    source_root = Path(__file__).resolve().parents[6]
+    source = (
+        source_root
+        / ".xinfa"
+        / (
+            "product-atlas-bundle.json"
+            if name == "bundle.json"
+            else "portable-atlas-classification.json.gz"
+        )
+    )
+    if source.is_file():
+        return source.read_bytes()
+    raise FileNotFoundError(f"Portable Atlas Bundle artifact is absent: {name}")
+
+
 def _portable_path(value):
     if not isinstance(value, str) or not value or "\\" in value:
         raise ValueError("documentation path must be a non-empty POSIX path")
@@ -112,6 +139,11 @@ def verify(root=None):
             _artifact_bytes(root, relative)
         except (FileNotFoundError, OSError):
             diagnostics.append({"code": "missing-artifact", "path": relative})
+    try:
+        bundle_bytes = _portable_artifact(root, "bundle.json")
+        classification_compressed = _portable_artifact(root, "classification.json.gz")
+    except (FileNotFoundError, OSError) as error:
+        diagnostics.append({"code": "missing-portable-bundle", "path": str(error)})
     if diagnostics:
         return {
             "schema": "kungfu.documentation-pack-verification/v1",
@@ -125,6 +157,9 @@ def verify(root=None):
     pack = _json(root, str(_COMPATIBILITY / "pack.json"))
     pack_manifest = _json(root, str(_COMPATIBILITY / "manifest.json"))
     pack_receipt = _json(root, str(_COMPATIBILITY / "receipt.json"))
+    bundle = json.loads(bundle_bytes.decode("utf-8"))
+    classification_bytes = gzip.decompress(classification_compressed)
+    classification = json.loads(classification_bytes.decode("utf-8"))
 
     atlas_core = dict(atlas)
     atlas_root = atlas_core.pop("atlas_root", None)
@@ -204,6 +239,31 @@ def verify(root=None):
     ):
         diagnostics.append({"code": "authority-binding", "path": "."})
 
+    bundle_core = dict(bundle)
+    bundle_root = bundle_core.pop("bundleRoot", None)
+    classification_meta = bundle.get("classification", {})
+    material = classification_meta.get("material", {})
+    if (
+        _digest(bundle_core) != bundle_root
+        or bundle.get("roots", {}).get("atlas") != atlas_root
+        or bundle.get("roots", {}).get("contextPack") != declared_pack_root
+        or bundle.get("routes", {}).get("incompleteRoutes") != 0
+        or bundle.get("budgets", {}).get("passed") is not True
+    ):
+        diagnostics.append({"code": "portable-bundle-root", "path": "bundle.json"})
+    if (
+        _byte_digest(classification_bytes)
+        != classification_meta.get("classificationRoot")
+        or len(classification_compressed) != material.get("compressedBytes")
+        or len(classification_bytes) != material.get("uncompressedBytes")
+        or classification.get("unknown") != 0
+        or classification.get("silentOmissions") != 0
+        or classification.get("total") != classification_meta.get("total")
+    ):
+        diagnostics.append(
+            {"code": "portable-classification-root", "path": "classification.json.gz"}
+        )
+
     return {
         "schema": "kungfu.documentation-pack-verification/v1",
         "valid": not diagnostics,
@@ -214,6 +274,12 @@ def verify(root=None):
         "cutRoot": atlas.get("roots", {}).get("cut"),
         "manifestRoot": manifest_root,
         "receiptRoot": receipt_root,
+        "bundleRoot": bundle_root,
+        "classificationRoot": classification_meta.get("classificationRoot"),
+        "releasePassportRoot": bundle.get("releasePassportBinding", {}).get(
+            "releasePassportRoot"
+        ),
+        "releaseQualified": bundle.get("budgets", {}).get("releaseQualified") is True,
         "diagnostics": diagnostics,
     }
 
@@ -233,11 +299,39 @@ def catalog(root=None):
     _, pack, result = _verified_pack(root)
     return {
         "schema": "kungfu.documentation-catalog/v1",
-        "roots": {key: result[key] for key in ("atlasRoot", "packRoot", "cutRoot")},
+        "roots": {
+            key: result[key]
+            for key in ("atlasRoot", "packRoot", "cutRoot", "bundleRoot")
+        },
         "entries": [
-            {key: item[key] for key in ("path", "contentRoot", "size", "visibility")}
+            {
+                **{
+                    key: item[key]
+                    for key in ("path", "contentRoot", "size", "visibility")
+                },
+                "class": "embedded",
+            }
             for item in pack.get("inventory", [])
         ],
+    }
+
+
+def bundle(root=None):
+    root, _, result = _verified_pack(root)
+    value = json.loads(_portable_artifact(root, "bundle.json").decode("utf-8"))
+    return {
+        "schema": "kungfu.portable-atlas-bundle-view/v1",
+        "valid": True,
+        "bundleRoot": result["bundleRoot"],
+        "atlasRoot": result["atlasRoot"],
+        "contextPackRoot": result["packRoot"],
+        "classification": value["classification"],
+        "routes": value["routes"],
+        "expansion": value["expansion"],
+        "budgets": value["budgets"],
+        "sourceCut": value["sourceCut"],
+        "releasePassportBinding": value["releasePassportBinding"],
+        "assembly": value["assembly"],
     }
 
 

@@ -63,6 +63,12 @@ test('installed reader verifies and reads the exact offline Xinfa pack', () => {
   assert.equal(receipt.readOnly, true);
   assert.equal(receipt.atlasRoot, SELECTOR.atlasRoot);
   assert.equal(receipt.packRoot, SELECTOR.contextPackRoot);
+  assert.match(receipt.bundleRoot, /^sha256:[0-9a-f]{64}$/);
+  const bundle = probe(ATLAS, 'bundle(root)');
+  assert.equal(bundle.valid, true);
+  assert.equal(bundle.bundleRoot, receipt.bundleRoot);
+  assert.equal(bundle.routes.incompleteRoutes, 0);
+  assert.equal(bundle.classification.unknown, 0);
   const catalog = probe(ATLAS, 'catalog(root)');
   assert.ok(catalog.entries.length > 300);
   assert.equal(catalog.roots.atlasRoot, receipt.atlasRoot);
@@ -70,6 +76,40 @@ test('installed reader verifies and reads the exact offline Xinfa pack', () => {
   const agent = probe(ATLAS, "projection('agent', root)");
   assert.equal(human.roots.atlasRoot, receipt.atlasRoot);
   assert.equal(agent.roots.atlasRoot, receipt.atlasRoot);
+});
+
+test('tampered portable classification fails closed', () => {
+  const temporary = fs.mkdtempSync(
+    path.join(os.tmpdir(), 'kungfu-portable-pack-'),
+  );
+  try {
+    fs.cpSync(ATLAS, temporary, { recursive: true });
+    fs.copyFileSync(
+      path.join(ROOT, '.xinfa', 'product-atlas-bundle.json'),
+      path.join(temporary, 'bundle.json'),
+    );
+    const classification = JSON.parse(
+      zlib.gunzipSync(
+        fs.readFileSync(
+          path.join(ROOT, '.xinfa', 'portable-atlas-classification.json.gz'),
+        ),
+      ),
+    );
+    classification.unknown = 1;
+    fs.writeFileSync(
+      path.join(temporary, 'classification.json.gz'),
+      zlib.gzipSync(Buffer.from(`${JSON.stringify(classification)}\n`)),
+    );
+    const receipt = probe(temporary);
+    assert.equal(receipt.valid, false);
+    assert.ok(
+      receipt.diagnostics.some(
+        (item) => item.code === 'portable-classification-root',
+      ),
+    );
+  } finally {
+    fs.rmSync(temporary, { recursive: true, force: true });
+  }
 });
 
 test('tampered product bytes fail closed before any read', () => {
@@ -95,7 +135,9 @@ test('freeze assembly stages the selected verified Atlas into the product', () =
   );
   assert.match(source, /documentationAtlasSource\(\)/);
   assert.match(source, /product-documentation-pack\.json/);
-  assert.match(source, /agent', 'documentation'/);
+  assert.match(source, /documentationDestination/);
+  assert.match(source, /portableAtlasBundleSource\(\)/);
+  assert.match(source, /classification\.json\.gz/);
 });
 
 test('freeze assembly accepts only the assembled product selector', () => {

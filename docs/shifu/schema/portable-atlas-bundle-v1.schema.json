@@ -1,0 +1,71 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://libkungfu.dev/schemas/shifu/portable-atlas-bundle-v1.schema.json",
+  "title": "Portable Kungfu Atlas Bundle",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "version",
+    "authority",
+    "roots",
+    "sourceCut",
+    "releasePassportBinding",
+    "classification",
+    "routes",
+    "expansion",
+    "budgets",
+    "assembly",
+    "bundleRoot"
+  ],
+  "properties": {
+    "schema": {"const": "kungfu.portable-atlas-bundle/v1"},
+    "version": {"const": 1},
+    "authority": {"type": "object"},
+    "roots": {"type": "object"},
+    "sourceCut": {
+      "type": "object",
+      "required": ["repository", "commit", "tree"],
+      "properties": {
+        "repository": {"type": "string", "minLength": 1},
+        "commit": {"$ref": "#/$defs/gitObject"},
+        "tree": {"$ref": "#/$defs/gitObject"}
+      }
+    },
+    "releasePassportBinding": {"type": "object"},
+    "classification": {
+      "type": "object",
+      "required": ["classificationRoot", "unknown", "silentOmissions", "material"],
+      "properties": {
+        "classificationRoot": {"$ref": "#/$defs/root"},
+        "unknown": {"const": 0},
+        "silentOmissions": {"const": 0},
+        "material": {"type": "object"}
+      }
+    },
+    "routes": {
+      "type": "object",
+      "required": ["routeCatalogRoot", "incompleteRoutes", "entries"],
+      "properties": {
+        "routeCatalogRoot": {"$ref": "#/$defs/root"},
+        "incompleteRoutes": {"const": 0},
+        "entries": {"type": "array", "minItems": 1}
+      }
+    },
+    "expansion": {"type": "object"},
+    "budgets": {
+      "type": "object",
+      "required": ["limits", "metrics", "gates", "passed", "releaseQualified"],
+      "properties": {
+        "passed": {"const": true},
+        "releaseQualified": {"type": "boolean"}
+      }
+    },
+    "assembly": {"type": "object"},
+    "bundleRoot": {"$ref": "#/$defs/root"}
+  },
+  "$defs": {
+    "root": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "gitObject": {"type": "string", "pattern": "^[0-9a-f]{40}$"}
+  }
+}
