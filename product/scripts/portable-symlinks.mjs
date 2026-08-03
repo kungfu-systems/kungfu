@@ -7,6 +7,19 @@ function pathInside(root, candidate) {
   return candidate === root || candidate.startsWith(`${root}${path.sep}`);
 }
 
+export function materializeRegularFile(file) {
+  if (!fs.lstatSync(file).isSymbolicLink()) return;
+  const resolved = fs.realpathSync(file);
+  const entry = fs.statSync(resolved);
+  if (!entry.isFile()) {
+    throw new Error(`executable symlink target is not a regular file: ${file}`);
+  }
+  const materialized = `${file}.materialized-regular-file`;
+  fs.copyFileSync(resolved, materialized);
+  fs.chmodSync(materialized, entry.mode & 0o777);
+  fs.renameSync(materialized, file);
+}
+
 export function normalizeCopiedSymlinks({ source, target }) {
   const sourceRoot = fs.realpathSync(source);
   const visit = (currentTarget) => {
