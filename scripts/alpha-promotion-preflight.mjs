@@ -60,7 +60,12 @@ const ROOT_FILES = {
   ],
 };
 const PLATFORM_CHECKS = {
-  'linux-x64': ['exact-source', 'adr-cutover-history', 'cargo-locked-fetch'],
+  'linux-x64': [
+    'exact-source',
+    'source-contracts',
+    'adr-cutover-history',
+    'cargo-locked-fetch',
+  ],
   'linux-arm64': ['exact-source', 'cargo-locked-fetch'],
   'macos-arm64': ['exact-source', 'codesign-tool', 'cargo-locked-fetch'],
   'windows-x64': ['exact-source', 'windows-cmd-spawn', 'cargo-locked-fetch'],

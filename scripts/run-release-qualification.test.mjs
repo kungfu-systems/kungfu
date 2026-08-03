@@ -13,14 +13,17 @@ import {
   probeReleasePlatform,
 } from './probe-release-platform.mjs';
 import {
+  executeReleaseQualificationStages,
   loadExecutionProfile,
   parseExecutionProfile,
   parseReleaseQualificationOptions,
   prepareReleaseQualificationHistory,
   prepareReleaseQualificationOutput,
   releaseQualificationEnvironment,
+  releaseQualificationExecutionGroups,
   releaseQualificationStages,
   verifyCorePlatformRelease,
+  verifySourceOnlyEvidence,
 } from './run-release-qualification.mjs';
 
 function corePlatformReleaseFixture() {
@@ -664,6 +667,7 @@ test('execution profile parsing fails closed on missing, duplicate, and unknown 
       executionProfile: 'alpha',
       nativeUpgradePolicy: 'skip',
       artifactScope: 'product',
+      sourceOnlyEvidence: null,
     },
   );
   assert.deepEqual(
@@ -679,6 +683,7 @@ test('execution profile parsing fails closed on missing, duplicate, and unknown 
       executionProfile: 'alpha',
       nativeUpgradePolicy: 'skip',
       artifactScope: 'hub-cli',
+      sourceOnlyEvidence: null,
     },
   );
   assert.throws(
@@ -712,6 +717,91 @@ test('execution profile parsing fails closed on missing, duplicate, and unknown 
         'skip',
       ]),
     /may be specified once/,
+  );
+  const sourceOnlyEvidence = {
+    receiptRoot: `sha256:${'a'.repeat(64)}`,
+    sourceTree: 'b'.repeat(40),
+    policyRoot: `sha256:${'c'.repeat(64)}`,
+  };
+  assert.deepEqual(
+    parseReleaseQualificationOptions([
+      '--execution-profile',
+      'alpha',
+      '--native-upgrade-policy',
+      'skip',
+      '--source-only-receipt-root',
+      sourceOnlyEvidence.receiptRoot,
+      '--source-only-source-tree',
+      sourceOnlyEvidence.sourceTree,
+      '--source-only-policy-root',
+      sourceOnlyEvidence.policyRoot,
+    ]).sourceOnlyEvidence,
+    sourceOnlyEvidence,
+  );
+  assert.throws(
+    () =>
+      parseReleaseQualificationOptions([
+        '--execution-profile',
+        'alpha',
+        '--source-only-receipt-root',
+        sourceOnlyEvidence.receiptRoot,
+      ]),
+    /requires receipt root, source tree, and policy root/,
+  );
+});
+
+test('source-only evidence fails closed on tree drift', () => {
+  const evidence = {
+    receiptRoot: `sha256:${'a'.repeat(64)}`,
+    sourceTree: 'b'.repeat(40),
+    policyRoot: `sha256:${'c'.repeat(64)}`,
+  };
+  assert.deepEqual(
+    verifySourceOnlyEvidence(evidence, { sourceTree: evidence.sourceTree }),
+    evidence,
+  );
+  assert.throws(
+    () => verifySourceOnlyEvidence(evidence, { sourceTree: 'd'.repeat(40) }),
+    /tree mismatch/,
+  );
+});
+
+test('artifact admission and invariant verification run as one fail-closed sibling group', async () => {
+  const stages = [['gate'], ['invariant:verify']];
+  assert.deepEqual(releaseQualificationExecutionGroups(stages, true), [stages]);
+  assert.deepEqual(releaseQualificationExecutionGroups(stages, false), [
+    [['gate']],
+    [['invariant:verify']],
+  ]);
+  assert.deepEqual(
+    releaseQualificationExecutionGroups(
+      [['gate'], ['upgrade:qualify:native'], ['invariant:verify']],
+      true,
+    ),
+    [[['gate']], [['upgrade:qualify:native']], [['invariant:verify']]],
+  );
+  const observed = [];
+  let active = 0;
+  let peak = 0;
+  const asyncRunner = async (args) => {
+    active += 1;
+    peak = Math.max(peak, active);
+    observed.push(args[0]);
+    await new Promise((resolve) => setTimeout(resolve, 2));
+    active -= 1;
+    return args[0] === 'gate' ? 1 : 0;
+  };
+  const result = await executeReleaseQualificationStages(stages, {
+    env: { SHIFU_CACHE_ACTIVE: '1' },
+    asyncRunner,
+  });
+  assert.equal(peak, 2);
+  assert.deepEqual(observed.sort(), ['gate', 'invariant:verify']);
+  assert.equal(result.finalStatus, 1);
+  assert.equal(result.timings.length, 2);
+  assert.equal(
+    result.timings.find((row) => row.stage === 'invariant:verify').status,
+    0,
   );
 });
 
