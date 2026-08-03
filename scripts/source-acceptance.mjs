@@ -255,14 +255,7 @@ function assertYijinjingWriterInterface() {
 
 const KFD_REBASE_EQUIVALENCE_ANCESTOR_LIMIT = 4096;
 
-export function findGitTreeEquivalentAncestor(
-  sourceSha,
-  headSha,
-  gitRead = gitMaybe,
-) {
-  if (gitRead(['cat-file', '-t', sourceSha]) !== 'commit') return '';
-  const sourceTree = gitRead(['rev-parse', `${sourceSha}^{tree}`]);
-  if (!/^[0-9a-f]{40}$/u.test(sourceTree)) return '';
+function findFirstParentTreeEquivalent(sourceTree, headSha, gitRead) {
   for (const line of gitRead([
     'log',
     '--first-parent',
@@ -274,6 +267,49 @@ export function findGitTreeEquivalentAncestor(
     if (treeSha === sourceTree) return commitSha;
   }
   return '';
+}
+
+export function findGitTreeEquivalentAncestor(
+  sourceSha,
+  headSha,
+  gitRead = gitMaybe,
+) {
+  if (gitRead(['cat-file', '-t', sourceSha]) !== 'commit') return '';
+  const sourceTree = gitRead(['rev-parse', `${sourceSha}^{tree}`]);
+  if (!/^[0-9a-f]{40}$/u.test(sourceTree)) return '';
+
+  const directMatch = findFirstParentTreeEquivalent(
+    sourceTree,
+    headSha,
+    gitRead,
+  );
+  if (directMatch) return directMatch;
+
+  // GitHub tests a pull request through a synthetic two-parent merge commit.
+  // Its first parent is the protected base, so a first-parent-only lookup
+  // cannot see a tree-equivalent commit retained on the candidate branch. Only
+  // enter the candidate parent when it has the exact checked merge tree; a
+  // conflict-resolved or otherwise changed merge remains ineligible.
+  const [mergeSha, baseParent, candidateParent, ...extraParents] = gitRead([
+    'rev-list',
+    '--parents',
+    '-n',
+    '1',
+    headSha,
+  ])
+    .trim()
+    .split(/\s+/u);
+  if (
+    mergeSha !== headSha ||
+    !baseParent ||
+    !candidateParent ||
+    extraParents.length > 0
+  )
+    return '';
+  const headTree = gitRead(['rev-parse', `${headSha}^{tree}`]);
+  const candidateTree = gitRead(['rev-parse', `${candidateParent}^{tree}`]);
+  if (headTree !== candidateTree) return '';
+  return findFirstParentTreeEquivalent(sourceTree, candidateParent, gitRead);
 }
 
 export function assertKfdEvidenceSourceBinding({
