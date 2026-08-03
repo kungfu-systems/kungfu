@@ -362,6 +362,59 @@ function materializePythonEntrypoint(packageRoot) {
 }
 
 /**
+ * Linux release inputs retain compatibility aliases that point at the same
+ * bytes as the stable package entrypoints. npm archives cannot preserve that
+ * relationship, so carrying both files spends the compressed budget twice.
+ * Return only aliases whose canonical entrypoint is present; byte equality is
+ * verified before anything is removed.
+ * @param {string[]} files
+ * @returns {Array<{canonical: string, alias: string}>}
+ */
+function linuxReleaseAliasPairs(files) {
+  const available = new Set(files);
+  /** @type {Array<{canonical: string, alias: string}>} */
+  const pairs = [];
+  const python = 'dist/kungfu/python/bin/python3';
+  if (available.has(python)) {
+    for (const alias of files.filter((file) =>
+      /^dist\/kungfu\/python\/bin\/python3\.\d+$/u.test(file),
+    )) {
+      pairs.push({ canonical: python, alias });
+    }
+  }
+  const kungfu = 'dist/kungfu/kungfu';
+  const trunk = 'dist/kungfu/kungfu-trunk';
+  if (available.has(kungfu) && available.has(trunk)) {
+    pairs.push({ canonical: kungfu, alias: trunk });
+  }
+  return pairs;
+}
+
+/** @param {string} file @returns {string} */
+function sha256File(file) {
+  return crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex');
+}
+
+/** @param {string} packageRoot @returns {void} */
+function removeVerifiedLinuxReleaseAliases(packageRoot) {
+  if (process.platform !== 'linux' || configuration() !== 'Release') return;
+  for (const pair of linuxReleaseAliasPairs(listPackageFiles(packageRoot))) {
+    const canonical = path.join(packageRoot, pair.canonical);
+    const alias = path.join(packageRoot, pair.alias);
+    if (
+      fs.statSync(canonical).size !== fs.statSync(alias).size ||
+      sha256File(canonical) !== sha256File(alias)
+    ) {
+      throw new Error(
+        `Linux release alias differs from canonical entrypoint: ${pair.alias} != ${pair.canonical}`,
+      );
+    }
+    fs.removeSync(alias);
+    console.log(`deduplicated ${pair.alias} -> ${pair.canonical}`);
+  }
+}
+
+/**
  * Release platform packages do not publish link/debug tables. Keep the
  * selection explicit so the embedded Python runtime and pinned libnode input
  * are never rewritten by this package projection.
@@ -453,6 +506,7 @@ function preparePlatformPackage(descriptor) {
   writeJson(path.join(packageRoot, 'package.json'), packageJson);
   copyPlatformPayload(packageRoot);
   materializePythonEntrypoint(packageRoot);
+  removeVerifiedLinuxReleaseAliases(packageRoot);
   stripLinuxReleasePayload(packageRoot);
   copyIfExists(
     path.join(repositoryRoot, 'LICENSE'),
@@ -921,6 +975,7 @@ if (require.main === module)
 
 module.exports = {
   evaluateLinuxPackageBudget,
+  linuxReleaseAliasPairs,
   linuxReleaseStripCandidates,
   packageBudgetComponent,
   resolvePackageStageDir,

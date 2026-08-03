@@ -14,6 +14,7 @@ const {
 } = require('../lib/platform-packages');
 const {
   evaluateLinuxPackageBudget,
+  linuxReleaseAliasPairs,
   linuxReleaseStripCandidates,
   packageBudgetComponent,
   resolvePackageStageDir,
@@ -197,6 +198,35 @@ test('Linux Release stripping is explicit and excludes runtimes owned upstream',
       'dist/kungfu/kungfu-trunk',
       'dist/kungfu/kungfu-wasm-host',
     ],
+  );
+});
+
+test('Linux Release packaging deduplicates only stable byte-verified aliases', () => {
+  assert.deepEqual(
+    linuxReleaseAliasPairs([
+      'dist/kungfu/python/bin/python3',
+      'dist/kungfu/python/bin/python3.13',
+      'dist/kungfu/kungfu',
+      'dist/kungfu/kungfu-trunk',
+      'dist/kungfu/kungfu_node.node',
+    ]),
+    [
+      {
+        canonical: 'dist/kungfu/python/bin/python3',
+        alias: 'dist/kungfu/python/bin/python3.13',
+      },
+      {
+        canonical: 'dist/kungfu/kungfu',
+        alias: 'dist/kungfu/kungfu-trunk',
+      },
+    ],
+  );
+  assert.deepEqual(
+    linuxReleaseAliasPairs([
+      'dist/kungfu/python/bin/python3.13',
+      'dist/kungfu/kungfu-trunk',
+    ]),
+    [],
   );
 });
 
