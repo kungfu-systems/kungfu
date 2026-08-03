@@ -1,0 +1,11 @@
+{
+  "schema": "shifu.production-graph-negative-fixture/v0",
+  "baseFixture": "failed",
+  "mutation": {
+    "target": "recovery",
+    "operation": "set",
+    "path": ["failureRoot"],
+    "value": "sha256:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+  },
+  "expect": "recovery-binding-mismatch"
+}
