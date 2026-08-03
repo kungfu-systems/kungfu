@@ -199,9 +199,11 @@ strict path therefore publishes the requested package ID instead of silently
 substituting (for example) a `gnu17` package that Conan considers compatible
 with a C++23 consumer. It queries the hosted remote first, authenticates with Conan's
 remote-scoped environment variables, uploads only missing exact revisions
-without `--force`, and reads every revision back. The publisher emits a Conan
-lockfile that pins dependency RREVs; the receipt binds both that lockfile and
-the exact RREV/package_id/PREV closure with digests. The `macos-arm64` entry is explicitly bound to Macos armv8,
+without `--force`, and reads every revision back. It then resolves the remote's
+current PREV for each RREV/package_id, so an older partition-local PREV cannot
+define the published closure. The publisher emits a Conan lockfile that pins
+dependency RREVs; the receipt binds both that lockfile and the remote-current
+RREV/package_id/PREV closure with digests. The `macos-arm64` entry is explicitly bound to Macos armv8,
 Apple Clang 21, and C++23.
 Publisher credentials remain in the operator or CI secret surface and are
 never added to the cache profile, Buildchain arguments, or Shifu receipt.

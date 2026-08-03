@@ -15,6 +15,7 @@ import {
 import {
   MATRIX,
   assertStrictDependencySettings,
+  bindRemotePackageRevisions,
   disableBinaryCompatibility,
   exactClosureDigest,
   graphDependencyRecords,
@@ -232,6 +233,33 @@ test('resolved dependency records disclose effective settings and exact closure 
   records[0].effectiveSettings['compiler.cppstd'] = '23';
   assert.doesNotThrow(() =>
     assertStrictDependencySettings(records, 'macos-arm64'),
+  );
+});
+
+test('publisher closure binds the remote current PREV instead of a partition-local PREV', () => {
+  const records = [
+    {
+      reference: 'flatbuffers/25.9.23',
+      rrev: 'recipeRevision',
+      packageId: 'packageId',
+      prev: 'partitionLocalRevision',
+      exactReference:
+        'flatbuffers/25.9.23#recipeRevision:packageId#partitionLocalRevision',
+      effectiveSettings: { 'compiler.cppstd': '23' },
+    },
+  ];
+  const rebound = bindRemotePackageRevisions(records, [
+    'flatbuffers/25.9.23#recipeRevision:packageId#remoteCurrentRevision',
+  ]);
+  assert.equal(rebound[0].prev, 'remoteCurrentRevision');
+  assert.equal(
+    rebound[0].exactReference,
+    'flatbuffers/25.9.23#recipeRevision:packageId#remoteCurrentRevision',
+  );
+  assert.equal(records[0].prev, 'partitionLocalRevision');
+  assert.throws(
+    () => bindRemotePackageRevisions(records, []),
+    /remote current PREV is missing/,
   );
 });
 
