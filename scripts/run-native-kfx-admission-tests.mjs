@@ -7,16 +7,23 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import {
+  platformCommand,
+  platformCommandOptions,
+} from './platform-command.mjs';
+
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const isWin = process.platform === 'win32';
 
 function run(label, command, args, env = process.env) {
   process.stdout.write(`[native-admission] ${label}\n`);
-  const result = spawnSync(command, args, {
+  const result = spawnSync(platformCommand(command), args, {
     cwd: root,
     env,
     stdio: 'inherit',
-    shell: isWin,
+    // Native executables stay shell-free so ctest regex parentheses remain
+    // argv. Windows package-manager shims opt into their bounded .cmd route.
+    shell: false,
+    ...platformCommandOptions(command),
   });
   if (result.error) throw result.error;
   if (result.status !== 0) process.exit(result.status ?? 1);
@@ -350,7 +357,7 @@ run(
   ],
   {
     ...process.env,
-    KUNGFU_DIR: path.join(root, 'framework/core/build/Release'),
+    KUNGFU_DIR: path.join(root, 'framework/core/dist/kungfu'),
     KUNGFU_REQUIRE_NATIVE: '1',
   },
 );
