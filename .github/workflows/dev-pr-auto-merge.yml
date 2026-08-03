@@ -60,9 +60,9 @@ jobs:
       contents: write
       pull-requests: write
       statuses: read
-    uses: kungfu-systems/buildchain/.github/workflows/dev-pr-auto-merge.yml@978520e86134683f66b607bc70c2d18f623e2410
+    uses: kungfu-systems/buildchain/.github/workflows/dev-pr-auto-merge.yml@3d5b53833009b0e21748ffe26afa7e3a3de9d128
     with:
-      buildchain-ref: 978520e86134683f66b607bc70c2d18f623e2410
+      buildchain-ref: 3d5b53833009b0e21748ffe26afa7e3a3de9d128
       target-branch: ${{ needs.resolve-target.outputs.target-branch }}
       required-status-checks: |-
         Candidate source acceptance / check
