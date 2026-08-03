@@ -415,9 +415,9 @@ def test_every_removed_path_is_unknown_and_every_canonical_path_is_live(tmp_path
 
 def test_internal_engage_subprocesses_use_the_only_canonical_path():
     sources = {
-        "SDK Python-AOT builder": (REPO_ROOT / "developer/sdk/src/sdk.js").read_text(
-            encoding="utf-8"
-        ),
+        "SDK Python-AOT builder": (
+            REPO_ROOT / "developer/sdk/src/sdk-contract.js"
+        ).read_text(encoding="utf-8"),
         "Nuitka bridge": (
             REPO_ROOT
             / "framework/core/src/python/kungfu/cli/bridging/nuitka/__init__.py"
