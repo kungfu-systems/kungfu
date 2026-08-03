@@ -115,8 +115,8 @@
       "weldRationale": "Buildchain attests exact bytes while Xinfa remains the documentation compiler authority.",
       "sourcePath": ".xinfa/product-documentation-pack.json",
       "artifactPath": "agent/documentation-selector.json",
-      "sourceSha256": "fb0dd9ed053ad97ae3f3e93e617a6c7ffa7927db4962cf040f4c9b6982580a41",
-      "expectedSha256": "fb0dd9ed053ad97ae3f3e93e617a6c7ffa7927db4962cf040f4c9b6982580a41",
+      "sourceSha256": "b87a0b0c789e1df467d9696f7a3f3528b1121f4f526207b6c40cc4e495f45759",
+      "expectedSha256": "b87a0b0c789e1df467d9696f7a3f3528b1121f4f526207b6c40cc4e495f45759",
       "byteForByte": true,
       "impactProjection": {
         "breaking": "root mismatch or missing packaged bytes rejects the old passport",
