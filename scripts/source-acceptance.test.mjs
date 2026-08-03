@@ -272,7 +272,7 @@ test('release verification reuses the exact mypy tool lane without project sync'
 test('cross-platform full verification keeps Python resolution frozen and allows the bounded Episode workload', () => {
   const verify = fs.readFileSync(path.join(ROOT, 'scripts/verify.mjs'), 'utf8');
   const sdk = fs.readFileSync(
-    path.join(ROOT, 'developer/sdk/src/sdk.js'),
+    path.join(ROOT, 'developer/sdk/src/sdk-contract.js'),
     'utf8',
   );
   assert.match(verify, /timeout: 30 \* 60 \* 1000/);
