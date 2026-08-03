@@ -520,9 +520,9 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "diagnostic",
-          "definitionDigest": "sha256:94b036563321b10eabe02eeb9950fe9df544631fb8ae6335d38bdc5d620c132e",
+          "definitionDigest": "sha256:78aef7613bc615a018ed0ca13bf61bd0879376159e25d3f9bc9dbeae0e79ad21",
           "credentials": {"githubToken":"write","oidc":false,"repositorySecrets":["KUNGFU_GITHUB_TOKEN"],"inheritedSecrets":false,"environment":null},
-          "externalActions": ["kungfu-systems/buildchain/.github/workflows/dev-pr-auto-merge.yml@cf9d88fd08c604515baa0757bab2980e5cbc8740"],
+          "externalActions": ["kungfu-systems/buildchain/.github/workflows/dev-pr-auto-merge.yml@12043e826f995f9f4ba5dfa457df55a869ab10b9"],
           "steps": []
         },
         {

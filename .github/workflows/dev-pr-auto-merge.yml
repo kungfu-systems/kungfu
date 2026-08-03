@@ -120,9 +120,9 @@ jobs:
       contents: write
       pull-requests: write
       statuses: write
-    uses: kungfu-systems/buildchain/.github/workflows/dev-pr-auto-merge.yml@cf9d88fd08c604515baa0757bab2980e5cbc8740
+    uses: kungfu-systems/buildchain/.github/workflows/dev-pr-auto-merge.yml@12043e826f995f9f4ba5dfa457df55a869ab10b9
     with:
-      buildchain-ref: cf9d88fd08c604515baa0757bab2980e5cbc8740
+      buildchain-ref: 12043e826f995f9f4ba5dfa457df55a869ab10b9
       target-branch: ${{ needs.resolve-target.outputs.target-branch }}
       expected-pr-number: ${{ fromJSON(needs.resolve-target.outputs.expected-pr-number || '0') }}
       expected-head-sha: ${{ needs.resolve-target.outputs.expected-head-sha }}
