@@ -64,7 +64,7 @@ class BinaryDistribution(Distribution):
 
 
 class BuildPythonWithExitContract(build_py):
-    """Ship the normative Exit Bundle contract beside the installed verifier."""
+    """Ship normative contracts and the Work conformance checker."""
 
     def run(self):
         super().run()
@@ -76,6 +76,17 @@ class BuildPythonWithExitContract(build_py):
         destination = Path(self.build_lib) / "kungfu" / "exit_bundle.contract.json"
         destination.parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(source, destination)
+        conformance_source = (
+            _find_pyproject(_here).parent.parent / "work-profile-conformance"
+        )
+        conformance_destination = (
+            Path(self.build_lib) / "kungfu" / "work_profile_conformance"
+        )
+        shutil.copytree(
+            conformance_source,
+            conformance_destination,
+            dirs_exist_ok=True,
+        )
 
 
 setup(

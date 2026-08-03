@@ -85,6 +85,13 @@ SOURCE_BUNDLE_SCHEMA = "kungfu.profile-source-bundle/v1"
 
 
 def _work_profile_conformance_script() -> Path | None:
+    installed = (
+        Path(__file__).resolve().parent
+        / "work_profile_conformance"
+        / "work-profile-conformance.mjs"
+    )
+    if installed.is_file():
+        return installed
     relative = (
         Path("framework") / "work-profile-conformance" / "work-profile-conformance.mjs"
     )
@@ -142,10 +149,20 @@ def _work_profile_conformance(
         capture_output=True,
         text=True,
     )
-    if completed.returncode not in (0, 2):
+    if completed.returncode != 0:
+        try:
+            failed = json.loads(completed.stdout)
+        except json.JSONDecodeError:
+            failed = None
         raise ProfileSdkError(
-            "work-profile-conformance-check-failed",
-            completed.stderr.strip() or "Work Profile conformance checker failed",
+            "work-profile-conformance-denied",
+            completed.stderr.strip()
+            or (
+                f"Work Profile conformance denied: {failed.get('verdict')}"
+                if failed
+                else "Work Profile conformance checker failed"
+            ),
+            result=failed,
         )
     result = json.loads(completed.stdout)
     result["publicSurface"] = surface

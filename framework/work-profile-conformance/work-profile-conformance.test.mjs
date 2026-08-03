@@ -78,6 +78,7 @@ test('projects one conformance root across every supported required Profile surf
   const result = evaluateConformance(agentDeclaration());
   assert.deepEqual(Object.keys(result.surfaceRoots), [
     'authoring-check',
+    'installed-runtime',
     'qualify',
     'validate',
   ]);
@@ -313,8 +314,7 @@ test('blocks every unsupported Buildchain admission mode without an allowlist es
   );
 
   const artifactMismatch = agentDeclaration();
-  artifactMismatch.buildchain.artifactRefs =
-    artifactMismatch.buildchain.artifactRefs.slice(1);
+  artifactMismatch.buildchain.artifactRefs[0].evidenceRoot = `sha256:${'f'.repeat(64)}`;
   const artifactResult = evaluateConformance(artifactMismatch);
   assert.equal(artifactResult.verdict, 'profile-invalid');
   assert.ok(

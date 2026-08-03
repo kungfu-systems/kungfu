@@ -154,6 +154,36 @@ def test_public_profile_validate_and_qualify_share_work_conformance(tmp_path):
     assert validated["verdict"] == "compatible"
 
 
+def test_public_profile_validate_denies_failed_work_conformance(tmp_path):
+    source = _copy_source(tmp_path)
+    repository = Path(__file__).resolve().parents[4]
+    reference = json.loads(
+        (
+            repository
+            / "framework/work-profile-conformance/qualification/reference-scenarios.json"
+        ).read_text()
+    )
+    declaration = reference["scenarios"][0]["declaration"]
+    declaration["behaviorEvidence"][0]["status"] = "failed"
+    declaration_path = source / "qualification/work-profile-conformance.json"
+    declaration_sha = _write_json(declaration_path, declaration)
+    qualification_path = source / "qualification/profile.json"
+    qualification = json.loads(qualification_path.read_text())
+    qualification["workConformance"] = {
+        "path": "qualification/work-profile-conformance.json",
+        "sha256": declaration_sha,
+    }
+    qualification_sha = _write_json(qualification_path, qualification)
+    profile_path = source / "profile.json"
+    profile = json.loads(profile_path.read_text())
+    profile["qualification"]["profile"]["sha256"] = qualification_sha
+    _write_json(profile_path, profile)
+
+    with pytest.raises(profile_sdk.ProfileSdkError) as raised:
+        profile_sdk.validate_source(source, tmp_path / "runtime")
+    assert raised.value.diagnosis["code"] == "work-profile-conformance-denied"
+
+
 def test_first_party_work_control_suite_rejects_missing_member(tmp_path):
     source = _copy_source(tmp_path)
     shutil.rmtree(source / "work-control-actions")

@@ -187,8 +187,8 @@
           },
           {
             "surface": "installed-runtime",
-            "relevance": "not-relevant",
-            "status": "unsupported"
+            "relevance": "required",
+            "status": "supported"
           }
         ],
         "buildchain": {
@@ -199,26 +199,16 @@
           "manualAllowlist": false,
           "provider": "kungfu-buildchain",
           "runner": "source-acceptance",
-          "sourceRevision": "2a251e8c7b39a108f671b05acb8902b74e9c6289",
+          "sourceRevision": "9b37767a0e1aa5516a6719b8398e9099b5a82c7b",
           "authorityRoot": "sha256:6e92d2246c3ffe4d14c10dd7286f60c50a2266e619320b7e9dc6cb892efc8a57",
           "artifactRefs": [
-            {
-              "evidenceRoot": "sha256:909f01446d58aafdd9556001a98b18b9689f9bcd5a7e977697f380995d0493f2",
-              "evidencePath": ".buildchain/kfd/kfd-3/collaboration-interface.prebuild.json",
-              "evidencePointer": null
-            },
             {
               "evidenceRoot": "sha256:07abbeffd6b47f5d0aa25625b74b7e6d2aa4d67b84f10d18e859a5a31a3880bb",
               "evidencePath": "scripts/source-acceptance.mjs",
               "evidencePointer": null
-            },
-            {
-              "evidenceRoot": "sha256:a49155c2e7eb9f4215e3290efa16014ae999c833d56947765e38dc73dc4ca50c",
-              "evidencePath": "framework/work-profile-conformance/work-profile-conformance.test.mjs",
-              "evidencePointer": null
             }
           ],
-          "evidenceRoot": "sha256:1a7231c305cebde78102b7ecd239536f9e6bb9061c445e9131d25041ff4999dd",
+          "evidenceRoot": "sha256:d6b01774e8127c3e407084e6a55d75c185b426fcd5c8ec462435d687ac16c9b9",
           "evidencePath": "framework/work-profile-conformance/qualification/retained-witnesses.json",
           "evidencePointer": "/scenarios/agent-work-control/buildchain",
           "authorityPath": ".buildchain/alpha-contract-lock.json"
@@ -431,8 +421,8 @@
           },
           {
             "surface": "installed-runtime",
-            "relevance": "not-relevant",
-            "status": "unsupported"
+            "relevance": "required",
+            "status": "supported"
           }
         ],
         "buildchain": {
@@ -443,26 +433,16 @@
           "manualAllowlist": false,
           "provider": "kungfu-buildchain",
           "runner": "source-acceptance",
-          "sourceRevision": "2a251e8c7b39a108f671b05acb8902b74e9c6289",
+          "sourceRevision": "9b37767a0e1aa5516a6719b8398e9099b5a82c7b",
           "authorityRoot": "sha256:6e92d2246c3ffe4d14c10dd7286f60c50a2266e619320b7e9dc6cb892efc8a57",
           "artifactRefs": [
-            {
-              "evidenceRoot": "sha256:909f01446d58aafdd9556001a98b18b9689f9bcd5a7e977697f380995d0493f2",
-              "evidencePath": ".buildchain/kfd/kfd-3/collaboration-interface.prebuild.json",
-              "evidencePointer": null
-            },
             {
               "evidenceRoot": "sha256:07abbeffd6b47f5d0aa25625b74b7e6d2aa4d67b84f10d18e859a5a31a3880bb",
               "evidencePath": "scripts/source-acceptance.mjs",
               "evidencePointer": null
-            },
-            {
-              "evidenceRoot": "sha256:a49155c2e7eb9f4215e3290efa16014ae999c833d56947765e38dc73dc4ca50c",
-              "evidencePath": "framework/work-profile-conformance/work-profile-conformance.test.mjs",
-              "evidencePointer": null
             }
           ],
-          "evidenceRoot": "sha256:4351fbcc85466da38e32050566c1ddc611a698acb27d407e0832c930784593bb",
+          "evidenceRoot": "sha256:549ea65b7cd7bd781ecc104a88d2f1ac63d7320408731436c3f1a532fc609724",
           "evidencePath": "framework/work-profile-conformance/qualification/retained-witnesses.json",
           "evidencePointer": "/scenarios/week-day-action/buildchain",
           "authorityPath": ".buildchain/alpha-contract-lock.json"
@@ -677,8 +657,8 @@
           },
           {
             "surface": "installed-runtime",
-            "relevance": "not-relevant",
-            "status": "unsupported"
+            "relevance": "required",
+            "status": "supported"
           }
         ],
         "buildchain": {
@@ -689,26 +669,16 @@
           "manualAllowlist": false,
           "provider": "kungfu-buildchain",
           "runner": "source-acceptance",
-          "sourceRevision": "2a251e8c7b39a108f671b05acb8902b74e9c6289",
+          "sourceRevision": "9b37767a0e1aa5516a6719b8398e9099b5a82c7b",
           "authorityRoot": "sha256:6e92d2246c3ffe4d14c10dd7286f60c50a2266e619320b7e9dc6cb892efc8a57",
           "artifactRefs": [
-            {
-              "evidenceRoot": "sha256:909f01446d58aafdd9556001a98b18b9689f9bcd5a7e977697f380995d0493f2",
-              "evidencePath": ".buildchain/kfd/kfd-3/collaboration-interface.prebuild.json",
-              "evidencePointer": null
-            },
             {
               "evidenceRoot": "sha256:07abbeffd6b47f5d0aa25625b74b7e6d2aa4d67b84f10d18e859a5a31a3880bb",
               "evidencePath": "scripts/source-acceptance.mjs",
               "evidencePointer": null
-            },
-            {
-              "evidenceRoot": "sha256:a49155c2e7eb9f4215e3290efa16014ae999c833d56947765e38dc73dc4ca50c",
-              "evidencePath": "framework/work-profile-conformance/work-profile-conformance.test.mjs",
-              "evidencePointer": null
             }
           ],
-          "evidenceRoot": "sha256:8cd283c646106a9b2b50a80a541c11195fe6d577d49f4b28b2821d0e0cec9d95",
+          "evidenceRoot": "sha256:9bb44c315f5978d4707368b79abf0b8fa37b86810b22098b9c7da561151a6d0c",
           "evidencePath": "framework/work-profile-conformance/qualification/retained-witnesses.json",
           "evidencePointer": "/scenarios/course-production/buildchain",
           "authorityPath": ".buildchain/alpha-contract-lock.json"

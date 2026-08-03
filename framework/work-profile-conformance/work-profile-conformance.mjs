@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 // SPDX-License-Identifier: Apache-2.0
 
+import { spawnSync } from 'node:child_process';
 import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -415,7 +416,6 @@ export function evaluateConformance(declaration) {
         'The declaration is not bound to the current generic Action Geometry authority.',
       ),
     );
-
   const expectedAbstractionAuthorityRoot = fileRoot(WORK_LIFECYCLE_PATH);
   const abstractionMatches =
     declaration.bindings.abstractionAuthorityRoot ===
@@ -647,7 +647,14 @@ export function evaluateConformance(declaration) {
         ),
       );
     platformNames.add(adapter.platform);
-    if (adapter.relevance === 'not-relevant') continue;
+    if (adapter.relevance === 'not-relevant')
+      diagnostics.push(
+        diagnostic(
+          `platform-${adapter.platform}-not-relevant-forbidden`,
+          INVALID,
+          `Closed-world conformance requires explicit evidence for ${adapter.platform}.`,
+        ),
+      );
     checks.push(
       check(
         `platform-${adapter.platform}`,
@@ -694,6 +701,14 @@ export function evaluateConformance(declaration) {
         ),
       );
     surfaceNames.add(surface.surface);
+    if (surface.relevance === 'not-relevant')
+      diagnostics.push(
+        diagnostic(
+          `surface-${surface.surface}-not-relevant-forbidden`,
+          INVALID,
+          `Closed-world conformance requires ${surface.surface} support.`,
+        ),
+      );
     if (surface.relevance === 'required' && surface.status !== 'supported')
       diagnostics.push(
         diagnostic(
@@ -714,6 +729,32 @@ export function evaluateConformance(declaration) {
       );
 
   const buildchain = declaration.buildchain;
+  if (buildchain.fresh) {
+    const ancestry = spawnSync(
+      'git',
+      ['merge-base', '--is-ancestor', buildchain.sourceRevision, 'HEAD'],
+      { cwd: ROOT },
+    );
+    const changed = spawnSync(
+      'git',
+      [
+        'diff',
+        '--quiet',
+        buildchain.sourceRevision,
+        '--',
+        ...buildchain.artifactRefs.map((artifact) => artifact.evidencePath),
+      ],
+      { cwd: ROOT },
+    );
+    if (ancestry.status !== 0 || changed.status !== 0)
+      diagnostics.push(
+        diagnostic(
+          'buildchain-freshness-unverified',
+          UNQUALIFIED,
+          'Fresh Buildchain evidence requires an ancestor revision and unchanged retained artifacts.',
+        ),
+      );
+  }
   checks.push(
     check('buildchain-admission', buildchain.status, buildchain.evidenceRoot),
   );

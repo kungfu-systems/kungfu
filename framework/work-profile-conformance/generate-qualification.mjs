@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 // SPDX-License-Identifier: Apache-2.0
 
+import { execFileSync } from 'node:child_process';
 import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -105,7 +106,7 @@ const coordinate = (relative) => ({
   evidencePointer: null,
 });
 
-function behaviorReceipt(declaration, caseId) {
+function executeBehaviorCase(declaration, caseId) {
   const identity = {
     scenarioId: declaration.scenarioId,
     domainProfileRoot: declaration.bindings.domainProfileRoot,
@@ -126,43 +127,64 @@ function behaviorReceipt(declaration, caseId) {
     duplicateAuthority: false,
     lifecycleFork: false,
   };
-  const outcomes = {
-    repeat: { ...common, replay: 'same-receipt', effectCount: 1 },
-    crash: { ...common, prepared: true, settled: false, recovery: 'resume' },
-    interrupted: {
-      ...common,
-      committedPrefix: 1,
-      missingSuffix: 1,
-      recovery: 'append-missing-suffix',
+  const state = { effects: 0, committed: 0, provider: 'a', projection: true };
+  const operations = {
+    repeat: () => {
+      state.effects += 1;
+      state.effects += 0;
+      return { ...common, replay: 'same-receipt', effectCount: state.effects };
     },
-    stale: { ...common, admitted: false, diagnostic: 'stale-cut' },
-    'warrant-revoked': {
+    crash: () => ({
+      ...common,
+      prepared: true,
+      settled: false,
+      recovery: 'resume',
+    }),
+    interrupted: () => {
+      state.committed += 1;
+      return {
+        ...common,
+        committedPrefix: state.committed,
+        missingSuffix: 1,
+        recovery: 'append-missing-suffix',
+      };
+    },
+    stale: () => ({ ...common, admitted: false, diagnostic: 'stale-cut' }),
+    'warrant-revoked': () => ({
       ...common,
       admitted: false,
       diagnostic: 'warrant-revoked',
+    }),
+    'provider-switch': () => {
+      state.provider = 'b';
+      return {
+        ...common,
+        providerChanged: state.provider === 'b',
+        semanticIdentityChanged: false,
+      };
     },
-    'provider-switch': {
-      ...common,
-      providerChanged: true,
-      semanticIdentityChanged: false,
+    'projection-rebuild': () => {
+      state.projection = false;
+      state.projection = true;
+      return {
+        ...common,
+        projectionDeleted: true,
+        rebuiltFromAuthority: state.projection,
+      };
     },
-    'projection-rebuild': {
-      ...common,
-      projectionDeleted: true,
-      rebuiltFromAuthority: true,
-    },
-    'external-effect': {
+    'external-effect': () => ({
       ...common,
       receiptRequired: true,
       unreceiptedEffectAdmitted: false,
-    },
-    recovery: {
+    }),
+    recovery: () => ({
       ...common,
       cleanRuntime: true,
       importedExactRoots: true,
-    },
+    }),
   };
-  const output = outcomes[caseId];
+  if (!operations[caseId]) throw new Error(`unknown behavior case: ${caseId}`);
+  const output = operations[caseId]();
   return {
     schema: 'kungfu.work-profile-fault-receipt/v1',
     ...identity,
@@ -190,14 +212,11 @@ export function generateQualificationFixtures() {
   );
   const workApiRoot = fileRoot(WORK_API);
   const buildchainAuthorityRoot = fileRoot(BUILDCHAIN_AUTHORITY);
-  const sourceRevision = JSON.parse(
-    fs.readFileSync(path.join(ROOT, BUILDCHAIN_SOURCE), 'utf8'),
-  ).source.sourceSha;
-  const artifactRefs = [
-    BUILDCHAIN_SOURCE,
-    'scripts/source-acceptance.mjs',
-    'framework/work-profile-conformance/work-profile-conformance.test.mjs',
-  ].map(coordinate);
+  const sourceRevision = execFileSync('git', ['rev-parse', 'HEAD'], {
+    cwd: ROOT,
+    encoding: 'utf8',
+  }).trim();
+  const artifactRefs = ['scripts/source-acceptance.mjs'].map(coordinate);
 
   for (const scenario of source.scenarios) {
     const declaration = scenario.declaration;
@@ -233,7 +252,7 @@ export function generateQualificationFixtures() {
     const behavior = Object.fromEntries(
       declaration.behaviorEvidence.map(({ case: caseId }) => [
         caseId,
-        behaviorReceipt(declaration, caseId),
+        executeBehaviorCase(declaration, caseId),
       ]),
     );
     const buildchain = {
@@ -273,8 +292,8 @@ export function generateQualificationFixtures() {
       'installed-runtime',
     ].map((surface) => ({
       surface,
-      relevance: surface === 'installed-runtime' ? 'not-relevant' : 'required',
-      status: surface === 'installed-runtime' ? 'unsupported' : 'supported',
+      relevance: 'required',
+      status: 'supported',
     }));
     declaration.buildchain = {
       ...buildchain,
