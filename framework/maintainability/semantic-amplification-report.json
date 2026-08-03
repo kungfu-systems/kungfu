@@ -5,7 +5,7 @@
   "manifestPath": "framework/maintainability/semantic-amplification.manifest.json",
   "manifestRoot": "sha256:b64ab1daecaec8560dd649af61b7e175adaf562df3aa8b94e3733ef499a308aa",
   "baselineRef": "dbfed9ca1785d147b26f4f06e7e6895ac7368fee",
-  "sourceRoot": "sha256:d32ae747281f695c1025cc240eb24be86233cd76110c7982692d82041edd2061",
+  "sourceRoot": "sha256:07799fcf90c044223159108f96726bc43f0ca89feeec1425c139dd359c077949",
   "roles": {
     "authority": "exactly one authority route per family; the route may name multiple co-owned source files",
     "allowedProjectionRoles": [
@@ -651,9 +651,9 @@
         },
         {
           "path": "product/scripts/dist.mjs",
-          "currentLines": 2445,
+          "currentLines": 2449,
           "baselineLines": 2514,
-          "currentRoot": "sha256:414bb9474fe3e1df6a5e554d47f80c2d885e0f8a5ad27f2d2cccbafe9a8e91c4",
+          "currentRoot": "sha256:abfe349423e30aeb0638ca1a4c12588c1715926c672f521c4f1b71ea39ca0eb2",
           "baselineRoot": "sha256:6cfd6c55e296163ab863fb1d79a4a51198ad12943274fc0858338bb651a108da",
           "changedSinceBaseline": true
         },
@@ -1122,7 +1122,7 @@
           "path": "docs/qualification/gates/release-admission-policy.json",
           "currentLines": 49,
           "baselineLines": 41,
-          "currentRoot": "sha256:6951f04a5965ac24be54a26720f5886589f60c6d0c76c6d4ca0cf039003e2295",
+          "currentRoot": "sha256:b1d9d61d1aae55e5f29f61764a9580de46b11f9dae9249961ac9254f66cda842",
           "baselineRoot": "sha256:e8a0f7037f2331610f3b9c07e7cdf5e47ea701045c73d0f67bf909372e77e0ac",
           "changedSinceBaseline": true
         },
@@ -1144,9 +1144,9 @@
         },
         {
           "path": "scripts/release-promotion-rehearsal.mjs",
-          "currentLines": 771,
+          "currentLines": 773,
           "baselineLines": 713,
-          "currentRoot": "sha256:1a4c9595a581c960691b98ab471928825b4019e83853f89afaee5790ad64ac43",
+          "currentRoot": "sha256:97d635a70a6ce52370814ed1c418c40bfcc856f6ebe9cec06e983df7126fa532",
           "baselineRoot": "sha256:12df72a7b881c2c3c83d5a19f1ab8d4189156a4d09ef759fe1e36328f5b4ed1d",
           "changedSinceBaseline": true
         },
@@ -1160,9 +1160,9 @@
         },
         {
           "path": "docs/qualification/gates/workflow-bindings.json",
-          "currentLines": 659,
+          "currentLines": 662,
           "baselineLines": 580,
-          "currentRoot": "sha256:fe06c30e8d51d985901f47aacc6a30d3c073af7722c3ae2fd37295147eb188ed",
+          "currentRoot": "sha256:17dedc50fbe4042b736a51f82aa630c4c0d56a3d82feb9e375a21dddf8bc4b42",
           "baselineRoot": "sha256:233cd22ebce4c9930e0e4889808b88661d77c202d5e5f73121823dcdc461576d",
           "changedSinceBaseline": true
         },
@@ -1170,7 +1170,7 @@
           "path": ".github/workflows/release-new-version.yml",
           "currentLines": 386,
           "baselineLines": 362,
-          "currentRoot": "sha256:3739372c9fc513c3da3eadc44f0cc4d8e57f6314fb74e8281e10f81506b45aea",
+          "currentRoot": "sha256:8f475fd6a68e62e37eb559f5568175979429d3a7d93a7decb3da88a49b04cb47",
           "baselineRoot": "sha256:3bdd847c80a05030de1d826282cef2e76a85e31dc0904df02c7f0cdda7a5eb74",
           "changedSinceBaseline": true
         },
@@ -1178,7 +1178,7 @@
           "path": "docs/qualification/gates/release-and-promotion.md",
           "currentLines": 206,
           "baselineLines": 141,
-          "currentRoot": "sha256:4fbbeaf1924c28fd42cc6b0fc80e6e9dabdc99ee3e5b30da1fdb8c8dea0ac0b1",
+          "currentRoot": "sha256:7221c45334ab215accf301158921da63768804bc08a0744f60f391e3ea27677b",
           "baselineRoot": "sha256:5eb20fe886635e0464313023daa1a2b62529ad1d6977202dce9c91c6b8aacf9e",
           "changedSinceBaseline": true
         },
@@ -1186,7 +1186,7 @@
           "path": "docs/qualification/gates/release-admission.md",
           "currentLines": 75,
           "baselineLines": 75,
-          "currentRoot": "sha256:6c290f523aadc5b9d3af5458c8251a342df21b6cfb01e25bea4e59efc7473b3b",
+          "currentRoot": "sha256:74c944d492149c37748813ab8a6f58c43af49a2bbf493162c15277a4684f3911",
           "baselineRoot": "sha256:69f293fefb3c94df44051dc86ba4435416f5ea4348f2ffb245bef19bb494a280",
           "changedSinceBaseline": true
         },
@@ -1947,7 +1947,7 @@
         "topology": "product-assembly",
         "kind": "line-count",
         "status": "remediated",
-        "metric": 2445,
+        "metric": 2449,
         "threshold": 2450,
         "finding": null
       },

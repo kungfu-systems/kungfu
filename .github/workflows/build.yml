@@ -158,14 +158,14 @@ jobs:
   build:
     needs: [preflight, windows-fast-sentinel, auditable-demo-fast-sentinel]
     if: ${{ needs.preflight.result == 'success' && needs.windows-fast-sentinel.result == 'success' && needs.auditable-demo-fast-sentinel.result == 'success' && !inputs.fast-sentinels-only && fromJSON(inputs.macos-overflow-request-json || '{}').mode != 'control' }}
-    uses: kungfu-systems/buildchain/.github/workflows/.build.yml@a5d2e312d083bc1b382c36e2ecb9179c7cd90dbe # ancestry-aware source authority
+    uses: kungfu-systems/buildchain/.github/workflows/.build.yml@5246afd4ff5608f6e8d09fb71003992119364880 # pre-upload transport smoke
     secrets:
       BUILDCHAIN_PROMOTION_TOKEN: ${{ secrets.KUNGFU_GITHUB_TOKEN }}
       BUILDCHAIN_ARTIFACT_RELAY_S3_ROLE_ARN: ${{ secrets.BUILDCHAIN_ARTIFACT_RELAY_S3_ROLE_ARN }}
       BUILDCHAIN_ARTIFACT_RELAY_S3_UPLOAD_ROLE_ARN: ${{ secrets.BUILDCHAIN_ARTIFACT_RELAY_S3_UPLOAD_ROLE_ARN }}
       BUILDCHAIN_ARTIFACT_RELAY_S3_DOWNLOAD_ROLE_ARN: ${{ secrets.BUILDCHAIN_ARTIFACT_RELAY_S3_DOWNLOAD_ROLE_ARN }}
     with:
-      buildchain-ref: ${{ inputs.buildchain-ref || '' }}
+      buildchain-ref: ${{ inputs.buildchain-ref || '5246afd4ff5608f6e8d09fb71003992119364880' }}
       runner-preset: custom
       platforms-json: ${{ fromJSON(inputs.macos-overflow-request-json || '{}').mode == 'self-hosted' && '[{"id":"macos-arm64","name":"macOS ARM64 self-hosted primary","platform":"macos","runner":"[\"self-hosted\",\"macOS\",\"ARM64\",\"kungfu-build-v4-macos-arm64\"]","capabilities":["native-toolchain","node","product-artifacts","rust"]}]' || (fromJSON(inputs.macos-overflow-request-json || '{}').mode == 'github-hosted' && '[{"id":"macos-arm64","name":"macOS ARM64 GitHub-hosted overflow","platform":"macos","runner":"[\"macos-15\"]","capabilities":["native-toolchain","node","product-artifacts","rust"]}]' || (inputs.platforms-json || '[{"id":"linux-x64","name":"Linux x64","platform":"linux","runner":"[\"self-hosted\",\"Linux\",\"X64\",\"kungfu-build-v4-linux-x64\"]","capabilities":["node","native-toolchain","product-artifacts","rust"]},{"id":"linux-arm64","name":"Linux ARM64","platform":"linux","runner":"[\"ubuntu-24.04-arm\"]","capabilities":["node","native-toolchain","product-artifacts","rust"]},{"id":"macos-arm64","name":"macOS ARM64","platform":"macos","runner":"[\"self-hosted\",\"macOS\",\"ARM64\",\"kungfu-build-v4-macos-arm64\"]","capabilities":["node","native-toolchain","product-artifacts","rust"]},{"id":"windows-x64","name":"Windows x64","platform":"windows","runner":"[\"self-hosted\",\"Windows\",\"X64\",\"kungfu-build-v4-windows-x64\"]","capabilities":["node","native-toolchain","product-artifacts","rust"]}]')) }}
       # Normal native builds route each exact-label self-hosted lane to its
@@ -184,6 +184,8 @@ jobs:
       artifact-paths: |
         product/release
         product/dist/cli/kungfu-episodes-cli-linux-x64
+      pre-upload-transport-smoke-scenario-path: .buildchain/auditable-demo.json
+      pre-upload-transport-smoke-artifact-root: .
       github-artifact-attestation-subject-path: product/release/cli/kungfu-episodes-cli-linux-x64.tar.gz
       github-artifact-attestation-signer-sha: 375b2d4b8a904776453773a33b4c4e4556c8c999
       github-artifact-attestation-platform-id: linux-x64
@@ -465,7 +467,7 @@ jobs:
       actions: read
       contents: write
       pull-requests: write
-    uses: kungfu-systems/buildchain/.github/workflows/.declarative-auditable-demo.yml@ae9f4b91ee1027d0e18f416c8f18bc4645c8e3f9
+    uses: kungfu-systems/buildchain/.github/workflows/.declarative-auditable-demo.yml@5246afd4ff5608f6e8d09fb71003992119364880
     secrets:
       DEMO_UPDATE_TOKEN: ${{ secrets.KUNGFU_GITHUB_TOKEN }}
     with:

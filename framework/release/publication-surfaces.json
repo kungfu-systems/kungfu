@@ -122,7 +122,7 @@
             "product-stable",
             "product-binaries"
           ],
-          "sourceRoot": "sha256:b67a379ce701bd9d4a347b6e35cda255c681423272db20802ec471411569539e"
+          "sourceRoot": "sha256:1d1c0bdba86de714dc03e58f45208502ec7d98f8531a9f8558ab72b3e6bfd06b"
         },
         {
           "path": ".github/workflows/buildchain-validate.yml",
@@ -305,7 +305,7 @@
             "product-stable",
             "product-binaries"
           ],
-          "sourceRoot": "sha256:3739372c9fc513c3da3eadc44f0cc4d8e57f6314fb74e8281e10f81506b45aea"
+          "sourceRoot": "sha256:8f475fd6a68e62e37eb559f5568175979429d3a7d93a7decb3da88a49b04cb47"
         },
         {
           "path": ".github/workflows/release-shifu.yml",
@@ -340,17 +340,18 @@
     "buildchain": {
       "repository": "kungfu-systems/buildchain",
       "owner": "kungfu-systems/buildchain",
-      "sourceRevision": "a5d2e312d083bc1b382c36e2ecb9179c7cd90dbe",
-      "version": "3.0.2-alpha.2",
+      "sourceRevision": "5246afd4ff5608f6e8d09fb71003992119364880",
+      "version": "3.0.5-alpha.6",
       "compatibilityMode": "stable-v3-contract-plus-exact-additive-runtime",
       "stableContractLock": ".buildchain/contract-lock.json",
       "runtimeContractLock": ".buildchain/alpha-contract-lock.json",
-      "workflowInventoryRoot": "sha256:570866f0204d887e761e69c3a8907a6348eab1b77dba133d76f32a4034d0f05c",
+      "workflowInventoryRoot": "sha256:18c8418a96df4c01f0505ed8c5e8c892b944f3385ab844febe540590e4c96bdf",
       "workflowDiscoveryPattern": "(release|publish|publication|promotion|stable-candidate|alpha-self-dogfood|candidate-lab|auditable-demo|binary-distribution|web-surface|wheel|bump-minor)",
       "workflowInventory": [
         ".github/workflows/.auditable-demo.yml",
         ".github/workflows/.binary-release-assets.yml",
         ".github/workflows/.bump-minor-version.yml",
+        ".github/workflows/.declarative-auditable-demo.yml",
         ".github/workflows/.publication-authority.yml",
         ".github/workflows/.release-candidate-promote.yml",
         ".github/workflows/.release-docker.yml",
