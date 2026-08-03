@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // @ts-check
 
-import { spawnSync } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 import crypto from 'node:crypto';
 import fs from 'node:fs';
 import os from 'node:os';
@@ -20,6 +20,12 @@ const REPORT_SCHEMA_PATH = path.join(
   'runtime-activation-qualification-report-v1.schema.json',
 );
 const LAUNCHER = process.platform === 'win32' ? 'shifu.cmd' : './shifu';
+const MAX_SUITE_LOG_BYTES = 128 * 1024 * 1024;
+const PRODUCT_CONSUMER_SUITES = new Set([
+  'product-runtime-smoke',
+  'product-verification',
+  'product-catalog',
+]);
 
 export const SUITES = [
   {
@@ -367,20 +373,54 @@ export function suiteEnvironment(suite, baseEnv = process.env) {
   };
 }
 
-function runSuite(suite, outputDir) {
+export async function runSuite(suite, outputDir) {
   console.log(`[runtime-activation-qualify] running ${suite.id}`);
   const started = Date.now();
   const invocation = suiteInvocation(suite);
-  const result = spawnSync(invocation.command, invocation.args, {
-    cwd: ROOT,
-    env: suiteEnvironment(suite),
-    encoding: 'utf8',
-    maxBuffer: 128 * 1024 * 1024,
+  const result = await new Promise((resolve) => {
+    const child = spawn(invocation.command, invocation.args, {
+      cwd: ROOT,
+      env: suiteEnvironment(suite),
+      stdio: ['ignore', 'pipe', 'pipe'],
+      windowsHide: true,
+    });
+    const chunks = [];
+    let bytes = 0;
+    let overflow = false;
+    let launchError = null;
+    const collect = (chunk) => {
+      if (overflow) return;
+      bytes += chunk.length;
+      if (bytes > MAX_SUITE_LOG_BYTES) {
+        overflow = true;
+        child.kill();
+        return;
+      }
+      chunks.push(chunk);
+    };
+    child.stdout.on('data', collect);
+    child.stderr.on('data', collect);
+    child.once('error', (error) => {
+      launchError = error;
+    });
+    child.once('close', (status, signal) => {
+      resolve({
+        status: overflow ? 1 : status,
+        signal,
+        error: overflow
+          ? new Error(`suite output exceeded ${MAX_SUITE_LOG_BYTES} bytes`)
+          : launchError,
+        output: Buffer.concat(chunks).toString('utf8'),
+      });
+    });
   });
   const launchError = result.error
     ? `[runtime-activation-qualify] launch_error=${result.error.stack || String(result.error)}\n`
     : '';
-  const output = `${result.stdout || ''}${result.stderr || ''}${launchError}`;
+  const signal = result.signal
+    ? `[runtime-activation-qualify] signal=${result.signal}\n`
+    : '';
+  const output = `${result.output || ''}${launchError}${signal}`;
   const rawName = `${suite.id}.log`;
   fs.writeFileSync(path.join(outputDir, rawName), output, { flag: 'wx' });
   const passed = !result.error && result.status === 0;
@@ -401,6 +441,47 @@ function runSuite(suite, outputDir) {
     raw_log: rawName,
     raw_sha256: sha256(output),
   };
+}
+
+/**
+ * Execute source/runtime producers together, then fan out product consumers
+ * after product-distribution has settled. Every required suite runs and the
+ * returned order remains the declared contract order.
+ */
+export async function executeQualificationSuites(
+  suites,
+  outputDir,
+  runner = runSuite,
+  maxParallelism = 2,
+) {
+  if (!Number.isInteger(maxParallelism) || maxParallelism < 1)
+    throw new Error('runtime activation maxParallelism must be positive');
+  const required = suites.filter((suite) => suite.required);
+  const producers = required.filter(
+    (suite) => !PRODUCT_CONSUMER_SUITES.has(suite.id),
+  );
+  const consumers = required.filter((suite) =>
+    PRODUCT_CONSUMER_SUITES.has(suite.id),
+  );
+  const results = new Map();
+  for (const group of [producers, consumers]) {
+    let cursor = 0;
+    const workers = Array.from(
+      { length: Math.min(maxParallelism, group.length) },
+      async () => {
+        const completed = [];
+        while (cursor < group.length) {
+          const suite = group[cursor];
+          cursor += 1;
+          completed.push(await runner(suite, outputDir));
+        }
+        return completed;
+      },
+    );
+    const settled = (await Promise.all(workers)).flat();
+    for (const result of settled) results.set(result.id, result);
+  }
+  return suites.map((suite) => results.get(suite.id) || suite);
 }
 
 function parseArgs(argv) {
@@ -447,9 +528,7 @@ async function main() {
   fs.mkdirSync(outputDir, { recursive: true });
   let suites = qualificationPlan(args);
   if (args.mode === 'execute') {
-    suites = suites.map((suite) =>
-      suite.required ? runSuite(suite, outputDir) : suite,
-    );
+    suites = await executeQualificationSuites(suites, outputDir);
   }
   const logBundle =
     args.mode === 'execute' ? createLogBundle(outputDir, suites) : null;
