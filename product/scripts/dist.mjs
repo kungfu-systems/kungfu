@@ -33,7 +33,7 @@ import {
   runLibwasmArtifactSelfTest,
   runLibwasmExecutionQualification,
 } from './libwasm-artifact.mjs';
-import { normalizeCopiedSymlinks } from './portable-symlinks.mjs';
+import * as symlinks from './portable-symlinks.mjs';
 import { productReleaseChannelConfig } from './release-channel-trust.mjs';
 import {
   assertSupportedProductHost,
@@ -960,7 +960,7 @@ export function copyTree(source, target, options = {}) {
       );
     },
   });
-  normalizeCopiedSymlinks({ source, target });
+  symlinks.normalizeCopiedSymlinks({ source, target });
   return true;
 }
 
@@ -1126,21 +1126,7 @@ export function writeAuditableDemoBinaryMetadata(
   const binary = path.join(stageRoot, layout.launcherName);
   const runtime = path.join(stageRoot, layout.runtimeEntrypoint);
   const python = path.join(stageRoot, layout.pythonEntrypoint);
-  for (const file of [binary, runtime, python]) {
-    const entry = fs.lstatSync(file);
-    if (!entry.isSymbolicLink()) continue;
-    const resolved = fs.realpathSync(file);
-    const resolvedEntry = fs.statSync(resolved);
-    if (!resolvedEntry.isFile()) {
-      throw new Error(
-        `auditable demo executable is not a regular file: ${file}`,
-      );
-    }
-    const materialized = `${file}.auditable-demo-regular-file`;
-    fs.copyFileSync(resolved, materialized);
-    fs.chmodSync(materialized, resolvedEntry.mode & 0o777);
-    fs.renameSync(materialized, file);
-  }
+  [binary, runtime, python].forEach(symlinks.materializeRegularFile);
   const metadata = {
     contract: 'kungfu.declarative-demo-binary/v1',
     platformId: platform,
