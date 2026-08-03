@@ -20,6 +20,7 @@ import {
   installedKungfuInvocation,
   isShippedKfdSupport,
   kfxBundleExternalModules,
+  materializeProductRuntimeEntrypoints,
   requiresManagedEsbuildPlatform,
   runInstalledKungfuAgentHubSmoke,
   runInstalledKungfuAssignmentAdmissionSmoke,
@@ -325,6 +326,31 @@ test('CLI product materializes symlinked demo executables as regular files', (t)
   assert.equal(fs.lstatSync(python).isSymbolicLink(), false);
   assert.equal(fs.readFileSync(python, 'utf8'), 'python\n');
   assert.notEqual(fs.statSync(python).mode & 0o111, 0);
+});
+
+test('CLI runtime identity is stable after demo executable metadata', (t) => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'kungfu-runtime-id-'));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const layout = cliArchiveLayout('linux');
+  const runtimeRoot = path.join(root, layout.runtimeDirectory);
+  const python = path.join(root, layout.pythonEntrypoint);
+  const pythonTarget = path.join(path.dirname(python), 'python3.13');
+  fs.mkdirSync(path.dirname(python), { recursive: true });
+  fs.writeFileSync(path.join(root, layout.launcherName), '#!/bin/sh\nexit 0\n');
+  fs.writeFileSync(path.join(root, layout.runtimeEntrypoint), 'runtime\n');
+  fs.writeFileSync(pythonTarget, 'python\n');
+  fs.chmodSync(pythonTarget, 0o755);
+  fs.symlinkSync('python3.13', python);
+
+  materializeProductRuntimeEntrypoints(runtimeRoot, 'linux');
+  const manifest = buildCliUpgradeManifest({ stageRoot: root, layout });
+  writeAuditableDemoBinaryMetadata(root, layout, 'linux-x64', root);
+
+  assert.equal(fs.lstatSync(python).isFile(), true);
+  assert.equal(
+    manifest.runtimeArtifactDigest,
+    `sha256:${sha256Tree(runtimeRoot)}`,
+  );
 });
 
 test('CLI product rejects demo executable symlinks to non-files', (t) => {
