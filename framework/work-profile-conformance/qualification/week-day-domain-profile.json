@@ -1,0 +1,14 @@
+{
+  "schema": "kungfu.work-profile-qualification-domain/v1",
+  "id": "example.week-day",
+  "roles": {
+    "fact": "week",
+    "episode": "day-observation",
+    "pursuit": "action-intent",
+    "atlas": "calendar-plan",
+    "warrant": "calendar-permission"
+  },
+  "identity": "semantic ids are independent of process, UI, runner, path, and provider",
+  "settlement": "an observed day and explicit permission settle an action result",
+  "authority": "existing Fact, Episode, Action Geometry, Work lifecycle, and Cut"
+}

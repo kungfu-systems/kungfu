@@ -31,7 +31,7 @@
     },
     "invariants": {
       "path": "framework/invariant/kungfu-invariant.registry.json",
-      "root": "sha256:97e0c3a2d6dfa821cf9fbddc225537732655f52aa837562858ff58bf469718b1"
+      "root": "sha256:f39b9fe0b7784b6f2b68388e01b44393926c329ed3771bc7c76eebefefdfac4b"
     },
     "workLifecycle": {
       "path": "framework/work-lifecycle/kungfu-work-lifecycle-operation-matrix.contract.json",
@@ -504,7 +504,7 @@
           "invariants": [
             {
               "path": "framework/invariant/kungfu-invariant.registry.json",
-              "root": "sha256:97e0c3a2d6dfa821cf9fbddc225537732655f52aa837562858ff58bf469718b1"
+              "root": "sha256:f39b9fe0b7784b6f2b68388e01b44393926c329ed3771bc7c76eebefefdfac4b"
             }
           ],
           "admissionThreshold": {
@@ -528,7 +528,7 @@
               },
               {
                 "path": "framework/invariant/kungfu-invariant.registry.json",
-                "root": "sha256:97e0c3a2d6dfa821cf9fbddc225537732655f52aa837562858ff58bf469718b1"
+                "root": "sha256:f39b9fe0b7784b6f2b68388e01b44393926c329ed3771bc7c76eebefefdfac4b"
               }
             ],
             "policy": "active authority plus invariant evidence qualifies semantic stability"
@@ -566,7 +566,7 @@
               },
               {
                 "path": "framework/invariant/kungfu-invariant.registry.json",
-                "root": "sha256:97e0c3a2d6dfa821cf9fbddc225537732655f52aa837562858ff58bf469718b1"
+                "root": "sha256:f39b9fe0b7784b6f2b68388e01b44393926c329ed3771bc7c76eebefefdfac4b"
               }
             ],
             "policy": "contract, vector, and invariant evidence are jointly required"
@@ -642,7 +642,7 @@
             "refs": [
               {
                 "path": "framework/invariant/kungfu-invariant.registry.json",
-                "root": "sha256:97e0c3a2d6dfa821cf9fbddc225537732655f52aa837562858ff58bf469718b1"
+                "root": "sha256:f39b9fe0b7784b6f2b68388e01b44393926c329ed3771bc7c76eebefefdfac4b"
               }
             ]
           },
@@ -854,7 +854,7 @@
           "invariants": [
             {
               "path": "framework/invariant/kungfu-invariant.registry.json",
-              "root": "sha256:97e0c3a2d6dfa821cf9fbddc225537732655f52aa837562858ff58bf469718b1"
+              "root": "sha256:f39b9fe0b7784b6f2b68388e01b44393926c329ed3771bc7c76eebefefdfac4b"
             }
           ],
           "admissionThreshold": {
@@ -878,7 +878,7 @@
               },
               {
                 "path": "framework/invariant/kungfu-invariant.registry.json",
-                "root": "sha256:97e0c3a2d6dfa821cf9fbddc225537732655f52aa837562858ff58bf469718b1"
+                "root": "sha256:f39b9fe0b7784b6f2b68388e01b44393926c329ed3771bc7c76eebefefdfac4b"
               }
             ],
             "policy": "active authority plus invariant evidence qualifies semantic stability"
@@ -916,7 +916,7 @@
               },
               {
                 "path": "framework/invariant/kungfu-invariant.registry.json",
-                "root": "sha256:97e0c3a2d6dfa821cf9fbddc225537732655f52aa837562858ff58bf469718b1"
+                "root": "sha256:f39b9fe0b7784b6f2b68388e01b44393926c329ed3771bc7c76eebefefdfac4b"
               }
             ],
             "policy": "contract, vector, and invariant evidence are jointly required"
@@ -992,7 +992,7 @@
             "refs": [
               {
                 "path": "framework/invariant/kungfu-invariant.registry.json",
-                "root": "sha256:97e0c3a2d6dfa821cf9fbddc225537732655f52aa837562858ff58bf469718b1"
+                "root": "sha256:f39b9fe0b7784b6f2b68388e01b44393926c329ed3771bc7c76eebefefdfac4b"
               }
             ]
           },
@@ -1038,7 +1038,7 @@
           "invariants": [
             {
               "path": "framework/invariant/kungfu-invariant.registry.json",
-              "root": "sha256:97e0c3a2d6dfa821cf9fbddc225537732655f52aa837562858ff58bf469718b1"
+              "root": "sha256:f39b9fe0b7784b6f2b68388e01b44393926c329ed3771bc7c76eebefefdfac4b"
             }
           ],
           "admissionThreshold": {
@@ -1062,7 +1062,7 @@
               },
               {
                 "path": "framework/invariant/kungfu-invariant.registry.json",
-                "root": "sha256:97e0c3a2d6dfa821cf9fbddc225537732655f52aa837562858ff58bf469718b1"
+                "root": "sha256:f39b9fe0b7784b6f2b68388e01b44393926c329ed3771bc7c76eebefefdfac4b"
               }
             ],
             "policy": "active authority plus invariant evidence qualifies semantic stability"
@@ -1113,7 +1113,7 @@
               },
               {
                 "path": "framework/invariant/kungfu-invariant.registry.json",
-                "root": "sha256:97e0c3a2d6dfa821cf9fbddc225537732655f52aa837562858ff58bf469718b1"
+                "root": "sha256:f39b9fe0b7784b6f2b68388e01b44393926c329ed3771bc7c76eebefefdfac4b"
               }
             ],
             "policy": "contract, vector, and invariant evidence are jointly required"
@@ -1204,7 +1204,7 @@
             "refs": [
               {
                 "path": "framework/invariant/kungfu-invariant.registry.json",
-                "root": "sha256:97e0c3a2d6dfa821cf9fbddc225537732655f52aa837562858ff58bf469718b1"
+                "root": "sha256:f39b9fe0b7784b6f2b68388e01b44393926c329ed3771bc7c76eebefefdfac4b"
               }
             ]
           },
@@ -1721,5 +1721,5 @@
       "artifacts": []
     }
   ],
-  "catalogRoot": "sha256:19de8146a48d24f2c4fa29fceae5b1550b2be992be7e6120d7583287d396096e"
+  "catalogRoot": "sha256:763efc7f6a67acd01e0178c40c08c5f5a9b13f86dc384e9cab56ab6f6e72891c"
 }
