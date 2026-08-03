@@ -294,6 +294,62 @@ test('CLI product emits exact standalone demo metadata beside the launcher', (t)
   );
 });
 
+test('CLI product materializes symlinked demo executables as regular files', (t) => {
+  if (process.platform === 'win32') {
+    t.skip('POSIX symlink contract');
+    return;
+  }
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'kungfu-demo-symlink-'));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const layout = cliArchiveLayout('linux');
+  fs.writeFileSync(path.join(root, layout.launcherName), '#!/bin/sh\nexit 0\n');
+  fs.mkdirSync(path.dirname(path.join(root, layout.pythonEntrypoint)), {
+    recursive: true,
+  });
+  fs.writeFileSync(path.join(root, layout.runtimeEntrypoint), 'runtime\n');
+  const pythonTarget = path.join(root, layout.runtimeDirectory, 'python-real');
+  fs.writeFileSync(pythonTarget, 'python\n');
+  fs.chmodSync(pythonTarget, 0o755);
+  fs.symlinkSync(
+    path.relative(
+      path.dirname(path.join(root, layout.pythonEntrypoint)),
+      pythonTarget,
+    ),
+    path.join(root, layout.pythonEntrypoint),
+  );
+
+  writeAuditableDemoBinaryMetadata(root, layout, 'linux-x64', root);
+
+  const python = path.join(root, layout.pythonEntrypoint);
+  assert.equal(fs.lstatSync(python).isFile(), true);
+  assert.equal(fs.lstatSync(python).isSymbolicLink(), false);
+  assert.equal(fs.readFileSync(python, 'utf8'), 'python\n');
+  assert.notEqual(fs.statSync(python).mode & 0o111, 0);
+});
+
+test('CLI product rejects demo executable symlinks to non-files', (t) => {
+  if (process.platform === 'win32') {
+    t.skip('POSIX symlink contract');
+    return;
+  }
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'kungfu-demo-symlink-'));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const layout = cliArchiveLayout('linux');
+  const python = path.join(root, layout.pythonEntrypoint);
+  fs.writeFileSync(path.join(root, layout.launcherName), '#!/bin/sh\nexit 0\n');
+  fs.mkdirSync(path.dirname(python), { recursive: true });
+  fs.writeFileSync(path.join(root, layout.runtimeEntrypoint), 'runtime\n');
+  const directory = path.join(root, layout.runtimeDirectory, 'python-dir');
+  fs.mkdirSync(directory);
+  fs.symlinkSync(path.relative(path.dirname(python), directory), python);
+
+  assert.throws(
+    () => writeAuditableDemoBinaryMetadata(root, layout, 'linux-x64', root),
+    /executable symlink target is not a regular file/u,
+  );
+  assert.equal(fs.lstatSync(python).isSymbolicLink(), true);
+});
+
 test('CLI product manifest channel config contains only runtime trust fields', () => {
   const publicKey = Buffer.alloc(32, 7).toString('base64');
   const keyId = releaseChannelKeyId(publicKey);
