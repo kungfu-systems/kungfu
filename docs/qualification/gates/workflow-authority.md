@@ -80,6 +80,8 @@ without changing and refreshing the manifest fails the Gate catalog check.
 | `.github/workflows/dev-alpha-candidate-patrol.yml` | `resolve-channels` | qualification | none | diagnostic | token:none | none | 1 |
 | `.github/workflows/dev-gate-latency-patrol.yml` | `capture` | diagnostic | evidence | diagnostic | token:read | none | 5 |
 | `.github/workflows/dev-gate-latency-patrol.yml` | `collect` | diagnostic | evidence | diagnostic | token:read | none | 6 |
+| `.github/workflows/dev-pr-auto-merge.yml` | `admission` | qualification | none | diagnostic | token:write, repo-secret:KUNGFU_GITHUB_TOKEN | none | 0 |
+| `.github/workflows/dev-pr-auto-merge.yml` | `resolve-target` | qualification | none | diagnostic | token:none | none | 1 |
 | `.github/workflows/dev-verify-patrol.yml` | `report` | diagnostic | none | none | token:write | none | 1 |
 | `.github/workflows/dev-verify-patrol.yml` | `verify` | qualification | none | qualifying | token:write, oidc | none | 0 |
 | `.github/workflows/docs-check.yml` | `docs-check` | qualification | none | diagnostic | token:read | none | 3 |
