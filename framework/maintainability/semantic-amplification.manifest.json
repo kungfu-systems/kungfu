@@ -2,7 +2,7 @@
   "schema": "kungfu.semantic-amplification-manifest/v1",
   "status": "navigation-projection-input",
   "baselineRef": "dbfed9ca1785d147b26f4f06e7e6895ac7368fee",
-  "reportPath": "framework/maintainability/semantic-amplification-report.json",
+  "legacyReportPath": "framework/maintainability/semantic-amplification-report.json",
   "integrityPolicy": {
     "schema": "kungfu.abstraction-integrity-governance/v1",
     "compatibility": "additive-extension-of-kungfu.semantic-amplification-manifest/v1",
@@ -1201,14 +1201,14 @@
       "rollback": "Move the read-only evidence helpers back and preserve the existing re-export surface."
     },
     {
-      "id": "product-assembly-lifecycle",
+      "id": "product-assembly-runtime",
       "original": [
         "product/scripts/dist.mjs"
       ],
-      "boundary": "Lifecycle ordering and product target guards form one pure assembly plan; product mechanics, platform adapters, and release behavior remain in dist.mjs.",
+      "boundary": "Source pins, platform package selection, no-optional acquisition, and lifecycle ordering form one explicit-input assembly runtime; product mechanics and release behavior remain in dist.mjs.",
       "target": "product/scripts/runtime-pin-snapshot.mjs",
-      "owner": "product/release",
-      "dependencyInvariant": "The plan receives all mechanics explicitly, preserves the existing Buildchain event order, and exposes no second CLI or product authority.",
+      "owner": "product/release-assembly-runtime",
+      "dependencyInvariant": "The runtime receives repository paths, command execution, logging, environment, package resolution, and product mechanics explicitly; it preserves Buildchain event order and exposes no CLI, publication, or second product authority.",
       "tests": [
         "product/scripts/dist.test.mjs",
         "framework/maintainability/semantic-amplification.test.mjs"

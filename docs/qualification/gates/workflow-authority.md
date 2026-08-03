@@ -112,6 +112,7 @@ without changing and refreshing the manifest fails the Gate catalog check.
 | `.github/workflows/release-new-version.yml` | `promotion-contract` | qualification | none | diagnostic | token:read | none | 8 |
 | `.github/workflows/release-shifu.yml` | `build` | qualification | none | diagnostic | token:write, oidc | none | 7 |
 | `.github/workflows/release-shifu.yml` | `release` | product-publication | product | none | token:write, repo-secret:GITHUB_TOKEN | `adr0049-production-publication` | 3 |
+| `.github/workflows/report-projection.yml` | `exact-source-projection` | qualification | none | diagnostic | token:read | none | 6 |
 | `.github/workflows/shifu-ci.yml` | `check` | qualification | none | diagnostic | token:read | none | 9 |
 | `.github/workflows/shifu-ci.yml` | `preflight` | qualification | none | diagnostic | token:read | none | 2 |
 | `.github/workflows/source-acceptance.yml` | `source-acceptance` | qualification | none | qualifying | token:read | none | 0 |

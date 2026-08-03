@@ -257,7 +257,11 @@ test('CLI product emits exact standalone demo metadata beside the launcher', (t)
     recursive: true,
   });
   fs.writeFileSync(path.join(root, layout.runtimeEntrypoint), 'runtime\n');
-  fs.writeFileSync(path.join(root, layout.pythonEntrypoint), 'python\n');
+  fs.writeFileSync(
+    path.join(root, 'runtime/python/bin/python3.13'),
+    'python\n',
+  );
+  fs.symlinkSync('python3.13', path.join(root, layout.pythonEntrypoint));
   const metadata = writeAuditableDemoBinaryMetadata(
     root,
     layout,

@@ -29,7 +29,6 @@ function semanticAmplificationFixturePaths(manifest) {
     'framework/maintainability/semantic-amplification.manifest.json',
     'framework/maintainability/semantic-amplification.mjs',
     'framework/maintainability/terminal-evidence-matrix.json',
-    manifest.reportPath,
   ]);
   for (const family of manifest.families || []) {
     for (const relative of family.authority?.sources || []) paths.add(relative);
@@ -96,6 +95,16 @@ function executableOnPath(name) {
   throw new Error(`${name} is not available on PATH`);
 }
 
+function declaredExecutable(name, candidate) {
+  if (!candidate) return null;
+  try {
+    fs.accessSync(candidate, fs.constants.X_OK);
+    return candidate;
+  } catch {
+    throw new Error(`${name} is not executable: ${candidate}`);
+  }
+}
+
 function snapshotSource(root) {
   const rows = [];
   const visit = (directory) => {
@@ -120,6 +129,36 @@ function snapshotSource(root) {
   };
   visit(root);
   return rows;
+}
+
+function sourceAuditRoot(rows) {
+  const hash = crypto.createHash('sha256');
+  for (const row of rows) hash.update(row).update('\0');
+  return `sha256:${hash.digest('hex')}`;
+}
+
+function boundedDiagnosticTail(...values) {
+  const [stderr] = values;
+  if (stderr) return stderr.slice(-24 * 1024);
+  const output = values.filter(Boolean).join('\n');
+  const lines = output.split(/\r?\n/u);
+  const failingTestsIndex = lines.findLastIndex(
+    (line) => line.trim() === '✖ failing tests:',
+  );
+  if (failingTestsIndex >= 0)
+    return lines
+      .slice(failingTestsIndex, failingTestsIndex + 120)
+      .join('\n')
+      .slice(0, 24 * 1024);
+  const failureSummaryIndex = lines.findLastIndex((line) =>
+    /^(?:ℹ fail [1-9]|# fail [1-9])/u.test(line.trimStart()),
+  );
+  if (failureSummaryIndex >= 0)
+    return lines
+      .slice(Math.max(0, failureSummaryIndex - 8), failureSummaryIndex + 40)
+      .join('\n')
+      .slice(0, 24 * 1024);
+  return output.slice(-24 * 1024);
 }
 
 function makeReadOnly(root) {
@@ -198,9 +237,11 @@ test('declared discovery routes are zero-write in a cold read-only fixture', (t)
   assert.equal(fixtureHead.stdout.trim(), exactSourceSha);
   const base = sourceMergeBase();
   const corePytest = path.join(ROOT, 'framework/core/.venv/bin/pytest');
-  const pytest = fs.existsSync(corePytest)
-    ? corePytest
-    : executableOnPath('pytest');
+  const pytest =
+    declaredExecutable(
+      'KUNGFU_READONLY_PYTEST',
+      process.env.KUNGFU_READONLY_PYTEST,
+    ) || (fs.existsSync(corePytest) ? corePytest : executableOnPath('pytest'));
   const fixedBase = spawnSync(
     git,
     ['update-ref', 'refs/heads/dev/v4/v4.0', base.sha],
@@ -258,6 +299,7 @@ test('declared discovery routes are zero-write in a cold read-only fixture', (t)
     '.github/workflows/dev-gate-latency-patrol.yml',
     '.github/workflows/dev-verify-patrol.yml',
     '.github/workflows/gate-measurement.yml',
+    '.github/workflows/report-projection.yml',
     '.github/workflows/build.yml',
     '.github/workflows/publish-layer-artifacts.yml',
     '.github/workflows/python-structure.yml',
@@ -488,11 +530,15 @@ test('declared discovery routes are zero-write in a cold read-only fixture', (t)
     'framework/maintainability/abstraction-integrity.manifest.json',
     'framework/maintainability/abstraction-integrity.baseline.json',
     'framework/maintainability/abstraction-integrity-report.json',
+    'framework/report-projection/authority.json',
     'framework/maintainability/python-structure-negative-fixtures.json',
     'framework/maintainability/readonly-source-routes.json',
     'framework/maintainability/semantic-amplification.manifest.json',
     'framework/maintainability/semantic-amplification-report.json',
     'framework/maintainability/semantic-amplification.mjs',
+    'framework/report-projection/authority.mjs',
+    'framework/report-projection/authority.test.mjs',
+    'docs/qualification/evidence/generated-report-authority-queue/report.json',
     'framework/maintainability/waivers/README.md',
     'framework/work-history-selector/schema/work-history-selection-manifest-v1.schema.json',
     'framework/work-history-selector/schema/work-history-selection-request-v1.schema.json',
@@ -625,6 +671,7 @@ test('declared discovery routes are zero-write in a cold read-only fixture', (t)
   }
 
   const before = snapshotSource(fixture);
+  const beforeAuditRoot = sourceAuditRoot(before);
   const protectedRef = base.sha;
   makeReadOnly(fixture);
   fs.chmodSync(home, 0o555);
@@ -734,11 +781,18 @@ test('declared discovery routes are zero-write in a cold read-only fixture', (t)
   assert.equal(
     sourceAcceptance.status,
     0,
-    `check:source:\n${[sourceAcceptance.stderr, sourceAcceptance.stdout]
-      .filter(Boolean)
-      .join('\n')}`,
+    `check:source (bounded tail):\n${boundedDiagnosticTail(
+      sourceAcceptance.stderr,
+      sourceAcceptance.stdout,
+    )}`,
   );
-  assert.deepEqual(snapshotSource(fixture), before);
+  const after = snapshotSource(fixture);
+  const afterAuditRoot = sourceAuditRoot(after);
+  assert.deepEqual(after, before);
+  assert.equal(afterAuditRoot, beforeAuditRoot);
+  console.log(
+    `[readonly-source] filesystem-write-audit before=${beforeAuditRoot} after=${afterAuditRoot} byteUnchanged=true`,
+  );
   assert.equal(fs.existsSync(toolLog), false, 'bootstrap tool was invoked');
   assert.deepEqual(fs.readdirSync(home), [], 'read-only route wrote into HOME');
   assert.equal(

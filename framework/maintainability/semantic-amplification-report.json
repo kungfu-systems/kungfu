@@ -3,7 +3,7 @@
   "verdict": "pass",
   "authoritySemantics": "navigation-only-projection-over-existing-authorities",
   "manifestPath": "framework/maintainability/semantic-amplification.manifest.json",
-  "manifestRoot": "sha256:b64ab1daecaec8560dd649af61b7e175adaf562df3aa8b94e3733ef499a308aa",
+  "manifestRoot": "sha256:3510a3caaf84d7224a167b0183615793b3234078486f5bf92f54b08cdba73923",
   "baselineRef": "dbfed9ca1785d147b26f4f06e7e6895ac7368fee",
   "sourceRoot": "sha256:444d322292cf6f8b9dfecfb05c352082e36afb3afa360f7384c299ef69453bf8",
   "roles": {
@@ -1391,14 +1391,14 @@
       "rollback": "Move the read-only evidence helpers back and preserve the existing re-export surface."
     },
     {
-      "id": "product-assembly-lifecycle",
+      "id": "product-assembly-runtime",
       "original": [
         "product/scripts/dist.mjs"
       ],
-      "boundary": "Lifecycle ordering and product target guards form one pure assembly plan; product mechanics, platform adapters, and release behavior remain in dist.mjs.",
+      "boundary": "Source pins, platform package selection, no-optional acquisition, and lifecycle ordering form one explicit-input assembly runtime; product mechanics and release behavior remain in dist.mjs.",
       "target": "product/scripts/runtime-pin-snapshot.mjs",
-      "owner": "product/release",
-      "dependencyInvariant": "The plan receives all mechanics explicitly, preserves the existing Buildchain event order, and exposes no second CLI or product authority.",
+      "owner": "product/release-assembly-runtime",
+      "dependencyInvariant": "The runtime receives repository paths, command execution, logging, environment, package resolution, and product mechanics explicitly; it preserves Buildchain event order and exposes no CLI, publication, or second product authority.",
       "tests": [
         "product/scripts/dist.test.mjs",
         "framework/maintainability/semantic-amplification.test.mjs"
