@@ -170,7 +170,7 @@
             "product-alpha",
             "product-binaries"
           ],
-          "sourceRoot": "sha256:4943256e8198fa1a8dc868202e8307728ba186de82de37e51522b39582f30816"
+          "sourceRoot": "sha256:bb5717535c601db3746cce2812e03b35b20e6bf2db3c7434e3d2af9b99d0c479"
         },
         {
           "path": ".github/workflows/dev-pr-auto-merge.yml",
@@ -213,7 +213,7 @@
             "product-alpha",
             "product-stable"
           ],
-          "sourceRoot": "sha256:fad9a5a41a0f91fdf60e3f7eea658906e8c133a5fb5d5cbaeb3abc5af11d6bf8"
+          "sourceRoot": "sha256:093b14145afce7081c12b1042a24649557f9eb10fdab2d1aed939be36860c3b6"
         },
         {
           "path": ".github/workflows/docs-check.yml",
@@ -853,5 +853,5 @@
       }
     }
   ],
-  "registryRoot": "sha256:802e4611bff0dc4d14d1a364f6007f8ed32811da6f6bd82c5e34ee28619a6fe1"
+  "registryRoot": "sha256:b7a7074b41a732580723d260fbd093bb27b7d744762a99178f49e97c26475c4f"
 }

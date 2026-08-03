@@ -6,6 +6,8 @@ import path from 'node:path';
 import { test } from 'node:test';
 
 const ROOT = process.cwd();
+const BUILDCHAIN_TIMEOUT_SAFE_RUNTIME =
+  '825f596fe4a5ed8a4b2bb4f7c5a1b44cb9a075a3';
 
 function workflow(name) {
   return fs.readFileSync(path.join(ROOT, '.github/workflows', name), 'utf8');
@@ -28,6 +30,10 @@ test('Dev Patrol is exact-source dispatch-only behind the qualification controll
     source,
     /buildchain-ref: \$\{\{ inputs\.buildchain-ref \|\| '[0-9a-f]{40}' \}\}/u,
   );
+  const reusableRef = source.match(
+    /uses: kungfu-systems\/buildchain\/\.github\/workflows\/\.gate-profile\.yml@([0-9a-f]{40})/u,
+  )?.[1];
+  assert.equal(reusableRef, BUILDCHAIN_TIMEOUT_SAFE_RUNTIME);
 });
 
 test('qualification patrol coalesces the latest Dev SHA behind release priority', () => {
@@ -64,7 +70,7 @@ test('candidate patrol is a thin Buildchain caller with exact channel and eviden
     /uses: kungfu-systems\/buildchain\/.github\/workflows\/dev-alpha-candidate-patrol\.yml@([0-9a-f]{40})/u,
   )?.[1];
   assert.match(reusableRef || '', /^[0-9a-f]{40}$/u);
-  assert.equal(reusableRef, '978520e86134683f66b607bc70c2d18f623e2410');
+  assert.equal(reusableRef, BUILDCHAIN_TIMEOUT_SAFE_RUNTIME);
   assert.match(
     source,
     new RegExp(
