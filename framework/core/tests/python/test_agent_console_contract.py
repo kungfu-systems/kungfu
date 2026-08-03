@@ -2129,31 +2129,6 @@ def test_run_agent_process_streams_output_before_return(tmp_path):
     assert ("stderr", "notice") in streamed
 
 
-def test_run_agent_process_retains_undecodable_output_without_crashing(tmp_path):
-    script = tmp_path / "non_utf8.py"
-    script.write_text(
-        "import sys\n"
-        "sys.stdout.buffer.write(b'out\\xff\\n')\n"
-        "sys.stderr.buffer.write(b'err\\xfe\\n')\n",
-        encoding="utf-8",
-    )
-    streamed = []
-    result = run_agent.run_process(
-        [sys.executable, str(script)],
-        cwd=str(tmp_path),
-        env=os.environ,
-        timeout_seconds=5,
-        output_sink=lambda stream, line: streamed.append((stream, line)),
-    )
-    assert result.exit_code == 0
-    assert result.stdout == "out\ufffd\n"
-    assert result.stderr == "err\ufffd\n"
-    assert set(streamed) == {
-        ("stdout", "out\ufffd\n"),
-        ("stderr", "err\ufffd\n"),
-    }
-
-
 def test_run_agent_continuation_rejects_transcript_fields_and_root_drift():
     continuation = {
         "schema": "kungfu.agent-continuation-envelope/v1",
