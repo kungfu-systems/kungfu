@@ -104,7 +104,7 @@ pub(crate) fn regular_file(path: &Path) -> Result<bool, String> {
     }
 }
 
-fn read_document(path: &Path) -> Result<Option<json::Json>, String> {
+pub(super) fn read_document(path: &Path) -> Result<Option<json::Json>, String> {
     let text = match fs::read_to_string(path) {
         Ok(text) => text,
         Err(error) if error.kind() == io::ErrorKind::NotFound => return Ok(None),
@@ -192,7 +192,7 @@ fn sorted_entries(path: &Path) -> Result<Vec<fs::DirEntry>, String> {
 
 /// Verify a copied desktop tree against its immutable registry source without
 /// trusting a sentinel that could have landed before an interrupted copy.
-pub(crate) fn tree_exact(source: &Path, candidate: &Path) -> Result<bool, String> {
+pub(super) fn tree_exact(source: &Path, candidate: &Path) -> Result<bool, String> {
     let source_meta = fs::symlink_metadata(source).map_err(|error| error.to_string())?;
     let candidate_meta = match fs::symlink_metadata(candidate) {
         Ok(metadata) => metadata,
@@ -437,7 +437,8 @@ pub(super) fn retain_previous_installed_receipt(
             if !backup_updater.is_file() {
                 return Err("retained desktop has no native updater".to_string());
             }
-            (installed_updater, artifact_sha256(&backup_updater)?)
+            let digest = artifact_sha256(&backup_updater)?;
+            (backup_updater, digest)
         }
     } else {
         let source = PathBuf::from(receipt_value(&current, "KUNGFU_INSTALLED_NATIVE_UPDATER"));

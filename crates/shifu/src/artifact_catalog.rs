@@ -5,7 +5,7 @@
 // Git relation, automatic/manual disposition, compact display, and JSON safety.
 
 use std::fs;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -18,6 +18,101 @@ const RECEIPT_SCHEMA: &str =
     include_str!("../../../docs/shifu/schema/local-promotion-receipt-v1.schema.json");
 pub const CURRENT_REGISTRATION_RELATIVE: &str =
     ".buildchain/runtime/shifu-product-registration.env";
+
+pub(crate) struct InstalledAdoption {
+    pub(crate) app: PathBuf,
+    pub(crate) artifact: String,
+    pub(crate) build_id: String,
+    pub(crate) source_commit: String,
+    pub(crate) artifact_digest: String,
+    pub(crate) product_version: String,
+    pub(crate) release_cut_root: String,
+    pub(crate) platform_slice_root: String,
+    pub(crate) native_receipt_root: String,
+    pub(crate) native_updater: PathBuf,
+    pub(crate) native_updater_digest: String,
+}
+
+pub(crate) fn adopted_build_meta(adoption: &InstalledAdoption) -> String {
+    format!(
+        "KUNGFU_BUILD_SHA='{}'\n\
+         KUNGFU_BUILD_BRANCH='legacy-installed'\n\
+         KUNGFU_BUILD_REPO='installed-product'\n\
+         KUNGFU_BUILD_WORKTREE=''\n\
+         KUNGFU_BUILD_TIME='adopted'\n\
+         KUNGFU_BUILD_KIND='app'\n\
+         KUNGFU_BUILD_ARTIFACT='{}'\n\
+         KUNGFU_BUILD_SHA256='{}'\n\
+         KUNGFU_BUILD_PRODUCT_VERSION='{}'\n\
+         KUNGFU_BUILD_RELEASE_CUT_ROOT='{}'\n\
+         KUNGFU_BUILD_PLATFORM_SLICE_ROOT='{}'\n\
+         KUNGFU_BUILD_MAINLINE_REF='origin/HEAD'\n\
+         KUNGFU_BUILD_MAINLINE_SHA='{}'\n\
+         KUNGFU_BUILD_INTEGRATED='false'\n\
+         KUNGFU_BUILD_QUALIFIED='false'\n",
+        adoption.source_commit,
+        adoption.artifact,
+        adoption.artifact_digest,
+        adoption.product_version,
+        adoption.release_cut_root,
+        adoption.platform_slice_root,
+        adoption.source_commit,
+    )
+}
+
+pub(crate) fn adopted_installed_receipt(adoption: &InstalledAdoption) -> String {
+    format!(
+        "KUNGFU_ARTIFACT_SCHEMA='shifu.local-artifact/v1'\n\
+         KUNGFU_INSTALLED_SHA='{}'\n\
+         KUNGFU_INSTALLED_BRANCH='legacy-installed'\n\
+         KUNGFU_INSTALLED_REPO='installed-product'\n\
+         KUNGFU_INSTALLED_BUILD_ID='{}'\n\
+         KUNGFU_INSTALLED_WORKTREE=''\n\
+         KUNGFU_INSTALLED_ARTIFACT='{}'\n\
+         KUNGFU_INSTALLED_KIND='app'\n\
+         KUNGFU_INSTALLED_DIGEST='{}'\n\
+         KUNGFU_INSTALLED_MAINLINE_REF='origin/HEAD'\n\
+         KUNGFU_INSTALLED_MAINLINE_SHA='{}'\n\
+         KUNGFU_INSTALLED_INTEGRATED='false'\n\
+         KUNGFU_INSTALLED_QUALIFIED='false'\n\
+         KUNGFU_INSTALLED_MODE='legacy-adopted'\n\
+         KUNGFU_INSTALLED_PRODUCT_VERSION='{}'\n\
+         KUNGFU_INSTALLED_RELEASE_CUT_ROOT='{}'\n\
+         KUNGFU_INSTALLED_PLATFORM_SLICE_ROOT='{}'\n\
+         KUNGFU_INSTALLED_CUT_TRANSITION_ROOT=''\n\
+         KUNGFU_INSTALLED_NATIVE_RECEIPT_ROOT='{}'\n\
+         KUNGFU_INSTALLED_NATIVE_UPDATER='{}'\n\
+         KUNGFU_INSTALLED_NATIVE_UPDATER_DIGEST='{}'\n\
+         KUNGFU_ROLLBACK_BUILD_ID=''\n\
+         KUNGFU_ROLLBACK_SHA=''\n\
+         KUNGFU_ROLLBACK_RELEASE_CUT_ROOT=''\n\
+         KUNGFU_ROLLBACK_DESKTOP_PATH=''\n",
+        adoption.source_commit,
+        adoption.build_id,
+        adoption.app.display(),
+        adoption.artifact_digest,
+        adoption.source_commit,
+        adoption.product_version,
+        adoption.release_cut_root,
+        adoption.platform_slice_root,
+        adoption.native_receipt_root,
+        adoption.native_updater.display(),
+        adoption.native_updater_digest,
+    )
+}
+
+pub(crate) fn adopted_result(adoption: &InstalledAdoption, execute: bool) -> String {
+    format!(
+        "{{\"schema\":\"shifu.installed-product-adoption/v1\",\"state\":\"{}\",\"artifactId\":\"{}\",\"sourceCommit\":\"{}\",\"desktopDigest\":\"sha256:{}\",\"nativeReleaseCutRoot\":\"{}\",\"nativeReceiptRoot\":\"{}\",\"wouldWrite\":{}}}",
+        if execute { "complete" } else { "action-required" },
+        json_escape(&adoption.build_id),
+        json_escape(&adoption.source_commit),
+        json_escape(&adoption.artifact_digest),
+        json_escape(&adoption.release_cut_root),
+        json_escape(&adoption.native_receipt_root),
+        execute,
+    )
+}
 
 fn env_quote(value: &str) -> String {
     format!("'{}'", value.replace('\'', ""))
