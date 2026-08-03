@@ -224,12 +224,59 @@ function validateMatrix(matrix, { verifyInstalledKfd = true } = {}) {
       `shipped support must remain exactly ${expectedShippedKeys.join(',')}, found ${shippedKeys.join(',') || '<none>'}`,
     );
   }
+  const kfd6 = byKey['kfd-6'];
   if (
-    byKey['kfd-6'].supportStatus !== 'unsupported' ||
-    byKey['kfd-6'].implementation.status !== 'not-implemented' ||
-    byKey['kfd-6'].releaseQualification.shippedSupport
+    kfd6.supportStatus !== 'unsupported' ||
+    kfd6.implementation.status !== 'not-implemented' ||
+    kfd6.implementation.surfaces.length !== 0 ||
+    kfd6.verification.status !== 'none' ||
+    kfd6.verification.evidenceRoots.length !== 0 ||
+    kfd6.buildchain.gateStatus !== 'not-applicable' ||
+    kfd6.releaseQualification.status !== 'not-qualified' ||
+    kfd6.releaseQualification.shippedSupport ||
+    kfd6.releaseQualification.evidenceRoots.length !== 0 ||
+    kfd6.claimClass !== 'explicit-non-adoption'
   ) {
     fail('KFD-6 must remain an explicit unsupported non-adoption');
+  }
+  const kfd6Precursor = kfd6.precursorEvidence;
+  const expectedKfd6PrecursorSurfaces = [
+    'framework/work-design-advisor/work-design-advisor.contract.json',
+    'framework/work-design-policy-replay/work-design-policy-replay.contract.json',
+    'framework/project-cut/README.md',
+  ];
+  const expectedKfd6MissingGates = [
+    'plural genesis methods and declared budgets',
+    'fixed-ontology and no-new-primitive baselines',
+    'systematic false-candidate rejection',
+    'held-out promotion separation',
+    'cross-domain transfer',
+  ];
+  const expectedKfd6ClaimBoundary =
+    'Work Design history selection, outcome estimation, and offline policy replay are bounded advisory precursors only. They do not implement, verify, activate, or ship KFD-6 autonomous discovery.';
+  if (
+    kfd6Precursor?.status !== 'non-conforming-evidence' ||
+    kfd6Precursor.surfaces?.join(',') !==
+      expectedKfd6PrecursorSurfaces.join(',') ||
+    kfd6Precursor.evidenceRoots?.map((entry) => entry.path).join(',') !==
+      expectedKfd6PrecursorSurfaces.join(',') ||
+    kfd6Precursor.missingGates?.join(',') !==
+      expectedKfd6MissingGates.join(',') ||
+    kfd6Precursor.claimBoundary !== expectedKfd6ClaimBoundary
+  ) {
+    fail('KFD-6 precursor evidence must remain bounded and non-conforming');
+  }
+  for (const evidence of kfd6Precursor.evidenceRoots) {
+    const evidencePath = checkoutFile(
+      evidence.path,
+      'KFD-6 precursor evidence',
+    );
+    if (!fs.existsSync(evidencePath)) {
+      fail(`KFD-6 precursor evidence is missing: ${evidence.path}`);
+    }
+    if (sha256File(evidencePath) !== evidence.sha256) {
+      fail(`KFD-6 precursor evidence root drift: ${evidence.path}`);
+    }
   }
   for (const key of ['kfd-4', 'kfd-5']) {
     if (
@@ -258,6 +305,21 @@ function validateMatrix(matrix, { verifyInstalledKfd = true } = {}) {
       expectedKfd4Evidence.join(',')
   ) {
     fail('KFD-4 perspective qualification evidence drifted');
+  }
+  const kfd5 = byKey['kfd-5'];
+  const kfd5SurfaceListRoot = sha256Buffer(
+    kfd5.implementation.surfaces.join('\0'),
+  );
+  const kfd5EvidenceListRoot = sha256Buffer(
+    kfd5.verification.evidenceRoots.map((entry) => entry.path).join('\0'),
+  );
+  if (
+    kfd5SurfaceListRoot !==
+      'sha256:997e161669402b0e6944397a8f017337b3834dd12bc06e214275cc8ebbaab7a8' ||
+    kfd5EvidenceListRoot !==
+      'sha256:b6ea1bdc1dd7af92a25c5bc9004e85eab6386f4225becb196159f8af6509bcf5'
+  ) {
+    fail('KFD-5 Primitive Management evidence drifted');
   }
   for (const key of [
     'kfd-8',
@@ -417,8 +479,8 @@ ${rows}
 - KFD-1, KFD-2, KFD-3, and KFD-7 are the bounded shipped-support set for the current Alpha release declaration.
 - KFD-3 uses Buildchain's product-declared registry audit directly. It currently has ${matrix.kfd3Enforcement.declaredSurfaceCount} declared surfaces and ${matrix.kfd3Enforcement.enforcedSurfaceCount} release-Gate-enforced surfaces. Declaration is discoverability; it is not enforcement.
 - KFD-4 passes one bounded observer/contrastive-replay product gate but remains a non-shipped adoption candidate.
-- KFD-5 passes the bounded Assignment adopter gate but remains a non-shipped candidate; Buildchain does not self-qualify or activate it.
-- KFD-6 is explicitly unsupported.
+- KFD-5 passes the bounded Assignment adopter gate and now binds the Primitive Management Plane, sole-intake incubation passports, and derived nine-entry catalog. It remains a non-shipped candidate; Buildchain does not self-qualify or activate it.
+- KFD-6 remains explicitly unsupported. The matrix retains bounded, non-conforming Work Design precursor evidence while keeping implementation, verification, activation, and shipment claims false.
 - KFD-8 through KFD-13 expose only non-conforming draft adopter evidence. They are not shipped support.
 
 ## Inspect this source with Shifu
