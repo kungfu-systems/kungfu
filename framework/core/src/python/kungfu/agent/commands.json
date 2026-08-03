@@ -447,12 +447,6 @@
     },
     {
       "apiId": "kungfu.exit.verify",
-      "name": "python -m kungfu.exit_verifier --file <package.json> --json",
-      "maturity": "experimental",
-      "purpose": "Invoke the same registry-free verifier directly from an installed Python module."
-    },
-    {
-      "apiId": "kungfu.exit.verify",
       "name": "kungfu exit verify --file <package.json> --json",
       "maturity": "experimental",
       "purpose": "Invoke the packaged verifier through the integrated Kungfu CLI when a configured runtime is already available."
