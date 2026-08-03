@@ -988,8 +988,12 @@ test('no-optional builds isolate a mismatched esbuild platform binary', () => {
   );
 });
 
-test('no-optional installs authorize deterministic non-interactive purges', () => {
-  assert.deepEqual(installArgs(false), ['install', '--frozen-lockfile']);
+test('all product installs authorize deterministic non-interactive purges', () => {
+  assert.deepEqual(installArgs(false), [
+    'install',
+    '--frozen-lockfile',
+    '--config.confirmModulesPurge=false',
+  ]);
   assert.deepEqual(installArgs(true), [
     'install',
     '--frozen-lockfile',

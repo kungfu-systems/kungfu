@@ -349,15 +349,6 @@ export function boundedFailureTail(
 }
 
 export function suiteEnvironment(suite, baseEnv = process.env) {
-  if (suite.id === 'product-distribution') {
-    return {
-      ...baseEnv,
-      // The qualification harness owns a non-interactive child. pnpm must be
-      // allowed to replace a stale modules layout instead of prompting for a
-      // TTY and aborting an otherwise reproducible second distribution.
-      CI: baseEnv.CI || 'true',
-    };
-  }
   if (!['activation-core', 'activation-performance'].includes(suite.id)) {
     return { ...baseEnv };
   }
