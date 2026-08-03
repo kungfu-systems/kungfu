@@ -652,7 +652,7 @@ class KungfuCoreConan(ConanFile):
         # 统一配置,仓内不硬编码);其次 conan conf tools.build:jobs;最后回退 os.cpu_count()。
         # kungfu 开 -flto + 重模板,单路峰值约 2GB,大核机（如 agent-120 32 线程）默认满并行会
         # 撑爆内存换页 thrash,故需可按机封顶。
-        env_jobs = os.environ.get("KUNGFU_BUILD_JOBS", "")
+        env_jobs = os.environ.get("KUNGFU_BUILD_JOBS", "").strip()
         if env_jobs.isdigit() and int(env_jobs) > 0:
             return int(env_jobs)
         return build_jobs(self)
@@ -668,6 +668,10 @@ class KungfuCoreConan(ConanFile):
     ):
         log_level = self.__spdlog_level()
         parallel_level = self.__parallel_jobs()
+        # Cargo runs inside one Ninja slot while Ninja may schedule another
+        # translation unit. Reserve that outer slot so nested Rust work cannot
+        # exceed the caller's total build budget.
+        cargo_parallel_level = max(1, parallel_level - 1)
         # Conan itself runs under Shifu's pinned `uv run --frozen` interpreter.
         # Reuse that exact executable instead of nesting another uv invocation:
         # strict-cache overlays intentionally expose short-lived wrappers, and a
@@ -733,6 +737,7 @@ class KungfuCoreConan(ConanFile):
                 f"--CDPYTHON_EXECUTABLE={python_path}",
                 f"--CDSPDLOG_LOG_LEVEL_COMPILE={log_level}",
                 f"--CDCMAKE_BUILD_PARALLEL_LEVEL={parallel_level}",
+                f"--CDKF_LIBWASM_CARGO_JOBS={cargo_parallel_level}",
             ]
             + cargo_registry_option
             + ninja_option

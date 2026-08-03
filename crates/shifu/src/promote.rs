@@ -32,7 +32,7 @@ use shifu_core::{bootstrap, host, json, style};
 use crate::artifact_catalog::{
     automatic, compact_branch, git_relation, json_escape, product_mainline_ref,
     select_unique_automatic, short_sha, state_for, write_promotion_receipt, GitRelation,
-    SelectionError,
+    SelectionError, CURRENT_REGISTRATION_RELATIVE,
 };
 use crate::native_update::{artifact_sha256, local_artifact_identity_valid};
 use crate::{envfile, native_update, util};
@@ -70,6 +70,7 @@ struct ListOptions {
     verbose: bool,
     json: bool,
     no_truncate: bool,
+    verify_current: bool,
 }
 
 fn registry_dir() -> PathBuf {
@@ -79,13 +80,48 @@ fn registry_dir() -> PathBuf {
 }
 
 fn read_meta(slot: &Path) -> Option<Vec<(String, String)>> {
-    let text = fs::read_to_string(slot.join("meta.env")).ok()?;
+    read_env(&slot.join("meta.env"))
+}
+
+fn read_env(path: &Path) -> Option<Vec<(String, String)>> {
+    let text = fs::read_to_string(path).ok()?;
     Some(
         text.lines()
             .filter_map(envfile::parse_line)
             .map(|(k, v)| (k.to_string(), v.to_string()))
             .collect(),
     )
+}
+
+fn entry_from_slot(slot: PathBuf, name: String) -> Option<BuildEntry> {
+    let meta = read_meta(&slot)?;
+    let artifact = meta_get(&meta, "KUNGFU_BUILD_ARTIFACT");
+    if artifact.is_empty() || !slot.join(&artifact).exists() {
+        return None;
+    }
+    Some(BuildEntry {
+        sha: meta_get(&meta, "KUNGFU_BUILD_SHA"),
+        branch: meta_get(&meta, "KUNGFU_BUILD_BRANCH"),
+        repo: meta_get(&meta, "KUNGFU_BUILD_REPO"),
+        worktree: meta_get(&meta, "KUNGFU_BUILD_WORKTREE"),
+        built_at: meta_get(&meta, "KUNGFU_BUILD_TIME"),
+        kind: meta_get(&meta, "KUNGFU_BUILD_KIND"),
+        digest: meta_get(&meta, "KUNGFU_BUILD_SHA256"),
+        cli_archive: meta_get(&meta, "KUNGFU_BUILD_CLI_ARCHIVE"),
+        cli_archive_digest: meta_get(&meta, "KUNGFU_BUILD_CLI_ARCHIVE_SHA256"),
+        upgrade_manifest: meta_get(&meta, "KUNGFU_BUILD_UPGRADE_MANIFEST"),
+        upgrade_manifest_digest: meta_get(&meta, "KUNGFU_BUILD_UPGRADE_MANIFEST_SHA256"),
+        product_version: meta_get(&meta, "KUNGFU_BUILD_PRODUCT_VERSION"),
+        release_cut_root: meta_get(&meta, "KUNGFU_BUILD_RELEASE_CUT_ROOT"),
+        platform_slice_root: meta_get(&meta, "KUNGFU_BUILD_PLATFORM_SLICE_ROOT"),
+        mainline_ref: meta_get(&meta, "KUNGFU_BUILD_MAINLINE_REF"),
+        mainline_sha: meta_get(&meta, "KUNGFU_BUILD_MAINLINE_SHA"),
+        integrated: meta_get(&meta, "KUNGFU_BUILD_INTEGRATED") == "true",
+        qualified: meta_get(&meta, "KUNGFU_BUILD_QUALIFIED") == "true",
+        artifact,
+        slot,
+        name,
+    })
 }
 
 fn meta_get(meta: &[(String, String)], key: &str) -> String {
@@ -111,38 +147,67 @@ fn entries() -> Vec<BuildEntry> {
     names.reverse();
     names
         .into_iter()
-        .filter_map(|name| {
-            let slot = dir.join(&name);
-            let meta = read_meta(&slot)?;
-            let artifact = meta_get(&meta, "KUNGFU_BUILD_ARTIFACT");
-            if artifact.is_empty() || !slot.join(&artifact).exists() {
-                return None;
-            }
-            Some(BuildEntry {
-                sha: meta_get(&meta, "KUNGFU_BUILD_SHA"),
-                branch: meta_get(&meta, "KUNGFU_BUILD_BRANCH"),
-                repo: meta_get(&meta, "KUNGFU_BUILD_REPO"),
-                worktree: meta_get(&meta, "KUNGFU_BUILD_WORKTREE"),
-                built_at: meta_get(&meta, "KUNGFU_BUILD_TIME"),
-                kind: meta_get(&meta, "KUNGFU_BUILD_KIND"),
-                digest: meta_get(&meta, "KUNGFU_BUILD_SHA256"),
-                cli_archive: meta_get(&meta, "KUNGFU_BUILD_CLI_ARCHIVE"),
-                cli_archive_digest: meta_get(&meta, "KUNGFU_BUILD_CLI_ARCHIVE_SHA256"),
-                upgrade_manifest: meta_get(&meta, "KUNGFU_BUILD_UPGRADE_MANIFEST"),
-                upgrade_manifest_digest: meta_get(&meta, "KUNGFU_BUILD_UPGRADE_MANIFEST_SHA256"),
-                product_version: meta_get(&meta, "KUNGFU_BUILD_PRODUCT_VERSION"),
-                release_cut_root: meta_get(&meta, "KUNGFU_BUILD_RELEASE_CUT_ROOT"),
-                platform_slice_root: meta_get(&meta, "KUNGFU_BUILD_PLATFORM_SLICE_ROOT"),
-                mainline_ref: meta_get(&meta, "KUNGFU_BUILD_MAINLINE_REF"),
-                mainline_sha: meta_get(&meta, "KUNGFU_BUILD_MAINLINE_SHA"),
-                integrated: meta_get(&meta, "KUNGFU_BUILD_INTEGRATED") == "true",
-                qualified: meta_get(&meta, "KUNGFU_BUILD_QUALIFIED") == "true",
-                artifact,
-                slot,
-                name,
-            })
-        })
+        .filter_map(|name| entry_from_slot(dir.join(&name), name))
         .collect()
+}
+
+fn git_head(root: &Path) -> String {
+    Command::new("git")
+        .arg("-C")
+        .arg(root)
+        .args(["rev-parse", "HEAD"])
+        .env_remove("GIT_DIR")
+        .env_remove("GIT_WORK_TREE")
+        .env_remove("GIT_COMMON_DIR")
+        .env_remove("GIT_INDEX_FILE")
+        .output()
+        .ok()
+        .filter(|output| output.status.success())
+        .map(|output| String::from_utf8_lossy(&output.stdout).trim().to_string())
+        .unwrap_or_default()
+}
+
+fn valid_build_id(value: &str) -> bool {
+    !value.is_empty()
+        && value
+            .bytes()
+            .all(|byte| byte.is_ascii_alphanumeric() || byte == b'-')
+}
+
+fn current_entry_at(
+    root: &Path,
+    registry: &Path,
+    expected_sha: &str,
+) -> Result<BuildEntry, String> {
+    let pointer_path = root.join(CURRENT_REGISTRATION_RELATIVE);
+    let pointer = read_env(&pointer_path).ok_or_else(|| {
+        format!(
+            "no fresh current-build registration at {}; run the declared product distribution in this checkout first",
+            pointer_path.display()
+        )
+    })?;
+    let product = meta_get(&pointer, "SHIFU_REGISTERED_PRODUCT");
+    let platform = meta_get(&pointer, "SHIFU_REGISTERED_PLATFORM");
+    let build_id = meta_get(&pointer, "SHIFU_REGISTERED_BUILD_ID");
+    let build_sha = meta_get(&pointer, "SHIFU_REGISTERED_BUILD_SHA");
+    let artifact_digest = meta_get(&pointer, "SHIFU_REGISTERED_ARTIFACT_SHA256");
+    if product != "kungfu"
+        || platform != host::os_arch()
+        || !valid_build_id(&build_id)
+        || expected_sha.is_empty()
+        || build_sha != expected_sha
+    {
+        return Err("current-build registration does not bind this product, platform, and exact checkout revision".to_string());
+    }
+    let entry = entry_from_slot(registry.join(&build_id), build_id.clone()).ok_or_else(|| {
+        format!("current-build registration names an unreadable slot: {build_id}")
+    })?;
+    if entry.sha != build_sha || entry.digest != artifact_digest {
+        return Err(format!(
+            "current-build registration differs from slot metadata: {build_id}"
+        ));
+    }
+    Ok(entry)
 }
 
 fn no_builds_hint() -> ! {
@@ -237,6 +302,40 @@ fn build_relation(entry: &BuildEntry, installed: &str, entry_count: usize) -> Gi
 
 fn build_valid(entry: &BuildEntry) -> bool {
     build_previewable(entry)
+        && entry.integrated
+        && entry.qualified
+        && entry.sha == entry.mainline_sha
+}
+
+/// Deep verification for the artifact produced by the exact current checkout.
+/// Pre-integration qualification must prove payload bytes before a branch can
+/// be submitted, so mainline admission remains a promotion concern rather than
+/// a prerequisite for verifying the current build.
+fn current_payload_valid(entry: &BuildEntry) -> bool {
+    build_previewable(entry)
+}
+
+/// Fast catalog classification from the immutable registration envelope.
+/// This deliberately does not read artifact payload bytes. Promotion and
+/// `builds --verify-current` call `build_valid` and re-check the selected
+/// payload in full before making any safety claim or state change.
+fn build_recorded_valid(entry: &BuildEntry) -> bool {
+    !entry.sha.is_empty()
+        && entry.sha != "unknown"
+        && !entry.sha.ends_with("-dirty")
+        && matches!(entry.kind.as_str(), "app" | "installer" | "appimage")
+        && entry.digest.len() == 64
+        && entry.digest.bytes().all(|byte| byte.is_ascii_hexdigit())
+        && !entry.cli_archive.is_empty()
+        && valid_root(&entry.cli_archive_digest)
+        && entry.slot.join(&entry.cli_archive).is_file()
+        && !entry.upgrade_manifest.is_empty()
+        && valid_root(&entry.upgrade_manifest_digest)
+        && entry.slot.join(&entry.upgrade_manifest).is_file()
+        && !entry.product_version.is_empty()
+        && valid_root(&entry.release_cut_root)
+        && valid_root(&entry.platform_slice_root)
+        && entry.mainline_ref == product_mainline_ref()
         && entry.integrated
         && entry.qualified
         && entry.sha == entry.mainline_sha
@@ -423,7 +522,7 @@ fn select_preview_build<'a>(
     entry
 }
 
-fn print_builds_json(entries: &[BuildEntry]) {
+fn print_builds_json(entries: &[BuildEntry], payload_verified: bool) {
     let installed = installed_sha();
     println!("{{");
     println!("  \"schema\": \"shifu.local-artifact-catalog/v1\",");
@@ -434,10 +533,14 @@ fn print_builds_json(entries: &[BuildEntry]) {
         .iter()
         .map(|entry| {
             let relation = build_relation(entry, &installed, entries.len());
-            let valid = build_valid(entry);
+            let valid = if payload_verified {
+                current_payload_valid(entry)
+            } else {
+                build_recorded_valid(entry)
+            };
             let state = state_for(relation, valid, false);
             format!(
-                "    {{\"id\":\"{}\",\"kind\":\"{}\",\"version\":\"{}\",\"commit\":\"{}\",\"branch\":\"{}\",\"digest\":\"{}\",\"releaseCutRoot\":\"{}\",\"platformSliceRoot\":\"{}\",\"cliArchivePath\":\"{}\",\"cliArchiveDigest\":\"{}\",\"upgradeManifestPath\":\"{}\",\"upgradeManifestDigest\":\"{}\",\"builtAt\":\"{}\",\"state\":\"{}\",\"relation\":\"{}\",\"automatic\":{},\"rollbackOnly\":false,\"dirty\":{},\"qualified\":{},\"integrated\":{},\"mainlineRef\":\"{}\",\"mainlineCommit\":\"{}\",\"repoPath\":\"{}\",\"worktreePath\":\"{}\",\"buildPath\":\"{}\",\"artifactPath\":\"{}\",\"pathDigest\":\"\",\"reason\":\"{}\"}}",
+                "    {{\"id\":\"{}\",\"kind\":\"{}\",\"version\":\"{}\",\"commit\":\"{}\",\"branch\":\"{}\",\"digest\":\"{}\",\"releaseCutRoot\":\"{}\",\"platformSliceRoot\":\"{}\",\"cliArchivePath\":\"{}\",\"cliArchiveDigest\":\"{}\",\"upgradeManifestPath\":\"{}\",\"upgradeManifestDigest\":\"{}\",\"builtAt\":\"{}\",\"state\":\"{}\",\"relation\":\"{}\",\"automatic\":{},\"rollbackOnly\":false,\"integrity\":\"{}\",\"dirty\":{},\"qualified\":{},\"integrated\":{},\"mainlineRef\":\"{}\",\"mainlineCommit\":\"{}\",\"repoPath\":\"{}\",\"worktreePath\":\"{}\",\"buildPath\":\"{}\",\"artifactPath\":\"{}\",\"pathDigest\":\"\",\"reason\":\"{}\"}}",
                 json_escape(&entry.name),
                 json_escape(schema_kind(entry)),
                 json_escape(&entry.product_version),
@@ -460,6 +563,11 @@ fn print_builds_json(entries: &[BuildEntry]) {
                 state.as_str(),
                 relation.as_str(),
                 automatic(relation, valid, false),
+                if payload_verified {
+                    "verified"
+                } else {
+                    "recorded"
+                },
                 entry.sha.ends_with("-dirty"),
                 entry.qualified,
                 entry.integrated,
@@ -478,22 +586,40 @@ fn print_builds_json(entries: &[BuildEntry]) {
     println!("}}");
 }
 
-pub fn run_builds(args: &[String]) -> ! {
+pub fn run_builds(root: Option<&Path>, args: &[String]) -> ! {
     let mut options = ListOptions::default();
     for arg in args {
         match arg.as_str() {
             "--verbose" => options.verbose = true,
             "--json" => options.json = true,
             "--no-truncate" => options.no_truncate = true,
-            _ => util::die("usage: shifu builds [--verbose] [--json] [--no-truncate]"),
+            "--verify-current" => options.verify_current = true,
+            _ => util::die(
+                "usage: shifu builds [--verbose] [--json] [--no-truncate] [--verify-current]",
+            ),
         }
     }
-    let entries = entries();
+    let entries = if options.verify_current {
+        let root =
+            root.unwrap_or_else(|| util::die("--verify-current requires a Kungfu source checkout"));
+        let expected_sha = git_head(root);
+        let entry = current_entry_at(root, &registry_dir(), &expected_sha)
+            .unwrap_or_else(|error| util::die(&error));
+        if !current_payload_valid(&entry) {
+            util::die(&format!(
+                "current registered build {} failed exact payload verification",
+                entry.name
+            ));
+        }
+        vec![entry]
+    } else {
+        entries()
+    };
     if entries.is_empty() {
         no_builds_hint();
     }
     if options.json {
-        print_builds_json(&entries);
+        print_builds_json(&entries, options.verify_current);
         std::process::exit(0);
     }
     let installed = installed_sha();
@@ -506,7 +632,12 @@ pub fn run_builds(args: &[String]) -> ! {
     );
     for (index, entry) in entries.iter().enumerate() {
         let relation = build_relation(entry, &installed, entries.len());
-        let state = state_for(relation, build_valid(entry), false);
+        let valid = if options.verify_current {
+            current_payload_valid(entry)
+        } else {
+            build_recorded_valid(entry)
+        };
+        let state = state_for(relation, valid, false);
         println!(
             "  {} {:10} {:9} {:34} {:10}",
             style::bold(&format!("[{index}]")),
