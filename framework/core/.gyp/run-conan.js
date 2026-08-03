@@ -152,12 +152,39 @@ function makeConanSettings(names) {
   return names.flatMap(makeConanSetting);
 }
 
+/** @param {string} banner */
+function conanMsvcVersionFromBanner(banner) {
+  // Keep the probe locale-independent: localized cl.exe banners preserve the
+  // numeric 19.xx toolset identity but may translate the word "Version".
+  const match = String(banner).match(/\b(19)\.(\d{2,})\.\d+(?:\.\d+)?\b/);
+  if (!match) {
+    throw new Error(
+      `cannot map the active MSVC banner to a Conan compiler.version: ${String(banner).trim() || '<empty>'}`,
+    );
+  }
+  return `${match[1]}${match[2][0]}`;
+}
+
+function activeMsvcConanSettings() {
+  const result = shell.runAndCollect('cl.exe', [], {
+    silent: true,
+    encoding: 'utf8',
+  });
+  const banner = `${result.stdout || ''}\n${result.stderr || ''}`;
+  const version = conanMsvcVersionFromBanner(banner);
+  return ['-s', 'compiler=msvc', '-s', `compiler.version=${version}`];
+}
+
 // KF-ADR-019f86da-4f90-79ce-888e-6fd6476f10f4: Conan package identity and the CMake language mode are one
 // contract. A dependency binary resolved as gnu17/17 must not share the cache
 // key of Kungfu's strict C++23 build merely because most current dependencies
 // happen to be header-only or C ABI.
 function platformConanSettings() {
-  return ['-s', 'compiler.cppstd=23'];
+  return [
+    '-s',
+    'compiler.cppstd=23',
+    ...(process.platform === 'win32' ? activeMsvcConanSettings() : []),
+  ];
 }
 
 /** @param {string} name */
@@ -172,6 +199,17 @@ function makeConanOption(name) {
 /** @param {string[]} names */
 function makeConanOptions(names) {
   return names.flatMap(makeConanOption).concat(getNodeVersionOptions());
+}
+
+function conanBuildJobsConf(environment = process.env) {
+  const jobs = String(environment.KUNGFU_BUILD_JOBS || '').trim();
+  if (!jobs) return [];
+  if (!/^[1-9]\d*$/.test(jobs)) {
+    throw new Error(
+      `KUNGFU_BUILD_JOBS must be a positive integer, got ${JSON.stringify(jobs)}`,
+    );
+  }
+  return ['-c', `tools.build:jobs=${jobs}`];
 }
 
 // conan2：-if/-bf → --output-folder；arch 是 setting 由 profile 自测，不再作 -o 选项。
@@ -192,6 +230,7 @@ function conanInstall() {
     '--output-folder',
     'build',
     '--build=missing',
+    ...conanBuildJobsConf(),
     ...settings,
     ...options,
   ]);
@@ -203,7 +242,15 @@ function conanBuild() {
     ...platformConanSettings(),
   ];
   const options = makeConanOptions(['log_level', 'build_profile']);
-  conan(['build', '.', '--output-folder', 'build', ...settings, ...options]);
+  conan([
+    'build',
+    '.',
+    '--output-folder',
+    'build',
+    ...conanBuildJobsConf(),
+    ...settings,
+    ...options,
+  ]);
 }
 
 // conan2 移除了独立的 `conan package` 本地命令(package() 经 conan create/export-pkg 触发)。
@@ -216,7 +263,15 @@ function conanPackage() {
     ...platformConanSettings(),
   ];
   const options = makeConanOptions(['log_level', 'build_profile']);
-  conan(['build', '.', '--output-folder', 'build', ...settings, ...options]);
+  conan([
+    'build',
+    '.',
+    '--output-folder',
+    'build',
+    ...conanBuildJobsConf(),
+    ...settings,
+    ...options,
+  ]);
 }
 
 const cli = require('sywac')
@@ -241,6 +296,8 @@ module.exports.cli = cli;
 module.exports.main = main;
 module.exports.conanInstall = conanInstall;
 module.exports.conanBuild = conanBuild;
+module.exports.conanBuildJobsConf = conanBuildJobsConf;
+module.exports.conanMsvcVersionFromBanner = conanMsvcVersionFromBanner;
 module.exports.repairInvalidUvEnvironment = repairInvalidUvEnvironment;
 
 if (require.main === module) main().catch(shell.utils.exitOnError);

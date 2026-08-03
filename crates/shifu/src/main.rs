@@ -258,7 +258,7 @@ pub fn main_and_exit(args: &[String], invocation: InvocationContext) -> ! {
         promote::run_promote(&args[1..]);
     }
     if is_builds {
-        promote::run_builds(&args[1..]);
+        promote::run_builds(root.as_deref(), &args[1..]);
     }
     if is_artifacts {
         artifact_catalog::run_discovery(&args[1..]);
