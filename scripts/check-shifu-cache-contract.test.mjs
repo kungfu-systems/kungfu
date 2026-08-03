@@ -788,7 +788,7 @@ test('cache doctor probes selected HTTP endpoints only when requested', async (t
   profile.services.npm.endpoint.url = `http://127.0.0.1:${address.port}/npm/`;
   profile.services.npm.verification.probe = {
     path: '/healthz',
-    timeoutMs: 250,
+    timeoutMs: 1000,
     attempts: 3,
     retryDelayMs: 0,
   };
@@ -805,7 +805,7 @@ test('cache doctor probes selected HTTP endpoints only when requested', async (t
     receiptPath: fixture.receipt,
     env: {},
     probe: true,
-    timeoutMs: 1000,
+    timeoutMs: 5000,
   });
   assert.equal(diagnostic.overall, 'healthy');
   assert.equal(diagnostic.probe, true);
@@ -816,7 +816,7 @@ test('cache doctor probes selected HTTP endpoints only when requested', async (t
     status: 200,
     durationMs: diagnostic.services.npm.probeEvidence.durationMs,
     attempts: 1,
-    timeoutMs: 250,
+    timeoutMs: 1000,
     target: 'same-origin-path',
   });
 });

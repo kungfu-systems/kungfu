@@ -857,7 +857,7 @@ test('desktop updater artifact selection is exact per platform', () => {
 
 test('installed SDK resolves the packaged KFX contract beside its resources', () => {
   const sdk = fs.readFileSync(
-    new URL('../../developer/sdk/src/sdk.js', import.meta.url),
+    new URL('../../developer/sdk/src/sdk-shared.js', import.meta.url),
     'utf8',
   );
   assert.match(
