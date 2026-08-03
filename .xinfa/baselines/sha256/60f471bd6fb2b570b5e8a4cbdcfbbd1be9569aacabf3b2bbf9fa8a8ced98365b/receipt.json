@@ -1,0 +1,16 @@
+{
+  "atlas_root": "sha256:60f471bd6fb2b570b5e8a4cbdcfbbd1be9569aacabf3b2bbf9fa8a8ced98365b",
+  "compiler": {
+    "product": "xinfa",
+    "version": "4.0.0-alpha.1"
+  },
+  "context_pack_root": "sha256:92404ba935a7cde4b1fc2b97c354943749aab1b45e497a0bc5b523127342f9d1",
+  "diagnostics": [],
+  "manifest_root": "sha256:589401fb0996ef977304a1ebe925da8ed3bafa8cdc65d4db22d13c72eec35795",
+  "qualifying": false,
+  "receipt_root": "sha256:33e09991afa8a3add45e998645d3f8c4ee3fc8eab04666d43470777f6f62405e",
+  "schema": "xinfa.atlas-compile-receipt/v1",
+  "selfCertified": false,
+  "verdict": "pass",
+  "writesCache": false
+}

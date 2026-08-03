@@ -1,5 +1,5 @@
 {"schema":"shifu.agent-intent-map/v1","product":"shifu","intents":[
-{"id":"acquire","command":"shifu clone [path]","access":"write","authorization":"explicit invocation","maturity":"stable"},
+{"id":"acquire","command":"shifu source plan|acquire --execute|verify","access":"plan-read / explicit-write / verify-read","authorization":"acquire requires --execute","maturity":"stable"},
 {"id":"doctor-bootstrap","command":"shifu doctor","access":"mixed","authorization":"bootstrap only when required by contract","maturity":"stable"},
 {"id":"toolchain","command":"shifu <task>","access":"mixed","authorization":"task-specific","maturity":"stable"},
 {"id":"dependencies","command":"shifu sync","access":"write-cache","authorization":"explicit invocation","maturity":"stable"},

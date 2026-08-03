@@ -28,6 +28,7 @@ from kungfu.agent.kfd3 import (
     verify_agent_interface,
 )
 from kungfu.cli.commands import agent_first_value_entry
+from kungfu.cli.commands import agent_docs
 from kungfu.cli.commands import agent_work_lab as agent_work_lab_commands
 from kungfu.cli.commands import kfc, PrioritizedCommandGroup
 from kungfu.config import resolve_config
@@ -286,6 +287,12 @@ def first_value_verify(ctx, receipt_file, as_json):
     is_flag=True,
     help="list exact packaged documentation surfaces",
 )
+@click.option(
+    "--bundle",
+    "show_bundle",
+    is_flag=True,
+    help="show the verified Portable Kungfu Atlas Bundle contract",
+)
 @click.option("--read", "read_path", help="read one exact repository-relative surface")
 @click.option(
     "--projection",
@@ -294,59 +301,26 @@ def first_value_verify(ctx, receipt_file, as_json):
 )
 @kfd3_api("kungfu.agent.docs")
 @agent_command_context
-def docs(ctx, as_json, atlas, verify_pack, show_catalog, read_path, projection):
-    requested = sum(
-        bool(value) for value in (verify_pack, show_catalog, read_path, projection)
+def docs(
+    ctx,
+    as_json,
+    atlas,
+    verify_pack,
+    show_catalog,
+    show_bundle,
+    read_path,
+    projection,
+):
+    return agent_docs.run(
+        as_json=as_json,
+        atlas=atlas,
+        verify_pack=verify_pack,
+        show_catalog=show_catalog,
+        show_bundle=show_bundle,
+        read_path=read_path,
+        projection=projection,
+        emit_json=_json,
     )
-    if requested > 1:
-        raise click.UsageError(
-            "choose only one of --verify, --catalog, --read, or --projection"
-        )
-    try:
-        if verify_pack:
-            payload = documentation_pack.verify(atlas)
-        elif show_catalog:
-            payload = documentation_pack.catalog(atlas)
-        elif read_path:
-            payload = documentation_pack.read(read_path, atlas)
-        elif projection:
-            payload = documentation_pack.projection(projection, atlas)
-        else:
-            payload = None
-    except (FileNotFoundError, KeyError, OSError, ValueError) as error:
-        raise click.ClickException(str(error)) from error
-    if payload is not None:
-        if as_json:
-            _json(payload)
-        elif verify_pack:
-            click.echo(
-                f"Documentation Atlas: {'valid' if payload['valid'] else 'invalid'} "
-                f"({payload.get('atlasRoot', 'unknown')})"
-            )
-        elif read_path:
-            click.echo(payload["content"], nl=False)
-        else:
-            click.echo(json.dumps(payload, indent=2, sort_keys=True))
-        if verify_pack and not payload["valid"]:
-            raise click.ClickException("Documentation Atlas verification failed")
-        return
-    index = agent_pack.index()
-    root = str(agent_pack.pack_root())
-    payload = {
-        "schema": "kungfu.agent-docs/v1",
-        "packRoot": root,
-        "documents": index["documents"],
-        "skills": index["skills"],
-        "contextCompiler": index["contextCompiler"],
-    }
-    if as_json:
-        _json(payload)
-        return
-    click.echo(f"Agent pack: {root}")
-    for row in index["documents"]:
-        click.echo(f"- {row['path']} [{row['maturity']}]: {row['purpose']}")
-    for row in index["skills"]:
-        click.echo(f"- {row['path']} [{row['maturity']}]: {row['target']} skill")
 
 
 @agent.command(help=api_help("kungfu.agent.capabilities"))
@@ -1534,26 +1508,16 @@ def uninstall(ctx, target, execute, as_json):
 @kfd3_api("kungfu.agent.context")
 @agent_command_context
 def context(ctx, as_json, task, role, budget, route):
-    try:
-        task_mode = any(value is not None for value in (task, role, budget, route))
-        if task_mode and not all(
-            value is not None for value in (task, role, budget, route)
-        ):
-            raise ValueError(
-                "--task, --role, --budget, and --route are required together"
-            )
-        data = (
-            documentation_pack.task_context(task, role, budget, route)
-            if task_mode
-            else _context(ctx)
-        )
-    except (OSError, ValueError, json.JSONDecodeError) as e:
-        click.echo(f"[agent] failed to load context: {e}", err=True)
-        sys.exit(1)
-    if as_json:
-        _json(data)
-        return
-    click.echo(json.dumps(data, indent=2, sort_keys=True))
+    return agent_docs.run_context(
+        ctx=ctx,
+        task=task,
+        role=role,
+        budget=budget,
+        route=route,
+        as_json=as_json,
+        default_context=_context,
+        emit_json=_json,
+    )
 
 
 @agent.command(name="expand", help="Expand one verified Xinfa context handle.")
@@ -1564,14 +1528,13 @@ def context(ctx, as_json, task, role, budget, route):
 @kfd3_api("kungfu.agent.expand")
 @agent_command_context
 def expand(ctx, view, handle, budget, as_json):
-    try:
-        payload = documentation_pack.expand(view, handle, budget)
-    except (FileNotFoundError, OSError, ValueError, json.JSONDecodeError) as error:
-        raise click.ClickException(str(error)) from error
-    if as_json:
-        _json(payload)
-    else:
-        click.echo(json.dumps(payload, indent=2, sort_keys=True))
+    return agent_docs.run_expand(
+        view=view,
+        handle=handle,
+        budget=budget,
+        as_json=as_json,
+        emit_json=_json,
+    )
 
 
 @agent.command(help=api_help("kungfu.agent.verify"))
