@@ -41,6 +41,10 @@ function copyConfigContract() {
   copyContractArtifacts(path.join(CORE, 'dist', 'kungfu'));
 }
 
+/**
+ * @param {string} kungfuPackage
+ * @param {string} repositoryRoot
+ */
 function copyWorkProfileConformance(kungfuPackage, repositoryRoot) {
   const source = path.join(
     repositoryRoot,
