@@ -232,6 +232,27 @@ def test_live_unknown_section_is_a_named_usage_error():
     assert "unknown help section 'missing'" in result.output
 
 
+def test_module_entry_uses_the_canonical_product_name(monkeypatch):
+    pytest.importorskip("pykungfu")
+    from kungfu import __main__ as module_entry
+
+    observed = []
+    monkeypatch.setattr(module_entry, "available", lambda: ["fixture"])
+    monkeypatch.setattr(
+        module_entry,
+        "select",
+        lambda modules, **kwargs: observed.append((modules, kwargs)),
+    )
+
+    module_entry.main()
+    module_entry.main(prog_name="embedded-fixture")
+
+    assert observed == [
+        (["fixture"], {"prog_name": "kungfu"}),
+        (["fixture"], {"prog_name": "embedded-fixture"}),
+    ]
+
+
 def test_live_interactive_bare_command_enters_tui_without_materializing_runtime(
     monkeypatch,
 ):

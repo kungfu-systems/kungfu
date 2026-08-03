@@ -43,6 +43,7 @@ from kungfu.cli import available, select  # noqa: E402
 
 
 def main(**kwargs):
+    kwargs.setdefault("prog_name", "kungfu")
     select(available(), **kwargs)
 
 
