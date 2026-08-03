@@ -91,9 +91,11 @@ export function validateWorkflowSources(root, contract, overrides = {}) {
   );
   requirePattern(
     build,
-    /buildchain-ref: \$\{\{ inputs\.buildchain-ref \|\| '' \}\}/,
+    new RegExp(
+      `buildchain-ref: \\$\\{\\{ inputs\\.buildchain-ref \\|\\| '${contract.buildchain.workflow_shell_sha}' \\}\\}`,
+    ),
     findings,
-    'manual validation must retain the Buildchain ref pass-through',
+    'manual validation must retain the Buildchain ref pass-through and default to the reviewed workflow shell',
   );
   forbidPattern(
     build,

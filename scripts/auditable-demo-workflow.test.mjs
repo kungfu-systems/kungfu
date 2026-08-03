@@ -13,6 +13,7 @@ const scenario = JSON.parse(
   fs.readFileSync('.buildchain/auditable-demo.json', 'utf8'),
 );
 const demo = workflow.jobs['auditable-demo'];
+const build = workflow.jobs.build;
 
 test('one exact Buildchain workflow owns every declared demo', () => {
   assert.match(
@@ -34,10 +35,32 @@ test('one exact Buildchain workflow owns every declared demo', () => {
   );
   assert.equal(scenario.execution.durationClass, 'long-form');
   assert.equal(scenario.execution.totalTimeoutSeconds, 180);
+  assert.deepEqual(scenario.transportSmoke, {
+    argv: ['agent-work-lab', 'autoplay'],
+    timeoutSeconds: 60,
+    expectedExitCodes: [0],
+    stdoutIncludes: ['KUNGFU_TUI_DEMO_COMPLETE'],
+  });
   assert.equal(
     demo.with['media-profile'],
     'responsive-long-form-web-delivery-v1',
   );
+});
+
+test('the build fails the real transported binary before either upload path', () => {
+  assert.equal(
+    build.uses,
+    'kungfu-systems/buildchain/.github/workflows/.build.yml@5246afd4ff5608f6e8d09fb71003992119364880',
+  );
+  assert.equal(
+    demo.uses,
+    'kungfu-systems/buildchain/.github/workflows/.declarative-auditable-demo.yml@5246afd4ff5608f6e8d09fb71003992119364880',
+  );
+  assert.equal(
+    build.with['pre-upload-transport-smoke-scenario-path'],
+    '.buildchain/auditable-demo.json',
+  );
+  assert.equal(build.with['pre-upload-transport-smoke-artifact-root'], '.');
 });
 
 test('manual full refresh and promotion reuse the same materializer', () => {

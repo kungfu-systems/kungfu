@@ -252,8 +252,11 @@ test('CLI product emits exact standalone demo metadata beside the launcher', (t)
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
   const layout = cliArchiveLayout('linux');
   fs.writeFileSync(path.join(root, layout.launcherName), '#!/bin/sh\nexit 0\n');
-  fs.mkdirSync(path.join(root, layout.runtimeDirectory));
+  fs.mkdirSync(path.dirname(path.join(root, layout.pythonEntrypoint)), {
+    recursive: true,
+  });
   fs.writeFileSync(path.join(root, layout.runtimeEntrypoint), 'runtime\n');
+  fs.writeFileSync(path.join(root, layout.pythonEntrypoint), 'python\n');
   const metadata = writeAuditableDemoBinaryMetadata(
     root,
     layout,
@@ -275,6 +278,10 @@ test('CLI product emits exact standalone demo metadata beside the launcher', (t)
       {
         path: 'runtime/kungfu',
         sha256: crypto.createHash('sha256').update('runtime\n').digest('hex'),
+      },
+      {
+        path: 'runtime/python/bin/python3',
+        sha256: crypto.createHash('sha256').update('python\n').digest('hex'),
       },
     ],
     runtimeDependencies: [],
@@ -311,12 +318,14 @@ test('CLI archive keeps the launcher distinct from its runtime tree', () => {
     launcherName: 'kungfu',
     runtimeDirectory: 'runtime',
     runtimeEntrypoint: 'runtime/kungfu',
+    pythonEntrypoint: 'runtime/python/bin/python3',
     compatibility: 'runtime/product-compatibility.json',
   });
   assert.deepEqual(cliArchiveLayout('win32'), {
     launcherName: 'kungfu.cmd',
     runtimeDirectory: 'runtime',
     runtimeEntrypoint: 'runtime/kungfu.exe',
+    pythonEntrypoint: 'runtime/python/python.exe',
     compatibility: 'runtime/product-compatibility.json',
   });
   assert.match(cliLauncherContent('darwin'), /exec "\$here\/runtime\/kungfu"/);
