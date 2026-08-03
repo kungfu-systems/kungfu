@@ -120,7 +120,7 @@
         "owner": "kungfu.work-control Profile over native Fact and Episode authority",
         "sourceBindings": [
           {
-            "path": "extensions/work-control/work-control-actions/domain/work_control.py",
+            "path": "extensions/work-control/work-control-actions/domain/work_control_assessment.py",
             "marker": "kungfu.work-control.continuation-decision-basis/v1"
           },
           {
