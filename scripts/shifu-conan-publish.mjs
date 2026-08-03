@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import { spawnSync } from 'node:child_process';
+import crypto from 'node:crypto';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -49,7 +50,13 @@ function fail(message) {
 }
 
 export function parseArgs(argv) {
-  const options = { execute: false, matrixEntry: '', remote: 'workhub-conan' };
+  const options = {
+    execute: false,
+    matrixEntry: '',
+    remote: 'workhub-conan',
+    receiptFile: '',
+    lockfileFile: '',
+  };
   for (let index = 0; index < argv.length; index += 1) {
     const argument = argv[index];
     if (argument === '--execute') options.execute = true;
@@ -58,6 +65,12 @@ export function parseArgs(argv) {
       index += 1;
     } else if (argument === '--remote') {
       options.remote = argv[index + 1] || '';
+      index += 1;
+    } else if (argument === '--receipt-file') {
+      options.receiptFile = argv[index + 1] || '';
+      index += 1;
+    } else if (argument === '--lockfile-file') {
+      options.lockfileFile = argv[index + 1] || '';
       index += 1;
     } else fail(`unknown argument: ${argument}`);
   }
@@ -111,7 +124,11 @@ export function packageRevisionRefs(payload) {
 }
 
 export function graphPackageRevisionRefs(payload) {
-  const refs = [];
+  return graphDependencyRecords(payload).map((row) => row.exactReference);
+}
+
+export function graphDependencyRecords(payload) {
+  const records = [];
   for (const node of Object.values(payload?.graph?.nodes || {})) {
     if (node?.recipe === 'Consumer') continue;
     if (!node?.package_id) continue;
@@ -125,16 +142,107 @@ export function graphPackageRevisionRefs(payload) {
       fail(
         `graph dependency lacks exact RREV/package_id/PREV identity: ${reference}`,
       );
-    refs.push(`${reference}#${rrev}:${packageId}#${prev}`);
+    records.push({
+      reference,
+      rrev,
+      packageId,
+      prev,
+      exactReference: `${reference}#${rrev}:${packageId}#${prev}`,
+      binary: String(node.binary || ''),
+      remote: String(node.binary_remote || node.remote || ''),
+      effectiveSettings: node.settings || {},
+      options: node.options || {},
+    });
   }
-  return [...new Set(refs)].sort();
+  const unique = new Map(records.map((row) => [row.exactReference, row]));
+  return [...unique.values()].sort((left, right) =>
+    left.exactReference.localeCompare(right.exactReference),
+  );
 }
 
-export function conanCommand(args, { capture = false } = {}) {
-  const executable = process.env.SHIFU_CONAN_BIN || 'conan';
+export function exactClosureDigest(references) {
+  const normalized = [...new Set(references)].sort();
+  return `sha256:${crypto
+    .createHash('sha256')
+    .update(
+      JSON.stringify({
+        schema: 'shifu.conan-exact-closure/v1',
+        identity: 'rrev-package-id-prev',
+        exactReferences: normalized,
+      }),
+    )
+    .digest('hex')}`;
+}
+
+export function bytesDigest(value) {
+  return `sha256:${crypto.createHash('sha256').update(value).digest('hex')}`;
+}
+
+export function assertStrictDependencySettings(records, matrixEntry) {
+  const expected = MATRIX[matrixEntry].settings;
+  const mismatches = [];
+  for (const record of records) {
+    for (const name of [
+      'os',
+      'arch',
+      'compiler',
+      'compiler.version',
+      'compiler.cppstd',
+    ]) {
+      const effective = record.effectiveSettings?.[name];
+      if (effective !== undefined && String(effective) !== expected[name])
+        mismatches.push(
+          `${record.reference}:${name}=${effective} (expected ${expected[name]})`,
+        );
+    }
+  }
+  if (mismatches.length > 0)
+    fail(
+      `strict package qualification resolved compatible settings: ${mismatches.join(', ')}`,
+    );
+}
+
+export function conanVersion() {
+  return conanCommand(['--version'], { capture: true }).trim();
+}
+
+export function disableBinaryCompatibility() {
+  assertManagedConanEnvironment();
+  const pluginDirectory = path.join(
+    process.env.CONAN_HOME,
+    'extensions',
+    'plugins',
+    'compatibility',
+  );
+  fs.mkdirSync(pluginDirectory, { recursive: true });
+  fs.writeFileSync(
+    path.join(pluginDirectory, 'compatibility.py'),
+    [
+      '# Shifu exact-package qualification: do not substitute another package ID.',
+      'def compatibility(conanfile):',
+      '    return []',
+      '',
+    ].join('\n'),
+    { mode: 0o600 },
+  );
+}
+
+export function conanCommand(
+  args,
+  { capture = false, originalPath = false } = {},
+) {
+  const executable =
+    !originalPath && process.env.SHIFU_CONAN_BIN
+      ? process.env.SHIFU_CONAN_BIN
+      : 'conan';
+  const commandPath = originalPath
+    ? process.env.SHIFU_CONAN_ORIGINAL_PATH
+    : process.env.PATH;
+  if (originalPath && !commandPath)
+    fail('original Conan PATH is unavailable inside Shifu cache apply');
   const result = spawnSync(executable, args, {
     cwd: repoRoot,
-    env: process.env,
+    env: { ...process.env, PATH: commandPath },
     encoding: 'utf8',
     stdio: capture ? ['ignore', 'pipe', 'inherit'] : 'inherit',
     shell: process.platform === 'win32' && /\.(?:cmd|bat)$/i.test(executable),
@@ -187,12 +295,14 @@ export function plan(matrixEntry, remote = 'workhub-conan') {
     commands: [
       'conan profile detect --force (only when default is absent)',
       'assert clean exact Git checkout',
-      'conan install framework/core --build=missing -s:a compiler.cppstd=23 --format=json',
+      'disable Conan global binary compatibility in the disposable CONAN_HOME',
+      'conan install framework/core --build=missing -s:a compiler.cppstd=23 --lockfile-out <publish-lockfile> --format=json',
       'derive every dependency RREV/package_id/PREV from the resolved graph',
       'conan list <each-exact-package-revision> --remote <remote>',
       `conan remote auth ${remote} --force --strict`,
       `conan upload <each-missing-exact-package-revision> --remote ${remote} --check --confirm`,
       `conan list <each-exact-package-revision> --remote ${remote} and assert exact read-back`,
+      `conan list <each-rrev-package-id>#latest --remote ${remote} and bind the remote-current PREV closure`,
     ],
     buildchainInputs: ['SHIFU_CACHE_PROFILE_REF', 'SHIFU_CACHE_PROFILE_DIGEST'],
     publisherSecretInBuildchain: false,
@@ -240,15 +350,61 @@ function remoteHasExactReference(reference, remote) {
   return packageRevisionRefs(payload).includes(reference);
 }
 
-export function execute({ matrixEntry, remote }) {
+export function bindRemotePackageRevisions(records, remoteReferences) {
+  const byPackage = new Map();
+  for (const reference of remoteReferences) {
+    const packageCoordinate = reference.slice(0, reference.lastIndexOf('#'));
+    if (byPackage.has(packageCoordinate))
+      fail(`remote returned multiple current PREVs for ${packageCoordinate}`);
+    byPackage.set(packageCoordinate, reference);
+  }
+  return records.map((record) => {
+    const packageCoordinate = `${record.reference}#${record.rrev}:${record.packageId}`;
+    const exactReference = byPackage.get(packageCoordinate);
+    if (!exactReference)
+      fail(`remote current PREV is missing for ${packageCoordinate}`);
+    return {
+      ...record,
+      prev: exactReference.slice(exactReference.lastIndexOf('#') + 1),
+      exactReference,
+    };
+  });
+}
+
+function remoteCurrentReference(record, remote) {
+  const packageCoordinate = `${record.reference}#${record.rrev}:${record.packageId}`;
+  const payload = JSON.parse(
+    conanCommand(
+      [
+        'list',
+        `${packageCoordinate}#latest`,
+        '--remote',
+        remote,
+        '--format=json',
+      ],
+      { capture: true },
+    ),
+  );
+  const references = packageRevisionRefs(payload);
+  if (references.length !== 1)
+    fail(
+      `remote current PREV query returned ${references.length} references for ${packageCoordinate}`,
+    );
+  return references[0];
+}
+
+export function execute({ matrixEntry, remote, lockfileFile }) {
   assertExecutionEnvironment(remote);
+  if (!lockfileFile) fail('--lockfile-file is required with --execute');
   const sourceRevision = gitRevision();
   const detected = detectProfile();
   validateDetectedProfile(matrixEntry, detected);
+  disableBinaryCompatibility();
   const scratch = fs.mkdtempSync(
     path.join(os.tmpdir(), 'shifu-conan-publish-'),
   );
   try {
+    const generatedLockfile = path.join(scratch, 'conan.lock');
     const graph = JSON.parse(
       conanCommand(
         [
@@ -257,6 +413,8 @@ export function execute({ matrixEntry, remote }) {
           '--output-folder',
           path.join(scratch, 'generators'),
           '--lockfile=',
+          '--lockfile-out',
+          generatedLockfile,
           '--build=missing',
           ...PROFILE_ARGS,
           '--format=json',
@@ -264,15 +422,22 @@ export function execute({ matrixEntry, remote }) {
         { capture: true },
       ),
     );
-    const expectedRefs = graphPackageRevisionRefs(graph);
-    if (expectedRefs.length === 0)
+    const resolvedDependencies = graphDependencyRecords(graph);
+    assertStrictDependencySettings(resolvedDependencies, matrixEntry);
+    const lockfileBytes = fs.readFileSync(generatedLockfile);
+    fs.writeFileSync(path.resolve(lockfileFile), lockfileBytes, {
+      mode: 0o600,
+      flag: 'wx',
+    });
+    const localRefs = resolvedDependencies.map((row) => row.exactReference);
+    if (localRefs.length === 0)
       fail(
         'resolved Core graph contains no exact dependency package revisions',
       );
-    const alreadyPresent = expectedRefs.filter((reference) =>
+    const alreadyPresent = localRefs.filter((reference) =>
       remoteHasExactReference(reference, remote),
     );
-    const missingBefore = expectedRefs.filter(
+    const missingBefore = localRefs.filter(
       (reference) => !alreadyPresent.includes(reference),
     );
     conanCommand(['remote', 'auth', remote, '--force', '--strict']);
@@ -285,11 +450,19 @@ export function execute({ matrixEntry, remote }) {
         '--check',
         '--confirm',
       ]);
-    const missing = expectedRefs.filter((reference) => {
+    const missing = localRefs.filter((reference) => {
       return !remoteHasExactReference(reference, remote);
     });
     if (missing.length > 0)
       fail(`remote read-back missing package revisions: ${missing.join(', ')}`);
+    const remoteReferences = resolvedDependencies.map((record) =>
+      remoteCurrentReference(record, remote),
+    );
+    const remoteDependencies = bindRemotePackageRevisions(
+      resolvedDependencies,
+      remoteReferences,
+    );
+    const expectedRefs = remoteDependencies.map((row) => row.exactReference);
     return {
       schema: 'shifu.conan-binary-publish-receipt/v1',
       sourceRevision,
@@ -297,7 +470,19 @@ export function execute({ matrixEntry, remote }) {
       settings: MATRIX[matrixEntry].settings,
       remote,
       identity: 'rrev-package-id-prev',
+      compatibilityPolicy: 'disabled-for-exact-package-id',
+      conan: {
+        version: conanVersion(),
+        compatibilityPolicy: 'global-plugin-disabled-in-disposable-home',
+      },
+      lockfile: {
+        schema: 'conan-lockfile',
+        digest: bytesDigest(lockfileBytes),
+        pins: 'dependency-rrev',
+      },
+      closureDigest: exactClosureDigest(expectedRefs),
       exactReferences: expectedRefs,
+      resolvedDependencies: remoteDependencies,
       alreadyPresent,
       published: missingBefore,
       readBack: expectedRefs,
@@ -320,6 +505,12 @@ if (
       process.stdout.write(`${JSON.stringify(output, null, 2)}\n`);
     } else {
       const receipt = execute(options);
+      if (options.receiptFile)
+        fs.writeFileSync(
+          path.resolve(options.receiptFile),
+          `${JSON.stringify(receipt, null, 2)}\n`,
+          { mode: 0o600, flag: 'wx' },
+        );
       process.stdout.write(`${JSON.stringify(receipt, null, 2)}\n`);
     }
   } catch (error) {
