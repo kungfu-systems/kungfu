@@ -2,12 +2,25 @@
 
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
+import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 
 import {
+  conanStorageLayout,
+  conanStoragePartition,
+} from './shifu-cache-runtime.mjs';
+import {
   MATRIX,
+  assertStrictDependencySettings,
+  bindRemotePackageRevisions,
+  conanCommand,
+  disableBinaryCompatibility,
+  exactClosureDigest,
+  graphDependencyRecords,
+  graphPackageRevisionRefs,
   packageRevisionRefs,
   parseArgs,
   plan,
@@ -16,6 +29,40 @@ import {
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const script = path.join(here, 'shifu-conan-publish.mjs');
+
+test('Conan storage partitions isolate mutable packages and share downloads', () => {
+  const first = conanStoragePartition('development', {
+    SHIFU_CACHE_PRINCIPAL: 'worktree:first',
+  });
+  assert.equal(
+    first,
+    conanStoragePartition('development', {
+      SHIFU_CACHE_PRINCIPAL: 'worktree:first',
+    }),
+  );
+  assert.notEqual(
+    first,
+    conanStoragePartition('development', {
+      SHIFU_CACHE_PRINCIPAL: 'worktree:second',
+    }),
+  );
+  assert.match(first, /^development-[a-f0-9]{12}$/);
+  assert.match(
+    conanStoragePartition('self-hosted-runner', {
+      RUNNER_NAME: 'runner-one',
+    }),
+    /^runner-[a-f0-9]{12}$/,
+  );
+  const firstLayout = conanStorageLayout('/cache/conan/workhub-v1', first);
+  const secondLayout = conanStorageLayout(
+    '/cache/conan/workhub-v1',
+    conanStoragePartition('development', {
+      SHIFU_CACHE_PRINCIPAL: 'worktree:second',
+    }),
+  );
+  assert.notEqual(firstLayout.packageRoot, secondLayout.packageRoot);
+  assert.equal(firstLayout.downloadRoot, secondLayout.downloadRoot);
+});
 
 test('matrix contract covers the required three platforms', () => {
   assert.deepEqual(Object.keys(MATRIX), [
@@ -32,6 +79,7 @@ test('matrix contract covers the required three platforms', () => {
           arch: 'x86_64',
           compiler: 'gcc',
           'compiler.version': '14',
+          'compiler.cppstd': '23',
         },
       },
     },
@@ -48,6 +96,7 @@ test('matrix contract covers the required three platforms', () => {
               arch: 'x86_64',
               compiler: 'gcc',
               'compiler.version': '13',
+              'compiler.cppstd': '23',
             },
           },
         },
@@ -71,7 +120,12 @@ test('dry-run plan keeps publisher credentials out of Buildchain', () => {
     /remote auth workhub-conan --force --strict/,
   );
   assert.doesNotMatch(JSON.stringify(output), /password/i);
-  assert.match(JSON.stringify(output), /rocksdb\/6\.29\.5#\*:\*#\*/);
+  assert.equal(output.publication, 'additive-only-no-force');
+  assert.equal(
+    output.storage.immutableBinaryAuthority,
+    'hosted-remote-rrev-package-id-prev',
+  );
+  assert.match(JSON.stringify(output), /framework\/core dependency closure/);
 });
 
 test('package revision read-back requires exact recipe and package revisions', () => {
@@ -104,6 +158,176 @@ test('package revision read-back requires exact recipe and package revisions', (
       },
     }),
     [],
+  );
+});
+
+test('resolved graph evidence requires full dependency identity', () => {
+  assert.deepEqual(
+    graphPackageRevisionRefs({
+      graph: {
+        nodes: {
+          0: {
+            recipe: 'Consumer',
+            ref: 'kungfu-core/4.0.0-alpha.1',
+            package_id: 'consumerPackageId',
+          },
+          1: {
+            ref: 'flatbuffers/25.9.23#recipeRevision',
+            package_id: 'packageId',
+            prev: 'packageRevision',
+          },
+          2: {
+            ref: 'rocksdb/6.29.5',
+            rrev: 'rocksRecipeRevision',
+            package_id: 'rocksPackageId',
+            prev: 'rocksPackageRevision',
+          },
+        },
+      },
+    }),
+    [
+      'flatbuffers/25.9.23#recipeRevision:packageId#packageRevision',
+      'rocksdb/6.29.5#rocksRecipeRevision:rocksPackageId#rocksPackageRevision',
+    ],
+  );
+  assert.throws(
+    () =>
+      graphPackageRevisionRefs({
+        graph: {
+          nodes: {
+            1: { ref: 'nng/1.11.0', package_id: 'packageId', prev: '' },
+          },
+        },
+      }),
+    /lacks exact RREV\/package_id\/PREV identity/,
+  );
+});
+
+test('resolved dependency records disclose effective settings and exact closure digest', () => {
+  const payload = {
+    graph: {
+      nodes: {
+        1: {
+          ref: 'rocksdb/6.29.5#recipeRevision',
+          package_id: 'packageId',
+          prev: 'packageRevision',
+          binary: 'Download',
+          binary_remote: 'workhub-conan',
+          settings: { compiler: 'apple-clang', 'compiler.cppstd': 'gnu17' },
+          options: { shared: 'False' },
+        },
+      },
+    },
+  };
+  const records = graphDependencyRecords(payload);
+  assert.equal(records[0].effectiveSettings['compiler.cppstd'], 'gnu17');
+  assert.equal(records[0].options.shared, 'False');
+  assert.equal(records[0].binary, 'Download');
+  assert.match(
+    exactClosureDigest(graphPackageRevisionRefs(payload)),
+    /^sha256:[a-f0-9]{64}$/,
+  );
+  assert.throws(
+    () => assertStrictDependencySettings(records, 'macos-arm64'),
+    /resolved compatible settings/,
+  );
+  records[0].effectiveSettings['compiler.cppstd'] = '23';
+  assert.doesNotThrow(() =>
+    assertStrictDependencySettings(records, 'macos-arm64'),
+  );
+});
+
+test('publisher closure binds the remote current PREV instead of a partition-local PREV', () => {
+  const records = [
+    {
+      reference: 'flatbuffers/25.9.23',
+      rrev: 'recipeRevision',
+      packageId: 'packageId',
+      prev: 'partitionLocalRevision',
+      exactReference:
+        'flatbuffers/25.9.23#recipeRevision:packageId#partitionLocalRevision',
+      effectiveSettings: { 'compiler.cppstd': '23' },
+    },
+  ];
+  const rebound = bindRemotePackageRevisions(records, [
+    'flatbuffers/25.9.23#recipeRevision:packageId#remoteCurrentRevision',
+  ]);
+  assert.equal(rebound[0].prev, 'remoteCurrentRevision');
+  assert.equal(
+    rebound[0].exactReference,
+    'flatbuffers/25.9.23#recipeRevision:packageId#remoteCurrentRevision',
+  );
+  assert.equal(records[0].prev, 'partitionLocalRevision');
+  assert.throws(
+    () => bindRemotePackageRevisions(records, []),
+    /remote current PREV is missing/,
+  );
+});
+
+test('publisher disables global Conan binary compatibility only in managed overlay', (t) => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'shifu-conan-home-'));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const previousManaged = process.env.SHIFU_CACHE_MANAGED_CONAN;
+  const previousHome = process.env.CONAN_HOME;
+  t.after(() => {
+    if (previousManaged === undefined)
+      Reflect.deleteProperty(process.env, 'SHIFU_CACHE_MANAGED_CONAN');
+    else process.env.SHIFU_CACHE_MANAGED_CONAN = previousManaged;
+    if (previousHome === undefined)
+      Reflect.deleteProperty(process.env, 'CONAN_HOME');
+    else process.env.CONAN_HOME = previousHome;
+  });
+  process.env.SHIFU_CACHE_MANAGED_CONAN = '1';
+  process.env.CONAN_HOME = root;
+  disableBinaryCompatibility();
+  const plugin = fs.readFileSync(
+    path.join(
+      root,
+      'extensions',
+      'plugins',
+      'compatibility',
+      'compatibility.py',
+    ),
+    'utf8',
+  );
+  assert.match(plugin, /return \[\]/);
+});
+
+test('migration can bypass the managed Conan wrapper while holding its own partition lock', (t) => {
+  if (process.platform === 'win32') {
+    t.skip('POSIX executable fixture');
+    return;
+  }
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'shifu-conan-path-'));
+  const wrapperDirectory = path.join(root, 'wrapper');
+  const originalDirectory = path.join(root, 'original');
+  fs.mkdirSync(wrapperDirectory);
+  fs.mkdirSync(originalDirectory);
+  fs.writeFileSync(
+    path.join(wrapperDirectory, 'conan'),
+    "#!/bin/sh\nprintf 'wrapper\\n'\n",
+    { mode: 0o755 },
+  );
+  fs.writeFileSync(
+    path.join(originalDirectory, 'conan'),
+    "#!/bin/sh\nprintf 'original\\n'\n",
+    { mode: 0o755 },
+  );
+  const previousPath = process.env.PATH;
+  const previousOriginalPath = process.env.SHIFU_CONAN_ORIGINAL_PATH;
+  t.after(() => {
+    fs.rmSync(root, { recursive: true, force: true });
+    process.env.PATH = previousPath;
+    if (previousOriginalPath === undefined)
+      Reflect.deleteProperty(process.env, 'SHIFU_CONAN_ORIGINAL_PATH');
+    else process.env.SHIFU_CONAN_ORIGINAL_PATH = previousOriginalPath;
+  });
+  process.env.PATH = `${wrapperDirectory}${path.delimiter}${previousPath}`;
+  process.env.SHIFU_CONAN_ORIGINAL_PATH = originalDirectory;
+  assert.equal(conanCommand([], { capture: true }).trim(), 'wrapper');
+  assert.equal(
+    conanCommand([], { capture: true, originalPath: true }).trim(),
+    'original',
   );
 });
 
