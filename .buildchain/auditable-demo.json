@@ -48,12 +48,12 @@
     },
     {
       "id": "project-tour-08x",
-      "title": "Kungfu Project Tour at 0.8x",
-      "claimBoundary": "This exact standalone Kungfu artifact proves only the bounded disposable Project Tour observed at 0.8x in two independently captured native PTYs; Mock Agent output and terminal observations grant no Work, release, capability, or production authority.",
+      "title": "Kungfu full Project Tour",
+      "claimBoundary": "This exact standalone Kungfu artifact proves only the bounded disposable full Project Tour observed in two independently captured native PTYs; Mock Agent output and terminal observations grant no Work, release, capability, or production authority.",
       "steps": [
         {
           "id": "project-tour",
-          "argv": ["agent-work-lab", "project-tour", "--speed", "0.8"],
+          "argv": ["agent-work-lab", "project-tour", "--episode", "all"],
           "timeoutSeconds": 180,
           "expectedExitCodes": [0],
           "stdoutIncludes": ["KUNGFU_PROJECT_TOUR_COMPLETE"],

@@ -164,7 +164,7 @@ export function inspectAuditableDemoFastSentinel({
     JSON.stringify(autoplay?.steps?.[0]?.argv) !==
       JSON.stringify(['agent-work-lab', 'autoplay']) ||
     JSON.stringify(projectTour?.steps?.[0]?.argv) !==
-      JSON.stringify(['agent-work-lab', 'project-tour', '--speed', '0.8'])
+      JSON.stringify(['agent-work-lab', 'project-tour', '--episode', 'all'])
   ) {
     issues.push(
       'auditable-demo scenario no longer declares the exact bounded two-demo cut',
