@@ -302,6 +302,7 @@ const require = createRequire(import.meta.url);
 let cachedAjv;
 
 export function optionalAjv2020() {
+  if (process.env.KUNGFU_READONLY_NO_AJV === '1') return null;
   if (cachedAjv !== undefined) return cachedAjv;
   try {
     const loaded = require('ajv/dist/2020.js');

@@ -18,6 +18,7 @@ import {
   createSettlementCoreAdapters,
   settleActionLoop,
 } from './action-loop-settle.mjs';
+import { rootStepReceipt } from './action-loop.mjs';
 
 const DIR = path.dirname(fileURLToPath(import.meta.url));
 const contract = JSON.parse(
@@ -48,16 +49,16 @@ function clone(value) {
 }
 
 function receipt(input, stepId, source) {
-  return {
+  return rootStepReceipt({
     schema: 'kungfu.action-loop.step-receipt/v0',
     loopId: input.loopId,
     stepId,
     idempotencyKey: input.idempotencyKey,
-    receiptRoot: root(`${source}:${stepId}`),
     status: 'accepted',
     preconditionRoots: [input.loopRoot],
     resultRoots: [root(`${source}:${stepId}:result`)],
-  };
+    authorityReceiptRoot: root(`${source}:${stepId}`),
+  });
 }
 
 function beginRequest() {
@@ -454,8 +455,8 @@ test(
           env: {
             ...process.env,
             PYTHONPATH: [
-              NATIVE_BINDING_DIR,
               path.join(DIR, '..', 'core', 'src', 'python'),
+              NATIVE_BINDING_DIR,
               process.env.PYTHONPATH,
             ]
               .filter(Boolean)

@@ -1,0 +1,66 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kungfu.link/schema/work-profile-conformance-result-v1.json",
+  "title": "Kungfu Work Profile Conformance Result",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "scenarioId",
+    "verdict",
+    "declarationRoot",
+    "conformanceRoot",
+    "authorityBindings",
+    "machineChecks",
+    "humanAuthority",
+    "surfaceRoots",
+    "diagnostics",
+    "constraints",
+    "residualRisk",
+    "nonClaims",
+    "lifecycleMutation"
+  ],
+  "properties": {
+    "schema": { "const": "kungfu.work-profile-conformance-result/v1" },
+    "scenarioId": { "type": "string" },
+    "verdict": { "enum": ["compatible", "compatible-with-constraints", "profile-invalid", "scenario-incompatible", "unqualified"] },
+    "declarationRoot": { "$ref": "#/$defs/root" },
+    "conformanceRoot": { "$ref": "#/$defs/root" },
+    "authorityBindings": { "type": "object" },
+    "machineChecks": { "type": "array", "items": { "type": "object" } },
+    "humanAuthority": { "type": "object" },
+    "surfaceRoots": { "type": "object", "additionalProperties": { "$ref": "#/$defs/root" } },
+    "diagnostics": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["code", "class", "message", "violatedInvariant", "evidenceCoordinate"],
+        "properties": {
+          "code": { "type": "string" },
+          "class": { "enum": ["invalid", "incompatible", "unqualified", "constraint"] },
+          "message": { "type": "string" },
+          "violatedInvariant": { "type": "string" },
+          "evidenceCoordinate": { "$ref": "#/$defs/evidenceCoordinate" }
+        }
+      }
+    },
+    "constraints": { "type": "array", "items": { "type": "string" } },
+    "residualRisk": { "type": "array", "items": { "type": "string" } },
+    "nonClaims": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "type": "string", "minLength": 1 } },
+    "lifecycleMutation": { "const": false }
+  },
+  "$defs": {
+    "root": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+    "evidenceCoordinate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["evidenceRoot", "evidencePath", "evidencePointer"],
+      "properties": {
+        "evidenceRoot": { "$ref": "#/$defs/root" },
+        "evidencePath": { "anyOf": [{ "type": "string" }, { "type": "null" }] },
+        "evidencePointer": { "anyOf": [{ "type": "string" }, { "type": "null" }] }
+      }
+    }
+  }
+}
