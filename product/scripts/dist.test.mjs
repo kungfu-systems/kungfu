@@ -256,7 +256,11 @@ test('CLI product emits exact standalone demo metadata beside the launcher', (t)
     recursive: true,
   });
   fs.writeFileSync(path.join(root, layout.runtimeEntrypoint), 'runtime\n');
-  fs.writeFileSync(path.join(root, layout.pythonEntrypoint), 'python\n');
+  fs.writeFileSync(
+    path.join(root, 'runtime/python/bin/python3.13'),
+    'python\n',
+  );
+  fs.symlinkSync('python3.13', path.join(root, layout.pythonEntrypoint));
   const metadata = writeAuditableDemoBinaryMetadata(
     root,
     layout,
@@ -280,7 +284,7 @@ test('CLI product emits exact standalone demo metadata beside the launcher', (t)
         sha256: crypto.createHash('sha256').update('runtime\n').digest('hex'),
       },
       {
-        path: 'runtime/python/bin/python3',
+        path: 'runtime/python/bin/python3.13',
         sha256: crypto.createHash('sha256').update('python\n').digest('hex'),
       },
     ],
@@ -291,6 +295,29 @@ test('CLI product emits exact standalone demo metadata beside the launcher', (t)
       fs.readFileSync(path.join(root, 'auditable-demo-binary.json'), 'utf8'),
     ),
     metadata,
+  );
+});
+
+test('CLI product rejects an interpreter symlink outside the staged artifact', (t) => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'kungfu-demo-binary-'));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const layout = cliArchiveLayout('linux');
+  fs.writeFileSync(path.join(root, layout.launcherName), '#!/bin/sh\nexit 0\n');
+  fs.mkdirSync(path.dirname(path.join(root, layout.pythonEntrypoint)), {
+    recursive: true,
+  });
+  fs.writeFileSync(path.join(root, layout.runtimeEntrypoint), 'runtime\n');
+  const external = path.join(
+    path.dirname(root),
+    `${path.basename(root)}.python`,
+  );
+  fs.writeFileSync(external, 'python\n');
+  t.after(() => fs.rmSync(external, { force: true }));
+  fs.symlinkSync(external, path.join(root, layout.pythonEntrypoint));
+
+  assert.throws(
+    () => writeAuditableDemoBinaryMetadata(root, layout, 'linux-x64', root),
+    /product path escapes its root/u,
   );
 });
 
