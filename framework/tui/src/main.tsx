@@ -113,8 +113,7 @@ import {
   ProjectTourView,
   StarterProjectHost,
   cleanupProjectTourTemporaryProject,
-  parseProjectTourEpisode,
-  parseProjectTourSpeed,
+  parseProjectTourLaunchOptions,
   playbackQuitRequested,
   workReceiptHasRetainedSession,
 } from './starter-project-view/index.js';
@@ -2284,35 +2283,11 @@ async function main(): Promise<void> {
     return;
   }
   const autoDemo = process.argv.includes('--agent-work-lab-autoplay');
-  const projectTourIndex = process.argv.indexOf('--project-work-tour-root');
-  const projectTourRoot =
-    projectTourIndex >= 0 ? process.argv[projectTourIndex + 1] : undefined;
-  if (projectTourIndex >= 0 && !projectTourRoot) {
-    throw new Error('--project-work-tour-root requires a destination');
-  }
-  const projectTourSpeedIndex = process.argv.indexOf('--project-tour-speed');
-  if (projectTourSpeedIndex >= 0 && !process.argv[projectTourSpeedIndex + 1]) {
-    throw new Error('--project-tour-speed requires a multiplier');
-  }
-  const projectTourSpeed = parseProjectTourSpeed(
-    projectTourSpeedIndex >= 0
-      ? process.argv[projectTourSpeedIndex + 1]
-      : undefined,
-  );
-  const projectTourEpisodeIndex = process.argv.indexOf(
-    '--project-tour-episode',
-  );
-  if (
-    projectTourEpisodeIndex >= 0 &&
-    !process.argv[projectTourEpisodeIndex + 1]
-  ) {
-    throw new Error('--project-tour-episode requires 1, 2, or all');
-  }
-  const projectTourEpisode = parseProjectTourEpisode(
-    projectTourEpisodeIndex >= 0
-      ? process.argv[projectTourEpisodeIndex + 1]
-      : undefined,
-  );
+  const {
+    root: projectTourRoot,
+    speed: projectTourSpeed,
+    episode: projectTourEpisode,
+  } = parseProjectTourLaunchOptions(process.argv);
   const lab = openTuiAgentWorkLab(Boolean(projectTourRoot));
   const playbackMode = autoDemo || Boolean(projectTourRoot);
   const emptyState = process.argv.includes('--empty-state');
