@@ -13,6 +13,16 @@ on:
     - cron: "23,53 * * * *"
   workflow_dispatch:
     inputs:
+      expected-pr-number:
+        description: Exact PR number for targeted Agent admission; 0 runs a cadence patrol
+        required: false
+        type: number
+        default: 0
+      expected-head-sha:
+        description: Exact 40-character PR head for targeted Agent admission
+        required: false
+        type: string
+        default: ""
       dry-run:
         description: Evaluate eligible PRs without admitting them to the merge queue
         required: false
@@ -33,12 +43,20 @@ jobs:
     permissions: {}
     outputs:
       target-branch: ${{ steps.target.outputs.target-branch }}
+      expected-pr-number: ${{ steps.target.outputs.expected-pr-number }}
+      expected-head-sha: ${{ steps.target.outputs.expected-head-sha }}
     steps:
-      - name: Resolve the active dev channel
+      - name: Resolve the active dev channel and exact PR target
         id: target
         shell: bash
         env:
           DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+          EVENT_NAME: ${{ github.event_name }}
+          WORKFLOW_EVENT: ${{ github.event.workflow_run.event }}
+          WORKFLOW_HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+          WORKFLOW_PULL_REQUESTS: ${{ toJSON(github.event.workflow_run.pull_requests) }}
+          DISPATCH_PR_NUMBER: ${{ inputs.expected-pr-number }}
+          DISPATCH_HEAD_SHA: ${{ inputs.expected-head-sha }}
         run: |
           set -euo pipefail
           case "$DEFAULT_BRANCH" in
@@ -48,7 +66,49 @@ jobs:
               exit 1
               ;;
           esac
+
+          expected_pr_number=""
+          expected_head_sha=""
+          if [ "$EVENT_NAME" = "workflow_run" ] && [ "$WORKFLOW_EVENT" = "pull_request" ]; then
+            pr_count="$(jq -r 'if type == "array" then length else -1 end' <<<"$WORKFLOW_PULL_REQUESTS")"
+            if [ "$pr_count" != "1" ]; then
+              echo "workflow_run must resolve to exactly one pull request; got: $pr_count" >&2
+              exit 1
+            fi
+            expected_pr_number="$(jq -r '.[0].number' <<<"$WORKFLOW_PULL_REQUESTS")"
+            expected_head_sha="$WORKFLOW_HEAD_SHA"
+          elif [ "$EVENT_NAME" = "workflow_dispatch" ]; then
+            expected_pr_number="${DISPATCH_PR_NUMBER:-0}"
+            expected_head_sha="$DISPATCH_HEAD_SHA"
+            if { [ "$expected_pr_number" = "0" ] && [ -n "$expected_head_sha" ]; } ||
+              { [ "$expected_pr_number" != "0" ] && [ -z "$expected_head_sha" ]; }; then
+              echo "expected-pr-number and expected-head-sha must be provided together" >&2
+              exit 1
+            fi
+            if [ "$expected_pr_number" = "0" ]; then
+              expected_pr_number=""
+            fi
+          fi
+
+          if [ -n "$expected_pr_number" ]; then
+            case "$expected_pr_number" in
+              *[!0-9]*|0) echo "expected PR number must be a positive integer" >&2; exit 1 ;;
+            esac
+            if [ "${#expected_head_sha}" -ne 40 ]; then
+              echo "expected head must be an exact lowercase 40-character commit SHA" >&2
+              exit 1
+            fi
+            case "$expected_head_sha" in
+              *[!0-9a-f]*)
+                echo "expected head must be an exact lowercase 40-character commit SHA" >&2
+                exit 1
+                ;;
+            esac
+          fi
+
           echo "target-branch=$DEFAULT_BRANCH" >>"$GITHUB_OUTPUT"
+          echo "expected-pr-number=$expected_pr_number" >>"$GITHUB_OUTPUT"
+          echo "expected-head-sha=$expected_head_sha" >>"$GITHUB_OUTPUT"
 
   admission:
     needs: resolve-target
@@ -60,10 +120,13 @@ jobs:
       contents: write
       pull-requests: write
       statuses: write
-    uses: kungfu-systems/buildchain/.github/workflows/dev-pr-auto-merge.yml@1659da98053f8ea8c75471e414b7732e3a491580
+    uses: kungfu-systems/buildchain/.github/workflows/dev-pr-auto-merge.yml@633574453b8d0174f1e8d8b3aa76cf56e4a24773
     with:
-      buildchain-ref: 1659da98053f8ea8c75471e414b7732e3a491580
+      buildchain-ref: 633574453b8d0174f1e8d8b3aa76cf56e4a24773
       target-branch: ${{ needs.resolve-target.outputs.target-branch }}
+      expected-pr-number: ${{ fromJSON(needs.resolve-target.outputs.expected-pr-number || '0') }}
+      expected-head-sha: ${{ needs.resolve-target.outputs.expected-head-sha }}
+      diagnostic-context: Buildchain delivery intent
       required-status-checks: |-
         Candidate source acceptance / check
         affected-native / linux

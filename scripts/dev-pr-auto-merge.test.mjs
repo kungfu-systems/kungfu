@@ -13,7 +13,7 @@ test('Dev auto-merge admits only explicitly ready reviewed same-repository PRs',
   const reusableRef = workflow.match(
     /uses: kungfu-systems\/buildchain\/\.github\/workflows\/dev-pr-auto-merge\.yml@([0-9a-f]{40})/u,
   )?.[1];
-  assert.equal(reusableRef, '1659da98053f8ea8c75471e414b7732e3a491580');
+  assert.equal(reusableRef, '633574453b8d0174f1e8d8b3aa76cf56e4a24773');
   assert.match(workflow, new RegExp(`buildchain-ref: ${reusableRef}`, 'u'));
   assert.match(workflow, /workflow_run:[\s\S]*Core affected native/u);
   assert.match(workflow, /cron: "23,53 \* \* \* \*"/u);
@@ -29,6 +29,46 @@ test('Dev auto-merge admits only explicitly ready reviewed same-repository PRs',
   assert.match(workflow, /require-approval: true/u);
   assert.match(workflow, /same-repository-only: true/u);
   assert.match(workflow, /max-merges: 1/u);
+});
+
+test('Dev Agent admission binds every targeted run to one exact PR head', () => {
+  assert.match(
+    workflow,
+    /expected-pr-number:[\s\S]*type: number[\s\S]*default: 0/u,
+  );
+  assert.match(
+    workflow,
+    /expected-head-sha:[\s\S]*type: string[\s\S]*default: ""/u,
+  );
+  assert.match(
+    workflow,
+    /workflow_run must resolve to exactly one pull request/u,
+  );
+  assert.match(
+    workflow,
+    /expected-pr-number and expected-head-sha must be provided together/u,
+  );
+  assert.match(
+    workflow,
+    /expected head must be an exact lowercase 40-character commit SHA/u,
+  );
+  assert.match(
+    workflow,
+    /expected-pr-number: \$\{\{ fromJSON\(needs\.resolve-target\.outputs\.expected-pr-number \|\| '0'\) \}\}/u,
+  );
+  assert.match(
+    workflow,
+    /expected-head-sha: \$\{\{ needs\.resolve-target\.outputs\.expected-head-sha \}\}/u,
+  );
+  assert.match(workflow, /diagnostic-context: Buildchain delivery intent/u);
+});
+
+test('Dev cadence patrol remains an explicit non-targeted path', () => {
+  assert.match(workflow, /expected_pr_number=""/u);
+  assert.match(workflow, /expected_head_sha=""/u);
+  assert.match(workflow, /if \[ "\$expected_pr_number" = "0" \]; then/u);
+  assert.match(workflow, /cron: "23,53 \* \* \* \*"/u);
+  assert.doesNotMatch(workflow, /auto-merge-enabled|autoMergeEnabled/u);
 });
 
 test('Dev auto-merge waits for PR checks and lands through the native queue', () => {
