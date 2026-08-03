@@ -62,6 +62,27 @@ function semanticAmplificationFixturePaths(manifest) {
   return [...paths].sort();
 }
 
+function workProfileConformanceFixturePaths(manifest) {
+  const paths = new Set([
+    'config/kungfu-kfx.contract.json',
+    'extensions/work-control/profile.json',
+    'extensions/work-control/qualification/work-profile-conformance.json',
+    'framework/kfx/kungfu-kfx.contract.json',
+    'framework/work-profile-conformance/authority-manifest.json',
+    'framework/work-profile-conformance/generate-qualification.mjs',
+    'framework/work-profile-conformance/qualification/negative-witnesses.json',
+    'framework/work-profile-conformance/qualification/reference-scenarios.json',
+    'framework/work-profile-conformance/qualification/retained-witnesses.json',
+    'framework/work-profile-conformance/schema/work-profile-conformance-declaration-v1.schema.json',
+    'framework/work-profile-conformance/schema/work-profile-conformance-result-v1.schema.json',
+    'framework/work-profile-conformance/work-profile-conformance.mjs',
+  ]);
+  for (const file of manifest.files || []) {
+    if (file.path) paths.add(file.path);
+  }
+  return [...paths].sort();
+}
+
 function executableOnPath(name) {
   for (const directory of (process.env.PATH || '').split(path.delimiter)) {
     const candidate = path.join(directory, name);
@@ -303,7 +324,10 @@ test('declared discovery routes are zero-write in a cold read-only fixture', (t)
     'framework/core/tests/python/test_release_channel.py',
     'framework/core/tests/python/test_release_cut.py',
     'framework/primitive/kungfu-primitive-catalog.contract.json',
+    'framework/invariant/kungfu-invariant.registry.json',
     'framework/registry/contract.registry-envelope.json',
+    'framework/registry/invariant.registry-envelope.json',
+    'config/invariant/kungfu-invariant.registry.json',
     'docs/adr/KF-ADR-019fabb5-62a0-7b8d-8f8d-6505efdbc239.md',
     'docs/architecture/adr-map.json',
     'docs/architecture/adr-map.md',
@@ -505,6 +529,21 @@ test('declared discovery routes are zero-write in a cold read-only fixture', (t)
   );
   for (const relative of semanticAmplificationFixturePaths(
     amplificationManifest,
+  ))
+    copyFile(ROOT, fixture, relative);
+  const workProfileConformanceManifest = JSON.parse(
+    fs.readFileSync(
+      path.join(
+        ROOT,
+        'framework',
+        'work-profile-conformance',
+        'authority-manifest.json',
+      ),
+      'utf8',
+    ),
+  );
+  for (const relative of workProfileConformanceFixturePaths(
+    workProfileConformanceManifest,
   ))
     copyFile(ROOT, fixture, relative);
   const matrix = JSON.parse(

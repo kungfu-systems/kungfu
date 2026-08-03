@@ -71,6 +71,42 @@ nlohmann::json member_roots(const std::string &suffix = {}) {
   return roots;
 }
 
+std::string fixture_root(const std::string &label) { return "sha256:" + sha256("work-conformance:" + label); }
+
+nlohmann::json work_conformance_declaration() {
+  nlohmann::json role_roots = nlohmann::json::object();
+  for (const auto *role : {"fact", "episode", "pursuit", "atlas", "warrant"})
+    role_roots[role] = fixture_root(std::string("role:") + role);
+  nlohmann::json human = nlohmann::json::object();
+  for (const auto *field : {"domainIdentity", "legitimateAuthorization", "successMeaning", "privacyBoundary",
+                            "evidenceStrength", "consequenceMeaning"})
+    human[field] = {{"status", "human-declared"},
+                    {"statement", std::string("fixture ") + field},
+                    {"authorityRoot", fixture_root(std::string("human:") + field)}};
+  nlohmann::json behavior = nlohmann::json::array();
+  for (const auto *case_id : {"repeat", "crash", "interrupted", "stale", "warrant-revoked", "provider-switch",
+                              "projection-rebuild", "external-effect", "recovery"})
+    behavior.push_back({{"case", case_id}, {"status", "passed"}, {"evidenceRoot", fixture_root(case_id)}});
+  nlohmann::json platforms = nlohmann::json::array();
+  for (const auto *platform : {"cpp", "python", "node", "rust"})
+    platforms.push_back({{"platform", platform}, {"status", "passed"}, {"evidenceRoot", fixture_root(platform)}});
+  return {
+      {"schema", "kungfu.work-profile-conformance-declaration/v1"},
+      {"scenarioId", "test"},
+      {"bindings",
+       {{"actionGeometryRoot", fixture_root("action-geometry")},
+        {"domainProfileRoot", fixture_root("domain-profile")},
+        {"abstractionAuthorityRoot", fixture_root("work-lifecycle")},
+        {"sourceRoot", fixture_root("source")},
+        {"roleSchemaRoots", role_roots}}},
+      {"humanAuthority", human},
+      {"behaviorEvidence", behavior},
+      {"platformAdapters", platforms},
+      {"buildchain", {{"status", "passed"}, {"evidenceRoot", fixture_root("buildchain")}}},
+      {"workOperationModel", {{"authorityRoot", fixture_root("work-api")}}},
+  };
+}
+
 struct package_fixture {
   fs::path profile_path;
   fs::path mutable_artifact;
@@ -78,6 +114,7 @@ struct package_fixture {
 
 package_fixture write_package(const fs::path &root, const std::string &version, const std::string &suffix = {},
                               const std::string &profile_id = "example.week-day") {
+  const auto conformance_declaration = work_conformance_declaration().dump();
   const std::vector<std::pair<std::string, std::string>> artifacts = {
       {"contracts/world.json", R"({"schema":"example.world/v1"})"},
       {"contracts/week.json", R"({"schema":"example.week/v1"})"},
@@ -93,6 +130,7 @@ package_fixture write_package(const fs::path &root, const std::string &version, 
       {"permissions.json", R"({"schema":"kungfu.profile-permissions/v1","permissions":["fact.read","fact.write"]})"},
       {"qualification/profile.json",
        R"({"schema":"kungfu.profile-qualification/v1","checks":["content-closure","runtime-contract"]})"},
+      {"qualification/work-conformance.json", conformance_declaration},
   };
   std::map<std::string, std::string> hashes;
   for (const auto &[path, base] : artifacts) {
@@ -123,6 +161,7 @@ package_fixture write_package(const fs::path &root, const std::string &version, 
       {"migrations", {{"registry", ref("migrations/registry.json")}}},
       {"permissions", {{"registry", ref("permissions.json")}}},
       {"qualification", {{"profile", ref("qualification/profile.json")}}},
+      {"work", {{"conformance", ref("qualification/work-conformance.json")}}},
       {"experience", {{"homeView", "week-day-dashboard"}}},
   };
   const auto profile_path = root / "profile.json";
@@ -138,10 +177,74 @@ void rewrite_bound_artifact(const fs::path &profile_path, const std::string &rel
     document["kfd1"]["compatibility"]["sha256"] = sha256(value);
   } else if (relative == "qualification/profile.json") {
     document["qualification"]["profile"]["sha256"] = sha256(value);
+  } else if (relative == "actions/registry.json") {
+    document["actions"]["registry"]["sha256"] = sha256(value);
   } else {
     throw std::runtime_error("test helper received an unsupported bound artifact");
   }
   write_text(profile_path, document.dump(2));
+}
+
+void make_work_capable(const fs::path &profile_path) {
+  rewrite_bound_artifact(
+      profile_path, "actions/registry.json",
+      R"({"schema":"kungfu.profile-actions/v1","actions":[{"id":"claim-completion","runtimeOperation":"episode.append"},{"id":"review-completion","runtimeOperation":"episode.append"},{"id":"decide-continuation","runtimeOperation":"episode.append"}]})");
+}
+
+nlohmann::json work_conformance_receipt(const fs::path &profile_path, const std::string &surface) {
+  std::ifstream profile_input(profile_path);
+  const auto profile = nlohmann::json::parse(profile_input);
+  const auto declaration_path =
+      profile_path.parent_path() / profile.at("work").at("conformance").at("path").get<std::string>();
+  std::ifstream declaration_input(declaration_path);
+  const auto declaration = nlohmann::json::parse(declaration_input);
+  nlohmann::json checks = nlohmann::json::array();
+  const auto add_check = [&checks](const std::string &id, const std::string &status,
+                                   const nlohmann::json &evidence_root = nullptr) {
+    checks.push_back({{"id", id}, {"status", status}, {"evidenceRoot", evidence_root}});
+  };
+  const auto &bindings = declaration.at("bindings");
+  add_check("exact-action-geometry-root", "passed", bindings.at("actionGeometryRoot"));
+  add_check("exact-work-abstraction-authority-root", "passed", bindings.at("abstractionAuthorityRoot"));
+  for (const auto *field : {"actionGeometryRoot", "domainProfileRoot", "abstractionAuthorityRoot", "sourceRoot"})
+    add_check(std::string("binding-") + field, "passed", bindings.at(field));
+  for (const auto *role : {"fact", "episode", "pursuit", "atlas", "warrant"})
+    add_check(std::string("binding-role-") + role, "passed", bindings.at("roleSchemaRoots").at(role));
+  add_check("responsibility-role-root-separation", "passed");
+  add_check("generic-authority-reuse", "passed");
+  for (const auto &judgment : declaration.at("humanAuthority").items())
+    add_check("human-authority-" + judgment.key(), "declared", judgment.value().at("authorityRoot"));
+  for (const auto &evidence : declaration.at("behaviorEvidence"))
+    add_check("behavior-" + evidence.at("case").get<std::string>(), evidence.at("status").get<std::string>(),
+              evidence.at("evidenceRoot"));
+  for (const auto &adapter : declaration.at("platformAdapters"))
+    add_check("platform-" + adapter.at("platform").get<std::string>(), adapter.at("status").get<std::string>(),
+              adapter.at("evidenceRoot"));
+  add_check("buildchain-admission", declaration.at("buildchain").at("status").get<std::string>(),
+            declaration.at("buildchain").at("evidenceRoot"));
+  add_check("generic-work-operation-model", "passed", declaration.at("workOperationModel").at("authorityRoot"));
+  std::sort(checks.begin(), checks.end(), [](const auto &left, const auto &right) {
+    return left.at("id").template get<std::string>() < right.at("id").template get<std::string>();
+  });
+  nlohmann::json stable = {
+      {"schema", "kungfu.work-profile-conformance-result/v1"},
+      {"scenarioId", "test"},
+      {"verdict", "compatible"},
+      {"declarationRoot", "sha256:" + sha256(declaration.dump())},
+      {"authorityBindings", declaration.at("bindings")},
+      {"machineChecks", checks},
+      {"humanAuthority", declaration.at("humanAuthority")},
+      {"diagnostics", nlohmann::json::array()},
+      {"constraints", nlohmann::json::array()},
+      {"residualRisk", nlohmann::json::array()},
+      {"nonClaims", {"test fixture only"}},
+      {"lifecycleMutation", false},
+  };
+  const auto conformance_root = "sha256:" + sha256(stable.dump());
+  stable["conformanceRoot"] = conformance_root;
+  stable["surfaceRoots"] = {{"qualify", conformance_root}, {"installed-runtime", conformance_root}};
+  stable["publicSurface"] = surface;
+  return stable;
 }
 
 void attach_kfd3_collaboration(const fs::path &profile_path, const std::string &value) {
@@ -167,7 +270,7 @@ void test_inspection_is_content_bound_and_confined() {
   const auto first = profile::inspect_profile(fixture.profile_path.string(), member_roots());
   const auto second = profile::inspect_profile(fixture.profile_path.string(), member_roots());
   require(first.at("profile_suite_root") == second.at("profile_suite_root"), "Profile root was not deterministic");
-  require(first.at("artifacts").size() == 12, "complete Profile content closure was not verified");
+  require(first.at("artifacts").size() == 13, "complete Profile content closure was not verified");
   require(first.at("closure").at("source_contract").at("root") ==
               profile::profile_lifecycle_contract().at("source_contract_root"),
           "Profile root did not bind the exact KFX source contract");
@@ -212,7 +315,7 @@ void test_optional_kfd3_collaboration_is_content_bound() {
   const auto inspection = profile::inspect_profile(fixture.profile_path.string(), member_roots());
   require(inspection.at("profile").at("kfd3").at("collaboration").at("path") == "collaboration/interface.json",
           "KFD-3 collaboration authority was not preserved");
-  require(inspection.at("artifacts").size() == 13, "KFD-3 collaboration artifact was not in content closure");
+  require(inspection.at("artifacts").size() == 14, "KFD-3 collaboration artifact was not in content closure");
 
   write_text(fixture.profile_path.parent_path() / "collaboration" / "interface.json", "drift");
   require_invalid([&] { (void)profile::inspect_profile(fixture.profile_path.string(), member_roots()); },
@@ -370,6 +473,101 @@ void test_incompatible_runtime_and_unsupported_qualification_fail_closed() {
       "unsupported qualification check was reported as passed");
 }
 
+void test_work_capable_profile_requires_native_conformance_receipt() {
+  temp_tree tree;
+  const auto missing = write_package(tree.root() / "missing", "1.0.0");
+  make_work_capable(missing.profile_path);
+  {
+    std::ifstream input(missing.profile_path);
+    auto document = nlohmann::json::parse(input);
+    document.erase("work");
+    write_text(missing.profile_path, document.dump(2));
+  }
+  const auto missing_inspection = profile::inspect_profile(missing.profile_path.string(), member_roots());
+  require(missing_inspection.at("work_capable").get<bool>(),
+          "native inspection did not identify a Work-capable Profile");
+  require_invalid(
+      [&] {
+        (void)plan(
+            tree.root() / "missing-runtime",
+            {{"action", "qualify"}, {"profile_path", missing.profile_path.string()}, {"member_roots", member_roots()}});
+      },
+      "native qualification accepted a Work-capable Profile without work.conformance");
+
+  const auto fixture = write_package(tree.root() / "bound", "1.0.0");
+  make_work_capable(fixture.profile_path);
+  const auto runtime = tree.root() / "runtime";
+  fs::create_directories(runtime);
+  const auto roots = member_roots("-work");
+  apply(
+      runtime,
+      plan(runtime, {{"action", "install"}, {"profile_path", fixture.profile_path.string()}, {"member_roots", roots}}),
+      100);
+
+  require_invalid(
+      [&] {
+        (void)plan(runtime,
+                   {{"action", "qualify"}, {"profile_path", fixture.profile_path.string()}, {"member_roots", roots}});
+      },
+      "native qualification bypassed the Work conformance result");
+
+  const auto qualify_receipt = work_conformance_receipt(fixture.profile_path, "qualify");
+  apply(runtime,
+        plan(runtime, {{"action", "qualify"},
+                       {"profile_path", fixture.profile_path.string()},
+                       {"member_roots", roots},
+                       {"work_conformance", qualify_receipt}}),
+        200);
+
+  require_invalid(
+      [&] {
+        (void)plan(runtime,
+                   {{"action", "activate"}, {"profile_path", fixture.profile_path.string()}, {"member_roots", roots}});
+      },
+      "native activation bypassed the Work conformance result");
+
+  auto forged = work_conformance_receipt(fixture.profile_path, "installed-runtime");
+  forged["conformanceRoot"] = "sha256:" + sha256("forged");
+  forged["surfaceRoots"]["installed-runtime"] = forged["conformanceRoot"];
+  require_invalid(
+      [&] {
+        (void)plan(runtime, {{"action", "activate"},
+                             {"profile_path", fixture.profile_path.string()},
+                             {"member_roots", roots},
+                             {"work_conformance", forged}});
+      },
+      "native activation accepted a forged Work conformance root");
+
+  auto self_minted = work_conformance_receipt(fixture.profile_path, "installed-runtime");
+  self_minted["machineChecks"][0] = {{"id", "self-minted"}, {"status", "passed"}, {"evidenceRoot", nullptr}};
+  self_minted.erase("conformanceRoot");
+  self_minted.erase("surfaceRoots");
+  self_minted.erase("publicSurface");
+  const auto self_minted_root = "sha256:" + sha256(self_minted.dump());
+  self_minted["conformanceRoot"] = self_minted_root;
+  self_minted["surfaceRoots"] = {{"qualify", self_minted_root}, {"installed-runtime", self_minted_root}};
+  self_minted["publicSurface"] = "installed-runtime";
+  require_invalid(
+      [&] {
+        (void)plan(runtime, {{"action", "activate"},
+                             {"profile_path", fixture.profile_path.string()},
+                             {"member_roots", roots},
+                             {"work_conformance", self_minted}});
+      },
+      "native activation accepted a self-minted machine-check set");
+
+  const auto activate_receipt = work_conformance_receipt(fixture.profile_path, "installed-runtime");
+  apply(runtime,
+        plan(runtime, {{"action", "activate"},
+                       {"profile_path", fixture.profile_path.string()},
+                       {"member_roots", roots},
+                       {"work_conformance", activate_receipt},
+                       {"granted_permissions", nlohmann::json::array()}}),
+        300);
+  require(profile::get_profile(runtime.string(), "example.week-day").at("state") == "activated",
+          "Work-capable Profile did not activate with the exact conformance root");
+}
+
 int run_tests() {
   const std::pair<const char *, void (*)()> tests[] = {
       {"inspection is deterministic, content-bound, and confined", test_inspection_is_content_bound_and_confined},
@@ -378,6 +576,8 @@ int run_tests() {
       {"stale and cross-runtime plans fail closed", test_stale_plan_and_wrong_runtime_fail_closed},
       {"runtime and qualification inputs fail closed",
        test_incompatible_runtime_and_unsupported_qualification_fail_closed},
+      {"Work-capable native lifecycle requires exact conformance",
+       test_work_capable_profile_requires_native_conformance_receipt},
   };
   int failed = 0;
   for (const auto &[name, test] : tests) {

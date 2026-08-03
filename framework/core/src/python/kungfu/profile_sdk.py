@@ -14,6 +14,8 @@ import base64
 import importlib.util
 import json
 import os
+import shutil
+import subprocess
 import sys
 from pathlib import Path
 from typing import Any, Mapping
@@ -78,8 +80,87 @@ from kungfu.profile_sdk_kfd3 import (
     verify_kfd3 as _verify_kfd3,
 )
 
-
 SOURCE_BUNDLE_SCHEMA = "kungfu.profile-source-bundle/v1"
+
+
+def _work_profile_conformance_script() -> Path | None:
+    relative = Path("framework/work-profile-conformance/work-profile-conformance.mjs")
+    roots = (*Path(__file__).resolve().parents, *Path.cwd().resolve().parents)
+    candidates = (
+        Path(__file__).resolve().parent
+        / "work_profile_conformance/work-profile-conformance.mjs",
+        *(parent / relative for parent in roots),
+    )
+    return next((candidate for candidate in candidates if candidate.is_file()), None)
+
+
+def _work_profile_conformance(
+    inspection: Mapping[str, Any], surface: str
+) -> dict[str, Any] | None:
+    work = inspection["profile"].get("work")
+    declaration_ref = work.get("conformance") if isinstance(work, Mapping) else None
+    if declaration_ref is None and inspection.get("work_capable"):
+        raise ProfileSdkError(
+            "work-profile-conformance-required",
+            "Work-capable Profile requires exact Work conformance",
+        )
+    if declaration_ref is None:
+        return None
+    if not isinstance(declaration_ref, Mapping):
+        raise ProfileSdkError(
+            "work-profile-conformance-ref-invalid",
+            "Profile work.conformance must be a content reference",
+        )
+    declaration_path = _confined(
+        Path(str(inspection["profile_path"])).parent,
+        str(declaration_ref.get("path") or ""),
+    )
+    expected = str(declaration_ref.get("sha256") or "")
+    if expected != (actual := _sha256(declaration_path.read_bytes())):
+        raise ProfileSdkError(
+            "work-profile-conformance-root-mismatch",
+            "Profile Work conformance declaration root mismatch",
+            expected=expected,
+            actual=actual,
+        )
+    checker, node = _work_profile_conformance_script(), shutil.which("node")
+    if checker is None or node is None:
+        raise ProfileSdkError(
+            "work-profile-conformance-checker-unavailable",
+            "Work Profile conformance checker is unavailable",
+        )
+    completed = subprocess.run(
+        [
+            node,
+            str(checker),
+            "--declaration",
+            str(declaration_path),
+            "--surface",
+            surface,
+            "--json",
+        ],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    if completed.returncode != 0:
+        try:
+            failed = json.loads(completed.stdout)
+        except json.JSONDecodeError:
+            failed = None
+        raise ProfileSdkError(
+            "work-profile-conformance-denied",
+            completed.stderr.strip()
+            or (
+                f"Work Profile conformance denied: {failed.get('verdict')}"
+                if failed
+                else "Work Profile conformance checker failed"
+            ),
+            result=failed,
+        )
+    result = json.loads(completed.stdout)
+    result["publicSurface"] = surface
+    return result
 
 
 def capabilities() -> dict[str, Any]:
@@ -118,6 +199,12 @@ def capabilities() -> dict[str, Any]:
             "kfd3QualificationReceipt": sdk_contract["kfd3QualificationReceiptSchema"],
             "kfd3Witness": sdk_contract["kfd3WitnessSchema"],
             "sourceBundle": sdk_contract["sourceBundleSchema"],
+            "workProfileConformanceDeclaration": (
+                "kungfu.work-profile-conformance-declaration/v1"
+            ),
+            "workProfileConformanceResult": (
+                "kungfu.work-profile-conformance-result/v1"
+            ),
         },
         "sourcePlanSchema": SOURCE_PLAN_SCHEMA,
         "actionRegistrySchema": ACTION_REGISTRY_SCHEMA,
@@ -179,6 +266,10 @@ def capabilities() -> dict[str, Any]:
             "lifecycle": "libkungfu-profile-lifecycle",
             "authorization": "external-explicit-decision",
             "selfCertification": False,
+            "workConformance": (
+                "required content-bound work.conformance for Work-capable Profiles; "
+                "validate and qualify project one checker result"
+            ),
         },
     }
 
@@ -691,11 +782,13 @@ def validate_source(source: str | Path, runtime_dir: str | Path) -> dict[str, An
         member_roots=resolved["memberRoots"],
     )
     collaboration = _collaboration_closure(inspection)
+    work_conformance = _work_profile_conformance(inspection, "validate")
     return {
         "schema": "kungfu.profile-validation/v1",
         "source": resolved,
         "inspection": inspection,
         "collaboration": collaboration,
+        "workConformance": work_conformance,
         "ok": True,
     }
 
@@ -1106,6 +1199,7 @@ def qualify_source(source: str | Path, runtime_dir: str | Path) -> dict[str, Any
             "closureRoot": collaboration.get("closureRoot"),
             "reason": collaboration.get("reason"),
         },
+        "workConformance": _work_profile_conformance(inspection, "qualify"),
         "lifecycleMutation": False,
     }
 
@@ -1254,6 +1348,18 @@ def lifecycle_plan(
             profile_path=resolved["profilePath"],
             member_roots=resolved["memberRoots"],
         )
+        if action in {"qualify", "activate"}:
+            inspection = storage_service.profile_lifecycle(
+                runtime_dir,
+                "inspect",
+                profile_path=resolved["profilePath"],
+                member_roots=resolved["memberRoots"],
+            )
+            work_conformance = _work_profile_conformance(
+                inspection, "qualify" if action == "qualify" else "installed-runtime"
+            )
+            if work_conformance is not None:
+                request["work_conformance"] = work_conformance
     plan = storage_service.profile_lifecycle(runtime_dir, "plan", request=request)
     return {
         "schema": "kungfu.profile-agent-plan/v1",

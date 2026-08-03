@@ -38,8 +38,8 @@ function invoke(operation, payload) {
       env: {
         ...process.env,
         PYTHONPATH: [
-          path.join(DIR, '..', '..', 'core', 'build', 'python'),
           path.join(DIR, '..', '..', 'core', 'src', 'python'),
+          path.join(DIR, '..', '..', 'core', 'build', 'python'),
           process.env.PYTHONPATH,
         ]
           .filter(Boolean)
