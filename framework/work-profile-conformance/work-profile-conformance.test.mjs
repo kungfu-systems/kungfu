@@ -3,6 +3,7 @@
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
+import { createRequire } from 'node:module';
 import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
@@ -18,6 +19,10 @@ import {
 const ROOT = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
   '../..',
+);
+const require = createRequire(import.meta.url);
+const { copyWorkProfileConformance } = require(
+  path.join(ROOT, 'framework/core/.gyp/run-freeze.js'),
 );
 const SCRIPT = path.join(
   ROOT,
@@ -62,6 +67,45 @@ test('qualifies agent, calendar, and non-agent reference scenarios', () => {
       { scenarioId: 'course-production', verdict: 'compatible' },
     ],
   );
+});
+
+test('stages the Work conformance checker and exact authority bundle into assembled products', (t) => {
+  const temporary = fs.mkdtempSync(
+    path.join(os.tmpdir(), 'kungfu-work-conformance-product-'),
+  );
+  t.after(() => fs.rmSync(temporary, { recursive: true, force: true }));
+
+  copyWorkProfileConformance(temporary, ROOT);
+  assert.ok(
+    fs
+      .statSync(
+        path.join(
+          temporary,
+          'work_profile_conformance/work-profile-conformance.mjs',
+        ),
+      )
+      .isFile(),
+  );
+  const manifest = JSON.parse(
+    fs.readFileSync(
+      path.join(temporary, 'work_profile_conformance/authority-manifest.json'),
+      'utf8',
+    ),
+  );
+  for (const coordinate of manifest.files) {
+    assert.ok(
+      fs
+        .statSync(
+          path.join(
+            temporary,
+            'work_profile_conformance/authority',
+            coordinate.path,
+          ),
+        )
+        .isFile(),
+      coordinate.path,
+    );
+  }
 });
 
 test('returns a versioned, rooted, schema-valid compatible result', () => {

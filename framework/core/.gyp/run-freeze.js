@@ -41,6 +41,39 @@ function copyConfigContract() {
   copyContractArtifacts(path.join(CORE, 'dist', 'kungfu'));
 }
 
+function copyWorkProfileConformance(kungfuPackage, repositoryRoot) {
+  const source = path.join(
+    repositoryRoot,
+    'framework',
+    'work-profile-conformance',
+  );
+  const destination = path.join(kungfuPackage, 'work_profile_conformance');
+  fs.cpSync(source, destination, { recursive: true });
+
+  const manifest = JSON.parse(
+    fs.readFileSync(path.join(source, 'authority-manifest.json'), 'utf8'),
+  );
+  const resolvedRoot = path.resolve(repositoryRoot);
+  for (const coordinate of manifest.files) {
+    const sourceFile = path.resolve(resolvedRoot, coordinate.path);
+    if (
+      sourceFile !== resolvedRoot &&
+      !sourceFile.startsWith(`${resolvedRoot}${path.sep}`)
+    ) {
+      throw new Error(
+        `invalid Work conformance authority path: ${coordinate.path}`,
+      );
+    }
+    const destinationFile = path.join(
+      destination,
+      'authority',
+      coordinate.path,
+    );
+    fs.mkdirSync(path.dirname(destinationFile), { recursive: true });
+    fs.copyFileSync(sourceFile, destinationFile);
+  }
+}
+
 function buildType() {
   return shell.getConfigValue('build_type') || 'Release';
 }
@@ -900,6 +933,10 @@ function assembleTree(bt) {
     path.join(CORE, '..', 'exit', 'kungfu-exit-bundle.contract.json'),
     path.join(layout.sitePackages, 'kungfu', 'exit_bundle.contract.json'),
   );
+  copyWorkProfileConformance(
+    path.join(layout.sitePackages, 'kungfu'),
+    path.resolve(CORE, '..', '..'),
+  );
   const documentationDestination = path.join(
     layout.sitePackages,
     'kungfu',
@@ -1100,6 +1137,7 @@ if (require.main === module) main();
 module.exports = {
   assemblySelector,
   copyFirstPartyProfile,
+  copyWorkProfileConformance,
   documentationAtlasSource,
   firstPartyProfileFilter,
   portableAtlasBundleSource,
