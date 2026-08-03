@@ -1360,8 +1360,12 @@ def selected_cli_command(
     selected_env.update(
         {
             "KUNGFU_SELECTED_FRONTEND_BUILD_ID": frontend_build_id,
+            "KUNGFU_DIR": str(executable.parent),
             "KUNGFU_PRODUCT_MANIFEST": str(root / image["productManifest"]),
             "KUNGFU_UPGRADE_MANIFEST": str(root / image["upgradeManifest"]),
+            "KF_BUNDLED_EXTENSION_ROOT": str(root / "extensions"),
+            "KUNGFU_AGENT_SESSION_EXECUTABLE": str(executable),
+            "KUNGFU_CONTROLLER_ENTRYPOINT": str(executable),
         }
     )
     if selection.get("releaseCutRoot"):
