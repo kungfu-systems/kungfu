@@ -891,6 +891,8 @@ def run_process(
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         text=True,
+        encoding="utf-8",
+        errors="replace",
     )
     stdout_lines: list[str] = []
     stderr_lines: list[str] = []
