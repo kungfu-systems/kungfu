@@ -55,6 +55,35 @@ def test_json_write_is_atomic_across_interleaved_writers(tmp_path, monkeypatch):
     assert list(target.parent.glob(f".{target.name}.*.tmp")) == []
 
 
+def test_windows_json_write_retries_transient_replace_lock(tmp_path, monkeypatch):
+    target = tmp_path / "runtime" / "state.json"
+    original_replace = peer_lifecycle.coordination_locks.os.replace
+    attempts = []
+    sleeps = []
+
+    def replace_after_transient_lock(source, destination):
+        attempts.append((source, destination))
+        if len(attempts) == 1:
+            raise PermissionError(5, "Access is denied", str(destination))
+        original_replace(source, destination)
+
+    monkeypatch.setattr(
+        peer_lifecycle.coordination_locks.platform, "system", lambda: "Windows"
+    )
+    monkeypatch.setattr(
+        peer_lifecycle.coordination_locks.os,
+        "replace",
+        replace_after_transient_lock,
+    )
+    monkeypatch.setattr(peer_lifecycle.coordination_locks.time, "sleep", sleeps.append)
+
+    peer_lifecycle._write_json(target, {"status": "running"})
+
+    assert peer_lifecycle._read_json(target) == {"status": "running"}
+    assert len(attempts) == 2
+    assert sleeps == [0.05]
+
+
 def test_plan_is_stable_and_never_uses_a_shell(tmp_path):
     first = peer_lifecycle.plan(_spec(), tmp_path)
     second = peer_lifecycle.plan(_spec(), tmp_path)

@@ -18,7 +18,7 @@ use std::process::Command;
 
 use shifu_core::json;
 
-use crate::{registrar, tools, util};
+use crate::{artifact_catalog, registrar, tools, util};
 
 pub fn run_pnpm(root: &Path, args: &[String]) -> ! {
     let fnm = tools::ensure_tool(&tools::FNM, root);
@@ -60,6 +60,13 @@ pub fn run_pnpm(root: &Path, args: &[String]) -> ! {
     let Some(plan) = plan else {
         util::exec_or_exit(cmd)
     };
+    // A successful distribution must publish a fresh, worktree-local
+    // registration pointer. Remove any prior pointer before the task starts so
+    // a registration failure cannot make release qualification reuse an older
+    // build from the same checkout.
+    if let Err(error) = artifact_catalog::begin_current_registration(root, &plan.product_id) {
+        eprintln!("shifu registrar: {error}");
+    }
     registrar::configure_child_release_cut(&mut cmd);
     match cmd.status() {
         Ok(status) => {

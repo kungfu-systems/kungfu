@@ -106,7 +106,10 @@ target_compile_definitions(kungfu_compile_contract INTERFACE
 target_compile_options(kungfu_compile_contract INTERFACE
   $<$<CXX_COMPILER_ID:AppleClang,Clang>:-Wall;-Werror=switch>
   $<$<CXX_COMPILER_ID:GNU>:-Wall;-Werror=switch;-ftemplate-backtrace-limit=0>
-  $<$<CXX_COMPILER_ID:MSVC>:/MP;/utf-8;/permissive-;/bigobj;/W3;/we4062;/Zc:__cplusplus;/EHsc;/Z7>)
+  # Ninja already owns translation-unit parallelism and emits /showIncludes;
+  # MSVC documents /MP as incompatible with /showIncludes. Keep one scheduler
+  # so the configured build budget remains explicit and auditable.
+  $<$<CXX_COMPILER_ID:MSVC>:/utf-8;/permissive-;/bigobj;/W3;/we4062;/Zc:__cplusplus;/EHsc;/Z7>)
 target_link_options(kungfu_compile_contract INTERFACE
   $<$<CXX_COMPILER_ID:MSVC>:/DEBUG;/OPT:REF;/OPT:ICF;/IGNORE:4199>)
 

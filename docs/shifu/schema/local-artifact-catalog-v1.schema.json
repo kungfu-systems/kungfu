@@ -40,6 +40,7 @@
         "relation": { "enum": ["same", "descendant", "ancestor", "diverged", "unknown"] },
         "automatic": { "type": "boolean" },
         "rollbackOnly": { "type": "boolean" },
+        "integrity": { "enum": ["recorded", "verified"] },
         "dirty": { "type": ["boolean", "null"] },
         "qualified": { "type": "boolean" },
         "integrated": { "type": "boolean" },
