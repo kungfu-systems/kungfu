@@ -108,10 +108,12 @@ import {
 } from './projects-view/index.js';
 import {
   type OpenedStarterProject,
+  type ProjectTourEpisode,
   type ProjectTourResult,
   ProjectTourView,
   StarterProjectHost,
   cleanupProjectTourTemporaryProject,
+  parseProjectTourEpisode,
   parseProjectTourSpeed,
   playbackQuitRequested,
   workReceiptHasRetainedSession,
@@ -940,6 +942,7 @@ function ProductHost({
   autoDemo = false,
   projectTourRoot,
   projectTourSpeed = 1,
+  projectTourEpisode = '1',
   emptyState = false,
   onAutoDemoSettled,
   onProjectTourSettled,
@@ -950,6 +953,7 @@ function ProductHost({
   autoDemo?: boolean;
   projectTourRoot?: string;
   projectTourSpeed?: number;
+  projectTourEpisode?: ProjectTourEpisode;
   emptyState?: boolean;
   onAutoDemoSettled?: (result: AgentWorkLabAutoplayResult) => void;
   onProjectTourSettled?: (result: ProjectTourResult) => void;
@@ -1888,6 +1892,7 @@ function ProductHost({
         columns={size.columns}
         rows={size.rows}
         playbackSpeed={projectTourSpeed}
+        episode={projectTourEpisode}
         onSettled={projectTourSettled}
       />
     );
@@ -2201,7 +2206,11 @@ function ProductHost({
           label="DEMO PLAYBACK"
           status={
             projectTourRoot
-              ? 'Project Work · failure recovery and settlement'
+              ? projectTourEpisode === 'all'
+                ? 'Project Tour · Episodes 1–2 · full story'
+                : projectTourEpisode === '1'
+                  ? 'Project Tour · Episode 1/2 · Work survives failure'
+                  : 'Project Tour · Episode 2/2 · recover, review, settle'
               : 'Agent Work Lab · Offline continuity'
           }
           hint="q Exit · Automatic playback · exits after the final result"
@@ -2290,6 +2299,20 @@ async function main(): Promise<void> {
       ? process.argv[projectTourSpeedIndex + 1]
       : undefined,
   );
+  const projectTourEpisodeIndex = process.argv.indexOf(
+    '--project-tour-episode',
+  );
+  if (
+    projectTourEpisodeIndex >= 0 &&
+    !process.argv[projectTourEpisodeIndex + 1]
+  ) {
+    throw new Error('--project-tour-episode requires 1, 2, or all');
+  }
+  const projectTourEpisode = parseProjectTourEpisode(
+    projectTourEpisodeIndex >= 0
+      ? process.argv[projectTourEpisodeIndex + 1]
+      : undefined,
+  );
   const lab = openTuiAgentWorkLab(Boolean(projectTourRoot));
   const playbackMode = autoDemo || Boolean(projectTourRoot);
   const emptyState = process.argv.includes('--empty-state');
@@ -2344,6 +2367,7 @@ async function main(): Promise<void> {
           autoDemo={autoDemo}
           projectTourRoot={projectTourRoot}
           projectTourSpeed={projectTourSpeed}
+          projectTourEpisode={projectTourEpisode}
           emptyState={emptyState}
           onAutoDemoSettled={(result) => {
             autoDemoResult = result;
