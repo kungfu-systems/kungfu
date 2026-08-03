@@ -1,13 +1,13 @@
 {
   "schema": "kungfu.product-documentation-pack/v1",
-  "atlasRoot": "sha256:60f471bd6fb2b570b5e8a4cbdcfbbd1be9569aacabf3b2bbf9fa8a8ced98365b",
-  "contextPackRoot": "sha256:92404ba935a7cde4b1fc2b97c354943749aab1b45e497a0bc5b523127342f9d1",
+  "atlasRoot": "sha256:2dcf9dc910ef32105d607d692b05bb55b79eb3082d8bebc0b951295d50390856",
+  "contextPackRoot": "sha256:a12a9898f958395e27ee6a62c494245f01f742ac54dc03a38572e79ef5dab4af",
   "visibility": "public",
   "compilerAuthority": "xinfa",
   "runtimeAuthority": "read-only",
   "materialSource": {
     "kind": "tracked-gzip",
-    "originCommit": "3d42b64effcde267cdd044920fb35973a73498d4",
-    "bundleRoot": ".xinfa/material-bundles/sha256/60f471bd6fb2b570b5e8a4cbdcfbbd1be9569aacabf3b2bbf9fa8a8ced98365b"
+    "originCommit": "0ae51646cd80d2091a577ad82e051dbd0c28e6d6",
+    "bundleRoot": ".xinfa/material-bundles/sha256/2dcf9dc910ef32105d607d692b05bb55b79eb3082d8bebc0b951295d50390856"
   }
 }
