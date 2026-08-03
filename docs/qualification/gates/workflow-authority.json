@@ -234,10 +234,10 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "diagnostic",
-          "definitionDigest": "sha256:23b52a3000961fce92fce68508453a36ebbaefdb4808d41d478d6d24486a4865",
+          "definitionDigest": "sha256:3c83aee139d47df4e5275310ed936b20db7ef169aa06973f5371d0d8198d87ab",
           "credentials": {"githubToken":"read","oidc":false,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
           "externalActions": [],
-          "steps": [{"index":1,"label":"name:Confirm exact JIT runner identity","definitionDigest":"sha256:115bfd9234736a1da607e61a0bb1be98a191d35f0da57ad4bb419a447069b9d2"},{"index":2,"label":"name:Hold until the declared cleanup trigger","definitionDigest":"sha256:ebc15529c500b6f0e216a2a2ede2ade66d1f685f9b824e67cf3a5382af07cf84"}]
+          "steps": [{"index":1,"label":"name:Confirm exact JIT runner identity","definitionDigest":"sha256:c698b5435dd0cd908946051f13616670d9639cf4f482f0c5d313d1b6242c25b9"},{"index":2,"label":"name:Hold until the declared cleanup trigger","definitionDigest":"sha256:ebc15529c500b6f0e216a2a2ede2ade66d1f685f9b824e67cf3a5382af07cf84"}]
         },
         {
           "id": "full",
