@@ -42,6 +42,7 @@ mod native_update;
 mod promote;
 mod registrar;
 mod self_update;
+mod source;
 mod tools;
 mod util;
 pub use invocation::{InvocationContext, InvocationMode};
@@ -84,7 +85,7 @@ fn should_auto_apply_cache(
                 | "docs"
                 | "proxy"
                 | "config"
-                | "clone"
+                | "source"
                 | "self-update"
                 | "self-version"
                 | "promote"
@@ -140,10 +141,8 @@ fn print_usage() {
     println!("  shifu docs ...             validate documentation submissions and canonical roots");
     println!("  shifu gate ...             inspect and plan registered project gates");
     println!("  shifu proxy | config ...   manage local mirror/cache config (build-local.env)");
-    println!("  shifu clone [path]         clone the kungfu repository (default: current dir;");
     println!(
-        "                             {}",
-        style::dim("SHIFU_CLONE_URL overrides the source)")
+        "  shifu source ...           plan, explicitly acquire, or verify an exact source cut"
     );
     println!("  shifu doctor               check the development environment (install pointers");
     println!(
@@ -199,9 +198,10 @@ pub fn main_and_exit(args: &[String], invocation: InvocationContext) -> ! {
     if first == Some("agent") {
         util::run_agent(&args[1..]);
     }
-    // Repo acquisition — the one verb that must work outside a checkout.
-    if first == Some("clone") {
-        clone_repo(&args[1..]);
+    // Exact source acquisition is rootless. Planning and verification are
+    // read-only; acquisition is gated by its own explicit --execute flag.
+    if first == Some("source") {
+        source::run(&args[1..]);
     }
 
     let is_version = matches!(first, Some("--version") | Some("-v") | Some("-V"));
@@ -310,58 +310,6 @@ pub fn main_and_exit(args: &[String], invocation: InvocationContext) -> ! {
     match first {
         Some(cmd) if L2_SUBCOMMANDS.contains(&cmd) => dispatch::delegate_l2(&root, args),
         _ => dispatch::run_pnpm(&root, args),
-    }
-}
-
-const DEFAULT_CLONE_URL: &str = "https://github.com/kungfu-systems/kungfu.git";
-
-/// `shifu clone [path]` — fetch the kungfu repository (default: into the
-/// current directory, which git requires to be empty). With this one verb an
-/// installed shifu is a self-sufficient bootstrap core: clone anywhere, and
-/// inside the checkout every later invocation delegates to the repo-pinned
-/// launcher, so new functionality always comes from the repo, never from
-/// re-installing the binary.
-fn clone_repo(args: &[String]) -> ! {
-    if args.len() > 1 {
-        util::die("usage: shifu clone [path]");
-    }
-    let dest = args.first().map(String::as_str).unwrap_or(".");
-    let url = env::var("SHIFU_CLONE_URL").unwrap_or_else(|_| DEFAULT_CLONE_URL.to_string());
-    let Some(git) = util::find_on_path("git") else {
-        util::die_code(
-            "git is required for clone — install it first (https://git-scm.com/downloads)",
-            127,
-        );
-    };
-    eprintln!(
-        "\u{1f94b} {}",
-        style::bold(&format!("cloning {url} into {dest}"))
-    );
-    let status = std::process::Command::new(git)
-        .arg("clone")
-        .arg(&url)
-        .arg(dest)
-        .status();
-    match status {
-        Ok(s) if s.success() => {
-            let cd_hint = if dest == "." {
-                String::new()
-            } else {
-                format!("cd {dest} && ")
-            };
-            eprintln!(
-                "\u{2705} {} next: {}",
-                style::green("done -"),
-                style::bold(&format!("{cd_hint}./shifu build")),
-            );
-            eprintln!(
-                "   {}",
-                style::dim("(or ./shifu doctor first to check your environment)")
-            );
-            exit(0);
-        }
-        Ok(s) => exit(s.code().unwrap_or(1)),
-        Err(e) => util::die(&format!("failed to run git clone: {e}")),
     }
 }
 
@@ -667,7 +615,7 @@ mod tests {
             "cache",
             "config",
             "proxy",
-            "clone",
+            "source",
             "self-update",
             "self-version",
             "promote",

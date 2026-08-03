@@ -213,17 +213,21 @@ per-platform special-casing) with one binary that:
   wins; `shifu --version` reports the crate version, the baked build commit,
   and whether the answering process is the installed or the repo launcher
   (plus the checkout's current branch for the repo role);
-- `shifu clone [path]` fetches the repository itself and `shifu doctor`
+- `shifu source plan/acquire/verify` plans and verifies exact repository,
+  commit, tree, optional tag, Portable Atlas Bundle root, and Release Passport
+  root coordinates. Planning and verification are read-only; acquisition
+  requires an explicit `--execute`, may use a declared mirror/cache/partial or
+  sparse transfer, and never executes repository code. `shifu doctor`
   checks the development environment (install pointers for the heavyweight
   prerequisites it deliberately does not manage); `shifu promote` installs
   the unique Git-descendant dev product from the user-global build stash
   (successful desktop builds register themselves there, so a cleaned worktree
   cannot strand its build) and `shifu builds` lists provenance and Git
-  relation for that stash — the jurisdiction
-  siblings of clone: clone acquires the repository, promote acquires the
-  product. Together with delegation
+  relation for that stash — the jurisdiction siblings of source acquisition:
+  source acquires an exact repository cut, promote acquires the product.
+  Together with delegation
   this makes an installed shifu a self-sufficient bootstrap core: install
-  once, clone anywhere, and every capability that can evolve lives in the
+  once, acquire an exact source cut anywhere, and every capability that can evolve lives in the
   repo — the binary never needs re-installing to pick up new launcher
   behavior. The loop is welded to nothing but the entrypoints themselves:
   installed binaries recognize a repo root by the presence of `shifu` and

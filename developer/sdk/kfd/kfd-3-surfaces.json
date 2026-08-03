@@ -2633,6 +2633,66 @@
     {"id":"shifu.agent.map","name":"shifu agent map --json","kind":"cli","participantProfile":"agent-or-developer","state":"declared","availability":"shipped","visibility":"public","participantFacing":true,"public":true,"sourcePath":"crates/shifu/agent/kfd3_api.registry.json","evidencePath":"crates/shifu/agent/kfd3_api.registry.json","artifactPath":"crates/shifu/agent/kfd3_api.registry.json","maturity":"stable","declaration":{"owner":"shifu","source":"scripts/buildchain-kfd-evidence.mjs","sourcePath":"crates/shifu/agent/kfd3_api.registry.json"}},
     {"id":"shifu.agent.schema","name":"shifu agent schema --json","kind":"cli","participantProfile":"agent-or-developer","state":"declared","availability":"shipped","visibility":"public","participantFacing":true,"public":true,"sourcePath":"crates/shifu/agent/kfd3_api.registry.json","evidencePath":"crates/shifu/agent/kfd3_api.registry.json","artifactPath":"crates/shifu/agent/kfd3_api.registry.json","maturity":"stable","declaration":{"owner":"shifu","source":"scripts/buildchain-kfd-evidence.mjs","sourcePath":"crates/shifu/agent/kfd3_api.registry.json"}},
     {"id":"shifu.agent.verify","name":"shifu agent verify --json","kind":"cli","participantProfile":"agent-or-developer","state":"declared","availability":"shipped","visibility":"public","participantFacing":true,"public":true,"sourcePath":"crates/shifu/agent/kfd3_api.registry.json","evidencePath":"crates/shifu/agent/kfd3_api.registry.json","artifactPath":"crates/shifu/agent/kfd3_api.registry.json","maturity":"stable","declaration":{"owner":"shifu","source":"scripts/buildchain-kfd-evidence.mjs","sourcePath":"crates/shifu/agent/kfd3_api.registry.json"}},
+    {
+      "id": "shifu.source.acquire",
+      "name": "shifu source acquire ... --execute --json",
+      "kind": "cli",
+      "participantProfile": "agent-or-developer",
+      "state": "declared",
+      "availability": "shipped",
+      "visibility": "public",
+      "participantFacing": true,
+      "public": true,
+      "sourcePath": "crates/shifu/agent/kfd3_api.registry.json",
+      "evidencePath": "crates/shifu/agent/kfd3_api.registry.json",
+      "artifactPath": "crates/shifu/agent/kfd3_api.registry.json",
+      "maturity": "stable",
+      "declaration": {
+        "owner": "shifu",
+        "source": "scripts/buildchain-kfd-evidence.mjs",
+        "sourcePath": "crates/shifu/agent/kfd3_api.registry.json"
+      }
+    },
+    {
+      "id": "shifu.source.plan",
+      "name": "shifu source plan ... --json",
+      "kind": "cli",
+      "participantProfile": "agent-or-developer",
+      "state": "declared",
+      "availability": "shipped",
+      "visibility": "public",
+      "participantFacing": true,
+      "public": true,
+      "sourcePath": "crates/shifu/agent/kfd3_api.registry.json",
+      "evidencePath": "crates/shifu/agent/kfd3_api.registry.json",
+      "artifactPath": "crates/shifu/agent/kfd3_api.registry.json",
+      "maturity": "stable",
+      "declaration": {
+        "owner": "shifu",
+        "source": "scripts/buildchain-kfd-evidence.mjs",
+        "sourcePath": "crates/shifu/agent/kfd3_api.registry.json"
+      }
+    },
+    {
+      "id": "shifu.source.verify",
+      "name": "shifu source verify ... --json",
+      "kind": "cli",
+      "participantProfile": "agent-or-developer",
+      "state": "declared",
+      "availability": "shipped",
+      "visibility": "public",
+      "participantFacing": true,
+      "public": true,
+      "sourcePath": "crates/shifu/agent/kfd3_api.registry.json",
+      "evidencePath": "crates/shifu/agent/kfd3_api.registry.json",
+      "artifactPath": "crates/shifu/agent/kfd3_api.registry.json",
+      "maturity": "stable",
+      "declaration": {
+        "owner": "shifu",
+        "source": "scripts/buildchain-kfd-evidence.mjs",
+        "sourcePath": "crates/shifu/agent/kfd3_api.registry.json"
+      }
+    },
     {"id":"xinfa.agent.brief","name":"xinfa agent brief","kind":"cli","participantProfile":"agent-or-developer","state":"declared","availability":"shipped","visibility":"public","participantFacing":true,"public":true,"sourcePath":"crates/xinfa/agent/kfd3_api.registry.json","evidencePath":"crates/xinfa/agent/kfd3_api.registry.json","artifactPath":"crates/xinfa/agent/kfd3_api.registry.json","maturity":"stable","declaration":{"owner":"xinfa","source":"scripts/buildchain-kfd-evidence.mjs","sourcePath":"crates/xinfa/agent/kfd3_api.registry.json"}},
     {"id":"xinfa.agent.capabilities","name":"xinfa agent capabilities --json","kind":"cli","participantProfile":"agent-or-developer","state":"declared","availability":"shipped","visibility":"public","participantFacing":true,"public":true,"sourcePath":"crates/xinfa/agent/kfd3_api.registry.json","evidencePath":"crates/xinfa/agent/kfd3_api.registry.json","artifactPath":"crates/xinfa/agent/kfd3_api.registry.json","maturity":"stable","declaration":{"owner":"xinfa","source":"scripts/buildchain-kfd-evidence.mjs","sourcePath":"crates/xinfa/agent/kfd3_api.registry.json"}},
     {"id":"xinfa.agent.map","name":"xinfa agent map --json","kind":"cli","participantProfile":"agent-or-developer","state":"declared","availability":"shipped","visibility":"public","participantFacing":true,"public":true,"sourcePath":"crates/xinfa/agent/kfd3_api.registry.json","evidencePath":"crates/xinfa/agent/kfd3_api.registry.json","artifactPath":"crates/xinfa/agent/kfd3_api.registry.json","maturity":"stable","declaration":{"owner":"xinfa","source":"scripts/buildchain-kfd-evidence.mjs","sourcePath":"crates/xinfa/agent/kfd3_api.registry.json"}},

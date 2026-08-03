@@ -286,6 +286,12 @@ def first_value_verify(ctx, receipt_file, as_json):
     is_flag=True,
     help="list exact packaged documentation surfaces",
 )
+@click.option(
+    "--bundle",
+    "show_bundle",
+    is_flag=True,
+    help="show the verified Portable Kungfu Atlas Bundle contract",
+)
 @click.option("--read", "read_path", help="read one exact repository-relative surface")
 @click.option(
     "--projection",
@@ -294,19 +300,31 @@ def first_value_verify(ctx, receipt_file, as_json):
 )
 @kfd3_api("kungfu.agent.docs")
 @agent_command_context
-def docs(ctx, as_json, atlas, verify_pack, show_catalog, read_path, projection):
+def docs(
+    ctx,
+    as_json,
+    atlas,
+    verify_pack,
+    show_catalog,
+    show_bundle,
+    read_path,
+    projection,
+):
     requested = sum(
-        bool(value) for value in (verify_pack, show_catalog, read_path, projection)
+        bool(value)
+        for value in (verify_pack, show_catalog, show_bundle, read_path, projection)
     )
     if requested > 1:
         raise click.UsageError(
-            "choose only one of --verify, --catalog, --read, or --projection"
+            "choose only one of --verify, --catalog, --bundle, --read, or --projection"
         )
     try:
         if verify_pack:
             payload = documentation_pack.verify(atlas)
         elif show_catalog:
             payload = documentation_pack.catalog(atlas)
+        elif show_bundle:
+            payload = documentation_pack.bundle(atlas)
         elif read_path:
             payload = documentation_pack.read(read_path, atlas)
         elif projection:
