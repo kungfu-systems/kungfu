@@ -6,7 +6,10 @@ const os = require('node:os');
 const path = require('node:path');
 const test = require('node:test');
 
-const { repairInvalidUvEnvironment } = require('../.gyp/run-conan');
+const {
+  conanMsvcVersionFromBanner,
+  repairInvalidUvEnvironment,
+} = require('../.gyp/run-conan');
 
 function fixture() {
   return fs.mkdtempSync(path.join(os.tmpdir(), 'kungfu-uv-environment-'));
@@ -47,4 +50,23 @@ test('refuses to replace an invalid uv environment symlink', () => {
     /refusing to replace invalid uv environment/,
   );
   assert.equal(fs.existsSync(target), true);
+});
+
+test('binds Conan dependency identity to the active MSVC toolset', () => {
+  assert.equal(
+    conanMsvcVersionFromBanner(
+      'Microsoft (R) C/C++ Optimizing Compiler Version 19.44.35207 for x64',
+    ),
+    '194',
+  );
+  assert.equal(
+    conanMsvcVersionFromBanner(
+      '用于 x64 的 Microsoft (R) C/C++ 优化编译器 19.51.36248 版',
+    ),
+    '195',
+  );
+  assert.throws(
+    () => conanMsvcVersionFromBanner('unexpected compiler banner'),
+    /cannot map the active MSVC banner/,
+  );
 });

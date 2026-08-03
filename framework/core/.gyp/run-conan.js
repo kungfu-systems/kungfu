@@ -152,12 +152,38 @@ function makeConanSettings(names) {
   return names.flatMap(makeConanSetting);
 }
 
+function conanMsvcVersionFromBanner(banner) {
+  // Keep the probe locale-independent: localized cl.exe banners preserve the
+  // numeric 19.xx toolset identity but may translate the word "Version".
+  const match = String(banner).match(/\b(19)\.(\d{2,})\.\d+(?:\.\d+)?\b/);
+  if (!match) {
+    throw new Error(
+      `cannot map the active MSVC banner to a Conan compiler.version: ${String(banner).trim() || '<empty>'}`,
+    );
+  }
+  return `${match[1]}${match[2][0]}`;
+}
+
+function activeMsvcConanSettings() {
+  const result = shell.runAndCollect('cl.exe', [], {
+    silent: true,
+    encoding: 'utf8',
+  });
+  const banner = `${result.stdout || ''}\n${result.stderr || ''}`;
+  const version = conanMsvcVersionFromBanner(banner);
+  return ['-s', 'compiler=msvc', '-s', `compiler.version=${version}`];
+}
+
 // KF-ADR-019f86da-4f90-79ce-888e-6fd6476f10f4: Conan package identity and the CMake language mode are one
 // contract. A dependency binary resolved as gnu17/17 must not share the cache
 // key of Kungfu's strict C++23 build merely because most current dependencies
 // happen to be header-only or C ABI.
 function platformConanSettings() {
-  return ['-s', 'compiler.cppstd=23'];
+  return [
+    '-s',
+    'compiler.cppstd=23',
+    ...(process.platform === 'win32' ? activeMsvcConanSettings() : []),
+  ];
 }
 
 /** @param {string} name */
@@ -241,6 +267,7 @@ module.exports.cli = cli;
 module.exports.main = main;
 module.exports.conanInstall = conanInstall;
 module.exports.conanBuild = conanBuild;
+module.exports.conanMsvcVersionFromBanner = conanMsvcVersionFromBanner;
 module.exports.repairInvalidUvEnvironment = repairInvalidUvEnvironment;
 
 if (require.main === module) main().catch(shell.utils.exitOnError);

@@ -186,6 +186,20 @@ test('only source-tree Python suites allow the hosted qualification interpreter'
   assert.equal(baseEnv.KUNGFU_ALLOW_FOREIGN_RUNTIME, undefined);
 });
 
+test('product distribution is explicitly non-interactive', () => {
+  const baseEnv = { CUSTOM_MARKER: 'preserved' };
+  const env = suiteEnvironment({ id: 'product-distribution' }, baseEnv);
+  assert.equal(env.CI, 'true');
+  assert.equal(env.CUSTOM_MARKER, 'preserved');
+  assert.equal(baseEnv.CI, undefined);
+
+  const inherited = suiteEnvironment(
+    { id: 'product-distribution' },
+    { CI: '1' },
+  );
+  assert.equal(inherited.CI, '1');
+});
+
 test('Windows suites invoke the repository Shifu shim through ComSpec', () => {
   const invocation = suiteInvocation(
     { command: ['shifu.cmd', 'exec', 'argument with spaces'] },
