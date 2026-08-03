@@ -1798,14 +1798,14 @@
       "visibility": "public",
       "participantFacing": true,
       "public": true,
-      "sourcePath": "developer/sdk/src/sdk.js",
+      "sourcePath": "developer/sdk/src/sdk-contract.js",
       "evidencePath": "framework/contract/kungfu-agent-first-canonical-policy.json",
       "artifactPath": "framework/contract/kungfu-agent-first-canonical-policy.json",
       "maturity": "stable",
       "declaration": {
         "owner": "kungfu",
         "source": "scripts/buildchain-kfd-evidence.mjs",
-        "sourcePath": "developer/sdk/src/sdk.js"
+        "sourcePath": "developer/sdk/src/sdk-contract.js"
       }
     },
     {
@@ -1818,14 +1818,14 @@
       "visibility": "public",
       "participantFacing": true,
       "public": true,
-      "sourcePath": "developer/sdk/src/sdk.js",
+      "sourcePath": "developer/sdk/src/sdk-contract.js",
       "evidencePath": "framework/contract/kungfu-contracts.registry.json",
       "artifactPath": "framework/contract/kungfu-contracts.registry.json",
       "maturity": "stable",
       "declaration": {
         "owner": "kungfu",
         "source": "scripts/buildchain-kfd-evidence.mjs",
-        "sourcePath": "developer/sdk/src/sdk.js"
+        "sourcePath": "developer/sdk/src/sdk-contract.js"
       }
     },
     {
@@ -1838,14 +1838,14 @@
       "visibility": "public",
       "participantFacing": true,
       "public": true,
-      "sourcePath": "developer/sdk/src/sdk.js",
+      "sourcePath": "developer/sdk/src/sdk-kfd.js",
       "evidencePath": "developer/sdk/kfd/upstream-aggregate.json",
       "artifactPath": "developer/sdk/kfd/upstream-aggregate.json",
       "maturity": "stable",
       "declaration": {
         "owner": "kungfu",
         "source": "scripts/buildchain-kfd-evidence.mjs",
-        "sourcePath": "developer/sdk/src/sdk.js"
+        "sourcePath": "developer/sdk/src/sdk-kfd.js"
       }
     },
     {
@@ -1858,14 +1858,14 @@
       "visibility": "public",
       "participantFacing": true,
       "public": true,
-      "sourcePath": "developer/sdk/src/sdk.js",
+      "sourcePath": "developer/sdk/src/sdk-contract.js",
       "evidencePath": "framework/kfx/kungfu-kfx.contract.json",
       "artifactPath": "framework/kfx/kungfu-kfx.contract.json",
       "maturity": "stable",
       "declaration": {
         "owner": "kungfu",
         "source": "scripts/buildchain-kfd-evidence.mjs",
-        "sourcePath": "developer/sdk/src/sdk.js"
+        "sourcePath": "developer/sdk/src/sdk-contract.js"
       }
     },
     {
@@ -1878,14 +1878,14 @@
       "visibility": "public",
       "participantFacing": true,
       "public": true,
-      "sourcePath": "developer/sdk/src/sdk.js",
-      "evidencePath": "developer/sdk/src/sdk.js",
-      "artifactPath": "developer/sdk/src/sdk.js",
+      "sourcePath": "developer/sdk/src/sdk-shared.js",
+      "evidencePath": "developer/sdk/src/sdk-shared.js",
+      "artifactPath": "developer/sdk/src/sdk-shared.js",
       "maturity": "stable",
       "declaration": {
         "owner": "kungfu",
         "source": "scripts/buildchain-kfd-evidence.mjs",
-        "sourcePath": "developer/sdk/src/sdk.js"
+        "sourcePath": "developer/sdk/src/sdk-shared.js"
       }
     },
     {
@@ -1898,14 +1898,14 @@
       "visibility": "public",
       "participantFacing": true,
       "public": true,
-      "sourcePath": "developer/sdk/src/sdk.js",
-      "evidencePath": "developer/sdk/src/sdk.js",
-      "artifactPath": "developer/sdk/src/sdk.js",
+      "sourcePath": "developer/sdk/src/sdk-shared.js",
+      "evidencePath": "developer/sdk/src/sdk-shared.js",
+      "artifactPath": "developer/sdk/src/sdk-shared.js",
       "maturity": "stable",
       "declaration": {
         "owner": "kungfu",
         "source": "scripts/buildchain-kfd-evidence.mjs",
-        "sourcePath": "developer/sdk/src/sdk.js"
+        "sourcePath": "developer/sdk/src/sdk-shared.js"
       }
     },
     {
@@ -1918,14 +1918,14 @@
       "visibility": "public",
       "participantFacing": true,
       "public": true,
-      "sourcePath": "developer/sdk/src/sdk.js",
-      "evidencePath": "developer/sdk/src/sdk.js",
-      "artifactPath": "developer/sdk/src/sdk.js",
+      "sourcePath": "developer/sdk/src/sdk-shared.js",
+      "evidencePath": "developer/sdk/src/sdk-shared.js",
+      "artifactPath": "developer/sdk/src/sdk-shared.js",
       "maturity": "stable",
       "declaration": {
         "owner": "kungfu",
         "source": "scripts/buildchain-kfd-evidence.mjs",
-        "sourcePath": "developer/sdk/src/sdk.js"
+        "sourcePath": "developer/sdk/src/sdk-shared.js"
       }
     },
     {

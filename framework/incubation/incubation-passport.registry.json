@@ -452,7 +452,7 @@
           "languageEvidence": {
             "cpp": [],
             "python": [
-              "extensions/work-control/work-control-actions/domain/work_control.py"
+              "extensions/work-control/work-control-actions/domain/work_control_runtime.py"
             ],
             "node": [],
             "rust": []
@@ -509,7 +509,7 @@
           "languageEvidence": {
             "cpp": [],
             "python": [
-              "extensions/work-control/work-control-actions/domain/work_control.py"
+              "extensions/work-control/work-control-actions/domain/work_control_runtime.py"
             ],
             "node": [],
             "rust": []
@@ -614,6 +614,8 @@
         "cpp": [],
         "python": [
           "extensions/work-control/work-control-actions/domain/work_control.py",
+          "extensions/work-control/work-control-actions/domain/work_control_runtime.py",
+          "extensions/work-control/work-control-actions/domain/work_control_assessment.py",
           "framework/core/src/python/kungfu/assignment_orchestration.py"
         ],
         "node": [],
@@ -634,7 +636,7 @@
       ],
       "anchor": {
         "type": "runtime",
-        "authorityRef": "extensions/work-control/work-control-actions/domain/work_control.py"
+        "authorityRef": "extensions/work-control/work-control-actions/domain/work_control_runtime.py"
       },
       "destinedAuthority": {
         "layer": "L5 native runtime",
@@ -645,6 +647,8 @@
         "state": "incubating",
         "implementationPaths": [
           "extensions/work-control/work-control-actions/domain/work_control.py",
+          "extensions/work-control/work-control-actions/domain/work_control_runtime.py",
+          "extensions/work-control/work-control-actions/domain/work_control_assessment.py",
           "extensions/work-control/contracts/world.json",
           "framework/action/action-canonical-json-v1.json",
           "framework/core/src/python/kungfu/canonical_json.py",
@@ -672,7 +676,7 @@
         "implementations": [
           {
             "language": "python",
-            "path": "extensions/work-control/work-control-actions/domain/work_control.py"
+            "path": "extensions/work-control/work-control-actions/domain/work_control_runtime.py"
           }
         ],
         "vectors": [

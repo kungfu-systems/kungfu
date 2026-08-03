@@ -5,7 +5,7 @@
   "manifestPath": "framework/maintainability/semantic-amplification.manifest.json",
   "manifestRoot": "sha256:b64ab1daecaec8560dd649af61b7e175adaf562df3aa8b94e3733ef499a308aa",
   "baselineRef": "dbfed9ca1785d147b26f4f06e7e6895ac7368fee",
-  "sourceRoot": "sha256:bb3d578c78f7949ced86f55f42076e438e8ede2fe4c7cfe7dee4e5263d60bb31",
+  "sourceRoot": "sha256:01df15185740100c3d5c1ef8f9c6379964f50c5af80536d550fa9d96d410c884",
   "roles": {
     "authority": "exactly one authority route per family; the route may name multiple co-owned source files",
     "allowedProjectionRoles": [
@@ -651,9 +651,9 @@
         },
         {
           "path": "product/scripts/dist.mjs",
-          "currentLines": 2449,
+          "currentLines": 1937,
           "baselineLines": 2514,
-          "currentRoot": "sha256:abfe349423e30aeb0638ca1a4c12588c1715926c672f521c4f1b71ea39ca0eb2",
+          "currentRoot": "sha256:033b7bda4f390dd9017918371b87bda1e8c75eed0d6ba24c721708e783c7fc77",
           "baselineRoot": "sha256:6cfd6c55e296163ab863fb1d79a4a51198ad12943274fc0858338bb651a108da",
           "changedSinceBaseline": true
         },
@@ -925,9 +925,9 @@
         },
         {
           "path": "framework/core/src/libkungfu/src/runtime/storage/service.cpp",
-          "currentLines": 2788,
+          "currentLines": 2404,
           "baselineLines": 2789,
-          "currentRoot": "sha256:7429e5b9cc71a9f3afb22d93aa0544dc429653c29b0f70137388fbde8ddf4eec",
+          "currentRoot": "sha256:82e868f060d5ba3dbe492478b3072de3a541da731a58b154c09ea031fadf3678",
           "baselineRoot": "sha256:01d1c02cf918c98ffef460d01cfc2c86a642d5a29ae4b066eda7a7c24d88651f",
           "changedSinceBaseline": true
         },
@@ -1947,7 +1947,7 @@
         "topology": "product-assembly",
         "kind": "line-count",
         "status": "remediated",
-        "metric": 2449,
+        "metric": 1937,
         "threshold": 2450,
         "finding": null
       },
