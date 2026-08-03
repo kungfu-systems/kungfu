@@ -33,7 +33,7 @@ import {
   runLibwasmArtifactSelfTest,
   runLibwasmExecutionQualification,
 } from './libwasm-artifact.mjs';
-import { normalizeCopiedSymlinks } from './portable-symlinks.mjs';
+import * as portable from './portable-symlinks.mjs';
 import { productReleaseChannelConfig } from './release-channel-trust.mjs';
 import {
   assertSupportedProductHost,
@@ -960,7 +960,7 @@ export function copyTree(source, target, options = {}) {
       );
     },
   });
-  normalizeCopiedSymlinks({ source, target });
+  portable.normalizeCopiedSymlinks({ source, target });
   return true;
 }
 
@@ -1117,21 +1117,6 @@ function writeCliLauncher(stageRoot, layout) {
   return layout.launcherName;
 }
 
-function resolveCliMetadataInterpreter(stageRoot, interpreter) {
-  const resolvedStageRoot = fs.realpathSync(stageRoot);
-  const resolvedInterpreter = fs.realpathSync(interpreter);
-  const relative = path.relative(resolvedStageRoot, resolvedInterpreter);
-  if (
-    !relative ||
-    path.isAbsolute(relative) ||
-    relative === '..' ||
-    relative.startsWith(`..${path.sep}`)
-  ) {
-    throw new Error('CLI auditable demo interpreter escapes its stage root');
-  }
-  return path.join(stageRoot, relative);
-}
-
 export function writeAuditableDemoBinaryMetadata(
   stageRoot,
   layout,
@@ -1140,14 +1125,8 @@ export function writeAuditableDemoBinaryMetadata(
 ) {
   const binary = path.join(stageRoot, layout.launcherName);
   const runtime = path.join(stageRoot, layout.runtimeEntrypoint);
-  // POSIX standalone Python trees expose bin/python3 as a relative symlink to
-  // the versioned interpreter. The auditable transport contract deliberately
-  // rejects symlinks in executableFiles, so bind the metadata to the packaged
-  // regular file that the launcher ultimately executes.
-  const python = resolveCliMetadataInterpreter(
-    stageRoot,
-    path.join(stageRoot, layout.pythonEntrypoint),
-  );
+  const pythonPath = path.join(stageRoot, layout.pythonEntrypoint);
+  const python = portable.resolveInternalPath(stageRoot, pythonPath);
   const metadata = {
     contract: 'kungfu.declarative-demo-binary/v1',
     platformId: platform,

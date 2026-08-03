@@ -317,7 +317,7 @@ test('CLI product rejects an interpreter symlink outside the staged artifact', (
 
   assert.throws(
     () => writeAuditableDemoBinaryMetadata(root, layout, 'linux-x64', root),
-    /CLI auditable demo interpreter escapes its stage root/u,
+    /product path escapes its root/u,
   );
 });
 
