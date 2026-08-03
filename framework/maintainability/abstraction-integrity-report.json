@@ -5,13 +5,13 @@
   "manifestPath": "framework/maintainability/abstraction-integrity.manifest.json",
   "measurement": {
     "aggregates": {
-      "kungfu-cli": 20462,
+      "kungfu-cli": 20536,
       "kungfu-flat-root": 36505,
       "kungfu-runtime-family": 6246
     },
     "counts": {
-      "productionFiles": 253,
-      "productionPhysicalLines": 86730,
+      "productionFiles": 254,
+      "productionPhysicalLines": 86898,
       "testFiles": 106,
       "testPhysicalLines": 47370
     },
@@ -43,7 +43,7 @@
       },
       {
         "path": "framework/core/src/python/kungfu/cli/commands/agent.py",
-        "physicalLines": 1597
+        "physicalLines": 1560
       },
       {
         "path": "framework/core/src/python/kungfu/cli/commands/assignment.py",
@@ -150,9 +150,9 @@
         "responsibilities": 39
       },
       {
-        "contentRoot": "sha256:84c95e12e317bcb5b74f335b905a6677471a8778d4f85830417be7de6316354b",
+        "contentRoot": "sha256:93f2968c2e614c42ec025c3b0e4c74ca92080ae59fb96e8fd7ca6a328348adf2",
         "path": "framework/core/src/python/kungfu/cli/commands/agent.py",
-        "physicalLines": 1597,
+        "physicalLines": 1560,
         "responsibilities": 61
       },
       {
@@ -350,7 +350,7 @@
       }
     ],
     "schema": "kungfu.python-structure-measurement/v1",
-    "sourceRoot": "sha256:27a3eb145cc9260e766f976ce7c14dee232ad88a41337fe9bef02d294592ba8c",
+    "sourceRoot": "sha256:10198888b662e58f8c8bc6acc516977cffc01df10a62ebdaa23d5d194c2044db",
     "sourceRoots": {
       "production": [
         "framework/core/src/python"
@@ -533,6 +533,24 @@
       "paths": [
         "scripts/durable-history-qualification.mjs"
       ]
+    },
+    {
+      "owner": "shifu/native-source-acquisition",
+      "paths": [
+        "crates/shifu/src/source.rs"
+      ]
+    },
+    {
+      "owner": "core/python-agent-documentation-cli",
+      "paths": [
+        "framework/core/src/python/kungfu/cli/commands/agent_docs.py"
+      ]
+    },
+    {
+      "owner": "shifu/portable-atlas-bundle",
+      "paths": [
+        "scripts/portable-atlas-bundle.mjs"
+      ]
     }
   ],
   "publicImports": [
@@ -544,9 +562,9 @@
     "kungfu.runtime_broker.NativeReadinessAuthority",
     "kungfu.runtime_service.ProcessRuntimeHost"
   ],
-  "reportRoot": "sha256:d776c2351fd1abe446b2308fd48d652ef3d1a05b8e4631b9e2fa9986d79aeae3",
+  "reportRoot": "sha256:7261e8acfe5c46ba0d2a6192f06c9b50256665906e0bbb1fa7c893b2b0d5f28c",
   "schema": "kungfu.abstraction-integrity-report/v1",
-  "sourceRoot": "sha256:27a3eb145cc9260e766f976ce7c14dee232ad88a41337fe9bef02d294592ba8c",
+  "sourceRoot": "sha256:10198888b662e58f8c8bc6acc516977cffc01df10a62ebdaa23d5d194c2044db",
   "summary": {
     "blockingIssues": 0
   },

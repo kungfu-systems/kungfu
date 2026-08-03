@@ -1,0 +1,57 @@
+{
+  "schema": "shifu.source-contract/v1",
+  "authority": "shifu-native-launcher",
+  "operations": {
+    "plan": {
+      "mutationClass": "read",
+      "executeGate": false,
+      "receipt": "shifu.source-plan/v1"
+    },
+    "acquire": {
+      "mutationClass": "explicit-write",
+      "executeGate": "--execute",
+      "receipt": "shifu.source-receipt/v1"
+    },
+    "verify": {
+      "mutationClass": "read",
+      "executeGate": false,
+      "receipt": "shifu.source-receipt/v1"
+    }
+  },
+  "identity": [
+    "repository",
+    "commit",
+    "tree",
+    "tag",
+    "bundleRoot",
+    "releasePassportRoot"
+  ],
+  "transfer": [
+    "transportLocator",
+    "cache",
+    "resume",
+    "partial",
+    "sparse"
+  ],
+  "destinationPolicy": {
+    "default": "reject-existing",
+    "resume": "existing matching Git checkout only"
+  },
+  "executionTransfer": {
+    "afterQualification": "./shifu",
+    "autoBuild": false,
+    "autoEdit": false,
+    "autoRunRepositoryCode": false,
+    "autoClean": false
+  },
+  "buildchainCompatibility": {
+    "boundary": "exact repository commit and tree plus optional release roots",
+    "claim": "compatible identity contract, not protected-checkout authority"
+  },
+  "nonClaims": [
+    "acquisition-is-not-build",
+    "acquisition-is-not-release-qualification",
+    "mirror-is-not-repository-identity",
+    "installed-shifu-does-not-own-repository-execution"
+  ]
+}

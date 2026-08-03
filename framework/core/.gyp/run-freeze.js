@@ -213,6 +213,65 @@ function documentationAtlasSource(repository = path.resolve(CORE, '..', '..')) {
   return root;
 }
 
+/** @param {unknown} value @returns {unknown} */
+function canonicalJson(value) {
+  if (Array.isArray(value)) return value.map(canonicalJson);
+  if (value && typeof value === 'object') {
+    const record = /** @type {Record<string, unknown>} */ (value);
+    return Object.fromEntries(
+      Object.keys(record)
+        .sort()
+        .map((key) => [key, canonicalJson(record[key])]),
+    );
+  }
+  return value;
+}
+
+/** @param {Buffer|string} value */
+function sha256Root(value) {
+  return `sha256:${crypto.createHash('sha256').update(value).digest('hex')}`;
+}
+
+function portableAtlasBundleSource(
+  repository = path.resolve(CORE, '..', '..'),
+) {
+  const manifestPath = path.join(
+    repository,
+    '.xinfa',
+    'product-atlas-bundle.json',
+  );
+  const classificationPath = path.join(
+    repository,
+    '.xinfa',
+    'portable-atlas-classification.json.gz',
+  );
+  const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+  const { bundleRoot: declaredRoot, ...core } = manifest;
+  const computedRoot = sha256Root(`${JSON.stringify(canonicalJson(core))}\n`);
+  const classificationCompressed = fs.readFileSync(classificationPath);
+  const classificationBytes = zlib.gunzipSync(classificationCompressed);
+  const classification = JSON.parse(classificationBytes.toString('utf8'));
+  if (
+    manifest.schema !== 'kungfu.portable-atlas-bundle/v1' ||
+    declaredRoot !== computedRoot ||
+    manifest.classification?.classificationRoot !==
+      sha256Root(classificationBytes) ||
+    manifest.classification?.material?.compressedBytes !==
+      classificationCompressed.length ||
+    manifest.classification?.material?.uncompressedBytes !==
+      classificationBytes.length ||
+    classification.unknown !== 0 ||
+    classification.silentOmissions !== 0 ||
+    manifest.routes?.incompleteRoutes !== 0 ||
+    manifest.budgets?.passed !== true
+  ) {
+    throw new Error(
+      '[freeze] Portable Kungfu Atlas Bundle verification failed',
+    );
+  }
+  return { manifestPath, classificationPath, manifest };
+}
+
 /**
  * Keep generated interpreter caches out of installed first-party Profiles.
  * Workspace node_modules are transient build-tree state. Declared Suite
@@ -841,10 +900,23 @@ function assembleTree(bt) {
     path.join(CORE, '..', 'exit', 'kungfu-exit-bundle.contract.json'),
     path.join(layout.sitePackages, 'kungfu', 'exit_bundle.contract.json'),
   );
-  fs.cpSync(
-    documentationAtlasSource(),
-    path.join(layout.sitePackages, 'kungfu', 'agent', 'documentation'),
-    { recursive: true },
+  const documentationDestination = path.join(
+    layout.sitePackages,
+    'kungfu',
+    'agent',
+    'documentation',
+  );
+  fs.cpSync(documentationAtlasSource(), documentationDestination, {
+    recursive: true,
+  });
+  const portableBundle = portableAtlasBundleSource();
+  fs.copyFileSync(
+    portableBundle.manifestPath,
+    path.join(documentationDestination, 'bundle.json'),
+  );
+  fs.copyFileSync(
+    portableBundle.classificationPath,
+    path.join(documentationDestination, 'classification.json.gz'),
   );
   // Assignment orchestration is an installed-product surface. Its Work
   // Control Profile must therefore travel with the runtime instead of being
@@ -1030,5 +1102,6 @@ module.exports = {
   copyFirstPartyProfile,
   documentationAtlasSource,
   firstPartyProfileFilter,
+  portableAtlasBundleSource,
   requireAssemblySelector,
 };

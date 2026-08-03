@@ -17,15 +17,15 @@
     "mode": "release-passport-target-sha",
     "immutableFullShaRequired": true,
     "mutableRefAllowed": false,
-    "xinfaSourceRoot": "sha256:04a70aa659e48eaa4510e3f075bb17d5bd79a749a7c407aaeb6d047c10c73fe1"
+    "xinfaSourceRoot": "sha256:c7aa4d22a0774e329a83f79541926fa75e204bf16e0af775d014dc108a0f7d00"
   },
   "documentationRoots": {
-    "atlasRoot": "sha256:e2efdfcbd23eabb0c30eabc1e3e19e3e019329a1ac45cff42ccb6367e4564e3c",
-    "packRoot": "sha256:83398faa776717f1538ac184fffa2ba4895a44c3d2565709be2bd70ce732317d",
-    "cutRoot": "sha256:606df31e053ba862830c698acd43ad5b9560fa02aca9136d1bcb1c217e528c3c",
-    "claimGraphRoot": "sha256:535781e3b62b448d3dab5e77827ca0431acb3bb755be96ff3b1a33647d09cda2",
-    "manifestRoot": "sha256:711745308d964e07af7bfcf9be5d8fd472972251ae68ef8372fa3f86a284cbad",
-    "compileReceiptRoot": "sha256:13f7e0765bb8b0677b3a6c844665d8484d1c3e602fa05762f02f98a1e1046084",
+    "atlasRoot": "sha256:57abaf4985767afd17dadb0fe57a559af9128abd0cf5790a17ccde0085f4d488",
+    "packRoot": "sha256:3287addd01dee88dee504d670425d0eee368b56ff579678899b21de27d0b57e5",
+    "cutRoot": "sha256:5f38d619702a78b7fabab94c13e5fa41f5cf60a081bfe6ea14aabe081640e6c8",
+    "claimGraphRoot": "sha256:783aaaac54bbba91cc4df8c824d4a18f24cfa23c648af6b4979cfa2d651253ea",
+    "manifestRoot": "sha256:831bdb5fb3dbec8005c9203866aed37c87eca3b0ab0b68206fdd6d7ed0d22b37",
+    "compileReceiptRoot": "sha256:632d7d22e6064673092aec73897d30449d79173ef096fde70da33be4e1b5299d",
     "qualificationRoot": "sha256:f206b36cc568a6d4cedf4391afd5af9ecad32efce8552171ebefd795a461406e"
   },
   "responsibility": {
@@ -50,10 +50,10 @@
       ],
       "description": "Canonical public Xinfa Documentation Atlas",
       "weldRationale": "Buildchain attests exact bytes while Xinfa remains the documentation compiler authority.",
-      "sourcePath": ".xinfa/baselines/sha256/e2efdfcbd23eabb0c30eabc1e3e19e3e019329a1ac45cff42ccb6367e4564e3c/atlas.json",
+      "sourcePath": ".xinfa/baselines/sha256/57abaf4985767afd17dadb0fe57a559af9128abd0cf5790a17ccde0085f4d488/atlas.json",
       "artifactPath": "agent/documentation/atlas.json",
-      "sourceSha256": "c9fa41fde08b9ee5b05267cebdbb2798736dadc81add64f294549cb616a5e192",
-      "expectedSha256": "c9fa41fde08b9ee5b05267cebdbb2798736dadc81add64f294549cb616a5e192",
+      "sourceSha256": "3392aed36c073d11f5e6ea9a0140b64dfe0caeede4b316d7255404aaead6f981",
+      "expectedSha256": "3392aed36c073d11f5e6ea9a0140b64dfe0caeede4b316d7255404aaead6f981",
       "byteForByte": true,
       "impactProjection": {
         "breaking": "root mismatch or missing packaged bytes rejects the old passport",
@@ -71,10 +71,10 @@
       ],
       "description": "Compatibility Context Pack embedded by the canonical Atlas",
       "weldRationale": "Buildchain attests exact bytes while Xinfa remains the documentation compiler authority.",
-      "sourcePath": ".xinfa/baselines/sha256/e2efdfcbd23eabb0c30eabc1e3e19e3e019329a1ac45cff42ccb6367e4564e3c/compatibility/context-pack-v1/pack.json",
+      "sourcePath": ".xinfa/baselines/sha256/57abaf4985767afd17dadb0fe57a559af9128abd0cf5790a17ccde0085f4d488/compatibility/context-pack-v1/pack.json",
       "artifactPath": "agent/documentation/compatibility/context-pack-v1/pack.json",
-      "sourceSha256": "207593a25cb9a4ac6c0b7859e829b81ca803cc9eb1ed1148b231f66bdfabbb91",
-      "expectedSha256": "207593a25cb9a4ac6c0b7859e829b81ca803cc9eb1ed1148b231f66bdfabbb91",
+      "sourceSha256": "3b7ddb3db0c67b4d84c33fa790d7a2e6961a6407e496c22dbad667b78eec21b7",
+      "expectedSha256": "3b7ddb3db0c67b4d84c33fa790d7a2e6961a6407e496c22dbad667b78eec21b7",
       "byteForByte": true,
       "impactProjection": {
         "breaking": "root mismatch or missing packaged bytes rejects the old passport",
@@ -92,10 +92,10 @@
       ],
       "description": "Manifest binding every packaged Atlas artifact byte",
       "weldRationale": "Buildchain attests exact bytes while Xinfa remains the documentation compiler authority.",
-      "sourcePath": ".xinfa/baselines/sha256/e2efdfcbd23eabb0c30eabc1e3e19e3e019329a1ac45cff42ccb6367e4564e3c/manifest.json",
+      "sourcePath": ".xinfa/baselines/sha256/57abaf4985767afd17dadb0fe57a559af9128abd0cf5790a17ccde0085f4d488/manifest.json",
       "artifactPath": "agent/documentation/manifest.json",
-      "sourceSha256": "b945b18de0fa314f15a9dca3d4f7ad0e1ede49ac9a52bd964622ea8d06583812",
-      "expectedSha256": "b945b18de0fa314f15a9dca3d4f7ad0e1ede49ac9a52bd964622ea8d06583812",
+      "sourceSha256": "6129256aad6c384c78e4b52c714ed86135448f0909036d1ea76111a370d83969",
+      "expectedSha256": "6129256aad6c384c78e4b52c714ed86135448f0909036d1ea76111a370d83969",
       "byteForByte": true,
       "impactProjection": {
         "breaking": "root mismatch or missing packaged bytes rejects the old passport",
@@ -115,8 +115,8 @@
       "weldRationale": "Buildchain attests exact bytes while Xinfa remains the documentation compiler authority.",
       "sourcePath": ".xinfa/product-documentation-pack.json",
       "artifactPath": "agent/documentation-selector.json",
-      "sourceSha256": "b9a3540f9d0f7a38aca8d3b86853cc0cdeb982428dce7e64ab38bec6023e0530",
-      "expectedSha256": "b9a3540f9d0f7a38aca8d3b86853cc0cdeb982428dce7e64ab38bec6023e0530",
+      "sourceSha256": "e54487c677d2653482c6fe5250e4333e21c8ffdea84c15ae2b2bccb77af75599",
+      "expectedSha256": "e54487c677d2653482c6fe5250e4333e21c8ffdea84c15ae2b2bccb77af75599",
       "byteForByte": true,
       "impactProjection": {
         "breaking": "root mismatch or missing packaged bytes rejects the old passport",
@@ -129,7 +129,7 @@
   "evidence": [
     {
       "kind": "xinfa-atlas-receipt",
-      "path": ".xinfa/baselines/sha256/e2efdfcbd23eabb0c30eabc1e3e19e3e019329a1ac45cff42ccb6367e4564e3c/receipt.json"
+      "path": ".xinfa/baselines/sha256/57abaf4985767afd17dadb0fe57a559af9128abd0cf5790a17ccde0085f4d488/receipt.json"
     },
     {
       "kind": "product-pack-selector",
