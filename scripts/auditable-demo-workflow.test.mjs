@@ -58,11 +58,11 @@ test('one exact Buildchain workflow owns every declared demo', () => {
 test('the build fails the real transported binary before either upload path', () => {
   assert.equal(
     build.uses,
-    'kungfu-systems/buildchain/.github/workflows/.build.yml@07a276ecad9bd01d16411ef58fbbde809699247a',
+    'kungfu-systems/buildchain/.github/workflows/.build.yml@71ca85df9d19ae47f51af45d836125dc78289750',
   );
   assert.equal(
     demo.uses,
-    'kungfu-systems/buildchain/.github/workflows/.declarative-auditable-demo.yml@07a276ecad9bd01d16411ef58fbbde809699247a',
+    'kungfu-systems/buildchain/.github/workflows/.declarative-auditable-demo.yml@71ca85df9d19ae47f51af45d836125dc78289750',
   );
   assert.equal(
     build.with['pre-upload-transport-smoke-scenario-path'],
