@@ -703,6 +703,8 @@ export function sourceAcceptancePlan(files, evidenceBaseCommit = '') {
           : ['framework/production-graph/check.test.mjs']),
         'scripts/check-health-diagnostics-contract.test.mjs',
         'scripts/shifu-cache-runtime.test.mjs',
+        'scripts/shifu-conan-hit-evidence.test.mjs',
+        'scripts/shifu-conan-legacy.test.mjs',
         'scripts/shifu-conan-publish.test.mjs',
         'scripts/shifu-uv-cache-adapter.test.mjs',
         'scripts/shifu-gate-runtime.test.mjs',

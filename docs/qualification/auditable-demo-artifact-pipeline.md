@@ -26,7 +26,7 @@ The single source of scenario intent is
 | Demo | Exact installed-binary argv | Bound |
 | --- | --- | --- |
 | Agent Work Lab autoplay | `kungfu agent-work-lab autoplay` | 90 seconds |
-| Full Guided Project Tour | `kungfu agent-work-lab project-tour --episode all` | 180 seconds |
+| Full Guided Project Tour | `kungfu agent-work-lab project-tour --episode all --speed 4` | 180 seconds |
 
 Both playback commands are self-driving, deterministic under the declared
 isolated environment, credential-free, and bounded by the `long-form` duration
@@ -87,7 +87,7 @@ For a multi-demo scenario, Buildchain owns one README block per demo:
 
 ```text
 kungfu:auditable-demo:agent-work-lab-autoplay
-kungfu:auditable-demo:project-tour-08x
+kungfu:auditable-demo:project-tour
 ```
 
 Qualified media is copied under the content-addressed root
