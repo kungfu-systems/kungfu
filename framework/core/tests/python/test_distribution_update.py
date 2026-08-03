@@ -1002,6 +1002,10 @@ def test_apply_installs_runtime_and_selects_versioned_cli_on_next_command(
         {
             "KUNGFU_INSTALL_SOURCE": "archive",
             "KF_CONFIG_HOME": str(tmp_path / "config"),
+            "KUNGFU_DIR": str(tmp_path / "stale-runtime"),
+            "KF_BUNDLED_EXTENSION_ROOT": str(tmp_path / "stale-extensions"),
+            "KUNGFU_AGENT_SESSION_EXECUTABLE": str(tmp_path / "stale-agent"),
+            "KUNGFU_CONTROLLER_ENTRYPOINT": str(tmp_path / "stale-controller"),
         },
         current_executable=tmp_path / "original" / "kungfu",
     )
@@ -1011,6 +1015,14 @@ def test_apply_installs_runtime_and_selects_versioned_cli_on_next_command(
     assert (
         selected_env["KUNGFU_SELECTED_FRONTEND_BUILD_ID"] == manifest["frontendBuildId"]
     )
+    selected_executable = Path(command[0])
+    selected_root = Path(frontend["productRoot"])
+    assert Path(selected_env["KUNGFU_DIR"]) == selected_executable.parent
+    assert (
+        Path(selected_env["KF_BUNDLED_EXTENSION_ROOT"]) == selected_root / "extensions"
+    )
+    assert Path(selected_env["KUNGFU_AGENT_SESSION_EXECUTABLE"]) == selected_executable
+    assert Path(selected_env["KUNGFU_CONTROLLER_ENTRYPOINT"]) == selected_executable
     assert (
         distribution_update.selected_cli_command(
             selected_env,
