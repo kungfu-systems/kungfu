@@ -119,10 +119,10 @@ test('README first-use paths converge on Agent-first onboarding', () => {
     '<!-- kungfu:auditable-demo:agent-work-lab-autoplay:end -->',
   );
   const tourStart = readme.indexOf(
-    '<!-- kungfu:auditable-demo:project-tour-08x:start -->',
+    '<!-- kungfu:auditable-demo:project-tour:start -->',
   );
   const demoEnd = readme.indexOf(
-    '<!-- kungfu:auditable-demo:project-tour-08x:end -->',
+    '<!-- kungfu:auditable-demo:project-tour:end -->',
   );
   const tuiEntry = readme.indexOf('\nkungfu\n', demoEnd);
   const firstUseEnd = readme.indexOf('\n## What Kungfu preserves', demoEnd);

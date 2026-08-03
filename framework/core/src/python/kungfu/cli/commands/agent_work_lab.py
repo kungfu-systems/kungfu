@@ -201,7 +201,7 @@ def autoplay(ctx):
 )
 @click.option(
     "--speed",
-    type=click.FloatRange(min=0.25, max=2.0),
+    type=click.FloatRange(min=0.25, max=4.0),
     default=1.0,
     show_default=True,
     help="playback speed multiplier; 0.5 doubles the reading time",
