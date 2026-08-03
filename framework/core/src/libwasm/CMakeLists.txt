@@ -125,7 +125,8 @@ target_include_directories(kungfu_wasm_host PRIVATE include ../libkungfu/include
 target_compile_options(kungfu_wasm_host PRIVATE
   $<$<CONFIG:Release>:${COMPILER_OPTIMIZE_ON_OPTIONS}>)
 target_link_libraries(kungfu_wasm_host PRIVATE
-  ${LIBKUNGFU_NAME} ${KUNGFU_PUBLIC_ABI_TARGET} kungfu_compile_contract ${CMAKE_DL_LIBS})
+  ${LIBKUNGFU_NAME} ${KUNGFU_PUBLIC_ABI_TARGET} kungfu_compile_contract
+  nlohmann_json::nlohmann_json ${CMAKE_DL_LIBS})
 
 add_custom_target(kungfu_libwasm_self_test
   COMMAND ${CMAKE_COMMAND} -E make_directory "$<TARGET_FILE_DIR:kungfu_wasm_host>/libwasm"
