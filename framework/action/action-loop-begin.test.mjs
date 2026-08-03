@@ -16,6 +16,7 @@ import {
   createExplicitCompatibilityAdapters,
   resumeActionLoop,
 } from './action-loop-begin.mjs';
+import { rootStepReceipt } from './action-loop.mjs';
 
 const DIR = path.dirname(fileURLToPath(import.meta.url));
 const contract = JSON.parse(
@@ -43,16 +44,16 @@ function root(value) {
 }
 
 function stepReceipt(request, stepId, source) {
-  return {
+  return rootStepReceipt({
     schema: contract.stepReceipt.schema,
     loopId: request.loopId,
     stepId,
     idempotencyKey: request.idempotencyKey,
-    receiptRoot: root(`${source}:${stepId}`),
     status: 'accepted',
     preconditionRoots: [request.loopRoot],
     resultRoots: [root(`${source}:${stepId}:result`)],
-  };
+    authorityReceiptRoot: root(`${source}:${stepId}`),
+  });
 }
 
 function request(overrides = {}) {
@@ -435,8 +436,8 @@ test(
           env: {
             ...process.env,
             PYTHONPATH: [
-              path.join(DIR, '..', 'core', 'build', 'python'),
               path.join(DIR, '..', 'core', 'src', 'python'),
+              path.join(DIR, '..', 'core', 'build', 'python'),
               process.env.PYTHONPATH,
             ]
               .filter(Boolean)

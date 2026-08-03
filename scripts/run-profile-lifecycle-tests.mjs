@@ -259,6 +259,11 @@ function qualifyCommandContract() {
     return `sha256:${crypto.createHash('sha256').update(canonical(value)).digest('hex')}`;
   }
 
+  const shifu = path.join(
+    root,
+    process.platform === 'win32' ? 'shifu.cmd' : 'shifu',
+  );
+  run(shifu, ['build:core']);
   if (!fs.existsSync(wheelDir))
     fail('built wheel directory is unavailable; run ./shifu build:core');
   const wheels = fs
@@ -306,6 +311,103 @@ function qualifyCommandContract() {
   const manager = JSON.parse(
     run(binary, ['--home', home, 'profile', 'manager', '--json']),
   );
+  const workControlSource = path.join(root, 'extensions', 'work-control');
+  const workValidation = JSON.parse(
+    run(binary, [
+      '--home',
+      home,
+      'profile',
+      'validate',
+      workControlSource,
+      '--json',
+    ]),
+  );
+  const workQualification = JSON.parse(
+    run(binary, [
+      '--home',
+      home,
+      'profile',
+      'qualify',
+      workControlSource,
+      '--json',
+    ]),
+  );
+  if (workValidation.workConformance?.verdict !== 'compatible')
+    fail('installed wheel cannot validate the Work conformance declaration');
+  if (
+    workValidation.workConformance.conformanceRoot !==
+    workQualification.workConformance?.conformanceRoot
+  )
+    fail(
+      'installed validate and qualify project different Work conformance roots',
+    );
+  const lifecycleReceipts = [];
+  for (const [index, action] of ['install', 'qualify', 'activate'].entries()) {
+    const planPath = path.join(environment, `${index + 1}-${action}-plan.json`);
+    const answerPath = path.join(
+      environment,
+      `${index + 1}-${action}-answer.json`,
+    );
+    const planArgs = [
+      '--home',
+      home,
+      'profile',
+      'plan',
+      action,
+      workControlSource,
+    ];
+    if (action === 'activate') planArgs.push('--grant', 'storage');
+    planArgs.push('--out', planPath, '--json');
+    const agentPlan = JSON.parse(run(binary, planArgs));
+    const answer = JSON.parse(
+      run(binary, [
+        '--home',
+        home,
+        'profile',
+        'decide',
+        planPath,
+        '--choice',
+        'approve',
+        '--authorized-by',
+        'profile-lifecycle-command-contract-gate',
+        '--out',
+        answerPath,
+        '--json',
+      ]),
+    );
+    const receipt = JSON.parse(
+      run(binary, [
+        '--home',
+        home,
+        'profile',
+        'apply',
+        planPath,
+        '--authorization-file',
+        answerPath,
+        '--json',
+      ]),
+    );
+    if (!agentPlan.corePlan?.plan_id || !answer.authorizationId)
+      fail(`installed ${action} lifecycle artifacts are not content-bound`);
+    lifecycleReceipts.push({
+      action,
+      planId: agentPlan.corePlan.plan_id,
+      authorizationId: answer.authorizationId,
+      receiptRoot: receipt.receipt_root,
+    });
+  }
+  const activated = JSON.parse(
+    run(binary, [
+      '--home',
+      home,
+      'profile',
+      'inspect',
+      'kungfu.work-control',
+      '--json',
+    ]),
+  );
+  if (activated.state !== 'activated')
+    fail('installed public lifecycle did not activate the Work Profile');
   const contract = capabilities.lifecycleCommandContract;
   if (contract?.schema !== 'kungfu.profile-lifecycle-command-contract/v1')
     fail('installed capabilities omit the lifecycle command contract');
@@ -348,6 +450,9 @@ function qualifyCommandContract() {
         mutationCount: contract.commands.filter((row) => row.mutation === true)
           .length,
         home,
+        workConformanceRoot: workValidation.workConformance.conformanceRoot,
+        lifecycleReceipts,
+        activatedProfileRoot: activated.profile_suite_root,
       },
       null,
       2,

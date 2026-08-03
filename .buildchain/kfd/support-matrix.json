@@ -274,7 +274,7 @@
           },
           {
             "path": "framework/primitive/kungfu-primitive-catalog.contract.json",
-            "sha256": "sha256:af23ffa54066095a45c3f682ee443c7eea59fce2b8bc4c88e6ab4484743c6d94"
+            "sha256": "sha256:52f1fec8ceef69be8184bfd9df241bd49ee42c6fe5f3af75f26fa18df8ed68f8"
           }
         ]
       },
@@ -448,7 +448,7 @@
         "evidenceRoots": [
           {
             "path": "framework/agent-work/evidence/kfd-7/atlas-staleness-loss.json",
-            "sha256": "sha256:dee2962750bfd9620a23799b3710476eaf95c5040caf15a2ca9edf0ef2944341"
+            "sha256": "sha256:df945b2e695457ab021b0d56633086b73c837f71841eb409c6ea70276908e5d1"
           }
         ]
       },
@@ -494,7 +494,7 @@
         "evidenceRoots": [
           {
             "path": "framework/agent-work/evidence/kfd-7/pursuit-continuity-settlement.json",
-            "sha256": "sha256:1c5c9753f23000362c0f64adc9fe45d37f7cb7e1ef5f596d84c9b3d636d46c98"
+            "sha256": "sha256:7f18af674c5636a515daea74931b4bc7c0372ba38a74c38e1b0bb20b3072bc67"
           }
         ]
       },
@@ -540,7 +540,7 @@
         "evidenceRoots": [
           {
             "path": "framework/agent-work/evidence/kfd-7/warrant-decay-revocation.json",
-            "sha256": "sha256:0af2b521111d6ce905f8bc72663eee34ad15a0b5255a6577ecd2bc11333f2ce4"
+            "sha256": "sha256:f6d15823561abed00ed00e32dd26a8f05468015eb653092f0e7867f7355c31b8"
           }
         ]
       },

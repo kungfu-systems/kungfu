@@ -789,6 +789,18 @@
           }
         }
       },
+      "work": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "conformance"
+        ],
+        "properties": {
+          "conformance": {
+            "$ref": "#/$defs/contentRef"
+          }
+        }
+      },
       "experience": {
         "type": "object",
         "additionalProperties": false,

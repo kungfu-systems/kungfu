@@ -90,6 +90,12 @@
       "sha256": "be38f3c31182245d19d05aa0e71bc1245fc3caf453c4ab84cd55512aaf2f3cfa"
     }
   },
+  "work": {
+    "conformance": {
+      "path": "qualification/work-profile-conformance.json",
+      "sha256": "7beceb3690f4c8d10335558459686ee95f2a7e751b76a2d104e84c203f1efd80"
+    }
+  },
   "experience": {
     "homeView": "work-dashboard"
   }
