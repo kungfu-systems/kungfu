@@ -635,6 +635,7 @@ fn receipt_persistence_failure_retains_pending_recovery_material() {
 
 #[cfg(unix)]
 mod unix {
+    use super::*;
     use std::fs;
     use std::os::unix::fs::PermissionsExt;
     use std::path::Path;
@@ -697,6 +698,79 @@ mod unix {
             ),
         )
         .unwrap();
+    }
+
+    #[cfg(target_os = "macos")]
+    #[test]
+    fn installed_adoption_is_read_only_until_execute_and_snapshots_exact_bytes() {
+        let root_dir = host::unique_temp_dir("shifu-installed-adoption").unwrap();
+        let registry = root_dir.join("registry");
+        let install_dir = root_dir.join("Applications");
+        let app = install_dir.join("Kungfu Episodes.app");
+        let resources = app.join("Contents/Resources");
+        let native_root = root_dir.join("native-image");
+        let source_commit = "1".repeat(40);
+        let desktop_cut = root('a');
+        let desktop_slice = root('b');
+        let native_cut = root('c');
+        let native_slice = root('d');
+        let native_receipt = root('e');
+        fs::create_dir_all(resources.join("kungfu")).unwrap();
+        fs::create_dir_all(resources.join("upgrade")).unwrap();
+        fs::create_dir_all(app.join("Contents/MacOS")).unwrap();
+        fs::create_dir_all(native_root.join("upgrade")).unwrap();
+        fs::write(app.join("Contents/MacOS/Kungfu Episodes"), "desktop").unwrap();
+        fs::write(
+            resources.join("kungfu/kungfubuildinfo.json"),
+            format!(r#"{{"git":{{"revision":"{source_commit}"}}}}"#),
+        )
+        .unwrap();
+        fs::write(
+            resources.join("kungfu/profile-kfd3.json"),
+            r#"{"schema":"kungfu.system-profile-kfd3-manifest/v1","entries":[{"id":"work-control"}]}"#,
+        )
+        .unwrap();
+        fs::write(
+            resources.join("upgrade/kungfu-release-manifest.json"),
+            format!(r#"{{"sourceCommit":"{source_commit}","productVersion":"4.0.0-alpha.1","releaseCutRoot":"{desktop_cut}","platformSliceRoot":"{desktop_slice}","releaseCut":{{"publicationPolicy":{{"trustDomain":"shifu-local"}}}}}}"#),
+        )
+        .unwrap();
+        fs::write(
+            native_root.join("upgrade/kungfu-release-manifest.json"),
+            format!(r#"{{"sourceCommit":"{source_commit}","productVersion":"4.0.0-alpha.1","releaseCutRoot":"{native_cut}","platformSliceRoot":"{native_slice}","releaseCut":{{"publicationPolicy":{{"trustDomain":"shifu-local"}}}}}}"#),
+        )
+        .unwrap();
+        let updater = resources.join("kungfu/kungfu");
+        let status = format!(
+            r#"{{"frontendInventory":{{"selected":{{"releaseCutRoot":"{native_cut}","platformSliceRoot":"{native_slice}","productRoot":"{}"}}}},"nativeReceiptRoot":"{native_receipt}"}}"#,
+            native_root.display()
+        );
+        fs::write(
+            &updater,
+            format!("#!/bin/sh\nprintf '%s\\n' '{}'\n", status.replace('\'', "")),
+        )
+        .unwrap();
+        fs::set_permissions(&updater, fs::Permissions::from_mode(0o755)).unwrap();
+
+        let entry = qualified_app(&root_dir.join("candidate"));
+        let plan = adopt_installed_product_at(&entry, false, &registry, &install_dir).unwrap();
+        assert!(plan.contains("\"state\":\"action-required\""));
+        assert!(!registry.exists());
+
+        let receipt = adopt_installed_product_at(&entry, true, &registry, &install_dir).unwrap();
+        assert!(receipt.contains("\"state\":\"complete\""));
+        let installed = fs::read_to_string(registry.join("installed.meta.env")).unwrap();
+        let build_id = receipt_value(&installed, "KUNGFU_INSTALLED_BUILD_ID");
+        assert!(rollback_entry_valid(&registry, &build_id, &source_commit));
+        assert_eq!(
+            artifact_sha256(&registry.join(&build_id).join(&entry.artifact)).unwrap(),
+            artifact_sha256(&app).unwrap()
+        );
+        assert!(installed.contains(&format!("KUNGFU_INSTALLED_RELEASE_CUT_ROOT='{native_cut}'")));
+        fs::remove_file(registry.join("installed.meta.env")).unwrap();
+        assert!(adopt_installed_product_at(&entry, true, &registry, &install_dir).is_ok());
+        assert!(adopt_installed_product_at(&entry, true, &registry, &install_dir).is_err());
+        let _ = fs::remove_dir_all(root_dir);
     }
 
     #[test]
