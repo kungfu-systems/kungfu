@@ -6,14 +6,14 @@
   "measurement": {
     "aggregates": {
       "kungfu-cli": 20536,
-      "kungfu-flat-root": 36506,
+      "kungfu-flat-root": 36484,
       "kungfu-runtime-family": 6246
     },
     "counts": {
       "productionFiles": 254,
-      "productionPhysicalLines": 86926,
+      "productionPhysicalLines": 86945,
       "testFiles": 106,
-      "testPhysicalLines": 47450
+      "testPhysicalLines": 47479
     },
     "hiddenProductionFiles": [],
     "modulesOver1000": [
@@ -71,7 +71,7 @@
       },
       {
         "path": "framework/core/src/python/kungfu/peer_lifecycle.py",
-        "physicalLines": 1218
+        "physicalLines": 1196
       },
       {
         "path": "framework/core/src/python/kungfu/profile_composition.py",
@@ -192,10 +192,10 @@
         "responsibilities": 36
       },
       {
-        "contentRoot": "sha256:216529e0c2108a9ebd74c620a7008c5905e619c9c3aca8ed5677408b5f72cbea",
+        "contentRoot": "sha256:8260e896da5c67dbb9b44089e71d1be9eac59a1f177c6513a62f04b518cb332b",
         "path": "framework/core/src/python/kungfu/peer_lifecycle.py",
-        "physicalLines": 1218,
-        "responsibilities": 46
+        "physicalLines": 1196,
+        "responsibilities": 45
       },
       {
         "contentRoot": "sha256:9fe772a1932552a4374f11d652280c2e1d5bc86ae6baa0b0ee8d6a450d0445d5",
@@ -299,32 +299,32 @@
         "test": "os.name == 'nt' and sys.maxsize <= 2 ** 32"
       },
       {
-        "line": 55,
+        "line": 58,
         "path": "framework/core/src/python/kungfu/coordination/locks.py",
         "test": "os.name == 'nt'"
       },
       {
-        "line": 105,
+        "line": 108,
         "path": "framework/core/src/python/kungfu/coordination/locks.py",
         "test": "os.name == 'nt'"
       },
       {
-        "line": 127,
+        "line": 130,
         "path": "framework/core/src/python/kungfu/coordination/locks.py",
         "test": "acquired and os.name == 'nt'"
       },
       {
-        "line": 97,
+        "line": 75,
         "path": "framework/core/src/python/kungfu/peer_lifecycle.py",
         "test": "platform.system() == 'Windows'"
       },
       {
-        "line": 582,
+        "line": 560,
         "path": "framework/core/src/python/kungfu/peer_lifecycle.py",
         "test": "platform.system() == 'Windows'"
       },
       {
-        "line": 1016,
+        "line": 994,
         "path": "framework/core/src/python/kungfu/peer_lifecycle.py",
         "test": "platform.system() != 'Windows'"
       },
@@ -350,7 +350,7 @@
       }
     ],
     "schema": "kungfu.python-structure-measurement/v1",
-    "sourceRoot": "sha256:18f8e6970d75186419b431a0e6fdb54500479427eb7bc010a59a67a9187bab7b",
+    "sourceRoot": "sha256:db14801074120dd248fa1cffa348eae0e73e5e29e67092bb4aa146f06c3ec2b4",
     "sourceRoots": {
       "production": [
         "framework/core/src/python"
@@ -562,9 +562,9 @@
     "kungfu.runtime_broker.NativeReadinessAuthority",
     "kungfu.runtime_service.ProcessRuntimeHost"
   ],
-  "reportRoot": "sha256:a4a6328c8ed3e63c42063d6c8e365a0ce0d3837190a28eacadb9a05aef41bcbf",
+  "reportRoot": "sha256:351e9083baef7baa894fcb7f76303600d0728e5aace2a612f3401389704dc9e4",
   "schema": "kungfu.abstraction-integrity-report/v1",
-  "sourceRoot": "sha256:18f8e6970d75186419b431a0e6fdb54500479427eb7bc010a59a67a9187bab7b",
+  "sourceRoot": "sha256:db14801074120dd248fa1cffa348eae0e73e5e29e67092bb4aa146f06c3ec2b4",
   "summary": {
     "blockingIssues": 0
   },
