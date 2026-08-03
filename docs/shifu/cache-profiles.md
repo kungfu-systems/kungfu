@@ -192,16 +192,27 @@ Buildchain lifecycle input. `scripts/shifu-conan-publish.mjs` provides a
 dry-run-first matrix for Mac arm64, Linux GCC 14 x64, and Windows MSVC x64. The
 execute path must run inside one `shifu cache apply`, detects and validates the
 ephemeral Conan profile, resolves the complete pinned Core dependency closure
-with C++23, and derives each dependency's full RREV/package_id/PREV from the
-Conan graph. It queries the hosted remote first, authenticates with Conan's
+with C++23, disables Conan's global compatibility plugin only in that
+disposable qualification `CONAN_HOME`, and derives each dependency's full
+RREV/package_id/PREV plus effective settings/options from the Conan graph. This
+strict path therefore publishes the requested package ID instead of silently
+substituting (for example) a `gnu17` package that Conan considers compatible
+with a C++23 consumer. It queries the hosted remote first, authenticates with Conan's
 remote-scoped environment variables, uploads only missing exact revisions
-without `--force`, and reads every revision back. The `macos-arm64` entry is
-explicitly bound to Macos armv8, Apple Clang 21, and C++23.
+without `--force`, and reads every revision back. The publisher emits a Conan
+lockfile that pins dependency RREVs; the receipt binds both that lockfile and
+the exact RREV/package_id/PREV closure with digests. The `macos-arm64` entry is explicitly bound to Macos armv8,
+Apple Clang 21, and C++23.
 Publisher credentials remain in the operator or CI secret surface and are
 never added to the cache profile, Buildchain arguments, or Shifu receipt.
 
+Ordinary `./shifu build:core` retains Conan's normal compatibility behavior;
+the strict override is qualification-local and does not alter persistent user
+configuration. Normal runtime evidence must therefore distinguish requested
+settings from each resolved binary's effective settings and package ID.
+
 ```sh
-node scripts/shifu-conan-publish.mjs --matrix-entry macos-arm64
+node scripts/shifu-conan-publish.mjs --matrix-entry macos-arm64 --lockfile-file <publish-lockfile> --receipt-file <publish-receipt>
 node scripts/shifu-conan-publish.mjs --matrix-entry linux-gcc14-x64
 node scripts/shifu-conan-publish.mjs --matrix-entry windows-msvc-x64
 ```
@@ -215,12 +226,17 @@ source worktree, then execute only in a fresh canonical worktree whose mutable
 package partition is empty:
 
 ```sh
-node scripts/shifu-conan-hit-evidence.mjs --matrix-entry macos-arm64
+node scripts/shifu-conan-hit-evidence.mjs --matrix-entry macos-arm64 --publish-lockfile <publish-lockfile> --publish-receipt <publish-receipt>
 ```
 
-The execute path uses `--build=never` and accepts only dependency graph nodes
-whose binary state is `Download` from the selected hosted remote. Its evidence
-lists every exact RREV/package_id/PREV and an empty source-build set. A warm
+The execute path applies the same qualification-local compatibility override,
+uses `--build=never`, and accepts only dependency graph nodes whose binary
+state is `Download` from the selected hosted remote. It also requires exact-set
+equality with the same-source publisher receipt and verifies its closure
+digest. It consumes the digest-bound publisher lockfile so remote revision
+ordering cannot select a different RREV before equality is checked. Its
+evidence lists every exact RREV/package_id/PREV, effective
+settings/options, and an empty source-build set. A warm
 worktree-local `framework/core/build` directory or a pre-populated partition is
 rejected as hit proof.
 
@@ -245,6 +261,11 @@ created empty mutable partitions. Execution additionally requires that digest,
 the Shifu-managed publisher environment, a clean checkout, and an exclusive
 partition lock; it performs only additive exact uploads and readback. It never
 deletes, overwrites, links, moves, or compacts legacy artifacts.
+Partition roots, `packages`, the SQLite index, and indexed artifact paths must
+all be real in-root objects rather than symlinks. Execution fingerprints the
+partition and package directory before and around every remote operation,
+fails if either changes, and releases its owned temporary lock on normal exit
+or termination signals.
 
 ## Developer operations
 
