@@ -68,6 +68,31 @@ def test_storage_write_with_exact_grant_succeeds(tmp_path):
     assert target.read_text() == "ok"
 
 
+def test_process_grant_allows_anonymous_stdio_pipes_without_storage(tmp_path):
+    program = (
+        "import subprocess, sys\n"
+        "from kungfu.kfx_host import install_ambient_capability_audit\n"
+        "install_ambient_capability_audit({'process'})\n"
+        "result = subprocess.run(\n"
+        "    [sys.executable, '-I', '-S', '-c', 'raise SystemExit(0)'],\n"
+        "    stdin=subprocess.PIPE,\n"
+        "    stdout=subprocess.PIPE,\n"
+        "    stderr=subprocess.PIPE,\n"
+        ")\n"
+        "raise SystemExit(result.returncode)\n"
+    )
+    result = subprocess.run(
+        [sys.executable, "-c", program],
+        cwd=tmp_path,
+        env={**os.environ, "PYTHONDONTWRITEBYTECODE": "1"},
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        check=False,
+    )
+    assert result.returncode == 0, result.stderr
+
+
 def test_runtime_contract_is_machine_readable_and_matches_supported_python():
     contract_path = (
         Path(__file__).resolve().parents[4]
