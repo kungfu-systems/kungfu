@@ -11,6 +11,7 @@ import { prepareGateMeasurementHistory } from './prepare-gate-measurement-histor
 import {
   lifecycleEnvironment,
   runShifuWithCache,
+  runShifuWithCacheAsync,
 } from './run-shifu-lifecycle.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -28,6 +29,8 @@ const SUMMARY = path.join(
   'qualification',
   'layer-qualification-summary.json',
 );
+const ROOT_PATTERN = /^sha256:[0-9a-f]{64}$/u;
+const TREE_PATTERN = /^[0-9a-f]{40}$/u;
 
 function readJson(file) {
   return JSON.parse(fs.readFileSync(file, 'utf8'));
@@ -123,6 +126,11 @@ export function parseReleaseQualificationOptions(argv) {
   let nativeUpgradePolicySeen = false;
   let artifactScope = 'product';
   let artifactScopeSeen = false;
+  const sourceOnlyEvidence = {
+    receiptRoot: '',
+    sourceTree: '',
+    policyRoot: '',
+  };
   for (let index = 0; index < argv.length; index += 1) {
     const arg = argv[index];
     if (
@@ -130,6 +138,9 @@ export function parseReleaseQualificationOptions(argv) {
         '--execution-profile',
         '--native-upgrade-policy',
         '--artifact-scope',
+        '--source-only-receipt-root',
+        '--source-only-source-tree',
+        '--source-only-policy-root',
       ].includes(arg)
     )
       throw new Error(`unknown release qualification option: ${arg}`);
@@ -147,10 +158,21 @@ export function parseReleaseQualificationOptions(argv) {
       nativeUpgradePolicy = argv[index];
       continue;
     }
-    if (artifactScopeSeen)
-      throw new Error('--artifact-scope may be specified once');
-    artifactScopeSeen = true;
-    artifactScope = argv[index];
+    if (arg === '--artifact-scope') {
+      if (artifactScopeSeen)
+        throw new Error('--artifact-scope may be specified once');
+      artifactScopeSeen = true;
+      artifactScope = argv[index];
+      continue;
+    }
+    const sourceField = {
+      '--source-only-receipt-root': 'receiptRoot',
+      '--source-only-source-tree': 'sourceTree',
+      '--source-only-policy-root': 'policyRoot',
+    }[arg];
+    if (sourceOnlyEvidence[sourceField])
+      throw new Error(`${arg} may be specified once`);
+    sourceOnlyEvidence[sourceField] = argv[index];
   }
   if (!name)
     throw new Error(
@@ -164,7 +186,24 @@ export function parseReleaseQualificationOptions(argv) {
     throw new Error(
       '--artifact-scope hub-cli requires --native-upgrade-policy skip',
     );
-  return { executionProfile: name, nativeUpgradePolicy, artifactScope };
+  const evidenceFields = Object.values(sourceOnlyEvidence).filter(Boolean);
+  if (evidenceFields.length !== 0 && evidenceFields.length !== 3)
+    throw new Error(
+      'source-only reuse requires receipt root, source tree, and policy root',
+    );
+  if (
+    evidenceFields.length === 3 &&
+    (!ROOT_PATTERN.test(sourceOnlyEvidence.receiptRoot) ||
+      !TREE_PATTERN.test(sourceOnlyEvidence.sourceTree) ||
+      !ROOT_PATTERN.test(sourceOnlyEvidence.policyRoot))
+  )
+    throw new Error('source-only evidence identity is invalid');
+  return {
+    executionProfile: name,
+    nativeUpgradePolicy,
+    artifactScope,
+    sourceOnlyEvidence: evidenceFields.length === 3 ? sourceOnlyEvidence : null,
+  };
 }
 
 export function releaseQualificationEnvironment(
@@ -367,6 +406,138 @@ function gitRevision() {
   }).stdout.trim();
 }
 
+function gitTreeRevision() {
+  return spawnSync('git', ['rev-parse', 'HEAD^{tree}'], {
+    cwd: ROOT,
+    encoding: 'utf8',
+  }).stdout.trim();
+}
+
+export function verifySourceOnlyEvidence(
+  evidence,
+  { sourceTree = gitTreeRevision() } = {},
+) {
+  if (!evidence) return null;
+  if (
+    !ROOT_PATTERN.test(evidence.receiptRoot) ||
+    !ROOT_PATTERN.test(evidence.policyRoot) ||
+    !TREE_PATTERN.test(evidence.sourceTree)
+  )
+    throw new Error('source-only evidence identity is invalid');
+  if (evidence.sourceTree !== sourceTree)
+    throw new Error(
+      `source-only evidence tree mismatch: expected ${sourceTree}, got ${evidence.sourceTree}`,
+    );
+  return structuredClone(evidence);
+}
+
+export function releaseQualificationExecutionGroups(
+  stages,
+  cacheActive = process.env.SHIFU_CACHE_ACTIVE === '1',
+) {
+  const nativeUpgradeRequired = stages.some(
+    ([stage]) => stage === 'upgrade:qualify:native',
+  );
+  if (nativeUpgradeRequired || !cacheActive)
+    return stages.map((stage) => [stage]);
+  const groups = [];
+  for (let index = 0; index < stages.length; index += 1) {
+    if (
+      stages[index][0] === 'gate' &&
+      stages[index + 1]?.[0] === 'invariant:verify'
+    ) {
+      groups.push([stages[index], stages[index + 1]]);
+      index += 1;
+      continue;
+    }
+    groups.push([stages[index]]);
+  }
+  return groups;
+}
+
+function rootedTiming(row) {
+  return { ...row, evidenceRoot: digest(row) };
+}
+
+async function runQualificationStage(
+  args,
+  {
+    env,
+    sourceOnlyEvidence,
+    groupId,
+    parallel = false,
+    syncRunner = runShifuWithCache,
+    asyncRunner = runShifuWithCacheAsync,
+  },
+) {
+  const startedAt = new Date().toISOString();
+  const started = Date.now();
+  let status = 0;
+  let executionMode = 'platform-native';
+  if (args[0] === 'test:upgrade-qualification' && sourceOnlyEvidence) {
+    executionMode = 'exact-source-reuse';
+  } else {
+    try {
+      status = parallel
+        ? await asyncRunner(args, { env })
+        : syncRunner(args, { env });
+    } catch (error) {
+      status = 1;
+      console.error(
+        `[release-qualification] ${args[0]} launch failed: ${error instanceof Error ? error.message : String(error)}`,
+      );
+    }
+  }
+  const completedAt = new Date().toISOString();
+  return rootedTiming({
+    stage: args[0],
+    startedAt,
+    completedAt,
+    durationSeconds: (Date.now() - started) / 1000,
+    status,
+    conclusion: status === 0 ? 'passed' : 'failed',
+    executionMode,
+    concurrencyGroup: groupId,
+    ...(executionMode === 'exact-source-reuse'
+      ? {
+          sourceOnlyReceiptRoot: sourceOnlyEvidence.receiptRoot,
+          sourceOnlyPolicyRoot: sourceOnlyEvidence.policyRoot,
+        }
+      : {}),
+  });
+}
+
+export async function executeReleaseQualificationStages(stages, options = {}) {
+  const timings = [];
+  let finalStatus = 0;
+  const groups = releaseQualificationExecutionGroups(
+    stages,
+    options.env?.SHIFU_CACHE_ACTIVE === '1',
+  );
+  for (const [groupIndex, group] of groups.entries()) {
+    const groupId =
+      group.length > 1
+        ? `parallel-${groupIndex + 1}-${group.map(([stage]) => stage).join('+')}`
+        : `serial-${groupIndex + 1}-${group[0][0]}`;
+    const settled = await Promise.all(
+      group.map((args) =>
+        runQualificationStage(args, {
+          ...options,
+          groupId,
+          parallel: group.length > 1,
+        }),
+      ),
+    );
+    timings.push(...settled);
+    const failure = settled.find((row) => row.status !== 0);
+    if (failure) {
+      finalStatus = failure.status || 1;
+      break;
+    }
+  }
+  return { timings, finalStatus };
+}
+
 function artifactManifestDigest() {
   const release = path.join(ROOT, 'product', 'release');
   const rows = [];
@@ -490,6 +661,7 @@ function writeSummary(
     ? JSON.parse(fs.readFileSync(receiptPath, 'utf8'))
     : {};
   const sourceRevision = gitRevision();
+  const sourceTree = gitTreeRevision();
   const artifactDigest = artifactManifestDigest();
   const toolchain = {
     node: process.version,
@@ -513,18 +685,61 @@ function writeSummary(
     toolchainDigest: digest(toolchain),
     artifactManifestDigest: artifactDigest,
   };
-  const durationSeconds = timings.reduce(
-    (total, row) => total + row.durationSeconds,
+  const generatedAt = new Date().toISOString();
+  const durationSeconds = Math.max(
     0,
+    (Date.parse(generatedAt) - Date.parse(startedAt)) / 1000,
   );
   const executionLimitSeconds =
     execution.parameters.budgetSeconds -
     execution.parameters.upstreamBudgetSeconds -
     execution.parameters.reserveSeconds;
   const withinLimit = status === 0 && durationSeconds <= executionLimitSeconds;
+  const substageEvidenceBody = {
+    schema: 'kungfu.lifecycle-substage-evidence/v1',
+    lifecycleStage: 'verify',
+    generatedAt,
+    startedAt,
+    completedAt: generatedAt,
+    conclusion: withinLimit ? 'passed' : 'failed',
+    ...(withinLimit
+      ? {}
+      : {
+          failureReason: status === 0 ? 'budget-exceeded' : 'substage-failed',
+        }),
+    source: {
+      sha: sourceRevision,
+      tree: sourceTree,
+    },
+    platform: {
+      id:
+        process.env.BUILDCHAIN_PLATFORM_ID ||
+        `${process.platform}-${process.arch}`,
+      os: process.platform,
+      arch: process.arch,
+    },
+    roots: {
+      buildchainRuntime: process.env.BUILDCHAIN_RUNTIME_SHA || '',
+      dependencyLock: process.env.BUILDCHAIN_DEPENDENCY_LOCK_ROOT || '',
+      toolchain: process.env.BUILDCHAIN_TOOLCHAIN_ROOT || '',
+      cachePolicy: process.env.BUILDCHAIN_CACHE_POLICY_ROOT || '',
+      qualificationPolicy: execution.policyDigest,
+    },
+    execution: {
+      policy: 'declared-order-with-bounded-independent-parallel-groups',
+      maxParallelism: 2,
+      groups: [...new Set(timings.map((row) => row.concurrencyGroup))],
+    },
+    durationSeconds,
+    substages: timings,
+  };
+  const substageEvidence = {
+    ...substageEvidenceBody,
+    evidenceRoot: digest(substageEvidenceBody),
+  };
   const summary = {
     schema: 'kungfu.layer-qualification-summary/v1',
-    generatedAt: new Date().toISOString(),
+    generatedAt,
     startedAt,
     status: withinLimit ? 'passed' : 'failed',
     executionProfile: execution.name,
@@ -533,6 +748,7 @@ function writeSummary(
     effectiveParameters: execution.parameters,
     policy: { ref: execution.policyRef, digest: execution.policyDigest },
     timings,
+    substageEvidence,
     durationSeconds,
     budget: {
       totalSeconds: execution.parameters.budgetSeconds,
@@ -552,7 +768,7 @@ function writeSummary(
   return summary;
 }
 
-export function main(argv = process.argv.slice(2)) {
+export async function main(argv = process.argv.slice(2)) {
   if (argv.length === 1 && argv[0] === '--core-platform-only') {
     try {
       console.log(JSON.stringify(verifyCorePlatformRelease()));
@@ -565,6 +781,9 @@ export function main(argv = process.argv.slice(2)) {
   const options = parseReleaseQualificationOptions(argv);
   const execution = loadExecutionProfile(options.executionProfile);
   prepareReleaseQualificationOutput();
+  const sourceOnlyEvidence = verifySourceOnlyEvidence(
+    options.sourceOnlyEvidence,
+  );
   prepareReleaseQualificationHistory(
     ROOT,
     process.platform,
@@ -577,28 +796,18 @@ export function main(argv = process.argv.slice(2)) {
     process.env,
     execution.parameters.fuzzSecondsPerTarget,
   );
-  const timings = [];
   const startedAt = new Date().toISOString();
-  let finalStatus = 0;
-  for (const args of releaseQualificationStages(
+  const stages = releaseQualificationStages(
     process.platform,
     execution,
     options.nativeUpgradePolicy,
     options.artifactScope,
     process.arch,
-  )) {
-    const started = Date.now();
-    const status = runShifuWithCache(args, { env });
-    timings.push({
-      stage: args[0],
-      durationSeconds: (Date.now() - started) / 1000,
-      status,
-    });
-    if (status !== 0) {
-      finalStatus = status;
-      break;
-    }
-  }
+  );
+  const { timings, finalStatus } = await executeReleaseQualificationStages(
+    stages,
+    { env, sourceOnlyEvidence },
+  );
   const summary = writeSummary(
     execution,
     timings,
@@ -617,4 +826,10 @@ export function main(argv = process.argv.slice(2)) {
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href)
-  process.exit(main());
+  main().then(
+    (status) => process.exit(status),
+    (error) => {
+      console.error(error?.stack || String(error));
+      process.exit(1);
+    },
+  );
