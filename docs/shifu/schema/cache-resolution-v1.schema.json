@@ -207,7 +207,27 @@
         "namespace": {"$ref": "#/$defs/id"},
         "pathDigest": {"$ref": "#/$defs/sha256"},
         "partitionDigest": {"$ref": "#/$defs/sha256"},
-        "lock": {"enum": ["acquired", "released", "on-demand"]}
+        "lock": {"enum": ["acquired", "released", "on-demand"]},
+        "artifactLayer": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "binaryAuthority",
+            "identity",
+            "downloadCache",
+            "downloadPathDigest",
+            "concurrency",
+            "worktreeIndependent"
+          ],
+          "properties": {
+            "binaryAuthority": {"const": "hosted-remote"},
+            "identity": {"const": "rrev-package-id-prev"},
+            "downloadCache": {"const": "shared-content-addressed"},
+            "downloadPathDigest": {"$ref": "#/$defs/sha256"},
+            "concurrency": {"const": "conan-content-locks"},
+            "worktreeIndependent": {"const": true}
+          }
+        }
       }
     },
     "uvToolEvidence": {
