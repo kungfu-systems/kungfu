@@ -11,9 +11,9 @@
     },
     "counts": {
       "productionFiles": 254,
-      "productionPhysicalLines": 87025,
+      "productionPhysicalLines": 87050,
       "testFiles": 106,
-      "testPhysicalLines": 47512
+      "testPhysicalLines": 47543
     },
     "hiddenProductionFiles": [],
     "modulesOver1000": [
@@ -23,7 +23,7 @@
       },
       {
         "path": "framework/core/src/python/kungfu/agent/run_agent.py",
-        "physicalLines": 1235
+        "physicalLines": 1260
       },
       {
         "path": "framework/core/src/python/kungfu/agent/work_profile.py",
@@ -124,9 +124,9 @@
         "responsibilities": 30
       },
       {
-        "contentRoot": "sha256:069d9c4ed44ef14ab452512ed7de195f8757688bf5a7921189c8d36156ea7715",
+        "contentRoot": "sha256:198883c7e26e56d5f4f279953e59630283bb575daa0acf85e570c6421af80573",
         "path": "framework/core/src/python/kungfu/agent/run_agent.py",
-        "physicalLines": 1235,
+        "physicalLines": 1260,
         "responsibilities": 36
       },
       {
@@ -354,7 +354,7 @@
       }
     ],
     "schema": "kungfu.python-structure-measurement/v1",
-    "sourceRoot": "sha256:934e34bd4038f5f5d350477edd2631d67edcfc560f52838b06711f5f78e82a64",
+    "sourceRoot": "sha256:46e6f247f9e9889751d8b0cdddfba00053728a2be37303e395de8f693f19474d",
     "sourceRoots": {
       "production": [
         "framework/core/src/python"
@@ -566,9 +566,9 @@
     "kungfu.runtime_broker.NativeReadinessAuthority",
     "kungfu.runtime_service.ProcessRuntimeHost"
   ],
-  "reportRoot": "sha256:bd4cf043e145f0feccd950c9bd72f64d9a410e8f954747ef50a5e967faf5f6cf",
+  "reportRoot": "sha256:05d00174f1fde3ab213eca9157a1343ee994cab434d3d29eb3603b49ad3ce0cc",
   "schema": "kungfu.abstraction-integrity-report/v1",
-  "sourceRoot": "sha256:934e34bd4038f5f5d350477edd2631d67edcfc560f52838b06711f5f78e82a64",
+  "sourceRoot": "sha256:46e6f247f9e9889751d8b0cdddfba00053728a2be37303e395de8f693f19474d",
   "summary": {
     "blockingIssues": 0
   },
