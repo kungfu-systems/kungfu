@@ -7,7 +7,7 @@
   "runtimeAuthority": "read-only",
   "materialSource": {
     "kind": "tracked-gzip",
-    "originCommit": "9b0fa3017a5813be2ff422db14166024bf975f65",
+    "originCommit": "490be03b323d875c9e8fc333dd10a108b19f7c00",
     "bundleRoot": ".xinfa/material-bundles/sha256/57abaf4985767afd17dadb0fe57a559af9128abd0cf5790a17ccde0085f4d488"
   }
 }
