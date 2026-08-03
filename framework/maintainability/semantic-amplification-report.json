@@ -2,17 +2,13 @@
   "schema": "kungfu.semantic-amplification-report/v1",
   "verdict": "pass",
   "authoritySemantics": "navigation-only-projection-over-existing-authorities",
-  "sourceRevision": "22b717d02a4b0415f7bf5dfaf0c72c5e459ee11d",
+  "sourceRevision": "db77e7926c59ad12640dafa7b7524d97195cc688",
   "manifestPath": "framework/maintainability/semantic-amplification.manifest.json",
   "manifestRoot": "sha256:ae6bb7630bd6e3a682dd6f1cf364d5f71f2259607dd442bcc94e840a93aa2b7f",
   "generatorRoot": "sha256:a62c635839b1d7f32dccdaa770ba424b2858be41f2ae017561dbf2c83ee760ec",
   "baselineRef": "dbfed9ca1785d147b26f4f06e7e6895ac7368fee",
   "baselineRoot": "sha256:a6e7ee9aeea7213807abdf830f8b4e60aede2352289539ddc31ad0fa67b1da50",
-<<<<<<< HEAD
-  "sourceRoot": "sha256:bb9735aece3ed0961c457827cd4b3a304f4d55a5cf7b951b75d9479df5eedec7",
-=======
-  "sourceRoot": "sha256:34ba3a5c82873c3193f68d455667199b725cbcbdf7976fe16ab865d13439e04e",
->>>>>>> 05a71be9be (fix(ci): bind v15 delivery evidence)
+  "sourceRoot": "sha256:9d99bfbd1bdf04f85b0fc6c89ebf122a5bbd68788e59ca89c20bf4a079799470",
   "roles": {
     "authority": "exactly one authority route per family; the route may name multiple co-owned source files",
     "allowedProjectionRoles": [
@@ -1168,13 +1164,9 @@
         },
         {
           "path": "docs/qualification/gates/workflow-bindings.json",
-          "currentLines": 662,
+          "currentLines": 663,
           "baselineLines": 580,
-<<<<<<< HEAD
-          "currentRoot": "sha256:aacae9f35d043cc16844923e549db140bfe41d66fb60495f65c7dd12ea1cb182",
-=======
-          "currentRoot": "sha256:8715bc3f04fad42923563938b4484c9b4b84088dd2cee2dca6795bf4de38b893",
->>>>>>> 05a71be9be (fix(ci): bind v15 delivery evidence)
+          "currentRoot": "sha256:410a35e47e5f3b45c9a2b1603948a4bf464df45603fc8a44461c471c464cbfd5",
           "baselineRoot": "sha256:233cd22ebce4c9930e0e4889808b88661d77c202d5e5f73121823dcdc461576d",
           "changedSinceBaseline": true
         },
@@ -1985,5 +1977,5 @@
     "findings": []
   },
   "issues": [],
-  "reportRoot": "sha256:00d6c44d667497c93fb270b5b1d39e4e72b85b54575eb236c2d900704c2f08c6"
+  "reportRoot": "sha256:c446bdfd48253e32d2b7d236df4fd100de9a1451b3c093784282f0c4b2ca3d79"
 }
