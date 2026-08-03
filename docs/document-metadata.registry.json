@@ -1238,6 +1238,29 @@
       "review_state": "self-reviewed",
       "sensitivity": "public"
     },
+    "docs/profiles/work-profile-conformance.md": {
+      "metadata_schema": "kungfu.document-metadata/v1",
+      "document_status": "draft",
+      "doc_type": "analysis",
+      "review_state": "self-reviewed",
+      "sensitivity": "public",
+      "sources": [
+        "executable-probe",
+        "local-files",
+        "user-consensus"
+      ],
+      "period": "2026-08-03",
+      "theme": "work-profile-conformance",
+      "confidence": "high",
+      "evidence_grade": "A",
+      "last_reviewed": "2026-08-03",
+      "ai_provenance": {
+        "model_family": "OpenAI GPT-5",
+        "product": "Codex",
+        "generated_at": "2026-08-03",
+        "invisible_context_boundary": "private prompts, runtime secrets, unpublished product state, and unretained execution evidence are not claimed"
+      }
+    },
     "docs/profiles/work-control.md": {
       "metadata_schema": "kungfu.document-metadata/v1",
       "document_status": "active",

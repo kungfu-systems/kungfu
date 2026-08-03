@@ -28,17 +28,31 @@ from kungfu.storage.episode_lifecycle import (
 )
 
 
-STEP_RECEIPT_SCHEMA = "kungfu.action-loop.step-receipt/v0"
 CHECKPOINT_SCHEMA = "kungfu.action-loop.checkpoint/v0"
 
 
-def _canonical(value: Any) -> str:
-    return json.dumps(value, ensure_ascii=False, separators=(",", ":"), sort_keys=True)
-
-
 def _root(value: Any) -> str:
-    raw = value if isinstance(value, str) else _canonical(value)
-    return "sha256:" + hashlib.sha256(raw.encode("utf-8")).hexdigest()
+    if not isinstance(value, str):
+        value = json.dumps(
+            value, ensure_ascii=False, separators=(",", ":"), sort_keys=True
+        )
+    return "sha256:" + hashlib.sha256(value.encode("utf-8")).hexdigest()
+
+
+def _step_receipt(
+    payload: dict[str, Any], step_id: str, authority_root: str, result_roots: list[str]
+) -> dict[str, Any]:
+    body = {
+        "schema": "kungfu.action-loop.step-receipt/v0",
+        "loopId": payload["loopId"],
+        "stepId": step_id,
+        "idempotencyKey": payload["idempotencyKey"],
+        "status": "accepted",
+        "preconditionRoots": [payload["loopRoot"]],
+        "resultRoots": result_roots,
+        "authorityReceiptRoot": authority_root,
+    }
+    return {**body, "receiptRoot": _root(body)}
 
 
 def _file_root(path: Path) -> str:
@@ -119,21 +133,6 @@ def _support(loop_root: str, operation: str) -> dict[str, Any]:
         "declarationRoots": [_root({"loopRoot": loop_root, "kind": "declaration"})],
         "admissionRoots": [_root({"loopRoot": loop_root, "kind": "admission"})],
         "reasonRoot": _root({"loopRoot": loop_root, "operation": operation}),
-    }
-
-
-def _step_receipt(
-    payload: dict[str, Any], step_id: str, receipt_root: str, result_roots: list[str]
-) -> dict[str, Any]:
-    return {
-        "schema": STEP_RECEIPT_SCHEMA,
-        "loopId": payload["loopId"],
-        "stepId": step_id,
-        "idempotencyKey": payload["idempotencyKey"],
-        "receiptRoot": receipt_root,
-        "status": "accepted",
-        "preconditionRoots": [payload["loopRoot"]],
-        "resultRoots": result_roots,
     }
 
 
