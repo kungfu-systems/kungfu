@@ -1132,6 +1132,21 @@ function writeCliLauncher(stageRoot, layout) {
   return layout.launcherName;
 }
 
+function resolveCliMetadataInterpreter(stageRoot, interpreter) {
+  const resolvedStageRoot = fs.realpathSync(stageRoot);
+  const resolvedInterpreter = fs.realpathSync(interpreter);
+  const relative = path.relative(resolvedStageRoot, resolvedInterpreter);
+  if (
+    !relative ||
+    path.isAbsolute(relative) ||
+    relative === '..' ||
+    relative.startsWith(`..${path.sep}`)
+  ) {
+    throw new Error('CLI auditable demo interpreter escapes its stage root');
+  }
+  return path.join(stageRoot, relative);
+}
+
 export function writeAuditableDemoBinaryMetadata(
   stageRoot,
   layout,
@@ -1140,7 +1155,14 @@ export function writeAuditableDemoBinaryMetadata(
 ) {
   const binary = path.join(stageRoot, layout.launcherName);
   const runtime = path.join(stageRoot, layout.runtimeEntrypoint);
-  const python = path.join(stageRoot, layout.pythonEntrypoint);
+  // POSIX standalone Python trees expose bin/python3 as a relative symlink to
+  // the versioned interpreter. The auditable transport contract deliberately
+  // rejects symlinks in executableFiles, so bind the metadata to the packaged
+  // regular file that the launcher ultimately executes.
+  const python = resolveCliMetadataInterpreter(
+    stageRoot,
+    path.join(stageRoot, layout.pythonEntrypoint),
+  );
   const metadata = {
     contract: 'kungfu.declarative-demo-binary/v1',
     platformId: platform,

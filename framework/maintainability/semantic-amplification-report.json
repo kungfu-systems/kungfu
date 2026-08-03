@@ -3,9 +3,9 @@
   "verdict": "pass",
   "authoritySemantics": "navigation-only-projection-over-existing-authorities",
   "manifestPath": "framework/maintainability/semantic-amplification.manifest.json",
-  "manifestRoot": "sha256:b64ab1daecaec8560dd649af61b7e175adaf562df3aa8b94e3733ef499a308aa",
+  "manifestRoot": "sha256:3510a3caaf84d7224a167b0183615793b3234078486f5bf92f54b08cdba73923",
   "baselineRef": "dbfed9ca1785d147b26f4f06e7e6895ac7368fee",
-  "sourceRoot": "sha256:e16aaef84e911792171816c047c62d00767f4dde4c66e9bca92ae191b4f9b2d7",
+  "sourceRoot": "sha256:0807aa0f241e23c825e4501d4f7ff866edaea0c049380fd602c3957d32bc08f7",
   "roles": {
     "authority": "exactly one authority route per family; the route may name multiple co-owned source files",
     "allowedProjectionRoles": [
@@ -651,9 +651,9 @@
         },
         {
           "path": "product/scripts/dist.mjs",
-          "currentLines": 1937,
+          "currentLines": 1959,
           "baselineLines": 2514,
-          "currentRoot": "sha256:033b7bda4f390dd9017918371b87bda1e8c75eed0d6ba24c721708e783c7fc77",
+          "currentRoot": "sha256:235f7db3bd9c3e551dc7dde368f2efbc5c47541a1a1e70bc040918e2c4bf1026",
           "baselineRoot": "sha256:6cfd6c55e296163ab863fb1d79a4a51198ad12943274fc0858338bb651a108da",
           "changedSinceBaseline": true
         },
@@ -1390,14 +1390,14 @@
       "rollback": "Move the read-only evidence helpers back and preserve the existing re-export surface."
     },
     {
-      "id": "product-assembly-lifecycle",
+      "id": "product-assembly-runtime",
       "original": [
         "product/scripts/dist.mjs"
       ],
-      "boundary": "Lifecycle ordering and product target guards form one pure assembly plan; product mechanics, platform adapters, and release behavior remain in dist.mjs.",
+      "boundary": "Source pins, platform package selection, no-optional acquisition, and lifecycle ordering form one explicit-input assembly runtime; product mechanics and release behavior remain in dist.mjs.",
       "target": "product/scripts/runtime-pin-snapshot.mjs",
-      "owner": "product/release",
-      "dependencyInvariant": "The plan receives all mechanics explicitly, preserves the existing Buildchain event order, and exposes no second CLI or product authority.",
+      "owner": "product/release-assembly-runtime",
+      "dependencyInvariant": "The runtime receives repository paths, command execution, logging, environment, package resolution, and product mechanics explicitly; it preserves Buildchain event order and exposes no CLI, publication, or second product authority.",
       "tests": [
         "product/scripts/dist.test.mjs",
         "framework/maintainability/semantic-amplification.test.mjs"
@@ -1947,7 +1947,7 @@
         "topology": "product-assembly",
         "kind": "line-count",
         "status": "remediated",
-        "metric": 1937,
+        "metric": 1959,
         "threshold": 2450,
         "finding": null
       },
