@@ -281,9 +281,9 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "qualifying",
-          "definitionDigest": "sha256:98eec07e280eef723afceabb5a51db666f035ae5eee033f8b6d38e4e9446d3e4",
+          "definitionDigest": "sha256:381805c74b18897adc7366c225dd2fda3461822b441f412cdd440367d42cfa71",
           "credentials": {"githubToken":"write","oidc":false,"repositorySecrets":["KUNGFU_GITHUB_TOKEN"],"inheritedSecrets":false,"environment":null},
-          "externalActions": ["kungfu-systems/buildchain/.github/workflows/.declarative-auditable-demo.yml@136a89cede1196c088ee362d45bb97d40f8d30d5"],
+          "externalActions": ["kungfu-systems/buildchain/.github/workflows/.declarative-auditable-demo.yml@07a276ecad9bd01d16411ef58fbbde809699247a"],
           "steps": []
         },
         {
@@ -301,9 +301,9 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "qualifying",
-          "definitionDigest": "sha256:c962473f45e6345cdb8f43f700757dfc40ae609615e5b7c1b52ff359a5bf2285",
+          "definitionDigest": "sha256:cc2b195c821ed456c4606518a44e4d53bcd1768c1dcc1977fb6d3a54e0cdf61f",
           "credentials": {"githubToken":"write","oidc":true,"repositorySecrets":["BUILDCHAIN_ARTIFACT_RELAY_S3_DOWNLOAD_ROLE_ARN","BUILDCHAIN_ARTIFACT_RELAY_S3_ROLE_ARN","BUILDCHAIN_ARTIFACT_RELAY_S3_UPLOAD_ROLE_ARN","KUNGFU_GITHUB_TOKEN"],"inheritedSecrets":false,"environment":null},
-          "externalActions": ["kungfu-systems/buildchain/.github/workflows/.build.yml@136a89cede1196c088ee362d45bb97d40f8d30d5"],
+          "externalActions": ["kungfu-systems/buildchain/.github/workflows/.build.yml@07a276ecad9bd01d16411ef58fbbde809699247a"],
           "steps": []
         },
         {
@@ -905,9 +905,9 @@
           "authority": "release-control",
           "publication": "channel",
           "receipt": "qualifying",
-          "definitionDigest": "sha256:8e96817f4cefda4bc8e65654410d3016f3db3d4b2c286df69eb1b215220b9a35",
+          "definitionDigest": "sha256:581bc8d4ffa4aa42dbdab20ca88ffe757438c0174c3791c1a5b625b0932e0cde",
           "credentials": {"githubToken":"write","oidc":true,"repositorySecrets":["BUILDCHAIN_ISSUE_APP_ID","BUILDCHAIN_ISSUE_APP_PRIVATE_KEY","KUNGFU_ALPHA_CHANNEL_SIGNING_PRIVATE_KEY","KUNGFU_GITHUB_TOKEN","KUNGFU_GOVERNANCE_AUDITOR_APP_PRIVATE_KEY"],"inheritedSecrets":false,"environment":null},
-          "externalActions": ["kungfu-systems/buildchain/.github/workflows/release-candidate-promote.yml@136a89cede1196c088ee362d45bb97d40f8d30d5"],
+          "externalActions": ["kungfu-systems/buildchain/.github/workflows/release-candidate-promote.yml@07a276ecad9bd01d16411ef58fbbde809699247a"],
           "steps": []
         },
         {
