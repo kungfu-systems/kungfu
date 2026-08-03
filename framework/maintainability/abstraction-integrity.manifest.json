@@ -1,7 +1,7 @@
 {
   "schema": "kungfu.python-structure-governance-manifest/v1",
   "baselinePath": "framework/maintainability/abstraction-integrity.baseline.json",
-  "reportPath": "framework/maintainability/abstraction-integrity-report.json",
+  "legacyReportPath": "framework/maintainability/abstraction-integrity-report.json",
   "sourceRoots": {
     "production": [
       "framework/core/src/python"

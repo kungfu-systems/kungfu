@@ -919,13 +919,24 @@ function buildReport(manifest, layers) {
       ),
     ]),
   );
-  return {
+  const baselineRevision = String(
+    git(['rev-parse', `${manifest.baselineRef}^{commit}`]),
+  ).trim();
+  const body = {
     schema: 'kungfu.semantic-amplification-report/v1',
     verdict: issues.length ? 'fail' : 'pass',
     authoritySemantics: 'navigation-only-projection-over-existing-authorities',
+    sourceRevision: String(git(['rev-parse', 'HEAD^{commit}'])).trim(),
     manifestPath: MANIFEST_PATH,
     manifestRoot: digest(manifest),
+    generatorRoot: digest(
+      currentBytes('framework/maintainability/semantic-amplification.mjs'),
+    ),
     baselineRef: manifest.baselineRef,
+    baselineRoot: digest({
+      ref: manifest.baselineRef,
+      revision: baselineRevision,
+    }),
     sourceRoot: digest(mappedRoots),
     roles: manifest.rolePolicy,
     summary: {
@@ -953,6 +964,7 @@ function buildReport(manifest, layers) {
     integrity,
     issues,
   };
+  return { ...body, reportRoot: digest(body) };
 }
 
 function findFamilies(report, manifest, query) {
@@ -1084,6 +1096,7 @@ function parseArgs(argv) {
     check: false,
     json: false,
     query: '',
+    legacyReportCheck: false,
     electronBuilderConfigWrite: false,
     electronBuilderConfigCheck: false,
   };
@@ -1094,6 +1107,7 @@ function parseArgs(argv) {
     else if (arg === '--check') options.check = true;
     else if (arg === '--json') options.json = true;
     else if (arg === '--query') options.query = argv[++index] || '';
+    else if (arg === '--check-legacy-report') options.legacyReportCheck = true;
     else if (arg === '--electron-builder-config-write')
       options.electronBuilderConfigWrite = true;
     else if (arg === '--electron-builder-config-check')
@@ -1125,18 +1139,18 @@ function main() {
     if (taskGraph.verdict === 'unresolved') process.exitCode = 3;
     return;
   }
-  const target = path.join(ROOT, manifest.reportPath);
+  const target = path.join(ROOT, manifest.legacyReportPath);
   if (options.write) {
     if (report.issues.length)
       throw new Error('refusing to write a report with blocking issues');
     fs.writeFileSync(target, `${JSON.stringify(report, null, 2)}\n`);
-  } else if (options.check) {
+  } else if (options.legacyReportCheck) {
     if (!fs.existsSync(target))
-      throw new Error(`missing generated report ${manifest.reportPath}`);
+      throw new Error(`missing legacy report ${manifest.legacyReportPath}`);
     const expected = `${JSON.stringify(report, null, 2)}\n`;
     if (fs.readFileSync(target, 'utf8') !== expected)
       throw new Error(
-        `stale generated report ${manifest.reportPath}; run maintainability:amplification --write in an isolated worktree`,
+        `stale legacy report ${manifest.legacyReportPath}; live checks regenerate an isolated exact-revision projection`,
       );
   }
   if (options.json)
