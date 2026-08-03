@@ -9,10 +9,67 @@ import os
 import subprocess
 import threading
 import time
+from contextlib import ExitStack, contextmanager
+from dataclasses import dataclass
 from typing import Any, Callable, Mapping
 import uuid
 
 from kungfu.agent.work_projection import WorkProjectionPort
+
+
+@dataclass(frozen=True)
+class NativeTerminalRoute:
+    stdin: str
+    stdout: str
+    stderr: str
+
+
+def _non_terminal_streams() -> list[str]:
+    return [
+        name
+        for name, descriptor in (("stdin", 0), ("stdout", 1), ("stderr", 2))
+        if not os.isatty(descriptor)
+    ]
+
+
+def _native_terminal_route(provider: str) -> NativeTerminalRoute | None:
+    missing = _non_terminal_streams()
+    if not missing:
+        return None
+
+    if os.name == "nt":
+        route = NativeTerminalRoute("CONIN$", "CONOUT$", "CONOUT$")
+    elif os.name == "posix":
+        route = NativeTerminalRoute("/dev/tty", "/dev/tty", "/dev/tty")
+    else:
+        route = None
+
+    try:
+        if route is None:
+            raise OSError("unsupported platform")
+        with open(route.stdin, "rb", buffering=0) as terminal:
+            if not os.isatty(terminal.fileno()):
+                raise OSError("controlling terminal is not a TTY")
+    except OSError as error:
+        descriptors = ", ".join(missing)
+        raise ValueError(
+            f"provider-native UI '{provider}' requires an interactive terminal; "
+            f"non-terminal descriptors: {descriptors}. No controlling terminal is "
+            "available. Run the command from a terminal or PTY (for example, tmux)."
+        ) from error
+    return route
+
+
+@contextmanager
+def _native_terminal_stdio(route: NativeTerminalRoute | None):
+    if route is None:
+        yield {}
+        return
+    with ExitStack() as stack:
+        stdin = stack.enter_context(open(route.stdin, "rb", buffering=0))
+        stdout = stack.enter_context(open(route.stdout, "wb", buffering=0))
+        stderr = stack.enter_context(open(route.stderr, "wb", buffering=0))
+        yield {"stdin": stdin, "stdout": stdout, "stderr": stderr}
 
 
 class NativeLaunchCoordinator:
@@ -72,6 +129,9 @@ class NativeLaunchCoordinator:
             raise ValueError(
                 "Agent Runtime Profile bootstrap adapter must match provider"
             )
+        terminal_route = (
+            _native_terminal_route(provider) if process_runner is None else None
+        )
         attempt_id = f"native:{uuid.uuid4()}"
         adapter = self.build_adapter(
             adapter_id,
@@ -111,6 +171,7 @@ class NativeLaunchCoordinator:
             session_endpoint=session_endpoint,
             provider_version=str(verification.get("version") or "unknown"),
             adapter=adapter,
+            stdio_is_tty=True if process_runner is None else None,
         )
         actor_id = f"native:{provider}:{attempt_id}"
         registered = False
@@ -241,7 +302,10 @@ class NativeLaunchCoordinator:
         completed: Any | None = None
         try:
             if process_runner is None:
-                provider_process = subprocess.Popen(argv, cwd=cwd, env=env)
+                with _native_terminal_stdio(terminal_route) as terminal_stdio:
+                    provider_process = subprocess.Popen(
+                        argv, cwd=cwd, env=env, **terminal_stdio
+                    )
                 start_heartbeat()
                 completed = subprocess.CompletedProcess(argv, provider_process.wait())
             else:
