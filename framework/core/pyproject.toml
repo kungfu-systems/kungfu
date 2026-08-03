@@ -108,7 +108,7 @@ dev = [
     "pycparser==2.22 ; sys_platform != 'win32'",
     "colorama==0.4.6 ; os_name == 'nt'",
     "pywin32-ctypes==0.2.3 ; sys_platform == 'win32'",
-    "cryptography>=48.0.1,<49.0.0 ; sys_platform == 'linux'",
+    "cryptography>=50.0.0,<51.0.0 ; sys_platform == 'linux'",
     "jeepney==0.8.0 ; sys_platform == 'linux'",
     "secretstorage==3.3.3 ; sys_platform == 'linux'",
 ]
