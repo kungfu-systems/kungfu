@@ -1,0 +1,637 @@
+{
+  "schema": "kungfu.work-profile-conformance-reference-scenarios/v1",
+  "scenarios": [
+    {
+      "expectedVerdict": "compatible",
+      "declaration": {
+        "schema": "kungfu.work-profile-conformance-declaration/v1",
+        "scenarioId": "agent-work-mission-control",
+        "domainKind": "agent-work",
+        "bindings": {
+          "actionGeometryRoot": "sha256:7714576ce33208544ca8a9ee1869ad988d815c07dacbf9e136e0475ce2fb9793",
+          "domainProfileRoot": "sha256:b3d788344e93518bb4fecac6fea05a6fea87707c6325e50bcf01980492309ce0",
+          "roleSchemaRoots": {
+            "fact": "sha256:a7bf1af8fc22d60d909b0de9591ed724c65aa87aaa11869d457c3d3666233426",
+            "episode": "sha256:42f7171fdad5c43162749065cdb74eed174121b1f9497e1e933f24299b09f7a3",
+            "pursuit": "sha256:705f541dec68b8f18aa4b3968e0db83a4dc8ff53331b0e772999a3054cb8db7b",
+            "atlas": "sha256:00516c07e553e66a23732c0e1fb05ed1f052e25a7f1babe4fb0bb77c27631929",
+            "warrant": "sha256:ece2cf9cfdcbf95ca8a0e79d83105a4e57d91fedc1dcf6ab32af329f6268daaf"
+          },
+          "abstractionAuthorityRoot": "sha256:bca8cf2cb144dd05250e3bea9d274394cdf47b141a7795c5a1ffc2d95bcd5ca6",
+          "sourceRoot": "sha256:2111111111111111111111111111111111111111111111111111111111111111"
+        },
+        "reuse": {
+          "factEpisode": "generic",
+          "actionGeometry": "generic",
+          "workLifecycle": "generic",
+          "cut": "generic",
+          "domainSpecificCoreFork": false,
+          "parallelAuthority": false
+        },
+        "humanAuthority": {
+          "domainIdentity": {
+            "status": "human-declared",
+            "statement": "Mission and Assignment identities remain Work Control judgments.",
+            "authorityRoot": "sha256:3111111111111111111111111111111111111111111111111111111111111111"
+          },
+          "legitimateAuthorization": {
+            "status": "human-declared",
+            "statement": "A Warrant records but does not invent legitimate authorization.",
+            "authorityRoot": "sha256:3211111111111111111111111111111111111111111111111111111111111111"
+          },
+          "successMeaning": {
+            "status": "human-declared",
+            "statement": "Mission success is decided against retained acceptance evidence.",
+            "authorityRoot": "sha256:3311111111111111111111111111111111111111111111111111111111111111"
+          },
+          "privacyBoundary": {
+            "status": "human-declared",
+            "statement": "Private work evidence stays outside public projections.",
+            "authorityRoot": "sha256:3411111111111111111111111111111111111111111111111111111111111111"
+          },
+          "evidenceStrength": {
+            "status": "human-declared",
+            "statement": "Qualification evidence is bounded falsification evidence.",
+            "authorityRoot": "sha256:3511111111111111111111111111111111111111111111111111111111111111"
+          },
+          "consequenceMeaning": {
+            "status": "human-declared",
+            "statement": "External effects require an owned consequence interpretation.",
+            "authorityRoot": "sha256:3611111111111111111111111111111111111111111111111111111111111111"
+          }
+        },
+        "behaviorEvidence": [
+          {
+            "case": "repeat",
+            "status": "passed",
+            "evidenceRoot": "sha256:f84f51a3e2ef65e2b90948c665149b69737227059f3d802fa29d1d62cdfd7696",
+            "evidencePath": "framework/work-profile-conformance/qualification/retained-witnesses.json",
+            "evidencePointer": "/scenarios/agent-work-mission-control/behavior/repeat"
+          },
+          {
+            "case": "crash",
+            "status": "passed",
+            "evidenceRoot": "sha256:19277b56a47f36940c33aed9cf25da9b55deb1eac97e180fc856e531da1d7ca8",
+            "evidencePath": "framework/work-profile-conformance/qualification/retained-witnesses.json",
+            "evidencePointer": "/scenarios/agent-work-mission-control/behavior/crash"
+          },
+          {
+            "case": "interrupted",
+            "status": "passed",
+            "evidenceRoot": "sha256:2e7cf992e26526db25baa5c020d4ae3319ed7d00f25892cfe0046a21db178fe5",
+            "evidencePath": "framework/work-profile-conformance/qualification/retained-witnesses.json",
+            "evidencePointer": "/scenarios/agent-work-mission-control/behavior/interrupted"
+          },
+          {
+            "case": "stale",
+            "status": "passed",
+            "evidenceRoot": "sha256:a5d90d8a3209c009673e62a176363a82a75a7bcd886e19bfda71727a253c7ba6",
+            "evidencePath": "framework/work-profile-conformance/qualification/retained-witnesses.json",
+            "evidencePointer": "/scenarios/agent-work-mission-control/behavior/stale"
+          },
+          {
+            "case": "warrant-revoked",
+            "status": "passed",
+            "evidenceRoot": "sha256:9f434df552bb273cb0fa19dd728a9aa6f02fc43ffc1f6b2ea86e9b2ccf587908",
+            "evidencePath": "framework/work-profile-conformance/qualification/retained-witnesses.json",
+            "evidencePointer": "/scenarios/agent-work-mission-control/behavior/warrant-revoked"
+          },
+          {
+            "case": "provider-switch",
+            "status": "passed",
+            "evidenceRoot": "sha256:7db830fffeab9705eb0f3118ce40a8709adcba462ba36ef78aa458922f72fa55",
+            "evidencePath": "framework/work-profile-conformance/qualification/retained-witnesses.json",
+            "evidencePointer": "/scenarios/agent-work-mission-control/behavior/provider-switch"
+          },
+          {
+            "case": "projection-rebuild",
+            "status": "passed",
+            "evidenceRoot": "sha256:0dd34a1e332d57cd48b7e44c1c3ddfec62c8a793a9a3302665ecdeff0870d9aa",
+            "evidencePath": "framework/work-profile-conformance/qualification/retained-witnesses.json",
+            "evidencePointer": "/scenarios/agent-work-mission-control/behavior/projection-rebuild"
+          },
+          {
+            "case": "external-effect",
+            "status": "passed",
+            "evidenceRoot": "sha256:9dc7a15e4389f91277bbd8fd5e39972652566a3db94e4afc5b47dbce3c00eef1",
+            "evidencePath": "framework/work-profile-conformance/qualification/retained-witnesses.json",
+            "evidencePointer": "/scenarios/agent-work-mission-control/behavior/external-effect"
+          },
+          {
+            "case": "recovery",
+            "status": "passed",
+            "evidenceRoot": "sha256:fdca95797d0a989f88039cd040a88bc6f66dcf6a582bd07942ea5dd5a5693b9f",
+            "evidencePath": "framework/work-profile-conformance/qualification/retained-witnesses.json",
+            "evidencePointer": "/scenarios/agent-work-mission-control/behavior/recovery"
+          }
+        ],
+        "platformAdapters": [
+          {
+            "platform": "cpp",
+            "relevance": "required",
+            "status": "passed",
+            "evidenceRoot": "sha256:44a7f63db956e2754a7d36e66852d10766d5d7103f6febbc51d3f8f6e218066f",
+            "evidencePath": "framework/core/src/libkungfu/include/kungfu/sdk/generated/work_lifecycle_v1.hpp",
+            "evidencePointer": null
+          },
+          {
+            "platform": "python",
+            "relevance": "required",
+            "status": "passed",
+            "evidenceRoot": "sha256:fdc38b484a22b48cfbd6ac3db2ee15164010aa06e25cb475aa72bfe4c04a6c59",
+            "evidencePath": "framework/storage/python/kungfu_sdk/generated/work_lifecycle_v1.py",
+            "evidencePointer": null
+          },
+          {
+            "platform": "node",
+            "relevance": "required",
+            "status": "passed",
+            "evidenceRoot": "sha256:33d1adb42d90b742a46950cf61801ef96955ce27b735dfb2eacc66388efb46f7",
+            "evidencePath": "framework/storage/generated/work-lifecycle-v1.js",
+            "evidencePointer": null
+          },
+          {
+            "platform": "rust",
+            "relevance": "required",
+            "status": "passed",
+            "evidenceRoot": "sha256:d3e701dc88e9ac22cf0ab851814d061dc30102f83ad9c9af9a11cadf2b22f2d9",
+            "evidencePath": "crates/kungfu-sdk/src/generated/work_lifecycle_v1.rs",
+            "evidencePointer": null
+          }
+        ],
+        "profileSurfaces": [
+          {
+            "surface": "validate",
+            "relevance": "required",
+            "status": "supported"
+          },
+          {
+            "surface": "qualify",
+            "relevance": "required",
+            "status": "supported"
+          },
+          {
+            "surface": "authoring-check",
+            "relevance": "required",
+            "status": "supported"
+          },
+          {
+            "surface": "installed-runtime",
+            "relevance": "not-relevant",
+            "status": "unsupported"
+          }
+        ],
+        "buildchain": {
+          "status": "admitted",
+          "sourceRoot": "sha256:2111111111111111111111111111111111111111111111111111111111111111",
+          "evidenceRoot": "sha256:00fc77fde37335238fc55aff6d34e0e26a024605f4b938659b7c3169ed774d17",
+          "fresh": true,
+          "compatible": true,
+          "manualAllowlist": false,
+          "evidencePath": "framework/work-profile-conformance/qualification/retained-witnesses.json",
+          "evidencePointer": "/scenarios/agent-work-mission-control/buildchain"
+        },
+        "workOperationModel": {
+          "authority": "existing-work-lifecycle",
+          "operations": [
+            "inspect",
+            "validate",
+            "qualify",
+            "plan",
+            "execute",
+            "settle",
+            "recover",
+            "archive"
+          ],
+          "separateAssignment": false
+        },
+        "constraints": [],
+        "residualRisk": [
+          "Human judgments remain outside machine proof."
+        ]
+      }
+    },
+    {
+      "expectedVerdict": "compatible-with-constraints",
+      "declaration": {
+        "schema": "kungfu.work-profile-conformance-declaration/v1",
+        "scenarioId": "week-day-action",
+        "domainKind": "calendar-work",
+        "bindings": {
+          "actionGeometryRoot": "sha256:7714576ce33208544ca8a9ee1869ad988d815c07dacbf9e136e0475ce2fb9793",
+          "domainProfileRoot": "sha256:1222222222222222222222222222222222222222222222222222222222222222",
+          "roleSchemaRoots": {
+            "fact": "sha256:1322222222222222222222222222222222222222222222222222222222222222",
+            "episode": "sha256:1422222222222222222222222222222222222222222222222222222222222222",
+            "pursuit": "sha256:1522222222222222222222222222222222222222222222222222222222222222",
+            "atlas": "sha256:1622222222222222222222222222222222222222222222222222222222222222",
+            "warrant": "sha256:1722222222222222222222222222222222222222222222222222222222222222"
+          },
+          "abstractionAuthorityRoot": "sha256:bca8cf2cb144dd05250e3bea9d274394cdf47b141a7795c5a1ffc2d95bcd5ca6",
+          "sourceRoot": "sha256:1922222222222222222222222222222222222222222222222222222222222222"
+        },
+        "reuse": {
+          "factEpisode": "generic",
+          "actionGeometry": "generic",
+          "workLifecycle": "generic",
+          "cut": "generic",
+          "domainSpecificCoreFork": false,
+          "parallelAuthority": false
+        },
+        "humanAuthority": {
+          "domainIdentity": {
+            "status": "human-declared",
+            "statement": "Week, Day, and Action are calendar-work vocabulary.",
+            "authorityRoot": "sha256:2122222222222222222222222222222222222222222222222222222222222222"
+          },
+          "legitimateAuthorization": {
+            "status": "human-declared",
+            "statement": "Calendar authority does not grant external execution authority.",
+            "authorityRoot": "sha256:2222222222222222222222222222222222222222222222222222222222222222"
+          },
+          "successMeaning": {
+            "status": "human-declared",
+            "statement": "A planned action is not a successful outcome.",
+            "authorityRoot": "sha256:2322222222222222222222222222222222222222222222222222222222222222"
+          },
+          "privacyBoundary": {
+            "status": "human-declared",
+            "statement": "Private calendar content is projected only by explicit policy.",
+            "authorityRoot": "sha256:2422222222222222222222222222222222222222222222222222222222222222"
+          },
+          "evidenceStrength": {
+            "status": "human-declared",
+            "statement": "Calendar receipts prove mutations, not real-world completion.",
+            "authorityRoot": "sha256:2522222222222222222222222222222222222222222222222222222222222222"
+          },
+          "consequenceMeaning": {
+            "status": "human-declared",
+            "statement": "Rescheduling consequences remain a domain judgment.",
+            "authorityRoot": "sha256:2622222222222222222222222222222222222222222222222222222222222222"
+          }
+        },
+        "behaviorEvidence": [
+          {
+            "case": "repeat",
+            "status": "passed",
+            "evidenceRoot": "sha256:1eb2fc3b9bb701da5362a916cf87d2ec537b0378977883ea43bf7b2aa078fa3e",
+            "evidencePath": "framework/work-profile-conformance/qualification/retained-witnesses.json",
+            "evidencePointer": "/scenarios/week-day-action/behavior/repeat"
+          },
+          {
+            "case": "crash",
+            "status": "passed",
+            "evidenceRoot": "sha256:8dd6e56f5c868d3dfc31e349bb900e0da9636e1b5ae0d3bb8c755b385c59c48d",
+            "evidencePath": "framework/work-profile-conformance/qualification/retained-witnesses.json",
+            "evidencePointer": "/scenarios/week-day-action/behavior/crash"
+          },
+          {
+            "case": "interrupted",
+            "status": "passed",
+            "evidenceRoot": "sha256:06ad53bd36740e3e26d5b85490f330f187d59ba595e212a8b4d962f8e9161404",
+            "evidencePath": "framework/work-profile-conformance/qualification/retained-witnesses.json",
+            "evidencePointer": "/scenarios/week-day-action/behavior/interrupted"
+          },
+          {
+            "case": "stale",
+            "status": "passed",
+            "evidenceRoot": "sha256:c647b7c8e5b41d13ce5aa4787822ee9f3cf9c391044eaf98cfba5d471eda0ca4",
+            "evidencePath": "framework/work-profile-conformance/qualification/retained-witnesses.json",
+            "evidencePointer": "/scenarios/week-day-action/behavior/stale"
+          },
+          {
+            "case": "warrant-revoked",
+            "status": "passed",
+            "evidenceRoot": "sha256:12eba0c104d1c9ced3bd8b010d30b2398e40b7b8dba46b4a8cf55442a2bee0da",
+            "evidencePath": "framework/work-profile-conformance/qualification/retained-witnesses.json",
+            "evidencePointer": "/scenarios/week-day-action/behavior/warrant-revoked"
+          },
+          {
+            "case": "provider-switch",
+            "status": "passed",
+            "evidenceRoot": "sha256:9a4e140502927384b079b959b747deedf9d9b4e3f6c614d843b117e81326dc59",
+            "evidencePath": "framework/work-profile-conformance/qualification/retained-witnesses.json",
+            "evidencePointer": "/scenarios/week-day-action/behavior/provider-switch"
+          },
+          {
+            "case": "projection-rebuild",
+            "status": "passed",
+            "evidenceRoot": "sha256:8b6d6c0840b8b278a49a09590a126fb165ccc7ee3354b834618db13d96e19b70",
+            "evidencePath": "framework/work-profile-conformance/qualification/retained-witnesses.json",
+            "evidencePointer": "/scenarios/week-day-action/behavior/projection-rebuild"
+          },
+          {
+            "case": "external-effect",
+            "status": "passed",
+            "evidenceRoot": "sha256:6f490f1aa48ca467de360866ed586f550e6d30e62f4fd6cefae67b172a363601",
+            "evidencePath": "framework/work-profile-conformance/qualification/retained-witnesses.json",
+            "evidencePointer": "/scenarios/week-day-action/behavior/external-effect"
+          },
+          {
+            "case": "recovery",
+            "status": "passed",
+            "evidenceRoot": "sha256:f1795859cd00105fd8950de9d96df194eeb0cae3557c571673dbefd84bf68d49",
+            "evidencePath": "framework/work-profile-conformance/qualification/retained-witnesses.json",
+            "evidencePointer": "/scenarios/week-day-action/behavior/recovery"
+          }
+        ],
+        "platformAdapters": [
+          {
+            "platform": "python",
+            "relevance": "required",
+            "status": "passed",
+            "evidenceRoot": "sha256:fdc38b484a22b48cfbd6ac3db2ee15164010aa06e25cb475aa72bfe4c04a6c59",
+            "evidencePath": "framework/storage/python/kungfu_sdk/generated/work_lifecycle_v1.py",
+            "evidencePointer": null
+          },
+          {
+            "platform": "node",
+            "relevance": "required",
+            "status": "passed",
+            "evidenceRoot": "sha256:33d1adb42d90b742a46950cf61801ef96955ce27b735dfb2eacc66388efb46f7",
+            "evidencePath": "framework/storage/generated/work-lifecycle-v1.js",
+            "evidencePointer": null
+          },
+          {
+            "platform": "cpp",
+            "relevance": "not-relevant",
+            "status": "unsupported",
+            "evidenceRoot": null,
+            "evidencePath": null,
+            "evidencePointer": null
+          },
+          {
+            "platform": "rust",
+            "relevance": "not-relevant",
+            "status": "unsupported",
+            "evidenceRoot": null,
+            "evidencePath": null,
+            "evidencePointer": null
+          }
+        ],
+        "profileSurfaces": [
+          {
+            "surface": "validate",
+            "relevance": "required",
+            "status": "supported"
+          },
+          {
+            "surface": "qualify",
+            "relevance": "required",
+            "status": "supported"
+          },
+          {
+            "surface": "authoring-check",
+            "relevance": "required",
+            "status": "supported"
+          },
+          {
+            "surface": "installed-runtime",
+            "relevance": "not-relevant",
+            "status": "unsupported"
+          }
+        ],
+        "buildchain": {
+          "status": "admitted",
+          "sourceRoot": "sha256:1922222222222222222222222222222222222222222222222222222222222222",
+          "evidenceRoot": "sha256:5e81b8eafa782592a946958ea4f2547a0dc7e1ee1ba1c36296ffb0770e87d400",
+          "fresh": true,
+          "compatible": true,
+          "manualAllowlist": false,
+          "evidencePath": "framework/work-profile-conformance/qualification/retained-witnesses.json",
+          "evidencePointer": "/scenarios/week-day-action/buildchain"
+        },
+        "workOperationModel": {
+          "authority": "existing-work-lifecycle",
+          "operations": [
+            "inspect",
+            "validate",
+            "qualify",
+            "plan",
+            "execute",
+            "settle",
+            "recover",
+            "archive"
+          ],
+          "separateAssignment": false
+        },
+        "constraints": [
+          "Calendar recurrence exceptions require a domain-declared projection policy."
+        ],
+        "residualRisk": [
+          "Time-zone policy remains a domain responsibility."
+        ]
+      }
+    },
+    {
+      "expectedVerdict": "compatible",
+      "declaration": {
+        "schema": "kungfu.work-profile-conformance-declaration/v1",
+        "scenarioId": "course-production",
+        "domainKind": "non-agent-work",
+        "bindings": {
+          "actionGeometryRoot": "sha256:7714576ce33208544ca8a9ee1869ad988d815c07dacbf9e136e0475ce2fb9793",
+          "domainProfileRoot": "sha256:1333333333333333333333333333333333333333333333333333333333333333",
+          "roleSchemaRoots": {
+            "fact": "sha256:1433333333333333333333333333333333333333333333333333333333333333",
+            "episode": "sha256:1533333333333333333333333333333333333333333333333333333333333333",
+            "pursuit": "sha256:1633333333333333333333333333333333333333333333333333333333333333",
+            "atlas": "sha256:1733333333333333333333333333333333333333333333333333333333333333",
+            "warrant": "sha256:1833333333333333333333333333333333333333333333333333333333333333"
+          },
+          "abstractionAuthorityRoot": "sha256:bca8cf2cb144dd05250e3bea9d274394cdf47b141a7795c5a1ffc2d95bcd5ca6",
+          "sourceRoot": "sha256:2133333333333333333333333333333333333333333333333333333333333333"
+        },
+        "reuse": {
+          "factEpisode": "generic",
+          "actionGeometry": "generic",
+          "workLifecycle": "generic",
+          "cut": "generic",
+          "domainSpecificCoreFork": false,
+          "parallelAuthority": false
+        },
+        "humanAuthority": {
+          "domainIdentity": {
+            "status": "human-declared",
+            "statement": "Course production is a non-agent delivery domain.",
+            "authorityRoot": "sha256:2233333333333333333333333333333333333333333333333333333333333333"
+          },
+          "legitimateAuthorization": {
+            "status": "human-declared",
+            "statement": "Publisher approval is separate from execution evidence.",
+            "authorityRoot": "sha256:2333333333333333333333333333333333333333333333333333333333333333"
+          },
+          "successMeaning": {
+            "status": "human-declared",
+            "statement": "Release readiness is decided by the course owner.",
+            "authorityRoot": "sha256:2433333333333333333333333333333333333333333333333333333333333333"
+          },
+          "privacyBoundary": {
+            "status": "human-declared",
+            "statement": "Student and draft material follows declared privacy policy.",
+            "authorityRoot": "sha256:2533333333333333333333333333333333333333333333333333333333333333"
+          },
+          "evidenceStrength": {
+            "status": "human-declared",
+            "statement": "Artifact checks do not prove educational value.",
+            "authorityRoot": "sha256:2633333333333333333333333333333333333333333333333333333333333333"
+          },
+          "consequenceMeaning": {
+            "status": "human-declared",
+            "statement": "Publication consequences remain owned by the publisher.",
+            "authorityRoot": "sha256:2733333333333333333333333333333333333333333333333333333333333333"
+          }
+        },
+        "behaviorEvidence": [
+          {
+            "case": "repeat",
+            "status": "passed",
+            "evidenceRoot": "sha256:8e5537a45cd91454409cd5390ca7e28264f7456e6a96ca331f57e7e05ea3bb55",
+            "evidencePath": "framework/work-profile-conformance/qualification/retained-witnesses.json",
+            "evidencePointer": "/scenarios/course-production/behavior/repeat"
+          },
+          {
+            "case": "crash",
+            "status": "passed",
+            "evidenceRoot": "sha256:23479605b4ea6bcd125e8d1cf6568b0481739d33bc6d0dcc8de4601fd9a10cd5",
+            "evidencePath": "framework/work-profile-conformance/qualification/retained-witnesses.json",
+            "evidencePointer": "/scenarios/course-production/behavior/crash"
+          },
+          {
+            "case": "interrupted",
+            "status": "passed",
+            "evidenceRoot": "sha256:005c61f0b52b0617c9a7e6a5de8b34202b1c2f511267dcca37f22b0ec05ab1bd",
+            "evidencePath": "framework/work-profile-conformance/qualification/retained-witnesses.json",
+            "evidencePointer": "/scenarios/course-production/behavior/interrupted"
+          },
+          {
+            "case": "stale",
+            "status": "passed",
+            "evidenceRoot": "sha256:874a80533536ccea4c3220bae23e3a5dc6705ef84db2f30d79527aab18c41139",
+            "evidencePath": "framework/work-profile-conformance/qualification/retained-witnesses.json",
+            "evidencePointer": "/scenarios/course-production/behavior/stale"
+          },
+          {
+            "case": "warrant-revoked",
+            "status": "passed",
+            "evidenceRoot": "sha256:fd963dc6ab25e60bcc96c89a53232abadc92b50b1875ee15a08296c1efe19c16",
+            "evidencePath": "framework/work-profile-conformance/qualification/retained-witnesses.json",
+            "evidencePointer": "/scenarios/course-production/behavior/warrant-revoked"
+          },
+          {
+            "case": "provider-switch",
+            "status": "passed",
+            "evidenceRoot": "sha256:948ff59e13ccc7b4b9ac5f61874483f695b3528869d66b171654cb5ce640bab4",
+            "evidencePath": "framework/work-profile-conformance/qualification/retained-witnesses.json",
+            "evidencePointer": "/scenarios/course-production/behavior/provider-switch"
+          },
+          {
+            "case": "projection-rebuild",
+            "status": "passed",
+            "evidenceRoot": "sha256:bc9c73ca02954736f2edc1a03b2f4385afa7d5138cad6e93ba285acdc31577ea",
+            "evidencePath": "framework/work-profile-conformance/qualification/retained-witnesses.json",
+            "evidencePointer": "/scenarios/course-production/behavior/projection-rebuild"
+          },
+          {
+            "case": "external-effect",
+            "status": "passed",
+            "evidenceRoot": "sha256:5391b929bac52df081f2beb93058074adc6fec00d64dd74048aaadf847b90fab",
+            "evidencePath": "framework/work-profile-conformance/qualification/retained-witnesses.json",
+            "evidencePointer": "/scenarios/course-production/behavior/external-effect"
+          },
+          {
+            "case": "recovery",
+            "status": "passed",
+            "evidenceRoot": "sha256:531b879e189990cf82c147bf07529ffa8ed52566eee96b473c4ccbc4ad7f043e",
+            "evidencePath": "framework/work-profile-conformance/qualification/retained-witnesses.json",
+            "evidencePointer": "/scenarios/course-production/behavior/recovery"
+          }
+        ],
+        "platformAdapters": [
+          {
+            "platform": "node",
+            "relevance": "required",
+            "status": "passed",
+            "evidenceRoot": "sha256:33d1adb42d90b742a46950cf61801ef96955ce27b735dfb2eacc66388efb46f7",
+            "evidencePath": "framework/storage/generated/work-lifecycle-v1.js",
+            "evidencePointer": null
+          },
+          {
+            "platform": "cpp",
+            "relevance": "not-relevant",
+            "status": "unsupported",
+            "evidenceRoot": null,
+            "evidencePath": null,
+            "evidencePointer": null
+          },
+          {
+            "platform": "python",
+            "relevance": "not-relevant",
+            "status": "unsupported",
+            "evidenceRoot": null,
+            "evidencePath": null,
+            "evidencePointer": null
+          },
+          {
+            "platform": "rust",
+            "relevance": "not-relevant",
+            "status": "unsupported",
+            "evidenceRoot": null,
+            "evidencePath": null,
+            "evidencePointer": null
+          }
+        ],
+        "profileSurfaces": [
+          {
+            "surface": "validate",
+            "relevance": "required",
+            "status": "supported"
+          },
+          {
+            "surface": "qualify",
+            "relevance": "required",
+            "status": "supported"
+          },
+          {
+            "surface": "authoring-check",
+            "relevance": "required",
+            "status": "supported"
+          },
+          {
+            "surface": "installed-runtime",
+            "relevance": "not-relevant",
+            "status": "unsupported"
+          }
+        ],
+        "buildchain": {
+          "status": "admitted",
+          "sourceRoot": "sha256:2133333333333333333333333333333333333333333333333333333333333333",
+          "evidenceRoot": "sha256:0b00c7978a95dc331bef30bf1c9df3b7e732bafc040c7ffb7603fec2a69c4878",
+          "fresh": true,
+          "compatible": true,
+          "manualAllowlist": false,
+          "evidencePath": "framework/work-profile-conformance/qualification/retained-witnesses.json",
+          "evidencePointer": "/scenarios/course-production/buildchain"
+        },
+        "workOperationModel": {
+          "authority": "existing-work-lifecycle",
+          "operations": [
+            "inspect",
+            "validate",
+            "qualify",
+            "plan",
+            "execute",
+            "settle",
+            "recover",
+            "archive"
+          ],
+          "separateAssignment": false
+        },
+        "constraints": [],
+        "residualRisk": [
+          "Domain outcome quality remains a human judgment."
+        ]
+      }
+    }
+  ]
+}

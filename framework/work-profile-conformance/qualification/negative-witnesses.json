@@ -1,0 +1,14 @@
+{
+  "schema": "kungfu.work-profile-conformance-negative-witnesses/v1",
+  "behavior": {
+    "external-effect-failed": { "case": "external-effect", "status": "failed", "witness": "external consequence cannot be represented without substituting domain authority" },
+    "crash-crashed": { "case": "crash", "status": "crashed", "witness": "checker process terminated before retaining a result" }
+  },
+  "buildchain": {
+    "absent": { "status": "absent", "sourceRoot": "sha256:2111111111111111111111111111111111111111111111111111111111111111", "fresh": false, "compatible": true, "manualAllowlist": false },
+    "stale": { "status": "stale", "sourceRoot": "sha256:2111111111111111111111111111111111111111111111111111111111111111", "fresh": false, "compatible": true, "manualAllowlist": false },
+    "mismatch": { "status": "mismatch", "sourceRoot": "sha256:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", "fresh": true, "compatible": true, "manualAllowlist": false },
+    "manual-allowlist": { "status": "admitted", "sourceRoot": "sha256:2111111111111111111111111111111111111111111111111111111111111111", "fresh": true, "compatible": true, "manualAllowlist": true },
+    "incompatible": { "status": "incompatible", "sourceRoot": "sha256:2111111111111111111111111111111111111111111111111111111111111111", "fresh": true, "compatible": false, "manualAllowlist": false }
+  }
+}

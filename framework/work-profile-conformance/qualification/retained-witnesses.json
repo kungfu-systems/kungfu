@@ -1,0 +1,47 @@
+{
+  "schema": "kungfu.work-profile-conformance-retained-witnesses/v1",
+  "scenarios": {
+    "agent-work-mission-control": {
+      "behavior": {
+        "repeat": { "case": "repeat", "status": "passed", "artifactRefs": ["framework/agent-work/evidence/kfd-7/concurrency-retry-compensation.json"] },
+        "crash": { "case": "crash", "status": "passed", "artifactRefs": ["framework/agent-work/evidence/kfd-7/cold-start-continuation.json"] },
+        "interrupted": { "case": "interrupted", "status": "passed", "artifactRefs": ["framework/agent-work/evidence/kfd-7/pursuit-continuity-settlement.json"] },
+        "stale": { "case": "stale", "status": "passed", "artifactRefs": ["framework/agent-work/evidence/kfd-7/atlas-staleness-loss.json"] },
+        "warrant-revoked": { "case": "warrant-revoked", "status": "passed", "artifactRefs": ["framework/agent-work/evidence/kfd-7/warrant-decay-revocation.json"] },
+        "provider-switch": { "case": "provider-switch", "status": "passed", "artifactRefs": ["framework/agent-work/evidence/kfd-7/backend-migration.json"] },
+        "projection-rebuild": { "case": "projection-rebuild", "status": "passed", "artifactRefs": ["framework/agent-work/evidence/kfd-7/export-import-rebuild.json"] },
+        "external-effect": { "case": "external-effect", "status": "passed", "artifactRefs": ["framework/agent-work/evidence/kfd-7/episode-replay-contraction.json"] },
+        "recovery": { "case": "recovery", "status": "passed", "artifactRefs": ["framework/agent-work/evidence/kfd-7/cold-start-continuation.json", "framework/agent-work/evidence/kfd-7/export-import-rebuild.json"] }
+      },
+      "buildchain": { "status": "admitted", "sourceRoot": "sha256:2111111111111111111111111111111111111111111111111111111111111111", "fresh": true, "compatible": true, "manualAllowlist": false, "artifactRefs": ["scripts/buildchain-kfd-evidence.mjs"] }
+    },
+    "week-day-action": {
+      "behavior": {
+        "repeat": { "case": "repeat", "status": "passed", "witness": "idempotent recurrence replay" },
+        "crash": { "case": "crash", "status": "passed", "witness": "pre-ref crash leaves no admitted ref move" },
+        "interrupted": { "case": "interrupted", "status": "passed", "witness": "continuation resumes from the retained Cut" },
+        "stale": { "case": "stale", "status": "passed", "witness": "stale calendar Cut is rejected" },
+        "warrant-revoked": { "case": "warrant-revoked", "status": "passed", "witness": "revoked execution Warrant is denied" },
+        "provider-switch": { "case": "provider-switch", "status": "passed", "witness": "provider change preserves Fact and Cut roots" },
+        "projection-rebuild": { "case": "projection-rebuild", "status": "passed", "witness": "calendar projection rebuilds from retained Facts" },
+        "external-effect": { "case": "external-effect", "status": "passed", "witness": "reminder delivery stays an Episode consequence" },
+        "recovery": { "case": "recovery", "status": "passed", "witness": "named ref recovery retains prior Cuts" }
+      },
+      "buildchain": { "status": "admitted", "sourceRoot": "sha256:1922222222222222222222222222222222222222222222222222222222222222", "fresh": true, "compatible": true, "manualAllowlist": false, "artifactRefs": ["framework/work-profile-conformance/work-profile-conformance.test.mjs"] }
+    },
+    "course-production": {
+      "behavior": {
+        "repeat": { "case": "repeat", "status": "passed", "witness": "repeated asset admission is content-idempotent" },
+        "crash": { "case": "crash", "status": "passed", "witness": "crashed release plan does not imply publication" },
+        "interrupted": { "case": "interrupted", "status": "passed", "witness": "course work continues from a retained Cut" },
+        "stale": { "case": "stale", "status": "passed", "witness": "stale review input cannot advance the release ref" },
+        "warrant-revoked": { "case": "warrant-revoked", "status": "passed", "witness": "revoked publisher approval blocks release" },
+        "provider-switch": { "case": "provider-switch", "status": "passed", "witness": "artifact provider switch preserves content roots" },
+        "projection-rebuild": { "case": "projection-rebuild", "status": "passed", "witness": "release dashboard rebuilds from retained Facts" },
+        "external-effect": { "case": "external-effect", "status": "passed", "witness": "publication remains an explicit Episode effect" },
+        "recovery": { "case": "recovery", "status": "passed", "witness": "release recovery retains prior review and Cut evidence" }
+      },
+      "buildchain": { "status": "admitted", "sourceRoot": "sha256:2133333333333333333333333333333333333333333333333333333333333333", "fresh": true, "compatible": true, "manualAllowlist": false, "artifactRefs": ["tests/fixtures/domain-profile-authoring/course-production/domain-profile.json"] }
+    }
+  }
+}

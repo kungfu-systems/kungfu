@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kungfu.link/schema/work-profile-conformance-result-v1.json",
+  "title": "Kungfu Work Profile Conformance Result",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "scenarioId",
+    "verdict",
+    "declarationRoot",
+    "conformanceRoot",
+    "authorityBindings",
+    "machineChecks",
+    "humanAuthority",
+    "surfaceRoots",
+    "diagnostics",
+    "constraints",
+    "residualRisk",
+    "lifecycleMutation"
+  ],
+  "properties": {
+    "schema": { "const": "kungfu.work-profile-conformance-result/v1" },
+    "scenarioId": { "type": "string" },
+    "verdict": { "enum": ["compatible", "compatible-with-constraints", "profile-invalid", "scenario-incompatible", "unqualified"] },
+    "declarationRoot": { "$ref": "#/$defs/root" },
+    "conformanceRoot": { "$ref": "#/$defs/root" },
+    "authorityBindings": { "type": "object" },
+    "machineChecks": { "type": "array", "items": { "type": "object" } },
+    "humanAuthority": { "type": "object" },
+    "surfaceRoots": { "type": "object", "additionalProperties": { "$ref": "#/$defs/root" } },
+    "diagnostics": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["code", "class", "message"],
+        "properties": {
+          "code": { "type": "string" },
+          "class": { "enum": ["invalid", "incompatible", "unqualified", "constraint"] },
+          "message": { "type": "string" }
+        }
+      }
+    },
+    "constraints": { "type": "array", "items": { "type": "string" } },
+    "residualRisk": { "type": "array", "items": { "type": "string" } },
+    "lifecycleMutation": { "const": false }
+  },
+  "$defs": {
+    "root": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" }
+  }
+}

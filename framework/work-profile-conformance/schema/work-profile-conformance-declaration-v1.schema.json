@@ -1,0 +1,191 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kungfu.link/schema/work-profile-conformance-declaration-v1.json",
+  "title": "Kungfu Work Profile Conformance Declaration",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "scenarioId",
+    "domainKind",
+    "bindings",
+    "reuse",
+    "humanAuthority",
+    "behaviorEvidence",
+    "platformAdapters",
+    "profileSurfaces",
+    "buildchain",
+    "workOperationModel",
+    "constraints",
+    "residualRisk"
+  ],
+  "properties": {
+    "schema": { "const": "kungfu.work-profile-conformance-declaration/v1" },
+    "scenarioId": { "$ref": "#/$defs/id" },
+    "domainKind": { "enum": ["agent-work", "calendar-work", "non-agent-work"] },
+    "bindings": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "actionGeometryRoot",
+        "domainProfileRoot",
+        "roleSchemaRoots",
+        "abstractionAuthorityRoot",
+        "sourceRoot"
+      ],
+      "properties": {
+        "actionGeometryRoot": { "$ref": "#/$defs/root" },
+        "domainProfileRoot": { "$ref": "#/$defs/root" },
+        "roleSchemaRoots": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["fact", "episode", "pursuit", "atlas", "warrant"],
+          "properties": {
+            "fact": { "$ref": "#/$defs/root" },
+            "episode": { "$ref": "#/$defs/root" },
+            "pursuit": { "$ref": "#/$defs/root" },
+            "atlas": { "$ref": "#/$defs/root" },
+            "warrant": { "$ref": "#/$defs/root" }
+          }
+        },
+        "abstractionAuthorityRoot": { "$ref": "#/$defs/root" },
+        "sourceRoot": { "$ref": "#/$defs/root" }
+      }
+    },
+    "reuse": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "factEpisode",
+        "actionGeometry",
+        "workLifecycle",
+        "cut",
+        "domainSpecificCoreFork",
+        "parallelAuthority"
+      ],
+      "properties": {
+        "factEpisode": { "const": "generic" },
+        "actionGeometry": { "const": "generic" },
+        "workLifecycle": { "const": "generic" },
+        "cut": { "const": "generic" },
+        "domainSpecificCoreFork": { "type": "boolean" },
+        "parallelAuthority": { "type": "boolean" }
+      }
+    },
+    "humanAuthority": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "domainIdentity",
+        "legitimateAuthorization",
+        "successMeaning",
+        "privacyBoundary",
+        "evidenceStrength",
+        "consequenceMeaning"
+      ],
+      "properties": {
+        "domainIdentity": { "$ref": "#/$defs/humanJudgment" },
+        "legitimateAuthorization": { "$ref": "#/$defs/humanJudgment" },
+        "successMeaning": { "$ref": "#/$defs/humanJudgment" },
+        "privacyBoundary": { "$ref": "#/$defs/humanJudgment" },
+        "evidenceStrength": { "$ref": "#/$defs/humanJudgment" },
+        "consequenceMeaning": { "$ref": "#/$defs/humanJudgment" }
+      }
+    },
+    "behaviorEvidence": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/behaviorEvidence" }
+    },
+    "platformAdapters": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["platform", "relevance", "status", "evidenceRoot", "evidencePath", "evidencePointer"],
+        "properties": {
+          "platform": { "enum": ["cpp", "python", "node", "rust"] },
+          "relevance": { "enum": ["required", "not-relevant"] },
+          "status": { "enum": ["passed", "failed", "unsupported", "unqualified"] },
+          "evidenceRoot": { "anyOf": [{ "$ref": "#/$defs/root" }, { "type": "null" }] },
+          "evidencePath": { "anyOf": [{ "$ref": "#/$defs/path" }, { "type": "null" }] },
+          "evidencePointer": { "anyOf": [{ "$ref": "#/$defs/pointer" }, { "type": "null" }] }
+        }
+      }
+    },
+    "profileSurfaces": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["surface", "relevance", "status"],
+        "properties": {
+          "surface": { "enum": ["validate", "qualify", "authoring-check", "installed-runtime"] },
+          "relevance": { "enum": ["required", "not-relevant"] },
+          "status": { "enum": ["supported", "unsupported"] }
+        }
+      }
+    },
+    "buildchain": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "sourceRoot", "evidenceRoot", "evidencePath", "evidencePointer", "fresh", "compatible", "manualAllowlist"],
+      "properties": {
+        "status": { "enum": ["admitted", "absent", "stale", "mismatch", "incompatible"] },
+        "sourceRoot": { "anyOf": [{ "$ref": "#/$defs/root" }, { "type": "null" }] },
+        "evidenceRoot": { "anyOf": [{ "$ref": "#/$defs/root" }, { "type": "null" }] },
+        "evidencePath": { "anyOf": [{ "$ref": "#/$defs/path" }, { "type": "null" }] },
+        "evidencePointer": { "anyOf": [{ "$ref": "#/$defs/pointer" }, { "type": "null" }] },
+        "fresh": { "type": "boolean" },
+        "compatible": { "type": "boolean" },
+        "manualAllowlist": { "type": "boolean" }
+      }
+    },
+    "workOperationModel": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["authority", "operations", "separateAssignment"],
+      "properties": {
+        "authority": { "const": "existing-work-lifecycle" },
+        "operations": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "enum": ["inspect", "validate", "qualify", "plan", "execute", "settle", "recover", "archive"] }
+        },
+        "separateAssignment": { "type": "boolean" }
+      }
+    },
+    "constraints": { "type": "array", "uniqueItems": true, "items": { "type": "string", "minLength": 1 } },
+    "residualRisk": { "type": "array", "items": { "type": "string", "minLength": 1 } }
+  },
+  "$defs": {
+    "id": { "type": "string", "pattern": "^[a-z][a-z0-9.-]{2,127}$" },
+    "root": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+    "path": { "type": "string", "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$)).+" },
+    "pointer": { "type": "string", "pattern": "^/" },
+    "humanJudgment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "statement", "authorityRoot"],
+      "properties": {
+        "status": { "enum": ["human-declared", "missing"] },
+        "statement": { "type": ["string", "null"] },
+        "authorityRoot": { "anyOf": [{ "$ref": "#/$defs/root" }, { "type": "null" }] }
+      }
+    },
+    "behaviorEvidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["case", "status", "evidenceRoot", "evidencePath", "evidencePointer"],
+      "properties": {
+        "case": { "enum": ["repeat", "crash", "interrupted", "stale", "warrant-revoked", "provider-switch", "projection-rebuild", "external-effect", "recovery"] },
+        "status": { "enum": ["passed", "failed", "missing", "stale", "crashed", "unsupported"] },
+        "evidenceRoot": { "anyOf": [{ "$ref": "#/$defs/root" }, { "type": "null" }] },
+        "evidencePath": { "anyOf": [{ "$ref": "#/$defs/path" }, { "type": "null" }] },
+        "evidencePointer": { "anyOf": [{ "$ref": "#/$defs/pointer" }, { "type": "null" }] }
+      }
+    }
+  }
+}
