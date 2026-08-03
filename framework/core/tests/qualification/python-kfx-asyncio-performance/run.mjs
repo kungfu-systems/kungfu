@@ -219,7 +219,23 @@ export function parseObservationStream(text) {
   if (observations.some((record) => record.status !== 'passed')) {
     throw new Error('workload emitted a non-passing observation');
   }
+  validatePeakRssObservations(observations);
   return { observations, manifest: manifests[0] };
+}
+
+function crediblePeakRss(value) {
+  return Number.isSafeInteger(value) && value > 0;
+}
+
+export function validatePeakRssObservations(observations) {
+  const invalid = observations.findIndex(
+    (record) => !crediblePeakRss(record.peak_rss_bytes),
+  );
+  if (invalid !== -1) {
+    throw new Error(
+      `observation ${invalid + 1} peak_rss_bytes must be a positive safe integer`,
+    );
+  }
 }
 
 export function validateCoverage(
@@ -407,6 +423,11 @@ export function evaluateReport({
     invalidations.push('correctness gate failed');
   if (mode === 'execute' && !observations.length)
     invalidations.push('scored observations are missing');
+  if (
+    mode === 'execute' &&
+    observations.some((record) => !crediblePeakRss(record.peak_rss_bytes))
+  )
+    invalidations.push('peak RSS observation is missing or non-credible');
   if (mode === 'execute' && quick)
     invalidations.push('quick workload is diagnostic-only');
   if (
@@ -601,6 +622,7 @@ export function verifyEvidence(
       'raw observations contain an invalid or non-passing record',
     );
   }
+  validatePeakRssObservations(observations);
   if (observations.length !== report.observations.count) {
     throw new Error('raw observation count does not match the report');
   }
