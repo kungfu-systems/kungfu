@@ -12,7 +12,19 @@
       "command": "./shifu check:source",
       "classification": "read-only-source",
       "implementation": "scripts/source-acceptance.mjs",
-      "transitiveWriters": [],
+      "runtimeImplementation": "scripts/readonly-source-toolchain.mjs",
+      "writerOwner": "source-acceptance-runtime",
+      "transitiveWriters": [
+        "disposable OS test directories only"
+      ],
+      "deniedCheckoutWriters": [
+        "_tmp_*",
+        ".buildchain/diagnostics/*.tmp-*",
+        ".pnpm-store/**",
+        "generated-fixtures/**",
+        "nested-task-output/**"
+      ],
+      "recovery": "move disposable writes to the declared OS runtime root; run legitimate materialization in an isolated worktree and exclude it from ./shifu check:source",
       "network": false,
       "dependencyInstallation": false
     },
@@ -123,6 +135,35 @@
       "transitiveWriters": [],
       "network": false,
       "dependencyInstallation": false
+    },
+    {
+      "id": "work-design-open-card-preflight",
+      "command": "./shifu work-design:open-card-preflight",
+      "classification": "read-only-source",
+      "implementation": "framework/work-design-open-card/tooling/open-card-preflight.mjs",
+      "transitiveWriters": [],
+      "network": false,
+      "dependencyInstallation": false
+    },
+    {
+      "id": "work-design-feedback",
+      "command": "./shifu work-design:feedback",
+      "classification": "read-only-source",
+      "implementation": "framework/work-design-policy-replay/tooling/check-work-design-policy-replay.mjs",
+      "transitiveWriters": [],
+      "network": false,
+      "dependencyInstallation": false
+    },
+    {
+      "id": "documentation-readonly-checkout",
+      "command": "./shifu docs:check:readonly",
+      "classification": "explicit-materialization",
+      "implementation": "scripts/run-docs-readonly.mjs",
+      "transitiveWriters": [
+        "declared external documentation tool cache and manifest mirror"
+      ],
+      "network": true,
+      "dependencyInstallation": true
     },
     {
       "id": "documentation-material-qualification",
