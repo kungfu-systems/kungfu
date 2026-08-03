@@ -245,6 +245,24 @@
       "paths": [
         "scripts/durable-history-qualification.mjs"
       ]
+    },
+    {
+      "owner": "shifu/native-source-acquisition",
+      "paths": [
+        "crates/shifu/src/source.rs"
+      ]
+    },
+    {
+      "owner": "core/python-agent-documentation-cli",
+      "paths": [
+        "framework/core/src/python/kungfu/cli/commands/agent_docs.py"
+      ]
+    },
+    {
+      "owner": "shifu/portable-atlas-bundle",
+      "paths": [
+        "scripts/portable-atlas-bundle.mjs"
+      ]
     }
   ],
   "exceptions": []

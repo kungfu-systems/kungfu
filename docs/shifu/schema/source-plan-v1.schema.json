@@ -1,0 +1,79 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://libkungfu.dev/schemas/shifu/source-plan-v1.schema.json",
+  "title": "Shifu exact source plan",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "operation",
+    "readOnly",
+    "requiresExecute",
+    "repository",
+    "transportLocator",
+    "identity",
+    "destination",
+    "transfer",
+    "safety",
+    "nextAction",
+    "planRoot"
+  ],
+  "properties": {
+    "schema": {"const": "shifu.source-plan/v1"},
+    "operation": {"const": "acquire"},
+    "readOnly": {"const": true},
+    "requiresExecute": {"const": true},
+    "repository": {"type": "string", "minLength": 1},
+    "transportLocator": {"type": "string", "minLength": 1},
+    "identity": {"$ref": "#/$defs/identity"},
+    "destination": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "collisionPolicy", "resume"],
+      "properties": {
+        "path": {"type": "string", "minLength": 1},
+        "collisionPolicy": {"enum": ["reject-existing", "resume-qualified-only"]},
+        "resume": {"type": "boolean"}
+      }
+    },
+    "transfer": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["cache", "partial", "sparse"],
+      "properties": {
+        "cache": {"type": ["string", "null"]},
+        "partial": {"type": "boolean"},
+        "sparse": {"type": "array", "items": {"type": "string"}, "uniqueItems": true}
+      }
+    },
+    "safety": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["executesRepositoryCode", "autoBuild", "autoEdit", "autoClean"],
+      "properties": {
+        "executesRepositoryCode": {"const": false},
+        "autoBuild": {"const": false},
+        "autoEdit": {"const": false},
+        "autoClean": {"const": false}
+      }
+    },
+    "nextAction": {"type": "string", "minLength": 1},
+    "planRoot": {"$ref": "#/$defs/root"}
+  },
+  "$defs": {
+    "root": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "gitObject": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+    "identity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["commit", "tree", "tag", "bundleRoot", "releasePassportRoot"],
+      "properties": {
+        "commit": {"$ref": "#/$defs/gitObject"},
+        "tree": {"$ref": "#/$defs/gitObject"},
+        "tag": {"type": ["string", "null"]},
+        "bundleRoot": {"anyOf": [{"$ref": "#/$defs/root"}, {"type": "null"}]},
+        "releasePassportRoot": {"anyOf": [{"$ref": "#/$defs/root"}, {"type": "null"}]}
+      }
+    }
+  }
+}
