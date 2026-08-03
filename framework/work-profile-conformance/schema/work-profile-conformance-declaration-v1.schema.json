@@ -28,14 +28,21 @@
       "additionalProperties": false,
       "required": [
         "actionGeometryRoot",
+        "actionGeometryPath",
         "domainProfileRoot",
+        "domainProfilePath",
         "roleSchemaRoots",
+        "roleSchemaPaths",
         "abstractionAuthorityRoot",
+        "abstractionAuthorityPath",
+        "sourcePath",
         "sourceRoot"
       ],
       "properties": {
         "actionGeometryRoot": { "$ref": "#/$defs/root" },
+        "actionGeometryPath": { "$ref": "#/$defs/path" },
         "domainProfileRoot": { "$ref": "#/$defs/root" },
+        "domainProfilePath": { "$ref": "#/$defs/path" },
         "roleSchemaRoots": {
           "type": "object",
           "additionalProperties": false,
@@ -48,7 +55,21 @@
             "warrant": { "$ref": "#/$defs/root" }
           }
         },
+        "roleSchemaPaths": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["fact", "episode", "pursuit", "atlas", "warrant"],
+          "properties": {
+            "fact": { "$ref": "#/$defs/path" },
+            "episode": { "$ref": "#/$defs/path" },
+            "pursuit": { "$ref": "#/$defs/path" },
+            "atlas": { "$ref": "#/$defs/path" },
+            "warrant": { "$ref": "#/$defs/path" }
+          }
+        },
         "abstractionAuthorityRoot": { "$ref": "#/$defs/root" },
+        "abstractionAuthorityPath": { "$ref": "#/$defs/path" },
+        "sourcePath": { "$ref": "#/$defs/path" },
         "sourceRoot": { "$ref": "#/$defs/root" }
       }
     },
@@ -130,7 +151,7 @@
     "buildchain": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["status", "sourceRoot", "evidenceRoot", "evidencePath", "evidencePointer", "fresh", "compatible", "manualAllowlist"],
+      "required": ["status", "sourceRoot", "evidenceRoot", "evidencePath", "evidencePointer", "fresh", "compatible", "manualAllowlist", "provider", "runner", "sourceRevision", "authorityRoot", "authorityPath", "artifactRefs"],
       "properties": {
         "status": { "enum": ["admitted", "absent", "stale", "mismatch", "incompatible"] },
         "sourceRoot": { "anyOf": [{ "$ref": "#/$defs/root" }, { "type": "null" }] },
@@ -140,19 +161,30 @@
         "fresh": { "type": "boolean" },
         "compatible": { "type": "boolean" },
         "manualAllowlist": { "type": "boolean" }
+        ,"provider": { "type": "string", "minLength": 1 }
+        ,"runner": { "type": "string", "minLength": 1 }
+        ,"sourceRevision": { "type": "string", "pattern": "^[0-9a-f]{40}$" }
+        ,"authorityRoot": { "$ref": "#/$defs/root" }
+        ,"authorityPath": { "$ref": "#/$defs/path" }
+        ,"artifactRefs": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/evidenceCoordinate" }
+        }
       }
     },
     "workOperationModel": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["authority", "operations", "separateAssignment"],
+      "required": ["authority", "authorityRoot", "operations", "separateAssignment"],
       "properties": {
-        "authority": { "const": "existing-work-lifecycle" },
+        "authority": { "const": "existing-work-api" },
+        "authorityRoot": { "$ref": "#/$defs/root" },
         "operations": {
           "type": "array",
           "minItems": 1,
           "uniqueItems": true,
-          "items": { "enum": ["inspect", "validate", "qualify", "plan", "execute", "settle", "recover", "archive"] }
+          "items": { "enum": ["inspect", "begin", "checkpoint", "complete", "settle", "resume", "recover", "export", "import"] }
         },
         "separateAssignment": { "type": "boolean" }
       }
@@ -165,6 +197,16 @@
     "root": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
     "path": { "type": "string", "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$)).+" },
     "pointer": { "type": "string", "pattern": "^/" },
+    "evidenceCoordinate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["evidenceRoot", "evidencePath", "evidencePointer"],
+      "properties": {
+        "evidenceRoot": { "$ref": "#/$defs/root" },
+        "evidencePath": { "$ref": "#/$defs/path" },
+        "evidencePointer": { "anyOf": [{ "$ref": "#/$defs/pointer" }, { "type": "null" }] }
+      }
+    },
     "humanJudgment": {
       "type": "object",
       "additionalProperties": false,

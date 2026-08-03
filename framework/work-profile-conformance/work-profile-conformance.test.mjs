@@ -124,9 +124,41 @@ test('fails closed as profile-invalid for malformed roots and duplicate evidence
   duplicate.behaviorEvidence.push(clone(duplicate.behaviorEvidence[0]));
   const result = evaluateConformance(duplicate);
   assert.equal(result.verdict, 'profile-invalid');
+  const diagnostic = result.diagnostics.find(
+    (item) => item.code === 'behavior-repeat-duplicate',
+  );
+  assert.ok(diagnostic);
+  assert.equal(diagnostic.violatedInvariant, diagnostic.code);
+  assert.deepEqual(diagnostic.evidenceCoordinate, {
+    evidenceRoot: result.declarationRoot,
+    evidencePath: null,
+    evidencePointer: null,
+  });
+  assert.deepEqual(validateResult(result), { ok: true, errors: [] });
+});
+
+test('cold source validation remains schema-enforcing without Ajv', () => {
+  const temporary = fs.mkdtempSync(
+    path.join(os.tmpdir(), 'kungfu-conformance-cold-'),
+  );
+  const declaration = agentDeclaration();
+  declaration.unregisteredAuthority = true;
+  const declarationPath = path.join(temporary, 'malformed.json');
+  fs.writeFileSync(declarationPath, JSON.stringify(declaration));
+  const run = spawnSync(
+    process.execPath,
+    [SCRIPT, '--declaration', declarationPath, '--json'],
+    {
+      encoding: 'utf8',
+      env: { ...process.env, KUNGFU_READONLY_NO_AJV: '1' },
+    },
+  );
+  assert.equal(run.status, 2, run.stderr);
+  const result = JSON.parse(run.stdout);
+  assert.equal(result.verdict, 'profile-invalid');
   assert.ok(
     result.diagnostics.some(
-      (item) => item.code === 'behavior-repeat-duplicate',
+      ({ code }) => code === 'declaration-schema-additionalProperties',
     ),
   );
 });
@@ -150,6 +182,38 @@ test('fails closed when retained evidence is missing or root-mismatched', () => 
   assert.ok(
     missingResult.diagnostics.some(
       (item) => item.code === 'behavior-repeat-evidence-missing',
+    ),
+  );
+});
+
+test('rejects forged authority roots and cross-domain evidence replay', () => {
+  const forged = agentDeclaration();
+  forged.bindings.domainProfileRoot = `sha256:${'9'.repeat(64)}`;
+  forged.bindings.roleSchemaRoots.fact = `sha256:${'8'.repeat(64)}`;
+  forged.humanAuthority.domainIdentity.authorityRoot = `sha256:${'7'.repeat(64)}`;
+  const forgedResult = evaluateConformance(forged);
+  assert.equal(forgedResult.verdict, 'profile-invalid');
+  assert.ok(
+    forgedResult.diagnostics.some(
+      ({ code }) => code === 'binding-domainProfileRoot-evidence-mismatch',
+    ),
+  );
+
+  const replay = agentDeclaration();
+  const week = FIXTURE.scenarios.find(
+    ({ declaration }) => declaration.scenarioId === 'week-day-action',
+  ).declaration;
+  for (const evidence of replay.behaviorEvidence) {
+    const source = week.behaviorEvidence.find(
+      ({ case: caseId }) => caseId === evidence.case,
+    );
+    Object.assign(evidence, source);
+  }
+  const replayResult = evaluateConformance(replay);
+  assert.equal(replayResult.verdict, 'profile-invalid');
+  assert.ok(
+    replayResult.diagnostics.some(({ code }) =>
+      code.endsWith('-evidence-semantic-mismatch'),
     ),
   );
 });
@@ -247,6 +311,17 @@ test('blocks every unsupported Buildchain admission mode without an allowlist es
     evaluateConformance(incompatible).verdict,
     'scenario-incompatible',
   );
+
+  const artifactMismatch = agentDeclaration();
+  artifactMismatch.buildchain.artifactRefs =
+    artifactMismatch.buildchain.artifactRefs.slice(1);
+  const artifactResult = evaluateConformance(artifactMismatch);
+  assert.equal(artifactResult.verdict, 'profile-invalid');
+  assert.ok(
+    artifactResult.diagnostics.some(
+      ({ code }) => code === 'buildchain-evidence-semantic-mismatch',
+    ),
+  );
 });
 
 test('requires explicit relevant adapter and surface support', () => {
@@ -262,6 +337,45 @@ test('requires explicit relevant adapter and surface support', () => {
   surface.profileSurfaces.find(({ surface: id }) => id === 'qualify').status =
     'unsupported';
   assert.equal(evaluateConformance(surface).verdict, 'unqualified');
+
+  const omittedPlatform = agentDeclaration();
+  omittedPlatform.platformAdapters = omittedPlatform.platformAdapters.filter(
+    ({ platform }) => platform !== 'rust',
+  );
+  assert.equal(evaluateConformance(omittedPlatform).verdict, 'profile-invalid');
+
+  const omittedSurface = agentDeclaration();
+  omittedSurface.profileSurfaces = omittedSurface.profileSurfaces.filter(
+    ({ surface: id }) => id !== 'qualify',
+  );
+  assert.equal(evaluateConformance(omittedSurface).verdict, 'profile-invalid');
+});
+
+test('generated fault receipts bind exact identity and idempotence semantics', () => {
+  const retained = JSON.parse(
+    fs.readFileSync(
+      path.join(
+        ROOT,
+        'framework/work-profile-conformance/qualification/retained-witnesses.json',
+      ),
+      'utf8',
+    ),
+  );
+  for (const [scenarioId, scenario] of Object.entries(retained.scenarios)) {
+    const roots = new Set();
+    for (const [caseId, receipt] of Object.entries(scenario.behavior)) {
+      assert.equal(receipt.scenarioId, scenarioId);
+      assert.equal(receipt.case, caseId);
+      assert.equal(receipt.status, 'passed');
+      assert.equal(receipt.output.identityRoot, receipt.identityRoot);
+      assert.equal(receipt.output.resultIdentityRoot, receipt.identityRoot);
+      assert.equal(receipt.output.duplicateAuthority, false);
+      assert.equal(receipt.output.lifecycleFork, false);
+      assert.equal(receipt.output.idempotencyKey, receipt.input.idempotencyKey);
+      roots.add(receipt.identityRoot);
+    }
+    assert.equal(roots.size, 1);
+  }
 });
 
 test('rejects Core forks, parallel authority, and separate Assignment closure', () => {

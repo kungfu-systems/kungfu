@@ -1,47 +1,837 @@
 {
-  "schema": "kungfu.work-profile-conformance-retained-witnesses/v1",
+  "schema": "kungfu.work-profile-generated-evidence/v1",
+  "generator": "framework/work-profile-conformance/generate-qualification.mjs",
   "scenarios": {
     "agent-work-control": {
       "behavior": {
-        "repeat": { "case": "repeat", "status": "passed", "artifactRefs": ["framework/agent-work/evidence/kfd-7/concurrency-retry-compensation.json"] },
-        "crash": { "case": "crash", "status": "passed", "artifactRefs": ["framework/agent-work/evidence/kfd-7/cold-start-continuation.json"] },
-        "interrupted": { "case": "interrupted", "status": "passed", "artifactRefs": ["framework/agent-work/evidence/kfd-7/pursuit-continuity-settlement.json"] },
-        "stale": { "case": "stale", "status": "passed", "artifactRefs": ["framework/agent-work/evidence/kfd-7/atlas-staleness-loss.json"] },
-        "warrant-revoked": { "case": "warrant-revoked", "status": "passed", "artifactRefs": ["framework/agent-work/evidence/kfd-7/warrant-decay-revocation.json"] },
-        "provider-switch": { "case": "provider-switch", "status": "passed", "artifactRefs": ["framework/agent-work/evidence/kfd-7/backend-migration.json"] },
-        "projection-rebuild": { "case": "projection-rebuild", "status": "passed", "artifactRefs": ["framework/agent-work/evidence/kfd-7/export-import-rebuild.json"] },
-        "external-effect": { "case": "external-effect", "status": "passed", "artifactRefs": ["framework/agent-work/evidence/kfd-7/episode-replay-contraction.json"] },
-        "recovery": { "case": "recovery", "status": "passed", "artifactRefs": ["framework/agent-work/evidence/kfd-7/cold-start-continuation.json", "framework/agent-work/evidence/kfd-7/export-import-rebuild.json"] }
+        "repeat": {
+          "schema": "kungfu.work-profile-fault-receipt/v1",
+          "scenarioId": "agent-work-control",
+          "domainProfileRoot": "sha256:be4c92b368d0b015b78d1a67a1087c2a11c9f85eaebfc8c203ad695ac6ba3e4d",
+          "sourceRoot": "sha256:be4c92b368d0b015b78d1a67a1087c2a11c9f85eaebfc8c203ad695ac6ba3e4d",
+          "case": "repeat",
+          "status": "passed",
+          "identityRoot": "sha256:d1af4679af18d37709750ebd77d8434919f057b984a85bcb27ea2e9e690ca85c",
+          "inputRoot": "sha256:d9be71254aafdf312f15f7cac01a007de3a822940b67c59db97519b9017210ab",
+          "outputRoot": "sha256:da14328a150a124f96c8536a08b239c6c087d048998ac28e00b761df73cb24f2",
+          "input": {
+            "schema": "kungfu.work-profile-fault-input/v1",
+            "case": "repeat",
+            "identityRoot": "sha256:d1af4679af18d37709750ebd77d8434919f057b984a85bcb27ea2e9e690ca85c",
+            "idempotencyKey": "qualification:agent-work-control:repeat",
+            "basisRevision": 7
+          },
+          "output": {
+            "identityRoot": "sha256:d1af4679af18d37709750ebd77d8434919f057b984a85bcb27ea2e9e690ca85c",
+            "resultIdentityRoot": "sha256:d1af4679af18d37709750ebd77d8434919f057b984a85bcb27ea2e9e690ca85c",
+            "idempotencyKey": "qualification:agent-work-control:repeat",
+            "duplicateAuthority": false,
+            "lifecycleFork": false,
+            "replay": "same-receipt",
+            "effectCount": 1
+          }
+        },
+        "crash": {
+          "schema": "kungfu.work-profile-fault-receipt/v1",
+          "scenarioId": "agent-work-control",
+          "domainProfileRoot": "sha256:be4c92b368d0b015b78d1a67a1087c2a11c9f85eaebfc8c203ad695ac6ba3e4d",
+          "sourceRoot": "sha256:be4c92b368d0b015b78d1a67a1087c2a11c9f85eaebfc8c203ad695ac6ba3e4d",
+          "case": "crash",
+          "status": "passed",
+          "identityRoot": "sha256:d1af4679af18d37709750ebd77d8434919f057b984a85bcb27ea2e9e690ca85c",
+          "inputRoot": "sha256:ee5f47ccc8fe95617951fd13b2ae5dcb2e7cea63861ae56f95ec0249649fd877",
+          "outputRoot": "sha256:7900c83204d7692a3bbb8ec0752608e13bb59c11f2126c009519bf5396c01222",
+          "input": {
+            "schema": "kungfu.work-profile-fault-input/v1",
+            "case": "crash",
+            "identityRoot": "sha256:d1af4679af18d37709750ebd77d8434919f057b984a85bcb27ea2e9e690ca85c",
+            "idempotencyKey": "qualification:agent-work-control:crash",
+            "basisRevision": 7
+          },
+          "output": {
+            "identityRoot": "sha256:d1af4679af18d37709750ebd77d8434919f057b984a85bcb27ea2e9e690ca85c",
+            "resultIdentityRoot": "sha256:d1af4679af18d37709750ebd77d8434919f057b984a85bcb27ea2e9e690ca85c",
+            "idempotencyKey": "qualification:agent-work-control:crash",
+            "duplicateAuthority": false,
+            "lifecycleFork": false,
+            "prepared": true,
+            "settled": false,
+            "recovery": "resume"
+          }
+        },
+        "interrupted": {
+          "schema": "kungfu.work-profile-fault-receipt/v1",
+          "scenarioId": "agent-work-control",
+          "domainProfileRoot": "sha256:be4c92b368d0b015b78d1a67a1087c2a11c9f85eaebfc8c203ad695ac6ba3e4d",
+          "sourceRoot": "sha256:be4c92b368d0b015b78d1a67a1087c2a11c9f85eaebfc8c203ad695ac6ba3e4d",
+          "case": "interrupted",
+          "status": "passed",
+          "identityRoot": "sha256:d1af4679af18d37709750ebd77d8434919f057b984a85bcb27ea2e9e690ca85c",
+          "inputRoot": "sha256:a84587cc1834fc3e5607c2d6f9070d801ae80d80720ac260dab47a97b4a3656c",
+          "outputRoot": "sha256:c3ab83f3b3100f2106c30a6102aba0ae511082a0f3c3595e01fb6909c8669b75",
+          "input": {
+            "schema": "kungfu.work-profile-fault-input/v1",
+            "case": "interrupted",
+            "identityRoot": "sha256:d1af4679af18d37709750ebd77d8434919f057b984a85bcb27ea2e9e690ca85c",
+            "idempotencyKey": "qualification:agent-work-control:interrupted",
+            "basisRevision": 7
+          },
+          "output": {
+            "identityRoot": "sha256:d1af4679af18d37709750ebd77d8434919f057b984a85bcb27ea2e9e690ca85c",
+            "resultIdentityRoot": "sha256:d1af4679af18d37709750ebd77d8434919f057b984a85bcb27ea2e9e690ca85c",
+            "idempotencyKey": "qualification:agent-work-control:interrupted",
+            "duplicateAuthority": false,
+            "lifecycleFork": false,
+            "committedPrefix": 1,
+            "missingSuffix": 1,
+            "recovery": "append-missing-suffix"
+          }
+        },
+        "stale": {
+          "schema": "kungfu.work-profile-fault-receipt/v1",
+          "scenarioId": "agent-work-control",
+          "domainProfileRoot": "sha256:be4c92b368d0b015b78d1a67a1087c2a11c9f85eaebfc8c203ad695ac6ba3e4d",
+          "sourceRoot": "sha256:be4c92b368d0b015b78d1a67a1087c2a11c9f85eaebfc8c203ad695ac6ba3e4d",
+          "case": "stale",
+          "status": "passed",
+          "identityRoot": "sha256:d1af4679af18d37709750ebd77d8434919f057b984a85bcb27ea2e9e690ca85c",
+          "inputRoot": "sha256:bbe051ce3b9495bf52968f0946121759eb1dfa00695cdc978a9da9a713d3199f",
+          "outputRoot": "sha256:4e58e27d2f933087aee866a22392e080e821f9aa96ca88aefb60e5ef884dcd81",
+          "input": {
+            "schema": "kungfu.work-profile-fault-input/v1",
+            "case": "stale",
+            "identityRoot": "sha256:d1af4679af18d37709750ebd77d8434919f057b984a85bcb27ea2e9e690ca85c",
+            "idempotencyKey": "qualification:agent-work-control:stale",
+            "basisRevision": 7
+          },
+          "output": {
+            "identityRoot": "sha256:d1af4679af18d37709750ebd77d8434919f057b984a85bcb27ea2e9e690ca85c",
+            "resultIdentityRoot": "sha256:d1af4679af18d37709750ebd77d8434919f057b984a85bcb27ea2e9e690ca85c",
+            "idempotencyKey": "qualification:agent-work-control:stale",
+            "duplicateAuthority": false,
+            "lifecycleFork": false,
+            "admitted": false,
+            "diagnostic": "stale-cut"
+          }
+        },
+        "warrant-revoked": {
+          "schema": "kungfu.work-profile-fault-receipt/v1",
+          "scenarioId": "agent-work-control",
+          "domainProfileRoot": "sha256:be4c92b368d0b015b78d1a67a1087c2a11c9f85eaebfc8c203ad695ac6ba3e4d",
+          "sourceRoot": "sha256:be4c92b368d0b015b78d1a67a1087c2a11c9f85eaebfc8c203ad695ac6ba3e4d",
+          "case": "warrant-revoked",
+          "status": "passed",
+          "identityRoot": "sha256:d1af4679af18d37709750ebd77d8434919f057b984a85bcb27ea2e9e690ca85c",
+          "inputRoot": "sha256:284e7cc93577925e7ca1b8f1364f2e023ea6a86089aaf0c567cf71f950a32ba6",
+          "outputRoot": "sha256:6ce8e5a08aebaeb8bf9911dbd02544af7c18618dff8862f20cc3da3e80851ddd",
+          "input": {
+            "schema": "kungfu.work-profile-fault-input/v1",
+            "case": "warrant-revoked",
+            "identityRoot": "sha256:d1af4679af18d37709750ebd77d8434919f057b984a85bcb27ea2e9e690ca85c",
+            "idempotencyKey": "qualification:agent-work-control:warrant-revoked",
+            "basisRevision": 7
+          },
+          "output": {
+            "identityRoot": "sha256:d1af4679af18d37709750ebd77d8434919f057b984a85bcb27ea2e9e690ca85c",
+            "resultIdentityRoot": "sha256:d1af4679af18d37709750ebd77d8434919f057b984a85bcb27ea2e9e690ca85c",
+            "idempotencyKey": "qualification:agent-work-control:warrant-revoked",
+            "duplicateAuthority": false,
+            "lifecycleFork": false,
+            "admitted": false,
+            "diagnostic": "warrant-revoked"
+          }
+        },
+        "provider-switch": {
+          "schema": "kungfu.work-profile-fault-receipt/v1",
+          "scenarioId": "agent-work-control",
+          "domainProfileRoot": "sha256:be4c92b368d0b015b78d1a67a1087c2a11c9f85eaebfc8c203ad695ac6ba3e4d",
+          "sourceRoot": "sha256:be4c92b368d0b015b78d1a67a1087c2a11c9f85eaebfc8c203ad695ac6ba3e4d",
+          "case": "provider-switch",
+          "status": "passed",
+          "identityRoot": "sha256:d1af4679af18d37709750ebd77d8434919f057b984a85bcb27ea2e9e690ca85c",
+          "inputRoot": "sha256:c8a47489d6fcc8ba889a28db8ea150ccf2a699e104093ae676bd22ab49c50fc5",
+          "outputRoot": "sha256:1f6e63c1ad454b01ceba681d6026102b39039a9b4abeba3b00a578b02ccdc8e2",
+          "input": {
+            "schema": "kungfu.work-profile-fault-input/v1",
+            "case": "provider-switch",
+            "identityRoot": "sha256:d1af4679af18d37709750ebd77d8434919f057b984a85bcb27ea2e9e690ca85c",
+            "idempotencyKey": "qualification:agent-work-control:provider-switch",
+            "basisRevision": 7
+          },
+          "output": {
+            "identityRoot": "sha256:d1af4679af18d37709750ebd77d8434919f057b984a85bcb27ea2e9e690ca85c",
+            "resultIdentityRoot": "sha256:d1af4679af18d37709750ebd77d8434919f057b984a85bcb27ea2e9e690ca85c",
+            "idempotencyKey": "qualification:agent-work-control:provider-switch",
+            "duplicateAuthority": false,
+            "lifecycleFork": false,
+            "providerChanged": true,
+            "semanticIdentityChanged": false
+          }
+        },
+        "projection-rebuild": {
+          "schema": "kungfu.work-profile-fault-receipt/v1",
+          "scenarioId": "agent-work-control",
+          "domainProfileRoot": "sha256:be4c92b368d0b015b78d1a67a1087c2a11c9f85eaebfc8c203ad695ac6ba3e4d",
+          "sourceRoot": "sha256:be4c92b368d0b015b78d1a67a1087c2a11c9f85eaebfc8c203ad695ac6ba3e4d",
+          "case": "projection-rebuild",
+          "status": "passed",
+          "identityRoot": "sha256:d1af4679af18d37709750ebd77d8434919f057b984a85bcb27ea2e9e690ca85c",
+          "inputRoot": "sha256:eb6305ef5fd26c6bf970206b2773bede077532ada0175e33de6f8799a94727cf",
+          "outputRoot": "sha256:9ce867fcf99b037719d19715cb71ae9f4b9b153ff87148c903649a5cf63dedf5",
+          "input": {
+            "schema": "kungfu.work-profile-fault-input/v1",
+            "case": "projection-rebuild",
+            "identityRoot": "sha256:d1af4679af18d37709750ebd77d8434919f057b984a85bcb27ea2e9e690ca85c",
+            "idempotencyKey": "qualification:agent-work-control:projection-rebuild",
+            "basisRevision": 7
+          },
+          "output": {
+            "identityRoot": "sha256:d1af4679af18d37709750ebd77d8434919f057b984a85bcb27ea2e9e690ca85c",
+            "resultIdentityRoot": "sha256:d1af4679af18d37709750ebd77d8434919f057b984a85bcb27ea2e9e690ca85c",
+            "idempotencyKey": "qualification:agent-work-control:projection-rebuild",
+            "duplicateAuthority": false,
+            "lifecycleFork": false,
+            "projectionDeleted": true,
+            "rebuiltFromAuthority": true
+          }
+        },
+        "external-effect": {
+          "schema": "kungfu.work-profile-fault-receipt/v1",
+          "scenarioId": "agent-work-control",
+          "domainProfileRoot": "sha256:be4c92b368d0b015b78d1a67a1087c2a11c9f85eaebfc8c203ad695ac6ba3e4d",
+          "sourceRoot": "sha256:be4c92b368d0b015b78d1a67a1087c2a11c9f85eaebfc8c203ad695ac6ba3e4d",
+          "case": "external-effect",
+          "status": "passed",
+          "identityRoot": "sha256:d1af4679af18d37709750ebd77d8434919f057b984a85bcb27ea2e9e690ca85c",
+          "inputRoot": "sha256:3390dfa1e84ce8ef1ebb26e9257938c1141ccc13f99653629232f3716cb8257a",
+          "outputRoot": "sha256:795e2a280e337194425f9eed3ea05b7d0a71f91a39f8680369bfda33326b2b68",
+          "input": {
+            "schema": "kungfu.work-profile-fault-input/v1",
+            "case": "external-effect",
+            "identityRoot": "sha256:d1af4679af18d37709750ebd77d8434919f057b984a85bcb27ea2e9e690ca85c",
+            "idempotencyKey": "qualification:agent-work-control:external-effect",
+            "basisRevision": 7
+          },
+          "output": {
+            "identityRoot": "sha256:d1af4679af18d37709750ebd77d8434919f057b984a85bcb27ea2e9e690ca85c",
+            "resultIdentityRoot": "sha256:d1af4679af18d37709750ebd77d8434919f057b984a85bcb27ea2e9e690ca85c",
+            "idempotencyKey": "qualification:agent-work-control:external-effect",
+            "duplicateAuthority": false,
+            "lifecycleFork": false,
+            "receiptRequired": true,
+            "unreceiptedEffectAdmitted": false
+          }
+        },
+        "recovery": {
+          "schema": "kungfu.work-profile-fault-receipt/v1",
+          "scenarioId": "agent-work-control",
+          "domainProfileRoot": "sha256:be4c92b368d0b015b78d1a67a1087c2a11c9f85eaebfc8c203ad695ac6ba3e4d",
+          "sourceRoot": "sha256:be4c92b368d0b015b78d1a67a1087c2a11c9f85eaebfc8c203ad695ac6ba3e4d",
+          "case": "recovery",
+          "status": "passed",
+          "identityRoot": "sha256:d1af4679af18d37709750ebd77d8434919f057b984a85bcb27ea2e9e690ca85c",
+          "inputRoot": "sha256:70eb6fd024e927c6ada151c0d968aace210fa68bd35a0d4b2cf20050b8e526c4",
+          "outputRoot": "sha256:0eafd9b0f25ebd27e5e32316475b91d3a15a027214eddd3b4e8bfff7a514ef10",
+          "input": {
+            "schema": "kungfu.work-profile-fault-input/v1",
+            "case": "recovery",
+            "identityRoot": "sha256:d1af4679af18d37709750ebd77d8434919f057b984a85bcb27ea2e9e690ca85c",
+            "idempotencyKey": "qualification:agent-work-control:recovery",
+            "basisRevision": 7
+          },
+          "output": {
+            "identityRoot": "sha256:d1af4679af18d37709750ebd77d8434919f057b984a85bcb27ea2e9e690ca85c",
+            "resultIdentityRoot": "sha256:d1af4679af18d37709750ebd77d8434919f057b984a85bcb27ea2e9e690ca85c",
+            "idempotencyKey": "qualification:agent-work-control:recovery",
+            "duplicateAuthority": false,
+            "lifecycleFork": false,
+            "cleanRuntime": true,
+            "importedExactRoots": true
+          }
+        }
       },
-      "buildchain": { "status": "admitted", "sourceRoot": "sha256:2111111111111111111111111111111111111111111111111111111111111111", "fresh": true, "compatible": true, "manualAllowlist": false, "artifactRefs": ["scripts/buildchain-kfd-evidence.mjs"] }
+      "buildchain": {
+        "status": "admitted",
+        "sourceRoot": "sha256:be4c92b368d0b015b78d1a67a1087c2a11c9f85eaebfc8c203ad695ac6ba3e4d",
+        "fresh": true,
+        "compatible": true,
+        "manualAllowlist": false,
+        "provider": "kungfu-buildchain",
+        "runner": "source-acceptance",
+        "sourceRevision": "2a251e8c7b39a108f671b05acb8902b74e9c6289",
+        "authorityRoot": "sha256:6e92d2246c3ffe4d14c10dd7286f60c50a2266e619320b7e9dc6cb892efc8a57",
+        "artifactRefs": [
+          {
+            "evidenceRoot": "sha256:909f01446d58aafdd9556001a98b18b9689f9bcd5a7e977697f380995d0493f2",
+            "evidencePath": ".buildchain/kfd/kfd-3/collaboration-interface.prebuild.json",
+            "evidencePointer": null
+          },
+          {
+            "evidenceRoot": "sha256:07abbeffd6b47f5d0aa25625b74b7e6d2aa4d67b84f10d18e859a5a31a3880bb",
+            "evidencePath": "scripts/source-acceptance.mjs",
+            "evidencePointer": null
+          },
+          {
+            "evidenceRoot": "sha256:a49155c2e7eb9f4215e3290efa16014ae999c833d56947765e38dc73dc4ca50c",
+            "evidencePath": "framework/work-profile-conformance/work-profile-conformance.test.mjs",
+            "evidencePointer": null
+          }
+        ]
+      }
     },
     "week-day-action": {
       "behavior": {
-        "repeat": { "case": "repeat", "status": "passed", "witness": "idempotent recurrence replay" },
-        "crash": { "case": "crash", "status": "passed", "witness": "pre-ref crash leaves no admitted ref move" },
-        "interrupted": { "case": "interrupted", "status": "passed", "witness": "continuation resumes from the retained Cut" },
-        "stale": { "case": "stale", "status": "passed", "witness": "stale calendar Cut is rejected" },
-        "warrant-revoked": { "case": "warrant-revoked", "status": "passed", "witness": "revoked execution Warrant is denied" },
-        "provider-switch": { "case": "provider-switch", "status": "passed", "witness": "provider change preserves Fact and Cut roots" },
-        "projection-rebuild": { "case": "projection-rebuild", "status": "passed", "witness": "calendar projection rebuilds from retained Facts" },
-        "external-effect": { "case": "external-effect", "status": "passed", "witness": "reminder delivery stays an Episode consequence" },
-        "recovery": { "case": "recovery", "status": "passed", "witness": "named ref recovery retains prior Cuts" }
+        "repeat": {
+          "schema": "kungfu.work-profile-fault-receipt/v1",
+          "scenarioId": "week-day-action",
+          "domainProfileRoot": "sha256:4d8391378a77728c2dd5acda64c5c0c0ddad1d94551206b4d46895540e3e5779",
+          "sourceRoot": "sha256:4d8391378a77728c2dd5acda64c5c0c0ddad1d94551206b4d46895540e3e5779",
+          "case": "repeat",
+          "status": "passed",
+          "identityRoot": "sha256:e770c56428f5fa06c777b4dffef17ade4dd954aa40d38004f07a21e7ad859c53",
+          "inputRoot": "sha256:c8ab243cfb819b3b93f2ae438df49e1b3bf2c81963a44e94a5bd80e487fc455e",
+          "outputRoot": "sha256:c2a91c1f749dc8d8658a273d4d66b4d9424248cf669e3a81027fb836a3c59906",
+          "input": {
+            "schema": "kungfu.work-profile-fault-input/v1",
+            "case": "repeat",
+            "identityRoot": "sha256:e770c56428f5fa06c777b4dffef17ade4dd954aa40d38004f07a21e7ad859c53",
+            "idempotencyKey": "qualification:week-day-action:repeat",
+            "basisRevision": 7
+          },
+          "output": {
+            "identityRoot": "sha256:e770c56428f5fa06c777b4dffef17ade4dd954aa40d38004f07a21e7ad859c53",
+            "resultIdentityRoot": "sha256:e770c56428f5fa06c777b4dffef17ade4dd954aa40d38004f07a21e7ad859c53",
+            "idempotencyKey": "qualification:week-day-action:repeat",
+            "duplicateAuthority": false,
+            "lifecycleFork": false,
+            "replay": "same-receipt",
+            "effectCount": 1
+          }
+        },
+        "crash": {
+          "schema": "kungfu.work-profile-fault-receipt/v1",
+          "scenarioId": "week-day-action",
+          "domainProfileRoot": "sha256:4d8391378a77728c2dd5acda64c5c0c0ddad1d94551206b4d46895540e3e5779",
+          "sourceRoot": "sha256:4d8391378a77728c2dd5acda64c5c0c0ddad1d94551206b4d46895540e3e5779",
+          "case": "crash",
+          "status": "passed",
+          "identityRoot": "sha256:e770c56428f5fa06c777b4dffef17ade4dd954aa40d38004f07a21e7ad859c53",
+          "inputRoot": "sha256:c4678aef62951fd36746257832d37deb7d52b1beeb8ea4d3255f688fd085676a",
+          "outputRoot": "sha256:f8252a3085ae8edc1de560b10202711f75b05726f9ec41ddd5c23e765e145148",
+          "input": {
+            "schema": "kungfu.work-profile-fault-input/v1",
+            "case": "crash",
+            "identityRoot": "sha256:e770c56428f5fa06c777b4dffef17ade4dd954aa40d38004f07a21e7ad859c53",
+            "idempotencyKey": "qualification:week-day-action:crash",
+            "basisRevision": 7
+          },
+          "output": {
+            "identityRoot": "sha256:e770c56428f5fa06c777b4dffef17ade4dd954aa40d38004f07a21e7ad859c53",
+            "resultIdentityRoot": "sha256:e770c56428f5fa06c777b4dffef17ade4dd954aa40d38004f07a21e7ad859c53",
+            "idempotencyKey": "qualification:week-day-action:crash",
+            "duplicateAuthority": false,
+            "lifecycleFork": false,
+            "prepared": true,
+            "settled": false,
+            "recovery": "resume"
+          }
+        },
+        "interrupted": {
+          "schema": "kungfu.work-profile-fault-receipt/v1",
+          "scenarioId": "week-day-action",
+          "domainProfileRoot": "sha256:4d8391378a77728c2dd5acda64c5c0c0ddad1d94551206b4d46895540e3e5779",
+          "sourceRoot": "sha256:4d8391378a77728c2dd5acda64c5c0c0ddad1d94551206b4d46895540e3e5779",
+          "case": "interrupted",
+          "status": "passed",
+          "identityRoot": "sha256:e770c56428f5fa06c777b4dffef17ade4dd954aa40d38004f07a21e7ad859c53",
+          "inputRoot": "sha256:30a00ece77867a44101672eac1d93f057453152e1ab21f1147baa72d10a68ce5",
+          "outputRoot": "sha256:9979b4ba460dbf21fbc14273d8a76a5dc2e6d62f67fe9ffe6eca5cfd9ba55923",
+          "input": {
+            "schema": "kungfu.work-profile-fault-input/v1",
+            "case": "interrupted",
+            "identityRoot": "sha256:e770c56428f5fa06c777b4dffef17ade4dd954aa40d38004f07a21e7ad859c53",
+            "idempotencyKey": "qualification:week-day-action:interrupted",
+            "basisRevision": 7
+          },
+          "output": {
+            "identityRoot": "sha256:e770c56428f5fa06c777b4dffef17ade4dd954aa40d38004f07a21e7ad859c53",
+            "resultIdentityRoot": "sha256:e770c56428f5fa06c777b4dffef17ade4dd954aa40d38004f07a21e7ad859c53",
+            "idempotencyKey": "qualification:week-day-action:interrupted",
+            "duplicateAuthority": false,
+            "lifecycleFork": false,
+            "committedPrefix": 1,
+            "missingSuffix": 1,
+            "recovery": "append-missing-suffix"
+          }
+        },
+        "stale": {
+          "schema": "kungfu.work-profile-fault-receipt/v1",
+          "scenarioId": "week-day-action",
+          "domainProfileRoot": "sha256:4d8391378a77728c2dd5acda64c5c0c0ddad1d94551206b4d46895540e3e5779",
+          "sourceRoot": "sha256:4d8391378a77728c2dd5acda64c5c0c0ddad1d94551206b4d46895540e3e5779",
+          "case": "stale",
+          "status": "passed",
+          "identityRoot": "sha256:e770c56428f5fa06c777b4dffef17ade4dd954aa40d38004f07a21e7ad859c53",
+          "inputRoot": "sha256:0e3b0796c8e488c5c82b8b4bfe34a4a1346fcad909531d2bb5922954edc44974",
+          "outputRoot": "sha256:2e1e573dad43884d2c7d0281125b956c93c650a30661da0f3377c1eca10dcf44",
+          "input": {
+            "schema": "kungfu.work-profile-fault-input/v1",
+            "case": "stale",
+            "identityRoot": "sha256:e770c56428f5fa06c777b4dffef17ade4dd954aa40d38004f07a21e7ad859c53",
+            "idempotencyKey": "qualification:week-day-action:stale",
+            "basisRevision": 7
+          },
+          "output": {
+            "identityRoot": "sha256:e770c56428f5fa06c777b4dffef17ade4dd954aa40d38004f07a21e7ad859c53",
+            "resultIdentityRoot": "sha256:e770c56428f5fa06c777b4dffef17ade4dd954aa40d38004f07a21e7ad859c53",
+            "idempotencyKey": "qualification:week-day-action:stale",
+            "duplicateAuthority": false,
+            "lifecycleFork": false,
+            "admitted": false,
+            "diagnostic": "stale-cut"
+          }
+        },
+        "warrant-revoked": {
+          "schema": "kungfu.work-profile-fault-receipt/v1",
+          "scenarioId": "week-day-action",
+          "domainProfileRoot": "sha256:4d8391378a77728c2dd5acda64c5c0c0ddad1d94551206b4d46895540e3e5779",
+          "sourceRoot": "sha256:4d8391378a77728c2dd5acda64c5c0c0ddad1d94551206b4d46895540e3e5779",
+          "case": "warrant-revoked",
+          "status": "passed",
+          "identityRoot": "sha256:e770c56428f5fa06c777b4dffef17ade4dd954aa40d38004f07a21e7ad859c53",
+          "inputRoot": "sha256:1ccc8337662c3c2279dea34259f47fec65f219e644ea3c542f0756996fa721d0",
+          "outputRoot": "sha256:b3e23147c32bee97f095a168573e454a339efedcca9310f77e4d4684a49041bb",
+          "input": {
+            "schema": "kungfu.work-profile-fault-input/v1",
+            "case": "warrant-revoked",
+            "identityRoot": "sha256:e770c56428f5fa06c777b4dffef17ade4dd954aa40d38004f07a21e7ad859c53",
+            "idempotencyKey": "qualification:week-day-action:warrant-revoked",
+            "basisRevision": 7
+          },
+          "output": {
+            "identityRoot": "sha256:e770c56428f5fa06c777b4dffef17ade4dd954aa40d38004f07a21e7ad859c53",
+            "resultIdentityRoot": "sha256:e770c56428f5fa06c777b4dffef17ade4dd954aa40d38004f07a21e7ad859c53",
+            "idempotencyKey": "qualification:week-day-action:warrant-revoked",
+            "duplicateAuthority": false,
+            "lifecycleFork": false,
+            "admitted": false,
+            "diagnostic": "warrant-revoked"
+          }
+        },
+        "provider-switch": {
+          "schema": "kungfu.work-profile-fault-receipt/v1",
+          "scenarioId": "week-day-action",
+          "domainProfileRoot": "sha256:4d8391378a77728c2dd5acda64c5c0c0ddad1d94551206b4d46895540e3e5779",
+          "sourceRoot": "sha256:4d8391378a77728c2dd5acda64c5c0c0ddad1d94551206b4d46895540e3e5779",
+          "case": "provider-switch",
+          "status": "passed",
+          "identityRoot": "sha256:e770c56428f5fa06c777b4dffef17ade4dd954aa40d38004f07a21e7ad859c53",
+          "inputRoot": "sha256:16d080025dd4e8f1edfbc9bb4a509f2eb0a5599f3ee836128942f19c7fd6596e",
+          "outputRoot": "sha256:c9fb70e7ac1324ba374caaf3537582cbb54f46b84567ca9ef552f7c536eecb74",
+          "input": {
+            "schema": "kungfu.work-profile-fault-input/v1",
+            "case": "provider-switch",
+            "identityRoot": "sha256:e770c56428f5fa06c777b4dffef17ade4dd954aa40d38004f07a21e7ad859c53",
+            "idempotencyKey": "qualification:week-day-action:provider-switch",
+            "basisRevision": 7
+          },
+          "output": {
+            "identityRoot": "sha256:e770c56428f5fa06c777b4dffef17ade4dd954aa40d38004f07a21e7ad859c53",
+            "resultIdentityRoot": "sha256:e770c56428f5fa06c777b4dffef17ade4dd954aa40d38004f07a21e7ad859c53",
+            "idempotencyKey": "qualification:week-day-action:provider-switch",
+            "duplicateAuthority": false,
+            "lifecycleFork": false,
+            "providerChanged": true,
+            "semanticIdentityChanged": false
+          }
+        },
+        "projection-rebuild": {
+          "schema": "kungfu.work-profile-fault-receipt/v1",
+          "scenarioId": "week-day-action",
+          "domainProfileRoot": "sha256:4d8391378a77728c2dd5acda64c5c0c0ddad1d94551206b4d46895540e3e5779",
+          "sourceRoot": "sha256:4d8391378a77728c2dd5acda64c5c0c0ddad1d94551206b4d46895540e3e5779",
+          "case": "projection-rebuild",
+          "status": "passed",
+          "identityRoot": "sha256:e770c56428f5fa06c777b4dffef17ade4dd954aa40d38004f07a21e7ad859c53",
+          "inputRoot": "sha256:a9629ad387e133d29ef066909f3bb4fcbc5b88afce44ced04c9ee834e66da7d2",
+          "outputRoot": "sha256:2b2a0f62d7c1b67e33dfbc4278bfa7bd17f29e6dadaf43b8eb7d7e3109f2946d",
+          "input": {
+            "schema": "kungfu.work-profile-fault-input/v1",
+            "case": "projection-rebuild",
+            "identityRoot": "sha256:e770c56428f5fa06c777b4dffef17ade4dd954aa40d38004f07a21e7ad859c53",
+            "idempotencyKey": "qualification:week-day-action:projection-rebuild",
+            "basisRevision": 7
+          },
+          "output": {
+            "identityRoot": "sha256:e770c56428f5fa06c777b4dffef17ade4dd954aa40d38004f07a21e7ad859c53",
+            "resultIdentityRoot": "sha256:e770c56428f5fa06c777b4dffef17ade4dd954aa40d38004f07a21e7ad859c53",
+            "idempotencyKey": "qualification:week-day-action:projection-rebuild",
+            "duplicateAuthority": false,
+            "lifecycleFork": false,
+            "projectionDeleted": true,
+            "rebuiltFromAuthority": true
+          }
+        },
+        "external-effect": {
+          "schema": "kungfu.work-profile-fault-receipt/v1",
+          "scenarioId": "week-day-action",
+          "domainProfileRoot": "sha256:4d8391378a77728c2dd5acda64c5c0c0ddad1d94551206b4d46895540e3e5779",
+          "sourceRoot": "sha256:4d8391378a77728c2dd5acda64c5c0c0ddad1d94551206b4d46895540e3e5779",
+          "case": "external-effect",
+          "status": "passed",
+          "identityRoot": "sha256:e770c56428f5fa06c777b4dffef17ade4dd954aa40d38004f07a21e7ad859c53",
+          "inputRoot": "sha256:c1cc97420c14b8ffdc103841656a82cf646470a0d540a67ddace5253af80261c",
+          "outputRoot": "sha256:8282700ee7a1e6ccb1fe501ae6e5af86796f33637ea7d3d4da2f4fe892cf247d",
+          "input": {
+            "schema": "kungfu.work-profile-fault-input/v1",
+            "case": "external-effect",
+            "identityRoot": "sha256:e770c56428f5fa06c777b4dffef17ade4dd954aa40d38004f07a21e7ad859c53",
+            "idempotencyKey": "qualification:week-day-action:external-effect",
+            "basisRevision": 7
+          },
+          "output": {
+            "identityRoot": "sha256:e770c56428f5fa06c777b4dffef17ade4dd954aa40d38004f07a21e7ad859c53",
+            "resultIdentityRoot": "sha256:e770c56428f5fa06c777b4dffef17ade4dd954aa40d38004f07a21e7ad859c53",
+            "idempotencyKey": "qualification:week-day-action:external-effect",
+            "duplicateAuthority": false,
+            "lifecycleFork": false,
+            "receiptRequired": true,
+            "unreceiptedEffectAdmitted": false
+          }
+        },
+        "recovery": {
+          "schema": "kungfu.work-profile-fault-receipt/v1",
+          "scenarioId": "week-day-action",
+          "domainProfileRoot": "sha256:4d8391378a77728c2dd5acda64c5c0c0ddad1d94551206b4d46895540e3e5779",
+          "sourceRoot": "sha256:4d8391378a77728c2dd5acda64c5c0c0ddad1d94551206b4d46895540e3e5779",
+          "case": "recovery",
+          "status": "passed",
+          "identityRoot": "sha256:e770c56428f5fa06c777b4dffef17ade4dd954aa40d38004f07a21e7ad859c53",
+          "inputRoot": "sha256:04d2fee4d4d3910bc8c76face097f76c9b3f4a1a36b3c0c55886a8e178668859",
+          "outputRoot": "sha256:f6772f8bd71bd091a35f370a4e5b6b6cbb7ad6176bacfda6f38566d5426679a8",
+          "input": {
+            "schema": "kungfu.work-profile-fault-input/v1",
+            "case": "recovery",
+            "identityRoot": "sha256:e770c56428f5fa06c777b4dffef17ade4dd954aa40d38004f07a21e7ad859c53",
+            "idempotencyKey": "qualification:week-day-action:recovery",
+            "basisRevision": 7
+          },
+          "output": {
+            "identityRoot": "sha256:e770c56428f5fa06c777b4dffef17ade4dd954aa40d38004f07a21e7ad859c53",
+            "resultIdentityRoot": "sha256:e770c56428f5fa06c777b4dffef17ade4dd954aa40d38004f07a21e7ad859c53",
+            "idempotencyKey": "qualification:week-day-action:recovery",
+            "duplicateAuthority": false,
+            "lifecycleFork": false,
+            "cleanRuntime": true,
+            "importedExactRoots": true
+          }
+        }
       },
-      "buildchain": { "status": "admitted", "sourceRoot": "sha256:1922222222222222222222222222222222222222222222222222222222222222", "fresh": true, "compatible": true, "manualAllowlist": false, "artifactRefs": ["framework/work-profile-conformance/work-profile-conformance.test.mjs"] }
+      "buildchain": {
+        "status": "admitted",
+        "sourceRoot": "sha256:4d8391378a77728c2dd5acda64c5c0c0ddad1d94551206b4d46895540e3e5779",
+        "fresh": true,
+        "compatible": true,
+        "manualAllowlist": false,
+        "provider": "kungfu-buildchain",
+        "runner": "source-acceptance",
+        "sourceRevision": "2a251e8c7b39a108f671b05acb8902b74e9c6289",
+        "authorityRoot": "sha256:6e92d2246c3ffe4d14c10dd7286f60c50a2266e619320b7e9dc6cb892efc8a57",
+        "artifactRefs": [
+          {
+            "evidenceRoot": "sha256:909f01446d58aafdd9556001a98b18b9689f9bcd5a7e977697f380995d0493f2",
+            "evidencePath": ".buildchain/kfd/kfd-3/collaboration-interface.prebuild.json",
+            "evidencePointer": null
+          },
+          {
+            "evidenceRoot": "sha256:07abbeffd6b47f5d0aa25625b74b7e6d2aa4d67b84f10d18e859a5a31a3880bb",
+            "evidencePath": "scripts/source-acceptance.mjs",
+            "evidencePointer": null
+          },
+          {
+            "evidenceRoot": "sha256:a49155c2e7eb9f4215e3290efa16014ae999c833d56947765e38dc73dc4ca50c",
+            "evidencePath": "framework/work-profile-conformance/work-profile-conformance.test.mjs",
+            "evidencePointer": null
+          }
+        ]
+      }
     },
     "course-production": {
       "behavior": {
-        "repeat": { "case": "repeat", "status": "passed", "witness": "repeated asset admission is content-idempotent" },
-        "crash": { "case": "crash", "status": "passed", "witness": "crashed release plan does not imply publication" },
-        "interrupted": { "case": "interrupted", "status": "passed", "witness": "course work continues from a retained Cut" },
-        "stale": { "case": "stale", "status": "passed", "witness": "stale review input cannot advance the release ref" },
-        "warrant-revoked": { "case": "warrant-revoked", "status": "passed", "witness": "revoked publisher approval blocks release" },
-        "provider-switch": { "case": "provider-switch", "status": "passed", "witness": "artifact provider switch preserves content roots" },
-        "projection-rebuild": { "case": "projection-rebuild", "status": "passed", "witness": "release dashboard rebuilds from retained Facts" },
-        "external-effect": { "case": "external-effect", "status": "passed", "witness": "publication remains an explicit Episode effect" },
-        "recovery": { "case": "recovery", "status": "passed", "witness": "release recovery retains prior review and Cut evidence" }
+        "repeat": {
+          "schema": "kungfu.work-profile-fault-receipt/v1",
+          "scenarioId": "course-production",
+          "domainProfileRoot": "sha256:4d50257e275199010ad26546662e6b13c589ad53fff1634e10763f2a8c16994f",
+          "sourceRoot": "sha256:4d50257e275199010ad26546662e6b13c589ad53fff1634e10763f2a8c16994f",
+          "case": "repeat",
+          "status": "passed",
+          "identityRoot": "sha256:6d55c99cbb3efd9a29d2553af694bf70d58498b73bcd4769166245efe22e10d6",
+          "inputRoot": "sha256:8d7cfabb466bfd63b3d2bc265759aaa4f6c998b3027fa5bb11ad335cc3e081ba",
+          "outputRoot": "sha256:18a6376c5d8ebb98167a707c99c3b29ec4088957d423b3560dc047b6dd15d397",
+          "input": {
+            "schema": "kungfu.work-profile-fault-input/v1",
+            "case": "repeat",
+            "identityRoot": "sha256:6d55c99cbb3efd9a29d2553af694bf70d58498b73bcd4769166245efe22e10d6",
+            "idempotencyKey": "qualification:course-production:repeat",
+            "basisRevision": 7
+          },
+          "output": {
+            "identityRoot": "sha256:6d55c99cbb3efd9a29d2553af694bf70d58498b73bcd4769166245efe22e10d6",
+            "resultIdentityRoot": "sha256:6d55c99cbb3efd9a29d2553af694bf70d58498b73bcd4769166245efe22e10d6",
+            "idempotencyKey": "qualification:course-production:repeat",
+            "duplicateAuthority": false,
+            "lifecycleFork": false,
+            "replay": "same-receipt",
+            "effectCount": 1
+          }
+        },
+        "crash": {
+          "schema": "kungfu.work-profile-fault-receipt/v1",
+          "scenarioId": "course-production",
+          "domainProfileRoot": "sha256:4d50257e275199010ad26546662e6b13c589ad53fff1634e10763f2a8c16994f",
+          "sourceRoot": "sha256:4d50257e275199010ad26546662e6b13c589ad53fff1634e10763f2a8c16994f",
+          "case": "crash",
+          "status": "passed",
+          "identityRoot": "sha256:6d55c99cbb3efd9a29d2553af694bf70d58498b73bcd4769166245efe22e10d6",
+          "inputRoot": "sha256:6f18fb04c571a6b774cdbfe4e9ca36d53e65fd52fdb28454c3ba2afc475624ca",
+          "outputRoot": "sha256:3201184ecaf9c3d5710f5cf375f5628114dfc9374525225d3f71f825166e8a26",
+          "input": {
+            "schema": "kungfu.work-profile-fault-input/v1",
+            "case": "crash",
+            "identityRoot": "sha256:6d55c99cbb3efd9a29d2553af694bf70d58498b73bcd4769166245efe22e10d6",
+            "idempotencyKey": "qualification:course-production:crash",
+            "basisRevision": 7
+          },
+          "output": {
+            "identityRoot": "sha256:6d55c99cbb3efd9a29d2553af694bf70d58498b73bcd4769166245efe22e10d6",
+            "resultIdentityRoot": "sha256:6d55c99cbb3efd9a29d2553af694bf70d58498b73bcd4769166245efe22e10d6",
+            "idempotencyKey": "qualification:course-production:crash",
+            "duplicateAuthority": false,
+            "lifecycleFork": false,
+            "prepared": true,
+            "settled": false,
+            "recovery": "resume"
+          }
+        },
+        "interrupted": {
+          "schema": "kungfu.work-profile-fault-receipt/v1",
+          "scenarioId": "course-production",
+          "domainProfileRoot": "sha256:4d50257e275199010ad26546662e6b13c589ad53fff1634e10763f2a8c16994f",
+          "sourceRoot": "sha256:4d50257e275199010ad26546662e6b13c589ad53fff1634e10763f2a8c16994f",
+          "case": "interrupted",
+          "status": "passed",
+          "identityRoot": "sha256:6d55c99cbb3efd9a29d2553af694bf70d58498b73bcd4769166245efe22e10d6",
+          "inputRoot": "sha256:97b2c822c578041c90995fced1dda78e58f496758e9edd46453d516e50d47d94",
+          "outputRoot": "sha256:d6091a86d547b3476d6049aaf1c58e670455af6269077fe430ba602fbb7a8900",
+          "input": {
+            "schema": "kungfu.work-profile-fault-input/v1",
+            "case": "interrupted",
+            "identityRoot": "sha256:6d55c99cbb3efd9a29d2553af694bf70d58498b73bcd4769166245efe22e10d6",
+            "idempotencyKey": "qualification:course-production:interrupted",
+            "basisRevision": 7
+          },
+          "output": {
+            "identityRoot": "sha256:6d55c99cbb3efd9a29d2553af694bf70d58498b73bcd4769166245efe22e10d6",
+            "resultIdentityRoot": "sha256:6d55c99cbb3efd9a29d2553af694bf70d58498b73bcd4769166245efe22e10d6",
+            "idempotencyKey": "qualification:course-production:interrupted",
+            "duplicateAuthority": false,
+            "lifecycleFork": false,
+            "committedPrefix": 1,
+            "missingSuffix": 1,
+            "recovery": "append-missing-suffix"
+          }
+        },
+        "stale": {
+          "schema": "kungfu.work-profile-fault-receipt/v1",
+          "scenarioId": "course-production",
+          "domainProfileRoot": "sha256:4d50257e275199010ad26546662e6b13c589ad53fff1634e10763f2a8c16994f",
+          "sourceRoot": "sha256:4d50257e275199010ad26546662e6b13c589ad53fff1634e10763f2a8c16994f",
+          "case": "stale",
+          "status": "passed",
+          "identityRoot": "sha256:6d55c99cbb3efd9a29d2553af694bf70d58498b73bcd4769166245efe22e10d6",
+          "inputRoot": "sha256:9f7ee76433ba05010b412a8587006baf3ddf27cc6af395c2fc7965020db1aafb",
+          "outputRoot": "sha256:ffb8eea2ba0562d3672316fc3df775caf61811650756124eaae5d4174e28cb77",
+          "input": {
+            "schema": "kungfu.work-profile-fault-input/v1",
+            "case": "stale",
+            "identityRoot": "sha256:6d55c99cbb3efd9a29d2553af694bf70d58498b73bcd4769166245efe22e10d6",
+            "idempotencyKey": "qualification:course-production:stale",
+            "basisRevision": 7
+          },
+          "output": {
+            "identityRoot": "sha256:6d55c99cbb3efd9a29d2553af694bf70d58498b73bcd4769166245efe22e10d6",
+            "resultIdentityRoot": "sha256:6d55c99cbb3efd9a29d2553af694bf70d58498b73bcd4769166245efe22e10d6",
+            "idempotencyKey": "qualification:course-production:stale",
+            "duplicateAuthority": false,
+            "lifecycleFork": false,
+            "admitted": false,
+            "diagnostic": "stale-cut"
+          }
+        },
+        "warrant-revoked": {
+          "schema": "kungfu.work-profile-fault-receipt/v1",
+          "scenarioId": "course-production",
+          "domainProfileRoot": "sha256:4d50257e275199010ad26546662e6b13c589ad53fff1634e10763f2a8c16994f",
+          "sourceRoot": "sha256:4d50257e275199010ad26546662e6b13c589ad53fff1634e10763f2a8c16994f",
+          "case": "warrant-revoked",
+          "status": "passed",
+          "identityRoot": "sha256:6d55c99cbb3efd9a29d2553af694bf70d58498b73bcd4769166245efe22e10d6",
+          "inputRoot": "sha256:ab9d59834cd9d5d1a320c9a54e26cd7d43249e9f6b935bf1d758b5afdfe2c6d4",
+          "outputRoot": "sha256:9195d153075282362a03e13389c881224c468cd161adf883aeb4cd4151a315e5",
+          "input": {
+            "schema": "kungfu.work-profile-fault-input/v1",
+            "case": "warrant-revoked",
+            "identityRoot": "sha256:6d55c99cbb3efd9a29d2553af694bf70d58498b73bcd4769166245efe22e10d6",
+            "idempotencyKey": "qualification:course-production:warrant-revoked",
+            "basisRevision": 7
+          },
+          "output": {
+            "identityRoot": "sha256:6d55c99cbb3efd9a29d2553af694bf70d58498b73bcd4769166245efe22e10d6",
+            "resultIdentityRoot": "sha256:6d55c99cbb3efd9a29d2553af694bf70d58498b73bcd4769166245efe22e10d6",
+            "idempotencyKey": "qualification:course-production:warrant-revoked",
+            "duplicateAuthority": false,
+            "lifecycleFork": false,
+            "admitted": false,
+            "diagnostic": "warrant-revoked"
+          }
+        },
+        "provider-switch": {
+          "schema": "kungfu.work-profile-fault-receipt/v1",
+          "scenarioId": "course-production",
+          "domainProfileRoot": "sha256:4d50257e275199010ad26546662e6b13c589ad53fff1634e10763f2a8c16994f",
+          "sourceRoot": "sha256:4d50257e275199010ad26546662e6b13c589ad53fff1634e10763f2a8c16994f",
+          "case": "provider-switch",
+          "status": "passed",
+          "identityRoot": "sha256:6d55c99cbb3efd9a29d2553af694bf70d58498b73bcd4769166245efe22e10d6",
+          "inputRoot": "sha256:9a821b8325dbfb3b82e8ead13b9825329c9154092dfd8e9deec505032f124e2b",
+          "outputRoot": "sha256:1c34d8117f7d9b7eb26fea070676759fe05abb97ca9762eade221aa5d4e1797c",
+          "input": {
+            "schema": "kungfu.work-profile-fault-input/v1",
+            "case": "provider-switch",
+            "identityRoot": "sha256:6d55c99cbb3efd9a29d2553af694bf70d58498b73bcd4769166245efe22e10d6",
+            "idempotencyKey": "qualification:course-production:provider-switch",
+            "basisRevision": 7
+          },
+          "output": {
+            "identityRoot": "sha256:6d55c99cbb3efd9a29d2553af694bf70d58498b73bcd4769166245efe22e10d6",
+            "resultIdentityRoot": "sha256:6d55c99cbb3efd9a29d2553af694bf70d58498b73bcd4769166245efe22e10d6",
+            "idempotencyKey": "qualification:course-production:provider-switch",
+            "duplicateAuthority": false,
+            "lifecycleFork": false,
+            "providerChanged": true,
+            "semanticIdentityChanged": false
+          }
+        },
+        "projection-rebuild": {
+          "schema": "kungfu.work-profile-fault-receipt/v1",
+          "scenarioId": "course-production",
+          "domainProfileRoot": "sha256:4d50257e275199010ad26546662e6b13c589ad53fff1634e10763f2a8c16994f",
+          "sourceRoot": "sha256:4d50257e275199010ad26546662e6b13c589ad53fff1634e10763f2a8c16994f",
+          "case": "projection-rebuild",
+          "status": "passed",
+          "identityRoot": "sha256:6d55c99cbb3efd9a29d2553af694bf70d58498b73bcd4769166245efe22e10d6",
+          "inputRoot": "sha256:7ec9df335ece55fd1ff4cafdf0274453fa01a1cfd445cc1ab79c35a9273d4181",
+          "outputRoot": "sha256:f2b2b38a1a33e7d3754129ae88c1d9ef86ec3cd3fc3ec6831b0dfc6e4deacca3",
+          "input": {
+            "schema": "kungfu.work-profile-fault-input/v1",
+            "case": "projection-rebuild",
+            "identityRoot": "sha256:6d55c99cbb3efd9a29d2553af694bf70d58498b73bcd4769166245efe22e10d6",
+            "idempotencyKey": "qualification:course-production:projection-rebuild",
+            "basisRevision": 7
+          },
+          "output": {
+            "identityRoot": "sha256:6d55c99cbb3efd9a29d2553af694bf70d58498b73bcd4769166245efe22e10d6",
+            "resultIdentityRoot": "sha256:6d55c99cbb3efd9a29d2553af694bf70d58498b73bcd4769166245efe22e10d6",
+            "idempotencyKey": "qualification:course-production:projection-rebuild",
+            "duplicateAuthority": false,
+            "lifecycleFork": false,
+            "projectionDeleted": true,
+            "rebuiltFromAuthority": true
+          }
+        },
+        "external-effect": {
+          "schema": "kungfu.work-profile-fault-receipt/v1",
+          "scenarioId": "course-production",
+          "domainProfileRoot": "sha256:4d50257e275199010ad26546662e6b13c589ad53fff1634e10763f2a8c16994f",
+          "sourceRoot": "sha256:4d50257e275199010ad26546662e6b13c589ad53fff1634e10763f2a8c16994f",
+          "case": "external-effect",
+          "status": "passed",
+          "identityRoot": "sha256:6d55c99cbb3efd9a29d2553af694bf70d58498b73bcd4769166245efe22e10d6",
+          "inputRoot": "sha256:14a20faeaf8bdccbfe49472d51abbe67cb4b6a3cceeaa238d77cb676767219f4",
+          "outputRoot": "sha256:50d1f6e61b0207259f0e1a4c9d4037c50c96f88820f23759bff521f562fe1bda",
+          "input": {
+            "schema": "kungfu.work-profile-fault-input/v1",
+            "case": "external-effect",
+            "identityRoot": "sha256:6d55c99cbb3efd9a29d2553af694bf70d58498b73bcd4769166245efe22e10d6",
+            "idempotencyKey": "qualification:course-production:external-effect",
+            "basisRevision": 7
+          },
+          "output": {
+            "identityRoot": "sha256:6d55c99cbb3efd9a29d2553af694bf70d58498b73bcd4769166245efe22e10d6",
+            "resultIdentityRoot": "sha256:6d55c99cbb3efd9a29d2553af694bf70d58498b73bcd4769166245efe22e10d6",
+            "idempotencyKey": "qualification:course-production:external-effect",
+            "duplicateAuthority": false,
+            "lifecycleFork": false,
+            "receiptRequired": true,
+            "unreceiptedEffectAdmitted": false
+          }
+        },
+        "recovery": {
+          "schema": "kungfu.work-profile-fault-receipt/v1",
+          "scenarioId": "course-production",
+          "domainProfileRoot": "sha256:4d50257e275199010ad26546662e6b13c589ad53fff1634e10763f2a8c16994f",
+          "sourceRoot": "sha256:4d50257e275199010ad26546662e6b13c589ad53fff1634e10763f2a8c16994f",
+          "case": "recovery",
+          "status": "passed",
+          "identityRoot": "sha256:6d55c99cbb3efd9a29d2553af694bf70d58498b73bcd4769166245efe22e10d6",
+          "inputRoot": "sha256:9f93b585b8e79f3d2ff608a069e90e4cf413129f06880a8b7ca391a0a5761903",
+          "outputRoot": "sha256:fd42ccf8de1dc0a240fb09b59d81e48817b8790e5a7999d00ac6749d2f47ce81",
+          "input": {
+            "schema": "kungfu.work-profile-fault-input/v1",
+            "case": "recovery",
+            "identityRoot": "sha256:6d55c99cbb3efd9a29d2553af694bf70d58498b73bcd4769166245efe22e10d6",
+            "idempotencyKey": "qualification:course-production:recovery",
+            "basisRevision": 7
+          },
+          "output": {
+            "identityRoot": "sha256:6d55c99cbb3efd9a29d2553af694bf70d58498b73bcd4769166245efe22e10d6",
+            "resultIdentityRoot": "sha256:6d55c99cbb3efd9a29d2553af694bf70d58498b73bcd4769166245efe22e10d6",
+            "idempotencyKey": "qualification:course-production:recovery",
+            "duplicateAuthority": false,
+            "lifecycleFork": false,
+            "cleanRuntime": true,
+            "importedExactRoots": true
+          }
+        }
       },
-      "buildchain": { "status": "admitted", "sourceRoot": "sha256:2133333333333333333333333333333333333333333333333333333333333333", "fresh": true, "compatible": true, "manualAllowlist": false, "artifactRefs": ["tests/fixtures/domain-profile-authoring/course-production/domain-profile.json"] }
+      "buildchain": {
+        "status": "admitted",
+        "sourceRoot": "sha256:4d50257e275199010ad26546662e6b13c589ad53fff1634e10763f2a8c16994f",
+        "fresh": true,
+        "compatible": true,
+        "manualAllowlist": false,
+        "provider": "kungfu-buildchain",
+        "runner": "source-acceptance",
+        "sourceRevision": "2a251e8c7b39a108f671b05acb8902b74e9c6289",
+        "authorityRoot": "sha256:6e92d2246c3ffe4d14c10dd7286f60c50a2266e619320b7e9dc6cb892efc8a57",
+        "artifactRefs": [
+          {
+            "evidenceRoot": "sha256:909f01446d58aafdd9556001a98b18b9689f9bcd5a7e977697f380995d0493f2",
+            "evidencePath": ".buildchain/kfd/kfd-3/collaboration-interface.prebuild.json",
+            "evidencePointer": null
+          },
+          {
+            "evidenceRoot": "sha256:07abbeffd6b47f5d0aa25625b74b7e6d2aa4d67b84f10d18e859a5a31a3880bb",
+            "evidencePath": "scripts/source-acceptance.mjs",
+            "evidencePointer": null
+          },
+          {
+            "evidenceRoot": "sha256:a49155c2e7eb9f4215e3290efa16014ae999c833d56947765e38dc73dc4ca50c",
+            "evidencePath": "framework/work-profile-conformance/work-profile-conformance.test.mjs",
+            "evidencePointer": null
+          }
+        ]
+      }
     }
   }
 }

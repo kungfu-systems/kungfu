@@ -7,6 +7,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { optionalAjv2020 } from '../../scripts/readonly-source-toolchain.mjs';
+import { generateQualificationFixtures } from './generate-qualification.mjs';
 
 const ROOT = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -20,9 +21,9 @@ const RESULT_SCHEMA_PATH = path.join(
   ROOT,
   'framework/work-profile-conformance/schema/work-profile-conformance-result-v1.schema.json',
 );
-const QUALIFICATION_PATH = path.join(
+const RETAINED_EVIDENCE_PATH = path.join(
   ROOT,
-  'framework/work-profile-conformance/qualification/reference-scenarios.json',
+  'framework/work-profile-conformance/qualification/retained-witnesses.json',
 );
 const ACTION_GEOMETRY_PATH = path.join(
   ROOT,
@@ -32,6 +33,24 @@ const WORK_LIFECYCLE_PATH = path.join(
   ROOT,
   'framework/work-lifecycle/kungfu-work-lifecycle-operation-matrix.contract.json',
 );
+const WORK_API_PATH = path.join(
+  ROOT,
+  'framework/work-loop/work-api.contract.json',
+);
+
+const RESPONSIBILITY_ROLES = ['fact', 'episode', 'pursuit', 'atlas', 'warrant'];
+const PLATFORMS = ['cpp', 'python', 'node', 'rust'];
+const PROFILE_SURFACES = [
+  'validate',
+  'qualify',
+  'authoring-check',
+  'installed-runtime',
+];
+const NON_CLAIMS = [
+  'The verdict does not invent domain identity, legitimate authorization, success, privacy, evidence strength, or consequence meaning.',
+  'The verdict does not install or activate a Profile, mutate lifecycle state, create or close an Assignment, or settle Work.',
+  'A compatible adapter or public projection does not become semantic authority.',
+];
 
 export const BEHAVIOR_CASES = [
   'repeat',
@@ -125,28 +144,183 @@ function retainEvidence(diagnostics, prefix, coordinate) {
       retained.status === 'mismatch'
         ? `Retained evidence root mismatch: expected ${coordinate.evidenceRoot}, got ${retained.actualRoot}.`
         : `Retained evidence is ${retained.status}.`,
+      coordinate,
     ),
   );
   return retained;
 }
 
-function diagnostic(code, classification, message) {
-  return { code, class: classification, message };
+function diagnostic(code, classification, message, evidenceCoordinate = null) {
+  return {
+    code,
+    class: classification,
+    message,
+    violatedInvariant: code,
+    evidenceCoordinate: evidenceCoordinate
+      ? {
+          evidenceRoot: evidenceCoordinate.evidenceRoot,
+          evidencePath: evidenceCoordinate.evidencePath ?? null,
+          evidencePointer: evidenceCoordinate.evidencePointer ?? null,
+        }
+      : null,
+  };
 }
 
 function check(id, status, evidenceRoot = null) {
   return { id, status, evidenceRoot };
 }
 
+function schemaTypeMatches(value, type) {
+  if (type === 'array') return Array.isArray(value);
+  if (type === 'object')
+    return value !== null && typeof value === 'object' && !Array.isArray(value);
+  if (type === 'integer') return Number.isInteger(value);
+  if (type === 'null') return value === null;
+  if (type === 'string') return typeof value === 'string';
+  if (type === 'number') return typeof value === 'number';
+  if (type === 'boolean') return typeof value === 'boolean';
+  return false;
+}
+
+function subsetSchemaErrors(value, schema, rootSchema, instancePath = '') {
+  if (schema.$ref) {
+    const target = schema.$ref
+      .slice(2)
+      .split('/')
+      .reduce((current, key) => current[key], rootSchema);
+    return subsetSchemaErrors(value, target, rootSchema, instancePath);
+  }
+  if (schema.anyOf) {
+    if (
+      schema.anyOf.some(
+        (candidate) =>
+          subsetSchemaErrors(value, candidate, rootSchema, instancePath)
+            .length === 0,
+      )
+    )
+      return [];
+    return [
+      {
+        instancePath,
+        keyword: 'anyOf',
+        message: 'must match one allowed shape',
+      },
+    ];
+  }
+  const types = Array.isArray(schema.type) ? schema.type : [schema.type];
+  if (schema.type && !types.some((type) => schemaTypeMatches(value, type)))
+    return [
+      {
+        instancePath,
+        keyword: 'type',
+        message: `must be ${types.join(' or ')}`,
+      },
+    ];
+  if ('const' in schema && value !== schema.const)
+    return [
+      {
+        instancePath,
+        keyword: 'const',
+        message: `must equal ${JSON.stringify(schema.const)}`,
+      },
+    ];
+  if (schema.enum && !schema.enum.includes(value))
+    return [
+      {
+        instancePath,
+        keyword: 'enum',
+        message: 'must be an allowed value',
+      },
+    ];
+  if (typeof value === 'string') {
+    if (schema.minLength && value.length < schema.minLength)
+      return [
+        {
+          instancePath,
+          keyword: 'minLength',
+          message: `must have at least ${schema.minLength} characters`,
+        },
+      ];
+    if (schema.pattern && !new RegExp(schema.pattern, 'u').test(value))
+      return [
+        {
+          instancePath,
+          keyword: 'pattern',
+          message: `must match ${schema.pattern}`,
+        },
+      ];
+  }
+  const errors = [];
+  if (Array.isArray(value)) {
+    if (schema.minItems && value.length < schema.minItems)
+      errors.push({
+        instancePath,
+        keyword: 'minItems',
+        message: `must contain at least ${schema.minItems} items`,
+      });
+    if (schema.uniqueItems) {
+      const roots = value.map(contentRoot);
+      if (new Set(roots).size !== roots.length)
+        errors.push({
+          instancePath,
+          keyword: 'uniqueItems',
+          message: 'must not contain duplicates',
+        });
+    }
+    if (schema.items)
+      value.forEach((item, index) =>
+        errors.push(
+          ...subsetSchemaErrors(
+            item,
+            schema.items,
+            rootSchema,
+            `${instancePath}/${index}`,
+          ),
+        ),
+      );
+  } else if (value && typeof value === 'object') {
+    for (const required of schema.required || [])
+      if (!(required in value))
+        errors.push({
+          instancePath,
+          keyword: 'required',
+          message: `must contain ${required}`,
+        });
+    if (schema.additionalProperties === false)
+      for (const key of Object.keys(value))
+        if (!(key in (schema.properties || {})))
+          errors.push({
+            instancePath: `${instancePath}/${key}`,
+            keyword: 'additionalProperties',
+            message: 'is not allowed',
+          });
+    for (const [key, propertySchema] of Object.entries(schema.properties || {}))
+      if (key in value)
+        errors.push(
+          ...subsetSchemaErrors(
+            value[key],
+            propertySchema,
+            rootSchema,
+            `${instancePath}/${key}`,
+          ),
+        );
+  }
+  return errors;
+}
+
 function schemaValidator(schemaPath) {
+  const schema = readJson(schemaPath);
   const Ajv2020 = optionalAjv2020();
   if (!Ajv2020) {
-    const validate = () => true;
+    const validate = (value) => {
+      validate.errors = subsetSchemaErrors(value, schema, schema);
+      return validate.errors.length === 0;
+    };
     validate.errors = null;
     return validate;
   }
   const ajv = new Ajv2020({ allErrors: true, strict: true });
-  return ajv.compile(readJson(schemaPath));
+  return ajv.compile(schema);
 }
 
 function schemaDiagnostics(errors = []) {
@@ -161,6 +335,13 @@ function schemaDiagnostics(errors = []) {
 
 function resultForInvalid(declaration, diagnostics) {
   const declarationRoot = contentRoot(declaration);
+  for (const item of diagnostics)
+    if (!item.evidenceCoordinate)
+      item.evidenceCoordinate = {
+        evidenceRoot: declarationRoot,
+        evidencePath: null,
+        evidencePointer: null,
+      };
   const stable = {
     schema: 'kungfu.work-profile-conformance-result/v1',
     scenarioId:
@@ -186,6 +367,7 @@ function resultForInvalid(declaration, diagnostics) {
     residualRisk: Array.isArray(declaration?.residualRisk)
       ? declaration.residualRisk
       : [],
+    nonClaims: NON_CLAIMS,
     lifecycleMutation: false,
   };
   const conformanceRoot = contentRoot(stable);
@@ -254,6 +436,42 @@ export function evaluateConformance(declaration) {
       ),
     );
 
+  const bindingCoordinates = {
+    actionGeometryRoot: declaration.bindings.actionGeometryPath,
+    domainProfileRoot: declaration.bindings.domainProfilePath,
+    abstractionAuthorityRoot: declaration.bindings.abstractionAuthorityPath,
+    sourceRoot: declaration.bindings.sourcePath,
+  };
+  for (const [rootField, evidencePath] of Object.entries(bindingCoordinates)) {
+    const retained = retainEvidence(diagnostics, `binding-${rootField}`, {
+      evidencePath,
+      evidencePointer: null,
+      evidenceRoot: declaration.bindings[rootField],
+    });
+    checks.push(
+      check(
+        `binding-${rootField}`,
+        retained.status === 'verified' ? 'passed' : 'failed',
+        declaration.bindings[rootField],
+      ),
+    );
+  }
+
+  for (const role of RESPONSIBILITY_ROLES) {
+    const retained = retainEvidence(diagnostics, `binding-role-${role}`, {
+      evidencePath: declaration.bindings.roleSchemaPaths[role],
+      evidencePointer: null,
+      evidenceRoot: declaration.bindings.roleSchemaRoots[role],
+    });
+    checks.push(
+      check(
+        `binding-role-${role}`,
+        retained.status === 'verified' ? 'passed' : 'failed',
+        declaration.bindings.roleSchemaRoots[role],
+      ),
+    );
+  }
+
   const roleRoots = Object.values(declaration.bindings.roleSchemaRoots);
   const rolesSeparated = new Set(roleRoots).size === roleRoots.length;
   checks.push(
@@ -307,16 +525,23 @@ export function evaluateConformance(declaration) {
     );
 
   for (const [name, judgment] of Object.entries(declaration.humanAuthority)) {
+    const expectedAuthorityRoot = contentRoot({
+      scenarioId: declaration.scenarioId,
+      domainProfileRoot: declaration.bindings.domainProfileRoot,
+      field: name,
+      status: judgment.status,
+      statement: judgment.statement,
+    });
     const complete =
       judgment.status === 'human-declared' &&
       typeof judgment.statement === 'string' &&
       judgment.statement.length > 0 &&
-      typeof judgment.authorityRoot === 'string';
+      judgment.authorityRoot === expectedAuthorityRoot;
     checks.push(
       check(
         `human-authority-${name}`,
         complete ? 'declared' : 'missing',
-        judgment.authorityRoot,
+        complete ? expectedAuthorityRoot : judgment.authorityRoot,
       ),
     );
     if (!complete)
@@ -324,7 +549,7 @@ export function evaluateConformance(declaration) {
         diagnostic(
           `human-authority-${name}-missing`,
           UNQUALIFIED,
-          `${name} must remain an explicit human judgment; the gate cannot infer it.`,
+          `${name} must remain an explicit, content-bound human judgment; the gate cannot infer or re-root it.`,
         ),
       );
   }
@@ -389,7 +614,17 @@ export function evaluateConformance(declaration) {
         retained.status === 'verified' &&
         retained.value &&
         (retained.value.case !== caseId ||
-          retained.value.status !== evidence.status)
+          retained.value.status !== evidence.status ||
+          retained.value.scenarioId !== declaration.scenarioId ||
+          retained.value.domainProfileRoot !==
+            declaration.bindings.domainProfileRoot ||
+          retained.value.sourceRoot !== declaration.bindings.sourceRoot ||
+          retained.value.identityRoot !==
+            contentRoot({
+              scenarioId: declaration.scenarioId,
+              domainProfileRoot: declaration.bindings.domainProfileRoot,
+              sourceRoot: declaration.bindings.sourceRoot,
+            }))
       )
         diagnostics.push(
           diagnostic(
@@ -438,6 +673,15 @@ export function evaluateConformance(declaration) {
       );
     else retainEvidence(diagnostics, `platform-${adapter.platform}`, adapter);
   }
+  for (const platform of PLATFORMS)
+    if (!platformNames.has(platform))
+      diagnostics.push(
+        diagnostic(
+          `platform-${platform}-omitted`,
+          INVALID,
+          `Platform ${platform} must be declared as required or explicitly not relevant.`,
+        ),
+      );
 
   const surfaceNames = new Set();
   for (const surface of declaration.profileSurfaces) {
@@ -459,6 +703,15 @@ export function evaluateConformance(declaration) {
         ),
       );
   }
+  for (const surface of PROFILE_SURFACES)
+    if (!surfaceNames.has(surface))
+      diagnostics.push(
+        diagnostic(
+          `surface-${surface}-omitted`,
+          INVALID,
+          `Profile surface ${surface} must be declared as required or explicitly not relevant.`,
+        ),
+      );
 
   const buildchain = declaration.buildchain;
   checks.push(
@@ -476,13 +729,44 @@ export function evaluateConformance(declaration) {
       retainedBuildchain.value.sourceRoot !== buildchain.sourceRoot ||
       retainedBuildchain.value.fresh !== buildchain.fresh ||
       retainedBuildchain.value.compatible !== buildchain.compatible ||
-      retainedBuildchain.value.manualAllowlist !== buildchain.manualAllowlist)
+      retainedBuildchain.value.manualAllowlist !== buildchain.manualAllowlist ||
+      retainedBuildchain.value.provider !== buildchain.provider ||
+      retainedBuildchain.value.runner !== buildchain.runner ||
+      retainedBuildchain.value.sourceRevision !== buildchain.sourceRevision ||
+      retainedBuildchain.value.authorityRoot !== buildchain.authorityRoot ||
+      canonicalJson(retainedBuildchain.value.artifactRefs) !==
+        canonicalJson(buildchain.artifactRefs))
   )
     diagnostics.push(
       diagnostic(
         'buildchain-evidence-semantic-mismatch',
         INVALID,
         'Retained Buildchain evidence does not match the declared admission fields.',
+      ),
+    );
+  const buildchainAuthority = retainEvidence(
+    diagnostics,
+    'buildchain-authority',
+    {
+      evidencePath: buildchain.authorityPath,
+      evidencePointer: null,
+      evidenceRoot: buildchain.authorityRoot,
+    },
+  );
+  for (const [index, artifact] of buildchain.artifactRefs.entries())
+    retainEvidence(diagnostics, `buildchain-artifact-${index}`, artifact);
+  if (
+    buildchainAuthority.status !== 'verified' ||
+    !buildchain.provider ||
+    !buildchain.runner ||
+    !/^[0-9a-f]{40}$/u.test(buildchain.sourceRevision) ||
+    buildchain.artifactRefs.length === 0
+  )
+    diagnostics.push(
+      diagnostic(
+        'buildchain-evidence-incomplete',
+        UNQUALIFIED,
+        'Buildchain admission requires an exact authority, provider, runner, source revision, and retained artifact roots.',
       ),
     );
   if (buildchain.manualAllowlist)
@@ -526,26 +810,20 @@ export function evaluateConformance(declaration) {
     );
 
   const operations = declaration.workOperationModel;
-  const requiredOperations = [
-    'inspect',
-    'validate',
-    'qualify',
-    'plan',
-    'execute',
-    'settle',
-    'recover',
-    'archive',
-  ];
+  const workApi = readJson(WORK_API_PATH);
+  const requiredOperations = workApi.actions.map(({ id }) => id).sort();
+  const declaredOperations = [...operations.operations].sort();
+  const expectedWorkApiRoot = fileRoot(WORK_API_PATH);
   const operationModelValid =
-    operations.authority === 'existing-work-lifecycle' &&
+    operations.authority === 'existing-work-api' &&
+    operations.authorityRoot === expectedWorkApiRoot &&
     operations.separateAssignment === false &&
-    requiredOperations.every((operation) =>
-      operations.operations.includes(operation),
-    );
+    canonicalJson(declaredOperations) === canonicalJson(requiredOperations);
   checks.push(
     check(
       'generic-work-operation-model',
       operationModelValid ? 'passed' : 'failed',
+      expectedWorkApiRoot,
     ),
   );
   if (!operationModelValid)
@@ -553,7 +831,7 @@ export function evaluateConformance(declaration) {
       diagnostic(
         'separate-work-authority-required',
         INCOMPATIBLE,
-        'The high-level operation model must reuse Work lifecycle and cannot close through a separate Assignment.',
+        'The high-level operation model must bind the existing Work API contract exactly and cannot close through a separate Assignment.',
       ),
     );
 
@@ -566,6 +844,13 @@ export function evaluateConformance(declaration) {
       ),
     );
 
+  for (const item of diagnostics)
+    if (!item.evidenceCoordinate)
+      item.evidenceCoordinate = {
+        evidenceRoot: declarationRoot,
+        evidencePath: null,
+        evidencePointer: null,
+      };
   diagnostics.sort((a, b) => a.code.localeCompare(b.code));
   checks.sort((a, b) => a.id.localeCompare(b.id));
   const verdict = verdictFor(diagnostics, declaration.constraints);
@@ -580,6 +865,7 @@ export function evaluateConformance(declaration) {
     diagnostics,
     constraints: declaration.constraints,
     residualRisk: declaration.residualRisk,
+    nonClaims: NON_CLAIMS,
     lifecycleMutation: false,
   };
   const conformanceRoot = contentRoot(stable);
@@ -601,7 +887,14 @@ export function validateResult(result) {
 }
 
 export function checkReferenceQualification() {
-  const suite = readJson(QUALIFICATION_PATH);
+  const generated = generateQualificationFixtures();
+  if (
+    canonicalJson(readJson(RETAINED_EVIDENCE_PATH)) !==
+    canonicalJson(generated.retained)
+  )
+    throw new Error('generated-retained-evidence-stale');
+  const suite = generated.reference;
+  const retainedRoot = contentRoot(generated.retained);
   const results = suite.scenarios.map((scenario) => {
     const result = evaluateConformance(scenario.declaration);
     const resultValidation = validateResult(result);
@@ -609,9 +902,9 @@ export function checkReferenceQualification() {
       throw new Error(
         `result-schema-invalid: ${JSON.stringify(resultValidation.errors)}`,
       );
-    if (result.verdict !== scenario.expectedVerdict)
+    if (!['compatible', 'compatible-with-constraints'].includes(result.verdict))
       throw new Error(
-        `reference-verdict-mismatch: ${scenario.declaration.scenarioId} expected ${scenario.expectedVerdict}, got ${result.verdict}`,
+        `reference-verdict-failed: ${scenario.declaration.scenarioId} got ${result.verdict}`,
       );
     const roots = new Set(Object.values(result.surfaceRoots));
     if (roots.size > 1)
@@ -625,13 +918,75 @@ export function checkReferenceQualification() {
       conformanceRoot: result.conformanceRoot,
     };
   });
+  const agent = suite.scenarios[0].declaration;
+  const calendar = suite.scenarios[1].declaration;
+  const adversarial = [
+    [
+      'forged-domain-root',
+      (value) => {
+        value.bindings.domainProfileRoot = `sha256:${'9'.repeat(64)}`;
+      },
+    ],
+    [
+      'omitted-platform',
+      (value) => {
+        value.platformAdapters = value.platformAdapters.filter(
+          ({ platform }) => platform !== 'rust',
+        );
+      },
+    ],
+    [
+      'omitted-surface',
+      (value) => {
+        value.profileSurfaces = value.profileSurfaces.filter(
+          ({ surface }) => surface !== 'qualify',
+        );
+      },
+    ],
+    [
+      'manual-buildchain-allowlist',
+      (value) => {
+        value.buildchain.manualAllowlist = true;
+      },
+    ],
+    [
+      'separate-assignment',
+      (value) => {
+        value.workOperationModel.separateAssignment = true;
+      },
+    ],
+    [
+      'cross-domain-evidence-replay',
+      (value) => {
+        for (const evidence of value.behaviorEvidence) {
+          const replacement = calendar.behaviorEvidence.find(
+            ({ case: caseId }) => caseId === evidence.case,
+          );
+          Object.assign(evidence, replacement);
+        }
+      },
+    ],
+  ].map(([id, mutate]) => {
+    const declaration = structuredClone(agent);
+    mutate(declaration);
+    const result = evaluateConformance(declaration);
+    if (['compatible', 'compatible-with-constraints'].includes(result.verdict))
+      throw new Error(`negative-qualification-false-positive: ${id}`);
+    return {
+      id,
+      verdict: result.verdict,
+      conformanceRoot: result.conformanceRoot,
+    };
+  });
   return {
     schema: 'kungfu.work-profile-conformance-qualification/v1',
     status: 'passed',
     actionGeometryRoot: fileRoot(ACTION_GEOMETRY_PATH),
     workAbstractionAuthorityRoot: fileRoot(WORK_LIFECYCLE_PATH),
+    generatedEvidenceRoot: retainedRoot,
     scenarios: results,
-    qualificationRoot: contentRoot(results),
+    negativeCaseCount: adversarial.length,
+    qualificationRoot: contentRoot({ results, adversarial }),
     lifecycleMutation: false,
   };
 }
@@ -683,7 +1038,12 @@ function main() {
       const declared = declaration.profileSurfaces?.find(
         (surface) => surface.surface === options.surface,
       );
-      if (!declared || declared.status !== 'supported')
+      if (
+        !declared ||
+        declared.relevance !== 'required' ||
+        declared.status !== 'supported' ||
+        !output.surfaceRoots?.[options.surface]
+      )
         throw new Error(`profile-surface-unsupported: ${options.surface}`);
     }
   }

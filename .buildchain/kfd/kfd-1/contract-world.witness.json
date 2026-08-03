@@ -35,7 +35,7 @@
   "sourceVerificationRequired": false,
   "canonicalPolicy": {
     "path": "framework/contract/kungfu-agent-first-canonical-policy.json",
-    "sha256": "b4800df2efa222229844fc6844a00caf4c463115a7de0a3e076aba236392bd18"
+    "sha256": "a14ae61286bf6061962bf8b979db9030bd8779bb5911a98235e6007f48600c00"
   },
   "registry": {
     "path": "framework/contract/kungfu-contracts.registry.json",
@@ -205,9 +205,9 @@
     {
       "name": "kungfu-primitive-catalog",
       "sourcePath": "framework/primitive/kungfu-primitive-catalog.contract.json",
-      "sourceSha256": "e2eac134b5ad294a82710318c9c09096d76420d4f3e741e6b547e8b96d2cbc52",
+      "sourceSha256": "80ca3633cf668cf931989557f674cf4a9d4f25ec0501ccf394da6211c40ed1ee",
       "artifactPath": "config/primitive/kungfu-primitive-catalog.contract.json",
-      "expectedSha256": "e2eac134b5ad294a82710318c9c09096d76420d4f3e741e6b547e8b96d2cbc52",
+      "expectedSha256": "80ca3633cf668cf931989557f674cf4a9d4f25ec0501ccf394da6211c40ed1ee",
       "byteForByte": true
     }
   ],
