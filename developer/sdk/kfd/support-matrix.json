@@ -152,11 +152,11 @@
         "evidenceRoots": [
           {
             "path": ".buildchain/kfd/kfd-3/surfaces.json",
-            "sha256": "sha256:3a9c58f6d7b41324a4b8fcf7a2e4de90167a70136f8959eec3f74b2b15073a34"
+            "sha256": "sha256:c3419cdcca7ab3476516e06e4d44e52deb6411d9732ac191b210111793d59988"
           },
           {
             "path": ".buildchain/kfd/kfd-3/capability-query.json",
-            "sha256": "sha256:e38b3477acf876926186aac4f97ad6c1405b9665ca803aa4338ae93076d31edd"
+            "sha256": "sha256:02b4ad89a76f0f634631f3d2a1dbe41be55a14a341604bc06c51aad650783fb3"
           }
         ]
       },
@@ -270,11 +270,11 @@
           },
           {
             "path": "framework/incubation/incubation-passport.registry.json",
-            "sha256": "sha256:8cab184f9c708c5fd00324cb420f22972047875b0238b8bf2d10c95e36012dad"
+            "sha256": "sha256:66441c1baa6bdbf9662074019af594bef4a9c08c3292a5387f2c8b3d906ee9c8"
           },
           {
             "path": "framework/primitive/kungfu-primitive-catalog.contract.json",
-            "sha256": "sha256:e2eac134b5ad294a82710318c9c09096d76420d4f3e741e6b547e8b96d2cbc52"
+            "sha256": "sha256:af23ffa54066095a45c3f682ee443c7eea59fce2b8bc4c88e6ab4484743c6d94"
           }
         ]
       },

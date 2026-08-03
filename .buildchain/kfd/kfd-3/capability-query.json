@@ -1956,14 +1956,14 @@
       "state": "declared",
       "detected": true,
       "enforced": false,
-      "sourcePath": "developer/sdk/src/sdk.js",
+      "sourcePath": "developer/sdk/src/sdk-contract.js",
       "artifactPath": "framework/contract/kungfu-agent-first-canonical-policy.json",
       "evidencePath": "framework/contract/kungfu-agent-first-canonical-policy.json",
       "kfd1Basis": {
         "registryPath": ".buildchain/kfd/kfd-3/surfaces.json",
-        "sourcePath": "developer/sdk/src/sdk.js",
+        "sourcePath": "developer/sdk/src/sdk-contract.js",
         "artifactPath": "framework/contract/kungfu-agent-first-canonical-policy.json",
-        "digest": "sha256:2a8fe81b07e6c1cb77479c38923782bbd6d585b1d15f12627689be093d51e632"
+        "digest": "sha256:f6e793be041bdcf91dae51b3d7bc9af29491c216633becf9222f83295daa348e"
       },
       "kfd2Trust": {
         "status": "unknown",
@@ -1979,14 +1979,14 @@
       "state": "declared",
       "detected": true,
       "enforced": false,
-      "sourcePath": "developer/sdk/src/sdk.js",
+      "sourcePath": "developer/sdk/src/sdk-contract.js",
       "artifactPath": "framework/contract/kungfu-contracts.registry.json",
       "evidencePath": "framework/contract/kungfu-contracts.registry.json",
       "kfd1Basis": {
         "registryPath": ".buildchain/kfd/kfd-3/surfaces.json",
-        "sourcePath": "developer/sdk/src/sdk.js",
+        "sourcePath": "developer/sdk/src/sdk-contract.js",
         "artifactPath": "framework/contract/kungfu-contracts.registry.json",
-        "digest": "sha256:cf786bedcb2b7f212b4e9f15eca61abbffc948404700d0fb47da095e71b2e990"
+        "digest": "sha256:b3eb2717d367dc59fd4a39d434d24dd3e5b074298f772d7ec16bc58bb02da635"
       },
       "kfd2Trust": {
         "status": "unknown",
@@ -2002,14 +2002,14 @@
       "state": "declared",
       "detected": true,
       "enforced": false,
-      "sourcePath": "developer/sdk/src/sdk.js",
+      "sourcePath": "developer/sdk/src/sdk-kfd.js",
       "artifactPath": "developer/sdk/kfd/upstream-aggregate.json",
       "evidencePath": "developer/sdk/kfd/upstream-aggregate.json",
       "kfd1Basis": {
         "registryPath": ".buildchain/kfd/kfd-3/surfaces.json",
-        "sourcePath": "developer/sdk/src/sdk.js",
+        "sourcePath": "developer/sdk/src/sdk-kfd.js",
         "artifactPath": "developer/sdk/kfd/upstream-aggregate.json",
-        "digest": "sha256:48010a6bcd7225aef3cd46e5ea1627d62b4e49184523fdb5534210b7ec148cde"
+        "digest": "sha256:6daa16370ca873e5a89e1aa7d5b6b176bc0dfbccd5c0f3bce799f343917a612a"
       },
       "kfd2Trust": {
         "status": "unknown",
@@ -2025,14 +2025,14 @@
       "state": "declared",
       "detected": true,
       "enforced": false,
-      "sourcePath": "developer/sdk/src/sdk.js",
+      "sourcePath": "developer/sdk/src/sdk-contract.js",
       "artifactPath": "framework/kfx/kungfu-kfx.contract.json",
       "evidencePath": "framework/kfx/kungfu-kfx.contract.json",
       "kfd1Basis": {
         "registryPath": ".buildchain/kfd/kfd-3/surfaces.json",
-        "sourcePath": "developer/sdk/src/sdk.js",
+        "sourcePath": "developer/sdk/src/sdk-contract.js",
         "artifactPath": "framework/kfx/kungfu-kfx.contract.json",
-        "digest": "sha256:cfe083aac2a44cb7fc88bc9d805a9091e5dbe752dd053c3a66e84280d230f12d"
+        "digest": "sha256:d57d15721b2ceee392eef15d1161a0d4784dc2a9a3e383d65631d40e73f5ff62"
       },
       "kfd2Trust": {
         "status": "unknown",
@@ -2048,14 +2048,14 @@
       "state": "declared",
       "detected": true,
       "enforced": false,
-      "sourcePath": "developer/sdk/src/sdk.js",
-      "artifactPath": "developer/sdk/src/sdk.js",
-      "evidencePath": "developer/sdk/src/sdk.js",
+      "sourcePath": "developer/sdk/src/sdk-shared.js",
+      "artifactPath": "developer/sdk/src/sdk-shared.js",
+      "evidencePath": "developer/sdk/src/sdk-shared.js",
       "kfd1Basis": {
         "registryPath": ".buildchain/kfd/kfd-3/surfaces.json",
-        "sourcePath": "developer/sdk/src/sdk.js",
-        "artifactPath": "developer/sdk/src/sdk.js",
-        "digest": "sha256:43c48ca743732ee0e4941e9abe1d2a3119182396129efcdf65d1d3a76b2f28e8"
+        "sourcePath": "developer/sdk/src/sdk-shared.js",
+        "artifactPath": "developer/sdk/src/sdk-shared.js",
+        "digest": "sha256:861591b494a5f0b8d1c8f158d6d2ef1fac12d41bed28e8aa5cd31f36c57ffe66"
       },
       "kfd2Trust": {
         "status": "unknown",
@@ -2071,14 +2071,14 @@
       "state": "declared",
       "detected": true,
       "enforced": false,
-      "sourcePath": "developer/sdk/src/sdk.js",
-      "artifactPath": "developer/sdk/src/sdk.js",
-      "evidencePath": "developer/sdk/src/sdk.js",
+      "sourcePath": "developer/sdk/src/sdk-shared.js",
+      "artifactPath": "developer/sdk/src/sdk-shared.js",
+      "evidencePath": "developer/sdk/src/sdk-shared.js",
       "kfd1Basis": {
         "registryPath": ".buildchain/kfd/kfd-3/surfaces.json",
-        "sourcePath": "developer/sdk/src/sdk.js",
-        "artifactPath": "developer/sdk/src/sdk.js",
-        "digest": "sha256:2bb5016d62dc4c6ad9347d72a6a5d9c07061eae3c960bd8a2f412b1c31b0e7fe"
+        "sourcePath": "developer/sdk/src/sdk-shared.js",
+        "artifactPath": "developer/sdk/src/sdk-shared.js",
+        "digest": "sha256:db46d6372a0299cd0470685a9da96a389c91ec458186cff599403f29fda3a95f"
       },
       "kfd2Trust": {
         "status": "unknown",
@@ -2094,14 +2094,14 @@
       "state": "declared",
       "detected": true,
       "enforced": false,
-      "sourcePath": "developer/sdk/src/sdk.js",
-      "artifactPath": "developer/sdk/src/sdk.js",
-      "evidencePath": "developer/sdk/src/sdk.js",
+      "sourcePath": "developer/sdk/src/sdk-shared.js",
+      "artifactPath": "developer/sdk/src/sdk-shared.js",
+      "evidencePath": "developer/sdk/src/sdk-shared.js",
       "kfd1Basis": {
         "registryPath": ".buildchain/kfd/kfd-3/surfaces.json",
-        "sourcePath": "developer/sdk/src/sdk.js",
-        "artifactPath": "developer/sdk/src/sdk.js",
-        "digest": "sha256:5da2bf2abadafcac39ea1eaa092b30722ba269a513dd5c065b1e8e72bdd061a0"
+        "sourcePath": "developer/sdk/src/sdk-shared.js",
+        "artifactPath": "developer/sdk/src/sdk-shared.js",
+        "digest": "sha256:021bdd70b7a3d44515c8d4f57ad6c72b2f9e8384a905d23850027be72aece918"
       },
       "kfd2Trust": {
         "status": "unknown",

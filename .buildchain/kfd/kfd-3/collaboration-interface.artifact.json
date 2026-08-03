@@ -10,8 +10,8 @@
   "sourceRegistry": {
     "id": "kungfu",
     "path": ".buildchain/kfd/kfd-3/surfaces.json",
-    "sha256": "3a9c58f6d7b41324a4b8fcf7a2e4de90167a70136f8959eec3f74b2b15073a34",
-    "digest": "sha256:76bb4cf950bca286cf21d4e9a02c32ce48d9141322cd3ad0b1ed52f27b8d8c43"
+    "sha256": "c3419cdcca7ab3476516e06e4d44e52deb6411d9732ac191b210111793d59988",
+    "digest": "sha256:bfafb87155fad6661464fb09ad1b173b6d1d856f1da0943a3a483895a25a4a42"
   },
   "upstreamKfd": {
     "aggregatePath": "developer/sdk/kfd/upstream-aggregate.json",
@@ -28,7 +28,7 @@
     },
     "digest": "sha256:4b6a6b2f5519c7cc8379bbac57bcf3bf65297e44b5b70c17afdeb9d769244277"
   },
-  "collaborationInterfaceDigest": "sha256:7b05dd7192deab7b2a2baafd174da62eff4e124961aa01fade461c95f3692d3e",
+  "collaborationInterfaceDigest": "sha256:c8ad9ca4635fe5488e06c92c2484302afe1178404a523fc742b7b4da63eef651",
   "exposedSurfaces": [
     {
       "id": "kungfu.agent",
@@ -1752,14 +1752,14 @@
       "visibility": "public",
       "participantFacing": true,
       "public": true,
-      "sourcePath": "developer/sdk/src/sdk.js",
+      "sourcePath": "developer/sdk/src/sdk-contract.js",
       "evidencePath": "framework/contract/kungfu-agent-first-canonical-policy.json",
       "artifactPath": "framework/contract/kungfu-agent-first-canonical-policy.json",
       "maturity": "stable",
       "declaration": {
         "owner": "kungfu",
         "source": "scripts/buildchain-kfd-evidence.mjs",
-        "sourcePath": "developer/sdk/src/sdk.js"
+        "sourcePath": "developer/sdk/src/sdk-contract.js"
       }
     },
     {
@@ -1772,14 +1772,14 @@
       "visibility": "public",
       "participantFacing": true,
       "public": true,
-      "sourcePath": "developer/sdk/src/sdk.js",
+      "sourcePath": "developer/sdk/src/sdk-contract.js",
       "evidencePath": "framework/contract/kungfu-contracts.registry.json",
       "artifactPath": "framework/contract/kungfu-contracts.registry.json",
       "maturity": "stable",
       "declaration": {
         "owner": "kungfu",
         "source": "scripts/buildchain-kfd-evidence.mjs",
-        "sourcePath": "developer/sdk/src/sdk.js"
+        "sourcePath": "developer/sdk/src/sdk-contract.js"
       }
     },
     {
@@ -1792,14 +1792,14 @@
       "visibility": "public",
       "participantFacing": true,
       "public": true,
-      "sourcePath": "developer/sdk/src/sdk.js",
+      "sourcePath": "developer/sdk/src/sdk-kfd.js",
       "evidencePath": "developer/sdk/kfd/upstream-aggregate.json",
       "artifactPath": "developer/sdk/kfd/upstream-aggregate.json",
       "maturity": "stable",
       "declaration": {
         "owner": "kungfu",
         "source": "scripts/buildchain-kfd-evidence.mjs",
-        "sourcePath": "developer/sdk/src/sdk.js"
+        "sourcePath": "developer/sdk/src/sdk-kfd.js"
       }
     },
     {
@@ -1812,14 +1812,14 @@
       "visibility": "public",
       "participantFacing": true,
       "public": true,
-      "sourcePath": "developer/sdk/src/sdk.js",
+      "sourcePath": "developer/sdk/src/sdk-contract.js",
       "evidencePath": "framework/kfx/kungfu-kfx.contract.json",
       "artifactPath": "framework/kfx/kungfu-kfx.contract.json",
       "maturity": "stable",
       "declaration": {
         "owner": "kungfu",
         "source": "scripts/buildchain-kfd-evidence.mjs",
-        "sourcePath": "developer/sdk/src/sdk.js"
+        "sourcePath": "developer/sdk/src/sdk-contract.js"
       }
     },
     {
@@ -1832,14 +1832,14 @@
       "visibility": "public",
       "participantFacing": true,
       "public": true,
-      "sourcePath": "developer/sdk/src/sdk.js",
-      "evidencePath": "developer/sdk/src/sdk.js",
-      "artifactPath": "developer/sdk/src/sdk.js",
+      "sourcePath": "developer/sdk/src/sdk-shared.js",
+      "evidencePath": "developer/sdk/src/sdk-shared.js",
+      "artifactPath": "developer/sdk/src/sdk-shared.js",
       "maturity": "stable",
       "declaration": {
         "owner": "kungfu",
         "source": "scripts/buildchain-kfd-evidence.mjs",
-        "sourcePath": "developer/sdk/src/sdk.js"
+        "sourcePath": "developer/sdk/src/sdk-shared.js"
       }
     },
     {
@@ -1852,14 +1852,14 @@
       "visibility": "public",
       "participantFacing": true,
       "public": true,
-      "sourcePath": "developer/sdk/src/sdk.js",
-      "evidencePath": "developer/sdk/src/sdk.js",
-      "artifactPath": "developer/sdk/src/sdk.js",
+      "sourcePath": "developer/sdk/src/sdk-shared.js",
+      "evidencePath": "developer/sdk/src/sdk-shared.js",
+      "artifactPath": "developer/sdk/src/sdk-shared.js",
       "maturity": "stable",
       "declaration": {
         "owner": "kungfu",
         "source": "scripts/buildchain-kfd-evidence.mjs",
-        "sourcePath": "developer/sdk/src/sdk.js"
+        "sourcePath": "developer/sdk/src/sdk-shared.js"
       }
     },
     {
@@ -1872,14 +1872,14 @@
       "visibility": "public",
       "participantFacing": true,
       "public": true,
-      "sourcePath": "developer/sdk/src/sdk.js",
-      "evidencePath": "developer/sdk/src/sdk.js",
-      "artifactPath": "developer/sdk/src/sdk.js",
+      "sourcePath": "developer/sdk/src/sdk-shared.js",
+      "evidencePath": "developer/sdk/src/sdk-shared.js",
+      "artifactPath": "developer/sdk/src/sdk-shared.js",
       "maturity": "stable",
       "declaration": {
         "owner": "kungfu",
         "source": "scripts/buildchain-kfd-evidence.mjs",
-        "sourcePath": "developer/sdk/src/sdk.js"
+        "sourcePath": "developer/sdk/src/sdk-shared.js"
       }
     },
     {
