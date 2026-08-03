@@ -235,7 +235,7 @@ test('current Kungfu catalog, docs, matrix, actions, and workflows align', () =>
   );
   assert.equal(controllers.length, 10);
   assert.ok(controllers.every((fact) => fact.gates.length > 0));
-  assert.equal(result.workflowAuthority.workflows.length, 33);
+  assert.equal(result.workflowAuthority.workflows.length, 34);
   const agentPatrol = result.workflowAuthority.workflows.find(
     (workflow) => workflow.path === '.github/workflows/kungfu-agent-patrol.yml',
   );

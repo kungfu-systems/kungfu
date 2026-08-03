@@ -183,10 +183,10 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "diagnostic",
-          "definitionDigest": "sha256:c6ab21fa86ab188d7061e5ebf01856429763e448144812853c30b180d6604be7",
+          "definitionDigest": "sha256:27f3ae5634f6ffa99c21d94b005bb9ee09a9e2abab3a32ffe89d4166fd7695fe",
           "credentials": {"githubToken":"read","oidc":false,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
           "externalActions": ["actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0","actions/setup-node@v6.4.0","actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02"],
-          "steps": [{"index":1,"label":"name:Check out exact source with ADR history","definitionDigest":"sha256:d87b0b7113389d8d974e8bb6aec288204fdb71ef21294b590603744e9a550122"},{"index":2,"label":"uses:actions/setup-node@v6.4.0","definitionDigest":"sha256:789e56d63991440fb89fffa3b2795c1cab043e6b7df6237a0c830c5c89759690"},{"index":3,"label":"name:Verify exact clean source","definitionDigest":"sha256:008a3e6ea44c5263f9f3a02f399492c18475c64f0fc9e0a5c1290ebacc443aa8"},{"index":4,"label":"name:Verify early source contracts","definitionDigest":"sha256:11c7cfe93dce2aeb5fbc3ea1cbf16705f1636505938a1368f87910011043ce25"},{"index":5,"label":"name:Verify ADR cutover history is locally available","definitionDigest":"sha256:277833ae0b708489b598ab5cd169523dd13c202e088271a71c08dca55997f6ea"},{"index":6,"label":"name:Verify macOS codesign probe is available","definitionDigest":"sha256:bca3fb2eef2db43415dc56865a3706d57b08765b815adfb82e12b0dcfcbe0140"},{"index":7,"label":"name:Install pinned Rust toolchain","definitionDigest":"sha256:6a0303319d9a83ae1b31046aacf3d3afb063d0fca9fe35af0feaef3d1eba5b96"},{"index":8,"label":"name:Fetch locked Rust dependencies serially","definitionDigest":"sha256:1c3b6dc51f01dd6c1d4dcc55267d2a149269e8638b264279c6feba754a290887"},{"index":9,"label":"name:Write platform receipt","definitionDigest":"sha256:5b678360852f9cf2cb9a5420effcde7369ef46e40f75bae11e227095ff5f9bcf"},{"index":10,"label":"name:Upload platform receipt","authority":"evidence-publication","definitionDigest":"sha256:cfde7ab2bc368a94ceb06b956f371f0e2e6642b6dcd7a5d0e45aec2e1637a977"}]
+          "steps": [{"index":1,"label":"name:Check out exact source with ADR history","definitionDigest":"sha256:d87b0b7113389d8d974e8bb6aec288204fdb71ef21294b590603744e9a550122"},{"index":2,"label":"uses:actions/setup-node@v6.4.0","definitionDigest":"sha256:789e56d63991440fb89fffa3b2795c1cab043e6b7df6237a0c830c5c89759690"},{"index":3,"label":"name:Verify exact clean source","definitionDigest":"sha256:008a3e6ea44c5263f9f3a02f399492c18475c64f0fc9e0a5c1290ebacc443aa8"},{"index":4,"label":"name:Verify early source contracts","definitionDigest":"sha256:11c7cfe93dce2aeb5fbc3ea1cbf16705f1636505938a1368f87910011043ce25"},{"index":5,"label":"name:Verify ADR cutover history is locally available","definitionDigest":"sha256:277833ae0b708489b598ab5cd169523dd13c202e088271a71c08dca55997f6ea"},{"index":6,"label":"name:Verify macOS codesign probe is available","definitionDigest":"sha256:bca3fb2eef2db43415dc56865a3706d57b08765b815adfb82e12b0dcfcbe0140"},{"index":7,"label":"name:Install pinned Rust toolchain","definitionDigest":"sha256:0bead6b0518552f3d308ca352f78a43de816b17ed89c76c56500be92caf33d06"},{"index":8,"label":"name:Fetch locked Rust dependencies serially","definitionDigest":"sha256:1c3b6dc51f01dd6c1d4dcc55267d2a149269e8638b264279c6feba754a290887"},{"index":9,"label":"name:Write platform receipt","definitionDigest":"sha256:5b678360852f9cf2cb9a5420effcde7369ef46e40f75bae11e227095ff5f9bcf"},{"index":10,"label":"name:Upload platform receipt","authority":"evidence-publication","definitionDigest":"sha256:cfde7ab2bc368a94ceb06b956f371f0e2e6642b6dcd7a5d0e45aec2e1637a977"}]
         }
       ]
     },
@@ -281,9 +281,9 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "qualifying",
-          "definitionDigest": "sha256:fda89951bdfe6890bc50d766a694d38c379116606124db0840074b712e401ae9",
+          "definitionDigest": "sha256:55ef508943fce5e8790d17c35d4bb90f23bdb6bfc10dfe63d8a3b80ca78e7532",
           "credentials": {"githubToken":"write","oidc":false,"repositorySecrets":["KUNGFU_GITHUB_TOKEN"],"inheritedSecrets":false,"environment":null},
-          "externalActions": ["kungfu-systems/buildchain/.github/workflows/.declarative-auditable-demo.yml@ae9f4b91ee1027d0e18f416c8f18bc4645c8e3f9"],
+          "externalActions": ["kungfu-systems/buildchain/.github/workflows/.declarative-auditable-demo.yml@5246afd4ff5608f6e8d09fb71003992119364880"],
           "steps": []
         },
         {
@@ -301,9 +301,9 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "qualifying",
-          "definitionDigest": "sha256:b6a06dcd26b06ef41a488cd779d2bd7557125d9e51425be84fa89ffc5b9eebe1",
+          "definitionDigest": "sha256:5e3d1fcb5cc78a67e65577371296819a6b80b33ef767d499d4315d9977e66b37",
           "credentials": {"githubToken":"write","oidc":true,"repositorySecrets":["BUILDCHAIN_ARTIFACT_RELAY_S3_DOWNLOAD_ROLE_ARN","BUILDCHAIN_ARTIFACT_RELAY_S3_ROLE_ARN","BUILDCHAIN_ARTIFACT_RELAY_S3_UPLOAD_ROLE_ARN","KUNGFU_GITHUB_TOKEN"],"inheritedSecrets":false,"environment":null},
-          "externalActions": ["kungfu-systems/buildchain/.github/workflows/.build.yml@a5d2e312d083bc1b382c36e2ecb9179c7cd90dbe"],
+          "externalActions": ["kungfu-systems/buildchain/.github/workflows/.build.yml@5246afd4ff5608f6e8d09fb71003992119364880"],
           "steps": []
         },
         {
@@ -520,9 +520,9 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "diagnostic",
-          "definitionDigest": "sha256:5ba5b438e1f3b443dd8e824c55267a6a921472a3fdb65ebbf3c5f1f63c8adf00",
+          "definitionDigest": "sha256:61069f0491d85bc0ea17e8f9ba15c2f30c7f550422baeaf599907187af00a27e",
           "credentials": {"githubToken":"write","oidc":false,"repositorySecrets":["KUNGFU_GITHUB_TOKEN"],"inheritedSecrets":false,"environment":null},
-          "externalActions": ["kungfu-systems/buildchain/.github/workflows/dev-pr-auto-merge.yml@978520e86134683f66b607bc70c2d18f623e2410"],
+          "externalActions": ["kungfu-systems/buildchain/.github/workflows/dev-pr-auto-merge.yml@1659da98053f8ea8c75471e414b7732e3a491580"],
           "steps": []
         },
         {
@@ -538,26 +538,53 @@
       ]
     },
     {
+      "path": ".github/workflows/dev-qualification-patrol.yml",
+      "authority": "qualification",
+      "definitionDigest": "sha256:00a0ae69c1caa91a8ecd32b4df7a10bf462d43aa699fce4d348af02583b63ea3",
+      "jobs": [
+        {
+          "id": "patrol",
+          "authority": "qualification",
+          "publication": "none",
+          "receipt": "diagnostic",
+          "definitionDigest": "sha256:57a029cf8190b4df23acdab9ba2607199f768e86544ea020c57a29dd22ca41be",
+          "credentials": {"githubToken":"write","oidc":false,"repositorySecrets":["KUNGFU_GITHUB_TOKEN"],"inheritedSecrets":false,"environment":null},
+          "externalActions": ["kungfu-systems/buildchain/.github/workflows/dev-qualification-patrol.yml@49da2cd118b04d502fd90deaa57acaf83b0eaed7"],
+          "steps": []
+        }
+      ]
+    },
+    {
       "path": ".github/workflows/dev-verify-patrol.yml",
       "authority": "diagnostic",
-      "definitionDigest": "sha256:9b20d3c16112715b00b0ffdee667d118cb14f2f47f5a45d0821c7ddb56e9a6ea",
+      "definitionDigest": "sha256:cc4961063e8a7b0203c82d559e625a3d5a52eaa539b6815ab0cb6062a29a71d0",
       "jobs": [
+        {
+          "id": "bind-source",
+          "authority": "qualification",
+          "publication": "none",
+          "receipt": "diagnostic",
+          "definitionDigest": "sha256:241876aaad1b05e78ec556d7a9d6c685cd146fe82bd02033bbed1ecffdb66801",
+          "credentials": {"githubToken":"read","oidc":false,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
+          "externalActions": [],
+          "steps": [{"index":1,"label":"id:source","definitionDigest":"sha256:062a9a480710a64e08b7ebcdd0f2ac4cee8c97503dde5a8b5704ed7d8b7206e0"}]
+        },
         {
           "id": "report",
           "authority": "diagnostic",
           "publication": "none",
           "receipt": "none",
-          "definitionDigest": "sha256:a05982a2c1f611924354bf60fa038b8de9e34188f638622bb1edc0c8032b9610",
+          "definitionDigest": "sha256:2f624de37d5d71ac909f04bd17f59e21f48c515ed7d44fd6db9ff4a0eecdc783",
           "credentials": {"githubToken":"write","oidc":false,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
           "externalActions": [],
-          "steps": [{"index":1,"label":"name:Sync tracking issue with patrol result","authority":"diagnostic-write","definitionDigest":"sha256:9a52c75f071708a68e46fe539e4714efde77cec2ec7d571f8e17c28fca4800b0"}]
+          "steps": [{"index":1,"label":"name:Sync tracking issue with patrol result","authority":"diagnostic-write","definitionDigest":"sha256:f33e4ab9673c51d1a245249276274a2af1f662756bcc213c502405a136cf9a76"}]
         },
         {
           "id": "verify",
           "authority": "qualification",
           "publication": "none",
           "receipt": "qualifying",
-          "definitionDigest": "sha256:aaf8f6119c6eae36fe5c7052ecd568541a6170d799db0fe92a849de9652f18ab",
+          "definitionDigest": "sha256:5c48dc34b7eab862016e0fe250421066fc17139476cec001f545eaa2f92f2d5c",
           "credentials": {"githubToken":"write","oidc":true,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
           "externalActions": ["kungfu-systems/buildchain/.github/workflows/.gate-profile.yml@f8ef93be41b0badd75eb35cc1506c2be12198984"],
           "steps": []
@@ -868,9 +895,9 @@
           "authority": "release-control",
           "publication": "channel",
           "receipt": "qualifying",
-          "definitionDigest": "sha256:ec8893b6fc8136bb6af7b5a857de8096a4422391da273e1a06bdae613f6c9220",
+          "definitionDigest": "sha256:551cb34fd2f73b24feb3fc8239d9daac9b06403186ac3e7512c2f1a304b02670",
           "credentials": {"githubToken":"write","oidc":true,"repositorySecrets":["BUILDCHAIN_ISSUE_APP_ID","BUILDCHAIN_ISSUE_APP_PRIVATE_KEY","KUNGFU_ALPHA_CHANNEL_SIGNING_PRIVATE_KEY","KUNGFU_GITHUB_TOKEN","KUNGFU_GOVERNANCE_AUDITOR_APP_PRIVATE_KEY"],"inheritedSecrets":false,"environment":null},
-          "externalActions": ["kungfu-systems/buildchain/.github/workflows/release-candidate-promote.yml@a5d2e312d083bc1b382c36e2ecb9179c7cd90dbe"],
+          "externalActions": ["kungfu-systems/buildchain/.github/workflows/release-candidate-promote.yml@5246afd4ff5608f6e8d09fb71003992119364880"],
           "steps": []
         },
         {

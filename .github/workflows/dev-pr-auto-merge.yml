@@ -59,14 +59,15 @@ jobs:
       checks: read
       contents: write
       pull-requests: write
-      statuses: read
-    uses: kungfu-systems/buildchain/.github/workflows/dev-pr-auto-merge.yml@978520e86134683f66b607bc70c2d18f623e2410
+      statuses: write
+    uses: kungfu-systems/buildchain/.github/workflows/dev-pr-auto-merge.yml@1659da98053f8ea8c75471e414b7732e3a491580
     with:
-      buildchain-ref: 978520e86134683f66b607bc70c2d18f623e2410
+      buildchain-ref: 1659da98053f8ea8c75471e414b7732e3a491580
       target-branch: ${{ needs.resolve-target.outputs.target-branch }}
       required-status-checks: |-
         Candidate source acceptance / check
         affected-native / linux
+      queue-admission-context: Queue admission lease
       ready-label: state/ready
       block-labels: state/blocked,blocked,do-not-merge,work-in-progress
       allowed-head-prefixes: feature/,fix/,chore/,docs/,ci/,refactor/

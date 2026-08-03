@@ -1103,6 +1103,9 @@ export function cliArchiveLayout(platform = process.platform) {
     runtimeEntrypoint: `${runtimeDirectory}/${
       platform === 'win32' ? 'kungfu.exe' : 'kungfu'
     }`,
+    pythonEntrypoint: `${runtimeDirectory}/python/${
+      platform === 'win32' ? 'python.exe' : 'bin/python3'
+    }`,
     compatibility: `${runtimeDirectory}/product-compatibility.json`,
   };
 }
@@ -1122,11 +1125,12 @@ export function writeAuditableDemoBinaryMetadata(
 ) {
   const binary = path.join(stageRoot, layout.launcherName);
   const runtime = path.join(stageRoot, layout.runtimeEntrypoint);
+  const python = path.join(stageRoot, layout.pythonEntrypoint);
   const metadata = {
     contract: 'kungfu.declarative-demo-binary/v1',
     platformId: platform,
     sha256: sha256File(binary),
-    executableFiles: [binary, runtime].map((file) => ({
+    executableFiles: [binary, runtime, python].map((file) => ({
       path: path.relative(artifactRoot, file).split(path.sep).join('/'),
       sha256: sha256File(file).slice('sha256:'.length),
     })),

@@ -11,11 +11,15 @@ function workflow(name) {
   return fs.readFileSync(path.join(ROOT, '.github/workflows', name), 'utf8');
 }
 
-test('Dev Patrol runs at 04:00 Asia/Shanghai with an explicit UTC contract', () => {
+test('Dev Patrol is exact-source dispatch-only behind the qualification controller', () => {
   const source = workflow('dev-verify-patrol.yml');
-  assert.match(source, /04:00 Asia\/Shanghai/u);
-  assert.match(source, /cron: "0 20 \* \* \*"/u);
-  assert.doesNotMatch(source, /cron: "23 3 \* \* \*"/u);
+  assert.doesNotMatch(source, /schedule:/u);
+  assert.match(source, /source-sha:/u);
+  assert.match(source, /test "\$REQUESTED_SHA" = "\$EVENT_SHA"/u);
+  assert.match(
+    source,
+    /source-ref: \$\{\{ needs\.bind-source\.outputs\.source-sha \}\}/u,
+  );
   assert.match(
     source,
     /buildchain-ref: \$\{\{ github\.event_name == 'workflow_dispatch' && inputs\.buildchain-ref \|\| '' \}\}/u,
@@ -24,6 +28,34 @@ test('Dev Patrol runs at 04:00 Asia/Shanghai with an explicit UTC contract', () 
     source,
     /buildchain-ref: \$\{\{ inputs\.buildchain-ref \|\| '[0-9a-f]{40}' \}\}/u,
   );
+});
+
+test('qualification patrol coalesces the latest Dev SHA behind release priority', () => {
+  const source = workflow('dev-qualification-patrol.yml');
+  const reusableRef = source.match(
+    /uses: kungfu-systems\/buildchain\/\.github\/workflows\/dev-qualification-patrol\.yml@([0-9a-f]{40})/u,
+  )?.[1];
+  assert.match(reusableRef || '', /^[0-9a-f]{40}$/u);
+  assert.match(source, /workflow_run:/u);
+  assert.match(source, /Alpha promotion preflight/u);
+  assert.match(source, /Dev Verify Patrol/u);
+  assert.match(source, /Release - New Version/u);
+  assert.match(source, /Release native components/u);
+  assert.match(source, /cron: "7,22,37,52 \* \* \* \*"/u);
+  assert.match(
+    source,
+    /priority-workflows-json:[\s\S]*build\.yml[\s\S]*release-new-version\.yml[\s\S]*release-shifu\.yml/u,
+  );
+  assert.match(source, /max-attempts: 2/u);
+  assert.match(
+    source,
+    /mutation-authorized: \$\{\{ github\.event_name != 'workflow_dispatch' \}\}/u,
+  );
+  assert.match(
+    source,
+    /qualification-token: \$\{\{ secrets\.KUNGFU_GITHUB_TOKEN \}\}/u,
+  );
+  assert.doesNotMatch(source, /npm publish|gh release create|git tag/iu);
 });
 
 test('candidate patrol is a thin Buildchain caller with exact channel and evidence inputs', () => {
