@@ -40,6 +40,37 @@ def test_run_process_retains_undecodable_output_without_crashing(tmp_path):
     }
 
 
+def test_managed_agent_environment_preserves_windows_process_coordinates(tmp_path):
+    windows_coordinates = {
+        "APPDATA": r"C:\\Users\\test\\AppData\\Roaming",
+        "LOCALAPPDATA": r"C:\\Users\\test\\AppData\\Local",
+        "USERPROFILE": r"C:\\Users\\test",
+        "SYSTEMROOT": r"C:\\Windows",
+        "COMSPEC": r"C:\\Windows\\System32\\cmd.exe",
+        "PATHEXT": ".COM;.EXE;.BAT;.CMD",
+        "TEMP": r"C:\\Users\\test\\AppData\\Local\\Temp",
+        "TMP": r"C:\\Users\\test\\AppData\\Local\\Temp",
+    }
+    env, environment_keys = run_agent._environment(
+        "codex",
+        runtime_dir=str(tmp_path / "runtime"),
+        run_id="agent-windows-environment",
+        workspace_root=str(tmp_path / "project"),
+        work_ref=None,
+        continuation=None,
+        source={
+            "HOME": r"C:\\Users\\test",
+            "PATH": r"C:\\Windows\\System32",
+            **windows_coordinates,
+            "UNDECLARED_SECRET": "blocked",
+        },
+    )
+
+    assert {key: env[key] for key in windows_coordinates} == windows_coordinates
+    assert "UNDECLARED_SECRET" not in env
+    assert environment_keys == sorted(env)
+
+
 def _signals(**overrides):
     value = {
         "taskId": "upgrade-runtime",
