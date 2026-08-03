@@ -5,7 +5,7 @@
   "manifestPath": "framework/maintainability/semantic-amplification.manifest.json",
   "manifestRoot": "sha256:b64ab1daecaec8560dd649af61b7e175adaf562df3aa8b94e3733ef499a308aa",
   "baselineRef": "dbfed9ca1785d147b26f4f06e7e6895ac7368fee",
-  "sourceRoot": "sha256:2a04be76f1e88b1574fe7688cc899b7fab23fa67afff17c35dbb9c2b03c76efe",
+  "sourceRoot": "sha256:e7b6e15a1242180bf890d41b57d92c8432e34017aef0a9baf1ede789438fc26f",
   "roles": {
     "authority": "exactly one authority route per family; the route may name multiple co-owned source files",
     "allowedProjectionRoles": [
@@ -1186,7 +1186,7 @@
           "path": "docs/qualification/gates/release-admission.md",
           "currentLines": 75,
           "baselineLines": 75,
-          "currentRoot": "sha256:b385e3444b4c35e437a633cc371eb29cbee70f8ea0ef080d8deacc06e76c3034",
+          "currentRoot": "sha256:190b0c97f561df4e399ace0377b7946016e68e27adf6fc690b54accba8802067",
           "baselineRoot": "sha256:69f293fefb3c94df44051dc86ba4435416f5ea4348f2ffb245bef19bb494a280",
           "changedSinceBaseline": true
         },

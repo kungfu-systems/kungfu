@@ -72,7 +72,7 @@
     },
     "package": {
       "name": "@kungfu-tech/kfd",
-      "version": "1.0.0-alpha.47",
+      "version": "1.0.0-alpha.53",
       "repository": "git+https://github.com/kungfu-systems/kfd.git"
     }
   },
@@ -88,7 +88,7 @@
       "standard": "KFD-1",
       "standardKey": "kfd-1",
       "result": "passed",
-      "preBuildWitnessSha256": "5b459dfc2b8dee3ee327a7c7ed5786f752579b7e59c9cda478dc03437739eebc",
+      "preBuildWitnessSha256": "5ea110f9a2bfec47fb80edc628f4160a5c0d3e9f5dd51c06a31210633d3b0c4f",
       "sourceHashes": {
         "sha256": "1990dcbc7bcc311a2ad9be9a7596229c5742c41bd15a9a343dc70e2cfad491e5",
         "surfaceCount": 21
@@ -313,7 +313,7 @@
         "metadata": {
           "kfdPackage": {
             "name": "@kungfu-tech/kfd",
-            "version": "1.0.0-alpha.47",
+            "version": "1.0.0-alpha.53",
             "repository": "git+https://github.com/kungfu-systems/kfd.git"
           },
           "schemaIds": {
