@@ -4,7 +4,11 @@ import {
   checkpointActionLoop,
   resumeActionLoop,
 } from './action-loop-begin.mjs';
-import { classifyRecovery, validateEnvelope } from './action-loop.mjs';
+import {
+  classifyRecovery,
+  rootStepReceipt,
+  validateEnvelope,
+} from './action-loop.mjs';
 
 const ROOT = /^sha256:[0-9a-f]{64}$/;
 const RESPONSE_SCHEMA = 'kungfu.action-loop.settlement-response/v0';
@@ -54,11 +58,19 @@ function validateReceipt(envelope, receipt, stepId) {
     !validRoot(receipt.receiptRoot) ||
     !Array.isArray(receipt.preconditionRoots) ||
     !Array.isArray(receipt.resultRoots) ||
+    !validRoot(receipt.authorityReceiptRoot) ||
     ![...receipt.preconditionRoots, ...receipt.resultRoots].every(validRoot)
   ) {
     return failure(
       'invalid-adapter-receipt',
       `${stepId} adapter did not return an accepted authority receipt`,
+      { stepId },
+    );
+  }
+  if (rootStepReceipt(receipt).receiptRoot !== receipt.receiptRoot) {
+    return failure(
+      'invalid-adapter-receipt',
+      `${stepId} adapter returned a forged receiptRoot`,
       { stepId },
     );
   }

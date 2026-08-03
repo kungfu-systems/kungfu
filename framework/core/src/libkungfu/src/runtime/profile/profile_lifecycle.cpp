@@ -350,7 +350,7 @@ nlohmann::json normalize_profile(const nlohmann::json &input) {
   require_exact_keys(input,
                      {"schema", "id", "title", "version", "members", "kfd1", "kfd2", "actions", "views", "migrations",
                       "permissions", "qualification"},
-                     {"kfd3", "experience"});
+                     {"kfd3", "experience", "work"});
   if (required_text(input, "schema") != PROFILE_SCHEMA_V1) {
     throw std::invalid_argument("Profile must use kungfu.profile-suite/v1");
   }
@@ -415,6 +415,11 @@ nlohmann::json normalize_profile(const nlohmann::json &input) {
     require_exact_keys(kfd3, {"collaboration"});
     normalized["kfd3"] = {{"collaboration", normalize_ref(kfd3.at("collaboration"))}};
   }
+  if (input.contains("work")) {
+    const auto &work = input.at("work");
+    require_exact_keys(work, {"conformance"});
+    normalized["work"] = {{"conformance", normalize_ref(work.at("conformance"))}};
+  }
   if (!home_view.empty()) {
     normalized["experience"] = {{"homeView", home_view}};
   }
@@ -469,6 +474,8 @@ std::vector<nlohmann::json> profile_refs(const nlohmann::json &profile) {
   collect_ref(profile.at("qualification").at("profile"), refs);
   if (profile.contains("kfd3"))
     collect_ref(profile.at("kfd3").at("collaboration"), refs);
+  if (profile.contains("work"))
+    collect_ref(profile.at("work").at("conformance"), refs);
   std::sort(refs.begin(), refs.end(), [](const auto &left, const auto &right) {
     return left.at("path").template get<std::string>() < right.at("path").template get<std::string>();
   });
@@ -486,6 +493,106 @@ nlohmann::json parse_bound_json(const nlohmann::json &inspection, const std::str
   return nlohmann::json::parse(read_file(confined_path(package_root, facet_path)));
 }
 
+bool work_capable_profile(const nlohmann::json &inspection) {
+  const auto &profile = inspection.at("profile");
+  const auto actions_ref = profile.at("actions").at("registry");
+  const auto registry = parse_bound_json(inspection, required_text(actions_ref, "path"));
+  if (text_or(registry, "schema") != "kungfu.profile-actions/v1" || !registry.contains("actions") ||
+      !registry.at("actions").is_array()) {
+    return false;
+  }
+  std::set<std::string> work_actions;
+  for (const auto &action : registry.at("actions")) {
+    if (action.is_object() && text_or(action, "runtimeOperation") == "episode.append") {
+      work_actions.insert(text_or(action, "id"));
+    }
+  }
+  return work_actions.contains("claim-completion") && work_actions.contains("review-completion") &&
+         work_actions.contains("decide-continuation");
+}
+
+nlohmann::json require_work_conformance(const nlohmann::json &inspection, const nlohmann::json &receipt,
+                                        const char *surface) {
+  if (!receipt.is_object() || text_or(receipt, "schema") != "kungfu.work-profile-conformance-result/v1") {
+    throw std::invalid_argument("Work-capable Profile requires a conformance result from the public checker");
+  }
+  const auto verdict = text_or(receipt, "verdict");
+  if (verdict != "compatible" && verdict != "compatible-with-constraints") {
+    throw std::invalid_argument("Work-capable Profile conformance verdict is not admissible");
+  }
+  if (receipt.value("lifecycleMutation", true) || !receipt.contains("diagnostics") ||
+      !receipt.at("diagnostics").is_array() || !receipt.at("diagnostics").empty()) {
+    throw std::invalid_argument("Work-capable Profile conformance result contains blocking diagnostics");
+  }
+  const auto &profile = inspection.at("profile");
+  if (!profile.contains("work")) {
+    throw std::invalid_argument("Work-capable Profile omits work.conformance");
+  }
+  const auto declaration_ref = profile.at("work").at("conformance");
+  const auto declaration = parse_bound_json(inspection, required_text(declaration_ref, "path"));
+  if (text_or(receipt, "declarationRoot") != content_root(declaration.dump())) {
+    throw std::invalid_argument("Work conformance result does not bind the exact declaration root");
+  }
+  if (text_or(receipt, "scenarioId") != text_or(declaration, "scenarioId") || !declaration.contains("bindings") ||
+      receipt.value("authorityBindings", nlohmann::json()) != declaration.at("bindings") ||
+      !declaration.contains("humanAuthority") ||
+      receipt.value("humanAuthority", nlohmann::json()) != declaration.at("humanAuthority")) {
+    throw std::invalid_argument("Work conformance result does not bind the prescribed declaration authorities");
+  }
+  const auto conformance_root = required_text(receipt, "conformanceRoot");
+  if (!receipt.contains("surfaceRoots") || !receipt.at("surfaceRoots").is_object() ||
+      text_or(receipt.at("surfaceRoots"), surface) != conformance_root ||
+      text_or(receipt, "publicSurface") != surface) {
+    throw std::invalid_argument("Work conformance result does not bind the requested public surface");
+  }
+  auto stable = receipt;
+  stable.erase("conformanceRoot");
+  stable.erase("surfaceRoots");
+  stable.erase("publicSurface");
+  if (content_root(stable.dump()) != conformance_root) {
+    throw std::invalid_argument("Work conformance result root is invalid");
+  }
+  if (!receipt.contains("machineChecks") || !receipt.at("machineChecks").is_array()) {
+    throw std::invalid_argument("Work conformance result omits machine checks");
+  }
+  std::map<std::string, nlohmann::json> expected_checks;
+  const auto add_expected = [&expected_checks](const std::string &id, const std::string &status,
+                                               const nlohmann::json &evidence_root = nullptr) {
+    expected_checks.emplace(id, nlohmann::json{{"id", id}, {"status", status}, {"evidenceRoot", evidence_root}});
+  };
+  const auto &bindings = declaration.at("bindings");
+  add_expected("exact-action-geometry-root", "passed", bindings.at("actionGeometryRoot"));
+  add_expected("exact-work-abstraction-authority-root", "passed", bindings.at("abstractionAuthorityRoot"));
+  for (const auto *field : {"actionGeometryRoot", "domainProfileRoot", "abstractionAuthorityRoot", "sourceRoot"})
+    add_expected(std::string("binding-") + field, "passed", bindings.at(field));
+  for (const auto *role : {"fact", "episode", "pursuit", "atlas", "warrant"})
+    add_expected(std::string("binding-role-") + role, "passed", bindings.at("roleSchemaRoots").at(role));
+  add_expected("responsibility-role-root-separation", "passed");
+  add_expected("generic-authority-reuse", "passed");
+  for (const auto &judgment : declaration.at("humanAuthority").items())
+    add_expected("human-authority-" + judgment.key(), "declared", judgment.value().at("authorityRoot"));
+  for (const auto &evidence : declaration.at("behaviorEvidence"))
+    add_expected("behavior-" + required_text(evidence, "case"), required_text(evidence, "status"),
+                 evidence.at("evidenceRoot"));
+  for (const auto &adapter : declaration.at("platformAdapters"))
+    add_expected("platform-" + required_text(adapter, "platform"), required_text(adapter, "status"),
+                 adapter.at("evidenceRoot"));
+  const auto &buildchain = declaration.at("buildchain");
+  add_expected("buildchain-admission", required_text(buildchain, "status"), buildchain.at("evidenceRoot"));
+  add_expected("generic-work-operation-model", "passed", declaration.at("workOperationModel").at("authorityRoot"));
+  if (receipt.at("machineChecks").size() != expected_checks.size()) {
+    throw std::invalid_argument("Work conformance result does not contain the exact prescribed machine-check set");
+  }
+  std::set<std::string> observed_checks;
+  for (const auto &check : receipt.at("machineChecks")) {
+    require_exact_keys(check, {"id", "status", "evidenceRoot"});
+    const auto id = required_text(check, "id");
+    if (!observed_checks.insert(id).second || !expected_checks.contains(id) || expected_checks.at(id) != check)
+      throw std::invalid_argument("Work conformance result contains a forged or unprescribed machine check");
+  }
+  return receipt;
+}
+
 std::vector<std::string> declared_permissions(const nlohmann::json &inspection) {
   const auto &profile = inspection.at("profile");
   const auto ref = profile.at("permissions").at("registry");
@@ -497,7 +604,7 @@ std::vector<std::string> declared_permissions(const nlohmann::json &inspection) 
   return normalize_tokens(registry.at("permissions"), "permissions", false);
 }
 
-nlohmann::json qualify_inspection(const nlohmann::json &inspection) {
+nlohmann::json qualify_inspection(const nlohmann::json &inspection, const nlohmann::json &work_conformance) {
   const auto &profile = inspection.at("profile");
   const auto compatibility_ref = profile.at("kfd1").at("compatibility");
   const auto compatibility = parse_bound_json(inspection, required_text(compatibility_ref, "path"));
@@ -525,13 +632,19 @@ nlohmann::json qualify_inspection(const nlohmann::json &inspection) {
   if (checks.size() != 2) {
     throw std::invalid_argument("qualification profile requests a check this runtime cannot execute");
   }
-  return {{"schema", "kungfu.profile-qualification-result/v1"},
-          {"profile_suite_root", inspection.at("profile_suite_root")},
-          {"status", "qualified"},
-          {"checks", checks},
-          {"qualifier", "libkungfu"},
-          {"policy", "profile-closure-and-runtime/v1"},
-          {"evidence_scope", "source-contract/content-closure/runtime-contract"}};
+  nlohmann::json result = {{"schema", "kungfu.profile-qualification-result/v1"},
+                           {"profile_suite_root", inspection.at("profile_suite_root")},
+                           {"status", "qualified"},
+                           {"checks", checks},
+                           {"qualifier", "libkungfu"},
+                           {"policy", "profile-closure-and-runtime/v1"},
+                           {"evidence_scope", "source-contract/content-closure/runtime-contract"}};
+  if (work_capable_profile(inspection)) {
+    const auto conformance = require_work_conformance(inspection, work_conformance, "qualify");
+    result["work_conformance_root"] = conformance.at("conformanceRoot");
+    result["work_declaration_root"] = conformance.at("declarationRoot");
+  }
+  return result;
 }
 
 std::vector<uint8_t> encode_event(const nlohmann::json &event) {
@@ -852,14 +965,16 @@ nlohmann::json inspect_profile(const std::string &profile_path_text, const nlohm
   auto root_input = closure;
   root_input.erase("profile_path");
   const auto root = content_root(root_input.dump());
-  return {{"schema", PROFILE_INSPECTION_V1},
-          {"profile_path", profile_path.string()},
-          {"profile_suite_root", root},
-          {"profile", profile},
-          {"artifacts", artifacts},
-          {"member_roots", member_roots},
-          {"closure", closure},
-          {"verified", true}};
+  nlohmann::json inspection = {{"schema", PROFILE_INSPECTION_V1},
+                               {"profile_path", profile_path.string()},
+                               {"profile_suite_root", root},
+                               {"profile", profile},
+                               {"artifacts", artifacts},
+                               {"member_roots", member_roots},
+                               {"closure", closure},
+                               {"verified", true}};
+  inspection["work_capable"] = work_capable_profile(inspection);
+  return inspection;
 }
 
 nlohmann::json plan_profile_lifecycle(const std::string &runtime_dir, const nlohmann::json &request) {
@@ -883,6 +998,14 @@ nlohmann::json plan_profile_lifecycle(const std::string &runtime_dir, const nloh
     normalized_request["profile_path"] = inspection.at("profile_path");
     normalized_request["member_roots"] = inspection.at("member_roots");
     profile_id = inspection.at("profile").at("id").get<std::string>();
+    if ((action_name == "qualify" || action_name == "activate") && work_capable_profile(inspection)) {
+      if (!request.contains("work_conformance")) {
+        throw std::invalid_argument("Work-capable Profile lifecycle requires a conformance result");
+      }
+      const auto *surface = action_name == "qualify" ? "qualify" : "installed-runtime";
+      normalized_request["work_conformance"] =
+          require_work_conformance(inspection, request.at("work_conformance"), surface);
+    }
   } else {
     profile_id = required_text(request, "profile_id");
     validate_profile_id(profile_id);
@@ -909,7 +1032,7 @@ nlohmann::json plan_profile_lifecycle(const std::string &runtime_dir, const nloh
     if (!exists || found->second.removed || current_root != inspection.at("profile_suite_root").get<std::string>()) {
       throw std::invalid_argument("qualification requires the exact current installed Profile root");
     }
-    qualification = qualify_inspection(inspection);
+    qualification = qualify_inspection(inspection, request.value("work_conformance", nlohmann::json::object()));
     effects.push_back({{"kind", "Qualified"}, {"profile_suite_root", current_root}});
   } else if (action_name == "activate") {
     if (!exists || found->second.removed || current_root != inspection.at("profile_suite_root").get<std::string>()) {
@@ -918,6 +1041,10 @@ nlohmann::json plan_profile_lifecycle(const std::string &runtime_dir, const nloh
     const auto root_found = found->second.roots.find(current_root);
     if (root_found == found->second.roots.end() || !root_found->second.qualified) {
       throw std::invalid_argument("activation requires a qualified Profile root");
+    }
+    if (work_capable_profile(inspection) && text_or(root_found->second.qualification, "work_conformance_root") !=
+                                                required_text(request.at("work_conformance"), "conformanceRoot")) {
+      throw std::invalid_argument("activation Work conformance root differs from the qualified root");
     }
     const auto requested = request.contains("granted_permissions")
                                ? normalize_tokens(request.at("granted_permissions"), "granted_permissions", false)
