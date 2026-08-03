@@ -1777,7 +1777,7 @@ export const PROJECT_TOUR_EPISODE_TWO_FINAL_GUIDE_SCALE = 0.8;
 
 export const PROJECT_TOUR_SPEED_RANGE = {
   min: 0.25,
-  max: 2,
+  max: 4,
 } as const;
 
 export const PROJECT_TOUR_EPISODES = ['1', '2', 'all'] as const;

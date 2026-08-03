@@ -154,7 +154,7 @@ export function inspectAuditableDemoFastSentinel({
   }
   const demos = scenarioValue?.demos || [];
   const autoplay = demos.find((demo) => demo?.id === 'agent-work-lab-autoplay');
-  const projectTour = demos.find((demo) => demo?.id === 'project-tour-08x');
+  const projectTour = demos.find((demo) => demo?.id === 'project-tour');
   if (
     scenarioValue?.schema !== 'buildchain.declarative-binary-demo/v1' ||
     scenarioValue?.execution?.durationClass !== 'long-form' ||
@@ -164,7 +164,15 @@ export function inspectAuditableDemoFastSentinel({
     JSON.stringify(autoplay?.steps?.[0]?.argv) !==
       JSON.stringify(['agent-work-lab', 'autoplay']) ||
     JSON.stringify(projectTour?.steps?.[0]?.argv) !==
-      JSON.stringify(['agent-work-lab', 'project-tour', '--episode', 'all'])
+      JSON.stringify([
+        'agent-work-lab',
+        'project-tour',
+        '--episode',
+        'all',
+        '--speed',
+        '4',
+      ]) ||
+    projectTour?.steps?.[0]?.timeoutSeconds !== 180
   ) {
     issues.push(
       'auditable-demo scenario no longer declares the exact bounded two-demo cut',

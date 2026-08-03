@@ -28,13 +28,21 @@ test('one exact Buildchain workflow owns every declared demo', () => {
         argv: ['agent-work-lab', 'autoplay'],
       },
       {
-        id: 'project-tour-08x',
-        argv: ['agent-work-lab', 'project-tour', '--episode', 'all'],
+        id: 'project-tour',
+        argv: [
+          'agent-work-lab',
+          'project-tour',
+          '--episode',
+          'all',
+          '--speed',
+          '4',
+        ],
       },
     ],
   );
   assert.equal(scenario.execution.durationClass, 'long-form');
   assert.equal(scenario.execution.totalTimeoutSeconds, 180);
+  assert.equal(scenario.demos[1].steps[0].timeoutSeconds, 180);
   assert.deepEqual(scenario.transportSmoke, {
     argv: ['agent-work-lab', 'demo', '--json'],
     timeoutSeconds: 60,
@@ -58,11 +66,11 @@ test('one exact Buildchain workflow owns every declared demo', () => {
 test('the build fails the real transported binary before either upload path', () => {
   assert.equal(
     build.uses,
-    'kungfu-systems/buildchain/.github/workflows/.build.yml@07a276ecad9bd01d16411ef58fbbde809699247a',
+    'kungfu-systems/buildchain/.github/workflows/.build.yml@c8acbc57d1f6aa2e5fda1398a5ea1782373d9a7a',
   );
   assert.equal(
     demo.uses,
-    'kungfu-systems/buildchain/.github/workflows/.declarative-auditable-demo.yml@07a276ecad9bd01d16411ef58fbbde809699247a',
+    'kungfu-systems/buildchain/.github/workflows/.declarative-auditable-demo.yml@c8acbc57d1f6aa2e5fda1398a5ea1782373d9a7a',
   );
   assert.equal(
     build.with['pre-upload-transport-smoke-scenario-path'],
