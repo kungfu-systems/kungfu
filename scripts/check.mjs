@@ -478,6 +478,12 @@ function checkKungfuGateCatalog() {
 }
 
 function checkLayerQualification() {
+  run('portable format authority bundle', 'pnpm', [
+    '--filter',
+    '@kungfu-tech/spec',
+    'run',
+    'build',
+  ]);
   run(
     'KF-ADR-019f86da-4f90-7c91-9cc2-6dbd18d68dff layer qualification harness tests',
     'node',

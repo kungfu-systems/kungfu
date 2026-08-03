@@ -152,6 +152,7 @@ function makeConanSettings(names) {
   return names.flatMap(makeConanSetting);
 }
 
+/** @param {string} banner */
 function conanMsvcVersionFromBanner(banner) {
   // Keep the probe locale-independent: localized cl.exe banners preserve the
   // numeric 19.xx toolset identity but may translate the word "Version".
