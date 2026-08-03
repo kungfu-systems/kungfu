@@ -1337,8 +1337,7 @@ def selected_cli_command(
     if env.get("KUNGFU_INSTALL_SOURCE") != "archive":
         return None
     config_home = Path(env.get("KF_CONFIG_HOME") or "~/.kungfu-config").expanduser()
-    selected = _read_cli_selection(config_home)
-    if selected is None:
+    if (selected := _read_cli_selection(config_home)) is None:
         return None
     selection, image = selected
     if release_cut.is_legacy_bootstrap(selection):
@@ -1351,17 +1350,19 @@ def selected_cli_command(
             "cli-selection-invalid", "selected CLI executable is missing or unsafe"
         )
     current = Path(current_executable or sys.executable).resolve()
-    if (
-        current == executable
-        or env.get("KUNGFU_SELECTED_FRONTEND_BUILD_ID") == frontend_build_id
-    ):
+    selected_id = env.get("KUNGFU_SELECTED_FRONTEND_BUILD_ID")
+    if current == executable or selected_id == frontend_build_id:
         return None
     selected_env = dict(env)
     selected_env.update(
         {
             "KUNGFU_SELECTED_FRONTEND_BUILD_ID": frontend_build_id,
+            "KUNGFU_DIR": str(executable.parent),
             "KUNGFU_PRODUCT_MANIFEST": str(root / image["productManifest"]),
             "KUNGFU_UPGRADE_MANIFEST": str(root / image["upgradeManifest"]),
+            "KF_BUNDLED_EXTENSION_ROOT": str(root / "extensions"),
+            "KUNGFU_AGENT_SESSION_EXECUTABLE": str(executable),
+            "KUNGFU_CONTROLLER_ENTRYPOINT": str(executable),
         }
     )
     if selection.get("releaseCutRoot"):
