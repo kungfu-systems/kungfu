@@ -2,13 +2,13 @@
   "schema": "kungfu.semantic-amplification-report/v1",
   "verdict": "pass",
   "authoritySemantics": "navigation-only-projection-over-existing-authorities",
-  "sourceRevision": "292e0713ad06481b9b9d67c611660466ab188bd0",
+  "sourceRevision": "194a72f04fb301b327dc8c405164f866fec4d48f",
   "manifestPath": "framework/maintainability/semantic-amplification.manifest.json",
   "manifestRoot": "sha256:ae6bb7630bd6e3a682dd6f1cf364d5f71f2259607dd442bcc94e840a93aa2b7f",
   "generatorRoot": "sha256:a62c635839b1d7f32dccdaa770ba424b2858be41f2ae017561dbf2c83ee760ec",
   "baselineRef": "dbfed9ca1785d147b26f4f06e7e6895ac7368fee",
   "baselineRoot": "sha256:a6e7ee9aeea7213807abdf830f8b4e60aede2352289539ddc31ad0fa67b1da50",
-  "sourceRoot": "sha256:4d5915972bce5a1277d1936a241fbdb330f520c4e85ccd1a438d84e89406307c",
+  "sourceRoot": "sha256:34ba3a5c82873c3193f68d455667199b725cbcbdf7976fe16ab865d13439e04e",
   "roles": {
     "authority": "exactly one authority route per family; the route may name multiple co-owned source files",
     "allowedProjectionRoles": [
@@ -1166,7 +1166,7 @@
           "path": "docs/qualification/gates/workflow-bindings.json",
           "currentLines": 663,
           "baselineLines": 580,
-          "currentRoot": "sha256:163aef28e2cba4de611c3b813080cc80ab34403e83845c54aa9f12d278cb9db4",
+          "currentRoot": "sha256:8715bc3f04fad42923563938b4484c9b4b84088dd2cee2dca6795bf4de38b893",
           "baselineRoot": "sha256:233cd22ebce4c9930e0e4889808b88661d77c202d5e5f73121823dcdc461576d",
           "changedSinceBaseline": true
         },
@@ -1977,5 +1977,5 @@
     "findings": []
   },
   "issues": [],
-  "reportRoot": "sha256:524a48ccf84c5f30411f3bd437503876a7ecf3de1c2a54a32db5d25731b678b6"
+  "reportRoot": "sha256:4610ce5e18e5f2b4166943e35089b6ade27a7960fbfcddfd65bd64a8dcb9d558"
 }
