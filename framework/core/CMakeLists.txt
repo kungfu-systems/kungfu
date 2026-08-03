@@ -50,6 +50,20 @@ endif()
 if("python" IN_LIST KUNGFU_BUILD_BINDINGS)
   cmake_policy(SET CMP0148 OLD)
   find_package(pybind11 REQUIRED)
+  # pybind11::windows_extras injects an unbounded /MP into every non-Debug
+  # binding compile. Ninja already owns translation-unit scheduling, so keep
+  # pybind11's /bigobj support but remove its second scheduler.
+  if(MSVC AND TARGET pybind11::windows_extras)
+    get_target_property(KUNGFU_PYBIND11_WINDOWS_COMPILE_OPTIONS
+      pybind11::windows_extras INTERFACE_COMPILE_OPTIONS)
+    if(KUNGFU_PYBIND11_WINDOWS_COMPILE_OPTIONS)
+      list(FILTER KUNGFU_PYBIND11_WINDOWS_COMPILE_OPTIONS
+        EXCLUDE REGEX "/MP")
+      set_property(TARGET pybind11::windows_extras
+        PROPERTY INTERFACE_COMPILE_OPTIONS
+        "${KUNGFU_PYBIND11_WINDOWS_COMPILE_OPTIONS}")
+    endif()
+  endif()
 endif()
 
 # RxCpp 4.1.1 assigns to a const error_ptr in rx-notification.hpp. Conan's

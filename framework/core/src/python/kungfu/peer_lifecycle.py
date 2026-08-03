@@ -19,7 +19,6 @@ import re
 import signal
 import subprocess
 import sys
-import tempfile
 import time
 from pathlib import Path
 from typing import Any, Mapping
@@ -62,28 +61,7 @@ def _read_json(path: Path) -> dict[str, Any]:
     return value if isinstance(value, dict) else {}
 
 
-def _write_json(path: Path, value: Mapping[str, Any]) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    temporary: Path | None = None
-    try:
-        with tempfile.NamedTemporaryFile(
-            mode="w",
-            encoding="utf-8",
-            newline="\n",
-            dir=path.parent,
-            prefix=f".{path.name}.",
-            suffix=".tmp",
-            delete=False,
-        ) as output:
-            temporary = Path(output.name)
-            output.write(json.dumps(value, indent=2, sort_keys=True) + "\n")
-        os.replace(temporary, path)
-    finally:
-        if temporary is not None:
-            try:
-                temporary.unlink()
-            except FileNotFoundError:
-                pass
+_write_json = coordination_locks.write_json
 
 
 def _canonical_digest(value: Mapping[str, Any]) -> str:
