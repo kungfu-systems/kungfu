@@ -683,6 +683,7 @@ export function sourceAcceptancePlan(files, evidenceBaseCommit = '') {
         'scripts/kungfu-workflow-authority.test.mjs',
         'scripts/code-complexity-budget.test.mjs',
         'scripts/check-code-complexity.test.mjs',
+        'framework/report-projection/authority.test.mjs',
         'framework/maintainability/semantic-amplification.test.mjs',
         'framework/maintainability/terminal-evidence-matrix.test.mjs',
         ...(coldReadOnlySourceAcceptance
