@@ -2,7 +2,7 @@
   "schema": "kungfu.semantic-amplification-manifest/v1",
   "status": "navigation-projection-input",
   "baselineRef": "dbfed9ca1785d147b26f4f06e7e6895ac7368fee",
-  "reportPath": "framework/maintainability/semantic-amplification-report.json",
+  "legacyReportPath": "framework/maintainability/semantic-amplification-report.json",
   "integrityPolicy": {
     "schema": "kungfu.abstraction-integrity-governance/v1",
     "compatibility": "additive-extension-of-kungfu.semantic-amplification-manifest/v1",
