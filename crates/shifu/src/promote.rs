@@ -686,6 +686,7 @@ pub fn run_promote(args: &[String]) -> ! {
     let mut check = false;
     let mut rollback = false;
     let mut preview = false;
+    let mut adopt_installed = false;
     let mut allow_nonlinear = false;
     let mut build_arg: Option<String> = None;
     let mut iter = args.iter();
@@ -696,6 +697,7 @@ pub fn run_promote(args: &[String]) -> ! {
             "--check" => check = true,
             "--rollback" => rollback = true,
             "--preview" => preview = true,
+            "--adopt-installed" => adopt_installed = true,
             "--allow-nonlinear" => allow_nonlinear = true,
             "--build" => match iter.next() {
                 Some(value) => build_arg = Some(value.clone()),
@@ -705,7 +707,14 @@ pub fn run_promote(args: &[String]) -> ! {
         }
     }
 
-    let _lock = if check {
+    if adopt_installed
+        && (build_arg.is_none() || rollback || preview || allow_nonlinear || launch || force)
+    {
+        util::die(
+            "--adopt-installed requires --build <id>; --check is its only optional companion",
+        );
+    }
+    let mut promotion_lock = if check {
         None
     } else {
         Some(
@@ -726,6 +735,21 @@ pub fn run_promote(args: &[String]) -> ! {
     }
     if entries.is_empty() {
         no_builds_hint();
+    }
+    if adopt_installed {
+        let build_id = build_arg.as_deref().expect("validated build id");
+        let entry = entries
+            .iter()
+            .find(|candidate| candidate.name == build_id)
+            .unwrap_or_else(|| util::die("--adopt-installed build id is not registered"));
+        let result = adopt_installed_product(entry, !check).unwrap_or_else(|error| {
+            util::die(&format!("installed Product adoption failed: {error}"))
+        });
+        if let Some(lock) = promotion_lock.take() {
+            lock.release().unwrap_or_else(|error| util::die(&error));
+        }
+        println!("{result}");
+        std::process::exit(0);
     }
     let installed = installed_sha();
     let previous_build_id = installed_value("KUNGFU_INSTALLED_BUILD_ID");
@@ -814,7 +838,7 @@ pub fn run_promote(args: &[String]) -> ! {
 }
 
 const PROMOTE_USAGE: &str =
-    "usage: shifu promote [--build <id> [--preview] [--allow-nonlinear] | --rollback] [--check] [--launch] [--force]";
+    "usage: shifu promote [--build <id> [--preview] [--allow-nonlinear] | --rollback | --adopt-installed --build <id>] [--check] [--launch] [--force]";
 
 /// Install target: KUNGFU_PRODUCT_INSTALL_DIR > platform default (falling
 /// back to a per-user location when the default is not writable).
