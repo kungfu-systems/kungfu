@@ -7,6 +7,17 @@ function pathInside(root, candidate) {
   return candidate === root || candidate.startsWith(`${root}${path.sep}`);
 }
 
+export function resolveInternalPath(root, candidate) {
+  const rootReal = fs.realpathSync(root);
+  const candidateReal = fs.realpathSync(candidate);
+  if (!pathInside(rootReal, candidateReal)) {
+    throw new Error(
+      `product path escapes its root (escaping symlink): ${candidate}`,
+    );
+  }
+  return path.join(root, path.relative(rootReal, candidateReal));
+}
+
 export function normalizeCopiedSymlinks({ source, target }) {
   const sourceRoot = fs.realpathSync(source);
   const visit = (currentTarget) => {
@@ -23,12 +34,7 @@ export function normalizeCopiedSymlinks({ source, target }) {
       const sourcePath = path.join(sourceRoot, relativePath);
       const link = fs.readlinkSync(sourcePath);
       const resolvedSource = path.resolve(path.dirname(sourcePath), link);
-      const canonicalSource = fs.realpathSync(resolvedSource);
-      if (!pathInside(sourceRoot, canonicalSource)) {
-        throw new Error(
-          `product input contains an escaping symlink: ${sourcePath}`,
-        );
-      }
+      const canonicalSource = resolveInternalPath(sourceRoot, resolvedSource);
       const resolvedTarget = path.join(
         target,
         path.relative(sourceRoot, canonicalSource),
