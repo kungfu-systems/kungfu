@@ -2,7 +2,7 @@
 
 const fs = require('node:fs');
 const path = require('node:path');
-const { kfc } = require('./executable');
+const executable = require('./executable');
 const shell = require('./shell');
 
 /**
@@ -99,7 +99,7 @@ function sourceCliEnvironment(
 }
 
 if (require.main === module) {
-  shell.run(kfc, process.argv.slice(2), true, {
+  shell.run(executable.kfc, process.argv.slice(2), true, {
     silent: true,
     env: sourceCliEnvironment(),
   });
