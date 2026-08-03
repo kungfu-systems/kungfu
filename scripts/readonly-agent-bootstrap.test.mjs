@@ -172,12 +172,30 @@ test('declared discovery routes are zero-write in a cold read-only fixture', (t)
 
   const git = executableOnPath('git');
   const node = process.execPath;
+  const exactSource = spawnSync(git, ['-C', ROOT, 'rev-parse', 'HEAD'], {
+    encoding: 'utf8',
+  });
+  assert.equal(exactSource.status, 0, exactSource.stderr);
+  const exactSourceSha = exactSource.stdout.trim();
+  assert.match(exactSourceSha, /^[0-9a-f]{40}$/u);
   const cloned = spawnSync(
     git,
     ['clone', '--shared', '--quiet', ROOT, fixture],
     { encoding: 'utf8' },
   );
   assert.equal(cloned.status, 0, cloned.stderr);
+  const exactCheckout = spawnSync(
+    git,
+    ['checkout', '--detach', '--quiet', exactSourceSha],
+    { cwd: fixture, encoding: 'utf8' },
+  );
+  assert.equal(exactCheckout.status, 0, exactCheckout.stderr);
+  const fixtureHead = spawnSync(git, ['rev-parse', 'HEAD'], {
+    cwd: fixture,
+    encoding: 'utf8',
+  });
+  assert.equal(fixtureHead.status, 0, fixtureHead.stderr);
+  assert.equal(fixtureHead.stdout.trim(), exactSourceSha);
   const base = sourceMergeBase();
   const corePytest = path.join(ROOT, 'framework/core/.venv/bin/pytest');
   const pytest = fs.existsSync(corePytest)
