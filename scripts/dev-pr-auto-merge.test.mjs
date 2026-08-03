@@ -13,7 +13,7 @@ test('Dev auto-merge admits only explicitly ready reviewed same-repository PRs',
   const reusableRef = workflow.match(
     /uses: kungfu-systems\/buildchain\/\.github\/workflows\/dev-pr-auto-merge\.yml@([0-9a-f]{40})/u,
   )?.[1];
-  assert.equal(reusableRef, '978520e86134683f66b607bc70c2d18f623e2410');
+  assert.equal(reusableRef, '1659da98053f8ea8c75471e414b7732e3a491580');
   assert.match(workflow, new RegExp(`buildchain-ref: ${reusableRef}`, 'u'));
   assert.match(workflow, /workflow_run:[\s\S]*Core affected native/u);
   assert.match(workflow, /cron: "23,53 \* \* \* \*"/u);
@@ -33,11 +33,13 @@ test('Dev auto-merge admits only explicitly ready reviewed same-repository PRs',
 
 test('Dev auto-merge waits for PR checks and lands through the native queue', () => {
   const requiredChecks = workflow.match(
-    /required-status-checks: \|-\n([\s\S]*?)\n\s+ready-label:/u,
+    /required-status-checks: \|-\n([\s\S]*?)\n\s+queue-admission-context:/u,
   )?.[1];
   assert.match(requiredChecks || '', /Candidate source acceptance \/ check/u);
   assert.match(requiredChecks || '', /affected-native \/ linux/u);
   assert.doesNotMatch(requiredChecks || '', /Queue admission lease/u);
+  assert.match(workflow, /statuses: write/u);
+  assert.match(workflow, /queue-admission-context: Queue admission lease/u);
   assert.match(workflow, /merge-method: rebase/u);
   assert.match(workflow, /landing-mode: queue/u);
   assert.match(
