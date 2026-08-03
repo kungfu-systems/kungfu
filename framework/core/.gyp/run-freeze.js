@@ -213,15 +213,17 @@ function documentationAtlasSource(repository = path.resolve(CORE, '..', '..')) {
   return root;
 }
 
-/** @param {unknown} value */
+/** @param {unknown} value @returns {unknown} */
 function canonicalJson(value) {
   if (Array.isArray(value)) return value.map(canonicalJson);
-  if (value && typeof value === 'object')
+  if (value && typeof value === 'object') {
+    const record = /** @type {Record<string, unknown>} */ (value);
     return Object.fromEntries(
-      Object.keys(value)
+      Object.keys(record)
         .sort()
-        .map((key) => [key, canonicalJson(value[key])]),
+        .map((key) => [key, canonicalJson(record[key])]),
     );
+  }
   return value;
 }
 
@@ -248,7 +250,7 @@ function portableAtlasBundleSource(
   const computedRoot = sha256Root(`${JSON.stringify(canonicalJson(core))}\n`);
   const classificationCompressed = fs.readFileSync(classificationPath);
   const classificationBytes = zlib.gunzipSync(classificationCompressed);
-  const classification = JSON.parse(classificationBytes);
+  const classification = JSON.parse(classificationBytes.toString('utf8'));
   if (
     manifest.schema !== 'kungfu.portable-atlas-bundle/v1' ||
     declaredRoot !== computedRoot ||

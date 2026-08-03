@@ -533,6 +533,24 @@
       "paths": [
         "scripts/durable-history-qualification.mjs"
       ]
+    },
+    {
+      "owner": "shifu/native-source-acquisition",
+      "paths": [
+        "crates/shifu/src/source.rs"
+      ]
+    },
+    {
+      "owner": "core/python-agent-documentation-cli",
+      "paths": [
+        "framework/core/src/python/kungfu/cli/commands/agent_docs.py"
+      ]
+    },
+    {
+      "owner": "shifu/portable-atlas-bundle",
+      "paths": [
+        "scripts/portable-atlas-bundle.mjs"
+      ]
     }
   ],
   "publicImports": [
@@ -544,7 +562,7 @@
     "kungfu.runtime_broker.NativeReadinessAuthority",
     "kungfu.runtime_service.ProcessRuntimeHost"
   ],
-  "reportRoot": "sha256:edeab4bfb6b034ce32be3d0a9edd1351e90bbe51f1fa0f22ecc383aab2b13d93",
+  "reportRoot": "sha256:7261e8acfe5c46ba0d2a6192f06c9b50256665906e0bbb1fa7c893b2b0d5f28c",
   "schema": "kungfu.abstraction-integrity-report/v1",
   "sourceRoot": "sha256:10198888b662e58f8c8bc6acc516977cffc01df10a62ebdaa23d5d194c2044db",
   "summary": {
