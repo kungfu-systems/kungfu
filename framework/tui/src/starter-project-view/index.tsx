@@ -1719,54 +1719,48 @@ export const PROJECT_TOUR_GUIDE_SCENES = [
   },
   {
     id: 'same-work',
-    kicker: 'ONE BUSINESS GOAL · MULTIPLE ATTEMPTS',
-    title: 'Two failures did not create two duplicate tasks',
+    kicker: 'EPISODE 1 COMPLETE · TWO FAILURES · ONE WORK',
+    title: 'The Agent stopped twice. The launch-brief Work is still here.',
     detail:
-      'Both Attempts remain under the same launch-brief Work. Retained history stays above while the current process starts cleanly below.',
+      'Both Attempts remain under the same launch-brief Work. Objective, checks, and next action stay intact for Episode 2.',
   },
   {
     id: 'recovery',
-    kicker: 'RECOVERY ATTEMPT',
-    title: 'A third process completes the original launch brief',
+    kicker: 'EPISODE 2 · RECOVER, REVIEW, AND SETTLE',
+    title: 'Start from retained Work—not a reconstructed chat',
     detail:
-      'It re-reads Project sources, preserves open questions, and writes deliverables/launch-brief.md against the original checks.',
-  },
-  {
-    id: 'agent-exit',
-    kicker: 'RESULT VISIBLE · AGENT EXIT IS NOT COMPLETION',
-    title: 'Read the launch brief before anyone approves it',
-    detail:
-      'The file above is retained evidence. The Mock Agent can say it is ready, but only an independent review can approve it.',
+      'Two failed Attempts remain under one Work. A third Mock Agent gets the original objective, checks, and evidence—not either transcript.',
   },
   {
     id: 'independent-review',
-    kicker: 'INDEPENDENT REVIEW',
+    kicker: 'AGENT EXIT IS NOT COMPLETION · INDEPENDENT REVIEW',
     title: 'A fresh, read-only Mock Reviewer checks the launch brief',
     detail:
-      'The Reviewer receives no prior Agent transcript. It reads the retained deliverable and checks every original acceptance criterion.',
+      'The file is evidence. The Agent cannot approve it; a fresh read-only Reviewer gets no transcript and checks every criterion.',
   },
   {
     id: 'native-settlement',
     kicker: 'KUNGFU SETTLES REVIEWED WORK',
     title: 'A passing review still does not complete the Work by itself',
     detail:
-      'Kungfu binds review to the Work and file in a settlement receipt. It proves declared checks were reviewed—not universal business truth.',
-  },
-  {
-    id: 'next-work-capture',
-    kicker: 'NEXT OUTCOME · OPERATOR ACTION',
-    title: 'The tour now uses /new to capture another Work',
-    detail:
-      'The same /new action is available in your Project. It adds an outcome beside settled history; it does not reopen completed Work.',
+      'Kungfu binds review to this Work and file in a settlement receipt. It proves declared checks—not universal business truth.',
   },
   {
     id: 'next-work',
-    kicker: 'TWO SESSIONS FAILED · ONE WORK CONTINUED',
-    title: 'Independent review passed; Kungfu settled it with evidence',
+    kicker: 'EPISODE 2 COMPLETE · REVIEWED, SETTLED, NEXT WORK READY',
+    title: 'Use /new for the next outcome, then Run Agent',
     detail:
-      'Sessions were replaceable Attempts; Project kept Work and proof. In your Project, use /new to capture one outcome, then Run Agent.',
+      'Sessions were replaceable Attempts. /new adds the next outcome beside settled history; it never reopens completed Work.',
   },
 ] as const;
+
+export const PROJECT_TOUR_EPISODE_TWO_STANDALONE_SCENE = {
+  id: 'standalone-recovery',
+  kicker: 'EPISODE 2 · RECOVER, REVIEW, AND SETTLE',
+  title: 'Episode 1 proved survival. Now isolate the next authority boundary.',
+  detail:
+    'This chapter starts real Starter Work with a fresh Mock Agent, then keeps Agent exit, independent review, and settlement distinct.',
+} as const;
 
 export const PROJECT_TOUR_PACING = {
   guideDwellMs: 8000,
@@ -1777,10 +1771,30 @@ export const PROJECT_TOUR_PACING = {
   finalDwellMs: 3200,
 } as const;
 
+export const PROJECT_TOUR_EPISODE_TWO_EVENT_SCALE = 0.5;
+export const PROJECT_TOUR_EPISODE_TWO_GUIDE_SCALE = 0.875;
+export const PROJECT_TOUR_EPISODE_TWO_FINAL_GUIDE_SCALE = 0.8;
+
 export const PROJECT_TOUR_SPEED_RANGE = {
   min: 0.25,
   max: 2,
 } as const;
+
+export const PROJECT_TOUR_EPISODES = ['1', '2', 'all'] as const;
+export type ProjectTourEpisode = (typeof PROJECT_TOUR_EPISODES)[number];
+
+export const PROJECT_TOUR_EPISODE_SCENE_IDS = {
+  '1': PROJECT_TOUR_GUIDE_SCENES.slice(0, 5).map((scene) => scene.id),
+  '2': PROJECT_TOUR_GUIDE_SCENES.slice(5).map((scene) => scene.id),
+} as const;
+
+export function parseProjectTourEpisode(value?: string): ProjectTourEpisode {
+  const episode = value ?? '1';
+  if (!PROJECT_TOUR_EPISODES.includes(episode as ProjectTourEpisode)) {
+    throw new Error('--project-tour-episode must be 1, 2, or all');
+  }
+  return episode as ProjectTourEpisode;
+}
 
 export function parseProjectTourSpeed(value?: string): number {
   if (value === undefined) return 1;
@@ -1851,6 +1865,27 @@ export function projectTourPacingForSpeed(speed: number) {
   };
 }
 
+export function projectTourEpisodeNarrationBudget(
+  episode: Exclude<ProjectTourEpisode, 'all'>,
+): number {
+  const guideDwellMs =
+    episode === '1'
+      ? PROJECT_TOUR_EPISODE_SCENE_IDS['1'].length *
+        PROJECT_TOUR_PACING.guideDwellMs
+      : PROJECT_TOUR_PACING.guideDwellMs +
+        2 *
+          Math.round(
+            PROJECT_TOUR_PACING.guideDwellMs *
+              PROJECT_TOUR_EPISODE_TWO_GUIDE_SCALE,
+          ) +
+        Math.round(
+          PROJECT_TOUR_PACING.guideDwellMs *
+            PROJECT_TOUR_EPISODE_TWO_FINAL_GUIDE_SCALE,
+        );
+  const guideCount = PROJECT_TOUR_EPISODE_SCENE_IDS[episode].length;
+  return guideDwellMs + guideCount * PROJECT_TOUR_PACING.guideGapMs;
+}
+
 export const PROJECT_TOUR_STREAM_TRANSITIONS = {
   A1: 'NEW MOCK AGENT PROCESS · CREATE THE LAUNCH BRIEF',
   A2: 'NEW PROCESS · A1 KEPT ABOVE · SAME LAUNCH-BRIEF WORK',
@@ -1859,7 +1894,12 @@ export const PROJECT_TOUR_STREAM_TRANSITIONS = {
   SET: 'KUNGFU SETTLEMENT · PASSING REVIEW KEPT ABOVE · SAME WORK',
 } as const;
 
-export type ProjectTourGuideScene = (typeof PROJECT_TOUR_GUIDE_SCENES)[number];
+export type ProjectTourGuideScene = {
+  readonly id: string;
+  readonly kicker: string;
+  readonly title: string;
+  readonly detail: string;
+};
 
 export type ProjectTourResult =
   | {
@@ -1867,6 +1907,7 @@ export type ProjectTourResult =
       report: {
         schema: 'kungfu.project-work.tui-tour/v1';
         status: 'qualified';
+        episode: ProjectTourEpisode;
         reportRoot: string;
         eventCount: number;
         projectPath: string;
@@ -2183,15 +2224,18 @@ function projectTourWindowRows(
 
 export function ProjectTourHeader({
   columns,
+  episode,
   step,
   projectName,
   playbackSpeed,
 }: {
   columns: number;
+  episode: Exclude<ProjectTourEpisode, 'all'>;
   step: number;
   projectName: string;
   playbackSpeed: number;
 }) {
+  const totalSteps = episode === '1' ? 4 : 3;
   return (
     <Box
       width={columns}
@@ -2202,8 +2246,8 @@ export function ProjectTourHeader({
     >
       <Box flexGrow={1} flexShrink={1} overflow="hidden">
         <Text bold color="cyan" wrap="truncate-end">
-          Kungfu Project → Work → Agent · STEP {Math.min(step + 1, 7)}/7 ·{' '}
-          {projectName}
+          Kungfu Project → Work → Agent · EPISODE {episode}/2 · STEP{' '}
+          {Math.min(step + 1, totalSteps)}/{totalSteps} · {projectName}
         </Text>
       </Box>
       <Box flexShrink={0} marginLeft={1}>
@@ -2222,6 +2266,7 @@ export function ProjectTourView({
   columns,
   rows,
   playbackSpeed = 1,
+  episode = '1',
   onSettled,
 }: {
   lab: AgentWorkLab;
@@ -2230,6 +2275,7 @@ export function ProjectTourView({
   columns: number;
   rows: number;
   playbackSpeed?: number;
+  episode?: ProjectTourEpisode;
   onSettled: (result: ProjectTourResult) => void;
 }) {
   const pacing = React.useMemo(
@@ -2237,6 +2283,9 @@ export function ProjectTourView({
     [playbackSpeed],
   );
   const [step, setStep] = React.useState(0);
+  const [displayEpisode, setDisplayEpisode] = React.useState<
+    Exclude<ProjectTourEpisode, 'all'>
+  >(episode === '2' ? '2' : '1');
   const [events, setEvents] = React.useState<TourEvent[]>([]);
   const [files, setFiles] = React.useState<ProjectFileTreeEntry[]>([]);
   const [works, setWorks] = React.useState<ProjectWork[]>([]);
@@ -2298,10 +2347,11 @@ export function ProjectTourView({
         sectionTag: string;
         text: string;
       },
+      dwellMs = pacing.guideDwellMs,
     ) => {
       if (!active) return;
       setGuide(scene);
-      await wait(pacing.guideDwellMs);
+      await wait(dwellMs);
       if (active) {
         if (nextStream) {
           beginStream(
@@ -2314,10 +2364,39 @@ export function ProjectTourView({
       }
       await wait(pacing.guideGapMs);
     };
+    const showGuideDuring = async <T,>(
+      scene: ProjectTourGuideScene,
+      operation: () => Promise<T>,
+      nextStream?: {
+        section: string;
+        sectionTag: string;
+        text: string;
+      },
+      dwellMs = pacing.guideDwellMs,
+    ): Promise<T> => {
+      if (!active) throw new Error('Project tour stopped');
+      setGuide(scene);
+      const operationPromise = operation().then(
+        (result) => ({ ok: true as const, result }),
+        (error: unknown) => ({ ok: false as const, error }),
+      );
+      await wait(dwellMs);
+      if (active) {
+        setGuide(null);
+      }
+      await wait(pacing.guideGapMs);
+      const outcome = await operationPromise;
+      if (!outcome.ok) throw outcome.error;
+      if (active && nextStream) {
+        beginStream(nextStream.section, nextStream.sectionTag, nextStream.text);
+      }
+      return outcome.result;
+    };
     const replayEvents = async (
       section: string,
       sectionTag: string,
       captured: Array<ProjectWorkRunEvent | WorkReviewEvent>,
+      presentationScale = 1,
     ) => {
       if (!active) return;
       setStreamHeading(section);
@@ -2335,7 +2414,10 @@ export function ProjectTourView({
           updateProjectTourStream(current, line, 'append'),
         );
         await wait(
-          event.activity ? pacing.activityEventMs : pacing.protocolEventMs,
+          Math.round(
+            (event.activity ? pacing.activityEventMs : pacing.protocolEventMs) *
+              presentationScale,
+          ),
         );
       }
     };
@@ -2381,11 +2463,14 @@ export function ProjectTourView({
       expectedStatus: 'agent-failed' | 'agent-finished',
       section: string,
       sectionTag: string,
+      present = true,
+      presentationScale = 1,
+      scenario = 'recovery-story',
     ): Promise<WorkStartReceipt> => {
       const plan = await projects.planRun('mock', {
         workspace: destination,
         work: assignmentId,
-        scenario: 'recovery-story',
+        scenario,
       });
       if (!plan.executable) {
         throw new Error(
@@ -2398,12 +2483,13 @@ export function ProjectTourView({
         {
           workspace: destination,
           work: assignmentId,
-          scenario: 'recovery-story',
+          scenario,
           expectedPlanRoot: plan.planRoot,
         },
         (event) => captured.push(event),
       );
-      await replayEvents(section, sectionTag, captured);
+      if (present)
+        await replayEvents(section, sectionTag, captured, presentationScale);
       if (receipt.status !== expectedStatus) {
         throw new Error(
           `Mock recovery attempt returned ${receipt.status}; expected ${expectedStatus}`,
@@ -2411,81 +2497,130 @@ export function ProjectTourView({
       }
       return receipt;
     };
+    const completeTour = (
+      completedEpisode: ProjectTourEpisode,
+      evidence: Record<string, unknown>,
+      eventCount: number,
+      workCount: number,
+    ) => {
+      const report = {
+        schema: 'kungfu.project-work.tui-tour/v1' as const,
+        status: 'qualified' as const,
+        episode: completedEpisode,
+        reportRoot: resultRoot({ episode: completedEpisode, ...evidence }),
+        eventCount,
+        projectPath: destination,
+        workCount,
+      };
+      if (active) onSettled({ state: 'completed', report });
+    };
 
     void (async () => {
       try {
         const plan = await lab.planStarterProject(destination);
         const created = await lab.createStarterProject(plan, 'project-tour');
         await lab.openStarterProject(created);
-        setStep(1);
+        setStep(0);
         refreshFiles();
         const initial = await refreshWorks();
         const work = initial.activeWork ?? initial.works[0];
         if (!work) throw new Error('Starter Project has no captured Work');
-        await showGuide(PROJECT_TOUR_GUIDE_SCENES[0]);
-        record({
-          title: 'Starter Project created',
-          detail:
-            'The Mock Agent is synthetic; this temporary Project and its complete Work lifecycle use the real Kungfu path.',
-          tone: 'good',
-        });
-        await wait(pacing.summaryDwellMs);
+        let disconnected: WorkStartReceipt | undefined;
+        let crashed: WorkStartReceipt | undefined;
 
-        setStep(2);
-        await showGuide(PROJECT_TOUR_GUIDE_SCENES[1], {
-          section: 'MOCK AGENT · ATTEMPT 1',
-          sectionTag: 'A1',
-          text: PROJECT_TOUR_STREAM_TRANSITIONS.A1,
-        });
-        const disconnected = await runAttempt(
-          work.assignmentId,
-          'agent-failed',
-          'MOCK AGENT · ATTEMPT 1',
-          'A1',
-        );
-        record({
-          title: 'Connection lost · exit 75',
-          detail:
-            'The launch brief was not written, but Kungfu retained the same Work, the failed Attempt, and the next action.',
-          tone: 'bad',
-        });
-        await refreshWorks();
-        await showGuide(PROJECT_TOUR_GUIDE_SCENES[2]);
-        await wait(pacing.summaryDwellMs);
+        if (episode !== '2') {
+          await showGuide(PROJECT_TOUR_GUIDE_SCENES[0]);
+          record({
+            title: 'Starter Project created',
+            detail:
+              'The Mock Agent is synthetic; this temporary Project and its complete Work lifecycle use the real Kungfu path.',
+            tone: 'good',
+          });
 
-        setStep(3);
-        await showGuide(PROJECT_TOUR_GUIDE_SCENES[3], {
-          section: 'MOCK AGENT · ATTEMPT 2',
-          sectionTag: 'A2',
-          text: PROJECT_TOUR_STREAM_TRANSITIONS.A2,
-        });
-        const crashed = await runAttempt(
-          work.assignmentId,
-          'agent-failed',
-          'MOCK AGENT · ATTEMPT 2',
-          'A2',
-        );
-        record({
-          title: 'Agent process crashed · exit 23',
-          detail:
-            'The resumed draft stopped before submission; the original launch-brief Work still remained intact.',
-          tone: 'bad',
-        });
-        await refreshWorks();
-        await showGuide(PROJECT_TOUR_GUIDE_SCENES[4]);
-        await wait(pacing.summaryDwellMs);
+          setStep(1);
+          await showGuide(PROJECT_TOUR_GUIDE_SCENES[1], {
+            section: 'MOCK AGENT · ATTEMPT 1',
+            sectionTag: 'A1',
+            text: PROJECT_TOUR_STREAM_TRANSITIONS.A1,
+          });
+          disconnected = await runAttempt(
+            work.assignmentId,
+            'agent-failed',
+            'MOCK AGENT · ATTEMPT 1',
+            'A1',
+          );
+          record({
+            title: 'Connection lost · exit 75',
+            detail:
+              'The launch brief was not written, but Kungfu retained the same Work, the failed Attempt, and the next action.',
+            tone: 'bad',
+          });
+          await refreshWorks();
+          await showGuide(PROJECT_TOUR_GUIDE_SCENES[2]);
 
-        setStep(4);
-        await showGuide(PROJECT_TOUR_GUIDE_SCENES[5], {
+          setStep(2);
+          await showGuide(PROJECT_TOUR_GUIDE_SCENES[3], {
+            section: 'MOCK AGENT · ATTEMPT 2',
+            sectionTag: 'A2',
+            text: PROJECT_TOUR_STREAM_TRANSITIONS.A2,
+          });
+          crashed = await runAttempt(
+            work.assignmentId,
+            'agent-failed',
+            'MOCK AGENT · ATTEMPT 2',
+            'A2',
+          );
+          record({
+            title: 'Agent process crashed · exit 23',
+            detail:
+              'The resumed draft stopped before submission; the original launch-brief Work still remained intact.',
+            tone: 'bad',
+          });
+          const retainedInventory = await refreshWorks();
+          setStep(3);
+          await showGuide(PROJECT_TOUR_GUIDE_SCENES[4]);
+
+          if (episode === '1') {
+            completeTour(
+              '1',
+              {
+                projectPath: destination,
+                requestRoot: created.initialWork.requestRoot,
+                failedAttempts: [
+                  disconnected.agentReport?.reportRoot,
+                  crashed.agentReport?.reportRoot,
+                ],
+                inventoryRoot: retainedInventory.inventoryRoot,
+              },
+              4,
+              retainedInventory.works.length,
+            );
+            return;
+          }
+        }
+
+        setDisplayEpisode('2');
+        setStep(0);
+        const recoveryTransition = {
           section: 'MOCK AGENT · RECOVERY ATTEMPT',
           sectionTag: 'REC',
           text: PROJECT_TOUR_STREAM_TRANSITIONS.REC,
-        });
+        };
+        await showGuide(
+          episode === '2'
+            ? PROJECT_TOUR_EPISODE_TWO_STANDALONE_SCENE
+            : PROJECT_TOUR_GUIDE_SCENES[5],
+          recoveryTransition,
+        );
+
         const completed = await runAttempt(
           work.assignmentId,
           'agent-finished',
           'MOCK AGENT · RECOVERY ATTEMPT',
           'REC',
+          true,
+          PROJECT_TOUR_EPISODE_TWO_EVENT_SCALE,
+          episode === '2' ? 'recovery-delivery' : 'recovery-story',
         );
         refreshFiles();
         setArtifactPreview(
@@ -2502,15 +2637,18 @@ export function ProjectTourView({
             'Mock Agent completed deliverables/launch-brief.md against the original Work; process exit still did not settle it.',
           tone: 'good',
         });
-        await showGuide(PROJECT_TOUR_GUIDE_SCENES[6]);
-        await wait(pacing.summaryDwellMs);
-
-        setStep(5);
-        await showGuide(PROJECT_TOUR_GUIDE_SCENES[7], {
-          section: 'INDEPENDENT REVIEW',
-          sectionTag: 'REV',
-          text: PROJECT_TOUR_STREAM_TRANSITIONS.REV,
-        });
+        setStep(1);
+        await showGuide(
+          PROJECT_TOUR_GUIDE_SCENES[6],
+          {
+            section: 'INDEPENDENT REVIEW',
+            sectionTag: 'REV',
+            text: PROJECT_TOUR_STREAM_TRANSITIONS.REV,
+          },
+          Math.round(
+            pacing.guideDwellMs * PROJECT_TOUR_EPISODE_TWO_GUIDE_SCALE,
+          ),
+        );
         const reviewPlan = await lab.planStarterReview(
           completed,
           'kungfu.mock-agent.review-fit',
@@ -2521,7 +2659,12 @@ export function ProjectTourView({
         const review = await lab.runStarterReview(reviewPlan, (event) =>
           reviewEvents.push(event),
         );
-        await replayEvents('INDEPENDENT REVIEW', 'REV', reviewEvents);
+        await replayEvents(
+          'INDEPENDENT REVIEW',
+          'REV',
+          reviewEvents,
+          PROJECT_TOUR_EPISODE_TWO_EVENT_SCALE,
+        );
         if (review.status !== 'review-passed') {
           throw new Error(
             `Mock review returned ${review.status}: ${review.message ?? 'no settlement detail'}`,
@@ -2534,7 +2677,11 @@ export function ProjectTourView({
           'completed',
           'Review passed · this Work is eligible for settlement.',
         );
-        await wait(pacing.activityEventMs);
+        await wait(
+          Math.round(
+            pacing.activityEventMs * PROJECT_TOUR_EPISODE_TWO_EVENT_SCALE,
+          ),
+        );
         const closePlan = await lab.planStarterClose({
           destination,
           initialWork: {
@@ -2543,11 +2690,18 @@ export function ProjectTourView({
             requestPath: work.requestPath,
           },
         });
-        await showGuide(PROJECT_TOUR_GUIDE_SCENES[8], {
-          section: 'NATIVE SETTLEMENT',
-          sectionTag: 'SET',
-          text: PROJECT_TOUR_STREAM_TRANSITIONS.SET,
-        });
+        setStep(2);
+        await showGuide(
+          PROJECT_TOUR_GUIDE_SCENES[7],
+          {
+            section: 'NATIVE SETTLEMENT',
+            sectionTag: 'SET',
+            text: PROJECT_TOUR_STREAM_TRANSITIONS.SET,
+          },
+          Math.round(
+            pacing.guideDwellMs * PROJECT_TOUR_EPISODE_TWO_GUIDE_SCALE,
+          ),
+        );
         const closed = await lab.closeStarterWork(closePlan);
         if (closed.status !== 'completed') {
           throw new Error(`Native Work close returned ${closed.status}`);
@@ -2559,7 +2713,11 @@ export function ProjectTourView({
           'completed',
           'Passing review bound to this Work and deliverables/launch-brief.md.',
         );
-        await wait(pacing.activityEventMs);
+        await wait(
+          Math.round(
+            pacing.activityEventMs * PROJECT_TOUR_EPISODE_TWO_EVENT_SCALE,
+          ),
+        );
         recordReceipt('NATIVE SETTLEMENT', 'SET', closed);
         setArtifactPreview([]);
         record({
@@ -2569,45 +2727,52 @@ export function ProjectTourView({
           tone: 'good',
         });
         await refreshWorks();
-        await wait(pacing.summaryDwellMs);
 
-        setStep(6);
-        await showGuide(PROJECT_TOUR_GUIDE_SCENES[9]);
-        const followupPlan = projects.prepareWork(
-          'Prepare the launch handoff for the next operator',
-          'A new business outcome remains visible beside the settled launch-brief Work',
+        const finalInventory = await showGuideDuring(
+          PROJECT_TOUR_GUIDE_SCENES[8],
+          async () => {
+            const followupPlan = projects.prepareWork(
+              'Prepare the launch handoff for the next operator',
+              'A new business outcome remains visible beside the settled launch-brief Work',
+            );
+            await projects.captureWork(destination, followupPlan);
+            const inventory = await refreshWorks();
+            record({
+              title: 'All Work inventory restored',
+              detail: `${inventory.works.length} Works are visible: completed history plus the next captured outcome.`,
+              tone: 'info',
+            });
+            return inventory;
+          },
+          undefined,
+          Math.round(
+            pacing.guideDwellMs * PROJECT_TOUR_EPISODE_TWO_FINAL_GUIDE_SCALE,
+          ),
         );
-        await projects.captureWork(destination, followupPlan);
-        const finalInventory = await refreshWorks();
-        record({
-          title: 'All Work inventory restored',
-          detail: `${finalInventory.works.length} Works are visible: completed history plus the next captured outcome.`,
-          tone: 'info',
-        });
-        await showGuide(PROJECT_TOUR_GUIDE_SCENES[10]);
-        await wait(pacing.finalDwellMs);
 
         const evidence = {
+          episode,
           projectPath: destination,
           requestRoot: created.initialWork.requestRoot,
           failedAttempts: [
-            disconnected.agentReport?.reportRoot,
-            crashed.agentReport?.reportRoot,
+            ...(episode === 'all'
+              ? [
+                  disconnected?.agentReport?.reportRoot,
+                  crashed?.agentReport?.reportRoot,
+                ]
+              : []),
           ],
           completedAttempt: completed.agentReport?.reportRoot,
           reviewRoot: review.receiptRoot,
           closeRoot: closed.receiptRoot,
           inventoryRoot: finalInventory.inventoryRoot,
         };
-        const report = {
-          schema: 'kungfu.project-work.tui-tour/v1' as const,
-          status: 'qualified' as const,
-          reportRoot: resultRoot(evidence),
-          eventCount: 7,
-          projectPath: destination,
-          workCount: finalInventory.works.length,
-        };
-        if (active) onSettled({ state: 'completed', report });
+        completeTour(
+          episode,
+          evidence,
+          episode === 'all' ? 7 : 3,
+          finalInventory.works.length,
+        );
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
         record({ title: 'Tour stopped', detail: message, tone: 'bad' });
@@ -2618,7 +2783,7 @@ export function ProjectTourView({
     return () => {
       active = false;
     };
-  }, [destination, lab, onSettled, pacing, projects]);
+  }, [destination, episode, lab, onSettled, pacing, projects]);
 
   const layout = projectTourLayout(rows);
   const summaryMode = projectTourSummaryMode(columns);
@@ -2774,6 +2939,7 @@ export function ProjectTourView({
     >
       <ProjectTourHeader
         columns={columns}
+        episode={displayEpisode}
         step={step}
         projectName={path.basename(destination)}
         playbackSpeed={playbackSpeed}

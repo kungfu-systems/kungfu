@@ -264,6 +264,7 @@ MOCK_SCENARIOS = (
     "crash",
     "disconnect",
     "multi-step",
+    "recovery-delivery",
     "recovery-story",
     "review-fit",
 )

@@ -15,6 +15,7 @@ export const MOCK_AGENT_SCENARIOS = Object.freeze([
   'crash',
   'disconnect',
   'multi-step',
+  'recovery-delivery',
   'recovery-story',
   'review-fit',
 ]);
@@ -95,6 +96,8 @@ export function createMockAgentMachine({
   effects = {},
 } = {}) {
   const selected = requireScenario(scenario);
+  const recoveryScenario =
+    selected === 'recovery-story' || selected === 'recovery-delivery';
   let phase = 'waiting-for-work';
   const writeDeliverable =
     effects.writeDeliverable ??
@@ -162,12 +165,16 @@ export function createMockAgentMachine({
       if (phase === 'waiting-for-work') {
         phase = 'working';
         const behavior =
-          selected === 'recovery-story' ? nextRecoveryStep() : selected;
+          selected === 'recovery-story'
+            ? nextRecoveryStep()
+            : selected === 'recovery-delivery'
+              ? 'deliverable'
+              : selected;
         if (behavior === 'crash') {
           phase = 'ended';
           return result(
             [
-              ...(selected === 'recovery-story'
+              ...(recoveryScenario
                 ? recoveryAttempt('crash')
                 : work('start deterministic attempt')),
               'MOCK CRASH: the process stopped before submitting the draft; exit 23',
@@ -180,7 +187,7 @@ export function createMockAgentMachine({
           phase = 'ended';
           return result(
             [
-              ...(selected === 'recovery-story'
+              ...(recoveryScenario
                 ? recoveryAttempt('disconnect')
                 : work('stream deterministic attempt')),
               'MOCK DISCONNECTED: the transport closed before I wrote the brief; exit 75',
@@ -212,14 +219,14 @@ export function createMockAgentMachine({
         }
         if (behavior === 'deliverable') {
           const written = writeDeliverable(
-            selected === 'recovery-story'
+            recoveryScenario
               ? MOCK_RECOVERY_STORY_DELIVERABLE_PATH
               : MOCK_DELIVERABLE_PATH,
           );
           phase = 'ended';
           return result(
             [
-              ...(selected === 'recovery-story'
+              ...(recoveryScenario
                 ? recoveryAttempt('deliverable')
                 : work('write bounded Project deliverable')),
               `MOCK FILE WRITTEN: ${written.path}`,
