@@ -6,6 +6,17 @@ import asyncio
 import sys
 
 
+async def close_stream(writer):
+    """Bound platform-specific pipe/socket shutdown without hiding body errors."""
+
+    writer.close()
+    try:
+        async with asyncio.timeout(2):
+            await writer.wait_closed()
+    except (TimeoutError, ConnectionError, OSError):
+        pass
+
+
 async def run(caps):
     future = asyncio.get_running_loop().create_future()
     asyncio.get_running_loop().call_soon(future.set_result, "future")
@@ -25,32 +36,56 @@ async def run(caps):
     except asyncio.CancelledError:
         cancellation_result = "cancelled"
 
-    async def handle(reader, writer):
-        await reader.readexactly(4)
-        writer.write(b"pong")
-        await writer.drain()
-        writer.close()
-        await writer.wait_closed()
+    print("[python-asyncio-fixture] network-start", file=sys.stderr, flush=True)
+    async with asyncio.timeout(5):
 
-    server = await asyncio.start_server(handle, "127.0.0.1", 0)
-    port = server.sockets[0].getsockname()[1]
-    reader, writer = await asyncio.open_connection("127.0.0.1", port)
-    writer.write(b"ping")
-    await writer.drain()
-    network_result = (await reader.readexactly(4)).decode()
-    writer.close()
-    await writer.wait_closed()
-    server.close()
-    await server.wait_closed()
+        async def handle(reader, writer):
+            await reader.readexactly(4)
+            writer.write(b"pong")
+            await writer.drain()
+            await close_stream(writer)
 
-    child = await asyncio.create_subprocess_exec(
-        sys.executable,
-        "-c",
-        "print('subprocess-ok')",
-        stdout=asyncio.subprocess.PIPE,
-    )
-    stdout, _stderr = await child.communicate()
-    process_result = stdout.decode().strip()
+        server = await asyncio.start_server(handle, "127.0.0.1", 0)
+        try:
+            port = server.sockets[0].getsockname()[1]
+            reader, writer = await asyncio.open_connection("127.0.0.1", port)
+            writer.write(b"ping")
+            await writer.drain()
+            network_result = (await reader.readexactly(4)).decode()
+            await close_stream(writer)
+        finally:
+            server.close()
+            await server.wait_closed()
+    print("[python-asyncio-fixture] network-done", file=sys.stderr, flush=True)
+
+    print("[python-asyncio-fixture] process-start", file=sys.stderr, flush=True)
+    child = None
+    try:
+        async with asyncio.timeout(15):
+            child = await asyncio.create_subprocess_exec(
+                sys.executable,
+                "-I",
+                "-S",
+                "-c",
+                "raise SystemExit(0)",
+                stdin=asyncio.subprocess.PIPE,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+            )
+            await child.communicate()
+            return_code = child.returncode
+    finally:
+        if child is not None and child.returncode is None:
+            child.kill()
+            try:
+                async with asyncio.timeout(2):
+                    await child.wait()
+            except (TimeoutError, ProcessLookupError):
+                pass
+    if return_code != 0:
+        raise RuntimeError(f"subprocess probe exited with {return_code}")
+    process_result = "subprocess-ok"
+    print("[python-asyncio-fixture] process-done", file=sys.stderr, flush=True)
 
     records_a, records_b = await asyncio.gather(
         caps["ledger"].records({"limit": 1}),

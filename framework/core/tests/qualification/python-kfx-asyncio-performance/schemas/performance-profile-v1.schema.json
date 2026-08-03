@@ -1,0 +1,65 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kungfu.tech/schemas/python-kfx-asyncio-performance-profile-v1.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "name", "supported_python", "platforms", "matrix", "sampling", "statistics", "required_workloads", "correctness_gate", "invalidation_rules", "evidence_policy", "claim_boundary"],
+  "properties": {
+    "schema": { "const": "kungfu.python-kfx-asyncio.performance-profile/v1" },
+    "name": { "const": "cross-platform-v1" },
+    "supported_python": { "const": ">=3.13,<3.14" },
+    "platforms": {
+      "type": "array", "minItems": 3, "maxItems": 3,
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["os", "arch", "claim"],
+        "properties": {
+          "os": { "enum": ["darwin", "linux", "win32"] },
+          "arch": { "enum": ["arm64", "x64"] },
+          "claim": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "matrix": {
+      "type": "object", "additionalProperties": false,
+      "required": ["concurrency", "payload_bytes"],
+      "properties": {
+        "concurrency": { "const": [1, 8, 64] },
+        "payload_bytes": { "const": [64, 1024, 65536] }
+      }
+    },
+    "sampling": {
+      "type": "object", "additionalProperties": false,
+      "required": ["warmup_repetitions", "scored_repetitions", "operations_per_repetition", "soak_seconds"],
+      "properties": {
+        "warmup_repetitions": { "type": "integer", "minimum": 1 },
+        "scored_repetitions": { "type": "integer", "minimum": 5 },
+        "operations_per_repetition": { "type": "integer", "minimum": 64 },
+        "soak_seconds": { "type": "integer", "minimum": 10, "maximum": 600 }
+      }
+    },
+    "statistics": { "type": "array", "minItems": 10, "uniqueItems": true, "items": { "type": "string", "minLength": 1 } },
+    "required_workloads": { "type": "array", "minItems": 5, "uniqueItems": true, "items": { "type": "string", "minLength": 1 } },
+    "correctness_gate": { "const": "test:native-kfx-admission" },
+    "invalidation_rules": { "type": "array", "minItems": 8, "uniqueItems": true, "items": { "type": "string", "minLength": 1 } },
+    "evidence_policy": {
+      "type": "object", "additionalProperties": false,
+      "required": ["raw_observations", "outliers", "thresholds", "overlap_authority"],
+      "properties": {
+        "raw_observations": { "type": "string", "minLength": 1 },
+        "outliers": { "type": "string", "minLength": 1 },
+        "thresholds": { "type": "string", "minLength": 1 },
+        "overlap_authority": { "type": "string", "minLength": 1 }
+      }
+    },
+    "claim_boundary": {
+      "type": "object", "additionalProperties": false,
+      "required": ["qualified", "advisory", "unqualified"],
+      "properties": {
+        "qualified": { "type": "string", "minLength": 1 },
+        "advisory": { "type": "string", "minLength": 1 },
+        "unqualified": { "type": "string", "minLength": 1 }
+      }
+    }
+  }
+}

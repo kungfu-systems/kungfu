@@ -158,24 +158,36 @@ test('integrated-explicit Python service uses standard asyncio in a separate pro
     pythonPath,
     pythonShutdownTimeoutMs: 2_000,
   });
+  try {
+    await Promise.race([running, deadline('Python service did not report')]);
+    assert.deepEqual(reports[0], {
+      phase: 'running',
+      future: 'future',
+      timeout: 'timed-out',
+      cancellation: 'cancelled',
+      network: 'pong',
+      process: 'subprocess-ok',
+      concurrentRelayCounts: [1, 2],
+    });
 
-  await Promise.race([running, deadline('Python service did not report')]);
-  assert.deepEqual(reports[0], {
-    phase: 'running',
-    future: 'future',
-    timeout: 'timed-out',
-    cancellation: 'cancelled',
-    network: 'pong',
-    process: 'subprocess-ok',
-    concurrentRelayCounts: [1, 2],
-  });
-
-  service.dispose();
-  releaseRunningResult?.();
-  await Promise.race([
-    stopped,
-    deadline('Python service did not stop gracefully'),
-  ]);
-  assert.equal(await service.done, 0);
-  assert.deepEqual(reports.at(-1), { phase: 'stopped' });
+    service.dispose();
+    releaseRunningResult?.();
+    await Promise.race([
+      stopped,
+      deadline('Python service did not stop gracefully'),
+    ]);
+    assert.equal(await service.done, 0);
+    assert.deepEqual(reports.at(-1), { phase: 'stopped' });
+  } finally {
+    // A failed readiness assertion must not strand the Python child and keep
+    // the Node test process alive. This is especially important on Windows,
+    // where the runner cannot reclaim inherited pipe handles until the child
+    // has crossed its graceful-shutdown boundary.
+    releaseRunningResult?.();
+    service.dispose();
+    await Promise.race([
+      service.done,
+      deadline('Python service cleanup did not finish'),
+    ]).catch(() => undefined);
+  }
 });
