@@ -5,7 +5,7 @@
   "manifestPath": "framework/maintainability/semantic-amplification.manifest.json",
   "manifestRoot": "sha256:b64ab1daecaec8560dd649af61b7e175adaf562df3aa8b94e3733ef499a308aa",
   "baselineRef": "dbfed9ca1785d147b26f4f06e7e6895ac7368fee",
-  "sourceRoot": "sha256:ba63607c401eee9efb322a930b7288f7d65fd7540ede8cd05fd64a23f6d09a9c",
+  "sourceRoot": "sha256:e7c009e490c3ad6ffd1d59c519f66616ef8edb288d43f3f9c717fb3fada3fbf0",
   "roles": {
     "authority": "exactly one authority route per family; the route may name multiple co-owned source files",
     "allowedProjectionRoles": [
@@ -651,9 +651,9 @@
         },
         {
           "path": "product/scripts/dist.mjs",
-          "currentLines": 1938,
+          "currentLines": 1952,
           "baselineLines": 2514,
-          "currentRoot": "sha256:ff33ae87fb0a644fd2f9829403a19fe72edf914a8236a7f2d33cc7ee44cc81fe",
+          "currentRoot": "sha256:2f6dfd8036ddcef42de183b824087856bb97a6775010c21b3b17cedd8d8e7bdc",
           "baselineRoot": "sha256:6cfd6c55e296163ab863fb1d79a4a51198ad12943274fc0858338bb651a108da",
           "changedSinceBaseline": true
         },
@@ -1947,7 +1947,7 @@
         "topology": "product-assembly",
         "kind": "line-count",
         "status": "remediated",
-        "metric": 1938,
+        "metric": 1952,
         "threshold": 2450,
         "finding": null
       },
