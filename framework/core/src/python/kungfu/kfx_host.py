@@ -309,9 +309,14 @@ def install_ambient_capability_audit(declared: set[str]) -> None:
                 "KF_KFX_CAPABILITY_DENIED: process capability is not granted"
             )
         if event == "open":
+            target = args[0] if args else None
             mode = args[1] if len(args) > 1 else None
             flags = args[2] if len(args) > 2 else None
-            if _write_open(mode, flags) and "storage" not in declared:
+            if (
+                not isinstance(target, int)
+                and _write_open(mode, flags)
+                and "storage" not in declared
+            ):
                 raise AmbientCapabilityDenied(
                     "KF_KFX_CAPABILITY_DENIED: storage capability is not granted"
                 )

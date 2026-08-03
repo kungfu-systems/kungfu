@@ -17,13 +17,18 @@ on:
         description: "Comma-separated platforms for focused measurement: linux,macos,windows"
         required: false
         default: "linux,macos,windows"
+      python-kfx-asyncio-performance:
+        description: "Run the report-only Python KFX asyncio service-plane qualification"
+        type: boolean
+        required: false
+        default: false
 
 permissions:
   contents: read
 
 jobs:
   measure:
-    if: ${{ inputs.focused-gates == '' }}
+    if: ${{ inputs.focused-gates == '' && !inputs.python-kfx-asyncio-performance }}
     uses: kungfu-systems/buildchain/.github/workflows/.gate-profile.yml@9e904de2c85dbea7c799780ee166510b3336d812 # v3.0.0
     with:
       source-ref: ${{ inputs.source-ref || github.sha }}
@@ -235,3 +240,133 @@ jobs:
         working-directory: ${{ env.KUNGFU_GATE_SOURCE_DIR }}
         # shifu-entry-contract: allow workflow outcome propagation after the failed Gate receipt is retained
         run: node -e "process.exit(1)"
+
+  python-kfx-asyncio-performance:
+    if: ${{ inputs.python-kfx-asyncio-performance }}
+    timeout-minutes: 1200
+    env:
+      # actions/checkout inherits Git's config-count environment. Keep the
+      # exact-source fetch off the flaky HTTP/2 proxy path used by the trusted
+      # self-hosted runners while retaining checkout's bounded retries.
+      GIT_CONFIG_COUNT: "1"
+      GIT_CONFIG_KEY_0: http.version
+      GIT_CONFIG_VALUE_0: HTTP/1.1
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - id: linux-x64
+            name: Linux x64
+            platform: linux
+            runner: '["self-hosted","Linux","X64","kungfu-build-v4-linux-x64"]'
+          - id: macos-arm64
+            name: macOS ARM64
+            platform: macos
+            runner: '["self-hosted","macOS","ARM64","kungfu-build-v4-macos-arm64"]'
+          - id: windows-x64
+            name: Windows x64
+            platform: windows
+            runner: '["self-hosted","Windows","X64","kungfu-build-v4-windows-x64"]'
+    name: Python KFX asyncio performance / ${{ matrix.name }}
+    runs-on: ${{ fromJSON(matrix.runner) }}
+    steps:
+      - name: Check out exact qualification source
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: ${{ inputs.source-ref || github.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Prepare runner toolchain paths on Unix
+        if: ${{ matrix.platform != 'windows' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          runner_root="$(cd "$RUNNER_TEMP/../.." && pwd)"
+          node_bin="$runner_root/externals/node24/bin"
+          test -x "$node_bin/node"
+          {
+            printf '%s\n' "$node_bin"
+            printf '%s\n' "$HOME/.cargo/bin"
+            printf '%s\n' "$HOME/.local/bin"
+            printf '%s\n' "$HOME/.local/share/fnm"
+          } >>"$GITHUB_PATH"
+
+      - name: Prepare runner toolchain paths on Windows
+        if: ${{ matrix.platform == 'windows' }}
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $runnerRoot = Split-Path (Split-Path $env:RUNNER_TEMP -Parent) -Parent
+          $nodeBin = Join-Path $runnerRoot "externals\node24\bin"
+          if (-not (Test-Path (Join-Path $nodeBin "node.exe"))) {
+            throw "runner Node 24 is unavailable"
+          }
+          @(
+            $nodeBin,
+            (Join-Path $env:USERPROFILE ".cargo\bin"),
+            (Join-Path $env:USERPROFILE ".local\bin"),
+            (Join-Path $env:USERPROFILE ".fnm"),
+            (Join-Path $env:LOCALAPPDATA "Microsoft\WinGet\Links")
+          ) | Out-File -FilePath $env:GITHUB_PATH -Append -Encoding utf8
+
+      - name: Setup Rust toolchain for qualification on Windows
+        if: ${{ matrix.platform == 'windows' }}
+        shell: cmd
+        env:
+          RUSTUP_DIST_SERVER: https://rsproxy.cn
+          RUSTUP_UPDATE_ROOT: https://rsproxy.cn/rustup
+        run: |
+          @echo off
+          set "CARGO_HOME=%RUNNER_TOOL_CACHE%\kungfu-gate-cargo-v1"
+          set "RUSTUP_HOME=%RUNNER_TOOL_CACHE%\kungfu-gate-rustup-1.96.0"
+          set "RUSTUP_INIT_ROOT=%RUNNER_TOOL_CACHE%\kungfu-gate-rustup-init-v1"
+          set "RUSTUP_INIT=%RUSTUP_INIT_ROOT%\rustup-init.exe"
+          if not exist "%RUSTUP_INIT_ROOT%" mkdir "%RUSTUP_INIT_ROOT%"
+          if errorlevel 1 exit /b %errorlevel%
+          if not exist "%RUSTUP_INIT%" curl.exe --proto "=https" --tlsv1.2 --retry 10 --retry-connrefused --fail --silent --show-error --location "https://win.rustup.rs/x86_64" --output "%RUSTUP_INIT%"
+          if not exist "%CARGO_HOME%\bin\rustup.exe" "%RUSTUP_INIT%" --default-toolchain "1.96.0" --profile minimal --component rustfmt --component clippy -y --no-modify-path
+          if not exist "%CARGO_HOME%\bin\rustup.exe" exit /b 1
+          "%CARGO_HOME%\bin\rustup.exe" run "1.96.0" rustc --version >nul 2>nul
+          if errorlevel 1 "%CARGO_HOME%\bin\rustup.exe" toolchain install "1.96.0" --profile minimal --component rustfmt --component clippy
+          if errorlevel 1 exit /b %errorlevel%
+          "%CARGO_HOME%\bin\rustup.exe" run "1.96.0" rustc --version
+          "%CARGO_HOME%\bin\rustup.exe" target add "wasm32-unknown-unknown" --toolchain "1.96.0"
+          if errorlevel 1 exit /b %errorlevel%
+          echo %CARGO_HOME%\bin>>"%GITHUB_PATH%"
+          echo CARGO_HOME=%CARGO_HOME%>>"%GITHUB_ENV%"
+          echo RUSTUP_HOME=%RUSTUP_HOME%>>"%GITHUB_ENV%"
+
+      - name: Run exact-revision qualification on Unix
+        if: ${{ matrix.platform != 'windows' }}
+        shell: bash
+        env:
+          KUNGFU_BUILDCHAIN_SOURCE_BUILD: "1"
+          SHIFU_NATIVE: "1"
+        run: |
+          set -euo pipefail
+          output_dir="$RUNNER_TEMP/python-kfx-asyncio-performance-${{ matrix.id }}"
+          ./shifu python-kfx-asyncio:qualify -- --execute --output "$output_dir"
+
+      - name: Run exact-revision qualification on Windows
+        if: ${{ matrix.platform == 'windows' }}
+        shell: cmd
+        env:
+          KUNGFU_BUILDCHAIN_SOURCE_BUILD: "1"
+          SHIFU_NATIVE: "1"
+        run: |
+          @echo off
+          set "output_dir=%RUNNER_TEMP%\python-kfx-asyncio-performance-${{ matrix.id }}"
+          call shifu.cmd python-kfx-asyncio:qualify -- --execute --output "%output_dir%"
+          if errorlevel 1 exit /b %errorlevel%
+
+      - name: Retain raw observations and derived report
+        if: ${{ always() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: python-kfx-asyncio-performance-${{ matrix.id }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/python-kfx-asyncio-performance-${{ matrix.id }}
+          if-no-files-found: error
+          retention-days: 30
+          compression-level: 6
+          overwrite: false
