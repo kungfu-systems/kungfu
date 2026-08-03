@@ -9,8 +9,8 @@ confidence: high
 sensitivity: public
 evidence_grade: A
 review_state: self-reviewed
-last_reviewed: 2026-08-02
-ai_provenance: GPT-5 via Codex on 2026-08-02; based on checked-in Kungfu, Buildchain, and Build Images contracts plus exact workflow evidence visible to this task; no claim is made for a render that has not passed the retained Gate
+last_reviewed: 2026-08-03
+ai_provenance: GPT-5 via Codex on 2026-08-02; updated by GPT-5 via Codex on 2026-08-03 to separate non-interactive artifact transport verification from native PTY playback after an exact Build failure; based on checked-in Kungfu, Buildchain, and Build Images contracts plus exact workflow evidence visible to this task; no claim is made for a render that has not passed the retained Gate
 ---
 
 # Declarative Multi-demo Animation Pipeline
@@ -28,9 +28,16 @@ The single source of scenario intent is
 | Agent Work Lab autoplay | `kungfu agent-work-lab autoplay` | 90 seconds |
 | Guided Project Tour | `kungfu agent-work-lab project-tour --speed 0.8` | 180 seconds |
 
-Both commands are non-interactive, deterministic under the declared isolated
-environment, credential-free, and bounded by the `long-form` duration class.
-They are executed directly as argv, never through a shell command string.
+Both playback commands are self-driving, deterministic under the declared
+isolated environment, credential-free, and bounded by the `long-form` duration
+class. They intentionally run inside native PTYs and are executed directly as
+argv, never through a shell command string.
+
+Before upload, a distinct non-interactive transport smoke runs
+`kungfu agent-work-lab demo --json` from the copied standalone distribution and
+requires the `kungfu.agent-work-lab.report/v1` sentinel. This verifies that
+transport retained an executable product without pretending that a pipe is a
+PTY or replacing either native playback capture.
 
 ## One reusable path
 
