@@ -60,6 +60,8 @@ test('SDK Core build plan drives both orchestrators and the queue workflow', () 
   const corePackage = JSON.parse(read('framework/core/package.json'));
   const build = read('framework/core/.gyp/run-build.js');
   const conan = read('framework/core/conanfile.py');
+  const compiler = read('framework/core/.cmake/compiler.cmake');
+  const libwasm = read('framework/core/src/libwasm/CMakeLists.txt');
   const workflow = read('.github/workflows/affected-native-pr.yml');
 
   assert.equal(
@@ -90,6 +92,13 @@ test('SDK Core build plan drives both orchestrators and the queue workflow', () 
   );
   assert.match(conan, /python_path = sys\.executable/);
   assert.match(conan, /--CDCMAKE_MAKE_PROGRAM=\{_cmake_path\(ninja_path\)\}/);
+  assert.match(conan, /cargo_parallel_level = max\(1, parallel_level - 1\)/);
+  assert.match(conan, /--CDKF_LIBWASM_CARGO_JOBS=\{cargo_parallel_level\}/);
+  assert.match(
+    libwasm,
+    /KF_LIBWASM_CARGO_JOBS[\s\S]*KF_LIBWASM_CARGO_JOB_ARGS --jobs[\s\S]*\$\{KF_LIBWASM_CARGO_JOB_ARGS\}/,
+  );
+  assert.doesNotMatch(compiler, /<CXX_COMPILER_ID:MSVC>:[^>]*\/MP/);
   assert.match(
     workflow,
     /name: Build Core SDK artifacts[\s\S]*run: \.\/shifu build:core:sdk/,

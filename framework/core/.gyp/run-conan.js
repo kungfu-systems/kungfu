@@ -201,6 +201,17 @@ function makeConanOptions(names) {
   return names.flatMap(makeConanOption).concat(getNodeVersionOptions());
 }
 
+function conanBuildJobsConf(environment = process.env) {
+  const jobs = String(environment.KUNGFU_BUILD_JOBS || '').trim();
+  if (!jobs) return [];
+  if (!/^[1-9]\d*$/.test(jobs)) {
+    throw new Error(
+      `KUNGFU_BUILD_JOBS must be a positive integer, got ${JSON.stringify(jobs)}`,
+    );
+  }
+  return ['-c', `tools.build:jobs=${jobs}`];
+}
+
 // conan2：-if/-bf → --output-folder；arch 是 setting 由 profile 自测，不再作 -o 选项。
 // freezer 不再透传给 conan：freeze 已迁出 conan（Stage C → run-freeze.js），
 // conanfile 的 freezer option 只喂 conan2 下不可达的遗留 package() 路径；产品
@@ -219,6 +230,7 @@ function conanInstall() {
     '--output-folder',
     'build',
     '--build=missing',
+    ...conanBuildJobsConf(),
     ...settings,
     ...options,
   ]);
@@ -230,7 +242,15 @@ function conanBuild() {
     ...platformConanSettings(),
   ];
   const options = makeConanOptions(['log_level', 'build_profile']);
-  conan(['build', '.', '--output-folder', 'build', ...settings, ...options]);
+  conan([
+    'build',
+    '.',
+    '--output-folder',
+    'build',
+    ...conanBuildJobsConf(),
+    ...settings,
+    ...options,
+  ]);
 }
 
 // conan2 移除了独立的 `conan package` 本地命令(package() 经 conan create/export-pkg 触发)。
@@ -243,7 +263,15 @@ function conanPackage() {
     ...platformConanSettings(),
   ];
   const options = makeConanOptions(['log_level', 'build_profile']);
-  conan(['build', '.', '--output-folder', 'build', ...settings, ...options]);
+  conan([
+    'build',
+    '.',
+    '--output-folder',
+    'build',
+    ...conanBuildJobsConf(),
+    ...settings,
+    ...options,
+  ]);
 }
 
 const cli = require('sywac')
@@ -268,6 +296,7 @@ module.exports.cli = cli;
 module.exports.main = main;
 module.exports.conanInstall = conanInstall;
 module.exports.conanBuild = conanBuild;
+module.exports.conanBuildJobsConf = conanBuildJobsConf;
 module.exports.conanMsvcVersionFromBanner = conanMsvcVersionFromBanner;
 module.exports.repairInvalidUvEnvironment = repairInvalidUvEnvironment;
 

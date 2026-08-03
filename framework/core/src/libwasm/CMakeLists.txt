@@ -19,6 +19,13 @@ if(DEFINED ENV{KF_LIBWASM_CARGO_REGISTRY})
 endif()
 set(KF_LIBWASM_CARGO_REGISTRY "${KF_LIBWASM_CARGO_REGISTRY_DEFAULT}" CACHE STRING
   "Optional sparse Cargo registry mirror, for example sparse+https://rsproxy.cn/index/")
+set(KF_LIBWASM_CARGO_JOBS "1" CACHE STRING
+  "Maximum Cargo jobs used by nested production libwasm builds")
+if(NOT KF_LIBWASM_CARGO_JOBS MATCHES "^[1-9][0-9]*$")
+  message(FATAL_ERROR
+    "KF_LIBWASM_CARGO_JOBS must be a positive integer; got '${KF_LIBWASM_CARGO_JOBS}'")
+endif()
+set(KF_LIBWASM_CARGO_JOB_ARGS --jobs "${KF_LIBWASM_CARGO_JOBS}")
 set(KF_LIBWASM_CARGO_SOURCE_ARGS)
 if(KF_LIBWASM_CARGO_REGISTRY)
   list(APPEND KF_LIBWASM_CARGO_SOURCE_ARGS
@@ -72,7 +79,8 @@ message(STATUS
 add_custom_command(
   OUTPUT "${KF_LIBWASM_WASMTIME_LIBRARY}"
   COMMAND ${CMAKE_COMMAND} -E env "CARGO_TARGET_DIR=${KF_LIBWASM_WASMTIME_TARGET}"
-          "${KF_LIBWASM_CARGO}" ${KF_LIBWASM_CARGO_SOURCE_ARGS} build --release --locked
+          "${KF_LIBWASM_CARGO}" ${KF_LIBWASM_CARGO_SOURCE_ARGS} build
+          ${KF_LIBWASM_CARGO_JOB_ARGS} --release --locked
           --manifest-path "${KF_LIBWASM_ROOT}/wasmtime/Cargo.toml"
   COMMAND ${CMAKE_COMMAND} -E make_directory "${KF_LIBWASM_STAGE_DIR}"
   COMMAND ${CMAKE_COMMAND} -E copy_if_different
@@ -91,7 +99,8 @@ add_custom_command(
 add_custom_command(
   OUTPUT "${KF_LIBWASM_WASMER_LIBRARY}"
   COMMAND ${CMAKE_COMMAND} -E env "CARGO_TARGET_DIR=${KF_LIBWASM_WASMER_TARGET}"
-          "${KF_LIBWASM_CARGO}" ${KF_LIBWASM_CARGO_SOURCE_ARGS} build --release --locked
+          "${KF_LIBWASM_CARGO}" ${KF_LIBWASM_CARGO_SOURCE_ARGS} build
+          ${KF_LIBWASM_CARGO_JOB_ARGS} --release --locked
           --manifest-path "${KF_LIBWASM_ROOT}/wasmer/Cargo.toml"
   COMMAND ${CMAKE_COMMAND} -E make_directory "${KF_LIBWASM_STAGE_DIR}"
   COMMAND ${CMAKE_COMMAND} -E copy_if_different

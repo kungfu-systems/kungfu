@@ -7,9 +7,26 @@ const path = require('node:path');
 const test = require('node:test');
 
 const {
+  conanBuildJobsConf,
   conanMsvcVersionFromBanner,
   repairInvalidUvEnvironment,
 } = require('../.gyp/run-conan');
+
+test('projects one validated build budget into Conan dependency builds', () => {
+  assert.deepEqual(conanBuildJobsConf({}), []);
+  assert.deepEqual(conanBuildJobsConf({ KUNGFU_BUILD_JOBS: ' 2 ' }), [
+    '-c',
+    'tools.build:jobs=2',
+  ]);
+  assert.throws(
+    () => conanBuildJobsConf({ KUNGFU_BUILD_JOBS: 'two' }),
+    /must be a positive integer/,
+  );
+  assert.throws(
+    () => conanBuildJobsConf({ KUNGFU_BUILD_JOBS: '0' }),
+    /must be a positive integer/,
+  );
+});
 
 function fixture() {
   return fs.mkdtempSync(path.join(os.tmpdir(), 'kungfu-uv-environment-'));

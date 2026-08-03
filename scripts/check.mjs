@@ -727,14 +727,17 @@ function touchesBuildchainKfdEvidence(files) {
 }
 
 function checkBuildchainKfdEvidence(files = [], { force = false } = {}) {
-  if (!force && !touchesBuildchainKfdEvidence(files)) {
-    log('[check] no Buildchain KFD evidence inputs changed');
-    return;
-  }
+  // The committed source binding depends on Git ancestry as well as file
+  // content. A rebase or merge can stale it without placing any KFD path in
+  // the changed-file set, so keep this fast check unconditional.
   run('Buildchain KFD evidence check', 'node', [
     path.join('scripts', 'buildchain-kfd-evidence.mjs'),
     '--check',
   ]);
+  if (!force && !touchesBuildchainKfdEvidence(files)) {
+    log('[check] no additional Buildchain KFD evidence inputs changed');
+    return;
+  }
   run('KFD-4 perspective qualification', 'node', [
     path.join(
       'framework',
