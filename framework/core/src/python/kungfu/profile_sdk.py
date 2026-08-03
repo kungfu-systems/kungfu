@@ -56,6 +56,7 @@ from kungfu.profile_sdk_support import (
     _validate_sdk_value as _validate_sdk_value,
     _validate_source_bundle as _validate_source_bundle,
 )
+
 from kungfu.profile_sdk_source import (
     _collaboration_closure as _collaboration_closure,
     _package_dirs as _package_dirs,
@@ -80,47 +81,45 @@ from kungfu.profile_sdk_kfd3 import (
     verify_kfd3 as _verify_kfd3,
 )
 
-
 SOURCE_BUNDLE_SCHEMA = "kungfu.profile-source-bundle/v1"
 
 
 def _work_profile_conformance_script() -> Path | None:
-    installed = (
+    relative = Path("framework/work-profile-conformance/work-profile-conformance.mjs")
+    roots = (*Path(__file__).resolve().parents, *Path.cwd().resolve().parents)
+    candidates = (
         Path(__file__).resolve().parent
-        / "work_profile_conformance"
-        / "work-profile-conformance.mjs"
+        / "work_profile_conformance/work-profile-conformance.mjs",
+        *(parent / relative for parent in roots),
     )
-    if installed.is_file():
-        return installed
-    relative = (
-        Path("framework") / "work-profile-conformance" / "work-profile-conformance.mjs"
-    )
-    for start in (Path(__file__).resolve(), Path.cwd().resolve()):
-        for parent in (start, *start.parents):
-            candidate = parent / relative
-            if candidate.is_file():
-                return candidate
-    return None
+    return next((candidate for candidate in candidates if candidate.is_file()), None)
 
 
 def _work_profile_conformance(
     inspection: Mapping[str, Any], surface: str
 ) -> dict[str, Any] | None:
-    qualification_ref = inspection["profile"]["qualification"]["profile"]
-    qualification = _read_ref_json(inspection, qualification_ref)
-    declaration_ref = qualification.get("workConformance")
+    work = inspection["profile"].get("work")
+    declaration_ref = work.get("conformance") if isinstance(work, Mapping) else None
+    if declaration_ref is None and inspection.get("work_capable"):
+        raise ProfileSdkError(
+            "work-profile-conformance-required",
+            "Work-capable Profile requires exact Work conformance",
+        )
     if declaration_ref is None:
         return None
     if not isinstance(declaration_ref, Mapping):
         raise ProfileSdkError(
             "work-profile-conformance-ref-invalid",
-            "Profile workConformance must be a content reference",
+            "Profile work.conformance must be a content reference",
         )
-    root = Path(str(inspection["profile_path"])).parent
-    declaration_path = _confined(root, str(declaration_ref.get("path") or ""))
-    declaration_bytes = declaration_path.read_bytes()
-    expected = str(declaration_ref.get("sha256") or "")
-    actual = _sha256(declaration_bytes)
+    declaration_path = _confined(
+        Path(str(inspection["profile_path"])).parent,
+        str(declaration_ref.get("path") or ""),
+    )
+    expected, actual = (
+        str(declaration_ref.get("sha256") or ""),
+        _sha256(declaration_path.read_bytes()),
+    )
     if expected != actual:
         raise ProfileSdkError(
             "work-profile-conformance-root-mismatch",
@@ -128,12 +127,11 @@ def _work_profile_conformance(
             expected=expected,
             actual=actual,
         )
-    checker = _work_profile_conformance_script()
-    node = shutil.which("node")
+    checker, node = _work_profile_conformance_script(), shutil.which("node")
     if checker is None or node is None:
         raise ProfileSdkError(
             "work-profile-conformance-checker-unavailable",
-            "Work-capable Profile validation requires the shipped conformance checker",
+            "Work Profile conformance checker is unavailable",
         )
     completed = subprocess.run(
         [
@@ -273,8 +271,8 @@ def capabilities() -> dict[str, Any]:
             "authorization": "external-explicit-decision",
             "selfCertification": False,
             "workConformance": (
-                "optional content-bound qualification; existing Profile validate "
-                "and qualify project one checker result"
+                "required content-bound work.conformance for Work-capable Profiles; "
+                "validate and qualify project one checker result"
             ),
         },
     }
@@ -1354,6 +1352,18 @@ def lifecycle_plan(
             profile_path=resolved["profilePath"],
             member_roots=resolved["memberRoots"],
         )
+        if action in {"qualify", "activate"}:
+            inspection = storage_service.profile_lifecycle(
+                runtime_dir,
+                "inspect",
+                profile_path=resolved["profilePath"],
+                member_roots=resolved["memberRoots"],
+            )
+            work_conformance = _work_profile_conformance(
+                inspection, "qualify" if action == "qualify" else "installed-runtime"
+            )
+            if work_conformance is not None:
+                request["work_conformance"] = work_conformance
     plan = storage_service.profile_lifecycle(runtime_dir, "plan", request=request)
     return {
         "schema": "kungfu.profile-agent-plan/v1",

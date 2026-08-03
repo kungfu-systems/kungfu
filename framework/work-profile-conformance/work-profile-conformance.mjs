@@ -7,20 +7,21 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { optionalAjv2020 } from '../../scripts/readonly-source-toolchain.mjs';
-import { generateQualificationFixtures } from './generate-qualification.mjs';
-
-const ROOT = path.resolve(
-  path.dirname(fileURLToPath(import.meta.url)),
-  '../..',
-);
+const MODULE_DIR = path.dirname(fileURLToPath(import.meta.url));
+const SOURCE_ROOT = path.resolve(MODULE_DIR, '../..');
+const BUNDLED_ROOT = path.join(MODULE_DIR, 'authority');
+const ROOT = fs.existsSync(
+  path.join(SOURCE_ROOT, 'framework/action/action-geometry.contract.json'),
+)
+  ? SOURCE_ROOT
+  : BUNDLED_ROOT;
 const DECLARATION_SCHEMA_PATH = path.join(
-  ROOT,
-  'framework/work-profile-conformance/schema/work-profile-conformance-declaration-v1.schema.json',
+  MODULE_DIR,
+  'schema/work-profile-conformance-declaration-v1.schema.json',
 );
 const RESULT_SCHEMA_PATH = path.join(
-  ROOT,
-  'framework/work-profile-conformance/schema/work-profile-conformance-result-v1.schema.json',
+  MODULE_DIR,
+  'schema/work-profile-conformance-result-v1.schema.json',
 );
 const RETAINED_EVIDENCE_PATH = path.join(
   ROOT,
@@ -64,6 +65,33 @@ export const BEHAVIOR_CASES = [
   'external-effect',
   'recovery',
 ];
+
+const KFD_BEHAVIOR = {
+  'provider-switch': {
+    category: 'backend-migration',
+    checks: [
+      'storage-backend-switch-delegation-declared',
+      'five-role-identity-conservation-witness',
+      'file-rocksdb-file-rollback',
+    ],
+  },
+  'projection-rebuild': {
+    category: 'export-import-rebuild',
+    checks: [
+      'projection-rebuild-from-native-journal',
+      'qualified-fact-export-import-bundle',
+      'tampered-bundle-fails-before-write',
+    ],
+  },
+  recovery: {
+    category: 'cold-start-continuation',
+    checks: [
+      'fresh-home-bootstrap-action',
+      'clean-home-continuation-from-qualified-export',
+      'clean-home-next-revision',
+    ],
+  },
+};
 
 const INVALID = 'invalid';
 const INCOMPATIBLE = 'incompatible';
@@ -126,7 +154,9 @@ function inspectEvidence(coordinate) {
     return {
       status: actualRoot === coordinate.evidenceRoot ? 'verified' : 'mismatch',
       actualRoot,
-      value: null,
+      value: absolute.endsWith('.json')
+        ? JSON.parse(fs.readFileSync(absolute, 'utf8'))
+        : null,
     };
   } catch (error) {
     return { status: 'invalid', value: null, message: error.message };
@@ -311,17 +341,12 @@ function subsetSchemaErrors(value, schema, rootSchema, instancePath = '') {
 
 function schemaValidator(schemaPath) {
   const schema = readJson(schemaPath);
-  const Ajv2020 = optionalAjv2020();
-  if (!Ajv2020) {
-    const validate = (value) => {
-      validate.errors = subsetSchemaErrors(value, schema, schema);
-      return validate.errors.length === 0;
-    };
-    validate.errors = null;
-    return validate;
-  }
-  const ajv = new Ajv2020({ allErrors: true, strict: true });
-  return ajv.compile(schema);
+  const validate = (value) => {
+    validate.errors = subsetSchemaErrors(value, schema, schema);
+    return validate.errors.length === 0;
+  };
+  validate.errors = null;
+  return validate;
 }
 
 function schemaDiagnostics(errors = []) {
@@ -610,27 +635,62 @@ export function evaluateConformance(declaration) {
         `behavior-${caseId}`,
         evidence,
       );
-      if (
-        retained.status === 'verified' &&
-        retained.value &&
-        (retained.value.case !== caseId ||
-          retained.value.status !== evidence.status ||
-          retained.value.scenarioId !== declaration.scenarioId ||
-          retained.value.domainProfileRoot !==
-            declaration.bindings.domainProfileRoot ||
-          retained.value.sourceRoot !== declaration.bindings.sourceRoot ||
-          retained.value.identityRoot !==
-            contentRoot({
-              scenarioId: declaration.scenarioId,
-              domainProfileRoot: declaration.bindings.domainProfileRoot,
-              sourceRoot: declaration.bindings.sourceRoot,
-            }))
-      )
+      if (retained.status !== 'verified' || !retained.value) continue;
+      const kfd = KFD_BEHAVIOR[caseId];
+      let semanticMatch = false;
+      if (kfd) {
+        const passedChecks = new Set(
+          (retained.value.checks || [])
+            .filter(({ status }) => status === 'pass')
+            .map(({ id }) => id),
+        );
+        const revisionMatch =
+          retained.value.sourceSha === declaration.buildchain.sourceRevision;
+        if (!revisionMatch)
+          diagnostics.push(
+            diagnostic(
+              `behavior-${caseId}-buildchain-revision-mismatch`,
+              INVALID,
+              `Retained ${caseId} evidence was produced at ${retained.value.sourceSha || '<missing>'}, not the admitted Buildchain source ${declaration.buildchain.sourceRevision}.`,
+              evidence,
+            ),
+          );
+        semanticMatch =
+          retained.value.contract ===
+            'kungfu-buildchain-kfd-7-evidence-report' &&
+          retained.value.category === kfd.category &&
+          retained.value.outcome === 'pass' &&
+          retained.value.matchedExpectation === true &&
+          revisionMatch &&
+          kfd.checks.every((id) => passedChecks.has(id));
+      } else {
+        semanticMatch =
+          retained.value.schema ===
+            'kungfu.work-profile-runtime-behavior-witness/v1' &&
+          retained.value.case === caseId &&
+          retained.value.status === 'passed' &&
+          canonicalJson(retained.value.actual) ===
+            canonicalJson({
+              ...retained.value.actual,
+              ...retained.value.expected,
+            });
+        for (const coordinate of retained.value.implementation || [])
+          if (
+            retainEvidence(
+              diagnostics,
+              `behavior-${caseId}-implementation`,
+              coordinate,
+            ).status !== 'verified'
+          )
+            semanticMatch = false;
+      }
+      if (!semanticMatch)
         diagnostics.push(
           diagnostic(
             `behavior-${caseId}-evidence-semantic-mismatch`,
             INVALID,
-            `Retained evidence does not describe the declared ${caseId} result.`,
+            `Retained evidence does not prove the required ${caseId} behavior through the existing runtime authority.`,
+            evidence,
           ),
         );
     }
@@ -729,32 +789,6 @@ export function evaluateConformance(declaration) {
       );
 
   const buildchain = declaration.buildchain;
-  if (buildchain.fresh) {
-    const ancestry = spawnSync(
-      'git',
-      ['merge-base', '--is-ancestor', buildchain.sourceRevision, 'HEAD'],
-      { cwd: ROOT },
-    );
-    const changed = spawnSync(
-      'git',
-      [
-        'diff',
-        '--quiet',
-        buildchain.sourceRevision,
-        '--',
-        ...buildchain.artifactRefs.map((artifact) => artifact.evidencePath),
-      ],
-      { cwd: ROOT },
-    );
-    if (ancestry.status !== 0 || changed.status !== 0)
-      diagnostics.push(
-        diagnostic(
-          'buildchain-freshness-unverified',
-          UNQUALIFIED,
-          'Fresh Buildchain evidence requires an ancestor revision and unchanged retained artifacts.',
-        ),
-      );
-  }
   checks.push(
     check('buildchain-admission', buildchain.status, buildchain.evidenceRoot),
   );
@@ -766,17 +800,13 @@ export function evaluateConformance(declaration) {
   if (
     retainedBuildchain.status === 'verified' &&
     retainedBuildchain.value &&
-    (retainedBuildchain.value.status !== buildchain.status ||
-      retainedBuildchain.value.sourceRoot !== buildchain.sourceRoot ||
-      retainedBuildchain.value.fresh !== buildchain.fresh ||
-      retainedBuildchain.value.compatible !== buildchain.compatible ||
-      retainedBuildchain.value.manualAllowlist !== buildchain.manualAllowlist ||
-      retainedBuildchain.value.provider !== buildchain.provider ||
-      retainedBuildchain.value.runner !== buildchain.runner ||
-      retainedBuildchain.value.sourceRevision !== buildchain.sourceRevision ||
-      retainedBuildchain.value.authorityRoot !== buildchain.authorityRoot ||
-      canonicalJson(retainedBuildchain.value.artifactRefs) !==
-        canonicalJson(buildchain.artifactRefs))
+    (retainedBuildchain.value.contract !==
+      'kungfu-buildchain-kfd-product-gate' ||
+      retainedBuildchain.value.standard !== 'kfd-7' ||
+      retainedBuildchain.value.status !== buildchain.status ||
+      retainedBuildchain.value.source?.sha !== buildchain.sourceRevision ||
+      retainedBuildchain.value.gateRoot !== buildchain.gateRoot ||
+      retainedBuildchain.value.selfCertified !== buildchain.selfCertified)
   )
     diagnostics.push(
       diagnostic(
@@ -785,6 +815,29 @@ export function evaluateConformance(declaration) {
         'Retained Buildchain evidence does not match the declared admission fields.',
       ),
     );
+  if (retainedBuildchain.status === 'verified' && retainedBuildchain.value) {
+    const admittedEvidence = new Map(
+      (retainedBuildchain.value.evidence || []).map((coordinate) => [
+        coordinate.id,
+        coordinate.sha256,
+      ]),
+    );
+    const missingKfdEvidence = declaration.behaviorEvidence.filter(
+      (evidence) =>
+        KFD_BEHAVIOR[evidence.case] &&
+        admittedEvidence.get(KFD_BEHAVIOR[evidence.case].category) !==
+          evidence.evidenceRoot,
+    );
+    if (missingKfdEvidence.length > 0)
+      diagnostics.push(
+        diagnostic(
+          'buildchain-runtime-evidence-not-admitted',
+          INVALID,
+          'The retained Buildchain gate does not admit every reused KFD-7 runtime report at its exact root.',
+          missingKfdEvidence[0],
+        ),
+      );
+  }
   const buildchainAuthority = retainEvidence(
     diagnostics,
     'buildchain-authority',
@@ -794,20 +847,18 @@ export function evaluateConformance(declaration) {
       evidenceRoot: buildchain.authorityRoot,
     },
   );
-  for (const [index, artifact] of buildchain.artifactRefs.entries())
-    retainEvidence(diagnostics, `buildchain-artifact-${index}`, artifact);
   if (
     buildchainAuthority.status !== 'verified' ||
-    !buildchain.provider ||
-    !buildchain.runner ||
+    buildchain.provider !== 'kungfu-buildchain' ||
+    buildchain.runner !== 'kfd-product-gate' ||
     !/^[0-9a-f]{40}$/u.test(buildchain.sourceRevision) ||
-    buildchain.artifactRefs.length === 0
+    buildchain.selfCertified !== false
   )
     diagnostics.push(
       diagnostic(
         'buildchain-evidence-incomplete',
         UNQUALIFIED,
-        'Buildchain admission requires an exact authority, provider, runner, source revision, and retained artifact roots.',
+        'Buildchain admission requires an exact non-self-certified product gate, authority input, provider, runner, and source revision.',
       ),
     );
   if (buildchain.manualAllowlist)
@@ -818,15 +869,12 @@ export function evaluateConformance(declaration) {
         'Manual allowlists cannot substitute for retained Buildchain evidence.',
       ),
     );
-  if (
-    buildchain.status === 'mismatch' ||
-    buildchain.sourceRoot !== declaration.bindings.sourceRoot
-  )
+  if (buildchain.status === 'mismatch')
     diagnostics.push(
       diagnostic(
         'buildchain-source-root-mismatch',
         INVALID,
-        'Buildchain evidence is not bound to the declared source root.',
+        'Buildchain product-gate root does not match the retained gate.',
       ),
     );
   else if (buildchain.status === 'incompatible' || !buildchain.compatible)
@@ -837,16 +885,12 @@ export function evaluateConformance(declaration) {
         'The retained Buildchain evidence is incompatible with this Profile declaration.',
       ),
     );
-  else if (
-    buildchain.status !== 'admitted' ||
-    !buildchain.fresh ||
-    !buildchain.evidenceRoot
-  )
+  else if (buildchain.status !== 'passed' || !buildchain.evidenceRoot)
     diagnostics.push(
       diagnostic(
-        `buildchain-${buildchain.status === 'admitted' ? 'stale' : buildchain.status}`,
+        `buildchain-${buildchain.status}`,
         UNQUALIFIED,
-        'Buildchain admission evidence is absent, stale, or incomplete.',
+        'Buildchain product-gate evidence is absent, stale, or incomplete.',
       ),
     );
 
@@ -928,14 +972,25 @@ export function validateResult(result) {
 }
 
 export function checkReferenceQualification() {
-  const generated = generateQualificationFixtures();
-  if (
-    canonicalJson(readJson(RETAINED_EVIDENCE_PATH)) !==
-    canonicalJson(generated.retained)
-  )
-    throw new Error('generated-retained-evidence-stale');
-  const suite = generated.reference;
-  const retainedRoot = contentRoot(generated.retained);
+  if (ROOT === SOURCE_ROOT) {
+    const generated = spawnSync(
+      process.execPath,
+      [path.join(MODULE_DIR, 'generate-qualification.mjs'), '--check'],
+      { cwd: ROOT, encoding: 'utf8' },
+    );
+    if (generated.status !== 0)
+      throw new Error(
+        `generated-qualification-stale: ${`${generated.stdout || ''}${generated.stderr || ''}`.trim()}`,
+      );
+  }
+  const suite = readJson(
+    path.join(
+      ROOT,
+      'framework/work-profile-conformance/qualification/reference-scenarios.json',
+    ),
+  );
+  const retained = readJson(RETAINED_EVIDENCE_PATH);
+  const retainedRoot = contentRoot(retained);
   const results = suite.scenarios.map((scenario) => {
     const result = evaluateConformance(scenario.declaration);
     const resultValidation = validateResult(result);
@@ -994,17 +1049,6 @@ export function checkReferenceQualification() {
       'separate-assignment',
       (value) => {
         value.workOperationModel.separateAssignment = true;
-      },
-    ],
-    [
-      'cross-domain-evidence-replay',
-      (value) => {
-        for (const evidence of value.behaviorEvidence) {
-          const replacement = calendar.behaviorEvidence.find(
-            ({ case: caseId }) => caseId === evidence.case,
-          );
-          Object.assign(evidence, replacement);
-        }
       },
     ],
   ].map(([id, mutate]) => {

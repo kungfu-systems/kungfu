@@ -82,11 +82,19 @@ class BuildPythonWithExitContract(build_py):
         conformance_destination = (
             Path(self.build_lib) / "kungfu" / "work_profile_conformance"
         )
-        shutil.copytree(
-            conformance_source,
-            conformance_destination,
-            dirs_exist_ok=True,
+        shutil.copytree(conformance_source, conformance_destination, dirs_exist_ok=True)
+        manifest = json.loads(
+            (conformance_source / "authority-manifest.json").read_text(encoding="utf-8")
         )
+        repository_root = _find_pyproject(_here).parent.parent.parent
+        for coordinate in manifest["files"]:
+            relative = Path(coordinate["path"])
+            source_file = (repository_root / relative).resolve()
+            if not source_file.is_relative_to(repository_root.resolve()):
+                raise ValueError(f"invalid Work conformance authority path: {relative}")
+            destination_file = conformance_destination / "authority" / relative
+            destination_file.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(source_file, destination_file)
 
 
 setup(

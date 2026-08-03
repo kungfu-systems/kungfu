@@ -124,16 +124,14 @@ def test_public_profile_validate_and_qualify_share_work_conformance(tmp_path):
     declaration = reference["scenarios"][0]["declaration"]
     declaration_path = source / "qualification" / "work-profile-conformance.json"
     declaration_sha = _write_json(declaration_path, declaration)
-    qualification_path = source / "qualification" / "profile.json"
-    qualification = json.loads(qualification_path.read_text(encoding="utf-8"))
-    qualification["workConformance"] = {
-        "path": "qualification/work-profile-conformance.json",
-        "sha256": declaration_sha,
-    }
-    qualification_sha = _write_json(qualification_path, qualification)
     profile_path = source / "profile.json"
     profile = json.loads(profile_path.read_text(encoding="utf-8"))
-    profile["qualification"]["profile"]["sha256"] = qualification_sha
+    profile["work"] = {
+        "conformance": {
+            "path": "qualification/work-profile-conformance.json",
+            "sha256": declaration_sha,
+        }
+    }
     _write_json(profile_path, profile)
 
     runtime = tmp_path / "runtime"
@@ -167,21 +165,32 @@ def test_public_profile_validate_denies_failed_work_conformance(tmp_path):
     declaration["behaviorEvidence"][0]["status"] = "failed"
     declaration_path = source / "qualification/work-profile-conformance.json"
     declaration_sha = _write_json(declaration_path, declaration)
-    qualification_path = source / "qualification/profile.json"
-    qualification = json.loads(qualification_path.read_text())
-    qualification["workConformance"] = {
-        "path": "qualification/work-profile-conformance.json",
-        "sha256": declaration_sha,
-    }
-    qualification_sha = _write_json(qualification_path, qualification)
     profile_path = source / "profile.json"
     profile = json.loads(profile_path.read_text())
-    profile["qualification"]["profile"]["sha256"] = qualification_sha
+    profile["work"] = {
+        "conformance": {
+            "path": "qualification/work-profile-conformance.json",
+            "sha256": declaration_sha,
+        }
+    }
     _write_json(profile_path, profile)
 
     with pytest.raises(profile_sdk.ProfileSdkError) as raised:
         profile_sdk.validate_source(source, tmp_path / "runtime")
     assert raised.value.diagnosis["code"] == "work-profile-conformance-denied"
+
+
+def test_work_capable_profile_rejects_missing_conformance_binding(tmp_path):
+    source = _copy_source(tmp_path)
+    profile_path = source / "profile.json"
+    profile = json.loads(profile_path.read_text(encoding="utf-8"))
+    profile.pop("work")
+    _write_json(profile_path, profile)
+
+    with pytest.raises(profile_sdk.ProfileSdkError) as raised:
+        profile_sdk.validate_source(source, tmp_path / "runtime")
+
+    assert raised.value.diagnosis["code"] == "work-profile-conformance-required"
 
 
 def test_first_party_work_control_suite_rejects_missing_member(tmp_path):

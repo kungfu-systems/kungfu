@@ -15,93 +15,118 @@
   "buildchain": {
     "absent": {
       "status": "absent",
-      "sourceRoot": "sha256:be4c92b368d0b015b78d1a67a1087c2a11c9f85eaebfc8c203ad695ac6ba3e4d",
-      "fresh": false,
       "compatible": true,
       "manualAllowlist": false,
       "provider": "kungfu-buildchain",
-      "runner": "source-acceptance",
-      "sourceRevision": "9b37767a0e1aa5516a6719b8398e9099b5a82c7b",
-      "authorityRoot": "sha256:6e92d2246c3ffe4d14c10dd7286f60c50a2266e619320b7e9dc6cb892efc8a57",
-      "artifactRefs": [
-        {
-          "evidenceRoot": "sha256:07abbeffd6b47f5d0aa25625b74b7e6d2aa4d67b84f10d18e859a5a31a3880bb",
-          "evidencePath": "scripts/source-acceptance.mjs",
-          "evidencePointer": null
-        }
-      ]
+      "runner": "kfd-product-gate",
+      "sourceRevision": "ec3b0c843ad271a34450a69a2da2e538f404f3ce",
+      "gateRoot": "sha256:cd877313251ce13512d480672850733ef70eb10f1c865523b89a21e9084fef0d",
+      "selfCertified": false,
+      "evidenceRoot": "sha256:8c06294997064e15d403a286ec9e2c37564662a4163e371ae199bfe89fe4fe21",
+      "evidencePath": "framework/work-profile-conformance/qualification/kfd-7-product-gate.json",
+      "evidencePointer": null,
+      "authorityPath": ".buildchain/alpha-contract-lock.json",
+      "authorityRoot": "sha256:6e92d2246c3ffe4d14c10dd7286f60c50a2266e619320b7e9dc6cb892efc8a57"
     },
     "stale": {
       "status": "stale",
-      "sourceRoot": "sha256:be4c92b368d0b015b78d1a67a1087c2a11c9f85eaebfc8c203ad695ac6ba3e4d",
-      "fresh": false,
       "compatible": true,
       "manualAllowlist": false,
       "provider": "kungfu-buildchain",
-      "runner": "source-acceptance",
-      "sourceRevision": "9b37767a0e1aa5516a6719b8398e9099b5a82c7b",
-      "authorityRoot": "sha256:6e92d2246c3ffe4d14c10dd7286f60c50a2266e619320b7e9dc6cb892efc8a57",
-      "artifactRefs": [
-        {
-          "evidenceRoot": "sha256:07abbeffd6b47f5d0aa25625b74b7e6d2aa4d67b84f10d18e859a5a31a3880bb",
-          "evidencePath": "scripts/source-acceptance.mjs",
-          "evidencePointer": null
-        }
-      ]
+      "runner": "kfd-product-gate",
+      "sourceRevision": "ec3b0c843ad271a34450a69a2da2e538f404f3ce",
+      "gateRoot": "sha256:cd877313251ce13512d480672850733ef70eb10f1c865523b89a21e9084fef0d",
+      "selfCertified": false,
+      "evidenceRoot": "sha256:8c06294997064e15d403a286ec9e2c37564662a4163e371ae199bfe89fe4fe21",
+      "evidencePath": "framework/work-profile-conformance/qualification/kfd-7-product-gate.json",
+      "evidencePointer": null,
+      "authorityPath": ".buildchain/alpha-contract-lock.json",
+      "authorityRoot": "sha256:6e92d2246c3ffe4d14c10dd7286f60c50a2266e619320b7e9dc6cb892efc8a57"
     },
     "mismatch": {
       "status": "mismatch",
-      "sourceRoot": "sha256:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
-      "fresh": true,
       "compatible": true,
       "manualAllowlist": false,
       "provider": "kungfu-buildchain",
-      "runner": "source-acceptance",
-      "sourceRevision": "9b37767a0e1aa5516a6719b8398e9099b5a82c7b",
-      "authorityRoot": "sha256:6e92d2246c3ffe4d14c10dd7286f60c50a2266e619320b7e9dc6cb892efc8a57",
-      "artifactRefs": [
-        {
-          "evidenceRoot": "sha256:07abbeffd6b47f5d0aa25625b74b7e6d2aa4d67b84f10d18e859a5a31a3880bb",
-          "evidencePath": "scripts/source-acceptance.mjs",
-          "evidencePointer": null
-        }
-      ]
+      "runner": "kfd-product-gate",
+      "sourceRevision": "ec3b0c843ad271a34450a69a2da2e538f404f3ce",
+      "gateRoot": "sha256:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+      "selfCertified": false,
+      "evidenceRoot": "sha256:8c06294997064e15d403a286ec9e2c37564662a4163e371ae199bfe89fe4fe21",
+      "evidencePath": "framework/work-profile-conformance/qualification/kfd-7-product-gate.json",
+      "evidencePointer": null,
+      "authorityPath": ".buildchain/alpha-contract-lock.json",
+      "authorityRoot": "sha256:6e92d2246c3ffe4d14c10dd7286f60c50a2266e619320b7e9dc6cb892efc8a57"
     },
     "manual-allowlist": {
-      "status": "admitted",
-      "sourceRoot": "sha256:be4c92b368d0b015b78d1a67a1087c2a11c9f85eaebfc8c203ad695ac6ba3e4d",
-      "fresh": true,
+      "status": "passed",
       "compatible": true,
       "manualAllowlist": true,
       "provider": "kungfu-buildchain",
-      "runner": "source-acceptance",
-      "sourceRevision": "9b37767a0e1aa5516a6719b8398e9099b5a82c7b",
-      "authorityRoot": "sha256:6e92d2246c3ffe4d14c10dd7286f60c50a2266e619320b7e9dc6cb892efc8a57",
-      "artifactRefs": [
-        {
-          "evidenceRoot": "sha256:07abbeffd6b47f5d0aa25625b74b7e6d2aa4d67b84f10d18e859a5a31a3880bb",
-          "evidencePath": "scripts/source-acceptance.mjs",
-          "evidencePointer": null
-        }
-      ]
+      "runner": "kfd-product-gate",
+      "sourceRevision": "ec3b0c843ad271a34450a69a2da2e538f404f3ce",
+      "gateRoot": "sha256:cd877313251ce13512d480672850733ef70eb10f1c865523b89a21e9084fef0d",
+      "selfCertified": false,
+      "evidenceRoot": "sha256:8c06294997064e15d403a286ec9e2c37564662a4163e371ae199bfe89fe4fe21",
+      "evidencePath": "framework/work-profile-conformance/qualification/kfd-7-product-gate.json",
+      "evidencePointer": null,
+      "authorityPath": ".buildchain/alpha-contract-lock.json",
+      "authorityRoot": "sha256:6e92d2246c3ffe4d14c10dd7286f60c50a2266e619320b7e9dc6cb892efc8a57"
     },
     "incompatible": {
       "status": "incompatible",
-      "sourceRoot": "sha256:be4c92b368d0b015b78d1a67a1087c2a11c9f85eaebfc8c203ad695ac6ba3e4d",
-      "fresh": true,
       "compatible": false,
       "manualAllowlist": false,
       "provider": "kungfu-buildchain",
-      "runner": "source-acceptance",
-      "sourceRevision": "9b37767a0e1aa5516a6719b8398e9099b5a82c7b",
-      "authorityRoot": "sha256:6e92d2246c3ffe4d14c10dd7286f60c50a2266e619320b7e9dc6cb892efc8a57",
-      "artifactRefs": [
+      "runner": "kfd-product-gate",
+      "sourceRevision": "ec3b0c843ad271a34450a69a2da2e538f404f3ce",
+      "gateRoot": "sha256:cd877313251ce13512d480672850733ef70eb10f1c865523b89a21e9084fef0d",
+      "selfCertified": false,
+      "evidenceRoot": "sha256:8c06294997064e15d403a286ec9e2c37564662a4163e371ae199bfe89fe4fe21",
+      "evidencePath": "framework/work-profile-conformance/qualification/kfd-7-product-gate.json",
+      "evidencePointer": null,
+      "authorityPath": ".buildchain/alpha-contract-lock.json",
+      "authorityRoot": "sha256:6e92d2246c3ffe4d14c10dd7286f60c50a2266e619320b7e9dc6cb892efc8a57"
+    },
+    "report-revision-drift": {
+      "schemaVersion": 1,
+      "contract": "kungfu-buildchain-kfd-7-evidence-report",
+      "profileId": "kungfu-kfd-7-action-profile",
+      "profileVersion": "0.1.0",
+      "stateMachineVersion": "0.1.0",
+      "sourceSha": "0000000000000000000000000000000000000000",
+      "category": "backend-migration",
+      "outcome": "pass",
+      "matchedExpectation": true,
+      "checks": [
         {
-          "evidenceRoot": "sha256:07abbeffd6b47f5d0aa25625b74b7e6d2aa4d67b84f10d18e859a5a31a3880bb",
-          "evidencePath": "scripts/source-acceptance.mjs",
-          "evidencePointer": null
+          "id": "storage-backend-switch-delegation-declared",
+          "status": "pass"
+        },
+        {
+          "id": "five-role-identity-conservation-witness",
+          "status": "pass"
+        },
+        {
+          "id": "file-rocksdb-file-rollback",
+          "status": "pass"
         }
-      ]
+      ],
+      "observations": {
+        "providers": [
+          "content-addressed-file",
+          "rocksdb"
+        ],
+        "preserved": [
+          "five role object ids",
+          "version roots",
+          "Cut roots",
+          "named ref roots and revisions",
+          "authority bundle root"
+        ],
+        "testPath": "framework/core/tests/python/test_agent_work_profile_native.py",
+        "retainedBoundary": "The witness covers the embedded file-to-RocksDB cut, continued authority on RocksDB, and reverse-sync rollback to file; it does not claim cross-machine consensus."
+      }
     }
   }
 }

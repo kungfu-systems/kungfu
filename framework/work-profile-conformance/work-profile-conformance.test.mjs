@@ -187,7 +187,7 @@ test('fails closed when retained evidence is missing or root-mismatched', () => 
   );
 });
 
-test('rejects forged authority roots and cross-domain evidence replay', () => {
+test('rejects forged domain authority while sharing generic runtime witnesses', () => {
   const forged = agentDeclaration();
   forged.bindings.domainProfileRoot = `sha256:${'9'.repeat(64)}`;
   forged.bindings.roleSchemaRoots.fact = `sha256:${'8'.repeat(64)}`;
@@ -211,11 +211,10 @@ test('rejects forged authority roots and cross-domain evidence replay', () => {
     Object.assign(evidence, source);
   }
   const replayResult = evaluateConformance(replay);
-  assert.equal(replayResult.verdict, 'profile-invalid');
-  assert.ok(
-    replayResult.diagnostics.some(({ code }) =>
-      code.endsWith('-evidence-semantic-mismatch'),
-    ),
+  assert.equal(replayResult.verdict, 'compatible');
+  assert.equal(
+    replay.behaviorEvidence[0].evidenceRoot,
+    week.behaviorEvidence[0].evidenceRoot,
   );
 });
 
@@ -267,59 +266,74 @@ test('distinguishes failed generic semantics from absent qualification evidence'
 test('blocks every unsupported Buildchain admission mode without an allowlist escape', () => {
   const absent = agentDeclaration();
   absent.buildchain.status = 'absent';
-  absent.buildchain.fresh = false;
-  bindPointer(
-    absent.buildchain,
-    '/buildchain/absent',
-    NEGATIVE.buildchain.absent,
-  );
+  absent.buildchain.evidenceRoot = null;
+  absent.buildchain.evidencePath = null;
+  absent.buildchain.evidencePointer = null;
   assert.equal(evaluateConformance(absent).verdict, 'unqualified');
 
   const stale = agentDeclaration();
   stale.buildchain.status = 'stale';
-  stale.buildchain.fresh = false;
-  bindPointer(stale.buildchain, '/buildchain/stale', NEGATIVE.buildchain.stale);
+  stale.buildchain.evidenceRoot = null;
+  stale.buildchain.evidencePath = null;
+  stale.buildchain.evidencePointer = null;
   assert.equal(evaluateConformance(stale).verdict, 'unqualified');
 
   const mismatch = agentDeclaration();
   mismatch.buildchain.status = 'mismatch';
-  mismatch.buildchain.sourceRoot = `sha256:${'f'.repeat(64)}`;
-  bindPointer(
-    mismatch.buildchain,
-    '/buildchain/mismatch',
-    NEGATIVE.buildchain.mismatch,
-  );
+  mismatch.buildchain.gateRoot = `sha256:${'f'.repeat(64)}`;
   assert.equal(evaluateConformance(mismatch).verdict, 'profile-invalid');
 
   const allowlisted = agentDeclaration();
   allowlisted.buildchain.manualAllowlist = true;
-  bindPointer(
-    allowlisted.buildchain,
-    '/buildchain/manual-allowlist',
-    NEGATIVE.buildchain['manual-allowlist'],
-  );
   assert.equal(evaluateConformance(allowlisted).verdict, 'profile-invalid');
 
   const incompatible = agentDeclaration();
   incompatible.buildchain.status = 'incompatible';
   incompatible.buildchain.compatible = false;
-  bindPointer(
-    incompatible.buildchain,
-    '/buildchain/incompatible',
-    NEGATIVE.buildchain.incompatible,
-  );
-  assert.equal(
-    evaluateConformance(incompatible).verdict,
-    'scenario-incompatible',
-  );
+  assert.equal(evaluateConformance(incompatible).verdict, 'profile-invalid');
 
-  const artifactMismatch = agentDeclaration();
-  artifactMismatch.buildchain.artifactRefs[0].evidenceRoot = `sha256:${'f'.repeat(64)}`;
-  const artifactResult = evaluateConformance(artifactMismatch);
+  const authorityMismatch = agentDeclaration();
+  authorityMismatch.buildchain.authorityRoot = `sha256:${'f'.repeat(64)}`;
+  const artifactResult = evaluateConformance(authorityMismatch);
   assert.equal(artifactResult.verdict, 'profile-invalid');
   assert.ok(
     artifactResult.diagnostics.some(
-      ({ code }) => code === 'buildchain-evidence-semantic-mismatch',
+      ({ code }) => code === 'buildchain-authority-evidence-mismatch',
+    ),
+  );
+
+  const unadmittedRuntime = agentDeclaration();
+  const providerSwitch = unadmittedRuntime.behaviorEvidence.find(
+    ({ case: caseId }) => caseId === 'provider-switch',
+  );
+  bindPointer(
+    providerSwitch,
+    '/behavior/external-effect-failed',
+    NEGATIVE.behavior['external-effect-failed'],
+  );
+  const unadmittedResult = evaluateConformance(unadmittedRuntime);
+  assert.equal(unadmittedResult.verdict, 'profile-invalid');
+  assert.ok(
+    unadmittedResult.diagnostics.some(
+      ({ code }) => code === 'buildchain-runtime-evidence-not-admitted',
+    ),
+  );
+
+  const revisionDrift = agentDeclaration();
+  const driftedProvider = revisionDrift.behaviorEvidence.find(
+    ({ case: caseId }) => caseId === 'provider-switch',
+  );
+  bindPointer(
+    driftedProvider,
+    '/buildchain/report-revision-drift',
+    NEGATIVE.buildchain['report-revision-drift'],
+  );
+  const revisionResult = evaluateConformance(revisionDrift);
+  assert.equal(revisionResult.verdict, 'profile-invalid');
+  assert.ok(
+    revisionResult.diagnostics.some(
+      ({ code }) =>
+        code === 'behavior-provider-switch-buildchain-revision-mismatch',
     ),
   );
 });
@@ -351,7 +365,7 @@ test('requires explicit relevant adapter and surface support', () => {
   assert.equal(evaluateConformance(omittedSurface).verdict, 'profile-invalid');
 });
 
-test('generated fault receipts bind exact identity and idempotence semantics', () => {
+test('generated fault witnesses execute the real Action Loop and bind implementation roots', () => {
   const retained = JSON.parse(
     fs.readFileSync(
       path.join(
@@ -361,21 +375,30 @@ test('generated fault receipts bind exact identity and idempotence semantics', (
       'utf8',
     ),
   );
-  for (const [scenarioId, scenario] of Object.entries(retained.scenarios)) {
-    const roots = new Set();
-    for (const [caseId, receipt] of Object.entries(scenario.behavior)) {
-      assert.equal(receipt.scenarioId, scenarioId);
-      assert.equal(receipt.case, caseId);
-      assert.equal(receipt.status, 'passed');
-      assert.equal(receipt.output.identityRoot, receipt.identityRoot);
-      assert.equal(receipt.output.resultIdentityRoot, receipt.identityRoot);
-      assert.equal(receipt.output.duplicateAuthority, false);
-      assert.equal(receipt.output.lifecycleFork, false);
-      assert.equal(receipt.output.idempotencyKey, receipt.input.idempotencyKey);
-      roots.add(receipt.identityRoot);
-    }
-    assert.equal(roots.size, 1);
+  for (const [caseId, witness] of Object.entries(retained.actionLoop)) {
+    assert.equal(witness.case, caseId);
+    assert.equal(witness.status, 'passed');
+    for (const [field, expected] of Object.entries(witness.expected))
+      assert.equal(witness.actual[field], expected);
+    assert.deepEqual(
+      witness.implementation.map(({ evidencePath }) => evidencePath),
+      [
+        'framework/action/action-loop.mjs',
+        'framework/action/action-loop-begin.mjs',
+        'framework/action/action-loop-settle.mjs',
+        'framework/action/action-loop-qualification-adapters.mjs',
+        'framework/action/action-loop.contract.json',
+      ],
+    );
   }
+  assert.deepEqual(retained.adapterNegative, {
+    schema: 'kungfu.action-loop.adapter-negative-witness/v0',
+    case: 'forged-receipt-root',
+    status: 'passed',
+    expectedCode: 'invalid-adapter-receipt',
+    actualCode: 'invalid-adapter-receipt',
+    writeOccurred: false,
+  });
 });
 
 test('rejects Core forks, parallel authority, and separate Assignment closure', () => {

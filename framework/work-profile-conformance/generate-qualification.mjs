@@ -1,11 +1,16 @@
 #!/usr/bin/env node
 // SPDX-License-Identifier: Apache-2.0
 
-import { execFileSync } from 'node:child_process';
 import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+
+import { executeQualificationActionLoop } from '../action/action-loop-qualification-adapters.mjs';
+import {
+  classifyPrecondition,
+  classifyRecovery,
+} from '../action/action-loop.mjs';
 
 const ROOT = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -23,13 +28,31 @@ const NEGATIVE_PATH = path.join(
   ROOT,
   'framework/work-profile-conformance/qualification/negative-witnesses.json',
 );
+const AUTHORITY_MANIFEST_PATH = path.join(
+  ROOT,
+  'framework/work-profile-conformance/authority-manifest.json',
+);
+const WORK_CONTROL_DECLARATION_PATH = path.join(
+  ROOT,
+  'extensions/work-control/qualification/work-profile-conformance.json',
+);
+const WORK_CONTROL_PROFILE_PATH = path.join(
+  ROOT,
+  'extensions/work-control/profile.json',
+);
 const RETAINED_RELATIVE = path
   .relative(ROOT, RETAINED_PATH)
   .split(path.sep)
   .join('/');
+const BUILDCHAIN_GATE =
+  'framework/work-profile-conformance/qualification/kfd-7-product-gate.json';
 const BUILDCHAIN_AUTHORITY = '.buildchain/alpha-contract-lock.json';
-const BUILDCHAIN_SOURCE =
-  '.buildchain/kfd/kfd-3/collaboration-interface.prebuild.json';
+const ACTION_LOOP_CONTRACT = 'framework/action/action-loop.contract.json';
+const ACTION_LOOP_FIXTURES = 'framework/action/action-loop-fixtures.json';
+const ACTION_LOOP_QUALIFICATION_ADAPTERS =
+  'framework/action/action-loop-qualification-adapters.mjs';
+const ACTION_LOOP_BEGIN = 'framework/action/action-loop-begin.mjs';
+const ACTION_LOOP_SETTLE = 'framework/action/action-loop-settle.mjs';
 const ACTION_GEOMETRY = 'framework/action/action-geometry.contract.json';
 const WORK_LIFECYCLE =
   'framework/work-lifecycle/kungfu-work-lifecycle-operation-matrix.contract.json';
@@ -39,6 +62,36 @@ const PLATFORMS = {
   python: 'framework/storage/python/kungfu_sdk/generated/work_lifecycle_v1.py',
   node: 'framework/storage/generated/work-lifecycle-v1.js',
   rust: 'crates/kungfu-sdk/src/generated/work_lifecycle_v1.rs',
+};
+
+const KFD_BEHAVIOR = {
+  'provider-switch': {
+    path: 'framework/agent-work/evidence/kfd-7/backend-migration.json',
+    category: 'backend-migration',
+    checks: [
+      'storage-backend-switch-delegation-declared',
+      'five-role-identity-conservation-witness',
+      'file-rocksdb-file-rollback',
+    ],
+  },
+  'projection-rebuild': {
+    path: 'framework/agent-work/evidence/kfd-7/export-import-rebuild.json',
+    category: 'export-import-rebuild',
+    checks: [
+      'projection-rebuild-from-native-journal',
+      'qualified-fact-export-import-bundle',
+      'tampered-bundle-fails-before-write',
+    ],
+  },
+  recovery: {
+    path: 'framework/agent-work/evidence/kfd-7/cold-start-continuation.json',
+    category: 'cold-start-continuation',
+    checks: [
+      'fresh-home-bootstrap-action',
+      'clean-home-continuation-from-qualified-export',
+      'clean-home-next-revision',
+    ],
+  },
 };
 
 const DOMAIN_BINDINGS = {
@@ -100,110 +153,103 @@ const sha256 = (bytes) =>
 const contentRoot = (value) => sha256(canonicalJson(value));
 const fileRoot = (relative) =>
   sha256(fs.readFileSync(path.join(ROOT, relative)));
+const generatedJsonRoot = (value) =>
+  sha256(`${JSON.stringify(value, null, 2)}\n`);
 const coordinate = (relative) => ({
   evidenceRoot: fileRoot(relative),
   evidencePath: relative,
   evidencePointer: null,
 });
+const readJson = (relative) =>
+  JSON.parse(fs.readFileSync(path.join(ROOT, relative), 'utf8'));
 
-function executeBehaviorCase(declaration, caseId) {
-  const identity = {
-    scenarioId: declaration.scenarioId,
-    domainProfileRoot: declaration.bindings.domainProfileRoot,
-    sourceRoot: declaration.bindings.sourceRoot,
-  };
-  const identityRoot = contentRoot(identity);
-  const input = {
-    schema: 'kungfu.work-profile-fault-input/v1',
-    case: caseId,
-    identityRoot,
-    idempotencyKey: `qualification:${declaration.scenarioId}:${caseId}`,
-    basisRevision: 7,
-  };
-  const common = {
-    identityRoot,
-    resultIdentityRoot: identityRoot,
-    idempotencyKey: input.idempotencyKey,
-    duplicateAuthority: false,
-    lifecycleFork: false,
-  };
-  const state = { effects: 0, committed: 0, provider: 'a', projection: true };
-  const operations = {
-    repeat: () => {
-      state.effects += 1;
-      state.effects += 0;
-      return { ...common, replay: 'same-receipt', effectCount: state.effects };
+async function executeActionLoopWitnesses() {
+  const contract = readJson(ACTION_LOOP_CONTRACT);
+  const execution = await executeQualificationActionLoop(contract);
+  const { bound, running, settled } = execution;
+  const cases = {
+    repeat: {
+      actual: classifyRecovery(contract, settled.envelope, [
+        ...settled.receipts,
+        { ...settled.receipts.at(-1) },
+      ]),
+      expected: { ok: true, code: 'already-settled' },
     },
-    crash: () => ({
-      ...common,
-      prepared: true,
-      settled: false,
-      recovery: 'resume',
-    }),
-    interrupted: () => {
-      state.committed += 1;
-      return {
-        ...common,
-        committedPrefix: state.committed,
-        missingSuffix: 1,
-        recovery: 'append-missing-suffix',
-      };
+    crash: {
+      actual: classifyRecovery(contract, running.envelope, running.receipts),
+      expected: { ok: true, code: 'resume', nextStep: 'seal-episode' },
     },
-    stale: () => ({ ...common, admitted: false, diagnostic: 'stale-cut' }),
-    'warrant-revoked': () => ({
-      ...common,
-      admitted: false,
-      diagnostic: 'warrant-revoked',
-    }),
-    'provider-switch': () => {
-      state.provider = 'b';
-      return {
-        ...common,
-        providerChanged: state.provider === 'b',
-        semanticIdentityChanged: false,
-      };
+    interrupted: {
+      actual: classifyRecovery(contract, bound.envelope, bound.receipts),
+      expected: { ok: true, code: 'resume', nextStep: 'open-episode' },
     },
-    'projection-rebuild': () => {
-      state.projection = false;
-      state.projection = true;
-      return {
-        ...common,
-        projectionDeleted: true,
-        rebuiltFromAuthority: state.projection,
-      };
+    stale: {
+      actual: classifyPrecondition(running.envelope, {
+        atlasCurrent: true,
+        warrantState: 'issued',
+        factRef: { cutRoot: `sha256:${'1'.repeat(64)}`, revision: 2 },
+      }),
+      expected: { ok: false, code: 'stale-ref' },
     },
-    'external-effect': () => ({
-      ...common,
-      receiptRequired: true,
-      unreceiptedEffectAdmitted: false,
-    }),
-    recovery: () => ({
-      ...common,
-      cleanRuntime: true,
-      importedExactRoots: true,
-    }),
+    'warrant-revoked': {
+      actual: classifyPrecondition(running.envelope, {
+        atlasCurrent: true,
+        warrantState: 'revoked',
+      }),
+      expected: { ok: false, code: 'warrant-revoked' },
+    },
+    'external-effect': {
+      actual: classifyPrecondition(running.envelope, {
+        atlasCurrent: true,
+        warrantState: 'issued',
+        externalEffect: 'unknown',
+      }),
+      expected: {
+        ok: false,
+        code: 'external-effect-unknown',
+        nextStep: 'inspect-external-effect',
+      },
+    },
   };
-  if (!operations[caseId]) throw new Error(`unknown behavior case: ${caseId}`);
-  const output = operations[caseId]();
+  const implementation = [
+    coordinate('framework/action/action-loop.mjs'),
+    coordinate(ACTION_LOOP_BEGIN),
+    coordinate(ACTION_LOOP_SETTLE),
+    coordinate(ACTION_LOOP_QUALIFICATION_ADAPTERS),
+    coordinate(ACTION_LOOP_CONTRACT),
+  ];
   return {
-    schema: 'kungfu.work-profile-fault-receipt/v1',
-    ...identity,
-    case: caseId,
-    status: 'passed',
-    identityRoot,
-    inputRoot: contentRoot(input),
-    outputRoot: contentRoot(output),
-    input,
-    output,
+    actionLoop: Object.fromEntries(
+      Object.entries(cases).map(([caseId, witness]) => {
+        for (const [field, expected] of Object.entries(witness.expected))
+          if (witness.actual[field] !== expected)
+            throw new Error(
+              `action-loop witness ${caseId} expected ${field}=${expected}, got ${witness.actual[field]}`,
+            );
+        const value = {
+          schema: 'kungfu.work-profile-runtime-behavior-witness/v1',
+          case: caseId,
+          status: 'passed',
+          implementation,
+          expected: witness.expected,
+          actual: witness.actual,
+        };
+        return [caseId, value];
+      }),
+    ),
+    adapterNegative: execution.adapterNegative,
   };
 }
 
-export function generateQualificationFixtures() {
+export async function generateQualificationFixtures() {
   const source = JSON.parse(fs.readFileSync(REFERENCE_PATH, 'utf8'));
+  const actionLoopExecution = await executeActionLoopWitnesses();
   const retained = {
     schema: 'kungfu.work-profile-generated-evidence/v1',
     generator: 'framework/work-profile-conformance/generate-qualification.mjs',
-    scenarios: {},
+    actionLoop: actionLoopExecution.actionLoop,
+    adapterNegative: actionLoopExecution.adapterNegative,
+    kfd7: KFD_BEHAVIOR,
   };
   const actionGeometryRoot = fileRoot(ACTION_GEOMETRY);
   const abstractionAuthorityRoot = fileRoot(WORK_LIFECYCLE);
@@ -212,11 +258,7 @@ export function generateQualificationFixtures() {
   );
   const workApiRoot = fileRoot(WORK_API);
   const buildchainAuthorityRoot = fileRoot(BUILDCHAIN_AUTHORITY);
-  const sourceRevision = execFileSync('git', ['rev-parse', 'HEAD'], {
-    cwd: ROOT,
-    encoding: 'utf8',
-  }).trim();
-  const artifactRefs = ['scripts/source-acceptance.mjs'].map(coordinate);
+  const buildchainGate = readJson(BUILDCHAIN_GATE);
 
   for (const scenario of source.scenarios) {
     const declaration = scenario.declaration;
@@ -249,31 +291,20 @@ export function generateQualificationFixtures() {
         statement: judgment.statement,
       });
 
-    const behavior = Object.fromEntries(
-      declaration.behaviorEvidence.map(({ case: caseId }) => [
-        caseId,
-        executeBehaviorCase(declaration, caseId),
-      ]),
-    );
-    const buildchain = {
-      status: 'admitted',
-      sourceRoot: declaration.bindings.sourceRoot,
-      fresh: true,
-      compatible: true,
-      manualAllowlist: false,
-      provider: 'kungfu-buildchain',
-      runner: 'source-acceptance',
-      sourceRevision,
-      authorityRoot: buildchainAuthorityRoot,
-      artifactRefs,
-    };
-    retained.scenarios[declaration.scenarioId] = { behavior, buildchain };
     for (const evidence of declaration.behaviorEvidence) {
-      const value = behavior[evidence.case];
       evidence.status = 'passed';
-      evidence.evidencePath = RETAINED_RELATIVE;
-      evidence.evidencePointer = `/scenarios/${declaration.scenarioId}/behavior/${evidence.case}`;
-      evidence.evidenceRoot = contentRoot(value);
+      const kfd = KFD_BEHAVIOR[evidence.case];
+      if (kfd) {
+        evidence.evidencePath = kfd.path;
+        evidence.evidencePointer = null;
+        evidence.evidenceRoot = fileRoot(kfd.path);
+      } else {
+        const value = retained.actionLoop[evidence.case];
+        if (!value) throw new Error(`unknown behavior case: ${evidence.case}`);
+        evidence.evidencePath = RETAINED_RELATIVE;
+        evidence.evidencePointer = `/actionLoop/${evidence.case}`;
+        evidence.evidenceRoot = contentRoot(value);
+      }
     }
     declaration.platformAdapters = Object.entries(PLATFORMS).map(
       ([platform, relative]) => ({
@@ -296,11 +327,19 @@ export function generateQualificationFixtures() {
       status: 'supported',
     }));
     declaration.buildchain = {
-      ...buildchain,
-      evidenceRoot: contentRoot(buildchain),
-      evidencePath: RETAINED_RELATIVE,
-      evidencePointer: `/scenarios/${declaration.scenarioId}/buildchain`,
+      status: buildchainGate.status,
+      compatible: buildchainGate.status === 'passed',
+      manualAllowlist: false,
+      provider: 'kungfu-buildchain',
+      runner: 'kfd-product-gate',
+      sourceRevision: buildchainGate.source.sha,
+      gateRoot: buildchainGate.gateRoot,
+      selfCertified: buildchainGate.selfCertified,
+      evidenceRoot: fileRoot(BUILDCHAIN_GATE),
+      evidencePath: BUILDCHAIN_GATE,
+      evidencePointer: null,
       authorityPath: BUILDCHAIN_AUTHORITY,
+      authorityRoot: buildchainAuthorityRoot,
     };
     declaration.workOperationModel = {
       authority: 'existing-work-api',
@@ -309,7 +348,7 @@ export function generateQualificationFixtures() {
       separateAssignment: false,
     };
   }
-  const agentBuildchain = retained.scenarios['agent-work-control'].buildchain;
+  const agentBuildchain = source.scenarios[0].declaration.buildchain;
   const negative = {
     schema: 'kungfu.work-profile-conformance-negative-witnesses/v1',
     behavior: {
@@ -326,12 +365,12 @@ export function generateQualificationFixtures() {
       },
     },
     buildchain: {
-      absent: { ...agentBuildchain, status: 'absent', fresh: false },
-      stale: { ...agentBuildchain, status: 'stale', fresh: false },
+      absent: { ...agentBuildchain, status: 'absent' },
+      stale: { ...agentBuildchain, status: 'stale' },
       mismatch: {
         ...agentBuildchain,
         status: 'mismatch',
-        sourceRoot: `sha256:${'f'.repeat(64)}`,
+        gateRoot: `sha256:${'f'.repeat(64)}`,
       },
       'manual-allowlist': { ...agentBuildchain, manualAllowlist: true },
       incompatible: {
@@ -339,39 +378,121 @@ export function generateQualificationFixtures() {
         status: 'incompatible',
         compatible: false,
       },
+      'report-revision-drift': {
+        ...readJson(KFD_BEHAVIOR['provider-switch'].path),
+        sourceSha: '0'.repeat(40),
+      },
     },
   };
-  return { reference: source, retained, negative };
+  const authorityPaths = new Set([
+    ACTION_GEOMETRY,
+    ACTION_LOOP_CONTRACT,
+    ACTION_LOOP_FIXTURES,
+    ACTION_LOOP_BEGIN,
+    ACTION_LOOP_SETTLE,
+    ACTION_LOOP_QUALIFICATION_ADAPTERS,
+    'framework/action/action-loop.mjs',
+    WORK_LIFECYCLE,
+    WORK_API,
+    RETAINED_RELATIVE,
+    path.relative(ROOT, REFERENCE_PATH).split(path.sep).join('/'),
+    BUILDCHAIN_GATE,
+    BUILDCHAIN_AUTHORITY,
+    ...Object.values(PLATFORMS),
+    ...Object.values(KFD_BEHAVIOR).map(({ path: relative }) => relative),
+  ]);
+  for (const binding of Object.values(DOMAIN_BINDINGS)) {
+    authorityPaths.add(binding.domainProfilePath);
+    authorityPaths.add(binding.sourcePath);
+    for (const relative of Object.values(binding.roleSchemaPaths))
+      authorityPaths.add(relative);
+  }
+  const referenceRelative = path
+    .relative(ROOT, REFERENCE_PATH)
+    .split(path.sep)
+    .join('/');
+  const authorityFiles = [...authorityPaths].sort().map((relative) => ({
+    path: relative,
+    sha256:
+      relative === referenceRelative
+        ? generatedJsonRoot(source)
+        : relative === RETAINED_RELATIVE
+          ? generatedJsonRoot(retained)
+          : fileRoot(relative),
+  }));
+  const authorityManifest = {
+    schema: 'kungfu.work-profile-conformance-authority-bundle/v1',
+    files: authorityFiles,
+    bundleRoot: contentRoot(authorityFiles),
+  };
+  return { reference: source, retained, negative, authorityManifest };
 }
 
 function writeJson(file, value) {
   fs.writeFileSync(file, `${JSON.stringify(value, null, 2)}\n`);
 }
 
-function main() {
+async function main() {
   const mode = process.argv[2] || '--check';
-  const generated = generateQualificationFixtures();
+  const generated = await generateQualificationFixtures();
   if (mode === '--write') {
     writeJson(REFERENCE_PATH, generated.reference);
     writeJson(RETAINED_PATH, generated.retained);
     writeJson(NEGATIVE_PATH, generated.negative);
+    writeJson(AUTHORITY_MANIFEST_PATH, generated.authorityManifest);
+    const workControlDeclaration = generated.reference.scenarios[0].declaration;
+    writeJson(WORK_CONTROL_DECLARATION_PATH, workControlDeclaration);
+    const workControlProfile = JSON.parse(
+      fs.readFileSync(WORK_CONTROL_PROFILE_PATH, 'utf8'),
+    );
+    workControlProfile.work = {
+      conformance: {
+        path: 'qualification/work-profile-conformance.json',
+        sha256: generatedJsonRoot(workControlDeclaration).slice(7),
+      },
+    };
+    writeJson(WORK_CONTROL_PROFILE_PATH, workControlProfile);
     return;
   }
   if (mode !== '--check') throw new Error(`unknown mode: ${mode}`);
   const actualReference = JSON.parse(fs.readFileSync(REFERENCE_PATH, 'utf8'));
   const actualRetained = JSON.parse(fs.readFileSync(RETAINED_PATH, 'utf8'));
   const actualNegative = JSON.parse(fs.readFileSync(NEGATIVE_PATH, 'utf8'));
+  const actualAuthorityManifest = JSON.parse(
+    fs.readFileSync(AUTHORITY_MANIFEST_PATH, 'utf8'),
+  );
   if (canonicalJson(actualReference) !== canonicalJson(generated.reference))
     throw new Error('generated reference scenarios are stale');
   if (canonicalJson(actualRetained) !== canonicalJson(generated.retained))
     throw new Error('generated retained evidence is stale');
   if (canonicalJson(actualNegative) !== canonicalJson(generated.negative))
     throw new Error('generated negative evidence is stale');
+  if (
+    canonicalJson(actualAuthorityManifest) !==
+    canonicalJson(generated.authorityManifest)
+  )
+    throw new Error('generated authority manifest is stale');
+  const workControlDeclaration = JSON.parse(
+    fs.readFileSync(WORK_CONTROL_DECLARATION_PATH, 'utf8'),
+  );
+  if (
+    canonicalJson(workControlDeclaration) !==
+    canonicalJson(generated.reference.scenarios[0].declaration)
+  )
+    throw new Error('Work Control conformance declaration is stale');
+  const workControlProfile = JSON.parse(
+    fs.readFileSync(WORK_CONTROL_PROFILE_PATH, 'utf8'),
+  );
+  if (
+    workControlProfile.work?.conformance?.sha256 !==
+    generatedJsonRoot(workControlDeclaration).slice(7)
+  )
+    throw new Error('Work Control conformance content reference is stale');
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   try {
-    main();
+    await main();
   } catch (error) {
     process.stderr.write(`[work-profile-qualification] ${error.message}\n`);
     process.exitCode = 1;

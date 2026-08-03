@@ -318,7 +318,7 @@
     "test:agent-review-continuation": "node scripts/require-shifu.mjs test:agent-review-continuation && node scripts/run-agent-review-continuation-tests.mjs",
     "test:native-kfx-admission": "node scripts/require-shifu.mjs test:native-kfx-admission && node scripts/run-native-kfx-admission-tests.mjs",
     "check:kfx-identity-neutral-authority": "node scripts/require-shifu.mjs check:kfx-identity-neutral-authority && node scripts/run-native-kfx-admission-tests.mjs --identity-neutral-only",
-    "test:profile-lifecycle": "node scripts/require-shifu.mjs test:profile-lifecycle && uv run --project framework/core --frozen node scripts/run-profile-lifecycle-tests.mjs",
+    "test:profile-lifecycle": "node scripts/require-shifu.mjs test:profile-lifecycle && uv run --project framework/core --frozen node scripts/run-profile-lifecycle-tests.mjs && node scripts/run-profile-lifecycle-tests.mjs --qualify-command-contract",
     "fix:profile-lifecycle-command-contract": "node scripts/require-shifu.mjs fix:profile-lifecycle-command-contract && uv run --project framework/core --frozen ruff format framework/core/src/python/kungfu/profile_sdk_support.py framework/core/src/python/kungfu/profile_sdk.py framework/core/src/python/kungfu/profile_composition.py framework/core/tests/python/test_profile_lifecycle_command_contract.py && biome check --write scripts/run-profile-lifecycle-tests.mjs",
     "qualify:profile-lifecycle-command-contract": "node scripts/require-shifu.mjs qualify:profile-lifecycle-command-contract && node scripts/run-profile-lifecycle-tests.mjs --qualify-command-contract",
     "test:agent-profile-sdk": "node scripts/require-shifu.mjs test:agent-profile-sdk && uv run --project framework/core --frozen node scripts/run-agent-profile-sdk-tests.mjs",

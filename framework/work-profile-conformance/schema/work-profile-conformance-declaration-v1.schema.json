@@ -151,26 +151,21 @@
     "buildchain": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["status", "sourceRoot", "evidenceRoot", "evidencePath", "evidencePointer", "fresh", "compatible", "manualAllowlist", "provider", "runner", "sourceRevision", "authorityRoot", "authorityPath", "artifactRefs"],
+      "required": ["status", "evidenceRoot", "evidencePath", "evidencePointer", "compatible", "manualAllowlist", "provider", "runner", "sourceRevision", "gateRoot", "selfCertified", "authorityRoot", "authorityPath"],
       "properties": {
-        "status": { "enum": ["admitted", "absent", "stale", "mismatch", "incompatible"] },
-        "sourceRoot": { "anyOf": [{ "$ref": "#/$defs/root" }, { "type": "null" }] },
+        "status": { "enum": ["passed", "absent", "stale", "mismatch", "incompatible"] },
         "evidenceRoot": { "anyOf": [{ "$ref": "#/$defs/root" }, { "type": "null" }] },
         "evidencePath": { "anyOf": [{ "$ref": "#/$defs/path" }, { "type": "null" }] },
         "evidencePointer": { "anyOf": [{ "$ref": "#/$defs/pointer" }, { "type": "null" }] },
-        "fresh": { "type": "boolean" },
         "compatible": { "type": "boolean" },
-        "manualAllowlist": { "type": "boolean" }
-        ,"provider": { "type": "string", "minLength": 1 }
-        ,"runner": { "type": "string", "minLength": 1 }
-        ,"sourceRevision": { "type": "string", "pattern": "^[0-9a-f]{40}$" }
-        ,"authorityRoot": { "$ref": "#/$defs/root" }
-        ,"authorityPath": { "$ref": "#/$defs/path" }
-        ,"artifactRefs": {
-          "type": "array",
-          "minItems": 1,
-          "items": { "$ref": "#/$defs/evidenceCoordinate" }
-        }
+        "manualAllowlist": { "type": "boolean" },
+        "provider": { "const": "kungfu-buildchain" },
+        "runner": { "const": "kfd-product-gate" },
+        "sourceRevision": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+        "gateRoot": { "$ref": "#/$defs/root" },
+        "selfCertified": { "const": false },
+        "authorityRoot": { "$ref": "#/$defs/root" },
+        "authorityPath": { "$ref": "#/$defs/path" }
       }
     },
     "workOperationModel": {

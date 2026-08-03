@@ -74,65 +74,65 @@
           {
             "case": "repeat",
             "status": "passed",
-            "evidenceRoot": "sha256:0599bc3e9116c1baaa0dfe3cfb436258ff4c15df972d62b78581f39aa9ec226b",
+            "evidenceRoot": "sha256:e391e08a343cb909ff3baa83d2fca97d052d0a8f3137d39a47dc60cd291c2365",
             "evidencePath": "framework/work-profile-conformance/qualification/retained-witnesses.json",
-            "evidencePointer": "/scenarios/agent-work-control/behavior/repeat"
+            "evidencePointer": "/actionLoop/repeat"
           },
           {
             "case": "crash",
             "status": "passed",
-            "evidenceRoot": "sha256:076d5ae9a3129c68dd74382b5cbf6dbb0e83382879c874eb162bd92f0a321295",
+            "evidenceRoot": "sha256:9a3c6fe84eda71b8e49060b6b71a563aa0d8c83143da60877c98e20afcab3dde",
             "evidencePath": "framework/work-profile-conformance/qualification/retained-witnesses.json",
-            "evidencePointer": "/scenarios/agent-work-control/behavior/crash"
+            "evidencePointer": "/actionLoop/crash"
           },
           {
             "case": "interrupted",
             "status": "passed",
-            "evidenceRoot": "sha256:98b1d38a483000c5ee501a8c215c9fb506795df6409858be3157e645a6c63ee9",
+            "evidenceRoot": "sha256:dd6bb5286b7f7d97acc13b7a92632f7cf57274b0e8270bf89c009d7ede131ba0",
             "evidencePath": "framework/work-profile-conformance/qualification/retained-witnesses.json",
-            "evidencePointer": "/scenarios/agent-work-control/behavior/interrupted"
+            "evidencePointer": "/actionLoop/interrupted"
           },
           {
             "case": "stale",
             "status": "passed",
-            "evidenceRoot": "sha256:a688b3b545adfe1de6067489353df8f73a0487eb25210559e139cc2c1188a8d5",
+            "evidenceRoot": "sha256:ed3937043a170b1038390d41d81adeb31bde1f25d05b95b20b70c56690a5d9c3",
             "evidencePath": "framework/work-profile-conformance/qualification/retained-witnesses.json",
-            "evidencePointer": "/scenarios/agent-work-control/behavior/stale"
+            "evidencePointer": "/actionLoop/stale"
           },
           {
             "case": "warrant-revoked",
             "status": "passed",
-            "evidenceRoot": "sha256:257cb8071fc0637fd8bb1eb9fd3d6c6e4e392a4bcdd78c3512b5a0967e4dfa3d",
+            "evidenceRoot": "sha256:16783aff83f4dd5c59855455b29591b043ac912eb2705ee51eeb8ba9db56c8aa",
             "evidencePath": "framework/work-profile-conformance/qualification/retained-witnesses.json",
-            "evidencePointer": "/scenarios/agent-work-control/behavior/warrant-revoked"
+            "evidencePointer": "/actionLoop/warrant-revoked"
           },
           {
             "case": "provider-switch",
             "status": "passed",
-            "evidenceRoot": "sha256:3b92f5674bd94a82dcbef9e4578f4b0e8e09df3a1e73e90e6ea6e4e76c96f6df",
-            "evidencePath": "framework/work-profile-conformance/qualification/retained-witnesses.json",
-            "evidencePointer": "/scenarios/agent-work-control/behavior/provider-switch"
+            "evidenceRoot": "sha256:010c067c6a69f3f3ce7b7b8b614c543ff46efe03c7feae964049311f3fd2cc36",
+            "evidencePath": "framework/agent-work/evidence/kfd-7/backend-migration.json",
+            "evidencePointer": null
           },
           {
             "case": "projection-rebuild",
             "status": "passed",
-            "evidenceRoot": "sha256:7a6d14b8415ac42764b6c3fa43216724af443e259c24ca495962932f8661b140",
-            "evidencePath": "framework/work-profile-conformance/qualification/retained-witnesses.json",
-            "evidencePointer": "/scenarios/agent-work-control/behavior/projection-rebuild"
+            "evidenceRoot": "sha256:6c1f21d0a87feea500b56f8845a9651dae29ea7be1520720642416561886d764",
+            "evidencePath": "framework/agent-work/evidence/kfd-7/export-import-rebuild.json",
+            "evidencePointer": null
           },
           {
             "case": "external-effect",
             "status": "passed",
-            "evidenceRoot": "sha256:3cb522c1e6d1e097540d66b80afe40fbbf83133876af848bfd63d7ba560f188f",
+            "evidenceRoot": "sha256:b9f6a04cbe4cf6d2d6b72532e6e330a8ee20afdff707d0cd854093d6b6c9f1e3",
             "evidencePath": "framework/work-profile-conformance/qualification/retained-witnesses.json",
-            "evidencePointer": "/scenarios/agent-work-control/behavior/external-effect"
+            "evidencePointer": "/actionLoop/external-effect"
           },
           {
             "case": "recovery",
             "status": "passed",
-            "evidenceRoot": "sha256:340813ba77a01f678aaf812d42fdb641f655dda0768d35c0250571af65088b52",
-            "evidencePath": "framework/work-profile-conformance/qualification/retained-witnesses.json",
-            "evidencePointer": "/scenarios/agent-work-control/behavior/recovery"
+            "evidenceRoot": "sha256:3e707743ceba9a39a31de4d0a2b7df99a474c4a9b4e5b85213bed45ce0ac9966",
+            "evidencePath": "framework/agent-work/evidence/kfd-7/cold-start-continuation.json",
+            "evidencePointer": null
           }
         ],
         "platformAdapters": [
@@ -192,26 +192,19 @@
           }
         ],
         "buildchain": {
-          "status": "admitted",
-          "sourceRoot": "sha256:be4c92b368d0b015b78d1a67a1087c2a11c9f85eaebfc8c203ad695ac6ba3e4d",
-          "fresh": true,
+          "status": "passed",
           "compatible": true,
           "manualAllowlist": false,
           "provider": "kungfu-buildchain",
-          "runner": "source-acceptance",
-          "sourceRevision": "9b37767a0e1aa5516a6719b8398e9099b5a82c7b",
-          "authorityRoot": "sha256:6e92d2246c3ffe4d14c10dd7286f60c50a2266e619320b7e9dc6cb892efc8a57",
-          "artifactRefs": [
-            {
-              "evidenceRoot": "sha256:07abbeffd6b47f5d0aa25625b74b7e6d2aa4d67b84f10d18e859a5a31a3880bb",
-              "evidencePath": "scripts/source-acceptance.mjs",
-              "evidencePointer": null
-            }
-          ],
-          "evidenceRoot": "sha256:d6b01774e8127c3e407084e6a55d75c185b426fcd5c8ec462435d687ac16c9b9",
-          "evidencePath": "framework/work-profile-conformance/qualification/retained-witnesses.json",
-          "evidencePointer": "/scenarios/agent-work-control/buildchain",
-          "authorityPath": ".buildchain/alpha-contract-lock.json"
+          "runner": "kfd-product-gate",
+          "sourceRevision": "ec3b0c843ad271a34450a69a2da2e538f404f3ce",
+          "gateRoot": "sha256:cd877313251ce13512d480672850733ef70eb10f1c865523b89a21e9084fef0d",
+          "selfCertified": false,
+          "evidenceRoot": "sha256:8c06294997064e15d403a286ec9e2c37564662a4163e371ae199bfe89fe4fe21",
+          "evidencePath": "framework/work-profile-conformance/qualification/kfd-7-product-gate.json",
+          "evidencePointer": null,
+          "authorityPath": ".buildchain/alpha-contract-lock.json",
+          "authorityRoot": "sha256:6e92d2246c3ffe4d14c10dd7286f60c50a2266e619320b7e9dc6cb892efc8a57"
         },
         "workOperationModel": {
           "authority": "existing-work-api",
@@ -308,65 +301,65 @@
           {
             "case": "repeat",
             "status": "passed",
-            "evidenceRoot": "sha256:493a8b702c1bfc8a92dbab582cc5a6095b6e829c91f6d3ba4886c884ae60b1b2",
+            "evidenceRoot": "sha256:e391e08a343cb909ff3baa83d2fca97d052d0a8f3137d39a47dc60cd291c2365",
             "evidencePath": "framework/work-profile-conformance/qualification/retained-witnesses.json",
-            "evidencePointer": "/scenarios/week-day-action/behavior/repeat"
+            "evidencePointer": "/actionLoop/repeat"
           },
           {
             "case": "crash",
             "status": "passed",
-            "evidenceRoot": "sha256:887b8fe9c18229c462ae3b0354d711fe52b78f7a1c491d2aada90a2e7cd61a7c",
+            "evidenceRoot": "sha256:9a3c6fe84eda71b8e49060b6b71a563aa0d8c83143da60877c98e20afcab3dde",
             "evidencePath": "framework/work-profile-conformance/qualification/retained-witnesses.json",
-            "evidencePointer": "/scenarios/week-day-action/behavior/crash"
+            "evidencePointer": "/actionLoop/crash"
           },
           {
             "case": "interrupted",
             "status": "passed",
-            "evidenceRoot": "sha256:e576234ae07b023cf56ab6e1ddea4c2cd6d3f386c125bddb3476880a8a173da1",
+            "evidenceRoot": "sha256:dd6bb5286b7f7d97acc13b7a92632f7cf57274b0e8270bf89c009d7ede131ba0",
             "evidencePath": "framework/work-profile-conformance/qualification/retained-witnesses.json",
-            "evidencePointer": "/scenarios/week-day-action/behavior/interrupted"
+            "evidencePointer": "/actionLoop/interrupted"
           },
           {
             "case": "stale",
             "status": "passed",
-            "evidenceRoot": "sha256:83b8a32383bf1ca932b8b0c6e09a72ee8a9022d20d0fe6d116d78afa7990a602",
+            "evidenceRoot": "sha256:ed3937043a170b1038390d41d81adeb31bde1f25d05b95b20b70c56690a5d9c3",
             "evidencePath": "framework/work-profile-conformance/qualification/retained-witnesses.json",
-            "evidencePointer": "/scenarios/week-day-action/behavior/stale"
+            "evidencePointer": "/actionLoop/stale"
           },
           {
             "case": "warrant-revoked",
             "status": "passed",
-            "evidenceRoot": "sha256:1b4c6522744d13ab3f13b29cf77ae06242c8fb099fa0e48d0e0abc2715c438bc",
+            "evidenceRoot": "sha256:16783aff83f4dd5c59855455b29591b043ac912eb2705ee51eeb8ba9db56c8aa",
             "evidencePath": "framework/work-profile-conformance/qualification/retained-witnesses.json",
-            "evidencePointer": "/scenarios/week-day-action/behavior/warrant-revoked"
+            "evidencePointer": "/actionLoop/warrant-revoked"
           },
           {
             "case": "provider-switch",
             "status": "passed",
-            "evidenceRoot": "sha256:597da3b414cb0324cc50560bf454efd64f17fdc3b24ac95f3f2d072364a37619",
-            "evidencePath": "framework/work-profile-conformance/qualification/retained-witnesses.json",
-            "evidencePointer": "/scenarios/week-day-action/behavior/provider-switch"
+            "evidenceRoot": "sha256:010c067c6a69f3f3ce7b7b8b614c543ff46efe03c7feae964049311f3fd2cc36",
+            "evidencePath": "framework/agent-work/evidence/kfd-7/backend-migration.json",
+            "evidencePointer": null
           },
           {
             "case": "projection-rebuild",
             "status": "passed",
-            "evidenceRoot": "sha256:09b126454f32c1ce155eb8a945995c126b5489a8a03d1469f6def1900361e579",
-            "evidencePath": "framework/work-profile-conformance/qualification/retained-witnesses.json",
-            "evidencePointer": "/scenarios/week-day-action/behavior/projection-rebuild"
+            "evidenceRoot": "sha256:6c1f21d0a87feea500b56f8845a9651dae29ea7be1520720642416561886d764",
+            "evidencePath": "framework/agent-work/evidence/kfd-7/export-import-rebuild.json",
+            "evidencePointer": null
           },
           {
             "case": "external-effect",
             "status": "passed",
-            "evidenceRoot": "sha256:c9accdbf9f9df656c000c87d899ef8a54c011e3d3b3767dcac526d0613cd765d",
+            "evidenceRoot": "sha256:b9f6a04cbe4cf6d2d6b72532e6e330a8ee20afdff707d0cd854093d6b6c9f1e3",
             "evidencePath": "framework/work-profile-conformance/qualification/retained-witnesses.json",
-            "evidencePointer": "/scenarios/week-day-action/behavior/external-effect"
+            "evidencePointer": "/actionLoop/external-effect"
           },
           {
             "case": "recovery",
             "status": "passed",
-            "evidenceRoot": "sha256:4ca8310a2cf649578236a90c402ba0809e3d950e0634e2389f79dfe587fb3f92",
-            "evidencePath": "framework/work-profile-conformance/qualification/retained-witnesses.json",
-            "evidencePointer": "/scenarios/week-day-action/behavior/recovery"
+            "evidenceRoot": "sha256:3e707743ceba9a39a31de4d0a2b7df99a474c4a9b4e5b85213bed45ce0ac9966",
+            "evidencePath": "framework/agent-work/evidence/kfd-7/cold-start-continuation.json",
+            "evidencePointer": null
           }
         ],
         "platformAdapters": [
@@ -426,26 +419,19 @@
           }
         ],
         "buildchain": {
-          "status": "admitted",
-          "sourceRoot": "sha256:4d8391378a77728c2dd5acda64c5c0c0ddad1d94551206b4d46895540e3e5779",
-          "fresh": true,
+          "status": "passed",
           "compatible": true,
           "manualAllowlist": false,
           "provider": "kungfu-buildchain",
-          "runner": "source-acceptance",
-          "sourceRevision": "9b37767a0e1aa5516a6719b8398e9099b5a82c7b",
-          "authorityRoot": "sha256:6e92d2246c3ffe4d14c10dd7286f60c50a2266e619320b7e9dc6cb892efc8a57",
-          "artifactRefs": [
-            {
-              "evidenceRoot": "sha256:07abbeffd6b47f5d0aa25625b74b7e6d2aa4d67b84f10d18e859a5a31a3880bb",
-              "evidencePath": "scripts/source-acceptance.mjs",
-              "evidencePointer": null
-            }
-          ],
-          "evidenceRoot": "sha256:549ea65b7cd7bd781ecc104a88d2f1ac63d7320408731436c3f1a532fc609724",
-          "evidencePath": "framework/work-profile-conformance/qualification/retained-witnesses.json",
-          "evidencePointer": "/scenarios/week-day-action/buildchain",
-          "authorityPath": ".buildchain/alpha-contract-lock.json"
+          "runner": "kfd-product-gate",
+          "sourceRevision": "ec3b0c843ad271a34450a69a2da2e538f404f3ce",
+          "gateRoot": "sha256:cd877313251ce13512d480672850733ef70eb10f1c865523b89a21e9084fef0d",
+          "selfCertified": false,
+          "evidenceRoot": "sha256:8c06294997064e15d403a286ec9e2c37564662a4163e371ae199bfe89fe4fe21",
+          "evidencePath": "framework/work-profile-conformance/qualification/kfd-7-product-gate.json",
+          "evidencePointer": null,
+          "authorityPath": ".buildchain/alpha-contract-lock.json",
+          "authorityRoot": "sha256:6e92d2246c3ffe4d14c10dd7286f60c50a2266e619320b7e9dc6cb892efc8a57"
         },
         "workOperationModel": {
           "authority": "existing-work-api",
@@ -544,65 +530,65 @@
           {
             "case": "repeat",
             "status": "passed",
-            "evidenceRoot": "sha256:4d305c2daa1d16204a741a450fa39dfdd4b112ada6ab69fdac3174ad1c7f2ada",
+            "evidenceRoot": "sha256:e391e08a343cb909ff3baa83d2fca97d052d0a8f3137d39a47dc60cd291c2365",
             "evidencePath": "framework/work-profile-conformance/qualification/retained-witnesses.json",
-            "evidencePointer": "/scenarios/course-production/behavior/repeat"
+            "evidencePointer": "/actionLoop/repeat"
           },
           {
             "case": "crash",
             "status": "passed",
-            "evidenceRoot": "sha256:1c55ed980a7216da4e252ff2d759c9ec5cc99a5264a6e76f595f04922e8e4767",
+            "evidenceRoot": "sha256:9a3c6fe84eda71b8e49060b6b71a563aa0d8c83143da60877c98e20afcab3dde",
             "evidencePath": "framework/work-profile-conformance/qualification/retained-witnesses.json",
-            "evidencePointer": "/scenarios/course-production/behavior/crash"
+            "evidencePointer": "/actionLoop/crash"
           },
           {
             "case": "interrupted",
             "status": "passed",
-            "evidenceRoot": "sha256:876df67b9d14fe68de60d569fa2082aab8d17dd38327e7ec360cc1f1301c754c",
+            "evidenceRoot": "sha256:dd6bb5286b7f7d97acc13b7a92632f7cf57274b0e8270bf89c009d7ede131ba0",
             "evidencePath": "framework/work-profile-conformance/qualification/retained-witnesses.json",
-            "evidencePointer": "/scenarios/course-production/behavior/interrupted"
+            "evidencePointer": "/actionLoop/interrupted"
           },
           {
             "case": "stale",
             "status": "passed",
-            "evidenceRoot": "sha256:2ad480c25e4da7e907175c799deff670cbe7c6735f20fde3126d7662116e1b0b",
+            "evidenceRoot": "sha256:ed3937043a170b1038390d41d81adeb31bde1f25d05b95b20b70c56690a5d9c3",
             "evidencePath": "framework/work-profile-conformance/qualification/retained-witnesses.json",
-            "evidencePointer": "/scenarios/course-production/behavior/stale"
+            "evidencePointer": "/actionLoop/stale"
           },
           {
             "case": "warrant-revoked",
             "status": "passed",
-            "evidenceRoot": "sha256:08a6dba66225a7e754f7339c38356c30c39a3c652ccb3446c5d2d5640b2420cf",
+            "evidenceRoot": "sha256:16783aff83f4dd5c59855455b29591b043ac912eb2705ee51eeb8ba9db56c8aa",
             "evidencePath": "framework/work-profile-conformance/qualification/retained-witnesses.json",
-            "evidencePointer": "/scenarios/course-production/behavior/warrant-revoked"
+            "evidencePointer": "/actionLoop/warrant-revoked"
           },
           {
             "case": "provider-switch",
             "status": "passed",
-            "evidenceRoot": "sha256:a7146fe079abd83a692499ab4dbd4a04abe949ac2883687f548c78c7f7aafc97",
-            "evidencePath": "framework/work-profile-conformance/qualification/retained-witnesses.json",
-            "evidencePointer": "/scenarios/course-production/behavior/provider-switch"
+            "evidenceRoot": "sha256:010c067c6a69f3f3ce7b7b8b614c543ff46efe03c7feae964049311f3fd2cc36",
+            "evidencePath": "framework/agent-work/evidence/kfd-7/backend-migration.json",
+            "evidencePointer": null
           },
           {
             "case": "projection-rebuild",
             "status": "passed",
-            "evidenceRoot": "sha256:b7abe3a3451435b7294ed5efae2631af57f8e209d6390dd8a1f7fc106d5758e1",
-            "evidencePath": "framework/work-profile-conformance/qualification/retained-witnesses.json",
-            "evidencePointer": "/scenarios/course-production/behavior/projection-rebuild"
+            "evidenceRoot": "sha256:6c1f21d0a87feea500b56f8845a9651dae29ea7be1520720642416561886d764",
+            "evidencePath": "framework/agent-work/evidence/kfd-7/export-import-rebuild.json",
+            "evidencePointer": null
           },
           {
             "case": "external-effect",
             "status": "passed",
-            "evidenceRoot": "sha256:f7848df0db206ae4f2aab4e75ec9bfc18917aa518b975e269978aa6640af4266",
+            "evidenceRoot": "sha256:b9f6a04cbe4cf6d2d6b72532e6e330a8ee20afdff707d0cd854093d6b6c9f1e3",
             "evidencePath": "framework/work-profile-conformance/qualification/retained-witnesses.json",
-            "evidencePointer": "/scenarios/course-production/behavior/external-effect"
+            "evidencePointer": "/actionLoop/external-effect"
           },
           {
             "case": "recovery",
             "status": "passed",
-            "evidenceRoot": "sha256:e7eac8f8046b7afad41d072ce631e64b8f935e406db07b93cdaa00e09be9e2a6",
-            "evidencePath": "framework/work-profile-conformance/qualification/retained-witnesses.json",
-            "evidencePointer": "/scenarios/course-production/behavior/recovery"
+            "evidenceRoot": "sha256:3e707743ceba9a39a31de4d0a2b7df99a474c4a9b4e5b85213bed45ce0ac9966",
+            "evidencePath": "framework/agent-work/evidence/kfd-7/cold-start-continuation.json",
+            "evidencePointer": null
           }
         ],
         "platformAdapters": [
@@ -662,26 +648,19 @@
           }
         ],
         "buildchain": {
-          "status": "admitted",
-          "sourceRoot": "sha256:4d50257e275199010ad26546662e6b13c589ad53fff1634e10763f2a8c16994f",
-          "fresh": true,
+          "status": "passed",
           "compatible": true,
           "manualAllowlist": false,
           "provider": "kungfu-buildchain",
-          "runner": "source-acceptance",
-          "sourceRevision": "9b37767a0e1aa5516a6719b8398e9099b5a82c7b",
-          "authorityRoot": "sha256:6e92d2246c3ffe4d14c10dd7286f60c50a2266e619320b7e9dc6cb892efc8a57",
-          "artifactRefs": [
-            {
-              "evidenceRoot": "sha256:07abbeffd6b47f5d0aa25625b74b7e6d2aa4d67b84f10d18e859a5a31a3880bb",
-              "evidencePath": "scripts/source-acceptance.mjs",
-              "evidencePointer": null
-            }
-          ],
-          "evidenceRoot": "sha256:9bb44c315f5978d4707368b79abf0b8fa37b86810b22098b9c7da561151a6d0c",
-          "evidencePath": "framework/work-profile-conformance/qualification/retained-witnesses.json",
-          "evidencePointer": "/scenarios/course-production/buildchain",
-          "authorityPath": ".buildchain/alpha-contract-lock.json"
+          "runner": "kfd-product-gate",
+          "sourceRevision": "ec3b0c843ad271a34450a69a2da2e538f404f3ce",
+          "gateRoot": "sha256:cd877313251ce13512d480672850733ef70eb10f1c865523b89a21e9084fef0d",
+          "selfCertified": false,
+          "evidenceRoot": "sha256:8c06294997064e15d403a286ec9e2c37564662a4163e371ae199bfe89fe4fe21",
+          "evidencePath": "framework/work-profile-conformance/qualification/kfd-7-product-gate.json",
+          "evidencePointer": null,
+          "authorityPath": ".buildchain/alpha-contract-lock.json",
+          "authorityRoot": "sha256:6e92d2246c3ffe4d14c10dd7286f60c50a2266e619320b7e9dc6cb892efc8a57"
         },
         "workOperationModel": {
           "authority": "existing-work-api",
