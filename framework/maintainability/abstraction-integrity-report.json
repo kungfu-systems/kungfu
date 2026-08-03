@@ -561,6 +561,15 @@
       "paths": [
         "scripts/portable-atlas-bundle.mjs"
       ]
+    },
+    {
+      "owner": "shifu/conan-cache",
+      "paths": [
+        "scripts/shifu-conan-hit-evidence.mjs",
+        "scripts/shifu-conan-hit-evidence.test.mjs",
+        "scripts/shifu-conan-legacy.mjs",
+        "scripts/shifu-conan-legacy.test.mjs"
+      ]
     }
   ],
   "publicImports": [
@@ -572,7 +581,7 @@
     "kungfu.runtime_broker.NativeReadinessAuthority",
     "kungfu.runtime_service.ProcessRuntimeHost"
   ],
-  "reportRoot": "sha256:7f082c21ad01c927609ebdd1992d39daefcbaba3e743051dba2522b844db2c9a",
+  "reportRoot": "sha256:98c784e2658adf03986d1c297173be78366e2ed485bb9aa9c621b23a5e05b024",
   "schema": "kungfu.abstraction-integrity-report/v1",
   "sourceRoot": "sha256:86620468ddfe32e25851cf3a08098fece816f784e0a9ebcfae9625afcaf946f3",
   "summary": {
