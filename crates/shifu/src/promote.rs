@@ -26,13 +26,15 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 #[cfg(not(windows))]
 use std::process::Stdio;
+use std::time::{SystemTime, UNIX_EPOCH};
 
 use shifu_core::{bootstrap, host, json, style};
 
 use crate::artifact_catalog::{
-    automatic, compact_branch, git_relation, json_escape, product_mainline_ref,
-    select_unique_automatic, short_sha, state_for, write_promotion_receipt, GitRelation,
-    SelectionError, CURRENT_REGISTRATION_RELATIVE,
+    adopted_build_meta, adopted_installed_receipt, adopted_result, automatic, compact_branch,
+    git_relation, json_escape, product_mainline_ref, select_unique_automatic, short_sha, state_for,
+    write_promotion_receipt, GitRelation, InstalledAdoption, SelectionError,
+    CURRENT_REGISTRATION_RELATIVE,
 };
 use crate::native_update::{artifact_sha256, local_artifact_identity_valid};
 use crate::{envfile, native_update, util};
@@ -1055,6 +1057,178 @@ fn launch_product(installed: &Path) {
             style::yellow(&format!("promoted, but launching failed: {e}"))
         ),
     }
+}
+
+fn inspect_installed_adoption_at(
+    entry: &BuildEntry,
+    registry: &Path,
+    target_dir: &Path,
+) -> Result<InstalledAdoption, String> {
+    if entry.kind != "app" {
+        return Err("installed adoption currently requires a macOS app candidate".to_string());
+    }
+    if registry.join("installed.meta.env").exists() {
+        return Err("installed Product already has a Shifu receipt".to_string());
+    }
+    let app = target_dir.join(&entry.artifact);
+    let resources = app.join("Contents/Resources");
+    let build = read_document(&resources.join("kungfu/kungfubuildinfo.json"))?
+        .ok_or_else(|| "installed Product has no build identity".to_string())?;
+    let release = read_document(&resources.join("upgrade/kungfu-release-manifest.json"))?
+        .ok_or_else(|| "installed Product has no release manifest".to_string())?;
+    let source_commit = build
+        .get("git")
+        .map(|git| git.str_of("revision").to_string())
+        .unwrap_or_default();
+    if source_commit.len() != 40
+        || !source_commit.bytes().all(|byte| byte.is_ascii_hexdigit())
+        || release.str_of("sourceCommit") != source_commit
+        || !product_app_manifests_valid(&app, &source_commit)?
+    {
+        return Err("installed Product manifests do not bind one exact source commit".to_string());
+    }
+    let product_version = release.str_of("productVersion").to_string();
+    let desktop_release_cut_root = release.str_of("releaseCutRoot").to_string();
+    let desktop_platform_slice_root = release.str_of("platformSliceRoot").to_string();
+    if product_version.is_empty()
+        || !valid_root(&desktop_release_cut_root)
+        || !valid_root(&desktop_platform_slice_root)
+        || release
+            .get("releaseCut")
+            .and_then(|cut| cut.get("publicationPolicy"))
+            .map(|policy| policy.str_of("trustDomain"))
+            != Some("shifu-local")
+    {
+        return Err("installed Product release manifest has no exact local Cut".to_string());
+    }
+    let native_updater = resources.join("kungfu/kungfu");
+    if !native_updater.is_file() {
+        return Err("installed Product has no native updater".to_string());
+    }
+    let output = Command::new(&native_updater)
+        .args(["update", "status", "--json"])
+        .output()
+        .map_err(|error| format!("cannot inspect installed native inventory: {error}"))?;
+    if !output.status.success() {
+        return Err("installed native inventory status failed".to_string());
+    }
+    let status = json::parse(&String::from_utf8_lossy(&output.stdout))
+        .map_err(|error| format!("installed native inventory returned invalid JSON: {error}"))?;
+    let selected = status
+        .get("frontendInventory")
+        .and_then(|inventory| inventory.get("selected"))
+        .ok_or_else(|| "installed native inventory has no selected image".to_string())?;
+    let release_cut_root = selected.str_of("releaseCutRoot").to_string();
+    let platform_slice_root = selected.str_of("platformSliceRoot").to_string();
+    let native_receipt_root = status.str_of("nativeReceiptRoot").to_string();
+    let native_manifest_path =
+        PathBuf::from(selected.str_of("productRoot")).join("upgrade/kungfu-release-manifest.json");
+    let native_manifest = read_document(&native_manifest_path)?
+        .ok_or_else(|| "selected native image has no release manifest".to_string())?;
+    if !valid_root(&release_cut_root)
+        || !valid_root(&platform_slice_root)
+        || !valid_root(&native_receipt_root)
+        || native_manifest.str_of("sourceCommit") != source_commit
+        || native_manifest.str_of("productVersion") != product_version
+        || native_manifest.str_of("releaseCutRoot") != release_cut_root
+        || native_manifest.str_of("platformSliceRoot") != platform_slice_root
+        || native_manifest
+            .get("releaseCut")
+            .and_then(|cut| cut.get("publicationPolicy"))
+            .map(|policy| policy.str_of("trustDomain"))
+            != Some("shifu-local")
+    {
+        return Err(
+            "installed desktop and native inventory do not share one exact source identity"
+                .to_string(),
+        );
+    }
+    let artifact_digest = artifact_sha256(&app)?;
+    let build_id = format!(
+        "adopted-{}-{}",
+        &source_commit[..12],
+        &artifact_digest[..12]
+    );
+    Ok(InstalledAdoption {
+        app,
+        artifact: entry.artifact.clone(),
+        build_id,
+        source_commit,
+        artifact_digest,
+        product_version,
+        release_cut_root,
+        platform_slice_root,
+        native_receipt_root,
+        native_updater_digest: artifact_sha256(&native_updater)?,
+        native_updater,
+    })
+}
+
+fn adopt_installed_product_at(
+    entry: &BuildEntry,
+    execute: bool,
+    registry: &Path,
+    target_dir: &Path,
+) -> Result<String, String> {
+    let adoption = inspect_installed_adoption_at(entry, registry, target_dir)?;
+    if execute {
+        fs::create_dir_all(registry)
+            .map_err(|error| format!("cannot create Product registry: {error}"))?;
+        let slot = registry.join(&adoption.build_id);
+        if slot.exists() {
+            let snapshot = slot.join(&adoption.artifact);
+            let expected_meta = adopted_build_meta(&adoption);
+            if fs::read_to_string(slot.join("meta.env")).ok().as_deref()
+                != Some(expected_meta.as_str())
+                || !tree_exact(&adoption.app, &snapshot)?
+                || artifact_sha256(&snapshot)? != adoption.artifact_digest
+            {
+                return Err("installed adoption coordinate exists with different bytes".to_string());
+            }
+        } else {
+            let staged = registry.join(format!(
+                ".{}.tmp-{}-{}",
+                adoption.build_id,
+                std::process::id(),
+                SystemTime::now()
+                    .duration_since(UNIX_EPOCH)
+                    .unwrap_or_default()
+                    .as_nanos()
+            ));
+            fs::create_dir_all(&staged)
+                .map_err(|error| format!("cannot stage installed adoption: {error}"))?;
+            let staged_app = staged.join(&adoption.artifact);
+            let copy = Command::new("ditto")
+                .arg(&adoption.app)
+                .arg(&staged_app)
+                .status()
+                .map_err(|error| format!("cannot snapshot installed Product: {error}"))?;
+            if !copy.success()
+                || !tree_exact(&adoption.app, &staged_app)?
+                || artifact_sha256(&staged_app)? != adoption.artifact_digest
+            {
+                let _ = fs::remove_dir_all(&staged);
+                return Err("installed Product snapshot failed exact verification".to_string());
+            }
+            fs::write(staged.join("meta.env"), adopted_build_meta(&adoption))
+                .map_err(|error| format!("cannot stage installed adoption metadata: {error}"))?;
+            fs::rename(&staged, &slot)
+                .map_err(|error| format!("cannot publish installed adoption slot: {error}"))?;
+        }
+        write_installed_receipt_at(
+            &registry.join("installed.meta.env"),
+            &adopted_installed_receipt(&adoption),
+        )?;
+    }
+    Ok(adopted_result(&adoption, execute))
+}
+
+fn adopt_installed_product(entry: &BuildEntry, execute: bool) -> Result<String, String> {
+    let target_dir = install_dir(
+        PathBuf::from("/Applications"),
+        host::home_dir().join("Applications"),
+    );
+    adopt_installed_product_at(entry, execute, &registry_dir(), &target_dir)
 }
 
 #[cfg(test)]
