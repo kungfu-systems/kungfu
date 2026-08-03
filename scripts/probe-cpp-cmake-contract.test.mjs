@@ -57,7 +57,7 @@ test('the C++ probe links the Windows yijinjing xxHash dependency', () => {
 
 test('the SDK resolves the real uv base interpreter for Windows CMake builds', () => {
   const sdk = fs.readFileSync(
-    path.join(ROOT, 'developer/sdk/src/sdk.js'),
+    path.join(ROOT, 'developer/sdk/src/sdk-contract.js'),
     'utf8',
   );
 
@@ -71,7 +71,7 @@ test('the SDK resolves the real uv base interpreter for Windows CMake builds', (
 
 test('the SDK pins multi-config C++ probe artifacts to the declared dist directory', () => {
   const sdk = fs.readFileSync(
-    path.join(ROOT, 'developer/sdk/src/sdk.js'),
+    path.join(ROOT, 'developer/sdk/src/sdk-contract.js'),
     'utf8',
   );
 

@@ -17,7 +17,7 @@
     },
     "authority": {
       "owner": "kungfu.work-control Profile over native Fact and Episode authority",
-      "source": "extensions/work-control/work-control-actions/domain/work_control.py",
+      "source": "extensions/work-control/work-control-actions/domain/work_control_assessment.py",
       "ownerReceiptSchema": "kungfu.initiative-assignment.write-receipt/v1",
       "ownerReceiptRoot": "sha256:2222222222222222222222222222222222222222222222222222222222222222"
     },
@@ -50,7 +50,7 @@
       "successorEquivalent": false,
       "exportRecoveryVerified": false
     },
-    "receiptRoot": "sha256:4d174b126959a17c523e12087016861d05499a8c47d3c32a459366bd5ab77d4d"
+    "receiptRoot": "sha256:91ef223412dcf9d8e8e9bfd4d5f66be03a5c6804b1a66e4e6c6d4b05e779b69e"
   },
   "cases": [
     {

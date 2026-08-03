@@ -35,7 +35,7 @@ const sourceFiles = (root) => {
     }
     const target = path.join(root, entry.name);
     if (entry.isDirectory()) files.push(...sourceFiles(target));
-    else files.push(target);
+    else files.push(target.split(path.sep).join('/'));
   }
   return files;
 };

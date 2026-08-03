@@ -79,29 +79,52 @@ fn scoped_entry_matches(expected: Option<&OsStr>, actual: Option<&OsStr>) -> boo
 #[cfg(any(unix, windows))]
 type NodeRunFn = extern "C" fn(std::ffi::c_int, *mut *mut std::ffi::c_char) -> std::ffi::c_int;
 
-/// Build heap-owned, mutable UTF-8 argv copies and hand them to the node-host
-/// entry. node::Start owns the process for its lifetime and may permute argv, so
-/// the copies must be heap-owned (argv[0] = program name, matching sys.argv). The
-/// copies are reclaimed only if node::Start returns rather than exiting the
-/// process itself. Shared by every platform loader so the argv contract lives in
-/// one place.
+/// Build one contiguous, heap-owned, mutable UTF-8 argv buffer.
+///
+/// node::Start may permute the pointer array and its Windows bootstrap also
+/// expects the argument strings to share one contiguous allocation. This
+/// mirrors the long-standing Python/libnode bridge instead of allocating one
+/// CString per argument, which truncated an absolute Windows entry path to
+/// its drive designator (C:).
+#[cfg(any(unix, windows))]
+fn contiguous_node_argv(
+    arguments: impl IntoIterator<Item = Vec<u8>>,
+) -> (Vec<u8>, Vec<*mut std::ffi::c_char>) {
+    use std::ffi::c_char;
+
+    let arguments: Vec<Vec<u8>> = arguments.into_iter().collect();
+    let total_size = arguments.iter().map(|argument| argument.len() + 1).sum();
+    let mut buffer = Vec::with_capacity(total_size);
+    let mut offsets = Vec::with_capacity(arguments.len());
+    for argument in arguments {
+        debug_assert!(
+            !argument.contains(&0),
+            "process arguments cannot contain NUL bytes"
+        );
+        offsets.push(buffer.len());
+        buffer.extend_from_slice(&argument);
+        buffer.push(0);
+    }
+    let base = buffer.as_mut_ptr();
+    let argv = offsets
+        .into_iter()
+        .map(|offset| unsafe { base.add(offset).cast::<c_char>() })
+        .collect();
+    (buffer, argv)
+}
+
+/// Hand contiguous, mutable UTF-8 argv to the node-host entry. node::Start owns
+/// the process for its lifetime and may permute argv, so both allocations stay
+/// live until it returns. Shared by every platform loader so the argv contract
+/// lives in one place.
 #[cfg(any(unix, windows))]
 fn invoke_node(run: NodeRunFn) -> i32 {
-    use std::ffi::{c_char, c_int, CString};
+    use std::ffi::c_int;
 
-    let mut argv: Vec<*mut c_char> = env::args_os()
-        .map(|arg| {
-            CString::new(os_arg_bytes(&arg))
-                .unwrap_or_default()
-                .into_raw()
-        })
-        .collect();
+    let (_buffer, mut argv) =
+        contiguous_node_argv(env::args_os().map(|argument| os_arg_bytes(&argument)));
     let argc = argv.len() as c_int;
-    let code = run(argc, argv.as_mut_ptr());
-    for ptr in argv {
-        unsafe { drop(CString::from_raw(ptr)) };
-    }
-    code as i32
+    run(argc, argv.as_mut_ptr())
 }
 
 /// argv bytes for the node-host: raw bytes on unix (exact), lossy UTF-8 on
@@ -220,6 +243,7 @@ fn run_node() -> Option<i32> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::ffi::CStr;
 
     // One serial test: `dispatch` reads a process-global env var, so the cases must
     // not run concurrently (cargo runs tests in one binary on parallel threads).
@@ -267,6 +291,30 @@ mod tests {
         match prior_entry {
             Some(v) => env::set_var(ENV_VARIANT_ENTRY_KEY, v),
             None => env::remove_var(ENV_VARIANT_ENTRY_KEY),
+        }
+    }
+
+    #[test]
+    fn node_argv_uses_one_contiguous_mutable_buffer() {
+        let arguments = [
+            b"C:\\Kungfu\\runtime\\kungfu.exe".to_vec(),
+            b"C:\\Kungfu\\tui\\tui.mjs".to_vec(),
+            b"--project".to_vec(),
+        ];
+        let expected_size: usize = arguments.iter().map(|argument| argument.len() + 1).sum();
+        let (buffer, argv) = contiguous_node_argv(arguments.clone());
+
+        assert_eq!(buffer.len(), expected_size);
+        assert_eq!(argv.len(), arguments.len());
+        let base = buffer.as_ptr() as usize;
+        let mut expected_offset = 0;
+        for (index, expected) in arguments.iter().enumerate() {
+            assert_eq!(argv[index] as usize, base + expected_offset);
+            assert_eq!(
+                unsafe { CStr::from_ptr(argv[index]) }.to_bytes(),
+                expected.as_slice()
+            );
+            expected_offset += expected.len() + 1;
         }
     }
 }

@@ -409,7 +409,7 @@ export function retirementIssues(entries, { enforceContracts = false } = {}) {
     'framework/core/src/python/kungfu/cli/bridging/nuitka/__init__.py',
     ['from nuitka.__main__ import main as nuitka_main'],
   );
-  requireText('developer/sdk/src/sdk.js', ["'nuitka'"]);
+  requireText('developer/sdk/src/sdk-contract.js', ["'nuitka'"]);
   requireText('framework/core/src/python/kungfu/runtime_service.py', [
     'CREATE_BREAKAWAY_FROM_JOB',
     'getattr(error, "winerror", None) != 5',

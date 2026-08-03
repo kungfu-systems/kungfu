@@ -75,6 +75,7 @@ set(KUNGFU_STORAGE_SERVICES_SOURCE_FILES
   "${PROJECT_SOURCE_DIR}/src/runtime/storage/manifest_catalog_projection.cpp"
   "${PROJECT_SOURCE_DIR}/src/runtime/storage/query_render.cpp"
   "${PROJECT_SOURCE_DIR}/src/runtime/storage/service.cpp"
+  "${PROJECT_SOURCE_DIR}/src/runtime/storage/service_operation_catalog.cpp"
   "${PROJECT_SOURCE_DIR}/src/runtime/storage/source_registry_projection.cpp"
   "${PROJECT_SOURCE_DIR}/src/runtime/storage/transfer_service.cpp"
 )
