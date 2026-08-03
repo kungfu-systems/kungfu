@@ -21,10 +21,10 @@
     "environment": {}
   },
   "transportSmoke": {
-    "argv": ["agent-work-lab", "autoplay"],
+    "argv": ["agent-work-lab", "demo", "--json"],
     "timeoutSeconds": 60,
     "expectedExitCodes": [0],
-    "stdoutIncludes": ["KUNGFU_TUI_DEMO_COMPLETE"]
+    "stdoutIncludes": ["kungfu.agent-work-lab.report/v1"]
   },
   "renditions": [
     {"id": "1080p", "role": "primary", "columns": 150, "rows": 36, "width": 1920, "height": 1080},

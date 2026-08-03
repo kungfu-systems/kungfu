@@ -1,0 +1,63 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://libkungfu.dev/schemas/shifu/production-graph-verification-receipt-v0.schema.json",
+  "title": "Shifu Production Graph verification receipt v0",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "status",
+    "sourceRevision",
+    "contractRoot",
+    "schemaRoots",
+    "authorityReferences",
+    "verifierRoot",
+    "validFixtureRoots",
+    "validFixtureCount",
+    "invalidFixtureCount",
+    "protectedGate",
+    "nodesExecuted",
+    "receiptRoot"
+  ],
+  "properties": {
+    "schema": { "const": "shifu.production-graph-verification-receipt/v0" },
+    "status": { "const": "qualified" },
+    "sourceRevision": { "$ref": "production-graph-v0.schema.json#/$defs/gitObject" },
+    "contractRoot": { "$ref": "production-graph-v0.schema.json#/$defs/root" },
+    "schemaRoots": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "graph",
+        "plan",
+        "executionEvent",
+        "receipt",
+        "failure",
+        "recovery",
+        "verificationReceipt"
+      ],
+      "properties": {
+        "graph": { "$ref": "production-graph-v0.schema.json#/$defs/root" },
+        "plan": { "$ref": "production-graph-v0.schema.json#/$defs/root" },
+        "executionEvent": { "$ref": "production-graph-v0.schema.json#/$defs/root" },
+        "receipt": { "$ref": "production-graph-v0.schema.json#/$defs/root" },
+        "failure": { "$ref": "production-graph-v0.schema.json#/$defs/root" },
+        "recovery": { "$ref": "production-graph-v0.schema.json#/$defs/root" },
+        "verificationReceipt": { "$ref": "production-graph-v0.schema.json#/$defs/root" }
+      }
+    },
+    "authorityReferences": { "$ref": "production-graph-v0.schema.json#/$defs/authorityRoots" },
+    "verifierRoot": { "$ref": "production-graph-v0.schema.json#/$defs/root" },
+    "validFixtureRoots": {
+      "type": "array",
+      "minItems": 3,
+      "uniqueItems": true,
+      "items": { "$ref": "production-graph-v0.schema.json#/$defs/root" }
+    },
+    "validFixtureCount": { "type": "integer", "minimum": 3 },
+    "invalidFixtureCount": { "type": "integer", "minimum": 7 },
+    "protectedGate": { "const": "./shifu check:source" },
+    "nodesExecuted": { "const": false },
+    "receiptRoot": { "$ref": "production-graph-v0.schema.json#/$defs/root" }
+  }
+}

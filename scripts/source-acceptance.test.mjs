@@ -732,6 +732,17 @@ test('cold read-only source acceptance skips dependency-backed checks', () => {
       plan.some((step) => step.label === 'agent-first contract audit'),
       false,
     );
+    assert.equal(
+      plan.some((step) => step.label === 'Shifu Production Graph contract'),
+      false,
+    );
+    const contractTests = plan.find(
+      (step) => step.label === 'source-acceptance contract tests',
+    );
+    assert.equal(
+      contractTests?.args.includes('framework/production-graph/check.test.mjs'),
+      false,
+    );
   } finally {
     if (previous === undefined) {
       Reflect.deleteProperty(

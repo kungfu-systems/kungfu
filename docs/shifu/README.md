@@ -37,6 +37,14 @@ execution; Shifu owns how the task is executed after source checkout.
   subject/claim/probe/artifact providers, and computes deterministic contract,
   content, and submission roots. Kungfu's compatibility submission is
   [`../../shifu.documentation.json`](../../shifu.documentation.json).
+- [`production-graph-contract.json`](production-graph-contract.json) defines the
+  project-independent Production Graph v0 description and verification
+  boundary. Its content-addressed graph, plan, execution-event, receipt,
+  failure, recovery, and verification-receipt schemas retain exact source,
+  project-authority, and Xinfa selection roots without executing nodes or
+  acquiring Assignment or Work Control authority. Run
+  `./shifu check:production-graph` to emit the exact protected-CI verification
+  receipt over the deterministic conformance fixtures.
 - [`.xinfa/project.json`](../../.xinfa/project.json) is the project-owned semantic declaration consumed by Xinfa. [`shifu.documentation.surfaces.json`](../../shifu.documentation.surfaces.json) is only a compatibility alias and carries no independent policy.
   classifies every tracked human-readable surface plus explicit product and
   Agent surfaces. Shifu closes the exact-path inventory; Xinfa remains the sole

@@ -36,11 +36,19 @@ test('one exact Buildchain workflow owns every declared demo', () => {
   assert.equal(scenario.execution.durationClass, 'long-form');
   assert.equal(scenario.execution.totalTimeoutSeconds, 180);
   assert.deepEqual(scenario.transportSmoke, {
-    argv: ['agent-work-lab', 'autoplay'],
+    argv: ['agent-work-lab', 'demo', '--json'],
     timeoutSeconds: 60,
     expectedExitCodes: [0],
-    stdoutIncludes: ['KUNGFU_TUI_DEMO_COMPLETE'],
+    stdoutIncludes: ['kungfu.agent-work-lab.report/v1'],
   });
+  assert.equal(
+    scenario.demos.some(
+      ({ steps }) =>
+        JSON.stringify(steps[0].argv) ===
+        JSON.stringify(scenario.transportSmoke.argv),
+    ),
+    false,
+  );
   assert.equal(
     demo.with['media-profile'],
     'responsive-long-form-web-delivery-v1',
