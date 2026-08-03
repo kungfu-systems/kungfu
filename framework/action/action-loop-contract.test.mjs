@@ -9,6 +9,7 @@ import { fileURLToPath } from 'node:url';
 import {
   classifyPrecondition,
   classifyRecovery,
+  rootStepReceipt,
   validateEnvelope,
 } from './action-loop.mjs';
 
@@ -69,16 +70,16 @@ function envelope(state, acceptedSteps = []) {
 
 function receipt(loopEnvelope, stepId, ordinal) {
   const hex = (ordinal + 1).toString(16).padStart(64, '0');
-  return {
+  return rootStepReceipt({
     schema: contract.stepReceipt.schema,
     loopId: loopEnvelope.loopId,
     stepId,
     idempotencyKey: loopEnvelope.idempotencyKey,
-    receiptRoot: `sha256:${hex}`,
     status: 'accepted',
     preconditionRoots: [fixtures.roots.loop],
     resultRoots: [fixtures.roots.fact],
-  };
+    authorityReceiptRoot: `sha256:${hex}`,
+  });
 }
 
 test('contract preserves five explicit roles and one authority boundary', () => {
@@ -126,10 +127,23 @@ test('same accepted settle receipt is reuse but a conflicting receipt is refused
     classifyRecovery(contract, loopEnvelope, receipts).code,
     'already-settled',
   );
-  receipts.at(-1).receiptRoot = `sha256:${'9'.repeat(64)}`;
+  receipts[receipts.length - 1] = rootStepReceipt({
+    ...receipts.at(-1),
+    authorityReceiptRoot: `sha256:${'9'.repeat(64)}`,
+  });
   assert.equal(
     classifyRecovery(contract, loopEnvelope, receipts).code,
     'idempotency-conflict',
+  );
+});
+
+test('a forged public adapter receipt root is refused', () => {
+  const loopEnvelope = envelope('bound', ['bind-roles']);
+  const forged = receipt(loopEnvelope, 'bind-roles', 0);
+  forged.receiptRoot = `sha256:${'9'.repeat(64)}`;
+  assert.equal(
+    classifyRecovery(contract, loopEnvelope, [forged]).code,
+    'invalid-receipt-root',
   );
 });
 

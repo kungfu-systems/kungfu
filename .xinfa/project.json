@@ -274,7 +274,7 @@
       "targetKind": "evidence",
       "targetPath": "framework/core/src/python/kungfu/agent/commands.json",
       "relation": "explains",
-      "expectedRevision": "sha256:8c9ada7ac25558b76a3a1346b38350fac932522ff1714bb7b5ba581da4e251cb"
+      "expectedRevision": "sha256:a2c04235939688a128132d1949f4d80571326d676ffe9231952ea20accc9102d"
     },
     {
       "id": "xinfa-compiler-implementation",

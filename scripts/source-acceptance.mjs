@@ -576,6 +576,12 @@ export function sourceAcceptancePlan(files, evidenceBaseCommit = '') {
       'scripts/buildchain-kfd-evidence.mjs',
       '--check',
     ],
+    [
+      'Work Profile conformance gate',
+      'framework/work-profile-conformance/work-profile-conformance.mjs',
+      '--check',
+      '--json',
+    ],
     ...(coldReadOnlySourceAcceptance
       ? []
       : [
@@ -737,6 +743,7 @@ export function sourceAcceptancePlan(files, evidenceBaseCommit = '') {
         'scripts/check-layered-api-encoding-boundary.test.mjs',
         'scripts/check-work-lifecycle-native.test.mjs',
         'scripts/check-work-lifecycle-operation-matrix.test.mjs',
+        'framework/work-profile-conformance/work-profile-conformance.test.mjs',
         'scripts/check-work-control-vocabulary.test.mjs',
         'scripts/check-project-work-agent-product.test.mjs',
         'scripts/registry-envelope.test.mjs',
