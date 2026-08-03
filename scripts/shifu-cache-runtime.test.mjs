@@ -671,6 +671,14 @@ test('cache apply overrides Cargo and isolates Conan without mutating persistent
     'workhub-v1',
     partition,
   );
+  const conanDownloads = path.join(
+    xdgCache,
+    'kungfu',
+    'conan',
+    'workhub-v1',
+    'artifacts',
+    'downloads',
+  );
   const fakeBin = path.join(directory, 'fake-bin');
   fs.mkdirSync(fakeBin);
   const fakeCargoModule = path.join(fakeBin, 'fake-cargo.mjs');
@@ -794,6 +802,13 @@ test('cache apply overrides Cargo and isolates Conan without mutating persistent
         `core.cache:storage_path = ${path.join(conanStorage, 'packages').replaceAll('\\', '/')}`,
       ),
   );
+  assert.ok(
+    child.conanGlobal
+      .replaceAll('\\', '/')
+      .includes(
+        `core.download:download_cache = ${conanDownloads.replaceAll('\\', '/')}`,
+      ),
+  );
   assert.equal(fs.readFileSync(child.storageMarker, 'utf8'), 'warm');
   assert.equal(
     fs.readFileSync(path.join(persistentCargo, 'config.toml'), 'utf8'),
@@ -848,6 +863,14 @@ test('cache apply overrides Cargo and isolates Conan without mutating persistent
     pathDigest: sha256(Buffer.from(conanStorage)),
     partitionDigest: sha256(Buffer.from(partition)),
     lock: 'on-demand',
+    artifactLayer: {
+      binaryAuthority: 'hosted-remote',
+      identity: 'rrev-package-id-prev',
+      downloadCache: 'shared-content-addressed',
+      downloadPathDigest: sha256(Buffer.from(conanDownloads)),
+      concurrency: 'conan-content-locks',
+      worktreeIndependent: true,
+    },
   });
 });
 
