@@ -288,7 +288,11 @@ Timestamp order never authorizes promotion: one unique descendant advances
 automatically, while ancestor, divergent, and unknown builds require explicit
 selection. Compact lists retain an identifying branch prefix/suffix;
 `--no-truncate`, `--verbose`, and `--json` expose progressively more local
-provenance. The exact contract and schemas are available through
+provenance. Catalog listing uses recorded registration metadata and does not
+deep-hash retained payloads. `shifu promote` re-verifies its selected payload;
+release qualification uses `shifu builds --json --verify-current` to deep-hash
+only the slot atomically registered by the current checkout, so unrelated
+history is not a build input. The exact contract and schemas are available through
 `shifu artifacts contract|schema|receipt-schema`.
 
 ```json

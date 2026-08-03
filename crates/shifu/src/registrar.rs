@@ -43,7 +43,9 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 use shifu_core::{bootstrap, host, json, style};
 
-use crate::artifact_catalog::product_mainline_ref;
+use crate::artifact_catalog::{
+    product_mainline_ref, publish_current_registration as publish_current,
+};
 use crate::native_update::{
     artifact_sha256, installed_release_cut_root, local_artifact_identity_valid, valid_sha256_root,
 };
@@ -233,9 +235,8 @@ fn json_string(value: &str) -> String {
     out
 }
 
-/// FNV-1a 64-bit, hex — a fast, dependency-free cache-key hash. Not
-/// cryptographic; the cache file's stored root/version make any collision a
-/// harmless miss.
+/// FNV-1a 64-bit, hex — a fast, dependency-free cache-key hash. Stored
+/// root/version values make a non-cryptographic collision a harmless miss.
 fn fnv1a_hex(bytes: &[u8]) -> String {
     let mut hash: u64 = 0xcbf2_9ce4_8422_2325;
     for &b in bytes {
@@ -246,7 +247,7 @@ fn fnv1a_hex(bytes: &[u8]) -> String {
 }
 
 pub struct DistributionPlan {
-    product_id: String,
+    pub(crate) product_id: String,
     surface_id: String,
     artifacts: Vec<DeclaredArtifact>,
 }
@@ -607,6 +608,9 @@ pub fn register(root: &Path, plan: &DistributionPlan) {
         let _ = fs::remove_dir_all(&staging);
         return;
     }
+    if let Err(error) = publish_current(root, &plan.product_id, &slot, &build_sha, primary_sha) {
+        warn(&error);
+    }
     eprintln!(
         "\u{1f94b} {}",
         style::bold(&format!("registered build -> {}", slot.display()))
@@ -760,9 +764,8 @@ fn git_success(root: &Path, args: &[&str]) -> bool {
         .unwrap_or(false)
 }
 
-/// meta.env values use the build-local.env single-quote shape; single quotes
-/// cannot be escaped in it, so they are stripped (same rule as the historical
-/// register script).
+/// meta.env uses the build-local.env single-quote shape; unescapable single
+/// quotes are stripped by the same rule as the historical register script.
 fn quote(value: &str) -> String {
     format!("'{}'", value.replace('\'', ""))
 }
@@ -1040,7 +1043,6 @@ mod tests {
         assert!(meta.contains(
             "KUNGFU_BUILD_SHA256='6521df166eb07efaf36eba5b6bedefd9d6a252e9c80bab1c99653700ec71473c'"
         ));
-
         // Layout-answer cache round-trip. This lives inside the single test
         // that owns XDG_CACHE_HOME (its writes land in the isolated cache);
         // running it here keeps env mutation from racing the parallel suite.
