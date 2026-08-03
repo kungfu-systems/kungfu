@@ -2,7 +2,7 @@
   "schema": "kungfu.semantic-amplification-report/v1",
   "verdict": "pass",
   "authoritySemantics": "navigation-only-projection-over-existing-authorities",
-  "sourceRevision": "91a3f29de2ae958b9a33b5d2fdd2f30e57ea5f2a",
+  "sourceRevision": "23afc49ed896c0b95871e5e8d591f2ec324c4c83",
   "manifestPath": "framework/maintainability/semantic-amplification.manifest.json",
   "manifestRoot": "sha256:ae6bb7630bd6e3a682dd6f1cf364d5f71f2259607dd442bcc94e840a93aa2b7f",
   "generatorRoot": "sha256:a62c635839b1d7f32dccdaa770ba424b2858be41f2ae017561dbf2c83ee760ec",
@@ -1977,5 +1977,5 @@
     "findings": []
   },
   "issues": [],
-  "reportRoot": "sha256:cce5e224731ed030f5693c8ebdbd04e6f054c694f632a1e8f8f3001116b38543"
+  "reportRoot": "sha256:696d24b6c862e52fa7fba19ee16f04902de28e5d1c5b04b4755298f800a2cc5c"
 }
