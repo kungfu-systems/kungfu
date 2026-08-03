@@ -6,16 +6,23 @@ import test from 'node:test';
 import { render } from 'ink';
 import React from 'react';
 import {
+  PROJECT_TOUR_EPISODE_SCENE_IDS,
+  PROJECT_TOUR_EPISODE_TWO_EVENT_SCALE,
+  PROJECT_TOUR_EPISODE_TWO_FINAL_GUIDE_SCALE,
+  PROJECT_TOUR_EPISODE_TWO_GUIDE_SCALE,
+  PROJECT_TOUR_EPISODE_TWO_STANDALONE_SCENE,
   PROJECT_TOUR_GUIDE_SCENES,
   PROJECT_TOUR_PACING,
   PROJECT_TOUR_STORY_STEPS,
   PROJECT_TOUR_STREAM_TRANSITIONS,
   ProjectTourHeader,
+  parseProjectTourEpisode,
   parseProjectTourSpeed,
   projectTourActivityCells,
   projectTourActivityWidth,
   projectTourArtifactPreview,
   projectTourAudienceLine,
+  projectTourEpisodeNarrationBudget,
   projectTourGuidePanelLines,
   projectTourLayout,
   projectTourPacingForSpeed,
@@ -59,7 +66,7 @@ test('Project recovery tour tells the complete user lifecycle without granting m
 });
 
 test('Project tour guide explains failures, review, and settlement without impersonating events', () => {
-  assert.equal(PROJECT_TOUR_GUIDE_SCENES.length, 11);
+  assert.equal(PROJECT_TOUR_GUIDE_SCENES.length, 9);
   const story = PROJECT_TOUR_GUIDE_SCENES.map(
     (scene) => `${scene.kicker} ${scene.title} ${scene.detail}`,
   ).join('\n');
@@ -69,7 +76,7 @@ test('Project tour guide explains failures, review, and settlement without imper
   assert.match(story, /read-only Mock Reviewer/u);
   assert.match(story, /settlement receipt/u);
   assert.match(story, /Agent is mocked/u);
-  assert.match(story, /file above is retained evidence/u);
+  assert.match(story, /file is evidence/u);
   assert.match(story, /The temporary Project is deleted/u);
   assert.match(story, /Session-first tools bind work to chat/u);
   assert.match(story, /Kungfu keeps Work outside it/u);
@@ -79,13 +86,53 @@ test('Project tour guide explains failures, review, and settlement without imper
   assert.match(story, /not chat reconstruction/u);
   assert.match(story, /does not silently retry/u);
   assert.match(story, /not universal business truth/u);
-  assert.match(story, /same \/new action is available in your Project/u);
-  assert.match(story, /TWO SESSIONS FAILED · ONE WORK CONTINUED/u);
+  assert.match(story, /\/new adds the next outcome/u);
+  assert.match(
+    story,
+    /EPISODE 2 COMPLETE · REVIEWED, SETTLED, NEXT WORK READY/u,
+  );
+  assert.match(story, /EPISODE 1 COMPLETE · TWO FAILURES · ONE WORK/u);
+  assert.match(story, /EPISODE 2 · RECOVER, REVIEW, AND SETTLE/u);
+  assert.match(story, /Start from retained Work/u);
   assert.match(story, /Sessions were replaceable Attempts/u);
-  assert.match(story, /use \/new to capture one outcome/u);
+  assert.match(story, /Use \/new for the next outcome/u);
   assert.doesNotMatch(story, /deterministic/u);
   assert.doesNotMatch(story, /\p{Script=Han}/u);
   assert.doesNotMatch(story, /TOUR GUIDE.*agent ·/u);
+  const standalone = Object.values(
+    PROJECT_TOUR_EPISODE_TWO_STANDALONE_SCENE,
+  ).join(' ');
+  assert.match(standalone, /Episode 1 proved survival/u);
+  assert.match(standalone, /real Starter Work/u);
+  assert.match(standalone, /Agent exit, independent review, and settlement/u);
+  assert.doesNotMatch(standalone, /failed Attempts remain/u);
+  assert.doesNotMatch(standalone, /\p{Script=Han}/u);
+});
+
+test('Project tour episodes are independently selectable and stay below the default narration budget', () => {
+  assert.deepEqual(PROJECT_TOUR_EPISODE_SCENE_IDS['1'], [
+    'starter-project',
+    'connection-loss',
+    'connection-retained',
+    'agent-crash',
+    'same-work',
+  ]);
+  assert.deepEqual(PROJECT_TOUR_EPISODE_SCENE_IDS['2'], [
+    'recovery',
+    'independent-review',
+    'native-settlement',
+    'next-work',
+  ]);
+  assert.equal(parseProjectTourEpisode(undefined), '1');
+  assert.equal(parseProjectTourEpisode('2'), '2');
+  assert.equal(parseProjectTourEpisode('all'), 'all');
+  assert.throws(() => parseProjectTourEpisode('3'), /must be 1, 2, or all/u);
+  assert.ok(projectTourEpisodeNarrationBudget('1') < 90_000);
+  assert.ok(projectTourEpisodeNarrationBudget('2') < 90_000);
+  assert.ok(PROJECT_TOUR_EPISODE_TWO_EVENT_SCALE >= 0.5);
+  assert.ok(PROJECT_TOUR_EPISODE_TWO_EVENT_SCALE < 1);
+  assert.equal(PROJECT_TOUR_EPISODE_TWO_GUIDE_SCALE, 0.875);
+  assert.equal(PROJECT_TOUR_EPISODE_TWO_FINAL_GUIDE_SCALE, 0.8);
 });
 
 test('Project tour summary windows reuse titles embedded in their borders', () => {
@@ -134,6 +181,7 @@ test('Project tour keeps playback speed at the right edge of the top bar', async
   const instance = render(
     React.createElement(ProjectTourHeader, {
       columns: 80,
+      episode: '1',
       step: 2,
       projectName: 'my-first-kungfu-project',
       playbackSpeed: 0.5,
@@ -151,7 +199,7 @@ test('Project tour keeps playback speed at the right edge of the top bar', async
 
   const rendered = output.chunks.join('');
   const middle = rendered.split('\n')[1] ?? '';
-  assert.match(middle, /STEP 3\/7/u);
+  assert.match(middle, /EPISODE 1\/2 · STEP 3\/4/u);
   assert.match(middle, /SPEED 0\.5×\s*│$/u);
 });
 

@@ -30,6 +30,7 @@ test('Mock Agent exposes the complete deterministic scenario catalog', () => {
     'crash',
     'disconnect',
     'multi-step',
+    'recovery-delivery',
     'recovery-story',
     'review-fit',
   ]);
@@ -155,6 +156,23 @@ test('recovery-story keeps the original business objective in natural Agent lang
   assert.match(completed, /does not approve its own Work/u);
 });
 
+test('recovery-delivery isolates the reviewable launch brief without inventing failed Attempts', () => {
+  const writes = [];
+  const completed = createMockAgentMachine({
+    scenario: 'recovery-delivery',
+    effects: {
+      writeDeliverable: (relativePath) => {
+        writes.push(relativePath);
+        return { path: relativePath };
+      },
+    },
+  }).input('complete the launch brief for independent review');
+
+  assert.equal(completed.exitCode, 0);
+  assert.deepEqual(writes, [MOCK_RECOVERY_STORY_DELIVERABLE_PATH]);
+  assert.match(completed.lines.join('\n'), /does not approve its own Work/u);
+});
+
 test('every Mock Agent scenario reaches its declared deterministic boundary', () => {
   const expected = {
     complete: 'ready-for-review',
@@ -165,6 +183,7 @@ test('every Mock Agent scenario reaches its declared deterministic boundary', ()
     crash: 'ended',
     disconnect: 'ended',
     'multi-step': 'needs-answer',
+    'recovery-delivery': 'ended',
     'recovery-story': 'ended',
     'review-fit': 'ended',
   };

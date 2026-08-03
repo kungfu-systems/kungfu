@@ -29,7 +29,7 @@ test('one exact Buildchain workflow owns every declared demo', () => {
       },
       {
         id: 'project-tour-08x',
-        argv: ['agent-work-lab', 'project-tour', '--speed', '0.8'],
+        argv: ['agent-work-lab', 'project-tour', '--episode', 'all'],
       },
     ],
   );

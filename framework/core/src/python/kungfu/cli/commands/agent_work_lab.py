@@ -190,7 +190,14 @@ def autoplay(ctx):
 
 @agent_work_lab.command(
     name="project-tour",
-    help="animate a disposable Project Work failure-and-recovery story",
+    help="play a disposable Project Work failure-and-recovery story",
+)
+@click.option(
+    "--episode",
+    type=click.Choice(("1", "2", "all"), case_sensitive=False),
+    default="1",
+    show_default=True,
+    help="play failure retention, recovery and settlement, or both episodes",
 )
 @click.option(
     "--speed",
@@ -201,7 +208,7 @@ def autoplay(ctx):
 )
 @kfd3_api("kungfu.agent-work-lab")
 @kfc.pass_context()
-def project_tour(ctx, speed):
+def project_tour(ctx, episode, speed):
     from kungfu.cli.tui_runtime import run_tui
 
     with tempfile.TemporaryDirectory(prefix="kungfu-project-tour-") as temporary:
@@ -213,6 +220,8 @@ def project_tour(ctx, speed):
                 str(destination),
                 "--project-tour-speed",
                 f"{speed:g}",
+                "--project-tour-episode",
+                episode,
             ),
         )
 
