@@ -357,7 +357,7 @@
     "buildchain": {
       "repository": "kungfu-systems/buildchain",
       "owner": "kungfu-systems/buildchain",
-      "sourceRevision": "07a276ecad9bd01d16411ef58fbbde809699247a",
+      "sourceRevision": "71ca85df9d19ae47f51af45d836125dc78289750",
       "version": "3.0.5-alpha.6",
       "compatibilityMode": "stable-v3-contract-plus-exact-additive-runtime",
       "stableContractLock": ".buildchain/contract-lock.json",
