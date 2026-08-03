@@ -538,26 +538,53 @@
       ]
     },
     {
+      "path": ".github/workflows/dev-qualification-patrol.yml",
+      "authority": "qualification",
+      "definitionDigest": "sha256:00a0ae69c1caa91a8ecd32b4df7a10bf462d43aa699fce4d348af02583b63ea3",
+      "jobs": [
+        {
+          "id": "patrol",
+          "authority": "qualification",
+          "publication": "none",
+          "receipt": "diagnostic",
+          "definitionDigest": "sha256:57a029cf8190b4df23acdab9ba2607199f768e86544ea020c57a29dd22ca41be",
+          "credentials": {"githubToken":"write","oidc":false,"repositorySecrets":["KUNGFU_GITHUB_TOKEN"],"inheritedSecrets":false,"environment":null},
+          "externalActions": ["kungfu-systems/buildchain/.github/workflows/dev-qualification-patrol.yml@49da2cd118b04d502fd90deaa57acaf83b0eaed7"],
+          "steps": []
+        }
+      ]
+    },
+    {
       "path": ".github/workflows/dev-verify-patrol.yml",
       "authority": "diagnostic",
-      "definitionDigest": "sha256:9b20d3c16112715b00b0ffdee667d118cb14f2f47f5a45d0821c7ddb56e9a6ea",
+      "definitionDigest": "sha256:cc4961063e8a7b0203c82d559e625a3d5a52eaa539b6815ab0cb6062a29a71d0",
       "jobs": [
+        {
+          "id": "bind-source",
+          "authority": "qualification",
+          "publication": "none",
+          "receipt": "diagnostic",
+          "definitionDigest": "sha256:241876aaad1b05e78ec556d7a9d6c685cd146fe82bd02033bbed1ecffdb66801",
+          "credentials": {"githubToken":"read","oidc":false,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
+          "externalActions": [],
+          "steps": [{"index":1,"label":"id:source","definitionDigest":"sha256:062a9a480710a64e08b7ebcdd0f2ac4cee8c97503dde5a8b5704ed7d8b7206e0"}]
+        },
         {
           "id": "report",
           "authority": "diagnostic",
           "publication": "none",
           "receipt": "none",
-          "definitionDigest": "sha256:a05982a2c1f611924354bf60fa038b8de9e34188f638622bb1edc0c8032b9610",
+          "definitionDigest": "sha256:2f624de37d5d71ac909f04bd17f59e21f48c515ed7d44fd6db9ff4a0eecdc783",
           "credentials": {"githubToken":"write","oidc":false,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
           "externalActions": [],
-          "steps": [{"index":1,"label":"name:Sync tracking issue with patrol result","authority":"diagnostic-write","definitionDigest":"sha256:9a52c75f071708a68e46fe539e4714efde77cec2ec7d571f8e17c28fca4800b0"}]
+          "steps": [{"index":1,"label":"name:Sync tracking issue with patrol result","authority":"diagnostic-write","definitionDigest":"sha256:f33e4ab9673c51d1a245249276274a2af1f662756bcc213c502405a136cf9a76"}]
         },
         {
           "id": "verify",
           "authority": "qualification",
           "publication": "none",
           "receipt": "qualifying",
-          "definitionDigest": "sha256:aaf8f6119c6eae36fe5c7052ecd568541a6170d799db0fe92a849de9652f18ab",
+          "definitionDigest": "sha256:5c48dc34b7eab862016e0fe250421066fc17139476cec001f545eaa2f92f2d5c",
           "credentials": {"githubToken":"write","oidc":true,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
           "externalActions": ["kungfu-systems/buildchain/.github/workflows/.gate-profile.yml@f8ef93be41b0badd75eb35cc1506c2be12198984"],
           "steps": []

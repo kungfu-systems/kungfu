@@ -187,6 +187,16 @@
           "sourceRoot": "sha256:639f670a1fa0f6418fc142c01e82a024ff2ce530b0ebd6db9857e63944ac9117"
         },
         {
+          "path": ".github/workflows/dev-qualification-patrol.yml",
+          "classification": "qualification",
+          "owner": "kungfu-release",
+          "surfaceIds": [
+            "product-alpha",
+            "product-stable"
+          ],
+          "sourceRoot": "sha256:a94f7b5c47883a70231ab1ca9b202cf0e7c15089d163410e0888b937c57d2c1f"
+        },
+        {
           "path": ".github/workflows/stable-candidate-patrol.yml",
           "classification": "qualification",
           "owner": "kungfu-release",
@@ -203,7 +213,7 @@
             "product-alpha",
             "product-stable"
           ],
-          "sourceRoot": "sha256:d9231b9aa95aab8e6986209b194ceab7f6129c8ca4d5267b6ba2af80071966f8"
+          "sourceRoot": "sha256:fad9a5a41a0f91fdf60e3f7eea658906e8c133a5fb5d5cbaeb3abc5af11d6bf8"
         },
         {
           "path": ".github/workflows/docs-check.yml",
@@ -836,5 +846,5 @@
       }
     }
   ],
-  "registryRoot": "sha256:e2f70af837b34c8b99c73da6d4244e9f288e51c73682d2e45580c4ecd327d129"
+  "registryRoot": "sha256:a911c02f9b2d30feba4c4b059e65e79d58fd98847b3cfe4c26bdd413d3bcba8c"
 }
