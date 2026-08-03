@@ -103,7 +103,10 @@ export const SUITES = [
   {
     id: 'product-catalog',
     product: true,
-    command: [LAUNCHER, 'builds', '--json'],
+    // The preceding product-distribution suite atomically records the exact
+    // slot produced by this checkout. Verify that one payload in full; old
+    // user-global history is not an input to the current qualification.
+    command: [LAUNCHER, 'builds', '--json', '--verify-current'],
   },
 ];
 

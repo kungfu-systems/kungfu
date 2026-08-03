@@ -149,6 +149,18 @@ test('product verification checks the distribution outputs without rebuilding th
   assert.equal(verification.command.includes('--full'), false);
 });
 
+test('product catalog qualification is bound to the build from this checkout', () => {
+  const catalog = qualificationPlan({
+    mode: 'execute',
+    withProduct: true,
+  }).find((suite) => suite.id === 'product-catalog');
+  assert.deepEqual(catalog.command.slice(1), [
+    'builds',
+    '--json',
+    '--verify-current',
+  ]);
+});
+
 test('source qualification uv runs preserve the exact tracked lockfile', () => {
   const uvSuites = qualificationPlan({
     mode: 'execute',

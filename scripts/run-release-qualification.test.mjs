@@ -17,6 +17,7 @@ import {
   parseExecutionProfile,
   parseReleaseQualificationOptions,
   prepareReleaseQualificationHistory,
+  prepareReleaseQualificationOutput,
   releaseQualificationEnvironment,
   releaseQualificationStages,
   verifyCorePlatformRelease,
@@ -146,6 +147,25 @@ test('qualification temp state is repository scoped on every platform', () => {
     assert.match(env.KF_DESKTOP_ARTIFACT_SIGNATURE, /#desktop$/);
     assert.match(env.KF_CLI_ARTIFACT_SIGNATURE, /#cli$/);
     assert.equal(fs.statSync(expected).isDirectory(), true);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('each qualification run replaces only its generated evidence root', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'kungfu-release-output-'));
+  const qualification = path.join(root, 'product/release/qualification');
+  const releaseArtifact = path.join(root, 'product/release/desktop/app.zip');
+  try {
+    fs.mkdirSync(qualification, { recursive: true });
+    fs.writeFileSync(path.join(qualification, 'stale-report.json'), '{}\n');
+    fs.mkdirSync(path.dirname(releaseArtifact), { recursive: true });
+    fs.writeFileSync(releaseArtifact, 'artifact\n');
+
+    assert.equal(prepareReleaseQualificationOutput(root), qualification);
+    assert.equal(fs.statSync(qualification).isDirectory(), true);
+    assert.deepEqual(fs.readdirSync(qualification), []);
+    assert.equal(fs.readFileSync(releaseArtifact, 'utf8'), 'artifact\n');
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
   }
