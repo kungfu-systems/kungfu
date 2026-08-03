@@ -358,6 +358,19 @@ function testShifuCacheContract() {
   ]);
 }
 
+function checkShifuProductionGraphContract() {
+  run('Shifu Production Graph contract gate', 'node', [
+    path.join('framework', 'production-graph', 'check.mjs'),
+  ]);
+}
+
+function testShifuProductionGraphContract() {
+  run('Shifu Production Graph contract tests', 'node', [
+    '--test',
+    path.join('framework', 'production-graph', 'check.test.mjs'),
+  ]);
+}
+
 function checkShifuDocumentationContract() {
   run('Shifu Documentation Protocol gate', 'node', [
     path.join('scripts', 'check-shifu-documentation-contract.mjs'),
@@ -790,6 +803,7 @@ function checkStaged() {
   checkNativeComponentVersionSync();
   checkShifuEntryContract();
   checkShifuCacheContract();
+  checkShifuProductionGraphContract();
   checkShifuDocumentationContract();
   checkRouteTopologyContract();
   checkXinfaBoundary();
@@ -855,6 +869,7 @@ function checkShared() {
   testTestManifest();
   testShifuEntryContract();
   testShifuCacheContract();
+  testShifuProductionGraphContract();
   testShifuDocumentationContract();
   testXinfaBoundary();
   testShifuGateContract();

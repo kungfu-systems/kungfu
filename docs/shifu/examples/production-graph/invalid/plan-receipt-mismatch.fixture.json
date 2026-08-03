@@ -1,0 +1,11 @@
+{
+  "schema": "shifu.production-graph-negative-fixture/v0",
+  "baseFixture": "qualified",
+  "mutation": {
+    "target": "receipt",
+    "operation": "set",
+    "path": ["planRoot"],
+    "value": "sha256:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+  },
+  "expect": "plan-receipt-mismatch"
+}
