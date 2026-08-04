@@ -4,6 +4,19 @@ These gates admit a change or artifact to a channel. Publication and tag mutatio
 
 Each section is bound to the registry id by the catalog meta gate.
 
+## Required development delivery Warrant
+
+Targeted development `workflow_run` deliveries require one exact, bounded
+Buildchain Warrant before queue admission. The Warrant binds the pull request
+head, reusable source proof, integration base, required checks, and lease; a
+protected terminal workflow closes it after merge or dequeue. Manual dispatch
+and cadence patrol remain outside that authority and run with Warrant mode off.
+
+This gate grants neither approval nor publication authority and does not enable
+paid runner campaigns. Shared AWS Windows Burst and macOS campaigns remain
+separately governed and disabled unless explicitly activated by their own
+resource authority.
+
 ## Exact-source Alpha preflight
 
 Every push to the development channel produces a four-platform
