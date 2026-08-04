@@ -605,15 +605,38 @@ def verify(
             "runtime surface receipt selection mode or requested class is invalid",
             "kungfu runtime surface contract --json",
         )
+    selected_surface = value["runtimeSurface"]
+    if operation["selectionMode"] == "exact" and (
+        requested != operation["allowedSurfaces"][0] or selected_surface != requested
+    ):
+        _fail(
+            "runtime-surface-receipt-selection",
+            "exact runtime surface receipt contradicts the operation requirement",
+            "kungfu runtime surface contract --json",
+        )
     fallback = value["selection"]["fallback"]
     if fallback["used"] and (
         operation["fallback"]["mode"] != "explicit-qualified"
+        or fallback["allowed"] is not True
+        or requested == "capability-negotiated"
+        or fallback["from"] != requested
+        or fallback["to"] != selected_surface
         or fallback["to"] not in operation["fallback"]["targets"]
         or not fallback["reason"]
     ):
         _fail(
             "runtime-surface-receipt-fallback",
             "runtime surface receipt contains an unauthorized fallback",
+            "kungfu runtime surface contract --json",
+        )
+    if (
+        not fallback["used"]
+        and requested != "capability-negotiated"
+        and requested != selected_surface
+    ):
+        _fail(
+            "runtime-surface-receipt-selection",
+            "runtime surface changed without a qualified fallback",
             "kungfu runtime surface contract --json",
         )
     if not fallback["used"] and any(

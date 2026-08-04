@@ -19,6 +19,36 @@ const REQUIRED_ROWS = [
   'context-hybrid',
   'seal-installed',
 ];
+const ROW_CONTRACT = {
+  'assignment-capture-installed': {
+    consumer: 'kungfu.work.capture',
+    operations: [['assignment.capture', 'installed-product']],
+  },
+  'source-build-test-source': {
+    consumer: 'shifu.build-test',
+    operations: [
+      ['source.build', 'source-checkout'],
+      ['source.test', 'source-checkout'],
+    ],
+  },
+  'portable-bundle-installed': {
+    consumer: 'kungfu.agent.docs.verify',
+    operations: [['portable-bundle.consume', 'installed-product']],
+  },
+  'dogfood-actual-surface': {
+    consumer: 'kungfu.dogfood.capture',
+    operations: [['dogfood.capture', null]],
+  },
+  'context-hybrid': {
+    consumer: 'atlas.xinfa.context',
+    operations: [['context.consume', 'hybrid-boundary']],
+    requiredObservers: ['kungfu.tui.runtime-surface'],
+  },
+  'seal-installed': {
+    consumer: 'kungfu.work.verify-seal',
+    operations: [['assignment.seal-verify', 'installed-product']],
+  },
+};
 
 function fail(message) {
   throw new Error(message);
@@ -42,7 +72,7 @@ function canonical(value) {
   );
 }
 
-function valueRoot(value) {
+export function valueRoot(value) {
   return digest(Buffer.from(JSON.stringify(canonical(value))));
 }
 
@@ -75,6 +105,7 @@ function parseArgs(argv) {
     assignmentRoot: null,
     workDefinitionRoot: null,
     workRoot: null,
+    consumerEvidence: {},
   };
   for (let index = 0; index < argv.length; index += 1) {
     const value = argv[index];
@@ -85,15 +116,129 @@ function parseArgs(argv) {
     else if (value === '--work-definition-root')
       options.workDefinitionRoot = argv[++index] || null;
     else if (value === '--work-root') options.workRoot = argv[++index] || null;
-    else fail(`unknown argument: ${value}`);
+    else if (value === '--consumer-evidence') {
+      const binding = argv[++index] || '';
+      const separator = binding.indexOf('=');
+      const row = separator > 0 ? binding.slice(0, separator) : '';
+      const file = separator > 0 ? binding.slice(separator + 1) : '';
+      if (!REQUIRED_ROWS.includes(row) || !file)
+        fail('--consumer-evidence must be <required-row>=<json-file>');
+      if (options.consumerEvidence[row])
+        fail(`duplicate consumer evidence for ${row}`);
+      options.consumerEvidence[row] = path.resolve(file);
+    } else fail(`unknown argument: ${value}`);
   }
   if (!options.output) fail('--output is required');
   for (const [key, value] of Object.entries(options))
-    if (key !== 'output' && value !== null && !ROOT_PATTERN.test(value))
+    if (
+      !['output', 'consumerEvidence'].includes(key) &&
+      value !== null &&
+      !ROOT_PATTERN.test(value)
+    )
       fail(
         `--${key.replace(/[A-Z]/gu, (char) => `-${char.toLowerCase()}`)} must be sha256 rooted`,
       );
+  for (const row of REQUIRED_ROWS)
+    if (!options.consumerEvidence[row])
+      fail(`--consumer-evidence ${row}=<json-file> is required`);
   return options;
+}
+
+export function verifyConsumerEvidence({
+  rowId,
+  file,
+  sourceCommand,
+  installedCommand,
+  authorityRoots,
+  sourceCandidate,
+  installedCandidate,
+  hybridCandidate,
+  invokeCommand = invoke,
+}) {
+  const value = JSON.parse(fs.readFileSync(file, 'utf8'));
+  if (
+    value?.schema !== 'kungfu.runtime-surface-consumer-evidence/v1' ||
+    value.rowId !== rowId ||
+    value.consumer !== ROW_CONTRACT[rowId].consumer ||
+    value.probe?.ok !== true ||
+    value.probe?.schema !== 'kungfu.runtime-surface-consumer-probe/v1' ||
+    !Object.hasOwn(value.probe, 'output') ||
+    !ROOT_PATTERN.test(value.probe?.outputRoot || '') ||
+    !Array.isArray(value.receipts)
+  )
+    fail(`consumer evidence is invalid for ${rowId}`);
+  if (value.probe.outputRoot !== valueRoot(value.probe.output))
+    fail(`consumer probe output root mismatch for ${rowId}`);
+  const declaredRoot = value.evidenceRoot;
+  const body = Object.fromEntries(
+    Object.entries(value).filter(([key]) => key !== 'evidenceRoot'),
+  );
+  if (declaredRoot !== valueRoot(body))
+    fail(`consumer evidence root mismatch for ${rowId}`);
+  const expected = ROW_CONTRACT[rowId];
+  if (value.receipts.length !== expected.operations.length)
+    fail(`consumer receipt count mismatch for ${rowId}`);
+  for (const observer of expected.requiredObservers || [])
+    if (!(value.probe.observers || []).includes(observer))
+      fail(`consumer evidence ${rowId} is missing observer ${observer}`);
+
+  const candidateBySurface = {
+    'source-checkout': sourceCandidate,
+    'installed-product': installedCandidate,
+    'hybrid-boundary': hybridCandidate,
+  };
+  const directory = fs.mkdtempSync(
+    path.join(os.tmpdir(), `kungfu-runtime-consumer-${rowId}-`),
+  );
+  try {
+    value.receipts.forEach((receipt, index) => {
+      const [operation, requiredSurface] = expected.operations[index];
+      if (
+        receipt?.schema !== 'kungfu.runtime-surface-receipt/v1' ||
+        receipt.operationId !== operation ||
+        (requiredSurface && receipt.runtimeSurface !== requiredSurface) ||
+        JSON.stringify(receipt.authorityRoots) !==
+          JSON.stringify(authorityRoots)
+      )
+        fail(`consumer receipt ${index} contradicts ${rowId}`);
+      const candidate = candidateBySurface[receipt.runtimeSurface];
+      if (!candidate) fail(`consumer receipt ${index} has unknown surface`);
+      for (const coordinate of ['executable', 'source'])
+        if (
+          JSON.stringify(receipt[coordinate]) !==
+          JSON.stringify(candidate[coordinate])
+        )
+          fail(`consumer receipt ${index} has stale ${coordinate}`);
+      if (
+        receipt.runtimeSurface === 'hybrid-boundary'
+          ? !ROOT_PATTERN.test(receipt.bundleRoot || '')
+          : JSON.stringify(receipt.bundleRoot) !==
+            JSON.stringify(candidate.bundleRoot)
+      )
+        fail(`consumer receipt ${index} has stale bundleRoot`);
+      const receiptPath = path.join(directory, `${index}-receipt.json`);
+      fs.writeFileSync(receiptPath, `${JSON.stringify(receipt, null, 2)}\n`);
+      const command =
+        receipt.runtimeSurface === 'source-checkout'
+          ? sourceCommand
+          : installedCommand;
+      const verification = invokeCommand(command, [
+        'runtime',
+        'surface',
+        'verify',
+        receiptPath,
+        '--json',
+      ]);
+      if (
+        verification.ok !== true ||
+        verification.receiptRoot !== receipt.receiptRoot
+      )
+        fail(`consumer receipt verification failed for ${rowId}`);
+    });
+  } finally {
+    fs.rmSync(directory, { recursive: true, force: true });
+  }
+  return value;
 }
 
 function candidateEvidence({
@@ -242,107 +387,27 @@ function qualify(options) {
     workDefinitionRoot: options.workDefinitionRoot,
     workRoot: options.workRoot,
   };
-  const temp = fs.mkdtempSync(
-    path.join(os.tmpdir(), 'kungfu-runtime-surface-'),
-  );
-  let sequence = 0;
-  const resolve = (command, operationId, requestedSurface, candidates) => {
-    sequence += 1;
-    const request = {
-      schema: 'kungfu.runtime-surface-request/v1',
-      operationId,
-      requestedSurface,
-      candidates,
+  const rows = REQUIRED_ROWS.map((id) => {
+    const consumerEvidence = verifyConsumerEvidence({
+      rowId: id,
+      file: options.consumerEvidence[id],
+      sourceCommand,
+      installedCommand,
       authorityRoots,
-      fallback: { allowed: false, reason: '' },
+      sourceCandidate,
+      installedCandidate,
+      hybridCandidate,
+    });
+    return {
+      id,
+      receipts: consumerEvidence.receipts,
+      consumerEvidence: {
+        root: consumerEvidence.evidenceRoot,
+        consumer: consumerEvidence.consumer,
+        probe: consumerEvidence.probe,
+      },
     };
-    const requestPath = path.join(temp, `${sequence}-request.json`);
-    const receiptPath = path.join(temp, `${sequence}-receipt.json`);
-    fs.writeFileSync(requestPath, `${JSON.stringify(request, null, 2)}\n`);
-    const receipt = invoke(command, [
-      'runtime',
-      'surface',
-      'resolve',
-      requestPath,
-      '--json',
-    ]);
-    fs.writeFileSync(receiptPath, `${JSON.stringify(receipt, null, 2)}\n`);
-    const verification = invoke(command, [
-      'runtime',
-      'surface',
-      'verify',
-      receiptPath,
-      '--json',
-    ]);
-    if (
-      verification.ok !== true ||
-      verification.receiptRoot !== receipt.receiptRoot
-    )
-      fail(`qualification receipt verification failed for ${operationId}`);
-    return receipt;
-  };
-  const rows = [
-    {
-      id: REQUIRED_ROWS[0],
-      receipts: [
-        resolve(installedCommand, 'assignment.capture', 'installed-product', [
-          installedCandidate,
-        ]),
-      ],
-    },
-    {
-      id: REQUIRED_ROWS[1],
-      receipts: [
-        resolve(sourceCommand, 'source.build', 'source-checkout', [
-          sourceCandidate,
-        ]),
-        resolve(sourceCommand, 'source.test', 'source-checkout', [
-          sourceCandidate,
-        ]),
-      ],
-    },
-    {
-      id: REQUIRED_ROWS[2],
-      receipts: [
-        resolve(
-          installedCommand,
-          'portable-bundle.consume',
-          'installed-product',
-          [installedCandidate],
-        ),
-      ],
-    },
-    {
-      id: REQUIRED_ROWS[3],
-      receipts: [
-        resolve(installedCommand, 'dogfood.capture', 'capability-negotiated', [
-          hybridCandidate,
-          sourceCandidate,
-          installedCandidate,
-        ]),
-      ],
-    },
-    {
-      id: REQUIRED_ROWS[4],
-      receipts: [
-        resolve(installedCommand, 'context.consume', 'hybrid-boundary', [
-          hybridCandidate,
-        ]),
-      ],
-    },
-    {
-      id: REQUIRED_ROWS[5],
-      receipts: [
-        resolve(
-          installedCommand,
-          'assignment.seal-verify',
-          'installed-product',
-          [installedCandidate],
-        ),
-      ],
-    },
-  ];
-  fs.rmSync(temp, { recursive: true, force: true });
+  });
   const body = {
     schema: 'kungfu.runtime-surface-qualification/v1',
     status: 'passed',
@@ -361,30 +426,32 @@ function qualify(options) {
   return { ...body, reportRoot: valueRoot(body) };
 }
 
-try {
-  const options = parseArgs(process.argv.slice(2));
-  const report = qualify(options);
-  const output = path.resolve(options.output);
-  fs.mkdirSync(path.dirname(output), { recursive: true });
-  fs.writeFileSync(output, `${JSON.stringify(report, null, 2)}\n`, {
-    flag: 'wx',
-  });
-  process.stdout.write(
-    `${JSON.stringify(
-      {
-        schema: report.schema,
-        status: report.status,
-        reportRoot: report.reportRoot,
-        output,
-        rows: report.rows.map((row) => row.id),
-      },
-      null,
-      2,
-    )}\n`,
-  );
-} catch (error) {
-  process.stderr.write(
-    `runtime surface qualification failed: ${error.message}\n`,
-  );
-  process.exitCode = 1;
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  try {
+    const options = parseArgs(process.argv.slice(2));
+    const report = qualify(options);
+    const output = path.resolve(options.output);
+    fs.mkdirSync(path.dirname(output), { recursive: true });
+    fs.writeFileSync(output, `${JSON.stringify(report, null, 2)}\n`, {
+      flag: 'wx',
+    });
+    process.stdout.write(
+      `${JSON.stringify(
+        {
+          schema: report.schema,
+          status: report.status,
+          reportRoot: report.reportRoot,
+          output,
+          rows: report.rows.map((row) => row.id),
+        },
+        null,
+        2,
+      )}\n`,
+    );
+  } catch (error) {
+    process.stderr.write(
+      `runtime surface qualification failed: ${error.message}\n`,
+    );
+    process.exitCode = 1;
+  }
 }
