@@ -3,7 +3,7 @@
   "contract": "kungfu-buildchain-dev-delivery-warrant-queue",
   "repository": "kungfu-systems/kungfu",
   "protectedBase": "dev/v4/v4.0",
-  "generation": 52,
+  "generation": 53,
   "fencingCounter": 13,
   "policy": {
     "agingSeconds": 900,
@@ -452,8 +452,32 @@
         "eventAction": "dequeued",
         "closedAt": "2026-08-04T14:20:28.638Z"
       }
+    },
+    {
+      "repository": "kungfu-systems/kungfu",
+      "protectedBase": "dev/v4/v4.0",
+      "pullRequestNumber": 2501,
+      "assignmentRoot": "sha256:2b9c9e5fab5465b23537e60d77fb5f97434293e3052789459540e5718551f46c",
+      "initiativeRoot": "sha256:bfff817933e5a5ad693e4b902a84f6cc3a251235dd7377cb4091d92f805fa7ff",
+      "sourceIdentityRoot": "sha256:9e3835d8d9fa7edf1c3dda369a8f8a98a6e367319deb31f778ab8b81fcd80f7a",
+      "deliveryClass": "native-proof-required",
+      "candidateId": "sha256:a7caf548f2efef855d4fd3e32109c61d7aaf074200f9dba05a7c916a7561639c",
+      "sourceHead": "73d9fc8b4009a81a32fe7157b2b6b436e41768ba",
+      "sourcePatchRoot": "sha256:489918e18e75a2788db9d765fcd37b28d7ddb6ff66060bca3c84fe3c2a117249",
+      "sourceProofRoot": "sha256:6351605924bca171fafb1dc11aa083c137b882eb95d9f6fd38eae8320dbe29a9",
+      "planRoot": "sha256:16b5806d83001a3af7d7824e4e238aeafef7adc34ef626db9608be10d5e1a587",
+      "closureRoot": "sha256:106d175611d8634c988192302b9c464ae8ba3b6d023c2cff9910e401344c9624",
+      "dependencyRoot": "sha256:015c57f4c762f4c40b7e52f398dace86db9b4a232a003583eb9e3f13abc44e29",
+      "toolchainRoot": "sha256:2ecb07894954a2e0de022615d4561e5ba3ae68376401941ecff77be03cd75a0f",
+      "priority": "ordinary",
+      "enqueuedAt": "2026-08-04T14:30:13.222Z",
+      "updatedAt": "2026-08-04T14:30:13.222Z",
+      "attempts": 1,
+      "recoveries": 0,
+      "status": "queued",
+      "terminal": null
     }
   ],
-  "updatedAt": "2026-08-04T14:20:28.638Z",
-  "stateRoot": "sha256:0a722826dc305e153dea96ddafe111f8a19109ae1e297b65625f2c6826e19ec7"
+  "updatedAt": "2026-08-04T14:30:13.222Z",
+  "stateRoot": "sha256:835177fafd8fe3f53155364ec13b4bd880178436022a202f8fdb3a5f66b978de"
 }
