@@ -310,7 +310,11 @@ jobs:
           if ! git cat-file -e "${pr_head}^{commit}" 2>/dev/null; then
             git fetch --no-tags origin "$pr_head"
           fi
-          echo "source-tree=$(git rev-parse "${pr_head}^{tree}")" >> "$GITHUB_OUTPUT"
+          source_tree="$(git rev-parse "${pr_head}^{tree}")"
+          if [ "$GITHUB_EVENT_NAME" = "merge_group" ]; then
+            source_tree="$(jq -er '.source.replayedTree' "$binding")"
+          fi
+          echo "source-tree=${source_tree}" >> "$GITHUB_OUTPUT"
       - name: Describe exact affected-native proof identity
         id: descriptor
         shell: bash
