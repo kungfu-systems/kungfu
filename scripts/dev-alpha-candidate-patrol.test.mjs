@@ -7,7 +7,7 @@ import { test } from 'node:test';
 
 const ROOT = process.cwd();
 const BUILDCHAIN_DEV_VERIFY_RUNTIME =
-  '8d3b882a70adededd19eeeac8cfe9f73b58cc1c0';
+  'd036820df1c0eed012023cc5e44c4b8d7b209bd4';
 const BUILDCHAIN_TIMEOUT_SAFE_RUNTIME =
   '22338823464024efb0bb72231c29cca9f61d72bb';
 

@@ -341,7 +341,7 @@
       ],
       "activation": "daily or manual on dev",
       "invocation": {
-        "uses": "kungfu-systems/buildchain/.github/workflows/.gate-profile.yml@8d3b882a70adededd19eeeac8cfe9f73b58cc1c0",
+        "uses": "kungfu-systems/buildchain/.github/workflows/.gate-profile.yml@d036820df1c0eed012023cc5e44c4b8d7b209bd4",
         "with": {
           "buildchain-ref": "${{ github.event_name == 'workflow_dispatch' && inputs.buildchain-ref || '' }}",
           "checkout-cache-fallback": "github",
