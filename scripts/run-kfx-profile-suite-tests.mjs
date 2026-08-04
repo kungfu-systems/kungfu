@@ -73,6 +73,29 @@ function assertNoLegacyProductIdentity() {
   );
 }
 
+function assertEmbeddedSourceContractDependencies() {
+  const cmake = readFileSync(
+    path.join(root, 'framework/core/src/libkungfu/CMakeLists.txt'),
+    'utf8',
+  );
+  const dependencyBlock = cmake.match(
+    /set_property\(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS ([^)]+)\)/u,
+  )?.[1];
+  for (const contract of [
+    'kungfu-kfx.contract.json',
+    'kungfu-kfx-domain-profile.contract.json',
+  ]) {
+    if (!dependencyBlock?.includes(contract)) {
+      throw new Error(
+        `${contract} must invalidate cached CMake configuration before its bytes are embedded`,
+      );
+    }
+  }
+  process.stdout.write(
+    '[kfx-profile-suite] embedded source contracts invalidate cached CMake configuration\n',
+  );
+}
+
 const pythonPath = [
   path.join(root, 'framework/core/src/python'),
   agentWorkLabOnly
@@ -83,6 +106,8 @@ const pythonPath = [
 ]
   .filter(Boolean)
   .join(path.delimiter);
+
+assertEmbeddedSourceContractDependencies();
 
 if (agentWorkLabOnly) {
   assertNoLegacyProductIdentity();
