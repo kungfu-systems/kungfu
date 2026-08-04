@@ -7,7 +7,7 @@ import { test } from 'node:test';
 
 const ROOT = process.cwd();
 const BUILDCHAIN_TIMEOUT_SAFE_RUNTIME =
-  '825f596fe4a5ed8a4b2bb4f7c5a1b44cb9a075a3';
+  '22338823464024efb0bb72231c29cca9f61d72bb';
 
 function workflow(name) {
   return fs.readFileSync(path.join(ROOT, '.github/workflows', name), 'utf8');
@@ -30,6 +30,11 @@ test('Dev Patrol is exact-source dispatch-only behind the qualification controll
     source,
     /buildchain-ref: \$\{\{ inputs\.buildchain-ref \|\| '[0-9a-f]{40}' \}\}/u,
   );
+  assert.match(source, /checkout-cache-mode: off/u);
+  assert.ok(source.includes(String.raw`"runner":"[\"ubuntu-24.04\"]"`));
+  assert.ok(source.includes(String.raw`"runner":"[\"macos-15\"]"`));
+  assert.ok(source.includes(String.raw`"runner":"[\"windows-2022\"]"`));
+  assert.doesNotMatch(source, /kungfu-build-v4-(?:linux|macos|windows)/u);
   const reusableRef = source.match(
     /uses: kungfu-systems\/buildchain\/\.github\/workflows\/\.gate-profile\.yml@([0-9a-f]{40})/u,
   )?.[1];
