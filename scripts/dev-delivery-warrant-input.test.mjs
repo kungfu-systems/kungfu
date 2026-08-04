@@ -171,13 +171,32 @@ test('terminal consumer executes only protected event and Buildchain authority',
   );
   assert.match(workflow, /pull_request_target:/u);
   assert.match(workflow, /types: \[closed, dequeued\]/u);
-  assert.match(workflow, /No matching active Warrant/u);
+  assert.match(workflow, /No matching active Warrant or queued candidate/u);
+  assert.match(workflow, /\.observation\.queued\[\]\?/u);
+  assert.match(workflow, /needs\.prepare\.outputs\.queued == 'true'/u);
   assert.match(workflow, /GH_TOKEN: \$\{\{ github\.token \}\}/u);
   assert.match(workflow, /GITHUB_TOKEN: \$\{\{ github\.token \}\}/u);
   assert.match(
     workflow,
-    /dev-delivery-warrant-close\.yml@4f491a61dd2a4ba127ddbb8d67c6b51a903b1567/u,
+    /dev-delivery-warrant-close\.yml@c8b36d8e16f7c191047b394a43c25e59ee5b00a1/u,
+  );
+  assert.match(
+    workflow,
+    /dev-delivery-warrant-cancel\.yml@c8b36d8e16f7c191047b394a43c25e59ee5b00a1/u,
   );
   assert.doesNotMatch(workflow, /github\.event\.pull_request\.head\.ref/u);
   assert.doesNotMatch(workflow, /checkout[^\n]*pull_request\.head/u);
+});
+
+test('protected caller makes the Warrant mandatory for exact delivery', () => {
+  const workflow = fs.readFileSync(
+    new URL('../.github/workflows/dev-pr-auto-merge.yml', import.meta.url),
+    'utf8',
+  );
+  assert.match(workflow, /delivery-warrant-mode:.*workflow_run.*required/u);
+  assert.match(
+    workflow,
+    /workflow_dispatch.*inputs\.dry-run == false.*required/u,
+  );
+  assert.doesNotMatch(workflow, /delivery-warrant-mode:.*shadow/u);
 });

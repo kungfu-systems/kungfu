@@ -20,6 +20,10 @@ jobs:
     runs-on: ubuntu-24.04
     outputs:
       active: ${{ steps.terminal.outputs.active }}
+      queued: ${{ steps.terminal.outputs.queued }}
+      queued-candidate-id: ${{ steps.terminal.outputs.queued-candidate-id }}
+      queued-source-head-sha: ${{ steps.terminal.outputs.queued-source-head-sha }}
+      queue-state-root: ${{ steps.terminal.outputs.queue-state-root }}
       outcome: ${{ steps.terminal.outputs.outcome }}
       current-base-sha: ${{ steps.terminal.outputs.current-base-sha }}
       replay-tree-sha: ${{ steps.terminal.outputs.replay-tree-sha }}
@@ -33,7 +37,7 @@ jobs:
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           repository: kungfu-systems/buildchain
-          ref: 4f491a61dd2a4ba127ddbb8d67c6b51a903b1567
+          ref: c8b36d8e16f7c191047b394a43c25e59ee5b00a1
           path: .buildchain/runtime
           persist-credentials: false
 
@@ -60,20 +64,44 @@ jobs:
             --branch "$TARGET_BRANCH" \
             --output "$observation"
 
-          if ! jq -e \
+          active_match="$(jq -r \
             --argjson pr "$EXPECTED_PR" \
             --arg head "$EXPECTED_HEAD" \
             '.observation.activeWarrant.pullRequestNumber == $pr
              and .observation.activeWarrant.sourceHead == $head
              and .observation.activeCandidate.pullRequestNumber == $pr
              and .observation.activeCandidate.sourceHead == $head' \
-            "$observation" >/dev/null; then
+            "$observation")"
+          queued_matches="$(jq -c \
+            --argjson pr "$EXPECTED_PR" \
+            '[.observation.queued[]? | select(.pullRequestNumber == $pr)]' \
+            "$observation")"
+          queued_count="$(jq -r 'length' <<<"$queued_matches")"
+          if [ "$active_match" != "true" ] && [ "$queued_count" -eq 0 ]; then
             echo "active=false" >> "$GITHUB_OUTPUT"
-            echo "No matching active Warrant; shadow and already-settled deliveries are terminal no-ops."
+            echo "queued=false" >> "$GITHUB_OUTPUT"
+            echo "No matching active Warrant or queued candidate; already-settled deliveries are terminal no-ops."
             exit 0
           fi
+          if [ "$active_match" = "true" ] && [ "$queued_count" -ne 0 ]; then
+            echo "The same PR cannot be both active and queued." >&2
+            exit 1
+          fi
+          if [ "$active_match" != "true" ] && [ "$queued_count" -ne 1 ]; then
+            echo "Expected exactly one queued candidate for terminal cancellation." >&2
+            exit 1
+          fi
 
-          echo "active=true" >> "$GITHUB_OUTPUT"
+          if [ "$active_match" = "true" ]; then
+            echo "active=true" >> "$GITHUB_OUTPUT"
+            echo "queued=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "active=false" >> "$GITHUB_OUTPUT"
+            echo "queued=true" >> "$GITHUB_OUTPUT"
+            echo "queued-candidate-id=$(jq -er '.[0].candidateId' <<<"$queued_matches")" >> "$GITHUB_OUTPUT"
+            echo "queued-source-head-sha=$(jq -er '.[0].sourceHead' <<<"$queued_matches")" >> "$GITHUB_OUTPUT"
+            echo "queue-state-root=$(jq -er '.observation.stateRoot' "$observation")" >> "$GITHUB_OUTPUT"
+          fi
           if [ "$EVENT_ACTION" = "dequeued" ]; then
             outcome=dequeued
           elif [ "$MERGED" = "true" ]; then
@@ -83,6 +111,11 @@ jobs:
           fi
           echo "outcome=$outcome" >> "$GITHUB_OUTPUT"
           echo "reason=protected pull request event: $EVENT_ACTION" >> "$GITHUB_OUTPUT"
+
+          if [ "$active_match" != "true" ] && [ "$outcome" = "merged" ]; then
+            echo "A queued candidate cannot consume a merged terminal event." >&2
+            exit 1
+          fi
 
           if [ "$outcome" = "merged" ]; then
             test "${#MERGE_SHA}" -eq 40
@@ -137,9 +170,9 @@ jobs:
   close:
     needs: prepare
     if: needs.prepare.outputs.active == 'true'
-    uses: kungfu-systems/buildchain/.github/workflows/dev-delivery-warrant-close.yml@4f491a61dd2a4ba127ddbb8d67c6b51a903b1567
+    uses: kungfu-systems/buildchain/.github/workflows/dev-delivery-warrant-close.yml@c8b36d8e16f7c191047b394a43c25e59ee5b00a1
     with:
-      buildchain-ref: 4f491a61dd2a4ba127ddbb8d67c6b51a903b1567
+      buildchain-ref: c8b36d8e16f7c191047b394a43c25e59ee5b00a1
       target-branch: ${{ github.event.pull_request.base.ref }}
       expected-pr-number: ${{ github.event.pull_request.number }}
       expected-head-sha: ${{ github.event.pull_request.head.sha }}
@@ -149,6 +182,25 @@ jobs:
       merge-group-head-sha: ${{ needs.prepare.outputs.merge-group-head-sha }}
       merge-group-tree-sha: ${{ needs.prepare.outputs.merge-group-tree-sha }}
       required-context-roots-json: ${{ needs.prepare.outputs.required-context-roots-json }}
+      terminal-evidence-root: ${{ needs.prepare.outputs.terminal-evidence-root }}
+      reason: ${{ needs.prepare.outputs.reason }}
+    secrets:
+      github-token: ${{ secrets.KUNGFU_GITHUB_TOKEN }}
+
+  cancel-queued:
+    needs: prepare
+    if: needs.prepare.outputs.queued == 'true'
+    uses: kungfu-systems/buildchain/.github/workflows/dev-delivery-warrant-cancel.yml@c8b36d8e16f7c191047b394a43c25e59ee5b00a1
+    with:
+      buildchain-ref: c8b36d8e16f7c191047b394a43c25e59ee5b00a1
+      target-branch: ${{ github.event.pull_request.base.ref }}
+      expected-pr-number: ${{ github.event.pull_request.number }}
+      expected-candidate-id: ${{ needs.prepare.outputs.queued-candidate-id }}
+      expected-source-head-sha: ${{ needs.prepare.outputs.queued-source-head-sha }}
+      observed-source-head-sha: ${{ github.event.pull_request.head.sha }}
+      expected-old-state-root: ${{ needs.prepare.outputs.queue-state-root }}
+      event-action: ${{ github.event.action }}
+      outcome: ${{ needs.prepare.outputs.outcome }}
       terminal-evidence-root: ${{ needs.prepare.outputs.terminal-evidence-root }}
       reason: ${{ needs.prepare.outputs.reason }}
     secrets:
