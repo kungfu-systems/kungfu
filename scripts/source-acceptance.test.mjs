@@ -428,6 +428,10 @@ test('dev patrol normalizes MSVC diagnostics for bounded Gate output', () => {
     'utf8',
   );
   assert.match(workflow, /"VSLANG":"1033"/);
+  assert.doesNotMatch(workflow, /BUILDCHAIN_CARGO_REGISTRY_INDEX/u);
+  assert.doesNotMatch(workflow, /SHIFU_CACHE_PROFILE_(?:REF|DIGEST)/u);
+  assert.doesNotMatch(workflow, /cargo-registry-index:/u);
+  assert.doesNotMatch(workflow, /shifu-cache-profile-(?:ref|digest):/u);
 });
 
 test('Python source checks use uvx when a bare ruff is unavailable', () => {

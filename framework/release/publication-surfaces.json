@@ -122,7 +122,7 @@
             "product-stable",
             "product-binaries"
           ],
-          "sourceRoot": "sha256:e61da25a88bb549953f1319322d2cf8378207437ff82cd299ed84efe26c80128"
+          "sourceRoot": "sha256:4817d5603a2958fcb66f34272d7cbf625fd3d30912da6351587874f53f5aa6a3"
         },
         {
           "path": ".github/workflows/buildchain-validate.yml",
@@ -220,7 +220,7 @@
             "product-alpha",
             "product-stable"
           ],
-          "sourceRoot": "sha256:d4019df041ad86c1d93e3b369c186bace20eccceee1856dd086c65f694ec71af"
+          "sourceRoot": "sha256:feec90b6dd3ea56a4694797f188b5b41d92d4e156c727dc470f8284d324332c7"
         },
         {
           "path": ".github/workflows/docs-check.yml",
@@ -272,7 +272,7 @@
             "product-stable",
             "product-binaries"
           ],
-          "sourceRoot": "sha256:62743a6b64d9b897792c572d6b8e3ad3eafd54b5ea330cb246b0467308ee8d3f"
+          "sourceRoot": "sha256:20618795b9bafbb08a12b41a48fe139549d76f9bedc2d14791d28956a7c4c63a"
         },
         {
           "path": ".github/workflows/kungfu-agent-patrol.yml",
@@ -860,5 +860,5 @@
       }
     }
   ],
-  "registryRoot": "sha256:8508cbed3bd2ed50871f01ead0ec97ab981ba73fa1f3a8d2467b70a6ec149a71"
+  "registryRoot": "sha256:1ec4ef6580594e2faca453cdd428cc2f87bc709a924a40a91b4021c2138a6857"
 }

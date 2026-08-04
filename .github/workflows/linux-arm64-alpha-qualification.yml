@@ -75,7 +75,6 @@ jobs:
       rust-toolchain: "1.96.0"
       rustup-dist-server: https://rsproxy.cn
       rustup-update-root: https://rsproxy.cn/rustup
-      cargo-registry-index: ${{ vars.BUILDCHAIN_CARGO_REGISTRY_INDEX }}
       artifact-name: kungfu-hub-cli
       artifact-paths: |
         product/release/cli/kungfu-episodes-cli-linux-arm64.tar.gz
@@ -104,7 +103,7 @@ jobs:
       publish-channel: ${{ github.event_name == 'pull_request' && (startsWith(github.base_ref, 'release/') && 'release' || 'alpha') || 'none' }}
       artifact-transfer-mode: s3-to-github-artifacts
       artifact-retention-days: 14
-      checkout-cache-mode: auto
+      checkout-cache-mode: off
       checkout-cache-fallback: github
       checkout-cache-timeout-seconds: 60
       checkout-cache-github-timeout-seconds: 1200

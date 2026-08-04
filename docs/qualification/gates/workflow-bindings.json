@@ -344,7 +344,6 @@
         "uses": "kungfu-systems/buildchain/.github/workflows/.gate-profile.yml@22338823464024efb0bb72231c29cca9f61d72bb",
         "with": {
           "buildchain-ref": "${{ github.event_name == 'workflow_dispatch' && inputs.buildchain-ref || '' }}",
-          "cargo-registry-index": "${{ vars.BUILDCHAIN_CARGO_REGISTRY_INDEX }}",
           "checkout-cache-fallback": "github",
           "checkout-cache-mode": "off",
           "gate-profile": "dev-patrol",
