@@ -1,0 +1,154 @@
+# SPDX-License-Identifier: Apache-2.0
+
+name: Dev Delivery Warrant Terminal
+
+on:
+  pull_request_target:
+    types: [closed, dequeued]
+    branches:
+      - dev/v*/v*
+
+permissions:
+  actions: read
+  checks: read
+  contents: write
+  pull-requests: read
+  statuses: read
+
+jobs:
+  prepare:
+    runs-on: ubuntu-24.04
+    outputs:
+      active: ${{ steps.terminal.outputs.active }}
+      outcome: ${{ steps.terminal.outputs.outcome }}
+      current-base-sha: ${{ steps.terminal.outputs.current-base-sha }}
+      replay-tree-sha: ${{ steps.terminal.outputs.replay-tree-sha }}
+      merge-group-head-sha: ${{ steps.terminal.outputs.merge-group-head-sha }}
+      merge-group-tree-sha: ${{ steps.terminal.outputs.merge-group-tree-sha }}
+      required-context-roots-json: ${{ steps.terminal.outputs.required-context-roots-json }}
+      terminal-evidence-root: ${{ steps.terminal.outputs.terminal-evidence-root }}
+      reason: ${{ steps.terminal.outputs.reason }}
+    steps:
+      - name: Check out protected Buildchain runtime
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          repository: kungfu-systems/buildchain
+          ref: 3550081196f08f4dd5a195aee484dc1ddaa8bdd5
+          path: .buildchain/runtime
+          persist-credentials: false
+
+      - name: Bind the protected terminal event
+        id: terminal
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EVENT_ACTION: ${{ github.event.action }}
+          EXPECTED_PR: ${{ github.event.pull_request.number }}
+          EXPECTED_HEAD: ${{ github.event.pull_request.head.sha }}
+          TARGET_BRANCH: ${{ github.event.pull_request.base.ref }}
+          MERGED: ${{ github.event.pull_request.merged }}
+          MERGE_SHA: ${{ github.event.pull_request.merge_commit_sha }}
+          CLOSED_AT: ${{ github.event.pull_request.closed_at }}
+        run: |
+          set -euo pipefail
+          mkdir -p .buildchain/dev-delivery-terminal
+          observation=.buildchain/dev-delivery-terminal/observation.json
+          # shifu-entry-contract: allow protected Buildchain Warrant observation without executing consumer source
+          node .buildchain/runtime/scripts/dev-delivery-warrant.mjs observe \
+            --repository "$GITHUB_REPOSITORY" \
+            --branch "$TARGET_BRANCH" \
+            --output "$observation"
+
+          if ! jq -e \
+            --argjson pr "$EXPECTED_PR" \
+            --arg head "$EXPECTED_HEAD" \
+            '.observation.activeWarrant.pullRequestNumber == $pr
+             and .observation.activeWarrant.sourceHead == $head
+             and .observation.activeCandidate.pullRequestNumber == $pr
+             and .observation.activeCandidate.sourceHead == $head' \
+            "$observation" >/dev/null; then
+            echo "active=false" >> "$GITHUB_OUTPUT"
+            echo "No matching active Warrant; shadow and already-settled deliveries are terminal no-ops."
+            exit 0
+          fi
+
+          echo "active=true" >> "$GITHUB_OUTPUT"
+          if [ "$EVENT_ACTION" = "dequeued" ]; then
+            outcome=dequeued
+          elif [ "$MERGED" = "true" ]; then
+            outcome=merged
+          else
+            outcome=cancelled
+          fi
+          echo "outcome=$outcome" >> "$GITHUB_OUTPUT"
+          echo "reason=protected pull request event: $EVENT_ACTION" >> "$GITHUB_OUTPUT"
+
+          if [ "$outcome" = "merged" ]; then
+            test "${#MERGE_SHA}" -eq 40
+            case "$MERGE_SHA" in
+              *[!0-9a-f]*) echo "merged terminal event lacks an exact merge commit" >&2; exit 1 ;;
+            esac
+            gh api "repos/$GITHUB_REPOSITORY/git/commits/$MERGE_SHA" \
+              > .buildchain/dev-delivery-terminal/merge-commit.json
+            merge_tree="$(jq -er '.tree.sha' .buildchain/dev-delivery-terminal/merge-commit.json)"
+            gh api --paginate \
+              -H 'Accept: application/vnd.github+json' \
+              "repos/$GITHUB_REPOSITORY/commits/$MERGE_SHA/check-runs?per_page=100" \
+              --jq '.check_runs[] | select(.conclusion == "success") | {kind:"check",name:.name,headSha:.head_sha,conclusion:.conclusion,completedAt:.completed_at}' \
+              > .buildchain/dev-delivery-terminal/success-contexts.jsonl
+            gh api "repos/$GITHUB_REPOSITORY/commits/$MERGE_SHA/status" \
+              --jq '.statuses[] | select(.state == "success") | {kind:"status",name:.context,headSha:.sha,conclusion:.state,completedAt:.updated_at}' \
+              >> .buildchain/dev-delivery-terminal/success-contexts.jsonl
+            test -s .buildchain/dev-delivery-terminal/success-contexts.jsonl
+            context_roots='[]'
+            while IFS= read -r context; do
+              canonical="$(jq -cS . <<<"$context")"
+              root="sha256:$(printf '%s' "$canonical" | sha256sum | awk '{print $1}')"
+              context_roots="$(jq -cn --argjson roots "$context_roots" --arg root "$root" '$roots + [$root] | unique | sort')"
+            done < <(jq -cS . .buildchain/dev-delivery-terminal/success-contexts.jsonl | sort)
+            printf '%s\n' "$context_roots" > .buildchain/dev-delivery-terminal/context-roots.json
+            context_roots="$(cat .buildchain/dev-delivery-terminal/context-roots.json)"
+            test "$context_roots" != "[]"
+            echo "current-base-sha=$MERGE_SHA" >> "$GITHUB_OUTPUT"
+            echo "replay-tree-sha=$merge_tree" >> "$GITHUB_OUTPUT"
+            echo "merge-group-head-sha=$MERGE_SHA" >> "$GITHUB_OUTPUT"
+            echo "merge-group-tree-sha=$merge_tree" >> "$GITHUB_OUTPUT"
+            echo "required-context-roots-json=$context_roots" >> "$GITHUB_OUTPUT"
+            echo "terminal-evidence-root=" >> "$GITHUB_OUTPUT"
+          else
+            evidence="$(jq -cnS \
+              --arg action "$EVENT_ACTION" \
+              --argjson pr "$EXPECTED_PR" \
+              --arg head "$EXPECTED_HEAD" \
+              --arg base "$TARGET_BRANCH" \
+              --arg outcome "$outcome" \
+              --arg closedAt "$CLOSED_AT" \
+              '{schema:"kungfu.dev-delivery-terminal-event/v1",action:$action,pullRequest:$pr,sourceHead:$head,protectedBase:$base,outcome:$outcome,closedAt:$closedAt}')"
+            evidence_root="sha256:$(printf '%s' "$evidence" | sha256sum | awk '{print $1}')"
+            echo "current-base-sha=" >> "$GITHUB_OUTPUT"
+            echo "replay-tree-sha=" >> "$GITHUB_OUTPUT"
+            echo "merge-group-head-sha=" >> "$GITHUB_OUTPUT"
+            echo "merge-group-tree-sha=" >> "$GITHUB_OUTPUT"
+            echo "required-context-roots-json=[]" >> "$GITHUB_OUTPUT"
+            echo "terminal-evidence-root=$evidence_root" >> "$GITHUB_OUTPUT"
+          fi
+
+  close:
+    needs: prepare
+    if: needs.prepare.outputs.active == 'true'
+    uses: kungfu-systems/buildchain/.github/workflows/dev-delivery-warrant-close.yml@3550081196f08f4dd5a195aee484dc1ddaa8bdd5
+    with:
+      buildchain-ref: 3550081196f08f4dd5a195aee484dc1ddaa8bdd5
+      target-branch: ${{ github.event.pull_request.base.ref }}
+      expected-pr-number: ${{ github.event.pull_request.number }}
+      expected-head-sha: ${{ github.event.pull_request.head.sha }}
+      outcome: ${{ needs.prepare.outputs.outcome }}
+      current-base-sha: ${{ needs.prepare.outputs.current-base-sha }}
+      replay-tree-sha: ${{ needs.prepare.outputs.replay-tree-sha }}
+      merge-group-head-sha: ${{ needs.prepare.outputs.merge-group-head-sha }}
+      merge-group-tree-sha: ${{ needs.prepare.outputs.merge-group-tree-sha }}
+      required-context-roots-json: ${{ needs.prepare.outputs.required-context-roots-json }}
+      terminal-evidence-root: ${{ needs.prepare.outputs.terminal-evidence-root }}
+      reason: ${{ needs.prepare.outputs.reason }}
+    secrets:
+      github-token: ${{ secrets.KUNGFU_GITHUB_TOKEN }}
