@@ -277,7 +277,7 @@ test('family delivery binding is separate from reusable qualification identity',
     createDeliveryBinding(values),
   );
   assert.equal(binding.state, 'bound');
-  assert.equal(first.schema, 'kungfu.affected-native-proof-descriptor/v3');
+  assert.equal(first.schema, 'kungfu.affected-native-proof-descriptor/v4');
   assert.match(first.identity.dependencyRoot, /^sha256:[0-9a-f]{64}$/u);
   assert.match(first.identity.closureRoot, /^sha256:[0-9a-f]{64}$/u);
   assert.equal(first.proofId, repeated.proofId);
@@ -320,7 +320,7 @@ test('family delivery binding is separate from reusable qualification identity',
     first.identity.deliveryBinding.bindingRoot,
     expandedChecks.identity.deliveryBinding.bindingRoot,
   );
-  assert.notEqual(
+  assert.equal(
     first.proofId,
     createProofDescriptor(
       plan(QUEUE_HEAD, { base: '6'.repeat(40) }),

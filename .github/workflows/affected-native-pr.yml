@@ -307,6 +307,10 @@ jobs:
             --queue-admission-context "$queue_context" \
             --output "$binding" \
             --github-output "$GITHUB_OUTPUT"
+          if ! git cat-file -e "${pr_head}^{commit}" 2>/dev/null; then
+            git fetch --no-tags origin "$pr_head"
+          fi
+          echo "source-tree=$(git rev-parse "${pr_head}^{tree}")" >> "$GITHUB_OUTPUT"
       - name: Describe exact affected-native proof identity
         id: descriptor
         shell: bash
@@ -329,6 +333,7 @@ jobs:
             --plan product/qualification/affected-native/proof-probe/plan.json \
             --toolchain product/qualification/affected-native/proof-probe/toolchain.json \
             --delivery-binding product/qualification/affected-native/proof-probe/delivery-binding.json \
+            --source-tree "${{ steps.delivery.outputs.source-tree }}" \
             --output product/qualification/affected-native/proof-probe/descriptor.json \
             --github-output "$GITHUB_OUTPUT"
       - name: Upload current proof descriptor
@@ -371,15 +376,32 @@ jobs:
         id: verify
         if: ${{ steps.download.outcome == 'success' }}
         continue-on-error: true
+        shell: bash
         run: |
+          set -euo pipefail
+          descriptor=product/qualification/affected-native/proof-probe/descriptor.json
+          bundle=product/qualification/affected-native/proof-reuse
+          producer_base="$(jq -er '.source.base' "$bundle"/partition-*.receipt.json | sort -u)"
+          current_base="$(jq -er '.identity.base' "$descriptor")"
+          delta_args=()
+          if [ "$producer_base" != "$current_base" ]; then
+            export GITHUB_BASE_SHA="$producer_base"
+            export GITHUB_HEAD_SHA="$current_base"
+            # shifu-entry-contract: allow source-only dev-delta classification before Gate dependencies are runnable
+            node scripts/run-core-affected-native.mjs \
+              --plan-out product/qualification/affected-native/proof-probe/dev-delta-plan.json \
+              --json
+            delta_args=(--dev-delta-plan product/qualification/affected-native/proof-probe/dev-delta-plan.json)
+          fi
           # shifu-entry-contract: allow source-only proof verification before Gate dependencies are runnable
           node scripts/affected-native-proof.mjs verify \
-            --descriptor product/qualification/affected-native/proof-probe/descriptor.json \
-            --bundle product/qualification/affected-native/proof-reuse \
+            --descriptor "$descriptor" \
+            --bundle "$bundle" \
             --repository "$GITHUB_REPOSITORY" \
             --producer-run-id "${{ steps.lookup.outputs.run-id }}" \
             --producer-event "${{ steps.lookup.outputs.producer-event }}" \
-            --producer-head-sha "${{ steps.lookup.outputs.producer-head-sha }}"
+            --producer-head-sha "${{ steps.lookup.outputs.producer-head-sha }}" \
+            "${delta_args[@]}"
       - name: Select authoritative queue execution
         id: decision
         if: ${{ always() }}
@@ -887,6 +909,11 @@ jobs:
           node scripts/run-core-affected-native.mjs \
             --plan-out "$admission/plan.json" \
             --json
+          source_head="$(jq -er '.source.pullRequestHead' "$admission/probe/delivery-binding.json")"
+          if ! git cat-file -e "${source_head}^{commit}" 2>/dev/null; then
+            git fetch --no-tags origin "$source_head"
+          fi
+          source_tree="$(git rev-parse "${source_head}^{tree}")"
           # Preserve the probe's exact hosted image and toolchain facts while
           # independently rechecking this checkout's base, source tree, and plan.
           # shifu-entry-contract: allow source-only proof revalidation after dependency admission
@@ -894,6 +921,7 @@ jobs:
             --plan "$admission/plan.json" \
             --toolchain "$toolchain" \
             --delivery-binding "$admission/probe/delivery-binding.json" \
+            --source-tree "$source_tree" \
             --output "$admission/recomputed-descriptor.json"
           cmp "$descriptor" "$admission/recomputed-descriptor.json"
           test "$PROBE_ARTIFACT_NAME" = "$(jq -r '.artifactName' "$descriptor")"
@@ -942,14 +970,28 @@ jobs:
               echo "reused affected-native partitions must be skipped: $PARTITION_RESULT" >&2
               exit 1
             fi
+            bundle=product/qualification/affected-native/proof-reuse
+            producer_base="$(jq -er '.source.base' "$bundle"/partition-*.receipt.json | sort -u)"
+            current_base="$(jq -er '.identity.base' "$descriptor")"
+            delta_args=()
+            if [ "$producer_base" != "$current_base" ]; then
+              export GITHUB_BASE_SHA="$producer_base"
+              export GITHUB_HEAD_SHA="$current_base"
+              # shifu-entry-contract: allow source-only dev-delta classification after aggregate dependency admission
+              node scripts/run-core-affected-native.mjs \
+                --plan-out product/qualification/affected-native/proof-admission/dev-delta-plan.json \
+                --json
+              delta_args=(--dev-delta-plan product/qualification/affected-native/proof-admission/dev-delta-plan.json)
+            fi
             # shifu-entry-contract: allow source-bound proof verification after aggregate dependency admission
             node scripts/affected-native-proof.mjs verify \
               --descriptor "$descriptor" \
-              --bundle product/qualification/affected-native/proof-reuse \
+              --bundle "$bundle" \
               --repository "$GITHUB_REPOSITORY" \
               --producer-run-id "$PRODUCER_RUN_ID" \
               --producer-event "$PRODUCER_EVENT" \
-              --producer-head-sha "$PRODUCER_HEAD_SHA"
+              --producer-head-sha "$PRODUCER_HEAD_SHA" \
+              "${delta_args[@]}"
             echo "proof-created=false" >> "$GITHUB_OUTPUT"
             echo "Exact successful producer proof admitted; repeated heavy gates remained skipped."
             exit 0
