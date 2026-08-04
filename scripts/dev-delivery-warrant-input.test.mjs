@@ -176,7 +176,7 @@ test('terminal consumer executes only protected event and Buildchain authority',
   assert.match(workflow, /GITHUB_TOKEN: \$\{\{ github\.token \}\}/u);
   assert.match(
     workflow,
-    /dev-delivery-warrant-close\.yml@3550081196f08f4dd5a195aee484dc1ddaa8bdd5/u,
+    /dev-delivery-warrant-close\.yml@5d302bd11fcac694e716e4a62550c6024c40aa30/u,
   );
   assert.doesNotMatch(workflow, /github\.event\.pull_request\.head\.ref/u);
   assert.doesNotMatch(workflow, /checkout[^\n]*pull_request\.head/u);
