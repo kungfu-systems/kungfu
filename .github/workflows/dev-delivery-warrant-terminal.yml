@@ -57,6 +57,12 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p .buildchain/dev-delivery-terminal
+          if [ "$EVENT_ACTION" = "dequeued" ] && [ "$MERGED" = "true" ]; then
+            echo "active=false" >> "$GITHUB_OUTPUT"
+            echo "queued=false" >> "$GITHUB_OUTPUT"
+            echo "Merged dequeue events defer Warrant settlement to the exact closed event."
+            exit 0
+          fi
           observation=.buildchain/dev-delivery-terminal/observation.json
           # shifu-entry-contract: allow protected Buildchain Warrant observation without executing consumer source
           node .buildchain/runtime/scripts/dev-delivery-warrant.mjs observe \

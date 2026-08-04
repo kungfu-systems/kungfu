@@ -171,6 +171,18 @@ test('terminal consumer executes only protected event and Buildchain authority',
   );
   assert.match(workflow, /pull_request_target:/u);
   assert.match(workflow, /types: \[closed, dequeued\]/u);
+  const mergedDequeueFence = workflow.indexOf(
+    'if [ "$EVENT_ACTION" = "dequeued" ] && [ "$MERGED" = "true" ]; then',
+  );
+  const warrantObservation = workflow.indexOf(
+    'dev-delivery-warrant.mjs observe',
+  );
+  assert.ok(mergedDequeueFence >= 0);
+  assert.ok(warrantObservation > mergedDequeueFence);
+  assert.match(
+    workflow,
+    /Merged dequeue events defer Warrant settlement to the exact closed event/u,
+  );
   assert.match(workflow, /No matching active Warrant or queued candidate/u);
   assert.match(workflow, /\.observation\.queued\[\]\?/u);
   assert.match(workflow, /needs\.prepare\.outputs\.queued == 'true'/u);
