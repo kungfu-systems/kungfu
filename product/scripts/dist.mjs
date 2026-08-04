@@ -1008,16 +1008,13 @@ export function stageNodePtyForCli(
     const nativeDirectory = path.join('build', 'Release');
     const targetNativeDirectory = path.join(target, nativeDirectory);
     fs.mkdirSync(targetNativeDirectory, { recursive: true });
-    for (const name of ['pty.node', 'spawn-helper']) {
-      const input = path.join(source, nativeDirectory, name);
-      if (!fs.existsSync(input) || !fs.lstatSync(input).isFile()) {
-        throw new Error(
-          `required Linux node-pty runtime not found: ${rel(input)}`,
-        );
-      }
-      fs.copyFileSync(input, path.join(targetNativeDirectory, name));
+    const input = path.join(source, nativeDirectory, 'pty.node');
+    if (!fs.existsSync(input) || !fs.lstatSync(input).isFile()) {
+      throw new Error(
+        `required Linux node-pty runtime not found: ${rel(input)}`,
+      );
     }
-    fs.chmodSync(path.join(targetNativeDirectory, 'spawn-helper'), 0o755);
+    fs.copyFileSync(input, path.join(targetNativeDirectory, 'pty.node'));
   } else if (platform === 'darwin') {
     fs.chmodSync(
       path.join(
@@ -1194,19 +1191,6 @@ export function writeAuditableDemoBinaryMetadata(
   const runtime = path.join(stageRoot, layout.runtimeEntrypoint);
   const python = path.join(stageRoot, layout.pythonEntrypoint);
   const executableFiles = [binary, runtime, python];
-  if (platform.startsWith('linux-')) {
-    executableFiles.push(
-      path.join(
-        stageRoot,
-        'tui',
-        'node_modules',
-        'node-pty',
-        'build',
-        'Release',
-        'spawn-helper',
-      ),
-    );
-  }
   executableFiles.forEach(symlinks.materializeRegularFile);
   const metadata = {
     contract: 'kungfu.declarative-demo-binary/v1',

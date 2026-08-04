@@ -54,22 +54,6 @@ const {
   toEsmEntrypointSpecifier,
 } = require('../../framework/gui/scripts/before-pack.cjs');
 
-function writeLinuxNodePtyHelper(root, content = 'spawn-helper\n') {
-  const helper = path.join(
-    root,
-    'tui',
-    'node_modules',
-    'node-pty',
-    'build',
-    'Release',
-    'spawn-helper',
-  );
-  fs.mkdirSync(path.dirname(helper), { recursive: true });
-  fs.writeFileSync(helper, content);
-  fs.chmodSync(helper, 0o755);
-  return helper;
-}
-
 test('Intel macOS is rejected by the product-wide host policy', () => {
   for (const architecture of ['x64', 'x86_64']) {
     for (const operation of [
@@ -279,7 +263,6 @@ test('CLI product emits exact standalone demo metadata beside the launcher', (t)
     'python\n',
   );
   fs.symlinkSync('python3.13', path.join(root, layout.pythonEntrypoint));
-  writeLinuxNodePtyHelper(root);
   const metadata = writeAuditableDemoBinaryMetadata(
     root,
     layout,
@@ -305,13 +288,6 @@ test('CLI product emits exact standalone demo metadata beside the launcher', (t)
       {
         path: 'runtime/python/bin/python3',
         sha256: crypto.createHash('sha256').update('python\n').digest('hex'),
-      },
-      {
-        path: 'tui/node_modules/node-pty/build/Release/spawn-helper',
-        sha256: crypto
-          .createHash('sha256')
-          .update('spawn-helper\n')
-          .digest('hex'),
       },
     ],
     runtimeDependencies: [],
@@ -347,8 +323,6 @@ test('CLI product materializes symlinked demo executables as regular files', (t)
     ),
     path.join(root, layout.pythonEntrypoint),
   );
-  writeLinuxNodePtyHelper(root);
-
   writeAuditableDemoBinaryMetadata(root, layout, 'linux-x64', root);
 
   const python = path.join(root, layout.pythonEntrypoint);
@@ -371,8 +345,6 @@ test('CLI runtime identity is stable after demo executable metadata', (t) => {
   fs.writeFileSync(pythonTarget, 'python\n');
   fs.chmodSync(pythonTarget, 0o755);
   fs.symlinkSync('python3.13', python);
-  writeLinuxNodePtyHelper(root);
-
   materializeProductRuntimeEntrypoints(runtimeRoot, 'linux');
   const manifest = buildCliUpgradeManifest({ stageRoot: root, layout });
   writeAuditableDemoBinaryMetadata(root, layout, 'linux-x64', root);
@@ -479,7 +451,6 @@ test('Linux CLI staging restores only the exact node-pty native runtime closure'
     ['package.json', '{}\n'],
     ['index.js', 'export {};\n'],
     ['build/Release/pty.node', 'native-addon\n'],
-    ['build/Release/spawn-helper', 'native-helper\n'],
     ['build/Debug/pty.node', 'debug-addon\n'],
     ['build/Release/obj.target/unshipped.o', 'object\n'],
   ]) {
@@ -498,9 +469,10 @@ test('Linux CLI staging restores only the exact node-pty native runtime closure'
     fs.readFileSync(path.join(target, 'build/Release/pty.node'), 'utf8'),
     'native-addon\n',
   );
-  const helper = path.join(target, 'build/Release/spawn-helper');
-  assert.equal(fs.readFileSync(helper, 'utf8'), 'native-helper\n');
-  assert.notEqual(fs.statSync(helper).mode & 0o111, 0);
+  assert.equal(
+    fs.existsSync(path.join(target, 'build/Release/spawn-helper')),
+    false,
+  );
   assert.equal(fs.existsSync(path.join(target, 'build/Debug')), false);
   assert.equal(
     fs.existsSync(path.join(target, 'build/Release/obj.target')),
@@ -525,17 +497,13 @@ test('Darwin CLI staging preserves the prebuilt node-pty helper contract', (t) =
   assert.notEqual(fs.statSync(helper).mode & 0o111, 0);
 });
 
-test('Linux CLI staging fails closed when node-pty native runtime is incomplete', (t) => {
+test('Linux CLI staging fails closed when the node-pty native addon is missing', (t) => {
   const parent = fs.mkdtempSync(path.join(os.tmpdir(), 'kungfu-node-pty-'));
   t.after(() => fs.rmSync(parent, { recursive: true, force: true }));
   const source = path.join(parent, 'source');
   const target = path.join(parent, 'target');
   fs.mkdirSync(path.join(source, 'build', 'Release'), { recursive: true });
   fs.writeFileSync(path.join(source, 'package.json'), '{}\n');
-  fs.writeFileSync(
-    path.join(source, 'build', 'Release', 'pty.node'),
-    'addon\n',
-  );
 
   assert.throws(
     () => stageNodePtyForCli(source, target, 'linux', 'x64'),
