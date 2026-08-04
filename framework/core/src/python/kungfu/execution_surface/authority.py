@@ -8,7 +8,7 @@ import copy
 import json
 import re
 from collections.abc import Mapping
-from typing import Any
+from typing import Any, Literal, Never, overload
 
 from kungfu import contract as contract_runtime
 from kungfu.action_envelope import canonical_json_bytes
@@ -62,8 +62,20 @@ class RuntimeSurfaceError(ValueError):
         }
 
 
-def _fail(code: str, message: str, recovery: str) -> None:
+def _fail(code: str, message: str, recovery: str) -> Never:
     raise RuntimeSurfaceError(code, message, recovery=recovery)
+
+
+@overload
+def _root(value: Any, field: str, *, nullable: Literal[False] = False) -> str: ...
+
+
+@overload
+def _root(value: Any, field: str, *, nullable: Literal[True]) -> str | None: ...
+
+
+@overload
+def _root(value: Any, field: str, *, nullable: bool) -> str | None: ...
 
 
 def _root(value: Any, field: str, *, nullable: bool = False) -> str | None:
