@@ -3,7 +3,7 @@
   "contract": "kungfu-buildchain-dev-delivery-warrant-queue",
   "repository": "kungfu-systems/kungfu",
   "protectedBase": "dev/v4/v4.0",
-  "generation": 17,
+  "generation": 18,
   "fencingCounter": 4,
   "policy": {
     "agingSeconds": 900,
@@ -93,11 +93,20 @@
       "toolchainRoot": "sha256:2ecb07894954a2e0de022615d4561e5ba3ae68376401941ecff77be03cd75a0f",
       "priority": "ordinary",
       "enqueuedAt": "2026-08-04T08:47:58.375Z",
-      "updatedAt": "2026-08-04T08:47:58.375Z",
+      "updatedAt": "2026-08-04T10:24:12.023Z",
       "attempts": 1,
       "recoveries": 0,
-      "status": "queued",
-      "terminal": null
+      "status": "cancelled",
+      "terminal": {
+        "outcome": "cancelled",
+        "reason": "temporary dev lock for exact public Alpha; queued source e9cc9cf2 is stale because PR #2458 advanced to b03f050e",
+        "evidenceRoot": "sha256:7a54ab26c548e6f0be97c0c7a67c5c20e84e066238a1cf557ef1094c0dc49fdc",
+        "authority": "queued-candidate-cancellation",
+        "expectedSourceHead": "e9cc9cf2e3f98587ed957c9ae3d491a9455fccbe",
+        "observedSourceHead": "b03f050e70cf4524404dff8a1b7027ff68ec9082",
+        "eventAction": "cancelled",
+        "closedAt": "2026-08-04T10:24:12.023Z"
+      }
     },
     {
       "repository": "kungfu-systems/kungfu",
@@ -148,6 +157,6 @@
       "terminal": null
     }
   ],
-  "updatedAt": "2026-08-04T10:19:51.679Z",
-  "stateRoot": "sha256:a281b4c72e1a5b60ee533287575d18b570d30738d7ee2609f8ba368bc3530236"
+  "updatedAt": "2026-08-04T10:24:12.023Z",
+  "stateRoot": "sha256:efae878a996e5a3500246c57870feded3b1573ad168ec457e556d2cbcd68bb90"
 }
