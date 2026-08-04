@@ -47,13 +47,28 @@
       ]
     },
     {
-      "id": "project-tour",
-      "title": "Kungfu full Project Tour at 4x",
-      "claimBoundary": "This exact standalone Kungfu artifact proves only the bounded disposable full Project Tour observed at 4x in two independently captured native PTYs; Mock Agent output and terminal observations grant no Work, release, capability, or production authority.",
+      "id": "project-tour-episode-1",
+      "title": "Kungfu Project Tour episode 1 at 1x",
+      "claimBoundary": "This exact standalone Kungfu artifact proves only the bounded disposable Project Tour episode 1 observed at 1x in two independently captured native PTYs; Mock Agent output and terminal observations grant no Work, release, capability, or production authority.",
       "steps": [
         {
-          "id": "project-tour",
-          "argv": ["agent-work-lab", "project-tour", "--episode", "all", "--speed", "4"],
+          "id": "project-tour-episode-1",
+          "argv": ["agent-work-lab", "project-tour", "--episode", "1", "--speed", "1"],
+          "timeoutSeconds": 180,
+          "expectedExitCodes": [0],
+          "stdoutIncludes": ["KUNGFU_PROJECT_TOUR_COMPLETE"],
+          "fileAssertions": []
+        }
+      ]
+    },
+    {
+      "id": "project-tour-episode-2",
+      "title": "Kungfu Project Tour episode 2 at 1x",
+      "claimBoundary": "This exact standalone Kungfu artifact proves only the bounded disposable Project Tour episode 2 observed at 1x in two independently captured native PTYs; Mock Agent output and terminal observations grant no Work, release, capability, or production authority.",
+      "steps": [
+        {
+          "id": "project-tour-episode-2",
+          "argv": ["agent-work-lab", "project-tour", "--episode", "2", "--speed", "1"],
           "timeoutSeconds": 180,
           "expectedExitCodes": [0],
           "stdoutIncludes": ["KUNGFU_PROJECT_TOUR_COMPLETE"],
