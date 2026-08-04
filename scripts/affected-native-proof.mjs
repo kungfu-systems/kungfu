@@ -39,6 +39,12 @@ export const DELIVERY_ATTEMPT_SCHEMA =
   'kungfu.affected-native-delivery-attempt/v1';
 export const CACHE_PROMOTION_AUTHORITY_SCHEMA =
   'kungfu.affected-native-cache-promotion-authority/v1';
+export const DEV_DELIVERY_CONSUMER_RECEIPT_SCHEMA =
+  'kungfu.dev-delivery-warrant-consumer-receipt/v1';
+export const DEV_DELIVERY_WARRANT_VIEW_SCHEMA =
+  'kungfu-buildchain-dev-delivery-warrant-view/v1';
+export const GITHUB_ENQUEUE_RECEIPT_SCHEMA =
+  'kungfu-buildchain-dev-delivery-github-enqueue/v1';
 const SHA256_ROOT = /^sha256:[0-9a-f]{64}$/u;
 
 function ordered(value) {
@@ -62,6 +68,313 @@ export function digest(value) {
     .createHash('sha256')
     .update(typeof value === 'string' ? value : stableJson(value))
     .digest('hex')}`;
+}
+
+function requireText(value, label) {
+  if (typeof value !== 'string' || value.trim() === '') {
+    throw new Error(`${label} is required`);
+  }
+  return value.trim();
+}
+
+function requireDevBase(value) {
+  const normalized = requireText(value, 'protected base').replace(
+    /^refs\/heads\//u,
+    '',
+  );
+  if (!/^dev\/v\d+\/v\d+\.\d+$/u.test(normalized)) {
+    throw new Error('protected base must be a dev channel');
+  }
+  return normalized;
+}
+
+function requirePositiveInteger(value, label) {
+  const parsed = Number(value);
+  if (!Number.isInteger(parsed) || parsed < 1) {
+    throw new Error(`${label} must be a positive integer`);
+  }
+  return parsed;
+}
+
+function sortedUnique(values) {
+  return [...new Set(values)].sort((left, right) => left.localeCompare(right));
+}
+
+function verifyNativeProof(descriptor, proof, plan, sourceHeadSha) {
+  validatePlan(plan);
+  if (descriptor?.schema !== DESCRIPTOR_SCHEMA) {
+    throw new Error('current affected-native descriptor is required');
+  }
+  if (proof?.schema !== PROOF_SCHEMA) {
+    throw new Error('current affected-native proof is required');
+  }
+  const { proofRoot, ...proofBody } = proof;
+  if (proofRoot !== digest(proofBody)) {
+    throw new Error('affected-native proof root drift');
+  }
+  if (
+    digest(proof.qualificationIdentity) !== `sha256:${descriptor.proofId}` ||
+    JSON.stringify(proof.qualificationIdentity) !==
+      JSON.stringify(descriptor.qualificationIdentity)
+  ) {
+    throw new Error('affected-native qualification identity drift');
+  }
+  if (
+    proof.producer?.event !== 'pull_request' ||
+    proof.producer?.checkoutSha !== sourceHeadSha ||
+    plan.head !== sourceHeadSha ||
+    proof.verdict?.status !== 'passed'
+  ) {
+    throw new Error(
+      'source proof is not bound to the exact successful PR head',
+    );
+  }
+  return proof;
+}
+
+function affectedClosure(plan) {
+  const affectedPrefixes = sortedUnique(
+    (plan.reasons || [])
+      .map((reason) => String(reason?.path || '').replace(/^\.\//u, ''))
+      .filter(Boolean)
+      .map((entry) => entry.split('/')[0]),
+  );
+  if (affectedPrefixes.length === 0) {
+    throw new Error('affected-native plan has no attributable path prefix');
+  }
+  return {
+    shards: [
+      {
+        id: 'affected-native',
+        pathPrefixes: affectedPrefixes,
+        qualificationContext: 'affected-native / linux',
+      },
+    ],
+    unrelatedPathPrefixes: ['docs'].filter(
+      (entry) => !affectedPrefixes.includes(entry),
+    ),
+  };
+}
+
+export function createSourceQualificationInput(input = {}) {
+  const repository = requireRepository(input.repository, 'repository');
+  const protectedBase = requireDevBase(input.protectedBase);
+  const pullRequestNumber = requirePositiveInteger(
+    input.pullRequestNumber,
+    'pull request number',
+  );
+  const sourceHeadSha = requireSha(input.sourceHeadSha, 'source head SHA');
+  const proof = verifyNativeProof(
+    input.descriptor,
+    input.proof,
+    input.plan,
+    sourceHeadSha,
+  );
+  const identity = input.descriptor.qualificationIdentity;
+  return {
+    repository,
+    protectedBase,
+    pullRequestNumber,
+    sourceHeadSha,
+    semanticSourceRoot: digest(identity),
+    sourceIntentRoot: digest({
+      planProjectionDigest: identity.planProjectionDigest,
+      sourceTree: identity.sourceTree,
+      closureRoot: identity.closureRoot,
+    }),
+    planRoot: requireRoot(input.plan.planDigest, 'qualification plan root'),
+    affectedClosure: affectedClosure(input.plan),
+    dependencyGraphRoot: requireRoot(
+      identity.dependencyRoot,
+      'dependency graph root',
+    ),
+    toolchainRoot: digest(identity.toolchain),
+    requiredContexts: [
+      {
+        name: 'affected-native / linux',
+        conclusion: 'success',
+        headSha: sourceHeadSha,
+        evidenceRoot: proof.proofRoot,
+      },
+    ],
+    evidenceRoots: sortedUnique([
+      proof.proofRoot,
+      ...proof.partitions.map((entry) =>
+        requireRoot(entry.receiptDigest, 'partition receipt digest'),
+      ),
+    ]),
+  };
+}
+
+function activeWarrantCandidate(view, pullRequestNumber, sourceHeadSha) {
+  if (view?.schema !== DEV_DELIVERY_WARRANT_VIEW_SCHEMA) {
+    throw new Error('Buildchain Warrant view schema mismatch');
+  }
+  requireRoot(view.revision, 'queue revision');
+  const warrant = view.activeWarrant;
+  if (!warrant) throw new Error('active Delivery Warrant is required');
+  for (const field of ['warrantId', 'fencingToken', 'submissionId']) {
+    requireRoot(warrant[field], `Warrant ${field}`);
+  }
+  requirePositiveInteger(warrant.generation, 'Warrant generation');
+  const candidate = view.candidates?.find(
+    (entry) => entry.submissionId === warrant.submissionId,
+  );
+  if (!candidate) throw new Error('active Warrant candidate is missing');
+  if (
+    candidate.pullRequestNumber !== pullRequestNumber ||
+    candidate.sourceHeadSha !== sourceHeadSha
+  ) {
+    throw new Error('active Warrant exact source readback mismatch');
+  }
+  return { warrant, candidate };
+}
+
+export function verifyQueueAdmissionLease(input = {}) {
+  const pullRequestNumber = requirePositiveInteger(
+    input.pullRequestNumber,
+    'pull request number',
+  );
+  const sourceHeadSha = requireSha(input.sourceHeadSha, 'source head SHA');
+  const { warrant, candidate } = activeWarrantCandidate(
+    input.view,
+    pullRequestNumber,
+    sourceHeadSha,
+  );
+  if (!['proving', 'waiting', 'merge-queued'].includes(candidate.state)) {
+    throw new Error(
+      `active Warrant candidate is not delivery-ready: ${candidate.state}`,
+    );
+  }
+  const observedAt = new Date(input.now || input.view.observedAt).getTime();
+  if (
+    !Number.isFinite(observedAt) ||
+    observedAt >= new Date(warrant.expiresAt).getTime()
+  ) {
+    throw new Error('active Delivery Warrant is expired');
+  }
+  const body = {
+    schema: DEV_DELIVERY_CONSUMER_RECEIPT_SCHEMA,
+    operation: 'queue-lease-verify',
+    repository: requireRepository(input.view.repository, 'repository'),
+    protectedBase: requireDevBase(input.view.protectedBase),
+    queueRevision: input.view.revision,
+    pullRequestNumber,
+    sourceHeadSha,
+    submissionId: warrant.submissionId,
+    warrantId: warrant.warrantId,
+    fencingToken: warrant.fencingToken,
+    generation: warrant.generation,
+    candidateState: candidate.state,
+    observedAt: new Date(observedAt).toISOString(),
+  };
+  return { ...body, receiptRoot: digest(body) };
+}
+
+function createProviderReceipt(view, candidate, warrant, queueEntry) {
+  const body = {
+    schema: GITHUB_ENQUEUE_RECEIPT_SCHEMA,
+    repository: requireRepository(view.repository, 'repository'),
+    protectedBase: requireDevBase(view.protectedBase),
+    submissionId: warrant.submissionId,
+    sourceHeadSha: candidate.sourceHeadSha,
+    warrantId: warrant.warrantId,
+    fencingToken: warrant.fencingToken,
+    generation: warrant.generation,
+    expiresAt: requireText(warrant.expiresAt, 'Warrant expiry'),
+    queueEntryId: requireText(queueEntry?.id, 'merge queue entry id'),
+    queueEntryState: requireText(queueEntry?.state, 'merge queue entry state'),
+    recoveredAfterControllerRestart:
+      queueEntry?.recoveredAfterControllerRestart === true,
+    queueRevision: requireRoot(view.revision, 'queue revision'),
+  };
+  return { ...body, receiptRoot: digest(body) };
+}
+
+export function createIntegrationDeliveryInput(input = {}) {
+  const attempt = validateDeliveryAttempt(input.deliveryAttempt);
+  const pullRequestNumber = requirePositiveInteger(
+    input.pullRequestNumber,
+    'pull request number',
+  );
+  const { warrant, candidate } = activeWarrantCandidate(
+    input.view,
+    pullRequestNumber,
+    attempt.source.pullRequestHead,
+  );
+  if (candidate.state !== 'merge-queued') {
+    throw new Error(
+      'Integration Proof requires a merge-queued Warrant candidate',
+    );
+  }
+  if (
+    candidate.candidateTreeSha !== attempt.source.replayedTree ||
+    candidate.proofs?.sourceQualificationRoot !== candidate.sourceProofRoot
+  ) {
+    throw new Error('Warrant replay or Source Proof readback mismatch');
+  }
+  for (const field of ['classificationRoot', 'replayReceiptRoot']) {
+    requireRoot(candidate.proofs?.[field], `candidate ${field}`);
+  }
+  const integrationHead = requireSha(
+    attempt.source.mergeGroupHead,
+    'merge-group integration head',
+  );
+  const queueEntry = input.queueEntry || {};
+  if (
+    Number(queueEntry.pullRequestNumber) !== pullRequestNumber ||
+    queueEntry.pullRequestHeadSha !== candidate.sourceHeadSha
+  ) {
+    throw new Error('GitHub merge queue exact-head readback mismatch');
+  }
+  const providerReceipt = createProviderReceipt(
+    input.view,
+    candidate,
+    warrant,
+    queueEntry,
+  );
+  return {
+    providerReceipt,
+    proofInput: {
+      repository: input.view.repository,
+      protectedBase: input.view.protectedBase,
+      sourceProofRoot: candidate.sourceProofRoot,
+      replayReceiptRoot: candidate.proofs.replayReceiptRoot,
+      classificationRoot: candidate.proofs.classificationRoot,
+      integrationTreeSha: integrationHead,
+      protectedBaseSha: requireSha(
+        attempt.source.devHead,
+        'protected base SHA',
+      ),
+      warrant,
+      queueRevision: input.view.revision,
+      providerReceipt,
+      requiredContexts: [
+        {
+          name: 'affected-native / linux',
+          conclusion: 'success',
+          headSha: integrationHead,
+          evidenceRoot: requireRoot(
+            attempt.attemptRoot,
+            'delivery attempt root',
+          ),
+        },
+        {
+          name: 'Queue admission lease',
+          conclusion: 'success',
+          headSha: integrationHead,
+          evidenceRoot: requireRoot(
+            input.queueLeaseReceipt?.receiptRoot,
+            'queue lease receipt root',
+          ),
+        },
+      ],
+      verifiedAt: requireText(
+        input.verifiedAt,
+        'integration verification time',
+      ),
+    },
+  };
 }
 
 function readJson(file) {
@@ -1108,6 +1421,45 @@ function copyDirectory(source, destination) {
 
 async function main() {
   const options = parseArgs(process.argv.slice(2));
+  if (options.command === 'source-input') {
+    const receipt = readJson(path.resolve(options['native-receipt']));
+    const result = createSourceQualificationInput({
+      repository: options.repository,
+      protectedBase: options['protected-base'],
+      pullRequestNumber: options['pull-request'],
+      sourceHeadSha: options['source-head'],
+      descriptor: readJson(path.resolve(options.descriptor)),
+      proof: readJson(path.resolve(options.proof)),
+      plan: receipt.plan,
+    });
+    writeJson(path.resolve(options.output), result);
+    console.log(JSON.stringify(result, null, 2));
+    return;
+  }
+  if (options.command === 'queue-lease-verify') {
+    const result = verifyQueueAdmissionLease({
+      view: readJson(path.resolve(options.view)),
+      pullRequestNumber: options['pull-request'],
+      sourceHeadSha: options['source-head'],
+      now: options.now,
+    });
+    writeJson(path.resolve(options.output), result);
+    console.log(JSON.stringify(result, null, 2));
+    return;
+  }
+  if (options.command === 'integration-input') {
+    const result = createIntegrationDeliveryInput({
+      view: readJson(path.resolve(options.view)),
+      deliveryAttempt: readJson(path.resolve(options['delivery-attempt'])),
+      queueEntry: readJson(path.resolve(options['queue-entry'])),
+      queueLeaseReceipt: readJson(path.resolve(options['queue-lease-receipt'])),
+      pullRequestNumber: options['pull-request'],
+      verifiedAt: options['verified-at'],
+    });
+    writeJson(path.resolve(options.output), result);
+    console.log(JSON.stringify(result, null, 2));
+    return;
+  }
   if (options.command === 'toolchain') {
     writeJson(
       path.resolve(options.output),
@@ -1384,7 +1736,7 @@ async function main() {
     return;
   }
   throw new Error(
-    'usage: affected-native-proof.mjs <toolchain|bind-delivery|describe|lookup|seal|verify|seal-attempt|verify-attempt|seal-cache-authority|verify-cache-authority>',
+    'usage: affected-native-proof.mjs <source-input|queue-lease-verify|integration-input|toolchain|bind-delivery|describe|lookup|seal|verify|seal-attempt|verify-attempt|seal-cache-authority|verify-cache-authority>',
   );
 }
 
