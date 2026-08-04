@@ -42,7 +42,11 @@ test('queue admission lease has distinct PR-head and merge-group authorities', (
   assert.equal(CONTRACT.admission.integrationDeliveryProofRequired, true);
   assert.equal(
     CONTRACT.authority.queueAndWarrant,
-    'kungfu-systems/buildchain@c0753d1732650e7e0727bd31059c2ccb640c1a6b',
+    'kungfu-systems/buildchain@c8b36d8e16f7c191047b394a43c25e59ee5b00a1',
+  );
+  assert.equal(
+    CONTRACT.authority.stateRefPattern,
+    'buildchain/dev-delivery-warrant/dev-vN-vN.N',
   );
   assert.equal(
     CONTRACT.revocation.dequeue,
@@ -99,11 +103,12 @@ test('merge-group continuation consumes the exact durable Warrant lease', () => 
   assert.match(workflow, /MERGE_GROUP_HEAD_SHA" != "\$GITHUB_SHA/u);
   assert.match(
     workflow,
-    /buildchain-state\/dev-delivery\/\$\{protected_base\/\/\\\/\/-\}/u,
+    /buildchain\/dev-delivery-warrant\/\$\{protected_base\/\/\\\/\/-\}/u,
   );
-  assert.match(workflow, /buildchain\.mjs" dev warrant/u);
+  assert.match(workflow, /buildchain\.mjs" dev warrant observe/u);
+  assert.match(workflow, /--branch "\$protected_base"/u);
   assert.match(workflow, /affected-native-proof\.mjs queue-lease-verify/u);
-  assert.match(workflow, /c0753d1732650e7e0727bd31059c2ccb640c1a6b/u);
+  assert.match(workflow, /c8b36d8e16f7c191047b394a43c25e59ee5b00a1/u);
   assert.match(
     workflow,
     /name: Install pinned Buildchain Warrant runtime[\s\S]*working-directory: \.buildchain\/dev-delivery-runtime[\s\S]*corepack pnpm install --frozen-lockfile --ignore-scripts[\s\S]*name: Consume the exact Buildchain Warrant lease/u,
