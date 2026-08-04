@@ -42,7 +42,7 @@ without changing and refreshing the manifest fails the Gate catalog check.
 | `.github/workflows/adr-release-gate.yml` | `adr-release` | qualification | none | diagnostic | token:read | none | 2 |
 | `.github/workflows/affected-native-cache-promote.yml` | `promote` | qualification | none | diagnostic | token:write | none | 24 |
 | `.github/workflows/affected-native-cache-promote.yml` | `qualify_windows_x86_64_consumer` | qualification | none | diagnostic | token:read | none | 5 |
-| `.github/workflows/affected-native-pr.yml` | `affected_native` | qualification | none | diagnostic | token:read | none | 13 |
+| `.github/workflows/affected-native-pr.yml` | `affected_native` | qualification | none | diagnostic | token:write | none | 19 |
 | `.github/workflows/affected-native-pr.yml` | `affected_native_shards` | qualification | none | diagnostic | token:read | none | 23 |
 | `.github/workflows/affected-native-pr.yml` | `cancel_after_source_failure` | qualification | none | diagnostic | token:write | none | 1 |
 | `.github/workflows/affected-native-pr.yml` | `candidate_buildchain_config` | qualification | none | diagnostic | token:read | none | 2 |
@@ -78,6 +78,7 @@ without changing and refreshing the manifest fails the Gate catalog check.
 | `.github/workflows/dco.yml` | `signoff` | qualification | none | diagnostic | token:read | none | 2 |
 | `.github/workflows/dev-alpha-candidate-patrol.yml` | `candidate` | qualification | none | diagnostic | token:write, repo-secret:KUNGFU_GITHUB_TOKEN | none | 0 |
 | `.github/workflows/dev-alpha-candidate-patrol.yml` | `resolve-channels` | qualification | none | diagnostic | token:none | none | 1 |
+| `.github/workflows/dev-delivery-warrant-terminal.yml` | `cancel-queued` | qualification | none | diagnostic | token:write, repo-secret:KUNGFU_GITHUB_TOKEN | none | 0 |
 | `.github/workflows/dev-delivery-warrant-terminal.yml` | `close` | qualification | none | diagnostic | token:write, repo-secret:KUNGFU_GITHUB_TOKEN | none | 0 |
 | `.github/workflows/dev-delivery-warrant-terminal.yml` | `prepare` | qualification | none | diagnostic | token:write | none | 2 |
 | `.github/workflows/dev-gate-latency-patrol.yml` | `capture` | diagnostic | evidence | diagnostic | token:read | none | 5 |
@@ -109,7 +110,7 @@ without changing and refreshing the manifest fails the Gate catalog check.
 | `.github/workflows/publish-layer-artifacts.yml` | `verify-portable-format-publication` | qualification | none | diagnostic | token:read | none | 4 |
 | `.github/workflows/publish-layer-artifacts.yml` | `verify-publication` | qualification | none | diagnostic | token:read | none | 4 |
 | `.github/workflows/python-structure.yml` | `exact-root-ratchet` | qualification | none | diagnostic | token:read | none | 5 |
-| `.github/workflows/queue-admission-lease.yml` | `admission` | qualification | none | diagnostic | token:none | none | 1 |
+| `.github/workflows/queue-admission-lease.yml` | `admission` | qualification | none | diagnostic | token:read | none | 4 |
 | `.github/workflows/release-new-version.yml` | `alpha-timeline` | qualification | none | diagnostic | token:write | none | 11 |
 | `.github/workflows/release-new-version.yml` | `promote` | release-control | channel | qualifying | token:write, oidc, repo-secret:BUILDCHAIN_ISSUE_APP_ID+BUILDCHAIN_ISSUE_APP_PRIVATE_KEY+KUNGFU_ALPHA_CHANNEL_SIGNING_PRIVATE_KEY+KUNGFU_GITHUB_TOKEN+KUNGFU_GOVERNANCE_AUDITOR_APP_PRIVATE_KEY | none | 0 |
 | `.github/workflows/release-new-version.yml` | `promotion-contract` | qualification | none | diagnostic | token:read | none | 8 |
