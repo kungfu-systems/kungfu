@@ -7,7 +7,7 @@ import { test } from 'node:test';
 
 const ROOT = process.cwd();
 const BUILDCHAIN_TIMEOUT_SAFE_RUNTIME =
-  '825f596fe4a5ed8a4b2bb4f7c5a1b44cb9a075a3';
+  '22338823464024efb0bb72231c29cca9f61d72bb';
 
 function workflow(name) {
   return fs.readFileSync(path.join(ROOT, '.github/workflows', name), 'utf8');
