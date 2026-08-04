@@ -37,12 +37,15 @@ their protected credential authority, while finalization, publication, and
 activation independently verify the returned source-bound receipts. Moving
 the functional matrix does not move credentials or collapse those authorities.
 
-The version-line projection retains the exact-label self-hosted platform matrix
-for development patrols and explicit diagnostics. The manual macOS overflow
-controller also retains its independent self-hosted and GitHub-hosted candidate
-identities, always with `publish-channel: none`; neither path is the default
-formal Alpha route. Explicit self-hosted or custom diagnostics may still opt
-into the bounded checkout-cache policy.
+The exact-source Dev Verify that Candidate Patrol consumes uses the same fresh
+hosted Linux x64, macOS ARM64, and Windows x64 boundary, so an offline
+self-hosted diagnostic runner cannot prevent creation of the next Alpha
+candidate. The version-line projection still retains the exact-label
+self-hosted platform matrix for explicit diagnostics. The manual macOS
+overflow controller also retains its independent self-hosted and GitHub-hosted
+candidate identities, always with `publish-channel: none`; neither path is the
+default formal Alpha route. Explicit self-hosted or custom diagnostics may
+still opt into the bounded checkout-cache policy.
 
 ### Queue-aware macOS overflow
 
