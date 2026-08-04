@@ -801,6 +801,11 @@ jobs:
       - uses: actions/setup-node@v6.4.0
         with:
           node-version: "24"
+      - name: Install pinned Buildchain proof runtime
+        working-directory: .buildchain/dev-delivery-runtime
+        run: |
+          # shifu-entry-contract: allow exact pinned Buildchain dependency bootstrap before its CLI is runnable
+          corepack pnpm install --frozen-lockfile --ignore-scripts
       - name: Admit staged candidate dependency graph
         shell: bash
         env:

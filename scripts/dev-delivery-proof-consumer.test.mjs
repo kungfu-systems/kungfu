@@ -377,4 +377,8 @@ test('workflow consumes exact Buildchain Source and Integration Proofs', () => {
     /buildchain-state\/dev-delivery\/\$\{protected_base\/\/\\\/\/-\}/u,
   );
   assert.match(aggregate, /ref: c0753d1732650e7e0727bd31059c2ccb640c1a6b/u);
+  assert.match(
+    aggregate,
+    /name: Install pinned Buildchain proof runtime[\s\S]*working-directory: \.buildchain\/dev-delivery-runtime[\s\S]*corepack pnpm install --frozen-lockfile --ignore-scripts/u,
+  );
 });
