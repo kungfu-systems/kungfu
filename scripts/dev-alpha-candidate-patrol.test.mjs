@@ -6,6 +6,8 @@ import path from 'node:path';
 import { test } from 'node:test';
 
 const ROOT = process.cwd();
+const BUILDCHAIN_DEV_VERIFY_RUNTIME =
+  '8d3b882a70adededd19eeeac8cfe9f73b58cc1c0';
 const BUILDCHAIN_TIMEOUT_SAFE_RUNTIME =
   '22338823464024efb0bb72231c29cca9f61d72bb';
 
@@ -44,7 +46,7 @@ test('Dev Patrol is exact-source dispatch-only behind the qualification controll
   const reusableRef = source.match(
     /uses: kungfu-systems\/buildchain\/\.github\/workflows\/\.gate-profile\.yml@([0-9a-f]{40})/u,
   )?.[1];
-  assert.equal(reusableRef, BUILDCHAIN_TIMEOUT_SAFE_RUNTIME);
+  assert.equal(reusableRef, BUILDCHAIN_DEV_VERIFY_RUNTIME);
 });
 
 test('qualification patrol coalesces the latest Dev SHA behind release priority', () => {

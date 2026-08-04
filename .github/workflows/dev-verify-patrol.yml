@@ -58,7 +58,7 @@ jobs:
     permissions:
       contents: read
       id-token: write
-    uses: kungfu-systems/buildchain/.github/workflows/.gate-profile.yml@22338823464024efb0bb72231c29cca9f61d72bb
+    uses: kungfu-systems/buildchain/.github/workflows/.gate-profile.yml@8d3b882a70adededd19eeeac8cfe9f73b58cc1c0
     with:
       # Keep the reviewed Gate workflow shell and its streamed runtime aligned
       # by default. Trusted manual runs may still supply an exact SHA or train
