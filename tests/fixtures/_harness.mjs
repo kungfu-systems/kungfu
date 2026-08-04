@@ -334,12 +334,26 @@ export function assertFileContains(file, pattern, label) {
 /** Find an executable among candidate paths (replaces slice find_bin). */
 export function findBin(candidates) {
   for (const c of candidates) {
-    const p = isWin && !c.endsWith('.exe') ? `${c}.exe` : c;
-    try {
-      fs.accessSync(p, fs.constants.X_OK);
-      return p;
-    } catch {
-      /* next */
+    const extensions =
+      isWin && !path.extname(c)
+        ? (process.env.PATHEXT || '.COM;.EXE;.BAT;.CMD').split(';')
+        : [''];
+    const roots =
+      path.isAbsolute(c) || c.includes(path.sep)
+        ? ['']
+        : (process.env.PATH || '').split(path.delimiter);
+    for (const root of roots) {
+      for (const extension of extensions) {
+        const candidate = root
+          ? path.join(root, `${c}${extension}`)
+          : `${c}${extension}`;
+        try {
+          fs.accessSync(candidate, fs.constants.X_OK);
+          return candidate;
+        } catch {
+          /* next */
+        }
+      }
     }
   }
   return null;
