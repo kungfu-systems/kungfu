@@ -84,14 +84,30 @@ export function resolveTuiCliRuntime({
 }: {
   env: NodeJS.ProcessEnv;
   packagedBin: string;
-}): { bin: string; sourceCliFallback: boolean } {
+}): {
+  bin: string;
+  sourceCliFallback: boolean;
+  runtimeSurface: 'installed-product' | 'source-checkout';
+  selectionReason: string;
+} {
   const configuredBin = env.KUNGFU_CLI_BIN || env.KUNGFU_BIN || '';
-  const sourceCliFallback =
-    !configuredBin &&
-    (env.KUNGFU_TUI_SOURCE_CLI === '1' || !fs.existsSync(packagedBin));
+  const explicitSource = !configuredBin && env.KUNGFU_TUI_SOURCE_CLI === '1';
+  if (!configuredBin && !explicitSource && !fs.existsSync(packagedBin)) {
+    throw new Error(
+      'TUI runtime surface is unavailable: the packaged Kungfu CLI is missing. ' +
+        'Set KUNGFU_CLI_BIN to one exact installed product, or set ' +
+        'KUNGFU_TUI_SOURCE_CLI=1 for an explicit source-checkout session.',
+    );
+  }
   return {
-    bin: sourceCliFallback ? 'uv' : configuredBin || packagedBin,
-    sourceCliFallback,
+    bin: explicitSource ? 'uv' : configuredBin || packagedBin,
+    sourceCliFallback: explicitSource,
+    runtimeSurface: explicitSource ? 'source-checkout' : 'installed-product',
+    selectionReason: explicitSource
+      ? 'explicit-source-environment'
+      : configuredBin
+        ? 'explicit-installed-command'
+        : 'packaged-product-command',
   };
 }
 

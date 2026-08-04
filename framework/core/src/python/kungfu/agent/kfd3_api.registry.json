@@ -615,15 +615,8 @@
       "purpose": "Preview or explicitly select the machine-global default Agent Runtime Profile.",
       "maturity": "experimental",
       "visibility": "public-agent",
-      "anchor": {
-        "kind": "runtime-click",
-        "symbol": "runtime_set_default"
-      },
-      "projections": [
-        "commands.json",
-        "capabilities-json",
-        "provider-skill"
-      ]
+      "anchor": {"kind": "runtime-click", "symbol": "runtime_set_default"},
+      "projections": ["commands.json", "capabilities-json", "provider-skill"]
     },
     {
       "id": "kungfu.agent.runtime.verify",
@@ -632,15 +625,18 @@
       "purpose": "Run a bounded executable --version probe for one Agent Runtime Profile.",
       "maturity": "experimental",
       "visibility": "public-agent",
-      "anchor": {
-        "kind": "runtime-click",
-        "symbol": "runtime_verify"
-      },
-      "projections": [
-        "commands.json",
-        "capabilities-json",
-        "provider-skill"
-      ]
+      "anchor": {"kind": "runtime-click", "symbol": "runtime_verify"},
+      "projections": ["commands.json", "capabilities-json", "provider-skill"]
+    },
+    {
+      "id": "kungfu.runtime.surface.verify",
+      "surface": "cli-api-tui",
+      "name": "kungfu runtime surface verify <receipt.json> --json",
+      "purpose": "Verify and observe one exact Runtime Surface Receipt without selecting another runtime or mutating authority.",
+      "maturity": "experimental",
+      "visibility": "public-agent",
+      "anchor": {"kind": "catalog"},
+      "projections": ["commands.json", "capabilities-json", "agent-pack-doc"]
     },
     {
       "id": "kungfu.agent.install-skill",

@@ -10,8 +10,8 @@
   "sourceRegistry": {
     "id": "kungfu",
     "path": ".buildchain/kfd/kfd-3/surfaces.json",
-    "sha256": "b3f75dd7ac38d01af09e53a523bef7b4746276bbaff190c91d658209284373d7",
-    "digest": "sha256:f318cd79da4888101cbbba563542963566fe7eb33b0daeaa5a8a82b49ffcaafa"
+    "sha256": "abb58f60ca24878699c96ca5ffebffaf80477e904781c44cd5f94297c0921022",
+    "digest": "sha256:085a1e580e7e9d6024b0fb5082ba5e241726cea661afb6ea191bb66ca17273b0"
   },
   "upstreamKfd": {
     "aggregatePath": "developer/sdk/kfd/upstream-aggregate.json",
@@ -26,9 +26,9 @@
       "libnode": "22.22.3-kf.5-alpha.3",
       "buildchain": "3.0.0"
     },
-    "digest": "sha256:4f50ffa1cda5d6f68e9849a6b8de2c92fd8923419d6becf2cf54dcdc45568802"
+    "digest": "sha256:54c39a6ecc328755359c60fce8a3b476e1de1aff6ab44d46bd4c38a4222f0214"
   },
-  "collaborationInterfaceDigest": "sha256:e211a25327aef028a7d517350a6978006271b7477b6f7d2f4867664afaa469ef",
+  "collaborationInterfaceDigest": "sha256:17d42d2b2d586f11c781e18b012d484a52c639541568fc6fdf04b3c1c7e7395d",
   "exposedSurfaces": [
     {
       "id": "kungfu.agent",
@@ -1740,6 +1740,26 @@
         "owner": "kungfu",
         "source": "scripts/buildchain-kfd-evidence.mjs",
         "sourcePath": "framework/core/src/python/kungfu/cli/commands/runtime.py"
+      }
+    },
+    {
+      "id": "kungfu.runtime.surface.verify",
+      "name": "kungfu runtime surface verify <receipt.json> --json",
+      "kind": "cli-api-tui",
+      "participantProfile": "agent-or-developer",
+      "state": "declared",
+      "availability": "shipped",
+      "visibility": "public",
+      "participantFacing": true,
+      "public": true,
+      "sourcePath": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json",
+      "evidencePath": "framework/core/src/python/kungfu/agent/commands.json",
+      "artifactPath": "framework/core/src/python/kungfu/agent/commands.json",
+      "maturity": "experimental",
+      "declaration": {
+        "owner": "kungfu",
+        "source": "scripts/buildchain-kfd-evidence.mjs",
+        "sourcePath": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json"
       }
     },
     {
