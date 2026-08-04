@@ -68,8 +68,11 @@ or standalone generation, and makes no production-deployment claim.
 </details>
 <!-- kungfu:auditable-demo:agent-work-lab-autoplay:end -->
 
-<!-- kungfu:auditable-demo:project-tour:start -->
-<!-- kungfu:auditable-demo:project-tour:end -->
+<!-- kungfu:auditable-demo:project-tour-episode-1:start -->
+<!-- kungfu:auditable-demo:project-tour-episode-1:end -->
+
+<!-- kungfu:auditable-demo:project-tour-episode-2:start -->
+<!-- kungfu:auditable-demo:project-tour-episode-2:end -->
 
 Want to explore without leaving Kungfu first? Run the terminal product:
 

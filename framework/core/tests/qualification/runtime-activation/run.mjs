@@ -444,9 +444,10 @@ export async function runSuite(suite, outputDir) {
 }
 
 /**
- * Execute source/runtime producers together, then fan out product consumers
- * after product-distribution has settled. Every required suite runs and the
- * returned order remains the declared contract order.
+ * Settle source/runtime suites before product-distribution can rebuild their
+ * shared Core output tree, then fan out product consumers after the product
+ * producer has settled. Every required suite runs and the returned order
+ * remains the declared contract order.
  */
 export async function executeQualificationSuites(
   suites,
@@ -457,14 +458,19 @@ export async function executeQualificationSuites(
   if (!Number.isInteger(maxParallelism) || maxParallelism < 1)
     throw new Error('runtime activation maxParallelism must be positive');
   const required = suites.filter((suite) => suite.required);
-  const producers = required.filter(
-    (suite) => !PRODUCT_CONSUMER_SUITES.has(suite.id),
+  const sourceSuites = required.filter(
+    (suite) =>
+      suite.id !== 'product-distribution' &&
+      !PRODUCT_CONSUMER_SUITES.has(suite.id),
+  );
+  const productProducers = required.filter(
+    (suite) => suite.id === 'product-distribution',
   );
   const consumers = required.filter((suite) =>
     PRODUCT_CONSUMER_SUITES.has(suite.id),
   );
   const results = new Map();
-  for (const group of [producers, consumers]) {
+  for (const group of [sourceSuites, productProducers, consumers]) {
     let cursor = 0;
     const workers = Array.from(
       { length: Math.min(maxParallelism, group.length) },
