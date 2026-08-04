@@ -237,6 +237,42 @@ def test_receipt_tamper_and_contract_root_drift_fail_closed():
     assert rejected.value.code == "runtime-surface-receipt-root"
 
 
+def _reroot_receipt(receipt: dict) -> None:
+    body = {key: value for key, value in receipt.items() if key != "receiptRoot"}
+    receipt["receiptRoot"] = compute_content_hash(canonical_json_bytes(body))
+
+
+def test_re_rooted_exact_selection_tamper_fails_closed():
+    receipt = runtime_surface.resolve(
+        request(
+            "assignment.capture", "installed-product", [candidate("installed-product")]
+        )
+    )
+    receipt["selection"]["requestedSurface"] = "source-checkout"
+    _reroot_receipt(receipt)
+
+    with pytest.raises(runtime_surface.RuntimeSurfaceError) as rejected:
+        runtime_surface.verify(receipt)
+    assert rejected.value.code == "runtime-surface-receipt-selection"
+
+
+def test_re_rooted_fallback_must_bind_request_and_selected_surface():
+    value = request(
+        "dogfood.capture", "installed-product", [candidate("source-checkout")]
+    )
+    value["fallback"] = {"allowed": True, "reason": "product unavailable"}
+    receipt = runtime_surface.resolve(value)
+    receipt["selection"]["fallback"].update(
+        allowed=False,
+        **{"from": "hybrid-boundary"},
+    )
+    _reroot_receipt(receipt)
+
+    with pytest.raises(runtime_surface.RuntimeSurfaceError) as rejected:
+        runtime_surface.verify(receipt)
+    assert rejected.value.code == "runtime-surface-receipt-fallback"
+
+
 def test_cli_resolve_and_verify_use_the_same_receipt(tmp_path: Path):
     request_path = tmp_path / "request.json"
     request_path.write_text(

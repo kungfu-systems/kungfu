@@ -14,6 +14,7 @@ export type RuntimeSurfaceObservation = {
 
 export function observeRuntimeSurfaceReceipt(
   value: unknown,
+  verificationValue: unknown,
 ): RuntimeSurfaceObservation {
   if (!value || typeof value !== 'object') {
     throw new Error('Runtime Surface Receipt must be an object');
@@ -40,6 +41,23 @@ export function observeRuntimeSurfaceReceipt(
   ) {
     throw new Error(
       'Runtime Surface Receipt names an unknown concrete surface',
+    );
+  }
+  if (!verificationValue || typeof verificationValue !== 'object') {
+    throw new Error('Runtime Surface Receipt verification is required');
+  }
+  const verification = verificationValue as Record<string, unknown>;
+  if (
+    verification.schema !== 'kungfu.runtime-surface-verification/v1' ||
+    verification.ok !== true ||
+    verification.receiptRoot !== root ||
+    verification.contractRoot !== contractRoot ||
+    verification.operationId !== receipt.operationId ||
+    verification.runtimeSurface !== runtimeSurface ||
+    verification.selectedProvider !== receipt.selectedProvider
+  ) {
+    throw new Error(
+      'Runtime Surface Receipt disagrees with authority verification',
     );
   }
   return {

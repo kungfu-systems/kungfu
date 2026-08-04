@@ -45,10 +45,21 @@ kungfu runtime surface verify receipt.json --json
 ```
 
 The verify command is declared as a public Agent API and returns the same rooted
-observation used by human tooling. The TUI uses
-the same schema and root; it does not select another runtime. If its packaged CLI
-is unavailable, it fails closed unless `KUNGFU_CLI_BIN` names an exact installed
-command or `KUNGFU_TUI_SOURCE_CLI=1` explicitly requests source operation.
+observation used by human tooling. Dogfood requires the complete receipt and
+authority verification rather than accepting a root-shaped string. The TUI
+diagnostic accepts `--runtime-surface-receipt`, invokes the same verifier, and
+exposes only the matching verified observation; it does not select another runtime.
+If its packaged CLI is unavailable, it fails closed unless `KUNGFU_CLI_BIN`
+names an exact installed command or `KUNGFU_TUI_SOURCE_CLI=1` explicitly requests
+source operation.
+
+The six-row closeout qualifier does not synthesize consumer success from resolver
+calls. Every row requires a content-rooted
+`kungfu.runtime-surface-consumer-evidence/v1` object containing the full receipts
+emitted around the real Assignment, Shifu, Portable Bundle, Dogfood, Atlas/Xinfa,
+seal, and TUI probes. The qualifier re-verifies those receipts against the exact
+source and assembled product coordinates. Publish the report and its consumer
+evidence with the reviewed head so another reviewer can recompute every root.
 
 ## Migration boundary
 

@@ -218,10 +218,21 @@ test('capture writes Findings, deduplicates, and exposes no Issue path', () => {
   let present = false;
   const run = (args) => {
     calls.push(args);
-    if (args[0] === 'runtime')
+    if (args[0] === 'runtime' && args[2] === 'resolve')
       return commandResult(0, {
         schema: 'kungfu.runtime-surface-receipt/v1',
+        operationId: 'dogfood.capture',
         runtimeSurface: 'source-checkout',
+        selectedProvider: 'source-shifu',
+        receiptRoot: ROOT_A,
+      });
+    if (args[0] === 'runtime' && args[2] === 'verify')
+      return commandResult(0, {
+        schema: 'kungfu.runtime-surface-verification/v1',
+        ok: true,
+        operationId: 'dogfood.capture',
+        runtimeSurface: 'source-checkout',
+        selectedProvider: 'source-shifu',
         receiptRoot: ROOT_A,
       });
     if (args[0] === 'workspace') return commandResult(0, { ok: true });
@@ -333,5 +344,25 @@ test('source Finding capture rejects a dirty checkout before native capture', ()
         workspaceRoot: '/tmp/dev-gate-latency-patrol-workspace-dirty',
       }),
     /does not match the exact current checkout/,
+  );
+});
+
+test('pre-bound Finding capture rejects a sha256-shaped root without its receipt', () => {
+  const classification = classifyMonitorFailure({
+    repository: 'kungfu-systems/kungfu',
+    branch: 'dev/v4/v4.0',
+    failureClass: 'collector-exit-1',
+  });
+  classification.findingIntents[0].capture.runtimeSurface = 'source-checkout';
+  classification.findingIntents[0].capture.runtimeReceiptRoot = ROOT_A;
+
+  assert.throws(
+    () =>
+      captureLatencyFindings(classification, {
+        run: () => assert.fail('unverified receipt must fail before execution'),
+        intentDirectory: '/tmp/dev-gate-latency-patrol-intents-unverified',
+        workspaceRoot: '/tmp/dev-gate-latency-patrol-workspace-unverified',
+      }),
+    /full runtimeReceipt object/,
   );
 });
