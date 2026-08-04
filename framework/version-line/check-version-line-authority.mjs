@@ -153,13 +153,14 @@ function requireContains(text, fragment, label) {
 }
 
 function validateWorkflowProjections(root, projection) {
-  const native = JSON.stringify(projection.runnerRouting.matrices.native);
+  const nativeMatrix = projection.runnerRouting.matrices.native;
+  const native = JSON.stringify(nativeMatrix);
+  const devPatrol = JSON.stringify(
+    nativeMatrix.filter(({ id }) => id !== 'linux-arm64'),
+  );
   const line = projection.lines.find(({ id }) => id === projection.activeLine);
   if (!line) throw new Error('active line projection is missing');
   const nativePreset = `kungfu-v${line.major}-native`;
-  const selfHosted = JSON.stringify(
-    projection.runnerRouting.matrices.selfHosted,
-  );
   const build = fs.readFileSync(
     path.join(root, '.github/workflows/build.yml'),
     'utf8',
@@ -183,7 +184,7 @@ function validateWorkflowProjections(root, projection) {
     `runner-preset: ${nativePreset}`,
     'release runner preset',
   );
-  requireContains(patrol, selfHosted, 'dev patrol matrix');
+  requireContains(patrol, devPatrol, 'dev patrol matrix');
   requireContains(patrol, 'runner-preset: custom', 'dev patrol runner preset');
   const stable = fs.readFileSync(
     path.join(root, '.github/workflows/stable-candidate-patrol.yml'),
