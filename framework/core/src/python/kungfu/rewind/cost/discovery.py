@@ -61,7 +61,8 @@ def _default_version_probe(path: str) -> Optional[str]:
         proc = subprocess.run(
             [path, "--version"],
             capture_output=True,
-            text=True,
+            encoding="utf-8",
+            errors="replace",
             timeout=_VERSION_TIMEOUT_S,
             check=False,
         )

@@ -13,6 +13,7 @@ from kungfu.agent.run_intent import RunIntentDispatcher
 from kungfu.agent.runtime_profile_catalog import RuntimeProfileCatalog
 from kungfu.agent.runtime_profile_store import RuntimeProfileStore
 from kungfu.agent.verification_probe import VerificationProbe
+from kungfu.rewind.cost import discovery as provider_discovery
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -48,6 +49,20 @@ def test_verification_probe_keeps_version_after_invalid_utf8():
 
     assert result["ok"] is True
     assert result["version"] == "1.2.3"
+
+
+def test_provider_discovery_replaces_invalid_utf8_from_version_probe(monkeypatch):
+    real_run = subprocess.run
+
+    def invalid_version(_argv, **kwargs):
+        return real_run(
+            [sys.executable, *_invalid_utf8_version_command()],
+            **kwargs,
+        )
+
+    monkeypatch.setattr(provider_discovery.subprocess, "run", invalid_version)
+
+    assert provider_discovery._default_version_probe("provider") == ("provider � 1.2.3")
 
 
 def _invalid_utf8_git_failure(real_run):
