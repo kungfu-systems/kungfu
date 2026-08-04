@@ -22,8 +22,8 @@
     "runtimes": {
       "alpha": {
         "ref": "v3-alpha",
-        "runtimeSha": "c8acbc57d1f6aa2e5fda1398a5ea1782373d9a7a",
-        "contractDigest": "sha256:c7a225a544b64a683fb5cb8fcb1bad25b7ccda458dca61c23692424077bc1b6b",
+        "runtimeSha": "825f596fe4a5ed8a4b2bb4f7c5a1b44cb9a075a3",
+        "contractDigest": "sha256:0cc6419c6648e9712fc1ddcf94b96d770e82edd2a552aa1268815a15dc22bc58",
         "contractLock": ".buildchain/alpha-contract-lock.json"
       },
       "release": {

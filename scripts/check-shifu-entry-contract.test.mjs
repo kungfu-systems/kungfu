@@ -624,7 +624,12 @@ test('real package manager cannot run a guarded task or write the checkout', (t)
     path.join(runtime.runtimeRoot, 'kungfu-package-manager-guard-'),
   );
   const guard = path.join(ROOT, 'scripts', 'require-shifu.mjs');
-  const node = JSON.stringify(process.execPath);
+  // cmd.exe reparses a quoted executable in the first package-script token.
+  // Resolve the current Node through PATH on Windows so the guard itself runs.
+  const node =
+    process.platform === 'win32'
+      ? path.basename(process.execPath)
+      : JSON.stringify(process.execPath);
   const guardPath = JSON.stringify(guard);
   fs.writeFileSync(
     path.join(fixture, 'package.json'),
