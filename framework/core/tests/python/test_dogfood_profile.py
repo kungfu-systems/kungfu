@@ -79,6 +79,8 @@ def _capture(runtime: Path, suffix: str = "one", **overrides):
             "platform": ["macos"],
         },
         "privacy": "internal",
+        "runtimeSurface": "source-checkout",
+        "runtimeReceiptRoot": ROOT_D,
         "actor": "test-agent",
         "observedAt": "2026-07-01T00:00:00Z",
         "impact": "normal",

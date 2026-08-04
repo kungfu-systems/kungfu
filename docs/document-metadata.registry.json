@@ -583,6 +583,27 @@
       "review_state": "self-reviewed",
       "sensitivity": "public"
     },
+    "docs/concepts/runtime-surface-provenance.md": {
+      "metadata_schema": "kungfu.document-metadata/v1",
+      "document_status": "active",
+      "doc_type": "public-document",
+      "review_state": "self-reviewed",
+      "sensitivity": "public",
+      "sources": [
+        "local-files"
+      ],
+      "period": "ongoing",
+      "theme": "kungfu-runtime-surface-provenance",
+      "confidence": "high",
+      "evidence_grade": "A",
+      "last_reviewed": "2026-08-04",
+      "ai_provenance": {
+        "model_family": "OpenAI GPT-5",
+        "product": "Codex",
+        "generated_at": "2026-08-04",
+        "invisible_context_boundary": "Private corpus, credentials, unpublished release evidence, and hidden runtime state were not used"
+      }
+    },
     "docs/concepts/system-overview.md": {
       "metadata_schema": "kungfu.document-metadata/v1",
       "document_status": "active",

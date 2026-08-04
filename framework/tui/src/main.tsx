@@ -106,6 +106,7 @@ import {
   type ProjectsQuickAction,
   projectWorkQuickCommandAvailable,
 } from './projects-view/index.js';
+import { runtimeSurfaceDiagnostic } from './runtime-surface.js';
 import {
   type OpenedStarterProject,
   type ProjectTourEpisode,
@@ -2265,20 +2266,20 @@ function ProductHost({
 function printNonInteractiveDiagnostic(): void {
   const paths = runtimePaths();
   process.stdout.write(
-    `${JSON.stringify({
-      schema: 'kungfu.tui.non-interactive/v1',
-      status: 'not-started',
-      reason: 'interactive terminal required',
-      runtimeDir: paths.runtimeDir,
-      next: 'run `kungfu` in a TTY',
-    })}\n`,
+    `${JSON.stringify(
+      runtimeSurfaceDiagnostic(
+        process.argv,
+        paths.runtimeDir,
+        tuiCliInvocation(paths),
+      ),
+    )}\n`,
   );
 }
 
 async function main(): Promise<void> {
   if (process.argv.includes('--help')) {
     process.stdout.write(
-      'Kungfu Work Control TUI\n\nRun in an interactive terminal.\nOffline animation demo: `kungfu agent-work-lab autoplay`.\nProject recovery tour: `kungfu agent-work-lab project-tour`.\nAgent brief: `kungfu agent brief`.\n',
+      'Kungfu Work Control TUI\n\nRun in an interactive terminal.\nVerified receipt diagnostic: `kungfu --diagnostic --runtime-surface-receipt receipt.json`.\nOffline animation demo: `kungfu agent-work-lab autoplay`.\nProject recovery tour: `kungfu agent-work-lab project-tour`.\nAgent brief: `kungfu agent brief`.\n',
     );
     return;
   }

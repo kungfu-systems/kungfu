@@ -71,6 +71,11 @@ HARD_CLASSES = {
     "security",
     "current-assignment-blocker",
 }
+RUNTIME_SURFACES = {
+    "installed-product",
+    "source-checkout",
+    "hybrid-boundary",
+}
 ISSUE_TRANSITIONS = {
     "open": {"triaged", "accepted", "deferred", "released"},
     "triaged": {"accepted", "deferred", "released"},
@@ -133,6 +138,11 @@ def capabilities() -> dict[str, Any]:
         "finding": {
             "immutable": True,
             "evidence": "episode-root-and-bounded-pointers",
+            "runtimeProvenance": {
+                "required": True,
+                "surfaces": sorted(RUNTIME_SURFACES),
+                "receiptRoot": "kungfu.runtime-surface-receipt/v1",
+            },
             "privacy": ["public", "internal", "private-metadata-only"],
             "impact": {
                 "canonical": list(CANONICAL_IMPACTS),
@@ -384,6 +394,8 @@ def capture_finding(
     evidence_roots: Iterable[str] = (),
     dimensions: Mapping[str, Any] | None = None,
     privacy: str = "internal",
+    runtime_surface: str,
+    runtime_receipt_root: str,
     actor: str,
     observed_at: str = "",
     impact: str = "medium",
@@ -398,6 +410,10 @@ def capture_finding(
         raise ValueError("hard_class is not in the declared policy vocabulary")
     if int(recurrence) < 1:
         raise ValueError("recurrence must be at least one")
+    runtime_surface = _text(runtime_surface, "runtime_surface")
+    if runtime_surface not in RUNTIME_SURFACES:
+        raise ValueError("runtime_surface is not contract-permitted")
+    runtime_receipt_root = _root(runtime_receipt_root, "runtime_receipt_root")
     existing = _one_record(runtime_dir, FINDING_SURFACE_ID, "finding_id", finding_id)
     recorded_at = observed_at or (
         str(existing["record"].get("observed_at") or "") if existing else ""
@@ -415,6 +431,8 @@ def capture_finding(
         ),
         "dimensions": _dimension_map(dimensions),
         "privacy": privacy,
+        "runtime_surface": runtime_surface,
+        "runtime_receipt_root": runtime_receipt_root,
         "impact": _normalize_impact(impact),
         "hard_class": hard_class,
         "recurrence": int(recurrence),
@@ -439,7 +457,10 @@ def capture_finding(
     payload = {
         "record": record,
         "source": _source(actor, recorded_at, finding_root),
-        "links": {"episode_root": body["episode_root"]},
+        "links": {
+            "episode_root": body["episode_root"],
+            "runtime_receipt_root": body["runtime_receipt_root"],
+        },
     }
     write = _put(
         runtime_dir,
@@ -483,6 +504,23 @@ def admit_issue(
     missing = sorted(set(finding_roots) - known_findings)
     if missing:
         raise ValueError(f"Issue references unknown Finding roots: {missing}")
+    selected_findings = [
+        row["record"]
+        for row in _records(runtime_dir, FINDING_SURFACE_ID)
+        if str(row["record"].get("finding_root") or "") in finding_roots
+    ]
+    runtime_surfaces = sorted(
+        {
+            _text(row.get("runtime_surface"), "runtime_surface")
+            for row in selected_findings
+        }
+    )
+    runtime_receipt_roots = sorted(
+        {
+            _root(row.get("runtime_receipt_root"), "runtime_receipt_root")
+            for row in selected_findings
+        }
+    )
     if hard_class and hard_class not in HARD_CLASSES:
         raise ValueError("hard_class is not in the declared policy vocabulary")
     existing = _one_record(runtime_dir, ISSUE_SURFACE_ID, "issue_id", issue_id)
@@ -500,6 +538,8 @@ def admit_issue(
         "version": 1,
         "predecessor_root": "",
         "finding_roots": finding_roots,
+        "runtime_surfaces": runtime_surfaces,
+        "runtime_receipt_roots": runtime_receipt_roots,
         "impact": _normalize_impact(impact),
         "hard_class": hard_class,
         "verification_criteria": [
