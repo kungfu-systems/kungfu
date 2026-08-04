@@ -39,6 +39,17 @@ const FIXTURE = JSON.parse(
   ),
 );
 
+test('merge-group native proof consumes the admitted replayed tree', () => {
+  const workflow = fs.readFileSync(
+    path.join(REPO_ROOT, '.github/workflows/affected-native-pr.yml'),
+    'utf8',
+  );
+  assert.match(
+    workflow,
+    /source_tree="\$\(git rev-parse "\$\{pr_head\}\^\{tree\}"\)"[\s\S]*GITHUB_EVENT_NAME" = "merge_group"[\s\S]*source\.replayedTree[\s\S]*source-tree=\$\{source_tree\}/u,
+  );
+});
+
 function git(root, ...args) {
   return execFileSync('git', args, { cwd: root, encoding: 'utf8' }).trim();
 }
