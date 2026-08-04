@@ -76,6 +76,10 @@ export function valueRoot(value) {
   return digest(Buffer.from(JSON.stringify(canonical(value))));
 }
 
+function sameCanonicalValue(left, right) {
+  return JSON.stringify(canonical(left)) === JSON.stringify(canonical(right));
+}
+
 function invoke(command, args, { json = true } = {}) {
   const result = spawnSync(command[0], [...command.slice(1), ...args], {
     cwd: ROOT,
@@ -197,23 +201,18 @@ export function verifyConsumerEvidence({
         receipt?.schema !== 'kungfu.runtime-surface-receipt/v1' ||
         receipt.operationId !== operation ||
         (requiredSurface && receipt.runtimeSurface !== requiredSurface) ||
-        JSON.stringify(receipt.authorityRoots) !==
-          JSON.stringify(authorityRoots)
+        !sameCanonicalValue(receipt.authorityRoots, authorityRoots)
       )
         fail(`consumer receipt ${index} contradicts ${rowId}`);
       const candidate = candidateBySurface[receipt.runtimeSurface];
       if (!candidate) fail(`consumer receipt ${index} has unknown surface`);
       for (const coordinate of ['executable', 'source'])
-        if (
-          JSON.stringify(receipt[coordinate]) !==
-          JSON.stringify(candidate[coordinate])
-        )
+        if (!sameCanonicalValue(receipt[coordinate], candidate[coordinate]))
           fail(`consumer receipt ${index} has stale ${coordinate}`);
       if (
         receipt.runtimeSurface === 'hybrid-boundary'
           ? !ROOT_PATTERN.test(receipt.bundleRoot || '')
-          : JSON.stringify(receipt.bundleRoot) !==
-            JSON.stringify(candidate.bundleRoot)
+          : !sameCanonicalValue(receipt.bundleRoot, candidate.bundleRoot)
       )
         fail(`consumer receipt ${index} has stale bundleRoot`);
       const receiptPath = path.join(directory, `${index}-receipt.json`);
