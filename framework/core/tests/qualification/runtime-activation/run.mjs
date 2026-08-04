@@ -26,6 +26,7 @@ const PRODUCT_CONSUMER_SUITES = new Set([
   'product-verification',
   'product-catalog',
 ]);
+const PRODUCT_DISTRIBUTION_SUITE = 'product-distribution';
 
 export const SUITES = [
   {
@@ -444,9 +445,10 @@ export async function runSuite(suite, outputDir) {
 }
 
 /**
- * Execute source/runtime producers together, then fan out product consumers
- * after product-distribution has settled. Every required suite runs and the
- * returned order remains the declared contract order.
+ * Execute source/runtime qualification before product-distribution mutates the
+ * shared build layout, then fan out product consumers after the distribution
+ * has settled. Every required suite runs and the returned order remains the
+ * declared contract order.
  */
 export async function executeQualificationSuites(
   suites,
@@ -457,14 +459,19 @@ export async function executeQualificationSuites(
   if (!Number.isInteger(maxParallelism) || maxParallelism < 1)
     throw new Error('runtime activation maxParallelism must be positive');
   const required = suites.filter((suite) => suite.required);
-  const producers = required.filter(
-    (suite) => !PRODUCT_CONSUMER_SUITES.has(suite.id),
+  const sourceSuites = required.filter(
+    (suite) =>
+      suite.id !== PRODUCT_DISTRIBUTION_SUITE &&
+      !PRODUCT_CONSUMER_SUITES.has(suite.id),
+  );
+  const distribution = required.filter(
+    (suite) => suite.id === PRODUCT_DISTRIBUTION_SUITE,
   );
   const consumers = required.filter((suite) =>
     PRODUCT_CONSUMER_SUITES.has(suite.id),
   );
   const results = new Map();
-  for (const group of [producers, consumers]) {
+  for (const group of [sourceSuites, distribution, consumers]) {
     let cursor = 0;
     const workers = Array.from(
       { length: Math.min(maxParallelism, group.length) },

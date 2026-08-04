@@ -162,7 +162,7 @@ test('product catalog qualification is bound to the build from this checkout', (
   ]);
 });
 
-test('runtime activation uses a bounded producer and consumer DAG without hiding sibling failures', async () => {
+test('runtime activation protects source bindings behind a distribution barrier', async () => {
   const suites = qualificationPlan({ mode: 'execute', withProduct: true });
   const events = [];
   let active = 0;
@@ -194,19 +194,21 @@ test('runtime activation uses a bounded producer and consumer DAG without hiding
     'failed',
   );
   assert.ok(result.every((suite) => suite.status !== 'planned'));
+  const distributionStart = events.indexOf('start:product-distribution');
+  const distributionEnd = events.indexOf('end:product-distribution');
+  for (const id of [
+    'activation-core',
+    'profile-action-admission',
+    'runtime-surface-parity',
+    'activation-performance',
+  ])
+    assert.ok(events.indexOf(`end:${id}`) < distributionStart, id);
   const firstConsumer = Math.min(
     ...['product-runtime-smoke', 'product-verification', 'product-catalog'].map(
       (id) => events.indexOf(`start:${id}`),
     ),
   );
-  for (const id of [
-    'activation-core',
-    'product-distribution',
-    'profile-action-admission',
-    'runtime-surface-parity',
-    'activation-performance',
-  ])
-    assert.ok(events.indexOf(`end:${id}`) < firstConsumer, id);
+  assert.ok(distributionEnd < firstConsumer, 'product-distribution');
 });
 
 test('source qualification uv runs preserve the exact tracked lockfile', () => {
