@@ -341,7 +341,7 @@
       ],
       "activation": "daily or manual on dev",
       "invocation": {
-        "uses": "kungfu-systems/buildchain/.github/workflows/.gate-profile.yml@3d245bba5e21e598a0e88980cf135a73cec41ecc",
+        "uses": "kungfu-systems/buildchain/.github/workflows/.gate-profile.yml@916fc84d488ae6f5af271a67487e79ecb47b9ae2",
         "with": {
           "buildchain-ref": "${{ github.event_name == 'workflow_dispatch' && inputs.buildchain-ref || '' }}",
           "checkout-cache-fallback": "github",
@@ -467,7 +467,7 @@
       "adapter": {
         "type": "buildchain-heavy-build",
         "kind": "job-uses",
-        "uses": "kungfu-systems/buildchain/.github/workflows/.build.yml@3d245bba5e21e598a0e88980cf135a73cec41ecc",
+        "uses": "kungfu-systems/buildchain/.github/workflows/.build.yml@bdb5a9687daead6353a741c125dd750c3fa9201f",
         "job": {
       "needs": [
         "preflight",
@@ -482,7 +482,7 @@
           }
         },
         "with": {
-          "buildchain-ref": "${{ inputs.buildchain-ref || '3d245bba5e21e598a0e88980cf135a73cec41ecc' }}",
+          "buildchain-ref": "${{ inputs.buildchain-ref || 'bdb5a9687daead6353a741c125dd750c3fa9201f' }}",
           "runner-preset": "custom",
           "platforms-json": "${{ fromJSON(inputs.macos-overflow-request-json || '{}').mode == 'self-hosted' && '[{\"id\":\"macos-arm64\",\"name\":\"macOS ARM64 self-hosted primary\",\"platform\":\"macos\",\"runner\":\"[\\\"self-hosted\\\",\\\"macOS\\\",\\\"ARM64\\\",\\\"kungfu-build-v4-macos-arm64\\\"]\",\"capabilities\":[\"native-toolchain\",\"node\",\"product-artifacts\",\"rust\"]}]' || (fromJSON(inputs.macos-overflow-request-json || '{}').mode == 'github-hosted' && '[{\"id\":\"macos-arm64\",\"name\":\"macOS ARM64 GitHub-hosted overflow\",\"platform\":\"macos\",\"runner\":\"[\\\"macos-15\\\"]\",\"capabilities\":[\"native-toolchain\",\"node\",\"product-artifacts\",\"rust\"]}]' || (inputs.platforms-json || '[{\"id\":\"linux-x64\",\"name\":\"Linux x64\",\"platform\":\"linux\",\"runner\":\"[\\\"ubuntu-24.04\\\"]\",\"capabilities\":[\"node\",\"native-toolchain\",\"product-artifacts\",\"rust\"],\"environment\":{\"CC\":\"gcc-14\",\"CXX\":\"g++-14\"}},{\"id\":\"linux-arm64\",\"name\":\"Linux ARM64\",\"platform\":\"linux\",\"runner\":\"[\\\"ubuntu-24.04-arm\\\"]\",\"capabilities\":[\"node\",\"native-toolchain\",\"product-artifacts\",\"rust\"]},{\"id\":\"macos-arm64\",\"name\":\"macOS ARM64\",\"platform\":\"macos\",\"runner\":\"[\\\"macos-15\\\"]\",\"capabilities\":[\"node\",\"native-toolchain\",\"product-artifacts\",\"rust\"]},{\"id\":\"windows-x64\",\"name\":\"Windows x64\",\"platform\":\"windows\",\"runner\":\"[\\\"windows-2022\\\"]\",\"capabilities\":[\"node\",\"native-toolchain\",\"product-artifacts\",\"rust\"]}]')) }}",
           "self-hosted-offline-fallback": false,
@@ -610,14 +610,14 @@
       "adapter": {
         "type": "buildchain-release-admission",
         "kind": "job-uses",
-        "uses": "kungfu-systems/buildchain/.github/workflows/release-candidate-promote.yml@3d245bba5e21e598a0e88980cf135a73cec41ecc",
+        "uses": "kungfu-systems/buildchain/.github/workflows/release-candidate-promote.yml@bdb5a9687daead6353a741c125dd750c3fa9201f",
         "job": {
           "needs": "promotion-contract",
           "if": "${{ github.event_name == 'workflow_dispatch' || github.event.pull_request.merged == true }}"
         },
         "with": {
           "channel": "${{ startsWith(inputs.target-ref || github.event.pull_request.base.ref, 'alpha/') && 'alpha' || 'release' }}",
-          "buildchain-ref": "3d245bba5e21e598a0e88980cf135a73cec41ecc",
+          "buildchain-ref": "bdb5a9687daead6353a741c125dd750c3fa9201f",
           "target-sha": "${{ inputs.target-sha || github.event.pull_request.merge_commit_sha || github.sha }}",
           "required-status-check": "build / Finalize build controller evidence",
           "publication-auto-admission": true,

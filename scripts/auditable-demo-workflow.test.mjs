@@ -78,11 +78,11 @@ test('one exact Buildchain workflow owns every declared demo', () => {
 test('the build fails the real transported binary before either upload path', () => {
   assert.equal(
     build.uses,
-    'kungfu-systems/buildchain/.github/workflows/.build.yml@3d245bba5e21e598a0e88980cf135a73cec41ecc',
+    'kungfu-systems/buildchain/.github/workflows/.build.yml@bdb5a9687daead6353a741c125dd750c3fa9201f',
   );
   assert.equal(
     demo.uses,
-    'kungfu-systems/buildchain/.github/workflows/.declarative-auditable-demo.yml@3d245bba5e21e598a0e88980cf135a73cec41ecc',
+    'kungfu-systems/buildchain/.github/workflows/.declarative-auditable-demo.yml@bdb5a9687daead6353a741c125dd750c3fa9201f',
   );
   assert.equal(
     build.with['pre-upload-transport-smoke-scenario-path'],
@@ -95,6 +95,10 @@ test('manual full refresh and promotion reuse the same materializer', () => {
   const sharedIntent =
     "${{ github.event_name != 'workflow_dispatch' || inputs.render-auditable-demo }}";
   assert.equal(demo.with['render-media'], sharedIntent);
+  assert.equal(
+    demo.with['render-failure-advisory'],
+    "${{ github.event_name == 'pull_request' && startsWith(github.base_ref, 'alpha/') }}",
+  );
   assert.equal(demo.with.materialize, sharedIntent);
   assert.equal(
     demo.with['materialize-base-ref'],

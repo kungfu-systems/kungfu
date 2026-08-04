@@ -49,7 +49,7 @@ on:
         type: boolean
         default: false
       render-auditable-demo:
-        description: "Run the same full media refresh required by Alpha and Release; false retains Gate-only validation"
+        description: "Run a strict full media refresh; false retains Gate-only validation"
         required: false
         type: boolean
         default: false
@@ -160,14 +160,14 @@ jobs:
   build:
     needs: [preflight, windows-fast-sentinel, auditable-demo-fast-sentinel]
     if: ${{ needs.preflight.result == 'success' && needs.windows-fast-sentinel.result == 'success' && needs.auditable-demo-fast-sentinel.result == 'success' && !inputs.fast-sentinels-only && fromJSON(inputs.macos-overflow-request-json || '{}').mode != 'control' }}
-    uses: kungfu-systems/buildchain/.github/workflows/.build.yml@3d245bba5e21e598a0e88980cf135a73cec41ecc # signing workflow path readback
+    uses: kungfu-systems/buildchain/.github/workflows/.build.yml@bdb5a9687daead6353a741c125dd750c3fa9201f # signing workflow path readback
     secrets:
       BUILDCHAIN_PROMOTION_TOKEN: ${{ secrets.KUNGFU_GITHUB_TOKEN }}
       BUILDCHAIN_ARTIFACT_RELAY_S3_ROLE_ARN: ${{ secrets.BUILDCHAIN_ARTIFACT_RELAY_S3_ROLE_ARN }}
       BUILDCHAIN_ARTIFACT_RELAY_S3_UPLOAD_ROLE_ARN: ${{ secrets.BUILDCHAIN_ARTIFACT_RELAY_S3_UPLOAD_ROLE_ARN }}
       BUILDCHAIN_ARTIFACT_RELAY_S3_DOWNLOAD_ROLE_ARN: ${{ secrets.BUILDCHAIN_ARTIFACT_RELAY_S3_DOWNLOAD_ROLE_ARN }}
     with:
-      buildchain-ref: ${{ inputs.buildchain-ref || '3d245bba5e21e598a0e88980cf135a73cec41ecc' }}
+      buildchain-ref: ${{ inputs.buildchain-ref || 'bdb5a9687daead6353a741c125dd750c3fa9201f' }}
       runner-preset: custom
       platforms-json: ${{ fromJSON(inputs.macos-overflow-request-json || '{}').mode == 'self-hosted' && '[{"id":"macos-arm64","name":"macOS ARM64 self-hosted primary","platform":"macos","runner":"[\"self-hosted\",\"macOS\",\"ARM64\",\"kungfu-build-v4-macos-arm64\"]","capabilities":["native-toolchain","node","product-artifacts","rust"]}]' || (fromJSON(inputs.macos-overflow-request-json || '{}').mode == 'github-hosted' && '[{"id":"macos-arm64","name":"macOS ARM64 GitHub-hosted overflow","platform":"macos","runner":"[\"macos-15\"]","capabilities":["native-toolchain","node","product-artifacts","rust"]}]' || (inputs.platforms-json || '[{"id":"linux-x64","name":"Linux x64","platform":"linux","runner":"[\"ubuntu-24.04\"]","capabilities":["node","native-toolchain","product-artifacts","rust"],"environment":{"CC":"gcc-14","CXX":"g++-14"}},{"id":"linux-arm64","name":"Linux ARM64","platform":"linux","runner":"[\"ubuntu-24.04-arm\"]","capabilities":["node","native-toolchain","product-artifacts","rust"]},{"id":"macos-arm64","name":"macOS ARM64","platform":"macos","runner":"[\"macos-15\"]","capabilities":["node","native-toolchain","product-artifacts","rust"]},{"id":"windows-x64","name":"Windows x64","platform":"windows","runner":"[\"windows-2022\"]","capabilities":["node","native-toolchain","product-artifacts","rust"]}]')) }}
       # Formal Alpha and Release candidates run their credential-free native
@@ -239,9 +239,9 @@ jobs:
       verify-substage-evidence-path: product/release/qualification/layer-qualification-summary.json
       release-candidate: true
       publish-channel: ${{ (fromJSON(inputs.macos-overflow-request-json || '{}').mode == 'self-hosted' || fromJSON(inputs.macos-overflow-request-json || '{}').mode == 'github-hosted') && 'none' || (github.event_name == 'pull_request' && (startsWith(github.base_ref, 'release/') && 'release' || 'alpha') || 'none') }}
-      # Alpha and release evidence always crosses the configured S3 relay,
-      # including manual diagnostic runs. Keep this literal so a dispatch
-      # cannot silently fall back to direct GitHub artifact transfer.
+      # Keep the external-runner relay request explicit. Buildchain resolves
+      # GitHub-hosted rows to native GitHub Artifacts and reserves S3 replay
+      # only for external rows, including mixed matrices.
       artifact-transfer-mode: s3-to-github-artifacts
       artifact-retention-days: 14
       # Fresh hosted formal lanes fetch the exact source directly from GitHub;
@@ -474,7 +474,7 @@ jobs:
       actions: read
       contents: write
       pull-requests: write
-    uses: kungfu-systems/buildchain/.github/workflows/.declarative-auditable-demo.yml@3d245bba5e21e598a0e88980cf135a73cec41ecc
+    uses: kungfu-systems/buildchain/.github/workflows/.declarative-auditable-demo.yml@bdb5a9687daead6353a741c125dd750c3fa9201f
     secrets:
       DEMO_UPDATE_TOKEN: ${{ secrets.KUNGFU_GITHUB_TOKEN }}
     with:
@@ -484,6 +484,10 @@ jobs:
       scenario-path: .buildchain/auditable-demo.json
       renderer-image: ghcr.io/kungfu-systems/build-images/demo-renderer@sha256:c200589be9dda6f730f1cb3deb5b48a60af9144e7a3e4216b7ef70c8e9274000
       render-media: ${{ github.event_name != 'workflow_dispatch' || inputs.render-auditable-demo }}
+      # Alpha publication depends on the required Gate, never on renderer
+      # capacity. The media step remains visible but advisory only for Alpha;
+      # Release and explicit media refreshes retain strict failure semantics.
+      render-failure-advisory: ${{ github.event_name == 'pull_request' && startsWith(github.base_ref, 'alpha/') }}
       media-profile: responsive-long-form-web-delivery-v1
       materialize: ${{ github.event_name != 'workflow_dispatch' || inputs.render-auditable-demo }}
       materialize-base-ref: ${{ github.event.repository.default_branch }}
