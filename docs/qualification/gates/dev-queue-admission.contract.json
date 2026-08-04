@@ -15,7 +15,7 @@
   },
   "requiredContext": "Queue admission lease",
   "authority": {
-    "pullRequestHead": "buildchain-dev-delivery-warrant-state-ref",
+    "pullRequestHead": "atlas-serialized-wrapper",
     "mergeGroup": ".github/workflows/queue-admission-lease.yml",
     "dequeueRevocation": ".github/workflows/cancel-dequeued-merge-group.yml",
     "dequeueControllerSource": "current-protected-pull-request-base-ref",
