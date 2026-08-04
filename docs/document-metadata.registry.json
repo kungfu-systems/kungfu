@@ -1718,7 +1718,21 @@
       "document_status": "active",
       "doc_type": "public-document",
       "review_state": "self-reviewed",
-      "sensitivity": "public"
+      "sensitivity": "public",
+      "sources": [
+        "local-files"
+      ],
+      "period": "ongoing",
+      "theme": "qualification-gates",
+      "confidence": "high",
+      "evidence_grade": "A",
+      "last_reviewed": "2026-08-04",
+      "ai_provenance": {
+        "model_family": "OpenAI GPT-5",
+        "product": "Codex",
+        "generated_at": "2026-08-04",
+        "invisible_context_boundary": "No credentials, private logs, or hidden provider state were read"
+      }
     },
     "docs/qualification/gates/workflow-authority.md": {
       "metadata_schema": "kungfu.document-metadata/v1",

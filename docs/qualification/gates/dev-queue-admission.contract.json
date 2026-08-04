@@ -15,16 +15,22 @@
   },
   "requiredContext": "Queue admission lease",
   "authority": {
-    "pullRequestHead": "atlas-serialized-wrapper",
+    "pullRequestHead": "buildchain-dev-delivery-warrant-state-ref",
     "mergeGroup": ".github/workflows/queue-admission-lease.yml",
     "dequeueRevocation": ".github/workflows/cancel-dequeued-merge-group.yml",
-    "dequeueControllerSource": "current-protected-pull-request-base-ref"
+    "dequeueControllerSource": "current-protected-pull-request-base-ref",
+    "queueAndWarrant": "kungfu-systems/buildchain@c0753d1732650e7e0727bd31059c2ccb640c1a6b",
+    "stateRefPattern": "buildchain-state/dev-delivery/dev-vN-vN.N"
   },
   "admission": {
     "queueMustBeEmpty": true,
     "requiredPosition": 1,
     "freshProjectCutReplay": true,
-    "leaseAfterReplay": true
+    "leaseAfterReplay": true,
+    "exactQueueRevisionRequired": true,
+    "exactWarrantFenceRequired": true,
+    "sourceQualificationProofRequired": true,
+    "integrationDeliveryProofRequired": true
   },
   "revocation": {
     "dequeue": "failure-status-on-exact-pr-head-for-non-merged-removal",
@@ -46,5 +52,5 @@
     "expectedSource": "any",
     "reason": "The pull-request lease is a user-authored commit status while the merge-group continuation is a GitHub Actions check."
   },
-  "threatBoundary": "Prevents inadvertent direct queue admission. A write actor that deliberately forges the named status is outside this operational safety boundary."
+  "threatBoundary": "Prevents inadvertent direct queue admission and stale-controller continuation. The named status alone is insufficient: merge-group continuation reads the exact Buildchain state-ref revision, active Warrant, fencing token, generation and source head, while affected-native records the exact Integration Delivery Proof before protected merge observation."
 }

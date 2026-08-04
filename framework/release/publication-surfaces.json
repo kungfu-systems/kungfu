@@ -80,7 +80,7 @@
             "product-stable",
             "product-binaries"
           ],
-          "sourceRoot": "sha256:f2f09e1f6e3eceb7908458951d04385686f2477ee10e0ce40cf5678c4b68e82b"
+          "sourceRoot": "sha256:8db17590b39c38889e9f4ee22fa1e54bf44b9c87910e5381562cf7ff0787ee9a"
         },
         {
           "path": ".github/workflows/alpha-promotion-preflight.yml",
@@ -146,7 +146,7 @@
           "classification": "non-publication",
           "owner": "kungfu-ci",
           "surfaceIds": [],
-          "sourceRoot": "sha256:fb476b7c16cdda4db240b2ae6e24f5f9a2d6f2a92a4fdb00c222868dfd345133"
+          "sourceRoot": "sha256:bda36df0bc30ae1396aa99b341da7dad32df88485a5b6bd2f01e8e55f9d6afd9"
         },
         {
           "path": ".github/workflows/core-build-profiles.yml",
@@ -860,5 +860,5 @@
       }
     }
   ],
-  "registryRoot": "sha256:3e8ca14c745aa73bfe890c32f28faac5710d780688bc8f13e546da5fc5ff331b"
+  "registryRoot": "sha256:000ad9e7c14e032043cd98697c2f984acced235cc227b0baed80fd13e565def2"
 }
