@@ -11,13 +11,18 @@ const receipt = {
 };
 
 test('consumer evidence roots the complete real probe output and receipt', () => {
-  const output = { schema: 'consumer.output/v1', ok: true };
+  const output = {
+    schema: 'kungfu.assignment-orchestration.seal-verification/v1',
+    ok: true,
+    state_root: receipt.receiptRoot,
+    phase: 'continuation-decided',
+    next_actions: [],
+  };
   const evidence = consumerEvidence({
-    rowId: 'context-hybrid',
-    consumer: 'atlas.xinfa.context',
+    rowId: 'seal-installed',
+    consumer: 'kungfu.work.verify-seal',
     output,
     receipts: [receipt],
-    observers: ['kungfu.tui.runtime-surface'],
   });
 
   assert.equal(evidence.probe.outputRoot, valueRoot(output));
