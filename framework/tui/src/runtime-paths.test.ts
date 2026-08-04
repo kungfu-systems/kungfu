@@ -139,14 +139,35 @@ test('TUI dev explicitly prefers the source CLI over a stale packaged build', ()
       env: { KUNGFU_TUI_SOURCE_CLI: '1' },
       packagedBin,
     }),
-    { bin: 'uv', sourceCliFallback: true },
+    {
+      bin: 'uv',
+      sourceCliFallback: true,
+      runtimeSurface: 'source-checkout',
+      selectionReason: 'explicit-source-environment',
+    },
   );
   assert.deepEqual(
     resolveTuiCliRuntime({
       env: { KUNGFU_TUI_SOURCE_CLI: '1', KUNGFU_CLI_BIN: '/exact/kungfu' },
       packagedBin,
     }),
-    { bin: '/exact/kungfu', sourceCliFallback: false },
+    {
+      bin: '/exact/kungfu',
+      sourceCliFallback: false,
+      runtimeSurface: 'installed-product',
+      selectionReason: 'explicit-installed-command',
+    },
+  );
+});
+
+test('TUI fails closed instead of silently switching to source', () => {
+  assert.throws(
+    () =>
+      resolveTuiCliRuntime({
+        env: {},
+        packagedBin: '/definitely/missing/kungfu',
+      }),
+    /KUNGFU_TUI_SOURCE_CLI=1/u,
   );
 });
 

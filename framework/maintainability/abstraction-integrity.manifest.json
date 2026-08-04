@@ -278,6 +278,14 @@
         "scripts/shifu-conan-legacy.mjs",
         "scripts/shifu-conan-legacy.test.mjs"
       ]
+    },
+    {
+      "owner": "runtime/runtime-surface-provenance",
+      "paths": [
+        "framework/core/src/python/kungfu/execution_surface/authority.py",
+        "framework/tui/src/runtime-surface.ts",
+        "scripts/qualify-runtime-surface.mjs"
+      ]
     }
   ],
   "exceptions": []
