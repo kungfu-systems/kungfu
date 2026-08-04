@@ -1380,8 +1380,6 @@ def reexec_selected_cli() -> None:
     if selected is not None:
         argv, env = selected
         if sys.platform == "win32":
-            # Keep the selected UI in the foreground so terminal ownership and
-            # its exact exit status return through the archive controller.
             raise SystemExit(subprocess.run(argv, env=env, check=False).returncode)
         os.execve(argv[0], argv, env)
 

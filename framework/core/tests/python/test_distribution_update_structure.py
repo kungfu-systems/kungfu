@@ -70,7 +70,7 @@ def test_windows_selected_cli_handoff_waits_for_child_and_preserves_exit(
     monkeypatch.setattr(
         distribution_update.os,
         "execve",
-        lambda *_args: pytest.fail("Windows must not detach via os.execve"),
+        lambda *_args: pytest.fail("Windows must retain foreground terminal ownership"),
     )
 
     with pytest.raises(SystemExit) as exited:
