@@ -3,7 +3,11 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { observeRuntimeSurfaceReceipt } from './runtime-surface.js';
+import {
+  observeRuntimeSurfaceDiagnostic,
+  observeRuntimeSurfaceReceipt,
+  runtimeSurfaceDiagnostic,
+} from './runtime-surface.js';
 
 const root = `sha256:${'a'.repeat(64)}`;
 
@@ -84,5 +88,58 @@ test('TUI rejects a rooted receipt without matching authority verification', () 
         selectedProvider: receipt.selectedProvider,
       }),
     /disagrees with authority verification/,
+  );
+});
+
+test('production diagnostic resolves and authority-verifies a receipt argument', () => {
+  const receipt = {
+    schema: 'kungfu.runtime-surface-receipt/v1',
+    receiptRoot: root,
+    contractRoot: `sha256:${'b'.repeat(64)}`,
+    operationId: 'context.consume',
+    runtimeSurface: 'hybrid-boundary',
+    selectedProvider: 'atlas-kungfu-hybrid',
+    capabilities: ['context.compose', 'runtime.provenance'],
+    selection: { fallback: { used: false, reason: null } },
+  };
+  const verification = {
+    schema: 'kungfu.runtime-surface-verification/v1',
+    ok: true,
+    receiptRoot: root,
+    contractRoot: receipt.contractRoot,
+    operationId: receipt.operationId,
+    runtimeSurface: receipt.runtimeSurface,
+    selectedProvider: receipt.selectedProvider,
+  };
+  let verifiedPath = '';
+  const observed = observeRuntimeSurfaceDiagnostic(
+    ['kungfu', '--diagnostic', '--runtime-surface-receipt', 'receipt.json'],
+    { bin: 'kungfu', env: {}, args: (values) => values },
+    {
+      cwd: () => '/evidence',
+      readFile: (file) => {
+        assert.equal(file, '/evidence/receipt.json');
+        return JSON.stringify(receipt);
+      },
+      verify: (_invocation, file) => {
+        verifiedPath = file;
+        return JSON.stringify(verification);
+      },
+    },
+  );
+  assert.equal(verifiedPath, '/evidence/receipt.json');
+  assert.equal(observed?.receiptRoot, root);
+  assert.equal(
+    runtimeSurfaceDiagnostic(
+      ['kungfu'],
+      '/runtime',
+      { bin: 'kungfu', env: {}, args: (values) => values },
+      {
+        cwd: () => '/evidence',
+        readFile: () => '',
+        verify: () => '',
+      },
+    ).runtimeSurface,
+    null,
   );
 });
