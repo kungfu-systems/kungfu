@@ -14,7 +14,7 @@ const RECEIPT_SCHEMA =
 
 export function captureLatencyFindings(
   value,
-  { run, intentDirectory, workspaceRoot },
+  { run, intentDirectory, workspaceRoot, inspectSource },
 ) {
   if (value?.schema !== CLASSIFICATION_SCHEMA)
     throw new Error('latency Patrol classification schema is unsupported');
@@ -36,6 +36,7 @@ export function captureLatencyFindings(
   const receipts = value.findingIntents.map((intent) =>
     captureNativeFinding(intent, {
       ...(run ? { run } : {}),
+      ...(inspectSource ? { inspectSource } : {}),
       intentPath: path.join(intentDirectory, `${intent.findingId}.json`),
       workspaceRoot,
       authorizedBy: 'dev-gate-latency-patrol-agent-121',

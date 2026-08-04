@@ -11,14 +11,14 @@
   },
   "contractWorld": {
     "schemaId": "https://kfd.libkungfu.dev/schemas/kfd-1/contract-world.schema.json",
-    "digest": "sha256:39548186d88adc65f8418c1d007c300a0c878fd0b4f389615304c3d3ccf55a4e"
+    "digest": "sha256:151fb132496867fbe51e4b94d2224407b69af81a20fb72644a9b9ecabf7ea04a"
   },
   "standardContract": {
     "id": "",
     "schemaId": "https://kfd.libkungfu.dev/schemas/kfd-1/contract-world.schema.json",
     "path": "",
     "sha256": "",
-    "digest": "sha256:39548186d88adc65f8418c1d007c300a0c878fd0b4f389615304c3d3ccf55a4e"
+    "digest": "sha256:151fb132496867fbe51e4b94d2224407b69af81a20fb72644a9b9ecabf7ea04a"
   },
   "selfHostingBoundary": {
     "mode": "external-contract-world",
@@ -35,11 +35,11 @@
   "sourceVerificationRequired": false,
   "canonicalPolicy": {
     "path": "framework/contract/kungfu-agent-first-canonical-policy.json",
-    "sha256": "ff1a1d3a2494d925078b760234aa10ec2bc2ef116ae4d9de3b9cb3c78741a378"
+    "sha256": "e2a19829ff020d36c1ac43a33554d89c3517c561505a28de1517b0f2680ff87f"
   },
   "registry": {
     "path": "framework/contract/kungfu-contracts.registry.json",
-    "sha256": "86079535834c818ba06972f3a1ff1bf8188c876746fd54d29ee04947f6de867b"
+    "sha256": "77f3710f9fe27401b1bdf55bfe7433e8a48bfbe98442d16a8e914ee84c284a7e"
   },
   "surfaces": [
     {
@@ -72,6 +72,14 @@
       "sourceSha256": "281da7c3103d1ca03825571665496748648cb20f328a34364c00e7207bbb15ee",
       "artifactPath": "config/kungfu-runtime.contract.json",
       "expectedSha256": "281da7c3103d1ca03825571665496748648cb20f328a34364c00e7207bbb15ee",
+      "byteForByte": true
+    },
+    {
+      "name": "kungfu-runtime-surface",
+      "sourcePath": "framework/runtime/kungfu-runtime-surface.contract.json",
+      "sourceSha256": "5a470459deb07294eac76d8d65b3049a8fbe9054dffefe40ca8d4b006aca1db7",
+      "artifactPath": "config/kungfu-runtime-surface.contract.json",
+      "expectedSha256": "5a470459deb07294eac76d8d65b3049a8fbe9054dffefe40ca8d4b006aca1db7",
       "byteForByte": true
     },
     {

@@ -643,6 +643,22 @@
       ]
     },
     {
+      "id": "kungfu.runtime.surface.verify",
+      "surface": "cli-api-tui",
+      "name": "kungfu runtime surface verify <receipt.json> --json",
+      "purpose": "Verify and observe one exact Runtime Surface Receipt without selecting another runtime or mutating authority.",
+      "maturity": "experimental",
+      "visibility": "public-agent",
+      "anchor": {
+        "kind": "catalog"
+      },
+      "projections": [
+        "commands.json",
+        "capabilities-json",
+        "kfd-3-surfaces"
+      ]
+    },
+    {
       "id": "kungfu.agent.install-skill",
       "surface": "cli",
       "name": "kungfu agent install-skill --target codex",
