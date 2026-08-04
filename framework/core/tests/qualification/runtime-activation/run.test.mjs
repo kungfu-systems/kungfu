@@ -162,7 +162,7 @@ test('product catalog qualification is bound to the build from this checkout', (
   ]);
 });
 
-test('runtime activation uses a bounded producer and consumer DAG without hiding sibling failures', async () => {
+test('runtime activation materializes native bindings before bounded producer and consumer fan-out', async () => {
   const suites = qualificationPlan({ mode: 'execute', withProduct: true });
   const events = [];
   let active = 0;
@@ -194,6 +194,17 @@ test('runtime activation uses a bounded producer and consumer DAG without hiding
     'failed',
   );
   assert.ok(result.every((suite) => suite.status !== 'planned'));
+  const distributionEnd = events.indexOf('end:product-distribution');
+  for (const id of [
+    'activation-core',
+    'profile-action-admission',
+    'runtime-surface-parity',
+    'activation-performance',
+    'product-runtime-smoke',
+    'product-verification',
+    'product-catalog',
+  ])
+    assert.ok(distributionEnd < events.indexOf(`start:${id}`), id);
   const firstConsumer = Math.min(
     ...['product-runtime-smoke', 'product-verification', 'product-catalog'].map(
       (id) => events.indexOf(`start:${id}`),
@@ -201,7 +212,6 @@ test('runtime activation uses a bounded producer and consumer DAG without hiding
   );
   for (const id of [
     'activation-core',
-    'product-distribution',
     'profile-action-admission',
     'runtime-surface-parity',
     'activation-performance',

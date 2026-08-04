@@ -444,9 +444,11 @@ export async function runSuite(suite, outputDir) {
 }
 
 /**
- * Execute source/runtime producers together, then fan out product consumers
- * after product-distribution has settled. Every required suite runs and the
- * returned order remains the declared contract order.
+ * Materialize the product first, then execute source/runtime checks, and only
+ * then fan out product consumers. Product distribution rebuilds native
+ * bindings, so it must not overlap suites that import those bindings. Every
+ * required suite runs and the returned order remains the declared contract
+ * order.
  */
 export async function executeQualificationSuites(
   suites,
@@ -457,14 +459,19 @@ export async function executeQualificationSuites(
   if (!Number.isInteger(maxParallelism) || maxParallelism < 1)
     throw new Error('runtime activation maxParallelism must be positive');
   const required = suites.filter((suite) => suite.required);
-  const producers = required.filter(
-    (suite) => !PRODUCT_CONSUMER_SUITES.has(suite.id),
+  const distribution = required.filter(
+    (suite) => suite.id === 'product-distribution',
+  );
+  const sourceProducers = required.filter(
+    (suite) =>
+      suite.id !== 'product-distribution' &&
+      !PRODUCT_CONSUMER_SUITES.has(suite.id),
   );
   const consumers = required.filter((suite) =>
     PRODUCT_CONSUMER_SUITES.has(suite.id),
   );
   const results = new Map();
-  for (const group of [producers, consumers]) {
+  for (const group of [distribution, sourceProducers, consumers]) {
     let cursor = 0;
     const workers = Array.from(
       { length: Math.min(maxParallelism, group.length) },
