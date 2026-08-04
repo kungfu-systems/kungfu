@@ -32,8 +32,14 @@ test('Dev Patrol is exact-source dispatch-only behind the qualification controll
   );
   assert.match(source, /checkout-cache-mode: off/u);
   assert.ok(source.includes(String.raw`"runner":"[\"ubuntu-24.04\"]"`));
+  assert.ok(
+    source.includes(
+      String.raw`"platform":"linux","runner":"[\"ubuntu-24.04\"]","capabilities":["node","native-toolchain","product-artifacts","rust"],"environment":{"CC":"gcc-14","CXX":"g++-14"}`,
+    ),
+  );
   assert.ok(source.includes(String.raw`"runner":"[\"macos-15\"]"`));
   assert.ok(source.includes(String.raw`"runner":"[\"windows-2022\"]"`));
+  assert.doesNotMatch(source, /gate-environment-json:[\s\S]*"CC":"gcc-14"/u);
   assert.doesNotMatch(source, /kungfu-build-v4-(?:linux|macos|windows)/u);
   const reusableRef = source.match(
     /uses: kungfu-systems\/buildchain\/\.github\/workflows\/\.gate-profile\.yml@([0-9a-f]{40})/u,

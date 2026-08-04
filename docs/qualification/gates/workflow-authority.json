@@ -621,7 +621,7 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "qualifying",
-          "definitionDigest": "sha256:24e0e28811e0f2ce4273148fb23a73038695febf76c9abfffb80ea026b6c3574",
+          "definitionDigest": "sha256:74126dbdceaadea9c8622578e9f81b88c36589a48c7e16d85d6cbfe81f0bd5ed",
           "credentials": {"githubToken":"write","oidc":true,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
           "externalActions": ["kungfu-systems/buildchain/.github/workflows/.gate-profile.yml@22338823464024efb0bb72231c29cca9f61d72bb"],
           "steps": []
