@@ -624,8 +624,8 @@ test('real package manager cannot run a guarded task or write the checkout', (t)
     path.join(runtime.runtimeRoot, 'kungfu-package-manager-guard-'),
   );
   const guard = path.join(ROOT, 'scripts', 'require-shifu.mjs');
-  const node = JSON.stringify(process.execPath);
-  const guardPath = JSON.stringify(guard);
+  const node = JSON.stringify(process.execPath.replaceAll('\\', '/'));
+  const guardPath = JSON.stringify(guard.replaceAll('\\', '/'));
   fs.writeFileSync(
     path.join(fixture, 'package.json'),
     `${JSON.stringify(
