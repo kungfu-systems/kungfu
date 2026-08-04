@@ -57,8 +57,11 @@ exact same-run Kungfu Linux artifact
 `.declarative-auditable-demo.yml` revision. Manual Gate-only validation leaves
 `render-auditable-demo` disabled. Manual full validation enables it. Alpha and
 Release promotion use the same call with full rendering and materialization
-enabled automatically; there is no product-specific adapter, trigger-plan
-compiler, Passport writer, renderer wrapper, or README updater.
+enabled automatically. Alpha keeps the required Gate strict but treats only
+the full-media step as advisory: renderer failure remains visible and
+suppresses materialization without blocking binary publication. Release and
+explicit media refreshes remain strict. There is no product-specific adapter,
+trigger-plan compiler, Passport writer, renderer wrapper, or README updater.
 
 The Linux build artifact contains both `product/release` and the exact
 standalone distribution at
