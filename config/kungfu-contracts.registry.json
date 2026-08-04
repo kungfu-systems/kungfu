@@ -128,6 +128,20 @@
       }
     },
     {
+      "surface": "runtime-surface",
+      "id": "kungfu-runtime-surface",
+      "schema": "kungfu.runtime-surface.contract/v1",
+      "weldedSurface": "runtime-surface-provenance",
+      "env": "KUNGFU_RUNTIME_SURFACE_CONTRACT",
+      "file": "kungfu-runtime-surface.contract.json",
+      "source": "framework/runtime/kungfu-runtime-surface.contract.json",
+      "artifact": "config/kungfu-runtime-surface.contract.json",
+      "cli": {
+        "contract": ["runtime", "surface", "contract", "--json"],
+        "schema": ["contract", "show", "runtime-surface", "--json"]
+      }
+    },
+    {
       "surface": "peer-lifecycle",
       "id": "kungfu-peer-lifecycle",
       "schema": "kungfu.runtime.peer-lifecycle-contract/v1",

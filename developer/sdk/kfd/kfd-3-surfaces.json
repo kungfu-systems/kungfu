@@ -73,7 +73,7 @@
       "libnode": "22.22.3-kf.5-alpha.3",
       "buildchain": "3.0.0"
     },
-    "digest": "sha256:4f50ffa1cda5d6f68e9849a6b8de2c92fd8923419d6becf2cf54dcdc45568802"
+    "digest": "sha256:54c39a6ecc328755359c60fce8a3b476e1de1aff6ab44d46bd4c38a4222f0214"
   },
   "surfaces": [
     {
@@ -1786,6 +1786,26 @@
         "owner": "kungfu",
         "source": "scripts/buildchain-kfd-evidence.mjs",
         "sourcePath": "framework/core/src/python/kungfu/cli/commands/runtime.py"
+      }
+    },
+    {
+      "id": "kungfu.runtime.surface.verify",
+      "name": "kungfu runtime surface verify <receipt.json> --json",
+      "kind": "cli-api-tui",
+      "participantProfile": "agent-or-developer",
+      "state": "declared",
+      "availability": "shipped",
+      "visibility": "public",
+      "participantFacing": true,
+      "public": true,
+      "sourcePath": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json",
+      "evidencePath": "framework/core/src/python/kungfu/agent/commands.json",
+      "artifactPath": "framework/core/src/python/kungfu/agent/commands.json",
+      "maturity": "experimental",
+      "declaration": {
+        "owner": "kungfu",
+        "source": "scripts/buildchain-kfd-evidence.mjs",
+        "sourcePath": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json"
       }
     },
     {

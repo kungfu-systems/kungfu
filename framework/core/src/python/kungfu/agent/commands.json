@@ -206,6 +206,12 @@
       "purpose": "Run a bounded executable --version probe for one Agent Runtime Profile."
     },
     {
+      "apiId": "kungfu.runtime.surface.verify",
+      "name": "kungfu runtime surface verify <receipt.json> --json",
+      "maturity": "experimental",
+      "purpose": "Verify and observe one exact Runtime Surface Receipt without selecting another runtime or mutating authority."
+    },
+    {
       "apiId": "kungfu.agent.install-skill",
       "name": "kungfu agent install-skill --target codex",
       "maturity": "stable",
