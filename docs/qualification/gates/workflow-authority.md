@@ -110,7 +110,7 @@ without changing and refreshing the manifest fails the Gate catalog check.
 | `.github/workflows/publish-layer-artifacts.yml` | `verify-portable-format-publication` | qualification | none | diagnostic | token:read | none | 4 |
 | `.github/workflows/publish-layer-artifacts.yml` | `verify-publication` | qualification | none | diagnostic | token:read | none | 4 |
 | `.github/workflows/python-structure.yml` | `exact-root-ratchet` | qualification | none | diagnostic | token:read | none | 5 |
-| `.github/workflows/queue-admission-lease.yml` | `admission` | qualification | none | diagnostic | token:read | none | 4 |
+| `.github/workflows/queue-admission-lease.yml` | `admission` | qualification | none | diagnostic | token:read | none | 5 |
 | `.github/workflows/release-new-version.yml` | `alpha-timeline` | qualification | none | diagnostic | token:write | none | 11 |
 | `.github/workflows/release-new-version.yml` | `promote` | release-control | channel | qualifying | token:write, oidc, repo-secret:BUILDCHAIN_ISSUE_APP_ID+BUILDCHAIN_ISSUE_APP_PRIVATE_KEY+KUNGFU_ALPHA_CHANNEL_SIGNING_PRIVATE_KEY+KUNGFU_GITHUB_TOKEN+KUNGFU_GOVERNANCE_AUDITOR_APP_PRIVATE_KEY | none | 0 |
 | `.github/workflows/release-new-version.yml` | `promotion-contract` | qualification | none | diagnostic | token:read | none | 8 |

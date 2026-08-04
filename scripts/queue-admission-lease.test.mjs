@@ -107,6 +107,10 @@ test('merge-group continuation consumes the exact durable Warrant lease', () => 
   assert.match(workflow, /buildchain\.mjs" dev warrant/u);
   assert.match(workflow, /affected-native-proof\.mjs queue-lease-verify/u);
   assert.match(workflow, /c0753d1732650e7e0727bd31059c2ccb640c1a6b/u);
+  assert.match(
+    workflow,
+    /name: Install pinned Buildchain Warrant runtime[\s\S]*working-directory: \.buildchain\/dev-delivery-runtime[\s\S]*corepack pnpm install --frozen-lockfile --ignore-scripts[\s\S]*name: Consume the exact Buildchain Warrant lease/u,
+  );
 });
 
 test('trusted dequeue controller revokes the same exact-head context', () => {
