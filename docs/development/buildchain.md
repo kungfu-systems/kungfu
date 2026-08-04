@@ -76,18 +76,23 @@ exists to hold.
 
 ## CI source checkout cache
 
-The release-candidate build uses Buildchain's locked source checkout cache in
-`auto` mode. Self-hosted runners first try the trusted local/LAN Git object cache
-declared by repository or organization variables, then fall back to GitHub if the
-cache is unavailable:
+Formal Alpha and Release candidates plus the Dev Verify consumed by Candidate
+Patrol use fresh GitHub-hosted runners with checkout-cache mode `off`. They fetch
+the immutable source directly from GitHub and do not receive private Cargo
+registry, Shifu cache-profile, Git mirror, or reference-repository inputs.
+Self-hosted and explicit custom diagnostics may instead use Buildchain's locked
+source checkout cache in `auto` mode. Those runners first try the trusted
+local/LAN Git object cache declared by repository or organization variables,
+then fall back to GitHub if the cache is unavailable:
 
 - `BUILDCHAIN_CHECKOUT_CACHE_MIRROR_URL_TEMPLATE`
 - `BUILDCHAIN_CHECKOUT_CACHE_REFERENCE_REPOSITORY_TEMPLATE`
 
-These values are intentionally not checked into this repository. They describe
-private runner or local-network topology. Buildchain still resolves and verifies
-the immutable source commit and tree before running lifecycle commands, and it
-writes sanitized `source-checkout.json` diagnostics into the platform artifacts.
+These values are intentionally not checked into this repository or projected
+into formal hosted jobs. They describe private runner or local-network topology.
+Buildchain still resolves and verifies the immutable source commit and tree
+before running lifecycle commands, and it writes sanitized
+`source-checkout.json` diagnostics into the platform artifacts.
 
 ## Alpha and release artifact relay
 

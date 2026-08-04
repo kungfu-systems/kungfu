@@ -70,6 +70,8 @@ test('Linux ARM64 runs artifact qualification with an independent budget', () =>
     'node product/scripts/verify-cli-surface-qualification.mjs --qualification product/release/cli/kungfu-episodes-cli-linux-arm64.qualification.json --archive product/release/cli/kungfu-episodes-cli-linux-arm64.tar.gz --platform linux-arm64',
   );
   assert.equal(inputs['lifecycle-timeout-minutes'], 240);
+  assert.equal(inputs['checkout-cache-mode'], 'off');
+  assert.equal(inputs['cargo-registry-index'], undefined);
   assert.equal(
     inputs['shifu-cache-profile-ref'],
     'docs/shifu/linux-arm64-qualification-portable-off.cache-profile.json',
@@ -89,5 +91,9 @@ test('Linux ARM64 runs artifact qualification with an independent budget', () =>
   assert.doesNotMatch(
     fs.readFileSync(ARM_WORKFLOW, 'utf8'),
     /run-release-qualification/u,
+  );
+  assert.doesNotMatch(
+    fs.readFileSync(ARM_WORKFLOW, 'utf8'),
+    /BUILDCHAIN_CARGO_REGISTRY_INDEX/u,
   );
 });

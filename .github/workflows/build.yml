@@ -179,7 +179,10 @@ jobs:
       fail-fast: ${{ github.event_name == 'pull_request' || !inputs.diagnostic-mode }}
       setup-rust: true
       rust-toolchain: "1.96.0"
-      cargo-registry-index: ${{ vars.BUILDCHAIN_CARGO_REGISTRY_INDEX }}
+      # Organization Cargo mirrors are private acceleration for explicit
+      # self-hosted/custom diagnostics. Formal hosted candidates use Cargo's
+      # public default and must not depend on LAN reachability.
+      cargo-registry-index: ${{ (fromJSON(inputs.macos-overflow-request-json || '{}').mode == 'self-hosted' || inputs.platforms-json) && vars.BUILDCHAIN_CARGO_REGISTRY_INDEX || '' }}
       artifact-name: kungfu
       artifact-paths: |
         product/release
@@ -245,8 +248,8 @@ jobs:
       # they cannot use runner-local or LAN mirrors. Explicit custom or
       # self-hosted diagnostics retain the cache route they requested.
       checkout-cache-mode: ${{ fromJSON(inputs.macos-overflow-request-json || '{}').mode == 'self-hosted' && 'auto' || (inputs.platforms-json && 'auto' || 'off') }}
-      checkout-cache-mirror-url-template: ${{ vars.BUILDCHAIN_CHECKOUT_CACHE_MIRROR_URL_TEMPLATE }}
-      checkout-cache-reference-repository-template: ${{ vars.BUILDCHAIN_CHECKOUT_CACHE_REFERENCE_REPOSITORY_TEMPLATE }}
+      checkout-cache-mirror-url-template: ${{ (fromJSON(inputs.macos-overflow-request-json || '{}').mode == 'self-hosted' || inputs.platforms-json) && vars.BUILDCHAIN_CHECKOUT_CACHE_MIRROR_URL_TEMPLATE || '' }}
+      checkout-cache-reference-repository-template: ${{ (fromJSON(inputs.macos-overflow-request-json || '{}').mode == 'self-hosted' || inputs.platforms-json) && vars.BUILDCHAIN_CHECKOUT_CACHE_REFERENCE_REPOSITORY_TEMPLATE || '' }}
       checkout-cache-fallback: github
       checkout-cache-timeout-seconds: 60
       checkout-history-mode: full

@@ -301,7 +301,7 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "qualifying",
-          "definitionDigest": "sha256:988cb646489d8b74bbb0bd1af3d6d57cfa0f064fbc3d1e24c4a782b0541ce339",
+          "definitionDigest": "sha256:af874940fc52fa9aec98a1c70b7bec84be6137a2a8ac2c61965f48a9000e7b34",
           "credentials": {"githubToken":"write","oidc":true,"repositorySecrets":["BUILDCHAIN_ARTIFACT_RELAY_S3_DOWNLOAD_ROLE_ARN","BUILDCHAIN_ARTIFACT_RELAY_S3_ROLE_ARN","BUILDCHAIN_ARTIFACT_RELAY_S3_UPLOAD_ROLE_ARN","KUNGFU_GITHUB_TOKEN"],"inheritedSecrets":false,"environment":null},
           "externalActions": ["kungfu-systems/buildchain/.github/workflows/.build.yml@22338823464024efb0bb72231c29cca9f61d72bb"],
           "steps": []
@@ -621,7 +621,7 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "qualifying",
-          "definitionDigest": "sha256:f9a54af7af4fc829ebe2c1190e100b94e299435a833d96c6886ddf473e22f751",
+          "definitionDigest": "sha256:24e0e28811e0f2ce4273148fb23a73038695febf76c9abfffb80ea026b6c3574",
           "credentials": {"githubToken":"write","oidc":true,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
           "externalActions": ["kungfu-systems/buildchain/.github/workflows/.gate-profile.yml@22338823464024efb0bb72231c29cca9f61d72bb"],
           "steps": []
@@ -780,7 +780,7 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "diagnostic",
-          "definitionDigest": "sha256:e7014e962c7d92dc5e39467025aae54fdfd622162cf813b7506ae6d3cdc212a6",
+          "definitionDigest": "sha256:05a579aed425ab3f19ea8f79bd2ff77b2aaec2e89588f607217f62e5649e3d58",
           "credentials": {"githubToken":"write","oidc":true,"repositorySecrets":["BUILDCHAIN_ARTIFACT_RELAY_S3_DOWNLOAD_ROLE_ARN","BUILDCHAIN_ARTIFACT_RELAY_S3_ROLE_ARN","BUILDCHAIN_ARTIFACT_RELAY_S3_UPLOAD_ROLE_ARN"],"inheritedSecrets":false,"environment":null},
           "externalActions": ["kungfu-systems/buildchain/.github/workflows/.build.yml@bfe43b0fe5577f15d2af01bc542de8a8ce587457"],
           "steps": []
