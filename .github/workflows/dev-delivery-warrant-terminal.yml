@@ -42,6 +42,7 @@ jobs:
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
+          GITHUB_TOKEN: ${{ github.token }}
           EVENT_ACTION: ${{ github.event.action }}
           EXPECTED_PR: ${{ github.event.pull_request.number }}
           EXPECTED_HEAD: ${{ github.event.pull_request.head.sha }}
