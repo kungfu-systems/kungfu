@@ -34,11 +34,15 @@ def _non_terminal_streams() -> list[str]:
 
 def _native_terminal_route(provider: str) -> NativeTerminalRoute | None:
     missing = _non_terminal_streams()
-    if not missing:
-        return None
-
     if os.name == "nt":
+        # Windows console launchers can expose CRT descriptors that Python
+        # reports as TTYs while their inherited Win32 handles are not usable as
+        # terminal input by a child Node/Rust UI.  Reopen the controlling
+        # console for every provider-native child so the child receives stable
+        # console handles instead of launcher-specific inherited handles.
         route = NativeTerminalRoute("CONIN$", "CONOUT$", "CONOUT$")
+    elif not missing:
+        return None
     elif os.name == "posix":
         route = NativeTerminalRoute("/dev/tty", "/dev/tty", "/dev/tty")
     else:
@@ -51,7 +55,7 @@ def _native_terminal_route(provider: str) -> NativeTerminalRoute | None:
             if not os.isatty(terminal.fileno()):
                 raise OSError("controlling terminal is not a TTY")
     except OSError as error:
-        descriptors = ", ".join(missing)
+        descriptors = ", ".join(missing) or "inherited Windows console handles"
         raise ValueError(
             f"provider-native UI '{provider}' requires an interactive terminal; "
             f"non-terminal descriptors: {descriptors}. No controlling terminal is "
