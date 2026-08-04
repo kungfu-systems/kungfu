@@ -1019,7 +1019,7 @@ test('direct Gate arguments and profile inputs fail closed on drift', () => {
     fs
       .readFileSync(profileRefWorkflow, 'utf8')
       .replace(
-        '.gate-profile.yml@d036820df1c0eed012023cc5e44c4b8d7b209bd4',
+        '.gate-profile.yml@916fc84d488ae6f5af271a67487e79ecb47b9ae2',
         '.gate-profile.yml@v2-alpha',
       ),
   );
