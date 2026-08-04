@@ -325,51 +325,6 @@ function copyPlatformPayload(packageRoot) {
 }
 
 /**
- * Product assembly may materialize both the stable Python entrypoint and its
- * versioned source as regular files. npm cannot express their original
- * symlink relationship, so retain only the stable entrypoint when the bytes
- * prove that the versioned file is redundant. Ambiguous or divergent runtime
- * layouts fail closed instead of silently changing the packaged interpreter.
- * @param {string} packageRoot
- * @param {string} relative
- * @returns {void}
- */
-function deduplicateMaterializedPythonEntrypoint(packageRoot, relative) {
-  if (relative !== 'python/bin/python3') return;
-  const target = path.join(packageRoot, 'dist', 'kungfu', relative);
-  if (!fs.existsSync(target) || !fs.lstatSync(target).isFile()) return;
-  const directory = path.dirname(target);
-  const candidates = fs
-    .readdirSync(directory, { withFileTypes: true })
-    .filter((entry) => entry.isFile() && /^python3\.\d+$/u.test(entry.name))
-    .map((entry) => entry.name)
-    .sort();
-  if (candidates.length === 0) return;
-  if (candidates.length !== 1) {
-    throw new Error(
-      `Python entrypoint has ambiguous versioned sources: ${candidates.join(', ')}`,
-    );
-  }
-  const redundantTarget = path.join(directory, candidates[0]);
-  const targetBytes = fs.readFileSync(target);
-  const redundantBytes = fs.readFileSync(redundantTarget);
-  const targetRoot = crypto.createHash('sha256').update(targetBytes).digest();
-  const redundantRoot = crypto
-    .createHash('sha256')
-    .update(redundantBytes)
-    .digest();
-  if (
-    targetBytes.length !== redundantBytes.length ||
-    !crypto.timingSafeEqual(targetRoot, redundantRoot)
-  ) {
-    throw new Error(
-      `Python entrypoint differs from versioned source: ${candidates[0]}`,
-    );
-  }
-  fs.removeSync(redundantTarget);
-}
-
-/**
  * npm excludes symbolic links from package archives. Materialize only the
  * platform interpreter entrypoint that consumers execute directly; preserve
  * the rest of the assembled runtime tree unchanged.
@@ -381,11 +336,7 @@ function materializePythonEntrypoint(packageRoot) {
     process.platform === 'win32' ? 'python/python.exe' : 'python/bin/python3';
   const source = path.join(bindingDir, relative);
   const target = path.join(packageRoot, 'dist', 'kungfu', relative);
-  if (!fs.existsSync(target)) return;
-  if (!fs.lstatSync(target).isSymbolicLink()) {
-    deduplicateMaterializedPythonEntrypoint(packageRoot, relative);
-    return;
-  }
+  if (!fs.existsSync(target) || !fs.lstatSync(target).isSymbolicLink()) return;
   const realSource = fs.realpathSync(source);
   const mode = fs.statSync(realSource).mode;
   fs.removeSync(target);
@@ -1026,7 +977,6 @@ if (require.main === module)
   });
 
 module.exports = {
-  deduplicateMaterializedPythonEntrypoint,
   evaluateLinuxPackageBudget,
   linuxReleaseAliasPairs,
   linuxReleaseStripCandidates,

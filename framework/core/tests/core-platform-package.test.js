@@ -2,8 +2,6 @@
 
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const fs = require('node:fs');
-const os = require('node:os');
 const path = require('node:path');
 
 const contract = require('../core-platform-package.contract.json');
@@ -15,7 +13,6 @@ const {
   resolveRuntimeDir,
 } = require('../lib/platform-packages');
 const {
-  deduplicateMaterializedPythonEntrypoint,
   evaluateLinuxPackageBudget,
   linuxReleaseAliasPairs,
   linuxReleaseStripCandidates,
@@ -24,16 +21,6 @@ const {
   summarizePackageBudgetComponents,
   verifyFinalLinuxPackageBudget,
 } = require('../.gyp/core-platform-package');
-
-function pythonPackageFixture(t) {
-  const packageRoot = fs.mkdtempSync(
-    path.join(os.tmpdir(), 'kungfu-core-platform-package-'),
-  );
-  const binDir = path.join(packageRoot, 'dist', 'kungfu', 'python', 'bin');
-  fs.mkdirSync(binDir, { recursive: true });
-  t.after(() => fs.rmSync(packageRoot, { recursive: true, force: true }));
-  return { packageRoot, binDir };
-}
 
 test('explicit package stage paths resolve from the repository root', () => {
   const repositoryRoot = path.resolve(__dirname, '..', '..', '..');
@@ -183,41 +170,6 @@ test('Linux package prunes the unused dbm accelerator before size enforcement', 
   const dbmAccelerator = 'lib/python3.13/lib-dynload/_dbm*';
   assert.ok(stdlibPrune.prune.linux.includes(dbmAccelerator));
   assert.equal(stdlibPrune.prune.darwin.includes(dbmAccelerator), false);
-});
-
-test('package projection removes a byte-identical versioned Python entrypoint', (t) => {
-  const { packageRoot, binDir } = pythonPackageFixture(t);
-  const stableEntrypoint = path.join(binDir, 'python3');
-  const versionedEntrypoint = path.join(binDir, 'python3.13');
-  fs.writeFileSync(stableEntrypoint, 'identical-python-runtime');
-  fs.writeFileSync(versionedEntrypoint, 'identical-python-runtime');
-
-  deduplicateMaterializedPythonEntrypoint(packageRoot, 'python/bin/python3');
-
-  assert.equal(
-    fs.readFileSync(stableEntrypoint, 'utf8'),
-    'identical-python-runtime',
-  );
-  assert.equal(fs.existsSync(versionedEntrypoint), false);
-});
-
-test('package projection rejects divergent materialized Python entrypoints', (t) => {
-  const { packageRoot, binDir } = pythonPackageFixture(t);
-  const stableEntrypoint = path.join(binDir, 'python3');
-  const versionedEntrypoint = path.join(binDir, 'python3.13');
-  fs.writeFileSync(stableEntrypoint, 'stable-python-runtime');
-  fs.writeFileSync(versionedEntrypoint, 'different-python-runtime');
-
-  assert.throws(
-    () =>
-      deduplicateMaterializedPythonEntrypoint(
-        packageRoot,
-        'python/bin/python3',
-      ),
-    /Python entrypoint differs from versioned source: python3\.13/u,
-  );
-  assert.equal(fs.existsSync(stableEntrypoint), true);
-  assert.equal(fs.existsSync(versionedEntrypoint), true);
 });
 
 test('Linux Release stripping is explicit and excludes runtimes owned upstream', () => {
