@@ -85,6 +85,37 @@ test('qualifier accepts a rooted consumer output and reverified receipt', () => 
   }
 });
 
+test('qualifier compares receipt coordinates by canonical value, not JSON key order', () => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'kungfu-qualifier-'));
+  try {
+    const { file, value } = fixture(directory);
+    value.receipts[0].executable = {
+      version: candidate.executable.version,
+      kind: candidate.executable.kind,
+      digest: candidate.executable.digest,
+      path: candidate.executable.path,
+    };
+    value.receipts[0].source = {
+      worktree: null,
+      tree: null,
+      commit: null,
+    };
+    value.receipts[0].authorityRoots = {
+      workRoot: null,
+      workDefinitionRoot: null,
+      assignmentRequestRoot: null,
+    };
+    const body = Object.fromEntries(
+      Object.entries(value).filter(([key]) => key !== 'evidenceRoot'),
+    );
+    value.evidenceRoot = valueRoot(body);
+    fs.writeFileSync(file, JSON.stringify(value));
+    assert.deepEqual(verify(file), value);
+  } finally {
+    fs.rmSync(directory, { recursive: true, force: true });
+  }
+});
+
 test('qualifier rejects re-rooted evidence with forged probe output root', () => {
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'kungfu-qualifier-'));
   try {
