@@ -597,7 +597,7 @@ def _git_worktree_root(cwd: str) -> str | None:
             ["git", "-C", cwd, "rev-parse", "--show-toplevel"],
             check=False,
             capture_output=True,
-            text=True,
+            errors="replace",
         )
     except (OSError, ValueError):
         return None
