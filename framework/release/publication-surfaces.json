@@ -122,7 +122,7 @@
             "product-stable",
             "product-binaries"
           ],
-          "sourceRoot": "sha256:2514858a734455f7f3dbcdf6087bfe9d4b8674b9c2198f00d6c4ec365563c66e"
+          "sourceRoot": "sha256:b559c00e861fd16d770ec62cc92fc513f90c85e7dd386c3a6b61da2814a1ca85"
         },
         {
           "path": ".github/workflows/buildchain-validate.yml",
@@ -170,7 +170,7 @@
             "product-alpha",
             "product-binaries"
           ],
-          "sourceRoot": "sha256:ee0a3e56df0a9388d93070d4baebd68b1bf40f7ad0f927a9de84e4afc72a87cc"
+          "sourceRoot": "sha256:82b42ca2270f567ec4ce9fa71bbe52dcbbb88ebc7056db0425b490ee569c8d5c"
         },
         {
           "path": ".github/workflows/dev-delivery-warrant-terminal.yml",
@@ -329,7 +329,7 @@
             "product-stable",
             "product-binaries"
           ],
-          "sourceRoot": "sha256:a0b5adfd5832e22e6763ca00b49f32a20c2f500c7843a0ca0a9e609db350ccaa"
+          "sourceRoot": "sha256:a56588efb6bcb82f7ef55f410011eb4abb4ae4d5d7a6acc98f34828cb0039d0a"
         },
         {
           "path": ".github/workflows/release-shifu.yml",
@@ -364,7 +364,7 @@
     "buildchain": {
       "repository": "kungfu-systems/buildchain",
       "owner": "kungfu-systems/buildchain",
-      "sourceRevision": "ef696e92647f4ff2777f26805fc58f6a2c55d76b",
+      "sourceRevision": "bdb5a9687daead6353a741c125dd750c3fa9201f",
       "version": "3.0.5-alpha.6",
       "compatibilityMode": "stable-v3-contract-plus-exact-additive-runtime",
       "stableContractLock": ".buildchain/contract-lock.json",
@@ -860,5 +860,5 @@
       }
     }
   ],
-  "registryRoot": "sha256:b2e70e69eb1d0ad0aa48d49fede832640bb0a44a9667c5bda45019e6ca9a0e40"
+  "registryRoot": "sha256:673fd035193fc7d76b7f6314a26befee65ecacfaa4e4958297cb6871fc72682a"
 }

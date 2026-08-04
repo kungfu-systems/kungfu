@@ -222,8 +222,8 @@ export function inspectAuditableDemoFastSentinel({
   requirePattern(
     issues,
     workflow,
-    /media-profile:\s*responsive-long-form-web-delivery-v1[\s\S]*materialize:\s*\$\{\{ github\.event_name != 'workflow_dispatch' \|\| inputs\.render-auditable-demo \}\}/u,
-    'declarative auditable-demo no longer shares one manual and promotion materialization path',
+    /render-failure-advisory:\s*\$\{\{ github\.event_name == 'pull_request' && startsWith\(github\.base_ref, 'alpha\/'\) \}\}[\s\S]*media-profile:\s*responsive-long-form-web-delivery-v1[\s\S]*materialize:\s*\$\{\{ github\.event_name != 'workflow_dispatch' \|\| inputs\.render-auditable-demo \}\}/u,
+    'declarative auditable-demo no longer preserves a required Gate with Alpha-only advisory rendering',
   );
   return issues;
 }
