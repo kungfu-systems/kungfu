@@ -478,7 +478,7 @@ test('fast sentinels fail the representative recent invalid fixtures', () => {
   assert.ok(demoIssues.length >= 4);
   assert.match(
     demoIssues.join('\n'),
-    /bounded two-demo cut|exact Buildchain SHA/u,
+    /bounded three-demo cut|exact Buildchain SHA/u,
   );
 });
 

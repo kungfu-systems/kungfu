@@ -80,6 +80,27 @@ test('generator reproduces every declared checked-in projection byte-for-byte', 
   }
 });
 
+test('formal native release lanes are hosted while diagnostic aliases remain self-hosted', () => {
+  const projection = deriveProjection(readAuthority());
+  assert.deepEqual(
+    projection.runnerRouting.matrices.native.map(({ id, runner }) => ({
+      id,
+      runner,
+    })),
+    [
+      { id: 'linux-x64', runner: '["ubuntu-24.04"]' },
+      { id: 'linux-arm64', runner: '["ubuntu-24.04-arm"]' },
+      { id: 'macos-arm64', runner: '["macos-15"]' },
+      { id: 'windows-x64', runner: '["windows-2022"]' },
+    ],
+  );
+  assert.ok(
+    projection.runnerRouting.matrices.selfHosted.every(({ runner }) =>
+      JSON.parse(runner).includes('self-hosted'),
+    ),
+  );
+});
+
 test('narrow literal detector catches branches, ledgers, rulesets, and runner names', () => {
   assert.deepEqual(
     narrowMatches(

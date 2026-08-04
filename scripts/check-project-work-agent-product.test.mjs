@@ -118,11 +118,17 @@ test('README first-use paths converge on Agent-first onboarding', () => {
   const autoplayEnd = readme.indexOf(
     '<!-- kungfu:auditable-demo:agent-work-lab-autoplay:end -->',
   );
-  const tourStart = readme.indexOf(
-    '<!-- kungfu:auditable-demo:project-tour:start -->',
+  const tourEpisodeOneStart = readme.indexOf(
+    '<!-- kungfu:auditable-demo:project-tour-episode-1:start -->',
+  );
+  const tourEpisodeOneEnd = readme.indexOf(
+    '<!-- kungfu:auditable-demo:project-tour-episode-1:end -->',
+  );
+  const tourEpisodeTwoStart = readme.indexOf(
+    '<!-- kungfu:auditable-demo:project-tour-episode-2:start -->',
   );
   const demoEnd = readme.indexOf(
-    '<!-- kungfu:auditable-demo:project-tour:end -->',
+    '<!-- kungfu:auditable-demo:project-tour-episode-2:end -->',
   );
   const tuiEntry = readme.indexOf('\nkungfu\n', demoEnd);
   const firstUseEnd = readme.indexOf('\n## What Kungfu preserves', demoEnd);
@@ -141,8 +147,22 @@ test('README first-use paths converge on Agent-first onboarding', () => {
     'Agent Work Lab demo must follow run <agent>',
   );
   assert.ok(autoplayEnd > demoStart, 'managed autoplay block is incomplete');
-  assert.ok(tourStart > autoplayEnd, 'managed Project Tour block is missing');
-  assert.ok(demoEnd > tourStart, 'managed Project Tour block is incomplete');
+  assert.ok(
+    tourEpisodeOneStart > autoplayEnd,
+    'managed Project Tour episode 1 block is missing',
+  );
+  assert.ok(
+    tourEpisodeOneEnd > tourEpisodeOneStart,
+    'managed Project Tour episode 1 block is incomplete',
+  );
+  assert.ok(
+    tourEpisodeTwoStart > tourEpisodeOneEnd,
+    'managed Project Tour episode 2 block is missing',
+  );
+  assert.ok(
+    demoEnd > tourEpisodeTwoStart,
+    'managed Project Tour episode 2 block is incomplete',
+  );
   assert.ok(tuiEntry > demoEnd, 'bare TUI entry must follow the Lab demo');
   assert.match(
     readme.slice(demoEnd, firstUseEnd),

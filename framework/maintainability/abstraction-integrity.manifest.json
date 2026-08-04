@@ -247,6 +247,12 @@
       ]
     },
     {
+      "owner": "delivery/dev-warrant-consumer",
+      "paths": [
+        "scripts/dev-delivery-warrant-input.mjs"
+      ]
+    },
+    {
       "owner": "shifu/native-source-acquisition",
       "paths": [
         "crates/shifu/src/source.rs"

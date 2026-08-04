@@ -469,8 +469,16 @@ test('workflow contract keeps candidates exact-source, independent, and publish-
   assert.match(workflow, /checkout-history-mode: full/u);
   assert.match(
     workflow,
-    /self-hosted-offline-fallback: \$\{\{ fromJSON\(inputs\.macos-overflow-request-json \|\| '\{\}'\)\.mode != 'self-hosted' && fromJSON\(inputs\.macos-overflow-request-json \|\| '\{\}'\)\.mode != 'github-hosted' \}\}/u,
+    /checkout-cache-mode: \$\{\{ fromJSON\(inputs\.macos-overflow-request-json \|\| '\{\}'\)\.mode == 'self-hosted' && 'auto' \|\| \(inputs\.platforms-json && 'auto' \|\| 'off'\) \}\}/u,
   );
+  assert.match(workflow, /self-hosted-offline-fallback: false/u);
+  for (const runner of [
+    String.raw`runner":"[\"ubuntu-24.04\"]"`,
+    String.raw`runner":"[\"ubuntu-24.04-arm\"]"`,
+    String.raw`runner":"[\"macos-15\"]"`,
+    String.raw`runner":"[\"windows-2022\"]"`,
+  ])
+    assert.ok(workflow.includes(runner), runner);
   assert.match(workflow, /release-candidate: true/u);
   assert.match(
     workflow,
