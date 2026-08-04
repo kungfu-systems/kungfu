@@ -206,7 +206,7 @@ jobs:
       expected-pr-number: ${{ fromJSON(needs.resolve-target.outputs.expected-pr-number || '0') }}
       expected-head-sha: ${{ needs.resolve-target.outputs.expected-head-sha }}
       diagnostic-context: Buildchain delivery intent
-      delivery-warrant-mode: ${{ github.event_name == 'workflow_run' && 'shadow' || 'off' }}
+      delivery-warrant-mode: ${{ github.event_name == 'workflow_run' && 'required' || 'off' }}
       assignment-root: ${{ needs.delivery-contract.outputs.assignment-root }}
       initiative-root: ${{ needs.delivery-contract.outputs.initiative-root }}
       source-identity-root: ${{ needs.delivery-contract.outputs.source-identity-root }}
