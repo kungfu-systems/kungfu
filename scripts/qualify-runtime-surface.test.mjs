@@ -45,6 +45,10 @@ function fixture(directory) {
     output: {
       schema: 'kungfu.documentation-pack-verification/v1',
       valid: true,
+      readOnly: true,
+      diagnostics: [],
+      receiptRoot: ROOT,
+      bundleRoot: candidate.bundleRoot,
     },
   };
   probe.outputRoot = valueRoot(probe.output);
@@ -128,6 +132,83 @@ test('qualifier rejects re-rooted evidence with forged probe output root', () =>
     );
     fs.writeFileSync(file, JSON.stringify(value));
     assert.throws(() => verify(file), /consumer probe output root mismatch/);
+  } finally {
+    fs.rmSync(directory, { recursive: true, force: true });
+  }
+});
+
+test('qualifier rejects a semantically failed output even after both roots are recomputed', () => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'kungfu-qualifier-'));
+  try {
+    const { file, value } = fixture(directory);
+    value.probe.output.valid = false;
+    value.probe.outputRoot = valueRoot(value.probe.output);
+    value.evidenceRoot = valueRoot(
+      Object.fromEntries(
+        Object.entries(value).filter(([key]) => key !== 'evidenceRoot'),
+      ),
+    );
+    fs.writeFileSync(file, JSON.stringify(value));
+    assert.throws(
+      () => verify(file),
+      /consumer probe output is not successful/,
+    );
+  } finally {
+    fs.rmSync(directory, { recursive: true, force: true });
+  }
+});
+
+test('qualifier rejects the re-rooted failed seal output from terminal review', () => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'kungfu-qualifier-'));
+  try {
+    const receipt = {
+      schema: 'kungfu.runtime-surface-receipt/v1',
+      receiptRoot: ROOT,
+      operationId: 'assignment.seal-verify',
+      runtimeSurface: 'installed-product',
+      authorityRoots,
+      executable: candidate.executable,
+      source: candidate.source,
+      bundleRoot: candidate.bundleRoot,
+    };
+    const probe = {
+      schema: 'kungfu.runtime-surface-consumer-probe/v1',
+      ok: true,
+      output: {
+        schema: 'kungfu.assignment-orchestration.seal-verification/v1',
+        ok: false,
+        reason: 'seal rejected',
+      },
+      observers: [],
+    };
+    probe.outputRoot = valueRoot(probe.output);
+    const body = {
+      schema: 'kungfu.runtime-surface-consumer-evidence/v1',
+      rowId: 'seal-installed',
+      consumer: 'kungfu.work.verify-seal',
+      probe,
+      receipts: [receipt],
+    };
+    const file = path.join(directory, 'seal-evidence.json');
+    fs.writeFileSync(
+      file,
+      JSON.stringify({ ...body, evidenceRoot: valueRoot(body) }),
+    );
+    assert.throws(
+      () =>
+        verifyConsumerEvidence({
+          rowId: 'seal-installed',
+          file,
+          sourceCommand: ['/source/shifu', 'kungfu'],
+          installedCommand: ['/installed/kungfu'],
+          authorityRoots,
+          sourceCandidate: candidate,
+          installedCandidate: candidate,
+          hybridCandidate: candidate,
+          invokeCommand: () => ({ ok: true, receiptRoot: ROOT }),
+        }),
+      /consumer probe output is not successful/,
+    );
   } finally {
     fs.rmSync(directory, { recursive: true, force: true });
   }

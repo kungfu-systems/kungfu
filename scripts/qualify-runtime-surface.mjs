@@ -85,6 +85,14 @@ export function consumerEvidence({
 }) {
   if (!rowId || !consumer || output === undefined || !receipts.length)
     fail('row, consumer, probe output, and at least one receipt are required');
+  const expected = ROW_CONTRACT[rowId];
+  if (
+    !expected ||
+    consumer !== expected.consumer ||
+    receipts.length !== expected.operations.length
+  )
+    fail(`consumer evidence contract is invalid for ${rowId}`);
+  assertConsumerOutput({ rowId, output, receipts });
   const probe = {
     schema: 'kungfu.runtime-surface-consumer-probe/v1',
     ok: true,
@@ -104,6 +112,135 @@ export function consumerEvidence({
 
 function sameCanonicalValue(left, right) {
   return JSON.stringify(canonical(left)) === JSON.stringify(canonical(right));
+}
+
+function isObject(value) {
+  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+}
+
+function outputIsSuccessful({
+  rowId,
+  output,
+  receipts,
+  authorityRoots,
+  sourceCandidate,
+  installedCandidate,
+  hybridCandidate,
+}) {
+  if (!isObject(output)) return false;
+  const receipt = receipts[0];
+  const receiptAuthority = receipt?.authorityRoots;
+  const expectedAuthority = authorityRoots || receiptAuthority;
+  const source = sourceCandidate?.source || receipt?.source;
+  const installedBundle = installedCandidate?.bundleRoot || receipt?.bundleRoot;
+  switch (rowId) {
+    case 'assignment-capture-installed':
+      return (
+        output.schema === 'kungfu.assignment-capture.response/v1' &&
+        ['captured', 'already-present'].includes(output.status) &&
+        output.authority === 'capture-material-only' &&
+        output.admitted === false &&
+        output.claimed === false &&
+        ROOT_PATTERN.test(output.receiptRoot || '') &&
+        output.requestRoot === receiptAuthority?.assignmentRequestRoot
+      );
+    case 'source-build-test-source':
+      return (
+        output.schema === 'kungfu.runtime-surface.source-build-test-probe/v1' &&
+        output.ok === true &&
+        output.head === source?.commit &&
+        output.tree === source?.tree &&
+        output.buildInfo?.git?.revision === source?.commit &&
+        output.buildInfo?.git?.pristine === true &&
+        ['sourceCheck', 'rebuild', 'check'].every(
+          (key) =>
+            output[key]?.ok === true &&
+            ROOT_PATTERN.test(output[key]?.logRoot || ''),
+        ) &&
+        sameCanonicalValue(
+          output.candidate?.authorityRoots,
+          expectedAuthority,
+        ) &&
+        output.candidate?.head === source?.commit &&
+        output.candidate?.tree ===
+          String(source?.tree || '').replace(/^git:/u, '') &&
+        (!installedCandidate ||
+          (output.candidate?.executableRoot ===
+            installedCandidate.executable?.digest &&
+            output.candidate?.bundleRoot === installedBundle))
+      );
+    case 'portable-bundle-installed':
+      return (
+        output.schema === 'kungfu.documentation-pack-verification/v1' &&
+        output.valid === true &&
+        output.readOnly === true &&
+        Array.isArray(output.diagnostics) &&
+        output.diagnostics.length === 0 &&
+        ROOT_PATTERN.test(output.receiptRoot || '') &&
+        output.bundleRoot === receipt?.bundleRoot &&
+        output.bundleRoot === installedBundle
+      );
+    case 'dogfood-actual-surface':
+      return (
+        output.schema ===
+          'kungfu.dev-gate-latency-patrol.dogfood-capture-receipt/v1' &&
+        ['captured', 'deduplicated'].includes(output.status) &&
+        output.issueAdmitted === false &&
+        Array.isArray(output.receipts) &&
+        output.receipts.length > 0 &&
+        output.receipts.every(
+          (entry) =>
+            ['captured', 'already-present'].includes(entry?.status) &&
+            ROOT_PATTERN.test(entry?.findingRoot || '') &&
+            sameCanonicalValue(entry?.runtimeReceipt, receipt) &&
+            entry?.runtimeVerification?.ok === true &&
+            entry.runtimeVerification.receiptRoot === receipt?.receiptRoot,
+        )
+      );
+    case 'context-hybrid': {
+      const context = output.context;
+      const target = context?.route_scope?.target_repository;
+      const observation = output.tui?.runtimeSurface;
+      return (
+        output.schema === 'atlas.xinfa-context-consumer-probe/v1' &&
+        output.ok === true &&
+        context?.schema === 'atlas.xinfa-context-envelope/v1' &&
+        context.status === 'complete' &&
+        context.authority === 'projection-only' &&
+        context.source_cut?.assignment_request_root ===
+          receiptAuthority?.assignmentRequestRoot &&
+        target?.verified === true &&
+        target.runtime_surface === 'hybrid-boundary' &&
+        target.git_head === source?.commit &&
+        target.git_tree === source?.tree &&
+        target.project_root === receipt?.bundleRoot &&
+        target.runtime_receipt_root === receipt?.receiptRoot &&
+        sameCanonicalValue(target.runtime_receipt, receipt) &&
+        observation?.receiptRoot === receipt?.receiptRoot &&
+        observation.runtimeSurface === 'hybrid-boundary' &&
+        observation.operationId === 'context.consume' &&
+        observation.fallbackUsed === false
+      );
+    }
+    case 'seal-installed':
+      return (
+        output.schema ===
+          'kungfu.assignment-orchestration.seal-verification/v1' &&
+        output.ok === true &&
+        ROOT_PATTERN.test(output.state_root || '') &&
+        typeof output.phase === 'string' &&
+        output.phase.length > 0 &&
+        Array.isArray(output.next_actions) &&
+        output.next_actions.length === 0
+      );
+    default:
+      return false;
+  }
+}
+
+function assertConsumerOutput(context) {
+  if (!outputIsSuccessful(context))
+    fail(`consumer probe output is not successful for ${context.rowId}`);
 }
 
 function invoke(command, args, { json = true } = {}) {
@@ -270,6 +407,16 @@ export function verifyConsumerEvidence({
   for (const observer of expected.requiredObservers || [])
     if (!(value.probe.observers || []).includes(observer))
       fail(`consumer evidence ${rowId} is missing observer ${observer}`);
+
+  assertConsumerOutput({
+    rowId,
+    output: value.probe.output,
+    receipts: value.receipts,
+    authorityRoots,
+    sourceCandidate,
+    installedCandidate,
+    hybridCandidate,
+  });
 
   const candidateBySurface = {
     'source-checkout': sourceCandidate,
