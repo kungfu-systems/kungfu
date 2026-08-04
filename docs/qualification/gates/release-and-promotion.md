@@ -30,6 +30,9 @@ self-hosted workspace history, retained toolchains, and runner inventory state
 cannot alter formal release routing or qualification prerequisites.
 Formal lanes fetch the immutable source directly from GitHub instead of probing
 LAN or runner-local mirrors that are unreachable from hosted infrastructure.
+They also omit organization-level private Cargo registries and remote Shifu
+cache profiles; public/default dependency endpoints and checked-in portable
+profiles are the only inputs allowed on the formal hosted boundary.
 
 Buildchain still seals exact-source unsigned artifacts and detached signing
 requests in the functional matrix. Signing and notarization execute only in
@@ -45,7 +48,8 @@ self-hosted platform matrix for explicit diagnostics. The manual macOS
 overflow controller also retains its independent self-hosted and GitHub-hosted
 candidate identities, always with `publish-channel: none`; neither path is the
 default formal Alpha route. Explicit self-hosted or custom diagnostics may
-still opt into the bounded checkout-cache policy.
+still opt into the bounded checkout-cache policy and private acceleration
+variables.
 
 ### Queue-aware macOS overflow
 
