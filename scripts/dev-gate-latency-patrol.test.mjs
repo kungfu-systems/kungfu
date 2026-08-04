@@ -218,6 +218,12 @@ test('capture writes Findings, deduplicates, and exposes no Issue path', () => {
   let present = false;
   const run = (args) => {
     calls.push(args);
+    if (args[0] === 'runtime')
+      return commandResult(0, {
+        schema: 'kungfu.runtime-surface-receipt/v1',
+        runtimeSurface: 'source-checkout',
+        receiptRoot: ROOT_A,
+      });
     if (args[0] === 'workspace') return commandResult(0, { ok: true });
     if (args[1] === 'doctor') return commandResult(0, { ok: true });
     if (args[1] === 'show') {
@@ -254,6 +260,19 @@ test('capture writes Findings, deduplicates, and exposes no Issue path', () => {
   };
   const options = {
     run,
+    inspectSource: () => ({
+      buildInfo: {
+        version: '4.0.0-alpha.1',
+        git: { revision: '1'.repeat(40), pristine: true },
+      },
+      buildInfoRoot: ROOT_A,
+      shifuPath: '/repo/shifu',
+      shifuRoot: ROOT_B,
+      head: '1'.repeat(40),
+      tree: '2'.repeat(40),
+      dirty: false,
+      worktree: '/repo',
+    }),
     intentDirectory: '/tmp/dev-gate-latency-patrol-intents',
     workspaceRoot: '/tmp/dev-gate-latency-patrol-workspace',
   };
@@ -284,4 +303,35 @@ test('healthy classification performs no native Dogfood command', () => {
   });
   assert.equal(receipt.status, 'not-required');
   assert.equal(receipt.issueAdmitted, false);
+});
+
+test('source Finding capture rejects a dirty checkout before native capture', () => {
+  const classification = classifyMonitorFailure({
+    repository: 'kungfu-systems/kungfu',
+    branch: 'dev/v4/v4.0',
+    failureClass: 'collector-exit-1',
+  });
+  assert.throws(
+    () =>
+      captureLatencyFindings(classification, {
+        run: () =>
+          assert.fail('dirty source must fail before Kungfu execution'),
+        inspectSource: () => ({
+          buildInfo: {
+            version: '4.0.0-alpha.1',
+            git: { revision: '1'.repeat(40), pristine: true },
+          },
+          buildInfoRoot: ROOT_A,
+          shifuPath: '/repo/shifu',
+          shifuRoot: ROOT_B,
+          head: '1'.repeat(40),
+          tree: '2'.repeat(40),
+          dirty: true,
+          worktree: '/repo',
+        }),
+        intentDirectory: '/tmp/dev-gate-latency-patrol-intents-dirty',
+        workspaceRoot: '/tmp/dev-gate-latency-patrol-workspace-dirty',
+      }),
+    /does not match the exact current checkout/,
+  );
 });
