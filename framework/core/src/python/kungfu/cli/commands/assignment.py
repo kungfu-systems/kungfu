@@ -377,6 +377,10 @@ def _admit_captured_assignment(
         )
         for stage in ("design", "admission")
     ]
+    # Dogfood is a separate Domain Profile. Its lifecycle reconciliation may
+    # change which exact Profile root is active, so restore Work Control before
+    # returning to the Assignment orchestration path.
+    _ensure_profile(runtime_dir, actor)
     return {
         "schema": "kungfu.assignment-orchestration.admission/v1",
         "ok": True,
@@ -1449,6 +1453,9 @@ def _advance(
             stage="kickoff",
             actor=actor,
         )
+        # The Dogfood Profile is independent of Work Control. Re-establish the
+        # exact Work Control root before invoking its member adapter.
+        _ensure_profile(runtime_dir, actor)
     receipt = _profile_action(
         runtime_dir,
         "advance-assignment",
