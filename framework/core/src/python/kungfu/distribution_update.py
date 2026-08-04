@@ -1366,13 +1366,11 @@ def selected_cli_command(
         }
     )
     if selection.get("releaseCutRoot"):
-        selected_env.update(
-            {
-                "KUNGFU_SELECTED_RELEASE_CUT_ROOT": str(selection["releaseCutRoot"]),
-                "KUNGFU_SELECTED_PLATFORM_SLICE_ROOT": str(
-                    selection["platformSliceRoot"]
-                ),
-            }
+        selected_env["KUNGFU_SELECTED_RELEASE_CUT_ROOT"] = str(
+            selection["releaseCutRoot"]
+        )
+        selected_env["KUNGFU_SELECTED_PLATFORM_SLICE_ROOT"] = str(
+            selection["platformSliceRoot"]
         )
     return [str(executable), *sys.argv[1:]], selected_env
 
@@ -1381,6 +1379,8 @@ def reexec_selected_cli() -> None:
     selected = selected_cli_command()
     if selected is not None:
         argv, env = selected
+        if sys.platform == "win32":
+            raise SystemExit(subprocess.run(argv, env=env, check=False).returncode)
         os.execve(argv[0], argv, env)
 
 
