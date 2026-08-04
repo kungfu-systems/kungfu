@@ -108,7 +108,11 @@
             "native-toolchain",
             "product-artifacts",
             "rust"
-          ]
+          ],
+          "environment": {
+            "CC": "gcc-14",
+            "CXX": "g++-14"
+          }
         },
         {
           "id": "linux-arm64",
@@ -149,5 +153,5 @@
       ]
     }
   },
-  "projectionRoot": "sha256:8c8b5b0b7a5d48009a58086dc08731072a8d42df3b8bb38c18912a6512fff892"
+  "projectionRoot": "sha256:177551c99aca2be2d614c0b095212707662ee5ec0bf4b810219f3ef1e538af14"
 }
