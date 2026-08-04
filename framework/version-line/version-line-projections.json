@@ -102,7 +102,7 @@
           "id": "linux-x64",
           "name": "Linux x64",
           "platform": "linux",
-          "runner": "[\"self-hosted\",\"Linux\",\"X64\",\"kungfu-build-v4-linux-x64\"]",
+          "runner": "[\"ubuntu-24.04\"]",
           "capabilities": [
             "node",
             "native-toolchain",
@@ -126,7 +126,7 @@
           "id": "macos-arm64",
           "name": "macOS ARM64",
           "platform": "macos",
-          "runner": "[\"self-hosted\",\"macOS\",\"ARM64\",\"kungfu-build-v4-macos-arm64\"]",
+          "runner": "[\"macos-15\"]",
           "capabilities": [
             "node",
             "native-toolchain",
@@ -138,7 +138,7 @@
           "id": "windows-x64",
           "name": "Windows x64",
           "platform": "windows",
-          "runner": "[\"self-hosted\",\"Windows\",\"X64\",\"kungfu-build-v4-windows-x64\"]",
+          "runner": "[\"windows-2022\"]",
           "capabilities": [
             "node",
             "native-toolchain",
@@ -149,5 +149,5 @@
       ]
     }
   },
-  "projectionRoot": "sha256:abdfc04509a60644d031b7c6367281121f031f0e780f956197cf7ba4d1362813"
+  "projectionRoot": "sha256:8c8b5b0b7a5d48009a58086dc08731072a8d42df3b8bb38c18912a6512fff892"
 }

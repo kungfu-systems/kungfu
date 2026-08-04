@@ -204,7 +204,13 @@ export function deriveProjection(authority) {
     };
   });
   const native = [
-    selfHosted[0],
+    {
+      id: 'linux-x64',
+      name: 'Linux x64',
+      platform: 'linux',
+      runner: '["ubuntu-24.04"]',
+      capabilities: ['node', 'native-toolchain', 'product-artifacts', 'rust'],
+    },
     {
       id: 'linux-arm64',
       name: 'Linux ARM64',
@@ -212,7 +218,20 @@ export function deriveProjection(authority) {
       runner: '["ubuntu-24.04-arm"]',
       capabilities: ['node', 'native-toolchain', 'product-artifacts', 'rust'],
     },
-    ...selfHosted.slice(1),
+    {
+      id: 'macos-arm64',
+      name: 'macOS ARM64',
+      platform: 'macos',
+      runner: '["macos-15"]',
+      capabilities: ['node', 'native-toolchain', 'product-artifacts', 'rust'],
+    },
+    {
+      id: 'windows-x64',
+      name: 'Windows x64',
+      platform: 'windows',
+      runner: '["windows-2022"]',
+      capabilities: ['node', 'native-toolchain', 'product-artifacts', 'rust'],
+    },
   ];
   const projection = {
     schema: 'kungfu.version-line-projections/v1',

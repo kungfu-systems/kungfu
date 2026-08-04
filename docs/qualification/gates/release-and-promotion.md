@@ -20,28 +20,29 @@ fail-fast and cancel stale runs for the same pull request. The manual Build
 workflow and preflight workflow expose an explicit diagnostic mode that keeps
 all platform lanes running.
 
-### Native self-hosted offline fallback
+### Fresh GitHub-hosted functional matrix
 
-Normal native Buildchain matrices retain the exact-label self-hosted Linux x64,
-macOS ARM64, and Windows x64 lanes while at least one matching runner is
-online. A busy online runner remains self-hosted so ordinary contention can use
-the warm workspace and toolchain caches. When no matching runner is online,
-Buildchain independently rewrites only that lane to `ubuntu-24.04`, `macos-15`,
-or `windows-2022`; the already hosted Linux ARM64 lane is unchanged.
+Formal Alpha and Release candidates execute credential-free Linux x64, Linux
+ARM64, macOS ARM64, and Windows x64 build and qualification lanes on the fixed
+GitHub-hosted images `ubuntu-24.04`, `ubuntu-24.04-arm`, `macos-15`, and
+`windows-2022`. Each candidate therefore starts from an isolated workspace;
+self-hosted workspace history, retained toolchains, and runner inventory state
+cannot alter formal release routing or qualification prerequisites.
+Formal lanes fetch the immutable source directly from GitHub instead of probing
+LAN or runner-local mirrors that are unreachable from hosted infrastructure.
 
-The inventory token is projected only into code checked out from the immutable
-Buildchain workflow-shell authority at
-`825f596fe4a5ed8a4b2bb4f7c5a1b44cb9a075a3`. The routing output contains
-de-identified counts and decisions, not runner names. A missing token,
-permission failure, or unavailable inventory API cannot claim an outage and
-therefore preserves the original self-hosted matrix. Source identity,
-qualification, signing, publication, and promotion authority are otherwise
-unchanged.
+Buildchain still seals exact-source unsigned artifacts and detached signing
+requests in the functional matrix. Signing and notarization execute only in
+their protected credential authority, while finalization, publication, and
+activation independently verify the returned source-bound receipts. Moving
+the functional matrix does not move credentials or collapse those authorities.
 
-Explicit macOS overflow candidates are excluded from this matrix rewrite
-because their independent route names are evidence. Their controller performs
-the equivalent macOS offline observation and also applies the bounded queue
-policy below.
+The version-line projection retains the exact-label self-hosted platform matrix
+for development patrols and explicit diagnostics. The manual macOS overflow
+controller also retains its independent self-hosted and GitHub-hosted candidate
+identities, always with `publish-channel: none`; neither path is the default
+formal Alpha route. Explicit self-hosted or custom diagnostics may still opt
+into the bounded checkout-cache policy.
 
 ### Queue-aware macOS overflow
 
