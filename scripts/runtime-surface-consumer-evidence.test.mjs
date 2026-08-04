@@ -3,10 +3,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import {
-  consumerEvidence,
-  valueRoot,
-} from './runtime-surface-consumer-evidence.mjs';
+import { consumerEvidence, valueRoot } from './qualify-runtime-surface.mjs';
 
 const receipt = {
   schema: 'kungfu.runtime-surface-receipt/v1',

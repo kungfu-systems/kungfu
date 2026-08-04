@@ -1,5 +1,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
+import { execFileSync } from 'node:child_process';
+import fs from 'node:fs';
+import path from 'node:path';
+
 export type RuntimeSurfaceObservation = {
   schema: 'kungfu.tui-runtime-surface-observation/v1';
   receiptRoot: string;
@@ -11,6 +15,62 @@ export type RuntimeSurfaceObservation = {
   fallbackUsed: boolean;
   fallbackReason: string | null;
 };
+
+type RuntimeSurfaceCliInvocation = {
+  bin: string;
+  env: NodeJS.ProcessEnv;
+  args: (values: string[]) => string[];
+};
+
+type RuntimeSurfaceDiagnosticIo = {
+  cwd: () => string;
+  readFile: (file: string) => string;
+  verify: (
+    invocation: RuntimeSurfaceCliInvocation,
+    receiptPath: string,
+  ) => string;
+};
+
+const defaultDiagnosticIo: RuntimeSurfaceDiagnosticIo = {
+  cwd: () => process.cwd(),
+  readFile: (file) => fs.readFileSync(file, 'utf8'),
+  verify: (invocation, receiptPath) =>
+    execFileSync(
+      invocation.bin,
+      invocation.args(['runtime', 'surface', 'verify', receiptPath, '--json']),
+      { env: invocation.env, encoding: 'utf8' },
+    ),
+};
+
+export function observeRuntimeSurfaceDiagnostic(
+  argv: string[],
+  invocation: RuntimeSurfaceCliInvocation,
+  io: RuntimeSurfaceDiagnosticIo = defaultDiagnosticIo,
+): RuntimeSurfaceObservation | null {
+  const index = argv.indexOf('--runtime-surface-receipt');
+  const receiptPath = index >= 0 ? String(argv[index + 1] || '') : '';
+  if (!receiptPath) return null;
+  const absolute = path.resolve(io.cwd(), receiptPath);
+  const receipt = JSON.parse(io.readFile(absolute)) as unknown;
+  const verification = JSON.parse(io.verify(invocation, absolute)) as unknown;
+  return observeRuntimeSurfaceReceipt(receipt, verification);
+}
+
+export function runtimeSurfaceDiagnostic(
+  argv: string[],
+  runtimeDir: string,
+  invocation: RuntimeSurfaceCliInvocation,
+  io: RuntimeSurfaceDiagnosticIo = defaultDiagnosticIo,
+) {
+  return {
+    schema: 'kungfu.tui.non-interactive/v1',
+    status: 'not-started',
+    reason: 'interactive terminal required',
+    runtimeDir,
+    runtimeSurface: observeRuntimeSurfaceDiagnostic(argv, invocation, io),
+    next: 'run `kungfu` in a TTY',
+  };
+}
 
 export function observeRuntimeSurfaceReceipt(
   value: unknown,
