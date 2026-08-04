@@ -1,8 +1,11 @@
 # SPDX-License-Identifier: Apache-2.0
 
 from pathlib import Path
+import subprocess
 import sys
 
+from kungfu import config
+from kungfu import workspace_guidance
 from kungfu.agent.managed_run import ManagedRunCoordinator
 from kungfu.agent.native_launch import NativeLaunchCoordinator
 from kungfu.agent.provider_bootstrap import ProviderBootstrapAdapter
@@ -45,6 +48,36 @@ def test_verification_probe_keeps_version_after_invalid_utf8():
 
     assert result["ok"] is True
     assert result["version"] == "1.2.3"
+
+
+def _invalid_utf8_git_failure(real_run):
+    def run(_argv, **kwargs):
+        return real_run(
+            [
+                sys.executable,
+                "-c",
+                "import os; os.write(2, b'not a repo: \\xb2\\n'); raise SystemExit(1)",
+            ],
+            **kwargs,
+        )
+
+    return run
+
+
+def test_runtime_home_git_probe_replaces_invalid_utf8(monkeypatch, tmp_path):
+    real_run = subprocess.run
+    monkeypatch.setattr(config.subprocess, "run", _invalid_utf8_git_failure(real_run))
+
+    assert config._git_worktree_root(str(tmp_path)) is None
+
+
+def test_workspace_guidance_git_probe_replaces_invalid_utf8(monkeypatch, tmp_path):
+    real_run = subprocess.run
+    monkeypatch.setattr(
+        workspace_guidance.subprocess, "run", _invalid_utf8_git_failure(real_run)
+    )
+
+    assert workspace_guidance._git_root(str(tmp_path)) is None
 
 
 def test_run_intent_dispatcher_keeps_native_and_managed_paths_explicit():
