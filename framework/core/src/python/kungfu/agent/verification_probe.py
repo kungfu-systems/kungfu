@@ -52,6 +52,8 @@ class VerificationProbe:
                 [executable, *(str(value) for value in version_argv)],
                 capture_output=True,
                 text=True,
+                encoding="utf-8",
+                errors="replace",
                 timeout=timeout_seconds or self.default_timeout_seconds,
                 check=False,
             )
@@ -87,6 +89,8 @@ class VerificationProbe:
                     [executable, *probe_argv],
                     capture_output=True,
                     text=True,
+                    encoding="utf-8",
+                    errors="replace",
                     timeout=self.timeout(provider),
                     check=False,
                     env=(

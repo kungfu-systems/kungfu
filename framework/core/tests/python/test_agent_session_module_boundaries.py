@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 from pathlib import Path
+import sys
 
 from kungfu.agent.managed_run import ManagedRunCoordinator
 from kungfu.agent.native_launch import NativeLaunchCoordinator
@@ -12,6 +13,38 @@ from kungfu.agent.verification_probe import VerificationProbe
 
 
 ROOT = Path(__file__).resolve().parents[2]
+
+
+def _invalid_utf8_version_command():
+    return [
+        "-c",
+        "import sys; sys.stdout.buffer.write(b'provider \\xff 1.2.3\\n')",
+    ]
+
+
+def test_verification_probe_replaces_invalid_utf8_from_provider():
+    probe = VerificationProbe(schema="test")
+
+    assert probe.raw_version(sys.executable, _invalid_utf8_version_command()) == (
+        "provider � 1.2.3"
+    )
+
+
+def test_verification_probe_keeps_version_after_invalid_utf8():
+    probe = VerificationProbe(schema="test")
+    result = probe.verify(
+        {
+            "id": "test.invalid-utf8",
+            "provider": "test",
+            "launch": {
+                "executable": sys.executable,
+                "versionArgv": _invalid_utf8_version_command(),
+            },
+        }
+    )
+
+    assert result["ok"] is True
+    assert result["version"] == "1.2.3"
 
 
 def test_run_intent_dispatcher_keeps_native_and_managed_paths_explicit():
