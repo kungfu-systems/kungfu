@@ -83,15 +83,22 @@ test('generator reproduces every declared checked-in projection byte-for-byte', 
 test('formal native release lanes are hosted while diagnostic aliases remain self-hosted', () => {
   const projection = deriveProjection(readAuthority());
   assert.deepEqual(
-    projection.runnerRouting.matrices.native.map(({ id, runner }) => ({
-      id,
-      runner,
-    })),
+    projection.runnerRouting.matrices.native.map(
+      ({ id, runner, environment }) => ({
+        id,
+        runner,
+        environment: environment ?? {},
+      }),
+    ),
     [
-      { id: 'linux-x64', runner: '["ubuntu-24.04"]' },
-      { id: 'linux-arm64', runner: '["ubuntu-24.04-arm"]' },
-      { id: 'macos-arm64', runner: '["macos-15"]' },
-      { id: 'windows-x64', runner: '["windows-2022"]' },
+      {
+        id: 'linux-x64',
+        runner: '["ubuntu-24.04"]',
+        environment: { CC: 'gcc-14', CXX: 'g++-14' },
+      },
+      { id: 'linux-arm64', runner: '["ubuntu-24.04-arm"]', environment: {} },
+      { id: 'macos-arm64', runner: '["macos-15"]', environment: {} },
+      { id: 'windows-x64', runner: '["windows-2022"]', environment: {} },
     ],
   );
   assert.ok(

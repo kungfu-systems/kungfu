@@ -498,7 +498,7 @@ def _git_root(path: str) -> str | None:
             ["git", "-C", path, "rev-parse", "--show-toplevel"],
             check=False,
             capture_output=True,
-            text=True,
+            errors="replace",
         )
     except OSError:
         return None

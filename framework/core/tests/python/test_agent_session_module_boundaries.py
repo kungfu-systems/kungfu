@@ -1,7 +1,11 @@
 # SPDX-License-Identifier: Apache-2.0
 
 from pathlib import Path
+import subprocess
+import sys
 
+from kungfu import config
+from kungfu import workspace_guidance
 from kungfu.agent.managed_run import ManagedRunCoordinator
 from kungfu.agent.native_launch import NativeLaunchCoordinator
 from kungfu.agent.provider_bootstrap import ProviderBootstrapAdapter
@@ -9,9 +13,86 @@ from kungfu.agent.run_intent import RunIntentDispatcher
 from kungfu.agent.runtime_profile_catalog import RuntimeProfileCatalog
 from kungfu.agent.runtime_profile_store import RuntimeProfileStore
 from kungfu.agent.verification_probe import VerificationProbe
+from kungfu.rewind.cost import discovery as provider_discovery
 
 
 ROOT = Path(__file__).resolve().parents[2]
+
+
+def _invalid_utf8_version_command():
+    return [
+        "-c",
+        "import sys; sys.stdout.buffer.write(b'provider \\xff 1.2.3\\n')",
+    ]
+
+
+def test_verification_probe_replaces_invalid_utf8_from_provider():
+    probe = VerificationProbe(schema="test")
+
+    assert probe.raw_version(sys.executable, _invalid_utf8_version_command()) == (
+        "provider � 1.2.3"
+    )
+
+
+def test_verification_probe_keeps_version_after_invalid_utf8():
+    probe = VerificationProbe(schema="test")
+    result = probe.verify(
+        {
+            "id": "test.invalid-utf8",
+            "provider": "test",
+            "launch": {
+                "executable": sys.executable,
+                "versionArgv": _invalid_utf8_version_command(),
+            },
+        }
+    )
+
+    assert result["ok"] is True
+    assert result["version"] == "1.2.3"
+
+
+def test_provider_discovery_replaces_invalid_utf8_from_version_probe(monkeypatch):
+    real_run = subprocess.run
+
+    def invalid_version(_argv, **kwargs):
+        return real_run(
+            [sys.executable, *_invalid_utf8_version_command()],
+            **kwargs,
+        )
+
+    monkeypatch.setattr(provider_discovery.subprocess, "run", invalid_version)
+
+    assert provider_discovery._default_version_probe("provider") == ("provider � 1.2.3")
+
+
+def _invalid_utf8_git_failure(real_run):
+    def run(_argv, **kwargs):
+        return real_run(
+            [
+                sys.executable,
+                "-c",
+                "import os; os.write(2, b'not a repo: \\xb2\\n'); raise SystemExit(1)",
+            ],
+            **kwargs,
+        )
+
+    return run
+
+
+def test_runtime_home_git_probe_replaces_invalid_utf8(monkeypatch, tmp_path):
+    real_run = subprocess.run
+    monkeypatch.setattr(config.subprocess, "run", _invalid_utf8_git_failure(real_run))
+
+    assert config._git_worktree_root(str(tmp_path)) is None
+
+
+def test_workspace_guidance_git_probe_replaces_invalid_utf8(monkeypatch, tmp_path):
+    real_run = subprocess.run
+    monkeypatch.setattr(
+        workspace_guidance.subprocess, "run", _invalid_utf8_git_failure(real_run)
+    )
+
+    assert workspace_guidance._git_root(str(tmp_path)) is None
 
 
 def test_run_intent_dispatcher_keeps_native_and_managed_paths_explicit():

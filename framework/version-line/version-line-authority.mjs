@@ -210,6 +210,7 @@ export function deriveProjection(authority) {
       platform: 'linux',
       runner: '["ubuntu-24.04"]',
       capabilities: ['node', 'native-toolchain', 'product-artifacts', 'rust'],
+      environment: { CC: 'gcc-14', CXX: 'g++-14' },
     },
     {
       id: 'linux-arm64',

@@ -31,11 +31,12 @@ import {
   fail,
   extractPackedKfx,
   kfxQualificationAuthorityFile,
+  corePython,
 } from '../_harness.mjs';
 
-const PY = process.platform === 'win32' ? 'python' : 'python3';
 const { fixtureDir, coreDir } = locate(import.meta.url);
 const repoDir = path.resolve(coreDir, '..', '..');
+const PY = corePython(coreDir);
 
 // ── provision the real framework (cached across runs) ────────────────
 const venv = path.join(fixtureDir, '.venv-langchain');
