@@ -186,20 +186,24 @@ Each section is bound to the registry id by the catalog meta gate.
   version; cross-runner drift therefore remains fail-closed. Shifu workspace
   and KFD remain independent on the producer execution; only a candidate backed
   by that completed-success exact proof may skip them.
-- **Serialized queue admission lease:** the dev ruleset additionally requires
-  `Queue admission lease`. On the pull-request head, only the Atlas serialized
-  wrapper issues that status after observing an empty queue and replaying the
-  Project Cut against the latest base; it then accepts only position one. A
-  merge-group-only workflow continues the same required context on the exact
-  synthetic SHA without satisfying it on ordinary PR events. Every non-merged
-  dequeue revokes the exact-head lease and forbids retrying that head; a normal
-  `merged` removal preserves the successful terminal lease instead of replacing
-  it with a misleading failure. A new head cannot inherit an older status. The
-  bounded contract is
+- **Durable queue admission lease:** the dev ruleset additionally requires
+  `Queue admission lease`. The pull-request delivery controller submits exact
+  Source Qualification Proof evidence to the pinned Buildchain Warrant queue;
+  only its active, unexpired Warrant may own replay, proof, waiting and GitHub
+  enqueue. The merge-group-only workflow reads the same durable state ref and
+  refuses revision, source-head, Warrant, fencing-token, generation or expiry
+  drift on the exact synthetic SHA. The affected-native aggregate then binds
+  its reconstructable delivery attempt and the live GitHub queue entry into an
+  exact Integration Delivery Proof and records that proof through Buildchain's
+  state-ref CAS before protected merge observation. Every non-merged dequeue
+  revokes the exact-head lease and forbids retrying that head; a normal `merged`
+  removal preserves the successful terminal lease instead of replacing it with
+  a misleading failure. A new head cannot inherit an older proof or Warrant.
+  The bounded contract is
   `docs/qualification/gates/dev-queue-admission.contract.json`. This prevents an
-  inadvertent direct position-two entry from changing the proof base and turning
-  an exact PR proof into a full native queue rebuild; it does not weaken proof
-  verification when source, plan, or toolchain identity changes.
+  inadvertent or stale controller from changing the proof base; reusable source
+  qualification never suppresses exact merge-group verification when source,
+  plan, dependency, toolchain, Warrant or integration identity changes.
 - **Dequeue repair admission:** the dequeue controller executes from the
   event-selected current protected `dev/v*/v*` base ref, never from the
   pull-request head or a stale event base SHA. It cancels active work and writes

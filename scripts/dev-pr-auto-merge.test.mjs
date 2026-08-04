@@ -13,7 +13,7 @@ test('Dev auto-merge admits only explicitly ready reviewed same-repository PRs',
   const reusableRef = workflow.match(
     /uses: kungfu-systems\/buildchain\/\.github\/workflows\/dev-pr-auto-merge\.yml@([0-9a-f]{40})/u,
   )?.[1];
-  assert.equal(reusableRef, '3550081196f08f4dd5a195aee484dc1ddaa8bdd5');
+  assert.equal(reusableRef, '5d302bd11fcac694e716e4a62550c6024c40aa30');
   assert.match(workflow, new RegExp(`buildchain-ref: ${reusableRef}`, 'u'));
   assert.match(workflow, /workflow_run:[\s\S]*Core affected native/u);
   assert.match(workflow, /cron: "23,53 \* \* \* \*"/u);
@@ -63,7 +63,7 @@ test('Dev Agent admission binds every targeted run to one exact PR head', () => 
   assert.match(workflow, /diagnostic-context: Buildchain delivery intent/u);
   assert.match(
     workflow,
-    /delivery-warrant-mode: \$\{\{ github\.event_name == 'workflow_run' && 'required' \|\| 'off' \}\}/u,
+    /delivery-warrant-mode:.*workflow_run.*workflow_dispatch.*inputs\.dry-run == false.*required/u,
   );
   assert.doesNotMatch(workflow, /delivery-warrant-mode:[^\n]*shadow/u);
 });
