@@ -28,11 +28,11 @@ export {
 const LEGACY_IDENTITY_SCHEMA = 'kungfu.affected-native-proof-identity/v3';
 const LEGACY_PROOF_SCHEMA = 'kungfu.affected-native-proof/v3';
 const LEGACY_DESCRIPTOR_SCHEMA = 'kungfu.affected-native-proof-descriptor/v1';
-export const IDENTITY_SCHEMA = 'kungfu.affected-native-proof-identity/v5';
+export const IDENTITY_SCHEMA = 'kungfu.affected-native-proof-identity/v6';
 export const QUALIFICATION_IDENTITY_SCHEMA =
-  'kungfu.affected-native-qualification-identity/v1';
-export const PROOF_SCHEMA = 'kungfu.affected-native-proof/v5';
-export const DESCRIPTOR_SCHEMA = 'kungfu.affected-native-proof-descriptor/v3';
+  'kungfu.affected-native-qualification-identity/v2';
+export const PROOF_SCHEMA = 'kungfu.affected-native-proof/v6';
+export const DESCRIPTOR_SCHEMA = 'kungfu.affected-native-proof-descriptor/v4';
 export const DELIVERY_BINDING_SCHEMA =
   'kungfu.affected-native-delivery-binding/v1';
 export const DELIVERY_ATTEMPT_SCHEMA =
@@ -435,7 +435,12 @@ export function validatePlan(plan) {
 
 export function planProjection(plan) {
   validatePlan(plan);
-  const { head: _head, planDigest: _planDigest, ...projection } = plan;
+  const {
+    base: _base,
+    head: _head,
+    planDigest: _planDigest,
+    ...projection
+  } = plan;
   return projection;
 }
 
@@ -445,7 +450,6 @@ function qualificationIdentityFromIdentity(identity) {
   }
   return {
     schema: QUALIFICATION_IDENTITY_SCHEMA,
-    base: identity.base,
     sourceTree: identity.sourceTree,
     planProjectionDigest: identity.planProjectionDigest,
     partitionCount: identity.partitionCount,
@@ -453,6 +457,68 @@ function qualificationIdentityFromIdentity(identity) {
     toolchain: identity.toolchain,
     dependencyRoot: identity.dependencyRoot,
     closureRoot: identity.closureRoot,
+  };
+}
+
+function intersect(left = [], right = []) {
+  const rightSet = new Set(right);
+  return [...new Set(left.filter((entry) => rightSet.has(entry)))].sort();
+}
+
+export function classifyProofBaseDelta({ descriptor, proofPlan, deltaPlan }) {
+  validateCurrentDescriptor(descriptor);
+  validatePlan(proofPlan);
+  if (proofPlan.base === descriptor.identity.base) {
+    return {
+      action: 'reuse-source-qualification',
+      reason: 'exact-qualified-base',
+      reusable: true,
+      changedPaths: [],
+      overlappingComponents: [],
+    };
+  }
+  if (!deltaPlan) {
+    return {
+      action: 'rerun-full-source-qualification',
+      reason: 'dependency-attribution-unknown',
+      reusable: false,
+    };
+  }
+  validatePlan(deltaPlan);
+  if (
+    deltaPlan.base !== proofPlan.base ||
+    deltaPlan.head !== descriptor.identity.base
+  ) {
+    return {
+      action: 'rerun-full-source-qualification',
+      reason: 'dev-delta-range-mismatch',
+      reusable: false,
+    };
+  }
+  const overlappingComponents = intersect(
+    proofPlan.closureComponents,
+    deltaPlan.closureComponents,
+  );
+  const sdkOverlap =
+    proofPlan.sdkQualification?.required === true &&
+    deltaPlan.sdkQualification?.required === true;
+  if (overlappingComponents.length > 0 || sdkOverlap) {
+    return {
+      action: 'rerun-affected-source-shards',
+      reason: 'dev-delta-overlaps-affected-closure',
+      reusable: false,
+      changedPaths: [...new Set(deltaPlan.changedPaths || [])].sort(),
+      overlappingComponents,
+      sdkOverlap,
+    };
+  }
+  return {
+    action: 'reuse-source-qualification',
+    reason: 'unrelated-dev-delta',
+    reusable: true,
+    changedPaths: [...new Set(deltaPlan.changedPaths || [])].sort(),
+    overlappingComponents: [],
+    requiredFinalGate: 'exact-merge-group-integration',
   };
 }
 
@@ -776,7 +842,34 @@ export function verifyProofBundle(descriptor, bundleDir, options) {
     throw new Error('affected-native proof identity drift');
   }
   validateProducer(proof.producer, options);
-  const records = partitionRecords(descriptor, receiptFiles(bundleDir));
+  const inputs = receiptFiles(bundleDir);
+  const proofPlans = inputs.map(({ value }) => value.plan);
+  if (proofPlans.length === 0) {
+    throw new Error('affected-native proof partition set is incomplete');
+  }
+  const proofPlan = proofPlans[0];
+  if (proofPlans.some((plan) => plan.planDigest !== proofPlan.planDigest)) {
+    throw new Error('affected-native proof plan set drift');
+  }
+  const baseDelta = current
+    ? classifyProofBaseDelta({
+        descriptor,
+        proofPlan,
+        deltaPlan: options.deltaPlan || null,
+      })
+    : {
+        action: 'reuse-source-qualification',
+        reason: 'legacy-exact-proof',
+        reusable: true,
+        changedPaths: [],
+        overlappingComponents: [],
+      };
+  if (!baseDelta.reusable) {
+    throw new Error(
+      `affected-native source proof reuse rejected: ${baseDelta.reason}`,
+    );
+  }
+  const records = partitionRecords(descriptor, inputs);
   if (stableJson(records) !== stableJson(proof.partitions)) {
     throw new Error('affected-native proof receipt set drift');
   }
@@ -787,7 +880,7 @@ export function verifyProofBundle(descriptor, bundleDir, options) {
   ) {
     throw new Error('affected-native proof verdict drift');
   }
-  return proof;
+  return { ...proof, baseDelta };
 }
 
 export function createDeliveryAttempt(descriptor, proof, decision, producer) {
@@ -1229,6 +1322,9 @@ async function main() {
           options['max-age-seconds'] || DEFAULT_MAX_AGE_SECONDS,
         ),
         now: options.now,
+        deltaPlan: options['dev-delta-plan']
+          ? readJson(path.resolve(options['dev-delta-plan']))
+          : null,
       },
     );
     console.log(
@@ -1237,6 +1333,7 @@ async function main() {
           status: 'verified',
           proofId: proof.proofId,
           proofRoot: proof.proofRoot,
+          baseDelta: proof.baseDelta,
         },
         null,
         2,

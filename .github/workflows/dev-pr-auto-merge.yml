@@ -110,8 +110,87 @@ jobs:
           echo "expected-pr-number=$expected_pr_number" >>"$GITHUB_OUTPUT"
           echo "expected-head-sha=$expected_head_sha" >>"$GITHUB_OUTPUT"
 
-  admission:
+  delivery-contract:
     needs: resolve-target
+    if: ${{ always() }}
+    runs-on: ubuntu-24.04
+    permissions:
+      actions: read
+      contents: read
+      pull-requests: read
+    outputs:
+      assignment-root: ${{ steps.contract.outputs.assignment-root }}
+      initiative-root: ${{ steps.contract.outputs.initiative-root }}
+      source-identity-root: ${{ steps.contract.outputs.source-identity-root }}
+      source-patch-root: ${{ steps.contract.outputs.source-patch-root }}
+      plan-root: ${{ steps.contract.outputs.plan-root }}
+      closure-root: ${{ steps.contract.outputs.closure-root }}
+      dependency-root: ${{ steps.contract.outputs.dependency-root }}
+      toolchain-root: ${{ steps.contract.outputs.toolchain-root }}
+      affected-paths-json: ${{ steps.contract.outputs.affected-paths-json }}
+      shard-evidence-roots-json: ${{ steps.contract.outputs.shard-evidence-roots-json }}
+      delivery-class: ${{ steps.contract.outputs.delivery-class }}
+      priority: ${{ steps.contract.outputs.priority }}
+      input-root: ${{ steps.contract.outputs.input-root }}
+    steps:
+      - name: Check out protected consumer adapter
+        if: >-
+          github.event_name == 'workflow_run' &&
+          needs.resolve-target.outputs.expected-pr-number != ''
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Download exact source qualification descriptor
+        if: >-
+          github.event_name == 'workflow_run' &&
+          needs.resolve-target.outputs.expected-pr-number != ''
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: core-affected-native-proof-descriptor-${{ github.event.workflow_run.id }}
+          path: .buildchain/dev-delivery-input
+          repository: ${{ github.repository }}
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ github.token }}
+
+      - name: Project Buildchain Warrant inputs
+        id: contract
+        if: >-
+          github.event_name == 'workflow_run' &&
+          needs.resolve-target.outputs.expected-pr-number != ''
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EXPECTED_PR: ${{ needs.resolve-target.outputs.expected-pr-number }}
+          EXPECTED_HEAD: ${{ needs.resolve-target.outputs.expected-head-sha }}
+        run: |
+          set -euo pipefail
+          gh api "repos/$GITHUB_REPOSITORY/pulls/$EXPECTED_PR" > .buildchain/dev-delivery-input/pull-request.json
+          test "$EXPECTED_HEAD" = "$(jq -r '.head.sha' .buildchain/dev-delivery-input/pull-request.json)"
+          # shifu-entry-contract: allow source-only Warrant input projection before Gate dependencies are runnable
+          node scripts/dev-delivery-warrant-input.mjs \
+            --repository "$GITHUB_REPOSITORY" \
+            --pull-request .buildchain/dev-delivery-input/pull-request.json \
+            --descriptor .buildchain/dev-delivery-input/descriptor.json \
+            --plan .buildchain/dev-delivery-input/plan.json \
+            --output .buildchain/dev-delivery-input/warrant-input.json \
+            --github-output "$GITHUB_OUTPUT"
+
+      - name: Upload exact Warrant input projection
+        if: steps.contract.outcome == 'success'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: dev-delivery-warrant-input-${{ needs.resolve-target.outputs.expected-head-sha }}
+          path: .buildchain/dev-delivery-input/
+          if-no-files-found: error
+          retention-days: 30
+
+  admission:
+    needs:
+      - resolve-target
+      - delivery-contract
     if: >-
       github.event_name != 'workflow_run' ||
       github.event.workflow_run.event == 'pull_request'
@@ -120,13 +199,27 @@ jobs:
       contents: write
       pull-requests: write
       statuses: write
-    uses: kungfu-systems/buildchain/.github/workflows/dev-pr-auto-merge.yml@12043e826f995f9f4ba5dfa457df55a869ab10b9
+    uses: kungfu-systems/buildchain/.github/workflows/dev-pr-auto-merge.yml@3550081196f08f4dd5a195aee484dc1ddaa8bdd5
     with:
-      buildchain-ref: 12043e826f995f9f4ba5dfa457df55a869ab10b9
+      buildchain-ref: 3550081196f08f4dd5a195aee484dc1ddaa8bdd5
       target-branch: ${{ needs.resolve-target.outputs.target-branch }}
       expected-pr-number: ${{ fromJSON(needs.resolve-target.outputs.expected-pr-number || '0') }}
       expected-head-sha: ${{ needs.resolve-target.outputs.expected-head-sha }}
       diagnostic-context: Buildchain delivery intent
+      delivery-warrant-mode: ${{ github.event_name == 'workflow_run' && 'shadow' || 'off' }}
+      assignment-root: ${{ needs.delivery-contract.outputs.assignment-root }}
+      initiative-root: ${{ needs.delivery-contract.outputs.initiative-root }}
+      source-identity-root: ${{ needs.delivery-contract.outputs.source-identity-root }}
+      source-patch-root: ${{ needs.delivery-contract.outputs.source-patch-root }}
+      plan-root: ${{ needs.delivery-contract.outputs.plan-root }}
+      closure-root: ${{ needs.delivery-contract.outputs.closure-root }}
+      dependency-root: ${{ needs.delivery-contract.outputs.dependency-root }}
+      toolchain-root: ${{ needs.delivery-contract.outputs.toolchain-root }}
+      affected-paths-json: ${{ needs.delivery-contract.outputs.affected-paths-json || '[]' }}
+      shard-evidence-roots-json: ${{ needs.delivery-contract.outputs.shard-evidence-roots-json || '[]' }}
+      delivery-class: ${{ needs.delivery-contract.outputs.delivery-class || 'native-proof-required' }}
+      delivery-priority: ${{ needs.delivery-contract.outputs.priority || 'ordinary' }}
+      warrant-lease-seconds: 5400
       required-status-checks: |-
         Candidate source acceptance / check
         affected-native / linux
