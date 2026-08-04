@@ -80,7 +80,7 @@
             "product-stable",
             "product-binaries"
           ],
-          "sourceRoot": "sha256:c069f9e6cb4db21eaaff5ebe144ff720df5546962ef565062e1e1392c4e5565c"
+          "sourceRoot": "sha256:6ad0b97d0bb5219d9a6be40fbd7336260e1363f8449672f1c4c3a7dc30d9c0fd"
         },
         {
           "path": ".github/workflows/alpha-promotion-preflight.yml",
@@ -146,7 +146,7 @@
           "classification": "non-publication",
           "owner": "kungfu-ci",
           "surfaceIds": [],
-          "sourceRoot": "sha256:fb476b7c16cdda4db240b2ae6e24f5f9a2d6f2a92a4fdb00c222868dfd345133"
+          "sourceRoot": "sha256:bda36df0bc30ae1396aa99b341da7dad32df88485a5b6bd2f01e8e55f9d6afd9"
         },
         {
           "path": ".github/workflows/core-build-profiles.yml",
@@ -177,7 +177,7 @@
           "classification": "non-publication",
           "owner": "kungfu-ci",
           "surfaceIds": [],
-          "sourceRoot": "sha256:20bdd6b8aa01f08d1f019ee0b61092c411fb75c6e9e259d760ce50ce9eacb374"
+          "sourceRoot": "sha256:f9fb9cd76c68915ff94aac8d892ede1ab9abed0ca8260a61605d1b6e25995a42"
         },
         {
           "path": ".github/workflows/dev-gate-latency-patrol.yml",
@@ -853,5 +853,5 @@
       }
     }
   ],
-  "registryRoot": "sha256:d9b49b49c74faca0f2e316a0a0f734230f68f13462cf2bf5ae7853067086d952"
+  "registryRoot": "sha256:17a231aaeab7ecc923733016ab13e5308d5dac47b10bf9cec7cf2e609151e876"
 }
