@@ -1,19 +1,176 @@
 # SPDX-License-Identifier: Apache-2.0
 
-import json
 import hashlib
+import json
+import math
 import os
 from pathlib import Path
 import shutil
 import socket
 import sys
+import time
 from typing import Protocol
 
 from kungfu.agent.session_contract import semantic_root
 from kungfu.workspace import WorkspaceTargetRequired, resolve_workspace_target
 
 
-MAX_RESPONSE_BYTES = 1024 * 1024
+MAX_MESSAGE_BYTES = 1024 * 1024
+_READ_CHUNK_BYTES = 65536
+
+
+def _deadline(timeout):
+    if timeout <= 0:
+        raise ValueError("Agent Session timeout must be positive")
+    return time.monotonic() + timeout
+
+
+def _remaining_milliseconds(deadline, operation):
+    remaining = deadline - time.monotonic()
+    if remaining <= 0:
+        raise TimeoutError(f"Agent Session {operation} timed out")
+    return max(1, math.ceil(remaining * 1000))
+
+
+def _encode_request(request):
+    payload = json.dumps(request, separators=(",", ":")).encode("utf-8") + b"\n"
+    if len(payload) > MAX_MESSAGE_BYTES:
+        raise ValueError("Agent Session request exceeds 1 MiB")
+    return payload
+
+
+def _decode_response(response):
+    decoded = json.loads(bytes(response).split(b"\n", 1)[0])
+    if not isinstance(decoded, dict):
+        raise ValueError("Agent Session response must be a JSON object")
+    return decoded
+
+
+def _append_response(response, chunk):
+    if not chunk:
+        raise ValueError("Agent Session surface closed without a response")
+    response.extend(chunk)
+    if len(response) > MAX_MESSAGE_BYTES:
+        raise ValueError("Agent Session response exceeds 1 MiB")
+
+
+def _invoke_unix_socket(target, payload, timeout):
+    if not hasattr(socket, "AF_UNIX"):
+        raise ValueError("Agent Session Unix socket transport is unavailable")
+    with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as client:
+        client.settimeout(timeout)
+        client.connect(target)
+        client.sendall(payload)
+        response = bytearray()
+        while b"\n" not in response:
+            _append_response(response, client.recv(_READ_CHUNK_BYTES))
+    return response
+
+
+def _open_named_pipe(target, deadline, api):
+    retryable = {api.ERROR_PIPE_BUSY, api.ERROR_SEM_TIMEOUT}
+    while True:
+        wait_ms = _remaining_milliseconds(deadline, "named-pipe connect")
+        try:
+            api.WaitNamedPipe(target, wait_ms)
+            return api.CreateFile(
+                target,
+                api.GENERIC_READ | api.GENERIC_WRITE,
+                0,
+                api.NULL,
+                api.OPEN_EXISTING,
+                api.FILE_FLAG_OVERLAPPED,
+                api.NULL,
+            )
+        except OSError as error:
+            if getattr(error, "winerror", None) not in retryable:
+                raise
+            if time.monotonic() >= deadline:
+                raise TimeoutError(
+                    "Agent Session named-pipe connect timed out"
+                ) from error
+
+
+def _complete_overlapped(api, overlapped, error, deadline, operation):
+    if error == api.ERROR_IO_PENDING:
+        wait_ms = _remaining_milliseconds(deadline, operation)
+        wait_result = api.WaitForMultipleObjects([overlapped.event], False, wait_ms)
+        if wait_result == api.WAIT_TIMEOUT:
+            overlapped.cancel()
+            try:
+                overlapped.GetOverlappedResult(True)
+            except OSError:
+                pass
+            raise TimeoutError(f"Agent Session {operation} timed out")
+        if wait_result != api.WAIT_OBJECT_0:
+            overlapped.cancel()
+            raise OSError(
+                f"Agent Session {operation} wait failed with status {wait_result}"
+            )
+    transferred, completion_error = overlapped.GetOverlappedResult(True)
+    return transferred, completion_error
+
+
+def _write_named_pipe(api, handle, payload, deadline):
+    overlapped, error = api.WriteFile(handle, payload, overlapped=True)
+    transferred, completion_error = _complete_overlapped(
+        api, overlapped, error, deadline, "named-pipe write"
+    )
+    if completion_error:
+        message = (
+            "Agent Session named-pipe write failed with Windows error "
+            f"{completion_error}"
+        )
+        raise OSError(completion_error, message)
+    if transferred != len(payload):
+        raise OSError("Agent Session named-pipe write was incomplete")
+
+
+def _read_named_pipe(api, handle, deadline):
+    response = bytearray()
+    while b"\n" not in response:
+        try:
+            overlapped, error = api.ReadFile(handle, _READ_CHUNK_BYTES, overlapped=True)
+            transferred, completion_error = _complete_overlapped(
+                api, overlapped, error, deadline, "named-pipe read"
+            )
+        except OSError as raised:
+            if getattr(raised, "winerror", None) == api.ERROR_BROKEN_PIPE:
+                raise ValueError(
+                    "Agent Session surface closed without a response"
+                ) from raised
+            raise
+        if completion_error not in (0, api.ERROR_MORE_DATA):
+            if completion_error == api.ERROR_BROKEN_PIPE:
+                raise ValueError("Agent Session surface closed without a response")
+            raise OSError(
+                completion_error,
+                "Agent Session named-pipe read failed with Windows error "
+                f"{completion_error}",
+            )
+        _append_response(response, bytes(overlapped.getbuffer())[:transferred])
+    return response
+
+
+def _invoke_windows_named_pipe(target, payload, timeout):
+    import _winapi as api
+
+    deadline = _deadline(timeout)
+    handle = _open_named_pipe(target, deadline, api)
+    try:
+        _write_named_pipe(api, handle, payload, deadline)
+        return _read_named_pipe(api, handle, deadline)
+    finally:
+        getattr(api, "CloseHandle")(handle)
+
+
+def _invoke_transport(request, endpoint, timeout):
+    payload = _encode_request(request)
+    if sys.platform == "win32":
+        response = _invoke_windows_named_pipe(endpoint, payload, timeout)
+    else:
+        response = _invoke_unix_socket(endpoint, payload, timeout)
+    return _decode_response(response)
 
 
 def effective_work_ref(envelope):
@@ -166,26 +323,7 @@ def invoke(request, endpoint=None, timeout=5.0):
             "Agent Session surface is unavailable; open the Kungfu product or "
             "run inside a Kungfu Agent Console"
         )
-    if not hasattr(socket, "AF_UNIX"):
-        raise ValueError(
-            "Agent Session local actions are currently supported on macOS/Linux"
-        )
-    payload = json.dumps(request, separators=(",", ":")).encode("utf-8") + b"\n"
-    if len(payload) > MAX_RESPONSE_BYTES:
-        raise ValueError("Agent Session request exceeds 1 MiB")
-    with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as client:
-        client.settimeout(timeout)
-        client.connect(target)
-        client.sendall(payload)
-        response = bytearray()
-        while b"\n" not in response:
-            chunk = client.recv(65536)
-            if not chunk:
-                raise ValueError("Agent Session surface closed without a response")
-            response.extend(chunk)
-            if len(response) > MAX_RESPONSE_BYTES:
-                raise ValueError("Agent Session response exceeds 1 MiB")
-    decoded = json.loads(bytes(response).split(b"\n", 1)[0])
+    decoded = _invoke_transport(request, target, timeout)
     if not decoded.get("ok"):
         error = decoded.get("error") or {}
         raise ValueError(
