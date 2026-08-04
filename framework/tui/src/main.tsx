@@ -106,7 +106,7 @@ import {
   type ProjectsQuickAction,
   projectWorkQuickCommandAvailable,
 } from './projects-view/index.js';
-import { observeRuntimeSurfaceReceipt } from './runtime-surface.js';
+import { runtimeSurfaceDiagnostic } from './runtime-surface.js';
 import {
   type OpenedStarterProject,
   type ProjectTourEpisode,
@@ -2263,40 +2263,16 @@ function ProductHost({
   );
 }
 
-function runtimeSurfaceReceiptOption(argv: string[]): string {
-  const index = argv.indexOf('--runtime-surface-receipt');
-  return index >= 0 ? String(argv[index + 1] || '') : '';
-}
-
-function verifiedRuntimeSurfaceObservation() {
-  const receiptPath = runtimeSurfaceReceiptOption(process.argv);
-  if (!receiptPath) return null;
-  const absolute = path.resolve(receiptPath);
-  const receipt = JSON.parse(fs.readFileSync(absolute, 'utf8')) as unknown;
-  const paths = runtimePaths();
-  const cli = tuiCliInvocation(paths);
-  const verification = JSON.parse(
-    execFileSync(
-      cli.bin,
-      cli.args(['runtime', 'surface', 'verify', absolute, '--json']),
-      { env: cli.env, encoding: 'utf8' },
-    ),
-  ) as unknown;
-  return observeRuntimeSurfaceReceipt(receipt, verification);
-}
-
 function printNonInteractiveDiagnostic(): void {
   const paths = runtimePaths();
-  const runtimeSurface = verifiedRuntimeSurfaceObservation();
   process.stdout.write(
-    `${JSON.stringify({
-      schema: 'kungfu.tui.non-interactive/v1',
-      status: 'not-started',
-      reason: 'interactive terminal required',
-      runtimeDir: paths.runtimeDir,
-      runtimeSurface,
-      next: 'run `kungfu` in a TTY',
-    })}\n`,
+    `${JSON.stringify(
+      runtimeSurfaceDiagnostic(
+        process.argv,
+        paths.runtimeDir,
+        tuiCliInvocation(paths),
+      ),
+    )}\n`,
   );
 }
 
