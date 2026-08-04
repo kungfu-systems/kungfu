@@ -513,10 +513,10 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "diagnostic",
-          "definitionDigest": "sha256:30e33b4b048112be5fa02794f428bfe3ad6b561666895f6fd8d2b863212ecb0a",
+          "definitionDigest": "sha256:12e20bc8dbf289f2d875150054fb66269f2e17918219f13e0577b26b78d3c2d9",
           "credentials": {"githubToken":"write","oidc":false,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
           "externalActions": ["actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0"],
-          "steps": [{"index":1,"label":"name:Check out protected Buildchain runtime","definitionDigest":"sha256:92f89811b9317f223d12a30cf905a95309f37363d606014f480d522339834ce9"},{"index":2,"label":"id:terminal","definitionDigest":"sha256:ae748475089b545118ef1108571a26228d1f4a3017d559e4ed61f6499c85ebad"}]
+          "steps": [{"index":1,"label":"name:Check out protected Buildchain runtime","definitionDigest":"sha256:92f89811b9317f223d12a30cf905a95309f37363d606014f480d522339834ce9"},{"index":2,"label":"id:terminal","definitionDigest":"sha256:125df3159ee945ce311f3910a8925f34d61904df1e5ab218387895011f316e61"}]
         }
       ]
     },

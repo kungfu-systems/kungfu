@@ -174,6 +174,10 @@ test('terminal consumer executes only protected event and Buildchain authority',
   assert.match(workflow, /No matching active Warrant or queued candidate/u);
   assert.match(workflow, /\.observation\.queued\[\]\?/u);
   assert.match(workflow, /needs\.prepare\.outputs\.queued == 'true'/u);
+  assert.match(
+    workflow,
+    /if \[ "\$MERGED" = "true" \]; then\s+outcome=merged\s+elif \[ "\$EVENT_ACTION" = "dequeued" \]; then\s+outcome=dequeued/u,
+  );
   assert.match(workflow, /GH_TOKEN: \$\{\{ github\.token \}\}/u);
   assert.match(workflow, /GITHUB_TOKEN: \$\{\{ github\.token \}\}/u);
   assert.match(

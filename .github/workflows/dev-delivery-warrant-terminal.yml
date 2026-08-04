@@ -102,10 +102,13 @@ jobs:
             echo "queued-source-head-sha=$(jq -er '.[0].sourceHead' <<<"$queued_matches")" >> "$GITHUB_OUTPUT"
             echo "queue-state-root=$(jq -er '.observation.stateRoot' "$observation")" >> "$GITHUB_OUTPUT"
           fi
-          if [ "$EVENT_ACTION" = "dequeued" ]; then
-            outcome=dequeued
-          elif [ "$MERGED" = "true" ]; then
+          # GitHub may emit pull_request_target:dequeued immediately before the
+          # closed event for a successfully merged queue entry. The payload's
+          # merged fact is terminal authority and must win that event race.
+          if [ "$MERGED" = "true" ]; then
             outcome=merged
+          elif [ "$EVENT_ACTION" = "dequeued" ]; then
+            outcome=dequeued
           else
             outcome=cancelled
           fi

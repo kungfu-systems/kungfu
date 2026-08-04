@@ -122,7 +122,7 @@
             "product-stable",
             "product-binaries"
           ],
-          "sourceRoot": "sha256:e080172367184d4f8b08c9a765a63f306b8d4dbf3c2a9d954f801ae00d5d7c5f"
+          "sourceRoot": "sha256:1e3b2f4c50a065b21d10c84b998d68e90e0fb42e61556f191e2b90f7cbdc2059"
         },
         {
           "path": ".github/workflows/buildchain-validate.yml",
@@ -170,14 +170,14 @@
             "product-alpha",
             "product-binaries"
           ],
-          "sourceRoot": "sha256:eff0224ed508998788b3e945f392e62e9b277c2d1fe128fdee06a8bc1b078ebd"
+          "sourceRoot": "sha256:aaa1a84ad1760afedbf796f8a87a98e28697489093f3fc11063f75a584fc3486"
         },
         {
           "path": ".github/workflows/dev-delivery-warrant-terminal.yml",
           "classification": "non-publication",
           "owner": "kungfu-ci",
           "surfaceIds": [],
-          "sourceRoot": "sha256:5da0cc278c8a7ceae35829c93606084c317c186f40f3330991734ebab50d32b1"
+          "sourceRoot": "sha256:c608931f7b258b53fbd900760ff2d31f8513f8a694b07369245e26441546a04f"
         },
         {
           "path": ".github/workflows/dev-pr-auto-merge.yml",
@@ -329,7 +329,7 @@
             "product-stable",
             "product-binaries"
           ],
-          "sourceRoot": "sha256:a638373ae7521f5be0310d5f38f9237ad3bb5475e58da6fcd5c17402e4770105"
+          "sourceRoot": "sha256:ab1bb0ca184a6a6e04e2589459cdbbecba2330ba40f0ce941c44318b02e34216"
         },
         {
           "path": ".github/workflows/release-shifu.yml",
@@ -860,5 +860,5 @@
       }
     }
   ],
-  "registryRoot": "sha256:a80cad7687b7bc5bc32bad8d9599d093a457ce078e029a7f5a1fcb894943da1e"
+  "registryRoot": "sha256:05390bddc60d8a05563dc1f6ef10e390be76f6f903bd0ad218d86107c02f053c"
 }
