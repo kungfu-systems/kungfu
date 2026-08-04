@@ -1066,11 +1066,35 @@ jobs:
             --proof "$bundle/proof.json" \
             --native-receipt "$native_receipt" \
             --output "$output/input.json"
+          jq -n \
+            --argjson number "$pull_request" \
+            --arg head "$source_head" \
+            --arg base "$protected_base" \
+            '{number:$number,head:{sha:$head},base:{ref:$base}}' \
+            > "$output/pull-request.json"
+          # Keep Source Proof roots identical to the protected Warrant caller.
+          # shifu-entry-contract: allow exact Warrant contract projection after native proof admission
+          node scripts/dev-delivery-warrant-input.mjs \
+            --repository "$GITHUB_REPOSITORY" \
+            --pull-request "$output/pull-request.json" \
+            --descriptor "$admission/proof-admission/descriptor.json" \
+            --plan "$admission/proof-admission/plan.json" \
+            --output "$output/warrant-input.json"
           # shifu-entry-contract: allow exact pinned Buildchain Source Proof creation in CI
-          node .buildchain/dev-delivery-runtime/bin/buildchain.mjs dev proof \
-            --operation source-create \
-            --input "$output/input.json" \
-            --output "$output/receipt.json"
+          node .buildchain/dev-delivery-runtime/bin/buildchain.mjs dev proof source \
+            --repository "$GITHUB_REPOSITORY" \
+            --branch "$protected_base" \
+            --source-identity-root "$(jq -er '.sourceIdentityRoot' "$output/warrant-input.json")" \
+            --source-head "$source_head" \
+            --source-patch-root "$(jq -er '.sourcePatchRoot' "$output/warrant-input.json")" \
+            --plan-root "$(jq -er '.planRoot' "$output/warrant-input.json")" \
+            --closure-root "$(jq -er '.closureRoot' "$output/warrant-input.json")" \
+            --dependency-root "$(jq -er '.dependencyRoot' "$output/warrant-input.json")" \
+            --toolchain-root "$(jq -er '.toolchainRoot' "$output/warrant-input.json")" \
+            --affected-paths-json "$(jq -c '.affectedPaths' "$output/warrant-input.json")" \
+            --shard-evidence-roots-json "$(jq -c '.shardEvidenceRoots' "$output/warrant-input.json")" \
+            --qualified-at "$(jq -er '.producer.createdAt' "$bundle/proof.json")" \
+            --output "$output/proof.json"
           jq -n \
             --arg repository "$GITHUB_REPOSITORY" \
             --arg protectedBase "$protected_base" \
@@ -1149,19 +1173,17 @@ jobs:
           fi
           source_head="$(gh api "repos/$GITHUB_REPOSITORY/pulls/$pull_request" --jq .head.sha)"
           protected_base="$(jq -r '.merge_group.base_ref' "$GITHUB_EVENT_PATH" | sed 's#^refs/heads/##')"
-          state_ref="buildchain-state/dev-delivery/${protected_base//\//-}"
           output=.buildchain/dev-delivery-warrant/integration
           mkdir -p "$output"
           runtime=.buildchain/dev-delivery-runtime
           # shifu-entry-contract: allow exact pinned Buildchain state-ref readback in CI
-          node "$runtime/bin/buildchain.mjs" dev warrant \
+          node "$runtime/bin/buildchain.mjs" dev warrant observe \
             --repository "$GITHUB_REPOSITORY" \
-            --state-ref "$state_ref" \
-            --view \
-            --output "$output/view.json"
+            --branch "$protected_base" \
+            --output "$output/warrant-result.json"
           # shifu-entry-contract: allow exact Warrant consumer verification in CI
           node scripts/affected-native-proof.mjs queue-lease-verify \
-            --view "$output/view.json" \
+            --view "$output/warrant-result.json" \
             --pull-request "$pull_request" \
             --source-head "$source_head" \
             --output "$output/queue-lease-receipt.json"
@@ -1178,39 +1200,26 @@ jobs:
             "$output/queue.json" > "$output/queue-entry.json"
           # shifu-entry-contract: allow exact merge-group proof input projection in CI
           node scripts/affected-native-proof.mjs integration-input \
-            --view "$output/view.json" \
+            --view "$output/warrant-result.json" \
             --delivery-attempt product/qualification/affected-native/delivery-attempt/delivery-attempt.json \
             --queue-entry "$output/queue-entry.json" \
             --queue-lease-receipt "$output/queue-lease-receipt.json" \
             --pull-request "$pull_request" \
             --verified-at "$(date -u +%Y-%m-%dT%H:%M:%S.000Z)" \
             --output "$output/input.json"
-          jq '.proofInput' "$output/input.json" > "$output/proof-input.json"
           # shifu-entry-contract: allow exact pinned Buildchain Integration Proof creation in CI
-          node "$runtime/bin/buildchain.mjs" dev proof \
-            --operation integration-create \
-            --input "$output/proof-input.json" \
-            --output "$output/proof-receipt.json"
-          jq -n \
-            --arg action record-integration-proof \
-            --arg revision "$(jq -r '.revision' "$output/view.json")" \
-            --arg controller "kungfu-affected-native:$GITHUB_RUN_ID" \
-            --arg now "$(date -u +%Y-%m-%dT%H:%M:%S.000Z)" \
-            --arg warrant "$(jq -r '.activeWarrant.warrantId' "$output/view.json")" \
-            --arg fence "$(jq -r '.activeWarrant.fencingToken' "$output/view.json")" \
-            --slurpfile proof "$output/proof-receipt.json" \
-            --slurpfile input "$output/input.json" \
-            '{action:$action, expectedOldRevision:$revision,
-              controllerId:$controller, now:$now, warrantId:$warrant,
-              fencingToken:$fence, integrationProof:$proof[0].result,
-              providerReceipt:$input[0].providerReceipt}' \
-            > "$output/record-command.json"
-          # shifu-entry-contract: allow fenced Integration Proof state-ref CAS in CI
-          node "$runtime/bin/buildchain.mjs" dev warrant \
+          node "$runtime/bin/buildchain.mjs" dev proof integration \
             --repository "$GITHUB_REPOSITORY" \
-            --state-ref "$state_ref" \
-            --command "$output/record-command.json" \
-            --output "$output/record-result.json"
+            --branch "$protected_base" \
+            --source-proof-root "$(jq -er '.proofInput.sourceProofRoot' "$output/input.json")" \
+            --warrant-result "$output/warrant-result.json" \
+            --current-base "$(jq -er '.proofInput.currentBase' "$output/input.json")" \
+            --replay-tree "$(jq -er '.proofInput.replayTree' "$output/input.json")" \
+            --merge-group-head "$(jq -er '.proofInput.mergeGroupHead' "$output/input.json")" \
+            --merge-group-tree "$(jq -er '.proofInput.mergeGroupTree' "$output/input.json")" \
+            --required-context-roots-json "$(jq -c '.proofInput.requiredContextRoots' "$output/input.json")" \
+            --verified-at "$(jq -er '.proofInput.verifiedAt' "$output/input.json")" \
+            --output "$output/proof.json"
       - name: Upload exact Integration Delivery Proof
         if: >-
           ${{

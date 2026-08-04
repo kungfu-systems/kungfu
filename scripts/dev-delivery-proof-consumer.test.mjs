@@ -33,12 +33,13 @@ const ROOT_A = `sha256:${'a'.repeat(64)}`;
 const ROOT_B = `sha256:${'b'.repeat(64)}`;
 const ROOT_C = `sha256:${'c'.repeat(64)}`;
 const WARRANT = {
-  warrantId: ROOT_A,
+  schema: 'kungfu.buildchain.dev-delivery-warrant/v1',
+  candidateId: ROOT_C,
   fencingToken: ROOT_B,
   generation: 7,
-  submissionId: ROOT_C,
+  pullRequestNumber: 42,
+  sourceHead: SOURCE,
   issuedAt: '2026-08-04T02:00:00.000Z',
-  heartbeatAt: '2026-08-04T02:00:00.000Z',
   expiresAt: '2026-08-04T03:00:00.000Z',
 };
 const TOOLCHAIN = {
@@ -146,29 +147,23 @@ function sourceFixture() {
 
 function queueView(sourceProofRoot, overrides = {}) {
   return {
-    schema: 'kungfu-buildchain-dev-delivery-warrant-view/v1',
-    repository: 'kungfu-systems/kungfu',
-    protectedBase: 'dev/v4/v4.0',
-    revision: ROOT_A,
-    observedAt: '2026-08-04T02:10:00.000Z',
-    activeWarrant: WARRANT,
-    candidates: [
-      {
-        submissionId: WARRANT.submissionId,
+    schema: 'kungfu.buildchain.dev-delivery-command-result/v1',
+    observation: {
+      schema: 'kungfu.buildchain.dev-delivery-queue-observation/v1',
+      repository: 'kungfu-systems/kungfu',
+      protectedBase: 'dev/v4/v4.0',
+      stateRoot: ROOT_A,
+      observedAt: '2026-08-04T02:10:00.000Z',
+      activeWarrant: { ...WARRANT, sourceProofRoot },
+      activeCandidate: {
+        candidateId: WARRANT.candidateId,
         pullRequestNumber: 42,
-        sourceHeadSha: SOURCE,
+        sourceHead: SOURCE,
         sourceProofRoot,
-        state: 'merge-queued',
-        proofs: {
-          sourceQualificationRoot: sourceProofRoot,
-          classificationRoot: ROOT_B,
-          replayReceiptRoot: ROOT_C,
-          integrationDeliveryRoot: null,
-        },
-        candidateTreeSha: TREE,
+        status: 'selected',
         ...overrides,
       },
-    ],
+    },
   };
 }
 
@@ -284,8 +279,8 @@ test('queue lease readback binds revision, Warrant, fence, and exact source', ()
     sourceHeadSha: SOURCE,
     now: '2026-08-04T02:30:00.000Z',
   });
-  assert.equal(receipt.queueRevision, ROOT_A);
-  assert.equal(receipt.warrantId, WARRANT.warrantId);
+  assert.equal(receipt.queueStateRoot, ROOT_A);
+  assert.equal(receipt.candidateId, WARRANT.candidateId);
   assert.equal(receipt.fencingToken, WARRANT.fencingToken);
   assert.equal(receipt.generation, WARRANT.generation);
   assert.match(receipt.receiptRoot, /^sha256:[0-9a-f]{64}$/u);
@@ -333,11 +328,12 @@ test('integration input binds merge-group authority and live queue entry', () =>
     queueLeaseReceipt: lease,
     verifiedAt: '2026-08-04T02:30:00.000Z',
   });
-  assert.equal(result.proofInput.integrationTreeSha, MERGE_GROUP);
-  assert.equal(result.proofInput.queueRevision, ROOT_A);
-  assert.equal(result.proofInput.warrant.fencingToken, WARRANT.fencingToken);
+  assert.equal(result.proofInput.mergeGroupHead, MERGE_GROUP);
+  assert.equal(result.proofInput.mergeGroupTree, TREE);
+  assert.equal(result.proofInput.currentBase, BASE);
+  assert.equal(result.proofInput.sourceProofRoot, sourceProofRoot);
   assert.equal(result.providerReceipt.queueEntryId, 'MQE_42');
-  assert.equal(result.proofInput.requiredContexts.length, 2);
+  assert.equal(result.proofInput.requiredContextRoots.length, 3);
   assert.throws(
     () =>
       createIntegrationDeliveryInput({
@@ -366,16 +362,13 @@ test('workflow consumes exact Buildchain Source and Integration Proofs', () => {
   const aggregate = workflow.slice(workflow.indexOf('  affected_native:\n'));
   assert.match(
     aggregate,
-    /Project exact PR qualification into Buildchain Source Proof[\s\S]*affected-native-proof\.mjs source-input[\s\S]*buildchain\.mjs dev proof[\s\S]*--operation source-create/u,
+    /Project exact PR qualification into Buildchain Source Proof[\s\S]*affected-native-proof\.mjs source-input[\s\S]*dev-delivery-warrant-input\.mjs[\s\S]*buildchain\.mjs dev proof source[\s\S]*--source-identity-root/u,
   );
   assert.match(
     aggregate,
-    /Consume Warrant and record exact Integration Delivery Proof[\s\S]*affected-native-proof\.mjs queue-lease-verify[\s\S]*affected-native-proof\.mjs integration-input[\s\S]*--operation integration-create[\s\S]*record-integration-proof/u,
+    /Consume Warrant and record exact Integration Delivery Proof[\s\S]*dev warrant observe[\s\S]*affected-native-proof\.mjs queue-lease-verify[\s\S]*affected-native-proof\.mjs integration-input[\s\S]*dev proof integration[\s\S]*--warrant-result/u,
   );
-  assert.match(
-    aggregate,
-    /buildchain-state\/dev-delivery\/\$\{protected_base\/\/\\\/\/-\}/u,
-  );
+  assert.match(aggregate, /--branch "\$protected_base"/u);
   assert.match(aggregate, /ref: 3550081196f08f4dd5a195aee484dc1ddaa8bdd5/u);
   assert.match(
     aggregate,

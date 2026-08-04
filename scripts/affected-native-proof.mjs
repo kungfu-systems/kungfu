@@ -41,8 +41,10 @@ export const CACHE_PROMOTION_AUTHORITY_SCHEMA =
   'kungfu.affected-native-cache-promotion-authority/v1';
 export const DEV_DELIVERY_CONSUMER_RECEIPT_SCHEMA =
   'kungfu.dev-delivery-warrant-consumer-receipt/v1';
-export const DEV_DELIVERY_WARRANT_VIEW_SCHEMA =
-  'kungfu-buildchain-dev-delivery-warrant-view/v1';
+export const DEV_DELIVERY_COMMAND_RESULT_SCHEMA =
+  'kungfu.buildchain.dev-delivery-command-result/v1';
+export const DEV_DELIVERY_QUEUE_OBSERVATION_SCHEMA =
+  'kungfu.buildchain.dev-delivery-queue-observation/v1';
 export const GITHUB_ENQUEUE_RECEIPT_SCHEMA =
   'kungfu-buildchain-dev-delivery-github-enqueue/v1';
 const SHA256_ROOT = /^sha256:[0-9a-f]{64}$/u;
@@ -206,28 +208,36 @@ export function createSourceQualificationInput(input = {}) {
   };
 }
 
-function activeWarrantCandidate(view, pullRequestNumber, sourceHeadSha) {
-  if (view?.schema !== DEV_DELIVERY_WARRANT_VIEW_SCHEMA) {
-    throw new Error('Buildchain Warrant view schema mismatch');
+function activeWarrantCandidate(result, pullRequestNumber, sourceHeadSha) {
+  if (result?.schema !== DEV_DELIVERY_COMMAND_RESULT_SCHEMA) {
+    throw new Error('Buildchain Warrant command result schema mismatch');
   }
-  requireRoot(view.revision, 'queue revision');
-  const warrant = view.activeWarrant;
+  const observation = result.observation;
+  if (observation?.schema !== DEV_DELIVERY_QUEUE_OBSERVATION_SCHEMA) {
+    throw new Error('Buildchain Warrant observation schema mismatch');
+  }
+  requireRoot(observation.stateRoot, 'queue state root');
+  const warrant = observation.activeWarrant;
   if (!warrant) throw new Error('active Delivery Warrant is required');
-  for (const field of ['warrantId', 'fencingToken', 'submissionId']) {
+  for (const field of ['candidateId', 'fencingToken'])
     requireRoot(warrant[field], `Warrant ${field}`);
-  }
   requirePositiveInteger(warrant.generation, 'Warrant generation');
-  const candidate = view.candidates?.find(
-    (entry) => entry.submissionId === warrant.submissionId,
-  );
+  const candidate = observation.activeCandidate;
   if (!candidate) throw new Error('active Warrant candidate is missing');
   if (
     candidate.pullRequestNumber !== pullRequestNumber ||
-    candidate.sourceHeadSha !== sourceHeadSha
+    candidate.sourceHead !== sourceHeadSha ||
+    candidate.candidateId !== warrant.candidateId ||
+    warrant.pullRequestNumber !== pullRequestNumber ||
+    warrant.sourceHead !== sourceHeadSha
   ) {
     throw new Error('active Warrant exact source readback mismatch');
   }
-  return { warrant, candidate };
+  requireRoot(candidate.sourceProofRoot, 'candidate Source Proof root');
+  if (candidate.sourceProofRoot !== warrant.sourceProofRoot) {
+    throw new Error('active Warrant Source Proof readback mismatch');
+  }
+  return { observation, warrant, candidate };
 }
 
 export function verifyQueueAdmissionLease(input = {}) {
@@ -236,17 +246,19 @@ export function verifyQueueAdmissionLease(input = {}) {
     'pull request number',
   );
   const sourceHeadSha = requireSha(input.sourceHeadSha, 'source head SHA');
-  const { warrant, candidate } = activeWarrantCandidate(
+  const { observation, warrant, candidate } = activeWarrantCandidate(
     input.view,
     pullRequestNumber,
     sourceHeadSha,
   );
-  if (!['proving', 'waiting', 'merge-queued'].includes(candidate.state)) {
+  if (
+    !['selected', 'proving', 'waiting', 'blocked'].includes(candidate.status)
+  ) {
     throw new Error(
-      `active Warrant candidate is not delivery-ready: ${candidate.state}`,
+      `active Warrant candidate is not delivery-ready: ${candidate.status}`,
     );
   }
-  const observedAt = new Date(input.now || input.view.observedAt).getTime();
+  const observedAt = new Date(input.now || observation.observedAt).getTime();
   if (
     !Number.isFinite(observedAt) ||
     observedAt >= new Date(warrant.expiresAt).getTime()
@@ -256,29 +268,28 @@ export function verifyQueueAdmissionLease(input = {}) {
   const body = {
     schema: DEV_DELIVERY_CONSUMER_RECEIPT_SCHEMA,
     operation: 'queue-lease-verify',
-    repository: requireRepository(input.view.repository, 'repository'),
-    protectedBase: requireDevBase(input.view.protectedBase),
-    queueRevision: input.view.revision,
+    repository: requireRepository(observation.repository, 'repository'),
+    protectedBase: requireDevBase(observation.protectedBase),
+    queueStateRoot: observation.stateRoot,
     pullRequestNumber,
     sourceHeadSha,
-    submissionId: warrant.submissionId,
-    warrantId: warrant.warrantId,
+    candidateId: warrant.candidateId,
+    sourceProofRoot: candidate.sourceProofRoot,
     fencingToken: warrant.fencingToken,
     generation: warrant.generation,
-    candidateState: candidate.state,
+    candidateState: candidate.status,
     observedAt: new Date(observedAt).toISOString(),
   };
   return { ...body, receiptRoot: digest(body) };
 }
 
-function createProviderReceipt(view, candidate, warrant, queueEntry) {
+function createProviderReceipt(observation, candidate, warrant, queueEntry) {
   const body = {
     schema: GITHUB_ENQUEUE_RECEIPT_SCHEMA,
-    repository: requireRepository(view.repository, 'repository'),
-    protectedBase: requireDevBase(view.protectedBase),
-    submissionId: warrant.submissionId,
-    sourceHeadSha: candidate.sourceHeadSha,
-    warrantId: warrant.warrantId,
+    repository: requireRepository(observation.repository, 'repository'),
+    protectedBase: requireDevBase(observation.protectedBase),
+    candidateId: warrant.candidateId,
+    sourceHeadSha: candidate.sourceHead,
     fencingToken: warrant.fencingToken,
     generation: warrant.generation,
     expiresAt: requireText(warrant.expiresAt, 'Warrant expiry'),
@@ -286,7 +297,7 @@ function createProviderReceipt(view, candidate, warrant, queueEntry) {
     queueEntryState: requireText(queueEntry?.state, 'merge queue entry state'),
     recoveredAfterControllerRestart:
       queueEntry?.recoveredAfterControllerRestart === true,
-    queueRevision: requireRoot(view.revision, 'queue revision'),
+    queueStateRoot: requireRoot(observation.stateRoot, 'queue state root'),
   };
   return { ...body, receiptRoot: digest(body) };
 }
@@ -297,25 +308,11 @@ export function createIntegrationDeliveryInput(input = {}) {
     input.pullRequestNumber,
     'pull request number',
   );
-  const { warrant, candidate } = activeWarrantCandidate(
+  const { observation, warrant, candidate } = activeWarrantCandidate(
     input.view,
     pullRequestNumber,
     attempt.source.pullRequestHead,
   );
-  if (candidate.state !== 'merge-queued') {
-    throw new Error(
-      'Integration Proof requires a merge-queued Warrant candidate',
-    );
-  }
-  if (
-    candidate.candidateTreeSha !== attempt.source.replayedTree ||
-    candidate.proofs?.sourceQualificationRoot !== candidate.sourceProofRoot
-  ) {
-    throw new Error('Warrant replay or Source Proof readback mismatch');
-  }
-  for (const field of ['classificationRoot', 'replayReceiptRoot']) {
-    requireRoot(candidate.proofs?.[field], `candidate ${field}`);
-  }
   const integrationHead = requireSha(
     attempt.source.mergeGroupHead,
     'merge-group integration head',
@@ -323,12 +320,12 @@ export function createIntegrationDeliveryInput(input = {}) {
   const queueEntry = input.queueEntry || {};
   if (
     Number(queueEntry.pullRequestNumber) !== pullRequestNumber ||
-    queueEntry.pullRequestHeadSha !== candidate.sourceHeadSha
+    queueEntry.pullRequestHeadSha !== candidate.sourceHead
   ) {
     throw new Error('GitHub merge queue exact-head readback mismatch');
   }
   const providerReceipt = createProviderReceipt(
-    input.view,
+    observation,
     candidate,
     warrant,
     queueEntry,
@@ -336,39 +333,24 @@ export function createIntegrationDeliveryInput(input = {}) {
   return {
     providerReceipt,
     proofInput: {
-      repository: input.view.repository,
-      protectedBase: input.view.protectedBase,
+      repository: observation.repository,
+      protectedBase: observation.protectedBase,
       sourceProofRoot: candidate.sourceProofRoot,
-      replayReceiptRoot: candidate.proofs.replayReceiptRoot,
-      classificationRoot: candidate.proofs.classificationRoot,
-      integrationTreeSha: integrationHead,
-      protectedBaseSha: requireSha(
-        attempt.source.devHead,
-        'protected base SHA',
+      currentBase: requireSha(attempt.source.devHead, 'protected base SHA'),
+      replayTree: requireSha(attempt.source.replayedTree, 'replay tree SHA'),
+      mergeGroupHead: integrationHead,
+      mergeGroupTree: requireSha(
+        attempt.source.replayedTree,
+        'merge-group tree SHA',
       ),
-      warrant,
-      queueRevision: input.view.revision,
-      providerReceipt,
-      requiredContexts: [
-        {
-          name: 'affected-native / linux',
-          conclusion: 'success',
-          headSha: integrationHead,
-          evidenceRoot: requireRoot(
-            attempt.attemptRoot,
-            'delivery attempt root',
-          ),
-        },
-        {
-          name: 'Queue admission lease',
-          conclusion: 'success',
-          headSha: integrationHead,
-          evidenceRoot: requireRoot(
-            input.queueLeaseReceipt?.receiptRoot,
-            'queue lease receipt root',
-          ),
-        },
-      ],
+      requiredContextRoots: sortedUnique([
+        requireRoot(attempt.attemptRoot, 'delivery attempt root'),
+        requireRoot(
+          input.queueLeaseReceipt?.receiptRoot,
+          'queue lease receipt root',
+        ),
+        providerReceipt.receiptRoot,
+      ]),
       verifiedAt: requireText(
         input.verifiedAt,
         'integration verification time',
