@@ -997,6 +997,40 @@ export function copyTree(source, target, options = {}) {
   return true;
 }
 
+export function stageNodePtyForCli(
+  source,
+  target,
+  platform = process.platform,
+  architecture = process.arch,
+) {
+  copyTree(source, target);
+  if (platform === 'linux') {
+    const nativeDirectory = path.join('build', 'Release');
+    const targetNativeDirectory = path.join(target, nativeDirectory);
+    fs.mkdirSync(targetNativeDirectory, { recursive: true });
+    for (const name of ['pty.node', 'spawn-helper']) {
+      const input = path.join(source, nativeDirectory, name);
+      if (!fs.existsSync(input) || !fs.lstatSync(input).isFile()) {
+        throw new Error(
+          `required Linux node-pty runtime not found: ${rel(input)}`,
+        );
+      }
+      fs.copyFileSync(input, path.join(targetNativeDirectory, name));
+    }
+    fs.chmodSync(path.join(targetNativeDirectory, 'spawn-helper'), 0o755);
+  } else if (platform === 'darwin') {
+    fs.chmodSync(
+      path.join(
+        target,
+        'prebuilds',
+        `${platform}-${architecture}`,
+        'spawn-helper',
+      ),
+      0o755,
+    );
+  }
+}
+
 function bundleSdkForCli(stageRoot, esbuildRuntime) {
   const esbuild = require(
     require.resolve('esbuild', {
@@ -1159,12 +1193,26 @@ export function writeAuditableDemoBinaryMetadata(
   const binary = path.join(stageRoot, layout.launcherName);
   const runtime = path.join(stageRoot, layout.runtimeEntrypoint);
   const python = path.join(stageRoot, layout.pythonEntrypoint);
-  [binary, runtime, python].forEach(symlinks.materializeRegularFile);
+  const executableFiles = [binary, runtime, python];
+  if (platform.startsWith('linux-')) {
+    executableFiles.push(
+      path.join(
+        stageRoot,
+        'tui',
+        'node_modules',
+        'node-pty',
+        'build',
+        'Release',
+        'spawn-helper',
+      ),
+    );
+  }
+  executableFiles.forEach(symlinks.materializeRegularFile);
   const metadata = {
     contract: 'kungfu.declarative-demo-binary/v1',
     platformId: platform,
     sha256: sha256File(binary),
-    executableFiles: [binary, runtime, python].map((file) => ({
+    executableFiles: executableFiles.map((file) => ({
       path: path.relative(artifactRoot, file).split(path.sep).join('/'),
       sha256: sha256File(file).slice('sha256:'.length),
     })),
@@ -1756,26 +1804,12 @@ function buildCliProduct(esbuildRuntime) {
       copyTree(CORE_DIST, path.join(stageRoot, layout.runtimeDirectory));
       copyTree(ASSEMBLED_EXTENSIONS, path.join(stageRoot, 'extensions'));
       copyTree(path.join(TUI_DIR, 'dist'), path.join(stageRoot, 'tui'));
-      copyTree(
+      stageNodePtyForCli(
         fs.realpathSync(
           path.join(AGENT_SESSION_DIR, 'node_modules', 'node-pty'),
         ),
         path.join(stageRoot, 'tui', 'node_modules', 'node-pty'),
       );
-      if (process.platform === 'darwin') {
-        fs.chmodSync(
-          path.join(
-            stageRoot,
-            'tui',
-            'node_modules',
-            'node-pty',
-            'prebuilds',
-            `${process.platform}-${process.arch}`,
-            'spawn-helper',
-          ),
-          0o755,
-        );
-      }
       bundleSdkForCli(stageRoot, esbuildRuntime);
       const bundledUpgradeManifest = buildCliUpgradeManifest({
         stageRoot,
