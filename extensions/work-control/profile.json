@@ -93,7 +93,7 @@
   "work": {
     "conformance": {
       "path": "qualification/work-profile-conformance.json",
-      "sha256": "c80d43bc4ca7ae542110388e7759896dc52b16e470a008ffc08df51c389cbd94"
+      "sha256": "62484918f899cb169316e9b4b5902f52ba3acdc3c4ccbf0eb7aa627251ca0f08"
     }
   },
   "experience": {
