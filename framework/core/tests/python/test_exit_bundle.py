@@ -877,6 +877,8 @@ def test_dogfood_profile_facts_roundtrip_through_native_exit_members(tmp_path):
                 "platform": ["source"],
             },
             "privacy": "internal",
+            "runtimeSurface": "source-checkout",
+            "runtimeReceiptRoot": f"sha256:{'c' * 64}",
             "actor": "test-agent",
             "observedAt": "2026-08-01T00:00:00Z",
             "impact": "normal",

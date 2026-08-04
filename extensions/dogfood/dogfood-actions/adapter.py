@@ -51,6 +51,8 @@ def _action(domain, operation: str, runtime_dir: str, values: Mapping[str, Any])
             evidence_roots=values.get("evidenceRoots") or [],
             dimensions=values.get("dimensions") or {},
             privacy=str(values.get("privacy") or "internal"),
+            runtime_surface=str(values.get("runtimeSurface") or ""),
+            runtime_receipt_root=str(values.get("runtimeReceiptRoot") or ""),
             actor=str(values.get("actor") or ""),
             observed_at=str(values.get("observedAt") or ""),
             impact=str(values.get("impact") or "medium"),
