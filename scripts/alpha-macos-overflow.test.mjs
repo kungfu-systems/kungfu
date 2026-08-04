@@ -471,6 +471,19 @@ test('workflow contract keeps candidates exact-source, independent, and publish-
     workflow,
     /checkout-cache-mode: \$\{\{ fromJSON\(inputs\.macos-overflow-request-json \|\| '\{\}'\)\.mode == 'self-hosted' && 'auto' \|\| \(inputs\.platforms-json && 'auto' \|\| 'off'\) \}\}/u,
   );
+  for (const input of [
+    'cargo-registry-index',
+    'checkout-cache-mirror-url-template',
+    'checkout-cache-reference-repository-template',
+  ]) {
+    assert.match(
+      workflow,
+      new RegExp(
+        `${input}: \\$\\{\\{ \\(fromJSON\\(inputs\\.macos-overflow-request-json \\|\\| '\\{\\}'\\)\\.mode == 'self-hosted' \\|\\| inputs\\.platforms-json\\) && vars\\.`,
+        'u',
+      ),
+    );
+  }
   assert.match(workflow, /self-hosted-offline-fallback: false/u);
   for (const runner of [
     String.raw`runner":"[\"ubuntu-24.04\"]"`,
