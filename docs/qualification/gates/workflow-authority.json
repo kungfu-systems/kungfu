@@ -611,17 +611,17 @@
           "authority": "diagnostic",
           "publication": "none",
           "receipt": "none",
-          "definitionDigest": "sha256:2f624de37d5d71ac909f04bd17f59e21f48c515ed7d44fd6db9ff4a0eecdc783",
+          "definitionDigest": "sha256:0e79141716826770567c0c9eff59536299d03cc4ff4955c3b3e793d04c443b7f",
           "credentials": {"githubToken":"write","oidc":false,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
           "externalActions": [],
-          "steps": [{"index":1,"label":"name:Sync tracking issue with patrol result","authority":"diagnostic-write","definitionDigest":"sha256:f33e4ab9673c51d1a245249276274a2af1f662756bcc213c502405a136cf9a76"}]
+          "steps": [{"index":1,"label":"name:Sync tracking issue with patrol result","authority":"diagnostic-write","definitionDigest":"sha256:b012b8f7bf42066a11017bc08f7e341aa9b21ec09641ddc04edfbd49cd68efbb"}]
         },
         {
           "id": "verify",
           "authority": "qualification",
           "publication": "none",
           "receipt": "qualifying",
-          "definitionDigest": "sha256:194cbfe3c7186b5d57cc595ba9f491fbb742eec49d2bc1e7b0a669f06374df8b",
+          "definitionDigest": "sha256:cb68df807c17306aa4d51cd9cde0d5a3a59e40bbb588a927aec742463c784d96",
           "credentials": {"githubToken":"write","oidc":true,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
           "externalActions": ["kungfu-systems/buildchain/.github/workflows/.gate-profile.yml@825f596fe4a5ed8a4b2bb4f7c5a1b44cb9a075a3"],
           "steps": []

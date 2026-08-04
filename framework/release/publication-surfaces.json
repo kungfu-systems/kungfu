@@ -220,7 +220,7 @@
             "product-alpha",
             "product-stable"
           ],
-          "sourceRoot": "sha256:093b14145afce7081c12b1042a24649557f9eb10fdab2d1aed939be36860c3b6"
+          "sourceRoot": "sha256:2fbcd9972d32f3bbd14b6ac8f6ccd07923c1481ceb5893332172e771b5c1ee5b"
         },
         {
           "path": ".github/workflows/docs-check.yml",
@@ -860,5 +860,5 @@
       }
     }
   ],
-  "registryRoot": "sha256:ae5eed56d4232e2ecea3be764e8b4d7f7cfa2d722308407da5e394f8452a0c80"
+  "registryRoot": "sha256:804ed33309780c1ca52dd8b184e5cdc296a1e028d1fa6a9a9dc5526b3915d688"
 }
