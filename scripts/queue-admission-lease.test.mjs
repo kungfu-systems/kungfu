@@ -28,7 +28,10 @@ const CONTRACT = JSON.parse(
 test('queue admission lease has distinct PR-head and merge-group authorities', () => {
   assert.equal(CONTRACT.schema, 'kungfu.dev-queue-admission/v1');
   assert.equal(CONTRACT.requiredContext, 'Queue admission lease');
-  assert.equal(CONTRACT.authority.pullRequestHead, 'atlas-serialized-wrapper');
+  assert.equal(
+    CONTRACT.authority.pullRequestHead,
+    'buildchain-dev-delivery-warrant-state-ref',
+  );
   assert.equal(
     CONTRACT.authority.mergeGroup,
     '.github/workflows/queue-admission-lease.yml',
@@ -36,6 +39,14 @@ test('queue admission lease has distinct PR-head and merge-group authorities', (
   assert.equal(CONTRACT.admission.queueMustBeEmpty, true);
   assert.equal(CONTRACT.admission.requiredPosition, 1);
   assert.equal(CONTRACT.admission.freshProjectCutReplay, true);
+  assert.equal(CONTRACT.admission.exactQueueRevisionRequired, true);
+  assert.equal(CONTRACT.admission.exactWarrantFenceRequired, true);
+  assert.equal(CONTRACT.admission.sourceQualificationProofRequired, true);
+  assert.equal(CONTRACT.admission.integrationDeliveryProofRequired, true);
+  assert.equal(
+    CONTRACT.authority.queueAndWarrant,
+    'kungfu-systems/buildchain@c0753d1732650e7e0727bd31059c2ccb640c1a6b',
+  );
   assert.equal(
     CONTRACT.revocation.dequeue,
     'failure-status-on-exact-pr-head-for-non-merged-removal',
@@ -73,7 +84,7 @@ test('queue admission lease has distinct PR-head and merge-group authorities', (
   assert.equal(CONTRACT.rulesetActivation.expectedSource, 'any');
 });
 
-test('merge-group continuation cannot satisfy the PR-head lease', () => {
+test('merge-group continuation consumes the exact durable Warrant lease', () => {
   const workflow = fs.readFileSync(
     path.join(ROOT, CONTRACT.authority.mergeGroup),
     'utf8',
@@ -81,13 +92,21 @@ test('merge-group continuation cannot satisfy the PR-head lease', () => {
   assert.match(workflow, /^name: Queue admission lease$/mu);
   assert.match(workflow, /^\s{2}merge_group:$/mu);
   assert.doesNotMatch(workflow, /^\s{2}pull_request(?:_target)?:$/mu);
-  assert.match(workflow, /^permissions: \{\}$/mu);
+  assert.match(workflow, /^\s{2}contents: read$/mu);
+  assert.match(workflow, /^\s{2}pull-requests: read$/mu);
   assert.match(workflow, /^\s{4}name: Queue admission lease$/mu);
   assert.match(
     workflow,
     /MERGE_GROUP_HEAD_SHA: \$\{\{ github\.event\.merge_group\.head_sha \}\}/u,
   );
   assert.match(workflow, /MERGE_GROUP_HEAD_SHA" != "\$GITHUB_SHA/u);
+  assert.match(
+    workflow,
+    /buildchain-state\/dev-delivery\/\$\{protected_base\/\/\\\/\/-\}/u,
+  );
+  assert.match(workflow, /buildchain\.mjs" dev warrant/u);
+  assert.match(workflow, /affected-native-proof\.mjs queue-lease-verify/u);
+  assert.match(workflow, /c0753d1732650e7e0727bd31059c2ccb640c1a6b/u);
 });
 
 test('trusted dequeue controller revokes the same exact-head context', () => {

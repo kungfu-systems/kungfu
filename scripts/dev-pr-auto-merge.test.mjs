@@ -63,7 +63,7 @@ test('Dev Agent admission binds every targeted run to one exact PR head', () => 
   assert.match(workflow, /diagnostic-context: Buildchain delivery intent/u);
   assert.match(
     workflow,
-    /delivery-warrant-mode: \$\{\{ github\.event_name == 'workflow_run' && 'required' \|\| 'off' \}\}/u,
+    /delivery-warrant-mode:.*workflow_run.*workflow_dispatch.*inputs\.dry-run == false.*required/u,
   );
   assert.doesNotMatch(workflow, /delivery-warrant-mode:[^\n]*shadow/u);
 });
