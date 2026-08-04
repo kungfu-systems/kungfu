@@ -179,3 +179,16 @@ test('terminal consumer executes only protected event and Buildchain authority',
   assert.doesNotMatch(workflow, /github\.event\.pull_request\.head\.ref/u);
   assert.doesNotMatch(workflow, /checkout[^\n]*pull_request\.head/u);
 });
+
+test('protected caller makes the Warrant mandatory for exact delivery', () => {
+  const workflow = fs.readFileSync(
+    new URL('../.github/workflows/dev-pr-auto-merge.yml', import.meta.url),
+    'utf8',
+  );
+  assert.match(workflow, /delivery-warrant-mode:.*workflow_run.*required/u);
+  assert.match(
+    workflow,
+    /workflow_dispatch.*inputs\.dry-run == false.*required/u,
+  );
+  assert.doesNotMatch(workflow, /delivery-warrant-mode:.*shadow/u);
+});
