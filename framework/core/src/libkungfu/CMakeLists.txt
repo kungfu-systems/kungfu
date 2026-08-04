@@ -14,7 +14,8 @@ configure_file(
   @ONLY
 )
 
-# Embed the exact KFX contract as the sole Profile schema owner.
+# Embed the exact KFX contracts and invalidate restored configurations when either owner changes.
+set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${PROJECT_SOURCE_DIR}/../../../kfx/kungfu-kfx.contract.json" "${PROJECT_SOURCE_DIR}/../../../kfx/kungfu-kfx-domain-profile.contract.json")
 file(READ "${PROJECT_SOURCE_DIR}/../../../kfx/kungfu-kfx.contract.json" KFX_CONTRACT_JSON)
 file(READ "${PROJECT_SOURCE_DIR}/../../../kfx/kungfu-kfx-domain-profile.contract.json" KFX_DOMAIN_PROFILE_JSON)
 # MSVC limits one string literal to 65,535 bytes. Preserve the exact contract
@@ -40,7 +41,6 @@ configure_file(
   "${KUNGFU_GENERATED_INCLUDE_DIR}/kungfu/runtime/profile/profile_source_contract.h"
   @ONLY
 )
-
 # KF-ADR-019f86da-4f90-7b3f-9ef3-84f5a878f302 assessment jobs use an independent FlatBuffers authority while
 # sharing the ActionEnvelope and Episode substrates with KF-ADR-019f86da-4f90-7d81-90a0-d144fc27fe03.
 file(READ "${PROJECT_SOURCE_DIR}/schemas/assessment_event.fbs" ASSESSMENT_EVENT_FBS)
