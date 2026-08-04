@@ -489,13 +489,23 @@
       "definitionDigest": "sha256:c01b03edd1c7dfc6581857a23c0ea347bcaf098d9cc1e931c11c881fc2ee9378",
       "jobs": [
         {
+          "id": "cancel-queued",
+          "authority": "qualification",
+          "publication": "none",
+          "receipt": "diagnostic",
+          "definitionDigest": "sha256:a94b1d3f008aa12f441c78f31efdb4a456550a19a938c0124f56ac730a2b9531",
+          "credentials": {"githubToken":"write","oidc":false,"repositorySecrets":["KUNGFU_GITHUB_TOKEN"],"inheritedSecrets":false,"environment":null},
+          "externalActions": ["kungfu-systems/buildchain/.github/workflows/dev-delivery-warrant-cancel.yml@c8b36d8e16f7c191047b394a43c25e59ee5b00a1"],
+          "steps": []
+        },
+        {
           "id": "close",
           "authority": "qualification",
           "publication": "none",
           "receipt": "diagnostic",
-          "definitionDigest": "sha256:59f07d3b86dc7bfa649d3bb4a9b560b8f0045df15d73cf0a928539e5184f0cb3",
+          "definitionDigest": "sha256:8f94c50efc0403cf0e2dd7e4fd58489303ce92f2c16206730fb063c8ffa6b5af",
           "credentials": {"githubToken":"write","oidc":false,"repositorySecrets":["KUNGFU_GITHUB_TOKEN"],"inheritedSecrets":false,"environment":null},
-          "externalActions": ["kungfu-systems/buildchain/.github/workflows/dev-delivery-warrant-close.yml@4f491a61dd2a4ba127ddbb8d67c6b51a903b1567"],
+          "externalActions": ["kungfu-systems/buildchain/.github/workflows/dev-delivery-warrant-close.yml@c8b36d8e16f7c191047b394a43c25e59ee5b00a1"],
           "steps": []
         },
         {
@@ -503,10 +513,10 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "diagnostic",
-          "definitionDigest": "sha256:64a9fa83f1b60371cad9782b6c7f0c6635c7c3844d85c8d2af025325f7cbae31",
+          "definitionDigest": "sha256:30e33b4b048112be5fa02794f428bfe3ad6b561666895f6fd8d2b863212ecb0a",
           "credentials": {"githubToken":"write","oidc":false,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
           "externalActions": ["actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0"],
-          "steps": [{"index":1,"label":"name:Check out protected Buildchain runtime","definitionDigest":"sha256:4f7c38c5216964aa2011dab24d7171471cabd56fddfc3d0c5b0ed9bd804d51b6"},{"index":2,"label":"id:terminal","definitionDigest":"sha256:27d33234108145000881cac9974391105c78a69896db4e6260bb0fbeb7e1f7f7"}]
+          "steps": [{"index":1,"label":"name:Check out protected Buildchain runtime","definitionDigest":"sha256:92f89811b9317f223d12a30cf905a95309f37363d606014f480d522339834ce9"},{"index":2,"label":"id:terminal","definitionDigest":"sha256:ae748475089b545118ef1108571a26228d1f4a3017d559e4ed61f6499c85ebad"}]
         }
       ]
     },
