@@ -121,8 +121,8 @@ function verifyNativeProof(descriptor, proof, plan, sourceHeadSha) {
   }
   if (
     proof.producer?.event !== 'pull_request' ||
-    proof.producer?.checkoutSha !== sourceHeadSha ||
-    plan.head !== sourceHeadSha ||
+    proof.producer?.triggerHeadSha !== sourceHeadSha ||
+    plan.head !== proof.producer?.checkoutSha ||
     proof.verdict?.status !== 'passed'
   ) {
     throw new Error(

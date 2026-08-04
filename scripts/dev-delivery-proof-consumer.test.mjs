@@ -28,6 +28,7 @@ const BASE = '1'.repeat(40);
 const SOURCE = '2'.repeat(40);
 const TREE = '3'.repeat(40);
 const MERGE_GROUP = '4'.repeat(40);
+const PULL_REQUEST_CHECKOUT = '5'.repeat(40);
 const ROOT_A = `sha256:${'a'.repeat(64)}`;
 const ROOT_B = `sha256:${'b'.repeat(64)}`;
 const ROOT_C = `sha256:${'c'.repeat(64)}`;
@@ -113,7 +114,7 @@ function sourceFixture() {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'delivery-consumer-'));
   const input = path.join(root, 'input');
   fs.mkdirSync(input, { recursive: true });
-  const value = plan();
+  const value = plan(PULL_REQUEST_CHECKOUT);
   fs.writeFileSync(
     path.join(input, 'receipt.json'),
     `${JSON.stringify(partitionReceipt(value), null, 2)}\n`,
@@ -137,7 +138,7 @@ function sourceFixture() {
     event: 'pull_request',
     workflowPath: '.github/workflows/affected-native-pr.yml',
     triggerHeadSha: SOURCE,
-    checkoutSha: SOURCE,
+    checkoutSha: PULL_REQUEST_CHECKOUT,
     createdAt: '2026-08-04T02:00:00.000Z',
   });
   return { root, value, descriptor, proof };
