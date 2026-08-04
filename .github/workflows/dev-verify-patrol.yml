@@ -72,8 +72,11 @@ jobs:
       checkout-cache-mode: off
       checkout-cache-fallback: github
       rust-toolchain: "1.96.0"
-      rustup-dist-server: https://rsproxy.cn
-      rustup-update-root: https://rsproxy.cn/rustup
+      # GitHub-hosted runners use the public Rust distribution plane directly.
+      # The China mirror remains appropriate for office runners, but routing a
+      # US-hosted macOS runner back through it caused setup timeouts.
+      rustup-dist-server: https://static.rust-lang.org
+      rustup-update-root: https://static.rust-lang.org/rustup
       gate-profile: dev-patrol
       runner-preset: custom
       platforms-json: >-
