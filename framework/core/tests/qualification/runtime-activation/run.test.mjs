@@ -195,18 +195,25 @@ test('runtime activation uses a bounded producer and consumer DAG without hiding
   );
   assert.ok(result.every((suite) => suite.status !== 'planned'));
   const firstConsumer = Math.min(
-    ...['product-runtime-smoke', 'product-verification', 'product-catalog'].map(
-      (id) => events.indexOf(`start:${id}`),
-    ),
+    ...[
+      'profile-action-admission',
+      'product-runtime-smoke',
+      'product-verification',
+      'product-catalog',
+    ].map((id) => events.indexOf(`start:${id}`)),
   );
   for (const id of [
     'activation-core',
     'product-distribution',
-    'profile-action-admission',
     'runtime-surface-parity',
     'activation-performance',
   ])
     assert.ok(events.indexOf(`end:${id}`) < firstConsumer, id);
+  assert.ok(
+    events.indexOf('end:product-distribution') <
+      events.indexOf('start:profile-action-admission'),
+    'profile-action-admission must not import pykungfu before dist completes',
+  );
 });
 
 test('source qualification uv runs preserve the exact tracked lockfile', () => {

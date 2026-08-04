@@ -21,7 +21,8 @@ const REPORT_SCHEMA_PATH = path.join(
 );
 const LAUNCHER = process.platform === 'win32' ? 'shifu.cmd' : './shifu';
 const MAX_SUITE_LOG_BYTES = 128 * 1024 * 1024;
-const PRODUCT_CONSUMER_SUITES = new Set([
+const DISTRIBUTION_DEPENDENT_SUITES = new Set([
+  'profile-action-admission',
   'product-runtime-smoke',
   'product-verification',
   'product-catalog',
@@ -444,9 +445,10 @@ export async function runSuite(suite, outputDir) {
 }
 
 /**
- * Execute source/runtime producers together, then fan out product consumers
- * after product-distribution has settled. Every required suite runs and the
- * returned order remains the declared contract order.
+ * Execute source/runtime producers together, then fan out every suite that
+ * imports the freshly built distribution after product-distribution has
+ * settled. Every required suite runs and the returned order remains the
+ * declared contract order.
  */
 export async function executeQualificationSuites(
   suites,
@@ -458,10 +460,10 @@ export async function executeQualificationSuites(
     throw new Error('runtime activation maxParallelism must be positive');
   const required = suites.filter((suite) => suite.required);
   const producers = required.filter(
-    (suite) => !PRODUCT_CONSUMER_SUITES.has(suite.id),
+    (suite) => !DISTRIBUTION_DEPENDENT_SUITES.has(suite.id),
   );
   const consumers = required.filter((suite) =>
-    PRODUCT_CONSUMER_SUITES.has(suite.id),
+    DISTRIBUTION_DEPENDENT_SUITES.has(suite.id),
   );
   const results = new Map();
   for (const group of [producers, consumers]) {

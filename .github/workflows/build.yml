@@ -169,12 +169,12 @@ jobs:
     with:
       buildchain-ref: ${{ inputs.buildchain-ref || '825f596fe4a5ed8a4b2bb4f7c5a1b44cb9a075a3' }}
       runner-preset: custom
-      platforms-json: ${{ fromJSON(inputs.macos-overflow-request-json || '{}').mode == 'self-hosted' && '[{"id":"macos-arm64","name":"macOS ARM64 self-hosted primary","platform":"macos","runner":"[\"self-hosted\",\"macOS\",\"ARM64\",\"kungfu-build-v4-macos-arm64\"]","capabilities":["native-toolchain","node","product-artifacts","rust"]}]' || (fromJSON(inputs.macos-overflow-request-json || '{}').mode == 'github-hosted' && '[{"id":"macos-arm64","name":"macOS ARM64 GitHub-hosted overflow","platform":"macos","runner":"[\"macos-15\"]","capabilities":["native-toolchain","node","product-artifacts","rust"]}]' || (inputs.platforms-json || '[{"id":"linux-x64","name":"Linux x64","platform":"linux","runner":"[\"self-hosted\",\"Linux\",\"X64\",\"kungfu-build-v4-linux-x64\"]","capabilities":["node","native-toolchain","product-artifacts","rust"]},{"id":"linux-arm64","name":"Linux ARM64","platform":"linux","runner":"[\"ubuntu-24.04-arm\"]","capabilities":["node","native-toolchain","product-artifacts","rust"]},{"id":"macos-arm64","name":"macOS ARM64","platform":"macos","runner":"[\"self-hosted\",\"macOS\",\"ARM64\",\"kungfu-build-v4-macos-arm64\"]","capabilities":["node","native-toolchain","product-artifacts","rust"]},{"id":"windows-x64","name":"Windows x64","platform":"windows","runner":"[\"self-hosted\",\"Windows\",\"X64\",\"kungfu-build-v4-windows-x64\"]","capabilities":["node","native-toolchain","product-artifacts","rust"]}]')) }}
-      # Normal native builds route each exact-label self-hosted lane to its
-      # GitHub-hosted counterpart only when no matching runner is online.
-      # Explicit macOS overflow candidates retain their declared route because
-      # the queue controller owns their independent candidate identities.
-      self-hosted-offline-fallback: ${{ fromJSON(inputs.macos-overflow-request-json || '{}').mode != 'self-hosted' && fromJSON(inputs.macos-overflow-request-json || '{}').mode != 'github-hosted' }}
+      platforms-json: ${{ fromJSON(inputs.macos-overflow-request-json || '{}').mode == 'self-hosted' && '[{"id":"macos-arm64","name":"macOS ARM64 self-hosted primary","platform":"macos","runner":"[\"self-hosted\",\"macOS\",\"ARM64\",\"kungfu-build-v4-macos-arm64\"]","capabilities":["native-toolchain","node","product-artifacts","rust"]}]' || (fromJSON(inputs.macos-overflow-request-json || '{}').mode == 'github-hosted' && '[{"id":"macos-arm64","name":"macOS ARM64 GitHub-hosted overflow","platform":"macos","runner":"[\"macos-15\"]","capabilities":["native-toolchain","node","product-artifacts","rust"]}]' || (inputs.platforms-json || '[{"id":"linux-x64","name":"Linux x64","platform":"linux","runner":"[\"ubuntu-24.04\"]","capabilities":["node","native-toolchain","product-artifacts","rust"]},{"id":"linux-arm64","name":"Linux ARM64","platform":"linux","runner":"[\"ubuntu-24.04-arm\"]","capabilities":["node","native-toolchain","product-artifacts","rust"]},{"id":"macos-arm64","name":"macOS ARM64","platform":"macos","runner":"[\"macos-15\"]","capabilities":["node","native-toolchain","product-artifacts","rust"]},{"id":"windows-x64","name":"Windows x64","platform":"windows","runner":"[\"windows-2022\"]","capabilities":["node","native-toolchain","product-artifacts","rust"]}]')) }}
+      # Formal Alpha and Release candidates run their credential-free native
+      # build and qualification lanes on fresh GitHub-hosted runners. Detached
+      # signing, notarization, publication, and activation retain their
+      # independent protected authorities below this matrix.
+      self-hosted-offline-fallback: false
       install-command: ${{ fromJSON(inputs.macos-overflow-request-json || '{}').mode == 'self-hosted' && format('node .github/actions/require-alpha-preflight/alpha-macos-overflow.mjs health --route self-hosted --health-mode {0} && node .github/actions/require-alpha-preflight/windows-alpha-sccache.mjs && node scripts/buildchain-install.mjs', fromJSON(inputs.macos-overflow-request-json).healthMode || 'auto') || fromJSON(inputs.macos-overflow-request-json || '{}').mode == 'github-hosted' && 'node .github/actions/require-alpha-preflight/alpha-macos-overflow.mjs health --route github-hosted --health-mode auto && node .github/actions/require-alpha-preflight/windows-alpha-sccache.mjs && node scripts/buildchain-install.mjs' || 'node .github/actions/require-alpha-preflight/windows-alpha-sccache.mjs && node scripts/buildchain-install.mjs' }}
       fail-fast: ${{ github.event_name == 'pull_request' || !inputs.diagnostic-mode }}
       setup-rust: true
@@ -241,7 +241,10 @@ jobs:
       # cannot silently fall back to direct GitHub artifact transfer.
       artifact-transfer-mode: s3-to-github-artifacts
       artifact-retention-days: 14
-      checkout-cache-mode: auto
+      # Fresh hosted formal lanes fetch the exact source directly from GitHub;
+      # they cannot use runner-local or LAN mirrors. Explicit custom or
+      # self-hosted diagnostics retain the cache route they requested.
+      checkout-cache-mode: ${{ fromJSON(inputs.macos-overflow-request-json || '{}').mode == 'self-hosted' && 'auto' || (inputs.platforms-json && 'auto' || 'off') }}
       checkout-cache-mirror-url-template: ${{ vars.BUILDCHAIN_CHECKOUT_CACHE_MIRROR_URL_TEMPLATE }}
       checkout-cache-reference-repository-template: ${{ vars.BUILDCHAIN_CHECKOUT_CACHE_REFERENCE_REPOSITORY_TEMPLATE }}
       checkout-cache-fallback: github
