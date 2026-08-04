@@ -38,7 +38,7 @@ import {
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const SOURCE_SHA = '1'.repeat(40);
-const RUNTIME_SHA = '22338823464024efb0bb72231c29cca9f61d72bb';
+const RUNTIME_SHA = '3d245bba5e21e598a0e88980cf135a73cec41ecc';
 const STABLE_RUNTIME_SHA = '9e904de2c85dbea7c799780ee166510b3336d812';
 const SOURCE_TREE_SHA = 'a'.repeat(40);
 const CONTRACT_DIGEST =
