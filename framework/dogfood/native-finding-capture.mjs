@@ -56,7 +56,30 @@ function inspectSourceCheckout() {
   };
 }
 
-function sourceRuntimeReceipt(
+function verifyRuntimeReceipt(receipt, run, intentPath) {
+  if (!receipt || typeof receipt !== 'object' || Array.isArray(receipt))
+    throw new Error('Dogfood capture requires the full runtimeReceipt object');
+  const receiptPath = `${path.resolve(intentPath)}.runtime-surface-receipt.json`;
+  fs.mkdirSync(path.dirname(receiptPath), { recursive: true });
+  fs.writeFileSync(receiptPath, `${JSON.stringify(receipt, null, 2)}\n`);
+  const result = run(['runtime', 'surface', 'verify', receiptPath, '--json']);
+  const verification = parseJsonOutput(result, 'runtime surface verify');
+  if (
+    result.status !== 0 ||
+    verification.schema !== 'kungfu.runtime-surface-verification/v1' ||
+    verification.ok !== true ||
+    verification.receiptRoot !== receipt.receiptRoot ||
+    verification.operationId !== 'dogfood.capture' ||
+    verification.runtimeSurface !== receipt.runtimeSurface ||
+    verification.selectedProvider !== receipt.selectedProvider
+  )
+    throw new Error(
+      'Dogfood runtime surface receipt verification failed closed',
+    );
+  return verification;
+}
+
+function bindRuntimeReceipt(
   intent,
   run,
   intentPath,
@@ -65,11 +88,24 @@ function sourceRuntimeReceipt(
   if (
     intent.capture?.runtimeSurface &&
     ROOT_PATTERN.test(intent.capture?.runtimeReceiptRoot || '')
-  )
-    return intent;
+  ) {
+    const receipt = intent.runtimeReceipt;
+    const verification = verifyRuntimeReceipt(receipt, run, intentPath);
+    if (
+      receipt.operationId !== 'dogfood.capture' ||
+      receipt.runtimeSurface !== intent.capture.runtimeSurface ||
+      receipt.receiptRoot !== intent.capture.runtimeReceiptRoot
+    )
+      throw new Error(
+        'Dogfood runtime receipt does not bind the declared capture surface',
+      );
+    const enriched = structuredClone(intent);
+    enriched.runtimeReceipt = undefined;
+    return { intent: enriched, receipt, verification };
+  }
   if (process.env.KUNGFU_DOGFOOD_COMMAND)
     throw new Error(
-      'an installed Dogfood command requires an explicit runtimeSurface and runtimeReceiptRoot',
+      'an installed Dogfood command requires a full verified runtimeReceipt',
     );
   const source = inspectSource();
   const buildInfo = source.buildInfo;
@@ -126,9 +162,12 @@ function sourceRuntimeReceipt(
   fs.writeFileSync(requestPath, `${JSON.stringify(request, null, 2)}\n`);
   const result = run(['runtime', 'surface', 'resolve', requestPath, '--json']);
   const receipt = parseJsonOutput(result, 'runtime surface resolve');
+  if (result.status !== 0)
+    throw new Error('source Dogfood runtime surface resolution failed closed');
+  const verification = verifyRuntimeReceipt(receipt, run, intentPath);
   if (
-    result.status !== 0 ||
     receipt.schema !== 'kungfu.runtime-surface-receipt/v1' ||
+    receipt.operationId !== 'dogfood.capture' ||
     receipt.runtimeSurface !== 'source-checkout' ||
     !ROOT_PATTERN.test(receipt.receiptRoot || '')
   )
@@ -136,7 +175,7 @@ function sourceRuntimeReceipt(
   const enriched = structuredClone(intent);
   enriched.capture.runtimeSurface = receipt.runtimeSurface;
   enriched.capture.runtimeReceiptRoot = receipt.receiptRoot;
-  return enriched;
+  return { intent: enriched, receipt, verification };
 }
 
 export function nativeDogfoodCli(args, options = {}) {
@@ -269,12 +308,13 @@ export function captureNativeFinding(
     inspectSource,
   },
 ) {
-  const boundIntent = sourceRuntimeReceipt(
+  const runtimeBinding = bindRuntimeReceipt(
     intent,
     run,
     intentPath,
     inspectSource,
   );
+  const boundIntent = runtimeBinding.intent;
   validateIntent(boundIntent);
   if (!path.isAbsolute(workspaceRoot || ''))
     throw new Error('native Dogfood workspace must be an absolute path');
@@ -324,6 +364,8 @@ export function captureNativeFinding(
       nativeStatus: 'already-present',
       capturePerformed: false,
       issueAdmitted: false,
+      runtimeReceipt: runtimeBinding.receipt,
+      runtimeVerification: runtimeBinding.verification,
     };
   }
   if (
@@ -371,5 +413,7 @@ export function captureNativeFinding(
     nativeStatus: captured.status,
     capturePerformed: captured.status === 'captured',
     issueAdmitted: false,
+    runtimeReceipt: runtimeBinding.receipt,
+    runtimeVerification: runtimeBinding.verification,
   };
 }
