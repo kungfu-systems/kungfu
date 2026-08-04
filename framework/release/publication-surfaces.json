@@ -122,7 +122,7 @@
             "product-stable",
             "product-binaries"
           ],
-          "sourceRoot": "sha256:e080172367184d4f8b08c9a765a63f306b8d4dbf3c2a9d954f801ae00d5d7c5f"
+          "sourceRoot": "sha256:9d57149d2d72d1e0607698b241a7cb5c56b9340af247246489c8fefd3109ac09"
         },
         {
           "path": ".github/workflows/buildchain-validate.yml",
@@ -170,7 +170,7 @@
             "product-alpha",
             "product-binaries"
           ],
-          "sourceRoot": "sha256:eff0224ed508998788b3e945f392e62e9b277c2d1fe128fdee06a8bc1b078ebd"
+          "sourceRoot": "sha256:1d78811bc447238b74c0c507716ae08fdc172bd69975879bd3d7508ecc234b16"
         },
         {
           "path": ".github/workflows/dev-delivery-warrant-terminal.yml",
@@ -220,7 +220,7 @@
             "product-alpha",
             "product-stable"
           ],
-          "sourceRoot": "sha256:fe6b676dcdcab77234d225eb00ca126ae718a00c496b87a3734134c4039b8ecc"
+          "sourceRoot": "sha256:c6035e1a15c7a365a0712344b5dcab4f329da9b4d008a5184945797d60d13915"
         },
         {
           "path": ".github/workflows/docs-check.yml",
@@ -329,7 +329,7 @@
             "product-stable",
             "product-binaries"
           ],
-          "sourceRoot": "sha256:a638373ae7521f5be0310d5f38f9237ad3bb5475e58da6fcd5c17402e4770105"
+          "sourceRoot": "sha256:967cc10670754762d40c8e786519d8f459b3ac4f043a410515b8effe778a7c2d"
         },
         {
           "path": ".github/workflows/release-shifu.yml",
@@ -364,7 +364,7 @@
     "buildchain": {
       "repository": "kungfu-systems/buildchain",
       "owner": "kungfu-systems/buildchain",
-      "sourceRevision": "22338823464024efb0bb72231c29cca9f61d72bb",
+      "sourceRevision": "3d245bba5e21e598a0e88980cf135a73cec41ecc",
       "version": "3.0.5-alpha.6",
       "compatibilityMode": "stable-v3-contract-plus-exact-additive-runtime",
       "stableContractLock": ".buildchain/contract-lock.json",
@@ -860,5 +860,5 @@
       }
     }
   ],
-  "registryRoot": "sha256:acd74ca68f574bed51c5bf1c18ee93a2cc6f419c6d07b34335f0a26dbe494a54"
+  "registryRoot": "sha256:316c408515c85065e6b26a5bd88997a05addfd94425d7e4f0d0d0511a3c453a0"
 }
