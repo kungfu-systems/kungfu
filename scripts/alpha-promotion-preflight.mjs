@@ -159,28 +159,44 @@ export function inspectAuditableDemoFastSentinel({
   }
   const demos = scenarioValue?.demos || [];
   const autoplay = demos.find((demo) => demo?.id === 'agent-work-lab-autoplay');
-  const projectTour = demos.find((demo) => demo?.id === 'project-tour');
+  const projectTourEpisode1 = demos.find(
+    (demo) => demo?.id === 'project-tour-episode-1',
+  );
+  const projectTourEpisode2 = demos.find(
+    (demo) => demo?.id === 'project-tour-episode-2',
+  );
   if (
     scenarioValue?.schema !== 'buildchain.declarative-binary-demo/v1' ||
     scenarioValue?.execution?.durationClass !== 'long-form' ||
     scenarioValue?.execution?.totalTimeoutSeconds !== 180 ||
     scenarioValue?.authority?.grants?.length !== 0 ||
-    demos.length !== 2 ||
+    demos.length !== 3 ||
     JSON.stringify(autoplay?.steps?.[0]?.argv) !==
       JSON.stringify(['agent-work-lab', 'autoplay']) ||
-    JSON.stringify(projectTour?.steps?.[0]?.argv) !==
+    autoplay?.steps?.[0]?.timeoutSeconds !== 90 ||
+    JSON.stringify(projectTourEpisode1?.steps?.[0]?.argv) !==
       JSON.stringify([
         'agent-work-lab',
         'project-tour',
         '--episode',
-        'all',
+        '1',
         '--speed',
-        '4',
+        '1',
       ]) ||
-    projectTour?.steps?.[0]?.timeoutSeconds !== 180
+    projectTourEpisode1?.steps?.[0]?.timeoutSeconds !== 180 ||
+    JSON.stringify(projectTourEpisode2?.steps?.[0]?.argv) !==
+      JSON.stringify([
+        'agent-work-lab',
+        'project-tour',
+        '--episode',
+        '2',
+        '--speed',
+        '1',
+      ]) ||
+    projectTourEpisode2?.steps?.[0]?.timeoutSeconds !== 180
   ) {
     issues.push(
-      'auditable-demo scenario no longer declares the exact bounded two-demo cut',
+      'auditable-demo scenario no longer declares the exact bounded three-demo cut',
     );
   }
   requirePattern(
