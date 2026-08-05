@@ -12,6 +12,7 @@ import {
 } from './cancel-dequeued-merge-group-runs.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const WARRANT_RUNTIME_SHA = 'ed978d70b246fcfdb5e80009d58e1ce4926ad593';
 const CONTRACT = JSON.parse(
   fs.readFileSync(
     path.join(
@@ -42,7 +43,7 @@ test('queue admission lease has distinct PR-head and merge-group authorities', (
   assert.equal(CONTRACT.admission.integrationDeliveryProofRequired, true);
   assert.equal(
     CONTRACT.authority.queueAndWarrant,
-    'kungfu-systems/buildchain@c8b36d8e16f7c191047b394a43c25e59ee5b00a1',
+    `kungfu-systems/buildchain@${WARRANT_RUNTIME_SHA}`,
   );
   assert.equal(
     CONTRACT.authority.stateRefPattern,
@@ -108,11 +109,27 @@ test('merge-group continuation consumes the exact durable Warrant lease', () => 
   assert.match(workflow, /buildchain\.mjs" dev warrant observe/u);
   assert.match(workflow, /--branch "\$protected_base"/u);
   assert.match(workflow, /affected-native-proof\.mjs queue-lease-verify/u);
-  assert.match(workflow, /c8b36d8e16f7c191047b394a43c25e59ee5b00a1/u);
+  assert.match(workflow, new RegExp(WARRANT_RUNTIME_SHA, 'u'));
   assert.match(
     workflow,
     /name: Install pinned Buildchain Warrant runtime[\s\S]*working-directory: \.buildchain\/dev-delivery-runtime[\s\S]*corepack pnpm install --frozen-lockfile --ignore-scripts[\s\S]*name: Consume the exact Buildchain Warrant lease/u,
   );
+});
+
+test('all protected delivery Warrant consumers share one exact runtime', () => {
+  const workflowPaths = [
+    '.github/workflows/dev-pr-auto-merge.yml',
+    '.github/workflows/dev-delivery-warrant-terminal.yml',
+    CONTRACT.authority.mergeGroup,
+  ];
+  for (const workflowPath of workflowPaths) {
+    const workflow = fs.readFileSync(path.join(ROOT, workflowPath), 'utf8');
+    assert.match(
+      workflow,
+      new RegExp(WARRANT_RUNTIME_SHA, 'u'),
+      `${workflowPath} must consume Buildchain ${WARRANT_RUNTIME_SHA}`,
+    );
+  }
 });
 
 test('trusted dequeue controller revokes the same exact-head context', () => {
