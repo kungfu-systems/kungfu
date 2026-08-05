@@ -13,7 +13,7 @@ test('Dev auto-merge admits only explicitly ready reviewed same-repository PRs',
   const reusableRef = workflow.match(
     /uses: kungfu-systems\/buildchain\/\.github\/workflows\/dev-pr-auto-merge\.yml@([0-9a-f]{40})/u,
   )?.[1];
-  assert.equal(reusableRef, '4f491a61dd2a4ba127ddbb8d67c6b51a903b1567');
+  assert.equal(reusableRef, '33362fdb5cfea40bf0fb44c738d3bbcf60c850e2');
   assert.match(workflow, new RegExp(`buildchain-ref: ${reusableRef}`, 'u'));
   assert.match(workflow, /workflow_run:[\s\S]*Core affected native/u);
   assert.match(workflow, /cron: "23,53 \* \* \* \*"/u);
@@ -96,4 +96,27 @@ test('Dev auto-merge waits for PR checks and lands through the native queue', ()
     /github-token: \$\{\{ secrets\.KUNGFU_GITHUB_TOKEN \}\}/u,
   );
   assert.doesNotMatch(workflow, /gh pr merge|npm publish|git tag/iu);
+});
+
+test('Dev behind admission produces and forwards an exact Project Cut replay proof', () => {
+  assert.match(
+    workflow,
+    /Check out protected consumer adapter[\s\S]*fetch-depth: 0/u,
+  );
+  assert.match(
+    workflow,
+    /Check out exact Buildchain delivery runtime[\s\S]*ref: 33362fdb5cfea40bf0fb44c738d3bbcf60c850e2/u,
+  );
+  assert.match(
+    workflow,
+    /Produce exact Project Cut replay proof[\s\S]*project-cut:queue-admission[\s\S]*dev-delivery-proof\.mjs replay-proof[\s\S]*--qualification-receipt/u,
+  );
+  assert.match(
+    workflow,
+    /dev-delivery-proof\.mjs verify-replay[\s\S]*project-cut-proof-json<<BUILDCHAIN_PROJECT_CUT_EOF/u,
+  );
+  assert.match(
+    workflow,
+    /project-cut-proof-json: \$\{\{ needs\.delivery-contract\.outputs\.project-cut-proof-json \}\}/u,
+  );
 });

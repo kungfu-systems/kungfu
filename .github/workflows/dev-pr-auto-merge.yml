@@ -132,6 +132,7 @@ jobs:
       delivery-class: ${{ steps.contract.outputs.delivery-class }}
       priority: ${{ steps.contract.outputs.priority }}
       input-root: ${{ steps.contract.outputs.input-root }}
+      project-cut-proof-json: ${{ steps.project-cut.outputs.project-cut-proof-json }}
     steps:
       - name: Check out protected consumer adapter
         if: >-
@@ -140,8 +141,37 @@ jobs:
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           ref: ${{ github.event.repository.default_branch }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Check out exact Buildchain delivery runtime
+        if: >-
+          github.event_name == 'workflow_run' &&
+          needs.resolve-target.outputs.expected-pr-number != ''
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          repository: kungfu-systems/buildchain
+          ref: 33362fdb5cfea40bf0fb44c738d3bbcf60c850e2
+          path: .buildchain/dev-delivery-runtime
           fetch-depth: 1
           persist-credentials: false
+
+      - name: Use Node.js 24 for exact delivery proof
+        if: >-
+          github.event_name == 'workflow_run' &&
+          needs.resolve-target.outputs.expected-pr-number != ''
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version: "24"
+
+      - name: Install exact Buildchain delivery runtime
+        if: >-
+          github.event_name == 'workflow_run' &&
+          needs.resolve-target.outputs.expected-pr-number != ''
+        working-directory: .buildchain/dev-delivery-runtime
+        shell: bash
+        # shifu-entry-contract: allow bootstrapping the separately checked-out exact Buildchain runtime
+        run: corepack pnpm install --frozen-lockfile --ignore-scripts
 
       - name: Download exact source qualification descriptor
         if: >-
@@ -178,6 +208,68 @@ jobs:
             --output .buildchain/dev-delivery-input/warrant-input.json \
             --github-output "$GITHUB_OUTPUT"
 
+      - name: Produce exact Project Cut replay proof
+        id: project-cut
+        if: steps.contract.outcome == 'success'
+        shell: bash
+        env:
+          EXPECTED_PR: ${{ needs.resolve-target.outputs.expected-pr-number }}
+          EXPECTED_HEAD: ${{ needs.resolve-target.outputs.expected-head-sha }}
+          TARGET_BRANCH: ${{ needs.resolve-target.outputs.target-branch }}
+        run: |
+          set -euo pipefail
+          pull_request=.buildchain/dev-delivery-input/pull-request.json
+          warrant_input=.buildchain/dev-delivery-input/warrant-input.json
+          qualification=.buildchain/dev-delivery-input/project-cut-qualification.json
+          proof=.buildchain/dev-delivery-input/project-cut-proof.json
+
+          test "$GITHUB_REPOSITORY" = "$(jq -r '.head.repo.full_name' "$pull_request")"
+          test "$TARGET_BRANCH" = "$(jq -r '.base.ref' "$pull_request")"
+          test "$EXPECTED_HEAD" = "$(jq -r '.head.sha' "$pull_request")"
+          current_base="$(git rev-parse 'HEAD^{commit}')"
+          test "$current_base" = "$(jq -r '.base.sha' "$pull_request")"
+          git fetch --no-tags origin "$EXPECTED_HEAD"
+          test "$EXPECTED_HEAD" = "$(git rev-parse "$EXPECTED_HEAD^{commit}")"
+
+          ./shifu project-cut:queue-admission -- \
+            --base "$current_base" \
+            --head "$EXPECTED_HEAD" \
+            > "$qualification"
+          jq -e \
+            --arg base "$current_base" \
+            --arg head "$EXPECTED_HEAD" \
+            '.schema == "project.cut.merge-queue-admission/v1"
+             and .ok == true
+             and .decision == "qualified"
+             and .baseCommitOid == $base
+             and .headCommitOid == $head
+             and (.reasonCodes | length) == 0' \
+            "$qualification" >/dev/null
+
+          context_roots="$(jq -c '[.inputRoot, .sourcePatchRoot] + .shardEvidenceRoots | unique | sort' "$warrant_input")"
+          # shifu-entry-contract: allow invoking the separately checked-out exact Buildchain proof runtime
+          node .buildchain/dev-delivery-runtime/scripts/dev-delivery-proof.mjs replay-proof \
+            --repository "$GITHUB_REPOSITORY" \
+            --branch "$TARGET_BRANCH" \
+            --pull-request "$EXPECTED_PR" \
+            --source-head "$EXPECTED_HEAD" \
+            --source-patch-root "$(jq -r '.sourcePatchRoot' "$warrant_input")" \
+            --current-base "$current_base" \
+            --replay-tree "$(jq -r '.candidateTreeOid' "$qualification")" \
+            --qualification-receipt "$qualification" \
+            --required-context-roots-json "$context_roots" \
+            --verified-at "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            --output "$proof"
+          # shifu-entry-contract: allow invoking the separately checked-out exact Buildchain proof runtime
+          node .buildchain/dev-delivery-runtime/scripts/dev-delivery-proof.mjs verify-replay \
+            --source-proof "$proof" \
+            --output .buildchain/dev-delivery-input/project-cut-verification.json
+          {
+            echo 'project-cut-proof-json<<BUILDCHAIN_PROJECT_CUT_EOF'
+            jq -c . "$proof"
+            echo 'BUILDCHAIN_PROJECT_CUT_EOF'
+          } >> "$GITHUB_OUTPUT"
+
       - name: Upload exact Warrant input projection
         if: steps.contract.outcome == 'success'
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
@@ -199,9 +291,9 @@ jobs:
       contents: write
       pull-requests: write
       statuses: write
-    uses: kungfu-systems/buildchain/.github/workflows/dev-pr-auto-merge.yml@4f491a61dd2a4ba127ddbb8d67c6b51a903b1567
+    uses: kungfu-systems/buildchain/.github/workflows/dev-pr-auto-merge.yml@33362fdb5cfea40bf0fb44c738d3bbcf60c850e2
     with:
-      buildchain-ref: 4f491a61dd2a4ba127ddbb8d67c6b51a903b1567
+      buildchain-ref: 33362fdb5cfea40bf0fb44c738d3bbcf60c850e2
       target-branch: ${{ needs.resolve-target.outputs.target-branch }}
       expected-pr-number: ${{ fromJSON(needs.resolve-target.outputs.expected-pr-number || '0') }}
       expected-head-sha: ${{ needs.resolve-target.outputs.expected-head-sha }}
@@ -211,6 +303,7 @@ jobs:
       initiative-root: ${{ needs.delivery-contract.outputs.initiative-root }}
       source-identity-root: ${{ needs.delivery-contract.outputs.source-identity-root }}
       source-patch-root: ${{ needs.delivery-contract.outputs.source-patch-root }}
+      project-cut-proof-json: ${{ needs.delivery-contract.outputs.project-cut-proof-json }}
       plan-root: ${{ needs.delivery-contract.outputs.plan-root }}
       closure-root: ${{ needs.delivery-contract.outputs.closure-root }}
       dependency-root: ${{ needs.delivery-contract.outputs.dependency-root }}

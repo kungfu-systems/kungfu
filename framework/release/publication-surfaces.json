@@ -122,7 +122,7 @@
             "product-stable",
             "product-binaries"
           ],
-          "sourceRoot": "sha256:24afce6e3554a0ad1bb53bb12a30d07a6d3c70dcb06ff7e5c15a2a90cef0b559"
+          "sourceRoot": "sha256:6326d3767cd70947a085d5190b9dae6ea81c3a50f17d4efbcc4b9befa29c57a8"
         },
         {
           "path": ".github/workflows/buildchain-validate.yml",
@@ -170,21 +170,21 @@
             "product-alpha",
             "product-binaries"
           ],
-          "sourceRoot": "sha256:a5c518570f1cfb21ba1ec7ce6648ce15ba04bd1456f0ee90341588b3878256b3"
+          "sourceRoot": "sha256:71431921f7a95c4203b06c48a4f9a6c6bcc0acb7e814b84bb93ae10194ca8a75"
         },
         {
           "path": ".github/workflows/dev-delivery-warrant-terminal.yml",
           "classification": "non-publication",
           "owner": "kungfu-ci",
           "surfaceIds": [],
-          "sourceRoot": "sha256:c608931f7b258b53fbd900760ff2d31f8513f8a694b07369245e26441546a04f"
+          "sourceRoot": "sha256:3b4aac64be5cc6cc5cef119fc3515556021da00939571d384c787b1c144f8efc"
         },
         {
           "path": ".github/workflows/dev-pr-auto-merge.yml",
           "classification": "non-publication",
           "owner": "kungfu-ci",
           "surfaceIds": [],
-          "sourceRoot": "sha256:c1f8c3ed11c78fbc84b2ebbcefcfac29454a1272b4a7f032cfabeda271de24b5"
+          "sourceRoot": "sha256:3f5c83036635c322fabf7d53e7c03b6b0e17e481c3e65dada2634ec3415db46f"
         },
         {
           "path": ".github/workflows/dev-gate-latency-patrol.yml",
@@ -329,7 +329,7 @@
             "product-stable",
             "product-binaries"
           ],
-          "sourceRoot": "sha256:2c4c676087d67ba7da7a6384474a94e69d26d268beee7b08a8ac8fa51f860ce5"
+          "sourceRoot": "sha256:3bc8118db56a4f5084a2f23e4fae370da14af48a82b408b636924e7901d64e32"
         },
         {
           "path": ".github/workflows/release-shifu.yml",
@@ -364,7 +364,7 @@
     "buildchain": {
       "repository": "kungfu-systems/buildchain",
       "owner": "kungfu-systems/buildchain",
-      "sourceRevision": "0596edb3c6a41de76ef26ab7eddcae89db4fb8ad",
+      "sourceRevision": "33362fdb5cfea40bf0fb44c738d3bbcf60c850e2",
       "version": "3.0.5-alpha.6",
       "compatibilityMode": "stable-v3-contract-plus-exact-additive-runtime",
       "stableContractLock": ".buildchain/contract-lock.json",
@@ -860,5 +860,5 @@
       }
     }
   ],
-  "registryRoot": "sha256:10db0aab226ad295a6f505f39a2c4368e00f0edcfb2702695a524bd627d40ae7"
+  "registryRoot": "sha256:faa901ad35efe94a59f57c4ff7e09ebcf397eebd85d611172d8494939d515883"
 }

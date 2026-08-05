@@ -14,6 +14,11 @@ const scenario = JSON.parse(
 );
 const demo = workflow.jobs['auditable-demo'];
 const build = workflow.jobs.build;
+const readme = fs.readFileSync('README.md', 'utf8');
+const technicalSpec = fs.readFileSync(
+  'docs/qualification/auditable-demo-artifact-pipeline.md',
+  'utf8',
+);
 
 test('one exact Buildchain workflow owns every declared demo', () => {
   assert.match(
@@ -75,14 +80,74 @@ test('one exact Buildchain workflow owns every declared demo', () => {
   );
 });
 
+test('Kungfu owns the ordered three-proof argument while Buildchain updates only media', () => {
+  assert.equal(
+    scenario.presentation.schema,
+    'buildchain.declarative-demo-presentation/v1',
+  );
+  assert.deepEqual(
+    scenario.presentation.proofs.map(({ demoId, label, question }) => ({
+      demoId,
+      label,
+      question,
+    })),
+    [
+      {
+        demoId: 'agent-work-lab-autoplay',
+        label: 'Continuity',
+        question: 'Can Work survive a new Agent?',
+      },
+      {
+        demoId: 'project-tour-episode-1',
+        label: 'Failure retention',
+        question: 'Can Work survive failure?',
+      },
+      {
+        demoId: 'project-tour-episode-2',
+        label: 'Review and settlement',
+        question: 'Who is allowed to complete Work?',
+      },
+    ],
+  );
+  assert.deepEqual(scenario.presentation.materialization, {
+    readmeMode: 'media-only',
+    technicalSpecPath: 'docs/qualification/auditable-demo-artifact-pipeline.md',
+    technicalSpecTitle: 'Declarative Multi-demo Animation Pipeline',
+    technicalMarker: 'kungfu:auditable-demo:technical',
+  });
+  for (const proof of scenario.presentation.proofs) {
+    const marker = `${scenario.publication.marker}:${proof.demoId}`;
+    const block = readme.match(
+      new RegExp(
+        `<!-- ${marker}:start -->([\\s\\S]*?)<!-- ${marker}:end -->`,
+        'u',
+      ),
+    )?.[1];
+    assert.ok(block, `README marker is missing for ${proof.demoId}`);
+    assert.match(block, /\[!\[/u);
+    assert.doesNotMatch(
+      block,
+      /Animation scenario|Native renditions|<details>/u,
+    );
+  }
+  assert.match(
+    readme,
+    /Work survival is only the first step\.[\s\S]*Who is allowed to complete Work\?/u,
+  );
+  assert.match(
+    technicalSpec,
+    /Kungfu owns the public argument around the media/u,
+  );
+});
+
 test('the build fails the real transported binary before either upload path', () => {
   assert.equal(
     build.uses,
-    'kungfu-systems/buildchain/.github/workflows/.build.yml@0596edb3c6a41de76ef26ab7eddcae89db4fb8ad',
+    'kungfu-systems/buildchain/.github/workflows/.build.yml@33362fdb5cfea40bf0fb44c738d3bbcf60c850e2',
   );
   assert.equal(
     demo.uses,
-    'kungfu-systems/buildchain/.github/workflows/.declarative-auditable-demo.yml@0596edb3c6a41de76ef26ab7eddcae89db4fb8ad',
+    'kungfu-systems/buildchain/.github/workflows/.declarative-auditable-demo.yml@33362fdb5cfea40bf0fb44c738d3bbcf60c850e2',
   );
   assert.equal(
     build.with['pre-upload-transport-smoke-scenario-path'],
