@@ -113,6 +113,10 @@ test('Dev behind admission produces and forwards an exact Project Cut replay pro
   );
   assert.match(
     workflow,
+    /project-cut:queue-admission[\s\S]*tee "\$qualification_output"[\s\S]*tail -n 1 "\$qualification_output" > "\$qualification"[\s\S]*jq -e/u,
+  );
+  assert.match(
+    workflow,
     /dev-delivery-proof\.mjs verify-replay[\s\S]*project-cut-proof-json<<BUILDCHAIN_PROJECT_CUT_EOF/u,
   );
   assert.match(
