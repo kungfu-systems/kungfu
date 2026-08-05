@@ -14,7 +14,7 @@ Do not hand-edit the generated block. A mode applies when the corresponding
 | [`gate.catalog`](source-and-governance.md#gate-catalog) | light | required | required | required | required | advisory | required |
 | [`governance.dco`](source-and-governance.md#governance-dco) | light | required | off | required | required | off | off |
 | [`governance.adr-delivery`](release-and-promotion.md#governance-adr-delivery) | light | required | off | required | required | advisory | off |
-| [`governance.buildchain-config`](source-and-governance.md#governance-buildchain-config) | light | required | off | required | required | off | required |
+| [`governance.buildchain-config`](source-and-governance.md#governance-buildchain-config) | light | required | off | required | required | off | advisory |
 | [`governance.promotion-rehearsal`](release-and-promotion.md#governance-promotion-rehearsal) | light | required | off | required | required | advisory | required |
 | [`source.acceptance`](source-and-governance.md#source-acceptance) | light | required | off | off | off | advisory | off |
 | [`source.changed-scope`](source-and-governance.md#source-changed-scope) | heavy | required | off | off | off | advisory | off |
@@ -26,12 +26,12 @@ Do not hand-edit the generated block. A mode applies when the corresponding
 | [`product.distribution`](build-and-runtime.md#product-distribution) | heavy | off | off | required | required | advisory | off |
 | [`product.verify-full`](build-and-runtime.md#product-verify-full) | heavy | off | required | off | off | advisory | off |
 | [`product.verify-fuzz`](build-and-runtime.md#product-verify-fuzz) | heavy | off | off | required | required | advisory | off |
-| [`release.artifact-admission`](release-and-promotion.md#release-artifact-admission) | heavy | off | off | off | off | off | required |
+| [`release.artifact-admission`](release-and-promotion.md#release-artifact-admission) | heavy | off | off | off | off | off | advisory |
 | [`layers.contract`](native-qualification.md#layers-contract) | light | off | off | required | required | advisory | off |
 | [`layers.format`](native-qualification.md#layers-format) | heavy | off | off | required | required | advisory | off |
 | [`layers.sdk`](native-qualification.md#layers-sdk) | heavy | off | off | required | required | advisory | off |
 | [`layers.surfaces`](native-qualification.md#layers-surfaces) | heavy | off | off | required | required | advisory | off |
-| [`layers.release`](release-and-promotion.md#layers-release) | light | off | off | off | off | advisory | required |
+| [`layers.release`](release-and-promotion.md#layers-release) | light | off | off | off | off | advisory | advisory |
 | [`episode.smoke`](native-qualification.md#episode-smoke) | heavy | off | off | required | required | advisory | off |
 | [`episode.release`](native-qualification.md#episode-release) | heavy | off | off | required | required | advisory | off |
 | [`embedding.membranes`](native-qualification.md#embedding-membranes) | heavy | off | off | required | required | advisory | off |
