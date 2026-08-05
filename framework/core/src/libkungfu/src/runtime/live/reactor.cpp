@@ -588,10 +588,10 @@ void reactor::require_write_to(int64_t trigger_time, uint32_t source_id, uint32_
     return;
   }
   auto writer = get_writer(source_id);
-  RequestWriteTo &msg = writer->open_data<RequestWriteTo>(trigger_time);
+  RequestWriteTo msg{};
   msg.dest_id = dest_id;
   msg.page_size = page_size;
-  writer->close_data();
+  writer->write(trigger_time, msg);
 }
 
 void reactor::require_write_to_outlet(int64_t trigger_time, uint32_t source_id,

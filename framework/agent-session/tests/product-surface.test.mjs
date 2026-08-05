@@ -17,6 +17,7 @@ import { InProcessAgentSessionProductRuntime } from '../src/product-runtime.mjs'
 import {
   AgentSessionProductSurface,
   agentSessionProductState,
+  agentSessionSurfaceRoot,
   createAgentSessionSurfaceClient,
 } from '../src/product-surface.mjs';
 import { createProviderAdapter } from '../src/provider-adapters.mjs';
@@ -141,11 +142,12 @@ class SyntheticProductRuntime {
   }
 }
 
-function fixture() {
+function fixture({ registry = null } = {}) {
   const runtime = new SyntheticProductRuntime();
   let id = 0;
   const surface = new AgentSessionProductSurface({
     runtime,
+    ...(registry ? { registry } : {}),
     now: () => 4000 + id,
     makeId: () => `id-${++id}`,
   });
@@ -164,8 +166,15 @@ function fixture() {
     workConsoleId: 'work:kungfu.work-control:assignment:assignment-42',
     sessionAttemptId: 'attempt:assignment-42:1',
     provider: 'codex',
-    providerVersion: '0.144.3',
+    providerVersion: '0.146.0',
     profileRoot: PROFILE_ROOT,
+    bootstrap: {
+      schema: 'kungfu.agent-bootstrap-receipt/v1',
+      state: 'verified',
+      attemptId: 'attempt:assignment-42:1',
+      receiptRoot: `sha256:${'f'.repeat(64)}`,
+      mutationsAllowed: true,
+    },
     executable: '/usr/local/bin/codex',
     argv: ['--no-alt-screen'],
     cwd: '/workspace',
@@ -182,10 +191,37 @@ function fixture() {
         entityRoot: `sha256:${'e'.repeat(64)}`,
         purpose: 'delegated-work',
         systemTimeCut: '2026-07-14T09:00:00Z',
+        initiativeId: 'initiative-42',
       },
     },
   };
   return { clients, input, runtime, surface };
+}
+
+function nativeProjection(work, overrides = {}) {
+  return {
+    schema: 'kungfu.native-work-projection/v1',
+    workRefRoot: agentSessionSurfaceRoot({
+      schema: 'kungfu.work-ref/v1',
+      workspaceId: 'workspace-1',
+      profileId: 'kungfu.work-control',
+      profileRoot: PROFILE_ROOT,
+      entityType: 'assignment',
+      entityId: 'assignment-42',
+      entityRoot: `sha256:${'e'.repeat(64)}`,
+      purpose: 'delegated-work',
+      systemTimeCut: '2026-07-14T09:00:00Z',
+      initiativeId: 'initiative-42',
+    }),
+    state: 'fresh',
+    observedAt: 4000,
+    source: 'initial',
+    queryCount: 1,
+    queryProofRoot: work?.queryProofRoot ?? null,
+    work,
+    diagnostic: null,
+    ...overrides,
+  };
 }
 
 test('product state hides process topology and reserves action-required for unsafe recovery', () => {
@@ -235,9 +271,434 @@ test('Core resolves one primary WorkConsole for a generic WorkRef', () => {
   assert.deepEqual(first, second);
   assert.equal(
     first.workConsoleId,
-    'work:kungfu.work-control:assignment:assignment-42',
+    'work:kungfu.work-control:assignment:initiative-42:assignment-42',
   );
   assert.equal(first.binding.workRef.entityType, 'assignment');
+});
+
+test('native provider UI registers one observer-only attempt in the primary WorkConsole', () => {
+  const { clients, input, surface } = fixture();
+  assert.equal(
+    clients.cli.capabilities().terminalAuthorities.nativeInteractive,
+    'provider-native-terminal',
+  );
+  const processIdentity = { launcherPid: 42, launchedAt: 4000 };
+  const plan = clients.cli.planNativeStart({
+    ...input,
+    runtimeProfileId: 'codex-native',
+  });
+  const started = clients.cli.startNative(plan, processIdentity);
+  assert.equal(started.status, 'started');
+  const awaiting = clients.gui.show({
+    workConsoleId: plan.workConsoleId,
+    sessionAttemptId: plan.sessionAttemptId,
+  });
+  assert.equal(awaiting.nativeObserver.state, 'unknown');
+  assert.equal(awaiting.bootstrap.state, 'verified');
+  assert.equal(awaiting.bootstrap.mutationsAllowed, true);
+  assert.equal(awaiting.product.state, 'action-required');
+  const work = {
+    schema: 'kungfu.native-work-observation/v1',
+    state: 'available',
+    initiativeId: 'initiative-42',
+    assignmentId: 'assignment-42',
+    title: 'Native continuity',
+    objective: 'Keep Work visible across native UIs',
+    acceptanceChecks: ['Rediscover the same Work'],
+    phase: 'executing',
+    queryProofRoot: `sha256:${'a'.repeat(64)}`,
+    nextActions: ['record-progress'],
+    evidenceEpisodeRoots: [`sha256:${'b'.repeat(64)}`],
+    continuation: {
+      completionClaimCount: 0,
+      independentReviewCount: 0,
+      continuationDecisionCount: 0,
+    },
+    remainingObligation: 'finish the acceptance fixture',
+    nextAction: 'record-progress',
+  };
+  clients.cli.heartbeatNative(
+    {
+      workConsoleId: plan.workConsoleId,
+      sessionAttemptId: plan.sessionAttemptId,
+    },
+    processIdentity,
+    {
+      schema: 'kungfu.attempt-heartbeat/v1',
+      state: 'fresh',
+      staleAfterMs: 500,
+      workRefRoot: agentSessionSurfaceRoot(input.binding.workRef),
+    },
+  );
+  clients.cli.projectNativeWork(
+    {
+      workConsoleId: plan.workConsoleId,
+      sessionAttemptId: plan.sessionAttemptId,
+    },
+    processIdentity,
+    nativeProjection(work),
+  );
+  const observed = clients.gui.show({
+    workConsoleId: plan.workConsoleId,
+    sessionAttemptId: plan.sessionAttemptId,
+  });
+  assert.equal(observed.live, true);
+  assert.equal(observed.terminalObservable, false);
+  assert.equal(observed.controllable, false);
+  assert.equal(observed.receiptRoots.length, 1);
+  assert.equal(observed.nativeObserver.state, 'fresh');
+  assert.equal(
+    observed.nativeObserver.work.queryProofRoot,
+    work.queryProofRoot,
+  );
+  assert.equal(observed.workOutcome, null);
+  assert.equal(observed.proof, null);
+
+  clients.cli.projectNativeWork(
+    {
+      workConsoleId: plan.workConsoleId,
+      sessionAttemptId: plan.sessionAttemptId,
+    },
+    processIdentity,
+    nativeProjection(work, {
+      state: 'degraded',
+      observedAt: 4001,
+      source: 'bounded-fallback',
+      queryCount: 2,
+      diagnostic: 'Core Work read unavailable',
+    }),
+  );
+  const degraded = clients.gui.show({
+    workConsoleId: plan.workConsoleId,
+    sessionAttemptId: plan.sessionAttemptId,
+  });
+  assert.equal(degraded.nativeObserver.state, 'fresh');
+  assert.equal(degraded.nativeObserver.workProjection.state, 'degraded');
+
+  clients.cli.heartbeatNative(
+    {
+      workConsoleId: plan.workConsoleId,
+      sessionAttemptId: plan.sessionAttemptId,
+    },
+    processIdentity,
+    {
+      schema: 'kungfu.attempt-heartbeat/v1',
+      state: 'fresh',
+      staleAfterMs: 500,
+      workRefRoot: agentSessionSurfaceRoot(input.binding.workRef),
+    },
+  );
+
+  surface.now = () => 10001;
+  const stale = clients.gui.show({
+    workConsoleId: plan.workConsoleId,
+    sessionAttemptId: plan.sessionAttemptId,
+  });
+  assert.equal(stale.live, false);
+  assert.equal(stale.nativeObserver.state, 'stale');
+  assert.equal(stale.product.state, 'action-required');
+  assert.equal(stale.workAgent.attention, null);
+  assert.equal(stale.nativeObserver.work.queryProofRoot, work.queryProofRoot);
+
+  assert.throws(
+    () =>
+      clients.cli.heartbeatNative(
+        {
+          workConsoleId: plan.workConsoleId,
+          sessionAttemptId: plan.sessionAttemptId,
+        },
+        processIdentity,
+        {
+          schema: 'kungfu.attempt-heartbeat/v1',
+          state: 'fresh',
+          workRefRoot: agentSessionSurfaceRoot(input.binding.workRef),
+          work: { ...work, transcript: 'forbidden' },
+        },
+      ),
+    /liveness coordinates only/u,
+  );
+});
+
+test('native bootstrap state is observable and blocks Work binding until verified', () => {
+  const pending = fixture();
+  const pendingInput = { ...pending.input, bootstrap: undefined };
+  const pendingPlan = pending.clients.cli.planNativeStart(pendingInput);
+  assert.equal(pendingPlan.bootstrap.state, 'pending');
+  assert.equal(
+    pending.clients.gui.show({
+      workConsoleId: pendingPlan.workConsoleId,
+      sessionAttemptId: pendingPlan.sessionAttemptId,
+    }).bootstrap.state,
+    'pending',
+  );
+  assert.throws(
+    () =>
+      pending.clients.cli.planNativeBindWork(
+        {
+          workConsoleId: pendingPlan.workConsoleId,
+          sessionAttemptId: pendingPlan.sessionAttemptId,
+        },
+        pending.input.binding.workRef,
+      ),
+    (error) => error?.code === 'native_bootstrap_not_verified',
+  );
+
+  const degraded = fixture();
+  const degradedPlan = degraded.clients.cli.planNativeStart({
+    ...degraded.input,
+    bootstrap: {
+      ...degraded.input.bootstrap,
+      state: 'degraded',
+      mutationsAllowed: false,
+    },
+  });
+  assert.equal(degradedPlan.bootstrap.state, 'degraded');
+  assert.equal(degradedPlan.bootstrap.mutationsAllowed, false);
+});
+
+test('native heartbeat updates live projection without durable registry churn', () => {
+  let saveCount = 0;
+  const registry = new WorkConsoleRegistry({
+    store: {
+      load: () => null,
+      save: () => {
+        saveCount += 1;
+      },
+    },
+    now: () => 4000,
+  });
+  const { clients, input } = fixture({ registry });
+  const processIdentity = { launcherPid: 42, launchedAt: 4000 };
+  const plan = clients.cli.planNativeStart(input);
+  clients.cli.startNative(plan, processIdentity);
+  const durableSaveCount = saveCount;
+
+  clients.cli.heartbeatNative(
+    {
+      workConsoleId: plan.workConsoleId,
+      sessionAttemptId: plan.sessionAttemptId,
+    },
+    processIdentity,
+    {
+      schema: 'kungfu.attempt-heartbeat/v1',
+      state: 'fresh',
+      staleAfterMs: 500,
+      workRefRoot: agentSessionSurfaceRoot(input.binding.workRef),
+    },
+  );
+
+  assert.equal(saveCount, durableSaveCount);
+  assert.equal(
+    clients.gui.show({
+      workConsoleId: plan.workConsoleId,
+      sessionAttemptId: plan.sessionAttemptId,
+    }).nativeObserver.state,
+    'fresh',
+  );
+});
+
+test('two native processes retain distinct attempts under one WorkConsole without claiming completion', () => {
+  const { clients, input } = fixture();
+  const firstIdentity = { launcherPid: 42, launchedAt: 4000 };
+  const first = clients.cli.planNativeStart(input);
+  clients.cli.startNative(first, firstIdentity);
+  const firstEnd = clients.cli.endNative(
+    {
+      workConsoleId: first.workConsoleId,
+      sessionAttemptId: first.sessionAttemptId,
+    },
+    firstIdentity,
+    { exitCode: 0, signal: null },
+  );
+  assert.equal(firstEnd.completionClaimed, false);
+
+  const second = clients.cli.planNativeStart({
+    ...input,
+    sessionAttemptId: 'attempt:assignment-42:2',
+  });
+  clients.cli.startNative(second, { launcherPid: 43, launchedAt: 5000 });
+  const listed = clients.gui.list();
+  assert.equal(listed.consoles.length, 1);
+  assert.deepEqual(
+    listed.consoles[0].attempts.map((attempt) => attempt.sessionAttemptId),
+    ['attempt:assignment-42:1', 'attempt:assignment-42:2'],
+  );
+  assert.deepEqual(
+    listed.consoles[0].attempts.map((attempt) => attempt.status),
+    ['exited', 'running'],
+  );
+  assert.deepEqual(
+    listed.consoles[0].attempts.map((attempt) => attempt.backend),
+    ['native-interactive', 'native-interactive'],
+  );
+  assert.equal(listed.attempts[0].nativeObserver.state, 'disconnected');
+});
+
+test('a second native Agent gets an explicit single-writer continuity explanation', () => {
+  const { clients, input } = fixture();
+  const first = clients.cli.planNativeStart(input);
+  clients.cli.startNative(first, { launcherPid: 42, launchedAt: 4000 });
+
+  assert.throws(
+    () =>
+      clients.cli.planNativeStart({
+        ...input,
+        sessionAttemptId: 'attempt:assignment-42:opencode',
+        provider: 'opencode',
+        providerVersion: '1.18.3',
+      }),
+    (error) => {
+      assert.equal(error.code, 'native_attempt_already_active');
+      assert.match(
+        error.message,
+        /Another Agent is already active for this Work/u,
+      );
+      assert.match(error.message, /Active Agent: codex/u);
+      assert.match(error.message, /Requested Agent: opencode/u);
+      assert.match(error.message, /expected behavior, not a system failure/u);
+      assert.match(error.message, /exit the active Agent normally/u);
+      assert.match(error.message, /kungfu run opencode/u);
+      assert.match(error.message, /separate WorkConsoles/u);
+      return true;
+    },
+  );
+});
+
+test('two bare native launches in one Project receive independent workspace Consoles', () => {
+  const { clients, input } = fixture();
+  const assistantBinding = { kind: 'workspace-assistant', workRef: null };
+  const first = clients.cli.planNativeStart({
+    ...input,
+    workspaceId: 'workspace:project',
+    workConsoleId: 'assistant:workspace:project:native:first',
+    sessionAttemptId: 'native:first',
+    binding: assistantBinding,
+  });
+  clients.cli.startNative(first, { launcherPid: 42, launchedAt: 4000 });
+  const second = clients.cli.planNativeStart({
+    ...input,
+    workspaceId: 'workspace:project',
+    workConsoleId: 'assistant:workspace:project:native:second',
+    sessionAttemptId: 'native:second',
+    provider: 'opencode',
+    providerVersion: '1.18.3',
+    binding: assistantBinding,
+  });
+  clients.cli.startNative(second, { launcherPid: 43, launchedAt: 5000 });
+
+  assert.notEqual(first.workConsoleId, second.workConsoleId);
+  assert.equal(clients.gui.list().consoles.length, 2);
+  assert.equal(clients.gui.show(first).binding.kind, 'workspace-assistant');
+  assert.equal(clients.gui.show(second).binding.kind, 'workspace-assistant');
+});
+
+test('native Work binding atomically blocks a second writer and releases on exit', () => {
+  const { clients, input } = fixture();
+  const binding = { kind: 'workspace-assistant', workRef: null };
+  const firstIdentity = { launcherPid: 42, launchedAt: 4000 };
+  const first = clients.cli.planNativeStart({
+    ...input,
+    workspaceId: 'workspace-1',
+    workConsoleId: 'assistant:workspace-42:native:first',
+    binding,
+  });
+  clients.cli.startNative(first, firstIdentity);
+  const second = clients.cli.planNativeStart({
+    ...input,
+    workspaceId: 'workspace-1',
+    workConsoleId: 'assistant:workspace-42:native:second',
+    sessionAttemptId: 'attempt:assignment-42:second',
+    provider: 'opencode',
+    providerVersion: '1.18.3',
+    bootstrap: {
+      ...input.bootstrap,
+      attemptId: 'attempt:assignment-42:second',
+    },
+    binding,
+  });
+  clients.cli.startNative(second, { launcherPid: 43, launchedAt: 5000 });
+
+  const firstBind = clients.cli.planNativeBindWork(
+    first,
+    input.binding.workRef,
+  );
+  const firstReceipt = clients.cli.bindNativeWork(firstBind);
+  assert.equal(firstReceipt.status, 'bound');
+  assert.equal(clients.gui.show(first).binding.kind, 'work');
+  assert.equal(
+    clients.gui
+      .list()
+      .attempts.find(
+        (attempt) => attempt.sessionAttemptId === first.sessionAttemptId,
+      ).binding.kind,
+    'work',
+  );
+  const refreshedWorkRef = {
+    ...input.binding.workRef,
+    entityRoot: `sha256:${'f'.repeat(64)}`,
+    systemTimeCut: '2026-08-01T10:00:00Z',
+  };
+
+  assert.throws(
+    () => clients.cli.planNativeBindWork(second, refreshedWorkRef),
+    (error) => {
+      assert.equal(error.code, 'native_work_already_active');
+      assert.match(
+        error.message,
+        /stopped this session before it could become a second writer/u,
+      );
+      assert.match(
+        error.message,
+        /return to the terminal running the active Agent/u,
+      );
+      assert.match(error.message, /choose a different Work/u);
+      assert.match(error.message, /kungfu agent session list --json/u);
+      return true;
+    },
+  );
+
+  clients.cli.endNative(first, firstIdentity, { exitCode: 0, signal: null });
+  const secondBind = clients.cli.planNativeBindWork(second, refreshedWorkRef);
+  assert.equal(clients.cli.bindNativeWork(secondBind).status, 'bound');
+});
+
+test('worker restart keeps an orphaned native Work binding fail-closed', () => {
+  const { input } = fixture();
+  const registry = new WorkConsoleRegistry({
+    now: () => 9000,
+    snapshot: {
+      schema: WORK_CONSOLE_REGISTRY_SCHEMA,
+      consoles: [
+        {
+          consoleId: 'assistant:workspace-1:native:orphaned',
+          workspaceId: 'workspace-1',
+          binding: { kind: 'workspace-assistant', workRef: null },
+          runtimeProfileId: 'kungfu.agent-runtime.codex.native',
+          backend: 'native-interactive',
+          attempts: [
+            {
+              sessionAttemptId: 'native:orphaned',
+              runId: 'native:orphaned',
+              provider: 'codex',
+              providerVersion: '0.146.0',
+              backend: 'native-interactive',
+              status: 'running',
+              startedAt: 4000,
+              plans: [],
+              receipts: [],
+              workBinding: input.binding,
+            },
+          ],
+          createdAt: 4000,
+          updatedAt: 4000,
+        },
+      ],
+    },
+  });
+
+  const conflict = registry.activeWorkConflict(input.binding);
+  assert.equal(conflict.attempt.status, 'orphaned');
+  assert.equal(conflict.attempt.sessionAttemptId, 'native:orphaned');
 });
 
 function invokeRpc(endpoint, request) {
@@ -471,8 +932,8 @@ test('Terminal WorkRef launch remains Profile-neutral and rejects partial identi
   assert.match(source, /profileId: params\.workProfileId/u);
 });
 
-test('the published v2 schema admits the Core registry and excludes presentation', async () => {
-  const { clients, input } = fixture();
+test('the published v3 schema admits the Core registry and excludes presentation', async () => {
+  const { clients, input, surface } = fixture();
   clients.gui.start(clients.gui.planStart(input), {
     attachmentId: 'view:schema',
     presentation: 'headless',
@@ -484,10 +945,8 @@ test('the published v2 schema admits the Core registry and excludes presentation
     ),
   );
   const validate = new Ajv2020({ strict: true }).compile(schema);
-  const registry = {
-    schema: WORK_CONSOLE_REGISTRY_SCHEMA,
-    consoles: clients.cli.list().consoles,
-  };
+  clients.cli.list();
+  const registry = surface.registry.snapshot();
   assert.equal(validate(registry), true, JSON.stringify(validate.errors));
   assert.equal('presentation' in schema.properties, false);
 });
@@ -649,7 +1108,7 @@ test('the product runtime executes a reviewed plan through the real Capsule host
     workConsoleId: 'assistant:workspace-runtime',
     sessionAttemptId: 'attempt:runtime:1',
     provider: 'codex',
-    providerVersion: '0.144.3',
+    providerVersion: '0.146.0',
     profileRoot: PROFILE_ROOT,
     executable: '/usr/local/bin/codex',
     argv: ['--no-alt-screen'],

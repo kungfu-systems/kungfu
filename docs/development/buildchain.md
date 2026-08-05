@@ -51,6 +51,13 @@ gone; only the `assemble` leg ships. What was removed, and what stays and why:
 | `engage nuitka` / `engage pdm` bridges | **kept, deliberately** — their consumer is the Python-AOT kfx build contract (`kungfu sdk kfx build` for py extensions), not the freeze chain; retirement follows the [KF-ADR-019f86da-4f90-7d41-a4a0-e6b01d4b31c6](../adr/KF-ADR-019f86da-4f90-7d41-a4a0-e6b01d4b31c6.md) execution-profile line, not this ledger |
 | Nuitka / PyInstaller pins in dev deps | **pyinstaller pin retired 2026-07-11**; **nuitka pin kept** — now resolved only by the `engage nuitka` bridge ([KF-ADR-019f86da-4f90-7d41-a4a0-e6b01d4b31c6](../adr/KF-ADR-019f86da-4f90-7d41-a4a0-e6b01d4b31c6.md)), no longer by any freeze leg |
 
+`scripts/check-runtime-greenfield.mjs` owns the executable negative ratchet. It
+permits the exact historical ledger rows above, rejects the retired runtime
+signatures and product-host vocabulary everywhere active, requires
+assembled-only selection and installed layout evidence, and separately pins the
+KFX Nuitka AOT and Windows Job Object contracts that this retirement must not
+erase.
+
 The assembled form's own policy record is
 [KF-ADR-019f86da-4f90-7ecd-9660-81f9f74dc416](../adr/KF-ADR-019f86da-4f90-7ecd-9660-81f9f74dc416.md)
 (stdlib pruning); the target architecture is
@@ -69,18 +76,23 @@ exists to hold.
 
 ## CI source checkout cache
 
-The release-candidate build uses Buildchain's locked source checkout cache in
-`auto` mode. Self-hosted runners first try the trusted local/LAN Git object cache
-declared by repository or organization variables, then fall back to GitHub if the
-cache is unavailable:
+Formal Alpha and Release candidates plus the Dev Verify consumed by Candidate
+Patrol use fresh GitHub-hosted runners with checkout-cache mode `off`. They fetch
+the immutable source directly from GitHub and do not receive private Cargo
+registry, Shifu cache-profile, Git mirror, or reference-repository inputs.
+Self-hosted and explicit custom diagnostics may instead use Buildchain's locked
+source checkout cache in `auto` mode. Those runners first try the trusted
+local/LAN Git object cache declared by repository or organization variables,
+then fall back to GitHub if the cache is unavailable:
 
 - `BUILDCHAIN_CHECKOUT_CACHE_MIRROR_URL_TEMPLATE`
 - `BUILDCHAIN_CHECKOUT_CACHE_REFERENCE_REPOSITORY_TEMPLATE`
 
-These values are intentionally not checked into this repository. They describe
-private runner or local-network topology. Buildchain still resolves and verifies
-the immutable source commit and tree before running lifecycle commands, and it
-writes sanitized `source-checkout.json` diagnostics into the platform artifacts.
+These values are intentionally not checked into this repository or projected
+into formal hosted jobs. They describe private runner or local-network topology.
+Buildchain still resolves and verifies the immutable source commit and tree
+before running lifecycle commands, and it writes sanitized
+`source-checkout.json` diagnostics into the platform artifacts.
 
 ## Alpha and release artifact relay
 
@@ -96,6 +108,18 @@ source SHA, platform, digest, and expiry in its artifact coordinates, and the
 publication workflows consume the rehydrated exact artifacts. Missing relay
 roles or a failed upload/download is therefore a failed build, never permission
 to fall back to an unrecorded direct transfer path.
+
+### Linux x64 Core package budget preflight
+
+Before writing the Linux x64 Core npm tarball, the packer performs a dry-run
+projection with the same npm pack implementation and compressed-byte units as
+the final 100 MiB hard ceiling. The projection retains a 64 KiB measurement
+error bound, component-level unpacked-byte attribution, headroom, and the delta
+from the last qualified Alpha artifact. A guarded projection over the ceiling
+stops the product build before downstream UI and qualification work. The real
+tarball is still created and checked afterward; the preflight cannot replace
+the final compressed-size authority, and a final value outside either the hard
+ceiling or the guarded projection fails closed.
 
 ## Maturity
 

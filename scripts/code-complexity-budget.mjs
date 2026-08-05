@@ -98,6 +98,11 @@ function language(pathname) {
 }
 
 function isEligible(pathname, policy) {
+  if (
+    pathname === '.kungfu/qualification' ||
+    pathname.startsWith('.kungfu/qualification/')
+  )
+    return false;
   const metadataPaths = [policy.baselinePath];
   const metadataPrefixes = [
     policy.waiverDirectory,
@@ -243,7 +248,12 @@ function owns(rule, file) {
   );
 }
 
-function ownerFor(pathname, layers) {
+function ownerFor(pathname, layers, ownership = []) {
+  const declared = ownership.filter((rule) =>
+    (rule.paths || []).includes(pathname),
+  );
+  if (declared.length === 1) return declared[0].owner;
+  if (declared.length > 1) return '';
   if (pathname.startsWith('framework/core/')) {
     const relative = pathname.slice('framework/core/'.length);
     const owners = layers.components.filter((component) =>
@@ -302,7 +312,7 @@ function baselineBytes(ref, pathname, changed) {
   return Buffer.from(git(['show', `${ref}:${pathname}`], { binary: true }));
 }
 
-function measureBaseline(policy, layers) {
+function measureBaseline(policy, layers, ownership = []) {
   const ref = policy.baselineRef;
   const paths = gitLines(['ls-tree', '-r', '--name-only', ref]);
   const changed = new Set(
@@ -319,7 +329,7 @@ function measureBaseline(policy, layers) {
         class: classify(pathname, bytes),
         generatedProvenance: hasGeneratedProvenance(pathname, bytes),
         language: language(pathname),
-        owner: ownerFor(pathname, layers),
+        owner: ownerFor(pathname, layers, ownership),
         lines: lineCount(bytes),
         contentRoot: digestBytes(bytes),
       };
@@ -327,7 +337,7 @@ function measureBaseline(policy, layers) {
     .sort((left, right) => left.path.localeCompare(right.path));
 }
 
-function measureCurrent(policy, layers) {
+function measureCurrent(policy, layers, ownership = []) {
   return [
     ...new Set(
       gitLines(['ls-files']).concat(
@@ -348,7 +358,7 @@ function measureCurrent(policy, layers) {
         class: classify(pathname, bytes),
         generatedProvenance: hasGeneratedProvenance(pathname, bytes),
         language: language(pathname),
-        owner: ownerFor(pathname, layers),
+        owner: ownerFor(pathname, layers, ownership),
         lines: lineCount(bytes),
         contentRoot: digestBytes(bytes),
       };
@@ -434,8 +444,8 @@ function validateMeasured(files) {
   return issues;
 }
 
-function buildBaseline(policy, layers) {
-  const files = measureBaseline(policy, layers);
+function buildBaseline(policy, layers, ownership = []) {
+  const files = measureBaseline(policy, layers, ownership);
   const issues = validateMeasured(files);
   const groups = calibrate(files, policy);
   const grandfathered = files
@@ -782,11 +792,11 @@ function currentRenameMap(policy) {
   return composeRenameEvidence(result.stdout);
 }
 
-function checkCurrent(policy, layers, baseline) {
-  const files = measureCurrent(policy, layers);
+function checkCurrent(policy, layers, baseline, ownership = []) {
+  const files = measureCurrent(policy, layers, ownership);
   const renamedFrom = currentRenameMap(policy);
   const issues = validateMeasured(files);
-  const recomputedBaseline = buildBaseline(policy, layers);
+  const recomputedBaseline = buildBaseline(policy, layers, ownership);
   issues.push(
     ...baselineIntegrityIssues(
       baseline,
@@ -949,8 +959,11 @@ function main() {
   const options = parseArgs(process.argv.slice(2));
   const policy = readJson(POLICY_PATH);
   const layers = readJson('framework/core/architecture/layers.json');
+  const ownership = readJson(
+    'framework/maintainability/abstraction-integrity.manifest.json',
+  ).ownership;
   if (options.calibrate) {
-    const baseline = buildBaseline(policy, layers);
+    const baseline = buildBaseline(policy, layers, ownership);
     if (options.write) {
       const target = path.join(ROOT, policy.baselinePath);
       fs.mkdirSync(path.dirname(target), { recursive: true });
@@ -968,7 +981,7 @@ function main() {
     return;
   }
   const baseline = readJson(policy.baselinePath);
-  const report = checkCurrent(policy, layers, baseline);
+  const report = checkCurrent(policy, layers, baseline, ownership);
   print(report, options.json);
   if (report.blocking.length) process.exitCode = 1;
 }
@@ -992,6 +1005,7 @@ export {
   checkCurrent,
   classify,
   hasGeneratedProvenance,
+  isEligible,
   language,
   ownerFor,
   percentile,

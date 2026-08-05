@@ -7,29 +7,43 @@ import { createRequire } from 'node:module';
 import os from 'node:os';
 import path from 'node:path';
 import { test } from 'node:test';
+import { readElectronBuilderProjection } from '../../framework/maintainability/semantic-amplification.mjs';
 import { cliLauncherContent } from './cli-launcher.mjs';
+import { isPythonBytecodePath, sha256Tree } from './compatibility.mjs';
 import {
   cliArchiveBase,
   cliArchiveLayout,
   copyTree,
   desktopUpdaterArtifact,
   esbuildPlatformBinaryPath,
+  installArgs,
   installedKungfuInvocation,
-  isPythonBytecodePath,
   isShippedKfdSupport,
   kfxBundleExternalModules,
+  materializeProductRuntimeEntrypoints,
   requiresManagedEsbuildPlatform,
   runInstalledKungfuAgentHubSmoke,
   runInstalledKungfuAssignmentAdmissionSmoke,
   runInstalledKungfuCommand,
+  runInstalledTuiBootstrapSmoke,
+  stageNodePtyForCli,
   stageXinfaContract,
   verifyProductObservabilityEvents,
+  writeAuditableDemoBinaryMetadata,
 } from './dist.mjs';
 import {
   productReleaseChannelConfig,
   releaseChannelKeyId,
 } from './release-channel-trust.mjs';
-import { readTrunkRuntimePinSnapshot } from './runtime-pin-snapshot.mjs';
+import {
+  INTEL_MACOS_DIAGNOSTIC,
+  PRODUCT_ASSEMBLY_STAGE_IDS,
+  assertSupportedProductHost,
+  assertSupportedProductTarget,
+  readTrunkRuntimePinSnapshot,
+  supportedProductTargets,
+} from './runtime-pin-snapshot.mjs';
+import { buildCliUpgradeManifest } from './upgrade-manifest.mjs';
 
 const require = createRequire(import.meta.url);
 const workDashboardPackage = require('../../extensions/work-dashboard/kungfu.kfx.json');
@@ -39,6 +53,69 @@ const {
   esmEntrypointArgs,
   toEsmEntrypointSpecifier,
 } = require('../../framework/gui/scripts/before-pack.cjs');
+
+test('Intel macOS is rejected by the product-wide host policy', () => {
+  for (const architecture of ['x64', 'x86_64']) {
+    for (const operation of [
+      () => assertSupportedProductHost({ platform: 'darwin', architecture }),
+      () => assertSupportedProductTarget('darwin', architecture),
+    ]) {
+      assert.throws(operation, (error) => {
+        assert.equal(error.message, INTEL_MACOS_DIAGNOSTIC);
+        return true;
+      });
+    }
+  }
+});
+
+test('the supported product matrix is exact', () => {
+  assert.deepEqual(supportedProductTargets(), [
+    'darwin/arm64',
+    'linux/arm64',
+    'linux/x64',
+    'win32/x64',
+  ]);
+  for (const target of supportedProductTargets()) {
+    const [platform, architecture] = target.split('/');
+    assert.doesNotThrow(() =>
+      assertSupportedProductTarget(platform, architecture),
+    );
+  }
+});
+
+test('installed TUI binds child CLI calls to the manifest runtime entry', () => {
+  const installRoot = path.resolve('installed-product');
+  const kungfuBin = path.join(installRoot, 'kungfu.cmd');
+  const runtimeEntry = path.join(installRoot, 'runtime', 'kungfu.exe');
+  const tuiEntry = path.join(installRoot, 'tui', 'tui.mjs');
+  let invocation;
+
+  runInstalledTuiBootstrapSmoke(
+    {
+      installRoot,
+      kungfuBin,
+      runtimeEntry,
+      tuiEntry,
+      env: {},
+    },
+    {
+      spawn(command, args, options) {
+        invocation = { command, args, options };
+        return {
+          status: 0,
+          signal: null,
+          stdout: '{"schema":"kungfu.agent-work-lab.report/v1"}\n',
+          stderr: '',
+        };
+      },
+    },
+  );
+
+  assert.equal(invocation.command, kungfuBin);
+  assert.deepEqual(invocation.args, [tuiEntry, '--agent-work-lab-demo']);
+  assert.equal(invocation.options.env.KUNGFU_DIR, path.dirname(runtimeEntry));
+  assert.notEqual(invocation.options.env.KUNGFU_DIR, path.dirname(kungfuBin));
+});
 
 test('trunk staging retains one source-authoritative runtime pin snapshot', () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'kungfu-pin-test-'));
@@ -166,7 +243,140 @@ test('CLI product archive name uses the Kungfu Episodes product prefix', () => {
     cliArchiveBase('linux-arm64'),
     'kungfu-episodes-cli-linux-arm64',
   );
-  assert.equal(cliArchiveBase('win32-x64'), 'kungfu-episodes-cli-win32-x64');
+  assert.equal(
+    cliArchiveBase('windows-x64'),
+    'kungfu-episodes-cli-windows-x64',
+  );
+});
+
+test('CLI product emits exact standalone demo metadata beside the launcher', (t) => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'kungfu-demo-binary-'));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const layout = cliArchiveLayout('linux');
+  fs.writeFileSync(path.join(root, layout.launcherName), '#!/bin/sh\nexit 0\n');
+  fs.mkdirSync(path.dirname(path.join(root, layout.pythonEntrypoint)), {
+    recursive: true,
+  });
+  fs.writeFileSync(path.join(root, layout.runtimeEntrypoint), 'runtime\n');
+  fs.writeFileSync(
+    path.join(root, 'runtime/python/bin/python3.13'),
+    'python\n',
+  );
+  fs.symlinkSync('python3.13', path.join(root, layout.pythonEntrypoint));
+  const metadata = writeAuditableDemoBinaryMetadata(
+    root,
+    layout,
+    'linux-x64',
+    root,
+  );
+  assert.deepEqual(metadata, {
+    contract: 'kungfu.declarative-demo-binary/v1',
+    platformId: 'linux-x64',
+    sha256: `sha256:${crypto.createHash('sha256').update('#!/bin/sh\nexit 0\n').digest('hex')}`,
+    executableFiles: [
+      {
+        path: 'kungfu',
+        sha256: crypto
+          .createHash('sha256')
+          .update('#!/bin/sh\nexit 0\n')
+          .digest('hex'),
+      },
+      {
+        path: 'runtime/kungfu',
+        sha256: crypto.createHash('sha256').update('runtime\n').digest('hex'),
+      },
+      {
+        path: 'runtime/python/bin/python3',
+        sha256: crypto.createHash('sha256').update('python\n').digest('hex'),
+      },
+    ],
+    runtimeDependencies: [],
+  });
+  assert.deepEqual(
+    JSON.parse(
+      fs.readFileSync(path.join(root, 'auditable-demo-binary.json'), 'utf8'),
+    ),
+    metadata,
+  );
+});
+
+test('CLI product materializes symlinked demo executables as regular files', (t) => {
+  if (process.platform === 'win32') {
+    t.skip('POSIX symlink contract');
+    return;
+  }
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'kungfu-demo-symlink-'));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const layout = cliArchiveLayout('linux');
+  fs.writeFileSync(path.join(root, layout.launcherName), '#!/bin/sh\nexit 0\n');
+  fs.mkdirSync(path.dirname(path.join(root, layout.pythonEntrypoint)), {
+    recursive: true,
+  });
+  fs.writeFileSync(path.join(root, layout.runtimeEntrypoint), 'runtime\n');
+  const pythonTarget = path.join(root, layout.runtimeDirectory, 'python-real');
+  fs.writeFileSync(pythonTarget, 'python\n');
+  fs.chmodSync(pythonTarget, 0o755);
+  fs.symlinkSync(
+    path.relative(
+      path.dirname(path.join(root, layout.pythonEntrypoint)),
+      pythonTarget,
+    ),
+    path.join(root, layout.pythonEntrypoint),
+  );
+  writeAuditableDemoBinaryMetadata(root, layout, 'linux-x64', root);
+
+  const python = path.join(root, layout.pythonEntrypoint);
+  assert.equal(fs.lstatSync(python).isFile(), true);
+  assert.equal(fs.lstatSync(python).isSymbolicLink(), false);
+  assert.equal(fs.readFileSync(python, 'utf8'), 'python\n');
+  assert.notEqual(fs.statSync(python).mode & 0o111, 0);
+});
+
+test('CLI runtime identity is stable after demo executable metadata', (t) => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'kungfu-runtime-id-'));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const layout = cliArchiveLayout('linux');
+  const runtimeRoot = path.join(root, layout.runtimeDirectory);
+  const python = path.join(root, layout.pythonEntrypoint);
+  const pythonTarget = path.join(path.dirname(python), 'python3.13');
+  fs.mkdirSync(path.dirname(python), { recursive: true });
+  fs.writeFileSync(path.join(root, layout.launcherName), '#!/bin/sh\nexit 0\n');
+  fs.writeFileSync(path.join(root, layout.runtimeEntrypoint), 'runtime\n');
+  fs.writeFileSync(pythonTarget, 'python\n');
+  fs.chmodSync(pythonTarget, 0o755);
+  fs.symlinkSync('python3.13', python);
+  materializeProductRuntimeEntrypoints(runtimeRoot, 'linux');
+  const manifest = buildCliUpgradeManifest({ stageRoot: root, layout });
+  writeAuditableDemoBinaryMetadata(root, layout, 'linux-x64', root);
+
+  assert.equal(fs.lstatSync(python).isFile(), true);
+  assert.equal(
+    manifest.runtimeArtifactDigest,
+    `sha256:${sha256Tree(runtimeRoot)}`,
+  );
+});
+
+test('CLI product rejects demo executable symlinks to non-files', (t) => {
+  if (process.platform === 'win32') {
+    t.skip('POSIX symlink contract');
+    return;
+  }
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'kungfu-demo-symlink-'));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const layout = cliArchiveLayout('linux');
+  const python = path.join(root, layout.pythonEntrypoint);
+  fs.writeFileSync(path.join(root, layout.launcherName), '#!/bin/sh\nexit 0\n');
+  fs.mkdirSync(path.dirname(python), { recursive: true });
+  fs.writeFileSync(path.join(root, layout.runtimeEntrypoint), 'runtime\n');
+  const directory = path.join(root, layout.runtimeDirectory, 'python-dir');
+  fs.mkdirSync(directory);
+  fs.symlinkSync(path.relative(path.dirname(python), directory), python);
+
+  assert.throws(
+    () => writeAuditableDemoBinaryMetadata(root, layout, 'linux-x64', root),
+    /executable symlink target is not a regular file/u,
+  );
+  assert.equal(fs.lstatSync(python).isSymbolicLink(), true);
 });
 
 test('CLI product manifest channel config contains only runtime trust fields', () => {
@@ -193,12 +403,14 @@ test('CLI archive keeps the launcher distinct from its runtime tree', () => {
     launcherName: 'kungfu',
     runtimeDirectory: 'runtime',
     runtimeEntrypoint: 'runtime/kungfu',
+    pythonEntrypoint: 'runtime/python/bin/python3',
     compatibility: 'runtime/product-compatibility.json',
   });
   assert.deepEqual(cliArchiveLayout('win32'), {
     launcherName: 'kungfu.cmd',
     runtimeDirectory: 'runtime',
     runtimeEntrypoint: 'runtime/kungfu.exe',
+    pythonEntrypoint: 'runtime/python/python.exe',
     compatibility: 'runtime/product-compatibility.json',
   });
   assert.match(cliLauncherContent('darwin'), /exec "\$here\/runtime\/kungfu"/);
@@ -230,6 +442,75 @@ test('product staging rewrites internal absolute symlinks as portable relative l
   }
 });
 
+test('Linux CLI staging restores only the exact node-pty native runtime closure', (t) => {
+  const parent = fs.mkdtempSync(path.join(os.tmpdir(), 'kungfu-node-pty-'));
+  t.after(() => fs.rmSync(parent, { recursive: true, force: true }));
+  const source = path.join(parent, 'source');
+  const target = path.join(parent, 'target');
+  for (const [relative, content] of [
+    ['package.json', '{}\n'],
+    ['index.js', 'export {};\n'],
+    ['build/Release/pty.node', 'native-addon\n'],
+    ['build/Debug/pty.node', 'debug-addon\n'],
+    ['build/Release/obj.target/unshipped.o', 'object\n'],
+  ]) {
+    const file = path.join(source, relative);
+    fs.mkdirSync(path.dirname(file), { recursive: true });
+    fs.writeFileSync(file, content);
+  }
+
+  stageNodePtyForCli(source, target, 'linux', 'x64');
+
+  assert.equal(
+    fs.readFileSync(path.join(target, 'index.js'), 'utf8'),
+    'export {};\n',
+  );
+  assert.equal(
+    fs.readFileSync(path.join(target, 'build/Release/pty.node'), 'utf8'),
+    'native-addon\n',
+  );
+  assert.equal(
+    fs.existsSync(path.join(target, 'build/Release/spawn-helper')),
+    false,
+  );
+  assert.equal(fs.existsSync(path.join(target, 'build/Debug')), false);
+  assert.equal(
+    fs.existsSync(path.join(target, 'build/Release/obj.target')),
+    false,
+  );
+});
+test('Darwin CLI staging preserves the prebuilt node-pty helper contract', (t) => {
+  const parent = fs.mkdtempSync(path.join(os.tmpdir(), 'kungfu-node-pty-'));
+  t.after(() => fs.rmSync(parent, { recursive: true, force: true }));
+  const source = path.join(parent, 'source');
+  const target = path.join(parent, 'target');
+  const prebuild = path.join(source, 'prebuilds', 'darwin-arm64');
+  fs.mkdirSync(prebuild, { recursive: true });
+  fs.writeFileSync(path.join(prebuild, 'pty.node'), 'native-addon\n');
+  fs.writeFileSync(path.join(prebuild, 'spawn-helper'), 'native-helper\n');
+  fs.chmodSync(path.join(prebuild, 'spawn-helper'), 0o644);
+  stageNodePtyForCli(source, target, 'darwin', 'arm64');
+  const addon = path.join(target, 'prebuilds/darwin-arm64/pty.node');
+  assert.equal(fs.readFileSync(addon, 'utf8'), 'native-addon\n');
+  const helper = path.join(target, 'prebuilds/darwin-arm64/spawn-helper');
+  assert.equal(fs.readFileSync(helper, 'utf8'), 'native-helper\n');
+  assert.notEqual(fs.statSync(helper).mode & 0o111, 0);
+});
+
+test('Linux CLI staging fails closed when the node-pty native addon is missing', (t) => {
+  const parent = fs.mkdtempSync(path.join(os.tmpdir(), 'kungfu-node-pty-'));
+  t.after(() => fs.rmSync(parent, { recursive: true, force: true }));
+  const source = path.join(parent, 'source');
+  const target = path.join(parent, 'target');
+  fs.mkdirSync(path.join(source, 'build', 'Release'), { recursive: true });
+  fs.writeFileSync(path.join(source, 'package.json'), '{}\n');
+
+  assert.throws(
+    () => stageNodePtyForCli(source, target, 'linux', 'x64'),
+    /required Linux node-pty runtime not found/u,
+  );
+});
+
 test('product staging rejects an absolute symlink outside its source tree', (t) => {
   if (process.platform === 'win32') {
     t.skip('POSIX symlink contract');
@@ -249,6 +530,43 @@ test('product staging rejects an absolute symlink outside its source tree', (t) 
   }
 });
 
+test('CLI upgrade identity binds the filtered staged runtime', (t) => {
+  if (process.platform === 'win32') {
+    t.skip('POSIX symlink contract');
+    return;
+  }
+  const parent = fs.mkdtempSync(path.join(os.tmpdir(), 'kungfu-dist-test-'));
+  try {
+    const source = path.join(parent, 'source');
+    const stageRoot = path.join(parent, 'stage');
+    const runtime = path.join(stageRoot, 'runtime');
+    fs.mkdirSync(path.join(source, 'bin'), { recursive: true });
+    fs.writeFileSync(path.join(source, 'kungfu'), 'runtime');
+    fs.writeFileSync(path.join(source, 'bin', 'python3'), 'interpreter');
+    fs.writeFileSync(path.join(source, 'bin', 'ignored.pyc'), 'bytecode');
+    fs.symlinkSync('python3', path.join(source, 'bin', 'python'));
+    copyTree(source, runtime);
+
+    const manifest = buildCliUpgradeManifest({
+      stageRoot,
+      layout: cliArchiveLayout(),
+    });
+
+    assert.equal(
+      manifest.runtimeArtifactDigest,
+      `sha256:${sha256Tree(runtime)}`,
+    );
+    assert.equal(
+      manifest.runtimeArtifactDigest,
+      `sha256:${sha256Tree(source, {
+        filter: (file) => !isPythonBytecodePath(file),
+      })}`,
+    );
+  } finally {
+    fs.rmSync(parent, { recursive: true, force: true });
+  }
+});
+
 test('product staging excludes every Python bytecode form', () => {
   assert.equal(
     isPythonBytecodePath('/runtime/pkg/__pycache__/module.pyc'),
@@ -261,12 +579,14 @@ test('product staging excludes every Python bytecode form', () => {
     '../electron-builder.yml',
     '../../framework/gui/electron-builder.yml',
   ]) {
-    const config = fs.readFileSync(
+    const config = readElectronBuilderProjection(
       new URL(configPath, import.meta.url),
-      'utf8',
     );
-    assert.match(config, /!\*\*\/__pycache__\/\*\*/u);
-    assert.match(config, /!\*\*\/\*\.pyc/u);
+    const filters = config.extraResources.flatMap(
+      (resource) => resource.filter ?? [],
+    );
+    assert.ok(filters.includes('!**/__pycache__/**'));
+    assert.ok(filters.includes('!**/*.pyc'));
   }
 });
 
@@ -606,38 +926,47 @@ test('product kfx gate sees bundle externals but ignores window.require', () => 
 });
 
 test('desktop product carries the installed Agent authoring runtime', () => {
-  const config = fs.readFileSync(
+  const config = readElectronBuilderProjection(
     new URL('../electron-builder.yml', import.meta.url),
-    'utf8',
   );
   for (const target of ['sdk', 'kfd', 'templates', 'node_modules']) {
-    assert.match(
-      config,
-      new RegExp(`desktop-authoring/${target}\\n\\s+to: ${target}`),
+    assert.ok(
+      config.extraResources.some(
+        (resource) =>
+          resource.from === `../../product/dist/desktop-authoring/${target}` &&
+          resource.to === target,
+      ),
     );
   }
 });
 
 test('desktop product carries the externalized Agent Session runtime', () => {
-  const config = fs.readFileSync(
+  const config = readElectronBuilderProjection(
     new URL('../electron-builder.yml', import.meta.url),
-    'utf8',
   );
-  assert.match(config, /from: \.\.\/agent-session/);
-  assert.match(config, /to: app\/node_modules\/@kungfu-tech\/agent-session/);
+  assert.ok(
+    config.extraResources.some(
+      (resource) =>
+        resource.from === '../agent-session' &&
+        resource.to === 'app/node_modules/@kungfu-tech/agent-session',
+    ),
+  );
 });
 
 test('desktop product declares prerelease update metadata without implicit publishing', () => {
-  const config = fs.readFileSync(
+  const config = readElectronBuilderProjection(
     new URL('../electron-builder.yml', import.meta.url),
-    'utf8',
   );
-  assert.match(config, /publish:\n\s+- provider: github/);
-  assert.match(config, /owner: kungfu-systems/);
-  assert.match(config, /repo: kungfu/);
-  assert.match(config, /channel: alpha/);
-  assert.match(config, /releaseType: prerelease/);
-  assert.match(config, /generateUpdatesFilesForAllChannels: true/);
+  assert.deepEqual(config.publish, [
+    {
+      provider: 'github',
+      owner: 'kungfu-systems',
+      repo: 'kungfu',
+      channel: 'alpha',
+      releaseType: 'prerelease',
+    },
+  ]);
+  assert.equal(config.generateUpdatesFilesForAllChannels, true);
   const launcher = fs.readFileSync(
     new URL(
       '../../framework/gui/scripts/run-electron-builder.mjs',
@@ -646,9 +975,12 @@ test('desktop product declares prerelease update metadata without implicit publi
     'utf8',
   );
   assert.match(launcher, /--publish=never/);
-  assert.match(
-    config,
-    /dist\/update\/kungfu-release-manifest\.json\n\s+to: upgrade\/kungfu-release-manifest\.json/,
+  assert.ok(
+    config.extraResources.some(
+      (resource) =>
+        resource.from === 'dist/update/kungfu-release-manifest.json' &&
+        resource.to === 'upgrade/kungfu-release-manifest.json',
+    ),
   );
 });
 
@@ -679,7 +1011,7 @@ test('desktop updater artifact selection is exact per platform', () => {
 
 test('installed SDK resolves the packaged KFX contract beside its resources', () => {
   const sdk = fs.readFileSync(
-    new URL('../../developer/sdk/src/sdk.js', import.meta.url),
+    new URL('../../developer/sdk/src/sdk-shared.js', import.meta.url),
     'utf8',
   );
   assert.match(
@@ -747,7 +1079,11 @@ test('installed SDK keeps esbuild external and carries its native runtime', () =
 });
 
 test('Buildchain stages exact esbuild binaries per product surface', () => {
-  const dist = fs.readFileSync(new URL('./dist.mjs', import.meta.url), 'utf8');
+  const dist = ['./dist.mjs', './runtime-pin-snapshot.mjs']
+    .map((relative) =>
+      fs.readFileSync(new URL(relative, import.meta.url), 'utf8'),
+    )
+    .join('\n');
   for (const slot of ['sdk', 'tui', 'gui']) {
     assert.match(dist, new RegExp(`slot: '${slot}'`));
   }
@@ -770,6 +1106,21 @@ test('Buildchain stages exact esbuild binaries per product surface', () => {
     dist,
     /process\.env\.ESBUILD_BINARY_PATH = buildEnv\.ESBUILD_BINARY_PATH/,
   );
+});
+
+test('product assembly stages have one ordered lifecycle owner', () => {
+  assert.deepEqual(PRODUCT_ASSEMBLY_STAGE_IDS, [
+    'discover',
+    'dependencies',
+    'core',
+    'extensions',
+    'ui',
+    'desktop',
+    'cli',
+  ]);
+  const dist = fs.readFileSync(new URL('./dist.mjs', import.meta.url), 'utf8');
+  assert.match(dist, /runProductAssembly\(\{/);
+  assert.doesNotMatch(dist, /buildchainLogger\.spanSync\(\s*'product\.dist'/);
 });
 
 test('platform package installs revalidate registry metadata', () => {
@@ -818,4 +1169,18 @@ test('no-optional builds isolate a mismatched esbuild platform binary', () => {
     }),
     false,
   );
+});
+
+test('all product installs authorize deterministic non-interactive purges', () => {
+  assert.deepEqual(installArgs(false), [
+    'install',
+    '--frozen-lockfile',
+    '--config.confirmModulesPurge=false',
+  ]);
+  assert.deepEqual(installArgs(true), [
+    'install',
+    '--frozen-lockfile',
+    '--no-optional',
+    '--config.confirmModulesPurge=false',
+  ]);
 });

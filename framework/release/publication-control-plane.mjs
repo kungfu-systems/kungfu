@@ -10,6 +10,10 @@ import {
   normalizeRuleset,
   validateContract as validateAlphaRulesetContract,
 } from '../../scripts/alpha-ruleset.mjs';
+import {
+  activeProjection,
+  readAuthority,
+} from '../version-line/version-line-authority.mjs';
 const ROOT = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
   '../..',
@@ -72,11 +76,17 @@ export function validateExternalWorkflowInventory(r, paths) {
   };
 }
 export function validateRegistry(r, { root = ROOT } = {}) {
+  const authority = readAuthority(
+    path.join(root, 'framework/version-line/version-line-authority.json'),
+  );
+  const { line: activeLine } = activeProjection(authority);
   if (
     r.schema !== 'kungfu.release-publication-control-plane/v1' ||
     r.status !== 'active'
   )
     throw new Error('registry inactive');
+  if (r.versionLineAuthorityRoot !== authority.authorityRoot)
+    throw new Error('publication version-line authority drift');
   const p = r.protocol;
   if (
     p.schema !== 'kungfu.release-publication-protocol/v1' ||
@@ -172,8 +182,28 @@ export function validateRegistry(r, { root = ROOT } = {}) {
     )
       throw new Error(`${c.id} ruleset drift`);
   }
+  const expectedTargets = {
+    alpha: `refs/heads/${activeLine.branches.alpha}`,
+    stable: `refs/heads/${activeLine.branches.stable}`,
+    major: `refs/heads/${activeLine.branches.majorPublicationGate}`,
+  };
+  for (const contract of r.rulesetContracts) {
+    if (
+      contract.id !== `${contract.channel}-current` ||
+      contract.target !== expectedTargets[contract.channel]
+    )
+      throw new Error(`${contract.channel} ruleset version-line drift`);
+  }
   for (const channel of ['alpha', 'stable', 'major']) {
     if (!channels.has(channel)) throw new Error(`missing ${channel} ruleset`);
+  }
+  const stableSurface = r.surfaces.find(({ id }) => id === 'product-stable');
+  for (const value of [
+    stableSurface?.bindings?.['exact-source-admission'],
+    stableSurface?.bindings?.['durable-history'],
+  ]) {
+    if (!String(value || '').includes(activeLine.candidateLedger))
+      throw new Error('stable candidate ledger version-line drift');
   }
   const bc = r.repositories.buildchain;
   if (

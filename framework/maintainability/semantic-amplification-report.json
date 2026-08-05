@@ -2,10 +2,13 @@
   "schema": "kungfu.semantic-amplification-report/v1",
   "verdict": "pass",
   "authoritySemantics": "navigation-only-projection-over-existing-authorities",
+  "sourceRevision": "2d074fe254c4ad3e65314739db83b379d4ad27a4",
   "manifestPath": "framework/maintainability/semantic-amplification.manifest.json",
-  "manifestRoot": "sha256:b947a743b8b8b286f60f4e0e0a30040c6da2d5faed36e6bdd0adf3efb336aca5",
+  "manifestRoot": "sha256:ae6bb7630bd6e3a682dd6f1cf364d5f71f2259607dd442bcc94e840a93aa2b7f",
+  "generatorRoot": "sha256:a62c635839b1d7f32dccdaa770ba424b2858be41f2ae017561dbf2c83ee760ec",
   "baselineRef": "dbfed9ca1785d147b26f4f06e7e6895ac7368fee",
-  "sourceRoot": "sha256:8e781e035acb2d9cbca0b15d95d668c07fc12f7b617f18ef53c28ae0f0530274",
+  "baselineRoot": "sha256:a6e7ee9aeea7213807abdf830f8b4e60aede2352289539ddc31ad0fa67b1da50",
+  "sourceRoot": "sha256:70bc47f3945b854848c3443d2852e4cd7988540ec1387376f71987dabf2b6383",
   "roles": {
     "authority": "exactly one authority route per family; the route may name multiple co-owned source files",
     "allowedProjectionRoles": [
@@ -24,8 +27,8 @@
   "summary": {
     "families": 6,
     "authorities": 6,
-    "mappedSurfaces": 77,
-    "changedMappedSurfaces": 48,
+    "mappedSurfaces": 81,
+    "changedMappedSurfaces": 55,
     "blockingIssues": 0
   },
   "families": [
@@ -36,29 +39,34 @@
         "id": "live-click-tree-and-cli-surface-registry",
         "sources": [
           "framework/core/src/python/kungfu/cli/surface_contract.registry.json",
-          "framework/core/src/python/kungfu/cli/commands/__registry__.py"
+          "framework/core/src/python/kungfu/cli/commands/__registry__.py",
+          "framework/core/src/python/kungfu/agent/kfd3_api.registry.json"
         ]
       },
       "authorityCount": 1,
       "roles": {
-        "authority": 2,
+        "authority": 3,
         "generated-projection": 3,
         "thin-binding": 1,
-        "conformance-oracle": 2,
+        "conformance-oracle": 3,
         "test": 2,
         "package-release": 1,
         "documentation": 1
       },
       "amplification": {
-        "mappedSurfaces": 12,
-        "nonAuthoritySurfaces": 10,
-        "changedSurfaces": 10,
+        "mappedSurfaces": 14,
+        "nonAuthoritySurfaces": 11,
+        "changedSurfaces": 14,
         "changedPaths": [
           "framework/core/src/python/kungfu/cli/surface_contract.registry.json",
           "framework/core/src/python/kungfu/cli/commands/__registry__.py",
+          "framework/core/src/python/kungfu/agent/kfd3_api.registry.json",
           "framework/core/src/python/kungfu/cli/catalog_projection.py",
           "framework/core/src/python/kungfu/agent/cli_surface.catalog.json",
           "framework/core/src/python/kungfu/agent/commands.json",
+          "framework/core/src/python/kungfu/cli/help_projection.py",
+          "scripts/check-cli-catalog-parity.mjs",
+          "scripts/verify-agent-pack.mjs",
           "framework/core/tests/python/test_cli_surface_contract.py",
           "product/scripts/cli-surface-qualification.mjs",
           "product/scripts/verify-cli-surface-qualification.mjs",
@@ -90,6 +98,10 @@
           "role": "conformance-oracle"
         },
         {
+          "path": "scripts/verify-agent-pack.mjs",
+          "role": "conformance-oracle"
+        },
+        {
           "path": "framework/core/tests/python/test_cli_surface_contract.py",
           "role": "test"
         },
@@ -113,18 +125,26 @@
       "measurements": [
         {
           "path": "framework/core/src/python/kungfu/cli/surface_contract.registry.json",
-          "currentLines": 156,
+          "currentLines": 152,
           "baselineLines": 155,
-          "currentRoot": "sha256:54463c2fe0a8fbe45c0fb21ae457ac222c7027a96aa10685ba709365a30b93d9",
+          "currentRoot": "sha256:41cc022644a53fa71bbafb6955351c1b0d8590f4e15ba683f43aec28c650b6fa",
           "baselineRoot": "sha256:7af1893015500d9d54e2783e44af30cd4af8753787d9d9b70c77356b0e788c17",
           "changedSinceBaseline": true
         },
         {
           "path": "framework/core/src/python/kungfu/cli/commands/__registry__.py",
-          "currentLines": 91,
+          "currentLines": 93,
           "baselineLines": 91,
-          "currentRoot": "sha256:8cdb597a2b4e87d43dd7d63a71c88527eb4a704b09748ef8e884ab00c6a9cfb9",
+          "currentRoot": "sha256:00ee7bb19f63f23fa809ced0b2f83209d6cdd054f6f5333cb72e5097ade7759f",
           "baselineRoot": "sha256:21ddfd68e29827a81d099362cd40c8bdef4731cddecf964633bcdea4e4a8c817",
+          "changedSinceBaseline": true
+        },
+        {
+          "path": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json",
+          "currentLines": 2552,
+          "baselineLines": 2505,
+          "currentRoot": "sha256:2f7a01536e263c63c683cc6e3d7a7635d56b4add37d800eb5fda22dc712ca88e",
+          "baselineRoot": "sha256:947a0cca02a357d4185dd4e945567549a57f1cbf37fb67e0539d1bfd6ce950d8",
           "changedSinceBaseline": true
         },
         {
@@ -137,49 +157,57 @@
         },
         {
           "path": "framework/core/src/python/kungfu/agent/cli_surface.catalog.json",
-          "currentLines": 926,
+          "currentLines": 1016,
           "baselineLines": 33927,
-          "currentRoot": "sha256:ff992d235535768c0b98e151d3f7cc27081701c61a1182595bec6b89454ec25a",
+          "currentRoot": "sha256:8373e9fee27d2a512697768f06417644e86a8593c3affa8405382b2111c0aead",
           "baselineRoot": "sha256:9f2f17fca5aa4e4daa28a276c1e3a153fa263e791b497f7ea83a93796f7aeb1f",
           "changedSinceBaseline": true
         },
         {
           "path": "framework/core/src/python/kungfu/agent/commands.json",
-          "currentLines": 1063,
+          "currentLines": 1141,
           "baselineLines": 1117,
-          "currentRoot": "sha256:8cf537f1870804178200e9faed3213c70d3f78aa4b911c24eba6498d18436a02",
+          "currentRoot": "sha256:aaa590ec2bd998035fd4b478a7c6095d434b53549b18c813881ef0826bdc9b03",
           "baselineRoot": "sha256:969ac3d851c14196b7244ac1afaecfc237c82d45527fbe06a33d3fc064ea7fc4",
           "changedSinceBaseline": true
         },
         {
           "path": "framework/core/src/python/kungfu/cli/help_projection.py",
-          "currentLines": 259,
+          "currentLines": 283,
           "baselineLines": 259,
-          "currentRoot": "sha256:efbfa84c27a90a59ab69e4c0c78902477a874a91e459cf3319070bd608d71ebf",
+          "currentRoot": "sha256:54a12ad8a2cb88cdf58994be0d4f613c35981f427182f5e726a38edae334754c",
           "baselineRoot": "sha256:efbfa84c27a90a59ab69e4c0c78902477a874a91e459cf3319070bd608d71ebf",
-          "changedSinceBaseline": false
+          "changedSinceBaseline": true
         },
         {
           "path": "scripts/check-cli-catalog-parity.mjs",
-          "currentLines": 346,
+          "currentLines": 367,
           "baselineLines": 346,
-          "currentRoot": "sha256:a8e4c919d73120dd45c4a8f8c8f7187caa62ec819e74a83a9b2d3fdcbcc13c3e",
+          "currentRoot": "sha256:c0811cc4588265a0601cba2a42b8c72278ba36c7b487e2ef4cc245dfe7284b9a",
           "baselineRoot": "sha256:a8e4c919d73120dd45c4a8f8c8f7187caa62ec819e74a83a9b2d3fdcbcc13c3e",
-          "changedSinceBaseline": false
+          "changedSinceBaseline": true
+        },
+        {
+          "path": "scripts/verify-agent-pack.mjs",
+          "currentLines": 570,
+          "baselineLines": 396,
+          "currentRoot": "sha256:c137b536cfc06c6501d12209cbe1df22e7769d398f090a2c36d4745ef7718f7c",
+          "baselineRoot": "sha256:3d5cf84d6cc561c681c68b51c92fa211f7993e1ca1a8da5d8bb9700b57a53bd2",
+          "changedSinceBaseline": true
         },
         {
           "path": "framework/core/tests/python/test_cli_surface_contract.py",
           "currentLines": 468,
           "baselineLines": 466,
-          "currentRoot": "sha256:e8693d953ddff380f0c30f8da2d702f3640f5a868b8eba7dd76afcf6465e30a9",
+          "currentRoot": "sha256:6551bf4ccae5af977e76a2d68f4c71ad7e609be845860ffa4c98ec7ab63d7d03",
           "baselineRoot": "sha256:3e377b96b194c7a12d8240caa42fa3c4ca243cb50019d1a1b096e5dffa4c829f",
           "changedSinceBaseline": true
         },
         {
           "path": "product/scripts/cli-surface-qualification.mjs",
-          "currentLines": 518,
+          "currentLines": 543,
           "baselineLines": 498,
-          "currentRoot": "sha256:1bfee95332add19e60680953b71035669b9fbb8973d736602a960a557d49e821",
+          "currentRoot": "sha256:c9547bfbe969e060fa574096b8bce5d3890dd3ea5f08b97784aaff0e7ce9ad3c",
           "baselineRoot": "sha256:7533c7b772a961fd8e1ae97acc474b7c9f0fbe6626322f1e98f0e30ee163f551",
           "changedSinceBaseline": true
         },
@@ -193,9 +221,9 @@
         },
         {
           "path": "product/scripts/cli-surface-qualification.test.mjs",
-          "currentLines": 277,
+          "currentLines": 286,
           "baselineLines": 206,
-          "currentRoot": "sha256:c5496132c5711e7762f6dbfbd829b720423e81584d487882fe2fd6f1dc40ccd2",
+          "currentRoot": "sha256:2df833cf4ec6b15f0a2c5e279c73f493b3752cdd62185d74583e0f20a111ee68",
           "baselineRoot": "sha256:8d4eea48d9b1af101eebb1e45349f22f7604067be87a3db5d4a0586d0b88f934",
           "changedSinceBaseline": true
         },
@@ -238,10 +266,11 @@
       "amplification": {
         "mappedSurfaces": 15,
         "nonAuthoritySurfaces": 11,
-        "changedSurfaces": 9,
+        "changedSurfaces": 10,
         "changedPaths": [
           "framework/work-lifecycle/work-lifecycle-native.contract.json",
           "framework/work-lifecycle/kungfu-work-lifecycle-operation-matrix.contract.json",
+          "framework/core/src/libkungfu/src/runtime/profile/profile_lifecycle.cpp",
           "crates/kungfu-sdk/src/generated/work_lifecycle_v1.rs",
           "framework/storage/generated/work-lifecycle-v1.js",
           "framework/storage/python/kungfu_sdk/generated/work_lifecycle_v1.py",
@@ -327,11 +356,11 @@
         },
         {
           "path": "framework/core/src/libkungfu/src/runtime/profile/profile_lifecycle.cpp",
-          "currentLines": 1084,
+          "currentLines": 1211,
           "baselineLines": 1084,
-          "currentRoot": "sha256:fd1371c3544de910030b6e59f9ac9d2c8ed8e753af2f2429c1c02577cef61fc7",
+          "currentRoot": "sha256:6fbd448925cb8fdf80e57f86576f6d3bd2f4ebadb9637e9ed9d6eaa9e20914ce",
           "baselineRoot": "sha256:fd1371c3544de910030b6e59f9ac9d2c8ed8e753af2f2429c1c02577cef61fc7",
-          "changedSinceBaseline": false
+          "changedSinceBaseline": true
         },
         {
           "path": "scripts/materialize-work-lifecycle-operation-matrix.mjs",
@@ -375,17 +404,17 @@
         },
         {
           "path": "framework/core/src/python/kungfu/assignment_orchestration.py",
-          "currentLines": 2198,
+          "currentLines": 1588,
           "baselineLines": 1014,
-          "currentRoot": "sha256:0543901da508a83d0181a0e016976765c5311dc514bb4be2b419f904ca88e6ac",
+          "currentRoot": "sha256:5c49399a62d43e478fe6d538c0ccb945296ebfc3dbbf9a9a914c85cd094ad412",
           "baselineRoot": "sha256:68b2491178449fab6abb8d96fb69819a8807751dd145ddd7a553393f57b73890",
           "changedSinceBaseline": true
         },
         {
           "path": "framework/core/src/python/kungfu/profile_sdk.py",
-          "currentLines": 3135,
+          "currentLines": 2089,
           "baselineLines": 3138,
-          "currentRoot": "sha256:fe9eb75f5d2960e2536d39f98c017e97186e88a32672bd8ac6db90b445b51d38",
+          "currentRoot": "sha256:bf08cb858e48ae62160bdf8d822da986174efb2106dabf47d0f3a1420c9f6ee9",
           "baselineRoot": "sha256:fb62fb8c4e1e944811c954d22786ebaeb21ff45dbb3fc1db705feb37fbb5dc1c",
           "changedSinceBaseline": true
         },
@@ -441,16 +470,16 @@
       "authorityCount": 1,
       "roles": {
         "authority": 3,
-        "thin-binding": 5,
+        "thin-binding": 6,
         "conformance-oracle": 1,
         "test": 1,
         "documentation": 2,
-        "package-release": 1
+        "package-release": 2
       },
       "amplification": {
-        "mappedSurfaces": 13,
-        "nonAuthoritySurfaces": 10,
-        "changedSurfaces": 13,
+        "mappedSurfaces": 15,
+        "nonAuthoritySurfaces": 12,
+        "changedSurfaces": 15,
         "changedPaths": [
           "framework/kfx/kungfu-kfx.contract.json",
           "framework/core/src/libkungfu/src/runtime/kfx/native_contract.cpp",
@@ -460,11 +489,13 @@
           "framework/core/src/python/kungfu/kfx_contract.py",
           "framework/core/src/python/kungfu/profile_sdk.py",
           "framework/core/src/python/kungfu/cli/commands/kfx.py",
+          "framework/core/src/python/kungfu/agent/intent-map.json",
           "scripts/run-native-kfx-admission-tests.mjs",
           "scripts/run-kfx-profile-suite-tests.mjs",
           "docs/qualification/kfd-native-sdk-release-gates.md",
           "framework/gui/docs/shell-and-kfx.md",
-          "product/scripts/dist.mjs"
+          "product/scripts/dist.mjs",
+          "product/scripts/runtime-pin-snapshot.mjs"
         ]
       },
       "surfaces": [
@@ -489,6 +520,10 @@
           "role": "thin-binding"
         },
         {
+          "path": "framework/core/src/python/kungfu/agent/intent-map.json",
+          "role": "thin-binding"
+        },
+        {
           "path": "scripts/run-native-kfx-admission-tests.mjs",
           "role": "conformance-oracle"
         },
@@ -507,14 +542,18 @@
         {
           "path": "product/scripts/dist.mjs",
           "role": "package-release"
+        },
+        {
+          "path": "product/scripts/runtime-pin-snapshot.mjs",
+          "role": "package-release"
         }
       ],
       "measurements": [
         {
           "path": "framework/kfx/kungfu-kfx.contract.json",
-          "currentLines": 1481,
+          "currentLines": 1498,
           "baselineLines": 1244,
-          "currentRoot": "sha256:f9f99ee94a91580f0e5e4592c260e32f2ab3d2c12f1c439db1e31d6ee0cfadff",
+          "currentRoot": "sha256:f0e6cfddac711123a969d7d88c8995b95fcb397b99438674902372fb38ff8d0c",
           "baselineRoot": "sha256:09461dda185e075d08137b51d8fcada3e862ff8e4f3cecd725ec7410021bbb99",
           "changedSinceBaseline": true
         },
@@ -536,9 +575,9 @@
         },
         {
           "path": "framework/kfx/src/index.ts",
-          "currentLines": 1530,
+          "currentLines": 1642,
           "baselineLines": 1622,
-          "currentRoot": "sha256:1cac03287d834ae896782e4d3a079f01afca8a0a12c7aed021d2675e1b6838b5",
+          "currentRoot": "sha256:17cace844696bc3d74f8a09db910e0ddcd9d91a2440c1b8c9396cd6a589d4bfe",
           "baselineRoot": "sha256:c27078f816d82f9d6aceb9d681f387ab1ee5ccdb806f0570e1b8959f8f2fadf8",
           "changedSinceBaseline": true
         },
@@ -560,9 +599,9 @@
         },
         {
           "path": "framework/core/src/python/kungfu/profile_sdk.py",
-          "currentLines": 3135,
+          "currentLines": 2089,
           "baselineLines": 3138,
-          "currentRoot": "sha256:fe9eb75f5d2960e2536d39f98c017e97186e88a32672bd8ac6db90b445b51d38",
+          "currentRoot": "sha256:bf08cb858e48ae62160bdf8d822da986174efb2106dabf47d0f3a1420c9f6ee9",
           "baselineRoot": "sha256:fb62fb8c4e1e944811c954d22786ebaeb21ff45dbb3fc1db705feb37fbb5dc1c",
           "changedSinceBaseline": true
         },
@@ -575,18 +614,26 @@
           "changedSinceBaseline": true
         },
         {
+          "path": "framework/core/src/python/kungfu/agent/intent-map.json",
+          "currentLines": 24,
+          "baselineLines": null,
+          "currentRoot": "sha256:d483703e85a9db94b462bc4d7d09eed89af7333ad3723800f3a0496386a80531",
+          "baselineRoot": null,
+          "changedSinceBaseline": true
+        },
+        {
           "path": "scripts/run-native-kfx-admission-tests.mjs",
-          "currentLines": 336,
+          "currentLines": 415,
           "baselineLines": 99,
-          "currentRoot": "sha256:a608dff058df11577c0387a0da05bc1f9f36d17658d766ae00900fca36cc5926",
+          "currentRoot": "sha256:14f0b501c10ef4f2ba3cdb61e0945ccdbcc424734ce8dea1112c5326f4038e58",
           "baselineRoot": "sha256:32bb3806ac0541fd4230c78febce26efcfb85b56ef8ce19b4a374d0a07f1c4a4",
           "changedSinceBaseline": true
         },
         {
           "path": "scripts/run-kfx-profile-suite-tests.mjs",
-          "currentLines": 217,
+          "currentLines": 229,
           "baselineLines": 89,
-          "currentRoot": "sha256:ca0d2956bc0488d3419cf92d5c20870dda00c2d8b7b5f6a7aa60841a0257153f",
+          "currentRoot": "sha256:48d8ccd6344891dc39225ce3396d174236f74a3d5017d6ed91a730c90b420cc9",
           "baselineRoot": "sha256:d7d0cd90cf794bd7f9240f0f9a2a8ed1757eb42e20179396f6268bee7c1bc035",
           "changedSinceBaseline": true
         },
@@ -594,7 +641,7 @@
           "path": "docs/qualification/kfd-native-sdk-release-gates.md",
           "currentLines": 506,
           "baselineLines": 495,
-          "currentRoot": "sha256:194b495014fc88e24868c61e84b6fcc99c5154eff3eebd363d9f8cb2823020eb",
+          "currentRoot": "sha256:d7064e1b9befdde83bf1f8dff15fa583969c1c5912df8911e674ab69d0ee7a70",
           "baselineRoot": "sha256:98328a6c59d603f82b03aee017e6bc490ee43decffa7dde63ddcaa644daf9462",
           "changedSinceBaseline": true
         },
@@ -608,10 +655,18 @@
         },
         {
           "path": "product/scripts/dist.mjs",
-          "currentLines": 2528,
+          "currentLines": 1956,
           "baselineLines": 2514,
-          "currentRoot": "sha256:b5008d62d82095ec7df4f483871fc01e0374fd056c8e7ab18e95e554fdb9dd47",
+          "currentRoot": "sha256:fae18c57373bad7730ea851b511f5d048776ba75e85b370710cbb21902522834",
           "baselineRoot": "sha256:6cfd6c55e296163ab863fb1d79a4a51198ad12943274fc0858338bb651a108da",
+          "changedSinceBaseline": true
+        },
+        {
+          "path": "product/scripts/runtime-pin-snapshot.mjs",
+          "currentLines": 242,
+          "baselineLines": null,
+          "currentRoot": "sha256:897d95575dc0b7052bf84d1058e1a4b902c5d9caf7d33e0d9e87bb7499b1c920",
+          "baselineRoot": null,
           "changedSinceBaseline": true
         }
       ],
@@ -874,9 +929,9 @@
         },
         {
           "path": "framework/core/src/libkungfu/src/runtime/storage/service.cpp",
-          "currentLines": 2788,
+          "currentLines": 2404,
           "baselineLines": 2789,
-          "currentRoot": "sha256:7429e5b9cc71a9f3afb22d93aa0544dc429653c29b0f70137388fbde8ddf4eec",
+          "currentRoot": "sha256:82e868f060d5ba3dbe492478b3072de3a541da731a58b154c09ea031fadf3678",
           "baselineRoot": "sha256:01d1c02cf918c98ffef460d01cfc2c86a642d5a29ae4b066eda7a7c24d88651f",
           "changedSinceBaseline": true
         },
@@ -1071,7 +1126,7 @@
           "path": "docs/qualification/gates/release-admission-policy.json",
           "currentLines": 49,
           "baselineLines": 41,
-          "currentRoot": "sha256:f6eda1fa4d48253ae832940ccf376c33864f21fbef362180b2db084cb1ab315b",
+          "currentRoot": "sha256:08186ece582b8afbad001ad2e556e7c305176577150c4c4fc9ef04d74846d15b",
           "baselineRoot": "sha256:e8a0f7037f2331610f3b9c07e7cdf5e47ea701045c73d0f67bf909372e77e0ac",
           "changedSinceBaseline": true
         },
@@ -1093,9 +1148,9 @@
         },
         {
           "path": "scripts/release-promotion-rehearsal.mjs",
-          "currentLines": 771,
+          "currentLines": 773,
           "baselineLines": 713,
-          "currentRoot": "sha256:1a4c9595a581c960691b98ab471928825b4019e83853f89afaee5790ad64ac43",
+          "currentRoot": "sha256:97d635a70a6ce52370814ed1c418c40bfcc856f6ebe9cec06e983df7126fa532",
           "baselineRoot": "sha256:12df72a7b881c2c3c83d5a19f1ab8d4189156a4d09ef759fe1e36328f5b4ed1d",
           "changedSinceBaseline": true
         },
@@ -1109,9 +1164,9 @@
         },
         {
           "path": "docs/qualification/gates/workflow-bindings.json",
-          "currentLines": 657,
+          "currentLines": 663,
           "baselineLines": 580,
-          "currentRoot": "sha256:cbacb1f8235f559e0a5777e929da38f3fffa9582f56b40d50a376fb204370f89",
+          "currentRoot": "sha256:1408c8eb7406d2c2aa68bb1b04b5860d1d3e8a7b0ff6aac0a6178a902bb7cff8",
           "baselineRoot": "sha256:233cd22ebce4c9930e0e4889808b88661d77c202d5e5f73121823dcdc461576d",
           "changedSinceBaseline": true
         },
@@ -1119,15 +1174,15 @@
           "path": ".github/workflows/release-new-version.yml",
           "currentLines": 386,
           "baselineLines": 362,
-          "currentRoot": "sha256:c96325a74759a76b79a77bf7ea42b9402b66db1d09e59dafde77ce6666215bb4",
+          "currentRoot": "sha256:630d7c42f2ad75f5c34dd756482ee1e8f177222eb12158eaf1f39603ddb676bf",
           "baselineRoot": "sha256:3bdd847c80a05030de1d826282cef2e76a85e31dc0904df02c7f0cdda7a5eb74",
           "changedSinceBaseline": true
         },
         {
           "path": "docs/qualification/gates/release-and-promotion.md",
-          "currentLines": 205,
+          "currentLines": 206,
           "baselineLines": 141,
-          "currentRoot": "sha256:6d23fec2994d9a567967370502bec80e2e48a3fb22520afa76e950f2f5107dc8",
+          "currentRoot": "sha256:49b44fc55604d0b7a81695f2b6ca0701c5a8267aeef7fc757030babc26dd8caa",
           "baselineRoot": "sha256:5eb20fe886635e0464313023daa1a2b62529ad1d6977202dce9c91c6b8aacf9e",
           "changedSinceBaseline": true
         },
@@ -1135,7 +1190,7 @@
           "path": "docs/qualification/gates/release-admission.md",
           "currentLines": 75,
           "baselineLines": 75,
-          "currentRoot": "sha256:991422ce306e8779e6a0e40f89470d288416b69289724cef5b5e8bc7bfa45e7a",
+          "currentRoot": "sha256:ce374185bcf5fde813393a2e65f7a959688116618a37c526f3e642e44fe1f2f7",
           "baselineRoot": "sha256:69f293fefb3c94df44051dc86ba4435416f5ea4348f2ffb245bef19bb494a280",
           "changedSinceBaseline": true
         },
@@ -1259,7 +1314,7 @@
   ],
   "terminalEvidenceProjection": {
     "matrixPath": "framework/maintainability/terminal-evidence-matrix.json",
-    "matrixSchema": "kungfu.maintainability-terminal-evidence-matrix/v2",
+    "matrixSchema": "kungfu.maintainability-terminal-evidence-matrix/v3",
     "predecessorAssignmentId": "2026-07-27-kungfu-maintainability-terminal-closure",
     "predecessorSealedStateRoot": "sha256:41449544ae9f64f6a6e6e7ae69f24c0fd9049e38beef4bba2bbed3e3e730e98c"
   },
@@ -1337,7 +1392,590 @@
         "scripts/cancel-dequeued-merge-group-runs.test.mjs"
       ],
       "rollback": "Move the read-only evidence helpers back and preserve the existing re-export surface."
+    },
+    {
+      "id": "product-assembly-runtime",
+      "original": [
+        "product/scripts/dist.mjs"
+      ],
+      "boundary": "Source pins, platform package selection, no-optional acquisition, and lifecycle ordering form one explicit-input assembly runtime; product mechanics and release behavior remain in dist.mjs.",
+      "target": "product/scripts/runtime-pin-snapshot.mjs",
+      "owner": "product/release-assembly-runtime",
+      "dependencyInvariant": "The runtime receives repository paths, command execution, logging, environment, package resolution, and product mechanics explicitly; it preserves Buildchain event order and exposes no CLI, publication, or second product authority.",
+      "tests": [
+        "product/scripts/dist.test.mjs",
+        "framework/maintainability/semantic-amplification.test.mjs"
+      ],
+      "rollback": "Inline runProductAssembly into dist.mjs without changing stage order, target guards, environment projection, or Buildchain events."
     }
   ],
-  "issues": []
+  "integrity": {
+    "schema": "kungfu.abstraction-integrity-report/v1",
+    "authoritySemantics": "additive-governance-over-declared-authorities",
+    "dimensions": [
+      "language",
+      "product-surface",
+      "platform",
+      "execution-topology",
+      "lifecycle",
+      "delivery",
+      "configuration",
+      "policy",
+      "evidence"
+    ],
+    "metrics": {
+      "topologies": 5,
+      "legalAxes": 8,
+      "adapters": 14,
+      "projections": 9,
+      "qualificationRoutes": 11,
+      "exceptionDebt": 2,
+      "findings": 0,
+      "weightedDebt": 0
+    },
+    "baseline": {
+      "sourceRef": "1b77dbe8a0e669f3ec086f76c63eac07ec6e2a0d",
+      "capturedAt": "2026-07-31",
+      "findings": 3,
+      "weightedDebt": 18,
+      "findingIds": [
+        "product-assembly:product-orchestration-size",
+        "desktop-packaging:electron-config-overlap",
+        "core-durability:durability-platform-primitive-spread"
+      ]
+    },
+    "baselineComparison": {
+      "findingDelta": -3,
+      "weightedDebtDelta": -18,
+      "ratchet": "pass"
+    },
+    "topologies": [
+      {
+        "id": "runner-lifecycle",
+        "owner": "buildchain/release",
+        "dimensions": [
+          "platform",
+          "execution-topology",
+          "lifecycle",
+          "delivery",
+          "configuration",
+          "policy",
+          "evidence"
+        ],
+        "authority": {
+          "id": "pinned-buildchain-runner-preset-contract",
+          "kind": "external-pinned-contract",
+          "repository": "kungfu-systems/buildchain",
+          "pinSource": ".buildchain/contract-lock.json",
+          "sources": [
+            ".buildchain/contract-lock.json"
+          ]
+        },
+        "legalAxes": {
+          "provider": [
+            "github",
+            "kungfu-fleet",
+            "aws-codebuild",
+            "aws-ec2"
+          ],
+          "lifecycle": [
+            "hosted",
+            "persistent",
+            "jit"
+          ],
+          "platform": [
+            "linux-x64",
+            "linux-arm64",
+            "macos-arm64",
+            "windows-x64"
+          ]
+        },
+        "adapters": [
+          {
+            "id": "github-hosted",
+            "axes": {
+              "provider": "github",
+              "lifecycle": "hosted"
+            },
+            "paths": [
+              ".github/workflows/build.yml"
+            ],
+            "authorityBinding": "buildchain:runner-preset:github-hosted"
+          },
+          {
+            "id": "aws-codebuild-linux",
+            "axes": {
+              "provider": "aws-codebuild",
+              "lifecycle": "jit",
+              "platform": "linux-x64"
+            },
+            "paths": [
+              ".github/workflows/aws-us-linux-burst-qualification.yml"
+            ],
+            "authorityBinding": "buildchain:runner-preset:aws-us-codebuild-linux"
+          },
+          {
+            "id": "aws-ec2-windows-jit",
+            "axes": {
+              "provider": "aws-ec2",
+              "lifecycle": "jit",
+              "platform": "windows-x64"
+            },
+            "paths": [
+              ".github/workflows/aws-us-windows-burst-qualification.yml"
+            ],
+            "authorityBinding": "buildchain:runner-preset:aws-us-ec2-windows-jit"
+          },
+          {
+            "id": "aws-ec2-macos-jit",
+            "axes": {
+              "provider": "aws-ec2",
+              "lifecycle": "jit",
+              "platform": "macos-arm64"
+            },
+            "paths": [
+              ".github/workflows/aws-us-macos-burst-qualification.yml"
+            ],
+            "authorityBinding": "buildchain:runner-preset:aws-us-ec2-macos-jit"
+          }
+        ],
+        "projections": [
+          {
+            "path": ".github/workflows/build.yml",
+            "role": "consumer-binding"
+          }
+        ],
+        "qualification": [
+          {
+            "path": ".github/workflows/aws-us-linux-burst-qualification.yml",
+            "role": "exact-provider-qualification"
+          },
+          {
+            "path": ".github/workflows/aws-us-windows-burst-qualification.yml",
+            "role": "exact-provider-qualification"
+          },
+          {
+            "path": ".github/workflows/aws-us-macos-burst-qualification.yml",
+            "role": "exact-provider-qualification"
+          }
+        ],
+        "exceptions": [
+          {
+            "id": "external-runner-authority-read",
+            "expiresAt": "2027-01-31",
+            "rationale": "The build-free Kungfu report reads the exact Buildchain contract lock, not a neighboring checkout or the network.",
+            "remediation": "Refresh the contract lock through Buildchain compatibility admission when the protected runtime changes."
+          }
+        ],
+        "recovery": "Read the pinned Buildchain contract lock, then qualify each provider adapter independently; never infer one provider from another."
+      },
+      {
+        "id": "product-assembly",
+        "owner": "product/release",
+        "dimensions": [
+          "language",
+          "product-surface",
+          "platform",
+          "lifecycle",
+          "delivery"
+        ],
+        "authority": {
+          "id": "product-dist-orchestration",
+          "kind": "repository-source",
+          "sources": [
+            "product/scripts/dist.mjs",
+            "product/scripts/runtime-pin-snapshot.mjs"
+          ]
+        },
+        "legalAxes": {
+          "product": [
+            "all",
+            "desktop",
+            "cli"
+          ]
+        },
+        "adapters": [
+          {
+            "id": "desktop-product",
+            "axes": {
+              "product": "desktop"
+            },
+            "paths": [
+              "product/scripts/dist.mjs",
+              "product/scripts/runtime-pin-snapshot.mjs"
+            ],
+            "authorityBinding": "product-dist-orchestration"
+          },
+          {
+            "id": "cli-product",
+            "axes": {
+              "product": "cli"
+            },
+            "paths": [
+              "product/scripts/dist.mjs",
+              "product/scripts/runtime-pin-snapshot.mjs"
+            ],
+            "authorityBinding": "product-dist-orchestration"
+          }
+        ],
+        "projections": [
+          {
+            "path": "product/electron-builder.yml",
+            "role": "desktop-package-policy"
+          }
+        ],
+        "qualification": [
+          {
+            "path": "product/scripts/dist.test.mjs",
+            "role": "source-and-product-contract"
+          }
+        ],
+        "detectors": [
+          {
+            "id": "product-orchestration-size",
+            "kind": "line-count",
+            "findingClass": "oversized-orchestration",
+            "paths": [
+              "product/scripts/dist.mjs"
+            ],
+            "maximum": 2450,
+            "remediation": "Keep lifecycle sequencing in a pure assembly plan and leave platform/product mechanics in owned modules."
+          }
+        ],
+        "exceptions": [],
+        "recovery": "Query the product topology, run dist source tests, and qualify desktop and CLI products separately."
+      },
+      {
+        "id": "desktop-packaging",
+        "owner": "framework/gui",
+        "dimensions": [
+          "product-surface",
+          "platform",
+          "delivery",
+          "configuration",
+          "policy"
+        ],
+        "authority": {
+          "id": "electron-builder-surface-policy",
+          "kind": "repository-source",
+          "sources": [
+            "framework/gui/electron-builder.base.json",
+            "product/electron-builder.overlay.json"
+          ]
+        },
+        "legalAxes": {
+          "surface": [
+            "framework-gui",
+            "assembled-product",
+            "projection-generator"
+          ]
+        },
+        "adapters": [
+          {
+            "id": "framework-gui-package",
+            "axes": {
+              "surface": "framework-gui"
+            },
+            "paths": [
+              "framework/gui/electron-builder.base.json"
+            ],
+            "authorityBinding": "electron-builder-surface-policy"
+          },
+          {
+            "id": "assembled-product-package",
+            "axes": {
+              "surface": "assembled-product"
+            },
+            "paths": [
+              "product/electron-builder.overlay.json"
+            ],
+            "authorityBinding": "electron-builder-surface-policy"
+          },
+          {
+            "id": "electron-builder-projection-generator",
+            "axes": {
+              "surface": "projection-generator"
+            },
+            "paths": [
+              "framework/maintainability/semantic-amplification.mjs"
+            ],
+            "authorityBinding": "electron-builder-surface-policy"
+          }
+        ],
+        "projections": [
+          {
+            "path": "framework/gui/electron-builder.yml",
+            "role": "framework-package"
+          },
+          {
+            "path": "product/electron-builder.yml",
+            "role": "product-package"
+          }
+        ],
+        "qualification": [
+          {
+            "path": "product/scripts/dist.test.mjs",
+            "role": "config-contract"
+          },
+          {
+            "path": "framework/gui/scripts/electron-builder-config.test.mjs",
+            "role": "base-overlay-projection-drift"
+          }
+        ],
+        "detectors": [
+          {
+            "id": "electron-config-overlap",
+            "kind": "normalized-line-overlap",
+            "findingClass": "config-duplication",
+            "paths": [
+              "framework/gui/electron-builder.base.json",
+              "product/electron-builder.overlay.json"
+            ],
+            "minimumLineLength": 4,
+            "maximumSharedLines": 9,
+            "thresholdRationale": "The product overlay must restate nine resource/filter lines because electron-builder replaces extraResources arrays instead of merging their entries; any additional shared policy line is a regression.",
+            "remediation": "Keep shared packaging policy in the canonical base, product-only assembly in the overlay, and both generated projections drift-checked."
+          }
+        ],
+        "exceptions": [],
+        "recovery": "Edit the executable base or product overlay, regenerate both projections, run the drift and product config contracts, then qualify packaging on every claimed platform."
+      },
+      {
+        "id": "core-durability",
+        "owner": "core/runtime-storage",
+        "dimensions": [
+          "language",
+          "platform",
+          "lifecycle",
+          "configuration",
+          "policy",
+          "evidence"
+        ],
+        "authority": {
+          "id": "native-durability-contract-and-storage-authority",
+          "kind": "repository-source",
+          "sources": [
+            "framework/core/src/libkungfu/include/kungfu/runtime/durable_ingest.h",
+            "framework/core/src/libyijinjing/src/io/durability.h",
+            "framework/core/src/libyijinjing/include/kungfu/yijinjing/platform/mmap.h",
+            "framework/storage/kungfu-storage.contract.json"
+          ]
+        },
+        "legalAxes": {
+          "durability-semantics": [
+            "strict-file-and-metadata",
+            "best-effort-content-publication",
+            "engine-owned"
+          ],
+          "platform-adapter": [
+            "windows",
+            "posix",
+            "provider"
+          ]
+        },
+        "adapters": [
+          {
+            "id": "native-file-durability-platform-adapter",
+            "axes": {
+              "durability-semantics": "strict-file-and-metadata"
+            },
+            "paths": [
+              "framework/core/src/libyijinjing/src/io/durability.h",
+              "framework/core/src/libyijinjing/src/io/durability.cpp",
+              "framework/core/src/libkungfu/src/runtime/durable_ingest.cpp",
+              "framework/core/src/libkungfu/src/runtime/storage/fact_durable_admission.cpp",
+              "framework/core/src/libkungfu/src/runtime/storage/backend_switch.cpp"
+            ],
+            "authorityBinding": "native-durability-contract-and-storage-authority"
+          },
+          {
+            "id": "content-store-publication-adapter",
+            "axes": {
+              "durability-semantics": "best-effort-content-publication"
+            },
+            "paths": [
+              "framework/core/src/libyijinjing/src/storage/content_store.cpp"
+            ],
+            "authorityBinding": "native-durability-contract-and-storage-authority"
+          },
+          {
+            "id": "storage-provider-adapter",
+            "axes": {
+              "durability-semantics": "engine-owned",
+              "platform-adapter": "provider"
+            },
+            "paths": [
+              "framework/core/src/libkungfu/src/runtime/storage/provider.cpp"
+            ],
+            "authorityBinding": "native-durability-contract-and-storage-authority"
+          }
+        ],
+        "projections": [
+          {
+            "path": "framework/core/src/libkungfu/src/runtime/durable_ingest.cpp",
+            "role": "strict-durable-ingest-consumer"
+          },
+          {
+            "path": "framework/core/src/libkungfu/src/runtime/storage/fact_durable_admission.cpp",
+            "role": "strict-fact-journal-consumer"
+          },
+          {
+            "path": "framework/core/src/libkungfu/src/runtime/storage/backend_switch.cpp",
+            "role": "strict-backend-authority-consumer"
+          },
+          {
+            "path": "docs/qualification/fact-storage-authority.md",
+            "role": "qualification-documentation"
+          }
+        ],
+        "qualification": [
+          {
+            "path": "framework/core/src/libkungfu/tests/durable_ingest_tests.cpp",
+            "role": "native-contract"
+          },
+          {
+            "path": "framework/core/src/libyijinjing/tests/durability_tests.cpp",
+            "role": "cross-platform-primitive-contract"
+          },
+          {
+            "path": "framework/core/tests/qualification/durability/product_contract.test.mjs",
+            "role": "product-contract"
+          }
+        ],
+        "detectors": [
+          {
+            "id": "durability-platform-primitive-spread",
+            "kind": "token-spread",
+            "findingClass": "leaking-platform-branch",
+            "paths": [
+              "framework/core/src/libyijinjing/src/io/durability.cpp",
+              "framework/core/src/libkungfu/src/runtime/durable_ingest.cpp",
+              "framework/core/src/libkungfu/src/runtime/storage/fact_durable_admission.cpp",
+              "framework/core/src/libkungfu/src/runtime/storage/backend_switch.cpp",
+              "framework/core/src/libyijinjing/src/storage/content_store.cpp",
+              "framework/core/src/libkungfu/src/runtime/storage/provider.cpp"
+            ],
+            "tokens": [
+              "FlushFileBuffers",
+              "MoveFileEx",
+              "::fsync",
+              "_commit("
+            ],
+            "maximumPaths": 2,
+            "remediation": "Keep equivalent strict primitives in the native file durability adapter; retain content-store best effort, mapping policy, and provider-owned WAL as explicit variants."
+          }
+        ],
+        "exceptions": [
+          {
+            "id": "content-store-best-effort-directory-sync",
+            "expiresAt": "2026-10-31",
+            "rationale": "Content-addressed publication deliberately reports a weaker profile than strict durable ingest and cannot inherit a stronger guarantee by refactor.",
+            "remediation": "Keep the weaker capability explicit; consolidate only after its public contract and power-loss evidence are upgraded."
+          }
+        ],
+        "recovery": "Inspect the declared durability semantics, use the platform adapter for strict file and metadata operations, preserve mapping policy, content-store best effort, and provider WAL as distinct contracts, then run native crash-recovery qualification."
+      },
+      {
+        "id": "integrity-governance",
+        "owner": "framework/maintainability",
+        "dimensions": [
+          "language",
+          "product-surface",
+          "platform",
+          "execution-topology",
+          "lifecycle",
+          "delivery",
+          "configuration",
+          "policy",
+          "evidence"
+        ],
+        "authority": {
+          "id": "semantic-amplification-manifest",
+          "kind": "additive-navigation-policy",
+          "sources": [
+            "framework/maintainability/semantic-amplification.manifest.json"
+          ]
+        },
+        "legalAxes": {
+          "surface": [
+            "report",
+            "query",
+            "fixture"
+          ]
+        },
+        "adapters": [
+          {
+            "id": "integrity-report",
+            "axes": {
+              "surface": "report"
+            },
+            "paths": [
+              "framework/maintainability/semantic-amplification.mjs"
+            ],
+            "authorityBinding": "semantic-amplification-manifest"
+          },
+          {
+            "id": "integrity-query",
+            "axes": {
+              "surface": "query"
+            },
+            "paths": [
+              "framework/maintainability/semantic-amplification.mjs"
+            ],
+            "authorityBinding": "semantic-amplification-manifest"
+          }
+        ],
+        "projections": [
+          {
+            "path": "framework/maintainability/semantic-amplification-report.json",
+            "role": "generated-report"
+          }
+        ],
+        "qualification": [
+          {
+            "path": "framework/maintainability/semantic-amplification.test.mjs",
+            "role": "adversarial-and-ratchet-fixtures"
+          },
+          {
+            "path": "framework/maintainability/semantic-amplification.fixtures.json",
+            "role": "synthetic-variant-fixtures"
+          }
+        ],
+        "exceptions": [],
+        "recovery": "Run the build-free report or task query, inspect exact findings and baseline delta, then edit the declared business authority or adapter rather than the report."
+      }
+    ],
+    "detectorOutcomes": [
+      {
+        "detector": "product-orchestration-size",
+        "topology": "product-assembly",
+        "kind": "line-count",
+        "status": "remediated",
+        "metric": 1956,
+        "threshold": 2450,
+        "finding": null
+      },
+      {
+        "detector": "electron-config-overlap",
+        "topology": "desktop-packaging",
+        "kind": "normalized-line-overlap",
+        "status": "remediated",
+        "metric": 9,
+        "threshold": 9,
+        "finding": null
+      },
+      {
+        "detector": "durability-platform-primitive-spread",
+        "topology": "core-durability",
+        "kind": "token-spread",
+        "status": "remediated",
+        "metric": 1,
+        "threshold": 2,
+        "finding": null
+      }
+    ],
+    "findings": []
+  },
+  "issues": [],
+  "reportRoot": "sha256:866c166c2c476d4df363c66d7222246d214269f3395cd056106b03acfb629a8c"
 }

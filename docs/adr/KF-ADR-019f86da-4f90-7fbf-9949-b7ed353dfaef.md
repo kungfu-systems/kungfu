@@ -5,8 +5,8 @@ adr_id: KF-ADR-019f86da-4f90-7fbf-9949-b7ed353dfaef
 decision_status: accepted
 implementation_status: partial
 implementation_commits: [80593936763261a38eb1fb696a254390c2decd67, 8b02979d68751924810d1dc25424dd7289f5d3e6, f3743218981bee7b1ffbe4fc14511845b8ac0b53]
-implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/834, https://github.com/kungfu-systems/kungfu/pull/837, https://github.com/kungfu-systems/kungfu/pull/840, https://github.com/kungfu-systems/kungfu/pull/885]
-qualification_refs: [scripts/check-agent-session-contract.test.mjs, scripts/run-zero-burden-product-qualification.mjs, tests/fixtures/agent-session-capsule-contract, framework/agent-session/tests/capsule-host.test.mjs, framework/agent-session/tests/capsule-worker.test.mjs, framework/agent-session/tests/peer-transport.test.mjs, framework/agent-session/tests/runtime-port.test.mjs, framework/agent-session/tests/runtime-port.native.test.mjs, framework/agent-session/tests/provider-adapters.test.mjs, framework/agent-session/tests/interaction-port.test.mjs, framework/agent-session/tests/provider-version.native.test.mjs, framework/agent-session/tests/product-surface.test.mjs, framework/agent-session/tests/product-detached-host.test.mjs, framework/agent-session/tests/product-recovery-qualification.test.mjs, framework/core/tests/python/test_agent_console_contract.py, docs/qualification/zero-burden-desktop-runtime.md, docs/qualification/evidence/agent-session/stage6-macos-source-v1.json]
+implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/834, https://github.com/kungfu-systems/kungfu/pull/837, https://github.com/kungfu-systems/kungfu/pull/840, https://github.com/kungfu-systems/kungfu/pull/885, https://github.com/kungfu-systems/kungfu/pull/2184]
+qualification_refs: [scripts/check-agent-session-contract.test.mjs, scripts/run-zero-burden-product-qualification.mjs, tests/fixtures/agent-session-capsule-contract, framework/agent-session/tests/capsule-host.test.mjs, framework/agent-session/tests/capsule-worker.test.mjs, framework/agent-session/tests/peer-transport.test.mjs, framework/agent-session/tests/runtime-port.test.mjs, framework/agent-session/tests/runtime-port.native.test.mjs, framework/agent-session/tests/provider-adapters.test.mjs, framework/agent-session/tests/interaction-port.test.mjs, framework/agent-session/tests/provider-version.native.test.mjs, framework/agent-session/tests/product-surface.test.mjs, framework/agent-session/tests/product-detached-host.test.mjs, framework/agent-session/tests/product-recovery-qualification.test.mjs, framework/agent-session/tests/capsule-transport-runtime.test.mjs, framework/agent-session/tests/module-boundaries.test.mjs, framework/agent-session/schemas/agent-session-core.schema.json, framework/core/tests/python/test_agent_console_contract.py, docs/qualification/zero-burden-desktop-runtime.md, docs/qualification/evidence/agent-session/stage6-macos-source-v1.json]
 review_state: self-reviewed
 sensitivity: public
 sources: [local-files, user-decision]
@@ -14,7 +14,7 @@ period: 2026-07-14
 theme: durable-agent-session-capsule-control-plane
 confidence: high
 evidence_grade: B
-last_reviewed: 2026-07-14
+last_reviewed: 2026-08-02
 ---
 
 # KF-ADR-019f86da-4f90-7fbf-9949-b7ed353dfaef: one fenced AgentSessionCapsule owns each live agent PTY
@@ -229,7 +229,7 @@ The production adapter binds that seam to native Watcher Peers without a
 Coordinator byte proxy. Versioned, redacted Codex and Claude Code fixtures now
 prove ready/busy/approval/unknown admission policy, atomic paste, bounded queue,
 manual-only keys, interrupt fencing, exit closure and visible adapter drift.
-Local `--version` probes match Codex `0.144.3` and Claude Code `2.1.209` without
+Local `--version` probes match Codex `0.146.0` and Claude Code `2.1.220` without
 reading private state; they do not qualify authenticated TUI behavior. Stage 5
 binds GUI, CLI, KFX/Agent, WorkConsole and KFD-3 to one action/plan/status/receipt
 port and proves the product runtime plus local RPC with synthetic providers.
@@ -250,6 +250,12 @@ environment values, and is promoted at `/Applications/Kungfu Episodes.app`.
 Machine restart and Linux/Windows qualification remain open, so the
 implementation status remains partial even though Mac `promotionEligible` is
 true and the qualified build is current.
+
+PR #2184 factors the provider-native transport, Capsule transport adapter,
+session lifecycle service, Work lease, and projection into one reusable kernel.
+The versioned Codex `0.146.0` and Claude Code `2.1.220` fixtures, generic PTY
+negative cases, and cross-language module-boundary tests qualify the shared
+contract without upgrading Claude authentication or Windows product evidence.
 
 The shared surface also projects each live or retained attempt into the same
 product states for GUI, CLI, and Agent clients: `available`, `starting`,

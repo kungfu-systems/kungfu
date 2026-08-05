@@ -68,13 +68,71 @@ def _install_fake_pykungfu():
 
 _install_fake_pykungfu()
 
-from kungfu import runtime_broker, runtime_service  # noqa: E402
+from kungfu import runtime_broker, runtime_service, runtime_service_config  # noqa: E402
 
 
 ROOT = Path(__file__).parents[4]
 LEASE_FIXTURES = json.loads(
     (ROOT / "tests/fixtures/runtime-lease-recovery/cases.json").read_text()
 )
+
+
+def test_runtime_service_config_preserves_compatibility_exports():
+    for name in (
+        "ServicePlan",
+        "entry_command",
+        "command_env",
+        "coordinator_run_command",
+        "assessment_worker_command",
+        "run_assessment_worker",
+        "supervisor_command",
+        "supervisor_state_dir",
+        "supervisor_log_path",
+    ):
+        assert getattr(runtime_service, name) is getattr(runtime_service_config, name)
+
+
+def test_windows_json_write_retries_transient_replace_lock(tmp_path, monkeypatch):
+    target = tmp_path / "runtime" / "state.json"
+    original_replace = runtime_service.os.replace
+    attempts = []
+    sleeps = []
+
+    def replace_after_transient_lock(source, destination):
+        attempts.append((source, destination))
+        if len(attempts) == 1:
+            raise PermissionError(5, "Access is denied", str(destination))
+        original_replace(source, destination)
+
+    monkeypatch.setattr(runtime_service.platform, "system", lambda: "Windows")
+    monkeypatch.setattr(runtime_service.os, "replace", replace_after_transient_lock)
+    monkeypatch.setattr(runtime_service.time, "sleep", sleeps.append)
+
+    runtime_service._json_write(target, {"status": "running"})
+
+    assert runtime_service._json_read(target) == {"status": "running"}
+    assert len(attempts) == 2
+    assert sleeps == [0.05]
+
+
+def test_json_write_is_atomic_across_interleaved_writers(tmp_path, monkeypatch):
+    target = tmp_path / "runtime" / "state.json"
+    original_replace = runtime_service.os.replace
+    interleaved = False
+
+    def replace_with_interleaved_writer(source, destination):
+        nonlocal interleaved
+        if not interleaved:
+            interleaved = True
+            runtime_service._json_write(target, {"writer": "nested"})
+        original_replace(source, destination)
+
+    monkeypatch.setattr(runtime_service.os, "replace", replace_with_interleaved_writer)
+
+    runtime_service._json_write(target, {"writer": "outer"})
+
+    assert runtime_service._json_read(target) == {"writer": "outer"}
+    assert list(target.parent.glob(f".{target.name}.*.tmp")) == []
 
 
 def test_adopted_coordinator_kill_uses_portable_hard_signal(monkeypatch):
@@ -402,32 +460,6 @@ def test_route_projects_runtime_generation_into_coordinator_environment(tmp_path
     assert env["KF_RUNTIME_GENERATION"] == "17"
 
 
-def test_independent_process_env_resets_frozen_application_instance(monkeypatch):
-    source_env = {
-        "KF_HOME": "/tmp/kungfu",
-        "PYINSTALLER_RESET_ENVIRONMENT": "0",
-    }
-    monkeypatch.setattr(runtime_service.sys, "frozen", True, raising=False)
-
-    child_env = runtime_service._independent_process_env(source_env)
-
-    assert child_env == {
-        "KF_HOME": "/tmp/kungfu",
-        "PYINSTALLER_RESET_ENVIRONMENT": "1",
-    }
-    assert source_env["PYINSTALLER_RESET_ENVIRONMENT"] == "0"
-
-
-def test_independent_process_env_preserves_source_runtime_without_freezing(monkeypatch):
-    source_env = {"KF_HOME": "/tmp/kungfu"}
-    monkeypatch.delattr(runtime_service.sys, "frozen", raising=False)
-
-    child_env = runtime_service._independent_process_env(source_env)
-
-    assert child_env == source_env
-    assert child_env is not source_env
-
-
 def test_coordinator_authority_persists_epoch_and_rejects_stale_generation(
     tmp_path,
 ):
@@ -626,7 +658,6 @@ def test_concurrent_activation_spawns_one_supervisor(tmp_path, monkeypatch):
         spawned.append((args, kwargs))
         return _FakeProcess()
 
-    monkeypatch.setattr(runtime_service.sys, "frozen", True, raising=False)
     monkeypatch.setattr(runtime_service.subprocess, "Popen", _spawn)
     monkeypatch.setattr(
         runtime_service, "_process_start_identity", lambda pid: f"start-{pid}"
@@ -650,7 +681,7 @@ def test_concurrent_activation_spawns_one_supervisor(tmp_path, monkeypatch):
         )
 
     assert len(spawned) == 1
-    assert spawned[0][1]["env"]["PYINSTALLER_RESET_ENVIRONMENT"] == "1"
+    assert spawned[0][1]["env"]["KF_RUNTIME_GENERATION"] == "17"
     assert sum(result["changed"] is True for result in results) == 1
     assert (
         runtime_service.read_pid(runtime_service.supervisor_pid_path(str(config_home)))

@@ -6,655 +6,92 @@ import copy
 import hashlib
 import json
 import os
-import platform
 import re
 import shutil
 import subprocess
 import sys
 import tarfile
 import tempfile
-import threading
 import time
 import urllib.parse
 import urllib.request
 import zipfile
-from collections.abc import Mapping
-from datetime import datetime, timezone
-from pathlib import Path
+from collections.abc import Callable, Mapping
+from pathlib import Path, PurePosixPath
 from typing import Any
 
 from kungfu import runtime_upgrade
 from kungfu.coordination import locks as coordination_locks
 
-
-CHECK_SCHEMA = "kungfu.product-update-check/v1"
-DOWNLOAD_PLAN_SCHEMA = "kungfu.product-update-download-plan/v1"
-DOWNLOAD_RECEIPT_SCHEMA = "kungfu.product-update-download-receipt/v1"
-APPLY_SCHEMA = "kungfu.product-update-apply/v1"
-ORCHESTRATION_PLAN_SCHEMA = "kungfu.product-update-orchestration-plan/v1"
-ORCHESTRATION_RECEIPT_SCHEMA = "kungfu.product-update-orchestration-receipt/v1"
-CLI_IMAGE_SCHEMA = "kungfu.product-cli-image/v1"
-CLI_SELECTION_SCHEMA = "kungfu.product-cli-selection/v1"
-CLI_INVENTORY_FSCK_SCHEMA = "kungfu.product-cli-inventory-fsck/v1"
-UNQUALIFIED = "unqualified-local-build"
-MAX_MANIFEST_BYTES = 1024 * 1024
-_DOWNLOAD_CHUNK_BYTES = 1024 * 1024
-_MANAGER_COMMAND_TIMEOUT_SECONDS = 15 * 60
-_VERIFICATION_COMMAND_TIMEOUT_SECONDS = 30
-_MAX_ARCHIVE_ENTRIES = 100_000
-_MIN_ARCHIVE_EXPANDED_BYTES = 64 * 1024 * 1024
-_MAX_ARCHIVE_EXPANDED_BYTES = 8 * 1024 * 1024 * 1024
-_MAX_ARCHIVE_EXPANSION_RATIO = 200
-_CONTENT_RANGE = re.compile(r"^bytes ([0-9]+)-([0-9]+)/([0-9]+)$")
-_CLI_DOWNLOAD_PROCESS_LOCK = threading.Lock()
-_CLI_SELECTION_PROCESS_LOCK = threading.Lock()
-_SEMVER = re.compile(
-    r"^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)"
-    r"(?:-([0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*))?"
-    r"(?:\+[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?$"
+from kungfu.distribution_update_planning import (
+    _finish_orchestration_plan as _finish_orchestration_plan,
+    _orchestration_plan_identity as _orchestration_plan_identity,
+    _orchestration_receipt_path as _orchestration_receipt_path,
+    check_release as check_release,
+    plan_download as plan_download,
+    plan_update as plan_update,
+    record_update_outcome as record_update_outcome,
+    validate_update_plan as validate_update_plan,
+)
+from kungfu.distribution_update_policy import (
+    APPLY_SCHEMA as APPLY_SCHEMA,
+    CHECK_SCHEMA as CHECK_SCHEMA,
+    CLI_IMAGE_SCHEMA as CLI_IMAGE_SCHEMA,
+    CLI_INVENTORY_FSCK_SCHEMA as CLI_INVENTORY_FSCK_SCHEMA,
+    CLI_ROLLBACK_SCHEMA as CLI_ROLLBACK_SCHEMA,
+    CLI_SELECTION_SCHEMA as CLI_SELECTION_SCHEMA,
+    DOWNLOAD_PLAN_SCHEMA as DOWNLOAD_PLAN_SCHEMA,
+    DOWNLOAD_RECEIPT_SCHEMA as DOWNLOAD_RECEIPT_SCHEMA,
+    MAX_MANIFEST_BYTES as MAX_MANIFEST_BYTES,
+    ORCHESTRATION_PLAN_SCHEMA as ORCHESTRATION_PLAN_SCHEMA,
+    ORCHESTRATION_RECEIPT_SCHEMA as ORCHESTRATION_RECEIPT_SCHEMA,
+    UNQUALIFIED as UNQUALIFIED,
+    DistributionUpdateError as DistributionUpdateError,
+    _artifact as _artifact,
+    _assert_cli_publication as _assert_cli_publication,
+    _assert_release_target as _assert_release_target,
+    _canonical as _canonical,
+    _CLI_DOWNLOAD_PROCESS_LOCK as _CLI_DOWNLOAD_PROCESS_LOCK,
+    _CLI_SELECTION_PROCESS_LOCK as _CLI_SELECTION_PROCESS_LOCK,
+    _cli_image_root as _cli_image_root,
+    _cli_inventory_root as _cli_inventory_root,
+    _cli_selection_path as _cli_selection_path,
+    _cli_selection_receipt_generations as _cli_selection_receipt_generations,
+    _cli_selection_receipt_path as _cli_selection_receipt_path,
+    _command_argv as _command_argv,
+    _content_root as _content_root,
+    _CONTENT_RANGE as _CONTENT_RANGE,
+    _DOWNLOAD_CHUNK_BYTES as _DOWNLOAD_CHUNK_BYTES,
+    _downgrade_refusal as _downgrade_refusal,
+    _INSTALL_SOURCES as _INSTALL_SOURCES,
+    _MANAGER_COMMAND_TIMEOUT_SECONDS as _MANAGER_COMMAND_TIMEOUT_SECONDS,
+    _MAX_ARCHIVE_ENTRIES as _MAX_ARCHIVE_ENTRIES,
+    _MAX_ARCHIVE_EXPANDED_BYTES as _MAX_ARCHIVE_EXPANDED_BYTES,
+    _MAX_ARCHIVE_EXPANSION_RATIO as _MAX_ARCHIVE_EXPANSION_RATIO,
+    _MIN_ARCHIVE_EXPANDED_BYTES as _MIN_ARCHIVE_EXPANDED_BYTES,
+    _next_cli_generation as _next_cli_generation,
+    _normalize_platform as _normalize_platform,
+    _optional_file_digest as _optional_file_digest,
+    _PACKAGE_MANAGER_COMMANDS as _PACKAGE_MANAGER_COMMANDS,
+    _package_manager_commands as _package_manager_commands,
+    _package_manager_failure_code as _package_manager_failure_code,
+    _parse_product_version as _parse_product_version,
+    _path_safe_id as _path_safe_id,
+    _persist_cli_selection_receipt as _persist_cli_selection_receipt,
+    _read_cli_selection_receipt as _read_cli_selection_receipt,
+    _read_json_object as _read_json_object,
+    _read_object as _read_object,
+    _read_shifu_env as _read_shifu_env,
+    _SEMVER as _SEMVER,
+    _stable_id as _stable_id,
+    _VERIFICATION_COMMAND_TIMEOUT_SECONDS as _VERIFICATION_COMMAND_TIMEOUT_SECONDS,
+    _write_object as _write_object,
+    compare_product_versions as compare_product_versions,
+    install_source as install_source,
+    local_dogfood_residency as local_dogfood_residency,
 )
 
-_INSTALL_SOURCES = {
-    "archive": {
-        "frontendAuthority": "archive-updater",
-        "selfUpdateAllowed": True,
-        "managerCommand": None,
-    },
-    "desktop-companion": {
-        "frontendAuthority": "desktop-updater",
-        "selfUpdateAllowed": False,
-        "managerCommand": None,
-    },
-    "homebrew": {
-        "frontendAuthority": "package-manager",
-        "selfUpdateAllowed": False,
-        "managerCommand": None,
-    },
-    "winget": {
-        "frontendAuthority": "package-manager",
-        "selfUpdateAllowed": False,
-        "managerCommand": None,
-    },
-    "deb": {
-        "frontendAuthority": "package-manager",
-        "selfUpdateAllowed": False,
-        "managerCommand": None,
-    },
-    "rpm": {
-        "frontendAuthority": "package-manager",
-        "selfUpdateAllowed": False,
-        "managerCommand": None,
-    },
-    "native-installer": {
-        "frontendAuthority": "external-installer",
-        "selfUpdateAllowed": False,
-        "managerCommand": None,
-    },
-    "unknown": {
-        "frontendAuthority": "user",
-        "selfUpdateAllowed": False,
-        "managerCommand": None,
-    },
-}
-
-_PACKAGE_MANAGER_COMMANDS = {
-    "homebrew": {
-        "managerCommand": [
-            "brew",
-            "upgrade",
-            "--formula",
-            "kungfu-systems/tap/kungfu",
-        ],
-        "verificationCommand": ["kungfu", "--version"],
-    },
-}
-
-
-class DistributionUpdateError(ValueError):
-    def __init__(self, code: str, message: str) -> None:
-        super().__init__(message)
-        self.code = code
-        self.receipt: dict[str, Any] | None = None
-
-
-def _command_argv(value: Any, label: str) -> list[str]:
-    if not (
-        isinstance(value, list)
-        and value
-        and all(isinstance(item, str) and item for item in value)
-    ):
-        raise DistributionUpdateError(
-            f"{label}-invalid",
-            f"{label.replace('-', ' ')} must be a non-empty string array",
-        )
-    return copy.deepcopy(value)
-
-
-def _package_manager_commands(
-    source: str,
-    manager_command: Any,
-    verification_command: Any,
-) -> tuple[list[str] | None, list[str] | None]:
-    if manager_command is None and verification_command is None:
-        return None, None
-    if manager_command is None or verification_command is None:
-        raise DistributionUpdateError(
-            "package-manager-contract-incomplete",
-            "package-manager install metadata must declare both update and verification argv",
-        )
-    manager = _command_argv(manager_command, "manager-command")
-    verification = _command_argv(verification_command, "verification-command")
-    expected = _PACKAGE_MANAGER_COMMANDS.get(source)
-    if expected is None:
-        raise DistributionUpdateError(
-            "package-manager-contract-unsupported",
-            f"{source} has no locally allowlisted package-manager contract",
-        )
-    if (
-        manager != expected["managerCommand"]
-        or verification != expected["verificationCommand"]
-    ):
-        raise DistributionUpdateError(
-            "package-manager-command-untrusted",
-            f"{source} update metadata does not match the locally allowlisted exact argv",
-        )
-    return manager, verification
-
-
-def _package_manager_failure_code(stderr: Any) -> tuple[str, str]:
-    detail = str(stderr or "").lower()
-    if any(
-        marker in detail
-        for marker in (
-            "no available formula",
-            "no formulae found",
-            "formula unavailable",
-            "not in a tap",
-        )
-    ):
-        return (
-            "package-manager-formula-unavailable",
-            "the trusted Kungfu Formula is unavailable from the configured tap",
-        )
-    if any(
-        marker in detail
-        for marker in ("no such keg", "not installed", "formula is not installed")
-    ):
-        return (
-            "package-manager-formula-not-installed",
-            "the trusted Kungfu Formula is not installed in this Homebrew prefix",
-        )
-    if any(
-        marker in detail
-        for marker in (
-            "could not resolve host",
-            "failed to connect",
-            "network is unreachable",
-            "timed out",
-            "offline",
-        )
-    ):
-        return (
-            "package-manager-offline",
-            "Homebrew could not reach the trusted Formula source",
-        )
-    if any(
-        marker in detail
-        for marker in ("permission denied", "operation not permitted", "not writable")
-    ):
-        return (
-            "package-manager-permission-denied",
-            "Homebrew could not update its owned prefix with current permissions",
-        )
-    return (
-        "update-command-failed",
-        "package manager update command failed; existing work was not changed",
-    )
-
-
-def _parse_product_version(value: str, label: str) -> tuple[int, int, int, list[str]]:
-    match = _SEMVER.fullmatch(value)
-    if match is None:
-        raise DistributionUpdateError(
-            "product-version-invalid", f"{label} is not a valid SemVer version"
-        )
-    prerelease = match.group(4)
-    prerelease_identifiers = prerelease.split(".") if prerelease is not None else []
-    if any(
-        identifier.isdigit() and len(identifier) > 1 and identifier.startswith("0")
-        for identifier in prerelease_identifiers
-    ):
-        raise DistributionUpdateError(
-            "product-version-invalid",
-            f"{label} is not a valid SemVer version",
-        )
-    return (
-        int(match.group(1)),
-        int(match.group(2)),
-        int(match.group(3)),
-        prerelease_identifiers,
-    )
-
-
-def compare_product_versions(left: str, right: str) -> int:
-    """Compare SemVer product versions while ignoring build metadata."""
-
-    left_major, left_minor, left_patch, left_pre = _parse_product_version(
-        left, "target product version"
-    )
-    right_major, right_minor, right_patch, right_pre = _parse_product_version(
-        right, "installed product version"
-    )
-    left_core = (left_major, left_minor, left_patch)
-    right_core = (right_major, right_minor, right_patch)
-    if left_core != right_core:
-        return 1 if left_core > right_core else -1
-    if not left_pre or not right_pre:
-        if left_pre == right_pre:
-            return 0
-        return -1 if left_pre else 1
-    for left_item, right_item in zip(left_pre, right_pre, strict=False):
-        if left_item == right_item:
-            continue
-        left_numeric = left_item.isdigit()
-        right_numeric = right_item.isdigit()
-        if left_numeric and right_numeric:
-            return 1 if int(left_item) > int(right_item) else -1
-        if left_numeric != right_numeric:
-            return -1 if left_numeric else 1
-        return 1 if left_item > right_item else -1
-    if len(left_pre) == len(right_pre):
-        return 0
-    return 1 if len(left_pre) > len(right_pre) else -1
-
-
-def _downgrade_refusal(
-    manifest: Mapping[str, Any], current_version: str
-) -> dict[str, Any]:
-    impact = {
-        "activeWorkContinues": True,
-        "activationTiming": "not-authorized",
-        "userActionRequired": True,
-    }
-    return {
-        "state": "action-required",
-        "reasonCode": "downgrade-refused",
-        "currentVersion": current_version,
-        "targetVersion": manifest["productVersion"],
-        "runtimeBuildId": manifest["runtimeBuildId"],
-        "frontendAction": "none",
-        "managerCommand": None,
-        "documentationUrl": manifest["documentationUrl"],
-        "message": runtime_upgrade.user_message(
-            "downgrade-refused",
-            documentation_url=manifest["documentationUrl"],
-            impact=impact,
-        ),
-    }
-
-
-def _canonical(value: Mapping[str, Any]) -> bytes:
-    return json.dumps(
-        value, sort_keys=True, separators=(",", ":"), ensure_ascii=True
-    ).encode("utf-8")
-
-
-def _stable_id(prefix: str, value: Mapping[str, Any]) -> str:
-    return f"{prefix}-{hashlib.sha256(_canonical(value)).hexdigest()[:24]}"
-
-
-def _content_root(value: Mapping[str, Any]) -> str:
-    return f"sha256:{hashlib.sha256(_canonical(value)).hexdigest()}"
-
-
-def _read_object(path: Path) -> dict[str, Any]:
-    try:
-        value = json.loads(path.read_text("utf-8"))
-    except (OSError, json.JSONDecodeError) as error:
-        raise DistributionUpdateError(
-            "metadata-unreadable", f"update metadata is unreadable: {path}"
-        ) from error
-    if not isinstance(value, dict):
-        raise DistributionUpdateError(
-            "metadata-invalid", f"update metadata is not an object: {path}"
-        )
-    return value
-
-
-def _write_object(path: Path, value: Mapping[str, Any]) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    temporary = path.with_name(f".{path.name}.{os.getpid()}.{time.time_ns()}.tmp")
-    try:
-        with temporary.open("x", encoding="utf-8") as output:
-            json.dump(value, output, indent=2, sort_keys=True)
-            output.write("\n")
-            output.flush()
-            os.fsync(output.fileno())
-        os.replace(temporary, path)
-    finally:
-        try:
-            temporary.unlink()
-        except FileNotFoundError:
-            pass
-
-
-def _path_safe_id(value: str, label: str) -> str:
-    if not value or any(
-        char not in "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789._-"
-        for char in value
-    ):
-        raise DistributionUpdateError(
-            f"{label}-invalid", f"{label.replace('-', ' ')} is not path safe"
-        )
-    return value
-
-
-def _cli_inventory_root(config_home: str | Path) -> Path:
-    return Path(config_home).expanduser().resolve() / "product" / "cli"
-
-
-def _cli_image_root(config_home: str | Path, frontend_build_id: str) -> Path:
-    return (
-        _cli_inventory_root(config_home)
-        / "images"
-        / _path_safe_id(frontend_build_id, "frontend-build-id")
-    )
-
-
-def _cli_selection_path(config_home: str | Path) -> Path:
-    return _cli_inventory_root(config_home) / "current.json"
-
-
-def _normalize_platform() -> tuple[str, str]:
-    system = {"Darwin": "darwin", "Linux": "linux", "Windows": "win32"}.get(
-        platform.system(), platform.system().lower()
-    )
-    machine = platform.machine().lower()
-    architecture = {
-        "aarch64": "arm64",
-        "arm64": "arm64",
-        "amd64": "x64",
-        "x86_64": "x64",
-    }.get(machine, machine)
-    return system, architecture
-
-
-def install_source(
-    env: Mapping[str, str] | None = None,
-    *,
-    product_manifest: str | Path | None = None,
-) -> dict[str, Any]:
-    env = os.environ if env is None else env
-    manifest_path = product_manifest or env.get("KUNGFU_PRODUCT_MANIFEST")
-    manifest = None
-    if manifest_path:
-        candidate = Path(manifest_path).expanduser().resolve()
-        manifest = _read_object(candidate)
-    source = str(env.get("KUNGFU_INSTALL_SOURCE") or "")
-    if not source and manifest is not None:
-        install = manifest.get("install")
-        if isinstance(install, Mapping):
-            source = str(install.get("source") or "")
-    source = source or "unknown"
-    if source not in _INSTALL_SOURCES:
-        raise DistributionUpdateError(
-            "install-source-unsupported", f"unsupported install source: {source}"
-        )
-    result = {
-        "schema": "kungfu.product-install-source/v1",
-        "source": source,
-        **copy.deepcopy(_INSTALL_SOURCES[source]),
-        "verificationCommand": None,
-        "productManifest": str(Path(manifest_path).expanduser().resolve())
-        if manifest_path
-        else None,
-        "selectedFrontendBuildId": env.get("KUNGFU_SELECTED_FRONTEND_BUILD_ID"),
-        "bootstrapReceipt": None,
-    }
-    if source == "archive" and manifest_path:
-        receipt_path = (
-            Path(manifest_path).expanduser().resolve().parent
-            / "install"
-            / "bootstrap-receipt.json"
-        )
-        if receipt_path.is_file():
-            receipt = _read_object(receipt_path)
-            receipt_root = receipt.get("receiptRoot")
-            rooted = {
-                key: value for key, value in receipt.items() if key != "receiptRoot"
-            }
-            if (
-                receipt.get("schema") != "kungfu.bootstrap-verification-receipt/v1"
-                or receipt.get("state") != "verified"
-                or receipt_root != _content_root(rooted)
-            ):
-                raise DistributionUpdateError(
-                    "bootstrap-receipt-invalid",
-                    "archive bootstrap receipt is invalid",
-                )
-            result["bootstrapReceipt"] = receipt
-            result["selectedFrontendBuildId"] = receipt.get("frontendBuildId")
-    if manifest is not None:
-        install = manifest.get("install")
-        manager_command = (
-            install.get("managerCommand") if isinstance(install, Mapping) else None
-        )
-        verification_command = (
-            install.get("verificationCommand") if isinstance(install, Mapping) else None
-        )
-        if manager_command is not None or verification_command is not None:
-            if result["frontendAuthority"] != "package-manager":
-                raise DistributionUpdateError(
-                    "manager-command-unowned",
-                    "only package-manager installs may declare a manager command",
-                )
-            manager, verification = _package_manager_commands(
-                source,
-                manager_command,
-                verification_command,
-            )
-            result["managerCommand"] = manager
-            result["verificationCommand"] = verification
-    return result
-
-
-def local_dogfood_residency(
-    env: Mapping[str, str] | None = None,
-) -> dict[str, Any]:
-    """Inspect Shifu's local dev Product residency without changing it."""
-
-    env = os.environ if env is None else env
-    os_name = {"Darwin": "macos", "Linux": "linux", "Windows": "windows"}.get(
-        platform.system(), platform.system().lower()
-    )
-    arch = {
-        "arm64": "aarch64",
-        "aarch64": "aarch64",
-        "x86_64": "x86_64",
-        "amd64": "x86_64",
-    }.get(platform.machine().lower(), platform.machine().lower())
-    home = Path(str(env.get("HOME") or Path.home()))
-    cache_home = Path(str(env.get("XDG_CACHE_HOME") or home / ".cache"))
-    registry = cache_home / "kungfu" / "product" / f"{os_name}-{arch}"
-    installed_path = registry / "installed.meta.env"
-    promotion_path = registry / "last-promotion.json"
-    installed = _read_shifu_env(installed_path)
-    promotion = _read_json_object(promotion_path)
-
-    runtime_root_value = str(env.get("KUNGFU_DIR") or "")
-    runtime_root = (
-        Path(runtime_root_value).expanduser().resolve() if runtime_root_value else None
-    )
-    manifest_value = str(env.get("KUNGFU_UPGRADE_MANIFEST") or "")
-    manifest_path = (
-        Path(manifest_value).expanduser().resolve() if manifest_value else None
-    )
-    build_info = (
-        _read_json_object(runtime_root / "kungfubuildinfo.json")
-        if runtime_root is not None
-        else {}
-    )
-    manifest = _read_json_object(manifest_path) if manifest_path is not None else {}
-    profile_manifest_path = (
-        runtime_root / "profile-kfd3.json" if runtime_root is not None else None
-    )
-    profile_manifest = (
-        _read_json_object(profile_manifest_path)
-        if profile_manifest_path is not None
-        else {}
-    )
-    profile_roots = sorted(
-        {
-            str(row.get("profileSuiteRoot") or "")
-            for row in profile_manifest.get("entries", [])
-            if str(row.get("profileSuiteRoot") or "").startswith("sha256:")
-        }
-    )
-    source_commit = str(build_info.get("git", {}).get("revision") or "")
-    manifest_commit = str(manifest.get("sourceCommit") or "")
-    installed_commit = str(installed.get("KUNGFU_INSTALLED_SHA") or "")
-    mainline_commit = str(installed.get("KUNGFU_INSTALLED_MAINLINE_SHA") or "")
-    artifact = Path(str(installed.get("KUNGFU_INSTALLED_ARTIFACT") or ""))
-    entrypoint = str(
-        env.get("KUNGFU_CONTROLLER_ENTRYPOINT") or shutil.which("kungfu") or sys.argv[0]
-    )
-    identity_matches = bool(
-        re.fullmatch(r"[0-9a-f]{40}", source_commit)
-        and source_commit == manifest_commit
-        and source_commit == installed_commit
-        and source_commit == mainline_commit
-    )
-    qualified = (
-        installed.get("KUNGFU_INSTALLED_QUALIFIED") == "true"
-        and installed.get("KUNGFU_INSTALLED_INTEGRATED") == "true"
-        and installed.get("KUNGFU_INSTALLED_MAINLINE_REF") == "origin/HEAD"
-    )
-    artifact_matches = bool(
-        artifact.is_dir()
-        and runtime_root is not None
-        and artifact.resolve() in runtime_root.parents
-    )
-    occurred_at = int(promotion.get("occurredAt") or 0)
-    age_seconds = max(0, int(time.time()) - occurred_at) if occurred_at else None
-    freshness = (
-        "fresh"
-        if identity_matches
-        and qualified
-        and age_seconds is not None
-        and age_seconds <= 7 * 24 * 60 * 60
-        else "stale"
-        if occurred_at
-        else "unknown"
-    )
-    rollback_id = str(installed.get("KUNGFU_ROLLBACK_BUILD_ID") or "")
-    rollback_slot = registry / rollback_id if rollback_id else None
-    rollback_available = bool(
-        rollback_slot is not None
-        and rollback_slot.is_dir()
-        and (rollback_slot / "meta.env").is_file()
-    )
-    promotion_matches = bool(
-        promotion.get("schema") == "shifu.local-promotion-receipt/v1"
-        and promotion.get("product") == "kungfu"
-        and promotion.get("action") in {"promote", "rollback"}
-        and promotion.get("artifactId") == installed.get("KUNGFU_INSTALLED_BUILD_ID")
-        and promotion.get("toCommit") == installed_commit
-    )
-    state = (
-        "qualified"
-        if identity_matches
-        and qualified
-        and artifact_matches
-        and profile_roots
-        and promotion_matches
-        and rollback_available
-        else "unqualified"
-        if installed
-        else "unavailable"
-    )
-    return {
-        "schema": "kungfu.product-dogfood-residency/v1",
-        "state": state,
-        "controllerEntrypoint": entrypoint,
-        "product": "kungfu",
-        "artifactId": installed.get("KUNGFU_INSTALLED_BUILD_ID"),
-        "artifactPath": str(artifact) if str(artifact) else None,
-        "artifactDigest": installed.get("KUNGFU_INSTALLED_DIGEST"),
-        "sourceCommit": source_commit or None,
-        "sourceBranch": build_info.get("git", {}).get("branch"),
-        "buildPristine": build_info.get("git", {}).get("pristine") is True,
-        "productManifest": str(manifest_path) if manifest_path is not None else None,
-        "productManifestDigest": _optional_file_digest(manifest_path),
-        "controllerProfileRoots": profile_roots,
-        "mainline": {
-            "ref": installed.get("KUNGFU_INSTALLED_MAINLINE_REF"),
-            "commit": mainline_commit or None,
-            "integrated": installed.get("KUNGFU_INSTALLED_INTEGRATED") == "true",
-        },
-        "qualification": {
-            "qualified": qualified,
-            "identityMatches": identity_matches,
-            "artifactMatchesRuntime": artifact_matches,
-            "promotionMatches": promotion_matches,
-            "rollbackAvailable": rollback_available,
-        },
-        "promotion": {
-            **promotion,
-            "receiptPath": str(promotion_path),
-            "receiptDigest": _optional_file_digest(promotion_path),
-        },
-        "rollback": {
-            "artifactId": rollback_id or None,
-            "sourceCommit": installed.get("KUNGFU_ROLLBACK_SHA") or None,
-            "available": rollback_available,
-            "checkCommand": (
-                ["shifu", "promote", "--rollback", "--check"] if rollback_id else None
-            ),
-        },
-        "freshness": {
-            "state": freshness,
-            "promotionAgeSeconds": age_seconds,
-            "maximumAgeSeconds": 7 * 24 * 60 * 60,
-        },
-        "registryPath": str(registry),
-        "writes": [],
-    }
-
-
-def _read_shifu_env(path: Path) -> dict[str, str]:
-    try:
-        lines = path.read_text(encoding="utf-8").splitlines()
-    except OSError:
-        return {}
-    result = {}
-    for line in lines:
-        key, separator, value = line.partition("=")
-        if not separator or not re.fullmatch(r"[A-Z0-9_]+", key):
-            continue
-        value = value.strip()
-        if len(value) >= 2 and value[0] == value[-1] == "'":
-            value = value[1:-1]
-        result[key] = value
-    return result
-
-
-def _read_json_object(path: Path | None) -> dict[str, Any]:
-    if path is None:
-        return {}
-    try:
-        value = json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError):
-        return {}
-    return value if isinstance(value, dict) else {}
-
-
-def _optional_file_digest(path: Path | None) -> str | None:
-    if path is None:
-        return None
-    try:
-        return "sha256:" + hashlib.sha256(path.read_bytes()).hexdigest()
-    except OSError:
-        return None
+release_cut = runtime_upgrade
 
 
 def _assert_https_response(
@@ -759,469 +196,6 @@ def load_release_manifest(reference: str | Path) -> tuple[dict[str, Any], bool]:
     return runtime_upgrade.validate_manifest(value), remote
 
 
-def _artifact(manifest: Mapping[str, Any], kind: str) -> dict[str, Any]:
-    artifacts = [item for item in manifest["artifacts"] if item["kind"] == kind]
-    if len(artifacts) != 1:
-        raise DistributionUpdateError(
-            "artifact-ambiguous", f"release manifest must declare one {kind} artifact"
-        )
-    return copy.deepcopy(dict(artifacts[0]))
-
-
-def _assert_cli_publication(manifest: Mapping[str, Any]) -> None:
-    evidence = str(manifest.get("qualificationEvidenceRef") or "")
-    if not evidence or evidence.startswith(UNQUALIFIED):
-        raise DistributionUpdateError(
-            "release-unqualified", "release has no retained qualification evidence"
-        )
-    _artifact(manifest, "runtime")
-    _artifact(manifest, "cli")
-    for artifact in manifest["artifacts"]:
-        kind = artifact["kind"]
-        if not artifact["signature"] or artifact["signature"] == UNQUALIFIED:
-            raise DistributionUpdateError(
-                "signature-missing", f"{kind} artifact has no signing evidence"
-            )
-        if kind in {"cli", "desktop"} and not str(artifact["url"]).startswith(
-            "https://"
-        ):
-            raise DistributionUpdateError(
-                "artifact-transport-insecure",
-                f"{kind} update artifact requires HTTPS",
-            )
-
-
-def _assert_release_target(
-    manifest: Mapping[str, Any],
-    *,
-    expected_platform: str | None = None,
-    expected_architecture: str | None = None,
-) -> None:
-    current_platform, current_architecture = _normalize_platform()
-    expected_platform = expected_platform or current_platform
-    expected_architecture = expected_architecture or current_architecture
-    if (
-        manifest["platform"] != expected_platform
-        or manifest["architecture"] != expected_architecture
-    ):
-        raise DistributionUpdateError(
-            "release-target-mismatch",
-            "release platform or architecture does not match this CLI",
-        )
-
-
-def check_release(
-    manifest: Mapping[str, Any],
-    *,
-    current_version: str,
-    source: Mapping[str, Any],
-    require_publication: bool = True,
-    expected_platform: str | None = None,
-    expected_architecture: str | None = None,
-) -> dict[str, Any]:
-    value = runtime_upgrade.validate_manifest(manifest)
-    _assert_release_target(
-        value,
-        expected_platform=expected_platform,
-        expected_architecture=expected_architecture,
-    )
-    if require_publication:
-        _assert_cli_publication(value)
-    version_order = compare_product_versions(value["productVersion"], current_version)
-    if version_order < 0:
-        return {
-            "schema": CHECK_SCHEMA,
-            **_downgrade_refusal(value, current_version),
-            "installSource": copy.deepcopy(dict(source)),
-            "manifest": value,
-        }
-    manager_action = source.get("managerCommand")
-    available = version_order > 0
-    reason_code = "new-product-version" if available else "already-current"
-    impact = {
-        "activeWorkContinues": True,
-        "activationTiming": "after-core-readiness",
-        "userActionRequired": False,
-    }
-    return {
-        "schema": CHECK_SCHEMA,
-        "state": "available" if available else "current",
-        "reasonCode": reason_code,
-        "currentVersion": current_version,
-        "targetVersion": value["productVersion"],
-        "runtimeBuildId": value["runtimeBuildId"],
-        "installSource": copy.deepcopy(dict(source)),
-        "frontendAction": "download"
-        if source.get("selfUpdateAllowed")
-        else "package-manager"
-        if manager_action
-        else "external-installer",
-        "managerCommand": copy.deepcopy(manager_action),
-        "documentationUrl": value["documentationUrl"],
-        "message": runtime_upgrade.user_message(
-            reason_code,
-            documentation_url=value["documentationUrl"],
-            impact=impact,
-        ),
-        "manifest": value,
-    }
-
-
-def plan_download(
-    manifest: Mapping[str, Any],
-    *,
-    current_version: str,
-    source: Mapping[str, Any],
-    cache_root: str | Path,
-    allow_local_artifact: bool = False,
-) -> dict[str, Any]:
-    value = runtime_upgrade.validate_manifest(manifest)
-    _assert_release_target(value)
-    if compare_product_versions(value["productVersion"], current_version) < 0:
-        return {
-            "schema": DOWNLOAD_PLAN_SCHEMA,
-            "planId": _stable_id(
-                "product-download-plan",
-                {
-                    "currentVersion": current_version,
-                    "targetVersion": value["productVersion"],
-                    "reasonCode": "downgrade-refused",
-                },
-            ),
-            **_downgrade_refusal(value, current_version),
-        }
-    if not source.get("selfUpdateAllowed"):
-        reason_code = "frontend-authority-external"
-        return {
-            "schema": DOWNLOAD_PLAN_SCHEMA,
-            "planId": _stable_id(
-                "product-download-plan",
-                {
-                    "runtimeBuildId": value["runtimeBuildId"],
-                    "source": str(source.get("source")),
-                },
-            ),
-            "state": "action-required",
-            "reasonCode": reason_code,
-            "managerCommand": copy.deepcopy(source.get("managerCommand")),
-            "documentationUrl": value["documentationUrl"],
-            "message": runtime_upgrade.user_message(
-                reason_code,
-                documentation_url=value["documentationUrl"],
-                impact={
-                    "activeWorkContinues": True,
-                    "activationTiming": "owned-by-install-source",
-                    "userActionRequired": True,
-                },
-            ),
-        }
-    artifact = _artifact(value, "cli")
-    if not allow_local_artifact:
-        _assert_cli_publication(value)
-    parsed = urllib.parse.urlparse(artifact["url"])
-    name = Path(parsed.path).name
-    if not name or name in {".", ".."}:
-        raise DistributionUpdateError(
-            "artifact-url-invalid", "CLI artifact URL has no safe filename"
-        )
-    target = Path(cache_root).expanduser().resolve() / value["runtimeBuildId"] / name
-    identity = {
-        "runtimeBuildId": value["runtimeBuildId"],
-        "artifactUrl": artifact["url"],
-        "artifactSize": artifact["size"],
-        "artifactDigest": artifact["digest"],
-        "target": str(target),
-    }
-    return {
-        "schema": DOWNLOAD_PLAN_SCHEMA,
-        "planId": _stable_id("product-download-plan", identity),
-        "state": "download-allowed",
-        "reasonCode": "verified-release",
-        "target": str(target),
-        "artifact": artifact,
-        "manifest": value,
-        "documentationUrl": value["documentationUrl"],
-    }
-
-
-def _orchestration_plan_identity(plan: Mapping[str, Any]) -> dict[str, Any]:
-    manifest = plan.get("manifest")
-    source = plan.get("installSource")
-    download_plan = plan.get("downloadPlan")
-    if not isinstance(manifest, Mapping) or not isinstance(source, Mapping):
-        raise DistributionUpdateError(
-            "plan-invalid", "update orchestration plan is incomplete"
-        )
-    return {
-        "channel": plan.get("channel"),
-        "currentVersion": plan.get("currentVersion"),
-        "targetVersion": plan.get("targetVersion"),
-        "releasePayloadRoot": plan.get("releasePayloadRoot"),
-        "releasePassport": plan.get("releasePassport"),
-        "manifestRoot": f"sha256:{hashlib.sha256(_canonical(manifest)).hexdigest()}",
-        "runtimeBuildId": manifest.get("runtimeBuildId"),
-        "frontendBuildId": manifest.get("frontendBuildId"),
-        "installSource": source.get("source"),
-        "managerCommand": source.get("managerCommand"),
-        "verificationCommand": source.get("verificationCommand"),
-        "downloadPlanId": (
-            download_plan.get("planId") if isinstance(download_plan, Mapping) else None
-        ),
-        "action": plan.get("action"),
-        "state": plan.get("state"),
-        "reasonCode": plan.get("reasonCode"),
-        "impact": plan.get("impact"),
-        "nextAction": plan.get("nextAction"),
-    }
-
-
-def _finish_orchestration_plan(payload: dict[str, Any]) -> dict[str, Any]:
-    return {
-        **payload,
-        "planId": _stable_id(
-            "product-update-plan", _orchestration_plan_identity(payload)
-        ),
-    }
-
-
-def plan_update(
-    selection: Mapping[str, Any],
-    *,
-    current_version: str,
-    source: Mapping[str, Any],
-    cache_root: str | Path,
-) -> dict[str, Any]:
-    """Bind one verified channel selection to one executable update action."""
-
-    entry = selection.get("entry")
-    manifest = entry.get("manifest") if isinstance(entry, Mapping) else None
-    release_passport = selection.get("releasePassport")
-    if (
-        selection.get("schema") != "kungfu.release-channel-selection/v1"
-        or not isinstance(manifest, Mapping)
-        or not isinstance(release_passport, Mapping)
-        or not str(selection.get("payloadRoot") or "").startswith("sha256:")
-    ):
-        raise DistributionUpdateError(
-            "channel-selection-invalid",
-            "release channel selection is incomplete",
-        )
-    if (
-        selection.get("channel") != manifest.get("releaseChannel")
-        or selection.get("installSource") != source.get("source")
-        or selection.get("targetVersion") != manifest.get("productVersion")
-        or selection.get("currentVersion") != current_version
-    ):
-        raise DistributionUpdateError(
-            "channel-selection-stale",
-            "release channel selection no longer matches this installation",
-        )
-    checked = check_release(
-        manifest,
-        current_version=current_version,
-        source=source,
-        require_publication=True,
-    )
-    impact = {
-        "activeWorkContinues": True,
-        "activationTiming": "after-core-readiness",
-        "userActionRequired": checked["state"] != "current",
-    }
-    common = {
-        "schema": ORCHESTRATION_PLAN_SCHEMA,
-        "channel": selection.get("channel"),
-        "currentVersion": current_version,
-        "targetVersion": checked["targetVersion"],
-        "releasePayloadRoot": selection.get("payloadRoot"),
-        "releasePassport": copy.deepcopy(selection.get("releasePassport")),
-        "installSource": copy.deepcopy(dict(source)),
-        "manifest": copy.deepcopy(dict(manifest)),
-        "check": checked,
-        "impact": impact,
-        "documentationUrl": checked["documentationUrl"],
-    }
-    if checked["state"] == "current":
-        return _finish_orchestration_plan(
-            {
-                **common,
-                "state": "current",
-                "reasonCode": "already-current",
-                "action": "none",
-                "downloadPlan": None,
-                "nextAction": "No action is required.",
-            }
-        )
-    if checked["reasonCode"] == "downgrade-refused":
-        return _finish_orchestration_plan(
-            {
-                **common,
-                "state": "action-required",
-                "reasonCode": "downgrade-refused",
-                "action": "recovery",
-                "downloadPlan": None,
-                "nextAction": "Use an explicit release recovery procedure.",
-            }
-        )
-    if source.get("selfUpdateAllowed"):
-        download_plan = plan_download(
-            manifest,
-            current_version=current_version,
-            source=source,
-            cache_root=cache_root,
-        )
-        return _finish_orchestration_plan(
-            {
-                **common,
-                "state": "update-available",
-                "reasonCode": "new-product-version",
-                "action": "archive-self-update",
-                "downloadPlan": download_plan,
-                "nextAction": "Approve this exact plan to install beside current work.",
-            }
-        )
-    if source.get("frontendAuthority") == "package-manager":
-        if not source.get("managerCommand") or not source.get("verificationCommand"):
-            return _finish_orchestration_plan(
-                {
-                    **common,
-                    "state": "action-required",
-                    "reasonCode": "manager-required",
-                    "action": "package-manager",
-                    "downloadPlan": None,
-                    "nextAction": (
-                        "Use a package that declares exact update and verification argv."
-                    ),
-                }
-            )
-        return _finish_orchestration_plan(
-            {
-                **common,
-                "state": "update-available",
-                "reasonCode": "new-product-version",
-                "action": "package-manager",
-                "downloadPlan": None,
-                "nextAction": (
-                    "Approve this exact plan to run the installed package command."
-                ),
-            }
-        )
-    if source.get("frontendAuthority") == "desktop-updater":
-        return _finish_orchestration_plan(
-            {
-                **common,
-                "state": "action-required",
-                "reasonCode": "desktop-required",
-                "action": "desktop-companion",
-                "downloadPlan": None,
-                "nextAction": (
-                    "Use the desktop updater; this CLI will not replace its frontend."
-                ),
-            }
-        )
-    return _finish_orchestration_plan(
-        {
-            **common,
-            "state": "action-required",
-            "reasonCode": "unsupported-source",
-            "action": str(source.get("source") or "unknown"),
-            "downloadPlan": None,
-            "nextAction": "Follow the release installation instructions.",
-        }
-    )
-
-
-def validate_update_plan(
-    plan: Mapping[str, Any], *, expected_plan_id: str
-) -> dict[str, Any]:
-    if plan.get("schema") != ORCHESTRATION_PLAN_SCHEMA:
-        raise DistributionUpdateError(
-            "plan-invalid", "update orchestration plan schema is invalid"
-        )
-    observed_plan_id = _stable_id(
-        "product-update-plan", _orchestration_plan_identity(plan)
-    )
-    if plan.get("planId") != expected_plan_id or observed_plan_id != expected_plan_id:
-        raise DistributionUpdateError(
-            "stale-plan", "update orchestration plan identity changed"
-        )
-    return copy.deepcopy(dict(plan))
-
-
-def _orchestration_receipt_path(
-    config_home: str | Path, plan_id: str, receipt_id: str
-) -> Path:
-    return (
-        Path(config_home).expanduser().resolve()
-        / "product"
-        / "update"
-        / "receipts"
-        / _path_safe_id(plan_id, "plan-id")
-        / f"{_path_safe_id(receipt_id, 'receipt-id')}.json"
-    )
-
-
-def record_update_outcome(
-    plan: Mapping[str, Any],
-    *,
-    config_home: str | Path,
-    state: str,
-    reason_code: str,
-    result: Mapping[str, Any] | None = None,
-) -> dict[str, Any]:
-    if state not in {"complete", "cancelled", "failed"}:
-        raise DistributionUpdateError(
-            "receipt-state-invalid", "update receipt state is invalid"
-        )
-    plan_id = str(plan.get("planId") or "")
-    validate_update_plan(plan, expected_plan_id=plan_id)
-    recorded_at_ns = time.time_ns()
-    recorded_at = (
-        datetime.fromtimestamp(recorded_at_ns / 1_000_000_000, timezone.utc)
-        .isoformat()
-        .replace("+00:00", "Z")
-    )
-    receipt_id = _stable_id(
-        "product-update-receipt",
-        {
-            "planId": plan_id,
-            "state": state,
-            "reasonCode": reason_code,
-            "recordedAtNs": str(recorded_at_ns),
-            "processId": os.getpid(),
-        },
-    )
-    path = _orchestration_receipt_path(config_home, plan_id, receipt_id)
-    receipt_core = {
-        "schema": ORCHESTRATION_RECEIPT_SCHEMA,
-        "receiptId": receipt_id,
-        "planId": plan_id,
-        "state": state,
-        "reasonCode": reason_code,
-        "recordedAt": recorded_at,
-        "recordedAtNs": str(recorded_at_ns),
-        "channel": plan["channel"],
-        "currentVersion": plan["currentVersion"],
-        "targetVersion": plan["targetVersion"],
-        "installSource": plan["installSource"]["source"],
-        "releasePayloadRoot": plan["releasePayloadRoot"],
-        "runtimeBuildId": plan["manifest"]["runtimeBuildId"],
-        "frontendBuildId": plan["manifest"]["frontendBuildId"],
-        "result": copy.deepcopy(dict(result)) if result is not None else None,
-        "recoveryAction": (
-            None
-            if state == "complete"
-            else "Run `kungfu update --check` before retrying the exact release."
-        ),
-    }
-    receipt = {
-        **receipt_core,
-        "receiptRoot": _content_root(receipt_core),
-        "receiptPath": str(path),
-    }
-    _write_object(path, receipt)
-    return receipt
-
-
 def _version_in_output(output: str, target_version: str) -> bool:
     pattern = re.compile(
         rf"(?<![0-9A-Za-z.+-]){re.escape(target_version)}(?![0-9A-Za-z.+-])"
@@ -1285,6 +259,8 @@ def execute_update(
                 config_home=config_home,
                 expected_digest=download_receipt["artifactDigest"],
                 execute=True,
+                cut_decision=value["check"].get("cutDecision"),
+                cut_transition=value.get("cutTransition"),
             )
             execution = {
                 "action": "archive-self-update",
@@ -1737,11 +713,31 @@ def _assert_zip_member(info: zipfile.ZipInfo) -> None:
 
 
 def _assert_tar_member(member: tarfile.TarInfo) -> None:
+    safe_symlink = False
+    if member.issym():
+        link_name = member.linkname.replace("\\", "/")
+        target = PurePosixPath(member.name).parent / PurePosixPath(link_name)
+        depth = 0
+        safe_symlink = (
+            bool(link_name)
+            and not link_name.startswith("/")
+            and re.match(r"^[A-Za-z]:", link_name) is None
+        )
+        for part in target.parts:
+            if part in ("", "."):
+                continue
+            if part == "..":
+                depth -= 1
+                if depth < 0:
+                    safe_symlink = False
+                    break
+            else:
+                depth += 1
     if (
         not _safe_member(member.name)
-        or member.issym()
         or member.islnk()
-        or not (member.isfile() or member.isdir())
+        or (member.issym() and not safe_symlink)
+        or not (member.isfile() or member.isdir() or member.issym())
     ):
         raise DistributionUpdateError(
             "archive-entry-unsupported",
@@ -1836,6 +832,25 @@ _IDENTITY_FIELDS = (
     "platform",
     "architecture",
 )
+_CUT_IDENTITY_FIELDS = (
+    "manifestIdentityRoot",
+    "releaseCut",
+    "releaseCutRoot",
+    "platformSliceRoot",
+)
+
+
+def _installed_cli_manifest(
+    image: Mapping[str, Any],
+) -> dict[str, Any]:
+    root = Path(str(image["productRoot"])).expanduser().resolve()
+    manifest = (root / str(image["upgradeManifest"])).resolve()
+    if root not in manifest.parents or not manifest.is_file():
+        raise DistributionUpdateError(
+            "cli-image-invalid",
+            "installed CLI image has no safe upgrade manifest",
+        )
+    return runtime_upgrade.validate_manifest(_read_object(manifest))
 
 
 def _install_cli_image(
@@ -1881,7 +896,7 @@ def _install_cli_image(
             f".{frontend_build_id}.{os.getpid()}.{time.time_ns()}.partial"
         )
         try:
-            shutil.copytree(product_root, staging)
+            shutil.copytree(product_root, staging, symlinks=True)
             executable = (staging / executable_relative).resolve()
             bundled_manifest = (staging / manifest_relative).resolve()
             if (
@@ -1894,6 +909,17 @@ def _install_cli_image(
                     "product-layout-invalid",
                     "CLI executable or bundled upgrade manifest escapes the product image",
                 )
+            runtime_root = (staging / executable_relative).parent
+            try:
+                observed_runtime_digest = runtime_upgrade.tree_digest(runtime_root)
+            except runtime_upgrade.UpgradeError as error:
+                raise DistributionUpdateError(error.code, str(error)) from error
+            if observed_runtime_digest != manifest["runtimeArtifactDigest"]:
+                raise DistributionUpdateError(
+                    "runtime-artifact-invalid",
+                    "staged CLI runtime digest does not match the release manifest",
+                )
+            _write_object(bundled_manifest, manifest)
             record = {
                 "schema": CLI_IMAGE_SCHEMA,
                 "frontendBuildId": frontend_build_id,
@@ -1904,6 +930,15 @@ def _install_cli_image(
                 "executable": executable_relative,
                 "productManifest": "product.json",
                 "upgradeManifest": manifest_relative,
+                **(
+                    {
+                        "manifestIdentityRoot": manifest["manifestIdentityRoot"],
+                        "releaseCutRoot": manifest["releaseCutRoot"],
+                        "platformSliceRoot": manifest["platformSliceRoot"],
+                    }
+                    if manifest.get("releaseCutRoot")
+                    else {}
+                ),
             }
             _write_object(staging / "image.json", record)
             os.replace(staging, target)
@@ -1911,6 +946,27 @@ def _install_cli_image(
         finally:
             if staging.exists():
                 shutil.rmtree(staging)
+
+
+def _assert_cli_image_slot_available(
+    manifest: Mapping[str, Any],
+    *,
+    artifact_digest: str,
+    config_home: str | Path,
+) -> None:
+    target = _cli_image_root(config_home, str(manifest["frontendBuildId"]))
+    record_path = target / "image.json"
+    if not record_path.is_file():
+        return
+    record = _read_object(record_path)
+    if (
+        record.get("schema") != CLI_IMAGE_SCHEMA
+        or record.get("artifactDigest") != artifact_digest
+    ):
+        raise DistributionUpdateError(
+            "frontend-build-id-collision",
+            "CLI frontend build id already names different archive bytes",
+        )
 
 
 def _read_cli_selection(
@@ -1924,14 +980,6 @@ def _read_cli_selection(
         raise DistributionUpdateError(
             "cli-selection-invalid", "CLI selection schema is invalid"
         )
-    frontend_build_id = _path_safe_id(
-        str(selection.get("frontendBuildId") or ""), "frontend-build-id"
-    )
-    root = _cli_image_root(config_home, frontend_build_id)
-    if Path(str(selection.get("productRoot") or "")).resolve() != root:
-        raise DistributionUpdateError(
-            "cli-selection-invalid", "CLI selection escaped the product inventory"
-        )
     generation = selection.get("generation")
     if generation is not None and (
         isinstance(generation, bool)
@@ -1941,12 +989,46 @@ def _read_cli_selection(
         raise DistributionUpdateError(
             "cli-selection-invalid", "CLI selection generation is invalid"
         )
+    transition = selection.get("cutTransition")
+    verified_transition = None
+    if transition is not None:
+        try:
+            verified_transition = release_cut.validate_cut_transition(transition)
+        except (TypeError, release_cut.ReleaseCutError) as error:
+            raise DistributionUpdateError(
+                "cli-selection-invalid",
+                "CLI selection Cut Transition evidence is invalid",
+            ) from error
+        if verified_transition["cutTransitionRoot"] != selection.get(
+            "cutTransitionRoot"
+        ):
+            raise DistributionUpdateError(
+                "cli-selection-invalid",
+                "CLI selection Cut Transition root disagrees with retained evidence",
+            )
+    if release_cut.is_legacy_bootstrap(selection):
+        if not release_cut.legacy_selection_is_bound(selection, verified_transition):
+            raise DistributionUpdateError(
+                "cli-selection-invalid",
+                "legacy bootstrap selection is not bound to exact recovery evidence",
+            )
+        return selection, {}
+    frontend_build_id = _path_safe_id(
+        str(selection.get("frontendBuildId") or ""), "frontend-build-id"
+    )
+    root = _cli_image_root(config_home, frontend_build_id)
+    if Path(str(selection.get("productRoot") or "")).resolve() != root:
+        raise DistributionUpdateError(
+            "cli-selection-invalid", "CLI selection escaped the product inventory"
+        )
     image = _read_object(root / "image.json")
     if (
         image.get("schema") != CLI_IMAGE_SCHEMA
         or image.get("frontendBuildId") != frontend_build_id
         or image.get("artifactDigest") != selection.get("artifactDigest")
         or image.get("runtimeBuildId") != selection.get("runtimeBuildId")
+        or image.get("releaseCutRoot") != selection.get("releaseCutRoot")
+        or image.get("platformSliceRoot") != selection.get("platformSliceRoot")
         or Path(str(image.get("productRoot") or "")).resolve() != root
     ):
         raise DistributionUpdateError(
@@ -1956,8 +1038,14 @@ def _read_cli_selection(
 
 
 def _select_cli_image(
-    image: Mapping[str, Any], *, config_home: str | Path
-) -> dict[str, Any]:
+    image: Mapping[str, Any],
+    *,
+    config_home: str | Path,
+    cut_decision: Mapping[str, Any] | None = None,
+    cut_transition: Mapping[str, Any] | None = None,
+    bootstrap_rollback: Mapping[str, Any] | None = None,
+    receipt_factory: Callable[[dict[str, Any]], dict[str, Any]],
+) -> tuple[dict[str, Any], dict[str, Any] | None]:
     lock_root = _cli_inventory_root(config_home) / "locks"
     with _CLI_SELECTION_PROCESS_LOCK:
         with coordination_locks.held(
@@ -1965,62 +1053,109 @@ def _select_cli_image(
             "current-selection",
             label="cli-product-select:current",
         ):
+
+            def finish_selection(
+                selection: dict[str, Any],
+            ) -> tuple[dict[str, Any], dict[str, Any]]:
+                receipt = receipt_factory(selection)
+                _persist_cli_selection_receipt(config_home, selection, receipt)
+                try:
+                    _write_object(_cli_selection_path(config_home), selection)
+                except OSError as error:
+                    raise DistributionUpdateError(
+                        "selection-io-failed",
+                        "CLI selection could not be published; the prior selection remains authoritative",
+                    ) from error
+                return selection, receipt
+
             current = _read_cli_selection(config_home)
             if current is not None:
                 current_selection, current_image = current
-                version_order = compare_product_versions(
-                    str(current_image["productVersion"]),
-                    str(image["productVersion"]),
-                )
-                if version_order > 0:
-                    return current_selection
-                if version_order == 0:
-                    if (
-                        current_image["frontendBuildId"] != image["frontendBuildId"]
-                        or current_image["artifactDigest"] != image["artifactDigest"]
+                current_cut = current_selection.get("releaseCutRoot")
+                target_cut = image.get("releaseCutRoot")
+                cut_movement_authorized = False
+                if current_cut is not None or target_cut is not None:
+                    if not current_cut or not target_cut:
+                        raise DistributionUpdateError(
+                            "release-cut-binding-incomplete",
+                            "CLI image transition mixes Cut-aware and legacy identities",
+                        )
+                    if current_cut != target_cut and (
+                        not isinstance(cut_decision, Mapping)
+                        or cut_decision.get("updateAllowed") is not True
+                        or cut_decision.get("currentReleaseCutRoot") != current_cut
+                        or cut_decision.get("targetReleaseCutRoot") != target_cut
                     ):
                         raise DistributionUpdateError(
-                            "frontend-version-collision",
-                            "one CLI product version names different image evidence",
+                            "release-cut-transition-required",
+                            "CLI image selection requires an authorized Cut Transition",
                         )
-                    return current_selection
+                    cut_movement_authorized = current_cut != target_cut
+                    if current_cut == target_cut:
+                        if (
+                            current_image["frontendBuildId"] != image["frontendBuildId"]
+                            or current_image["artifactDigest"]
+                            != image["artifactDigest"]
+                        ):
+                            raise DistributionUpdateError(
+                                "release-cut-image-collision",
+                                "one Release Cut names different CLI image evidence",
+                            )
+                        return current_selection, None
+                if not cut_movement_authorized:
+                    version_order = compare_product_versions(
+                        str(
+                            current_image.get("productVersion")
+                            or current_selection.get("productVersion")
+                            or ""
+                        ),
+                        str(image["productVersion"]),
+                    )
+                    if version_order > 0:
+                        return current_selection, None
+                    if version_order == 0:
+                        if (
+                            current_image["frontendBuildId"] != image["frontendBuildId"]
+                            or current_image["artifactDigest"]
+                            != image["artifactDigest"]
+                        ):
+                            raise DistributionUpdateError(
+                                "frontend-version-collision",
+                                "one CLI product version names different image evidence",
+                            )
+                        else:
+                            return current_selection, None
             previous = current[0] if current is not None else None
-            generation = int((previous or {}).get("generation") or 0) + 1
-            rollback = (
-                {
-                    "frontendBuildId": previous["frontendBuildId"],
-                    "runtimeBuildId": previous["runtimeBuildId"],
-                    "artifactDigest": previous["artifactDigest"],
-                    "productRoot": previous["productRoot"],
-                }
-                if previous is not None
-                else None
+            generation = _next_cli_generation(
+                config_home, int((previous or {}).get("generation") or 0)
             )
-            selection = {
-                "schema": CLI_SELECTION_SCHEMA,
-                "generation": generation,
-                "frontendBuildId": image["frontendBuildId"],
-                "runtimeBuildId": image["runtimeBuildId"],
-                "artifactDigest": image["artifactDigest"],
-                "productRoot": image["productRoot"],
-                "previousFrontendBuildId": (
-                    previous["frontendBuildId"] if previous is not None else None
+            if previous is None:
+                rollback = bootstrap_rollback
+            elif release_cut.is_legacy_bootstrap(previous):
+                rollback = release_cut.legacy_coordinate(
+                    previous["releaseCutRoot"], previous["productVersion"]
+                )
+            else:
+                rollback = release_cut.image_coordinate(previous)
+            selection = release_cut.image_selection(
+                image,
+                schema=CLI_SELECTION_SCHEMA,
+                generation=generation,
+                transition_root=(
+                    cut_decision.get("cutTransitionRoot")
+                    if isinstance(cut_decision, Mapping)
+                    else None
                 ),
-                "rollback": rollback,
-            }
-            try:
-                _write_object(_cli_selection_path(config_home), selection)
-            except OSError as error:
-                raise DistributionUpdateError(
-                    "selection-io-failed",
-                    "CLI selection could not be published; the prior selection remains authoritative",
-                ) from error
-            return selection
+                transition=cut_transition,
+                previous_frontend_build_id=(
+                    previous.get("frontendBuildId") if previous is not None else None
+                ),
+                rollback=rollback,
+            )
+            return finish_selection(selection)
 
 
 def cli_inventory_fsck(config_home: str | Path) -> dict[str, Any]:
-    """Inspect the archive CLI inventory without mutating or cleaning it."""
-
     root = _cli_inventory_root(config_home)
     images_root = root / "images"
     images: list[dict[str, Any]] = []
@@ -2074,6 +1209,8 @@ def cli_inventory_fsck(config_home: str | Path) -> dict[str, Any]:
                         "productVersion": image["productVersion"],
                         "artifactDigest": image["artifactDigest"],
                         "productRoot": image["productRoot"],
+                        "releaseCutRoot": image.get("releaseCutRoot"),
+                        "platformSliceRoot": image.get("platformSliceRoot"),
                     }
                 )
             except (
@@ -2089,11 +1226,28 @@ def cli_inventory_fsck(config_home: str | Path) -> dict[str, Any]:
                         "path": relative,
                     }
                 )
-    selection = None
+    selection = selected_receipt_root = None
+    retained_receipts: list[dict[str, Any]] = []
+    pending_receipts: list[dict[str, Any]] = []
+    selection_path_exists = _cli_selection_path(config_home).is_file()
     try:
         selected = _read_cli_selection(config_home)
         if selected is not None:
             selection = selected[0]
+            receipt = _read_cli_selection_receipt(config_home, selection)
+            if receipt is not None:
+                selected_receipt_root = receipt["receiptRoot"]
+            elif selection.get("releaseCutRoot"):
+                issues.append(
+                    {
+                        "code": "cli-selection-receipt-missing",
+                        "path": str(
+                            _cli_selection_receipt_path(
+                                config_home, int(selection["generation"])
+                            ).relative_to(root)
+                        ),
+                    }
+                )
     except DistributionUpdateError as error:
         issues.append(
             {
@@ -2101,12 +1255,68 @@ def cli_inventory_fsck(config_home: str | Path) -> dict[str, Any]:
                 "path": str(_cli_selection_path(config_home).relative_to(root)),
             }
         )
+    selected_generation = int((selection or {}).get("generation") or 0)
+    try:
+        for generation in _cli_selection_receipt_generations(config_home):
+            if generation == selected_generation:
+                continue
+            path = _cli_selection_receipt_path(config_home, generation)
+            try:
+                receipt = _read_object(path)
+                receipt_selection = receipt.get("frontendSelection")
+                receipt_root = receipt.get("receiptRoot")
+                receipt_core = {
+                    key: value for key, value in receipt.items() if key != "receiptRoot"
+                }
+                if (
+                    not isinstance(receipt_selection, Mapping)
+                    or int(receipt_selection.get("generation") or 0) != generation
+                    or not isinstance(receipt_root, str)
+                    or receipt_root != _content_root(receipt_core)
+                ):
+                    raise DistributionUpdateError(
+                        "cli-selection-receipt-invalid",
+                        "CLI selection receipt does not verify against its generation",
+                    )
+                retained = {
+                    "generation": generation,
+                    "receiptRoot": receipt_root,
+                    "frontendBuildId": receipt_selection.get("frontendBuildId"),
+                }
+                retained_receipts.append(retained)
+                if generation > selected_generation and (
+                    selection is not None or not selection_path_exists
+                ):
+                    pending_receipts.append(retained)
+                    issues.append(
+                        {
+                            "code": "cli-selection-publication-pending",
+                            "path": str(path.relative_to(root)),
+                        }
+                    )
+            except (DistributionUpdateError, OSError, TypeError, ValueError) as error:
+                issues.append(
+                    {
+                        "code": getattr(error, "code", "cli-receipt-unreadable"),
+                        "path": str(path.relative_to(root)),
+                    }
+                )
+    except DistributionUpdateError as error:
+        issues.append(
+            {
+                "code": error.code,
+                "path": "receipts",
+            }
+        )
     return {
         "schema": CLI_INVENTORY_FSCK_SCHEMA,
         "ok": not issues,
         "selected": selection,
+        "selectedReceiptRoot": selected_receipt_root,
         "images": images,
         "retainedPartials": retained_partials,
+        "retainedReceipts": retained_receipts,
+        "pendingReceipts": pending_receipts,
         "issues": issues,
         "recoveryAction": (
             None
@@ -2127,10 +1337,11 @@ def selected_cli_command(
     if env.get("KUNGFU_INSTALL_SOURCE") != "archive":
         return None
     config_home = Path(env.get("KF_CONFIG_HOME") or "~/.kungfu-config").expanduser()
-    selected = _read_cli_selection(config_home)
-    if selected is None:
+    if (selected := _read_cli_selection(config_home)) is None:
         return None
     selection, image = selected
+    if release_cut.is_legacy_bootstrap(selection):
+        return None
     frontend_build_id = str(selection["frontendBuildId"])
     root = _cli_image_root(config_home, frontend_build_id)
     executable = (root / str(image.get("executable") or "")).resolve()
@@ -2139,19 +1350,28 @@ def selected_cli_command(
             "cli-selection-invalid", "selected CLI executable is missing or unsafe"
         )
     current = Path(current_executable or sys.executable).resolve()
-    if (
-        current == executable
-        or env.get("KUNGFU_SELECTED_FRONTEND_BUILD_ID") == frontend_build_id
-    ):
+    selected_id = env.get("KUNGFU_SELECTED_FRONTEND_BUILD_ID")
+    if current == executable or selected_id == frontend_build_id:
         return None
     selected_env = dict(env)
     selected_env.update(
         {
             "KUNGFU_SELECTED_FRONTEND_BUILD_ID": frontend_build_id,
+            "KUNGFU_DIR": str(executable.parent),
             "KUNGFU_PRODUCT_MANIFEST": str(root / image["productManifest"]),
             "KUNGFU_UPGRADE_MANIFEST": str(root / image["upgradeManifest"]),
+            "KF_BUNDLED_EXTENSION_ROOT": str(root / "extensions"),
+            "KUNGFU_AGENT_SESSION_EXECUTABLE": str(executable),
+            "KUNGFU_CONTROLLER_ENTRYPOINT": str(executable),
         }
     )
+    if selection.get("releaseCutRoot"):
+        selected_env["KUNGFU_SELECTED_RELEASE_CUT_ROOT"] = str(
+            selection["releaseCutRoot"]
+        )
+        selected_env["KUNGFU_SELECTED_PLATFORM_SLICE_ROOT"] = str(
+            selection["platformSliceRoot"]
+        )
     return [str(executable), *sys.argv[1:]], selected_env
 
 
@@ -2159,6 +1379,8 @@ def reexec_selected_cli() -> None:
     selected = selected_cli_command()
     if selected is not None:
         argv, env = selected
+        if sys.platform == "win32":
+            raise SystemExit(subprocess.run(argv, env=env, check=False).returncode)
         os.execve(argv[0], argv, env)
 
 
@@ -2170,6 +1392,11 @@ def apply_archive(
     config_home: str | Path,
     expected_digest: str,
     execute: bool,
+    cut_decision: Mapping[str, Any] | None = None,
+    cut_transition: Mapping[str, Any] | None = None,
+    allow_shifu_local: bool = False,
+    bootstrap_release_cut_root: str | None = None,
+    bootstrap_version: str | None = None,
 ) -> dict[str, Any]:
     value = runtime_upgrade.validate_manifest(manifest)
     _assert_release_target(value)
@@ -2178,7 +1405,74 @@ def apply_archive(
             "schema": APPLY_SCHEMA,
             **_downgrade_refusal(value, current_version),
         }
-    _assert_cli_publication(value)
+    target_cut = value.get("releaseCut")
+    verified_cut_decision = None
+    if target_cut is not None:
+        selected = _read_cli_selection(config_home)
+        if selected is None:
+            installed_cut = bootstrap_release_cut_root
+            installed_version = bootstrap_version
+        else:
+            installed_cut = selected[0].get("releaseCutRoot")
+            installed_version = selected[1].get("productVersion") or selected[0].get(
+                "productVersion"
+            )
+        if not installed_cut or not installed_version:
+            raise DistributionUpdateError(
+                "current-release-cut-unknown",
+                "Cut-aware CLI installation requires an exact current Release Cut",
+            )
+        try:
+            verified_cut_decision = release_cut.decide_cut_transition(
+                current_release_cut_root=str(installed_cut),
+                current_version=str(installed_version),
+                target_cut=target_cut,
+                transition=cut_transition,
+            )
+        except release_cut.ReleaseCutError as error:
+            raise DistributionUpdateError(error.code, str(error)) from error
+        if cut_decision is not None and _canonical(verified_cut_decision) != _canonical(
+            cut_decision
+        ):
+            raise DistributionUpdateError(
+                "cut-decision-mismatch",
+                "applied Cut Transition differs from the planned decision",
+            )
+        if verified_cut_decision["updateAllowed"] is not True:
+            raise DistributionUpdateError(
+                verified_cut_decision["reasonCode"],
+                "Cut Transition does not authorize CLI image selection",
+            )
+        trust_domain = target_cut["publicationPolicy"]["trustDomain"]
+        if trust_domain == "shifu-local":
+            if not allow_shifu_local:
+                raise DistributionUpdateError(
+                    "local-release-policy-required",
+                    "shifu-local artifacts require the explicit local updater adapter",
+                )
+            if (
+                target_cut["publicationPolicy"]["publicationEligible"]
+                or cut_transition is None
+                or cut_transition["authorization"]["publicationEligible"]
+            ):
+                raise DistributionUpdateError(
+                    "local-release-publication-eligible",
+                    "local dogfood evidence cannot authorize public publication",
+                )
+        elif allow_shifu_local:
+            raise DistributionUpdateError(
+                "local-release-policy-mismatch",
+                "the local updater adapter accepts only shifu-local Release Cuts",
+            )
+        else:
+            _assert_cli_publication(value)
+    elif allow_shifu_local:
+        raise DistributionUpdateError(
+            "local-release-cut-missing",
+            "shifu-local installation requires a Product Release Cut",
+        )
+    else:
+        _assert_cli_publication(value)
     artifact = _artifact(value, "cli")
     archive_path = Path(archive).expanduser().resolve()
     try:
@@ -2206,6 +1500,17 @@ def apply_archive(
             "runtimeBuildId": value["runtimeBuildId"],
             "artifactPath": str(archive_path),
             "artifactDigest": observed_digest,
+            "currentReleaseCutRoot": (
+                verified_cut_decision.get("currentReleaseCutRoot")
+                if verified_cut_decision
+                else None
+            ),
+            "targetReleaseCutRoot": value.get("releaseCutRoot"),
+            "cutTransitionRoot": (
+                verified_cut_decision.get("cutTransitionRoot")
+                if verified_cut_decision
+                else None
+            ),
             "executeRequired": True,
             "documentationUrl": value["documentationUrl"],
         }
@@ -2248,12 +1553,26 @@ def apply_archive(
         runtime_root = (product_root / str(entries.get("runtime", ""))).parent
         bundled_path = product_root / str(entries.get("upgradeManifest", ""))
         bundled = runtime_upgrade.validate_manifest(_read_object(bundled_path))
-        if any(bundled[field] != value[field] for field in _IDENTITY_FIELDS):
+        if any(bundled.get(field) != value.get(field) for field in _IDENTITY_FIELDS):
             raise DistributionUpdateError(
                 "release-identity-mismatch",
                 "CLI archive and release manifest describe different builds",
             )
-        install_plan = runtime_upgrade.plan_install(bundled, runtime_root, config_home)
+        if value.get("manifestIdentityRoot") and (
+            bundled.get("manifestIdentityRoot") != value["manifestIdentityRoot"]
+            or release_cut.manifest_identity_root(bundled)
+            != value["manifestIdentityRoot"]
+        ):
+            raise DistributionUpdateError(
+                "release-manifest-identity-mismatch",
+                "CLI archive bootstrap identity differs from the final Release Cut",
+            )
+        _assert_cli_image_slot_available(
+            value,
+            artifact_digest=observed_digest,
+            config_home=config_home,
+        )
+        install_plan = runtime_upgrade.plan_install(value, runtime_root, config_home)
         if install_plan["state"] != "download-allowed":
             raise DistributionUpdateError(
                 "runtime-artifact-invalid", "bundled runtime digest is invalid"
@@ -2266,19 +1585,306 @@ def apply_archive(
         frontend_image = _install_cli_image(
             product_root,
             product,
-            bundled,
+            value,
             artifact_digest=observed_digest,
             config_home=config_home,
         )
-        selection = _select_cli_image(frontend_image, config_home=config_home)
-    receipt = {
-        "schema": APPLY_SCHEMA,
-        "state": "complete",
-        "reasonCode": "runtime-installed",
-        "runtimeImage": image,
-        "frontendImage": frontend_image,
-        "frontendSelection": selection,
-        "frontendAction": "selected-on-next-command",
-        "documentationUrl": value["documentationUrl"],
+
+    def receipt_for_selection(selection: dict[str, Any]) -> dict[str, Any]:
+        receipt = {
+            "schema": APPLY_SCHEMA,
+            "state": "complete",
+            "reasonCode": "runtime-installed",
+            "runtimeImage": image,
+            "frontendImage": frontend_image,
+            "frontendSelection": selection,
+            "frontendAction": "selected-on-next-command",
+            "currentReleaseCutRoot": (
+                verified_cut_decision.get("currentReleaseCutRoot")
+                if verified_cut_decision
+                else None
+            ),
+            "targetReleaseCutRoot": value.get("releaseCutRoot"),
+            "cutTransitionRoot": (
+                verified_cut_decision.get("cutTransitionRoot")
+                if verified_cut_decision
+                else None
+            ),
+            "cutTransition": (
+                copy.deepcopy(dict(cut_transition))
+                if cut_transition is not None
+                else None
+            ),
+            "documentationUrl": value["documentationUrl"],
+        }
+        return {**receipt, "receiptRoot": _content_root(receipt)}
+
+    selection, receipt = _select_cli_image(
+        frontend_image,
+        config_home=config_home,
+        cut_decision=verified_cut_decision or cut_decision,
+        cut_transition=cut_transition,
+        receipt_factory=receipt_for_selection,
+        bootstrap_rollback=(
+            release_cut.legacy_coordinate(bootstrap_release_cut_root, bootstrap_version)
+            if bootstrap_release_cut_root and bootstrap_version
+            else None
+        ),
+    )
+    return receipt if receipt is not None else receipt_for_selection(selection)
+
+
+def apply_shifu_local_archive(
+    manifest: Mapping[str, Any],
+    archive: str | Path,
+    *,
+    config_home: str | Path,
+    expected_digest: str,
+    evidence_roots: list[str],
+    bootstrap_release_cut_root: str | None,
+    bootstrap_version: str | None,
+    execute: bool,
+) -> dict[str, Any]:
+    """Install one exact Shifu-selected local archive through native ownership."""
+
+    value = runtime_upgrade.validate_manifest(manifest)
+    target_cut = value.get("releaseCut")
+    if (
+        not isinstance(target_cut, Mapping)
+        or target_cut.get("publicationPolicy", {}).get("trustDomain") != "shifu-local"
+    ):
+        raise DistributionUpdateError(
+            "local-release-policy-mismatch",
+            "Shifu local installation requires a publication-ineligible local Cut",
+        )
+    selected = _read_cli_selection(config_home)
+    legacy_selection = selected is not None and release_cut.is_legacy_bootstrap(
+        selected[0]
+    )
+    if selected is None or legacy_selection:
+        if not bootstrap_release_cut_root or not bootstrap_version:
+            raise DistributionUpdateError(
+                "local-bootstrap-coordinate-required",
+                "first Shifu local installation requires an exact legacy bootstrap coordinate",
+            )
+        current_release_cut_root = bootstrap_release_cut_root
+        current_version = bootstrap_version
+        if (
+            selected is not None
+            and legacy_selection
+            and (
+                selected[0].get("releaseCutRoot") != bootstrap_release_cut_root
+                or selected[0].get("productVersion") != bootstrap_version
+            )
+        ):
+            raise DistributionUpdateError(
+                "stale-bootstrap-coordinate",
+                "legacy bootstrap selection differs from the installed Product receipt",
+            )
+        current_manifest = None
+        authorization_kind = "shifu-local-bootstrap"
+    else:
+        selection, image = selected
+        if bootstrap_release_cut_root is not None or bootstrap_version is not None:
+            raise DistributionUpdateError(
+                "local-bootstrap-already-complete",
+                "native CLI inventory already has an exact Release Cut",
+            )
+        current_release_cut_root = str(selection.get("releaseCutRoot") or "")
+        current_version = str(image.get("productVersion") or "")
+        current_manifest = _installed_cli_manifest(image)
+        authorization_kind = "shifu-local-successor"
+    try:
+        cut_transition = release_cut.shifu_local_transition(
+            current_release_cut_root=current_release_cut_root,
+            current_version=current_version,
+            current_manifest=current_manifest,
+            target_manifest=value,
+            authorization_kind=authorization_kind,
+            evidence_roots=evidence_roots,
+        )
+    except release_cut.ReleaseCutError as error:
+        raise DistributionUpdateError(error.code, str(error)) from error
+    return apply_archive(
+        value,
+        archive,
+        current_version=current_version,
+        config_home=config_home,
+        expected_digest=expected_digest,
+        execute=execute,
+        cut_transition=cut_transition,
+        allow_shifu_local=True,
+        bootstrap_release_cut_root=(
+            current_release_cut_root if selected is None or legacy_selection else None
+        ),
+        bootstrap_version=(
+            current_version if selected is None or legacy_selection else None
+        ),
+    )
+
+
+def rollback_shifu_local_cli(
+    *,
+    config_home: str | Path,
+    expected_current_release_cut_root: str,
+    expected_rollback_release_cut_root: str,
+    evidence_roots: list[str],
+    execute: bool,
+) -> dict[str, Any]:
+    """Roll back native CLI selection without consulting the Shifu source cache."""
+
+    current = _read_cli_selection(config_home)
+    if current is None:
+        raise DistributionUpdateError(
+            "cli-selection-missing", "native CLI inventory has no selected image"
+        )
+    selection, current_image = current
+    if selection.get("releaseCutRoot") != expected_current_release_cut_root:
+        raise DistributionUpdateError(
+            "stale-selection",
+            "native CLI selection no longer matches the expected current Release Cut",
+        )
+    rollback = selection.get("rollback")
+    if not isinstance(rollback, Mapping):
+        raise DistributionUpdateError(
+            "rollback-unavailable",
+            "native CLI selection has no retained rollback image",
+        )
+    if rollback.get("releaseCutRoot") != expected_rollback_release_cut_root:
+        raise DistributionUpdateError(
+            "stale-rollback-coordinate",
+            "retained rollback image no longer matches the expected Release Cut",
+        )
+    target_is_legacy = rollback.get("kind") == release_cut.LEGACY_BOOTSTRAP_MODE
+    if target_is_legacy:
+        target_image: dict[str, Any] = {}
+        target_version = str(rollback.get("productVersion") or "")
+        if not target_version:
+            raise DistributionUpdateError(
+                "rollback-coordinate-invalid",
+                "legacy bootstrap rollback has no exact Product version",
+            )
+    else:
+        target_root = _cli_image_root(
+            config_home, str(rollback.get("frontendBuildId") or "")
+        )
+        target_image = _read_object(target_root / "image.json")
+        if (
+            target_image.get("schema") != CLI_IMAGE_SCHEMA
+            or target_image.get("releaseCutRoot") != expected_rollback_release_cut_root
+            or target_image.get("artifactDigest") != rollback.get("artifactDigest")
+            or Path(str(target_image.get("productRoot") or "")).resolve() != target_root
+        ):
+            raise DistributionUpdateError(
+                "rollback-image-invalid",
+                "retained rollback image does not match the native inventory coordinate",
+            )
+        target_version = str(target_image["productVersion"])
+    current_is_legacy = release_cut.is_legacy_bootstrap(selection)
+    current_version = str(
+        selection.get("productVersion")
+        if current_is_legacy
+        else current_image["productVersion"]
+    )
+    current_manifest = (
+        None if current_is_legacy else _installed_cli_manifest(current_image)
+    )
+    try:
+        if target_is_legacy:
+            compatibility = selection.get("cutTransition", {}).get("compatibility")
+            transition = release_cut.legacy_recovery_transition(
+                current_release_cut_root=expected_current_release_cut_root,
+                current_version=current_version,
+                target_release_cut_root=expected_rollback_release_cut_root,
+                target_version=target_version,
+                compatibility=compatibility or {},
+                evidence_roots=evidence_roots,
+            )
+        else:
+            target_manifest = _installed_cli_manifest(target_image)
+            transition = release_cut.shifu_local_transition(
+                current_release_cut_root=expected_current_release_cut_root,
+                current_version=current_version,
+                current_manifest=current_manifest,
+                target_manifest=target_manifest,
+                authorization_kind="shifu-local-recovery",
+                evidence_roots=evidence_roots,
+                relation="recovery",
+            )
+    except release_cut.ReleaseCutError as error:
+        raise DistributionUpdateError(error.code, str(error)) from error
+    plan = {
+        "schema": CLI_ROLLBACK_SCHEMA,
+        "state": "action-required" if not execute else "ready",
+        "reasonCode": "execute-required" if not execute else "rollback-authorized",
+        "currentReleaseCutRoot": expected_current_release_cut_root,
+        "targetReleaseCutRoot": expected_rollback_release_cut_root,
+        "cutTransitionRoot": transition["cutTransitionRoot"],
+        "cutTransition": transition,
+        "currentFrontendBuildId": current_image.get("frontendBuildId"),
+        "targetFrontendBuildId": target_image.get("frontendBuildId"),
+        "activeWorkPolicy": "keep-pinned",
+        "sourceCacheRequired": False,
     }
-    return {**receipt, "receiptRoot": _content_root(receipt)}
+    if not execute:
+        return {**plan, "executeRequired": True}
+
+    lock_root = _cli_inventory_root(config_home) / "locks"
+    with _CLI_SELECTION_PROCESS_LOCK:
+        with coordination_locks.held(
+            lock_root,
+            "current-selection",
+            label="cli-product-select:rollback",
+        ):
+            observed = _read_cli_selection(config_home)
+            if (
+                observed is None
+                or observed[0].get("releaseCutRoot")
+                != expected_current_release_cut_root
+                or observed[0].get("generation") != selection.get("generation")
+            ):
+                raise DistributionUpdateError(
+                    "stale-selection",
+                    "native CLI selection changed after rollback planning",
+                )
+            generation = _next_cli_generation(
+                config_home, int(selection.get("generation") or 0)
+            )
+            reverse_rollback = (
+                release_cut.legacy_coordinate(
+                    selection["releaseCutRoot"], selection["productVersion"]
+                )
+                if current_is_legacy
+                else release_cut.image_coordinate(current_image)
+            )
+            if target_is_legacy:
+                next_selection = release_cut.legacy_selection(
+                    schema=CLI_SELECTION_SCHEMA,
+                    generation=generation,
+                    release_cut_root=expected_rollback_release_cut_root,
+                    product_version=target_version,
+                    transition=transition,
+                    previous_frontend_build_id=current_image.get("frontendBuildId"),
+                    rollback=reverse_rollback,
+                )
+            else:
+                next_selection = release_cut.image_selection(
+                    target_image,
+                    schema=CLI_SELECTION_SCHEMA,
+                    generation=generation,
+                    transition_root=transition["cutTransitionRoot"],
+                    transition=transition,
+                    previous_frontend_build_id=current_image.get("frontendBuildId"),
+                    rollback=reverse_rollback,
+                )
+            receipt = {
+                **plan,
+                "state": "complete",
+                "reasonCode": "rollback-selected-on-next-command",
+                "executeRequired": False,
+                "frontendSelection": next_selection,
+            }
+            rooted_receipt = {**receipt, "receiptRoot": _content_root(receipt)}
+            _persist_cli_selection_receipt(config_home, next_selection, rooted_receipt)
+            _write_object(_cli_selection_path(config_home), next_selection)
+    return rooted_receipt

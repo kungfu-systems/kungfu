@@ -19,6 +19,7 @@ import {
   composeRenameEvidence,
   dispositionSoftWarnings,
   hasGeneratedProvenance,
+  isEligible,
   ownerFor,
   percentile,
   protectedBaselineCandidates,
@@ -77,6 +78,21 @@ test('classification order covers every declared source class', () => {
   );
 });
 
+test('local qualification runtimes stay outside source complexity budgets', () => {
+  const policy = {
+    baselinePath: 'baseline.json',
+    waiverDirectory: 'waivers',
+    baselineGovernance: {},
+    specialEligibleNames: [],
+    eligibleExtensions: ['.cc', '.json'],
+  };
+  assert.equal(
+    isEligible('.kungfu/qualification/runtime/vendor.cc', policy),
+    false,
+  );
+  assert.equal(isEligible('.kungfu/episodes/a.json', policy), true);
+});
+
 test('generated projection requires a file-header provenance marker', () => {
   assert.equal(
     hasGeneratedProvenance(
@@ -114,6 +130,28 @@ test('calibration percentile and owner routes are deterministic', () => {
   assert.equal(
     ownerFor('.kungfu/project-cuts/sha256/x/manifest.json', { components: [] }),
     'kungfu/retained-native-evidence',
+  );
+  assert.equal(
+    ownerFor('framework/core/src/python/kungfu/domain.py', { components: [] }, [
+      {
+        owner: 'core/python-domain',
+        paths: ['framework/core/src/python/kungfu/domain.py'],
+      },
+    ]),
+    'core/python-domain',
+  );
+  assert.equal(
+    ownerFor('framework/core/src/python/kungfu/domain.py', { components: [] }, [
+      {
+        owner: 'core/python-domain-a',
+        paths: ['framework/core/src/python/kungfu/domain.py'],
+      },
+      {
+        owner: 'core/python-domain-b',
+        paths: ['framework/core/src/python/kungfu/domain.py'],
+      },
+    ]),
+    '',
   );
 });
 
@@ -554,6 +592,15 @@ test('waiver approval rejects fabricated, unknown, same-authority, and stale rec
   stale.value.approval_receipt.approved_at = '2026-05-01T00:01:00Z';
   stale.value.approval_receipt.expires_at = '2026-08-01T00:00:00Z';
   assert.ok(codes(stale).includes('stale-approval'));
+  assert.ok(
+    codes(fixture.record, fixture.policy, {
+      ...context,
+      evaluationTime: new Date(
+        fixture.record.value.approval_receipt.expires_at,
+      ),
+    }).includes('expired-approval'),
+    'an approval is expired at its exact expires_at boundary',
+  );
 });
 
 test('baseline integrity rejects forged measurements and artifact fields', () => {

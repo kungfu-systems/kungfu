@@ -3,18 +3,18 @@
   "contract": "kungfu-buildchain-contract-lock",
   "buildchain": {
     "ref": "v3-alpha",
-    "resolvedSha": "ea0d13ac2ccfbb3dc3a11a94e8eb83ab04b936b8",
+    "resolvedSha": "f63d43720ebb7d5099080b14c70cf04254057d80",
     "contract": "kungfu-buildchain-runtime-contract-world",
-    "contractDigest": "sha256:9fd13609b31c78d57112fd4724649d5f7040abfc4c127b9b74d8beba55f88d19",
-    "compatibilityDigest": "sha256:32a651504c57829085dc8863f0e41dee98eb60708ff6dec958c9c7e4b1010102",
+    "contractDigest": "sha256:dc4197dd2495ff4a6114525879cdb19549a47c96a8c45e047b8a5b9c29c44e62",
+    "compatibilityDigest": "sha256:76c3dd58a02887ecd6af33d63e749fef0a988a820fea99bdf4cb078cc48caa83",
     "majorLine": "v3",
     "compatibilityPolicy": "major-compatible",
-    "acceptedAt": "2026-07-30T22:05:06.000Z",
+    "acceptedAt": "2026-08-04T20:57:54.000Z",
     "surfaces": [
       {
         "id": "reusable-build",
         "kind": "workflow",
-        "breakingDigest": "sha256:a6a35370d6b0d0f46e1b2712dcc01961fe53c2febde95409a27a485c10a36650"
+        "breakingDigest": "sha256:dfbedd543ae0c067982b5c8c02d98dd2f7f7df88752be97fb330da6b0ba30faa"
       },
       {
         "id": "channel-build-router",
@@ -34,12 +34,17 @@
       {
         "id": "web-surface",
         "kind": "workflow",
-        "breakingDigest": "sha256:da569f90374e878948e3d5160ed9929338ce0572473ca8ee54867b0fe1aaeace"
+        "breakingDigest": "sha256:27f0cb9c7d97288850d215be8696b323471c41fd1cdf3a2ff3ebf21f62541960"
       },
       {
         "id": "auditable-demo",
         "kind": "workflow",
         "breakingDigest": "sha256:425f8d3d1ba205dd6fe35a20f1dc6dad7d7c563872283e3af79fea4d5c475692"
+      },
+      {
+        "id": "declarative-auditable-demo",
+        "kind": "workflow",
+        "breakingDigest": "sha256:0bcba689ab5060e12230db4118895242ecb48677ff581ea0360b1833bdac558c"
       },
       {
         "id": "promote-buildchain-ref-action",
@@ -144,7 +149,7 @@
       {
         "id": "controller:release-propagation",
         "kind": "controller",
-        "breakingDigest": "sha256:d7a1f15990ce8bd13149474888232c7d4451dd2a49bebf4d4ce1336695da430e"
+        "breakingDigest": "sha256:b873ceb65618972bea615afcb9c616c138ce834b3246ec7237ef87c1618d68bd"
       },
       {
         "id": "controller:binary-distribution",

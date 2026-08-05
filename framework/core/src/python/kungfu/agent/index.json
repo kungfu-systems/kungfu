@@ -19,6 +19,9 @@
   "documents": [
     { "path": "index.json", "purpose": "pack manifest", "maturity": "stable" },
     { "path": "brief.md", "purpose": "first-read overview", "maturity": "stable" },
+    { "path": "intent-map.json", "purpose": "stable complete first-entry intent routing map", "maturity": "stable" },
+    { "path": "first-value.contract.json", "purpose": "deterministic first-value result and qualification contract", "maturity": "stable" },
+    { "path": "first-value-receipt.schema.json", "purpose": "sanitized first-value evidence receipt schema", "maturity": "stable" },
     { "path": "xinfa-context.md", "purpose": "verified-context discovery, help, and automation boundary", "maturity": "stable" },
     { "path": "primitive-management.md", "purpose": "Primitive authoring context binding and installed read-only discovery", "maturity": "experimental" },
     { "path": "mode-selection.md", "purpose": "choose the right operating mode", "maturity": "stable" },
@@ -27,6 +30,7 @@
     { "path": "kfd3_api.registry.json", "purpose": "single KFD-3 collaboration-interface registry", "maturity": "stable" },
     { "path": "kfd3_api.schema.json", "purpose": "local KFD-3 registry shape contract", "maturity": "stable" },
     { "path": "profile-sdk.contract.json", "purpose": "Agent Profile SDK brief, decision, and action schemas", "maturity": "experimental" },
+    { "path": "bootstrap-receipt.schema.json", "purpose": "attempt-bound native Agent bootstrap receipt schema", "maturity": "experimental" },
     { "path": "safety.md", "purpose": "fact boundaries and non-goals", "maturity": "stable" },
     { "path": "examples/report-mode.md", "purpose": "structured work facts without process capture", "maturity": "stable" },
     { "path": "examples/trace-mode.md", "purpose": "capture an existing command", "maturity": "stable" },
@@ -35,7 +39,9 @@
   ],
   "skills": [
     { "target": "codex", "path": "skills/codex/SKILL.md", "maturity": "stable" },
-    { "target": "claude", "path": "skills/claude/SKILL.md", "maturity": "stable" }
+    { "target": "claude", "path": "skills/claude/SKILL.md", "maturity": "stable" },
+    { "target": "amp", "path": "skills/amp/SKILL.md", "maturity": "experimental" },
+    { "target": "opencode", "path": "skills/opencode/SKILL.md", "maturity": "experimental" }
   ],
   "installChannels": [
     { "channel": "electron", "includes": "bundled @kungfu-tech/core runtime and CLI", "maturity": "stable" },
@@ -50,6 +56,9 @@
   "entrypoints": {
     "human": "kungfu agent brief",
     "machine": "kungfu agent capabilities --json",
+    "map": "kungfu agent map --json",
+    "firstValue": "kungfu agent first-value start --json",
+    "context": "kungfu agent context --task <task> --role <role> --budget <tokens> --route <route-id> --json",
     "workModel": "kungfu agent work-model --json",
     "modeChoice": "kungfu agent choose-mode --json",
     "verify": "kungfu agent verify --json"

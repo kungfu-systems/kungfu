@@ -11,6 +11,11 @@ This page is the curated route through the documentation. It is intentionally
 shorter than the exhaustive [Documentation Map](MAP.md): choose the route that
 matches your job, then go deeper only when you need to.
 
+For first use, remember only three objects: **Project, Work, and Agent**. Open
+or create a Project, describe one Work outcome, then run an Agent. The deeper
+authority model is available when evidence or recovery requires it; it is not
+a prerequisite for starting.
+
 ## Browse by responsibility
 
 | Section | What it owns |
@@ -124,8 +129,8 @@ public execution vocabulary.
 - [Durability Configuration](guides/durability-configuration.md) — choose a
   requested persistence profile and understand admission, effects, costs,
   receipts, timeouts, and recovery.
-- [Install the standalone Kungfu CLI](guides/installing-cli.md) — bootstrap trust,
-  ownership, pinned installers, and first-install verification.
+- [Make the Kungfu command available](guides/installing-cli.md) — expose the
+  desktop CLI to an existing Agent, or bootstrap and verify a standalone CLI.
 - [Upgrade Kungfu](guides/upgrading.md) — check, download, install, defer,
   activate, recover, and retain versioned desktop/CLI runtime images safely.
 - [Exit, Migration, and Version Compatibility](guides/exit-and-version-compatibility.md)
@@ -274,6 +279,7 @@ qualified. `docs.contract.json` owns the directory taxonomy, stable entry
 files, publication topology, and executable examples;
 [`document-metadata.contract.json`](document-metadata.contract.json) owns
 metadata routing and ADR projections;
+the registry set rooted at
 [`document-metadata.registry.json`](document-metadata.registry.json) keeps
 public entry and guide metadata out of rendered pages, while
 [`vocabulary.registry.json`](vocabulary.registry.json) owns executable language

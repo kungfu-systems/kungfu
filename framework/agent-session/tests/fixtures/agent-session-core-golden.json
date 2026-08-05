@@ -1,0 +1,100 @@
+{
+  "schema": "kungfu.agent-session-core-golden/v1",
+  "workRef": {
+    "schema": "kungfu.work-ref/v1",
+    "workspaceId": "project:golden",
+    "profileId": "kungfu.work-control",
+    "profileRoot": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "entityType": "assignment",
+    "entityId": "assignment:golden",
+    "entityRoot": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "purpose": "continue-project-assignment",
+    "systemTimeCut": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+    "initiativeId": "initiative:golden"
+  },
+  "workRefRoot": "sha256:03bc380fb1e50578165801da3b0e22472dcb48220ebf54fce9e3b1ce01beac2e",
+  "envelopeBody": {
+    "schema": "kungfu.agent-console-envelope/v1",
+    "workspaceId": "project:golden",
+    "consoleId": "work:kungfu.work-control:assignment:assignment:golden",
+    "attemptId": "native:00000000-0000-4000-8000-000000000001",
+    "runtimeProfileId": "amp.path.golden",
+    "provider": "amp",
+    "activeProfiles": [
+      {
+        "id": "kungfu.work-control",
+        "root": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      }
+    ],
+    "workRef": {
+      "schema": "kungfu.work-ref/v1",
+      "workspaceId": "project:golden",
+      "profileId": "kungfu.work-control",
+      "profileRoot": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "entityType": "assignment",
+      "entityId": "assignment:golden",
+      "entityRoot": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "purpose": "continue-project-assignment",
+      "systemTimeCut": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+      "initiativeId": "initiative:golden"
+    },
+    "entrypoints": {
+      "context": ["kungfu", "agent", "context", "--json"],
+      "capabilities": ["kungfu", "agent", "capabilities", "--json"],
+      "profiles": ["kungfu", "profile", "manager", "--json"],
+      "bindWork": [
+        "kungfu",
+        "agent",
+        "console",
+        "bind-work",
+        "--initiative-id",
+        "<id>",
+        "--assignment-id",
+        "<id>",
+        "--json"
+      ]
+    },
+    "knownLimits": [
+      "provider exit does not claim Work completion"
+    ]
+  },
+  "envelopeRoot": "sha256:54141d58b327b4fb02a98e53ca5b4cb5c66923dcf12f91b166a7c4f05b9cbabe",
+  "runtimeProfiles": [
+    {
+      "schema": "kungfu.agent-runtime-profile/v1",
+      "id": "amp.path.golden",
+      "label": "Amp golden",
+      "provider": "amp",
+      "launch": {
+        "executable": "/usr/local/bin/amp",
+        "argv": [],
+        "interactiveArgv": [],
+        "versionArgv": ["--version"],
+        "shellMode": false
+      },
+      "cwdPolicy": "workspace-root",
+      "backendDefault": "direct",
+      "bootstrap": { "adapter": "amp", "envelope": "required" },
+      "source": "user",
+      "lastVerified": null
+    },
+    {
+      "schema": "kungfu.agent-runtime-profile/v1",
+      "id": "termagent.path.golden",
+      "label": "Third-party PTY Agent",
+      "provider": "termagent",
+      "launch": {
+        "executable": "/opt/agents/termagent",
+        "argv": ["run"],
+        "interactiveArgv": ["--native"],
+        "versionArgv": ["version"],
+        "shellMode": false
+      },
+      "cwdPolicy": "workspace-root",
+      "backendDefault": "direct",
+      "bootstrap": { "adapter": "termagent", "envelope": "required" },
+      "source": "user",
+      "lastVerified": null
+    }
+  ]
+}

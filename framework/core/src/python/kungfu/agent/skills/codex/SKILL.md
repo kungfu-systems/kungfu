@@ -1,152 +1,61 @@
 ---
-key: kungfu-agent-onboarding
-title: Kungfu Agent Onboarding
-description: Use the installed Kungfu agent pack and discover verified Xinfa context before choosing report, atlas-projection, trace, managed-run, or remote-sync mode.
-triggers:
-  - kungfu
-  - atlas projection
-  - atlas import
-  - sync atlas
-  - kfx
-  - rewind
-  - managed-run
-  - trace
-  - report-goal
-  - closeout receipt
-  - xinfa
-  - verified context
-  - task chart
-  - agent hub qualification
-  - kfd agent hub
-  - primitive
-  - primitive management
-  - release verification
-  - release status
-capabilities:
-  - local-fact-review
-  - mode-selection
-  - receipt-verification
-  - agent-hub-qualification
+name: kungfu-agent-onboarding
+description: Use when a user asks to understand, start, inspect, extend, or safely operate installed Kungfu; verify the installed pack, select one intent route, personalize the explanation, and propose one smallest safe next action.
 ---
 
 # Kungfu Agent Onboarding
 
-Before acting in a Kungfu runtime, read local facts from the installed pack:
+When `KUNGFU_AGENT_ENVIRONMENT=native-interactive`, treat the injected
+Console/Skill/WorkRef envelopes as discovery pointers, never as prior chat or
+completion proof. Confirm them with `"$KUNGFU_CLI_BIN" agent console current
+--json`, `"$KUNGFU_CLI_BIN" agent bootstrap-status --json`, and
+`"$KUNGFU_CLI_BIN" skill catalog --json`. Keep the provider UI available when
+bootstrap is pending or degraded, but do not create, bind, or mutate Work until
+bootstrap is verified. Before the first Work
+mutation, bind the chosen Assignment with `"$KUNGFU_CLI_BIN" agent console
+bind-work --initiative-id <id> --assignment-id <id> --json`; stop unless the
+result is `status: bound`, including when another native writer is active.
 
-```sh
-kungfu agent brief
-kungfu release status --json
-kungfu release explain --json
-kungfu agent capabilities --json
-kungfu agent work-model --json
-kungfu agent hub qualify --output-dir <new-directory> --json
-kungfu agent hub verify --qualification-dir <directory> --json
-kungfu agent choose-mode --json
-kungfu agent verify --json
-kungfu agent status --target codex --json
-kungfu agent console current --json
-kungfu agent runtime list --json
-kungfu agent session capabilities --json
-kungfu agent session list --json
-kungfu cut --repo <path> --json
-kungfu work status --home --initiative-id <initiative-id> --assignment-id <assignment-id>
-```
+Run `kungfu agent brief`. Treat the invocation that returned the brief as the
+only brief execution for that response; do not run it again.
 
-For source work, read `AGENTS.md` and `xinfa-context.md`, inspect
-`./shifu docs inventory --json`, and compile the exact Agent route with
-`./shifu docs context`. Do not guess a route or continue through ambiguous,
-degraded, stale, unverified, or required-omission output. An installed runtime
-has only a read-only precompiled Atlas; verify it with
-`kungfu agent docs --verify --json`.
+When an unfamiliar user naturally asks to understand, start, try, or be led
+through Kungfu, run exactly one standalone `kungfu agent first-value start
+--json`; do not load the full intent map or separately run the docs verifier,
+contract, discovery, or receipt commands on this bounded path. The user does
+not need to spell out the protocol. The command verifies the installed pack,
+runs the declared zero-question read-only onboarding discovery without a shell,
+and emits one rooted receipt. Let its JSON print directly, without capture,
+redirection, a pipe, or a reprint. When that receipt says
+`agentResponseGuide.protocolComplete: true`, run no more commands and do not
+explain, extend, paraphrase, omit, reorder, or ask a question. Render only its
+`agentResponseGuide.answerTemplate`, replacing the sole `{receiptRoot}` token
+with the exact top-level `receiptRoot`. Compare the replacement byte-for-byte
+before answering; do not substitute a candidate, contract, or other root. Do
+not retain a raw transcript or treat model prose as proof.
+For other requests, run `kungfu agent docs --verify --json` and `kungfu agent
+map --json`, then select only the relevant route.
+Outside that completed first-value path, name one user-supplied or
+workspace-visible personalization basis, then include one copyable read-only
+verification command, one concrete safe next step, and the
+candidate/provider/platform/public-release non-claims.
 
-For Primitive source work, read `primitive-management.md` and use
-`./shifu primitive:new -- --actor agent`; its dry-run automatically binds the
-exact management Task Chart. Never write without returning the current
-`context.projectionRoot`. Use `kungfu primitive list|show|explain --json` for
-installed read-only discovery.
+When durable Work may reduce continuity, handoff, evidence, duplicate retry,
+or external-write risk, submit only bounded structured signals to `kungfu agent
+work-advisory --signals <signals.json> --json`. Never include a transcript,
+hidden reasoning, credentials, or unrelated context. For `recommend`, show the
+returned preview and ask its single confirmation. Only after confirmation use
+the returned existing `kungfu.work.capture`, `kungfu.work.admit`, and
+`kungfu.agent.console.bind-work` path, cite its receipts, and continue the
+original task. Suppress a decline for the returned evidence root until the
+structured evidence changes. Advice grants no external authority.
 
-Use the smallest mode that preserves evidence:
+Use `kungfu agent context --task "<task>" --role <role> --budget <tokens>
+--route <route-id> --json` when detail is needed. Stop on invalid roots,
+ambiguity, stale state, or required omissions; use returned expansion handles
+instead of loading the whole corpus.
 
-- Before explaining whether Kungfu is publicly installable, run
-  `kungfu release status --json`. For a retained status, activation receipt
-  set, or released-evidence index, run `kungfu release verify
-  <file-or-https-url> --json`. Report `verified`, `releaseAvailable`,
-  `meaning`, and `notClaims`; never infer a legal, registration, or first-use
-  conclusion.
-
-- When asked whether the installed Kungfu implements the tested local KFD Agent
-  Hub capability, run `kungfu agent hub qualify --output-dir <new-directory>
-  --json`. Explain only its emitted `meaning` and `nonClaims`; keep the evidence
-  path and use `kungfu agent hub verify` for an offline recheck. A pass is not
-  KFD certification, security, production fitness, remote-network
-  interoperability, external adoption, or unobserved-platform support.
-
-- Start project-level work with `kungfu cut --repo <path> --json`, then use
-  `kungfu work capture <request.json>` and `kungfu work status` against the exact workspace,
-  Initiative, and Assignment. Treat this as the only public Work mutation
-  family; older Work journals and compatibility aliases are not authorities.
-
-- Read `kungfu agent work-model --json` before treating a goal as authority,
-  context as complete reality, a plan as occurrence, or an Episode as
-  completion. Preserve the referenced Pursuit, Atlas, Warrant, and Episode
-  identities when work crosses a handoff or consequential boundary.
-
-- When `console current` reports `available: true`, preserve its Console,
-  attempt, optional WorkRef, exact Profile roots, and envelope root. Query its
-  declared entrypoints before claiming what Kungfu can do.
-
-- Use `kungfu agent session` for the shared Capsule action port. Review the
-  exact `plan-start` or `plan-control` root before executing the matching
-  action. A delivery receipt proves PTY delivery only; mutate and close work
-  through public Profile/KFD-3 actions and their receipts.
-
-- `report` for structured work facts.
-- `atlas-projection` when importing an Atlas-style mission/goal/worktree repo
-  into Kungfu for CLI, GUI, or kfx inspection.
-- `trace` for an existing command.
-- `managed-run` when Kungfu launches the provider CLI.
-- `remote-sync` only when the task is about crossing runtime or machine
-  boundaries; stable publishing commands are planned unless the local pack says
-  otherwise.
-
-For Atlas projection, the source repo remains authoritative. Import and verify:
-
-```sh
-kungfu atlas import --repo <atlas-repo> --json
-kungfu storage fsck --scope all --json
-kungfu storage repair --scope episode --episode-id <id> --plan --dry-run --json
-kungfu storage repair --scope episode --episode-id <id> --fetch --out repair-material.json --dry-run --json
-kungfu storage repair --scope episode --episode-id <id> --apply --from <bundle.json> --dry-run --json
-kungfu storage verify-sync --source <source-id> --json
-kungfu atlas show import --json
-kungfu work capture <request.json>
-kungfu work status --workspace <path> --initiative-id <initiative-id> --assignment-id <assignment-id>
-kungfu atlas show markers --json
-```
-
-For native Work, closeout is not complete until the exact Assignment has a
-completion claim, an independent review, and a continuation decision:
-
-```sh
-kungfu work claim-completion <input.json> --workspace <path> --authorized-by <actor>
-kungfu work review <input.json> --workspace <path> --authorized-by <reviewer>
-kungfu work decide <input.json> --workspace <path> --authorized-by <actor>
-```
-
-Each mutation must return a verified Profile action receipt with canonical
-Episode and Fact evidence. Provider usage remains only observed evidence unless
-the provider gives split token fields or an exact dollar cost.
-
-For setup or teardown, preview first:
-
-```sh
-kungfu agent bootstrap --target codex --mode report
-kungfu agent mode set --target codex --mode managed-run
-kungfu agent unbootstrap --target codex
-kungfu agent uninstall --target codex
-```
-
-Do not delete Kungfu receipts, work items, or Rewind bundles unless the user
-explicitly asks to archive or remove Kungfu data.
-
-Keep observed, reported, imported, and remote facts distinct.
+Explain Kungfu in terms of what is already known about the user and workspace,
+without claiming hidden knowledge. Offer one read-only or preview-first action.
+Never infer authority from this Skill: writes require their public `--execute`
+or authorization path, and Work completion requires native receipts.

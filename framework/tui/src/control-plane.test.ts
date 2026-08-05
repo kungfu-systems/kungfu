@@ -2,6 +2,7 @@
 
 import assert from 'node:assert/strict';
 import { EventEmitter } from 'node:events';
+import { readFileSync } from 'node:fs';
 import { Writable } from 'node:stream';
 import test from 'node:test';
 import { Box, Text, render } from 'ink';
@@ -10,20 +11,67 @@ import React from 'react';
 import { AGENT_WORK_LAB_QUICK_COMMANDS } from './agent-work-lab-view.js';
 import {
   CLOSED_CONTROL_PLANE,
+  CONTROL_PLANE_CURSOR_BLINK_MS,
   ControlPlaneBar,
   ControlPlaneOverlay,
   type ControlPlaneState,
+  type ProductSurface,
   QUICK_COMMANDS,
+  contextualProjectRestoreCanCommit,
   createControlPlaneInputFence,
+  directWorkspaceNavigationFromInput,
   quickCommandMatches,
   reduceControlPlaneInput,
+  resolveProductStartupSurface,
+  shouldStartContextualProjectRestore,
 } from './profile-shell.js';
 import {
-  degradedGlobalWorkModel,
+  PROJECTS_QUICK_COMMANDS,
+  PROJECT_WORK_QUICK_COMMANDS,
+  projectWorkQuickCommandAvailable,
+  selectVisibleProjectWorkRun,
+} from './projects-view/index.js';
+import {
   globalWorkContribution,
+  globalWorkObserverArgs,
   loadLatestGlobalWorkCache,
   parseGlobalWorkObserverLine,
 } from './work-control-contribution.js';
+
+test('p opens Projects directly from an empty Project input prompt', () => {
+  assert.equal(
+    directWorkspaceNavigationFromInput(
+      CLOSED_CONTROL_PLANE,
+      'p',
+      'project-work',
+    ),
+    'projects',
+  );
+  assert.equal(
+    directWorkspaceNavigationFromInput(
+      CLOSED_CONTROL_PLANE,
+      'p',
+      'project-assignment',
+    ),
+    'projects',
+  );
+  assert.equal(
+    directWorkspaceNavigationFromInput(
+      { ...CLOSED_CONTROL_PLANE, query: 'hel' },
+      'p',
+      'project-work',
+    ),
+    null,
+  );
+  assert.equal(
+    directWorkspaceNavigationFromInput(
+      { ...CLOSED_CONTROL_PLANE, focus: 'workspace' },
+      'p',
+      'project-work',
+    ),
+    null,
+  );
+});
 
 const globalWorkSnapshot = {
   schema: 'kungfu.workspace-federation.query/v1' as const,
@@ -43,7 +91,7 @@ const globalWorkSnapshot = {
         canonical_root: 'sha256:initiative',
         object_kind: 'initiative',
         subject: 'initiative-a',
-        display: { title: 'Initiative A', status: 'active' },
+        display: { title: 'Improve search', status: 'active' },
         observations: [{ workspace_id: 'home' }],
       },
       {
@@ -51,9 +99,21 @@ const globalWorkSnapshot = {
         object_kind: 'assignment',
         subject: 'initiative-a:assignment-a',
         display: {
-          title: 'Assignment A',
+          title: 'Unify search',
           status: 'executing',
           next_actions: ['continue'],
+        },
+        observations: [{ workspace_id: 'project:a' }],
+      },
+      {
+        canonical_root: 'sha256:completed',
+        object_kind: 'assignment',
+        subject: 'initiative-a:assignment-completed',
+        display: {
+          title: 'Completed Work',
+          status: 'completed',
+          portfolio_state: 'completed',
+          next_actions: [],
         },
         observations: [{ workspace_id: 'project:a' }],
       },
@@ -75,6 +135,78 @@ class CaptureOutput extends Writable {
     this.chunks.push(String(chunk));
     callback();
   }
+}
+
+function deferred<T>() {
+  let resolve!: (value: T | PromiseLike<T>) => void;
+  const promise = new Promise<T>((settle) => {
+    resolve = settle;
+  });
+  return { promise, resolve };
+}
+
+function ContextualProjectRestoreHarness({
+  selected,
+  inventory,
+  navigation,
+}: {
+  selected: Promise<void>;
+  inventory: Promise<void>;
+  navigation?: Promise<ProductSurface>;
+}) {
+  const [surface, setSurfaceState] = React.useState<ProductSurface>('loading');
+  const startupSurface = React.useRef(surface).current;
+  const surfaceRef = React.useRef(surface);
+  const [loading, setLoading] = React.useState(false);
+  const [restored, setRestored] = React.useState(false);
+  const setSurface = React.useCallback((next: ProductSurface) => {
+    surfaceRef.current = next;
+    setSurfaceState(next);
+  }, []);
+
+  React.useEffect(() => {
+    if (!navigation) return;
+    void navigation.then(setSurface);
+  }, [navigation, setSurface]);
+
+  React.useEffect(() => {
+    if (
+      !shouldStartContextualProjectRestore({
+        playbackMode: false,
+        surface: startupSurface,
+        emptyState: false,
+        startupProjectRoot: '/tmp/project',
+      })
+    ) {
+      return;
+    }
+    let active = true;
+    setLoading(true);
+    void selected
+      .then(async () => {
+        if (!active || !contextualProjectRestoreCanCommit(surfaceRef.current)) {
+          return;
+        }
+        setSurface('project-work');
+        await inventory;
+        if (!active || surfaceRef.current !== 'project-work') return;
+        setRestored(true);
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [inventory, selected, setSurface, startupSurface]);
+
+  return React.createElement(
+    Text,
+    null,
+    `${surface}:${loading ? 'loading' : 'settled'}:${
+      restored ? 'restored' : 'pending'
+    }`,
+  );
 }
 
 test('opens Help, slash commands, and product search from the focused input', () => {
@@ -111,6 +243,34 @@ test('Esc hands focus to workspace shortcuts and i returns to input', () => {
   const focused = reduceControlPlaneInput(workspace, 'i', 0);
   assert.equal(focused.handled, true);
   assert.equal(focused.state.focus, 'input');
+});
+
+test('Help and commands return to the workspace focus that opened them', () => {
+  const workspace = { ...CLOSED_CONTROL_PLANE, focus: 'workspace' as const };
+  const help = reduceControlPlaneInput(workspace, '?', 0).state;
+  assert.equal(help.mode, 'help');
+  assert.equal(help.returnFocus, 'workspace');
+  assert.deepEqual(reduceControlPlaneInput(help, '\u001b', 0).state, workspace);
+
+  const commands = reduceControlPlaneInput(
+    workspace,
+    '/',
+    QUICK_COMMANDS.length,
+  ).state;
+  assert.equal(commands.returnFocus, 'workspace');
+  assert.deepEqual(
+    reduceControlPlaneInput(commands, '\u001b', QUICK_COMMANDS.length).state,
+    workspace,
+  );
+});
+
+test('Help opened from text entry still returns to the input', () => {
+  const help = reduceControlPlaneInput(CLOSED_CONTROL_PLANE, '?', 0).state;
+  assert.equal(help.returnFocus, undefined);
+  assert.deepEqual(
+    reduceControlPlaneInput(help, '\u001b', 0).state,
+    CLOSED_CONTROL_PLANE,
+  );
 });
 
 test('Tab enters controls and requests one bounded focus move', () => {
@@ -181,30 +341,29 @@ test('keeps a closing key captured for the rest of its synchronous input emissio
 test('keeps quick commands bounded to declared product actions', () => {
   assert.deepEqual(
     QUICK_COMMANDS.map((row) => row.action),
-    ['help', 'search', 'health', 'work', 'lab', 'home', 'quit'],
+    [
+      'help',
+      'search',
+      'health',
+      'new-work',
+      'work',
+      'projects',
+      'lab',
+      'onboarding',
+      'home',
+      'quit',
+    ],
   );
+  assert.equal(quickCommandMatches('/new')[0]?.action, 'new-work');
+  assert.equal(quickCommandMatches('/onboarding')[0]?.action, 'onboarding');
   assert.equal(quickCommandMatches('/rm -rf').length, 0);
 });
 
-test('projects the global Portfolio and indexes every visible Work row', () => {
+test('projects every machine Work row into product search documents', () => {
   const contribution = globalWorkContribution(globalWorkSnapshot);
-  assert.equal(contribution.model.profile.title, 'Work');
-  assert.equal(contribution.model.profile.qualificationLabel, 'Global proof');
-  assert.equal(
-    contribution.model.subject.title,
-    'Portfolio · 2 current work items',
-  );
-  assert.match(
-    contribution.model.subject.subtitle,
-    /1 Initiatives · 1 Assignments/,
-  );
   assert.deepEqual(
     contribution.searchDocuments.map((row) => row.title),
-    ['Initiative A', 'Assignment A'],
-  );
-  assert.match(
-    degradedGlobalWorkModel(new Error('observer unavailable')).notice ?? '',
-    /observer unavailable/,
+    ['Improve search', 'Unify search', 'Completed Work'],
   );
 });
 
@@ -255,6 +414,39 @@ test('reads and parses the shared GUI or TUI global Work observer state', () => 
   assert.equal(parseGlobalWorkObserverLine('not json'), null);
 });
 
+test('source CLI fallback keeps the complete uv Python prefix before global Work observation', () => {
+  const args = globalWorkObserverArgs('/tmp/global-work.json', [
+    'run',
+    '--project',
+    '/checkout/framework/core',
+    '--frozen',
+    'python',
+    '-m',
+    'kungfu',
+  ]);
+  assert.deepEqual(args.slice(0, 9), [
+    'run',
+    '--project',
+    '/checkout/framework/core',
+    '--frozen',
+    'python',
+    '-m',
+    'kungfu',
+    'workspace',
+    'work',
+  ]);
+  const source = readFileSync(new URL('./main.tsx', import.meta.url), 'utf8');
+  const observerStart = source.indexOf('return startGlobalWorkObserver({');
+  const observerEnd = source.indexOf('  }, [applySnapshot', observerStart);
+  assert.notEqual(observerStart, -1);
+  assert.notEqual(observerEnd, -1);
+  const observerCall = source.slice(observerStart, observerEnd);
+  assert.match(observerCall, /bin: cli\.bin/);
+  assert.match(observerCall, /argsPrefix: cli\.argsPrefix/);
+  assert.match(observerCall, /env: cli\.env/);
+  assert.doesNotMatch(observerCall, /paths\.bin|cliEnvironment\(\)/);
+});
+
 test('adds Suite actions only to the active Lab command catalog', () => {
   const labCommands = [...AGENT_WORK_LAB_QUICK_COMMANDS, ...QUICK_COMMANDS];
   assert.deepEqual(
@@ -266,6 +458,195 @@ test('adds Suite actions only to the active Lab command catalog', () => {
     AGENT_WORK_LAB_QUICK_COMMANDS.map((row) => row.command),
     ['/demo', '/same', '/handoff', '/report', '/new', '/focus'],
   );
+});
+
+test('adds Project actions only to the active Projects command catalog', () => {
+  const projectCommands = [...PROJECTS_QUICK_COMMANDS, ...QUICK_COMMANDS];
+  assert.deepEqual(
+    projectCommands
+      .slice(0, PROJECTS_QUICK_COMMANDS.length)
+      .map((row) => row.command),
+    ['/new', '/open', '/remove'],
+  );
+  assert.equal(
+    quickCommandMatches('/new', projectCommands)[0]?.action,
+    'project-new',
+  );
+});
+
+test('gives /new a Work meaning inside an opened Project', () => {
+  const projectWorkCommands = [
+    ...PROJECT_WORK_QUICK_COMMANDS,
+    ...QUICK_COMMANDS,
+  ];
+  assert.equal(
+    quickCommandMatches('/new', projectWorkCommands)[0]?.action,
+    'project-work-new',
+  );
+  assert.match(projectWorkCommands[0]?.summary ?? '', /acceptance criterion/);
+});
+
+test('keeps /new available after completed Project Work but not during active review', () => {
+  assert.equal(
+    projectWorkQuickCommandAvailable({
+      surface: 'project-assignment',
+      hasOpenedProject: true,
+      completedWork: true,
+    }),
+    true,
+  );
+  assert.equal(
+    projectWorkQuickCommandAvailable({
+      surface: 'project-assignment',
+      hasOpenedProject: true,
+      completedWork: false,
+    }),
+    false,
+  );
+  assert.equal(
+    projectWorkQuickCommandAvailable({
+      surface: 'project-work',
+      hasOpenedProject: true,
+      completedWork: false,
+    }),
+    true,
+  );
+});
+
+test('completed Project Work does not retain the previous Agent run as a new-Work blocker', () => {
+  const retained = [{ id: 'old-run', workspace: '/tmp/project' }];
+  assert.equal(
+    selectVisibleProjectWorkRun(retained, '/tmp/project', false)?.id,
+    'old-run',
+  );
+  assert.equal(
+    selectVisibleProjectWorkRun(retained, '/tmp/project', true),
+    null,
+  );
+});
+
+test('startup opens only the current .kungfu Project and otherwise shows All Work', () => {
+  assert.equal(
+    resolveProductStartupSurface({
+      contextualProject: true,
+      openedProject: true,
+      projectResumeSettled: true,
+    }),
+    'project-work',
+  );
+  assert.equal(
+    resolveProductStartupSurface({
+      contextualProject: true,
+      openedProject: false,
+      projectResumeSettled: false,
+    }),
+    null,
+  );
+  assert.equal(
+    resolveProductStartupSurface({
+      contextualProject: true,
+      openedProject: false,
+      projectResumeSettled: true,
+    }),
+    'all-work',
+  );
+  assert.equal(
+    resolveProductStartupSurface({
+      contextualProject: false,
+      openedProject: true,
+      projectResumeSettled: false,
+    }),
+    'all-work',
+  );
+});
+
+test('explicit product navigation cancels contextual Project restoration', () => {
+  const startup = {
+    playbackMode: false,
+    emptyState: false,
+    startupProjectRoot: '/tmp/project',
+  };
+  assert.equal(
+    shouldStartContextualProjectRestore({ ...startup, surface: 'loading' }),
+    true,
+  );
+  for (const surface of ['lab', 'projects', 'all-work', 'onboarding']) {
+    assert.equal(
+      shouldStartContextualProjectRestore({ ...startup, surface }),
+      false,
+      `${surface} must not be replaced by a late Project restore`,
+    );
+    assert.equal(
+      contextualProjectRestoreCanCommit(surface),
+      false,
+      `${surface} must revoke a pending restore before React rerenders`,
+    );
+  }
+});
+
+test('contextual Project restore survives its owned async surface transition', async () => {
+  const output = new CaptureOutput();
+  const selected = deferred<void>();
+  const inventory = deferred<void>();
+  const instance = render(
+    React.createElement(ContextualProjectRestoreHarness, {
+      selected: selected.promise,
+      inventory: inventory.promise,
+    }),
+    {
+      stdout: output as unknown as NodeJS.WriteStream,
+      exitOnCtrlC: false,
+      patchConsole: false,
+      debug: true,
+    },
+  );
+
+  await new Promise<void>((resolve) => setImmediate(resolve));
+  selected.resolve();
+  await new Promise<void>((resolve) => setImmediate(resolve));
+  assert.match(output.chunks.join(''), /project-work:loading:pending/);
+
+  inventory.resolve();
+  await new Promise<void>((resolve) => setImmediate(resolve));
+  const frame = output.chunks.join('');
+  instance.unmount();
+  instance.cleanup();
+
+  assert.match(frame, /project-work:settled:restored/);
+});
+
+test('explicit navigation cancels async Project restore and settles loading', async () => {
+  const output = new CaptureOutput();
+  const selected = deferred<void>();
+  const inventory = deferred<void>();
+  const navigation = deferred<ProductSurface>();
+  const instance = render(
+    React.createElement(ContextualProjectRestoreHarness, {
+      selected: selected.promise,
+      inventory: inventory.promise,
+      navigation: navigation.promise,
+    }),
+    {
+      stdout: output as unknown as NodeJS.WriteStream,
+      exitOnCtrlC: false,
+      patchConsole: false,
+      debug: true,
+    },
+  );
+
+  await new Promise<void>((resolve) => setImmediate(resolve));
+  navigation.resolve('projects');
+  await new Promise<void>((resolve) => setImmediate(resolve));
+  assert.match(output.chunks.join(''), /projects:loading:pending/);
+
+  selected.resolve();
+  await new Promise<void>((resolve) => setImmediate(resolve));
+  const frame = output.chunks.join('');
+  instance.unmount();
+  instance.cleanup();
+
+  assert.match(frame, /projects:settled:pending/);
+  assert.doesNotMatch(frame, /project-work/);
 });
 
 test('the real Ink control plane covers the product canvas and keeps a fixed input bar', async () => {
@@ -302,7 +683,9 @@ test('the real Ink control plane covers the product canvas and keeps a fixed inp
   instance.cleanup();
   assert.match(frame, /KUNGFU · HELP/);
   assert.match(frame, /focused input accepts text/);
-  assert.match(frame, /Help is open/);
+  assert.match(frame, /Getting Started: \/onboarding/);
+  assert.match(frame, /Help open/);
+  assert.match(frame, /HELP.*Esc Back/s);
   assert.match(frame, /╭/);
   assert.match(frame, /╰/);
   assert.doesNotMatch(frame, /UNDERLYING PRODUCT CONTENT/);
@@ -337,10 +720,47 @@ test('the idle input is a focused full panel and renders typed text', async () =
   instance.unmount();
   instance.cleanup();
   assert.match(frame, /continue work/);
-  assert.match(frame, /INPUT · Kungfu/);
-  assert.match(frame, /Text entry is active · Esc Controls/);
+  assert.match(frame, /VIEW CONTROLS/);
+  assert.match(frame, /╭─ VIEW CONTROLS/u);
+  assert.match(frame, /Esc Controls · \? Help/);
+  assert.doesNotMatch(frame, /Kungfu/);
+  assert.doesNotMatch(frame, /Type…/u);
   assert.match(frame, /╭/);
   assert.match(frame, /╰/);
+});
+
+test('the focused empty input blinks a cursor without placeholder copy', async () => {
+  const output = new CaptureOutput();
+  const instance = render(
+    React.createElement(
+      Box,
+      { width: 80, height: 23, flexDirection: 'column' },
+      React.createElement(ControlPlaneBar, {
+        dimensions: { columns: 80, rows: 24 },
+        state: CLOSED_CONTROL_PLANE,
+        resultCount: 0,
+      }),
+    ),
+    {
+      stdout: output as unknown as NodeJS.WriteStream,
+      exitOnCtrlC: false,
+      patchConsole: false,
+      debug: true,
+    },
+  );
+  await new Promise<void>((resolve) => setTimeout(resolve, 80));
+  const initialWriteCount = output.chunks.length;
+  const initialFrame = output.chunks.join('');
+  await new Promise<void>((resolve) =>
+    setTimeout(resolve, CONTROL_PLANE_CURSOR_BLINK_MS + 80),
+  );
+  const blinkingWriteCount = output.chunks.length;
+  instance.unmount();
+  instance.cleanup();
+
+  assert.match(initialFrame, /╭─ VIEW CONTROLS/u);
+  assert.doesNotMatch(initialFrame, /Type…/u);
+  assert.ok(blinkingWriteCount > initialWriteCount);
 });
 
 test('the idle bar makes Lab controls visually explicit', async () => {
@@ -353,7 +773,6 @@ test('the idle bar makes Lab controls visually explicit', async () => {
         dimensions: { columns: 80, rows: 24 },
         state: { ...CLOSED_CONTROL_PLANE, focus: 'workspace' },
         resultCount: 0,
-        surfaceLabel: 'Agent Work Lab',
         controlsLabel: 'LAB CONTROLS',
         controlsHint: 'd Demo · x Same · m Handoff · Tab Focus',
       }),
@@ -370,9 +789,10 @@ test('the idle bar makes Lab controls visually explicit', async () => {
   instance.unmount();
   instance.cleanup();
 
-  assert.match(frame, /LAB CONTROLS · Agent Work Lab/);
+  assert.match(frame, /LAB CONTROLS/);
   assert.match(frame, /d Demo · x Same · m Handoff · Tab Focus/);
   assert.match(frame, /i Input/);
+  assert.match(frame, /◇ Press i to type/);
 });
 
 test('search keeps the selected result visible beyond the first viewport', async () => {

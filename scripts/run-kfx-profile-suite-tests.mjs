@@ -7,6 +7,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const tuiRoot = path.join(root, 'framework', 'tui');
 const isWin = process.platform === 'win32';
 const agentWorkLabOnly = process.argv.includes('--agent-work-lab');
 const logPrefix = agentWorkLabOnly ? '[agent-work-lab]' : '[kfx-profile-suite]';
@@ -72,6 +73,29 @@ function assertNoLegacyProductIdentity() {
   );
 }
 
+function assertEmbeddedSourceContractDependencies() {
+  const cmake = readFileSync(
+    path.join(root, 'framework/core/src/libkungfu/CMakeLists.txt'),
+    'utf8',
+  );
+  const dependencyBlock = cmake.match(
+    /set_property\(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS ([^)]+)\)/u,
+  )?.[1];
+  for (const contract of [
+    'kungfu-kfx.contract.json',
+    'kungfu-kfx-domain-profile.contract.json',
+  ]) {
+    if (!dependencyBlock?.includes(contract)) {
+      throw new Error(
+        `${contract} must invalidate cached CMake configuration before its bytes are embedded`,
+      );
+    }
+  }
+  process.stdout.write(
+    '[kfx-profile-suite] embedded source contracts invalidate cached CMake configuration\n',
+  );
+}
+
 const pythonPath = [
   path.join(root, 'framework/core/src/python'),
   agentWorkLabOnly
@@ -83,10 +107,16 @@ const pythonPath = [
   .filter(Boolean)
   .join(path.delimiter);
 
+assertEmbeddedSourceContractDependencies();
+
 if (agentWorkLabOnly) {
   assertNoLegacyProductIdentity();
   for (const [label, file] of [
     ['API capability adapter', 'framework/api/tests/agent-work-lab.test.ts'],
+    [
+      'TUI Getting Started',
+      'framework/tui/src/agent-first-onboarding-view.test.ts',
+    ],
     ['TUI experience', 'framework/tui/src/agent-work-lab-view.test.ts'],
     ['TUI workbench framework', 'framework/tui/src/profile-shell.test.ts'],
     ['Product TUI demo entry', 'product/scripts/product.test.mjs'],
@@ -97,13 +127,16 @@ if (agentWorkLabOnly) {
     ],
     ['KFX Manifest discovery', 'framework/kfx/src/profile-suite.test.ts'],
   ]) {
+    const testPath = path.join(root, file);
     run(label, 'pnpm', [
       '--filter',
       '@kungfu-tech/tui',
       'exec',
       'tsx',
       '--test',
-      path.join(root, file),
+      testPath.startsWith(`${tuiRoot}${path.sep}`)
+        ? path.relative(tuiRoot, testPath)
+        : testPath,
     ]);
   }
 
@@ -122,6 +155,10 @@ if (agentWorkLabOnly) {
       path.join(
         root,
         'framework/core/src/python/kungfu/cli/commands/agent_work_lab.py',
+      ),
+      path.join(
+        root,
+        'framework/core/src/python/kungfu/project_template/__init__.py',
       ),
       path.join(root, 'framework/core/tests/python/test_agent_work_lab.py'),
       path.join(root, 'framework/core/tests/python/test_project_template.py'),

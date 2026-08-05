@@ -2,12 +2,15 @@
 //
 // Unified `--help` rendered from a declarative manifest (KF-ADR-019f86da-4f90-73ff-9543-f0a4f0beef05 stage 3/4).
 //
-// `kungfu --help` should list the whole command surface without waking a
-// satellite — the front door stays usable (and fast) even when the domain
-// runtime is broken (KF-ADR-019f86da-4f90-73ff-9543-f0a4f0beef05 driver 1). The command surface lives in the Python
-// click tree, so it is introspected once at build time into a small tagged-line
-// manifest shipped next to the binary (dist/kungfu/help-manifest.txt); the trunk
-// reads and renders it here, initializing no Python.
+// `kungfu --help` should expose the first-layer Project → Work → Agent model
+// without waking a satellite — the front door stays usable (and fast) even
+// when the domain runtime is broken
+// (KF-ADR-019f86da-4f90-73ff-9543-f0a4f0beef05 driver 1). The complete command
+// surface remains discoverable through `--help-all` and `--help-section`. The
+// command surface lives in the Python click tree, so it is introspected once at
+// build time into a small tagged-line manifest shipped next to the binary
+// (dist/kungfu/help-manifest.txt); the trunk reads and renders it here,
+// initializing no Python.
 //
 // It degrades gracefully: when the manifest is absent (a dev checkout without the
 // assembled product), `render` returns None and the caller falls through to the
@@ -161,6 +164,7 @@ fn render_from_with_width(
     width: usize,
 ) -> String {
     let mut version: Option<String> = None;
+    let mut progressive_projection = false;
     let mut options: Vec<(String, String)> = Vec::new();
     let mut commands: Vec<Command> = Vec::new();
     let mut sections: Vec<Section> = Vec::new();
@@ -173,6 +177,7 @@ fn render_from_with_width(
         let mut fields = line.split('\t');
         match fields.next() {
             Some("VERSION") => version = fields.next().map(str::to_string),
+            Some("PROJECTION") => progressive_projection = true,
             Some("OPT") => {
                 if let (Some(flags), summary) = (fields.next(), fields.next().unwrap_or("")) {
                     options.push((flags.to_string(), summary.to_string()));
@@ -241,16 +246,23 @@ fn render_from_with_width(
         None => out.push_str("kungfu\n\n"),
     }
     out.push_str("usage: kungfu [options] <command> [<args>]\n");
+    if progressive_projection {
+        out.push_str("\nproduct model: Project → Work → Agent\n");
+    }
 
-    if !options.is_empty() {
-        let label_width = options
+    let visible_options: Vec<_> = options
+        .iter()
+        .filter(|(flags, _)| !progressive_projection || is_first_layer_option(flags))
+        .collect();
+    if !visible_options.is_empty() {
+        let label_width = visible_options
             .iter()
             .map(|(flags, _)| flags.len())
             .max()
             .unwrap_or(0)
             .min((width / 3).max(20));
         out.push_str("\noptions:\n");
-        for (flags, summary) in &options {
+        for (flags, summary) in visible_options {
             push_row(&mut out, flags, summary, label_width, width);
         }
     }
@@ -268,13 +280,25 @@ fn render_from_with_width(
     }
 
     for section in &sections {
-        let rows: Vec<_> = commands
+        let section_rows: Vec<_> = commands
             .iter()
             .filter(|command| command.section == section.id)
             .collect();
-        let expanded = rows
-            .iter()
-            .any(|command| matches!(command.visibility.as_str(), "start-here" | "public"));
+        let rows: Vec<_> = if progressive_projection {
+            section_rows
+                .into_iter()
+                .filter(|command| command.visibility == "start-here")
+                .collect()
+        } else {
+            section_rows
+        };
+        if progressive_projection && rows.is_empty() {
+            continue;
+        }
+        let expanded = progressive_projection
+            || rows
+                .iter()
+                .any(|command| matches!(command.visibility.as_str(), "start-here" | "public"));
         out.push_str(&format!("\n{}  [{}]\n", section.title, section.id));
         for line in wrap_words(&section.summary, width.saturating_sub(2).max(20)) {
             out.push_str(&format!("  {line}\n"));
@@ -324,6 +348,13 @@ fn render_from_with_width(
     out
 }
 
+fn is_first_layer_option(flags: &str) -> bool {
+    matches!(
+        flags,
+        "--help-all" | "--help-section SECTION" | "--help-json" | "-h, --help" | "--version"
+    )
+}
+
 fn push_row(out: &mut String, label: &str, summary: &str, label_width: usize, width: usize) {
     if label.len() > label_width {
         out.push_str(&format!("  {label}\n"));
@@ -367,8 +398,13 @@ mod tests {
     const SAMPLE: &str = "\
 # kungfu help manifest (generated; do not edit)
 VERSION\t4.0.0-alpha.1
+PROJECTION\tkungfu.cli-help-projection/v1\tsha256:projection\tsha256:contract\tsha256:registry
 OPT\t-H, --home <path>\tkungfu runtime home folder
+OPT\t--help-all\texpand every governed command family and exit
+OPT\t--help-section SECTION\texpand one governed help section and exit
+OPT\t--help-json\temit the offline discovery contract as JSON and exit
 OPT\t-h, --help\tshow this help and exit
+OPT\t--version\tshow the version and exit
 SECTION\tstart-here\tSTART HERE\tBegin with a governed workspace.
 SECTION\tsystem-maintenance\tSYSTEM & MAINTENANCE\tInspect and maintain runtime state.
 SECTION\tadvanced-compatibility\tADVANCED & COMPATIBILITY\tSupported compatibility surfaces.
@@ -412,12 +448,17 @@ ROOTOPT\tenv_verify_location\t0\tKF_VERIFY_LOCATION\t-ENV-verify-location\t
         let out = render_from(SAMPLE, NATIVE);
         assert!(out.contains("kungfu 4.0.0-alpha.1"));
         assert!(out.contains("usage: kungfu [options] <command>"));
-        assert!(out.contains("-H, --home <path>"));
+        assert!(out.contains("product model: Project → Work → Agent"));
+        assert!(!out.contains("-H, --home <path>"));
+        assert!(out.contains("--help-all"));
         assert!(out.contains("START HERE  [start-here]"));
         assert!(out.contains("\n  agent "));
-        assert!(out.contains("1 command families; expand with 'kungfu --help-section developer'"));
+        assert!(!out.contains("SYSTEM & MAINTENANCE"));
+        assert!(!out.contains("ADVANCED & COMPATIBILITY"));
+        assert!(!out.contains("DEVELOPER"));
         assert!(!out.contains("\n  env "));
         assert!(!out.contains("\n  trace "));
+        assert!(!out.contains("\n  doctor "));
     }
 
     #[test]

@@ -352,7 +352,6 @@ impl Tool {
             ("fnm", "linux", "aarch64") => "fnm-arm64.zip".to_string(),
             ("fnm", "windows", "x86_64") => "fnm-windows.zip".to_string(),
             ("uv", "macos", "aarch64") => "uv-aarch64-apple-darwin.tar.gz".to_string(),
-            ("uv", "macos", "x86_64") => "uv-x86_64-apple-darwin.tar.gz".to_string(),
             ("uv", "linux", "x86_64") => "uv-x86_64-unknown-linux-gnu.tar.gz".to_string(),
             ("uv", "linux", "aarch64") => "uv-aarch64-unknown-linux-gnu.tar.gz".to_string(),
             ("uv", "windows", "x86_64") => "uv-x86_64-pc-windows-msvc.zip".to_string(),

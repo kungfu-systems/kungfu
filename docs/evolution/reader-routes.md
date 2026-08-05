@@ -75,3 +75,11 @@ Historical context: [Work Control canonical name](stages/09-work-control-canonic
 Start current reading at [docs/profiles/work-control.md](../profiles/work-control.md).
 
 Deepen through [docs/architecture/kfx-topology.md](../architecture/kfx-topology.md), [docs/profiles/compatibility/README.md](../profiles/compatibility/README.md).
+
+## Understand exact product identity and how local or public updates move between releases
+
+Historical context: [Product Release Cut and updater convergence](stages/10-product-release-cut-updater.md).
+
+Start current reading at [docs/guides/upgrading.md](../guides/upgrading.md).
+
+Deepen through [framework/upgrade/kungfu-product-release-cut.contract.json](../../framework/upgrade/kungfu-product-release-cut.contract.json), [docs/adr/KF-ADR-019fabb5-62a0-7b8d-8f8d-6505efdbc239.md](../adr/KF-ADR-019fabb5-62a0-7b8d-8f8d-6505efdbc239.md), [docs/development/versioning.md](../development/versioning.md).

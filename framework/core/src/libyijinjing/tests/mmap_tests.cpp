@@ -137,17 +137,17 @@ auto make_bus() { return std::make_shared<kungfu::yijinjing::journal::bus>(false
 
 class one_shot_hook : public writer_hook {
 public:
-  bool throw_on_open{false};
-  bool throw_on_close{false};
+  bool throw_on_reserve{false};
+  bool throw_on_commit{false};
 
-  void on_open_frame(int64_t, frame_ptr) override {
-    if (std::exchange(throw_on_open, false)) {
+  void on_reservation_started(int64_t, frame_ptr) override {
+    if (std::exchange(throw_on_reserve, false)) {
       throw std::runtime_error("injected open hook failure");
     }
   }
 
-  void on_close_frame(int64_t, frame_ptr) override {
-    if (std::exchange(throw_on_close, false)) {
+  void on_transaction_committing(int64_t, frame_ptr) override {
+    if (std::exchange(throw_on_commit, false)) {
       throw std::runtime_error("injected close hook failure");
     }
   }
@@ -171,18 +171,18 @@ public:
   bool throw_on_commit{false};
 
 protected:
-  void on_frame_opened(int64_t trigger_time, kungfu::yijinjing::journal::frame *frame) override {
-    writer::on_frame_opened(trigger_time, frame);
+  void on_reservation_started(int64_t trigger_time, kungfu::yijinjing::journal::frame *frame) override {
+    writer::on_reservation_started(trigger_time, frame);
     if (std::exchange(throw_on_reserve, false)) {
       throw std::runtime_error("injected reservation failure");
     }
   }
 
-  void on_frame_closing(int64_t gen_time, kungfu::yijinjing::journal::frame *frame) override {
+  void on_transaction_committing(int64_t gen_time, kungfu::yijinjing::journal::frame *frame) override {
     if (std::exchange(throw_on_commit, false)) {
       throw std::runtime_error("injected commit failure");
     }
-    writer::on_frame_closing(gen_time, frame);
+    writer::on_transaction_committing(gen_time, frame);
   }
 };
 
@@ -796,10 +796,10 @@ void test_writer_transaction_recovers_from_hook_failures() {
   hookable_writer target(loc, location::PUBLIC, std::make_shared<noop_publisher>(), false, bus, TEST_PAGE_SIZE_MB,
                          hook);
 
-  hook->throw_on_open = true;
+  hook->throw_on_reserve = true;
   require_throws([&] { (void)target.reserve_frame(1, 1201, 8); }, "open hook failure did not escape");
 
-  hook->throw_on_close = true;
+  hook->throw_on_commit = true;
   require_throws(
       [&] {
         auto tx = target.reserve_frame(2, 1202, 8);

@@ -134,6 +134,7 @@ export function createGlobalWorkObserverHost(deps: GlobalWorkObserverHostDeps) {
         'all',
         '--max-workers',
         '8',
+        '--include-settled',
         '--observe',
         '--observer-state',
         deps.statePath,

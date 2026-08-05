@@ -146,19 +146,32 @@ def render_human(
     width = max(60, width or shutil.get_terminal_size((100, 24)).columns)
     visible = set(projection.get("defaultVisibilities", []))
     lines = [f"kungfu {version}", "", "usage: kungfu [options] <command> [<args>]", ""]
-    lines.extend(_render_options(root_command, width))
+    if mode == "default" and section is None:
+        lines.extend(["product model: Project → Work → Agent", ""])
+    lines.extend(
+        _render_options(
+            root_command,
+            width,
+            first_layer=mode == "default" and section is None,
+        )
+    )
     lines.append("")
 
     for section_row in projection["sections"]:
         section_id = section_row["id"]
         if section is not None and section_id != section:
             continue
-        rows = [row for row in projection["commands"] if row["section"] == section_id]
-        expanded = (
-            mode == "full"
-            or section is not None
-            or any(row["visibility"] in visible for row in rows)
+        section_rows = [
+            row for row in projection["commands"] if row["section"] == section_id
+        ]
+        rows = (
+            [row for row in section_rows if row["visibility"] in visible]
+            if mode == "default" and section is None
+            else section_rows
         )
+        if mode == "default" and section is None and not rows:
+            continue
+        expanded = mode == "full" or section is not None or bool(rows)
         lines.append(f"{section_row['title']}  [{section_id}]")
         lines.extend(_wrap(section_row.get("summary", ""), width, "  "))
         if expanded:
@@ -185,10 +198,21 @@ def render_human(
     return "\n".join(lines) + "\n"
 
 
-def _render_options(root_command: click.Command, width: int) -> list[str]:
+def _render_options(
+    root_command: click.Command, width: int, *, first_layer: bool = False
+) -> list[str]:
     rows = []
+    first_layer_options = {
+        "help",
+        "help_all",
+        "help_json",
+        "help_section",
+        "version",
+    }
     for param in root_command.params:
         if not isinstance(param, click.Option) or param.hidden:
+            continue
+        if first_layer and param.name not in first_layer_options:
             continue
         flags = ", ".join(param.opts + param.secondary_opts)
         metavar = param.make_metavar() if not param.is_flag else None

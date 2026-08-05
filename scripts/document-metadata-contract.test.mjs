@@ -275,6 +275,60 @@ test('accepts typed public metadata and aligned ADR projections', () => {
   assert.deepEqual(findings, []);
 });
 
+test('merges bounded metadata registry shards and rejects duplicate authority', () => {
+  const selected = structuredClone(contract);
+  selected.metadataRegistryShards = [
+    'docs/evolution/document-metadata.registry.json',
+  ];
+  const entry = {
+    metadata_schema: 'kungfu.document-metadata/v1',
+    document_status: 'active',
+    doc_type: 'public-document',
+    review_state: 'unreviewed',
+    sensitivity: 'public',
+  };
+  const registry = (documents) =>
+    `${JSON.stringify({
+      schemaVersion: 1,
+      metadataSchema: 'kungfu.document-metadata/v1',
+      documents,
+    })}\n`;
+  const files = {
+    'README.md': '# Home\n',
+    'docs/evolution/stage.md': '# Stage\n',
+    'docs/document-metadata.registry.json': registry({ 'README.md': entry }),
+    'docs/evolution/document-metadata.registry.json': registry({
+      'docs/evolution/stage.md': entry,
+    }),
+  };
+  const root = fixture(files);
+  assert.deepEqual(
+    validateDocumentMetadata({
+      root,
+      files: ['README.md', 'docs/evolution/stage.md'],
+      contract: selected,
+    }),
+    [],
+  );
+
+  const duplicateRoot = fixture({
+    ...files,
+    'docs/evolution/document-metadata.registry.json': registry({
+      'README.md': entry,
+      'docs/evolution/stage.md': entry,
+    }),
+  });
+  assert.throws(
+    () =>
+      validateDocumentMetadata({
+        root: duplicateRoot,
+        files: ['README.md', 'docs/evolution/stage.md'],
+        contract: selected,
+      }),
+    /duplicate document metadata authority/u,
+  );
+});
+
 test('rejects deleting or weakening the repository ADR identity policy', () => {
   for (const adrIdentity of [
     undefined,

@@ -18,8 +18,11 @@ const READONLY_SOURCE_COMMANDS = [
   'core:architecture:health',
   'invariant:verify --list',
   'maintainability:complexity',
+  'maintainability:python-structure',
   'maintainability:amplification',
   'maintainability:query',
+  'work-design:open-card-preflight',
+  'work-design:feedback',
 ];
 
 function route(command, args) {
@@ -46,12 +49,24 @@ function route(command, args) {
     return ['scripts/kungfu-invariant-discovery.mjs', args];
   if (command === 'maintainability:complexity')
     return ['scripts/code-complexity-budget.mjs', args];
+  if (command === 'maintainability:python-structure')
+    return ['scripts/check-code-complexity.mjs', args];
   if (
     ['maintainability:amplification', 'maintainability:query'].includes(command)
   )
     return [
       'framework/maintainability/semantic-amplification.mjs',
       command === 'maintainability:query' ? ['--query', ...args] : args,
+    ];
+  if (command === 'work-design:open-card-preflight')
+    return [
+      'framework/work-design-open-card/tooling/open-card-preflight.mjs',
+      args,
+    ];
+  if (command === 'work-design:feedback')
+    return [
+      'framework/work-design-policy-replay/tooling/check-work-design-policy-replay.mjs',
+      ['feedback', ...args],
     ];
   return null;
 }

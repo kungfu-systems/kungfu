@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kungfu.tech/schema/work-design-feedback-inspection-v1.schema.json",
+  "title": "Build-free read-only Work Design feedback inspection",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "stateRoot", "activePolicyRoot", "previousPolicyRoot", "candidatePolicyRoot", "policyPhase", "shadowStatusRoot", "shadowPhase", "cohortCoverage", "monitoringRoot", "blockingReasons", "activationRoot", "rollbackRoot", "authority", "inspectionRoot"],
+  "properties": {
+    "schema": { "const": "kungfu.work-design.feedback-inspection/v1" },
+    "stateRoot": { "$ref": "#/$defs/root" },
+    "activePolicyRoot": { "$ref": "#/$defs/root" },
+    "previousPolicyRoot": { "$ref": "#/$defs/nullableRoot" },
+    "candidatePolicyRoot": { "$ref": "#/$defs/nullableRoot" },
+    "policyPhase": { "enum": ["stable", "canary", "promoted", "rolled-back"] },
+    "shadowStatusRoot": { "$ref": "#/$defs/nullableRoot" },
+    "shadowPhase": { "anyOf": [{ "enum": ["observation-only", "tentative-trend", "promotion-eligible"] }, { "type": "null" }] },
+    "cohortCoverage": { "type": "array", "items": { "$ref": "https://kungfu.tech/schema/work-design-feedback-status-v1.schema.json#/$defs/cohort" } },
+    "monitoringRoot": { "$ref": "#/$defs/nullableRoot" },
+    "blockingReasons": { "type": "array", "uniqueItems": true, "items": { "type": "string" } },
+    "activationRoot": { "$ref": "#/$defs/nullableRoot" },
+    "rollbackRoot": { "$ref": "#/$defs/nullableRoot" },
+    "authority": { "const": { "mode": "read-only-projection", "policyAuthority": false, "workControlAuthority": false, "mayMutate": false } },
+    "inspectionRoot": { "$ref": "#/$defs/root" }
+  },
+  "$defs": {
+    "root": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+    "nullableRoot": { "anyOf": [{ "$ref": "#/$defs/root" }, { "type": "null" }] }
+  }
+}

@@ -21,7 +21,7 @@ def _resolve_tui_entry():
     override = os.environ.get("KUNGFU_TUI_ENTRY")
     if override and os.path.exists(override):
         return os.path.abspath(override)
-    # Packaged app: the frozen runtime is Resources/kungfu; the TUI bundle is
+    # Packaged app: the assembled runtime is Resources/kungfu; the TUI bundle is
     # shipped as a sibling Resources/tui/tui.mjs.
     binding_dir = os.path.dirname(kungfu.__binding__.__file__)
     candidates = [

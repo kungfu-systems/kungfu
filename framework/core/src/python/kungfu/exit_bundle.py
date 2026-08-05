@@ -13,12 +13,21 @@ import copy
 import json
 import tempfile
 from pathlib import Path
-from typing import Any, Mapping
+from typing import Any, Mapping, cast
 
 from kungfu import contract as contract_runtime
+from kungfu import product_release_history
+from kungfu import project_cut_exit
 from kungfu.action_envelope import canonical_json_bytes
 from kungfu.content_hash import compute_content_hash
 from kungfu.storage import service as storage_service
+
+
+# Backward-compatible import; behavior is owned by product_release_history.
+ProductReleaseHistoryError = product_release_history.ProductReleaseHistoryError
+_PRODUCT_RELEASE_HISTORY = cast(
+    product_release_history.ProductReleaseHistoryPort, product_release_history
+)
 
 
 REQUEST_SCHEMA = "kungfu.exit-bundle-request/v1"
@@ -112,6 +121,32 @@ _KINDS: dict[str, dict[str, Any]] = {
             "exact-record-roots",
             "exact-semantic-state",
             "rebuilt-projection-equivalence",
+        ],
+    },
+    "project-cut-v1": {
+        "authority": "Project Cut protocol",
+        "schema": "kungfu.project-cut.history-bundle/v1",
+        "protocol": "project-cut-history-portability/v1",
+        "rank": 55,
+        "idempotent": True,
+        "capabilities": _ALL_CAPABILITIES[:-1],
+        "verification": [
+            "exact-physical-bytes",
+            "exact-record-roots",
+            "exact-semantic-state",
+        ],
+    },
+    "product-release-cut-v1": {
+        "authority": "Product Release Cut and installed-product receipt owners",
+        "schema": "kungfu.product-release-cut.history-bundle/v1",
+        "protocol": "product-release-cut-history-portability/v1",
+        "rank": 57,
+        "idempotent": True,
+        "capabilities": _ALL_CAPABILITIES[:-1],
+        "verification": [
+            "exact-physical-bytes",
+            "exact-record-roots",
+            "exact-semantic-state",
         ],
     },
     "fact-library-v1": {
@@ -266,6 +301,18 @@ def _describe(kind: str, material: Mapping[str, Any]) -> dict[str, Any]:
         )
     elif kind == "episode-v1":
         identity_root = content_root = _episode_root(material)
+    elif kind == "project-cut-v1":
+        verified = _project_cut_verify_bundle(material)
+        identity_root = _normalized_root(
+            verified.get("primaryCutRoot"), "primaryCutRoot"
+        )
+        content_root = _normalized_root(verified.get("bundleRoot"), "bundleRoot")
+    elif kind == "product-release-cut-v1":
+        verified = _PRODUCT_RELEASE_HISTORY.verify(material)
+        identity_root = _normalized_root(
+            verified.get("selectedReleaseCutRoot"), "selectedReleaseCutRoot"
+        )
+        content_root = _normalized_root(verified.get("bundleRoot"), "bundleRoot")
     elif kind == "fact-library-v1":
         identity_root = content_root = _fact_library_root(material)
     elif kind == "mission-control-v2":
@@ -307,6 +354,18 @@ def _require_full_material(kind: str, material: Mapping[str, Any]) -> None:
             and counts.get("missing_frame_count") == 0
             and counts.get("missing_ref_payload_count") == 0
         )
+    elif kind == "project-cut-v1":
+        complete = (
+            material.get("mode") == "full"
+            and bool(material.get("cuts"))
+            and "verify-content" in (material.get("capabilities") or [])
+        )
+    elif kind == "product-release-cut-v1":
+        complete = (
+            material.get("mode") == "full"
+            and isinstance(material.get("material"), Mapping)
+            and "verify-content" in (material.get("capabilities") or [])
+        )
     elif kind == "fact-library-v1":
         counts = material.get("material") or {}
         complete = (
@@ -328,7 +387,12 @@ def _require_full_material(kind: str, material: Mapping[str, Any]) -> None:
 
 
 def _build_material(
-    runtime_dir: str | Path, kind: str, options: Mapping[str, Any], mode: str
+    runtime_dir: str | Path,
+    kind: str,
+    options: Mapping[str, Any],
+    mode: str,
+    *,
+    config_home: str | Path | None = None,
 ) -> dict[str, Any]:
     thin = mode == "thin"
     if kind == "episode-v1":
@@ -364,6 +428,13 @@ def _build_material(
         )
     if kind == "fact-library-v1":
         return storage_service.fact_library_export(runtime_dir, thin=thin)
+    if kind == "project-cut-v1":
+        return _project_cut_build_bundle(options, mode=mode)
+    if kind == "product-release-cut-v1":
+        try:
+            return _PRODUCT_RELEASE_HISTORY.build(config_home or runtime_dir, mode=mode)
+        except product_release_history.ProductReleaseHistoryError as error:
+            raise ExitBundleError(error.code, str(error), **error.details) from error
     if kind == "profile-source-v1":
         from kungfu import profile_sdk
 
@@ -448,6 +519,8 @@ def _validate_request(request: Mapping[str, Any]) -> None:
 def build(
     runtime_dir: str | Path,
     request: Mapping[str, Any],
+    *,
+    config_home: str | Path | None = None,
 ) -> dict[str, Any]:
     """Compose one deterministic package from existing domain exporters."""
 
@@ -461,7 +534,9 @@ def build(
         member_id = str(row["memberId"])
         kind = str(row["kind"])
         options = dict(row.get("options") or {})
-        material = _build_material(runtime_dir, kind, options, mode)
+        material = _build_material(
+            runtime_dir, kind, options, mode, config_home=config_home
+        )
         described = _describe(kind, material)
         if mode == "full":
             _require_full_material(kind, material)
@@ -517,10 +592,13 @@ def build(
         for value in execution.values()
         if value.get("kind") == "mission-control-v2"
     }
+    fact_library_present = any(
+        value.get("kind") == "fact-library-v1" for value in execution.values()
+    )
     for value in execution.values():
-        if (
-            value.get("kind") == "profile-source-v1"
-            and value.get("profileSuiteRoot") in mission_profile_roots
+        if value.get("kind") == "profile-source-v1" and (
+            fact_library_present
+            or value.get("profileSuiteRoot") in mission_profile_roots
         ):
             value["deferContractMaterialization"] = True
 
@@ -1001,6 +1079,8 @@ def _apply_member(
     material: Mapping[str, Any],
     execution: Mapping[str, Any],
     actor: str,
+    *,
+    config_home: str | Path | None = None,
 ) -> dict[str, Any]:
     if kind == "profile-source-v1":
         return _apply_profile(runtime_dir, material, execution, actor)
@@ -1087,6 +1167,15 @@ def _apply_member(
             ),
             "writeOccurred": write_occurred,
         }
+    if kind == "project-cut-v1":
+        return _project_cut_import_bundle(runtime_dir, material, execute=True)
+    if kind == "product-release-cut-v1":
+        try:
+            return _PRODUCT_RELEASE_HISTORY.import_history(
+                config_home or runtime_dir, material, execute=True
+            )
+        except product_release_history.ProductReleaseHistoryError as error:
+            raise ExitBundleError(error.code, str(error), **error.details) from error
     if kind == "mission-control-v2":
         from kungfu.atlas import mission_bundle
 
@@ -1168,6 +1257,7 @@ def import_package(
     runtime_dir: str | Path,
     package: Mapping[str, Any],
     *,
+    config_home: str | Path | None = None,
     execute: bool = False,
     authorized_by: str = "",
     _fault_after_member: int | None = None,
@@ -1236,6 +1326,7 @@ def import_package(
                     package["materials"][member_id],
                     execution,
                     "kungfu-exit-preflight",
+                    config_home=Path(root) / "config",
                 )
                 if result.get("ok") is not True:
                     raise ExitBundleError(
@@ -1288,6 +1379,7 @@ def import_package(
                 package["materials"][member_id],
                 execution,
                 actor,
+                config_home=config_home,
             )
         except (ExitBundleError, OSError, RuntimeError, ValueError) as error:
             failure = (
@@ -1355,3 +1447,11 @@ def write(path: str | Path, package: Mapping[str, Any]) -> None:
     target.write_text(
         json.dumps(package, indent=2, sort_keys=True) + "\n", encoding="utf-8"
     )
+
+
+# Backward-compatible imports; Project Cut behavior is owned by project_cut_exit.
+ProjectCutExitError = project_cut_exit.ProjectCutExitError
+_PROJECT_CUT_EXIT = cast(project_cut_exit.ProjectCutExitPort, project_cut_exit)
+_project_cut_build_bundle = _PROJECT_CUT_EXIT.build_bundle
+_project_cut_verify_bundle = _PROJECT_CUT_EXIT.verify_bundle
+_project_cut_import_bundle = _PROJECT_CUT_EXIT.import_bundle

@@ -7,16 +7,23 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import {
+  platformCommand,
+  platformCommandOptions,
+} from './platform-command.mjs';
+
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const isWin = process.platform === 'win32';
 
 function run(label, command, args, env = process.env) {
   process.stdout.write(`[native-admission] ${label}\n`);
-  const result = spawnSync(command, args, {
+  const result = spawnSync(platformCommand(command), args, {
     cwd: root,
     env,
     stdio: 'inherit',
-    shell: isWin,
+    // Native executables stay shell-free so ctest regex parentheses remain
+    // argv. Windows package-manager shims opt into their bounded .cmd route.
+    shell: false,
+    ...platformCommandOptions(command),
   });
   if (result.error) throw result.error;
   if (result.status !== 0) process.exit(result.status ?? 1);
@@ -32,6 +39,33 @@ function git(args) {
   if (result.status !== 0) {
     throw new Error(
       result.stderr.trim() || `git ${args.join(' ')} exited with failure`,
+    );
+  }
+  return result.stdout.trim();
+}
+
+function qualifiedPython() {
+  const result = spawnSync(
+    'uv',
+    [
+      'run',
+      '--project',
+      path.join(root, 'framework/core'),
+      '--frozen',
+      'python',
+      '-c',
+      'import sys; print(sys.executable)',
+    ],
+    {
+      cwd: root,
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'pipe'],
+    },
+  );
+  if (result.error) throw result.error;
+  if (result.status !== 0) {
+    throw new Error(
+      result.stderr.trim() || 'could not resolve the qualified CPython runtime',
     );
   }
   return result.stdout.trim();
@@ -55,6 +89,28 @@ function checkIdentityNeutralAuthority() {
   assert.equal(native.coreCapabilityPolicy.originAuthority, false);
   assert.equal(native.coreCapabilityPolicy.productAssemblyAuthority, false);
   assert.equal(native.coreCapabilityPolicy.kfdAuthority, 'eligibility-only');
+  const coreCapabilityCeiling = new Set(
+    native.coreCapabilityPolicy.allowedCapabilities,
+  );
+  for (const manifestPath of git(['ls-files', 'extensions/**/kungfu.kfx.json'])
+    .split('\n')
+    .filter(Boolean)) {
+    const manifest = json(manifestPath);
+    const config = manifest.kungfuConfig?.config ?? {};
+    for (const facet of ['view', 'adapter', 'service']) {
+      for (const capability of config[facet]?.capabilities ?? []) {
+        assert.equal(
+          coreCapabilityCeiling.has(capability),
+          true,
+          `${manifestPath} ${facet} capability is outside the embedded Core policy ceiling: ${capability}`,
+        );
+      }
+    }
+  }
+  assert.ok(
+    sourceContract.knownCapabilities.includes('projects'),
+    'KFX capability catalog omitted the Projects application service',
+  );
   assert.deepEqual(native.runtimeTiers, [
     'isolated',
     'integrated-explicit',
@@ -265,6 +321,12 @@ run(
     'pytest',
     path.join(root, 'framework/core/tests/python/test_native_kfx_contract.py'),
     path.join(root, 'framework/core/tests/python/test_action_envelope.py'),
+    path.join(
+      root,
+      'framework/core/tests/python/test_event_loop_concurrency.py',
+    ),
+    path.join(root, 'framework/core/tests/python/test_kfx_async_capability.py'),
+    path.join(root, 'framework/core/tests/python/test_kfx_python_service.py'),
   ],
   {
     ...process.env,
@@ -295,7 +357,7 @@ run(
   ],
   {
     ...process.env,
-    KUNGFU_DIR: path.join(root, 'framework/core/build/Release'),
+    KUNGFU_DIR: path.join(root, 'framework/core/dist/kungfu'),
     KUNGFU_REQUIRE_NATIVE: '1',
   },
 );
@@ -313,6 +375,23 @@ run('KFX type contract', 'pnpm', [
   'run',
   'build',
 ]);
+
+run(
+  'Python KFX standard asyncio service host',
+  'pnpm',
+  [
+    '--filter',
+    '@kungfu-tech/tui',
+    'exec',
+    'tsx',
+    '--test',
+    path.join(root, 'framework/tui/src/service-host-python.test.ts'),
+  ],
+  {
+    ...process.env,
+    KUNGFU_PYTHON_BIN: qualifiedPython(),
+  },
+);
 
 run('schema authority gate', 'node', [
   path.join(root, 'scripts/check-schema-authority.mjs'),

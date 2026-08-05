@@ -1,7 +1,109 @@
 // SPDX-License-Identifier: Apache-2.0
 
-import type { ProductSearchDocument } from '@kungfu-tech/api/capability';
+import {
+  type ProductSearchDocument,
+  SYSTEM_HELP_DOCUMENTS,
+} from '@kungfu-tech/api/capability';
 import { boundedIndex } from './navigation.js';
+
+export type ProductSurface =
+  | 'loading'
+  | 'onboarding'
+  | 'lab'
+  | 'all-work'
+  | 'projects'
+  | 'project-work'
+  | 'project-assignment';
+
+export function initialProductSurface({
+  playbackMode,
+  firstLaunch,
+  emptyState,
+}: {
+  playbackMode: boolean;
+  firstLaunch: boolean;
+  emptyState: boolean;
+}): ProductSurface {
+  if (playbackMode) return 'lab';
+  if (firstLaunch) return 'onboarding';
+  return emptyState ? 'all-work' : 'loading';
+}
+
+type SearchableQuickCommand = {
+  id: string;
+  command: string;
+  summary: string;
+  title: string;
+};
+
+const TUI_PRODUCT_VIEW_DOCUMENTS: ProductSearchDocument[] = [
+  {
+    id: 'view.work-control',
+    kind: 'view',
+    title: 'All Work',
+    summary: 'Open the cross-Project read-only Work overview.',
+    keywords: ['all', 'work', 'active', 'completed'],
+    action: { kind: 'open-view', viewId: 'work' },
+  },
+  {
+    id: 'view.projects',
+    kind: 'view',
+    title: 'Projects',
+    summary: 'Create a Project or open an existing directory.',
+    keywords: ['project', 'new', 'open', 'directory'],
+    action: { kind: 'open-view', viewId: 'projects' },
+  },
+  {
+    id: 'view.agent-work-lab',
+    kind: 'view',
+    title: 'Agent Work Lab',
+    summary: 'Compare bounded Agent Work behavior across two Sessions.',
+    keywords: ['qualification', 'handoff', 'session'],
+    action: { kind: 'open-view', viewId: 'lab' },
+  },
+  {
+    id: 'view.onboarding',
+    kind: 'view',
+    title: 'Getting Started',
+    summary: 'Reopen the Agent-first onboarding guide at any time.',
+    keywords: ['onboarding', 'agent', 'guide', 'first'],
+    action: { kind: 'open-view', viewId: 'onboarding' },
+  },
+];
+
+export function buildTuiProductSearchDocuments({
+  quickCommands,
+  cliDocuments,
+  workDocuments,
+  projectDocuments,
+}: {
+  quickCommands: readonly SearchableQuickCommand[];
+  cliDocuments: readonly ProductSearchDocument[];
+  workDocuments: readonly ProductSearchDocument[];
+  projectDocuments: readonly ProductSearchDocument[];
+}): ProductSearchDocument[] {
+  const quickSearchDocuments = quickCommands.map((command, index) => ({
+    id: `command.quick.${command.id}`,
+    kind: 'command' as const,
+    title: command.command,
+    summary: command.summary,
+    section: 'Quick actions',
+    keywords: [command.title],
+    priority: index,
+    action: {
+      kind: 'describe-command' as const,
+      command: command.command,
+    },
+  }));
+  return [
+    ...SYSTEM_HELP_DOCUMENTS,
+    ...quickSearchDocuments,
+    ...cliDocuments,
+    ...workDocuments,
+    ...projectDocuments,
+    ...TUI_PRODUCT_VIEW_DOCUMENTS,
+  ];
+}
 
 export type ControlPlaneMode =
   | 'closed'
@@ -13,6 +115,7 @@ export type ControlPlaneMode =
 export type ControlPlaneState = {
   mode: ControlPlaneMode;
   focus: 'input' | 'workspace';
+  returnFocus?: 'input' | 'workspace';
   query: string;
   selected: number;
   notice?: string;
@@ -59,8 +162,11 @@ export type ProductQuickCommandAction =
   | 'help'
   | 'search'
   | 'health'
+  | 'new-work'
   | 'work'
+  | 'projects'
   | 'lab'
+  | 'onboarding'
   | 'home'
   | 'quit';
 
@@ -89,11 +195,26 @@ export const QUICK_COMMANDS: QuickCommand<ProductQuickCommandAction>[] = [
     action: 'health',
   },
   {
+    id: 'new-work',
+    command: '/new',
+    title: 'Create Work',
+    summary:
+      'Create Work in the current Project, or choose a Project when none is open.',
+    action: 'new-work',
+  },
+  {
     id: 'work',
     command: '/work',
-    title: 'Open Work',
-    summary: 'Open the current read-only Work Control projection.',
+    title: 'Open All Work',
+    summary: 'Open the cross-Project read-only Work overview.',
     action: 'work',
+  },
+  {
+    id: 'projects',
+    command: '/projects',
+    title: 'Open Projects',
+    summary: 'Choose a Project before creating or running Project Work.',
+    action: 'projects',
   },
   {
     id: 'lab',
@@ -103,10 +224,18 @@ export const QUICK_COMMANDS: QuickCommand<ProductQuickCommandAction>[] = [
     action: 'lab',
   },
   {
+    id: 'onboarding',
+    command: '/onboarding',
+    title: 'Open Getting Started',
+    summary: 'Reopen the Agent-first onboarding guide at any time.',
+    action: 'onboarding',
+  },
+  {
     id: 'home',
     command: '/home',
-    title: 'Open startup home',
-    summary: 'Return to the surface selected from current Work evidence.',
+    title: 'Return to current context',
+    summary:
+      'Return to the selected Project, or the resolved startup surface when no Project is open.',
     action: 'home',
   },
   {
@@ -124,6 +253,60 @@ export const CLOSED_CONTROL_PLANE: ControlPlaneState = {
   query: '',
   selected: 0,
 };
+
+export function resolveProductStartupSurface({
+  contextualProject,
+  openedProject,
+  projectResumeSettled,
+}: {
+  contextualProject: boolean;
+  openedProject: boolean;
+  projectResumeSettled: boolean;
+}): 'project-work' | 'all-work' | null {
+  if (!contextualProject) return 'all-work';
+  if (openedProject) return 'project-work';
+  return projectResumeSettled ? 'all-work' : null;
+}
+
+export function shouldStartContextualProjectRestore({
+  playbackMode,
+  surface,
+  emptyState,
+  startupProjectRoot,
+}: {
+  playbackMode: boolean;
+  surface: string;
+  emptyState: boolean;
+  startupProjectRoot?: string;
+}): boolean {
+  return (
+    !playbackMode &&
+    contextualProjectRestoreCanCommit(surface) &&
+    !emptyState &&
+    Boolean(startupProjectRoot)
+  );
+}
+
+export function contextualProjectRestoreCanCommit(surface: string): boolean {
+  return surface === 'loading';
+}
+
+export function directWorkspaceNavigationFromInput(
+  current: ControlPlaneState,
+  input: string,
+  surface: string,
+): 'projects' | null {
+  if (
+    current.mode === 'closed' &&
+    current.focus === 'input' &&
+    current.query === '' &&
+    input === 'p' &&
+    (surface === 'project-work' || surface === 'project-assignment')
+  ) {
+    return 'projects';
+  }
+  return null;
+}
 
 export function quickCommandMatches(
   query: string,
@@ -147,8 +330,21 @@ export function quickCommandMatches(
 function openedControlPlane(
   mode: Exclude<ControlPlaneMode, 'closed' | 'detail'>,
   query = '',
+  returnFocus: ControlPlaneState['focus'] = 'input',
 ): ControlPlaneState {
-  return { mode, focus: 'input', query, selected: 0 };
+  return {
+    mode,
+    focus: 'input',
+    query,
+    selected: 0,
+    ...(returnFocus === 'workspace' ? { returnFocus } : {}),
+  };
+}
+
+function closedControlPlane(
+  focus: ControlPlaneState['focus'] = 'input',
+): ControlPlaneState {
+  return { ...CLOSED_CONTROL_PLANE, focus };
 }
 
 export function reduceControlPlaneInput(
@@ -167,6 +363,9 @@ export function reduceControlPlaneInput(
         current.mode === 'closed' && current.focus === 'input'
           ? current.query
           : '',
+        current.mode === 'closed'
+          ? current.focus
+          : (current.returnFocus ?? 'input'),
       ),
     };
   }
@@ -179,12 +378,15 @@ export function reduceControlPlaneInput(
         };
       }
       if (input === '?') {
-        return { handled: true, state: openedControlPlane('help') };
+        return {
+          handled: true,
+          state: openedControlPlane('help', '', current.focus),
+        };
       }
       if (input === '/') {
         return {
           handled: true,
-          state: openedControlPlane('commands', '/'),
+          state: openedControlPlane('commands', '/', current.focus),
         };
       }
       return { handled: false, state: current };
@@ -229,12 +431,15 @@ export function reduceControlPlaneInput(
       };
     }
     if (input === '?' && !current.query) {
-      return { handled: true, state: openedControlPlane('help') };
+      return {
+        handled: true,
+        state: openedControlPlane('help', '', current.focus),
+      };
     }
     if (input === '/' && !current.query) {
       return {
         handled: true,
-        state: openedControlPlane('commands', '/'),
+        state: openedControlPlane('commands', '/', current.focus),
       };
     }
     if (/^[\x20-\x7e]+$/.test(input)) {
@@ -250,7 +455,10 @@ export function reduceControlPlaneInput(
     return { handled: true, state: current };
   }
   if (input === '\u001b') {
-    return { handled: true, state: CLOSED_CONTROL_PLANE };
+    return {
+      handled: true,
+      state: closedControlPlane(current.returnFocus ?? 'input'),
+    };
   }
   if (current.mode === 'help' || current.mode === 'detail') {
     if (
@@ -259,12 +467,19 @@ export function reduceControlPlaneInput(
       input === '\n' ||
       input === '\u007f'
     ) {
-      return { handled: true, state: CLOSED_CONTROL_PLANE };
+      return {
+        handled: true,
+        state: closedControlPlane(current.returnFocus ?? 'input'),
+      };
     }
     if (input === '/') {
       return {
         handled: true,
-        state: openedControlPlane('commands', '/'),
+        state: openedControlPlane(
+          'commands',
+          '/',
+          current.returnFocus ?? 'input',
+        ),
       };
     }
     return { handled: true, state: current };
@@ -293,7 +508,10 @@ export function reduceControlPlaneInput(
   if (input === '\u007f' || input === '\b') {
     const next = [...current.query].slice(0, -1).join('');
     if (current.mode === 'commands' && next === '') {
-      return { handled: true, state: CLOSED_CONTROL_PLANE };
+      return {
+        handled: true,
+        state: closedControlPlane(current.returnFocus ?? 'input'),
+      };
     }
     return {
       handled: true,

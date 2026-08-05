@@ -95,10 +95,12 @@
     "workspace-idle",
     "active-work-compatible",
     "active-work-incompatible",
+    "active-work-must-be-idle",
     "provider-resume-required",
     "provider-resume-unsupported",
     "irreversible-migration-needs-approval",
     "rollback-unavailable",
+    "manual-rollback-needs-approval",
     "stale-generation",
     "readiness-failed",
     "unknown-image-reference",
@@ -163,6 +165,15 @@
         "dataAndSessions": "No data or session is changed while the update waits.",
         "documentationAnchor": "#updates-while-work-is-active"
       },
+      "active-work-must-be-idle": {
+        "title": "The update is waiting for current work",
+        "whatHappened": "The selected Release Cut cannot activate while incompatible work remains active.",
+        "activeWork": "Current work continues on its pinned runtime.",
+        "activation": "The new Release Cut waits until the workspace is idle.",
+        "userAction": "Finish the current work; do not force a restart for the update.",
+        "dataAndSessions": "No data or session is changed while the update waits.",
+        "documentationAnchor": "#updates-while-work-is-active"
+      },
       "provider-resume-required": {
         "title": "This work needs a supported resume",
         "whatHappened": "The provider must open a new physical attempt on the target runtime.",
@@ -197,6 +208,15 @@
         "activation": "The update remains action-required.",
         "userAction": "Follow the documented recovery path before proceeding.",
         "dataAndSessions": "Rollback never deletes workspace, Episode, or session facts.",
+        "documentationAnchor": "#rollback-and-recovery"
+      },
+      "manual-rollback-needs-approval": {
+        "title": "Manual rollback approval is required",
+        "whatHappened": "This release requires an explicit manual rollback plan.",
+        "activeWork": "Current work remains on its pinned runtime.",
+        "activation": "Activation waits until the manual rollback path is reviewed and approved.",
+        "userAction": "Review and approve the documented manual rollback path before proceeding.",
+        "dataAndSessions": "No runtime route, workspace, Episode, or session fact changes before approval.",
         "documentationAnchor": "#rollback-and-recovery"
       },
       "stale-generation": {
@@ -376,6 +396,34 @@
           }
         }
       },
+      "localArtifact": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "kind",
+          "format",
+          "size",
+          "digest"
+        ],
+        "properties": {
+          "kind": {
+            "const": "desktop-local"
+          },
+          "format": {
+            "enum": [
+              "file",
+              "directory"
+            ]
+          },
+          "size": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "digest": {
+            "$ref": "#/$defs/contentRoot"
+          }
+        }
+      },
       "releaseManifest": {
         "type": "object",
         "additionalProperties": false,
@@ -489,6 +537,9 @@
               "$ref": "#/$defs/artifact"
             }
           },
+          "localArtifact": {
+            "$ref": "#/$defs/localArtifact"
+          },
           "qualificationEvidenceRef": {
             "type": "string",
             "minLength": 1
@@ -496,6 +547,18 @@
           "documentationUrl": {
             "type": "string",
             "minLength": 1
+          },
+          "manifestIdentityRoot": {
+            "$ref": "#/$defs/contentRoot"
+          },
+          "releaseCut": {
+            "type": "object"
+          },
+          "releaseCutRoot": {
+            "$ref": "#/$defs/contentRoot"
+          },
+          "platformSliceRoot": {
+            "$ref": "#/$defs/contentRoot"
           }
         }
       },

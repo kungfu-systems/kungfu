@@ -5,6 +5,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import test from 'node:test';
 
+import { activeProjection } from '../framework/version-line/version-line-authority.mjs';
 import {
   compareRuleset,
   digest,
@@ -38,7 +39,7 @@ test('checked-in Alpha ruleset contract is exact-target and root-bound', () => {
 test('checked-in Stable ruleset contract reuses exact-target fail-closed governance', () => {
   const value = contract(stableContractPath);
   assert.equal(validateContract(value), value);
-  assert.equal(value.targetRef, 'release/v4/v4.0');
+  assert.equal(value.targetRef, activeProjection().line.branches.stable);
   assert.equal(value.ruleset.bypass_actors.length, 0);
   assert.equal(compareRuleset(value, []).status, 'missing');
   assert.equal(compareRuleset(value, [value.ruleset]).status, 'matching');

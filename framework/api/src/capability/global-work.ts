@@ -11,16 +11,22 @@ export type GlobalWorkRow = {
     status?: string;
     portfolio_state?: string;
     next_actions?: string[];
+    updated_at?: string;
   };
   observations: Array<{
     workspace_id?: string;
     availability?: string;
+    display?: {
+      updated_at?: string;
+    };
   }>;
   conflict?: boolean;
 };
 
 export type GlobalWorkSnapshot = {
-  schema: 'kungfu.workspace-federation.query/v1';
+  schema:
+    | 'kungfu.workspace-federation.query/v1'
+    | 'kungfu.gui.global-work-snapshot/v1';
   observed_at?: string;
   aggregate: {
     state?: string;
@@ -41,6 +47,16 @@ export type GlobalWorkSnapshot = {
   };
 };
 
+export type GlobalWorkFilter = 'active' | 'completed' | 'all';
+
+const TERMINAL_WORK_STATUSES = new Set([
+  'archived',
+  'closed',
+  'complete',
+  'completed',
+  'merged',
+]);
+
 function object(value: unknown): Record<string, unknown> | null {
   return value !== null && typeof value === 'object'
     ? (value as Record<string, unknown>)
@@ -57,7 +73,10 @@ export function parseGlobalWorkSnapshot(value: unknown): GlobalWorkSnapshot {
         : root;
   const globalWork = object(candidate?.global_work);
   if (
-    candidate?.schema !== 'kungfu.workspace-federation.query/v1' ||
+    ![
+      'kungfu.workspace-federation.query/v1',
+      'kungfu.gui.global-work-snapshot/v1',
+    ].includes(String(candidate?.schema)) ||
     !globalWork ||
     !Array.isArray(globalWork.visible_work)
   ) {
@@ -68,6 +87,24 @@ export function parseGlobalWorkSnapshot(value: unknown): GlobalWorkSnapshot {
 
 function clean(value: unknown): string {
   return typeof value === 'string' ? value.replace(/\s+/g, ' ').trim() : '';
+}
+
+export function isCompletedGlobalWork(row: GlobalWorkRow): boolean {
+  return (
+    clean(row.display.portfolio_state).toLocaleLowerCase() === 'completed' ||
+    TERMINAL_WORK_STATUSES.has(clean(row.display.status).toLocaleLowerCase())
+  );
+}
+
+export function filterGlobalWork(
+  snapshot: GlobalWorkSnapshot,
+  filter: GlobalWorkFilter,
+): GlobalWorkRow[] {
+  if (filter === 'all') return snapshot.global_work.visible_work;
+  const completed = filter === 'completed';
+  return snapshot.global_work.visible_work.filter(
+    (row) => isCompletedGlobalWork(row) === completed,
+  );
 }
 
 export function globalWorkSearchDocuments(
@@ -89,7 +126,7 @@ export function globalWorkSearchDocuments(
       title:
         clean(row.display.title) || clean(row.subject) || row.canonical_root,
       summary: [
-        `${kind} · ${status}`,
+        `Work · ${status}`,
         workspaces.length > 0 ? workspaces.join(' · ') : '',
         nextActions.length > 0 ? `Next: ${nextActions.join(' · ')}` : '',
         row.conflict ? 'Conflicting observations require attention.' : '',

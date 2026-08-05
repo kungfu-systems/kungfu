@@ -1,15 +1,30 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
 import test from 'node:test';
 
 import {
   affectedNativeWorkflowSdkProjection,
   devQueueQualificationImpact,
+  planFromChanged,
   sdkQualificationImpact,
 } from './run-core-affected-native.mjs';
 
 const workflowPath = '.github/workflows/affected-native-pr.yml';
+const architecture = JSON.parse(
+  fs.readFileSync(
+    new URL('../framework/core/architecture/layers.json', import.meta.url),
+  ),
+);
+const buildAuthority = JSON.parse(
+  fs.readFileSync(
+    new URL(
+      '../framework/core/architecture/build-capabilities.json',
+      import.meta.url,
+    ),
+  ),
+);
 
 function affectedNativeWorkflowFixture() {
   return {
@@ -68,6 +83,25 @@ test('dev queue impact keeps unrelated source changes out of optional heavy gate
     shifuWorkspace: { required: false, reasons: [] },
     kfdVerifier: { required: false, reasons: [] },
   });
+});
+
+test('Qualified Core native consumer changes require the platform matrix', () => {
+  for (const file of [
+    'framework/agent-session/src/runtime-port.mjs',
+    'framework/agent-session/tests/runtime-port.native-peer.mjs',
+    'framework/agent-session/tests/runtime-port.native.test.mjs',
+    '.github/actions/qualified-core-candidate-build/action.yml',
+  ]) {
+    const plan = planFromChanged(
+      [file],
+      architecture,
+      buildAuthority,
+      'base',
+      'head',
+    );
+    assert.equal(plan.closureComponents.length, architecture.components.length);
+    assert.notEqual(plan.platformTier, 'none');
+  }
 });
 
 test('dev queue impact selects Shifu and KFD from their declared source surfaces', () => {

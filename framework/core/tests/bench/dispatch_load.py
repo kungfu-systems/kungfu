@@ -73,10 +73,10 @@ def main():
             sys.exit("register handshake timed out; is coordinator running?")
 
     writer = app.get_writer(PUBLIC_DEST)
-    payload = [0] * payload_bytes  # binding takes list[int] (vector<uint8_t>)
+    payload = bytes(payload_bytes)
     started_at = time.time()
     for i in range(count):
-        writer.write_bytes(yjj.now_in_nano(), carrier_type, payload, payload_bytes)
+        writer.write_bytes(yjj.now_in_nano(), carrier_type, payload)
         if i % 10000 == 0:
             app.step(100)  # keep consuming coordinator feedback while loading
     elapsed = time.time() - started_at
@@ -90,7 +90,7 @@ def main():
         app.step(1000)
         time.sleep(0.01)
     for _ in range(max(1000, count // 100)):
-        writer.write_bytes(yjj.now_in_nano(), carrier_type, payload, payload_bytes)
+        writer.write_bytes(yjj.now_in_nano(), carrier_type, payload)
     settle_until = time.time() + 2
     while time.time() < settle_until:
         app.step(1000)

@@ -33,9 +33,12 @@ import errno
 import importlib
 import json
 import os
+import platform
 import subprocess
+import tempfile
 import threading
 import time
+from collections.abc import Mapping
 from pathlib import Path
 from typing import Any, Callable, Iterable
 
@@ -143,12 +146,50 @@ def _read(path: Path) -> dict[str, Any]:
     return payload
 
 
+def replace_file(source: Path, destination: Path) -> None:
+    """Replace one runtime file, tolerating bounded Windows sharing locks."""
+
+    replace_attempts = 20 if platform.system() == "Windows" else 1
+    for attempt in range(replace_attempts):
+        try:
+            os.replace(source, destination)
+            return
+        except PermissionError:
+            if attempt == replace_attempts - 1:
+                raise
+            time.sleep(0.05)
+
+
+def write_json(path: Path, value: Mapping[str, Any]) -> None:
+    """Write one coordination document through a unique atomic staging file."""
+
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temporary: Path | None = None
+    try:
+        with tempfile.NamedTemporaryFile(
+            mode="w",
+            encoding="utf-8",
+            newline="\n",
+            dir=path.parent,
+            prefix=f".{path.name}.",
+            suffix=".tmp",
+            delete=False,
+        ) as output:
+            temporary = Path(output.name)
+            output.write(json.dumps(value, indent=2, sort_keys=True) + "\n")
+        replace_file(temporary, path)
+    finally:
+        if temporary is not None:
+            try:
+                temporary.unlink()
+            except FileNotFoundError:
+                pass
+
+
 def _write(path: Path, payload: dict[str, Any]) -> None:
     payload["schema"] = SCHEMA
     payload["updatedAt"] = _now()
-    tmp = path.with_suffix(".json.tmp")
-    tmp.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", "utf-8")
-    os.replace(tmp, path)
+    write_json(path, payload)
 
 
 def _owner(pid: int) -> str:

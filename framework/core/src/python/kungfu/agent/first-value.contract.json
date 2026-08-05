@@ -1,0 +1,148 @@
+{
+  "schema": "kungfu.agent-first-value-contract/v1",
+  "id": "kungfu.agent.first-value",
+  "version": 2,
+  "maturity": "stable",
+  "prompt": {
+    "text": "我没用过 Kungfu，希望过程安全、直接并能自己验证；请运行 kungfu agent brief，严格按它带我完成第一次上手。",
+    "root": "sha256:97314a340dd8b7350d2e1a4610ab8dc4c65636ab93d5e01836fc9cebde599ac5",
+    "encoding": "utf-8",
+    "personalizationBasis": "user-goal",
+    "personalizationLabel": "个性化依据：用户目标"
+  },
+  "promptFamily": {
+    "canonicalRoot": "sha256:97314a340dd8b7350d2e1a4610ab8dc4c65636ab93d5e01836fc9cebde599ac5",
+    "variants": [
+      {
+        "id": "new-user-first-result",
+        "text": "请运行 kungfu agent brief，然后用你认为最适合新手的方式带我完成第一次 Kungfu 上手。",
+        "root": "sha256:a1e49d7eb9e0d5418715947698db18da6140ae3adb8676226c2f7b1abef4a6c3",
+        "personalizationBasis": "user-goal",
+        "personalizationLabel": "个性化依据：用户目标"
+      },
+      {
+        "id": "work-style-first-step",
+        "text": "请运行 kungfu agent brief，按我偏好直接动手验证的工作方式告诉我 Kungfu 是什么，并带我迈出第一步。",
+        "root": "sha256:ff3fe12029ff0e12c5df109957769842d81a6c6ac12a191dde7913dbd1dc1be2",
+        "personalizationBasis": "work-style",
+        "personalizationLabel": "个性化依据：工作方式"
+      },
+      {
+        "id": "complete-beginner-verifiable",
+        "text": "运行 kungfu agent brief，假设我完全没用过 Kungfu，请边解释边让我得到一个能验证的入门结果。",
+        "root": "sha256:f93d6fcab1ad3d0198579d0094a886cca2f6d24e0e48b7121c69765c500be451",
+        "personalizationBasis": "user-goal",
+        "personalizationLabel": "个性化依据：用户目标"
+      },
+      {
+        "id": "safe-practical-experience",
+        "text": "请运行 kungfu agent brief；我重视安全和实用，请据此安排第一次 Kungfu 体验。",
+        "root": "sha256:36ac5e4e64c757c7a78443b59bc25a0207d67ce0af5d01d176c6c379b6c84f74",
+        "personalizationBasis": "risk-tolerance",
+        "personalizationLabel": "个性化依据：风险偏好"
+      },
+      {
+        "id": "low-question-direct-start",
+        "text": "我想开始用 Kungfu：请运行 kungfu agent brief，少问问题，直接带我完成一个合适的入门结果。",
+        "root": "sha256:19895b56b44b18caf9b2bd2b64acc372617f2386c3c66fa32e56430cedd0d281",
+        "personalizationBasis": "detail-preference",
+        "personalizationLabel": "个性化依据：细节偏好"
+      }
+    ],
+    "naturalLanguagePolicy": {
+      "requiredPhrase": "kungfu agent brief",
+      "forbiddenProtocolHints": [
+        "agent docs",
+        "intent map",
+        "first-value",
+        "receipt",
+        "First response protocol",
+        "安全发现"
+      ]
+    }
+  },
+  "result": {
+    "deterministicEntryCommand": "kungfu agent first-value start --json",
+    "maximumQuestionCount": 1,
+    "requiredIntentCount": 1,
+    "minimumSafeDiscoveryCount": 1,
+    "requiredOutcomeCount": 1,
+    "intentAuthority": "intent-map.json",
+    "exactPromptDefault": {
+      "intentId": "onboarding",
+      "questionCount": 0,
+      "discoveryCommand": "kungfu agent status --target codex --scope project --json",
+      "outcomeKind": "verified-discovery"
+    },
+    "responseGuide": {
+      "language": "zh-CN",
+      "protocolComplete": true,
+      "mustNotRunMoreCommands": true,
+      "instruction": "协议已完成，禁止再执行命令、解释、扩展或提问。最终回答必须只输出 answerTemplate，并将其中唯一的 {receiptRoot} 替换为顶层 receiptRoot。",
+      "explanationSeed": "Kungfu 是为 Agent 工作提供本地项目边界、权限路径和可核验证据的协作层；这次第一步已完成只读环境发现。",
+      "answerTemplateFormat": "{explanationSeed}\n{personalizationLabel}\n验证命令：{verificationCommand}\n下一步：{nextStepCommand}\n回执：{{receiptRoot}}\n{scopeStatement}",
+      "nextStepCommand": "kungfu project list",
+      "scopeStatement": "本次只验证了这个本地 Codex 与候选 CLI；未验证 Claude、CI 托管 Codex、其他平台或公开发布。"
+    },
+    "discoveryPolicy": {
+      "allowDeclaredIntentCommandsOnly": true,
+      "allowTemplateSubstitution": true,
+      "forbiddenArguments": ["--execute"],
+      "execution": "direct-argv-no-shell",
+      "maximumOutputBytes": 4194304,
+      "timeoutSeconds": 30
+    }
+  },
+  "evidence": {
+    "receiptSchema": "first-value-receipt.schema.json",
+    "rootAlgorithm": "sha256-sorted-json-v1",
+    "retainedContent": "roots-and-bounded-facts-only",
+    "rawTranscriptRetention": false,
+    "independentVerification": "the product reruns the declared safe discovery without a shell"
+  },
+  "qualification": {
+    "ci": "deterministic-contract-and-receipt-only",
+    "local": "provider-and-candidate-specific",
+    "localCodexProfile": {
+      "contextIsolation": "ephemeral-auth-link-candidate-project-skill",
+      "executionMode": "codex-exec-ephemeral",
+      "model": "gpt-5.6-sol",
+      "providerSkillScope": "candidate-project",
+      "reasoningEffort": "medium",
+      "userConfig": "ignored"
+    },
+    "requiredLocalCodexTrials": 10,
+    "minimumCanonicalPromptTrials": 5,
+    "requiredVariantCoverage": "all-declared-variants",
+    "aggregatePolicy": "all-trials-must-pass",
+    "experienceDimensions": [
+      "autonomous-pack-verification",
+      "exactly-one-declared-intent",
+      "safe-discovery",
+      "question-count-at-most-one",
+      "candidate-bound-receipt-verification",
+      "personalized-plain-language-explanation",
+      "user-visible-verification",
+      "actionable-safe-next-step",
+      "qualification-non-claims"
+    ],
+    "evaluatorPolicy": {
+      "keywordOrSelfReportAloneCanPass": false,
+      "requiredBindings": [
+        "command-execution-roots",
+        "candidate-identity",
+        "receipt-root",
+        "normalized-response-facts",
+        "independent-candidate-verification"
+      ]
+    },
+    "nonClaims": [
+      "claude-qualified",
+      "ci-hosted-codex-qualified",
+      "other-platforms-qualified",
+      "public-release-qualified",
+      "model-output-alone-is-proof",
+      "brief-or-skill-grants-write-authority"
+    ]
+  }
+}

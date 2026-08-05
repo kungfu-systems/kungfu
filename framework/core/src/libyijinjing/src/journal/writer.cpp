@@ -1,9 +1,12 @@
 // SPDX-License-Identifier: Apache-2.0
 
+#include <algorithm>
 #include <kungfu/common.h>
 #include <kungfu/yijinjing/common.h>
 #include <kungfu/yijinjing/journal/journal.h>
 #include <kungfu/yijinjing/schema/core.h>
+#include <limits>
+#include <span>
 #include <utility>
 
 namespace kungfu::yijinjing::journal {
@@ -18,8 +21,19 @@ using namespace yijinjing::types;
 constexpr unsigned FRAME_UID_PAGE_ID_SHIFT = 32u;
 constexpr uint64_t FRAME_UID_FRAME_NB_MASK = 0x00000000FFFFFFFFull;
 
-inline size_t verify_cpu_word_length(size_t length) {
-  return ((length + (sizeof(uintptr_t) - 1)) & ~(sizeof(uintptr_t) - 1));
+inline size_t checked_cpu_word_length(size_t length) {
+  constexpr size_t mask = sizeof(uintptr_t) - 1;
+  if (length > std::numeric_limits<size_t>::max() - mask) {
+    throw journal_error("Frame payload length overflows CPU-word alignment");
+  }
+  return (length + mask) & ~mask;
+}
+
+inline void validate_cpu_word_alignment_input(size_t length) {
+  constexpr size_t mask = sizeof(uintptr_t) - 1;
+  if (length > std::numeric_limits<size_t>::max() - mask) {
+    throw journal_error("Frame payload length overflows CPU-word alignment");
+  }
 }
 
 writer::writer(const data::location_ptr &location, uint32_t dest_id, publisher_ptr publisher,
@@ -64,19 +78,17 @@ uint64_t writer::current_frame_uid() {
   return (page_id << FRAME_UID_PAGE_ID_SHIFT) | frame_nb;
 }
 
-writer::frame_transaction::frame_transaction(writer &owner, struct frame *frame, bool replay) noexcept
-    : owner_(&owner), frame_(frame), replay_(replay) {}
+writer::frame_transaction::frame_transaction(writer &owner, struct frame *frame) noexcept
+    : owner_(&owner), frame_(frame) {}
 
 writer::frame_transaction::frame_transaction(frame_transaction &&other) noexcept
-    : owner_(std::exchange(other.owner_, nullptr)), frame_(std::exchange(other.frame_, nullptr)),
-      replay_(other.replay_) {}
+    : owner_(std::exchange(other.owner_, nullptr)), frame_(std::exchange(other.frame_, nullptr)) {}
 
 writer::frame_transaction &writer::frame_transaction::operator=(frame_transaction &&other) noexcept {
   if (this != &other) {
     abort();
     owner_ = std::exchange(other.owner_, nullptr);
     frame_ = std::exchange(other.frame_, nullptr);
-    replay_ = other.replay_;
   }
   return *this;
 }
@@ -89,7 +101,7 @@ writer::frame_transaction::~frame_transaction() {
 
 void writer::frame_transaction::abort() noexcept {
   if (owner_ != nullptr) {
-    owner_->abort_frame_unserialized();
+    owner_->abort_transaction_unserialized();
     owner_->writer_mtx_.unlock();
   }
   owner_ = nullptr;
@@ -113,12 +125,8 @@ void writer::frame_transaction::commit(size_t data_length, int64_t gen_time) {
 
   auto *owner = owner_;
   try {
-    if (replay_) {
-      owner->close_frame(data_length, gen_time);
-    } else {
-      owner->on_frame_closing(gen_time, frame_);
-      owner->close_frame_unserialized(data_length, gen_time);
-    }
+    require_capacity(data_length);
+    owner->commit_transaction_unserialized(data_length, gen_time, frame_);
   } catch (...) {
     abort();
     throw;
@@ -132,27 +140,40 @@ void writer::frame_transaction::commit(size_t data_length, int64_t gen_time) {
 
 writer::frame_transaction writer::reserve_frame(int64_t trigger_time, int32_t carrier_type, size_t data_length,
                                                 uint64_t stream_id) {
+  // The overflow check is independent of journal state and can run before the
+  // lock. Page-capacity validation stays inside the lock in
+  // prepare_frame_unserialized(), so concurrent callers never race page rollover.
+  validate_cpu_word_alignment_input(data_length);
   if (!writer_mtx_.try_lock_for(std::chrono::seconds(30))) {
     throw journal_error("Can not lock writer for " + journal_->location_->uname);
   }
 
   try {
-    auto *frame = open_frame_unserialized(trigger_time, carrier_type, data_length, stream_id);
-    on_frame_opened(trigger_time, frame);
+    auto *frame = prepare_frame_unserialized(trigger_time, carrier_type, data_length, stream_id);
+    on_reservation_started(trigger_time, frame);
     return frame_transaction(*this, frame);
   } catch (...) {
-    abort_frame_unserialized();
+    abort_transaction_unserialized();
     writer_mtx_.unlock();
     throw;
   }
 }
 
-struct frame *writer::open_frame_unserialized(int64_t trigger_time, int32_t carrier_type, size_t data_length,
-                                              uint64_t stream_id) {
-  data_length = verify_cpu_word_length(data_length);
-  assert(sizeof(frame_header) + data_length + sizeof(frame_header) <= journal_->page_->get_page_size());
-  if (journal_->current_frame()->address() + sizeof(frame_header) + data_length >= journal_->page_->address_border()) {
+struct frame *writer::prepare_frame_unserialized(int64_t trigger_time, int32_t carrier_type, size_t data_length,
+                                                 uint64_t stream_id) {
+  const auto requested_length = data_length;
+  constexpr size_t mask = sizeof(uintptr_t) - 1;
+  const auto aligned_length = (requested_length + mask) & ~mask;
+  auto page_border = journal_->page_->address_border();
+  if (!current_frame_has_capacity(aligned_length, page_border)) {
+    // Keep the common path to one overflow-safe capacity comparison. Only a
+    // page rollover (or an oversized request) needs the page-wide maximum.
+    (void)validate_payload_length(requested_length);
     close_page(trigger_time);
+    page_border = journal_->page_->address_border();
+    if (!current_frame_has_capacity(aligned_length, page_border)) {
+      throw journal_error("Frame payload does not fit on an empty journal page for " + journal_->location_->uname);
+    }
   }
   auto &frame = journal_->current_frame();
   frame->set_header_length();
@@ -162,31 +183,53 @@ struct frame *writer::open_frame_unserialized(int64_t trigger_time, int32_t carr
   frame->set_initial_source(journal_->location_->uid);
   frame->set_dest(journal_->dest_id_);
   frame->set_stream_id(stream_id);
-  size_to_write_ = data_length;
+  size_to_write_ = requested_length;
   return frame.get();
 }
 
-frame_ptr writer::open_frame(int64_t trigger_time, int32_t carrier_type, size_t data_length, uint64_t stream_id) {
-  if (!writer_mtx_.try_lock_for(std::chrono::seconds(30))) {
-    throw journal_error("Can not lock writer for " + journal_->location_->uname);
+size_t writer::validate_payload_length(size_t length) const {
+  const auto aligned_length = checked_cpu_word_length(length);
+  const auto body_size = journal_->page_->get_body_size();
+  constexpr size_t publication_headers = 2 * sizeof(frame_header);
+  if (body_size < publication_headers) {
+    throw journal_error("Journal page is too small for frame and publication headers for " +
+                        journal_->location_->uname);
   }
-  try {
-    auto *frame = open_frame_unserialized(trigger_time, carrier_type, data_length, stream_id);
-    on_frame_opened(trigger_time, frame);
-    return journal_->current_frame();
-  } catch (...) {
-    abort_frame_unserialized();
-    writer_mtx_.unlock();
-    throw;
+  const auto page_capacity = static_cast<size_t>(body_size - publication_headers);
+  const auto wire_capacity = static_cast<size_t>(std::numeric_limits<uint32_t>::max() - sizeof(frame_header));
+  const auto maximum = std::min(page_capacity, wire_capacity);
+  if (aligned_length > maximum) {
+    throw journal_error(fmt::format("Frame payload of {} bytes exceeds the {} byte page capacity for {}", length,
+                                    maximum, journal_->location_->uname));
   }
+  return aligned_length;
 }
 
-void writer::close_frame_unserialized(size_t data_length, int64_t gen_time) {
-  data_length = verify_cpu_word_length(data_length);
-  assert(size_to_write_ >= data_length);
+bool writer::current_frame_has_capacity(size_t aligned_payload_length, uintptr_t border) const {
+  const auto frame_address = journal_->current_frame()->address();
+  if (frame_address == 0 || frame_address > border) {
+    throw journal_error("Current frame address is outside the journal page for " + journal_->location_->uname);
+  }
+  const auto available = static_cast<size_t>(border - frame_address);
+  // page::address_border() already reserves the trailing next-frame header.
+  return sizeof(frame_header) <= available && aligned_payload_length <= available - sizeof(frame_header);
+}
+
+size_t writer::validate_frame_commit(size_t data_length) const {
+  if (data_length > size_to_write_) [[unlikely]] {
+    throw journal_error(fmt::format("Frame commit of {} bytes exceeds the {} bytes reserved for {}", data_length,
+                                    size_to_write_, journal_->location_->uname));
+  }
+  // The writer lock remains held from reservation through commit. Since the
+  // committed length is no greater than the already-qualified reservation,
+  // its aligned extent cannot exceed the page capacity proven at reservation.
+  constexpr size_t mask = sizeof(uintptr_t) - 1;
+  return (data_length + mask) & ~mask;
+}
+
+void writer::publish_frame_unserialized(size_t aligned_data_length, int64_t gen_time) {
   auto frame = journal_->current_frame();
-  auto next_frame_address = frame->address() + frame->header_length() + data_length;
-  assert(next_frame_address < journal_->page_->address_border());
+  auto next_frame_address = frame->address() + frame->header_length() + aligned_data_length;
   memset(reinterpret_cast<void *>(next_frame_address), 0, sizeof(frame_header));
   frame->set_gen_time(gen_time);
   last_gen_time_ = gen_time;
@@ -197,31 +240,42 @@ void writer::close_frame_unserialized(size_t data_length, int64_t gen_time) {
   // KF-ADR-019f86da-4f90-7179-a900-c40bdb498910: publish the frame as the LAST step with a release store on `length`.
   // Every store above happens-before a reader's acquire-load of `length` in
   // frame::has_data(), so the frame is never observed with stale payload/header.
-  frame->publish_data_length(data_length);
+  frame->publish_data_length(aligned_data_length);
   journal_->next();
 }
 
-void writer::close_frame(size_t data_length, int64_t gen_time) {
-  try {
-    on_frame_closing(gen_time, journal_->current_frame().get());
-    close_frame_unserialized(data_length, gen_time);
-  } catch (...) {
-    abort_frame_unserialized();
-    writer_mtx_.unlock();
-    throw;
-  }
-  writer_mtx_.unlock();
-  publisher_->notify();
+void writer::commit_transaction_unserialized(size_t data_length, int64_t gen_time, struct frame *frame) {
+  const auto aligned_length = validate_frame_commit(data_length);
+  on_transaction_committing(gen_time, frame);
+  publish_frame_unserialized(aligned_length, gen_time);
 }
 
 void writer::copy_frame(const frame_ptr &source) {
+  if (source == nullptr || source->address() == 0) {
+    throw journal_error("Can not copy a null frame");
+  }
+  const auto source_frame_length = source->frame_length();
+  const auto source_header_length = source->header_length();
+  if (source_header_length != sizeof(frame_header) || source_frame_length < source_header_length) {
+    throw journal_error("Can not copy a frame with an invalid source length");
+  }
+  const auto source_data_length = static_cast<size_t>(source_frame_length - source_header_length);
+  const auto aligned_length = checked_cpu_word_length(source_data_length);
+  if (aligned_length != source_data_length || sizeof(frame_header) + aligned_length != source_frame_length) {
+    throw journal_error("Can not copy a frame with an inconsistent aligned length");
+  }
   std::unique_lock<std::timed_mutex> lock(writer_mtx_, std::defer_lock);
   if (!lock.try_lock_for(std::chrono::seconds(30))) {
     throw journal_error("Can not lock writer for " + journal_->location_->uname);
   }
-  assert(source->frame_length() + sizeof(frame_header) <= journal_->page_->get_page_size());
-  if (journal_->current_frame()->address() + source->frame_length() >= journal_->page_->address_border()) {
+  (void)validate_payload_length(source_data_length);
+  auto page_border = journal_->page_->address_border();
+  if (!current_frame_has_capacity(aligned_length, page_border)) {
     close_page(yijinjing::time::now_in_nano());
+    page_border = journal_->page_->address_border();
+    if (!current_frame_has_capacity(aligned_length, page_border)) {
+      throw journal_error("Source frame does not fit on an empty journal page for " + journal_->location_->uname);
+    }
   }
 
   auto frame = journal_->current_frame();
@@ -229,10 +283,10 @@ void writer::copy_frame(const frame_ptr &source) {
   // from the source size, zero the next header, then publish `length` last.
   frame->copy(*source);
 
-  auto next_frame_address = frame->address() + source->frame_length();
+  auto next_frame_address = frame->address() + source_frame_length;
   memset(reinterpret_cast<void *>(next_frame_address), 0, sizeof(frame_header));
   journal_->page_->set_last_frame_position(frame->address() - journal_->page_->address());
-  frame->publish_data_length(source->data_length());
+  frame->publish_data_length(source_data_length);
   journal_->next();
   lock.unlock();
   publisher_->notify();
@@ -248,41 +302,23 @@ void writer::mark_at(int64_t gen_time, int64_t trigger_time, int32_t carrier_typ
   tx.commit(0, gen_time);
 }
 
-void writer::write_raw(int64_t trigger_time, int32_t carrier_type, uintptr_t data, uint32_t length) {
-  auto tx = reserve_frame(trigger_time, carrier_type, length);
-  memcpy(tx.data(), reinterpret_cast<void *>(data), length);
-  tx.commit(length);
+void writer::write_bytes(int64_t trigger_time, int32_t carrier_type, std::span<const std::byte> data) {
+  auto tx = reserve_frame(trigger_time, carrier_type, data.size());
+  tx.copy_bytes(data.data(), data.size());
+  tx.commit(data.size());
 }
 
-void writer::write_bytes(int64_t trigger_time, int32_t carrier_type, const std::vector<uint8_t> &data,
-                         uint32_t length) {
-  auto tx = reserve_frame(trigger_time, carrier_type, length);
-  memcpy(tx.data(), data.data(), length);
-  tx.commit(length);
-}
-
-void writer::write_raw_at_as(int64_t gen_time, int64_t trigger_time, uint32_t source, uint32_t dest,
-                             int32_t carrier_type, uintptr_t data, uint32_t length) {
-  auto tx = reserve_frame(trigger_time, carrier_type, length);
-  tx.frame()->set_source(source);
-  tx.frame()->set_dest(dest);
-  memcpy(tx.data(), reinterpret_cast<void *>(data), length);
-  tx.commit(length, gen_time);
-}
-
-void writer::close_data(int64_t gen_time) { close_frame(size_to_write_, gen_time); }
-
-void writer::on_frame_opened(int64_t trigger_time, struct frame *frame) {
+void writer::on_reservation_started(int64_t trigger_time, struct frame *frame) {
   (void)trigger_time;
   (void)frame;
 }
 
-void writer::on_frame_closing(int64_t gen_time, struct frame *frame) {
+void writer::on_transaction_committing(int64_t gen_time, struct frame *frame) {
   (void)gen_time;
   (void)frame;
 }
 
-void writer::abort_frame_unserialized() noexcept { size_to_write_ = 0; }
+void writer::abort_transaction_unserialized() noexcept { size_to_write_ = 0; }
 
 void writer::close_page(int64_t trigger_time) { journal_->close_page(trigger_time, last_gen_time_); }
 

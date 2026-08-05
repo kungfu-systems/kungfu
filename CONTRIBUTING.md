@@ -97,8 +97,9 @@ Three product entry points, with one npm/Core executable boundary:
   published only as signed-provenance GitHub Release assets. `./shifu` is the
   checkout-pinned entrypoint.
 - `xinfa` — the independently installable verified context compiler, published
-  only as signed-provenance GitHub Release assets. It retains its own version,
-  schemas, state, and release identity.
+  only as signed-provenance GitHub Release assets. Its user-visible release
+  number follows the Kungfu/Shifu product train while its schemas, protocol
+  versions, state, tag namespace, and release identity remain Xinfa-owned.
 
 The standalone component executables are never npm packages and are not copied
 into Core platform payloads. Embedded Shifu self-update is intentionally

@@ -560,9 +560,9 @@ def work(
                 raise ValueError(
                     "--observe requires --scope all --json --observer-state PATH"
                 )
-            if start_ref or gate_phase or include_settled or include_excluded:
+            if start_ref or gate_phase or include_excluded:
                 raise ValueError(
-                    "--observe does not accept traversal, gate, or inclusion options"
+                    "--observe does not accept traversal, gate, or excluded-locator options"
                 )
             stop_requested = False
 
@@ -576,6 +576,7 @@ def work(
                     current,
                     state_path=observer_state,
                     max_workers=max_workers,
+                    include_settled=include_settled,
                     stop=lambda: stop_requested,
                 ):
                     click.echo(json.dumps(event, sort_keys=True))

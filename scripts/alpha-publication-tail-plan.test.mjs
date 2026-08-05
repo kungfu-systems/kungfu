@@ -97,7 +97,7 @@ test('payload discovery rejects missing and duplicate plans', (t) => {
   assert.throws(() => findAlphaPublicationTailPlan(root), /found 2/u);
 });
 
-test('Build DAG precomputes the tail beside signing and final commit consumes it', () => {
+test('Build DAG precomputes the tail while Buildchain owns signing', () => {
   const build = fs.readFileSync('.github/workflows/build.yml', 'utf8');
   const publication = fs.readFileSync(
     'scripts/alpha-publication-commit.mjs',
@@ -105,7 +105,7 @@ test('Build DAG precomputes the tail beside signing and final commit consumes it
   );
   assert.match(build, /^ {2}precompute-alpha-publication-tail:$/mu);
   assert.match(build, /precompute-alpha-publication-tail:[\s\S]*needs: build/u);
-  assert.match(build, /credential-island-macos:[\s\S]*needs: build/u);
+  assert.doesNotMatch(build, /^ {2}credential-island-macos:$/mu);
   assert.match(publication, /verifyAlphaPublicationTailPlan/u);
   assert.doesNotMatch(
     build.match(

@@ -8,6 +8,7 @@ import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
 
 import {
+  inspectProductLayout,
   invokeAfterIdentitySettlement,
   runtimeReady,
 } from './product_smoke.mjs';
@@ -16,6 +17,7 @@ import {
   createLogBundle,
   defaultOutputDir,
   evaluateQualification,
+  executeQualificationSuites,
   qualificationPlan,
   retainQualificationArtifacts,
   suiteEnvironment,
@@ -148,6 +150,80 @@ test('product verification checks the distribution outputs without rebuilding th
   assert.equal(verification.command.includes('--full'), false);
 });
 
+test('product catalog qualification is bound to the build from this checkout', () => {
+  const catalog = qualificationPlan({
+    mode: 'execute',
+    withProduct: true,
+  }).find((suite) => suite.id === 'product-catalog');
+  assert.deepEqual(catalog.command.slice(1), [
+    'builds',
+    '--json',
+    '--verify-current',
+  ]);
+});
+
+test('runtime activation settles source suites before the product rebuild and consumers', async () => {
+  const suites = qualificationPlan({ mode: 'execute', withProduct: true });
+  const events = [];
+  let active = 0;
+  let peak = 0;
+  const runner = async (suite) => {
+    active += 1;
+    peak = Math.max(peak, active);
+    events.push(`start:${suite.id}`);
+    await new Promise((resolve) => setTimeout(resolve, 2));
+    events.push(`end:${suite.id}`);
+    active -= 1;
+    return {
+      ...suite,
+      status: suite.id === 'profile-action-admission' ? 'failed' : 'passed',
+      exit_code: suite.id === 'profile-action-admission' ? 1 : 0,
+      duration_ms: 2,
+      raw_log: `${suite.id}.log`,
+      raw_sha256: 'a'.repeat(64),
+    };
+  };
+  const result = await executeQualificationSuites(suites, '/unused', runner, 2);
+  assert.equal(peak, 2);
+  assert.deepEqual(
+    result.map((suite) => suite.id),
+    suites.map((suite) => suite.id),
+  );
+  assert.equal(
+    result.find((suite) => suite.id === 'profile-action-admission').status,
+    'failed',
+  );
+  assert.ok(result.every((suite) => suite.status !== 'planned'));
+  const productStart = events.indexOf('start:product-distribution');
+  for (const id of [
+    'activation-core',
+    'profile-action-admission',
+    'runtime-surface-parity',
+    'activation-performance',
+  ])
+    assert.ok(events.indexOf(`end:${id}`) < productStart, id);
+  const firstConsumer = Math.min(
+    ...['product-runtime-smoke', 'product-verification', 'product-catalog'].map(
+      (id) => events.indexOf(`start:${id}`),
+    ),
+  );
+  assert.ok(
+    events.indexOf('end:product-distribution') < firstConsumer,
+    'product-distribution',
+  );
+});
+
+test('source qualification uv runs preserve the exact tracked lockfile', () => {
+  const uvSuites = qualificationPlan({
+    mode: 'execute',
+    withProduct: true,
+  }).filter((suite) => suite.command.includes('uv'));
+  assert.ok(uvSuites.length > 0);
+  for (const suite of uvSuites) {
+    assert.ok(suite.command.includes('--frozen'), suite.id);
+  }
+});
+
 test('only source-tree Python suites allow the hosted qualification interpreter', () => {
   const baseEnv = { Path: 'C:\\Windows\\System32', CUSTOM_MARKER: 'preserved' };
   for (const id of ['activation-core', 'activation-performance']) {
@@ -201,6 +277,68 @@ test('product smoke does not report runtime readiness before both identities set
       coordinator: { running: true, identityVerified: true },
     }),
     true,
+  );
+});
+
+test('product smoke proves the assembled marker, Rust entry, and real CPython layout', (t) => {
+  const product = fs.mkdtempSync(
+    path.join(os.tmpdir(), 'kungfu-product-layout-'),
+  );
+  t.after(() => fs.rmSync(product, { recursive: true, force: true }));
+  const pythonRoot = path.join(product, 'python');
+  fs.mkdirSync(path.join(pythonRoot, 'bin'), { recursive: true });
+  const trunkBytes = Buffer.from('rust-trunk-entry');
+  fs.writeFileSync(path.join(product, 'kungfu'), trunkBytes);
+  fs.writeFileSync(path.join(product, 'kungfu-trunk'), trunkBytes);
+  fs.writeFileSync(path.join(pythonRoot, 'bin', 'python3'), 'cpython');
+  fs.writeFileSync(
+    path.join(pythonRoot, 'kungfu-host.json'),
+    JSON.stringify({
+      schema: 'kungfu.host/v1',
+      form: 'assembled',
+      product_root: '..',
+    }),
+  );
+
+  const layout = inspectProductLayout(product, {
+    platform: 'darwin',
+    environment: {},
+  });
+
+  assert.equal(layout.host.form, 'assembled');
+  assert.equal(layout.entry.kind, 'rust-trunk');
+  assert.equal(layout.python.interpreter, 'python/bin/python3');
+  assert.deepEqual(layout.retiredPackagerEnvironmentKeys, []);
+});
+
+test('product smoke rejects retired packager process state', (t) => {
+  const product = fs.mkdtempSync(
+    path.join(os.tmpdir(), 'kungfu-product-state-'),
+  );
+  t.after(() => fs.rmSync(product, { recursive: true, force: true }));
+  const pythonRoot = path.join(product, 'python');
+  fs.mkdirSync(path.join(pythonRoot, 'bin'), { recursive: true });
+  for (const name of ['kungfu', 'kungfu-trunk']) {
+    fs.writeFileSync(path.join(product, name), 'rust-trunk-entry');
+  }
+  fs.writeFileSync(path.join(pythonRoot, 'bin', 'python3'), 'cpython');
+  fs.writeFileSync(
+    path.join(pythonRoot, 'kungfu-host.json'),
+    JSON.stringify({
+      schema: 'kungfu.host/v1',
+      form: 'assembled',
+      product_root: '..',
+    }),
+  );
+  const retiredKey = ['PY', 'INSTALLER', '_RESET_ENVIRONMENT'].join('');
+
+  assert.throws(
+    () =>
+      inspectProductLayout(product, {
+        platform: 'darwin',
+        environment: { [retiredKey]: '1' },
+      }),
+    /retired product packager state is present/u,
   );
 });
 

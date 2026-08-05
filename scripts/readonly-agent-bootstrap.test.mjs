@@ -29,7 +29,6 @@ function semanticAmplificationFixturePaths(manifest) {
     'framework/maintainability/semantic-amplification.manifest.json',
     'framework/maintainability/semantic-amplification.mjs',
     'framework/maintainability/terminal-evidence-matrix.json',
-    manifest.reportPath,
   ]);
   for (const family of manifest.families || []) {
     for (const relative of family.authority?.sources || []) paths.add(relative);
@@ -47,6 +46,39 @@ function semanticAmplificationFixturePaths(manifest) {
       ...(record.tests || []),
     ])
       if (relative) paths.add(relative);
+  for (const topology of manifest.integrityPolicy?.topologies || []) {
+    for (const relative of topology.authority?.sources || [])
+      paths.add(relative);
+    for (const adapter of topology.adapters || [])
+      for (const relative of adapter.paths || []) paths.add(relative);
+    for (const projection of topology.projections || [])
+      if (projection.path) paths.add(projection.path);
+    for (const qualification of topology.qualification || [])
+      if (qualification.path) paths.add(qualification.path);
+    for (const detector of topology.detectors || [])
+      for (const relative of detector.paths || []) paths.add(relative);
+  }
+  return [...paths].sort();
+}
+
+function workProfileConformanceFixturePaths(manifest) {
+  const paths = new Set([
+    'config/kungfu-kfx.contract.json',
+    'extensions/work-control/profile.json',
+    'extensions/work-control/qualification/work-profile-conformance.json',
+    'framework/kfx/kungfu-kfx.contract.json',
+    'framework/work-profile-conformance/authority-manifest.json',
+    'framework/work-profile-conformance/generate-qualification.mjs',
+    'framework/work-profile-conformance/qualification/negative-witnesses.json',
+    'framework/work-profile-conformance/qualification/reference-scenarios.json',
+    'framework/work-profile-conformance/qualification/retained-witnesses.json',
+    'framework/work-profile-conformance/schema/work-profile-conformance-declaration-v1.schema.json',
+    'framework/work-profile-conformance/schema/work-profile-conformance-result-v1.schema.json',
+    'framework/work-profile-conformance/work-profile-conformance.mjs',
+  ]);
+  for (const file of manifest.files || []) {
+    if (file.path) paths.add(file.path);
+  }
   return [...paths].sort();
 }
 
@@ -61,6 +93,16 @@ function executableOnPath(name) {
     }
   }
   throw new Error(`${name} is not available on PATH`);
+}
+
+function declaredExecutable(name, candidate) {
+  if (!candidate) return null;
+  try {
+    fs.accessSync(candidate, fs.constants.X_OK);
+    return candidate;
+  } catch {
+    throw new Error(`${name} is not executable: ${candidate}`);
+  }
 }
 
 function snapshotSource(root) {
@@ -87,6 +129,36 @@ function snapshotSource(root) {
   };
   visit(root);
   return rows;
+}
+
+function sourceAuditRoot(rows) {
+  const hash = crypto.createHash('sha256');
+  for (const row of rows) hash.update(row).update('\0');
+  return `sha256:${hash.digest('hex')}`;
+}
+
+function boundedDiagnosticTail(...values) {
+  const [stderr] = values;
+  if (stderr) return stderr.slice(-24 * 1024);
+  const output = values.filter(Boolean).join('\n');
+  const lines = output.split(/\r?\n/u);
+  const failingTestsIndex = lines.findLastIndex(
+    (line) => line.trim() === '✖ failing tests:',
+  );
+  if (failingTestsIndex >= 0)
+    return lines
+      .slice(failingTestsIndex, failingTestsIndex + 120)
+      .join('\n')
+      .slice(0, 24 * 1024);
+  const failureSummaryIndex = lines.findLastIndex((line) =>
+    /^(?:ℹ fail [1-9]|# fail [1-9])/u.test(line.trimStart()),
+  );
+  if (failureSummaryIndex >= 0)
+    return lines
+      .slice(Math.max(0, failureSummaryIndex - 8), failureSummaryIndex + 40)
+      .join('\n')
+      .slice(0, 24 * 1024);
+  return output.slice(-24 * 1024);
 }
 
 function makeReadOnly(root) {
@@ -139,17 +211,37 @@ test('declared discovery routes are zero-write in a cold read-only fixture', (t)
 
   const git = executableOnPath('git');
   const node = process.execPath;
+  const exactSource = spawnSync(git, ['-C', ROOT, 'rev-parse', 'HEAD'], {
+    encoding: 'utf8',
+  });
+  assert.equal(exactSource.status, 0, exactSource.stderr);
+  const exactSourceSha = exactSource.stdout.trim();
+  assert.match(exactSourceSha, /^[0-9a-f]{40}$/u);
   const cloned = spawnSync(
     git,
     ['clone', '--shared', '--quiet', ROOT, fixture],
     { encoding: 'utf8' },
   );
   assert.equal(cloned.status, 0, cloned.stderr);
+  const exactCheckout = spawnSync(
+    git,
+    ['checkout', '--detach', '--quiet', exactSourceSha],
+    { cwd: fixture, encoding: 'utf8' },
+  );
+  assert.equal(exactCheckout.status, 0, exactCheckout.stderr);
+  const fixtureHead = spawnSync(git, ['rev-parse', 'HEAD'], {
+    cwd: fixture,
+    encoding: 'utf8',
+  });
+  assert.equal(fixtureHead.status, 0, fixtureHead.stderr);
+  assert.equal(fixtureHead.stdout.trim(), exactSourceSha);
   const base = sourceMergeBase();
   const corePytest = path.join(ROOT, 'framework/core/.venv/bin/pytest');
-  const pytest = fs.existsSync(corePytest)
-    ? corePytest
-    : executableOnPath('pytest');
+  const pytest =
+    declaredExecutable(
+      'KUNGFU_READONLY_PYTEST',
+      process.env.KUNGFU_READONLY_PYTEST,
+    ) || (fs.existsSync(corePytest) ? corePytest : executableOnPath('pytest'));
   const fixedBase = spawnSync(
     git,
     ['update-ref', 'refs/heads/dev/v4/v4.0', base.sha],
@@ -171,10 +263,26 @@ test('declared discovery routes are zero-write in a cold read-only fixture', (t)
   for (const relative of [
     'shifu',
     'shifu.cmd',
+    '.xinfa/portable-atlas-classification.json.gz',
+    '.xinfa/product-atlas-bundle.json',
+    '.buildchain/kfd/kfd-1/contract-world.witness.json',
+    '.buildchain/kfd/kfd-1/release-gate.json',
+    '.buildchain/kfd/kfd-1/verify-result.json',
     '.buildchain/kfd/support-matrix.json',
+    '.buildchain/kfd/kfd-2/registry.json',
+    '.buildchain/kfd/kfd-2/release-claims.json',
+    '.buildchain/kfd/kfd-2/claims/agent-onboarding-pack.json',
+    '.buildchain/kfd/kfd-2/claims/agent-work-state-contract.json',
+    '.buildchain/kfd/kfd-2/claims/codex-report-receipts.json',
+    '.buildchain/kfd/kfd-2/claims/cross-language-authority-membrane.json',
+    '.buildchain/kfd/kfd-2/claims/remote-fact-boundary.json',
     '.buildchain/kfd/kfd-3/surfaces.json',
     '.buildchain/kfd/kfd-3/capability-query.json',
     '.buildchain/alpha-contract-lock.json',
+    'config/kungfu-agent-first-canonical-policy.json',
+    'developer/sdk/kfd/kfd-1/contract-world.witness.json',
+    'developer/sdk/kfd/kfd-1/release-gate.json',
+    'developer/sdk/kfd/kfd-1/verify-result.json',
     'developer/sdk/kfd/support-matrix.json',
     'docs/qualification/kfd-support-matrix.md',
     '.github/actions/qualified-core-candidate-build/action.yml',
@@ -187,12 +295,18 @@ test('declared discovery routes are zero-write in a cold read-only fixture', (t)
     '.github/workflows/core-build-profiles.yml',
     '.github/workflows/kungfu-agent-patrol.yml',
     '.github/workflows/dev-alpha-candidate-patrol.yml',
+    '.github/workflows/dev-pr-auto-merge.yml',
     '.github/workflows/dev-gate-latency-patrol.yml',
     '.github/workflows/dev-verify-patrol.yml',
     '.github/workflows/gate-measurement.yml',
+    '.github/workflows/report-projection.yml',
     '.github/workflows/build.yml',
     '.github/workflows/publish-layer-artifacts.yml',
+    '.github/workflows/python-structure.yml',
     '.github/workflows/release-new-version.yml',
+    '.github/workflows/stable-candidate-patrol.yml',
+    '.github/actionlint.yaml',
+    '.github/actions/require-alpha-preflight/alpha-macos-overflow.mjs',
     '.github/alpha-attention-operations.json',
     'docs/qualification/gates/README.md',
     'docs/qualification/gates/dev-queue-admission.contract.json',
@@ -200,21 +314,83 @@ test('declared discovery routes are zero-write in a cold read-only fixture', (t)
     'docs/qualification/gates/workflow-authority.json',
     'docs/qualification/gates/workflow-authority.md',
     'docs/qualification/gates/workflow-bindings.json',
+    'docs/qualification/alpha-ruleset.contract.json',
+    'docs/qualification/stable-ruleset.contract.json',
+    'docs/qualification/stable-release-continuation.contract.json',
+    'docs/adr/KF-ADR-019fbbe4-40c5-7c67-9ed2-910a65430ff7.md',
     'docs/adr/SHIFU-ADR-019fab1a-2853-737e-8c67-a9b1aa9035aa.md',
+    'docs/adr/KF-ADR-019fbe04-6548-7b3a-8358-22c8fe8238a9.md',
     'docs/architecture/adr-map.json',
     'docs/architecture/adr-map.md',
     'framework/release/publication-surfaces.json',
+    'framework/release/publication-control-plane.mjs',
+    'framework/core/architecture/dev-gate-latency-baseline.json',
+    'framework/version-line/check-version-line-authority.mjs',
+    'framework/version-line/version-line-authority.json',
+    'framework/version-line/version-line-authority.mjs',
+    'framework/version-line/version-line-projections.json',
     'docs/shifu/README.md',
+    'framework/contract/kungfu-agent-first-canonical-policy.json',
     'docs/shifu/artifact-contract.json',
     'docs/shifu/cache-contract.json',
+    'docs/shifu/examples/production-graph/cancelled.fixture.json',
+    'docs/shifu/examples/production-graph/failed.fixture.json',
+    'docs/shifu/examples/production-graph/invalid/authority-drift.fixture.json',
+    'docs/shifu/examples/production-graph/invalid/dependency-cycle.fixture.json',
+    'docs/shifu/examples/production-graph/invalid/missing-dependency.fixture.json',
+    'docs/shifu/examples/production-graph/invalid/missing-root.fixture.json',
+    'docs/shifu/examples/production-graph/invalid/plan-receipt-mismatch.fixture.json',
+    'docs/shifu/examples/production-graph/invalid/recovery-mismatch.fixture.json',
+    'docs/shifu/examples/production-graph/invalid/source-drift.fixture.json',
+    'docs/shifu/examples/production-graph/invalid/unknown-field.fixture.json',
+    'docs/shifu/examples/production-graph/qualified.fixture.json',
+    'docs/shifu/production-graph-contract.json',
+    'docs/shifu/schema/production-graph-execution-event-v0.schema.json',
+    'docs/shifu/schema/production-graph-failure-v0.schema.json',
+    'docs/shifu/schema/production-graph-plan-v0.schema.json',
+    'docs/shifu/schema/production-graph-receipt-v0.schema.json',
+    'docs/shifu/schema/production-graph-recovery-v0.schema.json',
+    'docs/shifu/schema/production-graph-v0.schema.json',
+    'docs/shifu/schema/production-graph-verification-receipt-v0.schema.json',
     'docs/shifu/qualified-assignment-core-platform-matrix.json',
     'docs/shifu/schema/qualified-assignment-core-platform-matrix-v1.schema.json',
+    'framework/production-graph/check.mjs',
+    'framework/production-graph/check.test.mjs',
+    'framework/production-graph/contract.mjs',
     'product/package.json',
+    'product/scripts/release-channel-index.mjs',
+    'product/scripts/release-channel-index.test.mjs',
+    'product/scripts/upgrade-manifest.test.mjs',
     'crates/shifu/src/artifact_catalog.rs',
+    'crates/shifu/src/main.rs',
+    'crates/shifu/src/native_update.rs',
     'crates/shifu/src/promote.rs',
+    'crates/shifu/src/promote_desktop.rs',
+    'crates/shifu/src/promote_tests.rs',
     'crates/shifu/src/registrar.rs',
+    'config/kungfu-contracts.registry.json',
     'framework/core/src/python/kungfu/distribution_update.py',
+    'framework/core/src/python/kungfu/distribution_update_planning.py',
+    'framework/core/src/python/kungfu/distribution_update_policy.py',
+    'framework/core/src/python/kungfu/profile_sdk_kfd3.py',
+    'framework/core/src/python/kungfu/profile_sdk_source.py',
+    'framework/core/src/python/kungfu/profile_sdk_support.py',
+    'framework/core/src/python/kungfu/exit_bundle.py',
+    'framework/core/src/python/kungfu/exit_verifier.py',
+    'framework/core/src/python/kungfu/release_channel.py',
+    'framework/core/src/python/kungfu/runtime_upgrade.py',
+    'framework/core/tests/python/test_distribution_release_cut.py',
     'framework/core/tests/python/test_distribution_update.py',
+    'framework/core/tests/python/test_release_channel.py',
+    'framework/core/tests/python/test_release_cut.py',
+    'framework/primitive/kungfu-primitive-catalog.contract.json',
+    'framework/invariant/kungfu-invariant.registry.json',
+    'framework/registry/contract.registry-envelope.json',
+    'framework/registry/invariant.registry-envelope.json',
+    'config/invariant/kungfu-invariant.registry.json',
+    'docs/adr/KF-ADR-019fabb5-62a0-7b8d-8f8d-6505efdbc239.md',
+    'docs/architecture/adr-map.json',
+    'docs/architecture/adr-map.md',
     'scripts/candidate-timeline-events.cjs',
     'scripts/check-carrier-action-envelope.mjs',
     'scripts/check-project-cut-composition-gate.mjs',
@@ -222,6 +398,11 @@ test('declared discovery routes are zero-write in a cold read-only fixture', (t)
     'scripts/check.mjs',
     'scripts/fix.mjs',
     'scripts/measure-dev-required-latency.mjs',
+    'scripts/alpha-ruleset.mjs',
+    'scripts/alpha-ruleset.test.mjs',
+    'scripts/stable-candidate-patrol.test.mjs',
+    'scripts/version-line-authority.test.mjs',
+    'scripts/linux-arm64-alpha-qualification-workflow.test.mjs',
     'scripts/run-core-affected-native.mjs',
     'scripts/run-gate-measurement.mjs',
     'scripts/run-native-kfx-admission-tests.mjs',
@@ -230,6 +411,9 @@ test('declared discovery routes are zero-write in a cold read-only fixture', (t)
     'scripts/kungfu-invariant.mjs',
     'scripts/code-complexity-budget.mjs',
     'scripts/code-complexity-budget.test.mjs',
+    'scripts/check-code-complexity.mjs',
+    'scripts/check-code-complexity.test.mjs',
+    'scripts/check-python-structure.py',
     'scripts/check-readonly-source-routes.mjs',
     'scripts/check-readonly-source-routes.test.mjs',
     'scripts/check-alpha-attention-operations.mjs',
@@ -270,13 +454,30 @@ test('declared discovery routes are zero-write in a cold read-only fixture', (t)
     'scripts/verify-kungfu-release-admission.test.mjs',
     'scripts/check-work-lifecycle-operation-matrix.test.mjs',
     'scripts/buildchain-kfd-evidence.mjs',
+    '.buildchain/kfd/kfd-2/claims/agent-onboarding-pack.json',
     '.buildchain/kfd/kfd-3/collaboration-interface.artifact.json',
     '.buildchain/kfd/kfd-3/collaboration-interface.prebuild.json',
     '.buildchain/kfd/kfd-3/surfaces.json',
     '.buildchain/kfd/support-matrix.json',
+    'developer/sdk/kfd/kfd-2/claims/agent-onboarding-pack.json',
+    'developer/sdk/kfd/kfd-2/release-claims.json',
     'developer/sdk/kfd/kfd-3-surfaces.json',
     'developer/sdk/kfd/support-matrix.json',
     'developer/sdk/kfd/upstream-aggregate.json',
+    'developer/sdk/kfd/kfd-2/release-claims.json',
+    'developer/sdk/kfd/kfd-2/claims/agent-onboarding-pack.json',
+    'developer/sdk/kfd/kfd-2/claims/agent-work-state-contract.json',
+    'developer/sdk/kfd/kfd-2/claims/codex-report-receipts.json',
+    'developer/sdk/kfd/kfd-2/claims/cross-language-authority-membrane.json',
+    'developer/sdk/kfd/kfd-2/claims/remote-fact-boundary.json',
+    'developer/sdk/src/sdk.js',
+    'developer/sdk/src/sdk-contract.js',
+    'developer/sdk/src/sdk-kfd.js',
+    'developer/sdk/src/sdk-shared.js',
+    'extensions/work-control/work-control-actions/domain/work_control.py',
+    'extensions/work-control/work-control-actions/domain/work_control_assessment.py',
+    'extensions/work-control/work-control-actions/domain/work_control_runtime.py',
+    'package.json',
     'framework/core/package.json',
     'pnpm-lock.yaml',
     'framework/release/buildchain-kfd-runtime.mjs',
@@ -299,11 +500,25 @@ test('declared discovery routes are zero-write in a cold read-only fixture', (t)
     'config/primitive/kungfu-primitive-catalog.contract.json',
     'framework/core/src/libkungfu/include/kungfu/sdk/generated/primitive_catalog_v2.hpp',
     'docs/qualification/gates/release-admission-policy.json',
+    'framework/core/src/python/kungfu/agent/__init__.py',
+    'framework/core/src/python/kungfu/agent/bootstrap-receipt.schema.json',
     'framework/core/src/python/kungfu/agent/documentation.py',
+    'framework/core/src/python/kungfu/agent/resources.py',
+    'framework/core/src/python/kungfu/agent/run_agent.py',
+    'framework/core/src/python/kungfu/agent/skills/amp/SKILL.md',
+    'framework/core/src/python/kungfu/agent/skills/claude/SKILL.md',
+    'framework/core/src/python/kungfu/agent/skills/codex/SKILL.md',
+    'framework/core/src/python/kungfu/agent/skills/opencode/SKILL.md',
+    'framework/core/src/python/kungfu/cli/commands/agent.py',
+    'framework/core/src/python/kungfu/cli/commands/assignment.py',
     'framework/core/src/python/kungfu/cli/surface_contract.py',
+    'framework/core/tests/python/test_agent_work_state_contract.py',
+    'framework/core/src/python/kungfu/cli/commands/exit.py',
     'framework/core/src/python/kungfu/cli/commands/env.py',
     'framework/core/src/python/kungfu/cli/commands/kfx.py',
     'framework/core/src/python/kungfu/cli/commands/shifu.py',
+    'framework/gui/src/renderer/src/main.tsx',
+    'framework/gui/src/runtime-status.ts',
     'framework/maintainability/baseline-transitions/README.md',
     'framework/maintainability/code-complexity-policy.json',
     'framework/maintainability/code-complexity-baseline.json',
@@ -312,10 +527,18 @@ test('declared discovery routes are zero-write in a cold read-only fixture', (t)
     'framework/maintainability/waivers/retired/hub-cli-linux-arm64-workflow-authority.v1.json',
     'framework/maintainability/waivers/retired/libnode-linux-arm64-lockfile.v1.json',
     'framework/maintainability/complexity-governance.mjs',
+    'framework/maintainability/abstraction-integrity.manifest.json',
+    'framework/maintainability/abstraction-integrity.baseline.json',
+    'framework/maintainability/abstraction-integrity-report.json',
+    'framework/report-projection/authority.json',
+    'framework/maintainability/python-structure-negative-fixtures.json',
     'framework/maintainability/readonly-source-routes.json',
     'framework/maintainability/semantic-amplification.manifest.json',
     'framework/maintainability/semantic-amplification-report.json',
     'framework/maintainability/semantic-amplification.mjs',
+    'framework/report-projection/authority.mjs',
+    'framework/report-projection/authority.test.mjs',
+    'docs/qualification/evidence/generated-report-authority-queue/report.json',
     'framework/maintainability/waivers/README.md',
     'framework/work-history-selector/schema/work-history-selection-manifest-v1.schema.json',
     'framework/work-history-selector/schema/work-history-selection-request-v1.schema.json',
@@ -332,6 +555,14 @@ test('declared discovery routes are zero-write in a cold read-only fixture', (t)
     'framework/work-design-advisor/tooling/work-design-advisor-contract.mjs',
     'framework/work-design-advisor/work-design-advisor.contract.json',
     'framework/work-design-policy-replay/schema/work-design-promotion-artifact-v1.schema.json',
+    'framework/work-design-policy-replay/schema/work-design-activation-envelope-v1.schema.json',
+    'framework/work-design-policy-replay/schema/work-design-feedback-inspection-v1.schema.json',
+    'framework/work-design-policy-replay/schema/work-design-feedback-status-v1.schema.json',
+    'framework/work-design-policy-replay/schema/work-design-outcome-compilation-request-v1.schema.json',
+    'framework/work-design-policy-replay/schema/work-design-outcome-v1.schema.json',
+    'framework/work-design-policy-replay/schema/work-design-policy-decision-v1.schema.json',
+    'framework/work-design-policy-replay/schema/work-design-policy-monitoring-v1.schema.json',
+    'framework/work-design-policy-replay/schema/work-design-policy-state-v1.schema.json',
     'framework/work-design-policy-replay/schema/work-design-replay-policy-v1.schema.json',
     'framework/work-design-policy-replay/schema/work-design-replay-report-v1.schema.json',
     'framework/work-design-policy-replay/schema/work-design-replay-request-v1.schema.json',
@@ -345,6 +576,10 @@ test('declared discovery routes are zero-write in a cold read-only fixture', (t)
     'framework/work-design-open-card/work-design-open-card.contract.json',
   ])
     copyFile(ROOT, fixture, relative);
+  fs.rmSync(
+    path.join(fixture, 'framework/core/src/python/kungfu/release_cut.py'),
+    { force: true },
+  );
   const amplificationManifest = JSON.parse(
     fs.readFileSync(
       path.join(
@@ -358,6 +593,21 @@ test('declared discovery routes are zero-write in a cold read-only fixture', (t)
   );
   for (const relative of semanticAmplificationFixturePaths(
     amplificationManifest,
+  ))
+    copyFile(ROOT, fixture, relative);
+  const workProfileConformanceManifest = JSON.parse(
+    fs.readFileSync(
+      path.join(
+        ROOT,
+        'framework',
+        'work-profile-conformance',
+        'authority-manifest.json',
+      ),
+      'utf8',
+    ),
+  );
+  for (const relative of workProfileConformanceFixturePaths(
+    workProfileConformanceManifest,
   ))
     copyFile(ROOT, fixture, relative);
   const matrix = JSON.parse(
@@ -421,6 +671,7 @@ test('declared discovery routes are zero-write in a cold read-only fixture', (t)
   }
 
   const before = snapshotSource(fixture);
+  const beforeAuditRoot = sourceAuditRoot(before);
   const protectedRef = base.sha;
   makeReadOnly(fixture);
   fs.chmodSync(home, 0o555);
@@ -530,11 +781,18 @@ test('declared discovery routes are zero-write in a cold read-only fixture', (t)
   assert.equal(
     sourceAcceptance.status,
     0,
-    `check:source:\n${[sourceAcceptance.stderr, sourceAcceptance.stdout]
-      .filter(Boolean)
-      .join('\n')}`,
+    `check:source (bounded tail):\n${boundedDiagnosticTail(
+      sourceAcceptance.stderr,
+      sourceAcceptance.stdout,
+    )}`,
   );
-  assert.deepEqual(snapshotSource(fixture), before);
+  const after = snapshotSource(fixture);
+  const afterAuditRoot = sourceAuditRoot(after);
+  assert.deepEqual(after, before);
+  assert.equal(afterAuditRoot, beforeAuditRoot);
+  console.log(
+    `[readonly-source] filesystem-write-audit before=${beforeAuditRoot} after=${afterAuditRoot} byteUnchanged=true`,
+  );
   assert.equal(fs.existsSync(toolLog), false, 'bootstrap tool was invoked');
   assert.deepEqual(fs.readdirSync(home), [], 'read-only route wrote into HOME');
   assert.equal(

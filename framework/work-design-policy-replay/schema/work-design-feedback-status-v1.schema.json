@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kungfu.tech/schema/work-design-feedback-status-v1.schema.json",
+  "title": "Read-only Work Design shadow and cohort status",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "asOf", "reportRoot", "activePolicyRoot", "candidatePolicyRoot", "cohorts", "phase", "defaultPromotionEligible", "blockingReasons", "authority", "statusRoot"],
+  "properties": {
+    "schema": { "const": "kungfu.work-design.feedback-status/v1" },
+    "asOf": { "type": "string", "format": "date-time" },
+    "reportRoot": { "$ref": "#/$defs/root" },
+    "activePolicyRoot": { "$ref": "#/$defs/root" },
+    "candidatePolicyRoot": { "$ref": "#/$defs/root" },
+    "cohorts": { "type": "array", "items": { "$ref": "#/$defs/cohort" } },
+    "phase": { "enum": ["observation-only", "tentative-trend", "promotion-eligible"] },
+    "defaultPromotionEligible": { "type": "boolean" },
+    "blockingReasons": { "type": "array", "uniqueItems": true, "items": { "type": "string" } },
+    "authority": { "const": { "mode": "read-only-projection", "policyAuthority": false, "workControlAuthority": false, "mayMutate": false } },
+    "statusRoot": { "$ref": "#/$defs/root" }
+  },
+  "$defs": {
+    "root": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+    "metricCounts": { "type": "object", "additionalProperties": false, "required": ["acceptanceFailure", "dependencyCorrection", "rework", "timeout"], "properties": { "acceptanceFailure": { "type": "integer", "minimum": 0 }, "dependencyCorrection": { "type": "integer", "minimum": 0 }, "rework": { "type": "integer", "minimum": 0 }, "timeout": { "type": "integer", "minimum": 0 } } },
+    "cohort": { "type": "object", "additionalProperties": false, "required": ["cohortRoot", "observedCount", "qualifiedCount", "phase", "unknownMetricCounts"], "properties": { "cohortRoot": { "$ref": "#/$defs/root" }, "observedCount": { "type": "integer", "minimum": 0 }, "qualifiedCount": { "type": "integer", "minimum": 0 }, "phase": { "enum": ["observation-only", "tentative-trend", "promotion-eligible"] }, "unknownMetricCounts": { "$ref": "#/$defs/metricCounts" } } }
+  }
+}

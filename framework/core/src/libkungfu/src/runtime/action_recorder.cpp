@@ -229,7 +229,7 @@ record_receipt action_recorder::record_payload(int32_t carrier_type, const uint8
   auto frame = tx.frame();
   frame->set_data_type(options.data_type);
   if (payload_length > 0) {
-    std::memcpy(const_cast<void *>(frame->data_address()), payload, payload_length);
+    tx.copy_bytes(payload, payload_length);
   }
   const auto frame_uid = writer_->current_frame_uid();
   auto checksum_header = *reinterpret_cast<const yijinjing::types::frame_header *>(frame->address());

@@ -11,10 +11,8 @@
 //   shifu --version | -v | -V     launcher version + build identity
 //   shifu self-version            this binary's crate version (machine readable)
 //   shifu / -h / --help           launcher usage (pnpm's own help: `shifu help`)
-//
-// plus the capability the scripts could only ask the user for: when fnm / uv
-// are missing it bootstraps them from prebuilt release binaries into a
-// user-global cache (no compiler, no package manager, no admin required).
+// plus bootstrap of missing fnm / uv from prebuilt release binaries into a
+// user-global cache (no compiler, package manager, or admin required).
 //
 // Installed-binary delegation: a shifu installed outside the repo (e.g.
 // ~/.local/bin) never runs its own logic against a checkout — inside a repo it
@@ -33,7 +31,6 @@
 use std::env;
 use std::path::{Path, PathBuf};
 use std::process::exit;
-
 mod artifact_catalog;
 mod dispatch;
 mod doctor;
@@ -41,22 +38,21 @@ mod envfile;
 mod invocation;
 #[cfg(windows)]
 mod msvc;
+mod native_update;
 mod promote;
 mod registrar;
 mod self_update;
+mod source;
 mod tools;
 mod util;
-
 pub use invocation::{InvocationContext, InvocationMode};
 use shifu_core::style;
-
 /// Rich subcommands handled by the L2 node implementation (shifu.mjs),
 /// mirroring the sh / cmd entrypoints. Everything else goes to corepack pnpm.
 const L2_SUBCOMMANDS: &[&str] = &[
     "build", "rebuild", "cache", "docs", "gate", "proxy", "config",
 ];
 const SOURCE_ACCEPTANCE_CACHE_BYPASS: &str = "source-acceptance";
-
 #[cfg(any(windows, test))]
 fn command_requires_msvc(command: Option<&str>) -> bool {
     !matches!(
@@ -89,7 +85,7 @@ fn should_auto_apply_cache(
                 | "docs"
                 | "proxy"
                 | "config"
-                | "clone"
+                | "source"
                 | "self-update"
                 | "self-version"
                 | "promote"
@@ -145,10 +141,8 @@ fn print_usage() {
     println!("  shifu docs ...             validate documentation submissions and canonical roots");
     println!("  shifu gate ...             inspect and plan registered project gates");
     println!("  shifu proxy | config ...   manage local mirror/cache config (build-local.env)");
-    println!("  shifu clone [path]         clone the kungfu repository (default: current dir;");
     println!(
-        "                             {}",
-        style::dim("SHIFU_CLONE_URL overrides the source)")
+        "  shifu source ...           plan, explicitly acquire, or verify an exact source cut"
     );
     println!("  shifu doctor               check the development environment (install pointers");
     println!(
@@ -167,9 +161,11 @@ fn print_usage() {
         style::dim("release; --list provenance; --rollback one step back)")
     );
     println!("  shifu promote [--launch]   install the unique descendant dev build");
+    println!("  shifu promote --adopt-installed --build <id>  bind a pre-receipt local Product");
     println!("  shifu promote --rollback   restore the exact retained prior Product");
     println!("  shifu builds               list provenance and Git relation for dev builds");
     println!("  shifu artifacts <verb>     print the local artifact contract or schema");
+    println!("  shifu agent ...             KFD-3 Agent brief, map, capabilities, and verify");
     println!("  shifu help                 pnpm's own help (tasks are pnpm scripts)");
     println!();
     println!(
@@ -183,6 +179,7 @@ fn print_usage() {
 }
 
 pub fn main_and_exit(args: &[String], invocation: InvocationContext) -> ! {
+    shifu_core::host::validate_current_host().unwrap_or_else(|e| util::die_code(e, 64));
     let first = args.first().map(String::as_str);
 
     // Answers for this binary itself — never delegated (the shim reads it to
@@ -198,10 +195,14 @@ pub fn main_and_exit(args: &[String], invocation: InvocationContext) -> ! {
         print_usage();
         exit(if args.is_empty() { 2 } else { 0 });
     }
-
-    // Repo acquisition — the one verb that must work outside a checkout.
-    if first == Some("clone") {
-        clone_repo(&args[1..]);
+    // Product-owned Agent discovery is static, rootless, and read-only.
+    if first == Some("agent") {
+        util::run_agent(&args[1..]);
+    }
+    // Exact source acquisition is rootless. Planning and verification are
+    // read-only; acquisition is gated by its own explicit --execute flag.
+    if first == Some("source") {
+        source::run(&args[1..]);
     }
 
     let is_version = matches!(first, Some("--version") | Some("-v") | Some("-V"));
@@ -258,7 +259,7 @@ pub fn main_and_exit(args: &[String], invocation: InvocationContext) -> ! {
         promote::run_promote(&args[1..]);
     }
     if is_builds {
-        promote::run_builds(&args[1..]);
+        promote::run_builds(root.as_deref(), &args[1..]);
     }
     if is_artifacts {
         artifact_catalog::run_discovery(&args[1..]);
@@ -310,58 +311,6 @@ pub fn main_and_exit(args: &[String], invocation: InvocationContext) -> ! {
     match first {
         Some(cmd) if L2_SUBCOMMANDS.contains(&cmd) => dispatch::delegate_l2(&root, args),
         _ => dispatch::run_pnpm(&root, args),
-    }
-}
-
-const DEFAULT_CLONE_URL: &str = "https://github.com/kungfu-systems/kungfu.git";
-
-/// `shifu clone [path]` — fetch the kungfu repository (default: into the
-/// current directory, which git requires to be empty). With this one verb an
-/// installed shifu is a self-sufficient bootstrap core: clone anywhere, and
-/// inside the checkout every later invocation delegates to the repo-pinned
-/// launcher, so new functionality always comes from the repo, never from
-/// re-installing the binary.
-fn clone_repo(args: &[String]) -> ! {
-    if args.len() > 1 {
-        util::die("usage: shifu clone [path]");
-    }
-    let dest = args.first().map(String::as_str).unwrap_or(".");
-    let url = env::var("SHIFU_CLONE_URL").unwrap_or_else(|_| DEFAULT_CLONE_URL.to_string());
-    let Some(git) = util::find_on_path("git") else {
-        util::die_code(
-            "git is required for clone — install it first (https://git-scm.com/downloads)",
-            127,
-        );
-    };
-    eprintln!(
-        "\u{1f94b} {}",
-        style::bold(&format!("cloning {url} into {dest}"))
-    );
-    let status = std::process::Command::new(git)
-        .arg("clone")
-        .arg(&url)
-        .arg(dest)
-        .status();
-    match status {
-        Ok(s) if s.success() => {
-            let cd_hint = if dest == "." {
-                String::new()
-            } else {
-                format!("cd {dest} && ")
-            };
-            eprintln!(
-                "\u{2705} {} next: {}",
-                style::green("done -"),
-                style::bold(&format!("{cd_hint}./shifu build")),
-            );
-            eprintln!(
-                "   {}",
-                style::dim("(or ./shifu doctor first to check your environment)")
-            );
-            exit(0);
-        }
-        Ok(s) => exit(s.code().unwrap_or(1)),
-        Err(e) => util::die(&format!("failed to run git clone: {e}")),
     }
 }
 
@@ -667,7 +616,7 @@ mod tests {
             "cache",
             "config",
             "proxy",
-            "clone",
+            "source",
             "self-update",
             "self-version",
             "promote",

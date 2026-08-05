@@ -1,9 +1,9 @@
 import * as capability from '@kungfu-tech/api/capability';
 import type {
-  AgentWorkLabStartupRoute,
   KfxExperienceFlowDescriptor,
   ProductSearchDocument,
   ProductSearchResult,
+  ProjectsCatalog,
 } from '@kungfu-tech/api/capability';
 import * as query from '@kungfu-tech/api/query';
 // Reference app shell: boots the in-process runtime and mounts kfx loaded
@@ -28,13 +28,18 @@ import type {
   ShellNotificationInput,
   ShellState,
   StatusBarItem,
-  StatusBarSeverity,
 } from '@kungfu-tech/kfx';
 import { mono, panelStyle } from '@kungfu-tech/kfx';
 import React from 'react';
 import * as ReactDOM from 'react-dom';
 import { createRoot } from 'react-dom/client';
 import * as jsxRuntime from 'react/jsx-runtime';
+import { ProjectWorkControlView } from '../../../../../extensions/work-dashboard/src/view/index';
+import {
+  actionableKfxFailures,
+  shouldOpenAgentWorkLab,
+  unavailableKfxMessage,
+} from '../../kfx-availability';
 import type { SessionWindowLaunchAuthorization } from '../../main/session-windows';
 import {
   accessibleEntries,
@@ -44,7 +49,6 @@ import {
   productRoleEntry,
   profileHomeId,
 } from '../../navigation';
-import { isResettableRuntimeFailure } from '../../runtime-recovery-contract';
 import {
   type RuntimeStatusResult,
   deriveWorkspaceRuntimePresentation,
@@ -53,7 +57,6 @@ import {
   GLOBAL_WORK_OBSERVER_EVENT_CHANNEL,
   GLOBAL_WORK_OBSERVER_SUBSCRIBE_CHANNEL,
   GLOBAL_WORK_OBSERVER_UNSUBSCRIBE_CHANNEL,
-  RUNTIME_BACKUP_RESET_CHANNEL,
   RUNTIME_STATUS_GET_CHANNEL,
   SESSION_WINDOW_OPEN_CHANNEL,
   SESSION_WINDOW_RESTORE_CHANNEL,
@@ -61,23 +64,9 @@ import {
   SHELL_NAVIGATE_CHANNEL,
   SHELL_REFRESH_CHANNEL,
   type ShellNavigateRequest,
-  WINDOW_CHROME_CONTROL_CHANNEL,
-  WINDOW_CHROME_GET_CHANNEL,
-  WINDOW_CHROME_STATE_CHANNEL,
-  WORKSPACE_GET_CHANNEL,
-  WORKSPACE_OPEN_CHANNEL,
-  WORKSPACE_SELECT_HOME_CHANNEL,
-  WORKSPACE_SELECT_PATH_CHANNEL,
-  WORKSPACE_SELECT_RECENT_CHANNEL,
-  WORKSPACE_START_CONTINUATION_CHANNEL,
 } from '../../sandbox/channels';
 import { publishRefresh } from '../../sandbox/refresh';
 import { createKfxSharedModules } from '../shared-modules';
-import {
-  AgentWorkLabPanel,
-  shouldOpenAgentWorkLab,
-  unavailableKfxMessage,
-} from './agent-work-lab';
 import {
   loadKungfuConfig,
   normalizedUiConfig,
@@ -88,6 +77,27 @@ import {
 } from './gui-config';
 import { type KfxLoadResult, loadKfx } from './kfx-loader';
 import {
+  AgentFirstOnboardingPanel,
+  type WindowChromeConfig,
+  type WindowChromeControl,
+  createLabOnboardingRoutes,
+  deferredAgentWorkStartup,
+  useAgentFirstEntry,
+  useWindowChrome,
+} from './product-navigation';
+import {
+  KfxErrorBoundary,
+  ProjectsPanel,
+  RetainedCoreSurfaceStack,
+  RuntimeFailurePanel,
+  WorkspacePanel,
+  kfxNativePlanArgs,
+  openRendererProjects,
+  resolveKfxHostDescriptor,
+  useRetainedCoreSurfaces,
+  workspaceIpc,
+} from './projects-panel';
+import {
   type Runtime,
   bootRuntime,
   deferredRuntime,
@@ -95,7 +105,18 @@ import {
   openRendererAgentWorkLab,
 } from './runtime';
 import { sandboxClient } from './sandbox-client';
-import { DEFAULT_STATE, loadShellState, saveShellState } from './shell-state';
+import {
+  DEFAULT_STATE,
+  exitHistoryStatusItem,
+  loadShellState,
+  notificationColor,
+  notificationId,
+  saveShellState,
+  statusColor,
+  trustStatusText,
+  trustTooltip,
+  useExitHistoryStatus,
+} from './shell-state';
 
 // Modules injected into every kfx bundle (the externals contract of
 // `kungfu sdk kfx build`): one React instance and the public API surfaces.
@@ -108,37 +129,6 @@ const SHARED_MODULES = createKfxSharedModules({
   capability,
   query,
 });
-
-// One failing kfx renders its error panel; it never takes the shell down.
-class KfxErrorBoundary extends React.Component<
-  { kfxId: string; children: React.ReactNode },
-  { error: Error | null }
-> {
-  state = { error: null as Error | null };
-  static getDerivedStateFromError(error: Error) {
-    return { error };
-  }
-  componentDidUpdate(prev: { kfxId: string }) {
-    if (prev.kfxId !== this.props.kfxId && this.state.error) {
-      this.setState({ error: null });
-    }
-  }
-  render() {
-    if (this.state.error) {
-      return (
-        <section style={panelStyle}>
-          <div style={{ ...mono, color: '#f48771' }}>
-            kfx `{this.props.kfxId}` failed: {this.state.error.message}
-          </div>
-          <div style={{ ...mono, color: '#6a6a6a', marginTop: 4 }}>
-            the shell and other kfx keep running — see the console for the stack
-          </div>
-        </section>
-      );
-    }
-    return this.props.children;
-  }
-}
 
 function subsetCaps(runtime: Runtime, entry: KfxEntry): KfxCapabilities | null {
   const full = {
@@ -155,6 +145,7 @@ function subsetCaps(runtime: Runtime, entry: KfxEntry): KfxCapabilities | null {
     agentSession: runtime.agentSession,
     agentWorkLab: runtime.agentWorkLab,
     workspace: runtime.workspace,
+    projects: runtime.projects,
   } as Record<string, unknown>;
   const subset: Record<string, unknown> = {};
   for (const key of entry.capabilities) {
@@ -189,6 +180,7 @@ function sandboxSubset(
     agentSession: runtime.agentSession,
     agentWorkLab: runtime.agentWorkLab,
     workspace: runtime.workspace,
+    projects: runtime.projects,
   };
   const subset: Record<string, Record<string, unknown>> = {};
   for (const key of entry.capabilities) {
@@ -254,154 +246,9 @@ function SandboxSlot({
   return <div ref={ref} style={{ width: '100%', height: '100%' }} />;
 }
 
-function statusColor(severity: StatusBarSeverity | undefined): string {
-  if (severity === 'ok') return '#4ec9b0';
-  if (severity === 'warning') return '#dcdcaa';
-  if (severity === 'error') return '#f48771';
-  return '#cccccc';
-}
-
-function trustStatusText(status: RuntimeStatusResult | null): string {
-  const assessments = status?.payload?.assessments;
-  if (!assessments) return 'trust unavailable';
-  const counts = assessments.counts ?? {};
-  const blocked =
-    (counts.stale ?? 0) +
-    (counts['insufficient-evidence'] ?? 0) +
-    (counts.conflicted ?? 0) +
-    (counts.unverifiable ?? 0) +
-    (counts['failed-retryable'] ?? 0);
-  if (blocked > 0) return `trust blocked ${String(blocked)}`;
-  if ((counts.pending ?? 0) + (counts.running ?? 0) > 0)
-    return `trust pending ${String((counts.pending ?? 0) + (counts.running ?? 0))}`;
-  return `trust fresh ${String(counts.fresh ?? 0)}`;
-}
-
-function trustTooltip(status: RuntimeStatusResult | null): string {
-  const assessments = status?.payload?.assessments?.assessments;
-  if (!assessments) return 'Assessment subscription is unavailable';
-  if (assessments.length === 0) return 'No load-bearing claims assessed';
-  return assessments
-    .map((assessment) => {
-      const request = assessment.request ?? {};
-      const risks = assessment.report?.residual_risks?.join('; ') || '-';
-      return `${assessment.state || '-'}: ${request.claim_id || '-'} for ${
-        request.purpose || '-'
-      }\nresidual risk: ${risks}\nproof: ${
-        assessment.report?.query_proof_root || '-'
-      }`;
-    })
-    .join('\n\n');
-}
-
-function notificationColor(level: ShellNotification['level']): string {
-  if (level === 'success') return '#4ec9b0';
-  if (level === 'warning') return '#dcdcaa';
-  if (level === 'error') return '#f48771';
-  return '#9cdcfe';
-}
-
-let notificationSeq = 0;
-function notificationId(): string {
-  notificationSeq += 1;
-  return (
-    globalThis.crypto?.randomUUID?.() ?? `n-${Date.now()}-${notificationSeq}`
-  );
-}
-
-type WindowChromeControl = 'minimize' | 'toggle-maximize' | 'close';
-type WindowChromeConfig = {
-  platform: 'darwin' | 'win32' | 'linux' | 'other';
-  mode: 'native' | 'integrated' | 'custom';
-  customControls: boolean;
-  draggable: boolean;
-  trafficLightInset: number;
-  controlInset: number;
-  maximized: boolean;
-  fullscreen: boolean;
-};
 type ElectronChromeStyle = React.CSSProperties & {
   WebkitAppRegion?: 'drag' | 'no-drag';
 };
-
-const defaultWindowChrome: WindowChromeConfig = {
-  platform: 'other',
-  mode: 'native',
-  customControls: false,
-  draggable: false,
-  trafficLightInset: 0,
-  controlInset: 0,
-  maximized: false,
-  fullscreen: false,
-};
-
-function readWindowChromeEnv(): WindowChromeConfig {
-  try {
-    const raw = window.process?.env?.KF_WINDOW_CHROME;
-    if (!raw) return defaultWindowChrome;
-    return { ...defaultWindowChrome, ...JSON.parse(raw) };
-  } catch {
-    return defaultWindowChrome;
-  }
-}
-
-function useWindowChrome(): [
-  WindowChromeConfig,
-  (control: WindowChromeControl) => void,
-] {
-  const [chrome, setChrome] =
-    React.useState<WindowChromeConfig>(readWindowChromeEnv);
-  React.useEffect(() => {
-    type ChromeIpc = {
-      invoke: (channel: string, payload?: unknown) => Promise<unknown>;
-      on: (
-        channel: string,
-        listener: (event: unknown, payload: unknown) => void,
-      ) => void;
-      removeListener: (
-        channel: string,
-        listener: (event: unknown, payload: unknown) => void,
-      ) => void;
-    };
-    let ipc: ChromeIpc | null = null;
-    try {
-      ipc = (window.require('electron') as { ipcRenderer: ChromeIpc })
-        .ipcRenderer;
-    } catch {
-      ipc = null;
-    }
-    if (!ipc) return;
-    void ipc.invoke(WINDOW_CHROME_GET_CHANNEL).then((next) => {
-      setChrome((current) => ({ ...current, ...(next as object) }));
-    });
-    const handler = (_event: unknown, payload: unknown) => {
-      setChrome((current) => ({ ...current, ...(payload as object) }));
-    };
-    ipc.on(WINDOW_CHROME_STATE_CHANNEL, handler);
-    return () => ipc?.removeListener(WINDOW_CHROME_STATE_CHANNEL, handler);
-  }, []);
-
-  const control = React.useCallback((next: WindowChromeControl) => {
-    try {
-      const ipc = (
-        window.require('electron') as {
-          ipcRenderer: {
-            invoke: (channel: string, payload: unknown) => Promise<unknown>;
-          };
-        }
-      ).ipcRenderer;
-      void ipc
-        .invoke(WINDOW_CHROME_CONTROL_CHANNEL, { control: next })
-        .then((state) =>
-          setChrome((current) => ({ ...current, ...(state as object) })),
-        );
-    } catch {
-      // Browser previews have no Electron window to control.
-    }
-  }, []);
-
-  return [chrome, control];
-}
 
 function ShellTitleBar({
   chrome,
@@ -410,11 +257,18 @@ function ShellTitleBar({
   searchResults,
   searchStatus,
   settingsOpen,
-  workspaceLabel,
+  activeViewId,
+  advancedItems,
+  failures,
   onSearchChange,
   onSearchActivate,
   onOpenSettings,
-  onOpenWorkspace,
+  onOpenAllWork,
+  currentProjectTitle,
+  onOpenCurrentProject,
+  onOpenProjects,
+  onOpenLab,
+  onOpenView,
   onWindowControl,
 }: {
   chrome: WindowChromeConfig;
@@ -423,16 +277,25 @@ function ShellTitleBar({
   searchResults: ProductSearchResult[];
   searchStatus: string;
   settingsOpen: boolean;
-  workspaceLabel: string;
+  activeViewId?: string;
+  advancedItems: ReturnType<typeof primaryNavigation>;
+  failures: Array<{ dir: string; error: string }>;
   onSearchChange: (value: string) => void;
   onSearchActivate: (result: ProductSearchResult) => void;
   onOpenSettings: () => void;
-  onOpenWorkspace: () => void;
+  onOpenAllWork: () => void;
+  currentProjectTitle: string;
+  onOpenCurrentProject?: () => void;
+  onOpenProjects: () => void;
+  onOpenLab: () => void;
+  onOpenView: (id: string) => void;
   onWindowControl: (control: WindowChromeControl) => void;
 }) {
   const searchRoot = React.useRef<HTMLFormElement>(null);
+  const menuRoot = React.useRef<HTMLDivElement>(null);
   const searchInput = React.useRef<HTMLInputElement>(null);
   const [searchOpen, setSearchOpen] = React.useState(false);
+  const [menuOpen, setMenuOpen] = React.useState(false);
   const [selectedSearchResult, setSelectedSearchResult] = React.useState(0);
   React.useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -441,6 +304,9 @@ function ShellTitleBar({
         setSearchOpen(true);
         searchInput.current?.focus();
         searchInput.current?.select();
+      } else if (event.key === 'Escape') {
+        setSearchOpen(false);
+        setMenuOpen(false);
       }
     };
     const onPointerDown = (event: MouseEvent) => {
@@ -451,6 +317,13 @@ function ShellTitleBar({
         !searchRoot.current.contains(target)
       ) {
         setSearchOpen(false);
+      }
+      if (
+        target instanceof Node &&
+        menuRoot.current &&
+        !menuRoot.current.contains(target)
+      ) {
+        setMenuOpen(false);
       }
     };
     window.addEventListener('keydown', onKeyDown);
@@ -465,6 +338,10 @@ function ShellTitleBar({
     if (!result) return;
     onSearchActivate(result);
     setSearchOpen(false);
+  };
+  const activateMenu = (action: () => void) => {
+    setMenuOpen(false);
+    action();
   };
   const dragRegion: ElectronChromeStyle = {
     WebkitAppRegion: chrome.draggable ? 'drag' : undefined,
@@ -592,7 +469,7 @@ function ShellTitleBar({
                 searchInput.current?.blur();
               }
             }}
-            placeholder="Search Help, Commands, Work"
+            placeholder="Search Help, Commands, Work, Projects"
             style={{
               width: '100%',
               height: 26,
@@ -719,29 +596,175 @@ function ShellTitleBar({
           paddingRight: 8,
         }}
       >
-        <button
-          type="button"
-          aria-label="Open workspace switcher"
-          title={workspaceLabel}
-          onClick={onOpenWorkspace}
-          style={{
-            ...interactiveRegion,
-            ...mono,
-            maxWidth: 180,
-            height: 28,
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            whiteSpace: 'nowrap',
-            border: '1px solid #3c3c3c',
-            borderRadius: 6,
-            cursor: 'pointer',
-            background: '#252526',
-            color: '#9cdcfe',
-            padding: '0 8px',
-          }}
+        <div
+          ref={menuRoot}
+          style={{ ...interactiveRegion, position: 'relative' }}
         >
-          {workspaceLabel}
-        </button>
+          <button
+            type="button"
+            aria-label="Open product menu"
+            aria-expanded={menuOpen}
+            title="Navigate Kungfu"
+            onClick={() => setMenuOpen((open) => !open)}
+            style={{
+              ...mono,
+              maxWidth: 210,
+              height: 28,
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+              border: '1px solid #3c3c3c',
+              borderRadius: 6,
+              cursor: 'pointer',
+              background: menuOpen ? '#04395e' : '#252526',
+              color: '#9cdcfe',
+              padding: '0 9px',
+            }}
+          >
+            ☰ {activeTitle}
+          </button>
+          {menuOpen ? (
+            <nav
+              aria-label="Kungfu product menu"
+              style={{
+                position: 'absolute',
+                top: 32,
+                right: 0,
+                width: 250,
+                maxHeight: 'min(520px, calc(100vh - 64px))',
+                overflow: 'auto',
+                padding: 6,
+                boxSizing: 'border-box',
+                border: '1px solid #454545',
+                borderRadius: 8,
+                background: '#202124',
+                boxShadow: '0 16px 42px rgba(0, 0, 0, 0.58)',
+              }}
+            >
+              {[
+                {
+                  id: 'all-work',
+                  title: 'All Work',
+                  icon: '◎',
+                  active: activeViewId === 'core-work',
+                  action: onOpenAllWork,
+                },
+                {
+                  id: 'projects',
+                  title: 'All Projects',
+                  icon: '◫',
+                  active: activeViewId === 'projects',
+                  action: onOpenProjects,
+                },
+                ...(onOpenCurrentProject
+                  ? [
+                      {
+                        id: 'current-project',
+                        title: currentProjectTitle,
+                        icon: '▣',
+                        active: activeViewId === 'current-project',
+                        action: onOpenCurrentProject,
+                      },
+                    ]
+                  : []),
+                {
+                  id: 'agent-work-lab',
+                  title: 'Agent Work Lab',
+                  icon: '🧪',
+                  active: activeViewId === 'agent-work-lab',
+                  action: onOpenLab,
+                },
+              ].map((item) => (
+                <button
+                  key={item.id}
+                  type="button"
+                  aria-current={item.active ? 'page' : undefined}
+                  onClick={() => activateMenu(item.action)}
+                  style={{
+                    ...mono,
+                    width: '100%',
+                    minHeight: 34,
+                    display: 'grid',
+                    gridTemplateColumns: '22px minmax(0, 1fr)',
+                    alignItems: 'center',
+                    gap: 8,
+                    padding: '7px 10px',
+                    border: 'none',
+                    borderRadius: 5,
+                    cursor: 'pointer',
+                    textAlign: 'left',
+                    background: item.active ? '#04395e' : 'transparent',
+                    color: item.active ? '#9cdcfe' : '#e6edf3',
+                  }}
+                >
+                  <span aria-hidden="true">{item.icon}</span>
+                  <span>{item.title}</span>
+                </button>
+              ))}
+              {advancedItems.length > 0 ? (
+                <>
+                  <div
+                    style={{
+                      ...mono,
+                      margin: '6px 8px 3px',
+                      paddingTop: 7,
+                      borderTop: '1px solid #3c3c3c',
+                      color: '#9aa0a6',
+                      fontSize: 11,
+                    }}
+                  >
+                    More
+                  </div>
+                  {advancedItems.map((item) => (
+                    <button
+                      key={item.id}
+                      type="button"
+                      aria-current={
+                        activeViewId === item.id ? 'page' : undefined
+                      }
+                      onClick={() => activateMenu(() => onOpenView(item.id))}
+                      style={{
+                        ...mono,
+                        width: '100%',
+                        minHeight: 32,
+                        display: 'grid',
+                        gridTemplateColumns: '22px minmax(0, 1fr)',
+                        alignItems: 'center',
+                        gap: 8,
+                        padding: '6px 10px',
+                        border: 'none',
+                        borderRadius: 5,
+                        cursor: 'pointer',
+                        textAlign: 'left',
+                        background:
+                          activeViewId === item.id ? '#04395e' : 'transparent',
+                        color: activeViewId === item.id ? '#9cdcfe' : '#d7dde5',
+                      }}
+                    >
+                      <span aria-hidden="true">{item.icon}</span>
+                      <span>{item.title}</span>
+                    </button>
+                  ))}
+                </>
+              ) : null}
+              {failures.length > 0 ? (
+                <div
+                  title={failures
+                    .map((failure) => `${failure.dir}: ${failure.error}`)
+                    .join('\n')}
+                  style={{
+                    ...mono,
+                    margin: '8px 8px 4px',
+                    color: '#f48771',
+                    fontSize: 11,
+                  }}
+                >
+                  {failures.length} kfx failed to load
+                </div>
+              ) : null}
+            </nav>
+          ) : null}
+        </div>
         <button
           type="button"
           aria-label="Open settings"
@@ -784,271 +807,36 @@ function ShellTitleBar({
   );
 }
 
-type WorkspaceSnapshot = {
-  current: {
-    workspaceId: string;
-    workspaceKind: 'home' | 'project';
-    workspaceRoot: string | null;
-    displayPath: string;
-    dataHome: string;
-    state:
-      | 'uninitialized'
-      | 'shadow-only'
-      | 'live-runtime'
-      | 'evidence-degraded'
-      | 'unavailable';
-    diagnosis: string;
-    evidenceLevel: 'none' | 'settled-review' | 'live-local' | 'degraded';
-    settledEpisodeCount: number;
-    projectCutCount: number;
-  };
-  recent: Array<{
-    workspace_id?: string;
-    workspace_kind?: 'home' | 'project';
-    workspace_root?: string | null;
-    display_path?: string;
-    data_home?: string;
-  }>;
-};
-
-function workspaceIpc() {
-  const ipcRenderer = (
-    window.require('electron') as {
-      ipcRenderer: {
-        invoke: (channel: string, payload?: unknown) => Promise<unknown>;
-      };
-    }
-  ).ipcRenderer;
-  return {
-    get: () =>
-      ipcRenderer.invoke(WORKSPACE_GET_CHANNEL) as Promise<WorkspaceSnapshot>,
-    open: () => ipcRenderer.invoke(WORKSPACE_OPEN_CHANNEL),
-    home: () => ipcRenderer.invoke(WORKSPACE_SELECT_HOME_CHANNEL),
-    path: (workspaceRoot: string) =>
-      ipcRenderer.invoke(WORKSPACE_SELECT_PATH_CHANNEL, { workspaceRoot }),
-    startContinuation: () =>
-      ipcRenderer.invoke(WORKSPACE_START_CONTINUATION_CHANNEL),
-    recent: (workspaceId: string) =>
-      ipcRenderer.invoke(WORKSPACE_SELECT_RECENT_CHANNEL, { workspaceId }),
-  };
-}
-
-function WorkspacePanel() {
-  const bridge = React.useMemo(workspaceIpc, []);
-  const [snapshot, setSnapshot] = React.useState<WorkspaceSnapshot | null>(
-    null,
-  );
-  const [error, setError] = React.useState<string | null>(null);
-  React.useEffect(() => {
-    void bridge
-      .get()
-      .then(setSnapshot)
-      .catch((e) => setError((e as Error).message));
-  }, [bridge]);
-  const run = (action: () => Promise<unknown>) => {
-    setError(null);
-    void action().catch((e) => setError((e as Error).message));
-  };
-  return (
-    <section style={{ ...panelStyle, width: 'min(680px, 100%)' }}>
-      <h2 style={{ margin: '0 0 8px', fontSize: 15 }}>Workspace</h2>
-      {snapshot && (
-        <div style={{ ...mono, color: '#9cdcfe', marginBottom: 10 }}>
-          {snapshot.current.displayPath} · {snapshot.current.state}
-          {snapshot.current.diagnosis ? ` · ${snapshot.current.diagnosis}` : ''}
-        </div>
-      )}
-      <div style={{ display: 'flex', gap: 6, marginBottom: 12 }}>
-        <button
-          type="button"
-          onClick={() => run(bridge.open)}
-          style={{ ...mono, padding: '6px 10px' }}
-        >
-          Open Workspace…
-        </button>
-        <button
-          type="button"
-          onClick={() => run(bridge.home)}
-          style={{ ...mono, padding: '6px 10px' }}
-        >
-          Use Home Workspace
-        </button>
-      </div>
-      <div style={{ ...mono, color: '#858585', marginBottom: 6 }}>
-        Opening or selecting is read-only. The first fact-bearing action creates
-        the selected `.kungfu` data home.
-      </div>
-      {snapshot?.current.state === 'shadow-only' && (
-        <div
-          style={{
-            display: 'grid',
-            gap: 5,
-            padding: 8,
-            marginBottom: 10,
-            border: '1px solid #3c3c3c',
-            borderRadius: 5,
-          }}
-        >
-          <div style={{ ...mono, color: '#9cdcfe' }}>
-            Settled history is available without a local runtime.
-          </div>
-          <div style={{ ...mono, color: '#858585' }}>
-            {snapshot.current.settledEpisodeCount} Episode shadow(s) ·{' '}
-            {snapshot.current.projectCutCount} Project Cut(s) · evidence{' '}
-            {snapshot.current.evidenceLevel}. Git shadows are not Episode
-            authority; raw replay and requalification require full evidence.
-          </div>
-          <button
-            type="button"
-            onClick={() => run(bridge.startContinuation)}
-            style={{ ...mono, padding: '6px 10px', width: 'fit-content' }}
-          >
-            Start local continuation
-          </button>
-        </div>
-      )}
-      {snapshot?.current.state === 'evidence-degraded' && (
-        <div style={{ ...mono, color: '#f48771', marginBottom: 10 }}>
-          Settled evidence is degraded. Continuation is disabled until the
-          reported shadow mismatch is repaired or full evidence is imported.
-        </div>
-      )}
-      {snapshot?.current.state === 'uninitialized' && (
-        <div
-          style={{
-            display: 'grid',
-            gap: 5,
-            padding: 8,
-            marginBottom: 10,
-            border: '1px solid #3c3c3c',
-            borderRadius: 5,
-          }}
-        >
-          <div style={{ ...mono, color: '#9cdcfe' }}>
-            This Workspace has not been initialized yet.
-          </div>
-          <div style={{ ...mono, color: '#858585' }}>
-            Open the focused Profile and run its first fact-bearing action when
-            you are ready.
-          </div>
-        </div>
-      )}
-      {snapshot?.recent.map((recent) => (
-        <button
-          key={recent.workspace_id}
-          type="button"
-          disabled={
-            recent.workspace_kind === 'project' && !recent.workspace_root
-          }
-          onClick={() =>
-            recent.workspace_id &&
-            run(() => bridge.recent(recent.workspace_id as string))
-          }
-          style={{
-            ...mono,
-            display: 'block',
-            width: '100%',
-            padding: '5px 7px',
-            border: 'none',
-            background: 'transparent',
-            color: '#cccccc',
-            textAlign: 'left',
-            cursor: 'pointer',
-          }}
-        >
-          {recent.display_path || recent.workspace_root || 'Home Workspace'}
-        </button>
-      ))}
-      {error && <div style={{ ...mono, color: '#f48771' }}>{error}</div>}
-    </section>
-  );
-}
-
-function RuntimeFailurePanel({ message }: { message: string }) {
-  const [busy, setBusy] = React.useState(false);
-  const [error, setError] = React.useState('');
-  const resettable = isResettableRuntimeFailure(message);
-  const backupAndReset = () => {
-    setBusy(true);
-    setError('');
-    const ipcRenderer = (
-      window.require('electron') as {
-        ipcRenderer: {
-          invoke: (
-            channel: string,
-            payload: unknown,
-          ) => Promise<{ ok?: boolean; canceled?: boolean; error?: string }>;
-        };
-      }
-    ).ipcRenderer;
-    void ipcRenderer
-      .invoke(RUNTIME_BACKUP_RESET_CHANNEL, { message })
-      .then((result) => {
-        if (!result.ok && !result.canceled) {
-          setError(result.error || 'runtime recovery failed');
-        }
-      })
-      .catch((reason) => setError((reason as Error).message))
-      .finally(() => setBusy(false));
-  };
-  return (
-    <section style={{ ...panelStyle, width: 'min(680px, 100%)' }}>
-      <h2 style={{ margin: '0 0 8px', fontSize: 15 }}>
-        Workspace runtime unavailable
-      </h2>
-      <pre
-        style={{
-          ...mono,
-          color: '#f48771',
-          whiteSpace: 'pre-wrap',
-          overflowWrap: 'anywhere',
-        }}
-      >
-        {message || 'Unknown runtime startup failure'}
-      </pre>
-      {resettable && (
-        <>
-          <button
-            type="button"
-            disabled={busy}
-            onClick={backupAndReset}
-            style={{ ...mono, padding: '6px 10px' }}
-          >
-            {busy ? 'Preparing recovery…' : 'Back up and reset runtime'}
-          </button>
-          <div style={{ ...mono, color: '#858585', marginTop: 8 }}>
-            The current runtime is preserved under
-            .kungfu/backups/runtime-recovery before Kungfu creates a fresh one.
-          </div>
-        </>
-      )}
-      {error && <div style={{ ...mono, color: '#f48771' }}>{error}</div>}
-    </section>
-  );
-}
-
 function App() {
   const [agentWorkLab] = React.useState(openRendererAgentWorkLab);
+  const [projects] = React.useState(openRendererProjects);
   const workspaceBridge = React.useMemo(workspaceIpc, []);
-  const [startup] = React.useState<AgentWorkLabStartupRoute>(() => {
-    try {
-      return agentWorkLab.inspectSync();
-    } catch (error) {
-      return {
-        schema: 'kungfu.agent-work-lab.startup-route/v1',
-        state: 'diagnostic',
-        route: 'diagnostic',
-        reasonCode: 'startup-inspection-failed',
-        message: error instanceof Error ? error.message : String(error),
-        runtimeDir: window.process.env.KF_RUNTIME_DIR || '',
-        workGraphPresent: null,
-        evidence: [],
-        writeOccurred: false,
-      };
-    }
-  });
+  const {
+    entry: agentFirstEntry,
+    initialOpen: initialOnboardingOpen,
+    persist: persistOnboarding,
+    installCli: installOnboardingCli,
+  } = useAgentFirstEntry();
+  const initialProjectsOpen =
+    window.process.env.KFE_INITIAL_SURFACE === 'projects';
+  const initialFocusedProjectPath =
+    window.process.env.KFE_FOCUSED_PROJECT_PATH || '';
+  const initialCoreWorkOpen = !initialProjectsOpen && !initialOnboardingOpen;
+  const [startup] = React.useState(() =>
+    deferredAgentWorkStartup(
+      initialOnboardingOpen
+        ? 'onboarding'
+        : initialProjectsOpen
+          ? 'projects'
+          : 'work',
+      window.process.env.KF_RUNTIME_DIR || '',
+    ),
+  );
   const startupSurface = capability.agentWorkLabStartupSurface(startup);
   const [runtime] = React.useState(() =>
+    !initialProjectsOpen &&
+    !initialOnboardingOpen &&
+    !initialCoreWorkOpen &&
     startupSurface === 'work-graph'
       ? bootRuntime()
       : deferredRuntime(
@@ -1056,24 +844,104 @@ function App() {
           `startup routed to ${startup.route}: ${startup.reasonCode}`,
         ),
   );
+  runtime.projects = projects;
   const [kfxDescriptor] = React.useState<KfxExperienceFlowDescriptor | null>(
     () => {
-      try {
-        const plan = runtime.storage?.kfxRegistry('plan', {});
-        return (
-          (plan?.hostContract as unknown as KfxExperienceFlowDescriptor) ?? null
-        );
-      } catch {
+      if (initialProjectsOpen || initialOnboardingOpen || initialCoreWorkOpen)
         return null;
-      }
+      const env = window.process.env as Record<string, string | undefined>;
+      return resolveKfxHostDescriptor({
+        nativePlan: () => runtime.storage?.kfxRegistry('plan', {}),
+        cliPlan: () => {
+          const childProcess = window.require('node:child_process') as {
+            execFileSync: (
+              file: string,
+              args: string[],
+              options: {
+                encoding: 'utf8';
+                env: Record<string, string | undefined>;
+                maxBuffer: number;
+              },
+            ) => string;
+          };
+          const path = window.require('node:path') as Pick<
+            typeof import('node:path'),
+            'delimiter' | 'dirname' | 'resolve'
+          >;
+          const fs = window.require('node:fs') as {
+            existsSync: (value: string) => boolean;
+          };
+          const bin = env.KUNGFU_CLI_BIN || env.KUNGFU_BIN;
+          if (!bin) throw new Error('Kungfu CLI is unavailable');
+          const raw = childProcess.execFileSync(
+            bin,
+            guiKungfuCliArgs(env, kfxNativePlanArgs(env, path, fs.existsSync)),
+            { encoding: 'utf8', env, maxBuffer: 4 * 1024 * 1024 },
+          );
+          return JSON.parse(raw) as unknown;
+        },
+      });
     },
   );
   const [loaded] = React.useState<KfxLoadResult>(() =>
-    loadKfx(window.process.env, SHARED_MODULES, kfxDescriptor),
+    initialProjectsOpen || initialOnboardingOpen || initialCoreWorkOpen
+      ? {
+          discoveredKfxCount: 0,
+          entries: [],
+          suites: {},
+          profiles: [],
+          failures: [],
+        }
+      : loadKfx(window.process.env, SHARED_MODULES, kfxDescriptor),
+  );
+  React.useEffect(() => {
+    if (
+      window.process.env.KUNGFU_GUI_DEV_SUPERVISOR === '1' &&
+      loaded.failures.length > 0
+    ) {
+      console.error(
+        `KF_GUI_KFX_FAILURES ${JSON.stringify(
+          loaded.failures.map((failure) => ({
+            dir: failure.dir,
+            error: failure.error,
+          })),
+        )}`,
+      );
+    }
+  }, [loaded.failures]);
+  const visibleKfxFailures = React.useMemo(
+    () => actionableKfxFailures(loaded.failures, kfxDescriptor !== null),
+    [kfxDescriptor, loaded.failures],
   );
   const [labOpen, setLabOpen] = React.useState(() =>
-    shouldOpenAgentWorkLab(startupSurface, loaded.entries.length),
+    initialProjectsOpen || initialOnboardingOpen || initialCoreWorkOpen
+      ? false
+      : shouldOpenAgentWorkLab(startupSurface, loaded.entries.length),
   );
+  const [onboardingOpen, setOnboardingOpen] = React.useState(
+    initialOnboardingOpen,
+  );
+  const [projectsOpen, setProjectsOpen] = React.useState(
+    !initialOnboardingOpen && initialProjectsOpen && !initialFocusedProjectPath,
+  );
+  const [coreWorkOpen, setCoreWorkOpen] = React.useState(
+    initialCoreWorkOpen ||
+      (!initialOnboardingOpen &&
+        initialProjectsOpen &&
+        Boolean(initialFocusedProjectPath)),
+  );
+  const retainedCoreSurfaces = useRetainedCoreSurfaces({
+    projectsOpen,
+    labOpen,
+    coreWorkOpen,
+  });
+  const [focusedProjectPath, setFocusedProjectPath] = React.useState(
+    initialFocusedProjectPath,
+  );
+  const [projectSearchDocuments, setProjectSearchDocuments] = React.useState<
+    ProductSearchDocument[]
+  >([]);
+  const [currentProjectName, setCurrentProjectName] = React.useState('');
   const [state, setState] = React.useState<ShellState>(() =>
     runtime.domain ? loadShellState(runtime.domain) : DEFAULT_STATE,
   );
@@ -1094,7 +962,31 @@ function App() {
     () =>
       window.process.env.KFE_INITIAL_VIEW || profileHomeId(profile, enabled),
   );
-  const [params, setParams] = React.useState<Record<string, string>>({});
+  const [params, setParams] = React.useState<Record<string, string>>(
+    (): Record<string, string> =>
+      initialFocusedProjectPath
+        ? {
+            projectPath: initialFocusedProjectPath,
+            projectSection: 'files',
+          }
+        : {},
+  );
+  const lastWorkParamsRef = React.useRef<Record<string, string>>(
+    initialFocusedProjectPath
+      ? {
+          projectPath: initialFocusedProjectPath,
+          projectSection: 'files',
+        }
+      : {},
+  );
+  const lastProjectParamsRef = React.useRef<Record<string, string> | null>(
+    initialFocusedProjectPath
+      ? {
+          projectPath: initialFocusedProjectPath,
+          projectSection: 'files',
+        }
+      : null,
+  );
   const [settingsOpen, setSettingsOpen] = React.useState(false);
   const [workspaceOpen, setWorkspaceOpen] = React.useState(false);
   const [searchText, setSearchText] = React.useState('');
@@ -1114,6 +1006,7 @@ function App() {
   const [configError, setConfigError] = React.useState('');
   const [runtimeStatus, setRuntimeStatus] =
     React.useState<RuntimeStatusResult | null>(null);
+  const historyStatus = useExitHistoryStatus(runtime.ok);
   const [statusBarItems, setStatusBarItems] = React.useState<
     Record<string, StatusBarItem>
   >({});
@@ -1202,6 +1095,12 @@ function App() {
   }, []);
 
   React.useEffect(() => {
+    if (
+      initialProjectsOpen &&
+      (params.projectId?.trim() || params.projectPath?.trim())
+    ) {
+      return;
+    }
     type GlobalWorkObserverEvent =
       | {
           schema: 'kungfu.gui.global-work-observer-event/v1';
@@ -1255,7 +1154,7 @@ function App() {
       ipc?.removeListener(GLOBAL_WORK_OBSERVER_EVENT_CHANNEL, receive);
       void ipc?.invoke(GLOBAL_WORK_OBSERVER_UNSUBSCRIBE_CHANNEL);
     };
-  }, []);
+  }, [initialProjectsOpen, params.projectId, params.projectPath]);
 
   // shared refresh bus: one shell-owned timer, kfx subscribe
   const subscribers = React.useRef(new Set<() => void>());
@@ -1369,7 +1268,10 @@ function App() {
 
   const openKfx = React.useCallback(
     (kfxId: string, nextParams?: Record<string, string>) => {
+      setOnboardingOpen(false);
       setLabOpen(false);
+      setProjectsOpen(false);
+      setCoreWorkOpen(false);
       setParams(nextParams ?? {});
       setActive(kfxId);
     },
@@ -1400,9 +1302,13 @@ function App() {
 
   React.useEffect(() => {
     if (state.profileId !== profile.id) {
-      updateState({ profileId: profile.id });
+      setState((current) => {
+        const next = { ...current, profileId: profile.id };
+        if (runtime.domain) saveShellState(runtime.domain, next);
+        return next;
+      });
     }
-  }, [profile.id, state.profileId, updateState]);
+  }, [profile.id, runtime.domain, state.profileId]);
 
   React.useEffect(() => {
     type NavigationIpc = {
@@ -1426,6 +1332,11 @@ function App() {
     const navigate = (_event: unknown, request: ShellNavigateRequest) => {
       if (request.target === 'settings') {
         setSettingsOpen(true);
+      } else if (request.target === 'onboarding') {
+        setLabOpen(false);
+        setProjectsOpen(false);
+        setCoreWorkOpen(false);
+        setOnboardingOpen(true);
       } else if (request.target === 'profile-home') {
         openKfx(profileHomeId(profile, enabled));
       } else if (request.target === 'view') {
@@ -1546,6 +1457,12 @@ function App() {
     },
     [dismissNotification],
   );
+  const labOnboarding = createLabOnboardingRoutes({
+    state: agentFirstEntry.state,
+    persist: persistOnboarding,
+    notify: showNotification,
+    openPath: workspaceBridge.path,
+  });
 
   const uiConfig = normalizedUiConfig(config);
 
@@ -1699,77 +1616,57 @@ function App() {
     ...sessionWindowShell,
   };
 
-  const sidebarCollapsed = state.sidebarCollapsed;
   const primaryNav = primaryNavigation(profile, enabled);
-  const toggleSidebar = React.useCallback(() => {
-    updateState({ sidebarCollapsed: !sidebarCollapsed });
-  }, [sidebarCollapsed, updateState]);
-  const navButton = (item: (typeof primaryNav)[number]) => (
-    <button
-      key={item.id}
-      type="button"
-      onClick={() => shell.open(item.id)}
-      title={item.title}
-      aria-label={item.title}
-      aria-current={activeKfx?.id === item.id ? 'page' : undefined}
-      style={{
-        ...mono,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: sidebarCollapsed ? 'center' : 'flex-start',
-        width: '100%',
-        height: sidebarCollapsed ? 32 : undefined,
-        minHeight: 32,
-        textAlign: sidebarCollapsed ? 'center' : 'left',
-        padding: sidebarCollapsed ? 0 : '6px 10px',
-        border: 'none',
-        borderRadius: 5,
-        cursor: 'pointer',
-        gap: 8,
-        background: activeKfx?.id === item.id ? '#04395e' : 'transparent',
-        color: activeKfx?.id === item.id ? '#9cdcfe' : '#cccccc',
-        overflow: 'hidden',
-      }}
-    >
-      <span aria-hidden="true" style={{ fontSize: 16, flexShrink: 0 }}>
-        {item.icon}
-      </span>
-      {!sidebarCollapsed && (
-        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>
-          {item.title}
-        </span>
-      )}
-    </button>
+  const workEntry =
+    productRoleEntry(enabled, 'profile-view') ??
+    enabled.find((entry) => entry.id === profileHomeId(profile, enabled));
+  const openCoreWork = React.useCallback(
+    (nextParams: Record<string, string>) => {
+      setOnboardingOpen(false);
+      setLabOpen(false);
+      setProjectsOpen(false);
+      setParams(nextParams);
+      setCoreWorkOpen(true);
+    },
+    [],
   );
-  const labButton = (
-    <button
-      type="button"
-      onClick={() => setLabOpen(true)}
-      title="Agent Work Lab"
-      aria-label="Agent Work Lab"
-      aria-current={labOpen ? 'page' : undefined}
-      style={{
-        ...mono,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: sidebarCollapsed ? 'center' : 'flex-start',
-        width: '100%',
-        minHeight: 32,
-        padding: sidebarCollapsed ? 0 : '6px 10px',
-        border: 'none',
-        borderRadius: 5,
-        cursor: 'pointer',
-        gap: 8,
-        background: labOpen ? '#04395e' : 'transparent',
-        color: labOpen ? '#9cdcfe' : '#cccccc',
-      }}
-    >
-      <span aria-hidden="true" style={{ fontSize: 16 }}>
-        🧪
-      </span>
-      {!sidebarCollapsed && <span>Agent Work Lab</span>}
-    </button>
+  const openWorkSurface = React.useCallback(
+    (nextParams?: Record<string, string>) => {
+      const restoredParams = nextParams ?? lastWorkParamsRef.current;
+      if (nextParams && Object.keys(nextParams).length > 0) {
+        lastWorkParamsRef.current = nextParams;
+      }
+      const projectPath = restoredParams.projectPath?.trim();
+      if (projectPath) {
+        lastProjectParamsRef.current = restoredParams;
+        setFocusedProjectPath(projectPath);
+      }
+      if (workEntry) {
+        openKfx(workEntry.id, restoredParams);
+      } else {
+        openCoreWork(restoredParams);
+      }
+    },
+    [openCoreWork, openKfx, workEntry],
   );
+  const restoreProjectWork = React.useCallback(
+    (projectPath: string, section: 'files' | 'work'): boolean => {
+      openWorkSurface({ projectPath, projectSection: section });
+      return true;
+    },
+    [openWorkSurface],
+  );
+  const advancedNav = primaryNav.filter((item) => item.id !== workEntry?.id);
+  const projectWorkOpen =
+    (coreWorkOpen || activeKfx?.id === workEntry?.id) &&
+    Boolean(params.projectPath?.trim());
+  const currentProjectDisplayName =
+    currentProjectName ||
+    lastProjectParamsRef.current?.projectPath
+      ?.split(/[\\/]/u)
+      .filter(Boolean)
+      .at(-1) ||
+    '';
 
   const caps = activeKfx ? subsetCaps(runtime, activeKfx) : null;
   const settingsKfx =
@@ -1796,11 +1693,13 @@ function App() {
       ...cliSearchDocuments,
       ...globalWorkSearchDocuments,
       ...workSearchDocuments,
+      ...projectSearchDocuments,
       ...viewSearchDocuments,
     ],
     [
       cliSearchDocuments,
       globalWorkSearchDocuments,
+      projectSearchDocuments,
       viewSearchDocuments,
       workSearchDocuments,
     ],
@@ -1809,22 +1708,34 @@ function App() {
     () => capability.searchProductDocuments(searchDocuments, searchText),
     [searchDocuments, searchText],
   );
+  const handleProjectsCatalog = React.useCallback(
+    (catalog: ProjectsCatalog) => {
+      setProjectSearchDocuments(capability.projectSearchDocuments(catalog));
+      setCurrentProjectName(
+        catalog.projects.find((project) => project.path === focusedProjectPath)
+          ?.name ??
+          catalog.projects.find((project) => project.selected)?.name ??
+          '',
+      );
+    },
+    [focusedProjectPath],
+  );
+  const handleOpenProject = React.useCallback(
+    (workspace: { workspace_root: string }) =>
+      workspaceBridge.path(workspace.workspace_root),
+    [workspaceBridge],
+  );
   const activateSearchResult = React.useCallback(
     (result: ProductSearchResult) => {
       if (result.action.kind === 'open-view') {
         openKfx(result.action.viewId);
       } else if (result.action.kind === 'open-work') {
-        const workView = productRoleEntry(enabled, 'profile-view');
-        if (workView) {
-          openKfx(workView.id, { workId: result.action.workId });
-        } else {
-          showNotification({
-            level: 'warning',
-            title: 'Work view unavailable',
-            message:
-              'The Work result remains read-only, but no enabled Profile view can open its details.',
-          });
-        }
+        openWorkSurface({ workId: result.action.workId });
+      } else if (result.action.kind === 'open-project') {
+        setFocusedProjectPath(result.action.projectPath);
+        setLabOpen(false);
+        setCoreWorkOpen(false);
+        setProjectsOpen(true);
       } else {
         showNotification({
           level: 'info',
@@ -1834,7 +1745,7 @@ function App() {
       }
       setSearchText('');
     },
-    [enabled, openKfx, showNotification],
+    [openKfx, openWorkSurface, showNotification],
   );
 
   const workspaceRuntime = deriveWorkspaceRuntimePresentation(runtimeStatus);
@@ -1883,6 +1794,7 @@ function App() {
       tooltip: trustTooltip(runtimeStatus),
       command: statusCommand,
     },
+    exitHistoryStatusItem(historyStatus, statusCommand),
     {
       id: 'system.profile',
       text: `profile: ${profile.id}`,
@@ -2270,19 +2182,65 @@ function App() {
       <ShellTitleBar
         chrome={windowChrome}
         activeTitle={
-          labOpen ? 'Agent Work Lab' : (activeKfx?.title ?? 'Kungfu Episodes')
+          onboardingOpen
+            ? 'Getting Started'
+            : labOpen
+              ? 'Agent Work Lab'
+              : projectsOpen
+                ? 'Projects'
+                : coreWorkOpen
+                  ? projectWorkOpen
+                    ? `Project · ${currentProjectDisplayName}`
+                    : 'All Work'
+                  : (activeKfx?.title ?? 'Kungfu Episodes')
         }
         searchText={searchText}
         searchResults={searchResults}
         searchStatus={searchCatalogStatus}
         settingsOpen={settingsOpen}
-        workspaceLabel={
-          window.process.env.KF_WORKSPACE_DISPLAY_PATH || 'Home Workspace'
+        activeViewId={
+          onboardingOpen
+            ? 'onboarding'
+            : labOpen
+              ? 'agent-work-lab'
+              : projectsOpen
+                ? 'projects'
+                : projectWorkOpen
+                  ? 'current-project'
+                  : coreWorkOpen || activeKfx?.id === workEntry?.id
+                    ? 'core-work'
+                    : activeKfx?.id
         }
+        advancedItems={advancedNav}
+        failures={visibleKfxFailures}
         onSearchChange={setSearchText}
         onSearchActivate={activateSearchResult}
         onOpenSettings={() => setSettingsOpen(true)}
-        onOpenWorkspace={() => setWorkspaceOpen(true)}
+        onOpenAllWork={() => openWorkSurface()}
+        currentProjectTitle={
+          currentProjectDisplayName
+            ? `Project · ${currentProjectDisplayName}`
+            : 'Current Project'
+        }
+        onOpenCurrentProject={
+          lastProjectParamsRef.current
+            ? () => openWorkSurface(lastProjectParamsRef.current ?? undefined)
+            : undefined
+        }
+        onOpenProjects={() => {
+          setOnboardingOpen(false);
+          setLabOpen(false);
+          setCoreWorkOpen(false);
+          setFocusedProjectPath('');
+          setProjectsOpen(true);
+        }}
+        onOpenLab={() => {
+          setOnboardingOpen(false);
+          setProjectsOpen(false);
+          setCoreWorkOpen(false);
+          setLabOpen(true);
+        }}
+        onOpenView={(id) => shell.open(id)}
         onWindowControl={controlWindow}
       />
       <div style={chromeBodyStyle}>
@@ -2295,119 +2253,128 @@ function App() {
             overflow: 'hidden',
           }}
         >
-          <nav
-            aria-label="Views"
-            style={{
-              width: sidebarCollapsed ? 44 : 150,
-              flexShrink: 0,
-              minHeight: 0,
-              overflow: 'auto',
-              overflowX: 'hidden',
-              transition: 'width 120ms ease',
-            }}
-          >
-            <button
-              type="button"
-              aria-label={
-                sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'
-              }
-              title={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-              onClick={toggleSidebar}
-              style={{
-                ...mono,
-                width: '100%',
-                height: 32,
-                marginBottom: 8,
-                border: '1px solid #3c3c3c',
-                borderRadius: 5,
-                cursor: 'pointer',
-                background: '#252526',
-                color: '#cccccc',
-                fontSize: 14,
-              }}
-            >
-              {sidebarCollapsed ? '›' : '‹'}
-            </button>
-            {labButton}
-            {primaryNav.map(navButton)}
-            {loaded.failures.length > 0 && (
-              <div
-                title={`${loaded.failures.length} kfx failed to load`}
-                style={{
-                  ...mono,
-                  color: '#f48771',
-                  marginTop: 12,
-                  fontSize: 10,
-                  textAlign: sidebarCollapsed ? 'center' : 'left',
-                }}
-              >
-                {sidebarCollapsed
-                  ? '!'
-                  : `${loaded.failures.length} kfx failed to load`}
-              </div>
-            )}
-          </nav>
           <div style={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
-            {labOpen ? (
-              <AgentWorkLabPanel
-                lab={agentWorkLab}
-                startup={startup}
-                onOpenWork={() => setLabOpen(false)}
-                onOpenExistingProject={() => setWorkspaceOpen(true)}
-                onOpenStarterProject={(workspaceRoot) =>
-                  void workspaceBridge.path(workspaceRoot)
-                }
-              />
-            ) : runtime.ok ? (
-              activeKfx && activeKfx.tier === 'sandboxed-ipc' ? (
-                // isolated third-party view: embedded, not mounted here
-                <KfxErrorBoundary kfxId={activeKfx.id}>
-                  <SandboxSlot
-                    key={activeKfx.id}
-                    entry={activeKfx}
-                    caps={sandboxSubset(runtime, activeKfx)}
-                  />
-                </KfxErrorBoundary>
-              ) : activeKfx && caps ? (
-                <KfxErrorBoundary kfxId={activeKfx.id}>
-                  <activeKfx.View caps={caps} shell={shell} />
-                </KfxErrorBoundary>
-              ) : (
-                <section style={panelStyle}>
-                  <div style={{ ...mono, color: '#f48771' }}>
-                    no kfx available
-                    {loaded.entries.length === 0
-                      ? ` — ${unavailableKfxMessage(loaded.discoveredKfxCount)}`
-                      : ` for view "${active}"`}
-                  </div>
-                  {loaded.failures.map((failure) => (
-                    <div
-                      key={failure.dir}
-                      style={{ ...mono, color: '#858585', marginTop: 4 }}
-                    >
-                      {failure.dir}: {failure.error}
-                    </div>
-                  ))}
-                </section>
-              )
-            ) : (
-              <div
-                style={{
-                  height: '100%',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
+            {onboardingOpen ? (
+              <AgentFirstOnboardingPanel
+                entry={agentFirstEntry}
+                onPersist={persistOnboarding}
+                onInstallCli={installOnboardingCli}
+                onOpenLab={() => {
+                  setOnboardingOpen(false);
+                  setLabOpen(true);
                 }}
-              >
-                {window.process.env.KF_WORKSPACE_STATE === 'uninitialized' ||
-                window.process.env.KF_WORKSPACE_STATE === 'shadow-only' ||
-                window.process.env.KF_WORKSPACE_STATE === 'evidence-degraded' ||
-                window.process.env.KF_WORKSPACE_STATE === 'unavailable' ? (
-                  <WorkspacePanel />
-                ) : (
-                  <RuntimeFailurePanel message={runtime.message} />
-                )}
-              </div>
+                onOpenTour={() => {
+                  setOnboardingOpen(false);
+                  setLabOpen(true);
+                  showNotification({
+                    level: 'info',
+                    title: 'Guided Project Tour',
+                    message:
+                      'Create the Starter Project in Agent Work Lab, then follow its Work actions. Kungfu will leave the Project available for continued work.',
+                  });
+                }}
+                onContinue={() => {
+                  setOnboardingOpen(false);
+                  if (initialFocusedProjectPath) {
+                    openWorkSurface({
+                      projectPath: initialFocusedProjectPath,
+                      projectSection: 'files',
+                    });
+                  } else {
+                    setProjectsOpen(true);
+                  }
+                }}
+              />
+            ) : (
+              <>
+                <RetainedCoreSurfaceStack
+                  visible={
+                    projectsOpen
+                      ? 'projects'
+                      : labOpen
+                        ? 'agent-work-lab'
+                        : coreWorkOpen
+                          ? 'core-work'
+                          : undefined
+                  }
+                  retained={retainedCoreSurfaces}
+                  projects={projects}
+                  focusedPath={focusedProjectPath}
+                  onCatalog={handleProjectsCatalog}
+                  onOpenProject={handleOpenProject}
+                  onOpenExistingProject={() => void workspaceBridge.open()}
+                  onRestoreProject={restoreProjectWork}
+                  lab={agentWorkLab}
+                  startup={startup}
+                  onOpenWork={() => openWorkSurface()}
+                  onOpenLabExistingProject={() => {
+                    setLabOpen(false);
+                    setCoreWorkOpen(false);
+                    setProjectsOpen(true);
+                  }}
+                  onLabComplete={labOnboarding.completeLab}
+                  onOpenStarterProject={labOnboarding.openStarterProject}
+                  work={
+                    <ProjectWorkControlView projects={projects} shell={shell} />
+                  }
+                />
+                {!projectsOpen && !labOpen && !coreWorkOpen ? (
+                  runtime.ok ? (
+                    activeKfx && activeKfx.tier === 'sandboxed-ipc' ? (
+                      // isolated third-party view: embedded, not mounted here
+                      <KfxErrorBoundary kfxId={activeKfx.id}>
+                        <SandboxSlot
+                          key={activeKfx.id}
+                          entry={activeKfx}
+                          caps={sandboxSubset(runtime, activeKfx)}
+                        />
+                      </KfxErrorBoundary>
+                    ) : activeKfx && caps ? (
+                      <KfxErrorBoundary kfxId={activeKfx.id}>
+                        <activeKfx.View caps={caps} shell={shell} />
+                      </KfxErrorBoundary>
+                    ) : (
+                      <section style={panelStyle}>
+                        <div style={{ ...mono, color: '#f48771' }}>
+                          no kfx available
+                          {loaded.entries.length === 0
+                            ? ` — ${unavailableKfxMessage(loaded.discoveredKfxCount)}`
+                            : ` for view "${active}"`}
+                        </div>
+                        {visibleKfxFailures.map((failure) => (
+                          <div
+                            key={failure.dir}
+                            style={{ ...mono, color: '#858585', marginTop: 4 }}
+                          >
+                            {failure.dir}: {failure.error}
+                          </div>
+                        ))}
+                      </section>
+                    )
+                  ) : (
+                    <div
+                      style={{
+                        height: '100%',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                    >
+                      {window.process.env.KF_WORKSPACE_STATE ===
+                        'uninitialized' ||
+                      window.process.env.KF_WORKSPACE_STATE === 'shadow-only' ||
+                      window.process.env.KF_WORKSPACE_STATE ===
+                        'evidence-degraded' ||
+                      window.process.env.KF_WORKSPACE_STATE ===
+                        'unavailable' ? (
+                        <WorkspacePanel />
+                      ) : (
+                        <RuntimeFailurePanel message={runtime.message} />
+                      )}
+                    </div>
+                  )
+                ) : null}
+              </>
             )}
           </div>
         </div>

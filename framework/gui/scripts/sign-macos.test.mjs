@@ -13,6 +13,16 @@ import {
 
 const ROOT = path.resolve(import.meta.dirname, '../../..');
 
+function readElectronBuilderProjection(file) {
+  return JSON.parse(
+    fs
+      .readFileSync(file, 'utf8')
+      .split('\n')
+      .filter((line) => !line.startsWith('#'))
+      .join('\n'),
+  );
+}
+
 test('preserves an explicit certificate hash for duplicate named identities', () => {
   assert.equal(
     resolveMacSigningIdentity(
@@ -113,9 +123,9 @@ test('both desktop builders resolve the signing hook from the GUI project', () =
     'framework/gui/electron-builder.yml',
     'product/electron-builder.yml',
   ]) {
-    assert.match(
-      fs.readFileSync(path.join(ROOT, config), 'utf8'),
-      /^\s+sign: \.\/scripts\/sign-macos\.mjs$/m,
+    assert.equal(
+      readElectronBuilderProjection(path.join(ROOT, config)).mac.sign,
+      './scripts/sign-macos.mjs',
       config,
     );
   }

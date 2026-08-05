@@ -4,6 +4,7 @@
 #define YIJINJING_JOURNAL_H
 
 #include <chrono>
+#include <cstddef>
 #include <expected>
 #include <kungfu/common.h>
 #include <kungfu/yijinjing/journal/bus.h>
@@ -15,6 +16,7 @@
 #include <kungfu/yijinjing/time.h>
 #include <mutex>
 #include <queue>
+#include <span>
 #include <thread>
 
 namespace kungfu::yijinjing::journal {
@@ -372,9 +374,8 @@ public:
     void commit(size_t data_length, int64_t gen_time = time::now_in_nano());
 
     // Capacity-checked payload write. The reservation made by reserve_frame() is
-    // the only bound on the underlying memcpy, so it is enforced here, before the
-    // copy and in release builds too: close_frame()'s assert only fires after the
-    // bytes have already landed, and evaporates entirely under NDEBUG.
+    // the only bound on the underlying memcpy, so it is enforced here before the
+    // copy and independently of debug-only assertions.
     template <typename T> size_t copy_data(const T &data) {
       require_capacity(sizeof(T));
       return frame_->copy_data(data);
@@ -382,14 +383,20 @@ public:
 
     // Same bound for the untyped payload path.
     void copy_bytes(const void *source, size_t length) {
+      if (source == nullptr && length != 0) {
+        throw journal_error("Can not copy a non-empty frame payload from a null address");
+      }
       require_capacity(length);
-      memcpy(data(), source, length);
+      if (length != 0) {
+        // KUNGFU_WRITER_RAW_COPY_EXCEPTION: the transaction validates both source and reserved capacity above.
+        memcpy(data(), source, length);
+      }
     }
 
   private:
     friend class writer;
     friend class replay_writer;
-    frame_transaction(writer &owner, ::kungfu::yijinjing::journal::frame *frame, bool replay = false) noexcept;
+    frame_transaction(writer &owner, ::kungfu::yijinjing::journal::frame *frame) noexcept;
     void abort() noexcept;
     // Throws unless this transaction is active and length fits what reserve_frame
     // set aside; never lets an over-long payload reach the page.
@@ -397,7 +404,6 @@ public:
 
     writer *owner_;
     ::kungfu::yijinjing::journal::frame *frame_;
-    bool replay_{false};
   };
 
   explicit writer(const data::location_ptr &location, uint32_t dest_id, publisher_ptr publisher, bool low_latency,
@@ -431,14 +437,6 @@ public:
   [[nodiscard]] virtual frame_transaction reserve_frame(int64_t trigger_time, int32_t carrier_type, size_t length,
                                                         uint64_t stream_id = 0);
 
-  [[deprecated("kungfu-deprecation:core.yijinjing.writer-split-frame-api#writer-open-frame; use reserve_frame(); split "
-               "open/close ownership is not exception-safe for caller abandonment")]]
-  virtual frame_ptr open_frame(int64_t trigger_time, int32_t carrier_type, size_t length, uint64_t stream_id = 0);
-
-  [[deprecated("kungfu-deprecation:core.yijinjing.writer-split-frame-api#writer-close-frame; use "
-               "frame_transaction::commit()")]]
-  virtual void close_frame(size_t data_length, int64_t gen_time = time::now_in_nano());
-
   virtual void copy_frame(const frame_ptr &source);
 
   virtual void release_page();
@@ -449,49 +447,8 @@ public:
 
   virtual void mark_at(int64_t gen_time, int64_t trigger_time, int32_t carrier_type);
 
-  virtual void write_raw(int64_t trigger_time, int32_t carrier_type, uintptr_t data, uint32_t length);
-
-  virtual void write_bytes(int64_t trigger_time, int32_t carrier_type, const std::vector<uint8_t> &data,
-                           uint32_t length);
-
-  virtual void write_raw_at_as(int64_t gen_time, int64_t trigger_time, uint32_t source, uint32_t dest,
-                               int32_t carrier_type, uintptr_t data, uint32_t length);
-
-  /**
-   * Using auto with the return mess up the reference with the undlerying memory address, DO NOT USE it.
-   * @tparam T
-   * @param trigger_time
-   * @param carrier_type
-   * @return a casted reference to the underlying memory address in mmap file
-   */
-#if defined(__clang__)
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated-declarations"
-#elif defined(__GNUC__)
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-#elif defined(_MSC_VER)
-#pragma warning(push)
-#pragma warning(disable : 4996)
-#endif
-  template <typename T> std::enable_if_t<size_fixed_v<T>, T &> open_data(int64_t trigger_time = 0) {
-    auto frame = open_frame(trigger_time, T::tag, sizeof(T));
-    return const_cast<T &>(frame->template data<T>());
-  }
-
-  template <typename T> T &open_custom_data(int32_t carrier_type, int64_t trigger_time = 0) {
-    auto frame = open_frame(trigger_time, carrier_type, sizeof(T));
-    return const_cast<T &>(*reinterpret_cast<const T *>(frame->data_address()));
-  }
-#if defined(__clang__)
-#pragma clang diagnostic pop
-#elif defined(__GNUC__)
-#pragma GCC diagnostic pop
-#elif defined(_MSC_VER)
-#pragma warning(pop)
-#endif
-
-  virtual void close_data(int64_t gen_time = time::now_in_nano());
+  // Canonical extent-carrying byte entrypoint.
+  void write_bytes(int64_t trigger_time, int32_t carrier_type, std::span<const std::byte> data);
 
   template <typename T>
   std::enable_if_t<size_fixed_v<T>> write(int64_t trigger_time, const T &data, int32_t carrier_type = T::tag) {
@@ -505,7 +462,7 @@ public:
     auto s = data.to_string();
     auto size = s.length();
     auto tx = reserve_frame(trigger_time, carrier_type, size);
-    memcpy(tx.data(), s.c_str(), size);
+    tx.copy_bytes(s.data(), size);
     tx.commit(size);
   }
 
@@ -524,7 +481,7 @@ public:
     auto s = data.to_string();
     auto size = s.length();
     auto tx = reserve_frame(trigger_time, T::tag, size);
-    memcpy(tx.data(), s.c_str(), size);
+    tx.copy_bytes(s.data(), size);
     tx.frame()->set_source(source);
     tx.frame()->set_dest(dest);
     tx.commit(size);
@@ -542,7 +499,7 @@ public:
     auto s = data.to_string();
     auto size = s.length();
     auto tx = reserve_frame(trigger_time, T::tag, size);
-    memcpy(tx.data(), s.c_str(), size);
+    tx.copy_bytes(s.data(), size);
     tx.commit(size, gen_time);
   }
 
@@ -554,12 +511,17 @@ protected:
   size_t size_to_write_;
   int64_t last_gen_time_;
 
-  virtual void on_frame_opened(int64_t trigger_time, ::kungfu::yijinjing::journal::frame *frame);
-  virtual void on_frame_closing(int64_t gen_time, ::kungfu::yijinjing::journal::frame *frame);
-  ::kungfu::yijinjing::journal::frame *open_frame_unserialized(int64_t trigger_time, int32_t carrier_type,
-                                                               size_t length, uint64_t stream_id);
-  void close_frame_unserialized(size_t data_length, int64_t gen_time);
-  void abort_frame_unserialized() noexcept;
+  virtual void on_reservation_started(int64_t trigger_time, ::kungfu::yijinjing::journal::frame *frame);
+  virtual void on_transaction_committing(int64_t gen_time, ::kungfu::yijinjing::journal::frame *frame);
+  virtual void commit_transaction_unserialized(size_t data_length, int64_t gen_time,
+                                               ::kungfu::yijinjing::journal::frame *frame);
+  ::kungfu::yijinjing::journal::frame *prepare_frame_unserialized(int64_t trigger_time, int32_t carrier_type,
+                                                                  size_t length, uint64_t stream_id);
+  [[nodiscard]] size_t validate_payload_length(size_t length) const;
+  [[nodiscard]] size_t validate_frame_commit(size_t data_length) const;
+  [[nodiscard]] bool current_frame_has_capacity(size_t aligned_payload_length, uintptr_t page_border) const;
+  void publish_frame_unserialized(size_t aligned_data_length, int64_t gen_time);
+  void abort_transaction_unserialized() noexcept;
   void close_page(int64_t trigger_time);
 };
 
@@ -569,9 +531,9 @@ public:
 
   virtual ~writer_hook() = default;
 
-  virtual void on_open_frame(int64_t trigger_time, frame_ptr frame) = 0;
+  virtual void on_reservation_started(int64_t trigger_time, frame_ptr frame) = 0;
 
-  virtual void on_close_frame(int64_t gen_time, frame_ptr frame) = 0;
+  virtual void on_transaction_committing(int64_t gen_time, frame_ptr frame) = 0;
 };
 
 class hookable_writer : public writer {
@@ -581,8 +543,8 @@ public:
       : writer(location, dest_id, std::move(publisher), low_latency, bus, page_size), hook_(std::move(hook)) {}
 
 private:
-  void on_frame_opened(int64_t trigger_time, ::kungfu::yijinjing::journal::frame *frame) override;
-  void on_frame_closing(int64_t gen_time, ::kungfu::yijinjing::journal::frame *frame) override;
+  void on_reservation_started(int64_t trigger_time, ::kungfu::yijinjing::journal::frame *frame) override;
+  void on_transaction_committing(int64_t gen_time, ::kungfu::yijinjing::journal::frame *frame) override;
   writer_hook_ptr hook_;
 };
 
@@ -591,16 +553,15 @@ public:
   explicit replay_writer(const data::location_ptr &location, uint32_t dest_id, publisher_ptr publisher,
                          const bus_ptr &bus, uint64_t page_size, int64_t begin_time);
 
-  frame_ptr open_frame(int64_t trigger_time, int32_t carrier_type, size_t length, uint64_t stream_id = 0) override;
-
-  void close_frame(size_t data_length, int64_t gen_time) override;
-
   frame_transaction reserve_frame(int64_t trigger_time, int32_t carrier_type, size_t length,
                                   uint64_t stream_id = 0) override;
 
   uint64_t current_frame_uid() override;
 
 private:
+  ::kungfu::yijinjing::journal::frame *select_replay_frame(int64_t trigger_time, int32_t carrier_type, size_t length);
+  void commit_transaction_unserialized(size_t data_length, int64_t gen_time,
+                                       ::kungfu::yijinjing::journal::frame *frame) override;
   reader_ptr reader_for_write_;
   cloned_frame_ptr cloned_frame_ = std::make_shared<cloned_frame>();
 };

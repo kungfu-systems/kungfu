@@ -11,7 +11,12 @@ import type {
   ProjectTemplatePlan,
 } from '@kungfu-tech/api/capability';
 import { agentWorkLabRunProgressLabel } from '@kungfu-tech/api/capability';
-import { mono, panelStyle } from '@kungfu-tech/kfx';
+import {
+  controlButtonStyle,
+  controlSelectStyle,
+  mono,
+  panelStyle,
+} from '@kungfu-tech/kfx';
 import React from 'react';
 import { createPortal } from 'react-dom';
 import {
@@ -1149,12 +1154,14 @@ export function AgentWorkLabPanel({
   onOpenWork,
   onOpenExistingProject,
   onOpenStarterProject,
+  onComplete,
 }: {
   lab: AgentWorkLab;
   startup: AgentWorkLabStartupRoute;
   onOpenWork?: () => void;
   onOpenExistingProject?: () => void;
   onOpenStarterProject?: (destination: string) => void;
+  onComplete?: () => void;
 }) {
   const [mode, setMode] = React.useState<AgentWorkLabMode>('offline-demo');
   const [agents, setAgents] = React.useState<AgentRuntimeCatalog | null>(null);
@@ -1374,6 +1381,7 @@ export function AgentWorkLabPanel({
       setActiveFindingIndex(-1);
       setShowNextRecommendation(true);
       setError('');
+      if (nextReport.status !== 'failed') onComplete?.();
     } catch (reason) {
       if (playbackRunRef.current === runId) {
         setError((reason as Error).message);
@@ -1470,7 +1478,11 @@ export function AgentWorkLabPanel({
           </h1>
         </div>
         {onOpenWork ? (
-          <button type="button" onClick={onOpenWork}>
+          <button
+            type="button"
+            onClick={onOpenWork}
+            style={controlButtonStyle()}
+          >
             Back to Work
           </button>
         ) : null}
@@ -1508,7 +1520,7 @@ export function AgentWorkLabPanel({
               onChange={(event) =>
                 resetRun(event.target.value as AgentWorkLabMode)
               }
-              style={{ width: '100%', minHeight: 34 }}
+              style={{ ...controlSelectStyle, width: '100%' }}
             >
               {AGENT_WORK_LAB_MODES.map((row) => (
                 <option key={row.id} value={row.id}>
@@ -1536,7 +1548,7 @@ export function AgentWorkLabPanel({
                   setVisibleFindingCount(0);
                   setActiveFindingIndex(-1);
                 }}
-                style={{ width: '100%', minHeight: 34 }}
+                style={{ ...controlSelectStyle, width: '100%' }}
               >
                 <option value="">No local agent discovered</option>
                 {options.map((profile) => (
@@ -1565,7 +1577,7 @@ export function AgentWorkLabPanel({
                   setVisibleFindingCount(0);
                   setActiveFindingIndex(-1);
                 }}
-                style={{ width: '100%', minHeight: 34 }}
+                style={{ ...controlSelectStyle, width: '100%' }}
               >
                 <option value="">No continuation agent discovered</option>
                 {options.map((profile) => (
@@ -1587,18 +1599,38 @@ export function AgentWorkLabPanel({
                   Boolean(busy)
                 }
                 onClick={prepareAgent}
+                style={controlButtonStyle({
+                  disabled:
+                    !selectedAgent ||
+                    (needs.target &&
+                      (!targetAgent || selectedAgent === targetAgent)) ||
+                    Boolean(busy),
+                })}
               >
                 {busy === 'prepare' ? 'Preparing…' : '1 · Prepare exact test'}
               </button>
             ) : null}
-            <button type="button" disabled={!canRun} onClick={run}>
+            <button
+              type="button"
+              disabled={!canRun}
+              onClick={run}
+              style={controlButtonStyle({
+                tone: 'primary',
+                disabled: !canRun,
+              })}
+            >
               {running
                 ? 'Running canonical test…'
                 : needs.source
                   ? '2 · Start test'
                   : 'Start offline demo'}
             </button>
-            <button type="button" disabled={Boolean(busy)} onClick={discover}>
+            <button
+              type="button"
+              disabled={Boolean(busy)}
+              onClick={discover}
+              style={controlButtonStyle({ disabled: Boolean(busy) })}
+            >
               Refresh agents
             </button>
             <InfoTip

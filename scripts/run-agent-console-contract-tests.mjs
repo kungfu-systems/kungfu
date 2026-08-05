@@ -6,8 +6,12 @@ import path from 'node:path';
 import process from 'node:process';
 
 const root = process.cwd();
+const nativePath =
+  process.env.KUNGFU_NATIVE_PATH ??
+  path.join(root, 'framework', 'core', 'build', 'Release');
 const pythonPath = [
   path.join(root, 'framework', 'core', 'src', 'python'),
+  nativePath,
   process.env.PYTHONPATH,
 ]
   .filter(Boolean)
@@ -35,7 +39,39 @@ const result = spawnSync(
       'core',
       'tests',
       'python',
+      'test_agent_native_terminal_contract.py',
+    ),
+    path.join(
+      root,
+      'framework',
+      'core',
+      'tests',
+      'python',
+      'test_agent_work_advisory.py',
+    ),
+    path.join(
+      root,
+      'framework',
+      'core',
+      'tests',
+      'python',
       'test_rewind_progress.py',
+    ),
+    path.join(
+      root,
+      'framework',
+      'core',
+      'tests',
+      'python',
+      'test_work_projection.py',
+    ),
+    path.join(
+      root,
+      'framework',
+      'core',
+      'tests',
+      'python',
+      'test_agent_session_module_boundaries.py',
     ),
     '-q',
   ],
@@ -43,6 +79,7 @@ const result = spawnSync(
     cwd: root,
     env: {
       ...process.env,
+      KUNGFU_NATIVE_PATH: nativePath,
       PYTHONPATH: pythonPath,
     },
     stdio: 'inherit',

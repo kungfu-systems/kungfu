@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
+import crypto from 'node:crypto';
+
 const ROOT = /^sha256:[0-9a-f]{64}$/;
 const IDENTITY = /^[A-Za-z0-9][A-Za-z0-9._:/-]{0,255}$/;
 const ENVELOPE_SCHEMA = 'kungfu.action-loop.envelope/v0';
@@ -24,6 +26,26 @@ function validRoot(value) {
 
 function validIdentity(value) {
   return typeof value === 'string' && IDENTITY.test(value);
+}
+
+function canonicalJson(value) {
+  if (Array.isArray(value)) return `[${value.map(canonicalJson).join(',')}]`;
+  if (value && typeof value === 'object')
+    return `{${Object.keys(value)
+      .sort()
+      .map((key) => `${JSON.stringify(key)}:${canonicalJson(value[key])}`)
+      .join(',')}}`;
+  return JSON.stringify(value);
+}
+
+function receiptRoot(receipt) {
+  const { receiptRoot: ignored, ...preimage } = receipt;
+  void ignored;
+  return `sha256:${crypto.createHash('sha256').update(canonicalJson(preimage)).digest('hex')}`;
+}
+
+export function rootStepReceipt(receipt) {
+  return { ...receipt, receiptRoot: receiptRoot(receipt) };
 }
 
 export function validateEnvelope(contract, envelope) {
@@ -117,6 +139,13 @@ function validateReceipt(envelope, receipt) {
     );
   if (!validRoot(receipt.receiptRoot))
     return fail('invalid-root', 'receiptRoot is invalid');
+  if (!validRoot(receipt.authorityReceiptRoot))
+    return fail('invalid-root', 'authorityReceiptRoot is invalid');
+  if (receipt.receiptRoot !== receiptRoot(receipt))
+    return fail(
+      'invalid-receipt-root',
+      'receiptRoot does not bind the public adapter receipt preimage',
+    );
   if (receipt.status !== 'accepted')
     return fail(
       'invalid-receipt',

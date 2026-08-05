@@ -6,7 +6,7 @@
 // 只触发 `conan build`（占位，不跑 freezer）。本脚本把 freeze 做成 `./shifu freeze`
 // 一步可复现；产物腿现只剩 assemble。
 //
-// 冻结腿（nuitka/pyinstaller）已于 2026-07-11 退役（KF-ADR-019f86da-4f90-73ff-9543-f0a4f0beef05 stage 2 收口：
+// 旧产品打包腿已于 2026-07-11 退役（KF-ADR-019f86da-4f90-73ff-9543-f0a4f0beef05 stage 2 收口：
 // macOS→Linux→Windows 全部组装完整 CPython 树，Windows 为最后一块平台）；去留记账
 // 见 docs/development/buildchain.md「Freeze retirement ledger」。
 //
@@ -45,14 +45,21 @@ function buildType() {
   return shell.getConfigValue('build_type') || 'Release';
 }
 
-function freezer() {
-  // KF-ADR-019f86da-4f90-73ff-9543-f0a4f0beef05 stage 2 rolled out platform by platform and is now complete:
-  // macOS, Linux, and Windows all ship the assembled runtime. The frozen legs
-  // retire with this last platform (docs/development/buildchain.md「Freeze retirement
-  // ledger」). An explicit config value can still select any surviving leg.
-  const explicit = shell.getConfigValue('freezer');
+function assemblySelector(explicit = shell.getConfigValue('freezer')) {
+  // The legacy config key remains only as a fail-closed compatibility input.
+  // Every supported platform ships the assembled runtime.
   if (explicit) return explicit;
   return 'assemble';
+}
+
+/** @param {string} selector */
+function requireAssemblySelector(selector) {
+  if (selector !== 'assemble') {
+    throw new Error(
+      `[assembly] retired product packager selector rejected; expected assemble, received ${selector}`,
+    );
+  }
+  return selector;
 }
 
 // kungfu/__init__ 读 pykungfu 同目录的 kungfubuildinfo.json 取 version；缺则生成。
@@ -81,7 +88,7 @@ function ensureBuildInfo(bt) {
   return info;
 }
 
-// app/electron 侧 node native：kfc python 进程不 import，Nuitka 不带，需从 build/<type> 补拷。
+// app/electron 侧 node native：Python 进程不 import，组装树需从 build/<type> 补拷。
 // app 栈通过 @kungfu-tech/core/dist/kungfu/<x> 解析它们（getKfcDir / webpack require.resolve）。
 const APP_NATIVE = [
   'drone.node',
@@ -206,6 +213,65 @@ function documentationAtlasSource(repository = path.resolve(CORE, '..', '..')) {
   return root;
 }
 
+/** @param {unknown} value @returns {unknown} */
+function canonicalJson(value) {
+  if (Array.isArray(value)) return value.map(canonicalJson);
+  if (value && typeof value === 'object') {
+    const record = /** @type {Record<string, unknown>} */ (value);
+    return Object.fromEntries(
+      Object.keys(record)
+        .sort()
+        .map((key) => [key, canonicalJson(record[key])]),
+    );
+  }
+  return value;
+}
+
+/** @param {Buffer|string} value */
+function sha256Root(value) {
+  return `sha256:${crypto.createHash('sha256').update(value).digest('hex')}`;
+}
+
+function portableAtlasBundleSource(
+  repository = path.resolve(CORE, '..', '..'),
+) {
+  const manifestPath = path.join(
+    repository,
+    '.xinfa',
+    'product-atlas-bundle.json',
+  );
+  const classificationPath = path.join(
+    repository,
+    '.xinfa',
+    'portable-atlas-classification.json.gz',
+  );
+  const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+  const { bundleRoot: declaredRoot, ...core } = manifest;
+  const computedRoot = sha256Root(`${JSON.stringify(canonicalJson(core))}\n`);
+  const classificationCompressed = fs.readFileSync(classificationPath);
+  const classificationBytes = zlib.gunzipSync(classificationCompressed);
+  const classification = JSON.parse(classificationBytes.toString('utf8'));
+  if (
+    manifest.schema !== 'kungfu.portable-atlas-bundle/v1' ||
+    declaredRoot !== computedRoot ||
+    manifest.classification?.classificationRoot !==
+      sha256Root(classificationBytes) ||
+    manifest.classification?.material?.compressedBytes !==
+      classificationCompressed.length ||
+    manifest.classification?.material?.uncompressedBytes !==
+      classificationBytes.length ||
+    classification.unknown !== 0 ||
+    classification.silentOmissions !== 0 ||
+    manifest.routes?.incompleteRoutes !== 0 ||
+    manifest.budgets?.passed !== true
+  ) {
+    throw new Error(
+      '[freeze] Portable Kungfu Atlas Bundle verification failed',
+    );
+  }
+  return { manifestPath, classificationPath, manifest };
+}
+
 /**
  * Keep generated interpreter caches out of installed first-party Profiles.
  * Workspace node_modules are transient build-tree state. Declared Suite
@@ -235,6 +301,42 @@ function copyFirstPartyProfile(source, destination) {
     filter: firstPartyProfileFilter,
   });
   materializeFirstPartyProfileMembers(source, destination);
+}
+
+/**
+ * Stage the same Work Profile conformance closure as the wheel build.  The
+ * assembled product copies Python sources directly, so wheel build_py hooks do
+ * not run for this tree.
+ *
+ * @param {string} destination
+ * @param {string} repositoryRoot
+ */
+function copyWorkProfileConformance(
+  destination,
+  repositoryRoot = path.resolve(CORE, '..', '..'),
+) {
+  const source = path.join(
+    repositoryRoot,
+    'framework',
+    'work-profile-conformance',
+  );
+  fs.cpSync(source, destination, { recursive: true });
+  const manifest = JSON.parse(
+    fs.readFileSync(path.join(source, 'authority-manifest.json'), 'utf8'),
+  );
+  const authorityRoot = path.join(destination, 'authority');
+  const repositoryBoundary = path.resolve(repositoryRoot) + path.sep;
+  for (const coordinate of manifest.files) {
+    const sourceFile = path.resolve(repositoryRoot, coordinate.path);
+    if (!sourceFile.startsWith(repositoryBoundary)) {
+      throw new Error(
+        `[freeze] invalid Work conformance authority path: ${coordinate.path}`,
+      );
+    }
+    const destinationFile = path.join(authorityRoot, coordinate.path);
+    fs.mkdirSync(path.dirname(destinationFile), { recursive: true });
+    fs.copyFileSync(sourceFile, destinationFile);
+  }
 }
 
 /**
@@ -491,13 +593,9 @@ function findFileShallow(root, re) {
 // kungfu.dll 补拷进 dist/kungfu。
 //
 // 缘由：MSVC 多配置生成器与 Mac/Linux 单配置生成器的产物布局不一致——Win 把
-// pykungfu.<abi>.pyd 产在 build/ 根、libnode.dll 产在 build/<bt>；而 Nuitka freeze 用
-// PYTHONPATH=build/<bt> 跟随 `import pykungfu`，于是在 Win 上既找不到 pykungfu(.pyd 不在
-// build/<bt>)、也不会连带 libnode.dll(非 pykungfu 同目录、Py3.8+ 扩展模块 DLL 依赖也不认
-// PATH)，冻结 kfc 运行时 `import pykungfu` 报 ModuleNotFound / DLL load failed。
-// Mac/Linux 无此问题：pykungfu.so 就在 build/<bt>，其 libnode 依赖经 rpath(@loader_path/
-// $ORIGIN) 解析、Nuitka 依赖扫描连带打包，故 freeze 自洽（本函数在非 Win 直接返回）。
-// 冻结 kfc 可执行会加载与其同目录的 pykungfu.pyd + libnode.dll（已实测通过），故补拷即可。
+// pykungfu.<abi>.pyd 产在 build/ 根、libnode.dll 产在 build/<bt>。组装树必须把两者
+// 显式放进扁平 dist 根，供完整 CPython 与 Rust trunk 的 variant dispatch 使用。
+// Mac/Linux 的 pykungfu.so 已位于 build/<bt>，且原生依赖由 origin-relative rpath 解析。
 /** @param {string} bt */
 function copyPyBindingWin(bt) {
   if (!isWin) return;
@@ -573,9 +671,8 @@ function copyPyBindingWin(bt) {
 
 // --------------------------------------------------------------- assemble
 //
-// KF-ADR-019f86da-4f90-73ff-9543-f0a4f0beef05 stage 2: the host runs a complete, exact CPython tree instead of a
-// frozen subset. The assembled dist keeps the flat dist/kungfu root (natives,
-// contract, wheels — identical to the frozen layout) and adds the interpreter
+// KF-ADR-019f86da-4f90-73ff-9543-f0a4f0beef05 stage 2: the host runs a complete, exact CPython tree. The assembled
+// dist keeps the flat dist/kungfu root (natives, contract, wheels) and adds the interpreter
 // tree under dist/kungfu/python. The kungfu package ships as sources at the
 // dist root, wired into the tree through a site-packages .pth (never through
 // PYTHON* environment variables, which would leak into satellite envs). The
@@ -839,10 +936,26 @@ function assembleTree(bt) {
     path.join(CORE, '..', 'exit', 'kungfu-exit-bundle.contract.json'),
     path.join(layout.sitePackages, 'kungfu', 'exit_bundle.contract.json'),
   );
-  fs.cpSync(
-    documentationAtlasSource(),
-    path.join(layout.sitePackages, 'kungfu', 'agent', 'documentation'),
-    { recursive: true },
+  copyWorkProfileConformance(
+    path.join(layout.sitePackages, 'kungfu', 'work_profile_conformance'),
+  );
+  const documentationDestination = path.join(
+    layout.sitePackages,
+    'kungfu',
+    'agent',
+    'documentation',
+  );
+  fs.cpSync(documentationAtlasSource(), documentationDestination, {
+    recursive: true,
+  });
+  const portableBundle = portableAtlasBundleSource();
+  fs.copyFileSync(
+    portableBundle.manifestPath,
+    path.join(documentationDestination, 'bundle.json'),
+  );
+  fs.copyFileSync(
+    portableBundle.classificationPath,
+    path.join(documentationDestination, 'classification.json.gz'),
   );
   // Assignment orchestration is an installed-product surface. Its Work
   // Control Profile must therefore travel with the runtime instead of being
@@ -1015,14 +1128,8 @@ function copyWheel() {
 
 function main() {
   const bt = buildType();
-  const fz = freezer();
-  console.log(`[freeze] freezer=${fz} build_type=${bt}`);
-  if (fz !== 'assemble') {
-    console.error(
-      `[freeze] 冻结腿（nuitka/pyinstaller）已于 2026-07-11 退役（KF-ADR-019f86da-4f90-73ff-9543-f0a4f0beef05 stage 2 收口）；现只剩 assemble，收到 freezer=${fz}`,
-    );
-    process.exit(1);
-  }
+  const selector = requireAssemblySelector(assemblySelector());
+  console.log(`[freeze] product_form=${selector} build_type=${bt}`);
   assembleTree(bt);
   copyWheel();
 }
@@ -1030,7 +1137,11 @@ function main() {
 if (require.main === module) main();
 
 module.exports = {
+  assemblySelector,
   copyFirstPartyProfile,
+  copyWorkProfileConformance,
   documentationAtlasSource,
   firstPartyProfileFilter,
+  portableAtlasBundleSource,
+  requireAssemblySelector,
 };

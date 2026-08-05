@@ -203,11 +203,14 @@ test('detached Capsule worker survives client loss and reattaches to the same PT
   const reattached = await second.request('status');
   assert.equal(reattached.sessionAttemptId, started.sessionAttemptId);
   assert.equal(reattached.foreground.pid, started.foreground.pid);
+  let replay;
   await waitFor(async () => {
-    const replay = await second.request('snapshot', { requestedSequence: 0 });
-    return replay.receipt.nextSequence > 4096;
-  }, 'synthetic PTY output did not arrive');
-  const replay = await second.request('snapshot', { requestedSequence: 0 });
+    replay = await second.request('snapshot', { requestedSequence: 0 });
+    return (
+      replay.receipt.nextSequence > 4096 &&
+      replay.vt.lines.some((line) => line.includes('approval-needed'))
+    );
+  }, 'synthetic PTY output did not fully converge');
   assert.equal(replay.receipt.gap.reason, 'bounded-retention-overflow');
   assert.equal(replay.vt.activeBuffer, 'primary');
   assert.ok(replay.vt.lines.some((line) => line.includes('approval-needed')));

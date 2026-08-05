@@ -464,27 +464,45 @@ test('workflow contract keeps candidates exact-source, independent, and publish-
   );
   assert.match(
     workflow,
-    /uses: kungfu-systems\/buildchain\/\.github\/workflows\/\.build\.yml@ea0d13ac2ccfbb3dc3a11a94e8eb83ab04b936b8/u,
+    /uses: kungfu-systems\/buildchain\/\.github\/workflows\/\.build\.yml@f63d43720ebb7d5099080b14c70cf04254057d80/u,
   );
+  assert.match(workflow, /checkout-history-mode: full/u);
   assert.match(
     workflow,
-    /self-hosted-offline-fallback: \$\{\{ fromJSON\(inputs\.macos-overflow-request-json \|\| '\{\}'\)\.mode != 'self-hosted' && fromJSON\(inputs\.macos-overflow-request-json \|\| '\{\}'\)\.mode != 'github-hosted' \}\}/u,
+    /checkout-cache-mode: \$\{\{ fromJSON\(inputs\.macos-overflow-request-json \|\| '\{\}'\)\.mode == 'self-hosted' && 'auto' \|\| \(inputs\.platforms-json && 'auto' \|\| 'off'\) \}\}/u,
   );
+  for (const input of [
+    'cargo-registry-index',
+    'checkout-cache-mirror-url-template',
+    'checkout-cache-reference-repository-template',
+  ]) {
+    assert.match(
+      workflow,
+      new RegExp(
+        `${input}: \\$\\{\\{ \\(fromJSON\\(inputs\\.macos-overflow-request-json \\|\\| '\\{\\}'\\)\\.mode == 'self-hosted' \\|\\| inputs\\.platforms-json\\) && vars\\.`,
+        'u',
+      ),
+    );
+  }
+  assert.match(workflow, /self-hosted-offline-fallback: false/u);
+  for (const runner of [
+    String.raw`runner":"[\"ubuntu-24.04\"]"`,
+    String.raw`runner":"[\"ubuntu-24.04-arm\"]"`,
+    String.raw`runner":"[\"macos-15\"]"`,
+    String.raw`runner":"[\"windows-2022\"]"`,
+  ])
+    assert.ok(workflow.includes(runner), runner);
   assert.match(workflow, /release-candidate: true/u);
   assert.match(
     workflow,
     /publish-channel: \$\{\{ \(fromJSON\(inputs\.macos-overflow-request-json \|\| '\{\}'\)\.mode == 'self-hosted'/u,
   );
-  assert.match(
-    workflow,
-    /credential-island-macos-app-path: \$\{\{ \(fromJSON\(inputs\.macos-overflow-request-json \|\| '\{\}'\)\.mode != 'self-hosted'/u,
-  );
+  assert.doesNotMatch(workflow, /credential-island-macos-app-path:/u);
+  assert.doesNotMatch(workflow, /credential-island-caller-owned:/u);
+  assert.doesNotMatch(workflow, /credential-island-macos-platform-id:/u);
   assert.match(
     workflow,
     /github\.ref == format\('refs\/heads\/\{0\}', github\.event\.repository\.default_branch\)/u,
   );
-  assert.match(
-    workflow,
-    /credential-island-macos:[\s\S]*if: \$\{\{ needs\.build\.result == 'success' && fromJSON\(inputs\.macos-overflow-request-json \|\| '\{\}'\)\.mode != 'self-hosted' && fromJSON\(inputs\.macos-overflow-request-json \|\| '\{\}'\)\.mode != 'github-hosted'/u,
-  );
+  assert.doesNotMatch(workflow, /^ {2}credential-island-macos:$/mu);
 });

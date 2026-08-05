@@ -16,10 +16,11 @@ import {
   uvPython,
   assertContains,
   fail,
+  corePython,
 } from '../_harness.mjs';
 
-const PY = process.platform === 'win32' ? 'python' : 'python3';
 const { fixtureDir, coreDir } = locate(import.meta.url);
+const PY = corePython(coreDir);
 const home = tmpDir('rewind-drift-');
 const runId = `fixturedrift${Date.now()}`;
 

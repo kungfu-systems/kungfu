@@ -9,7 +9,11 @@ import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
 
 import { guiQualificationArgs } from './installer.mjs';
-import { findArtifact, surfaceQualificationTempRoot } from './run.mjs';
+import {
+  findArtifact,
+  surfaceQualificationTempPrefix,
+  surfaceQualificationTempRoot,
+} from './run.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const runner = path.join(here, 'run.mjs');
@@ -50,6 +54,83 @@ test('Windows installer qualification uses the preserved short host temp', () =>
     ),
     '/repo/.buildchain/tmp',
   );
+});
+
+test('Windows installer qualification stays below the legacy path budget', () => {
+  const repositoryRoot = path.resolve(here, '..', '..', '..', '..');
+  const packageSources = [
+    {
+      root: path.join(
+        repositoryRoot,
+        'framework',
+        'core',
+        'src',
+        'python',
+        'kungfu',
+      ),
+      installedPrefix: [],
+    },
+    {
+      root: path.join(repositoryRoot, 'extensions', 'work-dashboard'),
+      installedPrefix: [
+        'profiles',
+        'work-control',
+        'members',
+        'work-dashboard',
+      ],
+    },
+    {
+      root: path.join(
+        repositoryRoot,
+        'extensions',
+        'work-control',
+        'work-control-actions',
+      ),
+      installedPrefix: ['profiles', 'work-control', 'work-control-actions'],
+    },
+  ];
+  const files = [];
+  const visit = (directory, installedPrefix, relativeDirectory = '') => {
+    for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
+      const relative = path.join(relativeDirectory, entry.name);
+      if (entry.isDirectory())
+        visit(path.join(directory, entry.name), installedPrefix, relative);
+      else if (entry.isFile())
+        files.push(path.join(...installedPrefix, relative));
+    }
+  };
+  for (const source of packageSources)
+    visit(source.root, source.installedPrefix);
+  const runnerTemp = 'C:\\actions-runner\\kungfu-systems\\_work\\_temp';
+  const workspace = `${surfaceQualificationTempPrefix(runnerTemp)}xxxxxx`;
+  const legacyWorkspace = path.win32.join(
+    runnerTemp,
+    'kungfu-surface-qualification-xxxxxx',
+    'desktop-installation',
+  );
+  const installedLength = (root, relative) =>
+    path.win32.join(
+      root,
+      'installed-desktop',
+      'resources',
+      'kungfu',
+      'python',
+      'Lib',
+      'site-packages',
+      'kungfu',
+      ...relative.split(path.sep),
+    ).length;
+  const longest = Math.max(
+    ...files.map((relative) => installedLength(workspace, relative)),
+  );
+  const legacyLongest = Math.max(
+    ...files.map((relative) => installedLength(legacyWorkspace, relative)),
+  );
+  assert.ok(
+    legacyLongest >= 260,
+    `fixture no longer covers the legacy path overflow (${legacyLongest})`,
+  );
+  assert.ok(longest < 260, `longest installed Python path is ${longest}`);
 });
 
 test('desktop discovery treats a matched app bundle as one artifact root', () => {

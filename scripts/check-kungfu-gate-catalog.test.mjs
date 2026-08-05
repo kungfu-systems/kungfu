@@ -235,7 +235,7 @@ test('current Kungfu catalog, docs, matrix, actions, and workflows align', () =>
   );
   assert.equal(controllers.length, 10);
   assert.ok(controllers.every((fact) => fact.gates.length > 0));
-  assert.equal(result.workflowAuthority.workflows.length, 31);
+  assert.equal(result.workflowAuthority.workflows.length, 36);
   const agentPatrol = result.workflowAuthority.workflows.find(
     (workflow) => workflow.path === '.github/workflows/kungfu-agent-patrol.yml',
   );
@@ -840,7 +840,7 @@ test('every controller class has a structured adapter and input drift fails clos
     {
       id: 'channel-heavy-build',
       workflow: '.github/workflows/build.yml',
-      from: 'verify-command: node scripts/run-release-qualification.mjs',
+      from: 'verify-command: node scripts/run-shifu-lifecycle.mjs cache-apply-command',
       to: 'verify-command: ./shifu verify',
       drift: 'with.verify-command',
     },
@@ -1019,7 +1019,7 @@ test('direct Gate arguments and profile inputs fail closed on drift', () => {
     fs
       .readFileSync(profileRefWorkflow, 'utf8')
       .replace(
-        '.gate-profile.yml@f8ef93be41b0badd75eb35cc1506c2be12198984',
+        '.gate-profile.yml@916fc84d488ae6f5af271a67487e79ecb47b9ae2',
         '.gate-profile.yml@v2-alpha',
       ),
   );
@@ -1040,10 +1040,7 @@ test('direct Gate arguments and profile inputs fail closed on drift', () => {
     profileInputWorkflow,
     fs
       .readFileSync(profileInputWorkflow, 'utf8')
-      .replace(
-        'runner-preset: kungfu-v4-self-hosted',
-        'runner-preset: portable',
-      ),
+      .replace('runner-preset: custom', 'runner-preset: portable'),
   );
   assert.ok(
     checkKungfuGateCatalog(profileInputRoot).issues.some((issue) =>

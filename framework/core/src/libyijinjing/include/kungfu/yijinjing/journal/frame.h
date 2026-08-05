@@ -96,6 +96,7 @@ struct frame : event {
   // which holds the reservation and checks it before calling through.
   template <typename T> size_t copy_data(const T &data) {
     size_t length = sizeof(T);
+    // KUNGFU_WRITER_RAW_COPY_EXCEPTION: fixed-size typed copies are bounded by frame_transaction before delegation.
     memcpy(const_cast<void *>(data_address()), &data, length);
     return length;
   }
@@ -150,7 +151,12 @@ struct frame : event {
   void copy(const frame &source) {
     static_assert(offsetof(yijinjing::types::frame_header, length) == 0,
                   "length must be frame_header's first field for publish-safe copy");
+    if (source.address() == 0 || source.header_length() != sizeof(yijinjing::types::frame_header) ||
+        source.frame_length() < source.header_length()) {
+      throw journal_error("Can not copy a frame with an invalid source header");
+    }
     auto total = source.frame_length();
+    // KUNGFU_WRITER_RAW_COPY_EXCEPTION: writer::copy_frame validates source length and destination page capacity.
     memcpy(reinterpret_cast<char *>(header_) + sizeof(uint32_t),
            reinterpret_cast<const char *>(source.header_) + sizeof(uint32_t), total - sizeof(uint32_t));
   }
@@ -175,8 +181,13 @@ struct cloned_frame : frame {
   ~cloned_frame() override { free(header_); };
 
   void copy(frame &from) {
+    if (from.address() == 0 || from.header_length() != sizeof(yijinjing::types::frame_header) ||
+        from.frame_length() < from.header_length()) {
+      throw journal_error("Can not clone a frame with an invalid source header");
+    }
     const auto frame_length = from.frame_length();
     allocate(frame_length);
+    // KUNGFU_WRITER_RAW_COPY_EXCEPTION: allocate reserves exactly frame_length bytes before this clone copy.
     memcpy(header_, from.header_, frame_length);
   }
 

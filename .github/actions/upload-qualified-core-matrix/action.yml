@@ -10,9 +10,6 @@ inputs:
   darwin-arm64-available:
     description: Whether the Darwin ARM64 row is qualified.
     required: true
-  darwin-x86-64-available:
-    description: Whether the Darwin x86_64 row is qualified.
-    required: true
   linux-x86-64-available:
     description: Whether the Linux x86_64 row is qualified.
     required: true
@@ -37,15 +34,6 @@ runs:
       with:
         name: qualified-assignment-core-${{ inputs.target-sha }}-darwin-arm64-cp313
         path: product/qualification/qualified-core/promoted/darwin-arm64-cp313
-        if-no-files-found: error
-        retention-days: 14
-        compression-level: 0
-    - name: Upload Darwin x86_64 transport
-      if: ${{ inputs.darwin-x86-64-available == 'true' }}
-      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
-      with:
-        name: qualified-assignment-core-${{ inputs.target-sha }}-darwin-x86_64-cp313
-        path: product/qualification/qualified-core/promoted/darwin-x86_64-cp313
         if-no-files-found: error
         retention-days: 14
         compression-level: 0

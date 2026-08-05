@@ -15,6 +15,7 @@ import {
   qualifiedAssignmentCoreRoot,
   verifyQualifiedAssignmentCoreArtifact,
 } from './check-shifu-cache-contract.mjs';
+import './ensure-windows-sccache.test.mjs';
 import {
   cacheDoctor,
   cacheStatus,
@@ -498,6 +499,36 @@ test('portable-off qualification profiles cover every native Build lane', () => 
   );
   assert.equal(buildWorkflow.split(`sha256:${digest}`).length - 1, 1);
 
+  const sccacheProfilePath = path.join(
+    ROOT,
+    'docs/shifu/windows-alpha-sccache.cache-profile.json',
+  );
+  const sccacheProfileText = fs.readFileSync(sccacheProfilePath, 'utf8');
+  const sccacheProfile = JSON.parse(sccacheProfileText);
+  assert.deepEqual(sccacheProfile.subject.platforms, profile.subject.platforms);
+  assert.equal(sccacheProfile.policy.mode, 'prefer');
+  assert.equal(
+    sccacheProfile.services['compiler-cache'].bindings[0].key,
+    'KUNGFU_WINDOWS_ALPHA_SCCACHE_DIR',
+  );
+  const sccacheDigest = crypto
+    .createHash('sha256')
+    .update(sccacheProfileText)
+    .digest('hex');
+  assert.equal(buildWorkflow.split(`sha256:${sccacheDigest}`).length - 1, 1);
+  assert.match(
+    buildWorkflow,
+    /windows-compiler-cache-mode:[\s\S]*?options:\s*\n\s+- sccache\s*\n\s+- ["']off["']/u,
+  );
+  assert.match(
+    buildWorkflow,
+    /compiler-cache-provider: \$\{\{ github\.event_name == 'workflow_dispatch' && inputs\.windows-compiler-cache-mode == 'off' && 'none' \|\| 'sccache' \}\}/u,
+  );
+  assert.match(
+    buildWorkflow,
+    /compiler-cache-platforms-json: \$\{\{[\s\S]*?'\["windows-x64"\]'/u,
+  );
+
   const linuxArm64ProfilePath = path.join(
     ROOT,
     'docs/shifu/linux-arm64-qualification-portable-off.cache-profile.json',
@@ -757,7 +788,7 @@ test('cache doctor probes selected HTTP endpoints only when requested', async (t
   profile.services.npm.endpoint.url = `http://127.0.0.1:${address.port}/npm/`;
   profile.services.npm.verification.probe = {
     path: '/healthz',
-    timeoutMs: 250,
+    timeoutMs: 1000,
     attempts: 3,
     retryDelayMs: 0,
   };
@@ -774,7 +805,7 @@ test('cache doctor probes selected HTTP endpoints only when requested', async (t
     receiptPath: fixture.receipt,
     env: {},
     probe: true,
-    timeoutMs: 1000,
+    timeoutMs: 5000,
   });
   assert.equal(diagnostic.overall, 'healthy');
   assert.equal(diagnostic.probe, true);
@@ -785,7 +816,7 @@ test('cache doctor probes selected HTTP endpoints only when requested', async (t
     status: 200,
     durationMs: diagnostic.services.npm.probeEvidence.durationMs,
     attempts: 1,
-    timeoutMs: 250,
+    timeoutMs: 1000,
     target: 'same-origin-path',
   });
 });

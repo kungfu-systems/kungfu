@@ -5,14 +5,12 @@
 # Stage 1 scope: the kungfu-owned install surface. It bootstraps the pinned
 # uv (through shifu-core's fetch engine, checksum-required from the shipped
 # runtime-pins manifest), pins the satellite CPython through uv, and derives
-# package environments exclusively from that blessed interpreter. The frozen
-# host stays the front door; it forwards the `env` subtree here untouched.
-# Stages 2/3 grow this binary into the process host; they do not add a second
-# one.
+# package environments exclusively from that blessed interpreter. This trunk
+# is the front door and forwards Python-owned subtrees into the assembled tree.
 #
-# Ships inside dist/kungfu next to the frozen binary — never released or
-# version-tagged on its own, so this version is informational and follows the
-# product line.
+# Ships inside dist/kungfu as both `kungfu` and `kungfu-trunk` — never released
+# or version-tagged on its own, so this version is informational and follows
+# the product line.
 
 [package]
 name = "kungfu-trunk"

@@ -9,8 +9,8 @@
   "status": "passed",
   "verificationMode": "product-declared-registry",
   "summary": {
-    "detected": 157,
-    "declared": 157,
+    "detected": 187,
+    "declared": 187,
     "enforced": 0,
     "detectedButUnregistered": 0,
     "declaredButMissing": 0
@@ -132,6 +132,29 @@
       "residualRisk": []
     },
     {
+      "id": "kungfu.agent-work-lab.autoplay",
+      "kind": "cli-api-tui",
+      "name": "kungfu agent-work-lab autoplay",
+      "state": "declared",
+      "detected": true,
+      "enforced": false,
+      "sourcePath": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json",
+      "artifactPath": "framework/core/src/python/kungfu/agent/commands.json",
+      "evidencePath": "framework/core/src/python/kungfu/agent/commands.json",
+      "kfd1Basis": {
+        "registryPath": ".buildchain/kfd/kfd-3/surfaces.json",
+        "sourcePath": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json",
+        "artifactPath": "framework/core/src/python/kungfu/agent/commands.json",
+        "digest": "sha256:681cea797fcaa307cf1bb1b5b99ddb73d34d9340a3d78d89377c261bc7244ee2"
+      },
+      "kfd2Trust": {
+        "status": "unknown",
+        "trustImpact": "passport-claim-not-found",
+        "residualRisk": []
+      },
+      "residualRisk": []
+    },
+    {
       "id": "kungfu.agent-work-lab.catalog",
       "kind": "cli-api-gui",
       "name": "kungfu agent-work-lab catalog --json",
@@ -224,9 +247,9 @@
       "residualRisk": []
     },
     {
-      "id": "kungfu.agent.bootstrap",
-      "kind": "cli",
-      "name": "kungfu agent bootstrap --target codex --mode report",
+      "id": "kungfu.agent-work-lab.starter-create",
+      "kind": "cli-api-gui-tui",
+      "name": "kungfu agent-work-lab starter-create --destination <path> --expected-plan-root <root> --actor <actor> --execute --json",
       "state": "declared",
       "detected": true,
       "enforced": false,
@@ -237,7 +260,7 @@
         "registryPath": ".buildchain/kfd/kfd-3/surfaces.json",
         "sourcePath": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json",
         "artifactPath": "framework/core/src/python/kungfu/agent/commands.json",
-        "digest": "sha256:d6b22da735ae1525100170f8b36af86764732c8d52a609a656a44f36baa855ba"
+        "digest": "sha256:ee97796067810219b53a95b00d9efd789d817ec077471370e74a08a351d46c38"
       },
       "kfd2Trust": {
         "status": "unknown",
@@ -247,9 +270,9 @@
       "residualRisk": []
     },
     {
-      "id": "kungfu.agent.brief",
-      "kind": "cli",
-      "name": "kungfu agent brief",
+      "id": "kungfu.agent-work-lab.starter-plan",
+      "kind": "cli-api-gui-tui",
+      "name": "kungfu agent-work-lab starter-plan --json",
       "state": "declared",
       "detected": true,
       "enforced": false,
@@ -260,7 +283,7 @@
         "registryPath": ".buildchain/kfd/kfd-3/surfaces.json",
         "sourcePath": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json",
         "artifactPath": "framework/core/src/python/kungfu/agent/commands.json",
-        "digest": "sha256:e477e01b0c8c9773f4d7755f6918db96eb80d47a9e26150a27d5559f61ec8b3c"
+        "digest": "sha256:3912eca044f21bcfb0c55fc2a4ac8817a7ffdda11040b4cc0286fd0d740eca7e"
       },
       "kfd2Trust": {
         "status": "unknown",
@@ -270,9 +293,9 @@
       "residualRisk": []
     },
     {
-      "id": "kungfu.agent.capabilities",
-      "kind": "cli",
-      "name": "kungfu agent capabilities --json",
+      "id": "kungfu.agent-work-lab.starter-resume",
+      "kind": "cli-api-tui",
+      "name": "kungfu agent-work-lab starter-resume --workspace <path> --json",
       "state": "declared",
       "detected": true,
       "enforced": false,
@@ -283,7 +306,7 @@
         "registryPath": ".buildchain/kfd/kfd-3/surfaces.json",
         "sourcePath": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json",
         "artifactPath": "framework/core/src/python/kungfu/agent/commands.json",
-        "digest": "sha256:eee7f0897b9677fc956f315e8b09829b757f68a30e042b11ee8cb9465aadf8f6"
+        "digest": "sha256:3571451da78e6e6fcbb2bd81c992134a5148af624007737b878b35a1d81b1247"
       },
       "kfd2Trust": {
         "status": "unknown",
@@ -292,788 +315,53 @@
       },
       "residualRisk": []
     },
-    {
-      "id": "kungfu.agent.choose-mode",
-      "kind": "cli",
-      "name": "kungfu agent choose-mode --json",
-      "state": "declared",
-      "detected": true,
-      "enforced": false,
-      "sourcePath": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json",
-      "artifactPath": "framework/core/src/python/kungfu/agent/commands.json",
-      "evidencePath": "framework/core/src/python/kungfu/agent/commands.json",
-      "kfd1Basis": {
-        "registryPath": ".buildchain/kfd/kfd-3/surfaces.json",
-        "sourcePath": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json",
-        "artifactPath": "framework/core/src/python/kungfu/agent/commands.json",
-        "digest": "sha256:fa00f0e900010e098bd19fcf176dbc5f13f4ddfcf4ead7c8b5d12130a779d2b8"
-      },
-      "kfd2Trust": {
-        "status": "unknown",
-        "trustImpact": "passport-claim-not-found",
-        "residualRisk": []
-      },
-      "residualRisk": []
-    },
-    {
-      "id": "kungfu.agent.console",
-      "kind": "cli-api-gui",
-      "name": "kungfu agent console",
-      "state": "declared",
-      "detected": true,
-      "enforced": false,
-      "sourcePath": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json",
-      "artifactPath": "framework/core/src/python/kungfu/agent/commands.json",
-      "evidencePath": "framework/core/src/python/kungfu/agent/commands.json",
-      "kfd1Basis": {
-        "registryPath": ".buildchain/kfd/kfd-3/surfaces.json",
-        "sourcePath": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json",
-        "artifactPath": "framework/core/src/python/kungfu/agent/commands.json",
-        "digest": "sha256:0f29129cffce5d9943c601e5c20702e4ba61c5302e81ced6226d340411d653f8"
-      },
-      "kfd2Trust": {
-        "status": "unknown",
-        "trustImpact": "passport-claim-not-found",
-        "residualRisk": []
-      },
-      "residualRisk": []
-    },
-    {
-      "id": "kungfu.agent.console.current",
-      "kind": "cli-api-gui",
-      "name": "kungfu agent console current --json",
-      "state": "declared",
-      "detected": true,
-      "enforced": false,
-      "sourcePath": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json",
-      "artifactPath": "framework/core/src/python/kungfu/agent/commands.json",
-      "evidencePath": "framework/core/src/python/kungfu/agent/commands.json",
-      "kfd1Basis": {
-        "registryPath": ".buildchain/kfd/kfd-3/surfaces.json",
-        "sourcePath": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json",
-        "artifactPath": "framework/core/src/python/kungfu/agent/commands.json",
-        "digest": "sha256:56d881a3bb76b667cf5305d25d50579b4de9d51513af18ee5bc2abf84ae1d225"
-      },
-      "kfd2Trust": {
-        "status": "unknown",
-        "trustImpact": "passport-claim-not-found",
-        "residualRisk": []
-      },
-      "residualRisk": []
-    },
-    {
-      "id": "kungfu.agent.context",
-      "kind": "cli",
-      "name": "kungfu agent context --json",
-      "state": "declared",
-      "detected": true,
-      "enforced": false,
-      "sourcePath": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json",
-      "artifactPath": "framework/core/src/python/kungfu/agent/commands.json",
-      "evidencePath": "framework/core/src/python/kungfu/agent/commands.json",
-      "kfd1Basis": {
-        "registryPath": ".buildchain/kfd/kfd-3/surfaces.json",
-        "sourcePath": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json",
-        "artifactPath": "framework/core/src/python/kungfu/agent/commands.json",
-        "digest": "sha256:4801a72b274dc919c70cb050702c082dc6e8f70d0fb37da822317d1c67260651"
-      },
-      "kfd2Trust": {
-        "status": "unknown",
-        "trustImpact": "passport-claim-not-found",
-        "residualRisk": []
-      },
-      "residualRisk": []
-    },
-    {
-      "id": "kungfu.agent.docs",
-      "kind": "cli",
-      "name": "kungfu agent docs",
-      "state": "declared",
-      "detected": true,
-      "enforced": false,
-      "sourcePath": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json",
-      "artifactPath": "framework/core/src/python/kungfu/agent/commands.json",
-      "evidencePath": "framework/core/src/python/kungfu/agent/commands.json",
-      "kfd1Basis": {
-        "registryPath": ".buildchain/kfd/kfd-3/surfaces.json",
-        "sourcePath": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json",
-        "artifactPath": "framework/core/src/python/kungfu/agent/commands.json",
-        "digest": "sha256:531b505a519d33343bfa5ca2e3ae4d0b3d23c0500b8352dfb1fff83b82266bcc"
-      },
-      "kfd2Trust": {
-        "status": "unknown",
-        "trustImpact": "passport-claim-not-found",
-        "residualRisk": []
-      },
-      "residualRisk": []
-    },
-    {
-      "id": "kungfu.agent.hub",
-      "kind": "cli",
-      "name": "kungfu agent hub",
-      "state": "declared",
-      "detected": true,
-      "enforced": false,
-      "sourcePath": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json",
-      "artifactPath": "framework/core/src/python/kungfu/agent/commands.json",
-      "evidencePath": "framework/core/src/python/kungfu/agent/commands.json",
-      "kfd1Basis": {
-        "registryPath": ".buildchain/kfd/kfd-3/surfaces.json",
-        "sourcePath": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json",
-        "artifactPath": "framework/core/src/python/kungfu/agent/commands.json",
-        "digest": "sha256:a8b1c324278473191815ed09f0998b64f0a131dbef8eecfdb4f89802b1d055b8"
-      },
-      "kfd2Trust": {
-        "status": "unknown",
-        "trustImpact": "passport-claim-not-found",
-        "residualRisk": []
-      },
-      "residualRisk": []
-    },
-    {
-      "id": "kungfu.agent.hub.adapter",
-      "kind": "cli",
-      "name": "kungfu agent hub adapter --qualification-root <path>",
-      "state": "declared",
-      "detected": true,
-      "enforced": false,
-      "sourcePath": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json",
-      "artifactPath": "framework/core/src/python/kungfu/agent/commands.json",
-      "evidencePath": "framework/core/src/python/kungfu/agent/commands.json",
-      "kfd1Basis": {
-        "registryPath": ".buildchain/kfd/kfd-3/surfaces.json",
-        "sourcePath": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json",
-        "artifactPath": "framework/core/src/python/kungfu/agent/commands.json",
-        "digest": "sha256:e8cc1a94ce0965f545dc42c90ba5bc6465ddbef83cae319764c15d576aade5ad"
-      },
-      "kfd2Trust": {
-        "status": "unknown",
-        "trustImpact": "passport-claim-not-found",
-        "residualRisk": []
-      },
-      "residualRisk": []
-    },
-    {
-      "id": "kungfu.agent.hub.capabilities",
-      "kind": "cli",
-      "name": "kungfu agent hub capabilities --hub-id <id> --runtime-home <path> --json",
-      "state": "declared",
-      "detected": true,
-      "enforced": false,
-      "sourcePath": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json",
-      "artifactPath": "framework/core/src/python/kungfu/agent/commands.json",
-      "evidencePath": "framework/core/src/python/kungfu/agent/commands.json",
-      "kfd1Basis": {
-        "registryPath": ".buildchain/kfd/kfd-3/surfaces.json",
-        "sourcePath": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json",
-        "artifactPath": "framework/core/src/python/kungfu/agent/commands.json",
-        "digest": "sha256:15137382384971d9b7492de02a052da5f08e44e6142be8df6347024fb7093586"
-      },
-      "kfd2Trust": {
-        "status": "unknown",
-        "trustImpact": "passport-claim-not-found",
-        "residualRisk": []
-      },
-      "residualRisk": []
-    },
-    {
-      "id": "kungfu.agent.hub.handle",
-      "kind": "cli",
-      "name": "kungfu agent hub handle --file <request.json> --source-home <path> --target-home <path> --json",
-      "state": "declared",
-      "detected": true,
-      "enforced": false,
-      "sourcePath": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json",
-      "artifactPath": "framework/core/src/python/kungfu/agent/commands.json",
-      "evidencePath": "framework/core/src/python/kungfu/agent/commands.json",
-      "kfd1Basis": {
-        "registryPath": ".buildchain/kfd/kfd-3/surfaces.json",
-        "sourcePath": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json",
-        "artifactPath": "framework/core/src/python/kungfu/agent/commands.json",
-        "digest": "sha256:ac365340cda182a1cc58a0b767da3af803836cd3750dd16a6f6516105a41556c"
-      },
-      "kfd2Trust": {
-        "status": "unknown",
-        "trustImpact": "passport-claim-not-found",
-        "residualRisk": []
-      },
-      "residualRisk": []
-    },
-    {
-      "id": "kungfu.agent.hub.qualify",
-      "kind": "cli-api-gui",
-      "name": "kungfu agent hub qualify --output-dir <new-directory> [--json]",
-      "state": "declared",
-      "detected": true,
-      "enforced": false,
-      "sourcePath": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json",
-      "artifactPath": "framework/core/src/python/kungfu/agent/commands.json",
-      "evidencePath": "framework/core/src/python/kungfu/agent/commands.json",
-      "kfd1Basis": {
-        "registryPath": ".buildchain/kfd/kfd-3/surfaces.json",
-        "sourcePath": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json",
-        "artifactPath": "framework/core/src/python/kungfu/agent/commands.json",
-        "digest": "sha256:acbe818ae172b0011035cba77bafab0f91aaae388ba3a7b779650fe4cb4a53fa"
-      },
-      "kfd2Trust": {
-        "status": "unknown",
-        "trustImpact": "passport-claim-not-found",
-        "residualRisk": []
-      },
-      "residualRisk": []
-    },
-    {
-      "id": "kungfu.agent.hub.verify",
-      "kind": "cli-api-gui",
-      "name": "kungfu agent hub verify --qualification-dir <directory> [--json]",
-      "state": "declared",
-      "detected": true,
-      "enforced": false,
-      "sourcePath": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json",
-      "artifactPath": "framework/core/src/python/kungfu/agent/commands.json",
-      "evidencePath": "framework/core/src/python/kungfu/agent/commands.json",
-      "kfd1Basis": {
-        "registryPath": ".buildchain/kfd/kfd-3/surfaces.json",
-        "sourcePath": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json",
-        "artifactPath": "framework/core/src/python/kungfu/agent/commands.json",
-        "digest": "sha256:19f7bd1b80a61a3f97140a2831cac860341d7129c42e2911ac82adf2b54c7ab6"
-      },
-      "kfd2Trust": {
-        "status": "unknown",
-        "trustImpact": "passport-claim-not-found",
-        "residualRisk": []
-      },
-      "residualRisk": []
-    },
-    {
-      "id": "kungfu.agent.install-skill",
-      "kind": "cli",
-      "name": "kungfu agent install-skill --target codex",
-      "state": "declared",
-      "detected": true,
-      "enforced": false,
-      "sourcePath": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json",
-      "artifactPath": "framework/core/src/python/kungfu/agent/commands.json",
-      "evidencePath": "framework/core/src/python/kungfu/agent/commands.json",
-      "kfd1Basis": {
-        "registryPath": ".buildchain/kfd/kfd-3/surfaces.json",
-        "sourcePath": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json",
-        "artifactPath": "framework/core/src/python/kungfu/agent/commands.json",
-        "digest": "sha256:0b819e06ce20fa33d1e86bb0ee0ef55975bf6a790e379df316e7adec3e804486"
-      },
-      "kfd2Trust": {
-        "status": "unknown",
-        "trustImpact": "passport-claim-not-found",
-        "residualRisk": []
-      },
-      "residualRisk": []
-    },
-    {
-      "id": "kungfu.agent.mode",
-      "kind": "cli",
-      "name": "kungfu agent mode",
-      "state": "declared",
-      "detected": true,
-      "enforced": false,
-      "sourcePath": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json",
-      "artifactPath": "framework/core/src/python/kungfu/agent/commands.json",
-      "evidencePath": "framework/core/src/python/kungfu/agent/commands.json",
-      "kfd1Basis": {
-        "registryPath": ".buildchain/kfd/kfd-3/surfaces.json",
-        "sourcePath": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json",
-        "artifactPath": "framework/core/src/python/kungfu/agent/commands.json",
-        "digest": "sha256:20d5d0db4b9c6e4dfb1dc6dfd8fc7cc87868038f55dd02af706c1de7d2e95143"
-      },
-      "kfd2Trust": {
-        "status": "unknown",
-        "trustImpact": "passport-claim-not-found",
-        "residualRisk": []
-      },
-      "residualRisk": []
-    },
-    {
-      "id": "kungfu.agent.mode.set",
-      "kind": "cli",
-      "name": "kungfu agent mode set --target codex --mode managed-run",
-      "state": "declared",
-      "detected": true,
-      "enforced": false,
-      "sourcePath": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json",
-      "artifactPath": "framework/core/src/python/kungfu/agent/commands.json",
-      "evidencePath": "framework/core/src/python/kungfu/agent/commands.json",
-      "kfd1Basis": {
-        "registryPath": ".buildchain/kfd/kfd-3/surfaces.json",
-        "sourcePath": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json",
-        "artifactPath": "framework/core/src/python/kungfu/agent/commands.json",
-        "digest": "sha256:c5b0fd8f6f10cebed2d101dacbc1ab5bf8ecccafcc5119e0af5ab57e0ebd84ea"
-      },
-      "kfd2Trust": {
-        "status": "unknown",
-        "trustImpact": "passport-claim-not-found",
-        "residualRisk": []
-      },
-      "residualRisk": []
-    },
-    {
-      "id": "kungfu.agent.runtime",
-      "kind": "cli",
-      "name": "kungfu agent runtime",
-      "state": "declared",
-      "detected": true,
-      "enforced": false,
-      "sourcePath": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json",
-      "artifactPath": "framework/core/src/python/kungfu/agent/commands.json",
-      "evidencePath": "framework/core/src/python/kungfu/agent/commands.json",
-      "kfd1Basis": {
-        "registryPath": ".buildchain/kfd/kfd-3/surfaces.json",
-        "sourcePath": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json",
-        "artifactPath": "framework/core/src/python/kungfu/agent/commands.json",
-        "digest": "sha256:ac2cadd2bc3b4f43e0bfcd650f21489f4bf0db438ea25a234510eb350ead1be7"
-      },
-      "kfd2Trust": {
-        "status": "unknown",
-        "trustImpact": "passport-claim-not-found",
-        "residualRisk": []
-      },
-      "residualRisk": []
-    },
-    {
-      "id": "kungfu.agent.runtime.discover",
-      "kind": "cli",
-      "name": "kungfu agent runtime discover --json",
-      "state": "declared",
-      "detected": true,
-      "enforced": false,
-      "sourcePath": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json",
-      "artifactPath": "framework/core/src/python/kungfu/agent/commands.json",
-      "evidencePath": "framework/core/src/python/kungfu/agent/commands.json",
-      "kfd1Basis": {
-        "registryPath": ".buildchain/kfd/kfd-3/surfaces.json",
-        "sourcePath": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json",
-        "artifactPath": "framework/core/src/python/kungfu/agent/commands.json",
-        "digest": "sha256:5290f30c23b294ba37260c1f0ade54f1bff0f5f2b78b3e64c15c462c5bc8baaf"
-      },
-      "kfd2Trust": {
-        "status": "unknown",
-        "trustImpact": "passport-claim-not-found",
-        "residualRisk": []
-      },
-      "residualRisk": []
-    },
-    {
-      "id": "kungfu.agent.runtime.list",
-      "kind": "cli",
-      "name": "kungfu agent runtime list --json",
-      "state": "declared",
-      "detected": true,
-      "enforced": false,
-      "sourcePath": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json",
-      "artifactPath": "framework/core/src/python/kungfu/agent/commands.json",
-      "evidencePath": "framework/core/src/python/kungfu/agent/commands.json",
-      "kfd1Basis": {
-        "registryPath": ".buildchain/kfd/kfd-3/surfaces.json",
-        "sourcePath": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json",
-        "artifactPath": "framework/core/src/python/kungfu/agent/commands.json",
-        "digest": "sha256:04a9272255e3386f902f7a30ac798de64e0c72bfd18e19e43b14aaa31446220c"
-      },
-      "kfd2Trust": {
-        "status": "unknown",
-        "trustImpact": "passport-claim-not-found",
-        "residualRisk": []
-      },
-      "residualRisk": []
-    },
-    {
-      "id": "kungfu.agent.runtime.remove",
-      "kind": "cli",
-      "name": "kungfu agent runtime remove <profile-id> --json",
-      "state": "declared",
-      "detected": true,
-      "enforced": false,
-      "sourcePath": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json",
-      "artifactPath": "framework/core/src/python/kungfu/agent/commands.json",
-      "evidencePath": "framework/core/src/python/kungfu/agent/commands.json",
-      "kfd1Basis": {
-        "registryPath": ".buildchain/kfd/kfd-3/surfaces.json",
-        "sourcePath": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json",
-        "artifactPath": "framework/core/src/python/kungfu/agent/commands.json",
-        "digest": "sha256:b75de3eb909b89468c0b31e0ad77fac7e214a45b795f7701a085cf7dca5168ea"
-      },
-      "kfd2Trust": {
-        "status": "unknown",
-        "trustImpact": "passport-claim-not-found",
-        "residualRisk": []
-      },
-      "residualRisk": []
-    },
-    {
-      "id": "kungfu.agent.runtime.set-default",
-      "kind": "cli",
-      "name": "kungfu agent runtime set-default <profile-id> --json",
-      "state": "declared",
-      "detected": true,
-      "enforced": false,
-      "sourcePath": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json",
-      "artifactPath": "framework/core/src/python/kungfu/agent/commands.json",
-      "evidencePath": "framework/core/src/python/kungfu/agent/commands.json",
-      "kfd1Basis": {
-        "registryPath": ".buildchain/kfd/kfd-3/surfaces.json",
-        "sourcePath": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json",
-        "artifactPath": "framework/core/src/python/kungfu/agent/commands.json",
-        "digest": "sha256:9a6ff309930ced706b2b9269707f64657bee28e5a5853d1b3ac4530a198f150d"
-      },
-      "kfd2Trust": {
-        "status": "unknown",
-        "trustImpact": "passport-claim-not-found",
-        "residualRisk": []
-      },
-      "residualRisk": []
-    },
-    {
-      "id": "kungfu.agent.runtime.upsert",
-      "kind": "cli",
-      "name": "kungfu agent runtime upsert --id <id> --provider <provider> --executable <path> --json",
-      "state": "declared",
-      "detected": true,
-      "enforced": false,
-      "sourcePath": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json",
-      "artifactPath": "framework/core/src/python/kungfu/agent/commands.json",
-      "evidencePath": "framework/core/src/python/kungfu/agent/commands.json",
-      "kfd1Basis": {
-        "registryPath": ".buildchain/kfd/kfd-3/surfaces.json",
-        "sourcePath": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json",
-        "artifactPath": "framework/core/src/python/kungfu/agent/commands.json",
-        "digest": "sha256:bc2537edd515553c1d4655fef8a4b95d9a4193f1391db4d985e7cfb88b9b29cf"
-      },
-      "kfd2Trust": {
-        "status": "unknown",
-        "trustImpact": "passport-claim-not-found",
-        "residualRisk": []
-      },
-      "residualRisk": []
-    },
-    {
-      "id": "kungfu.agent.runtime.verify",
-      "kind": "cli",
-      "name": "kungfu agent runtime verify <profile-id> --json",
-      "state": "declared",
-      "detected": true,
-      "enforced": false,
-      "sourcePath": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json",
-      "artifactPath": "framework/core/src/python/kungfu/agent/commands.json",
-      "evidencePath": "framework/core/src/python/kungfu/agent/commands.json",
-      "kfd1Basis": {
-        "registryPath": ".buildchain/kfd/kfd-3/surfaces.json",
-        "sourcePath": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json",
-        "artifactPath": "framework/core/src/python/kungfu/agent/commands.json",
-        "digest": "sha256:b7d616f1e3e3592fe5b18eae9a82f299136242002ab389ca8b975e6ae8cd34f8"
-      },
-      "kfd2Trust": {
-        "status": "unknown",
-        "trustImpact": "passport-claim-not-found",
-        "residualRisk": []
-      },
-      "residualRisk": []
-    },
-    {
-      "id": "kungfu.agent.session",
-      "kind": "cli-api-gui",
-      "name": "kungfu agent session <operation> --input - --json",
-      "state": "declared",
-      "detected": true,
-      "enforced": false,
-      "sourcePath": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json",
-      "artifactPath": "framework/core/src/python/kungfu/agent/commands.json",
-      "evidencePath": "framework/core/src/python/kungfu/agent/commands.json",
-      "kfd1Basis": {
-        "registryPath": ".buildchain/kfd/kfd-3/surfaces.json",
-        "sourcePath": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json",
-        "artifactPath": "framework/core/src/python/kungfu/agent/commands.json",
-        "digest": "sha256:e5dfe3fd1b95391140d99d6b1edf3855ae23feedca2bca0d0e4a12da22184046"
-      },
-      "kfd2Trust": {
-        "status": "unknown",
-        "trustImpact": "passport-claim-not-found",
-        "residualRisk": []
-      },
-      "residualRisk": []
-    },
-    {
-      "id": "kungfu.agent.status",
-      "kind": "cli",
-      "name": "kungfu agent status --target codex --json",
-      "state": "declared",
-      "detected": true,
-      "enforced": false,
-      "sourcePath": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json",
-      "artifactPath": "framework/core/src/python/kungfu/agent/commands.json",
-      "evidencePath": "framework/core/src/python/kungfu/agent/commands.json",
-      "kfd1Basis": {
-        "registryPath": ".buildchain/kfd/kfd-3/surfaces.json",
-        "sourcePath": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json",
-        "artifactPath": "framework/core/src/python/kungfu/agent/commands.json",
-        "digest": "sha256:5da2b52e4f8e7051eb5ccbe501b99fb37cd0d46336287f36bcf681ef9005f28c"
-      },
-      "kfd2Trust": {
-        "status": "unknown",
-        "trustImpact": "passport-claim-not-found",
-        "residualRisk": []
-      },
-      "residualRisk": []
-    },
-    {
-      "id": "kungfu.agent.unbootstrap",
-      "kind": "cli",
-      "name": "kungfu agent unbootstrap --target codex",
-      "state": "declared",
-      "detected": true,
-      "enforced": false,
-      "sourcePath": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json",
-      "artifactPath": "framework/core/src/python/kungfu/agent/commands.json",
-      "evidencePath": "framework/core/src/python/kungfu/agent/commands.json",
-      "kfd1Basis": {
-        "registryPath": ".buildchain/kfd/kfd-3/surfaces.json",
-        "sourcePath": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json",
-        "artifactPath": "framework/core/src/python/kungfu/agent/commands.json",
-        "digest": "sha256:096bd27075b3feae0784ea249be6a50cdc632e5136fefb88b639deef08c0e9ab"
-      },
-      "kfd2Trust": {
-        "status": "unknown",
-        "trustImpact": "passport-claim-not-found",
-        "residualRisk": []
-      },
-      "residualRisk": []
-    },
-    {
-      "id": "kungfu.agent.uninstall",
-      "kind": "cli",
-      "name": "kungfu agent uninstall --target codex",
-      "state": "declared",
-      "detected": true,
-      "enforced": false,
-      "sourcePath": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json",
-      "artifactPath": "framework/core/src/python/kungfu/agent/commands.json",
-      "evidencePath": "framework/core/src/python/kungfu/agent/commands.json",
-      "kfd1Basis": {
-        "registryPath": ".buildchain/kfd/kfd-3/surfaces.json",
-        "sourcePath": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json",
-        "artifactPath": "framework/core/src/python/kungfu/agent/commands.json",
-        "digest": "sha256:c8afbb0d46d2e11b12b2f08ac5683bdedfba8ea4e38b7c24eb1db09ef7183b6a"
-      },
-      "kfd2Trust": {
-        "status": "unknown",
-        "trustImpact": "passport-claim-not-found",
-        "residualRisk": []
-      },
-      "residualRisk": []
-    },
-    {
-      "id": "kungfu.agent.verify",
-      "kind": "cli",
-      "name": "kungfu agent verify --json",
-      "state": "declared",
-      "detected": true,
-      "enforced": false,
-      "sourcePath": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json",
-      "artifactPath": "framework/core/src/python/kungfu/agent/commands.json",
-      "evidencePath": "framework/core/src/python/kungfu/agent/commands.json",
-      "kfd1Basis": {
-        "registryPath": ".buildchain/kfd/kfd-3/surfaces.json",
-        "sourcePath": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json",
-        "artifactPath": "framework/core/src/python/kungfu/agent/commands.json",
-        "digest": "sha256:f1d03f639b0fb6f19bdefbdecded3375ce54d8fb1c233f9aceac7efc4c44bafb"
-      },
-      "kfd2Trust": {
-        "status": "unknown",
-        "trustImpact": "passport-claim-not-found",
-        "residualRisk": []
-      },
-      "residualRisk": []
-    },
-    {
-      "id": "kungfu.agent.work",
-      "kind": "cli-api-gui",
-      "name": "kungfu agent work",
-      "state": "declared",
-      "detected": true,
-      "enforced": false,
-      "sourcePath": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json",
-      "artifactPath": "framework/core/src/python/kungfu/agent/commands.json",
-      "evidencePath": "framework/core/src/python/kungfu/agent/commands.json",
-      "kfd1Basis": {
-        "registryPath": ".buildchain/kfd/kfd-3/surfaces.json",
-        "sourcePath": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json",
-        "artifactPath": "framework/core/src/python/kungfu/agent/commands.json",
-        "digest": "sha256:63764e57be6185834da23db2a58bf2ac99167599419cb4b6d835b6d789b6d0f8"
-      },
-      "kfd2Trust": {
-        "status": "unknown",
-        "trustImpact": "passport-claim-not-found",
-        "residualRisk": []
-      },
-      "residualRisk": []
-    },
-    {
-      "id": "kungfu.agent.work-model",
-      "kind": "cli",
-      "name": "kungfu agent work-model --json",
-      "state": "declared",
-      "detected": true,
-      "enforced": false,
-      "sourcePath": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json",
-      "artifactPath": "framework/core/src/python/kungfu/agent/commands.json",
-      "evidencePath": "framework/core/src/python/kungfu/agent/commands.json",
-      "kfd1Basis": {
-        "registryPath": ".buildchain/kfd/kfd-3/surfaces.json",
-        "sourcePath": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json",
-        "artifactPath": "framework/core/src/python/kungfu/agent/commands.json",
-        "digest": "sha256:95cfa8b61701d378bf7b607a2a8ed398a10fffff47d8a0213b0f15ff16279a4e"
-      },
-      "kfd2Trust": {
-        "status": "unknown",
-        "trustImpact": "passport-claim-not-found",
-        "residualRisk": []
-      },
-      "residualRisk": []
-    },
-    {
-      "id": "kungfu.agent.work.action",
-      "kind": "cli-api-gui",
-      "name": "kungfu agent work action --file <request.json> [--execute] --json",
-      "state": "declared",
-      "detected": true,
-      "enforced": false,
-      "sourcePath": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json",
-      "artifactPath": "framework/core/src/python/kungfu/agent/commands.json",
-      "evidencePath": "framework/core/src/python/kungfu/agent/commands.json",
-      "kfd1Basis": {
-        "registryPath": ".buildchain/kfd/kfd-3/surfaces.json",
-        "sourcePath": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json",
-        "artifactPath": "framework/core/src/python/kungfu/agent/commands.json",
-        "digest": "sha256:35d54212b2184b83d2052ee3311dc4ca4c3c4b8632861c6715435e10250a1e20"
-      },
-      "kfd2Trust": {
-        "status": "unknown",
-        "trustImpact": "passport-claim-not-found",
-        "residualRisk": []
-      },
-      "residualRisk": []
-    },
-    {
-      "id": "kungfu.agent.work.capabilities",
-      "kind": "cli-api-gui",
-      "name": "kungfu agent work capabilities --json",
-      "state": "declared",
-      "detected": true,
-      "enforced": false,
-      "sourcePath": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json",
-      "artifactPath": "framework/core/src/python/kungfu/agent/commands.json",
-      "evidencePath": "framework/core/src/python/kungfu/agent/commands.json",
-      "kfd1Basis": {
-        "registryPath": ".buildchain/kfd/kfd-3/surfaces.json",
-        "sourcePath": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json",
-        "artifactPath": "framework/core/src/python/kungfu/agent/commands.json",
-        "digest": "sha256:f3c47c84066a4c0acc5401dc6517c8a30b0ce23807ef86f243e1e65409002a42"
-      },
-      "kfd2Trust": {
-        "status": "unknown",
-        "trustImpact": "passport-claim-not-found",
-        "residualRisk": []
-      },
-      "residualRisk": []
-    },
-    {
-      "id": "kungfu.agent.work.export-authority",
-      "kind": "cli-api-gui",
-      "name": "kungfu agent work export-authority --json",
-      "state": "declared",
-      "detected": true,
-      "enforced": false,
-      "sourcePath": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json",
-      "artifactPath": "framework/core/src/python/kungfu/agent/commands.json",
-      "evidencePath": "framework/core/src/python/kungfu/agent/commands.json",
-      "kfd1Basis": {
-        "registryPath": ".buildchain/kfd/kfd-3/surfaces.json",
-        "sourcePath": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json",
-        "artifactPath": "framework/core/src/python/kungfu/agent/commands.json",
-        "digest": "sha256:36ce1377cb2807787be66fe02caafa23557b2000463b47f7ca9a5a20dffd2791"
-      },
-      "kfd2Trust": {
-        "status": "unknown",
-        "trustImpact": "passport-claim-not-found",
-        "residualRisk": []
-      },
-      "residualRisk": []
-    },
-    {
-      "id": "kungfu.agent.work.import-authority",
-      "kind": "cli-api-gui",
-      "name": "kungfu agent work import-authority --file <bundle.json> [--execute] --json",
-      "state": "declared",
-      "detected": true,
-      "enforced": false,
-      "sourcePath": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json",
-      "artifactPath": "framework/core/src/python/kungfu/agent/commands.json",
-      "evidencePath": "framework/core/src/python/kungfu/agent/commands.json",
-      "kfd1Basis": {
-        "registryPath": ".buildchain/kfd/kfd-3/surfaces.json",
-        "sourcePath": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json",
-        "artifactPath": "framework/core/src/python/kungfu/agent/commands.json",
-        "digest": "sha256:e037687e970a0ff9bc3354b3910ee102beaf28971f96c238e59b1661c1587b06"
-      },
-      "kfd2Trust": {
-        "status": "unknown",
-        "trustImpact": "passport-claim-not-found",
-        "residualRisk": []
-      },
-      "residualRisk": []
-    },
-    {
-      "id": "kungfu.agent.work.inspect",
-      "kind": "cli-api-gui",
-      "name": "kungfu agent work inspect --ref <ref> --json",
-      "state": "declared",
-      "detected": true,
-      "enforced": false,
-      "sourcePath": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json",
-      "artifactPath": "framework/core/src/python/kungfu/agent/commands.json",
-      "evidencePath": "framework/core/src/python/kungfu/agent/commands.json",
-      "kfd1Basis": {
-        "registryPath": ".buildchain/kfd/kfd-3/surfaces.json",
-        "sourcePath": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json",
-        "artifactPath": "framework/core/src/python/kungfu/agent/commands.json",
-        "digest": "sha256:6af6d64c9de18bca664083e4bed4729f414bdc942dc2eef163c138f0981a4d88"
-      },
-      "kfd2Trust": {
-        "status": "unknown",
-        "trustImpact": "passport-claim-not-found",
-        "residualRisk": []
-      },
-      "residualRisk": []
-    },
-    {
-      "id": "kungfu.agent.work.session",
-      "kind": "cli-api-gui",
-      "name": "kungfu agent work session --operation <compressibility|expand|project> --file <session.json> --json",
-      "state": "declared",
-      "detected": true,
-      "enforced": false,
-      "sourcePath": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json",
-      "artifactPath": "framework/core/src/python/kungfu/agent/commands.json",
-      "evidencePath": "framework/core/src/python/kungfu/agent/commands.json",
-      "kfd1Basis": {
-        "registryPath": ".buildchain/kfd/kfd-3/surfaces.json",
-        "sourcePath": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json",
-        "artifactPath": "framework/core/src/python/kungfu/agent/commands.json",
-        "digest": "sha256:12d0e74117911a9ca20cdbe629d58bf4f57d857a1e05fa8455b20b432ea5afb8"
-      },
-      "kfd2Trust": {
-        "status": "unknown",
-        "trustImpact": "passport-claim-not-found",
-        "residualRisk": []
-      },
-      "residualRisk": []
-    },
+    {"id":"kungfu.agent.bootstrap","kind":"cli","name":"kungfu agent bootstrap --target codex --mode report","state":"declared","detected":true,"enforced":false,"sourcePath":"framework/core/src/python/kungfu/agent/kfd3_api.registry.json","artifactPath":"framework/core/src/python/kungfu/agent/commands.json","evidencePath":"framework/core/src/python/kungfu/agent/commands.json","kfd1Basis":{"registryPath":".buildchain/kfd/kfd-3/surfaces.json","sourcePath":"framework/core/src/python/kungfu/agent/kfd3_api.registry.json","artifactPath":"framework/core/src/python/kungfu/agent/commands.json","digest":"sha256:d6b22da735ae1525100170f8b36af86764732c8d52a609a656a44f36baa855ba"},"kfd2Trust":{"status":"unknown","trustImpact":"passport-claim-not-found","residualRisk":[]},"residualRisk":[]},
+    {"id":"kungfu.agent.bootstrap-status","kind":"cli-api-gui","name":"kungfu agent bootstrap-status --json","state":"declared","detected":true,"enforced":false,"sourcePath":"framework/core/src/python/kungfu/agent/kfd3_api.registry.json","artifactPath":"framework/core/src/python/kungfu/agent/commands.json","evidencePath":"framework/core/src/python/kungfu/agent/commands.json","kfd1Basis":{"registryPath":".buildchain/kfd/kfd-3/surfaces.json","sourcePath":"framework/core/src/python/kungfu/agent/kfd3_api.registry.json","artifactPath":"framework/core/src/python/kungfu/agent/commands.json","digest":"sha256:4ba1ee673a17bba85bdcbb9891f22955da58a825cb3e5cda324b02f3dbcf4de8"},"kfd2Trust":{"status":"unknown","trustImpact":"passport-claim-not-found","residualRisk":[]},"residualRisk":[]},
+    {"id":"kungfu.agent.brief","kind":"cli","name":"kungfu agent brief","state":"declared","detected":true,"enforced":false,"sourcePath":"framework/core/src/python/kungfu/agent/kfd3_api.registry.json","artifactPath":"framework/core/src/python/kungfu/agent/commands.json","evidencePath":"framework/core/src/python/kungfu/agent/commands.json","kfd1Basis":{"registryPath":".buildchain/kfd/kfd-3/surfaces.json","sourcePath":"framework/core/src/python/kungfu/agent/kfd3_api.registry.json","artifactPath":"framework/core/src/python/kungfu/agent/commands.json","digest":"sha256:e477e01b0c8c9773f4d7755f6918db96eb80d47a9e26150a27d5559f61ec8b3c"},"kfd2Trust":{"status":"unknown","trustImpact":"passport-claim-not-found","residualRisk":[]},"residualRisk":[]},
+    {"id":"kungfu.agent.capabilities","kind":"cli","name":"kungfu agent capabilities --json","state":"declared","detected":true,"enforced":false,"sourcePath":"framework/core/src/python/kungfu/agent/kfd3_api.registry.json","artifactPath":"framework/core/src/python/kungfu/agent/commands.json","evidencePath":"framework/core/src/python/kungfu/agent/commands.json","kfd1Basis":{"registryPath":".buildchain/kfd/kfd-3/surfaces.json","sourcePath":"framework/core/src/python/kungfu/agent/kfd3_api.registry.json","artifactPath":"framework/core/src/python/kungfu/agent/commands.json","digest":"sha256:eee7f0897b9677fc956f315e8b09829b757f68a30e042b11ee8cb9465aadf8f6"},"kfd2Trust":{"status":"unknown","trustImpact":"passport-claim-not-found","residualRisk":[]},"residualRisk":[]},
+    {"id":"kungfu.agent.choose-mode","kind":"cli","name":"kungfu agent choose-mode --json","state":"declared","detected":true,"enforced":false,"sourcePath":"framework/core/src/python/kungfu/agent/kfd3_api.registry.json","artifactPath":"framework/core/src/python/kungfu/agent/commands.json","evidencePath":"framework/core/src/python/kungfu/agent/commands.json","kfd1Basis":{"registryPath":".buildchain/kfd/kfd-3/surfaces.json","sourcePath":"framework/core/src/python/kungfu/agent/kfd3_api.registry.json","artifactPath":"framework/core/src/python/kungfu/agent/commands.json","digest":"sha256:fa00f0e900010e098bd19fcf176dbc5f13f4ddfcf4ead7c8b5d12130a779d2b8"},"kfd2Trust":{"status":"unknown","trustImpact":"passport-claim-not-found","residualRisk":[]},"residualRisk":[]},
+    {"id":"kungfu.agent.console","kind":"cli-api-gui","name":"kungfu agent console","state":"declared","detected":true,"enforced":false,"sourcePath":"framework/core/src/python/kungfu/agent/kfd3_api.registry.json","artifactPath":"framework/core/src/python/kungfu/agent/commands.json","evidencePath":"framework/core/src/python/kungfu/agent/commands.json","kfd1Basis":{"registryPath":".buildchain/kfd/kfd-3/surfaces.json","sourcePath":"framework/core/src/python/kungfu/agent/kfd3_api.registry.json","artifactPath":"framework/core/src/python/kungfu/agent/commands.json","digest":"sha256:0f29129cffce5d9943c601e5c20702e4ba61c5302e81ced6226d340411d653f8"},"kfd2Trust":{"status":"unknown","trustImpact":"passport-claim-not-found","residualRisk":[]},"residualRisk":[]},
+    {"id":"kungfu.agent.console.bind-work","kind":"cli-api-gui","name":"kungfu agent console bind-work --initiative-id <id> --assignment-id <id> --json","state":"declared","detected":true,"enforced":false,"sourcePath":"framework/core/src/python/kungfu/agent/kfd3_api.registry.json","artifactPath":"framework/core/src/python/kungfu/agent/commands.json","evidencePath":"framework/core/src/python/kungfu/agent/commands.json","kfd1Basis":{"registryPath":".buildchain/kfd/kfd-3/surfaces.json","sourcePath":"framework/core/src/python/kungfu/agent/kfd3_api.registry.json","artifactPath":"framework/core/src/python/kungfu/agent/commands.json","digest":"sha256:9add2c2b2e913242ddb0297e929f71d27cb375f88c0cd9b4bf298a9d4e8ad7e9"},"kfd2Trust":{"status":"unknown","trustImpact":"passport-claim-not-found","residualRisk":[]},"residualRisk":[]},
+    {"id":"kungfu.agent.console.current","kind":"cli-api-gui","name":"kungfu agent console current --json","state":"declared","detected":true,"enforced":false,"sourcePath":"framework/core/src/python/kungfu/agent/kfd3_api.registry.json","artifactPath":"framework/core/src/python/kungfu/agent/commands.json","evidencePath":"framework/core/src/python/kungfu/agent/commands.json","kfd1Basis":{"registryPath":".buildchain/kfd/kfd-3/surfaces.json","sourcePath":"framework/core/src/python/kungfu/agent/kfd3_api.registry.json","artifactPath":"framework/core/src/python/kungfu/agent/commands.json","digest":"sha256:56d881a3bb76b667cf5305d25d50579b4de9d51513af18ee5bc2abf84ae1d225"},"kfd2Trust":{"status":"unknown","trustImpact":"passport-claim-not-found","residualRisk":[]},"residualRisk":[]},
+    {"id":"kungfu.agent.context","kind":"cli","name":"kungfu agent context --json","state":"declared","detected":true,"enforced":false,"sourcePath":"framework/core/src/python/kungfu/agent/kfd3_api.registry.json","artifactPath":"framework/core/src/python/kungfu/agent/commands.json","evidencePath":"framework/core/src/python/kungfu/agent/commands.json","kfd1Basis":{"registryPath":".buildchain/kfd/kfd-3/surfaces.json","sourcePath":"framework/core/src/python/kungfu/agent/kfd3_api.registry.json","artifactPath":"framework/core/src/python/kungfu/agent/commands.json","digest":"sha256:4801a72b274dc919c70cb050702c082dc6e8f70d0fb37da822317d1c67260651"},"kfd2Trust":{"status":"unknown","trustImpact":"passport-claim-not-found","residualRisk":[]},"residualRisk":[]},
+    {"id":"kungfu.agent.docs","kind":"cli","name":"kungfu agent docs","state":"declared","detected":true,"enforced":false,"sourcePath":"framework/core/src/python/kungfu/agent/kfd3_api.registry.json","artifactPath":"framework/core/src/python/kungfu/agent/commands.json","evidencePath":"framework/core/src/python/kungfu/agent/commands.json","kfd1Basis":{"registryPath":".buildchain/kfd/kfd-3/surfaces.json","sourcePath":"framework/core/src/python/kungfu/agent/kfd3_api.registry.json","artifactPath":"framework/core/src/python/kungfu/agent/commands.json","digest":"sha256:531b505a519d33343bfa5ca2e3ae4d0b3d23c0500b8352dfb1fff83b82266bcc"},"kfd2Trust":{"status":"unknown","trustImpact":"passport-claim-not-found","residualRisk":[]},"residualRisk":[]},
+    {"id":"kungfu.agent.expand","kind":"cli","name":"kungfu agent expand --view agent --handle <id> --budget <tokens> --json","state":"declared","detected":true,"enforced":false,"sourcePath":"framework/core/src/python/kungfu/agent/kfd3_api.registry.json","artifactPath":"framework/core/src/python/kungfu/agent/commands.json","evidencePath":"framework/core/src/python/kungfu/agent/commands.json","kfd1Basis":{"registryPath":".buildchain/kfd/kfd-3/surfaces.json","sourcePath":"framework/core/src/python/kungfu/agent/kfd3_api.registry.json","artifactPath":"framework/core/src/python/kungfu/agent/commands.json","digest":"sha256:32652119f0e3b83d6ecb25ce962b684214fa8a8b4bce41bdd5edc31928569edd"},"kfd2Trust":{"status":"unknown","trustImpact":"passport-claim-not-found","residualRisk":[]},"residualRisk":[]},
+    {"id":"kungfu.agent.first-value","kind":"cli","name":"kungfu agent first-value","state":"declared","detected":true,"enforced":false,"sourcePath":"framework/core/src/python/kungfu/agent/kfd3_api.registry.json","artifactPath":"framework/core/src/python/kungfu/agent/commands.json","evidencePath":"framework/core/src/python/kungfu/agent/commands.json","kfd1Basis":{"registryPath":".buildchain/kfd/kfd-3/surfaces.json","sourcePath":"framework/core/src/python/kungfu/agent/kfd3_api.registry.json","artifactPath":"framework/core/src/python/kungfu/agent/commands.json","digest":"sha256:e1fb8b2a8102a0229b7695facb0a2a9f16f13b7c1a86f3aa362ab164ab6fea68"},"kfd2Trust":{"status":"unknown","trustImpact":"passport-claim-not-found","residualRisk":[]},"residualRisk":[]},
+    {"id":"kungfu.agent.first-value.contract","kind":"cli","name":"kungfu agent first-value contract --json","state":"declared","detected":true,"enforced":false,"sourcePath":"framework/core/src/python/kungfu/agent/kfd3_api.registry.json","artifactPath":"framework/core/src/python/kungfu/agent/commands.json","evidencePath":"framework/core/src/python/kungfu/agent/commands.json","kfd1Basis":{"registryPath":".buildchain/kfd/kfd-3/surfaces.json","sourcePath":"framework/core/src/python/kungfu/agent/kfd3_api.registry.json","artifactPath":"framework/core/src/python/kungfu/agent/commands.json","digest":"sha256:779320b0529c22c52e56304c761d29666828f5ed2e919af79c56233017e97a3e"},"kfd2Trust":{"status":"unknown","trustImpact":"passport-claim-not-found","residualRisk":[]},"residualRisk":[]},
+    {"id":"kungfu.agent.first-value.receipt","kind":"cli","name":"kungfu agent first-value receipt --intent <id> --discovery <command> --question-count <0-or-1> --outcome <summary> --json","state":"declared","detected":true,"enforced":false,"sourcePath":"framework/core/src/python/kungfu/agent/kfd3_api.registry.json","artifactPath":"framework/core/src/python/kungfu/agent/commands.json","evidencePath":"framework/core/src/python/kungfu/agent/commands.json","kfd1Basis":{"registryPath":".buildchain/kfd/kfd-3/surfaces.json","sourcePath":"framework/core/src/python/kungfu/agent/kfd3_api.registry.json","artifactPath":"framework/core/src/python/kungfu/agent/commands.json","digest":"sha256:2f25d32f3a6469be8191a110ea474c061bcad1168a5e920c10c7cf58dc368476"},"kfd2Trust":{"status":"unknown","trustImpact":"passport-claim-not-found","residualRisk":[]},"residualRisk":[]},
+    {"id":"kungfu.agent.first-value.start","kind":"cli","name":"kungfu agent first-value start --json","state":"declared","detected":true,"enforced":false,"sourcePath":"framework/core/src/python/kungfu/agent/kfd3_api.registry.json","artifactPath":"framework/core/src/python/kungfu/agent/commands.json","evidencePath":"framework/core/src/python/kungfu/agent/commands.json","kfd1Basis":{"registryPath":".buildchain/kfd/kfd-3/surfaces.json","sourcePath":"framework/core/src/python/kungfu/agent/kfd3_api.registry.json","artifactPath":"framework/core/src/python/kungfu/agent/commands.json","digest":"sha256:c13cd0b82b2c9566c5afd6afdd2986e1ac4199c3aeaa174fbcce6e875a9cf0c2"},"kfd2Trust":{"status":"unknown","trustImpact":"passport-claim-not-found","residualRisk":[]},"residualRisk":[]},
+    {"id":"kungfu.agent.first-value.verify","kind":"cli","name":"kungfu agent first-value verify <receipt-file> --json","state":"declared","detected":true,"enforced":false,"sourcePath":"framework/core/src/python/kungfu/agent/kfd3_api.registry.json","artifactPath":"framework/core/src/python/kungfu/agent/commands.json","evidencePath":"framework/core/src/python/kungfu/agent/commands.json","kfd1Basis":{"registryPath":".buildchain/kfd/kfd-3/surfaces.json","sourcePath":"framework/core/src/python/kungfu/agent/kfd3_api.registry.json","artifactPath":"framework/core/src/python/kungfu/agent/commands.json","digest":"sha256:f56dbcece802cc465bc9b87861aa3c6c5fe9c19b44e5b0962d0a0a3a6de0c57a"},"kfd2Trust":{"status":"unknown","trustImpact":"passport-claim-not-found","residualRisk":[]},"residualRisk":[]},
+    {"id":"kungfu.agent.hub","kind":"cli","name":"kungfu agent hub","state":"declared","detected":true,"enforced":false,"sourcePath":"framework/core/src/python/kungfu/agent/kfd3_api.registry.json","artifactPath":"framework/core/src/python/kungfu/agent/commands.json","evidencePath":"framework/core/src/python/kungfu/agent/commands.json","kfd1Basis":{"registryPath":".buildchain/kfd/kfd-3/surfaces.json","sourcePath":"framework/core/src/python/kungfu/agent/kfd3_api.registry.json","artifactPath":"framework/core/src/python/kungfu/agent/commands.json","digest":"sha256:a8b1c324278473191815ed09f0998b64f0a131dbef8eecfdb4f89802b1d055b8"},"kfd2Trust":{"status":"unknown","trustImpact":"passport-claim-not-found","residualRisk":[]},"residualRisk":[]},
+    {"id":"kungfu.agent.hub.adapter","kind":"cli","name":"kungfu agent hub adapter --qualification-root <path>","state":"declared","detected":true,"enforced":false,"sourcePath":"framework/core/src/python/kungfu/agent/kfd3_api.registry.json","artifactPath":"framework/core/src/python/kungfu/agent/commands.json","evidencePath":"framework/core/src/python/kungfu/agent/commands.json","kfd1Basis":{"registryPath":".buildchain/kfd/kfd-3/surfaces.json","sourcePath":"framework/core/src/python/kungfu/agent/kfd3_api.registry.json","artifactPath":"framework/core/src/python/kungfu/agent/commands.json","digest":"sha256:e8cc1a94ce0965f545dc42c90ba5bc6465ddbef83cae319764c15d576aade5ad"},"kfd2Trust":{"status":"unknown","trustImpact":"passport-claim-not-found","residualRisk":[]},"residualRisk":[]},
+    {"id":"kungfu.agent.hub.capabilities","kind":"cli","name":"kungfu agent hub capabilities --hub-id <id> --runtime-home <path> --json","state":"declared","detected":true,"enforced":false,"sourcePath":"framework/core/src/python/kungfu/agent/kfd3_api.registry.json","artifactPath":"framework/core/src/python/kungfu/agent/commands.json","evidencePath":"framework/core/src/python/kungfu/agent/commands.json","kfd1Basis":{"registryPath":".buildchain/kfd/kfd-3/surfaces.json","sourcePath":"framework/core/src/python/kungfu/agent/kfd3_api.registry.json","artifactPath":"framework/core/src/python/kungfu/agent/commands.json","digest":"sha256:15137382384971d9b7492de02a052da5f08e44e6142be8df6347024fb7093586"},"kfd2Trust":{"status":"unknown","trustImpact":"passport-claim-not-found","residualRisk":[]},"residualRisk":[]},
+    {"id":"kungfu.agent.hub.handle","kind":"cli","name":"kungfu agent hub handle --file <request.json> --source-home <path> --target-home <path> --json","state":"declared","detected":true,"enforced":false,"sourcePath":"framework/core/src/python/kungfu/agent/kfd3_api.registry.json","artifactPath":"framework/core/src/python/kungfu/agent/commands.json","evidencePath":"framework/core/src/python/kungfu/agent/commands.json","kfd1Basis":{"registryPath":".buildchain/kfd/kfd-3/surfaces.json","sourcePath":"framework/core/src/python/kungfu/agent/kfd3_api.registry.json","artifactPath":"framework/core/src/python/kungfu/agent/commands.json","digest":"sha256:ac365340cda182a1cc58a0b767da3af803836cd3750dd16a6f6516105a41556c"},"kfd2Trust":{"status":"unknown","trustImpact":"passport-claim-not-found","residualRisk":[]},"residualRisk":[]},
+    {"id":"kungfu.agent.hub.qualify","kind":"cli-api-gui","name":"kungfu agent hub qualify --output-dir <new-directory> [--json]","state":"declared","detected":true,"enforced":false,"sourcePath":"framework/core/src/python/kungfu/agent/kfd3_api.registry.json","artifactPath":"framework/core/src/python/kungfu/agent/commands.json","evidencePath":"framework/core/src/python/kungfu/agent/commands.json","kfd1Basis":{"registryPath":".buildchain/kfd/kfd-3/surfaces.json","sourcePath":"framework/core/src/python/kungfu/agent/kfd3_api.registry.json","artifactPath":"framework/core/src/python/kungfu/agent/commands.json","digest":"sha256:acbe818ae172b0011035cba77bafab0f91aaae388ba3a7b779650fe4cb4a53fa"},"kfd2Trust":{"status":"unknown","trustImpact":"passport-claim-not-found","residualRisk":[]},"residualRisk":[]},
+    {"id":"kungfu.agent.hub.verify","kind":"cli-api-gui","name":"kungfu agent hub verify --qualification-dir <directory> [--json]","state":"declared","detected":true,"enforced":false,"sourcePath":"framework/core/src/python/kungfu/agent/kfd3_api.registry.json","artifactPath":"framework/core/src/python/kungfu/agent/commands.json","evidencePath":"framework/core/src/python/kungfu/agent/commands.json","kfd1Basis":{"registryPath":".buildchain/kfd/kfd-3/surfaces.json","sourcePath":"framework/core/src/python/kungfu/agent/kfd3_api.registry.json","artifactPath":"framework/core/src/python/kungfu/agent/commands.json","digest":"sha256:19f7bd1b80a61a3f97140a2831cac860341d7129c42e2911ac82adf2b54c7ab6"},"kfd2Trust":{"status":"unknown","trustImpact":"passport-claim-not-found","residualRisk":[]},"residualRisk":[]},
+    {"id":"kungfu.agent.install-skill","kind":"cli","name":"kungfu agent install-skill --target codex","state":"declared","detected":true,"enforced":false,"sourcePath":"framework/core/src/python/kungfu/agent/kfd3_api.registry.json","artifactPath":"framework/core/src/python/kungfu/agent/commands.json","evidencePath":"framework/core/src/python/kungfu/agent/commands.json","kfd1Basis":{"registryPath":".buildchain/kfd/kfd-3/surfaces.json","sourcePath":"framework/core/src/python/kungfu/agent/kfd3_api.registry.json","artifactPath":"framework/core/src/python/kungfu/agent/commands.json","digest":"sha256:0b819e06ce20fa33d1e86bb0ee0ef55975bf6a790e379df316e7adec3e804486"},"kfd2Trust":{"status":"unknown","trustImpact":"passport-claim-not-found","residualRisk":[]},"residualRisk":[]},
+    {"id":"kungfu.agent.map","kind":"cli","name":"kungfu agent map --json","state":"declared","detected":true,"enforced":false,"sourcePath":"framework/core/src/python/kungfu/agent/kfd3_api.registry.json","artifactPath":"framework/core/src/python/kungfu/agent/commands.json","evidencePath":"framework/core/src/python/kungfu/agent/commands.json","kfd1Basis":{"registryPath":".buildchain/kfd/kfd-3/surfaces.json","sourcePath":"framework/core/src/python/kungfu/agent/kfd3_api.registry.json","artifactPath":"framework/core/src/python/kungfu/agent/commands.json","digest":"sha256:57695a11a74c659e6d25df93e277e01168c0a6298cd1ce0d75a9d715f46f3574"},"kfd2Trust":{"status":"unknown","trustImpact":"passport-claim-not-found","residualRisk":[]},"residualRisk":[]},
+    {"id":"kungfu.agent.mode","kind":"cli","name":"kungfu agent mode","state":"declared","detected":true,"enforced":false,"sourcePath":"framework/core/src/python/kungfu/agent/kfd3_api.registry.json","artifactPath":"framework/core/src/python/kungfu/agent/commands.json","evidencePath":"framework/core/src/python/kungfu/agent/commands.json","kfd1Basis":{"registryPath":".buildchain/kfd/kfd-3/surfaces.json","sourcePath":"framework/core/src/python/kungfu/agent/kfd3_api.registry.json","artifactPath":"framework/core/src/python/kungfu/agent/commands.json","digest":"sha256:20d5d0db4b9c6e4dfb1dc6dfd8fc7cc87868038f55dd02af706c1de7d2e95143"},"kfd2Trust":{"status":"unknown","trustImpact":"passport-claim-not-found","residualRisk":[]},"residualRisk":[]},
+    {"id":"kungfu.agent.mode.set","kind":"cli","name":"kungfu agent mode set --target codex --mode managed-run","state":"declared","detected":true,"enforced":false,"sourcePath":"framework/core/src/python/kungfu/agent/kfd3_api.registry.json","artifactPath":"framework/core/src/python/kungfu/agent/commands.json","evidencePath":"framework/core/src/python/kungfu/agent/commands.json","kfd1Basis":{"registryPath":".buildchain/kfd/kfd-3/surfaces.json","sourcePath":"framework/core/src/python/kungfu/agent/kfd3_api.registry.json","artifactPath":"framework/core/src/python/kungfu/agent/commands.json","digest":"sha256:c5b0fd8f6f10cebed2d101dacbc1ab5bf8ecccafcc5119e0af5ab57e0ebd84ea"},"kfd2Trust":{"status":"unknown","trustImpact":"passport-claim-not-found","residualRisk":[]},"residualRisk":[]},
+    {"id":"kungfu.agent.runtime","kind":"cli","name":"kungfu agent runtime","state":"declared","detected":true,"enforced":false,"sourcePath":"framework/core/src/python/kungfu/agent/kfd3_api.registry.json","artifactPath":"framework/core/src/python/kungfu/agent/commands.json","evidencePath":"framework/core/src/python/kungfu/agent/commands.json","kfd1Basis":{"registryPath":".buildchain/kfd/kfd-3/surfaces.json","sourcePath":"framework/core/src/python/kungfu/agent/kfd3_api.registry.json","artifactPath":"framework/core/src/python/kungfu/agent/commands.json","digest":"sha256:ac2cadd2bc3b4f43e0bfcd650f21489f4bf0db438ea25a234510eb350ead1be7"},"kfd2Trust":{"status":"unknown","trustImpact":"passport-claim-not-found","residualRisk":[]},"residualRisk":[]},
+    {"id":"kungfu.agent.runtime.discover","kind":"cli","name":"kungfu agent runtime discover --json","state":"declared","detected":true,"enforced":false,"sourcePath":"framework/core/src/python/kungfu/agent/kfd3_api.registry.json","artifactPath":"framework/core/src/python/kungfu/agent/commands.json","evidencePath":"framework/core/src/python/kungfu/agent/commands.json","kfd1Basis":{"registryPath":".buildchain/kfd/kfd-3/surfaces.json","sourcePath":"framework/core/src/python/kungfu/agent/kfd3_api.registry.json","artifactPath":"framework/core/src/python/kungfu/agent/commands.json","digest":"sha256:5290f30c23b294ba37260c1f0ade54f1bff0f5f2b78b3e64c15c462c5bc8baaf"},"kfd2Trust":{"status":"unknown","trustImpact":"passport-claim-not-found","residualRisk":[]},"residualRisk":[]},
+    {"id":"kungfu.agent.runtime.list","kind":"cli","name":"kungfu agent runtime list --json","state":"declared","detected":true,"enforced":false,"sourcePath":"framework/core/src/python/kungfu/agent/kfd3_api.registry.json","artifactPath":"framework/core/src/python/kungfu/agent/commands.json","evidencePath":"framework/core/src/python/kungfu/agent/commands.json","kfd1Basis":{"registryPath":".buildchain/kfd/kfd-3/surfaces.json","sourcePath":"framework/core/src/python/kungfu/agent/kfd3_api.registry.json","artifactPath":"framework/core/src/python/kungfu/agent/commands.json","digest":"sha256:04a9272255e3386f902f7a30ac798de64e0c72bfd18e19e43b14aaa31446220c"},"kfd2Trust":{"status":"unknown","trustImpact":"passport-claim-not-found","residualRisk":[]},"residualRisk":[]},
+    {"id":"kungfu.agent.runtime.remove","kind":"cli","name":"kungfu agent runtime remove <profile-id> --json","state":"declared","detected":true,"enforced":false,"sourcePath":"framework/core/src/python/kungfu/agent/kfd3_api.registry.json","artifactPath":"framework/core/src/python/kungfu/agent/commands.json","evidencePath":"framework/core/src/python/kungfu/agent/commands.json","kfd1Basis":{"registryPath":".buildchain/kfd/kfd-3/surfaces.json","sourcePath":"framework/core/src/python/kungfu/agent/kfd3_api.registry.json","artifactPath":"framework/core/src/python/kungfu/agent/commands.json","digest":"sha256:b75de3eb909b89468c0b31e0ad77fac7e214a45b795f7701a085cf7dca5168ea"},"kfd2Trust":{"status":"unknown","trustImpact":"passport-claim-not-found","residualRisk":[]},"residualRisk":[]},
+    {"id":"kungfu.agent.runtime.set-default","kind":"cli","name":"kungfu agent runtime set-default <profile-id> --json","state":"declared","detected":true,"enforced":false,"sourcePath":"framework/core/src/python/kungfu/agent/kfd3_api.registry.json","artifactPath":"framework/core/src/python/kungfu/agent/commands.json","evidencePath":"framework/core/src/python/kungfu/agent/commands.json","kfd1Basis":{"registryPath":".buildchain/kfd/kfd-3/surfaces.json","sourcePath":"framework/core/src/python/kungfu/agent/kfd3_api.registry.json","artifactPath":"framework/core/src/python/kungfu/agent/commands.json","digest":"sha256:9a6ff309930ced706b2b9269707f64657bee28e5a5853d1b3ac4530a198f150d"},"kfd2Trust":{"status":"unknown","trustImpact":"passport-claim-not-found","residualRisk":[]},"residualRisk":[]},
+    {"id":"kungfu.agent.runtime.upsert","kind":"cli","name":"kungfu agent runtime upsert --id <id> --provider <provider> --executable <path> --json","state":"declared","detected":true,"enforced":false,"sourcePath":"framework/core/src/python/kungfu/agent/kfd3_api.registry.json","artifactPath":"framework/core/src/python/kungfu/agent/commands.json","evidencePath":"framework/core/src/python/kungfu/agent/commands.json","kfd1Basis":{"registryPath":".buildchain/kfd/kfd-3/surfaces.json","sourcePath":"framework/core/src/python/kungfu/agent/kfd3_api.registry.json","artifactPath":"framework/core/src/python/kungfu/agent/commands.json","digest":"sha256:bc2537edd515553c1d4655fef8a4b95d9a4193f1391db4d985e7cfb88b9b29cf"},"kfd2Trust":{"status":"unknown","trustImpact":"passport-claim-not-found","residualRisk":[]},"residualRisk":[]},
+    {"id":"kungfu.agent.runtime.verify","kind":"cli","name":"kungfu agent runtime verify <profile-id> --json","state":"declared","detected":true,"enforced":false,"sourcePath":"framework/core/src/python/kungfu/agent/kfd3_api.registry.json","artifactPath":"framework/core/src/python/kungfu/agent/commands.json","evidencePath":"framework/core/src/python/kungfu/agent/commands.json","kfd1Basis":{"registryPath":".buildchain/kfd/kfd-3/surfaces.json","sourcePath":"framework/core/src/python/kungfu/agent/kfd3_api.registry.json","artifactPath":"framework/core/src/python/kungfu/agent/commands.json","digest":"sha256:b7d616f1e3e3592fe5b18eae9a82f299136242002ab389ca8b975e6ae8cd34f8"},"kfd2Trust":{"status":"unknown","trustImpact":"passport-claim-not-found","residualRisk":[]},"residualRisk":[]},
+    {"id":"kungfu.agent.session","kind":"cli-api-gui","name":"kungfu agent session <operation> --input - --json","state":"declared","detected":true,"enforced":false,"sourcePath":"framework/core/src/python/kungfu/agent/kfd3_api.registry.json","artifactPath":"framework/core/src/python/kungfu/agent/commands.json","evidencePath":"framework/core/src/python/kungfu/agent/commands.json","kfd1Basis":{"registryPath":".buildchain/kfd/kfd-3/surfaces.json","sourcePath":"framework/core/src/python/kungfu/agent/kfd3_api.registry.json","artifactPath":"framework/core/src/python/kungfu/agent/commands.json","digest":"sha256:e5dfe3fd1b95391140d99d6b1edf3855ae23feedca2bca0d0e4a12da22184046"},"kfd2Trust":{"status":"unknown","trustImpact":"passport-claim-not-found","residualRisk":[]},"residualRisk":[]},
+    {"id":"kungfu.agent.status","kind":"cli","name":"kungfu agent status --target codex --json","state":"declared","detected":true,"enforced":false,"sourcePath":"framework/core/src/python/kungfu/agent/kfd3_api.registry.json","artifactPath":"framework/core/src/python/kungfu/agent/commands.json","evidencePath":"framework/core/src/python/kungfu/agent/commands.json","kfd1Basis":{"registryPath":".buildchain/kfd/kfd-3/surfaces.json","sourcePath":"framework/core/src/python/kungfu/agent/kfd3_api.registry.json","artifactPath":"framework/core/src/python/kungfu/agent/commands.json","digest":"sha256:5da2b52e4f8e7051eb5ccbe501b99fb37cd0d46336287f36bcf681ef9005f28c"},"kfd2Trust":{"status":"unknown","trustImpact":"passport-claim-not-found","residualRisk":[]},"residualRisk":[]},
+    {"id":"kungfu.agent.unbootstrap","kind":"cli","name":"kungfu agent unbootstrap --target codex","state":"declared","detected":true,"enforced":false,"sourcePath":"framework/core/src/python/kungfu/agent/kfd3_api.registry.json","artifactPath":"framework/core/src/python/kungfu/agent/commands.json","evidencePath":"framework/core/src/python/kungfu/agent/commands.json","kfd1Basis":{"registryPath":".buildchain/kfd/kfd-3/surfaces.json","sourcePath":"framework/core/src/python/kungfu/agent/kfd3_api.registry.json","artifactPath":"framework/core/src/python/kungfu/agent/commands.json","digest":"sha256:096bd27075b3feae0784ea249be6a50cdc632e5136fefb88b639deef08c0e9ab"},"kfd2Trust":{"status":"unknown","trustImpact":"passport-claim-not-found","residualRisk":[]},"residualRisk":[]},
+    {"id":"kungfu.agent.uninstall","kind":"cli","name":"kungfu agent uninstall --target codex","state":"declared","detected":true,"enforced":false,"sourcePath":"framework/core/src/python/kungfu/agent/kfd3_api.registry.json","artifactPath":"framework/core/src/python/kungfu/agent/commands.json","evidencePath":"framework/core/src/python/kungfu/agent/commands.json","kfd1Basis":{"registryPath":".buildchain/kfd/kfd-3/surfaces.json","sourcePath":"framework/core/src/python/kungfu/agent/kfd3_api.registry.json","artifactPath":"framework/core/src/python/kungfu/agent/commands.json","digest":"sha256:c8afbb0d46d2e11b12b2f08ac5683bdedfba8ea4e38b7c24eb1db09ef7183b6a"},"kfd2Trust":{"status":"unknown","trustImpact":"passport-claim-not-found","residualRisk":[]},"residualRisk":[]},
+    {"id":"kungfu.agent.verify","kind":"cli","name":"kungfu agent verify --json","state":"declared","detected":true,"enforced":false,"sourcePath":"framework/core/src/python/kungfu/agent/kfd3_api.registry.json","artifactPath":"framework/core/src/python/kungfu/agent/commands.json","evidencePath":"framework/core/src/python/kungfu/agent/commands.json","kfd1Basis":{"registryPath":".buildchain/kfd/kfd-3/surfaces.json","sourcePath":"framework/core/src/python/kungfu/agent/kfd3_api.registry.json","artifactPath":"framework/core/src/python/kungfu/agent/commands.json","digest":"sha256:f1d03f639b0fb6f19bdefbdecded3375ce54d8fb1c233f9aceac7efc4c44bafb"},"kfd2Trust":{"status":"unknown","trustImpact":"passport-claim-not-found","residualRisk":[]},"residualRisk":[]},
+    {"id":"kungfu.agent.work","kind":"cli-api-gui","name":"kungfu agent work","state":"declared","detected":true,"enforced":false,"sourcePath":"framework/core/src/python/kungfu/agent/kfd3_api.registry.json","artifactPath":"framework/core/src/python/kungfu/agent/commands.json","evidencePath":"framework/core/src/python/kungfu/agent/commands.json","kfd1Basis":{"registryPath":".buildchain/kfd/kfd-3/surfaces.json","sourcePath":"framework/core/src/python/kungfu/agent/kfd3_api.registry.json","artifactPath":"framework/core/src/python/kungfu/agent/commands.json","digest":"sha256:63764e57be6185834da23db2a58bf2ac99167599419cb4b6d835b6d789b6d0f8"},"kfd2Trust":{"status":"unknown","trustImpact":"passport-claim-not-found","residualRisk":[]},"residualRisk":[]},
+    {"id":"kungfu.agent.work-advisory","kind":"cli","name":"kungfu agent work-advisory --signals <signals.json> --json","state":"declared","detected":true,"enforced":false,"sourcePath":"framework/core/src/python/kungfu/agent/kfd3_api.registry.json","artifactPath":"framework/core/src/python/kungfu/agent/commands.json","evidencePath":"framework/core/src/python/kungfu/agent/commands.json","kfd1Basis":{"registryPath":".buildchain/kfd/kfd-3/surfaces.json","sourcePath":"framework/core/src/python/kungfu/agent/kfd3_api.registry.json","artifactPath":"framework/core/src/python/kungfu/agent/commands.json","digest":"sha256:431b7456699f7adf2bc084b562140d685e84e1802cf04670a9187b4f9bb814db"},"kfd2Trust":{"status":"unknown","trustImpact":"passport-claim-not-found","residualRisk":[]},"residualRisk":[]},
+    {"id":"kungfu.agent.work-model","kind":"cli","name":"kungfu agent work-model --json","state":"declared","detected":true,"enforced":false,"sourcePath":"framework/core/src/python/kungfu/agent/kfd3_api.registry.json","artifactPath":"framework/core/src/python/kungfu/agent/commands.json","evidencePath":"framework/core/src/python/kungfu/agent/commands.json","kfd1Basis":{"registryPath":".buildchain/kfd/kfd-3/surfaces.json","sourcePath":"framework/core/src/python/kungfu/agent/kfd3_api.registry.json","artifactPath":"framework/core/src/python/kungfu/agent/commands.json","digest":"sha256:95cfa8b61701d378bf7b607a2a8ed398a10fffff47d8a0213b0f15ff16279a4e"},"kfd2Trust":{"status":"unknown","trustImpact":"passport-claim-not-found","residualRisk":[]},"residualRisk":[]},
+    {"id":"kungfu.agent.work.action","kind":"cli-api-gui","name":"kungfu agent work action --file <request.json> [--execute] --json","state":"declared","detected":true,"enforced":false,"sourcePath":"framework/core/src/python/kungfu/agent/kfd3_api.registry.json","artifactPath":"framework/core/src/python/kungfu/agent/commands.json","evidencePath":"framework/core/src/python/kungfu/agent/commands.json","kfd1Basis":{"registryPath":".buildchain/kfd/kfd-3/surfaces.json","sourcePath":"framework/core/src/python/kungfu/agent/kfd3_api.registry.json","artifactPath":"framework/core/src/python/kungfu/agent/commands.json","digest":"sha256:35d54212b2184b83d2052ee3311dc4ca4c3c4b8632861c6715435e10250a1e20"},"kfd2Trust":{"status":"unknown","trustImpact":"passport-claim-not-found","residualRisk":[]},"residualRisk":[]},
+    {"id":"kungfu.agent.work.capabilities","kind":"cli-api-gui","name":"kungfu agent work capabilities --json","state":"declared","detected":true,"enforced":false,"sourcePath":"framework/core/src/python/kungfu/agent/kfd3_api.registry.json","artifactPath":"framework/core/src/python/kungfu/agent/commands.json","evidencePath":"framework/core/src/python/kungfu/agent/commands.json","kfd1Basis":{"registryPath":".buildchain/kfd/kfd-3/surfaces.json","sourcePath":"framework/core/src/python/kungfu/agent/kfd3_api.registry.json","artifactPath":"framework/core/src/python/kungfu/agent/commands.json","digest":"sha256:f3c47c84066a4c0acc5401dc6517c8a30b0ce23807ef86f243e1e65409002a42"},"kfd2Trust":{"status":"unknown","trustImpact":"passport-claim-not-found","residualRisk":[]},"residualRisk":[]},
+    {"id":"kungfu.agent.work.export-authority","kind":"cli-api-gui","name":"kungfu agent work export-authority --json","state":"declared","detected":true,"enforced":false,"sourcePath":"framework/core/src/python/kungfu/agent/kfd3_api.registry.json","artifactPath":"framework/core/src/python/kungfu/agent/commands.json","evidencePath":"framework/core/src/python/kungfu/agent/commands.json","kfd1Basis":{"registryPath":".buildchain/kfd/kfd-3/surfaces.json","sourcePath":"framework/core/src/python/kungfu/agent/kfd3_api.registry.json","artifactPath":"framework/core/src/python/kungfu/agent/commands.json","digest":"sha256:36ce1377cb2807787be66fe02caafa23557b2000463b47f7ca9a5a20dffd2791"},"kfd2Trust":{"status":"unknown","trustImpact":"passport-claim-not-found","residualRisk":[]},"residualRisk":[]},
+    {"id":"kungfu.agent.work.import-authority","kind":"cli-api-gui","name":"kungfu agent work import-authority --file <bundle.json> [--execute] --json","state":"declared","detected":true,"enforced":false,"sourcePath":"framework/core/src/python/kungfu/agent/kfd3_api.registry.json","artifactPath":"framework/core/src/python/kungfu/agent/commands.json","evidencePath":"framework/core/src/python/kungfu/agent/commands.json","kfd1Basis":{"registryPath":".buildchain/kfd/kfd-3/surfaces.json","sourcePath":"framework/core/src/python/kungfu/agent/kfd3_api.registry.json","artifactPath":"framework/core/src/python/kungfu/agent/commands.json","digest":"sha256:e037687e970a0ff9bc3354b3910ee102beaf28971f96c238e59b1661c1587b06"},"kfd2Trust":{"status":"unknown","trustImpact":"passport-claim-not-found","residualRisk":[]},"residualRisk":[]},
+    {"id":"kungfu.agent.work.inspect","kind":"cli-api-gui","name":"kungfu agent work inspect --ref <ref> --json","state":"declared","detected":true,"enforced":false,"sourcePath":"framework/core/src/python/kungfu/agent/kfd3_api.registry.json","artifactPath":"framework/core/src/python/kungfu/agent/commands.json","evidencePath":"framework/core/src/python/kungfu/agent/commands.json","kfd1Basis":{"registryPath":".buildchain/kfd/kfd-3/surfaces.json","sourcePath":"framework/core/src/python/kungfu/agent/kfd3_api.registry.json","artifactPath":"framework/core/src/python/kungfu/agent/commands.json","digest":"sha256:6af6d64c9de18bca664083e4bed4729f414bdc942dc2eef163c138f0981a4d88"},"kfd2Trust":{"status":"unknown","trustImpact":"passport-claim-not-found","residualRisk":[]},"residualRisk":[]},
+    {"id":"kungfu.agent.work.session","kind":"cli-api-gui","name":"kungfu agent work session --operation <compressibility|expand|project> --file <session.json> --json","state":"declared","detected":true,"enforced":false,"sourcePath":"framework/core/src/python/kungfu/agent/kfd3_api.registry.json","artifactPath":"framework/core/src/python/kungfu/agent/commands.json","evidencePath":"framework/core/src/python/kungfu/agent/commands.json","kfd1Basis":{"registryPath":".buildchain/kfd/kfd-3/surfaces.json","sourcePath":"framework/core/src/python/kungfu/agent/kfd3_api.registry.json","artifactPath":"framework/core/src/python/kungfu/agent/commands.json","digest":"sha256:12d0e74117911a9ca20cdbe629d58bf4f57d857a1e05fa8455b20b432ea5afb8"},"kfd2Trust":{"status":"unknown","trustImpact":"passport-claim-not-found","residualRisk":[]},"residualRisk":[]},
     {
       "id": "kungfu.atlas.import",
       "kind": "cli",
@@ -1893,7 +1181,7 @@
         "registryPath": ".buildchain/kfd/kfd-3/surfaces.json",
         "sourcePath": "product/scripts/dist.mjs",
         "artifactPath": "product/package.json",
-        "digest": "sha256:09701f1739f051ea55d1819b3582a04ac4e85a1b6c7d1b8b1be876e78badeddf"
+        "digest": "sha256:7798519296bde48895727fa3f9abf32443fbd256bc254c7f2dcc3f7de6424571"
       },
       "kfd2Trust": {
         "status": "unknown",
@@ -2618,7 +1906,7 @@
     {
       "id": "kungfu.run.agent",
       "kind": "cli",
-      "name": "kungfu run agent --prompt <task> [--agent <profile-id>]",
+      "name": "kungfu run agent [--agent <profile-id>] [--prompt <task>]",
       "state": "declared",
       "detected": true,
       "enforced": false,
@@ -2629,7 +1917,7 @@
         "registryPath": ".buildchain/kfd/kfd-3/surfaces.json",
         "sourcePath": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json",
         "artifactPath": "framework/core/src/python/kungfu/agent/commands.json",
-        "digest": "sha256:beb5b40046280483b04aac839213b67e996608ccad1d582d7205b435ce70ca0e"
+        "digest": "sha256:c9b9d79be920d756ab51712d7b8ac8285ddea3de8241efbb2d935cce31639af3"
       },
       "kfd2Trust": {
         "status": "unknown",
@@ -2662,20 +1950,43 @@
       "residualRisk": []
     },
     {
+      "id": "kungfu.runtime.surface.verify",
+      "kind": "cli-api-tui",
+      "name": "kungfu runtime surface verify <receipt.json> --json",
+      "state": "declared",
+      "detected": true,
+      "enforced": false,
+      "sourcePath": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json",
+      "artifactPath": "framework/core/src/python/kungfu/agent/commands.json",
+      "evidencePath": "framework/core/src/python/kungfu/agent/commands.json",
+      "kfd1Basis": {
+        "registryPath": ".buildchain/kfd/kfd-3/surfaces.json",
+        "sourcePath": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json",
+        "artifactPath": "framework/core/src/python/kungfu/agent/commands.json",
+        "digest": "sha256:0aff3c92d8aeec7ac6d868003bbae4f8a33da98cc41fd22256dcac651da52153"
+      },
+      "kfd2Trust": {
+        "status": "unknown",
+        "trustImpact": "passport-claim-not-found",
+        "residualRisk": []
+      },
+      "residualRisk": []
+    },
+    {
       "id": "kungfu.sdk.contract.audit",
       "kind": "cli",
       "name": "kungfu sdk contract audit --json",
       "state": "declared",
       "detected": true,
       "enforced": false,
-      "sourcePath": "developer/sdk/src/sdk.js",
+      "sourcePath": "developer/sdk/src/sdk-contract.js",
       "artifactPath": "framework/contract/kungfu-agent-first-canonical-policy.json",
       "evidencePath": "framework/contract/kungfu-agent-first-canonical-policy.json",
       "kfd1Basis": {
         "registryPath": ".buildchain/kfd/kfd-3/surfaces.json",
-        "sourcePath": "developer/sdk/src/sdk.js",
+        "sourcePath": "developer/sdk/src/sdk-contract.js",
         "artifactPath": "framework/contract/kungfu-agent-first-canonical-policy.json",
-        "digest": "sha256:2a8fe81b07e6c1cb77479c38923782bbd6d585b1d15f12627689be093d51e632"
+        "digest": "sha256:f6e793be041bdcf91dae51b3d7bc9af29491c216633becf9222f83295daa348e"
       },
       "kfd2Trust": {
         "status": "unknown",
@@ -2691,14 +2002,14 @@
       "state": "declared",
       "detected": true,
       "enforced": false,
-      "sourcePath": "developer/sdk/src/sdk.js",
+      "sourcePath": "developer/sdk/src/sdk-contract.js",
       "artifactPath": "framework/contract/kungfu-contracts.registry.json",
       "evidencePath": "framework/contract/kungfu-contracts.registry.json",
       "kfd1Basis": {
         "registryPath": ".buildchain/kfd/kfd-3/surfaces.json",
-        "sourcePath": "developer/sdk/src/sdk.js",
+        "sourcePath": "developer/sdk/src/sdk-contract.js",
         "artifactPath": "framework/contract/kungfu-contracts.registry.json",
-        "digest": "sha256:cf786bedcb2b7f212b4e9f15eca61abbffc948404700d0fb47da095e71b2e990"
+        "digest": "sha256:b3eb2717d367dc59fd4a39d434d24dd3e5b074298f772d7ec16bc58bb02da635"
       },
       "kfd2Trust": {
         "status": "unknown",
@@ -2714,14 +2025,14 @@
       "state": "declared",
       "detected": true,
       "enforced": false,
-      "sourcePath": "developer/sdk/src/sdk.js",
+      "sourcePath": "developer/sdk/src/sdk-kfd.js",
       "artifactPath": "developer/sdk/kfd/upstream-aggregate.json",
       "evidencePath": "developer/sdk/kfd/upstream-aggregate.json",
       "kfd1Basis": {
         "registryPath": ".buildchain/kfd/kfd-3/surfaces.json",
-        "sourcePath": "developer/sdk/src/sdk.js",
+        "sourcePath": "developer/sdk/src/sdk-kfd.js",
         "artifactPath": "developer/sdk/kfd/upstream-aggregate.json",
-        "digest": "sha256:48010a6bcd7225aef3cd46e5ea1627d62b4e49184523fdb5534210b7ec148cde"
+        "digest": "sha256:6daa16370ca873e5a89e1aa7d5b6b176bc0dfbccd5c0f3bce799f343917a612a"
       },
       "kfd2Trust": {
         "status": "unknown",
@@ -2737,14 +2048,14 @@
       "state": "declared",
       "detected": true,
       "enforced": false,
-      "sourcePath": "developer/sdk/src/sdk.js",
+      "sourcePath": "developer/sdk/src/sdk-contract.js",
       "artifactPath": "framework/kfx/kungfu-kfx.contract.json",
       "evidencePath": "framework/kfx/kungfu-kfx.contract.json",
       "kfd1Basis": {
         "registryPath": ".buildchain/kfd/kfd-3/surfaces.json",
-        "sourcePath": "developer/sdk/src/sdk.js",
+        "sourcePath": "developer/sdk/src/sdk-contract.js",
         "artifactPath": "framework/kfx/kungfu-kfx.contract.json",
-        "digest": "sha256:cfe083aac2a44cb7fc88bc9d805a9091e5dbe752dd053c3a66e84280d230f12d"
+        "digest": "sha256:d57d15721b2ceee392eef15d1161a0d4784dc2a9a3e383d65631d40e73f5ff62"
       },
       "kfd2Trust": {
         "status": "unknown",
@@ -2760,14 +2071,14 @@
       "state": "declared",
       "detected": true,
       "enforced": false,
-      "sourcePath": "developer/sdk/src/sdk.js",
-      "artifactPath": "developer/sdk/src/sdk.js",
-      "evidencePath": "developer/sdk/src/sdk.js",
+      "sourcePath": "developer/sdk/src/sdk-shared.js",
+      "artifactPath": "developer/sdk/src/sdk-shared.js",
+      "evidencePath": "developer/sdk/src/sdk-shared.js",
       "kfd1Basis": {
         "registryPath": ".buildchain/kfd/kfd-3/surfaces.json",
-        "sourcePath": "developer/sdk/src/sdk.js",
-        "artifactPath": "developer/sdk/src/sdk.js",
-        "digest": "sha256:43c48ca743732ee0e4941e9abe1d2a3119182396129efcdf65d1d3a76b2f28e8"
+        "sourcePath": "developer/sdk/src/sdk-shared.js",
+        "artifactPath": "developer/sdk/src/sdk-shared.js",
+        "digest": "sha256:861591b494a5f0b8d1c8f158d6d2ef1fac12d41bed28e8aa5cd31f36c57ffe66"
       },
       "kfd2Trust": {
         "status": "unknown",
@@ -2783,14 +2094,14 @@
       "state": "declared",
       "detected": true,
       "enforced": false,
-      "sourcePath": "developer/sdk/src/sdk.js",
-      "artifactPath": "developer/sdk/src/sdk.js",
-      "evidencePath": "developer/sdk/src/sdk.js",
+      "sourcePath": "developer/sdk/src/sdk-shared.js",
+      "artifactPath": "developer/sdk/src/sdk-shared.js",
+      "evidencePath": "developer/sdk/src/sdk-shared.js",
       "kfd1Basis": {
         "registryPath": ".buildchain/kfd/kfd-3/surfaces.json",
-        "sourcePath": "developer/sdk/src/sdk.js",
-        "artifactPath": "developer/sdk/src/sdk.js",
-        "digest": "sha256:2bb5016d62dc4c6ad9347d72a6a5d9c07061eae3c960bd8a2f412b1c31b0e7fe"
+        "sourcePath": "developer/sdk/src/sdk-shared.js",
+        "artifactPath": "developer/sdk/src/sdk-shared.js",
+        "digest": "sha256:db46d6372a0299cd0470685a9da96a389c91ec458186cff599403f29fda3a95f"
       },
       "kfd2Trust": {
         "status": "unknown",
@@ -2806,14 +2117,14 @@
       "state": "declared",
       "detected": true,
       "enforced": false,
-      "sourcePath": "developer/sdk/src/sdk.js",
-      "artifactPath": "developer/sdk/src/sdk.js",
-      "evidencePath": "developer/sdk/src/sdk.js",
+      "sourcePath": "developer/sdk/src/sdk-shared.js",
+      "artifactPath": "developer/sdk/src/sdk-shared.js",
+      "evidencePath": "developer/sdk/src/sdk-shared.js",
       "kfd1Basis": {
         "registryPath": ".buildchain/kfd/kfd-3/surfaces.json",
-        "sourcePath": "developer/sdk/src/sdk.js",
-        "artifactPath": "developer/sdk/src/sdk.js",
-        "digest": "sha256:5da2bf2abadafcac39ea1eaa092b30722ba269a513dd5c065b1e8e72bdd061a0"
+        "sourcePath": "developer/sdk/src/sdk-shared.js",
+        "artifactPath": "developer/sdk/src/sdk-shared.js",
+        "digest": "sha256:021bdd70b7a3d44515c8d4f57ad6c72b2f9e8384a905d23850027be72aece918"
       },
       "kfd2Trust": {
         "status": "unknown",
@@ -3626,7 +2937,88 @@
         "residualRisk": []
       },
       "residualRisk": []
-    }
+    },
+    {"id":"shifu.agent.brief","kind":"cli","name":"shifu agent brief","state":"declared","detected":true,"enforced":false,"sourcePath":"crates/shifu/agent/kfd3_api.registry.json","artifactPath":"crates/shifu/agent/kfd3_api.registry.json","evidencePath":"crates/shifu/agent/kfd3_api.registry.json","kfd1Basis":{"registryPath":".buildchain/kfd/kfd-3/surfaces.json","sourcePath":"crates/shifu/agent/kfd3_api.registry.json","artifactPath":"crates/shifu/agent/kfd3_api.registry.json","digest":"sha256:46c561afbeb622893d8cff68f62327e639b8105cb1eddde07d917be0e5bf5f67"},"kfd2Trust":{"status":"unknown","trustImpact":"passport-claim-not-found","residualRisk":[]},"residualRisk":[]},
+    {"id":"shifu.agent.capabilities","kind":"cli","name":"shifu agent capabilities --json","state":"declared","detected":true,"enforced":false,"sourcePath":"crates/shifu/agent/kfd3_api.registry.json","artifactPath":"crates/shifu/agent/kfd3_api.registry.json","evidencePath":"crates/shifu/agent/kfd3_api.registry.json","kfd1Basis":{"registryPath":".buildchain/kfd/kfd-3/surfaces.json","sourcePath":"crates/shifu/agent/kfd3_api.registry.json","artifactPath":"crates/shifu/agent/kfd3_api.registry.json","digest":"sha256:a52820b751d20242f208e5adaa7cdaf146f384b9fbe48040bc9609f6c319096e"},"kfd2Trust":{"status":"unknown","trustImpact":"passport-claim-not-found","residualRisk":[]},"residualRisk":[]},
+    {"id":"shifu.agent.map","kind":"cli","name":"shifu agent map --json","state":"declared","detected":true,"enforced":false,"sourcePath":"crates/shifu/agent/kfd3_api.registry.json","artifactPath":"crates/shifu/agent/kfd3_api.registry.json","evidencePath":"crates/shifu/agent/kfd3_api.registry.json","kfd1Basis":{"registryPath":".buildchain/kfd/kfd-3/surfaces.json","sourcePath":"crates/shifu/agent/kfd3_api.registry.json","artifactPath":"crates/shifu/agent/kfd3_api.registry.json","digest":"sha256:0aad6755fe623d5b6292df61a62b7b70f5b19eb3a304b0636eca8bd86b87f203"},"kfd2Trust":{"status":"unknown","trustImpact":"passport-claim-not-found","residualRisk":[]},"residualRisk":[]},
+    {"id":"shifu.agent.schema","kind":"cli","name":"shifu agent schema --json","state":"declared","detected":true,"enforced":false,"sourcePath":"crates/shifu/agent/kfd3_api.registry.json","artifactPath":"crates/shifu/agent/kfd3_api.registry.json","evidencePath":"crates/shifu/agent/kfd3_api.registry.json","kfd1Basis":{"registryPath":".buildchain/kfd/kfd-3/surfaces.json","sourcePath":"crates/shifu/agent/kfd3_api.registry.json","artifactPath":"crates/shifu/agent/kfd3_api.registry.json","digest":"sha256:616e2149953fbe0956e61320831ff7544c3f367a0fed9e19b97a02b187103567"},"kfd2Trust":{"status":"unknown","trustImpact":"passport-claim-not-found","residualRisk":[]},"residualRisk":[]},
+    {"id":"shifu.agent.verify","kind":"cli","name":"shifu agent verify --json","state":"declared","detected":true,"enforced":false,"sourcePath":"crates/shifu/agent/kfd3_api.registry.json","artifactPath":"crates/shifu/agent/kfd3_api.registry.json","evidencePath":"crates/shifu/agent/kfd3_api.registry.json","kfd1Basis":{"registryPath":".buildchain/kfd/kfd-3/surfaces.json","sourcePath":"crates/shifu/agent/kfd3_api.registry.json","artifactPath":"crates/shifu/agent/kfd3_api.registry.json","digest":"sha256:53b2142bf870796770e46c13160f3d5166f0debe33f080c1b4c7e76146a3db05"},"kfd2Trust":{"status":"unknown","trustImpact":"passport-claim-not-found","residualRisk":[]},"residualRisk":[]},
+    {
+      "id": "shifu.source.acquire",
+      "kind": "cli",
+      "name": "shifu source acquire ... --execute --json",
+      "state": "declared",
+      "detected": true,
+      "enforced": false,
+      "sourcePath": "crates/shifu/agent/kfd3_api.registry.json",
+      "artifactPath": "crates/shifu/agent/kfd3_api.registry.json",
+      "evidencePath": "crates/shifu/agent/kfd3_api.registry.json",
+      "kfd1Basis": {
+        "registryPath": ".buildchain/kfd/kfd-3/surfaces.json",
+        "sourcePath": "crates/shifu/agent/kfd3_api.registry.json",
+        "artifactPath": "crates/shifu/agent/kfd3_api.registry.json",
+        "digest": "sha256:2a690db4d7a559e4b500af85bfb87645a2fa9e070656a3888280b426408b832d"
+      },
+      "kfd2Trust": {
+        "status": "unknown",
+        "trustImpact": "passport-claim-not-found",
+        "residualRisk": []
+      },
+      "residualRisk": []
+    },
+    {
+      "id": "shifu.source.plan",
+      "kind": "cli",
+      "name": "shifu source plan ... --json",
+      "state": "declared",
+      "detected": true,
+      "enforced": false,
+      "sourcePath": "crates/shifu/agent/kfd3_api.registry.json",
+      "artifactPath": "crates/shifu/agent/kfd3_api.registry.json",
+      "evidencePath": "crates/shifu/agent/kfd3_api.registry.json",
+      "kfd1Basis": {
+        "registryPath": ".buildchain/kfd/kfd-3/surfaces.json",
+        "sourcePath": "crates/shifu/agent/kfd3_api.registry.json",
+        "artifactPath": "crates/shifu/agent/kfd3_api.registry.json",
+        "digest": "sha256:91821ce74fbfb976321416f82f07715f7e7cad1ce7fc8c955c2ab3544008f6fc"
+      },
+      "kfd2Trust": {
+        "status": "unknown",
+        "trustImpact": "passport-claim-not-found",
+        "residualRisk": []
+      },
+      "residualRisk": []
+    },
+    {
+      "id": "shifu.source.verify",
+      "kind": "cli",
+      "name": "shifu source verify ... --json",
+      "state": "declared",
+      "detected": true,
+      "enforced": false,
+      "sourcePath": "crates/shifu/agent/kfd3_api.registry.json",
+      "artifactPath": "crates/shifu/agent/kfd3_api.registry.json",
+      "evidencePath": "crates/shifu/agent/kfd3_api.registry.json",
+      "kfd1Basis": {
+        "registryPath": ".buildchain/kfd/kfd-3/surfaces.json",
+        "sourcePath": "crates/shifu/agent/kfd3_api.registry.json",
+        "artifactPath": "crates/shifu/agent/kfd3_api.registry.json",
+        "digest": "sha256:331cbc1d05702cc7f72f609d690478da54825f3a59a7ae6fad36ece3c20d070d"
+      },
+      "kfd2Trust": {
+        "status": "unknown",
+        "trustImpact": "passport-claim-not-found",
+        "residualRisk": []
+      },
+      "residualRisk": []
+    },
+    {"id":"xinfa.agent.brief","kind":"cli","name":"xinfa agent brief","state":"declared","detected":true,"enforced":false,"sourcePath":"crates/xinfa/agent/kfd3_api.registry.json","artifactPath":"crates/xinfa/agent/kfd3_api.registry.json","evidencePath":"crates/xinfa/agent/kfd3_api.registry.json","kfd1Basis":{"registryPath":".buildchain/kfd/kfd-3/surfaces.json","sourcePath":"crates/xinfa/agent/kfd3_api.registry.json","artifactPath":"crates/xinfa/agent/kfd3_api.registry.json","digest":"sha256:119681282b0bb4987505af618361f4fd0d70c5ec6502872147dcb74d4d0aa2f8"},"kfd2Trust":{"status":"unknown","trustImpact":"passport-claim-not-found","residualRisk":[]},"residualRisk":[]},
+    {"id":"xinfa.agent.capabilities","kind":"cli","name":"xinfa agent capabilities --json","state":"declared","detected":true,"enforced":false,"sourcePath":"crates/xinfa/agent/kfd3_api.registry.json","artifactPath":"crates/xinfa/agent/kfd3_api.registry.json","evidencePath":"crates/xinfa/agent/kfd3_api.registry.json","kfd1Basis":{"registryPath":".buildchain/kfd/kfd-3/surfaces.json","sourcePath":"crates/xinfa/agent/kfd3_api.registry.json","artifactPath":"crates/xinfa/agent/kfd3_api.registry.json","digest":"sha256:530882e72654978ccb9b3dc8d6525d27f5c151dc3590e50efd0600285c2943b7"},"kfd2Trust":{"status":"unknown","trustImpact":"passport-claim-not-found","residualRisk":[]},"residualRisk":[]},
+    {"id":"xinfa.agent.map","kind":"cli","name":"xinfa agent map --json","state":"declared","detected":true,"enforced":false,"sourcePath":"crates/xinfa/agent/kfd3_api.registry.json","artifactPath":"crates/xinfa/agent/kfd3_api.registry.json","evidencePath":"crates/xinfa/agent/kfd3_api.registry.json","kfd1Basis":{"registryPath":".buildchain/kfd/kfd-3/surfaces.json","sourcePath":"crates/xinfa/agent/kfd3_api.registry.json","artifactPath":"crates/xinfa/agent/kfd3_api.registry.json","digest":"sha256:e14ff8be9df02d9c5642aef7b9c25ce6deb9f7f5cebc11f2e5d7ac911694d0c5"},"kfd2Trust":{"status":"unknown","trustImpact":"passport-claim-not-found","residualRisk":[]},"residualRisk":[]},
+    {"id":"xinfa.agent.schema","kind":"cli","name":"xinfa agent schema --json","state":"declared","detected":true,"enforced":false,"sourcePath":"crates/xinfa/agent/kfd3_api.registry.json","artifactPath":"crates/xinfa/agent/kfd3_api.registry.json","evidencePath":"crates/xinfa/agent/kfd3_api.registry.json","kfd1Basis":{"registryPath":".buildchain/kfd/kfd-3/surfaces.json","sourcePath":"crates/xinfa/agent/kfd3_api.registry.json","artifactPath":"crates/xinfa/agent/kfd3_api.registry.json","digest":"sha256:4cbab23f807c673d23382ad6cbd9f2161add88c2b7a6473df8cdbd57293bb9a6"},"kfd2Trust":{"status":"unknown","trustImpact":"passport-claim-not-found","residualRisk":[]},"residualRisk":[]},
+    {"id":"xinfa.agent.verify","kind":"cli","name":"xinfa agent verify --json","state":"declared","detected":true,"enforced":false,"sourcePath":"crates/xinfa/agent/kfd3_api.registry.json","artifactPath":"crates/xinfa/agent/kfd3_api.registry.json","evidencePath":"crates/xinfa/agent/kfd3_api.registry.json","kfd1Basis":{"registryPath":".buildchain/kfd/kfd-3/surfaces.json","sourcePath":"crates/xinfa/agent/kfd3_api.registry.json","artifactPath":"crates/xinfa/agent/kfd3_api.registry.json","digest":"sha256:2dcf5340ebd147cf7b096b0d8c960b19977fc64af6dc582677a774702e72b154"},"kfd2Trust":{"status":"unknown","trustImpact":"passport-claim-not-found","residualRisk":[]},"residualRisk":[]},
+    {"id":"xinfa.context","kind":"cli","name":"xinfa context ... --json","state":"declared","detected":true,"enforced":false,"sourcePath":"crates/xinfa/agent/kfd3_api.registry.json","artifactPath":"crates/xinfa/agent/kfd3_api.registry.json","evidencePath":"crates/xinfa/agent/kfd3_api.registry.json","kfd1Basis":{"registryPath":".buildchain/kfd/kfd-3/surfaces.json","sourcePath":"crates/xinfa/agent/kfd3_api.registry.json","artifactPath":"crates/xinfa/agent/kfd3_api.registry.json","digest":"sha256:40c194b799add324097def20df853743478b404d6f5457a9c054331b70dc22ce"},"kfd2Trust":{"status":"unknown","trustImpact":"passport-claim-not-found","residualRisk":[]},"residualRisk":[]},
+    {"id":"xinfa.expand","kind":"cli","name":"xinfa expand ... --json","state":"declared","detected":true,"enforced":false,"sourcePath":"crates/xinfa/agent/kfd3_api.registry.json","artifactPath":"crates/xinfa/agent/kfd3_api.registry.json","evidencePath":"crates/xinfa/agent/kfd3_api.registry.json","kfd1Basis":{"registryPath":".buildchain/kfd/kfd-3/surfaces.json","sourcePath":"crates/xinfa/agent/kfd3_api.registry.json","artifactPath":"crates/xinfa/agent/kfd3_api.registry.json","digest":"sha256:bfe8038ef61e46bb90fdc7dc6a0ebf10401f549eb7873a405abee44b29dcb2cd"},"kfd2Trust":{"status":"unknown","trustImpact":"passport-claim-not-found","residualRisk":[]},"residualRisk":[]}
   ],
   "kfd": {
     "kfd1": "registry-facts",

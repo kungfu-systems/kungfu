@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // @ts-check
 
+import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -17,10 +18,14 @@ const PACK = path.join(
   'kungfu',
   'agent',
 );
+const AGENT_CLI_SOURCES = ['agent.py', 'agent_first_value_entry.py'];
 
 const REQUIRED = [
   'index.json',
   'brief.md',
+  'intent-map.json',
+  'first-value.contract.json',
+  'first-value-receipt.schema.json',
   'xinfa-context.md',
   'primitive-management.md',
   'mode-selection.md',
@@ -35,6 +40,8 @@ const REQUIRED = [
   'examples/remote-sync.md',
   'skills/codex/SKILL.md',
   'skills/claude/SKILL.md',
+  'skills/amp/SKILL.md',
+  'skills/opencode/SKILL.md',
 ];
 
 /** @type {string[]} */
@@ -65,6 +72,9 @@ let commands = null;
 let cliSurface = null;
 let apiRegistry = null;
 let apiSchema = null;
+let intentMap = null;
+let firstValueContract = null;
+let firstValueReceiptSchema = null;
 try {
   index = readJson('index.json');
 } catch (e) {
@@ -94,6 +104,27 @@ try {
 } catch (e) {
   fail(
     `kfd3_api.schema.json is invalid JSON: ${e instanceof Error ? e.message : e}`,
+  );
+}
+try {
+  intentMap = readJson('intent-map.json');
+} catch (e) {
+  fail(
+    `intent-map.json is invalid JSON: ${e instanceof Error ? e.message : e}`,
+  );
+}
+try {
+  firstValueContract = readJson('first-value.contract.json');
+} catch (e) {
+  fail(
+    `first-value.contract.json is invalid JSON: ${e instanceof Error ? e.message : e}`,
+  );
+}
+try {
+  firstValueReceiptSchema = readJson('first-value-receipt.schema.json');
+} catch (e) {
+  fail(
+    `first-value-receipt.schema.json is invalid JSON: ${e instanceof Error ? e.message : e}`,
   );
 }
 
@@ -135,10 +166,133 @@ if (index) {
 }
 
 const brief = exists('brief.md') ? read('brief.md') : '';
+const codexSkill = exists('skills/codex/SKILL.md')
+  ? read('skills/codex/SKILL.md')
+  : '';
 const xinfaContext = exists('xinfa-context.md') ? read('xinfa-context.md') : '';
 const primitiveManagement = exists('primitive-management.md')
   ? read('primitive-management.md')
   : '';
+if (Buffer.byteLength(brief, 'utf8') > 8192)
+  fail('brief.md exceeds the 8192-byte first-entry budget');
+if (brief.split(/\r?\n/).length > 120)
+  fail('brief.md exceeds the 120-line first-entry budget');
+if (intentMap) {
+  const required = intentMap.requiredIntentIds || [];
+  const actual = (intentMap.intents || []).map((row) => row.id);
+  if (new Set(actual).size !== actual.length)
+    fail('intent-map.json contains duplicate intent ids');
+  if (
+    required.length !== actual.length ||
+    required.some((id) => !actual.includes(id))
+  )
+    fail('intent-map.json required intent coverage is incomplete or unknown');
+  for (const row of intentMap.intents || []) {
+    for (const field of [
+      'id',
+      'summary',
+      'audience',
+      'maturity',
+      'authorityRoots',
+      'access',
+      'authorization',
+      'nonClaims',
+      'discoveryCommands',
+      'expansionHandles',
+    ])
+      if (!(field in row))
+        fail(`intent-map.json intent ${row.id} missing ${field}`);
+  }
+}
+if (firstValueContract) {
+  const prompt = firstValueContract.prompt || {};
+  const promptRoot = `sha256:${crypto
+    .createHash('sha256')
+    .update(String(prompt.text || ''), 'utf8')
+    .digest('hex')}`;
+  if (firstValueContract.schema !== 'kungfu.agent-first-value-contract/v1')
+    fail('first-value contract has an unknown schema');
+  if (prompt.root !== promptRoot)
+    fail('first-value contract prompt root does not bind the exact UTF-8 text');
+  const promptFamily = firstValueContract.promptFamily || {};
+  const variants = promptFamily.variants || [];
+  if (promptFamily.canonicalRoot !== prompt.root || variants.length !== 5)
+    fail('first-value contract natural prompt family is incomplete');
+  const promptRoots = new Set([prompt.root]);
+  for (const variant of variants) {
+    const root = `sha256:${crypto
+      .createHash('sha256')
+      .update(String(variant.text || ''), 'utf8')
+      .digest('hex')}`;
+    if (variant.root !== root || promptRoots.has(root))
+      fail('first-value contract natural prompt variant root is invalid');
+    promptRoots.add(root);
+    if (
+      !String(variant.text || '').includes(
+        promptFamily.naturalLanguagePolicy?.requiredPhrase || '',
+      ) ||
+      (promptFamily.naturalLanguagePolicy?.forbiddenProtocolHints || []).some(
+        (hint) => String(variant.text || '').includes(hint),
+      )
+    )
+      fail('first-value contract variant leaks protocol-step instructions');
+  }
+  if (firstValueContract.result?.maximumQuestionCount !== 1)
+    fail('first-value contract does not enforce at most one question');
+  if (firstValueContract.result?.requiredIntentCount !== 1)
+    fail('first-value contract does not enforce exactly one intent');
+  if (firstValueContract.result?.minimumSafeDiscoveryCount !== 1)
+    fail('first-value contract does not require one safe discovery');
+  if (firstValueContract.result?.requiredOutcomeCount !== 1)
+    fail('first-value contract does not require one minimal outcome');
+  const exactDefault = firstValueContract.result?.exactPromptDefault || {};
+  if (
+    firstValueContract.result?.deterministicEntryCommand !==
+      'kungfu agent first-value start --json' ||
+    exactDefault.intentId !== 'onboarding' ||
+    exactDefault.questionCount !== 0 ||
+    exactDefault.discoveryCommand !==
+      'kungfu agent status --target codex --scope project --json'
+  )
+    fail('first-value contract exact-prompt default is not deterministic');
+  if (
+    firstValueContract.qualification?.requiredLocalCodexTrials !== 10 ||
+    firstValueContract.qualification?.minimumCanonicalPromptTrials !== 5
+  )
+    fail('first-value contract does not require the 10-run local Codex matrix');
+  if (
+    firstValueContract.qualification?.experienceDimensions?.length !== 9 ||
+    firstValueContract.qualification?.evaluatorPolicy
+      ?.keywordOrSelfReportAloneCanPass !== false
+  )
+    fail(
+      'first-value contract does not bind the deterministic experience gate',
+    );
+  if (
+    firstValueContract.qualification?.ci !==
+    'deterministic-contract-and-receipt-only'
+  )
+    fail('first-value contract incorrectly requires a provider in CI');
+  for (const nonClaim of [
+    'claude-qualified',
+    'ci-hosted-codex-qualified',
+    'public-release-qualified',
+    'model-output-alone-is-proof',
+  ])
+    if (!(firstValueContract.qualification?.nonClaims || []).includes(nonClaim))
+      fail(`first-value contract omitted non-claim ${nonClaim}`);
+}
+if (firstValueReceiptSchema) {
+  if (
+    firstValueReceiptSchema.properties?.schema?.const !==
+    'kungfu.agent-first-value-receipt/v1'
+  )
+    fail('first-value receipt schema has an unknown receipt identity');
+  if (firstValueReceiptSchema.properties?.questionCount?.maximum !== 1)
+    fail('first-value receipt schema permits more than one question');
+  if (firstValueReceiptSchema.properties?.diagnostics?.maxItems !== 0)
+    fail('a verified first-value receipt can retain diagnostics');
+}
 for (const [rel, text] of [
   ['brief.md', brief],
   ['xinfa-context.md', xinfaContext],
@@ -150,6 +304,15 @@ for (const [rel, text] of [
   ]) {
     if (!text.includes(phrase))
       fail(`${rel} missing Xinfa discovery phrase: ${phrase}`);
+  }
+}
+for (const [rel, text] of [
+  ['brief.md', brief],
+  ['skills/codex/SKILL.md', codexSkill],
+]) {
+  for (const phrase of ['kungfu agent first-value start', 'receiptRoot']) {
+    if (!text.includes(phrase))
+      fail(`${rel} missing deterministic first-value phrase: ${phrase}`);
   }
 }
 for (const phrase of [
@@ -250,20 +413,19 @@ if (cliSurface) {
 }
 
 if (apiRegistry) {
-  const agentCli = fs.readFileSync(
-    path.join(
-      ROOT,
-      'framework',
-      'core',
-      'src',
-      'python',
-      'kungfu',
-      'cli',
-      'commands',
-      'agent.py',
-    ),
-    'utf8',
+  const commandRoot = path.join(
+    ROOT,
+    'framework',
+    'core',
+    'src',
+    'python',
+    'kungfu',
+    'cli',
+    'commands',
   );
+  const agentCli = AGENT_CLI_SOURCES.map((source) =>
+    fs.readFileSync(path.join(commandRoot, source), 'utf8'),
+  ).join('\n');
   const expectedRuntimeIds = new Set(
     (apiRegistry.apis || [])
       .filter((row) => row.anchor?.kind === 'runtime-click')
@@ -274,11 +436,11 @@ if (apiRegistry) {
   );
   for (const apiId of expectedRuntimeIds) {
     if (!observedAnchors.has(apiId))
-      fail(`agent.py missing @kfd3_api("${apiId}")`);
+      fail(`Agent CLI sources missing @kfd3_api("${apiId}")`);
   }
   for (const apiId of observedAnchors) {
     if (!expectedRuntimeIds.has(apiId))
-      fail(`agent.py has stale @kfd3_api("${apiId}")`);
+      fail(`Agent CLI sources have stale @kfd3_api("${apiId}")`);
   }
   const commandBlocks = [
     ...agentCli.matchAll(
@@ -376,15 +538,27 @@ const gui = fs.readFileSync(
   path.join(ROOT, 'framework', 'gui', 'src', 'main', 'index.ts'),
   'utf8',
 );
-if (!gui.includes("['agent', 'brief']"))
-  fail('GUI menu does not expose agent brief');
+if (
+  !gui.includes('kungfuAgentBriefCommand(') ||
+  !gui.includes("navigateShell({ target: 'onboarding' })")
+) {
+  fail('GUI onboarding does not expose the exact local agent brief command');
+}
 
 const tui = fs.readFileSync(
   path.join(ROOT, 'framework', 'tui', 'src', 'main.tsx'),
   'utf8',
 );
-if (!tui.includes('kungfu agent brief'))
-  fail('TUI does not point to agent brief');
+const tuiOnboarding = fs.readFileSync(
+  path.join(ROOT, 'framework', 'tui', 'src', 'agent-work-lab-view.tsx'),
+  'utf8',
+);
+if (
+  !tui.includes('kungfuAgentBriefCommand(') ||
+  !tuiOnboarding.includes('Exact local command:')
+) {
+  fail('TUI onboarding does not expose the exact local agent brief command');
+}
 
 if (failures.length) {
   console.error(failures.map((f) => `- ${f}`).join('\n'));

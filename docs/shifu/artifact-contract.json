@@ -60,7 +60,6 @@
     "matrix": {
       "initialRows": [
         "darwin-arm64-cp313",
-        "darwin-x86_64-cp313",
         "linux-x86_64-cp313",
         "windows-x86_64-cp313"
       ],

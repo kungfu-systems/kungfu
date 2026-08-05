@@ -2,5 +2,4 @@ self-hosted-runner:
   labels:
     - agent-121
     - kungfu-agent-patrol
-    - kungfu-build-v4
     - kungfu-build-v4-linux-x64

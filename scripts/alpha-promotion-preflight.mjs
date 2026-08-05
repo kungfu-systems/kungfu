@@ -5,6 +5,7 @@
 import childProcess from 'node:child_process';
 import crypto from 'node:crypto';
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -53,10 +54,18 @@ const ROOT_FILES = {
     'scripts/alpha-release-history.mjs',
     'scripts/alpha-ruleset.mjs',
     'scripts/probe-release-platform.mjs',
+    'framework/core/tests/python/test_peer_lifecycle.py',
+    'framework/core/tests/python/windows_continuity_sentinel.py',
+    'framework/core/tests/fixtures/peer_lifecycle_probe.py',
   ],
 };
 const PLATFORM_CHECKS = {
-  'linux-x64': ['exact-source', 'adr-cutover-history', 'cargo-locked-fetch'],
+  'linux-x64': [
+    'exact-source',
+    'source-contracts',
+    'adr-cutover-history',
+    'cargo-locked-fetch',
+  ],
   'linux-arm64': ['exact-source', 'cargo-locked-fetch'],
   'macos-arm64': ['exact-source', 'codesign-tool', 'cargo-locked-fetch'],
   'windows-x64': ['exact-source', 'windows-cmd-spawn', 'cargo-locked-fetch'],
@@ -68,6 +77,33 @@ const NON_REUSABLE_EVIDENCE = [
   'signing',
 ];
 const EXACT_BUILDCHAIN_SHA = /^[0-9a-f]{40}$/u;
+const WINDOWS_CONTINUITY_FILES = [
+  'framework/core/src/python/kungfu/peer_lifecycle.py',
+  'framework/core/tests/python/test_peer_lifecycle.py',
+  'framework/core/tests/python/windows_continuity_sentinel.py',
+  'framework/core/tests/fixtures/peer_lifecycle_probe.py',
+];
+const WINDOWS_CONTINUITY_PHASES = [
+  'initialReadiness',
+  'hostCrashAdoption',
+  'peerAdoption',
+  'staleOwnerFencing',
+  'peerRestartHealth',
+  'cleanup',
+];
+const WINDOWS_CONTINUITY_INVALIDATION_KEYS = [
+  'sourceCommit',
+  'sourceTree',
+  'workflowRoot',
+  'toolchainRoot',
+  'policyRoot',
+  'continuityInputRoot',
+  'nativeScenarioRoot',
+  'platform.os',
+  'platform.arch',
+];
+const WINDOWS_CONTINUITY_CLAIM_BOUNDARY =
+  'Windows-native crash, adoption, restart-health, fencing, and cleanup only; does not claim full Alpha qualification';
 
 function requirePattern(issues, source, pattern, message) {
   if (!pattern.test(source)) issues.push(message);
@@ -108,33 +144,86 @@ export function inspectWindowsFastSentinel({ shifuCmd, lifecycle }) {
   return issues;
 }
 
-export function inspectAuditableDemoFastSentinel({ adapter, workflow }) {
+export function inspectAuditableDemoFastSentinel({
+  workflow,
+  scenario,
+  product,
+}) {
   const issues = [];
+  let scenarioValue;
+  try {
+    scenarioValue =
+      typeof scenario === 'string' ? JSON.parse(scenario) : scenario;
+  } catch {
+    issues.push('auditable-demo scenario is not valid JSON');
+  }
+  const demos = scenarioValue?.demos || [];
+  const autoplay = demos.find((demo) => demo?.id === 'agent-work-lab-autoplay');
+  const projectTourEpisode1 = demos.find(
+    (demo) => demo?.id === 'project-tour-episode-1',
+  );
+  const projectTourEpisode2 = demos.find(
+    (demo) => demo?.id === 'project-tour-episode-2',
+  );
+  if (
+    scenarioValue?.schema !== 'buildchain.declarative-binary-demo/v1' ||
+    scenarioValue?.execution?.durationClass !== 'long-form' ||
+    scenarioValue?.execution?.totalTimeoutSeconds !== 180 ||
+    scenarioValue?.authority?.grants?.length !== 0 ||
+    demos.length !== 3 ||
+    JSON.stringify(autoplay?.steps?.[0]?.argv) !==
+      JSON.stringify(['agent-work-lab', 'autoplay']) ||
+    autoplay?.steps?.[0]?.timeoutSeconds !== 90 ||
+    JSON.stringify(projectTourEpisode1?.steps?.[0]?.argv) !==
+      JSON.stringify([
+        'agent-work-lab',
+        'project-tour',
+        '--episode',
+        '1',
+        '--speed',
+        '1',
+      ]) ||
+    projectTourEpisode1?.steps?.[0]?.timeoutSeconds !== 180 ||
+    JSON.stringify(projectTourEpisode2?.steps?.[0]?.argv) !==
+      JSON.stringify([
+        'agent-work-lab',
+        'project-tour',
+        '--episode',
+        '2',
+        '--speed',
+        '1',
+      ]) ||
+    projectTourEpisode2?.steps?.[0]?.timeoutSeconds !== 180
+  ) {
+    issues.push(
+      'auditable-demo scenario no longer declares the exact bounded three-demo cut',
+    );
+  }
   requirePattern(
     issues,
-    adapter,
-    /COMPLETION_SENTINEL\s*=\s*re\.compile\(r"KUNGFU_TUI_DEMO_COMPLETE/iu,
-    'auditable-demo adapter no longer requires the installed completion sentinel',
+    product,
+    /writeAuditableDemoBinaryMetadata\(stageRoot, layout\)/u,
+    'Kungfu product no longer emits exact declarative demo binary metadata',
   );
   requirePattern(
     issues,
-    adapter,
-    /completion\["status"\]\s*!=\s*"qualified"/iu,
-    'auditable-demo adapter regressed to a non-canonical completion verdict',
+    workflow,
+    /artifact-paths:[\s\S]*product\/dist\/cli\/kungfu-episodes-cli-linux-x64/u,
+    'build artifact no longer retains the exact standalone demo distribution',
   );
   const runtime = workflow.match(
-    /uses:\s*kungfu-systems\/buildchain\/\.github\/workflows\/\.auditable-demo\.yml@([0-9a-f]{40})/u,
+    /uses:\s*kungfu-systems\/buildchain\/\.github\/workflows\/\.declarative-auditable-demo\.yml@([0-9a-f]{40})/u,
   );
   if (!runtime || !EXACT_BUILDCHAIN_SHA.test(runtime[1])) {
     issues.push(
-      'auditable-demo Gate is not pinned to one exact Buildchain SHA',
+      'declarative auditable-demo workflow is not pinned to one exact Buildchain SHA',
     );
   }
   requirePattern(
     issues,
     workflow,
-    /issue #2057 canonical qualified sentinel/iu,
-    'auditable-demo Gate no longer names the reviewed qualified-sentinel correction',
+    /render-failure-advisory:\s*\$\{\{ github\.event_name == 'pull_request' && startsWith\(github\.base_ref, 'alpha\/'\) \}\}[\s\S]*media-profile:\s*responsive-long-form-web-delivery-v1[\s\S]*materialize:\s*\$\{\{ github\.event_name != 'workflow_dispatch' \|\| inputs\.render-auditable-demo \}\}/u,
+    'declarative auditable-demo no longer preserves a required Gate with Alpha-only advisory rendering',
   );
   return issues;
 }
@@ -151,17 +240,263 @@ export function runAlphaFastSentinel(kind, root = ROOT) {
   }
   if (kind === 'auditable-demo') {
     return inspectAuditableDemoFastSentinel({
-      adapter: fs.readFileSync(
-        path.join(root, 'scripts', 'auditable-demo-adapter.py'),
-        'utf8',
-      ),
       workflow: fs.readFileSync(
         path.join(root, '.github', 'workflows', 'build.yml'),
+        'utf8',
+      ),
+      scenario: fs.readFileSync(
+        path.join(root, '.buildchain', 'auditable-demo.json'),
+        'utf8',
+      ),
+      product: fs.readFileSync(
+        path.join(root, 'product', 'scripts', 'dist.mjs'),
         'utf8',
       ),
     });
   }
   throw new Error(`unknown Alpha fast sentinel: ${kind || '<empty>'}`);
+}
+
+function windowsContinuityInputRoot(root = ROOT) {
+  return digest(fileRows(root, WINDOWS_CONTINUITY_FILES));
+}
+
+function validateWindowsContinuityScenario(report, expectedPlatform) {
+  const issues = [];
+  if (
+    report?.schema !== 'kungfu.windows-continuity-fast-sentinel/v1' ||
+    report?.status !== 'passed'
+  )
+    issues.push('Windows continuity scenario did not pass');
+  if (!Number.isInteger(report?.sampleCount) || report.sampleCount < 2)
+    issues.push('Windows continuity scenario requires two independent samples');
+  if (
+    !Array.isArray(report?.samples) ||
+    report.samples.length !== report.sampleCount
+  )
+    issues.push('Windows continuity scenario sample set is incomplete');
+  if (report?.platform?.system !== expectedPlatform)
+    issues.push(
+      'Windows continuity native platform does not match the receipt',
+    );
+  for (const [index, sample] of (report?.samples || []).entries()) {
+    if (
+      sample?.schema !== 'kungfu.windows-continuity-fast-sentinel/v1' ||
+      sample?.sample !== index + 1
+    )
+      issues.push('Windows continuity sample identity is invalid');
+    if (sample?.status !== 'passed') {
+      issues.push(
+        `Windows continuity sample ${String(sample?.sample || '<unknown>')} failed`,
+      );
+      continue;
+    }
+    for (const coverage of [
+      'realHostCrash',
+      'peerAdoption',
+      'peerRestart',
+      'restartedHealthy',
+      'staleOwnerFenced',
+      'cleanupComplete',
+    ]) {
+      if (sample?.coverage?.[coverage] !== true)
+        issues.push(`Windows continuity sample omitted ${coverage}`);
+    }
+    for (const phase of WINDOWS_CONTINUITY_PHASES) {
+      const timing = sample?.phaseTimings?.[phase];
+      if (
+        !Number.isInteger(timing?.durationMs) ||
+        !Number.isInteger(timing?.deadlineMs) ||
+        timing.durationMs < 0 ||
+        timing.deadlineMs <= 0 ||
+        timing.durationMs > timing.deadlineMs
+      )
+        issues.push(`Windows continuity phase timing is invalid: ${phase}`);
+    }
+  }
+  if (
+    report?.retryPolicy !==
+    'none; repeated samples are independent qualifications'
+  )
+    issues.push('Windows continuity retry policy is not fail-closed');
+  return issues;
+}
+
+export function buildWindowsContinuityFastReceipt({
+  root = ROOT,
+  sourceSha = '',
+  platform = process.platform,
+  architecture = process.arch,
+  nativeReport,
+  nativeExitCode = 0,
+  durationMs = 0,
+}) {
+  const binding = sourceBinding(root);
+  const issues = [
+    ...runAlphaFastSentinel('windows', root),
+    ...validateWindowsContinuityScenario(nativeReport, platform),
+  ];
+  if (platform !== 'win32')
+    issues.push(
+      `Windows continuity qualification requires win32, got ${platform}`,
+    );
+  if (
+    !EXACT_BUILDCHAIN_SHA.test(sourceSha) ||
+    sourceSha !== binding.sourceCommit
+  )
+    issues.push(
+      'Windows continuity source SHA does not match the exact checkout',
+    );
+  if (nativeExitCode !== 0)
+    issues.push(`Windows continuity native scenario exited ${nativeExitCode}`);
+  const body = {
+    schema: 'kungfu.alpha-fast-sentinel/v1',
+    kind: 'windows',
+    sourceSha,
+    status: issues.length ? 'failed' : 'passed',
+    issues: [...new Set(issues)].sort(),
+    durationMs,
+    binding: {
+      ...binding,
+      continuityInputRoot: windowsContinuityInputRoot(root),
+      nativeScenarioRoot: digest(nativeReport || {}),
+    },
+    platform: { os: platform, arch: architecture },
+    nativeScenario: nativeReport || {},
+    reuse: {
+      scope: 'exact-source-windows-continuity-only',
+      invalidationKeys: WINDOWS_CONTINUITY_INVALIDATION_KEYS,
+      downstreamVerificationRequired: true,
+      crossShaReuse: false,
+      partialReuse: false,
+    },
+    claimBoundary: WINDOWS_CONTINUITY_CLAIM_BOUNDARY,
+  };
+  return withReceiptRoot(body);
+}
+
+export function verifyWindowsContinuityFastReceipt({
+  root = ROOT,
+  receipt,
+  expectedSourceCommit = '',
+  expectedPlatform = 'win32',
+  expectedArchitecture = '',
+}) {
+  verifyRoot(receipt);
+  if (
+    receipt.schema !== 'kungfu.alpha-fast-sentinel/v1' ||
+    receipt.kind !== 'windows' ||
+    receipt.status !== 'passed'
+  )
+    throw new Error('Windows continuity fast receipt is not qualifying');
+  const binding = {
+    ...sourceBinding(root),
+    continuityInputRoot: windowsContinuityInputRoot(root),
+    nativeScenarioRoot: digest(receipt.nativeScenario || {}),
+  };
+  assertBinding(receipt.binding, binding);
+  if (expectedSourceCommit && receipt.sourceSha !== expectedSourceCommit)
+    throw new Error(
+      'Windows continuity source SHA does not match the consumer',
+    );
+  if (receipt.sourceSha !== binding.sourceCommit)
+    throw new Error('Windows continuity source SHA is stale');
+  if (receipt.platform?.os !== expectedPlatform)
+    throw new Error('Windows continuity platform does not match the consumer');
+  if (expectedArchitecture && receipt.platform?.arch !== expectedArchitecture)
+    throw new Error(
+      'Windows continuity architecture does not match the consumer',
+    );
+  const scenarioIssues = validateWindowsContinuityScenario(
+    receipt.nativeScenario,
+    expectedPlatform,
+  );
+  if (scenarioIssues.length)
+    throw new Error(
+      `Windows continuity scenario drifted: ${scenarioIssues.join('; ')}`,
+    );
+  if (
+    receipt.reuse?.scope !== 'exact-source-windows-continuity-only' ||
+    JSON.stringify(receipt.reuse?.invalidationKeys) !==
+      JSON.stringify(WINDOWS_CONTINUITY_INVALIDATION_KEYS) ||
+    receipt.reuse?.downstreamVerificationRequired !== true ||
+    receipt.reuse?.crossShaReuse !== false ||
+    receipt.reuse?.partialReuse !== false
+  )
+    throw new Error('Windows continuity reuse boundary drifted');
+  if (receipt.claimBoundary !== WINDOWS_CONTINUITY_CLAIM_BOUNDARY)
+    throw new Error('Windows continuity claim boundary drifted');
+  return receipt;
+}
+
+function executeWindowsContinuityScenario(outFile, root = ROOT) {
+  const scenarioFile = outFile.replace(/\.json$/u, '.scenario.json');
+  const runtimeRoot = path.join(
+    os.tmpdir(),
+    `kungfu-windows-continuity-${Date.now()}-${process.pid}`,
+  );
+  const command = [
+    'run',
+    '--frozen',
+    '--project',
+    path.join(root, 'framework', 'core'),
+    'python',
+    path.join(
+      root,
+      'framework',
+      'core',
+      'tests',
+      'python',
+      'windows_continuity_sentinel.py',
+    ),
+    '--out',
+    scenarioFile,
+    '--runtime-root',
+    runtimeRoot,
+    '--probe',
+    path.join(
+      root,
+      'framework',
+      'core',
+      'tests',
+      'fixtures',
+      'peer_lifecycle_probe.py',
+    ),
+    '--repeat',
+    '2',
+  ];
+  const result = childProcess.spawnSync('uv', command, {
+    cwd: root,
+    encoding: 'utf8',
+    env: {
+      ...process.env,
+      PYTHONPATH: [
+        path.join(root, 'framework', 'core', 'src', 'python'),
+        process.env.PYTHONPATH,
+      ]
+        .filter(Boolean)
+        .join(path.delimiter),
+    },
+    maxBuffer: 16 * 1024 * 1024,
+    shell: process.platform === 'win32',
+    windowsHide: true,
+  });
+  let report = {};
+  try {
+    report = JSON.parse(fs.readFileSync(scenarioFile, 'utf8'));
+  } catch (error) {
+    report = {
+      schema: 'kungfu.windows-continuity-fast-sentinel/v1',
+      status: 'failed',
+      sampleCount: 0,
+      samples: [],
+      retryPolicy: 'none; repeated samples are independent qualifications',
+      diagnostic: String(
+        result.stderr || result.stdout || result.error?.message || error,
+      ).slice(-4000),
+    };
+  }
+  return { report, exitCode: result.status ?? 1 };
 }
 
 function canonical(value) {
@@ -442,24 +777,57 @@ function main(argv = process.argv.slice(2)) {
     );
     return;
   }
+  if (command === 'verify-fast-sentinel') {
+    if (!options.receipt || !options['source-commit'])
+      throw new Error(
+        'verify-fast-sentinel requires --receipt and --source-commit',
+      );
+    const receipt = JSON.parse(
+      fs.readFileSync(path.resolve(options.receipt), 'utf8'),
+    );
+    verifyWindowsContinuityFastReceipt({
+      receipt,
+      expectedSourceCommit: options['source-commit'],
+      expectedPlatform: options.platform || 'win32',
+      expectedArchitecture: options.architecture || '',
+    });
+    process.stdout.write(
+      `[alpha-fast-sentinel] verified ${receipt.receiptRoot} for ${receipt.sourceSha} ${receipt.platform.os}/${receipt.platform.arch}\n`,
+    );
+    return;
+  }
   if (command === 'fast-sentinel') {
     if (!options.kind || !options.out)
       throw new Error('fast-sentinel requires --kind and --out');
     const startedAt = Date.now();
-    const issues = runAlphaFastSentinel(options.kind);
-    const result = {
-      schema: 'kungfu.alpha-fast-sentinel/v1',
-      kind: options.kind,
-      sourceSha: process.env.GITHUB_SHA || '',
-      status: issues.length ? 'failed' : 'passed',
-      issues,
-      durationMs: Date.now() - startedAt,
-      claimBoundary:
-        'source-contract-only; does not claim platform or full Alpha qualification',
-    };
-    writeJson(path.resolve(options.out), result);
+    const output = path.resolve(options.out);
+    let result;
+    if (options.kind === 'windows') {
+      if (!options['source-commit'])
+        throw new Error('Windows fast-sentinel requires --source-commit');
+      const native = executeWindowsContinuityScenario(output);
+      result = buildWindowsContinuityFastReceipt({
+        sourceSha: options['source-commit'],
+        nativeReport: native.report,
+        nativeExitCode: native.exitCode,
+        durationMs: Date.now() - startedAt,
+      });
+    } else {
+      const issues = runAlphaFastSentinel(options.kind);
+      result = {
+        schema: 'kungfu.alpha-fast-sentinel/v1',
+        kind: options.kind,
+        sourceSha: process.env.GITHUB_SHA || '',
+        status: issues.length ? 'failed' : 'passed',
+        issues,
+        durationMs: Date.now() - startedAt,
+        claimBoundary:
+          'source-contract-only; does not claim platform or full Alpha qualification',
+      };
+    }
+    writeJson(output, result);
     process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
-    if (issues.length) process.exitCode = 1;
+    if (result.status !== 'passed') process.exitCode = 1;
     return;
   }
   throw new Error(`unknown alpha preflight command: ${command || '<missing>'}`);

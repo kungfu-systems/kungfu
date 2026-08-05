@@ -1,7 +1,6 @@
 #!/usr/bin/env node
 // SPDX-License-Identifier: Apache-2.0
 // @ts-check
-
 import { execFileSync, spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import fs from 'node:fs';
@@ -23,16 +22,20 @@ import {
   KFD3_DEFAULT_REGISTRY_PATH,
   checkColdBuildchainKfd,
   loadBuildchainKfdRuntime,
+  renderKfdJson,
 } from '../framework/release/buildchain-kfd-runtime.mjs';
-
+import { prepareGateMeasurementHistory } from './prepare-gate-measurement-history.mjs';
+import {
+  assertKfdEvidenceSourceBinding,
+  findGitTreeEquivalentAncestor,
+  resolveKfdProductGateCheckedAt,
+  selectKfdEvidenceSourceSha,
+} from './source-acceptance.mjs';
 let runtime;
-
 const KFD3_SURFACE_REGISTRY_CONTRACT =
   'kungfu-buildchain-kfd-3-surface-registry';
-
 const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-const ROOT = path.resolve(__dirname, '..');
+const ROOT = path.resolve(path.dirname(__filename), '..');
 const BUILDCHAIN_DIR = path.join(ROOT, '.buildchain');
 const KFD1_WITNESS_PATH = path.join(
   ROOT,
@@ -100,6 +103,9 @@ const KFD_PRODUCT_GATE_STANDARDS = ['kfd-4', 'kfd-5', 'kfd-7'];
 const KFD_PRODUCT_GATE_PATHS = KFD_PRODUCT_GATE_STANDARDS.map((standard) =>
   path.join(KFD_PRODUCT_GATE_RUNTIME_DIR, standard, 'gate.json'),
 );
+const KFD_PRODUCT_GATE_INPUT_PATHS = KFD_PRODUCT_GATE_STANDARDS.map(
+  (standard) => path.join(KFD_PRODUCT_GATE_RUNTIME_DIR, standard, 'input.json'),
+);
 const KFD_SUPPORT_PROJECTION_PATH = path.join(
   KFD_PRODUCT_GATE_RUNTIME_DIR,
   'kfd-support.json',
@@ -128,6 +134,14 @@ const AGENT_COMMANDS_PATH = path.join(
   'kungfu',
   'agent',
   'commands.json',
+);
+const SHIFU_AGENT_REGISTRY_PATH = path.join(
+  ROOT,
+  'crates/shifu/agent/kfd3_api.registry.json',
+);
+const XINFA_AGENT_REGISTRY_PATH = path.join(
+  ROOT,
+  'crates/xinfa/agent/kfd3_api.registry.json',
 );
 const SDK_CLI_PATH = path.join(ROOT, 'developer', 'sdk', 'src', 'sdk.js');
 const PRODUCT_PACKAGE_PATH = path.join(ROOT, 'product', 'package.json');
@@ -229,12 +243,10 @@ function parseArgs(argv) {
 function readJson(filePath) {
   return JSON.parse(fs.readFileSync(filePath, 'utf8'));
 }
-
 function productDisplayName() {
   const pkg = readJson(PRODUCT_PACKAGE_PATH);
   return String(pkg.kungfuProduct?.displayName || 'Kungfu');
 }
-
 function productIdentity() {
   return {
     id: 'kungfu',
@@ -242,16 +254,13 @@ function productIdentity() {
     repository: 'kungfu-systems/kungfu',
   };
 }
-
 function renderJson(value) {
-  return `${JSON.stringify(value, null, 2)}\n`;
+  return renderKfdJson(value);
 }
-
 function writeJson(filePath, value) {
   fs.mkdirSync(path.dirname(filePath), { recursive: true });
   fs.writeFileSync(filePath, renderJson(value));
 }
-
 function rel(filePath) {
   const resolved = path.resolve(filePath);
   if (!resolved.startsWith(`${ROOT}${path.sep}`) && resolved !== ROOT) {
@@ -259,27 +268,21 @@ function rel(filePath) {
   }
   return path.relative(ROOT, resolved).split(path.sep).join('/');
 }
-
 function sha256Text(value) {
   return createHash('sha256').update(String(value)).digest('hex');
 }
-
 function sha256Json(value) {
   return sha256Text(JSON.stringify(value));
 }
-
 function sha256File(filePath) {
   return createHash('sha256').update(fs.readFileSync(filePath)).digest('hex');
 }
-
 function sha256RenderedJson(value) {
   return sha256Text(renderJson(value));
 }
-
 function packageResolver(baseFile) {
   return createRequire(baseFile);
 }
-
 function packageJson(packageName, baseFile) {
   const req = packageResolver(baseFile);
   const packageJsonPath = req.resolve(`${packageName}/package.json`);
@@ -289,7 +292,6 @@ function packageJson(packageName, baseFile) {
     value: readJson(packageJsonPath),
   };
 }
-
 function packageAsset(packageName, assetPath, baseFile) {
   const metadata = packageJson(packageName, baseFile);
   const req = packageResolver(baseFile);
@@ -316,7 +318,6 @@ function packageAsset(packageName, assetPath, baseFile) {
     parsed,
   };
 }
-
 function requireAsset(packageName, assetPath, baseFile) {
   const asset = packageAsset(packageName, assetPath, baseFile);
   if (!asset) {
@@ -324,7 +325,6 @@ function requireAsset(packageName, assetPath, baseFile) {
   }
   return asset;
 }
-
 function assetSummary(asset) {
   return {
     path: asset.path,
@@ -332,12 +332,10 @@ function assetSummary(asset) {
     contract: asset.contract || undefined,
   };
 }
-
 function readOptionalJson(filePath) {
   if (!fs.existsSync(filePath)) return null;
   return readJson(filePath);
 }
-
 function buildOwnKfdFacts() {
   const contractRegistry = readOptionalJson(CONTRACT_REGISTRY_PATH);
   const kfd2Registry = readOptionalJson(KFD2_REGISTRY_PATH);
@@ -404,7 +402,6 @@ function buildOwnKfdFacts() {
     },
   };
 }
-
 function buildUpstreamKfdAggregate() {
   const kfdPackage = packageJson('@kungfu-tech/kfd', SDK_CLI_PATH);
   const libnodePackage = packageJson('@kungfu-tech/libnode', CORE_PACKAGE_PATH);
@@ -547,7 +544,6 @@ function buildUpstreamKfdAggregate() {
     },
   };
 }
-
 function gitValue(args) {
   try {
     return execFileSync('git', args, {
@@ -559,7 +555,35 @@ function gitValue(args) {
     return '';
   }
 }
-
+function isGitAncestor(sourceSha, headSha) {
+  return (
+    spawnSync('git', ['merge-base', '--is-ancestor', sourceSha, headSha], {
+      cwd: ROOT,
+      stdio: 'ignore',
+    }).status === 0
+  );
+}
+function resolveKfdEvidenceSourceSha({ write }) {
+  const committed = write
+    ? ''
+    : String(readJson(KFD3_PREBUILD_WITNESS_PATH).source?.sourceSha || '');
+  if (!write)
+    prepareGateMeasurementHistory(ROOT, { requiredCommit: committed });
+  const headSha = gitValue(['rev-parse', 'HEAD']);
+  const configured =
+    process.env.BUILDCHAIN_SOURCE_SHA || process.env.KUNGFU_KFD_SOURCE_SHA;
+  return assertKfdEvidenceSourceBinding({
+    sourceSha: selectKfdEvidenceSourceSha({
+      write,
+      configured,
+      committed,
+      headSha,
+    }),
+    headSha,
+    isAncestor: isGitAncestor,
+    findTreeEquivalentAncestor: findGitTreeEquivalentAncestor,
+  });
+}
 function runNodeScript(args, { expectJson = true } = {}) {
   const result = spawnSync(process.execPath, args, {
     cwd: ROOT,
@@ -572,7 +596,6 @@ function runNodeScript(args, { expectJson = true } = {}) {
   }
   return expectJson ? JSON.parse(result.stdout) : result.stdout;
 }
-
 function fileSurface({
   id,
   name,
@@ -581,6 +604,7 @@ function fileSurface({
   evidencePath,
   maturity,
   distribution,
+  owner = 'kungfu',
 }) {
   return {
     id,
@@ -597,29 +621,34 @@ function fileSurface({
     artifactPath: evidencePath || sourcePath,
     maturity: maturity || 'stable',
     declaration: {
-      owner: 'kungfu',
+      owner,
       source: 'scripts/buildchain-kfd-evidence.mjs',
       sourcePath,
     },
     ...(distribution ? { distribution } : {}),
   };
 }
-
 function agentApiSurfaces() {
-  const registry = readJson(AGENT_REGISTRY_PATH);
-  const apis = Array.isArray(registry.apis) ? registry.apis : [];
-  return apis.map((api) =>
-    fileSurface({
-      id: String(api.id),
-      name: String(api.name || api.id),
-      kind: String(api.surface || 'cli'),
-      sourcePath: rel(AGENT_REGISTRY_PATH),
-      evidencePath: rel(AGENT_COMMANDS_PATH),
-      maturity: String(api.maturity || 'stable'),
-    }),
-  );
+  return [
+    [AGENT_REGISTRY_PATH, AGENT_COMMANDS_PATH, 'kungfu'],
+    [SHIFU_AGENT_REGISTRY_PATH, SHIFU_AGENT_REGISTRY_PATH, 'shifu'],
+    [XINFA_AGENT_REGISTRY_PATH, XINFA_AGENT_REGISTRY_PATH, 'xinfa'],
+  ].flatMap(([registryPath, evidencePath, owner]) => {
+    const registry = readJson(registryPath);
+    const apis = Array.isArray(registry.apis) ? registry.apis : [];
+    return apis.map((api) =>
+      fileSurface({
+        id: String(api.id),
+        name: String(api.name || api.command || api.id),
+        kind: String(api.surface || 'cli'),
+        sourcePath: rel(registryPath),
+        evidencePath: rel(evidencePath),
+        maturity: String(api.maturity || 'stable'),
+        owner,
+      }),
+    );
+  });
 }
-
 function sdkAndProductSurfaces() {
   return [
     fileSurface({
@@ -634,7 +663,7 @@ function sdkAndProductSurfaces() {
       id: 'kungfu.sdk.kfd.query',
       name: 'kungfu sdk kfd status|schema|1|2|4|query|check|witness|upstream|aggregate',
       kind: 'cli',
-      sourcePath: 'developer/sdk/src/sdk.js',
+      sourcePath: 'developer/sdk/src/sdk-kfd.js',
       evidencePath: 'developer/sdk/kfd/upstream-aggregate.json',
       maturity: 'stable',
     }),
@@ -642,7 +671,7 @@ function sdkAndProductSurfaces() {
       id: 'kungfu.sdk.contract.witness',
       name: 'kungfu sdk contract witness --json',
       kind: 'cli',
-      sourcePath: 'developer/sdk/src/sdk.js',
+      sourcePath: 'developer/sdk/src/sdk-contract.js',
       evidencePath: 'framework/contract/kungfu-contracts.registry.json',
       maturity: 'stable',
     }),
@@ -650,7 +679,7 @@ function sdkAndProductSurfaces() {
       id: 'kungfu.sdk.contract.audit',
       name: 'kungfu sdk contract audit --json',
       kind: 'cli',
-      sourcePath: 'developer/sdk/src/sdk.js',
+      sourcePath: 'developer/sdk/src/sdk-contract.js',
       evidencePath:
         'framework/contract/kungfu-agent-first-canonical-policy.json',
       maturity: 'stable',
@@ -659,31 +688,31 @@ function sdkAndProductSurfaces() {
       id: 'kungfu.sdk.product.gui',
       name: 'kungfu sdk product gui dev|build|pack|dist',
       kind: 'cli',
-      sourcePath: 'developer/sdk/src/sdk.js',
-      evidencePath: 'developer/sdk/src/sdk.js',
+      sourcePath: 'developer/sdk/src/sdk-shared.js',
+      evidencePath: 'developer/sdk/src/sdk-shared.js',
       maturity: 'stable',
     }),
     fileSurface({
       id: 'kungfu.sdk.product.tui',
       name: 'kungfu sdk product tui dev|build|bundle|dist',
       kind: 'cli',
-      sourcePath: 'developer/sdk/src/sdk.js',
-      evidencePath: 'developer/sdk/src/sdk.js',
+      sourcePath: 'developer/sdk/src/sdk-shared.js',
+      evidencePath: 'developer/sdk/src/sdk-shared.js',
       maturity: 'stable',
     }),
     fileSurface({
       id: 'kungfu.sdk.product.cli',
       name: 'kungfu sdk product cli dist',
       kind: 'cli',
-      sourcePath: 'developer/sdk/src/sdk.js',
-      evidencePath: 'developer/sdk/src/sdk.js',
+      sourcePath: 'developer/sdk/src/sdk-shared.js',
+      evidencePath: 'developer/sdk/src/sdk-shared.js',
       maturity: 'stable',
     }),
     fileSurface({
       id: 'kungfu.sdk.kfx.build',
       name: 'kungfu sdk kfx build|clean',
       kind: 'cli',
-      sourcePath: 'developer/sdk/src/sdk.js',
+      sourcePath: 'developer/sdk/src/sdk-contract.js',
       evidencePath: 'framework/kfx/kungfu-kfx.contract.json',
       maturity: 'stable',
     }),
@@ -721,11 +750,11 @@ function sdkAndProductSurfaces() {
       // Build-output facts for the shifu registrar: when one of these tasks
       // succeeds under shifu, the launcher stashes the host platform's
       // artifact user-globally for `shifu builds` / `shifu promote`
-      // (crates/shifu/src/registrar.rs). Declaration, not script — a repo
-      // onboards its artifacts by stating them here.
+      // A repo onboards its artifacts here; crates/shifu/src/registrar.rs consumes it.
       distribution: {
         registrar: 'shifu',
-        tasks: ['dist', 'dist:dir', 'package'],
+        tasks: ['dist*', 'package'],
+        releaseCompanions: 'standard',
         artifacts: [
           {
             kind: 'app',
@@ -763,7 +792,6 @@ function sdkAndProductSurfaces() {
     }),
   ];
 }
-
 function uniqueById(surfaces) {
   const byId = new Map();
   for (const surface of surfaces) {
@@ -772,7 +800,6 @@ function uniqueById(surfaces) {
   }
   return [...byId.values()].sort((a, b) => a.id.localeCompare(b.id));
 }
-
 function buildKfd3Registry(upstreamAggregate = buildUpstreamKfdAggregate()) {
   const surfaces = uniqueById([
     ...agentApiSurfaces(),
@@ -795,6 +822,14 @@ function buildKfd3Registry(upstreamAggregate = buildUpstreamKfdAggregate()) {
           {
             path: rel(AGENT_REGISTRY_PATH),
             role: 'kungfu-agent-first-subregistry',
+          },
+          {
+            path: rel(SHIFU_AGENT_REGISTRY_PATH),
+            role: 'shifu-agent-subregistry',
+          },
+          {
+            path: rel(XINFA_AGENT_REGISTRY_PATH),
+            role: 'xinfa-agent-subregistry',
           },
           {
             path: rel(AGENT_COMMANDS_PATH),
@@ -848,7 +883,6 @@ function buildKfd3Registry(upstreamAggregate = buildUpstreamKfdAggregate()) {
     },
   };
 }
-
 function registryDescriptor(registry) {
   return {
     id: registry.product.id,
@@ -857,7 +891,6 @@ function registryDescriptor(registry) {
     digest: `sha256:${sha256Json(registry)}`,
   };
 }
-
 function missingSurfaceFields(surface) {
   return [
     'id',
@@ -965,7 +998,7 @@ function buildCollaborationInterface(registry) {
   };
 }
 
-function buildKfd3PrebuildWitness(registry) {
+function buildKfd3PrebuildWitness(registry, sourceSha) {
   const collaborationInterface = buildCollaborationInterface(registry);
   return {
     schemaVersion: 1,
@@ -975,7 +1008,7 @@ function buildKfd3PrebuildWitness(registry) {
     supportLevel: 'release',
     source: {
       cwd: '.',
-      sourceSha: gitValue(['rev-parse', 'HEAD']) || '',
+      sourceSha,
       registryPath: KFD3_DEFAULT_REGISTRY_PATH,
       registryDigest: `sha256:${sha256Json(registry)}`,
     },
@@ -1058,6 +1091,10 @@ function assertCurrent(filePath, value, label) {
   if (current !== rendered) {
     throw new Error(`${label} is stale: ${rel(filePath)}`);
   }
+}
+
+function assertCurrentIfPresent(filePath, value, label) {
+  if (fs.existsSync(filePath)) assertCurrent(filePath, value, label);
 }
 
 function buildKfd1Witness() {
@@ -1574,17 +1611,7 @@ function kfd7GateInput({ workspace, sourceSha, checkedAt, standards }) {
   });
 }
 
-async function buildProductGates({ write }) {
-  const sourceSha =
-    process.env.BUILDCHAIN_SOURCE_SHA ||
-    process.env.KUNGFU_KFD_SOURCE_SHA ||
-    gitValue(['rev-parse', 'HEAD']);
-  if (!/^[0-9a-f]{40}(?:[0-9a-f]{24})?$/.test(sourceSha)) {
-    throw new Error(
-      `KFD product gates require an exact 40- or 64-hex source SHA, got ${sourceSha || '<empty>'}`,
-    );
-  }
-  const checkedAt = new Date().toISOString();
+async function buildProductGates({ write, sourceSha, checkedAt }) {
   const workspace = write
     ? ROOT
     : fs.mkdtempSync(path.join(os.tmpdir(), 'kungfu-kfd-product-gates-'));
@@ -1658,6 +1685,7 @@ async function buildProductGates({ write }) {
     return {
       sourceSha,
       checkedAt,
+      inputs,
       gates,
       projection,
     };
@@ -1835,12 +1863,25 @@ async function runCheckOrWrite(options) {
   }
   const strictAudit = buildStrictBuildchainAudit(registry);
   assertStrictBuildchainAudit(strictAudit);
-  const prebuildWitness = buildKfd3PrebuildWitness(registry);
+  const sourceSha = resolveKfdEvidenceSourceSha({ write: options.write });
+  const checkedAt = resolveKfdProductGateCheckedAt({
+    write: options.write,
+    now: () => new Date().toISOString(),
+    retainedGateResults: KFD_PRODUCT_GATE_PATHS.map(readOptionalJson),
+    sourceSha,
+    commitTimestamp: (commit) =>
+      gitValue(['show', '-s', '--format=%cI', commit]),
+  });
+  const prebuildWitness = buildKfd3PrebuildWitness(registry, sourceSha);
   const artifactWitness = buildKfd3ArtifactWitness(registry, {
     runVerify: true,
   });
   const query = await buildQuery(registry);
-  const productGates = await buildProductGates({ write: options.write });
+  const productGates = await buildProductGates({
+    write: options.write,
+    sourceSha,
+    checkedAt,
+  });
   const summary = buildSummary({
     registry,
     upstreamAggregate,
@@ -1861,6 +1902,40 @@ async function runCheckOrWrite(options) {
     writeJson(KFD3_ARTIFACT_WITNESS_PATH, artifactWitness);
     writeJson(KFD3_QUERY_PATH, query);
     writeJson(SUMMARY_PATH, summary);
+  } else {
+    assertCurrent(
+      KFD3_PREBUILD_WITNESS_PATH,
+      prebuildWitness,
+      'Buildchain KFD-3 prebuild witness',
+    );
+    assertCurrent(
+      KFD3_ARTIFACT_WITNESS_PATH,
+      artifactWitness,
+      'Buildchain KFD-3 artifact witness',
+    );
+    assertCurrent(KFD3_QUERY_PATH, query, 'Buildchain KFD-3 capability query');
+    for (let index = 0; index < productGates.gates.length; index += 1) {
+      assertCurrentIfPresent(
+        KFD_PRODUCT_GATE_INPUT_PATHS[index],
+        productGates.inputs[index],
+        `${KFD_PRODUCT_GATE_STANDARDS[index]} product-gate input`,
+      );
+      assertCurrentIfPresent(
+        KFD_PRODUCT_GATE_PATHS[index],
+        productGates.gates[index],
+        `${KFD_PRODUCT_GATE_STANDARDS[index]} product gate`,
+      );
+    }
+    assertCurrentIfPresent(
+      KFD_SUPPORT_PROJECTION_PATH,
+      productGates.projection,
+      'Buildchain KFD support projection',
+    );
+    assertCurrentIfPresent(
+      SUMMARY_PATH,
+      summary,
+      'Buildchain KFD evidence summary',
+    );
   }
 
   const output = {
@@ -1885,7 +1960,6 @@ async function runCheckOrWrite(options) {
       `[kfd] ok: KFD-1 witness, ${summary.kfd2.claimCount} KFD-2 claim(s), ${summary.kfd3.surfaceCount} KFD-3 surface(s)\n`,
     );
 }
-
 async function runQuery(options) {
   const upstreamAggregate = buildUpstreamKfdAggregate();
   const registry = buildKfd3Registry(upstreamAggregate);

@@ -4,6 +4,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import test from 'node:test';
 
+import { activeProjection } from '../framework/version-line/version-line-authority.mjs';
 import { digest } from './alpha-ruleset.mjs';
 
 const workflow = fs.readFileSync(
@@ -17,22 +18,31 @@ const continuation = JSON.parse(
     'utf8',
   ),
 );
+const { line: activeLine } = activeProjection();
 
 test('Stable Patrol is an exact-pinned Buildchain caller with a protected target', () => {
   const reusableRef = workflow.match(
     /uses: kungfu-systems\/buildchain\/.github\/workflows\/stable-candidate-patrol\.yml@([0-9a-f]{40})/u,
   )?.[1];
-  assert.equal(reusableRef, '7629c4b499cd2d4eebf4c020fbc81637ae1dcb39');
+  assert.equal(reusableRef, '978520e86134683f66b607bc70c2d18f623e2410');
   assert.match(workflow, new RegExp(`buildchain-ref: ${reusableRef}`, 'u'));
-  assert.match(workflow, /target-branch: release\/v4\/v4\.0/u);
   assert.match(
     workflow,
-    /ledger-ref: buildchain\/candidate-ledger\/v4\/v4\.0/u,
+    /target-branch: \$\{\{ needs\.resolve-version-line\.outputs\.stable-branch \}\}/u,
+  );
+  assert.match(
+    workflow,
+    /ledger-ref: \$\{\{ needs\.resolve-version-line\.outputs\.candidate-ledger \}\}/u,
+  );
+  assert.match(
+    workflow,
+    /\.\/shifu version-line:resolve --github-output "\$GITHUB_OUTPUT"/u,
   );
   assert.match(workflow, /cron: "0 19 \* \* \*"/u);
   assert.match(workflow, /release-now: \$\{\{ inputs\.release-now \}\}/u);
   assert.match(workflow, /auto-approve: false/u);
-  assert.match(workflow, /auto-merge: false/u);
+  assert.match(workflow, /auto-merge: true/u);
+  assert.match(workflow, /merge-method: rebase/u);
   assert.match(
     workflow,
     /dry-run: \$\{\{ github\.event_name == 'workflow_dispatch' && !inputs\.create-pull-request \}\}/u,
@@ -56,10 +66,13 @@ test('Stable policy retains independent approval and durable candidate evidence'
   assert.match(policy, /required_checks = \["alpha-release"\]/u);
   assert.match(
     policy,
-    /ledger_ref = "buildchain\/candidate-ledger\/v4\/v4\.0"/u,
+    new RegExp(
+      `ledger_ref = "${activeLine.candidateLedger.replaceAll('.', '\\.')}"`,
+      'u',
+    ),
   );
   assert.match(policy, /auto_promote = true/u);
-  assert.match(policy, /auto_merge = false/u);
+  assert.match(policy, /auto_merge = true/u);
 });
 
 test('reviewed stable dry-run prepares the next patch Alpha without publishing', () => {

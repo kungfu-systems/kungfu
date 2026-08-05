@@ -14,6 +14,10 @@ const CORE_DIR = path.join(ROOT, 'framework', 'core');
 const CORE_DIST = path.join(CORE_DIR, 'dist', 'kungfu');
 const BINDING_PATH = path.join(CORE_DIST, 'kungfu_node.node');
 const PEER_FIXTURE = path.join(TEST_DIR, 'runtime-port.native-peer.mjs');
+// The child fixture admits Core's 60-second production registration window.
+// Leave five seconds for it to report the bounded failure and exit.
+const PEER_OUTPUT_TIMEOUT_MS = 65_000;
+const NATIVE_ROUNDTRIP_TIMEOUT_MS = PEER_OUTPUT_TIMEOUT_MS * 2 + 10_000;
 
 function sleep(milliseconds) {
   return new Promise((resolve) => setTimeout(resolve, milliseconds));
@@ -67,7 +71,7 @@ test('source-checkout coordinator declares the named foreign-runtime allowance',
   assert.equal(inherited.KUNGFU_ALLOW_FOREIGN_RUNTIME, undefined);
 });
 
-function waitForJsonLine(child, type, timeout = 20_000) {
+function waitForJsonLine(child, type, timeout = PEER_OUTPUT_TIMEOUT_MS) {
   return new Promise((resolve, reject) => {
     let output = '';
     const timer = setTimeout(
@@ -231,7 +235,7 @@ test(
 
 test(
   'native peers exchange an AgentSession frame through mmap journal plus nng notice',
-  { timeout: 45_000 },
+  { timeout: NATIVE_ROUNDTRIP_TIMEOUT_MS },
   async (context) => {
     assert.ok(
       fs.existsSync(BINDING_PATH),
@@ -298,7 +302,19 @@ test(
 
     const writer = spawnPeer('writer', runtimeDir);
     peers.push(writer);
-    const written = await waitForJsonLine(writer, 'writer-ready');
+    let written;
+    // Preserve the original failure while exposing the coordinator side of startup.
+    try {
+      written = await waitForJsonLine(writer, 'writer-ready');
+    } catch (error) {
+      const coordinatorLog = fs.readFileSync(coordinatorOutput, 'utf8');
+      throw new Error(
+        `${error instanceof Error ? error.message : String(error)}\n` +
+          `coordinatorExited=${coordinatorExited}\n` +
+          `coordinator output:\n${coordinatorLog || '<empty>'}`,
+        { cause: error },
+      );
+    }
     const reader = spawnPeer('reader', runtimeDir);
     peers.push(reader);
     const received = await waitForJsonLine(reader, 'reader-received');
@@ -314,5 +330,15 @@ test(
         coordinatorByteProxy: false,
       },
     );
+    assert.equal(received.runtimeStats.threadModel, 'dedicated-native-thread');
+    assert.equal(received.runtimeStats.bridgeQueueCapacity, 1);
+    assert.ok(Number(received.runtimeStats.stepCount) > 0);
+    assert.ok(Number(received.runtimeStats.stepMaxNanos) > 0);
+    assert.ok(Number(received.runtimeStats.snapshotRequests) > 0);
+    assert.ok(Number(received.runtimeStats.snapshotCoalesced) > 0);
+    assert.ok(Number(received.runtimeStats.snapshotHoldMaxNanos) > 0);
+    assert.equal(received.runtimeStats.customQueueCapacityBytes, '4194304');
+    assert.equal(received.runtimeStats.customFramesDropped, '0');
+    assert.equal(received.runtimeStats.bridgeFailures, '0');
   },
 );

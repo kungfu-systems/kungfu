@@ -338,10 +338,10 @@ def kfc(
         click.echo(kfc.get_help(ctx))
         return
 
-    # Workspace/control-plane commands must inspect uninitialized candidates
-    # without the root callback rewriting their resolution evidence first.
+    # Control-plane commands inspect candidates before root resolution rewrites evidence.
     if ctx.invoked_subcommand in {
         "workspace",
+        "project",
         "managed-run",
         "run",
         "storage",

@@ -6,6 +6,11 @@ export function cliLauncherContent(platform = process.platform) {
       '@echo off',
       'set "KUNGFU_PRODUCT_MANIFEST=%~dp0product.json"',
       'set "KUNGFU_UPGRADE_MANIFEST=%~dp0upgrade\\kungfu-release-manifest.json"',
+      'set "KF_BUNDLED_EXTENSION_ROOT=%~dp0extensions"',
+      'set "KUNGFU_AGENT_SESSION_EXECUTABLE=%~dp0runtime\\kungfu.exe"',
+      'set "KUNGFU_CONTROLLER_ENTRYPOINT=%~dp0runtime\\kungfu.exe"',
+      'set "PYTHONUTF8=1"',
+      'set "PYTHONIOENCODING=utf-8"',
       '"%~dp0runtime\\kungfu.exe" %*',
       '',
     ].join('\r\n');
@@ -23,6 +28,9 @@ done
 here=$(cd "$(dirname "$target")" && pwd)
 export KUNGFU_PRODUCT_MANIFEST="$here/product.json"
 export KUNGFU_UPGRADE_MANIFEST="$here/upgrade/kungfu-release-manifest.json"
+export KF_BUNDLED_EXTENSION_ROOT="$here/extensions"
+export KUNGFU_AGENT_SESSION_EXECUTABLE="$here/runtime/kungfu"
+export KUNGFU_CONTROLLER_ENTRYPOINT="$here/runtime/kungfu"
 exec "$here/runtime/kungfu" "$@"
 `;
 }

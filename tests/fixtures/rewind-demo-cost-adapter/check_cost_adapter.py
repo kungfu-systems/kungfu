@@ -142,6 +142,7 @@ res = discover_providers(
         {
             "codex": "/c/codex",
             "claude": "/c/claude",
+            "amp": "/c/amp",
             "opencode": "/c/opencode",
         }
     ),
@@ -150,7 +151,7 @@ res = discover_providers(
 )
 check(
     "discover_providers returns all defaults",
-    set(res) == {"codex", "claude", "opencode"}
+    set(res) == {"codex", "claude", "amp", "opencode"}
     and all(isinstance(v, ProviderDiscovery) for v in res.values()),
 )
 check("all defaults found with injected PATH", all(v.found for v in res.values()))

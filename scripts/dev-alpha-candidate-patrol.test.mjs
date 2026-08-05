@@ -6,16 +6,24 @@ import path from 'node:path';
 import { test } from 'node:test';
 
 const ROOT = process.cwd();
+const BUILDCHAIN_DEV_VERIFY_RUNTIME =
+  '916fc84d488ae6f5af271a67487e79ecb47b9ae2';
+const BUILDCHAIN_TIMEOUT_SAFE_RUNTIME =
+  'f63d43720ebb7d5099080b14c70cf04254057d80';
 
 function workflow(name) {
   return fs.readFileSync(path.join(ROOT, '.github/workflows', name), 'utf8');
 }
 
-test('Dev Patrol runs at 04:00 Asia/Shanghai with an explicit UTC contract', () => {
+test('Dev Patrol is exact-source dispatch-only behind the qualification controller', () => {
   const source = workflow('dev-verify-patrol.yml');
-  assert.match(source, /04:00 Asia\/Shanghai/u);
-  assert.match(source, /cron: "0 20 \* \* \*"/u);
-  assert.doesNotMatch(source, /cron: "23 3 \* \* \*"/u);
+  assert.doesNotMatch(source, /schedule:/u);
+  assert.match(source, /source-sha:/u);
+  assert.match(source, /test "\$REQUESTED_SHA" = "\$EVENT_SHA"/u);
+  assert.match(
+    source,
+    /source-ref: \$\{\{ needs\.bind-source\.outputs\.source-sha \}\}/u,
+  );
   assert.match(
     source,
     /buildchain-ref: \$\{\{ github\.event_name == 'workflow_dispatch' && inputs\.buildchain-ref \|\| '' \}\}/u,
@@ -24,6 +32,49 @@ test('Dev Patrol runs at 04:00 Asia/Shanghai with an explicit UTC contract', () 
     source,
     /buildchain-ref: \$\{\{ inputs\.buildchain-ref \|\| '[0-9a-f]{40}' \}\}/u,
   );
+  assert.match(source, /checkout-cache-mode: off/u);
+  assert.ok(source.includes(String.raw`"runner":"[\"ubuntu-24.04\"]"`));
+  assert.ok(
+    source.includes(
+      String.raw`"platform":"linux","runner":"[\"ubuntu-24.04\"]","capabilities":["node","native-toolchain","product-artifacts","rust"],"environment":{"CC":"gcc-14","CXX":"g++-14"}`,
+    ),
+  );
+  assert.ok(source.includes(String.raw`"runner":"[\"macos-15\"]"`));
+  assert.ok(source.includes(String.raw`"runner":"[\"windows-2022\"]"`));
+  assert.doesNotMatch(source, /gate-environment-json:[\s\S]*"CC":"gcc-14"/u);
+  assert.doesNotMatch(source, /kungfu-build-v4-(?:linux|macos|windows)/u);
+  const reusableRef = source.match(
+    /uses: kungfu-systems\/buildchain\/\.github\/workflows\/\.gate-profile\.yml@([0-9a-f]{40})/u,
+  )?.[1];
+  assert.equal(reusableRef, BUILDCHAIN_DEV_VERIFY_RUNTIME);
+});
+
+test('qualification patrol coalesces the latest Dev SHA behind release priority', () => {
+  const source = workflow('dev-qualification-patrol.yml');
+  const reusableRef = source.match(
+    /uses: kungfu-systems\/buildchain\/\.github\/workflows\/dev-qualification-patrol\.yml@([0-9a-f]{40})/u,
+  )?.[1];
+  assert.match(reusableRef || '', /^[0-9a-f]{40}$/u);
+  assert.match(source, /workflow_run:/u);
+  assert.match(source, /Alpha promotion preflight/u);
+  assert.match(source, /Dev Verify Patrol/u);
+  assert.match(source, /Release - New Version/u);
+  assert.match(source, /Release native components/u);
+  assert.match(source, /cron: "7,22,37,52 \* \* \* \*"/u);
+  assert.match(
+    source,
+    /priority-workflows-json:[\s\S]*build\.yml[\s\S]*release-new-version\.yml[\s\S]*release-shifu\.yml/u,
+  );
+  assert.match(source, /max-attempts: 2/u);
+  assert.match(
+    source,
+    /mutation-authorized: \$\{\{ github\.event_name != 'workflow_dispatch' \}\}/u,
+  );
+  assert.match(
+    source,
+    /qualification-token: \$\{\{ secrets\.KUNGFU_GITHUB_TOKEN \}\}/u,
+  );
+  assert.doesNotMatch(source, /npm publish|gh release create|git tag/iu);
 });
 
 test('candidate patrol is a thin Buildchain caller with exact channel and evidence inputs', () => {
@@ -32,7 +83,7 @@ test('candidate patrol is a thin Buildchain caller with exact channel and eviden
     /uses: kungfu-systems\/buildchain\/.github\/workflows\/dev-alpha-candidate-patrol\.yml@([0-9a-f]{40})/u,
   )?.[1];
   assert.match(reusableRef || '', /^[0-9a-f]{40}$/u);
-  assert.equal(reusableRef, '009c00d7c0145b5991f56aa97a98d5d1bbcc350f');
+  assert.equal(reusableRef, BUILDCHAIN_TIMEOUT_SAFE_RUNTIME);
   assert.match(
     source,
     new RegExp(
@@ -83,9 +134,11 @@ test('candidate patrol is a thin Buildchain caller with exact channel and eviden
     source,
     /promotion-token: \$\{\{ secrets\.KUNGFU_GITHUB_TOKEN \}\}/u,
   );
+  assert.match(source, /auto-merge: true/u);
+  assert.match(source, /merge-method: rebase/u);
   assert.doesNotMatch(
     source,
-    /npm publish|gh release create|git tag|auto-merge/iu,
+    /npm publish|gh release create|git tag|gh pr merge/iu,
   );
 });
 

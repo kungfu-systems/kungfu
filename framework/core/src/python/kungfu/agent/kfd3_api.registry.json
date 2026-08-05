@@ -115,6 +115,36 @@
       ]
     },
     {
+      "id": "kungfu.agent.bootstrap-status",
+      "surface": "cli-api-gui",
+      "name": "kungfu agent bootstrap-status --json",
+      "purpose": "Expose pending, verified, degraded, or unavailable Agent Brief bootstrap state for the current native attempt without claiming model comprehension.",
+      "maturity": "experimental",
+      "visibility": "public-agent",
+      "anchor": {"kind": "runtime-click", "symbol": "bootstrap_status"},
+      "projections": ["commands.json", "capabilities-json", "provider-skill"]
+    },
+    {
+      "id": "kungfu.agent.work-advisory",
+      "surface": "cli",
+      "name": "kungfu agent work-advisory --signals <signals.json> --json",
+      "purpose": "Return authority-free deterministic advice, a minimal Work preview, one-confirmation requirement, and the existing create-bind action path from bounded structured signals.",
+      "maturity": "preview",
+      "visibility": "public-agent",
+      "anchor": {"kind": "runtime-click", "symbol": "work_advisory_command"},
+      "projections": ["commands.json", "provider-skill"]
+    },
+    {
+      "id": "kungfu.agent.map",
+      "surface": "cli",
+      "name": "kungfu agent map --json",
+      "purpose": "Print and validate the complete stable first-entry intent route map.",
+      "maturity": "stable",
+      "visibility": "public-agent",
+      "anchor": {"kind": "runtime-click", "symbol": "intent_map"},
+      "projections": ["commands.json", "agent-pack-doc", "provider-skill"]
+    },
+    {
       "id": "kungfu.agent.capabilities",
       "surface": "cli",
       "name": "kungfu agent capabilities --json",
@@ -131,6 +161,56 @@
         "agent-pack-doc",
         "provider-skill"
       ]
+    },
+    {
+      "id": "kungfu.agent.first-value",
+      "surface": "cli",
+      "name": "kungfu agent first-value",
+      "purpose": "Discover and verify the deterministic Agent first-value result contract.",
+      "maturity": "stable",
+      "visibility": "public-agent",
+      "anchor": {"kind": "runtime-click", "symbol": "first_value"},
+      "projections": ["capabilities-json", "agent-pack-doc", "provider-skill"]
+    },
+    {
+      "id": "kungfu.agent.first-value.contract",
+      "surface": "cli",
+      "name": "kungfu agent first-value contract --json",
+      "purpose": "Print the exact prompt, packaged roots, result constraints, receipt schema, and qualification non-claims.",
+      "maturity": "stable",
+      "visibility": "public-agent",
+      "anchor": {"kind": "runtime-click", "symbol": "first_value_contract"},
+      "projections": ["commands.json", "capabilities-json", "agent-pack-doc", "provider-skill"]
+    },
+    {
+      "id": "kungfu.agent.first-value.start",
+      "surface": "cli",
+      "name": "kungfu agent first-value start --json",
+      "purpose": "Verify the installed pack, run the declared read-only onboarding discovery, and emit one rooted receipt.",
+      "maturity": "stable",
+      "visibility": "public-agent",
+      "anchor": {"kind": "runtime-click", "symbol": "first_value_start"},
+      "projections": ["commands.json", "capabilities-json", "agent-pack-doc", "provider-skill"]
+    },
+    {
+      "id": "kungfu.agent.first-value.receipt",
+      "surface": "cli",
+      "name": "kungfu agent first-value receipt --intent <id> --discovery <command> --question-count <0-or-1> --outcome <summary> --json",
+      "purpose": "Rerun one declared safe discovery without a shell and emit a sanitized rooted first-value receipt.",
+      "maturity": "stable",
+      "visibility": "public-agent",
+      "anchor": {"kind": "runtime-click", "symbol": "first_value_receipt"},
+      "projections": ["commands.json", "capabilities-json", "agent-pack-doc", "provider-skill"]
+    },
+    {
+      "id": "kungfu.agent.first-value.verify",
+      "surface": "cli",
+      "name": "kungfu agent first-value verify <receipt-file> --json",
+      "purpose": "Fail closed while validating one retained first-value receipt against the current installed candidate.",
+      "maturity": "stable",
+      "visibility": "public-agent",
+      "anchor": {"kind": "runtime-click", "symbol": "first_value_verify"},
+      "projections": ["commands.json", "capabilities-json", "agent-pack-doc", "provider-skill"]
     },
     {
       "id": "kungfu.agent.work-model",
@@ -413,6 +493,23 @@
       ]
     },
     {
+      "id": "kungfu.agent.console.bind-work",
+      "surface": "cli-api-gui",
+      "name": "kungfu agent console bind-work --initiative-id <id> --assignment-id <id> --json",
+      "purpose": "Atomically bind the current native SessionAttempt to one exact Assignment and reject a second active writer with actionable recovery guidance.",
+      "maturity": "experimental",
+      "visibility": "public-agent",
+      "anchor": {
+        "kind": "runtime-click",
+        "symbol": "console_bind_work"
+      },
+      "projections": [
+        "commands.json",
+        "capabilities-json",
+        "provider-skill"
+      ]
+    },
+    {
       "id": "kungfu.agent.session",
       "surface": "cli-api-gui",
       "name": "kungfu agent session <operation> --input - --json",
@@ -433,7 +530,7 @@
       "id": "kungfu.agent.runtime",
       "surface": "cli",
       "name": "kungfu agent runtime",
-      "purpose": "Discover and configure machine-local Codex and Claude launch profiles without reading provider credentials.",
+      "purpose": "Discover and configure machine-local built-in or registered native Agent launch profiles without reading provider credentials.",
       "maturity": "experimental",
       "visibility": "public-agent",
       "anchor": {
@@ -448,7 +545,7 @@
       "id": "kungfu.agent.runtime.discover",
       "surface": "cli",
       "name": "kungfu agent runtime discover --json",
-      "purpose": "List every safe executable Codex and Claude candidate from PATH and explicit known locations.",
+      "purpose": "List every safe executable candidate declared by built-in or registered native Provider adapters.",
       "maturity": "experimental",
       "visibility": "public-agent",
       "anchor": {
@@ -482,7 +579,7 @@
       "id": "kungfu.agent.runtime.upsert",
       "surface": "cli",
       "name": "kungfu agent runtime upsert --id <id> --provider <provider> --executable <path> --json",
-      "purpose": "Preview or explicitly add or edit one executable-plus-argv Agent Runtime Profile.",
+      "purpose": "Preview or explicitly add or edit one executable-plus-argv Agent Runtime Profile for a built-in or registered Provider adapter.",
       "maturity": "experimental",
       "visibility": "public-agent",
       "anchor": {
@@ -518,15 +615,8 @@
       "purpose": "Preview or explicitly select the machine-global default Agent Runtime Profile.",
       "maturity": "experimental",
       "visibility": "public-agent",
-      "anchor": {
-        "kind": "runtime-click",
-        "symbol": "runtime_set_default"
-      },
-      "projections": [
-        "commands.json",
-        "capabilities-json",
-        "provider-skill"
-      ]
+      "anchor": {"kind": "runtime-click", "symbol": "runtime_set_default"},
+      "projections": ["commands.json", "capabilities-json", "provider-skill"]
     },
     {
       "id": "kungfu.agent.runtime.verify",
@@ -535,15 +625,18 @@
       "purpose": "Run a bounded executable --version probe for one Agent Runtime Profile.",
       "maturity": "experimental",
       "visibility": "public-agent",
-      "anchor": {
-        "kind": "runtime-click",
-        "symbol": "runtime_verify"
-      },
-      "projections": [
-        "commands.json",
-        "capabilities-json",
-        "provider-skill"
-      ]
+      "anchor": {"kind": "runtime-click", "symbol": "runtime_verify"},
+      "projections": ["commands.json", "capabilities-json", "provider-skill"]
+    },
+    {
+      "id": "kungfu.runtime.surface.verify",
+      "surface": "cli-api-tui",
+      "name": "kungfu runtime surface verify <receipt.json> --json",
+      "purpose": "Verify and observe one exact Runtime Surface Receipt without selecting another runtime or mutating authority.",
+      "maturity": "experimental",
+      "visibility": "public-agent",
+      "anchor": {"kind": "catalog"},
+      "projections": ["commands.json", "capabilities-json", "agent-pack-doc"]
     },
     {
       "id": "kungfu.agent.install-skill",
@@ -695,6 +788,16 @@
       ]
     },
     {
+      "id": "kungfu.agent.expand",
+      "surface": "cli",
+      "name": "kungfu agent expand --view agent --handle <id> --budget <tokens> --json",
+      "purpose": "Expand one verified packaged Xinfa context handle without exposing internal pack paths.",
+      "maturity": "stable",
+      "visibility": "public-agent",
+      "anchor": {"kind": "runtime-click", "symbol": "expand"},
+      "projections": ["commands.json", "agent-pack-doc", "provider-skill"]
+    },
+    {
       "id": "kungfu.run",
       "surface": "cli",
       "name": "kungfu run",
@@ -711,8 +814,8 @@
     {
       "id": "kungfu.run.agent",
       "surface": "cli",
-      "name": "kungfu run agent --prompt <task> [--agent <profile-id>]",
-      "purpose": "Launch one fresh Agent process through a verified Runtime Profile, retain an Episode and transcript-free continuation evidence, and leave Work settlement to independent assessment.",
+      "name": "kungfu run agent [--agent <profile-id>] [--prompt <task>]",
+      "purpose": "Open the verified provider's native interactive UI when no prompt is given; with --prompt, launch one governed fresh process and retain transcript-free continuation evidence without settling Work.",
       "maturity": "experimental",
       "visibility": "public-agent",
       "anchor": {
@@ -1011,9 +1114,13 @@
       "name": "kungfu exit build --file <request.json> --json",
       "aliases": [
         "kungfu exit inspect --file <package.json> --json",
-        "kungfu exit import --file <package.json> [--execute --authorized-by <actor>] --json"
+        "kungfu exit import --file <package.json> [--execute --authorized-by <actor>] --json",
+        "kungfu exit history status [--file <request.json>] --json",
+        "kungfu exit history export --file <request.json> --out <exit.json> --json",
+        "kungfu exit history import --file <exit.json> [--execute --authorized-by <actor>] --json",
+        "kungfu exit history rebuild [--projection <episode|fact-kernel>] [--execute --authorized-by <actor>] --json"
       ],
-      "purpose": "Compose, inspect, validate, or explicitly import one scope-bound Exit package through the shared Core receipt path.",
+      "purpose": "Inspect protection status, compose or export one scope-bound package, validate or explicitly import it, and rebuild declared projections through the shared Core receipt path.",
       "maturity": "experimental",
       "visibility": "adjacent-agent",
       "anchor": {
@@ -1029,8 +1136,8 @@
       "surface": "cli",
       "name": "kungfu-exit-verify --file <package.json> --json",
       "aliases": [
-        "python -m kungfu.exit_verifier --file <package.json> --json",
-        "kungfu exit verify --file <package.json> --json"
+        "kungfu exit verify --file <package.json> --json",
+        "kungfu exit history verify --file <exit.json> --json"
       ],
       "purpose": "Run the bounded read-only installed Exit verifier without initializing a runtime; report safe capabilities, omissions, loss, failure codes, and residual risk.",
       "maturity": "experimental",
@@ -2343,6 +2450,21 @@
       ]
     },
     {
+      "id": "kungfu.agent-work-lab.autoplay",
+      "surface": "cli-api-tui",
+      "name": "kungfu agent-work-lab autoplay",
+      "purpose": "Launch the shipped TUI directly into the guided offline Agent Work Lab autoplay for unattended viewing and animation capture.",
+      "maturity": "experimental",
+      "visibility": "public-agent",
+      "anchor": {
+        "kind": "catalog"
+      },
+      "projections": [
+        "capabilities-json",
+        "kfd-3-surfaces"
+      ]
+    },
+    {
       "id": "kungfu.agent-work-lab.agent-plan",
       "surface": "cli-api-gui",
       "name": "kungfu agent-work-lab agent-plan <profile-id> --json",
@@ -2362,6 +2484,51 @@
       "surface": "cli-api-gui",
       "name": "kungfu agent-work-lab agent-run <profile-id> --execute --json",
       "purpose": "After explicit authorization, run self-continuity or a cross-profile handoff through two fresh local provider processes and exact receipts.",
+      "maturity": "experimental",
+      "visibility": "public-agent",
+      "anchor": {
+        "kind": "catalog"
+      },
+      "projections": [
+        "capabilities-json",
+        "kfd-3-surfaces"
+      ]
+    },
+    {
+      "id": "kungfu.agent-work-lab.starter-plan",
+      "surface": "cli-api-gui-tui",
+      "name": "kungfu agent-work-lab starter-plan --json",
+      "purpose": "Preview the exact Agent Work Starter files, destination, and initial captured Work request without writing.",
+      "maturity": "experimental",
+      "visibility": "public-agent",
+      "anchor": {
+        "kind": "catalog"
+      },
+      "projections": [
+        "capabilities-json",
+        "kfd-3-surfaces"
+      ]
+    },
+    {
+      "id": "kungfu.agent-work-lab.starter-create",
+      "surface": "cli-api-gui-tui",
+      "name": "kungfu agent-work-lab starter-create --destination <path> --expected-plan-root <root> --actor <actor> --execute --json",
+      "purpose": "After explicit confirmation, create the exact reviewed Starter Project and capture its first Work request pending admission.",
+      "maturity": "experimental",
+      "visibility": "public-agent",
+      "anchor": {
+        "kind": "catalog"
+      },
+      "projections": [
+        "capabilities-json",
+        "kfd-3-surfaces"
+      ]
+    },
+    {
+      "id": "kungfu.agent-work-lab.starter-resume",
+      "surface": "cli-api-tui",
+      "name": "kungfu agent-work-lab starter-resume --workspace <path> --json",
+      "purpose": "Restore one exact retained Starter Project and its captured Work coordinates without rerunning an Agent or writing project state.",
       "maturity": "experimental",
       "visibility": "public-agent",
       "anchor": {

@@ -8,7 +8,7 @@
 // dev environment (built dist/kungfu) and the repo-pinned node (run under
 // ./shifu or fnm so process.execPath matches the built binding).
 //
-// Usage: node tests/bench/dispatch_bench.mjs [event-count] [load-type]
+// Usage: node tests/bench/dispatch_bench.mjs [event-count] [carrier-type]
 //
 //   KF_BYPASS_CACHED=1 node tests/bench/dispatch_bench.mjs   # rx-isolated run
 //   node tests/bench/dispatch_bench.mjs                      # storage-on run
@@ -33,10 +33,10 @@ const benchDir = path.dirname(fileURLToPath(import.meta.url));
 const coreDir = path.resolve(benchDir, '..', '..'); // framework/core
 
 const count = Number.parseInt(process.argv[2] || '200000', 10);
-// "quote" (typed schema frames) by default: both coordinator and the node watcher
-// pre-filter open-layer events in is_reactable before rx, so only typed frames
-// actually traverse the filter chains being measured
-const loadType = process.argv[3] || 'quote';
+// SyntheticData is a closed Core carrier, so both coordinator and watcher
+// dispatch it through rx. Open-layer carriers such as 1000 are intentionally
+// rejected before the rx chains unless custom capture is enabled.
+const carrierType = process.argv[3] || '601';
 
 const home = benchHome();
 console.log(
@@ -56,7 +56,7 @@ if (!alive(coordinator)) {
   process.exit(1);
 }
 
-runLoad(benchDir, home, count, loadType, env);
+runLoad(benchDir, home, count, carrierType, env);
 
 // let at least one 5s probe report tick fire after the burst settles
 await sleep(6000);

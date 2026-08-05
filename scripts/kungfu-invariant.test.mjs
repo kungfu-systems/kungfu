@@ -7,6 +7,7 @@ import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 import { optionalAjv2020 } from './readonly-source-toolchain.mjs';
 
+import { findBin } from '../tests/fixtures/_harness.mjs';
 import {
   canonicalJson,
   checkEvolution,
@@ -37,6 +38,14 @@ const registry = readJson('framework/invariant/kungfu-invariant.registry.json');
 const contract = readJson(
   'framework/invariant/kungfu-invariant-system.contract.json',
 );
+
+test('fixture binary discovery resolves executables through PATH', () => {
+  const discovered = findBin([
+    process.platform === 'win32' ? 'node.exe' : 'node',
+  ]);
+  assert.ok(discovered);
+  assert.equal(fs.realpathSync(discovered), fs.realpathSync(process.execPath));
+});
 
 function qualificationSubject(overrides = {}) {
   const evidence = Object.fromEntries(

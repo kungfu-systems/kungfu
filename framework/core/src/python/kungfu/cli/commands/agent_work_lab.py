@@ -1,14 +1,20 @@
 # SPDX-License-Identifier: Apache-2.0
 
 import json
+import os
+import tempfile
 from pathlib import Path
 
 import click
 
+from kungfu import agent as agent_pack
 from kungfu import agent_work_lab as lab
+from kungfu import config as kungfu_config
+from kungfu import project_template
 from kungfu.agent.kfd3 import kfd3_api
 from kungfu.agent import runtime_profiles
 from kungfu.cli.commands import PrioritizedCommandGroup, kfc
+from kungfu.cli.surface_contract import surface as surface
 from kungfu.config import resolve_config
 
 
@@ -19,6 +25,58 @@ def _json(value):
 def _event_json(value):
     click.echo(json.dumps(value, sort_keys=True))
     click.get_text_stream("stdout").flush()
+
+
+def find_repo_root():
+    candidates = [Path.cwd(), Path(__file__).resolve()]
+    for candidate in candidates:
+        for directory in [candidate, *candidate.parents]:
+            if (directory / "docs" / "MAP.md").is_file() and (
+                directory / "framework"
+            ).is_dir():
+                return directory
+    return None
+
+
+def agent_json_output(payload):
+    _json(payload)
+
+
+def agent_bootstrap_status_payload():
+    envelope_raw = os.environ.get("KUNGFU_AGENT_CONSOLE_ENVELOPE", "").strip()
+    if envelope_raw:
+        kungfu_config.validate_value("agentConsoleEnvelope", json.loads(envelope_raw))
+    return agent_pack.bootstrap_status()
+
+
+def emit_agent_bootstrap_status(as_json):
+    try:
+        payload = agent_bootstrap_status_payload()
+    except (ValueError, json.JSONDecodeError) as exc:
+        raise click.ClickException(f"invalid Agent bootstrap state: {exc}") from exc
+    if as_json:
+        agent_json_output(payload)
+        return
+    click.echo(
+        f"bootstrap {payload['state']}"
+        + (f" for attempt {payload['attemptId']}" if payload.get("attemptId") else "")
+    )
+
+
+def emit_agent_work_advisory(signals_file, as_json):
+    try:
+        payload = agent_pack.assess_work_advisory(json.load(signals_file))
+    except (TypeError, ValueError, json.JSONDecodeError) as exc:
+        raise click.ClickException(str(exc)) from exc
+    if as_json:
+        agent_json_output(payload)
+        return
+    click.echo(f"{payload['decision']} · {', '.join(payload['reasonCodes'])}")
+    if payload["preview"] is not None:
+        click.echo(f"Work: {payload['preview']['title']}")
+    if payload["confirmation"]["required"]:
+        click.echo(payload["confirmation"]["prompt"])
+    click.echo(f"Decision: {payload['decisionRoot']}")
 
 
 @kfc.group(
@@ -131,6 +189,44 @@ def autoplay(ctx):
 
 
 @agent_work_lab.command(
+    name="project-tour",
+    help="play a disposable Project Work failure-and-recovery story",
+)
+@click.option(
+    "--episode",
+    type=click.Choice(("1", "2", "all"), case_sensitive=False),
+    default="1",
+    show_default=True,
+    help="play failure retention, recovery and settlement, or both episodes",
+)
+@click.option(
+    "--speed",
+    type=click.FloatRange(min=0.25, max=4.0),
+    default=1.0,
+    show_default=True,
+    help="playback speed multiplier; 0.5 doubles the reading time",
+)
+@kfd3_api("kungfu.agent-work-lab")
+@kfc.pass_context()
+def project_tour(ctx, episode, speed):
+    from kungfu.cli.tui_runtime import run_tui
+
+    with tempfile.TemporaryDirectory(prefix="kungfu-project-tour-") as temporary:
+        destination = Path(temporary) / "my-first-kungfu-project"
+        return run_tui(
+            ctx,
+            (
+                "--project-work-tour-root",
+                str(destination),
+                "--project-tour-speed",
+                f"{speed:g}",
+                "--project-tour-episode",
+                episode,
+            ),
+        )
+
+
+@agent_work_lab.command(
     name="starter-plan",
     help="preview the Agent Work Starter project without writing",
 )
@@ -195,6 +291,29 @@ def starter_create(destination, expected_plan_root, actor, execute, as_json):
         "  initial Work captured and pending explicit admission: "
         f"{payload['initialWork']['requestRoot']}"
     )
+
+
+@agent_work_lab.command(
+    name="starter-resume",
+    help="resume one exact retained Agent Work Starter project without writing",
+)
+@click.option(
+    "--workspace",
+    required=True,
+    type=click.Path(path_type=Path),
+)
+@click.option("--json", "as_json", is_flag=True, help="machine-readable output")
+@kfd3_api("kungfu.agent-work-lab.starter-resume")
+def starter_resume(workspace, as_json):
+    try:
+        payload = project_template.resume_project_template(workspace)
+    except (OSError, ValueError) as error:
+        raise click.ClickException(str(error)) from error
+    if as_json:
+        _json(payload)
+        return
+    click.echo(f"Resumed Starter Project: {payload['destination']}")
+    click.echo(f"  retained Work request: {payload['initialWork']['requestRoot']}")
 
 
 @agent_work_lab.command(name="agent-plan", help="preview one exact local agent run")

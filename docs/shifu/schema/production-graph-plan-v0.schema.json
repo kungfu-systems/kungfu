@@ -1,0 +1,70 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://libkungfu.dev/schemas/shifu/production-graph-plan-v0.schema.json",
+  "title": "Shifu Production Graph plan v0",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "contractRoot",
+    "graphRoot",
+    "sourceRevision",
+    "authorityReferences",
+    "xinfaSelectionRoot",
+    "orderedNodeIds",
+    "steps",
+    "planRoot"
+  ],
+  "properties": {
+    "schema": { "const": "shifu.production-graph-plan/v0" },
+    "contractRoot": { "$ref": "production-graph-v0.schema.json#/$defs/root" },
+    "graphRoot": { "$ref": "production-graph-v0.schema.json#/$defs/root" },
+    "sourceRevision": { "$ref": "production-graph-v0.schema.json#/$defs/gitObject" },
+    "authorityReferences": { "$ref": "production-graph-v0.schema.json#/$defs/authorityRoots" },
+    "xinfaSelectionRoot": { "$ref": "production-graph-v0.schema.json#/$defs/root" },
+    "orderedNodeIds": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "$ref": "production-graph-v0.schema.json#/$defs/id" }
+    },
+    "steps": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "index",
+          "nodeId",
+          "dependsOn",
+          "executor",
+          "inputIds",
+          "outputIds"
+        ],
+        "properties": {
+          "index": { "type": "integer", "minimum": 0 },
+          "nodeId": { "$ref": "production-graph-v0.schema.json#/$defs/id" },
+          "dependsOn": {
+            "type": "array",
+            "uniqueItems": true,
+            "items": { "$ref": "production-graph-v0.schema.json#/$defs/id" }
+          },
+          "executor": { "$ref": "production-graph-v0.schema.json#/$defs/executor" },
+          "inputIds": {
+            "type": "array",
+            "uniqueItems": true,
+            "items": { "$ref": "production-graph-v0.schema.json#/$defs/id" }
+          },
+          "outputIds": {
+            "type": "array",
+            "minItems": 1,
+            "uniqueItems": true,
+            "items": { "$ref": "production-graph-v0.schema.json#/$defs/id" }
+          }
+        }
+      }
+    },
+    "planRoot": { "$ref": "production-graph-v0.schema.json#/$defs/root" }
+  }
+}

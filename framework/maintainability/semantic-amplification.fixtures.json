@@ -1,0 +1,42 @@
+{
+  "schema": "kungfu.abstraction-integrity-fixtures/v1",
+  "syntheticProviderVariant": {
+    "id": "synthetic-linux-jit",
+    "axes": {
+      "provider": "aws-ec2",
+      "lifecycle": "jit",
+      "platform": "linux-x64"
+    },
+    "paths": [
+      ".github/workflows/aws-us-linux-burst-qualification.yml"
+    ],
+    "authorityBinding": "buildchain:runner-preset:synthetic-linux-jit"
+  },
+  "adversarial": [
+    {
+      "id": "parallel-authority",
+      "mutation": "additional-authority",
+      "expectedClass": "parallel-authority"
+    },
+    {
+      "id": "duplicated-policy",
+      "mutation": "duplicate-adapter",
+      "expectedClass": "duplicate-policy"
+    },
+    {
+      "id": "leaking-platform-branch",
+      "mutation": "token-spread",
+      "expectedClass": "leaking-platform-branch"
+    },
+    {
+      "id": "orphan-adapter",
+      "mutation": "remove-authority-binding",
+      "expectedClass": "orphan-adapter"
+    },
+    {
+      "id": "stale-exception",
+      "mutation": "expire-exception",
+      "expectedClass": "stale-exception"
+    }
+  ]
+}

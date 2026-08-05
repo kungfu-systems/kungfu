@@ -37,6 +37,14 @@ execution; Shifu owns how the task is executed after source checkout.
   subject/claim/probe/artifact providers, and computes deterministic contract,
   content, and submission roots. Kungfu's compatibility submission is
   [`../../shifu.documentation.json`](../../shifu.documentation.json).
+- [`production-graph-contract.json`](production-graph-contract.json) defines the
+  project-independent Production Graph v0 description and verification
+  boundary. Its content-addressed graph, plan, execution-event, receipt,
+  failure, recovery, and verification-receipt schemas retain exact source,
+  project-authority, and Xinfa selection roots without executing nodes or
+  acquiring Assignment or Work Control authority. Run
+  `./shifu check:production-graph` to emit the exact protected-CI verification
+  receipt over the deterministic conformance fixtures.
 - [`.xinfa/project.json`](../../.xinfa/project.json) is the project-owned semantic declaration consumed by Xinfa. [`shifu.documentation.surfaces.json`](../../shifu.documentation.surfaces.json) is only a compatibility alias and carries no independent policy.
   classifies every tracked human-readable surface plus explicit product and
   Agent surfaces. Shifu closes the exact-path inventory; Xinfa remains the sole
@@ -172,14 +180,15 @@ versions and roots. Roots use UTF-8 JSON with recursively sorted object keys,
 preserved array order, `JSON.stringify` scalar encoding, and no insignificant
 whitespace.
 
-The initial production matrix contains four isolated CPython 3.13 rows:
-macOS ARM64, macOS x86_64, Linux x86_64, and Windows x86_64. Candidate and
+The production matrix contains exactly three isolated CPython 3.13 rows:
+macOS ARM64, Linux x86_64, and Windows x86_64. Candidate and
 promoted transport names bind both the exact source commit and row identity.
 Each row has its own runner, build identity, payload closure, and single active
 promotion authority. An absent row is reported as `unqualified`; another
-platform's bytes can never substitute for it. The current automatic checkout
-consumer remains intentionally limited to macOS ARM64 until the dedicated
-platform consumer Assignments qualify the other three rows.
+platform's bytes can never substitute for it. Intel macOS (`darwin-x64`) is
+explicitly unsupported and cannot select transport or source-build fallback.
+The automatic checkout consumer admits all three declared rows and rejects
+every other host as `unsupported-host`.
 
 The consumer verifies every declared byte, mode, bounded POSIX path and safe
 relative symlink while staging outside the target. It then verifies all current

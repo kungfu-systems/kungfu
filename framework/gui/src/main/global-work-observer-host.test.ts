@@ -52,6 +52,7 @@ test('main observer owns one durable child and pushes incremental snapshots', ()
     'all',
     '--max-workers',
     '8',
+    '--include-settled',
     '--observe',
     '--observer-state',
     '/config/gui/global-work-observer.json',

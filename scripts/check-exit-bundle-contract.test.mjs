@@ -465,6 +465,31 @@ test('ADR maturity and public Mission schema references cannot drift', () => {
   assert.match(missionAdr, /`kungfu\.mission-control\.bundle\/v2`/u);
 });
 
+test('history surfaces share one honest authority projection', () => {
+  assert.equal(
+    contract.historySurface.schema,
+    'kungfu.exit-history.surface/v1',
+  );
+  assert.match(
+    contract.historySurface.statusSemantics['contract-ready'],
+    /coverage has not been evaluated/u,
+  );
+  assert.match(
+    contract.historySurface.statusSemantics['inventory-verified'],
+    /explicit loss/u,
+  );
+  assert.deepEqual(Object.keys(contract.historySurface.commands).sort(), [
+    'export',
+    'import',
+    'rebuild',
+    'status',
+    'verify',
+  ]);
+  assert.match(contract.historySurface.observerRule, /same Core status/u);
+  assert.match(contract.historySurface.rebuildRule, /never copies GUI/u);
+  assert.match(contract.historySurface.stdoutRule, /schema-bound JSON/u);
+});
+
 test('composition authority never absorbs member domain semantics', () => {
   assert.match(contract.authority.members, /sole authority/u);
   assert.match(

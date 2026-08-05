@@ -32,10 +32,58 @@
       "purpose": "Print the local onboarding brief."
     },
     {
+      "apiId": "kungfu.agent.bootstrap-status",
+      "name": "kungfu agent bootstrap-status --json",
+      "maturity": "experimental",
+      "purpose": "Expose pending, verified, degraded, or unavailable Agent Brief bootstrap state for the current native attempt without claiming model comprehension."
+    },
+    {
       "apiId": "kungfu.agent.docs",
       "name": "kungfu agent docs",
       "maturity": "stable",
       "purpose": "List installed Agent documents and expose the Xinfa context-discovery boundary."
+    },
+    {
+      "apiId": "kungfu.agent.work-advisory",
+      "name": "kungfu agent work-advisory --signals <signals.json> --json",
+      "maturity": "preview",
+      "purpose": "Return authority-free deterministic advice, a minimal Work preview, one-confirmation requirement, and the existing create-bind action path from bounded structured signals."
+    },
+    {
+      "apiId": "kungfu.agent.map",
+      "name": "kungfu agent map --json",
+      "maturity": "stable",
+      "purpose": "Print and validate the complete stable first-entry intent route map."
+    },
+    {
+      "apiId": "kungfu.agent.first-value.contract",
+      "name": "kungfu agent first-value contract --json",
+      "maturity": "stable",
+      "purpose": "Print the exact prompt, packaged roots, result constraints, receipt schema, and qualification non-claims."
+    },
+    {
+      "apiId": "kungfu.agent.first-value.start",
+      "name": "kungfu agent first-value start --json",
+      "maturity": "stable",
+      "purpose": "Verify the installed pack, run the declared read-only onboarding discovery, and emit one rooted receipt."
+    },
+    {
+      "apiId": "kungfu.agent.first-value.receipt",
+      "name": "kungfu agent first-value receipt --intent <id> --discovery <command> --question-count <0-or-1> --outcome <summary> --json",
+      "maturity": "stable",
+      "purpose": "Rerun one declared safe discovery without a shell and emit a sanitized rooted first-value receipt."
+    },
+    {
+      "apiId": "kungfu.agent.first-value.verify",
+      "name": "kungfu agent first-value verify <receipt-file> --json",
+      "maturity": "stable",
+      "purpose": "Fail closed while validating one retained first-value receipt against the current installed candidate."
+    },
+    {
+      "apiId": "kungfu.agent.expand",
+      "name": "kungfu agent expand --view agent --handle <id> --budget <tokens> --json",
+      "maturity": "stable",
+      "purpose": "Expand one verified packaged Xinfa context handle without exposing internal pack paths."
     },
     {
       "apiId": "kungfu.agent.capabilities",
@@ -110,6 +158,12 @@
       "purpose": "Validate and return the content-bound envelope for this Console attempt, including its optional WorkRef and public KFD-3/Profile entrypoints."
     },
     {
+      "apiId": "kungfu.agent.console.bind-work",
+      "name": "kungfu agent console bind-work --initiative-id <id> --assignment-id <id> --json",
+      "maturity": "experimental",
+      "purpose": "Bind this native terminal session to one exact Assignment, atomically rejecting a second active Agent before it can write."
+    },
+    {
       "apiId": "kungfu.agent.session",
       "name": "kungfu agent session <operation> --input - --json",
       "maturity": "experimental",
@@ -119,7 +173,7 @@
       "apiId": "kungfu.agent.runtime.discover",
       "name": "kungfu agent runtime discover --json",
       "maturity": "experimental",
-      "purpose": "List every safe executable Codex and Claude candidate from PATH and explicit known locations."
+      "purpose": "List every safe executable candidate declared by built-in or registered native Provider adapters."
     },
     {
       "apiId": "kungfu.agent.runtime.list",
@@ -131,7 +185,7 @@
       "apiId": "kungfu.agent.runtime.upsert",
       "name": "kungfu agent runtime upsert --id <id> --provider <provider> --executable <path> --json",
       "maturity": "experimental",
-      "purpose": "Preview or explicitly add or edit one executable-plus-argv Agent Runtime Profile."
+      "purpose": "Preview or explicitly add or edit one executable-plus-argv Agent Runtime Profile for a built-in or registered Provider adapter."
     },
     {
       "apiId": "kungfu.agent.runtime.remove",
@@ -150,6 +204,12 @@
       "name": "kungfu agent runtime verify <profile-id> --json",
       "maturity": "experimental",
       "purpose": "Run a bounded executable --version probe for one Agent Runtime Profile."
+    },
+    {
+      "apiId": "kungfu.runtime.surface.verify",
+      "name": "kungfu runtime surface verify <receipt.json> --json",
+      "maturity": "experimental",
+      "purpose": "Verify and observe one exact Runtime Surface Receipt without selecting another runtime or mutating authority."
     },
     {
       "apiId": "kungfu.agent.install-skill",
@@ -201,9 +261,9 @@
     },
     {
       "apiId": "kungfu.run.agent",
-      "name": "kungfu run agent --prompt <task> [--agent <profile-id>]",
+      "name": "kungfu run agent [--agent <profile-id>] [--prompt <task>]",
       "maturity": "experimental",
-      "purpose": "Launch one fresh Agent process through a verified Runtime Profile, retain an Episode and transcript-free continuation evidence, and leave Work settlement to independent assessment."
+      "purpose": "Open the verified provider's native interactive UI when no prompt is given; with --prompt, launch one governed fresh process and retain transcript-free continuation evidence without settling Work."
     },
     {
       "apiId": "kungfu.trace.capture",
@@ -362,6 +422,30 @@
       "purpose": "Validate by default or explicitly import after isolated full replay, returning landed, remaining, loss, and recovery evidence."
     },
     {
+      "apiId": "kungfu.exit.bundle",
+      "name": "kungfu exit history status [--file <request.json>] --json",
+      "maturity": "experimental",
+      "purpose": "Observe the installed history-protection contract or verify one selected scope inventory without mutating member authority."
+    },
+    {
+      "apiId": "kungfu.exit.bundle",
+      "name": "kungfu exit history export --file <request.json> --out <exit.json> --json",
+      "maturity": "experimental",
+      "purpose": "Write one full or explicitly lossy thin package and retain a disposable verified-export observer receipt."
+    },
+    {
+      "apiId": "kungfu.exit.bundle",
+      "name": "kungfu exit history import --file <exit.json> [--execute --authorized-by <actor>] --json",
+      "maturity": "experimental",
+      "purpose": "Validate by default or explicitly import one verified history package through the shared Exit receipt path."
+    },
+    {
+      "apiId": "kungfu.exit.bundle",
+      "name": "kungfu exit history rebuild [--projection <episode|fact-kernel>] [--execute --authorized-by <actor>] --json",
+      "maturity": "experimental",
+      "purpose": "Plan or explicitly rebuild only declared Episode and Fact projections from their unchanged local authorities."
+    },
+    {
       "apiId": "kungfu.exit.verify",
       "name": "kungfu-exit-verify --file <package.json> --json",
       "maturity": "experimental",
@@ -369,15 +453,15 @@
     },
     {
       "apiId": "kungfu.exit.verify",
-      "name": "python -m kungfu.exit_verifier --file <package.json> --json",
-      "maturity": "experimental",
-      "purpose": "Invoke the same registry-free verifier directly from an installed Python module."
-    },
-    {
-      "apiId": "kungfu.exit.verify",
       "name": "kungfu exit verify --file <package.json> --json",
       "maturity": "experimental",
       "purpose": "Invoke the packaged verifier through the integrated Kungfu CLI when a configured runtime is already available."
+    },
+    {
+      "apiId": "kungfu.exit.verify",
+      "name": "kungfu exit history verify --file <exit.json> --json",
+      "maturity": "experimental",
+      "purpose": "Run the same bounded read-only verifier over one history package without initializing or mutating a runtime."
     },
     {
       "apiId": "kungfu.cut.inspect",

@@ -187,6 +187,21 @@
       "canonicalIdentity": "authority-qualified, or shared version root as an explicit replica witness",
       "sameLabelDifferentRoot": "authority-distinct; ambiguous only to an unqualified reference",
       "retainedSettledReference": "verified worktree-deletion-safe Assignment seal with owning workspace, state root, and query proof root",
+      "outcomeHistory": {
+        "schema": "kungfu.workspace-federation.work-design-outcome-history/v1",
+        "bindingSchema": "kungfu.assignment-orchestration.work-design-outcome-binding/v1",
+        "storage": "additive-content-addressed-under-existing-component-work-control",
+        "join": "exact-settled-state-root-and-query-proof-root",
+        "replicaDeduplicationKey": "settled_state_root",
+        "coverageClasses": [
+          "complete",
+          "partial",
+          "sealed-only-unknown",
+          "unqualified"
+        ],
+        "rawPayloadBodies": false,
+        "writes": false
+      },
       "humanAndJsonShareProjection": true,
       "rawComponentsRetained": true
     },

@@ -14,6 +14,12 @@ export const WORK_DESIGN_VERIFICATION_SCHEMA =
   'kungfu.work-design.advice-verification/v1';
 export const WORK_DESIGN_DISPOSITION_SCHEMA =
   'kungfu.work-design.disposition/v1';
+export const WORK_DESIGN_OUTCOME_ESTIMATE_SCHEMA =
+  'kungfu.work-design.outcome-informed-estimate/v1';
+export const WORK_DESIGN_OPENING_ESTIMATE_SCHEMA =
+  'kungfu.work-design.opening-estimate-binding/v1';
+export const WORK_DESIGN_OUTCOME_HISTORY_RECORD_SCHEMA =
+  'kungfu.work-design.outcome-history-record/v1';
 
 const ROOT = /^sha256:[0-9a-f]{64}$/u;
 const ID = /^[A-Za-z0-9][A-Za-z0-9._:/-]*$/u;
@@ -1034,6 +1040,406 @@ export function verifyWorkDesignDisposition(disposition) {
       ),
     );
   return { ok: diagnostics.length === 0, diagnostics };
+}
+
+function validateOutcomeHistoryRecord(record, at, diagnostics) {
+  if (
+    !exactKeys(
+      record,
+      [
+        'schema',
+        'assignmentSubject',
+        'workspaceIdentityRoot',
+        'settledStateRoot',
+        'bindingRoot',
+        'outcomeRoot',
+        'coverageRoot',
+        'cohortRoot',
+        'outcomeAsOf',
+        'coverageComplete',
+        'attributableActiveSeconds',
+        'excludedWaitSeconds',
+        'rework',
+        'sourceEvidenceRoots',
+        'recordRoot',
+      ],
+      at,
+      diagnostics,
+    )
+  )
+    return;
+  if (record.schema !== WORK_DESIGN_OUTCOME_HISTORY_RECORD_SCHEMA)
+    diagnostics.push(
+      diagnostic(
+        'unknown-version',
+        `${at}.schema`,
+        'unsupported outcome record',
+      ),
+    );
+  requireText(
+    record.assignmentSubject,
+    `${at}.assignmentSubject`,
+    diagnostics,
+    ID,
+  );
+  for (const field of [
+    'workspaceIdentityRoot',
+    'settledStateRoot',
+    'bindingRoot',
+    'outcomeRoot',
+    'coverageRoot',
+    'cohortRoot',
+    'recordRoot',
+  ])
+    requireRoot(record[field], `${at}.${field}`, diagnostics);
+  requireTimestamp(record.outcomeAsOf, `${at}.outcomeAsOf`, diagnostics);
+  if (typeof record.coverageComplete !== 'boolean')
+    diagnostics.push(
+      diagnostic(
+        'invalid-type',
+        `${at}.coverageComplete`,
+        'expected boolean coverage state',
+      ),
+    );
+  requireNonNegativeInteger(
+    record.attributableActiveSeconds,
+    `${at}.attributableActiveSeconds`,
+    diagnostics,
+  );
+  if (
+    exactKeys(
+      record.excludedWaitSeconds,
+      ['ci-queue', 'external-review', 'human-decision', 'platform-approval'],
+      `${at}.excludedWaitSeconds`,
+      diagnostics,
+    )
+  )
+    for (const name of [
+      'ci-queue',
+      'external-review',
+      'human-decision',
+      'platform-approval',
+    ])
+      requireNonNegativeInteger(
+        record.excludedWaitSeconds[name],
+        `${at}.excludedWaitSeconds.${name}`,
+        diagnostics,
+      );
+  if (
+    exactKeys(record.rework, ['status', 'count'], `${at}.rework`, diagnostics)
+  ) {
+    requireEnum(
+      record.rework.status,
+      new Set(['qualified', 'unknown']),
+      `${at}.rework.status`,
+      diagnostics,
+    );
+    if (record.rework.count !== null)
+      requireNonNegativeInteger(
+        record.rework.count,
+        `${at}.rework.count`,
+        diagnostics,
+      );
+    if (record.rework.status === 'qualified' && record.rework.count === null)
+      diagnostics.push(
+        diagnostic(
+          'incomplete-rework-signal',
+          `${at}.rework.count`,
+          'qualified rework requires a count',
+        ),
+      );
+  }
+  requireCanonicalTextSet(
+    record.sourceEvidenceRoots,
+    `${at}.sourceEvidenceRoots`,
+    diagnostics,
+    ROOT,
+  );
+  validateRooted(record, 'recordRoot', at, diagnostics);
+}
+
+function nearestRank(values, percentile) {
+  if (values.length === 0) return null;
+  return values[Math.max(0, Math.ceil((values.length * percentile) / 100) - 1)];
+}
+
+export function buildOutcomeInformedEstimate(input) {
+  const diagnostics = [];
+  if (
+    !exactKeys(
+      input,
+      [
+        'asOf',
+        'sourceRoot',
+        'queryProofRoot',
+        'globalWorkProjectionRoot',
+        'targetCohortRoot',
+        'selectedStateRoots',
+        'records',
+        'coverage',
+      ],
+      '$',
+      diagnostics,
+    )
+  )
+    return { ok: false, estimate: null, diagnostics };
+  requireTimestamp(input.asOf, '$.asOf', diagnostics);
+  for (const field of [
+    'sourceRoot',
+    'queryProofRoot',
+    'globalWorkProjectionRoot',
+    'targetCohortRoot',
+  ])
+    requireRoot(input[field], `$.${field}`, diagnostics);
+  requireCanonicalTextSet(
+    input.selectedStateRoots,
+    '$.selectedStateRoots',
+    diagnostics,
+    ROOT,
+  );
+  if (!Array.isArray(input.records))
+    diagnostics.push(diagnostic('invalid-type', '$.records', 'expected array'));
+  for (const [index, record] of (input.records ?? []).entries())
+    validateOutcomeHistoryRecord(record, `$.records[${index}]`, diagnostics);
+  if (
+    exactKeys(
+      input.coverage,
+      [
+        'uniqueSettledStateCount',
+        'uniqueAssignmentCount',
+        'complete',
+        'partial',
+        'sealedOnlyUnknown',
+        'unqualifiedStateCount',
+      ],
+      '$.coverage',
+      diagnostics,
+    )
+  )
+    for (const field of Object.keys(input.coverage))
+      requireNonNegativeInteger(
+        input.coverage[field],
+        `$.coverage.${field}`,
+        diagnostics,
+      );
+  const roots = new Set();
+  for (const record of input.records ?? []) {
+    if (roots.has(record.settledStateRoot))
+      diagnostics.push(
+        diagnostic(
+          'duplicate-settled-state',
+          '$.records',
+          'outcome records must be deduplicated by settled state root',
+        ),
+      );
+    roots.add(record.settledStateRoot);
+    if (Date.parse(record.outcomeAsOf) > Date.parse(input.asOf))
+      diagnostics.push(
+        diagnostic(
+          'as-of-leakage',
+          '$.records',
+          'an outcome was unavailable at the declared estimate cut',
+        ),
+      );
+  }
+  if (diagnostics.length > 0)
+    return {
+      ok: false,
+      estimate: null,
+      diagnostics: diagnostics.sort(
+        (left, right) =>
+          compareUtf8(left.path, right.path) ||
+          compareUtf8(left.code, right.code),
+      ),
+    };
+
+  const selected = new Set(input.selectedStateRoots);
+  const comparable = input.records.filter(
+    (record) =>
+      selected.has(record.settledStateRoot) &&
+      record.cohortRoot === input.targetCohortRoot &&
+      record.coverageComplete === true &&
+      record.rework.status === 'qualified',
+  );
+  const active = comparable
+    .map((record) => record.attributableActiveSeconds)
+    .sort((left, right) => left - right);
+  const p50 = nearestRank(active, 50);
+  const p80 = nearestRank(active, 80);
+  const waitClasses = [
+    'ci-queue',
+    'external-review',
+    'human-decision',
+    'platform-approval',
+  ];
+  const excludedWaitTotals = Object.fromEntries(
+    waitClasses.map((name) => [
+      name,
+      comparable.reduce(
+        (total, record) => total + record.excludedWaitSeconds[name],
+        0,
+      ),
+    ]),
+  );
+  const count = comparable.length;
+  const phase =
+    count < 10
+      ? 'observation-only'
+      : count < 30
+        ? 'tentative-trend'
+        : 'replay-gated';
+  const fallbackReason =
+    count === 0
+      ? 'no-qualified-comparable-outcomes'
+      : count < 10
+        ? 'fewer-than-10-qualified-comparable-outcomes'
+        : count < 30
+          ? 'default-promotion-below-30'
+          : 'existing-replay-gates-required';
+  const preimage = {
+    schema: WORK_DESIGN_OUTCOME_ESTIMATE_SCHEMA,
+    asOf: input.asOf,
+    source: {
+      sourceRoot: input.sourceRoot,
+      queryProofRoot: input.queryProofRoot,
+      globalWorkProjectionRoot: input.globalWorkProjectionRoot,
+    },
+    comparability: {
+      targetCohortRoot: input.targetCohortRoot,
+      exactCohortRequired: true,
+      selectedStateCount: input.selectedStateRoots.length,
+      qualifiedSampleCount: count,
+      criteria: [
+        'complete-rooted-outcome',
+        'exact-cohort-root',
+        'selected-settled-state',
+        'verified-as-of',
+      ],
+    },
+    coverage: { ...input.coverage, qualifiedComparableCount: count },
+    attributableActiveSeconds: {
+      p50,
+      p80,
+      minimum: active.at(0) ?? null,
+      maximum: active.at(-1) ?? null,
+    },
+    excludedWaitTotals,
+    rework: {
+      totalCount: comparable.reduce(
+        (total, record) => total + record.rework.count,
+        0,
+      ),
+      outcomesWithRework: comparable.filter((record) => record.rework.count > 0)
+        .length,
+    },
+    evidence: {
+      settledStateRoots: comparable
+        .map((record) => record.settledStateRoot)
+        .sort(compareUtf8),
+      bindingRoots: comparable
+        .map((record) => record.bindingRoot)
+        .sort(compareUtf8),
+      outcomeRoots: comparable
+        .map((record) => record.outcomeRoot)
+        .sort(compareUtf8),
+      coverageRoots: comparable
+        .map((record) => record.coverageRoot)
+        .sort(compareUtf8),
+      sourceEvidenceRoots: [
+        ...new Set(comparable.flatMap((record) => record.sourceEvidenceRoots)),
+      ].sort(compareUtf8),
+    },
+    guidance: {
+      phase,
+      recommendedBudgetSeconds: count >= 10 ? p80 : null,
+      existingConservativeBudgetPreserved: count < 10,
+      defaultPolicyInfluence: false,
+      requiresExistingReplayGates: count >= 30,
+      fallbackReason,
+    },
+    confidence:
+      count >= 30
+        ? 'high'
+        : count >= 10
+          ? 'medium'
+          : count > 0
+            ? 'low'
+            : 'unknown',
+    authority: {
+      mode: 'advisory-estimate-only',
+      workAuthority: false,
+      policyAuthority: false,
+      defaultActivation: false,
+      mayMutate: false,
+    },
+  };
+  return {
+    ok: true,
+    estimate: { ...preimage, estimateRoot: semanticRoot(preimage) },
+    diagnostics: [],
+  };
+}
+
+export function verifyOutcomeInformedEstimate(estimate) {
+  if (
+    !isObject(estimate) ||
+    estimate.schema !== WORK_DESIGN_OUTCOME_ESTIMATE_SCHEMA
+  )
+    return {
+      ok: false,
+      diagnostics: [
+        diagnostic('unknown-version', '$.schema', 'unsupported estimate'),
+      ],
+    };
+  const { estimateRoot, ...preimage } = estimate;
+  const ok =
+    ROOT.test(String(estimateRoot ?? '')) &&
+    semanticRoot(preimage) === estimateRoot;
+  return {
+    ok,
+    diagnostics: ok
+      ? []
+      : [
+          diagnostic(
+            'root-mismatch',
+            '$.estimateRoot',
+            'estimate root differs from canonical preimage',
+          ),
+        ],
+  };
+}
+
+export function buildOpeningEstimateBinding(input) {
+  const verification = verifyOutcomeInformedEstimate(input.estimate);
+  if (!verification.ok)
+    return { ok: false, binding: null, diagnostics: verification.diagnostics };
+  const diagnostics = [];
+  requireText(input.assignmentId, '$.assignmentId', diagnostics, ID);
+  requireRoot(input.workDefinitionRoot, '$.workDefinitionRoot', diagnostics);
+  requireRoot(input.adviceRoot, '$.adviceRoot', diagnostics);
+  requireTimestamp(input.asOf, '$.asOf', diagnostics);
+  if (diagnostics.length > 0) return { ok: false, binding: null, diagnostics };
+  const preimage = {
+    schema: WORK_DESIGN_OPENING_ESTIMATE_SCHEMA,
+    assignmentId: input.assignmentId,
+    asOf: input.asOf,
+    workDefinitionRoot: input.workDefinitionRoot,
+    adviceRoot: input.adviceRoot,
+    estimateRoot: input.estimate.estimateRoot,
+    targetCohortRoot: input.estimate.comparability.targetCohortRoot,
+    guidance: structuredClone(input.estimate.guidance),
+    authority: {
+      mode: 'opening-observation-only',
+      assignmentAuthority: false,
+      finalWorkDefinitionAuthority: false,
+      mayMutate: false,
+    },
+  };
+  return {
+    ok: true,
+    binding: { ...preimage, openingEstimateRoot: semanticRoot(preimage) },
+    diagnostics: [],
+  };
 }
 
 export function workDesignAdvisoryBoundary() {

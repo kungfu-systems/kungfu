@@ -7,6 +7,20 @@
 use std::env;
 use std::path::PathBuf;
 
+pub const INTEL_MACOS_DIAGNOSTIC: &str =
+    "unsupported-host: Intel macOS (Darwin x86_64) is not supported by Kungfu";
+
+pub fn validate_product_host(os: &str, arch: &str) -> Result<(), &'static str> {
+    if os == "macos" && arch == "x86_64" {
+        return Err(INTEL_MACOS_DIAGNOSTIC);
+    }
+    Ok(())
+}
+
+pub fn validate_current_host() -> Result<(), &'static str> {
+    validate_product_host(env::consts::OS, env::consts::ARCH)
+}
+
 pub fn home_dir() -> PathBuf {
     if let Some(h) = env::var_os("HOME") {
         if !h.is_empty() {
@@ -93,4 +107,25 @@ pub fn unique_temp_dir(prefix: &str) -> std::io::Result<PathBuf> {
     let dir = env::temp_dir().join(format!("{prefix}-{}-{nanos}", std::process::id()));
     std::fs::create_dir_all(&dir)?;
     Ok(dir)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{validate_product_host, INTEL_MACOS_DIAGNOSTIC};
+
+    #[test]
+    fn intel_macos_is_explicitly_unsupported() {
+        assert_eq!(
+            validate_product_host("macos", "x86_64"),
+            Err(INTEL_MACOS_DIAGNOSTIC)
+        );
+        for (os, arch) in [
+            ("macos", "aarch64"),
+            ("linux", "x86_64"),
+            ("linux", "aarch64"),
+            ("windows", "x86_64"),
+        ] {
+            assert_eq!(validate_product_host(os, arch), Ok(()));
+        }
+    }
 }

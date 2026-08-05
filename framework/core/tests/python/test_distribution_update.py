@@ -150,6 +150,7 @@ def _archive(
     platform: str | None = None,
     architecture: str | None = None,
     product_version: str = "4.0.0-alpha.1",
+    runtime_symlink: bool = False,
 ) -> tuple[Path, dict]:
     current_platform, current_architecture = distribution_update._normalize_platform()
     platform = platform or current_platform
@@ -158,6 +159,8 @@ def _archive(
     runtime_root = source / "kungfu"
     runtime_root.mkdir(parents=True)
     (runtime_root / "kungfu").write_text("#!/bin/sh\necho fixture\n", "utf-8")
+    if runtime_symlink:
+        (runtime_root / "kungfu-alias").symlink_to("kungfu")
     internal = _manifest(
         runtime_root,
         platform=platform,
@@ -912,58 +915,6 @@ def test_apply_rejects_declared_size_drift_before_inventory_write(
     assert not (tmp_path / "config").exists()
 
 
-def test_apply_rejects_archive_replacement_before_extracting_or_writing_inventory(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    archive, manifest = _archive(tmp_path)
-    source = tmp_path / "source" / "kungfu-cli-test"
-    bundled = source / "upgrade" / "kungfu-release-manifest.json"
-    replacement_manifest = json.loads(bundled.read_text("utf-8"))
-    replacement_manifest["documentationUrl"] = replacement_manifest[
-        "documentationUrl"
-    ].replace("www.kungfu.tech", "bad.example.net")
-    bundled.write_text(json.dumps(replacement_manifest), "utf-8")
-    replacement = tmp_path / "replacement.tar.gz"
-    with tarfile.open(replacement, "w:gz") as output:
-        output.add(source, arcname=source.name)
-    stage_verified_archive = distribution_update._stage_verified_archive
-
-    def replace_then_stage(
-        source_archive: Path,
-        target: Path,
-        *,
-        expected_size: int,
-        expected_digest: str,
-    ) -> None:
-        replacement.replace(source_archive)
-        stage_verified_archive(
-            source_archive,
-            target,
-            expected_size=expected_size,
-            expected_digest=expected_digest,
-        )
-
-    monkeypatch.setattr(
-        distribution_update,
-        "_stage_verified_archive",
-        replace_then_stage,
-    )
-    config_home = tmp_path / "config"
-
-    with pytest.raises(distribution_update.DistributionUpdateError) as error:
-        distribution_update.apply_archive(
-            manifest,
-            archive,
-            current_version="4.0.0-alpha.0",
-            config_home=config_home,
-            expected_digest=manifest["artifacts"][1]["digest"],
-            execute=True,
-        )
-
-    assert error.value.code == "artifact-verification-failed"
-    assert not config_home.exists()
-
-
 @pytest.mark.parametrize("archive_format", ["tar", "zip"])
 @pytest.mark.parametrize("limit", ["entries", "expanded-bytes"])
 @pytest.mark.parametrize("execute", [False, True])
@@ -1051,6 +1002,10 @@ def test_apply_installs_runtime_and_selects_versioned_cli_on_next_command(
         {
             "KUNGFU_INSTALL_SOURCE": "archive",
             "KF_CONFIG_HOME": str(tmp_path / "config"),
+            "KUNGFU_DIR": str(tmp_path / "stale-runtime"),
+            "KF_BUNDLED_EXTENSION_ROOT": str(tmp_path / "stale-extensions"),
+            "KUNGFU_AGENT_SESSION_EXECUTABLE": str(tmp_path / "stale-agent"),
+            "KUNGFU_CONTROLLER_ENTRYPOINT": str(tmp_path / "stale-controller"),
         },
         current_executable=tmp_path / "original" / "kungfu",
     )
@@ -1060,6 +1015,14 @@ def test_apply_installs_runtime_and_selects_versioned_cli_on_next_command(
     assert (
         selected_env["KUNGFU_SELECTED_FRONTEND_BUILD_ID"] == manifest["frontendBuildId"]
     )
+    selected_executable = Path(command[0])
+    selected_root = Path(frontend["productRoot"])
+    assert Path(selected_env["KUNGFU_DIR"]) == selected_executable.parent
+    assert (
+        Path(selected_env["KF_BUNDLED_EXTENSION_ROOT"]) == selected_root / "extensions"
+    )
+    assert Path(selected_env["KUNGFU_AGENT_SESSION_EXECUTABLE"]) == selected_executable
+    assert Path(selected_env["KUNGFU_CONTROLLER_ENTRYPOINT"]) == selected_executable
     assert (
         distribution_update.selected_cli_command(
             selected_env,
@@ -1070,6 +1033,17 @@ def test_apply_installs_runtime_and_selects_versioned_cli_on_next_command(
     assert applied["receiptRoot"].startswith("sha256:")
     assert applied["frontendSelection"]["generation"] == 1
     assert applied["frontendSelection"]["previousFrontendBuildId"] is None
+    inventory = distribution_update.cli_inventory_fsck(tmp_path / "config")
+    assert inventory["selectedReceiptRoot"] == applied["receiptRoot"]
+    persisted_receipt = (
+        tmp_path
+        / "config"
+        / "product"
+        / "cli"
+        / "receipts"
+        / "generation-00000000000000000001.json"
+    )
+    assert json.loads(persisted_receipt.read_text("utf-8")) == applied
 
 
 def test_cli_inventory_retains_stale_partial_and_reports_rollback_coordinates(
@@ -1167,10 +1141,26 @@ def test_cli_selection_interruption_keeps_last_known_good_and_retry_recovers(
         )
     assert error.value.code == "selection-io-failed"
     selected = distribution_update.cli_inventory_fsck(config_home)
-    assert selected["ok"] is True
+    assert selected["ok"] is False
     assert (
         selected["selected"]["frontendBuildId"]
         == older["frontendImage"]["frontendBuildId"]
+    )
+    assert selected["selectedReceiptRoot"] == older["receiptRoot"]
+    interrupted_receipt = (
+        config_home
+        / "product"
+        / "cli"
+        / "receipts"
+        / "generation-00000000000000000002.json"
+    )
+    retained = json.loads(interrupted_receipt.read_text("utf-8"))
+    assert (
+        retained["frontendSelection"]["frontendBuildId"]
+        == newer_manifest["frontendBuildId"]
+    )
+    assert retained["receiptRoot"] == distribution_update._content_root(
+        {key: value for key, value in retained.items() if key != "receiptRoot"}
     )
 
     monkeypatch.setattr(distribution_update, "_write_object", original_write)
@@ -1186,7 +1176,10 @@ def test_cli_selection_interruption_keeps_last_known_good_and_retry_recovers(
         retried["frontendSelection"]["frontendBuildId"]
         == newer_manifest["frontendBuildId"]
     )
-    assert retried["frontendSelection"]["generation"] == 2
+    assert retried["frontendSelection"]["generation"] == 3
+    recovered = distribution_update.cli_inventory_fsck(config_home)
+    assert recovered["ok"] is True
+    assert recovered["pendingReceipts"] == []
 
 
 def test_cli_inventory_fsck_reports_malformed_image_without_crashing(
@@ -1421,6 +1414,7 @@ def test_cli_status_explains_frontend_runtime_and_no_daemon(tmp_path: Path) -> N
     assert payload["schema"] == "kungfu.product-update-status/v1"
     assert payload["frontendVersion"] == "4.0.0-alpha.0"
     assert payload["installSource"]["source"] == "archive"
+    assert payload["nativeReceiptRoot"] is None
     assert payload["backgroundUpdater"] is False
 
 

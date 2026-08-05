@@ -6,17 +6,27 @@ from __future__ import annotations
 
 import json
 import os
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
+import uuid
 
 import click
 
 from kungfu import assignment_orchestration as orchestration
+from kungfu import assignment_close
+from kungfu import assignment_evidence
+from kungfu import assignment_review_lifecycle
+from kungfu import assignment_start
 from kungfu import dogfood as dogfood_api
 from kungfu import profile_composition, profile_sdk
+from kungfu.agent import run_agent
+from kungfu.agent import resources as agent_resources
 from kungfu.cli.commands import PrioritizedCommandGroup, kfc
+from kungfu.cli.commands import assignment_review
 from kungfu.cli.surface_contract import surface
 from kungfu.storage import service as storage_service
 from kungfu.workspace import prepare_workspace_write, resolve_workspace_target
+from kungfu.assignment_lifecycle.ports import AssignmentRuntime
 
 assignment_context = kfc.pass_context()
 
@@ -73,6 +83,8 @@ def _run(operation):
 
 
 def _runtime(workspace_root="", home=False, operation_class="semantic-write"):
+    if operation_class != "read-only":
+        agent_resources.require_current_native_bootstrap_for_mutation()
     target = resolve_workspace_target(
         operation_class,
         workspace_root or None,
@@ -109,6 +121,11 @@ def _runtime(workspace_root="", home=False, operation_class="semantic-write"):
         ):
             raise RuntimeError("Assignment workspace identity did not stabilize")
     return identity, target.runtime_dir, receipt
+
+
+def _assignment_runtime(workspace_root, home, operation_class):
+    identity, runtime_dir, receipt = _runtime(workspace_root, home, operation_class)
+    return AssignmentRuntime(identity, str(runtime_dir), receipt)
 
 
 def _profile_source():
@@ -175,6 +192,49 @@ def _ensure_profile(runtime_dir, authorized_by):
     return receipts
 
 
+def _prepare_resume_profile(runtime_dir, actor):
+    source = _profile_source()
+    validated = profile_sdk.validate_source(source, runtime_dir)
+    profile_id = validated["inspection"]["profile"]["id"]
+    desired_root = validated["inspection"]["profile_suite_root"]
+    lifecycle = storage_service.profile_lifecycle(
+        runtime_dir, "list", include_removed=True
+    )
+    previous = next(
+        (
+            row
+            for row in lifecycle.get("profiles", [])
+            if row.get("profile_id") == profile_id and not row.get("removed")
+        ),
+        None,
+    )
+    receipts = _ensure_profile(runtime_dir, actor)
+    current = storage_service.profile_lifecycle(
+        runtime_dir,
+        "get",
+        profile_id=profile_id,
+    )
+    if (
+        not current.get("activated")
+        or not current.get("qualified")
+        or current.get("profile_suite_root") != desired_root
+    ):
+        raise RuntimeError(
+            "Work resume did not activate the exact current Work Control Profile root"
+        )
+    return {
+        "schema": "kungfu.work.resume-prepare/v1",
+        "status": "reconciled" if receipts else "ready",
+        "profileId": profile_id,
+        "previousProfileSuiteRoot": (
+            previous.get("profile_suite_root") if previous is not None else None
+        ),
+        "profileSuiteRoot": desired_root,
+        "profileLifecycleReceiptCount": len(receipts),
+        "writeOccurred": bool(receipts),
+    }
+
+
 def _profile_read(runtime_dir, operation, values):
     return profile_sdk.invoke_member_adapter(
         str(_profile_source()),
@@ -208,6 +268,138 @@ def _status(runtime_dir, initiative_id, assignment_id, now=""):
     result["assignment_id"] = assignment_id
     result["next_actions"] = orchestration.next_actions(result)
     return result
+
+
+def _admit_captured_assignment(
+    *,
+    request_file,
+    workspace_root,
+    home,
+    initiative_id,
+    assignment_id,
+    initiative_admission,
+    initiative_admission_stdin="",
+    actor,
+    actor_type,
+    allow_foreign_binding,
+):
+    binding = orchestration.binding_provenance(allow_foreign=allow_foreign_binding)
+    if not binding["ok"]:
+        return {
+            "schema": "kungfu.assignment-orchestration.admission/v1",
+            "ok": False,
+            "status": "degraded",
+            "admitted": False,
+            "binding": binding,
+            "next_actions": [
+                {
+                    "action": "build-core",
+                    "command": "./shifu build:core",
+                    "description": "Assemble pykungfu from the current checkout",
+                }
+            ],
+        }
+    captured = orchestration.load_captured_request(request_file)
+    promoted = None
+    if initiative_admission:
+        promoted = orchestration.load_initiative_admission(
+            initiative_admission, stdin_text=initiative_admission_stdin
+        )
+    projected = orchestration.atlas_assignment_projection(
+        captured,
+        initiative_id=initiative_id,
+        assignment_id=assignment_id,
+        initiative_admission=promoted,
+    )
+    identity, runtime_dir, workspace_receipt = _runtime(workspace_root, home)
+    lifecycle = _ensure_profile(runtime_dir, actor)
+    initiative_receipt = None
+    if not projected["initiative_ref"]:
+        initiative_receipt = _profile_action(
+            runtime_dir,
+            "create-initiative",
+            {
+                "initiativeId": projected["initiative_id"],
+                "title": projected["initiative_title"],
+                "intent": projected["initiative_intent"],
+                "actor": actor,
+                "actorType": actor_type,
+                "status": "active",
+                "horizon": "long-term",
+                "sourceIdentity": projected["initiative_source_identity"],
+            },
+            actor,
+        )
+    assignment_receipt = _profile_action(
+        runtime_dir,
+        "create-assignment",
+        {
+            "initiativeId": projected["initiative_id"],
+            "assignmentId": projected["assignment_id"],
+            "title": projected["title"],
+            "objective": projected["objective"],
+            "actor": actor,
+            "actorType": actor_type,
+            # The Initiative above is created under Kungfu-native authority.
+            # Select that same source family when linking the Assignment;
+            # capture roots preserve the Atlas request provenance.
+            "source": "kungfu",
+            "status": "active",
+            "parentAssignmentId": projected["parent_assignment_id"],
+            "dependsOn": projected["depends_on"],
+            "owningWorkspaceIdentityRoot": identity.identity_root,
+            "initiativeRef": projected["initiative_ref"],
+            "parentAssignmentRef": projected["parent_assignment_ref"],
+            "dependencyRefs": projected["dependency_refs"],
+            "responsibility": projected["responsibility"],
+            "acceptanceRoot": "",
+            "atlasRoot": "",
+            "contextBinding": projected["context_binding"],
+            "projectCutRoot": projected["project_cut_root"],
+            "evidenceEpisodeRoots": projected["evidence_episode_roots"],
+            "requestRoot": projected["request_root"],
+            "captureReceiptRoots": projected["capture_receipt_roots"],
+            "workDefinition": projected["work_definition"],
+        },
+        actor,
+    )
+    status = _status(
+        runtime_dir, projected["initiative_id"], projected["assignment_id"]
+    )
+    dogfood_receipts = [
+        dogfood_api.consider_assignment(
+            runtime_dir,
+            workspace_root=identity.workspace_root or "",
+            home=home,
+            assignment=status["assignment"],
+            stage=stage,
+            actor=actor,
+        )
+        for stage in ("design", "admission")
+    ]
+    # Dogfood is a separate Domain Profile. Its lifecycle reconciliation may
+    # change which exact Profile root is active, so restore Work Control before
+    # returning to the Assignment orchestration path.
+    _ensure_profile(runtime_dir, actor)
+    return {
+        "schema": "kungfu.assignment-orchestration.admission/v1",
+        "ok": True,
+        "status": "admitted",
+        "admitted": True,
+        "binding": binding,
+        "workspace": identity.as_dict(),
+        "workspace_receipt": workspace_receipt,
+        "request_root": projected["request_root"],
+        "capture_receipt_roots": projected["capture_receipt_roots"],
+        "initiative_receipt": initiative_receipt,
+        "assignment_receipt": assignment_receipt,
+        "dogfood_consideration_roots": [
+            row["consideration"]["receipt_root"] for row in dogfood_receipts
+        ],
+        "profile_lifecycle_receipt_count": len(lifecycle),
+        "phase": status["phase"],
+        "next_actions": status["next_actions"],
+    }
 
 
 @assignment.command(help="capture one canonical request without runtime admission")
@@ -270,130 +462,737 @@ def admit(
     allow_foreign_binding,
 ):
     def operation():
-        binding = orchestration.binding_provenance(allow_foreign=allow_foreign_binding)
-        if not binding["ok"]:
-            _emit(
-                {
-                    "schema": "kungfu.assignment-orchestration.admission/v1",
-                    "ok": False,
-                    "status": "degraded",
-                    "admitted": False,
-                    "binding": binding,
-                    "next_actions": [
-                        {
-                            "action": "build-core",
-                            "command": "./shifu build:core",
-                            "description": "Assemble pykungfu from the current checkout",
-                        }
-                    ],
-                }
-            )
-            raise click.exceptions.Exit(3)
-        captured = orchestration.load_captured_request(request_file)
-        promoted = None
+        initiative_admission_stdin = ""
         if initiative_admission:
-            stdin_text = (
+            initiative_admission_stdin = (
                 click.get_text_stream("stdin").read()
                 if initiative_admission == "-"
                 else ""
             )
-            promoted = orchestration.load_initiative_admission(
-                initiative_admission, stdin_text=stdin_text
-            )
-        projected = orchestration.atlas_assignment_projection(
-            captured,
+        return _admit_captured_assignment(
+            request_file=request_file,
+            workspace_root=workspace_root,
+            home=home,
             initiative_id=initiative_id,
             assignment_id=assignment_id,
-            initiative_admission=promoted,
+            initiative_admission=initiative_admission,
+            initiative_admission_stdin=initiative_admission_stdin,
+            actor=actor,
+            actor_type=actor_type,
+            allow_foreign_binding=allow_foreign_binding,
         )
-        identity, runtime_dir, workspace_receipt = _runtime(workspace_root, home)
-        lifecycle = _ensure_profile(runtime_dir, actor)
-        initiative_receipt = None
-        if not projected["initiative_ref"]:
-            initiative_receipt = _profile_action(
-                runtime_dir,
-                "create-initiative",
-                {
-                    "initiativeId": projected["initiative_id"],
-                    "title": projected["initiative_title"],
-                    "intent": projected["initiative_intent"],
-                    "actor": actor,
-                    "actorType": actor_type,
-                    "status": "active",
-                    "horizon": "long-term",
-                    "sourceIdentity": projected["initiative_source_identity"],
-                },
-                actor,
-            )
-        assignment_receipt = _profile_action(
-            runtime_dir,
-            "create-assignment",
-            {
-                "initiativeId": projected["initiative_id"],
-                "assignmentId": projected["assignment_id"],
-                "title": projected["title"],
-                "objective": projected["objective"],
-                "actor": actor,
-                "actorType": actor_type,
-                # The Initiative above is created under Kungfu-native authority.
-                # Select that same source family when linking the Assignment;
-                # capture roots preserve the Atlas request provenance.
-                "source": "kungfu",
-                "status": "active",
-                "parentAssignmentId": projected["parent_assignment_id"],
-                "dependsOn": projected["depends_on"],
-                "owningWorkspaceIdentityRoot": identity.identity_root,
-                "initiativeRef": projected["initiative_ref"],
-                "parentAssignmentRef": projected["parent_assignment_ref"],
-                "dependencyRefs": projected["dependency_refs"],
-                "responsibility": projected["responsibility"],
-                "acceptanceRoot": "",
-                "atlasRoot": "",
-                "contextBinding": projected["context_binding"],
-                "projectCutRoot": projected["project_cut_root"],
-                "evidenceEpisodeRoots": projected["evidence_episode_roots"],
-                "requestRoot": projected["request_root"],
-                "captureReceiptRoots": projected["capture_receipt_roots"],
-                "workDefinition": projected["work_definition"],
-            },
-            actor,
-        )
-        status = _status(
-            runtime_dir, projected["initiative_id"], projected["assignment_id"]
-        )
-        dogfood_receipts = [
-            dogfood_api.consider_assignment(
-                runtime_dir,
-                workspace_root=identity.workspace_root or "",
-                home=home,
-                assignment=status["assignment"],
-                stage=stage,
-                actor=actor,
-            )
-            for stage in ("design", "admission")
-        ]
-        return {
-            "schema": "kungfu.assignment-orchestration.admission/v1",
-            "ok": True,
-            "status": "admitted",
-            "admitted": True,
-            "binding": binding,
-            "workspace": identity.as_dict(),
-            "workspace_receipt": workspace_receipt,
-            "request_root": projected["request_root"],
-            "capture_receipt_roots": projected["capture_receipt_roots"],
-            "initiative_receipt": initiative_receipt,
-            "assignment_receipt": assignment_receipt,
-            "dogfood_consideration_roots": [
-                row["consideration"]["receipt_root"] for row in dogfood_receipts
-            ],
-            "profile_lifecycle_receipt_count": len(lifecycle),
-            "phase": status["phase"],
-            "next_actions": status["next_actions"],
-        }
 
     result = _run(operation)
     if result is not None:
+        _emit(result)
+        if result.get("ok") is not True:
+            raise click.exceptions.Exit(3)
+
+
+def _work_start_plan(
+    *,
+    config_home,
+    runtime_home,
+    request_file,
+    workspace_root,
+    home,
+    initiative_id,
+    assignment_id,
+    profile_id,
+    actor,
+    allow_foreign_binding,
+):
+    return assignment_review.build_plan(
+        config_home=config_home,
+        runtime_home=runtime_home,
+        request_file=request_file,
+        workspace_root=workspace_root,
+        home=home,
+        initiative_id=initiative_id,
+        assignment_id=assignment_id,
+        profile_id=profile_id,
+        actor=actor,
+        allow_foreign_binding=allow_foreign_binding,
+        profile_source=_profile_source,
+        status_reader=_status,
+    )
+
+
+_work_start_phase_plan = assignment_review.phase_plan
+_project_work_prompt = assignment_review.project_prompt
+_work_start_receipt = assignment_review.receipt
+_admission_summary = assignment_review.admission_summary
+_claim_summary = assignment_review.claim_summary
+_kickoff_summary = assignment_review.kickoff_summary
+_agent_report_summary = assignment_review.agent_report_summary
+_project_review_evidence = assignment_evidence.project_review_evidence
+
+
+_EVIDENCE_SERVICES = assignment_evidence.EvidenceServices(
+    runtime=_assignment_runtime,
+    status=_status,
+    receipt=_work_start_receipt,
+    agent_report_summary=_agent_report_summary,
+)
+
+
+@assignment.command(
+    name="start-plan",
+    help="preview admission, lease, kickoff, and one bound Agent run",
+)
+@click.argument(
+    "request_file", type=click.Path(exists=True, dir_okay=False, path_type=Path)
+)
+@click.option("--workspace", "workspace_root", type=click.Path(file_okay=False))
+@click.option("--home", is_flag=True)
+@click.option("--initiative-id", default="")
+@click.option("--assignment-id", default="")
+@click.option("--agent", "profile_id", required=True)
+@click.option("--actor", default="local-user", show_default=True)
+@click.option(
+    "--allow-foreign-binding",
+    is_flag=True,
+    help="development/testing override; retained as degraded provenance",
+)
+@assignment_context
+def start_plan(
+    ctx,
+    request_file,
+    workspace_root,
+    home,
+    initiative_id,
+    assignment_id,
+    profile_id,
+    actor,
+    allow_foreign_binding,
+):
+    _emit(
+        _run(
+            lambda: _work_start_plan(
+                config_home=ctx.config_home,
+                runtime_home=ctx.home,
+                request_file=request_file,
+                workspace_root=workspace_root,
+                home=home,
+                initiative_id=initiative_id,
+                assignment_id=assignment_id,
+                profile_id=profile_id,
+                actor=actor,
+                allow_foreign_binding=allow_foreign_binding,
+            )
+        )
+    )
+
+
+@assignment.command(
+    name="start",
+    help="admit, lease, kickoff, and launch one Agent from an exact plan",
+)
+@click.argument(
+    "request_file", type=click.Path(exists=True, dir_okay=False, path_type=Path)
+)
+@click.option("--workspace", "workspace_root", type=click.Path(file_okay=False))
+@click.option("--home", is_flag=True)
+@click.option("--initiative-id", default="")
+@click.option("--assignment-id", default="")
+@click.option("--agent", "profile_id", required=True)
+@click.option("--actor", default="local-user", show_default=True)
+@click.option("--expected-plan-root", required=True)
+@click.option("--execute", is_flag=True)
+@click.option("--events-json", is_flag=True)
+@click.option(
+    "--allow-foreign-binding",
+    is_flag=True,
+    help="development/testing override; retained as degraded provenance",
+)
+@assignment_context
+@surface(id="kungfu.work.start")
+def start_work(
+    ctx,
+    request_file,
+    workspace_root,
+    home,
+    initiative_id,
+    assignment_id,
+    profile_id,
+    actor,
+    expected_plan_root,
+    execute,
+    events_json,
+    allow_foreign_binding,
+    emit_result=True,
+):
+    event_index = 0
+
+    def event(stage, status, text, root=None, activity=None):
+        nonlocal event_index
+        event_index += 1
+        payload = {
+            "schema": "kungfu.work-start.event/v1",
+            "index": event_index,
+            "stage": stage,
+            "status": status,
+            "text": text,
+            "root": root,
+        }
+        if activity is not None:
+            payload["activity"] = dict(activity)
+        if events_json:
+            click.echo(json.dumps(payload, sort_keys=True))
+            click.get_text_stream("stdout").flush()
+
+    services = assignment_start.StartServices(
+        plan=_work_start_plan,
+        receipt=_work_start_receipt,
+        status=_status,
+        admit=_admit_captured_assignment,
+        admission_summary=_admission_summary,
+        profile_action=_profile_action,
+        claim_summary=_claim_summary,
+        advance=_advance,
+        kickoff_summary=_kickoff_summary,
+        project_prompt=_project_work_prompt,
+        agent_report_summary=_agent_report_summary,
+    )
+    request = assignment_start.StartRequest(
+        config_home=ctx.config_home,
+        runtime_home=ctx.home,
+        request_file=request_file,
+        workspace_root=workspace_root,
+        home=home,
+        initiative_id=initiative_id,
+        assignment_id=assignment_id,
+        profile_id=profile_id,
+        actor=actor,
+        expected_plan_root=expected_plan_root,
+        execute=execute,
+        allow_foreign_binding=allow_foreign_binding,
+    )
+    result = assignment_start.execute(request, services, event)
+    if emit_result:
+        if events_json:
+            click.echo(json.dumps(result, sort_keys=True))
+        else:
+            _emit(result)
+    return result
+
+
+@assignment.command(
+    name="resume-prepare",
+    help="reconcile the exact Work Control Profile before product resume",
+    hidden=True,
+)
+@click.option("--workspace", "workspace_root", type=click.Path(file_okay=False))
+@click.option("--home", is_flag=True)
+@click.option("--actor", default="kungfu-product", show_default=True)
+@click.option("--execute", is_flag=True)
+@assignment_context
+def resume_prepare(
+    ctx,
+    workspace_root,
+    home,
+    actor,
+    execute,
+):
+    del ctx
+
+    def operation():
+        if not execute:
+            raise ValueError("resume-prepare requires explicit --execute")
+        identity, runtime_dir, _ = _runtime(
+            workspace_root,
+            home,
+            "read-only",
+        )
+        return {
+            **_prepare_resume_profile(runtime_dir, actor),
+            "workspace": identity.as_dict(),
+        }
+
+    _emit(_run(operation))
+
+
+@assignment.command(
+    name="start-resume",
+    help="resume the latest retained Starter Agent run without writing",
+)
+@click.option("--workspace", "workspace_root", type=click.Path(file_okay=False))
+@click.option("--home", is_flag=True)
+@click.option("--initiative-id", required=True)
+@click.option("--assignment-id", required=True)
+@assignment_context
+@surface(id="kungfu.work.start.resume")
+def start_resume(
+    ctx,
+    workspace_root,
+    home,
+    initiative_id,
+    assignment_id,
+):
+    del ctx
+    _emit(
+        _run(
+            lambda: assignment_evidence.resume_starter_work(
+                workspace_root=workspace_root,
+                home=home,
+                initiative_id=initiative_id,
+                assignment_id=assignment_id,
+                services=_EVIDENCE_SERVICES,
+            )
+        )
+    )
+
+
+def _reviewer_read_only_safe(reviewer):
+    return reviewer.get("provider") == "codex" or (
+        reviewer.get("provider") == "synthetic"
+        and reviewer.get("id") == "kungfu.mock-agent.review-fit"
+        and reviewer.get("source") == "qualification"
+    )
+
+
+def _work_review_plan(
+    *,
+    config_home,
+    runtime_home,
+    agent_report_file,
+    workspace_root,
+    home,
+    initiative_id,
+    assignment_id,
+    reviewer_profile_id,
+    allow_foreign_binding,
+):
+    identity, runtime_dir, _ = _runtime(workspace_root, home, "read-only")
+    status_value = _status(runtime_dir, initiative_id, assignment_id)
+    if status_value["phase"] not in {
+        "executing",
+        "stage-ready",
+        "completion-claimed",
+    }:
+        raise ValueError(
+            "independent review settlement requires executing, stage-ready, or "
+            f"completion-claimed Work, got {status_value['phase']}"
+        )
+    report_path, execution_report = assignment_evidence.load_execution_agent_report(
+        agent_report_file,
+        runtime_dir,
+        initiative_id,
+        assignment_id,
+    )
+    reviewer, selection = run_agent.select_profile(
+        reviewer_profile_id,
+        config_home=config_home,
+        runtime_home=runtime_home,
+    )
+    verification = run_agent.runtime_profiles.verify_profile(reviewer)
+    binding = orchestration.binding_provenance(allow_foreign=allow_foreign_binding)
+    workspace = Path(identity.workspace_root or "").resolve()
+    work_definition = status_value["assignment"]["work_definition"]
+    evidence = assignment_evidence.project_review_evidence(
+        workspace,
+        report_path,
+        work_definition,
+    )
+    acceptance_checks = list(work_definition.get("acceptance_criteria") or [])
+    if not acceptance_checks:
+        raise ValueError("Assignment has no acceptance criteria to review")
+    stable_verification = {
+        "ok": verification["ok"],
+        "available": verification["available"],
+        "version": verification["version"],
+        "error": verification["error"],
+    }
+    reviewer_safe = _reviewer_read_only_safe(reviewer)
+    body = {
+        "schema": "kungfu.work-review.plan/v1",
+        "workspace": {
+            "id": identity.workspace_id,
+            "root": str(workspace),
+            "identityRoot": identity.identity_root,
+        },
+        "work": {
+            "initiativeId": initiative_id,
+            "assignmentId": assignment_id,
+            "phase": status_value["phase"],
+            "queryProofRoot": status_value["query_proof_root"],
+            "assignmentRoot": orchestration.semantic_root(status_value["assignment"]),
+            "workDefinitionRoot": status_value["assignment"]["work_definition_root"],
+            "acceptanceChecks": acceptance_checks,
+        },
+        "deliverable": evidence["primary"],
+        "inputs": evidence["supporting"],
+        "evidenceMode": evidence["mode"],
+        "execution": {
+            "reportPath": str(report_path),
+            "reportRoot": execution_report["reportRoot"],
+            "runId": execution_report["runId"],
+            "episodeId": execution_report["episode"]["episodeId"],
+            "agent": execution_report["runtimeProfile"],
+            "workRef": execution_report["work"]["workRef"],
+        },
+        "reviewer": {
+            "id": reviewer["id"],
+            "label": reviewer["label"],
+            "provider": reviewer["provider"],
+            "profileRoot": run_agent.canonical_root(reviewer),
+            "selection": selection,
+            "verification": stable_verification,
+            "permissionMode": "read-only" if reviewer_safe else "unsupported",
+            "priorTranscriptBytes": 0,
+        },
+        "admissionBinding": {
+            "ok": binding["ok"],
+            "state": binding["state"],
+            "override": binding["override"],
+            "provenanceRoot": binding["provenance_root"],
+            "sourceRevision": binding["source_revision"],
+        },
+        "skippedEffects": [
+            "continuation-decision",
+            "git-commit",
+            "git-push",
+            "publication",
+        ],
+        "confirmationRequired": True,
+        "executable": bool(
+            binding["ok"] and stable_verification["ok"] and reviewer_safe
+        ),
+        "writeOccurred": False,
+    }
+    retained = _find_retained_reviewer_evidence(runtime_dir, body)
+    body["reviewExecution"] = (
+        {
+            "mode": "retained-evidence",
+            "reportPath": retained["reportPath"],
+            "reportRoot": retained["report"]["reportRoot"],
+            "runId": retained["report"]["runId"],
+            "episodeId": retained["report"]["episode"]["episodeId"],
+            "reviewCut": retained["report"]["work"]["workRef"]["systemTimeCut"],
+            "assessmentRoot": orchestration.semantic_root(retained["assessment"]),
+        }
+        if retained is not None
+        else {
+            "mode": "fresh-process",
+            "reportPath": None,
+            "reportRoot": None,
+            "runId": None,
+            "episodeId": None,
+            "reviewCut": None,
+            "assessmentRoot": None,
+        }
+    )
+    body["reviewer"]["freshProcess"] = retained is None  # type: ignore[index]
+    effects = []
+    if retained is None:
+        effects.extend(
+            [
+                {
+                    "stage": "run",
+                    "label": "Launch one fresh reviewer in a read-only project sandbox",
+                },
+                {
+                    "stage": "assess",
+                    "label": "Check every acceptance criterion against retained sources",
+                },
+            ]
+        )
+    else:
+        effects.append(
+            {
+                "stage": "reuse",
+                "label": "Reuse the exact retained passing review without rerunning the Agent",
+            }
+        )
+    if status_value["phase"] == "executing":
+        effects.extend(
+            [
+                {
+                    "stage": "lease",
+                    "label": "Mint a new two-hour lease for bounded review settlement",
+                },
+                {
+                    "stage": "stage",
+                    "label": "Record stage-ready only when every criterion passes",
+                },
+            ]
+        )
+    if status_value["phase"] in {"executing", "stage-ready"}:
+        effects.append(
+            {
+                "stage": "claim",
+                "label": "Publish a proof-bound completion claim by local-user",
+            }
+        )
+    effects.append(
+        {
+            "stage": "review",
+            "label": "Record the reviewer as native independent review",
+        }
+    )
+    body["effects"] = effects
+    return {**body, "planRoot": orchestration.semantic_root(body)}
+
+
+def _find_retained_reviewer_evidence(runtime_dir, plan):
+    expected_prompt_root = run_agent.canonical_root(
+        assignment_review.review_agent_prompt(plan)
+    )
+    reports = sorted(
+        (Path(runtime_dir) / "agent-runs").glob("*/bundle/report.json"),
+        key=lambda path: path.stat().st_mtime_ns,
+        reverse=True,
+    )
+    for report_path in reports:
+        try:
+            _, report = assignment_evidence.load_execution_agent_report(
+                report_path,
+                runtime_dir,
+                plan["work"]["initiativeId"],
+                plan["work"]["assignmentId"],
+            )
+            work_ref = report["work"]["workRef"]
+            runtime_profile = report["runtimeProfile"]
+            launch = report["launch"]
+            privacy = report["privacy"]
+            argv = list(launch.get("argvWithoutPrompt") or [])
+            read_only_launch = launch.get("permissionMode") == "read-only" or (
+                "--sandbox" in argv and "read-only" in argv
+            )
+            if (
+                work_ref.get("workspaceId") != plan["workspace"]["id"]
+                or work_ref.get("profileId") != "kungfu.work-control"
+                or work_ref.get("profileRoot")
+                != plan["execution"]["workRef"]["profileRoot"]
+                or work_ref.get("entityRoot") != plan["work"]["assignmentRoot"]
+                or work_ref.get("purpose") != "independent-completion-review"
+                or runtime_profile.get("id") != plan["reviewer"]["id"]
+                or runtime_profile.get("root") != plan["reviewer"]["profileRoot"]
+                or launch.get("cwd") != plan["workspace"]["root"]
+                or launch.get("promptRoot") != expected_prompt_root
+                or not read_only_launch
+                or privacy.get("priorTranscriptBytesGivenToAgent") != 0
+                or privacy.get("privateProviderSessionStoreRead") is not False
+            ):
+                continue
+            assessment = assignment_review.parse_reviewer_result(
+                report, plan["work"]["acceptanceChecks"]
+            )
+            if assessment["verdict"] != "fit":
+                continue
+        except (KeyError, OSError, ValueError, json.JSONDecodeError):
+            continue
+        return {
+            "reportPath": str(report_path),
+            "report": report,
+            "assessment": assessment,
+        }
+    return None
+
+
+def _mint_review_settlement_lease(runtime_dir, plan, actor):
+    lease_id = f"work-review-{uuid.uuid4().hex}"
+    lease_expires_at = (
+        (datetime.now(UTC) + timedelta(hours=2)).isoformat().replace("+00:00", "Z")
+    )
+    agent = plan["execution"]["agent"]
+    return _profile_action(
+        runtime_dir,
+        "claim-assignment",
+        {
+            "initiativeId": plan["work"]["initiativeId"],
+            "assignmentId": plan["work"]["assignmentId"],
+            "owner": actor,
+            "agent": agent["id"],
+            "slot": f"starter-{agent['provider']}",
+            "leaseId": lease_id,
+            "leaseExpiresAt": lease_expires_at,
+            "authorizedBy": actor,
+            "grantScope": "assignment-execution",
+            "actorType": "user",
+            "source": "kungfu",
+        },
+        actor,
+    )
+
+
+def _native_completion_review_values(plan, reviewer_report):
+    return {
+        "initiativeId": plan["work"]["initiativeId"],
+        "assignmentId": plan["work"]["assignmentId"],
+        "reviewer": plan["reviewer"]["id"],
+        "reviewerSource": reviewer_report["runId"],
+        "source": "kungfu",
+        "purpose": "handoff",
+        "cutSystemTime": 0,
+        # This selects how the native assessment itself executes. The external
+        # reviewer identity is carried separately by reviewer/reviewerSource.
+        "executorProfile": "thread",
+        "proposedFollowups": [],
+        # Starter Projects deliberately do not initialize Git. Their sealed
+        # Agent Episodes and proof roots are the completion evidence.
+        "checkoutPath": "",
+    }
+
+
+def _native_completion_claim_values(plan, reviewer_report, assessment):
+    return {
+        "initiativeId": plan["work"]["initiativeId"],
+        "assignmentId": plan["work"]["assignmentId"],
+        "statement": assessment["summary"],
+        "actor": "local-user",
+        "actorType": "user",
+        "source": "kungfu",
+        "evidenceEpisodeIds": [
+            int(plan["execution"]["episodeId"]),
+            int(reviewer_report["episode"]["episodeId"]),
+        ],
+        "assignmentSet": [plan["work"]["assignmentId"]],
+        "acceptanceRoot": plan["work"]["workDefinitionRoot"],
+        # Native Assignment evidence is carried by sealed Episodes and proof
+        # roots. Atlas and Project Cut roots belong only to legacy authority.
+        "proofRoots": [
+            plan["execution"]["reportRoot"],
+            reviewer_report["reportRoot"],
+            plan["deliverable"]["root"],
+        ],
+        "knownGaps": [],
+        "evidenceAvailability": [
+            {
+                "acceptance": criterion,
+                "level": "full",
+                "state": "available",
+            }
+            for criterion in plan["work"]["acceptanceChecks"]
+        ],
+    }
+
+
+@assignment.command(
+    name="review-agent-plan",
+    help="preview a fresh read-only Agent review and native completion review",
+)
+@click.argument(
+    "agent_report_file",
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+)
+@click.option("--workspace", "workspace_root", type=click.Path(file_okay=False))
+@click.option("--home", is_flag=True)
+@click.option("--initiative-id", required=True)
+@click.option("--assignment-id", required=True)
+@click.option("--reviewer", "reviewer_profile_id", required=True)
+@click.option("--allow-foreign-binding", is_flag=True)
+@assignment_context
+def review_agent_plan(
+    ctx,
+    agent_report_file,
+    workspace_root,
+    home,
+    initiative_id,
+    assignment_id,
+    reviewer_profile_id,
+    allow_foreign_binding,
+):
+    _emit(
+        _run(
+            lambda: _work_review_plan(
+                config_home=ctx.config_home,
+                runtime_home=ctx.home,
+                agent_report_file=agent_report_file,
+                workspace_root=workspace_root,
+                home=home,
+                initiative_id=initiative_id,
+                assignment_id=assignment_id,
+                reviewer_profile_id=reviewer_profile_id,
+                allow_foreign_binding=allow_foreign_binding,
+            )
+        )
+    )
+
+
+@assignment.command(
+    name="review-agent-run",
+    help="run one exact fresh Agent review and submit passing native evidence",
+)
+@click.argument(
+    "agent_report_file",
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+)
+@click.option("--workspace", "workspace_root", type=click.Path(file_okay=False))
+@click.option("--home", is_flag=True)
+@click.option("--initiative-id", required=True)
+@click.option("--assignment-id", required=True)
+@click.option("--reviewer", "reviewer_profile_id", required=True)
+@click.option("--expected-plan-root", required=True)
+@click.option("--execute", is_flag=True)
+@click.option("--events-json", is_flag=True)
+@click.option("--allow-foreign-binding", is_flag=True)
+@assignment_context
+@surface(id="kungfu.work.review.agent.run")
+def review_agent_run(
+    ctx,
+    agent_report_file,
+    workspace_root,
+    home,
+    initiative_id,
+    assignment_id,
+    reviewer_profile_id,
+    expected_plan_root,
+    execute,
+    events_json,
+    allow_foreign_binding,
+):
+    event_index = 0
+
+    def event(stage, status, text, root=None, activity=None):
+        nonlocal event_index
+        event_index += 1
+        value = {
+            "schema": "kungfu.work-review.event/v1",
+            "index": event_index,
+            "stage": stage,
+            "status": status,
+            "text": text,
+            "root": root,
+        }
+        if activity is not None:
+            value["activity"] = activity
+        if events_json:
+            click.echo(json.dumps(value, sort_keys=True))
+            click.get_text_stream("stdout").flush()
+
+    services = assignment_review_lifecycle.ReviewServices(
+        plan=_work_review_plan,
+        receipt=_work_start_receipt,
+        runtime=_assignment_runtime,
+        retained_evidence=_find_retained_reviewer_evidence,
+        agent_report_summary=_agent_report_summary,
+        status=_status,
+        mint_lease=_mint_review_settlement_lease,
+        advance=_advance,
+        completion_claim_values=_native_completion_claim_values,
+        profile_action=_profile_action,
+        completion_review_values=_native_completion_review_values,
+    )
+    request = assignment_review_lifecycle.ReviewRequest(
+        config_home=ctx.config_home,
+        runtime_home=ctx.home,
+        agent_report_file=agent_report_file,
+        workspace_root=workspace_root,
+        home=home,
+        initiative_id=initiative_id,
+        assignment_id=assignment_id,
+        reviewer_profile_id=reviewer_profile_id,
+        expected_plan_root=expected_plan_root,
+        execute=execute,
+        allow_foreign_binding=allow_foreign_binding,
+    )
+    result = assignment_review_lifecycle.execute(
+        request, services, event, lambda: event_index
+    )
+    if events_json:
+        click.echo(json.dumps(result, sort_keys=True))
+    else:
         _emit(result)
 
 
@@ -485,6 +1284,102 @@ def _identity_options(function):
     return function
 
 
+_CLOSE_SERVICES = assignment_close.CloseServices(
+    runtime=_assignment_runtime,
+    status=_status,
+    receipt=_work_start_receipt,
+    ensure_profile=_ensure_profile,
+    profile_action=_profile_action,
+)
+
+
+@assignment.command(
+    name="close-resume",
+    help="restore reviewed or closed Starter Work without writing",
+)
+@_identity_options
+@assignment_context
+def close_resume(
+    ctx,
+    workspace_root,
+    home,
+    initiative_id,
+    assignment_id,
+):
+    del ctx
+    _emit(
+        _run(
+            lambda: assignment_close.resume(
+                workspace_root=workspace_root,
+                home=home,
+                initiative_id=initiative_id,
+                assignment_id=assignment_id,
+                services=_CLOSE_SERVICES,
+            )
+        )
+    )
+
+
+@assignment.command(
+    name="close-plan",
+    help="preview the explicit reviewed-Work close decision and portable seal",
+)
+@_identity_options
+@assignment_context
+def close_plan(
+    ctx,
+    workspace_root,
+    home,
+    initiative_id,
+    assignment_id,
+):
+    del ctx
+    _emit(
+        _run(
+            lambda: assignment_close.build_plan(
+                workspace_root=workspace_root,
+                home=home,
+                initiative_id=initiative_id,
+                assignment_id=assignment_id,
+                services=_CLOSE_SERVICES,
+            )
+        )
+    )
+
+
+@assignment.command(
+    name="close",
+    help="confirm reviewed Work as closed and write its portable sealed state",
+)
+@_identity_options
+@click.option("--actor", default="local-user")
+@click.option("--expected-plan-root", required=True)
+@click.option("--execute", is_flag=True)
+@assignment_context
+def close_work(
+    ctx,
+    workspace_root,
+    home,
+    initiative_id,
+    assignment_id,
+    actor,
+    expected_plan_root,
+    execute,
+):
+    del ctx
+    services = _CLOSE_SERVICES
+    request = assignment_close.CloseRequest(
+        workspace_root=workspace_root,
+        home=home,
+        initiative_id=initiative_id,
+        assignment_id=assignment_id,
+        actor=actor,
+        expected_plan_root=expected_plan_root,
+        execute=execute,
+    )
+    _emit(_run(lambda: assignment_close.execute(request, services)))
+
+
 @assignment.command(
     name="claim", help="claim execution with a bounded owner/agent lease"
 )
@@ -516,6 +1411,7 @@ def claim(
     def operation():
         _, runtime_dir, _ = _runtime(workspace_root, home)
         _ensure_profile(runtime_dir, authorized_by)
+        run_agent.bind_current_native_work(runtime_dir, initiative_id, assignment_id)
         receipt = _profile_action(
             runtime_dir,
             "claim-assignment",
@@ -544,6 +1440,8 @@ def _advance(
 ):
     identity, runtime_dir, _ = _runtime(workspace_root, home)
     _ensure_profile(runtime_dir, actor)
+    if to_phase == "executing":
+        run_agent.bind_current_native_work(runtime_dir, initiative_id, assignment_id)
     current = _status(runtime_dir, initiative_id, assignment_id)
     dogfood_receipt = None
     if to_phase == "executing":
@@ -555,6 +1453,9 @@ def _advance(
             stage="kickoff",
             actor=actor,
         )
+        # The Dogfood Profile is independent of Work Control. Re-establish the
+        # exact Work Control root before invoking its member adapter.
+        _ensure_profile(runtime_dir, actor)
     receipt = _profile_action(
         runtime_dir,
         "advance-assignment",

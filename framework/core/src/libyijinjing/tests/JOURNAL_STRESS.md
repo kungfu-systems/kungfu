@@ -25,8 +25,9 @@ A single real writer process and several real reader processes share the same
 mmap-backed journal pages:
 
 - The writer publishes self-verifying frames through the real `writer` API
-  (`write_raw_at_as`), rolling many small (2 MiB) pages so the `close_page`
-  turn-page protocol runs constantly, then a sentinel frame carrying the total.
+  with an extent-carrying frame transaction, rolling many small (2 MiB) pages
+  so the page-publication turn-page protocol runs constantly, then a sentinel
+  frame carrying the total.
 - Each reader opens the journal through the real reader (`journal` +
   `journal_open_policy::reader()`), live-tails from time 0, and content-verifies
   every observed frame.

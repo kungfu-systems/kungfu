@@ -10,10 +10,12 @@ import { test } from 'node:test';
 import {
   aggregatePlatformReceipts,
   buildPlatformReceipt,
+  buildWindowsContinuityFastReceipt,
   inspectAuditableDemoFastSentinel,
   inspectWindowsFastSentinel,
   runAlphaFastSentinel,
   verifyAggregateReceipt,
+  verifyWindowsContinuityFastReceipt,
 } from './alpha-promotion-preflight.mjs';
 
 const ROOT_FILES = [
@@ -43,6 +45,12 @@ const ROOT_FILES = [
   'scripts/alpha-release-history.mjs',
   'scripts/alpha-ruleset.mjs',
   'scripts/probe-release-platform.mjs',
+  'framework/core/src/python/kungfu/peer_lifecycle.py',
+  'framework/core/tests/python/test_peer_lifecycle.py',
+  'framework/core/tests/python/windows_continuity_sentinel.py',
+  'framework/core/tests/fixtures/peer_lifecycle_probe.py',
+  'scripts/run-shifu-lifecycle.mjs',
+  'shifu.cmd',
   'shifu.gates.json',
 ];
 const PLATFORMS = ['linux-x64', 'linux-arm64', 'macos-arm64', 'windows-x64'];
@@ -61,12 +69,64 @@ function fixture(t) {
     fs.mkdirSync(path.dirname(target), { recursive: true });
     fs.writeFileSync(target, `${file}\n`);
   }
+  fs.writeFileSync(
+    path.join(root, 'shifu.cmd'),
+    'if /i not "%~1"=="check:source" goto native\nsource-acceptance.mjs\n',
+  );
+  fs.writeFileSync(
+    path.join(root, 'scripts/run-shifu-lifecycle.mjs'),
+    [
+      'export function windowsCmdArgs() {}',
+      'windowsVerbatimArguments: true',
+      "['/d', '/s', '/c']",
+    ].join('\n'),
+  );
   git(root, 'init', '-q');
   git(root, 'config', 'user.name', 'Preflight Test');
   git(root, 'config', 'user.email', 'preflight@example.invalid');
   git(root, 'add', '.');
   git(root, '-c', 'core.hooksPath=/dev/null', 'commit', '-q', '-m', 'fixture');
   return root;
+}
+
+function continuityScenario() {
+  const phaseTimings = Object.fromEntries(
+    [
+      'initialReadiness',
+      'hostCrashAdoption',
+      'peerAdoption',
+      'staleOwnerFencing',
+      'peerRestartHealth',
+      'cleanup',
+    ].map((phase) => [phase, { durationMs: 25, deadlineMs: 10_000 }]),
+  );
+  const sample = (number) => ({
+    sample: number,
+    schema: 'kungfu.windows-continuity-fast-sentinel/v1',
+    status: 'passed',
+    phaseTimings,
+    coverage: {
+      realHostCrash: true,
+      peerAdoption: true,
+      peerRestart: true,
+      restartedHealthy: true,
+      staleOwnerFenced: true,
+      cleanupComplete: true,
+    },
+  });
+  return {
+    schema: 'kungfu.windows-continuity-fast-sentinel/v1',
+    status: 'passed',
+    platform: {
+      system: 'win32',
+      machine: 'AMD64',
+      python: '3.13.14',
+      psutil: '6.1.1',
+    },
+    sampleCount: 2,
+    samples: [sample(1), sample(2)],
+    retryPolicy: 'none; repeated samples are independent qualifications',
+  };
 }
 
 function aggregate(root, generatedAt = '2026-07-23T00:00:00.000Z') {
@@ -91,7 +151,34 @@ test('early source contracts bypass the platform-specific Shifu bootstrap', () =
   assert.doesNotMatch(workflow, /scripts\/require-shifu\.mjs/u);
   assert.match(
     workflow,
-    /node --test[\s\S]*scripts\/alpha-promotion-preflight\.test\.mjs[\s\S]*product\/scripts\/cli-surface-qualification\.test\.mjs/u,
+    /if: \$\{\{ matrix\.platform == 'linux-x64' \}\}[\s\S]*node --test[\s\S]*scripts\/alpha-promotion-preflight\.test\.mjs[\s\S]*product\/scripts\/cli-surface-qualification\.test\.mjs[\s\S]*scripts\/check-upgrade-qualification\.test\.mjs[\s\S]*scripts\/upgrade-publication-admission\.test\.mjs/u,
+  );
+  assert.equal(
+    workflow.match(/scripts\/check-upgrade-qualification\.test\.mjs/gu)?.length,
+    1,
+  );
+});
+
+test('Alpha build lanes reuse one exact-tree source receipt and emit verify substages', () => {
+  const workflow = fs.readFileSync(
+    path.join(process.cwd(), '.github/workflows/build.yml'),
+    'utf8',
+  );
+  assert.match(
+    workflow,
+    /receipt-root: \$\{\{ steps\.receipt\.outputs\.receipt-root \}\}/u,
+  );
+  assert.match(
+    workflow,
+    /source-tree: \$\{\{ steps\.receipt\.outputs\.source-tree \}\}/u,
+  );
+  assert.match(
+    workflow,
+    /cache-apply-command node scripts\/run-release-qualification\.mjs[\s\S]*--source-only-receipt-root \$\{\{ needs\.preflight\.outputs\.receipt-root \}\}[\s\S]*--source-only-source-tree \$\{\{ needs\.preflight\.outputs\.source-tree \}\}/u,
+  );
+  assert.match(
+    workflow,
+    /verify-substage-evidence-path: product\/release\/qualification\/layer-qualification-summary\.json/u,
   );
 });
 
@@ -107,18 +194,43 @@ test('automatic hosted preflight does not inherit a private Cargo mirror', () =>
   );
 });
 
-test('custom Linux-only and publish-none overflow builds do not start the macOS credential island', () => {
+test('hosted preflight retries the public mirror before the official Rust fallback', () => {
+  const workflow = fs.readFileSync(
+    path.join(process.cwd(), '.github/workflows/alpha-promotion-preflight.yml'),
+    'utf8',
+  );
+  assert.match(workflow, /RUSTUP_PRIMARY_DIST_SERVER: https:\/\/rsproxy\.cn/u);
+  assert.match(
+    workflow,
+    /RUSTUP_FALLBACK_DIST_SERVER: https:\/\/static\.rust-lang\.org/u,
+  );
+  assert.match(
+    workflow,
+    /install_toolchain[\s\S]*RUSTUP_PRIMARY_DIST_SERVER[\s\S]*3 \|\| install_toolchain[\s\S]*RUSTUP_FALLBACK_DIST_SERVER[\s\S]*1/u,
+  );
+});
+
+test('formal Build uses Buildchain official Rust defaults after exact-source preflight', () => {
   const workflow = fs.readFileSync(
     path.join(process.cwd(), '.github/workflows/build.yml'),
     'utf8',
   );
-  assert.match(
-    workflow,
-    /credential-island-macos:[\s\S]*if: \$\{\{ needs\.build\.result == 'success' && fromJSON\(inputs\.macos-overflow-request-json \|\| '\{\}'\)\.mode != 'self-hosted' && fromJSON\(inputs\.macos-overflow-request-json \|\| '\{\}'\)\.mode != 'github-hosted' && \(!inputs\.platforms-json \|\| contains\(inputs\.platforms-json, 'macos-arm64'\)\) \}\}/u,
-  );
+  assert.doesNotMatch(workflow, /rustup-dist-server:/u);
+  assert.doesNotMatch(workflow, /rustup-update-root:/u);
 });
 
-test('macOS products use Buildchain signing through the formal environment', () => {
+test('consumer workflow delegates every declared signing request to Buildchain', () => {
+  const workflow = fs.readFileSync(
+    path.join(process.cwd(), '.github/workflows/build.yml'),
+    'utf8',
+  );
+  assert.doesNotMatch(workflow, /^ {2}credential-island-macos:$/mu);
+  assert.doesNotMatch(workflow, /credential-island-macos-app-path:/u);
+  assert.doesNotMatch(workflow, /credential-island-caller-owned:/u);
+  assert.doesNotMatch(workflow, /credential-island-macos-platform-id:/u);
+});
+
+test('macOS products use Buildchain-native declarative signing', () => {
   const workflow = fs.readFileSync(
     path.join(process.cwd(), '.github/workflows/build.yml'),
     'utf8',
@@ -131,10 +243,9 @@ test('macOS products use Buildchain signing through the formal environment', () 
     workflow,
     /BUILDCHAIN_PROMOTION_TOKEN: \$\{\{ secrets\.KUNGFU_GITHUB_TOKEN \}\}/u,
   );
-  assert.match(
-    workflow,
-    /credential-island-macos:[\s\S]*name: buildchain-artifact-signing/u,
-  );
+  assert.doesNotMatch(workflow, /name: buildchain-artifact-signing/u);
+  assert.doesNotMatch(workflow, /BUILDCHAIN_MACOS_CERTIFICATE_/u);
+  assert.doesNotMatch(workflow, /BUILDCHAIN_MACOS_NOTARY_/u);
   assert.doesNotMatch(
     workflow,
     /BUILDCHAIN_MACOS_EXPECTED_BUNDLE_ID/u,
@@ -144,6 +255,10 @@ test('macOS products use Buildchain signing through the formal environment', () 
   assert.match(
     config,
     /\[\[signing\.artifacts\]\][\s\S]*id = "kungfu-cli-macos-arm64"[\s\S]*kind = "archive"[\s\S]*platforms = \["macos-arm64"\]/u,
+  );
+  assert.match(
+    config,
+    /\[\[signing\.artifacts\]\][\s\S]*id = "kungfu-desktop-macos-arm64"[\s\S]*path = "product\/dist\/desktop\/mac-arm64\/Kungfu Episodes\.app"[\s\S]*kind = "app-bundle"[\s\S]*platforms = \["macos-arm64"\][\s\S]*required = true/u,
   );
 });
 
@@ -261,6 +376,84 @@ test('current exact source passes both bounded pre-build sentinels', () => {
   assert.deepEqual(runAlphaFastSentinel('auditable-demo'), []);
 });
 
+test('Windows continuity receipt binds the exact scenario and rejects drift', (t) => {
+  const root = fixture(t);
+  const sourceSha = git(root, 'rev-parse', 'HEAD');
+  const receipt = buildWindowsContinuityFastReceipt({
+    root,
+    sourceSha,
+    platform: 'win32',
+    architecture: 'x64',
+    nativeReport: continuityScenario(),
+    nativeExitCode: 0,
+    durationMs: 250,
+  });
+
+  assert.equal(receipt.status, 'passed');
+  assert.equal(
+    verifyWindowsContinuityFastReceipt({
+      root,
+      receipt,
+      expectedSourceCommit: sourceSha,
+      expectedPlatform: 'win32',
+      expectedArchitecture: 'x64',
+    }),
+    receipt,
+  );
+  fs.appendFileSync(
+    path.join(
+      root,
+      'framework/core/tests/python/windows_continuity_sentinel.py',
+    ),
+    'drift\n',
+  );
+  assert.throws(
+    () =>
+      verifyWindowsContinuityFastReceipt({
+        root,
+        receipt,
+        expectedSourceCommit: sourceSha,
+        expectedPlatform: 'win32',
+      }),
+    /Root mismatch/u,
+  );
+});
+
+test('Windows continuity receipt fails closed for stale, partial, and non-Windows evidence', (t) => {
+  const root = fixture(t);
+  const sourceSha = git(root, 'rev-parse', 'HEAD');
+  const partial = continuityScenario();
+  partial.samples[0].coverage.restartedHealthy = false;
+  for (const [platform, claimedSha, report] of [
+    [
+      'linux',
+      sourceSha,
+      { ...continuityScenario(), platform: { system: 'linux' } },
+    ],
+    ['win32', 'f'.repeat(40), continuityScenario()],
+    ['win32', sourceSha, partial],
+  ]) {
+    const receipt = buildWindowsContinuityFastReceipt({
+      root,
+      sourceSha: claimedSha,
+      platform,
+      architecture: 'x64',
+      nativeReport: report,
+      nativeExitCode: 0,
+    });
+    assert.equal(receipt.status, 'failed');
+    assert.throws(
+      () =>
+        verifyWindowsContinuityFastReceipt({
+          root,
+          receipt,
+          expectedSourceCommit: sourceSha,
+        }),
+      /not qualifying/u,
+    );
+  }
+});
+
 test('fast sentinels fail the representative recent invalid fixtures', () => {
   const windowsIssues = inspectWindowsFastSentinel({
     shifuCmd: '@echo off\nif /i not "%~1"=="build" goto native\n',
@@ -272,17 +465,20 @@ test('fast sentinels fail the representative recent invalid fixtures', () => {
     /source gate|source-acceptance|verbatim/u,
   );
   const demoIssues = inspectAuditableDemoFastSentinel({
-    adapter: [
-      'COMPLETION_SENTINEL = re.compile(r"KUNGFU_TUI_DEMO_COMPLETE ([^\\\\r\\\\n]+)")',
-      'completion["status"] != "passed"',
-    ].join('\n'),
     workflow:
-      'uses: kungfu-systems/buildchain/.github/workflows/.auditable-demo.yml@main',
+      'uses: kungfu-systems/buildchain/.github/workflows/.declarative-auditable-demo.yml@main',
+    scenario: {
+      schema: 'buildchain.declarative-binary-demo/v1',
+      execution: { durationClass: 'standard', totalTimeoutSeconds: 60 },
+      authority: { grants: [] },
+      demos: [],
+    },
+    product: '',
   });
-  assert.ok(demoIssues.length >= 2);
+  assert.ok(demoIssues.length >= 4);
   assert.match(
     demoIssues.join('\n'),
-    /canonical completion verdict|exact Buildchain SHA/u,
+    /bounded three-demo cut|exact Buildchain SHA/u,
   );
 });
 
@@ -311,6 +507,25 @@ test('patrol, normal Alpha builds and sentinels keep one controller authority', 
   assert.match(build, /windows-fast-sentinel:[\s\S]*runs-on: windows-2025/u);
   assert.match(
     build,
+    /windows-fast-sentinel:[\s\S]*outputs:[\s\S]*receipt-root:[\s\S]*continuity-input-root:/u,
+  );
+  assert.match(
+    build,
+    /Run real Windows crash and restart continuity sentinel[\s\S]*verify-fast-sentinel/u,
+  );
+  assert.match(
+    build,
+    /KUNGFU_EXACT_SOURCE_SHA:[\s\S]*fast-sentinel --kind windows --source-commit \$env:KUNGFU_EXACT_SOURCE_SHA[\s\S]*verify-fast-sentinel[\s\S]*--source-commit \$env:KUNGFU_EXACT_SOURCE_SHA/u,
+  );
+  assert.doesNotMatch(
+    build.slice(
+      build.indexOf('  windows-fast-sentinel:'),
+      build.indexOf('  auditable-demo-fast-sentinel:'),
+    ),
+    /^\s*GITHUB_SHA:/mu,
+  );
+  assert.match(
+    build,
     /auditable-demo-fast-sentinel:[\s\S]*runs-on: ubuntu-24\.04/u,
   );
   assert.match(
@@ -319,7 +534,7 @@ test('patrol, normal Alpha builds and sentinels keep one controller authority', 
   );
   assert.match(
     build,
-    /fast-sentinels-only:[\s\S]*Run only the source-bound Windows and auditable-demo fast sentinels/u,
+    /fast-sentinels-only:[\s\S]*Run only the exact-source Windows continuity and auditable-demo fast sentinels/u,
   );
   assert.match(
     build,

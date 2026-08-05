@@ -128,6 +128,20 @@
       }
     },
     {
+      "surface": "runtime-surface",
+      "id": "kungfu-runtime-surface",
+      "schema": "kungfu.runtime-surface.contract/v1",
+      "weldedSurface": "runtime-surface-provenance",
+      "env": "KUNGFU_RUNTIME_SURFACE_CONTRACT",
+      "file": "kungfu-runtime-surface.contract.json",
+      "source": "framework/runtime/kungfu-runtime-surface.contract.json",
+      "artifact": "config/kungfu-runtime-surface.contract.json",
+      "cli": {
+        "contract": ["runtime", "surface", "contract", "--json"],
+        "schema": ["contract", "show", "runtime-surface", "--json"]
+      }
+    },
+    {
       "surface": "peer-lifecycle",
       "id": "kungfu-peer-lifecycle",
       "schema": "kungfu.runtime.peer-lifecycle-contract/v1",
@@ -183,6 +197,13 @@
       "file": "kungfu-upgrade.contract.json",
       "source": "framework/upgrade/kungfu-upgrade.contract.json",
       "artifact": "config/kungfu-upgrade.contract.json",
+      "extraArtifacts": [
+        {
+          "label": "product Release Cut profile",
+          "source": "framework/upgrade/kungfu-product-release-cut.contract.json",
+          "artifact": "config/kungfu-product-release-cut.contract.json"
+        }
+      ],
       "cli": {
         "contract": [
           "contract",
@@ -354,7 +375,7 @@
       "surface": "exit-bundle",
       "id": "kungfu-exit-bundle",
       "schema": "kungfu.exit-bundle.contract/v1",
-      "contractSchemaRoot": "sha256:9b5b525d081a0c05df32369c4dc42d3cffb31945591009d4b6cfbb669a08c6cc",
+      "contractSchemaRoot": "sha256:fb49726d937f181097224eaa80d918e71302970408be3bcf51bcdc4ba65fcb29",
       "weldedSurface": "exit-bundle-contract",
       "env": "KUNGFU_EXIT_BUNDLE_CONTRACT",
       "file": "kungfu-exit-bundle.contract.json",

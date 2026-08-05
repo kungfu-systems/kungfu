@@ -164,7 +164,7 @@ class LockClient(yjj.peer):
         # writer this peer already uses for Register/TimeRequest.
         carrier, data = wrap_event(action_type, payload)
         self.get_writer(self.get_coordinator_command_uid()).write_bytes(
-            self.now(), carrier, list(data), len(data)
+            self.now(), carrier, data
         )
 
 
@@ -206,9 +206,7 @@ def send_instruct(location, target_uid: int, text: str, timeout: float = 8.0) ->
         sender.step(0)
         time.sleep(_STEP_SLEEP)
     carrier, data = wrap_event(ACTION_INSTRUCT, instruct_payload(text))
-    sender.get_writer(target_uid).write_bytes(
-        sender.now(), carrier, list(data), len(data)
-    )
+    sender.get_writer(target_uid).write_bytes(sender.now(), carrier, data)
     for _ in range(100):
         if not sender.is_live():
             break

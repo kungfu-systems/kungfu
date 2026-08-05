@@ -7,6 +7,7 @@ import path from 'node:path';
 import { test } from 'node:test';
 
 import { parse } from 'yaml';
+import { activeProjection } from '../framework/version-line/version-line-authority.mjs';
 
 const ROOT = process.cwd();
 const BUILD_WORKFLOW = path.join(ROOT, '.github', 'workflows', 'build.yml');
@@ -23,11 +24,19 @@ const ARM_CACHE_PROFILE = path.join(
   'linux-arm64-qualification-portable-off.cache-profile.json',
 );
 
-test('Linux ARM64 qualification is isolated from the common build matrix', () => {
+test('Linux ARM64 Hub qualification remains isolated from the authority-derived product matrix', () => {
   const common = fs.readFileSync(BUILD_WORKFLOW, 'utf8');
   const arm = parse(fs.readFileSync(ARM_WORKFLOW, 'utf8'));
 
-  assert.doesNotMatch(common, /ubuntu-24\.04-arm/u);
+  assert.match(
+    common,
+    new RegExp(
+      JSON.stringify(
+        activeProjection().projection.runnerRouting.matrices.native,
+      ).replace(/[.*+?^${}()|[\]\\]/gu, '\\$&'),
+      'u',
+    ),
+  );
   assert.doesNotMatch(common, /hub-cli-linux-arm64/u);
   assert.deepEqual(Object.keys(arm.jobs), ['preflight', 'artifact']);
   assert.equal(arm.jobs.artifact.needs, 'preflight');
@@ -61,6 +70,8 @@ test('Linux ARM64 runs artifact qualification with an independent budget', () =>
     'node product/scripts/verify-cli-surface-qualification.mjs --qualification product/release/cli/kungfu-episodes-cli-linux-arm64.qualification.json --archive product/release/cli/kungfu-episodes-cli-linux-arm64.tar.gz --platform linux-arm64',
   );
   assert.equal(inputs['lifecycle-timeout-minutes'], 240);
+  assert.equal(inputs['checkout-cache-mode'], 'off');
+  assert.equal(inputs['cargo-registry-index'], undefined);
   assert.equal(
     inputs['shifu-cache-profile-ref'],
     'docs/shifu/linux-arm64-qualification-portable-off.cache-profile.json',
@@ -80,5 +91,9 @@ test('Linux ARM64 runs artifact qualification with an independent budget', () =>
   assert.doesNotMatch(
     fs.readFileSync(ARM_WORKFLOW, 'utf8'),
     /run-release-qualification/u,
+  );
+  assert.doesNotMatch(
+    fs.readFileSync(ARM_WORKFLOW, 'utf8'),
+    /BUILDCHAIN_CARGO_REGISTRY_INDEX/u,
   );
 });

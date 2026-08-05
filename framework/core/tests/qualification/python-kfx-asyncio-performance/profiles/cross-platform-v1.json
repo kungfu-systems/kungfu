@@ -1,0 +1,61 @@
+{
+  "schema": "kungfu.python-kfx-asyncio.performance-profile/v1",
+  "name": "cross-platform-v1",
+  "supported_python": ">=3.13,<3.14",
+  "platforms": [
+    { "os": "darwin", "arch": "arm64", "claim": "macOS ARM64" },
+    { "os": "linux", "arch": "x64", "claim": "Linux x64" },
+    { "os": "win32", "arch": "x64", "claim": "Windows x64" }
+  ],
+  "matrix": {
+    "concurrency": [1, 8, 64],
+    "payload_bytes": [64, 1024, 65536]
+  },
+  "sampling": {
+    "warmup_repetitions": 3,
+    "scored_repetitions": 9,
+    "operations_per_repetition": 128,
+    "soak_seconds": 30
+  },
+  "statistics": [
+    "throughput_ops_per_second",
+    "p50_microseconds",
+    "p95_microseconds",
+    "p99_microseconds",
+    "cpu_seconds",
+    "peak_rss_bytes",
+    "shutdown_milliseconds",
+    "cancelled_operations",
+    "error_operations",
+    "backpressure_peak_inflight"
+  ],
+  "required_workloads": [
+    "raw-asyncio-scheduling",
+    "journal-asyncio-bridge",
+    "python-service-process-lifecycle",
+    "async-capability-relay",
+    "bounded-relay-soak"
+  ],
+  "correctness_gate": "test:native-kfx-admission",
+  "invalidation_rules": [
+    "dirty source tree",
+    "source revision or tree cannot be resolved",
+    "profile, workload, or runner root mismatch",
+    "unsupported CPython, operating system, or architecture",
+    "Core build or correctness gate failure",
+    "missing, failed, or malformed observation",
+    "silent task, future, cancellation, timeout, error, relay, or shutdown failure",
+    "deleted or selectively excluded scored observation"
+  ],
+  "evidence_policy": {
+    "raw_observations": "retain every scored observation in emission order",
+    "outliers": "never delete or selectively exclude scored observations",
+    "thresholds": "report-only; no universal latency or throughput SLO",
+    "overlap_authority": "Single-Host Qualification owns release evidence; this profile is an exact-revision service-plane facet consumed as Gate Measurement evidence"
+  },
+  "claim_boundary": {
+    "qualified": "the observed CPython 3.13 service-plane envelope on the exact measured platform and revision",
+    "advisory": "comparisons across machines, revisions, or profiles and all reported latency, throughput, CPU, RSS, and soak values",
+    "unqualified": "journal and data-plane hot paths, Core ordering semantics, production capacity, hard real-time behavior, and any platform without retained exact-revision evidence"
+  }
+}

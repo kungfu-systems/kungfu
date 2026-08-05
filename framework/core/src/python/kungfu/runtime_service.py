@@ -8,7 +8,7 @@ import os
 import platform
 import signal
 import subprocess
-import sys
+import tempfile
 import threading
 import time
 from contextlib import contextmanager
@@ -16,11 +16,10 @@ from dataclasses import dataclass
 from hashlib import sha256
 from pathlib import Path
 from typing import Any, Mapping, Protocol
-from xml.sax.saxutils import escape as xml_escape
 
 import kungfu
 import psutil
-from kungfu import host
+from kungfu import runtime_leases, runtime_paths, runtime_service_config, runtime_state
 from kungfu.action_envelope import CARRIER_ACTION_ENVELOPE
 from kungfu.coordination import locks as coordination_locks
 from kungfu.coordination.arbiter import (
@@ -38,10 +37,7 @@ from pykungfu.runtime import coordinator as NativeCoordinator
 lf = kungfu.__binding__.yijinjing
 yjj: Any = kungfu.__binding__.runtime
 
-
 SCHEMA_STATUS = "kungfu.runtime.status/v2"
-SCHEMA_PLAN = "kungfu.runtime.service-plan/v2"
-SCHEMA_RESULT = "kungfu.runtime.service-result/v2"
 SCHEMA_ROUTES = "kungfu.runtime.routes/v2"
 SCHEMA_ASSESSMENT_SUBSCRIPTION = "kungfu.runtime.assessment-subscription/v2"
 SCHEMA_COORDINATOR_CONTINUITY = "kungfu.runtime.coordinator-continuity/v1"
@@ -51,15 +47,31 @@ LEGACY_SCHEMA_ROUTES = "kungfu.master-service.routes/v1"
 COORDINATOR_WIRE_NAMESPACE = "master"
 COORDINATOR_WIRE_NAME = "master"
 LEGACY_STATE_DIR_NAME = "master"
-SERVICE_ID = "tech.kungfu.supervisor"
-SERVICE_NAME = "Kungfu Supervisor"
 ROUTE_LEASE_TTL_SECONDS = 30.0
 RESTART_WINDOW_SECONDS = 60.0
 RESTART_MAX_ATTEMPTS = 5
 RUNTIME_IDLE_GRACE_SECONDS = 30.0
 SUPERVISOR_LIFECYCLE_LOCK = "supervisor-lifecycle"
-SUPERVISOR_ALWAYS_ON_ENV = "KF_SUPERVISOR_ALWAYS_ON"
 _SUPERVISOR_LIFECYCLE_THREAD_LOCK = threading.RLock()
+
+SCHEMA_PLAN = runtime_service_config.SCHEMA_PLAN
+SCHEMA_RESULT = runtime_service_config.SCHEMA_RESULT
+SERVICE_ID = runtime_service_config.SERVICE_ID
+SERVICE_NAME = runtime_service_config.SERVICE_NAME
+SUPERVISOR_ALWAYS_ON_ENV = runtime_service_config.SUPERVISOR_ALWAYS_ON_ENV
+ServicePlan = runtime_service_config.ServicePlan
+_shell_join = runtime_service_config._shell_join
+shlex_quote = runtime_service_config.shlex_quote
+_systemd_env_line = runtime_service_config._systemd_env_line
+_positive_generation = runtime_service_config._positive_generation
+supervisor_state_dir = runtime_service_config.supervisor_state_dir
+supervisor_log_path = runtime_service_config.supervisor_log_path
+entry_command = runtime_service_config.entry_command
+command_env = runtime_service_config.command_env
+coordinator_run_command = runtime_service_config.coordinator_run_command
+assessment_worker_command = runtime_service_config.assessment_worker_command
+run_assessment_worker = runtime_service_config.run_assessment_worker
+supervisor_command = runtime_service_config.supervisor_command
 
 
 @dataclass(frozen=True)
@@ -164,9 +176,34 @@ def _now() -> float:
 
 def _json_write(path: Path, payload: dict[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    tmp = path.with_suffix(path.suffix + ".tmp")
-    tmp.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", "utf-8")
-    os.replace(tmp, path)
+    temporary: Path | None = None
+    try:
+        with tempfile.NamedTemporaryFile(
+            mode="w",
+            encoding="utf-8",
+            newline="\n",
+            dir=path.parent,
+            prefix=f".{path.name}.",
+            suffix=".tmp",
+            delete=False,
+        ) as output:
+            temporary = Path(output.name)
+            output.write(json.dumps(payload, indent=2, sort_keys=True) + "\n")
+        replace_attempts = 20 if platform.system() == "Windows" else 1
+        for attempt in range(replace_attempts):
+            try:
+                os.replace(temporary, path)
+                return
+            except PermissionError:
+                if attempt == replace_attempts - 1:
+                    raise
+                time.sleep(0.05)
+    finally:
+        if temporary is not None:
+            try:
+                temporary.unlink()
+            except FileNotFoundError:
+                pass
 
 
 def _json_read(path: Path) -> dict[str, Any]:
@@ -264,44 +301,10 @@ def _pid_state(pid: int | None) -> str:
     return "running" if _is_pid_running(pid) else "dead"
 
 
-def _shell_join(argv: list[str]) -> str:
-    return (
-        subprocess.list2cmdline(argv)
-        if platform.system() == "Windows"
-        else " ".join(shlex_quote(arg) for arg in argv)
-    )
-
-
-def shlex_quote(value: str) -> str:
-    if not value:
-        return "''"
-    safe = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_@%+=:,./-"
-    if all(ch in safe for ch in value):
-        return value
-    return "'" + value.replace("'", "'\"'\"'") + "'"
-
-
-def _systemd_env_line(key: str, value: str) -> str:
-    escaped = value.replace("\\", "\\\\").replace('"', '\\"')
-    return f'Environment="{key}={escaped}"'
-
-
-def _canonical_path(value: str) -> str:
-    return str(Path(value).expanduser().resolve())
-
-
-def resolve_config_home(config_home: str | None = None) -> str:
-    return _canonical_path(
-        config_home or os.environ.get("KF_CONFIG_HOME") or "~/.kungfu-config"
-    )
-
-
-def resolve_runtime_home(home: str) -> str:
-    return _canonical_path(home)
-
-
-def resolve_runtime_dir(home: str, runtime_dir: str | None = None) -> str:
-    return _canonical_path(runtime_dir or str(Path(home).expanduser() / "runtime"))
+_canonical_path = runtime_paths.canonical_path
+resolve_config_home = runtime_paths.resolve_config_home
+resolve_runtime_home = runtime_paths.resolve_runtime_home
+resolve_runtime_dir = runtime_paths.resolve_runtime_dir
 
 
 def route_id(home: str, runtime_dir: str) -> str:
@@ -311,13 +314,6 @@ def route_id(home: str, runtime_dir: str) -> str:
         )
     ).hexdigest()
     return digest[:16]
-
-
-def _positive_generation(value: str | int, label: str) -> str:
-    raw = str(value)
-    if not raw.isdigit() or int(raw) <= 0 or int(raw) > (2**64 - 1):
-        raise ValueError(f"{label} must be a positive uint64")
-    return raw
 
 
 def route_record(
@@ -345,10 +341,6 @@ def route_record(
         "createdAt": now,
         "updatedAt": now,
     }
-
-
-def supervisor_state_dir(config_home: str | None = None) -> Path:
-    return Path(resolve_config_home(config_home)) / "runtime" / "supervisor"
 
 
 def supervisor_lifecycle_lock_dir(config_home: str | None = None) -> Path:
@@ -467,10 +459,6 @@ def routes_path(config_home: str | None = None) -> Path:
     return supervisor_state_dir(config_home) / "routes.json"
 
 
-def supervisor_log_path(config_home: str | None = None) -> Path:
-    return supervisor_state_dir(config_home) / "supervisor.log"
-
-
 def coordinator_log_path(runtime_dir: str) -> Path:
     return state_dir(runtime_dir) / "coordinator.log"
 
@@ -509,98 +497,6 @@ def unlink_if_exists(path: Path) -> None:
         pass
 
 
-def entry_command(runtime_image: Mapping[str, Any] | None = None) -> list[str]:
-    from kungfu import runtime_upgrade
-
-    image = runtime_image or runtime_upgrade.image_from_environment()
-    if image is None:
-        return host.entry_command()
-    if image.get("schema") == runtime_upgrade.IMAGE_SCHEMA:
-        return runtime_upgrade.pinned_entry_command(image)
-    root = Path(str(image["artifactRoot"])).expanduser().resolve()
-    entrypoint = (root / str(image["entrypoint"])).resolve()
-    if root not in entrypoint.parents or not entrypoint.is_file():
-        raise runtime_upgrade.UpgradeError(
-            "entrypoint-missing",
-            "pinned runtime entrypoint is missing or escapes the image root",
-        )
-    return [str(entrypoint)]
-
-
-def command_env(
-    home: str,
-    runtime_dir: str,
-    log_level: str,
-    config_home: str | None = None,
-    runtime_generation: str | int | None = None,
-    runtime_image: Mapping[str, Any] | None = None,
-) -> dict[str, str]:
-    env = dict(os.environ)
-    env["KF_HOME"] = home
-    env["KF_RUNTIME_DIR"] = runtime_dir
-    env["KF_CONFIG_HOME"] = resolve_config_home(config_home)
-    env["KF_LOG_LEVEL"] = log_level
-    if runtime_generation is not None:
-        env["KF_RUNTIME_GENERATION"] = _positive_generation(
-            runtime_generation, "runtime generation"
-        )
-    if runtime_image is not None:
-        from kungfu import runtime_upgrade
-
-        if runtime_image.get("schema") == runtime_upgrade.IMAGE_SCHEMA:
-            env.update(runtime_upgrade.pinned_environment(runtime_image))
-        else:
-            env.update(
-                {
-                    "KF_RUNTIME_BUILD_ID": str(runtime_image["buildId"]),
-                    "KF_RUNTIME_ARTIFACT_ROOT": str(runtime_image["artifactRoot"]),
-                    "KF_RUNTIME_ENTRYPOINT": str(runtime_image["entrypoint"]),
-                    "KF_RUNTIME_MANIFEST_DIGEST": str(runtime_image["manifestDigest"]),
-                }
-            )
-    return env
-
-
-def _independent_process_env(env: Mapping[str, str]) -> dict[str, str]:
-    """Detach a long-lived child from the current frozen application instance."""
-
-    child_env = dict(env)
-    if getattr(sys, "frozen", False):
-        child_env["PYINSTALLER_RESET_ENVIRONMENT"] = "1"
-    return child_env
-
-
-def coordinator_run_command(
-    home: str,
-    runtime_dir: str,
-    log_level: str,
-    runtime_image: Mapping[str, Any] | None = None,
-) -> list[str]:
-    return [
-        *entry_command(runtime_image),
-        "--log_level",
-        log_level,
-        "runtime",
-        "run",
-        "--runtime-dir",
-        runtime_dir,
-        "--home",
-        home,
-    ]
-
-
-def assessment_worker_command(runtime_dir: str, assessment_key: str) -> list[str]:
-    return [
-        *entry_command(),
-        "runtime",
-        "assess-worker",
-        "--runtime-dir",
-        resolve_runtime_dir("", runtime_dir),
-        "--assessment-key",
-        assessment_key,
-    ]
-
-
 def assessment_snapshot(runtime_dir: str) -> dict[str, Any]:
     lifecycle = storage_service.assessment_list(runtime_dir)
     counts: dict[str, int] = {}
@@ -620,41 +516,6 @@ def publish_assessment_snapshot(runtime_dir: str) -> dict[str, Any]:
     snapshot = assessment_snapshot(runtime_dir)
     _json_write(assessment_subscription_path(runtime_dir), snapshot)
     return snapshot
-
-
-def run_assessment_worker(runtime_dir: str, assessment_key: str) -> dict[str, Any]:
-    return storage_service.assessment_execute(
-        runtime_dir,
-        assessment_key,
-        executor_profile="process",
-    )
-
-
-def supervisor_command(
-    config_home: str | None,
-    log_level: str,
-    *,
-    home: str | None = None,
-    runtime_dir: str | None = None,
-    foreground: bool = True,
-    runtime_image: Mapping[str, Any] | None = None,
-) -> list[str]:
-    command = [
-        *entry_command(runtime_image),
-        "--log_level",
-        log_level,
-        "runtime",
-        "supervise",
-        "--config-home",
-        resolve_config_home(config_home),
-    ]
-    if home:
-        command.extend(["--home", resolve_runtime_home(home)])
-    if runtime_dir:
-        command.extend(["--runtime-dir", resolve_runtime_dir(home or "", runtime_dir)])
-    if foreground:
-        command.append("--foreground")
-    return command
 
 
 def _empty_routes() -> dict[str, Any]:
@@ -778,16 +639,14 @@ def _runtime_demand_status(
     grace_ns: int,
     clock: Any = None,
 ) -> dict[str, Any] | None:
-    from kungfu import runtime_broker
-
-    manager = runtime_broker.RuntimeLeaseManager(
+    manager = runtime_leases.RuntimeLeaseManager(
         config_home,
-        runtime_broker.workspace_id(runtime_dir),
+        runtime_state.workspace_id(runtime_dir),
         clock=clock,
     )
     try:
         return manager.begin_idle_drain(grace_ns)
-    except runtime_broker.RuntimeLifecycleError:
+    except runtime_leases.RuntimeLifecycleError:
         return None
 
 
@@ -798,15 +657,13 @@ def _complete_runtime_drain(
     *,
     stopped: bool,
 ) -> bool:
-    from kungfu import runtime_broker
-
-    manager = runtime_broker.RuntimeLeaseManager(
+    manager = runtime_leases.RuntimeLeaseManager(
         config_home,
-        runtime_broker.workspace_id(runtime_dir),
+        runtime_state.workspace_id(runtime_dir),
     )
     try:
         manager.complete_drain(generation, stopped=stopped)
-    except runtime_broker.RuntimeLifecycleError:
+    except runtime_leases.RuntimeLifecycleError:
         return False
     return True
 
@@ -816,15 +673,13 @@ def _fence_runtime_restart(
     runtime_dir: str,
     coordinator_pid: int,
 ) -> bool:
-    from kungfu import runtime_broker
-
-    manager = runtime_broker.RuntimeLeaseManager(
+    manager = runtime_leases.RuntimeLeaseManager(
         config_home,
-        runtime_broker.workspace_id(runtime_dir),
+        runtime_state.workspace_id(runtime_dir),
     )
     try:
         manager.begin_restart(coordinator_pid)
-    except runtime_broker.RuntimeLifecycleError:
+    except runtime_leases.RuntimeLifecycleError:
         return False
     return True
 
@@ -878,9 +733,7 @@ def _fenced_adopted_coordinator(
     start_identity = state.get("coordinatorStartIdentity")
     if state.get("coordinatorPid") != pid or not _process_matches(pid, start_identity):
         return None
-    from kungfu import runtime_broker
-
-    generation = runtime_broker.fenced_coordinator_generation(
+    generation = runtime_state.fenced_coordinator_generation(
         config_home,
         runtime_dir,
         pid,
@@ -1306,7 +1159,7 @@ class CoordinatorEngine(NativeCoordinator):
             return
         payload = grant_payload(name, holder)
         carrier, data = wrap_event(ACTION_GRANT, payload)
-        self.get_writer(holder).write_bytes(self.now(), carrier, list(data), len(data))
+        self.get_writer(holder).write_bytes(self.now(), carrier, data)
 
     def _reap_dead_lock_holders(self) -> None:
         # Reclaim locks whose holder is gone. The holder's liveness comes from
@@ -1518,15 +1371,13 @@ class ProcessRuntimeHost:
         )
         with supervisor_log_path(self.config_home).open("ab") as log:
             kwargs: dict[str, Any] = {
-                "env": _independent_process_env(
-                    command_env(
-                        home,
-                        runtime_dir,
-                        self.log_level,
-                        self.config_home,
-                        runtime_generation=runtime_generation,
-                        runtime_image=self.runtime_image,
-                    )
+                "env": command_env(
+                    home,
+                    runtime_dir,
+                    self.log_level,
+                    self.config_home,
+                    runtime_generation=runtime_generation,
+                    runtime_image=self.runtime_image,
                 ),
                 "stdout": log,
                 "stderr": log,
@@ -1696,8 +1547,6 @@ def route_status(
     runtime_dir: str,
     config_home: str | None = None,
 ) -> dict[str, Any]:
-    from kungfu import runtime_broker
-
     config_home = resolve_config_home(config_home)
     home = resolve_runtime_home(home)
     runtime_dir = resolve_runtime_dir(home, runtime_dir)
@@ -1787,7 +1636,7 @@ def route_status(
         },
         "lastSupervisorState": supervisor_state,
         "lastState": state,
-        "product": runtime_broker.product_status(config_home, runtime_dir),
+        "product": runtime_state.product_status(config_home, runtime_dir),
     }
 
 
@@ -2110,141 +1959,17 @@ def supervisor_status(config_home: str | None = None) -> dict[str, Any]:
     }
 
 
-@dataclass(frozen=True)
-class ServicePlan:
-    platform: str
-    path: Path
-    content: str
-    install_note: str
-    uninstall_note: str
-
-    def as_dict(self) -> dict[str, Any]:
-        return {
-            "schema": SCHEMA_PLAN,
-            "platform": self.platform,
-            "path": str(self.path),
-            "content": self.content,
-            "installNote": self.install_note,
-            "uninstallNote": self.uninstall_note,
-        }
-
-
 def service_plan(
     home: str,
     runtime_dir: str,
     log_level: str,
     config_home: str | None = None,
 ) -> ServicePlan:
-    config_home = resolve_config_home(config_home)
-    home = resolve_runtime_home(home)
-    runtime_dir = resolve_runtime_dir(home, runtime_dir)
-    system = platform.system()
-    command = supervisor_command(
-        config_home,
+    return runtime_service_config.service_plan(
+        home,
+        runtime_dir,
         log_level,
-        home=home,
-        runtime_dir=runtime_dir,
-        foreground=True,
-    )
-    env = command_env(home, runtime_dir, log_level, config_home)
-    if system == "Darwin":
-        path = Path.home() / "Library" / "LaunchAgents" / f"{SERVICE_ID}.plist"
-        args = "\n".join(f"    <string>{xml_escape(arg)}</string>" for arg in command)
-        content = f"""<?xml version=\"1.0\" encoding=\"UTF-8\"?>
-<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">
-<plist version=\"1.0\">
-<dict>
-  <key>Label</key>
-  <string>{xml_escape(SERVICE_ID)}</string>
-  <key>ProgramArguments</key>
-  <array>
-{args}
-  </array>
-  <key>EnvironmentVariables</key>
-  <dict>
-    <key>KF_HOME</key>
-    <string>{xml_escape(home)}</string>
-    <key>KF_CONFIG_HOME</key>
-    <string>{xml_escape(config_home)}</string>
-    <key>KF_RUNTIME_DIR</key>
-    <string>{xml_escape(runtime_dir)}</string>
-    <key>KF_LOG_LEVEL</key>
-    <string>{xml_escape(log_level)}</string>
-    <key>{SUPERVISOR_ALWAYS_ON_ENV}</key>
-    <string>1</string>
-  </dict>
-  <key>RunAtLoad</key>
-  <true/>
-  <key>KeepAlive</key>
-  <true/>
-  <key>StandardOutPath</key>
-  <string>{xml_escape(str(supervisor_log_path(config_home)))}</string>
-  <key>StandardErrorPath</key>
-  <string>{xml_escape(str(supervisor_log_path(config_home)))}</string>
-</dict>
-</plist>
-"""
-        return ServicePlan(
-            system,
-            path,
-            content,
-            f"write {path}; then run: launchctl bootstrap gui/$(id -u) {shlex_quote(str(path))}",
-            f"run: launchctl bootout gui/$(id -u) {shlex_quote(str(path))}; then remove {path}",
-        )
-    if system == "Linux":
-        path = (
-            Path.home() / ".config" / "systemd" / "user" / "kungfu-supervisor.service"
-        )
-        content = f"""[Unit]
-Description={SERVICE_NAME}
-After=default.target
-
-[Service]
-Type=simple
-{_systemd_env_line("KF_HOME", home)}
-{_systemd_env_line("KF_CONFIG_HOME", config_home)}
-{_systemd_env_line("KF_RUNTIME_DIR", runtime_dir)}
-{_systemd_env_line("KF_LOG_LEVEL", log_level)}
-{_systemd_env_line(SUPERVISOR_ALWAYS_ON_ENV, "1")}
-ExecStart={_shell_join(command)}
-Restart=always
-RestartSec=2
-
-[Install]
-WantedBy=default.target
-"""
-        return ServicePlan(
-            system,
-            path,
-            content,
-            "write the unit; then run: systemctl --user daemon-reload && systemctl --user enable --now kungfu-supervisor.service",
-            "run: systemctl --user disable --now kungfu-supervisor.service; then remove the unit",
-        )
-    startup = (
-        Path(os.environ.get("APPDATA", str(Path.home())))
-        / "Microsoft"
-        / "Windows"
-        / "Start Menu"
-        / "Programs"
-        / "Startup"
-        / "kungfu-supervisor.cmd"
-    )
-    lines = [
-        "@echo off",
-        f'set "KF_HOME={env["KF_HOME"]}"',
-        f'set "KF_CONFIG_HOME={env["KF_CONFIG_HOME"]}"',
-        f'set "KF_RUNTIME_DIR={env["KF_RUNTIME_DIR"]}"',
-        f'set "KF_LOG_LEVEL={env["KF_LOG_LEVEL"]}"',
-        f'set "{SUPERVISOR_ALWAYS_ON_ENV}=1"',
-        _shell_join(command),
-        "",
-    ]
-    return ServicePlan(
-        system,
-        startup,
-        "\r\n".join(lines),
-        f"write {startup}; it will start at the next user logon",
-        f"remove {startup}",
+        config_home,
     )
 
 
@@ -2254,15 +1979,9 @@ def install_service(
     log_level: str,
     config_home: str | None = None,
 ) -> dict[str, Any]:
-    plan = service_plan(home, runtime_dir, log_level, config_home)
-    plan.path.parent.mkdir(parents=True, exist_ok=True)
-    plan.path.write_text(plan.content, "utf-8")
-    return {
-        "schema": SCHEMA_RESULT,
-        "action": "install",
-        "changed": True,
-        "plan": plan.as_dict(),
-    }
+    return runtime_service_config.install_service(
+        service_plan(home, runtime_dir, log_level, config_home)
+    )
 
 
 def uninstall_service(
@@ -2271,16 +1990,9 @@ def uninstall_service(
     log_level: str,
     config_home: str | None = None,
 ) -> dict[str, Any]:
-    plan = service_plan(home, runtime_dir, log_level, config_home)
-    existed = plan.path.exists()
-    if existed:
-        plan.path.unlink()
-    return {
-        "schema": SCHEMA_RESULT,
-        "action": "uninstall",
-        "changed": existed,
-        "plan": plan.as_dict(),
-    }
+    return runtime_service_config.uninstall_service(
+        service_plan(home, runtime_dir, log_level, config_home)
+    )
 
 
 def service_status(
@@ -2293,24 +2005,10 @@ def service_status(
     home = resolve_runtime_home(home)
     runtime_dir = resolve_runtime_dir(home, runtime_dir)
     plan = service_plan(home, runtime_dir, log_level, config_home)
-    installed = plan.path.exists()
-    actual = ""
-    if installed:
-        try:
-            actual = plan.path.read_text("utf-8")
-        except OSError:
-            actual = ""
-    return {
-        "schema": SCHEMA_STATUS,
-        "configHome": config_home,
-        "home": home,
-        "runtimeDir": runtime_dir,
-        "service": {
-            "id": SERVICE_ID,
-            "platform": plan.platform,
-            "path": str(plan.path),
-            "installed": installed,
-            "matchesPlan": installed and actual == plan.content,
-        },
-        "supervisor": route_status(home, runtime_dir, config_home),
-    }
+    return runtime_service_config.service_status(
+        config_home=config_home,
+        home=home,
+        runtime_dir=runtime_dir,
+        plan=plan,
+        supervisor=route_status(home, runtime_dir, config_home),
+    )

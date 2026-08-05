@@ -1,5 +1,29 @@
 # Install the standalone Kungfu CLI
 
+## Make Kungfu available in PATH
+
+If you installed the desktop app on macOS, open **Kungfu → Install 'kungfu'
+Command in PATH**. The app creates `/usr/local/bin/kungfu` as a launcher for the
+exact bundled CLI; it does not copy or replace the runtime.
+
+Verify the command before asking an agent to use it:
+
+```sh
+command -v kungfu
+kungfu --version
+```
+
+If PATH installation is unavailable or you do not want it, open **Getting
+Started with Your Agent** in the app and copy the prompt shown there. That
+prompt includes the exact local CLI path, so the agent does not have to guess
+where the app was installed. Do not hand-create a symlink to a guessed app
+bundle path; moving or replacing the app would leave that guess stale.
+
+Standalone archive installations print their per-user bin directory. Add that
+exact directory to the environment used by your shell and agent, then run the
+same verification commands above. The release and ownership boundary for that
+installer follows below.
+
 > **Publication boundary:** the installer contract and verification mechanics are
 > implemented on the v4 source line. Do not use the commands below until
 > `https://kungfu.tech/install.sh` or `https://kungfu.tech/install.ps1` returns a

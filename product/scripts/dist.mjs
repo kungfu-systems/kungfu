@@ -18,21 +18,52 @@ import {
 import { extractTarGz, extractZip, writeTarGz, writeZip } from './archive.mjs';
 import { cliLauncherContent } from './cli-launcher.mjs';
 import { qualifyCliSurface } from './cli-surface-qualification.mjs';
-import { writeCompatibilityManifest } from './compatibility.mjs';
+import {
+  isPythonBytecodePath,
+  writeCompatibilityManifest,
+} from './compatibility.mjs';
+import {
+  isShippedKfdSupport,
+  runInstalledActionPrimitiveDiscovery,
+  runInstalledCliSemanticSmoke,
+  runInstalledKungfu,
+  runInstalledKungfuActionSmoke,
+  runInstalledKungfuAgentHubSmoke,
+  runInstalledKungfuCommand,
+  runInstalledKungfuKfdSmoke,
+  runInstalledKungfuXinfaSmoke,
+  runInstalledTuiBootstrapSmoke,
+} from './installed-kungfu/index.mjs';
+export {
+  installedKungfuInvocation,
+  isShippedKfdSupport,
+  runInstalledCliSemanticSmoke,
+  runInstalledKungfu,
+  runInstalledKungfuAgentHubSmoke,
+  runInstalledKungfuCommand,
+  runInstalledTuiBootstrapSmoke,
+} from './installed-kungfu/index.mjs';
 import {
   assertLibwasmArtifact,
   runLibwasmArtifactSelfTest,
   runLibwasmExecutionQualification,
 } from './libwasm-artifact.mjs';
-import { normalizeCopiedSymlinks } from './portable-symlinks.mjs';
+import * as symlinks from './portable-symlinks.mjs';
 import { productReleaseChannelConfig } from './release-channel-trust.mjs';
-import { readTrunkRuntimePinSnapshot } from './runtime-pin-snapshot.mjs';
 import {
-  buildBundledUpgradeManifest,
+  assertSupportedProductHost,
+  readTrunkRuntimePinSnapshot,
+  runProductAssembly,
+} from './runtime-pin-snapshot.mjs';
+import {
+  buildCliUpgradeManifest,
+  desktopUpdaterArtifact,
   finalizeCliUpgradeManifest,
   finalizeDesktopUpgradeManifest,
   platformUpgradeManifestName,
+  resolveDesktopLocalArtifact,
 } from './upgrade-manifest.mjs';
+export { desktopUpdaterArtifact };
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -40,6 +71,7 @@ const PRODUCT_DIR = path.resolve(__dirname, '..');
 const ROOT = path.resolve(PRODUCT_DIR, '..');
 const GUI_DIR = path.join(ROOT, 'framework', 'gui');
 const TUI_DIR = path.join(ROOT, 'framework', 'tui');
+const AGENT_SESSION_DIR = path.join(ROOT, 'framework', 'agent-session');
 const CORE_DIST = path.join(ROOT, 'framework', 'core', 'dist', 'kungfu');
 const CRATES_DIR = path.join(ROOT, 'crates');
 const RUNTIME_PINS = path.join(PRODUCT_DIR, 'runtime-pins.env');
@@ -197,7 +229,6 @@ function rollupPlatformPackageName() {
   const libc = linuxLibc();
   const packages = {
     'darwin-arm64': '@rollup/rollup-darwin-arm64',
-    'darwin-x64': '@rollup/rollup-darwin-x64',
     [`linux-arm64-${libc}`]: `@rollup/rollup-linux-arm64-${libc}`,
     [`linux-x64-${libc}`]: `@rollup/rollup-linux-x64-${libc}`,
     'win32-arm64': '@rollup/rollup-win32-arm64-msvc',
@@ -227,11 +258,17 @@ function linuxLibc() {
   return report?.header?.glibcVersionRuntime ? 'gnu' : 'musl';
 }
 
-function installArgs() {
+export function installArgs(
+  noOptional = process.env.KUNGFU_BUILDCHAIN_NO_OPTIONAL === '1',
+) {
   const args = ['install', '--frozen-lockfile'];
-  if (process.env.KUNGFU_BUILDCHAIN_NO_OPTIONAL === '1') {
+  if (noOptional) {
     args.push('--no-optional');
   }
+  // Product distribution is an owned, non-interactive build boundary. A
+  // changed Shifu cache overlay may make the generated modules layout stale;
+  // authorize pnpm to replace it instead of requiring a TTY prompt.
+  args.push('--config.confirmModulesPurge=false');
   return args;
 }
 
@@ -611,9 +648,6 @@ function assertSafeGeneratedDir(dir) {
   }
 }
 
-export const isPythonBytecodePath = (value) =>
-  /(^|\/)__pycache__(\/|$)|\.pyc$/i.test(value.replaceAll('\\', '/'));
-
 function copyPackageDir(source, target) {
   fs.mkdirSync(path.dirname(target), { recursive: true });
   fs.cpSync(source, target, {
@@ -778,24 +812,6 @@ function stageDesktopRelease() {
   });
 }
 
-export function desktopUpdaterArtifact(files, platform = process.platform) {
-  const suffix = {
-    darwin: '.zip',
-    win32: '.exe',
-    linux: '.AppImage',
-  }[platform];
-  if (!suffix) throw new Error(`unsupported desktop platform: ${platform}`);
-  const matches = files
-    .filter((file) => file.endsWith(suffix))
-    .sort((left, right) => left.localeCompare(right));
-  if (matches.length !== 1) {
-    throw new Error(
-      `expected one ${platform} desktop updater artifact, found: ${matches.join(', ') || 'none'}`,
-    );
-  }
-  return matches[0];
-}
-
 function finalizeDesktopReleaseManifest() {
   if (builderArgs.includes('--dir')) {
     console.log(
@@ -805,6 +821,10 @@ function finalizeDesktopReleaseManifest() {
   }
   const files = fs.readdirSync(DESKTOP_DIST_DIR);
   const artifactName = desktopUpdaterArtifact(files);
+  const localArtifact = resolveDesktopLocalArtifact(
+    DESKTOP_DIST_DIR,
+    artifactName,
+  );
   const metadata = files.filter(
     (file) => file.endsWith('.yml') || file.endsWith('.yaml'),
   );
@@ -824,6 +844,7 @@ function finalizeDesktopReleaseManifest() {
   const manifest = finalizeDesktopUpgradeManifest({
     bundledManifest,
     desktopArtifact: path.join(DESKTOP_DIST_DIR, artifactName),
+    localArtifact,
     artifactUrl,
     output: path.join(DESKTOP_DIST_DIR, outputName),
   });
@@ -833,7 +854,7 @@ function finalizeDesktopReleaseManifest() {
   return manifest;
 }
 
-function assertCoreFrozen() {
+function assertCoreAssembled() {
   const kungfuBin = path.join(CORE_DIST, isWin ? 'kungfu.exe' : 'kungfu');
   if (!fs.existsSync(kungfuBin)) {
     throw new Error(`freeze did not produce ${rel(kungfuBin)}`);
@@ -874,7 +895,7 @@ function assertCoreFrozen() {
 }
 
 // KF-ADR-019f86da-4f90-73ff-9543-f0a4f0beef05 stage 1: kungfu-trunk (the product trunk carrying the kungfu-owned
-// env/package surface) ships next to the frozen binary, together with its
+// env/package surface) ships next to the assembled product, together with its
 // runtime-pins manifest. UV_VERSION in the manifest must equal the repo's
 // .uv-version so the product and the dev launcher pull the same pinned uv.
 function stageTrunk(runtimePinSnapshot) {
@@ -921,9 +942,23 @@ function stageTrunk(runtimePinSnapshot) {
     runtimePinSnapshot.runtimePins,
     'utf8',
   );
+  materializeProductRuntimeEntrypoints(CORE_DIST);
   console.log(
     '[product] kungfu-trunk + runtime-pins.env staged into core dist',
   );
+}
+
+export function materializeProductRuntimeEntrypoints(
+  runtimeRoot,
+  platform = process.platform,
+) {
+  if (platform === 'win32') return;
+  for (const executable of [
+    path.join(runtimeRoot, 'kungfu'),
+    path.join(runtimeRoot, 'python', 'bin', 'python3'),
+  ]) {
+    symlinks.materializeRegularFile(executable);
+  }
 }
 
 function platformId() {
@@ -958,8 +993,39 @@ export function copyTree(source, target, options = {}) {
       );
     },
   });
-  normalizeCopiedSymlinks({ source, target });
+  symlinks.normalizeCopiedSymlinks({ source, target });
   return true;
+}
+
+export function stageNodePtyForCli(
+  source,
+  target,
+  platform = process.platform,
+  architecture = process.arch,
+) {
+  copyTree(source, target);
+  if (platform === 'linux') {
+    const nativeDirectory = path.join('build', 'Release');
+    const targetNativeDirectory = path.join(target, nativeDirectory);
+    fs.mkdirSync(targetNativeDirectory, { recursive: true });
+    const input = path.join(source, nativeDirectory, 'pty.node');
+    if (!fs.existsSync(input) || !fs.lstatSync(input).isFile()) {
+      throw new Error(
+        `required Linux node-pty runtime not found: ${rel(input)}`,
+      );
+    }
+    fs.copyFileSync(input, path.join(targetNativeDirectory, 'pty.node'));
+  } else if (platform === 'darwin') {
+    fs.chmodSync(
+      path.join(
+        target,
+        'prebuilds',
+        `${platform}-${architecture}`,
+        'spawn-helper',
+      ),
+      0o755,
+    );
+  }
 }
 
 function bundleSdkForCli(stageRoot, esbuildRuntime) {
@@ -1101,6 +1167,9 @@ export function cliArchiveLayout(platform = process.platform) {
     runtimeEntrypoint: `${runtimeDirectory}/${
       platform === 'win32' ? 'kungfu.exe' : 'kungfu'
     }`,
+    pythonEntrypoint: `${runtimeDirectory}/python/${
+      platform === 'win32' ? 'python.exe' : 'bin/python3'
+    }`,
     compatibility: `${runtimeDirectory}/product-compatibility.json`,
   };
 }
@@ -1110,6 +1179,34 @@ function writeCliLauncher(stageRoot, layout) {
   fs.writeFileSync(output, cliLauncherContent(), 'utf8');
   if (!isWin) fs.chmodSync(output, 0o755);
   return layout.launcherName;
+}
+
+export function writeAuditableDemoBinaryMetadata(
+  stageRoot,
+  layout,
+  platform = platformId(),
+  artifactRoot = ROOT,
+) {
+  const binary = path.join(stageRoot, layout.launcherName);
+  const runtime = path.join(stageRoot, layout.runtimeEntrypoint);
+  const python = path.join(stageRoot, layout.pythonEntrypoint);
+  const executableFiles = [binary, runtime, python];
+  executableFiles.forEach(symlinks.materializeRegularFile);
+  const metadata = {
+    contract: 'kungfu.declarative-demo-binary/v1',
+    platformId: platform,
+    sha256: sha256File(binary),
+    executableFiles: executableFiles.map((file) => ({
+      path: path.relative(artifactRoot, file).split(path.sep).join('/'),
+      sha256: sha256File(file).slice('sha256:'.length),
+    })),
+    runtimeDependencies: [],
+  };
+  fs.writeFileSync(
+    path.join(stageRoot, 'auditable-demo-binary.json'),
+    `${JSON.stringify(metadata, null, 2)}\n`,
+  );
+  return metadata;
 }
 
 function writeCliManifest(stageRoot, archiveName, layout) {
@@ -1259,557 +1356,6 @@ function listRelativeFiles(root) {
   return files.sort();
 }
 
-export function runInstalledKungfu({
-  kungfuBin,
-  installRoot,
-  home,
-  args,
-  env,
-}) {
-  const result = spawnInstalledKungfu(kungfuBin, ['-H', home, ...args], {
-    cwd: installRoot,
-    env,
-    encoding: 'utf8',
-  });
-  if (result.status !== 0) {
-    throw new Error(
-      [
-        `installed kungfu ${args.join(' ')} failed (exit ${exitLabel(result.status, result.signal)})`,
-        result.stdout?.trim() ? `stdout:\n${result.stdout.trim()}` : '',
-        result.stderr?.trim() ? `stderr:\n${result.stderr.trim()}` : '',
-      ]
-        .filter(Boolean)
-        .join('\n'),
-    );
-  }
-  return result.stdout || '';
-}
-
-export function installedKungfuInvocation(
-  kungfuBin,
-  args,
-  { platform = process.platform, comspec = process.env.ComSpec } = {},
-) {
-  if (platform !== 'win32') {
-    return { command: kungfuBin, args };
-  }
-  return {
-    command: comspec || 'cmd.exe',
-    args: ['/d', '/s', '/c', 'call', kungfuBin, ...args],
-  };
-}
-
-export function runInstalledKungfuCommand(
-  { cli, args, env, cwd },
-  {
-    platform = process.platform,
-    comspec = process.env.ComSpec,
-    spawn = spawnSync,
-  } = {},
-) {
-  const invocation = installedKungfuInvocation(cli, args, {
-    platform,
-    comspec,
-  });
-  const result = spawn(invocation.command, invocation.args, {
-    cwd,
-    env,
-    encoding: 'utf8',
-    maxBuffer: 32 * 1024 * 1024,
-    shell: false,
-  });
-  if (result.error) throw result.error;
-  return result;
-}
-
-function spawnInstalledKungfu(kungfuBin, args, options) {
-  const invocation = installedKungfuInvocation(kungfuBin, args);
-  return spawnSync(invocation.command, invocation.args, {
-    ...options,
-    shell: false,
-  });
-}
-
-export function runInstalledCliSemanticSmoke({
-  installRoot,
-  kungfuBin,
-  env,
-  home = path.join(installRoot, '.qualification-home'),
-}) {
-  const episodeId = 49003;
-  const exportPath = path.join(installRoot, 'episode-export.json');
-  runInstalledKungfu({
-    kungfuBin,
-    installRoot,
-    home,
-    args: ['storage', 'layout', '--json'],
-    env,
-  });
-  runInstalledKungfu({
-    kungfuBin,
-    installRoot,
-    home,
-    args: [
-      'storage',
-      'episode',
-      'begin',
-      '--episode-id',
-      String(episodeId),
-      '--source',
-      'adr0049-cli',
-      '--json',
-    ],
-    env,
-  });
-  runInstalledKungfu({
-    kungfuBin,
-    installRoot,
-    home,
-    args: [
-      'storage',
-      'episode',
-      'heartbeat',
-      '--episode-id',
-      String(episodeId),
-      '--note',
-      'qualification',
-      '--json',
-    ],
-    env,
-  });
-  runInstalledKungfu({
-    kungfuBin,
-    installRoot,
-    home,
-    args: [
-      'storage',
-      'episode',
-      'end',
-      '--episode-id',
-      String(episodeId),
-      '--reason',
-      'qualified',
-      '--json',
-    ],
-    env,
-  });
-  const query = parseJsonOutput(
-    runInstalledKungfu({
-      kungfuBin,
-      installRoot,
-      home,
-      args: [
-        'storage',
-        'query',
-        '--table',
-        'episodes',
-        '--scope',
-        'all',
-        '--json',
-      ],
-      env,
-    }),
-    'storage query',
-  );
-  if (!query.ok || query.row_count < 1)
-    throw new Error('installed CLI query did not return the recorded Episode');
-  const fsck = parseJsonOutput(
-    runInstalledKungfu({
-      kungfuBin,
-      installRoot,
-      home,
-      args: [
-        'storage',
-        'fsck',
-        '--scope',
-        'episode',
-        '--episode-id',
-        String(episodeId),
-        '--json',
-      ],
-      env,
-    }),
-    'storage fsck',
-  );
-  if (!fsck.ok)
-    throw new Error('installed CLI fsck rejected the recorded Episode');
-  runInstalledKungfu({
-    kungfuBin,
-    installRoot,
-    home,
-    args: [
-      'storage',
-      'export',
-      '--scope',
-      'episode',
-      '--episode-id',
-      String(episodeId),
-      '--format',
-      'bundle-json',
-      '--out',
-      exportPath,
-      '--json',
-    ],
-    env,
-  });
-  assertFile(exportPath, 'installed CLI Episode export');
-  const brief = runInstalledKungfu({
-    kungfuBin,
-    installRoot,
-    home,
-    args: ['agent', 'brief'],
-    env,
-  });
-  if (!brief.trim()) throw new Error('installed CLI agent brief was empty');
-  const mode = parseJsonOutput(
-    runInstalledKungfu({
-      kungfuBin,
-      installRoot,
-      home,
-      args: ['agent', 'choose-mode', '--json'],
-      env,
-    }),
-    'agent choose-mode',
-  );
-  if (!mode.mode)
-    throw new Error('installed CLI agent discovery did not choose a mode');
-  return { home, exportPath, episodeId };
-}
-
-export function isShippedKfdSupport(standard) {
-  if (standard?.status === 'supported') return true;
-  return (
-    standard?.status === 'source-supported' &&
-    standard?.verification?.status === 'passed' &&
-    standard?.buildchain?.gateStatus === 'passed' &&
-    standard?.claimClass === 'release-qualified-support' &&
-    standard?.releaseQualification?.status === 'alpha-release-passport' &&
-    standard?.releaseQualification?.shippedSupport === true
-  );
-}
-
-function runInstalledKungfuKfdSmoke({
-  installRoot,
-  kungfuBin,
-  sdkEntry,
-  kfd3Registry,
-  kfdUpstreamAggregate,
-  extensionsRoot,
-  env,
-}) {
-  const result = spawnInstalledKungfu(kungfuBin, ['kfd', 'status', '--json'], {
-    cwd: installRoot,
-    env: {
-      ...env,
-      KUNGFU_SDK_ENTRY: sdkEntry,
-      KUNGFU_KFD3_REGISTRY: kfd3Registry,
-      KUNGFU_KFD_UPSTREAM_AGGREGATE: kfdUpstreamAggregate,
-      KF_BUNDLED_EXTENSION_ROOT: extensionsRoot,
-    },
-    encoding: 'utf8',
-  });
-  if (result.status !== 0) {
-    throw new Error(
-      [
-        `installed kungfu kfd smoke failed (exit ${exitLabel(result.status, result.signal)})`,
-        result.stdout?.trim() ? `stdout:\n${result.stdout.trim()}` : '',
-        result.stderr?.trim() ? `stderr:\n${result.stderr.trim()}` : '',
-      ]
-        .filter(Boolean)
-        .join('\n'),
-    );
-  }
-  const data = parseJsonOutput(result.stdout || '', 'kungfu kfd status');
-  if (data.contract !== 'kungfu-sdk-kfd-standards-status') {
-    throw new Error(`unexpected kfd status contract: ${data.contract}`);
-  }
-  if (!isShippedKfdSupport(data.standards?.['kfd-3'])) {
-    throw new Error(
-      'installed kungfu kfd status did not report release-qualified KFD-3 support',
-    );
-  }
-  if (
-    data.agentRuntime?.status !== 'available' ||
-    data.agentRuntime?.profile?.id !== 'kfd-agent-runtime'
-  ) {
-    throw new Error(
-      'installed kungfu kfd status did not discover the KFD Agent Runtime adapter',
-    );
-  }
-}
-
-export function runInstalledKungfuAgentHubSmoke({
-  installRoot,
-  kungfuBin,
-  env,
-  run = runInstalledKungfu,
-}) {
-  const userHome = path.join(installRoot, '.agent-hub-user-home');
-  const smokeEnv = {
-    ...env,
-    HOME: userHome,
-    USERPROFILE: userHome,
-    KF_CACHE_HOME: path.join(installRoot, '.agent-hub-cache-home'),
-  };
-  const qualification = parseJsonOutput(
-    run({
-      kungfuBin,
-      installRoot,
-      home: path.join(installRoot, '.agent-hub-runtime-home'),
-      args: [
-        'agent',
-        'hub',
-        'qualify',
-        '--output-dir',
-        path.join(installRoot, 'agent-hub-qualification'),
-        '--json',
-      ],
-      env: smokeEnv,
-    }),
-    'kungfu agent hub qualify',
-  );
-  if (
-    qualification.valid !== true ||
-    qualification.coverage?.passed !== 20 ||
-    qualification.coverage?.total !== 20 ||
-    qualification.isolation?.realHomeUnchanged !== true ||
-    typeof qualification.meaning !== 'string' ||
-    !qualification.meaning ||
-    !qualification.nonClaims?.includes('KFD certification') ||
-    !qualification.next?.verify?.includes('kungfu agent hub verify') ||
-    !/^sha256:[0-9a-f]{64}$/.test(qualification.evidence?.reportDigest || '')
-  ) {
-    throw new Error(
-      'installed kungfu Agent Hub qualification returned an incomplete verdict',
-    );
-  }
-  const verification = parseJsonOutput(
-    run({
-      kungfuBin,
-      installRoot,
-      home: path.join(installRoot, '.agent-hub-runtime-home'),
-      args: [
-        'agent',
-        'hub',
-        'verify',
-        '--qualification-dir',
-        path.join(installRoot, 'agent-hub-qualification'),
-        '--json',
-      ],
-      env: smokeEnv,
-    }),
-    'kungfu agent hub verify',
-  );
-  if (
-    verification.valid !== true ||
-    verification.coverage?.passed !== 20 ||
-    verification.coverage?.total !== 20 ||
-    verification.meaning !== qualification.meaning ||
-    JSON.stringify(verification.nonClaims) !==
-      JSON.stringify(qualification.nonClaims) ||
-    verification.checks?.some((check) => check.passed !== true)
-  ) {
-    throw new Error(
-      'installed kungfu Agent Hub verification did not preserve the qualification verdict',
-    );
-  }
-  if (fs.existsSync(userHome)) {
-    throw new Error('Agent Hub smoke modified isolated HOME');
-  }
-}
-
-function runInstalledKungfuActionSmoke({
-  installRoot,
-  kungfuBin,
-  actionEntry,
-  env,
-}) {
-  const poisonDir = fs.mkdtempSync(
-    path.join(os.tmpdir(), 'kungfu-action-node-poison-'),
-  );
-  const marker = path.join(poisonDir, 'system-node-used');
-  const fakeNode = path.join(poisonDir, isWin ? 'node.cmd' : 'node');
-  try {
-    fs.writeFileSync(
-      fakeNode,
-      isWin
-        ? `@echo off\r\n>"%KUNGFU_NODE_FALLBACK_MARKER%" echo fallback\r\nexit /b 99\r\n`
-        : '#!/bin/sh\nprintf fallback > "$KUNGFU_NODE_FALLBACK_MARKER"\nexit 99\n',
-      'utf8',
-    );
-    if (!isWin) fs.chmodSync(fakeNode, 0o755);
-    const result = spawnInstalledKungfu(
-      kungfuBin,
-      ['action', 'contract', '--json'],
-      {
-        cwd: installRoot,
-        env: {
-          ...env,
-          KUNGFU_ACTION_ENTRY: actionEntry,
-          KUNGFU_NODE_FALLBACK_MARKER: marker,
-          PATH: [poisonDir, process.env.PATH || '']
-            .filter(Boolean)
-            .join(path.delimiter),
-        },
-        encoding: 'utf8',
-      },
-    );
-    if (result.status !== 0) {
-      throw new Error(
-        [
-          `installed kungfu action smoke failed (exit ${exitLabel(result.status, result.signal)})`,
-          result.stdout?.trim() ? `stdout:\n${result.stdout.trim()}` : '',
-          result.stderr?.trim() ? `stderr:\n${result.stderr.trim()}` : '',
-        ]
-          .filter(Boolean)
-          .join('\n'),
-      );
-    }
-    if (fs.existsSync(marker)) {
-      throw new Error('installed kungfu action used PATH node fallback');
-    }
-    if (!(result.stdout || '').trim()) {
-      throw new Error(
-        [
-          'installed kungfu action produced no stdout',
-          result.stderr?.trim() ? `stderr:\n${result.stderr.trim()}` : '',
-        ]
-          .filter(Boolean)
-          .join('\n'),
-      );
-    }
-    const data = parseJsonOutput(result.stdout || '', 'kungfu action contract');
-    if (
-      data.schema !== 'kungfu.action.response/v1' ||
-      data.host?.runtime !== 'embedded-libnode' ||
-      data.host?.layout !== 'installed' ||
-      !/^sha256:[0-9a-f]{64}$/.test(data.semanticRoot || '')
-    ) {
-      throw new Error(
-        'installed kungfu action returned an invalid host contract',
-      );
-    }
-  } finally {
-    fs.rmSync(poisonDir, { recursive: true, force: true });
-  }
-}
-
-function runInstalledKungfuXinfaSmoke({ installRoot, kungfuBin, env }) {
-  const fixtureRoot = path.join(
-    ROOT,
-    'crates',
-    'xinfa',
-    'fixtures',
-    'repository-small',
-  );
-  const project = path.join(fixtureRoot, 'project.json');
-  const atlasOutput = path.join(installRoot, 'xinfa-smoke-atlas');
-  const installed = spawnInstalledKungfu(
-    kungfuBin,
-    [
-      'xinfa',
-      'compile',
-      '--project',
-      project,
-      '--root',
-      fixtureRoot,
-      '--output',
-      atlasOutput,
-      '--visibility',
-      'public',
-      '--json',
-    ],
-    {
-      cwd: installRoot,
-      env,
-      encoding: 'utf8',
-    },
-  );
-  if (installed.status !== 0) {
-    throw new Error(
-      `linked kungfu xinfa compile failed (exit ${exitLabel(installed.status, installed.signal)}): ${installed.stderr || ''}`,
-    );
-  }
-  const verification = parseJsonOutput(
-    runInstalledKungfu({
-      kungfuBin,
-      installRoot,
-      home: path.join(installRoot, '.xinfa-smoke-home'),
-      args: ['xinfa', 'verify', '--atlas', atlasOutput, '--json'],
-      env,
-    }),
-    'kungfu xinfa verify',
-  );
-  if (verification.valid !== true || !verification.atlas_root) {
-    throw new Error('installed kungfu xinfa did not verify its compiled Atlas');
-  }
-
-  const defaultWorkspace = path.join(installRoot, 'xinfa-default-workspace');
-  fs.cpSync(fixtureRoot, defaultWorkspace, { recursive: true });
-  fs.mkdirSync(path.join(defaultWorkspace, '.xinfa'), { recursive: true });
-  fs.renameSync(
-    path.join(defaultWorkspace, 'project.json'),
-    path.join(defaultWorkspace, '.xinfa', 'project.json'),
-  );
-  const defaultCompile = parseJsonOutput(
-    runInstalledKungfu({
-      kungfuBin,
-      installRoot,
-      home: path.join(installRoot, '.xinfa-default-home'),
-      args: ['xinfa', 'compile', '--workspace', defaultWorkspace],
-      env,
-    }),
-    'bare kungfu xinfa compile',
-  );
-  if (
-    !defaultCompile.atlas_root ||
-    !fs.existsSync(path.join(defaultWorkspace, '.xinfa', 'atlas'))
-  ) {
-    throw new Error(
-      'bare kungfu xinfa compile did not create the default Atlas',
-    );
-  }
-}
-
-function runInstalledActionPrimitiveDiscovery({ installRoot, kungfuBin, env }) {
-  const briefHome = path.join(installRoot, '.brief-home-must-not-exist');
-  const brief = runInstalledKungfu({
-    kungfuBin,
-    installRoot,
-    home: briefHome,
-    args: ['agent', 'brief'],
-    env,
-  });
-  if (!brief.includes('kungfu xinfa compile')) {
-    throw new Error(
-      'installed Agent brief omitted the single-entry CLI topology',
-    );
-  }
-  if (fs.existsSync(briefHome)) {
-    throw new Error('kungfu agent brief initialized runtime state');
-  }
-
-  const roleHome = path.join(installRoot, '.role-discovery-home');
-  for (const role of ['atlas', 'pursuit', 'warrant', 'episode']) {
-    const capabilities = parseJsonOutput(
-      runInstalledKungfu({
-        kungfuBin,
-        installRoot,
-        home: roleHome,
-        args: [role, 'capabilities', '--json'],
-        env,
-      }),
-      `kungfu ${role} capabilities`,
-    );
-    if (
-      capabilities.schema !== 'kungfu.action-primitive-role-capabilities/v1' ||
-      capabilities.role !== role ||
-      !capabilities.transitions?.length
-    ) {
-      throw new Error(`installed kungfu ${role} discovery is invalid`);
-    }
-  }
-}
 export function runInstalledKungfuAssignmentAdmissionSmoke({
   installRoot,
   kungfuBin,
@@ -1946,6 +1492,11 @@ export function smokeCliProductArchive({ archivePath, archiveBase }) {
         }
 
         const kungfuBin = entryPath(installRoot, manifest.entries, 'kungfu');
+        const runtimeEntry = entryPath(
+          installRoot,
+          manifest.entries,
+          'runtime',
+        );
         const compatibility = entryPath(
           installRoot,
           manifest.entries,
@@ -2051,6 +1602,7 @@ export function smokeCliProductArchive({ archivePath, archiveBase }) {
           'upgradeManifest',
         );
         assertFile(kungfuBin, 'installed kungfu runtime');
+        assertFile(runtimeEntry, 'installed assembled runtime entry');
         assertFile(upgradeManifest, 'installed product upgrade manifest');
         const upgradeIdentity = readJson(upgradeManifest);
         if (upgradeIdentity.schema !== 'kungfu.product-upgrade.manifest/v1') {
@@ -2168,6 +1720,13 @@ export function smokeCliProductArchive({ archivePath, archiveBase }) {
           kungfuBin,
           env: smokeEnv,
         });
+        runInstalledTuiBootstrapSmoke({
+          installRoot,
+          kungfuBin,
+          runtimeEntry,
+          tuiEntry,
+          env: smokeEnv,
+        });
         runInstalledCliSemanticSmoke({
           installRoot,
           kungfuBin,
@@ -2229,10 +1788,16 @@ function buildCliProduct(esbuildRuntime) {
       copyTree(CORE_DIST, path.join(stageRoot, layout.runtimeDirectory));
       copyTree(ASSEMBLED_EXTENSIONS, path.join(stageRoot, 'extensions'));
       copyTree(path.join(TUI_DIR, 'dist'), path.join(stageRoot, 'tui'));
+      stageNodePtyForCli(
+        fs.realpathSync(
+          path.join(AGENT_SESSION_DIR, 'node_modules', 'node-pty'),
+        ),
+        path.join(stageRoot, 'tui', 'node_modules', 'node-pty'),
+      );
       bundleSdkForCli(stageRoot, esbuildRuntime);
-      const bundledUpgradeManifest = buildBundledUpgradeManifest({
-        root: ROOT,
-        runtimeRoot: CORE_DIST,
+      const bundledUpgradeManifest = buildCliUpgradeManifest({
+        stageRoot,
+        layout,
       });
       const bundledUpgradePath = path.join(
         stageRoot,
@@ -2246,6 +1811,7 @@ function buildCliProduct(esbuildRuntime) {
         'utf8',
       );
       writeCliLauncher(stageRoot, layout);
+      writeAuditableDemoBinaryMetadata(stageRoot, layout);
       writeCliManifest(stageRoot, archiveName, layout);
 
       if (isWin) {
@@ -2278,6 +1844,7 @@ function buildCliProduct(esbuildRuntime) {
       const combinedManifestPath = path.join(CLI_RELEASE_DIR, outputName);
       finalizeCliUpgradeManifest({
         bundledManifest: releaseBase,
+        embeddedManifest: bundledUpgradeManifest,
         cliArtifact: archivePath,
         artifactUrl,
         output: combinedManifestPath,
@@ -2295,168 +1862,47 @@ function buildCliProduct(esbuildRuntime) {
 }
 
 function main() {
-  const trunkRuntimePinSnapshot = readTrunkRuntimePinSnapshot({
-    runtimePinsPath: RUNTIME_PINS,
-    repoPinPath: path.join(ROOT, '.uv-version'),
+  assertSupportedProductHost();
+  runProductAssembly({
+    productTarget,
+    builderArgs,
+    logger: buildchainLogger,
+    paths: {
+      root: ROOT,
+      productDir: PRODUCT_DIR,
+      guiDir: GUI_DIR,
+      tuiDir: TUI_DIR,
+      sdkDir: SDK_DIR,
+      runtimePins: RUNTIME_PINS,
+      extensionsRoot: EXTENSIONS_ROOT,
+      assembledExtensions: ASSEMBLED_EXTENSIONS,
+      releaseDir: RELEASE_DIR,
+      npmReleaseDir: NPM_RELEASE_DIR,
+      compatibilityManifest: COMPATIBILITY_MANIFEST,
+    },
+    operations: {
+      assertCoreAssembled,
+      assertDeclaredKfx,
+      assertKfxBundleExternals,
+      assembleKfx,
+      buildCliProduct,
+      buildKfx,
+      buildchainSourceBuildEnv,
+      ensureEsbuildRuntime,
+      finalizeDesktopReleaseManifest,
+      guiEsbuildPackagePaths,
+      installArgs,
+      listKfxPackages,
+      readTrunkRuntimePinSnapshot,
+      rel,
+      run,
+      runPnpm,
+      stageDesktopAuthoringRuntime,
+      stageDesktopRelease,
+      stageTrunk,
+      writeCompatibilityManifest,
+    },
   });
-  buildchainLogger.spanSync(
-    'product.dist',
-    {
-      phase: 'package',
-      attributes: {
-        platform: process.platform,
-        arch: process.arch,
-        product: productTarget,
-        builderArgCount: builderArgs.length,
-      },
-    },
-    () => {
-      const kfxPackages = buildchainLogger.spanSync(
-        'product.kfx.discover',
-        {
-          phase: 'prepare',
-          attributes: {
-            root: rel(EXTENSIONS_ROOT),
-          },
-        },
-        () => listKfxPackages(),
-      );
-      assertDeclaredKfx(kfxPackages);
-
-      runPnpm('sync dependencies', installArgs(), {
-        phase: 'dependencies',
-        event: 'product.dependencies.sync',
-      });
-      const buildEnv = buildchainSourceBuildEnv();
-      const sdkEsbuildRuntime = ensureEsbuildRuntime({
-        slot: 'sdk',
-        paths: [SDK_DIR, ROOT],
-      });
-      const tuiEsbuildRuntime = ensureEsbuildRuntime({
-        slot: 'tui',
-        paths: [TUI_DIR, ROOT],
-      });
-      const sdkBuildEnv = {
-        ...buildEnv,
-        ESBUILD_BINARY_PATH: sdkEsbuildRuntime.binaryPath,
-      };
-      const tuiBuildEnv = {
-        ...buildEnv,
-        ESBUILD_BINARY_PATH: tuiEsbuildRuntime.binaryPath,
-      };
-      runPnpm(
-        'rebuild core',
-        ['--filter', '@kungfu-tech/core', 'run', 'rebuild'],
-        {
-          env: buildEnv,
-          phase: 'core',
-          event: 'product.core.rebuild',
-        },
-      );
-      runPnpm(
-        'freeze core runtime',
-        ['--filter', '@kungfu-tech/core', 'run', 'freeze'],
-        {
-          // The product must ship the native host; a missing one is a hard error
-          // here rather than a silent fall back to the slow Python node path /
-          // doctor stub (KF-ADR-019f86da-4f90-73ff-9543-f0a4f0beef05 S3). Dev `pnpm run freeze` leaves this unset and
-          // keeps warn-only.
-          env: { ...process.env, KF_REQUIRE_NATIVE_HOST: '1' },
-          phase: 'core',
-          event: 'product.core.freeze',
-        },
-      );
-      assertCoreFrozen();
-      stageTrunk(trunkRuntimePinSnapshot);
-      runPnpm(
-        'pack core npm artifacts',
-        ['--filter', '@kungfu-tech/core', 'run', 'pack-platform'],
-        {
-          env: {
-            ...buildEnv,
-            KF_PACKAGE_STAGE_DIR: NPM_RELEASE_DIR,
-          },
-          phase: 'package',
-          event: 'product.core.npm.pack',
-        },
-      );
-
-      buildKfx(kfxPackages, sdkBuildEnv);
-      assertKfxBundleExternals(kfxPackages);
-      assembleKfx(kfxPackages);
-
-      runPnpm('bundle tui', ['--filter', '@kungfu-tech/tui', 'run', 'bundle'], {
-        env: tuiBuildEnv,
-        phase: 'ui',
-        event: 'product.tui.bundle',
-      });
-      if (wantsDesktop()) {
-        const guiEsbuildRuntime = ensureEsbuildRuntime({
-          slot: 'gui',
-          paths: guiEsbuildPackagePaths(),
-        });
-        const guiBuildEnv = {
-          ...buildEnv,
-          ESBUILD_BINARY_PATH: guiEsbuildRuntime.binaryPath,
-        };
-        stageDesktopAuthoringRuntime(sdkEsbuildRuntime);
-        runPnpm(
-          'ensure electron',
-          ['--filter', '@kungfu-tech/gui', 'run', 'ensure-electron'],
-          {
-            env: buildEnv,
-            phase: 'ui',
-            event: 'product.gui.ensure-electron',
-          },
-        );
-        runPnpm('build gui', ['--filter', '@kungfu-tech/gui', 'run', 'build'], {
-          env: guiBuildEnv,
-          phase: 'ui',
-          event: 'product.gui.build',
-        });
-        writeCompatibilityManifest({
-          root: ROOT,
-          output: COMPATIBILITY_MANIFEST,
-          includeGui: true,
-        });
-        run(
-          'electron-builder desktop product',
-          process.execPath,
-          [
-            path.join(GUI_DIR, 'scripts', 'run-electron-builder.mjs'),
-            `--config=${path.join(PRODUCT_DIR, 'electron-builder.yml')}`,
-            ...builderArgs,
-          ],
-          {
-            cwd: GUI_DIR,
-            env: {
-              ...sdkBuildEnv,
-              KF_BUNDLED_EXTENSION_ROOT: ASSEMBLED_EXTENSIONS,
-            },
-            phase: 'package',
-            event: 'product.desktop.electron-builder',
-          },
-        );
-        finalizeDesktopReleaseManifest();
-        stageDesktopRelease();
-        // Build registration (for `shifu builds` / `shifu promote`) is not a
-        // build step: the launcher reads the KFD-3 distribution declaration
-        // and stashes the artifact after this task exits successfully.
-      }
-      if (wantsCli()) {
-        if (!wantsDesktop()) {
-          writeCompatibilityManifest({
-            root: ROOT,
-            output: COMPATIBILITY_MANIFEST,
-            includeGui: false,
-          });
-        }
-        buildCliProduct(sdkEsbuildRuntime);
-      }
-
-      console.log(`\n[product] output -> ${rel(RELEASE_DIR)}`);
-    },
-  );
 }
 
 export function verifyProductObservabilityEvents(events, target = 'all') {

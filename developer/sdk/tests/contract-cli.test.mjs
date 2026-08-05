@@ -78,6 +78,19 @@ function runText(args, cwd = repoRoot, env = process.env) {
   return result.stdout;
 }
 
+test('stable SDK dispatcher rejects an unknown command without an internal error', () => {
+  const result = spawnSync(process.execPath, [sdk, 'definitely-unknown'], {
+    cwd: repoRoot,
+    encoding: 'utf8',
+  });
+  assert.equal(result.status, 1);
+  assert.match(
+    result.stderr,
+    /kungfu sdk: unknown command: definitely-unknown/u,
+  );
+  assert.doesNotMatch(result.stderr, /ReferenceError/u);
+});
+
 function makeContractRepo(t) {
   const root = mkdtempSync(join(tmpdir(), 'kungfu-sdk-contract-'));
   const contractDir = join(root, 'framework', 'contract');

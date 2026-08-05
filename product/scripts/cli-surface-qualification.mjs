@@ -217,8 +217,19 @@ export function qualifyCliSurface({
         helpJson.registryRoot === expectedRoots.registryRoot,
       'human help roots do not match the Agent catalog',
     );
-    for (const section of ['START HERE', 'ACTION MODEL', 'FACTS & PROOF']) {
-      assert(defaultHelp.includes(section), `default help omitted ${section}`);
+    assert(
+      defaultHelp.includes('Project → Work → Agent'),
+      'default help omitted the Project, Work, Agent product model',
+    );
+    assert(
+      defaultHelp.includes('START HERE'),
+      'default help omitted START HERE',
+    );
+    for (const hiddenSection of ['ACTION MODEL', 'FACTS & PROOF']) {
+      assert(
+        !defaultHelp.includes(hiddenSection),
+        `default help exposed advanced section ${hiddenSection}`,
+      );
     }
     for (const section of ['SYSTEM & MAINTENANCE', 'DEVELOPER']) {
       assert(fullHelp.includes(section), `full help omitted ${section}`);
@@ -321,6 +332,20 @@ export function qualifyCliSurface({
     assert(
       brief.includes('kungfu xinfa compile'),
       'offline Agent brief omitted the single-entry topology',
+    );
+    const firstValue = parseJson(
+      run(
+        ['agent', 'first-value', 'contract', '--json'],
+        'kungfu agent first-value contract',
+      ).stdout,
+      'kungfu agent first-value contract',
+    );
+    assert(
+      firstValue.schema === 'kungfu.agent-first-value-contract-view/v1' &&
+        firstValue.contract?.result?.maximumQuestionCount === 1 &&
+        firstValue.contract?.qualification?.ci ===
+          'deterministic-contract-and-receipt-only',
+      'installed CLI first-value contract is incomplete',
     );
 
     const briefPath = path.join(tempRoot, 'profile-brief.json');

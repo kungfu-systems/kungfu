@@ -1,15 +1,23 @@
 // SPDX-License-Identifier: Apache-2.0
 
+import fs from 'node:fs';
+import path from 'node:path';
 import type {
   AgentWorkLab,
   AgentWorkLabEvent,
   AgentWorkLabReport,
   AgentWorkLabStartupRoute,
+  KungfuOnboardingState,
   ProjectTemplateCreationReceipt,
   ProjectTemplatePlan,
+  ProjectTemplateWorkspaceSelection,
 } from '@kungfu-tech/api/capability';
-import { agentWorkLabRunProgressLabel } from '@kungfu-tech/api/capability';
-import { useApp } from 'ink';
+import {
+  DEFAULT_KUNGFU_ONBOARDING_STATE,
+  agentWorkLabRunProgressLabel,
+  parseKungfuOnboardingState,
+} from '@kungfu-tech/api/capability';
+import { Box, Text, useApp } from 'ink';
 import React from 'react';
 import {
   AGENT_WORK_LAB_CHECKS,
@@ -23,18 +31,283 @@ import {
   type QuickCommand,
   SessionWorkbench,
   type TerminalDimensions,
+  TitledBorderWindow,
+  type WorkbenchActionButton,
   type WorkbenchCheck,
   type WorkbenchFocus,
   type WorkbenchGuideOverlay,
   type WorkbenchLine,
   type WorkbenchNextPrompt,
   type WorkbenchReportDetail,
+  type WorkbenchScrollBack,
+  type WorkbenchSessionBuffers,
+  appendWorkbenchSessionLines,
   boundedPromptRows,
   createIncrementalPlayback,
+  emptyWorkbenchSessionBuffers,
   isWorkbenchReturnInput,
   nextWorkbenchFocus,
+  scrollWorkbenchSession,
   sessionTitleBar,
+  workbenchActionAtPoint,
+  workbenchReportAtPoint,
+  workbenchReportReturnAtPoint,
+  workbenchSessionAtPoint,
+  workbenchViewportRows,
 } from './profile-shell.js';
+import { decodeTerminalMouseInput } from './terminal-lifecycle.js';
+
+export function readTuiOnboardingState(
+  configHome: string,
+  readFile: (file: string) => string = (file) => fs.readFileSync(file, 'utf8'),
+): KungfuOnboardingState {
+  try {
+    const value = JSON.parse(
+      readFile(path.join(configHome, 'config.json')),
+    ) as { ui?: { onboarding?: unknown } };
+    return parseKungfuOnboardingState(value.ui?.onboarding);
+  } catch {
+    return { ...DEFAULT_KUNGFU_ONBOARDING_STATE };
+  }
+}
+
+function wrapOnboardingText(value: string, width: number): string[] {
+  const words = value
+    .split(/\s+/u)
+    .flatMap((word) =>
+      word.length <= width
+        ? [word]
+        : Array.from({ length: Math.ceil(word.length / width) }, (_, index) =>
+            word.slice(index * width, (index + 1) * width),
+          ),
+    );
+  const lines: string[] = [];
+  let line = '';
+  for (const word of words) {
+    if (!line) line = word;
+    else if (`${line} ${word}`.length <= width) line = `${line} ${word}`;
+    else {
+      lines.push(line);
+      line = word;
+    }
+  }
+  if (line) lines.push(line);
+  return lines;
+}
+
+const AGENT_SHELL_ENTRY = 'kungfu run codex|claude|opencode|amp';
+
+export type TuiOnboardingAction =
+  | 'copy'
+  | 'lab'
+  | 'tour'
+  | 'continue'
+  | 'dismiss';
+
+export type TuiOnboardingNotice = {
+  ok: boolean;
+  title: string;
+  detail: string;
+  next: string;
+};
+
+export function useTransientOnboardingNotice(): [
+  TuiOnboardingNotice | undefined,
+  React.Dispatch<React.SetStateAction<TuiOnboardingNotice | undefined>>,
+] {
+  const [notice, setNotice] = React.useState<TuiOnboardingNotice>();
+  React.useEffect(() => {
+    if (!notice) return undefined;
+    const timer = setTimeout(() => setNotice(undefined), 4_000);
+    return () => clearTimeout(timer);
+  }, [notice]);
+  return [notice, setNotice];
+}
+
+export function tuiOnboardingActionFromInput(
+  value: string,
+): TuiOnboardingAction | 'quit' | null {
+  if (value === 'q' || value === 'Q' || value === '\u0003') return 'quit';
+  if (value === 'c' || value === 'C') return 'copy';
+  if (value === '\r' || value === '\n') return 'continue';
+  if (value === 'l' || value === 'L') return 'lab';
+  if (value === 't' || value === 'T') return 'tour';
+  if (value === 's' || value === 'S') return 'dismiss';
+  return null;
+}
+
+function OnboardingShortcutLine({
+  value,
+  opaqueWidth,
+}: {
+  value: string;
+  opaqueWidth?: number;
+}) {
+  const content =
+    opaqueWidth === undefined
+      ? value
+      : ` ${value}`.slice(0, opaqueWidth).padEnd(opaqueWidth);
+  return (
+    <Text
+      color={opaqueWidth === undefined ? undefined : 'white'}
+      backgroundColor={opaqueWidth === undefined ? undefined : 'blue'}
+      wrap="truncate-end"
+    >
+      {content.split(/(\[[^\]]+\])/u).map((part, index) =>
+        /^\[[^\]]+\]$/u.test(part) ? (
+          <Text
+            key={`${index}:${part}`}
+            bold
+            color="black"
+            backgroundColor="yellow"
+          >
+            {part}
+          </Text>
+        ) : (
+          part
+        ),
+      )}
+    </Text>
+  );
+}
+
+export function AgentFirstOnboardingView({
+  dimensions,
+  state,
+  command,
+  prompt,
+  notice,
+  onAction,
+}: {
+  dimensions: TerminalDimensions;
+  state: KungfuOnboardingState;
+  command: string;
+  prompt: string;
+  notice?: TuiOnboardingNotice;
+  onAction: (action: TuiOnboardingAction) => void;
+}) {
+  const { exit } = useApp();
+  const noticePanelWidth = Math.max(24, Math.min(72, dimensions.columns - 4));
+  const noticeColumns = Math.max(1, noticePanelWidth - 2);
+  const noticeLine = (value: string) =>
+    ` ${value}`.slice(0, noticeColumns).padEnd(noticeColumns);
+  React.useEffect(() => {
+    const onData = (chunk: Buffer | string) => {
+      const action = tuiOnboardingActionFromInput(String(chunk));
+      if (action === 'quit') exit();
+      else if (action) onAction(action);
+    };
+    process.stdin.on('data', onData);
+    return () => {
+      process.stdin.off('data', onData);
+    };
+  }, [exit, onAction]);
+
+  return (
+    <Box
+      width={dimensions.columns}
+      height={dimensions.rows}
+      paddingX={1}
+      flexDirection="column"
+      overflow="hidden"
+    >
+      <Text color="green" bold>
+        KUNGFU · AGENT-FIRST ENTRY
+      </Text>
+      <Text bold>Keep your agent. Give it durable Work.</Text>
+      <Text wrap="wrap">
+        Start in either place. Copy Kungfu into the Agent you already use,
+        continue directly into the Kungfu UI, or explore first. Copying is
+        helpful, never required.
+      </Text>
+      <TitledBorderWindow
+        columns={Math.max(20, dimensions.columns - 2)}
+        title="OPTION A · BRING KUNGFU TO YOUR AGENT"
+        borderColor="green"
+        paddingX={1}
+        rows={[
+          ...wrapOnboardingText(
+            prompt,
+            Math.max(16, dimensions.columns - 8),
+          ).map((row) => (
+            <Text key={`prompt:${row}`} color="cyan" bold>
+              {row}
+            </Text>
+          )),
+          <Text key="prompt-command-gap"> </Text>,
+          ...wrapOnboardingText(
+            `Exact local command: ${command}`,
+            Math.max(16, dimensions.columns - 8),
+          ).map((row) => (
+            <Text key={`command:${row}`} dimColor>
+              {row}
+            </Text>
+          )),
+          <OnboardingShortcutLine
+            key="copy-shortcut"
+            value="[C/c] Copy this one-line Agent prompt"
+          />,
+        ]}
+      />
+      <TitledBorderWindow
+        columns={Math.max(20, dimensions.columns - 2)}
+        title="OPTION B · START IN KUNGFU"
+        borderColor="cyan"
+        paddingX={1}
+        rows={[
+          <Text key="continue-copy">
+            Open the local Work control plane. No copy or paste is required.
+          </Text>,
+          <Text key="shell-entry" dimColor>
+            Keep your normal Agent workflow: {AGENT_SHELL_ENTRY}
+          </Text>,
+          <OnboardingShortcutLine
+            key="continue-shortcut"
+            value="[Enter] Continue to Kungfu"
+          />,
+        ]}
+      />
+      <OnboardingShortcutLine value="Explore first: [L/l] Agent Work Lab · [T/t] Guided Project Tour" />
+      <OnboardingShortcutLine
+        value={`Return any time with /onboarding · [S/s] Don’t show again · Current route: ${state.route}`}
+      />
+      {notice ? (
+        <Box
+          position="absolute"
+          width={noticePanelWidth}
+          height={6}
+          marginTop={Math.max(2, Math.floor((dimensions.rows - 6) / 2))}
+          marginLeft={Math.max(
+            2,
+            Math.floor((dimensions.columns - noticePanelWidth) / 2),
+          )}
+          borderStyle="double"
+          borderColor={notice.ok ? 'green' : 'red'}
+          flexDirection="column"
+          overflow="hidden"
+        >
+          <Text
+            bold
+            color={notice.ok ? 'black' : 'white'}
+            backgroundColor={notice.ok ? 'green' : 'red'}
+          >
+            {noticeLine(notice.title)}
+          </Text>
+          <Text color="white" backgroundColor="blue">
+            {noticeLine(notice.detail)}
+          </Text>
+          <OnboardingShortcutLine
+            value={notice.next}
+            opaqueWidth={noticeColumns}
+          />
+          <Text color="white" backgroundColor="blue" dimColor>
+            {noticeLine('Closes automatically in 4 seconds.')}
+          </Text>
+        </Box>
+      ) : null}
+    </Box>
+  );
+}
 
 export type TuiAgentWorkLabMode = AgentWorkLabCaseId;
 export type TuiAgentWorkLabFocus = WorkbenchFocus;
@@ -56,6 +329,14 @@ export type AgentWorkLabActionRequest = {
   action: AgentWorkLabSuiteAction;
 };
 
+export const AGENT_WORK_LAB_POINTER_ACTIONS: WorkbenchActionButton<AgentWorkLabSuiteAction>[] =
+  [
+    { action: 'lab-demo', label: 'Run demo' },
+    { action: 'lab-same', label: 'Run same' },
+    { action: 'lab-handoff', label: 'Run handoff' },
+    { action: 'lab-starter', label: 'New project' },
+  ];
+
 export type AgentWorkLabAutoplayResult =
   | {
       state: 'completed';
@@ -69,6 +350,11 @@ export type AgentWorkLabAutoplayResult =
 export type AgentWorkLabAutoplay = {
   onSettled: (result: AgentWorkLabAutoplayResult) => void;
   wait?: (milliseconds: number) => Promise<void>;
+};
+
+type StarterProjectFailure = {
+  stage: 'create' | 'open';
+  message: string;
 };
 
 export const AGENT_WORK_LAB_QUICK_COMMANDS: QuickCommand<AgentWorkLabSuiteAction>[] =
@@ -127,6 +413,19 @@ export const nextAgentWorkLabFocus = nextWorkbenchFocus;
 export const isAgentWorkLabReportReturnInput = isWorkbenchReturnInput;
 export const agentWorkLabSessionTitleBar = sessionTitleBar;
 export const agentWorkLabPromptRows = boundedPromptRows;
+
+export function agentWorkLabStarterReceiptInput(
+  input: string,
+  canOpen: boolean,
+  busy: boolean,
+): 'open' | 'close' | 'none' {
+  if (input === '\r' || input === '\n') {
+    if (!canOpen) return 'close';
+    return busy ? 'none' : 'open';
+  }
+  if (isAgentWorkLabReportReturnInput(input)) return 'close';
+  return 'none';
+}
 
 export function agentWorkLabNextModePrompt(
   mode: TuiAgentWorkLabMode,
@@ -304,7 +603,7 @@ export function AgentWorkLabView({
   mode,
   sourceLabel,
   targetLabel,
-  lines,
+  buffers,
   report,
   busy,
   progress,
@@ -324,13 +623,13 @@ export function AgentWorkLabView({
   mode: TuiAgentWorkLabMode;
   sourceLabel: string;
   targetLabel: string;
-  lines: TuiAgentWorkLabLine[];
+  buffers: WorkbenchSessionBuffers;
   report?: AgentWorkLabReport;
   busy: string;
   progress: string;
   error: string;
   activeFocus: TuiAgentWorkLabFocus;
-  scrollBack: Record<1 | 2, number>;
+  scrollBack: WorkbenchScrollBack;
   showHelp: boolean;
   activityFrame: number;
   runningSession?: 1 | 2;
@@ -356,16 +655,17 @@ export function AgentWorkLabView({
       controls={
         autoplay
           ? `STEP ${autoplay.phase}/4 · ${agentWorkLabAutoplayPhaseLabel(autoplay.phase)}`
-          : '[d] demo [j/k] source [brackets] target [x] same [m] handoff [n] new [Tab] focus [?] explain [w] Work [q] quit'
+          : 'keyboard [d/x/m/n] run · [j/k] source · [brackets] target · [Tab] focus · [?] explain'
       }
+      controlActions={autoplay ? undefined : AGENT_WORK_LAB_POINTER_ACTIONS}
       help={
         autoplay
           ? autoplayQuestion
-          : `${selectedCase.description} Good: a fresh Session 2 finds the same Work and continues. Bad: restart, copied chat, or lost identity.`
+          : `${selectedCase.description} Good: a fresh Session 2 finds the same Work and continues. Bad: restart, copied chat, or lost identity. Mouse clicks require terminal click reporting.`
       }
       sourceLabel={sourceLabel || 'Bundled Demo Agent'}
       targetLabel={targetLabel || 'Fresh Demo Agent'}
-      lines={lines}
+      buffers={buffers}
       checks={reportChecks(report)}
       reportAvailable={Boolean(report)}
       reportPassed={Boolean(report && report.status !== 'failed')}
@@ -421,6 +721,8 @@ export function AgentWorkLabHost({
   startup,
   dimensions,
   onOpenWork,
+  onOpenStarterProject,
+  onWorkspacePointer,
   isInputCaptured = () => false,
   actionRequest,
   onActionHandled,
@@ -430,6 +732,11 @@ export function AgentWorkLabHost({
   startup: AgentWorkLabStartupRoute;
   dimensions: DimensionSource;
   onOpenWork?: () => void;
+  onOpenStarterProject?: (
+    receipt: ProjectTemplateCreationReceipt,
+    workspace: ProjectTemplateWorkspaceSelection,
+  ) => void;
+  onWorkspacePointer?: () => void;
   isInputCaptured?: () => boolean;
   actionRequest?: AgentWorkLabActionRequest;
   onActionHandled?: (id: number) => void;
@@ -444,9 +751,14 @@ export function AgentWorkLabHost({
   const [selected, setSelected] = React.useState(0);
   const [target, setTarget] = React.useState(0);
   const [report, setReport] = React.useState<AgentWorkLabReport>();
-  const [lines, setLines] = React.useState<
-    ReturnType<typeof agentWorkLabEventLines>
-  >([]);
+  const [sessionState, setSessionState] = React.useState<{
+    buffers: WorkbenchSessionBuffers;
+    scrollBack: WorkbenchScrollBack;
+  }>(() => ({
+    buffers: emptyWorkbenchSessionBuffers(),
+    scrollBack: { 1: 0, 2: 0 },
+  }));
+  const { buffers, scrollBack } = sessionState;
   const [activeFocus, setActiveFocus] =
     React.useState<TuiAgentWorkLabFocus>('session-1');
   const [reportDetail, setReportDetail] =
@@ -455,16 +767,14 @@ export function AgentWorkLabHost({
     React.useState<TuiAgentWorkLabReportDetail>();
   const [nextPrompt, setNextPrompt] =
     React.useState<TuiAgentWorkLabNextPrompt>();
-  const [scrollBack, setScrollBack] = React.useState<Record<1 | 2, number>>({
-    1: 0,
-    2: 0,
-  });
   const [showHelp, setShowHelp] = React.useState(false);
   const [busy, setBusy] = React.useState('');
   const [error, setError] = React.useState('');
   const [starterPlan, setStarterPlan] = React.useState<ProjectTemplatePlan>();
   const [starterReceipt, setStarterReceipt] =
     React.useState<ProjectTemplateCreationReceipt>();
+  const [starterFailure, setStarterFailure] =
+    React.useState<StarterProjectFailure>();
   const [runProgress, setRunProgress] = React.useState<{
     startedAt: number;
     lastEventAt: number;
@@ -549,12 +859,14 @@ export function AgentWorkLabHost({
       setMode(nextMode);
       setBusy(selectedCase.runLabel);
       setReport(undefined);
-      setLines([]);
+      setSessionState({
+        buffers: emptyWorkbenchSessionBuffers(),
+        scrollBack: { 1: 0, 2: 0 },
+      });
       setActiveFocus('session-1');
       setReportDetail(undefined);
       setEmphasizedResult(undefined);
       setNextPrompt(undefined);
-      setScrollBack({ 1: 0, 2: 0 });
       setError('');
       const startedAt = Date.now();
       setProgressNow(startedAt);
@@ -576,7 +888,13 @@ export function AgentWorkLabHost({
             setAutoplayPhase(agentWorkLabAutoplayPhase(event));
             if (session) setActiveFocus(`session-${session}`);
           }
-          setLines((current) => [...current, ...agentWorkLabEventLines(event)]);
+          const eventLines = agentWorkLabEventLines(event);
+          setSessionState((current) =>
+            appendWorkbenchSessionLines({
+              ...current,
+              lines: eventLines,
+            }),
+          );
           setRunProgress((current) =>
             current
               ? {
@@ -668,6 +986,7 @@ export function AgentWorkLabHost({
     }
     setBusy('planning starter project');
     setStarterReceipt(undefined);
+    setStarterFailure(undefined);
     void lab
       .planStarterProject()
       .then((plan) => {
@@ -682,19 +1001,52 @@ export function AgentWorkLabHost({
   }, [busy, lab]);
   const confirmStarterProject = React.useCallback(() => {
     if (!starterPlan || busy) return;
+    let createdReceipt: ProjectTemplateCreationReceipt | undefined;
     setBusy('creating starter project');
+    setStarterFailure(undefined);
     void lab
       .createStarterProject(starterPlan, 'local-user')
-      .then((receipt) => {
+      .then(async (receipt) => {
+        createdReceipt = receipt;
         setStarterReceipt(receipt);
         setStarterPlan(undefined);
+        if (!onOpenStarterProject) return;
+        setBusy('opening starter project');
+        const workspace = await lab.openStarterProject(receipt);
+        onOpenStarterProject(receipt, workspace);
+        setStarterReceipt(undefined);
         setError('');
       })
       .catch((reason) => {
-        setError(reason instanceof Error ? reason.message : String(reason));
+        setStarterFailure({
+          stage: createdReceipt ? 'open' : 'create',
+          message: reason instanceof Error ? reason.message : String(reason),
+        });
+        setError('');
       })
       .finally(() => setBusy(''));
-  }, [busy, lab, starterPlan]);
+  }, [busy, lab, onOpenStarterProject, starterPlan]);
+  const openStarterProject = React.useCallback(() => {
+    if (!starterReceipt || busy || !onOpenStarterProject) return;
+    setBusy('opening starter project');
+    setStarterFailure(undefined);
+    void lab
+      .openStarterProject(starterReceipt)
+      .then((workspace) => {
+        onOpenStarterProject(starterReceipt, workspace);
+        setStarterReceipt(undefined);
+        setStarterFailure(undefined);
+        setError('');
+      })
+      .catch((reason) => {
+        setStarterFailure({
+          stage: 'open',
+          message: reason instanceof Error ? reason.message : String(reason),
+        });
+        setError('');
+      })
+      .finally(() => setBusy(''));
+  }, [busy, lab, onOpenStarterProject, starterReceipt]);
   const performSuiteAction = React.useCallback(
     (action: AgentWorkLabSuiteAction) => {
       if (action === 'lab-focus-next') {
@@ -797,10 +1149,105 @@ export function AgentWorkLabHost({
   }, [autoplay]);
   React.useEffect(() => {
     const onData = (chunk: Buffer | string) => {
-      if (isInputCaptured()) return;
       const input = String(chunk);
-      if (starterReceipt && isAgentWorkLabReportReturnInput(input)) {
-        return setStarterReceipt(undefined);
+      const mouseEvents = decodeTerminalMouseInput(input);
+      if (mouseEvents.length > 0) {
+        const topOffset = autoplay ? 0 : 1;
+        const viewportRows = workbenchViewportRows({
+          dimensions: size,
+          showHelp: showHelp || Boolean(autoplay),
+          verdictDetail: autoplay
+            ? 'THE CHAT ENDED. THE WORK DID NOT.'
+            : undefined,
+        });
+        for (const event of mouseEvents) {
+          const session = workbenchSessionAtPoint({
+            dimensions: size,
+            showHelp: showHelp || Boolean(autoplay),
+            verdictDetail: autoplay
+              ? 'THE CHAT ENDED. THE WORK DID NOT.'
+              : undefined,
+            column: event.column,
+            row: event.row,
+            topOffset,
+          });
+          if (event.kind === 'wheel') {
+            if (!session) continue;
+            const delta = event.button === 'wheel-up' ? 3 : -3;
+            setSessionState((current) => ({
+              ...current,
+              scrollBack: {
+                ...current.scrollBack,
+                [session]: scrollWorkbenchSession({
+                  current: current.scrollBack[session],
+                  lineCount: current.buffers[session].length,
+                  viewportRows,
+                  delta,
+                }),
+              },
+            }));
+            setActiveFocus(`session-${session}`);
+            onWorkspacePointer?.();
+            continue;
+          }
+          if (event.kind !== 'press' || event.button !== 'left') continue;
+          onWorkspacePointer?.();
+          if (reportDetail) {
+            if (
+              workbenchReportReturnAtPoint({
+                dimensions: size,
+                column: event.column,
+                row: event.row,
+                topOffset,
+              })
+            ) {
+              setReportDetail(undefined);
+            }
+            continue;
+          }
+          if (starterReceipt || starterPlan) continue;
+          const action = workbenchActionAtPoint({
+            actions: AGENT_WORK_LAB_POINTER_ACTIONS,
+            column: event.column,
+            row: event.row,
+            topOffset,
+          });
+          if (action) {
+            performSuiteActionRef.current(action);
+            continue;
+          }
+          const result = workbenchReportAtPoint({
+            dimensions: size,
+            column: event.column,
+            row: event.row,
+            topOffset,
+          });
+          if (result && report) {
+            setActiveFocus(result);
+            setReportDetail(result);
+            continue;
+          }
+          if (session) {
+            setActiveFocus(`session-${session}`);
+          }
+        }
+        return;
+      }
+      if (isInputCaptured()) return;
+      if (busy && (starterReceipt || starterPlan)) return;
+      if (starterReceipt) {
+        const action = agentWorkLabStarterReceiptInput(
+          input,
+          Boolean(onOpenStarterProject),
+          Boolean(busy),
+        );
+        if (action === 'open') {
+          openStarterProject();
+        } else if (action === 'close') {
+          setStarterReceipt(undefined);
+          setStarterFailure(undefined);
+        }
+        return;
       }
       if (starterPlan) {
         if (input === '\r' || input === '\n') {
@@ -809,6 +1256,7 @@ export function AgentWorkLabHost({
         }
         if (isAgentWorkLabReportReturnInput(input)) {
           setStarterPlan(undefined);
+          setStarterFailure(undefined);
           setError('');
         }
         return;
@@ -833,14 +1281,36 @@ export function AgentWorkLabHost({
             ? 2
             : undefined;
       if (input === '\u001b[A' && focusedSession)
-        return setScrollBack((current) => ({
+        return setSessionState((current) => ({
           ...current,
-          [focusedSession]: current[focusedSession] + 1,
+          scrollBack: {
+            ...current.scrollBack,
+            [focusedSession]: scrollWorkbenchSession({
+              current: current.scrollBack[focusedSession],
+              lineCount: current.buffers[focusedSession].length,
+              viewportRows: workbenchViewportRows({
+                dimensions: size,
+                showHelp,
+              }),
+              delta: 1,
+            }),
+          },
         }));
       if (input === '\u001b[B' && focusedSession)
-        return setScrollBack((current) => ({
+        return setSessionState((current) => ({
           ...current,
-          [focusedSession]: Math.max(0, current[focusedSession] - 1),
+          scrollBack: {
+            ...current.scrollBack,
+            [focusedSession]: scrollWorkbenchSession({
+              current: current.scrollBack[focusedSession],
+              lineCount: current.buffers[focusedSession].length,
+              viewportRows: workbenchViewportRows({
+                dimensions: size,
+                showHelp,
+              }),
+              delta: -1,
+            }),
+          },
         }));
       if (input === '?') return setShowHelp((current) => !current);
       if (key === 'next-card')
@@ -871,14 +1341,21 @@ export function AgentWorkLabHost({
     };
   }, [
     activeFocus,
+    autoplay,
+    busy,
     confirmStarterProject,
     exit,
     isInputCaptured,
     onOpenWork,
+    onOpenStarterProject,
+    onWorkspacePointer,
+    openStarterProject,
     performSuiteAction,
     profiles,
     report,
     reportDetail,
+    showHelp,
+    size,
     starterPlan,
     starterReceipt,
   ]);
@@ -904,7 +1381,7 @@ export function AgentWorkLabHost({
       mode={mode}
       sourceLabel={sourceLabel}
       targetLabel={targetLabel}
-      lines={lines}
+      buffers={buffers}
       report={report}
       busy={busy}
       progress={progress}
@@ -928,32 +1405,63 @@ export function AgentWorkLabHost({
       runningSession={runningSession}
       nextPrompt={nextPrompt}
       guideOverlay={
-        starterReceipt
+        starterFailure?.stage === 'create' && starterPlan
           ? {
-              heading: 'STARTER PROJECT CREATED',
-              title: starterReceipt.destination,
+              heading: 'STARTER PROJECT NOT CREATED',
+              title: 'CREATION STOPPED SAFELY',
               lines: [
-                `${starterReceipt.files.length} reference files written and verified.`,
-                'Initial Work request captured with canonical Assignment authority.',
-                'Its state is pending admission: no Agent run or completion is claimed.',
-                'Open this folder as a Kungfu project to begin the real Work.',
+                starterFailure.message,
+                `Destination: ${starterPlan.destination}`,
+                'Kungfu rolled back the incomplete folder and captured no Work.',
+                'Check folder access, then retry without leaving the Lab.',
               ],
-              footer:
-                'Press Esc or Enter to close · run /work to inspect Work.',
+              footer: 'Enter retries · Esc returns to Lab.',
             }
-          : starterPlan
+          : starterFailure?.stage === 'open' && starterReceipt
             ? {
-                heading: 'START YOUR OWN WORK',
-                title: 'CREATE AGENT WORK STARTER?',
+                heading: 'PROJECT CREATED · OPEN FAILED',
+                title: starterReceipt.destination,
                 lines: [
-                  `Destination: ${starterPlan.destination}`,
-                  `${starterPlan.files.length} files · first Work: ${starterPlan.initialWork.title}`,
-                  'Existing folders are never overwritten. Git is not changed.',
-                  'The Work request is captured now; admission remains explicit.',
+                  starterFailure.message,
+                  `${starterReceipt.files.length} files remain safely written and verified.`,
+                  'Initial Work remains captured and pending explicit admission.',
+                  'Retry opening this exact project workspace.',
                 ],
-                footer: 'Enter creates · Esc cancels.',
+                footer: 'Enter retries opening · Esc closes.',
               }
-            : undefined
+            : starterReceipt
+              ? {
+                  heading: 'STARTER PROJECT CREATED',
+                  title: starterReceipt.destination,
+                  lines: [
+                    `${starterReceipt.files.length} reference files written and verified.`,
+                    'Initial Work request captured with canonical Work authority.',
+                    'Its state is pending admission: no Agent run or completion is claimed.',
+                    busy
+                      ? 'Selecting this folder as the active Kungfu project…'
+                      : 'Open this folder as a Kungfu project to begin the real Work.',
+                  ],
+                  footer: busy
+                    ? 'Opening project workspace · please wait.'
+                    : onOpenStarterProject
+                      ? 'Enter retries opening · Esc closes.'
+                      : 'Press Esc or Enter to close.',
+                }
+              : starterPlan
+                ? {
+                    heading: 'START YOUR OWN WORK',
+                    title: 'CREATE AGENT WORK STARTER?',
+                    lines: [
+                      `Destination: ${starterPlan.destination}`,
+                      `${starterPlan.files.length} files · first Work: ${starterPlan.initialWork.title}`,
+                      'Existing folders are never overwritten. Git is not changed.',
+                      'The Work request is captured now; admission remains explicit.',
+                    ],
+                    footer: busy
+                      ? 'Creating files and capturing Work · please wait.'
+                      : 'Enter creates and opens · Esc cancels.',
+                  }
+                : undefined
       }
       reportDetail={reportDetail}
       emphasizedResult={emphasizedResult}

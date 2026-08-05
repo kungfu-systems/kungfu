@@ -83,25 +83,45 @@ try {
     packOutput,
     '--json',
   ]);
+  const atlasOutput = path.join(temporary, 'atlas');
+  run(xinfaBinary, [
+    'atlas',
+    'compile',
+    '--project',
+    project,
+    '--output',
+    atlasOutput,
+    '--json',
+  ]);
 
   const atlasGolden = JSON.parse(fs.readFileSync(XINFA_ATLAS_GOLDEN, 'utf8'));
-  const publishedAtlas = JSON.parse(
+  const currentAtlas = JSON.parse(
+    fs.readFileSync(path.join(atlasOutput, 'atlas.json'), 'utf8'),
+  );
+  const currentManifest = JSON.parse(
+    fs.readFileSync(path.join(atlasOutput, 'manifest.json'), 'utf8'),
+  );
+  const currentReceipt = JSON.parse(
+    fs.readFileSync(path.join(atlasOutput, 'receipt.json'), 'utf8'),
+  );
+  const bundledAtlas = JSON.parse(
     fs.readFileSync(path.join(KFD_ATLAS_FIXTURE, 'atlas.json'), 'utf8'),
   );
-  const publishedManifest = JSON.parse(
-    fs.readFileSync(path.join(KFD_ATLAS_FIXTURE, 'manifest.json'), 'utf8'),
-  );
-  const publishedReceipt = JSON.parse(
-    fs.readFileSync(path.join(KFD_ATLAS_FIXTURE, 'receipt.json'), 'utf8'),
-  );
-  assert.equal(publishedAtlas.atlas_root, atlasGolden.atlas_root);
-  assert.equal(
-    publishedAtlas.roots.context_pack,
-    atlasGolden.context_pack_root,
-  );
-  assert.equal(publishedAtlas.roots.schema, atlasGolden.schema_root);
-  assert.equal(publishedManifest.manifest_root, atlasGolden.manifest_root);
-  assert.equal(publishedReceipt.receipt_root, atlasGolden.receipt_root);
+  assert.equal(currentAtlas.atlas_root, atlasGolden.atlas_root);
+  assert.equal(currentAtlas.roots.context_pack, atlasGolden.context_pack_root);
+  assert.equal(currentAtlas.roots.schema, atlasGolden.schema_root);
+  assert.equal(currentManifest.manifest_root, atlasGolden.manifest_root);
+  assert.equal(currentReceipt.receipt_root, atlasGolden.receipt_root);
+
+  // Compiler release identity contributes to Pack and Atlas content roots. The
+  // KFD-bundled fixture may therefore represent an earlier Xinfa release, but
+  // it must retain the same release-independent source and semantic closure.
+  assert.equal(bundledAtlas.compiler.product, 'xinfa');
+  assert.equal(bundledAtlas.roots.cut, atlasGolden.cut_root);
+  assert.equal(bundledAtlas.roots.schema, atlasGolden.schema_root);
+  assert.equal(bundledAtlas.roots.semantic, atlasGolden.semantic_root);
+  assert.equal(bundledAtlas.roots.provenance, atlasGolden.provenance_root);
+  assert.equal(bundledAtlas.roots.verification, atlasGolden.verification_root);
 
   const episodeOutput = path.join(
     fixture,
@@ -114,11 +134,12 @@ try {
   );
   const profiles = {
     pack: verify('pack', packOutput),
-    atlas: verify('atlas', KFD_ATLAS_FIXTURE),
+    atlas: verify('atlas', atlasOutput),
+    bundledAtlas: verify('atlas', KFD_ATLAS_FIXTURE),
     episode: verify('episode', episodeOutput),
   };
   console.log(
-    `[kfd-verifier-drift] Kungfu-owned Pack, Atlas, and Episode accepted: ${JSON.stringify(profiles)}`,
+    `[kfd-verifier-drift] current Pack, Atlas, Episode, and bundled KFD Atlas accepted: ${JSON.stringify(profiles)}`,
   );
 } finally {
   fs.rmSync(temporary, { recursive: true, force: true });

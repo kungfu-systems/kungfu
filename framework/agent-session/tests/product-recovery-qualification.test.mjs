@@ -87,7 +87,7 @@ function startInput(root, suffix) {
   return {
     ...sessionRef(suffix),
     provider: 'codex',
-    providerVersion: '0.144.3',
+    providerVersion: '0.146.0',
     profileRoot: PROFILE_ROOT,
     executable: process.execPath,
     argv: [PROVIDER, 'codex'],

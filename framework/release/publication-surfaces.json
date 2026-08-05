@@ -1,6 +1,7 @@
 {
   "schema": "kungfu.release-publication-control-plane/v1",
   "status": "active",
+  "versionLineAuthorityRoot": "sha256:2fd580501fb77ae9ee05c8dd6a4bf141fc8cdeb77c8d4d3e9cd550133213b33d",
   "protocol": {
     "schema": "kungfu.release-publication-protocol/v1",
     "authority": "adapter-only",
@@ -68,7 +69,7 @@
             "product-stable",
             "product-binaries"
           ],
-          "sourceRoot": "sha256:49981aaf1fde55de4422bd6d3d3b6d3f14c37737e5d5e6abbf70af7ddcd5a186"
+          "sourceRoot": "sha256:5fb26894efc3f581fbae8b7d7bc9518ea1b414529044b01ee7316be47708d194"
         },
         {
           "path": ".github/workflows/affected-native-pr.yml",
@@ -79,7 +80,7 @@
             "product-stable",
             "product-binaries"
           ],
-          "sourceRoot": "sha256:ca478b9378664bd3cffc4be3b6939421227d52616c0c690a0f84e63d26ba1617"
+          "sourceRoot": "sha256:3e7c596b194eb0e177f453ddbf62ff26c95104da0b0ca6f05989a3e95c9ba88c"
         },
         {
           "path": ".github/workflows/alpha-promotion-preflight.yml",
@@ -89,7 +90,7 @@
             "product-alpha",
             "product-binaries"
           ],
-          "sourceRoot": "sha256:ac59ab8ac7eafa7ff1829d94c33e7f5453aa4109ad95ddc5d1b35f7df1e6b9ce"
+          "sourceRoot": "sha256:2205b495b9433c6efa110c3999ea3b09de16af02d7a2fb859ad8db5086c9399f"
         },
         {
           "path": ".github/workflows/aws-us-linux-burst-qualification.yml",
@@ -110,7 +111,7 @@
           "classification": "non-publication",
           "owner": "kungfu-ci",
           "surfaceIds": [],
-          "sourceRoot": "sha256:9828639e188badfc8a1f2ddfe17ea1d07ba9e737d15289a981a0a9db3906bbbd"
+          "sourceRoot": "sha256:bbaa81705979fe216eca197a7439ee1f5173d2c480cb7011d8d643b0ebc7cb50"
         },
         {
           "path": ".github/workflows/build.yml",
@@ -121,7 +122,7 @@
             "product-stable",
             "product-binaries"
           ],
-          "sourceRoot": "sha256:4060fee822a3170f3ee02d260d91d09e2e11b15f995df7c92f2cf6b533a9573a"
+          "sourceRoot": "sha256:45e14025564297ed54cfb095b79a11d17f5368bf3ad02047b070847499550d93"
         },
         {
           "path": ".github/workflows/buildchain-validate.yml",
@@ -145,7 +146,7 @@
           "classification": "non-publication",
           "owner": "kungfu-ci",
           "surfaceIds": [],
-          "sourceRoot": "sha256:fb476b7c16cdda4db240b2ae6e24f5f9a2d6f2a92a4fdb00c222868dfd345133"
+          "sourceRoot": "sha256:5f13b0ce2b2489c2949fc0e410c9b5ae832afea226c950be501a124857a181db"
         },
         {
           "path": ".github/workflows/core-build-profiles.yml",
@@ -169,7 +170,21 @@
             "product-alpha",
             "product-binaries"
           ],
-          "sourceRoot": "sha256:5dbafeda2b8f802e7b0944c40412f269bd0028280873ba96735b078d918a4de4"
+          "sourceRoot": "sha256:ec481c2245762516a4cf123d54a942fb0d0979e22d335b114a87e398f2b60d46"
+        },
+        {
+          "path": ".github/workflows/dev-delivery-warrant-terminal.yml",
+          "classification": "non-publication",
+          "owner": "kungfu-ci",
+          "surfaceIds": [],
+          "sourceRoot": "sha256:c608931f7b258b53fbd900760ff2d31f8513f8a694b07369245e26441546a04f"
+        },
+        {
+          "path": ".github/workflows/dev-pr-auto-merge.yml",
+          "classification": "non-publication",
+          "owner": "kungfu-ci",
+          "surfaceIds": [],
+          "sourceRoot": "sha256:c1f8c3ed11c78fbc84b2ebbcefcfac29454a1272b4a7f032cfabeda271de24b5"
         },
         {
           "path": ".github/workflows/dev-gate-latency-patrol.yml",
@@ -179,13 +194,23 @@
           "sourceRoot": "sha256:639f670a1fa0f6418fc142c01e82a024ff2ce530b0ebd6db9857e63944ac9117"
         },
         {
+          "path": ".github/workflows/dev-qualification-patrol.yml",
+          "classification": "qualification",
+          "owner": "kungfu-release",
+          "surfaceIds": [
+            "product-alpha",
+            "product-stable"
+          ],
+          "sourceRoot": "sha256:a94f7b5c47883a70231ab1ca9b202cf0e7c15089d163410e0888b937c57d2c1f"
+        },
+        {
           "path": ".github/workflows/stable-candidate-patrol.yml",
           "classification": "qualification",
           "owner": "kungfu-release",
           "surfaceIds": [
             "product-stable"
           ],
-          "sourceRoot": "sha256:131e6b02eee1fbcd643a4487b55f94182851fa1ab4c6caf649a05973e221104c"
+          "sourceRoot": "sha256:6af66965fdfe536109f0f1be8aaadf53ea21a5dbb9ab601fb3b7137467b5861d"
         },
         {
           "path": ".github/workflows/dev-verify-patrol.yml",
@@ -195,7 +220,7 @@
             "product-alpha",
             "product-stable"
           ],
-          "sourceRoot": "sha256:80ecf6fe4554d33e1dc72146064a91094544c03739e40d0e2516071c4fde3918"
+          "sourceRoot": "sha256:fe6b676dcdcab77234d225eb00ca126ae718a00c496b87a3734134c4039b8ecc"
         },
         {
           "path": ".github/workflows/docs-check.yml",
@@ -226,7 +251,7 @@
             "product-alpha",
             "product-stable"
           ],
-          "sourceRoot": "sha256:d855b0bed551c031f314b8223d45729d2a4609737bacf573ac1683188227b1fe"
+          "sourceRoot": "sha256:d884a2ed2c7eb683fc45687b4c9a63528debf11bff1060059f08ead6461f9c28"
         },
         {
           "path": ".github/workflows/kfd-verifier-drift.yml",
@@ -247,7 +272,7 @@
             "product-stable",
             "product-binaries"
           ],
-          "sourceRoot": "sha256:62743a6b64d9b897792c572d6b8e3ad3eafd54b5ea330cb246b0467308ee8d3f"
+          "sourceRoot": "sha256:20618795b9bafbb08a12b41a48fe139549d76f9bedc2d14791d28956a7c4c63a"
         },
         {
           "path": ".github/workflows/kungfu-agent-patrol.yml",
@@ -282,6 +307,20 @@
           "sourceRoot": "sha256:1700c2c52b5ff4b09016013b2cf643fc570560a31c805434153d524a83e2f073"
         },
         {
+          "path": ".github/workflows/python-structure.yml",
+          "classification": "non-publication",
+          "owner": "core-python",
+          "surfaceIds": [],
+          "sourceRoot": "sha256:e85ad35d75c680bd5890462ff2f3d8162751cff3a2fb1f579578045a841d621a"
+        },
+        {
+          "path": ".github/workflows/report-projection.yml",
+          "classification": "non-publication",
+          "owner": "framework-report-projection",
+          "surfaceIds": [],
+          "sourceRoot": "sha256:ddcca714991e9e8d5d8dde326b6d22804989cdab1d6af8d603a1b4ac7e08ea49"
+        },
+        {
           "path": ".github/workflows/release-new-version.yml",
           "classification": "publication",
           "owner": "kungfu-release",
@@ -290,7 +329,7 @@
             "product-stable",
             "product-binaries"
           ],
-          "sourceRoot": "sha256:c96325a74759a76b79a77bf7ea42b9402b66db1d09e59dafde77ce6666215bb4"
+          "sourceRoot": "sha256:227233e575be7399e82023faad2fb562f590c706845f12140f233e48c1893245"
         },
         {
           "path": ".github/workflows/release-shifu.yml",
@@ -325,17 +364,18 @@
     "buildchain": {
       "repository": "kungfu-systems/buildchain",
       "owner": "kungfu-systems/buildchain",
-      "sourceRevision": "ea0d13ac2ccfbb3dc3a11a94e8eb83ab04b936b8",
-      "version": "3.0.2-alpha.2",
+      "sourceRevision": "f63d43720ebb7d5099080b14c70cf04254057d80",
+      "version": "3.0.5-alpha.6",
       "compatibilityMode": "stable-v3-contract-plus-exact-additive-runtime",
       "stableContractLock": ".buildchain/contract-lock.json",
       "runtimeContractLock": ".buildchain/alpha-contract-lock.json",
-      "workflowInventoryRoot": "sha256:570866f0204d887e761e69c3a8907a6348eab1b77dba133d76f32a4034d0f05c",
+      "workflowInventoryRoot": "sha256:18c8418a96df4c01f0505ed8c5e8c892b944f3385ab844febe540590e4c96bdf",
       "workflowDiscoveryPattern": "(release|publish|publication|promotion|stable-candidate|alpha-self-dogfood|candidate-lab|auditable-demo|binary-distribution|web-surface|wheel|bump-minor)",
       "workflowInventory": [
         ".github/workflows/.auditable-demo.yml",
         ".github/workflows/.binary-release-assets.yml",
         ".github/workflows/.bump-minor-version.yml",
+        ".github/workflows/.declarative-auditable-demo.yml",
         ".github/workflows/.publication-authority.yml",
         ".github/workflows/.release-candidate-promote.yml",
         ".github/workflows/.release-docker.yml",
@@ -407,26 +447,26 @@
   },
   "rulesetContracts": [
     {
-      "id": "alpha-v4",
+      "id": "alpha-current",
       "channel": "alpha",
       "target": "refs/heads/alpha/v4/v4.0",
       "adapterContractPath": "docs/qualification/alpha-ruleset.contract.json",
       "requiredBeforePublication": true
     },
     {
-      "id": "stable-v4",
+      "id": "stable-current",
       "channel": "stable",
       "target": "refs/heads/release/v4/v4.0",
       "adapterContractPath": "docs/qualification/stable-ruleset.contract.json",
       "requiredBeforePublication": true
     },
     {
-      "id": "major-v4",
+      "id": "major-current",
       "channel": "major",
       "target": "refs/heads/publish-gate/major/v4/v4.0/*",
       "requiredBeforePublication": true,
       "ruleset": {
-        "name": "Kungfu major publication gate authority: v4",
+        "name": "Kungfu current major publication gate authority",
         "target": "branch",
         "enforcement": "active",
         "bypass_actors": [],
@@ -487,7 +527,7 @@
           }
         ]
       },
-      "contractRoot": "sha256:8a64372704fc3171973a33adf4150ea24d4ec4857c9e446789e9c1e63c8f8df4"
+      "contractRoot": "sha256:24936a0fb540a286f58515fad3bb544b093aae5ce5a1d2e9a66ee14be00767e7"
     }
   ],
   "surfaces": [
@@ -608,7 +648,7 @@
         ],
         "risk": "Inventing topology would create a second authority.",
         "reviewDate": "2026-08-31",
-        "sunsetCondition": "Admit one major topology under major-v4 rules and reuse Buildchain."
+        "sunsetCondition": "Admit one major topology under the current exact derived rules and reuse Buildchain."
       }
     },
     {
@@ -820,5 +860,5 @@
       }
     }
   ],
-  "registryRoot": "sha256:8f053e1ffcfd312f969fb743fc49d526c0089fd0e9dc94700827932b88f74919"
+  "registryRoot": "sha256:9319f01a0844a3ebf65ce05e19edeaa94c186f4ff7a80cc0dc2164d2aabeae29"
 }

@@ -70,11 +70,11 @@ int main(int argc, char **argv) {
       const std::string body = nlohmann::json{{"step", i}, {"note", "embedding smoke"}}.dump();
       bus->set_trigger_frame_uid(prev_uid);
       const int64_t gen_time = time::now_in_nano();
-      auto frame = writer->open_frame(/*trigger_time=*/prev_gen_time, MSG_SMOKE, body.size(), STREAM_ID);
-      frame->set_data_type(FrameDataType::Json);
-      std::memcpy(const_cast<void *>(frame->data_address()), body.data(), body.size());
+      auto tx = writer->reserve_frame(/*trigger_time=*/prev_gen_time, MSG_SMOKE, body.size(), STREAM_ID);
+      tx.frame()->set_data_type(FrameDataType::Json);
+      tx.copy_bytes(body.data(), body.size());
       const uint64_t this_uid = writer->current_frame_uid();
-      writer->close_frame(body.size(), gen_time);
+      tx.commit(body.size(), gen_time);
       written_uids.push_back(this_uid);
       prev_uid = this_uid;
       prev_gen_time = gen_time;

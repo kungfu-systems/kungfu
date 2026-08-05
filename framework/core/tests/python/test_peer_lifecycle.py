@@ -13,6 +13,10 @@ from jsonschema import Draft202012Validator
 
 from kungfu import contract, peer_lifecycle
 
+from windows_continuity_sentinel import (
+    run_scenario as run_windows_continuity_scenario,
+)
+
 
 def _spec(*, process_exit="restart", durable_state="declared", max_restarts=3):
     return {
@@ -29,6 +33,55 @@ def _spec(*, process_exit="restart", durable_state="declared", max_restarts=3):
             "guidance": "Rebuild the probe from its durable declaration.",
         },
     }
+
+
+def test_json_write_is_atomic_across_interleaved_writers(tmp_path, monkeypatch):
+    target = tmp_path / "runtime" / "state.json"
+    original_replace = peer_lifecycle.os.replace
+    interleaved = False
+
+    def replace_with_interleaved_writer(source, destination):
+        nonlocal interleaved
+        if not interleaved:
+            interleaved = True
+            peer_lifecycle._write_json(target, {"writer": "nested"})
+        original_replace(source, destination)
+
+    monkeypatch.setattr(peer_lifecycle.os, "replace", replace_with_interleaved_writer)
+
+    peer_lifecycle._write_json(target, {"writer": "outer"})
+
+    assert peer_lifecycle._read_json(target) == {"writer": "outer"}
+    assert list(target.parent.glob(f".{target.name}.*.tmp")) == []
+
+
+def test_windows_json_write_retries_transient_replace_lock(tmp_path, monkeypatch):
+    target = tmp_path / "runtime" / "state.json"
+    original_replace = peer_lifecycle.coordination_locks.os.replace
+    attempts = []
+    sleeps = []
+
+    def replace_after_transient_lock(source, destination):
+        attempts.append((source, destination))
+        if len(attempts) == 1:
+            raise PermissionError(5, "Access is denied", str(destination))
+        original_replace(source, destination)
+
+    monkeypatch.setattr(
+        peer_lifecycle.coordination_locks.platform, "system", lambda: "Windows"
+    )
+    monkeypatch.setattr(
+        peer_lifecycle.coordination_locks.os,
+        "replace",
+        replace_after_transient_lock,
+    )
+    monkeypatch.setattr(peer_lifecycle.coordination_locks.time, "sleep", sleeps.append)
+
+    peer_lifecycle._write_json(target, {"status": "running"})
+
+    assert peer_lifecycle._read_json(target) == {"status": "running"}
+    assert len(attempts) == 2
+    assert sleeps == [0.05]
 
 
 def test_plan_is_stable_and_never_uses_a_shell(tmp_path):
@@ -161,6 +214,45 @@ def test_ensure_fails_closed_on_pid_reuse(tmp_path, monkeypatch):
         peer_lifecycle.ensure(_spec(), runtime_dir, wait_seconds=0)
 
     assert failure.value.code == "ownership-unknown"
+
+
+def test_ensure_stops_waiting_when_a_new_host_exits(tmp_path, monkeypatch):
+    stopped = {
+        "healthy": False,
+        "lifecycleState": "starting",
+    }
+
+    class ExitedHost:
+        def poll(self):
+            return 2
+
+    monkeypatch.setattr(peer_lifecycle, "status", lambda *_args: stopped)
+
+    result = peer_lifecycle._wait_for_ensure_status(
+        str(tmp_path), "test.probe", 30, host_process=ExitedHost()
+    )
+
+    assert result is stopped
+
+
+def test_ensure_wait_returns_the_observed_ready_snapshot(tmp_path, monkeypatch):
+    ready = {"healthy": True, "lifecycleState": "ready"}
+    transient_empty_read = {"healthy": False, "lifecycleState": "stopped"}
+    statuses = [ready, transient_empty_read]
+    calls = 0
+
+    def next_status(_runtime_dir, _peer_id):
+        nonlocal calls
+        current = statuses[min(calls, len(statuses) - 1)]
+        calls += 1
+        return current
+
+    monkeypatch.setattr(peer_lifecycle, "status", next_status)
+
+    result = peer_lifecycle._wait_for_ensure_status(str(tmp_path), "test.probe", 30)
+
+    assert result is ready
+    assert calls == 1
 
 
 def test_stale_host_generation_cannot_stop_new_owner(tmp_path, monkeypatch):
@@ -435,51 +527,28 @@ def _assert_healthy(started):
 
 
 def test_real_host_crash_adoption_and_peer_restart_are_fenced(tmp_path):
-    runtime_dir = str(tmp_path / "runtime")
     probe = Path(__file__).parents[1] / "fixtures" / "peer_lifecycle_probe.py"
-    spec = _spec()
-    spec["command"] = {"argv": [sys.executable, str(probe)]}
-    started = peer_lifecycle.ensure(spec, runtime_dir, wait_seconds=10)
-    _assert_healthy(started)
-    first_host_generation = started["host"]["generation"]
-    first_peer_generation = started["peer"]["generation"]
-    first_peer_pid = started["peer"]["pid"]
-    try:
-        host_process = psutil.Process(started["host"]["pid"])
-        host_process.kill()
-        host_process.wait(timeout=5)
-        orphan = _wait_status(runtime_dir, lambda value: value["orphaned"])
-        assert orphan["adoptable"]
-        assert orphan["peer"]["pid"] == first_peer_pid
+    report = run_windows_continuity_scenario(
+        tmp_path / "runtime", probe=probe, phase_timeout_seconds=10
+    )
 
-        adopted = peer_lifecycle.ensure(spec, runtime_dir, wait_seconds=10)
-        assert adopted["healthy"]
-        assert adopted["host"]["generation"] == first_host_generation + 1
-        assert adopted["peer"]["pid"] == first_peer_pid
-
-        with pytest.raises(peer_lifecycle.PeerLifecycleError) as stale:
-            peer_lifecycle.stop(
-                runtime_dir,
-                "test.probe",
-                expected_host_generation=first_host_generation,
-                timeout=0,
-            )
-        assert stale.value.code == "stale-host-generation"
-
-        peer_process = psutil.Process(first_peer_pid)
-        peer_process.kill()
-        restarted = _wait_status(
-            runtime_dir,
-            lambda value: (
-                value["healthy"]
-                and value["peer"]["generation"] == first_peer_generation + 1
-            ),
-        )
-        assert restarted["healthy"]
-        assert restarted["peer"]["pid"] != first_peer_pid
-        assert restarted["restartAttempts"] == 1
-    finally:
-        peer_lifecycle.stop(runtime_dir, "test.probe")
+    assert report["status"] == "passed"
+    assert report["coverage"] == {
+        "realHostCrash": True,
+        "peerAdoption": True,
+        "peerRestart": True,
+        "restartedHealthy": True,
+        "staleOwnerFenced": True,
+        "cleanupComplete": True,
+    }
+    assert set(report["phaseTimings"]) == {
+        "initialReadiness",
+        "hostCrashAdoption",
+        "peerAdoption",
+        "staleOwnerFencing",
+        "peerRestartHealth",
+        "cleanup",
+    }
 
 
 @pytest.mark.parametrize(

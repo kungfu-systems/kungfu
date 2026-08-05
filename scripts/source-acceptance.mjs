@@ -11,6 +11,13 @@ import {
   checkDevChannelAuthority,
   devMergeBaseCandidates,
 } from './candidate-timeline-events.cjs';
+import {
+  SOURCE_ACCEPTANCE_RECOVERY,
+  SOURCE_ACCEPTANCE_RUNTIME_OWNER,
+  assertSourceCheckoutUnchanged,
+  prepareSourceAcceptanceRuntime,
+  sourceCheckoutSnapshot,
+} from './readonly-source-toolchain.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const CPP = /\.(?:c|cc|cpp|cxx|h|hh|hpp|hxx)$/;
@@ -150,13 +157,220 @@ export function sourceChangedFiles() {
   ]) {
     for (const file of git(args).split('\n')) {
       const rel = file.trim();
-      if (rel && fs.existsSync(path.join(ROOT, rel))) files.add(rel);
+      if (
+        rel &&
+        !isLocalQualificationRuntime(rel) &&
+        fs.existsSync(path.join(ROOT, rel))
+      )
+        files.add(rel);
     }
   }
   console.log(
     `[source-acceptance] revision=${git(['rev-parse', 'HEAD'])} base=${base.ref}@${base.sha}`,
   );
   return [...files];
+}
+
+export function isLocalQualificationRuntime(relativePath) {
+  return (
+    relativePath === '.kungfu/qualification' ||
+    relativePath.startsWith('.kungfu/qualification/')
+  );
+}
+
+function assertYijinjingWriterInterface() {
+  const negativeGuard =
+    'framework/core/src/libyijinjing/tests/writer_interface_surface_tests.cpp';
+  const textFile = /\.(?:c|cc|cpp|cxx|h|hh|hpp|hxx|py|pyi|md|json|mjs)$/u;
+  const forbidden = [
+    ['open', 'frame'].join('_'),
+    ['close', 'frame'].join('_'),
+    ['write', 'raw'].join('_'),
+    ['write', 'raw', 'at', 'as'].join('_'),
+    ['open', 'data'].join('_'),
+    ['open', 'custom', 'data'].join('_'),
+    ['close', 'data'].join('_'),
+    ['on', 'open', 'frame'].join('_'),
+    ['on', 'close', 'frame'].join('_'),
+    ['core.yijinjing.writer', 'split-frame-api'].join('-'),
+  ];
+  const findings = [];
+  for (const relative of git([
+    'ls-files',
+    '--cached',
+    '--others',
+    '--exclude-standard',
+  ]).split('\n')) {
+    if (
+      !relative ||
+      relative === negativeGuard ||
+      relative === 'scripts/source-acceptance.mjs' ||
+      GENERATED_EVIDENCE_ROOTS.some((root) => relative.startsWith(root)) ||
+      !textFile.test(relative)
+    )
+      continue;
+    const content = fs.readFileSync(path.join(ROOT, relative), 'utf8');
+    for (const token of forbidden) {
+      if (content.includes(token))
+        findings.push(`${relative}: forbidden ${token}`);
+    }
+  }
+
+  const contracts = [
+    [
+      'framework/core/src/libyijinjing/include/kungfu/yijinjing/journal/journal.h',
+      'void write_bytes(int64_t trigger_time, int32_t carrier_type, std::span<const std::byte> data);',
+      'canonical span overload is absent',
+    ],
+    [
+      'framework/core/src/bindings/python/binding/py-runtime.cpp',
+      'py::buffer payload',
+      'Python write_bytes must accept one bytes-like buffer',
+    ],
+    [
+      'framework/core/stubs/pykungfu/runtime.pyi',
+      'payload: typing_extensions.Buffer',
+      'typing must carry the payload extent',
+    ],
+  ];
+  for (const [relative, required, message] of contracts) {
+    if (!fs.readFileSync(path.join(ROOT, relative), 'utf8').includes(required))
+      findings.push(`${relative}: ${message}`);
+  }
+  const uniqueBindings = [
+    [
+      'framework/core/src/bindings/python/binding/py-runtime.cpp',
+      /"write_bytes"/gu,
+      'Python must expose exactly one write_bytes binding',
+    ],
+    [
+      'framework/core/stubs/pykungfu/runtime.pyi',
+      /def write_bytes\(/gu,
+      'typing must expose exactly one write_bytes signature',
+    ],
+  ];
+  for (const [relative, pattern, message] of uniqueBindings) {
+    const content = fs.readFileSync(path.join(ROOT, relative), 'utf8');
+    if ((content.match(pattern) || []).length !== 1)
+      findings.push(`${relative}: ${message}`);
+  }
+  if (findings.length)
+    throw new Error(
+      `yijinjing writer interface check failed:\n${findings.map((finding) => `- ${finding}`).join('\n')}`,
+    );
+}
+
+const KFD_REBASE_EQUIVALENCE_ANCESTOR_LIMIT = 4096;
+
+function findFirstParentTreeEquivalent(sourceTree, headSha, gitRead) {
+  for (const line of gitRead([
+    'log',
+    '--first-parent',
+    `--max-count=${KFD_REBASE_EQUIVALENCE_ANCESTOR_LIMIT}`,
+    '--format=%H %T',
+    headSha,
+  ]).split('\n')) {
+    const [commitSha, treeSha] = line.trim().split(/\s+/u);
+    if (treeSha === sourceTree) return commitSha;
+  }
+  return '';
+}
+
+export function findGitTreeEquivalentAncestor(
+  sourceSha,
+  headSha,
+  gitRead = gitMaybe,
+) {
+  if (gitRead(['cat-file', '-t', sourceSha]) !== 'commit') return '';
+  const sourceTree = gitRead(['rev-parse', `${sourceSha}^{tree}`]);
+  if (!/^[0-9a-f]{40}$/u.test(sourceTree)) return '';
+
+  const directMatch = findFirstParentTreeEquivalent(
+    sourceTree,
+    headSha,
+    gitRead,
+  );
+  if (directMatch) return directMatch;
+
+  // GitHub tests a pull request through a synthetic two-parent merge commit.
+  // Its first parent is the protected base, so a first-parent-only lookup
+  // cannot see a tree-equivalent commit retained on the candidate branch. Only
+  // enter the candidate parent when it has the exact checked merge tree; a
+  // conflict-resolved or otherwise changed merge remains ineligible.
+  const [mergeSha, baseParent, candidateParent, ...extraParents] = gitRead([
+    'rev-list',
+    '--parents',
+    '-n',
+    '1',
+    headSha,
+  ])
+    .trim()
+    .split(/\s+/u);
+  if (
+    mergeSha !== headSha ||
+    !baseParent ||
+    !candidateParent ||
+    extraParents.length > 0
+  )
+    return '';
+  const headTree = gitRead(['rev-parse', `${headSha}^{tree}`]);
+  const candidateTree = gitRead(['rev-parse', `${candidateParent}^{tree}`]);
+  if (headTree !== candidateTree) return '';
+  return findFirstParentTreeEquivalent(sourceTree, candidateParent, gitRead);
+}
+
+export function assertKfdEvidenceSourceBinding({
+  sourceSha,
+  headSha,
+  isAncestor,
+  findTreeEquivalentAncestor = () => '',
+}) {
+  const gitSha = /^[0-9a-f]{40}$/u;
+  if (!gitSha.test(sourceSha) || !gitSha.test(headSha)) {
+    throw new Error(
+      `KFD evidence requires exact 40-hex Git coordinates, got source=${sourceSha || '<empty>'} head=${headSha || '<empty>'}`,
+    );
+  }
+  if (
+    !isAncestor(sourceSha, headSha) &&
+    !gitSha.test(findTreeEquivalentAncestor(sourceSha, headSha))
+  ) {
+    throw new Error(
+      `KFD evidence source ${sourceSha} is not an ancestor of checked head ${headSha} and has no tree-equivalent ancestor; regenerate the evidence after rebasing`,
+    );
+  }
+  return sourceSha;
+}
+
+export function selectKfdEvidenceSourceSha({
+  write,
+  configured,
+  committed,
+  headSha,
+}) {
+  if (write) return configured || headSha;
+  return committed || configured;
+}
+
+export function resolveKfdProductGateCheckedAt({
+  write,
+  now,
+  retainedGateResults,
+  sourceSha,
+  commitTimestamp,
+}) {
+  if (write) return now();
+  for (const gate of retainedGateResults) {
+    const checkedAt = String(gate?.checkedAt || '');
+    if (checkedAt) return checkedAt;
+  }
+  const checkedAt = commitTimestamp(sourceSha);
+  if (!checkedAt || Number.isNaN(Date.parse(checkedAt))) {
+    throw new Error(
+      `KFD product-gate evidence cannot resolve a checkedAt timestamp for ${sourceSha}`,
+    );
+  }
+  return checkedAt;
 }
 
 /**
@@ -167,10 +381,20 @@ export function sourceAcceptancePlan(files, evidenceBaseCommit = '') {
   const settlementPublicationPresent = fs.existsSync(
     path.join(ROOT, 'framework/project-cut/publication.contract.json'),
   );
+  const coldReadOnlySourceAcceptance =
+    process.env.KUNGFU_READONLY_NESTED_SOURCE_ACCEPTANCE === '1';
   const nodeChecks = [
     ['no Bash scripts', 'scripts/no-bash-guard.mjs'],
     ['Shifu entry contract', 'scripts/check-shifu-entry-contract.mjs'],
     ['Shifu cache contract', 'scripts/check-shifu-cache-contract.mjs'],
+    ...(coldReadOnlySourceAcceptance
+      ? []
+      : [
+          [
+            'Shifu Production Graph contract',
+            'framework/production-graph/check.mjs',
+          ],
+        ]),
     [
       'Shifu Documentation Protocol',
       'scripts/check-shifu-documentation-contract.mjs',
@@ -208,6 +432,10 @@ export function sourceAcceptancePlan(files, evidenceBaseCommit = '') {
       'Work Control canonical naming boundary',
       'scripts/check-work-control-vocabulary.test.mjs',
     ],
+    [
+      'Project Work Agent first-layer product model',
+      'scripts/check-project-work-agent-product.test.mjs',
+    ],
     ['incubation passport governance', 'scripts/check-incubation-passport.mjs'],
     [
       'Hub Starter Docker concept',
@@ -232,6 +460,14 @@ export function sourceAcceptancePlan(files, evidenceBaseCommit = '') {
       '--self-test',
     ],
     ['code complexity budget ratchet', 'scripts/code-complexity-budget.mjs'],
+    ...(coldReadOnlySourceAcceptance
+      ? []
+      : [
+          [
+            'Python structure boundary ratchet',
+            'scripts/check-code-complexity.mjs',
+          ],
+        ]),
     [
       'semantic amplification and task graph',
       'framework/maintainability/semantic-amplification.mjs',
@@ -348,6 +584,31 @@ export function sourceAcceptancePlan(files, evidenceBaseCommit = '') {
       '--check',
     ],
     [
+      'Work Profile conformance gate',
+      'framework/work-profile-conformance/work-profile-conformance.mjs',
+      '--check',
+      '--json',
+    ],
+    ...(coldReadOnlySourceAcceptance
+      ? []
+      : [
+          [
+            'agent-first canonical policy',
+            'developer/sdk/src/sdk.js',
+            'contract',
+            'policy',
+            '--check',
+            '--json',
+          ],
+          [
+            'agent-first contract audit',
+            'developer/sdk/src/sdk.js',
+            'contract',
+            'audit',
+            '--json',
+          ],
+        ]),
+    [
       'KFD-4 perspective qualification',
       'framework/core/tests/qualification/kfd4-perspective.mjs',
     ],
@@ -356,7 +617,16 @@ export function sourceAcceptancePlan(files, evidenceBaseCommit = '') {
       'framework/release/publication-control-plane.mjs',
       'check',
     ],
+    [
+      'version-line authority',
+      'framework/version-line/check-version-line-authority.mjs',
+    ],
     ['KFD support matrix', 'scripts/kfd-support-matrix.mjs', '--check'],
+    [
+      'Darwin x64 retirement policy',
+      'scripts/platform-command.mjs',
+      '--check-darwin-x64-retirement',
+    ],
     [
       'KFD support matrix negative fixtures',
       '--test',
@@ -367,7 +637,11 @@ export function sourceAcceptancePlan(files, evidenceBaseCommit = '') {
       '--test',
       'scripts/kfd4-perspective-qualification.test.mjs',
     ],
-    ['Shifu version sync', 'scripts/sync-shifu-version.mjs', '--check'],
+    [
+      'Native component version sync',
+      'scripts/sync-shifu-version.mjs',
+      '--check',
+    ],
     ['layered SDK projections', 'scripts/generate-layered-sdk.mjs', '--check'],
     [
       'Work lifecycle matrix materialization',
@@ -396,7 +670,6 @@ export function sourceAcceptancePlan(files, evidenceBaseCommit = '') {
       env:
         label === 'documentation contracts' && evidenceBaseCommit
           ? {
-              ...process.env,
               KUNGFU_ADR_EVIDENCE_BASE_SHA: evidenceBaseCommit,
             }
           : undefined,
@@ -410,19 +683,28 @@ export function sourceAcceptancePlan(files, evidenceBaseCommit = '') {
         'scripts/run-shifu-lifecycle.test.mjs',
         'scripts/check-typescript-files.test.mjs',
         'scripts/source-acceptance.test.mjs',
+        'scripts/platform-command.test.mjs',
+        'product/scripts/dist.test.mjs',
         'scripts/opencode-local-model-canary-workflow.test.mjs',
         'scripts/kungfu-workflow-authority.test.mjs',
         'scripts/code-complexity-budget.test.mjs',
+        'scripts/check-code-complexity.test.mjs',
+        'framework/report-projection/authority.test.mjs',
         'framework/maintainability/semantic-amplification.test.mjs',
         'framework/maintainability/terminal-evidence-matrix.test.mjs',
-        ...(process.env.KUNGFU_READONLY_NESTED_SOURCE_ACCEPTANCE === '1'
+        ...(coldReadOnlySourceAcceptance
           ? []
           : ['scripts/readonly-agent-bootstrap.test.mjs']),
         'scripts/check-readonly-source-routes.test.mjs',
         'scripts/check-shifu-entry-contract.test.mjs',
         'scripts/check-shifu-cache-contract.test.mjs',
+        ...(coldReadOnlySourceAcceptance
+          ? []
+          : ['framework/production-graph/check.test.mjs']),
         'scripts/check-health-diagnostics-contract.test.mjs',
         'scripts/shifu-cache-runtime.test.mjs',
+        'scripts/shifu-conan-hit-evidence.test.mjs',
+        'scripts/shifu-conan-legacy.test.mjs',
         'scripts/shifu-conan-publish.test.mjs',
         'scripts/shifu-uv-cache-adapter.test.mjs',
         'scripts/shifu-gate-runtime.test.mjs',
@@ -437,6 +719,7 @@ export function sourceAcceptancePlan(files, evidenceBaseCommit = '') {
         'scripts/qualified-assignment-core-artifact.test.mjs',
         'scripts/verify-kungfu-release-admission.test.mjs',
         'scripts/release-publication-control-plane.test.mjs',
+        'scripts/version-line-authority.test.mjs',
         'crates/xinfa/tooling/check-boundary.test.mjs',
         'scripts/check-schema-authority.test.mjs',
         'scripts/check-incubation-passport.test.mjs',
@@ -457,6 +740,10 @@ export function sourceAcceptancePlan(files, evidenceBaseCommit = '') {
         'scripts/check-cli-catalog-parity.test.mjs',
         'framework/deprecation/deprecation-surface-discovery.test.mjs',
         'scripts/check-fact-cut-kernel-contract.test.mjs',
+        'scripts/check-data-protection-contract.test.mjs',
+        'scripts/check-durable-history-qualification.test.mjs',
+        'scripts/check-work-agent-history-continuity.test.mjs',
+        'scripts/check-project-cut-dogfood-history.test.mjs',
         'scripts/check-exit-bundle-contract.test.mjs',
         'scripts/check-fact-root-canonical.test.mjs',
         'scripts/kungfu-invariant.test.mjs',
@@ -465,7 +752,9 @@ export function sourceAcceptancePlan(files, evidenceBaseCommit = '') {
         'scripts/check-layered-api-encoding-boundary.test.mjs',
         'scripts/check-work-lifecycle-native.test.mjs',
         'scripts/check-work-lifecycle-operation-matrix.test.mjs',
+        'framework/work-profile-conformance/work-profile-conformance.test.mjs',
         'scripts/check-work-control-vocabulary.test.mjs',
+        'scripts/check-project-work-agent-product.test.mjs',
         'scripts/registry-envelope.test.mjs',
         'scripts/check-kfd-agent-runtime-boundary.mjs',
         'scripts/check-fact-root-canonical.test.mjs',
@@ -545,7 +834,7 @@ export function sourceAcceptancePlan(files, evidenceBaseCommit = '') {
       command: process.execPath,
       args: ['scripts/run-desktop-update-tests.mjs'],
     },
-    ...(process.env.KUNGFU_READONLY_NESTED_SOURCE_ACCEPTANCE === '1'
+    ...(coldReadOnlySourceAcceptance
       ? []
       : [
           {
@@ -582,10 +871,7 @@ export function sourceAcceptancePlan(files, evidenceBaseCommit = '') {
   const guiTypeScript = files.filter(
     (file) => file.startsWith('framework/gui/src/') && /\.tsx?$/.test(file),
   );
-  if (
-    guiTypeScript.length &&
-    process.env.KUNGFU_READONLY_NESTED_SOURCE_ACCEPTANCE !== '1'
-  ) {
+  if (guiTypeScript.length && !coldReadOnlySourceAcceptance) {
     plan.push({
       label: 'changed GUI TypeScript check',
       command: process.execPath,
@@ -600,13 +886,6 @@ export function sourceAcceptancePlan(files, evidenceBaseCommit = '') {
 
   const python = files.filter((file) => file.endsWith('.py'));
   if (python.length) {
-    const ruffEnv = {
-      ...process.env,
-      RUFF_CACHE_DIR: path.join(
-        process.env.XDG_CACHE_HOME || process.env.RUNNER_TEMP || '/tmp',
-        'kungfu-source-ruff',
-      ),
-    };
     const format = sourcePythonCommand([
       'format',
       '--no-cache',
@@ -628,12 +907,10 @@ export function sourceAcceptancePlan(files, evidenceBaseCommit = '') {
       {
         label: 'changed Python format',
         ...format,
-        env: ruffEnv,
       },
       {
         label: 'changed Python lint',
         ...lint,
-        env: ruffEnv,
       },
     );
   }
@@ -647,13 +924,6 @@ export function sourceAcceptancePlan(files, evidenceBaseCommit = '') {
       label: 'Python type baseline',
       ...mypy,
       cwd: path.join(ROOT, 'framework/core'),
-      env: {
-        ...process.env,
-        MYPY_CACHE_DIR: path.join(
-          process.env.RUNNER_TEMP || '/tmp',
-          'kungfu-source-mypy',
-        ),
-      },
     });
   }
 
@@ -673,18 +943,52 @@ export function sourceAcceptancePlan(files, evidenceBaseCommit = '') {
   return plan;
 }
 
-/** @param {Command} step */
-function run(step) {
+const SOURCE_ACCEPTANCE_RUNTIME_ENV = [
+  'TMPDIR',
+  'TMP',
+  'TEMP',
+  'XDG_CACHE_HOME',
+  'XDG_STATE_HOME',
+  'COREPACK_HOME',
+  'COREPACK_ENABLE_DOWNLOAD_PROMPT',
+  'PNPM_HOME',
+  'npm_config_cache',
+  'NPM_CONFIG_CACHE',
+  'UV_CACHE_DIR',
+  'RUFF_CACHE_DIR',
+  'MYPY_CACHE_DIR',
+  'SHIFU_CACHE_RECEIPT',
+  'KUNGFU_SOURCE_ACCEPTANCE_RUNTIME_ROOT',
+];
+
+export function sourceAcceptanceChildEnv(sourceEnv, stepEnv = {}) {
+  const childEnv = { ...sourceEnv, ...stepEnv };
+  for (const key of SOURCE_ACCEPTANCE_RUNTIME_ENV) {
+    if (sourceEnv[key] !== undefined) childEnv[key] = sourceEnv[key];
+  }
+  return childEnv;
+}
+
+/**
+ * @param {Command} step
+ * @param {NodeJS.ProcessEnv} sourceEnv
+ * @param {typeof spawnSync} spawn
+ */
+export function runSourceAcceptanceStep(
+  step,
+  sourceEnv = process.env,
+  spawn = spawnSync,
+) {
   console.log(`\n[source-acceptance] ${step.label}`);
   console.log(`[source-acceptance] $ ${step.command} ${step.args.join(' ')}`);
-  const result = spawnSync(step.command, step.args, {
+  const result = spawn(step.command, step.args, {
     cwd: step.cwd || ROOT,
-    env: step.env || process.env,
+    env: sourceAcceptanceChildEnv(sourceEnv, step.env),
     stdio: 'inherit',
   });
   if (result.error || result.status !== 0) {
     throw new Error(
-      `${step.label} failed: ${result.error?.message || result.status}`,
+      `${step.label} failed: ${result.error?.message || result.status}; owner=${SOURCE_ACCEPTANCE_RUNTIME_OWNER}; recovery=${SOURCE_ACCEPTANCE_RECOVERY}`,
     );
   }
   if (process.env.KUNGFU_READONLY_NESTED_SOURCE_ACCEPTANCE === '1') {
@@ -698,21 +1002,46 @@ function run(step) {
 }
 
 function main() {
-  const files = sourceChangedFiles();
-  console.log(`[source-acceptance] changed files: ${files.length}`);
-  const devChannels = checkDevChannelAuthority();
+  const before = sourceCheckoutSnapshot(ROOT);
+  const runtime = prepareSourceAcceptanceRuntime(ROOT);
   console.log(
-    `\n[source-acceptance] dev channel authority\n${JSON.stringify(devChannels, null, 2)}`,
+    `[source-acceptance] trackedTreeRoot=${before.trackedTreeRoot} untrackedInventoryRoot=${before.untrackedInventoryRoot}`,
   );
-  if (devChannels.verdict !== 'pass')
-    throw new Error('dev channel authority failed');
-  if (process.env.KUNGFU_READONLY_NESTED_SOURCE_ACCEPTANCE === '1') {
-    console.warn(
-      '[source-acceptance] cold read-only lane: the installed TypeScript dependency graph is absent; normal source acceptance and CI enforce tooling type checks.',
+  let failure;
+  try {
+    const files = sourceChangedFiles();
+    console.log(`[source-acceptance] changed files: ${files.length}`);
+    if (process.env.KUNGFU_READONLY_NESTED_SOURCE_ACCEPTANCE !== '1') {
+      assertYijinjingWriterInterface();
+      console.log('[source-acceptance] yijinjing writer interface passed');
+    }
+    const devChannels = checkDevChannelAuthority();
+    console.log(
+      `\n[source-acceptance] dev channel authority\n${JSON.stringify(devChannels, null, 2)}`,
     );
+    if (devChannels.verdict !== 'pass')
+      throw new Error('dev channel authority failed');
+    if (process.env.KUNGFU_READONLY_NESTED_SOURCE_ACCEPTANCE === '1') {
+      console.warn(
+        '[source-acceptance] cold read-only lane: the installed TypeScript dependency graph is absent; normal source acceptance and CI enforce tooling type checks.',
+      );
+    }
+    for (const step of sourceAcceptancePlan(files, sourceMergeBase().sha))
+      runSourceAcceptanceStep(step, runtime.env);
+  } catch (error) {
+    failure = error;
+  } finally {
+    try {
+      const after = sourceCheckoutSnapshot(ROOT);
+      assertSourceCheckoutUnchanged(before, after);
+      console.log(
+        `[source-acceptance] zero-write trackedTreeRoot=${after.trackedTreeRoot} untrackedInventoryRoot=${after.untrackedInventoryRoot}`,
+      );
+    } finally {
+      runtime.cleanup();
+    }
   }
-  for (const step of sourceAcceptancePlan(files, sourceMergeBase().sha))
-    run(step);
+  if (failure) throw failure;
   console.log('\n[source-acceptance] build-free source gate passed');
 }
 

@@ -10,11 +10,11 @@
   },
   "upstream": {
     "package": "@kungfu-tech/kfd",
-    "version": "1.0.0-alpha.47",
+    "version": "1.0.0-alpha.53",
     "line": "v1.0",
     "channel": "alpha",
     "standardsSha256": "sha256:65899780779a8e933f1f3a298bfdf2311104ccde84b773a0828ee4c23dd19d5b",
-    "releaseAnchorSha256": "sha256:c4e0ca30c47b3cfca1b6d2d00c6277d62dd71423fd367e355f0f231c8a0b445d"
+    "releaseAnchorSha256": "sha256:d50e474cf2d158722d765f54188550e30fa126e1728fc9eb748014e220acfc9b"
   },
   "projections": {
     "sdk": "developer/sdk/kfd/support-matrix.json",
@@ -24,7 +24,7 @@
   },
   "kfd3Enforcement": {
     "schema": "kungfu-kfd-3-release-gate-enforcement/v1",
-    "declaredSurfaceCount": 157,
+    "declaredSurfaceCount": 187,
     "enforcedSurfaceCount": 0,
     "gateBindings": [],
     "claimBoundary": "Declared means discoverable; enforced requires a retained passed hard release Gate. Merely detected or declared surfaces are not enforced."
@@ -55,7 +55,7 @@
           },
           {
             "path": "framework/contract/kungfu-contracts.registry.json",
-            "sha256": "sha256:c87f9d840552709ade4cbb23f01b46fe12ea43cab971d898d22e392b8fd21c1f"
+            "sha256": "sha256:77f3710f9fe27401b1bdf55bfe7433e8a48bfbe98442d16a8e914ee84c284a7e"
           }
         ]
       },
@@ -102,7 +102,7 @@
         "evidenceRoots": [
           {
             "path": ".buildchain/kfd/kfd-2/release-claims.json",
-            "sha256": "sha256:d6465a2d858ad86909e61f08d13cdb2434d6ab07f51b6818d7cde34915760f6e"
+            "sha256": "sha256:c983fd692dda08d932738dd8bb95b25a5b9bbbb31a4fbfcf54d0c03607321a8a"
           },
           {
             "path": "docs/qualification/kfd2-trust-assessment.md",
@@ -152,11 +152,11 @@
         "evidenceRoots": [
           {
             "path": ".buildchain/kfd/kfd-3/surfaces.json",
-            "sha256": "sha256:78defdb47b0f25674d2f74ca5bdb9d797048c6a681bb030a8865ca1ee41bc15e"
+            "sha256": "sha256:abb58f60ca24878699c96ca5ffebffaf80477e904781c44cd5f94297c0921022"
           },
           {
             "path": ".buildchain/kfd/kfd-3/capability-query.json",
-            "sha256": "sha256:cc346deba2e7f5a6095c0504016cfd066200d91caaf6c8533d707caf7ccd43a4"
+            "sha256": "sha256:a8558882b2a053152ff0f88dfed122e026aca9d70ac3f88c7848d1a444afb5a7"
           }
         ]
       },
@@ -176,7 +176,7 @@
       },
       "claimClass": "release-qualified-support",
       "knownLimitations": [
-        "Support covers the 157 product-declared surfaces accepted by the exact Buildchain registry audit."
+        "Support covers the 186 product-declared surfaces accepted by the exact Buildchain registry audit."
       ],
       "owner": "buildchain",
       "nextGate": "Publish the exact product-declared registry audit and artifact closure in the Alpha release passport."
@@ -247,7 +247,10 @@
         "status": "implemented-candidate-profile",
         "surfaces": [
           "framework/core/src/python/kungfu/assignment_orchestration.py",
-          "docs/qualification/evidence/assignment-organization-rollout/7aae2c562a/report.json"
+          "docs/qualification/evidence/assignment-organization-rollout/7aae2c562a/report.json",
+          "docs/architecture/primitive-management-plane.md",
+          "framework/incubation/incubation-passport.registry.json",
+          "framework/primitive/kungfu-primitive-catalog.contract.json"
         ]
       },
       "verification": {
@@ -259,7 +262,19 @@
           },
           {
             "path": "framework/core/tests/python/test_assignment_orchestration.py",
-            "sha256": "sha256:0054fc4698af5d9e53c04cd7d3638d5435b8b97b462d249777c8bbce3608a0b9"
+            "sha256": "sha256:362a6b85e1162bb04566e778c03eb511c65ac57035ad794bb893802aa4e6d28c"
+          },
+          {
+            "path": "docs/architecture/primitive-management-plane.md",
+            "sha256": "sha256:487177ad3247adbfed6fd1ccdecf7c31a7a6c93387bfba98af41cf1256426bcb"
+          },
+          {
+            "path": "framework/incubation/incubation-passport.registry.json",
+            "sha256": "sha256:66441c1baa6bdbf9662074019af594bef4a9c08c3292a5387f2c8b3d906ee9c8"
+          },
+          {
+            "path": "framework/primitive/kungfu-primitive-catalog.contract.json",
+            "sha256": "sha256:9e71715923735b3ed8d7e086ac9fae8a1ffea31e9b85d1adff2c9bc979e9e59c"
           }
         ]
       },
@@ -279,11 +294,12 @@
       },
       "claimClass": "adoption-candidate",
       "knownLimitations": [
-        "The evidence is bounded to Kungfu's first-party Assignment profile; it does not prove universal primitive need or independent adoption.",
+        "The evidence is bounded to Kungfu's first-party Assignment profile and Primitive Management Plane; it does not prove universal primitive need or independent adoption.",
+        "Incubation passports are the sole intake and the nine-entry catalog is a derived projection; its experimental and candidate admission states are not shipment or KFD-5 promotion.",
         "A passed Buildchain gate does not self-qualify, activate, or ship KFD-5 support."
       ],
       "owner": "kungfu-primitive",
-      "nextGate": "Retain the exact-source gate and release passport, then obtain independent adopter evidence and an explicit release decision before changing shipped support."
+      "nextGate": "Retain the Primitive Management evidence roots and exact-source gate, then obtain independent adopter evidence and an explicit release decision before changing shipped support."
     },
     {
       "id": "KFD-6",
@@ -303,6 +319,36 @@
         "status": "none",
         "evidenceRoots": []
       },
+      "precursorEvidence": {
+        "status": "non-conforming-evidence",
+        "surfaces": [
+          "framework/work-design-advisor/work-design-advisor.contract.json",
+          "framework/work-design-policy-replay/work-design-policy-replay.contract.json",
+          "framework/project-cut/README.md"
+        ],
+        "evidenceRoots": [
+          {
+            "path": "framework/work-design-advisor/work-design-advisor.contract.json",
+            "sha256": "sha256:bbfd014adb84bfce90e20f39978a3cd6129d9c57a56f4564783273db69eb1614"
+          },
+          {
+            "path": "framework/work-design-policy-replay/work-design-policy-replay.contract.json",
+            "sha256": "sha256:caa4f7d38d7efeef985453267d355c2a4dda3737eb83a4bfd5f6cdfbc6f4bc4e"
+          },
+          {
+            "path": "framework/project-cut/README.md",
+            "sha256": "sha256:0d7b91a5d3c04e47175e286763542a7da9e84d4d01b012451d4895b3191dc062"
+          }
+        ],
+        "missingGates": [
+          "plural genesis methods and declared budgets",
+          "fixed-ontology and no-new-primitive baselines",
+          "systematic false-candidate rejection",
+          "held-out promotion separation",
+          "cross-domain transfer"
+        ],
+        "claimBoundary": "Work Design history selection, outcome estimation, and offline policy replay are bounded advisory precursors only. They do not implement, verify, activate, or ship KFD-6 autonomous discovery."
+      },
       "buildchain": {
         "gateStatus": "not-applicable",
         "protocol": "none"
@@ -319,10 +365,11 @@
       },
       "claimClass": "explicit-non-adoption",
       "knownLimitations": [
-        "Kungfu has no bounded KFD-6 causal-experience discovery implementation or evidence."
+        "Kungfu has no conforming KFD-6 causal-experience discovery implementation or verification.",
+        "The retained Work Design precursors do not compare plural genesis methods, run fixed-ontology or no-new-primitive baselines, reject false candidates systematically, separate held-out promotion, or demonstrate transfer."
       ],
       "owner": "unassigned",
-      "nextGate": "Keep unsupported unless a separately admitted causal-experience discovery initiative is approved."
+      "nextGate": "Keep unsupported; admit a separate causal-experience discovery initiative only after the listed missing gates have executable contracts and evidence."
     },
     {
       "id": "KFD-7",
@@ -401,7 +448,7 @@
         "evidenceRoots": [
           {
             "path": "framework/agent-work/evidence/kfd-7/atlas-staleness-loss.json",
-            "sha256": "sha256:dee2962750bfd9620a23799b3710476eaf95c5040caf15a2ca9edf0ef2944341"
+            "sha256": "sha256:df945b2e695457ab021b0d56633086b73c837f71841eb409c6ea70276908e5d1"
           }
         ]
       },
@@ -447,7 +494,7 @@
         "evidenceRoots": [
           {
             "path": "framework/agent-work/evidence/kfd-7/pursuit-continuity-settlement.json",
-            "sha256": "sha256:1c5c9753f23000362c0f64adc9fe45d37f7cb7e1ef5f596d84c9b3d636d46c98"
+            "sha256": "sha256:7f18af674c5636a515daea74931b4bc7c0372ba38a74c38e1b0bb20b3072bc67"
           }
         ]
       },
@@ -493,7 +540,7 @@
         "evidenceRoots": [
           {
             "path": "framework/agent-work/evidence/kfd-7/warrant-decay-revocation.json",
-            "sha256": "sha256:0af2b521111d6ce905f8bc72663eee34ad15a0b5255a6577ecd2bc11333f2ce4"
+            "sha256": "sha256:f6d15823561abed00ed00e32dd26a8f05468015eb653092f0e7867f7355c31b8"
           }
         ]
       },
@@ -585,7 +632,7 @@
         "evidenceRoots": [
           {
             "path": "framework/core/src/python/kungfu/assignment_orchestration.py",
-            "sha256": "sha256:0543901da508a83d0181a0e016976765c5311dc514bb4be2b419f904ca88e6ac"
+            "sha256": "sha256:5c49399a62d43e478fe6d538c0ccb945296ebfc3dbbf9a9a914c85cd094ad412"
           }
         ]
       },

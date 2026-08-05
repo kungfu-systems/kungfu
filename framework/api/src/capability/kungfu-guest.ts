@@ -122,28 +122,39 @@ export type GuestRuntimeLaunch = {
   env?: Record<string, string>;
 };
 
-export type SandboxedGuestOptions = {
+export type GuestProcessOptions = {
   runtime: GuestRuntimeLaunch;
   // the real capabilities the host resolves calls against
   caps: Record<string, Record<string, unknown>>;
   // the capability keys this guest declared; only these are reachable
   declared: readonly string[];
+  // injectable for tests; defaults to node:child_process spawn (unix path)
+  spawn?: SpawnFn;
+  // Existing callers inherit for compatibility. KFX services set false so
+  // credentials and unrelated host state never become ambient child authority.
+  inheritEnv?: boolean;
+  // Python services support a relay control frame before the host escalates to
+  // process termination.
+  gracefulShutdown?: { timeoutMs: number };
+};
+
+export type SandboxedGuestOptions = GuestProcessOptions & {
   // OS sandbox profile; defaults to the KF-ADR-019f86da-4f90-7789-8b48-620aa694acf9 permissive first-delivery
   // profile — able to run, not yet restricted. Turn a knob on to narrow it.
   profile?: SandboxProfile;
-  // injectable for tests; defaults to node:child_process spawn (unix path)
-  spawn?: SpawnFn;
   // required on win32: the AppContainer launcher (libkungfu-backed). Injected by
   // the host so kungfu-guest holds no native binding itself.
   windowsSpawn?: WindowsSandboxSpawn;
 };
 
-export type SandboxedGuest = {
+export type GuestProcess = {
   // stop serving and terminate the child
   dispose: () => void;
   // resolves with the child's exit code (null if signalled)
   exited: Promise<number | null>;
 };
+
+export type SandboxedGuest = GuestProcess;
 
 async function defaultSpawn(
   command: string,
@@ -154,6 +165,102 @@ async function defaultSpawn(
   return spawn(command, args as string[], options) as unknown as GuestChild;
 }
 
+const MINIMAL_ENV_KEYS = [
+  'HOME',
+  'LANG',
+  'LC_ALL',
+  'PATH',
+  'PATHEXT',
+  'SYSTEMROOT',
+  'TEMP',
+  'TMP',
+  'TMPDIR',
+  'USERPROFILE',
+  'WINDIR',
+] as const;
+
+function guestEnvironment(opts: GuestProcessOptions): NodeJS.ProcessEnv {
+  const base: NodeJS.ProcessEnv = {};
+  if (opts.inheritEnv !== false) {
+    Object.assign(base, process.env);
+  } else {
+    for (const key of MINIMAL_ENV_KEYS) {
+      if (process.env[key] !== undefined) base[key] = process.env[key];
+    }
+  }
+  return { ...base, ...opts.runtime.env };
+}
+
+function wireGuest(
+  child: GuestChild,
+  opts: GuestProcessOptions,
+  label: string,
+): GuestProcess {
+  if (!child.stdout || !child.stdin) {
+    throw new Error(`${label} guest child has no piped stdio to relay over`);
+  }
+
+  const host = serveSubprocessCapabilities(
+    { stdout: child.stdout, stdin: child.stdin, once: child.once.bind(child) },
+    (emit) => createCapabilityHost(opts.caps, opts.declared, emit),
+  );
+  let exitedAlready = false;
+  let disposed = false;
+  let killTimer: ReturnType<typeof setTimeout> | undefined;
+  let exitCode: number | null = null;
+  const exited = new Promise<number | null>((resolve) => {
+    child.on('exit', (code) => {
+      exitedAlready = true;
+      exitCode = code;
+      if (killTimer) clearTimeout(killTimer);
+    });
+    // Resolve the public lifecycle only after stdio has closed. The relay owns
+    // final capability frames until this boundary; resolving on `exit` can
+    // otherwise race a graceful Python service's last awaited call.
+    child.once('close', () => {
+      host.dispose();
+      resolve(exitCode);
+    });
+  });
+
+  return {
+    dispose() {
+      if (disposed || exitedAlready) return;
+      disposed = true;
+      if (opts.gracefulShutdown) {
+        host.requestShutdown();
+        killTimer = setTimeout(() => {
+          if (!exitedAlready) child.kill?.();
+        }, opts.gracefulShutdown.timeoutMs);
+        killTimer.unref?.();
+        return;
+      }
+      host.dispose();
+      child.kill?.();
+    },
+    exited,
+  };
+}
+
+// Launch an explicitly integrated guest subprocess without an OS sandbox.
+// Authorization remains the caller's responsibility; the relay still exposes
+// only the exact declared capability set.
+export async function launchIntegratedGuest(
+  opts: GuestProcessOptions,
+): Promise<GuestProcess> {
+  const env = guestEnvironment(opts);
+  const child = opts.spawn
+    ? opts.spawn(opts.runtime.command, opts.runtime.args, {
+        stdio: ['pipe', 'pipe', 'inherit'],
+        env,
+      })
+    : await defaultSpawn(opts.runtime.command, opts.runtime.args, {
+        stdio: ['pipe', 'pipe', 'inherit'],
+        env,
+      });
+  return wireGuest(child, opts, 'integrated');
+}
+
 // Launch a guest inside the OS sandbox and serve its declared capabilities over
 // the stdio relay. The interpreter runs confined; its only egress is the relay
 // on its stdio (stderr is inherited for diagnostics). Returns a handle whose
@@ -162,7 +269,7 @@ export async function launchSandboxedGuest(
   opts: SandboxedGuestOptions,
 ): Promise<SandboxedGuest> {
   const profile = opts.profile ?? { base: 'permissive' };
-  const env: NodeJS.ProcessEnv = { ...process.env, ...opts.runtime.env };
+  const env = guestEnvironment(opts);
 
   let child: GuestChild;
   if (process.platform === 'win32') {
@@ -199,27 +306,5 @@ export async function launchSandboxedGuest(
         });
   }
 
-  if (!child.stdout || !child.stdin) {
-    throw new Error('sandboxed guest child has no piped stdio to relay over');
-  }
-
-  const host = serveSubprocessCapabilities(
-    { stdout: child.stdout, stdin: child.stdin, once: child.once.bind(child) },
-    (emit) => createCapabilityHost(opts.caps, opts.declared, emit),
-  );
-
-  const exited = new Promise<number | null>((resolve) => {
-    child.on('exit', (code) => {
-      host.dispose();
-      resolve(code);
-    });
-  });
-
-  return {
-    dispose() {
-      host.dispose();
-      child.kill?.();
-    },
-    exited,
-  };
+  return wireGuest(child, opts, 'sandboxed');
 }

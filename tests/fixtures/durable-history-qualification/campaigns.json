@@ -1,0 +1,16 @@
+{
+  "schema": "kungfu.durable-history-qualification.campaign-corpus/v1",
+  "campaigns": [
+    {"id": "clean-full-import", "proof": "framework/core/tests/python/test_agent_work_profile_native.py::test_native_profile_authority_bundle_restores_clean_home_exactly", "expected": "all declared Work and Agent role identities reconstruct from full material in a clean home"},
+    {"id": "thin-import-explicit-loss", "proof": "framework/core/tests/python/test_exit_bundle.py::test_thin_package_is_honest_and_rejected_before_write", "expectedDiagnostic": "thin-bundle-not-importable"},
+    {"id": "predecessor-version-migration", "proof": "framework/core/tests/python/test_agent_work_state_contract.py::test_kfd7_legacy_role_roots_remain_readable_without_reinterpretation", "expected": "predecessor roots retain their original interpretation"},
+    {"id": "interrupted-write", "proof": "framework/core/tests/python/test_agent_work_profile_native.py::test_native_profile_authority_import_preflights_all_operations_before_writing", "expected": "preflight failure lands no partial authority write"},
+    {"id": "interrupted-import", "proof": "framework/core/tests/python/test_exit_bundle.py::test_mid_import_fault_reports_landed_and_remaining_members", "expected": "the exact operation reports landed and remaining verified members"},
+    {"id": "interrupted-upgrade", "proof": "framework/core/tests/python/test_product_release_history.py::test_product_release_history_recovers_receipt_before_current_interruption", "expected": "receipt-bound image remains recoverable before current selection"},
+    {"id": "cache-deletion", "proof": "framework/core/tests/python/test_product_release_history.py::test_exit_product_release_history_survives_cache_deletion_and_rolls_back", "expected": "release history and rollback use retained image roots, not download cache"},
+    {"id": "worktree-and-ui-session-loss", "proof": "framework/core/tests/python/test_exit_bundle.py::test_project_cut_history_member_survives_source_removal", "expected": "portable member verification survives source worktree and UI/session absence"},
+    {"id": "qualified-rollback", "proof": "framework/core/tests/python/test_agent_work_profile_native.py::test_native_profile_backend_switch_and_rollback_preserve_five_role_identity", "expected": "rollback preserves all declared role identities under exact roots"},
+    {"id": "unknown-required-member", "proof": "framework/core/tests/python/test_product_release_history.py::test_product_release_history_rejects_unknown_features_and_thin_import", "expectedDiagnostic": "unknown-required-member"},
+    {"id": "gc-with-retained-recovery-root", "proof": "framework/core/tests/python/test_atlas_storage.py::test_storage_maintenance_rebuild_gc_compact_and_sync_check", "expected": "GC remains plan-bound and retains the authority needed for rebuild and verification"}
+  ]
+}

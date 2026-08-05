@@ -14,6 +14,7 @@ import {
   pathRemovalDiagnostics,
   removeEmptyDirectoryShells,
   waitForPathRemoval,
+  waitForWindowsProcessesUnderRootExit,
 } from './installer.mjs';
 
 test('recognizes every supported desktop installer family', () => {
@@ -28,6 +29,47 @@ test('NSIS uninstall keeps the standard temporary-copy behavior', () => {
   assert.equal(
     nsisUninstallArgs().some((arg) => arg.startsWith('_?=')),
     false,
+  );
+});
+
+test('waits for packaged Windows runtime children before starting NSIS', async () => {
+  const observations = [
+    [
+      {
+        ProcessId: 42,
+        Name: 'kungfu.exe',
+        ExecutablePath: 'C:\\installed\\resources\\kungfu\\kungfu.exe',
+      },
+    ],
+    [],
+  ];
+  let calls = 0;
+  await waitForWindowsProcessesUnderRootExit('C:\\installed', {
+    platform: 'win32',
+    pollIntervalMs: 1,
+    processesUnderRoot() {
+      calls += 1;
+      return observations.shift();
+    },
+  });
+  assert.equal(calls, 2);
+});
+
+test('fails closed when an installed Windows process does not exit', async () => {
+  await assert.rejects(
+    waitForWindowsProcessesUnderRootExit('C:\\installed', {
+      platform: 'win32',
+      timeoutMs: 5,
+      pollIntervalMs: 1,
+      processesUnderRoot: () => [
+        {
+          ProcessId: 42,
+          Name: 'kungfu.exe',
+          ExecutablePath: 'C:\\installed\\resources\\kungfu\\kungfu.exe',
+        },
+      ],
+    }),
+    /timed out waiting for installed Windows processes.*kungfu\.exe/,
   );
 });
 

@@ -15,7 +15,9 @@ from kungfu import contract as contract_runtime
 from kungfu import durability as durability_contract
 from kungfu.agent import agent_hub
 from kungfu.agent import agent_hub_qualification
+from kungfu.agent import first_value as first_value_protocol
 from kungfu.agent import runtime_profiles
+from kungfu.agent import run_agent
 from kungfu.agent import session_surface
 from kungfu.agent import work_profile
 from kungfu.agent import documentation as documentation_pack
@@ -25,6 +27,9 @@ from kungfu.agent.kfd3 import (
     registry_summary,
     verify_agent_interface,
 )
+from kungfu.cli.commands import agent_first_value_entry
+from kungfu.cli.commands import agent_docs
+from kungfu.cli.commands import agent_work_lab as agent_work_lab_commands
 from kungfu.cli.commands import kfc, PrioritizedCommandGroup
 from kungfu.config import resolve_config
 
@@ -44,6 +49,27 @@ def agent(ctx):
 
 
 def _context(ctx):
+    native_raw = os.environ.get("KUNGFU_AGENT_CONTEXT", "").strip()
+    if native_raw:
+        native = json.loads(native_raw)
+        if (
+            not isinstance(native, dict)
+            or native.get("schema") != "kungfu.native-agent-context/v1"
+            or native.get("environment") != "native-interactive"
+        ):
+            raise ValueError("invalid native Agent context envelope")
+        console_raw = os.environ.get("KUNGFU_AGENT_CONSOLE_ENVELOPE", "").strip()
+        if console_raw:
+            envelope = json.loads(console_raw)
+            kungfu_config.validate_value("agentConsoleEnvelope", envelope)
+            work_binding = dict(native.get("workBinding") or {})
+            effective_work_ref = session_surface.effective_work_ref(envelope)
+            work_binding["launchState"] = (
+                "bound" if effective_work_ref is not None else "unbound"
+            )
+            work_binding["workRef"] = effective_work_ref
+            native["workBinding"] = work_binding
+        return native
     config = resolve_config(runtime_home=ctx.home)
     index = agent_pack.index()
     return {
@@ -60,7 +86,9 @@ def _context(ctx):
             "skillCatalog": "kungfu skill catalog --json",
             "kfx": "kungfu kfx list --json",
         },
-        "docs": _docs_context(),
+        "docs": documentation_pack.discovery_context(
+            agent_work_lab_commands.find_repo_root()
+        ),
         "agentPack": {
             "packRoot": str(agent_pack.pack_root()),
             "documents": index["documents"],
@@ -71,50 +99,7 @@ def _context(ctx):
     }
 
 
-def _docs_context():
-    repo_root = _find_repo_root()
-    local_docs = []
-    if repo_root is not None:
-        local_docs.append(
-            {
-                "name": "documentation map",
-                "path": str(repo_root / "docs" / "MAP.md"),
-            }
-        )
-        local_docs.append(
-            {
-                "name": "agent-first global config",
-                "path": str(repo_root / "docs" / "config.md"),
-            }
-        )
-    return {
-        "local": local_docs,
-        "public": [
-            {
-                "name": "documentation map",
-                "url": "https://github.com/kungfu-tech/kungfu/blob/dev/v3/docs/MAP.md",
-            },
-            {
-                "name": "agent-first global config",
-                "url": "https://github.com/kungfu-tech/kungfu/blob/dev/v3/docs/guides/config.md",
-            },
-        ],
-    }
-
-
-def _find_repo_root():
-    candidates = [Path.cwd(), Path(__file__).resolve()]
-    for candidate in candidates:
-        for directory in [candidate, *candidate.parents]:
-            if (directory / "docs" / "MAP.md").is_file() and (
-                directory / "framework"
-            ).is_dir():
-                return directory
-    return None
-
-
-def _json(payload):
-    click.echo(json.dumps(payload, indent=2, sort_keys=True))
+_json = agent_work_lab_commands.agent_json_output
 
 
 def _policy_dir(ctx):
@@ -148,46 +133,6 @@ def _write_policy(ctx, target, policy):
     return path
 
 
-def _policy_payload(ctx, target, mode, enabled=True):
-    closeout_gate = enabled and mode in {"report", "managed-run"}
-    return {
-        "schema": "kungfu.agent-policy/v1",
-        "target": target,
-        "mode": mode,
-        "enabled": enabled,
-        "reportCloseoutGate": closeout_gate,
-        "reportAdapter": "kungfu work claim-completion"
-        if target == "codex"
-        else "kungfu report run begin",
-        "receiptVerifier": "kungfu work status"
-        if target == "codex"
-        else "kungfu report run end",
-        "runtimeDir": ctx.runtime_dir,
-    }
-
-
-def _work_authority_capabilities():
-    return {
-        "schema": "kungfu.work.authority-capabilities/v1",
-        "commandFamily": "kungfu work",
-        "mutationAuthority": "work-control-profile-actions",
-        "durableEvidence": ["episode", "fact", "action-receipt"],
-        "commands": [
-            "capture",
-            "admit",
-            "claim",
-            "kickoff",
-            "stage",
-            "claim-completion",
-            "review",
-            "decide",
-            "seal",
-        ],
-        "readCommands": ["status", "gate", "verify-binding", "verify-seal"],
-        "legacyStore": False,
-    }
-
-
 def _install_skill_file(target, out_dir, force):
     src = agent_pack.skill_path(target)
     dest = os.path.join(out_dir, "SKILL.md")
@@ -200,11 +145,134 @@ def _install_skill_file(target, out_dir, force):
     return str(src), dest
 
 
+def _skill_dir(target, scope):
+    root = Path.cwd() if scope == "project" else Path.home()
+    provider_root = ".agents" if target == "codex" else ".claude"
+    return root / provider_root / "skills" / "kungfu-agent-onboarding"
+
+
 @agent.command(help=api_help("kungfu.agent.brief"))
 @kfd3_api("kungfu.agent.brief")
 @agent_command_context
 def brief(ctx):
-    click.echo(agent_pack.document_text("brief.md"), nl=False)
+    try:
+        click.echo(
+            first_value_protocol.validate_brief(agent_pack.document_text("brief.md")),
+            nl=False,
+        )
+    except ValueError as error:
+        raise click.ClickException(str(error)) from error
+
+
+@agent.command(
+    name="bootstrap-status",
+    help="Inspect this native attempt's Agent Brief bootstrap.",
+)
+@click.option("--json", "as_json", is_flag=True, help="machine-readable output")
+@kfd3_api("kungfu.agent.bootstrap-status")
+@agent_work_lab_commands.surface(mutation_class="read")
+@agent_command_context
+def bootstrap_status(ctx, as_json):
+    del ctx
+    agent_work_lab_commands.emit_agent_bootstrap_status(as_json)
+
+
+@agent.command(name="map", help="Print the stable first-entry intent map.")
+@click.option("--json", "as_json", is_flag=True, help="machine-readable output")
+@kfd3_api("kungfu.agent.map")
+@agent_command_context
+def intent_map(ctx, as_json):
+    try:
+        payload = first_value_protocol.intent_map_view()
+    except ValueError as error:
+        raise click.ClickException(str(error)) from error
+    if as_json:
+        _json(payload)
+        return
+    for row in payload["intents"]:
+        click.echo(f"{row['id']} [{row['maturity']}]: {row['summary']}")
+
+
+@agent.command(
+    name="work-advisory",
+    help="assess bounded structured signals before proposing durable Work",
+)
+@click.option(
+    "--signals",
+    "signals_file",
+    type=click.File("r", encoding="utf-8"),
+    required=True,
+    help="structured JSON signals; transcripts and hidden reasoning are rejected",
+)
+@click.option("--json", "as_json", is_flag=True, help="machine-readable output")
+@kfd3_api("kungfu.agent.work-advisory")
+@agent_command_context
+def work_advisory_command(ctx, signals_file, as_json):
+    del ctx
+    agent_work_lab_commands.emit_agent_work_advisory(signals_file, as_json)
+
+
+@agent.group(
+    name="first-value",
+    help=api_help("kungfu.agent.first-value"),
+)
+@kfd3_api("kungfu.agent.first-value")
+@agent_command_context
+def first_value(ctx):
+    pass
+
+
+agent_first_value_entry.register(first_value, agent_command_context)
+
+
+@first_value.command(name="receipt", help=api_help("kungfu.agent.first-value.receipt"))
+@click.option("--intent", "intent_id", required=True, help="one declared intent id")
+@click.option(
+    "--discovery",
+    "--discovery-command",
+    "discovery",
+    required=True,
+    help="one declared safe discovery command",
+)
+@click.option("--question-count", required=True, type=click.IntRange(0, 1))
+@click.option("--outcome", required=True, help="bounded human outcome summary")
+@click.option("--json", "as_json", is_flag=True, help="machine-readable output")
+@kfd3_api("kungfu.agent.first-value.receipt")
+@agent_command_context
+def first_value_receipt(ctx, intent_id, discovery, question_count, outcome, as_json):
+    try:
+        payload = first_value_protocol.create_receipt(
+            intent_id=intent_id,
+            discovery_command=discovery,
+            question_count=question_count,
+            outcome_summary=outcome,
+        )
+    except (OSError, ValueError, first_value_protocol.SubprocessError) as error:
+        raise click.ClickException(str(error)) from error
+    if as_json:
+        _json(payload)
+        return
+    click.echo(f"verified first value: {payload['receiptRoot']}")
+
+
+@first_value.command(name="verify", help=api_help("kungfu.agent.first-value.verify"))
+@click.argument(
+    "receipt_file", type=click.Path(exists=True, dir_okay=False, path_type=Path)
+)
+@click.option("--json", "as_json", is_flag=True, help="machine-readable output")
+@kfd3_api("kungfu.agent.first-value.verify")
+@agent_command_context
+def first_value_verify(ctx, receipt_file, as_json):
+    try:
+        payload = first_value_protocol.verify_receipt(
+            first_value_protocol.read_receipt(receipt_file)
+        )
+    except (OSError, ValueError, json.JSONDecodeError) as error:
+        raise click.ClickException(str(error)) from error
+    if as_json:
+        _json(payload)
+        return
+    click.echo(f"verified first-value receipt: {payload['receiptRoot']}")
 
 
 @agent.command(help=api_help("kungfu.agent.docs"))
@@ -219,6 +287,12 @@ def brief(ctx):
     is_flag=True,
     help="list exact packaged documentation surfaces",
 )
+@click.option(
+    "--bundle",
+    "show_bundle",
+    is_flag=True,
+    help="show the verified Portable Kungfu Atlas Bundle contract",
+)
 @click.option("--read", "read_path", help="read one exact repository-relative surface")
 @click.option(
     "--projection",
@@ -227,59 +301,26 @@ def brief(ctx):
 )
 @kfd3_api("kungfu.agent.docs")
 @agent_command_context
-def docs(ctx, as_json, atlas, verify_pack, show_catalog, read_path, projection):
-    requested = sum(
-        bool(value) for value in (verify_pack, show_catalog, read_path, projection)
+def docs(
+    ctx,
+    as_json,
+    atlas,
+    verify_pack,
+    show_catalog,
+    show_bundle,
+    read_path,
+    projection,
+):
+    return agent_docs.run(
+        as_json=as_json,
+        atlas=atlas,
+        verify_pack=verify_pack,
+        show_catalog=show_catalog,
+        show_bundle=show_bundle,
+        read_path=read_path,
+        projection=projection,
+        emit_json=_json,
     )
-    if requested > 1:
-        raise click.UsageError(
-            "choose only one of --verify, --catalog, --read, or --projection"
-        )
-    try:
-        if verify_pack:
-            payload = documentation_pack.verify(atlas)
-        elif show_catalog:
-            payload = documentation_pack.catalog(atlas)
-        elif read_path:
-            payload = documentation_pack.read(read_path, atlas)
-        elif projection:
-            payload = documentation_pack.projection(projection, atlas)
-        else:
-            payload = None
-    except (FileNotFoundError, KeyError, OSError, ValueError) as error:
-        raise click.ClickException(str(error)) from error
-    if payload is not None:
-        if as_json:
-            _json(payload)
-        elif verify_pack:
-            click.echo(
-                f"Documentation Atlas: {'valid' if payload['valid'] else 'invalid'} "
-                f"({payload.get('atlasRoot', 'unknown')})"
-            )
-        elif read_path:
-            click.echo(payload["content"], nl=False)
-        else:
-            click.echo(json.dumps(payload, indent=2, sort_keys=True))
-        if verify_pack and not payload["valid"]:
-            raise click.ClickException("Documentation Atlas verification failed")
-        return
-    index = agent_pack.index()
-    root = str(agent_pack.pack_root())
-    payload = {
-        "schema": "kungfu.agent-docs/v1",
-        "packRoot": root,
-        "documents": index["documents"],
-        "skills": index["skills"],
-        "contextCompiler": index["contextCompiler"],
-    }
-    if as_json:
-        _json(payload)
-        return
-    click.echo(f"Agent pack: {root}")
-    for row in index["documents"]:
-        click.echo(f"- {row['path']} [{row['maturity']}]: {row['purpose']}")
-    for row in index["skills"]:
-        click.echo(f"- {row['path']} [{row['maturity']}]: {row['target']} skill")
 
 
 @agent.command(help=api_help("kungfu.agent.capabilities"))
@@ -305,7 +346,7 @@ def capabilities(ctx, as_json):
         },
         "actionGeometry": action_geometry,
         "workDomainProfile": work_domain_profile,
-        "workLoop": _work_authority_capabilities(),
+        "workLoop": first_value_protocol.work_authority_capabilities(),
     }
     if as_json:
         _json(payload)
@@ -777,10 +818,18 @@ def runtime_list(ctx, as_json):
 @click.option("--id", "profile_id", required=True, help="stable profile id")
 @click.option("--label", required=True, help="user-visible profile label")
 @click.option(
-    "--provider", required=True, type=click.Choice(runtime_profiles.PROVIDERS)
+    "--provider",
+    required=True,
+    help="built-in or registered native Provider adapter id",
 )
 @click.option("--executable", required=True, help="executable path or PATH name")
 @click.option("--arg", "argv", multiple=True, help="repeat for each launch argv")
+@click.option(
+    "--interactive-arg",
+    "interactive_argv",
+    multiple=True,
+    help="repeat for each provider-native interactive argv",
+)
 @click.option("--shell-mode", is_flag=True, help="explicitly allow shell semantics")
 @click.option(
     "--cwd-policy",
@@ -811,6 +860,7 @@ def runtime_upsert(
     provider,
     executable,
     argv,
+    interactive_argv,
     shell_mode,
     cwd_policy,
     backend,
@@ -826,6 +876,7 @@ def runtime_upsert(
             provider=provider,
             executable=executable,
             argv=list(argv),
+            interactive_argv=list(interactive_argv),
             shell_mode=shell_mode,
             cwd_policy=cwd_policy,
             backend=backend,
@@ -951,11 +1002,14 @@ def console_current(ctx, as_json):
             raise click.ClickException(
                 f"invalid Agent Console envelope: {exc}"
             ) from exc
+        effective_work_ref = session_surface.effective_work_ref(envelope)
         payload = {
             "schema": "kungfu.agent-console-current/v1",
             "available": True,
             "envelope": envelope,
-            "workBound": envelope.get("workRef") is not None,
+            "bootstrap": agent_pack.bootstrap_status(),
+            "workBound": effective_work_ref is not None,
+            "workRef": effective_work_ref,
             "knownLimits": envelope.get("knownLimits", []),
         }
     if as_json:
@@ -971,6 +1025,46 @@ def console_current(ctx, as_json):
     )
 
 
+@console.command(
+    name="bind-work",
+    help="atomically bind this native Agent attempt to one Assignment",
+)
+@click.option("--initiative-id", required=True)
+@click.option("--assignment-id", required=True)
+@click.option("--json", "as_json", is_flag=True, help="machine-readable output")
+@kfd3_api("kungfu.agent.console.bind-work")
+@agent_command_context
+def console_bind_work(ctx, initiative_id, assignment_id, as_json):
+    raw = os.environ.get("KUNGFU_AGENT_CONSOLE_ENVELOPE", "").strip()
+    if not raw:
+        raise click.ClickException(
+            "bind-work must run inside a native Kungfu Agent Console"
+        )
+    try:
+        envelope = json.loads(raw)
+        kungfu_config.validate_value("agentConsoleEnvelope", envelope)
+        binding = run_agent.bind_current_native_work(
+            str(ctx.runtime_dir), initiative_id, assignment_id
+        )
+        if binding is None:
+            raise ValueError("native Agent Console binding is unavailable")
+    except (OSError, RuntimeError, ValueError, json.JSONDecodeError) as exc:
+        raise click.ClickException(str(exc)) from exc
+    payload = {
+        "schema": "kungfu.agent-console.work-binding/v1",
+        "status": "bound",
+        **binding,
+        "next": "continue-this-Assignment-in-this-terminal",
+    }
+    if as_json:
+        _json(payload)
+        return
+    click.echo(
+        f"bound {assignment_id} to {envelope['consoleId']} "
+        f"attempt {envelope['attemptId']}"
+    )
+
+
 @agent.command(name="session", help=api_help("kungfu.agent.session"))
 @click.argument(
     "operation",
@@ -983,6 +1077,12 @@ def console_current(ctx, as_json):
             "snapshot",
             "plan-start",
             "start",
+            "plan-native-start",
+            "start-native",
+            "plan-native-bind-work",
+            "bind-native-work",
+            "heartbeat-native",
+            "end-native",
             "attach",
             "detach",
             "plan-control",
@@ -1026,7 +1126,12 @@ def session_action(ctx, operation, input_file, endpoint, as_json):
         ),
     }
     try:
-        payload = session_surface.invoke(request, endpoint=endpoint)
+        payload = session_surface.invoke_for_project(
+            request,
+            fallback_runtime_dir=ctx.runtime_dir,
+            endpoint=endpoint,
+            cwd=os.getcwd(),
+        )
     except (OSError, ValueError) as exc:
         raise click.ClickException(str(exc)) from exc
     if as_json:
@@ -1094,7 +1199,7 @@ def choose_mode(
 @click.option(
     "--target",
     required=True,
-    type=click.Choice(["codex", "claude"]),
+    type=click.Choice(["codex", "claude", "amp", "opencode"]),
     help="which provider skill to install",
 )
 @click.option(
@@ -1104,17 +1209,28 @@ def choose_mode(
     default=None,
     help="destination directory; required with --execute",
 )
+@click.option(
+    "--scope",
+    type=click.Choice(["project", "user"]),
+    default=None,
+    help="provider-supported destination scope; mutually exclusive with --out",
+)
 @click.option("--execute", is_flag=True, help="copy the file after preview")
 @click.option("--force", is_flag=True, help="replace an existing SKILL.md")
 @click.option("--json", "as_json", is_flag=True, help="machine-readable output")
 @kfd3_api("kungfu.agent.install-skill")
 @agent_command_context
-def install_skill(ctx, target, out_dir, execute, force, as_json):
+def install_skill(ctx, target, out_dir, scope, execute, force, as_json):
+    if out_dir and scope:
+        raise click.UsageError("choose --scope or --out, not both")
+    if not out_dir and scope:
+        out_dir = str(_skill_dir(target, scope))
     src = agent_pack.skill_path(target)
     dest = os.path.join(out_dir, "SKILL.md") if out_dir else None
     payload = {
         "schema": "kungfu.agent-skill-install/v1",
         "target": target,
+        "scope": scope,
         "source": str(src),
         "destination": dest,
         "execute": execute,
@@ -1145,18 +1261,29 @@ def install_skill(ctx, target, out_dir, execute, force, as_json):
     type=click.Choice(["codex", "claude"]),
     help="provider skill target",
 )
+@click.option(
+    "--scope",
+    type=click.Choice(["project", "user"]),
+    default="project",
+    show_default=True,
+    help="provider Skill discovery scope",
+)
 @click.option("--json", "as_json", is_flag=True, help="machine-readable output")
 @kfd3_api("kungfu.agent.status")
 @agent_command_context
-def status(ctx, target, as_json):
+def status(ctx, target, scope, as_json):
     policy = _read_policy(ctx, target)
+    skill_dir = _skill_dir(target, scope)
     payload = {
         "schema": "kungfu.agent-status/v1",
         "target": target,
+        "scope": scope,
         "configured": policy is not None,
         "policyPath": _policy_path(ctx, target),
         "policy": policy,
         "skillSource": str(agent_pack.skill_path(target)),
+        "skillDestination": str(skill_dir / "SKILL.md"),
+        "skillState": agent_pack.skill_state(target, skill_dir),
         "commands": {
             "bootstrap": f"kungfu agent bootstrap --target {target} --mode report",
             "mode": f"kungfu agent mode set --target {target} --mode managed-run",
@@ -1172,6 +1299,7 @@ def status(ctx, target, as_json):
     else:
         gate = "on" if policy.get("reportCloseoutGate") else "off"
         click.echo(f"[agent] {target}: {policy.get('mode')} (report gate: {gate})")
+    click.echo(f"[agent] skill {scope}: {payload['skillState']}")
 
 
 @agent.command(help=api_help("kungfu.agent.bootstrap"))
@@ -1201,7 +1329,9 @@ def status(ctx, target, as_json):
 @kfd3_api("kungfu.agent.bootstrap")
 @agent_command_context
 def bootstrap(ctx, target, mode, skill_dir, execute, force, as_json):
-    policy = _policy_payload(ctx, target, mode, enabled=True)
+    policy = runtime_profiles.policy_payload(
+        ctx.runtime_dir, target, mode, enabled=True
+    )
     skill_destination = os.path.join(skill_dir, "SKILL.md") if skill_dir else None
     payload = {
         "schema": "kungfu.agent-bootstrap/v1",
@@ -1260,8 +1390,17 @@ def mode(ctx):
 @agent_command_context
 def set_mode(ctx, target, mode_name, execute, as_json):
     previous = _read_policy(ctx, target)
-    policy = dict(previous or _policy_payload(ctx, target, mode_name, enabled=True))
-    policy.update(_policy_payload(ctx, target, mode_name, enabled=True))
+    policy = dict(
+        previous
+        or runtime_profiles.policy_payload(
+            ctx.runtime_dir, target, mode_name, enabled=True
+        )
+    )
+    policy.update(
+        runtime_profiles.policy_payload(
+            ctx.runtime_dir, target, mode_name, enabled=True
+        )
+    )
     payload = {
         "schema": "kungfu.agent-mode-set/v1",
         "target": target,
@@ -1297,7 +1436,9 @@ def set_mode(ctx, target, mode_name, execute, as_json):
 @agent_command_context
 def unbootstrap(ctx, target, execute, as_json):
     previous = _read_policy(ctx, target)
-    disabled = _policy_payload(ctx, target, "brief", enabled=False)
+    disabled = runtime_profiles.policy_payload(
+        ctx.runtime_dir, target, "brief", enabled=False
+    )
     payload = {
         "schema": "kungfu.agent-unbootstrap/v1",
         "target": target,
@@ -1334,7 +1475,9 @@ def unbootstrap(ctx, target, execute, as_json):
 @agent_command_context
 def uninstall(ctx, target, execute, as_json):
     previous = _read_policy(ctx, target)
-    disabled = _policy_payload(ctx, target, "brief", enabled=False)
+    disabled = runtime_profiles.policy_payload(
+        ctx.runtime_dir, target, "brief", enabled=False
+    )
     payload = {
         "schema": "kungfu.agent-uninstall/v1",
         "target": target,
@@ -1363,18 +1506,40 @@ def uninstall(ctx, target, execute, as_json):
 
 @agent.command(help=api_help("kungfu.agent.context"))
 @click.option("--json", "as_json", is_flag=True, help="machine-readable output")
+@click.option("--task", help="exact task for verified Xinfa context")
+@click.option("--role", help="task role; required with --task")
+@click.option("--budget", type=click.IntRange(min=1), help="context token budget")
+@click.option("--route", help="exact route id; required with --task")
 @kfd3_api("kungfu.agent.context")
 @agent_command_context
-def context(ctx, as_json):
-    try:
-        data = _context(ctx)
-    except (OSError, ValueError, json.JSONDecodeError) as e:
-        click.echo(f"[agent] failed to load context: {e}", err=True)
-        sys.exit(1)
-    if as_json:
-        _json(data)
-        return
-    click.echo(json.dumps(data, indent=2, sort_keys=True))
+def context(ctx, as_json, task, role, budget, route):
+    return agent_docs.run_context(
+        ctx=ctx,
+        task=task,
+        role=role,
+        budget=budget,
+        route=route,
+        as_json=as_json,
+        default_context=_context,
+        emit_json=_json,
+    )
+
+
+@agent.command(name="expand", help="Expand one verified Xinfa context handle.")
+@click.option("--view", type=click.Choice(["agent", "human"]), default="agent")
+@click.option("--handle", required=True)
+@click.option("--budget", required=True, type=click.IntRange(min=1))
+@click.option("--json", "as_json", is_flag=True, help="machine-readable output")
+@kfd3_api("kungfu.agent.expand")
+@agent_command_context
+def expand(ctx, view, handle, budget, as_json):
+    return agent_docs.run_expand(
+        view=view,
+        handle=handle,
+        budget=budget,
+        as_json=as_json,
+        emit_json=_json,
+    )
 
 
 @agent.command(help=api_help("kungfu.agent.verify"))

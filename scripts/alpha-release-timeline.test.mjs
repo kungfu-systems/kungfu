@@ -504,4 +504,6 @@ test('workflow consumes exact dev receipt before promotion and emits timeline', 
   assert.match(workflow, /--cache-evidence/u);
   assert.match(workflow, /\.\/shifu alpha:release:timeline write/u);
   assert.match(workflow, /alpha-release-timeline-\$\{\{ github\.run_id \}\}/u);
+  assert.match(workflow, /runner-preset: kungfu-v4-native/u);
+  assert.doesNotMatch(workflow, /^\s+platforms-json:/mu);
 });

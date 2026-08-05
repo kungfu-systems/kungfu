@@ -4,6 +4,19 @@ These gates admit a change or artifact to a channel. Publication and tag mutatio
 
 Each section is bound to the registry id by the catalog meta gate.
 
+## Required development delivery Warrant
+
+Targeted development `workflow_run` deliveries require one exact, bounded
+Buildchain Warrant before queue admission. The Warrant binds the pull request
+head, reusable source proof, integration base, required checks, and lease; a
+protected terminal workflow closes it after merge or dequeue. Manual dispatch
+and cadence patrol remain outside that authority and run with Warrant mode off.
+
+This gate grants neither approval nor publication authority and does not enable
+paid runner campaigns. Shared AWS Windows Burst and macOS campaigns remain
+separately governed and disabled unless explicitly activated by their own
+resource authority.
+
 ## Exact-source Alpha preflight
 
 Every push to the development channel produces a four-platform
@@ -20,28 +33,36 @@ fail-fast and cancel stale runs for the same pull request. The manual Build
 workflow and preflight workflow expose an explicit diagnostic mode that keeps
 all platform lanes running.
 
-### Native self-hosted offline fallback
+### Fresh GitHub-hosted functional matrix
 
-Normal native Buildchain matrices retain the exact-label self-hosted Linux x64,
-macOS ARM64, and Windows x64 lanes while at least one matching runner is
-online. A busy online runner remains self-hosted so ordinary contention can use
-the warm workspace and toolchain caches. When no matching runner is online,
-Buildchain independently rewrites only that lane to `ubuntu-24.04`, `macos-15`,
-or `windows-2022`; the already hosted Linux ARM64 lane is unchanged.
+Formal Alpha and Release candidates execute credential-free Linux x64, Linux
+ARM64, macOS ARM64, and Windows x64 build and qualification lanes on the fixed
+GitHub-hosted images `ubuntu-24.04`, `ubuntu-24.04-arm`, `macos-15`, and
+`windows-2022`. Each candidate therefore starts from an isolated workspace;
+self-hosted workspace history, retained toolchains, and runner inventory state
+cannot alter formal release routing or qualification prerequisites.
+Formal lanes fetch the immutable source directly from GitHub instead of probing
+LAN or runner-local mirrors that are unreachable from hosted infrastructure.
+They also omit organization-level private Cargo registries and remote Shifu
+cache profiles; public/default dependency endpoints and checked-in portable
+profiles are the only inputs allowed on the formal hosted boundary.
 
-The inventory token is projected only into code checked out from the immutable
-Buildchain workflow-shell authority at
-`ea0d13ac2ccfbb3dc3a11a94e8eb83ab04b936b8`. The routing output contains
-de-identified counts and decisions, not runner names. A missing token,
-permission failure, or unavailable inventory API cannot claim an outage and
-therefore preserves the original self-hosted matrix. Source identity,
-qualification, signing, publication, and promotion authority are otherwise
-unchanged.
+Buildchain still seals exact-source unsigned artifacts and detached signing
+requests in the functional matrix. Signing and notarization execute only in
+their protected credential authority, while finalization, publication, and
+activation independently verify the returned source-bound receipts. Moving
+the functional matrix does not move credentials or collapse those authorities.
 
-Explicit macOS overflow candidates are excluded from this matrix rewrite
-because their independent route names are evidence. Their controller performs
-the equivalent macOS offline observation and also applies the bounded queue
-policy below.
+The exact-source Dev Verify that Candidate Patrol consumes uses the same fresh
+hosted Linux x64, macOS ARM64, and Windows x64 boundary, so an offline
+self-hosted diagnostic runner cannot prevent creation of the next Alpha
+candidate. The version-line projection still retains the exact-label
+self-hosted platform matrix for explicit diagnostics. The manual macOS
+overflow controller also retains its independent self-hosted and GitHub-hosted
+candidate identities, always with `publish-channel: none`; neither path is the
+default formal Alpha route. Explicit self-hosted or custom diagnostics may
+still opt into the bounded checkout-cache policy and private acceleration
+variables.
 
 ### Queue-aware macOS overflow
 
@@ -59,9 +80,10 @@ candidate only when one of four source-bound conditions holds:
 
 The two candidates have independent concurrency identities and both run the
 same exact source SHA with the same exact Alpha preflight receipt. They are
-build-and-verify candidates only: `publish-channel` is always `none`, no release
-candidate passport is requested, and the caller-owned signing/notarization tail
-is not run. The existing Alpha promotion workflow remains the only publication
+build-and-verify candidates only: `publish-channel` is always `none` and no
+release-candidate passport is requested. Any declared signing request remains
+owned by Buildchain's protected authority; Kungfu has no caller-owned signing
+tail. The existing Alpha promotion workflow remains the only publication
 authority.
 
 The runner-inventory credential is projected only into the protected

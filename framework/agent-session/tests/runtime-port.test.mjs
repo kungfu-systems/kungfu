@@ -1,4 +1,7 @@
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
 import test from 'node:test';
 import {
   ACTION_ENVELOPE_CARRIER_TYPE,
@@ -6,10 +9,12 @@ import {
 } from '../src/runtime-port.mjs';
 
 class FakeWatcher {
-  constructor(_runtimeDir, _name, _bypass, _sleep, captureCustom) {
+  constructor(runtimeDir, _name, _bypass, _sleep, captureCustom) {
     assert.equal(captureCustom, true);
+    this.runtimeDir = runtimeDir;
     this.started = false;
     this.live = true;
+    this.readRequestReady = true;
     this.usable = true;
     this.issued = [];
     this.incoming = [];
@@ -38,7 +43,11 @@ class FakeWatcher {
 
   requestReadFromPublic(location, fromTime) {
     this.followed = { location, fromTime };
-    return this.live;
+    return this.live && this.readRequestReady;
+  }
+
+  canRequestReadFromPublic() {
+    return this.live && this.readRequestReady;
   }
 
   drainCustomData() {
@@ -70,6 +79,33 @@ const binding = {
     return decoded;
   },
 };
+
+test('native port gives the binding a canonical data-root identity', () => {
+  const parent = fs.mkdtempSync(path.join(os.tmpdir(), 'kfas-root.'));
+  const canonicalParent = path.join(parent, 'CanonicalParent');
+  fs.mkdirSync(canonicalParent);
+  const alias =
+    process.platform === 'win32'
+      ? canonicalParent.toLowerCase()
+      : path.join(parent, 'alias');
+  if (process.platform !== 'win32')
+    fs.symlinkSync(canonicalParent, alias, 'dir');
+  const runtimeDir = path.join(alias, 'child', '..', 'runtime');
+  try {
+    const port = new NativeKungfuJournalNoticePort({
+      binding,
+      runtimeDir,
+      peerName: 'canonical-root',
+    });
+    assert.equal(
+      port.peer.runtimeDir,
+      path.join(fs.realpathSync.native(canonicalParent), 'runtime'),
+    );
+    port.close();
+  } finally {
+    fs.rmSync(parent, { recursive: true, force: true });
+  }
+});
 
 test('native port uses action envelopes on one public journal writer', () => {
   const port = new NativeKungfuJournalNoticePort({
@@ -129,6 +165,28 @@ test('reader follows a Peer public journal and reconstructs cursor frames', () =
   assert.equal(recovered.frames[0].kind, 'controller-granted');
   assert.equal(recovered.frames[0].payload.leaseId, 'lease-1');
   assert.equal(reader.peer.followed.fromTime, 0n);
+});
+
+test('reader exposes coordinator command readiness separately from liveness', () => {
+  const reader = new NativeKungfuJournalNoticePort({
+    binding,
+    runtimeDir: '/tmp/runtime',
+    peerName: 'capsule-reader-readiness',
+  });
+  reader.peer.readRequestReady = false;
+  assert.equal(reader.health().live, true);
+  assert.equal(reader.canFollow(), false);
+  assert.throws(
+    () =>
+      reader.follow({
+        role: 'system',
+        namespace: 'node',
+        name: 'capsule-writer',
+      }),
+    (error) => error.code === 'peer_not_ready',
+  );
+  reader.peer.readRequestReady = true;
+  assert.equal(reader.canFollow(), true);
 });
 
 test('native queue overflow becomes an explicit gap', () => {

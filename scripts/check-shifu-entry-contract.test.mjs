@@ -9,6 +9,11 @@ import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
 
 import { checkRoot, scanText } from './check-shifu-entry-contract.mjs';
+import {
+  assertSourceCheckoutUnchanged,
+  prepareSourceAcceptanceRuntime,
+  sourceCheckoutSnapshot,
+} from './readonly-source-toolchain.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -86,6 +91,50 @@ test('cold source Work failure remains machine-actionable', (t) => {
   });
 });
 
+test('Intel macOS fails before launcher acquisition or task dispatch', (t) => {
+  if (process.platform === 'win32') {
+    t.skip('POSIX launcher contract');
+    return;
+  }
+  const temp = fs.mkdtempSync(
+    path.join(os.tmpdir(), 'kungfu-shifu-intel-mac-'),
+  );
+  t.after(() => fs.rmSync(temp, { recursive: true, force: true }));
+  const launcher = path.join(temp, 'shifu');
+  const bin = path.join(temp, 'bin');
+  const networkMarker = path.join(temp, 'network-attempted');
+  fs.mkdirSync(bin);
+  fs.copyFileSync(path.join(ROOT, 'shifu'), launcher);
+  fs.chmodSync(launcher, 0o755);
+  fs.writeFileSync(
+    path.join(bin, 'uname'),
+    '#!/bin/sh\ncase "$1" in -s) echo Darwin ;; -m) echo x86_64 ;; esac\n',
+  );
+  fs.writeFileSync(
+    path.join(bin, 'curl'),
+    `#!/bin/sh\ntouch ${JSON.stringify(networkMarker)}\nexit 99\n`,
+  );
+  fs.chmodSync(path.join(bin, 'uname'), 0o755);
+  fs.chmodSync(path.join(bin, 'curl'), 0o755);
+
+  const result = spawnSync(launcher, ['build'], {
+    encoding: 'utf8',
+    env: {
+      ...process.env,
+      HOME: temp,
+      PATH: `${bin}:/usr/bin:/bin`,
+      XDG_CONFIG_HOME: path.join(temp, 'config'),
+    },
+  });
+  assert.equal(result.status, 64);
+  assert.equal(result.stdout, '');
+  assert.equal(
+    result.stderr,
+    'shifu: unsupported-host: Intel macOS (Darwin x86_64) is not supported by Kungfu\n',
+  );
+  assert.equal(fs.existsSync(networkMarker), false);
+});
+
 test('partial Core assembly cannot masquerade as Work readiness', (t) => {
   if (process.platform === 'win32') {
     t.skip('POSIX launcher contract');
@@ -112,6 +161,83 @@ test('partial Core assembly cannot masquerade as Work readiness', (t) => {
   );
 });
 
+test('source Kungfu route projects its built TUI and Product extensions', (t) => {
+  if (process.platform === 'win32') {
+    t.skip('POSIX launcher contract');
+    return;
+  }
+  const temp = fs.mkdtempSync(path.join(os.tmpdir(), 'kungfu-shifu-tui-'));
+  t.after(() => fs.rmSync(temp, { recursive: true, force: true }));
+  const launcher = path.join(temp, 'shifu');
+  const executable = path.join(
+    temp,
+    'framework',
+    'core',
+    'dist',
+    'kungfu',
+    'kungfu',
+  );
+  const tuiEntry = path.join(temp, 'framework', 'tui', 'dist', 'tui.mjs');
+  const extensionRoot = path.join(temp, 'product', 'extensions');
+  const template = path.join(
+    extensionRoot,
+    'agent-work-lab',
+    'experience',
+    'starter-project.json',
+  );
+  fs.mkdirSync(path.dirname(executable), { recursive: true });
+  fs.mkdirSync(path.dirname(tuiEntry), { recursive: true });
+  fs.mkdirSync(path.dirname(template), { recursive: true });
+  fs.copyFileSync(path.join(ROOT, 'shifu'), launcher);
+  fs.writeFileSync(tuiEntry, '');
+  fs.writeFileSync(template, '{}\n');
+  fs.writeFileSync(
+    executable,
+    [
+      '#!/bin/sh',
+      'printf "%s\\n" "$KUNGFU_TUI_ENTRY"',
+      'printf "%s\\n" "$KF_BUNDLED_EXTENSION_ROOT"',
+      'printf "%s\\n" "$*"',
+      '',
+    ].join('\n'),
+  );
+  fs.chmodSync(launcher, 0o755);
+  fs.chmodSync(executable, 0o755);
+
+  const result = spawnSync(
+    launcher,
+    ['kungfu', 'agent-work-lab', 'project-tour'],
+    {
+      encoding: 'utf8',
+      env: {
+        ...process.env,
+        HOME: temp,
+        KUNGFU_TUI_ENTRY: '',
+        KF_BUNDLED_EXTENSION_ROOT: '',
+        XDG_CONFIG_HOME: path.join(temp, 'config'),
+      },
+    },
+  );
+  assert.equal(result.status, 0, result.stderr);
+  assert.deepEqual(result.stdout.trim().split('\n'), [
+    tuiEntry,
+    extensionRoot,
+    'agent-work-lab project-tour',
+  ]);
+});
+
+test('Windows source Kungfu route projects built TUI Product paths', () => {
+  const windows = fs.readFileSync(path.join(ROOT, 'shifu.cmd'), 'utf8');
+  assert.match(
+    windows,
+    /if not defined KUNGFU_TUI_ENTRY if exist .*framework\\tui\\dist\\tui\.mjs/u,
+  );
+  assert.match(
+    windows,
+    /if not defined KF_BUNDLED_EXTENSION_ROOT if exist .*agent-work-lab\\experience\\starter-project\.json/u,
+  );
+});
+
 test('cached pinned uv activates Work after Qualified Core materialization', (t) => {
   if (process.platform === 'win32') {
     t.skip('POSIX launcher contract');
@@ -119,7 +245,6 @@ test('cached pinned uv activates Work after Qualified Core materialization', (t)
   }
   const cacheTargets = {
     'darwin-arm64': 'macos-aarch64',
-    'darwin-x64': 'macos-x86_64',
     'linux-arm64': 'linux-aarch64',
     'linux-x64': 'linux-x86_64',
   };
@@ -215,6 +340,12 @@ test('Windows cold source Work failure carries the same diagnosis', () => {
   assert.match(windows, /"action":"build-core"/u);
   assert.match(windows, /"command":"shifu\.cmd build:core"/u);
   assert.match(windows, /kungfubuildinfo\.json/u);
+  assert.match(
+    windows,
+    /qualified-assignment-core-consumer\.mjs" materialize/u,
+  );
+  assert.match(windows, /resolve-cached-tool uv/u);
+  assert.match(windows, /set "_KFC_UV=/u);
 });
 
 test('cache execution boundaries distinguish gate run and source acceptance', () => {
@@ -274,6 +405,48 @@ test('build-free read-only routes bypass launcher bootstrap on both shims', () =
     windows.indexOf(':kungfucli'),
   );
   assert.doesNotMatch(windowsFloor, /fnm install|pnpm|diagnostics/u);
+});
+
+test('open-card Work Design preflight is build-free on both shims', () => {
+  const posix = fs.readFileSync(path.join(ROOT, 'shifu'), 'utf8');
+  const windows = fs.readFileSync(path.join(ROOT, 'shifu.cmd'), 'utf8');
+  const readonly = fs.readFileSync(
+    path.join(ROOT, 'scripts/shifu-readonly-entry.mjs'),
+    'utf8',
+  );
+  for (const entrypoint of [posix, windows]) {
+    assert.match(entrypoint, /work-design:open-card-preflight/u);
+    assert.match(entrypoint, /shifu-readonly-entry\.mjs/u);
+  }
+  assert.match(
+    readonly,
+    /framework[\\/]work-design-open-card[\\/]tooling[\\/]open-card-preflight\.mjs/u,
+  );
+  assert.doesNotMatch(
+    readonly,
+    /fnm install|pnpm|\.buildchain[\\/]diagnostics/u,
+  );
+});
+
+test('Work Design outcome feedback and status are build-free on both shims', () => {
+  const posix = fs.readFileSync(path.join(ROOT, 'shifu'), 'utf8');
+  const windows = fs.readFileSync(path.join(ROOT, 'shifu.cmd'), 'utf8');
+  const readonly = fs.readFileSync(
+    path.join(ROOT, 'scripts/shifu-readonly-entry.mjs'),
+    'utf8',
+  );
+  for (const entrypoint of [posix, windows]) {
+    assert.match(entrypoint, /work-design:feedback/u);
+    assert.match(entrypoint, /shifu-readonly-entry\.mjs/u);
+  }
+  assert.match(
+    readonly,
+    /framework[\\/]work-design-policy-replay[\\/]tooling[\\/]check-work-design-policy-replay\.mjs/u,
+  );
+  assert.doesNotMatch(
+    readonly,
+    /fnm install|pnpm|\.buildchain[\\/]diagnostics/u,
+  );
 });
 
 test('Xinfa product tasks bypass unrelated Kungfu dependency caches', () => {
@@ -443,12 +616,41 @@ test('runtime guard rejects a direct task and accepts Shifu provenance', () => {
   assert.equal(accepted.status, 0);
 });
 
-test('package manager cannot run a guarded root task without a canonical Shifu correction', () => {
+test('real package manager cannot run a guarded task or write the checkout', (t) => {
+  const runtime = prepareSourceAcceptanceRuntime(ROOT);
+  t.after(runtime.cleanup);
+  const before = sourceCheckoutSnapshot(ROOT);
+  const fixture = fs.mkdtempSync(
+    path.join(runtime.runtimeRoot, 'kungfu-package-manager-guard-'),
+  );
+  const guard = path.join(ROOT, 'scripts', 'require-shifu.mjs');
+  // cmd.exe reparses a quoted executable in the first package-script token.
+  // Resolve the current Node through PATH on Windows so the guard itself runs.
+  const node =
+    process.platform === 'win32'
+      ? path.basename(process.execPath)
+      : JSON.stringify(process.execPath);
+  const guardPath = JSON.stringify(guard);
+  fs.writeFileSync(
+    path.join(fixture, 'package.json'),
+    `${JSON.stringify(
+      {
+        name: 'kungfu-package-manager-guard-fixture',
+        private: true,
+        packageManager: 'pnpm@11.7.0',
+        scripts: {
+          'check:entry-contract': `${node} ${guardPath} check:entry-contract`,
+        },
+      },
+      null,
+      2,
+    )}\n`,
+  );
   const corepack = process.platform === 'win32' ? 'corepack.cmd' : 'corepack';
   const direct = spawnSync(corepack, ['pnpm', 'run', 'check:entry-contract'], {
-    cwd: ROOT,
+    cwd: fixture,
     encoding: 'utf8',
-    env: { ...process.env, SHIFU_ENTRYPOINT: '' },
+    env: { ...runtime.env, SHIFU_ENTRYPOINT: '' },
     shell: process.platform === 'win32',
   });
   const output = `${direct.stdout}\n${direct.stderr}`;
@@ -459,4 +661,10 @@ test('package manager cannot run a guarded root task without a canonical Shifu c
     /\[shifu-entry\] Run: \.\/shifu (?:install|check:entry-contract)(?:\r?\n|$)/,
   );
   assert.doesNotMatch(output, /\[shifu-entry\] Run: (?:corepack|node|pnpm)\b/);
+  assert.equal(
+    path.relative(runtime.runtimeRoot, fixture).startsWith('..'),
+    false,
+  );
+  assert.equal(fs.existsSync(path.join(fixture, 'package.json')), true);
+  assertSourceCheckoutUnchanged(before, sourceCheckoutSnapshot(ROOT));
 });

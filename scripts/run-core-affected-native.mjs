@@ -608,18 +608,16 @@ export function planFromChanged(
   let global = false;
   let forceFull = false;
   const globalPaths = [
+    '.github/actions/qualified-core-candidate-build/',
+    'framework/agent-session/src/runtime-port.mjs',
+    'framework/agent-session/tests/runtime-port.native-peer.mjs',
+    'framework/agent-session/tests/runtime-port.native.test.mjs',
     'framework/core/architecture/',
     'framework/core/CMakeLists.txt',
     'framework/core/conanfile.py',
-    // pyproject.toml is a Core build definition alongside conanfile.py and
-    // package.json: it pins the native toolchain (conan, cmake-js, ninja,
-    // pybind11-stubgen). Editing any section could change how the addon builds,
-    // and this gate cannot read TOML sections, so a change expands globally and
-    // re-validates every component rather than failing closed as unclassified.
+    // TOML edits can change the native toolchain, so expand them globally.
     'framework/core/pyproject.toml',
-    // uv.lock is the exact resolution of the same native Python toolchain.
-    // A lock-only update can therefore change the compiler/build helpers even
-    // when pyproject.toml is unchanged and needs the same global qualification.
+    // The exact resolution needs the same global qualification.
     'framework/core/uv.lock',
     'framework/core/package.json',
     'framework/core/tests/',

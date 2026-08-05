@@ -11,10 +11,35 @@ import gzip
 import hashlib
 import json
 import os
+import subprocess
 from pathlib import Path, PurePosixPath
 
-
 _COMPATIBILITY = Path("compatibility/context-pack-v1")
+
+
+def discovery_context(repo_root=None):
+    local_docs = []
+    if repo_root is not None:
+        local_docs = [
+            {"name": "documentation map", "path": str(repo_root / "docs" / "MAP.md")},
+            {
+                "name": "agent-first global config",
+                "path": str(repo_root / "docs" / "config.md"),
+            },
+        ]
+    return {
+        "local": local_docs,
+        "public": [
+            {
+                "name": "documentation map",
+                "url": "https://github.com/kungfu-tech/kungfu/blob/dev/v3/docs/MAP.md",
+            },
+            {
+                "name": "agent-first global config",
+                "url": "https://github.com/kungfu-tech/kungfu/blob/dev/v3/docs/guides/config.md",
+            },
+        ],
+    }
 
 
 def _canonical_bytes(value):
@@ -46,6 +71,33 @@ def _artifact_bytes(root, relative):
 
 def _json(root, relative):
     return json.loads(_artifact_bytes(root, relative).decode("utf-8"))
+
+
+def _portable_artifact(root, name):
+    direct = root / name
+    if direct.is_file():
+        return direct.read_bytes()
+    override = os.environ.get("KUNGFU_PORTABLE_ATLAS_BUNDLE")
+    if override:
+        candidate = Path(override)
+        if name == "bundle.json" and candidate.is_file():
+            return candidate.read_bytes()
+        sibling = candidate.parent / "portable-atlas-classification.json.gz"
+        if name == "classification.json.gz" and sibling.is_file():
+            return sibling.read_bytes()
+    source_root = Path(__file__).resolve().parents[6]
+    source = (
+        source_root
+        / ".xinfa"
+        / (
+            "product-atlas-bundle.json"
+            if name == "bundle.json"
+            else "portable-atlas-classification.json.gz"
+        )
+    )
+    if source.is_file():
+        return source.read_bytes()
+    raise FileNotFoundError(f"Portable Atlas Bundle artifact is absent: {name}")
 
 
 def _portable_path(value):
@@ -87,6 +139,11 @@ def verify(root=None):
             _artifact_bytes(root, relative)
         except (FileNotFoundError, OSError):
             diagnostics.append({"code": "missing-artifact", "path": relative})
+    try:
+        bundle_bytes = _portable_artifact(root, "bundle.json")
+        classification_compressed = _portable_artifact(root, "classification.json.gz")
+    except (FileNotFoundError, OSError) as error:
+        diagnostics.append({"code": "missing-portable-bundle", "path": str(error)})
     if diagnostics:
         return {
             "schema": "kungfu.documentation-pack-verification/v1",
@@ -100,6 +157,9 @@ def verify(root=None):
     pack = _json(root, str(_COMPATIBILITY / "pack.json"))
     pack_manifest = _json(root, str(_COMPATIBILITY / "manifest.json"))
     pack_receipt = _json(root, str(_COMPATIBILITY / "receipt.json"))
+    bundle = json.loads(bundle_bytes.decode("utf-8"))
+    classification_bytes = gzip.decompress(classification_compressed)
+    classification = json.loads(classification_bytes.decode("utf-8"))
 
     atlas_core = dict(atlas)
     atlas_root = atlas_core.pop("atlas_root", None)
@@ -179,6 +239,31 @@ def verify(root=None):
     ):
         diagnostics.append({"code": "authority-binding", "path": "."})
 
+    bundle_core = dict(bundle)
+    bundle_root = bundle_core.pop("bundleRoot", None)
+    classification_meta = bundle.get("classification", {})
+    material = classification_meta.get("material", {})
+    if (
+        _digest(bundle_core) != bundle_root
+        or bundle.get("roots", {}).get("atlas") != atlas_root
+        or bundle.get("roots", {}).get("contextPack") != declared_pack_root
+        or bundle.get("routes", {}).get("incompleteRoutes") != 0
+        or bundle.get("budgets", {}).get("passed") is not True
+    ):
+        diagnostics.append({"code": "portable-bundle-root", "path": "bundle.json"})
+    if (
+        _byte_digest(classification_bytes)
+        != classification_meta.get("classificationRoot")
+        or len(classification_compressed) != material.get("compressedBytes")
+        or len(classification_bytes) != material.get("uncompressedBytes")
+        or classification.get("unknown") != 0
+        or classification.get("silentOmissions") != 0
+        or classification.get("total") != classification_meta.get("total")
+    ):
+        diagnostics.append(
+            {"code": "portable-classification-root", "path": "classification.json.gz"}
+        )
+
     return {
         "schema": "kungfu.documentation-pack-verification/v1",
         "valid": not diagnostics,
@@ -189,6 +274,12 @@ def verify(root=None):
         "cutRoot": atlas.get("roots", {}).get("cut"),
         "manifestRoot": manifest_root,
         "receiptRoot": receipt_root,
+        "bundleRoot": bundle_root,
+        "classificationRoot": classification_meta.get("classificationRoot"),
+        "releasePassportRoot": bundle.get("releasePassportBinding", {}).get(
+            "releasePassportRoot"
+        ),
+        "releaseQualified": bundle.get("budgets", {}).get("releaseQualified") is True,
         "diagnostics": diagnostics,
     }
 
@@ -208,11 +299,39 @@ def catalog(root=None):
     _, pack, result = _verified_pack(root)
     return {
         "schema": "kungfu.documentation-catalog/v1",
-        "roots": {key: result[key] for key in ("atlasRoot", "packRoot", "cutRoot")},
+        "roots": {
+            key: result[key]
+            for key in ("atlasRoot", "packRoot", "cutRoot", "bundleRoot")
+        },
         "entries": [
-            {key: item[key] for key in ("path", "contentRoot", "size", "visibility")}
+            {
+                **{
+                    key: item[key]
+                    for key in ("path", "contentRoot", "size", "visibility")
+                },
+                "class": "embedded",
+            }
             for item in pack.get("inventory", [])
         ],
+    }
+
+
+def bundle(root=None):
+    root, _, result = _verified_pack(root)
+    value = json.loads(_portable_artifact(root, "bundle.json").decode("utf-8"))
+    return {
+        "schema": "kungfu.portable-atlas-bundle-view/v1",
+        "valid": True,
+        "bundleRoot": result["bundleRoot"],
+        "atlasRoot": result["atlasRoot"],
+        "contextPackRoot": result["packRoot"],
+        "classification": value["classification"],
+        "routes": value["routes"],
+        "expansion": value["expansion"],
+        "budgets": value["budgets"],
+        "sourceCut": value["sourceCut"],
+        "releasePassportBinding": value["releasePassportBinding"],
+        "assembly": value["assembly"],
     }
 
 
@@ -243,4 +362,125 @@ def projection(audience, root=None):
         "roots": {key: result[key] for key in ("atlasRoot", "packRoot", "cutRoot")},
         "audience": audience,
         "projection": value,
+    }
+
+
+def _xinfa(arguments):
+    # Keep offline Atlas verification stdlib-only.  The CLI stack (and click)
+    # is needed only when a caller asks the linked Xinfa runtime to project or
+    # expand task context.
+    from kungfu.cli.commands.env import _resolve_trunk
+
+    trunk = _resolve_trunk()
+    if not trunk:
+        raise FileNotFoundError(
+            "linked Xinfa product was not found; set KUNGFU_TRUNK_BIN for source qualification"
+        )
+    result = subprocess.run(
+        [trunk, "xinfa", *arguments],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    if result.returncode != 0:
+        detail = result.stderr.strip() or result.stdout.strip() or "no diagnostic"
+        raise ValueError(f"Xinfa context operation failed: {detail}")
+    try:
+        return json.loads(result.stdout)
+    except json.JSONDecodeError as error:
+        raise ValueError("Xinfa returned invalid JSON") from error
+
+
+def task_context(task, role, budget, route, root=None):
+    root, _, verification = _verified_pack(root)
+    payload = _xinfa(
+        [
+            "context",
+            "--atlas",
+            str(root),
+            "--route",
+            route,
+            "--task",
+            task,
+            "--role",
+            role,
+            "--budget",
+            str(budget),
+            "--json",
+        ]
+    )
+    projection_value = payload.get("projection", payload)
+    omissions = projection_value.get("omissions", [])
+    required_omissions = [row for row in omissions if row.get("required") is True]
+    status = projection_value.get("status", payload.get("status"))
+    roots = projection_value.get("roots", payload.get("roots", {}))
+    atlas_root = (
+        roots.get("atlas")
+        or roots.get("atlasRoot")
+        or projection_value.get("atlas_root")
+        or projection_value.get("atlasRoot")
+    )
+    if atlas_root and atlas_root != verification["atlasRoot"]:
+        raise ValueError("Xinfa context Atlas root does not match the installed pack")
+    if status not in {None, "complete", "pass"} or required_omissions:
+        raise ValueError(
+            "Xinfa context is incomplete: "
+            + json.dumps(
+                {"status": status, "requiredOmissions": required_omissions},
+                sort_keys=True,
+            )
+        )
+    return {
+        "schema": "kungfu.agent-task-context/v1",
+        "route": route,
+        "task": task,
+        "role": role,
+        "budget": budget,
+        "roots": {
+            key: verification[key]
+            for key in (
+                "atlasRoot",
+                "packRoot",
+                "cutRoot",
+                "manifestRoot",
+                "receiptRoot",
+            )
+        },
+        "context": projection_value,
+        "omissions": omissions,
+        "expansionHandles": projection_value.get(
+            "expansion_handles", projection_value.get("expansionHandles", [])
+        ),
+        "internalPathsExposed": False,
+    }
+
+
+def expand(view, handle, budget, root=None):
+    root, _, verification = _verified_pack(root)
+    if view not in {"agent", "human"}:
+        raise ValueError("view must be agent or human")
+    payload = _xinfa(
+        [
+            "expand",
+            "--atlas",
+            str(root),
+            "--view",
+            str(root / "views" / f"{view}.json"),
+            "--handle",
+            handle,
+            "--budget",
+            str(budget),
+            "--json",
+        ]
+    )
+    return {
+        "schema": "kungfu.agent-context-expansion/v1",
+        "view": view,
+        "handle": handle,
+        "budget": budget,
+        "roots": {
+            key: verification[key] for key in ("atlasRoot", "packRoot", "cutRoot")
+        },
+        "expansion": payload,
+        "internalPathsExposed": False,
     }

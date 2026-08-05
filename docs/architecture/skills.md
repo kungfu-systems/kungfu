@@ -431,9 +431,9 @@ The first implementation slice is verified by:
 - TypeScript and Python catalog/context output over shared fixtures;
 - `kungfu skill contract --json` and `kungfu skill schema --json` over the
   packaged Skill contract;
-- frozen CLI `validate/catalog/context/verify/read/explain` over shared
+- assembled product CLI `validate/catalog/context/verify/read/explain` over shared
   fixtures;
-- frozen CLI `skill verify --manager python` and `skill verify --manager node`
+- assembled product CLI `skill verify --manager python` and `skill verify --manager node`
   with provider response evidence;
 - `SkillAdvertised` audit sidecars discoverable through
   `kungfu skill audit --run-id`;

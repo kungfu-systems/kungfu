@@ -32,6 +32,7 @@ export class AgentSessionCapsuleHost {
     ptyReadiness = { ready: true, diagnostic: null },
     maxOutputBytes = 256 * 1024,
     now = () => Date.now(),
+    platform = process.platform,
   }) {
     if (!pty || typeof pty.spawn !== 'function') {
       throw new Error(
@@ -47,6 +48,7 @@ export class AgentSessionCapsuleHost {
     }
     this.maxOutputBytes = maxOutputBytes;
     this.now = now;
+    this.platform = platform;
     this.session = null;
   }
 
@@ -308,7 +310,14 @@ export class AgentSessionCapsuleHost {
     if (session.inputAdmission !== 'open') {
       throw new Error('provider process has already ended');
     }
-    session.child.kill(signal);
+    if (this.platform === 'win32') {
+      if (signal !== 'SIGTERM') {
+        throw new Error(`signal '${signal}' is not supported on Windows`);
+      }
+      session.child.kill();
+    } else {
+      session.child.kill(signal);
+    }
     return this.#controlReceipt('signal', action, { signal });
   }
 

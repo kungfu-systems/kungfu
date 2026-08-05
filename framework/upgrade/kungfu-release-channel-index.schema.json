@@ -87,6 +87,15 @@
           "artifactRoot": {
             "$ref": "#/$defs/root"
           },
+          "releaseCutRoot": {
+            "$ref": "#/$defs/root"
+          },
+          "platformSliceRoot": {
+            "$ref": "#/$defs/root"
+          },
+          "cutTransition": {
+            "type": "object"
+          },
           "documentationUrl": {
             "type": "string",
             "format": "uri"

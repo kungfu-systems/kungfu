@@ -19,6 +19,7 @@ from kungfu import (
 )
 from kungfu.cli.commands import PrioritizedCommandGroup, kfc
 from kungfu.cli.preflight import command_preflight
+from kungfu.execution_surface import authority as runtime_surface
 
 runtime_command_context = kfc.pass_context()
 
@@ -95,6 +96,72 @@ def _plain_status(payload):
 @kfc.pass_context()
 def runtime(ctx):
     pass
+
+
+@runtime.group(
+    name="surface",
+    cls=PrioritizedCommandGroup,
+    help="select and verify one explicit execution surface with rooted provenance",
+)
+@click.help_option("-h", "--help")
+@runtime_command_context
+def runtime_surface_group(ctx):
+    pass
+
+
+@runtime_surface_group.command(
+    name="contract", help="show the machine-readable runtime surface authority"
+)
+@click.option("--json", "as_json", is_flag=True, help="machine-readable output")
+def runtime_surface_contract(as_json):
+    payload = runtime_surface.load_contract()
+    _json(payload) if as_json else click.echo(
+        json.dumps(payload, indent=2, sort_keys=True)
+    )
+
+
+@runtime_surface_group.command(
+    name="resolve", help="resolve one explicit request into a rooted provenance receipt"
+)
+@click.argument(
+    "request_path", type=click.Path(exists=True, dir_okay=False, path_type=Path)
+)
+@click.option("--json", "as_json", is_flag=True, help="machine-readable output")
+def runtime_surface_resolve(request_path, as_json):
+    try:
+        payload = runtime_surface.resolve(_load_object(request_path))
+    except runtime_surface.RuntimeSurfaceError as error:
+        if as_json:
+            _json(error.diagnosis())
+        else:
+            raise click.ClickException(str(error)) from error
+        raise click.exceptions.Exit(2) from error
+    _json(payload) if as_json else click.echo(
+        f"{payload['operationId']}: {payload['runtimeSurface']} "
+        f"({payload['receiptRoot']})"
+    )
+
+
+@runtime_surface_group.command(
+    name="verify",
+    help="verify one runtime surface receipt against the current contract",
+)
+@click.argument(
+    "receipt_path", type=click.Path(exists=True, dir_okay=False, path_type=Path)
+)
+@click.option("--json", "as_json", is_flag=True, help="machine-readable output")
+def runtime_surface_verify(receipt_path, as_json):
+    try:
+        payload = runtime_surface.verify(_load_object(receipt_path))
+    except runtime_surface.RuntimeSurfaceError as error:
+        if as_json:
+            _json(error.diagnosis())
+        else:
+            raise click.ClickException(str(error)) from error
+        raise click.exceptions.Exit(2) from error
+    _json(payload) if as_json else click.echo(
+        f"verified {payload['runtimeSurface']} {payload['receiptRoot']}"
+    )
 
 
 @runtime.group(

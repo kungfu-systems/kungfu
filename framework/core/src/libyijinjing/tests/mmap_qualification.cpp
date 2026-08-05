@@ -18,6 +18,7 @@
 #include <iostream>
 #include <iterator>
 #include <numeric>
+#include <span>
 #include <stdexcept>
 #include <string>
 #include <thread>
@@ -329,8 +330,11 @@ journal_fixture build_journal_fixture(const temp_tree &tree, uint32_t page_count
       first_time[before_page] = gen_time;
     }
     const auto start = clock_type::now();
-    output.write_raw_at_as(gen_time, gen_time, loc->uid, DEST_ID, CARRIER_TYPE,
-                           reinterpret_cast<uintptr_t>(payload.data()), static_cast<uint32_t>(payload.size()));
+    auto tx = output.reserve_frame(gen_time, CARRIER_TYPE, payload.size());
+    tx.frame()->set_source(loc->uid);
+    tx.frame()->set_dest(DEST_ID);
+    tx.copy_bytes(payload.data(), payload.size());
+    tx.commit(payload.size(), gen_time);
     const auto duration = elapsed_ns(start);
     const auto after_page = output.get_current_page()->get_page_id();
     if (after_page != before_page) {
@@ -426,7 +430,7 @@ struct writer_api_sample {
 };
 
 writer_api_sample run_writer_api(const temp_tree &tree, const profile &config, bool transaction, size_t trial) {
-  auto loc = make_location(tree.root(), fmt::format("writer_api_{}_{}", transaction ? "transaction" : "legacy", trial));
+  auto loc = make_location(tree.root(), fmt::format("writer_api_{}_{}", transaction ? "transaction" : "bytes", trial));
   auto publisher = std::make_shared<noop_publisher>();
   auto page_bus = std::make_shared<bus>(false);
   writer output(loc, DEST_ID, publisher, false, page_bus, config.journal_page_size_mb, 0);
@@ -437,12 +441,10 @@ writer_api_sample run_writer_api(const temp_tree &tree, const profile &config, b
   for (size_t i = 0; i < config.writer_api_iterations; ++i) {
     if (transaction) {
       auto tx = output.reserve_frame(static_cast<int64_t>(i), CARRIER_TYPE, payload.size());
-      std::memcpy(tx.data(), payload.data(), payload.size());
+      tx.copy_bytes(payload.data(), payload.size());
       tx.commit(payload.size(), static_cast<int64_t>(i + 1));
     } else {
-      auto frame = output.open_frame(static_cast<int64_t>(i), CARRIER_TYPE, payload.size());
-      std::memcpy(const_cast<void *>(frame->data_address()), payload.data(), payload.size());
-      output.close_frame(payload.size(), static_cast<int64_t>(i + 1));
+      output.write_bytes(static_cast<int64_t>(i), CARRIER_TYPE, std::as_bytes(std::span{payload}));
     }
   }
   const auto total_ns = elapsed_ns(start);
@@ -453,7 +455,7 @@ writer_api_sample run_writer_api(const temp_tree &tree, const profile &config, b
 }
 
 json compare_writer_apis(const temp_tree &tree, const profile &config) {
-  std::vector<uint64_t> legacy_ns_per_frame;
+  std::vector<uint64_t> bytes_ns_per_frame;
   std::vector<uint64_t> transaction_ns_per_frame;
   std::vector<double> paired_overhead_percent;
   json trials = json::array();
@@ -461,18 +463,18 @@ json compare_writer_apis(const temp_tree &tree, const profile &config) {
     const bool transaction_first = trial % 2 == 1;
     const auto first = run_writer_api(tree, config, transaction_first, trial * 2);
     const auto second = run_writer_api(tree, config, !transaction_first, trial * 2 + 1);
-    const auto &legacy = transaction_first ? second : first;
+    const auto &bytes = transaction_first ? second : first;
     const auto &transaction = transaction_first ? first : second;
-    legacy_ns_per_frame.push_back(static_cast<uint64_t>(std::llround(legacy.ns_per_frame)));
+    bytes_ns_per_frame.push_back(static_cast<uint64_t>(std::llround(bytes.ns_per_frame)));
     transaction_ns_per_frame.push_back(static_cast<uint64_t>(std::llround(transaction.ns_per_frame)));
     const auto paired_overhead =
-        (static_cast<double>(transaction.total_ns) / static_cast<double>(legacy.total_ns) - 1.0) * 100.0;
+        (static_cast<double>(transaction.total_ns) / static_cast<double>(bytes.total_ns) - 1.0) * 100.0;
     paired_overhead_percent.push_back(paired_overhead);
-    trials.push_back({{"legacy",
-                       {{"total_ns", legacy.total_ns},
-                        {"ns_per_frame", legacy.ns_per_frame},
-                        {"frames_per_second", legacy.frames_per_second},
-                        {"resources", legacy.resources}}},
+    trials.push_back({{"write_bytes",
+                       {{"total_ns", bytes.total_ns},
+                        {"ns_per_frame", bytes.ns_per_frame},
+                        {"frames_per_second", bytes.frames_per_second},
+                        {"resources", bytes.resources}}},
                       {"transaction",
                        {{"total_ns", transaction.total_ns},
                         {"ns_per_frame", transaction.ns_per_frame},
@@ -481,18 +483,18 @@ json compare_writer_apis(const temp_tree &tree, const profile &config) {
                       {"paired_overhead_percent", paired_overhead}});
   }
 
-  const auto legacy_distribution = distribution(legacy_ns_per_frame);
+  const auto bytes_distribution = distribution(bytes_ns_per_frame);
   const auto transaction_distribution = distribution(transaction_ns_per_frame);
   std::sort(paired_overhead_percent.begin(), paired_overhead_percent.end());
   const auto overhead_percent = paired_overhead_percent.at(paired_overhead_percent.size() / 2);
-  return {{"comparison_scope", "same-binary deprecated split adapter versus RAII transaction"},
+  return {{"comparison_scope", "extent-carrying write_bytes versus direct RAII transaction"},
           {"iterations_per_trial", config.writer_api_iterations},
           {"trial_count", config.writer_api_trials},
           {"order_policy", "alternating within paired trials"},
           {"decision_statistic", "median of paired total-duration overhead percentages"},
           {"payload_bytes", WRITER_API_PAYLOAD_SIZE},
           {"trials", std::move(trials)},
-          {"legacy_ns_per_frame", legacy_distribution},
+          {"write_bytes_ns_per_frame", bytes_distribution},
           {"transaction_ns_per_frame", transaction_distribution},
           {"transaction_overhead_percent", overhead_percent},
           {"declared_regression_threshold_percent", 5.0},

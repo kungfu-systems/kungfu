@@ -1,35 +1,51 @@
 # Kungfu
 
-**Your agent shouldn't start over when the chat ends.**
+**Your agents don't hand off the work. You do.**
 
-Kungfu helps a fresh agent continue the same work without asking you to explain
-it all again. It does this from declared project sources, makes missing or
-conflicting context visible, and preserves enough structure to continue without
-reconstructing everything from conversation history.
+Every switch means copying context, re-explaining decisions, chasing updates,
+and checking what got lost. Kungfu keeps the same work moving, no matter which
+agent takes over.
+
+Use the best Agent when it matters. Use a cheaper one when it does not. Keep the
+same Work across Codex, Claude, OpenCode, Amp, or your own execution surface.
 
 > **Kungfu UNGFU™** · Never Guess. Facts Unfold. [Why this signature
 > exists](docs/concepts/why-kungfu.md).
 
-The intended first-release path is:
+Before asking an agent to use Kungfu, make sure the `kungfu` command is on its
+`PATH`. [Set up the Kungfu command](docs/guides/installing-cli.md#make-kungfu-available-in-path),
+then paste this one sentence into the agent you already use:
+
+```text
+Run `kungfu agent brief`, then guide me through my first Project and Work. Keep me in my current agent, and use Kungfu as the durable Work layer.
+```
+
+Keep working in that agent when you are ready:
 
 ```sh
 cd your-project
-kungfu run agent
+kungfu run codex
 ```
 
-**Status: Coming soon.** `kungfu run agent` is the target entrypoint for the
-first public CLI, which is now under qualification. Until public artifacts are
-available, you can [build the current source](#build-from-source).
+Use `claude`, `opencode`, or `amp` instead of `codex` when that is the agent you
+already use. Pass a task to create the first Work directly:
 
-<!-- kungfu:auditable-demo:start -->
-## See a fresh Agent continue the same Work
+```sh
+kungfu run codex "Prepare the release notes"
+```
+
+A successful agent process is retained for independent review; it does not
+complete Work by itself.
+
+<!-- kungfu:auditable-demo:agent-work-lab-autoplay:start -->
+## See the Work survive an Agent change
 
 **One Work. Two fresh Agent processes. No copied chat.**
 
 Session 1 stops with a partial result. Session 2 starts without the previous
 conversation, recovers what was done and what remains, then finishes the same Work.
 
-[![Kungfu Agent Work Lab showing a fresh Agent continuing the same Work without copied chat](docs/qualification/evidence/auditable-demo/0ff4cc1ef018544ad752eb08cf2fec205fe8d1bbedeb41b0111566732919b5e7/demo.gif)](docs/qualification/auditable-demo-artifact-pipeline.md)
+[![Kungfu Agent Work Lab showing a fresh Agent continuing the same Work without copied chat](docs/qualification/evidence/auditable-demo/835bde89ae8cee57661dfc2f4ba96bbf6d2be1546d89f42fd0c18a331a7308da/demo.gif)](docs/qualification/auditable-demo-artifact-pipeline.md)
 
 <details>
 <summary>How this exact installed-artifact demo was verified</summary>
@@ -39,9 +55,9 @@ The installed `kungfu agent-work-lab autoplay` command ran in a bounded PTY, the
 required Buildchain Gate qualified its exact capture, and full media rendered only
 from that passing Gate.
 
-[Method and evidence](docs/qualification/auditable-demo-artifact-pipeline.md) · [source `b48d30166e26`](https://github.com/kungfu-systems/kungfu/commit/b48d30166e26dfceb873d1057e1db3c3e00c3385) · [workflow run](https://github.com/kungfu-systems/kungfu/actions/runs/30536659808)
+[Method and evidence](docs/qualification/auditable-demo-artifact-pipeline.md) · [source `7777de45e3fa`](https://github.com/kungfu-systems/kungfu/commit/7777de45e3fa53c6654d39990314efc2bc9ae99a) · [workflow run](https://github.com/kungfu-systems/kungfu/actions/runs/30646944258)
 
-[Gate bundle](https://github.com/kungfu-systems/kungfu/actions/runs/30536659808/artifacts/8759425334) `sha256:31a259eccd3a4f093eaad2be01bc6def399b1653a010a6949c0bf8fa903bd54b` · [media bundle](https://github.com/kungfu-systems/kungfu/actions/runs/30536659808/artifacts/8759470968) `sha256:7fafb048c7133291602643beeb702bea58763863e533d696d6bc962f66e5981b` · [Release Passport](https://github.com/kungfu-systems/kungfu/actions/runs/30536659808/artifacts/8759489175) `sha256:0ff4cc1ef018544ad752eb08cf2fec205fe8d1bbedeb41b0111566732919b5e7`
+[Gate bundle](https://github.com/kungfu-systems/kungfu/actions/runs/30646944258/artifacts/8802347879) `sha256:9e73aac549a32458ad132ad8166836aa7ab03885210117a15a5d382ef2687c33` · [media bundle](https://github.com/kungfu-systems/kungfu/actions/runs/30646944258/artifacts/8802406105) `sha256:8353070c7b204bccb9e51e124cd07de215ef64db742a70333614c4fe065c59aa` · [Release Passport](https://github.com/kungfu-systems/kungfu/actions/runs/30646944258/artifacts/8802427227) `sha256:835bde89ae8cee57661dfc2f4ba96bbf6d2be1546d89f42fd0c18a331a7308da`
 
 Evidence class: `exact-installed-artifact-agent-work-lab-autoplay/v1`. This proves only the exact
 installed-artifact autoplay and named Gate/render path. The demo grants no
@@ -50,12 +66,28 @@ metadata, local bundle presence, package metadata, registry history, scan output
 or standalone generation, and makes no production-deployment claim.
 
 </details>
-<!-- kungfu:auditable-demo:end -->
+<!-- kungfu:auditable-demo:agent-work-lab-autoplay:end -->
+
+<!-- kungfu:auditable-demo:project-tour-episode-1:start -->
+<!-- kungfu:auditable-demo:project-tour-episode-1:end -->
+
+<!-- kungfu:auditable-demo:project-tour-episode-2:start -->
+<!-- kungfu:auditable-demo:project-tour-episode-2:end -->
+
+Want to explore without leaving Kungfu first? Run the terminal product:
+
+```sh
+kungfu
+```
+
+Getting Started leads to the same Agent-first prompt. Agent Work Lab is the
+lowest-friction optional demonstration, and Guided Project Tour leaves a
+Project you can keep using. After onboarding, bare `kungfu` opens Work directly.
 
 ## What Kungfu preserves
 
-- **Work continuity.** A fresh Agent can recover what was done, what remains,
-  and which Work it is continuing.
+- **Work continuity.** Change the Agent without losing what was done, what
+  remains, or which Work is continuing.
 - **Verified project understanding.** Declared sources, important omissions,
   conflicts, decisions, and uncertainty remain visible instead of being guessed.
 - **Inspectable history.** People and Agents can see what happened, what the
@@ -71,12 +103,24 @@ See the [continuity handoff](https://kungfu.tech/#continuity-demo) and
 The current result is preparatory fixture evidence—not a provider comparison,
 multi-day durability or retention result, or FO10 qualification.
 
-## Keep using the agents you already have
+## Change the Agent, not the Work
 
-`kungfu run agent` is the golden path, not a required replacement for Codex,
-Claude Code, OpenCode, VS Code, terminals, or other agent surfaces. The same
-local contracts and work state remain available through the Kungfu CLI and APIs
-when an Agent continues to run elsewhere.
+`kungfu run <agent>` is the scriptable golden path across Codex, Claude Code,
+OpenCode, Amp, and other Agent surfaces. Kungfu does not replace those surfaces;
+it keeps the Work behind them. The provider-neutral low-level launcher remains
+available as the advanced `kungfu run agent` command. Registered third-party
+PTY Agents use `kungfu run agent --agent <profile-id>` and the bounded
+[native adapter contract](docs/guides/native-agent-adapters.md). The same local
+contracts and Work state remain available through the Kungfu TUI, GUI, CLI,
+and APIs.
+
+Projects can start blank, use the guided Agent Work Starter template, or safely
+remember an existing folder without changing its files. You can open several
+terminals in the same Project and run the same bare command in each one; Kungfu
+gives every launch its own Console. The Agent binds that Console to exact Work
+before it changes the Project. If another live Agent already owns that Work,
+Kungfu stops the second writer and points back to the existing attempt. Use
+`--work` when more than one captured Work item is eligible.
 
 ## Build from source
 
@@ -107,6 +151,7 @@ whole history first.
 - [Why Kungfu begins with a minimal human sovereign core](docs/concepts/bootstrapping-agent-work.md)
 - [Inspect and reanalyze the bounded public work sample](https://kungfu.tech/about/bootstrapping/evidence/)
 - [How the complete Kungfu system works](docs/concepts/system-overview.md)
+- [How runtime selection stays explicit and auditable](docs/concepts/runtime-surface-provenance.md)
 - [Agent Supply Chain architecture and evaluation](docs/architecture/agent-supply-chain.md)
 - [Documentation Guide](docs/README.md)
 - [Documentation Map](docs/MAP.md)
@@ -216,7 +261,17 @@ and prepared package-manager adapters are not public release artifacts.
 
 ### Kungfu in the Agent Supply Chain
 
-Kungfu is also the founding runtime proof for an open Agent Supply Chain:
+Kungfu lights the first loop by keeping Work alive across the Agents a person
+already uses. The Agent experiences explicit capabilities, inspectable evidence,
+and durable Work—then can recognize and ask for those qualities elsewhere.
+
+That creates a possible market loop: Agents recommend within human or Hub
+authority, builders receive a demand signal, and more Agent-native products can
+ship the same qualities. Those products can restart the loop without Kungfu.
+This is an adoption thesis, not a claim of broad external demand or a multi-Hub
+market. [See the Agent Supply Chain loop](https://kungfu.tech/agent-supply-chain/).
+
+The technical chain is:
 
 ```text
 KFD-3 discovery -> Buildchain artifact evidence -> KFD-2 assessment

@@ -1,0 +1,1 @@
+{"$schema":"https://json-schema.org/draft/2020-12/schema","$id":"https://kungfu.link/schema/qualification/week-day/pursuit.json","type":"object","required":["actionId"],"properties":{"actionId":{"type":"string"}}}

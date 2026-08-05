@@ -5,7 +5,36 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const CONTRACT_FILE = 'kungfu-codex-app-server.contract.json';
+
+export function resolveCodexAppServerContractRoot({
+  moduleUrl = import.meta.url,
+  env = process.env,
+} = {}) {
+  if (env.KUNGFU_AGENT_SESSION_CONTRACT_ROOT) {
+    return path.resolve(env.KUNGFU_AGENT_SESSION_CONTRACT_ROOT);
+  }
+  const moduleDirectory = path.dirname(fileURLToPath(moduleUrl));
+  const candidates = [
+    path.resolve(moduleDirectory, '..'),
+    path.resolve(moduleDirectory, '..', '..', 'agent-session'),
+    path.resolve(
+      moduleDirectory,
+      '..',
+      'app',
+      'node_modules',
+      '@kungfu-tech',
+      'agent-session',
+    ),
+  ];
+  return (
+    candidates.find((candidate) =>
+      fs.existsSync(path.join(candidate, CONTRACT_FILE)),
+    ) ?? candidates[0]
+  );
+}
+
+const ROOT = resolveCodexAppServerContractRoot();
 const CONTRACT_SCHEMA = 'kungfu.codex-app-server.adapter-contract/v1';
 const MANIFEST_SCHEMA = 'kungfu.codex-app-server.schema-manifest/v1';
 const BUNDLE_ALGORITHM =
@@ -59,7 +88,7 @@ function atPointer(value, pointer) {
 }
 
 export function loadCodexAppServerContract() {
-  return readJson('kungfu-codex-app-server.contract.json');
+  return readJson(CONTRACT_FILE);
 }
 
 export function loadCodexAppServerSchemaManifest(

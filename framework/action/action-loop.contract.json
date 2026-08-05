@@ -119,10 +119,11 @@
       "receiptRoot",
       "status",
       "preconditionRoots",
-      "resultRoots"
+      "resultRoots",
+      "authorityReceiptRoot"
     ],
     "acceptedStatus": "accepted",
-    "authorityRule": "The receiptRoot must be returned by the public adapter named by the step; the coordinator cannot mint it."
+    "authorityRule": "The receiptRoot must be returned by the public adapter named by the step, bind the canonical adapter receipt preimage including authorityReceiptRoot, and pass root verification; the coordinator cannot mint or rewrite it."
   },
   "states": [
     "planned",

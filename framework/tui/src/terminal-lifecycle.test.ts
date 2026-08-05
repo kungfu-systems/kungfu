@@ -3,10 +3,14 @@
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import { EventEmitter } from 'node:events';
+import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 
 import {
+  DISABLE_MOUSE_TRACKING,
+  ENABLE_MOUSE_TRACKING,
   ENTER_ALTERNATE_SCREEN,
   HIDE_CURSOR,
   LEAVE_ALTERNATE_SCREEN,
@@ -14,8 +18,29 @@ import {
   type TerminalInput,
   TerminalLifecycle,
   type TerminalOutput,
+  decodeTerminalMouseInput,
+  existingProjectWorkspaceRoot,
   resolveTuiCoreDir,
+  resolveTuiProductPaths,
+  tuiChildCliEnvironment,
 } from './terminal-lifecycle.js';
+
+test('child CLI retains the packaged KFX root without recursive libnode selection', () => {
+  const parent = {
+    KUNGFU_AS_VARIANT: 'node',
+    KUNGFU_DIR: '/product/runtime',
+    KUNGFU_KFX_CONTRACT: '/product/runtime/config/kungfu-kfx.contract.json',
+    KF_BUNDLED_EXTENSION_ROOT: '/product/extensions',
+  };
+
+  const child = tuiChildCliEnvironment(parent);
+
+  assert.equal(child.KUNGFU_AS_VARIANT, undefined);
+  assert.equal(child.KUNGFU_DIR, undefined);
+  assert.equal(child.KUNGFU_KFX_CONTRACT, undefined);
+  assert.equal(child.KF_BUNDLED_EXTENSION_ROOT, '/product/extensions');
+  assert.equal(parent.KUNGFU_AS_VARIANT, 'node');
+});
 
 class FakeOutput extends EventEmitter implements TerminalOutput {
   isTTY = true;
@@ -27,6 +52,27 @@ class FakeOutput extends EventEmitter implements TerminalOutput {
     return true;
   }
 }
+
+test('existing Project discovery requires a real .kungfu directory', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'kungfu-tui-project-'));
+  try {
+    const project = path.join(root, 'project');
+    const nested = path.join(project, 'nested');
+    fs.mkdirSync(path.join(project, '.git'), { recursive: true });
+    fs.mkdirSync(nested, { recursive: true });
+    assert.equal(
+      existingProjectWorkspaceRoot(nested, { HOME: root }),
+      undefined,
+    );
+    fs.mkdirSync(path.join(project, '.kungfu'));
+    assert.equal(
+      existingProjectWorkspaceRoot(nested, { HOME: root }),
+      fs.realpathSync(project),
+    );
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
 
 test('packaged runtime resolution does not require the source core package', () => {
   let sourceResolutionCalled = false;
@@ -51,6 +97,20 @@ test('source runtime resolution keeps the workspace package fallback', () => {
     }),
     '/workspace/framework/core',
   );
+});
+
+test('source TUI can name the exact Core project independently of the loaded binding', () => {
+  const resolved = resolveTuiProductPaths({
+    env: {
+      KUNGFU_DIR: '/build/Release',
+      KUNGFU_TUI_SOURCE_CORE_DIR: '/repo/framework/core',
+    },
+    resolveCorePackageJson: () => '/unused/package.json',
+  });
+
+  assert.equal(resolved.coreDir, '/repo/framework/core');
+  assert.equal(resolved.kungfuDir, '/build/Release');
+  assert.equal(resolved.packagedBin, '/build/Release/kungfu');
 });
 
 test('owns alternate screen, raw mode, resize, and idempotent restoration', () => {
@@ -83,9 +143,9 @@ test('owns alternate screen, raw mode, resize, and idempotent restoration', () =
   lifecycle.restore();
 
   assert.deepEqual(output.writes, [
-    `${ENTER_ALTERNATE_SCREEN}${HIDE_CURSOR}`,
+    `${ENTER_ALTERNATE_SCREEN}${HIDE_CURSOR}${ENABLE_MOUSE_TRACKING}`,
     'INK-UNMOUNTED',
-    `${SHOW_CURSOR}${LEAVE_ALTERNATE_SCREEN}`,
+    `${DISABLE_MOUSE_TRACKING}${SHOW_CURSOR}${LEAVE_ALTERNATE_SCREEN}`,
   ]);
   assert.deepEqual(raw, [true, false]);
   assert.deepEqual(flow, ['resume', 'pause']);
@@ -128,7 +188,10 @@ test('restores terminal state when the wrapped task throws', async () => {
     /fixture boot failure/,
   );
   assert.deepEqual(raw, [true, false]);
-  assert.equal(output.writes.at(-1), `${SHOW_CURSOR}${LEAVE_ALTERNATE_SCREEN}`);
+  assert.equal(
+    output.writes.at(-1),
+    `${DISABLE_MOUSE_TRACKING}${SHOW_CURSOR}${LEAVE_ALTERNATE_SCREEN}`,
+  );
 });
 
 test('restores alternate screen and input after partial startup failure', async () => {
@@ -155,8 +218,60 @@ test('restores alternate screen and input after partial startup failure', async 
   );
   assert.deepEqual(raw, [true, false]);
   assert.deepEqual(output.writes, [
-    `${ENTER_ALTERNATE_SCREEN}${HIDE_CURSOR}`,
-    `${SHOW_CURSOR}${LEAVE_ALTERNATE_SCREEN}`,
+    `${ENTER_ALTERNATE_SCREEN}${HIDE_CURSOR}${ENABLE_MOUSE_TRACKING}`,
+    `${DISABLE_MOUSE_TRACKING}${SHOW_CURSOR}${LEAVE_ALTERNATE_SCREEN}`,
+  ]);
+});
+
+test('decodes SGR mouse wheel and click events without swallowing mixed input', () => {
+  assert.deepEqual(decodeTerminalMouseInput('\u001b[<64;12;8M'), [
+    {
+      kind: 'wheel',
+      button: 'wheel-up',
+      column: 12,
+      row: 8,
+      shift: false,
+      alt: false,
+      control: false,
+    },
+  ]);
+  assert.deepEqual(
+    decodeTerminalMouseInput('\u001b[<65;72;11M\u001b[<0;72;11M'),
+    [
+      {
+        kind: 'wheel',
+        button: 'wheel-down',
+        column: 72,
+        row: 11,
+        shift: false,
+        alt: false,
+        control: false,
+      },
+      {
+        kind: 'press',
+        button: 'left',
+        column: 72,
+        row: 11,
+        shift: false,
+        alt: false,
+        control: false,
+      },
+    ],
+  );
+  assert.deepEqual(decodeTerminalMouseInput('a\u001b[<64;12;8M'), []);
+});
+
+test('decodes button motion separately so drag input cannot repeat click actions', () => {
+  assert.deepEqual(decodeTerminalMouseInput('\u001b[<32;10;5M'), [
+    {
+      kind: 'motion',
+      button: 'left',
+      column: 10,
+      row: 5,
+      shift: false,
+      alt: false,
+      control: false,
+    },
   ]);
 });
 

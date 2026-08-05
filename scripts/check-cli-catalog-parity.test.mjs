@@ -103,9 +103,41 @@ test('standalone command routes require an explicit live Click target', () => {
       'commands.json orphan path kungfu-exit-verify --file <package.json> --json',
     ),
   );
+});
+
+test('public catalogs reject internal Python module entrypoints', () => {
+  const fixture = inputs();
+  const leaked = 'python -m kungfu.exit_verifier --file <package.json> --json';
+  const api = fixture.kfd3.apis.find((row) => row.id === 'kungfu.exit.verify');
+  assert(api);
+  api.aliases = [...(api.aliases || []), leaked];
+  fixture.commands.commands.push({
+    apiId: api.id,
+    name: leaked,
+    maturity: api.maturity,
+    purpose: api.purpose,
+  });
+  fixture.registry.standaloneCatalogRoutes.push({
+    prefix: 'python -m kungfu.exit_verifier',
+    target: 'kungfu exit verify',
+    source: 'framework/core/src/python/kungfu/exit_verifier.py',
+  });
+
+  const result = auditCatalogParity(fixture);
+  assert.equal(result.ok, false);
   assert(
     result.issues.includes(
-      'commands.json orphan path python -m kungfu.exit_verifier --file <package.json> --json',
+      'public standalone route exposes internal module entrypoint python -m kungfu.exit_verifier',
+    ),
+  );
+  assert(
+    result.issues.includes(
+      `KFD-3 registry exposes internal module entrypoint ${leaked}`,
+    ),
+  );
+  assert(
+    result.issues.includes(
+      `commands.json exposes internal module entrypoint ${leaked}`,
     ),
   );
 });

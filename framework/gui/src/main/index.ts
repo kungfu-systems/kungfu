@@ -9,6 +9,13 @@ import {
   statSync,
 } from 'node:fs';
 import path from 'node:path';
+import {
+  DEFAULT_KUNGFU_ONBOARDING_STATE,
+  type KungfuOnboardingState,
+  kungfuAgentBriefCommand,
+  kungfuAgentFirstPrompt,
+  parseKungfuOnboardingState,
+} from '@kungfu-tech/api/capability';
 import { type KfxPlanDeps, planKfx } from '@kungfu-tech/kfx';
 import {
   BrowserWindow,
@@ -39,6 +46,9 @@ import {
   DESTROY_CHANNEL,
   ENSURE_CHANNEL,
   HIDE_CHANNEL,
+  ONBOARDING_GET_CHANNEL,
+  ONBOARDING_INSTALL_CLI_CHANNEL,
+  ONBOARDING_SET_CHANNEL,
   PROFILE_CLI_EXEC_CHANNEL,
   RUNTIME_BACKUP_RESET_CHANNEL,
   RUNTIME_STATUS_GET_CHANNEL,
@@ -74,6 +84,7 @@ import {
 } from './global-work-observer-host';
 import {
   installKungfuCliToPath,
+  isKungfuCliInstalled,
   uninstallKungfuCliFromPath,
 } from './installCli';
 import {
@@ -101,14 +112,13 @@ import {
 } from './terminal-host';
 import { executeWorkLoopCli } from './work-loop-cli';
 import {
-  DESKTOP_WORKSPACE_ENV_KEYS,
+  applyDesktopProjectPresentationIntent,
   applyDesktopWorkspaceEnvironment,
   clearDesktopWorkspaceEnvForRelaunch,
   defaultHomeDesktopWorkspace,
-  desktopWorkspaceEnvironment,
-  desktopWorkspaceTransitionMode,
   inspectDesktopContinuation,
   listRecentDesktopWorkspaces,
+  prepareDesktopWorkspaceEnvironmentForRelaunch,
   resolveLastDesktopWorkspace,
 } from './workspace-selection';
 
@@ -147,6 +157,14 @@ function defaultConfigHome(): string {
     process.env.KF_CONFIG_HOME ||
       path.join(app.getPath('home'), '.kungfu-config'),
   );
+}
+
+if (!app.isPackaged && process.env.KUNGFU_GUI_DEV_USER_DATA) {
+  const developmentUserData = resolveHomePath(
+    process.env.KUNGFU_GUI_DEV_USER_DATA,
+  );
+  mkdirSync(developmentUserData, { recursive: true });
+  app.setPath('userData', developmentUserData);
 }
 
 const desktopWorkspaceIsRegistryManaged =
@@ -301,6 +319,7 @@ process.env.KUNGFU_KFX_CONTRACT =
 const bundledExtensionRoot = app.isPackaged
   ? path.join(process.resourcesPath, 'extensions')
   : bundledExtensionSourceRoot;
+process.env.KF_BUNDLED_EXTENSION_ROOT = bundledExtensionRoot;
 process.env.KF_EXTENSION_PATH =
   app.isPackaged && process.env.KF_EXTENSION_PATH
     ? [bundledExtensionRoot, process.env.KF_EXTENSION_PATH].join(path.delimiter)
@@ -396,6 +415,8 @@ const kungfuCliInvocation = resolveGuiKungfuCliInvocation({
   env: process.env,
   runtimeDir: path.dirname(process.env.KFE_PATH || bindingPath),
   platform: process.platform,
+  isPackaged: app.isPackaged,
+  resourcesPath: process.resourcesPath,
 });
 Object.assign(process.env, kungfuCliInvocation.env);
 process.env.KUNGFU_CLI_BIN = kungfuCliInvocation.bin;
@@ -410,6 +431,38 @@ function kungfuBinPath(): string {
 function kungfuCliArgs(args: string[]): string[] {
   return [...kungfuCliInvocation.argsPrefix, ...args];
 }
+
+function readDesktopOnboardingState(): KungfuOnboardingState {
+  try {
+    const value = JSON.parse(
+      readFileSync(path.join(defaultConfigHome(), 'config.json'), 'utf8'),
+    ) as { ui?: { onboarding?: unknown } };
+    return parseKungfuOnboardingState(value.ui?.onboarding);
+  } catch {
+    return { ...DEFAULT_KUNGFU_ONBOARDING_STATE };
+  }
+}
+
+const DESKTOP_AGENT_BRIEF_ARGS = ['agent', 'brief'] as const;
+
+function desktopAgentFirstEntry() {
+  const command = kungfuAgentBriefCommand(
+    kungfuCliInvocation.bin,
+    kungfuCliInvocation.argsPrefix,
+  );
+  return {
+    state: readDesktopOnboardingState(),
+    command,
+    commandArgs: DESKTOP_AGENT_BRIEF_ARGS,
+    prompt: kungfuAgentFirstPrompt(command),
+    cliInstalled: isKungfuCliInstalled(),
+    cliPath: path.isAbsolute(kungfuCliInvocation.bin)
+      ? kungfuCliInvocation.bin
+      : '',
+  };
+}
+
+process.env.KFE_ONBOARDING = JSON.stringify(desktopAgentFirstEntry());
 
 // Finder-launched apps do not inherit an interactive shell PATH. Make the
 // packaged CLI discoverable to agents launched by the Console while retaining
@@ -874,40 +927,52 @@ function workspaceSnapshot() {
   };
 }
 
-async function relaunchWithWorkspaceSelection(args: string[]) {
+function relaunchWithWorkspaceSelection(
+  args: string[],
+  projectPresentationPath: string | null = null,
+) {
   const out = execFileSync(kungfuBinPath(), kungfuCliArgs(args), {
     env: { ...process.env, KF_CONFIG_HOME: defaultConfigHome() },
     timeout: 10000,
   });
   const selected = JSON.parse(out.toString());
-  const transition = desktopWorkspaceTransitionMode({
-    isPackaged: app.isPackaged,
-    rendererUrl: process.env.ELECTRON_RENDERER_URL || '',
-    shellWindowAvailable: Boolean(shellWindow && !shellWindow.isDestroyed()),
-  });
-  if (transition === 'renderer-reload' && shellWindow) {
-    const workspace = resolveLastDesktopWorkspace(defaultConfigHome());
-    if (!workspace) {
-      throw new Error('selected project workspace could not be resolved');
-    }
-    applyDesktopWorkspaceEnvironment(process.env, workspace);
-    const rendererEnv = desktopWorkspaceEnvironment(workspace);
-    const script = [
-      `for (const key of ${JSON.stringify(DESKTOP_WORKSPACE_ENV_KEYS)}) delete window.process.env[key];`,
-      `Object.assign(window.process.env, ${JSON.stringify(rendererEnv)});`,
-    ].join('\n');
-    await shellWindow.webContents.executeJavaScript(script);
-    shellWindow.webContents.reload();
-    return { ok: true, selected, transition: 'renderer-reload' };
+  applyDesktopProjectPresentationIntent(process.env, projectPresentationPath);
+  const workspace = resolveLastDesktopWorkspace(defaultConfigHome());
+  if (!workspace) {
+    throw new Error('selected project workspace could not be resolved');
   }
-  if (desktopWorkspaceIsRegistryManaged) {
-    clearDesktopWorkspaceEnvForRelaunch(process.env);
+  const developmentRestartExitCode = Number.parseInt(
+    process.env.KUNGFU_GUI_DEV_RESTART_EXIT_CODE || '',
+    10,
+  );
+  if (
+    !app.isPackaged &&
+    process.env.KUNGFU_GUI_DEV_SUPERVISOR === '1' &&
+    Number.isInteger(developmentRestartExitCode)
+  ) {
+    setImmediate(() => {
+      appQuitting = true;
+      app.exit(developmentRestartExitCode);
+    });
+    return {
+      ok: true,
+      selected,
+      transition: 'development-supervisor-restart',
+    };
   }
+  prepareDesktopWorkspaceEnvironmentForRelaunch(
+    process.env,
+    workspace,
+    desktopWorkspaceIsRegistryManaged,
+  );
   setImmediate(() => {
     app.relaunch();
-    app.exit(0);
+    // This app normally hides its only window instead of closing it. Mark the
+    // relaunch as a real quit first so the close guard cannot strand a
+    // windowless tray process and prevent the replacement window from opening.
+    quitGui();
   });
-  return { ok: true, selected };
+  return { ok: true, selected, transition: 'application-relaunch' };
 }
 
 ipcMain.handle(WORKSPACE_GET_CHANNEL, () => workspaceSnapshot());
@@ -952,7 +1017,7 @@ ipcMain.handle(WORKSPACE_START_CONTINUATION_CHANNEL, () => {
   return { ok: true, receipt };
 });
 ipcMain.handle(WORKSPACE_SELECT_HOME_CHANNEL, () =>
-  relaunchWithWorkspaceSelection(['workspace', 'select-home', '--json']),
+  relaunchWithWorkspaceSelection(['workspace', 'select-home', '--json'], null),
 );
 ipcMain.handle(WORKSPACE_SELECT_PATH_CHANNEL, (_event, payload) => {
   const requestedPath = String(
@@ -965,12 +1030,10 @@ ipcMain.handle(WORKSPACE_SELECT_PATH_CHANNEL, (_event, payload) => {
   if (!statSync(workspaceRoot).isDirectory()) {
     throw new Error('project workspace path is not a directory');
   }
-  return relaunchWithWorkspaceSelection([
-    'workspace',
-    'select',
+  return relaunchWithWorkspaceSelection(
+    ['workspace', 'select', workspaceRoot, '--json'],
     workspaceRoot,
-    '--json',
-  ]);
+  );
 });
 ipcMain.handle(WORKSPACE_OPEN_CHANNEL, async () => {
   const result = await dialog.showOpenDialog({
@@ -978,12 +1041,10 @@ ipcMain.handle(WORKSPACE_OPEN_CHANNEL, async () => {
     properties: ['openDirectory'],
   });
   if (result.canceled || !result.filePaths[0]) return { ok: false };
-  return relaunchWithWorkspaceSelection([
-    'workspace',
-    'select',
+  return relaunchWithWorkspaceSelection(
+    ['workspace', 'select', result.filePaths[0], '--json'],
     result.filePaths[0],
-    '--json',
-  ]);
+  );
 });
 ipcMain.handle(WORKSPACE_SELECT_RECENT_CHANNEL, (_event, payload) => {
   const workspaceId = String(
@@ -994,21 +1055,47 @@ ipcMain.handle(WORKSPACE_SELECT_RECENT_CHANNEL, (_event, payload) => {
   );
   if (!selected) throw new Error('recent workspace was not found');
   if (selected.workspace_kind === 'home') {
-    return relaunchWithWorkspaceSelection([
-      'workspace',
-      'select-home',
-      '--json',
-    ]);
+    return relaunchWithWorkspaceSelection(
+      ['workspace', 'select-home', '--json'],
+      null,
+    );
   }
   if (!selected.workspace_root || !existsSync(selected.workspace_root)) {
     throw new Error('recent project workspace is unavailable');
   }
-  return relaunchWithWorkspaceSelection([
-    'workspace',
-    'select',
+  return relaunchWithWorkspaceSelection(
+    ['workspace', 'select', selected.workspace_root, '--json'],
     selected.workspace_root,
-    '--json',
-  ]);
+  );
+});
+ipcMain.handle(ONBOARDING_GET_CHANNEL, () => desktopAgentFirstEntry());
+ipcMain.handle(ONBOARDING_INSTALL_CLI_CHANNEL, () => {
+  const result = installKungfuCliToPath();
+  return { ...result, entry: desktopAgentFirstEntry() };
+});
+ipcMain.handle(ONBOARDING_SET_CHANNEL, (_event, payload) => {
+  const requested = parseKungfuOnboardingState(
+    (payload as { state?: unknown })?.state,
+  );
+  execFileSync(
+    kungfuBinPath(),
+    kungfuCliArgs([
+      'config',
+      'set',
+      'ui.onboarding',
+      JSON.stringify(requested),
+      '--scope',
+      'user',
+      '--json',
+    ]),
+    {
+      env: { ...process.env, KF_CONFIG_HOME: defaultConfigHome() },
+      timeout: 10000,
+    },
+  );
+  const entry = desktopAgentFirstEntry();
+  process.env.KFE_ONBOARDING = JSON.stringify(entry);
+  return entry;
 });
 // Application menu with the VS Code-style "Install 'kungfu' Command in PATH"
 // action, so a real user who installed Kungfu Episodes.app can use `kungfu` in a shell.
@@ -1064,30 +1151,25 @@ function buildMenu() {
         });
       },
     },
+  ];
+  const helpSubmenu: Electron.MenuItemConstructorOptions[] = [
     {
-      label: 'Show Agent Onboarding Brief',
-      click: async () => {
-        const kungfuBin = path.join(
-          path.dirname(process.env.KFE_PATH || bindingPath),
-          'kungfu',
-        );
-        try {
-          const out = execFileSync(kungfuBin, ['agent', 'brief'], {
-            timeout: 10000,
-          });
-          await dialog.showMessageBox({
-            type: 'info',
-            message: 'Kungfu Agent Onboarding',
-            detail: out.toString().slice(0, 4000),
-          });
-        } catch (e) {
-          await dialog.showMessageBox({
-            type: 'error',
-            message: 'Could not read Agent Onboarding brief',
-            detail: (e as Error).message,
-          });
-        }
-      },
+      label: 'Onboarding',
+      click: () => navigateShell({ target: 'onboarding' }),
+    },
+    { type: 'separator' },
+    {
+      label: 'GitHub Repository',
+      click: () =>
+        void shell.openExternal('https://github.com/kungfu-systems/kungfu'),
+    },
+    {
+      label: 'Kungfu Website',
+      click: () => void shell.openExternal('https://kungfu.tech'),
+    },
+    {
+      label: 'Developer Platform',
+      click: () => void shell.openExternal('https://libkungfu.dev'),
     },
   ];
   const planDeps: KfxPlanDeps = {
@@ -1157,6 +1239,7 @@ function buildMenu() {
       ],
     },
     { role: 'windowMenu' },
+    { role: 'help', submenu: helpSubmenu },
   ];
 
   Menu.setApplicationMenu(Menu.buildFromTemplate(template));
@@ -1183,6 +1266,29 @@ function createWindow() {
     },
   });
   shellWindow = win;
+
+  if (!app.isPackaged) {
+    win.webContents.on('console-message', (details) =>
+      console.log(
+        `KF_GUI_RENDERER_CONSOLE level=${details.level} source=${details.sourceId}:${details.lineNumber} ${details.message}`,
+      ),
+    );
+    win.webContents.on(
+      'did-fail-load',
+      (_event, code, description, url, isMainFrame) => {
+        if (isMainFrame) {
+          console.error(
+            `KF_GUI_RENDERER_LOAD_FAIL code=${code} url=${url} ${description}`,
+          );
+        }
+      },
+    );
+    win.webContents.on('render-process-gone', (_event, details) => {
+      console.error(
+        `KF_GUI_RENDERER_GONE reason=${details.reason} exitCode=${details.exitCode}`,
+      );
+    });
+  }
 
   win.on('maximize', () => publishWindowChromeState(win));
   win.on('unmaximize', () => publishWindowChromeState(win));
@@ -1222,11 +1328,16 @@ function createWindow() {
       setTimeout(quitGui, 250);
     });
   } else {
-    win.on('ready-to-show', () => {
+    let revealed = false;
+    const reveal = () => {
+      if (revealed || win.isDestroyed()) return;
+      revealed = true;
       win.show();
       if (process.platform === 'darwin') void app.dock?.show();
       buildTrayMenu();
-    });
+    };
+    win.once('ready-to-show', reveal);
+    win.webContents.once('did-finish-load', reveal);
   }
 
   if (process.env.ELECTRON_RENDERER_URL) {

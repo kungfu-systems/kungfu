@@ -9,7 +9,7 @@ period: 2026-07-14
 theme: runtime-activation-and-product-delivery
 confidence: high
 evidence_grade: B
-last_reviewed: 2026-07-14
+last_reviewed: 2026-07-31
 ---
 
 # Runtime activation and product-delivery qualification
@@ -17,7 +17,7 @@ last_reviewed: 2026-07-14
 This gate closes [KF-ADR-019f86da-4f90-7bc8-a3ed-a7b0a6363d6c](../adr/KF-ADR-019f86da-4f90-7bc8-a3ed-a7b0a6363d6c.md) Stage 7 for the current source revision and named
 platform. It composes existing authorities instead of creating another runtime
 or release system. A passing report binds raw suite hashes, source coordinates,
-the frozen product, full verification, the app artifact, and the Shifu local
+the assembled product, full verification, the app artifact, and the Shifu local
 artifact catalog.
 
 ## Acceptance matrix
@@ -32,7 +32,7 @@ artifact catalog.
 | Profile/KFX action admission | `profile-action-admission` | live-required callbacks run only after a matching broker receipt; storage-only callbacks stay daemonless |
 | language/product parity | `runtime-surface-parity` | CLI, GUI, Python, Node, libkungfu declarations, and KFX use the canonical registry/status vocabulary |
 | bounded performance report | `activation-performance` | synthetic daemonless, cold, warm, and replacement paths report latency/resource observations without an SLO claim |
-| real product smoke | `product-runtime-smoke` | a frozen CLI uses a temporary home for daemonless status, cold/warm process-live ensure, restart, and clean stop |
+| real product smoke | `product-runtime-smoke` | the assembled Rust trunk and CPython tree use a temporary home for daemonless status, cold/warm process-live ensure, restart, and clean stop |
 | product artifacts | `product-distribution`, `product-verification`, `product-catalog` | the Mac distribution, full Core/Episode verification, app build artifact, and local catalog all succeed |
 
 The full command is:
@@ -98,7 +98,7 @@ establish semantic readiness.
 
 The synthetic workload separates daemonless planning/invocation, first cold
 activation, warm generation reuse, and replacement recovery. The product smoke
-separately records real frozen-CLI timings for daemonless planning/status,
+separately records real assembled-product timings for daemonless planning/status,
 cold/warm ensure, restart, and stop in a temporary workspace. Reports preserve
 sample counts, median/p95/maximum observations where repeated, and a process
 resource snapshot.
@@ -129,7 +129,7 @@ It does not establish:
 
 Linux and Windows remain contract/CI surfaces until each platform retains its
 own complete product report. Interactive GUI launch remains a manual display
-check; `verify --full --with-app` proves the build artifact and frozen CLI smoke,
+check; `verify --full --with-app` proves the build artifact and assembled CLI smoke,
 not pixels or desktop lifecycle.
 
 ## AI provenance

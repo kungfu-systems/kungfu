@@ -57,6 +57,33 @@ test('GUI dev falls back to the source CLI when the adjacent binary is absent', 
 
 test('GUI packaged runtime keeps the adjacent executable', () => {
   const packaged = path.join(runtimeDir, 'kungfu');
+  const resourcesPath = path.resolve('/Applications/Kungfu.app/Resources');
+  const manifest = path.join(
+    resourcesPath,
+    'upgrade',
+    'kungfu-release-manifest.json',
+  );
+  const invocation = resolveGuiKungfuCliInvocation({
+    env: {},
+    runtimeDir,
+    platform: 'darwin',
+    isPackaged: true,
+    resourcesPath,
+    exists: (candidate) => candidate === packaged || candidate === manifest,
+  });
+
+  assert.equal(invocation.bin, packaged);
+  assert.deepEqual(invocation.argsPrefix, []);
+  assert.deepEqual(invocation.env, {
+    KUNGFU_DIR: runtimeDir,
+    KUNGFU_INSTALL_SOURCE: 'desktop-companion',
+    KUNGFU_UPGRADE_MANIFEST: manifest,
+  });
+  assert.equal(invocation.source, 'adjacent-runtime');
+});
+
+test('GUI development does not claim installed-product provenance', () => {
+  const packaged = path.join(runtimeDir, 'kungfu');
   const invocation = resolveGuiKungfuCliInvocation({
     env: {},
     runtimeDir,
@@ -64,7 +91,31 @@ test('GUI packaged runtime keeps the adjacent executable', () => {
     exists: (candidate) => candidate === packaged,
   });
 
-  assert.equal(invocation.bin, packaged);
-  assert.deepEqual(invocation.argsPrefix, []);
+  assert.deepEqual(invocation.env, {});
   assert.equal(invocation.source, 'adjacent-runtime');
+});
+
+test('GUI relaunch restores packaged provenance for its inherited adjacent CLI', () => {
+  const packaged = path.join(runtimeDir, 'kungfu');
+  const resourcesPath = path.resolve('/Applications/Kungfu.app/Resources');
+  const manifest = path.join(
+    resourcesPath,
+    'upgrade',
+    'kungfu-release-manifest.json',
+  );
+  const invocation = resolveGuiKungfuCliInvocation({
+    env: { KUNGFU_CLI_BIN: packaged },
+    runtimeDir,
+    platform: 'darwin',
+    isPackaged: true,
+    resourcesPath,
+    exists: (candidate) => candidate === packaged || candidate === manifest,
+  });
+
+  assert.equal(invocation.source, 'configured');
+  assert.deepEqual(invocation.env, {
+    KUNGFU_DIR: runtimeDir,
+    KUNGFU_INSTALL_SOURCE: 'desktop-companion',
+    KUNGFU_UPGRADE_MANIFEST: manifest,
+  });
 });

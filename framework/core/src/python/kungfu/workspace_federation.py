@@ -10,340 +10,64 @@ workspace and never claim an atomic global snapshot.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 from datetime import datetime, timezone
 from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
 import json
 import multiprocessing
 import os
-import re
 from pathlib import Path
 from typing import Any, Callable, Iterable, Literal, Mapping, cast
 
+from kungfu.assignment_graph import (
+    RELATION_QUALIFICATION_SCHEMA as RELATION_QUALIFICATION_SCHEMA,
+    RELATION_SCHEMA as RELATION_SCHEMA,
+    RELATION_TYPES as RELATION_TYPES,
+    TRAVERSAL_SCHEMA as TRAVERSAL_SCHEMA,
+    WORK_REF_SCHEMA as WORK_REF_SCHEMA,
+    ObjectKind as ObjectKind,
+    TraversalDirection as TraversalDirection,
+    WorkRef as WorkRef,
+    _ROOT as _ROOT,
+    _SUBJECT as _SUBJECT,
+    _root as _root,
+    build_relation as build_relation,
+    build_work_ref as build_work_ref,
+    parse_work_ref as parse_work_ref,
+    qualify_assignment_graph as qualify_assignment_graph,
+    traverse_assignment_graph as traverse_assignment_graph,
+)
 from kungfu.workspace import (
     WorkspaceIdentity,
     inspect_workspace,
     load_workspace_catalog,
     semantic_root,
 )
+from kungfu.workspace_federation_projection import (
+    CANONICAL_WORK_IDENTITY_SCHEMA as CANONICAL_WORK_IDENTITY_SCHEMA,
+    CANONICAL_WORK_SCHEMA as CANONICAL_WORK_SCHEMA,
+    GLOBAL_WORK_PROJECTION_SCHEMA as GLOBAL_WORK_PROJECTION_SCHEMA,
+    INITIATIVE_GROUP_SCHEMA as INITIATIVE_GROUP_SCHEMA,
+    OUTCOME_HISTORY_SCHEMA as OUTCOME_HISTORY_SCHEMA,
+    REFERENCE_RESOLUTION_SCHEMA as REFERENCE_RESOLUTION_SCHEMA,
+    TERMINAL_SOURCE_STATUSES as TERMINAL_SOURCE_STATUSES,
+    WORK_OBSERVATION_SCHEMA as WORK_OBSERVATION_SCHEMA,
+    _compose_global_work as _compose_global_work,
+    _compose_outcome_history as _compose_outcome_history,
+    _retained_state_dominates as _retained_state_dominates,
+)
 
 
-WORK_REF_SCHEMA = "kungfu.assignment-graph.work-ref/v1"
-RELATION_SCHEMA = "kungfu.assignment-graph.relation/v1"
-RELATION_QUALIFICATION_SCHEMA = "kungfu.assignment-graph.qualification/v1"
 COMPONENT_CUT_SCHEMA = "kungfu.workspace-federation.component-cut/v1"
 COMPONENT_ENVELOPE_SCHEMA = "kungfu.workspace-federation.component-envelope/v1"
 QUERY_SCHEMA = "kungfu.workspace-federation.query/v1"
 QUERY_PROOF_SCHEMA = "kungfu.workspace-federation.query-proof/v1"
 QUERY_VERIFICATION_SCHEMA = "kungfu.workspace-federation.query-verification/v1"
-GLOBAL_WORK_PROJECTION_SCHEMA = "kungfu.workspace-federation.global-work/v1"
-CANONICAL_WORK_SCHEMA = "kungfu.workspace-federation.canonical-work/v1"
-INITIATIVE_GROUP_SCHEMA = "kungfu.workspace-federation.initiative-group/v1"
-CANONICAL_WORK_IDENTITY_SCHEMA = (
-    "kungfu.workspace-federation.canonical-work-identity/v1"
-)
-WORK_OBSERVATION_SCHEMA = "kungfu.workspace-federation.work-observation/v1"
-REFERENCE_RESOLUTION_SCHEMA = "kungfu.workspace-federation.reference-resolution/v1"
 DOGFOOD_GATE_RECEIPT_SCHEMA = "kungfu.workspace-federation.dogfood-gate-receipt/v1"
 DOGFOOD_GATE_VERIFICATION_SCHEMA = (
     "kungfu.workspace-federation.dogfood-gate-verification/v1"
 )
-TRAVERSAL_SCHEMA = "kungfu.assignment-graph.traversal/v1"
 
-TERMINAL_SOURCE_STATUSES = frozenset(
-    {"archived", "closed", "complete", "completed", "merged"}
-)
-
-_ROOT = re.compile(r"^sha256:[0-9a-f]{64}$")
-_SUBJECT = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:/-]{0,255}$")
-
-ObjectKind = Literal["initiative", "assignment"]
 QueryScope = Literal["local", "related", "all"]
-TraversalDirection = Literal["forward", "backward", "both"]
-
-# Acyclicity is relation-specific.  Symmetric descriptive relations may form
-# arbitrary graphs and must never be rejected by a generic DAG rule.
-RELATION_TYPES: dict[str, dict[str, Any]] = {
-    "delegates-to": {
-        "directed": True,
-        "symmetric": False,
-        "transitive": False,
-        "revocable": True,
-        "acyclic": True,
-    },
-    "decomposes-into": {
-        "directed": True,
-        "symmetric": False,
-        "transitive": True,
-        "revocable": True,
-        "acyclic": True,
-    },
-    "depends-on": {
-        "directed": True,
-        "symmetric": False,
-        "transitive": True,
-        "revocable": True,
-        "acyclic": True,
-    },
-    "continues-as": {
-        "directed": True,
-        "symmetric": False,
-        "transitive": True,
-        "revocable": False,
-        "acyclic": True,
-    },
-    "supersedes": {
-        "directed": True,
-        "symmetric": False,
-        "transitive": True,
-        "revocable": False,
-        "acyclic": True,
-    },
-    "contributes-to": {
-        "directed": True,
-        "symmetric": False,
-        "transitive": False,
-        "revocable": True,
-        "acyclic": False,
-    },
-    "related-to": {
-        "directed": False,
-        "symmetric": True,
-        "transitive": False,
-        "revocable": True,
-        "acyclic": False,
-    },
-    "conflicts-with": {
-        "directed": False,
-        "symmetric": True,
-        "transitive": False,
-        "revocable": True,
-        "acyclic": False,
-    },
-    "shares-evidence-with": {
-        "directed": False,
-        "symmetric": True,
-        "transitive": False,
-        "revocable": True,
-        "acyclic": False,
-    },
-}
-
-
-@dataclass(frozen=True)
-class WorkRef:
-    workspace_identity_root: str
-    object_kind: ObjectKind
-    subject: str
-    version_root: str
-    cut_root: str
-
-    def as_dict(self) -> dict[str, str]:
-        return {
-            "schema": WORK_REF_SCHEMA,
-            "workspace_identity_root": self.workspace_identity_root,
-            "object_kind": self.object_kind,
-            "subject": self.subject,
-            "version_root": self.version_root,
-            "cut_root": self.cut_root,
-        }
-
-    @property
-    def node_key(self) -> str:
-        """Stable graph-node identity; version and cut remain edge evidence."""
-
-        return f"{self.workspace_identity_root}|{self.object_kind}|{self.subject}"
-
-
-def _root(value: Any, field: str) -> str:
-    text = str(value or "")
-    if not _ROOT.fullmatch(text):
-        raise ValueError(f"{field} must be a sha256 content root")
-    return text
-
-
-def build_work_ref(
-    identity: WorkspaceIdentity,
-    *,
-    object_kind: ObjectKind,
-    subject: str,
-    version_root: str,
-    cut_root: str,
-) -> WorkRef:
-    if identity.identity_state != "qualified" or not identity.identity_root:
-        raise ValueError("WorkRef requires a qualified owning workspace")
-    if object_kind not in {"initiative", "assignment"}:
-        raise ValueError("WorkRef object_kind must be initiative or assignment")
-    subject = subject.strip()
-    if not _SUBJECT.fullmatch(subject):
-        raise ValueError("WorkRef subject is not canonical")
-    return WorkRef(
-        workspace_identity_root=_root(
-            identity.identity_root, "workspace_identity_root"
-        ),
-        object_kind=object_kind,
-        subject=subject,
-        version_root=_root(version_root, "version_root"),
-        cut_root=_root(cut_root, "cut_root"),
-    )
-
-
-def parse_work_ref(value: Mapping[str, Any]) -> WorkRef:
-    if (
-        set(value)
-        != {
-            "schema",
-            "workspace_identity_root",
-            "object_kind",
-            "subject",
-            "version_root",
-            "cut_root",
-        }
-        or value.get("schema") != WORK_REF_SCHEMA
-    ):
-        raise ValueError("WorkRef must contain the exact v1 field set")
-    kind = str(value["object_kind"])
-    if kind not in {"initiative", "assignment"}:
-        raise ValueError("WorkRef object_kind must be initiative or assignment")
-    subject = str(value["subject"]).strip()
-    if not _SUBJECT.fullmatch(subject):
-        raise ValueError("WorkRef subject is not canonical")
-    return WorkRef(
-        workspace_identity_root=_root(
-            value["workspace_identity_root"], "workspace_identity_root"
-        ),
-        object_kind=kind,  # type: ignore[arg-type]
-        subject=subject,
-        version_root=_root(value["version_root"], "version_root"),
-        cut_root=_root(value["cut_root"], "cut_root"),
-    )
-
-
-def build_relation(
-    relation_type: str,
-    source: WorkRef | Mapping[str, Any],
-    target: WorkRef | Mapping[str, Any],
-    *,
-    evidence_roots: Iterable[str] = (),
-    state: Literal["proposed", "accepted", "revoked"] = "accepted",
-) -> dict[str, Any]:
-    if relation_type not in RELATION_TYPES:
-        raise ValueError(f"unknown Assignment relation type: {relation_type}")
-    left = source if isinstance(source, WorkRef) else parse_work_ref(source)
-    right = target if isinstance(target, WorkRef) else parse_work_ref(target)
-    if left.node_key == right.node_key:
-        raise ValueError("Assignment graph relations cannot be self-referential")
-    if state not in {"proposed", "accepted", "revoked"}:
-        raise ValueError("relation state is not in the v1 vocabulary")
-    specification = RELATION_TYPES[relation_type]
-    if specification["symmetric"] and right.node_key < left.node_key:
-        left, right = right, left
-    evidence = sorted({_root(value, "evidence_root") for value in evidence_roots})
-    body = {
-        "schema": RELATION_SCHEMA,
-        "relation_type": relation_type,
-        "source": left.as_dict(),
-        "target": right.as_dict(),
-        "state": state,
-        "evidence_roots": evidence,
-        "semantics": dict(specification),
-    }
-    return {**body, "relation_root": semantic_root(body)}
-
-
-def qualify_assignment_graph(
-    relations: Iterable[Mapping[str, Any]],
-) -> dict[str, Any]:
-    normalized: list[dict[str, Any]] = []
-    issues: list[dict[str, Any]] = []
-    seen_roots: set[str] = set()
-    for index, relation in enumerate(relations):
-        try:
-            body = build_relation(
-                str(relation.get("relation_type") or ""),
-                relation.get("source") or {},
-                relation.get("target") or {},
-                evidence_roots=relation.get("evidence_roots") or [],
-                state=str(relation.get("state") or "accepted"),  # type: ignore[arg-type]
-            )
-            declared_root = str(relation.get("relation_root") or "")
-            if declared_root and declared_root != body["relation_root"]:
-                raise ValueError("relation_root does not verify")
-            if body["relation_root"] in seen_roots:
-                raise ValueError("duplicate relation")
-            seen_roots.add(body["relation_root"])
-            normalized.append(body)
-        except (TypeError, ValueError) as error:
-            issues.append(
-                {
-                    "code": "relation-invalid",
-                    "index": index,
-                    "message": str(error),
-                }
-            )
-
-    for relation_type, specification in RELATION_TYPES.items():
-        if not specification["acyclic"]:
-            continue
-        adjacency: dict[str, set[str]] = {}
-        for relation in normalized:
-            if (
-                relation["relation_type"] != relation_type
-                or relation["state"] == "revoked"
-            ):
-                continue
-            source = parse_work_ref(relation["source"]).node_key
-            target = parse_work_ref(relation["target"]).node_key
-            adjacency.setdefault(source, set()).add(target)
-        cycle = _find_cycle(adjacency)
-        if cycle:
-            issues.append(
-                {
-                    "code": "relation-cycle",
-                    "relation_type": relation_type,
-                    "nodes": cycle,
-                }
-            )
-
-    proof = {
-        "schema": RELATION_QUALIFICATION_SCHEMA,
-        "relation_roots": sorted(row["relation_root"] for row in normalized),
-        "issues": issues,
-    }
-    return {
-        **proof,
-        "ok": not issues,
-        "qualification_root": semantic_root(proof),
-    }
-
-
-def _find_cycle(adjacency: Mapping[str, set[str]]) -> list[str]:
-    visiting: set[str] = set()
-    visited: set[str] = set()
-    trail: list[str] = []
-
-    def visit(node: str) -> list[str]:
-        if node in visiting:
-            start = trail.index(node)
-            return trail[start:] + [node]
-        if node in visited:
-            return []
-        visiting.add(node)
-        trail.append(node)
-        for target in sorted(adjacency.get(node, set())):
-            cycle = visit(target)
-            if cycle:
-                return cycle
-        trail.pop()
-        visiting.remove(node)
-        visited.add(node)
-        return []
-
-    for node in sorted(adjacency):
-        cycle = visit(node)
-        if cycle:
-            return cycle
-    return []
 
 
 WorkspaceLoader = Callable[[WorkspaceIdentity], dict[str, Any]]
@@ -698,6 +422,8 @@ def query_federation(
         "unqualified_retained_assignment_state_count": projection[
             "unqualified_retained_assignment_state_count"
         ],
+        "outcome_history_root": projection["outcome_history"]["history_root"],
+        "outcome_coverage": dict(projection["outcome_history"]["coverage"]),
         "available_component_count": available,
         "degraded_component_count": degraded,
         "unavailable_component_count": unavailable,
@@ -720,467 +446,6 @@ def query_federation(
     }
     result["verification"] = verification
     return result
-
-
-def _compose_global_work(
-    components: Iterable[Mapping[str, Any]],
-    *,
-    include_settled: bool = False,
-) -> dict[str, Any]:
-    """Compose root-bound observations into conservative canonical Work rows."""
-
-    component_rows = list(components)
-    observations: list[dict[str, Any]] = []
-    authority_nodes: dict[str, list[dict[str, Any]]] = {}
-    for component in component_rows:
-        workspace = component.get("workspace") or {}
-        envelope = component.get("envelope") or {}
-        for kind, field in (
-            ("initiative", "initiatives"),
-            ("assignment", "assignments"),
-        ):
-            for record in component.get(field) or []:
-                reference = parse_work_ref((record or {}).get("work_ref") or {})
-                display = {
-                    "title": str(
-                        record.get("title")
-                        or record.get("assignment_id")
-                        or record.get("initiative_id")
-                        or reference.subject
-                    ),
-                    "status": str(record.get("status") or ""),
-                    "source_status": str(record.get("status") or ""),
-                    "orchestration_phase": str(
-                        (record.get("lifecycle") or {}).get("orchestration_phase") or ""
-                    ),
-                    "portfolio_state": str(
-                        (record.get("lifecycle") or {}).get("portfolio_state") or ""
-                    ),
-                    "next_actions": list(
-                        (record.get("lifecycle") or {}).get("next_actions") or []
-                    ),
-                }
-                body = {
-                    "schema": WORK_OBSERVATION_SCHEMA,
-                    "work_ref": reference.as_dict(),
-                    "workspace_id": workspace.get("workspace_id"),
-                    "workspace_identity_root": reference.workspace_identity_root,
-                    "component_cut_root": component.get("cut_root"),
-                    "component_envelope_root": envelope.get("envelope_root"),
-                    "profile_root": envelope.get("profile_root"),
-                    "availability": component.get("availability"),
-                    "stale": bool(component.get("stale")),
-                    "display": display,
-                }
-                observation = {**body, "observation_root": semantic_root(body)}
-                observations.append(observation)
-                authority_nodes.setdefault(reference.node_key, []).append(observation)
-
-    fold_groups: dict[str, list[dict[str, Any]]] = {}
-    for node_key, rows in authority_nodes.items():
-        versions = sorted(
-            {str(row["work_ref"].get("version_root") or "") for row in rows}
-        )
-        reference = rows[0]["work_ref"]
-        fold_key = (
-            f"replica|{reference['object_kind']}|{reference['subject']}|{versions[0]}"
-            if len(versions) == 1
-            else f"authority|{node_key}"
-        )
-        fold_groups.setdefault(fold_key, []).extend(rows)
-
-    provisional: list[dict[str, Any]] = []
-    for rows in fold_groups.values():
-        rows.sort(key=lambda row: row["observation_root"])
-        references = [parse_work_ref(row["work_ref"]) for row in rows]
-        authority_roots = sorted(
-            {reference.workspace_identity_root for reference in references}
-        )
-        version_roots = sorted({reference.version_root for reference in references})
-        reference = references[0]
-        provisional.append(
-            {
-                "schema": CANONICAL_WORK_SCHEMA,
-                "object_kind": reference.object_kind,
-                "subject": reference.subject,
-                "authority_roots": authority_roots,
-                "version_roots": version_roots,
-                "equivalence": (
-                    {
-                        "state": "proven-replica",
-                        "witness": "shared-version-root",
-                        "version_root": version_roots[0],
-                    }
-                    if len(authority_roots) > 1 and len(version_roots) == 1
-                    else {
-                        "state": "authority-qualified",
-                        "witness": "workspace-identity-root",
-                    }
-                ),
-                "observation_roots": [str(row["observation_root"]) for row in rows],
-                "observations": rows,
-                "observation_count": len(rows),
-                "replica_count": max(0, len(rows) - len(version_roots)),
-                "display": rows[0]["display"],
-                "conflict": len(version_roots) > 1,
-                "conflict_reasons": (
-                    ["same-authority-divergent-version"]
-                    if len(version_roots) > 1
-                    else []
-                ),
-            }
-        )
-
-    by_label: dict[tuple[str, str], list[dict[str, Any]]] = {}
-    for row in provisional:
-        by_label.setdefault((row["object_kind"], row["subject"]), []).append(row)
-
-    canonical_rows: list[dict[str, Any]] = []
-    node_to_canonical: dict[str, str] = {}
-    subject_to_canonical: dict[tuple[str, str], set[str]] = {}
-    for row in provisional:
-        identity_body = {
-            "schema": CANONICAL_WORK_IDENTITY_SCHEMA,
-            "object_kind": row["object_kind"],
-            "subject": row["subject"],
-            "authority_roots": row["authority_roots"],
-            "version_roots": row["version_roots"],
-            "equivalence": row["equivalence"],
-        }
-        canonical_root = semantic_root(identity_body)
-        canonical_body = {
-            **dict(row),
-            "canonical_root": canonical_root,
-        }
-        canonical = {
-            **canonical_body,
-            "canonical_projection_root": semantic_root(canonical_body),
-        }
-        canonical_rows.append(canonical)
-        subject_to_canonical.setdefault(
-            (canonical["object_kind"], canonical["subject"]), set()
-        ).add(canonical_root)
-        for observation in canonical["observations"]:
-            node_to_canonical[parse_work_ref(observation["work_ref"]).node_key] = (
-                canonical_root
-            )
-    canonical_rows.sort(
-        key=lambda row: (
-            row["object_kind"],
-            row["subject"],
-            row["canonical_root"],
-        )
-    )
-    canonical_by_root = {str(row["canonical_root"]): row for row in canonical_rows}
-    label_collisions = [
-        {
-            "object_kind": object_kind,
-            "subject": subject,
-            "canonical_roots": sorted(
-                row["canonical_root"]
-                for row in canonical_rows
-                if row["object_kind"] == object_kind and row["subject"] == subject
-            ),
-            "state": "authority-distinct",
-            "strict_effect": "ambiguous-only-when-used-by-unqualified-reference",
-        }
-        for (object_kind, subject), rows in sorted(by_label.items())
-        if len(rows) > 1
-    ]
-    retained_states = {
-        str(state.get("state_root") or ""): dict(state)
-        for component in component_rows
-        for state in component.get("retained_assignment_states") or []
-        if state.get("state_root")
-    }
-    unqualified_retained_states = {
-        str(state.get("state_root") or ""): dict(state)
-        for component in component_rows
-        for state in component.get("unqualified_retained_assignment_states") or []
-        if state.get("state_root")
-    }
-    retained_subjects: dict[str, list[dict[str, Any]]] = {}
-    for state in retained_states.values():
-        if state.get("settled") is True:
-            retained_subjects.setdefault(
-                str(state.get("assignment_subject") or ""), []
-            ).append(state)
-    for rows in retained_subjects.values():
-        rows.sort(key=lambda row: str(row.get("state_root") or ""))
-
-    resolved: list[dict[str, Any]] = []
-    unresolved: list[dict[str, Any]] = []
-    relations = [
-        relation
-        for component in component_rows
-        for relation in component.get("relations") or []
-    ]
-    for relation in relations:
-        for side in ("source", "target"):
-            reference = parse_work_ref((relation or {}).get(side) or {})
-            target_root = node_to_canonical.get(reference.node_key)
-            if target_root:
-                resolved.append(
-                    {
-                        "kind": "typed-relation-endpoint",
-                        "relation_root": relation.get("relation_root"),
-                        "side": side,
-                        "work_ref": reference.as_dict(),
-                        "canonical_root": target_root,
-                    }
-                )
-            else:
-                unresolved.append(
-                    {
-                        "code": "missing-reference",
-                        "kind": "typed-relation-endpoint",
-                        "relation_root": relation.get("relation_root"),
-                        "side": side,
-                        "work_ref": reference.as_dict(),
-                        "next_action": "register and read the referenced workspace authority",
-                    }
-                )
-
-    for component in component_rows:
-        workspace = component.get("workspace") or {}
-        for problem in component.get("problems") or []:
-            if problem.get("code") != "unresolved-assignment-dependency":
-                continue
-            dependency_id = str(problem.get("dependency_id") or "")
-            dependency_subject = (
-                dependency_id
-                if dependency_id.startswith("kungfu:")
-                else f"kungfu:{dependency_id}"
-            )
-            candidates = sorted(
-                subject_to_canonical.get(("assignment", dependency_subject), set())
-            )
-            retained_candidates = retained_subjects.get(dependency_subject, [])
-            unqualified_candidates = [
-                row
-                for row in unqualified_retained_states.values()
-                if row.get("assignment_subject") == dependency_subject
-            ]
-            base = {
-                "kind": "legacy-assignment-dependency",
-                "workspace_identity_root": workspace.get("identity_root"),
-                "assignment_subject": problem.get("assignment_subject"),
-                "dependency_id": dependency_id,
-                "dependency_subject": dependency_subject,
-            }
-            if (
-                len(candidates) == 1
-                and not canonical_by_root[candidates[0]]["conflict"]
-            ):
-                resolved.append({**base, "canonical_root": candidates[0]})
-            elif not candidates and len(retained_candidates) == 1:
-                retained = retained_candidates[0]
-                resolved.append(
-                    {
-                        **base,
-                        "resolution": "retained-sealed-assignment-state",
-                        "sealed_state_root": retained["state_root"],
-                        "work_ref": {
-                            "schema": WORK_REF_SCHEMA,
-                            "workspace_identity_root": retained[
-                                "workspace_identity_root"
-                            ],
-                            "object_kind": "assignment",
-                            "subject": dependency_subject,
-                            "version_root": retained["state_root"],
-                            "cut_root": retained["query_proof_root"],
-                        },
-                    }
-                )
-            else:
-                code = (
-                    "missing-reference"
-                    if not candidates
-                    and not retained_candidates
-                    and not unqualified_candidates
-                    else (
-                        "conflicting-reference"
-                        if len(candidates) == 1 and not retained_candidates
-                        else (
-                            "incompatible-retained-reference"
-                            if not candidates
-                            and not retained_candidates
-                            and unqualified_candidates
-                            else "ambiguous-reference"
-                        )
-                    )
-                )
-                unresolved.append(
-                    {
-                        **base,
-                        "code": code,
-                        "candidate_canonical_roots": candidates,
-                        "candidate_sealed_state_roots": [
-                            row["state_root"] for row in retained_candidates
-                        ],
-                        "candidate_unqualified_state_roots": [
-                            row["state_root"] for row in unqualified_candidates
-                        ],
-                        "next_action": (
-                            "register the dependency authority"
-                            if code == "missing-reference"
-                            else "replace the legacy dependency id with one exact WorkRef"
-                        ),
-                    }
-                )
-
-    relation_qualification = qualify_assignment_graph(relations)
-    for issue in relation_qualification["issues"]:
-        unresolved.append(
-            {
-                "code": (
-                    "cyclic-reference"
-                    if issue.get("code") == "relation-cycle"
-                    else "invalid-reference"
-                ),
-                "qualification_issue": issue,
-                "next_action": "repair the source relation and publish a new component cut",
-            }
-        )
-    resolved.sort(key=lambda row: semantic_root(row))
-    unresolved.sort(key=lambda row: semantic_root(row))
-    resolution_body = {
-        "schema": REFERENCE_RESOLUTION_SCHEMA,
-        "resolved": resolved,
-        "unresolved": unresolved,
-        "relation_qualification_root": relation_qualification["qualification_root"],
-    }
-    reference_resolution = {
-        **resolution_body,
-        "resolution_root": semantic_root(resolution_body),
-    }
-    visible_work = [
-        row
-        for row in canonical_rows
-        if include_settled
-        or (
-            str(row["display"].get("portfolio_state") or "") != "completed"
-            and str(row["display"].get("source_status") or "").strip().lower()
-            not in TERMINAL_SOURCE_STATUSES
-        )
-    ]
-    visible_roots = {str(row["canonical_root"]) for row in visible_work}
-    initiative_groups: list[dict[str, Any]] = []
-    for (object_kind, subject), _rows in sorted(by_label.items()):
-        if object_kind != "initiative":
-            continue
-        initiative_rows = [
-            row
-            for row in canonical_rows
-            if row["object_kind"] == "initiative" and row["subject"] == subject
-        ]
-        if not initiative_rows:
-            continue
-        canonical_roots = sorted(str(row["canonical_root"]) for row in initiative_rows)
-        authority_roots = sorted(
-            {str(root) for row in initiative_rows for root in row["authority_roots"]}
-        )
-        statuses = sorted(
-            {
-                str(row["display"].get("source_status") or "")
-                for row in initiative_rows
-                if row["display"].get("source_status")
-            }
-        )
-        phases = sorted(
-            {
-                str(row["display"].get("orchestration_phase") or "")
-                for row in initiative_rows
-                if row["display"].get("orchestration_phase")
-            }
-        )
-        portfolio_states = sorted(
-            {
-                str(row["display"].get("portfolio_state") or "")
-                for row in initiative_rows
-                if row["display"].get("portfolio_state")
-            }
-        )
-        titles = sorted(
-            {str(row["display"].get("title") or subject) for row in initiative_rows}
-        )
-        group_body = {
-            "schema": INITIATIVE_GROUP_SCHEMA,
-            "object_kind": "initiative",
-            "subject": subject,
-            "authority_state": (
-                "authority-distinct" if len(canonical_roots) > 1 else "single-authority"
-            ),
-            "canonical_roots": canonical_roots,
-            "authority_roots": authority_roots,
-            "canonical_count": len(canonical_roots),
-            "authority_count": len(authority_roots),
-            "observation_count": sum(
-                int(row["observation_count"]) for row in initiative_rows
-            ),
-            "display": {
-                "title": titles[0],
-                "source_status": (
-                    statuses[0] if len(statuses) == 1 else ("mixed" if statuses else "")
-                ),
-                "orchestration_phase": (
-                    phases[0] if len(phases) == 1 else ("mixed" if phases else "")
-                ),
-                "portfolio_state": (
-                    portfolio_states[0]
-                    if len(portfolio_states) == 1
-                    else ("mixed" if portfolio_states else "")
-                ),
-            },
-        }
-        initiative_groups.append(
-            {**group_body, "group_root": semantic_root(group_body)}
-        )
-    visible_initiative_groups = [
-        group
-        for group in initiative_groups
-        if any(root in visible_roots for root in group["canonical_roots"])
-    ]
-    body = {
-        "schema": GLOBAL_WORK_PROJECTION_SCHEMA,
-        "canonical_work": canonical_rows,
-        "label_collisions": label_collisions,
-        "initiative_groups": initiative_groups,
-        "visible_initiative_groups": visible_initiative_groups,
-        "retained_assignment_states": [
-            retained_states[root] for root in sorted(retained_states)
-        ],
-        "unqualified_retained_assignment_states": [
-            unqualified_retained_states[root]
-            for root in sorted(unqualified_retained_states)
-        ],
-        "visible_work": visible_work,
-        "filter": {
-            "include_settled": include_settled,
-            "default": "active-and-attention",
-        },
-        "reference_resolution": reference_resolution,
-        "canonical_work_count": len(canonical_rows),
-        "visible_work_count": len(visible_work),
-        "visible_initiative_group_count": len(visible_initiative_groups),
-        "initiative_count": sum(
-            row["object_kind"] == "initiative" for row in canonical_rows
-        ),
-        "assignment_count": sum(
-            row["object_kind"] == "assignment" for row in canonical_rows
-        ),
-        "observation_count": len(observations),
-        "assignment_observation_count": sum(
-            row["work_ref"]["object_kind"] == "assignment" for row in observations
-        ),
-        "replica_count": sum(row["replica_count"] for row in canonical_rows),
-        "conflict_count": sum(bool(row["conflict"]) for row in canonical_rows),
-        "label_collision_count": len(label_collisions),
-        "retained_assignment_state_count": len(retained_states),
-        "unqualified_retained_assignment_state_count": len(unqualified_retained_states),
-        "writes": 0,
-    }
-    return {**body, "projection_root": semantic_root(body)}
 
 
 def verify_federation_query(value: Mapping[str, Any]) -> dict[str, Any]:
@@ -1457,85 +722,6 @@ def _identity_from_catalog_entry(
     return identity if identity.identity_state == "locator-candidate" else None
 
 
-def traverse_assignment_graph(
-    components: Iterable[Mapping[str, Any]],
-    start_ref: WorkRef | Mapping[str, Any],
-    *,
-    direction: TraversalDirection = "both",
-    relation_types: Iterable[str] | None = None,
-) -> dict[str, Any]:
-    """Traverse verified relation endpoints without resolving paths or writing."""
-
-    if direction not in {"forward", "backward", "both"}:
-        raise ValueError("traversal direction must be forward, backward, or both")
-    start = start_ref if isinstance(start_ref, WorkRef) else parse_work_ref(start_ref)
-    selected_types = set(relation_types or RELATION_TYPES)
-    unknown_types = selected_types - set(RELATION_TYPES)
-    if unknown_types:
-        raise ValueError(
-            f"unknown Assignment relation type: {sorted(unknown_types)[0]}"
-        )
-
-    relations: dict[str, dict[str, Any]] = {}
-    for component in components:
-        for relation in component.get("relations", []):
-            verified = build_relation(
-                str(relation.get("relation_type") or ""),
-                relation.get("source") or {},
-                relation.get("target") or {},
-                evidence_roots=relation.get("evidence_roots") or [],
-                state=str(relation.get("state") or "accepted"),  # type: ignore[arg-type]
-            )
-            if verified["relation_root"] != relation.get("relation_root"):
-                raise ValueError("traversed Assignment relation root does not verify")
-            if (
-                verified["relation_type"] in selected_types
-                and verified["state"] != "revoked"
-            ):
-                relations[verified["relation_root"]] = verified
-
-    adjacency: dict[str, list[tuple[str, str, WorkRef]]] = {}
-    for relation_root, relation in relations.items():
-        source = parse_work_ref(relation["source"])
-        target = parse_work_ref(relation["target"])
-        if direction in {"forward", "both"}:
-            adjacency.setdefault(source.node_key, []).append(
-                (target.node_key, relation_root, target)
-            )
-        if direction in {"backward", "both"}:
-            adjacency.setdefault(target.node_key, []).append(
-                (source.node_key, relation_root, source)
-            )
-
-    references = {start.node_key: start}
-    visited = {start.node_key}
-    relation_roots: set[str] = set()
-    pending = [start.node_key]
-    while pending:
-        node = pending.pop(0)
-        for target_key, relation_root, target in sorted(
-            adjacency.get(node, []),
-            key=lambda row: (row[0], row[1]),
-        ):
-            relation_roots.add(relation_root)
-            references.setdefault(target_key, target)
-            if target_key not in visited:
-                visited.add(target_key)
-                pending.append(target_key)
-
-    return {
-        "schema": TRAVERSAL_SCHEMA,
-        "start": start.as_dict(),
-        "direction": direction,
-        "relation_types": sorted(selected_types),
-        "nodes": [
-            references[node].as_dict() for node in sorted(visited) if node in references
-        ],
-        "relation_roots": sorted(relation_roots),
-        "writes": [],
-    }
-
-
 def _safe_component(
     identity: WorkspaceIdentity,
     loader: WorkspaceLoader,
@@ -1609,6 +795,27 @@ def _load_component(
         }
     )
     sealed_states = cast(list[dict[str, Any]], sealed_index["states"])
+    outcome_index = (
+        assignment_orchestration.list_outcome_bindings(identity.workspace_root)
+        if identity.workspace_root
+        else {
+            "schema": assignment_orchestration.OUTCOME_INDEX_SCHEMA,
+            "bindings": [],
+            "issues": [],
+            "storage_kind": "none",
+            "writes": [],
+            "index_root": semantic_root(
+                {
+                    "schema": assignment_orchestration.OUTCOME_INDEX_SCHEMA,
+                    "bindings": [],
+                    "issues": [],
+                    "storage_kind": "none",
+                    "writes": [],
+                }
+            ),
+        }
+    )
+    outcome_bindings = cast(list[dict[str, Any]], outcome_index["bindings"])
     runtime_dir = os.path.join(identity.data_home, "runtime")
     if not os.path.isdir(runtime_dir):
         body = {
@@ -1629,12 +836,14 @@ def _load_component(
             "initiatives": [],
             "assignments": [],
             "relations": [],
-            "problems": list(sealed_index["issues"]),
+            "problems": [*sealed_index["issues"], *outcome_index["issues"]],
             "retained_assignment_states": sealed_states,
             "unqualified_retained_assignment_states": sealed_index[
                 "unqualified_states"
             ],
             "retained_state_index_root": _retained_state_projection_root(sealed_states),
+            "retained_outcome_bindings": outcome_bindings,
+            "outcome_binding_index_root": outcome_index["index_root"],
             "reader_runtime": _reader_runtime_identity(),
             "workspace_runtime": _workspace_runtime_identity(identity),
             "profile_binding": _empty_profile_binding(),
@@ -1762,10 +971,12 @@ def _load_component(
         "initiatives": projected_initiatives,
         "assignments": projected_assignments,
         "relations": [relations[root] for root in sorted(relations)],
-        "problems": [*problems, *sealed_index["issues"]],
+        "problems": [*problems, *sealed_index["issues"], *outcome_index["issues"]],
         "retained_assignment_states": sealed_states,
         "unqualified_retained_assignment_states": sealed_index["unqualified_states"],
         "retained_state_index_root": _retained_state_projection_root(sealed_states),
+        "retained_outcome_bindings": outcome_bindings,
+        "outcome_binding_index_root": outcome_index["index_root"],
         "reader_runtime": _reader_runtime_identity(),
         "workspace_runtime": _workspace_runtime_identity(identity),
         "profile_binding": profile_binding,
@@ -1928,6 +1139,10 @@ def _bind_component_envelope(component: dict[str, Any]) -> dict[str, Any]:
             component.get("unqualified_retained_assignment_states") or []
         ),
         "retained_state_index_root": component.get("retained_state_index_root") or "",
+        "retained_outcome_binding_count": len(
+            component.get("retained_outcome_bindings") or []
+        ),
+        "outcome_binding_index_root": component.get("outcome_binding_index_root") or "",
         "relation_roots": sorted(
             str(row.get("relation_root") or "")
             for row in component.get("relations") or []
@@ -1957,6 +1172,10 @@ def _component_result_material(component: Mapping[str, Any]) -> dict[str, Any]:
             component.get("unqualified_retained_assignment_states") or []
         ),
         "retained_state_index_root": component.get("retained_state_index_root") or "",
+        "retained_outcome_bindings": list(
+            component.get("retained_outcome_bindings") or []
+        ),
+        "outcome_binding_index_root": component.get("outcome_binding_index_root") or "",
     }
 
 

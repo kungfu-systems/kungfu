@@ -323,8 +323,8 @@ function checkPlatformMacros() {
   log('[check] Windows platform macros use _WIN32');
 }
 
-function checkShifuVersionSync() {
-  run('shifu version sync gate', 'node', [
+function checkNativeComponentVersionSync() {
+  run('native component version sync gate', 'node', [
     path.join('scripts', 'sync-shifu-version.mjs'),
     '--check',
   ]);
@@ -354,7 +354,23 @@ function testShifuCacheContract() {
     '--test',
     path.join('scripts', 'check-shifu-cache-contract.test.mjs'),
     path.join('scripts', 'shifu-cache-runtime.test.mjs'),
+    path.join('scripts', 'shifu-conan-publish.test.mjs'),
+    path.join('scripts', 'shifu-conan-hit-evidence.test.mjs'),
+    path.join('scripts', 'shifu-conan-legacy.test.mjs'),
     path.join('scripts', 'shifu-uv-cache-adapter.test.mjs'),
+  ]);
+}
+
+function checkShifuProductionGraphContract() {
+  run('Shifu Production Graph contract gate', 'node', [
+    path.join('framework', 'production-graph', 'check.mjs'),
+  ]);
+}
+
+function testShifuProductionGraphContract() {
+  run('Shifu Production Graph contract tests', 'node', [
+    '--test',
+    path.join('framework', 'production-graph', 'check.test.mjs'),
   ]);
 }
 
@@ -445,6 +461,12 @@ function testTestManifest() {
     path.join('scripts', 'command-argument-batches.test.mjs'),
     path.join('scripts', 'qualify-embedding-membranes.test.mjs'),
     path.join('scripts', 'durability-powercut-platform.test.mjs'),
+    path.join(
+      'framework',
+      'gui',
+      'scripts',
+      'electron-builder-config.test.mjs',
+    ),
     path.join('framework', 'gui', 'scripts', 'run-electron-builder.test.mjs'),
     path.join('scripts', 'candidate-timeline-events.test.mjs'),
     path.join('scripts', 'qualify-xinfa-context-quality.test.mjs'),
@@ -472,6 +494,12 @@ function checkKungfuGateCatalog() {
 }
 
 function checkLayerQualification() {
+  run('portable format authority bundle', 'pnpm', [
+    '--filter',
+    '@kungfu-tech/spec',
+    'run',
+    'build',
+  ]);
   run(
     'KF-ADR-019f86da-4f90-7c91-9cc2-6dbd18d68dff layer qualification harness tests',
     'node',
@@ -715,14 +743,17 @@ function touchesBuildchainKfdEvidence(files) {
 }
 
 function checkBuildchainKfdEvidence(files = [], { force = false } = {}) {
-  if (!force && !touchesBuildchainKfdEvidence(files)) {
-    log('[check] no Buildchain KFD evidence inputs changed');
-    return;
-  }
+  // The committed source binding depends on Git ancestry as well as file
+  // content. A rebase or merge can stale it without placing any KFD path in
+  // the changed-file set, so keep this fast check unconditional.
   run('Buildchain KFD evidence check', 'node', [
     path.join('scripts', 'buildchain-kfd-evidence.mjs'),
     '--check',
   ]);
+  if (!force && !touchesBuildchainKfdEvidence(files)) {
+    log('[check] no additional Buildchain KFD evidence inputs changed');
+    return;
+  }
   run('KFD-4 perspective qualification', 'node', [
     path.join(
       'framework',
@@ -781,9 +812,10 @@ function checkStaged() {
   checkNoBashStaged();
   checkTestManifest();
   checkPlatformMacros();
-  checkShifuVersionSync();
+  checkNativeComponentVersionSync();
   checkShifuEntryContract();
   checkShifuCacheContract();
+  checkShifuProductionGraphContract();
   checkShifuDocumentationContract();
   checkRouteTopologyContract();
   checkXinfaBoundary();
@@ -849,6 +881,7 @@ function checkShared() {
   testTestManifest();
   testShifuEntryContract();
   testShifuCacheContract();
+  testShifuProductionGraphContract();
   testShifuDocumentationContract();
   testXinfaBoundary();
   testShifuGateContract();
@@ -892,7 +925,7 @@ function checkShared() {
 function checkChanged() {
   checkNoBashTree();
   checkPlatformMacros();
-  checkShifuVersionSync();
+  checkNativeComponentVersionSync();
   checkShifuEntryContract();
   checkXinfaBoundary();
   checkCarrierActionEnvelope();
@@ -917,7 +950,7 @@ function checkChanged() {
 function checkAll() {
   checkNoBashTree();
   checkPlatformMacros();
-  checkShifuVersionSync();
+  checkNativeComponentVersionSync();
   checkShifuEntryContract();
   checkXinfaBoundary();
   checkCarrierActionEnvelope(['--all']);

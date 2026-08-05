@@ -22,16 +22,21 @@ function sameKeys(left, right) {
  */
 export class InProcessAgentSessionProductRuntime {
   constructor({
-    pty,
+    pty = null,
+    loadPty = null,
     baseEnv = {},
     now = () => Date.now(),
     maxOutputBytes,
     structuredRuntime = null,
   }) {
-    if (!pty || typeof pty.spawn !== 'function') {
-      throw new Error('product runtime requires a node-pty compatible module');
+    if (pty && typeof pty.spawn !== 'function') {
+      throw new Error('product runtime received an invalid node-pty module');
+    }
+    if (loadPty !== null && typeof loadPty !== 'function') {
+      throw new Error('product runtime loadPty must be a function');
     }
     this.pty = pty;
+    this.loadPty = loadPty;
     this.baseEnv = baseEnv;
     this.now = now;
     this.maxOutputBytes = maxOutputBytes;
@@ -77,8 +82,18 @@ export class InProcessAgentSessionProductRuntime {
     }
     this.generation += 1;
     const generation = String(this.generation);
+    const pty = this.pty ?? this.loadPty?.();
+    if (!pty || typeof pty.spawn !== 'function') {
+      throw Object.assign(
+        new Error(
+          'Capsule transport requires an optional node-pty runtime; provider-native sessions remain available',
+        ),
+        { code: 'capsule_transport_unavailable' },
+      );
+    }
+    this.pty = pty;
     const host = new AgentSessionCapsuleHost({
-      pty: this.pty,
+      pty,
       capsuleId: `capsule:${plan.sessionAttemptId}:${generation}`,
       runtimeIdentity: `product-runtime:${process.pid}`,
       maxOutputBytes: this.maxOutputBytes,

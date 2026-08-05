@@ -11,6 +11,7 @@
     {
       "id": "shifu",
       "crate": "shifu",
+      "versionPolicy": "lockstep-with-kungfu",
       "versionSource": "crates/shifu/Cargo.toml",
       "libraryEntry": "shifu::main_and_exit",
       "embeddedMode": "embedded-kungfu",
@@ -26,6 +27,7 @@
     {
       "id": "xinfa",
       "crate": "xinfa",
+      "versionPolicy": "lockstep-with-kungfu",
       "versionSource": "crates/xinfa/Cargo.toml",
       "libraryEntry": "xinfa::cli::main_entry",
       "embeddedMode": "embedded-kungfu",

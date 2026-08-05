@@ -68,6 +68,13 @@ function canonicalPath(name) {
   return tokens.join(' ');
 }
 
+function usesInternalModuleEntrypoint(value) {
+  return (
+    typeof value === 'string' &&
+    /(?:^|\s)python(?:\d+(?:\.\d+)*)?\s+-m\s+kungfu(?:[.\s]|$)/u.test(value)
+  );
+}
+
 function resolvePath(name, byPath, standaloneRoutes = []) {
   for (const route of standaloneRoutes) {
     const { prefix, target } = route;
@@ -133,6 +140,12 @@ export function auditCatalogParity({
     fail('CLI registry must contain zero aliases');
   if (registry.aliasDispositionProfiles)
     fail('CLI registry retains obsolete alias disposition policy');
+  for (const route of registry.standaloneCatalogRoutes || []) {
+    if (usesInternalModuleEntrypoint(route.prefix))
+      fail(
+        `public standalone route exposes internal module entrypoint ${route.prefix}`,
+      );
+  }
   if (
     (schema.maturity || []).some((value) =>
       ['deprecated', 'compatibility'].includes(value),
@@ -201,6 +214,10 @@ export function auditCatalogParity({
 
   const apiById = new Map((kfd3.apis || []).map((row) => [row.id, row]));
   for (const row of kfd3.apis || []) {
+    for (const name of [row.name, ...(row.aliases || [])]) {
+      if (usesInternalModuleEntrypoint(name))
+        fail(`KFD-3 registry exposes internal module entrypoint ${name}`);
+    }
     if (row.anchor?.kind === 'runtime-click' && !linkedApiIds.has(row.id))
       fail(`orphan runtime KFD-3 API ${row.id}`);
   }
@@ -213,6 +230,8 @@ export function auditCatalogParity({
   }
   const actualCommands = new Map();
   for (const row of commands.commands || []) {
+    if (usesInternalModuleEntrypoint(row.name))
+      fail(`commands.json exposes internal module entrypoint ${row.name}`);
     actualCommands.set(row.name, row.apiId);
     const api = apiById.get(row.apiId);
     if (!api) {
@@ -268,6 +287,8 @@ function auditPublicReferences(byPath) {
     'examples/remote-sync.md',
     'skills/codex/SKILL.md',
     'skills/claude/SKILL.md',
+    'skills/amp/SKILL.md',
+    'skills/opencode/SKILL.md',
   ];
   for (const rel of docs) {
     const text = fs.readFileSync(path.join(PACK, rel), 'utf8');
@@ -327,7 +348,7 @@ export function auditRepository() {
     'utf8',
   );
   if (!freeze.includes('agentPackDataArgs()'))
-    issues.push('frozen CLI does not include the complete Agent pack');
+    issues.push('assembled CLI does not include the complete Agent pack');
   return { ok: issues.length === 0, issues };
 }
 

@@ -5,17 +5,196 @@
 // Git relation, automatic/manual disposition, compact display, and JSON safety.
 
 use std::fs;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use shifu_core::json;
+use shifu_core::{host, json};
 
 const CONTRACT: &str = include_str!("../../../docs/shifu/artifact-contract.json");
 const SCHEMA: &str =
     include_str!("../../../docs/shifu/schema/local-artifact-catalog-v1.schema.json");
 const RECEIPT_SCHEMA: &str =
     include_str!("../../../docs/shifu/schema/local-promotion-receipt-v1.schema.json");
+pub const CURRENT_REGISTRATION_RELATIVE: &str =
+    ".buildchain/runtime/shifu-product-registration.env";
+
+pub(crate) struct InstalledAdoption {
+    pub(crate) app: PathBuf,
+    pub(crate) artifact: String,
+    pub(crate) build_id: String,
+    pub(crate) source_commit: String,
+    pub(crate) artifact_digest: String,
+    pub(crate) product_version: String,
+    pub(crate) release_cut_root: String,
+    pub(crate) platform_slice_root: String,
+    pub(crate) native_receipt_root: String,
+    pub(crate) native_updater: PathBuf,
+    pub(crate) native_updater_digest: String,
+}
+
+pub(crate) fn adopted_build_meta(adoption: &InstalledAdoption) -> String {
+    format!(
+        "KUNGFU_BUILD_SHA='{}'\n\
+         KUNGFU_BUILD_BRANCH='legacy-installed'\n\
+         KUNGFU_BUILD_REPO='installed-product'\n\
+         KUNGFU_BUILD_WORKTREE=''\n\
+         KUNGFU_BUILD_TIME='adopted'\n\
+         KUNGFU_BUILD_KIND='app'\n\
+         KUNGFU_BUILD_ARTIFACT='{}'\n\
+         KUNGFU_BUILD_SHA256='{}'\n\
+         KUNGFU_BUILD_PRODUCT_VERSION='{}'\n\
+         KUNGFU_BUILD_RELEASE_CUT_ROOT='{}'\n\
+         KUNGFU_BUILD_PLATFORM_SLICE_ROOT='{}'\n\
+         KUNGFU_BUILD_MAINLINE_REF='origin/HEAD'\n\
+         KUNGFU_BUILD_MAINLINE_SHA='{}'\n\
+         KUNGFU_BUILD_INTEGRATED='false'\n\
+         KUNGFU_BUILD_QUALIFIED='false'\n",
+        adoption.source_commit,
+        adoption.artifact,
+        adoption.artifact_digest,
+        adoption.product_version,
+        adoption.release_cut_root,
+        adoption.platform_slice_root,
+        adoption.source_commit,
+    )
+}
+
+pub(crate) fn adopted_installed_receipt(adoption: &InstalledAdoption) -> String {
+    format!(
+        "KUNGFU_ARTIFACT_SCHEMA='shifu.local-artifact/v1'\n\
+         KUNGFU_INSTALLED_SHA='{}'\n\
+         KUNGFU_INSTALLED_BRANCH='legacy-installed'\n\
+         KUNGFU_INSTALLED_REPO='installed-product'\n\
+         KUNGFU_INSTALLED_BUILD_ID='{}'\n\
+         KUNGFU_INSTALLED_WORKTREE=''\n\
+         KUNGFU_INSTALLED_ARTIFACT='{}'\n\
+         KUNGFU_INSTALLED_KIND='app'\n\
+         KUNGFU_INSTALLED_DIGEST='{}'\n\
+         KUNGFU_INSTALLED_MAINLINE_REF='origin/HEAD'\n\
+         KUNGFU_INSTALLED_MAINLINE_SHA='{}'\n\
+         KUNGFU_INSTALLED_INTEGRATED='false'\n\
+         KUNGFU_INSTALLED_QUALIFIED='false'\n\
+         KUNGFU_INSTALLED_MODE='legacy-adopted'\n\
+         KUNGFU_INSTALLED_PRODUCT_VERSION='{}'\n\
+         KUNGFU_INSTALLED_RELEASE_CUT_ROOT='{}'\n\
+         KUNGFU_INSTALLED_PLATFORM_SLICE_ROOT='{}'\n\
+         KUNGFU_INSTALLED_CUT_TRANSITION_ROOT=''\n\
+         KUNGFU_INSTALLED_NATIVE_RECEIPT_ROOT='{}'\n\
+         KUNGFU_INSTALLED_NATIVE_UPDATER='{}'\n\
+         KUNGFU_INSTALLED_NATIVE_UPDATER_DIGEST='{}'\n\
+         KUNGFU_ROLLBACK_BUILD_ID=''\n\
+         KUNGFU_ROLLBACK_SHA=''\n\
+         KUNGFU_ROLLBACK_RELEASE_CUT_ROOT=''\n\
+         KUNGFU_ROLLBACK_DESKTOP_PATH=''\n",
+        adoption.source_commit,
+        adoption.build_id,
+        adoption.app.display(),
+        adoption.artifact_digest,
+        adoption.source_commit,
+        adoption.product_version,
+        adoption.release_cut_root,
+        adoption.platform_slice_root,
+        adoption.native_receipt_root,
+        adoption.native_updater.display(),
+        adoption.native_updater_digest,
+    )
+}
+
+pub(crate) fn adopted_result(adoption: &InstalledAdoption, execute: bool) -> String {
+    format!(
+        "{{\"schema\":\"shifu.installed-product-adoption/v1\",\"state\":\"{}\",\"artifactId\":\"{}\",\"sourceCommit\":\"{}\",\"desktopDigest\":\"sha256:{}\",\"nativeReleaseCutRoot\":\"{}\",\"nativeReceiptRoot\":\"{}\",\"wouldWrite\":{}}}",
+        if execute { "complete" } else { "action-required" },
+        json_escape(&adoption.build_id),
+        json_escape(&adoption.source_commit),
+        json_escape(&adoption.artifact_digest),
+        json_escape(&adoption.release_cut_root),
+        json_escape(&adoption.native_receipt_root),
+        execute,
+    )
+}
+
+fn env_quote(value: &str) -> String {
+    format!("'{}'", value.replace('\'', ""))
+}
+
+pub fn begin_current_registration(root: &Path, product_id: &str) -> Result<(), String> {
+    if product_id != "kungfu" {
+        return Ok(());
+    }
+    let pointer = root.join(CURRENT_REGISTRATION_RELATIVE);
+    match fs::remove_file(&pointer) {
+        Ok(()) => Ok(()),
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(()),
+        Err(error) => Err(format!(
+            "cannot clear stale current-build registration {}: {error}",
+            pointer.display()
+        )),
+    }
+}
+
+pub fn publish_current_registration(
+    root: &Path,
+    product_id: &str,
+    slot: &Path,
+    build_sha: &str,
+    artifact_digest: &str,
+) -> Result<(), String> {
+    if product_id != "kungfu" {
+        return Ok(());
+    }
+    let build_id = slot
+        .file_name()
+        .map(|name| name.to_string_lossy().to_string())
+        .filter(|name| !name.is_empty())
+        .ok_or_else(|| "registered product slot has no build id".to_string())?;
+    let pointer = root.join(CURRENT_REGISTRATION_RELATIVE);
+    let parent = pointer
+        .parent()
+        .ok_or_else(|| "current-build registration has no parent".to_string())?;
+    fs::create_dir_all(parent).map_err(|error| {
+        format!(
+            "cannot create current-build registration directory {}: {error}",
+            parent.display()
+        )
+    })?;
+    let staged = parent.join(format!(
+        ".shifu-product-registration.env.tmp-{}",
+        std::process::id()
+    ));
+    let content = [
+        format!("SHIFU_REGISTERED_PRODUCT={}", env_quote(product_id)),
+        format!("SHIFU_REGISTERED_PLATFORM={}", env_quote(&host::os_arch())),
+        format!("SHIFU_REGISTERED_BUILD_ID={}", env_quote(&build_id)),
+        format!("SHIFU_REGISTERED_BUILD_SHA={}", env_quote(build_sha)),
+        format!(
+            "SHIFU_REGISTERED_ARTIFACT_SHA256={}",
+            env_quote(artifact_digest)
+        ),
+        String::new(),
+    ]
+    .join("\n");
+    fs::write(&staged, content).map_err(|error| {
+        format!(
+            "cannot stage current-build registration {}: {error}",
+            staged.display()
+        )
+    })?;
+    if pointer.exists() {
+        let _ = fs::remove_file(&staged);
+        return Err(format!(
+            "current-build registration {} was recreated concurrently; refusing to overwrite it",
+            pointer.display()
+        ));
+    }
+    fs::rename(&staged, &pointer).map_err(|error| {
+        let _ = fs::remove_file(&staged);
+        format!(
+            "cannot publish current-build registration {}: {error}",
+            pointer.display()
+        )
+    })
+}
 
 pub fn product_mainline_ref() -> String {
     let contract = json::parse(CONTRACT).expect("embedded artifact contract must be valid JSON");
@@ -407,6 +586,27 @@ mod tests {
         let text = fs::read_to_string(root.join("last-promotion.json")).unwrap();
         assert!(text.contains("\"relation\": \"descendant\""));
         assert!(!text.contains(&root.display().to_string()));
+        let _ = fs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn next_distribution_cannot_reuse_or_overwrite_a_prior_coordinate() {
+        let root = shifu_core::host::unique_temp_dir("product-registration").unwrap();
+        let slot = root.join("registry/20260803T000000Z-111111111");
+        fs::create_dir_all(&slot).unwrap();
+        publish_current_registration(&root, "kungfu", &slot, &"1".repeat(40), &"a".repeat(64))
+            .unwrap();
+        assert!(root.join(CURRENT_REGISTRATION_RELATIVE).is_file());
+        assert!(publish_current_registration(
+            &root,
+            "kungfu",
+            &slot,
+            &"1".repeat(40),
+            &"a".repeat(64),
+        )
+        .is_err());
+        begin_current_registration(&root, "kungfu").unwrap();
+        assert!(!root.join(CURRENT_REGISTRATION_RELATIVE).exists());
         let _ = fs::remove_dir_all(root);
     }
 

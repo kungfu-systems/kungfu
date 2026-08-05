@@ -5,7 +5,9 @@ import test from 'node:test';
 
 import {
   type GlobalWorkSnapshot,
+  filterGlobalWork,
   globalWorkSearchDocuments,
+  isCompletedGlobalWork,
   parseGlobalWorkSnapshot,
 } from '../src/capability/global-work.ts';
 import {
@@ -151,6 +153,17 @@ test('projects the same global Work snapshot into searchable Initiative and Assi
           },
           observations: [{ workspace_id: 'project:one' }],
         },
+        {
+          canonical_root: 'sha256:completed',
+          object_kind: 'assignment',
+          subject: 'initiative-a:assignment-completed',
+          display: {
+            title: 'Ship product search',
+            portfolio_state: 'completed',
+            status: 'completed',
+          },
+          observations: [{ workspace_id: 'project:two' }],
+        },
       ],
     },
   };
@@ -166,9 +179,22 @@ test('projects the same global Work snapshot into searchable Initiative and Assi
   );
   assert.deepEqual(
     searchProductDocuments(documents, 'assignment').map((row) => row.title),
-    ['Unify product search'],
+    ['Unify product search', 'Ship product search'],
   );
   assert.equal(documents[1]?.action.kind, 'open-work');
+  assert.equal(documents[1]?.summary.startsWith('Work · '), true);
+  const completedWork = snapshot.global_work.visible_work[2];
+  assert.ok(completedWork);
+  assert.equal(isCompletedGlobalWork(completedWork), true);
+  assert.deepEqual(
+    filterGlobalWork(snapshot, 'active').map((row) => row.canonical_root),
+    ['sha256:initiative', 'sha256:assignment'],
+  );
+  assert.deepEqual(
+    filterGlobalWork(snapshot, 'completed').map((row) => row.canonical_root),
+    ['sha256:completed'],
+  );
+  assert.equal(filterGlobalWork(snapshot, 'all').length, 3);
 });
 
 test('rejects observer state without a global Work projection', () => {

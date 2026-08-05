@@ -69,7 +69,7 @@ npm-ecosystem projection; if it drifts it is a cosmetic mismatch, not a function
 
 **3. A release tag carries weight = code-freeze ⊗ binary distribution, performed
 atomically.** kungfu ships **prebuilt cross-platform binaries** (node-pre-gyp artifacts via
-`prebuilt.libkungfu.cc`, plus the frozen `kungfu` runtime), not source for users to compile. For such
+`prebuilt.libkungfu.cc`, plus the assembled `kungfu` runtime), not source for users to compile. For such
 a project, a tag that does *not* guarantee the corresponding binaries are built and
 distributed is an empty promise (users see `v1.0` but cannot download a `v1.0` binary). The
 `alpha → release` merge therefore performs tag + full-platform build + distribution as **one
@@ -279,8 +279,13 @@ The gate also evaluates
 waive deprecation debt. At the first eligible Alpha or stable release, an
 applicable entry must have qualified removal evidence, explicit restored
 support, or an exact native Warrant projection whose date and release bounds
-cover that candidate. The definition of eligibility, surface defaults, and
-history-retention rules are in the
+cover that candidate. The same source and protected-release audit treats class
+defaults as lower bounds, resolves classification provenance against the Core,
+CLI, or deterministic kind authority, and rejects dates or product versions
+beyond the candidate context. The sole retained pre-stable CLI 0/0 settlement
+is exact-entry-bound historical evidence, not a reusable release exception.
+The definition of eligibility, surface defaults, and history-retention rules
+are in the
 [deprecation lifecycle](deprecation-lifecycle.md).
 
 ### Side-effect-free promotion rehearsal

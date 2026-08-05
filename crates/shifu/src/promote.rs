@@ -20,17 +20,28 @@
 
 use std::env;
 use std::fs;
+use std::fs::OpenOptions;
+use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::process::Command;
+#[cfg(not(windows))]
+use std::process::Stdio;
+use std::time::{SystemTime, UNIX_EPOCH};
 
-use shifu_core::{host, json, style};
+use shifu_core::{bootstrap, host, json, style};
 
 use crate::artifact_catalog::{
-    automatic, compact_branch, git_relation, json_escape, product_mainline_ref,
-    select_unique_automatic, short_sha, state_for, write_promotion_receipt, GitRelation,
-    SelectionError,
+    adopted_build_meta, adopted_installed_receipt, adopted_result, automatic, compact_branch,
+    git_relation, json_escape, product_mainline_ref, select_unique_automatic, short_sha, state_for,
+    write_promotion_receipt, GitRelation, InstalledAdoption, SelectionError,
+    CURRENT_REGISTRATION_RELATIVE,
 };
-use crate::{envfile, util};
+use crate::native_update::{artifact_sha256, local_artifact_identity_valid};
+use crate::{envfile, native_update, util};
+
+#[path = "promote_desktop.rs"]
+mod promote_desktop;
+use promote_desktop::*;
 
 struct BuildEntry {
     slot: PathBuf,
@@ -43,6 +54,13 @@ struct BuildEntry {
     kind: String,
     artifact: String,
     digest: String,
+    cli_archive: String,
+    cli_archive_digest: String,
+    upgrade_manifest: String,
+    upgrade_manifest_digest: String,
+    product_version: String,
+    release_cut_root: String,
+    platform_slice_root: String,
     mainline_ref: String,
     mainline_sha: String,
     integrated: bool,
@@ -54,6 +72,7 @@ struct ListOptions {
     verbose: bool,
     json: bool,
     no_truncate: bool,
+    verify_current: bool,
 }
 
 fn registry_dir() -> PathBuf {
@@ -63,13 +82,48 @@ fn registry_dir() -> PathBuf {
 }
 
 fn read_meta(slot: &Path) -> Option<Vec<(String, String)>> {
-    let text = fs::read_to_string(slot.join("meta.env")).ok()?;
+    read_env(&slot.join("meta.env"))
+}
+
+fn read_env(path: &Path) -> Option<Vec<(String, String)>> {
+    let text = fs::read_to_string(path).ok()?;
     Some(
         text.lines()
             .filter_map(envfile::parse_line)
             .map(|(k, v)| (k.to_string(), v.to_string()))
             .collect(),
     )
+}
+
+fn entry_from_slot(slot: PathBuf, name: String) -> Option<BuildEntry> {
+    let meta = read_meta(&slot)?;
+    let artifact = meta_get(&meta, "KUNGFU_BUILD_ARTIFACT");
+    if artifact.is_empty() || !slot.join(&artifact).exists() {
+        return None;
+    }
+    Some(BuildEntry {
+        sha: meta_get(&meta, "KUNGFU_BUILD_SHA"),
+        branch: meta_get(&meta, "KUNGFU_BUILD_BRANCH"),
+        repo: meta_get(&meta, "KUNGFU_BUILD_REPO"),
+        worktree: meta_get(&meta, "KUNGFU_BUILD_WORKTREE"),
+        built_at: meta_get(&meta, "KUNGFU_BUILD_TIME"),
+        kind: meta_get(&meta, "KUNGFU_BUILD_KIND"),
+        digest: meta_get(&meta, "KUNGFU_BUILD_SHA256"),
+        cli_archive: meta_get(&meta, "KUNGFU_BUILD_CLI_ARCHIVE"),
+        cli_archive_digest: meta_get(&meta, "KUNGFU_BUILD_CLI_ARCHIVE_SHA256"),
+        upgrade_manifest: meta_get(&meta, "KUNGFU_BUILD_UPGRADE_MANIFEST"),
+        upgrade_manifest_digest: meta_get(&meta, "KUNGFU_BUILD_UPGRADE_MANIFEST_SHA256"),
+        product_version: meta_get(&meta, "KUNGFU_BUILD_PRODUCT_VERSION"),
+        release_cut_root: meta_get(&meta, "KUNGFU_BUILD_RELEASE_CUT_ROOT"),
+        platform_slice_root: meta_get(&meta, "KUNGFU_BUILD_PLATFORM_SLICE_ROOT"),
+        mainline_ref: meta_get(&meta, "KUNGFU_BUILD_MAINLINE_REF"),
+        mainline_sha: meta_get(&meta, "KUNGFU_BUILD_MAINLINE_SHA"),
+        integrated: meta_get(&meta, "KUNGFU_BUILD_INTEGRATED") == "true",
+        qualified: meta_get(&meta, "KUNGFU_BUILD_QUALIFIED") == "true",
+        artifact,
+        slot,
+        name,
+    })
 }
 
 fn meta_get(meta: &[(String, String)], key: &str) -> String {
@@ -95,31 +149,67 @@ fn entries() -> Vec<BuildEntry> {
     names.reverse();
     names
         .into_iter()
-        .filter_map(|name| {
-            let slot = dir.join(&name);
-            let meta = read_meta(&slot)?;
-            let artifact = meta_get(&meta, "KUNGFU_BUILD_ARTIFACT");
-            if artifact.is_empty() || !slot.join(&artifact).exists() {
-                return None;
-            }
-            Some(BuildEntry {
-                sha: meta_get(&meta, "KUNGFU_BUILD_SHA"),
-                branch: meta_get(&meta, "KUNGFU_BUILD_BRANCH"),
-                repo: meta_get(&meta, "KUNGFU_BUILD_REPO"),
-                worktree: meta_get(&meta, "KUNGFU_BUILD_WORKTREE"),
-                built_at: meta_get(&meta, "KUNGFU_BUILD_TIME"),
-                kind: meta_get(&meta, "KUNGFU_BUILD_KIND"),
-                digest: meta_get(&meta, "KUNGFU_BUILD_SHA256"),
-                mainline_ref: meta_get(&meta, "KUNGFU_BUILD_MAINLINE_REF"),
-                mainline_sha: meta_get(&meta, "KUNGFU_BUILD_MAINLINE_SHA"),
-                integrated: meta_get(&meta, "KUNGFU_BUILD_INTEGRATED") == "true",
-                qualified: meta_get(&meta, "KUNGFU_BUILD_QUALIFIED") == "true",
-                artifact,
-                slot,
-                name,
-            })
-        })
+        .filter_map(|name| entry_from_slot(dir.join(&name), name))
         .collect()
+}
+
+fn git_head(root: &Path) -> String {
+    Command::new("git")
+        .arg("-C")
+        .arg(root)
+        .args(["rev-parse", "HEAD"])
+        .env_remove("GIT_DIR")
+        .env_remove("GIT_WORK_TREE")
+        .env_remove("GIT_COMMON_DIR")
+        .env_remove("GIT_INDEX_FILE")
+        .output()
+        .ok()
+        .filter(|output| output.status.success())
+        .map(|output| String::from_utf8_lossy(&output.stdout).trim().to_string())
+        .unwrap_or_default()
+}
+
+fn valid_build_id(value: &str) -> bool {
+    !value.is_empty()
+        && value
+            .bytes()
+            .all(|byte| byte.is_ascii_alphanumeric() || byte == b'-')
+}
+
+fn current_entry_at(
+    root: &Path,
+    registry: &Path,
+    expected_sha: &str,
+) -> Result<BuildEntry, String> {
+    let pointer_path = root.join(CURRENT_REGISTRATION_RELATIVE);
+    let pointer = read_env(&pointer_path).ok_or_else(|| {
+        format!(
+            "no fresh current-build registration at {}; run the declared product distribution in this checkout first",
+            pointer_path.display()
+        )
+    })?;
+    let product = meta_get(&pointer, "SHIFU_REGISTERED_PRODUCT");
+    let platform = meta_get(&pointer, "SHIFU_REGISTERED_PLATFORM");
+    let build_id = meta_get(&pointer, "SHIFU_REGISTERED_BUILD_ID");
+    let build_sha = meta_get(&pointer, "SHIFU_REGISTERED_BUILD_SHA");
+    let artifact_digest = meta_get(&pointer, "SHIFU_REGISTERED_ARTIFACT_SHA256");
+    if product != "kungfu"
+        || platform != host::os_arch()
+        || !valid_build_id(&build_id)
+        || expected_sha.is_empty()
+        || build_sha != expected_sha
+    {
+        return Err("current-build registration does not bind this product, platform, and exact checkout revision".to_string());
+    }
+    let entry = entry_from_slot(registry.join(&build_id), build_id.clone()).ok_or_else(|| {
+        format!("current-build registration names an unreadable slot: {build_id}")
+    })?;
+    if entry.sha != build_sha || entry.digest != artifact_digest {
+        return Err(format!(
+            "current-build registration differs from slot metadata: {build_id}"
+        ));
+    }
+    Ok(entry)
 }
 
 fn no_builds_hint() -> ! {
@@ -132,6 +222,14 @@ fn no_builds_hint() -> ! {
 
 fn installed_receipt_path() -> PathBuf {
     registry_dir().join("installed.meta.env")
+}
+
+fn rollback_receipt_path() -> PathBuf {
+    registry_dir().join("rollback.meta.env")
+}
+
+fn rollback_target_receipt_path() -> PathBuf {
+    registry_dir().join("rollback-target.meta.env")
 }
 
 fn installed_sha() -> String {
@@ -154,6 +252,34 @@ fn installed_value(key: &str) -> String {
         .find(|(candidate, _)| *candidate == key)
         .map(|(_, value)| value.to_string())
         .unwrap_or_default()
+}
+
+fn receipt_value(text: &str, key: &str) -> String {
+    text.lines()
+        .filter_map(envfile::parse_line)
+        .find(|(candidate, _)| *candidate == key)
+        .map(|(_, value)| value.to_string())
+        .unwrap_or_default()
+}
+
+fn set_receipt_value(text: &str, key: &str, value: &str) -> String {
+    let prefix = format!("{key}=");
+    let mut replaced = false;
+    let mut lines: Vec<String> = text
+        .lines()
+        .map(|line| {
+            if line.starts_with(&prefix) {
+                replaced = true;
+                format!("{key}='{}'", value.replace('\'', ""))
+            } else {
+                line.to_string()
+            }
+        })
+        .collect();
+    if !replaced {
+        lines.push(format!("{key}='{}'", value.replace('\'', "")));
+    }
+    format!("{}\n", lines.join("\n"))
 }
 
 fn build_relation(entry: &BuildEntry, installed: &str, entry_count: usize) -> GitRelation {
@@ -183,53 +309,107 @@ fn build_valid(entry: &BuildEntry) -> bool {
         && entry.sha == entry.mainline_sha
 }
 
+/// Deep verification for the artifact produced by the exact current checkout.
+/// Pre-integration qualification must prove payload bytes before a branch can
+/// be submitted, so mainline admission remains a promotion concern rather than
+/// a prerequisite for verifying the current build.
+fn current_payload_valid(entry: &BuildEntry) -> bool {
+    build_previewable(entry)
+}
+
+/// Fast catalog classification from the immutable registration envelope.
+/// This deliberately does not read artifact payload bytes. Promotion and
+/// `builds --verify-current` call `build_valid` and re-check the selected
+/// payload in full before making any safety claim or state change.
+fn build_recorded_valid(entry: &BuildEntry) -> bool {
+    !entry.sha.is_empty()
+        && entry.sha != "unknown"
+        && !entry.sha.ends_with("-dirty")
+        && matches!(entry.kind.as_str(), "app" | "installer" | "appimage")
+        && entry.digest.len() == 64
+        && entry.digest.bytes().all(|byte| byte.is_ascii_hexdigit())
+        && !entry.cli_archive.is_empty()
+        && valid_root(&entry.cli_archive_digest)
+        && entry.slot.join(&entry.cli_archive).is_file()
+        && !entry.upgrade_manifest.is_empty()
+        && valid_root(&entry.upgrade_manifest_digest)
+        && entry.slot.join(&entry.upgrade_manifest).is_file()
+        && !entry.product_version.is_empty()
+        && valid_root(&entry.release_cut_root)
+        && valid_root(&entry.platform_slice_root)
+        && entry.mainline_ref == product_mainline_ref()
+        && entry.integrated
+        && entry.qualified
+        && entry.sha == entry.mainline_sha
+}
+
 fn build_previewable(entry: &BuildEntry) -> bool {
     !entry.sha.is_empty()
         && entry.sha != "unknown"
         && !entry.sha.ends_with("-dirty")
         && matches!(entry.kind.as_str(), "app" | "installer" | "appimage")
-        && entry.slot.join(&entry.artifact).exists()
+        && local_release_evidence_valid(entry)
+        && !entry.cli_archive.is_empty()
+        && valid_root(&entry.cli_archive_digest)
+        && entry.slot.join(&entry.cli_archive).is_file()
+        && !entry.upgrade_manifest.is_empty()
+        && valid_root(&entry.upgrade_manifest_digest)
+        && entry.slot.join(&entry.upgrade_manifest).is_file()
+        && !entry.product_version.is_empty()
+        && valid_root(&entry.release_cut_root)
+        && valid_root(&entry.platform_slice_root)
         && entry.mainline_ref == product_mainline_ref()
         && product_manifests_valid(entry)
+}
+
+fn local_release_evidence_valid(entry: &BuildEntry) -> bool {
+    let artifact = entry.slot.join(&entry.artifact);
+    let archive = entry.slot.join(&entry.cli_archive);
+    let manifest = entry.slot.join(&entry.upgrade_manifest);
+    if entry.digest.len() != 64
+        || !entry.digest.bytes().all(|byte| byte.is_ascii_hexdigit())
+        || artifact_sha256(&artifact).ok().as_deref() != Some(entry.digest.as_str())
+        || bootstrap::sha256_file(&archive)
+            .ok()
+            .map(|digest| format!("sha256:{digest}"))
+            .as_deref()
+            != Some(entry.cli_archive_digest.as_str())
+        || bootstrap::sha256_file(&manifest)
+            .ok()
+            .map(|digest| format!("sha256:{digest}"))
+            .as_deref()
+            != Some(entry.upgrade_manifest_digest.as_str())
+    {
+        return false;
+    }
+    let Ok(text) = fs::read_to_string(manifest) else {
+        return false;
+    };
+    let Ok(document) = json::parse(&text) else {
+        return false;
+    };
+    let local = document.get("localArtifact");
+    document.str_of("schema") == "kungfu.product-upgrade.manifest/v1"
+        && document.str_of("releaseCutRoot") == entry.release_cut_root
+        && document.str_of("platformSliceRoot") == entry.platform_slice_root
+        && local
+            .map(|value| local_artifact_identity_valid(&artifact, &entry.digest, value))
+            .unwrap_or(false)
+}
+
+fn valid_root(value: &str) -> bool {
+    value.len() == 71
+        && value.starts_with("sha256:")
+        && value[7..]
+            .bytes()
+            .all(|byte| byte.is_ascii_digit() || (b'a'..=b'f').contains(&byte))
 }
 
 fn product_manifests_valid(entry: &BuildEntry) -> bool {
     if entry.kind != "app" {
         return true;
     }
-    let resources = entry.slot.join(&entry.artifact).join("Contents/Resources");
-    let runtime = resources.join("kungfu");
-    let build = fs::read_to_string(runtime.join("kungfubuildinfo.json"))
-        .ok()
-        .and_then(|text| json::parse(&text).ok());
-    let release = fs::read_to_string(resources.join("upgrade/kungfu-release-manifest.json"))
-        .ok()
-        .and_then(|text| json::parse(&text).ok());
-    let profiles = fs::read_to_string(runtime.join("profile-kfd3.json"))
-        .ok()
-        .and_then(|text| json::parse(&text).ok());
-    let build_revision = build
-        .as_ref()
-        .and_then(|doc| doc.get("git"))
-        .map(|git| git.str_of("revision"))
-        .unwrap_or("");
-    let release_revision = release
-        .as_ref()
-        .map(|doc| doc.str_of("sourceCommit"))
-        .unwrap_or("");
-    let profile_count = profiles
-        .as_ref()
-        .and_then(|doc| doc.get("entries"))
-        .and_then(json::Json::as_array)
-        .map(<[_]>::len)
-        .unwrap_or(0);
-    build_revision == entry.sha
-        && release_revision == entry.sha
-        && profiles
-            .as_ref()
-            .map(|doc| doc.str_of("schema") == "kungfu.system-profile-kfd3-manifest/v1")
-            .unwrap_or(false)
-        && profile_count > 0
+    product_app_manifests_valid(&entry.slot.join(&entry.artifact), &entry.sha).unwrap_or(false)
 }
 
 fn rollback_entry_valid(registry: &Path, build_id: &str, sha: &str) -> bool {
@@ -244,16 +424,6 @@ fn rollback_entry_valid(registry: &Path, build_id: &str, sha: &str) -> bool {
     meta_get(&meta, "KUNGFU_BUILD_SHA") == sha
         && !artifact.is_empty()
         && slot.join(artifact).exists()
-}
-
-fn rollback_build<'a>(
-    entries: &'a [BuildEntry],
-    build_id: &str,
-    sha: &str,
-) -> Option<&'a BuildEntry> {
-    entries
-        .iter()
-        .find(|entry| entry.name == build_id && entry.sha == sha)
 }
 
 fn schema_kind(entry: &BuildEntry) -> &str {
@@ -354,7 +524,7 @@ fn select_preview_build<'a>(
     entry
 }
 
-fn print_builds_json(entries: &[BuildEntry]) {
+fn print_builds_json(entries: &[BuildEntry], payload_verified: bool) {
     let installed = installed_sha();
     println!("{{");
     println!("  \"schema\": \"shifu.local-artifact-catalog/v1\",");
@@ -365,19 +535,41 @@ fn print_builds_json(entries: &[BuildEntry]) {
         .iter()
         .map(|entry| {
             let relation = build_relation(entry, &installed, entries.len());
-            let valid = build_valid(entry);
+            let valid = if payload_verified {
+                current_payload_valid(entry)
+            } else {
+                build_recorded_valid(entry)
+            };
             let state = state_for(relation, valid, false);
             format!(
-                "    {{\"id\":\"{}\",\"kind\":\"{}\",\"version\":\"\",\"commit\":\"{}\",\"branch\":\"{}\",\"digest\":\"{}\",\"builtAt\":\"{}\",\"state\":\"{}\",\"relation\":\"{}\",\"automatic\":{},\"rollbackOnly\":false,\"dirty\":{},\"qualified\":{},\"integrated\":{},\"mainlineRef\":\"{}\",\"mainlineCommit\":\"{}\",\"repoPath\":\"{}\",\"worktreePath\":\"{}\",\"buildPath\":\"{}\",\"artifactPath\":\"{}\",\"pathDigest\":\"\",\"reason\":\"{}\"}}",
+                "    {{\"id\":\"{}\",\"kind\":\"{}\",\"version\":\"{}\",\"commit\":\"{}\",\"branch\":\"{}\",\"digest\":\"{}\",\"releaseCutRoot\":\"{}\",\"platformSliceRoot\":\"{}\",\"cliArchivePath\":\"{}\",\"cliArchiveDigest\":\"{}\",\"upgradeManifestPath\":\"{}\",\"upgradeManifestDigest\":\"{}\",\"builtAt\":\"{}\",\"state\":\"{}\",\"relation\":\"{}\",\"automatic\":{},\"rollbackOnly\":false,\"integrity\":\"{}\",\"dirty\":{},\"qualified\":{},\"integrated\":{},\"mainlineRef\":\"{}\",\"mainlineCommit\":\"{}\",\"repoPath\":\"{}\",\"worktreePath\":\"{}\",\"buildPath\":\"{}\",\"artifactPath\":\"{}\",\"pathDigest\":\"\",\"reason\":\"{}\"}}",
                 json_escape(&entry.name),
                 json_escape(schema_kind(entry)),
+                json_escape(&entry.product_version),
                 json_escape(&entry.sha),
                 json_escape(&entry.branch),
                 json_escape(&entry.digest),
+                json_escape(&entry.release_cut_root),
+                json_escape(&entry.platform_slice_root),
+                json_escape(&entry.slot.join(&entry.cli_archive).display().to_string()),
+                json_escape(&entry.cli_archive_digest),
+                json_escape(
+                    &entry
+                        .slot
+                        .join(&entry.upgrade_manifest)
+                        .display()
+                        .to_string()
+                ),
+                json_escape(&entry.upgrade_manifest_digest),
                 json_escape(&entry.built_at),
                 state.as_str(),
                 relation.as_str(),
                 automatic(relation, valid, false),
+                if payload_verified {
+                    "verified"
+                } else {
+                    "recorded"
+                },
                 entry.sha.ends_with("-dirty"),
                 entry.qualified,
                 entry.integrated,
@@ -396,73 +588,40 @@ fn print_builds_json(entries: &[BuildEntry]) {
     println!("}}");
 }
 
-fn write_installed_receipt(
-    entry: &BuildEntry,
-    installed: &Path,
-    rollback_build_id: &str,
-    rollback_sha: &str,
-    mode: &str,
-) {
-    let text = format!(
-        "KUNGFU_ARTIFACT_SCHEMA='shifu.local-artifact/v1'\n\
-         KUNGFU_INSTALLED_SHA='{}'\n\
-         KUNGFU_INSTALLED_BRANCH='{}'\n\
-         KUNGFU_INSTALLED_REPO='{}'\n\
-         KUNGFU_INSTALLED_BUILD_ID='{}'\n\
-         KUNGFU_INSTALLED_WORKTREE='{}'\n\
-         KUNGFU_INSTALLED_ARTIFACT='{}'\n\
-         KUNGFU_INSTALLED_DIGEST='{}'\n\
-         KUNGFU_INSTALLED_MAINLINE_REF='{}'\n\
-         KUNGFU_INSTALLED_MAINLINE_SHA='{}'\n\
-         KUNGFU_INSTALLED_INTEGRATED='{}'\n\
-         KUNGFU_INSTALLED_QUALIFIED='{}'\n\
-         KUNGFU_INSTALLED_MODE='{}'\n\
-         KUNGFU_ROLLBACK_BUILD_ID='{}'\n\
-         KUNGFU_ROLLBACK_SHA='{}'\n",
-        entry.sha,
-        entry.branch.replace('\'', ""),
-        entry.repo.replace('\'', ""),
-        entry.name,
-        entry.worktree.replace('\'', ""),
-        installed.display(),
-        entry.digest,
-        entry.mainline_ref,
-        entry.mainline_sha,
-        entry.integrated,
-        entry.qualified,
-        mode,
-        rollback_build_id,
-        rollback_sha,
-    );
-    let path = installed_receipt_path();
-    let staged = path.with_extension("tmp");
-    if fs::write(&staged, text).is_ok() {
-        if let Err(error) = fs::rename(&staged, &path) {
-            let _ = fs::remove_file(&staged);
-            eprintln!(
-                "   {}",
-                style::yellow(&format!("could not write promotion receipt: {error}"))
-            );
-        }
-    }
-}
-
-pub fn run_builds(args: &[String]) -> ! {
+pub fn run_builds(root: Option<&Path>, args: &[String]) -> ! {
     let mut options = ListOptions::default();
     for arg in args {
         match arg.as_str() {
             "--verbose" => options.verbose = true,
             "--json" => options.json = true,
             "--no-truncate" => options.no_truncate = true,
-            _ => util::die("usage: shifu builds [--verbose] [--json] [--no-truncate]"),
+            "--verify-current" => options.verify_current = true,
+            _ => util::die(
+                "usage: shifu builds [--verbose] [--json] [--no-truncate] [--verify-current]",
+            ),
         }
     }
-    let entries = entries();
+    let entries = if options.verify_current {
+        let root =
+            root.unwrap_or_else(|| util::die("--verify-current requires a Kungfu source checkout"));
+        let expected_sha = git_head(root);
+        let entry = current_entry_at(root, &registry_dir(), &expected_sha)
+            .unwrap_or_else(|error| util::die(&error));
+        if !current_payload_valid(&entry) {
+            util::die(&format!(
+                "current registered build {} failed exact payload verification",
+                entry.name
+            ));
+        }
+        vec![entry]
+    } else {
+        entries()
+    };
     if entries.is_empty() {
         no_builds_hint();
     }
     if options.json {
-        print_builds_json(&entries);
+        print_builds_json(&entries, options.verify_current);
         std::process::exit(0);
     }
     let installed = installed_sha();
@@ -475,7 +634,12 @@ pub fn run_builds(args: &[String]) -> ! {
     );
     for (index, entry) in entries.iter().enumerate() {
         let relation = build_relation(entry, &installed, entries.len());
-        let state = state_for(relation, build_valid(entry), false);
+        let valid = if options.verify_current {
+            current_payload_valid(entry)
+        } else {
+            build_recorded_valid(entry)
+        };
+        let state = state_for(relation, valid, false);
         println!(
             "  {} {:10} {:9} {:34} {:10}",
             style::bold(&format!("[{index}]")),
@@ -524,6 +688,7 @@ pub fn run_promote(args: &[String]) -> ! {
     let mut check = false;
     let mut rollback = false;
     let mut preview = false;
+    let mut adopt_installed = false;
     let mut allow_nonlinear = false;
     let mut build_arg: Option<String> = None;
     let mut iter = args.iter();
@@ -534,6 +699,7 @@ pub fn run_promote(args: &[String]) -> ! {
             "--check" => check = true,
             "--rollback" => rollback = true,
             "--preview" => preview = true,
+            "--adopt-installed" => adopt_installed = true,
             "--allow-nonlinear" => allow_nonlinear = true,
             "--build" => match iter.next() {
                 Some(value) => build_arg = Some(value.clone()),
@@ -543,28 +709,57 @@ pub fn run_promote(args: &[String]) -> ! {
         }
     }
 
+    if adopt_installed
+        && (build_arg.is_none() || rollback || preview || allow_nonlinear || launch || force)
+    {
+        util::die(
+            "--adopt-installed requires --build <id>; --check is its only optional companion",
+        );
+    }
+    let mut promotion_lock = if check {
+        None
+    } else {
+        Some(
+            acquire_promotion_lock_at(&promotion_lock_path())
+                .unwrap_or_else(|error| util::die(&error)),
+        )
+    };
     let entries = entries();
+    resume_pending_transaction(&entries, check);
+    if rollback {
+        if build_arg.is_some() || allow_nonlinear || preview || force {
+            util::die(
+                "--rollback identifies the exact retained Product; do not combine it with \
+                 --build, --preview, --allow-nonlinear, or --force",
+            );
+        }
+        start_retained_rollback(check, launch);
+    }
     if entries.is_empty() {
         no_builds_hint();
     }
+    if adopt_installed {
+        let build_id = build_arg.as_deref().expect("validated build id");
+        let entry = entries
+            .iter()
+            .find(|candidate| candidate.name == build_id)
+            .unwrap_or_else(|| util::die("--adopt-installed build id is not registered"));
+        let result = adopt_installed_product(entry, !check).unwrap_or_else(|error| {
+            util::die(&format!("installed Product adoption failed: {error}"))
+        });
+        if let Some(lock) = promotion_lock.take() {
+            lock.release().unwrap_or_else(|error| util::die(&error));
+        }
+        println!("{result}");
+        std::process::exit(0);
+    }
     let installed = installed_sha();
     let previous_build_id = installed_value("KUNGFU_INSTALLED_BUILD_ID");
-    let rollback_build_id = installed_value("KUNGFU_ROLLBACK_BUILD_ID");
-    let rollback_sha = installed_value("KUNGFU_ROLLBACK_SHA");
-    if rollback && (build_arg.is_some() || allow_nonlinear || preview) {
-        util::die(
-            "--rollback identifies the exact retained Product; do not combine it with \
-             --build, --preview, or --allow-nonlinear",
-        );
+    let mut previous_release_cut_root = installed_value("KUNGFU_INSTALLED_RELEASE_CUT_ROOT");
+    if previous_release_cut_root.is_empty() {
+        previous_release_cut_root = native_update::LEGACY_BOOTSTRAP_ROOT.to_string();
     }
-    let entry = if rollback {
-        if !rollback_entry_valid(&registry_dir(), &rollback_build_id, &rollback_sha) {
-            util::die("installed Product has no verified rollback coordinate");
-        }
-        rollback_build(&entries, &rollback_build_id, &rollback_sha).unwrap_or_else(|| {
-            util::die("verified rollback Product is absent from the local registry")
-        })
-    } else if preview {
+    let entry = if preview {
         if !rollback_entry_valid(&registry_dir(), &previous_build_id, &installed) {
             util::die(
                 "installed Product has no verified rollback coordinate; refusing dogfood promotion",
@@ -579,20 +774,19 @@ pub fn run_promote(args: &[String]) -> ! {
         }
         select_product_build(&entries, &installed, build_arg.as_deref(), allow_nonlinear)
     };
-    let action = if rollback {
-        "rollback"
-    } else if preview {
-        "preview"
-    } else {
-        "promote"
-    };
+    let action = if preview { "preview" } else { "promote" };
+    let native_plan = run_native(entry, false, false)
+        .unwrap_or_else(|error| util::die(&format!("native updater preflight failed: {error}")));
     if check {
         println!(
             "{{\"schema\":\"shifu.local-promotion-plan/v1\",\"ok\":true,\
              \"action\":\"{}\",\
              \"artifactId\":\"{}\",\"sourceCommit\":\"{}\",\"mainlineRef\":\"{}\",\
              \"mainlineCommit\":\"{}\",\"qualified\":{},\"integrated\":{},\
-             \"currentCommit\":\"{}\",\"wouldWrite\":false}}",
+             \"currentCommit\":\"{}\",\"currentReleaseCutRoot\":\"{}\",\
+             \"targetReleaseCutRoot\":\"{}\",\"platformSliceRoot\":\"{}\",\
+             \"cutTransitionRoot\":\"{}\",\
+             \"wouldWrite\":false}}",
             action,
             json_escape(&entry.name),
             json_escape(&entry.sha),
@@ -601,6 +795,10 @@ pub fn run_promote(args: &[String]) -> ! {
             entry.qualified,
             entry.integrated,
             json_escape(&installed),
+            json_escape(&previous_release_cut_root),
+            json_escape(&entry.release_cut_root),
+            json_escape(&entry.platform_slice_root),
+            json_escape(&native_plan.transition_root),
         );
         std::process::exit(0);
     }
@@ -621,63 +819,28 @@ pub fn run_promote(args: &[String]) -> ! {
         ))
     );
 
-    let installed = match entry.kind.as_str() {
-        "app" => promote_app(entry, force),
-        "installer" => promote_installer(entry),
-        "appimage" => promote_appimage(entry),
-        other => util::die(&format!("unknown artifact kind in stash: {other}")),
-    };
-
-    eprintln!(
-        "\u{2705} {} {}",
-        style::green(if rollback {
-            "rolled back"
-        } else if preview {
-            "previewed"
-        } else {
-            "promoted"
-        }),
-        style::bold(&installed.display().to_string())
-    );
-    let previous_sha = installed_sha();
-    let relation = build_relation(entry, &previous_sha, entries.len());
-    let installed_mode = if build_valid(entry) {
-        "qualified"
-    } else {
-        "preview"
-    };
-    write_installed_receipt(
-        entry,
-        &installed,
-        &previous_build_id,
-        &previous_sha,
-        installed_mode,
-    );
-    if let Err(error) = write_promotion_receipt(
-        &registry_dir(),
-        "kungfu",
-        action,
-        &entry.name,
-        &previous_sha,
-        &entry.sha,
-        relation,
-    ) {
-        eprintln!(
-            "   {}",
-            style::yellow(&format!("could not write promotion receipt: {error}"))
-        );
-    }
-    // Retain every prior slot: the installed receipt names the exact rollback
-    // coordinate, and a safe dogfood promotion must not erase it as a side
-    // effect of advancing.
-    if launch {
-        launch_product(&installed);
-    }
-    std::process::exit(0)
+    // Persist every phase; keep the desktop backup until both receipts commit.
+    write_pending_transaction(&PendingTransaction {
+        state: "desktop-commit-pending".to_string(),
+        action: action.to_string(),
+        artifact_id: entry.name.clone(),
+        target_release_cut_root: entry.release_cut_root.clone(),
+        cut_transition_root: native_plan.transition_root,
+        native_receipt_root: String::new(),
+        previous_build_id,
+        previous_sha: installed,
+        previous_release_cut_root,
+        installed_path: String::new(),
+        desktop_backup_path: String::new(),
+        force,
+        launch,
+    });
+    resume_pending_transaction(&entries, false);
+    unreachable!()
 }
 
 const PROMOTE_USAGE: &str =
-    "usage: shifu promote [--build <id> [--preview] [--allow-nonlinear] | --rollback] [--check] [--launch] [--force]";
+    "usage: shifu promote [--build <id> [--preview] [--allow-nonlinear] | --rollback | --adopt-installed --build <id>] [--check] [--launch] [--force]";
 
 /// Install target: KUNGFU_PRODUCT_INSTALL_DIR > platform default (falling
 /// back to a per-user location when the default is not writable).
@@ -692,6 +855,24 @@ fn install_dir(default: PathBuf, user_fallback: PathBuf) -> PathBuf {
         return default;
     }
     user_fallback
+}
+
+fn commit_desktop(entry: &BuildEntry, force: bool) -> Result<DesktopCommit, String> {
+    match entry.kind.as_str() {
+        "app" => promote_app(entry, force),
+        "installer" => promote_installer(entry),
+        "appimage" => promote_appimage(entry),
+        other => Err(format!("unknown artifact kind in stash: {other}")),
+    }
+}
+
+fn retained_backup_path(directory: &Path, name: &str) -> PathBuf {
+    let current = installed_value("KUNGFU_INSTALLED_RELEASE_CUT_ROOT");
+    let identity = current
+        .strip_prefix("sha256:")
+        .and_then(|value| value.get(..12))
+        .unwrap_or("legacy");
+    directory.join(format!(".{name}.shifu-previous-{identity}"))
 }
 
 fn dir_writable(dir: &Path) -> bool {
@@ -710,14 +891,13 @@ fn dir_writable(dir: &Path) -> bool {
 
 /// macOS: copy the stashed .app over the installed one (rename dance — the
 /// old app is only removed after the new copy fully landed next to it).
-fn promote_app(entry: &BuildEntry, force: bool) -> PathBuf {
+fn promote_app(entry: &BuildEntry, force: bool) -> Result<DesktopCommit, String> {
     let target_dir = install_dir(
         PathBuf::from("/Applications"),
         host::home_dir().join("Applications"),
     );
-    if let Err(e) = fs::create_dir_all(&target_dir) {
-        util::die(&format!("cannot create {}: {e}", target_dir.display()));
-    }
+    fs::create_dir_all(&target_dir)
+        .map_err(|error| format!("cannot create {}: {error}", target_dir.display()))?;
     let target = target_dir.join(&entry.artifact);
 
     if product_running(&entry.artifact) {
@@ -727,54 +907,36 @@ fn promote_app(entry: &BuildEntry, force: bool) -> PathBuf {
                 style::yellow("app is running; replacing anyway (--force)")
             );
         } else {
-            util::die(&format!(
+            return Err(format!(
                 "{} is running — quit it first, or pass --force to replace it anyway",
                 entry.artifact
             ));
         }
     }
 
-    let staged = target_dir.join(format!(".{}.new-{}", entry.artifact, std::process::id()));
-    let _ = fs::remove_dir_all(&staged);
-    let status = Command::new("ditto")
-        .arg(entry.slot.join(&entry.artifact))
-        .arg(&staged)
-        .status();
-    match status {
-        Ok(s) if s.success() => {}
-        Ok(s) => util::die(&format!("ditto failed (exit {:?})", s.code())),
-        Err(e) => util::die(&format!("failed to run ditto: {e}")),
-    }
-    let backup = target_dir.join(format!(
-        ".{}.previous-{}",
-        entry.artifact,
-        std::process::id()
-    ));
-    let _ = fs::remove_dir_all(&backup);
-    if target.exists() {
-        if let Err(e) = fs::rename(&target, &backup) {
-            let _ = fs::remove_dir_all(&staged);
-            util::die(&format!("cannot stage previous {}: {e}", target.display()));
-        }
-    }
-    if let Err(e) = fs::rename(&staged, &target) {
-        if backup.exists() {
-            let _ = fs::rename(&backup, &target);
-        }
-        util::die(&format!("cannot place {}: {e}", target.display()));
-    }
-    if backup.exists() {
-        if let Err(e) = fs::remove_dir_all(&backup) {
-            eprintln!(
-                "   {}",
-                style::yellow(&format!(
-                    "promoted, but could not remove staged previous app {}: {e}",
-                    backup.display()
-                ))
-            );
-        }
-    }
-    target
+    let source = entry.slot.join(&entry.artifact);
+    let staged = target_dir.join(format!(".{}.shifu-next", entry.artifact));
+    let backup = retained_backup_path(&target_dir, &entry.artifact);
+    complete_atomic_target(
+        &source,
+        &target,
+        &backup,
+        &staged,
+        |from, to| {
+            let status = Command::new("ditto").arg(from).arg(to).status();
+            match status {
+                Ok(result) if result.success() => Ok(()),
+                Ok(result) => Err(format!("ditto failed (exit {:?})", result.code())),
+                Err(error) => Err(format!("failed to run ditto: {error}")),
+            }
+        },
+        |path| {
+            if !product_app_manifests_valid(path, &entry.sha)? {
+                return Ok(false);
+            }
+            tree_exact(&source, path)
+        },
+    )
 }
 
 /// Is the product app currently running? (macOS: match the executable path
@@ -790,39 +952,84 @@ fn product_running(app_name: &str) -> bool {
 
 /// Windows: the stashed artifact is the self-contained nsis installer; run it
 /// silently.
-fn promote_installer(entry: &BuildEntry) -> PathBuf {
-    let installer = entry.slot.join(&entry.artifact);
+fn promote_installer(entry: &BuildEntry) -> Result<DesktopCommit, String> {
+    let source = entry.slot.join(&entry.artifact);
+    let retained = registry_dir().join("installed-desktop");
+    fs::create_dir_all(&retained)
+        .map_err(|error| format!("cannot create {}: {error}", retained.display()))?;
+    let installer = retained.join("kungfu-current-installer.exe");
+    let backup = retained_backup_path(&retained, "kungfu-current-installer.exe");
+    let staged = retained.join(format!(".kungfu-installer-next-{}", std::process::id()));
+    let digest = entry.digest.clone();
+    let desktop = complete_atomic_target(
+        &source,
+        &installer,
+        &backup,
+        &staged,
+        |from, to| {
+            fs::copy(from, to)
+                .map(|_| ())
+                .map_err(|error| format!("cannot retain Windows installer: {error}"))
+        },
+        |candidate| {
+            if !regular_file(candidate)? {
+                return Ok(false);
+            }
+            artifact_sha256(candidate).map(|value| value == digest)
+        },
+    )?;
     eprintln!(
         "   {}",
         style::dim("running the nsis installer silently (/S)")
     );
     let status = Command::new(&installer).arg("/S").status();
     match status {
-        Ok(s) if s.success() => installer,
-        Ok(s) => util::die(&format!("installer failed (exit {:?})", s.code())),
-        Err(e) => util::die(&format!("failed to run the installer: {e}")),
+        Ok(result) if result.success() => Ok(desktop),
+        Ok(result) => Err(format!("installer failed (exit {:?})", result.code())),
+        Err(error) => Err(format!("failed to run the installer: {error}")),
     }
 }
 
 /// Linux: place the AppImage on the user's PATH under a stable name.
-fn promote_appimage(entry: &BuildEntry) -> PathBuf {
+fn promote_appimage(entry: &BuildEntry) -> Result<DesktopCommit, String> {
     let target_dir = install_dir(
         host::home_dir().join(".local").join("bin"),
         host::home_dir().join(".local").join("bin"),
     );
-    if let Err(e) = fs::create_dir_all(&target_dir) {
-        util::die(&format!("cannot create {}: {e}", target_dir.display()));
-    }
+    fs::create_dir_all(&target_dir)
+        .map_err(|error| format!("cannot create {}: {error}", target_dir.display()))?;
     let target = target_dir.join("kungfu-dev.AppImage");
-    if let Err(e) = fs::copy(entry.slot.join(&entry.artifact), &target) {
-        util::die(&format!("cannot place {}: {e}", target.display()));
-    }
-    #[cfg(unix)]
-    {
-        use std::os::unix::fs::PermissionsExt;
-        let _ = fs::set_permissions(&target, fs::Permissions::from_mode(0o755));
-    }
-    target
+    let source = entry.slot.join(&entry.artifact);
+    let staged = target_dir.join(".kungfu-dev.AppImage.shifu-next");
+    let backup = retained_backup_path(&target_dir, "kungfu-dev.AppImage");
+    let source_digest = bootstrap::sha256_file(&source)
+        .map_err(|error| format!("cannot hash {}: {error}", source.display()))?;
+    complete_atomic_target(
+        &source,
+        &target,
+        &backup,
+        &staged,
+        |from, to| {
+            fs::copy(from, to)
+                .map(|_| ())
+                .map_err(|error| format!("cannot stage {}: {error}", to.display()))?;
+            #[cfg(unix)]
+            {
+                use std::os::unix::fs::PermissionsExt;
+                fs::set_permissions(to, fs::Permissions::from_mode(0o755))
+                    .map_err(|error| format!("cannot make staged AppImage executable: {error}"))?;
+            }
+            Ok(())
+        },
+        |path| {
+            if !regular_file(path)? {
+                return Ok(false);
+            }
+            bootstrap::sha256_file(path)
+                .map(|digest| digest == source_digest)
+                .map_err(|error| format!("cannot verify {}: {error}", path.display()))
+        },
+    )
 }
 
 #[cfg(windows)]
@@ -852,132 +1059,178 @@ fn launch_product(installed: &Path) {
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    fn qualified_app(slot: &Path) -> BuildEntry {
-        BuildEntry {
-            slot: slot.to_path_buf(),
-            name: "qualified-build".into(),
-            sha: "1111111111111111111111111111111111111111".into(),
-            branch: "detached".into(),
-            repo: String::new(),
-            worktree: String::new(),
-            built_at: "2026-07-24T00:00:00Z".into(),
-            kind: "app".into(),
-            artifact: "Kungfu Episodes.app".into(),
-            digest: "digest".into(),
-            mainline_ref: "origin/HEAD".into(),
-            mainline_sha: "1111111111111111111111111111111111111111".into(),
-            integrated: true,
-            qualified: true,
-        }
+fn inspect_installed_adoption_at(
+    entry: &BuildEntry,
+    registry: &Path,
+    target_dir: &Path,
+) -> Result<InstalledAdoption, String> {
+    if entry.kind != "app" {
+        return Err("installed adoption currently requires a macOS app candidate".to_string());
     }
-
-    fn write_app_manifests(entry: &BuildEntry) {
-        let resources = entry.slot.join(&entry.artifact).join("Contents/Resources");
-        fs::create_dir_all(resources.join("kungfu")).unwrap();
-        fs::create_dir_all(resources.join("upgrade")).unwrap();
-        fs::write(
-            resources.join("kungfu/kungfubuildinfo.json"),
-            format!(r#"{{"git":{{"revision":"{}"}}}}"#, entry.sha),
-        )
-        .unwrap();
-        fs::write(
-            resources.join("upgrade/kungfu-release-manifest.json"),
-            format!(r#"{{"sourceCommit":"{}"}}"#, entry.sha),
-        )
-        .unwrap();
-        fs::write(
-            resources.join("kungfu/profile-kfd3.json"),
-            r#"{"schema":"kungfu.system-profile-kfd3-manifest/v1","entries":[{"id":"work-control"}]}"#,
-        )
-        .unwrap();
+    if registry.join("installed.meta.env").exists() {
+        return Err("installed Product already has a Shifu receipt".to_string());
     }
-
-    #[test]
-    fn qualified_app_requires_exact_product_manifests() {
-        let root = shifu_core::host::unique_temp_dir("promote-manifests").unwrap();
-        let entry = qualified_app(&root);
-        fs::create_dir_all(entry.slot.join(&entry.artifact)).unwrap();
-        assert!(!build_valid(&entry));
-
-        write_app_manifests(&entry);
-        assert!(build_valid(&entry));
-
-        fs::write(
-            entry
-                .slot
-                .join(&entry.artifact)
-                .join("Contents/Resources/upgrade/kungfu-release-manifest.json"),
-            r#"{"sourceCommit":"2222222222222222222222222222222222222222"}"#,
-        )
-        .unwrap();
-        assert!(!build_valid(&entry));
-        let _ = fs::remove_dir_all(root);
+    let app = target_dir.join(&entry.artifact);
+    let resources = app.join("Contents/Resources");
+    let build = read_document(&resources.join("kungfu/kungfubuildinfo.json"))?
+        .ok_or_else(|| "installed Product has no build identity".to_string())?;
+    let release = read_document(&resources.join("upgrade/kungfu-release-manifest.json"))?
+        .ok_or_else(|| "installed Product has no release manifest".to_string())?;
+    let source_commit = build
+        .get("git")
+        .map(|git| git.str_of("revision").to_string())
+        .unwrap_or_default();
+    if source_commit.len() != 40
+        || !source_commit.bytes().all(|byte| byte.is_ascii_hexdigit())
+        || release.str_of("sourceCommit") != source_commit
+        || !product_app_manifests_valid(&app, &source_commit)?
+    {
+        return Err("installed Product manifests do not bind one exact source commit".to_string());
     }
-
-    #[test]
-    fn preview_keeps_mainline_qualification_separate_from_exact_product_provenance() {
-        let root = shifu_core::host::unique_temp_dir("promote-preview").unwrap();
-        let mut entry = qualified_app(&root);
-        entry.branch = "feature/local-review".into();
-        entry.integrated = false;
-        entry.qualified = false;
-        entry.mainline_sha = "2222222222222222222222222222222222222222".into();
-        fs::create_dir_all(entry.slot.join(&entry.artifact)).unwrap();
-        write_app_manifests(&entry);
-
-        assert!(build_previewable(&entry));
-        assert!(!build_valid(&entry));
-        let _ = fs::remove_dir_all(root);
+    let product_version = release.str_of("productVersion").to_string();
+    let desktop_release_cut_root = release.str_of("releaseCutRoot").to_string();
+    let desktop_platform_slice_root = release.str_of("platformSliceRoot").to_string();
+    if product_version.is_empty()
+        || !valid_root(&desktop_release_cut_root)
+        || !valid_root(&desktop_platform_slice_root)
+        || release
+            .get("releaseCut")
+            .and_then(|cut| cut.get("publicationPolicy"))
+            .map(|policy| policy.str_of("trustDomain"))
+            != Some("shifu-local")
+    {
+        return Err("installed Product release manifest has no exact local Cut".to_string());
     }
-
-    #[test]
-    fn rollback_coordinate_requires_exact_retained_artifact() {
-        let root = shifu_core::host::unique_temp_dir("promote-rollback").unwrap();
-        let slot = root.join("prior-build");
-        fs::create_dir_all(&slot).unwrap();
-        fs::write(
-            slot.join("meta.env"),
-            "KUNGFU_BUILD_SHA='aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'\n\
-             KUNGFU_BUILD_ARTIFACT='Kungfu Episodes.app'\n",
-        )
-        .unwrap();
-        assert!(!rollback_entry_valid(
-            &root,
-            "prior-build",
-            "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
-        ));
-
-        fs::create_dir_all(slot.join("Kungfu Episodes.app")).unwrap();
-        assert!(rollback_entry_valid(
-            &root,
-            "prior-build",
-            "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
-        ));
-        assert!(!rollback_entry_valid(
-            &root,
-            "prior-build",
-            "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
-        ));
-        let mut entry = qualified_app(&slot);
-        entry.name = "prior-build".into();
-        entry.sha = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa".into();
-        let entries = vec![entry];
-        assert!(rollback_build(
-            &entries,
-            "prior-build",
-            "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
-        )
-        .is_some());
-        assert!(rollback_build(
-            &entries,
-            "prior",
-            "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
-        )
-        .is_none());
-        let _ = fs::remove_dir_all(root);
+    let native_updater = resources.join("kungfu/kungfu");
+    if !native_updater.is_file() {
+        return Err("installed Product has no native updater".to_string());
     }
+    let output = Command::new(&native_updater)
+        .args(["update", "status", "--json"])
+        .output()
+        .map_err(|error| format!("cannot inspect installed native inventory: {error}"))?;
+    if !output.status.success() {
+        return Err("installed native inventory status failed".to_string());
+    }
+    let status = json::parse(&String::from_utf8_lossy(&output.stdout))
+        .map_err(|error| format!("installed native inventory returned invalid JSON: {error}"))?;
+    let selected = status
+        .get("frontendInventory")
+        .and_then(|inventory| inventory.get("selected"))
+        .ok_or_else(|| "installed native inventory has no selected image".to_string())?;
+    let release_cut_root = selected.str_of("releaseCutRoot").to_string();
+    let platform_slice_root = selected.str_of("platformSliceRoot").to_string();
+    let native_receipt_root = status.str_of("nativeReceiptRoot").to_string();
+    let native_manifest_path =
+        PathBuf::from(selected.str_of("productRoot")).join("upgrade/kungfu-release-manifest.json");
+    let native_manifest = read_document(&native_manifest_path)?
+        .ok_or_else(|| "selected native image has no release manifest".to_string())?;
+    if !valid_root(&release_cut_root)
+        || !valid_root(&platform_slice_root)
+        || !valid_root(&native_receipt_root)
+        || native_manifest.str_of("sourceCommit") != source_commit
+        || native_manifest.str_of("productVersion") != product_version
+        || native_manifest.str_of("releaseCutRoot") != release_cut_root
+        || native_manifest.str_of("platformSliceRoot") != platform_slice_root
+        || native_manifest
+            .get("releaseCut")
+            .and_then(|cut| cut.get("publicationPolicy"))
+            .map(|policy| policy.str_of("trustDomain"))
+            != Some("shifu-local")
+    {
+        return Err(
+            "installed desktop and native inventory do not share one exact source identity"
+                .to_string(),
+        );
+    }
+    let artifact_digest = artifact_sha256(&app)?;
+    let build_id = format!(
+        "adopted-{}-{}",
+        &source_commit[..12],
+        &artifact_digest[..12]
+    );
+    Ok(InstalledAdoption {
+        app,
+        artifact: entry.artifact.clone(),
+        build_id,
+        source_commit,
+        artifact_digest,
+        product_version,
+        release_cut_root,
+        platform_slice_root,
+        native_receipt_root,
+        native_updater_digest: artifact_sha256(&native_updater)?,
+        native_updater,
+    })
 }
+
+fn adopt_installed_product_at(
+    entry: &BuildEntry,
+    execute: bool,
+    registry: &Path,
+    target_dir: &Path,
+) -> Result<String, String> {
+    let adoption = inspect_installed_adoption_at(entry, registry, target_dir)?;
+    if execute {
+        fs::create_dir_all(registry)
+            .map_err(|error| format!("cannot create Product registry: {error}"))?;
+        let slot = registry.join(&adoption.build_id);
+        if slot.exists() {
+            let snapshot = slot.join(&adoption.artifact);
+            let expected_meta = adopted_build_meta(&adoption);
+            if fs::read_to_string(slot.join("meta.env")).ok().as_deref()
+                != Some(expected_meta.as_str())
+                || !tree_exact(&adoption.app, &snapshot)?
+                || artifact_sha256(&snapshot)? != adoption.artifact_digest
+            {
+                return Err("installed adoption coordinate exists with different bytes".to_string());
+            }
+        } else {
+            let staged = registry.join(format!(
+                ".{}.tmp-{}-{}",
+                adoption.build_id,
+                std::process::id(),
+                SystemTime::now()
+                    .duration_since(UNIX_EPOCH)
+                    .unwrap_or_default()
+                    .as_nanos()
+            ));
+            fs::create_dir_all(&staged)
+                .map_err(|error| format!("cannot stage installed adoption: {error}"))?;
+            let staged_app = staged.join(&adoption.artifact);
+            let copy = Command::new("ditto")
+                .arg(&adoption.app)
+                .arg(&staged_app)
+                .status()
+                .map_err(|error| format!("cannot snapshot installed Product: {error}"))?;
+            if !copy.success()
+                || !tree_exact(&adoption.app, &staged_app)?
+                || artifact_sha256(&staged_app)? != adoption.artifact_digest
+            {
+                let _ = fs::remove_dir_all(&staged);
+                return Err("installed Product snapshot failed exact verification".to_string());
+            }
+            fs::write(staged.join("meta.env"), adopted_build_meta(&adoption))
+                .map_err(|error| format!("cannot stage installed adoption metadata: {error}"))?;
+            fs::rename(&staged, &slot)
+                .map_err(|error| format!("cannot publish installed adoption slot: {error}"))?;
+        }
+        write_installed_receipt_at(
+            &registry.join("installed.meta.env"),
+            &adopted_installed_receipt(&adoption),
+        )?;
+    }
+    Ok(adopted_result(&adoption, execute))
+}
+
+fn adopt_installed_product(entry: &BuildEntry, execute: bool) -> Result<String, String> {
+    let target_dir = install_dir(
+        PathBuf::from("/Applications"),
+        host::home_dir().join("Applications"),
+    );
+    adopt_installed_product_at(entry, execute, &registry_dir(), &target_dir)
+}
+
+#[cfg(test)]
+#[path = "promote_tests.rs"]
+mod tests;
