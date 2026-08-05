@@ -22,8 +22,8 @@
     "runtimes": {
       "alpha": {
         "ref": "v3-alpha",
-        "runtimeSha": "d7f5e5fc7a182577455f898ddbeb0fc3a3c59059",
-        "contractDigest": "sha256:dc4197dd2495ff4a6114525879cdb19549a47c96a8c45e047b8a5b9c29c44e62",
+        "runtimeSha": "bcfb5b1063a455b653682eb1675c4c74b4eee4ca",
+        "contractDigest": "sha256:9d2a5305c0a52397bb2fe0f2daf4eead5a3f34d1de7ed756ebf579da98b07ea5",
         "contractLock": ".buildchain/alpha-contract-lock.json"
       },
       "release": {
@@ -39,7 +39,7 @@
     "publisherWorkflowPath": ".github/workflows/release-new-version.yml",
     "environment": "none",
     "product": "Kungfu Episodes",
-    "target": "kungfu-product",
+    "target": "github-release:kungfu-systems/kungfu",
     "channels": ["alpha", "release"]
   },
   "freshness": {

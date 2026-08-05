@@ -256,6 +256,30 @@ export function validateWorkflowSources(root, contract, overrides = {}) {
   );
   requirePattern(
     promote,
+    /release-candidate-wait-seconds: 10800/,
+    findings,
+    'promotion must wait for the complete long-running release-candidate workflow',
+  );
+  requirePattern(
+    promote,
+    /publication-gate-command: node scripts\/assemble-kungfu-publication-gate\.mjs/,
+    findings,
+    'publication authority must assemble the consumer Gate from exact candidate evidence',
+  );
+  requirePattern(
+    promote,
+    /publication-publisher-workflow-path: \.github\/workflows\/release-new-version\.yml/,
+    findings,
+    'publication authority must bind the repository-local publisher workflow',
+  );
+  requirePattern(
+    promote,
+    /publication-target: github-release:kungfu-systems\/kungfu/,
+    findings,
+    'publication authority must bind the exact Kungfu GitHub Release target',
+  );
+  requirePattern(
+    promote,
     /publish-dist-tag: \$\{\{ startsWith\(inputs\.target-ref \|\| github\.event\.pull_request\.base\.ref, 'alpha\/'\) && 'alpha' \|\| 'latest' \}\}/,
     findings,
     'alpha/stable distribution-tag routing drifted',

@@ -79,9 +79,9 @@ jobs:
       pull-requests: write
     # The reusable workflow and its runtime are pinned to the same merged,
     # immutable Buildchain source.
-    uses: kungfu-systems/buildchain/.github/workflows/dev-alpha-candidate-patrol.yml@d7f5e5fc7a182577455f898ddbeb0fc3a3c59059
+    uses: kungfu-systems/buildchain/.github/workflows/dev-alpha-candidate-patrol.yml@bcfb5b1063a455b653682eb1675c4c74b4eee4ca
     with:
-      buildchain-ref: ${{ inputs.buildchain-ref || 'd7f5e5fc7a182577455f898ddbeb0fc3a3c59059' }}
+      buildchain-ref: ${{ inputs.buildchain-ref || 'bcfb5b1063a455b653682eb1675c4c74b4eee4ca' }}
       source-branch: ${{ needs.resolve-channels.outputs.source-branch }}
       target-branch: ${{ needs.resolve-channels.outputs.target-branch }}
       dev-workflow-path: .github/workflows/dev-verify-patrol.yml

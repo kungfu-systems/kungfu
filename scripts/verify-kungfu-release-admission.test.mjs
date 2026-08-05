@@ -38,11 +38,11 @@ import {
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const SOURCE_SHA = '1'.repeat(40);
-const RUNTIME_SHA = 'd7f5e5fc7a182577455f898ddbeb0fc3a3c59059';
+const RUNTIME_SHA = 'bcfb5b1063a455b653682eb1675c4c74b4eee4ca';
 const STABLE_RUNTIME_SHA = '9e904de2c85dbea7c799780ee166510b3336d812';
 const SOURCE_TREE_SHA = 'a'.repeat(40);
 const CONTRACT_DIGEST =
-  'dc4197dd2495ff4a6114525879cdb19549a47c96a8c45e047b8a5b9c29c44e62';
+  '9d2a5305c0a52397bb2fe0f2daf4eead5a3f34d1de7ed756ebf579da98b07ea5';
 const STABLE_CONTRACT_DIGEST =
   '914720131f07664cd187a1033f357c4952ef1008f5553cb6b285a75f786a7fbc';
 const PREDICATE_COMMAND = 'node scripts/kungfu-release-qualification.mjs';
@@ -330,7 +330,7 @@ function fixture({
     gateAggregateDigest: gateAggregate.digest,
     environment: 'none',
     product: 'Kungfu Episodes',
-    target: 'kungfu-product',
+    target: 'github-release:kungfu-systems/kungfu',
     version: channel === 'alpha' ? '4.0.0-alpha.1' : '4.0.0',
     channel,
     artifactDigest: manifestSet.manifestSetDigest,

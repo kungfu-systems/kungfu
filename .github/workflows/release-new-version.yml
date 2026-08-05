@@ -131,18 +131,24 @@ jobs:
       issues: write
       id-token: write
       pull-requests: write
-    uses: kungfu-systems/buildchain/.github/workflows/release-candidate-promote.yml@d7f5e5fc7a182577455f898ddbeb0fc3a3c59059 # signing workflow path readback authority
+    uses: kungfu-systems/buildchain/.github/workflows/release-candidate-promote.yml@bcfb5b1063a455b653682eb1675c4c74b4eee4ca # signing workflow path readback authority
     with:
       channel: ${{ startsWith(inputs.target-ref || github.event.pull_request.base.ref, 'alpha/') && 'alpha' || 'release' }}
-      buildchain-ref: d7f5e5fc7a182577455f898ddbeb0fc3a3c59059
+      buildchain-ref: bcfb5b1063a455b653682eb1675c4c74b4eee4ca
       target-ref: ${{ inputs.target-ref || github.event.pull_request.base.ref }}
       target-sha: ${{ inputs.target-sha || github.event.pull_request.merge_commit_sha || github.sha }}
       buildchain-contract-lock-path: ${{ startsWith(inputs.target-ref || github.event.pull_request.base.ref, 'alpha/') && '.buildchain/alpha-contract-lock.json' || '.buildchain/contract-lock.json' }}
       buildchain-contract-compatibility-policy: major-compatible
       buildchain-contract-drift-issue-mode: compatible-and-breaking
+      release-candidate-wait-seconds: 10800
       publication-auto-admission: true
+      publication-gate-command: node scripts/assemble-kungfu-publication-gate.mjs
       publication-consumer-qualification-command: node scripts/kungfu-release-qualification.mjs
       publication-consumer-predicate-id: kungfu.release-admission/v1
+      publication-publisher-workflow-path: .github/workflows/release-new-version.yml
+      publication-product: Kungfu Episodes
+      publication-target: github-release:kungfu-systems/kungfu
+      publication-package-name: ""
       package-manager: custom
       artifact-name: kungfu
       release-candidate-workflow-file: build.yml
