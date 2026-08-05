@@ -8,7 +8,7 @@ inputs:
     description: Exact source commit admitted by the promotion workflow.
     required: true
   receipt-run-id:
-    description: Optional exact preflight workflow run for a diagnostic replay.
+    description: Optional exact preflight workflow run for a trusted diagnostic replay; successful exact-source dispatches are also discoverable for recovery.
     required: false
     default: ""
   controller-request-json:
@@ -58,7 +58,7 @@ runs:
           run_id="$(
             gh api \
               "repos/${GITHUB_REPOSITORY}/actions/workflows/alpha-promotion-preflight.yml/runs?head_sha=${SOURCE_SHA}&status=success&per_page=100" \
-              --jq '.workflow_runs | map(select(.event == "push" and (.head_branch | startswith("dev/")))) | sort_by(.run_number) | last | .id // empty'
+              --jq '.workflow_runs | map(select((.event == "push" and (.head_branch | startswith("dev/"))) or .event == "workflow_dispatch")) | sort_by(.run_number) | last | .id // empty'
           )"
         fi
         test -n "$run_id"
