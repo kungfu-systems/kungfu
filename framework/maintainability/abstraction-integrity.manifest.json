@@ -286,6 +286,12 @@
         "framework/tui/src/runtime-surface.ts",
         "scripts/qualify-runtime-surface.mjs"
       ]
+    },
+    {
+      "owner": "release/publication-authority-consumer",
+      "paths": [
+        "scripts/assemble-kungfu-publication-gate.mjs"
+      ]
     }
   ],
   "exceptions": []

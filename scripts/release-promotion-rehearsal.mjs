@@ -77,7 +77,6 @@ export function validateWorkflowSources(root, contract, overrides = {}) {
   const validation =
     overrides.validation || readText(root, contract.workflows.validation);
   const preflight = extractWorkflowJob(promotion, 'promotion-contract');
-  const publicationGates = extractWorkflowJob(promotion, 'publication-gates');
   const promote = extractWorkflowJob(promotion, 'promote');
   const rehearsal = extractWorkflowJob(validation, 'promotion-rehearsal');
   const attestation = contract.buildchain.artifact_attestation;
@@ -185,35 +184,9 @@ export function validateWorkflowSources(root, contract, overrides = {}) {
   );
   requirePattern(
     promote,
-    /needs: (?:promotion-contract|\[[^\]\n]*\bpromotion-contract\b[^\]\n]*\])/,
+    /needs: promotion-contract/,
     findings,
     'Buildchain promotion must depend on the Kungfu promotion contract preflight',
-  );
-  requirePattern(
-    promote,
-    /needs: \[[^\]\n]*\bpublication-gates\b[^\]\n]*\]/,
-    findings,
-    'Buildchain promotion must depend on the qualifying publication Gate aggregate',
-  );
-  requirePattern(
-    publicationGates,
-    new RegExp(
-      `uses: kungfu-systems/buildchain/\\.github/workflows/\\.gate-profile\\.yml@${contract.buildchain.workflow_shell_sha}`,
-    ),
-    findings,
-    'publication Gate aggregation must consume the reviewed Buildchain workflow shell',
-  );
-  requirePattern(
-    publicationGates,
-    /source-ref: \$\{\{ needs\.promotion-contract\.outputs\.promotion-sha \}\}/,
-    findings,
-    'publication Gate aggregation must bind the immutable promotion result',
-  );
-  requirePattern(
-    publicationGates,
-    /gate-profile: release-promotion/,
-    findings,
-    'publication authority must consume the release-promotion Gate profile',
   );
   requirePattern(
     promote,
@@ -239,30 +212,6 @@ export function validateWorkflowSources(root, contract, overrides = {}) {
     findings,
     'promotion artifact count drifted from the rehearsal contract',
   );
-  for (const [pattern, message] of [
-    [
-      /publication-gate-aggregate-json: \$\{\{ needs\.publication-gates\.outputs\.gate-aggregate-json \}\}/,
-      'promotion must transport the complete qualifying Gate aggregate',
-    ],
-    [
-      /publication-publisher-workflow-path: \.github\/workflows\/release-new-version\.yml/,
-      'promotion must bind the repository-local publisher workflow',
-    ],
-    [
-      /publication-product: Kungfu Episodes/,
-      'promotion must bind the Kungfu Episodes product identity',
-    ],
-    [
-      /publication-target: github-release:kungfu-systems\/kungfu/,
-      'promotion must bind the exact Kungfu GitHub Release target',
-    ],
-    [
-      /publication-package-name: ""/,
-      'GitHub Release publication must retain an empty npm package identity',
-    ],
-  ]) {
-    requirePattern(promote, pattern, findings, message);
-  }
   const buildchainRefLines = promote.match(/^\s+buildchain-ref:\s*.+$/gm) || [];
   const expectedBuildchainRef = `buildchain-ref: ${contract.buildchain.workflow_shell_sha}`;
   if (
@@ -304,6 +253,42 @@ export function validateWorkflowSources(root, contract, overrides = {}) {
     /buildchain-contract-lock-path: \$\{\{ startsWith\(inputs\.target-ref \|\| github\.event\.pull_request\.base\.ref, 'alpha\/'\) && '\.buildchain\/alpha-contract-lock\.json' \|\| '\.buildchain\/contract-lock\.json' \}\}/,
     findings,
     'alpha/stable Buildchain contract-lock routing drifted',
+  );
+  requirePattern(
+    promote,
+    /release-candidate-wait-seconds: 10800/,
+    findings,
+    'promotion must wait for the complete long-running release-candidate workflow',
+  );
+  requirePattern(
+    promote,
+    /publication-gate-command: node scripts\/assemble-kungfu-publication-gate\.mjs/,
+    findings,
+    'publication authority must assemble the consumer Gate from exact candidate evidence',
+  );
+  requirePattern(
+    promote,
+    /publication-publisher-workflow-path: \.github\/workflows\/release-new-version\.yml/,
+    findings,
+    'publication authority must bind the repository-local publisher workflow',
+  );
+  requirePattern(
+    promote,
+    /publication-product: Kungfu Episodes/,
+    findings,
+    'publication authority must bind the Kungfu Episodes product identity',
+  );
+  requirePattern(
+    promote,
+    /publication-target: github-release:kungfu-systems\/kungfu/,
+    findings,
+    'publication authority must bind the exact Kungfu GitHub Release target',
+  );
+  requirePattern(
+    promote,
+    /publication-package-name: ""/,
+    findings,
+    'GitHub Release publication must retain an empty npm package identity',
   );
   requirePattern(
     promote,

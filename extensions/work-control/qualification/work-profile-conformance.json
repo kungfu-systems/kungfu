@@ -200,7 +200,7 @@
     "evidencePath": "framework/work-profile-conformance/qualification/kfd-7-product-gate.json",
     "evidencePointer": null,
     "authorityPath": ".buildchain/alpha-contract-lock.json",
-    "authorityRoot": "sha256:c49d946ed21cb6b0608f88f190967b79380364e5a721ac8c60d2161f7ee03550"
+    "authorityRoot": "sha256:5f40c998d1c5dfa76120f063972fcc26d4cf65b966fd72068281fd1e65a7fd60"
   },
   "workOperationModel": {
     "authority": "existing-work-api",

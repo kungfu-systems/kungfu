@@ -2051,8 +2051,8 @@
           "reason": "Not selected by the current release-promotion workflow policy."
         },
         "governance.buildchain-config": {
-          "mode": "advisory",
-          "reason": "Validated by the source-locked promotion controller; retained as advisory because the generic Gate runner does not mint controller evidence."
+          "mode": "required",
+          "reason": "Selected by the current release-promotion workflow policy when its activation condition matches."
         },
         "governance.promotion-rehearsal": {
           "mode": "required",
@@ -2099,8 +2099,8 @@
           "reason": "Not selected by the current release-promotion workflow policy."
         },
         "release.artifact-admission": {
-          "mode": "advisory",
-          "reason": "Enforced independently by the Buildchain publication authority after Gate aggregation; retained as advisory because artifact admission cannot authorize itself."
+          "mode": "required",
+          "reason": "Selected by the current release-promotion workflow policy when its activation condition matches."
         },
         "layers.contract": {
           "mode": "off",
@@ -2119,8 +2119,8 @@
           "reason": "Not selected by the current release-promotion workflow policy."
         },
         "layers.release": {
-          "mode": "advisory",
-          "reason": "Produced after immutable publication coordinates exist and therefore remains visible without participating in pre-publication authority."
+          "mode": "off",
+          "reason": "Seven-layer public-coordinate qualification runs only after its separately authorized layer publication; it cannot grant pre-publication product authority."
         },
         "episode.smoke": {
           "mode": "off",
@@ -2190,6 +2190,50 @@
           "mode": "off",
           "reason": "Not selected by the current release-promotion workflow policy."
         }
+      }
+    },
+    {
+      "id": "layer-publication",
+      "title": "Seven-layer public-coordinate qualification",
+      "decisions": {
+        "gate.catalog": { "mode": "required", "reason": "The public-coordinate verdict fail-closes catalog, documentation, matrix, and workflow-binding drift before it qualifies publication." },
+        "governance.dco": { "mode": "off", "reason": "Not selected by the post-publication layer qualification policy." },
+        "governance.adr-delivery": { "mode": "off", "reason": "Not selected by the post-publication layer qualification policy." },
+        "governance.buildchain-config": { "mode": "off", "reason": "Not selected by the post-publication layer qualification policy." },
+        "governance.promotion-rehearsal": { "mode": "off", "reason": "Not selected by the post-publication layer qualification policy." },
+        "source.acceptance": { "mode": "off", "reason": "Not selected by the post-publication layer qualification policy." },
+        "source.changed-scope": { "mode": "off", "reason": "Not selected by the post-publication layer qualification policy." },
+        "source.whole-tree": { "mode": "off", "reason": "Not selected by the post-publication layer qualification policy." },
+        "docs.contracts": { "mode": "off", "reason": "Not selected by the post-publication layer qualification policy." },
+        "docs.prose": { "mode": "off", "reason": "Not selected by the post-publication layer qualification policy." },
+        "docs.external-links": { "mode": "off", "reason": "Not selected by the post-publication layer qualification policy." },
+        "shifu.workspace": { "mode": "off", "reason": "Not selected by the post-publication layer qualification policy." },
+        "product.distribution": { "mode": "off", "reason": "Not selected by the post-publication layer qualification policy." },
+        "product.verify-full": { "mode": "off", "reason": "Not selected by the post-publication layer qualification policy." },
+        "product.verify-fuzz": { "mode": "off", "reason": "Not selected by the post-publication layer qualification policy." },
+        "release.artifact-admission": { "mode": "off", "reason": "Product publication authority is completed before this independent public-coordinate qualification." },
+        "layers.contract": { "mode": "off", "reason": "Not selected by the post-publication layer qualification policy." },
+        "layers.format": { "mode": "off", "reason": "Not selected by the post-publication layer qualification policy." },
+        "layers.sdk": { "mode": "off", "reason": "Not selected by the post-publication layer qualification policy." },
+        "layers.surfaces": { "mode": "off", "reason": "Not selected by the post-publication layer qualification policy." },
+        "layers.release": { "mode": "required", "reason": "The completed public layer publication must prove all seven immutable public coordinates and exact three-platform evidence." },
+        "episode.smoke": { "mode": "off", "reason": "Not selected by the post-publication layer qualification policy." },
+        "episode.release": { "mode": "off", "reason": "Not selected by the post-publication layer qualification policy." },
+        "embedding.membranes": { "mode": "off", "reason": "Not selected by the post-publication layer qualification policy." },
+        "mmap.contracts": { "mode": "off", "reason": "Not selected by the post-publication layer qualification policy." },
+        "mmap.performance": { "mode": "off", "reason": "Not selected by the post-publication layer qualification policy." },
+        "durability.contracts": { "mode": "off", "reason": "Not selected by the post-publication layer qualification policy." },
+        "state-service.contracts": { "mode": "off", "reason": "Not selected by the post-publication layer qualification policy." },
+        "profile.suite": { "mode": "off", "reason": "Not selected by the post-publication layer qualification policy." },
+        "profile.lifecycle": { "mode": "off", "reason": "Not selected by the post-publication layer qualification policy." },
+        "profile.agent-sdk": { "mode": "off", "reason": "Not selected by the post-publication layer qualification policy." },
+        "profile.kfd3": { "mode": "off", "reason": "Not selected by the post-publication layer qualification policy." },
+        "runtime.durable-ingest": { "mode": "off", "reason": "Not selected by the post-publication layer qualification policy." },
+        "runtime.projection-bootstrap": { "mode": "off", "reason": "Not selected by the post-publication layer qualification policy." },
+        "runtime.crash-recovery": { "mode": "off", "reason": "Not selected by the post-publication layer qualification policy." },
+        "runtime.errors": { "mode": "off", "reason": "Not selected by the post-publication layer qualification policy." },
+        "toolchain.cpp-modules": { "mode": "off", "reason": "Not selected by the post-publication layer qualification policy." },
+        "toolchain.libwasm-cache": { "mode": "off", "reason": "Not selected by the post-publication layer qualification policy." }
       }
     }
   ]

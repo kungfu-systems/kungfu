@@ -45,9 +45,11 @@ three platform report sets + immutable public coordinates
   `layers.sdk`, and `layers.surfaces`. Buildchain schedules the three platform
   legs; `scripts/run-release-qualification.mjs` enters the three artifact Gates
   through Shifu and retains one source-bound Gate receipt per leg.
-- `release-promotion` requires `layers.release`. The manual publication workflow
-  binds this Gate only after exact artifacts have been published and the public
-  registries can be queried.
+- `layers.release` belongs to the separately authorized manual layer-publication
+  transaction, after exact layer artifacts have been published and the public
+  registries can be queried. The pre-publication product `release-promotion`
+  profile keeps it off: a post-publication public-coordinate verdict cannot be
+  used to grant the authority that performs publication.
 - Dev profiles intentionally leave these heavy Gates off. This keeps normal dev
   source checks distinct from release-artifact proof.
 

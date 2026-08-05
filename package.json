@@ -86,7 +86,7 @@
     "test:alpha-attention-operations": "node scripts/require-shifu.mjs test:alpha-attention-operations && node scripts/check-alpha-attention-operations.mjs && node --test scripts/check-alpha-attention-operations.test.mjs",
     "test:dev-channel-authority": "node scripts/require-shifu.mjs test:dev-channel-authority && node --test --test-name-pattern=\"dev channel\" scripts/candidate-timeline-events.test.mjs",
     "test:community-health-baseline": "node scripts/require-shifu.mjs test:community-health-baseline && node scripts/check-community-health-baseline.mjs && node --test scripts/check-community-health-baseline.test.mjs",
-    "test:release-admission": "node scripts/require-shifu.mjs test:release-admission && node --test scripts/verify-kungfu-release-admission.test.mjs",
+    "test:release-admission": "node scripts/require-shifu.mjs test:release-admission && node --test scripts/assemble-kungfu-publication-gate.test.mjs scripts/verify-kungfu-release-admission.test.mjs",
     "verify:release-admission": "node scripts/require-shifu.mjs verify:release-admission && node scripts/verify-kungfu-release-admission.mjs",
     "release:publication:status": "node scripts/require-shifu.mjs release:publication:status && node framework/release/publication-control-plane.mjs status",
     "release:publication:rehearse": "node scripts/require-shifu.mjs release:publication:rehearse && node framework/release/publication-control-plane.mjs rehearse",
