@@ -738,7 +738,12 @@ export class AgentSessionProductSurface {
     return plan;
   }
 
-  planNativeBindWork({ session: ref, workRef }) {
+  planNativeBindWork({
+    session: ref,
+    workRef,
+    bindingScope = 'same-project',
+    sourceWorkspaceId = null,
+  }) {
     const normalized = sessionRef(ref);
     const projection = this.registry.projection(normalized);
     if (!projection || projection.attempt.backend !== 'native-interactive') {
@@ -756,6 +761,24 @@ export class AgentSessionProductSurface {
         'native Agent bootstrap is not verified; Work binding is disabled',
       );
     }
+    const consoleWorkspaceId = projection.console.workspaceId;
+    const declaredSourceWorkspaceId = sourceWorkspaceId ?? consoleWorkspaceId;
+    if (declaredSourceWorkspaceId !== consoleWorkspaceId) {
+      throw new AgentSessionSurfaceError(
+        'work_binding_source_mismatch',
+        'native Work binding source differs from the Agent Console workspace',
+      );
+    }
+    const externalProject = workRef.workspaceId !== consoleWorkspaceId;
+    if (
+      (externalProject && bindingScope !== 'explicit-external-project') ||
+      (!externalProject && bindingScope !== 'same-project')
+    ) {
+      throw new AgentSessionSurfaceError(
+        'work_workspace_mismatch',
+        'external Project Work requires an explicit cross-project binding scope',
+      );
+    }
     const binding = { kind: 'work', workRef };
     const conflict = this.registry.activeWorkConflict(binding, normalized);
     if (conflict) this.#throwNativeWorkConflict(conflict, workRef);
@@ -765,6 +788,8 @@ export class AgentSessionProductSurface {
       workConsoleId: normalized.workConsoleId,
       sessionAttemptId: normalized.sessionAttemptId,
       workRef: structuredClone(workRef),
+      bindingScope,
+      sourceWorkspaceId: declaredSourceWorkspaceId,
       effects: ['bind-active-native-attempt-to-work'],
       workEffects: [],
       rollback: 'end-native-attempt-or-bind-after-active-attempt-ends',
@@ -1618,12 +1643,12 @@ export function createAgentSessionSurfaceClient({ invoke, client, actorId }) {
       invoke({ operation: 'plan-start', client, actorId, input }),
     planNativeStart: (input) =>
       invoke({ operation: 'plan-native-start', client, actorId, input }),
-    planNativeBindWork: (session, workRef) =>
+    planNativeBindWork: (session, workRef, options = {}) =>
       invoke({
         operation: 'plan-native-bind-work',
         client,
         actorId,
-        input: { session, workRef },
+        input: { session, workRef, ...options },
       }),
     start: (plan, attachment, execution) =>
       invoke({

@@ -662,6 +662,42 @@ test('native Work binding atomically blocks a second writer and releases on exit
   assert.equal(clients.cli.bindNativeWork(secondBind).status, 'bound');
 });
 
+test('native Work binding admits an explicitly selected external Project', () => {
+  const { clients, input } = fixture();
+  const binding = { kind: 'workspace-assistant', workRef: null };
+  const started = clients.cli.planNativeStart({
+    ...input,
+    workspaceId: 'workspace:console-project',
+    workConsoleId: 'assistant:workspace:console-project:native:external',
+    binding,
+  });
+  clients.cli.startNative(started, { launcherPid: 42, launchedAt: 4000 });
+  const externalWorkRef = {
+    ...input.binding.workRef,
+    workspaceId: 'workspace:work-project',
+  };
+
+  assert.throws(
+    () => clients.cli.planNativeBindWork(started, externalWorkRef),
+    (error) => error.code === 'work_workspace_mismatch',
+  );
+
+  const plan = clients.cli.planNativeBindWork(started, externalWorkRef, {
+    bindingScope: 'explicit-external-project',
+    sourceWorkspaceId: 'workspace:console-project',
+  });
+  const receipt = clients.cli.bindNativeWork(plan);
+
+  assert.equal(receipt.status, 'bound');
+  assert.equal(receipt.workRef.workspaceId, 'workspace:work-project');
+  assert.equal(plan.bindingScope, 'explicit-external-project');
+  assert.equal(plan.sourceWorkspaceId, 'workspace:console-project');
+  assert.equal(
+    clients.gui.show(started).binding.workRef.workspaceId,
+    'workspace:work-project',
+  );
+});
+
 test('worker restart keeps an orphaned native Work binding fail-closed', () => {
   const { input } = fixture();
   const registry = new WorkConsoleRegistry({
