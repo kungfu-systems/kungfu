@@ -9,7 +9,7 @@ const ROOT = process.cwd();
 const BUILDCHAIN_DEV_VERIFY_RUNTIME =
   '916fc84d488ae6f5af271a67487e79ecb47b9ae2';
 const BUILDCHAIN_TIMEOUT_SAFE_RUNTIME =
-  'f63d43720ebb7d5099080b14c70cf04254057d80';
+  'd7f5e5fc7a182577455f898ddbeb0fc3a3c59059';
 
 function workflow(name) {
   return fs.readFileSync(path.join(ROOT, '.github/workflows', name), 'utf8');
