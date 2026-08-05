@@ -929,11 +929,25 @@ jobs:
           node scripts/run-core-affected-native.mjs \
             --plan-out "$admission/plan.json" \
             --json
-          source_head="$(jq -er '.source.pullRequestHead' "$admission/probe/delivery-binding.json")"
-          if ! git cat-file -e "${source_head}^{commit}" 2>/dev/null; then
-            git fetch --no-tags origin "$source_head"
-          fi
-          source_tree="$(git rev-parse "${source_head}^{tree}")"
+          binding="$admission/probe/delivery-binding.json"
+          binding_state="$(jq -er '.state' "$binding")"
+          case "$binding_state" in
+            bound)
+              source_tree="$(jq -er '.source.replayedTree' "$binding")"
+              test "$(git rev-parse 'HEAD^{tree}')" = "$source_tree"
+              ;;
+            unbound)
+              source_head="$(jq -er '.source.pullRequestHead' "$binding")"
+              if ! git cat-file -e "${source_head}^{commit}" 2>/dev/null; then
+                git fetch --no-tags origin "$source_head"
+              fi
+              source_tree="$(git rev-parse "${source_head}^{tree}")"
+              ;;
+            *)
+              echo "unsupported affected-native delivery binding state: $binding_state" >&2
+              exit 1
+              ;;
+          esac
           # Preserve the probe's exact hosted image and toolchain facts while
           # independently rechecking this checkout's base, source tree, and plan.
           # shifu-entry-contract: allow source-only proof revalidation after dependency admission

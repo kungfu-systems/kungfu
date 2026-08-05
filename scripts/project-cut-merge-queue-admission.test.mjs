@@ -48,6 +48,17 @@ test('merge-group native proof consumes the admitted replayed tree', () => {
     workflow,
     /source_tree="\$\(git rev-parse "\$\{pr_head\}\^\{tree\}"\)"[\s\S]*GITHUB_EVENT_NAME" = "merge_group"[\s\S]*source\.replayedTree[\s\S]*source-tree=\$\{source_tree\}/u,
   );
+
+  const revalidation = workflow.slice(
+    workflow.indexOf(
+      '      - name: Revalidate exact affected-native source binding',
+    ),
+    workflow.indexOf('      - name: Download admitted producer proof'),
+  );
+  assert.match(
+    revalidation,
+    /binding_state="\$\(jq -er '\.state'[\s\S]*bound\)[\s\S]*source\.replayedTree[\s\S]*HEAD\^\{tree\}[\s\S]*unbound\)[\s\S]*source\.pullRequestHead[\s\S]*source_head\}\^\{tree\}/u,
+  );
 });
 
 function git(root, ...args) {
