@@ -54,7 +54,11 @@ _ANSI_ESCAPE = re.compile(r"\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])")
 
 
 def bind_current_native_work(
-    runtime_dir: str, initiative_id: str, assignment_id: str
+    runtime_dir: str,
+    initiative_id: str,
+    assignment_id: str,
+    *,
+    work_workspace_root: str | None = None,
 ) -> dict[str, Any] | None:
     """Atomically bind the current native attempt before it acts on Work."""
 
@@ -92,19 +96,42 @@ def bind_current_native_work(
         )
     agent_resources.validated_current_bootstrap_receipt(envelope)
 
-    # ``runtime_dir`` belongs to the CLI invocation context.  A packaged CLI may
+    # ``runtime_dir`` belongs to the CLI invocation context. A packaged CLI may
     # deliberately use ``--home`` while the native attempt is attached to a
-    # Project, so Work/Profile authority must come from the verified launch
-    # workspace above rather than silently falling back to Home.
-    del runtime_dir
+    # Project, so an implicit target must keep using the verified launch
+    # workspace. An explicit ``--workspace`` may select Work in another Project;
+    # bind that exact Project identity while preserving the current Console and
+    # attempt identities.
+    work_runtime_dir = project_runtime_dir
+    work_workspace_id = str(envelope["workspaceId"])
+    binding_scope = "same-project"
+    if work_workspace_root:
+        work_target = resolve_workspace_target(
+            "read-only",
+            work_workspace_root,
+            cwd=work_workspace_root,
+        )
+        if work_target.identity.workspace_kind != "project":
+            raise ValueError("native Work binding requires an exact Project workspace")
+        exact_work_runtime_dir = str(
+            Path(work_target.runtime_dir).expanduser().resolve()
+        )
+        if Path(runtime_dir).expanduser().resolve() != Path(exact_work_runtime_dir):
+            raise ValueError(
+                "native Work binding runtime does not match the explicit Project"
+            )
+        work_runtime_dir = exact_work_runtime_dir
+        work_workspace_id = work_target.identity.workspace_id
+        if work_workspace_id != str(envelope["workspaceId"]):
+            binding_scope = "explicit-external-project"
 
-    status = work_commands._status(project_runtime_dir, initiative_id, assignment_id)
+    status = work_commands._status(work_runtime_dir, initiative_id, assignment_id)
     work_control = profile_sdk.validate_source(
-        work_commands._profile_source(), project_runtime_dir
+        work_commands._profile_source(), work_runtime_dir
     )["inspection"]
     work_ref = {
         "schema": "kungfu.work-ref/v1",
-        "workspaceId": str(envelope["workspaceId"]),
+        "workspaceId": work_workspace_id,
         "profileId": work_control["profile"]["id"],
         "profileRoot": work_control["profile_suite_root"],
         "entityType": "assignment",
@@ -125,7 +152,12 @@ def bind_current_native_work(
             "operation": "plan-native-bind-work",
             "client": "kfd3-agent",
             "actorId": actor_id,
-            "input": {"session": session, "workRef": work_ref},
+            "input": {
+                "session": session,
+                "workRef": work_ref,
+                "bindingScope": binding_scope,
+                "sourceWorkspaceId": str(envelope["workspaceId"]),
+            },
         }
     )
     receipt = session_surface.invoke(
