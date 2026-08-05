@@ -23,6 +23,11 @@ on:
         required: false
         type: string
         default: ""
+      source-workflow-run-id:
+        description: Exact successful Core affected native run that produced the source descriptor
+        required: false
+        type: number
+        default: 0
       dry-run:
         description: Evaluate eligible PRs without admitting them to the merge queue
         required: false
@@ -45,6 +50,7 @@ jobs:
       target-branch: ${{ steps.target.outputs.target-branch }}
       expected-pr-number: ${{ steps.target.outputs.expected-pr-number }}
       expected-head-sha: ${{ steps.target.outputs.expected-head-sha }}
+      source-workflow-run-id: ${{ steps.target.outputs.source-workflow-run-id }}
     steps:
       - name: Resolve the active dev channel and exact PR target
         id: target
@@ -53,10 +59,13 @@ jobs:
           DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
           EVENT_NAME: ${{ github.event_name }}
           WORKFLOW_EVENT: ${{ github.event.workflow_run.event }}
+          WORKFLOW_RUN_ID: ${{ github.event.workflow_run.id }}
           WORKFLOW_HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
           WORKFLOW_PULL_REQUESTS: ${{ toJSON(github.event.workflow_run.pull_requests) }}
           DISPATCH_PR_NUMBER: ${{ inputs.expected-pr-number }}
           DISPATCH_HEAD_SHA: ${{ inputs.expected-head-sha }}
+          DISPATCH_SOURCE_RUN_ID: ${{ inputs.source-workflow-run-id }}
+          DISPATCH_DRY_RUN: ${{ inputs.dry-run }}
         run: |
           set -euo pipefail
           case "$DEFAULT_BRANCH" in
@@ -69,6 +78,7 @@ jobs:
 
           expected_pr_number=""
           expected_head_sha=""
+          source_workflow_run_id=""
           if [ "$EVENT_NAME" = "workflow_run" ] && [ "$WORKFLOW_EVENT" = "pull_request" ]; then
             pr_count="$(jq -r 'if type == "array" then length else -1 end' <<<"$WORKFLOW_PULL_REQUESTS")"
             if [ "$pr_count" != "1" ]; then
@@ -77,9 +87,11 @@ jobs:
             fi
             expected_pr_number="$(jq -r '.[0].number' <<<"$WORKFLOW_PULL_REQUESTS")"
             expected_head_sha="$WORKFLOW_HEAD_SHA"
+            source_workflow_run_id="$WORKFLOW_RUN_ID"
           elif [ "$EVENT_NAME" = "workflow_dispatch" ]; then
             expected_pr_number="${DISPATCH_PR_NUMBER:-0}"
             expected_head_sha="$DISPATCH_HEAD_SHA"
+            source_workflow_run_id="${DISPATCH_SOURCE_RUN_ID:-0}"
             if { [ "$expected_pr_number" = "0" ] && [ -n "$expected_head_sha" ]; } ||
               { [ "$expected_pr_number" != "0" ] && [ -z "$expected_head_sha" ]; }; then
               echo "expected-pr-number and expected-head-sha must be provided together" >&2
@@ -87,6 +99,16 @@ jobs:
             fi
             if [ "$expected_pr_number" = "0" ]; then
               expected_pr_number=""
+              if [ "$source_workflow_run_id" != "0" ]; then
+                echo "source-workflow-run-id requires an exact targeted PR and head" >&2
+                exit 1
+              fi
+            elif [ "$DISPATCH_DRY_RUN" = "false" ] && [ "$source_workflow_run_id" = "0" ]; then
+              echo "executing targeted admission requires source-workflow-run-id" >&2
+              exit 1
+            fi
+            if [ "$source_workflow_run_id" = "0" ]; then
+              source_workflow_run_id=""
             fi
           fi
 
@@ -105,10 +127,16 @@ jobs:
                 ;;
             esac
           fi
+          if [ -n "$source_workflow_run_id" ]; then
+            case "$source_workflow_run_id" in
+              *[!0-9]*|0) echo "source workflow run ID must be a positive integer" >&2; exit 1 ;;
+            esac
+          fi
 
           echo "target-branch=$DEFAULT_BRANCH" >>"$GITHUB_OUTPUT"
           echo "expected-pr-number=$expected_pr_number" >>"$GITHUB_OUTPUT"
           echo "expected-head-sha=$expected_head_sha" >>"$GITHUB_OUTPUT"
+          echo "source-workflow-run-id=$source_workflow_run_id" >>"$GITHUB_OUTPUT"
 
   delivery-contract:
     needs: resolve-target
@@ -136,7 +164,7 @@ jobs:
     steps:
       - name: Check out protected consumer adapter
         if: >-
-          github.event_name == 'workflow_run' &&
+          needs.resolve-target.outputs.source-workflow-run-id != '' &&
           needs.resolve-target.outputs.expected-pr-number != ''
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
@@ -146,19 +174,19 @@ jobs:
 
       - name: Check out exact Buildchain delivery runtime
         if: >-
-          github.event_name == 'workflow_run' &&
+          needs.resolve-target.outputs.source-workflow-run-id != '' &&
           needs.resolve-target.outputs.expected-pr-number != ''
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           repository: kungfu-systems/buildchain
-          ref: bcfb5b1063a455b653682eb1675c4c74b4eee4ca
+          ref: c0b739780233c6c78105907dd930b8f55ccbe914
           path: .buildchain/dev-delivery-runtime
           fetch-depth: 1
           persist-credentials: false
 
       - name: Use Node.js 24 for exact delivery proof
         if: >-
-          github.event_name == 'workflow_run' &&
+          needs.resolve-target.outputs.source-workflow-run-id != '' &&
           needs.resolve-target.outputs.expected-pr-number != ''
         uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
         with:
@@ -166,29 +194,58 @@ jobs:
 
       - name: Install exact Buildchain delivery runtime
         if: >-
-          github.event_name == 'workflow_run' &&
+          needs.resolve-target.outputs.source-workflow-run-id != '' &&
           needs.resolve-target.outputs.expected-pr-number != ''
         working-directory: .buildchain/dev-delivery-runtime
         shell: bash
         # shifu-entry-contract: allow bootstrapping the separately checked-out exact Buildchain runtime
         run: corepack pnpm install --frozen-lockfile --ignore-scripts
 
+      - name: Verify exact source qualification run
+        if: >-
+          needs.resolve-target.outputs.source-workflow-run-id != '' &&
+          needs.resolve-target.outputs.expected-pr-number != ''
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SOURCE_RUN_ID: ${{ needs.resolve-target.outputs.source-workflow-run-id }}
+          EXPECTED_PR: ${{ needs.resolve-target.outputs.expected-pr-number }}
+          EXPECTED_HEAD: ${{ needs.resolve-target.outputs.expected-head-sha }}
+        run: |
+          set -euo pipefail
+          mkdir -p .buildchain/dev-delivery-input
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/$SOURCE_RUN_ID" > .buildchain/dev-delivery-input/source-workflow-run.json
+          jq -e \
+            --argjson run "$SOURCE_RUN_ID" \
+            --argjson pullRequest "$EXPECTED_PR" \
+            --arg head "$EXPECTED_HEAD" \
+            '.id == $run
+             and .name == "Core affected native"
+             and .path == ".github/workflows/affected-native-pr.yml"
+             and .event == "pull_request"
+             and .status == "completed"
+             and .conclusion == "success"
+             and .head_sha == $head
+             and (.pull_requests | length) == 1
+             and .pull_requests[0].number == $pullRequest' \
+            .buildchain/dev-delivery-input/source-workflow-run.json >/dev/null
+
       - name: Download exact source qualification descriptor
         if: >-
-          github.event_name == 'workflow_run' &&
+          needs.resolve-target.outputs.source-workflow-run-id != '' &&
           needs.resolve-target.outputs.expected-pr-number != ''
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
-          name: core-affected-native-proof-descriptor-${{ github.event.workflow_run.id }}
+          name: core-affected-native-proof-descriptor-${{ needs.resolve-target.outputs.source-workflow-run-id }}
           path: .buildchain/dev-delivery-input
           repository: ${{ github.repository }}
-          run-id: ${{ github.event.workflow_run.id }}
+          run-id: ${{ needs.resolve-target.outputs.source-workflow-run-id }}
           github-token: ${{ github.token }}
 
       - name: Project Buildchain Warrant inputs
         id: contract
         if: >-
-          github.event_name == 'workflow_run' &&
+          needs.resolve-target.outputs.source-workflow-run-id != '' &&
           needs.resolve-target.outputs.expected-pr-number != ''
         shell: bash
         env:
@@ -228,7 +285,9 @@ jobs:
           test "$TARGET_BRANCH" = "$(jq -r '.base.ref' "$pull_request")"
           test "$EXPECTED_HEAD" = "$(jq -r '.head.sha' "$pull_request")"
           current_base="$(git rev-parse 'HEAD^{commit}')"
-          test "$current_base" = "$(jq -r '.base.sha' "$pull_request")"
+          remote_base="$(git ls-remote --exit-code origin "refs/heads/$TARGET_BRANCH" | awk 'NR == 1 { print $1 }')"
+          test "${#remote_base}" -eq 40
+          test "$current_base" = "$remote_base"
           git fetch --no-tags origin "$EXPECTED_HEAD"
           test "$EXPECTED_HEAD" = "$(git rev-parse "$EXPECTED_HEAD^{commit}")"
 
@@ -293,9 +352,9 @@ jobs:
       contents: write
       pull-requests: write
       statuses: write
-    uses: kungfu-systems/buildchain/.github/workflows/dev-pr-auto-merge.yml@bcfb5b1063a455b653682eb1675c4c74b4eee4ca
+    uses: kungfu-systems/buildchain/.github/workflows/dev-pr-auto-merge.yml@c0b739780233c6c78105907dd930b8f55ccbe914
     with:
-      buildchain-ref: bcfb5b1063a455b653682eb1675c4c74b4eee4ca
+      buildchain-ref: c0b739780233c6c78105907dd930b8f55ccbe914
       target-branch: ${{ needs.resolve-target.outputs.target-branch }}
       expected-pr-number: ${{ fromJSON(needs.resolve-target.outputs.expected-pr-number || '0') }}
       expected-head-sha: ${{ needs.resolve-target.outputs.expected-head-sha }}

@@ -493,9 +493,9 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "diagnostic",
-          "definitionDigest": "sha256:66a708ca6abc69fe6da127ccef68d80646d9719507609c342d35f111da8cccf9",
+          "definitionDigest": "sha256:992684075b66b853815a71a55f2a005041143327dfbc9e504d629c2a9834fcff",
           "credentials": {"githubToken":"write","oidc":false,"repositorySecrets":["KUNGFU_GITHUB_TOKEN"],"inheritedSecrets":false,"environment":null},
-          "externalActions": ["kungfu-systems/buildchain/.github/workflows/dev-delivery-warrant-cancel.yml@bcfb5b1063a455b653682eb1675c4c74b4eee4ca"],
+          "externalActions": ["kungfu-systems/buildchain/.github/workflows/dev-delivery-warrant-cancel.yml@c0b739780233c6c78105907dd930b8f55ccbe914"],
           "steps": []
         },
         {
@@ -503,9 +503,9 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "diagnostic",
-          "definitionDigest": "sha256:59d4e0e5157608c0018f3a60ba9c26048d5e3d71dcecd658806608c8112a970e",
+          "definitionDigest": "sha256:cf2c9cc420880edf015d9740649e3670c92c8f0d64b8c875e71f5c9d6ee84049",
           "credentials": {"githubToken":"write","oidc":false,"repositorySecrets":["KUNGFU_GITHUB_TOKEN"],"inheritedSecrets":false,"environment":null},
-          "externalActions": ["kungfu-systems/buildchain/.github/workflows/dev-delivery-warrant-close.yml@bcfb5b1063a455b653682eb1675c4c74b4eee4ca"],
+          "externalActions": ["kungfu-systems/buildchain/.github/workflows/dev-delivery-warrant-close.yml@c0b739780233c6c78105907dd930b8f55ccbe914"],
           "steps": []
         },
         {
@@ -513,10 +513,10 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "diagnostic",
-          "definitionDigest": "sha256:3cc6b9d44b2af3598c469f39c7f619f03dab70212c314175ee51ff3b6f3ddf3c",
+          "definitionDigest": "sha256:b7a4094a7fb2ac250a4ee1f80ed6c1003b6efa2771cfe7cead29e5d8acf83066",
           "credentials": {"githubToken":"write","oidc":false,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
           "externalActions": ["actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0"],
-          "steps": [{"index":1,"label":"name:Check out protected Buildchain runtime","definitionDigest":"sha256:6a3dc171d91342ee467a898eb64d6d60a33e4ff1c726633d66ff267b40d57611"},{"index":2,"label":"id:terminal","definitionDigest":"sha256:125df3159ee945ce311f3910a8925f34d61904df1e5ab218387895011f316e61"}]
+          "steps": [{"index":1,"label":"name:Check out protected Buildchain runtime","definitionDigest":"sha256:7b8d8461f901f1096b01f7bfa55a1220eb20c1cbb46f0c6f4dc19db9971e4244"},{"index":2,"label":"id:terminal","definitionDigest":"sha256:125df3159ee945ce311f3910a8925f34d61904df1e5ab218387895011f316e61"}]
         }
       ]
     },
@@ -550,16 +550,16 @@
     {
       "path": ".github/workflows/dev-pr-auto-merge.yml",
       "authority": "qualification",
-      "definitionDigest": "sha256:317c515bae6c1ab37b4539f7ff1d3599c1d3e25e208ff7422da70a2c31168580",
+      "definitionDigest": "sha256:1487e1b1f650b02861fe6aac1bf761037434dac38959bb19464e326bcbf3ae80",
       "jobs": [
         {
           "id": "admission",
           "authority": "qualification",
           "publication": "none",
           "receipt": "diagnostic",
-          "definitionDigest": "sha256:8af15a2630e36af3d8db6f11a95e5b854af997438b06c061ccc9da360c72b47e",
+          "definitionDigest": "sha256:58a0edc3a26a1e6df3db9f4245fa9aa59caa941d41211f4784e2e87f67b89655",
           "credentials": {"githubToken":"write","oidc":false,"repositorySecrets":["KUNGFU_GITHUB_TOKEN"],"inheritedSecrets":false,"environment":null},
-          "externalActions": ["kungfu-systems/buildchain/.github/workflows/dev-pr-auto-merge.yml@bcfb5b1063a455b653682eb1675c4c74b4eee4ca"],
+          "externalActions": ["kungfu-systems/buildchain/.github/workflows/dev-pr-auto-merge.yml@c0b739780233c6c78105907dd930b8f55ccbe914"],
           "steps": []
         },
         {
@@ -567,20 +567,20 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "diagnostic",
-          "definitionDigest": "sha256:d85232f2ea5530300b37a56673c2695c1cf8723ee2aa88f94c383666a044ff07",
+          "definitionDigest": "sha256:75e90785176693c2b8c05721e85135f99e57351988056fa5ea93f1ec47579f44",
           "credentials": {"githubToken":"read","oidc":false,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
           "externalActions": ["actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0","actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0","actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e","actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093","actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02"],
-          "steps": [{"index":1,"label":"name:Check out protected consumer adapter","definitionDigest":"sha256:1920c6e7e66590181fb89e48cc857c233ec2b8f2dd97fc2bf22ad741c9411dc0"},{"index":2,"label":"name:Check out exact Buildchain delivery runtime","authority":"evidence-publication","definitionDigest":"sha256:984c3560b5337164dd8710560d135e3fc9537ac444b9f801579495ee483af47b"},{"index":3,"label":"name:Use Node.js 24 for exact delivery proof","definitionDigest":"sha256:d9be1ee9ef9c0098bf11aaa0b4d68483f63800e16aabe804ddb9c12b6e72bbd3"},{"index":4,"label":"name:Install exact Buildchain delivery runtime","authority":"evidence-publication","definitionDigest":"sha256:f1b1877401f017f5c9931334b8053ad081d4d22fa78f6147c218c68734ab5c56"},{"index":5,"label":"name:Download exact source qualification descriptor","authority":"evidence-publication","definitionDigest":"sha256:0582e4597b45c6f099606f38de2acc1e17e0993e80ef718d8752f31dffb77f18"},{"index":6,"label":"id:contract","definitionDigest":"sha256:17df822ecd42931e4801dfbe537a80109a7b6fc25603f7a014691eb1fa64619a"},{"index":7,"label":"id:project-cut","definitionDigest":"sha256:822071d99fc6a7e0c0cb211b6eb7494cdce83966b345b79e8f6da2e0a7e31520"},{"index":8,"label":"name:Upload exact Warrant input projection","authority":"evidence-publication","definitionDigest":"sha256:374066139a234c9aa55cfffa25084b2938d17d83c6d14c62429fabef79a57bd8"}]
+          "steps": [{"index":1,"label":"name:Check out protected consumer adapter","definitionDigest":"sha256:7a6e2b7a4219bc394a436c2b5c62af8c7e88a4ee217160392af47145517ded7e"},{"index":2,"label":"name:Check out exact Buildchain delivery runtime","authority":"evidence-publication","definitionDigest":"sha256:4e3e7460c947141d81d74f6c34d2af4b8777b7e2376cdbca2b3235e24ded1866"},{"index":3,"label":"name:Use Node.js 24 for exact delivery proof","definitionDigest":"sha256:9a97d7c7a2267e05fe44eeb809814e7bf942ee5e9ac9b9471b9bde0e6be2c9a4"},{"index":4,"label":"name:Install exact Buildchain delivery runtime","authority":"evidence-publication","definitionDigest":"sha256:71ee76abd8d8d888d22ecd9ba4ea9c53746220b18a08f6431df9ac3f18948eb7"},{"index":5,"label":"name:Verify exact source qualification run","authority":"evidence-publication","definitionDigest":"sha256:79e4b6cf8b8f87e78dd33827ef218dd94112cef2402c124f4dcaaa0c228db805"},{"index":6,"label":"name:Download exact source qualification descriptor","authority":"evidence-publication","definitionDigest":"sha256:5c13a140aea8777e4749d8259cf091f804756e2b76ee35f00521d750c974429e"},{"index":7,"label":"id:contract","definitionDigest":"sha256:10d761264755f395be38654bf8df8d8d437d4972f631f5473a0c500f36c92bf5"},{"index":8,"label":"id:project-cut","authority":"evidence-publication","definitionDigest":"sha256:ad91e14cd423a17c99cc037c1a3a15f85bbcdcbf3d0b8e487556f6f98f48c3e0"},{"index":9,"label":"name:Upload exact Warrant input projection","authority":"evidence-publication","definitionDigest":"sha256:374066139a234c9aa55cfffa25084b2938d17d83c6d14c62429fabef79a57bd8"}]
         },
         {
           "id": "resolve-target",
           "authority": "qualification",
           "publication": "none",
           "receipt": "diagnostic",
-          "definitionDigest": "sha256:8929e60383dd5e02fde2bc63068c66b217a40ad5e70ee662d17046e4cf8879fe",
+          "definitionDigest": "sha256:d6c9e6bb881868dd82cac3ff32864f50b3eb461582ad6fd3962e4a02bd73969e",
           "credentials": {"githubToken":"none","oidc":false,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
           "externalActions": [],
-          "steps": [{"index":1,"label":"id:target","definitionDigest":"sha256:fd720e0b090fca1b5be2909cc57d11cba097392f53f888024b01e7a798166db0"}]
+          "steps": [{"index":1,"label":"id:target","definitionDigest":"sha256:92154f8831e5718e47e16df5fa366159c40740479458558c6e2d879525f28c2d"}]
         }
       ]
     },

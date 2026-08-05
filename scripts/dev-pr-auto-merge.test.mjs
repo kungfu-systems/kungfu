@@ -13,7 +13,7 @@ test('Dev auto-merge admits only explicitly ready reviewed same-repository PRs',
   const reusableRef = workflow.match(
     /uses: kungfu-systems\/buildchain\/\.github\/workflows\/dev-pr-auto-merge\.yml@([0-9a-f]{40})/u,
   )?.[1];
-  assert.equal(reusableRef, 'bcfb5b1063a455b653682eb1675c4c74b4eee4ca');
+  assert.equal(reusableRef, 'c0b739780233c6c78105907dd930b8f55ccbe914');
   assert.match(workflow, new RegExp(`buildchain-ref: ${reusableRef}`, 'u'));
   assert.match(workflow, /workflow_run:[\s\S]*Core affected native/u);
   assert.match(workflow, /cron: "23,53 \* \* \* \*"/u);
@@ -42,6 +42,10 @@ test('Dev Agent admission binds every targeted run to one exact PR head', () => 
   );
   assert.match(
     workflow,
+    /source-workflow-run-id:[\s\S]*type: number[\s\S]*default: 0/u,
+  );
+  assert.match(
+    workflow,
     /workflow_run must resolve to exactly one pull request/u,
   );
   assert.match(
@@ -51,6 +55,14 @@ test('Dev Agent admission binds every targeted run to one exact PR head', () => 
   assert.match(
     workflow,
     /expected head must be an exact lowercase 40-character commit SHA/u,
+  );
+  assert.match(
+    workflow,
+    /executing targeted admission requires source-workflow-run-id/u,
+  );
+  assert.match(
+    workflow,
+    /Verify exact source qualification run[\s\S]*\.name == "Core affected native"[\s\S]*\.path == "\.github\/workflows\/affected-native-pr\.yml"[\s\S]*\.head_sha == \$head[\s\S]*\.pull_requests\[0\]\.number == \$pullRequest/u,
   );
   assert.match(
     workflow,
@@ -105,7 +117,7 @@ test('Dev behind admission produces and forwards an exact Project Cut replay pro
   );
   assert.match(
     workflow,
-    /Check out exact Buildchain delivery runtime[\s\S]*ref: bcfb5b1063a455b653682eb1675c4c74b4eee4ca/u,
+    /Check out exact Buildchain delivery runtime[\s\S]*ref: c0b739780233c6c78105907dd930b8f55ccbe914/u,
   );
   assert.match(
     workflow,
@@ -122,5 +134,13 @@ test('Dev behind admission produces and forwards an exact Project Cut replay pro
   assert.match(
     workflow,
     /project-cut-proof-json: \$\{\{ needs\.delivery-contract\.outputs\.project-cut-proof-json \}\}/u,
+  );
+  assert.match(
+    workflow,
+    /git ls-remote --exit-code origin "refs\/heads\/\$TARGET_BRANCH"[\s\S]*test "\$current_base" = "\$remote_base"/u,
+  );
+  assert.doesNotMatch(
+    workflow,
+    /test "\$current_base" = "\$\(jq -r '\.base\.sha'/u,
   );
 });
