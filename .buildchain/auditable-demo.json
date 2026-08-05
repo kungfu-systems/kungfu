@@ -82,6 +82,37 @@
     "readmePath": "README.md",
     "marker": "kungfu:auditable-demo"
   },
+  "presentation": {
+    "schema": "buildchain.declarative-demo-presentation/v1",
+    "proofs": [
+      {
+        "demoId": "agent-work-lab-autoplay",
+        "label": "Continuity",
+        "question": "Can Work survive a new Agent?",
+        "summary": "The first proof isolates continuity: one Work continues across two fresh Agent Sessions without copied chat.",
+        "transitionAfter": "The mechanism exists; the next proof asks whether it still holds under real failure conditions."
+      },
+      {
+        "demoId": "project-tour-episode-1",
+        "label": "Failure retention",
+        "question": "Can Work survive failure?",
+        "summary": "Inside a disposable Project, a dropped connection and a crashed replacement process remain as Attempts under the same Work.",
+        "transitionAfter": "Work survival is only the first step. If an Agent can approve its own result, continuity still is not trustworthy."
+      },
+      {
+        "demoId": "project-tour-episode-2",
+        "label": "Review and settlement",
+        "question": "Who is allowed to complete Work?",
+        "summary": "The final proof separates Agent exit, independent review, and Kungfu settlement: an Agent can produce a candidate and evidence, but cannot approve its own Work."
+      }
+    ],
+    "materialization": {
+      "readmeMode": "media-only",
+      "technicalSpecPath": "docs/qualification/auditable-demo-artifact-pipeline.md",
+      "technicalSpecTitle": "Declarative Multi-demo Animation Pipeline",
+      "technicalMarker": "kungfu:auditable-demo:technical"
+    }
+  },
   "authority": {
     "grants": [],
     "nonAuthorities": [
