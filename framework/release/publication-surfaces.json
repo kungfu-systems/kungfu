@@ -177,14 +177,14 @@
           "classification": "non-publication",
           "owner": "kungfu-ci",
           "surfaceIds": [],
-          "sourceRoot": "sha256:3383d969ddabf86071cd2f2910492dac9c7a04bcb1ff41b0750f297260614f70"
+          "sourceRoot": "sha256:f34962e877c4399e2b14f9804811f00a30c3ff6ffc55ad5b1e635b79574d9d7d"
         },
         {
           "path": ".github/workflows/dev-pr-auto-merge.yml",
           "classification": "non-publication",
           "owner": "kungfu-ci",
           "surfaceIds": [],
-          "sourceRoot": "sha256:4139e69e190874c1917320c55041105454d6e88a9612756177ecaac547da5831"
+          "sourceRoot": "sha256:417bbb46cc60f86945d4f50abf548fe98abadb293665f1fd5c798ec4bb43ad48"
         },
         {
           "path": ".github/workflows/dev-gate-latency-patrol.yml",
@@ -860,5 +860,5 @@
       }
     }
   ],
-  "registryRoot": "sha256:0ebad363f7acc22064d78e41cb4bafda85a928f02af90c7de0ea966b739024a9"
+  "registryRoot": "sha256:76061a2f6474d698298c2ca12530c9113b824b0cc370c51beb2f87e0a50be2cd"
 }
