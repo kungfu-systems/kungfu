@@ -120,6 +120,7 @@ test('all protected delivery Warrant consumers share one exact runtime', () => {
   const workflowPaths = [
     '.github/workflows/dev-pr-auto-merge.yml',
     '.github/workflows/dev-delivery-warrant-terminal.yml',
+    '.github/workflows/affected-native-pr.yml',
     CONTRACT.authority.mergeGroup,
   ];
   for (const workflowPath of workflowPaths) {
