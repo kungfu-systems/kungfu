@@ -16,6 +16,7 @@
       "**/.deps/**",
       "**/generated/**",
       "**/fixtures/**",
+      "docs/qualification/evidence/auditable-demo/**/manifest.json",
       "framework/gui/public/config/defaultInstruments.json"
     ]
   },
