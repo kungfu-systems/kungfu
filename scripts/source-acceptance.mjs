@@ -717,6 +717,7 @@ export function sourceAcceptancePlan(files, evidenceBaseCommit = '') {
         'scripts/linux-arm64-alpha-qualification-workflow.test.mjs',
         'scripts/affected-native-proof.test.mjs',
         'scripts/qualified-assignment-core-artifact.test.mjs',
+        'scripts/assemble-kungfu-publication-gate.test.mjs',
         'scripts/verify-kungfu-release-admission.test.mjs',
         'scripts/release-publication-control-plane.test.mjs',
         'scripts/version-line-authority.test.mjs',

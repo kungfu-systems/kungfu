@@ -42,6 +42,10 @@ test('Dev Agent admission binds every targeted run to one exact PR head', () => 
   );
   assert.match(
     workflow,
+    /source-workflow-run-id:[\s\S]*type: number[\s\S]*default: 0/u,
+  );
+  assert.match(
+    workflow,
     /workflow_run must resolve to exactly one pull request/u,
   );
   assert.match(
@@ -51,6 +55,14 @@ test('Dev Agent admission binds every targeted run to one exact PR head', () => 
   assert.match(
     workflow,
     /expected head must be an exact lowercase 40-character commit SHA/u,
+  );
+  assert.match(
+    workflow,
+    /executing targeted admission requires source-workflow-run-id/u,
+  );
+  assert.match(
+    workflow,
+    /Verify exact source qualification run[\s\S]*\.name == "Core affected native"[\s\S]*\.path == "\.github\/workflows\/affected-native-pr\.yml"[\s\S]*\.head_sha == \$head[\s\S]*\.pull_requests\[0\]\.number == \$pullRequest/u,
   );
   assert.match(
     workflow,
@@ -122,5 +134,13 @@ test('Dev behind admission produces and forwards an exact Project Cut replay pro
   assert.match(
     workflow,
     /project-cut-proof-json: \$\{\{ needs\.delivery-contract\.outputs\.project-cut-proof-json \}\}/u,
+  );
+  assert.match(
+    workflow,
+    /git ls-remote --exit-code origin "refs\/heads\/\$TARGET_BRANCH"[\s\S]*test "\$current_base" = "\$remote_base"/u,
+  );
+  assert.doesNotMatch(
+    workflow,
+    /test "\$current_base" = "\$\(jq -r '\.base\.sha'/u,
   );
 });

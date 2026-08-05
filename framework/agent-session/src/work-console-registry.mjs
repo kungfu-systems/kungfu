@@ -253,9 +253,18 @@ export class WorkConsoleRegistry {
       );
     }
     const binding = attemptWorkBinding(workRef);
-    if (binding.workRef.workspaceId !== console.workspaceId) {
+    const externalProject = binding.workRef.workspaceId !== console.workspaceId;
+    if (
+      externalProject &&
+      !(
+        ref.bindingScope === 'explicit-external-project' &&
+        ref.sourceWorkspaceId === console.workspaceId
+      )
+    ) {
       throw Object.assign(
-        new Error('WorkRef workspace differs from the Agent Console workspace'),
+        new Error(
+          'WorkRef workspace differs without explicit cross-project authority',
+        ),
         { code: 'work_workspace_mismatch' },
       );
     }
