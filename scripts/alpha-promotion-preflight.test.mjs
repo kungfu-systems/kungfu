@@ -194,6 +194,20 @@ test('automatic hosted preflight does not inherit a private Cargo mirror', () =>
   );
 });
 
+test('exact-source admission can recover a successful trusted dispatch', () => {
+  const action = fs.readFileSync(
+    path.join(
+      process.cwd(),
+      '.github/actions/require-alpha-preflight/action.yml',
+    ),
+    'utf8',
+  );
+  assert.match(
+    action,
+    /head_sha=\$\{SOURCE_SHA\}&status=success[\s\S]*\.event == "push"[\s\S]*\.head_branch \| startswith\("dev\/"\)[\s\S]*or \.event == "workflow_dispatch"/u,
+  );
+});
+
 test('hosted preflight retries the public mirror before the official Rust fallback', () => {
   const workflow = fs.readFileSync(
     path.join(process.cwd(), '.github/workflows/alpha-promotion-preflight.yml'),
