@@ -493,9 +493,9 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "diagnostic",
-          "definitionDigest": "sha256:8000ec4bd7e5174ded74e84f349e0d82cb0edf3ef49cf43109cea067e78347ec",
+          "definitionDigest": "sha256:156367642d8d52eaf54049cb01f4ad104f9d1d17e329b0f3072d9b2c653c5cad",
           "credentials": {"githubToken":"write","oidc":false,"repositorySecrets":["KUNGFU_GITHUB_TOKEN"],"inheritedSecrets":false,"environment":null},
-          "externalActions": ["kungfu-systems/buildchain/.github/workflows/dev-delivery-warrant-cancel.yml@33362fdb5cfea40bf0fb44c738d3bbcf60c850e2"],
+          "externalActions": ["kungfu-systems/buildchain/.github/workflows/dev-delivery-warrant-cancel.yml@e12eae57c5c56d9680fc73760de9df393a5aa55e"],
           "steps": []
         },
         {
@@ -503,9 +503,9 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "diagnostic",
-          "definitionDigest": "sha256:28e5c2cd5e6ec8ed1d170606b8bf599e18a634facb1cafc4e9d0880f6f71f0d0",
+          "definitionDigest": "sha256:f2c549b13aa0baec6d4187561b97060678757588b899a5d13b08618daea73c71",
           "credentials": {"githubToken":"write","oidc":false,"repositorySecrets":["KUNGFU_GITHUB_TOKEN"],"inheritedSecrets":false,"environment":null},
-          "externalActions": ["kungfu-systems/buildchain/.github/workflows/dev-delivery-warrant-close.yml@33362fdb5cfea40bf0fb44c738d3bbcf60c850e2"],
+          "externalActions": ["kungfu-systems/buildchain/.github/workflows/dev-delivery-warrant-close.yml@e12eae57c5c56d9680fc73760de9df393a5aa55e"],
           "steps": []
         },
         {
@@ -513,10 +513,10 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "diagnostic",
-          "definitionDigest": "sha256:c1d802891a11c3f3e0452f445cf5b965d134d5a9a19f2d9630b9f4aba20ccb9f",
+          "definitionDigest": "sha256:926dd5f3316ce4a1b6871d2171c17cc3d50ac6338b971141a5b588ff9d6caf28",
           "credentials": {"githubToken":"write","oidc":false,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
           "externalActions": ["actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0"],
-          "steps": [{"index":1,"label":"name:Check out protected Buildchain runtime","definitionDigest":"sha256:87ef295183a027e91d87c4a58c4ec289c33839d1da75bd6a2137d6d65ac42bf8"},{"index":2,"label":"id:terminal","definitionDigest":"sha256:125df3159ee945ce311f3910a8925f34d61904df1e5ab218387895011f316e61"}]
+          "steps": [{"index":1,"label":"name:Check out protected Buildchain runtime","definitionDigest":"sha256:c1701408433f8c25db70f6ed7acb1f026b82bd936a57d2f3bff25c3b3aa3ce8b"},{"index":2,"label":"id:terminal","definitionDigest":"sha256:125df3159ee945ce311f3910a8925f34d61904df1e5ab218387895011f316e61"}]
         }
       ]
     },
