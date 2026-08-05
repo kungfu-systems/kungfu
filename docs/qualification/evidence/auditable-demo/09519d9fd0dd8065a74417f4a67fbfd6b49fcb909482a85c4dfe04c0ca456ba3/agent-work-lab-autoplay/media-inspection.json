@@ -1,0 +1,103 @@
+{
+  "inspectionRoot": "sha256:eea5d9a6e432c02692b125bad73a180d335c00ee01e5a3b2bded63916a791903",
+  "members": [
+    {
+      "bytes": 246320,
+      "facts": {
+        "audioStreams": 0,
+        "container": "mp4",
+        "durationMs": 21700,
+        "frameRate": 10,
+        "height": 720,
+        "pixelFormat": "yuv420p",
+        "progressiveDownload": "moov-before-mdat",
+        "videoCodec": "h264",
+        "width": 1280
+      },
+      "path": "demo-720p.mp4",
+      "root": "sha256:af0cba2d82aa0759a8ecebd70866ea3df16e0d46e41245bf8f380170cce43df9"
+    },
+    {
+      "bytes": 253769,
+      "facts": {
+        "audioStreams": 0,
+        "container": "webm",
+        "durationMs": 21700,
+        "frameRate": 10,
+        "height": 720,
+        "pixelFormat": "yuv420p",
+        "progressiveDownload": "not-applicable",
+        "videoCodec": "vp9",
+        "width": 1280
+      },
+      "path": "demo-720p.webm",
+      "root": "sha256:12a99059b907811bd618874f5d9520a9ed6c149970a706c4e70608b5ad006033"
+    },
+    {
+      "bytes": 206411,
+      "facts": {
+        "audioStreams": 0,
+        "container": "gif",
+        "durationMs": 21700,
+        "frameRate": 10,
+        "height": 720,
+        "pixelFormat": "bgra",
+        "progressiveDownload": "not-applicable",
+        "videoCodec": "gif",
+        "width": 1280
+      },
+      "path": "demo.gif",
+      "root": "sha256:44baf77c1d264adc279c74199d7a14d699fb88d081f3c68061608dd594a4e190"
+    },
+    {
+      "bytes": 473483,
+      "facts": {
+        "audioStreams": 0,
+        "container": "mp4",
+        "durationMs": 21700,
+        "frameRate": 10,
+        "height": 1080,
+        "pixelFormat": "yuv420p",
+        "progressiveDownload": "moov-before-mdat",
+        "videoCodec": "h264",
+        "width": 1920
+      },
+      "path": "demo.mp4",
+      "root": "sha256:4d0c2806860b1240dec952a72c958eee87e961750d3a4f1ae42c61dd48905e86"
+    },
+    {
+      "bytes": 504061,
+      "facts": {
+        "audioStreams": 0,
+        "container": "webm",
+        "durationMs": 21700,
+        "frameRate": 10,
+        "height": 1080,
+        "pixelFormat": "yuv420p",
+        "progressiveDownload": "not-applicable",
+        "videoCodec": "vp9",
+        "width": 1920
+      },
+      "path": "demo.webm",
+      "root": "sha256:0a0d88696e66270bc2cac5d676f1cc6294180901b41635a84f603320a1965bbf"
+    },
+    {
+      "bytes": 217820,
+      "facts": {
+        "audioStreams": 0,
+        "container": "png",
+        "durationMs": 0,
+        "frameRate": 25,
+        "height": 1080,
+        "pixelFormat": "rgb24",
+        "progressiveDownload": "not-applicable",
+        "videoCodec": "png",
+        "width": 1920
+      },
+      "path": "poster.png",
+      "root": "sha256:6afd12b6df19349758450b06393dcf7e5c68f8e19537e7a84338d2172309f91b"
+    }
+  ],
+  "rendererImage": "ghcr.io/kungfu-systems/build-images/demo-renderer@sha256:c200589be9dda6f730f1cb3deb5b48a60af9144e7a3e4216b7ef70c8e9274000",
+  "schema": "buildchain.auditable-demo-media-inspection/v1"
+}
