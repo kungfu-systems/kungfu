@@ -9,8 +9,8 @@ confidence: high
 sensitivity: public
 evidence_grade: A
 review_state: self-reviewed
-last_reviewed: 2026-08-04
-ai_provenance: GPT-5 via Codex on 2026-08-02; updated by GPT-5 via Codex on 2026-08-03 to separate non-interactive artifact transport verification from native PTY playback after an exact Build failure, and on 2026-08-04 to split the Project Tour into two independently captured 1x episodes; based on checked-in Kungfu, Buildchain, and Build Images contracts plus exact workflow evidence visible to this task; no claim is made for a render that has not passed the retained Gate
+last_reviewed: 2026-08-05
+ai_provenance: GPT-5 via Codex on 2026-08-02; updated by GPT-5 via Codex on 2026-08-03 to separate non-interactive artifact transport verification from native PTY playback after an exact Build failure, on 2026-08-04 to split the Project Tour into two independently captured 1x episodes, and on 2026-08-05 to bind the consumer-owned three-proof presentation contract; based on checked-in Kungfu, Buildchain, and Build Images contracts plus exact workflow evidence visible to this task; no claim is made for a render that has not passed the retained Gate
 ---
 
 # Declarative Multi-demo Animation Pipeline
@@ -87,7 +87,14 @@ dimension, output-size, native-rendition, or renderer-contract drift.
 
 ## Materialization and evidence
 
-For a multi-demo scenario, Buildchain owns one README block per demo:
+Kungfu owns the public argument around the media: the three proof labels,
+questions, summaries, and the transitions from continuity to failure retention
+to review and settlement. The scenario binds those semantics to the same demo
+titles used by exact-artifact capture. Buildchain validates and materializes
+that declaration without inventing product copy.
+
+For this consumer, Buildchain updates only one media block per demo in the
+README:
 
 ```text
 kungfu:auditable-demo:agent-work-lab-autoplay
@@ -97,9 +104,12 @@ kungfu:auditable-demo:project-tour-episode-2
 
 Qualified media is copied under the content-addressed root
 `docs/qualification/evidence/auditable-demo/<evidence-root>/<demo-id>/`.
-Each block links to its GIF, native 1080p and 720p videos, reduced-motion
-poster, `public-evidence.json`, and `release-passport.json`. Re-running the
-same evidence is idempotent; a changed source, scenario, capture, Gate, or
+Each compact README block links its GIF to `public-evidence.json`; the
+human-authored headings, explanations, and bridge remain outside generated
+markers. Buildchain writes the full command list, native 1080p and 720p video
+links, claim boundary, Release Passport, evidence links, and declared
+transition into ordered generated blocks on this technical page. Re-running
+the same evidence is idempotent; a changed source, scenario, capture, Gate, or
 media bundle produces a different evidence root.
 
 The workflow token may create the bounded materialization pull request only.

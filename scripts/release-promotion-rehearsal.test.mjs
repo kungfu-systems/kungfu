@@ -135,9 +135,13 @@ test('promotion caller grants the write permissions required by Buildchain', () 
 test('promotion rejects an event-scoped Buildchain runtime override', () => {
   const promotionPath = CONTRACT.workflows.promotion;
   const original = fs.readFileSync(path.join(ROOT, promotionPath), 'utf8');
+  const promote = extractWorkflowJob(original, 'promote');
   const drifted = original.replace(
-    `      buildchain-ref: ${CONTRACT.buildchain.workflow_shell_sha}`,
-    "      buildchain-ref: ${{ inputs.buildchain-ref || 'v3' }}",
+    promote,
+    promote.replace(
+      `      buildchain-ref: ${CONTRACT.buildchain.workflow_shell_sha}`,
+      "      buildchain-ref: ${{ inputs.buildchain-ref || 'v3' }}",
+    ),
   );
   assert.notEqual(drifted, original);
   const result = validateWorkflowSources(ROOT, CONTRACT, {
@@ -154,9 +158,13 @@ test('promotion rejects an event-scoped Buildchain runtime override', () => {
 test('promotion rejects a static Buildchain ref that differs from its workflow shell', () => {
   const promotionPath = CONTRACT.workflows.promotion;
   const original = fs.readFileSync(path.join(ROOT, promotionPath), 'utf8');
+  const promote = extractWorkflowJob(original, 'promote');
   const drifted = original.replace(
-    `      buildchain-ref: ${CONTRACT.buildchain.workflow_shell_sha}`,
-    '      buildchain-ref: 0000000000000000000000000000000000000000',
+    promote,
+    promote.replace(
+      `      buildchain-ref: ${CONTRACT.buildchain.workflow_shell_sha}`,
+      '      buildchain-ref: 0000000000000000000000000000000000000000',
+    ),
   );
   assert.notEqual(drifted, original);
   const result = validateWorkflowSources(ROOT, CONTRACT, {

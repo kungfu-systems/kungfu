@@ -48,7 +48,7 @@ explains Kungfu's current policy and does not redefine Shifu semantics.
 | `dev-patrol` | manual exact-source three-platform GitHub-hosted full product verify plus advisory external links |
 | `alpha-pr` | four GitHub-hosted full-product lanes, with build/verify/release evidence and conditional membrane and Shifu matrices |
 | `release-pr` | currently the same qualification strength as alpha, with the release publication channel |
-| `release-promotion` | post-merge promotion rehearsal and Buildchain artifact/passport admission |
+| `release-promotion` | four-platform pre-publication catalog and promotion rehearsal; Buildchain artifact/passport admission remains independently enforced |
 | `measurement` | manual three-platform source-bound observation of every task-backed Gate; all selected actions are advisory and it never publishes |
 
 The separate `Core build profiles` workflow is an asynchronous diagnostic
