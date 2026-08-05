@@ -33,7 +33,7 @@
   "demos": [
     {
       "id": "agent-work-lab-autoplay",
-      "title": "Kungfu Agent Work Lab autoplay",
+      "title": "Can Work survive a new Agent?",
       "claimBoundary": "This exact standalone Kungfu artifact proves only the bounded offline Agent Work Lab autoplay observed in two independently captured native PTYs; it grants no Work, release, capability, or production authority.",
       "steps": [
         {
@@ -48,7 +48,7 @@
     },
     {
       "id": "project-tour-episode-1",
-      "title": "Kungfu Project Tour episode 1 at 1x",
+      "title": "Can Work survive failure?",
       "claimBoundary": "This exact standalone Kungfu artifact proves only the bounded disposable Project Tour episode 1 observed at 1x in two independently captured native PTYs; Mock Agent output and terminal observations grant no Work, release, capability, or production authority.",
       "steps": [
         {
@@ -63,7 +63,7 @@
     },
     {
       "id": "project-tour-episode-2",
-      "title": "Kungfu Project Tour episode 2 at 1x",
+      "title": "Who is allowed to complete Work?",
       "claimBoundary": "This exact standalone Kungfu artifact proves only the bounded disposable Project Tour episode 2 observed at 1x in two independently captured native PTYs; Mock Agent output and terminal observations grant no Work, release, capability, or production authority.",
       "steps": [
         {
