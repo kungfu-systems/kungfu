@@ -221,6 +221,7 @@ jobs:
           pull_request=.buildchain/dev-delivery-input/pull-request.json
           warrant_input=.buildchain/dev-delivery-input/warrant-input.json
           qualification=.buildchain/dev-delivery-input/project-cut-qualification.json
+          qualification_output=.buildchain/dev-delivery-input/project-cut-qualification.log
           proof=.buildchain/dev-delivery-input/project-cut-proof.json
 
           test "$GITHUB_REPOSITORY" = "$(jq -r '.head.repo.full_name' "$pull_request")"
@@ -234,7 +235,8 @@ jobs:
           ./shifu project-cut:queue-admission -- \
             --base "$current_base" \
             --head "$EXPECTED_HEAD" \
-            > "$qualification"
+            | tee "$qualification_output"
+          tail -n 1 "$qualification_output" > "$qualification"
           jq -e \
             --arg base "$current_base" \
             --arg head "$EXPECTED_HEAD" \
