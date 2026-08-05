@@ -2051,8 +2051,8 @@
           "reason": "Not selected by the current release-promotion workflow policy."
         },
         "governance.buildchain-config": {
-          "mode": "required",
-          "reason": "Selected by the current release-promotion workflow policy when its activation condition matches."
+          "mode": "advisory",
+          "reason": "Validated by the source-locked promotion controller; retained as advisory because the generic Gate runner does not mint controller evidence."
         },
         "governance.promotion-rehearsal": {
           "mode": "required",
@@ -2099,8 +2099,8 @@
           "reason": "Not selected by the current release-promotion workflow policy."
         },
         "release.artifact-admission": {
-          "mode": "required",
-          "reason": "Selected by the current release-promotion workflow policy when its activation condition matches."
+          "mode": "advisory",
+          "reason": "Enforced independently by the Buildchain publication authority after Gate aggregation; retained as advisory because artifact admission cannot authorize itself."
         },
         "layers.contract": {
           "mode": "off",
@@ -2119,8 +2119,8 @@
           "reason": "Not selected by the current release-promotion workflow policy."
         },
         "layers.release": {
-          "mode": "required",
-          "reason": "Selected by the current release-promotion workflow policy when its activation condition matches."
+          "mode": "advisory",
+          "reason": "Produced after immutable publication coordinates exist and therefore remains visible without participating in pre-publication authority."
         },
         "episode.smoke": {
           "mode": "off",

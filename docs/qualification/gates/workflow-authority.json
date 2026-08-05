@@ -952,7 +952,7 @@
           "authority": "release-control",
           "publication": "channel",
           "receipt": "qualifying",
-          "definitionDigest": "sha256:302b79edbafafcce129e339e5ff8db333b23bd95d90af8c9f1769aca94bf120f",
+          "definitionDigest": "sha256:08ba3558dc8f10cdaf6e37ab4047e57bef35896d1fa63ba42ebfa3147b2e2788",
           "credentials": {"githubToken":"write","oidc":true,"repositorySecrets":["BUILDCHAIN_ISSUE_APP_ID","BUILDCHAIN_ISSUE_APP_PRIVATE_KEY","KUNGFU_ALPHA_CHANNEL_SIGNING_PRIVATE_KEY","KUNGFU_GITHUB_TOKEN","KUNGFU_GOVERNANCE_AUDITOR_APP_PRIVATE_KEY"],"inheritedSecrets":false,"environment":null},
           "externalActions": ["kungfu-systems/buildchain/.github/workflows/release-candidate-promote.yml@33362fdb5cfea40bf0fb44c738d3bbcf60c850e2"],
           "steps": []
@@ -966,6 +966,16 @@
           "credentials": {"githubToken":"read","oidc":false,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
           "externalActions": ["actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0","actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e","actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0"],
           "steps": [{"index":1,"label":"id:candidate","definitionDigest":"sha256:b26ccd80ef6de735f425e42a2f6bc52b4d0473bf52771cc1d9c2efecb674843a"},{"index":2,"label":"name:Checkout immutable Alpha candidate","definitionDigest":"sha256:8f1ff28917c625d57760451e82ab1239ddf747a611068bf9c6ad1067ad8f6284"},{"index":3,"label":"uses:actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e","definitionDigest":"sha256:a869cc671103a9106dc90b4275a4148de9a5d18cd3578a2642d8ae8076d8dbf0"},{"index":4,"label":"id:preflight","definitionDigest":"sha256:de360134fee9dbf785d19794d87d62f16b07c7bf2872c83ce97be75fa0b8a02f"},{"index":5,"label":"name:Checkout immutable promotion result","definitionDigest":"sha256:9ff1aa9f5707e1bed64e57983cf9e409bd19fc8146dd5aa1801e1f6d4b8413f4"},{"index":6,"label":"id:promotion-tree","definitionDigest":"sha256:391088f704e8df632f937c4fe9c1265efb3846849c489032170178e871bde248"},{"index":7,"label":"name:Rehearse the Kungfu promotion contract for a pull request","definitionDigest":"sha256:0af2d30832fe4041d9997fd0a331f528a62b23fba2e3c9cfc23e45dd8ab38947"},{"index":8,"label":"name:Rehearse the Kungfu promotion contract for a manual dry-run","definitionDigest":"sha256:ac10175c46721c013cdc70ec9c5db82713fabd00be703439cf665365bef6c05d"}]
+        },
+        {
+          "id": "publication-gates",
+          "authority": "qualification",
+          "publication": "none",
+          "receipt": "diagnostic",
+          "definitionDigest": "sha256:f63c64a49ab864a888f368323b22b902a8d0908854d0c15bd1620e3aa887d62b",
+          "credentials": {"githubToken":"read","oidc":false,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
+          "externalActions": ["kungfu-systems/buildchain/.github/workflows/.gate-profile.yml@33362fdb5cfea40bf0fb44c738d3bbcf60c850e2"],
+          "steps": []
         }
       ]
     },

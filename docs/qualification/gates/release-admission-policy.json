@@ -39,7 +39,7 @@
     "publisherWorkflowPath": ".github/workflows/release-new-version.yml",
     "environment": "none",
     "product": "Kungfu Episodes",
-    "target": "kungfu-product",
+    "target": "github-release:kungfu-systems/kungfu",
     "channels": ["alpha", "release"]
   },
   "freshness": {

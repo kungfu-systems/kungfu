@@ -595,6 +595,33 @@
       }
     },
     {
+      "id": "release-publication-gates",
+      "execution": "profile",
+      "workflow": ".github/workflows/release-new-version.yml",
+      "job": "publication-gates",
+      "profiles": [
+        "release-promotion"
+      ],
+      "gates": [
+        "gate.catalog",
+        "governance.buildchain-config",
+        "governance.promotion-rehearsal",
+        "release.artifact-admission",
+        "layers.release"
+      ],
+      "activation": "merged alpha or release pull request, or manual source-locked dry-run measurement before publication authority",
+      "invocation": {
+        "uses": "kungfu-systems/buildchain/.github/workflows/.gate-profile.yml@33362fdb5cfea40bf0fb44c738d3bbcf60c850e2",
+        "with": {
+          "buildchain-ref": "33362fdb5cfea40bf0fb44c738d3bbcf60c850e2",
+          "source-ref": "${{ needs.promotion-contract.outputs.promotion-sha }}",
+          "gate-profile": "release-promotion",
+          "runner-preset": "custom",
+          "platforms-json": "[{\"id\":\"linux-x64\",\"name\":\"Linux x64\",\"platform\":\"linux\",\"runner\":\"[\\\"ubuntu-24.04\\\"]\",\"capabilities\":[\"node\"]},{\"id\":\"linux-arm64\",\"name\":\"Linux ARM64\",\"platform\":\"linux\",\"runner\":\"[\\\"ubuntu-24.04-arm\\\"]\",\"capabilities\":[\"node\"]},{\"id\":\"macos-arm64\",\"name\":\"macOS ARM64\",\"platform\":\"macos\",\"runner\":\"[\\\"macos-15\\\"]\",\"capabilities\":[\"node\"]},{\"id\":\"windows-x64\",\"name\":\"Windows x64\",\"platform\":\"windows\",\"runner\":\"[\\\"windows-2022\\\"]\",\"capabilities\":[\"node\"]}]"
+        }
+      }
+    },
+    {
       "id": "release-admission",
       "execution": "controller",
       "workflow": ".github/workflows/release-new-version.yml",
@@ -612,7 +639,10 @@
         "kind": "job-uses",
         "uses": "kungfu-systems/buildchain/.github/workflows/release-candidate-promote.yml@33362fdb5cfea40bf0fb44c738d3bbcf60c850e2",
         "job": {
-          "needs": "promotion-contract",
+          "needs": [
+            "promotion-contract",
+            "publication-gates"
+          ],
           "if": "${{ github.event_name == 'workflow_dispatch' || github.event.pull_request.merged == true }}"
         },
         "with": {
@@ -621,6 +651,11 @@
           "target-sha": "${{ inputs.target-sha || github.event.pull_request.merge_commit_sha || github.sha }}",
           "required-status-check": "build / Finalize build controller evidence",
           "publication-auto-admission": true,
+          "publication-gate-aggregate-json": "${{ needs.publication-gates.outputs.gate-aggregate-json }}",
+          "publication-publisher-workflow-path": ".github/workflows/release-new-version.yml",
+          "publication-product": "Kungfu Episodes",
+          "publication-target": "github-release:kungfu-systems/kungfu",
+          "publication-package-name": "",
           "publication-consumer-qualification-command": "node scripts/kungfu-release-qualification.mjs",
           "publication-consumer-predicate-id": "kungfu.release-admission/v1",
           "publish-command": "node scripts/buildchain-custom-publish-evidence.mjs",

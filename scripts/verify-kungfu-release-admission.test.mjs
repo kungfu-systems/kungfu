@@ -330,7 +330,7 @@ function fixture({
     gateAggregateDigest: gateAggregate.digest,
     environment: 'none',
     product: 'Kungfu Episodes',
-    target: 'kungfu-product',
+    target: 'github-release:kungfu-systems/kungfu',
     version: channel === 'alpha' ? '4.0.0-alpha.1' : '4.0.0',
     channel,
     artifactDigest: manifestSet.manifestSetDigest,
