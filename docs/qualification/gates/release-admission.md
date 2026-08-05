@@ -22,7 +22,7 @@ A qualifying capability must bind all of the following exact values:
 | Runner | qualifying ephemeral, reimaged, or measured persistent-runner provenance; unqualified is denied |
 | Control plane | fresh passing Actions, branch/ruleset, Environment, OIDC, publisher, and runner audit facts |
 | Artifact | recomputed manifests and every product payload byte for the exact RC platform set |
-| Target | Kungfu Episodes, `kungfu-product`, exact version, and only `alpha` or `release` |
+| Target | Kungfu Episodes, `github-release:kungfu-systems/kungfu`, exact version, and only `alpha` or `release` |
 | Freshness | unique nonce, no replay, and no more than 15 minutes from issue to expiry |
 
 The verifier ignores a producer's own allow/deny statement. It recomputes the
@@ -39,6 +39,13 @@ fields are errors, not wildcards. Unreadable external audit state fails closed.
   requires a fresh sealed capability.
 - **Channel promotion** moves `alpha` or `release` to an exact already-qualified
   source and requires the same capability chain.
+
+Before publication authority is sealed, the Buildchain Gate controller runs
+the source-bound `release-promotion` profile on all four required platforms.
+That profile contains only actions that can genuinely complete before
+publication. Artifact admission remains an independent Buildchain authority
+check, and the seven-layer public-coordinate verdict remains post-publication;
+neither is allowed to authorize itself through a circular pre-publication Gate.
 
 The Buildchain controller transports the complete Gate aggregate and sealed
 capability into `node scripts/kungfu-release-qualification.mjs`. That predicate
