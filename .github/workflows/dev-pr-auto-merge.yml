@@ -231,7 +231,7 @@ jobs:
           git fetch --no-tags origin "$EXPECTED_HEAD"
           test "$EXPECTED_HEAD" = "$(git rev-parse "$EXPECTED_HEAD^{commit}")"
 
-          ./shifu project-cut:queue-admission -- \
+          ./shifu --silent project-cut:queue-admission -- \
             --base "$current_base" \
             --head "$EXPECTED_HEAD" \
             > "$qualification"

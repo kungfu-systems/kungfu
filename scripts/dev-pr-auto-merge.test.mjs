@@ -98,6 +98,13 @@ test('Dev auto-merge waits for PR checks and lands through the native queue', ()
   assert.doesNotMatch(workflow, /gh pr merge|npm publish|git tag/iu);
 });
 
+test('Dev auto-merge keeps Project Cut qualification stdout machine-readable', () => {
+  assert.match(
+    workflow,
+    /\.\/shifu --silent project-cut:queue-admission --[\s\S]*> "\$qualification"/u,
+  );
+});
+
 test('Dev behind admission produces and forwards an exact Project Cut replay proof', () => {
   assert.match(
     workflow,
