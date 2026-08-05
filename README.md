@@ -38,40 +38,78 @@ A successful agent process is retained for independent review; it does not
 complete Work by itself.
 
 <!-- kungfu:auditable-demo:agent-work-lab-autoplay:start -->
-## See the Work survive an Agent change
+## Kungfu Agent Work Lab autoplay
 
-**One Work. Two fresh Agent processes. No copied chat.**
+[![Kungfu Agent Work Lab autoplay](docs/qualification/evidence/auditable-demo/74f7cf0b18f261001755c43dfd2954262bdb32c865a34f8316e3ec38331fb35b/agent-work-lab-autoplay/demo.gif)](docs/qualification/evidence/auditable-demo/74f7cf0b18f261001755c43dfd2954262bdb32c865a34f8316e3ec38331fb35b/agent-work-lab-autoplay/public-evidence.json)
 
-Session 1 stops with a partial result. Session 2 starts without the previous
-conversation, recovers what was done and what remains, then finishes the same Work.
+Animation scenario:
 
-[![Kungfu Agent Work Lab showing a fresh Agent continuing the same Work without copied chat](docs/qualification/evidence/auditable-demo/835bde89ae8cee57661dfc2f4ba96bbf6d2be1546d89f42fd0c18a331a7308da/demo.gif)](docs/qualification/auditable-demo-artifact-pipeline.md)
+```text
+$ kungfu agent-work-lab autoplay
+```
+
+Native renditions: [1080p MP4](docs/qualification/evidence/auditable-demo/74f7cf0b18f261001755c43dfd2954262bdb32c865a34f8316e3ec38331fb35b/agent-work-lab-autoplay/demo.mp4) · [1080p WebM](docs/qualification/evidence/auditable-demo/74f7cf0b18f261001755c43dfd2954262bdb32c865a34f8316e3ec38331fb35b/agent-work-lab-autoplay/demo.webm) · [720p MP4](docs/qualification/evidence/auditable-demo/74f7cf0b18f261001755c43dfd2954262bdb32c865a34f8316e3ec38331fb35b/agent-work-lab-autoplay/demo-720p.mp4) · [720p WebM](docs/qualification/evidence/auditable-demo/74f7cf0b18f261001755c43dfd2954262bdb32c865a34f8316e3ec38331fb35b/agent-work-lab-autoplay/demo-720p.webm)
+
+[Static poster / reduced-motion fallback](docs/qualification/evidence/auditable-demo/74f7cf0b18f261001755c43dfd2954262bdb32c865a34f8316e3ec38331fb35b/agent-work-lab-autoplay/poster.png)
 
 <details>
-<summary>How this exact installed-artifact demo was verified</summary>
+<summary>Evidence and claim boundary</summary>
 
-This selectively rendered demo comes from one exact retained Linux build artifact.
-The installed `kungfu agent-work-lab autoplay` command ran in a bounded PTY, the
-required Buildchain Gate qualified its exact capture, and full media rendered only
-from that passing Gate.
+This exact standalone Kungfu artifact proves only the bounded offline Agent Work Lab autoplay observed in two independently captured native PTYs; it grants no Work, release, capability, or production authority.
 
-[Method and evidence](docs/qualification/auditable-demo-artifact-pipeline.md) · [source `7777de45e3fa`](https://github.com/kungfu-systems/kungfu/commit/7777de45e3fa53c6654d39990314efc2bc9ae99a) · [workflow run](https://github.com/kungfu-systems/kungfu/actions/runs/30646944258)
-
-[Gate bundle](https://github.com/kungfu-systems/kungfu/actions/runs/30646944258/artifacts/8802347879) `sha256:9e73aac549a32458ad132ad8166836aa7ab03885210117a15a5d382ef2687c33` · [media bundle](https://github.com/kungfu-systems/kungfu/actions/runs/30646944258/artifacts/8802406105) `sha256:8353070c7b204bccb9e51e124cd07de215ef64db742a70333614c4fe065c59aa` · [Release Passport](https://github.com/kungfu-systems/kungfu/actions/runs/30646944258/artifacts/8802427227) `sha256:835bde89ae8cee57661dfc2f4ba96bbf6d2be1546d89f42fd0c18a331a7308da`
-
-Evidence class: `exact-installed-artifact-agent-work-lab-autoplay/v1`. This proves only the exact
-installed-artifact autoplay and named Gate/render path. The demo grants no
-authorization from first-party/System identity, KFD compliance, Product System
-metadata, local bundle presence, package metadata, registry history, scan output,
-or standalone generation, and makes no production-deployment claim.
+[Release Passport](docs/qualification/evidence/auditable-demo/74f7cf0b18f261001755c43dfd2954262bdb32c865a34f8316e3ec38331fb35b/agent-work-lab-autoplay/release-passport.json) · [auditable evidence](docs/qualification/evidence/auditable-demo/74f7cf0b18f261001755c43dfd2954262bdb32c865a34f8316e3ec38331fb35b/agent-work-lab-autoplay/public-evidence.json)
 
 </details>
 <!-- kungfu:auditable-demo:agent-work-lab-autoplay:end -->
 
 <!-- kungfu:auditable-demo:project-tour-episode-1:start -->
+## Kungfu Project Tour episode 1 at 1x
+
+[![Kungfu Project Tour episode 1 at 1x](docs/qualification/evidence/auditable-demo/6751bfdf7a27dd2c4b0c3f0916a512fb7abd172543c94dee220b41a0d679632e/project-tour-episode-1/demo.gif)](docs/qualification/evidence/auditable-demo/6751bfdf7a27dd2c4b0c3f0916a512fb7abd172543c94dee220b41a0d679632e/project-tour-episode-1/public-evidence.json)
+
+Animation scenario:
+
+```text
+$ kungfu agent-work-lab project-tour --episode 1 --speed 1
+```
+
+Native renditions: [1080p MP4](docs/qualification/evidence/auditable-demo/6751bfdf7a27dd2c4b0c3f0916a512fb7abd172543c94dee220b41a0d679632e/project-tour-episode-1/demo.mp4) · [1080p WebM](docs/qualification/evidence/auditable-demo/6751bfdf7a27dd2c4b0c3f0916a512fb7abd172543c94dee220b41a0d679632e/project-tour-episode-1/demo.webm) · [720p MP4](docs/qualification/evidence/auditable-demo/6751bfdf7a27dd2c4b0c3f0916a512fb7abd172543c94dee220b41a0d679632e/project-tour-episode-1/demo-720p.mp4) · [720p WebM](docs/qualification/evidence/auditable-demo/6751bfdf7a27dd2c4b0c3f0916a512fb7abd172543c94dee220b41a0d679632e/project-tour-episode-1/demo-720p.webm)
+
+[Static poster / reduced-motion fallback](docs/qualification/evidence/auditable-demo/6751bfdf7a27dd2c4b0c3f0916a512fb7abd172543c94dee220b41a0d679632e/project-tour-episode-1/poster.png)
+
+<details>
+<summary>Evidence and claim boundary</summary>
+
+This exact standalone Kungfu artifact proves only the bounded disposable Project Tour episode 1 observed at 1x in two independently captured native PTYs; Mock Agent output and terminal observations grant no Work, release, capability, or production authority.
+
+[Release Passport](docs/qualification/evidence/auditable-demo/6751bfdf7a27dd2c4b0c3f0916a512fb7abd172543c94dee220b41a0d679632e/project-tour-episode-1/release-passport.json) · [auditable evidence](docs/qualification/evidence/auditable-demo/6751bfdf7a27dd2c4b0c3f0916a512fb7abd172543c94dee220b41a0d679632e/project-tour-episode-1/public-evidence.json)
+
+</details>
 <!-- kungfu:auditable-demo:project-tour-episode-1:end -->
 
 <!-- kungfu:auditable-demo:project-tour-episode-2:start -->
+## Kungfu Project Tour episode 2 at 1x
+
+[![Kungfu Project Tour episode 2 at 1x](docs/qualification/evidence/auditable-demo/2ceca18c5d030d98f693e433bad4981c7931a2ca1f4b2efcbdc7d63538e642db/project-tour-episode-2/demo.gif)](docs/qualification/evidence/auditable-demo/2ceca18c5d030d98f693e433bad4981c7931a2ca1f4b2efcbdc7d63538e642db/project-tour-episode-2/public-evidence.json)
+
+Animation scenario:
+
+```text
+$ kungfu agent-work-lab project-tour --episode 2 --speed 1
+```
+
+Native renditions: [1080p MP4](docs/qualification/evidence/auditable-demo/2ceca18c5d030d98f693e433bad4981c7931a2ca1f4b2efcbdc7d63538e642db/project-tour-episode-2/demo.mp4) · [1080p WebM](docs/qualification/evidence/auditable-demo/2ceca18c5d030d98f693e433bad4981c7931a2ca1f4b2efcbdc7d63538e642db/project-tour-episode-2/demo.webm) · [720p MP4](docs/qualification/evidence/auditable-demo/2ceca18c5d030d98f693e433bad4981c7931a2ca1f4b2efcbdc7d63538e642db/project-tour-episode-2/demo-720p.mp4) · [720p WebM](docs/qualification/evidence/auditable-demo/2ceca18c5d030d98f693e433bad4981c7931a2ca1f4b2efcbdc7d63538e642db/project-tour-episode-2/demo-720p.webm)
+
+[Static poster / reduced-motion fallback](docs/qualification/evidence/auditable-demo/2ceca18c5d030d98f693e433bad4981c7931a2ca1f4b2efcbdc7d63538e642db/project-tour-episode-2/poster.png)
+
+<details>
+<summary>Evidence and claim boundary</summary>
+
+This exact standalone Kungfu artifact proves only the bounded disposable Project Tour episode 2 observed at 1x in two independently captured native PTYs; Mock Agent output and terminal observations grant no Work, release, capability, or production authority.
+
+[Release Passport](docs/qualification/evidence/auditable-demo/2ceca18c5d030d98f693e433bad4981c7931a2ca1f4b2efcbdc7d63538e642db/project-tour-episode-2/release-passport.json) · [auditable evidence](docs/qualification/evidence/auditable-demo/2ceca18c5d030d98f693e433bad4981c7931a2ca1f4b2efcbdc7d63538e642db/project-tour-episode-2/public-evidence.json)
+
+</details>
 <!-- kungfu:auditable-demo:project-tour-episode-2:end -->
 
 Want to explore without leaving Kungfu first? Run the terminal product:
