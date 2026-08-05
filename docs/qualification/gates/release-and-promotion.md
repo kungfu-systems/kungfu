@@ -220,8 +220,8 @@ blocking obligation. The executable schema and negative fixtures are in
 - **Pass:** one fail-closed seven-row verdict binds clean-source three-host reports to the exact immutable public coordinates, then emits required task evidence and a source-bound Gate receipt.
 - **Failure or skip:** divergent portable reports, a missing or duplicate platform, non-numeric budget, absent uninstall proof, digest mismatch, mutable or local coordinate, missing capability, or missing evidence is non-qualifying.
 - **Evidence:** required `kungfu.layer-qualification.release-gate-evidence/v1` pointers, `product/release/qualification/layer-publication-report.json`, `product/release/qualification/layer-release-report.json`, and the unified Gate receipt.
-- **Diagnosis:** `./shifu gate explain layers.release --profile release-promotion`; inspect the publication report, discovered host reports, release report, and receipt without rerunning publication.
+- **Diagnosis:** `./shifu gate explain layers.release`; inspect the publication report, discovered host reports, release report, and receipt without rerunning publication.
 - **Cost:** light; timeout 300 seconds.
 - **Current source:** .github/workflows/publish-layer-artifacts.yml (verify-publication; manually executed public layer publication)
-- **Retirement:** remove only after all seven layers leave the release policy or a replacement Gate preserves exact artifacts, three-platform evidence, public-coordinate binding, and promotion-profile coverage.
+- **Retirement:** remove only after all seven layers leave the layer-publication policy or a replacement Gate preserves exact artifacts, three-platform evidence, and public-coordinate binding. This post-publication Gate is deliberately outside the pre-publication product `release-promotion` profile.
 <!-- /gate-doc:layers.release -->

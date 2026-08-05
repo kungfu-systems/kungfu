@@ -143,11 +143,11 @@ test('Kungfu owns the ordered three-proof argument while Buildchain updates only
 test('the build fails the real transported binary before either upload path', () => {
   assert.equal(
     build.uses,
-    'kungfu-systems/buildchain/.github/workflows/.build.yml@33362fdb5cfea40bf0fb44c738d3bbcf60c850e2',
+    'kungfu-systems/buildchain/.github/workflows/.build.yml@bcfb5b1063a455b653682eb1675c4c74b4eee4ca',
   );
   assert.equal(
     demo.uses,
-    'kungfu-systems/buildchain/.github/workflows/.declarative-auditable-demo.yml@33362fdb5cfea40bf0fb44c738d3bbcf60c850e2',
+    'kungfu-systems/buildchain/.github/workflows/.declarative-auditable-demo.yml@bcfb5b1063a455b653682eb1675c4c74b4eee4ca',
   );
   assert.equal(
     build.with['pre-upload-transport-smoke-scenario-path'],

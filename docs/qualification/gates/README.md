@@ -8,7 +8,7 @@ explains Kungfu's current policy and does not redefine Shifu semantics.
 ## Authority and current-state boundary
 
 - Shifu owns the registry, plan, execution, and receipt contracts.
-- Kungfu owns the 38 concrete gate ids, actions, documentation, five remote
+- Kungfu owns the 38 concrete gate ids, actions, documentation, six remote
   policy profiles, and one non-policy measurement profile.
 - [Workflow bindings](workflow-bindings.json) record how current GitHub
   workflows activate profiles and gates. Schema v2 makes direct Gate,
@@ -49,6 +49,7 @@ explains Kungfu's current policy and does not redefine Shifu semantics.
 | `alpha-pr` | four GitHub-hosted full-product lanes, with build/verify/release evidence and conditional membrane and Shifu matrices |
 | `release-pr` | currently the same qualification strength as alpha, with the release publication channel |
 | `release-promotion` | post-merge promotion rehearsal and Buildchain artifact/passport admission |
+| `layer-publication` | post-publication verification of seven immutable public coordinates and exact three-platform evidence |
 | `measurement` | manual three-platform source-bound observation of every task-backed Gate; all selected actions are advisory and it never publishes |
 
 The separate `Core build profiles` workflow is an asynchronous diagnostic
