@@ -164,7 +164,11 @@ test('Alpha recovery reuses the sealed candidate through the bounded Buildchain 
   assert.match(workflow, /test "\$PREFLIGHT_RUN_ID" = "31051197057"/u);
   assert.match(
     workflow,
-    /test "\$RECOVERY_RUNTIME_SHA" = "6ba1ea6c3587af12a750dcb476b341046f32b2d2"/u,
+    /\[\[ ! "\$RECOVERY_RUNTIME_SHA" =~ \^\[0-9a-f\]\{40\}\$ \]\]/u,
+  );
+  assert.doesNotMatch(
+    workflow,
+    /test "\$RECOVERY_RUNTIME_SHA" = "[0-9a-f]{40}"/u,
   );
 });
 

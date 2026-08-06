@@ -195,7 +195,10 @@ jobs:
           test "$EXPECTED_WORKFLOW_NAME" = "Build"
           test "$EXPECTED_SOURCE_TREE" = "67a93b5831596555e7c29104421de3a0b97eb865"
           test "$EXPECTED_CANDIDATE_RUNTIME_SHA" = "2e7e07902ac28d8f3edcfb81098ef9ebc7a91878"
-          test "$RECOVERY_RUNTIME_SHA" = "6ba1ea6c3587af12a750dcb476b341046f32b2d2"
+          if [[ ! "$RECOVERY_RUNTIME_SHA" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "::error::resume-buildchain-runtime-sha must be an exact lowercase 40-character commit SHA"
+            exit 1
+          fi
           test "$TARGET_REF" = "alpha/v4/v4.0"
           test "$TARGET_SHA" = "f9e6b0e34bcdd6407b2a18206ace7982d64de2c8"
           test "$PREFLIGHT_RUN_ID" = "31051197057"
