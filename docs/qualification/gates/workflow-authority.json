@@ -982,10 +982,10 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "diagnostic",
-          "definitionDigest": "sha256:e1bf7440015ee53c5ca74c170e91fb8657d169069ef270b66c117f617359e354",
+          "definitionDigest": "sha256:051ad0b0c0ddd7b722e432ca85b73455c59a1c6463797479d28d162858c1eb29",
           "credentials": {"githubToken":"read","oidc":false,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
           "externalActions": ["actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0","actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e"],
-          "steps": [{"index":1,"label":"name:Require the bounded Alpha 1 recovery identity","definitionDigest":"sha256:0e6e6fbb8ce01581ee18c2f28ef74d3d709e794b086966ebbe0424fc1f57d050"},{"index":2,"label":"name:Checkout immutable candidate source","definitionDigest":"sha256:e40649f5b143d21ffd7142da1bc68a742801f31c93e3ab2ada4aee4b6c2d967b"},{"index":3,"label":"uses:actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e","definitionDigest":"sha256:a869cc671103a9106dc90b4275a4148de9a5d18cd3578a2642d8ae8076d8dbf0"},{"index":4,"label":"name:Reuse exact Alpha preflight","definitionDigest":"sha256:76bc1b6cd358a7a800cb54acdee85b263411cdbd3e9f48d258448c456b6feef2"},{"index":5,"label":"name:Verify promotion target preserves the candidate tree","definitionDigest":"sha256:7fd95645898bbb9582006c899eb652152f9f411fc5a4354566c2405e7c67ba91"}]
+          "steps": [{"index":1,"label":"name:Require the bounded Alpha 1 recovery identity","definitionDigest":"sha256:c8ff497441e46ed9872b1bae82b45333e5a603e44b347ec5a3d64c12382471a4"},{"index":2,"label":"name:Checkout immutable candidate source","definitionDigest":"sha256:e40649f5b143d21ffd7142da1bc68a742801f31c93e3ab2ada4aee4b6c2d967b"},{"index":3,"label":"uses:actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e","definitionDigest":"sha256:a869cc671103a9106dc90b4275a4148de9a5d18cd3578a2642d8ae8076d8dbf0"},{"index":4,"label":"name:Reuse exact Alpha preflight","definitionDigest":"sha256:76bc1b6cd358a7a800cb54acdee85b263411cdbd3e9f48d258448c456b6feef2"},{"index":5,"label":"name:Verify promotion target preserves the candidate tree","definitionDigest":"sha256:7fd95645898bbb9582006c899eb652152f9f411fc5a4354566c2405e7c67ba91"}]
         }
       ]
     },
