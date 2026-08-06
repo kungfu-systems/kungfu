@@ -168,6 +168,7 @@ test('Alpha recovery reuses the sealed candidate through the bounded Buildchain 
     'resume-expected-source-tree: ${{ inputs.resume-expected-source-tree }}',
     'resume-expected-candidate-runtime-sha: ${{ inputs.resume-expected-candidate-runtime-sha }}',
     'resume-buildchain-runtime-sha: ${{ inputs.resume-buildchain-runtime-sha }}',
+    'publication-gate-controller-sha: ${{ inputs.resume-publication-gate-controller-sha }}',
     'publish-transaction-override: ${{ inputs.publish-transaction-override }}',
     'dry-run: false',
   ]) {
@@ -177,6 +178,10 @@ test('Alpha recovery reuses the sealed candidate through the bounded Buildchain 
   assert.doesNotMatch(recovery, /^\s+strategy:\s*$/mu);
   assert.match(workflow, /test "\$CANDIDATE_RUN_ID" = "31051528142"/u);
   assert.match(workflow, /test "\$PREFLIGHT_RUN_ID" = "31051197057"/u);
+  assert.match(
+    workflow,
+    /resume-publication-gate-controller-sha must be an exact lowercase 40-character commit SHA/u,
+  );
   assert.match(
     workflow,
     /actions\/runs\/\$\{PREFLIGHT_RUN_ID\}[\s\S]*\.path == "\.github\/workflows\/alpha-promotion-preflight\.yml"[\s\S]*artifact-name=alpha-promotion-preflight-\$preflight_source_sha/u,

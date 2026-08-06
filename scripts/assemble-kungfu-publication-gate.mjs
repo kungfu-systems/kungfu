@@ -205,6 +205,7 @@ export function createKungfuPublicationGateAggregate({
 
 export async function assembleKungfuPublicationGate({
   root = ROOT,
+  subjectRoot = root,
   evidenceRoot,
   runtimeRoot,
   sourceSha,
@@ -281,7 +282,7 @@ export async function assembleKungfuPublicationGate({
       `release-candidate passport is invalid: ${passportValidation.errors.join('; ')}`,
     );
   const promotionTree = execFileSync('git', ['rev-parse', 'HEAD^{tree}'], {
-    cwd: root,
+    cwd: subjectRoot,
     encoding: 'utf8',
   }).trim();
   if (passport.source?.treeHash !== promotionTree)
@@ -341,6 +342,11 @@ export async function assembleKungfuPublicationGate({
   );
 
   const registry = readJson(path.join(root, 'shifu.gates.json'));
+  const subjectRegistry = readJson(path.join(subjectRoot, 'shifu.gates.json'));
+  if (gateDigest(registry) !== gateDigest(subjectRegistry))
+    throw new Error(
+      'consumer Gate controller registry does not match the publication subject',
+    );
   const validationFiles = fs.mkdtempSync(
     path.join(os.tmpdir(), 'kungfu-buildchain-config-'),
   );
@@ -351,7 +357,7 @@ export async function assembleKungfuPublicationGate({
       process.execPath,
       [path.join(runtimeRoot, 'actions/validate-config/dist/index.js')],
       {
-        cwd: root,
+        cwd: subjectRoot,
         encoding: 'utf8',
         env: {
           ...process.env,
@@ -412,6 +418,9 @@ export async function assembleKungfuPublicationGate({
 
 async function main() {
   const aggregate = await assembleKungfuPublicationGate({
+    subjectRoot: path.resolve(
+      process.env.BUILDCHAIN_PUBLICATION_SUBJECT_ROOT || ROOT,
+    ),
     evidenceRoot: process.env.BUILDCHAIN_PUBLICATION_EVIDENCE_ROOT,
     runtimeRoot: process.env.BUILDCHAIN_PUBLICATION_AUTHORITY_RUNTIME_ROOT,
     sourceSha: process.env.BUILDCHAIN_PUBLICATION_SOURCE_SHA,

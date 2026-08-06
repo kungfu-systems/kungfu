@@ -58,6 +58,11 @@ on:
         required: false
         default: ""
         type: string
+      resume-publication-gate-controller-sha:
+        description: "Exact Kungfu commit that owns the read-only recovery Gate controller"
+        required: false
+        default: ""
+        type: string
       publish-transaction-override:
         description: "Allow only the matching durable transaction to resume"
         required: false
@@ -182,6 +187,7 @@ jobs:
           EXPECTED_SOURCE_TREE: ${{ inputs.resume-expected-source-tree }}
           EXPECTED_CANDIDATE_RUNTIME_SHA: ${{ inputs.resume-expected-candidate-runtime-sha }}
           RECOVERY_RUNTIME_SHA: ${{ inputs.resume-buildchain-runtime-sha }}
+          RECOVERY_GATE_CONTROLLER_SHA: ${{ inputs.resume-publication-gate-controller-sha }}
           TARGET_REF: ${{ inputs.target-ref }}
           TARGET_SHA: ${{ inputs.target-sha }}
           PREFLIGHT_RUN_ID: ${{ inputs.preflight-run-id }}
@@ -197,6 +203,10 @@ jobs:
           test "$EXPECTED_CANDIDATE_RUNTIME_SHA" = "2e7e07902ac28d8f3edcfb81098ef9ebc7a91878"
           if [[ ! "$RECOVERY_RUNTIME_SHA" =~ ^[0-9a-f]{40}$ ]]; then
             echo "::error::resume-buildchain-runtime-sha must be an exact lowercase 40-character commit SHA"
+            exit 1
+          fi
+          if [[ ! "$RECOVERY_GATE_CONTROLLER_SHA" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "::error::resume-publication-gate-controller-sha must be an exact lowercase 40-character commit SHA"
             exit 1
           fi
           test "$TARGET_REF" = "alpha/v4/v4.0"
@@ -395,6 +405,7 @@ jobs:
       release-candidate-wait-seconds: 10800
       publication-auto-admission: true
       publication-gate-command: node scripts/assemble-kungfu-publication-gate.mjs
+      publication-gate-controller-sha: ${{ inputs.resume-publication-gate-controller-sha }}
       publication-consumer-qualification-command: node scripts/kungfu-release-qualification.mjs
       publication-consumer-predicate-id: kungfu.release-admission/v1
       publication-publisher-workflow-path: .github/workflows/release-new-version.yml
