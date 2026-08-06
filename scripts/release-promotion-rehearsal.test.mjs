@@ -132,6 +132,20 @@ test('promotion caller grants the write permissions required by Buildchain', () 
   }
 });
 
+test('promotion caller uses the same bounded Buildchain train as recovery', () => {
+  const workflow = fs.readFileSync(
+    path.join(ROOT, CONTRACT.workflows.promotion),
+    'utf8',
+  );
+  const promote = extractWorkflowJob(workflow, 'promote');
+  assert.ok(promote);
+  assert.match(
+    promote,
+    /uses: kungfu-systems\/buildchain\/\.github\/workflows\/release-candidate-promote\.yml@train\/v3\/v3\.0\/resume-candidate-run/u,
+  );
+  assert.doesNotMatch(promote, /release-candidate-promote\.yml@[0-9a-f]{40}/u);
+});
+
 test('Alpha recovery reuses the sealed candidate through the bounded Buildchain train', () => {
   const workflow = fs.readFileSync(
     path.join(ROOT, CONTRACT.workflows.promotion),

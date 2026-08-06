@@ -610,7 +610,7 @@
       "adapter": {
         "type": "buildchain-release-admission",
         "kind": "job-uses",
-        "uses": "kungfu-systems/buildchain/.github/workflows/release-candidate-promote.yml@2e7e07902ac28d8f3edcfb81098ef9ebc7a91878",
+        "uses": "kungfu-systems/buildchain/.github/workflows/release-candidate-promote.yml@train/v3/v3.0/resume-candidate-run",
         "job": {
           "needs": "promotion-contract",
           "if": "${{ (github.event_name == 'workflow_dispatch' && inputs.resume-candidate-run-id == '') || github.event.pull_request.merged == true }}"
