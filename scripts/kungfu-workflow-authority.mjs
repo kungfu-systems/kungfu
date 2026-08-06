@@ -154,6 +154,18 @@ function immutableReference(reference) {
   return marker > 0 && /^[0-9a-f]{40}$/.test(reference.slice(marker + 1));
 }
 
+const ALPHA1_RECOVERY_TRAIN_ACTION =
+  'kungfu-systems/buildchain/.github/workflows/release-candidate-promote.yml@train/v3/v3.0/resume-candidate-run';
+
+function authorityReferenceAllowed(workflowPath, jobId, reference) {
+  return (
+    immutableReference(reference) ||
+    (workflowPath.endsWith('/release-new-version.yml') &&
+      jobId === 'recover' &&
+      reference === ALPHA1_RECOVERY_TRAIN_ACTION)
+  );
+}
+
 function exactKeys(value, keys, location, issues, optional = []) {
   if (!value || typeof value !== 'object' || Array.isArray(value)) {
     issues.push(`[workflow-authority] ${location} must be an object`);
@@ -175,7 +187,7 @@ function initialJobPolicy(workflowPath, jobId) {
       return ['product-publication', 'product', 'none'];
   }
   if (workflowPath.endsWith('/release-new-version.yml')) {
-    if (jobId === 'promote')
+    if (['promote', 'recover'].includes(jobId))
       return ['release-control', 'channel', 'qualifying'];
   }
   if (workflowPath.endsWith('/release-shifu.yml') && jobId === 'release')
@@ -517,7 +529,8 @@ export function validateWorkflowAuthority(root = ROOT, document = null) {
       if (
         workflowCarriesAuthority &&
         actualJob.externalActions.some(
-          (reference) => !immutableReference(reference),
+          (reference) =>
+            !authorityReferenceAllowed(workflow.path, job.id, reference),
         )
       )
         issues.push(

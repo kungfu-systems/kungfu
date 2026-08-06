@@ -132,6 +132,42 @@ test('promotion caller grants the write permissions required by Buildchain', () 
   }
 });
 
+test('Alpha recovery reuses the sealed candidate through the bounded Buildchain train', () => {
+  const workflow = fs.readFileSync(
+    path.join(ROOT, CONTRACT.workflows.promotion),
+    'utf8',
+  );
+  const recovery = extractWorkflowJob(workflow, 'recover');
+  assert.ok(recovery);
+  assert.match(
+    recovery,
+    /uses: kungfu-systems\/buildchain\/\.github\/workflows\/release-candidate-promote\.yml@train\/v3\/v3\.0\/resume-candidate-run/u,
+  );
+  for (const binding of [
+    'target-ref: ${{ inputs.target-ref }}',
+    'target-sha: ${{ inputs.target-sha }}',
+    'resume-candidate-repository: ${{ inputs.resume-candidate-repository }}',
+    'resume-candidate-run-id: ${{ inputs.resume-candidate-run-id }}',
+    'resume-expected-workflow-file: ${{ inputs.resume-expected-workflow-file }}',
+    'resume-expected-workflow-name: ${{ inputs.resume-expected-workflow-name }}',
+    'resume-expected-source-tree: ${{ inputs.resume-expected-source-tree }}',
+    'resume-expected-candidate-runtime-sha: ${{ inputs.resume-expected-candidate-runtime-sha }}',
+    'resume-buildchain-runtime-sha: ${{ inputs.resume-buildchain-runtime-sha }}',
+    'publish-transaction-override: ${{ inputs.publish-transaction-override }}',
+    'dry-run: false',
+  ]) {
+    assert.ok(recovery.includes(binding), binding);
+  }
+  assert.doesNotMatch(recovery, /release-candidate-promote\.yml@[0-9a-f]{40}/u);
+  assert.doesNotMatch(recovery, /^\s+strategy:\s*$/mu);
+  assert.match(workflow, /test "\$CANDIDATE_RUN_ID" = "31051528142"/u);
+  assert.match(workflow, /test "\$PREFLIGHT_RUN_ID" = "31051197057"/u);
+  assert.match(
+    workflow,
+    /test "\$RECOVERY_RUNTIME_SHA" = "c62ab3fca2a63b5cc30d90ba9a72b61c709bac0d"/u,
+  );
+});
+
 test('promotion rejects an event-scoped Buildchain runtime override', () => {
   const promotionPath = CONTRACT.workflows.promotion;
   const original = fs.readFileSync(path.join(ROOT, promotionPath), 'utf8');

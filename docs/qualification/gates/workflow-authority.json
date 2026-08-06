@@ -935,7 +935,7 @@
     {
       "path": ".github/workflows/release-new-version.yml",
       "authority": "release-control",
-      "definitionDigest": "sha256:605743db259b0bf409d49070a30a092034bee9b1e105e7f20f923fef8ce51db4",
+      "definitionDigest": "sha256:fbf1524a96d33813b55e5ca1beb42a36ddf87e308aa86fd6b7b752d9984a7e45",
       "jobs": [
         {
           "id": "alpha-timeline",
@@ -952,7 +952,7 @@
           "authority": "release-control",
           "publication": "channel",
           "receipt": "qualifying",
-          "definitionDigest": "sha256:9c6edfce28b097a3097c3e02484588363688123813886acf253e8ddc20f529de",
+          "definitionDigest": "sha256:12e2a53afb453c36d3fc4887c83186db37e34572e2189b8762ba266dabf1e079",
           "credentials": {"githubToken":"write","oidc":true,"repositorySecrets":["BUILDCHAIN_ISSUE_APP_ID","BUILDCHAIN_ISSUE_APP_PRIVATE_KEY","KUNGFU_ALPHA_CHANNEL_SIGNING_PRIVATE_KEY","KUNGFU_GITHUB_TOKEN","KUNGFU_GOVERNANCE_AUDITOR_APP_PRIVATE_KEY"],"inheritedSecrets":false,"environment":null},
           "externalActions": ["kungfu-systems/buildchain/.github/workflows/release-candidate-promote.yml@2e7e07902ac28d8f3edcfb81098ef9ebc7a91878"],
           "steps": []
@@ -962,10 +962,30 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "diagnostic",
-          "definitionDigest": "sha256:928b92797b78a1666e40d816dd7b25e7c95478af3465dcd6620fbd2ebc857335",
+          "definitionDigest": "sha256:4e9e5ddb616e8d063176be8f6c2b810e8b05d9468d8dc1dc4b63aa370ec5b93d",
           "credentials": {"githubToken":"read","oidc":false,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
           "externalActions": ["actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0","actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e","actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0"],
           "steps": [{"index":1,"label":"id:candidate","definitionDigest":"sha256:b26ccd80ef6de735f425e42a2f6bc52b4d0473bf52771cc1d9c2efecb674843a"},{"index":2,"label":"name:Checkout immutable Alpha candidate","definitionDigest":"sha256:8f1ff28917c625d57760451e82ab1239ddf747a611068bf9c6ad1067ad8f6284"},{"index":3,"label":"uses:actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e","definitionDigest":"sha256:a869cc671103a9106dc90b4275a4148de9a5d18cd3578a2642d8ae8076d8dbf0"},{"index":4,"label":"id:preflight","definitionDigest":"sha256:de360134fee9dbf785d19794d87d62f16b07c7bf2872c83ce97be75fa0b8a02f"},{"index":5,"label":"name:Checkout immutable promotion result","definitionDigest":"sha256:9ff1aa9f5707e1bed64e57983cf9e409bd19fc8146dd5aa1801e1f6d4b8413f4"},{"index":6,"label":"id:promotion-tree","definitionDigest":"sha256:391088f704e8df632f937c4fe9c1265efb3846849c489032170178e871bde248"},{"index":7,"label":"name:Rehearse the Kungfu promotion contract for a pull request","definitionDigest":"sha256:0af2d30832fe4041d9997fd0a331f528a62b23fba2e3c9cfc23e45dd8ab38947"},{"index":8,"label":"name:Rehearse the Kungfu promotion contract for a manual dry-run","definitionDigest":"sha256:ac10175c46721c013cdc70ec9c5db82713fabd00be703439cf665365bef6c05d"}]
+        },
+        {
+          "id": "recover",
+          "authority": "release-control",
+          "publication": "channel",
+          "receipt": "qualifying",
+          "definitionDigest": "sha256:069119e56d0d4ab070d9d54a266b16570a646dc7eacd6d740f78e755fc66ebcd",
+          "credentials": {"githubToken":"write","oidc":true,"repositorySecrets":["BUILDCHAIN_ISSUE_APP_ID","BUILDCHAIN_ISSUE_APP_PRIVATE_KEY","KUNGFU_ALPHA_CHANNEL_SIGNING_PRIVATE_KEY","KUNGFU_GITHUB_TOKEN","KUNGFU_GOVERNANCE_AUDITOR_APP_PRIVATE_KEY"],"inheritedSecrets":false,"environment":null},
+          "externalActions": ["kungfu-systems/buildchain/.github/workflows/release-candidate-promote.yml@train/v3/v3.0/resume-candidate-run"],
+          "steps": []
+        },
+        {
+          "id": "recovery-preflight",
+          "authority": "qualification",
+          "publication": "none",
+          "receipt": "diagnostic",
+          "definitionDigest": "sha256:e1bf7440015ee53c5ca74c170e91fb8657d169069ef270b66c117f617359e354",
+          "credentials": {"githubToken":"read","oidc":false,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
+          "externalActions": ["actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0","actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e"],
+          "steps": [{"index":1,"label":"name:Require the bounded Alpha 1 recovery identity","definitionDigest":"sha256:0e6e6fbb8ce01581ee18c2f28ef74d3d709e794b086966ebbe0424fc1f57d050"},{"index":2,"label":"name:Checkout immutable candidate source","definitionDigest":"sha256:e40649f5b143d21ffd7142da1bc68a742801f31c93e3ab2ada4aee4b6c2d967b"},{"index":3,"label":"uses:actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e","definitionDigest":"sha256:a869cc671103a9106dc90b4275a4148de9a5d18cd3578a2642d8ae8076d8dbf0"},{"index":4,"label":"name:Reuse exact Alpha preflight","definitionDigest":"sha256:76bc1b6cd358a7a800cb54acdee85b263411cdbd3e9f48d258448c456b6feef2"},{"index":5,"label":"name:Verify promotion target preserves the candidate tree","definitionDigest":"sha256:7fd95645898bbb9582006c899eb652152f9f411fc5a4354566c2405e7c67ba91"}]
         }
       ]
     },

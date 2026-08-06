@@ -613,7 +613,7 @@
         "uses": "kungfu-systems/buildchain/.github/workflows/release-candidate-promote.yml@2e7e07902ac28d8f3edcfb81098ef9ebc7a91878",
         "job": {
           "needs": "promotion-contract",
-          "if": "${{ github.event_name == 'workflow_dispatch' || github.event.pull_request.merged == true }}"
+          "if": "${{ (github.event_name == 'workflow_dispatch' && inputs.resume-candidate-run-id == '') || github.event.pull_request.merged == true }}"
         },
         "with": {
           "channel": "${{ startsWith(inputs.target-ref || github.event.pull_request.base.ref, 'alpha/') && 'alpha' || 'release' }}",
@@ -635,6 +635,59 @@
           "github-artifact-attestation-policy-json": "auto",
           "github-artifact-attestation-environment": "buildchain-artifact-attestation",
           "dry-run": "${{ github.event_name == 'workflow_dispatch' }}"
+        }
+      }
+    },
+    {
+      "id": "release-candidate-recovery",
+      "execution": "controller",
+      "workflow": ".github/workflows/release-new-version.yml",
+      "job": "recover",
+      "profiles": [
+        "release-promotion"
+      ],
+      "gates": [
+        "governance.buildchain-config",
+        "release.artifact-admission"
+      ],
+      "activation": "manual recovery of the single pre-existing sealed Alpha 1 candidate without product rebuild",
+      "adapter": {
+        "type": "buildchain-release-candidate-recovery",
+        "kind": "job-uses",
+        "uses": "kungfu-systems/buildchain/.github/workflows/release-candidate-promote.yml@train/v3/v3.0/resume-candidate-run",
+        "job": {
+          "needs": "recovery-preflight",
+          "if": "${{ always() && github.event_name == 'workflow_dispatch' && inputs.resume-candidate-run-id != '' && needs.recovery-preflight.result == 'success' }}"
+        },
+        "with": {
+          "buildchain-ref": "train/v3/v3.0/resume-candidate-run",
+          "channel": "alpha",
+          "target-ref": "${{ inputs.target-ref }}",
+          "target-sha": "${{ inputs.target-sha }}",
+          "resume-candidate-repository": "${{ inputs.resume-candidate-repository }}",
+          "resume-candidate-run-id": "${{ inputs.resume-candidate-run-id }}",
+          "resume-expected-workflow-file": "${{ inputs.resume-expected-workflow-file }}",
+          "resume-expected-workflow-name": "${{ inputs.resume-expected-workflow-name }}",
+          "resume-expected-source-tree": "${{ inputs.resume-expected-source-tree }}",
+          "resume-expected-candidate-runtime-sha": "${{ inputs.resume-expected-candidate-runtime-sha }}",
+          "resume-buildchain-runtime-sha": "${{ inputs.resume-buildchain-runtime-sha }}",
+          "publish-transaction-override": "${{ inputs.publish-transaction-override }}",
+          "required-status-check": "build / Finalize build controller evidence",
+          "publication-auto-admission": true,
+          "publication-consumer-qualification-command": "node scripts/kungfu-release-qualification.mjs",
+          "publication-consumer-predicate-id": "kungfu.release-admission/v1",
+          "publish-command": "node scripts/buildchain-custom-publish-evidence.mjs",
+          "runner-preset": "kungfu-v4-native",
+          "required-artifact-count": 5,
+          "release-passport": true,
+          "release-activation-command": "node scripts/activate-ungfu-release.mjs",
+          "release-activation-receipt-set-path": ".buildchain/release-activation/receipt-set.json",
+          "release-passport-evidence-command": "node scripts/prepare-ungfu-release-evidence.mjs --release --receipts \"$BUILDCHAIN_RELEASE_ACTIVATION_RECEIPTS\" --output \"$BUILDCHAIN_RELEASE_EVIDENCE_PATH\" --readback --json",
+          "release-passport-evidence-path": ".buildchain/release-evidence/ungfu-public-use.json",
+          "release-passport-invariant-passport-command": "node scripts/kungfu-invariant.mjs --collect-evidence . --passport product/release/qualification/invariant-passport.json --json",
+          "github-artifact-attestation-policy-json": "auto",
+          "github-artifact-attestation-environment": "buildchain-artifact-attestation",
+          "dry-run": false
         }
       }
     },

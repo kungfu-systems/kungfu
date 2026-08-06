@@ -172,9 +172,9 @@ export function validateWorkflowSources(root, contract, overrides = {}) {
   );
   requirePattern(
     preflight,
-    /if: \$\{\{ github\.event_name == 'workflow_dispatch' \|\| github\.event\.pull_request\.merged == true \}\}/,
+    /if: \$\{\{ \(github\.event_name == 'workflow_dispatch' && inputs\.resume-candidate-run-id == ''\) \|\| github\.event\.pull_request\.merged == true \}\}/,
     findings,
-    'promotion contract preflight must run only for a merged promotion PR',
+    'promotion contract preflight must run only for a merged promotion PR or a non-recovery manual dispatch',
   );
   requirePattern(
     preflight,

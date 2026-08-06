@@ -233,7 +233,7 @@ test('current Kungfu catalog, docs, matrix, actions, and workflows align', () =>
   const controllers = result.workflowFacts.filter(
     (fact) => fact.execution === 'controller',
   );
-  assert.equal(controllers.length, 10);
+  assert.equal(controllers.length, 11);
   assert.ok(controllers.every((fact) => fact.gates.length > 0));
   assert.equal(result.workflowAuthority.workflows.length, 36);
   const agentPatrol = result.workflowAuthority.workflows.find(
