@@ -353,6 +353,8 @@ export async function assembleKungfuPublicationGate({
   const validateBuildchainConfig = () => {
     const output = path.join(validationFiles, 'output');
     const summary = path.join(validationFiles, 'summary');
+    fs.writeFileSync(output, '');
+    fs.writeFileSync(summary, '');
     const result = spawnSync(
       process.execPath,
       [path.join(runtimeRoot, 'actions/validate-config/dist/index.js')],
