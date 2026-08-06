@@ -158,6 +158,7 @@ test('Alpha recovery reuses the sealed candidate through the bounded Buildchain 
     /uses: kungfu-systems\/buildchain\/\.github\/workflows\/release-candidate-promote\.yml@train\/v3\/v3\.0\/resume-candidate-run/u,
   );
   for (const binding of [
+    'buildchain-channel: auto',
     'target-ref: ${{ inputs.target-ref }}',
     'target-sha: ${{ inputs.target-sha }}',
     'resume-candidate-repository: ${{ inputs.resume-candidate-repository }}',

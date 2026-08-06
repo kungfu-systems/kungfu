@@ -376,7 +376,7 @@ jobs:
       pull-requests: write
     uses: kungfu-systems/buildchain/.github/workflows/release-candidate-promote.yml@train/v3/v3.0/resume-candidate-run
     with:
-      buildchain-channel: alpha
+      buildchain-channel: auto
       buildchain-ref: train/v3/v3.0/resume-candidate-run
       channel: alpha
       target-ref: ${{ inputs.target-ref }}
