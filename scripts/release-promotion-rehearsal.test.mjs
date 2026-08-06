@@ -146,6 +146,80 @@ test('promotion caller uses the same bounded Buildchain train as recovery', () =
   assert.doesNotMatch(promote, /release-candidate-promote\.yml@[0-9a-f]{40}/u);
 });
 
+test('publication and recovery clear activation commands while preserving publication surfaces', () => {
+  const workflow = fs.readFileSync(
+    path.join(ROOT, CONTRACT.workflows.promotion),
+    'utf8',
+  );
+  const jobs = [
+    ['promote', extractWorkflowJob(workflow, 'promote')],
+    ['recover', extractWorkflowJob(workflow, 'recover')],
+  ];
+  for (const [name, job] of jobs) {
+    assert.ok(job, name);
+    assert.match(job, /release-activation-command: ""/u, name);
+    assert.match(job, /release-passport-evidence-command: ""/u, name);
+    assert.match(
+      job,
+      /publish-command: node scripts\/buildchain-custom-publish-evidence\.mjs/u,
+      name,
+    );
+    assert.match(
+      job,
+      /publication-commit-evidence-path: \.buildchain\/publication-commit\/evidence\.json/u,
+      name,
+    );
+    assert.match(job, /release-passport: true/u, name);
+    assert.match(
+      job,
+      /publication-target: github-release:kungfu-systems\/kungfu/u,
+      name,
+    );
+    assert.match(
+      job,
+      /github-release-payload-patterns:[\s\S]*kungfu-episodes-cli-\*\.tar\.gz[\s\S]*kungfu-episodes-cli-\*\.zip[\s\S]*kungfu-episodes-cli-\*\.qualification\.json/u,
+      name,
+    );
+  }
+  assert.match(
+    jobs[0][1],
+    /publication-commit-command: \$\{\{ startsWith\(inputs\.target-ref \|\| github\.event\.pull_request\.base\.ref, 'alpha\/'\) && 'node scripts\/alpha-publication-commit\.mjs' \|\| '' \}\}/u,
+  );
+  assert.match(
+    jobs[1][1],
+    /publication-commit-command: node scripts\/alpha-publication-commit\.mjs/u,
+  );
+});
+
+test('promotion rehearsal rejects restored activation or passport evidence commands', () => {
+  const promotionPath = CONTRACT.workflows.promotion;
+  const original = fs.readFileSync(path.join(ROOT, promotionPath), 'utf8');
+  for (const jobName of ['promote', 'recover']) {
+    const job = extractWorkflowJob(original, jobName);
+    for (const [emptyBinding, restoredBinding] of [
+      [
+        '      release-activation-command: ""',
+        '      release-activation-command: node scripts/activate-ungfu-release.mjs',
+      ],
+      [
+        '      release-passport-evidence-command: ""',
+        '      release-passport-evidence-command: node scripts/prepare-ungfu-release-evidence.mjs',
+      ],
+    ]) {
+      const driftedJob = job.replace(emptyBinding, restoredBinding);
+      assert.notEqual(driftedJob, job, `${jobName}: ${emptyBinding}`);
+      const result = validateWorkflowSources(ROOT, CONTRACT, {
+        promotion: original.replace(job, driftedJob),
+      });
+      assert.equal(result.ok, false, `${jobName}: ${emptyBinding}`);
+      assert.ok(
+        result.findings.some((entry) => entry.message.includes('must leave')),
+        `${jobName}: ${emptyBinding}`,
+      );
+    }
+  }
+});
+
 test('Alpha recovery reuses the sealed candidate through the bounded Buildchain train', () => {
   const workflow = fs.readFileSync(
     path.join(ROOT, CONTRACT.workflows.promotion),

@@ -78,8 +78,59 @@ export function validateWorkflowSources(root, contract, overrides = {}) {
     overrides.validation || readText(root, contract.workflows.validation);
   const preflight = extractWorkflowJob(promotion, 'promotion-contract');
   const promote = extractWorkflowJob(promotion, 'promote');
+  const recovery = extractWorkflowJob(promotion, 'recover');
   const rehearsal = extractWorkflowJob(validation, 'promotion-rehearsal');
   const attestation = contract.buildchain.artifact_attestation;
+
+  for (const [label, job] of [
+    ['primary promotion', promote],
+    ['release-candidate recovery', recovery],
+  ]) {
+    requirePattern(
+      job,
+      /release-activation-command: ""/,
+      findings,
+      `${label} must leave the Buildchain release activation command empty`,
+    );
+    requirePattern(
+      job,
+      /release-passport-evidence-command: ""/,
+      findings,
+      `${label} must leave the Buildchain release-passport evidence command empty`,
+    );
+    requirePattern(
+      job,
+      new RegExp(
+        `publish-command: ${contract.evidence.publish_command.replaceAll('.', '\\.')}`,
+      ),
+      findings,
+      `${label} custom publish evidence command drifted`,
+    );
+    requirePattern(
+      job,
+      /publication-commit-evidence-path: \.buildchain\/publication-commit\/evidence\.json/,
+      findings,
+      `${label} publication commit evidence path drifted`,
+    );
+    requirePattern(
+      job,
+      /release-passport: true/,
+      findings,
+      `${label} must retain Release Passport collection`,
+    );
+    requirePattern(
+      job,
+      /publication-target: github-release:kungfu-systems\/kungfu/,
+      findings,
+      `${label} must retain the exact Kungfu GitHub Release target`,
+    );
+    requirePattern(
+      job,
+      /github-release-payload-patterns:[\s\S]*kungfu-episodes-cli-\*\.tar\.gz[\s\S]*kungfu-episodes-cli-\*\.zip[\s\S]*kungfu-episodes-cli-\*\.qualification\.json/,
+      findings,
+      `${label} must retain the exact GitHub Release payloads`,
+    );
+  }
 
   requirePattern(
     build,
@@ -313,6 +364,12 @@ export function validateWorkflowSources(root, contract, overrides = {}) {
     /publication-commit-command: \$\{\{ startsWith\(inputs\.target-ref \|\| github\.event\.pull_request\.base\.ref, 'alpha\/'\) && 'node scripts\/alpha-publication-commit\.mjs' \|\| '' \}\}/,
     findings,
     'signed Alpha discovery must be the final commit only for the Alpha channel',
+  );
+  requirePattern(
+    recovery,
+    /publication-commit-command: node scripts\/alpha-publication-commit\.mjs/,
+    findings,
+    'release-candidate recovery must retain the signed Alpha discovery commit',
   );
   requirePattern(
     promote,
