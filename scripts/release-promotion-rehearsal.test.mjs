@@ -132,7 +132,7 @@ test('promotion caller grants the write permissions required by Buildchain', () 
   }
 });
 
-test('promotion caller uses the same bounded Buildchain train as recovery', () => {
+test('promotion caller uses the immutable reviewed Buildchain workflow shell', () => {
   const workflow = fs.readFileSync(
     path.join(ROOT, CONTRACT.workflows.promotion),
     'utf8',
@@ -141,12 +141,13 @@ test('promotion caller uses the same bounded Buildchain train as recovery', () =
   assert.ok(promote);
   assert.match(
     promote,
-    /uses: kungfu-systems\/buildchain\/\.github\/workflows\/release-candidate-promote\.yml@train\/v3\/v3\.0\/resume-candidate-run/u,
+    new RegExp(
+      `uses: kungfu-systems/buildchain/\\.github/workflows/release-candidate-promote\\.yml@${CONTRACT.buildchain.workflow_shell_sha}`,
+    ),
   );
-  assert.doesNotMatch(promote, /release-candidate-promote\.yml@[0-9a-f]{40}/u);
 });
 
-test('Alpha recovery reuses the sealed candidate through the bounded Buildchain train', () => {
+test('Alpha recovery reuses the sealed candidate through the immutable reviewed Buildchain workflow shell', () => {
   const workflow = fs.readFileSync(
     path.join(ROOT, CONTRACT.workflows.promotion),
     'utf8',
@@ -155,7 +156,9 @@ test('Alpha recovery reuses the sealed candidate through the bounded Buildchain 
   assert.ok(recovery);
   assert.match(
     recovery,
-    /uses: kungfu-systems\/buildchain\/\.github\/workflows\/release-candidate-promote\.yml@train\/v3\/v3\.0\/resume-candidate-run/u,
+    new RegExp(
+      `uses: kungfu-systems/buildchain/\\.github/workflows/release-candidate-promote\\.yml@${CONTRACT.buildchain.workflow_shell_sha}`,
+    ),
   );
   for (const binding of [
     'target-ref: ${{ inputs.target-ref }}',
@@ -172,7 +175,6 @@ test('Alpha recovery reuses the sealed candidate through the bounded Buildchain 
   ]) {
     assert.ok(recovery.includes(binding), binding);
   }
-  assert.doesNotMatch(recovery, /release-candidate-promote\.yml@[0-9a-f]{40}/u);
   assert.doesNotMatch(recovery, /^\s+strategy:\s*$/mu);
   assert.match(workflow, /test "\$CANDIDATE_RUN_ID" = "31051528142"/u);
   assert.match(workflow, /test "\$PREFLIGHT_RUN_ID" = "31051197057"/u);

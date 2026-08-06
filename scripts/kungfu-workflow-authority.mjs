@@ -154,16 +154,8 @@ function immutableReference(reference) {
   return marker > 0 && /^[0-9a-f]{40}$/.test(reference.slice(marker + 1));
 }
 
-const ALPHA_RELEASE_TRAIN_ACTION =
-  'kungfu-systems/buildchain/.github/workflows/release-candidate-promote.yml@train/v3/v3.0/resume-candidate-run';
-
-function authorityReferenceAllowed(workflowPath, jobId, reference) {
-  return (
-    immutableReference(reference) ||
-    (workflowPath.endsWith('/release-new-version.yml') &&
-      ['promote', 'recover'].includes(jobId) &&
-      reference === ALPHA_RELEASE_TRAIN_ACTION)
-  );
+function authorityReferenceAllowed(_workflowPath, _jobId, reference) {
+  return immutableReference(reference);
 }
 
 function exactKeys(value, keys, location, issues, optional = []) {

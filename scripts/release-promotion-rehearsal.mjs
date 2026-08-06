@@ -190,9 +190,11 @@ export function validateWorkflowSources(root, contract, overrides = {}) {
   );
   requirePattern(
     promote,
-    /uses: kungfu-systems\/buildchain\/\.github\/workflows\/release-candidate-promote\.yml@train\/v3\/v3\.0\/resume-candidate-run/u,
+    new RegExp(
+      `uses: kungfu-systems/buildchain/\\.github/workflows/release-candidate-promote\\.yml@${contract.buildchain.workflow_shell_sha}`,
+    ),
     findings,
-    'promotion must consume the bounded Buildchain Alpha recovery train',
+    'promotion must consume the immutable reviewed Buildchain workflow shell',
   );
   requirePattern(
     promote,

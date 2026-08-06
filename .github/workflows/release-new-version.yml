@@ -281,10 +281,10 @@ jobs:
       issues: write
       id-token: write
       pull-requests: write
-    uses: kungfu-systems/buildchain/.github/workflows/release-candidate-promote.yml@train/v3/v3.0/resume-candidate-run
+    uses: kungfu-systems/buildchain/.github/workflows/release-candidate-promote.yml@7eee0d39477f568475a87fb3c41c65666a162b85
     with:
       channel: ${{ startsWith(inputs.target-ref || github.event.pull_request.base.ref, 'alpha/') && 'alpha' || 'release' }}
-      buildchain-ref: 2e7e07902ac28d8f3edcfb81098ef9ebc7a91878
+      buildchain-ref: 7eee0d39477f568475a87fb3c41c65666a162b85
       target-ref: ${{ inputs.target-ref || github.event.pull_request.base.ref }}
       target-sha: ${{ inputs.target-sha || github.event.pull_request.merge_commit_sha || github.sha }}
       buildchain-contract-lock-path: ${{ startsWith(inputs.target-ref || github.event.pull_request.base.ref, 'alpha/') && '.buildchain/alpha-contract-lock.json' || '.buildchain/contract-lock.json' }}
@@ -374,10 +374,10 @@ jobs:
       issues: write
       id-token: write
       pull-requests: write
-    uses: kungfu-systems/buildchain/.github/workflows/release-candidate-promote.yml@train/v3/v3.0/resume-candidate-run
+    uses: kungfu-systems/buildchain/.github/workflows/release-candidate-promote.yml@7eee0d39477f568475a87fb3c41c65666a162b85
     with:
       buildchain-channel: alpha
-      buildchain-ref: train/v3/v3.0/resume-candidate-run
+      buildchain-ref: 7eee0d39477f568475a87fb3c41c65666a162b85
       channel: alpha
       target-ref: ${{ inputs.target-ref }}
       target-sha: ${{ inputs.target-sha }}
