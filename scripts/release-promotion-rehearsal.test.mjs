@@ -178,6 +178,18 @@ test('Alpha recovery reuses the sealed candidate through the bounded Buildchain 
   assert.match(workflow, /test "\$PREFLIGHT_RUN_ID" = "31051197057"/u);
   assert.match(
     workflow,
+    /actions\/runs\/\$\{PREFLIGHT_RUN_ID\}[\s\S]*\.path == "\.github\/workflows\/alpha-promotion-preflight\.yml"[\s\S]*artifact-name=alpha-promotion-preflight-\$preflight_source_sha/u,
+  );
+  assert.match(
+    workflow,
+    /working-directory: \.buildchain\/alpha-preflight-source[\s\S]*\.\/shifu alpha:promotion:preflight verify[\s\S]*--source-commit "\$PREFLIGHT_SOURCE_SHA"[\s\S]*test "\$\(git rev-parse 'HEAD\^\{tree\}'\)" = "\$EXPECTED_TREE"/u,
+  );
+  assert.match(
+    workflow,
+    /test "\$\(git rev-parse 'HEAD\^\{tree\}'\)" = "\$EXPECTED_TREE"/u,
+  );
+  assert.match(
+    workflow,
     /\[\[ ! "\$RECOVERY_RUNTIME_SHA" =~ \^\[0-9a-f\]\{40\}\$ \]\]/u,
   );
   assert.doesNotMatch(

@@ -215,11 +215,49 @@ jobs:
         with:
           node-version: "24"
 
-      - name: Reuse exact Alpha preflight
-        uses: ./.github/actions/require-alpha-preflight
+      - name: Resolve the pinned Alpha preflight source
+        id: recovery-preflight
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PREFLIGHT_RUN_ID: ${{ inputs.preflight-run-id }}
+        run: |
+          set -euo pipefail
+          preflight_source_sha="$(
+            gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${PREFLIGHT_RUN_ID}" \
+              --jq 'select(.status == "completed" and .conclusion == "success" and .path == ".github/workflows/alpha-promotion-preflight.yml") | .head_sha // empty'
+          )"
+          [[ "$preflight_source_sha" =~ ^[0-9a-f]{40}$ ]]
+          echo "source-sha=$preflight_source_sha" >> "$GITHUB_OUTPUT"
+          echo "artifact-name=alpha-promotion-preflight-$preflight_source_sha" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout the pinned Alpha preflight source
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
-          source-sha: ${{ inputs.resume-candidate-source-sha }}
-          receipt-run-id: ${{ inputs.preflight-run-id }}
+          ref: ${{ steps.recovery-preflight.outputs.source-sha }}
+          path: .buildchain/alpha-preflight-source
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Download the pinned Alpha preflight receipt
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          run-id: ${{ inputs.preflight-run-id }}
+          name: ${{ steps.recovery-preflight.outputs.artifact-name }}
+          path: .buildchain/alpha-promotion-preflight
+
+      - name: Verify the pinned Alpha preflight at its source
+        working-directory: .buildchain/alpha-preflight-source
+        env:
+          EXPECTED_TREE: ${{ inputs.resume-expected-source-tree }}
+          PREFLIGHT_SOURCE_SHA: ${{ steps.recovery-preflight.outputs.source-sha }}
+        run: |
+          set -euo pipefail
+          ./shifu alpha:promotion:preflight verify \
+            --receipt ../alpha-promotion-preflight/receipt.json \
+            --source-commit "$PREFLIGHT_SOURCE_SHA"
+          test "$(git rev-parse 'HEAD^{tree}')" = "$EXPECTED_TREE"
 
       - name: Verify promotion target preserves the candidate tree
         env:
@@ -227,6 +265,7 @@ jobs:
           EXPECTED_TREE: ${{ inputs.resume-expected-source-tree }}
         run: |
           set -euo pipefail
+          test "$(git rev-parse 'HEAD^{tree}')" = "$EXPECTED_TREE"
           git fetch --no-tags origin "$TARGET_SHA"
           test "$(git rev-parse "$TARGET_SHA^{tree}")" = "$EXPECTED_TREE"
 
