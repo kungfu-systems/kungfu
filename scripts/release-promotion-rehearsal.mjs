@@ -549,6 +549,21 @@ export function validatePromotionContract(
       'custom publish evidence must bind one-command campaign roots into the release passport',
     );
   }
+  const kfdEvidencePath = path.join(
+    root,
+    'scripts/buildchain-kfd-evidence.mjs',
+  );
+  if (!fs.existsSync(kfdEvidencePath)) {
+    findings.push(finding('Buildchain KFD evidence adapter does not exist'));
+  } else {
+    const kfdEvidence = fs.readFileSync(kfdEvidencePath, 'utf8');
+    requirePattern(
+      kfdEvidence,
+      /BUILDCHAIN_RELEASE_CANDIDATE_RECOVERY_RECEIPT_PATH[\s\S]*reused sealed release-candidate KFD upstream aggregate/u,
+      findings,
+      'release-candidate recovery must reuse the sealed KFD upstream aggregate without reinstalling product dependencies',
+    );
+  }
   const workflows = validateWorkflowSources(root, contract);
   const locks = validateBuildchainLocks(root, contract);
   findings.push(...workflows.findings, ...locks.findings);

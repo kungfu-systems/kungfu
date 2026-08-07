@@ -403,6 +403,31 @@ function buildOwnKfdFacts() {
   };
 }
 function buildUpstreamKfdAggregate() {
+  const recoveryReceipt =
+    process.env.BUILDCHAIN_RELEASE_CANDIDATE_RECOVERY_RECEIPT_PATH?.trim();
+  if (recoveryReceipt) {
+    if (!fs.existsSync(recoveryReceipt)) {
+      throw new Error(
+        `release-candidate recovery receipt is missing: ${recoveryReceipt}`,
+      );
+    }
+    const sealedAggregate = readJson(SDK_KFD_UPSTREAM_AGGREGATE_PATH);
+    if (
+      sealedAggregate.contract !== 'kungfu-upstream-kfd-aggregate' ||
+      sealedAggregate.source?.generator !==
+        'scripts/buildchain-kfd-evidence.mjs' ||
+      !Array.isArray(sealedAggregate.upstreams) ||
+      sealedAggregate.upstreams.length === 0
+    ) {
+      throw new Error(
+        'sealed release-candidate KFD upstream aggregate is invalid',
+      );
+    }
+    console.log(
+      `reused sealed release-candidate KFD upstream aggregate from ${rel(SDK_KFD_UPSTREAM_AGGREGATE_PATH)}`,
+    );
+    return sealedAggregate;
+  }
   const kfdPackage = packageJson('@kungfu-tech/kfd', SDK_CLI_PATH);
   const libnodePackage = packageJson('@kungfu-tech/libnode', CORE_PACKAGE_PATH);
   const buildchainPackage = packageJson(
