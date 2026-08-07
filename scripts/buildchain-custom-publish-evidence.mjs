@@ -74,6 +74,7 @@ function main() {
   const upgradeAdmission = verifyUpgradePublicationPayloads({
     payloadRoot:
       process.env.KF_UPGRADE_PUBLISH_PAYLOAD_ROOT ||
+      process.env.BUILDCHAIN_RELEASE_CANDIDATE_PAYLOAD_ROOT ||
       path.join(releaseCandidateRoot, 'payloads'),
     releaseCandidatePassportPath:
       process.env.KF_UPGRADE_RELEASE_CANDIDATE_PASSPORT ||
