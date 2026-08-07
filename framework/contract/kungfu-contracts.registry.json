@@ -554,6 +554,38 @@
       ]
     },
     {
+      "surface": "assignment-runtime",
+      "id": "kungfu-assignment-runtime",
+      "schema": "kungfu.assignment-runtime.contract/v1",
+      "contractSchemaRoot": "sha256:5c6beeeb6f1a699052f144566c410ec459d4bfec8ead4916902e264835f3667a",
+      "weldedSurface": "assignment-runtime-contract",
+      "env": "KUNGFU_ASSIGNMENT_RUNTIME_CONTRACT",
+      "file": "kungfu-assignment-runtime.contract.json",
+      "source": "framework/assignment-runtime/assignment-runtime.contract.json",
+      "artifact": "config/assignment-runtime/kungfu-assignment-runtime.contract.json",
+      "cli": {
+        "contract": [
+          "contract",
+          "show",
+          "assignment-runtime",
+          "--json"
+        ],
+        "schema": [
+          "contract",
+          "show",
+          "assignment-runtime",
+          "--json"
+        ]
+      },
+      "extraArtifacts": [
+        {
+          "label": "Assignment Runtime envelope schema",
+          "source": "framework/assignment-runtime/schema/assignment-runtime-envelope-v1.schema.json",
+          "artifact": "config/assignment-runtime/schema/assignment-runtime-envelope-v1.schema.json"
+        }
+      ]
+    },
+    {
       "surface": "primitive-catalog",
       "id": "kungfu-primitive-catalog",
       "schema": "kungfu.primitive-catalog/v2",
