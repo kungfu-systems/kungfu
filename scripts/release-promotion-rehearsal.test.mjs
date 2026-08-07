@@ -168,6 +168,13 @@ test('publication and recovery clear activation commands while preserving public
     );
     assert.match(
       job,
+      name === 'recover'
+        ? /release-passport-kfd-3-artifact-verify-command: node \.buildchain\/publication-controller\/scripts\/buildchain-kfd-evidence\.mjs --artifact-witness --json/u
+        : /release-passport-kfd-3-artifact-verify-command: node scripts\/buildchain-kfd-evidence\.mjs --artifact-witness --json/u,
+      name,
+    );
+    assert.match(
+      job,
       /publication-commit-evidence-path: \.buildchain\/publication-commit\/evidence\.json/u,
       name,
     );

@@ -548,6 +548,12 @@ export function validatePromotionContract(
       findings,
       'custom publish evidence must bind one-command campaign roots into the release passport',
     );
+    requirePattern(
+      publishAdapter,
+      /path\.join\(SCRIPT_DIR, 'buildchain-kfd-evidence\.mjs'\)/u,
+      findings,
+      'recovery custom publish evidence must execute the checked-out publication controller KFD adapter',
+    );
   }
   const kfdEvidencePath = path.join(
     root,
@@ -562,6 +568,12 @@ export function validatePromotionContract(
       /BUILDCHAIN_RELEASE_CANDIDATE_RECOVERY_RECEIPT_PATH[\s\S]*reused sealed release-candidate KFD upstream aggregate/u,
       findings,
       'release-candidate recovery must reuse the sealed KFD upstream aggregate without reinstalling product dependencies',
+    );
+    requirePattern(
+      kfdEvidence,
+      /BUILDCHAIN_RELEASE_CANDIDATE_RECOVERY_RECEIPT_PATH\s*\? process\.cwd\(\)/u,
+      findings,
+      'release-candidate recovery must project controller logic over the sealed product root',
     );
   }
   const workflows = validateWorkflowSources(root, contract);

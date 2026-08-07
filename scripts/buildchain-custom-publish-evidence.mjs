@@ -4,11 +4,14 @@
 import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 import {
   promotableUpgradePlatforms,
   verifyUpgradePublicationPayloads,
 } from './upgrade-publication-admission.mjs';
+
+const SCRIPT_DIR = path.dirname(fileURLToPath(import.meta.url));
 
 function requireEnv(name) {
   const value = process.env[name];
@@ -50,7 +53,7 @@ function normalizeArtifact(artifact, index) {
 function generateKfdEvidence() {
   const result = spawnSync(
     process.execPath,
-    ['scripts/buildchain-kfd-evidence.mjs', '--write'],
+    [path.join(SCRIPT_DIR, 'buildchain-kfd-evidence.mjs'), '--write'],
     {
       cwd: process.cwd(),
       encoding: 'utf8',
