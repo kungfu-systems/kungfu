@@ -404,7 +404,7 @@ function buildOwnKfdFacts() {
     },
   };
 }
-function buildUpstreamKfdAggregate() {
+function buildUpstreamKfdAggregate({ quiet = false } = {}) {
   const recoveryReceipt =
     process.env.BUILDCHAIN_RELEASE_CANDIDATE_RECOVERY_RECEIPT_PATH?.trim();
   if (recoveryReceipt) {
@@ -425,9 +425,11 @@ function buildUpstreamKfdAggregate() {
         'sealed release-candidate KFD upstream aggregate is invalid',
       );
     }
-    console.log(
-      `reused sealed release-candidate KFD upstream aggregate from ${rel(SDK_KFD_UPSTREAM_AGGREGATE_PATH)}`,
-    );
+    if (!quiet) {
+      console.log(
+        `reused sealed release-candidate KFD upstream aggregate from ${rel(SDK_KFD_UPSTREAM_AGGREGATE_PATH)}`,
+      );
+    }
     return sealedAggregate;
   }
   const kfdPackage = packageJson('@kungfu-tech/kfd', SDK_CLI_PATH);
@@ -1812,7 +1814,7 @@ function buildSummary({
 }
 
 async function runArtifactWitness(options) {
-  const upstreamAggregate = buildUpstreamKfdAggregate();
+  const upstreamAggregate = buildUpstreamKfdAggregate({ quiet: options.json });
   const registry = buildKfd3Registry(upstreamAggregate);
   assertCurrent(KFD3_REGISTRY_PATH, registry, 'Buildchain KFD-3 registry');
   assertStrictBuildchainAudit(buildStrictBuildchainAudit(registry));
@@ -1825,7 +1827,7 @@ async function runArtifactWitness(options) {
 }
 
 async function runCheckOrWrite(options) {
-  const upstreamAggregate = buildUpstreamKfdAggregate();
+  const upstreamAggregate = buildUpstreamKfdAggregate({ quiet: options.json });
   const registry = buildKfd3Registry(upstreamAggregate);
   const kfd1Witness = buildKfd1Witness();
   const kfd1Gate = buildKfd1ReleaseGate(kfd1Witness);
@@ -1988,7 +1990,7 @@ async function runCheckOrWrite(options) {
     );
 }
 async function runQuery(options) {
-  const upstreamAggregate = buildUpstreamKfdAggregate();
+  const upstreamAggregate = buildUpstreamKfdAggregate({ quiet: options.json });
   const registry = buildKfd3Registry(upstreamAggregate);
   const query = await buildQuery(registry);
   if (options.json) process.stdout.write(renderJson(query));
