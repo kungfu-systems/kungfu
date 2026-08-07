@@ -45,6 +45,29 @@
       "last_reviewed": "2026-07-24",
       "theme": "kungfu-agent-supply-chain"
     },
+    "docs/architecture/assignment-runtime-r0-evidence.md": {
+      "metadata_schema": "kungfu.document-metadata/v1",
+      "document_status": "draft",
+      "doc_type": "architecture-evidence",
+      "review_state": "self-reviewed",
+      "sensitivity": "public",
+      "sources": [
+        "architecture-decisions",
+        "executable-probe",
+        "local-files"
+      ],
+      "period": "2026-08-07",
+      "theme": "local-first-assignment-runtime-api",
+      "confidence": "high",
+      "evidence_grade": "A",
+      "last_reviewed": "2026-08-07",
+      "ai_provenance": {
+        "model_family": "OpenAI GPT-5",
+        "product": "Codex",
+        "generated_at": "2026-08-07",
+        "invisible_context_boundary": "The source and test audit is pinned to Kungfu commit 9277c15752b810f71e1666fbd1ba777a4b94678d; runtime implementation, deployed behavior, and hidden model parameters are not claimed"
+      }
+    },
     "docs/architecture/domain-profile-authoring.md": {
       "metadata_schema": "kungfu.document-metadata/v1",
       "document_status": "active",
