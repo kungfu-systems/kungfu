@@ -98,6 +98,21 @@ variables. Session and pane control handles remain excluded. This lets a
 provider select the correct input protocol for the inherited PTY without
 receiving the rest of the ambient shell environment.
 
+`kungfu run <provider>` resolves its launch directory in this order:
+
+1. an explicit `--workspace` or `KF_WORKSPACE_ROOT`;
+2. a Project discovered from the current working directory;
+3. the active `KUNGFU_WORKSPACE_ROOT`, when the command is launched from an
+   existing Kungfu Agent session;
+4. the Project selected by the machine-local Project registry; and
+5. the current working directory without durable Work binding.
+
+The final case is a supported provider launch, not an error. Kungfu tells the
+user that no Project is bound and points to `kungfu project create-plan` and
+`kungfu project select <path>`; the provider still opens in the requested
+directory. A selected Project is reported before launch when it is used from a
+different directory.
+
 The built-in Codex adapter uses Codex's native inline TUI (`--no-alt-screen`).
 This keeps the required first-use Project trust prompt and any startup error in
 terminal scrollback. It also passes a unique `provider_log_dir` for each native
@@ -105,6 +120,15 @@ SessionAttempt, preventing a fresh Project trust launch from contending with an
 ambient Codex log target while leaving the user's Codex home, login, config,
 and trust state unchanged. Kungfu never answers that trust decision for the
 user.
+
+Before starting Codex, Kungfu names the directory whose trust prompt may
+appear. The prompt reads and writes through the same provider PTY; users do not
+need to start Codex separately. Kungfu also checks the versioned Agent Session
+capability schema and all native lifecycle operations before it registers a
+SessionAttempt. An older detached worker therefore fails before
+`plan-native-start` with an actionable protocol-mismatch error. Close the
+running Kungfu processes for that Project and retry; do not delete Project
+data.
 
 Once the Agent chooses an Assignment, its onboarding Skill runs the binding
 boundary through the exact front door injected by the launch before edits or

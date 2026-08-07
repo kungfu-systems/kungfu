@@ -104,7 +104,7 @@ function runner(observed = catalog()) {
         stderr: '',
       };
     }
-    if (joined.endsWith('--help')) {
+    if (joined === '' || joined.endsWith('--help')) {
       if (joined.includes(' sdk ')) {
         return {
           status: 0,
@@ -192,6 +192,25 @@ test('qualification binds help, canonical CLI, KFD-3 and mutation receipts', () 
     }).verified,
     true,
   );
+});
+
+test('qualification accepts presentation-only alignment drift in bare help', () => {
+  const baseRunner = runner();
+  const report = qualifyCliSurface({
+    cli: '/fixture/kungfu',
+    expectedCatalog: catalog(),
+    runCommand(input) {
+      const result = baseRunner(input);
+      if (input.args.length === 0) {
+        return {
+          ...result,
+          stdout: result.stdout.replace('Project → Work', 'Project  →  Work'),
+        };
+      }
+      return result;
+    },
+  });
+  assert.equal(report.qualified, true);
 });
 
 test('verification binds the qualification to the exact archive digest', () => {

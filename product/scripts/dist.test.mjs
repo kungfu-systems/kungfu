@@ -488,6 +488,11 @@ test('Darwin CLI staging preserves the prebuilt node-pty helper contract', (t) =
   fs.mkdirSync(prebuild, { recursive: true });
   fs.writeFileSync(path.join(prebuild, 'pty.node'), 'native-addon\n');
   fs.writeFileSync(path.join(prebuild, 'spawn-helper'), 'native-helper\n');
+  fs.mkdirSync(path.join(source, 'prebuilds', 'darwin-x64'));
+  fs.writeFileSync(
+    path.join(source, 'prebuilds', 'darwin-x64', 'pty.node'),
+    'foreign-native-addon\n',
+  );
   fs.chmodSync(path.join(prebuild, 'spawn-helper'), 0o644);
   stageNodePtyForCli(source, target, 'darwin', 'arm64');
   const addon = path.join(target, 'prebuilds/darwin-arm64/pty.node');
@@ -495,6 +500,9 @@ test('Darwin CLI staging preserves the prebuilt node-pty helper contract', (t) =
   const helper = path.join(target, 'prebuilds/darwin-arm64/spawn-helper');
   assert.equal(fs.readFileSync(helper, 'utf8'), 'native-helper\n');
   assert.notEqual(fs.statSync(helper).mode & 0o111, 0);
+  assert.deepEqual(fs.readdirSync(path.join(target, 'prebuilds')), [
+    'darwin-arm64',
+  ]);
 });
 
 test('Linux CLI staging fails closed when the node-pty native addon is missing', (t) => {

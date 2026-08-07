@@ -14,6 +14,20 @@ from kungfu.agent import session_surface
 from kungfu.cli.commands import agent as agent_commands, kfc
 
 
+NATIVE_SURFACE_CAPABILITIES = {
+    "schema": "kungfu.agent-session.surface-capabilities/v1",
+    "actions": [
+        "capabilities",
+        "show",
+        "plan-native-start",
+        "start-native",
+        "heartbeat-native",
+        "project-native-work",
+        "end-native",
+    ],
+}
+
+
 def test_agent_session_resolves_the_current_project_runtime(monkeypatch, tmp_path):
     runtime_dir = tmp_path / "project" / ".kungfu" / "runtime"
     calls = []
@@ -128,6 +142,48 @@ def test_agent_session_does_not_replace_an_explicit_environment_endpoint(
     assert result.exit_code == 1
     assert "explicit endpoint unavailable" in result.output
     assert ensured == []
+
+
+def test_agent_session_rejects_a_live_worker_with_stale_native_operations(
+    monkeypatch, tmp_path
+):
+    monkeypatch.setattr(
+        session_surface,
+        "invoke",
+        lambda *_args, **_kwargs: {
+            "schema": "kungfu.agent-session.surface-capabilities/v1",
+            "actions": ["capabilities", "show"],
+        },
+    )
+    runners = []
+
+    with pytest.raises(ValueError) as raised:
+        session_surface.ensure(
+            tmp_path / "runtime", runner=lambda *_args: runners.append(True)
+        )
+
+    assert "Agent Session protocol mismatch" in str(raised.value)
+    assert "plan-native-start" in str(raised.value)
+    assert "Project data does not need to be deleted" in str(raised.value)
+    assert runners == []
+
+
+def test_agent_session_accepts_the_versioned_native_operation_vocabulary(
+    monkeypatch, tmp_path
+):
+    monkeypatch.setattr(
+        session_surface,
+        "invoke",
+        lambda *_args, **_kwargs: NATIVE_SURFACE_CAPABILITIES,
+    )
+    runners = []
+
+    endpoint = session_surface.ensure(
+        tmp_path / "runtime", runner=lambda *_args: runners.append(True)
+    )
+
+    assert endpoint == session_surface.endpoint_for_runtime(tmp_path / "runtime")
+    assert runners == []
 
 
 def test_native_interactive_uses_controlling_terminal_before_registering_attempt(
