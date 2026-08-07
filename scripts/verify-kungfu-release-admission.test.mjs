@@ -166,7 +166,7 @@ function fixture({
   });
   const controlPlaneAudit = createPublicationControlPlaneAudit({
     repository: 'kungfu-systems/kungfu',
-    workflowPath: '.github/workflows/release-candidate-promote.yml',
+    workflowPath: '.github/workflows/.release-candidate-promote.yml',
     publisherWorkflowPath: '.github/workflows/release-new-version.yml',
     environment: 'none',
     facts: [
@@ -316,7 +316,7 @@ function fixture({
         'utf8',
       ),
     ).registryDigest,
-    workflowPath: '.github/workflows/release-candidate-promote.yml',
+    workflowPath: '.github/workflows/.release-candidate-promote.yml',
     publisherWorkflowPath: '.github/workflows/release-new-version.yml',
     repository: 'kungfu-systems/kungfu',
     sourceSha: SOURCE_SHA,
