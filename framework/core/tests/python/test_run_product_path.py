@@ -8,7 +8,7 @@ from click.testing import CliRunner
 
 from kungfu import assignment_orchestration as orchestration
 from kungfu.agent import first_value as onboarding
-from kungfu.agent import native_workspace
+from kungfu.agent import native_launch
 from kungfu.agent import run_agent
 from kungfu.cli.commands import assignment, kfc, run
 from kungfu.workspace import resolve_workspace_target
@@ -361,11 +361,11 @@ def test_native_launch_uses_the_selected_current_project_outside_it(
     def resolve(_operation, workspace_root=None, **_kwargs):
         if workspace_root == str(project):
             return target
-        raise native_workspace.WorkspaceTargetRequired("read-only", str(source))
+        raise native_launch.WorkspaceTargetRequired("read-only", str(source))
 
-    monkeypatch.setattr(native_workspace, "resolve_workspace_target", resolve)
+    monkeypatch.setattr(native_launch, "resolve_workspace_target", resolve)
     monkeypatch.setattr(
-        native_workspace,
+        native_launch,
         "load_workspace_registry",
         lambda **_kwargs: {
             "last_workspace_id": "project:selected",
@@ -379,7 +379,7 @@ def test_native_launch_uses_the_selected_current_project_outside_it(
         },
     )
 
-    resolved, launch_root, reason = native_workspace.resolve_native_launch_target(
+    resolved, launch_root, reason = native_launch.resolve_native_launch_target(
         SimpleNamespace(
             config_home=str(tmp_path / "config"), home=str(tmp_path / "home")
         ),
@@ -412,17 +412,17 @@ def test_native_launch_prefers_the_working_directory_project_to_global_current(
     ):
         monkeypatch.delenv(name, raising=False)
     monkeypatch.setattr(
-        native_workspace,
+        native_launch,
         "resolve_workspace_target",
         lambda *_args, **_kwargs: target,
     )
     monkeypatch.setattr(
-        native_workspace,
+        native_launch,
         "load_workspace_registry",
         lambda **_kwargs: pytest.fail("global current Project should not be read"),
     )
 
-    resolved, launch_root, reason = native_workspace.resolve_native_launch_target(
+    resolved, launch_root, reason = native_launch.resolve_native_launch_target(
         SimpleNamespace(
             config_home=str(tmp_path / "config"), home=str(tmp_path / "home")
         ),

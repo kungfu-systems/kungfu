@@ -47,6 +47,14 @@ const result = spawnSync(
       'core',
       'tests',
       'python',
+      'test_agent_native_first_run_pty.py',
+    ),
+    path.join(
+      root,
+      'framework',
+      'core',
+      'tests',
+      'python',
       'test_agent_work_advisory.py',
     ),
     path.join(

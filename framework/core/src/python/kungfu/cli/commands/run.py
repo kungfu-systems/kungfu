@@ -11,7 +11,7 @@ import click
 from kungfu import assignment_orchestration as orchestration
 from kungfu.agent import run_agent
 from kungfu.agent import first_value as onboarding
-from kungfu.agent import native_workspace
+from kungfu.agent import native_launch
 from kungfu.agent.run_intent import RunIntentDispatcher
 from kungfu.cli.commands import PrioritizedCommandGroup, kfc
 from kungfu.agent.kfd3 import api_help, kfd3_api
@@ -462,7 +462,7 @@ def _run_native_provider(ctx, *, provider=None, profile_id=None, workspace_root=
                 runtime_home=ctx.home,
             )
         target, launch_root, work_ref, work_selection, notices = (
-            native_workspace.prepare_native_launch(
+            native_launch.prepare_native_launch(
                 ctx,
                 workspace_root,
                 str(profile.get("provider") or "agent"),

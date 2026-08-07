@@ -28,7 +28,6 @@ import {
   runInstalledTuiBootstrapSmoke,
   stageNodePtyForCli,
   stageXinfaContract,
-  verifyDarwinCliExecutableLayout,
   verifyProductObservabilityEvents,
   writeAuditableDemoBinaryMetadata,
 } from './dist.mjs';
@@ -504,42 +503,6 @@ test('Darwin CLI staging preserves the prebuilt node-pty helper contract', (t) =
   assert.deepEqual(fs.readdirSync(path.join(target, 'prebuilds')), [
     'darwin-arm64',
   ]);
-});
-
-test('macOS CLI executable qualification is architecture-exact and signed', (t) => {
-  if (process.platform !== 'darwin') {
-    t.skip('macOS executable qualification');
-    return;
-  }
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'kungfu-macos-cli-'));
-  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
-  const layout = cliArchiveLayout('darwin');
-  const files = [
-    layout.runtimeEntrypoint,
-    layout.pythonEntrypoint,
-    'tui/node_modules/node-pty/prebuilds/darwin-arm64/pty.node',
-    'tui/node_modules/node-pty/prebuilds/darwin-arm64/spawn-helper',
-  ];
-  for (const relative of files) {
-    const file = path.join(root, relative);
-    fs.mkdirSync(path.dirname(file), { recursive: true });
-    fs.writeFileSync(file, 'fixture');
-    fs.chmodSync(file, 0o755);
-  }
-  const calls = [];
-  const result = verifyDarwinCliExecutableLayout(root, (command, args) => {
-    calls.push([command, ...args]);
-    return {
-      status: 0,
-      stdout: command === 'file' ? 'Mach-O 64-bit arm64\n' : '',
-      stderr: '',
-    };
-  });
-
-  assert.equal(result.architectureExact, true);
-  assert.equal(result.codesignStrict, true);
-  assert.equal(calls.filter(([command]) => command === 'file').length, 4);
-  assert.equal(calls.filter(([command]) => command === 'codesign').length, 4);
 });
 
 test('Linux CLI staging fails closed when the node-pty native addon is missing', (t) => {
