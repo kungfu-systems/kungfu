@@ -17,7 +17,7 @@
       "id": "contract-registry",
       "source": "framework/contract/kungfu-contracts.registry.json",
       "artifact": "config/kungfu-contracts.registry.json",
-      "root": "sha256:77f3710f9fe27401b1bdf55bfe7433e8a48bfbe98442d16a8e914ee84c284a7e"
+      "root": "sha256:0b144463582acb9a7de8c7c9b10c5cc09fa2d32c20be0ee44a8606884ecd8de4"
     },
     {
       "id": "work-lifecycle-operation-matrix",

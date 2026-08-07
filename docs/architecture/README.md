@@ -25,6 +25,7 @@ Architecture decisions and their historical rationale remain in
 
 - [Architecture Overview](overview.md)
 - [Agent Supply Chain](agent-supply-chain.md)
+- [Assignment Runtime R0 Evidence](assignment-runtime-r0-evidence.md)
 - [Docker-first Hub Starter](hub-starter-docker.md)
 - [Core Layer Map](../../framework/core/architecture/LAYERS.md)
 - [Event Model](event-model.md)
