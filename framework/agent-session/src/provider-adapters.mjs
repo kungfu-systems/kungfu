@@ -3,8 +3,8 @@ import { spawnSync } from 'node:child_process';
 const PROVIDER_PROFILES = {
   codex: {
     adapterVersion: 'codex-tui/v1',
-    supportedVersion: /^0\.(?:144|146)\.[0-9]+$/u,
-    testedVersions: ['0.144.3', '0.146.0'],
+    supportedVersion: /^0\.(?:144|146|147)\.[0-9]+$/u,
+    testedVersions: ['0.144.3', '0.146.0', '0.147.0'],
     signatures: {
       blocked: [],
       approval: [

@@ -1195,6 +1195,8 @@ def test_agent_context_returns_native_canonical_entrypoints(monkeypatch, tmp_pat
         "entrypoints": {"bindWork": ["/exact/kungfu", "agent", "console", "bind-work"]},
     }
     monkeypatch.setenv("KUNGFU_AGENT_CONTEXT", json.dumps(native))
+    monkeypatch.delenv("KUNGFU_WORK_REF", raising=False)
+    monkeypatch.delenv("KUNGFU_AGENT_CONSOLE_ENVELOPE", raising=False)
 
     assert (
         agent_commands._context(
@@ -2017,6 +2019,76 @@ def test_native_interactive_runner_preserves_a_real_pty(tmp_path):
 
 
 @pytest.mark.skipif(not hasattr(os, "openpty"), reason="requires a POSIX PTY")
+def test_codex_first_project_trust_prompt_round_trips_through_the_provider_pty(
+    tmp_path,
+):
+    probe = (
+        "import sys;"
+        "print('Trust this project? [y/N]',flush=True);"
+        "answer=input().strip().lower();"
+        "print('KUNGFU_CODEX_TRUST_OK' if answer=='y' else 'TRUST_REJECTED',flush=True);"
+        "raise SystemExit(0 if answer=='y' else 1)"
+    )
+    profile = {
+        "id": "kungfu.agent-runtime.codex.trust-probe",
+        "provider": "codex",
+        "cwdPolicy": "workspace-root",
+        "launch": {
+            "executable": sys.executable,
+            "argv": [],
+            "interactiveArgv": ["-c", probe],
+            "versionArgv": ["--version"],
+            "shellMode": False,
+        },
+    }
+    wrapper = (
+        "from kungfu.agent import run_agent;"
+        f"profile={profile!r};"
+        "raise SystemExit(run_agent.run_native_interactive("
+        "profile,"
+        f"runtime_dir={str(tmp_path / 'runtime')!r},"
+        f"config_home={str(tmp_path / 'config')!r},"
+        f"runtime_home={str(tmp_path / 'home')!r},"
+        f"workspace_root={str(tmp_path)!r},"
+        "work_ref=None,"
+        "work_selection={'schema':'kungfu.native-work-selection/v1','state':'none'}))"
+    )
+    master_fd, slave_fd = os.openpty()
+    process = subprocess.Popen(
+        [sys.executable, "-c", wrapper],
+        stdin=slave_fd,
+        stdout=slave_fd,
+        stderr=slave_fd,
+        close_fds=True,
+    )
+    os.close(slave_fd)
+    os.write(master_fd, b"y\n")
+    chunks = []
+    deadline = time.monotonic() + 10
+    try:
+        while time.monotonic() < deadline:
+            ready, _, _ = select.select([master_fd], [], [], 0.1)
+            if ready:
+                try:
+                    chunks.append(os.read(master_fd, 65536))
+                except OSError:
+                    break
+            if process.poll() is not None and not ready:
+                break
+        return_code = process.wait(timeout=1)
+    finally:
+        os.close(master_fd)
+        if process.poll() is None:
+            process.terminate()
+            process.wait(timeout=1)
+
+    output = b"".join(chunks).decode("utf-8").replace("\r", "")
+    assert return_code == 0, output
+    assert "Trust this project? [y/N]" in output
+    assert "KUNGFU_CODEX_TRUST_OK" in output
+
+
+@pytest.mark.skipif(not hasattr(os, "openpty"), reason="requires a POSIX PTY")
 def test_registered_third_party_agent_preserves_real_pty_and_skill_injection(
     tmp_path,
 ):
@@ -2225,6 +2297,7 @@ def test_agent_session_cli_forwards_the_same_self_describing_action(
         }
 
     monkeypatch.setattr("kungfu.agent.session_surface.invoke", fake_invoke)
+    monkeypatch.delenv("KUNGFU_AGENT_CONSOLE_ID", raising=False)
 
     @click.group()
     @click.option("--home", type=click.Path(), required=True)

@@ -104,7 +104,7 @@ function runner(observed = catalog()) {
         stderr: '',
       };
     }
-    if (joined.endsWith('--help')) {
+    if (joined === '' || joined.endsWith('--help')) {
       if (joined.includes(' sdk ')) {
         return {
           status: 0,

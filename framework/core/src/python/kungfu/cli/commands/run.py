@@ -11,10 +11,14 @@ import click
 from kungfu import assignment_orchestration as orchestration
 from kungfu.agent import run_agent
 from kungfu.agent import first_value as onboarding
+from kungfu.agent import native_workspace
 from kungfu.agent.run_intent import RunIntentDispatcher
 from kungfu.cli.commands import PrioritizedCommandGroup, kfc
 from kungfu.agent.kfd3 import api_help, kfd3_api
-from kungfu.workspace import WorkspaceTargetRequired, resolve_workspace_target
+from kungfu.workspace import (
+    WorkspaceTargetRequired,
+    resolve_workspace_target,
+)
 
 
 run_command_context = kfc.pass_context()
@@ -439,23 +443,6 @@ def _native_work_observer(runtime_dir, work_selection, bound_work_ref=None):
 
 
 def _run_native_provider(ctx, *, provider=None, profile_id=None, workspace_root=None):
-    command = f"kungfu run {provider or 'agent'}" + (
-        f" --agent {profile_id}" if profile_id else ""
-    )
-    try:
-        target = resolve_workspace_target(
-            "read-only", workspace_root or None, cwd=os.getcwd()
-        )
-    except WorkspaceTargetRequired as error:
-        raise click.ClickException(
-            onboarding.project_required_message(command)
-        ) from error
-    if (
-        target.identity.workspace_kind != "project"
-        or not target.identity.workspace_root
-    ):
-        raise click.ClickException(onboarding.project_required_message(command))
-
     try:
         if profile_id is not None:
             profile, _selection = run_agent.select_profile(
@@ -474,11 +461,16 @@ def _run_native_provider(ctx, *, provider=None, profile_id=None, workspace_root=
                 config_home=ctx.config_home,
                 runtime_home=ctx.home,
             )
-        work_ref, work_selection = _native_work_binding(
-            target.identity.workspace_root,
-            target.identity.workspace_id,
-            target.runtime_dir,
+        target, launch_root, work_ref, work_selection, notices = (
+            native_workspace.prepare_native_launch(
+                ctx,
+                workspace_root,
+                str(profile.get("provider") or "agent"),
+                _native_work_binding,
+            )
         )
+        for notice in notices:
+            click.echo(notice, err=True)
         session_endpoint = run_agent.session_surface.ensure(str(target.runtime_dir))
 
         def invoke_native_session(request):
@@ -508,7 +500,7 @@ def _run_native_provider(ctx, *, provider=None, profile_id=None, workspace_root=
             runtime_dir=str(target.runtime_dir),
             config_home=ctx.config_home,
             runtime_home=ctx.home,
-            workspace_root=target.identity.workspace_root,
+            workspace_root=launch_root,
             work_ref=work_ref,
             work_selection=work_selection,
             session_endpoint=session_endpoint,

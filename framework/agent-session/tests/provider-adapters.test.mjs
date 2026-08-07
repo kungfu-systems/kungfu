@@ -24,6 +24,7 @@ function fixtures(name) {
 for (const [provider, version, filename] of [
   ['codex', '0.144.3', 'codex-v0.144.3.json'],
   ['codex', '0.146.0', 'codex-v0.146.0.json'],
+  ['codex', '0.147.0', 'codex-v0.147.0.json'],
   ['claude', '2.1.209', 'claude-v2.1.209.json'],
   ['claude', '2.1.220', 'claude-v2.1.220.json'],
 ]) {

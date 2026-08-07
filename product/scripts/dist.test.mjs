@@ -28,6 +28,7 @@ import {
   runInstalledTuiBootstrapSmoke,
   stageNodePtyForCli,
   stageXinfaContract,
+  verifyDarwinCliExecutableLayout,
   verifyProductObservabilityEvents,
   writeAuditableDemoBinaryMetadata,
 } from './dist.mjs';
@@ -488,6 +489,11 @@ test('Darwin CLI staging preserves the prebuilt node-pty helper contract', (t) =
   fs.mkdirSync(prebuild, { recursive: true });
   fs.writeFileSync(path.join(prebuild, 'pty.node'), 'native-addon\n');
   fs.writeFileSync(path.join(prebuild, 'spawn-helper'), 'native-helper\n');
+  fs.mkdirSync(path.join(source, 'prebuilds', 'darwin-x64'));
+  fs.writeFileSync(
+    path.join(source, 'prebuilds', 'darwin-x64', 'pty.node'),
+    'foreign-native-addon\n',
+  );
   fs.chmodSync(path.join(prebuild, 'spawn-helper'), 0o644);
   stageNodePtyForCli(source, target, 'darwin', 'arm64');
   const addon = path.join(target, 'prebuilds/darwin-arm64/pty.node');
@@ -495,6 +501,49 @@ test('Darwin CLI staging preserves the prebuilt node-pty helper contract', (t) =
   const helper = path.join(target, 'prebuilds/darwin-arm64/spawn-helper');
   assert.equal(fs.readFileSync(helper, 'utf8'), 'native-helper\n');
   assert.notEqual(fs.statSync(helper).mode & 0o111, 0);
+  assert.deepEqual(fs.readdirSync(path.join(target, 'prebuilds')), [
+    'darwin-arm64',
+  ]);
+});
+
+test('macOS CLI executable qualification is architecture-exact and signed', (t) => {
+  if (process.platform !== 'darwin') {
+    t.skip('macOS executable qualification');
+    return;
+  }
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'kungfu-macos-cli-'));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const layout = cliArchiveLayout('darwin');
+  const files = [
+    layout.runtimeEntrypoint,
+    layout.pythonEntrypoint,
+    'tui/node_modules/node-pty/prebuilds/darwin-arm64/pty.node',
+    'tui/node_modules/node-pty/prebuilds/darwin-arm64/spawn-helper',
+  ];
+  for (const relative of files) {
+    const file = path.join(root, relative);
+    fs.mkdirSync(path.dirname(file), { recursive: true });
+    fs.writeFileSync(file, 'fixture');
+    fs.chmodSync(file, 0o755);
+  }
+  const calls = [];
+  const result = verifyDarwinCliExecutableLayout(
+    root,
+    layout,
+    (command, args) => {
+      calls.push([command, ...args]);
+      return {
+        status: 0,
+        stdout: command === 'file' ? 'Mach-O 64-bit arm64\n' : '',
+        stderr: '',
+      };
+    },
+  );
+
+  assert.equal(result.architectureExact, true);
+  assert.equal(result.codesignStrict, true);
+  assert.equal(calls.filter(([command]) => command === 'file').length, 4);
+  assert.equal(calls.filter(([command]) => command === 'codesign').length, 4);
 });
 
 test('Linux CLI staging fails closed when the node-pty native addon is missing', (t) => {

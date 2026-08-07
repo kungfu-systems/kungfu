@@ -17,6 +17,18 @@ from kungfu.workspace import WorkspaceTargetRequired, resolve_workspace_target
 
 MAX_MESSAGE_BYTES = 1024 * 1024
 _READ_CHUNK_BYTES = 65536
+_SURFACE_CAPABILITIES_SCHEMA = "kungfu.agent-session.surface-capabilities/v1"
+_REQUIRED_NATIVE_OPERATIONS = frozenset(
+    {
+        "capabilities",
+        "show",
+        "plan-native-start",
+        "start-native",
+        "heartbeat-native",
+        "project-native-work",
+        "end-native",
+    }
+)
 
 
 def _deadline(timeout):
@@ -283,15 +295,43 @@ def _resolve_worker_executable():
     )
 
 
+def _validate_surface_capabilities(capabilities, *, endpoint):
+    schema = capabilities.get("schema") if isinstance(capabilities, dict) else None
+    actions = capabilities.get("actions") if isinstance(capabilities, dict) else None
+    supported = (
+        {str(action) for action in actions if isinstance(action, str)}
+        if isinstance(actions, list)
+        else set()
+    )
+    missing = sorted(_REQUIRED_NATIVE_OPERATIONS - supported)
+    if schema == _SURFACE_CAPABILITIES_SCHEMA and not missing:
+        return capabilities
+    details = []
+    if schema != _SURFACE_CAPABILITIES_SCHEMA:
+        details.append(
+            f"schema is {schema or 'missing'}; expected {_SURFACE_CAPABILITIES_SCHEMA}"
+        )
+    if missing:
+        details.append("missing operations: " + ", ".join(missing))
+    raise ValueError(
+        f"Agent Session protocol mismatch at {endpoint}: {'; '.join(details)}. "
+        "Close running Kungfu processes for this Project and retry. Project data "
+        "does not need to be deleted."
+    )
+
+
 def ensure(runtime_dir, *, runner=None):
     """Ensure and return the runtime-scoped detached Agent Session endpoint."""
 
     endpoint = endpoint_for_runtime(runtime_dir)
     os.environ["KUNGFU_AGENT_SESSION_ENDPOINT"] = endpoint
     try:
-        invoke({"operation": "capabilities"}, endpoint=endpoint, timeout=0.25)
+        capabilities = invoke(
+            {"operation": "capabilities"}, endpoint=endpoint, timeout=0.25
+        )
+        _validate_surface_capabilities(capabilities, endpoint=endpoint)
         return endpoint
-    except (OSError, ValueError, socket.timeout):
+    except (OSError, socket.timeout):
         pass
 
     entry = _resolve_native_entry()
@@ -311,7 +351,8 @@ def ensure(runtime_dir, *, runner=None):
         raise ValueError(
             f"native Agent Session bridge exited with status {int(exit_code)}"
         )
-    invoke({"operation": "capabilities"}, endpoint=endpoint, timeout=5.0)
+    capabilities = invoke({"operation": "capabilities"}, endpoint=endpoint, timeout=5.0)
+    _validate_surface_capabilities(capabilities, endpoint=endpoint)
     return endpoint
 
 

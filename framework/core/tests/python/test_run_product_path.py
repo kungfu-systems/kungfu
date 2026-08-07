@@ -8,6 +8,7 @@ from click.testing import CliRunner
 
 from kungfu import assignment_orchestration as orchestration
 from kungfu.agent import first_value as onboarding
+from kungfu.agent import native_workspace
 from kungfu.agent import run_agent
 from kungfu.cli.commands import assignment, kfc, run
 from kungfu.workspace import resolve_workspace_target
@@ -298,14 +299,139 @@ def test_run_from_a_fresh_directory_converges_on_agent_first_onboarding(
     tmp_path, monkeypatch
 ):
     monkeypatch.chdir(tmp_path)
+    for name in (
+        "KF_HOME",
+        "KF_RUNTIME_DIR",
+        "KF_WORKSPACE_ROOT",
+        "KUNGFU_WORKSPACE_ROOT",
+    ):
+        monkeypatch.delenv(name, raising=False)
+    monkeypatch.setenv("KF_CONFIG_HOME", str(tmp_path / "config"))
+    monkeypatch.setattr(
+        run,
+        "_provider_profile",
+        lambda *_args, **_kwargs: {
+            "id": "codex.test",
+            "provider": "codex",
+        },
+    )
+    monkeypatch.setattr(run.run_agent.session_surface, "ensure", lambda *_args: "sock")
+    launches = []
+    monkeypatch.setattr(
+        run.run_agent,
+        "run_native_interactive",
+        lambda *_args, **kwargs: launches.append(kwargs) or 0,
+    )
 
     result = CliRunner().invoke(kfc, ["--home", str(tmp_path / "home"), "run", "codex"])
 
-    assert result.exit_code == 1
-    assert "needs a Project before it can start durable Work" in result.output
-    assert "kungfu agent brief" in result.output
-    assert "bare `kungfu`" in result.output
-    assert "kungfu run codex" in result.output
+    assert result.exit_code == 0, result.output
+    assert launches[0]["workspace_root"] == str(tmp_path)
+    assert launches[0]["work_ref"] is None
+    assert launches[0]["work_selection"]["state"] == "none"
+    assert (
+        "starting codex in this directory without durable Work binding" in result.output
+    )
+    assert "Codex may ask whether to trust" in result.output
+
+
+def test_native_launch_uses_the_selected_current_project_outside_it(
+    tmp_path, monkeypatch
+):
+    source = tmp_path / "outside"
+    project = tmp_path / "selected"
+    source.mkdir()
+    project.mkdir()
+    target = SimpleNamespace(
+        identity=SimpleNamespace(
+            workspace_kind="project",
+            workspace_root=str(project),
+            workspace_id="project:selected",
+        ),
+        runtime_dir=project / ".kungfu" / "runtime",
+    )
+    for name in (
+        "KF_HOME",
+        "KF_RUNTIME_DIR",
+        "KF_WORKSPACE_ROOT",
+        "KUNGFU_WORKSPACE_ROOT",
+    ):
+        monkeypatch.delenv(name, raising=False)
+
+    def resolve(_operation, workspace_root=None, **_kwargs):
+        if workspace_root == str(project):
+            return target
+        raise native_workspace.WorkspaceTargetRequired("read-only", str(source))
+
+    monkeypatch.setattr(native_workspace, "resolve_workspace_target", resolve)
+    monkeypatch.setattr(
+        native_workspace,
+        "load_workspace_registry",
+        lambda **_kwargs: {
+            "last_workspace_id": "project:selected",
+            "recent": [
+                {
+                    "workspace_id": "project:selected",
+                    "workspace_kind": "project",
+                    "workspace_root": str(project),
+                }
+            ],
+        },
+    )
+
+    resolved, launch_root, reason = native_workspace.resolve_native_launch_target(
+        SimpleNamespace(
+            config_home=str(tmp_path / "config"), home=str(tmp_path / "home")
+        ),
+        cwd=str(source),
+    )
+
+    assert resolved is target
+    assert launch_root == str(project)
+    assert reason == "selected-project"
+
+
+def test_native_launch_prefers_the_working_directory_project_to_global_current(
+    tmp_path, monkeypatch
+):
+    source = tmp_path / "project"
+    source.mkdir()
+    target = SimpleNamespace(
+        identity=SimpleNamespace(
+            workspace_kind="project",
+            workspace_root=str(source),
+            workspace_id="project:cwd",
+        ),
+        runtime_dir=source / ".kungfu" / "runtime",
+    )
+    for name in (
+        "KF_HOME",
+        "KF_RUNTIME_DIR",
+        "KF_WORKSPACE_ROOT",
+        "KUNGFU_WORKSPACE_ROOT",
+    ):
+        monkeypatch.delenv(name, raising=False)
+    monkeypatch.setattr(
+        native_workspace,
+        "resolve_workspace_target",
+        lambda *_args, **_kwargs: target,
+    )
+    monkeypatch.setattr(
+        native_workspace,
+        "load_workspace_registry",
+        lambda **_kwargs: pytest.fail("global current Project should not be read"),
+    )
+
+    resolved, launch_root, reason = native_workspace.resolve_native_launch_target(
+        SimpleNamespace(
+            config_home=str(tmp_path / "config"), home=str(tmp_path / "home")
+        ),
+        cwd=str(source),
+    )
+
+    assert resolved is target
+    assert launch_root == str(source)
+    assert reason == "working-directory-project"
 
 
 def test_successful_managed_work_start_completes_agent_onboarding(

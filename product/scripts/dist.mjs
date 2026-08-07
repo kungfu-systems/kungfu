@@ -1004,6 +1004,22 @@ export function stageNodePtyForCli(
   architecture = process.arch,
 ) {
   copyTree(source, target);
+  const prebuilds = path.join(target, 'prebuilds');
+  if (fs.existsSync(prebuilds)) {
+    const selected =
+      platform === 'darwin' || platform === 'win32'
+        ? `${platform}-${architecture}`
+        : null;
+    for (const entry of fs.readdirSync(prebuilds)) {
+      if (entry !== selected) {
+        fs.rmSync(path.join(prebuilds, entry), {
+          recursive: true,
+          force: true,
+        });
+      }
+    }
+    if (selected === null) fs.rmSync(prebuilds, { recursive: true });
+  }
   if (platform === 'linux') {
     const nativeDirectory = path.join('build', 'Release');
     const targetNativeDirectory = path.join(target, nativeDirectory);
@@ -1026,6 +1042,78 @@ export function stageNodePtyForCli(
       0o755,
     );
   }
+}
+
+export function verifyDarwinCliExecutableLayout(
+  installRoot,
+  layout,
+  run = spawnSync,
+) {
+  if (process.platform !== 'darwin') return null;
+  const nodePtyRoot = path.join(
+    installRoot,
+    'tui',
+    'node_modules',
+    'node-pty',
+    'prebuilds',
+  );
+  const selectedPrebuild = `darwin-${process.arch}`;
+  const prebuilds = fs.readdirSync(nodePtyRoot).sort();
+  if (prebuilds.join('\0') !== selectedPrebuild) {
+    throw new Error(
+      `macOS CLI node-pty closure is not architecture-exact: ${prebuilds.join(', ')}`,
+    );
+  }
+  const machObjects = [
+    path.join(installRoot, layout.runtimeEntrypoint),
+    path.join(installRoot, layout.pythonEntrypoint),
+    path.join(nodePtyRoot, selectedPrebuild, 'pty.node'),
+    path.join(nodePtyRoot, selectedPrebuild, 'spawn-helper'),
+  ];
+  const executablePaths = new Set([
+    machObjects[0],
+    machObjects[1],
+    machObjects[3],
+  ]);
+  for (const executable of machObjects) {
+    if (
+      executablePaths.has(executable) &&
+      (fs.statSync(executable).mode & 0o111) === 0
+    ) {
+      throw new Error(`macOS CLI executable bit is missing: ${executable}`);
+    }
+    const architecture = run('file', ['-b', executable], {
+      encoding: 'utf8',
+    });
+    if (
+      architecture.status !== 0 ||
+      !String(architecture.stdout).includes('arm64') ||
+      String(architecture.stdout).includes('x86_64')
+    ) {
+      throw new Error(
+        `macOS CLI executable architecture is not arm64: ${executable}`,
+      );
+    }
+    const signature = run(
+      'codesign',
+      ['--verify', '--strict', '--verbose=2', executable],
+      { encoding: 'utf8' },
+    );
+    if (signature.status !== 0) {
+      throw new Error(
+        `macOS CLI executable signature is invalid: ${executable}: ${signature.stderr || signature.stdout}`,
+      );
+    }
+  }
+  return {
+    architecture: 'arm64',
+    architectureExact: true,
+    executableBits: true,
+    codesignStrict: true,
+    nodePtyPrebuild: selectedPrebuild,
+    notarization:
+      'protected-release-credential-island-not-claimed-by-dev-build',
+  };
 }
 
 function bundleSdkForCli(stageRoot, esbuildRuntime) {
@@ -1732,6 +1820,10 @@ export function smokeCliProductArchive({ archivePath, archiveBase }) {
           kungfuBin,
           env: smokeEnv,
         });
+        const platformVerification = verifyDarwinCliExecutableLayout(
+          installRoot,
+          layout,
+        );
         const qualification = qualifyCliSurface({
           cli: kungfuBin,
           expectedCatalog: readJson(CLI_SURFACE_CATALOG),
@@ -1739,6 +1831,7 @@ export function smokeCliProductArchive({ archivePath, archiveBase }) {
           identity: {
             archive: path.basename(archivePath),
             archiveSha256: sha256File(archivePath),
+            ...(platformVerification ? { platformVerification } : {}),
           },
           environment: smokeEnv,
           runCommand: runInstalledKungfuCommand,

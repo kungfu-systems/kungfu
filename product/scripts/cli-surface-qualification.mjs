@@ -190,6 +190,7 @@ export function qualifyCliSurface({
     const defaultHelp = run(['--help'], 'kungfu --help', {
       withHome: false,
     }).stdout;
+    const bareHelp = run([], 'bare kungfu', { withHome: false }).stdout;
     const fullHelp = run(['--help-all'], 'kungfu --help-all', {
       withHome: false,
     }).stdout;
@@ -220,6 +221,10 @@ export function qualifyCliSurface({
     assert(
       defaultHelp.includes('Project → Work → Agent'),
       'default help omitted the Project, Work, Agent product model',
+    );
+    assert(
+      bareHelp === defaultHelp,
+      'bare kungfu did not match the standalone default help path',
     );
     assert(
       defaultHelp.includes('START HERE'),
