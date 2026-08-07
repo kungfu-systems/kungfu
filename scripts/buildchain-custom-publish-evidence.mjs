@@ -47,6 +47,7 @@ function normalizeArtifact(artifact, index) {
     ...(artifact.ref ? { ref: artifact.ref } : {}),
     digest: artifact.digest,
     ...(artifact.role ? { role: artifact.role } : {}),
+    ...(artifact.platform ? { platform: artifact.platform } : {}),
   };
 }
 

@@ -554,6 +554,12 @@ export function validatePromotionContract(
       findings,
       'recovery custom publish evidence must execute the checked-out publication controller KFD adapter',
     );
+    requirePattern(
+      publishAdapter,
+      /artifact\.platform\s*\?\s*\{ platform: artifact\.platform \}/u,
+      findings,
+      'custom publish evidence must preserve the required platform provenance',
+    );
   }
   const kfdEvidencePath = path.join(
     root,
