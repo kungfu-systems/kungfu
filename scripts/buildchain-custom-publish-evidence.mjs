@@ -5,7 +5,10 @@ import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 
-import { verifyUpgradePublicationPayloads } from './upgrade-publication-admission.mjs';
+import {
+  promotableUpgradePlatforms,
+  verifyUpgradePublicationPayloads,
+} from './upgrade-publication-admission.mjs';
 
 function requireEnv(name) {
   const value = process.env[name];
@@ -71,26 +74,37 @@ function main() {
     '.buildchain',
     'release-candidate',
   );
-  const upgradeAdmission = verifyUpgradePublicationPayloads({
-    payloadRoot:
-      process.env.KF_UPGRADE_PUBLISH_PAYLOAD_ROOT ||
-      process.env.BUILDCHAIN_RELEASE_CANDIDATE_PAYLOAD_ROOT ||
-      path.join(releaseCandidateRoot, 'payloads'),
-    releaseCandidatePassportPath:
-      process.env.KF_UPGRADE_RELEASE_CANDIDATE_PASSPORT ||
-      path.join(
-        releaseCandidateRoot,
-        'passport',
-        'release-candidate-passport.json',
-      ),
-    expectedVersion: version,
-  });
-  console.log(
-    `buildchain custom publish admitted upgrade evidence for ${upgradeAdmission.platforms.join(', ')}`,
-  );
-  console.log(
-    `buildchain custom publish admitted ${upgradeAdmission.credentialIsland.platformId} credential evidence from runtime ${upgradeAdmission.credentialIsland.runtimeSha}`,
-  );
+  const upgradePlatforms = promotableUpgradePlatforms();
+  const upgradeAdmission =
+    upgradePlatforms.length > 0
+      ? verifyUpgradePublicationPayloads({
+          payloadRoot:
+            process.env.KF_UPGRADE_PUBLISH_PAYLOAD_ROOT ||
+            process.env.BUILDCHAIN_RELEASE_CANDIDATE_PAYLOAD_ROOT ||
+            path.join(releaseCandidateRoot, 'payloads'),
+          releaseCandidatePassportPath:
+            process.env.KF_UPGRADE_RELEASE_CANDIDATE_PASSPORT ||
+            path.join(
+              releaseCandidateRoot,
+              'passport',
+              'release-candidate-passport.json',
+            ),
+          expectedVersion: version,
+          expectedPlatforms: upgradePlatforms,
+        })
+      : null;
+  if (upgradeAdmission) {
+    console.log(
+      `buildchain custom publish admitted upgrade evidence for ${upgradeAdmission.platforms.join(', ')}`,
+    );
+    console.log(
+      `buildchain custom publish admitted ${upgradeAdmission.credentialIsland.platformId} credential evidence from runtime ${upgradeAdmission.credentialIsland.runtimeSha}`,
+    );
+  } else {
+    console.log(
+      'buildchain custom publish recorded no upgrade qualification because the product advertises no promotion-eligible upgrade platform',
+    );
+  }
   generateKfdEvidence();
   const requiredArtifactsPath =
     process.env.BUILDCHAIN_PUBLISH_REQUIRED_ARTIFACTS_PATH ||
@@ -120,13 +134,17 @@ function main() {
     release_material_sha: requireEnv('BUILDCHAIN_RELEASE_MATERIAL_SHA'),
     publish_tooling_sha: requireEnv('BUILDCHAIN_PUBLISH_TOOLING_SHA'),
     artifacts: requiredArtifacts.map(normalizeArtifact),
-    upgrade_qualification: {
-      schema: 'kungfu.product-update.release-passport-evidence/v1',
-      release_passport_root: upgradeAdmission.releasePassportRoot,
-      channel_index_roots: upgradeAdmission.channelIndexRoots,
-      campaign_roots: upgradeAdmission.campaignRoots,
-      campaigns: upgradeAdmission.updateCampaigns,
-    },
+    ...(upgradeAdmission
+      ? {
+          upgrade_qualification: {
+            schema: 'kungfu.product-update.release-passport-evidence/v1',
+            release_passport_root: upgradeAdmission.releasePassportRoot,
+            channel_index_roots: upgradeAdmission.channelIndexRoots,
+            campaign_roots: upgradeAdmission.campaignRoots,
+            campaigns: upgradeAdmission.updateCampaigns,
+          },
+        }
+      : {}),
   };
 
   fs.mkdirSync(path.dirname(evidencePath), { recursive: true });

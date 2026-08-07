@@ -86,6 +86,10 @@ export function validateWorkflowSources(root, contract, overrides = {}) {
     ['primary promotion', promote],
     ['release-candidate recovery', recovery],
   ]) {
+    const publishCommand =
+      label === 'release-candidate recovery'
+        ? contract.evidence.recovery_publish_command
+        : contract.evidence.publish_command;
     requirePattern(
       job,
       /release-activation-command: ""/,
@@ -100,9 +104,7 @@ export function validateWorkflowSources(root, contract, overrides = {}) {
     );
     requirePattern(
       job,
-      new RegExp(
-        `publish-command: ${contract.evidence.publish_command.replaceAll('.', '\\.')}`,
-      ),
+      new RegExp(`publish-command: ${publishCommand.replaceAll('.', '\\.')}`),
       findings,
       `${label} custom publish evidence command drifted`,
     );

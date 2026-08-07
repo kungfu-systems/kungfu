@@ -7,7 +7,10 @@ import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 
-import { verifyUpgradePublicationPayloads } from './upgrade-publication-admission.mjs';
+import {
+  promotableUpgradePlatforms,
+  verifyUpgradePublicationPayloads,
+} from './upgrade-publication-admission.mjs';
 import {
   artifactSignatureStatement,
   loadUpgradeQualificationContract,
@@ -27,6 +30,20 @@ const RELEASE_CANDIDATE_PASSPORT = {
 const RELEASE_CANDIDATE_PASSPORT_ROOT = qualificationContentRoot(
   RELEASE_CANDIDATE_PASSPORT,
 );
+
+test('upgrade publication claims only advertised promotion-eligible platforms', () => {
+  assert.deepEqual(promotableUpgradePlatforms(CONTRACT), []);
+  assert.deepEqual(
+    promotableUpgradePlatforms({
+      currentClaims: {
+        win32: { advertised: true, promotionEligible: false },
+        linux: { advertised: true, promotionEligible: true },
+        darwin: { advertised: false, promotionEligible: true },
+      },
+    }),
+    ['linux'],
+  );
+});
 
 function sha256(value) {
   return createHash('sha256').update(value).digest('hex');

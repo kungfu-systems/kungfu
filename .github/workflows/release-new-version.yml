@@ -417,7 +417,7 @@ jobs:
       required-status-check: build / Finalize build controller evidence
       publish-target: custom
       publish-artifact-kind: kungfu-product
-      publish-command: node scripts/buildchain-custom-publish-evidence.mjs
+      publish-command: node .buildchain/publication-controller/scripts/buildchain-custom-publish-evidence.mjs
       github-release-payload-patterns: |
         kungfu-episodes-cli-*.tar.gz
         kungfu-episodes-cli-*.zip

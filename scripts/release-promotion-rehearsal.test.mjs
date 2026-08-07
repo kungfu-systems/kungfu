@@ -161,7 +161,9 @@ test('publication and recovery clear activation commands while preserving public
     assert.match(job, /release-passport-evidence-command: ""/u, name);
     assert.match(
       job,
-      /publish-command: node scripts\/buildchain-custom-publish-evidence\.mjs/u,
+      name === 'recover'
+        ? /publish-command: node \.buildchain\/publication-controller\/scripts\/buildchain-custom-publish-evidence\.mjs/u
+        : /publish-command: node scripts\/buildchain-custom-publish-evidence\.mjs/u,
       name,
     );
     assert.match(
@@ -243,6 +245,7 @@ test('Alpha recovery reuses the sealed candidate through the bounded Buildchain 
     'resume-expected-candidate-runtime-sha: ${{ inputs.resume-expected-candidate-runtime-sha }}',
     'resume-buildchain-runtime-sha: ${{ inputs.resume-buildchain-runtime-sha }}',
     'publication-gate-controller-sha: ${{ inputs.resume-publication-gate-controller-sha }}',
+    'publish-command: node .buildchain/publication-controller/scripts/buildchain-custom-publish-evidence.mjs',
     'publish-transaction-override: ${{ inputs.publish-transaction-override }}',
     'dry-run: false',
   ]) {

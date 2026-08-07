@@ -417,6 +417,18 @@ function releaseCandidateSources(passport) {
   return sources;
 }
 
+export function promotableUpgradePlatforms(
+  contract = loadUpgradeQualificationContract(),
+) {
+  return Object.entries(contract.currentClaims || {})
+    .filter(
+      ([, claim]) =>
+        claim?.advertised === true && claim?.promotionEligible === true,
+    )
+    .map(([platform]) => platform)
+    .sort((left, right) => left.localeCompare(right));
+}
+
 function platformIdentity(manifest) {
   return `${manifest.platform}-${manifest.architecture}`;
 }
