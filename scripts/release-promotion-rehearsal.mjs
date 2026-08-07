@@ -728,6 +728,7 @@ function evaluateActualEvent(root, eventPath) {
       {
         cwd: root,
         encoding: 'utf8',
+        maxBuffer: 4 * 1024 * 1024,
         // The rehearsal is read-only. Disable Git's optional index refresh so
         // the child remains runnable from a pre-commit hook that already owns
         // the real index lock. A private index preserves the exact staged view
