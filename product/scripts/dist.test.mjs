@@ -527,18 +527,14 @@ test('macOS CLI executable qualification is architecture-exact and signed', (t) 
     fs.chmodSync(file, 0o755);
   }
   const calls = [];
-  const result = verifyDarwinCliExecutableLayout(
-    root,
-    layout,
-    (command, args) => {
-      calls.push([command, ...args]);
-      return {
-        status: 0,
-        stdout: command === 'file' ? 'Mach-O 64-bit arm64\n' : '',
-        stderr: '',
-      };
-    },
-  );
+  const result = verifyDarwinCliExecutableLayout(root, (command, args) => {
+    calls.push([command, ...args]);
+    return {
+      status: 0,
+      stdout: command === 'file' ? 'Mach-O 64-bit arm64\n' : '',
+      stderr: '',
+    };
+  });
 
   assert.equal(result.architectureExact, true);
   assert.equal(result.codesignStrict, true);

@@ -1044,12 +1044,9 @@ export function stageNodePtyForCli(
   }
 }
 
-export function verifyDarwinCliExecutableLayout(
-  installRoot,
-  layout,
-  run = spawnSync,
-) {
+export function verifyDarwinCliExecutableLayout(installRoot, run = spawnSync) {
   if (process.platform !== 'darwin') return null;
+  const layout = cliArchiveLayout('darwin');
   const nodePtyRoot = path.join(
     installRoot,
     'tui',
@@ -1820,10 +1817,8 @@ export function smokeCliProductArchive({ archivePath, archiveBase }) {
           kungfuBin,
           env: smokeEnv,
         });
-        const platformVerification = verifyDarwinCliExecutableLayout(
-          installRoot,
-          layout,
-        );
+        const platformVerification =
+          verifyDarwinCliExecutableLayout(installRoot);
         const qualification = qualifyCliSurface({
           cli: kungfuBin,
           expectedCatalog: readJson(CLI_SURFACE_CATALOG),
