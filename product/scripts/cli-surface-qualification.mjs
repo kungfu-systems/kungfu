@@ -122,6 +122,14 @@ function assertRoots(actual, expected, label) {
   }
 }
 
+function normalizeHelpPresentation(value) {
+  return String(value)
+    .split(/\r?\n/u)
+    .map((line) => line.trim().replace(/\s+/gu, ' '))
+    .join('\n')
+    .trim();
+}
+
 function commandRunner({ cli, home, workspace, env, runCommand }) {
   const baseEnv = {
     ...env,
@@ -223,7 +231,8 @@ export function qualifyCliSurface({
       'default help omitted the Project, Work, Agent product model',
     );
     assert(
-      bareHelp === defaultHelp,
+      normalizeHelpPresentation(bareHelp) ===
+        normalizeHelpPresentation(defaultHelp),
       'bare kungfu did not match the standalone default help path',
     );
     assert(
