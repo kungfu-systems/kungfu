@@ -394,9 +394,45 @@ function baselineTransitionAuthorization(transition) {
     newBaselineRef: transition.new_baseline_ref,
     changedMeasurements: transition.changed_measurements,
     aggregateLineDelta: transition.aggregate_line_delta,
+    changeManifestRoot: transition.change_manifest_root || '',
+    reconstructionScope: transition.reconstruction_scope || '',
+    reconstructionReasonCodes: transition.reconstruction_reason_codes || [],
     requester: transition.requested_by,
     reason: transition.reason,
     retirementOrDecompositionRef: transition.retirement_or_decomposition_ref,
+  };
+}
+
+function baselineChangeManifest(protectedBaseline, candidateBaseline) {
+  const before = new Map(
+    (protectedBaseline.files || []).map((file) => [file.path, file]),
+  );
+  const after = new Map(
+    (candidateBaseline.files || []).map((file) => [file.path, file]),
+  );
+  const paths = sortedUnique([...before.keys(), ...after.keys()]);
+  const changes = paths
+    .filter(
+      (pathname) =>
+        comparable(before.get(pathname) || null) !==
+        comparable(after.get(pathname) || null),
+    )
+    .map((pathname) => ({
+      path: pathname,
+      before: before.get(pathname) || null,
+      after: after.get(pathname) || null,
+    }));
+  return {
+    schema: 'kungfu.code-complexity-baseline-change-manifest/v1',
+    expectedOldMeasurementRoot: protectedBaseline.measurementRoot,
+    newMeasurementRoot: candidateBaseline.measurementRoot,
+    changedMeasurements: changes.length,
+    aggregateLineDelta: changes.reduce(
+      (total, change) =>
+        total + (change.after?.lines || 0) - (change.before?.lines || 0),
+      0,
+    ),
+    changes,
   };
 }
 
@@ -404,6 +440,12 @@ function baselineTransitionIssues(record, context) {
   const issues = [];
   const transition = record.value || {};
   const governance = context.candidatePolicy.baselineGovernance || {};
+  const changeManifest = baselineChangeManifest(
+    context.protectedBaseline,
+    context.candidateBaseline,
+  );
+  const changeManifestRoot = digest(changeManifest);
+  const reconstruction = transition.schema === governance.reconstructionSchema;
   for (const field of [
     'schema',
     'expected_old_measurement_root',
@@ -427,11 +469,21 @@ function baselineTransitionIssues(record, context) {
         path: record.file,
         message: `missing ${field}`,
       });
-  if (transition.schema !== governance.transitionSchema)
+  if (transition.schema !== governance.transitionSchema && !reconstruction)
     issues.push({
       code: 'invalid-baseline-transition',
       path: record.file,
       message: 'baseline transition schema mismatch',
+    });
+  if (
+    transition.changed_measurements !== changeManifest.changedMeasurements ||
+    transition.aggregate_line_delta !== changeManifest.aggregateLineDelta
+  )
+    issues.push({
+      code: 'baseline-transition-delta-mismatch',
+      path: record.file,
+      message:
+        'declared baseline delta does not match the exact recomputed change manifest',
     });
   for (const [field, expected] of [
     [
@@ -450,9 +502,11 @@ function baselineTransitionIssues(record, context) {
         message: `${field} does not match the protected expected-old/new roots`,
       });
   if (
-    !Number.isSafeInteger(transition.changed_measurements) ||
-    transition.changed_measurements < 0 ||
-    transition.changed_measurements > governance.maxChangedMeasurements
+    (!reconstruction &&
+      !Number.isSafeInteger(transition.changed_measurements)) ||
+    (!reconstruction && transition.changed_measurements < 0) ||
+    (!reconstruction &&
+      transition.changed_measurements > governance.maxChangedMeasurements)
   )
     issues.push({
       code: 'baseline-transition-too-broad',
@@ -460,14 +514,54 @@ function baselineTransitionIssues(record, context) {
       message: 'changed_measurements exceeds the bounded transition policy',
     });
   if (
-    !Number.isSafeInteger(transition.aggregate_line_delta) ||
-    Math.abs(transition.aggregate_line_delta) > governance.maxAggregateLineDelta
+    (!reconstruction &&
+      !Number.isSafeInteger(transition.aggregate_line_delta)) ||
+    (!reconstruction &&
+      Math.abs(transition.aggregate_line_delta) >
+        governance.maxAggregateLineDelta)
   )
     issues.push({
       code: 'baseline-transition-too-broad',
       path: record.file,
       message: 'aggregate_line_delta exceeds the bounded transition policy',
     });
+  if (reconstruction) {
+    if (transition.change_manifest_root !== changeManifestRoot)
+      issues.push({
+        code: 'baseline-reconstruction-manifest-mismatch',
+        path: record.file,
+        message:
+          'reconstruction does not bind the exact recomputed change manifest',
+      });
+    if (transition.reconstruction_scope !== 'full-exact-baseline')
+      issues.push({
+        code: 'invalid-baseline-reconstruction',
+        path: record.file,
+        message: 'reconstruction_scope must cover the full exact baseline',
+      });
+    if (
+      !Array.isArray(transition.reconstruction_reason_codes) ||
+      transition.reconstruction_reason_codes.length === 0 ||
+      comparable(transition.reconstruction_reason_codes) !==
+        comparable(sortedUnique(transition.reconstruction_reason_codes))
+    )
+      issues.push({
+        code: 'invalid-baseline-reconstruction',
+        path: record.file,
+        message:
+          'reconstruction_reason_codes must be a non-empty sorted unique list',
+      });
+    const exceedsOrdinaryBounds =
+      changeManifest.changedMeasurements > governance.maxChangedMeasurements ||
+      Math.abs(changeManifest.aggregateLineDelta) >
+        governance.maxAggregateLineDelta;
+    if (!exceedsOrdinaryBounds)
+      issues.push({
+        code: 'unnecessary-baseline-reconstruction',
+        path: record.file,
+        message: 'bounded changes must use the ordinary transition contract',
+      });
+  }
   const authorizationRoot = digest(baselineTransitionAuthorization(transition));
   const evaluationTime =
     context.evaluationTime instanceof Date
@@ -543,6 +637,7 @@ function validWaiverFor(issue, current, waivers, policy, context = {}) {
 }
 
 export {
+  baselineChangeManifest,
   baselineTransitionAuthorization,
   baselineTransitionIssues,
   baselineIntegrityIssues,
