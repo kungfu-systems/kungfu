@@ -30,6 +30,36 @@ def _terminal_mock_scenario(selected: Mapping[str, Any]) -> bool:
     return scenario in _TERMINAL_MOCK_SCENARIOS
 
 
+def _initial_session_boundary_reached(status: Mapping[str, Any]) -> bool:
+    interaction = status.get("interactionState")
+    if interaction in {"ready", "approval-needed", "ended"}:
+        return True
+    if interaction != "unknown":
+        return False
+    adapter = status.get("providerAdapter") or {}
+    return adapter.get("compatible") is False or adapter.get("reason") not in {
+        None,
+        "no-supported-state-signature",
+    }
+
+
+def _session_boundary_reached(
+    status: Mapping[str, Any],
+    *,
+    before_sequence: int,
+    terminal_mock: bool,
+) -> bool:
+    interaction = status.get("interactionState")
+    if terminal_mock:
+        return interaction == "ended" and status.get("live") is not True
+    if interaction in {"approval-needed", "unknown", "ended"}:
+        return True
+    return (
+        interaction == "ready"
+        and int((status.get("output") or {}).get("nextSequence") or 0) > before_sequence
+    )
+
+
 class ManagedRunCoordinator:
     """Start, instruct, observe, and snapshot one managed SessionAttempt."""
 
@@ -112,9 +142,7 @@ class ManagedRunCoordinator:
         ready = self.wait_for_session(
             invoke,
             ref,
-            lambda status: (
-                status.get("interactionState") in {"ready", "approval-needed", "ended"}
-            ),
+            _initial_session_boundary_reached,
             timeout_seconds=min(timeout_seconds, 30.0),
         )
         if ready.get("interactionState") != "ready":
@@ -142,23 +170,10 @@ class ManagedRunCoordinator:
         boundary = self.wait_for_session(
             invoke,
             ref,
-            lambda status: (
-                (
-                    terminal_mock_scenario
-                    and status.get("interactionState") == "ended"
-                    and status.get("live") is not True
-                )
-                or (
-                    not terminal_mock_scenario
-                    and status.get("interactionState")
-                    in {"approval-needed", "unknown", "ended"}
-                )
-                or (
-                    not terminal_mock_scenario
-                    and status.get("interactionState") == "ready"
-                    and int((status.get("output") or {}).get("nextSequence") or 0)
-                    > before_sequence
-                )
+            lambda status: _session_boundary_reached(
+                status,
+                before_sequence=before_sequence,
+                terminal_mock=terminal_mock_scenario,
             ),
             timeout_seconds=timeout_seconds,
         )
