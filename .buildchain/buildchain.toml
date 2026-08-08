@@ -84,6 +84,12 @@ profile = "auto"
 kind = "archive"
 platforms = ["macos-arm64"]
 required = true
+entitlements_profile = "jit-executable-v1"
+entitlements_paths = [
+  "kungfu-episodes-cli-darwin-arm64/runtime/kungfu",
+  "kungfu-episodes-cli-darwin-arm64/runtime/python/bin/python3",
+  "kungfu-episodes-cli-darwin-arm64/runtime/python/bin/python3.13",
+]
 
 [[signing.artifacts]]
 id = "kungfu-desktop-macos-arm64"

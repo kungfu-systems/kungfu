@@ -274,7 +274,7 @@
     {
       "path": ".github/workflows/build.yml",
       "authority": "product-publication",
-      "definitionDigest": "sha256:419fd4fb6b5423b1a37cdbfc0067da327c9d973a12938afdbcaa6768439004d3",
+      "definitionDigest": "sha256:9cae1ec7ea1247a9a6282fd680a60021445aa58a38936d87205e562914ab81d8",
       "jobs": [
         {
           "id": "auditable-demo",
@@ -301,9 +301,9 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "qualifying",
-          "definitionDigest": "sha256:72645c724ec648be9639748172c486644f524b4a365341a24f50c00629eaa657",
+          "definitionDigest": "sha256:60c0ea4ea46776d75a0751383f2e631a3ecb9fe2dd3893bce7d2ab848726ae80",
           "credentials": {"githubToken":"write","oidc":true,"repositorySecrets":["BUILDCHAIN_ARTIFACT_RELAY_S3_DOWNLOAD_ROLE_ARN","BUILDCHAIN_ARTIFACT_RELAY_S3_ROLE_ARN","BUILDCHAIN_ARTIFACT_RELAY_S3_UPLOAD_ROLE_ARN","KUNGFU_GITHUB_TOKEN"],"inheritedSecrets":false,"environment":null},
-          "externalActions": ["kungfu-systems/buildchain/.github/workflows/.build.yml@v3"],
+          "externalActions": ["kungfu-systems/buildchain/.github/workflows/.build.yml@58e48d73ae7fef0dd06ae02baf6d090e4da5487d"],
           "steps": []
         },
         {
@@ -476,9 +476,9 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "diagnostic",
-          "definitionDigest": "sha256:98609d1683a146adf7c502da420b2f5388a4cccbc3f7ca29f0195af27c8f2f04",
+          "definitionDigest": "sha256:81355650d39c82d4c8530b11972079ee74e4db5e4538da0bc63a64d288da410b",
           "credentials": {"githubToken":"write","oidc":false,"repositorySecrets":["KUNGFU_GITHUB_TOKEN"],"inheritedSecrets":false,"environment":null},
-          "externalActions": ["kungfu-systems/buildchain/.github/workflows/dev-alpha-candidate-patrol.yml@2e7e07902ac28d8f3edcfb81098ef9ebc7a91878"],
+          "externalActions": ["kungfu-systems/buildchain/.github/workflows/dev-alpha-candidate-patrol.yml@58e48d73ae7fef0dd06ae02baf6d090e4da5487d"],
           "steps": []
         },
         {

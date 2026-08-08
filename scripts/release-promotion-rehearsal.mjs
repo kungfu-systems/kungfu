@@ -141,22 +141,18 @@ export function validateWorkflowSources(root, contract, overrides = {}) {
   requirePattern(
     build,
     new RegExp(
-      `uses: kungfu-systems/buildchain/\\.github/workflows/\\.build\\.yml@${contract.buildchain.workflow_shell_ref}`,
+      `uses: kungfu-systems/buildchain/\\.github/workflows/\\.build\\.yml@${contract.buildchain.candidate_build_sha}`,
     ),
     findings,
-    'release-candidate build must consume the production v3 floating workflow contract',
+    'release-candidate build must consume the reviewed JIT-capable Buildchain workflow shell',
   );
   requirePattern(
     build,
-    new RegExp(`buildchain-ref: ${contract.buildchain.workflow_shell_ref}`),
+    new RegExp(
+      `buildchain-ref: \\$\\{\\{ inputs\\.buildchain-ref \\|\\| '${contract.buildchain.candidate_build_sha}' \\}\\}`,
+    ),
     findings,
-    'candidate builds must resolve the production v3 floating runtime',
-  );
-  forbidPattern(
-    build,
-    /^ {6}buildchain-ref:\s*$/m,
-    findings,
-    'manual validation must not accept a Buildchain train or exact-SHA transport override',
+    'candidate builds must default to the reviewed JIT-capable runtime while retaining trusted manual validation pass-through',
   );
   forbidPattern(
     build,
