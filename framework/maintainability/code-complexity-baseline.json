@@ -1,7 +1,7 @@
 {
   "schema": "kungfu.code-complexity-budget-baseline/v1",
-  "policyRoot": "sha256:8d1882c8e80eb35aa173b779efbe869678ce4269d59b54da6395004cc13007d8",
-  "baselineRef": "8541ab3a01958ba89aba530177b198a013b11b32",
+  "policyRoot": "sha256:cede13a6da27bc2ab2f662733fae15d9f5d3511032e9160b06d6859cb022a77b",
+  "baselineRef": "3733e7cbedd16e21bd13e69d9ccad9b3d2a86382",
   "classification": "ordered-policy-and-content-marker/v1",
   "calibration": {
     "groupBy": [
@@ -627,7 +627,7 @@
       "language": "declarative",
       "owner": "kungfu/repository-contract",
       "lines": 281,
-      "contentRoot": "sha256:71265e53c8cb5e976a5908e0836b98e5f965d90e5e997cdd1ffc46fe3c672fd4"
+      "contentRoot": "sha256:d3f7e8f899e5201fbb159c77423d85a92d80cd078706dfde4d89e79e78faf206"
     },
     {
       "path": ".buildchain/kfd/kfd-1/documentation-consumers.witness.json",
@@ -654,7 +654,7 @@
       "language": "declarative",
       "owner": "kungfu/repository-contract",
       "lines": 852,
-      "contentRoot": "sha256:e0b5e39439f4b29ec479420a01779b6711c5f4a1b6a5415416ab6c1f24134a53"
+      "contentRoot": "sha256:356de624ae5274984626b74494abbcb3e36a3ea0d2854d337ee0ab4c04384053"
     },
     {
       "path": ".buildchain/kfd/kfd-1/verify-result.json",
@@ -753,7 +753,7 @@
       "language": "declarative",
       "owner": "kungfu/repository-contract",
       "lines": 5262,
-      "contentRoot": "sha256:2c46f4e61bfe27d960c3cf890f001b0959fdbe62abaeb9a4fd5c4b32724eb454"
+      "contentRoot": "sha256:eb122f35f54df714eb6da6ad661375e177e4e8234e894fbf1b3633cb4ef9aafb"
     },
     {
       "path": ".buildchain/kfd/kfd-3/surfaces.json",
@@ -771,7 +771,7 @@
       "language": "declarative",
       "owner": "kungfu/repository-contract",
       "lines": 707,
-      "contentRoot": "sha256:283c9f3b414aa1055366fdb92deef8381d98722f240ec7b82375009e5008013b"
+      "contentRoot": "sha256:0c80e01a9f6ea594e33db7e806041ee1f90ad3630316a0f917e23658728cc145"
     },
     {
       "path": ".github/actionlint.yaml",
@@ -13794,7 +13794,7 @@
       "language": "declarative",
       "owner": "kungfu/config",
       "lines": 1725,
-      "contentRoot": "sha256:82227cb9f90bf6bbbce50e25e916a28ba705ae6a83ff3b13e5963c75310bc19f"
+      "contentRoot": "sha256:16e9e81e47702a871cc7a805664f3698443c473fd1e51b89f6c154012aa9553c"
     },
     {
       "path": "config/profile/kungfu-domain-profile-authoring.contract.json",
@@ -15738,7 +15738,7 @@
       "language": "declarative",
       "owner": "developer/sdk",
       "lines": 281,
-      "contentRoot": "sha256:71265e53c8cb5e976a5908e0836b98e5f965d90e5e997cdd1ffc46fe3c672fd4"
+      "contentRoot": "sha256:d3f7e8f899e5201fbb159c77423d85a92d80cd078706dfde4d89e79e78faf206"
     },
     {
       "path": "developer/sdk/kfd/kfd-1/release-gate.json",
@@ -15747,7 +15747,7 @@
       "language": "declarative",
       "owner": "developer/sdk",
       "lines": 852,
-      "contentRoot": "sha256:e0b5e39439f4b29ec479420a01779b6711c5f4a1b6a5415416ab6c1f24134a53"
+      "contentRoot": "sha256:356de624ae5274984626b74494abbcb3e36a3ea0d2854d337ee0ab4c04384053"
     },
     {
       "path": "developer/sdk/kfd/kfd-1/verify-result.json",
@@ -15828,7 +15828,7 @@
       "language": "declarative",
       "owner": "developer/sdk",
       "lines": 707,
-      "contentRoot": "sha256:559abc22505ad21d463ebafc7d788dc32772832b796d4e4d139aef8dc8876439"
+      "contentRoot": "sha256:c43540f9e9d55a4034c94446698655fde9f50ae6bb225a0701acfa388bfd2726"
     },
     {
       "path": "developer/sdk/kfd/upstream-aggregate.json",
@@ -28077,7 +28077,7 @@
       "language": "c-cpp",
       "owner": "core/runtime-contracts",
       "lines": 36,
-      "contentRoot": "sha256:9a0de9e424627b586bac4303e3f90aab2b0a600ed91c80d234f5dbe00cf823ca"
+      "contentRoot": "sha256:a215207bee044d335d0a85dd55076ff9c8179ccc22c9820c95286181a624b978"
     },
     {
       "path": "framework/core/src/libkungfu/include/kungfu/sdk/generated/runtime_action_v1.hpp",
@@ -36006,7 +36006,7 @@
       "language": "declarative",
       "owner": "framework/maintainability",
       "lines": 165,
-      "contentRoot": "sha256:8dcc439c92821f850eb78a534393857bfe68ac7af6f56132ca2d9b39a917c621"
+      "contentRoot": "sha256:74d94c97cf63c8533959a8724f438b92171155a237056fd779e165bea4f3aabe"
     },
     {
       "path": "framework/maintainability/complexity-governance.mjs",
@@ -36123,7 +36123,7 @@
       "language": "declarative",
       "owner": "framework/primitive",
       "lines": 1725,
-      "contentRoot": "sha256:82227cb9f90bf6bbbce50e25e916a28ba705ae6a83ff3b13e5963c75310bc19f"
+      "contentRoot": "sha256:16e9e81e47702a871cc7a805664f3698443c473fd1e51b89f6c154012aa9553c"
     },
     {
       "path": "framework/primitive/schema/primitive-availability-observation-v1.schema.json",
@@ -44416,5 +44416,5 @@
     }
   ],
   "issues": [],
-  "measurementRoot": "sha256:4d241e49c67c59d6d09c3d8246f8ce7206d487df4c2c11d03011ab86f6fff410"
+  "measurementRoot": "sha256:7dd3c2accd783847c04b72995c1a3c156dd7af72f4ee7da5eb64ccbb867731b6"
 }
