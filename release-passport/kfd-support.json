@@ -17,11 +17,11 @@
       "standardRevision": 10,
       "sourceSha": "f9e6b0e34bcdd6407b2a18206ace7982d64de2c8",
       "evidenceCut": {
-        "generatedAt": "2026-08-08T09:27:00.416Z",
-        "expiresAt": "2026-08-09T09:27:00.416Z"
+        "generatedAt": "2026-08-08T09:59:23.723Z",
+        "expiresAt": "2026-08-09T09:59:23.723Z"
       },
       "status": "passed",
-      "gateRoot": "sha256:209ea160cd708685cc8f03943e72b117f2ae1aa336cf7a65c5c07cbd5f247cdc",
+      "gateRoot": "sha256:aaaafdda96faf617007a7bb3ee4816c892df0a8c5ecdca2522e62784d65b0e9e",
       "issueCount": 0
     },
     {
@@ -29,11 +29,11 @@
       "standardRevision": 7,
       "sourceSha": "f9e6b0e34bcdd6407b2a18206ace7982d64de2c8",
       "evidenceCut": {
-        "generatedAt": "2026-08-08T09:27:00.416Z",
-        "expiresAt": "2026-08-09T09:27:00.416Z"
+        "generatedAt": "2026-08-08T09:59:23.723Z",
+        "expiresAt": "2026-08-09T09:59:23.723Z"
       },
       "status": "passed",
-      "gateRoot": "sha256:ea39144c7ac0611be39cdca022a7055a0b40e576f1a67929c97e24ad5562d8c5",
+      "gateRoot": "sha256:6199d5c9546e17279f29e18f8effc4abb08ebfd7f12ddf5de6013035309d3f69",
       "issueCount": 0
     },
     {
@@ -41,11 +41,11 @@
       "standardRevision": 8,
       "sourceSha": "f9e6b0e34bcdd6407b2a18206ace7982d64de2c8",
       "evidenceCut": {
-        "generatedAt": "2026-08-08T09:27:00.416Z",
-        "expiresAt": "2026-08-09T09:27:00.416Z"
+        "generatedAt": "2026-08-08T09:59:23.723Z",
+        "expiresAt": "2026-08-09T09:59:23.723Z"
       },
       "status": "passed",
-      "gateRoot": "sha256:90bb5f482100b60111a7f22cd2e9752dec7e0c489ea48160d84f94769b9a9fe2",
+      "gateRoot": "sha256:efbb816996e99ec6f0d215abedda4baf0a7bf36fe826bec87b675f5505e3de98",
       "issueCount": 0
     }
   ],
@@ -636,5 +636,5 @@
     "Candidate, unsupported, draft, and non-qualifying matrix states cannot be widened by this projection."
   ],
   "issues": [],
-  "projectionRoot": "sha256:744998a3af8ca26779f81fa4228143c9a75103ee7b6b2f3eed6a21b6a0c98797"
+  "projectionRoot": "sha256:3ddf7fb97e2d243054475a15979c5e6a45cae733080d1e670c822ac7f9f654eb"
 }

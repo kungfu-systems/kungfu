@@ -1,10 +1,10 @@
 {
   "schemaVersion": 1,
   "contract": "kungfu-buildchain-release-passport",
-  "generatedAt": "2026-08-08T09:27:03.433Z",
+  "generatedAt": "2026-08-08T09:59:27.592Z",
   "surfaceTimestampPolicy": {
-    "generatedAt": "2026-08-08T09:27:03.433Z",
-    "publishedAt": "2026-08-08T09:27:03.433Z",
+    "generatedAt": "2026-08-08T09:59:27.592Z",
+    "publishedAt": "2026-08-08T09:59:27.592Z",
     "reproducible": true,
     "timestampPolicy": "ci-injected",
     "deterministicInputs": [
@@ -60,7 +60,7 @@
     "treeEquivalent": true,
     "publishToolingSha": "f9e6b0e34bcdd6407b2a18206ace7982d64de2c8",
     "releaseStateRef": "refs/heads/buildchain/release-state/4-0-0-alpha-1",
-    "releaseStateSha": "e77d24c03d2cb4b46b9a0d240948f7bde4202187",
+    "releaseStateSha": "",
     "package": {
       "name": "@kungfu-tech/buildchain",
       "version": "4.0.0-alpha.1"
@@ -90,7 +90,7 @@
     "statePath": "/home/runner/work/kungfu/kungfu/.buildchain/release-state/v4.0.0-alpha.1.json",
     "stateSha": "",
     "evidencePath": "/home/runner/work/kungfu/kungfu/.buildchain/release-evidence/v4.0.0-alpha.1/evidence.json",
-    "updatedAt": "2026-08-08T09:26:51.735Z",
+    "updatedAt": "2026-08-08T09:59:13.369Z",
     "result": {
       "command": "finalize",
       "validation": {
@@ -103280,7 +103280,7 @@
         },
         "sourceVerification": {
           "status": "passed",
-          "verifiedAt": "2026-08-08T09:27:03.433Z",
+          "verifiedAt": "2026-08-08T09:59:27.593Z",
           "required": true,
           "surfaces": [
             {
@@ -103463,7 +103463,7 @@
         },
         "artifactVerification": {
           "status": "passed",
-          "verifiedAt": "2026-08-08T09:27:03.433Z",
+          "verifiedAt": "2026-08-08T09:59:27.593Z",
           "surfaces": [
             {
               "name": "kungfu-config",
@@ -103862,7 +103862,7 @@
         },
         "sourceVerification": {
           "status": "passed",
-          "verifiedAt": "2026-08-08T09:27:03.433Z",
+          "verifiedAt": "2026-08-08T09:59:27.593Z",
           "required": false,
           "surfaces": [
             {
@@ -103901,7 +103901,7 @@
         },
         "artifactVerification": {
           "status": "passed",
-          "verifiedAt": "2026-08-08T09:27:03.433Z",
+          "verifiedAt": "2026-08-08T09:59:27.593Z",
           "surfaces": [
             {
               "name": "documentation-atlas",
@@ -103956,7 +103956,7 @@
     "schemaVersion": 1,
     "contract": "kungfu-buildchain-kfd-2-release-trust-passport-audit",
     "status": "downgraded",
-    "verifiedAt": "2026-08-08T09:27:03.501Z",
+    "verifiedAt": "2026-08-08T09:59:27.687Z",
     "auditBoundary": {
       "scope": "public release claims visible to humans or agents",
       "policy": "public claims must bind declared sources, machine-readable evidence, hashes, artifact coordinates, verification results, audit boundaries, responsibility state, and residual risk"
@@ -120593,7 +120593,7 @@
         },
         "comparison": {
           "status": "passed",
-          "verifiedAt": "2026-08-08T09:27:03.478Z",
+          "verifiedAt": "2026-08-08T09:59:27.657Z",
           "supportLevel": "release",
           "declaredPublicSurfaceCount": 374,
           "declaredShippedPublicSurfaceCount": 374,
@@ -120624,11 +120624,11 @@
         "standardRevision": 10,
         "sourceSha": "f9e6b0e34bcdd6407b2a18206ace7982d64de2c8",
         "evidenceCut": {
-          "generatedAt": "2026-08-08T09:27:00.416Z",
-          "expiresAt": "2026-08-09T09:27:00.416Z"
+          "generatedAt": "2026-08-08T09:59:23.723Z",
+          "expiresAt": "2026-08-09T09:59:23.723Z"
         },
         "status": "passed",
-        "gateRoot": "sha256:209ea160cd708685cc8f03943e72b117f2ae1aa336cf7a65c5c07cbd5f247cdc",
+        "gateRoot": "sha256:aaaafdda96faf617007a7bb3ee4816c892df0a8c5ecdca2522e62784d65b0e9e",
         "issueCount": 0
       },
       {
@@ -120636,11 +120636,11 @@
         "standardRevision": 7,
         "sourceSha": "f9e6b0e34bcdd6407b2a18206ace7982d64de2c8",
         "evidenceCut": {
-          "generatedAt": "2026-08-08T09:27:00.416Z",
-          "expiresAt": "2026-08-09T09:27:00.416Z"
+          "generatedAt": "2026-08-08T09:59:23.723Z",
+          "expiresAt": "2026-08-09T09:59:23.723Z"
         },
         "status": "passed",
-        "gateRoot": "sha256:ea39144c7ac0611be39cdca022a7055a0b40e576f1a67929c97e24ad5562d8c5",
+        "gateRoot": "sha256:6199d5c9546e17279f29e18f8effc4abb08ebfd7f12ddf5de6013035309d3f69",
         "issueCount": 0
       },
       {
@@ -120648,11 +120648,11 @@
         "standardRevision": 8,
         "sourceSha": "f9e6b0e34bcdd6407b2a18206ace7982d64de2c8",
         "evidenceCut": {
-          "generatedAt": "2026-08-08T09:27:00.416Z",
-          "expiresAt": "2026-08-09T09:27:00.416Z"
+          "generatedAt": "2026-08-08T09:59:23.723Z",
+          "expiresAt": "2026-08-09T09:59:23.723Z"
         },
         "status": "passed",
-        "gateRoot": "sha256:90bb5f482100b60111a7f22cd2e9752dec7e0c489ea48160d84f94769b9a9fe2",
+        "gateRoot": "sha256:efbb816996e99ec6f0d215abedda4baf0a7bf36fe826bec87b675f5505e3de98",
         "issueCount": 0
       }
     ],
@@ -121243,7 +121243,7 @@
       "Candidate, unsupported, draft, and non-qualifying matrix states cannot be widened by this projection."
     ],
     "issues": [],
-    "projectionRoot": "sha256:744998a3af8ca26779f81fa4228143c9a75103ee7b6b2f3eed6a21b6a0c98797"
+    "projectionRoot": "sha256:3ddf7fb97e2d243054475a15979c5e6a45cae733080d1e670c822ac7f9f654eb"
   },
   "invariantPassports": {
     "contract": "buildchain.invariant-passport-gate/v1",
@@ -121251,7 +121251,7 @@
     "passports": [
       {
         "path": "",
-        "sha256": "c48e7c2cb0de3693d6ebe57e58c2fd37f5cc53c9944d0e79a04f8a6f00be8e63",
+        "sha256": "8216ec701cc55ab766b043e679125e8fd5af133b836e7d80b8a433670dee4e33",
         "schema": "kungfu.invariant-passport/v1",
         "product": "Kungfu",
         "passportRoot": "sha256:7e1aa237969e58fedd4465cb2637a706030fc7a4bb5d9d7bfa35b5035803e402",
@@ -121509,6 +121509,39 @@
     {
       "group": "release",
       "kind": "release-asset",
+      "name": "Kungfu Episodes-4.0.0-alpha.1.AppImage",
+      "platform": "",
+      "ref": "v4.0.0-alpha.1",
+      "sha256": "126b24b8bf473065a17da2d132083d862018e44159e56a708f0815cac681645a",
+      "digest": "sha256:126b24b8bf473065a17da2d132083d862018e44159e56a708f0815cac681645a",
+      "evidence": "artifact-evidence.json",
+      "url": ""
+    },
+    {
+      "group": "release",
+      "kind": "release-asset",
+      "name": "Kungfu-Episodes-4.0.0-alpha.1-macos-arm64.dmg",
+      "platform": "darwin-arm64",
+      "ref": "v4.0.0-alpha.1",
+      "sha256": "4415daa549e6db490bd952a3a741f25e499fff3091935cbb59bb753217f4c242",
+      "digest": "sha256:4415daa549e6db490bd952a3a741f25e499fff3091935cbb59bb753217f4c242",
+      "evidence": "artifact-evidence.json",
+      "url": ""
+    },
+    {
+      "group": "release",
+      "kind": "release-asset",
+      "name": "Kungfu-Episodes-4.0.0-alpha.1-macos-arm64.zip",
+      "platform": "darwin-arm64",
+      "ref": "v4.0.0-alpha.1",
+      "sha256": "1e30b69bc9ef697e629a0eeb487580c97a3ac74614a39f34678df5fb0596dac7",
+      "digest": "sha256:1e30b69bc9ef697e629a0eeb487580c97a3ac74614a39f34678df5fb0596dac7",
+      "evidence": "artifact-evidence.json",
+      "url": ""
+    },
+    {
+      "group": "release",
+      "kind": "release-asset",
       "name": "kungfu-episodes-cli-darwin-arm64.qualification.json",
       "platform": "darwin-arm64",
       "ref": "v4.0.0-alpha.1",
@@ -121547,6 +121580,17 @@
       "ref": "v4.0.0-alpha.1",
       "sha256": "bdae85d3aa517668ef48ba5a24a1bcbddb65eafb8f19887b13743fcb4027557a",
       "digest": "sha256:bdae85d3aa517668ef48ba5a24a1bcbddb65eafb8f19887b13743fcb4027557a",
+      "evidence": "artifact-evidence.json",
+      "url": ""
+    },
+    {
+      "group": "release",
+      "kind": "release-asset",
+      "name": "Kungfu Episodes Setup 4.0.0-alpha.1.exe",
+      "platform": "",
+      "ref": "v4.0.0-alpha.1",
+      "sha256": "5d12cd827b654d6c68829ce7157e70c7fadc3b23d9a0752b3bb56da27307ff19",
+      "digest": "sha256:5d12cd827b654d6c68829ce7157e70c7fadc3b23d9a0752b3bb56da27307ff19",
       "evidence": "artifact-evidence.json",
       "url": ""
     },
