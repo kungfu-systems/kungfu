@@ -7,7 +7,6 @@ from __future__ import annotations
 import json
 import os
 from datetime import UTC, datetime, timedelta
-from functools import partial, reduce
 from pathlib import Path
 import uuid
 
@@ -33,22 +32,20 @@ from kungfu.workspace import prepare_workspace_write, resolve_workspace_target
 from kungfu.assignment_lifecycle.ports import AssignmentRuntime
 
 assignment_context = kfc.pass_context()
-assignment_identity_options = partial(
-    reduce,
-    lambda decorated, decorator: decorator(decorated),
-    tuple(
-        reversed(
-            [
-                click.option(
-                    "--workspace", "workspace_root", type=click.Path(file_okay=False)
-                ),
-                click.option("--home", is_flag=True),
-                click.option("--initiative-id", required=True),
-                click.option("--assignment-id", required=True),
-            ]
-        )
-    ),
-)
+
+
+def assignment_identity_options(command):
+    """Decorate every Work command with a fresh identity option set."""
+
+    decorators = (
+        click.option("--workspace", "workspace_root", type=click.Path(file_okay=False)),
+        click.option("--home", is_flag=True),
+        click.option("--initiative-id", required=True),
+        click.option("--assignment-id", required=True),
+    )
+    for decorator in reversed(decorators):
+        command = decorator(command)
+    return command
 
 
 @kfc.group(

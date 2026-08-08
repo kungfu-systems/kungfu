@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { Writable } from 'node:stream';
 import test from 'node:test';
 import { render } from 'ink';
@@ -35,6 +36,28 @@ import {
   projectTourSummaryTitles,
   updateProjectTourStream,
 } from './starter-project-view/index.js';
+
+test('Project tour awaits the shared Agent Session before rendering', () => {
+  const source = readFileSync(new URL('./main.tsx', import.meta.url), 'utf8');
+  const main = source.slice(source.indexOf('async function main()'));
+  assert.match(
+    main,
+    /await openTuiAgentWorkLab\(Boolean\(projectTourRoot\)\)/u,
+  );
+  assert.ok(
+    main.indexOf('await openTuiAgentWorkLab') <
+      main.indexOf('const lifecycle = new TerminalLifecycle'),
+  );
+  const lab = source.slice(
+    source.indexOf('async function openTuiAgentWorkLab'),
+  );
+  assert.match(lab, /if \(projectTour\) \{\s*await ensureTuiAgentSession/u);
+  assert.match(lab, /KUNGFU_MOCK_AGENT_EXECUTABLE \|\|= paths\.packagedBin/u);
+  assert.doesNotMatch(
+    source,
+    /KUNGFU_MOCK_AGENT_EXECUTABLE\s*=\s*process\.execPath/u,
+  );
+});
 
 test('Project tour launch options preserve defaults and validate explicit values', () => {
   assert.deepEqual(parseProjectTourLaunchOptions(['node', 'tui']), {

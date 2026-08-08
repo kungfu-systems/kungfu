@@ -147,6 +147,7 @@ def test_agent_session_does_not_replace_an_explicit_environment_endpoint(
 def test_agent_session_rejects_a_live_worker_with_stale_native_operations(
     monkeypatch, tmp_path
 ):
+    monkeypatch.delenv("KUNGFU_AGENT_SESSION_ENDPOINT", raising=False)
     monkeypatch.setattr(
         session_surface,
         "invoke",
@@ -171,6 +172,7 @@ def test_agent_session_rejects_a_live_worker_with_stale_native_operations(
 def test_agent_session_accepts_the_versioned_native_operation_vocabulary(
     monkeypatch, tmp_path
 ):
+    monkeypatch.delenv("KUNGFU_AGENT_SESSION_ENDPOINT", raising=False)
     monkeypatch.setattr(
         session_surface,
         "invoke",
@@ -183,6 +185,31 @@ def test_agent_session_accepts_the_versioned_native_operation_vocabulary(
     )
 
     assert endpoint == session_surface.endpoint_for_runtime(tmp_path / "runtime")
+    assert runners == []
+
+
+def test_agent_session_ensure_reuses_an_explicit_product_endpoint(
+    monkeypatch, tmp_path
+):
+    explicit = "/tmp/product-agent-session.sock"
+    monkeypatch.setenv("KUNGFU_AGENT_SESSION_ENDPOINT", explicit)
+    calls = []
+    monkeypatch.setattr(
+        session_surface,
+        "invoke",
+        lambda request, **kwargs: (
+            calls.append((request, kwargs)) or NATIVE_SURFACE_CAPABILITIES
+        ),
+    )
+    runners = []
+
+    endpoint = session_surface.ensure(
+        tmp_path / "different-project-runtime",
+        runner=lambda *_args: runners.append(True),
+    )
+
+    assert endpoint == explicit
+    assert calls[0][1]["endpoint"] == explicit
     assert runners == []
 
 
