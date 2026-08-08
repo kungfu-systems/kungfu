@@ -218,6 +218,44 @@ function observeDelivery(matrix, head, headTree) {
   };
 }
 
+function observeReconciliation(matrix) {
+  const repository = matrix.sourceBinding.repository;
+  const pulls = new Map();
+  const observePull = (number) => {
+    if (!pulls.has(number)) {
+      pulls.set(number, gh(`/repos/${repository}/pulls/${number}`));
+    }
+    return pulls.get(number);
+  };
+  return (matrix.reconciliation?.pullRequests || []).map((required) => {
+    const pull = observePull(required.number);
+    const successor = required.successor
+      ? observePull(required.successor)
+      : undefined;
+    return {
+      number: pull.number,
+      state:
+        pull.state === 'closed' && pull.merged_at
+          ? 'MERGED'
+          : pull.state?.toUpperCase() || '',
+      baseRef: pull.base?.ref || '',
+      headRef: pull.head?.ref || '',
+      head: pull.head?.sha || '',
+      mergeCommit: pull.merge_commit_sha || '',
+      ...(successor
+        ? {
+            successor: successor.number,
+            successorState:
+              successor.state === 'closed' && successor.merged_at
+                ? 'MERGED'
+                : successor.state?.toUpperCase() || '',
+            successorBaseRef: successor.base?.ref || '',
+          }
+        : {}),
+    };
+  });
+}
+
 function terminalReviewAttestation(body) {
   try {
     const value = JSON.parse(String(body || '').trim());
@@ -335,6 +373,7 @@ export function collectTerminalLiveObservations(matrix, evidence) {
       protectedTree,
     },
     delivery,
+    reconciliation: observeReconciliation(matrix),
     terminalReview: observeTerminalReview(
       matrix,
       delivery.pullRequest,

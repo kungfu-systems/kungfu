@@ -236,11 +236,41 @@ function fixture() {
     schema: 'kungfu.assignment-orchestration.sealed-state/v1',
     assignment: { assignment_id: fixtureMatrix.goalId },
     phase: 'continuation-decided',
+    counts: {
+      completion_claims: 1,
+      independent_reviews: 1,
+      continuation_decisions: 1,
+    },
   };
+  const dependencies = fixtureMatrix.dependencies.map((dependency, index) => {
+    const seal = {
+      schema: 'kungfu.assignment-orchestration.sealed-state/v1',
+      assignment: { assignment_id: dependency.assignmentId },
+      phase: 'continuation-decided',
+      counts: {
+        completion_claims: 1,
+        independent_reviews: 1,
+        continuation_decisions: 1,
+      },
+    };
+    const sealedStateRoot = retain(
+      `dependency-seal-${index}`,
+      seal,
+      'dependency-seal',
+    );
+    retainedObjects.at(-1).assignmentId = dependency.assignmentId;
+    dependency.sealedStateRoot = sealedStateRoot;
+    return { assignmentId: dependency.assignmentId, sealedStateRoot };
+  });
   const predecessorSeal = {
     schema: 'kungfu.assignment-orchestration.sealed-state/v1',
     assignment: { assignment_id: fixtureMatrix.predecessor.assignmentId },
     phase: 'continuation-decided',
+    counts: {
+      completion_claims: 1,
+      independent_reviews: 1,
+      continuation_decisions: 1,
+    },
   };
   const evidence = {
     schema: fixtureMatrix.terminalEvidence.schema,
@@ -323,6 +353,7 @@ function fixture() {
         'assignment-seal',
       ),
     },
+    dependencies,
     predecessor: {
       assignmentId: fixtureMatrix.predecessor.assignmentId,
       sealedStateRoot: retain(
@@ -364,6 +395,21 @@ function fixture() {
           submittedAt: '2026-08-02T00:00:00Z',
         },
       },
+      reconciliation: fixtureMatrix.reconciliation.pullRequests.map((pull) => ({
+        number: pull.number,
+        state: pull.state,
+        baseRef: fixtureMatrix.sourceBinding.protectedBranch,
+        headRef: pull.headRef,
+        head: pull.head,
+        mergeCommit: pull.mergeCommit || '',
+        ...(pull.successor
+          ? {
+              successor: pull.successor,
+              successorState: 'CLOSED',
+              successorBaseRef: fixtureMatrix.sourceBinding.protectedBranch,
+            }
+          : {}),
+      })),
       terminalReview: {
         commentId: 4001,
         author: 'kungfu-origin',
@@ -427,6 +473,7 @@ function fixture() {
         ...baseLive.assignment,
         ...(overrides.assignment || {}),
       },
+      reconciliation: overrides.reconciliation || baseLive.reconciliation,
       runs: overrides.runs || baseLive.runs,
     };
     return verifyTerminalEvidence(
@@ -467,20 +514,37 @@ test('live observation parser preserves object and array authority payloads', ()
   assert.equal(parseTerminalReviewAttestation('not json'), undefined);
 });
 
-test('terminal maintainability matrix declares an exact-head v3 contract', () => {
+test('terminal maintainability matrix declares an exact-head v4 contract', () => {
   assert.equal(
     matrix.schema,
-    'kungfu.maintainability-terminal-evidence-matrix/v3',
+    'kungfu.maintainability-terminal-evidence-matrix/v4',
   );
   assert.equal(matrix.sourceBinding.repository, 'kungfu-systems/kungfu');
   assert.equal(matrix.sourceBinding.protectedBranch, 'dev/v4/v4.0');
   assert.equal(
     matrix.terminalEvidence.schema,
-    'kungfu.maintainability-terminal-evidence/v3',
+    'kungfu.maintainability-terminal-evidence/v4',
   );
   assert.equal(repositoryPathExists(matrix.terminalEvidence.verifier), true);
   assert.match(matrix.sourceBinding.exactHeadRule, /reads Git HEAD/u);
   assert.deepEqual(matrix.exceptions, []);
+  assert.equal(matrix.dependencies.length, 8);
+  assert.match(matrix.reconciliation.branchPolicy, /audit and recovery/u);
+  assert.equal(matrix.reconciliation.pullRequests.length, 10);
+  assert.equal(
+    new Set(matrix.reconciliation.pullRequests.map(({ number }) => number))
+      .size,
+    10,
+  );
+  assert.equal(
+    new Set(matrix.dependencies.map(({ assignmentId }) => assignmentId)).size,
+    8,
+  );
+  assert.equal(
+    new Set(matrix.dependencies.map(({ sealedStateRoot }) => sealedStateRoot))
+      .size,
+    8,
+  );
   for (const group of matrix.terminalEvidence.runGroups) {
     assert.equal(repositoryPathExists(group.workflowPath), true, group.role);
     assert.ok(group.requiredJobs.length > 0, group.role);
@@ -670,5 +734,83 @@ test('self-consistent declared runs cannot replace GitHub live truth', () => {
   expired.find(({ role }) => role === 'product').artifacts[0].expired = true;
   assert.ok(
     issueCodes(verify(evidence, { runs: expired })).has('artifact-expired'),
+  );
+});
+
+test('dependency omission, rerooting, and non-terminal seals fail closed', () => {
+  const { evidence, retainedBytes, verify } = fixture();
+
+  const omitted = clone(evidence);
+  omitted.dependencies.pop();
+  assert.ok(issueCodes(verify(omitted)).has('missing-dependency'));
+  assert.ok(issueCodes(verify(omitted)).has('dependency-cardinality-mismatch'));
+
+  const rerooted = clone(evidence);
+  rerooted.dependencies[0].sealedStateRoot = `sha256:${'8'.repeat(64)}`;
+  assert.ok(issueCodes(verify(rerooted)).has('dependency-seal-mismatch'));
+
+  const dependency = evidence.dependencies[0];
+  const retained = evidence.retainedObjects.find(
+    ({ root }) => root === dependency.sealedStateRoot,
+  );
+  const document = JSON.parse(
+    retainedBytes.get(retained.path).toString('utf8'),
+  );
+  document.phase = 'stage-ready';
+  retainedBytes.set(
+    retained.path,
+    Buffer.from(`${JSON.stringify(document)}\n`),
+  );
+  const codes = issueCodes(verify(evidence));
+  assert.ok(codes.has('retained-root-mismatch'));
+  assert.ok(codes.has('retained-seal-not-terminal'));
+});
+
+test('remediation pull-request state and exact head drift fail closed', () => {
+  const { evidence, verify } = fixture();
+  const observed = matrix.reconciliation.pullRequests.map((pull) => ({
+    number: pull.number,
+    state: pull.state,
+    baseRef: matrix.sourceBinding.protectedBranch,
+    headRef: pull.headRef,
+    head: pull.head,
+    mergeCommit: pull.mergeCommit || '',
+    ...(pull.successor
+      ? {
+          successor: pull.successor,
+          successorState: 'CLOSED',
+          successorBaseRef: matrix.sourceBinding.protectedBranch,
+        }
+      : {}),
+  }));
+
+  const reopened = clone(observed);
+  reopened[0].state = 'OPEN';
+  assert.ok(
+    issueCodes(verify(evidence, { reconciliation: reopened })).has(
+      'reconciliation-pr-state-mismatch',
+    ),
+  );
+
+  const moved = clone(observed);
+  moved[1].head = OTHER_HEAD;
+  assert.ok(
+    issueCodes(verify(evidence, { reconciliation: moved })).has(
+      'reconciliation-pr-head-mismatch',
+    ),
+  );
+
+  const omitted = clone(observed);
+  omitted.pop();
+  const codes = issueCodes(verify(evidence, { reconciliation: omitted }));
+  assert.ok(codes.has('missing-reconciliation-pr'));
+  assert.ok(codes.has('reconciliation-pr-cardinality-mismatch'));
+
+  const liveSuccessor = clone(observed);
+  liveSuccessor[0].successorState = 'OPEN';
+  assert.ok(
+    issueCodes(verify(evidence, { reconciliation: liveSuccessor })).has(
+      'reconciliation-successor-not-terminal',
+    ),
   );
 });

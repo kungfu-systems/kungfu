@@ -12,6 +12,7 @@ import { semanticRoot } from '../project-cut/src/project-cut.mjs';
 import { collectTerminalLiveObservations } from '../terminal-evidence/live-observations.mjs';
 import {
   verifyLiveAssignment,
+  verifyLiveReconciliation,
   verifyLiveRuns,
 } from '../terminal-evidence/live-verification.mjs';
 import {
@@ -280,11 +281,14 @@ function verifyRetainedBinding(
       }
       break;
     case 'assignment-seal':
+    case 'dependency-seal':
     case 'predecessor-seal': {
       const expectedAssignment =
         object.kind === 'assignment-seal'
           ? matrix.goalId
-          : matrix.predecessor.assignmentId;
+          : object.kind === 'predecessor-seal'
+            ? matrix.predecessor.assignmentId
+            : object.assignmentId;
       mismatch(
         'retained-seal-schema',
         `${object.kind}.schema`,
@@ -297,17 +301,32 @@ function verifyRetainedBinding(
         document?.assignment?.assignment_id,
         expectedAssignment,
       );
-      if (
-        object.kind === 'assignment-seal' &&
-        document?.phase !== 'continuation-decided'
-      ) {
+      if (document?.phase !== 'continuation-decided') {
         issues.push(
           issue(
             'retained-seal-not-terminal',
-            'assignment.seal.phase',
+            `${object.kind}.phase`,
             `sealed Assignment phase is ${String(document?.phase)}`,
           ),
         );
+      }
+      for (const field of [
+        'completion_claims',
+        'independent_reviews',
+        'continuation_decisions',
+      ]) {
+        if (
+          !Number.isInteger(document?.counts?.[field]) ||
+          document.counts[field] < 1
+        ) {
+          issues.push(
+            issue(
+              'retained-seal-terminal-chain-incomplete',
+              `${object.kind}.counts.${field}`,
+              `sealed Assignment has no ${field}`,
+            ),
+          );
+        }
       }
       break;
     }
@@ -383,7 +402,7 @@ export function verifyTerminalEvidence(
   const references = new Map();
   exact(
     matrix.schema,
-    'kungfu.maintainability-terminal-evidence-matrix/v3',
+    'kungfu.maintainability-terminal-evidence-matrix/v4',
     'matrix-schema',
     'matrix.schema',
     issues,
@@ -706,6 +725,70 @@ export function verifyTerminalEvidence(
   );
 
   verifyLiveAssignment(matrix, evidence, live, references, issues);
+  verifyLiveReconciliation(matrix, live, issues);
+  uniqueBy(matrix.dependencies, 'assignmentId', 'duplicate-dependency', issues);
+  uniqueBy(
+    matrix.dependencies,
+    'sealedStateRoot',
+    'duplicate-dependency-seal',
+    issues,
+  );
+  uniqueBy(
+    evidence.dependencies,
+    'assignmentId',
+    'duplicate-evidence-dependency',
+    issues,
+  );
+  uniqueBy(
+    evidence.dependencies,
+    'sealedStateRoot',
+    'duplicate-evidence-dependency-seal',
+    issues,
+  );
+  const declaredDependencies = new Map(
+    (evidence.dependencies || []).map((dependency) => [
+      dependency.assignmentId,
+      dependency,
+    ]),
+  );
+  for (const dependency of matrix.dependencies || []) {
+    const declared = declaredDependencies.get(dependency.assignmentId);
+    if (!declared) {
+      issues.push(
+        issue(
+          'missing-dependency',
+          dependency.assignmentId,
+          'required terminal dependency is absent',
+        ),
+      );
+      continue;
+    }
+    exact(
+      declared.sealedStateRoot,
+      dependency.sealedStateRoot,
+      'dependency-seal-mismatch',
+      `${dependency.assignmentId}.sealedStateRoot`,
+      issues,
+    );
+    requiredRoot(
+      references,
+      declared.sealedStateRoot,
+      `${dependency.assignmentId}.sealedStateRoot`,
+      'dependency-seal',
+      issues,
+    );
+  }
+  if (
+    (evidence.dependencies || []).length !== (matrix.dependencies || []).length
+  ) {
+    issues.push(
+      issue(
+        'dependency-cardinality-mismatch',
+        'dependencies',
+        'terminal evidence dependency set differs from the matrix',
+      ),
+    );
+  }
   exact(
     evidence.predecessor?.assignmentId,
     matrix.predecessor.assignmentId,

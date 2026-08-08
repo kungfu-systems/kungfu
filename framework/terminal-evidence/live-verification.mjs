@@ -166,6 +166,113 @@ export function verifyLiveAssignment(
   }
 }
 
+export function verifyLiveReconciliation(matrix, live, issues) {
+  const requiredPulls = matrix.reconciliation?.pullRequests || [];
+  const observedPulls = live.reconciliation || [];
+  uniqueBy(requiredPulls, 'number', 'duplicate-reconciliation-pr', issues);
+  uniqueBy(observedPulls, 'number', 'duplicate-live-reconciliation-pr', issues);
+  const observedByNumber = new Map(
+    observedPulls.map((pull) => [pull.number, pull]),
+  );
+  for (const required of requiredPulls) {
+    const observed = observedByNumber.get(required.number);
+    if (!observed) {
+      issues.push(
+        issue(
+          'missing-reconciliation-pr',
+          `pullRequests.${required.number}`,
+          'required remediation pull request was not observed',
+        ),
+      );
+      continue;
+    }
+    for (const field of ['number', 'state', 'headRef', 'head']) {
+      exact(
+        observed[field],
+        required[field],
+        `reconciliation-pr-${field}-mismatch`,
+        `pullRequests.${required.number}.${field}`,
+        issues,
+      );
+    }
+    exact(
+      observed.baseRef,
+      matrix.sourceBinding.protectedBranch,
+      'reconciliation-pr-base-mismatch',
+      `pullRequests.${required.number}.baseRef`,
+      issues,
+    );
+    if (required.state === 'MERGED') {
+      exact(
+        observed.mergeCommit,
+        required.mergeCommit,
+        'reconciliation-pr-merge-mismatch',
+        `pullRequests.${required.number}.mergeCommit`,
+        issues,
+      );
+    }
+    if (
+      required.disposition === 'superseded-by' &&
+      (!Number.isInteger(required.successor) || required.successor < 1)
+    ) {
+      issues.push(
+        issue(
+          'reconciliation-successor-missing',
+          `pullRequests.${required.number}.successor`,
+          'superseded pull request has no exact successor identity',
+        ),
+      );
+    }
+    if (required.disposition === 'superseded-by') {
+      exact(
+        observed.successor,
+        required.successor,
+        'reconciliation-successor-mismatch',
+        `pullRequests.${required.number}.successor`,
+        issues,
+      );
+      if (!['CLOSED', 'MERGED'].includes(observed.successorState)) {
+        issues.push(
+          issue(
+            'reconciliation-successor-not-terminal',
+            `pullRequests.${required.number}.successorState`,
+            'superseding pull request remains actionable',
+          ),
+        );
+      }
+      exact(
+        observed.successorBaseRef,
+        matrix.sourceBinding.protectedBranch,
+        'reconciliation-successor-base-mismatch',
+        `pullRequests.${required.number}.successorBaseRef`,
+        issues,
+      );
+    }
+    if (
+      !['superseded-by', 'delivered', 'historical-nonmerge'].includes(
+        required.disposition,
+      )
+    ) {
+      issues.push(
+        issue(
+          'reconciliation-disposition-invalid',
+          `pullRequests.${required.number}.disposition`,
+          'pull request disposition is not terminal',
+        ),
+      );
+    }
+  }
+  if (observedPulls.length !== requiredPulls.length) {
+    issues.push(
+      issue(
+        'reconciliation-pr-cardinality-mismatch',
+        'reconciliation.pullRequests',
+        'live remediation pull-request set differs from the matrix',
+      ),
+    );
+  }
+}
+
 function verifyRequiredArtifact(
   required,
   artifactRule,
