@@ -13,7 +13,58 @@ import {
   publicationTimestamp,
   signingIdentity,
   validateExistingLauncherRelease,
+  validateExistingPublicationIdentity,
 } from './alpha-publication-commit.mjs';
+
+test('existing publication authority is reusable only for the exact Alpha identity', () => {
+  const candidateSourceSha = '1'.repeat(40);
+  const releaseSha = '2'.repeat(40);
+  const releaseTag = 'v4.0.0-alpha.1';
+  const bundle = {
+    identity: {
+      channel: 'alpha',
+      version: '4.0.0-alpha.1',
+      sourceCommit: candidateSourceSha,
+      releaseSha,
+      releaseTag,
+      releasePassport: {
+        ref: `buildchain:release-passport/${candidateSourceSha}`,
+      },
+    },
+    distribution: {
+      repository: 'kungfu-systems/kungfu',
+      releaseBaseUrl: `https://github.com/kungfu-systems/kungfu/releases/download/${releaseTag}`,
+      manifestAsset: 'kungfu-installer-publication-bundle.json',
+    },
+  };
+  const expected = {
+    bundle,
+    version: '4.0.0-alpha.1',
+    candidateSourceSha,
+    releaseSha,
+    releaseTag,
+  };
+  assert.equal(validateExistingPublicationIdentity(expected), bundle);
+  assert.throws(
+    () =>
+      validateExistingPublicationIdentity({
+        ...expected,
+        candidateSourceSha: '3'.repeat(40),
+      }),
+    /does not match the exact Alpha release identity/u,
+  );
+  assert.throws(
+    () =>
+      validateExistingPublicationIdentity({
+        ...expected,
+        bundle: {
+          ...bundle,
+          identity: { ...bundle.identity, releaseSha: '4'.repeat(40) },
+        },
+      }),
+    /does not match the exact Alpha release identity/u,
+  );
+});
 
 test('release asset reconciliation reuses only the exact uploaded winner', () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'kungfu-release-winner-'));

@@ -80,6 +80,23 @@ function sha256(bytes) {
   return `sha256:${createHash('sha256').update(bytes).digest('hex')}`;
 }
 
+function releaseBaseUrl(releaseTag) {
+  return `https://github.com/kungfu-systems/kungfu/releases/download/${releaseTag}`;
+}
+
+function bundleAssetDestination(bundleRoot, relativePath) {
+  const root = path.resolve(bundleRoot);
+  const destination = path.resolve(root, relativePath);
+  if (
+    typeof relativePath !== 'string' ||
+    relativePath === '' ||
+    !destination.startsWith(`${root}${path.sep}`)
+  ) {
+    throw new Error('existing installer publication asset path is unsafe');
+  }
+  return destination;
+}
+
 function run(command, args, { cwd = PRODUCT_ROOT, env = process.env } = {}) {
   const result = spawnSync(command, args, {
     cwd,
@@ -128,6 +145,133 @@ function trustedKeyMap(trust) {
   return Object.fromEntries(
     trust.trustedKeys.map(({ keyId, publicKey }) => [keyId, publicKey]),
   );
+}
+
+export function validateExistingPublicationIdentity({
+  bundle,
+  version,
+  candidateSourceSha,
+  releaseSha,
+  releaseTag,
+}) {
+  if (
+    bundle?.identity?.channel !== 'alpha' ||
+    bundle.identity.version !== version ||
+    bundle.identity.sourceCommit !== candidateSourceSha ||
+    bundle.identity.releaseSha !== releaseSha ||
+    bundle.identity.releaseTag !== releaseTag ||
+    bundle.identity.releasePassport?.ref !==
+      `buildchain:release-passport/${candidateSourceSha}` ||
+    bundle.distribution?.repository !== 'kungfu-systems/kungfu' ||
+    bundle.distribution.releaseBaseUrl !== releaseBaseUrl(releaseTag) ||
+    bundle.distribution.manifestAsset !== BUNDLE_MANIFEST_ASSET
+  ) {
+    throw new Error(
+      'existing installer publication bundle does not match the exact Alpha release identity',
+    );
+  }
+  return bundle;
+}
+
+async function fetchReleaseAsset(
+  url,
+  { fetcher = fetch, optional = false } = {},
+) {
+  const response = await fetcher(url, {
+    cache: 'no-store',
+    headers: { accept: 'application/octet-stream' },
+    signal: AbortSignal.timeout(30_000),
+  });
+  if (optional && response.status === 404) return null;
+  if (!response.ok) {
+    throw new Error(
+      `public release asset returned HTTP ${response.status}: ${url}`,
+    );
+  }
+  return Buffer.from(await response.arrayBuffer());
+}
+
+export async function existingPublicationAuthority({
+  version,
+  candidateSourceSha,
+  releaseSha,
+  releaseTag,
+  trust,
+  fetcher = fetch,
+}) {
+  const baseUrl = releaseBaseUrl(releaseTag);
+  const manifestUrl = `${baseUrl}/${BUNDLE_MANIFEST_ASSET}`;
+  const manifestBytes = await fetchReleaseAsset(manifestUrl, {
+    fetcher,
+    optional: true,
+  });
+  if (!manifestBytes) return null;
+  const bundle = validateExistingPublicationIdentity({
+    bundle: JSON.parse(manifestBytes),
+    version,
+    candidateSourceSha,
+    releaseSha,
+    releaseTag,
+  });
+  const canonicalManifest = Buffer.from(`${JSON.stringify(bundle, null, 2)}\n`);
+  if (!manifestBytes.equals(canonicalManifest)) {
+    throw new Error(
+      'existing installer publication bundle manifest bytes are not canonical',
+    );
+  }
+  const temporaryRoot = fs.mkdtempSync(
+    path.join(os.tmpdir(), 'kungfu-existing-alpha-publication-'),
+  );
+  try {
+    fs.writeFileSync(path.join(temporaryRoot, 'bundle.json'), manifestBytes, {
+      flag: 'wx',
+    });
+    const releaseAssets = new Map();
+    for (const asset of bundle.assets) {
+      const expectedUrl = `${baseUrl}/${asset.releaseAsset}`;
+      if (asset.releaseUrl !== expectedUrl) {
+        throw new Error(
+          `existing installer publication asset URL drifted: ${asset.path}`,
+        );
+      }
+      if (!releaseAssets.has(asset.releaseAsset)) {
+        releaseAssets.set(
+          asset.releaseAsset,
+          await fetchReleaseAsset(expectedUrl, { fetcher }),
+        );
+      }
+      const destination = bundleAssetDestination(temporaryRoot, asset.path);
+      fs.mkdirSync(path.dirname(destination), { recursive: true });
+      fs.writeFileSync(destination, releaseAssets.get(asset.releaseAsset), {
+        flag: 'wx',
+      });
+    }
+    verifyInstallerPublicationBundle({
+      bundleRoot: temporaryRoot,
+      expectedBundleRoot: bundle.bundleRoot,
+    });
+    const channelBytes = fs.readFileSync(
+      path.join(temporaryRoot, 'channel-index.json'),
+    );
+    const channelIndex = JSON.parse(channelBytes);
+    verifyReleaseChannelIndex(channelIndex, trustedKeyMap(trust));
+    if (
+      !channelBytes.equals(
+        Buffer.concat([canonicalBytes(channelIndex), Buffer.from('\n')]),
+      )
+    ) {
+      throw new Error(
+        'existing installer publication Alpha channel bytes are not canonical',
+      );
+    }
+    return {
+      bundle,
+      manifestDigest: sha256(manifestBytes),
+      manifestUrl,
+    };
+  } finally {
+    fs.rmSync(temporaryRoot, { recursive: true, force: true });
+  }
 }
 
 export function publicationCommitEvidence({
@@ -575,6 +719,40 @@ async function main() {
   const trustDocument = readJson(TRUST_PATH, 'release-channel trust');
   const trust = releaseChannelTrust(trustDocument, 'alpha');
   const previous = await previousAuthority(trustedKeyMap(trust));
+  const existing = await existingPublicationAuthority({
+    ...environment,
+    trust,
+  });
+  if (existing) {
+    ensureLauncherTag(environment);
+    const evidence = publicationCommitEvidence({
+      ...environment,
+      sourceSha: environment.candidateSourceSha,
+      payloadRoot: existing.bundle.identity.channelPayloadRoot,
+      previousPayloadRoot: previous?.index.payloadRoot,
+      bundle: existing.bundle,
+      readbackDigest: existing.manifestDigest,
+    });
+    fs.mkdirSync(path.dirname(environment.evidencePath), {
+      recursive: true,
+    });
+    fs.writeFileSync(
+      environment.evidencePath,
+      `${JSON.stringify(evidence, null, 2)}\n`,
+      { mode: 0o600 },
+    );
+    process.stdout.write(
+      `${JSON.stringify({
+        status: 'passed',
+        action: 'reused-existing-publication-authority',
+        channelPayloadRoot: existing.bundle.identity.channelPayloadRoot,
+        installerBundleRoot: existing.bundle.bundleRoot,
+        installerBundleUrl: existing.manifestUrl,
+        siteHandoff: evidence.siteHandoff.state,
+      })}\n`,
+    );
+    return;
+  }
   const candidatePassportPath = path.join(
     path.dirname(environment.payloadDir),
     'passport',
