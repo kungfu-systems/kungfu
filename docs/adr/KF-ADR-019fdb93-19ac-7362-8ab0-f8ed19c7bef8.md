@@ -4,7 +4,7 @@ doc_type: architecture-decision
 adr_id: KF-ADR-019fdb93-19ac-7362-8ab0-f8ed19c7bef8
 decision_status: accepted
 implementation_status: staged
-implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/2590]
+implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/2590, https://github.com/kungfu-systems/kungfu/pull/2618]
 qualification_refs: [framework/assignment-runtime/assignment-runtime.contract.json, framework/assignment-runtime/schema/assignment-runtime-envelope-v1.schema.json, framework/assignment-runtime/fixtures/contract-cases-v1.json, framework/assignment-runtime/assignment-runtime.test.mjs, framework/core/tests/python/test_assignment_runtime.py, docs/architecture/assignment-runtime-r0-evidence.md, docs/architecture/assignment-runtime-r1-local-profile.md]
 review_state: self-reviewed
 sensitivity: public
@@ -14,7 +14,7 @@ theme: local-first-assignment-runtime-api
 confidence: high
 evidence_grade: A
 last_reviewed: 2026-08-08
-ai_provenance: GPT-5 via Codex on 2026-08-08; based on the exact R0 and R1 Assignments, the protected R1 candidate in PR 2590, current Kungfu source, and disposable-Home qualification; no claim about GUI, CLI, Agent, KFX, or Cluster Runtime cutover
+ai_provenance: GPT-5 via Codex on 2026-08-08; based on the exact R0 and R1 Assignments, the protected R0 delivery in PR 2590, the linearly replayable R1 candidate in PR 2618, current Kungfu source, and disposable-Home qualification; no claim about GUI, CLI, Agent, KFX, or Cluster Runtime cutover
 ---
 
 # KF-ADR-019fdb93-19ac-7362-8ab0-f8ed19c7bef8: Assignment clients converge on one local-first transport-neutral Runtime API
@@ -89,7 +89,7 @@ planned before execution and remains revision- and idempotency-fenced.
 ### 4. The Local Runtime Profile is the first implementation target
 
 R1 implements this contract for the selected logical Home or project Workspace
-in the stage-ready candidate recorded by PR 2590. The current private
+in the stage-ready candidate recorded by PR 2618. The current private
 `.kungfu` Fact/Episode/runtime tree remains its
 initial backing, not its public API. A command is successful only when its
 authoritative receipt is durable; process liveness is diagnostic only. Crash
