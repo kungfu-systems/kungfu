@@ -1,7 +1,7 @@
 {
   "schema": "kungfu.code-complexity-budget-baseline/v1",
-  "policyRoot": "sha256:f65ae78e122b8cf000fafff997668a7f408d4957a8181f8138d4bab8de329f48",
-  "baselineRef": "364d9ae9f137ba6ee5a75f9bccf003d043984c81",
+  "policyRoot": "sha256:fae78e83de44788a83b99319f28393686694c71d76a146e66a6a6ba41a0d0883",
+  "baselineRef": "f30baffac6f7c7f4ec01121ea64bffaf1a933fe4",
   "classification": "ordered-policy-and-content-marker/v1",
   "calibration": {
     "groupBy": [
@@ -16,7 +16,7 @@
   "summary": {
     "declarative-schema-or-table": {
       "files": 1371,
-      "lines": 574107
+      "lines": 574114
     },
     "first-party-handwritten-implementation": {
       "files": 1034,
@@ -36,7 +36,7 @@
     },
     "test-or-fixture": {
       "files": 871,
-      "lines": 184405
+      "lines": 184414
     },
     "vendored-source": {
       "files": 451,
@@ -17681,8 +17681,8 @@
       "generatedProvenance": false,
       "language": "declarative",
       "owner": "kungfu/docs",
-      "lines": 57,
-      "contentRoot": "sha256:9a195b9405c564c1882d3bf299de9ad8daef9ce046c6645b34dc6250b80d7c9b"
+      "lines": 64,
+      "contentRoot": "sha256:9b8a0fc0691334f3fc2eb6394fd6f1b948f11f0600075b71eac1051a1ea431c2"
     },
     {
       "path": "docs/shifu/documentation-contract.json",
@@ -36006,7 +36006,7 @@
       "language": "declarative",
       "owner": "framework/maintainability",
       "lines": 165,
-      "contentRoot": "sha256:dafb48078e45dc0f631e5a6cb1df662e2353fc8d6d6a8b448f2d17515295ad9c"
+      "contentRoot": "sha256:c53bf3d72b12a167da47d1a8564efd4c39c68d240d9f64c965ace880fe78b324"
     },
     {
       "path": "framework/maintainability/complexity-governance.mjs",
@@ -41081,8 +41081,8 @@
       "generatedProvenance": false,
       "language": "javascript-typescript",
       "owner": "shifu/source-tooling",
-      "lines": 144,
-      "contentRoot": "sha256:44ed5322b2971d6f7a62ea74304265c5caac1be28652b2e3f670c22fb70a92fe"
+      "lines": 153,
+      "contentRoot": "sha256:281e79398d35537338c0089c27063d8f55f38837a6c5a65ce50e195bda6ff147"
     },
     {
       "path": "scripts/portable-atlas-bundle.mjs",
@@ -44416,5 +44416,5 @@
     }
   ],
   "issues": [],
-  "measurementRoot": "sha256:723596ee162df6adf675ae0ba59a6b74ebba077b787ee393e00aaf0c29694a53"
+  "measurementRoot": "sha256:9d9309631628ce226db181d91b0ddf1cc69284b54cc33d933f803979c26a494d"
 }
