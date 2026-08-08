@@ -1284,13 +1284,14 @@ def _identity_options(function):
     return function
 
 
-_CLOSE_SERVICES = assignment_close.CloseServices(
-    runtime=_assignment_runtime,
-    status=_status,
-    receipt=_work_start_receipt,
-    ensure_profile=_ensure_profile,
-    profile_action=_profile_action,
-)
+def _close_services():
+    return assignment_close.CloseServices(
+        runtime=_assignment_runtime,
+        status=_status,
+        receipt=_work_start_receipt,
+        ensure_profile=_ensure_profile,
+        profile_action=_profile_action,
+    )
 
 
 @assignment.command(
@@ -1314,7 +1315,7 @@ def close_resume(
                 home=home,
                 initiative_id=initiative_id,
                 assignment_id=assignment_id,
-                services=_CLOSE_SERVICES,
+                services=_close_services(),
             )
         )
     )
@@ -1341,7 +1342,7 @@ def close_plan(
                 home=home,
                 initiative_id=initiative_id,
                 assignment_id=assignment_id,
-                services=_CLOSE_SERVICES,
+                services=_close_services(),
             )
         )
     )
@@ -1367,7 +1368,7 @@ def close_work(
     execute,
 ):
     del ctx
-    services = _CLOSE_SERVICES
+    services = _close_services()
     request = assignment_close.CloseRequest(
         workspace_root=workspace_root,
         home=home,
