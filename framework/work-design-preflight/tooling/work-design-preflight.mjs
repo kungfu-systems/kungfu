@@ -9,12 +9,12 @@ import {
   buildOpenCardOutcomeHistory,
   runOpenCardPreflight,
   verifyOpenCardPreflight,
-} from '../src/work-design-open-card.mjs';
+} from '../src/work-design-preflight.mjs';
 
 function inputPath(argv) {
   const index = argv.indexOf('--input');
   if (index < 0 || !argv[index + 1])
-    throw new Error('usage: open-card-preflight --input <request.json>');
+    throw new Error('usage: work-design-preflight --input <request.json>');
   return argv[index + 1];
 }
 

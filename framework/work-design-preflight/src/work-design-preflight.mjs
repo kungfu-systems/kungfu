@@ -19,10 +19,10 @@ import {
   verifyWorkHistorySelectionManifest,
 } from '../../work-history-selector/src/work-history-selector.mjs';
 
-export const OPEN_CARD_PREFLIGHT_REQUEST_SCHEMA =
-  'kungfu.work-design.open-card-preflight-request/v1';
-export const OPEN_CARD_PREFLIGHT_SCHEMA =
-  'kungfu.work-design.open-card-preflight/v1';
+export const WORK_DESIGN_PREFLIGHT_REQUEST_SCHEMA =
+  'kungfu.work-design.preflight-request/v1';
+export const WORK_DESIGN_PREFLIGHT_SCHEMA =
+  'kungfu.work-design.preflight/v1';
 
 const ACTIONS = new Set([
   'accepted',
@@ -37,17 +37,17 @@ const FEDERATED_PROOF_SCHEMA = 'kungfu.workspace-federation.query-proof/v1';
 const SEALED_WORK_SCHEMA =
   'kungfu.assignment-orchestration.sealed-work-coordinate/v1';
 const FEDERATED_SOURCE_ID = 'kungfu.workspace-federation.sealed-work-index';
-const HISTORY_SOURCE_SCHEMA = 'kungfu.work-design.open-card-history-source/v1';
+const HISTORY_SOURCE_SCHEMA = 'kungfu.work-design.history-source/v1';
 const OUTCOME_HISTORY_SCHEMA =
-  'kungfu.work-design.open-card-outcome-history/v1';
+  'kungfu.work-design.outcome-history/v1';
 const OUTCOME_BINDING_SCHEMA =
   'kungfu.assignment-orchestration.work-design-outcome-binding/v1';
 const OUTCOME_SCHEMA = 'kungfu.work-design.outcome/v1';
 const POLICY_DISPOSITION_SCHEMA =
-  'kungfu.work-design.open-card-policy-disposition/v1';
+  'kungfu.work-design.policy-disposition/v1';
 
 const AUTO_ADOPTION_POLICY_PREIMAGE = Object.freeze({
-  schema: 'kungfu.work-design.open-card-auto-adoption-policy/v1',
+  schema: 'kungfu.work-design.auto-adoption-policy/v1',
   id: 'verified-history-within-authorized-boundary',
   version: 1,
   minimumConfidence: 'medium',
@@ -85,12 +85,9 @@ const AUTHORITY = Object.freeze({
   close: false,
 });
 
-const CARD_STATE = Object.freeze({
-  captureOnly: true,
-  pointerOnly: true,
-  status: 'paused',
-  claimed: false,
-  dispatched: false,
+const OPERATION = Object.freeze({
+  phase: 'pre-capture',
+  mutates: false,
 });
 
 function isObject(value) {
@@ -341,7 +338,7 @@ export function buildOpenCardHistorySelectionRequest({
     throw new Error('history query components must be an array');
 
   if (outcomeHistory !== null && !rooted(outcomeHistory, 'sourceRoot'))
-    throw new Error('open-card outcome history root mismatch');
+    throw new Error('work-design outcome history root mismatch');
   const outcomeByState = new Map(
     (outcomeHistory?.records ?? []).map((record) => [
       record.settledStateRoot,
@@ -463,7 +460,7 @@ export function buildOpenCardHistorySelectionRequest({
     ),
   );
   const policy = buildWorkHistorySelectionPolicy({
-    id: 'open-card-native-sealed-work-v1',
+    id: 'work-design-native-sealed-work-v1',
     version: 1,
     maxSelected:
       maxSelected ??
@@ -541,7 +538,7 @@ function fallback(request, reason, diagnostics, partial = {}) {
     ? request.humanWorkDefinitionRoot
     : null;
   const preimage = {
-    schema: OPEN_CARD_PREFLIGHT_SCHEMA,
+    schema: WORK_DESIGN_PREFLIGHT_SCHEMA,
     ok: true,
     outcome: 'manual-capture',
     humanAuthorization: {
@@ -562,7 +559,7 @@ function fallback(request, reason, diagnostics, partial = {}) {
       silentAdoption: false,
       diagnostics,
     },
-    cardState: { ...CARD_STATE },
+    operation: { ...OPERATION },
     authority: { ...AUTHORITY },
   };
   return { ...preimage, preflightRoot: semanticRoot(preimage) };
@@ -596,7 +593,7 @@ function buildPolicyDisposition(request, advice, historyBinding) {
     escalationReasons: [],
   };
   const rationaleRoot = semanticRoot({
-    schema: 'kungfu.work-design.open-card-policy-rationale/v1',
+    schema: 'kungfu.work-design.policy-rationale/v1',
     policyRoot: AUTO_ADOPTION_POLICY.policyRoot,
     adviceRoot: advice.adviceRoot,
     intentRoot: request.humanWorkDefinitionRoot,
@@ -624,7 +621,7 @@ function buildPolicyDisposition(request, advice, historyBinding) {
 
 function humanDecisionRequired(request, history, advice, reasons) {
   const preimage = {
-    schema: OPEN_CARD_PREFLIGHT_SCHEMA,
+    schema: WORK_DESIGN_PREFLIGHT_SCHEMA,
     ok: true,
     outcome: 'human-decision-required',
     humanAuthorization: {
@@ -645,7 +642,7 @@ function humanDecisionRequired(request, history, advice, reasons) {
       reasons,
     },
     fallback: null,
-    cardState: { ...CARD_STATE },
+    operation: { ...OPERATION },
     authority: { ...AUTHORITY },
   };
   return { ...preimage, preflightRoot: semanticRoot(preimage) };
@@ -655,7 +652,7 @@ function validateEnvelope(request) {
   const diagnostics = [];
   if (!isObject(request))
     return [diagnostic('invalid-type', '$', 'request must be an object')];
-  if (request.schema !== OPEN_CARD_PREFLIGHT_REQUEST_SCHEMA)
+  if (request.schema !== WORK_DESIGN_PREFLIGHT_REQUEST_SCHEMA)
     diagnostics.push(
       diagnostic('unknown-version', '$.schema', 'unsupported request schema'),
     );
@@ -947,7 +944,7 @@ export function runOpenCardPreflight(request) {
       historyBinding,
     );
     const preimage = {
-      schema: OPEN_CARD_PREFLIGHT_SCHEMA,
+      schema: WORK_DESIGN_PREFLIGHT_SCHEMA,
       ok: true,
       outcome: 'advisory-auto-adopted',
       humanAuthorization: {
@@ -966,7 +963,7 @@ export function runOpenCardPreflight(request) {
       },
       escalation: null,
       fallback: null,
-      cardState: { ...CARD_STATE },
+      operation: { ...OPERATION },
       authority: { ...AUTHORITY },
     };
     return { ...preimage, preflightRoot: semanticRoot(preimage) };
@@ -1028,7 +1025,7 @@ export function runOpenCardPreflight(request) {
     request.disposition.action === 'overridden' ||
     request.disposition.action === 'insufficient-history';
   const preimage = {
-    schema: OPEN_CARD_PREFLIGHT_SCHEMA,
+    schema: WORK_DESIGN_PREFLIGHT_SCHEMA,
     ok: true,
     outcome: isManual ? 'manual-capture' : 'advisory-disposition',
     humanAuthorization: {
@@ -1051,21 +1048,21 @@ export function runOpenCardPreflight(request) {
           diagnostics: [],
         }
       : null,
-    cardState: { ...CARD_STATE },
+    operation: { ...OPERATION },
     authority: { ...AUTHORITY },
   };
   return { ...preimage, preflightRoot: semanticRoot(preimage) };
 }
 
 export function verifyOpenCardPreflight(result) {
-  if (!isObject(result) || result.schema !== OPEN_CARD_PREFLIGHT_SCHEMA)
+  if (!isObject(result) || result.schema !== WORK_DESIGN_PREFLIGHT_SCHEMA)
     return { ok: false, reason: 'unsupported-preflight-schema' };
   const { preflightRoot, ...preimage } = result;
   if (semanticRoot(preimage) !== preflightRoot)
     return { ok: false, reason: 'preflight-root-mismatch' };
   if (
     JSON.stringify(result.authority) !== JSON.stringify(AUTHORITY) ||
-    JSON.stringify(result.cardState) !== JSON.stringify(CARD_STATE)
+    JSON.stringify(result.operation) !== JSON.stringify(OPERATION)
   )
     return { ok: false, reason: 'authority-boundary-mismatch' };
   if (
@@ -1131,10 +1128,10 @@ export function verifyOpenCardPreflight(result) {
   return { ok: true, reason: null };
 }
 
-export function openCardAuthorityBoundary() {
-  return { authority: { ...AUTHORITY }, cardState: { ...CARD_STATE } };
+export function workDesignAuthorityBoundary() {
+  return { authority: { ...AUTHORITY }, operation: { ...OPERATION } };
 }
 
-export function openCardAutoAdoptionPolicy() {
+export function workDesignAutoAdoptionPolicy() {
   return structuredClone(AUTO_ADOPTION_POLICY);
 }
