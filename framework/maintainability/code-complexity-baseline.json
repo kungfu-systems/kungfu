@@ -1,7 +1,7 @@
 {
   "schema": "kungfu.code-complexity-budget-baseline/v1",
-  "policyRoot": "sha256:e04f1e21c1390aebf0d3b6ad303efaa8246665850c3478a52d05a9cc3ecedc56",
-  "baselineRef": "28f79cd0a7caaf478d937b786bd7d8db8560ed0b",
+  "policyRoot": "sha256:f65ae78e122b8cf000fafff997668a7f408d4957a8181f8138d4bab8de329f48",
+  "baselineRef": "364d9ae9f137ba6ee5a75f9bccf003d043984c81",
   "classification": "ordered-policy-and-content-marker/v1",
   "calibration": {
     "groupBy": [
@@ -20,7 +20,7 @@
     },
     "first-party-handwritten-implementation": {
       "files": 1034,
-      "lines": 367582
+      "lines": 367586
     },
     "generated-projection": {
       "files": 74,
@@ -31,12 +31,12 @@
       "lines": 55188
     },
     "retained-evidence": {
-      "files": 887,
-      "lines": 1631192
+      "files": 885,
+      "lines": 1631190
     },
     "test-or-fixture": {
       "files": 871,
-      "lines": 184377
+      "lines": 184405
     },
     "vendored-source": {
       "files": 451,
@@ -191,7 +191,7 @@
     "retained-evidence:declarative": {
       "class": "retained-evidence",
       "language": "declarative",
-      "population": 886,
+      "population": 884,
       "soft": 124,
       "hard": 1198,
       "calibration": "p90/p99"
@@ -6001,24 +6001,6 @@
       "owner": "kungfu/retained-native-evidence",
       "lines": 1,
       "contentRoot": "sha256:3b879b8b50e192aff34d8ba141b5091ba71a46ca74bc23b6c0ee1f6313ba947f"
-    },
-    {
-      "path": ".kungfu/project-cuts/sha256/ba/bad9f430e973a3dfd49ae3886debe66fce5f8070fc23c231f22753e5dbcbb220/manifest.json",
-      "class": "retained-evidence",
-      "generatedProvenance": false,
-      "language": "declarative",
-      "owner": "kungfu/retained-native-evidence",
-      "lines": 1,
-      "contentRoot": "sha256:1be67fcdd4774fc36b1c9db62cd19d72403eb79c7e050d368062846390bba116"
-    },
-    {
-      "path": ".kungfu/project-cuts/sha256/ba/bad9f430e973a3dfd49ae3886debe66fce5f8070fc23c231f22753e5dbcbb220/receipt.json",
-      "class": "retained-evidence",
-      "generatedProvenance": false,
-      "language": "declarative",
-      "owner": "kungfu/retained-native-evidence",
-      "lines": 1,
-      "contentRoot": "sha256:78072ba31ba86555d5696f1259d4b8f5e5d7a5be4c45b974a72fea2924e24e36"
     },
     {
       "path": ".kungfu/project-cuts/sha256/ba/baf4ed6ee9d1c24c3ad81dd6e399e7caf13feb70338aeaf3dc16d5d9779ad1b7/manifest.json",
@@ -13569,7 +13551,7 @@
       "language": "declarative",
       "owner": "kungfu/repository-contract",
       "lines": 1,
-      "contentRoot": "sha256:b1dedf4a3c8a53ee9ffd237d5bf43e723f70b1090a29e4af37f1a072425e0704"
+      "contentRoot": "sha256:ee90e74a0300b8e04b8d2117b4a093f27b095fc9782bee875c2f7ef7a5ea5ed5"
     },
     {
       "path": ".xinfa/product-documentation-pack.json",
@@ -36024,7 +36006,7 @@
       "language": "declarative",
       "owner": "framework/maintainability",
       "lines": 165,
-      "contentRoot": "sha256:1021ec263dab406d7a02355140fde87cac1d08020b4f26861c9829f9ecb05d97"
+      "contentRoot": "sha256:dafb48078e45dc0f631e5a6cb1df662e2353fc8d6d6a8b448f2d17515295ad9c"
     },
     {
       "path": "framework/maintainability/complexity-governance.mjs",
@@ -36527,8 +36509,8 @@
       "generatedProvenance": false,
       "language": "javascript-typescript",
       "owner": "framework/project-cut",
-      "lines": 794,
-      "contentRoot": "sha256:0b2397d011d063c579bf1b680197b7c24652b67c3e79a9e44f538709809711f4"
+      "lines": 798,
+      "contentRoot": "sha256:29b352fe335eeb399e45654ba25264266d907ac76f6ba97a81b51cbace7a38bd"
     },
     {
       "path": "framework/project-cut/src/history.mjs",
@@ -39947,8 +39929,8 @@
       "generatedProvenance": false,
       "language": "javascript-typescript",
       "owner": "shifu/source-tooling",
-      "lines": 770,
-      "contentRoot": "sha256:7071650b4cdeca0faf40ad9870e012c8bf643a5156e885c5507aa3d8e1c57052"
+      "lines": 798,
+      "contentRoot": "sha256:0e128fd10b5f943be6d9563563daff18ab308b106776e41a4a551d74a5e3e0f9"
     },
     {
       "path": "scripts/check-project-cut-contract.mjs",
@@ -44434,5 +44416,5 @@
     }
   ],
   "issues": [],
-  "measurementRoot": "sha256:268d08121d5df115d98c789832c439d444b56a3304d02a70feb9b3a9e62c7225"
+  "measurementRoot": "sha256:723596ee162df6adf675ae0ba59a6b74ebba077b787ee393e00aaf0c29694a53"
 }
