@@ -15,22 +15,6 @@ from kungfu.product_identity import version_banner
 CLI = typing.TypeVar("CLI", bound=typing.Callable[..., typing.Any])
 
 
-def assignment_identity_options(function):
-    """Apply the shared native Assignment identity coordinate options."""
-    for decorator in reversed(
-        [
-            click.option(
-                "--workspace", "workspace_root", type=click.Path(file_okay=False)
-            ),
-            click.option("--home", is_flag=True),
-            click.option("--initiative-id", required=True),
-            click.option("--assignment-id", required=True),
-        ]
-    ):
-        function = decorator(function)
-    return function
-
-
 def initialize_runtime_context(ctx) -> None:
     """Materialize the legacy runtime context after an intent has selected it."""
     os.environ["KF_CONFIG_HOME"] = ctx.config_home
