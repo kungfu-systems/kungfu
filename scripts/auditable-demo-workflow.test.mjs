@@ -169,7 +169,7 @@ test('Kungfu owns the ordered three-proof argument while Buildchain updates only
 test('the build fails the real transported binary before either upload path', () => {
   assert.equal(
     build.uses,
-    'kungfu-systems/buildchain/.github/workflows/.build.yml@2e7e07902ac28d8f3edcfb81098ef9ebc7a91878',
+    'kungfu-systems/buildchain/.github/workflows/.build.yml@58e48d73ae7fef0dd06ae02baf6d090e4da5487d',
   );
   assert.equal(
     demo.uses,
