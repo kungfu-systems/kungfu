@@ -48,6 +48,10 @@ _TABLE_NAME = "locks.json"
 _LOCK_BACKEND = importlib.import_module("msvcrt" if os.name == "nt" else "fcntl")
 
 
+class _TableGuardBusy(RuntimeError):
+    """The coordination table guard is already held by another process."""
+
+
 def _now() -> float:
     return time.time()
 
@@ -98,7 +102,7 @@ def table_path(root: str | os.PathLike[str]) -> Path:
 
 
 @contextlib.contextmanager
-def _table_guard(path: Path):
+def _table_guard(path: Path, *, blocking: bool = True):
     """Serialize the read-modify-write through a platform advisory lock."""
     path.parent.mkdir(parents=True, exist_ok=True)
     guard = path.with_suffix(".guard")
@@ -120,9 +124,17 @@ def _table_guard(path: Path):
                 except OSError as exc:
                     if exc.errno not in {errno.EACCES, errno.EAGAIN, errno.EDEADLK}:
                         raise
+                    if not blocking:
+                        raise _TableGuardBusy from exc
                     time.sleep(DEFAULT_POLL_SECONDS)
         else:
-            _LOCK_BACKEND.flock(fd, _LOCK_BACKEND.LOCK_EX)
+            flags = _LOCK_BACKEND.LOCK_EX
+            if not blocking:
+                flags |= _LOCK_BACKEND.LOCK_NB
+            try:
+                _LOCK_BACKEND.flock(fd, flags)
+            except BlockingIOError as exc:
+                raise _TableGuardBusy from exc
             acquired = True
         yield
     finally:
@@ -196,28 +208,39 @@ def _owner(pid: int) -> str:
     return f"{pid}:{threading.get_ident()}"
 
 
-def _try_claim(path: Path, name: str, pid: int, owner: str, label: str) -> bool:
+def _try_claim(
+    path: Path,
+    name: str,
+    pid: int,
+    owner: str,
+    label: str,
+    *,
+    blocking_guard: bool = True,
+) -> bool:
     """Claim `name` for `pid` if it is free or its holder is dead. Atomic."""
-    with _table_guard(path):
-        payload = _read(path)
-        locks = payload.setdefault("locks", {})
-        holder = locks.get(name)
-        if isinstance(holder, dict):
-            if holder.get("owner") == owner:
-                holder["depth"] = int(holder.get("depth") or 1) + 1
-                _write(path, payload)
-                return True
-            if _pid_alive(holder.get("pid")):
-                return False
-        locks[name] = {
-            "pid": pid,
-            "owner": owner,
-            "depth": 1,
-            "label": label,
-            "acquiredAt": _now(),
-        }
-        _write(path, payload)
-        return True
+    try:
+        with _table_guard(path, blocking=blocking_guard):
+            payload = _read(path)
+            locks = payload.setdefault("locks", {})
+            holder = locks.get(name)
+            if isinstance(holder, dict):
+                if holder.get("owner") == owner:
+                    holder["depth"] = int(holder.get("depth") or 1) + 1
+                    _write(path, payload)
+                    return True
+                if _pid_alive(holder.get("pid")):
+                    return False
+            locks[name] = {
+                "pid": pid,
+                "owner": owner,
+                "depth": 1,
+                "label": label,
+                "acquiredAt": _now(),
+            }
+            _write(path, payload)
+            return True
+    except _TableGuardBusy:
+        return False
 
 
 def _release(path: Path, name: str, pid: int, owner: str) -> bool:
@@ -260,6 +283,31 @@ def acquire(
         waited = True
         time.sleep(poll)
     return waited
+
+
+def try_acquire(
+    root: str | os.PathLike[str],
+    name: str,
+    *,
+    label: str | None = None,
+    pid: int | None = None,
+) -> bool:
+    """Try to hold ``name`` once without waiting.
+
+    The holder keeps the lock until :func:`release` is called.  This is the
+    fail-closed startup primitive used by services that must reject a second
+    writer instead of waiting for the first writer to disappear.
+    """
+
+    pid = pid or os.getpid()
+    return _try_claim(
+        table_path(root),
+        name,
+        pid,
+        _owner(pid),
+        label or f"pid:{pid}",
+        blocking_guard=False,
+    )
 
 
 def release(root: str | os.PathLike[str], name: str, *, pid: int | None = None) -> bool:
