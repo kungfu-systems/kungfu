@@ -225,24 +225,13 @@ function verifyCredentialIslandBundle({
     'release',
     CREDENTIAL_EVIDENCE_FILE,
   );
-  const payloadIdentityMatches =
-    typeof manifest.artifactName === 'string' &&
-    path.basename(bundleRoot) === manifest.artifactName;
-  if (!payloadIdentityMatches && !fs.existsSync(evidencePath)) {
-    return null;
-  }
-  if (!payloadIdentityMatches) {
-    throw new Error(
-      `credential payload identity mismatch: manifest ${manifest.artifactName || '(missing)'}, payload ${path.basename(bundleRoot)}`,
-    );
-  }
+  if (!fs.existsSync(evidencePath)) return null;
   if (
-    !fs.existsSync(evidencePath) ||
     !fs.statSync(evidencePath).isFile() ||
     fs.lstatSync(evidencePath).isSymbolicLink()
   ) {
     throw new Error(
-      `credential payload ${bundleRoot} must contain ${CREDENTIAL_EVIDENCE_FILE} at its authoritative release path`,
+      `credential payload ${bundleRoot} ${CREDENTIAL_EVIDENCE_FILE} must be a regular file at its authoritative release path`,
     );
   }
   if (
