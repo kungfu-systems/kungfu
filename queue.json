@@ -3,7 +3,7 @@
   "contract": "kungfu-buildchain-dev-delivery-warrant-queue",
   "repository": "kungfu-systems/kungfu",
   "protectedBase": "dev/v4/v4.0",
-  "generation": 340,
+  "generation": 341,
   "fencingCounter": 100,
   "policy": {
     "agingSeconds": 900,
@@ -3331,8 +3331,32 @@
       "recoveries": 0,
       "status": "selected",
       "terminal": null
+    },
+    {
+      "repository": "kungfu-systems/kungfu",
+      "protectedBase": "dev/v4/v4.0",
+      "pullRequestNumber": 2626,
+      "assignmentRoot": "sha256:986c662168c988a95d0b43ab7fa32495dcdc5c705e786847a4b08a7d75514d57",
+      "initiativeRoot": "sha256:bfff817933e5a5ad693e4b902a84f6cc3a251235dd7377cb4091d92f805fa7ff",
+      "sourceIdentityRoot": "sha256:f016579c52c1138de1b416aac22b800874033c67e8e36df1bf28f21f4473ac87",
+      "deliveryClass": "native-proof-required",
+      "candidateId": "sha256:82f10e4a218bfed6b33908aa0a40660ca5bd8a95ecdac4513e12ebec0514b2b5",
+      "sourceHead": "fdb2280c8577c644b2d13767b1618291ef7250fa",
+      "sourcePatchRoot": "sha256:43f8f9c80204593f9c35e7777bc58288937494c4efaa71dd5e9b513ecb471a45",
+      "sourceProofRoot": "sha256:79653626649d63fa35cf3a785807fcd7b8c2843e95f24f216e54ac67d6318334",
+      "planRoot": "sha256:a77ba634f8d9fac820118176ad7a8dc055f4f24d837981900fbd6a2cc0a61f0c",
+      "closureRoot": "sha256:106d175611d8634c988192302b9c464ae8ba3b6d023c2cff9910e401344c9624",
+      "dependencyRoot": "sha256:b1fdd597476e878dcf8776e115003869b6c0cdc02bcc6e6d5af6b63fec93b79a",
+      "toolchainRoot": "sha256:2ecb07894954a2e0de022615d4561e5ba3ae68376401941ecff77be03cd75a0f",
+      "priority": "ordinary",
+      "enqueuedAt": "2026-08-08T17:13:58.978Z",
+      "updatedAt": "2026-08-08T17:13:58.978Z",
+      "attempts": 1,
+      "recoveries": 0,
+      "status": "queued",
+      "terminal": null
     }
   ],
-  "updatedAt": "2026-08-08T17:04:29.844Z",
-  "stateRoot": "sha256:515a0a201cbc4f5887931d3819a2f3f6cecb63b3d5e23517598bd68bb0f57fe8"
+  "updatedAt": "2026-08-08T17:13:58.978Z",
+  "stateRoot": "sha256:6f0c38a9dfaffbb571c07b4d86ad46a3c61cd0d2b13ff61efe81f583f007db4d"
 }
