@@ -359,7 +359,9 @@ export function channelSpecFromAdmission({
   }
   const admitted = admission.manifests.map((entry) => ({
     ...entry,
-    manifest: readJson(entry.manifestPath, 'admitted release manifest'),
+    manifest:
+      entry.manifest ||
+      readJson(entry.manifestPath, 'admitted release manifest'),
   }));
   const sourceCommits = new Set(
     admitted.map((entry) => entry.manifest.sourceCommit),

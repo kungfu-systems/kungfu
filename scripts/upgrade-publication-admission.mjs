@@ -159,6 +159,40 @@ function verifyManifestFileBytes(bundleRoot, file) {
   return filePath;
 }
 
+function verifyInventoryFileBytes(bundleRoot, file, label) {
+  if (
+    typeof file?.path !== 'string' ||
+    path.posix.isAbsolute(file.path) ||
+    file.path.split('/').includes('..')
+  ) {
+    throw new Error(`${label} contains an unsafe output path`);
+  }
+  const filePath = path.resolve(bundleRoot, file.path);
+  const relative = path.relative(path.resolve(bundleRoot), filePath);
+  if (relative.startsWith('..') || path.isAbsolute(relative)) {
+    throw new Error(`${label} output escapes its payload bundle`);
+  }
+  if (!fs.existsSync(filePath) || !fs.statSync(filePath).isFile()) {
+    throw new Error(`${label} output is missing: ${file.path}`);
+  }
+  if (fs.lstatSync(filePath).isSymbolicLink()) {
+    throw new Error(`${label} output is a symbolic link: ${file.path}`);
+  }
+  const size = fs.statSync(filePath).size;
+  if (size !== file.size) {
+    throw new Error(
+      `${label} size mismatch for ${file.path}: manifest ${file.size}, payload ${size}`,
+    );
+  }
+  const digest = sha256File(filePath);
+  if (digest !== file.sha256) {
+    throw new Error(
+      `${label} digest mismatch for ${file.path}: manifest ${file.sha256}, payload ${digest}`,
+    );
+  }
+  return filePath;
+}
+
 function verifyCredentialIslandBundle({
   bundleRoot,
   expectedVersion,
@@ -360,6 +394,21 @@ function verifyCredentialIslandBundle({
       evidence.notarization.application.id,
       evidence.notarization.diskImage.id,
     ],
+    artifacts: Object.fromEntries(
+      ['dmg', 'zip'].map((kind) => {
+        const item = evidenceArtifacts.find(
+          (artifact) => artifact.kind === kind,
+        );
+        return [
+          kind,
+          {
+            name: item.name,
+            size: item.bytes,
+            digest: item.sha256,
+          },
+        ];
+      }),
+    ),
   };
 }
 
@@ -398,6 +447,141 @@ function verifyArtifactBytes(bundleRoot, artifact) {
       `${artifact.kind} artifact digest mismatch for ${name}: manifest ${artifact.digest}, payload ${digest}`,
     );
   }
+}
+
+function releaseAssetUrl(sourceUrl, assetName) {
+  const parsed = new URL(sourceUrl);
+  parsed.pathname = `${path.posix.dirname(parsed.pathname)}/${encodeURIComponent(assetName)}`;
+  return parsed.toString();
+}
+
+function finalizedDarwinCliArtifact({
+  bundleRoot,
+  manifest,
+  acceptedSources,
+  policy,
+}) {
+  const inventoryPath = path.join(
+    bundleRoot,
+    '.buildchain',
+    'artifacts',
+    'macos-arm64',
+    'manifest.json',
+  );
+  if (!fs.existsSync(inventoryPath)) return null;
+  const inventory = readJson(
+    inventoryPath,
+    'finalized macOS Buildchain artifact manifest',
+  );
+  if (
+    inventory.schemaVersion !== 1 ||
+    inventory.contract !== 'kungfu-buildchain-artifact' ||
+    inventory.platform?.id !== 'macos-arm64' ||
+    inventory.git?.sha !== manifest.sourceCommit ||
+    !acceptedSources.has(inventory.git?.sha) ||
+    inventory.expectedArtifacts?.ok !== true ||
+    !Array.isArray(inventory.files)
+  ) {
+    throw new Error('finalized macOS artifact manifest is not authoritative');
+  }
+  const files = [...inventory.files].sort((left, right) =>
+    String(left.path).localeCompare(String(right.path)),
+  );
+  if (
+    new Set(files.map((file) => file.path)).size !== files.length ||
+    files.some(
+      (file) =>
+        !Number.isSafeInteger(file.size) ||
+        file.size < 1 ||
+        !/^[a-f0-9]{64}$/i.test(file.sha256 || ''),
+    ) ||
+    inventory.summary?.fileCount !== files.length ||
+    inventory.summary?.totalBytes !==
+      files.reduce((total, file) => total + file.size, 0) ||
+    !/^[a-f0-9]{64}$/i.test(inventory.summary?.digest || '')
+  ) {
+    throw new Error('finalized macOS artifact inventory is invalid');
+  }
+  const cliName = artifactFileName(
+    manifest.artifacts.find((artifact) => artifact.kind === 'cli'),
+  );
+  const cliPath = `product/release/cli/${cliName}`;
+  const cliFiles = files.filter((file) => file.path === cliPath);
+  if (cliFiles.length !== 1) {
+    throw new Error(
+      `finalized macOS artifact manifest must bind exactly one ${cliPath}`,
+    );
+  }
+  verifyInventoryFileBytes(bundleRoot, cliFiles[0], 'finalized macOS artifact');
+  const providerPath =
+    '.buildchain/artifacts/signing/macos-arm64/kungfu-cli-macos-arm64/provider-evidence.json';
+  const providerFiles = files.filter((file) => file.path === providerPath);
+  if (providerFiles.length !== 1) {
+    throw new Error(
+      'finalized macOS artifact manifest must bind CLI provider evidence',
+    );
+  }
+  const providerEvidencePath = verifyInventoryFileBytes(
+    bundleRoot,
+    providerFiles[0],
+    'finalized macOS artifact',
+  );
+  const provider = readJson(
+    providerEvidencePath,
+    'finalized macOS CLI provider evidence',
+  );
+  if (
+    provider.contract !== 'kungfu-buildchain-apple-developer-id-evidence/v1' ||
+    provider.status !== 'passed' ||
+    provider.artifactKind !== 'archive' ||
+    String(provider.certificateSha1 || '').toLowerCase() !==
+      policy.identity.certificateSha1.toLowerCase() ||
+    provider.teamId !== policy.identity.teamId ||
+    provider.notarization?.status !== 'Accepted'
+  ) {
+    throw new Error('finalized macOS CLI provider evidence did not qualify');
+  }
+  return {
+    name: cliName,
+    size: cliFiles[0].size,
+    digest: `sha256:${cliFiles[0].sha256}`,
+    signature: `buildchain-retained:${providerPath}`,
+  };
+}
+
+function reconcileUnadvertisedDarwinManifest({
+  item,
+  credentialIsland,
+  acceptedSources,
+  policy,
+}) {
+  const manifest = structuredClone(item.manifest);
+  const desktop = manifest.artifacts.find(
+    (artifact) => artifact.kind === 'desktop',
+  );
+  const cli = manifest.artifacts.find((artifact) => artifact.kind === 'cli');
+  const finalizedCli = finalizedDarwinCliArtifact({
+    bundleRoot: item.bundleRoot,
+    manifest,
+    acceptedSources,
+    policy,
+  });
+  if (finalizedCli) {
+    Object.assign(cli, finalizedCli, {
+      url: releaseAssetUrl(cli.url, finalizedCli.name),
+    });
+  } else {
+    verifyArtifactBytes(item.bundleRoot, cli);
+  }
+  const finalizedDesktop = credentialIsland.artifacts.zip;
+  Object.assign(desktop, finalizedDesktop, {
+    url: releaseAssetUrl(desktop.url, finalizedDesktop.name),
+    signature: `buildchain-retained:${path.relative(
+      item.bundleRoot,
+      credentialIsland.evidencePath,
+    )}#zip`,
+  });
+  return { ...item, manifest };
 }
 
 function releaseCandidateSources(passport) {
@@ -439,6 +623,7 @@ function verifyBundle({
   expectedVersion,
   acceptedSources,
   releasePassportRoot,
+  qualificationPlatforms,
 }) {
   const manifestPaths = upgradeManifestFiles(bundleRoot);
   if (manifestPaths.length === 0) return null;
@@ -476,42 +661,49 @@ function verifyBundle({
     );
   }
 
-  const evidencePaths = filesNamed(bundleRoot, evidenceFileName);
-  if (evidencePaths.length !== 1) {
-    throw new Error(
-      `payload bundle ${bundleRoot} must contain exactly one ${evidenceFileName}; found ${evidencePaths.length}`,
+  let evidence = null;
+  if (qualificationPlatforms.has(manifest.platform)) {
+    const evidencePaths = filesNamed(bundleRoot, evidenceFileName);
+    if (evidencePaths.length !== 1) {
+      throw new Error(
+        `payload bundle ${bundleRoot} must contain exactly one ${evidenceFileName}; found ${evidencePaths.length}`,
+      );
+    }
+    evidence = readJson(
+      evidencePaths[0],
+      'retained upgrade qualification evidence',
+    );
+    const qualificationOptions = { releasePassportRoot };
+    assertUpgradePublicationEligible(
+      manifest,
+      'desktop',
+      evidence,
+      qualificationOptions,
+    );
+    assertUpgradePublicationEligible(
+      manifest,
+      'cli',
+      evidence,
+      qualificationOptions,
     );
   }
-  const evidence = readJson(
-    evidencePaths[0],
-    'retained upgrade qualification evidence',
-  );
-  const qualificationOptions = { releasePassportRoot };
-  assertUpgradePublicationEligible(
-    manifest,
-    'desktop',
-    evidence,
-    qualificationOptions,
-  );
-  assertUpgradePublicationEligible(
-    manifest,
-    'cli',
-    evidence,
-    qualificationOptions,
-  );
   const artifacts = new Map(
     (manifest.artifacts || []).map((artifact) => [artifact.kind, artifact]),
   );
-  verifyArtifactBytes(bundleRoot, artifacts.get('desktop'));
-  verifyArtifactBytes(bundleRoot, artifacts.get('cli'));
+  if (manifest.platform !== 'darwin' || qualificationPlatforms.has('darwin')) {
+    verifyArtifactBytes(bundleRoot, artifacts.get('desktop'));
+    verifyArtifactBytes(bundleRoot, artifacts.get('cli'));
+  }
   return {
+    bundleRoot,
+    manifest,
     identity: platformIdentity(manifest),
     platform: manifest.platform,
     architecture: manifest.architecture,
     manifestPath: manifestPaths[0],
     manifestPaths: manifestPaths.length,
-    evidenceRef: evidence.evidenceRef,
-    campaigns: evidence.campaigns.map((campaign) => ({
+    evidenceRef: evidence?.evidenceRef || null,
+    campaigns: (evidence?.campaigns || []).map((campaign) => ({
       campaignRoot: campaign.campaignRoot,
       channelIndexRoot: campaign.candidate.channelIndexRoot,
       releasePassportRoot: campaign.candidate.releasePassportRoot,
@@ -529,6 +721,7 @@ export function verifyUpgradePublicationPayloads({
   releaseCandidatePassportPath,
   expectedVersion,
   expectedPlatforms,
+  qualificationPlatforms,
 } = {}) {
   if (!payloadRoot || !fs.existsSync(payloadRoot)) {
     throw new Error(
@@ -565,12 +758,22 @@ export function verifyUpgradePublicationPayloads({
   const requiredPlatforms = new Set(
     expectedPlatforms || Object.keys(contract.currentClaims || {}),
   );
+  const qualificationRequiredPlatforms = new Set(
+    qualificationPlatforms || [...requiredPlatforms],
+  );
+  for (const platform of qualificationRequiredPlatforms) {
+    if (!requiredPlatforms.has(platform)) {
+      throw new Error(
+        `upgrade qualification platform ${platform} is not an expected publication platform`,
+      );
+    }
+  }
   const bundleRoots = fs
     .readdirSync(payloadRoot, { withFileTypes: true })
     .filter((entry) => entry.isDirectory())
     .map((entry) => path.join(payloadRoot, entry.name))
     .sort((left, right) => left.localeCompare(right));
-  const admitted = bundleRoots
+  let admitted = bundleRoots
     .map((bundleRoot) =>
       verifyBundle({
         bundleRoot,
@@ -578,6 +781,7 @@ export function verifyUpgradePublicationPayloads({
         expectedVersion,
         acceptedSources,
         releasePassportRoot,
+        qualificationPlatforms: qualificationRequiredPlatforms,
       }),
     )
     .filter(Boolean);
@@ -594,6 +798,18 @@ export function verifyUpgradePublicationPayloads({
   if (credentialIsland.length !== 1) {
     throw new Error(
       `upgrade publication requires exactly one authoritative macOS credential-island payload; found ${credentialIsland.length}`,
+    );
+  }
+  if (!qualificationRequiredPlatforms.has('darwin')) {
+    admitted = admitted.map((item) =>
+      item.platform === 'darwin'
+        ? reconcileUnadvertisedDarwinManifest({
+            item,
+            credentialIsland: credentialIsland[0],
+            acceptedSources,
+            policy: credentialPolicy,
+          })
+        : item,
     );
   }
   const platformCounts = new Map();
@@ -624,7 +840,10 @@ export function verifyUpgradePublicationPayloads({
     version: expectedVersion,
     releasePassportRoot,
     platforms: admitted.map((item) => item.identity).sort(),
-    evidenceRefs: admitted.map((item) => item.evidenceRef).sort(),
+    evidenceRefs: admitted
+      .map((item) => item.evidenceRef)
+      .filter(Boolean)
+      .sort(),
     campaignRoots: admitted
       .flatMap((item) =>
         item.campaigns.map((campaign) => campaign.campaignRoot),
@@ -658,10 +877,11 @@ export function verifyUpgradePublicationPayloads({
           ),
       ),
     manifests: admitted
-      .map(({ platform, architecture, manifestPath }) => ({
+      .map(({ platform, architecture, manifestPath, manifest }) => ({
         platform,
         architecture,
         manifestPath,
+        manifest,
       }))
       .sort((left, right) =>
         `${left.platform}-${left.architecture}`.localeCompare(

@@ -26,11 +26,15 @@ import {
   releaseChannelKeyId,
   releaseChannelTrust,
 } from '../product/scripts/release-channel-trust.mjs';
+import { bindProductReleaseCut } from '../product/scripts/upgrade-manifest.mjs';
 import {
   findAlphaPublicationTailPlan,
   verifyAlphaPublicationTailPlan,
 } from './alpha-publication-tail-plan.mjs';
-import { verifyUpgradePublicationPayloads } from './upgrade-publication-admission.mjs';
+import {
+  promotableUpgradePlatforms,
+  verifyUpgradePublicationPayloads,
+} from './upgrade-publication-admission.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const PRODUCT_ROOT = process.env.BUILDCHAIN_PUBLICATION_COMMIT_PRODUCT_ROOT
@@ -207,13 +211,24 @@ export function prepareAlphaPublication({
     payloadRoot: payloadDir,
     releaseCandidatePassportPath: candidatePassportPath,
     expectedVersion: version,
+    qualificationPlatforms: promotableUpgradePlatforms(),
   });
+  const publicAdmission = {
+    ...admission,
+    manifests: admission.manifests.map((entry) => ({
+      ...entry,
+      manifest: bindProductReleaseCut(entry.manifest, {
+        parentReleaseCutRoots: [],
+        sourceBuild: false,
+      }),
+    })),
+  };
   const generatedAt = now.toISOString();
   const expiresAt = new Date(
     now.getTime() + 30 * 24 * 60 * 60 * 1000,
   ).toISOString();
   const spec = channelSpecFromAdmission({
-    admission,
+    admission: publicAdmission,
     releaseCandidatePassportPath: candidatePassportPath,
     releasePassportPath,
     releasePassportRef: `buildchain:release-passport/${sourceSha}`,
@@ -256,7 +271,7 @@ export function prepareAlphaPublication({
     output: publicationDir,
   });
   return {
-    admission,
+    admission: publicAdmission,
     channelIndex,
     channelIndexPath,
     channelBytes: fs.readFileSync(channelIndexPath),

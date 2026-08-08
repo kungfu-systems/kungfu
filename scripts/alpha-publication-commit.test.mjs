@@ -117,6 +117,14 @@ test('sealed-candidate recovery passes the immutable candidate source only to th
   );
   assert.match(source, /root: PRODUCT_ROOT,[\s\S]*expectedSourceCommit:/u);
   assert.match(
+    source,
+    /qualificationPlatforms: promotableUpgradePlatforms\(\)/u,
+  );
+  assert.match(
+    source,
+    /bindProductReleaseCut\(entry\.manifest,[\s\S]*sourceBuild: false/u,
+  );
+  assert.match(
     workflow,
     /publication-commit-command: \$\{\{ startsWith\([\s\S]*'node scripts\/alpha-publication-commit\.mjs' \|\| '' \}\}/u,
   );

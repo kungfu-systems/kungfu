@@ -469,6 +469,47 @@ test('publication admission verifies three native payloads plus authoritative si
   });
 });
 
+test('publication admission keeps exact installer bytes while omitting unadvertised upgrade qualification claims', () => {
+  withFixture((value) => {
+    for (const platform of Object.values(value.platforms)) {
+      fs.rmSync(platform.evidencePath);
+    }
+    const admitted = verifyUpgradePublicationPayloads({
+      payloadRoot: value.payloadRoot,
+      releaseCandidatePassportPath: value.passportPath,
+      expectedVersion: VERSION,
+      qualificationPlatforms: [],
+    });
+    assert.deepEqual(admitted.platforms, [
+      'darwin-arm64',
+      'linux-x64',
+      'win32-x64',
+    ]);
+    assert.deepEqual(admitted.evidenceRefs, []);
+    assert.deepEqual(admitted.campaignRoots, []);
+    assert.equal(
+      admitted.credentialIsland.platformId,
+      'macos-arm64-credential',
+    );
+  });
+});
+
+test('publication admission still requires evidence for every advertised upgrade platform', () => {
+  withFixture((value) => {
+    fs.rmSync(value.platforms.linux.evidencePath);
+    assert.throws(
+      () =>
+        verifyUpgradePublicationPayloads({
+          payloadRoot: value.payloadRoot,
+          releaseCandidatePassportPath: value.passportPath,
+          expectedVersion: VERSION,
+          qualificationPlatforms: ['linux'],
+        }),
+      /must contain exactly one/u,
+    );
+  });
+});
+
 test('publication admission rejects a missing credential-island payload', () => {
   withFixture((value) => {
     fs.rmSync(value.credential.bundleRoot, {
