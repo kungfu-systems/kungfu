@@ -7,7 +7,15 @@ import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 
-import { verifyUpgradePublicationPayloads } from './upgrade-publication-admission.mjs';
+import {
+  PRODUCT_UPGRADE_PUBLICATION_ADMISSION_FILE,
+  PRODUCT_UPGRADE_PUBLICATION_ADMISSION_SCHEMA,
+  PRODUCT_UPGRADE_PUBLICATION_CAPSULE_FILE,
+  PRODUCT_UPGRADE_PUBLICATION_CAPSULE_SCHEMA,
+  verifyUpgradePublicationAdmission,
+  verifyUpgradePublicationPayloads,
+  writeUpgradePublicationAdmission,
+} from './upgrade-publication-admission.mjs';
 import {
   artifactSignatureStatement,
   loadUpgradeQualificationContract,
@@ -30,6 +38,22 @@ const RELEASE_CANDIDATE_PASSPORT_ROOT = qualificationContentRoot(
 
 function sha256(value) {
   return createHash('sha256').update(value).digest('hex');
+}
+
+function canonical(value) {
+  if (Array.isArray(value)) return value.map(canonical);
+  if (value && typeof value === 'object') {
+    return Object.fromEntries(
+      Object.entries(value)
+        .sort(([left], [right]) => left.localeCompare(right))
+        .map(([key, item]) => [key, canonical(item)]),
+    );
+  }
+  return value;
+}
+
+function contentRoot(value) {
+  return `sha256:${sha256(JSON.stringify(canonical(value)))}`;
 }
 
 function writeJson(filePath, value) {
@@ -206,6 +230,12 @@ function platformFixture(root, platform, architecture) {
   writeJson(desktopManifestPath, manifest);
   writeJson(cliManifestPath, manifest);
   writeJson(evidencePath, signedEvidence(manifest));
+  writeJson(path.join(bundleRoot, 'manifest.json'), {
+    schemaVersion: 1,
+    contract: 'kungfu-buildchain-artifact',
+    artifactName: `kungfu-${platform}-${SOURCE}`,
+    platform: { id: `${platform}-${architecture}` },
+  });
   return {
     bundleRoot,
     desktopPath,
@@ -369,6 +399,18 @@ function credentialFixture(root) {
   };
 }
 
+function supportFixture(root) {
+  const bundleRoot = path.join(root, 'payloads', 'kungfu-linux-arm64-core');
+  writeJson(path.join(bundleRoot, 'manifest.json'), {
+    schemaVersion: 1,
+    contract: 'kungfu-buildchain-artifact',
+    artifactName: `kungfu-linux-arm64-${SOURCE}`,
+    platform: { id: 'linux-arm64' },
+  });
+  fs.writeFileSync(path.join(bundleRoot, 'core-qualification.txt'), 'passed\n');
+  return { bundleRoot };
+}
+
 function fixture() {
   const root = fs.mkdtempSync(
     path.join(os.tmpdir(), 'kungfu-upgrade-publication-'),
@@ -385,12 +427,14 @@ function fixture() {
     win32: platformFixture(root, 'win32', 'x64'),
   };
   const credential = credentialFixture(root);
+  const support = supportFixture(root);
   return {
     root,
     payloadRoot: path.join(root, 'payloads'),
     passportPath,
     platforms,
     credential,
+    support,
   };
 }
 
@@ -575,5 +619,243 @@ test('publication admission rejects divergent duplicate release manifests', () =
     manifest.releaseChannel = 'release';
     writeJson(value.platforms.darwin.cliManifestPath, manifest);
     assert.throws(() => verify(value), /divergent copies/);
+  });
+});
+
+test('candidate finalization seals one rooted product admission receipt into its capsule', () => {
+  withFixture((value) => {
+    const outputRoot = path.join(
+      value.payloadRoot,
+      `kungfu-product-admission-${SOURCE}`,
+    );
+    const outputPath = path.join(
+      outputRoot,
+      PRODUCT_UPGRADE_PUBLICATION_ADMISSION_FILE,
+    );
+    const capsulePath = path.join(
+      outputRoot,
+      PRODUCT_UPGRADE_PUBLICATION_CAPSULE_FILE,
+    );
+    const written = writeUpgradePublicationAdmission({
+      payloadRoot: value.payloadRoot,
+      releaseCandidatePassportPath: value.passportPath,
+      expectedVersion: VERSION,
+      outputPath,
+      capsulePath,
+    });
+    assert.equal(
+      written.receipt.schema,
+      PRODUCT_UPGRADE_PUBLICATION_ADMISSION_SCHEMA,
+    );
+    assert.equal(
+      written.capsule.schema,
+      PRODUCT_UPGRADE_PUBLICATION_CAPSULE_SCHEMA,
+    );
+    assert.equal(
+      written.capsule.admission.receiptRoot,
+      written.receipt.receiptRoot,
+    );
+    assert.equal(written.receipt.claims.externalPublication, false);
+    assert.equal(written.receipt.candidate.bundleCount, 5);
+    assert.deepEqual(
+      written.receipt.candidate.bundles.map(({ role }) => role).sort(),
+      [
+        'credential-island',
+        'product-support',
+        'product-upgrade',
+        'product-upgrade',
+        'product-upgrade',
+      ],
+    );
+    const verified = verifyUpgradePublicationAdmission({
+      payloadRoot: value.payloadRoot,
+      releaseCandidatePassportPath: value.passportPath,
+      expectedVersion: VERSION,
+      expectedSourceSha: SOURCE,
+    });
+    assert.equal(verified.receiptRoot, written.receipt.receiptRoot);
+    assert.equal(verified.capsuleRoot, written.capsule.capsuleRoot);
+    assert.equal(verified.manifests.length, 3);
+  });
+});
+
+test('candidate finalization rejects a candidate without the exact five bundle roles', () => {
+  withFixture((value) => {
+    fs.rmSync(value.support.bundleRoot, { recursive: true });
+    assert.throws(
+      () =>
+        writeUpgradePublicationAdmission({
+          payloadRoot: value.payloadRoot,
+          releaseCandidatePassportPath: value.passportPath,
+          expectedVersion: VERSION,
+          outputPath: path.join(
+            value.payloadRoot,
+            'kungfu-product-admission',
+            PRODUCT_UPGRADE_PUBLICATION_ADMISSION_FILE,
+          ),
+        }),
+      /requires exactly 1 product-support bundle; found 0/,
+    );
+  });
+  withFixture((value) => {
+    const manifestPath = path.join(value.support.bundleRoot, 'manifest.json');
+    const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+    manifest.platform.id = 'linux-x64';
+    writeJson(manifestPath, manifest);
+    assert.throws(
+      () =>
+        writeUpgradePublicationAdmission({
+          payloadRoot: value.payloadRoot,
+          releaseCandidatePassportPath: value.passportPath,
+          expectedVersion: VERSION,
+          outputPath: path.join(
+            value.payloadRoot,
+            'kungfu-product-admission',
+            PRODUCT_UPGRADE_PUBLICATION_ADMISSION_FILE,
+          ),
+        }),
+      /product-support platform roles must be linux-arm64; found linux-x64/,
+    );
+  });
+});
+
+test('sealed product admission rejects candidate bytes changed after finalization', () => {
+  withFixture((value) => {
+    const outputRoot = path.join(value.payloadRoot, 'kungfu-product-admission');
+    writeUpgradePublicationAdmission({
+      payloadRoot: value.payloadRoot,
+      releaseCandidatePassportPath: value.passportPath,
+      expectedVersion: VERSION,
+      outputPath: path.join(
+        outputRoot,
+        PRODUCT_UPGRADE_PUBLICATION_ADMISSION_FILE,
+      ),
+      capsulePath: path.join(
+        outputRoot,
+        PRODUCT_UPGRADE_PUBLICATION_CAPSULE_FILE,
+      ),
+    });
+    fs.appendFileSync(value.platforms.linux.cliPath, 'post-seal-drift');
+    assert.throws(
+      () =>
+        verifyUpgradePublicationAdmission({
+          payloadRoot: value.payloadRoot,
+          releaseCandidatePassportPath: value.passportPath,
+          expectedVersion: VERSION,
+        }),
+      /product admission artifact root drift/,
+    );
+  });
+});
+
+test('sealed product admission rejects passport drift and a stale version', () => {
+  withFixture((value) => {
+    const outputRoot = path.join(value.payloadRoot, 'kungfu-product-admission');
+    writeUpgradePublicationAdmission({
+      payloadRoot: value.payloadRoot,
+      releaseCandidatePassportPath: value.passportPath,
+      expectedVersion: VERSION,
+      outputPath: path.join(
+        outputRoot,
+        PRODUCT_UPGRADE_PUBLICATION_ADMISSION_FILE,
+      ),
+      capsulePath: path.join(
+        outputRoot,
+        PRODUCT_UPGRADE_PUBLICATION_CAPSULE_FILE,
+      ),
+    });
+    assert.throws(
+      () =>
+        verifyUpgradePublicationAdmission({
+          payloadRoot: value.payloadRoot,
+          releaseCandidatePassportPath: value.passportPath,
+          expectedVersion: '4.0.0-alpha.2',
+        }),
+      /product admission version is stale/,
+    );
+    fs.appendFileSync(value.passportPath, ' ');
+    assert.throws(
+      () =>
+        verifyUpgradePublicationAdmission({
+          payloadRoot: value.payloadRoot,
+          releaseCandidatePassportPath: value.passportPath,
+          expectedVersion: VERSION,
+        }),
+      /product admission passport root drift/,
+    );
+  });
+});
+
+test('sealed product admission rejects receipt tampering', () => {
+  withFixture((value) => {
+    const outputRoot = path.join(value.payloadRoot, 'kungfu-product-admission');
+    const outputPath = path.join(
+      outputRoot,
+      PRODUCT_UPGRADE_PUBLICATION_ADMISSION_FILE,
+    );
+    writeUpgradePublicationAdmission({
+      payloadRoot: value.payloadRoot,
+      releaseCandidatePassportPath: value.passportPath,
+      expectedVersion: VERSION,
+      outputPath,
+      capsulePath: path.join(
+        outputRoot,
+        PRODUCT_UPGRADE_PUBLICATION_CAPSULE_FILE,
+      ),
+    });
+    const receipt = JSON.parse(fs.readFileSync(outputPath, 'utf8'));
+    receipt.admission.platforms = ['linux-x64'];
+    writeJson(outputPath, receipt);
+    assert.throws(
+      () =>
+        verifyUpgradePublicationAdmission({
+          payloadRoot: value.payloadRoot,
+          releaseCandidatePassportPath: value.passportPath,
+          expectedVersion: VERSION,
+        }),
+      /product admission receipt root drift/,
+    );
+  });
+});
+
+test('sealed product admission rejects semantically forged campaign roots after resealing', () => {
+  withFixture((value) => {
+    const outputRoot = path.join(value.payloadRoot, 'kungfu-product-admission');
+    const outputPath = path.join(
+      outputRoot,
+      PRODUCT_UPGRADE_PUBLICATION_ADMISSION_FILE,
+    );
+    const capsulePath = path.join(
+      outputRoot,
+      PRODUCT_UPGRADE_PUBLICATION_CAPSULE_FILE,
+    );
+    writeUpgradePublicationAdmission({
+      payloadRoot: value.payloadRoot,
+      releaseCandidatePassportPath: value.passportPath,
+      expectedVersion: VERSION,
+      outputPath,
+      capsulePath,
+    });
+    const receipt = JSON.parse(fs.readFileSync(outputPath, 'utf8'));
+    receipt.admission.updateCampaigns[0].targetVersion = '4.0.0-forged';
+    receipt.roots.campaign = contentRoot(receipt.admission.updateCampaigns);
+    const { receiptRoot: _oldReceiptRoot, ...receiptBody } = receipt;
+    receipt.receiptRoot = contentRoot(receiptBody);
+    writeJson(outputPath, receipt);
+    const capsule = JSON.parse(fs.readFileSync(capsulePath, 'utf8'));
+    capsule.admission.receiptRoot = receipt.receiptRoot;
+    capsule.admission.fileRoot = `sha256:${sha256(fs.readFileSync(outputPath))}`;
+    const { capsuleRoot: _oldCapsuleRoot, ...capsuleBody } = capsule;
+    capsule.capsuleRoot = contentRoot(capsuleBody);
+    writeJson(capsulePath, capsule);
+    assert.throws(
+      () =>
+        verifyUpgradePublicationAdmission({
+          payloadRoot: value.payloadRoot,
+          releaseCandidatePassportPath: value.passportPath,
+          expectedVersion: VERSION,
+        }),
+      /product admission campaign projection drift/,
+    );
   });
 });

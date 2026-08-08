@@ -307,6 +307,16 @@
           "steps": []
         },
         {
+          "id": "finalize-upgrade-publication-admission",
+          "authority": "qualification",
+          "publication": "none",
+          "receipt": "diagnostic",
+          "definitionDigest": "sha256:e698d3009296baa237dc1d9ae7037ce7b5beb21383a3b61c0d94874d40e61079",
+          "credentials": {"githubToken":"read","oidc":false,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
+          "externalActions": ["actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0","actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e","actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093","actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093","actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a"],
+          "steps": [{"index":1,"label":"name:Check out exact qualified source","definitionDigest":"sha256:29b1db9963a2029aabffae82fe0ec406fa6ec8d3a522d80493e9e84be9967dbe"},{"index":2,"label":"uses:actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e","definitionDigest":"sha256:0519ae7ef76b1b87fef7deb473d97cbf8f907413a7bd0c725596270fec7c0af6"},{"index":3,"label":"name:Restore exact release-candidate Passport","authority":"evidence-publication","definitionDigest":"sha256:fc271b217841d4cc2640243191c339fb5c8791016d544cdd3811d82da9463dc3"},{"index":4,"label":"name:Restore exact candidate payload artifacts","authority":"evidence-publication","definitionDigest":"sha256:a9a974cd4262757504227dffce39a79eaa9ae79e2b62e732e2fff263169bad2b"},{"index":5,"label":"name:Qualify exact product bytes and seal admission receipt","definitionDigest":"sha256:7462bdfc90943eb9f125e1672ade02f5890a898d7dc7dc381040524785cd6e25"},{"index":6,"label":"name:Upload sealed product admission capsule","authority":"evidence-publication","definitionDigest":"sha256:b03ecdcd6505304c03301561871cae5d959f46b4038ae510e6af96e7dfebfc01"}]
+        },
+        {
           "id": "kungfu-phase-b",
           "authority": "qualification",
           "publication": "none",

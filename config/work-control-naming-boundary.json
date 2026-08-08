@@ -43,6 +43,7 @@
         "tests/fixtures/exit-bundle-contract/"
       ],
       "files": [
+        "docs/architecture/assignment-runtime-r0-evidence.md",
         "docs/development/versioning.md",
         "docs/profiles/mission-control-workspaces.md",
         "docs/profiles/mission-control.md",
@@ -55,6 +56,7 @@
         "framework/core/src/python/kungfu/exit_verifier.contract.json",
         "framework/deprecation/deprecation-registry.json",
         "framework/exit/kungfu-exit-bundle.contract.json",
+        "framework/assignment-runtime/assignment-runtime.contract.json",
         "product/scripts/cli-surface-qualification.mjs",
         "scripts/check-exit-bundle-contract.test.mjs",
         "scripts/exit-clean-runtime-worker.py"
@@ -67,6 +69,7 @@
         "framework/core/tests/python/compatibility/"
       ],
       "files": [
+        "framework/assignment-runtime/assignment-runtime.test.mjs",
         "framework/core/tests/python/test_atlas_storage.py",
         "framework/core/tests/python/test_exit_bundle.py",
         "framework/core/tests/python/test_work_control_profile.py",

@@ -187,6 +187,10 @@ the stable-admission obligation without publishing a release.
   ADRs; do not use commit messages as implementation authority. Alpha and
   stable promotion semantics live in
   [`docs/development/version-release-design.md`](docs/development/version-release-design.md).
+  Product upgrade publication work must also follow
+  [`docs/development/publication-admission.md`](docs/development/publication-admission.md):
+  qualify exact candidate bytes once before finalization, then consume only the
+  rooted receipt and capsule at the release tail.
 - Write commit messages and PR descriptions in English, using lightweight
   [Conventional Commits](https://www.conventionalcommits.org/)
   (`type(scope): summary`).

@@ -1,0 +1,199 @@
+{
+  "schema": "kungfu.assignment-runtime.fixture-set/v1",
+  "cases": [
+    {
+      "id": "snapshot-success",
+      "request": {
+        "schema": "kungfu.assignment-runtime.request/v1",
+        "requestId": "request.snapshot.1",
+        "realm": { "realmId": "home", "realmKind": "local", "generation": "generation-7" },
+        "operation": "assignment.snapshot",
+        "client": { "clientId": "gui.work-dashboard", "kind": "gui", "requestedCapabilities": ["assignment.snapshot.read"] },
+        "payload": { "scope": "active" }
+      },
+      "response": {
+        "schema": "kungfu.assignment-runtime.response/v1",
+        "requestId": "request.snapshot.1",
+        "realm": { "realmId": "home", "realmKind": "local", "generation": "generation-7" },
+        "revision": { "value": "revision-42", "root": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "parentRoot": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb" },
+        "capabilities": { "supported": ["assignment.snapshot.read"], "selected": ["assignment.snapshot.read"], "unsupported": [] },
+        "status": "ok",
+        "result": { "schema": "kungfu.assignment-runtime.snapshot/v1", "assignments": [{ "initiativeId": "initiative-a", "assignmentId": "assignment-a", "phase": "executing" }] },
+        "attempt": { "attemptId": "attempt-a", "state": "executing", "claimId": "claim-a" },
+        "lease": { "leaseId": "lease-a", "state": "active", "expiresAt": "2026-08-08T00:00:00Z" },
+        "warrant": { "warrantRoot": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc", "state": "active", "scope": ["assignment-execution"] },
+        "factRefs": [{ "factRoot": "sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd", "surfaceId": "kungfu.initiative-assignment.assignment", "subjectKey": "assignment-a" }],
+        "episodeRefs": [{ "episodeRoot": "sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee" }],
+        "receipts": [{ "receiptRoot": "sha256:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", "kind": "snapshot" }],
+        "diagnostics": [],
+        "cursor": null,
+        "error": null
+      },
+      "expected": { "requestValid": true, "responseStatus": "ok" }
+    },
+    {
+      "id": "stale-revision",
+      "request": {
+        "schema": "kungfu.assignment-runtime.request/v1",
+        "requestId": "request.command.stale",
+        "realm": { "realmId": "home", "realmKind": "local", "generation": "generation-7" },
+        "operation": "command.submit",
+        "client": { "clientId": "cli", "kind": "cli", "requestedCapabilities": ["assignment.command.submit"] },
+        "payload": { "schema": "kungfu.assignment-runtime.command/v1", "commandId": "command-stale", "type": "assignment.stage", "target": { "initiativeId": "initiative-a", "assignmentId": "assignment-a" }, "expectedRevision": { "value": "revision-41", "root": "sha256:1111111111111111111111111111111111111111111111111111111111111111", "parentRoot": null }, "idempotencyKey": "idem-stale", "attempt": null, "lease": null, "warrant": null, "arguments": {} }
+      },
+      "response": {
+        "schema": "kungfu.assignment-runtime.response/v1",
+        "requestId": "request.command.stale",
+        "realm": { "realmId": "home", "realmKind": "local", "generation": "generation-7" },
+        "revision": { "value": "revision-42", "root": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "parentRoot": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb" },
+        "capabilities": { "supported": ["assignment.command.submit"], "selected": ["assignment.command.submit"], "unsupported": [] },
+        "status": "error", "result": null, "receipts": [], "diagnostics": [],
+        "error": { "code": "stale-revision", "message": "expected revision is no longer current", "retryable": true, "details": { "currentRevision": "revision-42" } }
+      },
+      "expected": { "requestValid": true, "responseStatus": "error", "errorCode": "stale-revision" }
+    },
+    {
+      "id": "duplicate-command-replay",
+      "request": {
+        "schema": "kungfu.assignment-runtime.request/v1",
+        "requestId": "request.command.replay",
+        "realm": { "realmId": "home", "realmKind": "local", "generation": "generation-7" },
+        "operation": "command.submit",
+        "client": { "clientId": "agent", "kind": "agent", "requestedCapabilities": ["assignment.command.submit"] },
+        "payload": { "schema": "kungfu.assignment-runtime.command/v1", "commandId": "command-replay", "type": "assignment.kickoff", "target": { "initiativeId": "initiative-a", "assignmentId": "assignment-a" }, "expectedRevision": { "value": "revision-42", "root": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "parentRoot": null }, "idempotencyKey": "idem-replay", "attempt": { "attemptId": "attempt-a", "state": "claimed", "claimId": "claim-a" }, "lease": { "leaseId": "lease-a", "state": "active", "expiresAt": "2026-08-08T00:00:00Z" }, "warrant": null, "arguments": {} }
+      },
+      "response": {
+        "schema": "kungfu.assignment-runtime.response/v1",
+        "requestId": "request.command.replay",
+        "realm": { "realmId": "home", "realmKind": "local", "generation": "generation-7" },
+        "revision": { "value": "revision-43", "root": "sha256:2222222222222222222222222222222222222222222222222222222222222222", "parentRoot": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" },
+        "capabilities": { "supported": ["assignment.command.submit"], "selected": ["assignment.command.submit"], "unsupported": [] },
+        "status": "ok",
+        "result": { "command": { "commandId": "command-replay", "disposition": "replayed", "originalReceiptRoot": "sha256:3333333333333333333333333333333333333333333333333333333333333333" } },
+        "receipts": [{ "receiptRoot": "sha256:3333333333333333333333333333333333333333333333333333333333333333", "kind": "command" }],
+        "diagnostics": [], "error": null
+      },
+      "expected": { "requestValid": true, "responseStatus": "ok", "commandDisposition": "replayed" }
+    },
+    {
+      "id": "unsupported-capability",
+      "request": {
+        "schema": "kungfu.assignment-runtime.request/v1",
+        "requestId": "request.unsupported",
+        "realm": { "realmId": "home", "realmKind": "local", "generation": "generation-7" },
+        "operation": "capabilities.discover",
+        "client": { "clientId": "kfx.example", "kind": "kfx", "requestedCapabilities": ["assignment.cluster.rebalance"] },
+        "payload": {}
+      },
+      "response": {
+        "schema": "kungfu.assignment-runtime.response/v1",
+        "requestId": "request.unsupported",
+        "realm": { "realmId": "home", "realmKind": "local", "generation": "generation-7" },
+        "revision": { "value": "revision-42", "root": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "parentRoot": null },
+        "capabilities": { "supported": ["assignment.capabilities.discover"], "selected": [], "unsupported": ["assignment.cluster.rebalance"] },
+        "status": "error", "result": null, "receipts": [], "diagnostics": [],
+        "error": { "code": "unsupported-capability", "message": "requested capability is not available", "retryable": false, "details": {} }
+      },
+      "expected": { "requestValid": false, "requestCode": "unsupported-capability", "responseStatus": "error", "errorCode": "unsupported-capability" }
+    },
+    {
+      "id": "malformed-identity",
+      "request": {
+        "schema": "kungfu.assignment-runtime.request/v1",
+        "requestId": "request.bad-identity",
+        "realm": { "realmId": "", "realmKind": "local", "generation": "generation-7" },
+        "operation": "assignment.get",
+        "client": { "clientId": "cli", "kind": "cli", "requestedCapabilities": ["assignment.get.read"] },
+        "payload": { "initiativeId": "initiative-a", "assignmentId": "assignment-a" }
+      },
+      "response": null,
+      "expected": { "requestValid": false, "requestCode": "malformed-identity" }
+    },
+    {
+      "id": "ambiguous-identity",
+      "request": {
+        "schema": "kungfu.assignment-runtime.request/v1",
+        "requestId": "request.ambiguous",
+        "realm": { "realmId": "home", "realmKind": "local", "generation": "generation-7" },
+        "operation": "assignment.get",
+        "client": { "clientId": "gui", "kind": "gui", "requestedCapabilities": ["assignment.get.read"] },
+        "payload": { "legacyAlias": "go-1" }
+      },
+      "response": {
+        "schema": "kungfu.assignment-runtime.response/v1",
+        "requestId": "request.ambiguous",
+        "realm": { "realmId": "home", "realmKind": "local", "generation": "generation-7" },
+        "revision": { "value": "revision-42", "root": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "parentRoot": null },
+        "capabilities": { "supported": ["assignment.get.read"], "selected": ["assignment.get.read"], "unsupported": [] },
+        "status": "error", "result": null, "receipts": [], "diagnostics": [],
+        "error": { "code": "ambiguous-identity", "message": "legacy alias resolves to more than one canonical identity", "retryable": false, "details": { "candidateCount": 2 } }
+      },
+      "expected": { "requestValid": true, "responseStatus": "error", "errorCode": "ambiguous-identity" }
+    },
+    {
+      "id": "backend-unavailable",
+      "request": {
+        "schema": "kungfu.assignment-runtime.request/v1",
+        "requestId": "request.backend-down",
+        "realm": { "realmId": "home", "realmKind": "local", "generation": "generation-7" },
+        "operation": "assignment.query",
+        "client": { "clientId": "agent", "kind": "agent", "requestedCapabilities": ["assignment.query.read"] },
+        "payload": { "query": "active" }
+      },
+      "response": {
+        "schema": "kungfu.assignment-runtime.response/v1",
+        "requestId": "request.backend-down",
+        "realm": { "realmId": "home", "realmKind": "local", "generation": "generation-7" },
+        "revision": { "value": "revision-42", "root": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "parentRoot": null },
+        "capabilities": { "supported": ["assignment.query.read"], "selected": ["assignment.query.read"], "unsupported": [] },
+        "status": "error", "result": null, "receipts": [],
+        "diagnostics": [{ "code": "runtime-unavailable", "message": "realm authority is unavailable", "severity": "error", "recovery": ["diagnostics.get", "recovery.plan"] }],
+        "error": { "code": "backend-unavailable", "message": "realm authority is unavailable", "retryable": true, "details": {} }
+      },
+      "expected": { "requestValid": true, "responseStatus": "error", "errorCode": "backend-unavailable" }
+    },
+    {
+      "id": "event-resume-gap",
+      "request": {
+        "schema": "kungfu.assignment-runtime.request/v1",
+        "requestId": "request.resume-gap",
+        "realm": { "realmId": "home", "realmKind": "local", "generation": "generation-7" },
+        "operation": "events.watch",
+        "client": { "clientId": "gui", "kind": "gui", "requestedCapabilities": ["assignment.events.watch"] },
+        "cursor": { "streamId": "assignment-events", "generation": "generation-7", "sequence": "3", "eventRoot": "sha256:4444444444444444444444444444444444444444444444444444444444444444" },
+        "payload": {}
+      },
+      "response": {
+        "schema": "kungfu.assignment-runtime.response/v1",
+        "requestId": "request.resume-gap",
+        "realm": { "realmId": "home", "realmKind": "local", "generation": "generation-7" },
+        "revision": { "value": "revision-42", "root": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "parentRoot": null },
+        "capabilities": { "supported": ["assignment.events.watch"], "selected": ["assignment.events.watch"], "unsupported": [] },
+        "status": "error", "result": { "recoverySnapshotRevision": "revision-42" }, "receipts": [], "diagnostics": [],
+        "error": { "code": "event-resume-gap", "message": "cursor is outside retained history", "retryable": true, "details": { "oldestSequence": "10" } }
+      },
+      "expected": { "requestValid": true, "responseStatus": "error", "errorCode": "event-resume-gap" }
+    },
+    {
+      "id": "authority-bypass",
+      "request": {
+        "schema": "kungfu.assignment-runtime.request/v1",
+        "requestId": "request.bypass",
+        "realm": { "realmId": "home", "realmKind": "local", "generation": "generation-7" },
+        "operation": "command.submit",
+        "client": { "clientId": "kfx.example", "kind": "kfx", "requestedCapabilities": ["assignment.command.submit"] },
+        "payload": { "schema": "kungfu.assignment-runtime.command/v1", "commandId": "command-bypass", "type": "assignment.stage", "target": { "initiativeId": "initiative-a", "assignmentId": "assignment-a" }, "expectedRevision": { "value": "revision-42", "root": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "parentRoot": null }, "idempotencyKey": "idem-bypass", "attempt": null, "lease": null, "warrant": null, "arguments": { "directStorageMutation": { "storagePath": ".private-runtime" } } }
+      },
+      "response": {
+        "schema": "kungfu.assignment-runtime.response/v1",
+        "requestId": "request.bypass",
+        "realm": { "realmId": "home", "realmKind": "local", "generation": "generation-7" },
+        "revision": { "value": "revision-42", "root": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "parentRoot": null },
+        "capabilities": { "supported": ["assignment.command.submit"], "selected": ["assignment.command.submit"], "unsupported": [] },
+        "status": "error", "result": null, "receipts": [], "diagnostics": [],
+        "error": { "code": "authority-bypass", "message": "caller attempted direct storage mutation", "retryable": false, "details": {} }
+      },
+      "expected": { "requestValid": false, "requestCode": "authority-bypass", "responseStatus": "error", "errorCode": "authority-bypass" }
+    }
+  ]
+}
