@@ -1,10 +1,10 @@
 {
   "schemaVersion": 1,
   "contract": "kungfu-buildchain-release-passport",
-  "generatedAt": "2026-08-08T09:03:22.935Z",
+  "generatedAt": "2026-08-08T09:27:03.433Z",
   "surfaceTimestampPolicy": {
-    "generatedAt": "2026-08-08T09:03:22.935Z",
-    "publishedAt": "2026-08-08T09:03:22.935Z",
+    "generatedAt": "2026-08-08T09:27:03.433Z",
+    "publishedAt": "2026-08-08T09:27:03.433Z",
     "reproducible": true,
     "timestampPolicy": "ci-injected",
     "deterministicInputs": [
@@ -60,7 +60,7 @@
     "treeEquivalent": true,
     "publishToolingSha": "f9e6b0e34bcdd6407b2a18206ace7982d64de2c8",
     "releaseStateRef": "refs/heads/buildchain/release-state/4-0-0-alpha-1",
-    "releaseStateSha": "3e2791e6ccff3523fbad5ddc91b6222c6f619b73",
+    "releaseStateSha": "",
     "package": {
       "name": "@kungfu-tech/buildchain",
       "version": "4.0.0-alpha.1"
@@ -90,7 +90,7 @@
     "statePath": "/home/runner/work/kungfu/kungfu/.buildchain/release-state/v4.0.0-alpha.1.json",
     "stateSha": "",
     "evidencePath": "/home/runner/work/kungfu/kungfu/.buildchain/release-evidence/v4.0.0-alpha.1/evidence.json",
-    "updatedAt": "2026-08-08T09:03:09.756Z",
+    "updatedAt": "2026-08-08T09:26:51.735Z",
     "result": {
       "command": "finalize",
       "validation": {
@@ -104,16 +104,16 @@
     "contract": "buildchain.promotion-routing/v1",
     "router": {
       "ref": "train/v3/v3.0/resume-candidate-run",
-      "sha": "1eaf16504c5b5940eca334fc7ff89f54285da444"
+      "sha": "7a7eecae1ba1c435a15bb3f181c41223a75fd1cc"
     },
     "shell": {
       "channel": "alpha",
       "ref": "train/v3/v3.0/resume-candidate-run",
-      "sha": "1eaf16504c5b5940eca334fc7ff89f54285da444"
+      "sha": "7a7eecae1ba1c435a15bb3f181c41223a75fd1cc"
     },
     "runtime": {
       "requestedRef": "train/v3/v3.0/resume-candidate-run",
-      "resolvedSha": "1eaf16504c5b5940eca334fc7ff89f54285da444"
+      "resolvedSha": "7a7eecae1ba1c435a15bb3f181c41223a75fd1cc"
     },
     "contractLock": {
       "path": ".buildchain/alpha-contract-lock.json",
@@ -103280,7 +103280,7 @@
         },
         "sourceVerification": {
           "status": "passed",
-          "verifiedAt": "2026-08-08T09:03:22.936Z",
+          "verifiedAt": "2026-08-08T09:27:03.433Z",
           "required": true,
           "surfaces": [
             {
@@ -103463,7 +103463,7 @@
         },
         "artifactVerification": {
           "status": "passed",
-          "verifiedAt": "2026-08-08T09:03:22.936Z",
+          "verifiedAt": "2026-08-08T09:27:03.433Z",
           "surfaces": [
             {
               "name": "kungfu-config",
@@ -103862,7 +103862,7 @@
         },
         "sourceVerification": {
           "status": "passed",
-          "verifiedAt": "2026-08-08T09:03:22.936Z",
+          "verifiedAt": "2026-08-08T09:27:03.433Z",
           "required": false,
           "surfaces": [
             {
@@ -103901,7 +103901,7 @@
         },
         "artifactVerification": {
           "status": "passed",
-          "verifiedAt": "2026-08-08T09:03:22.936Z",
+          "verifiedAt": "2026-08-08T09:27:03.433Z",
           "surfaces": [
             {
               "name": "documentation-atlas",
@@ -103956,7 +103956,7 @@
     "schemaVersion": 1,
     "contract": "kungfu-buildchain-kfd-2-release-trust-passport-audit",
     "status": "downgraded",
-    "verifiedAt": "2026-08-08T09:03:23.021Z",
+    "verifiedAt": "2026-08-08T09:27:03.501Z",
     "auditBoundary": {
       "scope": "public release claims visible to humans or agents",
       "policy": "public claims must bind declared sources, machine-readable evidence, hashes, artifact coordinates, verification results, audit boundaries, responsibility state, and residual risk"
@@ -120593,7 +120593,7 @@
         },
         "comparison": {
           "status": "passed",
-          "verifiedAt": "2026-08-08T09:03:22.993Z",
+          "verifiedAt": "2026-08-08T09:27:03.478Z",
           "supportLevel": "release",
           "declaredPublicSurfaceCount": 374,
           "declaredShippedPublicSurfaceCount": 374,
@@ -120624,11 +120624,11 @@
         "standardRevision": 10,
         "sourceSha": "f9e6b0e34bcdd6407b2a18206ace7982d64de2c8",
         "evidenceCut": {
-          "generatedAt": "2026-08-08T09:03:18.644Z",
-          "expiresAt": "2026-08-09T09:03:18.644Z"
+          "generatedAt": "2026-08-08T09:27:00.416Z",
+          "expiresAt": "2026-08-09T09:27:00.416Z"
         },
         "status": "passed",
-        "gateRoot": "sha256:632e7cb53e95e7c3edec3b3697bf4aea887912d1157d168f4f69d207feccf953",
+        "gateRoot": "sha256:209ea160cd708685cc8f03943e72b117f2ae1aa336cf7a65c5c07cbd5f247cdc",
         "issueCount": 0
       },
       {
@@ -120636,11 +120636,11 @@
         "standardRevision": 7,
         "sourceSha": "f9e6b0e34bcdd6407b2a18206ace7982d64de2c8",
         "evidenceCut": {
-          "generatedAt": "2026-08-08T09:03:18.644Z",
-          "expiresAt": "2026-08-09T09:03:18.644Z"
+          "generatedAt": "2026-08-08T09:27:00.416Z",
+          "expiresAt": "2026-08-09T09:27:00.416Z"
         },
         "status": "passed",
-        "gateRoot": "sha256:f38ec09c57031899c68c38cd108e9ac5a8325d4ef6bd532a840529644e640983",
+        "gateRoot": "sha256:ea39144c7ac0611be39cdca022a7055a0b40e576f1a67929c97e24ad5562d8c5",
         "issueCount": 0
       },
       {
@@ -120648,11 +120648,11 @@
         "standardRevision": 8,
         "sourceSha": "f9e6b0e34bcdd6407b2a18206ace7982d64de2c8",
         "evidenceCut": {
-          "generatedAt": "2026-08-08T09:03:18.644Z",
-          "expiresAt": "2026-08-09T09:03:18.644Z"
+          "generatedAt": "2026-08-08T09:27:00.416Z",
+          "expiresAt": "2026-08-09T09:27:00.416Z"
         },
         "status": "passed",
-        "gateRoot": "sha256:68d064efa95132046184e374d16e35fdb7bfe2801f4d797f8d982297c9156c19",
+        "gateRoot": "sha256:90bb5f482100b60111a7f22cd2e9752dec7e0c489ea48160d84f94769b9a9fe2",
         "issueCount": 0
       }
     ],
@@ -121243,7 +121243,7 @@
       "Candidate, unsupported, draft, and non-qualifying matrix states cannot be widened by this projection."
     ],
     "issues": [],
-    "projectionRoot": "sha256:b8c934a8533e070070830132e820b98f3e164d6c38767eec846bb2db8e826539"
+    "projectionRoot": "sha256:744998a3af8ca26779f81fa4228143c9a75103ee7b6b2f3eed6a21b6a0c98797"
   },
   "invariantPassports": {
     "contract": "buildchain.invariant-passport-gate/v1",
@@ -121251,7 +121251,7 @@
     "passports": [
       {
         "path": "",
-        "sha256": "01442717fddf66d2bd90b606289656e0c9e7687093c3711b9980878f874c89b2",
+        "sha256": "c48e7c2cb0de3693d6ebe57e58c2fd37f5cc53c9944d0e79a04f8a6f00be8e63",
         "schema": "kungfu.invariant-passport/v1",
         "product": "Kungfu",
         "passportRoot": "sha256:7e1aa237969e58fedd4465cb2637a706030fc7a4bb5d9d7bfa35b5035803e402",
