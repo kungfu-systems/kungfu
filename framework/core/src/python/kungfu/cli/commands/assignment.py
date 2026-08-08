@@ -7,6 +7,7 @@ from __future__ import annotations
 import json
 import os
 from datetime import UTC, datetime, timedelta
+from functools import partial, reduce
 from pathlib import Path
 import uuid
 
@@ -23,7 +24,6 @@ from kungfu.agent import run_agent
 from kungfu.agent import resources as agent_resources
 from kungfu.cli.commands import (
     PrioritizedCommandGroup,
-    assignment_identity_options,
     kfc,
 )
 from kungfu.cli.commands import assignment_review
@@ -33,6 +33,20 @@ from kungfu.workspace import prepare_workspace_write, resolve_workspace_target
 from kungfu.assignment_lifecycle.ports import AssignmentRuntime
 
 assignment_context = kfc.pass_context()
+assignment_identity_options = partial(
+    reduce,
+    lambda decorated, decorator: decorator(decorated),
+    reversed(
+        [
+            click.option(
+                "--workspace", "workspace_root", type=click.Path(file_okay=False)
+            ),
+            click.option("--home", is_flag=True),
+            click.option("--initiative-id", required=True),
+            click.option("--assignment-id", required=True),
+        ]
+    ),
+)
 
 
 @kfc.group(
