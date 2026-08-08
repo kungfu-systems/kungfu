@@ -2,11 +2,11 @@
   "schema": "kungfu.code-complexity-baseline-reconstruction/v1",
   "expected_old_measurement_root": "sha256:4fd6d3566bd76b1f999f8528bd3bb60f301a4616fc56c971ff421c5ec22a7b2f",
   "expected_old_baseline_ref": "a7605d74513867b94851a6763c51fcdc803e5d30",
-  "new_measurement_root": "sha256:9d9309631628ce226db181d91b0ddf1cc69284b54cc33d933f803979c26a494d",
-  "new_baseline_ref": "f30baffac6f7c7f4ec01121ea64bffaf1a933fe4",
+  "new_measurement_root": "sha256:33cee74675a3bf7872de493133761e9fa50e2e93b0347c686b9389cdb286dd86",
+  "new_baseline_ref": "9f7e254d674c1a98636ccda4b39747b13ede4848",
   "changed_measurements": 1519,
   "aggregate_line_delta": 1719629,
-  "change_manifest_root": "sha256:0f25477909381616c953b5693296d7c12674f55296dd038b39b15296b1882f9c",
+  "change_manifest_root": "sha256:305166ffc965eaf52d4747de1668649c14566e70986cec3486f1a8aa4c0249a2",
   "reconstruction_scope": "full-exact-baseline",
   "reconstruction_reason_codes": [
     "protected-baseline-lag",
@@ -23,7 +23,7 @@
     "issued_at": "2026-08-08T10:24:00Z",
     "approved_at": "2026-08-08T10:25:00Z",
     "expires_at": "2026-08-15T10:25:00Z",
-    "authorization_root": "sha256:e907b7539f0dbd2924fcd1ef5463bda29a5febe89a143b01033765830f1c299c",
-    "signature": "MR5OhExmSsCRSaK/ayY37Tsgo/cazAS1365S1P8tm1HauOwkBjC6F0zxRdbyevBjehg7NYGdz/fyXTgUhhjZDA=="
+    "authorization_root": "sha256:ddc939e1155d399df0914545733ffe7797f44eccd0be7d2da039a5a53be89d94",
+    "signature": "xTjVPLsEHHTJljTyI38zpxgbUjnA7J7cJeIk9B36iaUJdPOO+RZw4/mc/xg0GywXeZz4KTdxV4hEI51uuD19DA=="
   }
 }

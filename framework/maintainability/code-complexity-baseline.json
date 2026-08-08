@@ -1,7 +1,7 @@
 {
   "schema": "kungfu.code-complexity-budget-baseline/v1",
-  "policyRoot": "sha256:fae78e83de44788a83b99319f28393686694c71d76a146e66a6a6ba41a0d0883",
-  "baselineRef": "f30baffac6f7c7f4ec01121ea64bffaf1a933fe4",
+  "policyRoot": "sha256:b690d6b4da23cba79ff585db1c05797d77c3210b997f9459c13f88f5fe93e5a2",
+  "baselineRef": "9f7e254d674c1a98636ccda4b39747b13ede4848",
   "classification": "ordered-policy-and-content-marker/v1",
   "calibration": {
     "groupBy": [
@@ -36006,7 +36006,7 @@
       "language": "declarative",
       "owner": "framework/maintainability",
       "lines": 165,
-      "contentRoot": "sha256:c53bf3d72b12a167da47d1a8564efd4c39c68d240d9f64c965ace880fe78b324"
+      "contentRoot": "sha256:a2147f1b71301798f82bf6cdffddff6c21c79019f39e59d60970d66a8a7e6919"
     },
     {
       "path": "framework/maintainability/complexity-governance.mjs",
@@ -42396,7 +42396,7 @@
       "language": "javascript-typescript",
       "owner": "shifu/source-tooling",
       "lines": 825,
-      "contentRoot": "sha256:7a00a8d6e649ae8b0d2050748e2575582db98244a92ade808f56e61959fe7990"
+      "contentRoot": "sha256:a2c64b19f5664c5b7a0a1798155bf6e9feae9024206f78a7fcc7dcf0788fd6c3"
     },
     {
       "path": "scripts/shifu-gate-cli.mjs",
@@ -44416,5 +44416,5 @@
     }
   ],
   "issues": [],
-  "measurementRoot": "sha256:9d9309631628ce226db181d91b0ddf1cc69284b54cc33d933f803979c26a494d"
+  "measurementRoot": "sha256:33cee74675a3bf7872de493133761e9fa50e2e93b0347c686b9389cdb286dd86"
 }
