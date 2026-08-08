@@ -31,10 +31,7 @@ import {
   findAlphaPublicationTailPlan,
   verifyAlphaPublicationTailPlan,
 } from './alpha-publication-tail-plan.mjs';
-import {
-  promotableUpgradePlatforms,
-  verifyUpgradePublicationPayloads,
-} from './upgrade-publication-admission.mjs';
+import { verifyUpgradePublicationAdmission } from './upgrade-publication-admission.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const PRODUCT_ROOT = process.env.BUILDCHAIN_PUBLICATION_COMMIT_PRODUCT_ROOT
@@ -358,11 +355,11 @@ export function prepareAlphaPublication({
       'publication signing key does not match the committed active trust key',
     );
   }
-  const admission = verifyUpgradePublicationPayloads({
+  const admission = verifyUpgradePublicationAdmission({
     payloadRoot: payloadDir,
     releaseCandidatePassportPath: candidatePassportPath,
     expectedVersion: version,
-    qualificationPlatforms: promotableUpgradePlatforms(),
+    expectedSourceSha: sourceSha,
   });
   const publicAdmission = {
     ...admission,

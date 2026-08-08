@@ -38,6 +38,8 @@ class ManagedRunCoordinator:
         prompt: str,
         timeout_seconds: float,
         event_sink: Callable[[Mapping[str, Any]], None] | None = None,
+        session_started: Callable[[Mapping[str, str], Mapping[str, Any]], None]
+        | None = None,
     ) -> tuple[Any, dict[str, Any]]:
         provider = str(selected["provider"])
         ref = self.session_ref(work, run_id)
@@ -82,6 +84,8 @@ class ManagedRunCoordinator:
                 "workConsoleId": actual_console,
                 "sessionAttemptId": actual_attempt,
             }
+        if session_started is not None:
+            session_started(ref, started)
         ready = self.wait_for_session(
             invoke,
             ref,

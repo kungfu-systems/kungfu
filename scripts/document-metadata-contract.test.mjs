@@ -862,6 +862,42 @@ test('accepts reachable full-SHA implementation and closure evidence', () => {
   assert.deepEqual(findings, []);
 });
 
+test('batches ADR evidence reachability into a constant number of Git processes', () => {
+  const { root, file, commit } = evidenceFixture();
+  const missing = Array.from({ length: 32 }, (_, index) =>
+    (index + 1).toString(16).padStart(40, '0'),
+  );
+  const target = path.join(root, file);
+  fs.writeFileSync(
+    target,
+    fs
+      .readFileSync(target, 'utf8')
+      .replace(
+        /^implementation_commits:.*$/m,
+        `implementation_commits: [${[commit, ...missing].join(', ')}]`,
+      ),
+  );
+
+  const originalSpawnSync = childProcess.spawnSync;
+  let gitSpawns = 0;
+  childProcess.spawnSync = (...args) => {
+    if (args[0] === 'git') gitSpawns += 1;
+    return originalSpawnSync(...args);
+  };
+  let findings;
+  try {
+    findings = validateDocumentMetadata({ root, files: [file], contract });
+  } finally {
+    childProcess.spawnSync = originalSpawnSync;
+  }
+
+  assert.equal(
+    findings.filter((finding) => finding.code === 'adr-evidence-commit').length,
+    missing.length,
+  );
+  assert.equal(gitSpawns, 3);
+});
+
 test('pins PR evidence reachability to the source-acceptance base SHA', () => {
   const base = 'a'.repeat(40);
   const documentation = sourceAcceptancePlan([], base).find(

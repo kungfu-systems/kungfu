@@ -7,6 +7,7 @@ from __future__ import annotations
 import json
 import os
 from datetime import UTC, datetime, timedelta
+from functools import partial, reduce
 from pathlib import Path
 import uuid
 
@@ -21,7 +22,10 @@ from kungfu import dogfood as dogfood_api
 from kungfu import profile_composition, profile_sdk
 from kungfu.agent import run_agent
 from kungfu.agent import resources as agent_resources
-from kungfu.cli.commands import PrioritizedCommandGroup, kfc
+from kungfu.cli.commands import (
+    PrioritizedCommandGroup,
+    kfc,
+)
 from kungfu.cli.commands import assignment_review
 from kungfu.cli.surface_contract import surface
 from kungfu.storage import service as storage_service
@@ -29,6 +33,20 @@ from kungfu.workspace import prepare_workspace_write, resolve_workspace_target
 from kungfu.assignment_lifecycle.ports import AssignmentRuntime
 
 assignment_context = kfc.pass_context()
+assignment_identity_options = partial(
+    reduce,
+    lambda decorated, decorator: decorator(decorated),
+    reversed(
+        [
+            click.option(
+                "--workspace", "workspace_root", type=click.Path(file_okay=False)
+            ),
+            click.option("--home", is_flag=True),
+            click.option("--initiative-id", required=True),
+            click.option("--assignment-id", required=True),
+        ]
+    ),
+)
 
 
 @kfc.group(
@@ -649,7 +667,7 @@ def start_work(
         admission_summary=_admission_summary,
         profile_action=_profile_action,
         claim_summary=_claim_summary,
-        advance=_advance,
+        advance_bound=lambda *args: _advance(*args, native_work_bound=True),
         kickoff_summary=_kickoff_summary,
         project_prompt=_project_work_prompt,
         agent_report_summary=_agent_report_summary,
@@ -1269,22 +1287,9 @@ def relation_event(
         _emit(result)
 
 
-def _identity_options(function):
-    for decorator in reversed(
-        [
-            click.option(
-                "--workspace", "workspace_root", type=click.Path(file_okay=False)
-            ),
-            click.option("--home", is_flag=True),
-            click.option("--initiative-id", required=True),
-            click.option("--assignment-id", required=True),
-        ]
-    ):
-        function = decorator(function)
-    return function
-
-
-_CLOSE_SERVICES = assignment_close.CloseServices(
+_close_services = lambda: assignment_close.CloseServices(  # noqa: E731
+    # Resolve the composition-root ports at invocation time. Tests and native
+    # embeddings may replace these ports after importing the CLI module.
     runtime=_assignment_runtime,
     status=_status,
     receipt=_work_start_receipt,
@@ -1297,7 +1302,7 @@ _CLOSE_SERVICES = assignment_close.CloseServices(
     name="close-resume",
     help="restore reviewed or closed Starter Work without writing",
 )
-@_identity_options
+@assignment_identity_options
 @assignment_context
 def close_resume(
     ctx,
@@ -1314,7 +1319,7 @@ def close_resume(
                 home=home,
                 initiative_id=initiative_id,
                 assignment_id=assignment_id,
-                services=_CLOSE_SERVICES,
+                services=_close_services(),
             )
         )
     )
@@ -1324,7 +1329,7 @@ def close_resume(
     name="close-plan",
     help="preview the explicit reviewed-Work close decision and portable seal",
 )
-@_identity_options
+@assignment_identity_options
 @assignment_context
 def close_plan(
     ctx,
@@ -1341,7 +1346,7 @@ def close_plan(
                 home=home,
                 initiative_id=initiative_id,
                 assignment_id=assignment_id,
-                services=_CLOSE_SERVICES,
+                services=_close_services(),
             )
         )
     )
@@ -1351,7 +1356,7 @@ def close_plan(
     name="close",
     help="confirm reviewed Work as closed and write its portable sealed state",
 )
-@_identity_options
+@assignment_identity_options
 @click.option("--actor", default="local-user")
 @click.option("--expected-plan-root", required=True)
 @click.option("--execute", is_flag=True)
@@ -1367,7 +1372,7 @@ def close_work(
     execute,
 ):
     del ctx
-    services = _CLOSE_SERVICES
+    services = _close_services()
     request = assignment_close.CloseRequest(
         workspace_root=workspace_root,
         home=home,
@@ -1383,7 +1388,7 @@ def close_work(
 @assignment.command(
     name="claim", help="claim execution with a bounded owner/agent lease"
 )
-@_identity_options
+@assignment_identity_options
 @click.option("--owner", required=True)
 @click.option("--agent", required=True)
 @click.option("--slot", required=True)
@@ -1441,11 +1446,19 @@ def claim(
 
 
 def _advance(
-    workspace_root, home, initiative_id, assignment_id, to_phase, actor, reason
+    workspace_root,
+    home,
+    initiative_id,
+    assignment_id,
+    to_phase,
+    actor,
+    reason,
+    *,
+    native_work_bound=False,
 ):
     identity, runtime_dir, _ = _runtime(workspace_root, home)
     _ensure_profile(runtime_dir, actor)
-    if to_phase == "executing":
+    if to_phase == "executing" and not native_work_bound:
         run_agent.bind_current_native_work(
             runtime_dir,
             initiative_id,
@@ -1493,7 +1506,7 @@ def _advance(
 
 
 @assignment.command(help="enter executing phase under the active lease")
-@_identity_options
+@assignment_identity_options
 @click.option("--actor", required=True)
 @click.option("--reason", required=True)
 @assignment_context
@@ -1514,7 +1527,7 @@ def kickoff(ctx, workspace_root, home, initiative_id, assignment_id, actor, reas
 
 
 @assignment.command(help="record the stage-ready boundary")
-@_identity_options
+@assignment_identity_options
 @click.option("--actor", required=True)
 @click.option("--reason", required=True)
 @assignment_context
@@ -1535,7 +1548,7 @@ def stage(ctx, workspace_root, home, initiative_id, assignment_id, actor, reason
 
 
 @assignment.command(help="show the proof-bound orchestration state")
-@_identity_options
+@assignment_identity_options
 @click.option("--now", default="", help="ISO-8601 cut used to test lease expiry")
 @assignment_context
 def status(ctx, workspace_root, home, initiative_id, assignment_id, now):
@@ -1717,7 +1730,7 @@ def family_verify_v2(ctx, state_file):
 
 
 @assignment.command(help="evaluate the native run or closeout gate")
-@_identity_options
+@assignment_identity_options
 @click.option("--target", type=click.Choice(["run", "closeout"]), required=True)
 @assignment_context
 def gate(ctx, workspace_root, home, initiative_id, assignment_id, target):
@@ -1868,7 +1881,7 @@ def binding_create(
 @click.argument(
     "binding_file", type=click.Path(exists=True, dir_okay=False, path_type=Path)
 )
-@_identity_options
+@assignment_identity_options
 @click.option("--execute", is_flag=True)
 @click.option("--expected-binding-root", default="")
 @assignment_context
@@ -1938,7 +1951,7 @@ def verify_binding(ctx, binding_file, receipt_file):
 
 
 @assignment.command(help="plan or write a portable content-addressed state snapshot")
-@_identity_options
+@assignment_identity_options
 @click.option("--execute", is_flag=True)
 @click.option("--expected-state-root", default="")
 @assignment_context

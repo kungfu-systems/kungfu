@@ -199,10 +199,7 @@ test('sealed-candidate recovery passes the immutable candidate source only to th
     /publication-commit-command: BUILDCHAIN_PUBLICATION_COMMIT_PRODUCT_ROOT=\$GITHUB_WORKSPACE BUILDCHAIN_PUBLICATION_COMMIT_CANDIDATE_SOURCE_SHA=\$\{\{ inputs\.resume-candidate-source-sha \}\} node \.buildchain\/publication-controller\/scripts\/alpha-publication-commit\.mjs/u,
   );
   assert.match(source, /root: PRODUCT_ROOT,[\s\S]*expectedSourceCommit:/u);
-  assert.match(
-    source,
-    /qualificationPlatforms: promotableUpgradePlatforms\(\)/u,
-  );
+  assert.match(source, /expectedSourceSha: sourceSha/u);
   assert.match(
     source,
     /bindProductReleaseCut\(entry\.manifest,[\s\S]*sourceBuild: false/u,
