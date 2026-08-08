@@ -7,6 +7,29 @@ from __future__ import annotations
 from typing import Any, Callable, Mapping
 
 
+_TERMINAL_MOCK_SCENARIOS = frozenset(
+    {
+        "crash",
+        "deliverable",
+        "disconnect",
+        "recovery-delivery",
+        "recovery-story",
+        "review-fit",
+    }
+)
+
+
+def _terminal_mock_scenario(selected: Mapping[str, Any]) -> bool:
+    if selected.get("provider") != "synthetic":
+        return False
+    argv = list((selected.get("launch") or {}).get("argv") or [])
+    try:
+        scenario = str(argv[argv.index("--scenario") + 1])
+    except (ValueError, IndexError):
+        return False
+    return scenario in _TERMINAL_MOCK_SCENARIOS
+
+
 class ManagedRunCoordinator:
     """Start, instruct, observe, and snapshot one managed SessionAttempt."""
 
@@ -90,8 +113,7 @@ class ManagedRunCoordinator:
             invoke,
             ref,
             lambda status: (
-                status.get("interactionState")
-                in {"ready", "approval-needed", "unknown", "ended"}
+                status.get("interactionState") in {"ready", "approval-needed", "ended"}
             ),
             timeout_seconds=min(timeout_seconds, 30.0),
         )
@@ -116,14 +138,24 @@ class ManagedRunCoordinator:
                     "rawToolArgumentsExposed": False,
                 }
             )
+        terminal_mock_scenario = _terminal_mock_scenario(selected)
         boundary = self.wait_for_session(
             invoke,
             ref,
             lambda status: (
-                status.get("interactionState")
-                in {"approval-needed", "unknown", "ended"}
+                (
+                    terminal_mock_scenario
+                    and status.get("interactionState") == "ended"
+                    and status.get("live") is not True
+                )
                 or (
-                    status.get("interactionState") == "ready"
+                    not terminal_mock_scenario
+                    and status.get("interactionState")
+                    in {"approval-needed", "unknown", "ended"}
+                )
+                or (
+                    not terminal_mock_scenario
+                    and status.get("interactionState") == "ready"
                     and int((status.get("output") or {}).get("nextSequence") or 0)
                     > before_sequence
                 )

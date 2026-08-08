@@ -251,11 +251,13 @@ export function agentSessionProductState({
 function publicStatus(session) {
   const status = session.port.status();
   const controller = status.controllerLease;
+  const live =
+    status.lifecycleState !== 'ended' && status.inputAdmission !== 'closed';
   const statusProjection = {
     schema: 'kungfu.agent-session.surface-status/v1',
-    live: true,
+    live,
     terminalObservable: true,
-    controllable: true,
+    controllable: live,
     workConsoleId: status.workConsoleId,
     sessionAttemptId: status.sessionAttemptId,
     capsuleId: status.capsuleId,
@@ -289,7 +291,7 @@ function publicStatus(session) {
     proof: null,
     receiptRoots: [],
     product: agentSessionProductState({
-      live: true,
+      live,
       lifecycleState: status.lifecycleState,
       interactionState: status.interactionState,
       providerCompatible: status.providerAdapter?.compatible ?? null,
@@ -565,9 +567,13 @@ export class AgentSessionProductSurface {
           workspaceId: console.workspaceId,
           binding: nativeStatus?.binding ?? console.binding,
           backend: attempt.backend,
-          live: nativeStatus?.live ?? Boolean(live),
-          terminalObservable: nativeStatus?.terminalObservable ?? Boolean(live),
-          controllable: nativeStatus?.controllable ?? Boolean(live),
+          live: nativeStatus?.live ?? live?.live ?? false,
+          terminalObservable:
+            nativeStatus?.terminalObservable ??
+            live?.terminalObservable ??
+            false,
+          controllable:
+            nativeStatus?.controllable ?? live?.controllable ?? false,
           lifecycleState:
             nativeStatus?.lifecycleState ??
             live?.lifecycleState ??

@@ -36,15 +36,17 @@ assignment_context = kfc.pass_context()
 assignment_identity_options = partial(
     reduce,
     lambda decorated, decorator: decorator(decorated),
-    reversed(
-        [
-            click.option(
-                "--workspace", "workspace_root", type=click.Path(file_okay=False)
-            ),
-            click.option("--home", is_flag=True),
-            click.option("--initiative-id", required=True),
-            click.option("--assignment-id", required=True),
-        ]
+    tuple(
+        reversed(
+            [
+                click.option(
+                    "--workspace", "workspace_root", type=click.Path(file_okay=False)
+                ),
+                click.option("--home", is_flag=True),
+                click.option("--initiative-id", required=True),
+                click.option("--assignment-id", required=True),
+            ]
+        )
     ),
 )
 

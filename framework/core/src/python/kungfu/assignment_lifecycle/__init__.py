@@ -24,6 +24,7 @@ def work_ref(
         "profileRoot": plan["workControl"]["profileRoot"],
         "entityType": "assignment",
         "entityId": plan["work"]["assignmentId"],
+        "initiativeId": plan["work"]["initiativeId"],
         "entityRoot": orchestration.semantic_root(status["assignment"]),
         "purpose": "complete-project-assignment",
         "systemTimeCut": status["query_proof_root"],

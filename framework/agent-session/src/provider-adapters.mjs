@@ -58,8 +58,8 @@ const PROVIDER_PROFILES = {
   },
   synthetic: {
     adapterVersion: 'kungfu-mock-agent/v1',
-    supportedVersion: /^1\.0\.0$/u,
-    testedVersions: ['1.0.0'],
+    supportedVersion: /^1\.(?:0|1)\.0$/u,
+    testedVersions: ['1.0.0', '1.1.0'],
     latestStateWins: true,
     signatures: {
       blocked: [['synthetic.blocked', /MOCK BLOCKED:/u]],
@@ -349,7 +349,13 @@ export function createProviderAdapter({ provider, version }) {
         });
       }
       const screen = cleanScreen(lines);
-      if (provider === 'synthetic' && /MOCK READY FOR REVIEW:/u.test(screen)) {
+      const reviewReadyIndex = screen.lastIndexOf('MOCK READY FOR REVIEW:');
+      const promptAfterReviewIndex = lastMatch(/^\s*mock›(?:\s|$)/mu, screen);
+      if (
+        provider === 'synthetic' &&
+        reviewReadyIndex >= 0 &&
+        promptAfterReviewIndex > reviewReadyIndex
+      ) {
         return interactionResult({
           state: 'ready',
           signatureId: 'synthetic.ready.review',
