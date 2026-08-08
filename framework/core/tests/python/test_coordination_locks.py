@@ -23,7 +23,7 @@ _LOCKS_PATH = (
     / "python"
     / "kungfu"
     / "coordination"
-    / "locks.py"
+    / "__init__.py"
 )
 
 
