@@ -6,7 +6,7 @@
   "hold": {
     "enabled": false,
     "reason": "",
-    "updatedAt": "2026-08-07T19:21:25.463Z"
+    "updatedAt": "2026-08-08T19:11:47.051Z"
   },
   "candidates": [
     {
@@ -18,7 +18,7 @@
       "state": "soaking",
       "qualification": {
         "ok": false,
-        "observedAt": "2026-08-07T19:21:25.463Z",
+        "observedAt": "2026-08-08T19:11:47.051Z",
         "soakStartedAt": "",
         "soakElapsedSeconds": 0,
         "requiredSeconds": 86400,
@@ -33,11 +33,39 @@
       },
       "decision": {
         "reason": "checks-incomplete",
-        "updatedAt": "2026-08-07T19:21:25.463Z",
+        "updatedAt": "2026-08-08T19:11:47.051Z",
+        "actor": "buildchain-patrol"
+      }
+    },
+    {
+      "version": "4.0.0-alpha.1",
+      "stableVersion": "4.0.0",
+      "sha": "f9e6b0e34bcdd6407b2a18206ace7982d64de2c8",
+      "tag": "v4.0.0-alpha.1",
+      "publishedAt": "2026-08-08T09:03:38.000Z",
+      "state": "soaking",
+      "qualification": {
+        "ok": false,
+        "observedAt": "2026-08-08T19:11:47.051Z",
+        "soakStartedAt": "2026-08-08T09:03:38.000Z",
+        "soakElapsedSeconds": 36489,
+        "requiredSeconds": 86400,
+        "checks": [
+          {
+            "id": "alpha-release",
+            "status": "pass",
+            "completedAt": "2026-08-08T09:03:38.000Z",
+            "evidenceUrl": "https://github.com/kungfu-systems/kungfu/releases/tag/v4.0.0-alpha.1"
+          }
+        ]
+      },
+      "decision": {
+        "reason": "soaking",
+        "updatedAt": "2026-08-08T19:11:47.051Z",
         "actor": "buildchain-patrol"
       }
     }
   ],
-  "updatedAt": "2026-08-07T19:21:25.463Z",
+  "updatedAt": "2026-08-08T19:11:47.051Z",
   "stableReleases": []
 }
