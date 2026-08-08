@@ -3,7 +3,7 @@
   "contract": "kungfu-buildchain-dev-delivery-warrant-queue",
   "repository": "kungfu-systems/kungfu",
   "protectedBase": "dev/v4/v4.0",
-  "generation": 224,
+  "generation": 225,
   "fencingCounter": 68,
   "policy": {
     "agingSeconds": 900,
@@ -11,30 +11,7 @@
     "leaseSeconds": 3600,
     "emergencyPolicy": "reviewed-explicit-only"
   },
-  "activeWarrant": {
-    "schema": "kungfu.buildchain.dev-delivery-warrant/v1",
-    "repository": "kungfu-systems/kungfu",
-    "protectedBase": "dev/v4/v4.0",
-    "candidateId": "sha256:d1a83db8e7e52379a19152eda26285fac8e2565d3b3192569d19a73a88a131bd",
-    "pullRequestNumber": 2593,
-    "sourceHead": "361633c1b27bf8c243a224805d706cc6a84b4c4a",
-    "assignmentRoot": "sha256:fa7f1ae6ae2eb249a6ac04c93007a4f7e4949c992025276020ad490c60d850af",
-    "initiativeRoot": "sha256:bfff817933e5a5ad693e4b902a84f6cc3a251235dd7377cb4091d92f805fa7ff",
-    "sourceIdentityRoot": "sha256:a5421ab8765cfa3b56c89a48312af02c64da4ef9bb992d7fda989a4496ef1a13",
-    "sourcePatchRoot": "sha256:fed52f9a0d0e1f8604a25476777043451b845daf06d16087ac4f961c91f7cb55",
-    "sourceProofRoot": "sha256:5541031fabc6e4c1cf35c4760fdfd81fc3ef3154ef7ca09b34ac988ef1347ff6",
-    "planRoot": "sha256:ddfb227cdccf4cea4e9a2359effc08c6904c271d0c9e2fed416c0ed627aa188f",
-    "closureRoot": "sha256:106d175611d8634c988192302b9c464ae8ba3b6d023c2cff9910e401344c9624",
-    "dependencyRoot": "sha256:72ac867be87afbdf3c66b019016cbcdc8ef9293646b5f73e01c004abd99fda64",
-    "toolchainRoot": "sha256:2ecb07894954a2e0de022615d4561e5ba3ae68376401941ecff77be03cd75a0f",
-    "deliveryClass": "native-proof-required",
-    "generation": 68,
-    "expectedOldStateRoot": "sha256:230be59c02ab1d5582ed0d6cf05c99743cc2861f129fd4203d1a01f9251de85a",
-    "issuedAt": "2026-08-08T07:38:10.848Z",
-    "expiresAt": "2026-08-08T09:08:10.848Z",
-    "fencingToken": "sha256:352dfa82ecc8f7dd6e69c5c4a7540e52331381c9b014a331c556ff542d402eb6",
-    "nextAction": "Replay on the exact current dev base, prove required checks, then enqueue the unchanged PR head."
-  },
+  "activeWarrant": null,
   "candidates": [
     {
       "repository": "kungfu-systems/kungfu",
@@ -2211,13 +2188,20 @@
       "toolchainRoot": "sha256:2ecb07894954a2e0de022615d4561e5ba3ae68376401941ecff77be03cd75a0f",
       "priority": "ordinary",
       "enqueuedAt": "2026-08-08T07:38:07.040Z",
-      "updatedAt": "2026-08-08T07:38:10.848Z",
+      "updatedAt": "2026-08-08T07:44:06.752Z",
       "attempts": 1,
       "recoveries": 0,
-      "status": "selected",
-      "terminal": null
+      "status": "merged",
+      "terminal": {
+        "outcome": "merged",
+        "reason": "protected pull request event: dequeued",
+        "evidenceRoot": "sha256:4832dba31661bb0e1a6194d54da8cd9840214f3e8225ab2a2ace865d16a334c0",
+        "closedAt": "2026-08-08T07:44:06.752Z",
+        "fencingToken": "sha256:352dfa82ecc8f7dd6e69c5c4a7540e52331381c9b014a331c556ff542d402eb6",
+        "leaseGeneration": 68
+      }
     }
   ],
-  "updatedAt": "2026-08-08T07:38:10.848Z",
-  "stateRoot": "sha256:b8052378c80bc025ecf67754f884e3558e6f86bf23c8a517b8364b9e661d6268"
+  "updatedAt": "2026-08-08T07:44:06.752Z",
+  "stateRoot": "sha256:9c432808d0ae89570bfcdf9d792b1c5f3ca427020eccb49f20c2b57f36c7761c"
 }
