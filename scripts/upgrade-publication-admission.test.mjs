@@ -294,7 +294,11 @@ function credentialManifest(root, bundleRoot, evidencePath, dmgPath, zipPath) {
 }
 
 function credentialFixture(root) {
-  const bundleRoot = path.join(root, 'payloads', 'kungfu-macos-credential');
+  const bundleRoot = path.join(
+    root,
+    'payloads',
+    `kungfu-macos-credential-${SOURCE}`,
+  );
   const releaseRoot = path.join(bundleRoot, 'product', 'release');
   const dmgPath = path.join(
     releaseRoot,
@@ -483,16 +487,14 @@ test('publication admission keeps exact installer bytes while omitting unadverti
       ),
       { retainedCopy: true },
     );
-    writeJson(
-      path.join(
-        value.payloadRoot,
-        'kungfu-credential-manifest-macos',
-        'manifest.json',
-      ),
-      {
-        schemaVersion: 1,
-        contract: 'kungfu-buildchain-credential-manifest/v1',
-      },
+    const manifestOnlyRoot = path.join(
+      value.payloadRoot,
+      'kungfu-credential-manifest-macos',
+    );
+    fs.mkdirSync(manifestOnlyRoot, { recursive: true });
+    fs.copyFileSync(
+      value.credential.manifestPath,
+      path.join(manifestOnlyRoot, 'manifest.json'),
     );
     const admitted = verifyUpgradePublicationPayloads({
       payloadRoot: value.payloadRoot,
