@@ -1,7 +1,7 @@
 {
   "schema": "kungfu.code-complexity-budget-baseline/v1",
-  "policyRoot": "sha256:acab3dc8fd51376efa694be88d3401133541670ec4cc2a902dd69791c94bc050",
-  "baselineRef": "c7d0c61d031ad6be1dd9041af2bd5db48896df1e",
+  "policyRoot": "sha256:f1d3c9f6ca52ff1e95fdd0f0ae584c1d6673e67cb513c046ae5b9f8eb9ae949c",
+  "baselineRef": "86903b04cdcc0e4149f60a032be7fe4fa03f820f",
   "classification": "ordered-policy-and-content-marker/v1",
   "calibration": {
     "groupBy": [
@@ -15,28 +15,28 @@
   },
   "summary": {
     "declarative-schema-or-table": {
-      "files": 1371,
-      "lines": 574114
+      "files": 1395,
+      "lines": 576095
     },
     "first-party-handwritten-implementation": {
-      "files": 1035,
-      "lines": 367612
+      "files": 1050,
+      "lines": 375888
     },
     "generated-projection": {
-      "files": 74,
-      "lines": 10088
+      "files": 79,
+      "lines": 10858
     },
     "public-header-or-entrypoint": {
-      "files": 185,
-      "lines": 55572
+      "files": 189,
+      "lines": 56108
     },
     "retained-evidence": {
-      "files": 885,
-      "lines": 1631190
+      "files": 909,
+      "lines": 1631214
     },
     "test-or-fixture": {
-      "files": 871,
-      "lines": 184625
+      "files": 889,
+      "lines": 195098
     },
     "vendored-source": {
       "files": 451,
@@ -55,8 +55,8 @@
     "declarative-schema-or-table:declarative": {
       "class": "declarative-schema-or-table",
       "language": "declarative",
-      "population": 1344,
-      "soft": 226,
+      "population": 1368,
+      "soft": 225,
       "hard": 2340,
       "calibration": "p90/p99"
     },
@@ -71,17 +71,17 @@
     "first-party-handwritten-implementation:javascript-typescript": {
       "class": "first-party-handwritten-implementation",
       "language": "javascript-typescript",
-      "population": 566,
-      "soft": 835,
-      "hard": 1963,
+      "population": 570,
+      "soft": 837,
+      "hard": 1965,
       "calibration": "p90/p99"
     },
     "first-party-handwritten-implementation:python": {
       "class": "first-party-handwritten-implementation",
       "language": "python",
-      "population": 230,
+      "population": 241,
       "soft": 1009,
-      "hard": 2014,
+      "hard": 2089,
       "calibration": "p90/p99"
     },
     "first-party-handwritten-implementation:rust": {
@@ -135,7 +135,7 @@
     "generated-projection:python": {
       "class": "generated-projection",
       "language": "python",
-      "population": 19,
+      "population": 24,
       "soft": 271,
       "hard": 1363,
       "calibration": "p90/p99"
@@ -161,13 +161,13 @@
       "language": "javascript-typescript",
       "population": 45,
       "soft": 2390,
-      "hard": 3080,
+      "hard": 3353,
       "calibration": "p90/p99"
     },
     "public-header-or-entrypoint:python": {
       "class": "public-header-or-entrypoint",
       "language": "python",
-      "population": 35,
+      "population": 39,
       "soft": 455,
       "hard": 641,
       "calibration": "p90/p99"
@@ -191,9 +191,9 @@
     "retained-evidence:declarative": {
       "class": "retained-evidence",
       "language": "declarative",
-      "population": 884,
-      "soft": 124,
-      "hard": 1198,
+      "population": 908,
+      "soft": 122,
+      "hard": 759,
       "calibration": "p90/p99"
     },
     "retained-evidence:javascript-typescript": {
@@ -223,15 +223,15 @@
     "test-or-fixture:declarative": {
       "class": "test-or-fixture",
       "language": "declarative",
-      "population": 226,
-      "soft": 107,
+      "population": 233,
+      "soft": 100,
       "hard": 263,
       "calibration": "p90/p99"
     },
     "test-or-fixture:javascript-typescript": {
       "class": "test-or-fixture",
       "language": "javascript-typescript",
-      "population": 437,
+      "population": 445,
       "soft": 575,
       "hard": 1246,
       "calibration": "p90/p99"
@@ -239,9 +239,9 @@
     "test-or-fixture:python": {
       "class": "test-or-fixture",
       "language": "python",
-      "population": 165,
-      "soft": 681,
-      "hard": 2216,
+      "population": 168,
+      "soft": 708,
+      "hard": 2289,
       "calibration": "p90/p99"
     },
     "test-or-fixture:rust": {
@@ -267,7 +267,7 @@
       "class": "declarative-schema-or-table",
       "language": "declarative",
       "owner": "kungfu/repository-contract",
-      "baselineLines": 2959,
+      "baselineLines": 3028,
       "hardBudget": 2340
     },
     {
@@ -275,7 +275,7 @@
       "class": "declarative-schema-or-table",
       "language": "declarative",
       "owner": "kungfu/repository-contract",
-      "baselineLines": 2623,
+      "baselineLines": 2683,
       "hardBudget": 2340
     },
     {
@@ -283,7 +283,7 @@
       "class": "declarative-schema-or-table",
       "language": "declarative",
       "owner": "kungfu/repository-contract",
-      "baselineLines": 5262,
+      "baselineLines": 5382,
       "hardBudget": 2340
     },
     {
@@ -291,7 +291,7 @@
       "class": "declarative-schema-or-table",
       "language": "declarative",
       "owner": "kungfu/repository-contract",
-      "baselineLines": 2672,
+      "baselineLines": 2732,
       "hardBudget": 2340
     },
     {
@@ -323,7 +323,7 @@
       "class": "declarative-schema-or-table",
       "language": "declarative",
       "owner": "developer/sdk",
-      "baselineLines": 2672,
+      "baselineLines": 2732,
       "hardBudget": 2340
     },
     {
@@ -331,8 +331,16 @@
       "class": "declarative-schema-or-table",
       "language": "declarative",
       "owner": "kungfu/docs",
-      "baselineLines": 2397,
+      "baselineLines": 2516,
       "hardBudget": 2340
+    },
+    {
+      "path": "docs/qualification/evidence/agent-brief-first-value-loop/report.json",
+      "class": "retained-evidence",
+      "language": "declarative",
+      "owner": "kungfu/docs",
+      "baselineLines": 1198,
+      "hardBudget": 759
     },
     {
       "path": "docs/qualification/evidence/auditable-demo/2ceca18c5d030d98f693e433bad4981c7931a2ca1f4b2efcbdc7d63538e642db/project-tour-episode-2/manifest.json",
@@ -340,7 +348,7 @@
       "language": "declarative",
       "owner": "kungfu/docs",
       "baselineLines": 879894,
-      "hardBudget": 1198
+      "hardBudget": 759
     },
     {
       "path": "docs/qualification/evidence/auditable-demo/6751bfdf7a27dd2c4b0c3f0916a512fb7abd172543c94dee220b41a0d679632e/project-tour-episode-1/manifest.json",
@@ -348,7 +356,7 @@
       "language": "declarative",
       "owner": "kungfu/docs",
       "baselineLines": 631942,
-      "hardBudget": 1198
+      "hardBudget": 759
     },
     {
       "path": "docs/qualification/evidence/auditable-demo/74f7cf0b18f261001755c43dfd2954262bdb32c865a34f8316e3ec38331fb35b/agent-work-lab-autoplay/manifest.json",
@@ -356,7 +364,7 @@
       "language": "declarative",
       "owner": "kungfu/docs",
       "baselineLines": 69852,
-      "hardBudget": 1198
+      "hardBudget": 759
     },
     {
       "path": "docs/qualification/evidence/durability/791e09a70/evidence/fault-campaign-v2.json",
@@ -364,7 +372,7 @@
       "language": "declarative",
       "owner": "kungfu/docs",
       "baselineLines": 15977,
-      "hardBudget": 1198
+      "hardBudget": 759
     },
     {
       "path": "docs/qualification/evidence/gate-measurements/e90b0fb2b/linux/receipt.json",
@@ -372,7 +380,7 @@
       "language": "declarative",
       "owner": "kungfu/docs",
       "baselineLines": 1373,
-      "hardBudget": 1198
+      "hardBudget": 759
     },
     {
       "path": "docs/qualification/evidence/gate-measurements/e90b0fb2b/macos/receipt.json",
@@ -380,7 +388,7 @@
       "language": "declarative",
       "owner": "kungfu/docs",
       "baselineLines": 1273,
-      "hardBudget": 1198
+      "hardBudget": 759
     },
     {
       "path": "docs/qualification/evidence/gate-measurements/e90b0fb2b/windows/receipt.json",
@@ -388,15 +396,23 @@
       "language": "declarative",
       "owner": "kungfu/docs",
       "baselineLines": 1210,
-      "hardBudget": 1198
+      "hardBudget": 759
+    },
+    {
+      "path": "extensions/dogfood/dogfood-actions/domain/dogfood.py",
+      "class": "first-party-handwritten-implementation",
+      "language": "python",
+      "owner": "extension/dogfood/dogfood-actions",
+      "baselineLines": 2355,
+      "hardBudget": 2089
     },
     {
       "path": "extensions/work-control/work-control-actions/domain/work_control_runtime.py",
       "class": "first-party-handwritten-implementation",
       "language": "python",
       "owner": "extension/work-control/work-control-actions",
-      "baselineLines": 2246,
-      "hardBudget": 2014
+      "baselineLines": 2874,
+      "hardBudget": 2089
     },
     {
       "path": "framework/api/tests/projects.test.ts",
@@ -451,24 +467,16 @@
       "class": "declarative-schema-or-table",
       "language": "declarative",
       "owner": "core/package",
-      "baselineLines": 2500,
+      "baselineLines": 2548,
       "hardBudget": 2340
     },
     {
-      "path": "framework/core/src/python/kungfu/profile_sdk.py",
-      "class": "first-party-handwritten-implementation",
-      "language": "python",
-      "owner": "core/package",
-      "baselineLines": 2090,
-      "hardBudget": 2014
-    },
-    {
-      "path": "framework/core/tests/python/test_distribution_update.py",
+      "path": "framework/core/tests/python/test_atlas_storage.py",
       "class": "test-or-fixture",
       "language": "python",
       "owner": "core/qualification",
-      "baselineLines": 2283,
-      "hardBudget": 2216
+      "baselineLines": 6092,
+      "hardBudget": 2289
     },
     {
       "path": "framework/core/tests/storage-node-binding.test.js",
@@ -492,7 +500,7 @@
       "language": "javascript-typescript",
       "owner": "framework/project-cut",
       "baselineLines": 1977,
-      "hardBudget": 1963
+      "hardBudget": 1965
     },
     {
       "path": "framework/tui/src/profile-shell.tsx",
@@ -500,7 +508,7 @@
       "language": "javascript-typescript",
       "owner": "framework/tui",
       "baselineLines": 1977,
-      "hardBudget": 1963
+      "hardBudget": 1965
     },
     {
       "path": "framework/work-lifecycle/kungfu-work-lifecycle-operation-matrix.contract.json",
@@ -524,15 +532,15 @@
       "language": "javascript-typescript",
       "owner": "product/assembly",
       "baselineLines": 2062,
-      "hardBudget": 1963
+      "hardBudget": 1965
     },
     {
       "path": "scripts/buildchain-kfd-evidence.mjs",
       "class": "first-party-handwritten-implementation",
       "language": "javascript-typescript",
       "owner": "shifu/source-tooling",
-      "baselineLines": 1991,
-      "hardBudget": 1963
+      "baselineLines": 1982,
+      "hardBudget": 1965
     },
     {
       "path": "scripts/measure-dev-required-latency.mjs",
@@ -540,14 +548,14 @@
       "language": "javascript-typescript",
       "owner": "shifu/source-tooling",
       "baselineLines": 2099,
-      "hardBudget": 1963
+      "hardBudget": 1965
     },
     {
       "path": "scripts/qualified-assignment-core-artifact.test.mjs",
       "class": "test-or-fixture",
       "language": "javascript-typescript",
       "owner": "shifu/source-tooling",
-      "baselineLines": 2118,
+      "baselineLines": 2117,
       "hardBudget": 1246
     },
     {
@@ -564,7 +572,7 @@
       "language": "declarative",
       "owner": "kungfu/qualification",
       "baselineLines": 1722,
-      "hardBudget": 1198
+      "hardBudget": 759
     },
     {
       "path": "tests/qualification/agent-repository-work/incident-board-replay-v1.mjs",
@@ -627,7 +635,7 @@
       "language": "declarative",
       "owner": "kungfu/repository-contract",
       "lines": 281,
-      "contentRoot": "sha256:8def0dc7e78f26d551cb80d617678ea12492171debc72e9590ddbee499b1f4db"
+      "contentRoot": "sha256:487f5f08b94c9ea4c496baa4b4bcabc8d70186db2b0769fa0ce38bee03e24e2b"
     },
     {
       "path": ".buildchain/kfd/kfd-1/documentation-consumers.witness.json",
@@ -654,7 +662,7 @@
       "language": "declarative",
       "owner": "kungfu/repository-contract",
       "lines": 852,
-      "contentRoot": "sha256:18b5b6714b6183dc3cf26b6f05ce41221a96bb7fc79be303bab54d16d3a2dcce"
+      "contentRoot": "sha256:e4dd1b7de5cd8e55cbd034319c93939d10f9541b3d09b566071118938071e6d2"
     },
     {
       "path": ".buildchain/kfd/kfd-1/verify-result.json",
@@ -672,7 +680,7 @@
       "language": "declarative",
       "owner": "kungfu/repository-contract",
       "lines": 241,
-      "contentRoot": "sha256:124b4522d910cf024e598cc293f9dadf952f0aaadd9b185ff66af38ea6b8eca7"
+      "contentRoot": "sha256:793d78406dea419532f15f68aecf9ab475bb69d64d583f9fe06d20e82d68bfe8"
     },
     {
       "path": ".buildchain/kfd/kfd-2/claims/agent-work-state-contract.json",
@@ -681,7 +689,7 @@
       "language": "declarative",
       "owner": "kungfu/repository-contract",
       "lines": 126,
-      "contentRoot": "sha256:7700c5d9d878bb222e237b7782c417950d64708dc85ce67d2a6be2570def226a"
+      "contentRoot": "sha256:6db0ea8773e1147de00abd0f300a8f032b368ede832ce3756d985b02e0840b3b"
     },
     {
       "path": ".buildchain/kfd/kfd-2/claims/codex-report-receipts.json",
@@ -699,7 +707,7 @@
       "language": "declarative",
       "owner": "kungfu/repository-contract",
       "lines": 139,
-      "contentRoot": "sha256:f012a2c8215a35ea5a67b0a8176fd81959add219ce11437d4ea19b06d696ad0d"
+      "contentRoot": "sha256:387b5ca933f1019cbb7af612052a163e434d3eebfb406a246ce7539a41c59f0b"
     },
     {
       "path": ".buildchain/kfd/kfd-2/claims/remote-fact-boundary.json",
@@ -708,7 +716,7 @@
       "language": "declarative",
       "owner": "kungfu/repository-contract",
       "lines": 121,
-      "contentRoot": "sha256:d9bf2d304fe3bea7579f0b9f765d5ce919300b40e90811b4dccb8b8bdba63711"
+      "contentRoot": "sha256:e6ea7cc9eda4423f6f39a7c2e970f60250197250de26e358b2f54fcbc630cd4f"
     },
     {
       "path": ".buildchain/kfd/kfd-2/registry.json",
@@ -726,7 +734,7 @@
       "language": "declarative",
       "owner": "kungfu/repository-contract",
       "lines": 477,
-      "contentRoot": "sha256:e07be9fcd74d19fbcf534737773d1dd76c75ed9f7320561fea3c3bdfc2f04928"
+      "contentRoot": "sha256:c983fd692dda08d932738dd8bb95b25a5b9bbbb31a4fbfcf54d0c03607321a8a"
     },
     {
       "path": ".buildchain/kfd/kfd-3/capability-query.json",
@@ -734,8 +742,8 @@
       "generatedProvenance": false,
       "language": "declarative",
       "owner": "kungfu/repository-contract",
-      "lines": 2959,
-      "contentRoot": "sha256:be67cff65bfe399d1ec5e694667074e54547344d8b56537349081745cd634bd8"
+      "lines": 3028,
+      "contentRoot": "sha256:a8558882b2a053152ff0f88dfed122e026aca9d70ac3f88c7848d1a444afb5a7"
     },
     {
       "path": ".buildchain/kfd/kfd-3/collaboration-interface.artifact.json",
@@ -743,8 +751,8 @@
       "generatedProvenance": false,
       "language": "declarative",
       "owner": "kungfu/repository-contract",
-      "lines": 2623,
-      "contentRoot": "sha256:ab016f7636c4372c7397ac91180b72619a0c30eecbe99bcef74702470df91260"
+      "lines": 2683,
+      "contentRoot": "sha256:ff685728a4a8925e5d46f020de9201928f1ea04f0fb53a22d33c293ad8dd6bdc"
     },
     {
       "path": ".buildchain/kfd/kfd-3/collaboration-interface.prebuild.json",
@@ -752,8 +760,8 @@
       "generatedProvenance": false,
       "language": "declarative",
       "owner": "kungfu/repository-contract",
-      "lines": 5262,
-      "contentRoot": "sha256:cfff192be01db7d51294fa51ce65264093ffc5c3d582a58c2b337a6a0f5d2e8d"
+      "lines": 5382,
+      "contentRoot": "sha256:b0f054b267c3b7a8c05d063092d80e343ae5610ce4f524a29fd4750d1e5ca4f0"
     },
     {
       "path": ".buildchain/kfd/kfd-3/surfaces.json",
@@ -761,8 +769,8 @@
       "generatedProvenance": false,
       "language": "declarative",
       "owner": "kungfu/repository-contract",
-      "lines": 2672,
-      "contentRoot": "sha256:757aadcbd42aeedffd253203fc8ee8e9d0c963f998756f24943b0dcb07b8693f"
+      "lines": 2732,
+      "contentRoot": "sha256:997fa8c88dc052e42a484f96797b66e1bff24890474f06efe3eea2971bb58daa"
     },
     {
       "path": ".buildchain/kfd/support-matrix.json",
@@ -771,7 +779,7 @@
       "language": "declarative",
       "owner": "kungfu/repository-contract",
       "lines": 707,
-      "contentRoot": "sha256:0c80e01a9f6ea594e33db7e806041ee1f90ad3630316a0f917e23658728cc145"
+      "contentRoot": "sha256:900d9f533a059853303bbc543e1ab80b004cb83156a8abfa6502294f468f37c6"
     },
     {
       "path": ".github/actionlint.yaml",
@@ -978,7 +986,7 @@
       "language": "declarative",
       "owner": "kungfu/release-workflow",
       "lines": 670,
-      "contentRoot": "sha256:0281b3ee47ae6e8406be1ed48410650e944f340081bb2e5f2219503c4d4a5e75"
+      "contentRoot": "sha256:2a21e2bfbc638410f3b76b613faecf7d1dd5bbfe993a327cb7cfc249767b3e84"
     },
     {
       "path": ".github/workflows/buildchain-validate.yml",
@@ -1184,8 +1192,8 @@
       "generatedProvenance": false,
       "language": "declarative",
       "owner": "kungfu/release-workflow",
-      "lines": 647,
-      "contentRoot": "sha256:8fa401cdf8b41acb5e64ab4664eeaf584f16ae3275d4abb2f8da7e643736a3c3"
+      "lines": 655,
+      "contentRoot": "sha256:d85e4c62af74fa2e4075986bf0f376240d29409b1a67c0e80cfeb638673bbc45"
     },
     {
       "path": ".github/workflows/release-shifu.yml",
@@ -1683,6 +1691,24 @@
       "contentRoot": "sha256:9f2756393c884f8b596e62a7163f171fafd7357cc098972a397fd7d55184d680"
     },
     {
+      "path": ".kungfu/episodes/sealed/sha256/8a/8a500490c531e5d1451f22381a91b358a68bedb80f81506c8955328b98ed4718/manifest.json",
+      "class": "retained-evidence",
+      "generatedProvenance": false,
+      "language": "declarative",
+      "owner": "kungfu/retained-native-evidence",
+      "lines": 1,
+      "contentRoot": "sha256:3853050c47e93669e188d9778c4c9dc242177572d53ce383f6d680935777c67a"
+    },
+    {
+      "path": ".kungfu/episodes/sealed/sha256/8a/8a500490c531e5d1451f22381a91b358a68bedb80f81506c8955328b98ed4718/qualification.json",
+      "class": "retained-evidence",
+      "generatedProvenance": false,
+      "language": "declarative",
+      "owner": "kungfu/retained-native-evidence",
+      "lines": 1,
+      "contentRoot": "sha256:6195d9c92bc05f215539a725442f650a854e82fe849fb1d67522efe6aada6a3d"
+    },
+    {
       "path": ".kungfu/episodes/sealed/sha256/9d/9d656f7be5ff6e505a8c44914616db4e612a950b1d53cc2f25dcccfa2ed08f65/manifest.json",
       "class": "retained-evidence",
       "generatedProvenance": false,
@@ -1771,6 +1797,24 @@
       "owner": "kungfu/retained-native-evidence",
       "lines": 1,
       "contentRoot": "sha256:1be77e05e5523be14e17ca7cb60e80fa0cd0b993405dd04649a2273192881c03"
+    },
+    {
+      "path": ".kungfu/episodes/sealed/sha256/be/bef3a935d78137bb158d4987c6cf463bb70a5c3a469677fe95146aebbb7381b4/manifest.json",
+      "class": "retained-evidence",
+      "generatedProvenance": false,
+      "language": "declarative",
+      "owner": "kungfu/retained-native-evidence",
+      "lines": 1,
+      "contentRoot": "sha256:00e6c714fca90aba43880295374ba59f57f77fa9f6bd910294d7042955bef21e"
+    },
+    {
+      "path": ".kungfu/episodes/sealed/sha256/be/bef3a935d78137bb158d4987c6cf463bb70a5c3a469677fe95146aebbb7381b4/qualification.json",
+      "class": "retained-evidence",
+      "generatedProvenance": false,
+      "language": "declarative",
+      "owner": "kungfu/retained-native-evidence",
+      "lines": 1,
+      "contentRoot": "sha256:6ac36b07c06ef130049edd3ac85cc2c84faea3531017d6055ee33f192c8a7a65"
     },
     {
       "path": ".kungfu/episodes/sealed/sha256/c1/c1561438422233e0473932f92116e94b06f8fa6aa9686c31fea6ca2e470bba32/manifest.json",
@@ -2061,6 +2105,24 @@
       "contentRoot": "sha256:85585d12864a83edf644dd0b634a89310ac4aa12bd510089f3f7f5ea2a9b785c"
     },
     {
+      "path": ".kungfu/project-cuts/sha256/07/071188f7480528bbde1666b80f1ed38ff42ef9824ea2e9e05883e0ee7509d8d6/manifest.json",
+      "class": "retained-evidence",
+      "generatedProvenance": false,
+      "language": "declarative",
+      "owner": "kungfu/retained-native-evidence",
+      "lines": 1,
+      "contentRoot": "sha256:9917636ee48967e956b97c2dbf7426bd858f70eb6bf141028e50d4228ad03395"
+    },
+    {
+      "path": ".kungfu/project-cuts/sha256/07/071188f7480528bbde1666b80f1ed38ff42ef9824ea2e9e05883e0ee7509d8d6/receipt.json",
+      "class": "retained-evidence",
+      "generatedProvenance": false,
+      "language": "declarative",
+      "owner": "kungfu/retained-native-evidence",
+      "lines": 1,
+      "contentRoot": "sha256:a4f44dfcdbc236747fad5eb37222129162c81cd082ab0bf3e564b825c21099f1"
+    },
+    {
       "path": ".kungfu/project-cuts/sha256/07/079e45d96169d8847d22f01ed96d6e1e985898ec74da54e44a2cc2d1de2de905/manifest.json",
       "class": "retained-evidence",
       "generatedProvenance": false,
@@ -2259,6 +2321,24 @@
       "contentRoot": "sha256:73ff9e791ccf527ca824d6ea2869f6d8c8c0474a80990f7ef35ab9c7f4cec8dd"
     },
     {
+      "path": ".kungfu/project-cuts/sha256/0d/0d7a52fde7f7d5ecfdef52a2563306112b1fe9add99cf80101918f1a8c2bfab3/manifest.json",
+      "class": "retained-evidence",
+      "generatedProvenance": false,
+      "language": "declarative",
+      "owner": "kungfu/retained-native-evidence",
+      "lines": 1,
+      "contentRoot": "sha256:bf9a8c0271cc03a5e3f7348afb277004dcd38961739582fb49e8463051216c36"
+    },
+    {
+      "path": ".kungfu/project-cuts/sha256/0d/0d7a52fde7f7d5ecfdef52a2563306112b1fe9add99cf80101918f1a8c2bfab3/receipt.json",
+      "class": "retained-evidence",
+      "generatedProvenance": false,
+      "language": "declarative",
+      "owner": "kungfu/retained-native-evidence",
+      "lines": 1,
+      "contentRoot": "sha256:50b9ac3868b22a156ec03a2fe2f66c7529923eacb660361012c932c37cbca990"
+    },
+    {
       "path": ".kungfu/project-cuts/sha256/0d/0da7ed18c971338f91f137408bbab76f8cfab34ffbed86c5ed703653866a5aaf/manifest.json",
       "class": "retained-evidence",
       "generatedProvenance": false,
@@ -2437,6 +2517,24 @@
       "owner": "kungfu/retained-native-evidence",
       "lines": 1,
       "contentRoot": "sha256:813ae2afcc0087b69d3b5b32ef03c9cbe951c929fb467961e7511ca4a8feb84a"
+    },
+    {
+      "path": ".kungfu/project-cuts/sha256/12/12795060a554169135c130a6cfb71840a77fb4f3db7eda855aeed57c65cd63d4/manifest.json",
+      "class": "retained-evidence",
+      "generatedProvenance": false,
+      "language": "declarative",
+      "owner": "kungfu/retained-native-evidence",
+      "lines": 1,
+      "contentRoot": "sha256:968a50a49dccdcedf22357ffd57d2b42976829df71105e5a0a21a57c91658e65"
+    },
+    {
+      "path": ".kungfu/project-cuts/sha256/12/12795060a554169135c130a6cfb71840a77fb4f3db7eda855aeed57c65cd63d4/receipt.json",
+      "class": "retained-evidence",
+      "generatedProvenance": false,
+      "language": "declarative",
+      "owner": "kungfu/retained-native-evidence",
+      "lines": 1,
+      "contentRoot": "sha256:252c5fb1072c6bba1e8f86b75372df18dd64ba8dd8197512ca9d22887d32e39c"
     },
     {
       "path": ".kungfu/project-cuts/sha256/13/13fa9fd76f92ff43cd503d1bf1da3a689b63bd3979deacdc6d9e7187be3dc070/manifest.json",
@@ -2961,6 +3059,24 @@
       "contentRoot": "sha256:fe937e9efe8d9d45aff4db2ff9dd076074d515096d4fe009e8cea70992b7fc58"
     },
     {
+      "path": ".kungfu/project-cuts/sha256/2e/2e3e4ef66363ebdd05f775d91d0048c229ed5e971fabfe6101f29dc2d06dd194/manifest.json",
+      "class": "retained-evidence",
+      "generatedProvenance": false,
+      "language": "declarative",
+      "owner": "kungfu/retained-native-evidence",
+      "lines": 1,
+      "contentRoot": "sha256:bc08698f26d2f7c5f39fc86e5efe8e96c7b37e322e9456a4da838ead4bf8e37f"
+    },
+    {
+      "path": ".kungfu/project-cuts/sha256/2e/2e3e4ef66363ebdd05f775d91d0048c229ed5e971fabfe6101f29dc2d06dd194/receipt.json",
+      "class": "retained-evidence",
+      "generatedProvenance": false,
+      "language": "declarative",
+      "owner": "kungfu/retained-native-evidence",
+      "lines": 1,
+      "contentRoot": "sha256:131b097a0e3c1394a68f0a7b57546a5a204d6afd8698ecf86b365333ea50c739"
+    },
+    {
       "path": ".kungfu/project-cuts/sha256/2f/2f52bb214d64b69685c439b286eeca54742fe7cd420b1d17e714709e84ad2e8d/manifest.json",
       "class": "retained-evidence",
       "generatedProvenance": false,
@@ -3211,6 +3327,24 @@
       "owner": "kungfu/retained-native-evidence",
       "lines": 1,
       "contentRoot": "sha256:71f6815e21a0e8172572e5d4fadbea7565bdc2abad1c59a865b34f42cb77c192"
+    },
+    {
+      "path": ".kungfu/project-cuts/sha256/40/4076f95fd2e85ee6efe4a469bf1f11f6f652c123c0650554ad441b44418aeae1/manifest.json",
+      "class": "retained-evidence",
+      "generatedProvenance": false,
+      "language": "declarative",
+      "owner": "kungfu/retained-native-evidence",
+      "lines": 1,
+      "contentRoot": "sha256:89e25354bd5180436e263f28944ee4384df3288b208634f438b31b1213f27876"
+    },
+    {
+      "path": ".kungfu/project-cuts/sha256/40/4076f95fd2e85ee6efe4a469bf1f11f6f652c123c0650554ad441b44418aeae1/receipt.json",
+      "class": "retained-evidence",
+      "generatedProvenance": false,
+      "language": "declarative",
+      "owner": "kungfu/retained-native-evidence",
+      "lines": 1,
+      "contentRoot": "sha256:432a27017842222cf0a46ef8c52c736836a01ec78d5e9bfeafcbf28c59b15126"
     },
     {
       "path": ".kungfu/project-cuts/sha256/40/40c2174caa9b28e17e8a4e664811f0a140f589d1797f7b51c2fad3b0449c0689/manifest.json",
@@ -4057,6 +4191,24 @@
       "owner": "kungfu/retained-native-evidence",
       "lines": 1,
       "contentRoot": "sha256:38bb0fe4d910a32872bb87fd98b072757b5abcd212ab4aeeab636230859d0c19"
+    },
+    {
+      "path": ".kungfu/project-cuts/sha256/64/64f57ff3e0b7cb5593022808e2517dcfda3c4d0773582961a3d5e61b32a06942/manifest.json",
+      "class": "retained-evidence",
+      "generatedProvenance": false,
+      "language": "declarative",
+      "owner": "kungfu/retained-native-evidence",
+      "lines": 1,
+      "contentRoot": "sha256:00e66fd738abd57c5ee629c9ed4009b218c77dce09473f7ae5c7d40f432a5228"
+    },
+    {
+      "path": ".kungfu/project-cuts/sha256/64/64f57ff3e0b7cb5593022808e2517dcfda3c4d0773582961a3d5e61b32a06942/receipt.json",
+      "class": "retained-evidence",
+      "generatedProvenance": false,
+      "language": "declarative",
+      "owner": "kungfu/retained-native-evidence",
+      "lines": 1,
+      "contentRoot": "sha256:5e4ef68aa1da107928c4cd51c4d141304d6615bfa1f30862498c96c72c88150a"
     },
     {
       "path": ".kungfu/project-cuts/sha256/67/6779be6fe66bb903c52d1481f201513cc22b3c273cbbb1e6f8106d52670a285a/manifest.json",
@@ -6003,6 +6155,24 @@
       "contentRoot": "sha256:3b879b8b50e192aff34d8ba141b5091ba71a46ca74bc23b6c0ee1f6313ba947f"
     },
     {
+      "path": ".kungfu/project-cuts/sha256/ba/bad9f430e973a3dfd49ae3886debe66fce5f8070fc23c231f22753e5dbcbb220/manifest.json",
+      "class": "retained-evidence",
+      "generatedProvenance": false,
+      "language": "declarative",
+      "owner": "kungfu/retained-native-evidence",
+      "lines": 1,
+      "contentRoot": "sha256:1be67fcdd4774fc36b1c9db62cd19d72403eb79c7e050d368062846390bba116"
+    },
+    {
+      "path": ".kungfu/project-cuts/sha256/ba/bad9f430e973a3dfd49ae3886debe66fce5f8070fc23c231f22753e5dbcbb220/receipt.json",
+      "class": "retained-evidence",
+      "generatedProvenance": false,
+      "language": "declarative",
+      "owner": "kungfu/retained-native-evidence",
+      "lines": 1,
+      "contentRoot": "sha256:78072ba31ba86555d5696f1259d4b8f5e5d7a5be4c45b974a72fea2924e24e36"
+    },
+    {
       "path": ".kungfu/project-cuts/sha256/ba/baf4ed6ee9d1c24c3ad81dd6e399e7caf13feb70338aeaf3dc16d5d9779ad1b7/manifest.json",
       "class": "retained-evidence",
       "generatedProvenance": false,
@@ -6291,6 +6461,24 @@
       "contentRoot": "sha256:9de4534004b24e0dbfe25ef88d5f723d6273200fd8c8dba8ab45940037449073"
     },
     {
+      "path": ".kungfu/project-cuts/sha256/c5/c5866904cc8af27429cfa78215df7f717206e0243dbc700bb3ba9435b7d59a76/manifest.json",
+      "class": "retained-evidence",
+      "generatedProvenance": false,
+      "language": "declarative",
+      "owner": "kungfu/retained-native-evidence",
+      "lines": 1,
+      "contentRoot": "sha256:2e387f7909158b997a00b40fa07e2e708811654496b242fd26eaddcaf1692931"
+    },
+    {
+      "path": ".kungfu/project-cuts/sha256/c5/c5866904cc8af27429cfa78215df7f717206e0243dbc700bb3ba9435b7d59a76/receipt.json",
+      "class": "retained-evidence",
+      "generatedProvenance": false,
+      "language": "declarative",
+      "owner": "kungfu/retained-native-evidence",
+      "lines": 1,
+      "contentRoot": "sha256:90eb56e8931a89243bb779c84dbae787885248d5545b1b24bd02b5923e11b5ab"
+    },
+    {
       "path": ".kungfu/project-cuts/sha256/c5/c5ed027df98b600483d07fbabf3508b75978c752c0fe168c70427d0bbf706900/manifest.json",
       "class": "retained-evidence",
       "generatedProvenance": false,
@@ -6543,6 +6731,24 @@
       "contentRoot": "sha256:ad699da587b321fa3251deca620fc1f77f71c4bed20068a8f7ea06b84167b98a"
     },
     {
+      "path": ".kungfu/project-cuts/sha256/ce/ce5c7214dabb2f7998f6b4e8c4bdd4b4ba0d9c271a87528c1bed69b1f11338fe/manifest.json",
+      "class": "retained-evidence",
+      "generatedProvenance": false,
+      "language": "declarative",
+      "owner": "kungfu/retained-native-evidence",
+      "lines": 1,
+      "contentRoot": "sha256:d44dc70e37e108b66682a8732227758be8ec489cea40c9e25ef08f268a96d4a1"
+    },
+    {
+      "path": ".kungfu/project-cuts/sha256/ce/ce5c7214dabb2f7998f6b4e8c4bdd4b4ba0d9c271a87528c1bed69b1f11338fe/receipt.json",
+      "class": "retained-evidence",
+      "generatedProvenance": false,
+      "language": "declarative",
+      "owner": "kungfu/retained-native-evidence",
+      "lines": 1,
+      "contentRoot": "sha256:57704fde9b5063422f13bf0ca235c794e73337d3e84e155ff8d3b8b9845849d0"
+    },
+    {
       "path": ".kungfu/project-cuts/sha256/cf/cfe96accedeee467f73c44401a7dd830eaa0be934026415c401edae5df73939a/manifest.json",
       "class": "retained-evidence",
       "generatedProvenance": false,
@@ -6757,6 +6963,24 @@
       "owner": "kungfu/retained-native-evidence",
       "lines": 1,
       "contentRoot": "sha256:ad6b0d8de3f7301c65811513aaa5ab6dced46fe4fc066680fa0aaf322de1275b"
+    },
+    {
+      "path": ".kungfu/project-cuts/sha256/dd/dd7d5f67596af4f68b91bf663f8db620bce468eee8b39e7284d908d97a30f90f/manifest.json",
+      "class": "retained-evidence",
+      "generatedProvenance": false,
+      "language": "declarative",
+      "owner": "kungfu/retained-native-evidence",
+      "lines": 1,
+      "contentRoot": "sha256:086866b4d879a9e79f0be637683acb43f5dc0495dba9c07f90f9da09a83418a1"
+    },
+    {
+      "path": ".kungfu/project-cuts/sha256/dd/dd7d5f67596af4f68b91bf663f8db620bce468eee8b39e7284d908d97a30f90f/receipt.json",
+      "class": "retained-evidence",
+      "generatedProvenance": false,
+      "language": "declarative",
+      "owner": "kungfu/retained-native-evidence",
+      "lines": 1,
+      "contentRoot": "sha256:fb42ca7ced7dbeff8492ffc31059f1b6fd1531c81ee553d27b7dbcf411399220"
     },
     {
       "path": ".kungfu/project-cuts/sha256/df/dfaaf79adf4e1e7631d69ef23aeece53524af23db350f7282061a8ae04c3186b/manifest.json",
@@ -7594,6 +7818,42 @@
       "owner": "kungfu/repository-contract",
       "lines": 1,
       "contentRoot": "sha256:5e106b3091ce04fe4e0bfbeedd4aa4f1a2ae1986fb13e09d13518434016c6d05"
+    },
+    {
+      "path": ".xinfa/baselines/sha256/01bb1fe70ccbf84f4c876396d31fb5818bdb79a74fad37435bbdf7a06a747afa/compatibility/context-pack-v1/manifest.json",
+      "class": "declarative-schema-or-table",
+      "generatedProvenance": false,
+      "language": "declarative",
+      "owner": "kungfu/repository-contract",
+      "lines": 1,
+      "contentRoot": "sha256:e8025e8376fa7e4146bcf91220b29b7ffdc20df90dbb691c9febae95c1046307"
+    },
+    {
+      "path": ".xinfa/baselines/sha256/01bb1fe70ccbf84f4c876396d31fb5818bdb79a74fad37435bbdf7a06a747afa/compatibility/context-pack-v1/receipt.json",
+      "class": "declarative-schema-or-table",
+      "generatedProvenance": false,
+      "language": "declarative",
+      "owner": "kungfu/repository-contract",
+      "lines": 1,
+      "contentRoot": "sha256:c4e9981e3b0a6ce07f9c9ccd7f395c2d6f859e6c4e53d908a83dbea5835171e7"
+    },
+    {
+      "path": ".xinfa/baselines/sha256/01bb1fe70ccbf84f4c876396d31fb5818bdb79a74fad37435bbdf7a06a747afa/manifest.json",
+      "class": "declarative-schema-or-table",
+      "generatedProvenance": false,
+      "language": "declarative",
+      "owner": "kungfu/repository-contract",
+      "lines": 1,
+      "contentRoot": "sha256:c491f09cb886c44d94126207997ca592dd9a0ae300ca394ad9c68962f0b03225"
+    },
+    {
+      "path": ".xinfa/baselines/sha256/01bb1fe70ccbf84f4c876396d31fb5818bdb79a74fad37435bbdf7a06a747afa/receipt.json",
+      "class": "declarative-schema-or-table",
+      "generatedProvenance": false,
+      "language": "declarative",
+      "owner": "kungfu/repository-contract",
+      "lines": 1,
+      "contentRoot": "sha256:137fb6eee6ee45cc6b1c17282a1ded3f492eb623994f50bc54fbe5e35cbdbc30"
     },
     {
       "path": ".xinfa/baselines/sha256/05631a8dbd39a881897c5a10f720422feb677306a1b96b5d829db415aaad91d8/compatibility/context-pack-v1/manifest.json",
@@ -8674,6 +8934,42 @@
       "owner": "kungfu/repository-contract",
       "lines": 1,
       "contentRoot": "sha256:8843c9d788fdf3c734911c4886e445b82750a96b22de0526027677bdf9dcd783"
+    },
+    {
+      "path": ".xinfa/baselines/sha256/36133efd67041591e1023fa74a9bc47e182f9abd4d221d40cf3424c79ea6eba1/compatibility/context-pack-v1/manifest.json",
+      "class": "declarative-schema-or-table",
+      "generatedProvenance": false,
+      "language": "declarative",
+      "owner": "kungfu/repository-contract",
+      "lines": 1,
+      "contentRoot": "sha256:dd920faadfabbabe7194723b080b8059c994c93c829c5dbadb4682a3ad8bf804"
+    },
+    {
+      "path": ".xinfa/baselines/sha256/36133efd67041591e1023fa74a9bc47e182f9abd4d221d40cf3424c79ea6eba1/compatibility/context-pack-v1/receipt.json",
+      "class": "declarative-schema-or-table",
+      "generatedProvenance": false,
+      "language": "declarative",
+      "owner": "kungfu/repository-contract",
+      "lines": 1,
+      "contentRoot": "sha256:60bc083c55ecee894d3c10269cc43eec89c39a52533469af284f30e81ece0466"
+    },
+    {
+      "path": ".xinfa/baselines/sha256/36133efd67041591e1023fa74a9bc47e182f9abd4d221d40cf3424c79ea6eba1/manifest.json",
+      "class": "declarative-schema-or-table",
+      "generatedProvenance": false,
+      "language": "declarative",
+      "owner": "kungfu/repository-contract",
+      "lines": 1,
+      "contentRoot": "sha256:eb21fdd3edefa837ccf190b23254ca1972088797d7ff5333c20b0db2a9fad09b"
+    },
+    {
+      "path": ".xinfa/baselines/sha256/36133efd67041591e1023fa74a9bc47e182f9abd4d221d40cf3424c79ea6eba1/receipt.json",
+      "class": "declarative-schema-or-table",
+      "generatedProvenance": false,
+      "language": "declarative",
+      "owner": "kungfu/repository-contract",
+      "lines": 1,
+      "contentRoot": "sha256:8ce7b77e9a2f2655701c69c7edbcb61697425fa3bc2a17453b8b707996413f2c"
     },
     {
       "path": ".xinfa/baselines/sha256/3a6d553ef1a9b531a89404469d96a761f91dd4d494adbb5cf7451671db8f580b/compatibility/context-pack-v1/manifest.json",
@@ -10116,6 +10412,42 @@
       "contentRoot": "sha256:f69496d3ca2bfb7d58bdecbd7bc7c252defdb0adcf5b54e4d2e162d98225642e"
     },
     {
+      "path": ".xinfa/baselines/sha256/874fd897d7dee846d0e326553d638cea28cf8cbb4ed946c61273c5caf1525dd3/compatibility/context-pack-v1/manifest.json",
+      "class": "declarative-schema-or-table",
+      "generatedProvenance": false,
+      "language": "declarative",
+      "owner": "kungfu/repository-contract",
+      "lines": 1,
+      "contentRoot": "sha256:74c5dc619780c44ce70036621b851ebe2b827c372c2363bda47b9691ad4ca80e"
+    },
+    {
+      "path": ".xinfa/baselines/sha256/874fd897d7dee846d0e326553d638cea28cf8cbb4ed946c61273c5caf1525dd3/compatibility/context-pack-v1/receipt.json",
+      "class": "declarative-schema-or-table",
+      "generatedProvenance": false,
+      "language": "declarative",
+      "owner": "kungfu/repository-contract",
+      "lines": 1,
+      "contentRoot": "sha256:260e420fe2f7eb7277dc28ea90159720072c8ca3a2efac9e63af625b87e516a3"
+    },
+    {
+      "path": ".xinfa/baselines/sha256/874fd897d7dee846d0e326553d638cea28cf8cbb4ed946c61273c5caf1525dd3/manifest.json",
+      "class": "declarative-schema-or-table",
+      "generatedProvenance": false,
+      "language": "declarative",
+      "owner": "kungfu/repository-contract",
+      "lines": 1,
+      "contentRoot": "sha256:85f3dd804b9a1b1d4cb1e75e00078050f3bf825ca0638b4d9ced80119cf53587"
+    },
+    {
+      "path": ".xinfa/baselines/sha256/874fd897d7dee846d0e326553d638cea28cf8cbb4ed946c61273c5caf1525dd3/receipt.json",
+      "class": "declarative-schema-or-table",
+      "generatedProvenance": false,
+      "language": "declarative",
+      "owner": "kungfu/repository-contract",
+      "lines": 1,
+      "contentRoot": "sha256:2bf30d95df9b1ba3ebb8a20864e7b61d68f5a146b83a981be001a743245e7f27"
+    },
+    {
       "path": ".xinfa/baselines/sha256/896ce70f38ee3e8128f2547a2df79bf53b17be792118ce481f7ecbe49bee1fd9/compatibility/context-pack-v1/manifest.json",
       "class": "declarative-schema-or-table",
       "generatedProvenance": false,
@@ -10402,6 +10734,42 @@
       "owner": "kungfu/repository-contract",
       "lines": 1,
       "contentRoot": "sha256:2acf88e0adc7b47886c91b9095a6008a90df6b1ac9e15ab493e1484327f5d472"
+    },
+    {
+      "path": ".xinfa/baselines/sha256/94bfff741b1829fc3782e5b94f7d11876ed7474394c100217847ac54edcd3807/compatibility/context-pack-v1/manifest.json",
+      "class": "declarative-schema-or-table",
+      "generatedProvenance": false,
+      "language": "declarative",
+      "owner": "kungfu/repository-contract",
+      "lines": 1,
+      "contentRoot": "sha256:d444f01a492e67fc8d42574579554215af4050b91db0835ce7d349906adb8608"
+    },
+    {
+      "path": ".xinfa/baselines/sha256/94bfff741b1829fc3782e5b94f7d11876ed7474394c100217847ac54edcd3807/compatibility/context-pack-v1/receipt.json",
+      "class": "declarative-schema-or-table",
+      "generatedProvenance": false,
+      "language": "declarative",
+      "owner": "kungfu/repository-contract",
+      "lines": 1,
+      "contentRoot": "sha256:1e22f4945a7389332a9b2053673a83bd3ff813ebe79da0be8c92e207fd8e0334"
+    },
+    {
+      "path": ".xinfa/baselines/sha256/94bfff741b1829fc3782e5b94f7d11876ed7474394c100217847ac54edcd3807/manifest.json",
+      "class": "declarative-schema-or-table",
+      "generatedProvenance": false,
+      "language": "declarative",
+      "owner": "kungfu/repository-contract",
+      "lines": 1,
+      "contentRoot": "sha256:616d95595d6f36f0d6b23131c8ce8d3b9793dd4ddfb67397b29479e21b97b7fd"
+    },
+    {
+      "path": ".xinfa/baselines/sha256/94bfff741b1829fc3782e5b94f7d11876ed7474394c100217847ac54edcd3807/receipt.json",
+      "class": "declarative-schema-or-table",
+      "generatedProvenance": false,
+      "language": "declarative",
+      "owner": "kungfu/repository-contract",
+      "lines": 1,
+      "contentRoot": "sha256:e5e7e01936838c54f6d61e38d2a20930f777b30603af9f195d8ad2461ed6b863"
     },
     {
       "path": ".xinfa/baselines/sha256/99d45d5f1b733024bc3db171265351b15a64a030385999113cf55abb7b09f9a9/compatibility/context-pack-v1/manifest.json",
@@ -12357,6 +12725,15 @@
       "contentRoot": "sha256:0c93b8a6b4d96cdac9aa7fc3fd5e81c9cc2427716c55df10c71127f03d58252d"
     },
     {
+      "path": ".xinfa/manifests/legacy-atlas-roots.json",
+      "class": "declarative-schema-or-table",
+      "generatedProvenance": false,
+      "language": "declarative",
+      "owner": "kungfu/repository-contract",
+      "lines": 594,
+      "contentRoot": "sha256:aa1423056aae530196695f7030a507eef5c52c3f14f86dd38024b80389da9f2b"
+    },
+    {
       "path": ".xinfa/manifests/project-cuts/009cdca09f138e98c7f0004dabfdbf01b1a1fa230124f0d552af9a6613baae8b.json",
       "class": "declarative-schema-or-table",
       "generatedProvenance": false,
@@ -13551,7 +13928,7 @@
       "language": "declarative",
       "owner": "kungfu/repository-contract",
       "lines": 1,
-      "contentRoot": "sha256:74ade15d2632d5214d7356421307a5e58b8a814295607c9429a9d7033868e709"
+      "contentRoot": "sha256:0d42b95fee0593c1e113c69c33862fa093616ac22c82e0e686e706fbd921050a"
     },
     {
       "path": ".xinfa/product-documentation-pack.json",
@@ -13569,7 +13946,7 @@
       "language": "declarative",
       "owner": "kungfu/repository-contract",
       "lines": 1077,
-      "contentRoot": "sha256:21d444aab56d57a382bd24960e69f563f03635d1f892315120809c9cdde55803"
+      "contentRoot": "sha256:d0f4059e4524daf116a9a4215899c2b4194ef65d35b61397ccb0345c4a8cb0c9"
     },
     {
       "path": ".xinfa/projection-recipes/xinfa-dogfood.json",
@@ -13662,6 +14039,15 @@
       "contentRoot": "sha256:959c0a3ed0db20a2f9b8c4bee28637c95f974add41c96ff007329e79fc9aad63"
     },
     {
+      "path": ".xinfa/submissions/xinfa-go-context-autoload-live-completion.json",
+      "class": "declarative-schema-or-table",
+      "generatedProvenance": false,
+      "language": "declarative",
+      "owner": "kungfu/repository-contract",
+      "lines": 36,
+      "contentRoot": "sha256:a2dbe62ba0495f50b35ae9be317e334b80ccead59d08593fc523d162e4f11e06"
+    },
+    {
       "path": "biome.json",
       "class": "declarative-schema-or-table",
       "generatedProvenance": false,
@@ -13749,7 +14135,7 @@
       "language": "declarative",
       "owner": "kungfu/config",
       "lines": 584,
-      "contentRoot": "sha256:bc243cba8871bf7f47d71544dfe6718f5144a49b5978192e2fef148de4ff930b"
+      "contentRoot": "sha256:c49f53799ef7d61f5439427bb12fcaab0dff7abfdc018e374053ff16a0e2fc45"
     },
     {
       "path": "config/kungfu-contracts.registry.json",
@@ -13775,8 +14161,8 @@
       "generatedProvenance": false,
       "language": "declarative",
       "owner": "kungfu/config",
-      "lines": 1497,
-      "contentRoot": "sha256:f4bb8be416f73f46b960c1f46666bbf669d9daab58585003d30cd3f8e18e2227"
+      "lines": 1498,
+      "contentRoot": "sha256:f0e6cfddac711123a969d7d88c8995b95fcb397b99438674902372fb38ff8d0c"
     },
     {
       "path": "config/kungfu-runtime-surface.contract.json",
@@ -13784,8 +14170,8 @@
       "generatedProvenance": false,
       "language": "declarative",
       "owner": "kungfu/config",
-      "lines": 790,
-      "contentRoot": "sha256:4e4ef2d229200f0d24861db7e1ada9da41c85f55c4596f54ad53f40e6cb8fb1f"
+      "lines": 791,
+      "contentRoot": "sha256:5a470459deb07294eac76d8d65b3049a8fbe9054dffefe40ca8d4b006aca1db7"
     },
     {
       "path": "config/primitive/kungfu-primitive-catalog.contract.json",
@@ -13794,7 +14180,7 @@
       "language": "declarative",
       "owner": "kungfu/config",
       "lines": 1725,
-      "contentRoot": "sha256:16e9e81e47702a871cc7a805664f3698443c473fd1e51b89f6c154012aa9553c"
+      "contentRoot": "sha256:46aa5c6a056801de9c11b46d28af6ed8163d8810bc1cdd480c315f4f173d99fe"
     },
     {
       "path": "config/profile/kungfu-domain-profile-authoring.contract.json",
@@ -13804,6 +14190,15 @@
       "owner": "kungfu/config",
       "lines": 938,
       "contentRoot": "sha256:3ca9675f02c82adbb0702c7b74c62107f8c0524816a90571da03778d09d5f46f"
+    },
+    {
+      "path": "config/work-control-naming-boundary.json",
+      "class": "declarative-schema-or-table",
+      "generatedProvenance": false,
+      "language": "declarative",
+      "owner": "kungfu/config",
+      "lines": 146,
+      "contentRoot": "sha256:72a73a297348ca09ed4d2f5196e29fdb43a7c9e96d3c4b7f4c57f2a5d6d45698"
     },
     {
       "path": "config/work-lifecycle/episode-native-operation-catalog.contract.json",
@@ -14541,7 +14936,7 @@
       "language": "rust",
       "owner": "crate/trunk",
       "lines": 194,
-      "contentRoot": "sha256:bf65e7b8c8e42e3832fbfcdecc5ebefc89a84da401607d44037a9db91c7dc70c"
+      "contentRoot": "sha256:cae9a5f5417fb95d575910d4a00c8ba8e9fef89bfd064347588b5d21d2ea9cdb"
     },
     {
       "path": "crates/trunk/src/variant.rs",
@@ -14658,7 +15053,7 @@
       "language": "declarative",
       "owner": "crate/xinfa",
       "lines": 9,
-      "contentRoot": "sha256:bed0d1bc28fd770399af1043b6f1ad5ff8b9656b0f39d8a0b219f8acf4a3733f"
+      "contentRoot": "sha256:443c3503164cf0eeed8f4efd1b431842b4e7ae1bb02202ed8b2fb33430081097"
     },
     {
       "path": "crates/xinfa/extraction-manifest.json",
@@ -14667,16 +15062,7 @@
       "language": "declarative",
       "owner": "crate/xinfa",
       "lines": 125,
-      "contentRoot": "sha256:c0705b335ddbf505a2051ee0e0037ecf69076c1bb37c4a7bc93924a6687c56af"
-    },
-    {
-      "path": "crates/xinfa/fixtures/golden/assignment-route-corpus-v1.json",
-      "class": "test-or-fixture",
-      "generatedProvenance": false,
-      "language": "declarative",
-      "owner": "crate/xinfa",
-      "lines": 38,
-      "contentRoot": "sha256:8e6b8a644f5fa2f6d215bfbf871d9a059117e6620d2d93ab589a16f0739a3712"
+      "contentRoot": "sha256:fab8b14ad2c67f057179e5f0001e12b6aa01490788fc6e997292415ac506f623"
     },
     {
       "path": "crates/xinfa/fixtures/golden/context-quality-corpus-v1.json",
@@ -14685,7 +15071,16 @@
       "language": "declarative",
       "owner": "crate/xinfa",
       "lines": 50,
-      "contentRoot": "sha256:943945bd4012bf2430b1d16470720e69e077a990da12e74c02c529ece4c2f79e"
+      "contentRoot": "sha256:ea3675ac36f26c0aec347aa6712fa55b053a59e1c4e9803edceb788665cfba9f"
+    },
+    {
+      "path": "crates/xinfa/fixtures/golden/go-route-corpus-v1.json",
+      "class": "test-or-fixture",
+      "generatedProvenance": false,
+      "language": "declarative",
+      "owner": "crate/xinfa",
+      "lines": 38,
+      "contentRoot": "sha256:99ac68932576190495e6dc56f38a19041889757c756c97446bbea5c0a023c1aa"
     },
     {
       "path": "crates/xinfa/fixtures/golden/projection-scenarios-v1.json",
@@ -14694,7 +15089,7 @@
       "language": "declarative",
       "owner": "crate/xinfa",
       "lines": 75,
-      "contentRoot": "sha256:2f6e034f2a9eb89da70521e3ce45a8caa84fc918453696411c0049e14e87374e"
+      "contentRoot": "sha256:b14530cdac75ae9aaca72f5c12de9e912803c9265905eb53d08ce8d5670ed627"
     },
     {
       "path": "crates/xinfa/fixtures/golden/repository-small-atlas-v1.json",
@@ -14703,7 +15098,7 @@
       "language": "declarative",
       "owner": "crate/xinfa",
       "lines": 15,
-      "contentRoot": "sha256:5db79f899cf74c878836af84512fa02237cafe1c4ef3226c2a606255a1c9d4ff"
+      "contentRoot": "sha256:b1f5b9b3d7b01cb7878e27a1746a9abe234eae8a9ec73aab4ac5fff0b318ef97"
     },
     {
       "path": "crates/xinfa/fixtures/golden/repository-small-pack-v1.json",
@@ -14964,7 +15359,7 @@
       "language": "declarative",
       "owner": "crate/xinfa",
       "lines": 1,
-      "contentRoot": "sha256:5de0dfeeaba58094618359bc6945d712c01b053c0296affeb458462913ac2428"
+      "contentRoot": "sha256:38ef7b78a8257f11254b96e0e0f48b2c99913f440fc1f328e5fcbc55554e2b87"
     },
     {
       "path": "crates/xinfa/fixtures/repository-small/evidence/runtime.json",
@@ -14994,22 +15389,13 @@
       "contentRoot": "sha256:8cd8ed2434ba1394043b3a2b8f6f746b16e2eee01b28d30661e17350948a30e1"
     },
     {
-      "path": "crates/xinfa/fixtures/terminology/consumer-project-and-atlas-primitive-v1.json",
+      "path": "crates/xinfa/fixtures/terminology/atlas-project-and-primitive-v1.json",
       "class": "test-or-fixture",
       "generatedProvenance": false,
       "language": "declarative",
       "owner": "crate/xinfa",
       "lines": 10,
-      "contentRoot": "sha256:80fc0b4b451cb22d9a0bb541998470d93ee01bb45c00dec6dac4459e59c861a5"
-    },
-    {
-      "path": "crates/xinfa/qualification/assignment-route-resolution-v1.json",
-      "class": "declarative-schema-or-table",
-      "generatedProvenance": false,
-      "language": "declarative",
-      "owner": "crate/xinfa",
-      "lines": 30,
-      "contentRoot": "sha256:c1e22f2ae35ded0e237763a91f24e564f2f487214082f758c48a745fad02f19a"
+      "contentRoot": "sha256:58aa66fbdb349556066f8140d3882d2a245d4579c99fd5f722652989be81ff02"
     },
     {
       "path": "crates/xinfa/qualification/atlas-v1.json",
@@ -15036,7 +15422,7 @@
       "language": "declarative",
       "owner": "crate/xinfa",
       "lines": 711,
-      "contentRoot": "sha256:edfd223cdac35b655815f08319c55215bf003120ea175c36df6407e6620396df"
+      "contentRoot": "sha256:6a0af1729b1f9ea1e1d06e5075698fac848b98a4308bc19adfdd01839ae8fa14"
     },
     {
       "path": "crates/xinfa/qualification/episode-provider-v1.json",
@@ -15046,6 +15432,15 @@
       "owner": "crate/xinfa",
       "lines": 34,
       "contentRoot": "sha256:ce6072efcb71f83f3bf1fc1dd8139e508ac40638009ae5637af8126cbafaa550"
+    },
+    {
+      "path": "crates/xinfa/qualification/go-route-resolution-v1.json",
+      "class": "declarative-schema-or-table",
+      "generatedProvenance": false,
+      "language": "declarative",
+      "owner": "crate/xinfa",
+      "lines": 30,
+      "contentRoot": "sha256:ffd08b342e68ca5e0382501d433216e26cf595b167a3c8448f5dfe325b6a5b3e"
     },
     {
       "path": "crates/xinfa/qualification/repository-onboarding-v1.json",
@@ -15090,7 +15485,7 @@
       "language": "declarative",
       "owner": "crate/xinfa",
       "lines": 183,
-      "contentRoot": "sha256:1213a74c6c0d2320613ebce50b00cd38b86447dce7003813f92d1307ac73f166"
+      "contentRoot": "sha256:77e6591c81e937f8354c647b5d8717cf8be0f21d0e765e8038711ec65f758eb0"
     },
     {
       "path": "crates/xinfa/qualification/task-chart-v1.json",
@@ -15126,7 +15521,7 @@
       "language": "declarative",
       "owner": "crate/xinfa",
       "lines": 176,
-      "contentRoot": "sha256:ffd8e690f692341894820f302c0163d7c16633f2b79ee04447bad26f3f001c2e"
+      "contentRoot": "sha256:1fa4c89cade55fefd40aa04c03058f3cbcc1f0fec5ac8e01e320feac57a21eaf"
     },
     {
       "path": "crates/xinfa/schema/atlas-manifest-v1.schema.json",
@@ -15261,7 +15656,7 @@
       "language": "declarative",
       "owner": "crate/xinfa",
       "lines": 53,
-      "contentRoot": "sha256:4372befe60bdcfc00563abff758bc83d01e98a42d0b26a3cc9eb038b6c7e492c"
+      "contentRoot": "sha256:7035df7ee8ddb42d6bedd5e2e346e475f3dd3a16343fffd3831161e6f36993e4"
     },
     {
       "path": "crates/xinfa/schema/project-v1.schema.json",
@@ -15270,7 +15665,7 @@
       "language": "declarative",
       "owner": "crate/xinfa",
       "lines": 128,
-      "contentRoot": "sha256:3a031af33969af1ec65dec1d527c6b3606d60fa5ebce7a4fd6bfa371268d7d7e"
+      "contentRoot": "sha256:33341df708e7b29250d6fbd95ad56765757badcc1ec0d4cff6b85d9c70aac656"
     },
     {
       "path": "crates/xinfa/schema/projection-recipe-v1.schema.json",
@@ -15333,7 +15728,7 @@
       "language": "declarative",
       "owner": "crate/xinfa",
       "lines": 467,
-      "contentRoot": "sha256:422121308cdd0af8f828833b3765ce98bf6fbd1955dfac9072002f64139a01fb"
+      "contentRoot": "sha256:f61bd88943d9f15ef96a9bd05201c8eedfc516baef3907cae40784eaf3534083"
     },
     {
       "path": "crates/xinfa/schema/task-chart-v1.schema.json",
@@ -15369,7 +15764,7 @@
       "language": "rust",
       "owner": "crate/xinfa",
       "lines": 878,
-      "contentRoot": "sha256:dc8e2ec4735e03219bc8666e16c0825ca065e4365a0fcc2f663fa7136a68c819"
+      "contentRoot": "sha256:94a78ee44ef043aab346c362e78443c4103233adc450c882529d9991e5d8f19b"
     },
     {
       "path": "crates/xinfa/src/cli.rs",
@@ -15423,7 +15818,7 @@
       "language": "rust",
       "owner": "crate/xinfa",
       "lines": 1238,
-      "contentRoot": "sha256:1d0c47fd7bf8f1a8aedcf8786cd52ddc20fd26c349c4fd992a3ddd0abce546b0"
+      "contentRoot": "sha256:1442d3bc465909773da562a0a1c8bedb7bd30e49417e3ec353bad49e151b4afb"
     },
     {
       "path": "crates/xinfa/src/main.rs",
@@ -15441,7 +15836,7 @@
       "language": "rust",
       "owner": "crate/xinfa",
       "lines": 922,
-      "contentRoot": "sha256:dbe9dfbc93d5ce3e815de3777e822091684861e3e89813796a82879698f29dc3"
+      "contentRoot": "sha256:2b7bfaf2d001c9d7b97fb5ff3ba4dafc584c553ac43d0c928a95f0a9188e2d97"
     },
     {
       "path": "crates/xinfa/src/onboarding.rs",
@@ -15450,7 +15845,7 @@
       "language": "rust",
       "owner": "crate/xinfa",
       "lines": 437,
-      "contentRoot": "sha256:6c86c0807858de7f58c4f58fa83d6038f50c19104876855dd6d7cd15f3882d4e"
+      "contentRoot": "sha256:9cf150114318c05d55abbb4504fdfd8ec239364321470589dda42e470a0d55d4"
     },
     {
       "path": "crates/xinfa/src/onboarding/acceptance.rs",
@@ -15459,7 +15854,7 @@
       "language": "rust",
       "owner": "crate/xinfa",
       "lines": 436,
-      "contentRoot": "sha256:16eba547c0a67af9e6ed2b8fc1461229a14fc13eaa92e991338b38496ebd55de"
+      "contentRoot": "sha256:2851e032e79cd64755cfc64dcd7d61de9dfa543067361390bb754f9a543af970"
     },
     {
       "path": "crates/xinfa/src/onboarding/candidate.rs",
@@ -15522,7 +15917,7 @@
       "language": "rust",
       "owner": "crate/xinfa",
       "lines": 818,
-      "contentRoot": "sha256:3676a6574671dfec3598e629c6067754e141854f85438d0e2f124ba7d8517b0f"
+      "contentRoot": "sha256:65dd66497a96519b804c9f9a6b7599e4f0fa7a8a5d83f26f20405f143a34f66c"
     },
     {
       "path": "crates/xinfa/src/projection.rs",
@@ -15540,7 +15935,7 @@
       "language": "rust",
       "owner": "crate/xinfa",
       "lines": 546,
-      "contentRoot": "sha256:8caf8bcfbf0e8579981b4c812e5ffdeaa54beac84118420ff04a711f78396769"
+      "contentRoot": "sha256:f801cbe2a4c2a15097e76192226c0ba02acfd4e384a470ef9d79138ed1225cb9"
     },
     {
       "path": "crates/xinfa/src/semantic_project.rs",
@@ -15549,7 +15944,7 @@
       "language": "rust",
       "owner": "crate/xinfa",
       "lines": 341,
-      "contentRoot": "sha256:d5ceaf96e552b54b56b044c1bc65e6c9fea083aac0629a394b1f6c6f12717b8f"
+      "contentRoot": "sha256:631d2462a74d0125261683ca3093780421dca3f57c0ec95cc185e4d0d99caedc"
     },
     {
       "path": "crates/xinfa/tooling/build-wasm.mjs",
@@ -15666,7 +16061,7 @@
       "language": "javascript-typescript",
       "owner": "crate/xinfa",
       "lines": 357,
-      "contentRoot": "sha256:3545de0731e1f0abe2428d53b15b60eb8ac168a82c36480eb7ab7ae5c476e241"
+      "contentRoot": "sha256:9e78817e0e718d53480a8d0e74c5f2045197bf153f0f2b9f561ddba2d68bbdac"
     },
     {
       "path": "crates/xinfa/tooling/qualify-route-resolver.mjs",
@@ -15675,7 +16070,7 @@
       "language": "javascript-typescript",
       "owner": "crate/xinfa",
       "lines": 197,
-      "contentRoot": "sha256:b5719858852fff735be7476ef2160149157578b1df3246fbccf5042bf4ffdf62"
+      "contentRoot": "sha256:d8f28dbf5e067dec524531071cb0914cd984e5a083da4aa757b71b3e6b1463e8"
     },
     {
       "path": "crates/xinfa/tooling/qualify-wasm.mjs",
@@ -15684,7 +16079,7 @@
       "language": "javascript-typescript",
       "owner": "crate/xinfa",
       "lines": 617,
-      "contentRoot": "sha256:8de38af9df8f8fcd2521ac6e873a50c9575d4a8fc5b45ec8d4e6549fe2458ee2"
+      "contentRoot": "sha256:4c39e60d2c3b177a75940e821466921e583790eabe2f40f947c0a8d30998d76f"
     },
     {
       "path": "crates/xinfa/tooling/source-command-arguments.mjs",
@@ -15738,7 +16133,7 @@
       "language": "declarative",
       "owner": "developer/sdk",
       "lines": 281,
-      "contentRoot": "sha256:8def0dc7e78f26d551cb80d617678ea12492171debc72e9590ddbee499b1f4db"
+      "contentRoot": "sha256:487f5f08b94c9ea4c496baa4b4bcabc8d70186db2b0769fa0ce38bee03e24e2b"
     },
     {
       "path": "developer/sdk/kfd/kfd-1/release-gate.json",
@@ -15747,7 +16142,7 @@
       "language": "declarative",
       "owner": "developer/sdk",
       "lines": 852,
-      "contentRoot": "sha256:18b5b6714b6183dc3cf26b6f05ce41221a96bb7fc79be303bab54d16d3a2dcce"
+      "contentRoot": "sha256:e4dd1b7de5cd8e55cbd034319c93939d10f9541b3d09b566071118938071e6d2"
     },
     {
       "path": "developer/sdk/kfd/kfd-1/verify-result.json",
@@ -15765,7 +16160,7 @@
       "language": "declarative",
       "owner": "developer/sdk",
       "lines": 241,
-      "contentRoot": "sha256:124b4522d910cf024e598cc293f9dadf952f0aaadd9b185ff66af38ea6b8eca7"
+      "contentRoot": "sha256:793d78406dea419532f15f68aecf9ab475bb69d64d583f9fe06d20e82d68bfe8"
     },
     {
       "path": "developer/sdk/kfd/kfd-2/claims/agent-work-state-contract.json",
@@ -15774,7 +16169,7 @@
       "language": "declarative",
       "owner": "developer/sdk",
       "lines": 126,
-      "contentRoot": "sha256:7700c5d9d878bb222e237b7782c417950d64708dc85ce67d2a6be2570def226a"
+      "contentRoot": "sha256:6db0ea8773e1147de00abd0f300a8f032b368ede832ce3756d985b02e0840b3b"
     },
     {
       "path": "developer/sdk/kfd/kfd-2/claims/codex-report-receipts.json",
@@ -15792,7 +16187,7 @@
       "language": "declarative",
       "owner": "developer/sdk",
       "lines": 139,
-      "contentRoot": "sha256:f012a2c8215a35ea5a67b0a8176fd81959add219ce11437d4ea19b06d696ad0d"
+      "contentRoot": "sha256:387b5ca933f1019cbb7af612052a163e434d3eebfb406a246ce7539a41c59f0b"
     },
     {
       "path": "developer/sdk/kfd/kfd-2/claims/remote-fact-boundary.json",
@@ -15801,7 +16196,7 @@
       "language": "declarative",
       "owner": "developer/sdk",
       "lines": 121,
-      "contentRoot": "sha256:d9bf2d304fe3bea7579f0b9f765d5ce919300b40e90811b4dccb8b8bdba63711"
+      "contentRoot": "sha256:e6ea7cc9eda4423f6f39a7c2e970f60250197250de26e358b2f54fcbc630cd4f"
     },
     {
       "path": "developer/sdk/kfd/kfd-2/release-claims.json",
@@ -15810,7 +16205,7 @@
       "language": "declarative",
       "owner": "developer/sdk",
       "lines": 477,
-      "contentRoot": "sha256:e07be9fcd74d19fbcf534737773d1dd76c75ed9f7320561fea3c3bdfc2f04928"
+      "contentRoot": "sha256:c983fd692dda08d932738dd8bb95b25a5b9bbbb31a4fbfcf54d0c03607321a8a"
     },
     {
       "path": "developer/sdk/kfd/kfd-3-surfaces.json",
@@ -15818,8 +16213,8 @@
       "generatedProvenance": false,
       "language": "declarative",
       "owner": "developer/sdk",
-      "lines": 2672,
-      "contentRoot": "sha256:757aadcbd42aeedffd253203fc8ee8e9d0c963f998756f24943b0dcb07b8693f"
+      "lines": 2732,
+      "contentRoot": "sha256:997fa8c88dc052e42a484f96797b66e1bff24890474f06efe3eea2971bb58daa"
     },
     {
       "path": "developer/sdk/kfd/support-matrix.json",
@@ -15828,7 +16223,7 @@
       "language": "declarative",
       "owner": "developer/sdk",
       "lines": 707,
-      "contentRoot": "sha256:c43540f9e9d55a4034c94446698655fde9f50ae6bb225a0701acfa388bfd2726"
+      "contentRoot": "sha256:911ac1f9e9302dd0035e5ed575166224442323a2ed3bb720ffdc91fe4018911a"
     },
     {
       "path": "developer/sdk/kfd/upstream-aggregate.json",
@@ -15981,7 +16376,7 @@
       "language": "declarative",
       "owner": "kungfu/docs",
       "lines": 1,
-      "contentRoot": "sha256:523cf7d6b0e364b278fc8d23ca00beaf89fe229f7907b796e24fb0014e1da7ea"
+      "contentRoot": "sha256:b694cb5dc240720d0867563e335cf51becd4d9f2f6b090fd0fefd37f68499255"
     },
     {
       "path": "docs/document-metadata.contract.json",
@@ -15989,8 +16384,8 @@
       "generatedProvenance": false,
       "language": "declarative",
       "owner": "kungfu/docs",
-      "lines": 243,
-      "contentRoot": "sha256:bb5f4e19180c61527cc8c919a7ee1e3163404e382fe2b99c2b2e2414bca5653e"
+      "lines": 245,
+      "contentRoot": "sha256:22fa1361ea9e917d2a5aba2fced69c7eaf293f8d6fc06bee39d3d3a051f6d00f"
     },
     {
       "path": "docs/document-metadata.registry.json",
@@ -15998,8 +16393,8 @@
       "generatedProvenance": false,
       "language": "declarative",
       "owner": "kungfu/docs",
-      "lines": 2397,
-      "contentRoot": "sha256:fda9317d85c23d2a1fa75a521bcddbc6ce94c58b35c76d460e158b8965272d41"
+      "lines": 2516,
+      "contentRoot": "sha256:cc3d5388c5ca5ff880f27f39634e9ef42e027173a04f577d80a273b79a927a90"
     },
     {
       "path": "docs/evolution/document-metadata.registry.json",
@@ -16025,8 +16420,8 @@
       "generatedProvenance": false,
       "language": "declarative",
       "owner": "kungfu/docs",
-      "lines": 1015,
-      "contentRoot": "sha256:5471fdddb1738cbfb80535cfb176fd7b92c233e6e5b769abc502f6c409a631f1"
+      "lines": 1023,
+      "contentRoot": "sha256:bdc2829b3740e026d92d5179f0875ee3f4abad1f7e20ed64a23a994908a6502a"
     },
     {
       "path": "docs/qualification/alpha-local-publication-debug.declaration.json",
@@ -17501,8 +17896,8 @@
       "generatedProvenance": false,
       "language": "declarative",
       "owner": "kungfu/docs",
-      "lines": 44,
-      "contentRoot": "sha256:7895be561222c7d920bd03cab32aa81fa03e55a1fb4eb58854520ed2ba22a0fb"
+      "lines": 47,
+      "contentRoot": "sha256:2705cb27ecac529a0dba21f3a0221aa24371d897988f6af4eee66130169a9005"
     },
     {
       "path": "docs/qualification/fixtures/native-dogfood-dispositions.json",
@@ -17591,8 +17986,8 @@
       "generatedProvenance": false,
       "language": "declarative",
       "owner": "kungfu/docs",
-      "lines": 49,
-      "contentRoot": "sha256:8dd35046ba62418c7c4f396002acdfbc8c8b3aa7d421f58655bd863f5b8dad2c"
+      "lines": 51,
+      "contentRoot": "sha256:5d8286803e8b926f94f5ccbaaa45bb352b1572dcbbb8c1929728e6889b421e0b"
     },
     {
       "path": "docs/qualification/gates/workflow-authority.json",
@@ -17601,7 +17996,7 @@
       "language": "declarative",
       "owner": "kungfu/docs",
       "lines": 1118,
-      "contentRoot": "sha256:a0c8d258abc034f85cd5e67802c5a9bb911d248bcd2c57b5b37ec59b85745ccb"
+      "contentRoot": "sha256:94e0ed580a3ef37ccc3cba1a9aeda0ea6ed32f463d2cbc4e7537bf926c1614fb"
     },
     {
       "path": "docs/qualification/gates/workflow-bindings.json",
@@ -17610,7 +18005,7 @@
       "language": "declarative",
       "owner": "kungfu/docs",
       "lines": 718,
-      "contentRoot": "sha256:9e8cdafab4400b713e0ab921e1e92e7476dc2a2bb677ed1c292c860c30fe2611"
+      "contentRoot": "sha256:68ed8c3eca63fdfca4f1d62f5eae87b6bcad4817ba284d9ce09ed463d3751ecc"
     },
     {
       "path": "docs/qualification/python-kfx-asyncio-runtime.contract.json",
@@ -17645,8 +18040,8 @@
       "generatedProvenance": false,
       "language": "declarative",
       "owner": "kungfu/docs",
-      "lines": 64,
-      "contentRoot": "sha256:3134c07c5aed956da7907c11083ee518a5d192ee6452f9ce7534ca33a10b2e74"
+      "lines": 65,
+      "contentRoot": "sha256:38cb12e063d8439807e9873866e7892b2195f60a27d8efca7afdf000fba4dbd1"
     },
     {
       "path": "docs/route-topology.registry.json",
@@ -17681,8 +18076,8 @@
       "generatedProvenance": false,
       "language": "declarative",
       "owner": "kungfu/docs",
-      "lines": 64,
-      "contentRoot": "sha256:9b8a0fc0691334f3fc2eb6394fd6f1b948f11f0600075b71eac1051a1ea431c2"
+      "lines": 57,
+      "contentRoot": "sha256:9a195b9405c564c1882d3bf299de9ad8daef9ce046c6645b34dc6250b80d7c9b"
     },
     {
       "path": "docs/shifu/documentation-contract.json",
@@ -18043,6 +18438,15 @@
       "owner": "kungfu/docs",
       "lines": 272,
       "contentRoot": "sha256:c1fa8fdf93f5ff5b4e5dd60eff94769e9bbbce3e63f0ba828ac0d022d5f62771"
+    },
+    {
+      "path": "docs/shifu/schema/core-affected-production-graph-shadow-receipt-v0.schema.json",
+      "class": "declarative-schema-or-table",
+      "generatedProvenance": false,
+      "language": "declarative",
+      "owner": "kungfu/docs",
+      "lines": 120,
+      "contentRoot": "sha256:dcffa811e80b746928f1331889336b3e94252c84dc3eb017648f9400c2f24fb6"
     },
     {
       "path": "docs/shifu/schema/documentation-project-v1.schema.json",
@@ -18599,8 +19003,8 @@
       "generatedProvenance": false,
       "language": "declarative",
       "owner": "extension/dogfood/actions",
-      "lines": 45,
-      "contentRoot": "sha256:f00ddaf8b7e99050540d654c46acfc6bd4dc0d4c1ac2b004328d4e525db7c86a"
+      "lines": 55,
+      "contentRoot": "sha256:cbefcd2deed7c73f04f363d60af2192c1f18eb1ca95e54d5a2855996c9b97298"
     },
     {
       "path": "extensions/dogfood/assessments/policies.json",
@@ -18626,8 +19030,8 @@
       "generatedProvenance": false,
       "language": "declarative",
       "owner": "extension/dogfood/collaboration",
-      "lines": 130,
-      "contentRoot": "sha256:f3a92bf000256aec6e5115c7730391c6594f90ffdb1d7b60a11e2fb8b5de5b53"
+      "lines": 148,
+      "contentRoot": "sha256:081e05ca0e646327b566de8dde04b0f909e6182bfb087b07678c188ccf5913ba"
     },
     {
       "path": "extensions/dogfood/compatibility/v1.json",
@@ -18644,8 +19048,8 @@
       "generatedProvenance": false,
       "language": "declarative",
       "owner": "extension/dogfood/contracts",
-      "lines": 20,
-      "contentRoot": "sha256:33c46b133948984977e023ac026562b0ff072f37051c4b726e4f03aa6a2cc064"
+      "lines": 25,
+      "contentRoot": "sha256:ab3b638c462abf676de8a2e1226d4bbe427b20109143d9c81976f03f4c24be12"
     },
     {
       "path": "extensions/dogfood/contracts/world.json",
@@ -18653,8 +19057,8 @@
       "generatedProvenance": false,
       "language": "declarative",
       "owner": "extension/dogfood/contracts",
-      "lines": 67,
-      "contentRoot": "sha256:58b58168a9933036f435414405ec020e16170902fa6ecb2c1a28936d13ccd24e"
+      "lines": 85,
+      "contentRoot": "sha256:6ead9f6163e3ce05c72b9465411f1c1561aa8f505a2c73ed9028d0c4cb99a7ca"
     },
     {
       "path": "extensions/dogfood/dogfood-actions/adapter.py",
@@ -18662,8 +19066,8 @@
       "generatedProvenance": false,
       "language": "python",
       "owner": "extension/dogfood/dogfood-actions",
-      "lines": 194,
-      "contentRoot": "sha256:474250aa5e5c054b50662fafe06cc05827c26de39dac20168cf0b58e14aa56e3"
+      "lines": 210,
+      "contentRoot": "sha256:d10a12925c4e0c516494a21ed7929ff346b8f01db378a914e58104e553036dc1"
     },
     {
       "path": "extensions/dogfood/dogfood-actions/domain/__init__.py",
@@ -18680,8 +19084,8 @@
       "generatedProvenance": false,
       "language": "python",
       "owner": "extension/dogfood/dogfood-actions",
-      "lines": 1998,
-      "contentRoot": "sha256:f6c01bebe79d15489d6171cbf8b6131446d7e493da8ddf4e6cade70b885c6b9f"
+      "lines": 2355,
+      "contentRoot": "sha256:d6eb870a54cab8e263b598f3fe82ff498ffe0b199805d1fee6b8e249608cdf92"
     },
     {
       "path": "extensions/dogfood/dogfood-actions/kungfu.kfx.json",
@@ -18743,8 +19147,8 @@
       "generatedProvenance": false,
       "language": "declarative",
       "owner": "extension/dogfood",
-      "lines": 261,
-      "contentRoot": "sha256:5ec14df1a7a36c92387a45c496af84cf976aef1c86c6c0c3ca2ae4ba6ffbb345"
+      "lines": 283,
+      "contentRoot": "sha256:79dd3ac69eb1484631931970b5714275f55394c25e092f4038f701288db31843"
     },
     {
       "path": "extensions/dogfood/kungfu.kfx.json",
@@ -18761,8 +19165,8 @@
       "generatedProvenance": false,
       "language": "declarative",
       "owner": "extension/dogfood/migrations",
-      "lines": 5,
-      "contentRoot": "sha256:440c1dd01fc89f137dd3636a262a7e00b21b9d38d4c030330e5ccfc7e21675a8"
+      "lines": 14,
+      "contentRoot": "sha256:8481cfee4e529a5a3d3c3ab5004fdce7618a22c5373a318b2734626eb9c7291a"
     },
     {
       "path": "extensions/dogfood/package.json",
@@ -18789,7 +19193,7 @@
       "language": "declarative",
       "owner": "extension/dogfood",
       "lines": 88,
-      "contentRoot": "sha256:09b886ae5b1bbe8b2b410b2a814422301f9e49c75ca86a9ad59a9488c679ecdb"
+      "contentRoot": "sha256:af983733916d6360ff5d5d945e1a4b14954d622367760085ff081964ec68934e"
     },
     {
       "path": "extensions/dogfood/qualification/profile.json",
@@ -19184,8 +19588,8 @@
       "generatedProvenance": false,
       "language": "declarative",
       "owner": "extension/work-control/actions",
-      "lines": 136,
-      "contentRoot": "sha256:88375d2b39eaa7277aa7807bbb4799c37e506a3389307da862f4cb4b117d13f4"
+      "lines": 174,
+      "contentRoot": "sha256:0a2e8af8ef2dc690f8f4408d00f2056ca4aca7488c6025166adaf6a21d0268a4"
     },
     {
       "path": "extensions/work-control/assessments/policies.json",
@@ -19211,8 +19615,35 @@
       "generatedProvenance": false,
       "language": "declarative",
       "owner": "extension/work-control/collaboration",
-      "lines": 244,
-      "contentRoot": "sha256:7e0fbb0601adf4132f383f2117c9a3e6bca15cf177b74ff10617fee861d24248"
+      "lines": 292,
+      "contentRoot": "sha256:e538121d855e3e3ec46b3515fbe944b36a4906fe6f591f5b50ccff28b5681549"
+    },
+    {
+      "path": "extensions/work-control/compatibility/v3.1.json",
+      "class": "declarative-schema-or-table",
+      "generatedProvenance": false,
+      "language": "declarative",
+      "owner": "extension/work-control/compatibility",
+      "lines": 6,
+      "contentRoot": "sha256:8779f18d0655935fb33767b90ceaad4e9cf3d90e3fb80e71b8add65db41d5390"
+    },
+    {
+      "path": "extensions/work-control/compatibility/v3.json",
+      "class": "declarative-schema-or-table",
+      "generatedProvenance": false,
+      "language": "declarative",
+      "owner": "extension/work-control/compatibility",
+      "lines": 6,
+      "contentRoot": "sha256:8779f18d0655935fb33767b90ceaad4e9cf3d90e3fb80e71b8add65db41d5390"
+    },
+    {
+      "path": "extensions/work-control/compatibility/v4.json",
+      "class": "declarative-schema-or-table",
+      "generatedProvenance": false,
+      "language": "declarative",
+      "owner": "extension/work-control/compatibility",
+      "lines": 6,
+      "contentRoot": "sha256:8779f18d0655935fb33767b90ceaad4e9cf3d90e3fb80e71b8add65db41d5390"
     },
     {
       "path": "extensions/work-control/contracts/facts.json",
@@ -19229,8 +19660,8 @@
       "generatedProvenance": false,
       "language": "declarative",
       "owner": "extension/work-control/contracts",
-      "lines": 157,
-      "contentRoot": "sha256:0f03794fb5f5a366d0814daf9f201cf970a55b146fef2909086a7179083f5c78"
+      "lines": 165,
+      "contentRoot": "sha256:b099ab642cdc3c350aab0ecc01060fe4fe81d3f1f1da075a44d56946b867a2d1"
     },
     {
       "path": "extensions/work-control/kungfu.kfx.json",
@@ -19247,8 +19678,8 @@
       "generatedProvenance": false,
       "language": "declarative",
       "owner": "extension/work-control/migrations",
-      "lines": 5,
-      "contentRoot": "sha256:440c1dd01fc89f137dd3636a262a7e00b21b9d38d4c030330e5ccfc7e21675a8"
+      "lines": 42,
+      "contentRoot": "sha256:012a9e1da8070a816083493e40348a957aa2528a182eda0523d651edeb545f1a"
     },
     {
       "path": "extensions/work-control/package.json",
@@ -19274,8 +19705,8 @@
       "generatedProvenance": false,
       "language": "declarative",
       "owner": "extension/work-control",
-      "lines": 98,
-      "contentRoot": "sha256:db9abb4121192509b49c333660a8251c23b467f039b4032ba9cb7dd12213ad85"
+      "lines": 102,
+      "contentRoot": "sha256:957caedc55219a844af55b044fba83decb8a12e54c4af7c93258273319fd6635"
     },
     {
       "path": "extensions/work-control/qualification/profile.json",
@@ -19311,7 +19742,7 @@
       "language": "declarative",
       "owner": "extension/work-control/views",
       "lines": 160,
-      "contentRoot": "sha256:d2d8df79cac11311faea5d8c6b56825d25b4c280475946101af3283fe7cda1a1"
+      "contentRoot": "sha256:300c71ae1a0551a8bc80e9267e6eb15c3666506280b7868941895166164e7580"
     },
     {
       "path": "extensions/work-control/work-control-actions/adapter.py",
@@ -19319,8 +19750,8 @@
       "generatedProvenance": false,
       "language": "python",
       "owner": "extension/work-control/work-control-actions",
-      "lines": 570,
-      "contentRoot": "sha256:39e2cd3489cc0de392bfa8c3052018b2a3aae8a1198d51112be6e08773b0047e"
+      "lines": 823,
+      "contentRoot": "sha256:ff11755340cacd14e257f03ddac82fd4dd156139f176d8de62bddb67b28b51c2"
     },
     {
       "path": "extensions/work-control/work-control-actions/domain/__init__.py",
@@ -19329,16 +19760,34 @@
       "language": "python",
       "owner": "extension/work-control/work-control-actions",
       "lines": 7,
-      "contentRoot": "sha256:c38669bc05cb34ba7f73fc48aa9f0721ffc90ba5fb77405eecbd87f14ebc7a8c"
+      "contentRoot": "sha256:5a7fb01605fe849c8401b21d0a76d95b2bb7e55d4639d854bbb249db942b897d"
     },
     {
-      "path": "extensions/work-control/work-control-actions/domain/initiative_bundle.py",
+      "path": "extensions/work-control/work-control-actions/domain/compatibility/__init__.py",
+      "class": "public-header-or-entrypoint",
+      "generatedProvenance": false,
+      "language": "python",
+      "owner": "extension/work-control/work-control-actions",
+      "lines": 7,
+      "contentRoot": "sha256:a65199bed4daa58ab6de134b1be3340a5bda35020de48caed0df202517bcb408"
+    },
+    {
+      "path": "extensions/work-control/work-control-actions/domain/compatibility/mission_control_v3_bundle.py",
       "class": "first-party-handwritten-implementation",
       "generatedProvenance": false,
       "language": "python",
       "owner": "extension/work-control/work-control-actions",
-      "lines": 418,
-      "contentRoot": "sha256:6c5bd35afe4edc1a7c015228471071eff77422aef4c46095603452629f544b2d"
+      "lines": 649,
+      "contentRoot": "sha256:b0b9ad95dca88680133631d81a6c00606208f27caf40dbcb69124d5961442a97"
+    },
+    {
+      "path": "extensions/work-control/work-control-actions/domain/compatibility/mission_control_v3.py",
+      "class": "first-party-handwritten-implementation",
+      "generatedProvenance": false,
+      "language": "python",
+      "owner": "extension/work-control/work-control-actions",
+      "lines": 52,
+      "contentRoot": "sha256:76a90af3ddd8b15155ab793397e34af653ddce4e1a543187a09ceb874358fa94"
     },
     {
       "path": "extensions/work-control/work-control-actions/domain/native_state.py",
@@ -19346,8 +19795,8 @@
       "generatedProvenance": false,
       "language": "python",
       "owner": "extension/work-control/work-control-actions",
-      "lines": 190,
-      "contentRoot": "sha256:230d914c6d76b5d3be19cd16348208038565980cb9bb00401727557f7f5b73b1"
+      "lines": 191,
+      "contentRoot": "sha256:63534c0510173cf3f7243621146ee9b72e0c7fca7eb6814710c6b45cc9f91366"
     },
     {
       "path": "extensions/work-control/work-control-actions/domain/work_control_assessment.py",
@@ -19355,8 +19804,8 @@
       "generatedProvenance": false,
       "language": "python",
       "owner": "extension/work-control/work-control-actions",
-      "lines": 1389,
-      "contentRoot": "sha256:2c59efc2410a136d87a90afaa08167d9658dafffddcdb3607d2c07e75f9a659d"
+      "lines": 1374,
+      "contentRoot": "sha256:354af0e10ab2a35d243814fc23a11644a953b7c854e0a454cf358e226b296578"
     },
     {
       "path": "extensions/work-control/work-control-actions/domain/work_control_runtime.py",
@@ -19364,8 +19813,8 @@
       "generatedProvenance": false,
       "language": "python",
       "owner": "extension/work-control/work-control-actions",
-      "lines": 2246,
-      "contentRoot": "sha256:54014c43e4bc625a09057d9a96cc1d5546cca07e7cb61dfc011505e6b43f8e78"
+      "lines": 2874,
+      "contentRoot": "sha256:2ce8fe8ef1a08ce6fa0109929955a58f572c4c13ef1cb3cea9a328fb4dda8ba9"
     },
     {
       "path": "extensions/work-control/work-control-actions/domain/work_control.py",
@@ -19373,8 +19822,8 @@
       "generatedProvenance": false,
       "language": "python",
       "owner": "extension/work-control/work-control-actions",
-      "lines": 287,
-      "contentRoot": "sha256:243ae60a6f34042e951667fa52a3c7f9f9dcad121f73d263a667979bfb460e68"
+      "lines": 132,
+      "contentRoot": "sha256:0e63cd8eb1dc5356d7d6514f9cc991766b321bc7b76effd85e20ca7049275790"
     },
     {
       "path": "extensions/work-control/work-control-actions/kungfu.kfx.json",
@@ -19472,8 +19921,8 @@
       "generatedProvenance": false,
       "language": "javascript-typescript",
       "owner": "extension/work-dashboard/src",
-      "lines": 39,
-      "contentRoot": "sha256:1798a4a481f46d202e20d5680d6cc0e44eef1569ac109e655d05b129c40fedd2"
+      "lines": 44,
+      "contentRoot": "sha256:55004539e396e10a8d7bb7e45ca206125dfdad370d1d3205a2d1aa9b3e0f4ca6"
     },
     {
       "path": "extensions/work-dashboard/src/view/agent-progress.ts",
@@ -19481,8 +19930,17 @@
       "generatedProvenance": false,
       "language": "javascript-typescript",
       "owner": "extension/work-dashboard/src",
-      "lines": 54,
-      "contentRoot": "sha256:a00c20e4d50ca68aed92dad5b073d30e1a6e761b7879618af1be7a44b3e81ce2"
+      "lines": 51,
+      "contentRoot": "sha256:5c15602850129e3b4044a8a86fa47cf4cc22b1c2b48fd3591c0a35f8711b3469"
+    },
+    {
+      "path": "extensions/work-dashboard/src/view/compatibility/mission-control-v3-query.ts",
+      "class": "first-party-handwritten-implementation",
+      "generatedProvenance": false,
+      "language": "javascript-typescript",
+      "owner": "extension/work-dashboard/src",
+      "lines": 46,
+      "contentRoot": "sha256:ca8a44894c0328b06e35c1b4b9fe9e7a6695544a2aad7a347fc03cc00cbec6e6"
     },
     {
       "path": "extensions/work-dashboard/src/view/dashboard-status.ts",
@@ -19491,7 +19949,7 @@
       "language": "javascript-typescript",
       "owner": "extension/work-dashboard/src",
       "lines": 114,
-      "contentRoot": "sha256:c92d8eb9a658e80e55ea38555e065b52f8500d9af099a06edfbf4cbdd6417854"
+      "contentRoot": "sha256:07304e68e3bfea3cdbfb0ffa6b43fb1d86527d5bdaa4eec44aec4d96ea3b0f06"
     },
     {
       "path": "extensions/work-dashboard/src/view/global-work-observer.ts",
@@ -19508,8 +19966,8 @@
       "generatedProvenance": false,
       "language": "javascript-typescript",
       "owner": "extension/work-dashboard/src",
-      "lines": 2409,
-      "contentRoot": "sha256:e4dedb2f32cc2169758bd4d55c082864cb5716986408a387d6bdb119eff9a5d9"
+      "lines": 2417,
+      "contentRoot": "sha256:8751bccd01e3357447c3b387654dbbfbd0d73e3b452ba59e30f9e4b007056cab"
     },
     {
       "path": "extensions/work-dashboard/src/view/initiative-visual-model.ts",
@@ -19517,8 +19975,8 @@
       "generatedProvenance": false,
       "language": "javascript-typescript",
       "owner": "extension/work-dashboard/src",
-      "lines": 576,
-      "contentRoot": "sha256:20bc3b5064b99e68c6ad0d73aca7f0f299a218c6dc03ad987c03d5379937e35f"
+      "lines": 547,
+      "contentRoot": "sha256:897597b65a9a193cd064538334c1190cb40b60f1079b4bc9137021a467a6db81"
     },
     {
       "path": "extensions/work-dashboard/src/view/initiative-visual.tsx",
@@ -19526,8 +19984,8 @@
       "generatedProvenance": false,
       "language": "javascript-typescript",
       "owner": "extension/work-dashboard/src",
-      "lines": 1393,
-      "contentRoot": "sha256:a63c85f458c22110f1ffd05d3f8bfb1c54ecdef350f5fa31dcb5c22c71bee59c"
+      "lines": 1381,
+      "contentRoot": "sha256:90761bb51752ef32de47d08fcc17f9e7d7d1faf00ec1eeb2c0e2913beca37ea3"
     },
     {
       "path": "extensions/work-dashboard/src/view/latest-refresh.ts",
@@ -19544,8 +20002,8 @@
       "generatedProvenance": false,
       "language": "javascript-typescript",
       "owner": "extension/work-dashboard/src",
-      "lines": 43,
-      "contentRoot": "sha256:eb51198f18cc0235082612bd16496f9f0444563b1e9d5812c037322cbd149444"
+      "lines": 47,
+      "contentRoot": "sha256:0d131b5245e0c90e8dde7d03fe3c32514d1d948d4e151de73eec15b0919aa69f"
     },
     {
       "path": "extensions/work-dashboard/src/view/project-work-list.tsx",
@@ -19571,8 +20029,8 @@
       "generatedProvenance": false,
       "language": "javascript-typescript",
       "owner": "extension/work-dashboard/src",
-      "lines": 796,
-      "contentRoot": "sha256:e11e208fa631eb15b3b4e0da657954c017c3f67afc694d90161c04180c649fad"
+      "lines": 896,
+      "contentRoot": "sha256:53ddd1051f6e87964e6e742490ab42ce8e77a02ce26a976c6726bf8bcceffd48"
     },
     {
       "path": "extensions/work-dashboard/src/view/work-control-query.ts",
@@ -19580,8 +20038,8 @@
       "generatedProvenance": false,
       "language": "javascript-typescript",
       "owner": "extension/work-dashboard/src",
-      "lines": 209,
-      "contentRoot": "sha256:8d9697a7c0dc2ccbcfb4ccd2053b584c193d839600fcc887b66a014fcafb5d23"
+      "lines": 207,
+      "contentRoot": "sha256:781bbbc1cd9eb40d6a73f8c2ae5b3fda4341897ec41de9ae66e216b6f453ef42"
     },
     {
       "path": "extensions/work-dashboard/src/view/work-loop-summary.ts",
@@ -19608,7 +20066,7 @@
       "language": "javascript-typescript",
       "owner": "extension/work-dashboard/tests",
       "lines": 88,
-      "contentRoot": "sha256:26971562cfcdcff2aef8240453e526de1df00cefceab1581e432965b700b96b8"
+      "contentRoot": "sha256:83597d06ec044586d437a38e42c4f673bcd189d7a8d1e9b0350ea1ed29e150ac"
     },
     {
       "path": "extensions/work-dashboard/tests/dashboard-status.test.ts",
@@ -19617,7 +20075,7 @@
       "language": "javascript-typescript",
       "owner": "extension/work-dashboard/tests",
       "lines": 74,
-      "contentRoot": "sha256:722a5f88334d44ca56fcb7f8b1450286be52e63292638a8e26133224f9fb9ef8"
+      "contentRoot": "sha256:bda014482c30730254230d4a42bc211258e896ed20cf7ee7621ec58e51148ebd"
     },
     {
       "path": "extensions/work-dashboard/tests/global-work-observer.test.ts",
@@ -19634,8 +20092,8 @@
       "generatedProvenance": false,
       "language": "javascript-typescript",
       "owner": "extension/work-dashboard/tests",
-      "lines": 314,
-      "contentRoot": "sha256:4b7a18b6f8bc244629873ad7adfad3e94c9d5d6029fdba56c1343865d967ac66"
+      "lines": 302,
+      "contentRoot": "sha256:88b0585911f6e036bd0e18da0f68027321d5859ff9a494cacc78cbe9ddd77d58"
     },
     {
       "path": "extensions/work-dashboard/tests/latest-refresh.test.ts",
@@ -19671,7 +20129,7 @@
       "language": "javascript-typescript",
       "owner": "extension/work-dashboard/tests",
       "lines": 265,
-      "contentRoot": "sha256:21409d22b9190eb7817a70d1140d73134443de9a2ab5d42f4673437ddff961d1"
+      "contentRoot": "sha256:a0c2d9b1beae228581914e1e1536a0b1c481294bf16f6b8e99a6633b0d08c2df"
     },
     {
       "path": "extensions/work-dashboard/tests/work-control-query.test.ts",
@@ -19679,8 +20137,8 @@
       "generatedProvenance": false,
       "language": "javascript-typescript",
       "owner": "extension/work-dashboard/tests",
-      "lines": 50,
-      "contentRoot": "sha256:08a701093ba2471b29903a6e865bd6d8c62ae11e57b3ee3ed3dd25004f6a8174"
+      "lines": 67,
+      "contentRoot": "sha256:706b802a5db3a04324363402397f33c57f0e6a3550184bf295d99ce74ee62e0f"
     },
     {
       "path": "extensions/work-dashboard/tests/work-loop-summary.test.ts",
@@ -19850,8 +20308,8 @@
       "generatedProvenance": false,
       "language": "declarative",
       "owner": "framework/action",
-      "lines": 54,
-      "contentRoot": "sha256:3fef1556906af983b6f2e8ef3f78173219830a9528ec9d5260f0633a1ddd7ced"
+      "lines": 59,
+      "contentRoot": "sha256:2d9e481922c72d7ce01e4aef658c74ae02126739a65d1a7d3c3b12acac5808ef"
     },
     {
       "path": "framework/action/fixtures/action-loop-native-resume-worker.mjs",
@@ -19886,8 +20344,8 @@
       "generatedProvenance": false,
       "language": "declarative",
       "owner": "framework/action",
-      "lines": 31,
-      "contentRoot": "sha256:1b87348e43551492eb20a473879a576ebbed900f0307f018f759eabf12039801"
+      "lines": 41,
+      "contentRoot": "sha256:d3c43a6b5204fb3dbf0c4dcc88b135661214f2961f0495b3a7d1236a115cb047"
     },
     {
       "path": "framework/agent-patrol/classify.mjs",
@@ -20102,8 +20560,8 @@
       "generatedProvenance": false,
       "language": "javascript-typescript",
       "owner": "agent-session/native-transport",
-      "lines": 487,
-      "contentRoot": "sha256:72b594408b5838fdd973539479bd569a7648a4f76861977f31577a722f01b585"
+      "lines": 486,
+      "contentRoot": "sha256:f75246fade51159c55228d38a92f2a43d1bba8d60d7fabc1f8b63f9649e2a326"
     },
     {
       "path": "framework/agent-session/src/native-interactive-client.mjs",
@@ -20165,8 +20623,8 @@
       "generatedProvenance": false,
       "language": "javascript-typescript",
       "owner": "framework/agent-session",
-      "lines": 1774,
-      "contentRoot": "sha256:902f7826e3013d4e4686d618a71445de418f3b4367d3a5051798e736ddf1d205"
+      "lines": 1780,
+      "contentRoot": "sha256:00b91aa8f72c5390459e073723702113b1d0110a7a5cc961d5e8d9036db55c57"
     },
     {
       "path": "framework/agent-session/src/product-worker.mjs",
@@ -20183,8 +20641,8 @@
       "generatedProvenance": false,
       "language": "javascript-typescript",
       "owner": "framework/agent-session",
-      "lines": 423,
-      "contentRoot": "sha256:d50603eff0773819ccb0cdbc3276df792c397d45f0895323954a591699793bbd"
+      "lines": 429,
+      "contentRoot": "sha256:a75597efb24182a9f93a8d9ef998558439ca838dfb95cdf8b5a7a55933e7c06f"
     },
     {
       "path": "framework/agent-session/src/runtime-continuity.mjs",
@@ -20480,8 +20938,8 @@
       "generatedProvenance": false,
       "language": "javascript-typescript",
       "owner": "framework/agent-session",
-      "lines": 290,
-      "contentRoot": "sha256:e520f5602d9db405541fb099b519adb6f3253265433242cfd2f61606285ed917"
+      "lines": 299,
+      "contentRoot": "sha256:765985c070c86d442cb817232c118fca027006cb420bc64515b42410e36c64c8"
     },
     {
       "path": "framework/agent-session/tests/mock-provider.test.mjs",
@@ -20489,8 +20947,8 @@
       "generatedProvenance": false,
       "language": "javascript-typescript",
       "owner": "framework/agent-session",
-      "lines": 196,
-      "contentRoot": "sha256:a1f3c0471096748e302148b9c1317ea07cc2cdbbff280c98e0fe793c9aa527f4"
+      "lines": 208,
+      "contentRoot": "sha256:9fc1474ff08ecf2629d91cf8d50391ef907b11120c486c2493495c92ddd09f43"
     },
     {
       "path": "framework/agent-session/tests/module-boundaries.test.mjs",
@@ -20543,8 +21001,8 @@
       "generatedProvenance": false,
       "language": "javascript-typescript",
       "owner": "framework/agent-session",
-      "lines": 1215,
-      "contentRoot": "sha256:c8689083d71d994612fa872196b4c3fbd1ddc4250dfd9141eea2a0bffbcbb02e"
+      "lines": 1216,
+      "contentRoot": "sha256:4fe68fe60409626bd69580085956f36579bccf13fc3477fc7a750988fad080bf"
     },
     {
       "path": "framework/agent-session/tests/provider-adapters.test.mjs",
@@ -21920,8 +22378,8 @@
       "generatedProvenance": false,
       "language": "javascript-typescript",
       "owner": "framework/assignment-capture",
-      "lines": 250,
-      "contentRoot": "sha256:a829afc9f05e8ecfd72dbcaf30c607626ce82eb5ca6ad4930a69937d41714445"
+      "lines": 319,
+      "contentRoot": "sha256:9d6961393d71122f1582c53e218c04d789f19ac8d25fa71095a980b46f03b753"
     },
     {
       "path": "framework/assignment-capture/assignment-request.schema.json",
@@ -21933,13 +22391,22 @@
       "contentRoot": "sha256:8a14cdae936c135705027a16913980d709cbcc957c2c20a60b44adb7b633fb9f"
     },
     {
-      "path": "framework/assignment-capture/fixtures/native-assignment-dogfood-request-v1.json",
+      "path": "framework/assignment-capture/fixtures/atlas-go-card-roundtrip-v1.json",
+      "class": "test-or-fixture",
+      "generatedProvenance": false,
+      "language": "declarative",
+      "owner": "framework/assignment-capture",
+      "lines": 100,
+      "contentRoot": "sha256:df4bb4abca4a5f1dcd06a58d4688f09d9c7dcdb0d4c10dacc53a17d58be9d815"
+    },
+    {
+      "path": "framework/assignment-capture/fixtures/native-go-dogfood-request-v1.json",
       "class": "test-or-fixture",
       "generatedProvenance": false,
       "language": "declarative",
       "owner": "framework/assignment-capture",
       "lines": 21,
-      "contentRoot": "sha256:ec51ca824933707ee89d32fe1f3304626e424cf2aba9076b66b602b24a463110"
+      "contentRoot": "sha256:f281b270cc5937b9a5332ad4228e4083ca3c66abbcf400fb7a221d53fe233031"
     },
     {
       "path": "framework/assignment-capture/qualified-assignment-core-consumer.mjs",
@@ -21947,8 +22414,8 @@
       "generatedProvenance": false,
       "language": "javascript-typescript",
       "owner": "framework/assignment-capture",
-      "lines": 1535,
-      "contentRoot": "sha256:418e6793f362023f336498c4815da5046bf09804d411b4406fcc8291e9f5abf7"
+      "lines": 1536,
+      "contentRoot": "sha256:428d8ff1fb844ebe6453913251a04e455596091215897e4d882c778910d942b4"
     },
     {
       "path": "framework/assignment-capture/qualified-assignment-core-observability.mjs",
@@ -21957,7 +22424,7 @@
       "language": "javascript-typescript",
       "owner": "framework/assignment-capture",
       "lines": 319,
-      "contentRoot": "sha256:bb326eed684fd2878ee55f089591407c8ca8f10613520aeb7b1a389598bef2ed"
+      "contentRoot": "sha256:35bf8ab3a6774400bbb86b578121c13619e05c6b76d4859f2eaeeefe5cfd9700"
     },
     {
       "path": "framework/assignment-capture/qualified-assignment-core-platform-matrix.mjs",
@@ -21974,8 +22441,8 @@
       "generatedProvenance": false,
       "language": "declarative",
       "owner": "framework/assignment-runtime",
-      "lines": 371,
-      "contentRoot": "sha256:9ea321019f2a4a6ea78f2a121cf75da69338528a52424e92704cd40c91df7759"
+      "lines": 382,
+      "contentRoot": "sha256:a2f54cdba88272474cd19ad29271a2743651c872ec17f83f3a41e246754b9bab"
     },
     {
       "path": "framework/assignment-runtime/assignment-runtime.test.mjs",
@@ -21984,7 +22451,7 @@
       "language": "javascript-typescript",
       "owner": "framework/assignment-runtime",
       "lines": 165,
-      "contentRoot": "sha256:ca7e24fe475496ee5ed31720d919dddc0565d2c656e1d171c8d0955a55e3c9f0"
+      "contentRoot": "sha256:a73b70bb2dfb64a239cc42e89336d0402666744769f899cae500e1da7a5bca7f"
     },
     {
       "path": "framework/assignment-runtime/fixtures/contract-cases-v1.json",
@@ -22029,7 +22496,7 @@
       "language": "declarative",
       "owner": "framework/contract",
       "lines": 584,
-      "contentRoot": "sha256:bc243cba8871bf7f47d71544dfe6718f5144a49b5978192e2fef148de4ff930b"
+      "contentRoot": "sha256:c49f53799ef7d61f5439427bb12fcaab0dff7abfdc018e374053ff16a0e2fc45"
     },
     {
       "path": "framework/contract/kungfu-contracts.registry.json",
@@ -26348,8 +26815,8 @@
       "generatedProvenance": false,
       "language": "javascript-typescript",
       "owner": "core/build",
-      "lines": 1176,
-      "contentRoot": "sha256:d4e41bcb69bc1430733eb883b193021c140ce82fe1672296300f990bffcf3d35"
+      "lines": 1147,
+      "contentRoot": "sha256:36d1fd6072439447e4e25ff61ea59a713005b58e98475f12200b0d0d7bd0ee34"
     },
     {
       "path": "framework/core/.gyp/run-link-node.js",
@@ -26493,7 +26960,7 @@
       "language": "declarative",
       "owner": "core/architecture",
       "lines": 284,
-      "contentRoot": "sha256:500d6e5a51bef523aa7f1f739e9730bbfd818e58e4a00bcc12bff1984590d47e"
+      "contentRoot": "sha256:2597f77626c9236b40f614d554a5e2f385935009e7a8785d02339b4692fa2ad2"
     },
     {
       "path": "framework/core/architecture/layers.json",
@@ -26501,8 +26968,8 @@
       "generatedProvenance": false,
       "language": "declarative",
       "owner": "core/architecture",
-      "lines": 1446,
-      "contentRoot": "sha256:aafa995a39698c8cac579067d13460884f1a290144e44b7e98f634cb0eab6f07"
+      "lines": 1447,
+      "contentRoot": "sha256:226c00bc9d0374d7ef201d3d73ddf29f143c4113bf525a170a4d802aa9dec0b8"
     },
     {
       "path": "framework/core/architecture/libkungfu-symbol-policy.json",
@@ -26537,8 +27004,8 @@
       "generatedProvenance": false,
       "language": "declarative",
       "owner": "core/architecture",
-      "lines": 209,
-      "contentRoot": "sha256:61308ee96bbcf458b14332deb5fe838722612972f8b872993ee798b931a455ca"
+      "lines": 210,
+      "contentRoot": "sha256:a65b2fb5f4e3c2a8e1fb41bbeb39638a53e610609146deb214fe1ae482188c3d"
     },
     {
       "path": "framework/core/architecture/sdk-build-plan.json",
@@ -26835,7 +27302,7 @@
       "language": "declarative",
       "owner": "core/package",
       "lines": 223,
-      "contentRoot": "sha256:5dc4e960d91547942f42e2fa6ca570aa541f26ee6990f3e988c0320ddf20afbf"
+      "contentRoot": "sha256:58b567f2c47ddfbaf26d1c140e58c231a80532255efceb98cf36de08aeb01648"
     },
     {
       "path": "framework/core/schema-authority.json",
@@ -26843,8 +27310,8 @@
       "generatedProvenance": false,
       "language": "declarative",
       "owner": "core/package",
-      "lines": 119,
-      "contentRoot": "sha256:2956ed9ed38b2043ebe5eaa6205f2e2a1c7d88d6abbab93439f9b67c565de06d"
+      "lines": 126,
+      "contentRoot": "sha256:e4c620b81410f7498a96b2b50c0af77193036f70eb89eab01f331b440f62769f"
     },
     {
       "path": "framework/core/slices/_harness.mjs",
@@ -27447,7 +27914,7 @@
       "language": "c-cpp",
       "owner": "core/bindings",
       "lines": 139,
-      "contentRoot": "sha256:421d9278ca3eab8ed5f86f05d422f330b54cf0c2a419cee5a23731038538d1b7"
+      "contentRoot": "sha256:947e493ea9fc21eb6e666aabbfae29fd29db5a2dd82895468fd6d37f36d7f464"
     },
     {
       "path": "framework/core/src/bindings/python/binding/py-yijinjing.cpp",
@@ -28077,7 +28544,7 @@
       "language": "c-cpp",
       "owner": "core/runtime-contracts",
       "lines": 36,
-      "contentRoot": "sha256:a215207bee044d335d0a85dd55076ff9c8179ccc22c9820c95286181a624b978"
+      "contentRoot": "sha256:1a12e52fcf8c2962a987cb803d538ad63705384591af9e3324b152fbd4021614"
     },
     {
       "path": "framework/core/src/libkungfu/include/kungfu/sdk/generated/runtime_action_v1.hpp",
@@ -28427,8 +28894,8 @@
       "generatedProvenance": false,
       "language": "c-cpp",
       "owner": "core/runtime-extension",
-      "lines": 1217,
-      "contentRoot": "sha256:25b7a5309f71aa2921bbb3829cc3f177592d336f101f0f42915562c7e0c76b79"
+      "lines": 1211,
+      "contentRoot": "sha256:6fbd448925cb8fdf80e57f86576f6d3bd2f4ebadb9637e9ed9d6eaa9e20914ce"
     },
     {
       "path": "framework/core/src/libkungfu/src/runtime/projection_bootstrap.cpp",
@@ -30398,8 +30865,8 @@
       "generatedProvenance": false,
       "language": "declarative",
       "owner": "core/package",
-      "lines": 970,
-      "contentRoot": "sha256:2b8b20e5b98334f2e9e94fa641226d151025a4c9d0674c884dac03d419127274"
+      "lines": 1024,
+      "contentRoot": "sha256:cf4e0fe7a6a383d9926f2afd7821df05b8838b329e0a280d4cd62d0c6d66176e"
     },
     {
       "path": "framework/core/src/python/kungfu/agent/commands.json",
@@ -30407,8 +30874,8 @@
       "generatedProvenance": false,
       "language": "declarative",
       "owner": "core/package",
-      "lines": 1124,
-      "contentRoot": "sha256:b030edb55332818300b3569c6a5e753d669138b7606169beb1fcfe652e7a899b"
+      "lines": 1147,
+      "contentRoot": "sha256:993a36d2c41dd70a1d611292c49f9e0a80d6c5bbcd8004e38cfc3954dbd07167"
     },
     {
       "path": "framework/core/src/python/kungfu/agent/documentation.py",
@@ -30479,8 +30946,8 @@
       "generatedProvenance": false,
       "language": "declarative",
       "owner": "core/package",
-      "lines": 2500,
-      "contentRoot": "sha256:5c01c6cf0ed0225e4879c41205f5aff8c3bed00eadb04e25846324334c85eaa7"
+      "lines": 2548,
+      "contentRoot": "sha256:d149a5be246d5919782d943ebb0f24596818a443781aa932e731b833539ea2f9"
     },
     {
       "path": "framework/core/src/python/kungfu/agent/kfd3_api.schema.json",
@@ -30506,8 +30973,8 @@
       "generatedProvenance": false,
       "language": "python",
       "owner": "core/python-agent-session-native-execution",
-      "lines": 170,
-      "contentRoot": "sha256:5cc2dab67056a86e12ea9518c65422c3902bb7b84b5b0335ac527bd604e6e4f5"
+      "lines": 206,
+      "contentRoot": "sha256:b192025b5b9530a1913fab1004c98d3d810e1c7885de03b21d3a521bacd4dfac"
     },
     {
       "path": "framework/core/src/python/kungfu/agent/native_authority.py",
@@ -30560,8 +31027,8 @@
       "generatedProvenance": false,
       "language": "python",
       "owner": "core/package",
-      "lines": 687,
-      "contentRoot": "sha256:8da91dd8ac0832a19f0a1b017fb93f9568c1c7f383d6e831dc2f274c2738662b"
+      "lines": 694,
+      "contentRoot": "sha256:031486a547219bd567f46cc7e135bf46be8e9e89fcd6af24219a07e1b65b6b49"
     },
     {
       "path": "framework/core/src/python/kungfu/agent/run_agent.py",
@@ -30569,8 +31036,8 @@
       "generatedProvenance": false,
       "language": "python",
       "owner": "core/package",
-      "lines": 1292,
-      "contentRoot": "sha256:4ee93a5c64976b15ef1546b2e8f6ef2f942f7b6a2dcabdd93cd8af0e417979ef"
+      "lines": 1298,
+      "contentRoot": "sha256:c831dca0d25a6dd1b2c2eb19df725e23944ebc6e5cc79a180e82eea10aaeb4f1"
     },
     {
       "path": "framework/core/src/python/kungfu/agent/run_intent.py",
@@ -30686,8 +31153,8 @@
       "generatedProvenance": false,
       "language": "python",
       "owner": "core/python-assignment-start-review",
-      "lines": 3,
-      "contentRoot": "sha256:218b972bb321a4b4edd9ad9fc3050eef1956b4dcc609c1dfa3578754fdfb84e6"
+      "lines": 80,
+      "contentRoot": "sha256:68d2e0dc5c74f5ddce86b2443e155ee86e8675abb13b529088eef2896bc486ca"
     },
     {
       "path": "framework/core/src/python/kungfu/assignment_lifecycle/ports.py",
@@ -30704,8 +31171,8 @@
       "generatedProvenance": false,
       "language": "python",
       "owner": "core/package",
-      "lines": 1564,
-      "contentRoot": "sha256:da1691366a7a0fa0a2d8bf1e952f3798300b843e20ca27edd8c4f489e1ab2004"
+      "lines": 1588,
+      "contentRoot": "sha256:5c49399a62d43e478fe6d538c0ccb945296ebfc3dbbf9a9a914c85cd094ad412"
     },
     {
       "path": "framework/core/src/python/kungfu/assignment_review_lifecycle.py",
@@ -30717,13 +31184,166 @@
       "contentRoot": "sha256:ccc1ba27410be8198e908e2f856867e91b37662458e9cc9366a320525cefbc72"
     },
     {
+      "path": "framework/core/src/python/kungfu/assignment_runtime/__init__.py",
+      "class": "public-header-or-entrypoint",
+      "generatedProvenance": false,
+      "language": "python",
+      "owner": "core/runtime-live",
+      "lines": 137,
+      "contentRoot": "sha256:48eb44efba1ce27004b273eb11ccb0a8bbd4a97640ee926900c22f2fa1d08326"
+    },
+    {
+      "path": "framework/core/src/python/kungfu/assignment_runtime/authority.py",
+      "class": "first-party-handwritten-implementation",
+      "generatedProvenance": false,
+      "language": "python",
+      "owner": "core/runtime-live",
+      "lines": 433,
+      "contentRoot": "sha256:6561f22e08061788f556866524cfecbcae35cdc478ec95f72f529730cd2f1f3e"
+    },
+    {
+      "path": "framework/core/src/python/kungfu/assignment_runtime/local.py",
+      "class": "first-party-handwritten-implementation",
+      "generatedProvenance": false,
+      "language": "python",
+      "owner": "core/runtime-live",
+      "lines": 963,
+      "contentRoot": "sha256:ffce8ca4b98509387a0de5cd60353308bbdc34584c5e6ab1bb6aeee47ab449c2"
+    },
+    {
       "path": "framework/core/src/python/kungfu/assignment_start.py",
       "class": "first-party-handwritten-implementation",
       "generatedProvenance": false,
       "language": "python",
       "owner": "core/python-assignment-start-review",
-      "lines": 437,
-      "contentRoot": "sha256:5923d8f0ae25417c4aeabfc3d63feac361ff34af2b230ed30b1d42db83176be8"
+      "lines": 436,
+      "contentRoot": "sha256:9abec654cd92d84164db6653a1778cb34932c8f57b62cca36409b63fe232761e"
+    },
+    {
+      "path": "framework/core/src/python/kungfu/atlas/__init__.py",
+      "class": "public-header-or-entrypoint",
+      "generatedProvenance": false,
+      "language": "python",
+      "owner": "core/package",
+      "lines": 42,
+      "contentRoot": "sha256:5b9f33a4aed8b8adfb1402bf2bac0cba998a1efbe57181bdbe2d73017c625c4d"
+    },
+    {
+      "path": "framework/core/src/python/kungfu/atlas/atlas_events.fbs",
+      "class": "declarative-schema-or-table",
+      "generatedProvenance": false,
+      "language": "declarative",
+      "owner": "core/package",
+      "lines": 92,
+      "contentRoot": "sha256:a69bb28b22e2533b259a6ef72b3d456dcaefd829f757e78a17138a47f55343c0"
+    },
+    {
+      "path": "framework/core/src/python/kungfu/atlas/events.py",
+      "class": "first-party-handwritten-implementation",
+      "generatedProvenance": false,
+      "language": "python",
+      "owner": "core/package",
+      "lines": 174,
+      "contentRoot": "sha256:e6975b03480e21d8b59bc89a8bfc08bbf0d75fa0212657be60e7a018e354e409"
+    },
+    {
+      "path": "framework/core/src/python/kungfu/atlas/fb/__init__.py",
+      "class": "public-header-or-entrypoint",
+      "generatedProvenance": false,
+      "language": "python",
+      "owner": "core/package",
+      "lines": 0,
+      "contentRoot": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "framework/core/src/python/kungfu/atlas/fb/GoalSnapshot.py",
+      "class": "generated-projection",
+      "generatedProvenance": true,
+      "language": "python",
+      "owner": "core/package",
+      "lines": 271,
+      "contentRoot": "sha256:634a19651fed53d28436c82626976573306caef2a71967ba62eba51fdb18b24b"
+    },
+    {
+      "path": "framework/core/src/python/kungfu/atlas/fb/ImportBegin.py",
+      "class": "generated-projection",
+      "generatedProvenance": true,
+      "language": "python",
+      "owner": "core/package",
+      "lines": 89,
+      "contentRoot": "sha256:7d75a5dcea6b032d2633a987d76ae0a938f306a374d61246d11ac46c57f0f800"
+    },
+    {
+      "path": "framework/core/src/python/kungfu/atlas/fb/ImportEnd.py",
+      "class": "generated-projection",
+      "generatedProvenance": true,
+      "language": "python",
+      "owner": "core/package",
+      "lines": 102,
+      "contentRoot": "sha256:d81f69a1e1439565a3034d7090300193be79e23372d6b9224320192356596642"
+    },
+    {
+      "path": "framework/core/src/python/kungfu/atlas/fb/MarkerSnapshot.py",
+      "class": "generated-projection",
+      "generatedProvenance": true,
+      "language": "python",
+      "owner": "core/package",
+      "lines": 167,
+      "contentRoot": "sha256:6cd8571d0945e581caf73d3b696d92666dd7c76e72cb0b30eea904a8bd32b485"
+    },
+    {
+      "path": "framework/core/src/python/kungfu/atlas/fb/MissionSnapshot.py",
+      "class": "generated-projection",
+      "generatedProvenance": true,
+      "language": "python",
+      "owner": "core/package",
+      "lines": 141,
+      "contentRoot": "sha256:036edc34b00638acd62ec0f3beddd6cfa1a517f578fca07434138b33076c05b7"
+    },
+    {
+      "path": "framework/core/src/python/kungfu/atlas/importer.py",
+      "class": "first-party-handwritten-implementation",
+      "generatedProvenance": false,
+      "language": "python",
+      "owner": "core/package",
+      "lines": 393,
+      "contentRoot": "sha256:cb3c079009bdafeb85b4ea058bf523017e20c4f61691f59d5d8e60d8db5373df"
+    },
+    {
+      "path": "framework/core/src/python/kungfu/atlas/mission_bundle.py",
+      "class": "first-party-handwritten-implementation",
+      "generatedProvenance": false,
+      "language": "python",
+      "owner": "core/package",
+      "lines": 21,
+      "contentRoot": "sha256:5f0b444e88fc9b68463bfbf06865369cbf015308cd0c7985a854ba737b3196f8"
+    },
+    {
+      "path": "framework/core/src/python/kungfu/atlas/mission_control.py",
+      "class": "first-party-handwritten-implementation",
+      "generatedProvenance": false,
+      "language": "python",
+      "owner": "core/package",
+      "lines": 25,
+      "contentRoot": "sha256:d7e7407fa1adeb3fd4ee3ddc65f658d31bb766e7c9b2863e38a73d7515370bd5"
+    },
+    {
+      "path": "framework/core/src/python/kungfu/atlas/payloads.py",
+      "class": "first-party-handwritten-implementation",
+      "generatedProvenance": false,
+      "language": "python",
+      "owner": "core/package",
+      "lines": 1046,
+      "contentRoot": "sha256:cee7d0087eabae3ad1e22b38b897ad28af84d9b31a0a76c26e0c2343926f668a"
+    },
+    {
+      "path": "framework/core/src/python/kungfu/atlas/store.py",
+      "class": "first-party-handwritten-implementation",
+      "generatedProvenance": false,
+      "language": "python",
+      "owner": "core/package",
+      "lines": 708,
+      "contentRoot": "sha256:963618d63ccbcea4612365eae575cee1b8850f63a26027c11c6dde9146de46b6"
     },
     {
       "path": "framework/core/src/python/kungfu/canonical_json.py",
@@ -30875,8 +31495,8 @@
       "generatedProvenance": false,
       "language": "python",
       "owner": "core/package",
-      "lines": 91,
-      "contentRoot": "sha256:f4f10ab8e33447cd21e8c31b7068737f3e48f3201e61ec56c1b58039e8e53a08"
+      "lines": 93,
+      "contentRoot": "sha256:00ee7bb19f63f23fa809ced0b2f83209d6cdd054f6f5333cb72e5097ade7759f"
     },
     {
       "path": "framework/core/src/python/kungfu/cli/commands/action.py",
@@ -30920,8 +31540,8 @@
       "generatedProvenance": false,
       "language": "python",
       "owner": "core/package",
-      "lines": 1554,
-      "contentRoot": "sha256:5f1efb8756b77201b403abc4cd3cad1d614961e7ca693ee44f7c9fd05f0b46e4"
+      "lines": 1565,
+      "contentRoot": "sha256:b32b44091a771a0d9e356f5d8dc4df858b08db846c17aea059da59585b3831a1"
     },
     {
       "path": "framework/core/src/python/kungfu/cli/commands/assignment_review/__init__.py",
@@ -30930,7 +31550,7 @@
       "language": "python",
       "owner": "core/package",
       "lines": 455,
-      "contentRoot": "sha256:fb3cb7b1483a0dbcb7f0c9a35cd7033fa30b4ec8f5671242ac2716f0f7c03560"
+      "contentRoot": "sha256:520501d339447703b95371af7df3bb167f5f8da0a6ae4d72db9ec5bbdf3215a5"
     },
     {
       "path": "framework/core/src/python/kungfu/cli/commands/assignment.py",
@@ -30938,8 +31558,17 @@
       "generatedProvenance": false,
       "language": "python",
       "owner": "core/package",
-      "lines": 1985,
-      "contentRoot": "sha256:1ff05daff8a30b3d07d2d2c571fd9f9d60e6a9e1d2b951a5bbe53827a81cd284"
+      "lines": 2002,
+      "contentRoot": "sha256:c8351e689ea5f3254dd4b23b0546047982e0a020e0717765ba44f00bc54237aa"
+    },
+    {
+      "path": "framework/core/src/python/kungfu/cli/commands/atlas.py",
+      "class": "first-party-handwritten-implementation",
+      "generatedProvenance": false,
+      "language": "python",
+      "owner": "core/package",
+      "lines": 590,
+      "contentRoot": "sha256:4ff0df84d861a29b7fff0fed64a782be88b287889387049a307bbbe1cfcb6406"
     },
     {
       "path": "framework/core/src/python/kungfu/cli/commands/codex.py",
@@ -30992,8 +31621,8 @@
       "generatedProvenance": false,
       "language": "python",
       "owner": "core/package",
-      "lines": 475,
-      "contentRoot": "sha256:9f8a6819c1636b6596123ce2ee9f815e09042e9ebb17f02440d05c6eda2cd48a"
+      "lines": 544,
+      "contentRoot": "sha256:9f09983fab592c41a06d2c3debfe0b02d07987a18b8dcee3bc18ce807eb099a6"
     },
     {
       "path": "framework/core/src/python/kungfu/cli/commands/engage.py",
@@ -31191,7 +31820,7 @@
       "language": "python",
       "owner": "core/package",
       "lines": 891,
-      "contentRoot": "sha256:24e13ac566fe391f7fe1144798940375e96133e61c4633f94c17ddad7e950b22"
+      "contentRoot": "sha256:120c82b15cfa78d2291f593efba505ba567ff84c0c809ca9da08327ac35f2662"
     },
     {
       "path": "framework/core/src/python/kungfu/cli/commands/runtime.py",
@@ -31239,13 +31868,22 @@
       "contentRoot": "sha256:d3222af8805948da27cb15d8272518953d3d3c09d9ee2200422cfba7d31f9792"
     },
     {
+      "path": "framework/core/src/python/kungfu/cli/commands/source.py",
+      "class": "first-party-handwritten-implementation",
+      "generatedProvenance": false,
+      "language": "python",
+      "owner": "core/package",
+      "lines": 158,
+      "contentRoot": "sha256:a6585e4cb6f2482fb0e9744514b3feb7c4ca6842ab757405486eb371ade8974e"
+    },
+    {
       "path": "framework/core/src/python/kungfu/cli/commands/storage.py",
       "class": "first-party-handwritten-implementation",
       "generatedProvenance": false,
       "language": "python",
       "owner": "core/package",
-      "lines": 1375,
-      "contentRoot": "sha256:6514f8b7513e0a38059e365cbfd579c3f44ab14b75bca679c4317efeecc7b052"
+      "lines": 1404,
+      "contentRoot": "sha256:c6940157bce2b05edda4cf0f539b12f953bdd094f07e5e695e0e3c3677e7136d"
     },
     {
       "path": "framework/core/src/python/kungfu/cli/commands/trace.py",
@@ -31273,15 +31911,6 @@
       "owner": "core/package",
       "lines": 20,
       "contentRoot": "sha256:d89751db922093a31a8d9592fc9a18e3524c61c22b0e6a4c058945dd117332cd"
-    },
-    {
-      "path": "framework/core/src/python/kungfu/cli/commands/work_design.py",
-      "class": "first-party-handwritten-implementation",
-      "generatedProvenance": false,
-      "language": "python",
-      "owner": "core/package",
-      "lines": 57,
-      "contentRoot": "sha256:bca017040a59cf5adbfa2677a7d6dd271ab3853220761e88568392d461be25c1"
     },
     {
       "path": "framework/core/src/python/kungfu/cli/commands/workspace.py",
@@ -31352,8 +31981,8 @@
       "generatedProvenance": false,
       "language": "declarative",
       "owner": "core/package",
-      "lines": 132,
-      "contentRoot": "sha256:80f379a24d039aded177b91b36fb0c5b283a3f13fbc7253bb4772b981b8690ad"
+      "lines": 152,
+      "contentRoot": "sha256:3b74dcdb943c618deced72b90e517a6ae993d7180537a373563c52b579cea71a"
     },
     {
       "path": "framework/core/src/python/kungfu/cli/surface_contract.schema.json",
@@ -31442,8 +32071,8 @@
       "generatedProvenance": false,
       "language": "python",
       "owner": "core/package",
-      "lines": 10,
-      "contentRoot": "sha256:3484eb02430e17c0932fecb6e5abe3ad68480e23cb2069397b1556e0f3d70348"
+      "lines": 29,
+      "contentRoot": "sha256:145d1f2cc147c3082884625a7f3de4786abc7a0ebe600122f0330d7d46172841"
     },
     {
       "path": "framework/core/src/python/kungfu/coordination/arbiter_client.py",
@@ -31478,8 +32107,8 @@
       "generatedProvenance": false,
       "language": "python",
       "owner": "core/package",
-      "lines": 323,
-      "contentRoot": "sha256:671a5cd7ba04a1cf3ef18f192ebf1686c55d3683b5f4604e04291236a80bac8c"
+      "lines": 359,
+      "contentRoot": "sha256:b804719b283bf5034c683d9bc4cc6de4efafb02a31972b7fd1d4a861c8179e55"
     },
     {
       "path": "framework/core/src/python/kungfu/delivery_evidence.py",
@@ -31569,7 +32198,7 @@
       "language": "python",
       "owner": "core/package",
       "lines": 1457,
-      "contentRoot": "sha256:b601fcac796bbfae1d8de1e83bb7d889c57186bfa33b1601ee8539f736f36ad7"
+      "contentRoot": "sha256:5ed800177af8ff6a7b00434b3ba1f6330baf66c27901e91578d2442df9a9ee71"
     },
     {
       "path": "framework/core/src/python/kungfu/exit_verifier.contract.json",
@@ -31578,7 +32207,7 @@
       "language": "declarative",
       "owner": "core/package",
       "lines": 130,
-      "contentRoot": "sha256:ba6782bce57c511d952cf6d1686c4982e40dff759dc2c61e4f88d600f019032f"
+      "contentRoot": "sha256:376905b87d365e5659126bff781a38880393437f95dd2595564e7eef88d7c579"
     },
     {
       "path": "framework/core/src/python/kungfu/exit_verifier.corpus.json",
@@ -31739,8 +32368,8 @@
       "generatedProvenance": false,
       "language": "python",
       "owner": "core/package",
-      "lines": 2090,
-      "contentRoot": "sha256:70a4a64222fc038259e25bc41c0d5e8df77fe1d2673b26254bd7f4c6770a88ec"
+      "lines": 2089,
+      "contentRoot": "sha256:bf08cb858e48ae62160bdf8d822da986174efb2106dabf47d0f3a1420c9f6ee9"
     },
     {
       "path": "framework/core/src/python/kungfu/project_cut_exit.py",
@@ -32472,6 +33101,24 @@
       "contentRoot": "sha256:167016058512a7866847666027d51d3f954f86e26114950021cdee5fc8604496"
     },
     {
+      "path": "framework/core/src/python/kungfu/sources/__init__.py",
+      "class": "public-header-or-entrypoint",
+      "generatedProvenance": false,
+      "language": "python",
+      "owner": "core/package",
+      "lines": 2,
+      "contentRoot": "sha256:741515b5c268b60fb2d52919c220149b46e7aef8927851f2df4a017777862abc"
+    },
+    {
+      "path": "framework/core/src/python/kungfu/sources/store.py",
+      "class": "first-party-handwritten-implementation",
+      "generatedProvenance": false,
+      "language": "python",
+      "owner": "core/package",
+      "lines": 230,
+      "contentRoot": "sha256:93a15e67e38a812d532f01d8bc96787ca4dbff857edb4d6641fe72cb47a55cb3"
+    },
+    {
       "path": "framework/core/src/python/kungfu/storage/__init__.py",
       "class": "public-header-or-entrypoint",
       "generatedProvenance": false,
@@ -32544,15 +33191,6 @@
       "contentRoot": "sha256:0dd3ceeb5e6aef4dcd72e793df8e8384ca6a3159aa9eee2ec1d86429bce0e1a1"
     },
     {
-      "path": "framework/core/src/python/kungfu/work_control/__init__.py",
-      "class": "public-header-or-entrypoint",
-      "generatedProvenance": false,
-      "language": "python",
-      "owner": "core/package",
-      "lines": 30,
-      "contentRoot": "sha256:9f917175395b01a568922d8f87a4559af2fcc1b2db46b5fd478ba6863921b3b9"
-    },
-    {
       "path": "framework/core/src/python/kungfu/workspace_federation_observer.py",
       "class": "first-party-handwritten-implementation",
       "generatedProvenance": false,
@@ -32577,7 +33215,7 @@
       "language": "python",
       "owner": "core/package",
       "lines": 1379,
-      "contentRoot": "sha256:392e7846f9da7da1e2288a97ff76fd45e48f4b455548ef57a2802de89eed4db8"
+      "contentRoot": "sha256:0f255528ab77cd1101c5c0901737760a1a639aa96b916ff38fd18bd2b408a106"
     },
     {
       "path": "framework/core/src/python/kungfu/workspace_guidance.py",
@@ -32603,8 +33241,8 @@
       "generatedProvenance": false,
       "language": "python",
       "owner": "core/package",
-      "lines": 149,
-      "contentRoot": "sha256:531ae72c523ca853f4cf865ebd9f60e7af7b6b22261b9d6aee6bb86e56e3d31a"
+      "lines": 133,
+      "contentRoot": "sha256:9aa353dc99b1ea8e5b4fb7e4901630af2a4ba9f95582eb19ee35ca7efdaa3f57"
     },
     {
       "path": "framework/core/tests/bench/_bench.mjs",
@@ -32679,13 +33317,22 @@
       "contentRoot": "sha256:415bd0d152123b9128e41455282f51dd46dba9c3bc6035a77427c2bf0d5d8f47"
     },
     {
+      "path": "framework/core/tests/fixtures/cli-canonical-alias-migration.json",
+      "class": "test-or-fixture",
+      "generatedProvenance": false,
+      "language": "declarative",
+      "owner": "core/qualification",
+      "lines": 14,
+      "contentRoot": "sha256:c6018d1a4ecb681dfdf6ab89b55860d6f602017e507db82bd65481e4538f61b5"
+    },
+    {
       "path": "framework/core/tests/fixtures/cli-removed-aliases.json",
       "class": "test-or-fixture",
       "generatedProvenance": false,
       "language": "declarative",
       "owner": "core/qualification",
-      "lines": 15,
-      "contentRoot": "sha256:46d32666b25109d5f09143e468c6248e2ec56fe88d75e20dc8734ef2bb6a921f"
+      "lines": 31,
+      "contentRoot": "sha256:4cf76f82ba4c701526751a59cbcdb4ac600c7d65962ea7b5c93b05ee0f5ba35c"
     },
     {
       "path": "framework/core/tests/fixtures/cli-surface-contract/dangling-kfd3.json",
@@ -32927,8 +33574,8 @@
       "generatedProvenance": false,
       "language": "python",
       "owner": "core/qualification",
-      "lines": 147,
-      "contentRoot": "sha256:2e7ba2e2c91ef3cdb8b1ce5209d3c7bb15e89fde2a0d8d21066d5e300a4c77ab"
+      "lines": 245,
+      "contentRoot": "sha256:9b3e90dcb8609615158cd4cc41c48f41601816a988a29897047adbdb66dfcfc7"
     },
     {
       "path": "framework/core/tests/python/test_agent_work_advisory.py",
@@ -32972,8 +33619,8 @@
       "generatedProvenance": false,
       "language": "python",
       "owner": "core/qualification",
-      "lines": 2180,
-      "contentRoot": "sha256:7c91b8b518b64aab6781109964589035051ed4661306e0c8ef825668ac92cf71"
+      "lines": 2289,
+      "contentRoot": "sha256:362a6b85e1162bb04566e778c03eb511c65ac57035ad794bb893802aa4e6d28c"
     },
     {
       "path": "framework/core/tests/python/test_assignment_profile_source.py",
@@ -32992,6 +33639,24 @@
       "owner": "core/qualification",
       "lines": 157,
       "contentRoot": "sha256:64d96125eeebed659b6b72e6e984c765693b80b127bf0fb602c8f3600850a1f1"
+    },
+    {
+      "path": "framework/core/tests/python/test_assignment_runtime.py",
+      "class": "test-or-fixture",
+      "generatedProvenance": false,
+      "language": "python",
+      "owner": "core/qualification",
+      "lines": 910,
+      "contentRoot": "sha256:aa51d92cdee786f79e480f5083aa55eb3330265c45d14af278774c80312914f5"
+    },
+    {
+      "path": "framework/core/tests/python/test_atlas_storage.py",
+      "class": "test-or-fixture",
+      "generatedProvenance": false,
+      "language": "python",
+      "owner": "core/qualification",
+      "lines": 6092,
+      "contentRoot": "sha256:86b7354113845c8b8b32701a1c88a839f079634d5a3d7b22c0f42785066e9db6"
     },
     {
       "path": "framework/core/tests/python/test_canonical_json.py",
@@ -33026,8 +33691,8 @@
       "generatedProvenance": false,
       "language": "python",
       "owner": "core/qualification",
-      "lines": 463,
-      "contentRoot": "sha256:b6628ae1d90cd591ae182331a209ac23ab974182d40a0bdd58a42cd58488a10a"
+      "lines": 468,
+      "contentRoot": "sha256:6551bf4ccae5af977e76a2d68f4c71ad7e609be845860ffa4c98ec7ab63d7d03"
     },
     {
       "path": "framework/core/tests/python/test_conan_rxcpp_compat.py",
@@ -33080,8 +33745,8 @@
       "generatedProvenance": false,
       "language": "python",
       "owner": "core/qualification",
-      "lines": 173,
-      "contentRoot": "sha256:506083789b7987ed0b533cef295bb83fbd3460380ff39a6ab40c376a07ebd6e1"
+      "lines": 193,
+      "contentRoot": "sha256:41e479adcf6ab076eebfc202218ebfade9d6e63c68608b5f480365dd31fbe6cf"
     },
     {
       "path": "framework/core/tests/python/test_delivery_evidence.py",
@@ -33134,8 +33799,8 @@
       "generatedProvenance": false,
       "language": "python",
       "owner": "core/qualification",
-      "lines": 1059,
-      "contentRoot": "sha256:a6df088e4c31383a639964e2238356a639c95814a82f4353f23fc67534a88982"
+      "lines": 1161,
+      "contentRoot": "sha256:2672ddde80055e593cc56ebfc15d1acb614f66590623545e0aaeca36c22699e9"
     },
     {
       "path": "framework/core/tests/python/test_durability_capability.py",
@@ -33170,8 +33835,8 @@
       "generatedProvenance": false,
       "language": "python",
       "owner": "core/qualification",
-      "lines": 263,
-      "contentRoot": "sha256:d47585201e045310ca19dca333e4334594bb854dce6eff2eca29a278017c86d0"
+      "lines": 294,
+      "contentRoot": "sha256:96f71714c2c6f6ddb4594cc5117815833d453b7124e9d59ad291be2ae6eca980"
     },
     {
       "path": "framework/core/tests/python/test_episode_content_root.py",
@@ -33242,8 +33907,8 @@
       "generatedProvenance": false,
       "language": "python",
       "owner": "core/qualification",
-      "lines": 938,
-      "contentRoot": "sha256:253e7bab3f8ca1a0adcbf7b3ab884fd57b1f13a1feda75d42403c0f96498d80f"
+      "lines": 934,
+      "contentRoot": "sha256:09ece276b4bbe0edb3585738afa675237748ab27d4201995469aa6c420d5f177"
     },
     {
       "path": "framework/core/tests/python/test_exit_verifier.py",
@@ -33298,6 +33963,15 @@
       "owner": "core/qualification",
       "lines": 41,
       "contentRoot": "sha256:12196bef51b9048f815e4c97d272bd0aa3b6f962dbd4d7853c44f185c9fd0a47"
+    },
+    {
+      "path": "framework/core/tests/python/test_generic_primitive_dedup.py",
+      "class": "test-or-fixture",
+      "generatedProvenance": false,
+      "language": "python",
+      "owner": "core/qualification",
+      "lines": 225,
+      "contentRoot": "sha256:ffd45e08e45aeafe89f7f5b1c4deda59c531c07e6854b716b227572c3bdf779f"
     },
     {
       "path": "framework/core/tests/python/test_health_diagnostics_native.py",
@@ -33513,7 +34187,7 @@
       "language": "python",
       "owner": "core/qualification",
       "lines": 491,
-      "contentRoot": "sha256:27e651216c89daba85a2583ec13a9fc099de96104c4cd23d7b273b0865e7a1aa"
+      "contentRoot": "sha256:de4cf95e3db8cf114ae8c5c4af3925b08f68eddd2d263cba58b7ff46eaf5db32"
     },
     {
       "path": "framework/core/tests/python/test_query_cli.py",
@@ -33575,8 +34249,8 @@
       "generatedProvenance": false,
       "language": "python",
       "owner": "core/qualification",
-      "lines": 1161,
-      "contentRoot": "sha256:7ebb68b107e4d8b3f2503ef6e75a3248d81dfe9cddd12844e3ab2874e815eb57"
+      "lines": 1240,
+      "contentRoot": "sha256:e4dd70ada22bc1bc63f89ef89377186b8f734f5eebc6b61de9c3c8de13b5e000"
     },
     {
       "path": "framework/core/tests/python/test_runtime_broker.py",
@@ -33612,7 +34286,7 @@
       "language": "python",
       "owner": "core/qualification",
       "lines": 327,
-      "contentRoot": "sha256:d52f22eb322988ee854c3b3d57e5247eeedd00350d7c9f031cd59ae85ef785b2"
+      "contentRoot": "sha256:d64a395034634222cd5b45170ec8a1b3f188352a98a5e4ca684f60d6c5d54f56"
     },
     {
       "path": "framework/core/tests/python/test_runtime_upgrade.py",
@@ -33692,17 +34366,8 @@
       "generatedProvenance": false,
       "language": "python",
       "owner": "core/qualification",
-      "lines": 424,
-      "contentRoot": "sha256:8db8082f942895ea80821dd095549e04060d57f03227a70a379d7bd9e8ac8db1"
-    },
-    {
-      "path": "framework/core/tests/python/test_work_design_cli.py",
-      "class": "test-or-fixture",
-      "generatedProvenance": false,
-      "language": "python",
-      "owner": "core/qualification",
-      "lines": 64,
-      "contentRoot": "sha256:e4f0bc43aa0acd188846fd2cbc88318c2039541b45f534fc0d76448fcd139445"
+      "lines": 457,
+      "contentRoot": "sha256:d6157e92ac4bd91baac64669521a357303d8e0d48137805ce998e6a07e85b909"
     },
     {
       "path": "framework/core/tests/python/test_work_design_outcome_history.py",
@@ -34116,7 +34781,7 @@
       "language": "python",
       "owner": "core/qualification",
       "lines": 569,
-      "contentRoot": "sha256:439dbbcd2315e4f27323abb11269ee14eed3a6addb1b0c75a514003c47095b0d"
+      "contentRoot": "sha256:80da1e7d5ca53b7df0e9411c6a52fec66227a4ccb5da42a478a3636c494a6f3d"
     },
     {
       "path": "framework/core/tests/qualification/fact-kernel-fold-performance/workload_test.py",
@@ -34458,7 +35123,7 @@
       "language": "declarative",
       "owner": "framework/data-protection",
       "lines": 88,
-      "contentRoot": "sha256:ac5eac91611a90bb333b0bac35d2cc41eeb13d2eea9481a7abc09e9492d7dab1"
+      "contentRoot": "sha256:25696625e4b276f5c4424519815af2957f41af733006d51b30eda443c3198e4f"
     },
     {
       "path": "framework/data-protection/kungfu-data-protection.contract.json",
@@ -34485,7 +35150,7 @@
       "language": "declarative",
       "owner": "framework/data-protection",
       "lines": 154,
-      "contentRoot": "sha256:3003b550c6c8e2ac309fd643929de8b6b326c3f2aa17a4311b9b046f8aab0373"
+      "contentRoot": "sha256:18e56da58d8e15e816102e26879eb8209c1e62c75d8f6b39f05a94be7b7c67d5"
     },
     {
       "path": "framework/data-protection/work-agent-history.contract.json",
@@ -34529,8 +35194,8 @@
       "generatedProvenance": false,
       "language": "declarative",
       "owner": "framework/deprecation",
-      "lines": 378,
-      "contentRoot": "sha256:4b984e52b836a2914072d9367091b0b07461a366ad6ad3c067fab74b4b86b706"
+      "lines": 379,
+      "contentRoot": "sha256:ca2c13c5e45945f2ff1814654dd327c6c1dd0c38a7fab77e4c23659d5cb0b4c8"
     },
     {
       "path": "framework/deprecation/deprecation-surface-discovery.mjs",
@@ -34709,8 +35374,8 @@
       "generatedProvenance": false,
       "language": "declarative",
       "owner": "framework/exit",
-      "lines": 1479,
-      "contentRoot": "sha256:5e9bb9cd19e0bbeeff508b7c4cb4127062238665b749eb872b475a8ee2ea19d0"
+      "lines": 1482,
+      "contentRoot": "sha256:d53745f3c33fd4bc3683faa6472358e15e880eab73508e7bc00367fe5daafe74"
     },
     {
       "path": "framework/fact/kungfu-fact-cut-kernel.contract.json",
@@ -35798,8 +36463,8 @@
       "generatedProvenance": false,
       "language": "declarative",
       "owner": "framework/incubation",
-      "lines": 645,
-      "contentRoot": "sha256:c24e9bdca26ac8ea9e153c6ca6a4de40cb28ea3b8308eb021d894f35adbd192c"
+      "lines": 689,
+      "contentRoot": "sha256:66441c1baa6bdbf9662074019af594bef4a9c08c3292a5387f2c8b3d906ee9c8"
     },
     {
       "path": "framework/incubation/schema/incubation-passport-contract-v1.schema.json",
@@ -35897,8 +36562,8 @@
       "generatedProvenance": false,
       "language": "declarative",
       "owner": "framework/kfx",
-      "lines": 1497,
-      "contentRoot": "sha256:f4bb8be416f73f46b960c1f46666bbf669d9daab58585003d30cd3f8e18e2227"
+      "lines": 1498,
+      "contentRoot": "sha256:f0e6cfddac711123a969d7d88c8995b95fcb397b99438674902372fb38ff8d0c"
     },
     {
       "path": "framework/kfx/package.json",
@@ -35925,7 +36590,7 @@
       "language": "javascript-typescript",
       "owner": "framework/kfx",
       "lines": 1642,
-      "contentRoot": "sha256:f1b6960d5abe5f149adb1fb56797865f2a17de204767f4808616ceb5896053fc"
+      "contentRoot": "sha256:17cace844696bc3d74f8a09db910e0ddcd9d91a2440c1b8c9396cd6a589d4bfe"
     },
     {
       "path": "framework/kfx/src/profile-suite.test.ts",
@@ -35978,8 +36643,8 @@
       "generatedProvenance": false,
       "language": "declarative",
       "owner": "framework/maintainability",
-      "lines": 650,
-      "contentRoot": "sha256:0cc0be46490c07cabb333fc16e048a95b58b0f4703b2e333b98cb4ec800b95b4"
+      "lines": 617,
+      "contentRoot": "sha256:bd796d92ee1ac1b6ea396d7b03fa840c71e83944c4ffc62015a85a2485345940"
     },
     {
       "path": "framework/maintainability/abstraction-integrity.baseline.json",
@@ -35987,8 +36652,8 @@
       "generatedProvenance": false,
       "language": "declarative",
       "owner": "framework/maintainability",
-      "lines": 387,
-      "contentRoot": "sha256:a0e337a8c430ead558949236aaeade735f12aea682e2a8a20222c7a1b2f3075f"
+      "lines": 402,
+      "contentRoot": "sha256:3348cdb37de1ff83d93bc7d55dbb9f73d85c25df3de455992550401c7288325a"
     },
     {
       "path": "framework/maintainability/abstraction-integrity.manifest.json",
@@ -35996,8 +36661,8 @@
       "generatedProvenance": false,
       "language": "declarative",
       "owner": "framework/maintainability",
-      "lines": 298,
-      "contentRoot": "sha256:f6c4f775a53b5deefed84599b0915743ec9ece800c4fedf53fc16bdca3fa862a"
+      "lines": 299,
+      "contentRoot": "sha256:06e9aa49c55e7fd994ad4f0122b710d2f8ea4856c9827b1b49385b68d0afbc8c"
     },
     {
       "path": "framework/maintainability/code-complexity-policy.json",
@@ -36005,8 +36670,8 @@
       "generatedProvenance": false,
       "language": "declarative",
       "owner": "framework/maintainability",
-      "lines": 165,
-      "contentRoot": "sha256:737a9cf5c6424171922fe038ecca5f3b9085bd2a1d63afd3d140aa6c15d9f7ed"
+      "lines": 184,
+      "contentRoot": "sha256:d3e5c0567434a5807e698c7c52a00b8081252f4eeb6956f0319477d6892a2f60"
     },
     {
       "path": "framework/maintainability/complexity-governance.mjs",
@@ -36014,8 +36679,8 @@
       "generatedProvenance": false,
       "language": "javascript-typescript",
       "owner": "framework/maintainability",
-      "lines": 654,
-      "contentRoot": "sha256:a4d7103755e9b0a68856d0ee552663f81500156dbafdbb1310284700ac80f31d"
+      "lines": 559,
+      "contentRoot": "sha256:dcb7d1bdbec45bce7d4a2e2f3fb65401f82511ca3479efc006f8715df2918a46"
     },
     {
       "path": "framework/maintainability/delivery-evidence.mjs",
@@ -36042,7 +36707,7 @@
       "language": "declarative",
       "owner": "framework/maintainability",
       "lines": 247,
-      "contentRoot": "sha256:3cbb360242e537b6e3bc6e368483fc01f320e5479e3fd8361158df002753ca61"
+      "contentRoot": "sha256:afa71e9463929097697caf2801ca85087ebcdf325a85dd706f316f6a71a367bf"
     },
     {
       "path": "framework/maintainability/semantic-amplification-report.json",
@@ -36104,8 +36769,8 @@
       "generatedProvenance": false,
       "language": "javascript-typescript",
       "owner": "framework/maintainability",
-      "lines": 674,
-      "contentRoot": "sha256:295b5592da8957045f7749636e5824bc08e43637ae29ebecc4379cc30c8173de"
+      "lines": 744,
+      "contentRoot": "sha256:8e8302008dd57e5f38f0715a58c0a1ae6c2aa97856a5e4b60b4fb294168c316d"
     },
     {
       "path": "framework/maintainability/terminal-evidence.mjs",
@@ -36113,8 +36778,8 @@
       "generatedProvenance": false,
       "language": "javascript-typescript",
       "owner": "framework/maintainability",
-      "lines": 846,
-      "contentRoot": "sha256:175e0740a62a52520acd324e51ed248d1eaf3ed321cdcd30b2320497e77a3f0d"
+      "lines": 852,
+      "contentRoot": "sha256:f464bc48a1c3a7bb1910bd15ec0ed1cd8a91b888e0c77de23588380ce8693cd7"
     },
     {
       "path": "framework/primitive/kungfu-primitive-catalog.contract.json",
@@ -36123,7 +36788,7 @@
       "language": "declarative",
       "owner": "framework/primitive",
       "lines": 1725,
-      "contentRoot": "sha256:16e9e81e47702a871cc7a805664f3698443c473fd1e51b89f6c154012aa9553c"
+      "contentRoot": "sha256:46aa5c6a056801de9c11b46d28af6ed8163d8810bc1cdd480c315f4f173d99fe"
     },
     {
       "path": "framework/primitive/schema/primitive-availability-observation-v1.schema.json",
@@ -36177,7 +36842,7 @@
       "language": "javascript-typescript",
       "owner": "framework/production-graph",
       "lines": 200,
-      "contentRoot": "sha256:43e5e6978df0c18bc16127f3f63494f5a6c012e98ee9dda0815f4b3110ac5261"
+      "contentRoot": "sha256:e309ed6d0965a93ca1af745441e69a9a2a49af7958f7ba2ad68346de63140a67"
     },
     {
       "path": "framework/production-graph/contract.mjs",
@@ -36185,8 +36850,8 @@
       "generatedProvenance": false,
       "language": "javascript-typescript",
       "owner": "framework/production-graph",
-      "lines": 587,
-      "contentRoot": "sha256:2af8950d15411b9f00cf23d37b6cb268631e5b9489ade490cda1fc66d96f559d"
+      "lines": 1228,
+      "contentRoot": "sha256:2ad4529445050cc786e46eb21679ba634e061f7b8581e63e61ea6dd4b32948c0"
     },
     {
       "path": "framework/profile/kungfu-domain-profile-authoring.contract.json",
@@ -36312,7 +36977,7 @@
       "language": "declarative",
       "owner": "framework/project-cut",
       "lines": 47,
-      "contentRoot": "sha256:d06c8347c2ee1ecbd25b4979e9843140d24c0a5ba8b6d5daf9e1f491dc502c80"
+      "contentRoot": "sha256:961ebc8eeef0e6a267b6190d9974b14e3323d5234f091b32358ed950b2bd5526"
     },
     {
       "path": "framework/project-cut/qualification/three-agent-dogfood/actor-b-continuation-plan.json",
@@ -36321,7 +36986,7 @@
       "language": "declarative",
       "owner": "framework/project-cut",
       "lines": 22,
-      "contentRoot": "sha256:6e3317e9b0e1b298b6dc826a0bbce6493ac63654d67ea4568497878e4de72116"
+      "contentRoot": "sha256:d2174440a962b933b7d8b0816dcd65039ec92ebd45dfd90d0b58ca6084b071c8"
     },
     {
       "path": "framework/project-cut/qualification/three-agent-dogfood/actor-b-review.json",
@@ -36330,7 +36995,7 @@
       "language": "declarative",
       "owner": "framework/project-cut",
       "lines": 76,
-      "contentRoot": "sha256:2dfe40fb2f8ac47ba754407df4142f962d2325a32f5aa8d32354f65a9444f7bb"
+      "contentRoot": "sha256:ea3770d8c12613c24145b6a1fa3dbedba0e5c689cf59d0191879bdb2d1aadf2d"
     },
     {
       "path": "framework/project-cut/qualification/three-agent-dogfood/final-actor-a-settlement.json",
@@ -36366,7 +37031,7 @@
       "language": "declarative",
       "owner": "framework/project-cut",
       "lines": 71,
-      "contentRoot": "sha256:0f6e2e7a20f2d3a5a23f5b32db6be8c87e506e8df4c0103fbdf452cb5b79445f"
+      "contentRoot": "sha256:289edfb1a3da025284b8db74db2b68420573bda6f293911b3234d3a6cbc87d49"
     },
     {
       "path": "framework/project-cut/schema/composition-v1.schema.json",
@@ -36527,8 +37192,8 @@
       "generatedProvenance": false,
       "language": "javascript-typescript",
       "owner": "framework/project-cut",
-      "lines": 798,
-      "contentRoot": "sha256:29b352fe335eeb399e45654ba25264266d907ac76f6ba97a81b51cbace7a38bd"
+      "lines": 794,
+      "contentRoot": "sha256:0b2397d011d063c579bf1b680197b7c24652b67c3e79a9e44f538709809711f4"
     },
     {
       "path": "framework/project-cut/src/history.mjs",
@@ -36644,8 +37309,8 @@
       "generatedProvenance": false,
       "language": "javascript-typescript",
       "owner": "framework/release",
-      "lines": 180,
-      "contentRoot": "sha256:c80ae533f96a02bfaa67ad8b6fdf1b1df5007ad3ac36d9450fa04abda5648225"
+      "lines": 260,
+      "contentRoot": "sha256:93214c5d987239a46f1998e043d4efddd7246219c88f2f37d484cea559380c66"
     },
     {
       "path": "framework/release/component-distribution.contract.json",
@@ -36708,7 +37373,7 @@
       "language": "declarative",
       "owner": "framework/release",
       "lines": 864,
-      "contentRoot": "sha256:7e28108b69aa2637e0886acbfa61b2993b6b97b327e00ba1eda1eea910b35599"
+      "contentRoot": "sha256:fac7bfe1fa1ecfb0fce39895b003afd163532996dcac8da3a13026a904d5e4ac"
     },
     {
       "path": "framework/release/qualified-assignment-core-artifact.mjs",
@@ -36770,8 +37435,8 @@
       "generatedProvenance": false,
       "language": "declarative",
       "owner": "framework/runtime",
-      "lines": 790,
-      "contentRoot": "sha256:4e4ef2d229200f0d24861db7e1ada9da41c85f55c4596f54ad53f40e6cb8fb1f"
+      "lines": 791,
+      "contentRoot": "sha256:5a470459deb07294eac76d8d65b3049a8fbe9054dffefe40ca8d4b006aca1db7"
     },
     {
       "path": "framework/runtime/kungfu-runtime.contract.json",
@@ -37364,8 +38029,8 @@
       "generatedProvenance": false,
       "language": "javascript-typescript",
       "owner": "framework/terminal-evidence",
-      "lines": 352,
-      "contentRoot": "sha256:8b8fc36b219c5f2e5b42109a51a0acd91236bb559d2b74a672212f328cf18519"
+      "lines": 355,
+      "contentRoot": "sha256:ad9f2d82293b680647a1c955c8ab4d365833e669a934f46f56fde5518e8692b3"
     },
     {
       "path": "framework/terminal-evidence/live-verification.mjs",
@@ -37456,6 +38121,24 @@
       "owner": "framework/tui",
       "lines": 77,
       "contentRoot": "sha256:c2937dd762c3da4c60f984753b3bb5787faac2919eabb49489528263d06b8850"
+    },
+    {
+      "path": "framework/tui/src/compatibility/mission-control-v3-contribution.test.ts",
+      "class": "test-or-fixture",
+      "generatedProvenance": false,
+      "language": "javascript-typescript",
+      "owner": "framework/tui",
+      "lines": 169,
+      "contentRoot": "sha256:c00627618772416f0b44b926c36df93f4a8271372bc36c0d6b2dcd55e2302315"
+    },
+    {
+      "path": "framework/tui/src/compatibility/mission-control-v3-contribution.ts",
+      "class": "first-party-handwritten-implementation",
+      "generatedProvenance": false,
+      "language": "javascript-typescript",
+      "owner": "framework/tui",
+      "lines": 297,
+      "contentRoot": "sha256:af09cccb900197f215f0de4e66137ed9dcfed5a5cb7c4673927a60a9303ed7aa"
     },
     {
       "path": "framework/tui/src/control-plane-state.ts",
@@ -37652,8 +38335,8 @@
       "generatedProvenance": false,
       "language": "javascript-typescript",
       "owner": "framework/tui",
-      "lines": 480,
-      "contentRoot": "sha256:54f8b648c9107130b3814a4d18897318f11685b8e5e2def2af19b3fa31cd9f19"
+      "lines": 595,
+      "contentRoot": "sha256:45be681ad2cae454fd6bed5890b8a96d6f4a1228cf94bbd2ae66af20ecb25bb6"
     },
     {
       "path": "framework/tui/src/projects-view.test.ts",
@@ -37689,7 +38372,7 @@
       "language": "javascript-typescript",
       "owner": "framework/tui",
       "lines": 145,
-      "contentRoot": "sha256:207095c152bdd69d966052223e3e4b54c981afd90bb60f71cc00a11cf5b470f2"
+      "contentRoot": "sha256:637de05af42bcdc5b29052ee3bc9161ab3fcd1d4fbca720fe6ba6c960f5e834a"
     },
     {
       "path": "framework/tui/src/runtime-surface.ts",
@@ -37751,8 +38434,8 @@
       "generatedProvenance": false,
       "language": "javascript-typescript",
       "owner": "framework/tui",
-      "lines": 3080,
-      "contentRoot": "sha256:8f44d4be4f8e0cd33289e5ca9a175e35d77f0d3a037664804855aab48e53c917"
+      "lines": 3353,
+      "contentRoot": "sha256:4743e853216b94ffc8f37e4858b993b67e7f0e502369358cf86acb76a2cb1887"
     },
     {
       "path": "framework/tui/src/terminal-animation.test.ts",
@@ -37932,7 +38615,7 @@
       "language": "declarative",
       "owner": "framework/upgrade",
       "lines": 71,
-      "contentRoot": "sha256:aa7c45998afe6eb034de786f08008fd2b083c8a05b07847de96928338708b086"
+      "contentRoot": "sha256:533bc7b4bb1fb4418c4fe098dc79c5234696e4a8376137d1a0366eca9a7c821a"
     },
     {
       "path": "framework/upgrade/kungfu-release-channel-index.schema.json",
@@ -38068,6 +38751,42 @@
       "owner": "framework/work-design-advisor",
       "lines": 74,
       "contentRoot": "sha256:bbfd014adb84bfce90e20f39978a3cd6129d9c57a56f4564783273db69eb1614"
+    },
+    {
+      "path": "framework/work-design-open-card/src/work-design-open-card.mjs",
+      "class": "first-party-handwritten-implementation",
+      "generatedProvenance": false,
+      "language": "javascript-typescript",
+      "owner": "framework/work-design-open-card",
+      "lines": 1140,
+      "contentRoot": "sha256:91e131e11d0afc44876f0093eaee8c2d01fe836b6140c7cfe3cda87adc34ce39"
+    },
+    {
+      "path": "framework/work-design-open-card/tooling/check-work-design-open-card.mjs",
+      "class": "first-party-handwritten-implementation",
+      "generatedProvenance": false,
+      "language": "javascript-typescript",
+      "owner": "framework/work-design-open-card",
+      "lines": 55,
+      "contentRoot": "sha256:5e554c8ca88a2f8160f4bffe762b8e14843a8204f55b8fb8981e1271cbe87bf5"
+    },
+    {
+      "path": "framework/work-design-open-card/tooling/open-card-preflight.mjs",
+      "class": "first-party-handwritten-implementation",
+      "generatedProvenance": false,
+      "language": "javascript-typescript",
+      "owner": "framework/work-design-open-card",
+      "lines": 58,
+      "contentRoot": "sha256:0df78110e6c30dddd01fea8ac75f3ec101d8dd9bb8cf184e11c68a80b7140526"
+    },
+    {
+      "path": "framework/work-design-open-card/work-design-open-card.contract.json",
+      "class": "declarative-schema-or-table",
+      "generatedProvenance": false,
+      "language": "declarative",
+      "owner": "framework/work-design-open-card",
+      "lines": 93,
+      "contentRoot": "sha256:031566e5c855ee548c795440cdf3ec883851c994f6e29e9ab9bf2d62bcabd354"
     },
     {
       "path": "framework/work-design-policy-replay/schema/work-design-activation-envelope-v1.schema.json",
@@ -38221,42 +38940,6 @@
       "owner": "framework/work-design-policy-replay",
       "lines": 106,
       "contentRoot": "sha256:caa4f7d38d7efeef985453267d355c2a4dda3737eb83a4bfd5f6cdfbc6f4bc4e"
-    },
-    {
-      "path": "framework/work-design-preflight/src/work-design-preflight.mjs",
-      "class": "first-party-handwritten-implementation",
-      "generatedProvenance": false,
-      "language": "javascript-typescript",
-      "owner": "framework/work-design-preflight",
-      "lines": 1137,
-      "contentRoot": "sha256:c5c03b3de095726d186ec24b6e5d2d9782f7f9c6efdb85f0ef92e3eddc9982f0"
-    },
-    {
-      "path": "framework/work-design-preflight/tooling/check-work-design-preflight.mjs",
-      "class": "first-party-handwritten-implementation",
-      "generatedProvenance": false,
-      "language": "javascript-typescript",
-      "owner": "framework/work-design-preflight",
-      "lines": 55,
-      "contentRoot": "sha256:5030a363b0301b05e9d1c97dcd6aef345ee3e2e1ee263d7ee719d531f37b4bc7"
-    },
-    {
-      "path": "framework/work-design-preflight/tooling/work-design-preflight.mjs",
-      "class": "first-party-handwritten-implementation",
-      "generatedProvenance": false,
-      "language": "javascript-typescript",
-      "owner": "framework/work-design-preflight",
-      "lines": 58,
-      "contentRoot": "sha256:9d1385532ada3e674199620b363645b389aac2ded7c3f8b2fb16fcd01840aa13"
-    },
-    {
-      "path": "framework/work-design-preflight/work-design-preflight.contract.json",
-      "class": "declarative-schema-or-table",
-      "generatedProvenance": false,
-      "language": "declarative",
-      "owner": "framework/work-design-preflight",
-      "lines": 90,
-      "contentRoot": "sha256:ab280265260f7c9ea403bd0c893456c1d09548ba398132b93d8b8b4fd7632bbc"
     },
     {
       "path": "framework/work-history-selector/schema/work-history-selection-manifest-v1.schema.json",
@@ -38534,8 +39217,8 @@
       "generatedProvenance": false,
       "language": "declarative",
       "owner": "kungfu/repository-contract",
-      "lines": 396,
-      "contentRoot": "sha256:01e92838ffd84fab760e2be4d4000d955dafe12241c13177287fbafb68892750"
+      "lines": 399,
+      "contentRoot": "sha256:8765dbaa693c672d72392fed31bec9a1ddebcf49b2a5be11aaeb16a5993a382d"
     },
     {
       "path": "pnpm-lock.yaml",
@@ -38651,8 +39334,8 @@
       "generatedProvenance": false,
       "language": "javascript-typescript",
       "owner": "product/assembly",
-      "lines": 540,
-      "contentRoot": "sha256:48cc1f0a263ab74ae0a37a9e44ca6fb6e64b6583d0fe9e278efc48b9c873bf17"
+      "lines": 557,
+      "contentRoot": "sha256:f49452434cfb69c04968e046f8651faeb7fdee211140411d21d170d5bc16d5e1"
     },
     {
       "path": "product/scripts/cli-surface-qualification.test.mjs",
@@ -38660,8 +39343,8 @@
       "generatedProvenance": false,
       "language": "javascript-typescript",
       "owner": "product/assembly",
-      "lines": 296,
-      "contentRoot": "sha256:1a16bdd45ea450239e68bd04752d8f8394b8f210f47e9c4d76732e627dc25665"
+      "lines": 305,
+      "contentRoot": "sha256:1098984f2daa1bf8aab37fbdf628c41e66c932ed89988ad9b908658bb1c779f7"
     },
     {
       "path": "product/scripts/compatibility.mjs",
@@ -38751,7 +39434,7 @@
       "language": "javascript-typescript",
       "owner": "product/assembly",
       "lines": 559,
-      "contentRoot": "sha256:b556845072b76598a98fb116568e1c2b3b908c790188204ef1c03ed9eaf5ad65"
+      "contentRoot": "sha256:06a3ad0f781b5fce676985d8b06a16c9ff9ae11d1a32178210476f41e332d075"
     },
     {
       "path": "product/scripts/qualify-product-cache-home.mjs",
@@ -38777,8 +39460,8 @@
       "generatedProvenance": false,
       "language": "javascript-typescript",
       "owner": "product/assembly",
-      "lines": 689,
-      "contentRoot": "sha256:b473ed61ef38d3bb3a8c45e66c5dd1625394ffa8f427f514148fa5f56181332e"
+      "lines": 693,
+      "contentRoot": "sha256:aaefb6f82fa34f3146a66ed9de6878b6cc66365b38e50bd1a73cf56f097a782c"
     },
     {
       "path": "product/scripts/release-channel-index.test.mjs",
@@ -38786,8 +39469,8 @@
       "generatedProvenance": false,
       "language": "javascript-typescript",
       "owner": "product/assembly",
-      "lines": 456,
-      "contentRoot": "sha256:16e17932862a6544cb01cf165e47507a7e013d49e6ce43a278c41d1077595bf5"
+      "lines": 463,
+      "contentRoot": "sha256:2e4b97990e8e7d88014558abbc6c9bfcbbed7fc53fa03b4e16f78642143230ac"
     },
     {
       "path": "product/scripts/release-channel-trust.mjs",
@@ -38903,8 +39586,8 @@
       "generatedProvenance": false,
       "language": "javascript-typescript",
       "owner": "shifu/source-tooling",
-      "lines": 493,
-      "contentRoot": "sha256:747d0575e2e45996d12aa60737a30682107cb14074237a2137e4900cca91cc63"
+      "lines": 494,
+      "contentRoot": "sha256:f9ced2effea93b67553e127ee2be72ea0d02360a25bcf20fe021bc48c48358e9"
     },
     {
       "path": "scripts/adr-navigation.test.mjs",
@@ -39119,8 +39802,8 @@
       "generatedProvenance": false,
       "language": "javascript-typescript",
       "owner": "shifu/source-tooling",
-      "lines": 577,
-      "contentRoot": "sha256:36aa364667db1a45b83f3d9dd0f18a76eea155c49924330b3332278b167a2697"
+      "lines": 837,
+      "contentRoot": "sha256:e10c865c07ebfd45f1e4b18c0b024d005b1e07311973fb6b88df1f85ba84181e"
     },
     {
       "path": "scripts/alpha-publication-commit.test.mjs",
@@ -39128,8 +39811,8 @@
       "generatedProvenance": false,
       "language": "javascript-typescript",
       "owner": "shifu/source-tooling",
-      "lines": 98,
-      "contentRoot": "sha256:51082c10cc37599a0c052c0bae89bfb43b00dc6477cf4fe13417e2a6ee3ccdbf"
+      "lines": 239,
+      "contentRoot": "sha256:003635dedc3943b5224a44f0e4b390d6498e3482e641c3cdfc84923eb8642a5c"
     },
     {
       "path": "scripts/alpha-publication-tail-plan.mjs",
@@ -39246,7 +39929,25 @@
       "language": "javascript-typescript",
       "owner": "shifu/source-tooling",
       "lines": 245,
-      "contentRoot": "sha256:1c8646388d807529c0e1de0402c838082348d09f0bef4778bdc839294a816cbe"
+      "contentRoot": "sha256:7cafdbd226423faa56c7ecd58a2eaecc78237f012a300e33e2ad61b5e34cccd3"
+    },
+    {
+      "path": "scripts/backfill-legacy-atlas-roots.mjs",
+      "class": "first-party-handwritten-implementation",
+      "generatedProvenance": false,
+      "language": "javascript-typescript",
+      "owner": "shifu/source-tooling",
+      "lines": 180,
+      "contentRoot": "sha256:2e7e7fb47c8793141d450810d0bfc73bf907c4c904f32faa5a5353b32021ab49"
+    },
+    {
+      "path": "scripts/backfill-legacy-atlas-roots.test.mjs",
+      "class": "test-or-fixture",
+      "generatedProvenance": false,
+      "language": "javascript-typescript",
+      "owner": "shifu/source-tooling",
+      "lines": 186,
+      "contentRoot": "sha256:deb7cdeb74977b707df049c4799f4839afabaf8a848327dd8cd8cae95a5318a3"
     },
     {
       "path": "scripts/build-documentation-material-bundle.mjs",
@@ -39272,8 +39973,8 @@
       "generatedProvenance": false,
       "language": "javascript-typescript",
       "owner": "shifu/source-tooling",
-      "lines": 150,
-      "contentRoot": "sha256:01abd3f2eef4e02511eeea83fd6d6cff189246bdbf129b38a9407f8d5100cc69"
+      "lines": 155,
+      "contentRoot": "sha256:98167fb8592956bb58e0853176dbe99be9f562f2cbf381f05e8a832b93186ee8"
     },
     {
       "path": "scripts/buildchain-documentation-witness.mjs",
@@ -39281,8 +39982,8 @@
       "generatedProvenance": false,
       "language": "javascript-typescript",
       "owner": "shifu/source-tooling",
-      "lines": 337,
-      "contentRoot": "sha256:5742be605d1decc4350190b4aead7e7a5dd537d83d209e04f6282b4a2969c29b"
+      "lines": 374,
+      "contentRoot": "sha256:1a20b3be8f5e3d9832700b71216de6f2186c0acf806968670f2a1cc467c5b5e4"
     },
     {
       "path": "scripts/buildchain-documentation-witness.test.mjs",
@@ -39290,8 +39991,8 @@
       "generatedProvenance": false,
       "language": "javascript-typescript",
       "owner": "shifu/source-tooling",
-      "lines": 112,
-      "contentRoot": "sha256:487f5b266204d7f68ab5345ff3c2ec909ed66d7e4f64753cfbc696110c52898c"
+      "lines": 206,
+      "contentRoot": "sha256:68213772861067b5dadd4d971bf424561dc6208131ea3a636358e6a38ea2e81c"
     },
     {
       "path": "scripts/buildchain-install.mjs",
@@ -39317,8 +40018,8 @@
       "generatedProvenance": false,
       "language": "javascript-typescript",
       "owner": "shifu/source-tooling",
-      "lines": 1991,
-      "contentRoot": "sha256:a87f2e55443cb1c8587d4600e42f10290eada86ba6648c854a47d2b622db2533"
+      "lines": 1982,
+      "contentRoot": "sha256:edf2d1ab0e5cbbaca6c3cc8cac442fb2663934b92c7a694011db1999b3d5a092"
     },
     {
       "path": "scripts/cancel-dequeued-merge-group-runs.mjs",
@@ -39416,8 +40117,8 @@
       "generatedProvenance": false,
       "language": "javascript-typescript",
       "owner": "shifu/source-tooling",
-      "lines": 231,
-      "contentRoot": "sha256:becaa5af4793e004f3ddeb5aeee3bcb31c6166bb6a604ed863780498b43438be"
+      "lines": 232,
+      "contentRoot": "sha256:22cebab622c5bbc2db1982a2ba9e76c8dcf572e5202345de34c0bdb5dfd12fec"
     },
     {
       "path": "scripts/check-cli-catalog-parity.mjs",
@@ -39552,7 +40253,7 @@
       "language": "javascript-typescript",
       "owner": "shifu/source-tooling",
       "lines": 184,
-      "contentRoot": "sha256:874265815879016c321564c409da2c4bbd29ca246888fb75a41291ca1675215e"
+      "contentRoot": "sha256:bfc8a582a5a1397ab0cfe3f32b20a98ba13b43e6972e26657b4148682b285769"
     },
     {
       "path": "scripts/check-episode-admission-contract.mjs",
@@ -39587,8 +40288,8 @@
       "generatedProvenance": false,
       "language": "javascript-typescript",
       "owner": "shifu/source-tooling",
-      "lines": 506,
-      "contentRoot": "sha256:016221e603c4de3971a50c24222e3d5db11ed11237c8b046a9bc21be737a5ead"
+      "lines": 512,
+      "contentRoot": "sha256:346e0e954f95c9599e30d3ae3286e5bd467e7751f35082701ee4b5d6107921da"
     },
     {
       "path": "scripts/check-exit-clean-runtime.py",
@@ -39884,8 +40585,8 @@
       "generatedProvenance": false,
       "language": "javascript-typescript",
       "owner": "shifu/source-tooling",
-      "lines": 219,
-      "contentRoot": "sha256:9ba34a8a6cd24c4b691ffbf8f470bc51d937ad9a7061989a56c4c8250849eb58"
+      "lines": 218,
+      "contentRoot": "sha256:e59f65e1dd3b61352f274b765499abd3e72b6eb99aaf8fe878c1a394deedd021"
     },
     {
       "path": "scripts/check-primitive-authority-boundary.test.mjs",
@@ -39947,8 +40648,8 @@
       "generatedProvenance": false,
       "language": "javascript-typescript",
       "owner": "shifu/source-tooling",
-      "lines": 798,
-      "contentRoot": "sha256:0e128fd10b5f943be6d9563563daff18ab308b106776e41a4a551d74a5e3e0f9"
+      "lines": 770,
+      "contentRoot": "sha256:7071650b4cdeca0faf40ad9870e012c8bf643a5156e885c5507aa3d8e1c57052"
     },
     {
       "path": "scripts/check-project-cut-contract.mjs",
@@ -40064,8 +40765,8 @@
       "generatedProvenance": false,
       "language": "python",
       "owner": "shifu/python-structure-oracle",
-      "lines": 673,
-      "contentRoot": "sha256:ea119f245a1616258753cdc12793311783ef87e6f7d7db89fd7df4363ae6907d"
+      "lines": 700,
+      "contentRoot": "sha256:d5d76ae5c53bab9bb3bfea1b27ffdbd1e89a95df77915147b58afa7a79abee5f"
     },
     {
       "path": "scripts/check-python-structure.test.py",
@@ -40073,8 +40774,8 @@
       "generatedProvenance": false,
       "language": "python",
       "owner": "shifu/python-structure-oracle",
-      "lines": 109,
-      "contentRoot": "sha256:17256e1fa3e0f98a2062744de61438e23b9f936f734b01d7837e725d42cdd7f9"
+      "lines": 152,
+      "contentRoot": "sha256:0151c097f1544315af13124dad8648a5c644d6127bd4be500e4b7a8a61bedfb3"
     },
     {
       "path": "scripts/check-readonly-source-routes.mjs",
@@ -40092,7 +40793,7 @@
       "language": "javascript-typescript",
       "owner": "shifu/source-tooling",
       "lines": 89,
-      "contentRoot": "sha256:baa8a197fe4c5b278b1a73ba8102c22fe7428c57709d614e7cf3f34e9107ae91"
+      "contentRoot": "sha256:aef239b60e217370be5fbc20fc24eb84a6c53e7f9182bd794bb08fa751b7be45"
     },
     {
       "path": "scripts/check-required-reader-contract.mjs",
@@ -40208,8 +40909,8 @@
       "generatedProvenance": false,
       "language": "javascript-typescript",
       "owner": "shifu/source-tooling",
-      "lines": 665,
-      "contentRoot": "sha256:43e406fb9aa17bae3c7c8d01d1301a5a125cad5ac846022111690736ab315ced"
+      "lines": 670,
+      "contentRoot": "sha256:1a3f9c7df537b81130c50b0848c347b3177605936c27542388a3e0be166f2348"
     },
     {
       "path": "scripts/check-shifu-gate-contract.mjs",
@@ -40334,17 +41035,17 @@
       "generatedProvenance": false,
       "language": "javascript-typescript",
       "owner": "shifu/source-tooling",
-      "lines": 64,
-      "contentRoot": "sha256:6fe034578b14407653522335be96662f0df5589600105531142fef41ea973184"
+      "lines": 80,
+      "contentRoot": "sha256:053b681f248786596dac9fce05b0ed5f440c5ae4b3c3ca2ef48db7d883a7ec67"
     },
     {
-      "path": "scripts/check-work-control-native.test.mjs",
+      "path": "scripts/check-work-control-vocabulary.test.mjs",
       "class": "test-or-fixture",
       "generatedProvenance": false,
       "language": "javascript-typescript",
       "owner": "shifu/source-tooling",
-      "lines": 24,
-      "contentRoot": "sha256:21c14b10b9963b9e8efc828384f4402c96e64816fcbca1a28c6d3d158a3d16c1"
+      "lines": 275,
+      "contentRoot": "sha256:f689a6ab2e6371e561c0f031b1b74d5c3cbcd5fb474234fc7ed277450dceecda"
     },
     {
       "path": "scripts/check-work-design-advisor.test.mjs",
@@ -40356,6 +41057,15 @@
       "contentRoot": "sha256:0cf4c52f2619ba45b0bc1762a44a96f1ddef4090a01a6e736c64b0853fbb8263"
     },
     {
+      "path": "scripts/check-work-design-open-card.test.mjs",
+      "class": "test-or-fixture",
+      "generatedProvenance": false,
+      "language": "javascript-typescript",
+      "owner": "shifu/source-tooling",
+      "lines": 733,
+      "contentRoot": "sha256:8a2dd32cd190ee494853b886616ee05cb06412341e5c91e35be24470b2261e3c"
+    },
+    {
       "path": "scripts/check-work-design-policy-replay.test.mjs",
       "class": "test-or-fixture",
       "generatedProvenance": false,
@@ -40363,15 +41073,6 @@
       "owner": "shifu/source-tooling",
       "lines": 869,
       "contentRoot": "sha256:16b95f3b843bddfc689a08f15a3928fab4a277a0c46f8cec131afc2d679a2b88"
-    },
-    {
-      "path": "scripts/check-work-design-preflight.test.mjs",
-      "class": "test-or-fixture",
-      "generatedProvenance": false,
-      "language": "javascript-typescript",
-      "owner": "shifu/source-tooling",
-      "lines": 730,
-      "contentRoot": "sha256:d588c072269fbdaf0527cb9fa9111d6a03ee66157f1450937cff3bebc98dc009"
     },
     {
       "path": "scripts/check-work-history-selector.test.mjs",
@@ -40433,8 +41134,8 @@
       "generatedProvenance": false,
       "language": "javascript-typescript",
       "owner": "shifu/source-tooling",
-      "lines": 982,
-      "contentRoot": "sha256:9c12d81e93c8b16eb9de603f0f4a91cc02974b17e9aec6d4ef05707e82742255"
+      "lines": 983,
+      "contentRoot": "sha256:65c43f6c7564edab2106523daffb0e4ffb497f4411f8e2812b9f996fd4f80952"
     },
     {
       "path": "scripts/code-complexity-budget.mjs",
@@ -40442,8 +41143,8 @@
       "generatedProvenance": false,
       "language": "javascript-typescript",
       "owner": "shifu/source-tooling",
-      "lines": 1016,
-      "contentRoot": "sha256:65f0955fe817130a7809008cd2e267a0edb4df5495f3a910db0e588fd85b05fe"
+      "lines": 1024,
+      "contentRoot": "sha256:460c2e9bfac52eba15e1777ee5d6b779a42acd3e48cf62b373b794d7d7e1d43f"
     },
     {
       "path": "scripts/code-complexity-budget.test.mjs",
@@ -40451,8 +41152,8 @@
       "generatedProvenance": false,
       "language": "javascript-typescript",
       "owner": "shifu/source-tooling",
-      "lines": 785,
-      "contentRoot": "sha256:7acd020e1564490b9ffbf2a7a3fe622ee58324a8e632abff55866de767ea0f09"
+      "lines": 717,
+      "contentRoot": "sha256:94810d70130e8e1b4e22e075f3735492d4a85a96dc25fa35c5daf2591fe18f0a"
     },
     {
       "path": "scripts/collect-layer-publication.mjs",
@@ -40641,7 +41342,7 @@
       "language": "javascript-typescript",
       "owner": "framework/data-protection-qualification",
       "lines": 252,
-      "contentRoot": "sha256:9ec5a9cd973bdd0aeaf503c4c0fcc37df2450257b362f6a529a68a2ae771dfa0"
+      "contentRoot": "sha256:cf632fa2c65570d65981173247198320746e504e30841db370e77c984a6a4c8a"
     },
     {
       "path": "scripts/ensure-windows-sccache.test.mjs",
@@ -40667,8 +41368,8 @@
       "generatedProvenance": false,
       "language": "javascript-typescript",
       "owner": "shifu/source-tooling",
-      "lines": 549,
-      "contentRoot": "sha256:ec2fdf8f6092b0df93598bbee4dd08705cafce64b9206627d9757db967df77d5"
+      "lines": 550,
+      "contentRoot": "sha256:8976991ad9f1926644c24a03c6e97763c991e3a9ee26bd13de12ac20441367fd"
     },
     {
       "path": "scripts/evolution-map/index.mjs",
@@ -40676,8 +41377,8 @@
       "generatedProvenance": false,
       "language": "javascript-typescript",
       "owner": "shifu/source-tooling",
-      "lines": 1406,
-      "contentRoot": "sha256:3e176c314caaf65629cffa7a1251645bdd2880a120ec3f1183ce2a6a69b2d234"
+      "lines": 1407,
+      "contentRoot": "sha256:fcb4e2bde5e0995eba2fc4edf97d8d33c4df6fd01b4792fe458205a9ab1d555c"
     },
     {
       "path": "scripts/exit-clean-runtime-worker.py",
@@ -40686,7 +41387,7 @@
       "language": "python",
       "owner": "shifu/source-tooling",
       "lines": 881,
-      "contentRoot": "sha256:fb3f699c3f00fd5831d3f7dae0d7afd9723edc15af511f3ee61f582297448c06"
+      "contentRoot": "sha256:cf218047eca60151f75faded59ea14e6b0af97c8067631b3e53323a0e6c1b3b8"
     },
     {
       "path": "scripts/fix.mjs",
@@ -40784,8 +41485,8 @@
       "generatedProvenance": false,
       "language": "javascript-typescript",
       "owner": "shifu/source-tooling",
-      "lines": 694,
-      "contentRoot": "sha256:32265efb624815b09ef8442f8935e58697e412433704a44cd2203a3b4a72941b"
+      "lines": 692,
+      "contentRoot": "sha256:fee97c6d05983c7735ac4cac0b91b0dc6afa668307649bc648a3ba56fd27e36c"
     },
     {
       "path": "scripts/generate-profile-lifecycle-schema.mjs",
@@ -40830,7 +41531,7 @@
       "language": "javascript-typescript",
       "owner": "shifu/source-tooling",
       "lines": 350,
-      "contentRoot": "sha256:f38ef658dc6296cda979ef47f27e9006691c187aae3751312f23060401cd1c74"
+      "contentRoot": "sha256:332178fd32f684c4819465bf7c0b6fcd5d9f3aebc07c3214847e0a329d63b0c2"
     },
     {
       "path": "scripts/kfd4-perspective-qualification.test.mjs",
@@ -40901,8 +41602,8 @@
       "generatedProvenance": false,
       "language": "javascript-typescript",
       "owner": "shifu/source-tooling",
-      "lines": 273,
-      "contentRoot": "sha256:5f710e2818fc077c0a407462402fd3ce1056cfdcb56e62eb14c51bf413a6864c"
+      "lines": 277,
+      "contentRoot": "sha256:2db7e19d23334d730173431e0b83650e091dccbf6f3d6239a05a2d15f5e6f788"
     },
     {
       "path": "scripts/kungfu-workflow-authority.mjs",
@@ -41090,8 +41791,8 @@
       "generatedProvenance": false,
       "language": "javascript-typescript",
       "owner": "shifu/source-tooling",
-      "lines": 150,
-      "contentRoot": "sha256:86df7c00996ed4757be21f6c8fcdd5c90b6bb6305a6d131f77ec9ea8c89e9031"
+      "lines": 148,
+      "contentRoot": "sha256:a3543bb6ba4d39261b786c01f2fb1a89b4697ef0284c1df749e427d75ed8b4c3"
     },
     {
       "path": "scripts/platform-command.test.mjs",
@@ -41099,8 +41800,8 @@
       "generatedProvenance": false,
       "language": "javascript-typescript",
       "owner": "shifu/source-tooling",
-      "lines": 153,
-      "contentRoot": "sha256:281e79398d35537338c0089c27063d8f55f38837a6c5a65ce50e195bda6ff147"
+      "lines": 144,
+      "contentRoot": "sha256:44ed5322b2971d6f7a62ea74304265c5caac1be28652b2e3f670c22fb70a92fe"
     },
     {
       "path": "scripts/portable-atlas-bundle.mjs",
@@ -41333,8 +42034,8 @@
       "generatedProvenance": false,
       "language": "javascript-typescript",
       "owner": "shifu/source-tooling",
-      "lines": 2118,
-      "contentRoot": "sha256:00abd821557d187d00879c8eac455444b3e96740b92db9c6beea0a0fcf00414f"
+      "lines": 2117,
+      "contentRoot": "sha256:3849734eba3e7fd9d3919f314ad4b05ef942b994968005bb6e5059cd734a3d1a"
     },
     {
       "path": "scripts/qualify-agent-first-value-codex.mjs",
@@ -41406,7 +42107,7 @@
       "language": "javascript-typescript",
       "owner": "runtime/runtime-surface-provenance",
       "lines": 694,
-      "contentRoot": "sha256:6f7b0fa1aa10ecfd1a0f7b2e6454d853209d08b07458b9bb7f0516ddc4fd7ebf"
+      "contentRoot": "sha256:791863a392cb165b359b7cc84b92119b155142088f109183c875798a79b9153a"
     },
     {
       "path": "scripts/qualify-runtime-surface.test.mjs",
@@ -41450,8 +42151,8 @@
       "generatedProvenance": false,
       "language": "javascript-typescript",
       "owner": "shifu/source-tooling",
-      "lines": 815,
-      "contentRoot": "sha256:66b66909a7d474ec06a50e24c413bdb0727b5ca61fadfe856b46451c476fdaee"
+      "lines": 809,
+      "contentRoot": "sha256:daf02aa5639eef1f16c19c6d1e02dc10d5ff580c26e2d3d69acb898747931f00"
     },
     {
       "path": "scripts/readonly-source-toolchain.mjs",
@@ -41459,8 +42160,8 @@
       "generatedProvenance": false,
       "language": "javascript-typescript",
       "owner": "shifu/source-tooling",
-      "lines": 485,
-      "contentRoot": "sha256:70b481d61970ca03436479a83f004aedd2034474ff87f133f92be6ef52b929ff"
+      "lines": 478,
+      "contentRoot": "sha256:b47f02ef505b70985bf1f61247c036fb91f9c6a6cad3da0d4d512e1a5434608b"
     },
     {
       "path": "scripts/recover-focused-gate-receipt.mjs",
@@ -41513,8 +42214,8 @@
       "generatedProvenance": false,
       "language": "javascript-typescript",
       "owner": "shifu/source-tooling",
-      "lines": 916,
-      "contentRoot": "sha256:6352be98b979815fd02037571775b7d8437da47a08859db25074097f947d1528"
+      "lines": 959,
+      "contentRoot": "sha256:8a88285f08b650ae2e62d9d4cd2d6c2378f7f8665606be7b4f90942306f0189b"
     },
     {
       "path": "scripts/release-promotion-rehearsal.test.mjs",
@@ -41522,8 +42223,8 @@
       "generatedProvenance": false,
       "language": "javascript-typescript",
       "owner": "shifu/source-tooling",
-      "lines": 514,
-      "contentRoot": "sha256:e44dd248458205db2af954414195e1ceef4e4d3a12322d50d05a95430f9ffa47"
+      "lines": 524,
+      "contentRoot": "sha256:a1fc2b80b6cf5d98875ef2625765e8193433c89235a5d804100f68be2f277da1"
     },
     {
       "path": "scripts/release-publication-control-plane.test.mjs",
@@ -41576,8 +42277,8 @@
       "generatedProvenance": false,
       "language": "javascript-typescript",
       "owner": "shifu/source-tooling",
-      "lines": 93,
-      "contentRoot": "sha256:9d170a08c6fdc305672424bbc9ef38a8c87b2cd73449cf232d00c1319319771a"
+      "lines": 95,
+      "contentRoot": "sha256:29799f44f4e4a82e7554154534121d5a01df981e01ddf59fbf6e2b370bc4a0b8"
     },
     {
       "path": "scripts/run-action-runtime-shadow-tests.mjs",
@@ -41648,8 +42349,8 @@
       "generatedProvenance": false,
       "language": "javascript-typescript",
       "owner": "shifu/source-tooling",
-      "lines": 79,
-      "contentRoot": "sha256:f9fc3f54de67a54ecc2983e364e4ccbab4308088c0d070b9361642137f2c38d5"
+      "lines": 73,
+      "contentRoot": "sha256:2ecb609d15279bea7206b599fd65e1103399bafbd62617417bc5039646ef07c6"
     },
     {
       "path": "scripts/run-agent-session-provider-dogfood.mjs",
@@ -41693,8 +42394,8 @@
       "generatedProvenance": false,
       "language": "javascript-typescript",
       "owner": "shifu/source-tooling",
-      "lines": 1963,
-      "contentRoot": "sha256:1a79b855170b1ddd51f3e29f1345ba38d03dc352fd3011d23e7924ca74d038f5"
+      "lines": 1965,
+      "contentRoot": "sha256:f42cf854a051ec69638892207b9c88ec024a135a89d0d6dd6c5a0e937a98b45a"
     },
     {
       "path": "scripts/run-core-affected-native.test.mjs",
@@ -41702,8 +42403,8 @@
       "generatedProvenance": false,
       "language": "javascript-typescript",
       "owner": "shifu/source-tooling",
-      "lines": 236,
-      "contentRoot": "sha256:fe38f7c2585319ce8193733ffd6893ba32a0e707d114900d23f8a1ff53fcb5ac"
+      "lines": 572,
+      "contentRoot": "sha256:8ce3369f8e218c3bda61f948ecf57c55e4c9e02df521ff6a654ba21e34f75c91"
     },
     {
       "path": "scripts/run-cpp-modules-qualification.mjs",
@@ -42035,8 +42736,8 @@
       "generatedProvenance": false,
       "language": "javascript-typescript",
       "owner": "shifu/source-tooling",
-      "lines": 55,
-      "contentRoot": "sha256:7a850da5454478af88af3f895f5477c078ebd58e88ac9871ebc0a8b690fd6804"
+      "lines": 59,
+      "contentRoot": "sha256:bc721a73048eeed5ef8c34f27f1c99d9cbbbc3cc85e17dc5d050d26eafd6995a"
     },
     {
       "path": "scripts/run-journal-stress.mjs",
@@ -42073,6 +42774,15 @@
       "owner": "shifu/source-tooling",
       "lines": 37,
       "contentRoot": "sha256:16ab5eef74d1cfecd50020a47fd1f5634b66ae3545a5a2379ca3790794a89ff9"
+    },
+    {
+      "path": "scripts/run-mission-authority-cutover-tests.mjs",
+      "class": "first-party-handwritten-implementation",
+      "generatedProvenance": false,
+      "language": "javascript-typescript",
+      "owner": "shifu/source-tooling",
+      "lines": 68,
+      "contentRoot": "sha256:c2f558e72537ad20b54254a4bf21fcc0606d039322b0ce6560419dcf0e745088"
     },
     {
       "path": "scripts/run-mmap-qualification.mjs",
@@ -42404,8 +43114,8 @@
       "generatedProvenance": false,
       "language": "javascript-typescript",
       "owner": "shifu/source-tooling",
-      "lines": 680,
-      "contentRoot": "sha256:7efae14e827625ac5d3ddac4ff96558ac20cff68f5d9979557847ee2382abe23"
+      "lines": 676,
+      "contentRoot": "sha256:d4fd0b7a4b3406384b9ff8561f2b56ec207999899d086c1aaad699253ea4b7b7"
     },
     {
       "path": "scripts/shifu-documentation-surfaces.test.mjs",
@@ -42414,7 +43124,7 @@
       "language": "javascript-typescript",
       "owner": "shifu/source-tooling",
       "lines": 825,
-      "contentRoot": "sha256:a2c64b19f5664c5b7a0a1798155bf6e9feae9024206f78a7fcc7dcf0788fd6c3"
+      "contentRoot": "sha256:7a00a8d6e649ae8b0d2050748e2575582db98244a92ade808f56e61959fe7990"
     },
     {
       "path": "scripts/shifu-gate-cli.mjs",
@@ -42486,7 +43196,7 @@
       "language": "javascript-typescript",
       "owner": "shifu/source-tooling",
       "lines": 105,
-      "contentRoot": "sha256:62621f27adfdd165cbb53482ea04fe15ab86ce9f3c68daaecd54948c3d171b07"
+      "contentRoot": "sha256:a50a19a8ac9a0fb6d794cc352d6c18a8e934036f459ba4c611ca3a6ca1acc9f7"
     },
     {
       "path": "scripts/shifu-uv-cache-adapter.mjs",
@@ -42521,8 +43231,8 @@
       "generatedProvenance": false,
       "language": "javascript-typescript",
       "owner": "shifu/source-tooling",
-      "lines": 1063,
-      "contentRoot": "sha256:79f3e720ff5c2ac6b1dced9efa7016e2a040d5466336a93ea7921f3bd95a2fc1"
+      "lines": 1165,
+      "contentRoot": "sha256:915a66af23af9108ac38fbce3863e180a931babc3a53dc92998265d55187fe8a"
     },
     {
       "path": "scripts/source-acceptance.test.mjs",
@@ -42530,8 +43240,8 @@
       "generatedProvenance": false,
       "language": "javascript-typescript",
       "owner": "shifu/source-tooling",
-      "lines": 972,
-      "contentRoot": "sha256:731e3ba609ef9a2bfaf6fe3ee989270003e0d3bb54f4dbda38df7bd5c4623216"
+      "lines": 1220,
+      "contentRoot": "sha256:a30633aa269feb1a4c45655bad79dade3cdf2ae99e3db992719cd38c6cf3d95c"
     },
     {
       "path": "scripts/stable-candidate-patrol.test.mjs",
@@ -42593,8 +43303,8 @@
       "generatedProvenance": false,
       "language": "javascript-typescript",
       "owner": "shifu/source-tooling",
-      "lines": 1399,
-      "contentRoot": "sha256:a7985f15a3ac1d8ca68ec848ed6db641cfd1b84b1e09f19dc246f4cef315fdfb"
+      "lines": 1642,
+      "contentRoot": "sha256:c364ff8afb2f65b0e718a760af8f37fe4d1b90f7335476ad23820f1e3e30b47c"
     },
     {
       "path": "scripts/upgrade-publication-admission.test.mjs",
@@ -42602,8 +43312,8 @@
       "generatedProvenance": false,
       "language": "javascript-typescript",
       "owner": "shifu/source-tooling",
-      "lines": 861,
-      "contentRoot": "sha256:50ebde64b15859cc855b0805a08f13ac83d02c447923524b515ce89cc736624d"
+      "lines": 939,
+      "contentRoot": "sha256:1478892dfe2171c8718a429038c3dee9ea576af5f8fe245b24c1f20e4892afda"
     },
     {
       "path": "scripts/upgrade-qualification.mjs",
@@ -42620,8 +43330,8 @@
       "generatedProvenance": false,
       "language": "javascript-typescript",
       "owner": "shifu/source-tooling",
-      "lines": 569,
-      "contentRoot": "sha256:d31db9d2b138c2c4eba915a71b434298f25dae1e8e17d518e0c0bf650ca70751"
+      "lines": 570,
+      "contentRoot": "sha256:c137b536cfc06c6501d12209cbe1df22e7769d398f090a2c36d4745ef7718f7c"
     },
     {
       "path": "scripts/verify-kfd-owned-fixtures.mjs",
@@ -42638,8 +43348,8 @@
       "generatedProvenance": false,
       "language": "javascript-typescript",
       "owner": "shifu/source-tooling",
-      "lines": 378,
-      "contentRoot": "sha256:c2590dc2d04d6b6ab40e4f3b5db72d94eaedea003da0e13436493081954dfd3c"
+      "lines": 384,
+      "contentRoot": "sha256:a7214a617782ab8494826249234f238e3a2296689a1e9c418d47fa046a9079cd"
     },
     {
       "path": "scripts/verify-kungfu-release-admission.test.mjs",
@@ -42647,8 +43357,8 @@
       "generatedProvenance": false,
       "language": "javascript-typescript",
       "owner": "shifu/source-tooling",
-      "lines": 554,
-      "contentRoot": "sha256:261599af7e7affa8ef5d8b7bb3dcaa80d930b67b97b119364c19cd107487872e"
+      "lines": 559,
+      "contentRoot": "sha256:afe4896d478101c96117edb0d754bff772b5ac8da92b2deacbd91742d1365574"
     },
     {
       "path": "scripts/verify-layer-publication.mjs",
@@ -42665,8 +43375,8 @@
       "generatedProvenance": false,
       "language": "javascript-typescript",
       "owner": "shifu/source-tooling",
-      "lines": 1255,
-      "contentRoot": "sha256:5b81e0e31f91ba6b1fdaf6b192bf3a0092c641f4f623fd8593410bc2aa7a913f"
+      "lines": 1258,
+      "contentRoot": "sha256:a6881314f210979a7b1815af7a483666a84a32e4547b7fe768985a3d248f529d"
     },
     {
       "path": "scripts/version-line-authority.test.mjs",
@@ -42729,7 +43439,7 @@
       "language": "shell",
       "owner": "shifu/source-tooling",
       "lines": 561,
-      "contentRoot": "sha256:c2aa8b3b27e1b66f152d6949a080f4925621da6305e4e9c265b441ac67ef0955"
+      "contentRoot": "sha256:2c96db45f382de93397cdf7a1456267d4bf00109cb01ae076f1b91f79bf8c1a6"
     },
     {
       "path": "shifu.cmd",
@@ -42738,7 +43448,7 @@
       "language": "shell",
       "owner": "shifu/source-tooling",
       "lines": 561,
-      "contentRoot": "sha256:e287cf065562a2b1cb1f7888973af2f4e963e503418b97c7d46923eb5855b867"
+      "contentRoot": "sha256:d6d4bd1f415d7a4978aaa05326736e678938607d8b6e32d38bd6693e0d340aee"
     },
     {
       "path": "shifu.documentation.json",
@@ -42829,6 +43539,69 @@
       "owner": "kungfu/qualification",
       "lines": 187,
       "contentRoot": "sha256:fa399f32c1eb1c5e68a0125dde443d93721fed11f43058ae3c5e81aa3018c890"
+    },
+    {
+      "path": "tests/fixtures/atlas-demo-import/check_import.py",
+      "class": "test-or-fixture",
+      "generatedProvenance": false,
+      "language": "python",
+      "owner": "kungfu/qualification",
+      "lines": 306,
+      "contentRoot": "sha256:5f5eed244b80ffb9dede26bf247b70541fd9af2ef943e28956864336758d17f5"
+    },
+    {
+      "path": "tests/fixtures/atlas-demo-import/run.mjs",
+      "class": "test-or-fixture",
+      "generatedProvenance": false,
+      "language": "javascript-typescript",
+      "owner": "kungfu/qualification",
+      "lines": 95,
+      "contentRoot": "sha256:087172dd5b9e328691e99bc6e6d98f21d33f63dd5fdc82364236b4cd2f6befac"
+    },
+    {
+      "path": "tests/fixtures/atlas-demo-import/sample-root/agent-journal/goals/registry/active/2026-01-02-demo-importer.json",
+      "class": "test-or-fixture",
+      "generatedProvenance": false,
+      "language": "declarative",
+      "owner": "kungfu/qualification",
+      "lines": 20,
+      "contentRoot": "sha256:55010eb81a1373dc5d62d1658ae7c61b39b2cf6d3ab541ef164389cadc3e92ec"
+    },
+    {
+      "path": "tests/fixtures/atlas-demo-import/sample-root/agent-journal/goals/registry/archive/2026-01-01-demo-archived.json",
+      "class": "test-or-fixture",
+      "generatedProvenance": false,
+      "language": "declarative",
+      "owner": "kungfu/qualification",
+      "lines": 6,
+      "contentRoot": "sha256:1df43335bceea463cc42188632a8bbc492bfcea7e6d9b97e5de5667a171c9c9f"
+    },
+    {
+      "path": "tests/fixtures/atlas-demo-import/sample-root/agent-journal/missions/registry/active/demo-platform.json",
+      "class": "test-or-fixture",
+      "generatedProvenance": false,
+      "language": "declarative",
+      "owner": "kungfu/qualification",
+      "lines": 10,
+      "contentRoot": "sha256:0ed55212c23446766740c1d983422bbdce3ba2c2c499fe31d52a6d1b74ff456c"
+    },
+    {
+      "path": "tests/fixtures/atlas-demo-import/sample-root/reviews/worktree-status/ai__demo__importer.json",
+      "class": "test-or-fixture",
+      "generatedProvenance": false,
+      "language": "declarative",
+      "owner": "kungfu/qualification",
+      "lines": 11,
+      "contentRoot": "sha256:3716415ab35ca4ccadc80ed01c8c7d39a782ccc73b41d27036b1ff27efbc5046"
+    },
+    {
+      "path": "tests/fixtures/atlas-demo-import/sample-root/reviews/worktree-status/broken.json",
+      "class": "test-or-fixture",
+      "generatedProvenance": false,
+      "language": "declarative",
+      "owner": "kungfu/qualification",
+      "lines": 1,
+      "contentRoot": "sha256:2eae03e9ce9fe666a28c686ca14733242222241591f83b862eaafab9c6c1bba8"
     },
     {
       "path": "tests/fixtures/canonical-json/vectors.json",
@@ -43080,7 +43853,7 @@
       "language": "declarative",
       "owner": "kungfu/qualification",
       "lines": 16,
-      "contentRoot": "sha256:c4e56a4bb96954a837c09eccc180d88d7ee100d76776031005f6719470f46677"
+      "contentRoot": "sha256:ea9d937a0171b6ee1e1350aa006224ec96ab8029598871f1bd2414af34dad7d2"
     },
     {
       "path": "tests/fixtures/exit-bundle-contract/cases.json",
@@ -43089,7 +43862,7 @@
       "language": "declarative",
       "owner": "kungfu/qualification",
       "lines": 216,
-      "contentRoot": "sha256:b980a5b5ded86504fc6e4f63303ad452470a07303ef3c084be9a15ba2abd30e6"
+      "contentRoot": "sha256:e338a2628c4611aa79e14379f98c1f2d18f05e27845c2d1e7ec38e4c8bef6bd5"
     },
     {
       "path": "tests/fixtures/fact-cut-kernel-contract/cases.json",
@@ -43144,6 +43917,24 @@
       "owner": "kungfu/qualification",
       "lines": 15,
       "contentRoot": "sha256:089bbcedf09d419118c16c93cf47e5c605971b8913d102e662719ce57e6c9f38"
+    },
+    {
+      "path": "tests/fixtures/kfx-demo-atlas-capability/roundtrip.mjs",
+      "class": "test-or-fixture",
+      "generatedProvenance": false,
+      "language": "javascript-typescript",
+      "owner": "kungfu/qualification",
+      "lines": 86,
+      "contentRoot": "sha256:82ce2abc1c4bc3a8b4c56d93bcec06542642051b390facc945c7aade447152eb"
+    },
+    {
+      "path": "tests/fixtures/kfx-demo-atlas-capability/run.mjs",
+      "class": "test-or-fixture",
+      "generatedProvenance": false,
+      "language": "javascript-typescript",
+      "owner": "kungfu/qualification",
+      "lines": 29,
+      "contentRoot": "sha256:4aaaa435e381355ed294babb987d329a49e68955d0e56d9ecd24fd41413b7d96"
     },
     {
       "path": "tests/fixtures/kfx-demo-install/check_install.py",
@@ -43243,6 +44034,33 @@
       "owner": "kungfu/qualification",
       "lines": 32,
       "contentRoot": "sha256:555aacce65fdce81215c8f866c3ff4e17ac62d746523f482208a398ef0998a85"
+    },
+    {
+      "path": "tests/fixtures/kfx-demo-work-dashboard-atlas-live/render-live.mjs",
+      "class": "test-or-fixture",
+      "generatedProvenance": false,
+      "language": "javascript-typescript",
+      "owner": "kungfu/qualification",
+      "lines": 154,
+      "contentRoot": "sha256:7c90972ce9ffd485983a6b3e5d3c4041f94f3f46bf03ae7becb55803f6d1df99"
+    },
+    {
+      "path": "tests/fixtures/kfx-demo-work-dashboard-atlas-live/run.mjs",
+      "class": "test-or-fixture",
+      "generatedProvenance": false,
+      "language": "javascript-typescript",
+      "owner": "kungfu/qualification",
+      "lines": 30,
+      "contentRoot": "sha256:11dfcc7d79503f0dedb20020e0dc5b1188a90a5b533fefd324c6e40281fb8f67"
+    },
+    {
+      "path": "tests/fixtures/kfx-demo-work-dashboard-atlas-view/run.mjs",
+      "class": "test-or-fixture",
+      "generatedProvenance": false,
+      "language": "javascript-typescript",
+      "owner": "kungfu/qualification",
+      "lines": 179,
+      "contentRoot": "sha256:45279bd30aef2875534358f77a56965737c40477569b263c461bdcf3e63d7574"
     },
     {
       "path": "tests/fixtures/kfx-profile-suite-contract/invalid-cases.json",
@@ -44034,7 +44852,7 @@
       "language": "declarative",
       "owner": "kungfu/qualification",
       "lines": 29,
-      "contentRoot": "sha256:4c8f12bd0c150b267ee0a13dc2bddde5b84d96e0a75e72de3e37dec80d3c99c1"
+      "contentRoot": "sha256:3d28d13b8db43736700b717f52d917c28cdef4a0d714b8a408096568966907dc"
     },
     {
       "path": "tests/qualification/agent-hub-20/run.mjs",
@@ -44434,5 +45252,5 @@
     }
   ],
   "issues": [],
-  "measurementRoot": "sha256:fb5e8867e1016e28ba61ea0c916179887eba6820791760d951625b4c9e54b210"
+  "measurementRoot": "sha256:58d7472bbe9ab46be22ba2bf7822eac10ed74becc78ab879facaafdad53e35bc"
 }

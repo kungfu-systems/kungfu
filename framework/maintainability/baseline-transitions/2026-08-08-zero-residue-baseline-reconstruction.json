@@ -2,11 +2,11 @@
   "schema": "kungfu.code-complexity-baseline-reconstruction/v1",
   "expected_old_measurement_root": "sha256:4fd6d3566bd76b1f999f8528bd3bb60f301a4616fc56c971ff421c5ec22a7b2f",
   "expected_old_baseline_ref": "a7605d74513867b94851a6763c51fcdc803e5d30",
-  "new_measurement_root": "sha256:fb5e8867e1016e28ba61ea0c916179887eba6820791760d951625b4c9e54b210",
-  "new_baseline_ref": "c7d0c61d031ad6be1dd9041af2bd5db48896df1e",
-  "changed_measurements": 1522,
-  "aggregate_line_delta": 1720250,
-  "change_manifest_root": "sha256:2393571fa35c71e9ec4ba5818f1623457bdec0b8dce8a3f93eeda74b5cc44e84",
+  "new_measurement_root": "sha256:58d7472bbe9ab46be22ba2bf7822eac10ed74becc78ab879facaafdad53e35bc",
+  "new_baseline_ref": "86903b04cdcc0e4149f60a032be7fe4fa03f820f",
+  "changed_measurements": 1411,
+  "aggregate_line_delta": 1742310,
+  "change_manifest_root": "sha256:e77081f91d8f0aee3107b73856687b2ddcda33c24efa939017ade9a1e92f835b",
   "reconstruction_scope": "full-exact-baseline",
   "reconstruction_reason_codes": [
     "protected-baseline-lag",
@@ -23,7 +23,7 @@
     "issued_at": "2026-08-08T19:32:51.532Z",
     "approved_at": "2026-08-08T19:33:51.532Z",
     "expires_at": "2026-08-15T19:34:51.532Z",
-    "authorization_root": "sha256:d425f395531481e31c9e7800190c812100c9c4cf009f38cf35d7001f6250e15a",
-    "signature": "/a63uiotfViokPjryUpW21BYsq++Ts8RMyOGep8EJtJdrPHIkHN8z1y+0BE/0blM3K+8VQ3M0PV0LkNOMZ5NCQ=="
+    "authorization_root": "sha256:56d0eb01728d6412f325d1490c036f7a93fc75a0f23d5f4d4797188312394a1f",
+    "signature": "EcXczqH3u6CeMJfpnboL/ciHIaosU/vFkQAK89nXBq5Vw6/fnB6koQSv6hUnahwEDhSF0vzgtsVPpeDFZQs9BQ=="
   }
 }

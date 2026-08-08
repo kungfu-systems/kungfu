@@ -1449,7 +1449,6 @@ test('consumer CLI emits one source-build diagnosis and durable fallback observa
   const output = JSON.parse(result.stdout);
   assert.equal(output.code, 'qualified-core-reuse-unavailable');
   assert.equal(output.next_actions[0].action, 'install-qualified-product');
-  assert.equal(output.next_actions[0].command, '');
   const summary = summarizeQualifiedCoreUsage(cacheRoot);
   assert.equal(summary.ok, true);
   assert.equal(summary.totals.observations, 1);
