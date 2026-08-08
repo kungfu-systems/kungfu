@@ -6,7 +6,7 @@
     "tag": "v4.0.0-alpha.1",
     "sourceSha": "f9e6b0e34bcdd6407b2a18206ace7982d64de2c8"
   },
-  "generatedAt": "2026-08-08T07:59:49.784Z",
+  "generatedAt": "2026-08-08T09:03:22.935Z",
   "runner": {
     "kind": "github-hosted",
     "os": "Linux",
@@ -20,5 +20,66 @@
     "runAttempt": "1",
     "url": "https://github.com/kungfu-systems/kungfu/actions/runs/31209284718"
   },
-  "artifacts": []
+  "artifacts": [
+    {
+      "name": "kungfu-episodes-cli-linux-x64.qualification.json",
+      "kind": "release-asset",
+      "platform": "linux-x64",
+      "size": 2864,
+      "sha256": "f274daff6946246e54f73640e8238a1c219db6c4fe4a727f3108a9904281dd1a",
+      "url": "",
+      "githubAssetId": "",
+      "attestation": ""
+    },
+    {
+      "name": "kungfu-episodes-cli-linux-x64.tar.gz",
+      "kind": "release-asset",
+      "platform": "linux-x64",
+      "size": 219557472,
+      "sha256": "cd8310b8e6a4baf346f5248adf78496bc7e87502a7f2ec8d51bcbb689fef1023",
+      "url": "",
+      "githubAssetId": "",
+      "attestation": ""
+    },
+    {
+      "name": "kungfu-episodes-cli-darwin-arm64.qualification.json",
+      "kind": "release-asset",
+      "platform": "darwin-arm64",
+      "size": 2870,
+      "sha256": "12ea3c24e7156a21695298c45aa94cb73c384c064c5f69752029e92b74ac3d0e",
+      "url": "",
+      "githubAssetId": "",
+      "attestation": ""
+    },
+    {
+      "name": "kungfu-episodes-cli-darwin-arm64.tar.gz",
+      "kind": "release-asset",
+      "platform": "darwin-arm64",
+      "size": 159116574,
+      "sha256": "360880cc7b0826924d078dc27a97f062a8731029f5a724c9cbe2bfa1d9ca0c09",
+      "url": "",
+      "githubAssetId": "",
+      "attestation": ""
+    },
+    {
+      "name": "kungfu-episodes-cli-windows-x64.qualification.json",
+      "kind": "release-asset",
+      "platform": "windows-x64",
+      "size": 2863,
+      "sha256": "79ef2e11ac48348eac51b1691d5d6fd5722062886a42f7ce6781ddcd14371d4a",
+      "url": "",
+      "githubAssetId": "",
+      "attestation": ""
+    },
+    {
+      "name": "kungfu-episodes-cli-windows-x64.zip",
+      "kind": "release-asset",
+      "platform": "windows-x64",
+      "size": 1214020883,
+      "sha256": "bdae85d3aa517668ef48ba5a24a1bcbddb65eafb8f19887b13743fcb4027557a",
+      "url": "",
+      "githubAssetId": "",
+      "attestation": ""
+    }
+  ]
 }

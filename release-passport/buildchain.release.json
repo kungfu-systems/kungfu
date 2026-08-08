@@ -1,10 +1,10 @@
 {
   "schemaVersion": 1,
   "contract": "kungfu-buildchain-release-passport",
-  "generatedAt": "2026-08-08T07:59:49.784Z",
+  "generatedAt": "2026-08-08T09:03:22.935Z",
   "surfaceTimestampPolicy": {
-    "generatedAt": "2026-08-08T07:59:49.784Z",
-    "publishedAt": "2026-08-08T07:59:49.784Z",
+    "generatedAt": "2026-08-08T09:03:22.935Z",
+    "publishedAt": "2026-08-08T09:03:22.935Z",
     "reproducible": true,
     "timestampPolicy": "ci-injected",
     "deterministicInputs": [
@@ -60,7 +60,7 @@
     "treeEquivalent": true,
     "publishToolingSha": "f9e6b0e34bcdd6407b2a18206ace7982d64de2c8",
     "releaseStateRef": "refs/heads/buildchain/release-state/4-0-0-alpha-1",
-    "releaseStateSha": "5d298079a41a8656e1bf62bb869da3c6762c1d25",
+    "releaseStateSha": "",
     "package": {
       "name": "@kungfu-tech/buildchain",
       "version": "4.0.0-alpha.1"
@@ -90,7 +90,7 @@
     "statePath": "/home/runner/work/kungfu/kungfu/.buildchain/release-state/v4.0.0-alpha.1.json",
     "stateSha": "",
     "evidencePath": "/home/runner/work/kungfu/kungfu/.buildchain/release-evidence/v4.0.0-alpha.1/evidence.json",
-    "updatedAt": "2026-08-08T07:59:38.696Z",
+    "updatedAt": "2026-08-08T09:03:09.756Z",
     "result": {
       "command": "finalize",
       "validation": {
@@ -104,16 +104,16 @@
     "contract": "buildchain.promotion-routing/v1",
     "router": {
       "ref": "train/v3/v3.0/resume-candidate-run",
-      "sha": "0024984e4bdd035fe30c94f4a2e922d333212b88"
+      "sha": "1eaf16504c5b5940eca334fc7ff89f54285da444"
     },
     "shell": {
       "channel": "alpha",
       "ref": "train/v3/v3.0/resume-candidate-run",
-      "sha": "0024984e4bdd035fe30c94f4a2e922d333212b88"
+      "sha": "1eaf16504c5b5940eca334fc7ff89f54285da444"
     },
     "runtime": {
       "requestedRef": "train/v3/v3.0/resume-candidate-run",
-      "resolvedSha": "0024984e4bdd035fe30c94f4a2e922d333212b88"
+      "resolvedSha": "1eaf16504c5b5940eca334fc7ff89f54285da444"
     },
     "contractLock": {
       "path": ".buildchain/alpha-contract-lock.json",
@@ -103280,7 +103280,7 @@
         },
         "sourceVerification": {
           "status": "passed",
-          "verifiedAt": "2026-08-08T07:59:49.784Z",
+          "verifiedAt": "2026-08-08T09:03:22.936Z",
           "required": true,
           "surfaces": [
             {
@@ -103463,7 +103463,7 @@
         },
         "artifactVerification": {
           "status": "passed",
-          "verifiedAt": "2026-08-08T07:59:49.784Z",
+          "verifiedAt": "2026-08-08T09:03:22.936Z",
           "surfaces": [
             {
               "name": "kungfu-config",
@@ -103862,7 +103862,7 @@
         },
         "sourceVerification": {
           "status": "passed",
-          "verifiedAt": "2026-08-08T07:59:49.784Z",
+          "verifiedAt": "2026-08-08T09:03:22.936Z",
           "required": false,
           "surfaces": [
             {
@@ -103901,7 +103901,7 @@
         },
         "artifactVerification": {
           "status": "passed",
-          "verifiedAt": "2026-08-08T07:59:49.784Z",
+          "verifiedAt": "2026-08-08T09:03:22.936Z",
           "surfaces": [
             {
               "name": "documentation-atlas",
@@ -103956,7 +103956,7 @@
     "schemaVersion": 1,
     "contract": "kungfu-buildchain-kfd-2-release-trust-passport-audit",
     "status": "downgraded",
-    "verifiedAt": "2026-08-08T07:59:49.864Z",
+    "verifiedAt": "2026-08-08T09:03:23.021Z",
     "auditBoundary": {
       "scope": "public release claims visible to humans or agents",
       "policy": "public claims must bind declared sources, machine-readable evidence, hashes, artifact coordinates, verification results, audit boundaries, responsibility state, and residual risk"
@@ -120593,7 +120593,7 @@
         },
         "comparison": {
           "status": "passed",
-          "verifiedAt": "2026-08-08T07:59:49.836Z",
+          "verifiedAt": "2026-08-08T09:03:22.993Z",
           "supportLevel": "release",
           "declaredPublicSurfaceCount": 374,
           "declaredShippedPublicSurfaceCount": 374,
@@ -120624,11 +120624,11 @@
         "standardRevision": 10,
         "sourceSha": "f9e6b0e34bcdd6407b2a18206ace7982d64de2c8",
         "evidenceCut": {
-          "generatedAt": "2026-08-08T07:59:45.794Z",
-          "expiresAt": "2026-08-09T07:59:45.794Z"
+          "generatedAt": "2026-08-08T09:03:18.644Z",
+          "expiresAt": "2026-08-09T09:03:18.644Z"
         },
         "status": "passed",
-        "gateRoot": "sha256:5fa7df51719d3ae04ba18a9b270223f7f99d67b6835707b84d05ab4b6f70f6ad",
+        "gateRoot": "sha256:632e7cb53e95e7c3edec3b3697bf4aea887912d1157d168f4f69d207feccf953",
         "issueCount": 0
       },
       {
@@ -120636,11 +120636,11 @@
         "standardRevision": 7,
         "sourceSha": "f9e6b0e34bcdd6407b2a18206ace7982d64de2c8",
         "evidenceCut": {
-          "generatedAt": "2026-08-08T07:59:45.794Z",
-          "expiresAt": "2026-08-09T07:59:45.794Z"
+          "generatedAt": "2026-08-08T09:03:18.644Z",
+          "expiresAt": "2026-08-09T09:03:18.644Z"
         },
         "status": "passed",
-        "gateRoot": "sha256:0f070a628b4fcb9302a2f25cb5fdcd775b91f82f321b742c415e58a993bbeb8e",
+        "gateRoot": "sha256:f38ec09c57031899c68c38cd108e9ac5a8325d4ef6bd532a840529644e640983",
         "issueCount": 0
       },
       {
@@ -120648,11 +120648,11 @@
         "standardRevision": 8,
         "sourceSha": "f9e6b0e34bcdd6407b2a18206ace7982d64de2c8",
         "evidenceCut": {
-          "generatedAt": "2026-08-08T07:59:45.794Z",
-          "expiresAt": "2026-08-09T07:59:45.794Z"
+          "generatedAt": "2026-08-08T09:03:18.644Z",
+          "expiresAt": "2026-08-09T09:03:18.644Z"
         },
         "status": "passed",
-        "gateRoot": "sha256:ae495e0a27603123fb02b681b3ebb74dc58a13400e6a66fc2bd985688ec9cde8",
+        "gateRoot": "sha256:68d064efa95132046184e374d16e35fdb7bfe2801f4d797f8d982297c9156c19",
         "issueCount": 0
       }
     ],
@@ -121243,7 +121243,7 @@
       "Candidate, unsupported, draft, and non-qualifying matrix states cannot be widened by this projection."
     ],
     "issues": [],
-    "projectionRoot": "sha256:75ede068b593e14594f01b23f6047b7ec2a325fbfcc9ec4cbbc3b949b667b998"
+    "projectionRoot": "sha256:b8c934a8533e070070830132e820b98f3e164d6c38767eec846bb2db8e826539"
   },
   "invariantPassports": {
     "contract": "buildchain.invariant-passport-gate/v1",
@@ -121251,7 +121251,7 @@
     "passports": [
       {
         "path": "",
-        "sha256": "c144b22e6b5c4fa7497d1afa43083e92c909b63bec1a76852c35add67f8e6fd1",
+        "sha256": "01442717fddf66d2bd90b606289656e0c9e7687093c3711b9980878f874c89b2",
         "schema": "kungfu.invariant-passport/v1",
         "product": "Kungfu",
         "passportRoot": "sha256:7e1aa237969e58fedd4465cb2637a706030fc7a4bb5d9d7bfa35b5035803e402",
@@ -121484,6 +121484,72 @@
   },
   "surfaceImpacts": [],
   "artifacts": [
+    {
+      "group": "release",
+      "kind": "release-asset",
+      "name": "kungfu-episodes-cli-linux-x64.qualification.json",
+      "platform": "linux-x64",
+      "ref": "v4.0.0-alpha.1",
+      "sha256": "f274daff6946246e54f73640e8238a1c219db6c4fe4a727f3108a9904281dd1a",
+      "digest": "sha256:f274daff6946246e54f73640e8238a1c219db6c4fe4a727f3108a9904281dd1a",
+      "evidence": "artifact-evidence.json",
+      "url": ""
+    },
+    {
+      "group": "release",
+      "kind": "release-asset",
+      "name": "kungfu-episodes-cli-linux-x64.tar.gz",
+      "platform": "linux-x64",
+      "ref": "v4.0.0-alpha.1",
+      "sha256": "cd8310b8e6a4baf346f5248adf78496bc7e87502a7f2ec8d51bcbb689fef1023",
+      "digest": "sha256:cd8310b8e6a4baf346f5248adf78496bc7e87502a7f2ec8d51bcbb689fef1023",
+      "evidence": "artifact-evidence.json",
+      "url": ""
+    },
+    {
+      "group": "release",
+      "kind": "release-asset",
+      "name": "kungfu-episodes-cli-darwin-arm64.qualification.json",
+      "platform": "darwin-arm64",
+      "ref": "v4.0.0-alpha.1",
+      "sha256": "12ea3c24e7156a21695298c45aa94cb73c384c064c5f69752029e92b74ac3d0e",
+      "digest": "sha256:12ea3c24e7156a21695298c45aa94cb73c384c064c5f69752029e92b74ac3d0e",
+      "evidence": "artifact-evidence.json",
+      "url": ""
+    },
+    {
+      "group": "release",
+      "kind": "release-asset",
+      "name": "kungfu-episodes-cli-darwin-arm64.tar.gz",
+      "platform": "darwin-arm64",
+      "ref": "v4.0.0-alpha.1",
+      "sha256": "360880cc7b0826924d078dc27a97f062a8731029f5a724c9cbe2bfa1d9ca0c09",
+      "digest": "sha256:360880cc7b0826924d078dc27a97f062a8731029f5a724c9cbe2bfa1d9ca0c09",
+      "evidence": "artifact-evidence.json",
+      "url": ""
+    },
+    {
+      "group": "release",
+      "kind": "release-asset",
+      "name": "kungfu-episodes-cli-windows-x64.qualification.json",
+      "platform": "windows-x64",
+      "ref": "v4.0.0-alpha.1",
+      "sha256": "79ef2e11ac48348eac51b1691d5d6fd5722062886a42f7ce6781ddcd14371d4a",
+      "digest": "sha256:79ef2e11ac48348eac51b1691d5d6fd5722062886a42f7ce6781ddcd14371d4a",
+      "evidence": "artifact-evidence.json",
+      "url": ""
+    },
+    {
+      "group": "release",
+      "kind": "release-asset",
+      "name": "kungfu-episodes-cli-windows-x64.zip",
+      "platform": "windows-x64",
+      "ref": "v4.0.0-alpha.1",
+      "sha256": "bdae85d3aa517668ef48ba5a24a1bcbddb65eafb8f19887b13743fcb4027557a",
+      "digest": "sha256:bdae85d3aa517668ef48ba5a24a1bcbddb65eafb8f19887b13743fcb4027557a",
+      "evidence": "artifact-evidence.json",
+      "url": ""
+    },
     {
       "group": "macos-arm64",
       "kind": "kungfu-product",
