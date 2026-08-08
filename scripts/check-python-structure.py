@@ -8,11 +8,13 @@ from __future__ import annotations
 import argparse
 import ast
 import hashlib
+import io
 import json
 import math
 import os
 import subprocess
 import sys
+import tarfile
 from datetime import date
 from pathlib import Path
 from typing import Any, Iterable
@@ -238,10 +240,22 @@ def responsibility_count(tree: ast.Module, imports: Iterable[str]) -> int:
 
 
 def files_at_ref(ref: str, roots: list[str]) -> dict[str, str]:
-    names = git("ls-tree", "-r", "--name-only", ref, "--", *roots).decode().splitlines()
-    result = {}
-    for name in sorted(value for value in names if value.endswith(".py")):
-        result[name] = git("show", f"{ref}:{name}").decode("utf-8")
+    archive = git("archive", "--format=tar", ref, "--", *roots)
+    result: dict[str, str] = {}
+    with tarfile.open(fileobj=io.BytesIO(archive), mode="r:") as bundle:
+        members = sorted(
+            (
+                member
+                for member in bundle.getmembers()
+                if member.isfile() and member.name.endswith(".py")
+            ),
+            key=lambda member: member.name,
+        )
+        for member in members:
+            source = bundle.extractfile(member)
+            if source is None:
+                raise ValueError(f"git archive member is unreadable: {member.name}")
+            result[member.name] = source.read().decode("utf-8")
     return result
 
 
