@@ -16,7 +16,7 @@ last_reviewed: 2026-07-15
 
 Generated from the architecture authority and repository facts. Metrics are structural signals, not individual performance measures. Affected-native timing comes from retained qualification evidence; binary size remains release-owned because PR source authority has no stable packaged artifact.
 
-Authority root: `sha256:bef5261545bf362db2126e640dbc72478f12167b9baf7436887bb00707925609`
+Authority root: `sha256:7bd9cd19e304c279afcd1d8f2d295b630599ea6a7a4f5409259fbef3ebf5fd6b`
 
 | Metric | Current | Baseline | Budget | Policy |
 | --- | ---: | ---: | ---: | --- |
