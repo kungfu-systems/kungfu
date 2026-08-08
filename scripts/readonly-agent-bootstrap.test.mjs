@@ -357,6 +357,8 @@ test('declared discovery routes are zero-write in a cold read-only fixture', (t)
     'docs/shifu/schema/qualified-assignment-core-platform-matrix-v1.schema.json',
     'framework/production-graph/check.mjs',
     'framework/production-graph/check.test.mjs',
+    'framework/production-graph/compiler/index.mjs',
+    'framework/production-graph/compiler/polyglot.fixture.mjs',
     'framework/production-graph/contract.mjs',
     'product/package.json',
     'product/scripts/release-channel-index.mjs',

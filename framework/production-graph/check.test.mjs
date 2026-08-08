@@ -4,6 +4,11 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import { checkProductionGraphContract } from './check.mjs';
+import { compileProductionGraph } from './compiler/index.mjs';
+import {
+  POLYGLOT_COMPILE_REQUEST,
+  POLYGLOT_SOURCE,
+} from './compiler/polyglot.fixture.mjs';
 import {
   applyFixtureMutation,
   canonicalJson,
@@ -104,4 +109,123 @@ test('verifier has no Work Control mutation authority', () => {
     'close',
   ]);
   assert.equal(contract.verification.executesNodes, false);
+});
+
+test('compiler deterministically projects the polyglot production path', async () => {
+  const request = structuredClone(POLYGLOT_COMPILE_REQUEST);
+  const first = await compileProductionGraph(request, {
+    root: ROOT,
+    source: POLYGLOT_SOURCE,
+  });
+  const reordered = structuredClone(request);
+  reordered.nodes.reverse();
+  for (const node of reordered.nodes) {
+    node.authorityRefs.reverse();
+    node.dependencies.reverse();
+    node.events.reverse();
+    node.inputs.reverse();
+    node.outputs.reverse();
+    node.exit.successCodes.reverse();
+    node.failure.retainedEvidence.reverse();
+  }
+  const second = await compileProductionGraph(reordered, {
+    root: ROOT,
+    source: POLYGLOT_SOURCE,
+  });
+  assert.equal(first.graph.graphRoot, second.graph.graphRoot);
+  assert.equal(first.plan.planRoot, second.plan.planRoot);
+  assert.deepEqual(first, second);
+
+  const tasks = new Set(first.graph.nodes.map(({ executor }) => executor.task));
+  for (const task of [
+    'xinfa:build',
+    'build',
+    'build:core',
+    'freeze',
+    'core:affected:configure',
+    'core:affected',
+    'pack:core-platform',
+    'build:extensions',
+    'build:cli',
+    'build:app',
+    'product',
+    'release:qualify:core-platform',
+  ]) {
+    assert.ok(tasks.has(task), `missing polyglot executor reference ${task}`);
+  }
+  const references = new Set(
+    first.graph.nodes.flatMap(({ authorityRefs }) =>
+      authorityRefs.map(({ authority, id }) => `${authority}:${id}`),
+    ),
+  );
+  for (const reference of [
+    'build-capabilities:journal-core',
+    'build-capabilities:full',
+    'build-capabilities:cxx',
+    'build-capabilities:file-storage',
+    'build-capabilities:sqlite-projection',
+    'build-capabilities:fmt',
+    'build-capabilities:kungfu_composition',
+    'layers:core-composition-bindings',
+    'layers:kungfu_composition',
+  ]) {
+    assert.ok(
+      references.has(reference),
+      `missing authority reference ${reference}`,
+    );
+  }
+  for (const [index, nodeId] of first.plan.orderedNodeIds.entries()) {
+    const step = first.plan.steps[index];
+    assert.equal(step.nodeId, nodeId);
+    for (const dependency of step.dependsOn) {
+      assert.ok(first.plan.orderedNodeIds.indexOf(dependency) < index);
+    }
+    assert.equal(step.executor.executionOwnedBy, 'external-orchestrator');
+    assert.equal(step.executor.invokedByVerifier, false);
+  }
+  for (const input of first.graph.nodes.flatMap(({ inputs }) => inputs)) {
+    assert.match(input.root, /^sha256:[0-9a-f]{64}$/u);
+  }
+});
+
+test('compiler fails closed on source, authority, and Xinfa drift', async () => {
+  const rejects = async (mutate, code, options = {}) => {
+    const request = structuredClone(POLYGLOT_COMPILE_REQUEST);
+    mutate(request);
+    await assert.rejects(
+      compileProductionGraph(request, {
+        root: ROOT,
+        source: POLYGLOT_SOURCE,
+        ...options,
+      }),
+      (error) => error?.code === code,
+    );
+  };
+  await rejects((request) => {
+    request.semanticImpact = {};
+  }, 'unknown-or-missing-field');
+  await rejects((request) => {
+    request.xinfaVerification.sourceRevision = '3'.repeat(40);
+  }, 'xinfa-selection-stale');
+  await rejects((request) => {
+    request.semanticImpact.selectionRoot = `sha256:${'ee'.repeat(32)}`;
+  }, 'xinfa-selection-root-mismatch');
+  await rejects((request) => {
+    request.semanticImpact.changedPaths = ['framework/core/CMakeLists.txt'];
+  }, 'unknown-or-missing-field');
+  await rejects((request) => {
+    request.authorityReferences.layers = `sha256:${'ff'.repeat(32)}`;
+  }, 'authority-root-drift');
+  await rejects(() => undefined, 'source-drift', {
+    source: { ...POLYGLOT_SOURCE, revision: '4'.repeat(40) },
+  });
+  await rejects((request) => {
+    request.nodes[0].authorityRefs[0].id = 'manual-substitution';
+  }, 'unknown-authority-reference');
+  await rejects((request) => {
+    request.xinfaVerification.status = 'pending';
+  }, 'xinfa-selection-unverified');
+  await rejects((request) => {
+    request.nodes[0].inputs[0].root = null;
+  }, 'unrooted-compiler-input');
 });
