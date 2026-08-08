@@ -58,8 +58,8 @@ const PROVIDER_PROFILES = {
   },
   synthetic: {
     adapterVersion: 'kungfu-mock-agent/v1',
-    supportedVersion: /^1\.0\.0$/u,
-    testedVersions: ['1.0.0'],
+    supportedVersion: /^1\.(?:0|1)\.0$/u,
+    testedVersions: ['1.0.0', '1.1.0'],
     latestStateWins: true,
     signatures: {
       blocked: [['synthetic.blocked', /MOCK BLOCKED:/u]],

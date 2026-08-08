@@ -53,6 +53,24 @@ for (const [provider, version, filename] of [
   });
 }
 
+test('synthetic adapter accepts the current mock provider and its v1 compatibility floor', () => {
+  for (const version of ['1.0.0', '1.1.0']) {
+    const adapter = createProviderAdapter({ provider: 'synthetic', version });
+    assert.equal(adapter.compatible, true, version);
+    assert.equal(adapter.tested, true, version);
+    assert.equal(
+      adapter.inspect({
+        lines: ['mock› '],
+        lifecycleState: 'ready',
+        inputAdmission: 'open',
+        foreground: { provider: 'synthetic' },
+      }).state,
+      'ready',
+      version,
+    );
+  }
+});
+
 test('version drift and foreground mismatch fail visibly to raw human fallback', () => {
   const drifted = createProviderAdapter({
     provider: 'codex',

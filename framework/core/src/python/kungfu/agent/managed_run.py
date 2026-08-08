@@ -7,6 +7,59 @@ from __future__ import annotations
 from typing import Any, Callable, Mapping
 
 
+_TERMINAL_SYNTHETIC_SCENARIOS = frozenset(
+    {
+        "crash",
+        "deliverable",
+        "disconnect",
+        "recovery-delivery",
+        "recovery-story",
+        "review-fit",
+    }
+)
+
+
+def _requires_terminal_session_boundary(selected: Mapping[str, Any]) -> bool:
+    if selected.get("provider") != "synthetic":
+        return False
+    argv = [str(value) for value in (selected.get("launch") or {}).get("argv") or []]
+    try:
+        scenario = argv[argv.index("--scenario") + 1]
+    except (ValueError, IndexError):
+        return False
+    return scenario in _TERMINAL_SYNTHETIC_SCENARIOS
+
+
+def _session_boundary_reached(
+    status: Mapping[str, Any],
+    *,
+    before_sequence: int,
+    require_terminal: bool,
+) -> bool:
+    interaction = status.get("interactionState")
+    if interaction in {"approval-needed", "unknown", "ended"}:
+        return True
+    if require_terminal:
+        return False
+    return (
+        interaction == "ready"
+        and int((status.get("output") or {}).get("nextSequence") or 0) > before_sequence
+    )
+
+
+def _initial_session_boundary_reached(status: Mapping[str, Any]) -> bool:
+    interaction = status.get("interactionState")
+    if interaction in {"ready", "approval-needed", "ended"}:
+        return True
+    if interaction != "unknown":
+        return False
+    adapter = status.get("providerAdapter") or {}
+    return adapter.get("compatible") is False or adapter.get("reason") not in {
+        None,
+        "no-supported-state-signature",
+    }
+
+
 class ManagedRunCoordinator:
     """Start, instruct, observe, and snapshot one managed SessionAttempt."""
 
@@ -89,10 +142,7 @@ class ManagedRunCoordinator:
         ready = self.wait_for_session(
             invoke,
             ref,
-            lambda status: (
-                status.get("interactionState")
-                in {"ready", "approval-needed", "unknown", "ended"}
-            ),
+            _initial_session_boundary_reached,
             timeout_seconds=min(timeout_seconds, 30.0),
         )
         if ready.get("interactionState") != "ready":
@@ -119,14 +169,10 @@ class ManagedRunCoordinator:
         boundary = self.wait_for_session(
             invoke,
             ref,
-            lambda status: (
-                status.get("interactionState")
-                in {"approval-needed", "unknown", "ended"}
-                or (
-                    status.get("interactionState") == "ready"
-                    and int((status.get("output") or {}).get("nextSequence") or 0)
-                    > before_sequence
-                )
+            lambda status: _session_boundary_reached(
+                status,
+                before_sequence=before_sequence,
+                require_terminal=_requires_terminal_session_boundary(selected),
             ),
             timeout_seconds=timeout_seconds,
         )
