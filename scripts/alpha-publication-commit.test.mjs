@@ -105,7 +105,8 @@ test('publication evidence binds exact read-back and rollback authority', () => 
   const bundleRoot = `sha256:${'c'.repeat(64)}`;
   const evidence = publicationCommitEvidence({
     version: '4.0.0-alpha.2',
-    sourceSha: '1'.repeat(40),
+    sourceSha: '2'.repeat(40),
+    candidateSourceSha: '1'.repeat(40),
     releaseSha: '2'.repeat(40),
     releaseTag: 'v4.0.0-alpha.2',
     payloadRoot: `sha256:${'a'.repeat(64)}`,
@@ -135,6 +136,8 @@ test('publication evidence binds exact read-back and rollback authority', () => 
     readbackDigest: `sha256:${'e'.repeat(64)}`,
   });
   assert.equal(evidence.readback.status, 'passed');
+  assert.equal(evidence.identity.sourceSha, '2'.repeat(40));
+  assert.equal(evidence.identity.candidateSourceSha, '1'.repeat(40));
   assert.equal(evidence.readback.payloadRoot, evidence.publication.payloadRoot);
   assert.equal(evidence.publication.payloadRoot, bundleRoot);
   assert.equal(

@@ -277,6 +277,7 @@ export async function existingPublicationAuthority({
 export function publicationCommitEvidence({
   version,
   sourceSha,
+  candidateSourceSha,
   releaseSha,
   releaseTag,
   payloadRoot,
@@ -287,7 +288,13 @@ export function publicationCommitEvidence({
   return {
     schema: 'kungfu-buildchain-publication-commit-evidence/v1',
     status: 'passed',
-    identity: { version, sourceSha, releaseSha, releaseTag },
+    identity: {
+      version,
+      sourceSha,
+      candidateSourceSha,
+      releaseSha,
+      releaseTag,
+    },
     publication: {
       url: `${bundle.distribution.releaseBaseUrl}/${bundle.distribution.manifestAsset}`,
       payloadRoot: bundle.bundleRoot,
@@ -727,7 +734,6 @@ async function main() {
     ensureLauncherTag(environment);
     const evidence = publicationCommitEvidence({
       ...environment,
-      sourceSha: environment.candidateSourceSha,
       payloadRoot: existing.bundle.identity.channelPayloadRoot,
       previousPayloadRoot: previous?.index.payloadRoot,
       bundle: existing.bundle,
