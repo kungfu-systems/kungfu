@@ -9,8 +9,8 @@ confidence: high
 sensitivity: public
 evidence_grade: A
 review_state: self-reviewed
-last_reviewed: 2026-08-05
-ai_provenance: GPT-5 via Codex on 2026-08-02; updated by GPT-5 via Codex on 2026-08-03 to separate non-interactive artifact transport verification from native PTY playback after an exact Build failure, on 2026-08-04 to split the Project Tour into two independently captured 1x episodes, and on 2026-08-05 to bind the consumer-owned three-proof presentation contract; based on checked-in Kungfu, Buildchain, and Build Images contracts plus exact workflow evidence visible to this task; no claim is made for a render that has not passed the retained Gate
+last_reviewed: 2026-08-08
+ai_provenance: GPT-5 via Codex on 2026-08-02; updated by GPT-5 via Codex on 2026-08-03 to separate non-interactive artifact transport verification from native PTY playback after an exact Build failure, on 2026-08-04 to split the Project Tour into two independently captured 1x episodes, on 2026-08-05 to bind the consumer-owned three-proof presentation contract, and on 2026-08-08 to bind the 720p full-width native PTY geometry; based on checked-in Kungfu, Buildchain, and Build Images contracts plus exact workflow evidence visible to this task; no claim is made for a render that has not passed the retained Gate
 ---
 
 # Declarative Multi-demo Animation Pipeline
@@ -75,12 +75,14 @@ rebuilding Kungfu or using npm as an execution layer.
 
 Every demo is captured twice from the same deterministic replay window:
 
-- `1920x1080` uses its declared wide PTY;
-- `1280x720` uses its declared narrow PTY.
+- `1920x1080` uses a `150x36` PTY;
+- `1280x720` keeps the same 150-column full-width grid with a shorter 28-row
+  viewport.
 
 The 720p rendition is not a resized 1080p recording. Each PTY receives the
-same timed terminal events but independently reflows the real TUI at its own
-column and row dimensions. The renderer retains ANSI color and emits GIF,
+same timed terminal events, while the shorter 720p row budget independently
+reflows the real TUI without shrinking its active content to a 100-column
+island. The renderer retains ANSI color and emits GIF,
 MP4, WebM, poster, probe, inspection, receipt, and checksum evidence. The
 long-form web profile keeps a 10 fps capture budget and rejects duration,
 dimension, output-size, native-rendition, or renderer-contract drift.
