@@ -47,8 +47,8 @@ importers:
         specifier: 3.0.0
         version: 3.0.0
       '@kungfu-tech/buildchain-alpha':
-        specifier: npm:@kungfu-tech/buildchain@3.0.6-alpha.1
-        version: '@kungfu-tech/buildchain@3.0.6-alpha.1'
+        specifier: git+https://github.com/kungfu-systems/buildchain.git#58e48d73ae7fef0dd06ae02baf6d090e4da5487d
+        version: '@kungfu-tech/buildchain@https://codeload.github.com/kungfu-systems/buildchain/tar.gz/58e48d73ae7fef0dd06ae02baf6d090e4da5487d'
       '@kungfu-tech/kfd':
         specifier: 1.0.0-alpha.53
         version: 1.0.0-alpha.53
@@ -1446,10 +1446,7 @@ packages:
     engines: {node: '>=22.14.0'}
     hasBin: true
 
-  '@kungfu-tech/buildchain@3.0.6-alpha.1':
-    resolution: {integrity: sha512-rmElQ2qeK/hN3PWPseclXp2AeedvKhtRQUPc/gZ3zi3kXRWWD1EuPKVuHreBsYBYsOcfAZKz2N0/dWXkOE/WJg==}
-    engines: {node: '>=22.14.0'}
-    hasBin: true
+  '@kungfu-tech/buildchain@https://codeload.github.com/kungfu-systems/buildchain/tar.gz/58e48d73ae7fef0dd06ae02baf6d090e4da5487d': {resolution: {gitHosted: true, integrity: sha512-eOr81ElxUDoAGa4tA/JZuv6+wWI+0/uKAf/CVwB4HyHZ6XyF7eKjediKrUuZPXH6EGrIkMPLd8YO1Slni5bz5g==, tarball: https://codeload.github.com/kungfu-systems/buildchain/tar.gz/58e48d73ae7fef0dd06ae02baf6d090e4da5487d}, version: 3.0.6-alpha.10, engines: {node: '>=22.14.0'}, hasBin: true}
 
   '@kungfu-tech/kfd@1.0.0-alpha.41':
     resolution: {integrity: sha512-e+iIuvsijDLSFotb3gPKqwn649lLGRX3xEWOwn7xfBeu8L8kvw5RPRznJ4xKVM+NYCrfYCRVmUzpJI58k97C+Q==}
@@ -5806,7 +5803,7 @@ snapshots:
       '@kungfu-tech/kfd': 1.0.0-alpha.41
       smol-toml: 1.7.0
 
-  '@kungfu-tech/buildchain@3.0.6-alpha.1':
+  '@kungfu-tech/buildchain@https://codeload.github.com/kungfu-systems/buildchain/tar.gz/58e48d73ae7fef0dd06ae02baf6d090e4da5487d':
     dependencies:
       '@kungfu-tech/kfd': 1.0.0-alpha.53
       smol-toml: 1.7.0
