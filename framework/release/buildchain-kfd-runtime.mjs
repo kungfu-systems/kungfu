@@ -105,7 +105,9 @@ export function resolveGitBoundKfdEvidenceSourceSha({
     isAncestor: (sourceSha, candidateHeadSha) =>
       isGitAncestor(root, sourceSha, candidateHeadSha),
     findTreeEquivalentAncestor: (sourceSha, candidateHeadSha) =>
-      findTreeEquivalentAncestor(root, sourceSha, candidateHeadSha),
+      findTreeEquivalentAncestor(sourceSha, candidateHeadSha, (args) =>
+        gitValue(root, args),
+      ),
   });
 }
 
