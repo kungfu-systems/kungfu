@@ -370,7 +370,7 @@ test('promotion rejects a static Buildchain ref that differs from its workflow s
 test('PR-stage builds reject a premature publish-source lock', () => {
   const buildPath = CONTRACT.workflows.build;
   const original = fs.readFileSync(path.join(ROOT, buildPath), 'utf8');
-  const buildchainRef = '      buildchain-ref: v3';
+  const buildchainRef = `      buildchain-ref: \${{ inputs.buildchain-ref || '${CONTRACT.buildchain.candidate_build_sha}' }}`;
   const drifted = original.replace(
     buildchainRef,
     [
