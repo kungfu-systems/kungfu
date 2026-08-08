@@ -464,8 +464,21 @@ test('workflow contract keeps candidates exact-source, independent, and publish-
   );
   assert.match(
     workflow,
-    /uses: kungfu-systems\/buildchain\/\.github\/workflows\/\.build\.yml@2e7e07902ac28d8f3edcfb81098ef9ebc7a91878/u,
+    /uses: kungfu-systems\/buildchain\/\.github\/workflows\/\.build\.yml@58e48d73ae7fef0dd06ae02baf6d090e4da5487d/u,
   );
+  const signing = fs.readFileSync('.buildchain/buildchain.toml', 'utf8');
+  assert.match(
+    signing,
+    /id = "kungfu-cli-macos-arm64"[\s\S]*entitlements_profile = "jit-executable-v1"/u,
+  );
+  for (const executable of [
+    'kungfu-episodes-cli-darwin-arm64/runtime/kungfu',
+    'kungfu-episodes-cli-darwin-arm64/runtime/python/bin/python3',
+    'kungfu-episodes-cli-darwin-arm64/runtime/python/bin/python3.13',
+  ]) {
+    assert.match(signing, new RegExp(`"${executable}"`, 'u'));
+  }
+  assert.doesNotMatch(signing, /entitlements_paths = \[[^\]]*libnode/su);
   assert.match(workflow, /checkout-history-mode: full/u);
   assert.match(
     workflow,
