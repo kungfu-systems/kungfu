@@ -39,7 +39,7 @@ import {
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const SOURCE_SHA = '1'.repeat(40);
 const RUNTIME_SHA = '2e7e07902ac28d8f3edcfb81098ef9ebc7a91878';
-const PUBLICATION_RUNTIME_SHA = '8ed65977d2414ebd2e7cc9872a74227c43ac9a35';
+const PUBLICATION_RUNTIME_SHA = 'ec5166f21999251b8821c060ae1f4ddec9024e18';
 const STABLE_RUNTIME_SHA = '9e904de2c85dbea7c799780ee166510b3336d812';
 const SOURCE_TREE_SHA = 'a'.repeat(40);
 const CONTRACT_DIGEST =
