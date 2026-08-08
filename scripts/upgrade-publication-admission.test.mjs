@@ -483,6 +483,17 @@ test('publication admission keeps exact installer bytes while omitting unadverti
       ),
       { retainedCopy: true },
     );
+    writeJson(
+      path.join(
+        value.payloadRoot,
+        'kungfu-credential-manifest-macos',
+        'manifest.json',
+      ),
+      {
+        schemaVersion: 1,
+        contract: 'kungfu-buildchain-credential-manifest/v1',
+      },
+    );
     const admitted = verifyUpgradePublicationPayloads({
       payloadRoot: value.payloadRoot,
       releaseCandidatePassportPath: value.passportPath,

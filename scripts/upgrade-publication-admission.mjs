@@ -209,6 +209,16 @@ function verifyCredentialIslandBundle({
       `credential payload ${bundleRoot} root manifest must be a regular file`,
     );
   }
+  const manifest = readJson(
+    manifestPath,
+    'macOS credential-island artifact manifest',
+  );
+  if (
+    manifest.schemaVersion !== 1 ||
+    manifest.contract !== policy.manifestContract
+  ) {
+    return null;
+  }
   const evidencePath = path.join(
     bundleRoot,
     'product',
@@ -223,16 +233,6 @@ function verifyCredentialIslandBundle({
     throw new Error(
       `credential payload ${bundleRoot} must contain ${CREDENTIAL_EVIDENCE_FILE} at its authoritative release path`,
     );
-  }
-  const manifest = readJson(
-    manifestPath,
-    'macOS credential-island artifact manifest',
-  );
-  if (
-    manifest.schemaVersion !== 1 ||
-    manifest.contract !== policy.manifestContract
-  ) {
-    throw new Error('credential artifact manifest contract is unsupported');
   }
   if (
     manifest.platform?.id !== policy.platformId ||
