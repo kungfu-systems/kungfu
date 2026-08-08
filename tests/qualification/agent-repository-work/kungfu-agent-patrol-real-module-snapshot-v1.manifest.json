@@ -6,9 +6,9 @@
     "revisionPolicy": "exact-commit",
     "trackedRegularFilesOnly": true
   },
-  "fileCount": 8,
-  "lineCount": 4001,
-  "treeRoot": "sha256:6bb34887b52f1696570b4b2208f61f0ae45b1a48de9804d5732a3a4792f3cb31",
+  "fileCount": 9,
+  "lineCount": 4297,
+  "treeRoot": "sha256:1acb5053fd6cdcb8fcd17be1ee21e6de1823758a172cb8a5bfddd07dbe56fb38",
   "files": [
     {
       "path": "framework/agent-patrol/classify.mjs",
@@ -20,9 +20,9 @@
     {
       "path": "framework/agent-patrol/dogfood-capture.mjs",
       "mode": "100644",
-      "bytes": 9177,
-      "lines": 306,
-      "root": "sha256:09bcf6c783ca074d1c4f3e50562f304742afc51e373ab8440fbefc67dbeee226"
+      "bytes": 4280,
+      "lines": 137,
+      "root": "sha256:daf2dd225bb268a42cc0e25ac190bfe4ae370e3bf0a2d4d0d1c3067287361b71"
     },
     {
       "path": "framework/agent-patrol/select.mjs",
@@ -39,11 +39,18 @@
       "root": "sha256:efbab2b60a79a328ab826004bb21e158b9a561c98d96d7509fae73351edc3d7d"
     },
     {
+      "path": "framework/dogfood/native-finding-capture.mjs",
+      "mode": "100644",
+      "bytes": 13120,
+      "lines": 419,
+      "root": "sha256:6107e0de10d835a69bfee84f257f3e2f889918722df306dc2eab5fc2e223678d"
+    },
+    {
       "path": "scripts/agent-patrol.test.mjs",
       "mode": "100644",
-      "bytes": 14820,
-      "lines": 476,
-      "root": "sha256:5d8ff34cd064cce6eb3c271c9c3e63ee39a4adab4096f5fec602e788108ef9dd"
+      "bytes": 16173,
+      "lines": 522,
+      "root": "sha256:0d6a6a406b40d1bacb58dced43cfe27ac4a4bdf474eba2717024fef4f676254a"
     },
     {
       "path": "tests/qualification/agent-repository-work/fixture-catalog.mjs",
