@@ -23,13 +23,15 @@ SPEC.loader.exec_module(MODULE)
 
 class PythonStructureGovernanceTest(unittest.TestCase):
     def test_git_timeout_is_reported(self) -> None:
-        with mock.patch.object(
-            MODULE.subprocess,
-            "run",
-            side_effect=subprocess.TimeoutExpired(("git", "show"), 10),
+        with (
+            mock.patch.object(
+                MODULE.subprocess,
+                "run",
+                side_effect=subprocess.TimeoutExpired(("git", "show"), 10),
+            ),
+            self.assertRaisesRegex(ValueError, "timed out after 10s"),
         ):
-            with self.assertRaisesRegex(ValueError, "timed out after 10s"):
-                MODULE.git("show", "HEAD:file")
+            MODULE.git("show", "HEAD:file")
 
     def test_files_at_ref_reads_one_bounded_archive(self) -> None:
         stream = io.BytesIO()
@@ -134,9 +136,7 @@ class PythonStructureGovernanceTest(unittest.TestCase):
             current,
             {**manifest, "typedSeams": ["kungfu.fake.ProductReleaseHistoryPort"]},
             "fixture-baseline",
-            tracked_paths=set(
-                current_path["path"] for current_path in current["files"]
-            ),
+            tracked_paths={current_path["path"] for current_path in current["files"]},
         )
         self.assertIn("typed-seam-invalid", {issue["code"] for issue in issues})
 

@@ -15,7 +15,6 @@ WRITE_OPERATIONS = {
     "admit-issue",
     "transition-issue",
     "record-consideration",
-    "import-atlas-jsonl",
 }
 
 
@@ -107,15 +106,6 @@ def _action(domain, operation: str, runtime_dir: str, values: Mapping[str, Any])
             recorded_at=str(values.get("recordedAt") or ""),
         )
         affected = [result["consideration"]["receipt_root"]]
-    elif operation == "import-atlas-jsonl":
-        result = domain.import_atlas_jsonl(
-            runtime_dir,
-            source_path=str(values.get("sourcePath") or ""),
-            expected_source_root=str(values.get("expectedSourceRoot") or ""),
-            actor=str(values.get("actor") or ""),
-            imported_at=str(values.get("importedAt") or ""),
-        )
-        affected = [result["migration"]["migration_root"]]
     else:
         raise ValueError(f"unsupported Dogfood action: {operation}")
     return {
@@ -200,11 +190,5 @@ def invoke(
             scope=str(values.get("scope") or "local"),
             config_home=str(values.get("configHome") or "") or None,
             now=str(values.get("now") or ""),
-        )
-    if operation == "migration-plan":
-        return domain.atlas_migration_plan(str(values.get("sourcePath") or ""))
-    if operation == "migration-verify":
-        return domain.verify_atlas_migration(
-            runtime_dir, source_path=str(values.get("sourcePath") or "")
         )
     raise ValueError(f"unsupported Dogfood adapter operation: {operation}")

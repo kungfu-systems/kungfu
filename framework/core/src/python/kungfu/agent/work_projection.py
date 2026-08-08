@@ -12,6 +12,27 @@ from typing import Any
 from kungfu.agent.session_contract import semantic_root, validate_work_ref
 
 
+def report_status(
+    report: Mapping[str, Any], identity: Mapping[str, Any]
+) -> dict[str, Any]:
+    """Project whether an Agent Work report still matches its identity."""
+
+    current_root = semantic_root(identity)
+    recorded_root = report.get("identityRoot")
+    return {
+        "schema": "kungfu.agent-work-lab.report-status/v1",
+        "status": (
+            str(report.get("status") or "failed")
+            if current_root == recorded_root
+            else "stale"
+        ),
+        "recordedIdentityRoot": recorded_root,
+        "currentIdentityRoot": current_root,
+        "stale": current_root != recorded_root,
+        "writeOccurred": False,
+    }
+
+
 class WorkProjectionPort:
     """Cache full Work status independently from high-frequency liveness.
 

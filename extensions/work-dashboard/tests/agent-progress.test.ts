@@ -6,7 +6,7 @@ import type {
   RewindRun,
   RewindRunSummary,
 } from '@kungfu-tech/api/capability';
-import { loadGoalProgress } from '../src/view/agent-progress.ts';
+import { loadAssignmentProgress } from '../src/view/agent-progress.ts';
 
 function fakeRewind(events: RewindEvent[]): Rewind & { refreshes: number } {
   const summary: RewindRunSummary = {
@@ -28,14 +28,14 @@ function fakeRewind(events: RewindEvent[]): Rewind & { refreshes: number } {
   return rewind;
 }
 
-test('loads newest live observations for the selected Go only', () => {
+test('loads newest live observations for the selected Assignment only', () => {
   const rewind = fakeRewind([
     {
       kind: 'RunProgress',
       genTime: 2n,
       runId: 'attempt-1',
-      entityType: 'go',
-      entityId: 'go-1',
+      entityType: 'assignment',
+      entityId: 'assignment-1',
       message: 'building',
       phase: 'implement',
       signal: 'progress',
@@ -45,16 +45,16 @@ test('loads newest live observations for the selected Go only', () => {
       kind: 'RunProgress',
       genTime: 3n,
       runId: 'attempt-1',
-      entityType: 'go',
-      entityId: 'go-2',
-      message: 'other goal',
+      entityType: 'assignment',
+      entityId: 'assignment-2',
+      message: 'other assignment',
     },
     {
       kind: 'RunProgress',
       genTime: 4n,
       runId: 'attempt-1',
-      entityType: 'go',
-      entityId: 'go-1',
+      entityType: 'assignment',
+      entityId: 'assignment-1',
       message: 'waiting for review',
       signal: 'waiting',
       severity: 'warn',
@@ -62,7 +62,7 @@ test('loads newest live observations for the selected Go only', () => {
     },
   ]);
 
-  assert.deepEqual(loadGoalProgress(rewind, 'go-1'), [
+  assert.deepEqual(loadAssignmentProgress(rewind, 'assignment-1'), [
     {
       runId: 'attempt-1',
       genTime: 4n,

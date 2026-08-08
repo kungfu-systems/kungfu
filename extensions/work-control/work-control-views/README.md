@@ -6,7 +6,4 @@ the generic `kind: profile` envelope only; it does not validate Initiative,
 Assignment, or card payloads.
 
 The `assignment-cards` renderer is declared by this member. Work Dashboard
-validates its payload and saves it inside the Profile envelope. Retained v3
-saved views remain readable as opaque legacy Profile
-views and migrate only when the user explicitly saves them again. No stored
-facts or query definitions are rewritten.
+validates its payload and saves it inside the Profile envelope.
