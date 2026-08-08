@@ -106,7 +106,7 @@ test('expiry cleanup is dry-run-first and retains captured bytes', () => {
   const root = temporary();
   try {
     const response = captureAssignmentRequest(
-      request({ goal_id: 'expired' }, '2026-01-01T00:00:00Z'),
+      request({ assignment_id: 'expired' }, '2026-01-01T00:00:00Z'),
       {
         workspaceRoot: root,
         cwd: root,
@@ -165,7 +165,7 @@ test('cleanup fails closed for request material without a valid receipt', () => 
   const root = temporary();
   try {
     const response = captureAssignmentRequest(
-      request({ goal_id: 'incomplete' }, '2026-01-01T00:00:00Z'),
+      request({ assignment_id: 'incomplete' }, '2026-01-01T00:00:00Z'),
       {
         workspaceRoot: root,
         cwd: root,
@@ -197,7 +197,7 @@ test('Shifu source entry captures without compiled Kungfu artifacts', () => {
     const requestPath = path.join(root, 'request.json');
     fs.writeFileSync(
       requestPath,
-      `${JSON.stringify(request({ goal_id: 'source-entry' }))}\n`,
+      `${JSON.stringify(request({ assignment_id: 'source-entry' }))}\n`,
     );
     const args = [
       'work',

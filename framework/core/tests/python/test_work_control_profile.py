@@ -7,7 +7,11 @@ from pathlib import Path
 
 import pytest
 
-from kungfu import assignment_orchestration, profile_composition, profile_sdk
+from kungfu import (
+    initiative_family,
+    profile_composition,
+    profile_sdk,
+)
 from kungfu.agent import work_profile
 
 
@@ -404,7 +408,7 @@ def test_family_protocol_adds_no_parent_execution_authority():
         str(SOURCE), "work-control-actions", "domain"
     )
     capabilities = domain.work_control.capabilities()
-    contract = assignment_orchestration.family_contract()
+    contract = initiative_family.family_contract()
 
     assert contract["authority"] == {
         "initiativeParent": "inert",

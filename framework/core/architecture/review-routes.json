@@ -1,6 +1,6 @@
 {
   "schema": "kungfu.core-review-routes/v1",
-  "authorityRoot": "sha256:3fe669d985d56239af778e0693f368d23ff0b4b81c537f609e2a6edfaaf538d3",
+  "authorityRoot": "sha256:293b342bf94fbddf0b2ecb4ad50d67a17d6caa2a6b3532bc92d0c48a04d6edef",
   "fallbackAccount": "@dongkeren",
   "routes": [
     {
@@ -86,7 +86,8 @@
     {
       "component": "runtime-live-services",
       "paths": [
-        "src/libkungfu/src/runtime/live/"
+        "src/libkungfu/src/runtime/live/",
+        "src/python/kungfu/assignment_runtime/"
       ],
       "ownerRole": "core/runtime-live",
       "backupRole": "core/architecture",

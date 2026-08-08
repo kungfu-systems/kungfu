@@ -491,7 +491,7 @@ test('composition authority never absorbs member domain semantics', () => {
     /delegates member verification/u,
   );
   for (const forbidden of [
-    'mission_id',
+    'initiative_id',
     'episode_id',
     'fact_id',
     'profile_id',

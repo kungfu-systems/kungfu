@@ -19,6 +19,7 @@ import {
   classify,
   composeRenameEvidence,
   dispositionSoftWarnings,
+  git,
   hasGeneratedProvenance,
   isEligible,
   ownerFor,
@@ -47,6 +48,17 @@ const groups = {
   },
   'generated-projection:javascript-typescript': { hard: 100 },
 };
+
+test('git probes fail fast with a precise timeout', () => {
+  assert.throws(
+    () =>
+      git(['show', 'HEAD:file'], {}, () => ({
+        status: null,
+        error: { code: 'ETIMEDOUT' },
+      })),
+    /timed out after 10000ms/,
+  );
+});
 
 test('classification order covers every declared source class', () => {
   assert.equal(

@@ -1,6 +1,6 @@
 {
   "schema": "xinfa.assignment-route-qualification-summary/v1",
-  "phase": "C5-standard-go-cutover",
+  "phase": "C5-standard-task-cutover",
   "actor": "native-assignment-cutover",
   "verdict": "pass",
   "atlas_root": "sha256:644ee0ea020c74cf7400930044a884fd4b183ca87cc0c753829747bb95d04853",

@@ -1137,7 +1137,6 @@ def create_assignment(
     ]
     if dependencies and resolved_dependency_refs:
         raise ValueError("pass depends_on shorthand or dependency_refs, not both")
-    unresolved_dependency_ids: list[str] = []
     if dependencies:
         for dependency in dependencies:
             matches = [
@@ -1151,8 +1150,9 @@ def create_assignment(
                     f"local assignment shorthand resolves more than once: {dependency}"
                 )
             if not matches:
-                unresolved_dependency_ids.append(dependency)
-                continue
+                raise ValueError(
+                    f"depends_on does not resolve to a current local Assignment: {dependency}"
+                )
             resolved_dependency_refs.append(
                 _local_work_ref(
                     runtime_dir,
@@ -1253,7 +1253,6 @@ def create_assignment(
         "parent_assignment_id": "",
         "parent_assignment_ref": resolved_parent_ref,
         "depends_on": [],
-        "unresolved_dependency_ids": unresolved_dependency_ids,
         "dependency_refs": sorted(
             resolved_dependency_refs,
             key=lambda row: (
@@ -1530,13 +1529,13 @@ def claim_assignment_execution(
     lease_id: str,
     lease_expires_at: str,
     authorized_by: str,
+    attempt_id: str = "",
     grant_scope: str = "assignment-execution",
     actor_type: str = "agent",
     storage_source_id: str = "kungfu",
     system_time: int = 0,
 ) -> dict[str, Any]:
     """Append a bounded execution lease; slot identity never grants authority."""
-
     _ensure_native_write_allowed(runtime_dir)
     from . import native_state
 
@@ -1560,11 +1559,12 @@ def claim_assignment_execution(
         )
     _stable_id(values["lease_id"], "lease_id")
     expiry = native_state.parse_lease_expiry(lease_expires_at)
-    now = datetime.now(expiry.tzinfo)
-    if expiry <= now:
+    if expiry <= datetime.now(expiry.tzinfo):
         raise ValueError("execution lease must expire in the future")
+    claim_id = f"execution-{_sha256_root({**values, 'assignment': assignment_id, 'expires': lease_expires_at})[7:31]}"
     record = {
-        "claim_id": f"execution-{_sha256_root({**values, 'assignment': assignment_id, 'expires': lease_expires_at})[7:31]}",
+        "claim_id": claim_id,
+        "attempt_id": _stable_id(attempt_id or claim_id, "attempt_id"),
         "claim_type": ASSIGNMENT_EXECUTION_CLAIM,
         "assignment_id": _stable_id(assignment_id, "assignment_id"),
         **values,

@@ -2,16 +2,16 @@ import { mono, panelStyle } from '@kungfu-tech/kfx';
 import React from 'react';
 import type { AgentProgressRow } from './agent-progress';
 import {
-  type GoalCluster,
-  type GoalSection,
+  type AssignmentCluster,
+  type AssignmentSection,
   type TrustVisual,
   type VisualTrustState,
   WORK_CONTROL_VISUAL_SPEC,
+  assignmentStatusGlyph,
   deriveTrustVisual,
-  goalStatusGlyph,
   initiativeIntent,
   initiativeStage,
-  queryGoalClusters,
+  queryAssignmentClusters,
   responsibilityActions,
 } from './initiative-visual-model';
 import type {
@@ -46,7 +46,7 @@ const TRUST_COLORS: Record<VisualTrustState, string> = {
 };
 
 const SECTION_META: Record<
-  GoalSection,
+  AssignmentSection,
   { label: string; glyph: string; color: string }
 > = {
   attention: { label: 'Attention', glyph: '!', color: COLORS.red },
@@ -463,7 +463,7 @@ export function InitiativeSituationOverview({
   );
 }
 
-function GoalTrustMark({ state }: { state: VisualTrustState }) {
+function AssignmentTrustMark({ state }: { state: VisualTrustState }) {
   return (
     <span
       title={`Assignment-level KFD-2: ${state}. Initiative trust is not inherited.`}
@@ -485,22 +485,22 @@ function GoalTrustMark({ state }: { state: VisualTrustState }) {
 function AssignmentCard({
   cluster,
   expanded,
-  selectedGoalId,
-  trustByGoal,
+  selectedAssignmentId,
+  trustByAssignment,
   onToggle,
-  onSelectGoal,
+  onSelectAssignment,
 }: {
-  cluster: GoalCluster;
+  cluster: AssignmentCluster;
   expanded: boolean;
-  selectedGoalId: string | null;
-  trustByGoal: Readonly<Record<string, VisualTrustState>>;
+  selectedAssignmentId: string | null;
+  trustByAssignment: Readonly<Record<string, VisualTrustState>>;
   onToggle: () => void;
-  onSelectGoal: (assignmentId: string) => void;
+  onSelectAssignment: (assignmentId: string) => void;
 }) {
   const parent = cluster.parent;
   const children = cluster.members.slice(1);
   const meta = SECTION_META[cluster.section];
-  const parentTrust = trustByGoal[parent.assignment_id] ?? 'unknown';
+  const parentTrust = trustByAssignment[parent.assignment_id] ?? 'unknown';
   const completed = cluster.members.filter(({ assignment }) =>
     ['completed', 'done', 'merged', 'archived'].includes(
       assignment.status ?? '',
@@ -511,7 +511,9 @@ function AssignmentCard({
       style={{
         minWidth: 0,
         border: `1px solid ${
-          selectedGoalId === parent.assignment_id ? COLORS.cyan : COLORS.border
+          selectedAssignmentId === parent.assignment_id
+            ? COLORS.cyan
+            : COLORS.border
         }`,
         borderRadius: 11,
         background: `linear-gradient(145deg, ${COLORS.elevated}, ${COLORS.panel})`,
@@ -521,7 +523,7 @@ function AssignmentCard({
     >
       <button
         type="button"
-        onClick={() => onSelectGoal(parent.assignment_id)}
+        onClick={() => onSelectAssignment(parent.assignment_id)}
         style={{
           display: 'block',
           width: '100%',
@@ -542,9 +544,9 @@ function AssignmentCard({
           }}
         >
           <span style={{ ...mono, color: meta.color, fontSize: 11 }}>
-            {goalStatusGlyph(parent.status)} {parent.status || 'unknown'}
+            {assignmentStatusGlyph(parent.status)} {parent.status || 'unknown'}
           </span>
-          <GoalTrustMark state={parentTrust} />
+          <AssignmentTrustMark state={parentTrust} />
         </div>
         <div
           style={{
@@ -636,7 +638,7 @@ function AssignmentCard({
                 <button
                   key={assignment.assignment_id}
                   type="button"
-                  onClick={() => onSelectGoal(assignment.assignment_id)}
+                  onClick={() => onSelectAssignment(assignment.assignment_id)}
                   style={{
                     ...mono,
                     display: 'grid',
@@ -647,7 +649,7 @@ function AssignmentCard({
                     border: 0,
                     borderRadius: 6,
                     background:
-                      selectedGoalId === assignment.assignment_id
+                      selectedAssignmentId === assignment.assignment_id
                         ? '#17313a'
                         : 'transparent',
                     color: COLORS.text,
@@ -657,7 +659,7 @@ function AssignmentCard({
                   }}
                 >
                   <span style={{ color: SECTION_META[cluster.section].color }}>
-                    {goalStatusGlyph(assignment.status)}
+                    {assignmentStatusGlyph(assignment.status)}
                   </span>
                   <span
                     style={{
@@ -668,8 +670,10 @@ function AssignmentCard({
                   >
                     {assignment.title || assignment.assignment_id}
                   </span>
-                  <GoalTrustMark
-                    state={trustByGoal[assignment.assignment_id] ?? 'unknown'}
+                  <AssignmentTrustMark
+                    state={
+                      trustByAssignment[assignment.assignment_id] ?? 'unknown'
+                    }
                   />
                 </button>
               ))}
@@ -683,37 +687,37 @@ function AssignmentCard({
 
 export function AssignmentCardField({
   assignments,
-  selectedGoalId,
-  trustByGoal,
+  selectedAssignmentId,
+  trustByAssignment,
   query,
   asOfTime,
   savedViewId,
   saveState,
   onQueryChange,
   onSave,
-  onSelectGoal,
+  onSelectAssignment,
 }: {
   assignments: WorkControlAssignment[];
-  selectedGoalId: string | null;
-  trustByGoal: Readonly<Record<string, VisualTrustState>>;
+  selectedAssignmentId: string | null;
+  trustByAssignment: Readonly<Record<string, VisualTrustState>>;
   query: AssignmentCardQuerySpec;
   asOfTime: string;
   savedViewId: string;
   saveState: string;
   onQueryChange: (query: AssignmentCardQuerySpec) => void;
   onSave: () => void;
-  onSelectGoal: (assignmentId: string) => void;
+  onSelectAssignment: (assignmentId: string) => void;
 }) {
   const [expanded, setExpanded] = React.useState<Set<string>>(() => new Set());
   const clusters = React.useMemo(
     () =>
-      queryGoalClusters(
+      queryAssignmentClusters(
         assignments,
         query,
-        trustByGoal,
+        trustByAssignment,
         Date.parse(asOfTime) || Date.now(),
       ),
-    [assignments, query, trustByGoal, asOfTime],
+    [assignments, query, trustByAssignment, asOfTime],
   );
   const optionValues = React.useMemo(() => {
     const values = (field: keyof WorkControlAssignment) =>
@@ -735,7 +739,7 @@ export function AssignmentCardField({
   }, [assignments]);
   const update = (patch: Partial<AssignmentCardQuerySpec>) =>
     onQueryChange({ ...query, ...patch });
-  const toggleSection = (section: GoalSection) =>
+  const toggleSection = (section: AssignmentSection) =>
     update({
       sections: query.sections.includes(section)
         ? query.sections.filter((value) => value !== section)
@@ -836,7 +840,7 @@ export function AssignmentCardField({
               padding: '6px 8px',
             }}
           />
-          {(Object.keys(SECTION_META) as GoalSection[]).map((section) => (
+          {(Object.keys(SECTION_META) as AssignmentSection[]).map((section) => (
             <button
               key={section}
               type="button"
@@ -1019,7 +1023,7 @@ export function AssignmentCardField({
           )}
         </div>
       </section>
-      {(Object.keys(SECTION_META) as GoalSection[]).map((section) => {
+      {(Object.keys(SECTION_META) as AssignmentSection[]).map((section) => {
         const rows = clusters.filter((cluster) => cluster.section === section);
         if (!rows.length) return null;
         const meta = SECTION_META[section];
@@ -1055,10 +1059,10 @@ export function AssignmentCardField({
                   key={cluster.key}
                   cluster={cluster}
                   expanded={expanded.has(cluster.key)}
-                  selectedGoalId={selectedGoalId}
-                  trustByGoal={trustByGoal}
+                  selectedAssignmentId={selectedAssignmentId}
+                  trustByAssignment={trustByAssignment}
                   onToggle={() => toggle(cluster.key)}
-                  onSelectGoal={onSelectGoal}
+                  onSelectAssignment={onSelectAssignment}
                 />
               ))}
             </div>
@@ -1077,7 +1081,7 @@ type DetailTab =
   | 'evidence'
   | 'relations';
 
-export function GoalDetailDrawer({
+export function AssignmentDetailDrawer({
   assignment,
   initiative,
   trust,
@@ -1154,7 +1158,7 @@ export function GoalDetailDrawer({
       >
         <div style={{ minWidth: 0 }}>
           <div style={{ ...mono, color: COLORS.muted, fontSize: 10 }}>
-            {goalStatusGlyph(assignment.status)}{' '}
+            {assignmentStatusGlyph(assignment.status)}{' '}
             {assignment.status || 'unknown'}
           </div>
           <div

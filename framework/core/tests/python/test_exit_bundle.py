@@ -602,7 +602,7 @@ def test_all_remaining_member_adapters_roundtrip_idempotently(tmp_path):
         {
             "sources": [
                 {
-                    "profile": "mission-go",
+                    "profile": "initiative-assignment",
                     "source_id": "exit:fixture",
                     "source_cut_root": _root("source-cut"),
                     "last_accepted_head": _root("source-head"),

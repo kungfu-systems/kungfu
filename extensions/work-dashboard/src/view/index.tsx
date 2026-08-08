@@ -59,9 +59,8 @@ import {
 } from './project-work-run';
 import { openWorkControlProfile } from './work-control-profile';
 
-// Preserve the qualified Profile application service without restoring its
-// retired legacy presentation. The visible Work view is intentionally
-// read-only.
+// Preserve the qualified Profile application service. The visible Work view is
+// intentionally read-only.
 export function openProfileApplication(profile: Profile, defaultRepoRoot = '') {
   const application = openWorkControlProfile(profile, defaultRepoRoot);
   return {

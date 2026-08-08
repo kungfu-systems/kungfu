@@ -92,16 +92,16 @@ transaction.
 
 Action MJS owns canonical validation, deterministic recovery classification,
 pure transition planning, and projections. It does not read or write private
-journal/CAS/runtime layouts and cannot mint Fact, Episode, Profile, Mission,
+journal/CAS/runtime layouts and cannot mint Fact, Episode, Profile, Initiative,
 review, continuation, or Project Cut receipts.
 
-Compatibility ports map current Mission/Go, Xinfa, bounded authority material,
+Compatibility ports map current Initiative/Assignment, Xinfa, bounded authority material,
 the KFD-7 Work Profile, Runtime Episode lifecycle, Work Control completion,
 and the Fact kernel into the coordinator. They are replacement seams for future
 native Pursuit, Atlas, and Warrant implementations plus Domain Profiles, not
 new authorities.
 
-The first implementation slice validates explicit Mission/Go Pursuit, verified
+The first implementation slice validates explicit Initiative/Assignment Pursuit, verified
 Xinfa Atlas, and bounded Warrant inputs before mutation. It then requires the
 Work Profile, Episode, and Fact checkpoint ports to return their own accepted
 receipts. Re-entering the same loop ref reuses the persisted envelope; a fresh
@@ -116,7 +116,7 @@ Fact ref CAS. Its command transport is replaceable; it does not expose or write
 private journal, CAS, or Episode layouts.
 
 The settlement slice resumes that durable checkpoint, seals the same Runtime
-Episode, refreshes the verified Atlas binding, consumes an independent Mission
+Episode, refreshes the verified Atlas binding, consumes an independent Initiative
 Control review receipt, and settles the terminal Fact ref with expected-old
 CAS. Each accepted external effect is checkpointed before the next one; unknown
 Episode outcome, pending review, and stale final CAS remain typed recovery

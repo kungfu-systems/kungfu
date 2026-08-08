@@ -144,7 +144,7 @@ function verifyRetainedBinding(
       }
       for (const field of [
         'schema',
-        'goalId',
+        'assignmentId',
         'commit',
         'tree',
         'reviewer',
@@ -172,7 +172,7 @@ function verifyRetainedBinding(
         'retained-request-source',
         'assignment.request.sourceId',
         document?.source?.sourceId,
-        matrix.goalId,
+        matrix.assignmentId,
       );
       break;
     case 'assignment-capture':
@@ -203,13 +203,13 @@ function verifyRetainedBinding(
         live.source?.head,
       );
       if (
-        !Array.isArray(document?.go_set) ||
-        !document.go_set.includes(matrix.goalId)
+        !Array.isArray(document?.assignment_set) ||
+        !document.assignment_set.includes(matrix.assignmentId)
       ) {
         issues.push(
           issue(
             'retained-claim-assignment',
-            'assignment.claim.go_set',
+            'assignment.claim.assignment_set',
             'completion claim does not include the terminal Assignment',
           ),
         );
@@ -277,7 +277,7 @@ function verifyRetainedBinding(
     case 'predecessor-seal': {
       const expectedAssignment =
         object.kind === 'assignment-seal'
-          ? matrix.goalId
+          ? matrix.assignmentId
           : matrix.predecessor.assignmentId;
       mismatch(
         'retained-seal-schema',
@@ -390,10 +390,10 @@ export function verifyTerminalEvidence(
     issues,
   );
   exact(
-    evidence.goalId,
-    matrix.goalId,
+    evidence.assignmentId,
+    matrix.assignmentId,
     'goal-identity-mismatch',
-    'goalId',
+    'assignmentId',
     issues,
   );
   if ((matrix.exceptions || []).length !== 0) {
@@ -571,10 +571,10 @@ export function verifyTerminalEvidence(
     issues,
   );
   exact(
-    live.terminalReview?.goalId,
-    matrix.goalId,
+    live.terminalReview?.assignmentId,
+    matrix.assignmentId,
     'review-attestation-goal-mismatch',
-    'live.terminalReview.goalId',
+    'live.terminalReview.assignmentId',
     issues,
   );
   exact(

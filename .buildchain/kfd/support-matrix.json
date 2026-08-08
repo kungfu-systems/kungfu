@@ -10,11 +10,11 @@
   },
   "upstream": {
     "package": "@kungfu-tech/kfd",
-    "version": "1.0.0-alpha.53",
+    "version": "1.0.0-alpha.57",
     "line": "v1.0",
     "channel": "alpha",
-    "standardsSha256": "sha256:65899780779a8e933f1f3a298bfdf2311104ccde84b773a0828ee4c23dd19d5b",
-    "releaseAnchorSha256": "sha256:d50e474cf2d158722d765f54188550e30fa126e1728fc9eb748014e220acfc9b"
+    "standardsSha256": "sha256:e849d00499489a7fa28aa3c4873ee3f965e5b0f74e1ea1473a5f41a737484149",
+    "releaseAnchorSha256": "sha256:d6dba5ab31e78d09c9ba4359b4788aee06844fd04de3c13cbd96a50c9e0d283e"
   },
   "projections": {
     "sdk": "developer/sdk/kfd/support-matrix.json",
@@ -55,7 +55,7 @@
           },
           {
             "path": "framework/contract/kungfu-contracts.registry.json",
-        "sha256": "sha256:0b144463582acb9a7de8c7c9b10c5cc09fa2d32c20be0ee44a8606884ecd8de4"
+          "sha256": "sha256:26f51e3f4a9e73c0caee305a9d8eae545a0710dff475ebd4ac5c11d15c74b378"
           }
         ]
       },
@@ -102,7 +102,7 @@
         "evidenceRoots": [
           {
             "path": ".buildchain/kfd/kfd-2/release-claims.json",
-            "sha256": "sha256:e07be9fcd74d19fbcf534737773d1dd76c75ed9f7320561fea3c3bdfc2f04928"
+          "sha256": "sha256:2a4a989a6920533dbebbac77f2af78764963a36cf5c66f79c48da6340929b5a1"
           },
           {
             "path": "docs/qualification/kfd2-trust-assessment.md",
@@ -152,7 +152,7 @@
         "evidenceRoots": [
           {
             "path": ".buildchain/kfd/kfd-3/surfaces.json",
-            "sha256": "sha256:757aadcbd42aeedffd253203fc8ee8e9d0c963f998756f24943b0dcb07b8693f"
+          "sha256": "sha256:3c4b1d14bbd79bf09fb6538e0460219e7764889b16b777a64ad55347d350d95e"
           },
           {
             "path": ".buildchain/kfd/kfd-3/capability-query.json",
@@ -258,11 +258,11 @@
         "evidenceRoots": [
           {
             "path": "docs/qualification/evidence/assignment-organization-rollout/7aae2c562a/report.json",
-            "sha256": "sha256:b852b810293452b277edd79033c71adbdea341aba082c0380bdc60e0e90d0ca4"
+          "sha256": "sha256:706ad25c9f48338e6cf9e1c8e017ed5d3c4c29d28fa69e16ecee09e76d12f4a0"
           },
           {
             "path": "framework/core/tests/python/test_assignment_orchestration.py",
-            "sha256": "sha256:7c91b8b518b64aab6781109964589035051ed4661306e0c8ef825668ac92cf71"
+          "sha256": "sha256:8d29eedb973994937fae282b250859145aa1ccd16b18f13c861c283fead989fe"
           },
           {
             "path": "docs/architecture/primitive-management-plane.md",
@@ -274,7 +274,7 @@
           },
           {
             "path": "framework/primitive/kungfu-primitive-catalog.contract.json",
-            "sha256": "sha256:16e9e81e47702a871cc7a805664f3698443c473fd1e51b89f6c154012aa9553c"
+          "sha256": "sha256:dfc90fc0563017f2f5d332135ee4cf1ecb491774758332d9101b8f936af36a11"
           }
         ]
       },
@@ -337,7 +337,7 @@
           },
           {
             "path": "framework/project-cut/README.md",
-            "sha256": "sha256:5b8167b2e4cc9ff75112f52b7cd2c8e4c8a97c7c8d07f3827161912594464550"
+            "sha256": "sha256:a31a4bd076561cab48a883e1eb4bf24e9d264be5d90776107358186c49b497fc"
           }
         ],
         "missingGates": [
@@ -632,7 +632,7 @@
         "evidenceRoots": [
           {
             "path": "framework/core/src/python/kungfu/assignment_orchestration.py",
-            "sha256": "sha256:da1691366a7a0fa0a2d8bf1e952f3798300b843e20ca27edd8c4f489e1ab2004"
+          "sha256": "sha256:5018b0be21cc71e6b457058c54e88cbe2d35ca163bf77f5d78b2fc91803281a6"
           }
         ]
       },

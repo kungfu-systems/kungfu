@@ -69,5 +69,5 @@ historical/runtime compatibility material, not the v4 business allocation model.
 
 Initiative/Assignment, Rewind, Work, and KFX first-party runtime facts use
 `carrier_type=1000`. The envelope above illustrates the current
-Initiative/Assignment semantic binding; Mission/Go names remain bounded
+Initiative/Assignment semantic binding; Initiative/Assignment names remain bounded
 compatibility aliases and are not new action-type authority.

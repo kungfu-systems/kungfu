@@ -114,8 +114,8 @@ function taskEnvelope(atlas, item) {
     audience: 'agent',
     role: item.role,
     visibility: 'public',
-    mission: {
-      id: 'kungfu-technical-stewardship',
+    work_context: {
+      id: 'kungfu-work-context',
       lens: 'principal-engineer',
       track: item.initiative_track,
     },

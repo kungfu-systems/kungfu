@@ -242,7 +242,7 @@ implemented and qualified or explicitly waived for that release.
   [Initiative and Assignment L3 contract](KF-ADR-019f8759-ab29-7627-bc04-6aba547ea45f.md) names Initiative
   and Assignment as the canonical L3 control-plane records, gives their
   successor contract world an independent identity, preserves legacy
-  Mission/Go evidence as exact read-only history, and leaves KFD-7 Pursuit
+  Initiative/Assignment evidence as exact read-only history, and leaves KFD-7 Pursuit
   unchanged.
   [Build-free Assignment request capture](KF-ADR-019f878c-5480-7890-bc64-9b2aab7e9aa5.md) adds the preceding
   capture boundary: lossless request material may enter a project inbox or

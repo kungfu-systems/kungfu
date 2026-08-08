@@ -3,9 +3,9 @@ import test from 'node:test';
 
 import {
   WORK_CONTROL_VISUAL_SPEC,
-  buildGoalClusters,
+  buildAssignmentClusters,
   deriveTrustVisual,
-  queryGoalClusters,
+  queryAssignmentClusters,
   responsibilityActions,
 } from '../src/view/initiative-visual-model.ts';
 import type {
@@ -63,7 +63,7 @@ const report = (fields: Partial<WorkControlAuthorityReport> = {}) =>
         value: 'active',
         source_statuses: ['active'],
         mapping_policy: 'work-control',
-        go_subjects: [],
+        assignment_subjects: [],
       },
       proof: {
         canonical_state: true,
@@ -101,7 +101,7 @@ test('visual spec keeps the five questions internal and forbids synthetic truth'
 });
 
 test('parent and descendants occupy one cluster and a blocked child propagates attention', () => {
-  const clusters = buildGoalClusters([
+  const clusters = buildAssignmentClusters([
     assignment('parent'),
     assignment('child-a', {
       parent_assignment_id: 'parent',
@@ -135,7 +135,7 @@ test('parent and descendants occupy one cluster and a blocked child propagates a
 });
 
 test('assignment-card query retains the parent for a matching child and hides closed siblings', () => {
-  const clusters = queryGoalClusters(
+  const clusters = queryAssignmentClusters(
     [
       assignment('parent', {
         title: 'Parent delivery',
@@ -170,7 +170,7 @@ test('assignment-card query retains the parent for a matching child and hides cl
 });
 
 test('decision priority sorts propagated trust risk before ordinary active work', () => {
-  const clusters = queryGoalClusters(
+  const clusters = queryAssignmentClusters(
     [
       assignment('ordinary', {
         title: 'Ordinary active work',
@@ -197,7 +197,7 @@ test('decision priority sorts propagated trust risk before ordinary active work'
 });
 
 test('structured filters combine actor, status, hierarchy, and cut-relative time', () => {
-  const clusters = queryGoalClusters(
+  const clusters = queryAssignmentClusters(
     [
       assignment('parent', {
         owner_agent: 'codex',

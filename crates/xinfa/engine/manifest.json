@@ -2,8 +2,8 @@
   "schema": "xinfa.engine-manifest/v1",
   "abi": "xinfa.engine-abi/v1",
   "target": "wasm32-unknown-unknown",
-  "source_tree_hash": "sha256:854e125e3195f45441e783907fb4c7efb11ddb531ec324320ca41aee216fba2c",
-  "wasm_sha256": "sha256:c375502716305eda46d82fd0be47abbd3458382fed29f4318493f9c0e1e692cc",
+  "source_tree_hash": "sha256:e77c28727f6bc80ed41ae30a99c592bf81db4e5f88c191a97665b0d778abc1ba",
+  "wasm_sha256": "sha256:47a5f4a3eda2ca00d0d09dd8475433bceec3ca8dda7c9723814ba8a9c6975ce9",
   "rustc_version": "rustc 1.95.0 (59807616e 2026-04-14)",
-  "size": 953042
+  "size": 953114
 }

@@ -125,7 +125,7 @@ def query_state(
     storage_source_id: str = "kungfu",
     cut_system_time: int = 0,
 ) -> dict[str, Any]:
-    """Return native Initiative/Assignment state without legacy vocabulary."""
+    """Return native Initiative/Assignment state in the current vocabulary."""
 
     definition = work_control.build_state_query(
         runtime_dir,

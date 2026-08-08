@@ -67,7 +67,7 @@ policy, and time-axis fields for readability:
 {
   "schema": "kungfu.query.definition/v1",
   "object": "fact-state",
-  "subject_keys": ["atlas:mission-a", "atlas:goal-a"],
+  "subject_keys": ["kungfu:initiative-a", "kungfu:assignment-a"],
   "basis": {
     "scope": "domain-fact-ledger",
     "perspective": "system-time-then-observation-id",

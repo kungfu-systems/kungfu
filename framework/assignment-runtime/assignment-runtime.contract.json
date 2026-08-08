@@ -27,7 +27,6 @@
       "idempotency",
       "events",
       "errors",
-      "compatibility",
       "localRuntimeProfile",
       "implementationStatus",
       "nonClaims"
@@ -89,9 +88,6 @@
       "errors": {
         "type": "array",
         "minItems": 10
-      },
-      "compatibility": {
-        "type": "object"
       },
       "localRuntimeProfile": {
         "type": "object"

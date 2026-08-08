@@ -2,11 +2,11 @@
   "schema": "kungfu.code-complexity-baseline-reconstruction/v1",
   "expected_old_measurement_root": "sha256:4fd6d3566bd76b1f999f8528bd3bb60f301a4616fc56c971ff421c5ec22a7b2f",
   "expected_old_baseline_ref": "a7605d74513867b94851a6763c51fcdc803e5d30",
-  "new_measurement_root": "sha256:67a4c459aa5f7a2951eacb3b1fe534a036bb04fdef6bac0c9f1dde14210cefaa",
+  "new_measurement_root": "sha256:fb5e8867e1016e28ba61ea0c916179887eba6820791760d951625b4c9e54b210",
   "new_baseline_ref": "c7d0c61d031ad6be1dd9041af2bd5db48896df1e",
   "changed_measurements": 1522,
   "aggregate_line_delta": 1720250,
-  "change_manifest_root": "sha256:6e5d0440de42d516a09aad822b3d35c95dd56a9cda35aaaeee20a52524a6b4a6",
+  "change_manifest_root": "sha256:2393571fa35c71e9ec4ba5818f1623457bdec0b8dce8a3f93eeda74b5cc44e84",
   "reconstruction_scope": "full-exact-baseline",
   "reconstruction_reason_codes": [
     "protected-baseline-lag",
@@ -14,16 +14,16 @@
   ],
   "requested_by": "keren.dong+cx@kungfu.link",
   "reason": "Reconstruct the exact protected complexity baseline after accumulated source and retained-evidence growth, including complete removal of obsolete project-specific compatibility surfaces.",
-  "retirement_or_decomposition_ref": "https://github.com/kungfu-systems/kungfu/pull/2598",
+  "retirement_or_decomposition_ref": "https://github.com/kungfu-systems/kungfu/pull/2619",
   "approval_receipt": {
     "schema": "kungfu.code-complexity-budget-approval-receipt/v1",
     "authority_id": "kungfu-origin-complexity-transition-review",
     "key_id": "ed25519-668812bf28659460",
     "algorithm": "ed25519",
-    "issued_at": "2026-08-08T10:24:00Z",
-    "approved_at": "2026-08-08T10:25:00Z",
-    "expires_at": "2026-08-15T10:25:00Z",
-    "authorization_root": "sha256:9de4a2c4989097f4b9d419197133088a0bea0d7712f4f754970e0398d2c0309b",
-    "signature": "IIvKslDOpEmLFkwEwU9s6W4uYypg4VYKXwC88G0MciKcEKlQNz+ApfdJo9Z6GxOatbaRrScdO2Bkffsz0k+3CA=="
+    "issued_at": "2026-08-08T19:32:51.532Z",
+    "approved_at": "2026-08-08T19:33:51.532Z",
+    "expires_at": "2026-08-15T19:34:51.532Z",
+    "authorization_root": "sha256:d425f395531481e31c9e7800190c812100c9c4cf009f38cf35d7001f6250e15a",
+    "signature": "/a63uiotfViokPjryUpW21BYsq++Ts8RMyOGep8EJtJdrPHIkHN8z1y+0BE/0blM3K+8VQ3M0PV0LkNOMZ5NCQ=="
   }
 }

@@ -10,7 +10,7 @@ import { fileURLToPath } from 'node:url';
 import {
   beginActionLoop,
   createCorePublicAdapters,
-  createExplicitCompatibilityAdapters,
+  createExplicitAuthorityAdapters,
   resumeActionLoop,
 } from './action-loop-begin.mjs';
 import {
@@ -58,47 +58,47 @@ function exactRoot(value, field) {
   return value;
 }
 
-export function resolveProjectCutAuthority(state, { missionId, goalId }) {
-  const activeProjectCutPhases = new Set([
-    'native-go',
-    'episode-sealed',
-    'cut-prepared',
-    'cut-bound',
-    'cut-observed',
+export function resolveAssignmentAuthority(
+  state,
+  { initiativeId, assignmentId },
+) {
+  const activeAssignmentPhases = new Set([
+    'admitted',
     'claimed',
+    'executing',
+    'stage-ready',
     'reviewed',
     'continuation-decided',
   ]);
-  if (!state || !activeProjectCutPhases.has(state.phase))
-    throw new Error('Project Cut state is not an active native Go context');
-  if (state.goal_id !== goalId || state.native?.go_id !== goalId)
-    throw new Error('Project Cut goal coordinate does not match --goal-id');
-  if (state.native?.mission_id !== missionId)
+  if (
+    !state ||
+    state.schema !== 'kungfu.action-loop.assignment-authority/v0' ||
+    !activeAssignmentPhases.has(state.phase)
+  )
+    throw new Error('Assignment authority state is not active');
+  if (state.assignmentId !== assignmentId)
     throw new Error(
-      'Project Cut Mission coordinate does not match --mission-id',
+      'Assignment authority coordinate does not match --assignment-id',
     );
-  const goReceipt = state.native?.go_receipt;
-  const atlasVerification = state.context?.receipts?.atlas_verify;
-  const pursuitRoot = exactRoot(
-    goReceipt?.receipt?.payload_hash,
-    'native Go receipt payload root',
-  );
-  const atlasRoot = exactRoot(
-    state.roots?.input_atlas_root,
-    'input Atlas root',
-  );
+  if (state.initiativeId !== initiativeId)
+    throw new Error(
+      'Assignment Initiative coordinate does not match --initiative-id',
+    );
+  const pursuitRoot = exactRoot(state.pursuit?.root, 'Assignment pursuit root');
+  const atlasRoot = exactRoot(state.atlas?.root, 'input Atlas root');
+  const atlasVerification = state.atlas?.verification;
   if (
     atlasVerification?.valid !== true ||
     atlasVerification.atlas_root !== atlasRoot ||
     (atlasVerification.diagnostics ?? []).length !== 0
   ) {
-    throw new Error('Project Cut Atlas verification is not exact and clean');
+    throw new Error('Assignment Atlas verification is not exact and clean');
   }
   const acceptanceRoot = exactRoot(
-    state.roots?.acceptance_root,
-    'Go acceptance root',
+    state.warrant?.root,
+    'Assignment warrant root',
   );
-  const externalRepoPath = state.coordinates?.external_repo_path;
+  const externalRepoPath = state.coordinates?.externalRepoPath;
   const sourceBuildBinding = externalRepoPath
     ? path.join(externalRepoPath, 'framework/core/build/python')
     : '';
@@ -113,43 +113,43 @@ export function resolveProjectCutAuthority(state, { missionId, goalId }) {
           (name.endsWith('.so') || name.endsWith('.pyd')),
       );
   return {
-    schema: 'kungfu.action-loop.project-cut-authority/v0',
-    missionId,
-    goalId,
+    schema: 'kungfu.action-loop.assignment-authority/v0',
+    initiativeId,
+    assignmentId,
     bindingDir: hasSourceBuildBinding
       ? sourceBuildBinding
-      : required(state.coordinates ?? {}, 'binding_dir'),
+      : required(state.coordinates ?? {}, 'bindingDir'),
     contextBindingRoot: exactRoot(
-      state.roots?.context_binding_root,
+      state.contextBindingRoot,
       'context binding root',
     ),
     pursuit: {
-      id: required(goReceipt ?? {}, 'go_subject'),
+      id: required(state.pursuit ?? {}, 'id'),
       root: pursuitRoot,
     },
     atlas: {
-      id: `xinfa:${state.roots.context_binding_root.slice(7, 31)}`,
+      id: required(state.atlas ?? {}, 'id'),
       root: atlasRoot,
       verification: atlasVerification,
     },
     warrant: {
-      id: `project-cut-warrant:${goalId}`,
+      id: required(state.warrant ?? {}, 'id'),
       root: acceptanceRoot,
     },
   };
 }
 
 export function beginNativeRequest(args, authority, nativeAuthority) {
-  const goalId = authority.goalId;
-  const loopRef = args['loop-ref'] || `action-loop/${goalId}`;
+  const assignmentId = authority.assignmentId;
+  const loopRef = args['loop-ref'] || `action-loop/${assignmentId}`;
   return {
     schema: 'kungfu.action-loop.begin-request/v0',
-    loopId: args['loop-id'] || `loop:${goalId}`,
+    loopId: args['loop-id'] || `loop:${assignmentId}`,
     loopRoot: authority.warrant.root,
     loopRef,
     idempotencyKey:
       args['idempotency-key'] ||
-      `action-loop:${goalId}:${authority.contextBindingRoot.slice(7, 23)}`,
+      `action-loop:${assignmentId}:${authority.contextBindingRoot.slice(7, 23)}`,
     factRef: { name: loopRef, cutRoot: null, revision: 0 },
     pursuit: {
       explicit: true,
@@ -172,13 +172,13 @@ export function beginNativeRequest(args, authority, nativeAuthority) {
       binding: { ...authority.warrant, state: 'issued' },
     },
     episode: {
-      id: args['episode-id'] || `episode:${goalId}`,
-      source: args['episode-source'] || `action-loop:${goalId}`,
+      id: args['episode-id'] || `episode:${assignmentId}`,
+      source: args['episode-source'] || `action-loop:${assignmentId}`,
       title: args['episode-title'],
       actor: args.actor,
     },
     fact: {
-      id: args['fact-id'] || `fact:${goalId}`,
+      id: args['fact-id'] || `fact:${assignmentId}`,
       root: authority.warrant.root,
       state: 'declared',
     },
@@ -186,12 +186,12 @@ export function beginNativeRequest(args, authority, nativeAuthority) {
   };
 }
 
-function readProjectCutAuthority(args) {
-  const statePath = path.resolve(required(args, 'project-cut-state'));
+function readAssignmentAuthority(args) {
+  const statePath = path.resolve(required(args, 'assignment-state'));
   const state = JSON.parse(fs.readFileSync(statePath, 'utf8'));
-  return resolveProjectCutAuthority(state, {
-    missionId: required(args, 'mission-id'),
-    goalId: required(args, 'goal-id'),
+  return resolveAssignmentAuthority(state, {
+    initiativeId: required(args, 'initiative-id'),
+    assignmentId: required(args, 'assignment-id'),
   });
 }
 
@@ -245,7 +245,7 @@ function ports(runtime, bindingDir) {
   const begin = createCorePublicAdapters(call);
   const settle = createSettlementCoreAdapters(call);
   return {
-    ...createExplicitCompatibilityAdapters(),
+    ...createExplicitAuthorityAdapters(),
     ...begin,
     ...settle,
     episodeRecorder: {
@@ -306,8 +306,8 @@ function beginRequest(args) {
 
 function completion(args) {
   return {
-    missionId: required(args, 'mission-id'),
-    goalId: required(args, 'goal-id'),
+    initiativeId: required(args, 'initiative-id'),
+    assignmentId: required(args, 'assignment-id'),
     statement: required(args, 'statement'),
     acceptanceRoot: required(args, 'acceptance-root'),
     inputAtlasRoot: required(args, 'input-atlas-root'),
@@ -392,7 +392,7 @@ async function main() {
   const args = parseArgs(process.argv.slice(2));
   const runtime = path.resolve(required(args, 'runtime'));
   const nativeCommand = args.command?.endsWith('-native');
-  const authority = nativeCommand ? readProjectCutAuthority(args) : null;
+  const authority = nativeCommand ? readAssignmentAuthority(args) : null;
   const bindingDir =
     authority?.bindingDir || path.resolve(args['binding-dir'] || BINDING);
   const adapters = ports(runtime, bindingDir);
@@ -417,7 +417,7 @@ async function main() {
   ) {
     result = await resumeActionLoop(
       contract,
-      args['loop-ref'] || `action-loop/${authority?.goalId}`,
+      args['loop-ref'] || `action-loop/${authority?.assignmentId}`,
       adapters,
     );
   } else if (args.command === 'settle' || args.command === 'settle-native') {

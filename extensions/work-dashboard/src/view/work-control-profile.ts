@@ -161,7 +161,7 @@ export type WorkControlAuthorityReport = {
     profile_hash: string;
     profile: { id: string; version: string };
     initiative_subject: string;
-    go_subject?: string | null;
+    assignment_subject?: string | null;
     cost: {
       status: 'missing' | 'ambiguous' | 'partial' | 'attributed';
       observation_count: number;
@@ -195,7 +195,7 @@ export type WorkControlAuthorityReport = {
       value: string;
       source_statuses: string[];
       mapping_policy: string;
-      go_subjects: string[];
+      assignment_subjects: string[];
     };
     proof: {
       canonical_state: boolean;

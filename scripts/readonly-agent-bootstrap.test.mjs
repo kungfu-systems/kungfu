@@ -25,7 +25,9 @@ function copyFile(sourceRoot, targetRoot, relative) {
 
 function semanticAmplificationFixturePaths(manifest) {
   const paths = new Set([
+    'framework/core/architecture/ARCHITECTURE_HEALTH.md',
     'framework/core/architecture/layers.json',
+    'framework/core/architecture/review-routes.json',
     'framework/maintainability/semantic-amplification.manifest.json',
     'framework/maintainability/semantic-amplification.mjs',
     'framework/maintainability/terminal-evidence-matrix.json',
@@ -531,6 +533,9 @@ test('declared discovery routes are zero-write in a cold read-only fixture', (t)
     'framework/maintainability/baseline-transitions/README.md',
     'framework/maintainability/code-complexity-policy.json',
     'framework/maintainability/code-complexity-baseline.json',
+    'framework/maintainability/baseline-transitions/2026-08-08-zero-residue-baseline-reconstruction.json',
+    'framework/maintainability/waivers/2026-08-09-document-metadata-zero-residue-regeneration.json',
+    'framework/maintainability/waivers/2026-08-09-pnpm-lock-zero-residue-dependency-cutover.json',
     'framework/maintainability/waivers/retired/hub-cli-linux-arm64-dist-platform-map.v1.json',
     'framework/maintainability/waivers/retired/hub-cli-linux-arm64-post-queue-workflow-authority.v1.json',
     'framework/maintainability/waivers/retired/hub-cli-linux-arm64-workflow-authority.v1.json',
@@ -629,12 +634,42 @@ test('declared discovery routes are zero-write in a cold read-only fixture', (t)
   for (const row of matrix.rows) {
     for (const section of [
       row.verification?.evidenceRoots,
+      row.precursorEvidence?.evidenceRoots,
       row.releaseQualification?.evidenceRoots,
     ]) {
       for (const evidence of section || []) evidencePaths.add(evidence.path);
     }
   }
   for (const relative of evidencePaths) copyFile(ROOT, fixture, relative);
+  const changedCandidatePaths = spawnSync(
+    git,
+    [
+      '-C',
+      ROOT,
+      'diff',
+      '--name-only',
+      '--diff-filter=ACMRTUXB',
+      '-z',
+      'HEAD',
+      '--',
+    ],
+    { encoding: 'utf8' },
+  );
+  assert.equal(changedCandidatePaths.status, 0, changedCandidatePaths.stderr);
+  for (const relative of changedCandidatePaths.stdout
+    .split('\0')
+    .filter(Boolean))
+    copyFile(ROOT, fixture, relative);
+  const deletedCandidatePaths = spawnSync(
+    git,
+    ['-C', ROOT, 'diff', '--name-only', '--diff-filter=D', '-z', 'HEAD', '--'],
+    { encoding: 'utf8' },
+  );
+  assert.equal(deletedCandidatePaths.status, 0, deletedCandidatePaths.stderr);
+  for (const relative of deletedCandidatePaths.stdout
+    .split('\0')
+    .filter(Boolean))
+    fs.rmSync(path.join(fixture, relative), { recursive: true, force: true });
   fs.chmodSync(path.join(fixture, 'shifu'), 0o755);
 
   fs.symlinkSync(git, path.join(tools, 'git'));
@@ -659,12 +694,24 @@ test('declared discovery routes are zero-write in a cold read-only fixture', (t)
     fs.chmodSync(file, 0o755);
   }
 
+  const sourceAuthorName = spawnSync(
+    git,
+    ['-C', ROOT, 'show', '-s', '--format=%an', exactSourceSha],
+    { encoding: 'utf8' },
+  );
+  const sourceAuthorEmail = spawnSync(
+    git,
+    ['-C', ROOT, 'show', '-s', '--format=%ae', exactSourceSha],
+    { encoding: 'utf8' },
+  );
+  assert.equal(sourceAuthorName.status, 0, sourceAuthorName.stderr);
+  assert.equal(sourceAuthorEmail.status, 0, sourceAuthorEmail.stderr);
   const gitEnv = {
     ...process.env,
-    GIT_AUTHOR_NAME: 'Kungfu Fixture',
-    GIT_AUTHOR_EMAIL: 'fixture@kungfu.invalid',
-    GIT_COMMITTER_NAME: 'Kungfu Fixture',
-    GIT_COMMITTER_EMAIL: 'fixture@kungfu.invalid',
+    GIT_AUTHOR_NAME: sourceAuthorName.stdout.trim(),
+    GIT_AUTHOR_EMAIL: sourceAuthorEmail.stdout.trim(),
+    GIT_COMMITTER_NAME: sourceAuthorName.stdout.trim(),
+    GIT_COMMITTER_EMAIL: sourceAuthorEmail.stdout.trim(),
   };
   for (const args of [
     ['config', 'core.fileMode', 'false'],

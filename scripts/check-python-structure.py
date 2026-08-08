@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 # SPDX-License-Identifier: Apache-2.0
 
 """Build-free, exact-root Python structure governance and report query."""
@@ -8,17 +7,22 @@ from __future__ import annotations
 import argparse
 import ast
 import hashlib
+import io
 import json
 import math
+import os
 import subprocess
 import sys
-from datetime import date
+import tarfile
+from collections.abc import Iterable
+from datetime import UTC, date, datetime
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any
 
 ROOT = Path(__file__).resolve().parents[1]
 MANIFEST_PATH = Path("framework/maintainability/abstraction-integrity.manifest.json")
 PYTHON_SOURCE_ROOT = "framework/core/src/python"
+GIT_TIMEOUT_SECONDS = float(os.environ.get("KUNGFU_GIT_COMMAND_TIMEOUT_SECONDS", "10"))
 
 
 def canonical(value: Any) -> bytes:
@@ -38,12 +42,23 @@ def digest_bytes(value: bytes) -> str:
 def read_json(relative: Path) -> dict[str, Any]:
     value = json.loads((ROOT / relative).read_text(encoding="utf-8"))
     if not isinstance(value, dict):
-        raise ValueError(f"{relative} must contain an object")
+        raise TypeError(f"{relative} must contain an object")
     return value
 
 
 def git(*args: str) -> bytes:
-    result = subprocess.run(["git", *args], cwd=ROOT, check=False, capture_output=True)
+    try:
+        result = subprocess.run(
+            ["git", *args],
+            cwd=ROOT,
+            check=False,
+            capture_output=True,
+            timeout=GIT_TIMEOUT_SECONDS,
+        )
+    except subprocess.TimeoutExpired as exc:
+        raise ValueError(
+            f"git {' '.join(args)} timed out after {GIT_TIMEOUT_SECONDS:g}s"
+        ) from exc
     if result.returncode:
         raise ValueError(
             f"git {' '.join(args)} failed: {result.stderr.decode(errors='replace').strip()}"
@@ -225,10 +240,22 @@ def responsibility_count(tree: ast.Module, imports: Iterable[str]) -> int:
 
 
 def files_at_ref(ref: str, roots: list[str]) -> dict[str, str]:
-    names = git("ls-tree", "-r", "--name-only", ref, "--", *roots).decode().splitlines()
-    result = {}
-    for name in sorted(value for value in names if value.endswith(".py")):
-        result[name] = git("show", f"{ref}:{name}").decode("utf-8")
+    archive = git("archive", "--format=tar", ref, "--", *roots)
+    result: dict[str, str] = {}
+    with tarfile.open(fileobj=io.BytesIO(archive), mode="r:") as bundle:
+        members = sorted(
+            (
+                member
+                for member in bundle.getmembers()
+                if member.isfile() and member.name.endswith(".py")
+            ),
+            key=lambda member: member.name,
+        )
+        for member in members:
+            source = bundle.extractfile(member)
+            if source is None:
+                raise ValueError(f"git archive member is unreadable: {member.name}")
+            result[member.name] = source.read().decode("utf-8")
     return result
 
 
@@ -425,7 +452,7 @@ def exception_issues(manifest: dict[str, Any]) -> list[dict[str, Any]]:
             except ValueError:
                 valid = False
             else:
-                valid = expires > date.today()
+                valid = expires > datetime.now(UTC).date()
         if (
             not valid
             or not identifier

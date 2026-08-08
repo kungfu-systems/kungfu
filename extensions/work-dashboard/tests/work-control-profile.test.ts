@@ -45,22 +45,17 @@ test('Work Control uses the exact-root Profile projection and intent surfaces', 
     cut: { kind: 'system_time', system_time: '42' },
     freshness: { status: 'fresh', basis: 'request-cut' },
     projection_authority: {
-      mode: 'adapter-projection',
-      source: 'atlas-and-kungfu-facts',
+      mode: 'native-fact-projection',
+      source: 'kungfu-facts',
       profileSuiteRoot: 'sha256:profile-root',
       memberRoot: 'sha256:member-root',
       cutSystemTime: '42',
       writableAuthority: false,
     },
-    import_info: null,
     authority: {
       schema: 'kungfu.work-control.authority-status/v1',
-      state: 'pre-cutover',
-      write_authority: 'atlas-adapter',
-      legacy_mutation_path: 'available',
-      migration_id: '',
-      parity_root: '',
-      transition_count: 0,
+      state: 'native-only',
+      write_authority: 'kungfu-native',
     },
     initiatives: [],
     assignments: [],
@@ -117,7 +112,7 @@ test('Work Control uses the exact-root Profile projection and intent surfaces', 
 
   const workControl = openWorkControlProfile(profile);
   const projected = await workControl.dashboard();
-  await workControl.initiativeHome('initiative-a', { source: 'atlas' });
+  await workControl.initiativeHome('initiative-a', { source: 'kungfu' });
   await workControl.createInitiative('initiative-a', {
     title: initiativeInput.title,
     intent: initiativeInput.intent,
@@ -194,7 +189,7 @@ test('Work Control uses the exact-root Profile projection and intent surfaces', 
       operation: 'initiative-home',
       input: {
         initiativeId: 'initiative-a',
-        source: 'atlas',
+        source: 'kungfu',
         cutSystemTime: undefined,
       },
     },

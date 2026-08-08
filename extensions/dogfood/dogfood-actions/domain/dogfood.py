@@ -1549,7 +1549,7 @@ def record_consideration(
         assignment.get("work_definition_root"), "work_definition_root"
     )
     assignment_id = _stable_id(
-        assignment.get("assignment_id") or assignment.get("goal_id"),
+        assignment.get("assignment_id"),
         "assignment_id",
     )
     relevance = relevance_query(

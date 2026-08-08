@@ -20,5 +20,5 @@ test('Work Control exposes one native Initiative and Assignment domain', () => {
   const ids = actions.actions.map((row) => row.id);
   assert(ids.includes('create-initiative'));
   assert(ids.includes('create-assignment'));
-  assert(ids.every((id) => !id.includes('mission') && !id.includes('go')));
+  assert(actions.actions.every((action) => action.compatibility === undefined));
 });

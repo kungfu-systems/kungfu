@@ -19,7 +19,7 @@ from pathlib import Path
 from typing import Any
 
 import kungfu
-from kungfu import profile_sdk
+from kungfu import profile_sdk, work_control
 from kungfu.agent import work_profile
 from kungfu.storage import service
 from kungfu.storage.episode_lifecycle import (
@@ -55,21 +55,13 @@ def _step_receipt(
     return {**body, "receiptRoot": _root(body)}
 
 
-def _file_root(path: Path) -> str:
-    digest = hashlib.sha256()
-    with path.open("rb") as stream:
-        for chunk in iter(lambda: stream.read(1024 * 1024), b""):
-            digest.update(chunk)
-    return "sha256:" + digest.hexdigest()
-
-
 def inspect_native_authority(
     runtime_dir: str | Path, expected: Mapping[str, Any] | None = None
 ) -> dict[str, Any]:
     """Bind one process to its loaded native binary and active Profile root."""
 
     binding_path = Path(kungfu.__binding__.__file__).resolve()
-    binding_root = _file_root(binding_path)
+    binding_root = "sha256:" + hashlib.sha256(binding_path.read_bytes()).hexdigest()
     discovered = profile_sdk.discover_source("kungfu.work-control", runtime_dir)
     application = profile_sdk.application(
         discovered["source"], runtime_dir, include_qualification=False
@@ -600,28 +592,16 @@ def refresh_atlas(runtime_dir: str | Path, payload: dict[str, Any]) -> dict[str,
     }
 
 
-def _mission_action(
-    runtime_dir: str | Path, intent_id: str, values: dict[str, Any]
-) -> dict[str, Any]:
-    from kungfu import profile_sdk
-
-    source = profile_sdk.discover_source("kungfu.work-control", runtime_dir)["source"]
-    plan = profile_sdk.intent_plan(source, runtime_dir, intent_id, values)
-    answer = profile_sdk.answer_decision(plan["decisionCard"], "approve", "action-loop")
-    receipt = profile_sdk.intent_apply(runtime_dir, plan, answer)
-    return receipt["actionReceipt"]["coreReceipt"]
-
-
 def review_completion(
     runtime_dir: str | Path, payload: dict[str, Any]
 ) -> dict[str, Any]:
     completion = payload.get("completion") or {}
     common = {
-        "missionId": completion["missionId"],
-        "goalId": completion["goalId"],
-        "source": completion.get("source") or "atlas",
+        "initiativeId": completion["initiativeId"],
+        "assignmentId": completion["assignmentId"],
+        "source": completion.get("source") or "kungfu",
     }
-    claim = _mission_action(
+    claim = work_control.apply_intent(
         runtime_dir,
         "claim-completion",
         {
@@ -630,7 +610,9 @@ def review_completion(
             "actor": completion.get("actor") or "agent",
             "actorType": completion.get("actorType") or "agent",
             "evidenceEpisodeIds": list(completion.get("evidenceEpisodeIds") or []),
-            "goSet": list(completion.get("goSet") or [completion["goalId"]]),
+            "assignmentSet": list(
+                completion.get("assignmentSet") or [completion["assignmentId"]]
+            ),
             "acceptanceRoot": completion.get("acceptanceRoot") or "",
             "inputAtlasRoot": completion.get("inputAtlasRoot") or "",
             "resultAtlasRoot": payload["envelope"]["roles"]["atlas"]["root"],
@@ -643,7 +625,7 @@ def review_completion(
             "evidenceAvailability": list(completion.get("evidenceAvailability") or []),
         },
     )
-    reviewed = _mission_action(
+    reviewed = work_control.apply_intent(
         runtime_dir,
         "review-completion",
         {
@@ -671,7 +653,7 @@ def review_completion(
             "writeOccurred": True,
         }
     decision_action = completion.get("decisionAction") or "close"
-    decided = _mission_action(
+    decided = work_control.apply_intent(
         runtime_dir,
         "decide-continuation",
         {

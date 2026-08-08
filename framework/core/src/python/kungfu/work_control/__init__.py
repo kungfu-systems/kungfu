@@ -22,6 +22,16 @@ def initiative_bundle(runtime_dir: str | None = None):
     return domain_package(runtime_dir).initiative_bundle
 
 
+def apply_intent(runtime_dir, intent_id, values):
+    """Apply one native Work Control intent through its decision authority."""
+
+    source = profile_sdk.discover_source("kungfu.work-control", runtime_dir)["source"]
+    plan = profile_sdk.intent_plan(source, runtime_dir, intent_id, values)
+    answer = profile_sdk.answer_decision(plan["decisionCard"], "approve", "action-loop")
+    receipt = profile_sdk.intent_apply(runtime_dir, plan, answer)
+    return receipt["actionReceipt"]["coreReceipt"]
+
+
 def __getattr__(name):
     return getattr(domain(), name)
 

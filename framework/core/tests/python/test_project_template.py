@@ -219,8 +219,8 @@ def test_resume_selects_latest_composed_project_work(tmp_path):
             "expiresAt": None,
         },
         "workDefinition": {
-            "goal_id": "assignment-project-work-example",
-            "mission_id": "project-work-example",
+            "assignment_id": "assignment-project-work-example",
+            "initiative_id": "project-work-example",
             "title": "分析商业目标",
             "objective": "分析商业目标并给出行动计划",
             "acceptance_criteria": ["给出一份可行计划"],

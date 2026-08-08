@@ -30685,7 +30685,7 @@
       "class": "public-header-or-entrypoint",
       "generatedProvenance": false,
       "language": "python",
-      "owner": "core/package",
+      "owner": "core/python-assignment-start-review",
       "lines": 3,
       "contentRoot": "sha256:218b972bb321a4b4edd9ad9fc3050eef1956b4dcc609c1dfa3578754fdfb84e6"
     },
@@ -31630,7 +31630,7 @@
       "class": "first-party-handwritten-implementation",
       "generatedProvenance": false,
       "language": "python",
-      "owner": "core/python-initiative-family",
+      "owner": "core/package",
       "lines": 594,
       "contentRoot": "sha256:c350b83573e88171a7c01e3077796da6f6a143e78d8fd5e6c77b1ed6305c79cb"
     },
@@ -44434,5 +44434,5 @@
     }
   ],
   "issues": [],
-  "measurementRoot": "sha256:67a4c459aa5f7a2951eacb3b1fe534a036bb04fdef6bac0c9f1dde14210cefaa"
+  "measurementRoot": "sha256:fb5e8867e1016e28ba61ea0c916179887eba6820791760d951625b4c9e54b210"
 }

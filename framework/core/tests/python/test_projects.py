@@ -396,8 +396,8 @@ def test_project_work_inventory_lists_multiple_captured_work_without_writing(tmp
                 "expiresAt": None,
             },
             "workDefinition": {
-                "goal_id": f"assignment-example-{index}",
-                "mission_id": "project-work-example",
+                "assignment_id": f"assignment-example-{index}",
+                "initiative_id": "project-work-example",
                 "title": f"Example Work {index}",
                 "objective": f"Produce result {index}",
                 "acceptance_criteria": [f"Result {index} is reviewable"],
@@ -439,8 +439,8 @@ def test_project_work_inventory_projects_live_executing_phase(tmp_path):
             "expiresAt": None,
         },
         "workDefinition": {
-            "goal_id": "assignment-example",
-            "mission_id": "project-work-example",
+            "assignment_id": "assignment-example",
+            "initiative_id": "project-work-example",
             "title": "Example Work",
             "objective": "Produce a reviewable result",
             "acceptance_criteria": ["The result is reviewable"],

@@ -38,7 +38,7 @@
           "pointer": {
             "kind": "file",
             "path": "framework/core/src/python/kungfu/agent/cli_surface.catalog.json",
-            "sha256": "2b8b20e5b98334f2e9e94fa641226d151025a4c9d0674c884dac03d419127274"
+            "sha256": "6190a4301bebf43eeb666d249d922c321a1f1c14065917cc2b8bdade931f2c08"
           },
           "description": "Complete deterministic CLI surface graph shared by offline Agent capabilities and catalog parity checks."
         },
@@ -303,7 +303,7 @@
       "source": {
         "kind": "file",
         "path": "framework/agent-work/kungfu-agent-work-state.contract.json",
-        "sha256": "381c75e05ed905bb31c4a5a0cedf1a08836c68f143f914522269d323eff46d96"
+        "sha256": "b4396a3eba9e098d32e3f5617710b9332173d9de005287a30b5d0928b4f96f29"
       },
       "evidence": [
         {
@@ -311,7 +311,7 @@
           "pointer": {
             "kind": "file",
             "path": "docs/adr/KF-ADR-019f86da-4f90-786d-aa24-a97705e13917.md",
-            "sha256": "52972a05c27c0b6da338bcd55f7f60f4e3a97084cec385a315f3703175abab2b"
+            "sha256": "1b9b21b2660105e3c6eba9a5057a8bf91f8d76d40895fdc77b5c7429e9df5aae"
           },
           "description": "Accepted role-separation decision and bounded P17 qualification boundary."
         },
@@ -385,7 +385,7 @@
       "source": {
         "kind": "file",
         "path": "framework/work-lifecycle/kungfu-work-lifecycle-operation-matrix.contract.json",
-        "sha256": "bca8cf2cb144dd05250e3bea9d274394cdf47b141a7795c5a1ffc2d95bcd5ca6"
+        "sha256": "3feacc972ba83311045dd5f6b219fd92827a50c8d6f5240f13cb127908965063"
       },
       "evidence": [
         {

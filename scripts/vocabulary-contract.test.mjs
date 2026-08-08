@@ -51,23 +51,10 @@ function registry() {
     domainProfiles: [
       {
         name: 'Agent Work',
-        terms: ['Initiative', 'Assignment', 'Mission', 'Go'],
+        terms: ['Initiative', 'Assignment'],
       },
     ],
-    compatibilityTerms: [
-      {
-        name: 'Mission',
-        replacement: 'Initiative',
-        status: 'deprecated-for-new-prose',
-        retainedFor: ['legacy-read-projection', 'command-alias'],
-      },
-      {
-        name: 'Go',
-        replacement: 'Assignment',
-        status: 'deprecated-for-new-prose',
-        retainedFor: ['legacy-read-projection', 'command-alias'],
-      },
-    ],
+    compatibilityTerms: [],
     prosePolicy: {
       roots: ['README.md', 'docs'],
       retiredPhrases: [
@@ -150,7 +137,7 @@ test('rejects malformed or unbound compatibility vocabulary', () => {
   const root = fixture();
   const value = registry();
   value.compatibilityTerms.push({
-    name: 'Mission',
+    name: 'FormerTerm',
     replacement: 'Unknown successor',
     status: 'active',
     retainedFor: [],
@@ -159,27 +146,11 @@ test('rejects malformed or unbound compatibility vocabulary', () => {
   assert.ok(
     findings.some((finding) => finding.code === 'vocabulary-compatibility'),
   );
-  assert.ok(
-    findings.some((finding) => finding.code === 'vocabulary-duplicate'),
-  );
 });
 
-test('the repository retires Mission and Go toward their native successors', () => {
+test('the repository retains no compatibility vocabulary', () => {
   const current = readVocabularyRegistry();
-  assert.deepEqual(current.compatibilityTerms, [
-    {
-      name: 'Mission',
-      replacement: 'Initiative',
-      status: 'deprecated-for-new-prose',
-      retainedFor: ['legacy-read-projection', 'command-alias'],
-    },
-    {
-      name: 'Go',
-      replacement: 'Assignment',
-      status: 'deprecated-for-new-prose',
-      retainedFor: ['legacy-read-projection', 'command-alias'],
-    },
-  ]);
+  assert.deepEqual(current.compatibilityTerms, []);
 });
 
 test('projects canonical terms and prose rules into disposable Vale styles', () => {

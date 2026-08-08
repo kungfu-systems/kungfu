@@ -1,6 +1,6 @@
 {
   "schema": "kungfu.assignment.organization-dogfood-report/v1",
-  "goalId": "2026-07-23-kungfu-systems-organization-wide-dogfood-rollout",
+  "assignmentId": "2026-07-23-kungfu-systems-organization-wide-dogfood-rollout",
   "generatedAt": "2026-07-23T11:55:00Z",
   "scope": {
     "organization": "kungfu-systems",

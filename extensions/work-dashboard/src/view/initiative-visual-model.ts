@@ -196,18 +196,22 @@ export function responsibilityActions(
     .filter((value) => value.action);
 }
 
-export type GoalSection = 'attention' | 'in-motion' | 'delegated' | 'closed';
+export type AssignmentSection =
+  | 'attention'
+  | 'in-motion'
+  | 'delegated'
+  | 'closed';
 
-export type GoalClusterMember = {
+export type AssignmentClusterMember = {
   assignment: WorkControlAssignment;
   depth: number;
 };
 
-export type GoalCluster = {
+export type AssignmentCluster = {
   key: string;
   parent: WorkControlAssignment;
-  members: GoalClusterMember[];
-  section: GoalSection;
+  members: AssignmentClusterMember[];
+  section: AssignmentSection;
   matchCount?: number;
 };
 
@@ -225,15 +229,16 @@ const DELEGATED_STATUSES = new Set([
   'proposed',
 ]);
 
-export function classifyGoalCluster(
-  members: GoalClusterMember[],
-  trustByGoal: Readonly<Record<string, VisualTrustState>> = {},
-): GoalSection {
+export function classifyAssignmentCluster(
+  members: AssignmentClusterMember[],
+  trustByAssignment: Readonly<Record<string, VisualTrustState>> = {},
+): AssignmentSection {
   const statuses = members.map(({ assignment }) =>
     assignment.archived ? 'archived' : (assignment.status ?? 'unknown'),
   );
   const trustStates = members.map(
-    ({ assignment }) => trustByGoal[assignment.assignment_id] ?? 'unknown',
+    ({ assignment }) =>
+      trustByAssignment[assignment.assignment_id] ?? 'unknown',
   );
   if (
     statuses.includes('blocked') ||
@@ -255,10 +260,10 @@ export function classifyGoalCluster(
   return 'delegated';
 }
 
-export function buildGoalClusters(
+export function buildAssignmentClusters(
   assignments: WorkControlAssignment[],
-  trustByGoal: Readonly<Record<string, VisualTrustState>> = {},
-): GoalCluster[] {
+  trustByAssignment: Readonly<Record<string, VisualTrustState>> = {},
+): AssignmentCluster[] {
   const byId = new Map(
     assignments.map((assignment) => [assignment.assignment_id, assignment]),
   );
@@ -288,12 +293,12 @@ export function buildGoalClusters(
       left.assignment_id.localeCompare(right.assignment_id),
     );
   const visited = new Set<string>();
-  const clusters: GoalCluster[] = [];
+  const clusters: AssignmentCluster[] = [];
 
   const collect = (
     assignment: WorkControlAssignment,
     depth: number,
-    members: GoalClusterMember[],
+    members: AssignmentClusterMember[],
   ) => {
     if (visited.has(assignment.assignment_id)) return;
     visited.add(assignment.assignment_id);
@@ -304,13 +309,13 @@ export function buildGoalClusters(
   };
 
   const appendCluster = (parent: WorkControlAssignment) => {
-    const members: GoalClusterMember[] = [];
+    const members: AssignmentClusterMember[] = [];
     collect(parent, 0, members);
     clusters.push({
       key: parent.assignment_id,
       parent,
       members,
-      section: classifyGoalCluster(members, trustByGoal),
+      section: classifyAssignmentCluster(members, trustByAssignment),
     });
   };
   roots.forEach(appendCluster);
@@ -354,7 +359,7 @@ function includesOrEmpty(values: string[], actual = ''): boolean {
 function memberMatches(
   assignment: WorkControlAssignment,
   query: AssignmentCardQuerySpec,
-  trustByGoal: Readonly<Record<string, VisualTrustState>>,
+  trustByAssignment: Readonly<Record<string, VisualTrustState>>,
   asOfMs: number,
 ): boolean {
   const closed = isClosedAssignment(assignment);
@@ -372,7 +377,7 @@ function memberMatches(
   if (
     !includesOrEmpty(
       query.trust,
-      trustByGoal[assignment.assignment_id] ?? 'unknown',
+      trustByAssignment[assignment.assignment_id] ?? 'unknown',
     )
   ) {
     return false;
@@ -391,7 +396,7 @@ function memberMatches(
   return true;
 }
 
-const SECTION_PRIORITY: Record<GoalSection, number> = {
+const SECTION_PRIORITY: Record<AssignmentSection, number> = {
   attention: 4,
   'in-motion': 3,
   delegated: 2,
@@ -410,7 +415,7 @@ const TRUST_RISK_PRIORITY: Record<VisualTrustState, number> = {
   established: 1,
 };
 
-function clusterImportance(cluster: GoalCluster): number {
+function clusterImportance(cluster: AssignmentCluster): number {
   return Math.max(
     0,
     ...cluster.members.map(
@@ -421,19 +426,21 @@ function clusterImportance(cluster: GoalCluster): number {
 }
 
 function clusterTrustRisk(
-  cluster: GoalCluster,
-  trustByGoal: Readonly<Record<string, VisualTrustState>>,
+  cluster: AssignmentCluster,
+  trustByAssignment: Readonly<Record<string, VisualTrustState>>,
 ): number {
   return Math.max(
     0,
     ...cluster.members.map(
       ({ assignment }) =>
-        TRUST_RISK_PRIORITY[trustByGoal[assignment.assignment_id] ?? 'unknown'],
+        TRUST_RISK_PRIORITY[
+          trustByAssignment[assignment.assignment_id] ?? 'unknown'
+        ],
     ),
   );
 }
 
-function clusterUpdated(cluster: GoalCluster): number {
+function clusterUpdated(cluster: AssignmentCluster): number {
   return Math.max(
     0,
     ...cluster.members.map(
@@ -447,10 +454,10 @@ function compareText(left: string, right: string): number {
 }
 
 function compareClusters(
-  left: GoalCluster,
-  right: GoalCluster,
+  left: AssignmentCluster,
+  right: AssignmentCluster,
   query: AssignmentCardQuerySpec,
-  trustByGoal: Readonly<Record<string, VisualTrustState>>,
+  trustByAssignment: Readonly<Record<string, VisualTrustState>>,
 ): number {
   const direction = query.sort.direction === 'desc' ? -1 : 1;
   let value = 0;
@@ -459,8 +466,8 @@ function compareClusters(
       const fields: Array<[number, number]> = [
         [SECTION_PRIORITY[left.section], SECTION_PRIORITY[right.section]],
         [
-          clusterTrustRisk(left, trustByGoal),
-          clusterTrustRisk(right, trustByGoal),
+          clusterTrustRisk(left, trustByAssignment),
+          clusterTrustRisk(right, trustByAssignment),
         ],
         [clusterImportance(left), clusterImportance(right)],
         [clusterUpdated(left), clusterUpdated(right)],
@@ -479,8 +486,8 @@ function compareClusters(
       break;
     case 'trust-risk':
       value =
-        clusterTrustRisk(left, trustByGoal) -
-        clusterTrustRisk(right, trustByGoal);
+        clusterTrustRisk(left, trustByAssignment) -
+        clusterTrustRisk(right, trustByAssignment);
       break;
     case 'next-actor':
       value = compareText(
@@ -501,13 +508,13 @@ function compareClusters(
   return value === 0 ? compareText(left.key, right.key) : value * direction;
 }
 
-export function queryGoalClusters(
+export function queryAssignmentClusters(
   assignments: WorkControlAssignment[],
   query: AssignmentCardQuerySpec,
-  trustByGoal: Readonly<Record<string, VisualTrustState>> = {},
+  trustByAssignment: Readonly<Record<string, VisualTrustState>> = {},
   asOfMs = Date.now(),
-): GoalCluster[] {
-  const clusters = buildGoalClusters(assignments, trustByGoal);
+): AssignmentCluster[] {
+  const clusters = buildAssignmentClusters(assignments, trustByAssignment);
   return clusters
     .filter(
       (cluster) =>
@@ -523,7 +530,7 @@ export function queryGoalClusters(
     })
     .map((cluster) => {
       const matching = cluster.members.filter(({ assignment }) =>
-        memberMatches(assignment, query, trustByGoal, asOfMs),
+        memberMatches(assignment, query, trustByAssignment, asOfMs),
       );
       if (matching.length === 0) return null;
       const parentMatches = matching.some(
@@ -545,8 +552,10 @@ export function queryGoalClusters(
       }
       return { ...cluster, members, matchCount: matching.length };
     })
-    .filter((cluster): cluster is GoalCluster => cluster !== null)
-    .sort((left, right) => compareClusters(left, right, query, trustByGoal));
+    .filter((cluster): cluster is AssignmentCluster => cluster !== null)
+    .sort((left, right) =>
+      compareClusters(left, right, query, trustByAssignment),
+    );
 }
 
 export function initiativeIntent(
@@ -567,7 +576,7 @@ export function initiativeStage(
   return initiative?.stage_name?.trim() || 'Undeclared stage';
 }
 
-export function goalStatusGlyph(status = 'unknown'): string {
+export function assignmentStatusGlyph(status = 'unknown'): string {
   if (status === 'blocked') return '!';
   if (CLOSED_STATUSES.has(status)) return '✓';
   if (MOTION_STATUSES.has(status)) return '●';

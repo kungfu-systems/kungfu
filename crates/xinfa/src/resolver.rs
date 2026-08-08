@@ -84,7 +84,7 @@ fn validate_task_envelope(task: &Value) -> Result<(), String> {
             "audience",
             "role",
             "visibility",
-            "mission",
+            "work_context",
             "acceptance",
             "subjects",
             "claims",
@@ -97,7 +97,11 @@ fn validate_task_envelope(task: &Value) -> Result<(), String> {
             "atlas",
         ],
     )?;
-    exact_object(&task["mission"], "/mission", &["id", "lens", "track"])?;
+    exact_object(
+        &task["work_context"],
+        "/work_context",
+        &["id", "lens", "track"],
+    )?;
     exact_object(&task["atlas"], "/atlas", &["atlas_root", "cut_root"])?;
     for pointer in [
         "/acceptance",
@@ -110,7 +114,11 @@ fn validate_task_envelope(task: &Value) -> Result<(), String> {
     ] {
         string_array(task, pointer)?;
     }
-    for pointer in ["/mission/id", "/mission/lens", "/mission/track"] {
+    for pointer in [
+        "/work_context/id",
+        "/work_context/lens",
+        "/work_context/track",
+    ] {
         required_text(task, pointer)?;
     }
     for pointer in ["/requested_route", "/requested_parity_group"] {
@@ -210,7 +218,7 @@ fn candidate(atlas: &Value, task: &Value, route: &Value) -> Value {
         .unwrap_or_default()
         .to_ascii_lowercase();
     let initiative_track = task
-        .pointer("/mission/track")
+        .pointer("/work_context/track")
         .and_then(Value::as_str)
         .unwrap_or_default()
         .to_ascii_lowercase();
@@ -282,7 +290,7 @@ fn candidate(atlas: &Value, task: &Value, route: &Value) -> Value {
     }
     if !initiative_track.is_empty() && route_tracks.contains(&initiative_track) {
         structured_score += 35;
-        evidence.push(json!({"kind": "mission-track", "value": initiative_track}));
+        evidence.push(json!({"kind": "work-track", "value": initiative_track}));
     }
     if route_roles.contains(&role) {
         structured_score += 10;
@@ -449,7 +457,7 @@ pub fn resolve_route_value(atlas: &Value, task: &Value) -> Result<RouteResolutio
         "next_action": if status == "resolved" {
             "create and verify a Task Chart with the selected route"
         } else {
-            "declare exact subjects, capabilities, ownership, Mission track, required authority, or requested_route; then resolve again"
+            "declare exact subjects, capabilities, ownership, work track, required authority, or requested_route; then resolve again"
         },
         "receipt_root": Value::Null
     });
@@ -489,7 +497,7 @@ mod tests {
             "audience": "agent",
             "role": "implementer",
             "visibility": "public",
-            "mission": {"id":"mission","lens":"principal-engineer","track":"core-runtime"},
+            "work_context": {"id":"work_context","lens":"principal-engineer","track":"core-runtime"},
             "acceptance": ["storage evidence remains exact"],
             "subjects": ["core","storage"],
             "claims": ["core.claim.storage"],
@@ -522,7 +530,7 @@ mod tests {
         task["ownership"] = json!([]);
         task["required_authority"] = json!([]);
         task["required_capabilities"] = json!([]);
-        task["mission"]["track"] = json!("unclassified");
+        task["work_context"]["track"] = json!("unclassified");
         let outcome = resolve_route_value(&atlas(), &task).expect("resolution");
         assert!(!outcome.resolved);
         let receipt: Value = serde_json::from_str(&outcome.receipt).expect("receipt JSON");

@@ -4,8 +4,8 @@ doc_type: architecture-decision
 adr_id: KF-ADR-019fdb93-19ac-7362-8ab0-f8ed19c7bef8
 decision_status: accepted
 implementation_status: staged
-implementation_prs: []
-qualification_refs: [framework/assignment-runtime/assignment-runtime.contract.json, framework/assignment-runtime/schema/assignment-runtime-envelope-v1.schema.json, framework/assignment-runtime/fixtures/contract-cases-v1.json, framework/assignment-runtime/assignment-runtime.test.mjs, docs/architecture/assignment-runtime-r0-evidence.md]
+implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/2590, https://github.com/kungfu-systems/kungfu/pull/2618]
+qualification_refs: [framework/assignment-runtime/assignment-runtime.contract.json, framework/assignment-runtime/schema/assignment-runtime-envelope-v1.schema.json, framework/assignment-runtime/fixtures/contract-cases-v1.json, framework/assignment-runtime/assignment-runtime.test.mjs, framework/core/tests/python/test_assignment_runtime.py, docs/architecture/assignment-runtime-r0-evidence.md, docs/architecture/assignment-runtime-r1-local-profile.md]
 review_state: self-reviewed
 sensitivity: public
 sources: [local-files, user-consensus]
@@ -13,13 +13,13 @@ period: 2026-08-07
 theme: local-first-assignment-runtime-api
 confidence: high
 evidence_grade: A
-last_reviewed: 2026-08-07
-ai_provenance: GPT-5 via Codex on 2026-08-07; based on the exact R0 Assignment, current Kungfu source and tests at 9277c15752b810f71e1666fbd1ba777a4b94678d, and the accepted local-first Initiative direction; no claim about an implemented Local or Cluster Runtime
+last_reviewed: 2026-08-08
+ai_provenance: GPT-5 via Codex on 2026-08-08; based on the exact R0 and R1 Assignments, the protected R0 delivery in PR 2590, the linearly replayable R1 candidate in PR 2618, current Kungfu source, and disposable-Home qualification; no claim about GUI, CLI, Agent, KFX, or Cluster Runtime cutover
 ---
 
 # KF-ADR-019fdb93-19ac-7362-8ab0-f8ed19c7bef8: Assignment clients converge on one local-first transport-neutral Runtime API
 
-- Status: accepted; R0 contract staged, runtime implementation deferred
+- Status: accepted; R0 contract staged, R1 Local Profile stage-ready, client cutover deferred
 - Date: 2026-08-07
 - Category: Work Control / Assignment Runtime / client boundary
 - Related: the current Assignment orchestration contract,
@@ -30,8 +30,8 @@ ai_provenance: GPT-5 via Codex on 2026-08-07; based on the exact R0 Assignment, 
 ## Context
 
 Kungfu already has one fact-backed Work Control authority, content-addressed
-Assignment capture, bounded execution leases, append-only phase facts, portable
-sealed state, and compatibility readers. Its clients do not yet share one
+Assignment capture, bounded execution leases, append-only phase facts, and
+portable sealed state. Its clients do not yet share one
 Runtime boundary. The public CLI resolves workspace and runtime coordinates,
 loads Profile source, invokes member adapters, and derives `next_actions`; the
 Work Dashboard calls the same Profile members directly; Agent discovery
@@ -88,15 +88,16 @@ planned before execution and remains revision- and idempotency-fenced.
 
 ### 4. The Local Runtime Profile is the first implementation target
 
-R1 will implement this contract for the selected logical Home or project
-Workspace. The current private `.kungfu` Fact/Episode/runtime tree remains its
+R1 implements this contract for the selected logical Home or project Workspace
+in the stage-ready candidate recorded by PR 2618. The current private
+`.kungfu` Fact/Episode/runtime tree remains its
 initial backing, not its public API. A command is successful only when its
 authoritative receipt is durable; process liveness is diagnostic only. Crash
 and reconnect behavior must reproduce the same revision, cursor, and receipt
 semantics through embedded and loopback adapters.
 
-R1 must retain current compatibility readers and migration seams. It must not
-allow caller-owned storage mutation or enable a second writer during cutover.
+R1 accepts only the current native schemas and identities. It must not allow
+caller-owned storage mutation or enable a second writer during cutover.
 
 ### 5. Client convergence is phased and deletion is evidence-gated
 
@@ -105,10 +106,9 @@ implements and qualifies the Local Runtime Profile. R2 moves GUI reads and
 writes behind a Runtime Client. R3 converges CLI, Agent, and KFX, then performs
 a reverse scan for direct paths and semantic parity.
 
-Existing paths remain visible implementation facts until their successor has
-exact-root parity evidence. A compatibility alias or direct path may be removed
-only through an explicit reviewed deletion gate. No phase uses dual write as a
-migration technique.
+The cutover removes superseded paths after exact-root parity evidence. The
+result exposes one current reader and writer: no alias, dual write, deprecated
+reader, or alternate direct path remains.
 
 ## Falsification and qualification
 
@@ -134,6 +134,5 @@ bypass fixtures. R1-R3 require separate implementation and product evidence.
 Kungfu gains one stable boundary for local-first Assignment clients without
 promoting a storage layout into an API. The explicit revision, generation,
 idempotency, event, and error contract makes a future backend adapter possible
-without prepaying for distributed infrastructure. The cost is a deliberate
-multi-phase migration: existing client paths remain until exact successor
-evidence proves they can be removed.
+without prepaying for distributed infrastructure. The final state contains
+only the native client path.
