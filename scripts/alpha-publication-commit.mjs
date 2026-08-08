@@ -30,7 +30,7 @@ import {
   findAlphaPublicationTailPlan,
   verifyAlphaPublicationTailPlan,
 } from './alpha-publication-tail-plan.mjs';
-import { verifyUpgradePublicationPayloads } from './upgrade-publication-admission.mjs';
+import { verifyUpgradePublicationAdmission } from './upgrade-publication-admission.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const TRUST_PATH = path.join(ROOT, 'product', 'release-channel-trust.json');
@@ -196,10 +196,11 @@ export function prepareAlphaPublication({
       'publication signing key does not match the committed active trust key',
     );
   }
-  const admission = verifyUpgradePublicationPayloads({
+  const admission = verifyUpgradePublicationAdmission({
     payloadRoot: payloadDir,
     releaseCandidatePassportPath: candidatePassportPath,
     expectedVersion: version,
+    expectedSourceSha: sourceSha,
   });
   const generatedAt = now.toISOString();
   const expiresAt = new Date(

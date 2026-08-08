@@ -79,6 +79,10 @@ export function validateWorkflowSources(root, contract, overrides = {}) {
   const preflight = extractWorkflowJob(promotion, 'promotion-contract');
   const promote = extractWorkflowJob(promotion, 'promote');
   const recovery = extractWorkflowJob(promotion, 'recover');
+  const productAdmission = extractWorkflowJob(
+    build,
+    'finalize-upgrade-publication-admission',
+  );
   const rehearsal = extractWorkflowJob(validation, 'promotion-rehearsal');
   const attestation = contract.buildchain.artifact_attestation;
 
@@ -189,6 +193,30 @@ export function validateWorkflowSources(root, contract, overrides = {}) {
     /release-candidate: true/,
     findings,
     'candidate build must remain a Buildchain release candidate',
+  );
+  requirePattern(
+    productAdmission,
+    /needs: build/,
+    findings,
+    'product admission finalization must consume the complete candidate matrix',
+  );
+  requirePattern(
+    productAdmission,
+    /scripts\/upgrade-publication-admission\.mjs write/,
+    findings,
+    'candidate finalization must mint the product admission receipt before publication',
+  );
+  requirePattern(
+    productAdmission,
+    /product-upgrade-publication-admission\.json[\s\S]*product-upgrade-publication-capsule\.json/,
+    findings,
+    'candidate finalization must seal the receipt and capsule together',
+  );
+  requirePattern(
+    productAdmission,
+    /name: kungfu-product-upgrade-publication-admission-\$\{\{ needs\.build\.outputs\.publish-source-sha \}\}/,
+    findings,
+    'candidate finalization must retain the exact source-bound capsule artifact',
   );
   requirePattern(
     build,
@@ -536,9 +564,15 @@ export function validatePromotionContract(
     const publishAdapter = fs.readFileSync(publishAdapterPath, 'utf8');
     requirePattern(
       publishAdapter,
-      /verifyUpgradePublicationPayloads\(\{/,
+      /verifyUpgradePublicationAdmission\(\{/,
       findings,
-      'custom publish evidence must admit retained upgrade payload evidence before publication',
+      'custom publish evidence must validate the sealed product admission receipt',
+    );
+    forbidPattern(
+      publishAdapter,
+      /verifyUpgradePublicationPayloads/,
+      findings,
+      'custom publish evidence must not repeat Kungfu product qualification',
     );
     requirePattern(
       publishAdapter,
@@ -547,6 +581,23 @@ export function validatePromotionContract(
       'custom publish evidence must bind one-command campaign roots into the release passport',
     );
   }
+  const publicationCommitPath = path.join(
+    root,
+    'scripts/alpha-publication-commit.mjs',
+  );
+  const publicationCommit = fs.readFileSync(publicationCommitPath, 'utf8');
+  requirePattern(
+    publicationCommit,
+    /verifyUpgradePublicationAdmission\(\{/,
+    findings,
+    'Alpha publication commit must validate the sealed product admission receipt',
+  );
+  forbidPattern(
+    publicationCommit,
+    /verifyUpgradePublicationPayloads/,
+    findings,
+    'Alpha publication commit must not repeat Kungfu product qualification',
+  );
   const workflows = validateWorkflowSources(root, contract);
   const locks = validateBuildchainLocks(root, contract);
   findings.push(...workflows.findings, ...locks.findings);

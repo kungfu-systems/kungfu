@@ -819,6 +819,26 @@
         "invisible_context_boundary": "unpublished channel credentials, hidden build state, and unretained native evidence are not claimed"
       }
     },
+    "docs/development/publication-admission.md": {
+      "metadata_schema": "kungfu.document-metadata/v1",
+      "document_status": "active",
+      "doc_type": "public-document",
+      "review_state": "self-reviewed",
+      "sensitivity": "public",
+      "confidence": "high",
+      "evidence_grade": "A",
+      "sources": [
+        "architecture-decisions",
+        "local-files"
+      ],
+      "last_reviewed": "2026-08-08",
+      "ai_provenance": {
+        "model_family": "OpenAI GPT-5",
+        "product": "Codex",
+        "generated_at": "2026-08-08",
+        "invisible_context_boundary": "credentials, private provider state, signed URLs, and unpublished release payloads were not read or claimed"
+      }
+    },
     "docs/development/version-release-design.md": {
       "metadata_schema": "kungfu.document-metadata/v1",
       "document_status": "active",

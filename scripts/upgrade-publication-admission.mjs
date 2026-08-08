@@ -3,7 +3,7 @@
 import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 import { assertUpgradePublicationEligible } from '../product/scripts/upgrade-manifest.mjs';
 import {
@@ -17,6 +17,25 @@ const RELEASE_CANDIDATE_CONTRACT =
 const CREDENTIAL_POLICY_PATH =
   'docs/qualification/gates/macos-credential-island-policy.json';
 const CREDENTIAL_EVIDENCE_FILE = 'credential-island-evidence.json';
+const CANDIDATE_PLATFORM_MANIFEST_FILE = 'manifest.json';
+const EXPECTED_CANDIDATE_BUNDLE_ROLES = {
+  'credential-island': 1,
+  'product-support': 1,
+  'product-upgrade': 3,
+};
+const EXPECTED_CANDIDATE_PLATFORM_ROLES = {
+  'credential-island': ['macos-arm64-credential'],
+  'product-support': ['linux-arm64'],
+  'product-upgrade': ['darwin-arm64', 'linux-x64', 'win32-x64'],
+};
+export const PRODUCT_UPGRADE_PUBLICATION_ADMISSION_SCHEMA =
+  'kungfu.product-upgrade.publication-admission/v1';
+export const PRODUCT_UPGRADE_PUBLICATION_CAPSULE_SCHEMA =
+  'kungfu.product-upgrade.publication-candidate-capsule/v1';
+export const PRODUCT_UPGRADE_PUBLICATION_ADMISSION_FILE =
+  'product-upgrade-publication-admission.json';
+export const PRODUCT_UPGRADE_PUBLICATION_CAPSULE_FILE =
+  'product-upgrade-publication-capsule.json';
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const SHA1_PATTERN = /^[a-f0-9]{40}$/i;
 const SHA256_PATTERN = /^sha256:[a-f0-9]{64}$/i;
@@ -77,8 +96,231 @@ function canonical(value) {
   return value;
 }
 
+function contentRoot(value) {
+  return `sha256:${createHash('sha256')
+    .update(JSON.stringify(canonical(value)))
+    .digest('hex')}`;
+}
+
 function sha256File(filePath) {
-  return createHash('sha256').update(fs.readFileSync(filePath)).digest('hex');
+  const digest = createHash('sha256');
+  const descriptor = fs.openSync(filePath, 'r');
+  const buffer = Buffer.allocUnsafe(8 * 1024 * 1024);
+  try {
+    while (true) {
+      const bytesRead = fs.readSync(descriptor, buffer, 0, buffer.length, null);
+      if (bytesRead === 0) break;
+      digest.update(buffer.subarray(0, bytesRead));
+    }
+  } finally {
+    fs.closeSync(descriptor);
+  }
+  return digest.digest('hex');
+}
+
+function fileRoot(filePath) {
+  return `sha256:${sha256File(filePath)}`;
+}
+
+function exactRoot(value, label) {
+  const root = String(value || '').toLowerCase();
+  if (!SHA256_PATTERN.test(root))
+    throw new Error(`${label} is not a SHA-256 root`);
+  return root;
+}
+
+function safeRelative(root, filePath, label) {
+  const relative = path
+    .relative(path.resolve(root), path.resolve(filePath))
+    .split(path.sep)
+    .join('/');
+  if (
+    !relative ||
+    relative.startsWith('../') ||
+    relative === '..' ||
+    path.posix.isAbsolute(relative)
+  ) {
+    throw new Error(`${label} is outside its candidate root`);
+  }
+  return relative;
+}
+
+function candidateBundleIdentity(directory) {
+  const platformManifestPath = path.join(
+    directory,
+    CANDIDATE_PLATFORM_MANIFEST_FILE,
+  );
+  const credentialEvidence = filesNamed(directory, CREDENTIAL_EVIDENCE_FILE);
+  if (credentialEvidence.length > 0) {
+    if (!fs.existsSync(platformManifestPath)) {
+      throw new Error('credential-island bundle has no platform manifest');
+    }
+    const manifest = readJson(
+      platformManifestPath,
+      'credential-island platform manifest',
+    );
+    return {
+      role: 'credential-island',
+      platformId: String(manifest.platform?.id || ''),
+    };
+  }
+  const upgradeManifests = upgradeManifestFiles(directory);
+  if (upgradeManifests.length > 0) {
+    const platformIds = new Set(
+      upgradeManifests.map((manifestPath) =>
+        platformIdentity(readJson(manifestPath, 'upgrade platform manifest')),
+      ),
+    );
+    if (platformIds.size !== 1) {
+      throw new Error(
+        `product-upgrade bundle has multiple platform roles: ${[...platformIds].join(', ')}`,
+      );
+    }
+    return { role: 'product-upgrade', platformId: [...platformIds][0] };
+  }
+  if (fs.existsSync(platformManifestPath)) {
+    const manifest = readJson(
+      platformManifestPath,
+      'product-support platform manifest',
+    );
+    return {
+      role: 'product-support',
+      platformId: String(manifest.platform?.id || ''),
+    };
+  }
+  return null;
+}
+
+function candidateInventory(payloadRoot) {
+  const resolvedRoot = fs.realpathSync(payloadRoot);
+  const files = [];
+  const visit = (directory) => {
+    for (const entry of fs
+      .readdirSync(directory, { withFileTypes: true })
+      .sort((left, right) => left.name.localeCompare(right.name))) {
+      const fullPath = path.join(directory, entry.name);
+      if (entry.isSymbolicLink()) {
+        throw new Error(
+          `candidate payload contains a symbolic link: ${fullPath}`,
+        );
+      }
+      if (entry.isDirectory()) visit(fullPath);
+      else if (entry.isFile()) {
+        files.push({
+          path: safeRelative(resolvedRoot, fullPath, 'candidate file'),
+          size: fs.statSync(fullPath).size,
+          root: fileRoot(fullPath),
+        });
+      }
+    }
+  };
+  const bundleEntries = fs
+    .readdirSync(resolvedRoot, { withFileTypes: true })
+    .filter((entry) => entry.isDirectory())
+    .map((entry) => {
+      const directory = path.join(resolvedRoot, entry.name);
+      return { directory, identity: candidateBundleIdentity(directory) };
+    })
+    .filter((entry) => entry.identity)
+    .sort((left, right) => left.directory.localeCompare(right.directory));
+  const bundleRoots = bundleEntries.map((entry) => entry.directory);
+  for (const bundleRoot of bundleRoots) visit(bundleRoot);
+  files.sort((left, right) => left.path.localeCompare(right.path));
+  const bundles = bundleEntries.map(({ directory: bundleRoot, identity }) => {
+    const name = path.basename(bundleRoot);
+    const bundleFiles = files.filter((file) =>
+      file.path.startsWith(`${name}/`),
+    );
+    return {
+      name,
+      ...identity,
+      fileCount: bundleFiles.length,
+      root: contentRoot(bundleFiles),
+    };
+  });
+  return { files, bundles };
+}
+
+function candidateArtifactRoot(payloadRoot) {
+  const { files, bundles } = candidateInventory(payloadRoot);
+  if (files.length === 0)
+    throw new Error('candidate payload contains no files');
+  return { files, bundles, root: contentRoot(files) };
+}
+
+function assertCandidateBundleRoles(bundles) {
+  const counts = Object.fromEntries(
+    Object.keys(EXPECTED_CANDIDATE_BUNDLE_ROLES).map((role) => [role, 0]),
+  );
+  for (const bundle of bundles) {
+    if (!(bundle.role in counts)) {
+      throw new Error(
+        `candidate payload has an unsupported role: ${bundle.role}`,
+      );
+    }
+    counts[bundle.role] += 1;
+  }
+  for (const [role, expected] of Object.entries(
+    EXPECTED_CANDIDATE_BUNDLE_ROLES,
+  )) {
+    if (counts[role] !== expected) {
+      throw new Error(
+        `candidate payload requires exactly ${expected} ${role} bundle${expected === 1 ? '' : 's'}; found ${counts[role]}`,
+      );
+    }
+    const platforms = bundles
+      .filter((bundle) => bundle.role === role)
+      .map((bundle) => bundle.platformId)
+      .sort();
+    if (
+      JSON.stringify(platforms) !==
+      JSON.stringify(EXPECTED_CANDIDATE_PLATFORM_ROLES[role])
+    ) {
+      throw new Error(
+        `candidate ${role} platform roles must be ${EXPECTED_CANDIDATE_PLATFORM_ROLES[role].join(', ')}; found ${platforms.join(', ') || '<none>'}`,
+      );
+    }
+  }
+}
+
+function candidatePlatformRoot(bundles) {
+  return contentRoot(
+    bundles.map(({ name, role, platformId, root }) => ({
+      name,
+      role,
+      platformId,
+      root,
+    })),
+  );
+}
+
+function toolingRoot() {
+  const files = [
+    'scripts/upgrade-publication-admission.mjs',
+    'scripts/upgrade-qualification.mjs',
+    'product/scripts/upgrade-manifest.mjs',
+  ].map((relativePath) => ({
+    path: relativePath,
+    root: fileRoot(path.join(ROOT, relativePath)),
+  }));
+  return contentRoot(files);
+}
+
+function policyRoot() {
+  return contentRoot({
+    credentialIsland: credentialIslandPolicy(),
+    upgradeQualification: loadUpgradeQualificationContract(),
+  });
+}
+
+function findExactlyOne(root, name, label) {
+  const matches = filesNamed(root, name);
+  if (matches.length !== 1) {
+    throw new Error(
+      `${label} must occur exactly once; found ${matches.length}`,
+    );
+  }
+  return matches[0];
 }
 
 function sha256Summary(files) {
@@ -421,6 +663,38 @@ function platformIdentity(manifest) {
   return `${manifest.platform}-${manifest.architecture}`;
 }
 
+function sortUpdateCampaigns(campaigns) {
+  return campaigns.sort((left, right) =>
+    [left.channel, left.platform, left.architecture, left.installSource]
+      .join('/')
+      .localeCompare(
+        [
+          right.channel,
+          right.platform,
+          right.architecture,
+          right.installSource,
+        ].join('/'),
+      ),
+  );
+}
+
+function projectUpdateCampaigns(platform, architecture, campaigns) {
+  return sortUpdateCampaigns(
+    campaigns.map((campaign) => ({
+      platform,
+      architecture,
+      campaignRoot: campaign.campaignRoot,
+      channelIndexRoot: campaign.candidate.channelIndexRoot,
+      releasePassportRoot: campaign.candidate.releasePassportRoot,
+      channel: campaign.channel,
+      installSource: campaign.installSource,
+      previousVersion: campaign.previousPublic.productVersion,
+      targetVersion: campaign.candidate.productVersion,
+      receiptRoot: campaign.result.receiptRoot,
+    })),
+  );
+}
+
 function verifyBundle({
   bundleRoot,
   evidenceFileName,
@@ -499,16 +773,11 @@ function verifyBundle({
     manifestPath: manifestPaths[0],
     manifestPaths: manifestPaths.length,
     evidenceRef: evidence.evidenceRef,
-    campaigns: evidence.campaigns.map((campaign) => ({
-      campaignRoot: campaign.campaignRoot,
-      channelIndexRoot: campaign.candidate.channelIndexRoot,
-      releasePassportRoot: campaign.candidate.releasePassportRoot,
-      channel: campaign.channel,
-      installSource: campaign.installSource,
-      previousVersion: campaign.previousPublic.productVersion,
-      targetVersion: campaign.candidate.productVersion,
-      receiptRoot: campaign.result.receiptRoot,
-    })),
+    updateCampaigns: projectUpdateCampaigns(
+      manifest.platform,
+      manifest.architecture,
+      evidence.campaigns,
+    ),
   };
 }
 
@@ -615,36 +884,19 @@ export function verifyUpgradePublicationPayloads({
     evidenceRefs: admitted.map((item) => item.evidenceRef).sort(),
     campaignRoots: admitted
       .flatMap((item) =>
-        item.campaigns.map((campaign) => campaign.campaignRoot),
+        item.updateCampaigns.map((campaign) => campaign.campaignRoot),
       )
       .sort(),
     channelIndexRoots: [
       ...new Set(
         admitted.flatMap((item) =>
-          item.campaigns.map((campaign) => campaign.channelIndexRoot),
+          item.updateCampaigns.map((campaign) => campaign.channelIndexRoot),
         ),
       ),
     ].sort(),
-    updateCampaigns: admitted
-      .flatMap((item) =>
-        item.campaigns.map((campaign) => ({
-          platform: item.platform,
-          architecture: item.architecture,
-          ...campaign,
-        })),
-      )
-      .sort((left, right) =>
-        [left.channel, left.platform, left.architecture, left.installSource]
-          .join('/')
-          .localeCompare(
-            [
-              right.channel,
-              right.platform,
-              right.architecture,
-              right.installSource,
-            ].join('/'),
-          ),
-      ),
+    updateCampaigns: sortUpdateCampaigns(
+      admitted.flatMap((item) => item.updateCampaigns),
+    ),
     manifests: admitted
       .map(({ platform, architecture, manifestPath }) => ({
         platform,
@@ -658,4 +910,490 @@ export function verifyUpgradePublicationPayloads({
       ),
     credentialIsland: credentialIsland[0],
   };
+}
+
+function receiptAdmission(admission, payloadRoot) {
+  return {
+    releasePassportRoot: admission.releasePassportRoot,
+    platforms: admission.platforms,
+    evidenceRefs: admission.evidenceRefs,
+    campaignRoots: admission.campaignRoots,
+    channelIndexRoots: admission.channelIndexRoots,
+    updateCampaigns: admission.updateCampaigns,
+    manifests: admission.manifests.map((entry) => ({
+      platform: entry.platform,
+      architecture: entry.architecture,
+      path: safeRelative(payloadRoot, entry.manifestPath, 'upgrade manifest'),
+    })),
+    credentialIsland: {
+      platformId: admission.credentialIsland.platformId,
+      runtimeSha: admission.credentialIsland.runtimeSha,
+      certificateSha1: admission.credentialIsland.certificateSha1,
+      notarizationIds: admission.credentialIsland.notarizationIds,
+      manifestPath: safeRelative(
+        payloadRoot,
+        admission.credentialIsland.manifestPath,
+        'credential manifest',
+      ),
+      evidencePath: safeRelative(
+        payloadRoot,
+        admission.credentialIsland.evidencePath,
+        'credential evidence',
+      ),
+    },
+  };
+}
+
+export function createUpgradePublicationAdmission({
+  payloadRoot,
+  releaseCandidatePassportPath,
+  expectedVersion,
+  expectedPlatforms,
+} = {}) {
+  const resolvedPayloadRoot = fs.realpathSync(payloadRoot);
+  const resolvedPassportPath = fs.realpathSync(releaseCandidatePassportPath);
+  const admission = verifyUpgradePublicationPayloads({
+    payloadRoot: resolvedPayloadRoot,
+    releaseCandidatePassportPath: resolvedPassportPath,
+    expectedVersion,
+    expectedPlatforms,
+  });
+  const passport = readJson(resolvedPassportPath, 'release-candidate passport');
+  const sources = [...releaseCandidateSources(passport)].sort();
+  const artifacts = candidateArtifactRoot(resolvedPayloadRoot);
+  assertCandidateBundleRoles(artifacts.bundles);
+  const passportByteRoot = fileRoot(resolvedPassportPath);
+  const roots = {
+    source: contentRoot(sources),
+    tooling: toolingRoot(),
+    candidate: contentRoot({
+      artifactRoot: artifacts.root,
+      passportRoot: passportByteRoot,
+    }),
+    artifact: artifacts.root,
+    platform: candidatePlatformRoot(artifacts.bundles),
+    campaign: contentRoot(admission.updateCampaigns),
+    policy: policyRoot(),
+    passport: passportByteRoot,
+    credential: contentRoot({
+      manifestRoot: fileRoot(admission.credentialIsland.manifestPath),
+      evidenceRoot: fileRoot(admission.credentialIsland.evidencePath),
+    }),
+  };
+  const body = {
+    schema: PRODUCT_UPGRADE_PUBLICATION_ADMISSION_SCHEMA,
+    status: 'admitted',
+    identity: { version: expectedVersion, sources },
+    roots,
+    candidate: {
+      bundleCount: artifacts.bundles.length,
+      bundles: artifacts.bundles,
+      fileCount: artifacts.files.length,
+      files: artifacts.files,
+    },
+    admission: receiptAdmission(admission, resolvedPayloadRoot),
+    claims: {
+      deterministicProductAdmission: true,
+      externalPublication: false,
+      notarizationAuthority: false,
+      publicReadback: false,
+    },
+  };
+  return { ...body, receiptRoot: contentRoot(body) };
+}
+
+export function writeUpgradePublicationAdmission({
+  outputPath,
+  capsulePath,
+  ...options
+} = {}) {
+  if (!outputPath) throw new Error('product admission output path is required');
+  const resolvedOutputPath = path.resolve(outputPath);
+  const resolvedCapsulePath = path.resolve(
+    capsulePath ||
+      path.join(
+        path.dirname(resolvedOutputPath),
+        PRODUCT_UPGRADE_PUBLICATION_CAPSULE_FILE,
+      ),
+  );
+  if (path.dirname(resolvedOutputPath) !== path.dirname(resolvedCapsulePath)) {
+    throw new Error(
+      'product admission receipt and capsule must share one directory',
+    );
+  }
+  const receipt = createUpgradePublicationAdmission(options);
+  fs.mkdirSync(path.dirname(resolvedOutputPath), { recursive: true });
+  fs.writeFileSync(resolvedOutputPath, `${JSON.stringify(receipt, null, 2)}\n`);
+  const capsuleBody = {
+    schema: PRODUCT_UPGRADE_PUBLICATION_CAPSULE_SCHEMA,
+    candidateRoot: receipt.roots.candidate,
+    artifactRoot: receipt.roots.artifact,
+    passportRoot: receipt.roots.passport,
+    admission: {
+      path: path.basename(resolvedOutputPath),
+      receiptRoot: receipt.receiptRoot,
+      fileRoot: fileRoot(resolvedOutputPath),
+    },
+  };
+  const capsule = { ...capsuleBody, capsuleRoot: contentRoot(capsuleBody) };
+  fs.writeFileSync(
+    resolvedCapsulePath,
+    `${JSON.stringify(capsule, null, 2)}\n`,
+  );
+  return {
+    receipt,
+    capsule,
+    outputPath: resolvedOutputPath,
+    capsulePath: resolvedCapsulePath,
+  };
+}
+
+function admittedFile(payloadRoot, relativePath, label) {
+  const filePath = path.resolve(payloadRoot, relativePath || '');
+  safeRelative(payloadRoot, filePath, label);
+  if (!fs.existsSync(filePath) || !fs.statSync(filePath).isFile()) {
+    throw new Error(`${label} is missing: ${relativePath || '<empty>'}`);
+  }
+  if (fs.lstatSync(filePath).isSymbolicLink()) {
+    throw new Error(`${label} is a symbolic link: ${relativePath}`);
+  }
+  const resolvedRelative = path.relative(
+    fs.realpathSync(payloadRoot),
+    fs.realpathSync(filePath),
+  );
+  if (resolvedRelative.startsWith('..') || path.isAbsolute(resolvedRelative)) {
+    throw new Error(`${label} resolves outside its candidate root`);
+  }
+  return filePath;
+}
+
+export function verifyUpgradePublicationAdmission({
+  payloadRoot,
+  releaseCandidatePassportPath,
+  expectedVersion,
+  expectedSourceSha,
+  receiptPath,
+  capsulePath,
+} = {}) {
+  if (!payloadRoot || !fs.existsSync(payloadRoot)) {
+    throw new Error('product admission payload root is missing');
+  }
+  if (
+    !releaseCandidatePassportPath ||
+    !fs.existsSync(releaseCandidatePassportPath)
+  ) {
+    throw new Error('product admission release-candidate passport is missing');
+  }
+  const resolvedPayloadRoot = fs.realpathSync(payloadRoot);
+  const resolvedPassportPath = fs.realpathSync(releaseCandidatePassportPath);
+  const resolvedReceiptPath = receiptPath
+    ? fs.realpathSync(receiptPath)
+    : findExactlyOne(
+        resolvedPayloadRoot,
+        PRODUCT_UPGRADE_PUBLICATION_ADMISSION_FILE,
+        'product admission receipt',
+      );
+  const resolvedCapsulePath = capsulePath
+    ? fs.realpathSync(capsulePath)
+    : findExactlyOne(
+        resolvedPayloadRoot,
+        PRODUCT_UPGRADE_PUBLICATION_CAPSULE_FILE,
+        'product admission capsule',
+      );
+  const receipt = readJson(resolvedReceiptPath, 'product admission receipt');
+  if (
+    receipt.schema !== PRODUCT_UPGRADE_PUBLICATION_ADMISSION_SCHEMA ||
+    receipt.status !== 'admitted'
+  ) {
+    throw new Error('product admission receipt contract is unsupported');
+  }
+  const { receiptRoot, ...receiptBody } = receipt;
+  if (
+    exactRoot(receiptRoot, 'product admission receipt root') !==
+    contentRoot(receiptBody)
+  ) {
+    throw new Error('product admission receipt root drift');
+  }
+  const capsule = readJson(resolvedCapsulePath, 'product admission capsule');
+  if (capsule.schema !== PRODUCT_UPGRADE_PUBLICATION_CAPSULE_SCHEMA) {
+    throw new Error('product admission capsule contract is unsupported');
+  }
+  const { capsuleRoot, ...capsuleBody } = capsule;
+  if (
+    exactRoot(capsuleRoot, 'product admission capsule root') !==
+    contentRoot(capsuleBody)
+  ) {
+    throw new Error('product admission capsule root drift');
+  }
+  if (
+    capsule.admission?.path !== path.basename(resolvedReceiptPath) ||
+    capsule.admission?.receiptRoot !== receipt.receiptRoot ||
+    capsule.admission?.fileRoot !== fileRoot(resolvedReceiptPath)
+  ) {
+    throw new Error('product admission receipt is not sealed by its capsule');
+  }
+  const artifacts = candidateArtifactRoot(resolvedPayloadRoot);
+  const passportByteRoot = fileRoot(resolvedPassportPath);
+  const passport = readJson(resolvedPassportPath, 'release-candidate passport');
+  const sources = [...releaseCandidateSources(passport)].sort();
+  const expectedCandidateRoot = contentRoot({
+    artifactRoot: artifacts.root,
+    passportRoot: passportByteRoot,
+  });
+  const currentRoots = {
+    source: contentRoot(sources),
+    artifact: artifacts.root,
+    passport: passportByteRoot,
+    candidate: expectedCandidateRoot,
+    tooling: toolingRoot(),
+    policy: policyRoot(),
+    platform: candidatePlatformRoot(artifacts.bundles),
+  };
+  for (const [name, current] of Object.entries(currentRoots)) {
+    if (receipt.roots?.[name] !== current) {
+      throw new Error(`product admission ${name} root drift`);
+    }
+  }
+  if (
+    receipt.candidate?.bundleCount !== artifacts.bundles.length ||
+    JSON.stringify(canonical(receipt.candidate?.bundles || [])) !==
+      JSON.stringify(canonical(artifacts.bundles)) ||
+    receipt.candidate?.fileCount !== artifacts.files.length ||
+    contentRoot(receipt.candidate?.files || []) !== artifacts.root ||
+    JSON.stringify(canonical(receipt.candidate?.files || [])) !==
+      JSON.stringify(canonical(artifacts.files))
+  ) {
+    throw new Error('product admission candidate file inventory drift');
+  }
+  assertCandidateBundleRoles(artifacts.bundles);
+  if (
+    JSON.stringify(receipt.identity?.sources || []) !== JSON.stringify(sources)
+  ) {
+    throw new Error('product admission source inventory drift');
+  }
+  if (
+    receipt.admission?.releasePassportRoot !==
+    qualificationContentRoot(passport)
+  ) {
+    throw new Error('product admission release Passport semantic root drift');
+  }
+  if (
+    capsule.artifactRoot !== artifacts.root ||
+    capsule.passportRoot !== passportByteRoot ||
+    capsule.candidateRoot !== expectedCandidateRoot
+  ) {
+    throw new Error('product admission capsule candidate root drift');
+  }
+  if (expectedVersion && receipt.identity?.version !== expectedVersion) {
+    throw new Error(
+      `product admission version is stale: expected ${expectedVersion}, got ${receipt.identity?.version || '<empty>'}`,
+    );
+  }
+  if (
+    expectedSourceSha &&
+    !receipt.identity?.sources?.includes(expectedSourceSha)
+  ) {
+    throw new Error('product admission source is stale');
+  }
+  const evidenceFileName =
+    loadUpgradeQualificationContract().publication?.evidenceFileName;
+  if (!evidenceFileName) {
+    throw new Error(
+      'upgrade qualification contract has no publication evidence file name',
+    );
+  }
+  const manifests = (receipt.admission?.manifests || []).map((entry) => {
+    const manifestPath = admittedFile(
+      resolvedPayloadRoot,
+      entry.path,
+      'admitted manifest',
+    );
+    const manifest = readJson(manifestPath, 'admitted upgrade manifest');
+    if (
+      manifest.schema !== RELEASE_MANIFEST_SCHEMA ||
+      manifest.platform !== entry.platform ||
+      manifest.architecture !== entry.architecture ||
+      manifest.productVersion !== receipt.identity?.version ||
+      !sources.includes(manifest.sourceCommit)
+    ) {
+      throw new Error('admitted manifest identity drift');
+    }
+    const bundleName = entry.path.split('/')[0];
+    const bundleRoot = path.join(resolvedPayloadRoot, bundleName);
+    const evidencePath = findExactlyOne(
+      bundleRoot,
+      evidenceFileName,
+      'admitted upgrade evidence',
+    );
+    const evidence = readJson(evidencePath, 'admitted upgrade evidence');
+    if (
+      evidence.evidenceRef !== manifest.qualificationEvidenceRef ||
+      evidence.platform !== manifest.platform ||
+      evidence.architecture !== manifest.architecture
+    ) {
+      throw new Error('admitted upgrade evidence identity drift');
+    }
+    return {
+      platform: entry.platform,
+      architecture: entry.architecture,
+      manifestPath,
+      evidenceRef: evidence.evidenceRef,
+      updateCampaigns: projectUpdateCampaigns(
+        manifest.platform,
+        manifest.architecture,
+        evidence.campaigns || [],
+      ),
+      bundleName,
+    };
+  });
+  const expectedUpgradeBundles = artifacts.bundles
+    .filter((bundle) => bundle.role === 'product-upgrade')
+    .map((bundle) => bundle.name)
+    .sort();
+  const admittedUpgradeBundles = manifests
+    .map((manifest) => manifest.bundleName)
+    .sort();
+  if (
+    JSON.stringify(admittedUpgradeBundles) !==
+    JSON.stringify(expectedUpgradeBundles)
+  ) {
+    throw new Error('product admission manifest bundle inventory drift');
+  }
+  const updateCampaigns = sortUpdateCampaigns(
+    manifests.flatMap((manifest) => manifest.updateCampaigns),
+  );
+  const campaignRoots = updateCampaigns
+    .map((campaign) => campaign.campaignRoot)
+    .sort();
+  const channelIndexRoots = [
+    ...new Set(updateCampaigns.map((campaign) => campaign.channelIndexRoot)),
+  ].sort();
+  const evidenceRefs = manifests.map((manifest) => manifest.evidenceRef).sort();
+  const platforms = manifests
+    .map((manifest) => `${manifest.platform}-${manifest.architecture}`)
+    .sort();
+  if (
+    receipt.roots?.campaign !== contentRoot(updateCampaigns) ||
+    JSON.stringify(canonical(receipt.admission?.updateCampaigns || [])) !==
+      JSON.stringify(canonical(updateCampaigns)) ||
+    JSON.stringify(receipt.admission?.campaignRoots || []) !==
+      JSON.stringify(campaignRoots) ||
+    JSON.stringify(receipt.admission?.channelIndexRoots || []) !==
+      JSON.stringify(channelIndexRoots) ||
+    JSON.stringify(receipt.admission?.evidenceRefs || []) !==
+      JSON.stringify(evidenceRefs) ||
+    JSON.stringify(receipt.admission?.platforms || []) !==
+      JSON.stringify(platforms)
+  ) {
+    throw new Error('product admission campaign projection drift');
+  }
+  const credentialManifestPath = admittedFile(
+    resolvedPayloadRoot,
+    receipt.admission?.credentialIsland?.manifestPath,
+    'admitted credential manifest',
+  );
+  const credentialEvidencePath = admittedFile(
+    resolvedPayloadRoot,
+    receipt.admission?.credentialIsland?.evidencePath,
+    'admitted credential evidence',
+  );
+  const credentialRoot = contentRoot({
+    manifestRoot: fileRoot(credentialManifestPath),
+    evidenceRoot: fileRoot(credentialEvidencePath),
+  });
+  if (receipt.roots?.credential !== credentialRoot) {
+    throw new Error('product admission credential root drift');
+  }
+  const credentialManifest = readJson(
+    credentialManifestPath,
+    'admitted credential manifest',
+  );
+  const credentialEvidence = readJson(
+    credentialEvidencePath,
+    'admitted credential evidence',
+  );
+  const credentialIsland = receipt.admission?.credentialIsland;
+  if (
+    credentialIsland?.platformId !== credentialManifest.platform?.id ||
+    credentialIsland?.runtimeSha !==
+      credentialEvidence.buildchain?.runtimeSha ||
+    credentialIsland?.certificateSha1 !==
+      credentialEvidence.identity?.certificateSha1 ||
+    JSON.stringify(credentialIsland?.notarizationIds || []) !==
+      JSON.stringify([
+        credentialEvidence.notarization?.application?.id,
+        credentialEvidence.notarization?.diskImage?.id,
+      ])
+  ) {
+    throw new Error('product admission credential projection drift');
+  }
+  return {
+    ...receipt.admission,
+    manifests: manifests.map(({ platform, architecture, manifestPath }) => ({
+      platform,
+      architecture,
+      manifestPath,
+    })),
+    version: receipt.identity.version,
+    receiptRoot: receipt.receiptRoot,
+    capsuleRoot: capsule.capsuleRoot,
+    candidateRoot: receipt.roots.candidate,
+    artifactRoot: receipt.roots.artifact,
+  };
+}
+
+function option(args, name) {
+  const index = args.indexOf(name);
+  if (index < 0 || index + 1 >= args.length) {
+    throw new Error(`${name} is required`);
+  }
+  return args[index + 1];
+}
+
+function cli() {
+  const [command, ...args] = process.argv.slice(2);
+  const common = {
+    payloadRoot: option(args, '--payload-root'),
+    releaseCandidatePassportPath: option(args, '--passport'),
+    expectedVersion: option(args, '--version'),
+  };
+  if (command === 'write') {
+    const result = writeUpgradePublicationAdmission({
+      ...common,
+      outputPath: option(args, '--output'),
+      capsulePath: option(args, '--capsule'),
+    });
+    process.stdout.write(
+      `${JSON.stringify({ status: 'admitted', receiptRoot: result.receipt.receiptRoot, capsuleRoot: result.capsule.capsuleRoot })}\n`,
+    );
+    return;
+  }
+  if (command === 'verify') {
+    const result = verifyUpgradePublicationAdmission({
+      ...common,
+      receiptPath: option(args, '--receipt'),
+      capsulePath: option(args, '--capsule'),
+    });
+    process.stdout.write(
+      `${JSON.stringify({ status: 'verified', receiptRoot: result.receiptRoot, capsuleRoot: result.capsuleRoot })}\n`,
+    );
+    return;
+  }
+  throw new Error(
+    'usage: upgrade-publication-admission.mjs <write|verify> --payload-root DIR --passport FILE --version VERSION --output FILE --receipt FILE --capsule FILE',
+  );
+}
+
+if (
+  process.argv[1] &&
+  import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href
+) {
+  try {
+    cli();
+  } catch (error) {
+    process.stderr.write(
+      `upgrade-publication-admission: ${error instanceof Error ? error.message : String(error)}\n`,
+    );
+    process.exitCode = 1;
+  }
 }
