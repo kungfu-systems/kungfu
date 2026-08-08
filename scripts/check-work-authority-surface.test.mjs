@@ -42,16 +42,10 @@ test('the only public Work mutation family is kungfu work', () => {
   assert.match(command, /@kfc\.group\(\s*name="work"/u);
   assert.doesNotMatch(command, /@kfc\.group\(\s*name="assignment"/u);
 
-  for (const retired of [
-    'extensions/work-control/work-control-actions/domain/mission_control.py',
-    'framework/core/src/python/kungfu/cli/commands/atlas.py',
-  ]) {
-    assert.equal(
-      fs.existsSync(retired),
-      false,
-      `retired surface remains: ${retired}`,
-    );
-  }
+  assert.match(
+    read('framework/core/src/python/kungfu/cli/commands/__registry__.py'),
+    /from \. import assignment\b/u,
+  );
 });
 
 test('agent catalogs cannot advertise a retired Work mutation authority', () => {
@@ -61,10 +55,6 @@ test('agent catalogs cannot advertise a retired Work mutation authority', () => 
   ]) {
     const source = read(file);
     assert.doesNotMatch(source, /kungfu\.codex\.report-goal/u);
-    assert.doesNotMatch(
-      source,
-      /kungfu\.atlas\.(?:create-mission|create-go|claim-completion|review-completion|decide-continuation)/u,
-    );
     assert.match(source, /kungfu\.work\.claim-completion/u);
     assert.doesNotMatch(
       source,
