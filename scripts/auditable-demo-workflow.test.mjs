@@ -80,6 +80,32 @@ test('one exact Buildchain workflow owns every declared demo', () => {
   );
 });
 
+test('native 720p keeps full-width terminal coverage without copying 1080p geometry', () => {
+  assert.deepEqual(scenario.renditions, [
+    {
+      id: '1080p',
+      role: 'primary',
+      columns: 150,
+      rows: 36,
+      width: 1920,
+      height: 1080,
+    },
+    {
+      id: '720p',
+      role: 'responsive',
+      columns: 150,
+      rows: 28,
+      width: 1280,
+      height: 720,
+    },
+  ]);
+  assert.notEqual(
+    scenario.renditions[0].rows,
+    scenario.renditions[1].rows,
+    '720p must remain an independently reflowed native PTY',
+  );
+});
+
 test('Kungfu owns the ordered three-proof argument while Buildchain updates only media', () => {
   assert.equal(
     scenario.presentation.schema,
@@ -147,7 +173,7 @@ test('the build fails the real transported binary before either upload path', ()
   );
   assert.equal(
     demo.uses,
-    'kungfu-systems/buildchain/.github/workflows/.declarative-auditable-demo.yml@2e7e07902ac28d8f3edcfb81098ef9ebc7a91878',
+    'kungfu-systems/buildchain/.github/workflows/.declarative-auditable-demo.yml@f7a98257a32624a63be2a935d7b884d6e872e07e',
   );
   assert.equal(
     build.with['pre-upload-transport-smoke-scenario-path'],
@@ -189,9 +215,9 @@ test('the exact same-run artifact contains the standalone demo distribution', ()
     'kungfu.declarative-demo-binary/v1',
   );
   assert.deepEqual(scenario.artifact.runtimeDependencies, []);
-  assert.match(
+  assert.equal(
     demo.with['renderer-image'],
-    /^ghcr\.io\/kungfu-systems\/build-images\/demo-renderer@sha256:[0-9a-f]{64}$/u,
+    'ghcr.io/kungfu-systems/build-images/demo-renderer@sha256:3a49708163fedaaabe07b45bba910026a1828151b5d4e9bbdaf0d62e75c927c1',
   );
 });
 
