@@ -63,6 +63,10 @@ export function kungfuBuildchainRuntimePolicy(policy, channel) {
     throw new Error(`Kungfu Buildchain runtime is not pinned for ${channel}`);
   if (!/^[0-9a-f]{40}$/.test(String(runtime.runtimeSha || '')))
     throw new Error(`Kungfu Buildchain runtime SHA is invalid for ${channel}`);
+  if (!/^[0-9a-f]{40}$/.test(String(runtime.publicationRuntimeSha || '')))
+    throw new Error(
+      `Kungfu Buildchain publication runtime SHA is invalid for ${channel}`,
+    );
   normalizeDigest(runtime.contractDigest, `${channel} contract digest`);
   if (!runtime.ref || !runtime.contractLock)
     throw new Error(
@@ -191,7 +195,7 @@ export async function createKungfuConsumerPublicationDecision({
   exact(capability?.environment, policy.publication.environment, 'environment');
   exact(capability?.product, policy.publication.product, 'product');
   exact(capability?.target, policy.publication.target, 'target');
-  exact(capability?.runtimeSha, runtime.runtimeSha, 'runtime SHA');
+  exact(capability?.runtimeSha, runtime.publicationRuntimeSha, 'runtime SHA');
   if (
     normalizeDigest(capability?.contractDigest, 'capability.contractDigest') !==
     normalizeDigest(runtime.contractDigest, 'policy.contractDigest')

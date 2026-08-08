@@ -51,6 +51,16 @@ execution; Shifu owns how the task is executed after source checkout.
   Run
   `./shifu check:production-graph` to emit the exact protected-CI verification
   receipt over the deterministic conformance fixtures.
+  The additive `./shifu core:affected:graph-shadow` route is the first bounded
+  external consumer. It requires an exact graph, compiled plan, and
+  `./shifu production-graph:verify` receipt; admits only one dependency-free
+  `core:affected` node with the Core native qualification authority; and then
+  delegates planning and execution to the unchanged `core:affected` command.
+  Shadow events and receipts bind the current plan, toolchain, raw current
+  receipt, exit status, and parity result under the operating system temporary
+  root. Nonzero exits and cancellation remain non-qualifying. Removing or
+  disabling this route leaves the independently authoritative
+  `./shifu core:affected` path unchanged.
 - [`.xinfa/project.json`](../../.xinfa/project.json) is the project-owned semantic declaration consumed by Xinfa. [`shifu.documentation.surfaces.json`](../../shifu.documentation.surfaces.json) is only a compatibility alias and carries no independent policy.
   classifies every tracked human-readable surface plus explicit product and
   Agent surfaces. Shifu closes the exact-path inventory; Xinfa remains the sole

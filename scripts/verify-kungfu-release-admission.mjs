@@ -168,7 +168,13 @@ function validatePolicy(root, policy) {
     const runtime = kungfuBuildchainRuntimePolicy(policy, channel);
     exactKeys(
       runtime,
-      ['ref', 'runtimeSha', 'contractDigest', 'contractLock'],
+      [
+        'ref',
+        'runtimeSha',
+        'publicationRuntimeSha',
+        'contractDigest',
+        'contractLock',
+      ],
       `buildchain.runtimes.${channel}`,
     );
     const lock = readJson(root, runtime.contractLock);
@@ -299,7 +305,7 @@ export async function verifyKungfuReleaseAdmission({
   const fixedBindings = {
     repository: policy.repository,
     publisherWorkflowPath: policy.publication.publisherWorkflowPath,
-    runtimeSha: runtime.runtimeSha,
+    runtimeSha: runtime.publicationRuntimeSha,
     contractDigest: runtime.contractDigest.replace(/^sha256:/, ''),
     environment: policy.publication.environment,
     product: policy.publication.product,

@@ -173,7 +173,7 @@ test('the build fails the real transported binary before either upload path', ()
   );
   assert.equal(
     demo.uses,
-    'kungfu-systems/buildchain/.github/workflows/.declarative-auditable-demo.yml@f7a98257a32624a63be2a935d7b884d6e872e07e',
+    'kungfu-systems/buildchain/.github/workflows/.declarative-auditable-demo.yml@ba41d9c165a5d4f251a6c4af30c32b5a417865d2',
   );
   assert.equal(
     build.with['pre-upload-transport-smoke-scenario-path'],
