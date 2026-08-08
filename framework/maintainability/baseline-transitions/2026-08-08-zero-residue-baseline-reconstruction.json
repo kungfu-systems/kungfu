@@ -1,0 +1,29 @@
+{
+  "schema": "kungfu.code-complexity-baseline-reconstruction/v1",
+  "expected_old_measurement_root": "sha256:4fd6d3566bd76b1f999f8528bd3bb60f301a4616fc56c971ff421c5ec22a7b2f",
+  "expected_old_baseline_ref": "a7605d74513867b94851a6763c51fcdc803e5d30",
+  "new_measurement_root": "sha256:7da19216c83c9f679717692eea00769bcd6e2220b9d69d9878aaaf9193e5bfb3",
+  "new_baseline_ref": "0522cacca70ee07ed4fefde64534d848ecb1c06f",
+  "changed_measurements": 1513,
+  "aggregate_line_delta": 1718253,
+  "change_manifest_root": "sha256:aa76ad4fcc18d285f7227b89fa8383fad653e0ce1bbaf5307e29018207f9e341",
+  "reconstruction_scope": "full-exact-baseline",
+  "reconstruction_reason_codes": [
+    "protected-baseline-lag",
+    "retained-evidence-scale"
+  ],
+  "requested_by": "keren.dong+cx@kungfu.link",
+  "reason": "Reconstruct the exact protected complexity baseline after accumulated source and retained-evidence growth, including complete removal of obsolete project-specific compatibility surfaces.",
+  "retirement_or_decomposition_ref": "https://github.com/kungfu-systems/kungfu/pull/2598",
+  "approval_receipt": {
+    "schema": "kungfu.code-complexity-budget-approval-receipt/v1",
+    "authority_id": "kungfu-origin-complexity-transition-review",
+    "key_id": "ed25519-668812bf28659460",
+    "algorithm": "ed25519",
+    "issued_at": "2026-08-08T10:24:00Z",
+    "approved_at": "2026-08-08T10:25:00Z",
+    "expires_at": "2026-08-15T10:25:00Z",
+    "authorization_root": "sha256:5d79d017a8bbab0fccfb51dbb6a46874ecedd375311a4f05a590b9366fae47e1",
+    "signature": "+39r9z2xy882rTuicw02tHhShT7uPsIb2WUtjW636N5ctajJrF+JYRDQVrke4e8b6zFCKjR8/YWB+cCNFasxCQ=="
+  }
+}
