@@ -330,6 +330,8 @@ test('CLI product materializes symlinked demo executables as regular files', (t)
   assert.equal(fs.lstatSync(python).isSymbolicLink(), false);
   assert.equal(fs.readFileSync(python, 'utf8'), 'python\n');
   assert.notEqual(fs.statSync(python).mode & 0o111, 0);
+  assert.equal(fs.statSync(python).ino, fs.statSync(pythonTarget).ino);
+  assert.equal(fs.statSync(python).nlink, 2);
 });
 
 test('CLI runtime identity is stable after demo executable metadata', (t) => {
