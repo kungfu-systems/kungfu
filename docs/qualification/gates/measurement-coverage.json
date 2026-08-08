@@ -83,10 +83,10 @@
       "observations": [
         {
           "platform": "linux",
-          "sourceSha": "aec4e2f0726e92cc2dfd6ac1c11d0c1efe06bbda",
-          "registryDigest": "sha256:8647909d8ff4e6705efcd131519baadbf73c7378240729135c2f23756d61ff12",
-          "durationMs": 10000,
-          "receipt": "docs/qualification/evidence/gate-measurements/aec4e2f072/linux/governance.buildchain-config.controller-receipt.json"
+          "sourceSha": "df3b02b28e56068d8fcaa266cd4704b2fbb07ddc",
+          "registryDigest": "sha256:9e27717ce4cf04194e37793dfdab8c01b8a115099dccc6cd0392f30d82731cb6",
+          "durationMs": 9000,
+          "receipt": "docs/qualification/evidence/gate-measurements/df3b02b28e/linux/governance.buildchain-config.controller-receipt.json"
         }
       ]
     },
