@@ -14,6 +14,8 @@ import {
   completeRegularFileInventory,
   parseArguments,
   parsePortableArguments,
+  parseReplayArguments,
+  replayScenarioObservations,
   validateCoordinates,
 } from '../framework/release/alpha-local-publication-debug/index.mjs';
 
@@ -225,5 +227,71 @@ test('the portable smoke requires an exact capsule and admitted roots', () => {
   assert.throws(
     () => parsePortableArguments(['--capsule', '/data/capsule.json']),
     /--capsule-root is required/u,
+  );
+});
+
+test('replay qualification accepts only explicit immutable and scratch coordinates', () => {
+  assert.deepEqual(
+    parseReplayArguments([
+      '--',
+      '--capsule',
+      '/data/rehearsal-capsule.json',
+      '--capsule-root',
+      '/data/candidate',
+      '--scratch-root',
+      '/data/replay-output',
+      '--buildchain-root',
+      '/data/buildchain',
+    ]),
+    {
+      capsule: '/data/rehearsal-capsule.json',
+      'capsule-root': '/data/candidate',
+      'scratch-root': '/data/replay-output',
+      'buildchain-root': '/data/buildchain',
+    },
+  );
+  assert.throws(
+    () =>
+      parseReplayArguments([
+        '--capsule',
+        '/data/rehearsal-capsule.json',
+        '--capsule-root',
+        '/data/candidate',
+      ]),
+    /--scratch-root is required/u,
+  );
+});
+
+test('replay scenarios encode readback-first bounded fault transcripts', () => {
+  const operation = (id) => ({
+    operationId: root(id),
+    effect: {
+      subjectRoot: root(`${id}-subject`),
+      targetRoot: root(`${id}-target`),
+    },
+  });
+  const capsule = {
+    transaction: { operations: [operation('first'), operation('second')] },
+  };
+  const bounded = replayScenarioObservations(capsule, 'bounded-transient');
+  assert.deepEqual(
+    bounded[0].readbacks.map((entry) => entry.outcome),
+    ['transient', 'absent', 'observed'],
+  );
+  const duplicate = replayScenarioObservations(capsule, 'duplicate-observed');
+  assert.deepEqual(
+    duplicate.map((entry) => entry.readbacks[0].outcome),
+    ['observed', 'observed'],
+  );
+  const conflict = replayScenarioObservations(capsule, 'immutable-collision');
+  assert.equal(conflict[0].readbacks[0].outcome, 'conflict');
+  const missing = replayScenarioObservations(capsule, 'missing-observation');
+  assert.deepEqual(
+    missing[0].readbacks.map((entry) => entry.outcome),
+    ['absent'],
+  );
+  assert.throws(
+    () => replayScenarioObservations(capsule, 'unknown'),
+    /unknown replay scenario/u,
   );
 });

@@ -461,6 +461,339 @@ async function loadBuildchainRuntime(buildchainRoot) {
   );
 }
 
+function replayResponse(effect, outcome, providerCode) {
+  return {
+    outcome,
+    subjectRoot: outcome === 'observed' ? effect.subjectRoot : '',
+    targetRoot: outcome === 'observed' ? effect.targetRoot : '',
+    evidenceRoots: outcome === 'observed' ? [effect.targetRoot] : [],
+    providerCode,
+  };
+}
+
+export function replayScenarioObservations(capsule, scenario) {
+  const operations = capsule?.transaction?.operations;
+  if (!Array.isArray(operations) || operations.length === 0)
+    throw new Error('capsule transaction operations are required');
+  if (
+    ![
+      'bounded-transient',
+      'duplicate-observed',
+      'immutable-collision',
+      'missing-observation',
+    ].includes(scenario)
+  )
+    throw new Error(`unknown replay scenario: ${scenario}`);
+  return operations.map((operation, index) => {
+    const effect = operation.effect;
+    let readbacks = [
+      replayResponse(effect, 'absent', `${scenario}-absent`),
+      replayResponse(effect, 'observed', `${scenario}-observed`),
+    ];
+    if (scenario === 'bounded-transient' && index === 0)
+      readbacks.unshift(
+        replayResponse(effect, 'transient', 'recorded-network-transient'),
+      );
+    if (scenario === 'duplicate-observed')
+      readbacks = [
+        replayResponse(effect, 'observed', 'recorded-existing-duplicate'),
+      ];
+    if (scenario === 'immutable-collision' && index === 0)
+      readbacks = [
+        replayResponse(effect, 'conflict', 'recorded-immutable-collision'),
+      ];
+    if (scenario === 'missing-observation' && index === 0)
+      readbacks = [
+        replayResponse(effect, 'absent', 'recorded-before-observation-loss'),
+      ];
+    return {
+      operationId: operation.operationId,
+      readbacks,
+      apply: {
+        outcome: 'applied',
+        code: `${scenario}-applied`,
+        classification: 'none',
+      },
+    };
+  });
+}
+
+function replayCapsule(runtime, capsule, scenario) {
+  return runtime.createPublicationRehearsalCapsule({
+    declaration: capsule.declaration,
+    policyRoots: capsule.policyRoots,
+    passport: capsule.passport,
+    transaction: capsule.transaction,
+    files: capsule.files,
+    providerBindings: capsule.providerBindings,
+    providerObservations: replayScenarioObservations(capsule, scenario),
+    runtime: capsule.runtime,
+  });
+}
+
+function replaySummary(scenario, capsule, result) {
+  return {
+    scenario,
+    capsuleRoot: capsule.root,
+    state: result.transaction.state,
+    transactionRoot: result.transaction.transactionRoot,
+    stateRoot: result.transaction.stateRoot,
+    evidenceRoot: result.evidence.evidenceRoot,
+    transcriptRoot: result.evidence.transcriptRoot,
+    transcriptMethods: result.evidence.transcript.map((entry) => entry.method),
+    operationAttempts: result.transaction.operations.map((operation) => ({
+      capabilityId: operation.capabilityId,
+      effectAttempts: operation.effectAttempts,
+      readbackAttempts: operation.readbackAttempts,
+      action: operation.receipt?.action || '',
+    })),
+    failure: result.transaction.failure,
+    externalPublicationClaimed: result.evidence.externalPublicationClaimed,
+  };
+}
+
+function assertReplay(condition, code, message) {
+  if (!condition) debugFailure(code, message);
+}
+
+function createTamperedFileEntryCapsule(runtime, capsule) {
+  const files = structuredClone(capsule.files);
+  const entry =
+    files.find((candidate) => candidate.path === 'bindings/source.json') ||
+    files[0];
+  entry.root = `sha256:${'0'.repeat(64)}`;
+  return runtime.createPublicationRehearsalCapsule({
+    declaration: capsule.declaration,
+    policyRoots: capsule.policyRoots,
+    passport: capsule.passport,
+    transaction: capsule.transaction,
+    files,
+    providerBindings: capsule.providerBindings,
+    providerObservations: capsule.providerObservations,
+    runtime: capsule.runtime,
+  });
+}
+
+function validateReplayCoordinates(rawOptions) {
+  const capsuleValue = required(rawOptions.capsule, '--capsule');
+  if (!path.isAbsolute(capsuleValue))
+    throw new Error('--capsule must be an explicit absolute path');
+  const capsulePath = fs.realpathSync(regularFile(capsuleValue, '--capsule'));
+  const capsuleRoot = explicitDirectory(
+    rawOptions.capsuleRoot,
+    '--capsule-root',
+  );
+  const scratchRoot = explicitDirectory(
+    rawOptions.scratchRoot,
+    '--scratch-root',
+    { existing: false },
+  );
+  const buildchainRoot = explicitDirectory(
+    rawOptions.buildchainRoot,
+    '--buildchain-root',
+  );
+  const directories = [
+    ['--capsule-root', capsuleRoot],
+    ['--scratch-root', scratchRoot],
+    ['--buildchain-root', buildchainRoot],
+  ];
+  for (let left = 0; left < directories.length; left += 1)
+    for (let right = left + 1; right < directories.length; right += 1)
+      if (
+        inside(directories[left][1], directories[right][1]) ||
+        inside(directories[right][1], directories[left][1])
+      )
+        throw new Error(
+          `${directories[left][0]} and ${directories[right][0]} must be disjoint`,
+        );
+  if (inside(scratchRoot, capsulePath) || inside(buildchainRoot, capsulePath))
+    throw new Error('--capsule must be disjoint from scratch and Buildchain');
+  return { capsulePath, capsuleRoot, scratchRoot, buildchainRoot };
+}
+
+export async function runReplayQualification(rawOptions) {
+  const coordinates = validateReplayCoordinates(rawOptions);
+  assertCleanCheckout(ROOT, 'Kungfu source checkout');
+  const buildchain = verifyBuildchain(coordinates.buildchainRoot);
+  const runtime = await loadBuildchainRuntime(coordinates.buildchainRoot);
+  const capsule = JSON.parse(fs.readFileSync(coordinates.capsulePath, 'utf8'));
+  const before = completeRegularFileInventory(
+    coordinates.capsuleRoot,
+    capsule.files,
+  );
+  const results = {};
+  for (const scenario of [
+    'bounded-transient',
+    'duplicate-observed',
+    'immutable-collision',
+    'missing-observation',
+  ]) {
+    const scenarioCapsule = replayCapsule(runtime, capsule, scenario);
+    const result = await runtime.executePublicationRehearsal({
+      capsule: scenarioCapsule,
+      capsuleRoot: coordinates.capsuleRoot,
+      mode: 'replay',
+      environment: {},
+    });
+    results[scenario] = {
+      capsule: scenarioCapsule,
+      result,
+      summary: replaySummary(scenario, scenarioCapsule, result),
+    };
+  }
+  const bounded = results['bounded-transient'];
+  assertReplay(
+    bounded.result.transaction.state === 'complete' &&
+      JSON.stringify(
+        bounded.result.evidence.transcript
+          .filter(
+            (entry) =>
+              entry.operationId ===
+              bounded.result.transaction.operations[0].operationId,
+          )
+          .map((entry) => entry.method),
+      ) === JSON.stringify(['readback', 'readback', 'apply', 'readback']),
+    'replay-bounded-retry-failed',
+    'bounded transient replay did not read back before one apply and retry',
+  );
+  const duplicate = results['duplicate-observed'];
+  assertReplay(
+    duplicate.result.transaction.state === 'complete' &&
+      duplicate.result.transaction.operations.every(
+        (operation) =>
+          operation.effectAttempts === 0 &&
+          operation.receipt?.action === 'observed-existing',
+      ),
+    'replay-duplicate-idempotency-failed',
+    'duplicate replay attempted an effect or missed observed-existing',
+  );
+  const collision = results['immutable-collision'];
+  assertReplay(
+    collision.result.transaction.state === 'terminal-failure' &&
+      collision.result.transaction.failure?.code === 'provider-conflict' &&
+      collision.result.transaction.operations[0].effectAttempts === 0,
+    'replay-immutable-collision-failed',
+    'immutable collision did not fail terminally before apply',
+  );
+  const missing = results['missing-observation'];
+  assertReplay(
+    missing.result.transaction.state === 'repair-required' &&
+      missing.result.transaction.failure?.code === 'local-retry-exhausted' &&
+      missing.result.transaction.operations[0].effectAttempts === 1,
+    'replay-missing-observation-failed',
+    'missing observation did not exhaust bounded readback after one apply',
+  );
+  const settledReplay = await runtime.executePublicationRehearsal({
+    capsule: bounded.capsule,
+    capsuleRoot: coordinates.capsuleRoot,
+    mode: 'replay',
+    environment: {},
+    transaction: bounded.result.transaction,
+  });
+  assertReplay(
+    digest(settledReplay.transaction) === digest(bounded.result.transaction) &&
+      settledReplay.evidence.transcript.length === 0,
+    'replay-settled-idempotency-failed',
+    'settled replay changed the transaction or called a replay adapter',
+  );
+  const repeatedCollision = await runtime.executePublicationRehearsal({
+    capsule: collision.capsule,
+    capsuleRoot: coordinates.capsuleRoot,
+    mode: 'replay',
+    environment: {},
+  });
+  assertReplay(
+    digest(repeatedCollision.transaction) ===
+      digest(collision.result.transaction) &&
+      repeatedCollision.evidence.evidenceRoot ===
+        collision.result.evidence.evidenceRoot,
+    'replay-terminal-determinism-failed',
+    'repeated conflict did not reproduce terminal transaction and evidence',
+  );
+  const tamperedCapsule = createTamperedFileEntryCapsule(runtime, capsule);
+  const tamperDiagnostics = [];
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    try {
+      await runtime.executePublicationRehearsal({
+        capsule: tamperedCapsule,
+        capsuleRoot: coordinates.capsuleRoot,
+        mode: 'replay',
+        environment: {},
+      });
+      assertReplay(
+        false,
+        'replay-tamper-not-rejected',
+        'tampered capsule file entry was accepted',
+      );
+    } catch (error) {
+      tamperDiagnostics.push(
+        runtime.publicationRehearsalDiagnostic(error, {
+          capsule: tamperedCapsule,
+        }),
+      );
+    }
+  }
+  assertReplay(
+    tamperDiagnostics.every(
+      (diagnostic) => diagnostic.code === 'capsule-file-tampered',
+    ) &&
+      tamperDiagnostics[0].diagnosticRoot ===
+        tamperDiagnostics[1].diagnosticRoot,
+    'replay-tamper-diagnostic-failed',
+    'tampered file entry did not produce one stable fail-closed diagnostic',
+  );
+  const after = completeRegularFileInventory(
+    coordinates.capsuleRoot,
+    capsule.files,
+  );
+  assertReplay(
+    before.inventoryRoot === after.inventoryRoot,
+    'replay-candidate-mutated',
+    'exact candidate inventory changed during replay qualification',
+  );
+  const body = {
+    schema: 'kungfu.alpha-local-publication-replay-qualification/v1',
+    status: 'passed',
+    baseCapsuleRoot: capsule.root,
+    candidateInventoryRoot: before.inventoryRoot,
+    candidateRegularFileCount: before.fileCount,
+    transactionRoot: capsule.transaction.transactionRoot,
+    buildchainSha: buildchain.commit,
+    buildchainTree: buildchain.tree,
+    buildchainRequiredMerge: BUILDCHAIN_REHEARSAL_MERGE,
+    scenarios: Object.fromEntries(
+      Object.entries(results).map(([name, value]) => [name, value.summary]),
+    ),
+    settledReplay: {
+      stateRoot: settledReplay.transaction.stateRoot,
+      transactionUnchanged: true,
+      adapterCallCount: 0,
+    },
+    repeatedTerminalFailure: {
+      stateRoot: repeatedCollision.transaction.stateRoot,
+      evidenceRoot: repeatedCollision.evidence.evidenceRoot,
+      deterministic: true,
+    },
+    tamper: {
+      code: tamperDiagnostics[0].code,
+      diagnosticRoot: tamperDiagnostics[0].diagnosticRoot,
+      deterministic: true,
+    },
+    candidateUnchanged: true,
+    artifactsRebuilt: false,
+    externalPublicationClaimed: false,
+  };
+  const report = { ...body, qualificationRoot: digest(body) };
+  writeExact(
+    path.join(
+      coordinates.scratchRoot,
+      'alpha-publication-replay-qualification/report.json',
+    ),
+    `${JSON.stringify(report, null, 2)}\n`,
+  );
+  return report;
+}
+
 export async function runPortableSmoke(rawOptions) {
   const capsulePath = required(rawOptions.capsule, '--capsule');
   if (!path.isAbsolute(capsulePath))
@@ -1025,6 +1358,34 @@ export function parsePortableArguments(argv) {
   return options;
 }
 
+export function parseReplayArguments(argv) {
+  const args = argv[0] === '--' ? argv.slice(1) : argv;
+  const options = {};
+  for (let index = 0; index < args.length; index += 2) {
+    const flag = args[index];
+    if (!flag?.startsWith('--') || index + 1 >= args.length)
+      throw new Error(`invalid option: ${flag || '<missing>'}`);
+    const name = flag.slice(2);
+    if (
+      !['capsule', 'capsule-root', 'scratch-root', 'buildchain-root'].includes(
+        name,
+      )
+    )
+      throw new Error(`unknown option: ${flag}`);
+    if (Object.hasOwn(options, name))
+      throw new Error(`duplicate option: ${flag}`);
+    options[name] = args[index + 1];
+  }
+  for (const name of [
+    'capsule',
+    'capsule-root',
+    'scratch-root',
+    'buildchain-root',
+  ])
+    required(options[name], `--${name}`);
+  return options;
+}
+
 async function main(argv = process.argv.slice(2)) {
   if (argv[0] === 'portable-smoke') {
     const options = parsePortableArguments(argv.slice(1));
@@ -1034,6 +1395,17 @@ async function main(argv = process.argv.slice(2)) {
       buildchainRoot: options['buildchain-root'],
       expectedBindingRoot: options['expected-binding-root'],
       expectedTransactionRoot: options['expected-transaction-root'],
+    });
+    process.stdout.write(`${JSON.stringify(report, null, 2)}\n`);
+    return;
+  }
+  if (argv[0] === 'replay-qualify') {
+    const options = parseReplayArguments(argv.slice(1));
+    const report = await runReplayQualification({
+      capsule: options.capsule,
+      capsuleRoot: options['capsule-root'],
+      scratchRoot: options['scratch-root'],
+      buildchainRoot: options['buildchain-root'],
     });
     process.stdout.write(`${JSON.stringify(report, null, 2)}\n`);
     return;
