@@ -182,11 +182,11 @@ test('terminal consumer executes only protected event and Buildchain authority',
   assert.match(workflow, /GITHUB_TOKEN: \$\{\{ github\.token \}\}/u);
   assert.match(
     workflow,
-    /dev-delivery-warrant-close\.yml@ed978d70b246fcfdb5e80009d58e1ce4926ad593/u,
+    /dev-delivery-warrant-close\.yml@a12442567126cb55790263f86777d81263425273/u,
   );
   assert.match(
     workflow,
-    /dev-delivery-warrant-cancel\.yml@ed978d70b246fcfdb5e80009d58e1ce4926ad593/u,
+    /dev-delivery-warrant-cancel\.yml@a12442567126cb55790263f86777d81263425273/u,
   );
   assert.doesNotMatch(workflow, /github\.event\.pull_request\.head\.ref/u);
   assert.doesNotMatch(workflow, /checkout[^\n]*pull_request\.head/u);
