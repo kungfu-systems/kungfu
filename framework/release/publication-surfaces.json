@@ -80,7 +80,7 @@
             "product-stable",
             "product-binaries"
           ],
-          "sourceRoot": "sha256:1040e7f1cf3bad82ee2957427c620af9c683be63dc7e268b10cc9ba4166c41fb"
+          "sourceRoot": "sha256:0747474d09b824fe3acde949e6885f463d9ee64b3700e7ce5ee517665c145109"
         },
         {
           "path": ".github/workflows/alpha-promotion-preflight.yml",
@@ -122,7 +122,7 @@
             "product-stable",
             "product-binaries"
           ],
-          "sourceRoot": "sha256:0281b3ee47ae6e8406be1ed48410650e944f340081bb2e5f2219503c4d4a5e75"
+          "sourceRoot": "sha256:f49350e6e12453e56af7b0f11dc15ce055ddc2bfc69cbbb70e3344d7c363f4e3"
         },
         {
           "path": ".github/workflows/buildchain-validate.yml",
@@ -860,5 +860,5 @@
       }
     }
   ],
-  "registryRoot": "sha256:f3e35cf0ba4555555bd3df0f92a61a79e46f7d4ef24e3aae1ff56d1ff6c57985"
+  "registryRoot": "sha256:007aa73fa9b3b06202a01369a9af2283dbeed1c058770c7d99bd5cf2c0df53fe"
 }
