@@ -1,7 +1,7 @@
 {
   "schema": "kungfu.code-complexity-budget-baseline/v1",
-  "policyRoot": "sha256:fb6740f6cbc3f45ce0ade099af6074032fa43695c4c90cae29bec71428d5dc53",
-  "baselineRef": "6633739110175a9d4e6b66e8a0d863a7cedfb977",
+  "policyRoot": "sha256:acab3dc8fd51376efa694be88d3401133541670ec4cc2a902dd69791c94bc050",
+  "baselineRef": "c7d0c61d031ad6be1dd9041af2bd5db48896df1e",
   "classification": "ordered-policy-and-content-marker/v1",
   "calibration": {
     "groupBy": [
@@ -19,16 +19,16 @@
       "lines": 574114
     },
     "first-party-handwritten-implementation": {
-      "files": 1034,
-      "lines": 367579
+      "files": 1035,
+      "lines": 367612
     },
     "generated-projection": {
       "files": 74,
       "lines": 10088
     },
     "public-header-or-entrypoint": {
-      "files": 184,
-      "lines": 55190
+      "files": 185,
+      "lines": 55572
     },
     "retained-evidence": {
       "files": 885,
@@ -36,7 +36,7 @@
     },
     "test-or-fixture": {
       "files": 871,
-      "lines": 184420
+      "lines": 184625
     },
     "vendored-source": {
       "files": 451,
@@ -71,7 +71,7 @@
     "first-party-handwritten-implementation:javascript-typescript": {
       "class": "first-party-handwritten-implementation",
       "language": "javascript-typescript",
-      "population": 565,
+      "population": 566,
       "soft": 835,
       "hard": 1963,
       "calibration": "p90/p99"
@@ -159,7 +159,7 @@
     "public-header-or-entrypoint:javascript-typescript": {
       "class": "public-header-or-entrypoint",
       "language": "javascript-typescript",
-      "population": 44,
+      "population": 45,
       "soft": 2390,
       "hard": 3080,
       "calibration": "p90/p99"
@@ -600,7 +600,7 @@
       "language": "declarative",
       "owner": "kungfu/repository-contract",
       "lines": 129,
-      "contentRoot": "sha256:66c468cab16d747392d76554529360d112d13c0c4adb8f97d30d8b1a1977634c"
+      "contentRoot": "sha256:9772e1aafeeb5ae6f3bb9fe804798c8f2ef92e86dd3bc3200a7fccea2c49d8d9"
     },
     {
       "path": ".buildchain/buildchain.toml",
@@ -753,7 +753,7 @@
       "language": "declarative",
       "owner": "kungfu/repository-contract",
       "lines": 5262,
-      "contentRoot": "sha256:a520cb2ffb725e334d20cd83b77b992f7de04c9c80a0d3a286ddd80f177ea416"
+      "contentRoot": "sha256:cfff192be01db7d51294fa51ce65264093ffc5c3d582a58c2b337a6a0f5d2e8d"
     },
     {
       "path": ".buildchain/kfd/kfd-3/surfaces.json",
@@ -978,7 +978,7 @@
       "language": "declarative",
       "owner": "kungfu/release-workflow",
       "lines": 670,
-      "contentRoot": "sha256:63a2b84011633e94ede885e50bae26165bf5286511a3d328493024971cc65d99"
+      "contentRoot": "sha256:0281b3ee47ae6e8406be1ed48410650e944f340081bb2e5f2219503c4d4a5e75"
     },
     {
       "path": ".github/workflows/buildchain-validate.yml",
@@ -13551,7 +13551,7 @@
       "language": "declarative",
       "owner": "kungfu/repository-contract",
       "lines": 1,
-      "contentRoot": "sha256:ee90e74a0300b8e04b8d2117b4a093f27b095fc9782bee875c2f7ef7a5ea5ed5"
+      "contentRoot": "sha256:74ade15d2632d5214d7356421307a5e58b8a814295607c9429a9d7033868e709"
     },
     {
       "path": ".xinfa/product-documentation-pack.json",
@@ -17601,7 +17601,7 @@
       "language": "declarative",
       "owner": "kungfu/docs",
       "lines": 1118,
-      "contentRoot": "sha256:fafbfd97a8b1c270f73f45d268c68d4ce4f7a0e2efc284d2bf7e972a8635a77c"
+      "contentRoot": "sha256:a0c8d258abc034f85cd5e67802c5a9bb911d248bcd2c57b5b37ec59b85745ccb"
     },
     {
       "path": "docs/qualification/gates/workflow-bindings.json",
@@ -18186,7 +18186,7 @@
       "language": "declarative",
       "owner": "kungfu/docs",
       "lines": 222,
-      "contentRoot": "sha256:9bad13bc4a12dfe34014a664e6ecbabe9ead51bf641c8f2deff2df35b1745e20"
+      "contentRoot": "sha256:1ca9eec758ca353215a47ead7c3dddab241cc2438454e4c836f08ad605233259"
     },
     {
       "path": "docs/shifu/schema/production-graph-verification-receipt-v0.schema.json",
@@ -19904,8 +19904,8 @@
       "generatedProvenance": false,
       "language": "javascript-typescript",
       "owner": "framework/agent-patrol",
-      "lines": 306,
-      "contentRoot": "sha256:09bcf6c783ca074d1c4f3e50562f304742afc51e373ab8440fbefc67dbeee226"
+      "lines": 137,
+      "contentRoot": "sha256:daf2dd225bb268a42cc0e25ac190bfe4ae370e3bf0a2d4d0d1c3067287361b71"
     },
     {
       "path": "framework/agent-patrol/select.mjs",
@@ -36006,7 +36006,7 @@
       "language": "declarative",
       "owner": "framework/maintainability",
       "lines": 165,
-      "contentRoot": "sha256:d0d12e559747d43bdfa30acc7ee99440a21abab54fa30bc8e73c4e2c1c446ee0"
+      "contentRoot": "sha256:737a9cf5c6424171922fe038ecca5f3b9085bd2a1d63afd3d140aa6c15d9f7ed"
     },
     {
       "path": "framework/maintainability/complexity-governance.mjs",
@@ -36149,8 +36149,8 @@
       "generatedProvenance": false,
       "language": "javascript-typescript",
       "owner": "framework/production-graph",
-      "lines": 200,
-      "contentRoot": "sha256:48d16e3727853f738ba767069af06ee041c2b403a3474619fc0a0b3466a63c3d"
+      "lines": 202,
+      "contentRoot": "sha256:4f677d379ae6bf551d11aca11d6833d2c10fcfbc6332d1c816a72616d7662645"
     },
     {
       "path": "framework/production-graph/check.test.mjs",
@@ -36158,8 +36158,26 @@
       "generatedProvenance": false,
       "language": "javascript-typescript",
       "owner": "framework/production-graph",
-      "lines": 107,
-      "contentRoot": "sha256:fac6b792ca6f2c168d3248eebccf75804ace4fb2b25defc166006dda50e3be4d"
+      "lines": 231,
+      "contentRoot": "sha256:c6d010bed937ce3180cad43656933a4db2a3f2b6d97c0472b16038495302843a"
+    },
+    {
+      "path": "framework/production-graph/compiler/index.mjs",
+      "class": "public-header-or-entrypoint",
+      "generatedProvenance": false,
+      "language": "javascript-typescript",
+      "owner": "framework/production-graph",
+      "lines": 382,
+      "contentRoot": "sha256:75d44ff1aa3dab00dc322aed0bf195fb8812964f45af5f1fa0f2388a290fd3ec"
+    },
+    {
+      "path": "framework/production-graph/compiler/polyglot.fixture.mjs",
+      "class": "first-party-handwritten-implementation",
+      "generatedProvenance": false,
+      "language": "javascript-typescript",
+      "owner": "framework/production-graph",
+      "lines": 200,
+      "contentRoot": "sha256:43e5e6978df0c18bc16127f3f63494f5a6c012e98ee9dda0815f4b3110ac5261"
     },
     {
       "path": "framework/production-graph/contract.mjs",
@@ -36168,7 +36186,7 @@
       "language": "javascript-typescript",
       "owner": "framework/production-graph",
       "lines": 587,
-      "contentRoot": "sha256:edb1ce5cbb60e850a377a2c0ee9708e546bd45ee22f75aaea5847731c12c0a4a"
+      "contentRoot": "sha256:2af8950d15411b9f00cf23d37b6cb268631e5b9489ade490cda1fc66d96f559d"
     },
     {
       "path": "framework/profile/kungfu-domain-profile-authoring.contract.json",
@@ -36690,7 +36708,7 @@
       "language": "declarative",
       "owner": "framework/release",
       "lines": 864,
-      "contentRoot": "sha256:48bc192fbae626a182c6cb1b90cc667349dcf3600e828b91a986fd05970d7fe4"
+      "contentRoot": "sha256:7e28108b69aa2637e0886acbfa61b2993b6b97b327e00ba1eda1eea910b35599"
     },
     {
       "path": "framework/release/qualified-assignment-core-artifact.mjs",
@@ -39002,8 +39020,8 @@
       "generatedProvenance": false,
       "language": "javascript-typescript",
       "owner": "shifu/source-tooling",
-      "lines": 476,
-      "contentRoot": "sha256:5d8ff34cd064cce6eb3c271c9c3e63ee39a4adab4096f5fec602e788108ef9dd"
+      "lines": 522,
+      "contentRoot": "sha256:0d6a6a406b40d1bacb58dced43cfe27ac4a4bdf474eba2717024fef4f676254a"
     },
     {
       "path": "scripts/agent-repository-work-workflow.test.mjs",
@@ -39227,8 +39245,8 @@
       "generatedProvenance": false,
       "language": "javascript-typescript",
       "owner": "shifu/source-tooling",
-      "lines": 219,
-      "contentRoot": "sha256:cf224c3d84aa397e174e50fd4ab8abaffa91180268ff761847c7ca760b6f8c21"
+      "lines": 245,
+      "contentRoot": "sha256:1c8646388d807529c0e1de0402c838082348d09f0bef4778bdc839294a816cbe"
     },
     {
       "path": "scripts/build-documentation-material-bundle.mjs",
@@ -41432,8 +41450,8 @@
       "generatedProvenance": false,
       "language": "javascript-typescript",
       "owner": "shifu/source-tooling",
-      "lines": 813,
-      "contentRoot": "sha256:bff54ff46f0639dfd20f7f6844e3876221d4f6dca9520390fd0dcc7fb944b366"
+      "lines": 815,
+      "contentRoot": "sha256:66b66909a7d474ec06a50e24c413bdb0727b5ca61fadfe856b46451c476fdaee"
     },
     {
       "path": "scripts/readonly-source-toolchain.mjs",
@@ -44096,8 +44114,8 @@
       "generatedProvenance": false,
       "language": "declarative",
       "owner": "kungfu/qualification",
-      "lines": 81,
-      "contentRoot": "sha256:2807a02c0bb2efcaa5b23ec7b219d0cca253de2afdd2913d5248316e3958f273"
+      "lines": 88,
+      "contentRoot": "sha256:ccec62d9fccb10008658563da5be0772ec7f3ae1e52067d7d900ea1ad116203a"
     },
     {
       "path": "tests/qualification/agent-repository-work/mock-opencode.mjs",
@@ -44416,5 +44434,5 @@
     }
   ],
   "issues": [],
-  "measurementRoot": "sha256:c5674d8318856a235c4a291c69a673f15ceba0fcd986c18f195a2523a7224f4d"
+  "measurementRoot": "sha256:67a4c459aa5f7a2951eacb3b1fe534a036bb04fdef6bac0c9f1dde14210cefaa"
 }
