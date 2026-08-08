@@ -83,7 +83,7 @@ unknown ownership; this table does not become a replacement registry.
 | --- | --- | --- | --- |
 | Core ownership and build closure | `framework/core/architecture/layers.json` plus `build-capabilities.json` | `TARGETS.cmake`, `review-routes.json`, `ARCHITECTURE_INDEX.md`, `ARCHITECTURE_HEALTH.md`, `query-health.mjs` | `check-layers.mjs`, architecture query fixtures, affected-native selection, source acceptance |
 | CLI and Agent capability surface | Click command registration and Profile/KFX contributions, with stable identities linked through the KFD-3 API registry | human help, `commands.json`, `index.json`, installed CLI, GUI/TUI/Agent projections | CLI-surface checks, command catalog generation, documentation inventory, packaged capability inventory |
-| Profile, Work, and Assignment lifecycle | Core Profile/action and native Assignment fact contracts | Python CLI/API, Mission Control Profile, Work Dashboard, Agent envelopes | Profile/action tests, Assignment orchestration tests, Project Cut settlement and completion review |
+| Profile, Work, and Assignment lifecycle | Core Profile/action and native Assignment fact contracts | Python CLI/API, Work Control Profile, Work Dashboard, Agent envelopes | Profile/action tests, Assignment orchestration tests, Project Cut settlement and completion review |
 | KFX package and activation | Core native KFX registry, lifecycle, trust, and Product assembly policy | Node/Python thin bindings, GUI/TUI/CLI/Agent discovery and contribution landing | native KFX contract tests, KFD/Buildchain attestation, Profile Suite qualification, retained compatibility readers |
 | Fact and Episode | yijinjing schema and journal authority plus declared Fact/Episode contracts | C++ services, Python/Node/C bindings, Profile facts, query and proof projections | content/hash, ledger, replay, admission, portability, invariant, and release-passport checks |
 | Storage and query | Core storage ports and C++ runtime services under the architecture component map | JSON edge, Python/Node APIs, CLI storage/query commands, GUI diagnostics | durability, provider, fact-authority, query, repair, backup, migration, and known-limit evidence |
@@ -106,7 +106,7 @@ Representative large first-party implementation surfaces:
 
 | Path | Lines | 2026 changes | Current responsibility signal |
 | --- | ---: | ---: | --- |
-| `extensions/mission-control/mission-control-actions/domain/mission_control.py` | 4,223 | 26 | domain declarations, actions, queries, bundles, and authority migration share one module |
+| `extensions/work-control/work-control-actions/domain/mission_control.py` | 4,223 | 26 | domain declarations, actions, queries, bundles, and authority migration share one module |
 | `developer/sdk/src/sdk.js` | 3,793 | 30 | broad SDK projection and compatibility surface |
 | `framework/core/src/python/kungfu/profile_sdk.py` | 3,138 | 18 | Profile authoring, composition, actions, and qualification |
 | `framework/core/src/libkungfu/src/runtime/storage/service.cpp` | 2,789 | 60 | public storage facade and shared application-service composition |

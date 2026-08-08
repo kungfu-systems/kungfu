@@ -13,7 +13,7 @@ import pytest
 from click.testing import CliRunner
 
 from kungfu import assignment_orchestration, profile_composition, profile_sdk
-from kungfu.atlas import mission_control
+from kungfu import work_control
 from kungfu.cli.commands import kfc
 from kungfu.workspace import (
     ensure_workspace_data_home,
@@ -70,12 +70,12 @@ def test_captured_request_reads_all_paths_through_filesystem_namespace(
 ):
     request = {
         "schema": "kungfu.assignment-request/v1",
-        "source": {"kind": "atlas-go-card"},
+        "source": {"kind": "kungfu-assignment"},
         "retention": {
             "policy": "explicit-expiry-retain-bytes-v1",
             "expiresAt": None,
         },
-        "workDefinition": {"goal_id": "filesystem-namespace-read"},
+        "workDefinition": {"assignment_id": "filesystem-namespace-read"},
     }
     target = resolve_workspace_target(
         "capture-only", str(tmp_path), cwd=str(tmp_path), env={"HOME": str(tmp_path)}
@@ -133,8 +133,8 @@ def _initiative_admission(
         "intent": intent,
         "source": {
             "schema": assignment_orchestration.INITIATIVE_SOURCE_SCHEMA,
-            "authority": "atlas",
-            "kind": "go-card",
+            "authority": "kungfu.work-control",
+            "kind": "assignment",
             "sourceId": initiative_id,
             "versionRoot": "sha256:" + "c" * 64,
         },
@@ -1081,7 +1081,7 @@ def test_exact_initiative_identity_uses_the_open_record_without_schema_drift(
         "admissionRoot": admission["admissionRoot"],
     }
 
-    mission_control.create_initiative(
+    work_control.create_initiative(
         str(runtime),
         initiative_id=admission["initiativeId"],
         title=admission["title"],
@@ -1090,7 +1090,7 @@ def test_exact_initiative_identity_uses_the_open_record_without_schema_drift(
         actor_type="agent",
         source_identity=source_identity,
     )
-    initiatives = mission_control.list_initiatives(str(runtime))
+    initiatives = work_control.list_initiatives(str(runtime))
 
     assert initiatives[0]["source_identity"] == source_identity
 
@@ -1211,12 +1211,12 @@ def test_installed_runtime_accepts_a_filesystem_alias_root(monkeypatch):
 def test_installed_capture_matches_source_contract_without_runtime(tmp_path):
     request = {
         "schema": "kungfu.assignment-request/v1",
-        "source": {"kind": "atlas-go-card"},
+        "source": {"kind": "kungfu-assignment"},
         "retention": {
             "policy": "explicit-expiry-retain-bytes-v1",
             "expiresAt": None,
         },
-        "workDefinition": {"goal_id": "installed-capture"},
+        "workDefinition": {"assignment_id": "installed-capture"},
     }
     target = resolve_workspace_target(
         "capture-only", str(tmp_path), cwd=str(tmp_path), env={"HOME": str(tmp_path)}
@@ -1238,66 +1238,11 @@ def test_installed_capture_matches_source_contract_without_runtime(tmp_path):
     )
 
 
-def test_atlas_mission_parent_goal_stays_advisory_at_assignment_admission():
-    work_definition = {
-        "goal_id": "child-assignment",
-        "mission_id": "initiative-a",
-        "mission_parent_goal": "remote-parent-go-card",
-        "objective": "Admit without inventing a workspace-local parent",
-    }
-    captured = {
-        "request": {"workDefinition": work_definition},
-        "request_root": "sha256:" + "a" * 64,
-        "capture_receipt_roots": ["sha256:" + "b" * 64],
-    }
-
-    projected = assignment_orchestration.atlas_assignment_projection(
-        captured, initiative_id="initiative-a"
-    )
-
-    assert projected["parent_assignment_id"] == ""
-    assert projected["parent_assignment_ref"] == {}
-    assert projected["work_definition"]["mission_parent_goal"] == (
-        "remote-parent-go-card"
-    )
-
-
-def test_atlas_mission_parent_goal_can_accompany_an_exact_parent_work_ref():
-    parent_ref = {
-        "schema": "kungfu.assignment-graph.work-ref/v1",
-        "workspace_identity_root": "sha256:" + "c" * 64,
-        "object_kind": "assignment",
-        "subject": "kungfu:parent-assignment",
-        "version_root": "sha256:" + "d" * 64,
-        "component_cut_root": "sha256:" + "e" * 64,
-    }
-    captured = {
-        "request": {
-            "workDefinition": {
-                "goal_id": "child-assignment",
-                "mission_id": "initiative-a",
-                "mission_parent_goal": "remote-parent-go-card",
-                "parent_assignment_ref": parent_ref,
-                "objective": "Use only the exact cross-workspace parent edge",
-            }
-        },
-        "request_root": "sha256:" + "f" * 64,
-        "capture_receipt_roots": ["sha256:" + "1" * 64],
-    }
-
-    projected = assignment_orchestration.atlas_assignment_projection(
-        captured, initiative_id="initiative-a"
-    )
-
-    assert projected["parent_assignment_id"] == ""
-    assert projected["parent_assignment_ref"] == parent_ref
-
-
 def test_family_initiative_child_parent_stays_advisory_at_assignment_admission():
     work_definition = {
-        "goal_id": "family-child",
+        "assignment_id": "family-child",
         "initiative_id": "family-initiative",
-        "parent_goal": "family-initiative",
+        "parent_assignment_id": "family-initiative",
         "depends_on": ["prior-child"],
         "hierarchy": {
             "role": "initiative-child",
@@ -1314,7 +1259,7 @@ def test_family_initiative_child_parent_stays_advisory_at_assignment_admission()
         "capture_receipt_roots": ["sha256:" + "b" * 64],
     }
 
-    projected = assignment_orchestration.atlas_assignment_projection(captured)
+    projected = assignment_orchestration.assignment_projection(captured)
 
     assert projected["parent_assignment_id"] == ""
     assert projected["parent_assignment_ref"] == {}
@@ -1325,17 +1270,17 @@ def test_family_initiative_child_parent_stays_advisory_at_assignment_admission()
 def test_captured_request_admits_losslessly_and_drives_bounded_execution(tmp_path):
     request = {
         "schema": "kungfu.assignment-request/v1",
-        "source": {"kind": "atlas-go-card"},
+        "source": {"kind": "kungfu-assignment"},
         "retention": {
             "policy": "explicit-expiry-retain-bytes-v1",
             "expiresAt": None,
         },
         "workDefinition": {
-            "goal_id": "assignment-a",
-            "mission_id": "initiative-a",
+            "assignment_id": "assignment-a",
+            "initiative_id": "initiative-a",
             "title": "Assignment A",
             "objective": "Prove the native state machine",
-            "parent_goal": "parent-assignment",
+            "parent_assignment_id": "parent-assignment",
             "context_binding": {"root": "sha256:" + "c" * 64},
             "project_cut_root": "sha256:" + "d" * 64,
             "evidence_episode_roots": ["sha256:" + "e" * 64],
@@ -1371,7 +1316,7 @@ def test_captured_request_admits_losslessly_and_drives_bounded_execution(tmp_pat
     )
 
     captured = assignment_orchestration.load_captured_request(request_file)
-    projected = assignment_orchestration.atlas_assignment_projection(
+    projected = assignment_orchestration.assignment_projection(
         captured,
         initiative_id="initiative-a",
         initiative_admission=_initiative_admission(),
@@ -1384,7 +1329,7 @@ def test_captured_request_admits_losslessly_and_drives_bounded_execution(tmp_pat
 
     runtime = tmp_path / ".kungfu" / "runtime"
     _activate(runtime)
-    mission_control.create_initiative(
+    work_control.create_initiative(
         str(runtime),
         initiative_id="initiative-a",
         title="Initiative A",
@@ -1392,7 +1337,7 @@ def test_captured_request_admits_losslessly_and_drives_bounded_execution(tmp_pat
         actor="owner-a",
         actor_type="user",
     )
-    mission_control.create_assignment(
+    work_control.create_assignment(
         str(runtime),
         initiative_id="initiative-a",
         assignment_id="assignment-a",
@@ -1403,14 +1348,14 @@ def test_captured_request_admits_losslessly_and_drives_bounded_execution(tmp_pat
         capture_receipt_roots=[receipt_root],
         work_definition=projected["work_definition"],
     )
-    status = mission_control.assignment_orchestration_status(
+    status = work_control.assignment_orchestration_status(
         str(runtime), initiative_id="initiative-a", assignment_id="assignment-a"
     )
     assert status["phase"] == "admitted"
     assert status["assignment"]["work_definition"] == request["workDefinition"]
 
     expiry = datetime.now(timezone.utc) + timedelta(hours=2)
-    mission_control.claim_assignment_execution(
+    work_control.claim_assignment_execution(
         str(runtime),
         initiative_id="initiative-a",
         assignment_id="assignment-a",
@@ -1421,7 +1366,7 @@ def test_captured_request_admits_losslessly_and_drives_bounded_execution(tmp_pat
         lease_expires_at=expiry.isoformat(),
         authorized_by="owner-a",
     )
-    claimed = mission_control.assignment_orchestration_status(
+    claimed = work_control.assignment_orchestration_status(
         str(runtime), initiative_id="initiative-a", assignment_id="assignment-a"
     )
     assert claimed["phase"] == "claimed"
@@ -1430,7 +1375,7 @@ def test_captured_request_admits_losslessly_and_drives_bounded_execution(tmp_pat
     )
     assert assignment_orchestration.gate(claimed, "run")["ok"] is True
 
-    mission_control.advance_assignment_phase(
+    work_control.advance_assignment_phase(
         str(runtime),
         initiative_id="initiative-a",
         assignment_id="assignment-a",
@@ -1438,11 +1383,11 @@ def test_captured_request_admits_losslessly_and_drives_bounded_execution(tmp_pat
         actor="agent-a",
         reason="begin exact admitted work",
     )
-    executing = mission_control.assignment_orchestration_status(
+    executing = work_control.assignment_orchestration_status(
         str(runtime), initiative_id="initiative-a", assignment_id="assignment-a"
     )
     assert executing["phase"] == "executing"
-    mission_control.advance_assignment_phase(
+    work_control.advance_assignment_phase(
         str(runtime),
         initiative_id="initiative-a",
         assignment_id="assignment-a",
@@ -1450,62 +1395,17 @@ def test_captured_request_admits_losslessly_and_drives_bounded_execution(tmp_pat
         actor="agent-a",
         reason="bounded stage is ready",
     )
-    staged = mission_control.assignment_orchestration_status(
+    staged = work_control.assignment_orchestration_status(
         str(runtime), initiative_id="initiative-a", assignment_id="assignment-a"
     )
     assert staged["phase"] == "stage-ready"
-    expired = mission_control.assignment_orchestration_status(
+    expired = work_control.assignment_orchestration_status(
         str(runtime),
         initiative_id="initiative-a",
         assignment_id="assignment-a",
         now=(expiry + timedelta(seconds=1)).isoformat(),
     )
     assert assignment_orchestration.gate(expired, "run")["ok"] is False
-
-
-def test_atlas_mission_id_is_source_context_not_implicit_initiative_identity():
-    captured = {
-        "request": {
-            "source": {"kind": "atlas-go-card"},
-            "workDefinition": {
-                "goal_id": "assignment-a",
-                "mission_id": "atlas-mission-context",
-                "objective": "Require an explicit Initiative promotion",
-            },
-        },
-        "request_root": "sha256:" + "a" * 64,
-        "capture_receipt_roots": ["sha256:" + "b" * 64],
-    }
-
-    with pytest.raises(
-        ValueError, match="admission requires initiative and assignment identities"
-    ):
-        assignment_orchestration.atlas_assignment_projection(captured)
-
-    with pytest.raises(ValueError, match="exact parent Initiative admission"):
-        assignment_orchestration.atlas_assignment_projection(
-            captured, initiative_id="promoted-parent-card"
-        )
-
-    admission = _initiative_admission(
-        "promoted-parent-card",
-        "Parent card title",
-        "Parent card objective",
-    )
-    projected = assignment_orchestration.atlas_assignment_projection(
-        captured,
-        initiative_id="promoted-parent-card",
-        initiative_admission=admission,
-    )
-
-    assert projected["initiative_id"] == "promoted-parent-card"
-    assert projected["initiative_title"] == "Parent card title"
-    assert projected["initiative_intent"] == "Parent card objective"
-    assert projected["initiative_source_identity"]["sourceId"] == (
-        "promoted-parent-card"
-    )
-    assert projected["assignment_id"] == "assignment-a"
-    assert projected["work_definition"]["mission_id"] == "atlas-mission-context"
 
 
 def test_work_resume_prepare_rebinds_stale_profile_without_losing_assignment(
@@ -1543,14 +1443,14 @@ def test_work_resume_prepare_rebinds_stale_profile_without_losing_assignment(
                 "test-owner",
             ),
         )
-    mission_control.create_initiative(
+    work_control.create_initiative(
         str(runtime),
         initiative_id="retained-project",
         title="Retained Project",
         intent="Keep Work readable across a product Profile upgrade",
         actor="local-user",
     )
-    mission_control.create_assignment(
+    work_control.create_assignment(
         str(runtime),
         initiative_id="retained-project",
         assignment_id="retained-assignment",
@@ -1616,14 +1516,14 @@ def test_nonterminal_continuation_decision_starts_a_new_completion_cycle(
 ):
     runtime = tmp_path / ".kungfu" / "runtime"
     _activate(runtime)
-    mission_control.create_initiative(
+    work_control.create_initiative(
         str(runtime),
         initiative_id="initiative-a",
         title="Initiative A",
         intent="Keep failed review cycles open",
         actor="owner-a",
     )
-    mission_control.create_assignment(
+    work_control.create_assignment(
         str(runtime),
         initiative_id="initiative-a",
         assignment_id="assignment-a",
@@ -1631,26 +1531,26 @@ def test_nonterminal_continuation_decision_starts_a_new_completion_cycle(
         objective="Require a new claim after a nonterminal decision",
         actor="agent-a",
     )
-    first_claim = mission_control.claim_completion(
+    first_claim = work_control.claim_completion(
         str(runtime),
-        mission_id="initiative-a",
-        goal_id="assignment-a",
+        initiative_id="initiative-a",
+        assignment_id="assignment-a",
         statement="The first claim is intentionally missing independent evidence",
         actor="agent-a",
     )
-    first_review = mission_control.review_completion(
+    first_review = work_control.review_completion(
         str(runtime),
-        mission_id="initiative-a",
-        goal_id="assignment-a",
+        initiative_id="initiative-a",
+        assignment_id="assignment-a",
         reviewer="reviewer-a",
         reviewer_source="independent-session-a",
     )
     assert action in first_review["review"]["continuation_plan"]["allowed_actions"]
 
-    mission_control.decide_continuation(
+    work_control.decide_continuation(
         str(runtime),
-        mission_id="initiative-a",
-        goal_id="assignment-a",
+        initiative_id="initiative-a",
+        assignment_id="assignment-a",
         review_id=first_review["review"]["review_id"],
         expected_review_root=first_review["review_root"],
         expected_plan_root=first_review["continuation_plan_root"],
@@ -1658,7 +1558,7 @@ def test_nonterminal_continuation_decision_starts_a_new_completion_cycle(
         actor="agent-b",
         reason="return the Assignment to an evidence-bearing completion cycle",
     )
-    reopened = mission_control.assignment_orchestration_status(
+    reopened = work_control.assignment_orchestration_status(
         str(runtime), initiative_id="initiative-a", assignment_id="assignment-a"
     )
     assert reopened["phase"] == "stage-ready"
@@ -1667,26 +1567,26 @@ def test_nonterminal_continuation_decision_starts_a_new_completion_cycle(
         "claim-completion"
     )
 
-    second_claim = mission_control.claim_completion(
+    second_claim = work_control.claim_completion(
         str(runtime),
-        mission_id="initiative-a",
-        goal_id="assignment-a",
+        initiative_id="initiative-a",
+        assignment_id="assignment-a",
         statement="A later claim begins a new completion cycle",
         actor="agent-a",
     )
     assert second_claim["claim"]["claim_id"] != first_claim["claim"]["claim_id"]
-    claimed = mission_control.assignment_orchestration_status(
+    claimed = work_control.assignment_orchestration_status(
         str(runtime), initiative_id="initiative-a", assignment_id="assignment-a"
     )
     assert claimed["phase"] == "completion-claimed"
-    second_review = mission_control.review_completion(
+    second_review = work_control.review_completion(
         str(runtime),
-        mission_id="initiative-a",
-        goal_id="assignment-a",
+        initiative_id="initiative-a",
+        assignment_id="assignment-a",
         reviewer="reviewer-a",
         reviewer_source="independent-session-a",
     )
-    reviewed = mission_control.assignment_orchestration_status(
+    reviewed = work_control.assignment_orchestration_status(
         str(runtime), initiative_id="initiative-a", assignment_id="assignment-a"
     )
     assert reviewed["phase"] == "independently-reviewed"
@@ -1712,15 +1612,6 @@ def test_gate_field_equivalence_and_runtime_independent_seal(tmp_path):
         "continuation_decision_count": 1,
     }
     closed = assignment_orchestration.gate(status, "closeout")
-    assert set(closed["atlas_compatibility"]) == {
-        "schema",
-        "ok",
-        "phase",
-        "policy",
-        "reason",
-        "state_path",
-        "target",
-    }
     assert closed["ok"] is True
 
     runtime = tmp_path / ".kungfu" / "runtime"
@@ -1863,7 +1754,7 @@ def test_assignment_relation_handshake_is_workspace_routed_and_fact_backed(
     )
     relation = build_relation("delegates-to", source_ref, destination_ref)
 
-    offer = mission_control.append_assignment_relation_event(
+    offer = work_control.append_assignment_relation_event(
         str(source_runtime),
         workspace_identity_root=source_identity.identity_root,
         relation=relation,
@@ -1871,7 +1762,7 @@ def test_assignment_relation_handshake_is_workspace_routed_and_fact_backed(
         actor="source-agent",
     )
     assert offer["next_action"] == "destination-acceptance"
-    assert mission_control.assignment_relations(str(source_runtime)) == [relation]
+    assert work_control.assignment_relations(str(source_runtime)) == [relation]
     other_ref = build_work_ref(
         source_identity,
         object_kind="assignment",
@@ -1880,7 +1771,7 @@ def test_assignment_relation_handshake_is_workspace_routed_and_fact_backed(
         cut_root="sha256:" + "f" * 64,
     )
     other_relation = build_relation("delegates-to", source_ref, other_ref)
-    repeated = mission_control.append_assignment_relation_event(
+    repeated = work_control.append_assignment_relation_event(
         str(source_runtime),
         workspace_identity_root=source_identity.identity_root,
         relation=relation,
@@ -1903,7 +1794,7 @@ def test_assignment_relation_handshake_is_workspace_routed_and_fact_backed(
     }
 
     with pytest.raises(ValueError, match="wrong owning workspace"):
-        mission_control.append_assignment_relation_event(
+        work_control.append_assignment_relation_event(
             str(source_runtime),
             workspace_identity_root=source_identity.identity_root,
             relation=relation,
@@ -1912,7 +1803,7 @@ def test_assignment_relation_handshake_is_workspace_routed_and_fact_backed(
             predecessor_event_roots=[offer["event"]["event_root"]],
         )
 
-    accepted = mission_control.append_assignment_relation_event(
+    accepted = work_control.append_assignment_relation_event(
         str(destination_runtime),
         workspace_identity_root=destination_identity.identity_root,
         relation=relation,
@@ -1933,7 +1824,7 @@ def test_external_initiative_ref_owns_no_duplicate_project_initiative(tmp_path):
     ensure_workspace_data_home(home, "create-initiative")
     home_runtime = tmp_path / ".kungfu" / "runtime"
     _activate(home_runtime)
-    mission_control.create_initiative(
+    work_control.create_initiative(
         str(home_runtime),
         initiative_id="portfolio",
         title="Portfolio",
@@ -1971,7 +1862,7 @@ def test_external_initiative_ref_owns_no_duplicate_project_initiative(tmp_path):
         project_identities.append(identity)
         runtime = root / ".kungfu" / "runtime"
         _activate(runtime)
-        written = mission_control.create_assignment(
+        written = work_control.create_assignment(
             str(runtime),
             initiative_id="portfolio",
             assignment_id="duplicate-local-id",
@@ -1983,8 +1874,8 @@ def test_external_initiative_ref_owns_no_duplicate_project_initiative(tmp_path):
             initiative_ref=initiative_ref,
         )
         assert written["initiative_subject"] == initiative_ref["subject"]
-        assert mission_control.list_initiatives(str(runtime)) == []
-        status = mission_control.assignment_orchestration_status(
+        assert work_control.list_initiatives(str(runtime)) == []
+        status = work_control.assignment_orchestration_status(
             str(runtime),
             initiative_id="portfolio",
             assignment_id="duplicate-local-id",
@@ -2035,14 +1926,14 @@ def test_local_parent_shorthand_is_frozen_as_workspace_qualified_ref(tmp_path):
     assert identity is not None
     runtime = root / ".kungfu" / "runtime"
     _activate(runtime)
-    mission_control.create_initiative(
+    work_control.create_initiative(
         str(runtime),
         initiative_id="initiative",
         title="Initiative",
         intent="Resolve local shorthand before admission",
         actor="owner",
     )
-    mission_control.create_assignment(
+    work_control.create_assignment(
         str(runtime),
         initiative_id="initiative",
         assignment_id="parent",
@@ -2052,7 +1943,7 @@ def test_local_parent_shorthand_is_frozen_as_workspace_qualified_ref(tmp_path):
         storage_source_id="kungfu",
         owning_workspace_identity_root=identity.identity_root,
     )
-    mission_control.create_assignment(
+    work_control.create_assignment(
         str(runtime),
         initiative_id="initiative",
         assignment_id="child",
@@ -2065,7 +1956,7 @@ def test_local_parent_shorthand_is_frozen_as_workspace_qualified_ref(tmp_path):
     )
     child = next(
         row
-        for row in mission_control.list_assignments(str(runtime))
+        for row in work_control.list_assignments(str(runtime))
         if row["assignment_id"] == "child"
     )
     assert child["parent_assignment_id"] == ""
@@ -2075,7 +1966,7 @@ def test_local_parent_shorthand_is_frozen_as_workspace_qualified_ref(tmp_path):
     assert child["parent_assignment_ref"]["subject"] == "kungfu:parent"
 
     with pytest.raises(ValueError, match="resolve exactly once"):
-        mission_control.create_assignment(
+        work_control.create_assignment(
             str(runtime),
             initiative_id="initiative",
             assignment_id="bad-child",
@@ -2101,14 +1992,14 @@ def test_unresolved_dependency_shorthand_remains_visible_without_fake_work_ref(
     assert identity is not None
     runtime = root / ".kungfu" / "runtime"
     _activate(runtime)
-    mission_control.create_initiative(
+    work_control.create_initiative(
         str(runtime),
         initiative_id="initiative",
         title="Initiative",
         intent="Keep unavailable dependencies explicit",
         actor="owner",
     )
-    mission_control.create_assignment(
+    work_control.create_assignment(
         str(runtime),
         initiative_id="initiative",
         assignment_id="current",
@@ -2122,7 +2013,7 @@ def test_unresolved_dependency_shorthand_remains_visible_without_fake_work_ref(
 
     current = next(
         row
-        for row in mission_control.list_assignments(str(runtime))
+        for row in work_control.list_assignments(str(runtime))
         if row["assignment_id"] == "current"
     )
     assert current["depends_on"] == []

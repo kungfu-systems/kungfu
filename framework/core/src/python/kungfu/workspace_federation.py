@@ -76,7 +76,7 @@ WorkspaceLoader = Callable[[WorkspaceIdentity], dict[str, Any]]
 def _load_parallel_component(identity: WorkspaceIdentity) -> dict[str, Any]:
     """Load one default component in an isolated POSIX reader process."""
 
-    from kungfu.atlas import mission_control
+    from kungfu import work_control as mission_control
 
     return _safe_component(
         identity,
@@ -199,7 +199,7 @@ def query_federation(
     else:
         component_loader = loader
         if loader is _load_component:
-            from kungfu.atlas import mission_control
+            from kungfu import work_control as mission_control
 
             assignment_relations = mission_control.assignment_relations
 
@@ -858,7 +858,7 @@ def _load_component(
     from kungfu.storage import service as storage_service
 
     if relation_loader is None:
-        from kungfu.atlas import mission_control
+        from kungfu import work_control as mission_control
 
         relation_loader = mission_control.assignment_relations
 
@@ -1216,7 +1216,7 @@ def _assignment_lifecycle(
     runtime_dir: str,
     record: Mapping[str, Any],
 ) -> dict[str, Any]:
-    from kungfu.atlas import mission_control
+    from kungfu import work_control as mission_control
 
     status = mission_control.assignment_orchestration_status(
         runtime_dir,

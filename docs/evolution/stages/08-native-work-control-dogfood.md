@@ -20,7 +20,7 @@
       "subject": "work-authority",
       "before": "Initiative, Assignment, and portable Project Cut-bound Work",
       "after": "native Work Control and Assignment family state",
-      "authorityRefs": ["docs/profiles/mission-control.md", "docs/adr/KF-ADR-019f9771-4c20-7e2c-8e7c-3f3cb3f1b9bd.md"]
+      "authorityRefs": ["docs/profiles/work-control.md", "docs/adr/KF-ADR-019f9771-4c20-7e2c-8e7c-3f3cb3f1b9bd.md"]
     },
     {
       "subject": "primitive-lifecycle",
@@ -35,7 +35,7 @@
       "authorityRefs": ["docs/architecture/kfx-topology.md", "docs/profiles/profile-authoring.md"]
     }
   ],
-  "retiredSurfaces": ["Atlas projection as intended Work authority", "unregistered primitive intake", "KFX registry projection as source authority"],
+  "retiredSurfaces": ["consumer projection as intended Work authority", "unregistered primitive intake", "KFX registry projection as source authority"],
   "unlockedCapabilities": ["native assignment orchestration", "evidence-bound primitive promotion", "KFX manager as a KFX consumer", "continuous first-party dogfood", "historical self-improvement inputs"],
   "downstreamConsumers": ["Kungfu continuous delivery", "task decomposition and buildchain optimization", "KFX management", "future evolution-map stages"],
   "evidence": [
@@ -49,7 +49,7 @@
   "readerRoute": {
     "intent": "Understand how Kungfu now develops itself with its own primitives",
     "start": "docs/architecture/primitive-management-plane.md",
-    "deepen": ["docs/profiles/mission-control.md", "docs/architecture/kfx-topology.md", "docs/architecture/agent-supply-chain.md"]
+    "deepen": ["docs/profiles/work-control.md", "docs/architecture/kfx-topology.md", "docs/architecture/agent-supply-chain.md"]
   },
   "amends": [],
   "supersedes": []

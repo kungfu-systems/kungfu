@@ -503,7 +503,7 @@ def load_initiative_admission(
     }
 
 
-def atlas_assignment_projection(
+def assignment_projection(
     captured: Mapping[str, Any],
     *,
     initiative_id: str = "",
@@ -527,11 +527,7 @@ def atlas_assignment_projection(
     if not isinstance(dependencies, list):
         dependencies = []
     initiative = initiative_id or str(work.get("initiative_id") or "")
-    assignment = (
-        assignment_id
-        or str(work.get("assignment_id") or "")
-        or str(work.get("goal_id") or "")
-    )
+    assignment = assignment_id or str(work.get("assignment_id") or "")
     context_binding = work.get("context_binding") or {}
     if not isinstance(context_binding, dict):
         raise ValueError("workDefinition context_binding must be an object")
@@ -551,7 +547,7 @@ def atlas_assignment_projection(
         isinstance(row, dict) for row in dependency_refs
     ):
         raise ValueError("workDefinition.dependency_refs must be an array of objects")
-    if parent_assignment_ref and work.get("parent_goal"):
+    if parent_assignment_ref and work.get("parent_assignment_id"):
         raise ValueError(
             "workDefinition cannot mix parent Assignment ref and local shorthand"
         )
@@ -575,14 +571,6 @@ def atlas_assignment_projection(
             raise ValueError(
                 "Initiative source identity does not match requested identity"
             )
-    atlas_request = (
-        isinstance(request_source, dict)
-        and request_source.get("kind") == "atlas-go-card"
-    )
-    if atlas_request and not initiative_ref and not explicit_initiative:
-        raise ValueError(
-            "Atlas admission requires an exact parent Initiative admission or WorkRef"
-        )
     return {
         "initiative_id": initiative,
         "initiative_title": str(
@@ -611,18 +599,15 @@ def atlas_assignment_projection(
         # lossless work definition. It is not a workspace-local Assignment
         # shorthand; only an exact parent_assignment_ref may add that edge.
         "parent_assignment_id": (
-            "" if family_initiative_child else str(work.get("parent_goal") or "")
+            ""
+            if family_initiative_child
+            else str(work.get("parent_assignment_id") or "")
         ),
         "depends_on": [str(row) for row in dependencies],
         "initiative_ref": initiative_ref,
         "parent_assignment_ref": parent_assignment_ref,
         "dependency_refs": [dict(row) for row in dependency_refs],
-        "responsibility": str(
-            work.get("mission_why_matters")
-            or work.get("objective")
-            or work.get("owner_agent")
-            or ""
-        ),
+        "responsibility": str(work.get("objective") or work.get("owner_agent") or ""),
         "work_definition": work,
         "context_binding": context_binding,
         "project_cut_root": _root(
@@ -688,15 +673,6 @@ def gate(status: Mapping[str, Any], target: str) -> dict[str, Any]:
         "assignment_subject": status.get("assignment_subject"),
         "query_proof_root": status.get("query_proof_root"),
         "next_actions": [] if ok else next_actions(status),
-    }
-    response["atlas_compatibility"] = {
-        "schema": "atlas.project-cut-go-gate/v1",
-        "ok": ok,
-        "phase": phase,
-        "policy": "required",
-        "reason": reason,
-        "state_path": "kungfu-native-fact-library",
-        "target": target,
     }
     return response
 

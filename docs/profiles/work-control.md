@@ -89,21 +89,6 @@ kungfu work family-transition-v2 STATE_V2 TRANSITION_V2 --out SUCCESSOR_V2
 kungfu work family-verify-v2 STATE_V1_OR_V2
 ```
 
-## Atlas boundary
-
-Atlas is an optional source and compatibility adapter, not the native work
-identity authority. Its source fields may be retained inside an Assignment's
-auditable work definition, but an Atlas parent identifier is not automatically
-an Initiative identifier. Admission requires either an exact Initiative
-WorkRef or a content-addressed Initiative admission envelope carrying the
-parent card's identity, title, intent, source authority, and immutable source
-version root. Missing, mutable, or mismatched parents fail visibly.
-
-Historical v3 worlds and receipts remain exact, read-only compatibility
-evidence. They are documented in the
-[compatibility index](compatibility/README.md) so their terminology does not
-define the current product.
-
 ## Product surfaces
 
 ```text
@@ -115,8 +100,7 @@ kungfu work gate --help
 
 The Work Dashboard opens Portfolio as a live federated view. The TUI renders
 the same Initiative and Assignment model. Native machine receipts use Work
-Control schemas; explicit Atlas or compatibility inspection may retain source
-terminology and sealed source bytes.
+Control schemas and native source coordinates.
 
 The normative decision is
 [KF-ADR-019f9771-4c20-7e2c-8e7c-3f3cb3f1b9bd](../adr/KF-ADR-019f9771-4c20-7e2c-8e7c-3f3cb3f1b9bd.md).

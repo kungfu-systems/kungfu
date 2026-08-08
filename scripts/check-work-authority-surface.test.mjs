@@ -42,21 +42,15 @@ test('the only public Work mutation family is kungfu work', () => {
   assert.match(command, /@kfc\.group\(\s*name="work"/u);
   assert.doesNotMatch(command, /@kfc\.group\(\s*name="assignment"/u);
 
-  const missionControl = read(
+  for (const retired of [
     'extensions/work-control/work-control-actions/domain/mission_control.py',
-  );
-  assert.doesNotMatch(missionControl, /^def create_mission\(/mu);
-  assert.doesNotMatch(missionControl, /^def create_go\(/mu);
-
-  const atlas = read('framework/core/src/python/kungfu/cli/commands/atlas.py');
-  for (const alias of [
-    'create-mission',
-    'create-go',
-    'claim-completion',
-    'review-completion',
-    'decide-continuation',
+    'framework/core/src/python/kungfu/cli/commands/atlas.py',
   ]) {
-    assert.equal(atlas.includes(`name="${alias}"`), false, alias);
+    assert.equal(
+      fs.existsSync(retired),
+      false,
+      `retired surface remains: ${retired}`,
+    );
   }
 });
 

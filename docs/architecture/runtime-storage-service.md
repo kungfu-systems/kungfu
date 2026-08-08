@@ -1,7 +1,6 @@
 # Runtime Storage Service
 
-Status: draft design plan with implemented Atlas and generic source first
-slices.
+Status: draft design plan with implemented generic source slices.
 
 Kungfu's fact ledger is not only an event capture mechanism. Long term, it is
 also the local persistence service for user facts: runs, work items, imported
@@ -10,7 +9,7 @@ must be inspectable and maintainable in the same way a user expects from a
 serious local database.
 
 This document ties together the existing fact-ledger format direction, current
-journal maintenance commands, Atlas import, source sync, remote sync, and the
+journal maintenance commands, source import, source sync, remote sync, and the
 missing storage operations such as `fsck`, import/export, garbage collection,
 and compaction.
 
@@ -31,8 +30,6 @@ The architectural decisions are recorded in
 for the local runtime storage service and
 [`KF-ADR-019f86da-4f90-76a1-8eda-6e49fa70e7d5`](../adr/KF-ADR-019f86da-4f90-76a1-8eda-6e49fa70e7d5.md)
 for Git-like source sync over Kungfu `location` and `channel`.
-[`KF-ADR-019f86da-4f90-7111-9165-691b834edbab`](../adr/KF-ADR-019f86da-4f90-7111-9165-691b834edbab.md)
-records the first generic source service implementation slice.
 [`KF-ADR-019f86da-4f90-791c-9b90-4888cca36327`](../adr/KF-ADR-019f86da-4f90-791c-9b90-4888cca36327.md)
 defines Episode as the first-class causal segment object that future storage,
 sync, fsck, import/export, and timeline slicing should address directly.
@@ -58,8 +55,6 @@ The lower-level contract already exists in pieces:
   classes.
 - The runtime already has native `location` and `channel` concepts for
   cross-process identity and source/destination communication.
-- `kungfu atlas import` is currently a read-only projection of Atlas
-  control-plane data, not an authority migration.
 - Remote sync currently mirrors source-scoped runtime directories; it is not yet
   a range/hash/session delta protocol.
 
@@ -276,9 +271,8 @@ use explicit content-hash algorithms such as `sha256`; frame receipts use the
 recorded checksum algorithm such as `fnv1a64`; yijinjing `fast_hash_*` ids are
 not valid payload or manifest hashes.
 
-The first trust-proof surface is the manifest-scoped sync root from
-[`KF-ADR-019f86da-4f90-765c-9723-069718911491`](../adr/KF-ADR-019f86da-4f90-765c-9723-069718911491.md).
-For Atlas imports, `fsck` recomputes `kungfu.sync-root/v1` from the manifest's
+The first trust-proof surface is the manifest-scoped sync root.
+For source imports, `fsck` recomputes `kungfu.sync-root/v1` from the manifest's
 ordered entries and reports missing or mismatched root data as a storage
 failure. This root binds payload references, source coordinates, action
 envelopes, and frame receipt metadata for the accepted segment. It is local
@@ -425,56 +419,10 @@ This lets a one-way adapter remain safe while still exercising the same payload,
 manifest, fsck, export, and rebuild mechanisms required for future remote sync
 and authority migration.
 
-### Atlas Import First Slice
-
-Atlas import is the first high-value adapter for this service.
-
-Initial authority boundary:
-
-```text
-Atlas remains source of truth.
-Kungfu imports and verifies a local projection.
-```
-
-The implemented Atlas adapter slice is:
-
-```sh
-kungfu atlas import --repo <atlas-repo> --json
-kungfu storage status --scope atlas --json
-kungfu storage fsck --scope atlas --json
-kungfu storage export --scope atlas --format jsonl --out atlas.jsonl --json
-kungfu atlas verify --repo <atlas-repo> --json
-```
-
-Range-limited Atlas imports preserve the control-plane context needed to make
-the selected records meaningful. For example, if a goal updated inside
-`--from` references a mission whose own card was last updated before that
-window, the import includes that mission as context. `storage export --scope
-atlas` applies the same closure rule: a range export keeps those context
-records instead of re-filtering them away. To export the exact latest imported
-batch, omit range flags; to export a subrange from the latest import, pass
-`--since` / `--from` / `--until` and expect a JSONL stream containing the
-selected records plus required context records.
-
-Acceptance covered by that slice:
-
-- large Atlas JSON bodies are stored outside mmap frames as hash-addressed
-  payloads;
-- import writes a manifest with source head, object count, payload inventory,
-  hash algorithm, frame checksum algorithm, and projection watermark;
-- `fsck` detects missing payloads, hash mismatches, malformed payload JSON, and
-  projection drift against the current Atlas projection;
-- `storage export` emits a canonical JSONL record per imported Atlas payload;
-- `atlas verify` recomputes source hashes from the Atlas repo and compares them
-  with the latest imported payload manifest.
-
-The first slice deliberately does not claim generic storage compaction, range
-sync, schema repair, or a complete rebuild-index command yet.
-
 ### Generic Source Service First Slice
 
-The next implemented slice makes Atlas one adapter over a generic source
-service instead of a special storage architecture.
+The implemented slice exposes a generic source service without a
+project-specific adapter.
 
 The C++ semantic surface now builds and verifies these contracts:
 

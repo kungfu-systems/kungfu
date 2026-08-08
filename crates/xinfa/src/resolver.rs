@@ -198,7 +198,7 @@ fn candidate(atlas: &Value, task: &Value, route: &Value) -> Value {
     let route_capabilities = strings(metadata, "/capabilities");
     let route_owners = strings(metadata, "/owners");
     let route_roles = strings(metadata, "/roles");
-    let route_tracks = strings(metadata, "/mission_tracks");
+    let route_tracks = strings(metadata, "/initiative_tracks");
     let task_subjects = strings(task, "/subjects");
     let task_capabilities = strings(task, "/required_capabilities");
     let task_ownership = strings(task, "/ownership");
@@ -209,7 +209,7 @@ fn candidate(atlas: &Value, task: &Value, route: &Value) -> Value {
         .as_str()
         .unwrap_or_default()
         .to_ascii_lowercase();
-    let mission_track = task
+    let initiative_track = task
         .pointer("/mission/track")
         .and_then(Value::as_str)
         .unwrap_or_default()
@@ -280,9 +280,9 @@ fn candidate(atlas: &Value, task: &Value, route: &Value) -> Value {
         structured_score += 25;
         evidence.push(json!({"kind": "dependency", "value": dependency}));
     }
-    if !mission_track.is_empty() && route_tracks.contains(&mission_track) {
+    if !initiative_track.is_empty() && route_tracks.contains(&initiative_track) {
         structured_score += 35;
-        evidence.push(json!({"kind": "mission-track", "value": mission_track}));
+        evidence.push(json!({"kind": "mission-track", "value": initiative_track}));
     }
     if route_roles.contains(&role) {
         structured_score += 10;
@@ -475,8 +475,8 @@ mod tests {
                 {"id": "kfx.claim.extension", "source": {"path": "docs/kfx/extensions.md"}}
             ]},
             "routes": [
-                {"id":"fixture.core.agent","audience":"agent","parityGroup":"fixture.core","visibility":"public","nodes":["core.claim.storage"],"entrypoints":["docs/core/README.md"],"routeRoot":format!("sha256:{}", "c".repeat(64)),"authorityRoot":format!("sha256:{}", "d".repeat(64)),"status":"current","resolution":{"subjects":["core","storage"],"capabilities":["implementation"],"owners":["core"],"roles":["implementer","reviewer"],"mission_tracks":["core-runtime"],"terms":["core","storage","存储"]}},
-                {"id":"fixture.kfx.agent","audience":"agent","parityGroup":"fixture.kfx","visibility":"public","nodes":["kfx.claim.extension"],"entrypoints":["docs/kfx/README.md"],"routeRoot":format!("sha256:{}", "e".repeat(64)),"authorityRoot":format!("sha256:{}", "f".repeat(64)),"status":"current","resolution":{"subjects":["kfx","extension"],"capabilities":["implementation"],"owners":["kfx"],"roles":["implementer","reviewer"],"mission_tracks":["kfx-runtime"],"terms":["kfx","extension","扩展"]}}
+                {"id":"fixture.core.agent","audience":"agent","parityGroup":"fixture.core","visibility":"public","nodes":["core.claim.storage"],"entrypoints":["docs/core/README.md"],"routeRoot":format!("sha256:{}", "c".repeat(64)),"authorityRoot":format!("sha256:{}", "d".repeat(64)),"status":"current","resolution":{"subjects":["core","storage"],"capabilities":["implementation"],"owners":["core"],"roles":["implementer","reviewer"],"initiative_tracks":["core-runtime"],"terms":["core","storage","存储"]}},
+                {"id":"fixture.kfx.agent","audience":"agent","parityGroup":"fixture.kfx","visibility":"public","nodes":["kfx.claim.extension"],"entrypoints":["docs/kfx/README.md"],"routeRoot":format!("sha256:{}", "e".repeat(64)),"authorityRoot":format!("sha256:{}", "f".repeat(64)),"status":"current","resolution":{"subjects":["kfx","extension"],"capabilities":["implementation"],"owners":["kfx"],"roles":["implementer","reviewer"],"initiative_tracks":["kfx-runtime"],"terms":["kfx","extension","扩展"]}}
             ]
         })
     }

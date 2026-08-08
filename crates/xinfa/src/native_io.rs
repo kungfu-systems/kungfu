@@ -818,7 +818,7 @@ mod tests {
                 "resolution":{
                     "subjects":["repository"],"capabilities":["onboarding"],
                     "owners":["project"],"roles":["contributor"],
-                    "mission_tracks":["repository-onboarding"],"terms":["node"]
+                    "initiative_tracks":["repository-onboarding"],"terms":["node"]
                 }
             },
             "existingProject":{"replace":false,"expectedRoot":null}

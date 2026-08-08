@@ -117,7 +117,7 @@ function taskEnvelope(atlas, item) {
     mission: {
       id: 'kungfu-technical-stewardship',
       lens: 'principal-engineer',
-      track: item.mission_track,
+      track: item.initiative_track,
     },
     acceptance: [
       `route ${item.expected_route} includes every declared critical source`,

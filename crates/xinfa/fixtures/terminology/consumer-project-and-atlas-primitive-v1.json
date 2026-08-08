@@ -1,0 +1,10 @@
+{
+  "schema": "xinfa.terminology-contract/v1",
+  "projectTerm": "consumer project",
+  "primitiveTerm": "Xinfa Atlas",
+  "canonicalSentence": "A consumer project compiles a Xinfa Atlas",
+  "forbiddenEquivalences": [
+    ["consumer project", "Xinfa Atlas"],
+    ["consumer repository", "xinfa.atlas/v1"]
+  ]
+}
