@@ -603,15 +603,23 @@ export function validatePromotionContract(
     findings.push(finding('Buildchain KFD evidence adapter does not exist'));
   } else {
     const kfdEvidence = fs.readFileSync(kfdEvidencePath, 'utf8');
+    const kfdRuntimePath = path.join(
+      root,
+      'framework/release/buildchain-kfd-runtime.mjs',
+    );
+    const kfdRuntime = fs.existsSync(kfdRuntimePath)
+      ? fs.readFileSync(kfdRuntimePath, 'utf8')
+      : '';
+    const kfdRecoveryClosure = `${kfdEvidence}\n${kfdRuntime}`;
     requirePattern(
-      kfdEvidence,
+      kfdRecoveryClosure,
       /BUILDCHAIN_RELEASE_CANDIDATE_RECOVERY_RECEIPT_PATH[\s\S]*reused sealed release-candidate KFD upstream aggregate/u,
       findings,
       'release-candidate recovery must reuse the sealed KFD upstream aggregate without reinstalling product dependencies',
     );
     requirePattern(
-      kfdEvidence,
-      /BUILDCHAIN_RELEASE_CANDIDATE_RECOVERY_RECEIPT_PATH\s*\? process\.cwd\(\)/u,
+      kfdRecoveryClosure,
+      /BUILDCHAIN_RELEASE_CANDIDATE_RECOVERY_RECEIPT_PATH[\s\S]*releaseCandidateKfdRoot[\s\S]*process\.cwd\(\)/u,
       findings,
       'release-candidate recovery must project controller logic over the sealed product root',
     );
