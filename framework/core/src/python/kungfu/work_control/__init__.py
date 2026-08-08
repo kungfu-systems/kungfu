@@ -1,11 +1,6 @@
 # SPDX-License-Identifier: Apache-2.0
 
-"""Kungfu-native Work Control domain access.
-
-The implementation is supplied by the active ``kungfu.work-control`` Profile
-suite. This module names that native owner directly; it is not a projection of
-any consumer repository or retired protocol.
-"""
+"""Kungfu-native Work Control domain access."""
 
 from kungfu import profile_sdk
 

@@ -2,11 +2,8 @@
 
 """Installed Work Design command surface."""
 
-from pathlib import Path
-
 import click
 import kungfu
-
 from kungfu.cli.commands import PrioritizedCommandGroup, kfc
 
 
@@ -21,9 +18,9 @@ def work_design():
     pass
 
 
-def _preflight_entry() -> Path:
+def _preflight_entry():
     return (
-        Path(__file__).resolve().parents[2]
+        __import__("pathlib").Path(__file__).resolve().parents[2]
         / "work_design_runtime"
         / "framework"
         / "work-design-preflight"
