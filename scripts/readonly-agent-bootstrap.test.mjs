@@ -138,10 +138,16 @@ function sourceAuditRoot(rows) {
 }
 
 function boundedDiagnosticTail(...values) {
-  const [stderr] = values;
-  if (stderr) return stderr.slice(-24 * 1024);
-  const output = values.filter(Boolean).join('\n');
+  const output = [...values].reverse().filter(Boolean).join('\n');
   const lines = output.split(/\r?\n/u);
+  const sourceFailureIndex = lines.findLastIndex((line) =>
+    line.includes('[source-acceptance] Python type baseline failed'),
+  );
+  if (sourceFailureIndex >= 0)
+    return lines
+      .slice(Math.max(0, sourceFailureIndex - 80), sourceFailureIndex + 20)
+      .join('\n')
+      .slice(0, 24 * 1024);
   const failingTestsIndex = lines.findLastIndex(
     (line) => line.trim() === '✖ failing tests:',
   );
