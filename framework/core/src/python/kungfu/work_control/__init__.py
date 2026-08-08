@@ -6,7 +6,9 @@ from kungfu import profile_sdk
 
 
 def domain_package(runtime_dir: str | None = None):
-    source = profile_sdk.discover_source("kungfu.work-control", runtime_dir)["source"]
+    source = profile_sdk.discover_source("kungfu.work-control", runtime_dir or "")[
+        "source"
+    ]
     return profile_sdk.load_member_python_package(
         source, "work-control-actions", "domain"
     )

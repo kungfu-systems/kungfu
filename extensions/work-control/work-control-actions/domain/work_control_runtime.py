@@ -1322,7 +1322,6 @@ def list_assignment_relation_events(
         for record in list_domain_records(
             runtime_dir,
             surface_ids={RELATION_SURFACE_ID},
-            vocabulary="initiative-assignment",
             cut_system_time=cut_system_time,
         )
         if record.get("claim_type") == ASSIGNMENT_RELATION_EVENT
