@@ -501,6 +501,26 @@ test('graph shadow success delegates unchanged and binds current evidence', asyn
   assert.equal(result.events[1].state, 'succeeded');
 });
 
+test('graph shadow default verifier resolves the trusted receipt before admission', async (t) => {
+  const fixture = await shadowDiskFixture(t);
+  const result = await runProductionGraphShadow(fixture.options, {
+    root: shadowRoot,
+    delegate: async (invocation) => {
+      const plan = shadowCurrentPlan();
+      writeShadowJson(invocation.currentPlanPath, plan);
+      writeShadowJson(invocation.currentReceiptPath, {
+        schema: 'kungfu.core-affected-native-receipt/v1',
+        status: 'passed',
+        plan,
+        planDigest: plan.planDigest,
+        toolchain: { compiler: 'fixture', runner: 'node-test' },
+      });
+      return { exitCode: 0, signal: null, error: null };
+    },
+  });
+  assert.equal(result.shadowReceipt.parity.classification, 'matched-success');
+});
+
 test('graph shadow preserves nonzero current failure and its receipt', async (t) => {
   const fixture = await shadowDiskFixture(t);
   const result = await runProductionGraphShadow(fixture.options, {

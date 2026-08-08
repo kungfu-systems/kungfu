@@ -1045,9 +1045,11 @@ export async function runProductionGraphShadow(
   const verificationReceipt = readJsonFile(
     path.resolve(options.verificationReceipt),
   );
-  const trusted =
-    trustedVerificationReceipt ||
-    (await import('./check.mjs')).checkProductionGraphContract();
+  let trusted = trustedVerificationReceipt;
+  if (!trusted) {
+    const verifier = await import('./check.mjs');
+    trusted = await verifier.checkProductionGraphContract();
+  }
   const admission = await verifyProductionGraphShadowInput(
     { graph, plan, verificationReceipt },
     { root, trustedVerificationReceipt: trusted },
