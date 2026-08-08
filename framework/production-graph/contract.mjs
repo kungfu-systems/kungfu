@@ -142,7 +142,7 @@ function evidenceRoot(fixtureId, nodeId) {
   return semanticRoot({ fixtureId, nodeId, kind: 'retained-evidence' });
 }
 
-function createPlan(graph) {
+export function createPlan(graph) {
   const topology = topologicalNodeIds(graph.nodes);
   if (topology.diagnostics.length) {
     throw new Error(topology.diagnostics.map(({ code }) => code).join(', '));

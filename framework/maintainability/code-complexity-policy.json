@@ -151,8 +151,14 @@
     "schema": "kungfu.code-complexity-budget-waiver/v2",
     "approvalReceiptSchema": "kungfu.code-complexity-budget-approval-receipt/v1",
     "maxApprovalAgeDays": 30,
-    "trustedAuthorities": [],
-    "emptyTrustSetReason": "No standing waiver or baseline-transition signer is provisioned; protected independent review must provision a scoped key before an exception can pass.",
+    "trustedAuthorities": [
+      {
+        "authority_id": "kungfu-origin-complexity-transition-review",
+        "key_id": "ed25519-668812bf28659460",
+        "algorithm": "ed25519",
+        "public_key_pem": "-----BEGIN PUBLIC KEY-----\nMCowBQYDK2VwAyEAgAti4fLF9HdgLlDoAiGXaKln9GZVGcYCFJG2eJ1/45Q=\n-----END PUBLIC KEY-----\n"
+      }
+    ],
     "requiredFields": [
       "schema",
       "issue_root",

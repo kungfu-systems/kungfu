@@ -64,8 +64,10 @@ function verifierRoot() {
   return semanticRoot(
     [
       'framework/production-graph/contract.mjs',
+      'framework/production-graph/compiler/index.mjs',
       'framework/production-graph/check.mjs',
       'framework/production-graph/check.test.mjs',
+      'framework/production-graph/compiler/polyglot.fixture.mjs',
     ].map((relative) => ({
       path: relative,
       root: fileRoot(path.join(ROOT, relative)),

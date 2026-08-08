@@ -533,7 +533,7 @@ jobs:
       actions: read
       contents: write
       pull-requests: write
-    uses: kungfu-systems/buildchain/.github/workflows/.declarative-auditable-demo.yml@2e7e07902ac28d8f3edcfb81098ef9ebc7a91878
+    uses: kungfu-systems/buildchain/.github/workflows/.declarative-auditable-demo.yml@f7a98257a32624a63be2a935d7b884d6e872e07e
     secrets:
       DEMO_UPDATE_TOKEN: ${{ secrets.KUNGFU_GITHUB_TOKEN }}
     with:
@@ -541,7 +541,7 @@ jobs:
       binary-artifact-name: ${{ needs.resolve-auditable-demo-source.outputs.artifact-name }}
       binary-artifact-digest: ${{ needs.resolve-auditable-demo-source.outputs.artifact-digest }}
       scenario-path: .buildchain/auditable-demo.json
-      renderer-image: ghcr.io/kungfu-systems/build-images/demo-renderer@sha256:c200589be9dda6f730f1cb3deb5b48a60af9144e7a3e4216b7ef70c8e9274000
+      renderer-image: ghcr.io/kungfu-systems/build-images/demo-renderer@sha256:3a49708163fedaaabe07b45bba910026a1828151b5d4e9bbdaf0d62e75c927c1
       render-media: ${{ github.event_name != 'workflow_dispatch' || inputs.render-auditable-demo }}
       # Alpha publication depends on the required Gate, never on renderer
       # capacity. The media step remains visible but advisory only for Alpha;
