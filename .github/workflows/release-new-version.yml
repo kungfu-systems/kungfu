@@ -455,7 +455,7 @@ jobs:
       release-passport-invariant-passport-command: >-
         node scripts/kungfu-invariant.mjs --collect-evidence .
         --passport product/release/qualification/invariant-passport.json --json
-      github-artifact-attestation-policy-json: auto
+      github-artifact-attestation-policy-json: ""
       github-artifact-attestation-environment: buildchain-artifact-attestation
       dry-run: false
     secrets:
