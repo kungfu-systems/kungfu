@@ -223,7 +223,6 @@ test('KFD evidence accepts an exact tree-equivalent ancestor after queue rebase'
 
 test('KFD evidence runtime adapts the repository-bound Git reader for queue replay', () => {
   const sourceSha = 'a'.repeat(40);
-  const replayedSha = 'c'.repeat(40);
   const resolved = resolveGitBoundKfdEvidenceSourceSha({
     root: ROOT,
     write: false,
@@ -239,7 +238,7 @@ test('KFD evidence runtime adapts the repository-bound Git reader for queue repl
       assert.equal(selectedSourceSha, sourceSha);
       assert.equal(
         findTreeEquivalentAncestor(selectedSourceSha, headSha),
-        replayedSha,
+        'c'.repeat(40),
       );
       return selectedSourceSha;
     },
@@ -248,7 +247,7 @@ test('KFD evidence runtime adapts the repository-bound Git reader for queue repl
       assert.match(headSha, /^[0-9a-f]{40}$/u);
       assert.equal(typeof gitRead, 'function');
       assert.equal(gitRead(['rev-parse', 'HEAD']), headSha);
-      return replayedSha;
+      return 'c'.repeat(40);
     },
   });
   assert.equal(resolved, sourceSha);
