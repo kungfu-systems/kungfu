@@ -17,11 +17,11 @@
       "standardRevision": 10,
       "sourceSha": "f9e6b0e34bcdd6407b2a18206ace7982d64de2c8",
       "evidenceCut": {
-        "generatedAt": "2026-08-08T14:05:07.214Z",
-        "expiresAt": "2026-08-09T14:05:07.214Z"
+        "generatedAt": "2026-08-08T14:34:23.742Z",
+        "expiresAt": "2026-08-09T14:34:23.742Z"
       },
       "status": "passed",
-      "gateRoot": "sha256:65fe6d513730997e117266ad4a2720fe33c87afb45053cc924e47822c91edbcb",
+      "gateRoot": "sha256:10035decc833db04449d9ef4b109281da9d12122e52aa16dfbe44263781454e5",
       "issueCount": 0
     },
     {
@@ -29,11 +29,11 @@
       "standardRevision": 7,
       "sourceSha": "f9e6b0e34bcdd6407b2a18206ace7982d64de2c8",
       "evidenceCut": {
-        "generatedAt": "2026-08-08T14:05:07.214Z",
-        "expiresAt": "2026-08-09T14:05:07.214Z"
+        "generatedAt": "2026-08-08T14:34:23.742Z",
+        "expiresAt": "2026-08-09T14:34:23.742Z"
       },
       "status": "passed",
-      "gateRoot": "sha256:cc2d1f347fcd3588cbc179eff4cfedeb70ad1f0782b009e2649746180fc8f417",
+      "gateRoot": "sha256:382880ab25337d25fb8940b476944b1374132abaa518545fc90402d86d853841",
       "issueCount": 0
     },
     {
@@ -41,11 +41,11 @@
       "standardRevision": 8,
       "sourceSha": "f9e6b0e34bcdd6407b2a18206ace7982d64de2c8",
       "evidenceCut": {
-        "generatedAt": "2026-08-08T14:05:07.214Z",
-        "expiresAt": "2026-08-09T14:05:07.214Z"
+        "generatedAt": "2026-08-08T14:34:23.742Z",
+        "expiresAt": "2026-08-09T14:34:23.742Z"
       },
       "status": "passed",
-      "gateRoot": "sha256:3a04373fe59fc680138819b02a743823ec4ddfd646a2d8975a598625107c37a2",
+      "gateRoot": "sha256:fb9b6d23b82e9a46fc5f3680a25e9d69207e1654837cfee48b6a1abff7a6c9dd",
       "issueCount": 0
     }
   ],
@@ -636,5 +636,5 @@
     "Candidate, unsupported, draft, and non-qualifying matrix states cannot be widened by this projection."
   ],
   "issues": [],
-  "projectionRoot": "sha256:a715c930880caa5bea77f5836ab0bbdf19622aca1ab7da8db23035dc0b216bed"
+  "projectionRoot": "sha256:6597e23d9e342639eeaa51ae5bc5cb67d85f50218b0e3f556518858a7e2b6238"
 }
