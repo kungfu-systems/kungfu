@@ -42,6 +42,7 @@ from . import release
 from . import recover
 from . import exit
 from . import dev
+from . import work_design
 
 __all__ = [
     "engage",
@@ -86,4 +87,5 @@ __all__ = [
     "recover",
     "exit",
     "dev",
+    "work_design",
 ]
