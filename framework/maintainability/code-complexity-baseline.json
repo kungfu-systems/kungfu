@@ -1,7 +1,7 @@
 {
   "schema": "kungfu.code-complexity-budget-baseline/v1",
-  "policyRoot": "sha256:cede13a6da27bc2ab2f662733fae15d9f5d3511032e9160b06d6859cb022a77b",
-  "baselineRef": "3733e7cbedd16e21bd13e69d9ccad9b3d2a86382",
+  "policyRoot": "sha256:fb6740f6cbc3f45ce0ade099af6074032fa43695c4c90cae29bec71428d5dc53",
+  "baselineRef": "6633739110175a9d4e6b66e8a0d863a7cedfb977",
   "classification": "ordered-policy-and-content-marker/v1",
   "calibration": {
     "groupBy": [
@@ -627,7 +627,7 @@
       "language": "declarative",
       "owner": "kungfu/repository-contract",
       "lines": 281,
-      "contentRoot": "sha256:d3f7e8f899e5201fbb159c77423d85a92d80cd078706dfde4d89e79e78faf206"
+      "contentRoot": "sha256:8def0dc7e78f26d551cb80d617678ea12492171debc72e9590ddbee499b1f4db"
     },
     {
       "path": ".buildchain/kfd/kfd-1/documentation-consumers.witness.json",
@@ -654,7 +654,7 @@
       "language": "declarative",
       "owner": "kungfu/repository-contract",
       "lines": 852,
-      "contentRoot": "sha256:356de624ae5274984626b74494abbcb3e36a3ea0d2854d337ee0ab4c04384053"
+      "contentRoot": "sha256:18b5b6714b6183dc3cf26b6f05ce41221a96bb7fc79be303bab54d16d3a2dcce"
     },
     {
       "path": ".buildchain/kfd/kfd-1/verify-result.json",
@@ -753,7 +753,7 @@
       "language": "declarative",
       "owner": "kungfu/repository-contract",
       "lines": 5262,
-      "contentRoot": "sha256:eb122f35f54df714eb6da6ad661375e177e4e8234e894fbf1b3633cb4ef9aafb"
+      "contentRoot": "sha256:a520cb2ffb725e334d20cd83b77b992f7de04c9c80a0d3a286ddd80f177ea416"
     },
     {
       "path": ".buildchain/kfd/kfd-3/surfaces.json",
@@ -13749,7 +13749,7 @@
       "language": "declarative",
       "owner": "kungfu/config",
       "lines": 584,
-      "contentRoot": "sha256:ac3b7729b69d7242d562b13c3775b528f02de62e43369aaeacd75bbc09baa44a"
+      "contentRoot": "sha256:bc243cba8871bf7f47d71544dfe6718f5144a49b5978192e2fef148de4ff930b"
     },
     {
       "path": "config/kungfu-contracts.registry.json",
@@ -15738,7 +15738,7 @@
       "language": "declarative",
       "owner": "developer/sdk",
       "lines": 281,
-      "contentRoot": "sha256:d3f7e8f899e5201fbb159c77423d85a92d80cd078706dfde4d89e79e78faf206"
+      "contentRoot": "sha256:8def0dc7e78f26d551cb80d617678ea12492171debc72e9590ddbee499b1f4db"
     },
     {
       "path": "developer/sdk/kfd/kfd-1/release-gate.json",
@@ -15747,7 +15747,7 @@
       "language": "declarative",
       "owner": "developer/sdk",
       "lines": 852,
-      "contentRoot": "sha256:356de624ae5274984626b74494abbcb3e36a3ea0d2854d337ee0ab4c04384053"
+      "contentRoot": "sha256:18b5b6714b6183dc3cf26b6f05ce41221a96bb7fc79be303bab54d16d3a2dcce"
     },
     {
       "path": "developer/sdk/kfd/kfd-1/verify-result.json",
@@ -22029,7 +22029,7 @@
       "language": "declarative",
       "owner": "framework/contract",
       "lines": 584,
-      "contentRoot": "sha256:ac3b7729b69d7242d562b13c3775b528f02de62e43369aaeacd75bbc09baa44a"
+      "contentRoot": "sha256:bc243cba8871bf7f47d71544dfe6718f5144a49b5978192e2fef148de4ff930b"
     },
     {
       "path": "framework/contract/kungfu-contracts.registry.json",
@@ -36006,7 +36006,7 @@
       "language": "declarative",
       "owner": "framework/maintainability",
       "lines": 165,
-      "contentRoot": "sha256:74d94c97cf63c8533959a8724f438b92171155a237056fd779e165bea4f3aabe"
+      "contentRoot": "sha256:d0d12e559747d43bdfa30acc7ee99440a21abab54fa30bc8e73c4e2c1c446ee0"
     },
     {
       "path": "framework/maintainability/complexity-governance.mjs",
@@ -44416,5 +44416,5 @@
     }
   ],
   "issues": [],
-  "measurementRoot": "sha256:7dd3c2accd783847c04b72995c1a3c156dd7af72f4ee7da5eb64ccbb867731b6"
+  "measurementRoot": "sha256:c5674d8318856a235c4a291c69a673f15ceba0fcd986c18f195a2523a7224f4d"
 }
