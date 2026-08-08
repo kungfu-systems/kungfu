@@ -1,7 +1,7 @@
 {
   "schema": "kungfu.code-complexity-budget-baseline/v1",
-  "policyRoot": "sha256:3088fc25eb358d927df4fef7768b547c125a91df74844779f5632851120cc275",
-  "baselineRef": "0522cacca70ee07ed4fefde64534d848ecb1c06f",
+  "policyRoot": "sha256:e04f1e21c1390aebf0d3b6ad303efaa8246665850c3478a52d05a9cc3ecedc56",
+  "baselineRef": "28f79cd0a7caaf478d937b786bd7d8db8560ed0b",
   "classification": "ordered-policy-and-content-marker/v1",
   "calibration": {
     "groupBy": [
@@ -15,28 +15,28 @@
   },
   "summary": {
     "declarative-schema-or-table": {
-      "files": 1370,
-      "lines": 573816
+      "files": 1371,
+      "lines": 574107
     },
     "first-party-handwritten-implementation": {
       "files": 1034,
-      "lines": 367487
+      "lines": 367582
     },
     "generated-projection": {
       "files": 74,
       "lines": 10088
     },
     "public-header-or-entrypoint": {
-      "files": 183,
-      "lines": 54483
+      "files": 184,
+      "lines": 55188
     },
     "retained-evidence": {
       "files": 887,
       "lines": 1631192
     },
     "test-or-fixture": {
-      "files": 870,
-      "lines": 184138
+      "files": 871,
+      "lines": 184377
     },
     "vendored-source": {
       "files": 451,
@@ -55,8 +55,8 @@
     "declarative-schema-or-table:declarative": {
       "class": "declarative-schema-or-table",
       "language": "declarative",
-      "population": 1343,
-      "soft": 225,
+      "population": 1344,
+      "soft": 226,
       "hard": 2340,
       "calibration": "p90/p99"
     },
@@ -159,7 +159,7 @@
     "public-header-or-entrypoint:javascript-typescript": {
       "class": "public-header-or-entrypoint",
       "language": "javascript-typescript",
-      "population": 43,
+      "population": 44,
       "soft": 2390,
       "hard": 3080,
       "calibration": "p90/p99"
@@ -231,7 +231,7 @@
     "test-or-fixture:javascript-typescript": {
       "class": "test-or-fixture",
       "language": "javascript-typescript",
-      "population": 436,
+      "population": 437,
       "soft": 575,
       "hard": 1246,
       "calibration": "p90/p99"
@@ -331,7 +331,7 @@
       "class": "declarative-schema-or-table",
       "language": "declarative",
       "owner": "kungfu/docs",
-      "baselineLines": 2375,
+      "baselineLines": 2397,
       "hardBudget": 2340
     },
     {
@@ -13569,7 +13569,7 @@
       "language": "declarative",
       "owner": "kungfu/repository-contract",
       "lines": 1,
-      "contentRoot": "sha256:c3a59c3fff95e36abc126dd2551926bcf5b8b753f2f0ee250171a429c04e5f24"
+      "contentRoot": "sha256:b1dedf4a3c8a53ee9ffd237d5bf43e723f70b1090a29e4af37f1a072425e0704"
     },
     {
       "path": ".xinfa/product-documentation-pack.json",
@@ -14559,7 +14559,7 @@
       "language": "rust",
       "owner": "crate/trunk",
       "lines": 194,
-      "contentRoot": "sha256:cae9a5f5417fb95d575910d4a00c8ba8e9fef89bfd064347588b5d21d2ea9cdb"
+      "contentRoot": "sha256:bf65e7b8c8e42e3832fbfcdecc5ebefc89a84da401607d44037a9db91c7dc70c"
     },
     {
       "path": "crates/trunk/src/variant.rs",
@@ -15999,7 +15999,7 @@
       "language": "declarative",
       "owner": "kungfu/docs",
       "lines": 1,
-      "contentRoot": "sha256:dbdb199457ac391f93beac5e83b26a428a226af2f3f6037010a1d41ee817ff3c"
+      "contentRoot": "sha256:523cf7d6b0e364b278fc8d23ca00beaf89fe229f7907b796e24fb0014e1da7ea"
     },
     {
       "path": "docs/document-metadata.contract.json",
@@ -16016,8 +16016,8 @@
       "generatedProvenance": false,
       "language": "declarative",
       "owner": "kungfu/docs",
-      "lines": 2375,
-      "contentRoot": "sha256:48aac66bee860265172cbf47cdd0538c14f66dcd3126b6e2c0b30275faa8bbb6"
+      "lines": 2397,
+      "contentRoot": "sha256:fda9317d85c23d2a1fa75a521bcddbc6ce94c58b35c76d460e158b8965272d41"
     },
     {
       "path": "docs/evolution/document-metadata.registry.json",
@@ -16045,6 +16045,15 @@
       "owner": "kungfu/docs",
       "lines": 1015,
       "contentRoot": "sha256:5471fdddb1738cbfb80535cfb176fd7b92c233e6e5b769abc502f6c409a631f1"
+    },
+    {
+      "path": "docs/qualification/alpha-local-publication-debug.declaration.json",
+      "class": "declarative-schema-or-table",
+      "generatedProvenance": false,
+      "language": "declarative",
+      "owner": "kungfu/docs",
+      "lines": 265,
+      "contentRoot": "sha256:32ae01cda0bf12bfb27d050f81abb23501ce68013e8327001ae19044359a9e77"
     },
     {
       "path": "docs/qualification/alpha-release-latency.contract.json",
@@ -36014,8 +36023,8 @@
       "generatedProvenance": false,
       "language": "declarative",
       "owner": "framework/maintainability",
-      "lines": 163,
-      "contentRoot": "sha256:a4e9f316fb539d3c6d9fd307bd486893764f5152fcf393aa08780e8bbcffba54"
+      "lines": 165,
+      "contentRoot": "sha256:1021ec263dab406d7a02355140fde87cac1d08020b4f26861c9829f9ecb05d97"
     },
     {
       "path": "framework/maintainability/complexity-governance.mjs",
@@ -36023,8 +36032,8 @@
       "generatedProvenance": false,
       "language": "javascript-typescript",
       "owner": "framework/maintainability",
-      "lines": 559,
-      "contentRoot": "sha256:dcb7d1bdbec45bce7d4a2e2f3fb65401f82511ca3479efc006f8715df2918a46"
+      "lines": 654,
+      "contentRoot": "sha256:a4d7103755e9b0a68856d0ee552663f81500156dbafdbb1310284700ac80f31d"
     },
     {
       "path": "framework/maintainability/delivery-evidence.mjs",
@@ -36619,6 +36628,15 @@
       "owner": "framework/release",
       "lines": 128,
       "contentRoot": "sha256:93cc9e236135bad9175de04e216630f1218c5c5c22f9a32f26ea33dd2505ca72"
+    },
+    {
+      "path": "framework/release/alpha-local-publication-debug/index.mjs",
+      "class": "public-header-or-entrypoint",
+      "generatedProvenance": false,
+      "language": "javascript-typescript",
+      "owner": "framework/release",
+      "lines": 705,
+      "contentRoot": "sha256:59a928e3e3655eb039d0caa6f2157a710d81826b5e06a5fe6506b938cc76d8f5"
     },
     {
       "path": "framework/release/buildchain-kfd-runtime.mjs",
@@ -38516,8 +38534,8 @@
       "generatedProvenance": false,
       "language": "declarative",
       "owner": "kungfu/repository-contract",
-      "lines": 394,
-      "contentRoot": "sha256:4fcd522fe4ac93ec91f935cace49b6c94abd9b177e1642a993cb523c2b29c287"
+      "lines": 396,
+      "contentRoot": "sha256:01e92838ffd84fab760e2be4d4000d955dafe12241c13177287fbafb68892750"
     },
     {
       "path": "pnpm-lock.yaml",
@@ -38733,7 +38751,7 @@
       "language": "javascript-typescript",
       "owner": "product/assembly",
       "lines": 559,
-      "contentRoot": "sha256:06a3ad0f781b5fce676985d8b06a16c9ff9ae11d1a32178210476f41e332d075"
+      "contentRoot": "sha256:b556845072b76598a98fb116568e1c2b3b908c790188204ef1c03ed9eaf5ad65"
     },
     {
       "path": "product/scripts/qualify-product-cache-home.mjs",
@@ -39058,6 +39076,15 @@
       "owner": "shifu/source-tooling",
       "lines": 198,
       "contentRoot": "sha256:21e6bdff4164b5c865d2b5738f3cbf6dd03e77f68f03b222b66f28f4636a042c"
+    },
+    {
+      "path": "scripts/alpha-local-publication-debug.test.mjs",
+      "class": "test-or-fixture",
+      "generatedProvenance": false,
+      "language": "javascript-typescript",
+      "owner": "shifu/source-tooling",
+      "lines": 159,
+      "contentRoot": "sha256:9647eef02fff1c036d7d5ef9c4d4f8938b337c285892f690e963f655ae1f8cc9"
     },
     {
       "path": "scripts/alpha-macos-overflow.test.mjs",
@@ -40424,8 +40451,8 @@
       "generatedProvenance": false,
       "language": "javascript-typescript",
       "owner": "shifu/source-tooling",
-      "lines": 705,
-      "contentRoot": "sha256:d8b9a9e11414f79d07efa49bc5c12d6c30bcc695b9b9eeee57308be2e71ce016"
+      "lines": 785,
+      "contentRoot": "sha256:7acd020e1564490b9ffbf2a7a3fe622ee58324a8e632abff55866de767ea0f09"
     },
     {
       "path": "scripts/collect-layer-publication.mjs",
@@ -44407,5 +44434,5 @@
     }
   ],
   "issues": [],
-  "measurementRoot": "sha256:7da19216c83c9f679717692eea00769bcd6e2220b9d69d9878aaaf9193e5bfb3"
+  "measurementRoot": "sha256:268d08121d5df115d98c789832c439d444b56a3304d02a70feb9b3a9e62c7225"
 }
