@@ -272,13 +272,15 @@ function observeTerminalReview(matrix, pullRequest, head, headTree) {
   };
 }
 
-function observeRun(matrix, declared) {
+function observeRun(matrix, declared, observe = gh) {
   const repository = matrix.sourceBinding.repository;
-  const run = gh(`/repos/${repository}/actions/runs/${declared.runId}`);
-  const jobsPayload = gh(
-    `/repos/${repository}/actions/runs/${declared.runId}/jobs?per_page=100`,
-  );
-  const artifactsPayload = gh(
+  if (!Number.isInteger(declared.runAttempt) || declared.runAttempt < 1) {
+    throw new Error(`${declared.role} run attempt must be a positive integer`);
+  }
+  const attemptEndpoint = `/repos/${repository}/actions/runs/${declared.runId}/attempts/${declared.runAttempt}`;
+  const run = observe(attemptEndpoint);
+  const jobsPayload = observe(`${attemptEndpoint}/jobs?per_page=100`);
+  const artifactsPayload = observe(
     `/repos/${repository}/actions/runs/${declared.runId}/artifacts?per_page=100`,
   );
   return {
@@ -348,5 +350,6 @@ export function collectTerminalLiveObservations(matrix, evidence) {
 
 export {
   jsonOutput as parseCommandJson,
+  observeRun,
   terminalReviewAttestation as parseTerminalReviewAttestation,
 };
