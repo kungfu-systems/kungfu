@@ -322,10 +322,29 @@ function findFirstParentPatchEquivalent(
   return '';
 }
 
+export function githubMergeGroupCoordinates(
+  env = process.env,
+  readFile = fs.readFileSync,
+) {
+  if (env.GITHUB_EVENT_NAME !== 'merge_group' || !env.GITHUB_EVENT_PATH)
+    return null;
+  try {
+    const event = JSON.parse(readFile(env.GITHUB_EVENT_PATH, 'utf8'));
+    const baseSha = String(event?.merge_group?.base_sha || '');
+    const headSha = String(event?.merge_group?.head_sha || '');
+    if (!/^[0-9a-f]{40}$/u.test(baseSha) || !/^[0-9a-f]{40}$/u.test(headSha))
+      return null;
+    return { baseSha, headSha };
+  } catch {
+    return null;
+  }
+}
+
 export function findGitTreeEquivalentAncestor(
   sourceSha,
   headSha,
   gitRead = gitMaybe,
+  mergeGroup = githubMergeGroupCoordinates(),
 ) {
   if (gitRead(['cat-file', '-t', sourceSha]) !== 'commit') return '';
   const sourceTree = gitRead(['rev-parse', `${sourceSha}^{tree}`]);
@@ -352,6 +371,27 @@ export function findGitTreeEquivalentAncestor(
   ])
     .trim()
     .split(/\s+/u);
+
+  // GitHub merge queue currently emits a linear replay rather than the
+  // historical two-parent synthetic merge. Trust that shape only when the
+  // merge_group event binds this exact checked head and protected base, then
+  // require the same bounded byte-for-byte cumulative patch equivalence used
+  // for the synthetic form. Ordinary local and PR checkouts cannot enter this
+  // path by merely resembling a replay graph.
+  if (
+    mergeSha === headSha &&
+    baseParent &&
+    !candidateParent &&
+    mergeGroup?.headSha === headSha &&
+    /^[0-9a-f]{40}$/u.test(mergeGroup.baseSha)
+  ) {
+    return findFirstParentPatchEquivalent(
+      sourceSha,
+      mergeGroup.baseSha,
+      headSha,
+      gitRead,
+    );
+  }
   if (
     mergeSha !== headSha ||
     !baseParent ||
