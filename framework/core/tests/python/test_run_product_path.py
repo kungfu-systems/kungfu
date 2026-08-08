@@ -168,6 +168,8 @@ def test_resumed_authority_writes_remain_visible_when_run_gate_fails(
             "initiativeId": "project-work",
             "assignmentId": "first",
             "phase": "admitted",
+            "objective": "Verify bound-session ordering",
+            "acceptanceChecks": ["Run gate is checked before instruction"],
         },
         "agent": {
             "id": "kungfu.mock-agent",
@@ -182,7 +184,11 @@ def test_resumed_authority_writes_remain_visible_when_run_gate_fails(
     statuses = iter(
         [
             {"phase": "admitted", "query_proof_root": "sha256:" + "3" * 64},
-            {"phase": "claimed", "query_proof_root": "sha256:" + "4" * 64},
+            {
+                "phase": "claimed",
+                "query_proof_root": "sha256:" + "4" * 64,
+                "assignment": {"assignment_id": "first"},
+            },
         ]
     )
     monkeypatch.setattr(assignment, "_work_start_plan", lambda **_kwargs: plan)
@@ -195,7 +201,7 @@ def test_resumed_authority_writes_remain_visible_when_run_gate_fails(
     monkeypatch.setattr(
         assignment,
         "_profile_action",
-        lambda *_args: {
+        lambda *_args, **_kwargs: {
             "claim": {
                 "claim_id": "claim-1",
                 "lease_id": "lease-1",
@@ -208,7 +214,7 @@ def test_resumed_authority_writes_remain_visible_when_run_gate_fails(
     monkeypatch.setattr(
         assignment,
         "_advance",
-        lambda *_args: {
+        lambda *_args, **_kwargs: {
             "transition": {
                 "claim_id": "transition-1",
                 "lease_id": "lease-1",
@@ -227,6 +233,23 @@ def test_resumed_authority_writes_remain_visible_when_run_gate_fails(
         "gate",
         lambda *_args: {"ok": False, "reason": "test run gate failure"},
     )
+    monkeypatch.setattr(
+        assignment.run_agent.session_surface,
+        "ensure",
+        lambda *_args: "session-endpoint",
+    )
+
+    def start_bound_session(**kwargs):
+        kwargs["session_started_callback"](
+            {
+                "workConsoleId": "work:kungfu.work-control:assignment:first",
+                "sessionAttemptId": "agent-test",
+            },
+            {"status": "started"},
+        )
+        raise AssertionError("run gate should fail before the first instruction")
+
+    monkeypatch.setattr(assignment.run_agent, "execute", start_bound_session)
 
     result = assignment.start_work.callback.__wrapped__(
         SimpleNamespace(config_home=str(tmp_path), home=str(tmp_path)),
@@ -1048,6 +1071,7 @@ def test_unbound_native_work_observer_does_not_load_work_authority(
 
 def test_project_work_session_yields_at_deterministic_attention(tmp_path):
     calls = []
+    started_callbacks = []
     statuses = [
         {
             "live": True,
@@ -1129,12 +1153,27 @@ def test_project_work_session_yields_at_deterministic_attention(tmp_path):
         env={"PATH": "/usr/bin"},
         prompt="bounded Work",
         timeout_seconds=1,
+        session_started_callback=lambda ref, started: started_callbacks.append(
+            (dict(ref), dict(started))
+        ),
     )
 
     assert result.exit_code == 0
     assert "MOCK NEEDS ANSWER" in result.stdout
     assert session["live"] is True
     assert session["workAgent"]["attention"]["kind"] == "needs-answer"
+    assert started_callbacks == [
+        (
+            {
+                "workConsoleId": "work:kungfu.work-control:assignment:first",
+                "sessionAttemptId": "agent-test",
+            },
+            {"status": "started"},
+        )
+    ]
+    assert calls.index(
+        next(call for call in calls if call["operation"] == "start")
+    ) < calls.index(next(call for call in calls if call["operation"] == "instruct"))
     start_input = next(
         call["input"] for call in calls if call["operation"] == "plan-start"
     )
