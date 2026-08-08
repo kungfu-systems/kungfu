@@ -65,9 +65,9 @@
       "adapter": {
         "type": "buildchain-source",
         "kind": "job-uses",
-        "uses": "kungfu-systems/buildchain/.github/workflows/check.yml@9e904de2c85dbea7c799780ee166510b3336d812",
+        "uses": "kungfu-systems/buildchain/.github/workflows/check.yml@58e48d73ae7fef0dd06ae02baf6d090e4da5487d",
         "with": {
-          "buildchain-ref": "v3",
+          "buildchain-ref": "58e48d73ae7fef0dd06ae02baf6d090e4da5487d",
           "mode": "source",
           "upload-artifacts": true
         }
@@ -88,7 +88,7 @@
       "adapter": {
         "type": "buildchain-config-staged",
         "kind": "step-uses",
-        "uses": "kungfu-systems/buildchain/actions/validate-config@v3",
+        "uses": "kungfu-systems/buildchain/actions/validate-config@58e48d73ae7fef0dd06ae02baf6d090e4da5487d",
         "name": "Validate .buildchain/buildchain.toml",
         "with": {
           "require-version-state": "true",
