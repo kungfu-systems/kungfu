@@ -1,4 +1,5 @@
 lockfileVersion: '9.0'
+
 settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
@@ -46,6 +47,9 @@ importers:
       '@kungfu-tech/buildchain':
         specifier: 3.0.6
         version: 3.0.6
+      '@kungfu-tech/buildchain-alpha':
+        specifier: git+https://github.com/kungfu-systems/buildchain.git#58e48d73ae7fef0dd06ae02baf6d090e4da5487d
+        version: '@kungfu-tech/buildchain@https://codeload.github.com/kungfu-systems/buildchain/tar.gz/58e48d73ae7fef0dd06ae02baf6d090e4da5487d'
       '@kungfu-tech/kfd':
         specifier: 1.0.0-alpha.53
         version: 1.0.0-alpha.53
@@ -608,8 +612,12 @@ importers:
 
   framework/tui:
     dependencies:
-      '@kungfu-tech/agent-session': {specifier: 'workspace:*', version: 'link:../agent-session'}
-      '@kungfu-tech/api': {specifier: 'workspace:*', version: 'link:../api'}
+      '@kungfu-tech/agent-session':
+        specifier: workspace:*
+        version: link:../agent-session
+      '@kungfu-tech/api':
+        specifier: workspace:*
+        version: link:../api
       '@kungfu-tech/core':
         specifier: workspace:*
         version: link:../core
@@ -650,7 +658,9 @@ importers:
       '@kungfu-tech/kfx-adapter-langchain':
         specifier: workspace:*
         version: link:../extensions/langchain-adapter
-      '@kungfu-tech/kfx-agent-work-lab-experience': {specifier: 'workspace:*', version: 'link:../extensions/agent-work-lab/experience'}
+      '@kungfu-tech/kfx-agent-work-lab-experience':
+        specifier: workspace:*
+        version: link:../extensions/agent-work-lab/experience
       '@kungfu-tech/kfx-dogfood-actions':
         specifier: workspace:*
         version: link:../extensions/dogfood/dogfood-actions
@@ -660,7 +670,9 @@ importers:
       '@kungfu-tech/kfx-dogfood-contract':
         specifier: workspace:*
         version: link:../extensions/dogfood/dogfood-contract
-      '@kungfu-tech/kfx-suite-agent-work-lab': {specifier: 'workspace:*', version: 'link:../extensions/agent-work-lab'}
+      '@kungfu-tech/kfx-suite-agent-work-lab':
+        specifier: workspace:*
+        version: link:../extensions/agent-work-lab
       '@kungfu-tech/kfx-suite-dogfood-feedback':
         specifier: workspace:*
         version: link:../extensions/dogfood
@@ -1445,6 +1457,12 @@ packages:
 
   '@kungfu-tech/buildchain@3.0.6':
     resolution: {integrity: sha512-flNZxwK0jcGvgHU7Mo6NQLEay96/6M7UU97W9EG0dYi4ZDKbs3kj34zCSkTNYR8fVtkUP8aeL9KZloixfi2DOw==}
+    engines: {node: '>=22.14.0'}
+    hasBin: true
+
+  '@kungfu-tech/buildchain@https://codeload.github.com/kungfu-systems/buildchain/tar.gz/58e48d73ae7fef0dd06ae02baf6d090e4da5487d':
+    resolution: {gitHosted: true, integrity: sha512-eOr81ElxUDoAGa4tA/JZuv6+wWI+0/uKAf/CVwB4HyHZ6XyF7eKjediKrUuZPXH6EGrIkMPLd8YO1Slni5bz5g==, tarball: https://codeload.github.com/kungfu-systems/buildchain/tar.gz/58e48d73ae7fef0dd06ae02baf6d090e4da5487d}
+    version: 3.0.6-alpha.10
     engines: {node: '>=22.14.0'}
     hasBin: true
 
@@ -5804,6 +5822,11 @@ snapshots:
       smol-toml: 1.7.0
 
   '@kungfu-tech/buildchain@3.0.6':
+    dependencies:
+      '@kungfu-tech/kfd': 1.0.0-alpha.53
+      smol-toml: 1.7.0
+
+  '@kungfu-tech/buildchain@https://codeload.github.com/kungfu-systems/buildchain/tar.gz/58e48d73ae7fef0dd06ae02baf6d090e4da5487d':
     dependencies:
       '@kungfu-tech/kfd': 1.0.0-alpha.53
       smol-toml: 1.7.0
