@@ -2,9 +2,9 @@
   "schemaVersion": 1,
   "contract": "kungfu-buildchain-release-candidate-recovery/v1",
   "action": "reused",
-  "createdAt": "2026-08-08T13:16:30.241Z",
+  "createdAt": "2026-08-08T13:41:27.475Z",
   "repository": "kungfu-systems/kungfu",
-  "recoveryRunId": "31258763730",
+  "recoveryRunId": "31259444347",
   "originalCandidate": {
     "runId": "31051528142",
     "workflowFile": "build.yml",
@@ -254,5 +254,5 @@
     "state": "complete",
     "publicationState": "alpha-complete"
   },
-  "root": "sha256:54088c837f068be2bb7dd942d1c57fe9585d4ca443a5d61cf39860202bf6270f"
+  "root": "sha256:2fb6dc02112a3178f272a4e32ce098a3518012ae0871c334449801138d7941fc"
 }
