@@ -289,6 +289,25 @@ function ghEnvironment(token) {
   return { ...process.env, GH_TOKEN: token };
 }
 
+export function validateExistingLauncherRelease({ tag, release }) {
+  if (release?.tagName !== tag) {
+    throw new Error(`existing launcher Release tag mismatch: expected ${tag}`);
+  }
+  const assets = new Set(
+    Array.isArray(release.assets)
+      ? release.assets.map((asset) => asset?.name).filter(Boolean)
+      : [],
+  );
+  for (const requiredAsset of ['component-release-bom.json', 'SHA256SUMS']) {
+    if (!assets.has(requiredAsset)) {
+      throw new Error(
+        `existing launcher Release ${tag} is missing ${requiredAsset}`,
+      );
+    }
+  }
+  return tag;
+}
+
 function ensureLauncherTag({ token, releaseSha, version }) {
   const tag = `shifu-v${version}`;
   const env = ghEnvironment(token);
@@ -303,10 +322,28 @@ function ensureLauncherTag({ token, releaseSha, version }) {
     { env, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] },
   );
   if (probe.status === 0) {
-    if (probe.stdout.trim() !== releaseSha) {
-      throw new Error(`${tag} already points to a different release SHA`);
+    const releaseProbe = spawnSync(
+      'gh',
+      [
+        'release',
+        'view',
+        tag,
+        '--repo',
+        'kungfu-systems/kungfu',
+        '--json',
+        'tagName,assets',
+      ],
+      { env, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] },
+    );
+    if (releaseProbe.status !== 0) {
+      throw new Error(
+        `existing launcher tag ${tag} has no complete GitHub Release`,
+      );
     }
-    return tag;
+    return validateExistingLauncherRelease({
+      tag,
+      release: JSON.parse(releaseProbe.stdout),
+    });
   }
   run(
     'gh',

@@ -9,6 +9,7 @@ import {
   publicationCommitEvidence,
   publicationTimestamp,
   signingIdentity,
+  validateExistingLauncherRelease,
 } from './alpha-publication-commit.mjs';
 
 test('publication signing identity is derived from Ed25519 public bytes', () => {
@@ -94,5 +95,33 @@ test('publication commit owns Kungfu release assets but no site repository opera
     source.indexOf('verifyAlphaPublicationTailPlan({') <
       source.indexOf('await previousAuthority('),
     'the source-bound tail plan must fail closed before public side effects',
+  );
+});
+
+test('publication commit reuses an immutable existing launcher component Release', () => {
+  assert.equal(
+    validateExistingLauncherRelease({
+      tag: 'shifu-v4.0.0-alpha.1',
+      release: {
+        tagName: 'shifu-v4.0.0-alpha.1',
+        assets: [
+          { name: 'component-release-bom.json' },
+          { name: 'SHA256SUMS' },
+          { name: 'shifu-linux-x64' },
+        ],
+      },
+    }),
+    'shifu-v4.0.0-alpha.1',
+  );
+  assert.throws(
+    () =>
+      validateExistingLauncherRelease({
+        tag: 'shifu-v4.0.0-alpha.1',
+        release: {
+          tagName: 'shifu-v4.0.0-alpha.1',
+          assets: [{ name: 'component-release-bom.json' }],
+        },
+      }),
+    /missing SHA256SUMS/u,
   );
 });
