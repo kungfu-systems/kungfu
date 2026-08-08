@@ -1,7 +1,7 @@
 {
   "schema": "kungfu.code-complexity-budget-baseline/v1",
-  "policyRoot": "sha256:b690d6b4da23cba79ff585db1c05797d77c3210b997f9459c13f88f5fe93e5a2",
-  "baselineRef": "9f7e254d674c1a98636ccda4b39747b13ede4848",
+  "policyRoot": "sha256:8d1882c8e80eb35aa173b779efbe869678ce4269d59b54da6395004cc13007d8",
+  "baselineRef": "8541ab3a01958ba89aba530177b198a013b11b32",
   "classification": "ordered-policy-and-content-marker/v1",
   "calibration": {
     "groupBy": [
@@ -20,7 +20,7 @@
     },
     "first-party-handwritten-implementation": {
       "files": 1034,
-      "lines": 367586
+      "lines": 367579
     },
     "generated-projection": {
       "files": 74,
@@ -28,7 +28,7 @@
     },
     "public-header-or-entrypoint": {
       "files": 184,
-      "lines": 55188
+      "lines": 55190
     },
     "retained-evidence": {
       "files": 885,
@@ -36,7 +36,7 @@
     },
     "test-or-fixture": {
       "files": 871,
-      "lines": 184414
+      "lines": 184420
     },
     "vendored-source": {
       "files": 451,
@@ -395,7 +395,7 @@
       "class": "first-party-handwritten-implementation",
       "language": "python",
       "owner": "extension/work-control/work-control-actions",
-      "baselineLines": 2247,
+      "baselineLines": 2246,
       "hardBudget": 2014
     },
     {
@@ -19364,8 +19364,8 @@
       "generatedProvenance": false,
       "language": "python",
       "owner": "extension/work-control/work-control-actions",
-      "lines": 2247,
-      "contentRoot": "sha256:fa6944ce5c441c6389c0ad0d1ccf9c46843fd76ea7e0f28bbae282849746d801"
+      "lines": 2246,
+      "contentRoot": "sha256:54014c43e4bc625a09057d9a96cc1d5546cca07e7cb61dfc011505e6b43f8e78"
     },
     {
       "path": "extensions/work-control/work-control-actions/domain/work_control.py",
@@ -26493,7 +26493,7 @@
       "language": "declarative",
       "owner": "core/architecture",
       "lines": 284,
-      "contentRoot": "sha256:2597f77626c9236b40f614d554a5e2f385935009e7a8785d02339b4692fa2ad2"
+      "contentRoot": "sha256:500d6e5a51bef523aa7f1f739e9730bbfd818e58e4a00bcc12bff1984590d47e"
     },
     {
       "path": "framework/core/architecture/layers.json",
@@ -32549,8 +32549,8 @@
       "generatedProvenance": false,
       "language": "python",
       "owner": "core/package",
-      "lines": 28,
-      "contentRoot": "sha256:121bbc1d082a6f0471821e7545c970196ecf9dc75d99407b6f73eaf8403fd888"
+      "lines": 30,
+      "contentRoot": "sha256:9f917175395b01a568922d8f87a4559af2fcc1b2db46b5fd478ba6863921b3b9"
     },
     {
       "path": "framework/core/src/python/kungfu/workspace_federation_observer.py",
@@ -36006,7 +36006,7 @@
       "language": "declarative",
       "owner": "framework/maintainability",
       "lines": 165,
-      "contentRoot": "sha256:a2147f1b71301798f82bf6cdffddff6c21c79019f39e59d60970d66a8a7e6919"
+      "contentRoot": "sha256:8dcc439c92821f850eb78a534393857bfe68ac7af6f56132ca2d9b39a917c621"
     },
     {
       "path": "framework/maintainability/complexity-governance.mjs",
@@ -36113,8 +36113,8 @@
       "generatedProvenance": false,
       "language": "javascript-typescript",
       "owner": "framework/maintainability",
-      "lines": 852,
-      "contentRoot": "sha256:f464bc48a1c3a7bb1910bd15ec0ed1cd8a91b888e0c77de23588380ce8693cd7"
+      "lines": 846,
+      "contentRoot": "sha256:175e0740a62a52520acd324e51ed248d1eaf3ed321cdcd30b2320497e77a3f0d"
     },
     {
       "path": "framework/primitive/kungfu-primitive-catalog.contract.json",
@@ -41432,8 +41432,8 @@
       "generatedProvenance": false,
       "language": "javascript-typescript",
       "owner": "shifu/source-tooling",
-      "lines": 807,
-      "contentRoot": "sha256:3e0771fff549424c85405042a777b9f5f7e0c6ad76bf57a3d2a623a8b5f401d0"
+      "lines": 813,
+      "contentRoot": "sha256:bff54ff46f0639dfd20f7f6844e3876221d4f6dca9520390fd0dcc7fb944b366"
     },
     {
       "path": "scripts/readonly-source-toolchain.mjs",
@@ -44416,5 +44416,5 @@
     }
   ],
   "issues": [],
-  "measurementRoot": "sha256:33cee74675a3bf7872de493133761e9fa50e2e93b0347c686b9389cdb286dd86"
+  "measurementRoot": "sha256:4d241e49c67c59d6d09c3d8246f8ce7206d487df4c2c11d03011ab86f6fff410"
 }
