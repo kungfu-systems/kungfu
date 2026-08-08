@@ -33,7 +33,14 @@ import {
 import { verifyUpgradePublicationPayloads } from './upgrade-publication-admission.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const TRUST_PATH = path.join(ROOT, 'product', 'release-channel-trust.json');
+const PRODUCT_ROOT = process.env.BUILDCHAIN_PUBLICATION_COMMIT_PRODUCT_ROOT
+  ? path.resolve(process.env.BUILDCHAIN_PUBLICATION_COMMIT_PRODUCT_ROOT)
+  : ROOT;
+const TRUST_PATH = path.join(
+  PRODUCT_ROOT,
+  'product',
+  'release-channel-trust.json',
+);
 const CHANNEL_URL = 'https://kungfu.tech/.well-known/kungfu/alpha.json';
 const CANONICAL_BASE_URL = 'https://kungfu.tech';
 const BUNDLE_MANIFEST_ASSET = 'kungfu-installer-publication-bundle.json';
@@ -69,7 +76,7 @@ function sha256(bytes) {
   return `sha256:${createHash('sha256').update(bytes).digest('hex')}`;
 }
 
-function run(command, args, { cwd = ROOT, env = process.env } = {}) {
+function run(command, args, { cwd = PRODUCT_ROOT, env = process.env } = {}) {
   const result = spawnSync(command, args, {
     cwd,
     env,
@@ -227,7 +234,7 @@ export function prepareAlphaPublication({
   const channelIndex = writeChannelIndex({
     spec,
     privateKeyPem,
-    baseDirectory: ROOT,
+    baseDirectory: PRODUCT_ROOT,
     output: channelIndexPath,
   });
   const trustedKeysPath = path.join(outputDir, 'trusted-keys.json');
@@ -531,6 +538,7 @@ async function main() {
   }
   const tailPlanPath = findAlphaPublicationTailPlan(environment.payloadDir);
   verifyAlphaPublicationTailPlan({
+    root: PRODUCT_ROOT,
     plan: readJson(tailPlanPath, 'Alpha publication tail plan'),
     expectedSourceCommit: environment.candidateSourceSha,
     expectedVersion: environment.version,
@@ -559,7 +567,7 @@ async function main() {
   });
   ensureLauncherTag(environment);
   const packageMetadata = readJson(
-    path.join(ROOT, 'framework', 'site', 'package.json'),
+    path.join(PRODUCT_ROOT, 'framework', 'site', 'package.json'),
     '@kungfu-tech/site package metadata',
   );
   const bundleRoot = path.join(temporaryRoot, 'installer-publication-bundle');

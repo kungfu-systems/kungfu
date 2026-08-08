@@ -430,7 +430,7 @@ jobs:
         Kungfu-Episodes-*-macos-arm64.zip
         Kungfu Episodes-*.AppImage
         Kungfu Episodes Setup *.exe
-      publication-commit-command: BUILDCHAIN_PUBLICATION_COMMIT_CANDIDATE_SOURCE_SHA=${{ inputs.resume-candidate-source-sha }} node scripts/alpha-publication-commit.mjs
+      publication-commit-command: BUILDCHAIN_PUBLICATION_COMMIT_PRODUCT_ROOT=$GITHUB_WORKSPACE BUILDCHAIN_PUBLICATION_COMMIT_CANDIDATE_SOURCE_SHA=${{ inputs.resume-candidate-source-sha }} node .buildchain/publication-controller/scripts/alpha-publication-commit.mjs
       publication-commit-evidence-path: .buildchain/publication-commit/evidence.json
       release-activation-command: ""
       release-activation-receipt-set-path: .buildchain/release-activation/receipt-set.json

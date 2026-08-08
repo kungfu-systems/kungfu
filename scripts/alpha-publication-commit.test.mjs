@@ -113,8 +113,9 @@ test('sealed-candidate recovery passes the immutable candidate source only to th
   );
   assert.match(
     workflow,
-    /publication-commit-command: BUILDCHAIN_PUBLICATION_COMMIT_CANDIDATE_SOURCE_SHA=\$\{\{ inputs\.resume-candidate-source-sha \}\} node scripts\/alpha-publication-commit\.mjs/u,
+    /publication-commit-command: BUILDCHAIN_PUBLICATION_COMMIT_PRODUCT_ROOT=\$GITHUB_WORKSPACE BUILDCHAIN_PUBLICATION_COMMIT_CANDIDATE_SOURCE_SHA=\$\{\{ inputs\.resume-candidate-source-sha \}\} node \.buildchain\/publication-controller\/scripts\/alpha-publication-commit\.mjs/u,
   );
+  assert.match(source, /root: PRODUCT_ROOT,[\s\S]*expectedSourceCommit:/u);
   assert.match(
     workflow,
     /publication-commit-command: \$\{\{ startsWith\([\s\S]*'node scripts\/alpha-publication-commit\.mjs' \|\| '' \}\}/u,

@@ -369,9 +369,9 @@ export function validateWorkflowSources(root, contract, overrides = {}) {
   );
   requirePattern(
     recovery,
-    /publication-commit-command: BUILDCHAIN_PUBLICATION_COMMIT_CANDIDATE_SOURCE_SHA=\$\{\{ inputs\.resume-candidate-source-sha \}\} node scripts\/alpha-publication-commit\.mjs/,
+    /publication-commit-command: BUILDCHAIN_PUBLICATION_COMMIT_PRODUCT_ROOT=\$GITHUB_WORKSPACE BUILDCHAIN_PUBLICATION_COMMIT_CANDIDATE_SOURCE_SHA=\$\{\{ inputs\.resume-candidate-source-sha \}\} node \.buildchain\/publication-controller\/scripts\/alpha-publication-commit\.mjs/,
     findings,
-    'release-candidate recovery must bind the signed Alpha discovery commit to the immutable candidate source',
+    'release-candidate recovery must run the pinned controller against the immutable candidate product root',
   );
   requirePattern(
     promote,
