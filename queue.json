@@ -3,7 +3,7 @@
   "contract": "kungfu-buildchain-dev-delivery-warrant-queue",
   "repository": "kungfu-systems/kungfu",
   "protectedBase": "dev/v4/v4.0",
-  "generation": 290,
+  "generation": 291,
   "fencingCounter": 86,
   "policy": {
     "agingSeconds": 900,
@@ -2832,8 +2832,32 @@
         "eventAction": "closed",
         "closedAt": "2026-08-08T13:25:11.020Z"
       }
+    },
+    {
+      "repository": "kungfu-systems/kungfu",
+      "protectedBase": "dev/v4/v4.0",
+      "pullRequestNumber": 2617,
+      "assignmentRoot": "sha256:8ed07657c3a5fc028a73470a34d391d2b556172278a7c5980065e2ff50fe2db7",
+      "initiativeRoot": "sha256:bfff817933e5a5ad693e4b902a84f6cc3a251235dd7377cb4091d92f805fa7ff",
+      "sourceIdentityRoot": "sha256:cc8dbff25fa100b5c2f04a764a1f0fb14c3fe05d34edf7d0beff2ecfbdf616f6",
+      "deliveryClass": "native-proof-required",
+      "candidateId": "sha256:dbd13b22eeb427f4f9c6941e4b2ea504292afdc6a2d5aae37aaaf5ae84f0654b",
+      "sourceHead": "388548278a670654159f912a48a60263925f1021",
+      "sourcePatchRoot": "sha256:0c2aaff87e9656a14b2fd9245f35878db0932605cef01b4a298666179f232f6e",
+      "sourceProofRoot": "sha256:96f517e3fc1311dd3b5b8a836628dab2f4a18de7290cd36479ad80a2ca6fa936",
+      "planRoot": "sha256:a154d4b0b204b12d433ac8dbddd23ece5de7911322c4632e3fa979d344972fe2",
+      "closureRoot": "sha256:106d175611d8634c988192302b9c464ae8ba3b6d023c2cff9910e401344c9624",
+      "dependencyRoot": "sha256:f65cabd1d73aab99b946e250ebae247b42add890f739d6cb033a999e5d5da9fe",
+      "toolchainRoot": "sha256:2ecb07894954a2e0de022615d4561e5ba3ae68376401941ecff77be03cd75a0f",
+      "priority": "ordinary",
+      "enqueuedAt": "2026-08-08T13:30:56.915Z",
+      "updatedAt": "2026-08-08T13:30:56.915Z",
+      "attempts": 1,
+      "recoveries": 0,
+      "status": "queued",
+      "terminal": null
     }
   ],
-  "updatedAt": "2026-08-08T13:25:11.020Z",
-  "stateRoot": "sha256:e2d572365c74c31a09d3feaefa63cd9ee1b3eb2b9f9e8b07b2f75012141bd86b"
+  "updatedAt": "2026-08-08T13:30:56.915Z",
+  "stateRoot": "sha256:01b6888bcd66399134c5404d0f56f1709c0801cb845a338755def7af0b390a7f"
 }
