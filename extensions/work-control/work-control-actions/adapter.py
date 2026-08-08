@@ -64,9 +64,7 @@ def _goal_cards(
 
     projection = _projection(runtime_dir)
     cards = dict((projection or {}).get("goals", {}))
-    for record in work_control.list_goals(
-        runtime_dir, cut_system_time=cut_system_time
-    ):
+    for record in work_control.list_goals(runtime_dir, cut_system_time=cut_system_time):
         goal_id = str(record["goal_id"])
         cards[goal_id] = {**record, **cards.get(goal_id, {})}
     return [
@@ -329,6 +327,7 @@ def _action(domain, operation: str, runtime_dir: str, values: Mapping[str, Any])
                 "slot",
                 "leaseId",
                 "leaseExpiresAt",
+                "attemptId",
                 "authorizedBy",
                 "grantScope",
                 "actorType",
@@ -345,6 +344,7 @@ def _action(domain, operation: str, runtime_dir: str, values: Mapping[str, Any])
             slot=str(values.get("slot") or ""),
             lease_id=str(values.get("leaseId") or ""),
             lease_expires_at=str(values.get("leaseExpiresAt") or ""),
+            attempt_id=str(values.get("attemptId") or ""),
             authorized_by=str(values.get("authorizedBy") or ""),
             grant_scope=str(values.get("grantScope") or "assignment-execution"),
             actor_type=str(values.get("actorType") or "agent"),
@@ -805,6 +805,9 @@ def _invoke(
                 storage_source_id=str(values.get("source") or "atlas"),
             ),
         }
+    if operation == "runtime-authority-status":
+        _only(values, set(), operation)
+        return {"authority": domain.work_control.authority_status(runtime_dir)}
     if operation == "assignment-status":
         _only(values, {"initiativeId", "assignmentId", "source", "now"}, operation)
         return _native_result(

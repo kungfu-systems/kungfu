@@ -5,6 +5,13 @@
 # only on the Python standard library so it can run and be tested without the
 # native runtime binding.
 
-from kungfu.coordination.locks import acquire, held, release, status, with_lock
+from kungfu.coordination.locks import (
+    acquire,
+    held,
+    release,
+    status,
+    try_acquire,
+    with_lock,
+)
 
-__all__ = ["acquire", "release", "held", "with_lock", "status"]
+__all__ = ["acquire", "release", "try_acquire", "held", "with_lock", "status"]
