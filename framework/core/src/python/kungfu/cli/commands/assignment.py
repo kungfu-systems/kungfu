@@ -667,7 +667,7 @@ def start_work(
         admission_summary=_admission_summary,
         profile_action=_profile_action,
         claim_summary=_claim_summary,
-        advance=_advance,
+        advance_bound=lambda *args: _advance(*args, native_work_bound=True),
         kickoff_summary=_kickoff_summary,
         project_prompt=_project_work_prompt,
         agent_report_summary=_agent_report_summary,
@@ -1446,11 +1446,19 @@ def claim(
 
 
 def _advance(
-    workspace_root, home, initiative_id, assignment_id, to_phase, actor, reason
+    workspace_root,
+    home,
+    initiative_id,
+    assignment_id,
+    to_phase,
+    actor,
+    reason,
+    *,
+    native_work_bound=False,
 ):
     identity, runtime_dir, _ = _runtime(workspace_root, home)
     _ensure_profile(runtime_dir, actor)
-    if to_phase == "executing":
+    if to_phase == "executing" and not native_work_bound:
         run_agent.bind_current_native_work(
             runtime_dir,
             initiative_id,
