@@ -90,8 +90,7 @@ class ManagedRunCoordinator:
             invoke,
             ref,
             lambda status: (
-                status.get("interactionState")
-                in {"ready", "approval-needed", "unknown", "ended"}
+                status.get("interactionState") in {"ready", "approval-needed", "ended"}
             ),
             timeout_seconds=min(timeout_seconds, 30.0),
         )

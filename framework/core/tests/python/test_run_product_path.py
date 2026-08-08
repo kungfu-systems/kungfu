@@ -6,12 +6,23 @@ from types import SimpleNamespace
 import pytest
 from click.testing import CliRunner
 
+from kungfu import assignment_lifecycle
 from kungfu import assignment_orchestration as orchestration
 from kungfu.agent import first_value as onboarding
 from kungfu.agent import native_launch
 from kungfu.agent import run_agent
 from kungfu.cli.commands import assignment, kfc, run
 from kungfu.workspace import resolve_workspace_target
+
+
+@pytest.mark.parametrize("command", ["claim", "status", "gate"])
+def test_assignment_identity_options_are_reusable_across_commands(command):
+    result = CliRunner().invoke(kfc, ["work", command, "--help"])
+
+    assert result.exit_code == 0, result.output
+    assert "--workspace" in result.output
+    assert "--initiative-id" in result.output
+    assert "--assignment-id" in result.output
 
 
 def _capture(project: Path, assignment_id: str):
@@ -151,6 +162,29 @@ def test_work_start_phase_plan_rejects_settled_or_review_work(phase):
     assert mode is None
     assert effects == []
     assert phase in blocked_reason
+
+
+def test_managed_work_start_builds_a_strict_assignment_work_ref():
+    plan = {
+        "work": {
+            "initiativeId": "project-work",
+            "assignmentId": "first",
+        },
+        "workControl": {
+            "profileId": "kungfu.work-control",
+            "profileRoot": "sha256:" + "2" * 64,
+        },
+    }
+    admission = {"workspace": {"workspace_id": "workspace:test"}}
+    status = {
+        "assignment": {"assignment_id": "first"},
+        "query_proof_root": "sha256:" + "3" * 64,
+    }
+
+    work_ref = assignment_lifecycle.work_ref(admission, plan, status)
+
+    assert work_ref["initiativeId"] == "project-work"
+    assert run_agent.validate_work_ref(work_ref) == work_ref
 
 
 def test_resumed_authority_writes_remain_visible_when_run_gate_fails(
@@ -1073,6 +1107,12 @@ def test_project_work_session_yields_at_deterministic_attention(tmp_path):
     calls = []
     started_callbacks = []
     statuses = [
+        {
+            "live": True,
+            "lifecycleState": "starting",
+            "interactionState": "unknown",
+            "output": {"nextSequence": 0},
+        },
         {
             "live": True,
             "lifecycleState": "ready",
