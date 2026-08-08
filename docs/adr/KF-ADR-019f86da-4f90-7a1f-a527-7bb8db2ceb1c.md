@@ -38,7 +38,7 @@ kernel owns objects, versions, relations, Cuts, named refs, CAS, and receipts;
 Action Geometry owns Pursuit, Atlas, Warrant, and Episode responsibility
 separation; the Agent Work Domain Profile owns its fields, lifecycle vocabulary,
 and transitions; Xinfa owns Atlas compilation and verification; Runtime Episode
-lifecycle owns occurrence; Mission Control owns Completion Claim, assessment,
+lifecycle owns occurrence; Work Control owns Completion Claim, assessment,
 independent review, and continuation; Project Cut owns source settlement.
 
 An Agent still has to compose those surfaces manually. A process can crash
@@ -96,7 +96,7 @@ journal/CAS/runtime layouts and cannot mint Fact, Episode, Profile, Mission,
 review, continuation, or Project Cut receipts.
 
 Compatibility ports map current Mission/Go, Xinfa, bounded authority material,
-the KFD-7 Work Profile, Runtime Episode lifecycle, Mission Control completion,
+the KFD-7 Work Profile, Runtime Episode lifecycle, Work Control completion,
 and the Fact kernel into the coordinator. They are replacement seams for future
 native Pursuit, Atlas, and Warrant implementations plus Domain Profiles, not
 new authorities.
@@ -124,10 +124,10 @@ states. A terminal envelope is recoverable from the final KFD-7 role details
 after the begin-time Warrant has expired.
 
 The source dogfood entry now resolves the exact loaded source-build native
-extension and active Mission Control Profile into one `nativeAuthority`
+extension and active Work Control Profile into one `nativeAuthority`
 binding. It loads the checked-out source adapter ahead of a generated build
 copy, refuses resume or settlement without mutation when either root drifts,
-and roots reused Mission Control receipts in their original payload and Episode.
+and roots reused Work Control receipts in their original payload and Episode.
 The first same-root Atlas refresh creates its receipt; only a later exact replay
 is idempotent, while a conflicting replay is rejected.
 

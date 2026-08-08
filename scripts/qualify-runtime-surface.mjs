@@ -594,7 +594,7 @@ function qualify(options) {
     },
   };
   const hybridCandidate = {
-    providerId: 'atlas-kungfu-hybrid',
+    providerId: 'xinfa-context-runtime',
     surface: 'hybrid-boundary',
     capabilities: ['context.compose', 'dogfood.capture', 'runtime.provenance'],
     executable: {

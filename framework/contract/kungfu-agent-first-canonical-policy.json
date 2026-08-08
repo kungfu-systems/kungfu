@@ -248,13 +248,13 @@
       },
       "source": {
         "path": "framework/kfx/kungfu-kfx.contract.json",
-        "sha256": "sha256:f0e6cfddac711123a969d7d88c8995b95fcb397b99438674902372fb38ff8d0c",
-        "renderedSha256": "sha256:f0e6cfddac711123a969d7d88c8995b95fcb397b99438674902372fb38ff8d0c",
+        "sha256": "sha256:f4bb8be416f73f46b960c1f46666bbf669d9daab58585003d30cd3f8e18e2227",
+        "renderedSha256": "sha256:f4bb8be416f73f46b960c1f46666bbf669d9daab58585003d30cd3f8e18e2227",
         "byteForByte": true
       },
       "artifact": {
         "path": "config/kungfu-kfx.contract.json",
-        "expectedSha256": "sha256:f0e6cfddac711123a969d7d88c8995b95fcb397b99438674902372fb38ff8d0c"
+        "expectedSha256": "sha256:f4bb8be416f73f46b960c1f46666bbf669d9daab58585003d30cd3f8e18e2227"
       }
     },
     {
@@ -305,13 +305,13 @@
       },
       "source": {
         "path": "framework/runtime/kungfu-runtime-surface.contract.json",
-        "sha256": "sha256:5a470459deb07294eac76d8d65b3049a8fbe9054dffefe40ca8d4b006aca1db7",
-        "renderedSha256": "sha256:5a470459deb07294eac76d8d65b3049a8fbe9054dffefe40ca8d4b006aca1db7",
+        "sha256": "sha256:4e4ef2d229200f0d24861db7e1ada9da41c85f55c4596f54ad53f40e6cb8fb1f",
+        "renderedSha256": "sha256:4e4ef2d229200f0d24861db7e1ada9da41c85f55c4596f54ad53f40e6cb8fb1f",
         "byteForByte": true
       },
       "artifact": {
         "path": "config/kungfu-runtime-surface.contract.json",
-        "expectedSha256": "sha256:5a470459deb07294eac76d8d65b3049a8fbe9054dffefe40ca8d4b006aca1db7"
+        "expectedSha256": "sha256:4e4ef2d229200f0d24861db7e1ada9da41c85f55c4596f54ad53f40e6cb8fb1f"
       }
     },
     {
@@ -476,13 +476,13 @@
       },
       "source": {
         "path": "framework/exit/kungfu-exit-bundle.contract.json",
-        "sha256": "sha256:d53745f3c33fd4bc3683faa6472358e15e880eab73508e7bc00367fe5daafe74",
-        "renderedSha256": "sha256:d53745f3c33fd4bc3683faa6472358e15e880eab73508e7bc00367fe5daafe74",
+        "sha256": "sha256:5e9bb9cd19e0bbeeff508b7c4cb4127062238665b749eb872b475a8ee2ea19d0",
+        "renderedSha256": "sha256:5e9bb9cd19e0bbeeff508b7c4cb4127062238665b749eb872b475a8ee2ea19d0",
         "byteForByte": true
       },
       "artifact": {
         "path": "config/kungfu-exit-bundle.contract.json",
-        "expectedSha256": "sha256:d53745f3c33fd4bc3683faa6472358e15e880eab73508e7bc00367fe5daafe74"
+        "expectedSha256": "sha256:5e9bb9cd19e0bbeeff508b7c4cb4127062238665b749eb872b475a8ee2ea19d0"
       }
     },
     {
@@ -552,13 +552,13 @@
       },
       "source": {
         "path": "framework/assignment-runtime/assignment-runtime.contract.json",
-        "sha256": "sha256:a2f54cdba88272474cd19ad29271a2743651c872ec17f83f3a41e246754b9bab",
-        "renderedSha256": "sha256:a2f54cdba88272474cd19ad29271a2743651c872ec17f83f3a41e246754b9bab",
+        "sha256": "sha256:9ea321019f2a4a6ea78f2a121cf75da69338528a52424e92704cd40c91df7759",
+        "renderedSha256": "sha256:9ea321019f2a4a6ea78f2a121cf75da69338528a52424e92704cd40c91df7759",
         "byteForByte": true
       },
       "artifact": {
         "path": "config/assignment-runtime/kungfu-assignment-runtime.contract.json",
-        "expectedSha256": "sha256:a2f54cdba88272474cd19ad29271a2743651c872ec17f83f3a41e246754b9bab"
+        "expectedSha256": "sha256:9ea321019f2a4a6ea78f2a121cf75da69338528a52424e92704cd40c91df7759"
       }
     },
     {
@@ -571,13 +571,13 @@
       },
       "source": {
         "path": "framework/primitive/kungfu-primitive-catalog.contract.json",
-        "sha256": "sha256:48a9dd8f1f5a91ae69954b64550417bbdf0866cb4b80a2a16e1b2add0c0c856e",
-        "renderedSha256": "sha256:48a9dd8f1f5a91ae69954b64550417bbdf0866cb4b80a2a16e1b2add0c0c856e",
+        "sha256": "sha256:d01245b5212ceeb88e231273421727c8397ebe5b2831abcca34fac76a73eafab",
+        "renderedSha256": "sha256:d01245b5212ceeb88e231273421727c8397ebe5b2831abcca34fac76a73eafab",
         "byteForByte": true
       },
       "artifact": {
         "path": "config/primitive/kungfu-primitive-catalog.contract.json",
-        "expectedSha256": "sha256:48a9dd8f1f5a91ae69954b64550417bbdf0866cb4b80a2a16e1b2add0c0c856e"
+        "expectedSha256": "sha256:d01245b5212ceeb88e231273421727c8397ebe5b2831abcca34fac76a73eafab"
       }
     }
   ]

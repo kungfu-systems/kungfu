@@ -87,7 +87,7 @@ test('pins the current Assignment authority and client-path audit', () => {
       [
         'def _runtime(',
         'def _profile_action(',
-        'for profile_name in ("work-control", "mission-control")',
+        'source = extensions / "work-control"',
       ],
     ],
     [

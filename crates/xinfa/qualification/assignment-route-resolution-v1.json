@@ -1,7 +1,7 @@
 {
-  "schema": "xinfa.go-route-qualification-summary/v1",
+  "schema": "xinfa.assignment-route-qualification-summary/v1",
   "phase": "C5-standard-go-cutover",
-  "actor": "c5-standard-go-cutover",
+  "actor": "native-assignment-cutover",
   "verdict": "pass",
   "atlas_root": "sha256:644ee0ea020c74cf7400930044a884fd4b183ca87cc0c753829747bb95d04853",
   "cut_root": "sha256:7798b1d1417c1cbb25ee0693e3a1d3bffb545ad2b645090ca9a369642454f891",
@@ -26,5 +26,5 @@
     "mutation": "append one undeclared required authority node",
     "resolved_false_green": 0
   },
-  "reproduce": "node crates/xinfa/tooling/qualify-route-resolver.mjs --xinfa crates/xinfa/tooling/source-xinfa --atlas <verified-atlas> --corpus crates/xinfa/fixtures/golden/go-route-corpus-v1.json --actor c5-standard-go-cutover"
+  "reproduce": "node crates/xinfa/tooling/qualify-route-resolver.mjs --xinfa crates/xinfa/tooling/source-xinfa --atlas <verified-atlas> --corpus crates/xinfa/fixtures/golden/assignment-route-corpus-v1.json --actor native-assignment-cutover"
 }

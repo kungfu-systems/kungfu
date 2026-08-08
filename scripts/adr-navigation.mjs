@@ -118,7 +118,6 @@ const DOMAINS = [
       'workbench',
       'frontend',
       'product',
-      'mission control',
       'console',
       'user',
     ],

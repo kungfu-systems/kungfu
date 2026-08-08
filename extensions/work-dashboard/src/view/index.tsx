@@ -92,14 +92,6 @@ export function openProfileApplication(profile: Profile, defaultRepoRoot = '') {
     decideContinuation: (
       ...args: Parameters<typeof application.decideContinuation>
     ) => application.decideContinuation(...args),
-    importRepo: (...args: Parameters<typeof application.importRepo>) =>
-      application.importRepo(...args),
-    activateWorkControl: (
-      ...args: Parameters<typeof application.activateWorkControl>
-    ) => application.activateWorkControl(...args),
-    restoreAtlasAuthority: (
-      ...args: Parameters<typeof application.restoreAtlasAuthority>
-    ) => application.restoreAtlasAuthority(...args),
     exportInitiative: (
       ...args: Parameters<typeof application.exportInitiative>
     ) => application.exportInitiative(...args),

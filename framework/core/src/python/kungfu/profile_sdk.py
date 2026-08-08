@@ -1185,15 +1185,16 @@ def verify_kfd3(
 def qualify_source(source: str | Path, runtime_dir: str | Path) -> dict[str, Any]:
     validated = validate_source(source, runtime_dir)
     inspection = validated["inspection"]
-    compatibility = _read_ref_json(
-        inspection, inspection["profile"]["kfd1"]["compatibility"]
+    compatibility_ref = inspection["profile"]["kfd1"].get("compatibility")
+    compatibility = (
+        _read_ref_json(inspection, compatibility_ref) if compatibility_ref else {}
     )
     qualification = _read_ref_json(
         inspection, inspection["profile"]["qualification"]["profile"]
     )
     contracts = compatibility.get("runtimeContracts", [])
     checks = qualification.get("checks", [])
-    if (
+    if compatibility_ref and (
         contracts != ["kungfu.profile-lifecycle/v1"]
         and "kungfu.profile-lifecycle/v1" not in contracts
     ):

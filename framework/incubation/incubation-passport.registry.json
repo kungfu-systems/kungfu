@@ -278,50 +278,6 @@
       }
     },
     {
-      "id": "kungfu.atlas-events-schema",
-      "subject": "Atlas event FlatBuffers schema",
-      "subjectKind": "schema",
-      "primitiveDeclarations": [],
-      "anchor": {
-        "type": "git",
-        "authorityRef": "framework/core/src/python/kungfu/atlas/atlas_events.fbs"
-      },
-      "destinedAuthority": {
-        "layer": "Atlas native Domain Profile",
-        "owner": "future native Atlas service",
-        "admissionAssignment": "future:kungfu-atlas-native-admission"
-      },
-      "incubation": {
-        "state": "incubating",
-        "implementationPaths": [
-          "framework/core/src/python/kungfu/atlas/atlas_events.fbs",
-          "framework/core/src/python/kungfu/atlas/atlas_events.bfbs"
-        ],
-        "startedOn": "2026-07-23",
-        "deadline": null,
-        "admissionTrigger": "The schema moves byte-identically with a qualified native Atlas owner.",
-        "currentBoundary": "Registered in place; no existing event byte, Root, reader, or journal coordinate changes."
-      },
-      "schemaOwnership": {
-        "class": "flatbuffers",
-        "registryRef": "framework/core/schema-authority.json",
-        "identity": "kungfu.atlas.events",
-        "rationale": "The existing schema-authority entry remains authoritative during incubation."
-      },
-      "persistence": {
-        "policy": "git-canonical-bytes",
-        "byteAuthority": "framework/core/src/python/kungfu/atlas/atlas_events.fbs",
-        "scriptLayerRole": "Scripts may consume and project the registered schema but cannot mint a competing byte format."
-      },
-      "identityProtocol": {
-        "mintsRoots": false,
-        "protocolId": null,
-        "implementations": [],
-        "vectors": [],
-        "goldenFixturePolicy": "Not applicable until this schema participates in a Root preimage protocol."
-      }
-    },
-    {
       "id": "kungfu.rewind-events-schema",
       "subject": "Rewind event FlatBuffers schema",
       "subjectKind": "schema",

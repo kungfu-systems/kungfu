@@ -20,7 +20,7 @@
       "subject": "work-authority",
       "before": "external mission records",
       "after": "Initiative, Assignment, and portable Project Cut-bound Work",
-      "authorityRefs": ["docs/profiles/mission-control.md", "framework/project-cut/README.md"]
+      "authorityRefs": ["docs/profiles/work-control.md", "framework/project-cut/README.md"]
     }
   ],
   "retiredSurfaces": ["Git or Atlas JSON as the intended runtime work authority"],
@@ -32,7 +32,7 @@
   ],
   "readerRoute": {
     "intent": "Understand how agent intent becomes bounded Work",
-    "start": "docs/profiles/mission-control.md",
+    "start": "docs/profiles/work-control.md",
     "deepen": ["framework/project-cut/README.md", "docs/concepts/project-cut-product-loop.md"]
   },
   "amends": [],

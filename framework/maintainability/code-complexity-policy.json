@@ -89,28 +89,7 @@
   "antiGaming": {
     "maxNewHandwrittenFilesPerOwner": 3,
     "newGeneratedProjectionRequiresProvenance": true,
-    "allowedOwnerRenamePrefixes": [
-      {
-        "from": "extension/mission-control/mission-control-actions",
-        "to": "extension/work-control/work-control-actions"
-      },
-      {
-        "from": "extension/mission-control/mission-control-assessment",
-        "to": "extension/work-control/work-control-assessment"
-      },
-      {
-        "from": "extension/mission-control/mission-control-contract",
-        "to": "extension/work-control/work-control-contract"
-      },
-      {
-        "from": "extension/mission-control/mission-control-views",
-        "to": "extension/work-control/work-control-views"
-      },
-      {
-        "from": "extension/mission-control",
-        "to": "extension/work-control"
-      }
-    ],
+    "allowedOwnerRenamePrefixes": [],
     "blockClassificationOrOwnerRelabeling": true,
     "blockResponsibilityPreservingSplit": true,
     "blockGeneratedOrVendorLaundering": true

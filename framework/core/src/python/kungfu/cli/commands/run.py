@@ -60,7 +60,7 @@ def _captured_work(workspace_root):
         try:
             captured = orchestration.load_captured_request(request_path)
             definition = captured["request"].get("workDefinition") or {}
-            projected = orchestration.atlas_assignment_projection(
+            projected = orchestration.assignment_projection(
                 captured,
                 initiative_id=str(definition.get("mission_id") or ""),
                 assignment_id=str(definition.get("goal_id") or ""),

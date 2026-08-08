@@ -7,14 +7,12 @@
         "assignment-settlement-runtime",
         "workspace-home-federation",
         "dogfood-relevance-query",
-        "lossless-jsonl-migration",
         "installed-product-qualification"
       ],
       "subjects": [
         "dogfood-finding",
         "dogfood-issue",
-        "assignment-consideration",
-        "atlas-jsonl-migration"
+        "assignment-consideration"
       ]
     }
   },
@@ -28,7 +26,6 @@
     "capability": [
       "assignment-settlement-runtime",
       "dogfood-relevance-query",
-      "lossless-jsonl-migration",
       "installed-product-qualification"
     ],
     "schema": ["assignment-graph-work-ref", "dogfood-finding", "dogfood-issue"],
@@ -40,7 +37,7 @@
     "error": ["completed-dependency-no-workref"],
     "build": ["source-shifu", "installed-product"],
     "platform": ["macos-arm64"],
-    "tag": ["dependency", "compatibility", "admission", "dogfood"],
+    "tag": ["dependency", "admission", "dogfood"],
     "history": ["pre-workref-assignment"],
     "evidence": ["sealed-assignment-state"]
   }

@@ -22,7 +22,7 @@ ai_provenance: GPT-5 via Codex on 2026-08-07; based on the exact R0 Assignment, 
 - Status: accepted; R0 contract staged, runtime implementation deferred
 - Date: 2026-08-07
 - Category: Work Control / Assignment Runtime / client boundary
-- Related: [Assignment orchestration](KF-ADR-019f87cc-bd1f-786d-896d-07ea9245861e.md),
+- Related: the current Assignment orchestration contract,
   [Assignment claim identity](KF-ADR-019f87cc-bd45-7a5c-9b37-1d6b5917928a.md),
   [workspace Home layout](KF-ADR-019f86da-4f90-713d-8626-d70bca82cb76.md), and
   [runtime activation](KF-ADR-019f86da-4f90-738c-b372-e509976f69ff.md)

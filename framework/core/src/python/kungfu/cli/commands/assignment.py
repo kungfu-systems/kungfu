@@ -130,15 +130,13 @@ def _assignment_runtime(workspace_root, home, operation_class):
 
 def _profile_source():
     profiles = Path(orchestration.__file__).resolve().parent / "profiles"
-    for profile_name in ("work-control", "mission-control"):  # compatibility path
-        packaged = profiles / profile_name
-        if packaged.is_dir():
-            return packaged
+    packaged = profiles / "work-control"
+    if packaged.is_dir():
+        return packaged
     extensions = orchestration.source_root() / "extensions"
-    for profile_name in ("work-control", "mission-control"):  # compatibility path
-        source = extensions / profile_name
-        if source.is_dir():
-            return source
+    source = extensions / "work-control"
+    if source.is_dir():
+        return source
     raise ValueError("Work Control Profile is absent from this Kungfu product")
 
 
@@ -293,9 +291,9 @@ def _admit_captured_assignment(
             "binding": binding,
             "next_actions": [
                 {
-                    "action": "build-core",
-                    "command": "./shifu build:core",
-                    "description": "Assemble pykungfu from the current checkout",
+                    "action": "use-installed-product",
+                    "command": "kungfu work",
+                    "description": "Run admission through an installed qualified Kungfu product",
                 }
             ],
         }
@@ -305,7 +303,7 @@ def _admit_captured_assignment(
         promoted = orchestration.load_initiative_admission(
             initiative_admission, stdin_text=initiative_admission_stdin
         )
-    projected = orchestration.atlas_assignment_projection(
+    projected = orchestration.assignment_projection(
         captured,
         initiative_id=initiative_id,
         assignment_id=assignment_id,

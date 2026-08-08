@@ -1448,11 +1448,12 @@ test('consumer CLI emits one source-build diagnosis and durable fallback observa
   assert.equal(result.stderr, '');
   const output = JSON.parse(result.stdout);
   assert.equal(output.code, 'qualified-core-reuse-unavailable');
-  assert.equal(output.next_actions[0].command, './shifu build:core');
+  assert.equal(output.next_actions[0].action, 'install-qualified-product');
+  assert.equal(output.next_actions[0].command, '');
   const summary = summarizeQualifiedCoreUsage(cacheRoot);
   assert.equal(summary.ok, true);
   assert.equal(summary.totals.observations, 1);
-  assert.equal(summary.counts.results['fallback-required'], 1);
+  assert.equal(summary.counts.results['artifact-unavailable'], 1);
   const expectedReason =
     (process.platform === 'darwin' && process.arch === 'arm64') ||
     (process.platform === 'linux' && process.arch === 'x64')
@@ -1931,7 +1932,7 @@ test('consumer retains unsupported-platform outcomes without claiming support', 
   const summary = summarizeQualifiedCoreUsage(cacheRoot);
   assert.equal(summary.totals.observations, unsupportedHosts.length);
   assert.equal(
-    summary.counts.results['fallback-required'],
+    summary.counts.results['artifact-unavailable'],
     unsupportedHosts.length,
   );
   assert.equal(
