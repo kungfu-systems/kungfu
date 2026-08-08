@@ -4,8 +4,10 @@ from __future__ import annotations
 
 import copy
 import importlib.util
+import io
 import json
 import subprocess
+import tarfile
 import unittest
 from pathlib import Path
 from unittest import mock
@@ -28,6 +30,36 @@ class PythonStructureGovernanceTest(unittest.TestCase):
         ):
             with self.assertRaisesRegex(ValueError, "timed out after 10s"):
                 MODULE.git("show", "HEAD:file")
+
+    def test_files_at_ref_reads_one_bounded_archive(self) -> None:
+        stream = io.BytesIO()
+        with tarfile.open(fileobj=stream, mode="w") as bundle:
+            for name, content in {
+                "framework/core/src/python/kungfu/a.py": b"A = 1\n",
+                "framework/core/src/python/kungfu/b.txt": b"ignored\n",
+                "framework/core/src/python/kungfu/c.py": b"C = 3\n",
+            }.items():
+                member = tarfile.TarInfo(name)
+                member.size = len(content)
+                bundle.addfile(member, io.BytesIO(content))
+
+        with mock.patch.object(MODULE, "git", return_value=stream.getvalue()) as call:
+            files = MODULE.files_at_ref("HEAD", ["framework/core/src/python"])
+
+        call.assert_called_once_with(
+            "archive",
+            "--format=tar",
+            "HEAD",
+            "--",
+            "framework/core/src/python",
+        )
+        self.assertEqual(
+            files,
+            {
+                "framework/core/src/python/kungfu/a.py": "A = 1\n",
+                "framework/core/src/python/kungfu/c.py": "C = 3\n",
+            },
+        )
 
     @staticmethod
     def _empty_measurement(manifest):

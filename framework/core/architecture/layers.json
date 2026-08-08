@@ -870,6 +870,7 @@
       "layer": "application-services",
       "owner": "core/runtime-live",
       "include_prefixes": [
+        "src/python/kungfu/assignment_runtime/",
         "src/libkungfu/src/runtime/live/"
       ],
       "exclude_prefixes": [],
