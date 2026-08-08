@@ -23,17 +23,25 @@ import { devMergeBaseCandidates } from './candidate-timeline-events.cjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const POLICY_PATH = 'framework/maintainability/code-complexity-policy.json';
+const GIT_TIMEOUT_MS = Number(
+  process.env.KUNGFU_GIT_COMMAND_TIMEOUT_MS || 10_000,
+);
 
 function readJson(relative) {
   return JSON.parse(fs.readFileSync(path.join(ROOT, relative), 'utf8'));
 }
 
-function git(args, options = {}) {
-  const result = spawnSync('git', args, {
+export function git(args, options = {}, runner = spawnSync) {
+  const result = runner('git', args, {
     cwd: ROOT,
     encoding: options.binary ? null : 'utf8',
     maxBuffer: 128 * 1024 * 1024,
+    timeout: GIT_TIMEOUT_MS,
   });
+  if (result.error?.code === 'ETIMEDOUT')
+    throw new Error(
+      `git ${args.join(' ')} timed out after ${GIT_TIMEOUT_MS}ms`,
+    );
   if (result.status !== 0)
     throw new Error(
       `git ${args.join(' ')} failed: ${String(result.stderr || '').trim()}`,

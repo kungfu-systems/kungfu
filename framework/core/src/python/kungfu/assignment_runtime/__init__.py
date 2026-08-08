@@ -8,16 +8,16 @@ import threading
 from collections.abc import Mapping
 from typing import Any
 
-from .local import (
+from .authority import WorkControlAuthority
+from .authority import (
     EVENT_SCHEMA,
     SNAPSHOT_SCHEMA,
     REQUEST_SCHEMA,
-    EmbeddedLocalAssignmentRuntime,
     LocalRuntimeError,
-    WorkControlAuthority,
     _copy_json,
     _stable,
 )
+from .local import EmbeddedLocalAssignmentRuntime
 
 
 class EmbeddedAssignmentRuntimeClient:
