@@ -369,9 +369,9 @@ export function validateWorkflowSources(root, contract, overrides = {}) {
   );
   requirePattern(
     recovery,
-    /publication-commit-command: node scripts\/alpha-publication-commit\.mjs/,
+    /publication-commit-command: BUILDCHAIN_PUBLICATION_COMMIT_CANDIDATE_SOURCE_SHA=\$\{\{ inputs\.resume-candidate-source-sha \}\} node scripts\/alpha-publication-commit\.mjs/,
     findings,
-    'release-candidate recovery must retain the signed Alpha discovery commit',
+    'release-candidate recovery must bind the signed Alpha discovery commit to the immutable candidate source',
   );
   requirePattern(
     promote,

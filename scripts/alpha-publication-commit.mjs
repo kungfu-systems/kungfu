@@ -486,6 +486,11 @@ async function main() {
       process.env.BUILDCHAIN_PUBLICATION_COMMIT_SOURCE_SHA,
       'BUILDCHAIN_PUBLICATION_COMMIT_SOURCE_SHA',
     ),
+    candidateSourceSha: exactSha(
+      process.env.BUILDCHAIN_PUBLICATION_COMMIT_CANDIDATE_SOURCE_SHA ||
+        process.env.BUILDCHAIN_PUBLICATION_COMMIT_SOURCE_SHA,
+      'BUILDCHAIN_PUBLICATION_COMMIT_CANDIDATE_SOURCE_SHA',
+    ),
     releaseSha: exactSha(
       process.env.BUILDCHAIN_PUBLICATION_COMMIT_RELEASE_SHA,
       'BUILDCHAIN_PUBLICATION_COMMIT_RELEASE_SHA',
@@ -527,7 +532,7 @@ async function main() {
   const tailPlanPath = findAlphaPublicationTailPlan(environment.payloadDir);
   verifyAlphaPublicationTailPlan({
     plan: readJson(tailPlanPath, 'Alpha publication tail plan'),
-    expectedSourceCommit: environment.sourceSha,
+    expectedSourceCommit: environment.candidateSourceSha,
     expectedVersion: environment.version,
   });
   const trustDocument = readJson(TRUST_PATH, 'release-channel trust');
@@ -543,6 +548,7 @@ async function main() {
   );
   const prepared = prepareAlphaPublication({
     ...environment,
+    sourceSha: environment.candidateSourceSha,
     candidatePassportPath,
     trustDocument,
     previousChannelIndex: previous?.index || null,

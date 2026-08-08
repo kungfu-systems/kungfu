@@ -196,7 +196,7 @@ test('publication and recovery clear activation commands while preserving public
   );
   assert.match(
     jobs[1][1],
-    /publication-commit-command: node scripts\/alpha-publication-commit\.mjs/u,
+    /publication-commit-command: BUILDCHAIN_PUBLICATION_COMMIT_CANDIDATE_SOURCE_SHA=\$\{\{ inputs\.resume-candidate-source-sha \}\} node scripts\/alpha-publication-commit\.mjs/u,
   );
 });
 

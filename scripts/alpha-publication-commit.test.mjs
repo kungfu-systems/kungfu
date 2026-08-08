@@ -98,6 +98,29 @@ test('publication commit owns Kungfu release assets but no site repository opera
   );
 });
 
+test('sealed-candidate recovery passes the immutable candidate source only to the publication tail', () => {
+  const source = fs.readFileSync(
+    new URL('./alpha-publication-commit.mjs', import.meta.url),
+    'utf8',
+  );
+  const workflow = fs.readFileSync(
+    new URL('../.github/workflows/release-new-version.yml', import.meta.url),
+    'utf8',
+  );
+  assert.match(
+    source,
+    /candidateSourceSha:[\s\S]*BUILDCHAIN_PUBLICATION_COMMIT_CANDIDATE_SOURCE_SHA[\s\S]*\|\|[\s\S]*BUILDCHAIN_PUBLICATION_COMMIT_SOURCE_SHA/u,
+  );
+  assert.match(
+    workflow,
+    /publication-commit-command: BUILDCHAIN_PUBLICATION_COMMIT_CANDIDATE_SOURCE_SHA=\$\{\{ inputs\.resume-candidate-source-sha \}\} node scripts\/alpha-publication-commit\.mjs/u,
+  );
+  assert.match(
+    workflow,
+    /publication-commit-command: \$\{\{ startsWith\([\s\S]*'node scripts\/alpha-publication-commit\.mjs' \|\| '' \}\}/u,
+  );
+});
+
 test('publication commit reuses an immutable existing launcher component Release', () => {
   assert.equal(
     validateExistingLauncherRelease({
