@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
   MOCK_AGENT_SCENARIOS,
+  MOCK_AGENT_VERSION,
   MOCK_RECOVERY_STORY_DELIVERABLE_PATH,
   createMockAgentMachine,
 } from '../src/mock-provider.mjs';
@@ -10,7 +11,7 @@ import { createProviderAdapter } from '../src/provider-adapters.mjs';
 function inspect(lines) {
   return createProviderAdapter({
     provider: 'synthetic',
-    version: '1.0.0',
+    version: MOCK_AGENT_VERSION,
   }).inspect({
     lines,
     volatileTail: lines.join('\n'),
@@ -19,6 +20,15 @@ function inspect(lines) {
     foreground: { provider: 'synthetic' },
   });
 }
+
+test('current Mock Agent version is admitted by its bundled interaction adapter', () => {
+  const adapter = createProviderAdapter({
+    provider: 'synthetic',
+    version: MOCK_AGENT_VERSION,
+  });
+  assert.equal(adapter.compatible, true);
+  assert.equal(adapter.tested, true);
+});
 
 test('Mock Agent exposes the complete deterministic scenario catalog', () => {
   assert.deepEqual(MOCK_AGENT_SCENARIOS, [
@@ -171,6 +181,8 @@ test('recovery-delivery isolates the reviewable launch brief without inventing f
   assert.equal(completed.exitCode, 0);
   assert.deepEqual(writes, [MOCK_RECOVERY_STORY_DELIVERABLE_PATH]);
   assert.match(completed.lines.join('\n'), /does not approve its own Work/u);
+  assert.equal(inspect(completed.lines).state, 'busy');
+  assert.doesNotMatch(completed.lines.join('\n'), /^\s*mock›(?:\s|$)/mu);
 });
 
 test('every Mock Agent scenario reaches its declared deterministic boundary', () => {

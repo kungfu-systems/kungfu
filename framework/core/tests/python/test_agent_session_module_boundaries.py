@@ -3,6 +3,7 @@
 from pathlib import Path
 import subprocess
 import sys
+from types import SimpleNamespace
 
 from kungfu import config
 from kungfu import workspace_guidance
@@ -49,6 +50,103 @@ def test_verification_probe_keeps_version_after_invalid_utf8():
 
     assert result["ok"] is True
     assert result["version"] == "1.2.3"
+
+
+def test_terminal_mock_session_waits_for_process_exit_after_reviewable_output():
+    observations = [
+        [
+            {
+                "live": True,
+                "lifecycleState": "ready",
+                "interactionState": "ready",
+                "output": {"nextSequence": 1},
+            }
+        ],
+        [
+            {
+                "live": True,
+                "lifecycleState": "running",
+                "interactionState": "unknown",
+                "output": {"nextSequence": 2},
+            },
+            {
+                "live": True,
+                "lifecycleState": "ready",
+                "interactionState": "ready",
+                "output": {"nextSequence": 3},
+            },
+            {
+                "live": True,
+                "lifecycleState": "ended",
+                "interactionState": "ended",
+                "output": {"nextSequence": 3},
+                "exit": {"exitCode": 0},
+            },
+            {
+                "live": False,
+                "lifecycleState": "ended",
+                "interactionState": "ended",
+                "output": {"nextSequence": 3},
+                "exit": {"exitCode": 0},
+            },
+        ],
+    ]
+    inspected = []
+
+    def wait_for_session(_invoke, _ref, predicate, *, timeout_seconds):
+        assert timeout_seconds > 0
+        for status in observations.pop(0):
+            inspected.append(status["interactionState"])
+            if predicate(status):
+                return status
+        raise AssertionError("expected one observed status to satisfy the boundary")
+
+    def invoke(request):
+        if request["operation"] == "plan-start":
+            return {"root": "sha256:" + "1" * 64}
+        if request["operation"] == "start":
+            return {}
+        if request["operation"] == "snapshot":
+            return {"terminal": {"vt": {"lines": ["reviewable output"]}}}
+        raise AssertionError(request["operation"])
+
+    coordinator = ManagedRunCoordinator(
+        session_ref=lambda _work, run_id: {
+            "workConsoleId": "console:test",
+            "sessionAttemptId": run_id,
+        },
+        semantic_root=lambda _value: "sha256:" + "2" * 64,
+        wait_for_session=wait_for_session,
+        invoke_control=lambda *_args, **_kwargs: {"status": "written"},
+        result_factory=lambda **kwargs: SimpleNamespace(**kwargs),
+    )
+    result, session = coordinator.run(
+        invoke=invoke,
+        run_id="attempt:test",
+        selected={
+            "id": "kungfu.mock-agent.recovery-delivery",
+            "provider": "synthetic",
+            "launch": {
+                "executable": "/usr/bin/node",
+                "argv": [
+                    "/mock-provider.mjs",
+                    "--scenario",
+                    "recovery-delivery",
+                ],
+            },
+        },
+        verification={"version": "1.1.0"},
+        work={"workspaceId": "workspace:test"},
+        cwd="/tmp",
+        env={},
+        prompt="finish the retained Work",
+        timeout_seconds=1,
+    )
+
+    assert inspected == ["ready", "unknown", "ready", "ended", "ended"]
+    assert result.exit_code == 0
+    assert session["live"] is False
+    assert session["interactionState"] == "ended"
 
 
 def test_provider_discovery_replaces_invalid_utf8_from_version_probe(monkeypatch):
