@@ -1,16 +1,45 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import assert from 'node:assert/strict';
-import { generateKeyPairSync } from 'node:crypto';
+import { createHash, generateKeyPairSync } from 'node:crypto';
 import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
 import { test } from 'node:test';
 
 import {
+  existingReleaseAssetIsWinner,
   publicationCommitEvidence,
   publicationTimestamp,
   signingIdentity,
   validateExistingLauncherRelease,
 } from './alpha-publication-commit.mjs';
+
+test('release asset reconciliation reuses only the exact uploaded winner', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'kungfu-release-winner-'));
+  try {
+    const file = path.join(root, 'bundle.json');
+    fs.writeFileSync(file, 'exact-publication-bytes');
+    const winner = {
+      name: 'bundle.json',
+      state: 'uploaded',
+      size: fs.statSync(file).size,
+      digest: `sha256:${createHash('sha256').update(fs.readFileSync(file)).digest('hex')}`,
+    };
+    assert.equal(existingReleaseAssetIsWinner(undefined, file), false);
+    assert.equal(existingReleaseAssetIsWinner(winner, file), true);
+    assert.throws(
+      () =>
+        existingReleaseAssetIsWinner(
+          { ...winner, size: winner.size + 1 },
+          file,
+        ),
+      /conflicts with existing bytes/u,
+    );
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
 
 test('publication signing identity is derived from Ed25519 public bytes', () => {
   const { privateKey } = generateKeyPairSync('ed25519');

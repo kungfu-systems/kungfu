@@ -406,6 +406,22 @@ function releaseAssetInputs(bundleRoot, bundle, stagingRoot) {
   return staged;
 }
 
+export function existingReleaseAssetIsWinner(asset, file) {
+  if (!asset) return false;
+  const size = fs.statSync(file).size;
+  const digest = sha256(fs.readFileSync(file));
+  if (
+    asset.state !== 'uploaded' ||
+    asset.size !== size ||
+    asset.digest !== digest
+  ) {
+    throw new Error(
+      `installer publication release asset conflicts with existing bytes: ${asset.name}`,
+    );
+  }
+  return true;
+}
+
 function publishReleaseAssets({ token, releaseTag, bundleRoot, bundle }) {
   const env = ghEnvironment(token);
   const existing = JSON.parse(
@@ -423,7 +439,9 @@ function publishReleaseAssets({ token, releaseTag, bundleRoot, bundle }) {
       { env },
     ),
   );
-  const names = new Set(existing.assets.map((asset) => asset.name));
+  const assetsByName = new Map(
+    existing.assets.map((asset) => [asset.name, asset]),
+  );
   const stagingRoot = fs.mkdtempSync(
     path.join(os.tmpdir(), 'kungfu-installer-release-assets-'),
   );
@@ -433,11 +451,7 @@ function publishReleaseAssets({ token, releaseTag, bundleRoot, bundle }) {
       bundle,
       stagingRoot,
     )) {
-      if (names.has(name)) {
-        throw new Error(
-          `installer publication release asset already exists: ${name}`,
-        );
-      }
+      if (existingReleaseAssetIsWinner(assetsByName.get(name), file)) continue;
       run(
         'gh',
         [
