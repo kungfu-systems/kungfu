@@ -5,8 +5,10 @@ from __future__ import annotations
 import copy
 import importlib.util
 import json
+import subprocess
 import unittest
 from pathlib import Path
+from unittest import mock
 
 ROOT = Path(__file__).resolve().parents[1]
 SPEC = importlib.util.spec_from_file_location(
@@ -18,6 +20,15 @@ SPEC.loader.exec_module(MODULE)
 
 
 class PythonStructureGovernanceTest(unittest.TestCase):
+    def test_git_timeout_is_reported(self) -> None:
+        with mock.patch.object(
+            MODULE.subprocess,
+            "run",
+            side_effect=subprocess.TimeoutExpired(("git", "show"), 10),
+        ):
+            with self.assertRaisesRegex(ValueError, "timed out after 10s"):
+                MODULE.git("show", "HEAD:file")
+
     @staticmethod
     def _empty_measurement(manifest):
         return {

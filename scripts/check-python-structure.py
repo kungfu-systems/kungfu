@@ -10,6 +10,7 @@ import ast
 import hashlib
 import json
 import math
+import os
 import subprocess
 import sys
 from datetime import date
@@ -19,6 +20,7 @@ from typing import Any, Iterable
 ROOT = Path(__file__).resolve().parents[1]
 MANIFEST_PATH = Path("framework/maintainability/abstraction-integrity.manifest.json")
 PYTHON_SOURCE_ROOT = "framework/core/src/python"
+GIT_TIMEOUT_SECONDS = float(os.environ.get("KUNGFU_GIT_COMMAND_TIMEOUT_SECONDS", "10"))
 
 
 def canonical(value: Any) -> bytes:
@@ -43,7 +45,18 @@ def read_json(relative: Path) -> dict[str, Any]:
 
 
 def git(*args: str) -> bytes:
-    result = subprocess.run(["git", *args], cwd=ROOT, check=False, capture_output=True)
+    try:
+        result = subprocess.run(
+            ["git", *args],
+            cwd=ROOT,
+            check=False,
+            capture_output=True,
+            timeout=GIT_TIMEOUT_SECONDS,
+        )
+    except subprocess.TimeoutExpired as exc:
+        raise ValueError(
+            f"git {' '.join(args)} timed out after {GIT_TIMEOUT_SECONDS:g}s"
+        ) from exc
     if result.returncode:
         raise ValueError(
             f"git {' '.join(args)} failed: {result.stderr.decode(errors='replace').strip()}"
