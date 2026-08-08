@@ -199,21 +199,33 @@ function verifyCredentialIslandBundle({
   acceptedSources,
   policy,
 }) {
-  const evidencePaths = filesNamed(bundleRoot, CREDENTIAL_EVIDENCE_FILE);
-  if (evidencePaths.length === 0) return null;
-  if (evidencePaths.length !== 1) {
+  const manifestPath = path.join(bundleRoot, 'manifest.json');
+  if (!fs.existsSync(manifestPath)) return null;
+  if (
+    !fs.statSync(manifestPath).isFile() ||
+    fs.lstatSync(manifestPath).isSymbolicLink()
+  ) {
     throw new Error(
-      `credential payload ${bundleRoot} must contain exactly one ${CREDENTIAL_EVIDENCE_FILE}; found ${evidencePaths.length}`,
+      `credential payload ${bundleRoot} root manifest must be a regular file`,
     );
   }
-  const manifestPaths = filesNamed(bundleRoot, 'manifest.json');
-  if (manifestPaths.length !== 1) {
+  const evidencePath = path.join(
+    bundleRoot,
+    'product',
+    'release',
+    CREDENTIAL_EVIDENCE_FILE,
+  );
+  if (
+    !fs.existsSync(evidencePath) ||
+    !fs.statSync(evidencePath).isFile() ||
+    fs.lstatSync(evidencePath).isSymbolicLink()
+  ) {
     throw new Error(
-      `credential payload ${bundleRoot} must contain exactly one manifest.json; found ${manifestPaths.length}`,
+      `credential payload ${bundleRoot} must contain ${CREDENTIAL_EVIDENCE_FILE} at its authoritative release path`,
     );
   }
   const manifest = readJson(
-    manifestPaths[0],
+    manifestPath,
     'macOS credential-island artifact manifest',
   );
   if (
@@ -300,10 +312,7 @@ function verifyCredentialIslandBundle({
     );
   }
 
-  const evidence = readJson(
-    evidencePaths[0],
-    'macOS credential-island evidence',
-  );
+  const evidence = readJson(evidencePath, 'macOS credential-island evidence');
   if (
     evidence.schema !== policy.evidenceSchema ||
     evidence.status !== 'accepted'
@@ -386,8 +395,8 @@ function verifyCredentialIslandBundle({
   return {
     bundleRoot,
     platformId: manifest.platform.id,
-    manifestPath: manifestPaths[0],
-    evidencePath: evidencePaths[0],
+    manifestPath,
+    evidencePath,
     runtimeSha: evidence.buildchain.runtimeSha,
     certificateSha1: evidence.identity.certificateSha1,
     notarizationIds: [

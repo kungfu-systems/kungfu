@@ -474,6 +474,15 @@ test('publication admission keeps exact installer bytes while omitting unadverti
     for (const platform of Object.values(value.platforms)) {
       fs.rmSync(platform.evidencePath);
     }
+    writeJson(
+      path.join(
+        value.platforms.darwin.bundleRoot,
+        '.buildchain',
+        'signing',
+        'credential-island-evidence.json',
+      ),
+      { retainedCopy: true },
+    );
     const admitted = verifyUpgradePublicationPayloads({
       payloadRoot: value.payloadRoot,
       releaseCandidatePassportPath: value.passportPath,
