@@ -11,7 +11,7 @@
     "version": "4.0.0-alpha.1",
     "channel": "repository-default",
     "tag": "v4.0.0-alpha.1",
-    "sourceSha": "local-dev-snapshot"
+    "sourceSha": "106aec009179f022c7f735a30faadc43bf1aab46"
   },
   "claims": [
     {

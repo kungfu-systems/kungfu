@@ -35,7 +35,9 @@ let runtime;
 const KFD3_SURFACE_REGISTRY_CONTRACT =
   'kungfu-buildchain-kfd-3-surface-registry';
 const __filename = fileURLToPath(import.meta.url);
-const ROOT = path.resolve(path.dirname(__filename), '..');
+const ROOT = process.env.BUILDCHAIN_RELEASE_CANDIDATE_RECOVERY_RECEIPT_PATH
+  ? process.cwd()
+  : path.resolve(path.dirname(__filename), '..');
 const BUILDCHAIN_DIR = path.join(ROOT, '.buildchain');
 const KFD1_WITNESS_PATH = path.join(
   ROOT,
@@ -402,7 +404,34 @@ function buildOwnKfdFacts() {
     },
   };
 }
-function buildUpstreamKfdAggregate() {
+function buildUpstreamKfdAggregate({ quiet = false } = {}) {
+  const recoveryReceipt =
+    process.env.BUILDCHAIN_RELEASE_CANDIDATE_RECOVERY_RECEIPT_PATH?.trim();
+  if (recoveryReceipt) {
+    if (!fs.existsSync(recoveryReceipt)) {
+      throw new Error(
+        `release-candidate recovery receipt is missing: ${recoveryReceipt}`,
+      );
+    }
+    const sealedAggregate = readJson(SDK_KFD_UPSTREAM_AGGREGATE_PATH);
+    if (
+      sealedAggregate.contract !== 'kungfu-upstream-kfd-aggregate' ||
+      sealedAggregate.source?.generator !==
+        'scripts/buildchain-kfd-evidence.mjs' ||
+      !Array.isArray(sealedAggregate.upstreams) ||
+      sealedAggregate.upstreams.length === 0
+    ) {
+      throw new Error(
+        'sealed release-candidate KFD upstream aggregate is invalid',
+      );
+    }
+    if (!quiet) {
+      console.log(
+        `reused sealed release-candidate KFD upstream aggregate from ${rel(SDK_KFD_UPSTREAM_AGGREGATE_PATH)}`,
+      );
+    }
+    return sealedAggregate;
+  }
   const kfdPackage = packageJson('@kungfu-tech/kfd', SDK_CLI_PATH);
   const libnodePackage = packageJson('@kungfu-tech/libnode', CORE_PACKAGE_PATH);
   const buildchainPackage = packageJson(
@@ -1785,7 +1814,7 @@ function buildSummary({
 }
 
 async function runArtifactWitness(options) {
-  const upstreamAggregate = buildUpstreamKfdAggregate();
+  const upstreamAggregate = buildUpstreamKfdAggregate({ quiet: options.json });
   const registry = buildKfd3Registry(upstreamAggregate);
   assertCurrent(KFD3_REGISTRY_PATH, registry, 'Buildchain KFD-3 registry');
   assertStrictBuildchainAudit(buildStrictBuildchainAudit(registry));
@@ -1798,7 +1827,7 @@ async function runArtifactWitness(options) {
 }
 
 async function runCheckOrWrite(options) {
-  const upstreamAggregate = buildUpstreamKfdAggregate();
+  const upstreamAggregate = buildUpstreamKfdAggregate({ quiet: options.json });
   const registry = buildKfd3Registry(upstreamAggregate);
   const kfd1Witness = buildKfd1Witness();
   const kfd1Gate = buildKfd1ReleaseGate(kfd1Witness);
@@ -1961,7 +1990,7 @@ async function runCheckOrWrite(options) {
     );
 }
 async function runQuery(options) {
-  const upstreamAggregate = buildUpstreamKfdAggregate();
+  const upstreamAggregate = buildUpstreamKfdAggregate({ quiet: options.json });
   const registry = buildKfd3Registry(upstreamAggregate);
   const query = await buildQuery(registry);
   if (options.json) process.stdout.write(renderJson(query));
