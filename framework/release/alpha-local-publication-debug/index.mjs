@@ -461,6 +461,70 @@ async function loadBuildchainRuntime(buildchainRoot) {
   );
 }
 
+export async function runPortableSmoke(rawOptions) {
+  const capsulePath = required(rawOptions.capsule, '--capsule');
+  if (!path.isAbsolute(capsulePath))
+    throw new Error('--capsule must be an explicit absolute path');
+  const exactCapsulePath = fs.realpathSync(
+    regularFile(capsulePath, '--capsule'),
+  );
+  const capsuleRoot = explicitDirectory(
+    rawOptions.capsuleRoot,
+    '--capsule-root',
+  );
+  const buildchainRoot = explicitDirectory(
+    rawOptions.buildchainRoot,
+    '--buildchain-root',
+  );
+  const expectedBindingRoot = required(
+    rawOptions.expectedBindingRoot,
+    '--expected-binding-root',
+  );
+  const expectedTransactionRoot = required(
+    rawOptions.expectedTransactionRoot,
+    '--expected-transaction-root',
+  );
+  if (
+    !/^sha256:[0-9a-f]{64}$/u.test(expectedBindingRoot) ||
+    !/^sha256:[0-9a-f]{64}$/u.test(expectedTransactionRoot)
+  )
+    throw new Error('expected roots must be sha256 content roots');
+  const buildchain = verifyBuildchain(buildchainRoot);
+  const runtime = await loadBuildchainRuntime(buildchainRoot);
+  const capsule = JSON.parse(fs.readFileSync(exactCapsulePath, 'utf8'));
+  const result = await runtime.executePublicationRehearsal({
+    capsule,
+    capsuleRoot,
+    mode: 'simulate',
+    environment: {},
+  });
+  if (
+    result.evidence.bindingRoot !== expectedBindingRoot ||
+    result.transaction.transactionRoot !== expectedTransactionRoot
+  )
+    throw new Error(
+      'portable deterministic roots differ from the admitted Mac run',
+    );
+  if (result.evidence.externalPublicationClaimed !== false)
+    throw new Error('portable smoke claimed external publication');
+  return {
+    schema: 'kungfu.alpha-local-publication-portable-smoke/v1',
+    status: 'passed',
+    platform: process.platform,
+    architecture: process.arch,
+    mode: 'simulate',
+    capsuleRoot: capsule.root,
+    bindingRoot: result.evidence.bindingRoot,
+    transactionRoot: result.transaction.transactionRoot,
+    stateRoot: result.transaction.stateRoot,
+    evidenceRoot: result.evidence.evidenceRoot,
+    externalPublicationClaimed: false,
+    buildchainSha: buildchain.commit,
+    buildchainTree: buildchain.tree,
+    buildchainRequiredMerge: BUILDCHAIN_REHEARSAL_MERGE,
+  };
+}
+
 async function runAlphaLocalPublicationDebugInternal(
   rawOptions,
   injectedRuntime,
@@ -928,7 +992,52 @@ export function parseArguments(argv) {
   return options;
 }
 
+export function parsePortableArguments(argv) {
+  const args = argv[0] === '--' ? argv.slice(1) : argv;
+  const options = {};
+  for (let index = 0; index < args.length; index += 2) {
+    const flag = args[index];
+    if (!flag?.startsWith('--') || index + 1 >= args.length)
+      throw new Error(`invalid option: ${flag || '<missing>'}`);
+    const name = flag.slice(2);
+    if (
+      ![
+        'capsule',
+        'capsule-root',
+        'buildchain-root',
+        'expected-binding-root',
+        'expected-transaction-root',
+      ].includes(name)
+    )
+      throw new Error(`unknown option: ${flag}`);
+    if (Object.hasOwn(options, name))
+      throw new Error(`duplicate option: ${flag}`);
+    options[name] = args[index + 1];
+  }
+  for (const name of [
+    'capsule',
+    'capsule-root',
+    'buildchain-root',
+    'expected-binding-root',
+    'expected-transaction-root',
+  ])
+    required(options[name], `--${name}`);
+  return options;
+}
+
 async function main(argv = process.argv.slice(2)) {
+  if (argv[0] === 'portable-smoke') {
+    const options = parsePortableArguments(argv.slice(1));
+    const report = await runPortableSmoke({
+      capsule: options.capsule,
+      capsuleRoot: options['capsule-root'],
+      buildchainRoot: options['buildchain-root'],
+      expectedBindingRoot: options['expected-binding-root'],
+      expectedTransactionRoot: options['expected-transaction-root'],
+    });
+    process.stdout.write(`${JSON.stringify(report, null, 2)}\n`);
+    return;
+  }
   const options = parseArguments(argv);
   const report = await runAlphaLocalPublicationDebug({
     artifactRoot: options['artifact-root'],

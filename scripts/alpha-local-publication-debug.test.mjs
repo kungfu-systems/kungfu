@@ -13,6 +13,7 @@ import {
   assertCleanCheckout,
   completeRegularFileInventory,
   parseArguments,
+  parsePortableArguments,
   validateCoordinates,
 } from '../framework/release/alpha-local-publication-debug/index.mjs';
 
@@ -195,5 +196,34 @@ test('the exact candidate inventory covers every regular file and rejects drift'
   assert.throws(
     () => completeRegularFileInventory(candidate, declared),
     /file binding drift/u,
+  );
+});
+
+test('the portable smoke requires an exact capsule and admitted roots', () => {
+  assert.deepEqual(
+    parsePortableArguments([
+      '--',
+      '--capsule',
+      '/data/rehearsal-capsule.json',
+      '--capsule-root',
+      '/data/candidate',
+      '--buildchain-root',
+      '/data/buildchain',
+      '--expected-binding-root',
+      `sha256:${'a'.repeat(64)}`,
+      '--expected-transaction-root',
+      `sha256:${'b'.repeat(64)}`,
+    ]),
+    {
+      capsule: '/data/rehearsal-capsule.json',
+      'capsule-root': '/data/candidate',
+      'buildchain-root': '/data/buildchain',
+      'expected-binding-root': `sha256:${'a'.repeat(64)}`,
+      'expected-transaction-root': `sha256:${'b'.repeat(64)}`,
+    },
+  );
+  assert.throws(
+    () => parsePortableArguments(['--capsule', '/data/capsule.json']),
+    /--capsule-root is required/u,
   );
 });
