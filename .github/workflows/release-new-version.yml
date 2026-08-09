@@ -219,17 +219,28 @@ jobs:
           [[ "$TARGET_SHA" =~ ^[0-9a-f]{40}$ ]]
           [[ "$PREFLIGHT_RUN_ID" =~ ^[0-9]+$ ]]
           test "$TRANSACTION_OVERRIDE" = "true"
-          gh api "repos/${CANDIDATE_REPOSITORY}/actions/runs/${CANDIDATE_RUN_ID}" \
-            --jq 'select(
+          candidate_run_head_sha="$(
+            gh api "repos/${CANDIDATE_REPOSITORY}/actions/runs/${CANDIDATE_RUN_ID}" \
+              --jq 'select(
               .repository.full_name == "kungfu-systems/kungfu" and
               .head_repository.full_name == "kungfu-systems/kungfu" and
               .status == "completed" and
               .conclusion == "success" and
               .event == "pull_request" and
               .path == ".github/workflows/build.yml" and
-              .name == "Build" and
-              .head_sha == "'"$CANDIDATE_SOURCE_SHA"'"
-            ) | .id' | grep -qx "$CANDIDATE_RUN_ID"
+              .name == "Build"
+            ) | .head_sha // empty'
+          )"
+          [[ "$candidate_run_head_sha" =~ ^[0-9a-f]{40}$ ]]
+          gh api "repos/${CANDIDATE_REPOSITORY}/git/commits/${CANDIDATE_SOURCE_SHA}" \
+            --jq 'select(
+              .sha == "'"$CANDIDATE_SOURCE_SHA"'" and
+              .tree.sha == "'"$EXPECTED_SOURCE_TREE"'" and
+              (
+                .sha == "'"$candidate_run_head_sha"'" or
+                any(.parents[]; .sha == "'"$candidate_run_head_sha"'")
+              )
+            ) | .sha' | grep -qx "$CANDIDATE_SOURCE_SHA"
 
       - name: Checkout immutable candidate source
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
