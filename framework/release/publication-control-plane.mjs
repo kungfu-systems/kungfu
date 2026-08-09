@@ -208,6 +208,7 @@ export function validateRegistry(r, { root = ROOT } = {}) {
   const bc = r.repositories.buildchain;
   if (
     !/^[0-9a-f]{40}$/.test(bc.sourceRevision) ||
+    !/^[0-9a-f]{40}$/.test(bc.candidateBuildRevision) ||
     bc.workflowInventoryRoot !== digest([...bc.workflowInventory].sort())
   )
     throw new Error('Buildchain inventory drift');
@@ -233,11 +234,13 @@ export function validateRegistry(r, { root = ROOT } = {}) {
   );
   if (
     !buildWorkflow.includes(
-      'uses: kungfu-systems/buildchain/.github/workflows/.build.yml@v3',
+      `uses: kungfu-systems/buildchain/.github/workflows/.build.yml@${bc.candidateBuildRevision}`,
     ) ||
-    !/^\s+buildchain-ref: v3\s*$/mu.test(buildWorkflow) ||
-    /kungfu-systems\/buildchain\/\.github\/workflows\/\.build\.yml@[0-9a-f]{40}/u.test(
-      buildWorkflow,
+    !buildWorkflow.includes(
+      `buildchain-ref: \${{ inputs.buildchain-ref || '${bc.candidateBuildRevision}' }}`,
+    ) ||
+    buildWorkflow.includes(
+      'uses: kungfu-systems/buildchain/.github/workflows/.build.yml@v3',
     ) ||
     buildWorkflow.includes('kungfu-trader/workflows@v1')
   )

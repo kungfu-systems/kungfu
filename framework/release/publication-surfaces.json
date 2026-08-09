@@ -80,7 +80,7 @@
             "product-stable",
             "product-binaries"
           ],
-          "sourceRoot": "sha256:81a951538ea9fdca69460ab99a60adeb286ccd6164f39da1a61339666db9a7f1"
+          "sourceRoot": "sha256:e590285f72200b9150245afc2904df4be8c6682495e02dc5c09fca1aad09b8f3"
         },
         {
           "path": ".github/workflows/alpha-promotion-preflight.yml",
@@ -122,7 +122,7 @@
             "product-stable",
             "product-binaries"
           ],
-          "sourceRoot": "sha256:3a3294eb3dc6ac33ce23923574164d87faa6815d05e21c4172faf1a04d4ce475"
+          "sourceRoot": "sha256:9979c74420120335fb67cb5b1907b0862026905e1526b8475558538d297c3d4d"
         },
         {
           "path": ".github/workflows/buildchain-validate.yml",
@@ -170,7 +170,7 @@
             "product-alpha",
             "product-binaries"
           ],
-          "sourceRoot": "sha256:33f05f9a4b40a51045b60159da450db000a975008ec185836626cad3fa75dc7a"
+          "sourceRoot": "sha256:795857454372ce1f340e126cbb2326e0de19f171acb90fe2a027759cc1ca7926"
         },
         {
           "path": ".github/workflows/dev-delivery-warrant-terminal.yml",
@@ -365,6 +365,7 @@
       "repository": "kungfu-systems/buildchain",
       "owner": "kungfu-systems/buildchain",
       "sourceRevision": "dd702f22e6afef137c86c5456e167e6db20e88f2",
+      "candidateBuildRevision": "58e48d73ae7fef0dd06ae02baf6d090e4da5487d",
       "version": "3.0.7-alpha.0",
       "compatibilityMode": "stable-v3-contract-plus-alpha-v3-contract",
       "stableContractLock": ".buildchain/contract-lock.json",
@@ -860,5 +861,5 @@
       }
     }
   ],
-  "registryRoot": "sha256:359f476f7c04c46069a0733704a58cf9c9e93b1b4b6971a985fe86f1479dedcc"
+  "registryRoot": "sha256:623714fd7bd4588bdc4c4cddc6968b03d44706fdd008423397817625312a9665"
 }
