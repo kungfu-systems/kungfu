@@ -12,9 +12,10 @@ carry. Memory, coordination, facts, permissions, and acceptance must become a
 machine-readable Work Runtime before participation scales.
 
 This is an explanation of product intent, not a new runtime guarantee. Kungfu
-v4 is **Coming soon**. The repository contains source-built capabilities,
-merged mechanisms, and qualification slices, but they are not all one generally
-available product yet. Current guarantees remain owned by
+`v4.0.0-alpha.1` is the first public v4 Alpha, but it is not a Stable or
+generally available product. The repository continues to contain mechanisms
+and qualification slices whose claims are narrower than the assembled Alpha.
+Current guarantees remain owned by
 [Contracts](../qualification/contracts.md),
 [Known Limits](../qualification/known-limits.md), and retained qualification
 evidence.

@@ -322,9 +322,10 @@ export function checkAlphaAttentionOperations(root = ROOT) {
   const known = read(path.join(root, 'docs', 'guides', 'known-issues.md'));
   requireCheck(
     issues,
-    status.includes('product Alpha publication is blocked') &&
+    status.includes('v4.0.0-alpha.1 is the first public product Alpha') &&
+      status.includes('For any later Alpha publication') &&
       status.includes('no public response-time SLA'),
-    'Alpha Status overclaims availability or support',
+    'Alpha Status drifts from current availability or support boundaries',
   );
   requireCheck(
     issues,

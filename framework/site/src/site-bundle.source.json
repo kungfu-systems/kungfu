@@ -3,7 +3,7 @@
   "positioning": {
     "promise": "Kungfu helps a fresh agent continue the same real-world work without asking you to explain it all again.",
     "firstReleaseOutcome": "Keep the work when the chat ends.",
-    "status": "The portable Spec and site bundles are qualified at 4.0.0-alpha.1; the complete product, public CLI and stable compatibility remain separate release claims.",
+    "status": "Kungfu 4.0.0-alpha.1 is the first public v4 Alpha, with desktop and standalone CLI artifacts; stable compatibility and independently published SDK layers remain separate release claims.",
     "principle": "One core, many complete products. Higher layers add convenience, never authority.",
     "currentFocus": "Accountable agent runtime is the current product focus; quantitative trading is historical proof and games or virtual worlds are a future derivative horizon.",
     "sourceIds": [
@@ -74,7 +74,7 @@
       "label": "Standalone CLI and TUI",
       "job": "Discover, record, query, verify, maintain and export headlessly.",
       "notRequired": "Electron.",
-      "maturity": "staged",
+      "maturity": "qualified",
       "sourceIds": ["product-layers", "cli-contract", "tui-package"]
     },
     {
@@ -90,7 +90,7 @@
       "label": "Assembled Kungfu App",
       "job": "Install compatible official layers as one convenience product.",
       "notRequired": "Use of every bundled layer.",
-      "maturity": "coming-soon",
+      "maturity": "qualified",
       "sourceIds": ["project-readme", "product-layers", "layer-release"]
     }
   ],
@@ -102,13 +102,13 @@
       "headline": "Keep durable work continuity while choosing only the Kungfu layer you need.",
       "summary": "Start from the user outcome, then move through independently adoptable format, native, SDK, headless, visual and assembled products.",
       "claimClass": "product-framing",
-      "maturity": "coming-soon",
+      "maturity": "qualified",
       "capabilities": [
         "Preserve current understanding, omissions, decisions and next action across fresh contexts.",
         "Expose the same bounded product and evidence map to humans and agents."
       ],
       "knownLimits": [
-        "The first public CLI and stable product release are not claimed available yet."
+        "The public product remains an Alpha prerelease; Stable and independently published SDK layers are not claimed available."
       ],
       "sourceIds": ["project-readme", "agent-work-state", "product-layers"]
     },
@@ -411,15 +411,15 @@
       "headline": "Headless and human products add complete workflows while lower layers retain semantic authority.",
       "summary": "The CLI/TUI is the complete headless product, the GUI is the complete visual product, and the assembled App is the one-install convenience product.",
       "claimClass": "product-framing",
-      "maturity": "coming-soon",
+      "maturity": "qualified",
       "capabilities": [
         "Operate semantic workflows headlessly without Electron.",
         "Render complete visual workflows over public capability contracts.",
         "Install compatible official layers together without collapsing their independent qualifications."
       ],
       "knownLimits": [
-        "The public install path remains coming soon.",
-        "Current GUI qualification is bounded to the named macOS arm64 candidate and does not prove interactive pixel correctness or all platforms."
+        "The public install path is Alpha-only; no Stable or native package-manager channel is claimed.",
+        "Published desktop artifacts do not prove production fitness, interactive pixel correctness, or a Stable compatibility line."
       ],
       "sourceIds": ["project-readme", "product-layers", "cli-contract", "tui-package", "gui-package", "gui-qualification"]
     },

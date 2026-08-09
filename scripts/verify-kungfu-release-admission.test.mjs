@@ -39,9 +39,9 @@ import {
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const SOURCE_SHA = '1'.repeat(40);
 const RUNTIME_SHA = '2e7e07902ac28d8f3edcfb81098ef9ebc7a91878';
-const PUBLICATION_RUNTIME_SHA = '21030efd277301d642fd9baaa1bd75f02dd3ddc6';
+const PUBLICATION_RUNTIME_SHA = '1d9b35b75e16d492e6d8b18c32504e89f8806855';
 const RETIRED_PUBLICATION_RUNTIME_SHA =
-  'bd32d3f834f84bef1bbccc775b6edd6ad0bc6766';
+  '21030efd277301d642fd9baaa1bd75f02dd3ddc6';
 const STABLE_RUNTIME_SHA = '9e904de2c85dbea7c799780ee166510b3336d812';
 const SOURCE_TREE_SHA = 'a'.repeat(40);
 const CONTRACT_DIGEST =
@@ -381,7 +381,7 @@ function fixture(options = {}) {
   };
 }
 
-test('Kungfu independently accepts only a current sealed qualifying capability', async () => {
+test('Kungfu independently accepts only a durable sealed qualifying capability', async () => {
   const result = await verifyKungfuReleaseAdmission(fixture());
   assert.equal(result.qualifying, true);
   assert.equal(result.capability.decision, 'allow');
