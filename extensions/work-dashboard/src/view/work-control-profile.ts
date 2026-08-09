@@ -1,4 +1,8 @@
-import type { Profile, QueryDefinition } from '@kungfu-tech/api/capability';
+import type {
+  Profile,
+  ProfileIntentReceipt,
+  QueryDefinition,
+} from '@kungfu-tech/api/capability';
 
 // Work Control domain client over the public, exact-root Profile surface.
 // Domain types live with this Profile KFX rather than in the generic API.
@@ -688,6 +692,17 @@ export type Atlas = {
 const PROFILE_ID = 'kungfu.work-control';
 const ADAPTER_MEMBER = 'work-control-actions';
 
+type IntentExecutionReceipt<TResult> = ProfileIntentReceipt & {
+  actionReceipt: {
+    verified: boolean;
+    coreReceipt: TResult;
+  };
+};
+
+type WorkControlProfileOptions = {
+  mutationAuthority?: 'reject' | 'kfd3-application';
+};
+
 function directMutationRejected(intentId: string): Error {
   const error = new Error(
     `Direct GUI Profile mutation is read-only compatibility: ${intentId}; use kungfu.assignment-runtime/v1`,
@@ -699,6 +714,7 @@ function directMutationRejected(intentId: string): Error {
 export function openWorkControlProfile(
   profile: Profile,
   defaultRepoRoot = '',
+  options: WorkControlProfileOptions = {},
 ): Atlas {
   let dashboardSnapshot: AtlasDashboardSnapshot | null = null;
   const source = () => profile.discover(PROFILE_ID).source;
@@ -716,10 +732,26 @@ export function openWorkControlProfile(
     ).result;
   const authorize = async <TResult>(
     intentId: string,
-    _input: unknown,
-    _authorizedBy: string,
+    input: unknown,
+    authorizedBy: string,
   ): Promise<TResult> => {
-    throw directMutationRejected(intentId);
+    if (options.mutationAuthority !== 'kfd3-application') {
+      throw directMutationRejected(intentId);
+    }
+    const profileSource = source();
+    const plan = profile.intentPlan(profileSource, intentId, input);
+    const receipt = (await profile.authorizeIntentAsync(
+      profileSource,
+      intentId,
+      plan.planId,
+      'approve',
+      authorizedBy,
+      input,
+    )) as IntentExecutionReceipt<TResult>;
+    if (!receipt.executionReceiptVerified || !receipt.actionReceipt.verified) {
+      throw new Error(`Profile intent execution was not verified: ${intentId}`);
+    }
+    return receipt.actionReceipt.coreReceipt;
   };
 
   return {
@@ -877,4 +909,59 @@ export function openWorkControlProfile(
   };
 }
 
-/** Explicit compatibility alias for callers that have not migrated yet. */
+// KFD-3 factory qualification owns this separate, explicitly injected Profile
+// application surface. It is never selected as a fallback by the production
+// Work Dashboard, whose only Assignment authority is openProfileApplication().
+export function openKfd3ProfileApplication(
+  profile: Profile,
+  defaultRepoRoot = '',
+) {
+  const application = openWorkControlProfile(profile, defaultRepoRoot, {
+    mutationAuthority: 'kfd3-application',
+  });
+  return {
+    createInitiative: (
+      ...args: Parameters<typeof application.createInitiative>
+    ) => application.createInitiative(...args),
+    createAssignment: (
+      ...args: Parameters<typeof application.createAssignment>
+    ) => application.createAssignment(...args),
+    appendAssignmentRelationEvent: (
+      ...args: Parameters<typeof application.appendAssignmentRelationEvent>
+    ) => application.appendAssignmentRelationEvent(...args),
+    claimAssignment: (
+      ...args: Parameters<typeof application.claimAssignment>
+    ) => application.claimAssignment(...args),
+    advanceAssignment: (
+      ...args: Parameters<typeof application.advanceAssignment>
+    ) => application.advanceAssignment(...args),
+    claimCompletion: (
+      ...args: Parameters<typeof application.claimCompletion>
+    ) => application.claimCompletion(...args),
+    assessInitiativeAsync: (
+      ...args: Parameters<typeof application.assessInitiativeAsync>
+    ) => application.assessInitiativeAsync(...args),
+    reviewCompletion: (
+      ...args: Parameters<typeof application.reviewCompletion>
+    ) => application.reviewCompletion(...args),
+    decideContinuation: (
+      ...args: Parameters<typeof application.decideContinuation>
+    ) => application.decideContinuation(...args),
+    importRepo: (...args: Parameters<typeof application.importRepo>) =>
+      application.importRepo(...args),
+    activateWorkControl: (
+      ...args: Parameters<typeof application.activateWorkControl>
+    ) => application.activateWorkControl(...args),
+    restoreAtlasAuthority: (
+      ...args: Parameters<typeof application.restoreAtlasAuthority>
+    ) => application.restoreAtlasAuthority(...args),
+    exportInitiative: (
+      ...args: Parameters<typeof application.exportInitiative>
+    ) => application.exportInitiative(...args),
+    importInitiative: (
+      ...args: Parameters<typeof application.importInitiative>
+    ) => application.importInitiative(...args),
+    intentPlan: (...args: Parameters<typeof profile.intentPlan>) =>
+      profile.intentPlan(...args),
+  };
+}

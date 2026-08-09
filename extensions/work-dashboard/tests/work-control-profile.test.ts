@@ -148,3 +148,71 @@ test('Work Control Profile compatibility is read-only in the GUI', async () => {
   }
   assert.deepEqual(calls, ['dashboard']);
 });
+
+test('KFD-3 application authority executes an exact verified Profile intent', async () => {
+  const source = '/profiles/work-control';
+  const calls: Array<Record<string, unknown>> = [];
+  const profile = {
+    runtimeDir: '/runtime',
+    discover: () => ({ source }),
+    intentPlan: (actualSource: string, intentId: string, input: unknown) => {
+      calls.push({ stage: 'plan', actualSource, intentId, input });
+      return { planId: 'plan:create-assignment' };
+    },
+    authorizeIntentAsync: async (
+      actualSource: string,
+      intentId: string,
+      expectedPlanId: string,
+      choice: string,
+      authorizedBy: string,
+      input: unknown,
+    ) => {
+      calls.push({
+        stage: 'authorize',
+        actualSource,
+        intentId,
+        expectedPlanId,
+        choice,
+        authorizedBy,
+        input,
+      });
+      return {
+        executionReceiptVerified: true,
+        actionReceipt: {
+          verified: true,
+          coreReceipt: { assignment_id: 'assignment-a' },
+        },
+      };
+    },
+  } as unknown as Profile;
+
+  const application = openWorkControlProfile(profile, '', {
+    mutationAuthority: 'kfd3-application',
+  });
+  const input = {
+    assignmentId: 'assignment-a',
+    title: 'Assignment A',
+    objective: 'Prove the release application boundary',
+    actor: 'test-owner',
+  };
+  const receipt = await application.createAssignment('initiative-a', input);
+
+  assert.deepEqual(receipt, { assignment_id: 'assignment-a' });
+  assert.deepEqual(calls, [
+    {
+      stage: 'plan',
+      actualSource: source,
+      intentId: 'create-assignment',
+      input: { initiativeId: 'initiative-a', ...input },
+    },
+    {
+      stage: 'authorize',
+      actualSource: source,
+      intentId: 'create-assignment',
+      expectedPlanId: 'plan:create-assignment',
+      choice: 'approve',
+      authorizedBy: 'test-owner',
+      input: { initiativeId: 'initiative-a', ...input },
+    },
+  ]);
+});
