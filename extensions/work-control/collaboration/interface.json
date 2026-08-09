@@ -190,54 +190,6 @@
       }
     },
     {
-      "id": "import-atlas",
-      "title": "Import Atlas projection source",
-      "actionId": "import-atlas",
-      "inspectViewId": "initiative-state",
-      "verifyViewId": "initiative-timeline",
-      "requiredAuthority": "work-control-author",
-      "requiredCapabilities": ["storage"],
-      "material": true,
-      "protocol": {
-        "mode": "shared-api",
-        "apiId": "kungfu.profile.application",
-        "guiMember": "work-dashboard",
-        "guiMethod": "importRepo"
-      }
-    },
-    {
-      "id": "activate-work-control",
-      "title": "Activate Work Control authority after exact Atlas parity",
-      "actionId": "activate-work-control",
-      "inspectViewId": "initiative-state",
-      "verifyViewId": "initiative-timeline",
-      "requiredAuthority": "work-control-author",
-      "requiredCapabilities": ["storage"],
-      "material": true,
-      "protocol": {
-        "mode": "shared-api",
-        "apiId": "kungfu.profile.application",
-        "guiMember": "work-dashboard",
-        "guiMethod": "activateWorkControl"
-      }
-    },
-    {
-      "id": "restore-atlas-authority",
-      "title": "Restore Atlas adapter authority",
-      "actionId": "restore-atlas-authority",
-      "inspectViewId": "initiative-state",
-      "verifyViewId": "initiative-timeline",
-      "requiredAuthority": "work-control-author",
-      "requiredCapabilities": ["storage"],
-      "material": true,
-      "protocol": {
-        "mode": "shared-api",
-        "apiId": "kungfu.profile.application",
-        "guiMember": "work-dashboard",
-        "guiMethod": "restoreAtlasAuthority"
-      }
-    },
-    {
       "id": "export-initiative",
       "title": "Export portable Initiative bundle",
       "actionId": "export-initiative",

@@ -198,7 +198,6 @@ struct storage_layout_paths_view {
   std::string episode_manifest_journal = {};
   std::string coordinator_state = {};
   std::string remote_mirrors = {};
-  std::string atlas_store = {};
 };
 
 struct storage_layout_entry_view {
