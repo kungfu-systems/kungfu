@@ -1,0 +1,94 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://libkungfu.dev/schemas/shifu/production-graph-execution-admission-request-v0.schema.json",
+  "title": "Shifu Production Graph execution admission request v0",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "requestId", "graph", "plan", "executorPolicyRoot", "work", "authorization", "actor", "attemptId", "intendedNodeIds", "observedAt", "requestRoot"],
+  "properties": {
+    "schema": { "const": "shifu.production-graph-execution-admission-request/v0" },
+    "requestId": { "$ref": "production-graph-v0.schema.json#/$defs/id" },
+    "graph": { "$ref": "production-graph-v0.schema.json" },
+    "plan": { "$ref": "production-graph-plan-v0.schema.json" },
+    "executorPolicyRoot": { "$ref": "production-graph-v0.schema.json#/$defs/root" },
+    "work": { "$ref": "#/$defs/workVerification" },
+    "authorization": { "$ref": "#/$defs/authorizationVerification" },
+    "actor": { "$ref": "production-graph-v0.schema.json#/$defs/nonEmpty" },
+    "attemptId": { "$ref": "production-graph-v0.schema.json#/$defs/id" },
+    "intendedNodeIds": { "$ref": "#/$defs/nodeIds" },
+    "observedAt": { "$ref": "#/$defs/timestamp" },
+    "requestRoot": { "$ref": "production-graph-v0.schema.json#/$defs/root" }
+  },
+  "$defs": {
+    "timestamp": { "type": "string", "format": "date-time" },
+    "nodeIds": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "$ref": "production-graph-v0.schema.json#/$defs/id" } },
+    "workRef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema", "workspaceId", "profileId", "profileRoot", "entityType", "entityId", "initiativeId", "entityRoot", "purpose", "systemTimeCut"],
+      "properties": {
+        "schema": { "const": "kungfu.work-ref/v1" },
+        "workspaceId": { "$ref": "production-graph-v0.schema.json#/$defs/nonEmpty" },
+        "profileId": { "$ref": "production-graph-v0.schema.json#/$defs/nonEmpty" },
+        "profileRoot": { "$ref": "production-graph-v0.schema.json#/$defs/root" },
+        "entityType": { "const": "assignment" },
+        "entityId": { "$ref": "production-graph-v0.schema.json#/$defs/nonEmpty" },
+        "initiativeId": { "$ref": "production-graph-v0.schema.json#/$defs/nonEmpty" },
+        "entityRoot": { "$ref": "production-graph-v0.schema.json#/$defs/root" },
+        "purpose": { "const": "complete-project-assignment" },
+        "systemTimeCut": { "$ref": "production-graph-v0.schema.json#/$defs/root" }
+      }
+    },
+    "workVerification": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["authority", "status", "phase", "workRef", "workRefRoot", "assignmentRequestRoot", "workDefinitionRoot", "assignmentStateRoot", "queryProofRoot", "executionClaimRoot", "runGateRoot", "attemptId", "actor", "leaseExpiresAt", "verificationRoot"],
+      "properties": {
+        "authority": { "const": "kungfu.work-control" },
+        "status": { "enum": ["verified", "stale", "missing"] },
+        "phase": { "enum": ["admitted", "claimed", "executing", "stage-ready", "completed", "closed"] },
+        "workRef": { "$ref": "#/$defs/workRef" },
+        "workRefRoot": { "$ref": "production-graph-v0.schema.json#/$defs/root" },
+        "assignmentRequestRoot": { "$ref": "production-graph-v0.schema.json#/$defs/root" },
+        "workDefinitionRoot": { "$ref": "production-graph-v0.schema.json#/$defs/root" },
+        "assignmentStateRoot": { "$ref": "production-graph-v0.schema.json#/$defs/root" },
+        "queryProofRoot": { "$ref": "production-graph-v0.schema.json#/$defs/root" },
+        "executionClaimRoot": { "$ref": "production-graph-v0.schema.json#/$defs/root" },
+        "runGateRoot": { "$ref": "production-graph-v0.schema.json#/$defs/root" },
+        "attemptId": { "$ref": "production-graph-v0.schema.json#/$defs/id" },
+        "actor": { "$ref": "production-graph-v0.schema.json#/$defs/nonEmpty" },
+        "leaseExpiresAt": { "$ref": "#/$defs/timestamp" },
+        "verificationRoot": { "$ref": "production-graph-v0.schema.json#/$defs/root" }
+      }
+    },
+    "evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "root"],
+      "properties": {
+        "kind": { "enum": ["execution-claim", "warrant", "approval"] },
+        "root": { "$ref": "production-graph-v0.schema.json#/$defs/root" }
+      }
+    },
+    "authorizationVerification": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["authority", "status", "decision", "action", "actor", "attemptId", "executorPolicyRoot", "intendedNodeIds", "issuedAt", "expiresAt", "replayState", "evidence", "verificationRoot"],
+      "properties": {
+        "authority": { "enum": ["kungfu.work-control", "kungfu.warrant", "external-approval-authority"] },
+        "status": { "enum": ["verified", "stale", "missing"] },
+        "decision": { "enum": ["allowed", "denied"] },
+        "action": { "const": "start-production-graph-nodes" },
+        "actor": { "$ref": "production-graph-v0.schema.json#/$defs/nonEmpty" },
+        "attemptId": { "$ref": "production-graph-v0.schema.json#/$defs/id" },
+        "executorPolicyRoot": { "$ref": "production-graph-v0.schema.json#/$defs/root" },
+        "intendedNodeIds": { "$ref": "#/$defs/nodeIds" },
+        "issuedAt": { "$ref": "#/$defs/timestamp" },
+        "expiresAt": { "$ref": "#/$defs/timestamp" },
+        "replayState": { "enum": ["fresh", "consumed", "revoked"] },
+        "evidence": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "$ref": "#/$defs/evidence" } },
+        "verificationRoot": { "$ref": "production-graph-v0.schema.json#/$defs/root" }
+      }
+    }
+  }
+}

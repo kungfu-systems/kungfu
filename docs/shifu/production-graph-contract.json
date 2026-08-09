@@ -10,7 +10,11 @@
     "failure": "docs/shifu/schema/production-graph-failure-v0.schema.json",
     "recovery": "docs/shifu/schema/production-graph-recovery-v0.schema.json",
     "feedback": "docs/shifu/schema/production-graph-feedback-v0.schema.json",
-    "verificationReceipt": "docs/shifu/schema/production-graph-verification-receipt-v0.schema.json"
+    "verificationReceipt": "docs/shifu/schema/production-graph-verification-receipt-v0.schema.json",
+    "executionAdmissionRequest": "docs/shifu/schema/production-graph-execution-admission-request-v0.schema.json",
+    "executionAdmissionRejection": "docs/shifu/schema/production-graph-execution-admission-rejection-v0.schema.json",
+    "executionAdmissionDecision": "docs/shifu/schema/production-graph-execution-admission-decision-v0.schema.json",
+    "executionAdmissionVerificationReceipt": "docs/shifu/schema/production-graph-execution-admission-verification-receipt-v0.schema.json"
   },
   "rootAlgorithm": {
     "name": "sha256-canonical-json",
@@ -33,6 +37,44 @@
     "invalidFixtures": "docs/shifu/examples/production-graph/invalid",
     "receipt": "shifu.production-graph-verification-receipt/v0",
     "executesNodes": false
+  },
+  "executionAdmission": {
+    "command": "./shifu production-graph:admit",
+    "request": "shifu.production-graph-execution-admission-request/v0",
+    "decision": "shifu.production-graph-execution-admission-decision/v0",
+    "rejection": "shifu.production-graph-execution-admission-rejection/v0",
+    "verificationReceipt": "shifu.production-graph-execution-admission-verification-receipt/v0",
+    "requiredBeforeNodeStart": true,
+    "failClosed": true,
+    "nodesStartedByAdmission": false,
+    "authorityMutations": false,
+    "externalAuthorities": [
+      "kungfu.assignment",
+      "kungfu.work-control",
+      "kungfu.warrant",
+      "external-approval-authority",
+      "protected-merge-authority",
+      "assignment-close-authority"
+    ],
+    "authorizationAuthorities": [
+      "kungfu.work-control",
+      "kungfu.warrant",
+      "external-approval-authority"
+    ],
+    "shifuForbiddenAuthority": [
+      "mint-assignment",
+      "mutate-assignment",
+      "mint-work-control",
+      "mutate-work-control",
+      "mint-warrant",
+      "mutate-warrant",
+      "mint-approval",
+      "mutate-approval",
+      "mint-merge-authority",
+      "mutate-merge-authority",
+      "mint-close-authority",
+      "mutate-close-authority"
+    ]
   },
   "feedback": {
     "command": "./shifu production-graph:feedback",
@@ -69,6 +111,7 @@
       "graph-is-not-a-scheduler",
       "plan-is-not-dispatch-authority",
       "verification-is-not-execution",
+      "execution-admission-is-not-node-start",
       "receipt-is-not-work-control-authority",
       "recovery-is-guidance-not-mutation",
       "shifu-does-not-own-xinfa-selection"

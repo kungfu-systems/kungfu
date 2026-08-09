@@ -112,6 +112,21 @@ function feedbackInputFor(spec) {
       compilerRoot: semanticRoot({ fixture: 'compiler' }),
       verifierRoot: semanticRoot({ fixture: 'verifier' }),
       verificationReceiptRoot: semanticRoot({ fixture: 'verification' }),
+      executionAdmissionRequestRoot: semanticRoot({
+        fixture: 'execution-admission-request',
+      }),
+      executionAdmissionDecisionRoot: semanticRoot({
+        fixture: 'execution-admission-decision',
+      }),
+      workRefRoot: semanticRoot({ fixture: 'work-ref' }),
+      workVerificationRoot: semanticRoot({ fixture: 'work-verification' }),
+      authorizationEvidenceRoots: [
+        semanticRoot({ fixture: 'authorization-evidence' }),
+      ],
+      authorizationVerificationRoot: semanticRoot({
+        fixture: 'authorization-verification',
+      }),
+      executionAdmissionExpiresAt: '2099-01-01T00:00:00Z',
       graphRoot: bundle.graph.graphRoot,
       graphPlanRoot: bundle.plan.planRoot,
       xinfaSelectionRoot: bundle.graph.semanticImpact.selectionRoot,
@@ -125,6 +140,8 @@ function feedbackInputFor(spec) {
       signal: spec.outcome === 'cancelled' ? 'SIGTERM' : null,
       parity: { status: 'pass', classification, issues: [] },
       artifacts: {
+        executionAdmissionRequest: '/tmp/execution-admission-request.json',
+        executionAdmissionDecision: '/tmp/execution-admission-decision.json',
         events: '/tmp/events.jsonl',
         graphReceipt: '/tmp/graph-receipt.json',
         currentPlan: '/tmp/current-plan.json',
@@ -186,6 +203,7 @@ test('Production Graph contract emits one source-bound protected-CI receipt', as
   assert.equal(receipt.status, 'qualified');
   assert.equal(receipt.validFixtureCount, 3);
   assert.equal(receipt.invalidFixtureCount, 8);
+  assert.match(receipt.executionAdmissionReceiptRoot, /^sha256:[0-9a-f]{64}$/u);
   assert.equal(receipt.nodesExecuted, false);
   assert.equal(receipt.protectedGate, './shifu check:source');
   assert.match(receipt.receiptRoot, /^sha256:[0-9a-f]{64}$/u);
@@ -267,6 +285,27 @@ test('verifier has no Work Control mutation authority', () => {
     'close',
   ]);
   assert.equal(contract.verification.executesNodes, false);
+  assert.equal(contract.executionAdmission.nodesStartedByAdmission, false);
+  assert.equal(contract.executionAdmission.authorityMutations, false);
+  for (const authority of [
+    'assignment',
+    'work-control',
+    'warrant',
+    'approval',
+    'merge-authority',
+    'close-authority',
+  ]) {
+    assert.ok(
+      contract.executionAdmission.shifuForbiddenAuthority.includes(
+        `mint-${authority}`,
+      ),
+    );
+    assert.ok(
+      contract.executionAdmission.shifuForbiddenAuthority.includes(
+        `mutate-${authority}`,
+      ),
+    );
+  }
 });
 
 test('compiler deterministically projects the polyglot production path', async () => {
