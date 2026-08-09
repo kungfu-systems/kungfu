@@ -1,5 +1,6 @@
 {
   "schema": "buildchain.declarative-binary-demo/v1",
+  "compositionMode": "terminal-fill",
   "product": {
     "id": "kungfu",
     "displayName": "Kungfu",
