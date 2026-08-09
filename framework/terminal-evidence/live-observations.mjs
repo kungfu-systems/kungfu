@@ -60,9 +60,17 @@ function gitTree(commit) {
   return git(['rev-parse', `${commit}^{tree}`]);
 }
 
-function githubTree(repository, commit) {
-  return gh(`/repos/${repository}/git/commits/${encodeURIComponent(commit)}`)
-    .tree?.sha;
+function requiredArray(value, label) {
+  if (!Array.isArray(value)) {
+    throw new Error(`${label} must be an array`);
+  }
+  return value;
+}
+
+function githubTree(repository, commit, observe = gh) {
+  return observe(
+    `/repos/${repository}/git/commits/${encodeURIComponent(commit)}`,
+  ).tree?.sha;
 }
 
 function canonicalSealPath(root) {
@@ -218,6 +226,80 @@ function observeDelivery(matrix, head, headTree) {
   };
 }
 
+function observeReconciliation(matrix, observe = gh) {
+  const repository = matrix.sourceBinding.repository;
+  const pulls = new Map();
+  const observePull = (number) => {
+    if (!pulls.has(number)) {
+      pulls.set(number, observe(`/repos/${repository}/pulls/${number}`));
+    }
+    return pulls.get(number);
+  };
+  const declaredPulls = requiredArray(
+    matrix.reconciliation?.pullRequests,
+    'matrix.reconciliation.pullRequests',
+  ).map((required) => {
+    const pull = observePull(required.number);
+    const successor = required.successor
+      ? observePull(required.successor)
+      : undefined;
+    return {
+      number: pull.number,
+      state:
+        pull.state === 'closed' && pull.merged_at
+          ? 'MERGED'
+          : pull.state?.toUpperCase() || '',
+      baseRef: pull.base?.ref || '',
+      headRef: pull.head?.ref || '',
+      head: pull.head?.sha || '',
+      mergeCommit: pull.merge_commit_sha || '',
+      ...(successor
+        ? {
+            successor: successor.number,
+            successorState:
+              successor.state === 'closed' && successor.merged_at
+                ? 'MERGED'
+                : successor.state?.toUpperCase() || '',
+            successorBaseRef: successor.base?.ref || '',
+            successorHeadRef: successor.head?.ref || '',
+            successorHead: successor.head?.sha || '',
+            successorTree: githubTree(
+              repository,
+              successor.head?.sha || '',
+              observe,
+            ),
+            successorMergeCommit: successor.merged_at
+              ? successor.merge_commit_sha || ''
+              : '',
+          }
+        : {}),
+    };
+  });
+  const openPullPayload = requiredArray(
+    observe(
+      `/repos/${repository}/pulls?state=open&base=${encodeURIComponent(
+        matrix.sourceBinding.protectedBranch,
+      )}&per_page=100`,
+    ),
+    'GitHub open protected pull requests',
+  );
+  if (openPullPayload.length === 100) {
+    throw new Error(
+      'open protected pull-request enumeration reached its hard page bound',
+    );
+  }
+  const openProtectedPulls = openPullPayload.map((pull) => ({
+    number: pull.number,
+    state: pull.state?.toUpperCase() || '',
+    baseRef: pull.base?.ref || '',
+    headRef: pull.head?.ref || '',
+    head: pull.head?.sha || '',
+    headTree: githubTree(repository, pull.head?.sha || '', observe),
+    title: pull.title || '',
+  }));
+  return { declaredPulls, openProtectedPulls };
+}
+
 function terminalReviewAttestation(body) {
   try {
     const value = JSON.parse(String(body || '').trim());
@@ -311,20 +393,37 @@ function observeRun(matrix, declared, observe = gh) {
   };
 }
 
-export function collectTerminalLiveObservations(matrix, evidence) {
-  const head = git(['rev-parse', 'HEAD']);
-  const headTree = gitTree(head);
-  const protectedRef = gh(
-    `/repos/${matrix.sourceBinding.repository}/git/ref/heads/${encodeURIComponent(
+function observeProtectedSource(matrix, observe = gh) {
+  const repository = matrix.sourceBinding.repository;
+  const ref = observe(
+    `/repos/${repository}/git/ref/heads/${encodeURIComponent(
       matrix.sourceBinding.protectedBranch,
     )}`,
   );
-  const protectedCommit = protectedRef.object?.sha || '';
-  const protectedTree = githubTree(
-    matrix.sourceBinding.repository,
-    protectedCommit,
-  );
+  const commit = ref.object?.sha || '';
+  return { commit, tree: githubTree(repository, commit, observe) };
+}
+
+export function collectTerminalLiveObservations(
+  matrix,
+  evidence,
+  observe = gh,
+) {
+  requiredArray(evidence.runs, 'evidence.runs');
+  const head = git(['rev-parse', 'HEAD']);
+  const headTree = gitTree(head);
+  const protectedStart = observeProtectedSource(matrix, observe);
   const delivery = observeDelivery(matrix, head, headTree);
+  const reconciliation = observeReconciliation(matrix, observe);
+  const terminalReview = observeTerminalReview(
+    matrix,
+    delivery.pullRequest,
+    head,
+    headTree,
+  );
+  const assignment = observeAssignment(matrix, evidence);
+  const runs = evidence.runs.map((run) => observeRun(matrix, run, observe));
+  const protectedEnd = observeProtectedSource(matrix, observe);
   return {
     schema: 'kungfu.terminal-live-observations/v1',
     observedAt: new Date().toISOString(),
@@ -333,23 +432,22 @@ export function collectTerminalLiveObservations(matrix, evidence) {
       protectedBranch: matrix.sourceBinding.protectedBranch,
       head,
       headTree,
-      protectedCommit,
-      protectedTree,
+      protectedCommit: protectedStart.commit,
+      protectedTree: protectedStart.tree,
+      protectedCommitEnd: protectedEnd.commit,
+      protectedTreeEnd: protectedEnd.tree,
     },
     delivery,
-    terminalReview: observeTerminalReview(
-      matrix,
-      delivery.pullRequest,
-      head,
-      headTree,
-    ),
-    assignment: observeAssignment(matrix, evidence),
-    runs: (evidence.runs || []).map((run) => observeRun(matrix, run)),
+    reconciliation,
+    terminalReview,
+    assignment,
+    runs,
   };
 }
 
 export {
   jsonOutput as parseCommandJson,
   observeRun,
+  observeReconciliation,
   terminalReviewAttestation as parseTerminalReviewAttestation,
 };
