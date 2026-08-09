@@ -1,7 +1,9 @@
 # Alpha Attention Operations
 
 This runbook controls public attention from T-24 hours through T+48 hours around
-a future Kungfu product Alpha. It does not authorize publication, production
+a Kungfu product Alpha publication. `v4.0.0-alpha.1` is already public; apply
+this runbook to a later Alpha only after rebasing it on the current release and
+live repository state. It does not authorize publication, production
 deployment, promotion, moderation settings, or any other live mutation.
 
 ## Authorities and roles
@@ -276,5 +278,6 @@ The parent publication handoff must contain:
 - rehearsal command and receipt root;
 - unresolved risks and the current Alpha Status;
 - named launch and backup coverage; and
-- the explicit statement: **Kungfu product Alpha publication remains blocked
-  until every readiness criterion is satisfied.**
+- the explicit version-scoped statement: **Publication of this Alpha candidate
+  remains blocked until every readiness criterion is satisfied.** This does not
+  revoke or hide an already published Alpha.

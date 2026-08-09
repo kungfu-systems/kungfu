@@ -78,7 +78,7 @@
         "Support remains bounded to the exact Alpha release passport and its retained evidence."
       ],
       "owner": "kungfu-core",
-      "nextGate": "Publish and retain the exact Alpha release passport."
+      "nextGate": "Retain and verify the exact Alpha release passport for every claimed release."
     },
     {
       "id": "KFD-2",
@@ -129,7 +129,7 @@
         "Trust remains claim-specific and bounded to the exact Alpha release passport."
       ],
       "owner": "kungfu-release",
-      "nextGate": "Publish and retain all KFD-2 claim evaluations in the Alpha release passport."
+      "nextGate": "Retain and verify all KFD-2 claim evaluations in every claimed Alpha release passport."
     },
     {
       "id": "KFD-3",
@@ -179,7 +179,7 @@
         "Support covers the 186 product-declared surfaces accepted by the exact Buildchain registry audit."
       ],
       "owner": "buildchain",
-      "nextGate": "Publish the exact product-declared registry audit and artifact closure in the Alpha release passport."
+      "nextGate": "Retain and verify the exact product-declared registry audit and artifact closure in every claimed Alpha release passport."
     },
     {
       "id": "KFD-4",
@@ -425,7 +425,7 @@
         "The Buildchain product gate does not certify other KFD-7 Domain Profiles."
       ],
       "owner": "kungfu-agent-work",
-      "nextGate": "Publish and retain the exact KFD-7 product gate and support projection in the Alpha release passport."
+      "nextGate": "Retain and verify the exact KFD-7 product gate and support projection in every claimed Alpha release passport."
     },
     {
       "id": "KFD-8",

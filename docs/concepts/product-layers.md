@@ -24,8 +24,9 @@ defines the architecture constraint. This page is the practical product map.
 | `.kungfu` format/spec | portable facts, declared schemas, verification and preservation rules | GUI or a particular language runtime |
 
 The implementation and source-built qualification harness now cover every row.
-The table remains a contract map, not a claim that the artifacts have been
-published or that a current public release has passed its final Gate.
+The current `v4.0.0-alpha.1` release publishes the assembled desktop product and
+standalone CLI artifacts, but the table remains a contract map rather than a
+claim that every independent SDK/package row is published or Stable-qualified.
 
 These distribution layers are independent adoption boundaries. Within the
 assembled product, the ordinary Agent Work interaction converges on a separate
