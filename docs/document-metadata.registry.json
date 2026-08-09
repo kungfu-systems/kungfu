@@ -89,6 +89,29 @@
         "invisible_context_boundary": "Based on the R0 contract, Work Control Profile adapter, and disposable-Home qualification in this source tree; GUI, CLI, Agent, KFX, loopback, Cluster, release cutover, and hidden model parameters are not claimed"
       }
     },
+    "docs/architecture/assignment-runtime-r2-gui-client.md": {
+      "metadata_schema": "kungfu.document-metadata/v1",
+      "document_status": "draft",
+      "doc_type": "architecture-evidence",
+      "review_state": "unreviewed",
+      "sensitivity": "public",
+      "sources": [
+        "architecture-decisions",
+        "executable-probe",
+        "local-files"
+      ],
+      "period": "2026-08-09",
+      "theme": "local-first-assignment-runtime-api",
+      "confidence": "high",
+      "evidence_grade": "A",
+      "last_reviewed": "2026-08-09",
+      "ai_provenance": {
+        "model_family": "OpenAI GPT-5",
+        "product": "Codex",
+        "generated_at": "2026-08-09",
+        "invisible_context_boundary": "Based on the R0 contract, R1 Local Profile, GUI and Work Dashboard source, and disposable-Home tests in this candidate; protected delivery and any R3, Cluster, or deployed behavior are not claimed"
+      }
+    },
     "docs/architecture/domain-profile-authoring.md": {
       "metadata_schema": "kungfu.document-metadata/v1",
       "document_status": "active",

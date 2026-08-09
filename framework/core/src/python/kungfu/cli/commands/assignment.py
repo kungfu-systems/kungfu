@@ -17,6 +17,11 @@ from kungfu import assignment_close
 from kungfu import assignment_evidence
 from kungfu import assignment_review_lifecycle
 from kungfu import assignment_start
+from kungfu.assignment_runtime import (
+    EmbeddedLocalAssignmentRuntime,
+    LocalRuntimeError,
+)
+from kungfu.assignment_runtime.stdio import serve
 from kungfu import dogfood as dogfood_api
 from kungfu import profile_composition, profile_sdk
 from kungfu.agent import run_agent
@@ -143,6 +148,31 @@ def _runtime(workspace_root="", home=False, operation_class="semantic-write"):
 def _assignment_runtime(workspace_root, home, operation_class):
     identity, runtime_dir, receipt = _runtime(workspace_root, home, operation_class)
     return AssignmentRuntime(identity, str(runtime_dir), receipt)
+
+
+@assignment.command(
+    name="runtime-host",
+    hidden=True,
+    help="serve the GUI Assignment Runtime client over private stdio",
+)
+@click.option("--workspace", "workspace_root", type=click.Path(file_okay=False))
+@click.option("--home", is_flag=True)
+@assignment_context
+def runtime_host(ctx, workspace_root, home):
+    """Run the GUI-private transport without migrating the public CLI client."""
+
+    identity, runtime_dir, _ = _runtime(workspace_root, home, "read-only")
+    runtime = EmbeddedLocalAssignmentRuntime(
+        runtime_dir,
+        realm_id=identity.workspace_id,
+        generation=identity.identity_root,
+        profile_source=_profile_source(),
+    )
+    try:
+        serve(runtime, click.get_text_stream("stdin"), click.get_text_stream("stdout"))
+    except LocalRuntimeError as error:
+        # ``serve`` emits a private host diagnosis before exiting.
+        raise click.exceptions.Exit(2) from error
 
 
 def _profile_source():

@@ -73,6 +73,10 @@ import {
   bindElectronAgentSessionHost,
   createMainAgentSessionHost,
 } from './agent-session-host';
+import {
+  bindElectronAssignmentRuntime,
+  createAssignmentRuntimeHost,
+} from './assignment-runtime-host';
 import { configureProductCacheEnvironment } from './desktop-python-environment';
 import {
   type ProductionDesktopUpdateProvider,
@@ -800,6 +804,16 @@ ipcMain.handle(PROFILE_CLI_EXEC_CHANNEL, (_event, payload) =>
     argsPrefix: kungfuCliInvocation.argsPrefix,
   }),
 );
+const assignmentRuntimeBinding = bindElectronAssignmentRuntime(
+  ipcMain,
+  createAssignmentRuntimeHost({
+    bin: kungfuBinPath(),
+    env: process.env,
+    argsPrefix: kungfuCliInvocation.argsPrefix,
+    workspaceRoot: process.env.KF_WORKSPACE_ROOT,
+    spawn: (file, args, options) => spawn(file, args, options),
+  }),
+);
 const globalWorkObserverBinding = bindElectronGlobalWorkObserver(
   ipcMain,
   createGlobalWorkObserverHost({
@@ -1414,6 +1428,7 @@ app.on('before-quit', () => {
   // Freeze the persisted session-window layout: the window closes that follow
   // are shutdown, not the user dropping windows, so they must not overwrite it.
   appQuitting = true;
+  assignmentRuntimeBinding.dispose();
   globalWorkObserverBinding.dispose();
   desktopUpdateProvider?.stop();
 });

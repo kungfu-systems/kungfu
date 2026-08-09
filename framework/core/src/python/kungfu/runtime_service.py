@@ -1289,37 +1289,41 @@ class ProcessRuntimeHost:
         state_dir(runtime_dir).mkdir(parents=True, exist_ok=True)
         write_pid(coordinator_pid_path(runtime_dir), os.getpid())
         coordinator_start_identity = _process_start_identity(os.getpid())
-        _json_write(
-            state_path(runtime_dir),
-            {
-                "schema": SCHEMA_STATUS,
-                "status": "coordinator-running",
-                "home": home,
-                "runtimeDir": runtime_dir,
-                **authority,
-                "coordinatorPid": os.getpid(),
-                "coordinatorStartIdentity": coordinator_start_identity,
-                "runtimeImage": copy.deepcopy(dict(self.runtime_image))
-                if self.runtime_image is not None
-                else None,
-                "updatedAt": _now(),
-            },
-        )
-        engine = CoordinatorEngine(
-            home,
-            runtime_dir,
-            low_latency=low_latency,
-            runtime_generation=authority["runtimeGeneration"],
-            coordinator_epoch=authority["coordinatorEpoch"],
-            assessment_executor=ProcessAssessmentExecutor(
-                home, runtime_dir, self.log_level
-            ),
-        )
+        engine: CoordinatorEngine | None = None
         try:
+            # Native construction owns the nanomsg binds.  Never publish a
+            # ready coordinator state until every bind has succeeded.
+            engine = CoordinatorEngine(
+                home,
+                runtime_dir,
+                low_latency=low_latency,
+                runtime_generation=authority["runtimeGeneration"],
+                coordinator_epoch=authority["coordinatorEpoch"],
+                assessment_executor=ProcessAssessmentExecutor(
+                    home, runtime_dir, self.log_level
+                ),
+            )
+            _json_write(
+                state_path(runtime_dir),
+                {
+                    "schema": SCHEMA_STATUS,
+                    "status": "coordinator-running",
+                    "home": home,
+                    "runtimeDir": runtime_dir,
+                    **authority,
+                    "coordinatorPid": os.getpid(),
+                    "coordinatorStartIdentity": coordinator_start_identity,
+                    "runtimeImage": copy.deepcopy(dict(self.runtime_image))
+                    if self.runtime_image is not None
+                    else None,
+                    "updatedAt": _now(),
+                },
+            )
             engine.run()
             return 0
         finally:
-            engine.close()
+            if engine is not None:
+                engine.close()
             unlink_coordinator_pid_files(runtime_dir)
 
     def spawn_coordinator(
@@ -1893,7 +1897,15 @@ def _wait_for_coordinator(
     deadline = time.time() + 5
     while time.time() < deadline:
         current = route_status(home, runtime_dir, config_home)
-        if current["supervisor"]["running"] and current["coordinator"]["running"]:
+        lifecycle = current.get("lifecycle") or {}
+        last_state = current.get("lastState") or {}
+        if (
+            lifecycle.get("healthy") is True
+            and current["supervisor"].get("identityVerified") is True
+            and current["coordinator"].get("identityVerified") is True
+            and last_state.get("status") == "coordinator-running"
+            and last_state.get("coordinatorPid") == current["coordinator"].get("pid")
+        ):
             payload = {
                 **current,
                 "changed": changed,
