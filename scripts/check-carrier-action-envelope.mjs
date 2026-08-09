@@ -178,8 +178,7 @@ const hits = [];
 for (const rel of selectedFiles()) {
   const businessEnvelopeSurface =
     rel.startsWith('framework/core/src/python/kungfu/rewind/') ||
-    rel.startsWith('framework/core/src/python/kungfu/work/') ||
-    rel.startsWith('framework/core/src/python/kungfu/atlas/');
+    rel.startsWith('framework/core/src/python/kungfu/work/');
   const text = fs.readFileSync(path.join(ROOT, rel), 'utf8');
   for (const pattern of ALLOCATION_PATTERNS) {
     if (

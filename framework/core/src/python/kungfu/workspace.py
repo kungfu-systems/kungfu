@@ -604,7 +604,7 @@ def observe_workspace_locator(
         raise ValueError(
             "invalid Workspace Locator Catalog must be repaired explicitly"
         )
-    observed_at = _now()
+    observed_at = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
     entry = _catalog_entry(
         identity,
         observed_at,
@@ -754,7 +754,7 @@ def rebuild_workspace_catalog(
         identities.append(identity)
         sources.append({"source": "explicit", "workspace_id": identity.workspace_id})
 
-    observed_at = _now()
+    observed_at = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
     by_key: dict[str, dict[str, Any]] = {}
     for identity in identities:
         entry = _catalog_entry(
@@ -917,7 +917,9 @@ def maintain_workspace_catalog(
         "test-only": "test-only",
         "quarantine": "quarantined",
     }[action]  # type: ignore[assignment]
-    transitioned_at = transitioned_at or _now()
+    transitioned_at = transitioned_at or datetime.now(timezone.utc).isoformat().replace(
+        "+00:00", "Z"
+    )
     changes: list[dict[str, Any]] = []
     persisted_entries: list[dict[str, Any]] = []
     for row in catalog["entries"]:
@@ -1146,7 +1148,7 @@ def prepare_workspace_write(
     return {
         "schema": TARGET_RECEIPT_SCHEMA,
         "receipt_id": f"workspace-target:{uuid4()}",
-        "recorded_at": _now(),
+        "recorded_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
         "operation_class": target.operation_class,
         "workspace_id": ensure_receipt["workspace_id"],
         "workspace_identity_root": ensure_receipt["workspace_identity_root"],
@@ -1177,7 +1179,7 @@ def record_workspace_capture(
     recorded["resulting_identities"] = resulting_identities
     recorded["effects"] = ["capture-receipt-recorded"]
     recorded["skipped_effects"] = [
-        "mission-association",
+        "initiative-association",
         "git-init",
         "gitignore-edit",
         "git-stage",
@@ -1232,7 +1234,9 @@ def select_workspace(
     registry = load_workspace_registry(config_home, env=env)
     selected = identity.as_dict()
     selected["available"] = _workspace_available(identity)
-    selected["selected_at"] = _now()
+    selected["selected_at"] = (
+        datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+    )
     recent = [
         item
         for item in registry["recent"]
@@ -1291,7 +1295,7 @@ def forget_workspace(
         "schema": REGISTRY_SCHEMA,
         "last_workspace_id": last_workspace_id,
         "recent": recent,
-        "updated_at": _now(),
+        "updated_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
     }
     path = workspace_registry_path(config_home, env=env)
     _write_json_atomic(path, payload)
@@ -1368,7 +1372,7 @@ def ensure_workspace_data_home(
     return {
         "schema": ENSURE_RECEIPT_SCHEMA,
         "receipt_id": f"workspace-ensure:{uuid4()}",
-        "recorded_at": _now(),
+        "recorded_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
         "workspace_id": qualified.workspace_id,
         "workspace_identity_root": qualified.identity_root,
         "workspace_kind": qualified.workspace_kind,
@@ -1697,7 +1701,3 @@ def _write_json_atomic(path: str, payload: dict[str, Any]) -> None:
         if os.path.exists(temporary):
             os.unlink(temporary)
         raise
-
-
-def _now() -> str:
-    return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")

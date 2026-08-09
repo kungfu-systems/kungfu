@@ -4,7 +4,7 @@
   "hashAlgorithm": "sha256",
   "memberDigestAlgorithm": "sha256-file-bytes/v1",
   "canonicalization": "utf8-json-object-keys-byte-sorted-no-insignificant-whitespace-lf/v1",
-  "schemaSetRoot": "sha256:f2ea013553fd9c3b7ba62ca850030103b2753c49ab0cacef12ce88426fb63e0c",
+  "schemaSetRoot": "sha256:9607f7ead4a096f0877eb9113dcccf802be363987f14678f867e3c77d36469cd",
   "members": [
     {
       "path": "schema/atlas-manifest-v1.schema.json",
@@ -49,7 +49,7 @@
     {
       "path": "schema/episode-provider-submission-v1.schema.json",
       "uri": "https://xinfa.dev/schema/episode-provider-submission-v1.schema.json",
-      "sha256": "sha256:ff8e403407a4699a3e6f175192f7a2ec3b3c442691002e0ac4b0690f5ad9dc80"
+      "sha256": "sha256:cf5a4333dccb28ad573bdc6b843f5c0340aecd5088e7e5d32ec1ef8c9cca9cc1"
     },
     {
       "path": "schema/gui-view-v1.schema.json",
@@ -79,12 +79,12 @@
     {
       "path": "schema/onboarding-selection-v1.schema.json",
       "uri": "https://xinfa.dev/schema/onboarding-selection-v1.schema.json",
-      "sha256": "sha256:7035df7ee8ddb42d6bedd5e2e346e475f3dd3a16343fffd3831161e6f36993e4"
+      "sha256": "sha256:4372befe60bdcfc00563abff758bc83d01e98a42d0b26a3cc9eb038b6c7e492c"
     },
     {
       "path": "schema/project-v1.schema.json",
       "uri": "https://xinfa.dev/schema/project-v1.schema.json",
-      "sha256": "sha256:33341df708e7b29250d6fbd95ad56765757badcc1ec0d4cff6b85d9c70aac656"
+      "sha256": "sha256:3a031af33969af1ec65dec1d527c6b3606d60fa5ebce7a4fd6bfa371268d7d7e"
     },
     {
       "path": "schema/projection-recipe-v1.schema.json",
@@ -119,7 +119,7 @@
     {
       "path": "schema/semantic-project-v1.schema.json",
       "uri": "https://xinfa.dev/schema/semantic-project-v1.schema.json",
-      "sha256": "sha256:f61bd88943d9f15ef96a9bd05201c8eedfc516baef3907cae40784eaf3534083"
+      "sha256": "sha256:422121308cdd0af8f828833b3765ce98bf6fbd1955dfac9072002f64139a01fb"
     },
     {
       "path": "schema/task-chart-v1.schema.json",
@@ -129,14 +129,14 @@
     {
       "path": "schema/task-envelope-v1.schema.json",
       "uri": "https://xinfa.dev/schema/task-envelope-v1.schema.json",
-      "sha256": "sha256:91340d60cadd0d84a12a0639e153cd36caf4ad6098c14268580d149ea7daa443"
+      "sha256": "sha256:6eacf5f767ae74dd4ce2ef08c5a6f776ed14f099e3257e37dbd353ffcea9a442"
     }
   ],
   "rootSets": [
     {
       "id": "xinfa.atlas-schema-set/v1",
       "rootAlgorithm": "sha256-canonical-json-object-v1",
-      "root": "sha256:1c3519689b9f5f9db531f497408c93baaf9a068877bdbf505e042eb5c02d8fdb",
+      "root": "sha256:edfed3718a2982448e8d7dbedf7f534328dfae3f76bcde9a77d9f49823b995de",
       "entries": [
         {
           "key": "project",

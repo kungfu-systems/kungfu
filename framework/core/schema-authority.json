@@ -72,13 +72,6 @@
       "projection_route": "flatbuffers-bfbs"
     },
     {
-      "identity": "kungfu.atlas.events",
-      "owner": "flatbuffers",
-      "declaration": "framework/core/src/python/kungfu/atlas/atlas_events.fbs",
-      "derived_schema": "framework/core/src/python/kungfu/atlas/atlas_events.bfbs",
-      "projection_route": "flatbuffers-bfbs"
-    },
-    {
       "identity": "kungfu.rewind.events",
       "owner": "flatbuffers",
       "declaration": "framework/core/src/python/kungfu/rewind/rewind_events.fbs",

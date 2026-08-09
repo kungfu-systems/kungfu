@@ -9,9 +9,6 @@ export function resolveAssignmentWorkspaceRoot(assignment: {
   return root || null;
 }
 
-/** Explicit compatibility alias for callers that have not migrated yet. */
-export const resolveGoalWorkspaceRoot = resolveAssignmentWorkspaceRoot;
-
 export async function resolveWorkControlProfileRoot(
   profile: Pick<Profile, 'managerAsync'> | undefined,
 ): Promise<string> {
@@ -40,5 +37,3 @@ export async function resolveWorkControlProfileRoot(
   }
   return current.profileSuiteRoot;
 }
-
-/** Explicit compatibility alias for callers that have not migrated yet. */

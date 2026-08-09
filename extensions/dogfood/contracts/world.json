@@ -8,8 +8,7 @@
     "factSurfaceIds": [
       "kungfu.dogfood-feedback.finding",
       "kungfu.dogfood-feedback.issue",
-      "kungfu.dogfood-feedback.consideration",
-      "kungfu.dogfood-feedback.migration"
+      "kungfu.dogfood-feedback.consideration"
     ]
   },
   "factSurfaces": [
@@ -17,7 +16,7 @@
       "id": "kungfu.dogfood-feedback.finding",
       "version": "1",
       "contractWorldId": "kungfu.dogfood-feedback",
-      "sourceAuthorities": ["kungfu-user", "kungfu-agent", "atlas-migration"],
+      "sourceAuthorities": ["kungfu-user", "kungfu-agent"],
       "schema": {
         "$id": "kungfu://dogfood-feedback/finding/v1",
         "type": "object",
@@ -34,7 +33,7 @@
       "id": "kungfu.dogfood-feedback.issue",
       "version": "1",
       "contractWorldId": "kungfu.dogfood-feedback",
-      "sourceAuthorities": ["kungfu-user", "kungfu-agent", "atlas-migration"],
+      "sourceAuthorities": ["kungfu-user", "kungfu-agent"],
       "schema": {
         "$id": "kungfu://dogfood-feedback/issue/v1",
         "type": "object",
@@ -54,23 +53,6 @@
       "sourceAuthorities": ["kungfu-user", "kungfu-agent"],
       "schema": {
         "$id": "kungfu://dogfood-feedback/consideration/v1",
-        "type": "object",
-        "properties": {
-          "record": { "type": "object" },
-          "source": { "type": "object" },
-          "links": { "type": "object" }
-        },
-        "required": ["record", "source", "links"],
-        "additionalProperties": false
-      }
-    },
-    {
-      "id": "kungfu.dogfood-feedback.migration",
-      "version": "1",
-      "contractWorldId": "kungfu.dogfood-feedback",
-      "sourceAuthorities": ["atlas-migration"],
-      "schema": {
-        "$id": "kungfu://dogfood-feedback/migration/v1",
         "type": "object",
         "properties": {
           "record": { "type": "object" },

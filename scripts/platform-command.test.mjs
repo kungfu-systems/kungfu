@@ -29,6 +29,11 @@ const darwinX64Policy = {
       prefixes: ['vendor/'],
       linePatterns: {},
     },
+    'generated-governance-projection': {
+      paths: ['framework/maintainability/code-complexity-baseline.json'],
+      prefixes: [],
+      linePatterns: {},
+    },
     'mechanically-required-lockfile': {
       paths: ['package-lock.yaml'],
       prefixes: [],
@@ -127,12 +132,16 @@ test('an unknown active Darwin x64 reference fails closed', () => {
   ]);
 });
 
-test('all four permitted Darwin x64 residual classes stay distinct', () => {
+test('all permitted Darwin x64 residual classes stay distinct', () => {
   const report = classifyDarwinX64Residuals(
     [
       { path: 'policy.test.mjs', content: 'Intel macOS' },
       { path: 'history/log.txt', content: 'Darwin/x86_64' },
       { path: 'vendor/readme.txt', content: 'x86_64-apple-darwin' },
+      {
+        path: 'framework/maintainability/code-complexity-baseline.json',
+        content: 'darwin-x64',
+      },
       { path: 'package-lock.yaml', content: '@tool/darwin-x64' },
     ],
     darwinX64Policy,
