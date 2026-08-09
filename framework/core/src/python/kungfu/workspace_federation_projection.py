@@ -7,9 +7,7 @@ from __future__ import annotations
 from typing import Any, Iterable, Mapping
 
 from kungfu.assignment_graph import (
-    WORK_REF_SCHEMA,
     WorkRef,
-    _ROOT,
     parse_work_ref,
     qualify_assignment_graph,
 )
@@ -28,29 +26,6 @@ REFERENCE_RESOLUTION_SCHEMA = "kungfu.workspace-federation.reference-resolution/
 TERMINAL_SOURCE_STATUSES = frozenset(
     {"archived", "closed", "complete", "completed", "merged"}
 )
-
-
-def _retained_state_dominates(
-    candidate: Mapping[str, Any], predecessor: Mapping[str, Any]
-) -> bool:
-    candidate_counts = candidate.get("event_counts")
-    predecessor_counts = predecessor.get("event_counts")
-    if not isinstance(candidate_counts, Mapping) or not isinstance(
-        predecessor_counts, Mapping
-    ):
-        return False
-    if not candidate_counts or set(candidate_counts) != set(predecessor_counts):
-        return False
-    try:
-        pairs = [
-            (int(candidate_counts[key]), int(predecessor_counts[key]))
-            for key in candidate_counts
-        ]
-    except (TypeError, ValueError):
-        return False
-    return all(current >= previous for current, previous in pairs) and any(
-        current > previous for current, previous in pairs
-    )
 
 
 def _compose_global_work(
@@ -209,7 +184,6 @@ def _compose_global_work(
             row["canonical_root"],
         )
     )
-    canonical_by_root = {str(row["canonical_root"]): row for row in canonical_rows}
     label_collisions = [
         {
             "object_kind": object_kind,
@@ -306,146 +280,6 @@ def _compose_global_work(
                         "side": side,
                         "work_ref": reference.as_dict(),
                         "next_action": "register and read the referenced workspace authority",
-                    }
-                )
-
-    for component in component_rows:
-        workspace = component.get("workspace") or {}
-        for problem in component.get("problems") or []:
-            if problem.get("code") != "unresolved-assignment-dependency":
-                continue
-            dependency_id = str(problem.get("dependency_id") or "")
-            dependency_subject = (
-                dependency_id
-                if dependency_id.startswith("kungfu:")
-                else f"kungfu:{dependency_id}"
-            )
-            candidates = sorted(
-                subject_to_canonical.get(("assignment", dependency_subject), set())
-            )
-            retained_candidates = retained_subjects.get(dependency_subject, [])
-            retained_candidate_groups: dict[str, list[dict[str, Any]]] = {}
-            for retained in retained_candidates:
-                assignment_state_root = str(retained.get("assignment_state_root") or "")
-                group_key = (
-                    assignment_state_root
-                    if _ROOT.fullmatch(assignment_state_root)
-                    else f"legacy:{retained['state_root']}"
-                )
-                retained_candidate_groups.setdefault(group_key, []).append(retained)
-            selected_retained_group_root = ""
-            if len(retained_candidate_groups) == 1:
-                selected_retained_group_root = next(iter(retained_candidate_groups))
-            elif len(retained_candidate_groups) > 1:
-                dominant_roots = [
-                    group_root
-                    for group_root, group_rows in retained_candidate_groups.items()
-                    if all(
-                        other_root == group_root
-                        or _retained_state_dominates(group_rows[0], other_rows[0])
-                        for other_root, other_rows in retained_candidate_groups.items()
-                    )
-                ]
-                if len(dominant_roots) == 1:
-                    selected_retained_group_root = dominant_roots[0]
-            unqualified_candidates = [
-                row
-                for row in unqualified_retained_states.values()
-                if row.get("assignment_subject") == dependency_subject
-            ]
-            base = {
-                "kind": "legacy-assignment-dependency",
-                "workspace_identity_root": workspace.get("identity_root"),
-                "assignment_subject": problem.get("assignment_subject"),
-                "dependency_id": dependency_id,
-                "dependency_subject": dependency_subject,
-            }
-            if (
-                len(candidates) == 1
-                and not canonical_by_root[candidates[0]]["conflict"]
-            ):
-                resolved.append({**base, "canonical_root": candidates[0]})
-            elif not candidates and selected_retained_group_root:
-                retained_group = retained_candidate_groups[selected_retained_group_root]
-                retained_group.sort(key=lambda row: str(row["state_root"]))
-                retained = retained_group[0]
-                superseded_state_roots = sorted(
-                    row["state_root"]
-                    for group_root, rows in retained_candidate_groups.items()
-                    if group_root != selected_retained_group_root
-                    for row in rows
-                )
-                resolved.append(
-                    {
-                        **base,
-                        "resolution": "retained-sealed-assignment-state",
-                        "sealed_state_root": retained["state_root"],
-                        "equivalent_sealed_state_roots": [
-                            row["state_root"] for row in retained_group
-                        ],
-                        "superseded_sealed_state_roots": superseded_state_roots,
-                        "assignment_state_root": retained.get(
-                            "assignment_state_root", ""
-                        ),
-                        "work_ref": {
-                            "schema": WORK_REF_SCHEMA,
-                            "workspace_identity_root": retained[
-                                "workspace_identity_root"
-                            ],
-                            "object_kind": "assignment",
-                            "subject": dependency_subject,
-                            "version_root": retained["state_root"],
-                            "cut_root": retained["query_proof_root"],
-                        },
-                    }
-                )
-            else:
-                code = (
-                    "missing-reference"
-                    if not candidates
-                    and not retained_candidates
-                    and not unqualified_candidates
-                    else (
-                        "conflicting-reference"
-                        if len(candidates) == 1 and not retained_candidates
-                        else (
-                            "incompatible-retained-reference"
-                            if not candidates
-                            and not retained_candidates
-                            and unqualified_candidates
-                            else "ambiguous-reference"
-                        )
-                    )
-                )
-                unresolved.append(
-                    {
-                        **base,
-                        "code": code,
-                        "candidate_canonical_roots": candidates,
-                        "candidate_sealed_state_roots": [
-                            row["state_root"] for row in retained_candidates
-                        ],
-                        **(
-                            {
-                                "candidate_assignment_state_roots": sorted(
-                                    {
-                                        str(row.get("assignment_state_root") or "")
-                                        for row in retained_candidates
-                                        if row.get("assignment_state_root")
-                                    }
-                                )
-                            }
-                            if retained_candidates
-                            else {}
-                        ),
-                        "candidate_unqualified_state_roots": [
-                            row["state_root"] for row in unqualified_candidates
-                        ],
-                        "next_action": (
-                            "register the dependency authority"
-                            if code == "missing-reference"
-                            else "replace the legacy dependency id with one exact WorkRef"
-                        ),
                     }
                 )
 

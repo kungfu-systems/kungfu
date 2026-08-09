@@ -11,25 +11,28 @@ export type AgentProgressRow = {
   nextAction?: string;
 };
 
-function isGoalProgress(event: RewindEvent, goalId: string): boolean {
+function isAssignmentProgress(
+  event: RewindEvent,
+  assignmentId: string,
+): boolean {
   return (
     event.kind === 'RunProgress' &&
-    event.entityType === 'go' &&
-    event.entityId === goalId &&
+    event.entityType === 'assignment' &&
+    event.entityId === assignmentId &&
     Boolean(event.message)
   );
 }
 
-export function loadGoalProgress(
+export function loadAssignmentProgress(
   rewind: Rewind,
-  goalId: string,
+  assignmentId: string,
   limit = 50,
 ): AgentProgressRow[] {
   rewind.refresh();
   const rows = rewind
     .runs()
     .flatMap((run) => rewind.loadRun(run.runId)?.events ?? [])
-    .filter((event) => isGoalProgress(event, goalId))
+    .filter((event) => isAssignmentProgress(event, assignmentId))
     .map((event) => ({
       runId: event.runId,
       genTime: event.genTime,

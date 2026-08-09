@@ -49,7 +49,7 @@ const pythonPath = [
   .join(path.delimiter);
 
 run(
-  'fresh and reused Work Control authority receipts',
+  'native Work Control authority',
   'uv',
   [
     'run',
@@ -64,16 +64,14 @@ run(
       'core',
       'tests',
       'python',
-      'test_atlas_storage.py',
+      'test_work_control_profile.py',
     ),
-    '-k',
-    'mission_control_native_go_completion_claim_fails_closed_then_passes',
   ],
   { env: { ...process.env, PYTHONPATH: pythonPath } },
 );
 
 run(
-  'same-root first Atlas refresh and exact replay',
+  'same-root action refresh and exact replay',
   'uv',
   [
     'run',

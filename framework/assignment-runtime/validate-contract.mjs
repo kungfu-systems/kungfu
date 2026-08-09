@@ -183,8 +183,6 @@ export function validateContract() {
   for (const code of requiredErrors) {
     if (!errorSet.has(code)) errors.push(`required error is absent: ${code}`);
   }
-  if (contract.compatibility.dualWrite !== 'forbidden')
-    errors.push('dual-write compatibility must be forbidden');
   if (contract.localRuntimeProfile.publicPathContract !== false)
     errors.push('the Local Runtime must not expose a public path contract');
   if (

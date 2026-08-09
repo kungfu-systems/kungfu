@@ -18,10 +18,6 @@ for (const testCase of [
   { file: 'test_health_diagnostics.py', args: [] },
   { file: 'test_recovery.py', args: [] },
   { file: 'test_health_diagnostics_native.py', args: [] },
-  {
-    file: 'test_atlas_storage.py',
-    args: ['-k', 'episode_fixed_text_edges_are_capacity_bounded'],
-  },
 ]) {
   const testFile = testCase.file;
   const result = spawnSync(
