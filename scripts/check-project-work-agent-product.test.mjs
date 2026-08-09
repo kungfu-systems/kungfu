@@ -107,9 +107,10 @@ test('Project, Work, and Agent are the complete first-layer object model', () =>
 
 test('README first-use paths converge on Agent-first onboarding', () => {
   const readme = fs.readFileSync(path.join(ROOT, 'README.md'), 'utf8');
-  const pathGuide = readme.indexOf(
-    'docs/guides/installing-cli.md#make-kungfu-available-in-path',
+  const explicitInstallEntry = readme.indexOf(
+    'install Kungfu and make the `kungfu` command available',
   );
+  const installGuide = readme.indexOf('docs/guides/installing-cli.md');
   const agentBrief = readme.indexOf('Run `kungfu agent brief`');
   const runAgent = readme.indexOf('kungfu run codex');
   const demoStart = readme.indexOf(
@@ -134,10 +135,14 @@ test('README first-use paths converge on Agent-first onboarding', () => {
   const firstUseEnd = readme.indexOf('\n## What Kungfu preserves', demoEnd);
 
   assert.ok(
-    pathGuide > 0,
-    'README must protect app-only users with PATH setup',
+    explicitInstallEntry > 0,
+    'README must present installation as an explicit first-use action',
   );
-  assert.ok(agentBrief > pathGuide, 'Agent brief must follow PATH setup');
+  assert.ok(
+    installGuide > explicitInstallEntry,
+    'The explicit installation action must link to the installation guide',
+  );
+  assert.ok(agentBrief > installGuide, 'Agent brief must follow installation');
   assert.ok(
     runAgent > agentBrief,
     'run <agent> must follow the one-line brief',

@@ -11,9 +11,9 @@ same Work across Codex, Claude, OpenCode, Amp, or your own execution surface.
 
 ## Start where you already work
 
-Once the `kungfu` command is on your
-[`PATH`](docs/guides/installing-cli.md#make-kungfu-available-in-path), choose the
-entry that matches how you already work.
+First, [install Kungfu and make the `kungfu` command available on your
+`PATH`](docs/guides/installing-cli.md), then choose the entry that matches how
+you already work.
 
 **Stay in your current Agent.** Paste this sentence into Codex, Claude, OpenCode,
 Amp, or another Agent that can run local commands:
