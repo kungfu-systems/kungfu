@@ -1,0 +1,139 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://libkungfu.dev/schemas/shifu/production-graph-feedback-v0.schema.json",
+  "title": "Shifu Production Graph feedback v0",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema", "state", "exitCode", "sideEffects", "source", "graph",
+    "nodes", "receipts", "parity", "failure", "recovery", "events",
+    "outputRoots", "retainedEvidenceRoots", "diagnostics", "nextAction",
+    "feedbackRoot"
+  ],
+  "properties": {
+    "schema": { "const": "shifu.production-graph-feedback/v0" },
+    "state": { "enum": ["complete", "inspect", "resume-eligible", "restart-required", "blocked-by-drift"] },
+    "exitCode": { "type": "integer", "enum": [0, 1, 2] },
+    "sideEffects": { "const": false },
+    "source": { "$ref": "production-graph-v0.schema.json#/$defs/source" },
+    "graph": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "contractRoot", "graphRoot", "planRoot", "authorityReferences", "xinfaSelectionRoot"],
+      "properties": {
+        "id": { "$ref": "production-graph-v0.schema.json#/$defs/id" },
+        "contractRoot": { "$ref": "production-graph-v0.schema.json#/$defs/root" },
+        "graphRoot": { "$ref": "production-graph-v0.schema.json#/$defs/root" },
+        "planRoot": { "$ref": "production-graph-v0.schema.json#/$defs/root" },
+        "authorityReferences": { "$ref": "production-graph-v0.schema.json#/$defs/authorityRoots" },
+        "xinfaSelectionRoot": { "$ref": "production-graph-v0.schema.json#/$defs/root" }
+      }
+    },
+    "nodes": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 64,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "state", "executor", "inputRoots", "eventRoots", "outputRoots"],
+        "properties": {
+          "id": { "$ref": "production-graph-v0.schema.json#/$defs/id" },
+          "state": { "enum": ["planned", "started", "succeeded", "failed", "cancelled"] },
+          "executor": { "$ref": "production-graph-v0.schema.json#/$defs/executor" },
+          "inputRoots": { "type": "array", "items": { "$ref": "production-graph-v0.schema.json#/$defs/rootedReference" } },
+          "eventRoots": { "$ref": "#/$defs/roots" },
+          "outputRoots": { "$ref": "#/$defs/roots" }
+        }
+      }
+    },
+    "receipts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["verificationReceiptRoot", "currentPlanRoot", "currentReceiptRoot", "graphReceiptRoot", "shadowReceiptRoot"],
+      "properties": {
+        "verificationReceiptRoot": { "$ref": "production-graph-v0.schema.json#/$defs/root" },
+        "currentPlanRoot": { "$ref": "#/$defs/nullableRoot" },
+        "currentReceiptRoot": { "$ref": "#/$defs/nullableRoot" },
+        "graphReceiptRoot": { "$ref": "production-graph-v0.schema.json#/$defs/root" },
+        "shadowReceiptRoot": { "$ref": "production-graph-v0.schema.json#/$defs/root" }
+      }
+    },
+    "parity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "classification", "issues"],
+      "properties": {
+        "status": { "enum": ["pass", "fail"] },
+        "classification": { "enum": ["matched-success", "matched-failure", "matched-cancellation", "drift"] },
+        "issues": { "type": "array", "uniqueItems": true, "items": { "$ref": "production-graph-v0.schema.json#/$defs/nonEmpty" } }
+      }
+    },
+    "failure": {
+      "anyOf": [
+        { "type": "null" },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["root", "nodeId", "classification", "owner"],
+          "properties": {
+            "root": { "$ref": "production-graph-v0.schema.json#/$defs/root" },
+            "nodeId": { "$ref": "production-graph-v0.schema.json#/$defs/id" },
+            "classification": { "enum": ["executor-failed", "timed-out", "cancelled", "source-drift", "authority-drift", "invalid-output"] },
+            "owner": { "$ref": "production-graph-v0.schema.json#/$defs/nonEmpty" }
+          }
+        }
+      ]
+    },
+    "recovery": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["root", "eligible", "strategy", "resumeFromNode", "externallyBlocked", "requiredEvidenceRoots"],
+      "properties": {
+        "root": { "$ref": "#/$defs/nullableRoot" },
+        "eligible": { "type": "boolean" },
+        "strategy": { "anyOf": [{ "enum": ["retry-node", "replan", "stop"] }, { "type": "null" }] },
+        "resumeFromNode": { "anyOf": [{ "$ref": "production-graph-v0.schema.json#/$defs/id" }, { "type": "null" }] },
+        "externallyBlocked": { "type": "boolean" },
+        "requiredEvidenceRoots": { "$ref": "#/$defs/roots" }
+      }
+    },
+    "events": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["root", "nodeId", "sequence", "state", "observedOutputRoots", "failureRoot"],
+        "properties": {
+          "root": { "$ref": "production-graph-v0.schema.json#/$defs/root" },
+          "nodeId": { "$ref": "production-graph-v0.schema.json#/$defs/id" },
+          "sequence": { "type": "integer", "minimum": 0 },
+          "state": { "enum": ["planned", "started", "succeeded", "failed", "cancelled"] },
+          "observedOutputRoots": { "$ref": "#/$defs/roots" },
+          "failureRoot": { "$ref": "#/$defs/nullableRoot" }
+        }
+      }
+    },
+    "outputRoots": { "$ref": "#/$defs/roots" },
+    "retainedEvidenceRoots": { "$ref": "#/$defs/roots" },
+    "diagnostics": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["code", "path", "message"],
+        "properties": {
+          "code": { "$ref": "production-graph-v0.schema.json#/$defs/nonEmpty" },
+          "path": { "$ref": "production-graph-v0.schema.json#/$defs/nonEmpty" },
+          "message": { "$ref": "production-graph-v0.schema.json#/$defs/nonEmpty" }
+        }
+      }
+    },
+    "nextAction": { "$ref": "production-graph-v0.schema.json#/$defs/nonEmpty" },
+    "feedbackRoot": { "$ref": "production-graph-v0.schema.json#/$defs/root" }
+  },
+  "$defs": {
+    "nullableRoot": { "anyOf": [{ "$ref": "production-graph-v0.schema.json#/$defs/root" }, { "type": "null" }] },
+    "roots": { "type": "array", "items": { "$ref": "production-graph-v0.schema.json#/$defs/root" } }
+  }
+}
