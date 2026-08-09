@@ -34,6 +34,7 @@
         "receipt",
         "failure",
         "recovery",
+        "feedback",
         "verificationReceipt"
       ],
       "properties": {
@@ -43,6 +44,7 @@
         "receipt": { "$ref": "production-graph-v0.schema.json#/$defs/root" },
         "failure": { "$ref": "production-graph-v0.schema.json#/$defs/root" },
         "recovery": { "$ref": "production-graph-v0.schema.json#/$defs/root" },
+        "feedback": { "$ref": "production-graph-v0.schema.json#/$defs/root" },
         "verificationReceipt": { "$ref": "production-graph-v0.schema.json#/$defs/root" }
       }
     },

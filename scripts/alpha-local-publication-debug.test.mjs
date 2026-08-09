@@ -3,6 +3,7 @@
 
 import assert from 'node:assert/strict';
 import childProcess from 'node:child_process';
+import crypto from 'node:crypto';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -10,9 +11,15 @@ import test from 'node:test';
 
 import {
   assertCleanCheckout,
+  completeRegularFileInventory,
   parseArguments,
+  parsePortableArguments,
   validateCoordinates,
 } from '../framework/release/alpha-local-publication-debug/index.mjs';
+
+function root(bytes) {
+  return `sha256:${crypto.createHash('sha256').update(bytes).digest('hex')}`;
+}
 
 function git(repo, ...args) {
   const result = childProcess.spawnSync('git', ['-C', repo, ...args], {
@@ -155,5 +162,68 @@ test('the one-command interface is explicit and closed to unknown options', () =
         'true',
       ]),
     /unknown option/u,
+  );
+});
+
+test('the exact candidate inventory covers every regular file and rejects drift', (context) => {
+  const candidate = fs.mkdtempSync(
+    path.join(os.tmpdir(), 'kungfu-alpha-debug-inventory-'),
+  );
+  context.after(() => fs.rmSync(candidate, { recursive: true, force: true }));
+  fs.mkdirSync(path.join(candidate, 'bindings'));
+  const bytes = Buffer.from('exact candidate bytes\n');
+  fs.writeFileSync(path.join(candidate, 'bindings/source.json'), bytes);
+  const declared = [
+    {
+      role: 'candidate-source-binding',
+      path: 'bindings/source.json',
+      size: bytes.length,
+      root: root(bytes),
+    },
+  ];
+
+  const inventory = completeRegularFileInventory(candidate, declared);
+  assert.equal(inventory.fileCount, 1);
+  assert.match(inventory.inventoryRoot, /^sha256:[0-9a-f]{64}$/u);
+
+  fs.writeFileSync(path.join(candidate, 'unexpected.txt'), 'drift\n');
+  assert.throws(
+    () => completeRegularFileInventory(candidate, declared),
+    /regular-file inventory differs/u,
+  );
+  fs.rmSync(path.join(candidate, 'unexpected.txt'));
+  fs.writeFileSync(path.join(candidate, 'bindings/source.json'), 'tampered\n');
+  assert.throws(
+    () => completeRegularFileInventory(candidate, declared),
+    /file binding drift/u,
+  );
+});
+
+test('the portable smoke requires an exact capsule and admitted roots', () => {
+  assert.deepEqual(
+    parsePortableArguments([
+      '--',
+      '--capsule',
+      '/data/rehearsal-capsule.json',
+      '--capsule-root',
+      '/data/candidate',
+      '--buildchain-root',
+      '/data/buildchain',
+      '--expected-binding-root',
+      `sha256:${'a'.repeat(64)}`,
+      '--expected-transaction-root',
+      `sha256:${'b'.repeat(64)}`,
+    ]),
+    {
+      capsule: '/data/rehearsal-capsule.json',
+      'capsule-root': '/data/candidate',
+      'buildchain-root': '/data/buildchain',
+      'expected-binding-root': `sha256:${'a'.repeat(64)}`,
+      'expected-transaction-root': `sha256:${'b'.repeat(64)}`,
+    },
+  );
+  assert.throws(
+    () => parsePortableArguments(['--capsule', '/data/capsule.json']),
+    /--capsule-root is required/u,
   );
 });
