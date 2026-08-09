@@ -1658,7 +1658,7 @@ def test_current_native_console_uses_project_runtime_when_cli_context_is_home(
         status,
     )
     monkeypatch.setattr(
-        "kungfu.cli.commands.assignment._profile_source", lambda: tmp_path
+        "kungfu.cli.commands.assignment.profile_source", lambda: tmp_path
     )
 
     def validate_source(_source, runtime_dir):
@@ -1744,7 +1744,7 @@ def test_public_bind_work_cli_preserves_stable_project_runtime_under_home(
         },
     )
     monkeypatch.setattr(
-        "kungfu.cli.commands.assignment._profile_source", lambda: tmp_path
+        "kungfu.cli.commands.assignment.profile_source", lambda: tmp_path
     )
     monkeypatch.setattr(
         "kungfu.profile_sdk.validate_source",
