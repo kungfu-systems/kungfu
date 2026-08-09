@@ -49,6 +49,7 @@ export const RUNTIME_BACKUP_RESET_CHANNEL = 'kf-runtime:backup-reset';
 // The renderer keeps native runtime access, but process startup and JSON reads
 // must not block Chromium's event loop.
 export const PROFILE_CLI_EXEC_CHANNEL = 'kf-profile-cli:exec';
+export const ASSIGNMENT_RUNTIME_CALL_CHANNEL = 'kf-assignment-runtime:call';
 export const GLOBAL_WORK_OBSERVER_SUBSCRIBE_CHANNEL =
   'kf-global-work-observer:subscribe';
 export const GLOBAL_WORK_OBSERVER_UNSUBSCRIBE_CHANNEL =

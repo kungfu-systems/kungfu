@@ -14,6 +14,7 @@ import type {
   AgentRuntime,
   AgentSession,
   AgentWorkLab,
+  AssignmentRuntime,
   DomainState,
   KfxControl,
   Ledger,
@@ -102,6 +103,10 @@ export type {
   SavedQueryEntry,
   SavedQueryView,
   SavedQueryViewInspection,
+  AssignmentRuntime,
+  AssignmentRuntimeCommand,
+  AssignmentRuntimeCursor,
+  AssignmentRuntimeResponse,
 } from '@kungfu-tech/api/capability';
 export {
   buildAgentConsoleEnvelope,
@@ -134,6 +139,7 @@ export type KfxCapabilities = {
   workLoop?: WorkLoop;
   kfxControl?: KfxControl;
   profile?: Profile;
+  assignmentRuntime?: AssignmentRuntime;
   agentRuntime?: AgentRuntime;
   agentSession?: AgentSession;
   agentWorkLab?: AgentWorkLab;
