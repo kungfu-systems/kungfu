@@ -628,6 +628,7 @@ def start_work(
     events_json,
     allow_foreign_binding,
     emit_result=True,
+    on_event=None,
 ):
     event_index = 0
 
@@ -644,6 +645,8 @@ def start_work(
         }
         if activity is not None:
             payload["activity"] = dict(activity)
+        if on_event is not None:
+            on_event(payload)
         if events_json:
             click.echo(json.dumps(payload, sort_keys=True))
             click.get_text_stream("stdout").flush()
@@ -1148,6 +1151,8 @@ def review_agent_run(
     execute,
     events_json,
     allow_foreign_binding,
+    emit_result=True,
+    on_event=None,
 ):
     event_index = 0
 
@@ -1164,6 +1169,8 @@ def review_agent_run(
         }
         if activity is not None:
             value["activity"] = activity
+        if on_event is not None:
+            on_event(value)
         if events_json:
             click.echo(json.dumps(value, sort_keys=True))
             click.get_text_stream("stdout").flush()
@@ -1197,10 +1204,12 @@ def review_agent_run(
     result = assignment_review_lifecycle.execute(
         request, services, event, lambda: event_index
     )
-    if events_json:
-        click.echo(json.dumps(result, sort_keys=True))
-    else:
-        _emit(result)
+    if emit_result:
+        if events_json:
+            click.echo(json.dumps(result, sort_keys=True))
+        else:
+            _emit(result)
+    return result
 
 
 @assignment.command(

@@ -51,12 +51,35 @@ test('Project tour awaits the shared Agent Session before rendering', () => {
   const lab = source.slice(
     source.indexOf('async function openTuiAgentWorkLab'),
   );
-  assert.match(lab, /if \(projectTour\) \{\s*await ensureTuiAgentSession/u);
+  assert.match(
+    lab,
+    /const endpoint = await ensureTuiAgentSession\(paths\.runtimeDir\)/u,
+  );
+  assert.match(lab, /cli\.env\.KUNGFU_AGENT_SESSION_ENDPOINT = endpoint/u);
   assert.match(lab, /KUNGFU_MOCK_AGENT_EXECUTABLE \|\|= paths\.packagedBin/u);
   assert.doesNotMatch(
     source,
     /KUNGFU_MOCK_AGENT_EXECUTABLE\s*=\s*process\.execPath/u,
   );
+});
+
+test('Project Tour delegates each episode to one controller without intermediate Work queries', () => {
+  const source = readFileSync(
+    new URL('./starter-project-view/index.tsx', import.meta.url),
+    'utf8',
+  );
+  const view = source.slice(source.indexOf('export function ProjectTourView'));
+
+  assert.match(view, /lab\.runProjectTourEpisode\(/u);
+  assert.match(view, /report\.controller\.processCount !== 1/u);
+  assert.match(view, /report\.controller\.inventoryQueryCount !== 1/u);
+  assert.doesNotMatch(view, /projects\.works\(/u);
+  assert.doesNotMatch(view, /lab\.planStarterWork\(/u);
+  assert.doesNotMatch(view, /lab\.startStarterWork\(/u);
+  assert.doesNotMatch(view, /lab\.planStarterReview\(/u);
+  assert.doesNotMatch(view, /lab\.runStarterReview\(/u);
+  assert.doesNotMatch(view, /lab\.planStarterClose\(/u);
+  assert.doesNotMatch(view, /lab\.closeStarterWork\(/u);
 });
 
 test('Project tour launch options preserve defaults and validate explicit values', () => {
