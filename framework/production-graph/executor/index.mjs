@@ -557,6 +557,7 @@ export async function runLocalProductionGraph(
   const nodeResults = [];
   const byNode = new Map();
   let graphStopped = false;
+  let graphCancelled = false;
   for (const step of admitted.plan.steps) {
     const node = nodes.get(step.nodeId);
     const dependencyResults = step.dependsOn.map((id) => byNode.get(id));
@@ -564,6 +565,7 @@ export async function runLocalProductionGraph(
       (result) => !result || result.state !== 'succeeded',
     );
     if (graphStopped || blocked || signal?.aborted) {
+      if (!graphStopped && !blocked && signal?.aborted) graphCancelled = true;
       const evidenceRoots = unique(
         dependencyResults
           .filter(Boolean)
@@ -701,7 +703,7 @@ export async function runLocalProductionGraph(
     );
   }
 
-  const status = receiptStatus(nodeResults);
+  const status = graphCancelled ? 'cancelled' : receiptStatus(nodeResults);
   const retainedEvidenceRoots = unique([
     admitted.executionAdmissionRequest.requestRoot,
     admitted.executionAdmissionDecision.workRefRoot,
