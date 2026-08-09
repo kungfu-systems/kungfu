@@ -110,7 +110,7 @@ test('Core Work remains a first-class shell surface without an admitted Work KFX
   assert.match(source, /onOpenAllWork=\{\(\) => openWorkSurface\(\)\}/);
   assert.match(
     source,
-    /<RetainedCoreSurfaceStack[\s\S]*work=\{[\s\S]*<ProjectWorkControlView[\s\S]*projects=\{projects\}[\s\S]*assignmentRuntime=\{runtime\.assignmentRuntime!\}/,
+    /<RetainedCoreSurfaceStack[\s\S]*work=\{[\s\S]*runtime\.assignmentRuntime \? \([\s\S]*<ProjectWorkControlView[\s\S]*projects=\{projects\}[\s\S]*assignmentRuntime=\{runtime\.assignmentRuntime\}/,
   );
   assert.match(
     projectsPanelSource,

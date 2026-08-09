@@ -82,6 +82,30 @@ pass means Linux re-read every capsule file and produced the same binding and
 transaction roots; it does not claim native Linux product execution or any
 hosted provider effect.
 
+## Replay and fault qualification
+
+Run the replay matrix over the already sealed candidate. The output root must
+be separate from the candidate and Buildchain checkout; no candidate file is
+copied, rewritten, or rebuilt:
+
+```sh
+./shifu alpha:publication:debug:replay -- \
+  --capsule /private/tmp/kungfu-alpha-phase-a/alpha-publication-debug/rehearsal-capsule.json \
+  --capsule-root /private/tmp/kungfu-alpha-phase-a/alpha-publication-debug/candidate \
+  --scratch-root /private/tmp/kungfu-alpha-phase-c \
+  --buildchain-root /Users/dkr/Code/kungfu-systems/buildchain
+```
+
+`alpha-publication-replay-qualification/report.json` binds every scenario to
+the base capsule, complete candidate inventory, unchanged transaction, and
+exact Buildchain checkout. The matrix records one transient-before-absent
+sequence followed by a single apply and readback, an all-observed duplicate
+with zero effects, a pre-effect immutable collision, bounded missing
+post-effect observation, repeated settled and terminal replay, and two
+identical fail-closed diagnostics for a tampered file entry. Every scenario
+uses Buildchain's public `executePublicationRehearsal` core in `replay` mode;
+recorded responses are data-only fixtures and never claim provider truth.
+
 ## Fail-closed boundaries
 
 The command rejects relative or overlapping paths, missing or extra required
@@ -92,6 +116,7 @@ publication. It never supplies provider credentials or a provider adapter.
 
 Phase A proved local reconstruction and deterministic simulation for one
 retained real candidate. Phase B adds the sealed complete-file inventory,
-stable clean-checkout workflow, and portable non-provider smoke. Replay, fault
-injection, and hosted/local parity remain separate continuation phases and are
-not implied by a green Phase B report.
+stable clean-checkout workflow, and portable non-provider smoke. Phase C adds
+bounded replay and fault qualification without rebuilding artifacts. Hosted
+provider effects and hosted/local parity remain a separate continuation phase
+and are not implied by a green local report.

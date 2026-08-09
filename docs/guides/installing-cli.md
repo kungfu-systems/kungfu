@@ -24,12 +24,11 @@ exact directory to the environment used by your shell and agent, then run the
 same verification commands above. The release and ownership boundary for that
 installer follows below.
 
-> **Publication boundary:** the installer contract and verification mechanics are
-> implemented on the v4 source line. Do not use the commands below until
-> `https://kungfu.tech/install.sh` or `https://kungfu.tech/install.ps1` returns a
-> Buildchain-qualified installer and the public installation page names an
-> available signed channel. A 404 or an explicit unavailable result is the honest
-> state; it must not be bypassed with a source fixture.
+> **Current publication:** `v4.0.0-alpha.1` is available through the
+> Buildchain-qualified installers below and the public installation page. It is
+> an Alpha prerelease, not a Stable channel. If a future request returns a 404,
+> an explicit unavailable result, or evidence that does not bind the requested
+> version and channel, fail closed rather than substituting a source fixture.
 
 ## Convenience commands
 

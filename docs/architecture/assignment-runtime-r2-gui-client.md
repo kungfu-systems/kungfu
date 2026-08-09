@@ -33,13 +33,16 @@ startup, reads, watch, diagnostics, recovery, and command capability are bound
 to `AssignmentRuntime`. Runtime unavailability has no Profile or storage
 fallback and no dual write.
 
-The All Work workspace-federation observer and Projects APIs remain separate
-read-only product projections: they aggregate repository and workspace
-availability across multiple workspaces and do not own Local Assignment
-transitions. R2 does not relabel that global projection as the Local Runtime or
-route Runtime commands through it. The Work Dashboard establishes the Local
-Assignment snapshot/watch authority alongside that projection and exposes all
-Assignment reads and commands only through `AssignmentRuntime`.
+The All Work workspace-federation observer and the Project catalog/inventory
+reads remain separate read-only product projections: they aggregate repository
+and workspace availability across multiple workspaces and do not own Local
+Assignment transitions. Project creation, Agent launch/session control, review
+orchestration, and closeout retain their existing Project/CLI/Agent paths as
+the explicitly excluded R3 client-migration residual; R2 does not relabel those
+paths or the global projection as Local Runtime operations. Within the R2
+boundary, the Work Dashboard establishes Local Assignment snapshot/watch
+authority alongside the projection, exposes the typed Runtime command surface,
+and has no direct Work Control Profile mutation or storage fallback.
 
 The public CLI remains an R3 client-migration residual. Its hidden
 `runtime-host` subcommand is only the GUI's private transport into the already

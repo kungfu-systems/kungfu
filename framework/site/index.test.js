@@ -189,7 +189,7 @@ test('keeps maturity and authority boundaries explicit', () => {
   assert.equal(byId.get('format').maturity, 'staged');
   assert.equal(byId.get('format').claimClass, 'current-contract');
   assert.equal(byId.get('primitives').maturity, 'qualified-shadow');
-  assert.equal(byId.get('products').maturity, 'coming-soon');
+  assert.equal(byId.get('products').maturity, 'qualified');
   assert.match(bundle.adrMap.authorityBoundary, /navigation-only/);
   assert.ok(
     bundle.nonClaims.some(
