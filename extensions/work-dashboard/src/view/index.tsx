@@ -946,7 +946,7 @@ function GlobalWorkView({
   const [status, setStatus] = React.useState('Connecting All Work…');
   const [error, setError] = React.useState('');
   const [assignmentRuntimeStatus, setAssignmentRuntimeStatus] = React.useState(
-    'Assignment Runtime connecting…',
+    'Work Runtime connecting…',
   );
   const [projectsCatalog, setProjectsCatalog] =
     React.useState<ProjectsCatalog>();
@@ -1002,7 +1002,7 @@ function GlobalWorkView({
         const discovery = await assignmentRuntime.discover();
         if (discovery.status !== 'ok') {
           throw new Error(
-            discovery.error?.message ?? 'Assignment Runtime discovery failed',
+            discovery.error?.message ?? 'Work Runtime discovery failed',
           );
         }
         const snapshot = await assignmentRuntime.snapshot();
@@ -1013,7 +1013,7 @@ function GlobalWorkView({
             snapshot.error?.message ??
               diagnostics.error?.message ??
               recovery.error?.message ??
-              'Assignment Runtime snapshot failed',
+              'Work Runtime snapshot failed',
           );
         }
         const watched = await assignmentRuntime.watch();
@@ -1033,13 +1033,13 @@ function GlobalWorkView({
             if (!active) return;
             if (resumed.status === 'ok') {
               setAssignmentRuntimeStatus(
-                `Assignment Runtime · recovered · ${snapshot.revision.value}`,
+                `Work Runtime · recovered · ${snapshot.revision.value}`,
               );
               return;
             }
           }
           setAssignmentRuntimeStatus(
-            `Assignment Runtime · ${watched.error?.code ?? 'watch unavailable'} · ${String(
+            `Work Runtime · ${watched.error?.code ?? 'watch unavailable'} · ${String(
               (recovery.result as { status?: unknown } | null)?.status ??
                 diagnostics.error?.code ??
                 'recovery inspected',
@@ -1047,13 +1047,13 @@ function GlobalWorkView({
           );
         } else {
           setAssignmentRuntimeStatus(
-            `Assignment Runtime · ${snapshot.revision.value}`,
+            `Work Runtime · ${snapshot.revision.value}`,
           );
         }
       } catch (reason: unknown) {
         if (active) {
           setAssignmentRuntimeStatus(
-            `Assignment Runtime unavailable · ${
+            `Work Runtime unavailable · ${
               reason instanceof Error ? reason.message : String(reason)
             }`,
           );
@@ -2440,7 +2440,7 @@ function WorkDashboardView({
     return (
       <section style={panelStyle}>
         <div style={{ ...mono, color: '#f48771' }}>
-          Assignment Runtime capability unavailable
+          Work Runtime capability unavailable
         </div>
       </section>
     );
