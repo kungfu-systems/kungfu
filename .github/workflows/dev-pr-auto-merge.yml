@@ -358,6 +358,8 @@ jobs:
       target-branch: ${{ needs.resolve-target.outputs.target-branch }}
       expected-pr-number: ${{ fromJSON(needs.resolve-target.outputs.expected-pr-number || '0') }}
       expected-head-sha: ${{ needs.resolve-target.outputs.expected-head-sha }}
+      handoff-workflow-id: dev-pr-auto-merge.yml
+      source-workflow-id: affected-native-pr.yml
       diagnostic-context: Buildchain delivery intent
       delivery-warrant-mode: ${{ (github.event_name == 'workflow_run' || (github.event_name == 'workflow_dispatch' && inputs.dry-run == false)) && 'required' || 'off' }}
       assignment-root: ${{ needs.delivery-contract.outputs.assignment-root }}
