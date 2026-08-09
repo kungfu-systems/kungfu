@@ -1772,21 +1772,10 @@ export function smokeCliProductArchive({ archivePath, archiveBase }) {
           KF_BUNDLED_EXTENSION_ROOT: extensionsRoot,
           KUNGFU_ACTION_ENTRY: actionEntry,
         };
-        runInstalledKungfuXinfaSmoke({
-          installRoot,
-          kungfuBin,
-          env: smokeEnv,
-        });
-        runInstalledActionPrimitiveDiscovery({
-          installRoot,
-          kungfuBin,
-          env: smokeEnv,
-        });
-        runInstalledKungfuAssignmentAdmissionSmoke({
-          installRoot,
-          kungfuBin,
-          env: smokeEnv,
-        });
+        const cliSmoke = { installRoot, kungfuBin, env: smokeEnv };
+        runInstalledKungfuXinfaSmoke(cliSmoke);
+        runInstalledActionPrimitiveDiscovery(cliSmoke);
+        runInstalledKungfuAssignmentAdmissionSmoke(cliSmoke);
         runInstalledKungfuActionSmoke({
           installRoot,
           kungfuBin,
@@ -1802,11 +1791,7 @@ export function smokeCliProductArchive({ archivePath, archiveBase }) {
           extensionsRoot,
           env: smokeEnv,
         });
-        runInstalledKungfuAgentHubSmoke({
-          installRoot,
-          kungfuBin,
-          env: smokeEnv,
-        });
+        runInstalledKungfuAgentHubSmoke(cliSmoke);
         runInstalledEmbeddedNodeAddonSmoke({
           installRoot,
           runtimeEntry,
