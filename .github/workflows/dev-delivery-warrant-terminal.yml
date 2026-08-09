@@ -73,7 +73,9 @@ jobs:
             "$observation")"
           queued_matches="$(jq -c \
             --argjson pr "$EXPECTED_PR" \
-            '[.observation.queued[]? | select(.pullRequestNumber == $pr)]' \
+            --arg head "$EXPECTED_HEAD" \
+            '[.observation.queued[]? |
+              select(.pullRequestNumber == $pr and .sourceHead == $head)]' \
             "$observation")"
           queued_count="$(jq -r 'length' <<<"$queued_matches")"
           if [ "$active_match" != "true" ] && [ "$queued_count" -eq 0 ]; then

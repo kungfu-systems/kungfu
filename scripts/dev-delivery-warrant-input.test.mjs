@@ -212,6 +212,10 @@ test('terminal consumer executes only protected event and Buildchain authority',
   assert.match(workflow, /types: \[closed, dequeued, synchronize\]/u);
   assert.match(workflow, /No matching active Warrant or queued candidate/u);
   assert.match(workflow, /\.observation\.queued\[\]\?/u);
+  assert.match(
+    workflow,
+    /select\(\.pullRequestNumber == \$pr and \.sourceHead == \$head\)/u,
+  );
   assert.match(workflow, /needs\.prepare\.outputs\.queued == 'true'/u);
   assert.match(
     workflow,

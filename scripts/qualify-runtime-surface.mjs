@@ -40,7 +40,7 @@ const ROW_CONTRACT = {
     operations: [['dogfood.capture', null]],
   },
   'context-hybrid': {
-    consumer: 'atlas.xinfa.context',
+    consumer: 'kungfu.xinfa.context',
     operations: [['context.consume', 'hybrid-boundary']],
     requiredObservers: ['kungfu.tui.runtime-surface'],
   },
@@ -202,9 +202,9 @@ function outputIsSuccessful({
       const target = context?.route_scope?.target_repository;
       const observation = output.tui?.runtimeSurface;
       return (
-        output.schema === 'atlas.xinfa-context-consumer-probe/v1' &&
+        output.schema === 'kungfu.xinfa-context-consumer-probe/v1' &&
         output.ok === true &&
-        context?.schema === 'atlas.xinfa-context-envelope/v1' &&
+        context?.schema === 'kungfu.xinfa-context-envelope/v1' &&
         context.status === 'complete' &&
         context.authority === 'projection-only' &&
         context.source_cut?.assignment_request_root ===
@@ -594,7 +594,7 @@ function qualify(options) {
     },
   };
   const hybridCandidate = {
-    providerId: 'atlas-kungfu-hybrid',
+    providerId: 'xinfa-context-runtime',
     surface: 'hybrid-boundary',
     capabilities: ['context.compose', 'dogfood.capture', 'runtime.provenance'],
     executable: {

@@ -15,11 +15,6 @@
       "id": "kungfu.dogfood-feedback.consideration",
       "schema": "kungfu.dogfood-feedback.consideration/v1",
       "title": "Assignment dogfood consideration receipt"
-    },
-    {
-      "id": "kungfu.dogfood-feedback.migration",
-      "schema": "kungfu.dogfood-feedback.migration/v1",
-      "title": "Lossless source migration receipt"
     }
   ]
 }
