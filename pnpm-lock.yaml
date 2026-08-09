@@ -485,7 +485,7 @@ importers:
         version: 2.4.1
       electron:
         specifier: ^42.5.0
-        version: 42.5.0(supports-color@7.2.0)
+        version: 42.5.1(supports-color@7.2.0)
       node-addon-api:
         specifier: ^8.0.0
         version: 8.9.0
@@ -533,8 +533,8 @@ importers:
         specifier: ^4.3.1
         version: 4.7.0(vite@6.4.3(@types/node@24.13.2)(jiti@2.7.0)(less@4.6.7)(terser@5.48.0)(tsx@4.22.4)(yaml@2.9.0))
       electron:
-        specifier: 42.5.0
-        version: 42.5.0(supports-color@7.2.0)
+        specifier: 42.5.1
+        version: 42.5.1(supports-color@7.2.0)
       electron-builder:
         specifier: ^26.15.3
         version: 26.15.3(electron-builder-squirrel-windows@26.15.3)
@@ -2697,8 +2697,8 @@ packages:
     resolution: {integrity: sha512-bO3y10YikuUwUuDUQRM4KfwNkKhnpVO7IPdbsrejwN9/AABJzzTQ4GeHwyzNSrVO+tEH3/Np255a3sVZpZDjvg==}
     engines: {node: '>=8.0.0'}
 
-  electron@42.5.0:
-    resolution: {integrity: sha512-cYEKS9XFz+c9fAB4jI0x49yz1FFzB55r3q96wu9YkwwJMv7t9202IE/ltlgy6yitl/J4M7C8JQcmUqdzDvPl/w==}
+  electron@42.5.1:
+    resolution: {integrity: sha512-2VFNJcHHbrhIpGsJHdkLoi/nWPZPxN3GHVPe+9At3Oz3/TJRwpr+7JL97ddBDbKyLmHGx3GfI2jvzcEQL28uFw==}
     engines: {node: '>= 22.12.0'}
 
   emoji-regex@10.6.0:
@@ -7176,7 +7176,7 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  electron@42.5.0(supports-color@7.2.0):
+  electron@42.5.1(supports-color@7.2.0):
     dependencies:
       '@electron-internal/extract-zip': 1.0.4
       '@electron/get': 5.0.0(supports-color@7.2.0)
