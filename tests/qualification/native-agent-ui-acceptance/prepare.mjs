@@ -440,8 +440,8 @@ writeFileSync(
         expiresAt: null,
       },
       workDefinition: {
-        goal_id: workId,
-        mission_id: workId,
+        assignment_id: workId,
+        initiative_id: workId,
         title: 'Native Agent UI acceptance',
         objective:
           'Record partial progress and continue it from a fresh native Agent UI without copying provider transcript.',

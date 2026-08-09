@@ -97,7 +97,7 @@ if /i "%~1"=="invariant:verify" if /i "%~2"=="--list" goto readonlynode
 if /i "%~1"=="invariant:verify" if /i "%~2"=="--" if /i "%~3"=="--list" goto readonlynode
 if /i "%~1"=="maintainability:complexity" goto readonlynode
 if /i "%~1"=="maintainability:amplification" goto readonlynode
-if /i "%~1"=="kfd" if /i "%~2"=="status" goto readonlynode & if /i "%~1"=="kfd" if /i "%~2"=="query" goto readonlynode & if /i "%~1"=="kfd" if /i "%~2"=="check" goto readonlynode & if /i "%~1"=="kfd:query" goto readonlynode & if /i "%~1"=="kfd:support-matrix:check" goto readonlynode & if /i "%~1"=="maintainability:query" goto readonlynode & if /i "%~1"=="work-design:open-card-preflight" goto readonlynode & if /i "%~1"=="work-design:feedback" goto readonlynode
+if /i "%~1"=="kfd" if /i "%~2"=="status" goto readonlynode & if /i "%~1"=="kfd" if /i "%~2"=="query" goto readonlynode & if /i "%~1"=="kfd" if /i "%~2"=="check" goto readonlynode & if /i "%~1"=="kfd:query" goto readonlynode & if /i "%~1"=="kfd:support-matrix:check" goto readonlynode & if /i "%~1"=="maintainability:query" goto readonlynode & if /i "%~1"=="work-design:preflight" goto readonlynode & if /i "%~1"=="work-design:feedback" goto readonlynode
 if /i "%~1"=="docs:check:readonly" goto docsreadonly
 if /i "%~1"=="adr:release:gate" goto adrrelease
 goto projectcut
@@ -180,7 +180,7 @@ if exist "%~dp0framework\core\dist\kungfu\pykungfu*.pyd" (
     )
   )
 )
-echo {"schema":"kungfu.assignment-orchestration.diagnosis/v1","ok":false,"code":"assignment-current-checkout-binding-missing","message":"Assignment admission requires pykungfu from the current checkout","next_actions":[{"action":"build-core","command":"shifu.cmd build:core","description":"Assemble pykungfu from the current checkout"}]}
+echo {"schema":"kungfu.assignment-orchestration.diagnosis/v1","ok":false,"code":"qualified-product-required","message":"Assignment orchestration requires an installed qualified Kungfu product","next_actions":[{"action":"use-installed-product","command":"kungfu work","description":"Run Work through an installed qualified Kungfu product"}]}
 exit /b 127
 
 :assignmentcapture

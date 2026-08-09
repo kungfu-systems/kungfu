@@ -1447,11 +1447,11 @@ nlohmann::json query_examples_json() {
   attention_definition.pattern.absence = {"title", "stable_published"};
   auto fact_state_definition = head_definition;
   fact_state_definition.object = "fact-state";
-  fact_state_definition.subject_keys = {"atlas:mission-example", "atlas:goal-example"};
+  fact_state_definition.subject_keys = {"kungfu:initiative-example", "kungfu:assignment-example"};
   fact_state_definition.basis.contract_world = {"example.world", "1", json_hash({{"id", "example.world"}})};
   fact_state_definition.basis.fact_surfaces = {
-      {"example.world.mission", "1", json_hash({{"id", "example.world.mission"}})},
-      {"example.world.go", "1", json_hash({{"id", "example.world.go"}})}};
+      {"example.world.initiative", "1", json_hash({{"id", "example.world.initiative"}})},
+      {"example.world.assignment", "1", json_hash({{"id", "example.world.assignment"}})}};
   fact_state_definition.basis.scope = "domain-fact-ledger";
   fact_state_definition.basis.perspective = "system-time-then-observation-id";
   fact_state_definition.basis.policy = {"latest-admitted-per-source/v1", "kungfu.facts.domain-fact-event/v1",

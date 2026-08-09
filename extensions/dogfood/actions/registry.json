@@ -40,16 +40,6 @@
       "authorityClass": "assignment-execution-owner",
       "requiredCapabilities": ["storage"],
       "effects": ["bind-federation-component-cuts", "append-disposition-receipt"]
-    },
-    {
-      "id": "import-atlas-jsonl",
-      "title": "Import append-only Atlas dogfood history",
-      "runner": "kfx-member",
-      "operation": "dogfood-actions",
-      "runtimeOperation": "episode.append",
-      "authorityClass": "dogfood-migration-operator",
-      "requiredCapabilities": ["storage"],
-      "effects": ["verify-source-root", "append-all-revisions", "retain-source-authority"]
     }
   ]
 }
