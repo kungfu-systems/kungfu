@@ -7,6 +7,8 @@ import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 
+import { createDiagnosticsArtifact } from '@kungfu-tech/buildchain-alpha/diagnostics';
+
 import { createExecutionAdmissionDecision } from '../framework/production-graph/admission/index.mjs';
 import {
   checkProductionGraphContract,
@@ -45,6 +47,15 @@ const buildAuthority = JSON.parse(
     ),
   ),
 );
+
+test('affected-native diagnostics accepts the exact candidate signing contract', () => {
+  const diagnostics = createDiagnosticsArtifact({ cwd: process.cwd() });
+  assert.equal(
+    diagnostics.buildchain.config.validation.signing.artifacts[0]
+      .entitlementsProfile,
+    'jit-executable-v1',
+  );
+});
 
 function affectedNativeWorkflowFixture() {
   return {
