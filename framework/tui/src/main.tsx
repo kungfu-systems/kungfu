@@ -293,12 +293,13 @@ async function openTuiAgentWorkLab(projectTour = false): Promise<AgentWorkLab> {
   const paths = runtimePaths();
   const cli = tuiCliInvocation(paths);
   if (projectTour) {
-    await ensureTuiAgentSession(paths.runtimeDir);
+    const endpoint = await ensureTuiAgentSession(paths.runtimeDir);
     const { mockPath } = resolveTuiAgentSessionPaths({
       env: process.env,
       argvEntry: process.argv[1],
       modulePath: fileURLToPath(import.meta.url),
     });
+    cli.env.KUNGFU_AGENT_SESSION_ENDPOINT = endpoint;
     cli.env.KUNGFU_MOCK_AGENT_EXECUTABLE ||= paths.packagedBin;
     cli.env.KUNGFU_MOCK_AGENT_SCRIPT ||= mockPath;
     cli.env.KUNGFU_ASSIGNMENT_ADMIT_ALLOW_FOREIGN_BINDING = '1';
