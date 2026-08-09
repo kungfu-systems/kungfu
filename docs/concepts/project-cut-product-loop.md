@@ -95,17 +95,10 @@ authority or stronger proof.
 
 ## Current implementation boundary
 
-The repository already implements the frozen `project.cut/v1` protocol and an
-agent-first `./shifu project-cut` settlement workflow. Mission and Go are the
-current Agent Work compatibility projection and have a qualified native
-authority cutover path.
-
-This product decision does not reinterpret those roots, identifiers, or
-receipts. Initiative and Assignment are the target product language. Moving
-persisted Mission/Go state or public commands to that language requires an
-explicit, versioned KFD-1 migration with retained readers, exact mappings,
-differential evidence, and rollback. Until that cutover, the existing commands
-and records keep their documented meaning.
+The repository implements the frozen `project.cut/v1` protocol and an
+agent-first `./shifu project-cut` settlement workflow. Initiative and Assignment
+are the native Agent Work identities. Their public contracts and receipts are
+owned by Kungfu and do not translate a consumer project's workflow vocabulary.
 
 See [KF-ADR-019f86da-4f90-7a57-a680-9739f5e67173](../adr/KF-ADR-019f86da-4f90-7a57-a680-9739f5e67173.md) for the
 decision, the [architecture design](../architecture/project-cut-product-loop.md)

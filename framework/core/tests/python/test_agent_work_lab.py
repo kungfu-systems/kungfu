@@ -7,6 +7,7 @@ from pathlib import Path
 from click.testing import CliRunner
 
 from kungfu import agent_work_lab
+from kungfu.agent import work_projection
 from kungfu.cli.commands import kfc
 from kungfu.cli.commands import agent_work_lab as agent_work_lab_commands  # noqa: F401
 from kungfu.cli.commands.assignment import (
@@ -354,9 +355,9 @@ def test_agent_work_lab_identity_change_marks_report_stale():
         "status": "qualified",
         "identityRoot": agent_work_lab.content_root(identity),
     }
-    assert agent_work_lab.report_status(report, identity)["status"] == "qualified"
+    assert work_projection.report_status(report, identity)["status"] == "qualified"
     changed = {**identity, "executableDigest": "sha256:two"}
-    status = agent_work_lab.report_status(report, changed)
+    status = work_projection.report_status(report, changed)
     assert status["status"] == "stale"
     assert status["stale"] is True
 

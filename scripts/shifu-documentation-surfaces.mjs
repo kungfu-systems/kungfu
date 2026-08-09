@@ -123,7 +123,11 @@ function trackedFiles(root) {
     throw new Error(
       `cannot enumerate tracked surfaces: ${result.error?.message || result.stderr.toString('utf8')}`,
     );
-  return result.stdout.toString('utf8').split('\0').filter(Boolean).sort();
+  return result.stdout
+    .toString('utf8')
+    .split('\0')
+    .filter((relative) => relative && fs.existsSync(path.join(root, relative)))
+    .sort();
 }
 
 /** @param {string} relative @param {any} selectors @returns {boolean} */

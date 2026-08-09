@@ -25,6 +25,9 @@ allowBuilds:
 # it ages past the cutoff, forcing a per-version allow-list. 0 = no minimum age.
 minimumReleaseAge: 0
 overrides:
+  # Keep every Buildchain runtime bound to the same KFD standard bytes as the
+  # product-level authority instead of retaining package-private old revisions.
+  '@kungfu-tech/kfd': 1.0.0-alpha.57
   # node-gyp 9.x cannot detect Visual Studio 2026; 13.x adds VS2026 support, which
   # the Windows build needs to match the prebuilt (MSVC 19.5) conan dependencies.
   node-gyp: ^13.0.0

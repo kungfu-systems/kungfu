@@ -13,7 +13,7 @@ the same target order as `workspace.py`, and writes only durable material under
 ```
 
 Capture does not admit an Initiative or Assignment, initialize a runtime, write
-a journal, claim work, or infer Mission purpose. With no explicit, environment,
+a journal, claim work, or infer Initiative purpose. With no explicit, environment,
 or discovered project workspace, it writes to `~/.kungfu` with
 `association=unassigned`.
 

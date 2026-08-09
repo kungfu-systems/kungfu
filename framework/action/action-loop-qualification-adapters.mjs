@@ -5,7 +5,7 @@ import crypto from 'node:crypto';
 import {
   beginActionLoop,
   createCorePublicAdapters,
-  createExplicitCompatibilityAdapters,
+  createExplicitAuthorityAdapters,
 } from './action-loop-begin.mjs';
 import {
   createSettlementCoreAdapters,
@@ -296,7 +296,7 @@ function adapters({ forgeBindReceipt = false } = {}) {
   const beginPorts = createCorePublicAdapters(invoke);
   const settlementPorts = createSettlementCoreAdapters(invoke);
   const ports = {
-    ...createExplicitCompatibilityAdapters(),
+    ...createExplicitAuthorityAdapters(),
     ...beginPorts,
     ...settlementPorts,
     episodeRecorder: {

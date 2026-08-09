@@ -7,7 +7,7 @@ import { fileURLToPath } from 'node:url';
 
 import {
   createCorePublicAdapters,
-  createExplicitCompatibilityAdapters,
+  createExplicitAuthorityAdapters,
   resumeActionLoop,
 } from '../action-loop-begin.mjs';
 
@@ -53,7 +53,7 @@ function invoke(operation, payload) {
 }
 
 const result = await resumeActionLoop(contract, loopRef, {
-  ...createExplicitCompatibilityAdapters(),
+  ...createExplicitAuthorityAdapters(),
   ...createCorePublicAdapters(invoke),
 });
 process.stdout.write(`${JSON.stringify(result)}\n`);

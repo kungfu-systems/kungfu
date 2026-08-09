@@ -68,7 +68,7 @@ def candidate(surface: str) -> dict:
             },
         },
         "hybrid-boundary": {
-            "providerId": "atlas-kungfu-hybrid",
+            "providerId": "xinfa-context-runtime",
             "surface": surface,
             "capabilities": [
                 "context.compose",

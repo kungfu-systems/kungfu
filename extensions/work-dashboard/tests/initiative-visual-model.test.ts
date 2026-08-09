@@ -1,22 +1,25 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import type {
-  AtlasGoal,
-  WorkControlAuthorityReport,
-} from '../src/view/work-control-profile.ts';
-import { DEFAULT_GOAL_CARD_QUERY } from '../src/view/work-control-query.ts';
 import {
-  MISSION_CONTROL_VISUAL_SPEC,
-  buildGoalClusters,
+  WORK_CONTROL_VISUAL_SPEC,
+  buildAssignmentClusters,
   deriveTrustVisual,
-  queryGoalClusters,
+  queryAssignmentClusters,
   responsibilityActions,
 } from '../src/view/initiative-visual-model.ts';
+import type {
+  WorkControlAssignment,
+  WorkControlAuthorityReport,
+} from '../src/view/work-control-profile.ts';
+import { DEFAULT_ASSIGNMENT_CARD_QUERY } from '../src/view/work-control-query.ts';
 
-const goal = (goalId: string, fields: Partial<AtlasGoal> = {}): AtlasGoal => ({
-  goal_id: goalId,
-  mission_id: 'mission-a',
+const assignment = (
+  assignmentId: string,
+  fields: Partial<WorkControlAssignment> = {},
+): WorkControlAssignment => ({
+  assignment_id: assignmentId,
+  initiative_id: 'initiative-a',
   status: 'active',
   ...fields,
 });
@@ -35,7 +38,7 @@ const report = (fields: Partial<WorkControlAuthorityReport> = {}) =>
       schema: 'kungfu.profile.delegated-work-cost-state-proof/v1',
       profile_hash: 'sha256:profile',
       profile: { id: 'profile', version: '1' },
-      mission_subject: 'atlas:mission-a',
+      initiative_subject: 'kungfu:initiative-a',
       cost: {
         status: 'missing',
         observation_count: 0,
@@ -60,7 +63,7 @@ const report = (fields: Partial<WorkControlAuthorityReport> = {}) =>
         value: 'active',
         source_statuses: ['active'],
         mapping_policy: 'work-control',
-        go_subjects: [],
+        assignment_subjects: [],
       },
       proof: {
         canonical_state: true,
@@ -75,43 +78,52 @@ const report = (fields: Partial<WorkControlAuthorityReport> = {}) =>
       },
     },
     state: {
-      mission_subject: 'atlas:mission-a',
+      initiative_subject: 'kungfu:initiative-a',
       canonical_state: true,
       cut: {},
-      mission: null,
-      goals: [],
+      initiative: null,
+      assignments: [],
     },
     ...fields,
   }) as WorkControlAuthorityReport;
 
 test('visual spec keeps the five questions internal and forbids synthetic truth', () => {
   assert.equal(
-    MISSION_CONTROL_VISUAL_SPEC.schema,
+    WORK_CONTROL_VISUAL_SPEC.schema,
     'kungfu.work-control.visual-spec/v1',
   );
+  assert.equal(WORK_CONTROL_VISUAL_SPEC.disclosure.questions, 'internal-only');
+  assert.equal(WORK_CONTROL_VISUAL_SPEC.trust.scalarScore, 'forbidden');
   assert.equal(
-    MISSION_CONTROL_VISUAL_SPEC.disclosure.questions,
-    'internal-only',
-  );
-  assert.equal(MISSION_CONTROL_VISUAL_SPEC.trust.scalarScore, 'forbidden');
-  assert.equal(
-    MISSION_CONTROL_VISUAL_SPEC.trajectory.syntheticMilestones,
+    WORK_CONTROL_VISUAL_SPEC.trajectory.syntheticMilestones,
     'forbidden',
   );
 });
 
 test('parent and descendants occupy one cluster and a blocked child propagates attention', () => {
-  const clusters = buildGoalClusters([
-    goal('parent'),
-    goal('child-a', { mission_parent_goal: 'parent', status: 'completed' }),
-    goal('child-b', { mission_parent_goal: 'parent', status: 'blocked' }),
-    goal('grandchild', { mission_parent_goal: 'child-b', status: 'active' }),
+  const clusters = buildAssignmentClusters([
+    assignment('parent'),
+    assignment('child-a', {
+      parent_assignment_id: 'parent',
+      status: 'completed',
+    }),
+    assignment('child-b', {
+      parent_assignment_id: 'parent',
+      status: 'blocked',
+    }),
+    assignment('grandchild', {
+      parent_assignment_id: 'child-b',
+      status: 'active',
+    }),
   ]);
 
   assert.equal(clusters.length, 1);
-  assert.equal(clusters[0].parent.goal_id, 'parent');
+  assert.equal(clusters[0].parent.assignment_id, 'parent');
   assert.deepEqual(
-    clusters[0].members.map(({ goal: row, depth }) => [row.goal_id, depth]),
+    clusters[0].members.map(({ assignment: row, depth }) => [
+      row.assignment_id,
+      depth,
+    ]),
     [
       ['parent', 0],
       ['child-a', 1],
@@ -122,27 +134,27 @@ test('parent and descendants occupy one cluster and a blocked child propagates a
   assert.equal(clusters[0].section, 'attention');
 });
 
-test('goal-card query retains the parent for a matching child and hides closed siblings', () => {
-  const clusters = queryGoalClusters(
+test('assignment-card query retains the parent for a matching child and hides closed siblings', () => {
+  const clusters = queryAssignmentClusters(
     [
-      goal('parent', {
+      assignment('parent', {
         title: 'Parent delivery',
-        mission_importance: 'medium',
+        initiative_importance: 'medium',
       }),
-      goal('closed-child', {
+      assignment('closed-child', {
         title: 'Old work',
-        mission_parent_goal: 'parent',
+        parent_assignment_id: 'parent',
         status: 'completed',
       }),
-      goal('risk-child', {
+      assignment('risk-child', {
         title: 'Release evidence gap',
-        mission_parent_goal: 'parent',
+        parent_assignment_id: 'parent',
         status: 'blocked',
-        mission_importance: 'high',
+        initiative_importance: 'high',
       }),
     ],
     {
-      ...DEFAULT_GOAL_CARD_QUERY,
+      ...DEFAULT_ASSIGNMENT_CARD_QUERY,
       text: 'evidence gap',
       hideClosedChildren: true,
     },
@@ -152,28 +164,28 @@ test('goal-card query retains the parent for a matching child and hides closed s
   assert.equal(clusters[0].section, 'attention');
   assert.equal(clusters[0].matchCount, 1);
   assert.deepEqual(
-    clusters[0].members.map(({ goal: row }) => row.goal_id),
+    clusters[0].members.map(({ assignment: row }) => row.assignment_id),
     ['parent', 'risk-child'],
   );
 });
 
 test('decision priority sorts propagated trust risk before ordinary active work', () => {
-  const clusters = queryGoalClusters(
+  const clusters = queryAssignmentClusters(
     [
-      goal('ordinary', {
+      assignment('ordinary', {
         title: 'Ordinary active work',
         updated_at: '2026-07-12T08:00:00Z',
       }),
-      goal('risk-parent', {
+      assignment('risk-parent', {
         title: 'Risk cluster',
         updated_at: '2026-07-11T08:00:00Z',
       }),
-      goal('risk-child', {
-        mission_parent_goal: 'risk-parent',
+      assignment('risk-child', {
+        parent_assignment_id: 'risk-parent',
         status: 'paused',
       }),
     ],
-    DEFAULT_GOAL_CARD_QUERY,
+    DEFAULT_ASSIGNMENT_CARD_QUERY,
     { 'risk-child': 'stale' },
     Date.parse('2026-07-12T10:00:00Z'),
   );
@@ -185,24 +197,24 @@ test('decision priority sorts propagated trust risk before ordinary active work'
 });
 
 test('structured filters combine actor, status, hierarchy, and cut-relative time', () => {
-  const clusters = queryGoalClusters(
+  const clusters = queryAssignmentClusters(
     [
-      goal('parent', {
+      assignment('parent', {
         owner_agent: 'codex',
         updated_at: '2026-07-12T08:00:00Z',
       }),
-      goal('child', {
+      assignment('child', {
         owner_agent: 'codex',
-        mission_parent_goal: 'parent',
+        parent_assignment_id: 'parent',
         updated_at: '2026-07-12T09:00:00Z',
       }),
-      goal('other', {
+      assignment('other', {
         owner_agent: 'claude',
         updated_at: '2026-07-01T09:00:00Z',
       }),
     ],
     {
-      ...DEFAULT_GOAL_CARD_QUERY,
+      ...DEFAULT_ASSIGNMENT_CARD_QUERY,
       statuses: ['active'],
       actors: ['codex'],
       updatedWithinDays: 1,
@@ -254,7 +266,7 @@ test('next actor is projected from the query answer rather than component infere
           catalog_root: 'sha256:catalog',
           member_roots: {},
         },
-        mission_subject: 'atlas:mission-a',
+        initiative_subject: 'kungfu:initiative-a',
         query_definition_root: 'sha256:definition',
         query_proof_root: 'sha256:proof',
         result_hash: 'sha256:result',
@@ -263,7 +275,7 @@ test('next actor is projected from the query answer rather than component infere
           planId: 'sha256:plan',
           profileSuiteRoot: 'sha256:suite',
           catalogRoot: 'sha256:catalog',
-          viewId: 'mission-state-table',
+          viewId: 'initiative-state-table',
           queryDefinitionRoot: 'sha256:definition',
           queryProofRoot: 'sha256:proof',
           result: {},
@@ -279,9 +291,9 @@ test('next actor is projected from the query answer rather than component infere
               declared_actions: [
                 {
                   actor: 'Agent A',
-                  subject: 'goal-a',
+                  subject: 'assignment-a',
                   action: 'Run the visual dogfood',
-                  source: 'go.next_action',
+                  source: 'assignment.next_action',
                 },
               ],
             },
@@ -294,9 +306,9 @@ test('next actor is projected from the query answer rather than component infere
   assert.deepEqual(actions, [
     {
       actor: 'Agent A',
-      subject: 'goal-a',
+      subject: 'assignment-a',
       action: 'Run the visual dogfood',
-      source: 'go.next_action',
+      source: 'assignment.next_action',
     },
   ]);
 });
