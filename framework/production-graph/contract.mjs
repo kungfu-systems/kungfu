@@ -30,6 +30,7 @@ export const SCHEMA_PATHS = Object.freeze({
   receipt: 'docs/shifu/schema/production-graph-receipt-v0.schema.json',
   failure: 'docs/shifu/schema/production-graph-failure-v0.schema.json',
   recovery: 'docs/shifu/schema/production-graph-recovery-v0.schema.json',
+  feedback: 'docs/shifu/schema/production-graph-feedback-v0.schema.json',
   verificationReceipt:
     'docs/shifu/schema/production-graph-verification-receipt-v0.schema.json',
 });
@@ -1060,6 +1061,8 @@ export async function runProductionGraphShadow(
   const currentReceiptPath = path.join(outputDir, 'current-receipt.json');
   const eventsPath = path.join(outputDir, 'events.jsonl');
   const graphReceiptPath = path.join(outputDir, 'graph-receipt.json');
+  const failurePath = path.join(outputDir, 'failure.json');
+  const recoveryPath = path.join(outputDir, 'recovery.json');
   const shadowReceiptPath = path.join(outputDir, 'shadow-receipt.json');
   const args = delegateArgs(
     options,
@@ -1163,6 +1166,8 @@ export async function runProductionGraphShadow(
     'receiptRoot',
   );
   writeJson(graphReceiptPath, graphReceipt);
+  writeJson(failurePath, chain.failure);
+  writeJson(recoveryPath, chain.recovery);
   const shadowReceipt = rooted(
     {
       schema: 'kungfu.core-affected-production-graph-shadow-receipt/v0',
@@ -1189,6 +1194,8 @@ export async function runProductionGraphShadow(
         graphReceipt: graphReceiptPath,
         currentPlan: currentPlanPath,
         currentReceipt: currentReceiptPath,
+        failure: failurePath,
+        recovery: recoveryPath,
       },
     },
     'receiptRoot',

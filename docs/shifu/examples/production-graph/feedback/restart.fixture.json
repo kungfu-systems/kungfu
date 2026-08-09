@@ -1,0 +1,8 @@
+{
+  "schema": "shifu.production-graph-feedback-fixture/v0",
+  "id": "restart",
+  "outcome": "failed",
+  "terminalNodeId": "verify-authorities",
+  "recoveryStrategy": "replan",
+  "expectedState": "restart-required"
+}
