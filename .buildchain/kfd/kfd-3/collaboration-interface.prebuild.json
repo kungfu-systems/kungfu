@@ -6,15 +6,15 @@
   "supportLevel": "release",
   "source": {
     "cwd": ".",
-    "sourceSha": "d6ac4129a445ae88a37c0cea2e89efaed7501ea2",
+    "sourceSha": "c75ad3dc4ab30e22ec3ef54d2fcd812201fd7e27",
     "registryPath": ".buildchain/kfd/kfd-3/surfaces.json",
-    "registryDigest": "sha256:225b692b65f126352d9ee96e9afe9e83d0d8bf78f3a17e365d0456a0654b359b"
+    "registryDigest": "sha256:391d38bba0c5c4a73ad9d124ee25fa848a21ef58b61161b3fbf92ab1b2512b6f"
   },
   "sourceRegistry": {
     "id": "kungfu",
     "path": ".buildchain/kfd/kfd-3/surfaces.json",
-    "sha256": "997fa8c88dc052e42a484f96797b66e1bff24890474f06efe3eea2971bb58daa",
-    "digest": "sha256:225b692b65f126352d9ee96e9afe9e83d0d8bf78f3a17e365d0456a0654b359b"
+    "sha256": "3c4b1d14bbd79bf09fb6538e0460219e7764889b16b777a64ad55347d350d95e",
+    "digest": "sha256:391d38bba0c5c4a73ad9d124ee25fa848a21ef58b61161b3fbf92ab1b2512b6f"
   },
   "upstreamKfd": {
     "aggregatePath": "developer/sdk/kfd/upstream-aggregate.json",
@@ -25,16 +25,16 @@
       "buildchain"
     ],
     "packageVersions": {
-      "kfd": "1.0.0-alpha.53",
+      "kfd": "1.0.0-alpha.57",
       "libnode": "22.22.3-kf.5-alpha.3",
       "buildchain": "3.0.0"
     },
-    "digest": "sha256:06dc4dad18857aab71f44024f9c1799e1ce314bc44ac30acee2e057dca7cb9c2"
+    "digest": "sha256:3b998ab19e3607e8d9de4f5aac4fd3530060bbf6023216ce248f0a8149b0497e"
   },
   "expectedArtifactVerification": {
     "command": "node scripts/buildchain-kfd-evidence.mjs --artifact-witness --json"
   },
-  "collaborationInterfaceDigest": "sha256:9414ec2362a13e1df911e2b9a68c9d13f72301ba5403edf601d257911fc46821",
+  "collaborationInterfaceDigest": "sha256:70c6f9b661bed1aeec40f237fc158be3abbb640a9ee065bdbd176eaa3a20a143",
   "collaborationInterface": {
     "schemaVersion": 1,
     "contract": "kungfu-buildchain-kfd-3-surface-registry",
@@ -53,11 +53,11 @@
         "buildchain"
       ],
       "packageVersions": {
-        "kfd": "1.0.0-alpha.53",
+        "kfd": "1.0.0-alpha.57",
         "libnode": "22.22.3-kf.5-alpha.3",
         "buildchain": "3.0.0"
       },
-      "digest": "sha256:06dc4dad18857aab71f44024f9c1799e1ce314bc44ac30acee2e057dca7cb9c2"
+      "digest": "sha256:3b998ab19e3607e8d9de4f5aac4fd3530060bbf6023216ce248f0a8149b0497e"
     },
     "surfaces": [
       {
@@ -367,66 +367,6 @@
       {"id":"kungfu.agent.work.import-authority","name":"kungfu agent work import-authority --file <bundle.json> [--execute] --json","kind":"cli-api-gui","participantProfile":"agent-or-developer","state":"declared","availability":"shipped","visibility":"public","participantFacing":true,"public":true,"sourcePath":"framework/core/src/python/kungfu/agent/kfd3_api.registry.json","evidencePath":"framework/core/src/python/kungfu/agent/commands.json","artifactPath":"framework/core/src/python/kungfu/agent/commands.json","maturity":"experimental","declaration":{"owner":"kungfu","source":"scripts/buildchain-kfd-evidence.mjs","sourcePath":"framework/core/src/python/kungfu/agent/kfd3_api.registry.json"}},
       {"id":"kungfu.agent.work.inspect","name":"kungfu agent work inspect --ref <ref> --json","kind":"cli-api-gui","participantProfile":"agent-or-developer","state":"declared","availability":"shipped","visibility":"public","participantFacing":true,"public":true,"sourcePath":"framework/core/src/python/kungfu/agent/kfd3_api.registry.json","evidencePath":"framework/core/src/python/kungfu/agent/commands.json","artifactPath":"framework/core/src/python/kungfu/agent/commands.json","maturity":"experimental","declaration":{"owner":"kungfu","source":"scripts/buildchain-kfd-evidence.mjs","sourcePath":"framework/core/src/python/kungfu/agent/kfd3_api.registry.json"}},
       {"id":"kungfu.agent.work.session","name":"kungfu agent work session --operation <compressibility|expand|project> --file <session.json> --json","kind":"cli-api-gui","participantProfile":"agent-or-developer","state":"declared","availability":"shipped","visibility":"public","participantFacing":true,"public":true,"sourcePath":"framework/core/src/python/kungfu/agent/kfd3_api.registry.json","evidencePath":"framework/core/src/python/kungfu/agent/commands.json","artifactPath":"framework/core/src/python/kungfu/agent/commands.json","maturity":"experimental","declaration":{"owner":"kungfu","source":"scripts/buildchain-kfd-evidence.mjs","sourcePath":"framework/core/src/python/kungfu/agent/kfd3_api.registry.json"}},
-      {
-        "id": "kungfu.atlas.import",
-        "name": "kungfu atlas import --repo <atlas-repo> --json",
-        "kind": "cli",
-        "participantProfile": "agent-or-developer",
-        "state": "declared",
-        "availability": "shipped",
-        "visibility": "public",
-        "participantFacing": true,
-        "public": true,
-        "sourcePath": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json",
-        "evidencePath": "framework/core/src/python/kungfu/agent/commands.json",
-        "artifactPath": "framework/core/src/python/kungfu/agent/commands.json",
-        "maturity": "stable",
-        "declaration": {
-          "owner": "kungfu",
-          "source": "scripts/buildchain-kfd-evidence.mjs",
-          "sourcePath": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json"
-        }
-      },
-      {
-        "id": "kungfu.atlas.show.import",
-        "name": "kungfu atlas show import --json",
-        "kind": "cli",
-        "participantProfile": "agent-or-developer",
-        "state": "declared",
-        "availability": "shipped",
-        "visibility": "public",
-        "participantFacing": true,
-        "public": true,
-        "sourcePath": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json",
-        "evidencePath": "framework/core/src/python/kungfu/agent/commands.json",
-        "artifactPath": "framework/core/src/python/kungfu/agent/commands.json",
-        "maturity": "stable",
-        "declaration": {
-          "owner": "kungfu",
-          "source": "scripts/buildchain-kfd-evidence.mjs",
-          "sourcePath": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json"
-        }
-      },
-      {
-        "id": "kungfu.atlas.show.markers",
-        "name": "kungfu atlas show markers --json",
-        "kind": "cli",
-        "participantProfile": "agent-or-developer",
-        "state": "declared",
-        "availability": "shipped",
-        "visibility": "public",
-        "participantFacing": true,
-        "public": true,
-        "sourcePath": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json",
-        "evidencePath": "framework/core/src/python/kungfu/agent/commands.json",
-        "artifactPath": "framework/core/src/python/kungfu/agent/commands.json",
-        "maturity": "stable",
-        "declaration": {
-          "owner": "kungfu",
-          "source": "scripts/buildchain-kfd-evidence.mjs",
-          "sourcePath": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json"
-        }
-      },
       {
         "id": "kungfu.buildchain.kfd.evidence",
         "name": "./shifu kfd:buildchain",
@@ -2707,8 +2647,8 @@
     ],
     "audit": {
       "status": "passed",
-      "declared": 187,
-      "artifactPublic": 187,
+      "declared": 184,
+      "artifactPublic": 184,
       "policy": {
         "sourceOfTruth": ".buildchain/kfd/kfd-3/surfaces.json",
         "detectedButUnregistered": "product-specific-audit",
@@ -3027,66 +2967,6 @@
     {"id":"kungfu.agent.work.import-authority","name":"kungfu agent work import-authority --file <bundle.json> [--execute] --json","kind":"cli-api-gui","participantProfile":"agent-or-developer","state":"declared","availability":"shipped","visibility":"public","participantFacing":true,"public":true,"sourcePath":"framework/core/src/python/kungfu/agent/kfd3_api.registry.json","evidencePath":"framework/core/src/python/kungfu/agent/commands.json","artifactPath":"framework/core/src/python/kungfu/agent/commands.json","maturity":"experimental","declaration":{"owner":"kungfu","source":"scripts/buildchain-kfd-evidence.mjs","sourcePath":"framework/core/src/python/kungfu/agent/kfd3_api.registry.json"}},
     {"id":"kungfu.agent.work.inspect","name":"kungfu agent work inspect --ref <ref> --json","kind":"cli-api-gui","participantProfile":"agent-or-developer","state":"declared","availability":"shipped","visibility":"public","participantFacing":true,"public":true,"sourcePath":"framework/core/src/python/kungfu/agent/kfd3_api.registry.json","evidencePath":"framework/core/src/python/kungfu/agent/commands.json","artifactPath":"framework/core/src/python/kungfu/agent/commands.json","maturity":"experimental","declaration":{"owner":"kungfu","source":"scripts/buildchain-kfd-evidence.mjs","sourcePath":"framework/core/src/python/kungfu/agent/kfd3_api.registry.json"}},
     {"id":"kungfu.agent.work.session","name":"kungfu agent work session --operation <compressibility|expand|project> --file <session.json> --json","kind":"cli-api-gui","participantProfile":"agent-or-developer","state":"declared","availability":"shipped","visibility":"public","participantFacing":true,"public":true,"sourcePath":"framework/core/src/python/kungfu/agent/kfd3_api.registry.json","evidencePath":"framework/core/src/python/kungfu/agent/commands.json","artifactPath":"framework/core/src/python/kungfu/agent/commands.json","maturity":"experimental","declaration":{"owner":"kungfu","source":"scripts/buildchain-kfd-evidence.mjs","sourcePath":"framework/core/src/python/kungfu/agent/kfd3_api.registry.json"}},
-    {
-      "id": "kungfu.atlas.import",
-      "name": "kungfu atlas import --repo <atlas-repo> --json",
-      "kind": "cli",
-      "participantProfile": "agent-or-developer",
-      "state": "declared",
-      "availability": "shipped",
-      "visibility": "public",
-      "participantFacing": true,
-      "public": true,
-      "sourcePath": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json",
-      "evidencePath": "framework/core/src/python/kungfu/agent/commands.json",
-      "artifactPath": "framework/core/src/python/kungfu/agent/commands.json",
-      "maturity": "stable",
-      "declaration": {
-        "owner": "kungfu",
-        "source": "scripts/buildchain-kfd-evidence.mjs",
-        "sourcePath": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json"
-      }
-    },
-    {
-      "id": "kungfu.atlas.show.import",
-      "name": "kungfu atlas show import --json",
-      "kind": "cli",
-      "participantProfile": "agent-or-developer",
-      "state": "declared",
-      "availability": "shipped",
-      "visibility": "public",
-      "participantFacing": true,
-      "public": true,
-      "sourcePath": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json",
-      "evidencePath": "framework/core/src/python/kungfu/agent/commands.json",
-      "artifactPath": "framework/core/src/python/kungfu/agent/commands.json",
-      "maturity": "stable",
-      "declaration": {
-        "owner": "kungfu",
-        "source": "scripts/buildchain-kfd-evidence.mjs",
-        "sourcePath": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json"
-      }
-    },
-    {
-      "id": "kungfu.atlas.show.markers",
-      "name": "kungfu atlas show markers --json",
-      "kind": "cli",
-      "participantProfile": "agent-or-developer",
-      "state": "declared",
-      "availability": "shipped",
-      "visibility": "public",
-      "participantFacing": true,
-      "public": true,
-      "sourcePath": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json",
-      "evidencePath": "framework/core/src/python/kungfu/agent/commands.json",
-      "artifactPath": "framework/core/src/python/kungfu/agent/commands.json",
-      "maturity": "stable",
-      "declaration": {
-        "owner": "kungfu",
-        "source": "scripts/buildchain-kfd-evidence.mjs",
-        "sourcePath": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json"
-      }
-    },
     {
       "id": "kungfu.buildchain.kfd.evidence",
       "name": "./shifu kfd:buildchain",
