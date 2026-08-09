@@ -239,6 +239,73 @@ def test_project_tour_cli_selects_each_bounded_episode(monkeypatch):
     assert "is not one of '1', '2', 'all'" in invalid.output
 
 
+def test_project_tour_episode_cli_invokes_one_native_controller(monkeypatch, tmp_path):
+    observed = []
+
+    def run_episode(request, operations, emit):
+        observed.append((request, operations))
+        emit(
+            {
+                "schema": "kungfu.project-tour.episode-event/v1",
+                "index": 1,
+                "episode": request.episode,
+                "elapsedMs": 0,
+                "kind": "inventory",
+                "section": "PROJECT WORK · FINAL RECONCILIATION",
+                "sectionTag": "WORK",
+                "status": "completed",
+                "text": "one final inventory",
+                "root": "sha256:" + "1" * 64,
+            }
+        )
+        return {
+            "schema": "kungfu.project-tour.episode-report/v1",
+            "status": "qualified",
+            "episode": request.episode,
+            "controller": {
+                "pid": 42,
+                "processCount": 1,
+                "inventoryQueryCount": 1,
+            },
+            "reportRoot": "sha256:" + "2" * 64,
+        }
+
+    monkeypatch.setattr(
+        agent_work_lab_commands.project_tour_runtime,
+        "run_project_tour_episode",
+        run_episode,
+    )
+    destination = tmp_path / "project"
+
+    result = CliRunner().invoke(
+        kfc,
+        [
+            "agent-work-lab",
+            "project-tour-run",
+            "--destination",
+            str(destination),
+            "--episode",
+            "2",
+            "--resume",
+            "--events-json",
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert len(observed) == 1
+    request, operations = observed[0]
+    assert request.destination == str(destination.resolve())
+    assert request.episode == "2"
+    assert request.resume is True
+    assert operations.__class__.__name__ == "_NativeProjectTourOperations"
+    lines = [json.loads(line) for line in result.output.splitlines()]
+    assert [line["schema"] for line in lines] == [
+        "kungfu.project-tour.episode-event/v1",
+        "kungfu.project-tour.episode-report/v1",
+    ]
+    assert lines[-1]["controller"]["inventoryQueryCount"] == 1
+
+
 def test_existing_global_work_routes_to_work_graph(tmp_path, monkeypatch):
     runtime = tmp_path / "runtime"
     monkeypatch.setattr(
