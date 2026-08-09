@@ -212,7 +212,7 @@ export SHIFU_ENTRYPOINT=1
 # Build-free routes read checked-in authorities with Node built-ins only.
 case "${1:-} ${2:-} ${3:-}" in
   kfd\ status*|kfd\ query*|kfd\ check*|kfd:query\ *|kfd:support-matrix:check\ *|core:architecture\ *|core:architecture:health\ *|invariant:verify\ --list*|invariant:verify\ --\ --list*|\
-  maintainability:complexity\ *|maintainability:amplification\ *|maintainability:query\ *|work-design:open-card-preflight\ *|work-design:feedback\ *)
+  maintainability:complexity\ *|maintainability:amplification\ *|maintainability:query\ *|work-design:preflight\ *|work-design:feedback\ *)
     if command -v node >/dev/null 2>&1; then
       exec node ./scripts/shifu-readonly-entry.mjs "$@"
     fi
@@ -303,7 +303,7 @@ if [ "${1:-}" = "work" ]; then
   if [ -n "$_kungfu_checkout_binding" ] && [ -f "$_kungfu_checkout_build_info" ] && [ -n "$_kungfu_uv" ]; then
     cd ./framework/core && exec "$_kungfu_uv" run --frozen python .devtools/kungfu_cli.py work "$@"
   fi
-  printf '%s\n' '{"schema":"kungfu.assignment-orchestration.diagnosis/v1","ok":false,"code":"assignment-current-checkout-binding-missing","message":"Assignment admission requires pykungfu from the current checkout","next_actions":[{"action":"build-core","command":"./shifu build:core","description":"Assemble pykungfu from the current checkout"}]}'
+  printf '%s\n' '{"schema":"kungfu.assignment-orchestration.diagnosis/v1","ok":false,"code":"qualified-product-required","message":"Assignment orchestration requires an installed qualified Kungfu product","next_actions":[{"action":"use-installed-product","command":"kungfu work","description":"Run Work through an installed qualified Kungfu product"}]}'
   exit 127
 fi
 # Use the executable assembled from this checkout, never a global `kungfu`.

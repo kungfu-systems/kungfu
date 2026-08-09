@@ -38,7 +38,6 @@ test('freezes one backend-neutral Assignment Runtime contract', () => {
   assert.deepEqual(validateContract(), { ok: true, errors: [] });
   assert.equal(contract.protocol.id, 'kungfu.assignment-runtime/v1');
   assert.equal(contract.authority.writer, 'realm-runtime');
-  assert.equal(contract.compatibility.dualWrite, 'forbidden');
   assert.equal(contract.localRuntimeProfile.publicPathContract, false);
   assert.equal(contract.implementationStatus.localRuntime, 'deferred-r1');
   assert.equal(
@@ -87,7 +86,7 @@ test('pins the current Assignment authority and client-path audit', () => {
       [
         'def _runtime(',
         'def _profile_action(',
-        'for profile_name in ("work-control", "mission-control")',
+        'source = extensions / "work-control"',
       ],
     ],
     [

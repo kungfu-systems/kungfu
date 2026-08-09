@@ -206,6 +206,7 @@ function assertYijinjingWriterInterface() {
       relative === negativeGuard ||
       relative === 'scripts/source-acceptance.mjs' ||
       GENERATED_EVIDENCE_ROOTS.some((root) => relative.startsWith(root)) ||
+      !fs.existsSync(path.join(ROOT, relative)) ||
       !textFile.test(relative)
     )
       continue;
@@ -533,7 +534,7 @@ export function sourceAcceptancePlan(files, evidenceBaseCommit = '') {
     ['schema authority', 'scripts/check-schema-authority.mjs'],
     [
       'Work Control canonical naming boundary',
-      'scripts/check-work-control-vocabulary.test.mjs',
+      'scripts/check-work-control-native.test.mjs',
     ],
     [
       'Project Work Agent first-layer product model',
@@ -648,8 +649,8 @@ export function sourceAcceptancePlan(files, evidenceBaseCommit = '') {
       'framework/work-design-policy-replay/tooling/check-work-design-policy-replay.mjs',
     ],
     [
-      'Work design open-card contract',
-      'framework/work-design-open-card/tooling/check-work-design-open-card.mjs',
+      'Work design work-design contract',
+      'framework/work-design-preflight/tooling/check-work-design-preflight.mjs',
     ],
     [
       'Project Cut composition contract',
@@ -859,7 +860,7 @@ export function sourceAcceptancePlan(files, evidenceBaseCommit = '') {
         'scripts/check-work-lifecycle-native.test.mjs',
         'scripts/check-work-lifecycle-operation-matrix.test.mjs',
         'framework/work-profile-conformance/work-profile-conformance.test.mjs',
-        'scripts/check-work-control-vocabulary.test.mjs',
+        'scripts/check-work-control-native.test.mjs',
         'scripts/check-project-work-agent-product.test.mjs',
         'scripts/registry-envelope.test.mjs',
         'scripts/check-kfd-agent-runtime-boundary.mjs',
@@ -871,7 +872,7 @@ export function sourceAcceptancePlan(files, evidenceBaseCommit = '') {
         'scripts/check-work-history-selector.test.mjs',
         'scripts/check-work-design-advisor.test.mjs',
         'scripts/check-work-design-policy-replay.test.mjs',
-        'scripts/check-work-design-open-card.test.mjs',
+        'scripts/check-work-design-preflight.test.mjs',
         'scripts/check-project-cut-composition.test.mjs',
         ...(settlementPublicationPresent
           ? ['scripts/check-project-cut-publication.test.mjs']

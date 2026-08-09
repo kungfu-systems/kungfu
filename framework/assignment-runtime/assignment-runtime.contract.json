@@ -27,7 +27,6 @@
       "idempotency",
       "events",
       "errors",
-      "compatibility",
       "localRuntimeProfile",
       "implementationStatus",
       "nonClaims"
@@ -89,9 +88,6 @@
       "errors": {
         "type": "array",
         "minItems": 10
-      },
-      "compatibility": {
-        "type": "object"
       },
       "localRuntimeProfile": {
         "type": "object"
@@ -340,17 +336,6 @@
       "retryable": true
     }
   ],
-  "compatibility": {
-    "legacyReaders": [
-      "kungfu.mission-control-v1-v3-read-only",
-      "atlas-gate-projection-read-only",
-      "captured-assignment-request-v1"
-    ],
-    "legacyWriters": "Existing Profile/CLI/GUI writers remain implementation facts until their phase-specific cutover; they are not additional Runtime API authority.",
-    "aliases": "Mission/Go names may translate at client edges while sealed legacy identities and roots remain unchanged.",
-    "deletionGate": "A direct path may be removed only after its Runtime Client successor has exact-root parity evidence and an explicit reviewed deletion decision.",
-    "dualWrite": "forbidden"
-  },
   "localRuntimeProfile": {
     "status": "frozen-r1-implementation-target",
     "realmKind": "local",

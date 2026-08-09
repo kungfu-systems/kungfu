@@ -705,8 +705,7 @@
         "required": [
           "contractWorld",
           "factSurfaces",
-          "reducers",
-          "compatibility"
+          "reducers"
         ],
         "properties": {
           "contractWorld": {

@@ -150,7 +150,7 @@
         "memberId": "work-control-views",
         "viewId": "assignment-cards",
         "spec": {
-          "schema": "kungfu.work-control.goal-card-view/v1",
+          "schema": "kungfu.work-control.assignment-card-view/v1",
           "questionId": "observed-progress",
           "reducer": "kungfu.work-control.five-questions"
         }
