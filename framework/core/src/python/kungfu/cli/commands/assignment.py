@@ -666,7 +666,7 @@ def start_work(
         admission_summary=_admission_summary,
         profile_action=_profile_action,
         claim_summary=_claim_summary,
-        advance_bound=lambda *args: _advance(*args, native_work_bound=True),
+        advance_bound=_advance,
         kickoff_summary=_kickoff_summary,
         project_prompt=_project_work_prompt,
         agent_report_summary=_agent_report_summary,
@@ -1412,36 +1412,28 @@ def claim(
     grant_scope,
     actor_type,
 ):
-    def operation():
-        _, runtime_dir, _ = _runtime(workspace_root, home)
-        _ensure_profile(runtime_dir, authorized_by)
-        run_agent.bind_current_native_work(
-            runtime_dir,
-            initiative_id,
-            assignment_id,
-            work_workspace_root=workspace_root or None,
+    _emit(
+        _run(
+            lambda: assignment_start.claim(
+                workspace_root=workspace_root,
+                home=home,
+                initiative_id=initiative_id,
+                assignment_id=assignment_id,
+                owner=owner,
+                agent=agent,
+                slot=slot,
+                lease_id=lease_id,
+                lease_expires_at=lease_expires_at,
+                authorized_by=authorized_by,
+                grant_scope=grant_scope,
+                actor_type=actor_type,
+                runtime=_runtime,
+                ensure_profile=_ensure_profile,
+                profile_action=_profile_action,
+                status=_status,
+            )
         )
-        receipt = _profile_action(
-            runtime_dir,
-            "claim-assignment",
-            {
-                "initiativeId": initiative_id,
-                "assignmentId": assignment_id,
-                "owner": owner,
-                "agent": agent,
-                "slot": slot,
-                "leaseId": lease_id,
-                "leaseExpiresAt": lease_expires_at,
-                "authorizedBy": authorized_by,
-                "grantScope": grant_scope,
-                "actorType": actor_type,
-                "source": "atlas",
-            },
-            authorized_by,
-        )
-        return {**receipt, "status": _status(runtime_dir, initiative_id, assignment_id)}
-
-    _emit(_run(operation))
+    )
 
 
 def _advance(
@@ -1452,18 +1444,9 @@ def _advance(
     to_phase,
     actor,
     reason,
-    *,
-    native_work_bound=False,
 ):
     identity, runtime_dir, _ = _runtime(workspace_root, home)
     _ensure_profile(runtime_dir, actor)
-    if to_phase == "executing" and not native_work_bound:
-        run_agent.bind_current_native_work(
-            runtime_dir,
-            initiative_id,
-            assignment_id,
-            work_workspace_root=workspace_root or None,
-        )
     current = _status(runtime_dir, initiative_id, assignment_id)
     dogfood_receipt = None
     if to_phase == "executing":

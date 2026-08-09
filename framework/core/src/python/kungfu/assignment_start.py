@@ -21,6 +21,7 @@ from kungfu.agent import run_agent
 from kungfu.workspace import resolve_workspace_target
 
 JsonObject = dict[str, Any]
+claim = bound_session.claim
 
 
 class StartPlanPort(Protocol):
@@ -286,7 +287,7 @@ def execute(
             event(
                 stage,
                 "started",
-                "Starting an exact Work-bound SessionAttempt before execution.",
+                "Starting an Agent Session with an optional observation of this Work.",
                 work_ref["entityRoot"],
             )
         else:
@@ -313,7 +314,7 @@ def execute(
                 event(
                     stage,
                     "completed",
-                    "Work-bound SessionAttempt admitted; Work is executing.",
+                    "Work execution admitted; Agent Session observes the current Work.",
                     last_status["query_proof_root"],
                 )
             stage = "run"

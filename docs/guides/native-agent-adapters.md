@@ -161,10 +161,12 @@ runtime-local guard, while the Work's authoritative state remains unchanged.
 Exiting the provider also releases the guard; provider exit never claims Work
 completion.
 
-Custom adapter Skills must retain this same pre-write binding boundary. Public
-`kungfu work claim` and kickoff paths also bind automatically when invoked from
-inside a native Console, so a compatible third-party PTY Agent cannot create a
-second authoritative Work lease through those commands.
+Custom adapter Skills may retain this pre-project-write observation boundary
+for runtime-local coordination. Public `kungfu work claim` and kickoff paths
+never bind an Agent Session automatically: they remain valid without a Console,
+and their Work authority cannot be blocked by ambient provider state. A
+third-party PTY Agent that wants observer projection must use the explicit
+Agent-owned bind entrypoint separately.
 
 ## Compatibility boundary
 
