@@ -12,6 +12,7 @@ import test from 'node:test';
 import {
   assertCleanCheckout,
   completeRegularFileInventory,
+  inspectBuildchainHostedPath,
   parseArguments,
   parsePortableArguments,
   parseReplayArguments,
@@ -294,4 +295,47 @@ test('replay scenarios encode readback-first bounded fault transcripts', () => {
     () => replayScenarioObservations(capsule, 'unknown'),
     /unknown replay scenario/u,
   );
+});
+
+test('the hosted path is a thin binding to the shared core', (context) => {
+  const buildchain = fs.mkdtempSync(
+    path.join(os.tmpdir(), 'kungfu-alpha-debug-hosted-path-'),
+  );
+  context.after(() => fs.rmSync(buildchain, { recursive: true, force: true }));
+  const write = (relativePath, contents) => {
+    const filePath = path.join(buildchain, relativePath);
+    fs.mkdirSync(path.dirname(filePath), { recursive: true });
+    fs.writeFileSync(filePath, contents);
+  };
+  write(
+    'actions/release-tail/index.js',
+    `import { PUBLICATION_REHEARSAL_CAPSULE_CONTRACT, executePublicationRehearsal, publicationRehearsalDiagnostic } from "../../packages/core/publication-rehearsal-runtime.js";\nasync function run(capsule) { try { return await executePublicationRehearsal({ capsule, mode: "provider" }); } catch (error) { return publicationRehearsalDiagnostic(error, { capsule }); } }\n`,
+  );
+  write(
+    'actions/release-tail/action.yml',
+    'inputs:\n  capsule-contract:\n  capsule-root:\n  github-token:\n  http-token:\nruns:\n  using: "node24"\n  main: "dist/index.js"\n',
+  );
+  write(
+    '.github/workflows/release-tail.yml',
+    'ref: ${{ inputs.buildchain-ref }}\nuses: ./.buildchain/release-tail-runtime/actions/release-tail\ncapsule-contract: ${{ inputs.capsule-contract }}\ngithub-token: ${{ github.token }}\nhttp-token: ${{ secrets.http-token }}\n',
+  );
+  write(
+    'packages/core/publication-rehearsal-runtime.js',
+    'export async function executePublicationRehearsal() {}\n',
+  );
+  const binding = inspectBuildchainHostedPath(buildchain);
+  assert.equal(binding.actionCoreEntrypoint, 'executePublicationRehearsal');
+  assert.deepEqual(binding.hostedOnly, [
+    'credentials',
+    'transport',
+    'provider-effects',
+    'real-observations',
+  ]);
+  assert.match(binding.hostedPathRoot, /^sha256:[0-9a-f]{64}$/u);
+
+  fs.appendFileSync(
+    path.join(buildchain, 'actions/release-tail/index.js'),
+    '\nexecuteReleaseTailTransaction();\n',
+  );
+  assert.throws(() => inspectBuildchainHostedPath(buildchain), /thin wrapper/u);
 });

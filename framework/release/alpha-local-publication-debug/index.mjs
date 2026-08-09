@@ -19,6 +19,12 @@ const EXPECTED_TREE = '67a93b5831596555e7c29104421de3a0b97eb865';
 const EXPECTED_VERSION = '4.0.0-alpha.1';
 const BUILDCHAIN_REHEARSAL_MERGE = 'fadcdfbf87a5e8f16b80df2ab39384dee0c8a601';
 const PLATFORM_IDS = ['linux-x64', 'linux-arm64', 'macos-arm64', 'windows-x64'];
+const HOSTED_ONLY_BOUNDARIES = [
+  'credentials',
+  'transport',
+  'provider-effects',
+  'real-observations',
+];
 
 /** @typedef {Error & {alphaDebugCode?: string, alphaDebugClass?: string, rehearsalCode?: string, rehearsalClass?: string, bindingRoot?: string}} DebugError */
 
@@ -459,6 +465,266 @@ async function loadBuildchainRuntime(buildchainRoot) {
       ),
     ).href
   );
+}
+
+export function inspectBuildchainHostedPath(buildchainRoot) {
+  const relativeFiles = [
+    '.github/workflows/release-tail.yml',
+    'actions/release-tail/action.yml',
+    'actions/release-tail/index.js',
+    'packages/core/publication-rehearsal-runtime.js',
+  ];
+  const files = Object.fromEntries(
+    relativeFiles.map((relativePath) => {
+      const filePath = regularFile(
+        path.join(buildchainRoot, relativePath),
+        `Buildchain hosted path ${relativePath}`,
+      );
+      return [
+        relativePath,
+        { size: fs.statSync(filePath).size, root: fileDigest(filePath) },
+      ];
+    }),
+  );
+  const action = fs.readFileSync(
+    path.join(buildchainRoot, 'actions/release-tail/index.js'),
+    'utf8',
+  );
+  const manifest = fs.readFileSync(
+    path.join(buildchainRoot, 'actions/release-tail/action.yml'),
+    'utf8',
+  );
+  const workflow = fs.readFileSync(
+    path.join(buildchainRoot, '.github/workflows/release-tail.yml'),
+    'utf8',
+  );
+  const requiredActionFragments = [
+    'from "../../packages/core/publication-rehearsal-runtime.js"',
+    'PUBLICATION_REHEARSAL_CAPSULE_CONTRACT',
+    'executePublicationRehearsal({',
+    'publicationRehearsalDiagnostic(error, { capsule })',
+    'mode: "provider"',
+  ];
+  const forbiddenActionFragments = [
+    'executeReleaseTailTransaction(',
+    'compileReleaseTailDeclaration(',
+  ];
+  if (
+    requiredActionFragments.some((fragment) => !action.includes(fragment)) ||
+    forbiddenActionFragments.some((fragment) => action.includes(fragment))
+  )
+    debugFailure(
+      'hosted-core-binding-drift',
+      'Buildchain hosted Action is not a thin wrapper over the public rehearsal core',
+    );
+  for (const fragment of [
+    'using: "node24"',
+    'main: "dist/index.js"',
+    'capsule-contract:',
+    'capsule-root:',
+    'github-token:',
+    'http-token:',
+  ])
+    if (!manifest.includes(fragment))
+      debugFailure(
+        'hosted-action-contract-drift',
+        `Buildchain hosted Action manifest is missing ${fragment}`,
+      );
+  for (const fragment of [
+    'ref: ${{ inputs.buildchain-ref }}',
+    'uses: ./.buildchain/release-tail-runtime/actions/release-tail',
+    'capsule-contract: ${{ inputs.capsule-contract }}',
+    'github-token: ${{ github.token }}',
+    'http-token: ${{ secrets.http-token }}',
+  ])
+    if (!workflow.includes(fragment))
+      debugFailure(
+        'hosted-workflow-contract-drift',
+        `Buildchain hosted workflow is missing ${fragment}`,
+      );
+  const body = {
+    schema: 'kungfu.alpha-local-hosted-path-binding/v1',
+    files,
+    actionCoreImport: '../../packages/core/publication-rehearsal-runtime.js',
+    actionCoreEntrypoint: 'executePublicationRehearsal',
+    actionMode: 'provider',
+    hostedOnly: HOSTED_ONLY_BOUNDARIES,
+  };
+  return { ...body, hostedPathRoot: digest(body) };
+}
+
+function deterministicProviderAdapters(capsule) {
+  const observed = new Map();
+  return Object.fromEntries(
+    capsule.declaration.capabilities.map((capability) => [
+      capability.adapter,
+      {
+        async readback(effect) {
+          return observed.has(effect.operationId)
+            ? {
+                outcome: 'observed',
+                subjectRoot: effect.subjectRoot,
+                targetRoot: effect.targetRoot,
+                evidenceRoots: [effect.targetRoot],
+                providerCode: 'phase-d-witness-observed',
+              }
+            : {
+                outcome: 'absent',
+                subjectRoot: '',
+                targetRoot: '',
+                evidenceRoots: [],
+                providerCode: 'phase-d-witness-absent',
+              };
+        },
+        async apply(effect) {
+          observed.set(effect.operationId, effect.targetRoot);
+        },
+      },
+    ]),
+  );
+}
+
+async function deterministicFailureDiagnostic(
+  runtime,
+  capsule,
+  capsuleRoot,
+  mode,
+) {
+  try {
+    await runtime.executePublicationRehearsal({
+      capsule,
+      capsuleRoot,
+      mode,
+      environment: { GITHUB_WORKSPACE: '/forbidden-ambient-workspace' },
+      adapters:
+        mode === 'provider' ? deterministicProviderAdapters(capsule) : {},
+    });
+  } catch (error) {
+    return runtime.publicationRehearsalDiagnostic(error, { capsule });
+  }
+  debugFailure(
+    'hosted-error-parity-not-rejected',
+    `${mode} accepted an undeclared hosted environment input`,
+  );
+}
+
+export async function runHostedParityQualification(rawOptions) {
+  const coordinates = validateReplayCoordinates(rawOptions);
+  assertCleanCheckout(ROOT, 'Kungfu source checkout');
+  const buildchain = verifyBuildchain(coordinates.buildchainRoot);
+  const hostedPath = inspectBuildchainHostedPath(coordinates.buildchainRoot);
+  const runtime = await loadBuildchainRuntime(coordinates.buildchainRoot);
+  const capsule = JSON.parse(fs.readFileSync(coordinates.capsulePath, 'utf8'));
+  const before = completeRegularFileInventory(
+    coordinates.capsuleRoot,
+    capsule.files,
+  );
+  const local = await runtime.executePublicationRehearsal({
+    capsule,
+    capsuleRoot: coordinates.capsuleRoot,
+    mode: 'simulate',
+    environment: {},
+  });
+  const hostedCoreWitness = await runtime.executePublicationRehearsal({
+    capsule,
+    capsuleRoot: coordinates.capsuleRoot,
+    mode: 'provider',
+    environment: {},
+    adapters: deterministicProviderAdapters(capsule),
+  });
+  const matchingContractRoots = {
+    capsuleRoot:
+      local.evidence.capsuleRoot === hostedCoreWitness.evidence.capsuleRoot,
+    bindingRoot:
+      local.evidence.bindingRoot === hostedCoreWitness.evidence.bindingRoot,
+    transactionRoot:
+      local.transaction.transactionRoot ===
+      hostedCoreWitness.transaction.transactionRoot,
+  };
+  if (Object.values(matchingContractRoots).some((matches) => !matches))
+    debugFailure(
+      'hosted-contract-root-mismatch',
+      'local and hosted-core witness contract roots differ',
+    );
+  const localDiagnostic = await deterministicFailureDiagnostic(
+    runtime,
+    capsule,
+    coordinates.capsuleRoot,
+    'simulate',
+  );
+  const hostedDiagnostic = await deterministicFailureDiagnostic(
+    runtime,
+    capsule,
+    coordinates.capsuleRoot,
+    'provider',
+  );
+  const matchingErrorContract =
+    localDiagnostic.errorClass === hostedDiagnostic.errorClass &&
+    localDiagnostic.code === hostedDiagnostic.code &&
+    localDiagnostic.bindingRoot === hostedDiagnostic.bindingRoot &&
+    localDiagnostic.diagnosticRoot === hostedDiagnostic.diagnosticRoot;
+  if (!matchingErrorContract)
+    debugFailure(
+      'hosted-error-contract-mismatch',
+      'local and hosted-core witness diagnostics differ',
+    );
+  const after = completeRegularFileInventory(
+    coordinates.capsuleRoot,
+    capsule.files,
+  );
+  if (before.inventoryRoot !== after.inventoryRoot)
+    debugFailure(
+      'hosted-parity-candidate-mutated',
+      'exact candidate inventory changed during hosted parity qualification',
+    );
+  const body = {
+    schema: 'kungfu.alpha-local-hosted-parity-qualification/v1',
+    status: 'passed',
+    buildchainSha: buildchain.commit,
+    buildchainTree: buildchain.tree,
+    buildchainRequiredMerge: BUILDCHAIN_REHEARSAL_MERGE,
+    hostedPathRoot: hostedPath.hostedPathRoot,
+    sharedCoreRoot:
+      hostedPath.files['packages/core/publication-rehearsal-runtime.js'].root,
+    capsuleContract: runtime.PUBLICATION_REHEARSAL_CAPSULE_CONTRACT,
+    capsuleRoot: local.evidence.capsuleRoot,
+    bindingRoot: local.evidence.bindingRoot,
+    transactionRoot: local.transaction.transactionRoot,
+    matchingContractRoots,
+    local: {
+      mode: 'simulate',
+      state: local.transaction.state,
+      truth: local.evidence.truth,
+    },
+    hostedCoreWitness: {
+      mode: 'provider',
+      state: hostedCoreWitness.transaction.state,
+      truth: hostedCoreWitness.evidence.truth,
+      observationAuthority:
+        'deterministic-in-memory-witness-not-provider-truth',
+    },
+    errorContract: {
+      code: localDiagnostic.code,
+      errorClass: localDiagnostic.errorClass,
+      bindingRoot: localDiagnostic.bindingRoot,
+      diagnosticRoot: localDiagnostic.diagnosticRoot,
+      matches: true,
+    },
+    hostedOnly: HOSTED_ONLY_BOUNDARIES,
+    candidateInventoryRoot: before.inventoryRoot,
+    candidateUnchanged: true,
+    realProviderObservationClaimed: false,
+    externalPublicationClaimed: false,
+  };
+  const report = { ...body, qualificationRoot: digest(body) };
+  writeExact(
+    path.join(
+      coordinates.scratchRoot,
+      'alpha-publication-hosted-parity-qualification/report.json',
+    ),
+    `${JSON.stringify(report, null, 2)}\n`,
+  );
+  return report;
 }
 
 function replayResponse(effect, outcome, providerCode) {
@@ -1402,6 +1668,17 @@ async function main(argv = process.argv.slice(2)) {
   if (argv[0] === 'replay-qualify') {
     const options = parseReplayArguments(argv.slice(1));
     const report = await runReplayQualification({
+      capsule: options.capsule,
+      capsuleRoot: options['capsule-root'],
+      scratchRoot: options['scratch-root'],
+      buildchainRoot: options['buildchain-root'],
+    });
+    process.stdout.write(`${JSON.stringify(report, null, 2)}\n`);
+    return;
+  }
+  if (argv[0] === 'hosted-parity') {
+    const options = parseReplayArguments(argv.slice(1));
+    const report = await runHostedParityQualification({
       capsule: options.capsule,
       capsuleRoot: options['capsule-root'],
       scratchRoot: options['scratch-root'],
