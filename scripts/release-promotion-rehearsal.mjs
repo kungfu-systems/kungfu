@@ -327,7 +327,7 @@ export function validateWorkflowSources(root, contract, overrides = {}) {
   );
   requirePattern(
     recovery,
-    /^\s+buildchain-channel: alpha[\s\S]*^\s+buildchain-ref: \$\{\{ inputs\.resume-buildchain-runtime-sha \}\}$/mu,
+    /^\s+buildchain-channel: auto[\s\S]*^\s+buildchain-ref: \$\{\{ inputs\.resume-buildchain-runtime-sha \}\}$/mu,
     findings,
     'Alpha recovery must resolve the exact reviewed publication runtime',
   );

@@ -85,6 +85,7 @@ export function validatePromotionWorkflowAuthority(
     !recover.includes(
       `uses: kungfu-systems/buildchain/.github/workflows/release-candidate-promote.yml@${recoveryRuntimeSha}`,
     ) ||
+    !/^\s+buildchain-channel: auto\s*$/mu.test(recover) ||
     !/^\s+buildchain-ref: \$\{\{ inputs\.resume-buildchain-runtime-sha \}\}\s*$/mu.test(
       recover,
     ) ||

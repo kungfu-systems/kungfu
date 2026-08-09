@@ -275,7 +275,7 @@ test('Alpha recovery reuses a verified sealed candidate through the reviewed pub
     ),
   );
   for (const binding of [
-    'buildchain-channel: alpha',
+    'buildchain-channel: auto',
     'buildchain-ref: ${{ inputs.resume-buildchain-runtime-sha }}',
     'target-ref: ${{ inputs.target-ref }}',
     'target-sha: ${{ inputs.target-sha }}',
