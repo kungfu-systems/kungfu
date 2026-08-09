@@ -281,9 +281,9 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "qualifying",
-          "definitionDigest": "sha256:9da27a2cc1e4992e411e35ebf2b0b4c8a6f5f86368dfc446fb81a8e43570b98d",
+          "definitionDigest": "sha256:7b4cf57bda0843563c3499dfedce43b98719b2935569aac36ec6145d8aa9722c",
           "credentials": {"githubToken":"write","oidc":false,"repositorySecrets":["KUNGFU_GITHUB_TOKEN"],"inheritedSecrets":false,"environment":null},
-          "externalActions": ["kungfu-systems/buildchain/.github/workflows/.declarative-auditable-demo.yml@ba41d9c165a5d4f251a6c4af30c32b5a417865d2"],
+          "externalActions": ["kungfu-systems/buildchain/.github/workflows/.declarative-auditable-demo.yml@41d4dce2f38aa4821c794b49dcfb2bcf59d0984a"],
           "steps": []
         },
         {
