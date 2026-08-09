@@ -274,7 +274,7 @@
     {
       "path": ".github/workflows/build.yml",
       "authority": "product-publication",
-      "definitionDigest": "sha256:9cae1ec7ea1247a9a6282fd680a60021445aa58a38936d87205e562914ab81d8",
+      "definitionDigest": "sha256:419fd4fb6b5423b1a37cdbfc0067da327c9d973a12938afdbcaa6768439004d3",
       "jobs": [
         {
           "id": "auditable-demo",
@@ -301,9 +301,9 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "qualifying",
-          "definitionDigest": "sha256:e0bb48b22d8b738260bb08031cb44aef493782a1055d72703e0e484831146fe4",
+          "definitionDigest": "sha256:72645c724ec648be9639748172c486644f524b4a365341a24f50c00629eaa657",
           "credentials": {"githubToken":"write","oidc":true,"repositorySecrets":["BUILDCHAIN_ARTIFACT_RELAY_S3_DOWNLOAD_ROLE_ARN","BUILDCHAIN_ARTIFACT_RELAY_S3_ROLE_ARN","BUILDCHAIN_ARTIFACT_RELAY_S3_UPLOAD_ROLE_ARN","KUNGFU_GITHUB_TOKEN"],"inheritedSecrets":false,"environment":null},
-          "externalActions": ["kungfu-systems/buildchain/.github/workflows/.build.yml@2e7e07902ac28d8f3edcfb81098ef9ebc7a91878"],
+          "externalActions": ["kungfu-systems/buildchain/.github/workflows/.build.yml@v3"],
           "steps": []
         },
         {
@@ -945,7 +945,7 @@
     {
       "path": ".github/workflows/release-new-version.yml",
       "authority": "release-control",
-      "definitionDigest": "sha256:f53f86b3f0108e92148e29fb5ef4d3413684d25eedd461624c0913f319f84bbb",
+      "definitionDigest": "sha256:26ac5b52d5bf4475c2902d249827466c1c4355deabd05377688795138700c2f6",
       "jobs": [
         {
           "id": "alpha-timeline",
@@ -962,9 +962,9 @@
           "authority": "release-control",
           "publication": "channel",
           "receipt": "qualifying",
-          "definitionDigest": "sha256:772b3ad1d6fdb84434bf2789ddc3e919ec1e22b8d1ca0dae3c816aff327b962d",
+          "definitionDigest": "sha256:1e27f8538dbdfdbec48565f818c056b7bfe39cb9d0fbb9af889b7a5d252b4dee",
           "credentials": {"githubToken":"write","oidc":true,"repositorySecrets":["BUILDCHAIN_ISSUE_APP_ID","BUILDCHAIN_ISSUE_APP_PRIVATE_KEY","KUNGFU_ALPHA_CHANNEL_SIGNING_PRIVATE_KEY","KUNGFU_GITHUB_TOKEN","KUNGFU_GOVERNANCE_AUDITOR_APP_PRIVATE_KEY"],"inheritedSecrets":false,"environment":null},
-          "externalActions": ["kungfu-systems/buildchain/.github/workflows/release-candidate-promote.yml@train/v3/v3.0/resume-candidate-run"],
+          "externalActions": ["kungfu-systems/buildchain/.github/workflows/release-candidate-promote.yml@v3"],
           "steps": []
         },
         {
@@ -982,9 +982,9 @@
           "authority": "release-control",
           "publication": "channel",
           "receipt": "qualifying",
-          "definitionDigest": "sha256:93c3e0e977d3d86b235ce2196af30ff9d8ff4b3c99feb244b86de6db9bb93e3d",
+          "definitionDigest": "sha256:a6aa487cf44f61501ac9ddfde4e14ba41cb64b87e76b94d6d9debaf934696b5f",
           "credentials": {"githubToken":"write","oidc":true,"repositorySecrets":["BUILDCHAIN_ISSUE_APP_ID","BUILDCHAIN_ISSUE_APP_PRIVATE_KEY","KUNGFU_ALPHA_CHANNEL_SIGNING_PRIVATE_KEY","KUNGFU_GITHUB_TOKEN","KUNGFU_GOVERNANCE_AUDITOR_APP_PRIVATE_KEY"],"inheritedSecrets":false,"environment":null},
-          "externalActions": ["kungfu-systems/buildchain/.github/workflows/release-candidate-promote.yml@train/v3/v3.0/resume-candidate-run"],
+          "externalActions": ["kungfu-systems/buildchain/.github/workflows/release-candidate-promote.yml@v3"],
           "steps": []
         },
         {
@@ -992,10 +992,10 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "diagnostic",
-          "definitionDigest": "sha256:411b5473ed5dcd04a7f1777b9d9167531d46b9fd0ddbe7d08c8850263479dce7",
+          "definitionDigest": "sha256:c8b364d6f99a90247b4d668bc6bf7a9dbc85f838f2326e9b885049af6618dbad",
           "credentials": {"githubToken":"read","oidc":false,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
           "externalActions": ["actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0","actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e","actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0","actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093"],
-          "steps": [{"index":1,"label":"name:Require the bounded Alpha 1 recovery identity","definitionDigest":"sha256:17ede448b460c796351019720d82f495aa4ee2ad0b1c36f5bca194612c38b71f"},{"index":2,"label":"name:Checkout immutable candidate source","definitionDigest":"sha256:e40649f5b143d21ffd7142da1bc68a742801f31c93e3ab2ada4aee4b6c2d967b"},{"index":3,"label":"uses:actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e","definitionDigest":"sha256:a869cc671103a9106dc90b4275a4148de9a5d18cd3578a2642d8ae8076d8dbf0"},{"index":4,"label":"id:recovery-preflight","definitionDigest":"sha256:928d42586c058a371bbf42e97504e267899a7b5e93e92b38f1097ab9954bc9a6"},{"index":5,"label":"name:Checkout the pinned Alpha preflight source","definitionDigest":"sha256:9a71cedbd18fda60df1b8412c351a2337187bad302098db2b110523777fe58c6"},{"index":6,"label":"name:Download the pinned Alpha preflight receipt","authority":"evidence-publication","definitionDigest":"sha256:3a7a33ef66ee436f5afbd556a303d51cd7715e270492f536c1f2569a02f64f29"},{"index":7,"label":"name:Verify the pinned Alpha preflight at its source","definitionDigest":"sha256:ec35f1079fe66c4a8ce96c1e910d6225f12070f7aef1b2f15a59791b3af1febd"},{"index":8,"label":"name:Verify promotion target preserves the candidate tree","definitionDigest":"sha256:094cc4ca0517fd5060a6e7cb51a99988b68d7ef0c64ce3b6dcc6fba5ff68e9fc"}]
+          "steps": [{"index":1,"label":"name:Require a bounded Alpha recovery identity","definitionDigest":"sha256:e6b2db59e7ca2083ea145a0a5b076d29a04d33a8f55a0d6a0b94bc38ff2b242d"},{"index":2,"label":"name:Checkout immutable candidate source","definitionDigest":"sha256:e40649f5b143d21ffd7142da1bc68a742801f31c93e3ab2ada4aee4b6c2d967b"},{"index":3,"label":"uses:actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e","definitionDigest":"sha256:a869cc671103a9106dc90b4275a4148de9a5d18cd3578a2642d8ae8076d8dbf0"},{"index":4,"label":"id:recovery-preflight","definitionDigest":"sha256:928d42586c058a371bbf42e97504e267899a7b5e93e92b38f1097ab9954bc9a6"},{"index":5,"label":"name:Checkout the pinned Alpha preflight source","definitionDigest":"sha256:9a71cedbd18fda60df1b8412c351a2337187bad302098db2b110523777fe58c6"},{"index":6,"label":"name:Download the pinned Alpha preflight receipt","authority":"evidence-publication","definitionDigest":"sha256:3a7a33ef66ee436f5afbd556a303d51cd7715e270492f536c1f2569a02f64f29"},{"index":7,"label":"name:Verify the pinned Alpha preflight at its source","definitionDigest":"sha256:ec35f1079fe66c4a8ce96c1e910d6225f12070f7aef1b2f15a59791b3af1febd"},{"index":8,"label":"name:Verify promotion target preserves the candidate tree","definitionDigest":"sha256:094cc4ca0517fd5060a6e7cb51a99988b68d7ef0c64ce3b6dcc6fba5ff68e9fc"}]
         }
       ]
     },
