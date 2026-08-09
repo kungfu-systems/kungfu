@@ -126,6 +126,7 @@
   "knownCapabilities": [
     "agentRuntime",
     "agentSession",
+    "assignmentRuntime",
     "domain",
     "journal.read.batch",
     "kfxControl",
@@ -1081,6 +1082,7 @@
       "allowedCapabilities": [
         "agentRuntime",
         "agentSession",
+        "assignmentRuntime",
         "domain",
         "journal.read.batch",
         "kfxControl",
