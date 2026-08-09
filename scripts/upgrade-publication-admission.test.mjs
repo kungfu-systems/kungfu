@@ -7,6 +7,7 @@ import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 
+import { cliQualificationRoot } from '../product/scripts/cli-surface-qualification.mjs';
 import {
   PRODUCT_UPGRADE_PUBLICATION_ADMISSION_FILE,
   PRODUCT_UPGRADE_PUBLICATION_ADMISSION_SCHEMA,
@@ -74,6 +75,55 @@ function contentRoot(value) {
 function writeJson(filePath, value) {
   fs.mkdirSync(path.dirname(filePath), { recursive: true });
   fs.writeFileSync(filePath, `${JSON.stringify(value, null, 2)}\n`);
+}
+
+function rewriteCliQualification(filePath, mutate) {
+  const report = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+  Reflect.deleteProperty(report, 'qualificationRoot');
+  mutate(report);
+  report.qualificationRoot = cliQualificationRoot(report);
+  writeJson(filePath, report);
+}
+
+function cliQualification(platform, architecture, archive, archiveBytes) {
+  const qualificationPlatform = platform === 'win32' ? 'windows' : platform;
+  const platformId = `${qualificationPlatform}-${architecture}`;
+  const body = {
+    schema: 'kungfu.cli-installed-product-qualification/v1',
+    qualified: true,
+    label: 'cli-archive',
+    identity: {
+      archive,
+      archiveSha256: `sha256:${sha256(archiveBytes)}`,
+      sourceCommit: SOURCE,
+    },
+    platform: platformId,
+    architecture,
+    version: VERSION,
+    claims: { installedProduct: true, qualifiedPlatform: platformId },
+    productIdentity: { verifiedFromInstalledCommand: true },
+    checks: {
+      kfd3: { linkedApiCount: 1 },
+      mutationPlanReceipt: {
+        planReplayStable: true,
+        receiptVerified: true,
+      },
+    },
+    isolation: {
+      sourceCheckoutRequired: false,
+      guiPrivateStateRequired: false,
+    },
+    nonClaims: [
+      ...(qualificationPlatform === 'darwin'
+        ? ['Linux', 'Windows']
+        : qualificationPlatform === 'linux'
+          ? ['macOS', 'Windows']
+          : ['macOS', 'Linux']
+      ).map((candidate) => `${candidate} is not qualified by this receipt.`),
+      'Availability metadata does not activate a KFX contribution.',
+    ],
+  };
+  return { ...body, qualificationRoot: cliQualificationRoot(body) };
 }
 
 function signedEvidence(manifest) {
@@ -192,8 +242,8 @@ function platformFixture(root, platform, architecture) {
         : `Kungfu-${platform}.zip`;
   const cliName =
     platform === 'win32'
-      ? `kungfu-cli-${platform}.zip`
-      : `kungfu-cli-${platform}.tar.gz`;
+      ? `kungfu-episodes-cli-windows-${architecture}.zip`
+      : `kungfu-episodes-cli-${platform}-${architecture}.tar.gz`;
   const desktopBytes = Buffer.from(`desktop-${platform}`);
   const cliBytes = Buffer.from(`cli-${platform}`);
   const desktopPath = path.join(releaseRoot, 'desktop', desktopName);
@@ -202,6 +252,15 @@ function platformFixture(root, platform, architecture) {
   fs.mkdirSync(path.dirname(cliPath), { recursive: true });
   fs.writeFileSync(desktopPath, desktopBytes);
   fs.writeFileSync(cliPath, cliBytes);
+  const cliQualificationPath = path.join(
+    releaseRoot,
+    'cli',
+    `kungfu-episodes-cli-${platform === 'win32' ? 'windows' : platform}-${architecture}.qualification.json`,
+  );
+  writeJson(
+    cliQualificationPath,
+    cliQualification(platform, architecture, cliName, cliBytes),
+  );
   const manifest = {
     schema: 'kungfu.product-upgrade.manifest/v1',
     productVersion: VERSION,
@@ -255,6 +314,7 @@ function platformFixture(root, platform, architecture) {
     bundleRoot,
     desktopPath,
     cliPath,
+    cliQualificationPath,
     desktopManifestPath,
     cliManifestPath,
     evidencePath,
@@ -427,7 +487,21 @@ function supportFixture(root) {
     platform: { id: 'linux-arm64' },
   });
   fs.writeFileSync(path.join(bundleRoot, 'core-qualification.txt'), 'passed\n');
-  return { bundleRoot };
+  const cliRoot = path.join(bundleRoot, 'product', 'release', 'cli');
+  const cliName = 'kungfu-episodes-cli-linux-arm64.tar.gz';
+  const cliPath = path.join(cliRoot, cliName);
+  const cliBytes = Buffer.from('cli-linux-arm64');
+  fs.mkdirSync(cliRoot, { recursive: true });
+  fs.writeFileSync(cliPath, cliBytes);
+  const cliQualificationPath = path.join(
+    cliRoot,
+    'kungfu-episodes-cli-linux-arm64.qualification.json',
+  );
+  writeJson(
+    cliQualificationPath,
+    cliQualification('linux', 'arm64', cliName, cliBytes),
+  );
+  return { bundleRoot, cliPath, cliQualificationPath };
 }
 
 function fixture() {
@@ -474,7 +548,7 @@ function withFixture(callback) {
   }
 }
 
-test('publication admission verifies three native payloads plus authoritative signed macOS bytes', () => {
+test('publication admission verifies a complete four-platform CLI payload plus authoritative signed macOS bytes', () => {
   withFixture((value) => {
     const admitted = verify(value);
     assert.deepEqual(admitted.platforms, [
@@ -501,6 +575,31 @@ test('publication admission verifies three native payloads plus authoritative si
     assert.equal(admitted.credentialIsland.runtimeSha, RUNTIME);
     assert.equal(admitted.credentialIsland.certificateSha1, CERTIFICATE_SHA1);
     assert.equal(admitted.releasePassportRoot, RELEASE_CANDIDATE_PASSPORT_ROOT);
+    assert.deepEqual(
+      admitted.cliArtifacts.map(({ platformId }) => platformId),
+      ['darwin-arm64', 'linux-arm64', 'linux-x64', 'windows-x64'],
+    );
+    const linuxArm64 = admitted.cliArtifacts.find(
+      ({ platformId }) => platformId === 'linux-arm64',
+    );
+    assert.deepEqual(
+      {
+        archive: linuxArm64.archive.name,
+        platform: linuxArm64.platform,
+        architecture: linuxArm64.architecture,
+        version: linuxArm64.version,
+        sourceCommit: linuxArm64.sourceCommit,
+        digest: linuxArm64.archive.digest,
+      },
+      {
+        archive: 'kungfu-episodes-cli-linux-arm64.tar.gz',
+        platform: 'linux',
+        architecture: 'arm64',
+        version: VERSION,
+        sourceCommit: SOURCE,
+        digest: `sha256:${sha256(fs.readFileSync(value.support.cliPath))}`,
+      },
+    );
     assert.equal(admitted.campaignRoots.length, 3);
     assert.deepEqual(admitted.channelIndexRoots, [`sha256:${'7'.repeat(64)}`]);
     assert.equal(
@@ -511,6 +610,45 @@ test('publication admission verifies three native payloads plus authoritative si
           campaign.targetVersion === VERSION,
       ),
       true,
+    );
+  });
+});
+
+test('publication admission rejects an omitted Linux ARM64 CLI archive', () => {
+  withFixture((value) => {
+    fs.rmSync(value.support.cliPath);
+    assert.throws(
+      () => verify(value),
+      /missing linux-arm64 archive kungfu-episodes-cli-linux-arm64\.tar\.gz/u,
+    );
+  });
+});
+
+test('publication admission rejects an omitted Linux ARM64 CLI qualification', () => {
+  withFixture((value) => {
+    fs.rmSync(value.support.cliQualificationPath);
+    assert.throws(
+      () => verify(value),
+      /missing linux-arm64 qualification kungfu-episodes-cli-linux-arm64\.qualification\.json/u,
+    );
+  });
+});
+
+test('publication admission rejects tampered Linux ARM64 CLI bytes', () => {
+  withFixture((value) => {
+    fs.appendFileSync(value.support.cliPath, 'tampered');
+    assert.throws(() => verify(value), /archive SHA256 mismatch/u);
+  });
+});
+
+test('publication admission rejects a Linux ARM64 CLI source mismatch', () => {
+  withFixture((value) => {
+    rewriteCliQualification(value.support.cliQualificationPath, (report) => {
+      report.identity.sourceCommit = 'f'.repeat(40);
+    });
+    assert.throws(
+      () => verify(value),
+      /linux-arm64 CLI qualification identity is not bound to the release candidate/u,
     );
   });
 });
@@ -646,7 +784,10 @@ test('publication admission rejects missing retained qualification evidence', ()
 test('publication admission rejects payload byte drift after manifest creation', () => {
   withFixture((value) => {
     fs.appendFileSync(value.platforms.win32.cliPath, 'drift');
-    assert.throws(() => verify(value), /artifact size mismatch/);
+    assert.throws(
+      () => verify(value),
+      /(?:artifact size mismatch|archive SHA256 mismatch)/u,
+    );
   });
 });
 
@@ -684,7 +825,7 @@ test('publication admission rejects an incomplete platform matrix', () => {
     });
     assert.throws(
       () => verify(value),
-      /exactly one admitted linux payload; found 0/,
+      /CLI publication requires exactly one linux-x64 payload bundle; found 0/,
     );
   });
 });
@@ -734,6 +875,7 @@ test('candidate finalization seals one rooted product admission receipt into its
       written.receipt.receiptRoot,
     );
     assert.equal(written.receipt.claims.externalPublication, false);
+    assert.equal(written.receipt.admission.cliArtifacts.length, 4);
     assert.equal(written.receipt.candidate.bundleCount, 5);
     assert.deepEqual(
       written.receipt.candidate.bundles.map(({ role }) => role).sort(),
