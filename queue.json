@@ -3,7 +3,7 @@
   "contract": "kungfu-buildchain-dev-delivery-warrant-queue",
   "repository": "kungfu-systems/kungfu",
   "protectedBase": "dev/v4/v4.0",
-  "generation": 417,
+  "generation": 418,
   "fencingCounter": 122,
   "policy": {
     "agingSeconds": 900,
@@ -4083,8 +4083,32 @@
       "recoveries": 0,
       "status": "queued",
       "terminal": null
+    },
+    {
+      "repository": "kungfu-systems/kungfu",
+      "protectedBase": "dev/v4/v4.0",
+      "pullRequestNumber": 2629,
+      "assignmentRoot": "sha256:d7abfc12d4d9976fedd1eab7ff589b6ec789069c03ab158a12ba635ca8014bee",
+      "initiativeRoot": "sha256:bfff817933e5a5ad693e4b902a84f6cc3a251235dd7377cb4091d92f805fa7ff",
+      "sourceIdentityRoot": "sha256:8e2e42c16696c6afa606a43313419e7d3ae05d3b0a0bc970f2bb7bf12a5e1dc6",
+      "deliveryClass": "non-native-fast",
+      "candidateId": "sha256:92fb32499c28cc3fe56b70ce9076d5ee0188e108f13be3a1244537d1f68645e9",
+      "sourceHead": "36bb99802d06ff2f7d6e6bf39e192ee9f3118613",
+      "sourcePatchRoot": "sha256:271be4eb11f4b1a785ad5678e3b336f4a1af53ae9f70742a842edd015035e3ea",
+      "sourceProofRoot": "sha256:5bc21a10b1c0b3b83233ad55bdbf798b39dc878c9cda564a613d6aeecd8c1f64",
+      "planRoot": "sha256:ca12b08666c1fcedd4c1468284a59ea568c1e982a04dc753556fd107111b1ba4",
+      "closureRoot": "sha256:ac6e52dc4778bd7be1e6224c9a526a00dc7fcdd56a84e07165a811b168158f3e",
+      "dependencyRoot": "sha256:6adbf33144a957cfe3558d59802692fe100d39ab70b8846bdc51f8c42bd285a0",
+      "toolchainRoot": "sha256:2ecb07894954a2e0de022615d4561e5ba3ae68376401941ecff77be03cd75a0f",
+      "priority": "ordinary",
+      "enqueuedAt": "2026-08-09T02:32:43.893Z",
+      "updatedAt": "2026-08-09T02:32:43.893Z",
+      "attempts": 1,
+      "recoveries": 0,
+      "status": "queued",
+      "terminal": null
     }
   ],
-  "updatedAt": "2026-08-09T02:29:16.280Z",
-  "stateRoot": "sha256:6826b6b7bdd9fed7c7f3c233cd79179f29bee06d63dac33da27a9210d4d9f5db"
+  "updatedAt": "2026-08-09T02:32:43.893Z",
+  "stateRoot": "sha256:6842b488216a9d656851b12b5b34222eea67746225d95190e009b14b613e5a0f"
 }
