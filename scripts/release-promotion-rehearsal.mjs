@@ -141,18 +141,22 @@ export function validateWorkflowSources(root, contract, overrides = {}) {
   requirePattern(
     build,
     new RegExp(
-      `uses: kungfu-systems/buildchain/\\.github/workflows/\\.build\\.yml@${contract.buildchain.workflow_shell_sha}`,
+      `uses: kungfu-systems/buildchain/\\.github/workflows/\\.build\\.yml@${contract.buildchain.workflow_shell_ref}`,
     ),
     findings,
-    'release-candidate build must consume the exact stable Buildchain workflow shell',
+    'release-candidate build must consume the production v3 floating workflow contract',
   );
   requirePattern(
     build,
-    new RegExp(
-      `buildchain-ref: \\$\\{\\{ inputs\\.buildchain-ref \\|\\| '${contract.buildchain.workflow_shell_sha}' \\}\\}`,
-    ),
+    new RegExp(`buildchain-ref: ${contract.buildchain.workflow_shell_ref}`),
     findings,
-    'manual validation must retain the Buildchain ref pass-through and default to the reviewed workflow shell',
+    'candidate builds must resolve the production v3 floating runtime',
+  );
+  forbidPattern(
+    build,
+    /^ {6}buildchain-ref:\s*$/m,
+    findings,
+    'manual validation must not accept a Buildchain train or exact-SHA transport override',
   );
   forbidPattern(
     build,
@@ -271,9 +275,11 @@ export function validateWorkflowSources(root, contract, overrides = {}) {
   );
   requirePattern(
     promote,
-    /uses: kungfu-systems\/buildchain\/\.github\/workflows\/release-candidate-promote\.yml@train\/v3\/v3\.0\/resume-candidate-run/u,
+    new RegExp(
+      `uses: kungfu-systems/buildchain/\\.github/workflows/release-candidate-promote\\.yml@${contract.buildchain.workflow_shell_ref}`,
+    ),
     findings,
-    'promotion must consume the bounded Buildchain Alpha recovery train',
+    'promotion must consume the production v3 floating router contract',
   );
   requirePattern(
     promote,
@@ -292,17 +298,30 @@ export function validateWorkflowSources(root, contract, overrides = {}) {
     'promotion artifact count drifted from the rehearsal contract',
   );
   const buildchainRefLines = promote.match(/^\s+buildchain-ref:\s*.+$/gm) || [];
-  const expectedBuildchainRef = `buildchain-ref: ${contract.buildchain.workflow_shell_sha}`;
+  const expectedBuildchainRef =
+    "buildchain-ref: ${{ startsWith(inputs.target-ref || github.event.pull_request.base.ref, 'alpha/') && 'v3-alpha' || 'v3' }}";
   if (
     buildchainRefLines.length !== 1 ||
     buildchainRefLines[0].trim() !== expectedBuildchainRef
   ) {
     findings.push(
       finding(
-        'promotion must bind one exact static runtime to the reviewed workflow shell; an event-scoped override or mismatched ref is forbidden',
+        'promotion must route only through the reviewed v3-alpha or v3 floating contracts',
       ),
     );
   }
+  requirePattern(
+    recovery,
+    /uses: kungfu-systems\/buildchain\/\.github\/workflows\/release-candidate-promote\.yml@v3/u,
+    findings,
+    'recovery must consume the production v3 floating router contract',
+  );
+  requirePattern(
+    recovery,
+    /^\s+buildchain-channel: alpha[\s\S]*^\s+buildchain-ref: v3-alpha$/mu,
+    findings,
+    'Alpha recovery must resolve the v3-alpha runtime through the v3 router',
+  );
   for (const permission of ['artifact-metadata', 'attestations']) {
     requirePattern(
       promote,
@@ -512,6 +531,14 @@ export function validateBuildchainLocks(root, contract) {
       findings.push(
         finding(
           `${channel} contract lock needs an immutable SHA`,
+          'buildchain-lock',
+        ),
+      );
+    }
+    if (lock.buildchain?.resolvedSha !== expected.resolved_sha) {
+      findings.push(
+        finding(
+          `${channel} contract lock resolves ${String(lock.buildchain?.resolvedSha)}, expected recorded digest ${expected.resolved_sha}`,
           'buildchain-lock',
         ),
       );
