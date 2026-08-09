@@ -26,7 +26,7 @@ function fixture(t) {
   };
 }
 
-test('installed embedded Node loads the staged node-pty native addon', (t) => {
+test('installed embedded Node spawns through the staged node-pty native addon', (t) => {
   const { installRoot, nodePtyEntry, runtimeEntry } = fixture(t);
   let invocation;
 
@@ -49,6 +49,9 @@ test('installed embedded Node loads the staged node-pty native addon', (t) => {
   assert.equal(invocation.options.env.KUNGFU_AS_VARIANT, 'node');
   assert.equal(invocation.options.env.KUNGFU_NODE_PTY_ENTRY, nodePtyEntry);
   assert.match(invocation.args[1], /typeof nodePty\.spawn/u);
+  assert.match(invocation.args[1], /nodePty\.spawn\(process\.execPath/u);
+  assert.match(invocation.args[1], /child\.onData/u);
+  assert.match(invocation.args[1], /KUNGFU_NODE_PTY_CHILD_READY/u);
 });
 
 test('installed embedded Node node-pty smoke fails closed', (t) => {
@@ -69,6 +72,6 @@ test('installed embedded Node node-pty smoke fails closed', (t) => {
           },
         },
       ),
-    /could not load node-pty[\s\S]*napi_create_function/u,
+    /could not spawn through node-pty[\s\S]*napi_create_function/u,
   );
 });
