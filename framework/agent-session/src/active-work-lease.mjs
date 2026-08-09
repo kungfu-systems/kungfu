@@ -124,6 +124,10 @@ export class ActiveWorkLeaseService {
   }
 
   acquire({ workRef, console, attempt }) {
+    return this.switch({ workRef, console, attempt });
+  }
+
+  switch({ workRef, console, attempt, previousWorkRef = null }) {
     const workKey = activeWorkKey(workRef);
     const ownerKey = refKey({
       workConsoleId: console.consoleId,
@@ -140,8 +144,7 @@ export class ActiveWorkLeaseService {
         lease: structuredClone(existing),
       });
     }
-    if (existing) return structuredClone(existing);
-    const lease = {
+    const lease = existing ?? {
       schema: ACTIVE_WORK_LEASE_SCHEMA,
       leaseId: `work-lease:${workKey.slice('sha256:'.length, 23)}:${attempt.sessionAttemptId}`,
       workKey,
@@ -153,7 +156,17 @@ export class ActiveWorkLeaseService {
       acquiredAt: this.now(),
       state: 'active',
     };
-    this.state.activeWorkLeases.push(lease);
+    const previous = previousWorkRef ? validateWorkRef(previousWorkRef) : null;
+    this.state.activeWorkLeases = this.state.activeWorkLeases.filter(
+      (candidate) =>
+        !(
+          previous &&
+          refKey(candidate) === ownerKey &&
+          sameWork(candidate, previous) &&
+          candidate.workKey !== workKey
+        ),
+    );
+    if (!existing) this.state.activeWorkLeases.push(lease);
     return structuredClone(lease);
   }
 

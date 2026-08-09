@@ -253,6 +253,10 @@ export class WorkConsoleRegistry {
       );
     }
     const binding = attemptWorkBinding(workRef);
+    const previousBinding = attempt.workBinding ?? null;
+    const bindingChanged =
+      previousBinding &&
+      bindingIdentityKey(previousBinding) !== bindingIdentityKey(binding);
     const externalProject = binding.workRef.workspaceId !== console.workspaceId;
     if (
       externalProject &&
@@ -268,18 +272,14 @@ export class WorkConsoleRegistry {
         { code: 'work_workspace_mismatch' },
       );
     }
-    if (
-      attempt.workBinding &&
-      bindingIdentityKey(attempt.workBinding) !== bindingIdentityKey(binding)
-    ) {
-      throw Object.assign(
-        new Error('SessionAttempt is already bound to another Work'),
-        { code: 'attempt_work_binding_mismatch' },
-      );
-    }
     this.#reapExpiredWorkLeases();
     try {
-      this.workLeases.acquire({ workRef: binding.workRef, console, attempt });
+      this.workLeases.switch({
+        workRef: binding.workRef,
+        console,
+        attempt,
+        previousWorkRef: previousBinding?.workRef ?? null,
+      });
     } catch (error) {
       if (error?.code !== 'native_work_already_active') throw error;
       throw Object.assign(new Error('Work already has an active Agent'), {
@@ -288,6 +288,7 @@ export class WorkConsoleRegistry {
       });
     }
     attempt.workBinding = binding;
+    if (bindingChanged) Reflect.deleteProperty(attempt, 'workProjection');
     if (receipt) this.#appendReceipt(attempt, receipt);
     console.updatedAt = this.now();
     this.#save();
