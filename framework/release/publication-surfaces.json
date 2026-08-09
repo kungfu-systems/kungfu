@@ -80,7 +80,7 @@
             "product-stable",
             "product-binaries"
           ],
-          "sourceRoot": "sha256:81a951538ea9fdca69460ab99a60adeb286ccd6164f39da1a61339666db9a7f1"
+          "sourceRoot": "sha256:e590285f72200b9150245afc2904df4be8c6682495e02dc5c09fca1aad09b8f3"
         },
         {
           "path": ".github/workflows/alpha-promotion-preflight.yml",
@@ -364,8 +364,8 @@
     "buildchain": {
       "repository": "kungfu-systems/buildchain",
       "owner": "kungfu-systems/buildchain",
-      "sourceRevision": "2e7e07902ac28d8f3edcfb81098ef9ebc7a91878",
-      "version": "3.0.5-alpha.6",
+      "sourceRevision": "58e48d73ae7fef0dd06ae02baf6d090e4da5487d",
+      "version": "3.0.6-alpha.10",
       "compatibilityMode": "stable-v3-contract-plus-exact-additive-runtime",
       "stableContractLock": ".buildchain/contract-lock.json",
       "runtimeContractLock": ".buildchain/alpha-contract-lock.json",
@@ -860,5 +860,5 @@
       }
     }
   ],
-  "registryRoot": "sha256:758831e94986595ea2d2f1eb15202631efed9b45cb10b73fc39c8c5ca950acf6"
+  "registryRoot": "sha256:5e9acf840db074de22d3685c79f89907a0a80308cb86186b1b5a009a0c166361"
 }
