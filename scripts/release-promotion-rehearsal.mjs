@@ -148,15 +148,17 @@ export function validateWorkflowSources(root, contract, overrides = {}) {
   );
   requirePattern(
     build,
-    new RegExp(`buildchain-ref: ${contract.buildchain.workflow_shell_ref}`),
+    new RegExp(
+      `buildchain-ref: \\$\\{\\{ inputs\\.buildchain-ref \\|\\| '${contract.buildchain.workflow_shell_ref}' \\}\\}`,
+    ),
     findings,
-    'candidate builds must resolve the production v3 floating runtime',
+    'candidate builds must default to the production v3 runtime while retaining the trusted manual pass-through',
   );
-  forbidPattern(
+  requirePattern(
     build,
-    /^ {6}buildchain-ref:\s*$/m,
+    /workflow_dispatch:[\s\S]*?inputs:[\s\S]*?buildchain-ref:[\s\S]*?required: false[\s\S]*?default: ""/u,
     findings,
-    'manual validation must not accept a Buildchain train or exact-SHA transport override',
+    'manual Buildchain runtime validation must remain an optional empty-default workflow_dispatch input',
   );
   forbidPattern(
     build,

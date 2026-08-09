@@ -13,6 +13,10 @@ on:
   # switch) on the full platform matrix without waiting for an alpha PR.
   workflow_dispatch:
     inputs:
+      buildchain-ref:
+        description: "Temporary Buildchain train or exact SHA for trusted manual validation"
+        required: false
+        default: ""
       platforms-json:
         description: "Optional custom platform matrix for isolated qualification reruns"
         required: false
@@ -163,9 +167,10 @@ jobs:
       BUILDCHAIN_ARTIFACT_RELAY_S3_UPLOAD_ROLE_ARN: ${{ secrets.BUILDCHAIN_ARTIFACT_RELAY_S3_UPLOAD_ROLE_ARN }}
       BUILDCHAIN_ARTIFACT_RELAY_S3_DOWNLOAD_ROLE_ARN: ${{ secrets.BUILDCHAIN_ARTIFACT_RELAY_S3_DOWNLOAD_ROLE_ARN }}
     with:
-      # The production v3 contract remains the source of authority. Buildchain
-      # resolves and records the immutable runtime SHA before any matrix work.
-      buildchain-ref: v3
+      # The production v3 workflow shell and default runtime remain the source
+      # of authority. Buildchain admits train/exact-SHA overrides only for a
+      # trusted manual actor and records the resolved immutable runtime.
+      buildchain-ref: ${{ inputs.buildchain-ref || 'v3' }}
       runner-preset: custom
       platforms-json: ${{ fromJSON(inputs.macos-overflow-request-json || '{}').mode == 'self-hosted' && '[{"id":"macos-arm64","name":"macOS ARM64 self-hosted primary","platform":"macos","runner":"[\"self-hosted\",\"macOS\",\"ARM64\",\"kungfu-build-v4-macos-arm64\"]","capabilities":["native-toolchain","node","product-artifacts","rust"]}]' || (fromJSON(inputs.macos-overflow-request-json || '{}').mode == 'github-hosted' && '[{"id":"macos-arm64","name":"macOS ARM64 GitHub-hosted overflow","platform":"macos","runner":"[\"macos-15\"]","capabilities":["native-toolchain","node","product-artifacts","rust"]}]' || (inputs.platforms-json || '[{"id":"linux-x64","name":"Linux x64","platform":"linux","runner":"[\"ubuntu-24.04\"]","capabilities":["node","native-toolchain","product-artifacts","rust"],"environment":{"CC":"gcc-14","CXX":"g++-14"}},{"id":"linux-arm64","name":"Linux ARM64","platform":"linux","runner":"[\"ubuntu-24.04-arm\"]","capabilities":["node","native-toolchain","product-artifacts","rust"]},{"id":"macos-arm64","name":"macOS ARM64","platform":"macos","runner":"[\"macos-15\"]","capabilities":["node","native-toolchain","product-artifacts","rust"]},{"id":"windows-x64","name":"Windows x64","platform":"windows","runner":"[\"windows-2022\"]","capabilities":["node","native-toolchain","product-artifacts","rust"]}]')) }}
       # Formal Alpha and Release candidates run their credential-free native

@@ -367,10 +367,63 @@ test('promotion rejects a static Buildchain ref that differs from its workflow s
   );
 });
 
+test('manual Buildchain validation retains the v3 default and declared input boundary', () => {
+  const buildPath = CONTRACT.workflows.build;
+  const original = fs.readFileSync(path.join(ROOT, buildPath), 'utf8');
+  const binding = "      buildchain-ref: ${{ inputs.buildchain-ref || 'v3' }}";
+  const withoutDefault = original.replace(
+    binding,
+    '      buildchain-ref: ${{ inputs.buildchain-ref }}',
+  );
+  assert.notEqual(withoutDefault, original);
+  const missingDefault = validateWorkflowSources(ROOT, CONTRACT, {
+    build: withoutDefault,
+  });
+  assert.equal(missingDefault.ok, false);
+  assert.ok(
+    missingDefault.findings.some((entry) =>
+      entry.message.includes('default to the production v3 runtime'),
+    ),
+  );
+
+  const withoutInput = original.replace(
+    / {6}buildchain-ref:\n {8}description: "Temporary Buildchain train or exact SHA for trusted manual validation"\n {8}required: false\n {8}default: ""\n/u,
+    '',
+  );
+  assert.notEqual(withoutInput, original);
+  const missingInput = validateWorkflowSources(ROOT, CONTRACT, {
+    build: withoutInput,
+  });
+  assert.equal(missingInput.ok, false);
+  assert.ok(
+    missingInput.findings.some((entry) =>
+      entry.message.includes('optional empty-default workflow_dispatch input'),
+    ),
+  );
+});
+
+test('candidate build rejects a committed exact Buildchain runtime pin', () => {
+  const buildPath = CONTRACT.workflows.build;
+  const original = fs.readFileSync(path.join(ROOT, buildPath), 'utf8');
+  const drifted = original.replace(
+    "      buildchain-ref: ${{ inputs.buildchain-ref || 'v3' }}",
+    '      buildchain-ref: 733812ff9405241705f5f267fe2e5ec6351e1a2d',
+  );
+  assert.notEqual(drifted, original);
+  const result = validateWorkflowSources(ROOT, CONTRACT, { build: drifted });
+  assert.equal(result.ok, false);
+  assert.ok(
+    result.findings.some((entry) =>
+      entry.message.includes('default to the production v3 runtime'),
+    ),
+  );
+});
+
 test('PR-stage builds reject a premature publish-source lock', () => {
   const buildPath = CONTRACT.workflows.build;
   const original = fs.readFileSync(path.join(ROOT, buildPath), 'utf8');
-  const buildchainRef = '      buildchain-ref: v3';
+  const buildchainRef =
+    "      buildchain-ref: ${{ inputs.buildchain-ref || 'v3' }}";
   const drifted = original.replace(
     buildchainRef,
     [
