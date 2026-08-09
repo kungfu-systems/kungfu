@@ -137,8 +137,7 @@ fn runtime_build_id_from_json(contents: &str) -> Result<String, String> {
 }
 
 fn runtime_build_id() -> Result<String, String> {
-    let Some(manifest_path) = env::var_os("KUNGFU_UPGRADE_MANIFEST").filter(|v| !v.is_empty())
-    else {
+    let Some(manifest_path) = resolved_upgrade_manifest_path() else {
         return Ok(DEVELOPMENT_RUNTIME_BUILD_ID.to_string());
     };
     let contents = fs::read_to_string(&manifest_path).map_err(|e| {
@@ -150,6 +149,24 @@ fn runtime_build_id() -> Result<String, String> {
     runtime_build_id_from_json(&contents)
 }
 
+fn adjacent_upgrade_manifest(executable: &Path) -> Option<PathBuf> {
+    executable.parent()?.parent().map(|resources| {
+        resources
+            .join("upgrade")
+            .join("kungfu-release-manifest.json")
+    })
+}
+
+fn resolved_upgrade_manifest_path() -> Option<PathBuf> {
+    if let Some(explicit) = env::var_os("KUNGFU_UPGRADE_MANIFEST").filter(|v| !v.is_empty()) {
+        return Some(PathBuf::from(explicit));
+    }
+    env::current_exe()
+        .ok()
+        .and_then(|executable| adjacent_upgrade_manifest(&executable))
+        .filter(|manifest| manifest.is_file())
+}
+
 fn python_cache_environment() -> Result<PythonCacheEnvironment, String> {
     let cache_home = product_cache_home()?;
     let pycache_prefix = cache_home.join("python").join(runtime_build_id()?);
@@ -157,6 +174,24 @@ fn python_cache_environment() -> Result<PythonCacheEnvironment, String> {
         cache_home,
         pycache_prefix,
     })
+}
+
+/// Establish the product cache contract in this process before a native
+/// runtime variant takes ownership. Normal CLI and GUI launches already pass
+/// these variables to children, but a detached Node worker can enter through
+/// `variant::dispatch` directly and must not depend on its parent having done
+/// so. This also protects workers that survive an in-place App upgrade.
+pub fn configure_product_cache_environment() -> Result<(), String> {
+    let manifest = resolved_upgrade_manifest_path();
+    let cache = python_cache_environment()?;
+    if env::var_os("KUNGFU_UPGRADE_MANIFEST").is_none() {
+        if let Some(manifest) = manifest {
+            env::set_var("KUNGFU_UPGRADE_MANIFEST", manifest);
+        }
+    }
+    env::set_var("KF_CACHE_HOME", cache.cache_home);
+    env::set_var("PYTHONPYCACHEPREFIX", cache.pycache_prefix);
+    Ok(())
 }
 
 /// Whether this process was invoked under the product entry name rather than
@@ -459,6 +494,14 @@ mod tests {
         );
         assert!(runtime_build_id_from_json(r#"{"runtimeBuildId":"../escape"}"#).is_err());
         assert!(runtime_build_id_from_json(r#"{"version":"4.0.0"}"#).is_err());
+        assert_eq!(
+            adjacent_upgrade_manifest(Path::new(
+                "/Applications/Kungfu Episodes.app/Contents/Resources/kungfu/kungfu"
+            )),
+            Some(PathBuf::from(
+                "/Applications/Kungfu Episodes.app/Contents/Resources/upgrade/kungfu-release-manifest.json"
+            ))
+        );
     }
 
     #[test]

@@ -72,6 +72,13 @@ pub fn dispatch() -> Option<i32> {
                 env::args_os().nth(1).as_deref(),
             ) =>
         {
+            // This fast path bypasses the normal product launch functions, so
+            // the worker itself must establish the external Python cache
+            // contract before it can launch any bundled interpreter child.
+            if let Err(message) = crate::launch::configure_product_cache_environment() {
+                eprintln!("kungfu: {message}");
+                return Some(1);
+            }
             run_node()
         }
         Some("node") => {

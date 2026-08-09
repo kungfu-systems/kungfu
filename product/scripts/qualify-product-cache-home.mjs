@@ -152,8 +152,80 @@ export function qualifyProductCacheHome(options = {}) {
     fail('packaged GUI did not report its qualification-ready marker');
   }
 
+  // Detached Agent Session workers enter the native Node variant before the
+  // normal CLI/GUI launchers. Exercise that exact cold path without inherited
+  // cache variables, then have it start the bundled interpreter directly. The
+  // native executable itself must recover the adjacent release manifest and
+  // establish the external, versioned bytecode cache contract.
+  const nativeNodeHome = path.join(cacheHome, 'native-node-home');
+  const nativeNodeCacheHome = path.join(
+    nativeNodeHome,
+    'Library',
+    'Caches',
+    'kungfu',
+  );
+  fs.mkdirSync(nativeNodeHome, { recursive: true });
+  const nativeNodeProbe = path.join(cacheHome, 'native-node-cache-probe.mjs');
+  const bundledPython = path.join(
+    app,
+    'Contents',
+    'Resources',
+    'kungfu',
+    'python',
+    'bin',
+    'python3',
+  );
+  fs.writeFileSync(
+    nativeNodeProbe,
+    [
+      "import { spawnSync } from 'node:child_process';",
+      'if (!process.env.KF_CACHE_HOME || !process.env.PYTHONPYCACHEPREFIX) process.exit(91);',
+      "const child = spawnSync(process.argv[2], ['-c', 'import pkgutil'], { env: process.env, encoding: 'utf8' });",
+      "if (child.status !== 0) { process.stderr.write(child.stderr || 'python cache probe failed'); process.exit(child.status ?? 92); }",
+      "process.stdout.write('KF_NATIVE_NODE_CACHE_READY\\n');",
+    ].join('\n'),
+  );
+  const nativeNodeEnv = {
+    ...Object.fromEntries(
+      Object.entries(ambientEnv).filter(
+        ([key]) =>
+          ![
+            'KF_CACHE_HOME',
+            'KF_INSTANCE_HOME',
+            'PYTHONPYCACHEPREFIX',
+            'KUNGFU_UPGRADE_MANIFEST',
+          ].includes(key),
+      ),
+    ),
+    HOME: nativeNodeHome,
+    KUNGFU_AS_VARIANT: 'node',
+    KUNGFU_NODE_VARIANT_ENTRY: nativeNodeProbe,
+  };
+  const nativeNodeInvocation = runCommand(
+    cli,
+    [nativeNodeProbe, bundledPython],
+    {
+      cwd: cacheHome,
+      env: nativeNodeEnv,
+      encoding: 'utf8',
+      timeout: 60_000,
+      maxBuffer: 16 * 1024 * 1024,
+    },
+  );
+  if (nativeNodeInvocation.status !== 0) {
+    fail(
+      `native Node cache probe exited ${nativeNodeInvocation.status ?? nativeNodeInvocation.signal}: ${(nativeNodeInvocation.stderr || '').trim()}`,
+    );
+  }
+  if (!nativeNodeInvocation.stdout.includes('KF_NATIVE_NODE_CACHE_READY')) {
+    fail('native Node cache probe did not report its ready marker');
+  }
+
   const afterDigest = treeDigest(app);
   const cacheBytecode = bytecodePaths(path.join(cacheHome, 'python'));
+  const nativeNodeBytecode = bytecodePaths(
+    path.join(nativeNodeCacheHome, 'python'),
+  );
   const finalBytecode = bytecodePaths(app);
   if (beforeDigest !== afterDigest)
     fail('application tree changed after CLI use');
@@ -162,6 +234,9 @@ export function qualifyProductCacheHome(options = {}) {
   }
   if (cacheBytecode.length === 0) {
     fail('CLI use did not create Python bytecode under KF_CACHE_HOME/python');
+  }
+  if (nativeNodeBytecode.length === 0) {
+    fail('native Node worker did not externalize bundled Python bytecode');
   }
   if (verifySignature) verifyCodesign(app, runCommand);
 
@@ -177,6 +252,7 @@ export function qualifyProductCacheHome(options = {}) {
       immutableAppTree: true,
       noPackagedPythonBytecode: true,
       externalVersionedPythonCache: true,
+      nativeNodeWorkerCacheBootstrap: true,
       packagedGuiBoot: true,
     },
   };
