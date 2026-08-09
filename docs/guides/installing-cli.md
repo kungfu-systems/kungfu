@@ -1,6 +1,38 @@
 # Install the standalone Kungfu CLI
 
+## Quick install
+
+The public routes below stay the same across Kungfu versions. They resolve the
+release currently selected by the Buildchain publication state rendered on the
+public [installation page](https://kungfu.tech/install/). That page owns the
+current version, channel, Desktop GUI downloads, byte sizes, and SHA-256
+digests.
+
+macOS and Linux use the reviewed POSIX installer:
+
+```sh
+curl -fsSL https://kungfu.tech/install.sh | sh
+```
+
+Windows PowerShell uses the reviewed PowerShell installer:
+
+```powershell
+irm https://kungfu.tech/install.ps1 | iex
+```
+
+These are convenience forms, not a claim that TLS alone proves the release.
+Each friendly route is a Buildchain-bound projection of the selected signed
+release channel. It cannot reinterpret a version, change channels, or authorize
+product bytes on its own.
+
+Stable and Alpha remain distinct. An Alpha-only public launch must say `alpha`
+in the page, installer plan, installed status, and retained receipts. A missing
+qualified Stable channel fails honestly instead of silently selecting Alpha.
+
 ## Make Kungfu available in PATH
+
+Standalone archive installations print their per-user bin directory. Add that
+exact directory to the environment used by your shell and agent.
 
 If you installed the desktop app on macOS, open **Kungfu → Install 'kungfu'
 Command in PATH**. The app creates `/usr/local/bin/kungfu` as a launcher for the
@@ -19,41 +51,9 @@ prompt includes the exact local CLI path, so the agent does not have to guess
 where the app was installed. Do not hand-create a symlink to a guessed app
 bundle path; moving or replacing the app would leave that guess stale.
 
-Standalone archive installations print their per-user bin directory. Add that
-exact directory to the environment used by your shell and agent, then run the
-same verification commands above. The release and ownership boundary for that
-installer follows below.
+The release and ownership boundary for both installation paths follows below.
 
-> **Current publication:** `v4.0.0-alpha.1` is available through the
-> Buildchain-qualified installers below and the public installation page. It is
-> an Alpha prerelease, not a Stable channel. If a future request returns a 404,
-> an explicit unavailable result, or evidence that does not bind the requested
-> version and channel, fail closed rather than substituting a source fixture.
-
-## Convenience commands
-
-Unix-like systems use the reviewed POSIX installer:
-
-```sh
-curl --fail --proto '=https' --tlsv1.2 https://kungfu.tech/install.sh | sh
-```
-
-Windows PowerShell uses the reviewed PowerShell installer:
-
-```powershell
-irm https://kungfu.tech/install.ps1 | iex
-```
-
-These are convenience forms, not a claim that TLS alone proves the release.
-The friendly route is a Buildchain-bound projection of one signed release
-channel. It cannot reinterpret a version, change channels, or authorize product
-bytes on its own.
-
-Stable and Alpha remain distinct. An Alpha-only public launch must say `alpha`
-in the page, installer plan, installed status, and retained receipts. A missing
-qualified Stable channel fails honestly instead of silently selecting Alpha.
-
-## Download, inspect, pin, then run
+## Higher assurance: download, inspect, pin, then run
 
 For higher-assurance or automated use:
 
@@ -68,14 +68,14 @@ Example shape:
 ```sh
 curl --fail --proto '=https' --tlsv1.2 \
   --output install.sh \
-  https://kungfu.tech/installers/v1/alpha/CHANNEL_ROOT/install.sh
+  https://kungfu.tech/installers/v1/CHANNEL/CHANNEL_ROOT/install.sh
 shasum -a 256 install.sh
 sed -n '1,240p' install.sh
-sh install.sh --channel alpha --version VERSION
+sh install.sh --channel CHANNEL --version VERSION
 ```
 
-The installation page supplies the concrete `CHANNEL_ROOT`, `VERSION`, byte
-size, and digest. Never copy placeholders from this guide.
+The installation page supplies the concrete `CHANNEL`, `CHANNEL_ROOT`,
+`VERSION`, byte size, and digest. Never copy placeholders from this guide.
 
 ## Options and filesystem ownership
 
@@ -112,9 +112,8 @@ and checks:
   `archive` install source;
 - release-manifest and artifact roots;
 - archive byte size and SHA-256 digest;
-- retained signing evidence plus macOS code-signing where applicable; the first
-  Windows Alpha is intentionally unsigned and relies on the exact signed-channel
-  digest instead of Authenticode; and
+- retained platform-signing evidence where required by the selected release,
+  together with any explicit signing exception bound to that publication; and
 - the extracted product and bundled runtime identity.
 
 The staged CLI repeats the signed-channel and product checks through

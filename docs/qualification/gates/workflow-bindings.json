@@ -655,14 +655,14 @@
       "adapter": {
         "type": "buildchain-release-candidate-recovery",
         "kind": "job-uses",
-        "uses": "kungfu-systems/buildchain/.github/workflows/release-candidate-promote.yml@v3",
+        "uses": "kungfu-systems/buildchain/.github/workflows/release-candidate-promote.yml@c49897528e04f38124869d0e5a6ce73acfb9d7ca",
         "job": {
           "needs": "recovery-preflight",
           "if": "${{ always() && github.event_name == 'workflow_dispatch' && inputs.resume-candidate-run-id != '' && needs.recovery-preflight.result == 'success' }}"
         },
         "with": {
           "buildchain-channel": "alpha",
-          "buildchain-ref": "v3-alpha",
+          "buildchain-ref": "${{ inputs.resume-buildchain-runtime-sha }}",
           "channel": "alpha",
           "target-ref": "${{ inputs.target-ref }}",
           "target-sha": "${{ inputs.target-sha }}",
