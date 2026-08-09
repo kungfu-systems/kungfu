@@ -297,6 +297,7 @@ test('declared discovery routes are zero-write in a cold read-only fixture', (t)
     '.github/workflows/dev-alpha-candidate-patrol.yml',
     '.github/workflows/dev-delivery-warrant-terminal.yml',
     '.github/workflows/dev-pr-auto-merge.yml',
+    '.github/workflows/queue-admission-lease.yml',
     '.github/workflows/dev-gate-latency-patrol.yml',
     '.github/workflows/dev-verify-patrol.yml',
     '.github/workflows/gate-measurement.yml',
