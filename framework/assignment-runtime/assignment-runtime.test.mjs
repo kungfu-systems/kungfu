@@ -38,7 +38,7 @@ test('freezes one backend-neutral Assignment Runtime contract', () => {
   assert.deepEqual(validateContract(), { ok: true, errors: [] });
   assert.equal(contract.protocol.id, 'kungfu.assignment-runtime/v1');
   assert.equal(contract.authority.writer, 'realm-runtime');
-  assert.equal(contract.compatibility.dualWrite, 'forbidden');
+  assert.equal(Object.hasOwn(contract, 'compatibility'), false);
   assert.equal(contract.localRuntimeProfile.publicPathContract, false);
   assert.equal(contract.implementationStatus.localRuntime, 'deferred-r1');
   assert.equal(
