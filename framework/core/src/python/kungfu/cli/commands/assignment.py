@@ -17,7 +17,7 @@ from kungfu import assignment_close
 from kungfu import assignment_evidence
 from kungfu import assignment_review_lifecycle
 from kungfu import assignment_start
-from kungfu.assignment_runtime.stdio import create_runtime_host_command, profile_source
+from kungfu.assignment_runtime import create_runtime_host_command, profile_source
 from kungfu import dogfood as dogfood_api
 from kungfu import profile_composition, profile_sdk
 from kungfu.agent import run_agent

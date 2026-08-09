@@ -87,7 +87,7 @@ test('pins the current Assignment authority and client-path audit', () => {
       ['def _runtime(', 'def _profile_action('],
     ],
     [
-      'framework/core/src/python/kungfu/assignment_runtime/stdio.py',
+      'framework/core/src/python/kungfu/assignment_runtime/__init__.py',
       ['for name in ("work-control", "mission-control")', 'runtime-host'],
     ],
     [
