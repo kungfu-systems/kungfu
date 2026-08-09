@@ -320,6 +320,22 @@ def _validate_surface_capabilities(capabilities, *, endpoint):
     )
 
 
+def _run_worker_preserving_standard_streams(runner, *argv):
+    """Start the detached worker without changing caller stdio inheritance."""
+
+    inheritance = []
+    for descriptor in (0, 1, 2):
+        try:
+            inheritance.append((descriptor, os.get_inheritable(descriptor)))
+        except OSError:
+            pass
+    try:
+        return runner(*argv)
+    finally:
+        for descriptor, inheritable in inheritance:
+            os.set_inheritable(descriptor, inheritable)
+
+
 def ensure(runtime_dir, *, runner=None):
     """Ensure and return the runtime-scoped detached Agent Session endpoint."""
 
@@ -349,7 +365,11 @@ def ensure(runtime_dir, *, runner=None):
         import kungfu
 
         runner = kungfu.__binding__.libnode.run
-    exit_code = runner(sys.argv[0], entry)
+    # The embedded Node bootstrap marks inherited descriptors close-on-exec on
+    # some platforms. Restore the exact caller flags before a provider-native
+    # child is launched; otherwise the first provider process starts without a
+    # terminal while later attempts (which reuse the worker) happen to work.
+    exit_code = _run_worker_preserving_standard_streams(runner, sys.argv[0], entry)
     if exit_code not in (None, 0):
         raise ValueError(
             f"native Agent Session bridge exited with status {int(exit_code)}"
