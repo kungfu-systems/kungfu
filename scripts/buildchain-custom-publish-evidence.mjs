@@ -4,8 +4,11 @@
 import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 import { verifyUpgradePublicationAdmission } from './upgrade-publication-admission.mjs';
+
+const SCRIPT_DIR = path.dirname(fileURLToPath(import.meta.url));
 
 function requireEnv(name) {
   const value = process.env[name];
@@ -41,13 +44,14 @@ function normalizeArtifact(artifact, index) {
     ...(artifact.ref ? { ref: artifact.ref } : {}),
     digest: artifact.digest,
     ...(artifact.role ? { role: artifact.role } : {}),
+    ...(artifact.platform ? { platform: artifact.platform } : {}),
   };
 }
 
 function generateKfdEvidence() {
   const result = spawnSync(
     process.execPath,
-    ['scripts/buildchain-kfd-evidence.mjs', '--write'],
+    [path.join(SCRIPT_DIR, 'buildchain-kfd-evidence.mjs'), '--write'],
     {
       cwd: process.cwd(),
       encoding: 'utf8',
@@ -74,6 +78,7 @@ function main() {
   const upgradeAdmission = verifyUpgradePublicationAdmission({
     payloadRoot:
       process.env.KF_UPGRADE_PUBLISH_PAYLOAD_ROOT ||
+      process.env.BUILDCHAIN_RELEASE_CANDIDATE_PAYLOAD_ROOT ||
       path.join(releaseCandidateRoot, 'payloads'),
     releaseCandidatePassportPath:
       process.env.KF_UPGRADE_RELEASE_CANDIDATE_PASSPORT ||

@@ -68,6 +68,27 @@
         "invisible_context_boundary": "The source and test audit is pinned to Kungfu commit 9277c15752b810f71e1666fbd1ba777a4b94678d; runtime implementation, deployed behavior, and hidden model parameters are not claimed"
       }
     },
+    "docs/architecture/assignment-runtime-r1-local-profile.md": {
+      "metadata_schema": "kungfu.document-metadata/v1",
+      "document_status": "draft",
+      "doc_type": "analysis",
+      "review_state": "unreviewed",
+      "sensitivity": "public",
+      "sources": [
+        "local-files"
+      ],
+      "period": "2026-08-08",
+      "theme": "local-first-assignment-runtime-api",
+      "confidence": "high",
+      "evidence_grade": "A",
+      "last_reviewed": "2026-08-08",
+      "ai_provenance": {
+        "model_family": "OpenAI GPT-5",
+        "product": "Codex",
+        "generated_at": "2026-08-08",
+        "invisible_context_boundary": "Based on the R0 contract, Work Control Profile adapter, and disposable-Home qualification in this source tree; GUI, CLI, Agent, KFX, loopback, Cluster, release cutover, and hidden model parameters are not claimed"
+      }
+    },
     "docs/architecture/domain-profile-authoring.md": {
       "metadata_schema": "kungfu.document-metadata/v1",
       "document_status": "active",

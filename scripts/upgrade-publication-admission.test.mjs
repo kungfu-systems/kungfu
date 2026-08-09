@@ -12,6 +12,7 @@ import {
   PRODUCT_UPGRADE_PUBLICATION_ADMISSION_SCHEMA,
   PRODUCT_UPGRADE_PUBLICATION_CAPSULE_FILE,
   PRODUCT_UPGRADE_PUBLICATION_CAPSULE_SCHEMA,
+  promotableUpgradePlatforms,
   verifyUpgradePublicationAdmission,
   verifyUpgradePublicationPayloads,
   writeUpgradePublicationAdmission,
@@ -35,6 +36,20 @@ const RELEASE_CANDIDATE_PASSPORT = {
 const RELEASE_CANDIDATE_PASSPORT_ROOT = qualificationContentRoot(
   RELEASE_CANDIDATE_PASSPORT,
 );
+
+test('upgrade publication claims only advertised promotion-eligible platforms', () => {
+  assert.deepEqual(promotableUpgradePlatforms(CONTRACT), []);
+  assert.deepEqual(
+    promotableUpgradePlatforms({
+      currentClaims: {
+        win32: { advertised: true, promotionEligible: false },
+        linux: { advertised: true, promotionEligible: true },
+        darwin: { advertised: false, promotionEligible: true },
+      },
+    }),
+    ['linux'],
+  );
+});
 
 function sha256(value) {
   return createHash('sha256').update(value).digest('hex');
@@ -307,7 +322,11 @@ function credentialManifest(root, bundleRoot, evidencePath, dmgPath, zipPath) {
 }
 
 function credentialFixture(root) {
-  const bundleRoot = path.join(root, 'payloads', 'kungfu-macos-credential');
+  const bundleRoot = path.join(
+    root,
+    'payloads',
+    `kungfu-macos-credential-${SOURCE}`,
+  );
   const releaseRoot = path.join(bundleRoot, 'product', 'release');
   const dmgPath = path.join(
     releaseRoot,
@@ -492,6 +511,65 @@ test('publication admission verifies three native payloads plus authoritative si
           campaign.targetVersion === VERSION,
       ),
       true,
+    );
+  });
+});
+
+test('publication admission keeps exact installer bytes while omitting unadvertised upgrade qualification claims', () => {
+  withFixture((value) => {
+    for (const platform of Object.values(value.platforms)) {
+      fs.rmSync(platform.evidencePath);
+    }
+    writeJson(
+      path.join(
+        value.platforms.darwin.bundleRoot,
+        '.buildchain',
+        'signing',
+        'credential-island-evidence.json',
+      ),
+      { retainedCopy: true },
+    );
+    const manifestOnlyRoot = path.join(
+      value.payloadRoot,
+      'kungfu-credential-manifest-macos',
+    );
+    fs.mkdirSync(manifestOnlyRoot, { recursive: true });
+    fs.copyFileSync(
+      value.credential.manifestPath,
+      path.join(manifestOnlyRoot, 'manifest.json'),
+    );
+    const admitted = verifyUpgradePublicationPayloads({
+      payloadRoot: value.payloadRoot,
+      releaseCandidatePassportPath: value.passportPath,
+      expectedVersion: VERSION,
+      qualificationPlatforms: [],
+    });
+    assert.deepEqual(admitted.platforms, [
+      'darwin-arm64',
+      'linux-x64',
+      'win32-x64',
+    ]);
+    assert.deepEqual(admitted.evidenceRefs, []);
+    assert.deepEqual(admitted.campaignRoots, []);
+    assert.equal(
+      admitted.credentialIsland.platformId,
+      'macos-arm64-credential',
+    );
+  });
+});
+
+test('publication admission still requires evidence for every advertised upgrade platform', () => {
+  withFixture((value) => {
+    fs.rmSync(value.platforms.linux.evidencePath);
+    assert.throws(
+      () =>
+        verifyUpgradePublicationPayloads({
+          payloadRoot: value.payloadRoot,
+          releaseCandidatePassportPath: value.passportPath,
+          expectedVersion: VERSION,
+          qualificationPlatforms: ['linux'],
+        }),
+      /must contain exactly one/u,
     );
   });
 });

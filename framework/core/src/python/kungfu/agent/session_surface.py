@@ -323,8 +323,10 @@ def _validate_surface_capabilities(capabilities, *, endpoint):
 def ensure(runtime_dir, *, runner=None):
     """Ensure and return the runtime-scoped detached Agent Session endpoint."""
 
-    endpoint = endpoint_for_runtime(runtime_dir)
-    os.environ["KUNGFU_AGENT_SESSION_ENDPOINT"] = endpoint
+    explicit_endpoint = os.environ.get("KUNGFU_AGENT_SESSION_ENDPOINT")
+    endpoint = explicit_endpoint or endpoint_for_runtime(runtime_dir)
+    if explicit_endpoint is None:
+        os.environ["KUNGFU_AGENT_SESSION_ENDPOINT"] = endpoint
     try:
         capabilities = invoke(
             {"operation": "capabilities"}, endpoint=endpoint, timeout=0.25
@@ -332,7 +334,8 @@ def ensure(runtime_dir, *, runner=None):
         _validate_surface_capabilities(capabilities, endpoint=endpoint)
         return endpoint
     except (OSError, socket.timeout):
-        pass
+        if explicit_endpoint is not None:
+            raise
 
     entry = _resolve_native_entry()
     if entry is None:

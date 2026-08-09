@@ -231,7 +231,6 @@ export function createMockAgentMachine({
                 : work('write bounded Project deliverable')),
               `MOCK FILE WRITTEN: ${written.path}`,
               'MOCK READY FOR REVIEW: Agent does not approve its own Work.',
-              'mock› ',
             ],
             phase,
             0,

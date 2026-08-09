@@ -276,10 +276,75 @@ function findFirstParentTreeEquivalent(sourceTree, headSha, gitRead) {
   return '';
 }
 
+function findFirstParentPatchEquivalent(
+  sourceSha,
+  baseParent,
+  candidateParent,
+  gitRead,
+) {
+  const sourceBase = gitRead(['merge-base', sourceSha, candidateParent]);
+  if (!/^[0-9a-f]{40}$/u.test(sourceBase)) return '';
+  const sourcePatch = gitRead([
+    'diff',
+    '--binary',
+    '--full-index',
+    '--no-renames',
+    sourceBase,
+    sourceSha,
+    '--',
+  ]);
+  if (!sourcePatch) return '';
+
+  const candidates = gitRead([
+    'log',
+    '--first-parent',
+    `--max-count=${KFD_REBASE_EQUIVALENCE_ANCESTOR_LIMIT}`,
+    '--format=%H',
+    candidateParent,
+  ])
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean);
+  const baseIndex = candidates.indexOf(baseParent);
+  if (baseIndex < 0) return '';
+  for (const commitSha of candidates.slice(0, baseIndex)) {
+    const replayPatch = gitRead([
+      'diff',
+      '--binary',
+      '--full-index',
+      '--no-renames',
+      baseParent,
+      commitSha,
+      '--',
+    ]);
+    if (replayPatch === sourcePatch) return commitSha;
+  }
+  return '';
+}
+
+export function githubMergeGroupCoordinates(
+  env = process.env,
+  readFile = fs.readFileSync,
+) {
+  if (env.GITHUB_EVENT_NAME !== 'merge_group' || !env.GITHUB_EVENT_PATH)
+    return null;
+  try {
+    const event = JSON.parse(readFile(env.GITHUB_EVENT_PATH, 'utf8'));
+    const baseSha = String(event?.merge_group?.base_sha || '');
+    const headSha = String(event?.merge_group?.head_sha || '');
+    if (!/^[0-9a-f]{40}$/u.test(baseSha) || !/^[0-9a-f]{40}$/u.test(headSha))
+      return null;
+    return { baseSha, headSha };
+  } catch {
+    return null;
+  }
+}
+
 export function findGitTreeEquivalentAncestor(
   sourceSha,
   headSha,
   gitRead = gitMaybe,
+  mergeGroup = githubMergeGroupCoordinates(),
 ) {
   if (gitRead(['cat-file', '-t', sourceSha]) !== 'commit') return '';
   const sourceTree = gitRead(['rev-parse', `${sourceSha}^{tree}`]);
@@ -306,6 +371,27 @@ export function findGitTreeEquivalentAncestor(
   ])
     .trim()
     .split(/\s+/u);
+
+  // GitHub merge queue currently emits a linear replay rather than the
+  // historical two-parent synthetic merge. Trust that shape only when the
+  // merge_group event binds this exact checked head and protected base, then
+  // require the same bounded byte-for-byte cumulative patch equivalence used
+  // for the synthetic form. Ordinary local and PR checkouts cannot enter this
+  // path by merely resembling a replay graph.
+  if (
+    mergeSha === headSha &&
+    baseParent &&
+    !candidateParent &&
+    mergeGroup?.headSha === headSha &&
+    /^[0-9a-f]{40}$/u.test(mergeGroup.baseSha)
+  ) {
+    return findFirstParentPatchEquivalent(
+      sourceSha,
+      mergeGroup.baseSha,
+      headSha,
+      gitRead,
+    );
+  }
   if (
     mergeSha !== headSha ||
     !baseParent ||
@@ -316,7 +402,24 @@ export function findGitTreeEquivalentAncestor(
   const headTree = gitRead(['rev-parse', `${headSha}^{tree}`]);
   const candidateTree = gitRead(['rev-parse', `${candidateParent}^{tree}`]);
   if (headTree !== candidateTree) return '';
-  return findFirstParentTreeEquivalent(sourceTree, candidateParent, gitRead);
+  const treeMatch = findFirstParentTreeEquivalent(
+    sourceTree,
+    candidateParent,
+    gitRead,
+  );
+  if (treeMatch) return treeMatch;
+
+  // A protected base may advance in unrelated paths while GitHub exactly
+  // replays the candidate's Project Cut. The whole trees then differ even
+  // though the cumulative binary patch is byte-for-byte identical. Admit only
+  // a bounded first-parent candidate whose complete patch from the protected
+  // base exactly matches sourceSha's complete patch from their merge base.
+  return findFirstParentPatchEquivalent(
+    sourceSha,
+    baseParent,
+    candidateParent,
+    gitRead,
+  );
 }
 
 export function assertKfdEvidenceSourceBinding({
@@ -336,7 +439,7 @@ export function assertKfdEvidenceSourceBinding({
     !gitSha.test(findTreeEquivalentAncestor(sourceSha, headSha))
   ) {
     throw new Error(
-      `KFD evidence source ${sourceSha} is not an ancestor of checked head ${headSha} and has no tree-equivalent ancestor; regenerate the evidence after rebasing`,
+      `KFD evidence source ${sourceSha} is not an ancestor of checked head ${headSha} and has no exact protected-replay equivalent ancestor; regenerate the evidence after rebasing`,
     );
   }
   return sourceSha;
@@ -686,6 +789,7 @@ export function sourceAcceptancePlan(files, evidenceBaseCommit = '') {
         'scripts/platform-command.test.mjs',
         'product/scripts/dist.test.mjs',
         'product/scripts/dist-cli-executable-layout.test.mjs',
+        'product/scripts/installed-kungfu/index.test.mjs',
         'scripts/opencode-local-model-canary-workflow.test.mjs',
         'scripts/kungfu-workflow-authority.test.mjs',
         'scripts/code-complexity-budget.test.mjs',

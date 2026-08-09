@@ -873,14 +873,32 @@ export async function settleDequeuedMergeGroup({
     token,
     request,
   });
+  const cancellationPromise = removalPromise.then(
+    (observedRemoval) =>
+      observedRemoval.reason === 'merged'
+        ? {
+            pullRequest,
+            matchedRunCount: 0,
+            cancellations: [],
+          }
+        : cancelDequeuedMergeGroupRuns({
+            repository,
+            pullRequest,
+            workflow,
+            token,
+            request,
+          }),
+    () =>
+      cancelDequeuedMergeGroupRuns({
+        repository,
+        pullRequest,
+        workflow,
+        token,
+        request,
+      }),
+  );
   const results = await Promise.allSettled([
-    cancelDequeuedMergeGroupRuns({
-      repository,
-      pullRequest,
-      workflow,
-      token,
-      request,
-    }),
+    cancellationPromise,
     removalPromise.then((observedRemoval) =>
       recordDequeuedRepairMarker({
         repository,

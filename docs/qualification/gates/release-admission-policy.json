@@ -13,7 +13,7 @@
     "registry": "node_modules/@kungfu-tech/buildchain/dist/site/publication-authority-registry.json",
     "authorityRegistryDigest": "5487944a7dcac3931faeec5cde33a00254b9fdd8023ef0d21e1569c43d65e1bf",
     "publicationAuthority": {
-      "workflowPath": ".github/workflows/release-candidate-promote.yml",
+      "workflowPath": ".github/workflows/.release-candidate-promote.yml",
       "authorityClass": "product-publication",
       "publicationCapable": true,
       "publisherWorkflowMode": "caller-bound",
@@ -23,19 +23,21 @@
       "alpha": {
         "ref": "v3-alpha",
         "runtimeSha": "2e7e07902ac28d8f3edcfb81098ef9ebc7a91878",
+        "publicationRuntimeSha": "1d9b35b75e16d492e6d8b18c32504e89f8806855",
         "contractDigest": "sha256:5a6dc69d8905ed852260076da13d3aa3fa63533007dba706c164fe86f8b8f1e6",
         "contractLock": ".buildchain/alpha-contract-lock.json"
       },
       "release": {
         "ref": "v3",
         "runtimeSha": "9e904de2c85dbea7c799780ee166510b3336d812",
+        "publicationRuntimeSha": "9e904de2c85dbea7c799780ee166510b3336d812",
         "contractDigest": "sha256:914720131f07664cd187a1033f357c4952ef1008f5553cb6b285a75f786a7fbc",
         "contractLock": ".buildchain/contract-lock.json"
       }
     }
   },
   "publication": {
-    "workflowPath": ".github/workflows/release-candidate-promote.yml",
+    "workflowPath": ".github/workflows/.release-candidate-promote.yml",
     "publisherWorkflowPath": ".github/workflows/release-new-version.yml",
     "environment": "none",
     "product": "Kungfu Episodes",

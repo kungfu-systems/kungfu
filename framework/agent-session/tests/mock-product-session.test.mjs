@@ -283,8 +283,17 @@ test('deterministic Mock Agent traverses answer, approval, review, and exit in t
   assert.match(snapshot.terminal.vt.lines.join('\n'), /READY FOR REVIEW/u);
 
   await control(host, session, 'end', {});
-  await eventually(async () => {
+  const ended = await eventually(async () => {
     const status = await host.invoke({ operation: 'status', session });
-    return status.lifecycleState === 'ended';
+    return status.lifecycleState === 'ended' ? status : null;
   }, 'ended state');
+  assert.equal(ended.live, false);
+  assert.equal(ended.controllable, false);
+  assert.equal(ended.terminalObservable, true);
+  const listed = await host.invoke({ operation: 'list' });
+  const attempt = listed.attempts.find(
+    (candidate) => candidate.sessionAttemptId === session.sessionAttemptId,
+  );
+  assert.equal(attempt.live, false);
+  assert.equal(attempt.controllable, false);
 });

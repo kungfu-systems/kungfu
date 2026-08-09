@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // @ts-check
 
+import { execFileSync, spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 
@@ -63,6 +64,85 @@ export async function loadBuildchainKfdRuntime() {
       return null;
     throw error;
   }
+}
+
+export function gitValue(root, args) {
+  try {
+    return execFileSync('git', args, {
+      cwd: root,
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'ignore'],
+    }).trim();
+  } catch {
+    return '';
+  }
+}
+
+function isGitAncestor(root, sourceSha, headSha) {
+  return (
+    spawnSync('git', ['merge-base', '--is-ancestor', sourceSha, headSha], {
+      cwd: root,
+      stdio: 'ignore',
+    }).status === 0
+  );
+}
+
+export function resolveGitBoundKfdEvidenceSourceSha({
+  root,
+  write,
+  committed,
+  configured,
+  prepareHistory,
+  assertBinding,
+  selectSourceSha,
+  findTreeEquivalentAncestor,
+}) {
+  if (!write) prepareHistory(root, { requiredCommit: committed });
+  const headSha = gitValue(root, ['rev-parse', 'HEAD']);
+  return assertBinding({
+    sourceSha: selectSourceSha({ write, configured, committed, headSha }),
+    headSha,
+    isAncestor: (sourceSha, candidateHeadSha) =>
+      isGitAncestor(root, sourceSha, candidateHeadSha),
+    findTreeEquivalentAncestor: (sourceSha, candidateHeadSha) =>
+      findTreeEquivalentAncestor(sourceSha, candidateHeadSha, (args) =>
+        gitValue(root, args),
+      ),
+  });
+}
+
+export function releaseCandidateKfdRoot({ defaultRoot, receiptPath }) {
+  return receiptPath?.trim() ? process.cwd() : defaultRoot;
+}
+
+export function loadSealedKfdUpstreamAggregate({
+  receiptPath,
+  aggregatePath,
+  displayPath,
+  quiet,
+  readAggregate,
+}) {
+  const receipt = receiptPath?.trim();
+  if (!receipt) return null;
+  if (!fs.existsSync(receipt))
+    throw new Error(
+      `release-candidate recovery receipt is missing: ${receipt}`,
+    );
+  const aggregate = readAggregate(aggregatePath);
+  if (
+    aggregate.contract !== 'kungfu-upstream-kfd-aggregate' ||
+    aggregate.source?.generator !== 'scripts/buildchain-kfd-evidence.mjs' ||
+    !Array.isArray(aggregate.upstreams) ||
+    aggregate.upstreams.length === 0
+  )
+    throw new Error(
+      'sealed release-candidate KFD upstream aggregate is invalid',
+    );
+  if (!quiet)
+    console.log(
+      `reused sealed release-candidate KFD upstream aggregate from ${displayPath}`,
+    );
+  return aggregate;
 }
 
 function readJson(file) {

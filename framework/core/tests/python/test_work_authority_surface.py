@@ -76,6 +76,34 @@ def test_work_family_contains_only_profile_backed_orchestration_commands():
     )
 
 
+def test_reused_work_identity_decorator_preserves_every_command_signature():
+    identity_options = {
+        "--workspace",
+        "--home",
+        "--initiative-id",
+        "--assignment-id",
+    }
+    for name in {
+        "bind",
+        "claim",
+        "close",
+        "close-plan",
+        "close-resume",
+        "gate",
+        "kickoff",
+        "seal",
+        "stage",
+        "status",
+    }:
+        command = kfc.commands["work"].commands[name]
+        flags = {
+            flag
+            for parameter in command.params
+            for flag in getattr(parameter, "opts", ())
+        }
+        assert identity_options <= flags, name
+
+
 def test_start_resume_accepts_the_generic_project_work_purpose(tmp_path, monkeypatch):
     report_path = tmp_path / "agent-runs" / "run-1" / "bundle" / "report.json"
     report_path.parent.mkdir(parents=True)

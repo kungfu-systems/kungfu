@@ -51,6 +51,26 @@ execution; Shifu owns how the task is executed after source checkout.
   Run
   `./shifu check:production-graph` to emit the exact protected-CI verification
   receipt over the deterministic conformance fixtures.
+  The additive `./shifu core:affected:graph-shadow` route is the first bounded
+  external consumer. It requires an exact graph, compiled plan, and
+  `./shifu production-graph:verify` receipt; admits only one dependency-free
+  `core:affected` node with the Core native qualification authority; and then
+  delegates planning and execution to the unchanged `core:affected` command.
+  Shadow events and receipts bind the current plan, toolchain, raw current
+  receipt, exit status, and parity result under the operating system temporary
+  root. Nonzero exits and cancellation remain non-qualifying. Removing or
+  disabling this route leaves the independently authoritative
+  `./shifu core:affected` path unchanged.
+  `./shifu production-graph:feedback --graph GRAPH --plan PLAN
+  --shadow-receipt RECEIPT [--json]` reads those bounded artifacts without
+  executing recovery. Human and JSON modes expose the same source, authority,
+  Xinfa selection, node, event, output, receipt, parity, failure owner,
+  retained-evidence, and next-action facts while omitting receipt bodies. Its
+  one decision is `complete`, `inspect`, `resume-eligible`,
+  `restart-required`, or `blocked-by-drift`; source, graph, project-authority,
+  selection, plan, toolchain, and retained-output drift always fail closed.
+  Exit `0` means complete, `1` means a bounded human action is required, `2`
+  means drift blocks recovery, and `3` means the command or input is invalid.
 - [`.xinfa/project.json`](../../.xinfa/project.json) is the project-owned semantic declaration consumed by Xinfa. [`shifu.documentation.surfaces.json`](../../shifu.documentation.surfaces.json) is only a compatibility alias and carries no independent policy.
   classifies every tracked human-readable surface plus explicit product and
   Agent surfaces. Shifu closes the exact-path inventory; Xinfa remains the sole

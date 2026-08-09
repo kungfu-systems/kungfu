@@ -39,6 +39,9 @@ import {
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const SOURCE_SHA = '1'.repeat(40);
 const RUNTIME_SHA = '2e7e07902ac28d8f3edcfb81098ef9ebc7a91878';
+const PUBLICATION_RUNTIME_SHA = '1d9b35b75e16d492e6d8b18c32504e89f8806855';
+const RETIRED_PUBLICATION_RUNTIME_SHA =
+  '21030efd277301d642fd9baaa1bd75f02dd3ddc6';
 const STABLE_RUNTIME_SHA = '9e904de2c85dbea7c799780ee166510b3336d812';
 const SOURCE_TREE_SHA = 'a'.repeat(40);
 const CONTRACT_DIGEST =
@@ -89,11 +92,17 @@ function manifestSummaryDigest(files) {
   return hash.digest('hex');
 }
 
-function fixture({
-  channel = 'alpha',
-  runtimeSha = RUNTIME_SHA,
-  contractDigest = CONTRACT_DIGEST,
-} = {}) {
+function fixture(options = {}) {
+  const channel = options.channel || 'alpha';
+  const runtimeSha =
+    options.runtimeSha ||
+    (channel === 'alpha' ? RUNTIME_SHA : STABLE_RUNTIME_SHA);
+  const publicationRuntimeSha =
+    options.publicationRuntimeSha ||
+    (channel === 'alpha' ? PUBLICATION_RUNTIME_SHA : STABLE_RUNTIME_SHA);
+  const contractDigest =
+    options.contractDigest ||
+    (channel === 'alpha' ? CONTRACT_DIGEST : STABLE_CONTRACT_DIGEST);
   const registry = JSON.parse(
     fs.readFileSync(path.join(ROOT, 'shifu.gates.json'), 'utf8'),
   );
@@ -166,7 +175,7 @@ function fixture({
   });
   const controlPlaneAudit = createPublicationControlPlaneAudit({
     repository: 'kungfu-systems/kungfu',
-    workflowPath: '.github/workflows/release-candidate-promote.yml',
+    workflowPath: '.github/workflows/.release-candidate-promote.yml',
     publisherWorkflowPath: '.github/workflows/release-new-version.yml',
     environment: 'none',
     facts: [
@@ -316,11 +325,11 @@ function fixture({
         'utf8',
       ),
     ).registryDigest,
-    workflowPath: '.github/workflows/release-candidate-promote.yml',
+    workflowPath: '.github/workflows/.release-candidate-promote.yml',
     publisherWorkflowPath: '.github/workflows/release-new-version.yml',
     repository: 'kungfu-systems/kungfu',
     sourceSha: SOURCE_SHA,
-    runtimeSha,
+    runtimeSha: publicationRuntimeSha,
     contractDigest,
     policyDigest: matrixDigest,
     gateRegistryDigest: registryDigest,
@@ -372,18 +381,17 @@ function fixture({
   };
 }
 
-test('Kungfu independently accepts only a current sealed qualifying capability', async () => {
+test('Kungfu independently accepts only a durable sealed qualifying capability', async () => {
   const result = await verifyKungfuReleaseAdmission(fixture());
   assert.equal(result.qualifying, true);
   assert.equal(result.capability.decision, 'allow');
-  assert.equal(result.capability.runtimeSha, RUNTIME_SHA);
+  assert.equal(result.capability.runtimeSha, PUBLICATION_RUNTIME_SHA);
   assert.match(result.consumerPolicyDigest, /^[0-9a-f]{64}$/);
 
   const stable = await verifyKungfuReleaseAdmission(
     fixture({
       channel: 'release',
-      runtimeSha: STABLE_RUNTIME_SHA,
-      contractDigest: STABLE_CONTRACT_DIGEST,
+      publicationRuntimeSha: STABLE_RUNTIME_SHA,
     }),
   );
   assert.equal(stable.capability.runtimeSha, STABLE_RUNTIME_SHA);
@@ -393,8 +401,7 @@ test('Kungfu independently accepts only a current sealed qualifying capability',
       verifyKungfuReleaseAdmission(
         fixture({
           channel: 'alpha',
-          runtimeSha: STABLE_RUNTIME_SHA,
-          contractDigest: STABLE_CONTRACT_DIGEST,
+          publicationRuntimeSha: RETIRED_PUBLICATION_RUNTIME_SHA,
         }),
       ),
     /runtimeSha policy mismatch/,
@@ -485,7 +492,7 @@ test('Kungfu consumer qualification seals only an exact current handoff', async 
     gateAggregate,
     expected: {
       sourceSha: SOURCE_SHA,
-      runtimeSha: RUNTIME_SHA,
+      runtimeSha: PUBLICATION_RUNTIME_SHA,
       artifactDigest: capability.artifactDigest,
       version: capability.version,
       channel: capability.channel,

@@ -281,7 +281,7 @@ test('dequeue settlement still revokes the lease when other cleanup fails', asyn
   ]);
 });
 
-test('merged dequeue preserves the successful exact-head queue admission lease', async () => {
+test('merged dequeue preserves the exact-head run and successful queue admission lease', async () => {
   const headSha = 'e'.repeat(40);
   const requests = [];
   const request = async (url, init = {}) => {
@@ -308,9 +308,6 @@ test('merged dequeue preserves the successful exact-head queue admission lease',
         },
       });
     }
-    if (url.includes('/actions/workflows/affected-native-pr.yml/runs?')) {
-      return response(200, { workflow_runs: [] });
-    }
     throw new Error(`merged dequeue must not write status: ${url}`);
   };
   const settlement = await settleDequeuedMergeGroup({
@@ -330,6 +327,16 @@ test('merged dequeue preserves the successful exact-head queue admission lease',
   });
   assert.equal(settlement.repairMarker.repairRequired, false);
   assert.equal(settlement.evidence.dequeue.reason, 'merged');
+  assert.deepEqual(settlement.cancellation, {
+    pullRequest: 1798,
+    matchedRunCount: 0,
+    cancellations: [],
+  });
+  assert.equal(
+    requests.filter(({ url }) => url.includes('/actions/workflows/')).length,
+    0,
+  );
+  assert.equal(requests.filter(({ url }) => url.endsWith('/cancel')).length, 0);
   assert.equal(
     requests.filter(({ url }) => url.endsWith(`/statuses/${headSha}`)).length,
     0,

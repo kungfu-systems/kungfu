@@ -930,7 +930,7 @@ export function partitionAffectedNativePlan(plan, count = 1, index = 0) {
   };
 }
 
-function verifyPlan(plan) {
+export function verifyAffectedNativePlan(plan) {
   if (plan.schema !== 'kungfu.core-affected-native-plan/v1') {
     throw new Error('unsupported affected-native plan schema');
   }
@@ -1303,7 +1303,7 @@ async function execute(plan, receiptPath, partitionCount, partitionIndex) {
   return receipt;
 }
 
-function verifyReceipt(receipt) {
+export function verifyAffectedNativeReceipt(receipt) {
   if (receipt.schema !== 'kungfu.core-affected-native-receipt/v1') {
     throw new Error('unsupported affected-native receipt schema');
   }
@@ -1853,7 +1853,7 @@ function selfTest(authority, buildAuthority) {
         plan: { ...first, planDigest: `sha256:${'0'.repeat(64)}` },
         planDigest: first.planDigest,
       };
-      verifyReceipt(receipt);
+      verifyAffectedNativeReceipt(receipt);
     },
     /plan digest drift/,
   );
@@ -1861,7 +1861,7 @@ function selfTest(authority, buildAuthority) {
     'receipt partition drift fails closed',
     () => {
       const executionPartition = partitionAffectedNativePlan(first, 2, 0);
-      verifyReceipt({
+      verifyAffectedNativeReceipt({
         schema: 'kungfu.core-affected-native-receipt/v1',
         status: 'passed',
         plan: first,
@@ -1882,11 +1882,11 @@ function selfTest(authority, buildAuthority) {
     git('rev-parse', 'HEAD'),
   );
   expect('source-bound plan verifies before execution', () => {
-    verifyPlan(sourceBoundPlan);
+    verifyAffectedNativePlan(sourceBoundPlan);
   });
   expect(
     'source-bound plan digest drift fails closed',
-    () => verifyPlan({ ...sourceBoundPlan, profile: 'full' }),
+    () => verifyAffectedNativePlan({ ...sourceBoundPlan, profile: 'full' }),
     /plan digest drift/,
   );
   console.log(`[core-affected] ${passed} negative/determinism fixtures passed`);
@@ -1898,12 +1898,14 @@ async function main() {
   const buildAuthority = readJson(buildPath);
   if (options.selfTest) return selfTest(authority, buildAuthority);
   if (options.verifyReceipt) {
-    verifyReceipt(readJson(path.resolve(root, options.verifyReceipt)));
+    verifyAffectedNativeReceipt(
+      readJson(path.resolve(root, options.verifyReceipt)),
+    );
     console.log('[core-affected] receipt verified');
     return;
   }
   const plan = options.planInput
-    ? verifyPlan(readJson(path.resolve(root, options.planInput)))
+    ? verifyAffectedNativePlan(readJson(path.resolve(root, options.planInput)))
     : (() => {
         const base = git('rev-parse', options.base);
         const head = git('rev-parse', options.head);

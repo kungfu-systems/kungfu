@@ -186,7 +186,16 @@ test('publication and recovery clear activation commands while preserving public
     assert.match(job, /release-passport-evidence-command: ""/u, name);
     assert.match(
       job,
-      /publish-command: node scripts\/buildchain-custom-publish-evidence\.mjs/u,
+      name === 'recover'
+        ? /publish-command: node \.buildchain\/publication-controller\/scripts\/buildchain-custom-publish-evidence\.mjs/u
+        : /publish-command: node scripts\/buildchain-custom-publish-evidence\.mjs/u,
+      name,
+    );
+    assert.match(
+      job,
+      name === 'recover'
+        ? /release-passport-kfd-3-artifact-verify-command: node "\$GITHUB_WORKSPACE\/\.buildchain\/publication-controller\/scripts\/buildchain-kfd-evidence\.mjs" --write --json >\/dev\/null && node "\$GITHUB_WORKSPACE\/\.buildchain\/publication-controller\/scripts\/buildchain-kfd-evidence\.mjs" --artifact-witness --json/u
+        : /release-passport-kfd-3-artifact-verify-command: node scripts\/buildchain-kfd-evidence\.mjs --artifact-witness --json/u,
       name,
     );
     assert.match(
@@ -202,7 +211,7 @@ test('publication and recovery clear activation commands while preserving public
     );
     assert.match(
       job,
-      /github-release-payload-patterns:[\s\S]*kungfu-episodes-cli-\*\.tar\.gz[\s\S]*kungfu-episodes-cli-\*\.zip[\s\S]*kungfu-episodes-cli-\*\.qualification\.json/u,
+      /github-release-payload-patterns:[\s\S]*kungfu-episodes-cli-\*\.tar\.gz[\s\S]*kungfu-episodes-cli-\*\.zip[\s\S]*kungfu-episodes-cli-\*\.qualification\.json[\s\S]*Kungfu-Episodes-\*-macos-arm64\.dmg[\s\S]*Kungfu-Episodes-\*-macos-arm64\.zip[\s\S]*Kungfu Episodes-\*\.AppImage[\s\S]*Kungfu Episodes Setup \*\.exe/u,
       name,
     );
   }
@@ -212,7 +221,7 @@ test('publication and recovery clear activation commands while preserving public
   );
   assert.match(
     jobs[1][1],
-    /publication-commit-command: node scripts\/alpha-publication-commit\.mjs/u,
+    /publication-commit-command: BUILDCHAIN_PUBLICATION_COMMIT_PRODUCT_ROOT=\$GITHUB_WORKSPACE BUILDCHAIN_PUBLICATION_COMMIT_CANDIDATE_SOURCE_SHA=\$\{\{ inputs\.resume-candidate-source-sha \}\} node \.buildchain\/publication-controller\/scripts\/alpha-publication-commit\.mjs/u,
   );
 });
 
@@ -268,6 +277,7 @@ test('Alpha recovery reuses the sealed candidate through the bounded Buildchain 
     'resume-expected-candidate-runtime-sha: ${{ inputs.resume-expected-candidate-runtime-sha }}',
     'resume-buildchain-runtime-sha: ${{ inputs.resume-buildchain-runtime-sha }}',
     'publication-gate-controller-sha: ${{ inputs.resume-publication-gate-controller-sha }}',
+    'publish-command: node .buildchain/publication-controller/scripts/buildchain-custom-publish-evidence.mjs',
     'publish-transaction-override: ${{ inputs.publish-transaction-override }}',
     'dry-run: false',
   ]) {

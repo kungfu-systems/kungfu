@@ -90,6 +90,10 @@ export function validateWorkflowSources(root, contract, overrides = {}) {
     ['primary promotion', promote],
     ['release-candidate recovery', recovery],
   ]) {
+    const publishCommand =
+      label === 'release-candidate recovery'
+        ? contract.evidence.recovery_publish_command
+        : contract.evidence.publish_command;
     requirePattern(
       job,
       /release-activation-command: ""/,
@@ -104,9 +108,7 @@ export function validateWorkflowSources(root, contract, overrides = {}) {
     );
     requirePattern(
       job,
-      new RegExp(
-        `publish-command: ${contract.evidence.publish_command.replaceAll('.', '\\.')}`,
-      ),
+      new RegExp(`publish-command: ${publishCommand.replaceAll('.', '\\.')}`),
       findings,
       `${label} custom publish evidence command drifted`,
     );
@@ -130,7 +132,7 @@ export function validateWorkflowSources(root, contract, overrides = {}) {
     );
     requirePattern(
       job,
-      /github-release-payload-patterns:[\s\S]*kungfu-episodes-cli-\*\.tar\.gz[\s\S]*kungfu-episodes-cli-\*\.zip[\s\S]*kungfu-episodes-cli-\*\.qualification\.json/,
+      /github-release-payload-patterns:[\s\S]*kungfu-episodes-cli-\*\.tar\.gz[\s\S]*kungfu-episodes-cli-\*\.zip[\s\S]*kungfu-episodes-cli-\*\.qualification\.json[\s\S]*Kungfu-Episodes-\*-macos-arm64\.dmg[\s\S]*Kungfu-Episodes-\*-macos-arm64\.zip[\s\S]*Kungfu Episodes-\*\.AppImage[\s\S]*Kungfu Episodes Setup \*\.exe/,
       findings,
       `${label} must retain the exact GitHub Release payloads`,
     );
@@ -383,7 +385,7 @@ export function validateWorkflowSources(root, contract, overrides = {}) {
   );
   requirePattern(
     promote,
-    /github-release-payload-patterns:[\s\S]*kungfu-episodes-cli-\*\.tar\.gz[\s\S]*kungfu-episodes-cli-\*\.zip[\s\S]*kungfu-episodes-cli-\*\.qualification\.json/,
+    /github-release-payload-patterns:[\s\S]*kungfu-episodes-cli-\*\.tar\.gz[\s\S]*kungfu-episodes-cli-\*\.zip[\s\S]*kungfu-episodes-cli-\*\.qualification\.json[\s\S]*Kungfu-Episodes-\*-macos-arm64\.dmg[\s\S]*Kungfu-Episodes-\*-macos-arm64\.zip[\s\S]*Kungfu Episodes-\*\.AppImage[\s\S]*Kungfu Episodes Setup \*\.exe/,
     findings,
     'promotion must publish the exact CLI archives and qualification receipts from the PR-stage payload',
   );
@@ -395,9 +397,9 @@ export function validateWorkflowSources(root, contract, overrides = {}) {
   );
   requirePattern(
     recovery,
-    /publication-commit-command: node scripts\/alpha-publication-commit\.mjs/,
+    /publication-commit-command: BUILDCHAIN_PUBLICATION_COMMIT_PRODUCT_ROOT=\$GITHUB_WORKSPACE BUILDCHAIN_PUBLICATION_COMMIT_CANDIDATE_SOURCE_SHA=\$\{\{ inputs\.resume-candidate-source-sha \}\} node \.buildchain\/publication-controller\/scripts\/alpha-publication-commit\.mjs/,
     findings,
-    'release-candidate recovery must retain the signed Alpha discovery commit',
+    'release-candidate recovery must run the pinned controller against the immutable candidate product root',
   );
   requirePattern(
     promote,
@@ -579,6 +581,47 @@ export function validatePromotionContract(
       /upgrade_qualification:\s*\{/,
       findings,
       'custom publish evidence must bind one-command campaign roots into the release passport',
+    );
+    requirePattern(
+      publishAdapter,
+      /path\.join\(SCRIPT_DIR, 'buildchain-kfd-evidence\.mjs'\)/u,
+      findings,
+      'recovery custom publish evidence must execute the checked-out publication controller KFD adapter',
+    );
+    requirePattern(
+      publishAdapter,
+      /artifact\.platform\s*\?\s*\{ platform: artifact\.platform \}/u,
+      findings,
+      'custom publish evidence must preserve the required platform provenance',
+    );
+  }
+  const kfdEvidencePath = path.join(
+    root,
+    'scripts/buildchain-kfd-evidence.mjs',
+  );
+  if (!fs.existsSync(kfdEvidencePath)) {
+    findings.push(finding('Buildchain KFD evidence adapter does not exist'));
+  } else {
+    const kfdEvidence = fs.readFileSync(kfdEvidencePath, 'utf8');
+    const kfdRuntimePath = path.join(
+      root,
+      'framework/release/buildchain-kfd-runtime.mjs',
+    );
+    const kfdRuntime = fs.existsSync(kfdRuntimePath)
+      ? fs.readFileSync(kfdRuntimePath, 'utf8')
+      : '';
+    const kfdRecoveryClosure = `${kfdEvidence}\n${kfdRuntime}`;
+    requirePattern(
+      kfdRecoveryClosure,
+      /BUILDCHAIN_RELEASE_CANDIDATE_RECOVERY_RECEIPT_PATH[\s\S]*reused sealed release-candidate KFD upstream aggregate/u,
+      findings,
+      'release-candidate recovery must reuse the sealed KFD upstream aggregate without reinstalling product dependencies',
+    );
+    requirePattern(
+      kfdRecoveryClosure,
+      /BUILDCHAIN_RELEASE_CANDIDATE_RECOVERY_RECEIPT_PATH[\s\S]*releaseCandidateKfdRoot[\s\S]*process\.cwd\(\)/u,
+      findings,
+      'release-candidate recovery must project controller logic over the sealed product root',
     );
   }
   const publicationCommitPath = path.join(

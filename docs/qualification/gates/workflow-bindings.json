@@ -676,7 +676,7 @@
           "publication-auto-admission": true,
           "publication-consumer-qualification-command": "node scripts/kungfu-release-qualification.mjs",
           "publication-consumer-predicate-id": "kungfu.release-admission/v1",
-          "publish-command": "node scripts/buildchain-custom-publish-evidence.mjs",
+          "publish-command": "node .buildchain/publication-controller/scripts/buildchain-custom-publish-evidence.mjs",
           "runner-preset": "kungfu-v4-native",
           "required-artifact-count": 5,
           "release-passport": true,
@@ -685,7 +685,7 @@
           "release-passport-evidence-command": "",
           "release-passport-evidence-path": ".buildchain/release-evidence/ungfu-public-use.json",
           "release-passport-invariant-passport-command": "node scripts/kungfu-invariant.mjs --collect-evidence . --passport product/release/qualification/invariant-passport.json --json",
-          "github-artifact-attestation-policy-json": "auto",
+          "github-artifact-attestation-policy-json": "",
           "github-artifact-attestation-environment": "buildchain-artifact-attestation",
           "dry-run": false
         }

@@ -1,0 +1,122 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://libkungfu.dev/schemas/shifu/core-affected-production-graph-shadow-receipt-v0.schema.json",
+  "title": "Shifu Core affected Production Graph shadow receipt v0",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "status",
+    "sourceRevision",
+    "contractRoot",
+    "compilerRoot",
+    "verifierRoot",
+    "verificationReceiptRoot",
+    "graphRoot",
+    "graphPlanRoot",
+    "xinfaSelectionRoot",
+    "currentPlanRoot",
+    "toolchainRoot",
+    "eventRoots",
+    "outputRoots",
+    "currentReceiptRoot",
+    "graphReceiptRoot",
+    "exitStatus",
+    "signal",
+    "parity",
+    "artifacts",
+    "receiptRoot"
+  ],
+  "properties": {
+    "schema": {
+      "const": "kungfu.core-affected-production-graph-shadow-receipt/v0"
+    },
+    "status": { "enum": ["qualified", "failed", "cancelled"] },
+    "sourceRevision": { "$ref": "production-graph-v0.schema.json#/$defs/gitObject" },
+    "contractRoot": { "$ref": "production-graph-v0.schema.json#/$defs/root" },
+    "compilerRoot": { "$ref": "production-graph-v0.schema.json#/$defs/root" },
+    "verifierRoot": { "$ref": "production-graph-v0.schema.json#/$defs/root" },
+    "verificationReceiptRoot": { "$ref": "production-graph-v0.schema.json#/$defs/root" },
+    "graphRoot": { "$ref": "production-graph-v0.schema.json#/$defs/root" },
+    "graphPlanRoot": { "$ref": "production-graph-v0.schema.json#/$defs/root" },
+    "xinfaSelectionRoot": { "$ref": "production-graph-v0.schema.json#/$defs/root" },
+    "currentPlanRoot": {
+      "anyOf": [
+        { "$ref": "production-graph-v0.schema.json#/$defs/root" },
+        { "type": "null" }
+      ]
+    },
+    "toolchainRoot": {
+      "anyOf": [
+        { "$ref": "production-graph-v0.schema.json#/$defs/root" },
+        { "type": "null" }
+      ]
+    },
+    "eventRoots": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 2,
+      "uniqueItems": true,
+      "items": { "$ref": "production-graph-v0.schema.json#/$defs/root" }
+    },
+    "outputRoots": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": { "$ref": "production-graph-v0.schema.json#/$defs/root" }
+    },
+    "currentReceiptRoot": {
+      "anyOf": [
+        { "$ref": "production-graph-v0.schema.json#/$defs/root" },
+        { "type": "null" }
+      ]
+    },
+    "graphReceiptRoot": { "$ref": "production-graph-v0.schema.json#/$defs/root" },
+    "exitStatus": {
+      "anyOf": [
+        { "type": "integer", "minimum": 0, "maximum": 255 },
+        { "type": "null" }
+      ]
+    },
+    "signal": {
+      "anyOf": [
+        { "$ref": "production-graph-v0.schema.json#/$defs/nonEmpty" },
+        { "type": "null" }
+      ]
+    },
+    "parity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "classification", "issues"],
+      "properties": {
+        "status": { "enum": ["pass", "fail"] },
+        "classification": {
+          "enum": [
+            "matched-success",
+            "matched-failure",
+            "matched-cancellation",
+            "drift"
+          ]
+        },
+        "issues": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "$ref": "production-graph-v0.schema.json#/$defs/nonEmpty" }
+        }
+      }
+    },
+    "artifacts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["events", "graphReceipt", "currentPlan", "currentReceipt"],
+      "properties": {
+        "events": { "$ref": "production-graph-v0.schema.json#/$defs/nonEmpty" },
+        "graphReceipt": { "$ref": "production-graph-v0.schema.json#/$defs/nonEmpty" },
+        "currentPlan": { "$ref": "production-graph-v0.schema.json#/$defs/nonEmpty" },
+        "currentReceipt": { "$ref": "production-graph-v0.schema.json#/$defs/nonEmpty" },
+        "failure": { "$ref": "production-graph-v0.schema.json#/$defs/nonEmpty" },
+        "recovery": { "$ref": "production-graph-v0.schema.json#/$defs/nonEmpty" }
+      }
+    },
+    "receiptRoot": { "$ref": "production-graph-v0.schema.json#/$defs/root" }
+  }
+}

@@ -274,7 +274,7 @@
           },
           {
             "path": "framework/primitive/kungfu-primitive-catalog.contract.json",
-            "sha256": "sha256:48a9dd8f1f5a91ae69954b64550417bbdf0866cb4b80a2a16e1b2add0c0c856e"
+            "sha256": "sha256:46aa5c6a056801de9c11b46d28af6ed8163d8810bc1cdd480c315f4f173d99fe"
           }
         ]
       },
@@ -337,7 +337,7 @@
           },
           {
             "path": "framework/project-cut/README.md",
-            "sha256": "sha256:0d7b91a5d3c04e47175e286763542a7da9e84d4d01b012451d4895b3191dc062"
+            "sha256": "sha256:270406f732b339374e136b4ed954b975da60ae17c1e309ac8b75aea3f5b51c24"
           }
         ],
         "missingGates": [

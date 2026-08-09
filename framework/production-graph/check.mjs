@@ -44,6 +44,15 @@ function verifyContractBoundary(contract) {
   assert.equal(contract.verification.command, './shifu check:production-graph');
   assert.equal(contract.verification.protectedGate, './shifu check:source');
   assert.equal(contract.verification.executesNodes, false);
+  assert.equal(contract.feedback.command, './shifu production-graph:feedback');
+  assert.equal(contract.feedback.sideEffects, false);
+  assert.equal(contract.feedback.executesRecovery, false);
+  assert.deepEqual(contract.feedback.exitCodes, {
+    0: 'complete',
+    1: 'bounded-human-action-required',
+    2: 'blocked-by-drift',
+    3: 'invalid-command-or-input',
+  });
   assert.equal(contract.authorityReferences.semanticImpactOwner, 'xinfa');
   assert.equal(
     contract.authorityReferences.semanticImpactInput,
@@ -67,6 +76,7 @@ function verifierRoot() {
       'framework/production-graph/compiler/index.mjs',
       'framework/production-graph/check.mjs',
       'framework/production-graph/check.test.mjs',
+      'framework/production-graph/feedback/index.mjs',
       'framework/production-graph/compiler/polyglot.fixture.mjs',
     ].map((relative) => ({
       path: relative,

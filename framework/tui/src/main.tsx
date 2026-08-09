@@ -186,7 +186,6 @@ function ensureTuiAgentSession(runtimeDir: string): Promise<string> {
     },
   );
   process.env.KUNGFU_AGENT_SESSION_WORKER = workerPath;
-  process.env.KUNGFU_MOCK_AGENT_EXECUTABLE = process.execPath;
   process.env.KUNGFU_MOCK_AGENT_SCRIPT = mockPath;
   process.env.KUNGFU_PROJECT_WORK_AGENT_SESSION = '1';
   const host = createDetachedAgentSessionHost({
@@ -290,10 +289,11 @@ const EXIT_HISTORY_STATUS_FALLBACK: ExitHistoryStatus = {
   nextActions: ['kungfu exit history status --json'],
 };
 
-function openTuiAgentWorkLab(projectTour = false): AgentWorkLab {
+async function openTuiAgentWorkLab(projectTour = false): Promise<AgentWorkLab> {
   const paths = runtimePaths();
   const cli = tuiCliInvocation(paths);
   if (projectTour) {
+    await ensureTuiAgentSession(paths.runtimeDir);
     const { mockPath } = resolveTuiAgentSessionPaths({
       env: process.env,
       argvEntry: process.argv[1],
@@ -2289,7 +2289,7 @@ async function main(): Promise<void> {
     speed: projectTourSpeed,
     episode: projectTourEpisode,
   } = parseProjectTourLaunchOptions(process.argv);
-  const lab = openTuiAgentWorkLab(Boolean(projectTourRoot));
+  const lab = await openTuiAgentWorkLab(Boolean(projectTourRoot));
   const playbackMode = autoDemo || Boolean(projectTourRoot);
   const emptyState = process.argv.includes('--empty-state');
   if (process.argv.includes('--agent-work-lab-demo')) {
@@ -2310,7 +2310,6 @@ async function main(): Promise<void> {
     if (playbackMode) process.exitCode = 2;
     return;
   }
-
   const lifecycle = new TerminalLifecycle(
     process.stdin,
     process.stdout,
