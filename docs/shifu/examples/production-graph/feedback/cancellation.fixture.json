@@ -1,0 +1,7 @@
+{
+  "schema": "shifu.production-graph-feedback-fixture/v0",
+  "id": "cancellation",
+  "outcome": "cancelled",
+  "terminalNodeId": "qualify-contract",
+  "expectedState": "restart-required"
+}

@@ -1,0 +1,8 @@
+{
+  "schema": "shifu.production-graph-feedback-fixture/v0",
+  "id": "authority-drift",
+  "outcome": "failed",
+  "terminalNodeId": "verify-authorities",
+  "mutation": "authority-drift",
+  "expectedState": "blocked-by-drift"
+}

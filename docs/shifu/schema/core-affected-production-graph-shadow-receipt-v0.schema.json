@@ -112,7 +112,9 @@
         "events": { "$ref": "production-graph-v0.schema.json#/$defs/nonEmpty" },
         "graphReceipt": { "$ref": "production-graph-v0.schema.json#/$defs/nonEmpty" },
         "currentPlan": { "$ref": "production-graph-v0.schema.json#/$defs/nonEmpty" },
-        "currentReceipt": { "$ref": "production-graph-v0.schema.json#/$defs/nonEmpty" }
+        "currentReceipt": { "$ref": "production-graph-v0.schema.json#/$defs/nonEmpty" },
+        "failure": { "$ref": "production-graph-v0.schema.json#/$defs/nonEmpty" },
+        "recovery": { "$ref": "production-graph-v0.schema.json#/$defs/nonEmpty" }
       }
     },
     "receiptRoot": { "$ref": "production-graph-v0.schema.json#/$defs/root" }

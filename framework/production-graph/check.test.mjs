@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import path from 'node:path';
 import test from 'node:test';
 
 import { checkProductionGraphContract } from './check.mjs';
@@ -15,13 +17,169 @@ import {
   loadFixture,
   loadProductionGraphContract,
   materializeFixture,
+  rooted,
   schemaValidators,
   semanticRoot,
   verifyBundle,
 } from './contract.mjs';
+import {
+  createProductionGraphFeedback,
+  renderProductionGraphFeedback,
+} from './feedback/index.mjs';
 
 const ROOT = new URL('../..', import.meta.url).pathname;
 const QUALIFIED = 'docs/shifu/examples/production-graph/qualified.fixture.json';
+const FEEDBACK_FIXTURE_ROOT = path.join(
+  ROOT,
+  'docs',
+  'shifu',
+  'examples',
+  'production-graph',
+  'feedback',
+);
+
+function feedbackScenario(id) {
+  return JSON.parse(
+    fs.readFileSync(
+      path.join(FEEDBACK_FIXTURE_ROOT, `${id}.fixture.json`),
+      'utf8',
+    ),
+  );
+}
+
+function feedbackInputFor(spec) {
+  const source = loadFixture(ROOT, QUALIFIED);
+  const fixture = structuredClone(source);
+  fixture.fixtureId = spec.id;
+  fixture.outcome = {
+    status: spec.outcome,
+    ...(spec.terminalNodeId ? { terminalNodeId: spec.terminalNodeId } : {}),
+  };
+  if (spec.recoveryStrategy) {
+    const node = fixture.graph.nodes.find(
+      ({ id }) => id === spec.terminalNodeId,
+    );
+    node.recovery.strategy = spec.recoveryStrategy;
+  }
+  if (spec.executorTask)
+    fixture.graph.nodes[0].executor.task = spec.executorTask;
+  const bundle = materializeFixture(fixture, ROOT);
+  const currentPlan = {
+    schema: 'example.external-plan/v1',
+    graphRoot: bundle.graph.graphRoot,
+  };
+  const currentReceipt =
+    spec.outcome === 'cancelled'
+      ? null
+      : {
+          schema: 'example.external-receipt/v1',
+          status: spec.outcome === 'qualified' ? 'passed' : 'failed',
+          toolchain: { runner: 'project-independent-fixture' },
+          privatePayload: 'DO_NOT_RENDER',
+        };
+  const currentPlanRoot = semanticRoot(currentPlan);
+  const currentReceiptRoot = currentReceipt
+    ? semanticRoot(currentReceipt)
+    : null;
+  const toolchainRoot = currentReceipt
+    ? semanticRoot(currentReceipt.toolchain)
+    : null;
+  const receipt = rooted(
+    {
+      ...bundle.receipt,
+      outputRoots: currentReceiptRoot ? [currentReceiptRoot] : [],
+      retainedEvidenceRoots: [
+        ...bundle.receipt.retainedEvidenceRoots,
+        currentPlanRoot,
+        ...(currentReceiptRoot ? [currentReceiptRoot] : []),
+        ...(toolchainRoot ? [toolchainRoot] : []),
+      ],
+    },
+    'receiptRoot',
+  );
+  const classification =
+    spec.outcome === 'qualified'
+      ? 'matched-success'
+      : spec.outcome === 'cancelled'
+        ? 'matched-cancellation'
+        : 'matched-failure';
+  const shadowReceipt = rooted(
+    {
+      schema: 'kungfu.core-affected-production-graph-shadow-receipt/v0',
+      status: spec.outcome,
+      sourceRevision: bundle.graph.source.revision,
+      contractRoot: bundle.graph.contractRoot,
+      compilerRoot: semanticRoot({ fixture: 'compiler' }),
+      verifierRoot: semanticRoot({ fixture: 'verifier' }),
+      verificationReceiptRoot: semanticRoot({ fixture: 'verification' }),
+      graphRoot: bundle.graph.graphRoot,
+      graphPlanRoot: bundle.plan.planRoot,
+      xinfaSelectionRoot: bundle.graph.semanticImpact.selectionRoot,
+      currentPlanRoot,
+      toolchainRoot,
+      eventRoots: bundle.events.map(({ eventRoot }) => eventRoot),
+      outputRoots: receipt.outputRoots,
+      currentReceiptRoot,
+      graphReceiptRoot: receipt.receiptRoot,
+      exitStatus: spec.outcome === 'qualified' ? 0 : 7,
+      signal: spec.outcome === 'cancelled' ? 'SIGTERM' : null,
+      parity: { status: 'pass', classification, issues: [] },
+      artifacts: {
+        events: '/tmp/events.jsonl',
+        graphReceipt: '/tmp/graph-receipt.json',
+        currentPlan: '/tmp/current-plan.json',
+        currentReceipt: '/tmp/current-receipt.json',
+        failure: '/tmp/failure.json',
+        recovery: '/tmp/recovery.json',
+      },
+    },
+    'receiptRoot',
+  );
+  return {
+    input: {
+      graph: bundle.graph,
+      plan: bundle.plan,
+      events: bundle.events,
+      receipt,
+      failure: bundle.failure,
+      recovery: bundle.recovery,
+      shadowReceipt,
+      currentPlan,
+      currentReceipt,
+    },
+    observed: {
+      source: bundle.graph.source,
+      authorityReferences: bundle.graph.authorityReferences,
+      xinfaSelectionRoot: bundle.graph.semanticImpact.selectionRoot,
+      toolchainRoot,
+    },
+  };
+}
+
+async function feedbackFor(id) {
+  const spec = feedbackScenario(id);
+  const fixture = feedbackInputFor(spec);
+  if (spec.mutation === 'missing-failure') {
+    fixture.input.failure = null;
+    fixture.input.recovery = null;
+  } else if (spec.mutation === 'source-drift') {
+    fixture.observed.source = {
+      ...fixture.observed.source,
+      revision: '9'.repeat(40),
+    };
+  } else if (spec.mutation === 'authority-drift') {
+    fixture.observed.authorityReferences = {
+      ...fixture.observed.authorityReferences,
+      layers: `sha256:${'9'.repeat(64)}`,
+    };
+  }
+  const feedback = await createProductionGraphFeedback(fixture.input, {
+    observed: fixture.observed,
+    root: ROOT,
+  });
+  assert.equal(feedback.state, spec.expectedState);
+  return { spec, fixture, feedback };
+}
 
 test('Production Graph contract emits one source-bound protected-CI receipt', async () => {
   const receipt = await checkProductionGraphContract();
@@ -228,4 +386,111 @@ test('compiler fails closed on source, authority, and Xinfa drift', async () => 
   await rejects((request) => {
     request.nodes[0].inputs[0].root = null;
   }, 'unrooted-compiler-input');
+});
+
+test('feedback schema exposes a complete side-effect-free readback', async () => {
+  const { feedback } = await feedbackFor('success');
+  assert.equal(feedback.state, 'complete');
+  assert.equal(feedback.exitCode, 0);
+  assert.equal(feedback.sideEffects, false);
+  assert.equal(feedback.diagnostics.length, 0);
+  assert.equal(feedback.nodes.length, 3);
+  const validators = await schemaValidators(ROOT);
+  assert.equal(
+    validators.feedback(feedback),
+    true,
+    JSON.stringify(validators.feedback.errors),
+  );
+});
+
+test('failure can be resume eligible or require a fresh graph', async () => {
+  const resumable = await feedbackFor('failure');
+  assert.equal(resumable.feedback.state, 'resume-eligible');
+  assert.equal(resumable.feedback.recovery.eligible, true);
+  assert.equal(
+    resumable.feedback.failure.owner,
+    'architecture-qualification-owner',
+  );
+
+  const restart = await feedbackFor('restart');
+  assert.equal(restart.feedback.state, 'restart-required');
+  assert.equal(restart.feedback.recovery.eligible, false);
+});
+
+test('cancellation requires restart without inventing a current receipt', async () => {
+  const { feedback } = await feedbackFor('cancellation');
+  assert.equal(feedback.state, 'restart-required');
+  assert.equal(feedback.receipts.currentReceiptRoot, null);
+  assert.equal(feedback.recovery.eligible, false);
+});
+
+test('missing evidence remains an externally blocked inspect decision', async () => {
+  const { feedback } = await feedbackFor('missing-evidence');
+  assert.equal(feedback.state, 'inspect');
+  assert.equal(feedback.recovery.externallyBlocked, true);
+  assert.ok(
+    feedback.diagnostics.some(({ code }) => code === 'missing-evidence'),
+  );
+});
+
+test('source and project authority drift fail closed', async () => {
+  for (const id of ['source-drift', 'authority-drift']) {
+    const { feedback } = await feedbackFor(id);
+    assert.equal(feedback.state, 'blocked-by-drift');
+    assert.equal(feedback.exitCode, 2);
+  }
+});
+
+test('graph, selection, plan, toolchain, and retained output drift fail closed', async () => {
+  const mutations = [
+    (fixture) => {
+      fixture.input.shadowReceipt.graphRoot = `sha256:${'8'.repeat(64)}`;
+    },
+    (fixture) => {
+      fixture.input.shadowReceipt.xinfaSelectionRoot = `sha256:${'8'.repeat(64)}`;
+    },
+    (fixture) => {
+      fixture.input.shadowReceipt.graphPlanRoot = `sha256:${'8'.repeat(64)}`;
+    },
+    (fixture) => {
+      fixture.observed.toolchainRoot = `sha256:${'8'.repeat(64)}`;
+    },
+    (fixture) => {
+      fixture.input.shadowReceipt.outputRoots = [`sha256:${'8'.repeat(64)}`];
+    },
+  ];
+  for (const mutate of mutations) {
+    const fixture = feedbackInputFor(feedbackScenario('success'));
+    mutate(fixture);
+    const feedback = await createProductionGraphFeedback(fixture.input, {
+      observed: fixture.observed,
+      root: ROOT,
+    });
+    assert.equal(feedback.state, 'blocked-by-drift');
+    assert.equal(feedback.exitCode, 2);
+  }
+});
+
+test('project-independent consumer does not depend on core:affected semantics', async () => {
+  const { feedback } = await feedbackFor('project-independent');
+  assert.equal(feedback.state, 'complete');
+  assert.equal(feedback.nodes[0].executor.task, 'cargo:test');
+});
+
+test('human and JSON projections expose the same material facts without bodies', async () => {
+  const { feedback } = await feedbackFor('failure');
+  const rendered = renderProductionGraphFeedback(feedback);
+  for (const value of [
+    feedback.state,
+    feedback.source.revision,
+    feedback.graph.graphRoot,
+    feedback.graph.xinfaSelectionRoot,
+    feedback.failure.nodeId,
+    feedback.failure.owner,
+    feedback.parity.classification,
+    feedback.nextAction,
+  ]) {
+    assert.ok(rendered.includes(String(value)), `missing ${value}`);
+  }
+  assert.equal(rendered.includes('DO_NOT_RENDER'), false);
 });
