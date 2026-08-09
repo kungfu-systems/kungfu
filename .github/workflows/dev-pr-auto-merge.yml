@@ -133,10 +133,12 @@ jobs:
             esac
           fi
 
-          echo "target-branch=$DEFAULT_BRANCH" >>"$GITHUB_OUTPUT"
-          echo "expected-pr-number=$expected_pr_number" >>"$GITHUB_OUTPUT"
-          echo "expected-head-sha=$expected_head_sha" >>"$GITHUB_OUTPUT"
-          echo "source-workflow-run-id=$source_workflow_run_id" >>"$GITHUB_OUTPUT"
+          {
+            echo "target-branch=$DEFAULT_BRANCH"
+            echo "expected-pr-number=$expected_pr_number"
+            echo "expected-head-sha=$expected_head_sha"
+            echo "source-workflow-run-id=$source_workflow_run_id"
+          } >>"$GITHUB_OUTPUT"
 
   delivery-contract:
     needs: resolve-target
@@ -161,6 +163,7 @@ jobs:
       priority: ${{ steps.contract.outputs.priority }}
       input-root: ${{ steps.contract.outputs.input-root }}
       project-cut-proof-json: ${{ steps.project-cut.outputs.project-cut-proof-json }}
+      active-lease-context: ${{ steps.contract.outputs.active-lease-context }}
     steps:
       - name: Check out protected consumer adapter
         if: >-
@@ -179,7 +182,7 @@ jobs:
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           repository: kungfu-systems/buildchain
-          ref: 368533567cf1c1b20783e334ab8ce31b0da582a0
+          ref: cf9381cf232dc6f33a07b59c5da7ba6ab7a87381
           path: .buildchain/dev-delivery-runtime
           fetch-depth: 1
           persist-credentials: false
@@ -353,9 +356,9 @@ jobs:
       contents: write
       pull-requests: write
       statuses: write
-    uses: kungfu-systems/buildchain/.github/workflows/dev-pr-auto-merge.yml@368533567cf1c1b20783e334ab8ce31b0da582a0
+    uses: kungfu-systems/buildchain/.github/workflows/dev-pr-auto-merge.yml@cf9381cf232dc6f33a07b59c5da7ba6ab7a87381
     with:
-      buildchain-ref: 368533567cf1c1b20783e334ab8ce31b0da582a0
+      buildchain-ref: cf9381cf232dc6f33a07b59c5da7ba6ab7a87381
       target-branch: ${{ needs.resolve-target.outputs.target-branch }}
       expected-pr-number: ${{ fromJSON(needs.resolve-target.outputs.expected-pr-number || '0') }}
       expected-head-sha: ${{ needs.resolve-target.outputs.expected-head-sha }}
@@ -382,6 +385,7 @@ jobs:
         Candidate source acceptance / check
         affected-native / linux
       queue-admission-context: Queue admission lease
+      active-lease-context: ${{ needs.delivery-contract.outputs.active-lease-context }}
       ready-label: state/ready
       block-labels: state/blocked,blocked,do-not-merge,work-in-progress
       allowed-head-prefixes: feature/,fix/,chore/,docs/,ci/,refactor/

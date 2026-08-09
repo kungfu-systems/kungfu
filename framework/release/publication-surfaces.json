@@ -80,7 +80,7 @@
             "product-stable",
             "product-binaries"
           ],
-          "sourceRoot": "sha256:84ec97d6cea0f6f02597535a879acc8839cfd761f9e0523cba3d7caac407be53"
+          "sourceRoot": "sha256:8dcb7320fc82d4dbc5ecb5a3f310138b8d024ac4be8d82c6224201884bf42aef"
         },
         {
           "path": ".github/workflows/alpha-promotion-preflight.yml",
@@ -146,7 +146,7 @@
           "classification": "non-publication",
           "owner": "kungfu-ci",
           "surfaceIds": [],
-          "sourceRoot": "sha256:c9d7fbb761843956f3c62d864d8ea549057c196752a48c892cfd14021beb9aaf"
+          "sourceRoot": "sha256:9738d7eb2e830baef340761a8acdde478700f98517df48508feea79d58de7eb9"
         },
         {
           "path": ".github/workflows/core-build-profiles.yml",
@@ -177,14 +177,14 @@
           "classification": "non-publication",
           "owner": "kungfu-ci",
           "surfaceIds": [],
-          "sourceRoot": "sha256:fc8d071e98620b87161e688cd9c1f5b28463fa5f09df5c1932c4e3f42659269d"
+          "sourceRoot": "sha256:a66298d416822912f225de5b6d93af0f9619caca2eed6c2c8659da08d984a167"
         },
         {
           "path": ".github/workflows/dev-pr-auto-merge.yml",
           "classification": "non-publication",
           "owner": "kungfu-ci",
           "surfaceIds": [],
-          "sourceRoot": "sha256:41092ed2d24f2475c9d1912c68fcd75b4ad8b6157b2905a3ddb20e53c241fe1f"
+          "sourceRoot": "sha256:b9ec0c0522ec91976b6cdbddfc39c523000f26ad838e92bf92cce9382a2d5616"
         },
         {
           "path": ".github/workflows/dev-gate-latency-patrol.yml",
@@ -860,5 +860,5 @@
       }
     }
   ],
-  "registryRoot": "sha256:ba3117d51000a4b6b87819cf44b76a8ac4ef6d7ff59d162927cfd0df9ee78a23"
+  "registryRoot": "sha256:830b7cfb2799b769a438f6338194893091d084119eb18fdebcc65afe827b7896"
 }
