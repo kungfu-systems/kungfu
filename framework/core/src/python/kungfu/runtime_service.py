@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import copy
 import json
 import os
 import platform
@@ -30,6 +29,7 @@ from kungfu.coordination.arbiter import (
     grant_payload,
     parse_name,
 )
+from kungfu.execution_surface import authority as runtime_surface_authority
 from kungfu.storage import service as storage_service
 from kungfu.action_wire import unwrap_event, wrap_event
 from pykungfu.runtime import coordinator as NativeCoordinator
@@ -53,52 +53,6 @@ RESTART_MAX_ATTEMPTS = 5
 RUNTIME_IDLE_GRACE_SECONDS = 30.0
 SUPERVISOR_LIFECYCLE_LOCK = "supervisor-lifecycle"
 _SUPERVISOR_LIFECYCLE_THREAD_LOCK = threading.RLock()
-
-
-def _coordinator_ready(status: Mapping[str, Any]) -> bool:
-    """Require verified process identities and the matching native-ready state."""
-
-    lifecycle = status.get("lifecycle") or {}
-    supervisor = status.get("supervisor") or {}
-    coordinator = status.get("coordinator") or {}
-    last_state = status.get("lastState") or {}
-    return all(
-        (
-            lifecycle.get("healthy") is True,
-            supervisor.get("identityVerified") is True,
-            coordinator.get("identityVerified") is True,
-            last_state.get("status") == "coordinator-running",
-            last_state.get("coordinatorPid") == coordinator.get("pid"),
-        )
-    )
-
-
-def _coordinator_running_state(
-    *,
-    schema: str,
-    home: str,
-    runtime_dir: str,
-    authority: Mapping[str, Any],
-    pid: int,
-    start_identity: Any,
-    runtime_image: Mapping[str, Any] | None,
-    updated_at: float,
-) -> dict[str, Any]:
-    """Project ready state only after the native coordinator is constructed."""
-
-    return {
-        "schema": schema,
-        "status": "coordinator-running",
-        "home": home,
-        "runtimeDir": runtime_dir,
-        **authority,
-        "coordinatorPid": pid,
-        "coordinatorStartIdentity": start_identity,
-        "runtimeImage": copy.deepcopy(dict(runtime_image))
-        if runtime_image is not None
-        else None,
-        "updatedAt": updated_at,
-    }
 
 
 SCHEMA_PLAN = runtime_service_config.SCHEMA_PLAN
@@ -1349,7 +1303,7 @@ class ProcessRuntimeHost:
             )
             _json_write(
                 state_path(runtime_dir),
-                _coordinator_running_state(
+                runtime_surface_authority.coordinator_running_state(
                     schema=SCHEMA_STATUS,
                     home=home,
                     runtime_dir=runtime_dir,
@@ -1939,7 +1893,7 @@ def _wait_for_coordinator(
     deadline = time.time() + 5
     while time.time() < deadline:
         current = route_status(home, runtime_dir, config_home)
-        if _coordinator_ready(current):
+        if runtime_surface_authority.coordinator_ready(current):
             payload = {
                 **current,
                 "changed": changed,
