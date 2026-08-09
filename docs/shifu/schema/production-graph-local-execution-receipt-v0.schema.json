@@ -1,0 +1,120 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://libkungfu.dev/schemas/shifu/production-graph-local-execution-receipt-v0.schema.json",
+  "title": "Shifu Production Graph local execution receipt v0",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "status",
+    "contractRoot",
+    "graphRoot",
+    "planRoot",
+    "sourceRevision",
+    "sourceTree",
+    "executorPolicyRoot",
+    "executionAdmissionRequestRoot",
+    "executionAdmissionDecisionRoot",
+    "executionAdmissionExpiresAt",
+    "idempotencyRoot",
+    "concurrency",
+    "startedNodeIds",
+    "skippedNodeIds",
+    "nodeResults",
+    "eventRoots",
+    "failureRoots",
+    "retainedEvidenceRoots",
+    "nextAction",
+    "receiptRoot"
+  ],
+  "properties": {
+    "schema": { "const": "shifu.production-graph-local-execution-receipt/v0" },
+    "status": { "enum": ["qualified", "failed", "cancelled", "timed-out"] },
+    "contractRoot": { "$ref": "production-graph-v0.schema.json#/$defs/root" },
+    "graphRoot": { "$ref": "production-graph-v0.schema.json#/$defs/root" },
+    "planRoot": { "$ref": "production-graph-v0.schema.json#/$defs/root" },
+    "sourceRevision": { "$ref": "production-graph-v0.schema.json#/$defs/gitObject" },
+    "sourceTree": { "$ref": "production-graph-v0.schema.json#/$defs/gitObject" },
+    "executorPolicyRoot": { "$ref": "production-graph-v0.schema.json#/$defs/root" },
+    "executionAdmissionRequestRoot": { "$ref": "production-graph-v0.schema.json#/$defs/root" },
+    "executionAdmissionDecisionRoot": { "$ref": "production-graph-v0.schema.json#/$defs/root" },
+    "executionAdmissionExpiresAt": { "type": "string", "format": "date-time" },
+    "idempotencyRoot": { "$ref": "production-graph-v0.schema.json#/$defs/root" },
+    "concurrency": { "const": 1 },
+    "startedNodeIds": { "$ref": "#/$defs/nodeIds" },
+    "skippedNodeIds": { "$ref": "#/$defs/nodeIds" },
+    "nodeResults": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/nodeResult" }
+    },
+    "eventRoots": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "$ref": "production-graph-v0.schema.json#/$defs/root" }
+    },
+    "failureRoots": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": { "$ref": "production-graph-v0.schema.json#/$defs/root" }
+    },
+    "retainedEvidenceRoots": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "$ref": "production-graph-v0.schema.json#/$defs/root" }
+    },
+    "nextAction": { "$ref": "production-graph-v0.schema.json#/$defs/nonEmpty" },
+    "receiptRoot": { "$ref": "production-graph-v0.schema.json#/$defs/root" }
+  },
+  "$defs": {
+    "nullableRoot": {
+      "anyOf": [
+        { "$ref": "production-graph-v0.schema.json#/$defs/root" },
+        { "type": "null" }
+      ]
+    },
+    "nodeIds": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": { "$ref": "production-graph-v0.schema.json#/$defs/id" }
+    },
+    "nodeResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "nodeId",
+        "state",
+        "started",
+        "exitCode",
+        "signal",
+        "outputRoot",
+        "failureRoot",
+        "evidenceRoot",
+        "retryEligible"
+      ],
+      "properties": {
+        "nodeId": { "$ref": "production-graph-v0.schema.json#/$defs/id" },
+        "state": { "enum": ["succeeded", "failed", "cancelled", "timed-out", "skipped"] },
+        "started": { "type": "boolean" },
+        "exitCode": {
+          "anyOf": [
+            { "type": "integer", "minimum": 0, "maximum": 255 },
+            { "type": "null" }
+          ]
+        },
+        "signal": {
+          "anyOf": [
+            { "type": "string", "minLength": 1 },
+            { "type": "null" }
+          ]
+        },
+        "outputRoot": { "$ref": "#/$defs/nullableRoot" },
+        "failureRoot": { "$ref": "#/$defs/nullableRoot" },
+        "evidenceRoot": { "$ref": "production-graph-v0.schema.json#/$defs/root" },
+        "retryEligible": { "type": "boolean" }
+      }
+    }
+  }
+}
