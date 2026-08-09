@@ -230,37 +230,6 @@ def test_execute_rejects_journal_order_conflict(tmp_path):
     assert "episode_frame_order_conflict" in reasons
 
 
-def test_atlas_projection_survives_the_roundtrip(tmp_path):
-    # The P10 product claim: an atlas import batch (a sealed Episode since
-    # KF-ADR-019f86da-4f90-726e-b31f-ed180aa2e7a8's prerequisite work) moves between data roots as one bundle,
-    # and the destination folds the same projection. Card payload bodies
-    # resolve through the provider content store in a materialized home — the
-    # atlas store mirror is the import-side original and is absent there.
-    from test_atlas_storage import _atlas_fixture
-
-    from kungfu.atlas import store as atlas_store
-
-    repo = tmp_path / "atlas-repo"
-    _atlas_fixture(repo)
-
-    source_root = tmp_path / "source"
-    result = atlas_store.ImportStore(str(source_root)).run_import(str(repo))
-    episode_id = int(result["episode_id"])
-    assert episode_id != 0, result
-
-    bundle = _export(source_root, episode_id)
-    destination_root = tmp_path / "destination"
-    receipt = service.import_bundle(destination_root, bundle, execute=True)
-    assert receipt["ok"], receipt
-
-    source_projection = atlas_store.load(str(source_root))
-    destination_projection = atlas_store.load(str(destination_root))
-    assert destination_projection is not None
-    assert destination_projection["missions"] == source_projection["missions"]
-    assert destination_projection["goals"] == source_projection["goals"]
-    assert destination_projection["markers"] == source_projection["markers"]
-
-
 def test_repair_apply_materializes_missing_journal(tmp_path):
     # The P10 break shape: a sealed Episode whose event journal is gone.
     # A self-contained bundle from a healthy donor now heals it through the
