@@ -1,0 +1,38 @@
+{
+  "artifacts": [
+    {
+      "content_root": "sha256:f4aa7ae43e587e411003749e9a5ab6ef1c5b082aabed861a9f44eb9369111f17",
+      "path": "atlas.json",
+      "size": 5074008
+    },
+    {
+      "content_root": "sha256:251acd58f1ce960c77490283ea32687a7f727ded6dffe14511f8d35117fb6c1b",
+      "path": "views/human.json",
+      "size": 84301
+    },
+    {
+      "content_root": "sha256:c878259a92839809cd75aa4fc99ccde57abf757d7276eaf7dcad6399898fab4f",
+      "path": "views/agent.json",
+      "size": 84303
+    },
+    {
+      "content_root": "sha256:5bf6dd6472893744a4d3243cb7355b0b6b251c502ba82a850324a55887565e56",
+      "path": "compatibility/context-pack-v1/pack.json",
+      "size": 4957844
+    },
+    {
+      "content_root": "sha256:d125865a779123e596bc4097099e160b115f59ebb958d2c0709e9b5be18ed1c3",
+      "path": "compatibility/context-pack-v1/manifest.json",
+      "size": 493
+    },
+    {
+      "content_root": "sha256:59e3660a388ce866045dd2e1e31d555e62e34e7786ab5c8a8f443482d3a26612",
+      "path": "compatibility/context-pack-v1/receipt.json",
+      "size": 1232
+    }
+  ],
+  "atlas_root": "sha256:cf932566fc24af06c7cdd44ad807717b9c0cc1228d6bb4ede366310aa9a74a32",
+  "context_pack_root": "sha256:63cdce71ea7b77eb9bd1fc47b408cfd5d9f58e7dddef2aa7afd27ce37746b0a0",
+  "manifest_root": "sha256:2a24c9da28443b7c24c2866ceb6e76df690c95bae060db5774c4dc0803fe9e16",
+  "schema": "xinfa.atlas-manifest/v1"
+}
