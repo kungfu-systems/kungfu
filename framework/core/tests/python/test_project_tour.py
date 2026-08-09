@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: Apache-2.0
 
-from kungfu.project_tour import (
+from kungfu.project_tour.orchestration import (
     ProjectTourEpisodeRequest,
     run_project_tour_episode,
 )

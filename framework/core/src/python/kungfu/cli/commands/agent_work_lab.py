@@ -12,7 +12,7 @@ from kungfu import agent_work_lab as lab
 from kungfu import assignment_orchestration as orchestration
 from kungfu import config as kungfu_config
 from kungfu import project_template
-from kungfu import project_tour as project_tour_runtime
+from kungfu.project_tour import orchestration as project_tour_runtime
 from kungfu import projects as project_registry
 from kungfu.agent.kfd3 import kfd3_api
 from kungfu.agent import runtime_profiles
