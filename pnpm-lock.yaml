@@ -491,12 +491,8 @@ importers:
 
   framework/gui:
     dependencies:
-      '@kungfu-tech/agent-session':
-        specifier: workspace:*
-        version: link:../agent-session
-      '@kungfu-tech/api':
-        specifier: workspace:*
-        version: link:../api
+      '@kungfu-tech/agent-session': {specifier: 'workspace:*', version: 'link:../agent-session'}
+      '@kungfu-tech/api': {specifier: 'workspace:*', version: 'link:../api'}
       '@kungfu-tech/kfx':
         specifier: workspace:*
         version: link:../kfx
@@ -656,9 +652,7 @@ importers:
       '@kungfu-tech/kfx-adapter-langchain':
         specifier: workspace:*
         version: link:../extensions/langchain-adapter
-      '@kungfu-tech/kfx-agent-work-lab-experience':
-        specifier: workspace:*
-        version: link:../extensions/agent-work-lab/experience
+      '@kungfu-tech/kfx-agent-work-lab-experience': {specifier: 'workspace:*', version: 'link:../extensions/agent-work-lab/experience'}
       '@kungfu-tech/kfx-dogfood-actions':
         specifier: workspace:*
         version: link:../extensions/dogfood/dogfood-actions
@@ -668,9 +662,7 @@ importers:
       '@kungfu-tech/kfx-dogfood-contract':
         specifier: workspace:*
         version: link:../extensions/dogfood/dogfood-contract
-      '@kungfu-tech/kfx-suite-agent-work-lab':
-        specifier: workspace:*
-        version: link:../extensions/agent-work-lab
+      '@kungfu-tech/kfx-suite-agent-work-lab': {specifier: 'workspace:*', version: 'link:../extensions/agent-work-lab'}
       '@kungfu-tech/kfx-suite-dogfood-feedback':
         specifier: workspace:*
         version: link:../extensions/dogfood
