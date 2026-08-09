@@ -222,7 +222,7 @@ test('manual media publication builds exactly one Linux x64 product artifact', (
   );
   assert.equal(
     build.with['compiler-cache-platforms-json'],
-    '${{ github.event_name == \'workflow_dispatch\' && (inputs.render-auditable-demo || inputs.windows-compiler-cache-mode == \'off\') && \'[]\' || \'["windows-x64"]\' }}',
+    "${{ github.event_name == 'workflow_dispatch' && (inputs.render-auditable-demo || inputs.windows-compiler-cache-mode == 'off') && '[]' || '[\"windows-x64\"]' }}",
   );
   assert.equal(
     build.with['compiler-cache-required'],
