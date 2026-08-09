@@ -157,6 +157,7 @@ test(
         'kungfu-format-contract',
         'kungfu-gui',
         'kungfu-kfx-development',
+        'kungfu-kfx-service-webhook',
         'kungfu-operations',
         'kungfu-primitive-management',
         'kungfu-sdk',
