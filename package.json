@@ -243,6 +243,7 @@
     "alpha:publication:debug": "node scripts/require-shifu.mjs alpha:publication:debug && node framework/release/alpha-local-publication-debug/index.mjs",
     "alpha:publication:debug:portable-smoke": "node scripts/require-shifu.mjs alpha:publication:debug:portable-smoke && node framework/release/alpha-local-publication-debug/index.mjs portable-smoke",
     "alpha:publication:debug:replay": "node scripts/require-shifu.mjs alpha:publication:debug:replay && node framework/release/alpha-local-publication-debug/index.mjs replay-qualify",
+    "alpha:publication:debug:hosted-parity": "node scripts/require-shifu.mjs alpha:publication:debug:hosted-parity && node framework/release/alpha-local-publication-debug/index.mjs hosted-parity",
     "test:alpha-publication-debug": "node scripts/require-shifu.mjs test:alpha-publication-debug && node --test scripts/alpha-local-publication-debug.test.mjs",
     "release:promotion:rehearse": "node scripts/require-shifu.mjs release:promotion:rehearse && node scripts/release-promotion-rehearsal.mjs",
     "release:probe:platform": "node scripts/require-shifu.mjs release:probe:platform && node scripts/probe-release-platform.mjs",

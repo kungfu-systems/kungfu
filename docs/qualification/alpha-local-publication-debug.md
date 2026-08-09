@@ -106,6 +106,51 @@ identical fail-closed diagnostics for a tampered file entry. Every scenario
 uses Buildchain's public `executePublicationRehearsal` core in `replay` mode;
 recorded responses are data-only fixtures and never claim provider truth.
 
+## Hosted parity and the four-command handoff
+
+The fourth command proves the exact Buildchain hosted workflow and Action are a
+thin binding to the same public runtime used by the first three commands. It
+executes the sealed capsule once in local simulation and once in provider mode
+with an in-memory, data-only witness, then requires identical capsule, binding,
+transaction, error-class, error-code, diagnostic, and diagnostic-binding roots:
+
+```sh
+./shifu alpha:publication:debug:hosted-parity -- \
+  --capsule /private/tmp/kungfu-alpha-phase-a/alpha-publication-debug/rehearsal-capsule.json \
+  --capsule-root /private/tmp/kungfu-alpha-phase-a/alpha-publication-debug/candidate \
+  --scratch-root /private/tmp/kungfu-alpha-phase-d \
+  --buildchain-root /Users/dkr/Code/kungfu-systems/buildchain
+```
+
+The rooted report is
+`alpha-publication-hosted-parity-qualification/report.json`. Its hosted-path
+root covers the reusable workflow, Action manifest, Action source, and shared
+runtime source. The provider-mode witness makes no network request and is not
+provider truth. After parity, the only hosted-only behavior is the declared
+credentials, transport, provider effects, and real observations. Public
+readback remains an external authority and cannot be inferred from either
+local execution or an unobserved hosted attempt.
+
+The complete consumer contract is exactly these four Shifu commands:
+
+1. `alpha:publication:debug` reconstructs and simulates the retained exact
+   candidate.
+2. `alpha:publication:debug:portable-smoke` rechecks deterministic roots on a
+   portable non-provider worker.
+3. `alpha:publication:debug:replay` qualifies bounded faults and replay.
+4. `alpha:publication:debug:hosted-parity` roots the hosted wrapper binding and
+   local/hosted-core contract parity.
+
+Existing Atlas goal
+`2026-08-07-kungfu-alpha-build-publication-rehearsal-gate` is the sole
+downstream consumer. It must call this contract and consume its rooted reports;
+it must not copy the harness, reconstruct a second capsule, or add another
+Kungfu-specific local release path. Candidate and capsule rejection,
+deterministic retry, idempotency, collision, tamper, contract-root mismatch,
+diagnostic mismatch, and hosted-wrapper drift must all be caught locally.
+Credentials, transport, unavoidable provider effects, real observations, and
+independently authorized public readback remain pending for the hosted gate.
+
 ## Fail-closed boundaries
 
 The command rejects relative or overlapping paths, missing or extra required
@@ -117,6 +162,8 @@ publication. It never supplies provider credentials or a provider adapter.
 Phase A proved local reconstruction and deterministic simulation for one
 retained real candidate. Phase B adds the sealed complete-file inventory,
 stable clean-checkout workflow, and portable non-provider smoke. Phase C adds
-bounded replay and fault qualification without rebuilding artifacts. Hosted
-provider effects and hosted/local parity remain a separate continuation phase
-and are not implied by a green local report.
+bounded replay and fault qualification without rebuilding artifacts. Phase D
+roots the hosted wrapper's shared-core binding, proves matching deterministic
+contract roots and error classes, and hands the four commands to the existing
+Alpha rehearsal gate without creating a duplicate path. No local report claims
+hosted provider truth or public observation.
