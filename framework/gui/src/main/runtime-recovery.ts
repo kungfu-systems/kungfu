@@ -1,4 +1,4 @@
-import { execFileSync, type ChildProcessByStdio } from 'node:child_process';
+import { type ChildProcessByStdio, execFileSync } from 'node:child_process';
 import {
   existsSync,
   mkdirSync,
