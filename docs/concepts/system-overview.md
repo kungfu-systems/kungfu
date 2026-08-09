@@ -113,10 +113,12 @@ design.
 
 ## Status and guarantees
 
-Kungfu v4 is **Coming soon**. Source-built capabilities and qualification
-slices exist, but public packaging, cross-platform evidence, strong power-loss
-durability, and the institutional profile remain staged unless linked evidence
-says otherwise.
+Kungfu `v4.0.0-alpha.1` is the first public v4 Alpha, with desktop and
+standalone CLI artifacts for the declared macOS arm64, Linux x86_64, and
+Windows x86_64 release surfaces. It is not a Stable or generally available
+release. Strong power-loss durability, the institutional profile, independent
+ecosystem SDK publication, and every other unlisted claim remain staged unless
+linked evidence says otherwise.
 
 Design intent, implemented behavior, qualified guarantees, and released
 artifacts are deliberately distinct. Before relying on a claim, check

@@ -468,7 +468,7 @@ Source implementation is not the same as released support. Verification, Buildch
     .map((row) => row.id)
     .join(
       ', ',
-    )} only; the public claim becomes qualifying when the exact release passport is published.
+    )} only. The published \`v4.0.0-alpha.1\` Release Passport qualifies that exact bounded claim; every later release must carry its own passport.
 
 | Standard | Normative | Product status | Implementation | Verification | Buildchain | Release qualification | Shipped | Next gate |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |

@@ -115,10 +115,11 @@ must leave the lower declared product closures valid.
 
 ## Current availability and maturity
 
-Kungfu is currently marked **Coming soon**, and independent artifact
-qualification is staged. This page describes the adoption contract the project
-is implementing; it does not claim that every package is already published or
-that every row has passed its final release gate.
+Kungfu `v4.0.0-alpha.1` is the first public v4 Alpha. It publishes the assembled
+desktop product and standalone CLI artifacts for the declared macOS arm64,
+Linux x86_64, and Windows x86_64 release surfaces. It is a prerelease, and this
+page does not claim that every independently adoptable SDK/package row is
+published or that Stable qualification has passed.
 
 The native historical-query closure and versioned C ABI now have executable
 qualification. Thin Python, Node, and Rust storage SDK sources share that

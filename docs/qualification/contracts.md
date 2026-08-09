@@ -344,9 +344,10 @@ kungfu exit verify --info --json
 **Maturity.** Composition and the installed registry-free verifier are
 implemented. One exact `darwin-arm64` official CLI artifact has retained
 clean-runtime Exit and File↔RocksDB provider-migration qualification. The
-current v4 line is still pre-release and not release-qualified; Linux, Windows,
-GUI/TUI parity, cross-machine migration, physical-media durability, and the
-stable cross-minor support window remain unqualified or undecided. See
+current v4 line is a public Alpha, but this Exit guarantee is not qualified
+across the whole release line; Linux, Windows, GUI/TUI parity, cross-machine
+migration, physical-media durability, and the Stable cross-minor support window
+remain unqualified or undecided. See
 [Exit, Migration, and Version Compatibility](../guides/exit-and-version-compatibility.md).
 
 ## Durable history protection starts at the owner receipt
@@ -619,14 +620,14 @@ The living welded-surface register is [`versioning.md`](../development/versionin
 bundle, Python/Node validators, assembled artifact hash gate, and CLI inspection.
 Marketplace acquisition and permission elevation remain outside this contract.
 
-## First real release carries the mark and Class 9 capability evidence
+## A public release carries the mark and Class 9 capability evidence
 
-**Guarantee.** Kungfu does not claim released-software use while v4 remains
-Coming Soon. A future claim must bind the exact **Kungfu UNGFU™** mark to both a
-real public download or package-install path and at least one stable
-product-controlled surface. Source checkouts, previews, and staging do not
-satisfy the acquisition requirement. The same release must bind every core US
-Class 9 identification to a capability users can exercise in the released
+**Guarantee.** The `v4.0.0-alpha.1` public release binds the exact **Kungfu
+UNGFU™** mark to a real acquisition path and a product-controlled surface, so
+the engineering release status can claim released-software use for that exact
+Alpha. Source checkouts, previews, and staging still do not satisfy the
+acquisition requirement. Every release making the claim must bind each core US
+Class 9 identification to a capability users can exercise in that exact
 artifact. Conditional inspection/replay and first-party plug-in identifications
 are admitted only when their release conditions and evidence are present.
 
@@ -650,10 +651,11 @@ exact release. Class 9 fixtures additionally reject missing core
 identifications, changed identification text, roadmap or source-only evidence,
 and conditional goods selected without released-product evidence.
 
-**Maturity.** The brand surfaces and release gate are implemented. Public
-release artifacts, actual released-software use evidence, a first-use date, and
-legal conclusions are not claimed. The Class 9 list is an engineering filing
-candidate that still requires counsel review at the release coordinate.
+**Maturity.** The brand surfaces and release gate are implemented, and
+`v4.0.0-alpha.1` has public artifacts plus released-software-use evidence. No
+legal first-use date, registration status, ownership conclusion, or filing
+conclusion follows from that engineering evidence. The Class 9 list remains an
+engineering filing candidate requiring counsel review.
 
 ## How to read a guarantee here
 
