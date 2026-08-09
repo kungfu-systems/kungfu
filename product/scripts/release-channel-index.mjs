@@ -6,6 +6,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
+import { qualificationContentRoot } from '../../scripts/upgrade-qualification.mjs';
+
 export const CHANNEL_INDEX_SCHEMA = 'kungfu.release-channel-index/v1';
 
 export function canonical(value) {
@@ -359,7 +361,9 @@ export function channelSpecFromAdmission({
   }
   const admitted = admission.manifests.map((entry) => ({
     ...entry,
-    manifest: readJson(entry.manifestPath, 'admitted release manifest'),
+    manifest:
+      entry.manifest ||
+      readJson(entry.manifestPath, 'admitted release manifest'),
   }));
   const sourceCommits = new Set(
     admitted.map((entry) => entry.manifest.sourceCommit),
@@ -394,7 +398,7 @@ export function channelSpecFromAdmission({
   const cutTransition = publicCutTransition(
     previousChannelIndex,
     assembled[0],
-    contentRoot(passport),
+    qualificationContentRoot(passport),
   );
   return {
     keyId,
@@ -403,7 +407,7 @@ export function channelSpecFromAdmission({
     sourceCommit,
     releasePassport: {
       ref: passportRef,
-      root: contentRoot(passport),
+      root: qualificationContentRoot(passport),
     },
     entries: admitted.flatMap(({ manifestPath }, index) =>
       installSources.map((installSource) => ({

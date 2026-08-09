@@ -9,6 +9,8 @@ import test from 'node:test';
 
 import Ajv2020 from 'ajv/dist/2020.js';
 
+import { qualificationContentRoot } from '../../scripts/upgrade-qualification.mjs';
+
 import {
   buildChannelIndex,
   canonicalBytes,
@@ -275,6 +277,9 @@ test('release admission can bind the final Buildchain release passport', () => {
       `${JSON.stringify({
         contract: 'kungfu-buildchain-release-passport',
         source: { sha: value.spec.sourceCommit },
+        platformArtifactManifests: [
+          { lifecycle: { durationSeconds: 2900.34 } },
+        ],
       })}\n`,
     );
     const spec = channelSpecFromAdmission({
@@ -308,7 +313,9 @@ test('release admission can bind the final Buildchain release passport', () => {
     );
     assert.equal(
       spec.releasePassport.root,
-      contentRoot(JSON.parse(fs.readFileSync(releasePassportPath, 'utf8'))),
+      qualificationContentRoot(
+        JSON.parse(fs.readFileSync(releasePassportPath, 'utf8')),
+      ),
     );
   } finally {
     fs.rmSync(value.directory, { recursive: true, force: true });

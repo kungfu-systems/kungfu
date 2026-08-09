@@ -26,6 +26,7 @@ import {
   releaseChannelKeyId,
   releaseChannelTrust,
 } from '../product/scripts/release-channel-trust.mjs';
+import { bindProductReleaseCut } from '../product/scripts/upgrade-manifest.mjs';
 import {
   findAlphaPublicationTailPlan,
   verifyAlphaPublicationTailPlan,
@@ -33,7 +34,14 @@ import {
 import { verifyUpgradePublicationAdmission } from './upgrade-publication-admission.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const TRUST_PATH = path.join(ROOT, 'product', 'release-channel-trust.json');
+const PRODUCT_ROOT = process.env.BUILDCHAIN_PUBLICATION_COMMIT_PRODUCT_ROOT
+  ? path.resolve(process.env.BUILDCHAIN_PUBLICATION_COMMIT_PRODUCT_ROOT)
+  : ROOT;
+const TRUST_PATH = path.join(
+  PRODUCT_ROOT,
+  'product',
+  'release-channel-trust.json',
+);
 const CHANNEL_URL = 'https://kungfu.tech/.well-known/kungfu/alpha.json';
 const CANONICAL_BASE_URL = 'https://kungfu.tech';
 const BUNDLE_MANIFEST_ASSET = 'kungfu-installer-publication-bundle.json';
@@ -69,7 +77,24 @@ function sha256(bytes) {
   return `sha256:${createHash('sha256').update(bytes).digest('hex')}`;
 }
 
-function run(command, args, { cwd = ROOT, env = process.env } = {}) {
+function releaseBaseUrl(releaseTag) {
+  return `https://github.com/kungfu-systems/kungfu/releases/download/${releaseTag}`;
+}
+
+function bundleAssetDestination(bundleRoot, relativePath) {
+  const root = path.resolve(bundleRoot);
+  const destination = path.resolve(root, relativePath);
+  if (
+    typeof relativePath !== 'string' ||
+    relativePath === '' ||
+    !destination.startsWith(`${root}${path.sep}`)
+  ) {
+    throw new Error('existing installer publication asset path is unsafe');
+  }
+  return destination;
+}
+
+function run(command, args, { cwd = PRODUCT_ROOT, env = process.env } = {}) {
   const result = spawnSync(command, args, {
     cwd,
     env,
@@ -119,9 +144,137 @@ function trustedKeyMap(trust) {
   );
 }
 
+export function validateExistingPublicationIdentity({
+  bundle,
+  version,
+  candidateSourceSha,
+  releaseSha,
+  releaseTag,
+}) {
+  if (
+    bundle?.identity?.channel !== 'alpha' ||
+    bundle.identity.version !== version ||
+    bundle.identity.sourceCommit !== candidateSourceSha ||
+    bundle.identity.releaseSha !== releaseSha ||
+    bundle.identity.releaseTag !== releaseTag ||
+    bundle.identity.releasePassport?.ref !==
+      `buildchain:release-passport/${candidateSourceSha}` ||
+    bundle.distribution?.repository !== 'kungfu-systems/kungfu' ||
+    bundle.distribution.releaseBaseUrl !== releaseBaseUrl(releaseTag) ||
+    bundle.distribution.manifestAsset !== BUNDLE_MANIFEST_ASSET
+  ) {
+    throw new Error(
+      'existing installer publication bundle does not match the exact Alpha release identity',
+    );
+  }
+  return bundle;
+}
+
+async function fetchReleaseAsset(
+  url,
+  { fetcher = fetch, optional = false } = {},
+) {
+  const response = await fetcher(url, {
+    cache: 'no-store',
+    headers: { accept: 'application/octet-stream' },
+    signal: AbortSignal.timeout(30_000),
+  });
+  if (optional && response.status === 404) return null;
+  if (!response.ok) {
+    throw new Error(
+      `public release asset returned HTTP ${response.status}: ${url}`,
+    );
+  }
+  return Buffer.from(await response.arrayBuffer());
+}
+
+export async function existingPublicationAuthority({
+  version,
+  candidateSourceSha,
+  releaseSha,
+  releaseTag,
+  trust,
+  fetcher = fetch,
+}) {
+  const baseUrl = releaseBaseUrl(releaseTag);
+  const manifestUrl = `${baseUrl}/${BUNDLE_MANIFEST_ASSET}`;
+  const manifestBytes = await fetchReleaseAsset(manifestUrl, {
+    fetcher,
+    optional: true,
+  });
+  if (!manifestBytes) return null;
+  const bundle = validateExistingPublicationIdentity({
+    bundle: JSON.parse(manifestBytes),
+    version,
+    candidateSourceSha,
+    releaseSha,
+    releaseTag,
+  });
+  const canonicalManifest = Buffer.from(`${JSON.stringify(bundle, null, 2)}\n`);
+  if (!manifestBytes.equals(canonicalManifest)) {
+    throw new Error(
+      'existing installer publication bundle manifest bytes are not canonical',
+    );
+  }
+  const temporaryRoot = fs.mkdtempSync(
+    path.join(os.tmpdir(), 'kungfu-existing-alpha-publication-'),
+  );
+  try {
+    fs.writeFileSync(path.join(temporaryRoot, 'bundle.json'), manifestBytes, {
+      flag: 'wx',
+    });
+    const releaseAssets = new Map();
+    for (const asset of bundle.assets) {
+      const expectedUrl = `${baseUrl}/${asset.releaseAsset}`;
+      if (asset.releaseUrl !== expectedUrl) {
+        throw new Error(
+          `existing installer publication asset URL drifted: ${asset.path}`,
+        );
+      }
+      if (!releaseAssets.has(asset.releaseAsset)) {
+        releaseAssets.set(
+          asset.releaseAsset,
+          await fetchReleaseAsset(expectedUrl, { fetcher }),
+        );
+      }
+      const destination = bundleAssetDestination(temporaryRoot, asset.path);
+      fs.mkdirSync(path.dirname(destination), { recursive: true });
+      fs.writeFileSync(destination, releaseAssets.get(asset.releaseAsset), {
+        flag: 'wx',
+      });
+    }
+    verifyInstallerPublicationBundle({
+      bundleRoot: temporaryRoot,
+      expectedBundleRoot: bundle.bundleRoot,
+    });
+    const channelBytes = fs.readFileSync(
+      path.join(temporaryRoot, 'channel-index.json'),
+    );
+    const channelIndex = JSON.parse(channelBytes);
+    verifyReleaseChannelIndex(channelIndex, trustedKeyMap(trust));
+    if (
+      !channelBytes.equals(
+        Buffer.concat([canonicalBytes(channelIndex), Buffer.from('\n')]),
+      )
+    ) {
+      throw new Error(
+        'existing installer publication Alpha channel bytes are not canonical',
+      );
+    }
+    return {
+      bundle,
+      manifestDigest: sha256(manifestBytes),
+      manifestUrl,
+    };
+  } finally {
+    fs.rmSync(temporaryRoot, { recursive: true, force: true });
+  }
+}
+
 export function publicationCommitEvidence({
   version,
   sourceSha,
+  candidateSourceSha,
   releaseSha,
   releaseTag,
   payloadRoot,
@@ -132,7 +285,13 @@ export function publicationCommitEvidence({
   return {
     schema: 'kungfu-buildchain-publication-commit-evidence/v1',
     status: 'passed',
-    identity: { version, sourceSha, releaseSha, releaseTag },
+    identity: {
+      version,
+      sourceSha,
+      candidateSourceSha,
+      releaseSha,
+      releaseTag,
+    },
     publication: {
       url: `${bundle.distribution.releaseBaseUrl}/${bundle.distribution.manifestAsset}`,
       payloadRoot: bundle.bundleRoot,
@@ -202,12 +361,22 @@ export function prepareAlphaPublication({
     expectedVersion: version,
     expectedSourceSha: sourceSha,
   });
+  const publicAdmission = {
+    ...admission,
+    manifests: admission.manifests.map((entry) => ({
+      ...entry,
+      manifest: bindProductReleaseCut(entry.manifest, {
+        parentReleaseCutRoots: [],
+        sourceBuild: false,
+      }),
+    })),
+  };
   const generatedAt = now.toISOString();
   const expiresAt = new Date(
     now.getTime() + 30 * 24 * 60 * 60 * 1000,
   ).toISOString();
   const spec = channelSpecFromAdmission({
-    admission,
+    admission: publicAdmission,
     releaseCandidatePassportPath: candidatePassportPath,
     releasePassportPath,
     releasePassportRef: `buildchain:release-passport/${sourceSha}`,
@@ -228,7 +397,7 @@ export function prepareAlphaPublication({
   const channelIndex = writeChannelIndex({
     spec,
     privateKeyPem,
-    baseDirectory: ROOT,
+    baseDirectory: PRODUCT_ROOT,
     output: channelIndexPath,
   });
   const trustedKeysPath = path.join(outputDir, 'trusted-keys.json');
@@ -250,7 +419,7 @@ export function prepareAlphaPublication({
     output: publicationDir,
   });
   return {
-    admission,
+    admission: publicAdmission,
     channelIndex,
     channelIndexPath,
     channelBytes: fs.readFileSync(channelIndexPath),
@@ -290,6 +459,25 @@ function ghEnvironment(token) {
   return { ...process.env, GH_TOKEN: token };
 }
 
+export function validateExistingLauncherRelease({ tag, release }) {
+  if (release?.tagName !== tag) {
+    throw new Error(`existing launcher Release tag mismatch: expected ${tag}`);
+  }
+  const assets = new Set(
+    Array.isArray(release.assets)
+      ? release.assets.map((asset) => asset?.name).filter(Boolean)
+      : [],
+  );
+  for (const requiredAsset of ['component-release-bom.json', 'SHA256SUMS']) {
+    if (!assets.has(requiredAsset)) {
+      throw new Error(
+        `existing launcher Release ${tag} is missing ${requiredAsset}`,
+      );
+    }
+  }
+  return tag;
+}
+
 function ensureLauncherTag({ token, releaseSha, version }) {
   const tag = `shifu-v${version}`;
   const env = ghEnvironment(token);
@@ -304,10 +492,28 @@ function ensureLauncherTag({ token, releaseSha, version }) {
     { env, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] },
   );
   if (probe.status === 0) {
-    if (probe.stdout.trim() !== releaseSha) {
-      throw new Error(`${tag} already points to a different release SHA`);
+    const releaseProbe = spawnSync(
+      'gh',
+      [
+        'release',
+        'view',
+        tag,
+        '--repo',
+        'kungfu-systems/kungfu',
+        '--json',
+        'tagName,assets',
+      ],
+      { env, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] },
+    );
+    if (releaseProbe.status !== 0) {
+      throw new Error(
+        `existing launcher tag ${tag} has no complete GitHub Release`,
+      );
     }
-    return tag;
+    return validateExistingLauncherRelease({
+      tag,
+      release: JSON.parse(releaseProbe.stdout),
+    });
   }
   run(
     'gh',
@@ -348,6 +554,22 @@ function releaseAssetInputs(bundleRoot, bundle, stagingRoot) {
   return staged;
 }
 
+export function existingReleaseAssetIsWinner(asset, file) {
+  if (!asset) return false;
+  const size = fs.statSync(file).size;
+  const digest = sha256(fs.readFileSync(file));
+  if (
+    asset.state !== 'uploaded' ||
+    asset.size !== size ||
+    asset.digest !== digest
+  ) {
+    throw new Error(
+      `installer publication release asset conflicts with existing bytes: ${asset.name}`,
+    );
+  }
+  return true;
+}
+
 function publishReleaseAssets({ token, releaseTag, bundleRoot, bundle }) {
   const env = ghEnvironment(token);
   const existing = JSON.parse(
@@ -365,7 +587,9 @@ function publishReleaseAssets({ token, releaseTag, bundleRoot, bundle }) {
       { env },
     ),
   );
-  const names = new Set(existing.assets.map((asset) => asset.name));
+  const assetsByName = new Map(
+    existing.assets.map((asset) => [asset.name, asset]),
+  );
   const stagingRoot = fs.mkdtempSync(
     path.join(os.tmpdir(), 'kungfu-installer-release-assets-'),
   );
@@ -375,11 +599,7 @@ function publishReleaseAssets({ token, releaseTag, bundleRoot, bundle }) {
       bundle,
       stagingRoot,
     )) {
-      if (names.has(name)) {
-        throw new Error(
-          `installer publication release asset already exists: ${name}`,
-        );
-      }
+      if (existingReleaseAssetIsWinner(assetsByName.get(name), file)) continue;
       run(
         'gh',
         [
@@ -450,6 +670,11 @@ async function main() {
       process.env.BUILDCHAIN_PUBLICATION_COMMIT_SOURCE_SHA,
       'BUILDCHAIN_PUBLICATION_COMMIT_SOURCE_SHA',
     ),
+    candidateSourceSha: exactSha(
+      process.env.BUILDCHAIN_PUBLICATION_COMMIT_CANDIDATE_SOURCE_SHA ||
+        process.env.BUILDCHAIN_PUBLICATION_COMMIT_SOURCE_SHA,
+      'BUILDCHAIN_PUBLICATION_COMMIT_CANDIDATE_SOURCE_SHA',
+    ),
     releaseSha: exactSha(
       process.env.BUILDCHAIN_PUBLICATION_COMMIT_RELEASE_SHA,
       'BUILDCHAIN_PUBLICATION_COMMIT_RELEASE_SHA',
@@ -490,13 +715,47 @@ async function main() {
   }
   const tailPlanPath = findAlphaPublicationTailPlan(environment.payloadDir);
   verifyAlphaPublicationTailPlan({
+    root: PRODUCT_ROOT,
     plan: readJson(tailPlanPath, 'Alpha publication tail plan'),
-    expectedSourceCommit: environment.sourceSha,
+    expectedSourceCommit: environment.candidateSourceSha,
     expectedVersion: environment.version,
   });
   const trustDocument = readJson(TRUST_PATH, 'release-channel trust');
   const trust = releaseChannelTrust(trustDocument, 'alpha');
   const previous = await previousAuthority(trustedKeyMap(trust));
+  const existing = await existingPublicationAuthority({
+    ...environment,
+    trust,
+  });
+  if (existing) {
+    ensureLauncherTag(environment);
+    const evidence = publicationCommitEvidence({
+      ...environment,
+      payloadRoot: existing.bundle.identity.channelPayloadRoot,
+      previousPayloadRoot: previous?.index.payloadRoot,
+      bundle: existing.bundle,
+      readbackDigest: existing.manifestDigest,
+    });
+    fs.mkdirSync(path.dirname(environment.evidencePath), {
+      recursive: true,
+    });
+    fs.writeFileSync(
+      environment.evidencePath,
+      `${JSON.stringify(evidence, null, 2)}\n`,
+      { mode: 0o600 },
+    );
+    process.stdout.write(
+      `${JSON.stringify({
+        status: 'passed',
+        action: 'reused-existing-publication-authority',
+        channelPayloadRoot: existing.bundle.identity.channelPayloadRoot,
+        installerBundleRoot: existing.bundle.bundleRoot,
+        installerBundleUrl: existing.manifestUrl,
+        siteHandoff: evidence.siteHandoff.state,
+      })}\n`,
+    );
+    return;
+  }
   const candidatePassportPath = path.join(
     path.dirname(environment.payloadDir),
     'passport',
@@ -507,6 +766,7 @@ async function main() {
   );
   const prepared = prepareAlphaPublication({
     ...environment,
+    sourceSha: environment.candidateSourceSha,
     candidatePassportPath,
     trustDocument,
     previousChannelIndex: previous?.index || null,
@@ -517,7 +777,7 @@ async function main() {
   });
   ensureLauncherTag(environment);
   const packageMetadata = readJson(
-    path.join(ROOT, 'framework', 'site', 'package.json'),
+    path.join(PRODUCT_ROOT, 'framework', 'site', 'package.json'),
     '@kungfu-tech/site package metadata',
   );
   const bundleRoot = path.join(temporaryRoot, 'installer-publication-bundle');

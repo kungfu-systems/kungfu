@@ -39,6 +39,7 @@
   },
   "evidence": {
     "publish_command": "node scripts/buildchain-custom-publish-evidence.mjs",
+    "recovery_publish_command": "node .buildchain/publication-controller/scripts/buildchain-custom-publish-evidence.mjs",
     "kfd_1_witnesses": [
       ".buildchain/kfd/kfd-1/contract-world.witness.json"
     ],

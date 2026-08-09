@@ -323,6 +323,10 @@ jobs:
         kungfu-episodes-cli-*.tar.gz
         kungfu-episodes-cli-*.zip
         kungfu-episodes-cli-*.qualification.json
+        Kungfu-Episodes-*-macos-arm64.dmg
+        Kungfu-Episodes-*-macos-arm64.zip
+        Kungfu Episodes-*.AppImage
+        Kungfu Episodes Setup *.exe
       publication-commit-command: ${{ startsWith(inputs.target-ref || github.event.pull_request.base.ref, 'alpha/') && 'node scripts/alpha-publication-commit.mjs' || '' }}
       publication-commit-evidence-path: .buildchain/publication-commit/evidence.json
       release-activation-command: ""
@@ -417,12 +421,16 @@ jobs:
       required-status-check: build / Finalize build controller evidence
       publish-target: custom
       publish-artifact-kind: kungfu-product
-      publish-command: node scripts/buildchain-custom-publish-evidence.mjs
+      publish-command: node .buildchain/publication-controller/scripts/buildchain-custom-publish-evidence.mjs
       github-release-payload-patterns: |
         kungfu-episodes-cli-*.tar.gz
         kungfu-episodes-cli-*.zip
         kungfu-episodes-cli-*.qualification.json
-      publication-commit-command: node scripts/alpha-publication-commit.mjs
+        Kungfu-Episodes-*-macos-arm64.dmg
+        Kungfu-Episodes-*-macos-arm64.zip
+        Kungfu Episodes-*.AppImage
+        Kungfu Episodes Setup *.exe
+      publication-commit-command: BUILDCHAIN_PUBLICATION_COMMIT_PRODUCT_ROOT=$GITHUB_WORKSPACE BUILDCHAIN_PUBLICATION_COMMIT_CANDIDATE_SOURCE_SHA=${{ inputs.resume-candidate-source-sha }} node .buildchain/publication-controller/scripts/alpha-publication-commit.mjs
       publication-commit-evidence-path: .buildchain/publication-commit/evidence.json
       release-activation-command: ""
       release-activation-receipt-set-path: .buildchain/release-activation/receipt-set.json
@@ -444,7 +452,7 @@ jobs:
         .buildchain/kfd/kfd-2/claims/remote-fact-boundary.json
       release-passport-kfd-3-prebuild-witness-jsons: |
         .buildchain/kfd/kfd-3/collaboration-interface.prebuild.json
-      release-passport-kfd-3-artifact-verify-command: node scripts/buildchain-kfd-evidence.mjs --artifact-witness --json
+      release-passport-kfd-3-artifact-verify-command: node "$GITHUB_WORKSPACE/.buildchain/publication-controller/scripts/buildchain-kfd-evidence.mjs" --write --json >/dev/null && node "$GITHUB_WORKSPACE/.buildchain/publication-controller/scripts/buildchain-kfd-evidence.mjs" --artifact-witness --json
       release-passport-kfd-support-matrix-json: .buildchain/kfd/support-matrix.json
       release-passport-kfd-product-gate-jsons: |
         .buildchain/runtime/kfd-product-gates/kfd-4/gate.json
@@ -455,7 +463,7 @@ jobs:
       release-passport-invariant-passport-command: >-
         node scripts/kungfu-invariant.mjs --collect-evidence .
         --passport product/release/qualification/invariant-passport.json --json
-      github-artifact-attestation-policy-json: auto
+      github-artifact-attestation-policy-json: ""
       github-artifact-attestation-environment: buildchain-artifact-attestation
       dry-run: false
     secrets:
