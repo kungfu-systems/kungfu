@@ -42,11 +42,11 @@
     "values": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "type": "string", "minLength": 1 } },
     "resolution": {
       "type": "object", "additionalProperties": false,
-      "required": ["subjects", "capabilities", "owners", "roles", "mission_tracks", "terms"],
+      "required": ["subjects", "capabilities", "owners", "roles", "initiative_tracks", "terms"],
       "properties": {
         "subjects": { "$ref": "#/$defs/values" }, "capabilities": { "$ref": "#/$defs/values" },
         "owners": { "$ref": "#/$defs/values" }, "roles": { "$ref": "#/$defs/values" },
-        "mission_tracks": { "$ref": "#/$defs/values" }, "terms": { "$ref": "#/$defs/values" }
+        "initiative_tracks": { "$ref": "#/$defs/values" }, "terms": { "$ref": "#/$defs/values" }
       }
     }
   }

@@ -7,7 +7,7 @@ import test from 'node:test';
 import {
   kfxNativePlanArgs,
   resolveKfxHostDescriptor,
-} from './renderer/src/projects-panel/index.tsx';
+} from './kfx-host-descriptor.ts';
 
 const nativeDescriptor = {
   schema: 'kungfu.kfx.experience-flow-descriptor/v1',

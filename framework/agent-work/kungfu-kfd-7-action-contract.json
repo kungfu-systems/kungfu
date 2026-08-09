@@ -32,7 +32,7 @@
     {
       "role": "pursuit",
       "identity": "Pursuit Profile logical object and immutable version roots",
-      "sourceAuthority": "declared Kungfu Profile intent source such as native Mission and Go facts",
+      "sourceAuthority": "declared Kungfu Profile intent source such as native Initiative and Assignment facts",
       "responsibility": "preserve intended-change continuity and explicit success or termination conditions",
       "lifecycleVocabulary": ["absent", "active", "paused", "completed", "abandoned"],
       "requiredEvidence": ["intent and acceptance roots", "continuation, completion, or abandonment receipt"],

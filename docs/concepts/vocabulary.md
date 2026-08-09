@@ -338,12 +338,11 @@ experience.
   source, Atlas, Episode change, policy, omissions, and continuation
   coordinates without replacing those authorities.
 
-Initiative, Assignment, and Project Cut are the target product hierarchy.
-Mission, Go, Responsibility State, Cost/State/Proof, Completion Claim, Handoff,
-and Agent Work Inbox are current compatibility projections. Pursuit, Atlas, and
-Warrant use the generic Fact substrate; Episode remains separately identified
-on the temporal substrate. These profile terms do not redefine the
-domain-neutral runtime.
+Initiative, Assignment, and Project Cut are the native product hierarchy.
+Responsibility State, Cost/State/Proof, Completion Claim, Handoff, and Agent
+Work Inbox are profile projections. Pursuit, Atlas, and Warrant use the generic
+Fact substrate; Episode remains separately identified on the temporal
+substrate. These profile terms do not redefine the domain-neutral runtime.
 
 ### Quantitative trading profile
 

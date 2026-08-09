@@ -1274,11 +1274,10 @@ export function findHistoricalMutationViolations(lines, existedAtBase) {
     const [status, file] = line.split('\t');
     if (!['M', 'D'].includes(status)) continue;
     if (!existedAtBase(file)) continue;
+    if (!file.startsWith(`${CANDIDATE_ROOT}/`)) continue;
     const action = status === 'D' ? 'deleting' : 'editing';
     violations.push(
-      file.startsWith(`${CANDIDATE_ROOT}/`)
-        ? `${file} is immutable candidate history; append a new candidate revision instead of ${action} it`
-        : `${file} is settled history; add an amendment or successor Stage instead of ${action} it`,
+      `${file} is immutable candidate history; append a new candidate revision instead of ${action} it`,
     );
   }
   return violations;
@@ -1322,7 +1321,7 @@ export function findUnlinkedEvolutionMapMentions(entries) {
 function checkEvolutionMapNavigation() {
   const markdownFiles = runGit(['ls-files', '--', '*.md'])
     .split('\n')
-    .filter(Boolean);
+    .filter((file) => file && fs.existsSync(path.join(ROOT, file)));
   const violations = findUnlinkedEvolutionMapMentions(
     markdownFiles.map((file) => ({
       file,

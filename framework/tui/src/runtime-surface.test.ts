@@ -18,7 +18,7 @@ test('TUI observes the exact rooted receipt without choosing another surface', (
     contractRoot: `sha256:${'b'.repeat(64)}`,
     operationId: 'context.consume',
     runtimeSurface: 'hybrid-boundary',
-    selectedProvider: 'atlas-kungfu-hybrid',
+    selectedProvider: 'xinfa-context-runtime',
     capabilities: ['context.compose', 'runtime.provenance'],
     selection: { fallback: { used: false, reason: null } },
   };
@@ -29,7 +29,7 @@ test('TUI observes the exact rooted receipt without choosing another surface', (
     contractRoot: `sha256:${'b'.repeat(64)}`,
     operationId: 'context.consume',
     runtimeSurface: 'hybrid-boundary',
-    selectedProvider: 'atlas-kungfu-hybrid',
+    selectedProvider: 'xinfa-context-runtime',
   };
 
   assert.deepEqual(observeRuntimeSurfaceReceipt(receipt, verification), {
@@ -38,7 +38,7 @@ test('TUI observes the exact rooted receipt without choosing another surface', (
     contractRoot: `sha256:${'b'.repeat(64)}`,
     operationId: 'context.consume',
     runtimeSurface: 'hybrid-boundary',
-    selectedProvider: 'atlas-kungfu-hybrid',
+    selectedProvider: 'xinfa-context-runtime',
     capabilities: ['context.compose', 'runtime.provenance'],
     fallbackUsed: false,
     fallbackReason: null,
@@ -72,7 +72,7 @@ test('TUI rejects a rooted receipt without matching authority verification', () 
     contractRoot: `sha256:${'b'.repeat(64)}`,
     operationId: 'context.consume',
     runtimeSurface: 'hybrid-boundary',
-    selectedProvider: 'atlas-kungfu-hybrid',
+    selectedProvider: 'xinfa-context-runtime',
     capabilities: ['context.compose', 'runtime.provenance'],
     selection: { fallback: { used: false, reason: null } },
   };
@@ -98,7 +98,7 @@ test('production diagnostic resolves and authority-verifies a receipt argument',
     contractRoot: `sha256:${'b'.repeat(64)}`,
     operationId: 'context.consume',
     runtimeSurface: 'hybrid-boundary',
-    selectedProvider: 'atlas-kungfu-hybrid',
+    selectedProvider: 'xinfa-context-runtime',
     capabilities: ['context.compose', 'runtime.provenance'],
     selection: { fallback: { used: false, reason: null } },
   };

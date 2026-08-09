@@ -21,7 +21,6 @@ import {
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.resolve(HERE, '..', '..');
-const FIXTURE = path.join(HERE, 'fixtures', 'atlas-go-card-roundtrip-v1.json');
 
 function temporary() {
   return fs.mkdtempSync(path.join(os.tmpdir(), 'kungfu-assignment-capture-'));
@@ -30,79 +29,11 @@ function temporary() {
 function request(workDefinition, expiresAt = null) {
   return {
     schema: ASSIGNMENT_REQUEST_SCHEMA,
-    source: { kind: 'atlas-go-card' },
+    source: { kind: 'kungfu-assignment' },
     retention: { policy: RETENTION_POLICY, expiresAt },
     workDefinition,
   };
 }
-
-test('capture round-trips the complete historical Atlas card field set', () => {
-  const root = temporary();
-  try {
-    const fixture = JSON.parse(fs.readFileSync(FIXTURE, 'utf8'));
-    const response = captureAssignmentRequest(request(fixture.workDefinition), {
-      workspaceRoot: root,
-      cwd: root,
-      env: { HOME: path.join(root, 'home') },
-    });
-    assert.equal(response.status, 'captured');
-    assert.equal(response.authority, 'capture-material-only');
-    assert.equal(response.admitted, false);
-    assert.deepEqual(
-      JSON.parse(fs.readFileSync(response.requestPath, 'utf8')).workDefinition,
-      fixture.workDefinition,
-    );
-    assert.deepEqual(
-      Object.keys(
-        JSON.parse(fs.readFileSync(response.requestPath, 'utf8'))
-          .workDefinition,
-      ).sort(),
-      Object.keys(fixture.workDefinition).sort(),
-    );
-    const fieldNames = Object.keys(fixture.workDefinition).sort();
-    assert.equal(fieldNames.length, fixture.provenance.topLevelFieldCount);
-    assert.equal(
-      semanticRoot(fieldNames),
-      fixture.provenance.topLevelFieldRoot,
-    );
-    assert.match(response.requestRoot, /^sha256:[0-9a-f]{64}$/u);
-    assert.match(response.receiptRoot, /^sha256:[0-9a-f]{64}$/u);
-    const receipt = JSON.parse(fs.readFileSync(response.receiptPath, 'utf8'));
-    const { receiptRoot: declaredReceiptRoot, ...receiptCore } = receipt;
-    assert.equal(semanticRoot(receiptCore), declaredReceiptRoot);
-    assert.equal(fs.existsSync(path.join(root, '.kungfu', 'runtime')), false);
-    assert.equal(
-      captureAssignmentRequest(request(fixture.workDefinition), {
-        workspaceRoot: root,
-        cwd: root,
-        env: { HOME: path.join(root, 'home') },
-      }).status,
-      'already-present',
-    );
-
-    const nested = path.join(root, 'nested');
-    fs.mkdirSync(nested);
-    const discovered = captureAssignmentRequest(
-      request(fixture.workDefinition),
-      {
-        cwd: nested,
-        env: { HOME: path.join(root, 'home') },
-      },
-    );
-    assert.equal(discovered.status, 'captured');
-    assert.equal(discovered.requestPath, response.requestPath);
-    assert.notEqual(discovered.receiptRoot, response.receiptRoot);
-    assert.equal(
-      captureAssignmentRequest(request(fixture.workDefinition), {
-        cwd: nested,
-        env: { HOME: path.join(root, 'home') },
-      }).status,
-      'already-present',
-    );
-  } finally {
-    fs.rmSync(root, { recursive: true, force: true });
-  }
-});
 
 test('capture target order matches workspace.py capture-only resolution', () => {
   const root = temporary();
@@ -175,7 +106,7 @@ test('expiry cleanup is dry-run-first and retains captured bytes', () => {
   const root = temporary();
   try {
     const response = captureAssignmentRequest(
-      request({ goal_id: 'expired' }, '2026-01-01T00:00:00Z'),
+      request({ assignment_id: 'expired' }, '2026-01-01T00:00:00Z'),
       {
         workspaceRoot: root,
         cwd: root,
@@ -234,7 +165,7 @@ test('cleanup fails closed for request material without a valid receipt', () => 
   const root = temporary();
   try {
     const response = captureAssignmentRequest(
-      request({ goal_id: 'incomplete' }, '2026-01-01T00:00:00Z'),
+      request({ assignment_id: 'incomplete' }, '2026-01-01T00:00:00Z'),
       {
         workspaceRoot: root,
         cwd: root,
@@ -266,7 +197,7 @@ test('Shifu source entry captures without compiled Kungfu artifacts', () => {
     const requestPath = path.join(root, 'request.json');
     fs.writeFileSync(
       requestPath,
-      `${JSON.stringify(request({ goal_id: 'source-entry' }))}\n`,
+      `${JSON.stringify(request({ assignment_id: 'source-entry' }))}\n`,
     );
     const args = [
       'work',

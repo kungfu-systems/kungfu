@@ -12,8 +12,6 @@ export type WorkControlProfileSetupStep = {
   source: string;
 };
 
-/** Explicit compatibility type alias for callers that have not migrated yet. */
-
 export function workControlProfileSetupStep(
   managed: ManagedProfile | null,
   discovery: ProfileSourceDiscovery | null,
@@ -43,5 +41,3 @@ export function workControlProfileSetupStep(
   }
   return null;
 }
-
-/** Explicit compatibility alias for callers that have not migrated yet. */
