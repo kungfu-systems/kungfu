@@ -248,7 +248,7 @@ when a source-built qualification report passes on a named platform.
 Kungfu has the grounded pieces for a local runtime fact ledger: append-only
 journals, frame provenance, location/channel runtime identity, portable export
 direction, schema registry direction, SQLite projections, and a first
-Atlas-scoped payload import/fsck/export/verify loop. The unified storage service
+source-scoped payload import/fsck/export/verify loop. The unified storage service
 described in [`runtime-storage-service.md`](../architecture/runtime-storage-service.md) is still
 staged.
 
@@ -266,7 +266,7 @@ What is **not yet guaranteed**:
   of truth.
 
 Treat current Storage/Episode query, export, fsck, repair, GC-plan, compaction-
-plan, Atlas storage, and source import/export slices as proof surfaces for the
+plan and source import/export slices as proof surfaces for the
 storage contract, not as a completed distributed storage protocol. Legacy
 loose-file journal archive/clean commands are retired; this release deliberately
 has no destructive retention command.

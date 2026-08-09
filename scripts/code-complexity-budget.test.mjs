@@ -6,6 +6,7 @@ import { generateKeyPairSync, sign } from 'node:crypto';
 import test from 'node:test';
 
 import {
+  baselineChangeManifest,
   baselineIntegrityIssues,
   baselineMeasurementRoot,
   baselineTransitionAuthorization,
@@ -646,10 +647,12 @@ test('protected baseline refresh requires one exact protected signed transition'
   const protectedBaseline = {
     measurementRoot: `sha256:${'1'.repeat(64)}`,
     baselineRef: 'a'.repeat(40),
+    files: [{ path: 'src/example.ts', lines: 10 }],
   };
   const candidateBaseline = {
     measurementRoot: `sha256:${'2'.repeat(64)}`,
     baselineRef: 'b'.repeat(40),
+    files: [{ path: 'src/example.ts', lines: 15 }],
   };
   const protectedPolicy = {
     ...fixture.policy,
@@ -712,6 +715,83 @@ test('protected baseline refresh requires one exact protected signed transition'
   forged.value.new_baseline_ref = 'c'.repeat(40);
   assert.equal(
     protectedBaselineIssues({ ...context, transitions: [forged] })[0].code,
+    'unauthorized-baseline-transition',
+  );
+});
+
+test('full baseline reconstruction binds the exact independently signed change manifest', () => {
+  const fixture = signedWaiverFixture();
+  const protectedBaseline = {
+    measurementRoot: `sha256:${'3'.repeat(64)}`,
+    baselineRef: 'c'.repeat(40),
+    files: [{ path: 'retained/large.json', lines: 1 }],
+  };
+  const candidateBaseline = {
+    measurementRoot: `sha256:${'4'.repeat(64)}`,
+    baselineRef: 'd'.repeat(40),
+    files: [{ path: 'retained/large.json', lines: 50000 }],
+  };
+  const protectedPolicy = {
+    ...fixture.policy,
+    status: 'p1-trusted-governance',
+    baselineGovernance: {
+      transitionSchema: 'kungfu.code-complexity-baseline-transition/v1',
+      reconstructionSchema: 'kungfu.code-complexity-baseline-reconstruction/v1',
+      maxChangedMeasurements: 10,
+      maxAggregateLineDelta: 100,
+    },
+  };
+  const candidatePolicy = {
+    ...protectedPolicy,
+    baselinePath: 'framework/maintainability/code-complexity-baseline.json',
+  };
+  const manifest = baselineChangeManifest(protectedBaseline, candidateBaseline);
+  const value = {
+    schema: protectedPolicy.baselineGovernance.reconstructionSchema,
+    expected_old_measurement_root: protectedBaseline.measurementRoot,
+    expected_old_baseline_ref: protectedBaseline.baselineRef,
+    new_measurement_root: candidateBaseline.measurementRoot,
+    new_baseline_ref: candidateBaseline.baselineRef,
+    changed_measurements: manifest.changedMeasurements,
+    aggregate_line_delta: manifest.aggregateLineDelta,
+    change_manifest_root: digest(manifest),
+    reconstruction_scope: 'full-exact-baseline',
+    reconstruction_reason_codes: ['protected-baseline-lag'],
+    requested_by: 'author@example.com',
+    reason: 'reconstruct the exact baseline after retained evidence growth',
+    retirement_or_decomposition_ref: 'issue-789',
+    approval_receipt: {
+      schema: protectedPolicy.waiver.approvalReceiptSchema,
+      authority_id: 'independent-reviewer',
+      key_id: 'review-key-1',
+      algorithm: 'ed25519',
+      issued_at: '2026-07-26T00:00:00Z',
+      approved_at: '2026-07-26T00:01:00Z',
+      expires_at: '2026-08-01T00:00:00Z',
+      authorization_root: '',
+      signature: '',
+    },
+  };
+  value.approval_receipt.authorization_root = digest(
+    baselineTransitionAuthorization(value),
+  );
+  value.approval_receipt.signature = sign(
+    null,
+    Buffer.from(value.approval_receipt.authorization_root),
+    fixture.privateKey,
+  ).toString('base64');
+  const context = {
+    protectedPolicy,
+    protectedBaseline,
+    candidatePolicy,
+    candidateBaseline,
+    evaluationTime: fixture.evaluationTime,
+    transitions: [{ file: 'reconstruction.json', value }],
+  };
+  assert.deepEqual(protectedBaselineIssues(context), []);
+  context.transitions[0].value.change_manifest_root = `sha256:${'5'.repeat(64)}`;
+  assert.equal(
+    protectedBaselineIssues(context)[0].code,
     'unauthorized-baseline-transition',
   );
 });

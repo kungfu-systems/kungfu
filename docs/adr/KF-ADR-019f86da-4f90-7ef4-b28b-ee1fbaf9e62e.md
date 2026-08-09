@@ -27,7 +27,7 @@ last_reviewed: 2026-07-28
   [KF-ADR-019f86da-4f90-7c91-9cc2-6dbd18d68dff](KF-ADR-019f86da-4f90-7c91-9cc2-6dbd18d68dff.md),
   [KF-ADR-019f86da-4f90-7f46-b195-3af6228d17b1](KF-ADR-019f86da-4f90-7f46-b195-3af6228d17b1.md),
   [KF-ADR-019f86da-4f90-7bc8-a3ed-a7b0a6363d6c](KF-ADR-019f86da-4f90-7bc8-a3ed-a7b0a6363d6c.md),
-  and [KF-ADR-019f86da-4f90-79d7-a4b7-044fcf998708](KF-ADR-019f86da-4f90-79d7-a4b7-044fcf998708.md)
+  and the current native contract
 - Child decisions: [KF-ADR-019f86da-4f90-73f3-b027-c343b2bc8bcc](KF-ADR-019f86da-4f90-73f3-b027-c343b2bc8bcc.md),
   [KF-ADR-019f86da-4f90-7d6c-926a-ddd27dbde8ab](KF-ADR-019f86da-4f90-7d6c-926a-ddd27dbde8ab.md), and
   [KF-ADR-019f86da-4f90-72df-add3-948f3ae38c3a](KF-ADR-019f86da-4f90-72df-add3-948f3ae38c3a.md)
