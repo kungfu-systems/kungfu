@@ -386,8 +386,7 @@
   },
   "devDependencies": {
     "@biomejs/biome": "1.9.4",
-    "@kungfu-tech/buildchain": "3.0.0",
-    "@kungfu-tech/buildchain-alpha": "npm:@kungfu-tech/buildchain@3.0.6-alpha.1",
+    "@kungfu-tech/buildchain": "3.0.6",
     "@kungfu-tech/kfd": "1.0.0-alpha.53",
     "@types/fs-extra": "^11.0.4",
     "@types/markdown-it": "14.1.2",
