@@ -1028,11 +1028,10 @@ export function stageNodePtyForCli(
     fs.mkdirSync(targetNativeDirectory, { recursive: true });
     for (const runtime of ['pty.node', 'spawn-helper']) {
       const input = path.join(source, nativeDirectory, runtime);
-      if (!fs.existsSync(input) || !fs.lstatSync(input).isFile()) {
+      if (!fs.existsSync(input) || !fs.lstatSync(input).isFile())
         throw new Error(
           `required Linux node-pty runtime not found: ${rel(input)}`,
         );
-      }
       fs.copyFileSync(input, path.join(targetNativeDirectory, runtime));
     }
     fs.chmodSync(path.join(targetNativeDirectory, 'spawn-helper'), 0o755);
@@ -1773,21 +1772,10 @@ export function smokeCliProductArchive({ archivePath, archiveBase }) {
           KF_BUNDLED_EXTENSION_ROOT: extensionsRoot,
           KUNGFU_ACTION_ENTRY: actionEntry,
         };
-        runInstalledKungfuXinfaSmoke({
-          installRoot,
-          kungfuBin,
-          env: smokeEnv,
-        });
-        runInstalledActionPrimitiveDiscovery({
-          installRoot,
-          kungfuBin,
-          env: smokeEnv,
-        });
-        runInstalledKungfuAssignmentAdmissionSmoke({
-          installRoot,
-          kungfuBin,
-          env: smokeEnv,
-        });
+        const cliSmoke = { installRoot, kungfuBin, env: smokeEnv };
+        runInstalledKungfuXinfaSmoke(cliSmoke);
+        runInstalledActionPrimitiveDiscovery(cliSmoke);
+        runInstalledKungfuAssignmentAdmissionSmoke(cliSmoke);
         runInstalledKungfuActionSmoke({
           installRoot,
           kungfuBin,
@@ -1803,11 +1791,7 @@ export function smokeCliProductArchive({ archivePath, archiveBase }) {
           extensionsRoot,
           env: smokeEnv,
         });
-        runInstalledKungfuAgentHubSmoke({
-          installRoot,
-          kungfuBin,
-          env: smokeEnv,
-        });
+        runInstalledKungfuAgentHubSmoke(cliSmoke);
         runInstalledEmbeddedNodeAddonSmoke({
           installRoot,
           runtimeEntry,
