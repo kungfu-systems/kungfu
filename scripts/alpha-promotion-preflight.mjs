@@ -168,7 +168,7 @@ export function inspectAuditableDemoFastSentinel({
   if (
     scenarioValue?.schema !== 'buildchain.declarative-binary-demo/v1' ||
     scenarioValue?.execution?.durationClass !== 'long-form' ||
-    scenarioValue?.execution?.totalTimeoutSeconds !== 360 ||
+    scenarioValue?.execution?.totalTimeoutSeconds !== 180 ||
     scenarioValue?.authority?.grants?.length !== 0 ||
     demos.length !== 3 ||
     JSON.stringify(autoplay?.steps?.[0]?.argv) !==
@@ -183,7 +183,7 @@ export function inspectAuditableDemoFastSentinel({
         '--speed',
         '4',
       ]) ||
-    projectTourEpisode1?.steps?.[0]?.timeoutSeconds !== 360 ||
+    projectTourEpisode1?.steps?.[0]?.timeoutSeconds !== 180 ||
     JSON.stringify(projectTourEpisode2?.steps?.[0]?.argv) !==
       JSON.stringify([
         'agent-work-lab',
@@ -193,7 +193,7 @@ export function inspectAuditableDemoFastSentinel({
         '--speed',
         '4',
       ]) ||
-    projectTourEpisode2?.steps?.[0]?.timeoutSeconds !== 360
+    projectTourEpisode2?.steps?.[0]?.timeoutSeconds !== 180
   ) {
     issues.push(
       'auditable-demo scenario no longer declares the exact bounded three-demo cut',

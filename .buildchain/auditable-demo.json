@@ -17,7 +17,7 @@
     "network": "none",
     "secrets": "none",
     "durationClass": "long-form",
-    "totalTimeoutSeconds": 360,
+    "totalTimeoutSeconds": 180,
     "environment": {}
   },
   "transportSmoke": {
@@ -54,7 +54,7 @@
         {
           "id": "project-tour-episode-1",
           "argv": ["agent-work-lab", "project-tour", "--episode", "1", "--speed", "4"],
-          "timeoutSeconds": 360,
+          "timeoutSeconds": 180,
           "expectedExitCodes": [0],
           "stdoutIncludes": ["KUNGFU_PROJECT_TOUR_COMPLETE"],
           "fileAssertions": []
@@ -69,7 +69,7 @@
         {
           "id": "project-tour-episode-2",
           "argv": ["agent-work-lab", "project-tour", "--episode", "2", "--speed", "4"],
-          "timeoutSeconds": 360,
+          "timeoutSeconds": 180,
           "expectedExitCodes": [0],
           "stdoutIncludes": ["KUNGFU_PROJECT_TOUR_COMPLETE"],
           "fileAssertions": []

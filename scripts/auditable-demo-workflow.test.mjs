@@ -57,9 +57,9 @@ test('one exact Buildchain workflow owns every declared demo', () => {
     ],
   );
   assert.equal(scenario.execution.durationClass, 'long-form');
-  assert.equal(scenario.execution.totalTimeoutSeconds, 360);
-  assert.equal(scenario.demos[1].steps[0].timeoutSeconds, 360);
-  assert.equal(scenario.demos[2].steps[0].timeoutSeconds, 360);
+  assert.equal(scenario.execution.totalTimeoutSeconds, 180);
+  assert.equal(scenario.demos[1].steps[0].timeoutSeconds, 180);
+  assert.equal(scenario.demos[2].steps[0].timeoutSeconds, 180);
   assert.deepEqual(scenario.transportSmoke, {
     argv: ['agent-work-lab', 'demo', '--json'],
     timeoutSeconds: 60,
