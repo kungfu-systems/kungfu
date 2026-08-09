@@ -496,7 +496,7 @@
     {
       "path": ".github/workflows/dev-delivery-warrant-terminal.yml",
       "authority": "qualification",
-      "definitionDigest": "sha256:c01b03edd1c7dfc6581857a23c0ea347bcaf098d9cc1e931c11c881fc2ee9378",
+      "definitionDigest": "sha256:3ae39e719d36f5d6b80b88975a464a5828cc670a3a7dff1ac768db215ffacc9a",
       "jobs": [
         {
           "id": "cancel-queued",
@@ -513,7 +513,7 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "diagnostic",
-          "definitionDigest": "sha256:76e359aa9529e89c5779ec407825b683bbe5fbf6672ae1da176cbed56fe07e14",
+          "definitionDigest": "sha256:73f8dd89727971f5c7b09b74d0830ec65b79c2de8b61cf0822b6b98c04c61dbb",
           "credentials": {"githubToken":"write","oidc":false,"repositorySecrets":["KUNGFU_GITHUB_TOKEN"],"inheritedSecrets":false,"environment":null},
           "externalActions": ["kungfu-systems/buildchain/.github/workflows/dev-delivery-warrant-close.yml@368533567cf1c1b20783e334ab8ce31b0da582a0"],
           "steps": []
@@ -523,10 +523,10 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "diagnostic",
-          "definitionDigest": "sha256:afdf03c5cda8f826e4054667842f8a6257bc106eea6a8cf780a55b5cc3119361",
+          "definitionDigest": "sha256:e7e961110b26af449f185b810a081f80aaabba7bed20d79f4db5cb3f5d627257",
           "credentials": {"githubToken":"write","oidc":false,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
           "externalActions": ["actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0"],
-          "steps": [{"index":1,"label":"name:Check out protected Buildchain runtime","definitionDigest":"sha256:69b6f1bcf598676548cd2cdc8b7df5901bb8aecfc04f89bb84e719e0de11a068"},{"index":2,"label":"id:terminal","definitionDigest":"sha256:125df3159ee945ce311f3910a8925f34d61904df1e5ab218387895011f316e61"}]
+          "steps": [{"index":1,"label":"name:Check out protected Buildchain runtime","definitionDigest":"sha256:69b6f1bcf598676548cd2cdc8b7df5901bb8aecfc04f89bb84e719e0de11a068"},{"index":2,"label":"id:terminal","definitionDigest":"sha256:2736ca19d2dd5289ce4451628cda37f2f9f51443ce63587e619c4d1b24f4fbf0"}]
         }
       ]
     },

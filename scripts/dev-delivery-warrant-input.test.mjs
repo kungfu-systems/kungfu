@@ -170,13 +170,21 @@ test('terminal consumer executes only protected event and Buildchain authority',
     'utf8',
   );
   assert.match(workflow, /pull_request_target:/u);
-  assert.match(workflow, /types: \[closed, dequeued\]/u);
+  assert.match(workflow, /types: \[closed, dequeued, synchronize\]/u);
   assert.match(workflow, /No matching active Warrant or queued candidate/u);
   assert.match(workflow, /\.observation\.queued\[\]\?/u);
   assert.match(workflow, /needs\.prepare\.outputs\.queued == 'true'/u);
   assert.match(
     workflow,
-    /if \[ "\$MERGED" = "true" \]; then\s+outcome=merged\s+elif \[ "\$EVENT_ACTION" = "dequeued" \]; then\s+outcome=dequeued/u,
+    /if \[ "\$MERGED" = "true" \] && \[ "\$recorded_head" = "\$EXPECTED_HEAD" \]; then\s+outcome=merged\s+elif \[ "\$EVENT_ACTION" = "dequeued" \] && \[ "\$recorded_head" = "\$EXPECTED_HEAD" \]; then\s+outcome=dequeued/u,
+  );
+  assert.match(
+    workflow,
+    /expected-head-sha: \$\{\{ needs\.prepare\.outputs\.active-source-head-sha \}\}/u,
+  );
+  assert.match(
+    workflow,
+    /recordedSourceHead:\$recordedHead,observedSourceHead:\$observedHead/u,
   );
   assert.match(workflow, /GH_TOKEN: \$\{\{ github\.token \}\}/u);
   assert.match(workflow, /GITHUB_TOKEN: \$\{\{ github\.token \}\}/u);
