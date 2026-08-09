@@ -179,8 +179,9 @@ function fixture(t) {
   const ledgerCommit = git(root, 'rev-parse', 'HEAD');
   const input = {
     assignment: {
-      initiativeId: '2026-07-28-kungfu-go-family-continuous-delivery',
-      assignmentId: '2026-07-28-kungfu-go-family-native-loop-qualification',
+      initiativeId: '2026-07-28-kungfu-assignment-family-continuous-delivery',
+      assignmentId:
+        '2026-07-28-kungfu-assignment-family-native-loop-qualification',
       requestRoot: semanticRoot({ request: 'native-loop' }),
       captureReceiptRoots: [semanticRoot({ receipt: 'native-loop' })],
       workDefinitionRoot: semanticRoot({ work: 'native-loop' }),

@@ -105,17 +105,6 @@ function verifiedBaseline(relative, atlasRoot) {
 
 const ROOT_PATTERN = /^sha256:[0-9a-f]{64}$/;
 
-// Digest of .xinfa/manifests/legacy-atlas-roots.json, the closed backfill of
-// body-derived semantic roots for promotions that predate the sealed
-// atlasRoots projection (KF-ADR-019f86da-4f90-7089-b9b1-e070edf7d540). Pinning the exact bytes here makes the
-// legacy exception bounded and fail-closed: the backfill cannot grow or drift
-// without changing reviewed code. Regenerate only via
-// scripts/backfill-legacy-atlas-roots.mjs against verified local material.
-export const LEGACY_ATLAS_ROOTS_PATH =
-  '.xinfa/manifests/legacy-atlas-roots.json';
-export const LEGACY_ATLAS_ROOTS_DIGEST =
-  'sha256:aa1423056aae530196695f7030a507eef5c52c3f14f86dd38024b80389da9f2b';
-
 // Body-derived semantic roots for a witness-only checkout (KF-ADR-019f86da-4f90-7089-b9b1-e070edf7d540). The
 // authoritative source is the tracked settlement promotion, whose
 // promotionRoot seals the atlasRoots projection into the Project Cut chain.
@@ -129,7 +118,6 @@ export function witnessOnlyBodyRoots(
   manifest,
   receipt,
   root = ROOT,
-  legacyDigest = LEGACY_ATLAS_ROOTS_DIGEST,
 ) {
   const promotionPath = `.xinfa/manifests/project-cuts/${atlasRoot.slice('sha256:'.length)}.json`;
   if (!fs.existsSync(path.join(root, promotionPath)))
@@ -172,34 +160,9 @@ export function witnessOnlyBodyRoots(
       xinfaSourceRoot: promoted.source,
     };
   }
-  const legacyPath = path.join(root, LEGACY_ATLAS_ROOTS_PATH);
-  const legacyBytes = fs.existsSync(legacyPath)
-    ? fs.readFileSync(legacyPath)
-    : null;
-  if (legacyBytes === null || `sha256:${sha(legacyBytes)}` !== legacyDigest)
-    throw new Error(
-      `legacy Atlas roots backfill fails digest verification: ${LEGACY_ATLAS_ROOTS_PATH}`,
-    );
-  const legacy = JSON.parse(legacyBytes.toString('utf8')).entries?.[atlasRoot];
-  if (legacy === undefined)
-    throw new Error(
-      `atlas-material-missing: Atlas material for ${atlasRoot} is absent and no authenticated source binds its semantic roots`,
-    );
-  if (
-    [legacy?.contextPack, legacy?.cut, legacy?.semantic, legacy?.source].some(
-      (value) => !ROOT_PATTERN.test(String(value ?? '')),
-    ) ||
-    legacy.contextPack !== manifest.context_pack_root
-  )
-    throw new Error(
-      `legacy Atlas roots backfill contradicts the tracked witness for ${atlasRoot}`,
-    );
-  return {
-    packRoot: legacy.contextPack,
-    cutRoot: legacy.cut,
-    claimGraphRoot: legacy.semantic,
-    xinfaSourceRoot: legacy.source,
-  };
+  throw new Error(
+    `atlas-material-missing: Atlas material for ${atlasRoot} is absent and its settlement promotion does not seal semantic roots`,
+  );
 }
 
 export function documentationWitness() {

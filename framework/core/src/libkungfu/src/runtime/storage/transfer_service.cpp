@@ -78,7 +78,7 @@ nlohmann::json render_manifest_document(const yy_storage::manifest_document_view
       nlohmann::json{{"schema", yy_storage::STORAGE_SOURCE_RECORD_SCHEMA_V1},
                      {"source_id", manifest.source_id},
                      {"type", manifest.source_type},
-                     {"kind", manifest.source_type == "atlas" ? "adapter" : "local"},
+                     {"kind", manifest.source_type == "adapter" ? "adapter" : "local"},
                      {"coordinate", manifest.source_coordinate},
                      {"current_head",
                       {{"head", manifest.source_head}, {"range", range}, {"inventory_hash", manifest.sync_root.value}}},
@@ -327,7 +327,7 @@ storage_import_bundle_result import_bundle_typed_impl(const storage_import_bundl
   if (!registered) {
     yy_storage::source_register_options reg{};
     reg.source_id = accepted.source_id;
-    reg.kind = accepted.source_type == "atlas" ? yy_enums::SourceKind::Adapter : yy_enums::SourceKind::Local;
+    reg.kind = accepted.source_type == "adapter" ? yy_enums::SourceKind::Adapter : yy_enums::SourceKind::Local;
     reg.coordinate = accepted.source_coordinate;
     reg.head = accepted.source_head;
     (void)registry.register_source(reg);

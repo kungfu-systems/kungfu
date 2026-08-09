@@ -88,10 +88,10 @@ def test_ensure_creates_minimum_layout_and_receipt_without_git_effects(tmp_path)
     identity = inspect_workspace(str(repo), env={"HOME": str(tmp_path)})
     assert identity is not None
 
-    receipt = ensure_workspace_data_home(identity, "create-mission")
+    receipt = ensure_workspace_data_home(identity, "create-initiative")
 
     assert receipt["schema"] == "kungfu.workspace.ensure-receipt/v1"
-    assert receipt["reason"] == "create-mission"
+    assert receipt["reason"] == "create-initiative"
     assert receipt["initialized"] is True
     assert receipt["previous_state"] == "uninitialized"
     assert receipt["resulting_state"] == "live-runtime"
@@ -107,7 +107,7 @@ def test_ensure_creates_minimum_layout_and_receipt_without_git_effects(tmp_path)
     assert qualified.identity_state == "qualified"
     assert qualified.identity_root == receipt["workspace_identity_root"]
     catalog_before = load_workspace_catalog(qualified.config_home)
-    repeated = ensure_workspace_data_home(qualified, "create-go")
+    repeated = ensure_workspace_data_home(qualified, "create-assignment")
     catalog_after = load_workspace_catalog(qualified.config_home)
     assert repeated["initialized"] is False
     assert repeated["created_paths"] == []
@@ -667,6 +667,6 @@ def test_home_capture_records_durable_inbox_identity_without_inventing_purpose(
     )
 
     assert recorded["resulting_identities"] == [{"kind": "episode", "id": "501"}]
-    assert "mission-association" in recorded["skipped_effects"]
+    assert "initiative-association" in recorded["skipped_effects"]
     with open(recorded["receipt_path"], encoding="utf-8") as f:
         assert json.load(f)["receipt_id"] == recorded["receipt_id"]

@@ -674,7 +674,7 @@ def work(
         f"replicas={aggregate['replica_count']} conflicts={aggregate['conflict_count']} "
         f"label-collisions={aggregate['label_collision_count']} "
         f"retained-seals={aggregate['retained_assignment_state_count']} "
-        f"legacy-seals={aggregate['unqualified_retained_assignment_state_count']} "
+        f"unqualified-seals={aggregate['unqualified_retained_assignment_state_count']} "
         f"unavailable={aggregate['unavailable_component_count']} "
         f"stale={aggregate['stale_component_count']} "
         f"excluded={aggregate['excluded_component_count']} "
