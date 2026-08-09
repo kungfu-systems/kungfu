@@ -207,6 +207,10 @@ silently treating historical Git coordinates as semantic authority. Historical
 global reconciliation remains available separately and may still report
 orphaned or superseded observations outside the candidate scope.
 
+Removing a complete Cut bundle (both manifest and receipt) retires that Cut
+from the candidate and is a scoped no-op. Removing only one side, or removing
+Episode evidence still referenced by a surviving Cut, remains fail-closed.
+
 Before queue entry, the repository-internal admission tool recreates the
 rebase-style candidate as unreachable Git objects without changing refs, the
 index, or the worktree. It applies the PR's first-parent commits to the current
