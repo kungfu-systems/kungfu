@@ -1,0 +1,18 @@
+{
+  "schema": "kungfu.code-complexity-budget-waiver/v2",
+  "issue_root": "sha256:18d1ddea82f056bedb666bd909333f41214b088ad3483a25f7ebf94376aaa0c5",
+  "issue_kind": "classification-or-owner-relabeled",
+  "paths_or_scope": ["framework/work-design-open-card/tooling/open-card-preflight.mjs", "framework/work-design-preflight/tooling/work-design-preflight.mjs"],
+  "budget_classes": ["first-party-handwritten-implementation:javascript-typescript"],
+  "baseline_measurement": [{"path":"framework/work-design-open-card/tooling/open-card-preflight.mjs","class":"first-party-handwritten-implementation","language":"javascript-typescript","owner":"framework/work-design-open-card","lines":58,"contentRoot":"sha256:0df78110e6c30dddd01fea8ac75f3ec101d8dd9bb8cf184e11c68a80b7140526"}],
+  "current_measurement": [{"path":"framework/work-design-preflight/tooling/work-design-preflight.mjs","class":"first-party-handwritten-implementation","language":"javascript-typescript","owner":"framework/work-design-preflight","lines":58,"contentRoot":"sha256:9d1385532ada3e674199620b363645b389aac2ded7c3f8b2fb16fcd01840aa13"}],
+  "allowed_delta": 0,
+  "owner": "framework/work-design-preflight",
+  "responsibility_boundary": "The Work Design preflight tool remains the sole neutral executable surface.",
+  "cohesion_rationale": "The executable moves atomically with its neutral domain and exposes no legacy alias.",
+  "rejected_split_alternatives": ["Retaining the former executable name would violate the zero-residue boundary."],
+  "affected_tests_and_qualification": ["./shifu check:source", "pnpm test"],
+  "requested_by": "keren.dong@kungfu.link",
+  "retirement_or_decomposition_ref": "https://github.com/kungfu-systems/kungfu/pull/2619",
+  "approval_receipt": {"schema":"kungfu.code-complexity-budget-approval-receipt/v1","authority_id":"kungfu-origin-complexity-transition-review","key_id":"ed25519-668812bf28659460","algorithm":"ed25519","issued_at":"2026-08-08T19:32:51.532Z","approved_at":"2026-08-08T19:33:51.532Z","expires_at":"2026-08-15T19:34:51.532Z","authorization_root":"sha256:76b1a987a16f0b6f6ab786a5d7b90633f9755e72e9fa0cf1f8b451ff133c6002","signature":"2Itu+cOCfzzMzAEX+Dwvas9hVn4Z4/j4cBg3IHg6uHl1Pe9FAM70PHweBoBVodKhlt9GAttmocxVVUbaDJoLDQ=="}
+}

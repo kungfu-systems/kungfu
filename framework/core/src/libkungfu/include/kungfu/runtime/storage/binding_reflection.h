@@ -50,8 +50,7 @@ BOOST_HANA_ADAPT_STRUCT(kungfu::runtime::storage_service_api::storage_layout_pat
                         source_registry_journal, manifest_catalog_journal, manifest_entries, payloads, schemas, rocksdb,
                         backend_binding, backend_switch_state, backend_switch_receipts, backend_switch_operation_lock,
                         backend_authority_lock, source_registry_projection, manifest_catalog_projection,
-                        episode_manifest_journal_dir, episode_manifest_journal, coordinator_state, remote_mirrors,
-                        atlas_store);
+                        episode_manifest_journal_dir, episode_manifest_journal, coordinator_state, remote_mirrors);
 BOOST_HANA_ADAPT_STRUCT(kungfu::runtime::storage_service_api::storage_layout_entry_view, id, path, persistence,
                         authority);
 BOOST_HANA_ADAPT_STRUCT(kungfu::runtime::storage_service_api::storage_layout_coverage_view, complete, checked_roots,

@@ -1,7 +1,6 @@
 # Runtime Storage Service
 
-Status: draft design plan with implemented Atlas and generic source first
-slices.
+Status: draft design plan with implemented generic source slices.
 
 Kungfu's fact ledger is not only an event capture mechanism. Long term, it is
 also the local persistence service for user facts: runs, work items, imported
@@ -10,7 +9,7 @@ must be inspectable and maintainable in the same way a user expects from a
 serious local database.
 
 This document ties together the existing fact-ledger format direction, current
-journal maintenance commands, Atlas import, source sync, remote sync, and the
+journal maintenance commands, source import, source sync, remote sync, and the
 missing storage operations such as `fsck`, import/export, garbage collection,
 and compaction.
 
@@ -31,8 +30,6 @@ The architectural decisions are recorded in
 for the local runtime storage service and
 [`KF-ADR-019f86da-4f90-76a1-8eda-6e49fa70e7d5`](../adr/KF-ADR-019f86da-4f90-76a1-8eda-6e49fa70e7d5.md)
 for Git-like source sync over Kungfu `location` and `channel`.
-[`KF-ADR-019f86da-4f90-7111-9165-691b834edbab`](../adr/KF-ADR-019f86da-4f90-7111-9165-691b834edbab.md)
-records the first generic source service implementation slice.
 [`KF-ADR-019f86da-4f90-791c-9b90-4888cca36327`](../adr/KF-ADR-019f86da-4f90-791c-9b90-4888cca36327.md)
 defines Episode as the first-class causal segment object that future storage,
 sync, fsck, import/export, and timeline slicing should address directly.
@@ -58,8 +55,6 @@ The lower-level contract already exists in pieces:
   classes.
 - The runtime already has native `location` and `channel` concepts for
   cross-process identity and source/destination communication.
-- `kungfu atlas import` is currently a read-only projection of Atlas
-  control-plane data, not an authority migration.
 - Remote sync currently mirrors source-scoped runtime directories; it is not yet
   a range/hash/session delta protocol.
 
@@ -113,9 +108,8 @@ The first `libkungfu` provider slice exposes
 `backend_rollback`, and read-only `query`. The current default backend is a
 content-addressed file provider implemented in C++ under the runtime service. A second C++ provider
 stores the same source registry, manifests, and payload bodies in RocksDB behind
-the identical service operations. Python storage commands are now compatibility
-shims over that service instead of a second implementation of the provider
-semantics.
+the identical service operations. Python storage commands are thin bindings
+over that service instead of a second implementation of the provider semantics.
 
 Provider selection is runtime configuration, not product vocabulary. The
 default provider remains `content-addressed-file` for an empty runtime. Once a
@@ -276,9 +270,8 @@ use explicit content-hash algorithms such as `sha256`; frame receipts use the
 recorded checksum algorithm such as `fnv1a64`; yijinjing `fast_hash_*` ids are
 not valid payload or manifest hashes.
 
-The first trust-proof surface is the manifest-scoped sync root from
-[`KF-ADR-019f86da-4f90-765c-9723-069718911491`](../adr/KF-ADR-019f86da-4f90-765c-9723-069718911491.md).
-For Atlas imports, `fsck` recomputes `kungfu.sync-root/v1` from the manifest's
+The first trust-proof surface is the manifest-scoped sync root.
+For source imports, `fsck` recomputes `kungfu.sync-root/v1` from the manifest's
 ordered entries and reports missing or mismatched root data as a storage
 failure. This root binds payload references, source coordinates, action
 envelopes, and frame receipt metadata for the accepted segment. It is local
@@ -287,9 +280,8 @@ tamper evidence, not a signature, MAC, or non-repudiation proof.
 Example target:
 
 ```sh
-kungfu storage fsck --scope atlas --json
+kungfu storage fsck --scope source --source <source-id> --json
 kungfu storage fsck --scope all --since 20d --json
-kungfu source fsck atlas-local --since 20d --json
 ```
 
 `fsck` reports degraded facts without rewriting them. A missing payload is not
@@ -328,7 +320,7 @@ Import/export should become the shared mechanism for:
 
 - moving a run or work item between machines;
 - syncing source-scoped remote mirrors;
-- importing Atlas, another profile, or another adapter by range;
+- importing a profile or adapter by range;
 - repairing missing payloads by hash;
 - producing portable audit bundles.
 
@@ -336,7 +328,7 @@ Filters should support at least:
 
 - episode id or Episode selector;
 - source id;
-- scope/profile, such as `atlas`, `work`, `rewind`, or `all`;
+- scope/profile, such as `source`, `work`, `rewind`, or `all`;
 - session or run id;
 - `--since` / `--until`;
 - cursor or event range;
@@ -357,9 +349,9 @@ The bundle must carry:
 Example target:
 
 ```sh
-kungfu storage export --scope atlas --since 20d --out atlas.kfbundle --json
+kungfu storage export --scope source --source <source-id> --since 20d --out source.kfbundle --json
 kungfu storage export --scope work --since 20d --out work.kfbundle --json
-kungfu storage import --from atlas.kfbundle --verify --json
+kungfu storage import --from source.kfbundle --verify --json
 ```
 
 Directory copying can be an early implementation detail, but it must not become
@@ -425,56 +417,10 @@ This lets a one-way adapter remain safe while still exercising the same payload,
 manifest, fsck, export, and rebuild mechanisms required for future remote sync
 and authority migration.
 
-### Atlas Import First Slice
-
-Atlas import is the first high-value adapter for this service.
-
-Initial authority boundary:
-
-```text
-Atlas remains source of truth.
-Kungfu imports and verifies a local projection.
-```
-
-The implemented Atlas adapter slice is:
-
-```sh
-kungfu atlas import --repo <atlas-repo> --json
-kungfu storage status --scope atlas --json
-kungfu storage fsck --scope atlas --json
-kungfu storage export --scope atlas --format jsonl --out atlas.jsonl --json
-kungfu atlas verify --repo <atlas-repo> --json
-```
-
-Range-limited Atlas imports preserve the control-plane context needed to make
-the selected records meaningful. For example, if a goal updated inside
-`--from` references a mission whose own card was last updated before that
-window, the import includes that mission as context. `storage export --scope
-atlas` applies the same closure rule: a range export keeps those context
-records instead of re-filtering them away. To export the exact latest imported
-batch, omit range flags; to export a subrange from the latest import, pass
-`--since` / `--from` / `--until` and expect a JSONL stream containing the
-selected records plus required context records.
-
-Acceptance covered by that slice:
-
-- large Atlas JSON bodies are stored outside mmap frames as hash-addressed
-  payloads;
-- import writes a manifest with source head, object count, payload inventory,
-  hash algorithm, frame checksum algorithm, and projection watermark;
-- `fsck` detects missing payloads, hash mismatches, malformed payload JSON, and
-  projection drift against the current Atlas projection;
-- `storage export` emits a canonical JSONL record per imported Atlas payload;
-- `atlas verify` recomputes source hashes from the Atlas repo and compares them
-  with the latest imported payload manifest.
-
-The first slice deliberately does not claim generic storage compaction, range
-sync, schema repair, or a complete rebuild-index command yet.
-
 ### Generic Source Service First Slice
 
-The next implemented slice makes Atlas one adapter over a generic source
-service instead of a special storage architecture.
+The implemented slice exposes a generic source service without a
+project-specific adapter.
 
 The C++ semantic surface now builds and verifies these contracts:
 
@@ -526,7 +472,7 @@ storage service API.
 freezes that projection as additive-only layout v1. Its typed `entries` array
 covers the workspace roots, all five yijinjing layout directories, coordinator,
 skills, agent sessions, sources, peers, coordination, admission state, Project
-Cut runtime context, provider state and locks, mirrors, and the Atlas store.
+Cut runtime context, provider state and locks, and source-scoped mirrors.
 Each entry is `durable`, `ephemeral`, or `cache`.
 For standard `<home>/runtime` placement, `coverage` scans the bounded
 home/runtime/storage/coordinator namespaces and reports every unknown name as
@@ -599,13 +545,11 @@ kungfu storage export --scope episode --episode-id <episode-id> \
   --format bundle-json --out episode.kfbundle.json --json
 ```
 
-`kungfu source add/list/sync/fsck` uses the same source registry path. Atlas
-sync now writes the adapter-specific Atlas manifest and the generic storage
-manifest; it also mirrors imported payload bodies into the generic payload
-store so `storage fsck/export --scope source` can verify and export the same
-facts.
+Source registration and synchronization use the same source registry path.
+Accepted manifests and imported payload bodies enter the generic payload store
+so `storage fsck/export --scope source` can verify and export the same facts.
 
-This slice includes a non-Atlas synthetic fixture that exercises manifest
+This slice includes a synthetic fixture that exercises manifest
 construction, accepted ranges, payload inventory, source-scoped fsck,
 range-limited export, bundle creation, and bundle import. It deliberately does
 not implement remote channel transport, conflict policy, destructive GC,
@@ -680,9 +624,8 @@ making storage health and sync readiness inspectable:
 
 The current generic store has a generic SQLite projection and content-addressed
 file plus RocksDB providers, but SQLite remains a rebuildable projection, not a
-provider or authority root. Atlas's user-facing cards remain a journal-folded
-projection; this slice does not add a standalone Atlas-specific SQLite
-projection.
+provider or authority root. Domain-facing read models remain journal-folded
+projections; this slice does not add a consumer-specific SQLite authority.
 
 ## Safety Boundaries
 
@@ -754,17 +697,16 @@ Still open:
 - How channel requests map to range/Episode/hash inventory across machines.
 - Whether `compact` ships as one command first, or later after `checkpoint`,
   `gc`, and `rebuild-index` are boring.
-- How much Atlas profile semantics should remain `atlas/*` versus become a
-  generic imported-fact profile.
+- Which imported-source semantics belong in a generic imported-fact profile.
 - When an imported source is allowed to become the source of truth.
 
 ## Maturity
 
 This is a phased storage-service plan. The fact-ledger spine, location/channel
 runtime concepts, schema registry direction, and export slice exist as grounded
-building blocks. The Atlas scope now has a concrete payload import, fsck,
+building blocks. The external-source scope now has a concrete payload import, fsck,
 export, source-verify, and generic source-manifest loop. Kungfu also has a
-non-Atlas source fixture and generic bundle import/export proof. Kungfu still
+independent source fixture and generic bundle import/export proof. Kungfu still
 does not claim that it can repair arbitrary journal corruption, safely compact
-user data, run range/Episode/hash remote sync, or replace Atlas or any other
+user data, run range/Episode/hash remote sync, or replace any external
 external source as an authority source.

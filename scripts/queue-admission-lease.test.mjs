@@ -29,7 +29,10 @@ const CONTRACT = JSON.parse(
 test('queue admission lease has distinct PR-head and merge-group authorities', () => {
   assert.equal(CONTRACT.schema, 'kungfu.dev-queue-admission/v1');
   assert.equal(CONTRACT.requiredContext, 'Queue admission lease');
-  assert.equal(CONTRACT.authority.pullRequestHead, 'atlas-serialized-wrapper');
+  assert.equal(
+    CONTRACT.authority.pullRequestHead,
+    'buildchain-serialized-pr-head',
+  );
   assert.equal(
     CONTRACT.authority.mergeGroup,
     '.github/workflows/queue-admission-lease.yml',

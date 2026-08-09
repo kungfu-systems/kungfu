@@ -1,0 +1,21 @@
+{
+  "schema": "kungfu.code-complexity-budget-waiver/v2",
+  "issue_root": "sha256:1913d06d1b2be8d1750dd0ce1957800b0dc1db392d625f5b119204adae5a9fd2",
+  "issue_kind": "classification-or-owner-relabeled",
+  "paths_or_scope": [
+    "framework/work-design-open-card/src/work-design-open-card.mjs",
+    "framework/work-design-preflight/src/work-design-preflight.mjs"
+  ],
+  "budget_classes": ["first-party-handwritten-implementation:javascript-typescript"],
+  "baseline_measurement": [{"path":"framework/work-design-open-card/src/work-design-open-card.mjs","class":"first-party-handwritten-implementation","language":"javascript-typescript","owner":"framework/work-design-open-card","lines":1140,"contentRoot":"sha256:91e131e11d0afc44876f0093eaee8c2d01fe836b6140c7cfe3cda87adc34ce39"}],
+  "current_measurement": [{"path":"framework/work-design-preflight/src/work-design-preflight.mjs","class":"first-party-handwritten-implementation","language":"javascript-typescript","owner":"framework/work-design-preflight","lines":1137,"contentRoot":"sha256:c5c03b3de095726d186ec24b6e5d2d9782f7f9c6efdb85f0ef92e3eddc9982f0"}],
+  "allowed_delta": 0,
+  "owner": "framework/work-design-preflight",
+  "responsibility_boundary": "Work Design preflight remains one neutral Kungfu domain implementation.",
+  "cohesion_rationale": "The source responsibility is retired from the project-shaped domain and moved atomically into the neutral domain.",
+  "rejected_split_alternatives": ["Keeping an alias or compatibility reader would preserve the retired project-shaped surface."],
+  "affected_tests_and_qualification": ["./shifu check:source", "pnpm test"],
+  "requested_by": "keren.dong@kungfu.link",
+  "retirement_or_decomposition_ref": "https://github.com/kungfu-systems/kungfu/pull/2619",
+  "approval_receipt": {"schema":"kungfu.code-complexity-budget-approval-receipt/v1","authority_id":"kungfu-origin-complexity-transition-review","key_id":"ed25519-668812bf28659460","algorithm":"ed25519","issued_at":"2026-08-08T19:32:51.532Z","approved_at":"2026-08-08T19:33:51.532Z","expires_at":"2026-08-15T19:34:51.532Z","authorization_root":"sha256:26c94dd99c948c7bb0fa5aa7442605350b05bb85b47ba5b2573fd601b4728d9c","signature":"4qec4xCf6hykxHPlriISh4BuclGbGHnd3mQD58KLkzQrS2tTKCW9pBKIAbx5Dq0APVtmOMUEz5b5oQS/ocsbDA=="}
+}

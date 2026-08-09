@@ -30,7 +30,7 @@ Three words carry the model — keep them apart:
   bind a Profile document, making it one semantic and lifecycle closure while
   its members retain separate trust and capability boundaries.
 - **Profile** — a user-visible domain model and operating protocol such as
-  Mission/Go or Week/Day/Action. A Profile is declared by a KFX Suite; Kungfu
+  Initiative/Assignment or Week/Day/Action. A Profile is declared by a KFX Suite; Kungfu
   Core still owns fact admission, assessment, query, timeline, and lifecycle
   authority.
 

@@ -148,9 +148,9 @@ containment hierarchy.
 | --- | --- | --- |
 | Storage kernel | immutable bodies, typed records, refs, relations, cuts, receipts, integrity | product workflow vocabulary |
 | Fact-Episode Ontology | admitted state and realized causal occurrence | direction, perspective, authority, or domain policy |
-| Runtime substrate | journal-backed Fact admission/query and Episode lifecycle/replay | a second ontology, Mission/Go policy, or UI defaults |
+| Runtime substrate | journal-backed Fact admission/query and Episode lifecycle/replay | a second ontology, Initiative/Assignment policy, or UI defaults |
 | Action Geometry (cross-domain responsibility model) | Pursuit, Atlas, Warrant responsibility boundaries, typed relations, non-substitution invariants, and session refinement | Fact/Episode authority or domain field and lifecycle vocabulary |
-| Domain Profiles | Mission/Go and other domain fields, lifecycle, defaults, validation, presentation, and success policy | independent storage semantics or redefinition of Action Geometry |
+| Domain Profiles | Initiative/Assignment and other domain fields, lifecycle, defaults, validation, presentation, and success policy | independent storage semantics or redefinition of Action Geometry |
 | Product settlement | a Project Cut binding accepted source, Atlas, Episode change, policy, omissions, and continuation coordinates | a replacement source, Atlas, Episode, or Fact authority |
 | Projections | Git, JSON, CLI, GUI, Python, Node, bundles | hidden authority |
 
@@ -159,7 +159,7 @@ same semantics. Product convenience belongs above it.
 
 For the Agent Work Domain Profile, the target product organization is
 Initiative and Assignment, and the highest ordinary project interface is the
-Project Cut-centered loop. Existing Mission/Go records and commands retain
+Project Cut-centered loop. Existing Initiative/Assignment records and commands retain
 their compatibility meaning until an explicit versioned migration. See
 [The Project Cut Product Loop](../concepts/project-cut-product-loop.md) and
 [KF-ADR-019f86da-4f90-7a57-a680-9739f5e67173](../adr/KF-ADR-019f86da-4f90-7a57-a680-9739f5e67173.md).
@@ -323,23 +323,13 @@ Git projection is rebuildable and auditable. Git JSON, branch names, and
 working-tree files do not become runtime authority merely because they are
 convenient for an agent.
 
-## Xinfa Atlas migration boundary
+## Xinfa Atlas authority boundary
 
-Current `.xinfa` material remains authoritative according to its existing
-ADRs until a separate cutover decision is accepted and qualified. Migration
-should proceed in stages:
-
-1. import existing Xinfa Atlas and Project Cut state as read-only sources;
-2. assign stable Kungfu identities while preserving source coordinates;
-3. compare Kungfu projections against existing Xinfa outputs;
-4. run dual-write or shadow settlement with divergence reports;
-5. prove export, recovery, and clean-clone continuation;
-6. admit the Kungfu representation as authority through an explicit cut; and
-7. retain a compatibility projection for old repository consumers.
-
-Moving a directory from `.xinfa` to `.kungfu` is not authority migration.
-Authority changes only when identity, lineage, recovery, and rollback are
-proved.
+Xinfa Atlas is a generic compiled perspective owned by Xinfa. Kungfu consumes
+its public roots and verification receipts without translating consumer work
+vocabulary, importing a second authority, dual-writing state, or retaining a
+compatibility projection. `.xinfa` and `.kungfu` remain distinct authority
+domains.
 
 ## Product simplification
 
@@ -369,7 +359,7 @@ explicit:
 3. **Causality**: an Episode proves occurrence, not authorization or success.
 4. **Authority**: Warrant derivation, scope, expiry, attenuation, and revocation
    fail closed.
-5. **Perspective**: Atlas source and cut are inspectable and replayable.
+5. **Perspective**: Xinfa Atlas roots and their source cut are inspectable and replayable.
 6. **Continuity**: Pursuit decomposition and settlement preserve lineage.
 7. **Recovery**: fsck, rebuild, export/import, and rollback preserve identity
    and declared loss.
@@ -388,7 +378,7 @@ qualification plan.
 1. Preserve [KF-ADR-019f86da-4f90-786d-aa24-a97705e13917](../adr/KF-ADR-019f86da-4f90-786d-aa24-a97705e13917.md) and the current machine contract as the public baseline.
 2. Implement the accepted [KF-ADR-019f86da-4f90-7c45-8d95-3745dcbbff1c](../adr/KF-ADR-019f86da-4f90-7c45-8d95-3745dcbbff1c.md) machine contract over the existing journal
    and content-store substrate without changing its identity or ownership.
-3. Project existing Mission/Go, Xinfa Atlas, authorization, and Episode
+3. Project existing Initiative/Assignment, Xinfa Atlas, authorization, and Episode
    implementations into the generic model without destructive renaming.
 4. Add read-only inspection and divergence reporting before any authority
    cutover.

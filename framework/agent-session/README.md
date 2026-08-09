@@ -64,7 +64,7 @@ The Stage 5 product surface adds:
   runtime-scoped Unix socket, Python CLI/KFD-3, KFX, and product views;
 - plan roots for start and control, exact foreground/epoch fencing, and
   delivery receipts that still cannot claim work state or proof;
-- one-click WorkRef-bound Go launch with automatic side-console attachment,
+- one-click WorkRef-bound Assignment launch with automatic side-console attachment,
   plus Assistant Console and Console Hub projections of the same Capsule; and
 - presentation detach without provider termination, with no renderer-private
   spawn or PTY write path.

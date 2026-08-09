@@ -12,7 +12,7 @@ import { fileURLToPath } from 'node:url';
 import {
   beginActionLoop,
   createCorePublicAdapters,
-  createExplicitCompatibilityAdapters,
+  createExplicitAuthorityAdapters,
 } from './action-loop-begin.mjs';
 import {
   createSettlementCoreAdapters,
@@ -202,7 +202,7 @@ function adapters({
   failSeal = false,
   staleFinal = false,
 } = {}) {
-  const explicit = createExplicitCompatibilityAdapters();
+  const explicit = createExplicitAuthorityAdapters();
   const store = new CheckpointStore();
   let currentReviewVerdict = reviewVerdict;
   const ports = {
@@ -470,7 +470,7 @@ test(
     };
     const beginCore = createCorePublicAdapters(invoke);
     const settleCore = createSettlementCoreAdapters(invoke);
-    const explicit = createExplicitCompatibilityAdapters();
+    const explicit = createExplicitAuthorityAdapters();
     let injectFinalRefDrift = true;
     const ports = {
       ...explicit,

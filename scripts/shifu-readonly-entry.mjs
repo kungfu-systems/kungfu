@@ -21,7 +21,7 @@ const READONLY_SOURCE_COMMANDS = [
   'maintainability:python-structure',
   'maintainability:amplification',
   'maintainability:query',
-  'work-design:open-card-preflight',
+  'work-design:preflight',
   'work-design:feedback',
 ];
 
@@ -58,9 +58,9 @@ function route(command, args) {
       'framework/maintainability/semantic-amplification.mjs',
       command === 'maintainability:query' ? ['--query', ...args] : args,
     ];
-  if (command === 'work-design:open-card-preflight')
+  if (command === 'work-design:preflight')
     return [
-      'framework/work-design-open-card/tooling/open-card-preflight.mjs',
+      'framework/work-design-preflight/tooling/work-design-preflight.mjs',
       args,
     ];
   if (command === 'work-design:feedback')

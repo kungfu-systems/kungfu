@@ -60,13 +60,13 @@ function workspaceId(root) {
 
 function nearestWorkspaceHome(start, env) {
   let current = canonicalPath(start);
-  const legacyHome = homeDataHome(env);
+  const globalHome = homeDataHome(env);
   for (;;) {
     const candidate = path.join(current, '.kungfu');
     if (
       fs.existsSync(candidate) &&
       fs.statSync(candidate).isDirectory() &&
-      canonicalPath(candidate) !== legacyHome
+      canonicalPath(candidate) !== globalHome
     ) {
       return canonicalPath(candidate);
     }

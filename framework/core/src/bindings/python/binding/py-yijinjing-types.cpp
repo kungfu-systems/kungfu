@@ -104,7 +104,7 @@ template <typename DataType> void bind_data_type(pybind11::module &m_types, cons
   py_class.def("__parse__", [&](DataType &target, std::string &s) { target.parse(s.c_str(), s.length()); });
 
   // KF-ADR-019f86da-4f90-7499-9152-520599d089ae Decision 3: expose the raw frame_header struct bytes as a
-  // read-only, zero-copy Python buffer so outer rings (e.g. kungfu.atlas.store)
+  // read-only, zero-copy Python buffer so outer rings
   // hand the header straight to the native checksum_frame primitive instead of
   // re-packing the frame_header layout by hand. Only frame_header opts in; the
   // buffer is readonly (checksum never writes the header) and callers must keep

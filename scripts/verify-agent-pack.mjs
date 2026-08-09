@@ -392,7 +392,6 @@ if (commands && apiRegistry) {
   for (const mode of [
     'brief',
     'report',
-    'atlas-projection',
     'trace',
     'managed-run',
     'remote-sync',

@@ -391,7 +391,7 @@
             "capabilities",
             "owners",
             "roles",
-            "mission_tracks",
+            "initiative_tracks",
             "terms"
           ],
           "properties": {
@@ -407,7 +407,7 @@
             "roles": {
               "$ref": "#/$defs/resolutionValues"
             },
-            "mission_tracks": {
+            "initiative_tracks": {
               "$ref": "#/$defs/resolutionValues"
             },
             "terms": {
