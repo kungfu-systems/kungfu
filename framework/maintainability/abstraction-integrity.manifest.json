@@ -103,6 +103,12 @@
       ]
     },
     {
+      "owner": "core/python-project-tour",
+      "paths": [
+        "framework/core/src/python/kungfu/project_tour/orchestration.py"
+      ]
+    },
+    {
       "owner": "core/python-initiative-family",
       "paths": [
         "framework/core/src/python/kungfu/initiative_family/__init__.py",
