@@ -103,6 +103,11 @@ const fakeCaps = {
     runs: () => [],
     subscribeRuns: () => () => undefined,
   },
+  assignmentRuntime: {
+    discover: async () => ({ status: 'ok' }),
+    snapshot: async () => ({ status: 'ok', revision: { value: 'fixture' } }),
+    watch: async () => ({ status: 'ok' }),
+  },
 };
 
 const fakeShell = {
