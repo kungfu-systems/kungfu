@@ -1151,8 +1151,6 @@ def test_work_control_exposes_only_canonical_creation_actions():
     actions = {row["id"]: row for row in registry["actions"]}
     assert actions["create-initiative"]["runtimeOperation"] == "episode.append"
     assert actions["create-assignment"]["runtimeOperation"] == "episode.append"
-    assert "create-mission" not in actions
-    assert "create-go" not in actions
 
 
 def _write_native_runtime_evidence(runtime, config_home):
@@ -1239,8 +1237,8 @@ def test_work_control_profile_action_executes_through_public_intent(tmp_path):
     )
 
     values = {
-        "initiativeId": "mission:test",
-        "title": "Test Mission",
+        "initiativeId": "initiative:test",
+        "title": "Test Initiative",
         "intent": "Prove public Profile action execution",
         "actor": "test-agent",
         "actorType": "agent",
@@ -1271,14 +1269,14 @@ def test_work_control_profile_action_executes_through_public_intent(tmp_path):
     assert execution["runtimeReceipt"]["accepted"] is True
     assert execution["runtimeReceipt"]["activation"]["outcome"] == "daemonless"
     assert plan["actionPlan"]["runtimePlan"]["operation"]["id"] == "episode.append"
-    assert execution["coreReceipt"]["initiative_subject"] == "kungfu:mission:test"
+    assert execution["coreReceipt"]["initiative_subject"] == "kungfu:initiative:test"
     assert execution["memberReceipt"]["schema"] == ("kungfu.profile-member-receipt/v1")
     assert execution["memberReceipt"]["profileSuiteRoot"] == plan["profileSuiteRoot"]
     assert execution["memberReceipt"]["memberId"] == "work-control-actions"
     assert execution["memberReceipt"]["memberRoot"].startswith("sha256:")
     assert execution["affected"] == {
         "profileId": "kungfu.work-control",
-        "entityKeys": ["kungfu:mission:test"],
+        "entityKeys": ["kungfu:initiative:test"],
         "queryKeys": [
             "initiative-state",
             "initiative-timeline",
@@ -1296,7 +1294,7 @@ def test_profile_action_rejects_tampered_runtime_execution_material(tmp_path):
         runtime,
         "create-initiative",
         {
-            "initiativeId": "mission:tampered-runtime",
+            "initiativeId": "initiative:tampered-runtime",
             "title": "Tampered Runtime",
             "intent": "The callback must not bypass its exact runtime plan",
             "actor": "test-agent",
@@ -1323,7 +1321,7 @@ def test_live_profile_action_plan_fails_without_native_evidence(tmp_path, monkey
 
     try:
         profile_sdk.plan_action(
-            source, runtime, "assess-progress", {"missionId": "mission:test"}
+            source, runtime, "assess-progress", {"initiativeId": "initiative:test"}
         )
     except profile_sdk.ProfileSdkError as error:
         assert error.diagnosis["code"] == "runtime-evidence-unavailable"
@@ -1344,8 +1342,8 @@ def test_completion_review_plans_as_storage_append_without_native_runtime_eviden
         runtime,
         "review-completion",
         {
-            "missionId": "mission:test",
-            "goalId": "goal:test",
+            "initiativeId": "initiative:test",
+            "assignmentId": "assignment:test",
             "reviewer": "independent-reviewer",
             "reviewerSource": "qualification",
             "executorProfile": "inline",
@@ -1380,7 +1378,7 @@ def test_live_profile_action_does_not_run_callback_when_broker_refuses(
     )
 
     plan = profile_sdk.plan_action(
-        source, runtime, "assess-progress", {"missionId": "mission:test"}
+        source, runtime, "assess-progress", {"initiativeId": "initiative:test"}
     )
     answer = profile_sdk.answer_decision(plan["decisionCard"], "approve", "test-owner")
     receipt = profile_sdk.authorized_action_invoke(runtime, plan, answer)
@@ -1434,7 +1432,7 @@ def test_live_profile_action_runs_only_through_admitted_runtime_receipt(
     )
 
     plan = profile_sdk.plan_action(
-        source, runtime, "assess-progress", {"missionId": "mission:test"}
+        source, runtime, "assess-progress", {"initiativeId": "initiative:test"}
     )
     answer = profile_sdk.answer_decision(plan["decisionCard"], "approve", "test-owner")
     receipt = profile_sdk.authorized_action_invoke(runtime, plan, answer)

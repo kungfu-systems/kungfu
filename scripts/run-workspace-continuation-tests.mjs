@@ -35,39 +35,22 @@ const pythonPath = [
 ]
   .filter(Boolean)
   .join(path.delimiter);
-run(
-  'uv',
-  [
-    'run',
-    '--project',
-    path.join(root, 'framework', 'core'),
-    '--frozen',
-    'pytest',
-    path.join(
-      root,
-      'framework',
-      'core',
-      'tests',
-      'python',
-      'test_workspace.py',
-    ),
-    path.join(
-      root,
-      'framework',
-      'core',
-      'tests',
-      'python',
-      'test_workspace_federation.py',
-    ),
-    path.join(
-      root,
-      'framework',
-      'core',
-      'tests',
-      'python',
-      'test_assignment_orchestration.py',
-    ),
-    '-q',
-  ],
-  { env: { ...process.env, PYTHONPATH: pythonPath } },
-);
+for (const testFile of [
+  'test_workspace.py',
+  'test_workspace_federation.py',
+  'test_assignment_orchestration.py',
+]) {
+  run(
+    'uv',
+    [
+      'run',
+      '--project',
+      path.join(root, 'framework', 'core'),
+      '--frozen',
+      'pytest',
+      path.join(root, 'framework', 'core', 'tests', 'python', testFile),
+      '-q',
+    ],
+    { env: { ...process.env, PYTHONPATH: pythonPath } },
+  );
+}

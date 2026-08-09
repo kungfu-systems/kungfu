@@ -55,7 +55,7 @@
       "required": ["id", "type", "episode", "recordIndex", "dependsOn", "routes"],
       "properties": {
         "id": { "$ref": "#/$defs/id" },
-        "type": { "enum": ["mission-declaration", "go-declaration", "proof-ref", "receipt-ref", "review-finding"] },
+        "type": { "enum": ["initiative-declaration", "assignment-declaration", "proof-ref", "receipt-ref", "review-finding"] },
         "episode": { "$ref": "#/$defs/id" },
         "recordIndex": { "type": "integer", "minimum": 0 },
         "dependsOn": { "type": "array", "items": { "$ref": "#/$defs/dependency" } },
