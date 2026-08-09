@@ -6,7 +6,7 @@
   "hold": {
     "enabled": false,
     "reason": "",
-    "updatedAt": "2026-08-08T19:11:47.051Z"
+    "updatedAt": "2026-08-09T19:14:44.779Z"
   },
   "candidates": [
     {
@@ -18,7 +18,7 @@
       "state": "soaking",
       "qualification": {
         "ok": false,
-        "observedAt": "2026-08-08T19:11:47.051Z",
+        "observedAt": "2026-08-09T19:14:44.779Z",
         "soakStartedAt": "",
         "soakElapsedSeconds": 0,
         "requiredSeconds": 86400,
@@ -33,7 +33,7 @@
       },
       "decision": {
         "reason": "checks-incomplete",
-        "updatedAt": "2026-08-08T19:11:47.051Z",
+        "updatedAt": "2026-08-09T19:14:44.779Z",
         "actor": "buildchain-patrol"
       }
     },
@@ -43,12 +43,12 @@
       "sha": "f9e6b0e34bcdd6407b2a18206ace7982d64de2c8",
       "tag": "v4.0.0-alpha.1",
       "publishedAt": "2026-08-08T09:03:38.000Z",
-      "state": "soaking",
+      "state": "qualified",
       "qualification": {
-        "ok": false,
-        "observedAt": "2026-08-08T19:11:47.051Z",
+        "ok": true,
+        "observedAt": "2026-08-09T19:14:44.779Z",
         "soakStartedAt": "2026-08-08T09:03:38.000Z",
-        "soakElapsedSeconds": 36489,
+        "soakElapsedSeconds": 123066,
         "requiredSeconds": 86400,
         "checks": [
           {
@@ -60,12 +60,20 @@
         ]
       },
       "decision": {
-        "reason": "soaking",
-        "updatedAt": "2026-08-08T19:11:47.051Z",
+        "reason": "qualification-satisfied",
+        "updatedAt": "2026-08-09T19:14:44.779Z",
         "actor": "buildchain-patrol"
+      },
+      "promotionRequest": {
+        "stableTag": "v4.0.0",
+        "sourceRef": "publish-gate/release/v4/v4.0/4.0.0-alpha.1",
+        "targetRef": "release/v4/v4.0",
+        "pullRequestUrl": "https://github.com/kungfu-systems/kungfu/pull/2734",
+        "requestedAt": "2026-08-09T19:14:44.779Z",
+        "authority": "policy"
       }
     }
   ],
-  "updatedAt": "2026-08-08T19:11:47.051Z",
+  "updatedAt": "2026-08-09T19:14:44.779Z",
   "stableReleases": []
 }
