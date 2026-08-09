@@ -13,7 +13,7 @@ test('Dev auto-merge admits only explicitly ready reviewed same-repository PRs',
   const reusableRef = workflow.match(
     /uses: kungfu-systems\/buildchain\/\.github\/workflows\/dev-pr-auto-merge\.yml@([0-9a-f]{40})/u,
   )?.[1];
-  assert.equal(reusableRef, 'ed978d70b246fcfdb5e80009d58e1ce4926ad593');
+  assert.equal(reusableRef, '368533567cf1c1b20783e334ab8ce31b0da582a0');
   assert.match(workflow, new RegExp(`buildchain-ref: ${reusableRef}`, 'u'));
   assert.match(workflow, /workflow_run:[\s\S]*Core affected native/u);
   assert.match(workflow, /cron: "23,53 \* \* \* \*"/u);
@@ -72,6 +72,12 @@ test('Dev Agent admission binds every targeted run to one exact PR head', () => 
     workflow,
     /expected-head-sha: \$\{\{ needs\.resolve-target\.outputs\.expected-head-sha \}\}/u,
   );
+  assert.match(
+    workflow,
+    /source-workflow-run-id: \$\{\{ fromJSON\(needs\.resolve-target\.outputs\.source-workflow-run-id \|\| '0'\) \}\}/u,
+  );
+  assert.match(workflow, /handoff-workflow-id: dev-pr-auto-merge\.yml/u);
+  assert.match(workflow, /permissions:\n {6}actions: write/u);
   assert.match(workflow, /diagnostic-context: Buildchain delivery intent/u);
   assert.match(
     workflow,
@@ -117,7 +123,7 @@ test('Dev behind admission produces and forwards an exact Project Cut replay pro
   );
   assert.match(
     workflow,
-    /Check out exact Buildchain delivery runtime[\s\S]*ref: ed978d70b246fcfdb5e80009d58e1ce4926ad593/u,
+    /Check out exact Buildchain delivery runtime[\s\S]*ref: 368533567cf1c1b20783e334ab8ce31b0da582a0/u,
   );
   assert.match(
     workflow,

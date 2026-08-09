@@ -179,7 +179,7 @@ jobs:
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           repository: kungfu-systems/buildchain
-          ref: ed978d70b246fcfdb5e80009d58e1ce4926ad593
+          ref: 368533567cf1c1b20783e334ab8ce31b0da582a0
           path: .buildchain/dev-delivery-runtime
           fetch-depth: 1
           persist-credentials: false
@@ -348,16 +348,20 @@ jobs:
       github.event_name != 'workflow_run' ||
       github.event.workflow_run.event == 'pull_request'
     permissions:
+      actions: write
       checks: read
       contents: write
       pull-requests: write
       statuses: write
-    uses: kungfu-systems/buildchain/.github/workflows/dev-pr-auto-merge.yml@ed978d70b246fcfdb5e80009d58e1ce4926ad593
+    uses: kungfu-systems/buildchain/.github/workflows/dev-pr-auto-merge.yml@368533567cf1c1b20783e334ab8ce31b0da582a0
     with:
-      buildchain-ref: ed978d70b246fcfdb5e80009d58e1ce4926ad593
+      buildchain-ref: 368533567cf1c1b20783e334ab8ce31b0da582a0
       target-branch: ${{ needs.resolve-target.outputs.target-branch }}
       expected-pr-number: ${{ fromJSON(needs.resolve-target.outputs.expected-pr-number || '0') }}
       expected-head-sha: ${{ needs.resolve-target.outputs.expected-head-sha }}
+      source-workflow-run-id: ${{ fromJSON(needs.resolve-target.outputs.source-workflow-run-id || '0') }}
+      handoff-workflow-id: dev-pr-auto-merge.yml
+      source-workflow-id: affected-native-pr.yml
       diagnostic-context: Buildchain delivery intent
       delivery-warrant-mode: ${{ (github.event_name == 'workflow_run' || (github.event_name == 'workflow_dispatch' && inputs.dry-run == false)) && 'required' || 'off' }}
       assignment-root: ${{ needs.delivery-contract.outputs.assignment-root }}
