@@ -4,7 +4,7 @@ doc_type: architecture-decision
 adr_id: KF-ADR-019fdb93-19ac-7362-8ab0-f8ed19c7bef8
 decision_status: accepted
 implementation_status: staged
-implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/2590, https://github.com/kungfu-systems/kungfu/pull/2618]
+implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/2590, https://github.com/kungfu-systems/kungfu/pull/2618, https://github.com/kungfu-systems/kungfu/pull/2682]
 qualification_refs: [framework/assignment-runtime/assignment-runtime.contract.json, framework/assignment-runtime/schema/assignment-runtime-envelope-v1.schema.json, framework/assignment-runtime/fixtures/contract-cases-v1.json, framework/assignment-runtime/assignment-runtime.test.mjs, framework/api/tests/assignment-runtime.test.ts, framework/core/tests/python/test_assignment_runtime.py, framework/gui/src/main/assignment-runtime-host.test.ts, extensions/work-dashboard/tests/work-control-profile.test.ts, docs/architecture/assignment-runtime-r0-evidence.md, docs/architecture/assignment-runtime-r1-local-profile.md, docs/architecture/assignment-runtime-r2-gui-client.md]
 review_state: self-reviewed
 sensitivity: public
