@@ -8,6 +8,7 @@ import importlib.util
 import json
 from concurrent.futures import ThreadPoolExecutor
 from datetime import UTC, datetime, timedelta
+from io import StringIO
 from pathlib import Path
 from typing import Any
 
@@ -21,6 +22,7 @@ from kungfu.assignment_runtime import (
     EmbeddedLocalAssignmentRuntime,
     LocalRuntimeError,
     WorkControlAuthority,
+    serve,
 )
 from kungfu.canonical_json import canonical_json_text
 
@@ -265,6 +267,55 @@ def _handle(runtime: EmbeddedLocalAssignmentRuntime, request: dict[str, Any]):
     response = runtime.handle(request)
     assert list(VALIDATE_ENVELOPE.iter_errors(response)) == [], response
     return response
+
+
+def test_gui_stdio_host_announces_ready_after_start_and_preserves_envelopes(
+    tmp_path,
+):
+    authority = FakeAuthority(tmp_path)
+    runtime = EmbeddedLocalAssignmentRuntime(
+        tmp_path,
+        realm_id=REALM["realmId"],
+        generation=REALM["generation"],
+        authority=authority,
+        contract=ASSIGNMENT_RUNTIME_CONTRACT,
+        request_schema=ENVELOPE_SCHEMA,
+    )
+    request = _request(
+        "assignment.snapshot",
+        "assignment.snapshot.read",
+        request_id="gui.work-dashboard:1",
+    )
+    output = StringIO()
+
+    serve(runtime, StringIO(json.dumps(request) + "\n"), output)
+
+    hello, response = [json.loads(line) for line in output.getvalue().splitlines()]
+    assert hello["schema"] == "kungfu.gui.assignment-runtime-host/v1"
+    assert hello["status"] == "ready"
+    assert hello["realm"] == REALM
+    assert hello["genesisCursor"] == runtime.genesis_cursor(REALM["generation"])
+    assert response["schema"] == "kungfu.assignment-runtime.response/v1"
+    assert response["requestId"] == request["requestId"]
+    assert response["status"] == "ok"
+    assert runtime._started is False
+
+
+def test_gui_stdio_host_maps_unexpected_writer_start_failure_to_stable_error():
+    class FailingRuntime:
+        def start(self):
+            raise OSError("private native bind detail")
+
+    output = StringIO()
+
+    with pytest.raises(LocalRuntimeError, match="writer failed to start") as raised:
+        serve(FailingRuntime(), StringIO(), output)  # type: ignore[arg-type]
+
+    assert raised.value.code == "backend-unavailable"
+    envelope = json.loads(output.getvalue())
+    assert envelope["status"] == "error"
+    assert envelope["error"]["code"] == "backend-unavailable"
+    assert "private native bind detail" not in output.getvalue()
 
 
 @pytest.fixture

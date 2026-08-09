@@ -1112,6 +1112,25 @@ def test_process_runtime_host_wraps_engine_with_pid_lifecycle(tmp_path, monkeypa
     assert events[0][2]["coordinator_epoch"] == "1"
 
 
+def test_process_runtime_host_never_reports_ready_when_native_bind_fails(
+    tmp_path, monkeypatch
+):
+    class _BindFailure:
+        def __init__(self, *args, **kwargs):
+            raise OSError("nanomsg bind failed")
+
+    monkeypatch.setattr(runtime_service, "CoordinatorEngine", _BindFailure)
+    runtime_dir = tmp_path / "runtime"
+
+    with pytest.raises(OSError, match="nanomsg bind failed"):
+        runtime_service.ProcessRuntimeHost().run_foreground(
+            str(tmp_path / "home"), str(runtime_dir)
+        )
+
+    assert runtime_service.read_coordinator_pid(str(runtime_dir)) is None
+    assert not runtime_service.state_path(str(runtime_dir)).exists()
+
+
 def test_repair_route_state_removes_dead_pid_files(tmp_path, monkeypatch):
     config_home = tmp_path / "config"
     home = tmp_path / "workspace" / ".kungfu"
@@ -1194,8 +1213,14 @@ def test_wait_for_coordinator_preserves_enriched_route_status(tmp_path, monkeypa
         return {
             "schema": runtime_service.SCHEMA_STATUS,
             "status": "running",
-            "supervisor": {"running": True},
-            "coordinator": {"running": True},
+            "lifecycle": {"healthy": True},
+            "supervisor": {"running": True, "identityVerified": True},
+            "coordinator": {
+                "pid": 42,
+                "running": True,
+                "identityVerified": True,
+            },
+            "lastState": {"status": "coordinator-running", "coordinatorPid": 42},
             "route": {
                 **route,
                 "registered": True,
