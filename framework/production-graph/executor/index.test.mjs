@@ -312,6 +312,35 @@ test('timeout and cancellation settle deterministically and never start later no
   }
 });
 
+test('pre-start cancellation skips every node and remains non-qualifying', async (t) => {
+  const fixture = await admittedInput([
+    node('cancelled-one', 'production-graph:fixture:success'),
+    node('cancelled-two', 'production-graph:fixture:success'),
+  ]);
+  const controller = new AbortController();
+  controller.abort();
+  let calls = 0;
+  const result = await runLocalProductionGraph(fixture.input, {
+    root: ROOT,
+    outputDir: temporaryOutput(t),
+    observedAt: fixture.input.executionAdmissionRequest.observedAt,
+    trustedVerificationReceipt: fixture.input.verificationReceipt,
+    source: fixture.source,
+    signal: controller.signal,
+    delegate: async () => {
+      calls += 1;
+      return successResult();
+    },
+  });
+  assert.equal(calls, 0);
+  assert.equal(result.receipt.status, 'cancelled');
+  assert.deepEqual(result.receipt.startedNodeIds, []);
+  assert.deepEqual(result.receipt.skippedNodeIds, [
+    'cancelled-one',
+    'cancelled-two',
+  ]);
+});
+
 test('invalid or expired admission starts zero nodes', async (t) => {
   const fixture = await admittedInput([
     node('guarded', 'production-graph:fixture:success'),
