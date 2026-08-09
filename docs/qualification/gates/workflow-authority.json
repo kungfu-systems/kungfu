@@ -274,7 +274,7 @@
     {
       "path": ".github/workflows/build.yml",
       "authority": "product-publication",
-      "definitionDigest": "sha256:9cae1ec7ea1247a9a6282fd680a60021445aa58a38936d87205e562914ab81d8",
+      "definitionDigest": "sha256:840e4e95c31c34420a4a583924c4f75a3df8a33b4d94cba2a0872ceb8db20c9a",
       "jobs": [
         {
           "id": "auditable-demo",
@@ -301,7 +301,7 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "qualifying",
-          "definitionDigest": "sha256:8e64304b1506757b39fbf897d81abb03b856111e0f1dc61bb7750cc1e9db3511",
+          "definitionDigest": "sha256:c5540625a339012f67f9512fde656070500c400c2145fb2c99d9b638df8726b6",
           "credentials": {"githubToken":"write","oidc":true,"repositorySecrets":["BUILDCHAIN_ARTIFACT_RELAY_S3_DOWNLOAD_ROLE_ARN","BUILDCHAIN_ARTIFACT_RELAY_S3_ROLE_ARN","BUILDCHAIN_ARTIFACT_RELAY_S3_UPLOAD_ROLE_ARN","KUNGFU_GITHUB_TOKEN"],"inheritedSecrets":false,"environment":null},
           "externalActions": ["kungfu-systems/buildchain/.github/workflows/.build.yml@v3"],
           "steps": []
@@ -371,7 +371,7 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "diagnostic",
-          "definitionDigest": "sha256:f7dc63acebe5c10defce5fac27e65ce16aa95d6c554102da98d441333c100199",
+          "definitionDigest": "sha256:d224e571059d840b05a2ec82dd085cf52ba84fa9b91e7e57f795d72cca8b54ec",
           "credentials": {"githubToken":"read","oidc":false,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
           "externalActions": ["actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0"],
           "steps": [{"index":1,"label":"name:Check out exact candidate source","definitionDigest":"sha256:90b7875c1b8263fc6ee031b6f446decfc1fe5eb289f08dbc3d506c4bce43f113"},{"index":2,"label":"id:continuity","definitionDigest":"sha256:aae979c9b8b143b19076785a8b475412dfaf38549d5e0a6764fb006a52c72a5d"},{"index":3,"label":"name:Independently verify the exact Windows continuity receipt","definitionDigest":"sha256:02b95433a8c2b062797026a17d1f6579c78ebc31c89a569daf2ec9a93cb4455e"}]
