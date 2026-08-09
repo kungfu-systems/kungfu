@@ -12,19 +12,19 @@
   "period": { "start": "2026-07-22", "end": "2026-07-22" },
   "buildsOn": ["native-fact-action-authority"],
   "pressure": "Agent work needed explicit responsibility, dependency, review, and portability semantics above individual Facts and Episodes.",
-  "priorLimitation": "External mission records could describe intent, but the runtime lacked one portable, Project Cut-bound work object and assignment family.",
+  "priorLimitation": "External work records could describe intent, but the runtime lacked one portable, Project Cut-bound work object and assignment family.",
   "localCapability": "Initiative and Assignment entered the L3 world, and Work became portable across workspaces while retaining its Project Cut boundary.",
   "compression": "Intent, delegation, bounded execution, and completion evidence became first-class Work objects over the existing primitives.",
   "authorityTransitions": [
     {
       "subject": "work-authority",
-      "before": "external mission records",
+      "before": "external work records",
       "after": "Initiative, Assignment, and portable Project Cut-bound Work",
-      "authorityRefs": ["docs/profiles/mission-control.md", "framework/project-cut/README.md"]
+      "authorityRefs": ["docs/profiles/work-control.md", "framework/project-cut/README.md"]
     }
   ],
   "retiredSurfaces": ["Git or Atlas JSON as the intended runtime work authority"],
-  "unlockedCapabilities": ["portable work continuation", "native assignment dependency graphs", "completion claims and independent review", "runtime-owned Mission projection"],
+  "unlockedCapabilities": ["portable work continuation", "native assignment dependency graphs", "completion claims and independent review", "runtime-owned Initiative projection"],
   "downstreamConsumers": ["native Work Control", "Assignment orchestration", "continuous-delivery dogfood", "primitive incubation work"],
   "evidence": [
     { "kind": "pull-request", "ref": "https://github.com/kungfu-systems/kungfu/pull/1200", "label": "Initiative and Assignment L3 world" },
@@ -32,7 +32,7 @@
   ],
   "readerRoute": {
     "intent": "Understand how agent intent becomes bounded Work",
-    "start": "docs/profiles/mission-control.md",
+    "start": "docs/profiles/work-control.md",
     "deepen": ["framework/project-cut/README.md", "docs/concepts/project-cut-product-loop.md"]
   },
   "amends": [],
