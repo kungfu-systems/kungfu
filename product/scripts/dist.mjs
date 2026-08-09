@@ -53,9 +53,12 @@ import {
 import * as symlinks from './portable-symlinks.mjs';
 import { productReleaseChannelConfig } from './release-channel-trust.mjs';
 import {
+  assertNodePtyPackageIdentity,
   assertSupportedProductHost,
+  nodePtyRuntimeClosure,
   readTrunkRuntimePinSnapshot,
   runProductAssembly,
+  verifyNodePtyRuntimeClosure,
 } from './runtime-pin-snapshot.mjs';
 import {
   buildCliUpgradeManifest,
@@ -1005,6 +1008,8 @@ export function stageNodePtyForCli(
   platform = process.platform,
   architecture = process.arch,
 ) {
+  assertNodePtyPackageIdentity(source);
+  const closure = nodePtyRuntimeClosure(platform, architecture);
   copyTree(source, target);
   const prebuilds = path.join(target, 'prebuilds');
   if (fs.existsSync(prebuilds)) {
@@ -1023,27 +1028,24 @@ export function stageNodePtyForCli(
     if (selected === null) fs.rmSync(prebuilds, { recursive: true });
   }
   if (platform === 'linux') {
-    const nativeDirectory = path.join('build', 'Release');
-    const targetNativeDirectory = path.join(target, nativeDirectory);
-    fs.mkdirSync(targetNativeDirectory, { recursive: true });
-    const input = path.join(source, nativeDirectory, 'pty.node');
-    if (!fs.existsSync(input) || !fs.lstatSync(input).isFile()) {
-      throw new Error(
-        `required Linux node-pty runtime not found: ${rel(input)}`,
-      );
+    // node-pty 1.1.0 builds spawn-helper only on Darwin. Linux uses forkpty,
+    // so restore only the addon that copyTree deliberately excludes with build/.
+    for (const relative of closure.requiredFiles) {
+      const input = path.join(source, relative);
+      if (!fs.existsSync(input) || !fs.lstatSync(input).isFile()) {
+        throw new Error(
+          `required node-pty runtime file not found: ${rel(input)}`,
+        );
+      }
+      const output = path.join(target, relative);
+      fs.mkdirSync(path.dirname(output), { recursive: true });
+      fs.copyFileSync(input, output);
     }
-    fs.copyFileSync(input, path.join(targetNativeDirectory, 'pty.node'));
-  } else if (platform === 'darwin') {
-    fs.chmodSync(
-      path.join(
-        target,
-        'prebuilds',
-        `${platform}-${architecture}`,
-        'spawn-helper',
-      ),
-      0o755,
-    );
   }
+  for (const relative of closure.executableFiles) {
+    fs.chmodSync(path.join(target, relative), 0o755);
+  }
+  verifyNodePtyRuntimeClosure(target, platform, architecture);
 }
 
 export function verifyDarwinCliExecutableLayout(installRoot, run = spawnSync) {
