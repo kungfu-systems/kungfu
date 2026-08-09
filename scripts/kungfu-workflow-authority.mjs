@@ -154,15 +154,20 @@ function immutableReference(reference) {
   return marker > 0 && /^[0-9a-f]{40}$/.test(reference.slice(marker + 1));
 }
 
-const ALPHA_RELEASE_TRAIN_ACTION =
-  'kungfu-systems/buildchain/.github/workflows/release-candidate-promote.yml@train/v3/v3.0/resume-candidate-run';
+const BUILDCHAIN_V3_BUILD_ACTION =
+  'kungfu-systems/buildchain/.github/workflows/.build.yml@v3';
+const BUILDCHAIN_V3_PROMOTION_ACTION =
+  'kungfu-systems/buildchain/.github/workflows/release-candidate-promote.yml@v3';
 
 function authorityReferenceAllowed(workflowPath, jobId, reference) {
   return (
     immutableReference(reference) ||
+    (workflowPath.endsWith('/build.yml') &&
+      jobId === 'build' &&
+      reference === BUILDCHAIN_V3_BUILD_ACTION) ||
     (workflowPath.endsWith('/release-new-version.yml') &&
       ['promote', 'recover'].includes(jobId) &&
-      reference === ALPHA_RELEASE_TRAIN_ACTION)
+      reference === BUILDCHAIN_V3_PROMOTION_ACTION)
   );
 }
 

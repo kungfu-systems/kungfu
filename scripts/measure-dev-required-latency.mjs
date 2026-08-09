@@ -11,7 +11,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import {
   createCandidateTimeline,
   formatCandidateTimelineReport,
-} from '@kungfu-tech/buildchain-alpha/candidate-timeline';
+} from '@kungfu-tech/buildchain/candidate-timeline';
 import { latencyBaselineForDevBranch } from '../framework/version-line/version-line-authority.mjs';
 import {
   affectedNativeClassification,
