@@ -639,7 +639,7 @@ function verifyDependencyAuthority(
     'duplicate-evidence-dependency-seal',
     issues,
   );
-  const authoritySet = [...requestIdentities].sort();
+  const authoritySet = [...new Set(requestIdentities)].sort();
   const matrixAuthoritySet = matrixDependencies
     .map(({ requiredAssignmentId }) => requiredAssignmentId)
     .sort();
