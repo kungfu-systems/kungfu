@@ -411,7 +411,7 @@
         "required": [
           "coreOwns",
           "profileOwns",
-          "missionControl",
+          "workControl",
           "physicalStorage"
         ],
         "properties": {
@@ -431,7 +431,7 @@
               "minLength": 1
             }
           },
-          "missionControl": {
+          "workControl": {
             "type": "string",
             "minLength": 1
           },
@@ -1572,8 +1572,8 @@
           "surface": "work-control-profile",
           "status": "implemented",
           "identity": [
-            "mission_id",
-            "goal_id"
+            "initiative_id",
+            "assignment_id"
           ],
           "authority": "Work Control Profile domain facts over Kungfu Core",
           "queries": [
@@ -1805,7 +1805,7 @@
       "progressive-disclosure presentation",
       "domain-specific success and review policy"
     ],
-    "missionControl": "Mission and Go remain one first-party Profile projection; they are not universal Core nouns.",
+    "workControl": "Initiative and Assignment remain one first-party Profile projection; they are not universal Core nouns.",
     "physicalStorage": "The contract does not require four storage engines or a second domain authority."
   },
   "publicSurfaces": {

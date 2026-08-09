@@ -1,0 +1,18 @@
+{
+  "schema": "kungfu.code-complexity-budget-waiver/v2",
+  "issue_root": "sha256:53fc87eb25bee3e52f05f6cfd57824f9fc5126079d0b27a22693f3ffc9ab56ec",
+  "issue_kind": "classification-or-owner-relabeled",
+  "paths_or_scope": ["framework/work-design-open-card/work-design-open-card.contract.json", "framework/work-design-preflight/work-design-preflight.contract.json"],
+  "budget_classes": ["declarative-schema-or-table:declarative"],
+  "baseline_measurement": [{"path":"framework/work-design-open-card/work-design-open-card.contract.json","class":"declarative-schema-or-table","language":"declarative","owner":"framework/work-design-open-card","lines":93,"contentRoot":"sha256:031566e5c855ee548c795440cdf3ec883851c994f6e29e9ab9bf2d62bcabd354"}],
+  "current_measurement": [{"path":"framework/work-design-preflight/work-design-preflight.contract.json","class":"declarative-schema-or-table","language":"declarative","owner":"framework/work-design-preflight","lines":90,"contentRoot":"sha256:ab280265260f7c9ea403bd0c893456c1d09548ba398132b93d8b8b4fd7632bbc"}],
+  "allowed_delta": 0,
+  "owner": "framework/work-design-preflight",
+  "responsibility_boundary": "The public contract is owned only by the neutral Work Design preflight domain.",
+  "cohesion_rationale": "The contract moves atomically with the domain implementation and has no legacy schema reader.",
+  "rejected_split_alternatives": ["Keeping the former contract as a deprecated schema would preserve forbidden compatibility residue."],
+  "affected_tests_and_qualification": ["./shifu check:source", "pnpm test"],
+  "requested_by": "keren.dong@kungfu.link",
+  "retirement_or_decomposition_ref": "https://github.com/kungfu-systems/kungfu/pull/2619",
+  "approval_receipt": {"schema":"kungfu.code-complexity-budget-approval-receipt/v1","authority_id":"kungfu-origin-complexity-transition-review","key_id":"ed25519-668812bf28659460","algorithm":"ed25519","issued_at":"2026-08-08T19:32:51.532Z","approved_at":"2026-08-08T19:33:51.532Z","expires_at":"2026-08-15T19:34:51.532Z","authorization_root":"sha256:c11f00fa9b57993a21f0c1a5e3565dd587b8a1d6298138f4ca32a8c7a2164fd6","signature":"kzgPVRi5KDP32G4HjaC2+CABbfeKzCXalCAF5zGnAKgm53tMzvN5jBCYp8e/HKAFvXOQsoymu7mMU+5mg9/cCw=="}
+}

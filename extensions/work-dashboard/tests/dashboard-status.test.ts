@@ -10,15 +10,15 @@ import {
 
 test('dashboard metrics use domain glyphs and unambiguous tooltips', () => {
   const metrics = dashboardMetricVisuals({
-    missions: 4,
-    goals: 393,
+    initiatives: 4,
+    assignments: 393,
     markers: 731,
   });
   assert.deepEqual(
     metrics.map(({ glyph, value, title }) => [glyph, value, title]),
     [
-      ['🧭', 4, '4 Missions'],
-      ['🎯', 393, '393 Go cards'],
+      ['🧭', 4, '4 Initiatives'],
+      ['🎯', 393, '393 Assignment cards'],
       ['📌', 731, '731 imported timeline markers'],
     ],
   );
