@@ -7,7 +7,7 @@ import {
   openWorkControlProfile,
 } from '../src/view/work-control-profile.ts';
 
-test('Work Control uses the exact-root Profile projection and intent surfaces', async () => {
+test('Work Control projection client cannot enter Assignment mutations', async () => {
   const source = '/profiles/work-control';
   const initiativeInput = {
     initiativeId: 'initiative-a',
@@ -78,52 +78,10 @@ test('Work Control uses the exact-root Profile projection and intent surfaces', 
       calls.push({ operation, input: memberInput });
       return { result: snapshot };
     },
-    intentPlan: (
-      intentSource: string,
-      intentId: string,
-      intentInput?: unknown,
-    ) => {
-      assert.equal(intentSource, source);
-      calls.push({ operation: `plan:${intentId}`, input: intentInput });
-      return { planId: 'sha256:plan' };
-    },
-    authorizeIntentAsync: async (
-      intentSource: string,
-      intentId: string,
-      planId: string,
-      choice: string,
-      authorizedBy: string,
-      intentInput?: unknown,
-    ) => {
-      assert.equal(intentSource, source);
-      assert.equal(planId, 'sha256:plan');
-      assert.equal(choice, 'approve');
-      assert.equal(authorizedBy, 'test-owner');
-      calls.push({ operation: `authorize:${intentId}`, input: intentInput });
-      return {
-        executionReceiptVerified: true,
-        actionReceipt: {
-          verified: true,
-          coreReceipt: { initiative_subject: 'initiative-a' },
-        },
-      };
-    },
   } as unknown as Profile;
 
   const workControl = openWorkControlProfile(profile);
   const projected = await workControl.dashboard();
-  await workControl.initiativeHome('initiative-a', { source: 'kungfu' });
-  await workControl.createInitiative('initiative-a', {
-    title: initiativeInput.title,
-    intent: initiativeInput.intent,
-    actor: initiativeInput.actor,
-  });
-  await workControl.createAssignment('initiative-a', {
-    assignmentId: assignmentInput.assignmentId,
-    title: assignmentInput.title,
-    objective: assignmentInput.objective,
-    actor: assignmentInput.actor,
-  });
   const relationEventInput = {
     workspaceIdentityRoot: `sha256:${'a'.repeat(64)}`,
     relation: {
@@ -153,108 +111,85 @@ test('Work Control uses the exact-root Profile projection and intent surfaces', 
     eventType: 'delegation-offer' as const,
     actor: 'test-owner',
   };
-  await workControl.appendAssignmentRelationEvent(relationEventInput);
-  await workControl.claimAssignment('initiative-a', 'assignment-a', {
-    owner: executionClaimInput.owner,
-    agent: executionClaimInput.agent,
-    slot: executionClaimInput.slot,
-    leaseId: executionClaimInput.leaseId,
-    leaseExpiresAt: executionClaimInput.leaseExpiresAt,
-    authorizedBy: executionClaimInput.authorizedBy,
-  });
-  await workControl.advanceAssignment('initiative-a', 'assignment-a', {
-    toPhase: phaseTransitionInput.toPhase,
-    expectedPhase: phaseTransitionInput.expectedPhase,
-    actor: phaseTransitionInput.actor,
-    reason: phaseTransitionInput.reason,
-  });
-  await workControl.reviewCompletion('initiative-a', 'assignment-a', {
-    reviewer: 'test-owner',
-    reviewerSource: 'new-review-session',
-  });
-  await workControl.decideContinuation('initiative-a', 'assignment-a', {
-    reviewId: 'review-a',
-    expectedReviewRoot: 'sha256:review',
-    expectedPlanRoot: 'sha256:plan-root',
-    action: 'close',
-    actor: 'test-owner',
-    reason: 'the exact claim is fit',
-  });
+  const mutations: Array<[string, () => Promise<unknown>]> = [
+    [
+      'createInitiative',
+      () =>
+        workControl.createInitiative('initiative-a', {
+          title: initiativeInput.title,
+          intent: initiativeInput.intent,
+          actor: initiativeInput.actor,
+        }),
+    ],
+    [
+      'createAssignment',
+      () =>
+        workControl.createAssignment('initiative-a', {
+          assignmentId: assignmentInput.assignmentId,
+          title: assignmentInput.title,
+          objective: assignmentInput.objective,
+          actor: assignmentInput.actor,
+        }),
+    ],
+    [
+      'appendAssignmentRelationEvent',
+      () => workControl.appendAssignmentRelationEvent(relationEventInput),
+    ],
+    [
+      'claimAssignment',
+      () =>
+        workControl.claimAssignment('initiative-a', 'assignment-a', {
+          owner: executionClaimInput.owner,
+          agent: executionClaimInput.agent,
+          slot: executionClaimInput.slot,
+          leaseId: executionClaimInput.leaseId,
+          leaseExpiresAt: executionClaimInput.leaseExpiresAt,
+          authorizedBy: executionClaimInput.authorizedBy,
+        }),
+    ],
+    [
+      'advanceAssignment',
+      () =>
+        workControl.advanceAssignment('initiative-a', 'assignment-a', {
+          toPhase: phaseTransitionInput.toPhase,
+          expectedPhase: phaseTransitionInput.expectedPhase,
+          actor: phaseTransitionInput.actor,
+          reason: phaseTransitionInput.reason,
+        }),
+    ],
+    [
+      'reviewCompletion',
+      () =>
+        workControl.reviewCompletion('initiative-a', 'assignment-a', {
+          reviewer: 'test-owner',
+          reviewerSource: 'new-review-session',
+        }),
+    ],
+    [
+      'decideContinuation',
+      () =>
+        workControl.decideContinuation('initiative-a', 'assignment-a', {
+          reviewId: 'review-a',
+          expectedReviewRoot: 'sha256:review',
+          expectedPlanRoot: 'sha256:plan-root',
+          action: 'close',
+          actor: 'test-owner',
+          reason: 'the exact claim is fit',
+        }),
+    ],
+  ];
+  for (const [name, mutate] of mutations) {
+    await assert.rejects(mutate(), (error: Error & { code?: string }) => {
+      assert.equal(error.code, 'authority-bypass', name);
+      assert.match(
+        error.message,
+        /outside the projection client authority.*kungfu\.assignment-runtime\/v1/,
+      );
+      return true;
+    });
+  }
 
   assert.equal(projected.projection_authority.writableAuthority, false);
   assert.equal(workControl.currentDashboard(), projected);
-  assert.deepEqual(calls, [
-    { operation: 'dashboard', input: {} },
-    {
-      operation: 'initiative-home',
-      input: {
-        initiativeId: 'initiative-a',
-        source: 'kungfu',
-        cutSystemTime: undefined,
-      },
-    },
-    { operation: 'plan:create-initiative', input: initiativeInput },
-    { operation: 'authorize:create-initiative', input: initiativeInput },
-    { operation: 'plan:create-assignment', input: assignmentInput },
-    { operation: 'authorize:create-assignment', input: assignmentInput },
-    {
-      operation: 'plan:append-assignment-relation-event',
-      input: relationEventInput,
-    },
-    {
-      operation: 'authorize:append-assignment-relation-event',
-      input: relationEventInput,
-    },
-    { operation: 'plan:claim-assignment', input: executionClaimInput },
-    { operation: 'authorize:claim-assignment', input: executionClaimInput },
-    { operation: 'plan:advance-assignment', input: phaseTransitionInput },
-    {
-      operation: 'authorize:advance-assignment',
-      input: phaseTransitionInput,
-    },
-    {
-      operation: 'plan:review-completion',
-      input: {
-        initiativeId: 'initiative-a',
-        assignmentId: 'assignment-a',
-        reviewer: 'test-owner',
-        reviewerSource: 'new-review-session',
-      },
-    },
-    {
-      operation: 'authorize:review-completion',
-      input: {
-        initiativeId: 'initiative-a',
-        assignmentId: 'assignment-a',
-        reviewer: 'test-owner',
-        reviewerSource: 'new-review-session',
-      },
-    },
-    {
-      operation: 'plan:decide-continuation',
-      input: {
-        initiativeId: 'initiative-a',
-        assignmentId: 'assignment-a',
-        reviewId: 'review-a',
-        expectedReviewRoot: 'sha256:review',
-        expectedPlanRoot: 'sha256:plan-root',
-        action: 'close',
-        actor: 'test-owner',
-        reason: 'the exact claim is fit',
-      },
-    },
-    {
-      operation: 'authorize:decide-continuation',
-      input: {
-        initiativeId: 'initiative-a',
-        assignmentId: 'assignment-a',
-        reviewId: 'review-a',
-        expectedReviewRoot: 'sha256:review',
-        expectedPlanRoot: 'sha256:plan-root',
-        action: 'close',
-        actor: 'test-owner',
-        reason: 'the exact claim is fit',
-      },
-    },
-  ]);
+  assert.deepEqual(calls, [{ operation: 'dashboard', input: {} }]);
 });
