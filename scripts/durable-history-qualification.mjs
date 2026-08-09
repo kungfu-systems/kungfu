@@ -29,8 +29,8 @@ const PYTHON_TESTS = [
   'framework/core/tests/python/test_agent_work_profile_native.py::test_native_profile_backend_switch_and_rollback_preserve_five_role_identity',
   'framework/core/tests/python/test_agent_work_state_contract.py::test_kfd7_legacy_role_roots_remain_readable_without_reinterpretation',
   'framework/core/tests/python/test_product_release_history.py',
-  'framework/core/tests/python/test_atlas_storage.py::test_native_mission_full_bundle_roundtrip_and_thin_degraded_import',
-  'framework/core/tests/python/test_atlas_storage.py::test_storage_maintenance_rebuild_gc_compact_and_sync_check',
+  'framework/core/tests/python/test_episode_bundle_roundtrip.py::test_roundtrip_into_fresh_root',
+  'framework/core/tests/python/test_storage_cli.py::test_storage_layout_inherits_the_complete_runtime_context',
 ];
 
 export function canonical(value) {

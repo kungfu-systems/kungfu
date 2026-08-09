@@ -14,7 +14,7 @@ and compile the exact Agent Task Chart:
 ```
 
 Do not guess a route. The inventory declares its audience, subjects,
-capabilities, owners, roles, Mission tracks, and selection paths. Treat
+capabilities, owners, roles, Initiative tracks, and selection paths. Treat
 ambiguous or degraded resolution, failed Atlas verification, stale authority,
 and required omissions as blockers. The repository guide
 `docs/guides/xinfa-agent-context.md` records current routes and measured
@@ -45,4 +45,4 @@ kungfu xinfa diagnose --json
 
 Automatic admission requires an active coordinator to create a structured task
 envelope, resolve one exact route, verify the Task Chart, and bind its roots. A
-Go card, Agent instruction, Skill, or Episode alone does not execute Xinfa.
+Assignment request, Agent instruction, Skill, or Episode alone does not execute Xinfa.

@@ -1,11 +1,11 @@
 import type {
-  AtlasGoal,
-  AtlasMission,
+  WorkControlAssignment,
   WorkControlAuthorityReport,
+  WorkControlInitiative,
 } from './work-control-profile';
-import type { GoalCardQuerySpec } from './work-control-query';
+import type { AssignmentCardQuerySpec } from './work-control-query';
 
-export const MISSION_CONTROL_VISUAL_SPEC = {
+export const WORK_CONTROL_VISUAL_SPEC = {
   schema: 'kungfu.work-control.visual-spec/v1',
   semanticOwner: 'kungfu.work-control.query-profile/v1',
   defaultMode: 'situation',
@@ -14,15 +14,15 @@ export const MISSION_CONTROL_VISUAL_SPEC = {
     syntheticMilestones: 'forbidden',
     percentageWithoutDenominator: 'forbidden',
   },
-  goals: {
+  assignments: {
     layout: 'responsive-card-field',
-    hierarchy: 'mission-parent-goal-cluster',
+    hierarchy: 'initiative-parent-assignment-cluster',
     criticalChildPropagation: true,
   },
   trust: {
     source: 'purpose-bound-kfd-2-report',
     scalarScore: 'forbidden',
-    missionInheritanceForGo: 'forbidden',
+    initiativeInheritanceForAssignment: 'forbidden',
   },
   disclosure: {
     questions: 'internal-only',
@@ -196,18 +196,22 @@ export function responsibilityActions(
     .filter((value) => value.action);
 }
 
-export type GoalSection = 'attention' | 'in-motion' | 'delegated' | 'closed';
+export type AssignmentSection =
+  | 'attention'
+  | 'in-motion'
+  | 'delegated'
+  | 'closed';
 
-export type GoalClusterMember = {
-  goal: AtlasGoal;
+export type AssignmentClusterMember = {
+  assignment: WorkControlAssignment;
   depth: number;
 };
 
-export type GoalCluster = {
+export type AssignmentCluster = {
   key: string;
-  parent: AtlasGoal;
-  members: GoalClusterMember[];
-  section: GoalSection;
+  parent: WorkControlAssignment;
+  members: AssignmentClusterMember[];
+  section: AssignmentSection;
   matchCount?: number;
 };
 
@@ -225,15 +229,16 @@ const DELEGATED_STATUSES = new Set([
   'proposed',
 ]);
 
-export function classifyGoalCluster(
-  members: GoalClusterMember[],
-  trustByGoal: Readonly<Record<string, VisualTrustState>> = {},
-): GoalSection {
-  const statuses = members.map(({ goal }) =>
-    goal.archived ? 'archived' : (goal.status ?? 'unknown'),
+export function classifyAssignmentCluster(
+  members: AssignmentClusterMember[],
+  trustByAssignment: Readonly<Record<string, VisualTrustState>> = {},
+): AssignmentSection {
+  const statuses = members.map(({ assignment }) =>
+    assignment.archived ? 'archived' : (assignment.status ?? 'unknown'),
   );
   const trustStates = members.map(
-    ({ goal }) => trustByGoal[goal.goal_id] ?? 'unknown',
+    ({ assignment }) =>
+      trustByAssignment[assignment.assignment_id] ?? 'unknown',
   );
   if (
     statuses.includes('blocked') ||
@@ -255,79 +260,92 @@ export function classifyGoalCluster(
   return 'delegated';
 }
 
-export function buildGoalClusters(
-  goals: AtlasGoal[],
-  trustByGoal: Readonly<Record<string, VisualTrustState>> = {},
-): GoalCluster[] {
-  const byId = new Map(goals.map((goal) => [goal.goal_id, goal]));
-  const children = new Map<string, AtlasGoal[]>();
-  for (const goal of goals) {
-    const parent = goal.mission_parent_goal;
-    if (!parent || !byId.has(parent) || parent === goal.goal_id) continue;
+export function buildAssignmentClusters(
+  assignments: WorkControlAssignment[],
+  trustByAssignment: Readonly<Record<string, VisualTrustState>> = {},
+): AssignmentCluster[] {
+  const byId = new Map(
+    assignments.map((assignment) => [assignment.assignment_id, assignment]),
+  );
+  const children = new Map<string, WorkControlAssignment[]>();
+  for (const assignment of assignments) {
+    const parent = assignment.parent_assignment_id;
+    if (!parent || !byId.has(parent) || parent === assignment.assignment_id)
+      continue;
     const rows = children.get(parent) ?? [];
-    rows.push(goal);
+    rows.push(assignment);
     children.set(parent, rows);
   }
   for (const rows of children.values()) {
-    rows.sort((left, right) => left.goal_id.localeCompare(right.goal_id));
+    rows.sort((left, right) =>
+      left.assignment_id.localeCompare(right.assignment_id),
+    );
   }
 
-  const roots = goals
-    .filter((goal) => {
-      const parent = goal.mission_parent_goal;
-      return !parent || !byId.has(parent) || parent === goal.goal_id;
+  const roots = assignments
+    .filter((assignment) => {
+      const parent = assignment.parent_assignment_id;
+      return (
+        !parent || !byId.has(parent) || parent === assignment.assignment_id
+      );
     })
-    .sort((left, right) => left.goal_id.localeCompare(right.goal_id));
+    .sort((left, right) =>
+      left.assignment_id.localeCompare(right.assignment_id),
+    );
   const visited = new Set<string>();
-  const clusters: GoalCluster[] = [];
+  const clusters: AssignmentCluster[] = [];
 
   const collect = (
-    goal: AtlasGoal,
+    assignment: WorkControlAssignment,
     depth: number,
-    members: GoalClusterMember[],
+    members: AssignmentClusterMember[],
   ) => {
-    if (visited.has(goal.goal_id)) return;
-    visited.add(goal.goal_id);
-    members.push({ goal, depth });
-    for (const child of children.get(goal.goal_id) ?? []) {
+    if (visited.has(assignment.assignment_id)) return;
+    visited.add(assignment.assignment_id);
+    members.push({ assignment, depth });
+    for (const child of children.get(assignment.assignment_id) ?? []) {
       collect(child, depth + 1, members);
     }
   };
 
-  const appendCluster = (parent: AtlasGoal) => {
-    const members: GoalClusterMember[] = [];
+  const appendCluster = (parent: WorkControlAssignment) => {
+    const members: AssignmentClusterMember[] = [];
     collect(parent, 0, members);
     clusters.push({
-      key: parent.goal_id,
+      key: parent.assignment_id,
       parent,
       members,
-      section: classifyGoalCluster(members, trustByGoal),
+      section: classifyAssignmentCluster(members, trustByAssignment),
     });
   };
   roots.forEach(appendCluster);
-  goals
-    .filter((goal) => !visited.has(goal.goal_id))
-    .sort((left, right) => left.goal_id.localeCompare(right.goal_id))
+  assignments
+    .filter((assignment) => !visited.has(assignment.assignment_id))
+    .sort((left, right) =>
+      left.assignment_id.localeCompare(right.assignment_id),
+    )
     .forEach(appendCluster);
   return clusters;
 }
 
-function isClosedGoal(goal: AtlasGoal): boolean {
-  return Boolean(goal.archived || CLOSED_STATUSES.has(goal.status ?? ''));
+function isClosedAssignment(assignment: WorkControlAssignment): boolean {
+  return Boolean(
+    assignment.archived || CLOSED_STATUSES.has(assignment.status ?? ''),
+  );
 }
 
-function goalSearchText(goal: AtlasGoal): string {
+function assignmentSearchText(assignment: WorkControlAssignment): string {
   return [
-    goal.goal_id,
-    goal.title,
-    goal.summary,
-    goal.mission_why_matters,
-    goal.next_action,
-    goal.owner_agent,
-    goal.mission_track,
-    goal.mission_role,
-    goal.mission_stage,
-    goal.status,
+    assignment.assignment_id,
+    assignment.title,
+    assignment.summary,
+    assignment.responsibility,
+    assignment.next_action,
+    assignment.owner_agent,
+    assignment.initiative_track,
+    assignment.initiative_role,
+    assignment.initiative_stage,
+    assignment.status,
   ]
     .filter(Boolean)
     .join('\n')
@@ -339,38 +357,46 @@ function includesOrEmpty(values: string[], actual = ''): boolean {
 }
 
 function memberMatches(
-  goal: AtlasGoal,
-  query: GoalCardQuerySpec,
-  trustByGoal: Readonly<Record<string, VisualTrustState>>,
+  assignment: WorkControlAssignment,
+  query: AssignmentCardQuerySpec,
+  trustByAssignment: Readonly<Record<string, VisualTrustState>>,
   asOfMs: number,
 ): boolean {
-  const closed = isClosedGoal(goal);
+  const closed = isClosedAssignment(assignment);
   if (query.closed === 'exclude' && closed) return false;
   if (query.closed === 'only' && !closed) return false;
   if (
     query.text.trim() &&
-    !goalSearchText(goal).includes(query.text.trim().toLocaleLowerCase())
+    !assignmentSearchText(assignment).includes(
+      query.text.trim().toLocaleLowerCase(),
+    )
   ) {
     return false;
   }
-  if (!includesOrEmpty(query.statuses, goal.status)) return false;
-  if (!includesOrEmpty(query.trust, trustByGoal[goal.goal_id] ?? 'unknown')) {
+  if (!includesOrEmpty(query.statuses, assignment.status)) return false;
+  if (
+    !includesOrEmpty(
+      query.trust,
+      trustByAssignment[assignment.assignment_id] ?? 'unknown',
+    )
+  ) {
     return false;
   }
-  if (!includesOrEmpty(query.actors, goal.owner_agent)) return false;
-  if (!includesOrEmpty(query.tracks, goal.mission_track)) return false;
-  if (!includesOrEmpty(query.roles, goal.mission_role)) return false;
-  if (!includesOrEmpty(query.importance, goal.mission_importance)) return false;
-  if (!includesOrEmpty(query.stages, goal.mission_stage)) return false;
+  if (!includesOrEmpty(query.actors, assignment.owner_agent)) return false;
+  if (!includesOrEmpty(query.tracks, assignment.initiative_track)) return false;
+  if (!includesOrEmpty(query.roles, assignment.initiative_role)) return false;
+  if (!includesOrEmpty(query.importance, assignment.initiative_importance))
+    return false;
+  if (!includesOrEmpty(query.stages, assignment.initiative_stage)) return false;
   if (query.updatedWithinDays !== null) {
-    const updated = Date.parse(goal.updated_at ?? '');
+    const updated = Date.parse(assignment.updated_at ?? '');
     const windowMs = query.updatedWithinDays * 86_400_000;
     if (!Number.isFinite(updated) || updated < asOfMs - windowMs) return false;
   }
   return true;
 }
 
-const SECTION_PRIORITY: Record<GoalSection, number> = {
+const SECTION_PRIORITY: Record<AssignmentSection, number> = {
   attention: 4,
   'in-motion': 3,
   delegated: 2,
@@ -389,32 +415,36 @@ const TRUST_RISK_PRIORITY: Record<VisualTrustState, number> = {
   established: 1,
 };
 
-function clusterImportance(cluster: GoalCluster): number {
+function clusterImportance(cluster: AssignmentCluster): number {
   return Math.max(
     0,
     ...cluster.members.map(
-      ({ goal }) => IMPORTANCE_PRIORITY[goal.mission_importance ?? ''] ?? 0,
+      ({ assignment }) =>
+        IMPORTANCE_PRIORITY[assignment.initiative_importance ?? ''] ?? 0,
     ),
   );
 }
 
 function clusterTrustRisk(
-  cluster: GoalCluster,
-  trustByGoal: Readonly<Record<string, VisualTrustState>>,
+  cluster: AssignmentCluster,
+  trustByAssignment: Readonly<Record<string, VisualTrustState>>,
 ): number {
   return Math.max(
     0,
     ...cluster.members.map(
-      ({ goal }) => TRUST_RISK_PRIORITY[trustByGoal[goal.goal_id] ?? 'unknown'],
+      ({ assignment }) =>
+        TRUST_RISK_PRIORITY[
+          trustByAssignment[assignment.assignment_id] ?? 'unknown'
+        ],
     ),
   );
 }
 
-function clusterUpdated(cluster: GoalCluster): number {
+function clusterUpdated(cluster: AssignmentCluster): number {
   return Math.max(
     0,
     ...cluster.members.map(
-      ({ goal }) => Date.parse(goal.updated_at ?? '') || 0,
+      ({ assignment }) => Date.parse(assignment.updated_at ?? '') || 0,
     ),
   );
 }
@@ -424,10 +454,10 @@ function compareText(left: string, right: string): number {
 }
 
 function compareClusters(
-  left: GoalCluster,
-  right: GoalCluster,
-  query: GoalCardQuerySpec,
-  trustByGoal: Readonly<Record<string, VisualTrustState>>,
+  left: AssignmentCluster,
+  right: AssignmentCluster,
+  query: AssignmentCardQuerySpec,
+  trustByAssignment: Readonly<Record<string, VisualTrustState>>,
 ): number {
   const direction = query.sort.direction === 'desc' ? -1 : 1;
   let value = 0;
@@ -436,8 +466,8 @@ function compareClusters(
       const fields: Array<[number, number]> = [
         [SECTION_PRIORITY[left.section], SECTION_PRIORITY[right.section]],
         [
-          clusterTrustRisk(left, trustByGoal),
-          clusterTrustRisk(right, trustByGoal),
+          clusterTrustRisk(left, trustByAssignment),
+          clusterTrustRisk(right, trustByAssignment),
         ],
         [clusterImportance(left), clusterImportance(right)],
         [clusterUpdated(left), clusterUpdated(right)],
@@ -456,8 +486,8 @@ function compareClusters(
       break;
     case 'trust-risk':
       value =
-        clusterTrustRisk(left, trustByGoal) -
-        clusterTrustRisk(right, trustByGoal);
+        clusterTrustRisk(left, trustByAssignment) -
+        clusterTrustRisk(right, trustByAssignment);
       break;
     case 'next-actor':
       value = compareText(
@@ -470,21 +500,21 @@ function compareClusters(
       break;
     case 'name':
       value = compareText(
-        left.parent.title || left.parent.goal_id,
-        right.parent.title || right.parent.goal_id,
+        left.parent.title || left.parent.assignment_id,
+        right.parent.title || right.parent.assignment_id,
       );
       break;
   }
   return value === 0 ? compareText(left.key, right.key) : value * direction;
 }
 
-export function queryGoalClusters(
-  goals: AtlasGoal[],
-  query: GoalCardQuerySpec,
-  trustByGoal: Readonly<Record<string, VisualTrustState>> = {},
+export function queryAssignmentClusters(
+  assignments: WorkControlAssignment[],
+  query: AssignmentCardQuerySpec,
+  trustByAssignment: Readonly<Record<string, VisualTrustState>> = {},
   asOfMs = Date.now(),
-): GoalCluster[] {
-  const clusters = buildGoalClusters(goals, trustByGoal);
+): AssignmentCluster[] {
+  const clusters = buildAssignmentClusters(assignments, trustByAssignment);
   return clusters
     .filter(
       (cluster) =>
@@ -499,12 +529,13 @@ export function queryGoalClusters(
       );
     })
     .map((cluster) => {
-      const matching = cluster.members.filter(({ goal }) =>
-        memberMatches(goal, query, trustByGoal, asOfMs),
+      const matching = cluster.members.filter(({ assignment }) =>
+        memberMatches(assignment, query, trustByAssignment, asOfMs),
       );
       if (matching.length === 0) return null;
       const parentMatches = matching.some(
-        ({ goal }) => goal.goal_id === cluster.parent.goal_id,
+        ({ assignment }) =>
+          assignment.assignment_id === cluster.parent.assignment_id,
       );
       let members = parentMatches ? cluster.members : matching;
       if (!parentMatches) {
@@ -515,30 +546,37 @@ export function queryGoalClusters(
       }
       if (query.hideClosedChildren) {
         members = members.filter(
-          ({ goal, depth }) => depth === 0 || !isClosedGoal(goal),
+          ({ assignment, depth }) =>
+            depth === 0 || !isClosedAssignment(assignment),
         );
       }
       return { ...cluster, members, matchCount: matching.length };
     })
-    .filter((cluster): cluster is GoalCluster => cluster !== null)
-    .sort((left, right) => compareClusters(left, right, query, trustByGoal));
+    .filter((cluster): cluster is AssignmentCluster => cluster !== null)
+    .sort((left, right) =>
+      compareClusters(left, right, query, trustByAssignment),
+    );
 }
 
-export function missionIntent(mission: AtlasMission | null): string {
-  if (!mission) return '';
+export function initiativeIntent(
+  initiative: WorkControlInitiative | null,
+): string {
+  if (!initiative) return '';
   return (
-    mission.north_star ||
-    mission.intent ||
-    mission.why_it_matters ||
+    initiative.north_star ||
+    initiative.intent ||
+    initiative.why_it_matters ||
     ''
   ).trim();
 }
 
-export function missionStage(mission: AtlasMission | null): string {
-  return mission?.stage_name?.trim() || 'Undeclared stage';
+export function initiativeStage(
+  initiative: WorkControlInitiative | null,
+): string {
+  return initiative?.stage_name?.trim() || 'Undeclared stage';
 }
 
-export function goalStatusGlyph(status = 'unknown'): string {
+export function assignmentStatusGlyph(status = 'unknown'): string {
   if (status === 'blocked') return '!';
   if (CLOSED_STATUSES.has(status)) return '✓';
   if (MOTION_STATUSES.has(status)) return '●';
