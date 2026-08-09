@@ -324,7 +324,6 @@
     "canonicalization": "utf8-json-sorted-object-keys-no-whitespace-v1",
     "semanticRoot": "sha256-canonical-json-bytes",
     "writerPolicy": "strict-canonical-definition",
-    "compatibilityRead": "legacyWorkRefV1 is accepted only while loading retained v1 registry data; it is never emitted by a new Assignment binding",
     "providerPolicy": "provider and bootstrap adapter identifiers are open strings backed by the runtime adapter catalog, not a language-local closed union"
   },
   "compatibility": {

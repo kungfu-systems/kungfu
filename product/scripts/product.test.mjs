@@ -88,7 +88,7 @@ test('instance Project discovery retains an explicitly configured machine home',
 
 test('KF_DEV_HOME pins the dev workspace data home', () => {
   const parsed = { noInstanceHome: false, instanceHome: '' };
-  const devHome = path.join(tmpdir(), 'atlas', '.kungfu');
+  const devHome = path.join(tmpdir(), 'workspace', '.kungfu');
   assert.equal(
     devWorkspaceHomeOverride(parsed, 'gui', 'dev', { KF_DEV_HOME: devHome }),
     devHome,
@@ -101,7 +101,7 @@ test('KF_DEV_HOME pins the dev workspace data home', () => {
 
 test('KF_DEV_HOME loses to explicit homes and non-dev verbs', () => {
   const parsed = { noInstanceHome: false, instanceHome: '' };
-  const devHome = path.join(tmpdir(), 'atlas', '.kungfu');
+  const devHome = path.join(tmpdir(), 'workspace', '.kungfu');
   assert.equal(
     devWorkspaceHomeOverride(parsed, 'gui', 'dev', {
       KF_DEV_HOME: devHome,
