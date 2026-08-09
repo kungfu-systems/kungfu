@@ -8,13 +8,60 @@ response remains the public ``kungfu.assignment-runtime/v1`` envelope.
 
 from __future__ import annotations
 
+from collections.abc import Callable
 import json
+from pathlib import Path
 from typing import Any, TextIO
+
+import click
+
+from kungfu import assignment_orchestration as orchestration
 
 from .authority import PROFILE_ID, PROFILE_VERSION, PROTOCOL, LocalRuntimeError
 from .local import EmbeddedLocalAssignmentRuntime
 
 HOST_SCHEMA = "kungfu.gui.assignment-runtime-host/v1"
+
+
+def profile_source() -> Path:
+    """Resolve the packaged Work Control Profile with source compatibility."""
+
+    profiles = Path(orchestration.__file__).resolve().parent / "profiles"
+    extensions = orchestration.source_root() / "extensions"
+    for root in (profiles, extensions):
+        for name in ("work-control", "mission-control"):
+            source = root / name
+            if source.is_dir():
+                return source
+    raise ValueError("Work Control Profile is absent from this Kungfu product")
+
+
+def create_runtime_host_command(
+    resolve_runtime: Callable[[str, bool, str], tuple[Any, Path, dict[str, Any]]],
+) -> click.Command:
+    """Build the hidden host command without coupling transport to the CLI."""
+
+    @click.command(name="runtime-host", hidden=True)
+    @click.option("--workspace", "workspace_root", type=click.Path(file_okay=False))
+    @click.option("--home", is_flag=True)
+    def runtime_host(workspace_root: str, home: bool) -> None:
+        identity, runtime_dir, _ = resolve_runtime(workspace_root, home, "read-only")
+        runtime = EmbeddedLocalAssignmentRuntime(
+            runtime_dir,
+            realm_id=identity.workspace_id,
+            generation=identity.identity_root,
+            profile_source=profile_source(),
+        )
+        try:
+            serve(
+                runtime,
+                click.get_text_stream("stdin"),
+                click.get_text_stream("stdout"),
+            )
+        except LocalRuntimeError as error:
+            raise click.exceptions.Exit(2) from error
+
+    return runtime_host
 
 
 def _write_line(stream: TextIO, value: dict[str, Any]) -> None:
@@ -108,4 +155,11 @@ def serve(
         runtime.close()
 
 
-__all__ = ["HOST_SCHEMA", "error_envelope", "ready_envelope", "serve"]
+__all__ = [
+    "HOST_SCHEMA",
+    "create_runtime_host_command",
+    "error_envelope",
+    "profile_source",
+    "ready_envelope",
+    "serve",
+]
