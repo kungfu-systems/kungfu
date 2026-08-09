@@ -177,7 +177,7 @@
           "classification": "non-publication",
           "owner": "kungfu-ci",
           "surfaceIds": [],
-          "sourceRoot": "sha256:880acc1c6d216d38a874f372b48cc0f2408b82f7d96166ac4e97bae82fdc8bb8"
+          "sourceRoot": "sha256:221f532d05fd9b724eca11113e4deea13f0b8b2f05624ffccbadb1ee8c4b93d4"
         },
         {
           "path": ".github/workflows/dev-pr-auto-merge.yml",
@@ -860,5 +860,5 @@
       }
     }
   ],
-  "registryRoot": "sha256:a7cc3a2bd7def2ac18481a50cd03d1c88e46c73ea8a483c819c65eb06122f432"
+  "registryRoot": "sha256:37985c067d909cbd3c11e2303cd29f35c8c037dc8c63a01dd2e80983d0daa99f"
 }
