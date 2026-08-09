@@ -821,7 +821,7 @@ jobs:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           repository: kungfu-systems/buildchain
-          ref: cf9381cf232dc6f33a07b59c5da7ba6ab7a87381
+          ref: 1ecd150402c6e08f7bd9d4f840c808521bc3a9d1
           path: .buildchain/dev-delivery-runtime
           persist-credentials: false
       - uses: actions/setup-node@v6.4.0
