@@ -80,7 +80,7 @@
             "product-stable",
             "product-binaries"
           ],
-          "sourceRoot": "sha256:81a951538ea9fdca69460ab99a60adeb286ccd6164f39da1a61339666db9a7f1"
+          "sourceRoot": "sha256:e590285f72200b9150245afc2904df4be8c6682495e02dc5c09fca1aad09b8f3"
         },
         {
           "path": ".github/workflows/alpha-promotion-preflight.yml",
@@ -170,7 +170,7 @@
             "product-alpha",
             "product-binaries"
           ],
-          "sourceRoot": "sha256:33f05f9a4b40a51045b60159da450db000a975008ec185836626cad3fa75dc7a"
+          "sourceRoot": "sha256:795857454372ce1f340e126cbb2326e0de19f171acb90fe2a027759cc1ca7926"
         },
         {
           "path": ".github/workflows/dev-delivery-warrant-terminal.yml",
@@ -860,5 +860,5 @@
       }
     }
   ],
-  "registryRoot": "sha256:142c8ae5612d19e64f8adaaf575ead5e7029a4b397c1f2461a527a3cb0209cec"
+  "registryRoot": "sha256:4a1edf868e70769db428cb089ab4550a721c977d30b143cfb7c05fe178f1f54c"
 }
