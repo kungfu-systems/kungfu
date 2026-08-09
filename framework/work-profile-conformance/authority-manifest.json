@@ -99,7 +99,7 @@
     },
     {
       "path": "framework/work-profile-conformance/qualification/reference-scenarios.json",
-      "sha256": "sha256:182bf5d51ad76aa56c1a766bde27ffa4d854d79b97599dfd45c08a82ffc4105b"
+      "sha256": "sha256:bec5bc8730966442eee113b9ea440c3ef5e97cc5422932167786c14879fd4eb5"
     },
     {
       "path": "framework/work-profile-conformance/qualification/retained-witnesses.json",
@@ -154,5 +154,5 @@
       "sha256": "sha256:132d2a638e6535a00483991fc2676378c440a8a70058a6b8c488eac4e7612bc2"
     }
   ],
-  "bundleRoot": "sha256:f855d3dc2d6aee4c5e26ddb4d25b1980d71def6d8705f907580b9b2ea81205e3"
+  "bundleRoot": "sha256:6f1aabdd6df17bc5f679e561b50b30f8f2a480638661c180e4f70434a637a028"
 }
