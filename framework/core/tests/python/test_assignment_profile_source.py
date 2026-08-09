@@ -41,7 +41,9 @@ def test_kickoff_restores_work_control_after_dogfood_profile(monkeypatch, tmp_pa
     monkeypatch.setattr(
         ASSIGNMENT_CLI.run_agent,
         "bind_current_native_work",
-        lambda *_args, **_kwargs: None,
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(
+            AssertionError("Work kickoff must not bind Agent Session")
+        ),
     )
     monkeypatch.setattr(
         ASSIGNMENT_CLI,
@@ -82,6 +84,64 @@ def test_kickoff_restores_work_control_after_dogfood_profile(monkeypatch, tmp_pa
     assert result["dogfood_consideration_root"] == _sha256("d")
 
 
+def test_claim_does_not_require_or_bind_agent_session(monkeypatch, tmp_path):
+    runtime_dir = str(tmp_path / "runtime")
+    profile_actions = []
+    monkeypatch.setenv("KUNGFU_AGENT_ATTEMPT_ID", "ended:previous-work")
+    monkeypatch.setattr(
+        ASSIGNMENT_CLI,
+        "_runtime",
+        lambda *_args, **_kwargs: (
+            SimpleNamespace(workspace_root=str(tmp_path)),
+            runtime_dir,
+            {},
+        ),
+    )
+    monkeypatch.setattr(ASSIGNMENT_CLI, "_ensure_profile", lambda *_args: [])
+    monkeypatch.setattr(
+        ASSIGNMENT_CLI.run_agent,
+        "bind_current_native_work",
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(
+            AssertionError("Work claim must not bind Agent Session")
+        ),
+    )
+
+    def profile_action(observed_runtime, operation, values, actor):
+        profile_actions.append((observed_runtime, operation, values, actor))
+        return {"receipt": {"payload_hash": _sha256("c")}}
+
+    monkeypatch.setattr(ASSIGNMENT_CLI, "_profile_action", profile_action)
+    monkeypatch.setattr(
+        ASSIGNMENT_CLI,
+        "_status",
+        lambda *_args: {"phase": "claimed", "assignment_id": "work-2"},
+    )
+
+    result = ASSIGNMENT_CLI.assignment_start.claim(
+        workspace_root=str(tmp_path),
+        home=False,
+        initiative_id="initiative-1",
+        assignment_id="work-2",
+        owner="owner-1",
+        agent="codex",
+        slot="slot-1",
+        lease_id="lease-1",
+        lease_expires_at="2026-08-10T00:00:00Z",
+        authorized_by="owner-1",
+        grant_scope="assignment-execution",
+        actor_type="agent",
+        runtime=ASSIGNMENT_CLI._runtime,
+        ensure_profile=ASSIGNMENT_CLI._ensure_profile,
+        profile_action=profile_action,
+        status=ASSIGNMENT_CLI._status,
+    )
+
+    assert result["status"]["phase"] == "claimed"
+    assert len(profile_actions) == 1
+    assert profile_actions[0][0:2] == (runtime_dir, "claim-assignment")
+    assert profile_actions[0][2]["assignmentId"] == "work-2"
+
+
 def test_assignment_profile_source_prefers_native_source_layout(tmp_path, monkeypatch):
     package = tmp_path / "package" / "kungfu"
     package.mkdir(parents=True)
@@ -96,7 +156,9 @@ def test_assignment_profile_source_prefers_native_source_layout(tmp_path, monkey
     assert ASSIGNMENT_CLI._profile_source() == native
 
 
-def test_claim_binds_work_from_explicit_external_project(monkeypatch, tmp_path):
+def test_agent_session_can_observe_work_from_explicit_external_project(
+    monkeypatch, tmp_path
+):
     requests = []
     observed_runtime_dirs = []
     console_project = tmp_path / "console-project"
