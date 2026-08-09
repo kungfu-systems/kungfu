@@ -12,21 +12,21 @@ export type DashboardStateVisual = {
 };
 
 export function dashboardMetricVisuals(info: {
-  missions: number;
-  goals: number;
+  initiatives: number;
+  assignments: number;
   markers: number;
 }): DashboardMetricVisual[] {
   return [
     {
       glyph: '🧭',
-      value: info.missions,
-      title: `${info.missions} Mission${info.missions === 1 ? '' : 's'}`,
+      value: info.initiatives,
+      title: `${info.initiatives} Initiative${info.initiatives === 1 ? '' : 's'}`,
       width: 54,
     },
     {
       glyph: '🎯',
-      value: info.goals,
-      title: `${info.goals} Go card${info.goals === 1 ? '' : 's'}`,
+      value: info.assignments,
+      title: `${info.assignments} Assignment card${info.assignments === 1 ? '' : 's'}`,
       width: 62,
     },
     {

@@ -12,7 +12,7 @@
     "facade": "orchestration plans, projections, and typed recovery only",
     "workJournal": "work item events and WorkRef",
     "actionLoop": "five-role binding and recoverable execution coordination",
-    "missionControl": "Initiative, Assignment, claim, assessment, decision, and continuation",
+    "workControl": "Initiative, Assignment, claim, assessment, decision, and continuation",
     "xinfa": "Atlas compile and verification",
     "episode": "causal execution evidence",
     "projectCut": "source, Atlas, Episode-delta, and publication settlement"

@@ -633,7 +633,7 @@ export async function resumeActionLoop(contract, loopRef, adapters) {
   );
 }
 
-export function createExplicitCompatibilityAdapters() {
+export function createExplicitAuthorityAdapters() {
   return {
     pursuitSource: {
       async resolve(source) {
@@ -645,7 +645,7 @@ export function createExplicitCompatibilityAdapters() {
           return {
             status: 'denied',
             code: 'pursuit-unavailable',
-            message: 'an explicit active Mission/Go Pursuit is required',
+            message: 'an explicit active Assignment Pursuit is required',
           };
         }
         return { status: 'resolved', binding: source.binding };

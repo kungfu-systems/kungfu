@@ -1,0 +1,55 @@
+{
+  "schema": "kungfu.code-complexity-budget-waiver/v2",
+  "issue_root": "sha256:78f9d96603554165dcb1ad6fb5ea158c759648941f00753d10bd834862018780",
+  "issue_kind": "grandfathered-file-grew",
+  "paths_or_scope": [
+    "docs/document-metadata.registry.json"
+  ],
+  "budget_classes": [
+    "declarative-schema-or-table:declarative"
+  ],
+  "baseline_measurement": [
+    {
+      "path": "docs/document-metadata.registry.json",
+      "class": "declarative-schema-or-table",
+      "language": "declarative",
+      "owner": "kungfu/docs",
+      "lines": 2397,
+      "contentRoot": "sha256:fda9317d85c23d2a1fa75a521bcddbc6ce94c58b35c76d460e158b8965272d41"
+    }
+  ],
+  "current_measurement": [
+    {
+      "path": "docs/document-metadata.registry.json",
+      "class": "declarative-schema-or-table",
+      "language": "declarative",
+      "owner": "kungfu/docs",
+      "lines": 2418,
+      "contentRoot": "sha256:2f72848ea6d26ea3033640067f23567ae67b73afe3cabb66a3dcd464c53731b8"
+    }
+  ],
+  "allowed_delta": 21,
+  "owner": "kungfu/docs",
+  "responsibility_boundary": "Generated document metadata remains one deterministic registry projection.",
+  "cohesion_rationale": "The registry is generated atomically from the current documentation inventory.",
+  "rejected_split_alternatives": [
+    "Splitting the generated registry would create multiple metadata authorities."
+  ],
+  "affected_tests_and_qualification": [
+    "./shifu check:source",
+    "scripts/check-shifu-documentation-contract.mjs"
+  ],
+  "requested_by": "keren.dong@kungfu.link",
+  "retirement_or_decomposition_ref": "https://github.com/kungfu-systems/kungfu/pull/2619",
+  "approval_receipt": {
+    "schema": "kungfu.code-complexity-budget-approval-receipt/v1",
+    "authority_id": "kungfu-origin-complexity-transition-review",
+    "key_id": "ed25519-668812bf28659460",
+    "algorithm": "ed25519",
+    "issued_at": "2026-08-08T19:32:51.532Z",
+    "approved_at": "2026-08-08T19:33:51.532Z",
+    "expires_at": "2026-08-15T19:34:51.532Z",
+    "authorization_root": "sha256:9b8c43bb397a638690bde33d60d0c0414aa2fe5b0f121ced65abf63464e9038b",
+    "signature": "CAO92Jo1kxFO71rSnTRlADLFGjYijRz0OhpnKjOLE91DIfOgr1D8BTjc8BQpQJmqlvPCHOGX9xfQ4tGdc8qYAQ=="
+  }
+}

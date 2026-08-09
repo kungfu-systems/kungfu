@@ -54,7 +54,7 @@ struct AdmittedEpisode {
 
 fn unit_shape(unit_type: &str) -> Option<(&'static str, &'static str, &'static str, &'static str)> {
     match unit_type {
-        "mission-declaration" | "go-declaration" => {
+        "initiative-declaration" | "assignment-declaration" => {
             Some(("decision", "human-review", "human", "human-reviewed"))
         }
         "proof-ref" | "receipt-ref" => {
@@ -93,7 +93,7 @@ fn compile_unit(
         fail(
             "episode-unit-type-not-admitted",
             &format!("{path}/type"),
-            "only mission/go declarations, proof/receipt refs, and review findings are admitted",
+            "only initiative/assignment declarations, proof/receipt refs, and review findings are admitted",
         )
     })?;
     let episode_id = identifier(unit.get("episode"), &format!("{path}/episode"))?;

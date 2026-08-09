@@ -1,6 +1,6 @@
 {
   "schema": "kungfu.project-cut-dogfood-actor-b-review/v1",
-  "goal_id": "2026-07-15-project-cut-atlas-repo-dogfood",
+  "assignment_id": "2026-07-15-project-cut-repository-dogfood",
   "actor": "B",
   "input_commit": "962b141f2030ccf740ca13a9facf7ff754884826",
   "human_relay_count": 0,

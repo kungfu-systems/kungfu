@@ -33,3 +33,12 @@ metadata rather than measured source. Their integrity is enforced directly by
 exact recomputation, protected expected-old comparison, and signature
 verification; including them in their own line-count baseline would create a
 non-convergent self-reference.
+
+When accumulated protected-baseline lag exceeds either ordinary transition
+bound, the candidate may instead use exactly one
+`kungfu.code-complexity-baseline-reconstruction/v1` record. Reconstruction is
+not a larger unverified allowance: the verifier independently derives every
+before/after file measurement from the protected and candidate baselines,
+checks the exact change count and aggregate line delta, and requires the signed
+receipt to bind the resulting full change-manifest root. A reconstruction is
+rejected when the ordinary bounded transition contract would suffice.

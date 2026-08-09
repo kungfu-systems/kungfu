@@ -84,7 +84,7 @@ fn validate_route_declarations(routes: &[Value]) -> Result<(), String> {
             "capabilities",
             "owners",
             "roles",
-            "mission_tracks",
+            "initiative_tracks",
             "terms",
         ] {
             let values = array(resolution, field)?;

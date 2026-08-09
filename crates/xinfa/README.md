@@ -12,7 +12,7 @@ Agent-facing alias, not a second context authority.
 
 Automatic Agent admission starts with `xinfa.task-envelope/v1` and
 `xinfa route resolve`. The project declares route `resolution` intent
-(subjects, capabilities, owners, roles, Mission tracks, and bounded lexical
+(subjects, capabilities, owners, roles, work tracks, and bounded lexical
 terms); Xinfa verifies that declaration against one exact Atlas and emits a
 content-addressed `xinfa.route-resolution/v1` receipt. Only unique structured
 evidence may select a route. Objective text and embeddings may break a tie but
@@ -57,8 +57,8 @@ discovery root. `kungfu xinfa schema task-envelope`,
 `kungfu xinfa schema route-resolution`, and
 `kungfu xinfa schema task-chart` print the exact current schemas. Automatic
 invocation requires a coordinator to create and resolve the structured task
-envelope and bind the verified roots. A Go card, Agent instruction, Skill, or
-Episode alone does not execute Xinfa.
+envelope and bind the verified roots. An Assignment request, Agent instruction,
+Skill, or Episode alone does not execute Xinfa.
 
 ## Authority
 
@@ -339,7 +339,7 @@ only a repository-relative `xinfa.episode-provider-submission/v1`, a verified
 predecessor Atlas, and public `git-workspace-jsonl/v1` segment files accompanied
 by matching `cpp-typed-fold-fsck` qualification bytes. Xinfa verifies the
 public provider, qualification, JSONL, and root contracts but never recomputes
-the journal-native Episode root. Explicit Mission/Go declarations,
+the journal-native Episode root. Explicit Initiative/Assignment declarations,
 proof/receipt references, and review findings become sourced typed units in a
 new declared cut before the ordinary Repository Pack → Atlas compiler runs.
 
