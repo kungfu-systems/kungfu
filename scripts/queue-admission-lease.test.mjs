@@ -12,7 +12,7 @@ import {
 } from './cancel-dequeued-merge-group-runs.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const WARRANT_RUNTIME_SHA = 'ed978d70b246fcfdb5e80009d58e1ce4926ad593';
+const WARRANT_RUNTIME_SHA = 'd11b0f15a03a4098147984391c2c6b74f0fd8f92';
 const CONTRACT = JSON.parse(
   fs.readFileSync(
     path.join(
