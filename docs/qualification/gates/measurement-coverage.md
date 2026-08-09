@@ -23,7 +23,7 @@ Gate's complete platform set.
 | `gate.catalog` | measured | [linux: 469 ms @ ec0d1c2f2](../evidence/gate-measurements/ec0d1c2f2d/linux/receipt.json)<br>[macos: 790 ms @ ec0d1c2f2](../evidence/gate-measurements/ec0d1c2f2d/macos/receipt.json)<br>[windows: 1894 ms @ ec0d1c2f2](../evidence/gate-measurements/ec0d1c2f2d/windows/receipt.json) |
 | `governance.dco` | measured | [linux: 12000 ms @ e90b0fb2b](../evidence/gate-measurements/e90b0fb2b/linux/governance.dco.controller-receipt.json) |
 | `governance.adr-delivery` | measured | [linux: 38 ms @ 6b451a4e5](../evidence/gate-measurements/6b451a4e/linux/receipt.json)<br>[macos: 111 ms @ 6b451a4e5](../evidence/gate-measurements/6b451a4e/macos/receipt.json)<br>[windows: 101 ms @ 6b451a4e5](../evidence/gate-measurements/6b451a4e/windows/receipt.json) |
-| `governance.buildchain-config` | measured | [linux: 10000 ms @ aec4e2f07](../evidence/gate-measurements/aec4e2f072/linux/governance.buildchain-config.controller-receipt.json) |
+| `governance.buildchain-config` | measured | [linux: 9000 ms @ df3b02b28](../evidence/gate-measurements/df3b02b28e/linux/governance.buildchain-config.controller-receipt.json) |
 | `governance.promotion-rehearsal` | measured | [linux: 425 ms @ e90b0fb2b](../evidence/gate-measurements/e90b0fb2b/linux/receipt.json)<br>[macos: 1100 ms @ e90b0fb2b](../evidence/gate-measurements/e90b0fb2b/macos/receipt.json)<br>[windows: 2483 ms @ e90b0fb2b](../evidence/gate-measurements/e90b0fb2b/windows/receipt.json) |
 | `source.acceptance` | measured | [linux: 1639045 ms @ 1edae0d8b](../evidence/gate-measurements/1edae0d8b1/linux/receipt.json) |
 | `source.changed-scope` | measured | [linux: 115525 ms @ 785abbd44](../evidence/gate-measurements/785abbd44/linux/changed/receipt.json) |
