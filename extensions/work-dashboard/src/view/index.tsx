@@ -65,6 +65,8 @@ export function openProfileApplication(runtime: AssignmentRuntime) {
   return runtime;
 }
 
+export { openKfd3ProfileApplication } from './work-control-profile';
+
 type NodeHost = {
   require: NodeRequire;
   process: NodeJS.Process;
