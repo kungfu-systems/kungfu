@@ -1,7 +1,7 @@
 {
   "schema": "kungfu.kfd-agent-hub-package-lock/v1",
   "package": "@kungfu-tech/kfd",
-  "version": "1.0.0-alpha.53",
+  "version": "1.0.0-alpha.57",
   "registryGitHead": "3e346b62017fd46ae00ea9cbadd405b14978a027",
   "integrity": "sha512-t7ZyBXhhfYKNYo+KgBan/SBsBK1UygTf8RaTxQ+toTStwuq4wR5Z85sSAO/kmC2F/oqHeYVaan6nU28e1sVERw==",
   "shasum": "b63c956b0e276707dfaa54826fd3675e5966ec85",

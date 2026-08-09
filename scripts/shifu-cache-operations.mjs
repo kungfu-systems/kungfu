@@ -11,8 +11,8 @@ import { resolveCacheProfile, sha256 } from './shifu-cache-runtime.mjs';
 
 const SHIFU_BEGIN = '# shifu-cache-profile begin';
 const SHIFU_END = '# shifu-cache-profile end';
-const CONTROLLER_BEGIN = '# atlas-shifu-cache-profile begin';
-const CONTROLLER_END = '# atlas-shifu-cache-profile end';
+const CONTROLLER_BEGIN = '# external-shifu-cache-profile begin';
+const CONTROLLER_END = '# external-shifu-cache-profile end';
 
 function readText(file) {
   try {

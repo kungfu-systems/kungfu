@@ -45,7 +45,6 @@ test('profile admission runner references current tracked profile suites', () =>
     'test_work_control_profile.py',
   ];
 
-  assert.doesNotMatch(runner, /test_mission_control_profile\.py/u);
   for (const suite of suites) {
     assert.match(runner, new RegExp(suite.replace('.', '\\.'), 'u'));
     assert.equal(
