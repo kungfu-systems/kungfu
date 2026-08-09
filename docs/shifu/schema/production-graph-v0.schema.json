@@ -168,7 +168,7 @@
           "minItems": 2,
           "uniqueItems": true,
           "items": {
-            "enum": ["planned", "started", "succeeded", "failed", "cancelled"]
+            "enum": ["planned", "started", "succeeded", "failed", "cancelled", "timed-out", "skipped"]
           }
         },
         "exit": {

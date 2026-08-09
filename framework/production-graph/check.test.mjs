@@ -279,7 +279,7 @@ test('verifier has no Work Control mutation authority', () => {
     'capture',
     'claim',
     'dispatch',
-    'execute',
+    'schedule',
     'approve',
     'merge',
     'close',
@@ -287,6 +287,10 @@ test('verifier has no Work Control mutation authority', () => {
   assert.equal(contract.verification.executesNodes, false);
   assert.equal(contract.executionAdmission.nodesStartedByAdmission, false);
   assert.equal(contract.executionAdmission.authorityMutations, false);
+  assert.equal(contract.localExecutor.concurrency, 1);
+  assert.equal(contract.localExecutor.schedulerAuthority, false);
+  assert.equal(contract.localExecutor.workAuthorityMutations, false);
+  assert.equal(contract.localExecutor.replayStartsNodes, false);
   for (const authority of [
     'assignment',
     'work-control',
