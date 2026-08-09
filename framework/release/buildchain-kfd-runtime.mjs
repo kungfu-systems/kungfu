@@ -51,15 +51,15 @@ export const KFD3_DEFAULT_REGISTRY_PATH = '.buildchain/kfd/kfd-3/surfaces.json';
 export async function loadBuildchainKfdRuntime() {
   try {
     const [{ kfd1, kfd2, kfd3 }, productGates] = await Promise.all([
-      import('@kungfu-tech/buildchain/kfd'),
-      import('@kungfu-tech/buildchain/kfd-product-gates'),
+      import('@kungfu-tech/buildchain-alpha/kfd'),
+      import('@kungfu-tech/buildchain-alpha/kfd-product-gates'),
     ]);
     return { kfd1, kfd2, kfd3, productGates };
   } catch (error) {
     if (
       error &&
       error.code === 'ERR_MODULE_NOT_FOUND' &&
-      String(error.message).includes('@kungfu-tech/buildchain')
+      String(error.message).includes('@kungfu-tech/buildchain-alpha')
     )
       return null;
     throw error;
