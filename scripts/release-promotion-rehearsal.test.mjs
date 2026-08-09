@@ -293,8 +293,9 @@ test('Alpha recovery reuses a verified sealed candidate through the v3 router', 
   assert.match(workflow, /\[\[ "\$PREFLIGHT_RUN_ID" =~ \^\[0-9\]\+\$ \]\]/u);
   assert.match(
     workflow,
-    /actions\/runs\/\$\{CANDIDATE_RUN_ID\}[\s\S]*\.conclusion == "success"[\s\S]*\.event == "pull_request"[\s\S]*\.path == "\.github\/workflows\/build\.yml"[\s\S]*\.head_sha/u,
+    /candidate_run_head_sha="\$\([\s\S]*actions\/runs\/\$\{CANDIDATE_RUN_ID\}[\s\S]*\.conclusion == "success"[\s\S]*\.event == "pull_request"[\s\S]*\.path == "\.github\/workflows\/build\.yml"[\s\S]*\)"[\s\S]*git\/commits\/\$\{CANDIDATE_SOURCE_SHA\}[\s\S]*\.tree\.sha == [\s\S]*any\(\.parents\[\]; \.sha ==/u,
   );
+  assert.doesNotMatch(workflow, /\.head_sha == "'"\$CANDIDATE_SOURCE_SHA"'"/u);
   assert.match(
     workflow,
     /resume-publication-gate-controller-sha must be an exact lowercase 40-character commit SHA/u,
