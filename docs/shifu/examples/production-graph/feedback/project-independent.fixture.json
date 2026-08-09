@@ -1,0 +1,7 @@
+{
+  "schema": "shifu.production-graph-feedback-fixture/v0",
+  "id": "project-independent",
+  "outcome": "qualified",
+  "executorTask": "cargo:test",
+  "expectedState": "complete"
+}

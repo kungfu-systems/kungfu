@@ -19,6 +19,7 @@ import {
   runProductionGraphShadow,
   verifyProductionGraphShadowInput,
 } from '../framework/production-graph/contract.mjs';
+import { observeNativeToolchain } from './affected-native-proof.mjs';
 import {
   affectedNativeWorkflowSdkProjection,
   devQueueQualificationImpact,
@@ -499,6 +500,85 @@ test('graph shadow success delegates unchanged and binds current evidence', asyn
   assert.match(result.shadowReceipt.currentReceiptRoot, /^sha256:/u);
   assert.match(result.shadowReceipt.toolchainRoot, /^sha256:/u);
   assert.equal(result.events[1].state, 'succeeded');
+});
+
+test('graph feedback CLI preserves artifacts and keeps human and JSON facts aligned', async (t) => {
+  const fixture = await shadowDiskFixture(t);
+  const result = await runProductionGraphShadow(fixture.options, {
+    root: shadowRoot,
+    trustedVerificationReceipt: fixture.verificationReceipt,
+    delegate: async (invocation) => {
+      const plan = shadowCurrentPlan();
+      writeShadowJson(invocation.currentPlanPath, plan);
+      writeShadowJson(invocation.currentReceiptPath, {
+        schema: 'kungfu.core-affected-native-receipt/v1',
+        status: 'passed',
+        plan,
+        planDigest: plan.planDigest,
+        toolchain: observeNativeToolchain(),
+        privatePayload: 'DO_NOT_RENDER',
+      });
+      return { exitCode: 0, signal: null, error: null };
+    },
+  });
+  const outputFiles = fs.readdirSync(fixture.options.outputDir).sort();
+  const before = Object.fromEntries(
+    outputFiles.map((name) => [
+      name,
+      fileRoot(path.join(fixture.options.outputDir, name)),
+    ]),
+  );
+  const baseArgs = [
+    'framework/production-graph/feedback/index.mjs',
+    '--graph',
+    fixture.options.graph,
+    '--plan',
+    fixture.options.plan,
+    '--shadow-receipt',
+    result.shadowReceiptPath,
+  ];
+  const jsonResult = spawnSync(process.execPath, [...baseArgs, '--json'], {
+    cwd: shadowRoot,
+    encoding: 'utf8',
+  });
+  assert.equal(
+    jsonResult.status,
+    0,
+    `${jsonResult.stderr}\n${jsonResult.stdout}`,
+  );
+  const feedback = JSON.parse(jsonResult.stdout);
+  assert.equal(feedback.state, 'complete');
+  assert.equal(feedback.sideEffects, false);
+  assert.equal(
+    feedback.receipts.shadowReceiptRoot,
+    result.shadowReceipt.receiptRoot,
+  );
+  assert.equal(jsonResult.stdout.includes('DO_NOT_RENDER'), false);
+
+  const humanResult = spawnSync(process.execPath, baseArgs, {
+    cwd: shadowRoot,
+    encoding: 'utf8',
+  });
+  assert.equal(humanResult.status, 0, humanResult.stderr);
+  for (const value of [
+    feedback.state,
+    feedback.source.revision,
+    feedback.graph.graphRoot,
+    feedback.parity.classification,
+    feedback.nextAction,
+  ]) {
+    assert.ok(humanResult.stdout.includes(String(value)), `missing ${value}`);
+  }
+  assert.equal(humanResult.stdout.includes('DO_NOT_RENDER'), false);
+  const afterFiles = fs.readdirSync(fixture.options.outputDir).sort();
+  const after = Object.fromEntries(
+    afterFiles.map((name) => [
+      name,
+      fileRoot(path.join(fixture.options.outputDir, name)),
+    ]),
+  );
+  assert.deepEqual(afterFiles, outputFiles);
+  assert.deepEqual(after, before);
 });
 
 test('graph shadow default verifier resolves the trusted receipt before admission', async (t) => {

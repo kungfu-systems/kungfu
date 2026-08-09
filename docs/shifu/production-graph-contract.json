@@ -9,6 +9,7 @@
     "receipt": "docs/shifu/schema/production-graph-receipt-v0.schema.json",
     "failure": "docs/shifu/schema/production-graph-failure-v0.schema.json",
     "recovery": "docs/shifu/schema/production-graph-recovery-v0.schema.json",
+    "feedback": "docs/shifu/schema/production-graph-feedback-v0.schema.json",
     "verificationReceipt": "docs/shifu/schema/production-graph-verification-receipt-v0.schema.json"
   },
   "rootAlgorithm": {
@@ -32,6 +33,26 @@
     "invalidFixtures": "docs/shifu/examples/production-graph/invalid",
     "receipt": "shifu.production-graph-verification-receipt/v0",
     "executesNodes": false
+  },
+  "feedback": {
+    "command": "./shifu production-graph:feedback",
+    "schema": "shifu.production-graph-feedback/v0",
+    "modes": ["human", "json"],
+    "decisions": [
+      "complete",
+      "inspect",
+      "resume-eligible",
+      "restart-required",
+      "blocked-by-drift"
+    ],
+    "exitCodes": {
+      "0": "complete",
+      "1": "bounded-human-action-required",
+      "2": "blocked-by-drift",
+      "3": "invalid-command-or-input"
+    },
+    "sideEffects": false,
+    "executesRecovery": false
   },
   "authorityBoundary": {
     "mode": "description-and-verification-only",
