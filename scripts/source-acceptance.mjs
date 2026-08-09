@@ -789,6 +789,7 @@ export function sourceAcceptancePlan(files, evidenceBaseCommit = '') {
         'scripts/platform-command.test.mjs',
         'product/scripts/dist.test.mjs',
         'product/scripts/dist-cli-executable-layout.test.mjs',
+        'product/scripts/installed-kungfu/index.test.mjs',
         'scripts/opencode-local-model-canary-workflow.test.mjs',
         'scripts/kungfu-workflow-authority.test.mjs',
         'scripts/code-complexity-budget.test.mjs',
