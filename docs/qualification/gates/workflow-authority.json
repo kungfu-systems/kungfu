@@ -274,7 +274,7 @@
     {
       "path": ".github/workflows/build.yml",
       "authority": "product-publication",
-      "definitionDigest": "sha256:419fd4fb6b5423b1a37cdbfc0067da327c9d973a12938afdbcaa6768439004d3",
+      "definitionDigest": "sha256:9cae1ec7ea1247a9a6282fd680a60021445aa58a38936d87205e562914ab81d8",
       "jobs": [
         {
           "id": "auditable-demo",
@@ -301,7 +301,7 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "qualifying",
-          "definitionDigest": "sha256:72645c724ec648be9639748172c486644f524b4a365341a24f50c00629eaa657",
+          "definitionDigest": "sha256:8e64304b1506757b39fbf897d81abb03b856111e0f1dc61bb7750cc1e9db3511",
           "credentials": {"githubToken":"write","oidc":true,"repositorySecrets":["BUILDCHAIN_ARTIFACT_RELAY_S3_DOWNLOAD_ROLE_ARN","BUILDCHAIN_ARTIFACT_RELAY_S3_ROLE_ARN","BUILDCHAIN_ARTIFACT_RELAY_S3_UPLOAD_ROLE_ARN","KUNGFU_GITHUB_TOKEN"],"inheritedSecrets":false,"environment":null},
           "externalActions": ["kungfu-systems/buildchain/.github/workflows/.build.yml@v3"],
           "steps": []

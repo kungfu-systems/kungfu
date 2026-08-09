@@ -235,7 +235,9 @@ export function validateRegistry(r, { root = ROOT } = {}) {
     !buildWorkflow.includes(
       'uses: kungfu-systems/buildchain/.github/workflows/.build.yml@v3',
     ) ||
-    !/^\s+buildchain-ref: v3\s*$/mu.test(buildWorkflow) ||
+    !/^\s+buildchain-ref: \$\{\{ inputs\.buildchain-ref \|\| 'v3' \}\}\s*$/mu.test(
+      buildWorkflow,
+    ) ||
     /kungfu-systems\/buildchain\/\.github\/workflows\/\.build\.yml@[0-9a-f]{40}/u.test(
       buildWorkflow,
     ) ||
