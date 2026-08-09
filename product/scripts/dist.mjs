@@ -1026,13 +1026,16 @@ export function stageNodePtyForCli(
     const nativeDirectory = path.join('build', 'Release');
     const targetNativeDirectory = path.join(target, nativeDirectory);
     fs.mkdirSync(targetNativeDirectory, { recursive: true });
-    const input = path.join(source, nativeDirectory, 'pty.node');
-    if (!fs.existsSync(input) || !fs.lstatSync(input).isFile()) {
-      throw new Error(
-        `required Linux node-pty runtime not found: ${rel(input)}`,
-      );
+    for (const runtime of ['pty.node', 'spawn-helper']) {
+      const input = path.join(source, nativeDirectory, runtime);
+      if (!fs.existsSync(input) || !fs.lstatSync(input).isFile()) {
+        throw new Error(
+          `required Linux node-pty runtime not found: ${rel(input)}`,
+        );
+      }
+      fs.copyFileSync(input, path.join(targetNativeDirectory, runtime));
     }
-    fs.copyFileSync(input, path.join(targetNativeDirectory, 'pty.node'));
+    fs.chmodSync(path.join(targetNativeDirectory, 'spawn-helper'), 0o755);
   } else if (platform === 'darwin') {
     fs.chmodSync(
       path.join(
