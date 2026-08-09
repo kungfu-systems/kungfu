@@ -17,6 +17,7 @@ from kungfu import assignment_close
 from kungfu import assignment_evidence
 from kungfu import assignment_review_lifecycle
 from kungfu import assignment_start
+from kungfu.assignment_runtime import create_runtime_host_command, profile_source
 from kungfu import dogfood as dogfood_api
 from kungfu import profile_composition, profile_sdk
 from kungfu.agent import run_agent
@@ -145,22 +146,11 @@ def _assignment_runtime(workspace_root, home, operation_class):
     return AssignmentRuntime(identity, str(runtime_dir), receipt)
 
 
-def _profile_source():
-    profiles = Path(orchestration.__file__).resolve().parent / "profiles"
-    for profile_name in ("work-control", "mission-control"):  # compatibility path
-        packaged = profiles / profile_name
-        if packaged.is_dir():
-            return packaged
-    extensions = orchestration.source_root() / "extensions"
-    for profile_name in ("work-control", "mission-control"):  # compatibility path
-        source = extensions / profile_name
-        if source.is_dir():
-            return source
-    raise ValueError("Work Control Profile is absent from this Kungfu product")
+assignment.add_command(create_runtime_host_command(_runtime))
 
 
 def _ensure_profile(runtime_dir, authorized_by):
-    source = _profile_source()
+    source = profile_source()
     receipts = []
     validated = profile_sdk.validate_source(source, runtime_dir)
     inspection = validated["inspection"]
@@ -210,7 +200,7 @@ def _ensure_profile(runtime_dir, authorized_by):
 
 
 def _prepare_resume_profile(runtime_dir, actor):
-    source = _profile_source()
+    source = profile_source()
     validated = profile_sdk.validate_source(source, runtime_dir)
     profile_id = validated["inspection"]["profile"]["id"]
     desired_root = validated["inspection"]["profile_suite_root"]
@@ -254,7 +244,7 @@ def _prepare_resume_profile(runtime_dir, actor):
 
 def _profile_read(runtime_dir, operation, values):
     return profile_sdk.invoke_member_adapter(
-        str(_profile_source()),
+        str(profile_source()),
         runtime_dir,
         "work-control-actions",
         operation,
@@ -263,7 +253,7 @@ def _profile_read(runtime_dir, operation, values):
 
 
 def _profile_action(runtime_dir, intent_id, values, authorized_by):
-    source = str(_profile_source())
+    source = str(profile_source())
     plan = profile_sdk.intent_plan(source, runtime_dir, intent_id, values)
     answer = profile_sdk.answer_decision(plan["decisionCard"], "approve", authorized_by)
     receipt = profile_sdk.intent_apply(runtime_dir, plan, answer)
@@ -530,7 +520,7 @@ def _work_start_plan(
         profile_id=profile_id,
         actor=actor,
         allow_foreign_binding=allow_foreign_binding,
-        profile_source=_profile_source,
+        profile_source=profile_source,
         status_reader=_status,
     )
 
