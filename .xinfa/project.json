@@ -597,7 +597,7 @@
           "implementer",
           "reviewer"
         ],
-        "mission_tracks": [
+        "initiative_tracks": [
           "external",
           "kfx-runtime"
         ],
@@ -651,7 +651,7 @@
           "implementer",
           "reviewer"
         ],
-        "mission_tracks": [
+        "initiative_tracks": [
           "external",
           "kfx-runtime"
         ],
