@@ -72,6 +72,14 @@ test('Dev Agent admission binds every targeted run to one exact PR head', () => 
     workflow,
     /expected-head-sha: \$\{\{ needs\.resolve-target\.outputs\.expected-head-sha \}\}/u,
   );
+  assert.match(
+    workflow,
+    /source-workflow-run-id: \$\{\{ fromJSON\(needs\.resolve-target\.outputs\.source-workflow-run-id \|\| '0'\) \}\}/u,
+  );
+  assert.match(
+    workflow,
+    /admission:[\s\S]*permissions:\n\s+actions: write[\s\S]*uses: kungfu-systems\/buildchain\/\.github\/workflows\/dev-pr-auto-merge\.yml/u,
+  );
   assert.match(workflow, /handoff-workflow-id: dev-pr-auto-merge\.yml/u);
   assert.match(workflow, /source-workflow-id: affected-native-pr\.yml/u);
   assert.match(workflow, /diagnostic-context: Buildchain delivery intent/u);
