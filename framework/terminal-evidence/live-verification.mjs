@@ -166,9 +166,75 @@ export function verifyLiveAssignment(
   }
 }
 
-export function verifyLiveReconciliation(matrix, live, issues) {
-  const requiredPulls = matrix.reconciliation?.pullRequests || [];
-  const observedPulls = live.reconciliation || [];
+function assignmentFamily(assignmentId) {
+  const family = String(assignmentId || '')
+    .replace(/^\d{4}-\d{2}-\d{2}-kungfu-/u, '')
+    .replace(/-v\d+$/u, '');
+  return family.startsWith('terminal-review-') ? 'terminal-review' : family;
+}
+
+function authoritativePullScope(request, issues) {
+  const work = request?.workDefinition;
+  const dependencies = work?.dependency_identities;
+  const baseline = work?.review_baseline?.open_pull_requests_at_review;
+  if (!Array.isArray(dependencies)) {
+    issues.push(
+      issue(
+        'request-dependencies-missing',
+        'assignment.request.workDefinition.dependency_identities',
+        'immutable Assignment request has no dependency identities',
+      ),
+    );
+  }
+  if (!Array.isArray(baseline)) {
+    issues.push(
+      issue(
+        'request-reconciliation-scope-missing',
+        'assignment.request.workDefinition.review_baseline.open_pull_requests_at_review',
+        'immutable Assignment request has no pull-request review baseline',
+      ),
+    );
+  }
+  const identities = [
+    work?.parent_assignment_identity?.assignment_id,
+    ...(Array.isArray(dependencies)
+      ? dependencies.map(({ assignment_id }) => assignment_id)
+      : []),
+  ].filter(Boolean);
+  const families = new Set(identities.map(assignmentFamily).filter(Boolean));
+  const pullNumbers = new Set(
+    (Array.isArray(baseline) ? baseline : [])
+      .map((value) => /^#([1-9][0-9]*)$/u.exec(String(value)))
+      .filter(Boolean)
+      .map((match) => Number(match[1])),
+  );
+  return { families, pullNumbers };
+}
+
+export function verifyLiveReconciliation(matrix, live, request, issues) {
+  const requiredPulls = matrix.reconciliation?.pullRequests;
+  const observedPulls = live.reconciliation?.declaredPulls;
+  const openProtectedPulls = live.reconciliation?.openProtectedPulls;
+  if (!Array.isArray(requiredPulls) || !Array.isArray(observedPulls)) {
+    issues.push(
+      issue(
+        'reconciliation-set-missing',
+        'reconciliation.pullRequests',
+        'required and observed pull-request sets must be arrays',
+      ),
+    );
+    return;
+  }
+  if (!Array.isArray(openProtectedPulls)) {
+    issues.push(
+      issue(
+        'reconciliation-open-scope-missing',
+        'live.reconciliation.openProtectedPulls',
+        'live open protected pull-request enumeration is missing',
+      ),
+    );
+    return;
+  }
   uniqueBy(requiredPulls, 'number', 'duplicate-reconciliation-pr', issues);
   uniqueBy(observedPulls, 'number', 'duplicate-live-reconciliation-pr', issues);
   const observedByNumber = new Map(
@@ -247,6 +313,21 @@ export function verifyLiveReconciliation(matrix, live, issues) {
         `pullRequests.${required.number}.successorBaseRef`,
         issues,
       );
+      for (const field of [
+        'successorState',
+        'successorHeadRef',
+        'successorHead',
+        'successorTree',
+        'successorMergeCommit',
+      ]) {
+        exact(
+          observed[field] || '',
+          required[field] || '',
+          `reconciliation-${field}-mismatch`,
+          `pullRequests.${required.number}.${field}`,
+          issues,
+        );
+      }
     }
     if (
       !['superseded-by', 'delivered', 'historical-nonmerge'].includes(
@@ -270,6 +351,35 @@ export function verifyLiveReconciliation(matrix, live, issues) {
         'live remediation pull-request set differs from the matrix',
       ),
     );
+  }
+  const authority = authoritativePullScope(request, issues);
+  const requiredNumbers = new Set(requiredPulls.map(({ number }) => number));
+  for (const number of authority.pullNumbers) {
+    if (!requiredNumbers.has(number)) {
+      issues.push(
+        issue(
+          'reconciliation-authority-pr-missing',
+          `pullRequests.${number}`,
+          'immutable Assignment review-baseline pull request is absent',
+        ),
+      );
+    }
+  }
+  for (const pull of openProtectedPulls) {
+    const inScope =
+      authority.pullNumbers.has(pull.number) ||
+      [...authority.families].some((family) =>
+        String(pull.headRef || '').includes(family),
+      );
+    if (inScope) {
+      issues.push(
+        issue(
+          'reconciliation-in-scope-pr-open',
+          `openPullRequests.${pull.number}`,
+          `in-scope protected pull request ${pull.headRef} remains open`,
+        ),
+      );
+    }
   }
 }
 

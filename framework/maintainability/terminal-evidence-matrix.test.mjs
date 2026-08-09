@@ -2,16 +2,22 @@
 
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 
 import { semanticRoot } from '../project-cut/src/project-cut.mjs';
 import {
+  observeRun,
   parseCommandJson,
   parseTerminalReviewAttestation,
 } from '../terminal-evidence/live-observations.mjs';
-import { digestBytes, verifyTerminalEvidence } from './terminal-evidence.mjs';
+import {
+  digestBytes,
+  resolveRetainedPath,
+  verifyTerminalEvidence,
+} from './terminal-evidence.mjs';
 
 const ROOT = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -153,7 +159,27 @@ function fixture() {
       policy: 'explicit-expiry-retain-bytes-v1',
     },
     source: { kind: 'atlas-go-card', sourceId: fixtureMatrix.goalId },
-    workDefinition: { goal_id: fixtureMatrix.goalId },
+    workDefinition: {
+      goal_id: fixtureMatrix.goalId,
+      parent_assignment_identity: {
+        assignment_id: fixtureMatrix.dependencies[0].requiredAssignmentId,
+      },
+      dependency_identities: fixtureMatrix.dependencies
+        .slice(1)
+        .map(({ requiredAssignmentId }) => ({
+          assignment_id: requiredAssignmentId,
+        })),
+      review_baseline: {
+        open_pull_requests_at_review: [
+          '#2235',
+          '#2212',
+          '#2193',
+          '#2173',
+          '#2109',
+          '#1997',
+        ],
+      },
+    },
   };
   const requestRoot = retain(
     'assignment-request',
@@ -234,8 +260,13 @@ function fixture() {
   decision.review_root = independentReviewRoot;
   const assignmentSeal = {
     schema: 'kungfu.assignment-orchestration.sealed-state/v1',
-    assignment: { assignment_id: fixtureMatrix.goalId },
+    assignment: {
+      assignment_id: fixtureMatrix.goalId,
+      request_root: requestRoot,
+      capture_receipt_roots: [captureReceiptRoot],
+    },
     phase: 'continuation-decided',
+    query_proof_root: `sha256:${'7'.repeat(64)}`,
     counts: {
       completion_claims: 1,
       independent_reviews: 1,
@@ -245,8 +276,21 @@ function fixture() {
   const dependencies = fixtureMatrix.dependencies.map((dependency, index) => {
     const seal = {
       schema: 'kungfu.assignment-orchestration.sealed-state/v1',
-      assignment: { assignment_id: dependency.assignmentId },
+      assignment: {
+        assignment_id: dependency.assignmentId,
+        request_root: `sha256:${String(index + 1)
+          .repeat(64)
+          .slice(0, 64)}`,
+        capture_receipt_roots: [
+          `sha256:${String(index + 2)
+            .repeat(64)
+            .slice(0, 64)}`,
+        ],
+      },
       phase: 'continuation-decided',
+      query_proof_root: `sha256:${String(index + 3)
+        .repeat(64)
+        .slice(0, 64)}`,
       counts: {
         completion_claims: 1,
         independent_reviews: 1,
@@ -260,12 +304,21 @@ function fixture() {
     );
     retainedObjects.at(-1).assignmentId = dependency.assignmentId;
     dependency.sealedStateRoot = sealedStateRoot;
-    return { assignmentId: dependency.assignmentId, sealedStateRoot };
+    return {
+      requiredAssignmentId: dependency.requiredAssignmentId,
+      assignmentId: dependency.assignmentId,
+      sealedStateRoot,
+    };
   });
   const predecessorSeal = {
     schema: 'kungfu.assignment-orchestration.sealed-state/v1',
-    assignment: { assignment_id: fixtureMatrix.predecessor.assignmentId },
+    assignment: {
+      assignment_id: fixtureMatrix.predecessor.assignmentId,
+      request_root: `sha256:${'8'.repeat(64)}`,
+      capture_receipt_roots: [`sha256:${'9'.repeat(64)}`],
+    },
     phase: 'continuation-decided',
+    query_proof_root: `sha256:${'6'.repeat(64)}`,
     counts: {
       completion_claims: 1,
       independent_reviews: 1,
@@ -377,6 +430,8 @@ function fixture() {
         headTree: TREE,
         protectedCommit: HEAD,
         protectedTree: TREE,
+        protectedCommitEnd: HEAD,
+        protectedTreeEnd: TREE,
       },
       delivery: {
         pullRequest: 2001,
@@ -395,21 +450,30 @@ function fixture() {
           submittedAt: '2026-08-02T00:00:00Z',
         },
       },
-      reconciliation: fixtureMatrix.reconciliation.pullRequests.map((pull) => ({
-        number: pull.number,
-        state: pull.state,
-        baseRef: fixtureMatrix.sourceBinding.protectedBranch,
-        headRef: pull.headRef,
-        head: pull.head,
-        mergeCommit: pull.mergeCommit || '',
-        ...(pull.successor
-          ? {
-              successor: pull.successor,
-              successorState: 'CLOSED',
-              successorBaseRef: fixtureMatrix.sourceBinding.protectedBranch,
-            }
-          : {}),
-      })),
+      reconciliation: {
+        declaredPulls: fixtureMatrix.reconciliation.pullRequests.map(
+          (pull) => ({
+            number: pull.number,
+            state: pull.state,
+            baseRef: fixtureMatrix.sourceBinding.protectedBranch,
+            headRef: pull.headRef,
+            head: pull.head,
+            mergeCommit: pull.mergeCommit || '',
+            ...(pull.successor
+              ? {
+                  successor: pull.successor,
+                  successorState: pull.successorState,
+                  successorBaseRef: fixtureMatrix.sourceBinding.protectedBranch,
+                  successorHeadRef: pull.successorHeadRef,
+                  successorHead: pull.successorHead,
+                  successorTree: pull.successorTree,
+                  successorMergeCommit: pull.successorMergeCommit || '',
+                }
+              : {}),
+          }),
+        ),
+        openProtectedPulls: [],
+      },
       terminalReview: {
         commentId: 4001,
         author: 'kungfu-origin',
@@ -476,6 +540,15 @@ function fixture() {
       reconciliation: overrides.reconciliation || baseLive.reconciliation,
       runs: overrides.runs || baseLive.runs,
     };
+    const nativeRoots = new Map(
+      evidence.retainedObjects
+        .filter(({ kind }) =>
+          ['assignment-seal', 'dependency-seal', 'predecessor-seal'].includes(
+            kind,
+          ),
+        )
+        .map(({ path: pathname, root }) => [pathname, root]),
+    );
     return verifyTerminalEvidence(
       fixtureMatrix,
       candidate,
@@ -485,9 +558,28 @@ function fixture() {
         if (!bytes) throw new Error(`missing fixture ${relative}`);
         return bytes;
       },
+      (relative) => {
+        const expectedRoot = nativeRoots.get(relative);
+        const bytes = retainedBytes.get(relative);
+        const actualRoot = bytes
+          ? semanticRoot(JSON.parse(bytes.toString('utf8')))
+          : undefined;
+        return {
+          ok: actualRoot === expectedRoot,
+          state_root: expectedRoot,
+          phase: 'continuation-decided',
+          next_actions: [],
+        };
+      },
     );
   };
-  return { evidence, liveRuns, retainedBytes, verify };
+  return {
+    evidence,
+    liveRuns,
+    matrix: fixtureMatrix,
+    retainedBytes,
+    verify,
+  };
 }
 
 function clone(value) {
@@ -514,6 +606,79 @@ test('live observation parser preserves object and array authority payloads', ()
   assert.equal(parseTerminalReviewAttestation('not json'), undefined);
 });
 
+test('portable retained paths stay inside the evidence archive', (context) => {
+  const archive = fs.mkdtempSync(path.join(os.tmpdir(), 'kungfu-evidence-'));
+  const outside = fs.mkdtempSync(path.join(os.tmpdir(), 'kungfu-outside-'));
+  context.after(() => {
+    fs.rmSync(archive, { recursive: true });
+    fs.rmSync(outside, { recursive: true });
+  });
+  const retained = path.join(archive, 'seal.json');
+  const outsideSeal = path.join(outside, 'seal.json');
+  fs.writeFileSync(retained, '{}\n');
+  fs.writeFileSync(outsideSeal, '{}\n');
+  fs.symlinkSync(outsideSeal, path.join(archive, 'escaped.json'));
+  assert.equal(
+    resolveRetainedPath(archive, 'seal.json'),
+    fs.realpathSync(retained),
+  );
+  assert.throws(
+    () => resolveRetainedPath(archive, '../seal.json'),
+    /ENOENT|escapes/u,
+  );
+  assert.throws(
+    () => resolveRetainedPath(archive, 'escaped.json'),
+    /escapes the evidence archive/u,
+  );
+});
+
+test('live run observation binds run and jobs to the declared attempt', () => {
+  const calls = [];
+  const observed = observeRun(
+    matrix,
+    { role: 'source', runId: 123, runAttempt: 2 },
+    (endpoint) => {
+      calls.push(endpoint);
+      if (endpoint.endsWith('/attempts/2')) {
+        return {
+          id: 123,
+          run_attempt: 2,
+          path: '.github/workflows/affected-native-pr.yml',
+          event: 'merge_group',
+          head_sha: HEAD,
+          head_branch: matrix.sourceBinding.protectedBranch,
+          status: 'completed',
+          conclusion: 'success',
+        };
+      }
+      if (endpoint.endsWith('/attempts/2/jobs?per_page=100')) {
+        return {
+          jobs: [
+            {
+              id: 456,
+              name: 'Candidate source acceptance / check',
+              status: 'completed',
+              conclusion: 'success',
+            },
+          ],
+        };
+      }
+      return { artifacts: [] };
+    },
+  );
+  assert.deepEqual(calls, [
+    '/repos/kungfu-systems/kungfu/actions/runs/123/attempts/2',
+    '/repos/kungfu-systems/kungfu/actions/runs/123/attempts/2/jobs?per_page=100',
+    '/repos/kungfu-systems/kungfu/actions/runs/123/artifacts?per_page=100',
+  ]);
+  assert.equal(observed.runAttempt, 2);
+  assert.equal(observed.jobs[0].id, 456);
+  assert.throws(
+    () => observeRun(matrix, { role: 'source', runId: 123, runAttempt: 0 }),
+    /source run attempt must be a positive integer/u,
+  );
+});
+
 test('terminal maintainability matrix declares an exact-head v4 contract', () => {
   assert.equal(
     matrix.schema,
@@ -538,6 +703,14 @@ test('terminal maintainability matrix declares an exact-head v4 contract', () =>
   );
   assert.equal(
     new Set(matrix.dependencies.map(({ assignmentId }) => assignmentId)).size,
+    8,
+  );
+  assert.equal(
+    new Set(
+      matrix.dependencies.map(
+        ({ requiredAssignmentId }) => requiredAssignmentId,
+      ),
+    ).size,
     8,
   );
   assert.equal(
@@ -654,6 +827,37 @@ test('live HEAD, protected PR, merge, and review identities fail closed', () => 
       }),
     ).has('assignment-seal-query-proof-mismatch'),
   );
+  assert.ok(
+    issueCodes(
+      verify(evidence, { source: { protectedCommitEnd: OTHER_HEAD } }),
+    ).has('protected-head-toctou'),
+  );
+});
+
+test('missing v4 sets and request-authority substitution fail closed', () => {
+  const { evidence, matrix: fixtureMatrix, verify } = fixture();
+  const omitted = clone(evidence);
+  omitted.dependencies = undefined;
+  const omittedCodes = issueCodes(
+    verify(omitted, { reconciliation: { openProtectedPulls: [] } }),
+  );
+  assert.ok(omittedCodes.has('required-v4-field-missing'));
+  assert.ok(omittedCodes.has('reconciliation-set-missing'));
+
+  fixtureMatrix.dependencies = undefined;
+  assert.ok(issueCodes(verify(evidence)).has('required-v4-field-missing'));
+
+  const replacement = fixture();
+  const alternate = '2026-08-08-kungfu-unrelated-terminal-assignment';
+  replacement.matrix.dependencies[1].requiredAssignmentId = alternate;
+  replacement.matrix.dependencies[1].assignmentId = alternate;
+  replacement.evidence.dependencies[1].requiredAssignmentId = alternate;
+  replacement.evidence.dependencies[1].assignmentId = alternate;
+  assert.ok(
+    issueCodes(replacement.verify(replacement.evidence)).has(
+      'dependency-authority-set-mismatch',
+    ),
+  );
 });
 
 test('retained semantic roles, live runs, and artifact bytes fail closed', () => {
@@ -713,6 +917,28 @@ test('self-consistent declared runs cannot replace GitHub live truth', () => {
     'positive, retained, internally consistent run id must still match live API',
   );
 
+  const wrongAttempt = clone(evidence);
+  const attemptRun = wrongAttempt.runs.find(({ role }) => role === 'source');
+  const attemptRetained = wrongAttempt.retainedObjects.find(
+    ({ root }) => root === attemptRun.evidenceRoot,
+  );
+  const attemptSnapshot = JSON.parse(
+    retainedBytes.get(attemptRetained.path).toString('utf8'),
+  );
+  attemptSnapshot.runAttempt = 2;
+  attemptRun.runAttempt = 2;
+  const attemptRoot = semanticRoot(attemptSnapshot);
+  attemptRun.evidenceRoot = attemptRoot;
+  attemptRetained.root = attemptRoot;
+  retainedBytes.set(
+    attemptRetained.path,
+    Buffer.from(`${JSON.stringify(attemptSnapshot)}\n`),
+  );
+  assert.ok(
+    issueCodes(verify(wrongAttempt)).has('run-runAttempt-live-mismatch'),
+    'retained attempt identity must still match the live attempt endpoint',
+  );
+
   const missingJob = clone(liveRuns);
   missingJob[0].jobs = missingJob[0].jobs.slice(1);
   assert.ok(
@@ -747,7 +973,9 @@ test('dependency omission, rerooting, and non-terminal seals fail closed', () =>
 
   const rerooted = clone(evidence);
   rerooted.dependencies[0].sealedStateRoot = `sha256:${'8'.repeat(64)}`;
-  assert.ok(issueCodes(verify(rerooted)).has('dependency-seal-mismatch'));
+  assert.ok(
+    issueCodes(verify(rerooted)).has('dependency-sealedStateRoot-mismatch'),
+  );
 
   const dependency = evidence.dependencies[0];
   const retained = evidence.retainedObjects.find(
@@ -764,28 +992,57 @@ test('dependency omission, rerooting, and non-terminal seals fail closed', () =>
   const codes = issueCodes(verify(evidence));
   assert.ok(codes.has('retained-root-mismatch'));
   assert.ok(codes.has('retained-seal-not-terminal'));
+
+  const forgedFixture = fixture();
+  const forged = clone(forgedFixture.evidence);
+  const forgedDependency = forged.dependencies[0];
+  const forgedRetained = forged.retainedObjects.find(
+    ({ root }) => root === forgedDependency.sealedStateRoot,
+  );
+  const forgedDocument = JSON.parse(
+    forgedFixture.retainedBytes.get(forgedRetained.path).toString('utf8'),
+  );
+  forgedDocument.assignment.objective = 'self-described replacement';
+  const forgedRoot = semanticRoot(forgedDocument);
+  forgedFixture.retainedBytes.set(
+    forgedRetained.path,
+    Buffer.from(`${JSON.stringify(forgedDocument)}\n`),
+  );
+  forgedRetained.root = forgedRoot;
+  forgedDependency.sealedStateRoot = forgedRoot;
+  forgedFixture.matrix.dependencies[0].sealedStateRoot = forgedRoot;
+  const forgedCodes = issueCodes(forgedFixture.verify(forged));
+  assert.ok(forgedCodes.has('retained-seal-native-root-mismatch'));
+  assert.ok(forgedCodes.has('retained-seal-native-verification-failed'));
 });
 
 test('remediation pull-request state and exact head drift fail closed', () => {
   const { evidence, verify } = fixture();
-  const observed = matrix.reconciliation.pullRequests.map((pull) => ({
-    number: pull.number,
-    state: pull.state,
-    baseRef: matrix.sourceBinding.protectedBranch,
-    headRef: pull.headRef,
-    head: pull.head,
-    mergeCommit: pull.mergeCommit || '',
-    ...(pull.successor
-      ? {
-          successor: pull.successor,
-          successorState: 'CLOSED',
-          successorBaseRef: matrix.sourceBinding.protectedBranch,
-        }
-      : {}),
-  }));
+  const observed = {
+    declaredPulls: matrix.reconciliation.pullRequests.map((pull) => ({
+      number: pull.number,
+      state: pull.state,
+      baseRef: matrix.sourceBinding.protectedBranch,
+      headRef: pull.headRef,
+      head: pull.head,
+      mergeCommit: pull.mergeCommit || '',
+      ...(pull.successor
+        ? {
+            successor: pull.successor,
+            successorState: pull.successorState,
+            successorBaseRef: matrix.sourceBinding.protectedBranch,
+            successorHeadRef: pull.successorHeadRef,
+            successorHead: pull.successorHead,
+            successorTree: pull.successorTree,
+            successorMergeCommit: pull.successorMergeCommit || '',
+          }
+        : {}),
+    })),
+    openProtectedPulls: [],
+  };
 
   const reopened = clone(observed);
-  reopened[0].state = 'OPEN';
+  reopened.declaredPulls[0].state = 'OPEN';
   assert.ok(
     issueCodes(verify(evidence, { reconciliation: reopened })).has(
       'reconciliation-pr-state-mismatch',
@@ -793,7 +1050,7 @@ test('remediation pull-request state and exact head drift fail closed', () => {
   );
 
   const moved = clone(observed);
-  moved[1].head = OTHER_HEAD;
+  moved.declaredPulls[1].head = OTHER_HEAD;
   assert.ok(
     issueCodes(verify(evidence, { reconciliation: moved })).has(
       'reconciliation-pr-head-mismatch',
@@ -801,16 +1058,40 @@ test('remediation pull-request state and exact head drift fail closed', () => {
   );
 
   const omitted = clone(observed);
-  omitted.pop();
+  omitted.declaredPulls.pop();
   const codes = issueCodes(verify(evidence, { reconciliation: omitted }));
   assert.ok(codes.has('missing-reconciliation-pr'));
   assert.ok(codes.has('reconciliation-pr-cardinality-mismatch'));
 
   const liveSuccessor = clone(observed);
-  liveSuccessor[0].successorState = 'OPEN';
+  liveSuccessor.declaredPulls[0].successorState = 'OPEN';
   assert.ok(
     issueCodes(verify(evidence, { reconciliation: liveSuccessor })).has(
       'reconciliation-successor-not-terminal',
+    ),
+  );
+
+  const movedSuccessor = clone(observed);
+  movedSuccessor.declaredPulls[0].successorHead = OTHER_HEAD;
+  assert.ok(
+    issueCodes(verify(evidence, { reconciliation: movedSuccessor })).has(
+      'reconciliation-successorHead-mismatch',
+    ),
+  );
+
+  const unlistedOpen = clone(observed);
+  unlistedOpen.openProtectedPulls.push({
+    number: 9999,
+    state: 'OPEN',
+    baseRef: matrix.sourceBinding.protectedBranch,
+    headRef: 'fix/terminal-review-unlisted',
+    head: OTHER_HEAD,
+    headTree: TREE,
+    title: 'unlisted remediation',
+  });
+  assert.ok(
+    issueCodes(verify(evidence, { reconciliation: unlistedOpen })).has(
+      'reconciliation-in-scope-pr-open',
     ),
   );
 });
