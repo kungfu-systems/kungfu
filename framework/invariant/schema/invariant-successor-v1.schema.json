@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kungfu.tech/schemas/invariant-successor-v1.schema.json",
+  "title": "Kungfu invariant successor declaration v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "predecessorId", "predecessorSourceRoot", "successorId", "successorSourceRoot", "semanticDiff", "historicalInterpretation", "migration", "rollback", "requalification"],
+  "$defs": {"root": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"}},
+  "properties": {
+    "schema": {"const": "kungfu.invariant-successor/v1"}, "predecessorId": {"type": "string"}, "predecessorSourceRoot": {"$ref": "#/$defs/root"}, "successorId": {"type": "string"}, "successorSourceRoot": {"$ref": "#/$defs/root"},
+    "semanticDiff": {"type": "array", "minItems": 1, "items": {"type": "string"}}, "historicalInterpretation": {"type": "string", "minLength": 1}, "migration": {"type": "string", "minLength": 1}, "rollback": {"type": "string", "minLength": 1}, "requalification": {"type": "array", "minItems": 1, "items": {"type": "string"}}, "abstractModelImpact": {"type": "string", "minLength": 1}, "refinementImpact": {"type": "string", "minLength": 1}
+  }
+}

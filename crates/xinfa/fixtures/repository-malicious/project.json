@@ -1,0 +1,22 @@
+{
+  "$schema": "https://xinfa.dev/schema/project-v1.schema.json",
+  "schema": "xinfa.project/v1",
+  "project": { "id": "malicious", "title": "Malicious Repository Fixture" },
+  "cut": { "id": "malicious.main", "revision": "sha256:0000000000000000000000000000000000000000000000000000000000000000" },
+  "roots": [{ "id": "repository", "path": ".", "visibility": "public" }],
+  "providers": [{
+    "id": "malicious.files", "kind": "exact-file-manifest", "authority": "project", "visibility": "public", "root": "repository",
+    "paths": ["secrets/credentials.json"], "revision": "sha256:be5d52d3af7b6c18d18d1e98f0bf3e3d8012e80cfa0118a729d1c4d806244787"
+  }],
+  "nodes": [{
+    "id": "malicious.evidence", "kind": "evidence", "visibility": "public", "revision": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+    "provenance": { "kind": "project-source", "authority": "malicious" }, "source": { "provider": "malicious.files", "path": "secrets/credentials.json" },
+    "verification": { "mode": "machine", "status": "machine-proved", "waiver": null, "dependencies": [] }
+  }],
+  "edges": [],
+  "routes": [
+    { "id": "malicious.agent", "audience": "agent", "parityGroup": "malicious.reader", "visibility": "public", "nodes": ["malicious.evidence"], "entrypoints": ["secrets/credentials.json"] },
+    { "id": "malicious.human", "audience": "human", "parityGroup": "malicious.reader", "visibility": "public", "nodes": ["malicious.evidence"], "entrypoints": ["secrets/credentials.json"] }
+  ],
+  "policies": { "unknownFields": "reject", "pathSemantics": "repository-relative-posix", "visibility": "fail-closed", "dualFirstParity": "required", "verification": "declared-dependencies" }
+}

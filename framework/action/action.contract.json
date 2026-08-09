@@ -1,0 +1,43 @@
+{
+  "schema": "kungfu.action.kernel-contract/v1",
+  "version": "0.1.0",
+  "command": "contract",
+  "canonicalization": {
+    "format": "compact-json",
+    "objectKeyOrder": "utf8-byte-ascending",
+    "numbers": "safe-integers-only",
+    "trailingNewlineInRoot": false
+  },
+  "authority": {
+    "semanticAuthority": "framework/action/action.mjs",
+    "runtimeAuthority": "unsupported-in-bootstrap",
+    "journalAccess": false,
+    "casAccess": false,
+    "actionLoop": {
+      "contract": "action-loop.contract.json",
+      "planner": "action-loop.mjs",
+      "beginCoordinator": "action-loop-begin.mjs",
+      "settlementCoordinator": "action-loop-settle.mjs",
+      "status": "settlement-staged",
+      "authority": "pure validation and recovery planning only"
+    }
+  },
+  "hosts": [
+    "development-node",
+    "embedded-libnode"
+  ],
+  "profiles": [
+    "shared-kernel",
+    "atlas",
+    "pursuit",
+    "warrant",
+    "episode"
+  ],
+  "capabilities": [
+    "contract",
+    "public-cli-topology",
+    "internal-action-loop-coordination-contract",
+    "action-loop-begin-checkpoint-resume",
+    "action-loop-recoverable-settlement"
+  ]
+}

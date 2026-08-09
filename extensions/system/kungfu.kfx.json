@@ -1,0 +1,18 @@
+{
+  "schema": "kungfu.kfx.manifest/v1",
+  "name": "@kungfu-tech/kfx-suite-system",
+  "version": "4.0.0-alpha.1",
+  "kungfuConfig": {
+    "key": "system",
+    "name": "System Suite",
+    "suite": {
+      "title": "System",
+      "members": [
+        "settings",
+        "kfx-manager",
+        "skill-manager",
+        "system-status"
+      ]
+    }
+  }
+}

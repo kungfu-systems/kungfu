@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // Fact Bridge report-mode fixture. Proves a non-managed run can report
-// lifecycle, cost, approval, and work linkage facts without changing the
-// provider execution surface.
+// lifecycle, cost, approval, and an externally authoritative Work reference
+// without changing the provider execution surface.
 
 import fs from 'node:fs';
 import path from 'node:path';
@@ -10,17 +10,7 @@ import { assertFileContains, json, kfc, locate, tmpDir, uvPython } from '../_har
 const { fixtureDir, coreDir } = locate(import.meta.url);
 const home = tmpDir('kf-report-bridge-');
 
-const work = json(
-  kfc(coreDir, home, [
-    'work',
-    'create',
-    'External Codex run',
-    '--kind',
-    'agent-run',
-    '--json',
-  ]),
-);
-const workId = work.work_id;
+const workId = 'assignment-external-codex-1';
 const begin = json(
   kfc(coreDir, home, [
     'report',
@@ -101,11 +91,6 @@ kfc(coreDir, home, [
   '1',
   '--json',
 ]);
-
-const shown = json(kfc(coreDir, home, ['work', 'show', workId, '--json']));
-if (!shown.runs.some((row) => row.run_id === begin.run_id)) {
-  throw new Error(`work item did not link reported run: ${JSON.stringify(shown.runs)}`);
-}
 
 const eventFile = path.join(bundleDir, 'report-events.jsonl');
 assertFileContains(eventFile, 'waiting for PR review', 'report event');

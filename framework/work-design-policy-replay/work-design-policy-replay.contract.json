@@ -1,0 +1,106 @@
+{
+  "schema": "kungfu.work-design.policy-replay-contract/v2",
+  "version": 2,
+  "status": "pre-release",
+  "predecessorContractRoot": "sha256:1dd69058c9a940e6596ea27877dd0fe55954911161b4b11b1522654d3f13b97c",
+  "rootAlgorithm": "sha256-project-cut-canonical-json-v1",
+  "mode": "offline-advisory",
+  "minimumDefaultPromotionSamples": 30,
+  "comparisonDimensions": [
+    "selection",
+    "advice",
+    "disposition",
+    "outcome",
+    "coverage"
+  ],
+  "promotionGates": [
+    "exact-cohort",
+    "complete-evidence",
+    "classified-drift",
+    "regression-within-threshold",
+    "minimum-qualified-samples",
+    "exact-rollback"
+  ],
+  "authority": {
+    "assignment": false,
+    "workControl": false,
+    "repository": false,
+    "protectedBranch": false,
+    "activeDefaultPolicy": false,
+    "mutation": false
+  },
+  "activation": "separately-authorized-native-decision-required",
+  "outcomeFeedback": {
+    "outcomeSchema": "kungfu.work-design.outcome/v1",
+    "compilerInputSchema": "kungfu.work-design.outcome-compilation-request/v1",
+    "feedbackStatusSchema": "kungfu.work-design.feedback-status/v1",
+    "feedbackInspectionSchema": "kungfu.work-design.feedback-inspection/v1",
+    "activationEnvelopeSchema": "kungfu.work-design.activation-envelope/v1",
+    "policyStateSchema": "kungfu.work-design.policy-state/v1",
+    "policyDecisionSchema": "kungfu.work-design.policy-decision/v1",
+    "policyMonitoringSchema": "kungfu.work-design.policy-monitoring/v1",
+    "prospectiveOutcomeBindingSchema": "kungfu.work-design.prospective-outcome-binding/v1",
+    "metrics": {
+      "timeout": "planned-budget-versus-attributable-active-time-excluding-declared-waits",
+      "rework": "acceptance-reopen-or-corrective-successor-only",
+      "dependencyCorrection": "post-admission-exact-graph-root-revision",
+      "acceptanceFailure": "independent-assessment-unfit-only"
+    },
+    "unknownEvidence": "remain-unknown-and-block-affected-cohort",
+    "privacyBoundary": "roots-enums-timestamps-and-sanitized-identifiers-only",
+    "shadowThresholds": {
+      "observationOnlyMaximum": 9,
+      "tentativeTrendMinimum": 10,
+      "tentativeTrendMaximum": 29,
+      "promotionEligibilityMinimum": 30
+    },
+    "activation": "native-versioned-bounded-parameter-envelope",
+    "outOfEnvelope": "human-decision-required",
+    "concurrency": "expected-state-root-fenced",
+    "rollback": "automatic-exact-previous-policy-root",
+    "status": "build-free-read-only-machine-projection",
+    "prospectiveAccounting": {
+      "activeEngineeringClasses": [
+        "implementation-debug",
+        "local-validation"
+      ],
+      "excludedWaitClasses": [
+        "ci-queue",
+        "external-review",
+        "human-decision",
+        "platform-approval"
+      ],
+      "activeSecondsConservedExactly": true,
+      "openingEstimateRootRequired": true,
+      "authority": "observation-and-advice-only"
+    }
+  },
+  "failurePolicy": {
+    "asOfLeakage": "reject-without-report",
+    "cohortRootMismatch": "reject-without-report",
+    "missingOutcome": "reject-without-report",
+    "policyDrift": "reject-without-report",
+    "unclassifiedDrift": "report-and-deny-promotion",
+    "regressionThreshold": "report-and-deny-promotion",
+    "insufficientSamples": "report-and-deny-promotion",
+    "rollbackMismatch": "artifact-and-deny-promotion"
+  },
+  "schemaBundle": {
+    "files": [
+      "schema/work-design-activation-envelope-v1.schema.json",
+      "schema/work-design-feedback-inspection-v1.schema.json",
+      "schema/work-design-feedback-status-v1.schema.json",
+      "schema/work-design-outcome-compilation-request-v1.schema.json",
+      "schema/work-design-outcome-v1.schema.json",
+      "schema/work-design-policy-decision-v1.schema.json",
+      "schema/work-design-policy-monitoring-v1.schema.json",
+      "schema/work-design-policy-state-v1.schema.json",
+      "schema/work-design-promotion-artifact-v1.schema.json",
+      "schema/work-design-replay-policy-v1.schema.json",
+      "schema/work-design-replay-report-v1.schema.json",
+      "schema/work-design-replay-request-v1.schema.json"
+    ],
+    "schemaRoot": "sha256:60214373b6ec4ddcb689010b73ccb51d8668ab439c20a41d2b8ec53c67779c7a"
+  },
+  "contractRoot": "sha256:f26817f158853fd1b34881e0a565cfdbcce50c2a801a7fe8014fc3e074e33d46"
+}

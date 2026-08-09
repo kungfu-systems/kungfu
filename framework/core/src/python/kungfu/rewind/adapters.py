@@ -18,11 +18,11 @@
 
 from __future__ import annotations
 
-import json
 import os
 from collections.abc import Iterator
 
-from kungfu.rewind import first_party
+from kungfu import kfx_contract
+from kungfu.storage import service as storage_service
 
 ENV_EXTENSION_PATH = "KF_EXTENSION_PATH"
 # shared contract strings with the child hooks (per runtime): the python hook
@@ -49,12 +49,14 @@ def _scan_packages(root: str) -> Iterator[str]:
         return
     for name in sorted(os.listdir(root)):
         pkg = os.path.join(root, name)
-        if os.path.isfile(os.path.join(pkg, "package.json")):
+        if os.path.isfile(os.path.join(pkg, kfx_contract.PACKAGE_MANIFEST_FILE)):
             yield pkg
         elif os.path.isdir(pkg):
             for sub in sorted(os.listdir(pkg)):
                 nested = os.path.join(pkg, sub)
-                if os.path.isfile(os.path.join(nested, "package.json")):
+                if os.path.isfile(
+                    os.path.join(nested, kfx_contract.PACKAGE_MANIFEST_FILE)
+                ):
                     yield nested
 
 
@@ -65,12 +67,20 @@ def discover_adapters(
     adapter form for `runtime` ('python' or 'node'). First occurrence of a
     package path wins; missing entry files are skipped.
 
-    Trust gate (ADR-0013): an adapter runs in-process inside the traced program
-    and cannot be sandboxed, so only a package whose key is in the frozen
-    first-party set is injected. An untrusted adapter is refused — returned in
-    `refused` as {"key", "package"} so the caller can report it — never injected.
+    An adapter runs in-process inside the traced program and cannot be sandboxed,
+    so injection requires the exact native host authorization from the current
+    KFX Fact Cut. The discovered closure must match that authorization before
+    native ``authorize-host`` revalidates its generation and roots. Discovery
+    origin, caller-provided descriptors, and package identity carry no authority.
     """
-    trusted = first_party.first_party_keys()
+    descriptor = None
+    if runtime_dir:
+        try:
+            descriptor = storage_service.kfx_registry("plan", {}, runtime_dir).get(
+                "hostContract"
+            )
+        except (OSError, RuntimeError, ValueError):
+            descriptor = None
     entries: list[str] = []
     dirs: list[str] = []
     refused: list[dict[str, str | None]] = []
@@ -78,8 +88,7 @@ def discover_adapters(
     for root in _extension_roots(runtime_dir):
         for pkg in _scan_packages(root):
             try:
-                with open(os.path.join(pkg, "package.json")) as f:
-                    manifest = json.load(f)
+                manifest = kfx_contract.read_manifest_from_dir(pkg)
             except (OSError, ValueError):
                 continue
             kfx = manifest.get("kungfuConfig") or {}
@@ -93,7 +102,66 @@ def discover_adapters(
             if path in seen or not os.path.exists(path):
                 continue
             seen.add(path)
-            if kfx.get("key") not in trusted:
+            key = kfx.get("key")
+            authorization = None
+            if descriptor is not None and key:
+                observed = None
+                try:
+                    observed = storage_service.kfx_registry(
+                        "inspect",
+                        {
+                            "roots": [{"kind": "workspace", "path": pkg}],
+                            "packageKey": key,
+                        },
+                        "",
+                    ).get("package")
+                except (OSError, RuntimeError, ValueError):
+                    observed = None
+                for candidate in descriptor.get("runtimeAuthorizations", []):
+                    if (
+                        candidate.get("packageKey") == key
+                        and candidate.get("host") == f"adapter-{runtime}"
+                        and isinstance(observed, dict)
+                        and observed.get("packageRoot") == candidate.get("packageRoot")
+                        and observed.get("manifestRoot")
+                        == candidate.get("manifestRoot")
+                    ):
+                        try:
+                            launch = storage_service.kfx_registry(
+                                "authorize-host",
+                                {
+                                    "packageKey": key,
+                                    "host": f"adapter-{runtime}",
+                                    "expectedCutRoot": descriptor.get("cutRoot"),
+                                    "expectedRevision": descriptor.get("revision"),
+                                    "expectedGenerationRoot": descriptor.get(
+                                        "generationRoot"
+                                    ),
+                                    "expectedPackageRoot": candidate.get("packageRoot"),
+                                    "expectedCapabilityGrantRoot": candidate.get(
+                                        "capabilityGrantRoot"
+                                    ),
+                                    "expectedAuthorizationRoot": candidate.get(
+                                        "authorizationRoot"
+                                    ),
+                                    "expectedGrantedCapabilities": candidate.get(
+                                        "grantedCapabilities", []
+                                    ),
+                                },
+                                runtime_dir or "",
+                            )
+                            authorization = launch.get("authorization")
+                            if (
+                                launch.get("executionAllowed") is not True
+                                or not isinstance(authorization, dict)
+                                or authorization.get("authorizationRoot")
+                                != candidate.get("authorizationRoot")
+                            ):
+                                authorization = None
+                        except (OSError, RuntimeError, ValueError):
+                            authorization = None
+                        break
+            if authorization is None:
                 refused.append({"key": kfx.get("key"), "package": os.path.abspath(pkg)})
                 continue
             entries.append(path)

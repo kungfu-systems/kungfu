@@ -1,0 +1,59 @@
+{
+  "schema": "kungfu.action-primitive-cli/v1",
+  "version": "0.1.0",
+  "publicEntrypoint": {
+    "executable": "kungfu",
+    "secondExecutable": false
+  },
+  "onboarding": {
+    "command": "kungfu agent brief",
+    "singleRead": true,
+    "runtimeMutation": false
+  },
+  "groups": {
+    "xinfa": {
+      "command": "kungfu xinfa",
+      "role": "workspace-to-Atlas compiler",
+      "primaryOperation": "compile",
+      "engineAuthority": "xinfa",
+      "publicExecutable": false
+    },
+    "atlas": {
+      "command": "kungfu atlas",
+      "role": "perspective and Fact Cut",
+      "operations": ["capabilities", "inspect", "action"]
+    },
+    "pursuit": {
+      "command": "kungfu pursuit",
+      "role": "intent continuity",
+      "operations": ["capabilities", "inspect", "action"]
+    },
+    "warrant": {
+      "command": "kungfu warrant",
+      "role": "bounded authority",
+      "operations": ["capabilities", "inspect", "action"]
+    },
+    "episode": {
+      "command": "kungfu episode",
+      "role": "causal experience",
+      "operations": ["capabilities", "inspect", "action"]
+    }
+  },
+  "authority": {
+    "xinfa": ["schema", "state", "version", "engine", "Atlas compilation"],
+    "actionMjs": ["pure validation", "plans", "projections"],
+    "core": ["identity", "journal", "CAS", "Fact Cut", "receipts", "mutations"]
+  },
+  "qualification": {
+    "sourceEngine": "./shifu xinfa",
+    "installedCompiler": "kungfu xinfa",
+    "standaloneEngine": "clean extraction physical binary",
+    "standaloneIsPublicEntrypoint": false,
+    "requiredParity": ["schema", "root", "diagnostics", "stdout", "stderr", "exit"]
+  },
+  "nonClaims": [
+    "ActionBinding is derived and is not a fifth primitive.",
+    "A role action receipt is not Pursuit completion proof.",
+    "The generic Warrant product boundary is not yet complete."
+  ]
+}

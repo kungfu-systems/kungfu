@@ -1,0 +1,1374 @@
+# SPDX-License-Identifier: Apache-2.0
+
+"""Cost/state profiles, assessments, reviews, and continuation decisions."""
+
+import json
+import time
+from pathlib import Path
+from typing import Any
+
+from kungfu import profile_composition, profile_sdk
+from kungfu.rewind import ACTION_COST_SNAPSHOT
+from kungfu.rewind import replay as rewind_replay
+from kungfu.storage import service as storage_service
+
+from .compatibility import mission_control_v3
+from .work_control_runtime import (
+    AGENT_FACT_SOURCE_ID,
+    ATTRIBUTION_NAMES,
+    COMPLETION_CLAIM,
+    COMPLETION_PURPOSE,
+    CONTINUATION_ACTIONS,
+    CONTINUATION_DECISION,
+    COST_STATE_PROOF_PROFILE_ID,
+    COST_STATE_PROOF_PROFILE_VERSION,
+    INDEPENDENT_REVIEW,
+    PROGRESS_CLAIM,
+    PROGRESS_POLICY,
+    PROGRESS_PURPOSE,
+    REVIEW_SURFACE_ID,
+    REVIEW_VERDICTS,
+    WORK_CONTROL_PROFILE_ID,
+    WORK_CONTROL_PROFILE_VERSION,
+    WORK_CONTROL_QUESTIONS,
+    WORK_CONTROL_REDUCER,
+    _profile_context,
+    _sha256_root,
+)
+from .work_control_runtime import (
+    _ensure_native_write_allowed,
+    _native_source,
+    _put_native_fact,
+    _root_id,
+    _runtime_query_definition,
+    _stable_id,
+    query_state,
+)
+from .work_control_runtime import (
+    _tracked_completion_evidence,
+    _verified_episode,
+    create_assignment,
+)
+
+
+def _assessment_evidence(state: dict[str, Any]) -> dict[str, int]:
+    lineage = state["lineage"]
+    counts = {
+        "admitted": 0,
+        "unregistered-surface": 0,
+        "incompatible-schema": 0,
+        "ambiguous-authority": 0,
+        "unverifiable": 0,
+    }
+    for row in lineage.get("admission_outcomes", []):
+        outcome = str(row.get("outcome") or "unverifiable")
+        if outcome in counts:
+            counts[outcome] += int(row.get("record_count") or 0)
+    return {
+        "canonical_fact_count": len(state["rows"]),
+        "conflict_count": len(lineage.get("conflicts", [])),
+        "admitted_count": counts["admitted"],
+        "unregistered_surface_count": counts["unregistered-surface"],
+        "incompatible_schema_count": counts["incompatible-schema"],
+        "ambiguous_authority_count": counts["ambiguous-authority"],
+        "unverifiable_count": counts["unverifiable"]
+        + len(lineage.get("unverifiable_inputs", [])),
+    }
+
+
+def _responsibility_state(state: dict[str, Any]) -> dict[str, Any]:
+    source_statuses = [
+        str(row.get("payload", {}).get("record", {}).get("status") or "unknown")
+        for row in state.get("goals", [])
+    ]
+    normalized = []
+    for status in source_statuses:
+        if status in {"blocked", "paused"}:
+            normalized.append("blocked")
+        elif status in {"waiting", "waiting-for-decision"}:
+            normalized.append("waiting-for-decision")
+        elif status in {"claimed-complete", "completed", "merged", "closed"}:
+            normalized.append("claimed-complete")
+        elif status in {"active", "reviewing", "stage-ready", "ready"}:
+            normalized.append("active")
+        else:
+            normalized.append("proposed")
+    has_completion_claim = any(
+        row.get("payload", {}).get("record", {}).get("claim_type") == COMPLETION_CLAIM
+        for row in state.get("claims", [])
+    )
+    if has_completion_claim:
+        normalized.append("claimed-complete")
+    selected = "proposed"
+    for candidate in (
+        "blocked",
+        "waiting-for-decision",
+        "claimed-complete",
+        "active",
+    ):
+        if candidate in normalized:
+            selected = candidate
+            break
+    return {
+        "value": selected,
+        "source_statuses": source_statuses,
+        "mapping_policy": "kungfu.profile.responsibility-state/v1",
+        "go_subjects": [
+            str(row.get("subject_key") or "") for row in state.get("goals", [])
+        ],
+        "completion_claim_count": len(state.get("claims", [])),
+    }
+
+
+def _cost_profile(runtime_dir: str, state: dict[str, Any]) -> dict[str, Any]:
+    work_ids = {str(row.get("subject_key") or "") for row in state.get("goals", [])}
+    work_ids.update(
+        str(row.get("payload", {}).get("record", {}).get("goal_id") or "")
+        for row in state.get("goals", [])
+    )
+    work_ids.discard("")
+    declared_cut = state.get("cut", {}).get("declared", {})
+    cost_cut = (
+        int(declared_cut.get("system_time") or 0)
+        if declared_cut.get("kind") == "system_time"
+        else 0
+    )
+    # Open the Episode fold before Rewind readers. Both are journal-backed, and
+    # this pins one visibility frontier for the profile instead of letting a
+    # later reader construction observe a different filesystem snapshot.
+    first_episode_rows = storage_service.episode_list(runtime_dir).get("episodes", [])
+    refreshed_episode_rows = storage_service.episode_list(runtime_dir).get(
+        "episodes", []
+    )
+    episode_rows = list(
+        {
+            str(row.get("episode_id") or ""): row
+            for row in [*first_episode_rows, *refreshed_episode_rows]
+        }.values()
+    )
+    rewind_root = Path(runtime_dir) / "rewind"
+    observations: list[dict[str, Any]] = []
+    unreadable_runs = []
+    episode_id_by_run = {}
+    episode_by_run = {}
+    for episode in episode_rows:
+        source = str(episode.get("open", {}).get("source") or "")
+        if source.startswith("rewind:"):
+            episode_by_run[source.removeprefix("rewind:")] = episode
+    run_ids = set(episode_by_run)
+    if rewind_root.is_dir():
+        run_ids.update(path.name for path in rewind_root.iterdir() if path.is_dir())
+    for run_id in sorted(run_ids):
+        run_dir = rewind_root / run_id
+        if run_dir.is_dir():
+            manifest_path = run_dir / "bundle" / "manifest.json"
+            if manifest_path.is_file():
+                try:
+                    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+                    episode_id = manifest.get("fact_bridge", {}).get("episode_id") or ""
+                    if str(episode_id).isdigit():
+                        episode_id_by_run[run_id] = str(episode_id)
+                except (OSError, ValueError, TypeError):
+                    pass
+        try:
+            frames = rewind_replay.read_frames(runtime_dir, run_id)
+        except (FileNotFoundError, RuntimeError, ValueError) as error:
+            unreadable_runs.append({"run_id": run_id, "error": type(error).__name__})
+            continue
+        for action_type, header, payload in frames:
+            if action_type != ACTION_COST_SNAPSHOT:
+                continue
+            if cost_cut and int(header.gen_time) > cost_cut:
+                continue
+            fact = rewind_replay.decode_native(action_type, payload)
+            if str(fact.get("work_id") or "") not in work_ids:
+                continue
+            observations.append(
+                {
+                    "run_id": str(fact.get("run_id") or run_id),
+                    "work_id": str(fact.get("work_id") or ""),
+                    "system_time": str(header.gen_time),
+                    "provider": str(fact.get("provider") or ""),
+                    "surface": str(fact.get("surface") or ""),
+                    "model": str(fact.get("model") or ""),
+                    "source": str(fact.get("source") or ""),
+                    "attribution": ATTRIBUTION_NAMES.get(
+                        int(fact.get("attribution") or 0), "unknown"
+                    ),
+                    "attribution_rank": int(fact.get("attribution") or 0),
+                    "ambiguous": bool(fact.get("ambiguous_attribution")),
+                    "input_tokens": int(fact.get("input_tokens") or 0),
+                    "output_tokens": int(fact.get("output_tokens") or 0),
+                    "cached_input_tokens": int(fact.get("cached_input_tokens") or 0),
+                    "cache_creation_input_tokens": int(
+                        fact.get("cache_creation_input_tokens") or 0
+                    ),
+                    "reasoning_tokens": int(fact.get("reasoning_tokens") or 0),
+                    "cost_usd": (
+                        float(fact.get("cost_usd") or 0.0)
+                        if fact.get("cost_usd_known")
+                        else None
+                    ),
+                }
+            )
+    proof_episodes = []
+    unsealed_runs = []
+    for run_id in sorted({row["run_id"] for row in observations}):
+        episode_id = episode_id_by_run.get(run_id)
+        episode = episode_by_run.get(run_id)
+        if episode_id is None and episode is not None:
+            episode_id = str(episode["episode_id"])
+        if episode_id is None:
+            unsealed_runs.append(run_id)
+            continue
+        try:
+            verified = _verified_episode(runtime_dir, int(episode_id))
+        except ValueError:
+            unsealed_runs.append(run_id)
+            continue
+        proof_episodes.append(
+            {
+                "run_id": run_id,
+                "episode_id": episode_id,
+                "episode_root": verified["episode_root"],
+            }
+        )
+
+    tokens = {
+        name: sum(int(row[name]) for row in observations)
+        for name in (
+            "input_tokens",
+            "output_tokens",
+            "cached_input_tokens",
+            "cache_creation_input_tokens",
+            "reasoning_tokens",
+        )
+    }
+    known_costs = [
+        float(row["cost_usd"])
+        for row in observations
+        if row.get("cost_usd") is not None
+    ]
+    ambiguous = any(bool(row["ambiguous"]) for row in observations)
+    if not observations:
+        status = "missing"
+    elif ambiguous:
+        status = "ambiguous"
+    elif len(known_costs) != len(observations) or unsealed_runs:
+        status = "partial"
+    else:
+        status = "attributed"
+    ranks = [int(row["attribution_rank"]) for row in observations]
+    return {
+        "status": status,
+        "observation_count": len(observations),
+        "linked_run_count": len({row["run_id"] for row in observations}),
+        "tokens": tokens,
+        "cost_usd": round(sum(known_costs), 12) if known_costs else None,
+        "cost_usd_known": bool(observations) and len(known_costs) == len(observations),
+        "attribution": {
+            "best": ATTRIBUTION_NAMES.get(min(ranks), "unknown")
+            if ranks
+            else "missing",
+            "worst": ATTRIBUTION_NAMES.get(max(ranks), "unknown")
+            if ranks
+            else "missing",
+            "ambiguous": ambiguous,
+        },
+        "observations": observations,
+        "proof_episodes": proof_episodes,
+        "missing": {
+            "unsealed_runs": unsealed_runs,
+            "unreadable_runs": unreadable_runs,
+            "no_linked_cost_fact": not observations,
+        },
+    }
+
+
+def build_cost_state_proof_profile(
+    runtime_dir: str,
+    state: dict[str, Any],
+    *,
+    assessment_state: str,
+    report_hash: str | None,
+    go_subject: str | None = None,
+) -> dict[str, Any]:
+    """Compose the first commercial profile without creating new authorities."""
+
+    profile_state = state
+    if go_subject:
+        profile_state = {
+            **state,
+            "goals": [
+                row
+                for row in state.get("goals", [])
+                if row["subject_key"] == go_subject
+            ],
+            "claims": [
+                row
+                for row in state.get("claims", [])
+                if row.get("payload", {}).get("links", {}).get("go_id") == go_subject
+            ],
+        }
+    cost = _cost_profile(runtime_dir, profile_state)
+    proof = {
+        "canonical_state": bool(state.get("canonical_state")),
+        "query_definition_root": state["query_definition_root"],
+        "query_proof_root": state["query_proof_root"],
+        "query_result_hash": state["result_hash"],
+        "verified_fact_episode_roots": state["lineage"].get(
+            "episode_content_roots", []
+        ),
+        "cost_episode_roots": cost["proof_episodes"],
+        "assessment_state": assessment_state,
+        "assessment_report_hash": report_hash,
+        "conflicts": state["lineage"].get("conflicts", []),
+        "unverifiable_inputs": state["lineage"].get("unverifiable_inputs", []),
+    }
+    profile = {
+        "schema": "kungfu.profile.delegated-work-cost-state-proof/v1",
+        "profile": {
+            "id": COST_STATE_PROOF_PROFILE_ID,
+            "version": COST_STATE_PROOF_PROFILE_VERSION,
+        },
+        "mission_subject": state["mission_subject"],
+        "go_subject": go_subject,
+        "cost": cost,
+        "state": _responsibility_state(profile_state),
+        "proof": proof,
+    }
+    profile["profile_hash"] = _sha256_root(profile)
+    return profile
+
+
+def _mission_control_answers(
+    state: dict[str, Any],
+    *,
+    fitness: str,
+    assessment_state: str,
+    findings: list[str],
+    known_limits: list[str],
+) -> list[dict[str, Any]]:
+    mission = (state.get("mission") or {}).get("payload", {}).get("record", {})
+    goals = [row.get("payload", {}).get("record", {}) for row in state.get("goals", [])]
+    statuses: dict[str, int] = {}
+    for goal in goals:
+        status = str(goal.get("status") or "unknown")
+        statuses[status] = statuses.get(status, 0) + 1
+    status_summary = " · ".join(
+        f"{status}={statuses[status]}" for status in sorted(statuses)
+    )
+
+    intent = "Not yet declared. Create or import a Mission."
+    if mission:
+        identity = str(mission.get("title") or mission.get("mission_id") or "Mission")
+        intent = f"{identity} — {mission.get('intent') or 'intent not declared'}"
+        if mission.get("stage_name"):
+            intent += f" · stage {mission['stage_name']}"
+
+    actual = "No admitted Go activity is visible at this cut."
+    if goals:
+        actual = f"{len(goals)} Go(s) at this cut"
+        if status_summary:
+            actual += f" · {status_summary}"
+
+    declared_actions = []
+    for goal in goals:
+        if str(goal.get("next_action") or "").strip():
+            declared_actions.append(
+                {
+                    "actor": str(goal.get("owner_agent") or goal.get("actor") or ""),
+                    "subject": str(goal.get("goal_id") or ""),
+                    "action": str(goal["next_action"]),
+                    "source": "go.next_action",
+                }
+            )
+    if str(mission.get("next_action") or "").strip():
+        declared_actions.append(
+            {
+                "actor": str(mission.get("owner") or ""),
+                "subject": str(mission.get("mission_id") or ""),
+                "action": str(mission["next_action"]),
+                "source": "mission.next_action",
+            }
+        )
+    if declared_actions:
+        next_summary = " · ".join(
+            f"{item['actor'] or item['subject'] or 'declared actor'}: {item['action']}"
+            for item in declared_actions
+        )
+        responsibility_state = "declared"
+    elif fitness == "fit":
+        next_summary = "No next action or responsible actor is declared at this cut."
+        responsibility_state = "undeclared"
+    else:
+        next_summary = (
+            "A decision or additional evidence is required, but no responsible "
+            "actor is declared at this cut."
+        )
+        responsibility_state = "needs-decision"
+
+    proof_suffix = str(state.get("query_proof_root") or "")[-12:]
+    answers_by_id: dict[str, dict[str, Any]] = {
+        "initiative-intent": {
+            "status": "declared" if mission else "missing",
+            "summary": intent,
+            "data": {"mission": mission},
+        },
+        "observed-progress": {
+            "status": "observed" if goals else "missing",
+            "summary": actual,
+            "data": {"goal_count": len(goals), "status_counts": statuses},
+        },
+        "evidence-at-cut": {
+            "status": "established" if state.get("canonical_state") else "degraded",
+            "summary": (
+                f"{'canonical' if state.get('canonical_state') else 'degraded'} cut"
+                f" · {len(findings)} finding(s) · proof {proof_suffix or '-'}"
+            ),
+            "data": {
+                "canonical_state": bool(state.get("canonical_state")),
+                "cut": state.get("cut", {}),
+                "findings": findings,
+                "query_definition_root": state.get("query_definition_root", ""),
+                "query_proof_root": state.get("query_proof_root", ""),
+            },
+        },
+        "fitness-for-purpose": {
+            "status": fitness,
+            "summary": (
+                f"{fitness} · assessment {assessment_state}"
+                f" · residual limits {len(known_limits)}"
+            ),
+            "data": {
+                "fitness": fitness,
+                "assessment_state": assessment_state,
+                "known_limits": known_limits,
+            },
+        },
+        "next-responsibility": {
+            "status": responsibility_state,
+            "summary": next_summary,
+            "data": {"declared_actions": declared_actions},
+        },
+    }
+    return [
+        {"question_id": question_id, "question": question, **answers_by_id[question_id]}
+        for question_id, question in WORK_CONTROL_QUESTIONS
+    ]
+
+
+def build_mission_control_query_profile(
+    runtime_dir: str,
+    state: dict[str, Any],
+    *,
+    fitness: str,
+    assessment_state: str,
+    findings: list[str],
+    known_limits: list[str],
+) -> dict[str, Any]:
+    """Reduce one public Profile query receipt into the five Mission questions."""
+
+    definition = _runtime_query_definition(state["definition"])
+    if definition.get("schema") != "kungfu.query.definition/v1":
+        raise RuntimeError("Work Control profile requires one portable QueryDefinition")
+    context = _profile_context(runtime_dir)
+    catalog = context["catalog"]
+    views = [
+        {
+            "view_id": row["id"],
+            "title": row["title"],
+            "fact_surfaces": row["factSurfaces"],
+            "query_family": row.get("queryFamily"),
+            "view": row["view"],
+        }
+        for row in catalog["views"]
+    ]
+    profile = {
+        "schema": "kungfu.work-control.query-profile/v1",
+        "profile": {
+            "id": WORK_CONTROL_PROFILE_ID,
+            "version": WORK_CONTROL_PROFILE_VERSION,
+            "reducer": WORK_CONTROL_REDUCER,
+            "profile_suite_root": catalog["profileSuiteRoot"],
+            "catalog_root": catalog["catalogRoot"],
+            "member_roots": catalog["memberRoots"],
+        },
+        "mission_subject": state["mission_subject"],
+        "query_definition_root": state["query_definition_root"],
+        "query_proof_root": state["query_proof_root"],
+        "result_hash": state["result_hash"],
+        "query_receipt": state["profile_query_receipt"],
+        "views": views,
+        "answers": _mission_control_answers(
+            state,
+            fitness=fitness,
+            assessment_state=assessment_state,
+            findings=findings,
+            known_limits=known_limits,
+        ),
+    }
+    profile["profile_hash"] = _sha256_root(profile)
+    return profile
+
+
+def query_mission_home(
+    runtime_dir: str,
+    *,
+    mission_id: str,
+    storage_source_id: str = "atlas",
+    cut_system_time: int = 0,
+) -> dict[str, Any]:
+    """Return the five-question Mission Home without persisting an assessment.
+
+    This is the read-only surface for presentation hosts.  It deliberately
+    reuses the exact public state query and Profile reducer used by
+    ``assess_progress`` while keeping assessment authorization and Episode
+    creation out of a refresh path.
+    """
+
+    state = query_state(
+        runtime_dir,
+        mission_id=mission_id,
+        storage_source_id=storage_source_id,
+        cut_system_time=cut_system_time,
+    )
+    if not state["rows"]:
+        raise ValueError("Mission Home requires admitted Mission or Go facts")
+    fitness, findings = _progress_fitness(state, "fresh")
+    known_limits = ["read-only snapshot; no purpose-bound assessment was executed"]
+    query_profile = build_mission_control_query_profile(
+        runtime_dir,
+        state,
+        fitness=fitness,
+        assessment_state="not-assessed",
+        findings=findings,
+        known_limits=known_limits,
+    )
+    return {
+        "schema": mission_control_v3.MISSION_HOME_SCHEMA,
+        "mode": "read-only",
+        "fitness": fitness,
+        "findings": findings,
+        "known_limits": known_limits,
+        "state": state,
+        "query_definition_root": state["query_definition_root"],
+        "query_proof_root": state["query_proof_root"],
+        "query_profile": query_profile,
+    }
+
+
+def _progress_fitness(
+    state: dict[str, Any], assessment_state: str
+) -> tuple[str, list[str]]:
+    if assessment_state != "fresh":
+        mapped = {
+            "insufficient-evidence": "insufficient",
+            "conflicted": "conflicted",
+            "stale": "stale",
+            "unverifiable": "unverifiable",
+        }
+        return mapped.get(assessment_state, "warning"), [
+            f"assessment state is {assessment_state}"
+        ]
+    if not state.get("canonical_state"):
+        return "unverifiable", ["query lineage is not canonical"]
+    if state.get("mission") is None:
+        return "insufficient", ["Mission fact is missing"]
+    goals = state.get("goals", [])
+    if not goals:
+        return "insufficient", ["no linked Go facts are admitted"]
+    statuses = [
+        str(row.get("payload", {}).get("record", {}).get("status") or "unknown")
+        for row in goals
+    ]
+    warning_statuses = set(PROGRESS_POLICY["rules"]["warning_statuses"])
+    progress_statuses = set(PROGRESS_POLICY["rules"]["progress_statuses"])
+    findings = [f"linked Go statuses: {', '.join(statuses)}"]
+    if any(status in warning_statuses for status in statuses):
+        return "warning", findings
+    if any(status in progress_statuses for status in statuses):
+        return "fit", findings
+    return "warning", findings + ["no Go carries a recognized progress state"]
+
+
+def _execute_profile_assessment(
+    runtime_dir: str,
+    *,
+    source: str,
+    query_receipt: dict[str, Any],
+    claim_type_id: str,
+    claim_instance_id: str,
+    policy_id: str,
+    purpose: str,
+    work_episode_id: int,
+    independent_observation: dict[str, Any],
+    executor_profile: str,
+    authorized_by: str,
+) -> tuple[dict[str, Any], dict[str, Any], dict[str, Any]]:
+    plan = profile_composition.assessment_plan(
+        source,
+        runtime_dir,
+        query_receipt,
+        claim_id=claim_type_id,
+        claim_instance_id=claim_instance_id,
+        policy_id=policy_id,
+        purpose=purpose,
+        work_episode_id=work_episode_id,
+        independent_observation=independent_observation,
+        executor_profile=executor_profile,
+    )
+    authorization = profile_sdk.answer_decision(
+        plan["decisionCard"], "approve", authorized_by
+    )
+    receipt = profile_composition.authorized_assessment_execute(
+        runtime_dir, plan, authorization
+    )
+    return plan, authorization, receipt
+
+
+def assess_progress(
+    runtime_dir: str,
+    *,
+    mission_id: str,
+    storage_source_id: str = "atlas",
+    purpose: str = PROGRESS_PURPOSE,
+    cut_system_time: int = 0,
+    executor_profile: str = "thread",
+    authorized_by: str = "kungfu-work-control",
+) -> dict[str, Any]:
+    """Persist and expose the first purpose-bound Mission progress report."""
+
+    state = query_state(
+        runtime_dir,
+        mission_id=mission_id,
+        storage_source_id=storage_source_id,
+        cut_system_time=cut_system_time,
+    )
+    if not state["rows"]:
+        raise ValueError("Mission progress assessment requires admitted facts")
+    context = _profile_context(runtime_dir)
+    work_row = max(state["rows"], key=lambda row: int(row["system_time"]))
+    work_episode_id = str(work_row["episode_id"])
+    root_rows = {
+        str(row.get("episode_id")): str(row.get("computed") or "")
+        for row in state["lineage"].get("episode_content_roots", [])
+    }
+    work_episode_root = root_rows.get(work_episode_id, "")
+    if not work_episode_root:
+        raise RuntimeError("selected Mission/Go fact Episode has no verified root")
+    claim_basis = {
+        "claim_type": PROGRESS_CLAIM,
+        "mission_subject": state["mission_subject"],
+        "purpose": purpose,
+        "query_result_hash": state["result_hash"],
+    }
+    claim_instance_id = f"mission-progress-{_sha256_root(claim_basis)[7:31]}"
+    plan, authorization, receipt = _execute_profile_assessment(
+        runtime_dir,
+        source=context["source"],
+        query_receipt=state["profile_query_receipt"],
+        claim_type_id=PROGRESS_CLAIM,
+        claim_instance_id=claim_instance_id,
+        policy_id="initiative-progress-policy",
+        purpose=purpose,
+        work_episode_id=int(work_episode_id),
+        independent_observation={
+            "episodeRoot": work_episode_root,
+            "authority": "admitted-source",
+            "relation": "admitted-source",
+        },
+        executor_profile=executor_profile,
+        authorized_by=authorized_by,
+    )
+    assessed = receipt["assessment"]
+    request = plan["request"]
+    fitness, findings = _progress_fitness(state, assessed["state"])
+    report_hash = assessed.get("report", {}).get("report_hash")
+    query_profile = build_mission_control_query_profile(
+        runtime_dir,
+        state,
+        fitness=fitness,
+        assessment_state=assessed["state"],
+        findings=findings,
+        known_limits=request["residual_risks"],
+    )
+    return {
+        "schema": "kungfu.work-control.trust-report/v1",
+        "claim": {
+            "id": claim_instance_id,
+            "type": PROGRESS_CLAIM,
+            "purpose": purpose,
+        },
+        "fitness": fitness,
+        "findings": findings,
+        "known_limits": request["residual_risks"],
+        "state": state,
+        "assessment": assessed,
+        "assessment_plan": plan,
+        "assessment_authorization": authorization,
+        "assessment_receipt": receipt,
+        "assessment_key": assessed["assessment_key"],
+        "report_hash": report_hash,
+        "query_definition_root": state["query_definition_root"],
+        "query_proof_root": state["query_proof_root"],
+        "query_profile": query_profile,
+        "profile": build_cost_state_proof_profile(
+            runtime_dir,
+            state,
+            assessment_state=assessed["state"],
+            report_hash=report_hash,
+        ),
+    }
+
+
+def assess_completion(
+    runtime_dir: str,
+    *,
+    mission_id: str,
+    goal_id: str,
+    storage_source_id: str = "atlas",
+    purpose: str = COMPLETION_PURPOSE,
+    cut_system_time: int = 0,
+    executor_profile: str = "thread",
+    authorized_by: str = "kungfu-work-control",
+) -> dict[str, Any]:
+    """Assess one explicit completion claim against independent Episode proof."""
+
+    state = query_state(
+        runtime_dir,
+        mission_id=mission_id,
+        storage_source_id=storage_source_id,
+        cut_system_time=cut_system_time,
+    )
+    goal_id = _stable_id(goal_id, "goal_id")
+    goals = [
+        row
+        for row in state["goals"]
+        if row.get("subject_key") == goal_id
+        or row.get("subject_key") == f"kungfu:{goal_id}"
+        or row.get("payload", {}).get("record", {}).get("goal_id") == goal_id
+    ]
+    if len(goals) != 1:
+        raise ValueError(f"Go is missing or ambiguous under Mission: {goal_id}")
+    goal_subject = str(goals[0]["subject_key"])
+    claims = [
+        row
+        for row in state["claims"]
+        if row.get("payload", {}).get("record", {}).get("claim_type")
+        == COMPLETION_CLAIM
+        and row.get("payload", {}).get("links", {}).get("go_id") == goal_subject
+    ]
+    if not claims:
+        raise ValueError(f"completion claim not found for Go: {goal_id}")
+    context = _profile_context(runtime_dir)
+    claim = max(claims, key=lambda row: int(row["system_time"]))
+    claim_record = claim["payload"]["record"]
+    verified_evidence = []
+    invalid_evidence = []
+    for reference in claim_record.get("evidence_episodes", []):
+        episode_id = int(reference["episode_id"])
+        try:
+            current = _verified_episode(runtime_dir, episode_id)
+        except ValueError as error:
+            invalid_evidence.append(
+                {"episode_id": str(episode_id), "reason": str(error)}
+            )
+            continue
+        if current["episode_root"] != reference.get("episode_root"):
+            invalid_evidence.append(
+                {
+                    "episode_id": str(episode_id),
+                    "reason": "content root changed since the claim",
+                }
+            )
+            continue
+        verified_evidence.append(current)
+
+    root_rows = {
+        str(row.get("episode_id")): str(row.get("computed") or "")
+        for row in state["lineage"].get("episode_content_roots", [])
+    }
+    claim_episode_id = str(claim["episode_id"])
+    claim_episode_root = root_rows.get(claim_episode_id, "")
+    if verified_evidence:
+        work_episode_id = verified_evidence[0]["episode_id"]
+        work_episode_root = verified_evidence[0]["episode_root"]
+    else:
+        work_episode_id = claim_episode_id
+        work_episode_root = claim_episode_root
+    if not work_episode_root:
+        raise RuntimeError("completion claim has no verified work or claim Episode")
+
+    evidence = _assessment_evidence(state)
+    if not verified_evidence:
+        evidence["unverifiable_count"] += 1
+    evidence["unverifiable_count"] += len(invalid_evidence)
+    composite_proof = {
+        "state_query_proof_root": state["query_proof_root"],
+        "completion_claim_observation_id": claim["observation_id"],
+        "verified_evidence": verified_evidence,
+        "invalid_evidence": invalid_evidence,
+    }
+    assessment_plan = None
+    assessment_authorization = None
+    assessment_receipt = None
+    if verified_evidence:
+        assessment_plan, assessment_authorization, assessment_receipt = (
+            _execute_profile_assessment(
+                runtime_dir,
+                source=context["source"],
+                query_receipt=state["profile_query_receipt"],
+                claim_type_id=COMPLETION_CLAIM,
+                claim_instance_id=claim_record["claim_id"],
+                policy_id="task-completion-policy",
+                purpose=purpose,
+                work_episode_id=int(work_episode_id),
+                independent_observation={
+                    "episodeRoot": work_episode_root,
+                    "authority": "sealed-work-episode",
+                    "relation": "observed-work",
+                },
+                executor_profile=executor_profile,
+                authorized_by=authorized_by,
+            )
+        )
+        assessed = assessment_receipt["assessment"]
+        request = assessment_plan["request"]
+    else:
+        # Compatibility projection for an explicitly unproved completion claim.
+        # The public Profile plan correctly refuses to manufacture independent
+        # evidence; Core records the resulting insufficient state so existing
+        # Work Control cuts remain inspectable.
+        declared_claim = next(
+            row for row in context["catalog"]["claims"] if row["id"] == COMPLETION_CLAIM
+        )
+        declared_policy = next(
+            row
+            for row in context["catalog"]["policies"]
+            if row["id"] == "task-completion-policy"
+        )
+        request = {
+            "claim_id": claim_record["claim_id"],
+            "claim_type": declared_claim["type"],
+            "purpose": purpose,
+            "work_episode_id": work_episode_id,
+            "work_episode_root": work_episode_root,
+            "query_definition_root": state["query_definition_root"],
+            "query_proof_root": _sha256_root(composite_proof),
+            "contract_world": state["definition"]["basis"]["contract_world"],
+            "fact_surfaces": state["definition"]["basis"]["fact_surfaces"],
+            "policy": {
+                "id": declared_policy["id"],
+                "version": declared_policy["version"],
+                "root": _sha256_root(declared_policy),
+            },
+            "evidence": evidence,
+            "deadline": 0,
+            "responsibility": declared_policy["responsibility"],
+            "residual_risks": declared_policy["residualRisks"],
+        }
+        requested = storage_service.assessment_request(runtime_dir, request)
+        assessed = storage_service.assessment_execute(
+            runtime_dir,
+            requested["assessment_key"],
+            executor_profile=executor_profile,
+        )
+    if not verified_evidence:
+        fitness = "insufficient"
+    else:
+        fitness = (
+            "fit"
+            if assessed["state"] == "fresh"
+            else {
+                "insufficient-evidence": "insufficient",
+                "conflicted": "conflicted",
+                "stale": "stale",
+                "unverifiable": "unverifiable",
+            }.get(assessed["state"], "warning")
+        )
+    findings = [
+        f"verified completion evidence Episodes: {len(verified_evidence)}",
+        f"invalid completion evidence Episodes: {len(invalid_evidence)}",
+    ]
+    report_hash = assessed.get("report", {}).get("report_hash")
+    return {
+        "schema": "kungfu.work-control.trust-report/v1",
+        "claim": {
+            "id": claim_record["claim_id"],
+            "type": COMPLETION_CLAIM,
+            "purpose": purpose,
+            "go_subject": goal_subject,
+        },
+        "fitness": fitness,
+        "findings": findings,
+        "known_limits": request["residual_risks"],
+        "state": state,
+        "assessment": assessed,
+        "assessment_plan": assessment_plan,
+        "assessment_authorization": assessment_authorization,
+        "assessment_receipt": assessment_receipt,
+        "assessment_key": assessed["assessment_key"],
+        "report_hash": report_hash,
+        "query_definition_root": state["query_definition_root"],
+        "query_proof_root": request["query_proof_root"],
+        "composite_proof": composite_proof,
+        "profile": build_cost_state_proof_profile(
+            runtime_dir,
+            state,
+            assessment_state=assessed["state"],
+            report_hash=report_hash,
+            go_subject=goal_subject,
+        ),
+    }
+
+
+def _review_verdict(
+    report: dict[str, Any], claim_record: dict[str, Any]
+) -> tuple[str, list[str], list[dict[str, str]]]:
+    fitness = str(report.get("fitness") or "unverifiable")
+    verdict = {
+        "fit": "fit",
+        "insufficient": "insufficient",
+        "conflicted": "conflicted",
+        "stale": "stale",
+        "unverifiable": "unverifiable",
+    }.get(fitness, "unverifiable")
+    findings = list(report.get("findings") or [])
+    requests = []
+    for row in claim_record.get("evidence_availability", []):
+        state = str(row.get("state") or "")
+        if state == "available":
+            continue
+        request = {
+            "acceptance": str(row.get("acceptance") or ""),
+            "level": str(row.get("level") or ""),
+            "state": state,
+            "action": "request-evidence",
+        }
+        if request["level"] == "full":
+            request["command"] = (
+                "./shifu workspace request-full-evidence <checkout> --json"
+            )
+        requests.append(request)
+        findings.append(
+            f"{request['level']} evidence is {state} for {request['acceptance']}"
+        )
+        if request["level"] == "thin" or state == "missing":
+            verdict = "insufficient"
+        elif verdict == "fit":
+            verdict = "partial"
+    gaps = [str(row) for row in claim_record.get("known_gaps", []) if str(row)]
+    if gaps and verdict == "fit":
+        verdict = "partial"
+    findings.extend(f"known gap: {row}" for row in gaps)
+    if verdict not in REVIEW_VERDICTS:
+        verdict = "unverifiable"
+    return verdict, findings, requests
+
+
+def _continuation_actions(verdict: str) -> list[str]:
+    return {
+        "fit": ["approve", "close"],
+        "partial": ["adjust", "request-evidence", "create-follow-up"],
+        "insufficient": ["request-evidence", "reopen", "create-follow-up"],
+        "conflicted": ["request-evidence", "reopen"],
+        "stale": ["request-evidence", "reopen"],
+        "unverifiable": ["request-evidence", "reopen", "create-follow-up"],
+    }[verdict]
+
+
+def _bounded_followups(rows: list[dict[str, Any]] | None) -> list[dict[str, Any]]:
+    if len(rows or []) > 6:
+        raise ValueError("continuation plans may contain at most six follow-up Go rows")
+    result: list[dict[str, Any]] = []
+    for row in rows or []:
+        if not isinstance(row, dict):
+            raise ValueError(  # noqa: TRY004 - stable public validation surface
+                "follow-up Go rows must be objects"
+            )
+        goal_id = _stable_id(str(row.get("goal_id") or ""), "followup.goal_id")
+        title = str(row.get("title") or "").strip()
+        objective = str(row.get("objective") or "").strip()
+        why_created = str(row.get("why_created") or "").strip()
+        if not title or not objective or not why_created:
+            raise ValueError(
+                "follow-up Go title, objective, and why_created are required"
+            )
+        result.append(
+            {
+                "goal_id": goal_id,
+                "title": title,
+                "objective": objective,
+                "why_created": why_created,
+                "depends_on": sorted(
+                    {
+                        _stable_id(str(value), "followup.depends_on")
+                        for value in row.get("depends_on", [])
+                    }
+                ),
+                "acceptance_root": _root_id(
+                    str(row.get("acceptance_root") or ""),
+                    "followup.acceptance_root",
+                ),
+            }
+        )
+    if len({row["goal_id"] for row in result}) != len(result):
+        raise ValueError("continuation plan follow-up goal ids must be unique")
+    result.sort(key=lambda row: row["goal_id"])
+    return result
+
+
+def _tracked_empty_delta_closes_episode_gap(
+    report: dict[str, Any],
+    claim_record: dict[str, Any],
+    tracked_evidence: dict[str, Any],
+) -> bool:
+    """Admit exact empty-delta proof only when Episode absence is the sole gap."""
+
+    composite = report.get("composite_proof") or {}
+    assessment = report.get("assessment") or {}
+    assessment_report = assessment.get("report") or {}
+    assessment_evidence = assessment_report.get("evidence") or {}
+    return (
+        report.get("fitness") == "insufficient"
+        and assessment.get("state") == "unverifiable"
+        and assessment_report.get("state") == "unverifiable"
+        and assessment_evidence.get("conflict_count") == 0
+        and assessment_evidence.get("unregistered_surface_count") == 0
+        and assessment_evidence.get("incompatible_schema_count") == 0
+        and assessment_evidence.get("ambiguous_authority_count") == 0
+        and assessment_evidence.get("unverifiable_count") == 1
+        and tracked_evidence.get("valid") is True
+        and (
+            (tracked_evidence.get("cut") or {}).get("episodes") == []
+            or (
+                tracked_evidence.get("authority") == "kungfu-assignment-request"
+                and tracked_evidence.get("cut") == {}
+            )
+        )
+        and claim_record.get("evidence_episodes", []) == []
+        and composite.get("verified_evidence", []) == []
+        and composite.get("invalid_evidence", []) == []
+        and not claim_record.get("known_gaps")
+        and all(
+            str(row.get("state") or "") == "available"
+            for row in claim_record.get("evidence_availability", [])
+        )
+    )
+
+
+def review_completion(
+    runtime_dir: str,
+    *,
+    mission_id: str,
+    goal_id: str,
+    reviewer: str,
+    reviewer_source: str,
+    storage_source_id: str = "atlas",
+    purpose: str = COMPLETION_PURPOSE,
+    cut_system_time: int = 0,
+    executor_profile: str = "thread",
+    proposed_followups: list[dict[str, Any]] | None = None,
+    checkout_path: str = "",
+    system_time: int = 0,
+) -> dict[str, Any]:
+    """Write an independent exact-cut review and deterministic continuation plan."""
+
+    _ensure_native_write_allowed(runtime_dir)
+    reviewer = reviewer.strip()
+    reviewer_source = reviewer_source.strip()
+    if not reviewer or not reviewer_source:
+        raise ValueError("reviewer and reviewer_source are required")
+    report = assess_completion(
+        runtime_dir,
+        mission_id=mission_id,
+        goal_id=goal_id,
+        storage_source_id=storage_source_id,
+        purpose=purpose,
+        cut_system_time=cut_system_time,
+        executor_profile=executor_profile,
+        authorized_by=reviewer,
+    )
+    claim_id = str(report["claim"]["id"])
+    claim_rows = [
+        row
+        for row in report["state"]["claims"]
+        if row.get("payload", {}).get("record", {}).get("claim_id") == claim_id
+    ]
+    if len(claim_rows) != 1:
+        raise ValueError("review requires one exact completion claim")
+    claim_row = claim_rows[0]
+    claim_record = dict(claim_row["payload"]["record"])
+    claimant = str(claim_record.get("asserted_by") or "")
+    if not claimant or claimant == reviewer:
+        raise ValueError("independent reviewer identity must differ from claimant")
+    claimant_source = str(
+        claim_row.get("payload", {}).get("source", {}).get("source_id") or ""
+    )
+    if reviewer_source in {claimant, claimant_source}:
+        raise ValueError("independent reviewer source must differ from claimant source")
+    verdict, findings, evidence_requests = _review_verdict(report, claim_record)
+    tracked_evidence = None
+    if checkout_path.strip():
+        tracked_evidence = _tracked_completion_evidence(
+            checkout_path, report["state"], goal_id, claim_record
+        )
+        findings.extend(
+            f"tracked checkout: {row['code']}: {row['detail']}"
+            for row in tracked_evidence["diagnostics"]
+        )
+        if not tracked_evidence["valid"]:
+            verdict = "unverifiable"
+        elif _tracked_empty_delta_closes_episode_gap(
+            report, claim_record, tracked_evidence
+        ):
+            verdict = "fit"
+            findings.append(
+                "tracked Project Cut proves an explicit empty Episode delta"
+            )
+    followups = _bounded_followups(proposed_followups)
+    trust_basis = {
+        "schema": "kungfu.work-control.review-trust-basis/v1",
+        "claim_id": claim_id,
+        "claim_payload_hash": claim_row["payload_hash"],
+        "assessment_key": report["assessment_key"],
+        "assessment_report_hash": report.get("report_hash") or "",
+        "query_definition_root": report["query_definition_root"],
+        "query_proof_root": report["query_proof_root"],
+        "reviewer": reviewer,
+        "reviewer_source": reviewer_source,
+        "verdict": verdict,
+        "findings": findings,
+        "evidence_requests": evidence_requests,
+        "tracked_evidence_root": (
+            tracked_evidence.get("evidence_root") if tracked_evidence else None
+        ),
+    }
+    trust_report_root = _sha256_root(trust_basis)
+    plan = {
+        "schema": "kungfu.work-control.continuation-plan/v1",
+        "claim_id": claim_id,
+        "verdict": verdict,
+        "allowed_actions": _continuation_actions(verdict),
+        "evidence_requests": evidence_requests,
+        "followups": followups,
+        "authority_gate": (
+            "mechanical-only; mission, authority, privacy, security, public-claim, "
+            "and irreversible changes require a human actor"
+        ),
+    }
+    plan_root = _sha256_root(plan)
+    review_basis = {
+        "schema": "kungfu.work-control.independent-review-basis/v1",
+        "mission_subject": report["state"]["mission_subject"],
+        "go_subject": report["claim"]["go_subject"],
+        "trust_report_root": trust_report_root,
+        "plan_root": plan_root,
+    }
+    review_id = f"review-{_sha256_root(review_basis)[7:31]}"
+    record = {
+        "review_id": review_id,
+        "review_type": INDEPENDENT_REVIEW,
+        "claim_id": claim_id,
+        "claimant": claimant,
+        "reviewer": reviewer,
+        "reviewer_source": reviewer_source,
+        "purpose": purpose,
+        "verdict": verdict,
+        "findings": findings,
+        "trust_report_root": trust_report_root,
+        "assessment_key": report["assessment_key"],
+        "assessment_report_hash": report.get("report_hash") or "",
+        "query_definition_root": report["query_definition_root"],
+        "query_proof_root": report["query_proof_root"],
+        "claim_payload_hash": claim_row["payload_hash"],
+        "tracked_evidence": tracked_evidence,
+        "continuation_plan": plan,
+        "continuation_plan_root": plan_root,
+    }
+    payload = {
+        "record": record,
+        "source": {
+            "authority_mode": "kungfu-native",
+            "source_id": AGENT_FACT_SOURCE_ID,
+            "source_time": "journal-system-time",
+            "payload_hash": _sha256_root(record),
+            "actor": reviewer,
+        },
+        "links": {
+            "initiative_id": report["state"]["mission_subject"],
+            "assignment_id": report["claim"]["go_subject"],
+        },
+    }
+    receipt = _put_native_fact(
+        runtime_dir,
+        kind="independent-review",
+        surface_id=REVIEW_SURFACE_ID,
+        subject_key=f"kungfu:review:{review_id}",
+        source_id=AGENT_FACT_SOURCE_ID,
+        payload=payload,
+        system_time=system_time or time.time_ns(),
+    )
+    return {
+        "schema": "kungfu.work-control.independent-review/v1",
+        "review": record,
+        "review_root": _sha256_root(record),
+        "continuation_plan_root": plan_root,
+        "trust_report": report,
+        "receipt": receipt,
+    }
+
+
+def decide_continuation(
+    runtime_dir: str,
+    *,
+    mission_id: str,
+    goal_id: str,
+    review_id: str,
+    expected_review_root: str,
+    expected_plan_root: str,
+    action: str,
+    actor: str,
+    actor_type: str = "agent",
+    change_class: str = "mechanical",
+    storage_source_id: str = "atlas",
+    reason: str = "",
+    system_time: int = 0,
+) -> dict[str, Any]:
+    """Append an exact-review continuation decision and materialize bounded follow-ups."""
+
+    _ensure_native_write_allowed(runtime_dir)
+    action = action.strip()
+    actor = actor.strip()
+    reason = reason.strip()
+    if action not in CONTINUATION_ACTIONS or not actor or not reason:
+        raise ValueError("valid action, actor, and reason are required")
+    if change_class != "mechanical" and actor_type != "user":
+        raise ValueError(f"human-decision-required for change class {change_class}")
+    if action == "stop" and actor_type != "user":
+        raise ValueError("stop requires a human actor")
+    state = query_state(
+        runtime_dir,
+        mission_id=mission_id,
+        storage_source_id=storage_source_id,
+    )
+    goal_id = _stable_id(goal_id, "goal_id")
+    review_id = _stable_id(review_id, "review_id")
+    rows = [
+        row
+        for row in state["reviews"]
+        if row.get("payload", {}).get("record", {}).get("review_id") == review_id
+        and row.get("payload", {}).get("record", {}).get("review_type")
+        == INDEPENDENT_REVIEW
+    ]
+    if len(rows) != 1:
+        raise ValueError("continuation decision requires one exact independent review")
+    review_row = rows[0]
+    review = dict(review_row["payload"]["record"])
+    review_root = _sha256_root(review)
+    if review_root != _root_id(
+        expected_review_root, "expected_review_root", required=True
+    ):
+        raise ValueError("independent review changed before continuation decision")
+    if review["continuation_plan_root"] != _root_id(
+        expected_plan_root, "expected_plan_root", required=True
+    ):
+        raise ValueError("continuation plan changed before decision")
+    if action not in review["continuation_plan"]["allowed_actions"]:
+        raise ValueError(
+            f"continuation action {action} is not allowed for verdict {review['verdict']}"
+        )
+    decision_basis = {
+        "schema": "kungfu.work-control.continuation-decision-basis/v1",
+        "review_id": review_id,
+        "review_root": review_root,
+        "plan_root": expected_plan_root,
+        "action": action,
+        "actor": actor,
+        "actor_type": actor_type,
+        "change_class": change_class,
+        "reason": reason,
+    }
+    decision_id = f"decision-{_sha256_root(decision_basis)[7:31]}"
+    record = {
+        "decision_id": decision_id,
+        "review_type": CONTINUATION_DECISION,
+        "review_id": review_id,
+        "review_root": review_root,
+        "continuation_plan_root": expected_plan_root,
+        "action": action,
+        "actor": actor,
+        "actor_type": actor_type,
+        "change_class": change_class,
+        "reason": reason,
+    }
+    goal_subject = next(
+        (
+            str(row["subject_key"])
+            for row in state["goals"]
+            if row.get("subject_key") in {goal_id, f"kungfu:{goal_id}"}
+            or row.get("payload", {}).get("record", {}).get("goal_id") == goal_id
+        ),
+        "",
+    )
+    if not goal_subject:
+        raise ValueError(f"Go not found under Mission: {goal_id}")
+    source_id = _native_source(actor_type)
+    payload = {
+        "record": record,
+        "source": {
+            "authority_mode": "kungfu-native",
+            "source_id": source_id,
+            "source_time": "journal-system-time",
+            "payload_hash": _sha256_root(record),
+            "actor": actor,
+        },
+        "links": {
+            "initiative_id": state["mission_subject"],
+            "assignment_id": goal_subject,
+        },
+    }
+    receipt = _put_native_fact(
+        runtime_dir,
+        kind="continuation-decision",
+        surface_id=REVIEW_SURFACE_ID,
+        subject_key=f"kungfu:decision:{decision_id}",
+        source_id=source_id,
+        payload=payload,
+        system_time=system_time or time.time_ns(),
+    )
+    created = []
+    if action == "create-follow-up":
+        parent_record = next(
+            row["payload"]["record"]
+            for row in state["goals"]
+            if row.get("subject_key") == goal_subject
+        )
+        owning_workspace_identity_root = str(
+            parent_record.get("owning_workspace_identity_root") or ""
+        )
+        for followup in review["continuation_plan"]["followups"]:
+            created.append(
+                create_assignment(
+                    runtime_dir,
+                    initiative_id=str(state["mission_subject"]).split(":", 1)[-1],
+                    assignment_id=followup["goal_id"],
+                    title=followup["title"],
+                    objective=followup["objective"],
+                    actor=actor,
+                    actor_type=actor_type,
+                    storage_source_id=storage_source_id,
+                    parent_assignment_id=goal_id,
+                    depends_on=followup["depends_on"],
+                    owning_workspace_identity_root=owning_workspace_identity_root,
+                    responsibility=followup["why_created"],
+                    acceptance_root=followup["acceptance_root"],
+                )
+            )
+    return {
+        "schema": "kungfu.work-control.continuation-decision/v1",
+        "decision": record,
+        "receipt": receipt,
+        "created_followups": created,
+    }

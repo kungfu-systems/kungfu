@@ -1,0 +1,36 @@
+{
+  "schema": "kungfu.generated-report-authority-qualification/v1",
+  "verdict": "pass",
+  "observedAt": "2026-08-03T14:40:00Z",
+  "repository": "kungfu-systems/kungfu",
+  "case": {
+    "pullRequest": 2337,
+    "candidateRevision": "c8cad62fe560d178cf085b13073d8880fdf58cda",
+    "protectedDevelopmentRevision": "90e7cd0c95fea96c3e50c9ef18f78903c137ce4d",
+    "mergeBase": "b8f1e9ff13793140d2cad379e434379a9fcde98c",
+    "observedConflictPaths": [
+      "framework/maintainability/abstraction-integrity-report.json"
+    ],
+    "candidateSharedReportPaths": [
+      "framework/maintainability/abstraction-integrity-report.json",
+      "framework/maintainability/semantic-amplification-report.json"
+    ],
+    "candidateNonReportPaths": 29
+  },
+  "replay": {
+    "method": "load protected-development tree into an isolated temporary index and apply the candidate diff while excluding both legacy shared report paths",
+    "sourceOnlyApplyCheck": "pass",
+    "nativeBuildRequired": false,
+    "heavyQualificationRerunRequired": false,
+    "projectionReplay": "generate a new exact-revision content-addressed bundle from the synthetic merge checkout"
+  },
+  "commands": [
+    "git merge-tree c8cad62fe560d178cf085b13073d8880fdf58cda 90e7cd0c95",
+    "GIT_INDEX_FILE=<temporary> git read-tree 90e7cd0c95",
+    "git diff b8f1e9ff13793140d2cad379e434379a9fcde98c c8cad62fe560d178cf085b13073d8880fdf58cda -- . <exclude legacy reports> | GIT_INDEX_FILE=<temporary> git apply --cached --check"
+  ],
+  "limits": [
+    "The closed PR is retained only as a historical reproducer; it is not reopened or mutated.",
+    "The source-only apply check proves conflict removal for this candidate topology, not semantic correctness of the candidate's unrelated source changes."
+  ]
+}

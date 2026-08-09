@@ -1,0 +1,209 @@
+{
+  "schema": "kungfu.continuity-evidence-fixtures/v1",
+  "cases": [
+    {
+      "id": "smoke-preparatory-only",
+      "ok": true,
+      "evidence": {
+        "schema": "kungfu.continuity-evidence/v1",
+        "profile": "one-minute-smoke",
+        "release": {
+          "sourceCommit": "1111111111111111111111111111111111111111",
+          "artifact": {
+            "coordinate": "local://kungfu-smoke-candidate",
+            "sha256": "sha256:1111111111111111111111111111111111111111111111111111111111111111"
+          }
+        },
+        "fixture": {
+          "path": "fixtures/continuity/small-repository-v1.json",
+          "sha256": "sha256:2222222222222222222222222222222222222222222222222222222222222222"
+        },
+        "runner": {
+          "provider": "declared-provider",
+          "agent": "declared-agent",
+          "version": "candidate-version",
+          "configRoot": "sha256:3333333333333333333333333333333333333333333333333333333333333333"
+        },
+        "contextReset": {
+          "method": "new context with no transcript injection",
+          "freshContext": true,
+          "freshProcess": false,
+          "transcriptShared": false
+        },
+        "oracle": {
+          "path": "fixtures/continuity/oracle-v1.json",
+          "sha256": "sha256:4444444444444444444444444444444444444444444444444444444444444444"
+        },
+        "rawReport": {
+          "path": "reports/continuity/smoke-v1.json",
+          "sha256": "sha256:5555555555555555555555555555555555555555555555555555555555555555"
+        },
+        "claim": {
+          "copy": "This preparatory smoke exercises the declared reset and oracle.",
+          "comparative": false
+        },
+        "limitations": [
+          "Does not pass FO10 or establish long-term superiority."
+        ],
+        "qualificationEffects": {
+          "fo10Pass": false,
+          "longTermSuperiority": false
+        }
+      }
+    },
+    {
+      "id": "comparison-exact-baseline",
+      "ok": true,
+      "evidence": {
+        "schema": "kungfu.continuity-evidence/v1",
+        "profile": "matched-long-task-comparison",
+        "release": {
+          "sourceCommit": "1111111111111111111111111111111111111111",
+          "artifact": {
+            "coordinate": "npm:@kungfu-tech/kungfu@4.0.0-rc.1",
+            "sha256": "sha256:1111111111111111111111111111111111111111111111111111111111111111"
+          }
+        },
+        "fixture": {
+          "path": "fixtures/continuity/long-task-v1.json",
+          "sha256": "sha256:2222222222222222222222222222222222222222222222222222222222222222"
+        },
+        "runner": {
+          "provider": "declared-provider",
+          "agent": "declared-agent",
+          "version": "candidate-version",
+          "configRoot": "sha256:3333333333333333333333333333333333333333333333333333333333333333"
+        },
+        "contextReset": {
+          "method": "fresh context and process with no transcript injection",
+          "freshContext": true,
+          "freshProcess": true,
+          "transcriptShared": false
+        },
+        "oracle": {
+          "path": "fixtures/continuity/long-task-oracle-v1.json",
+          "sha256": "sha256:4444444444444444444444444444444444444444444444444444444444444444"
+        },
+        "rawReport": {
+          "path": "reports/continuity/comparison-v1.json",
+          "sha256": "sha256:5555555555555555555555555555555555555555555555555555555555555555"
+        },
+        "claim": {
+          "copy": "The exact candidate reduced reconstruction on the retained matched task.",
+          "comparative": true
+        },
+        "limitations": [
+          "Result applies only to the declared provider, version, configuration, fixture, and oracle."
+        ],
+        "baseline": {
+          "provider": "declared-provider",
+          "agent": "declared-agent",
+          "version": "latest-native-version-at-run",
+          "configRoot": "sha256:6666666666666666666666666666666666666666666666666666666666666666",
+          "nativeCapabilities": [
+            "memory",
+            "resume",
+            "tasks",
+            "checkpoints"
+          ],
+          "selectedAt": "2026-07-21T00:00:00.000Z"
+        },
+        "entryConditions": {
+          "featureCompleteReleaseCandidate": true,
+          "latestNativeBaselineAtRun": true,
+          "sameTaskAndOracle": true,
+          "freshContextAndProcessBoundaries": true,
+          "independentReviewPlanned": true
+        },
+        "independentReview": {
+          "reviewer": "independent-reviewer",
+          "source": "independent-review-process",
+          "verdict": "admit",
+          "reportRoot": "sha256:7777777777777777777777777777777777777777777777777777777777777777"
+        }
+      }
+    },
+    {
+      "id": "animation-linked-to-report",
+      "ok": true,
+      "evidence": {
+        "schema": "kungfu.continuity-evidence/v1",
+        "profile": "public-animation",
+        "release": {
+          "sourceCommit": "1111111111111111111111111111111111111111",
+          "artifact": {
+            "coordinate": "npm:@kungfu-tech/kungfu@4.0.0-rc.1",
+            "sha256": "sha256:1111111111111111111111111111111111111111111111111111111111111111"
+          }
+        },
+        "fixture": {
+          "path": "fixtures/continuity/small-repository-v1.json",
+          "sha256": "sha256:2222222222222222222222222222222222222222222222222222222222222222"
+        },
+        "runner": {
+          "provider": "declared-provider",
+          "agent": "declared-agent",
+          "version": "candidate-version",
+          "configRoot": "sha256:3333333333333333333333333333333333333333333333333333333333333333"
+        },
+        "contextReset": {
+          "method": "new context with no transcript injection",
+          "freshContext": true,
+          "freshProcess": false,
+          "transcriptShared": false
+        },
+        "oracle": {
+          "path": "fixtures/continuity/oracle-v1.json",
+          "sha256": "sha256:4444444444444444444444444444444444444444444444444444444444444444"
+        },
+        "rawReport": {
+          "path": "reports/continuity/smoke-v1.json",
+          "sha256": "sha256:5555555555555555555555555555555555555555555555555555555555555555"
+        },
+        "claim": {
+          "copy": "A time-compressed projection of the retained smoke report.",
+          "comparative": false
+        },
+        "limitations": [
+          "Animation timing is illustrative and is not independent qualification evidence."
+        ],
+        "sourceReport": {
+          "path": "reports/continuity/smoke-v1.json",
+          "sha256": "sha256:5555555555555555555555555555555555555555555555555555555555555555"
+        },
+        "animation": {
+          "path": "public/continuity/smoke-v1.webm",
+          "sha256": "sha256:8888888888888888888888888888888888888888888888888888888888888888"
+        }
+      }
+    },
+    {
+      "id": "reject-smoke-as-fo10-proof",
+      "ok": false,
+      "copyFrom": "smoke-preparatory-only",
+      "patch": {
+        "qualificationEffects": {
+          "fo10Pass": true,
+          "longTermSuperiority": false
+        }
+      }
+    },
+    {
+      "id": "reject-comparison-without-baseline",
+      "ok": false,
+      "copyFrom": "comparison-exact-baseline",
+      "remove": [
+        "baseline"
+      ]
+    },
+    {
+      "id": "reject-animation-without-report",
+      "ok": false,
+      "copyFrom": "animation-linked-to-report",
+      "remove": [
+        "rawReport",
+        "sourceReport"
+      ]
+    }
+  ]
+}

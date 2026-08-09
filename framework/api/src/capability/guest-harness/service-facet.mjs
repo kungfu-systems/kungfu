@@ -1,4 +1,4 @@
-// A background-SERVICE facet (ADR-0017): unlike the view/adapter facets, this is
+// A background-SERVICE facet (KF-ADR-019f86da-4f90-7afa-a1e1-0510f00916be): unlike the view/adapter facets, this is
 // a kfx's own long-lived process that reaches OUT to the network and reaches the
 // host only over the capability relay. This one source runs unchanged whether the
 // OS sandbox allows the network or denies it — it never branches on the profile.

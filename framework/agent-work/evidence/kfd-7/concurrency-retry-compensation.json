@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "contract": "kungfu-buildchain-kfd-7-evidence-report",
+  "profileId": "kungfu-kfd-7-action-profile",
+  "profileVersion": "0.1.0",
+  "stateMachineVersion": "0.1.0",
+  "sourceSha": "ec3b0c843ad271a34450a69a2da2e538f404f3ce",
+  "category": "concurrency-retry-compensation",
+  "outcome": "pass",
+  "matchedExpectation": true,
+  "checks": [
+    { "id": "stale-ref-cas-denied-before-write", "status": "pass" },
+    { "id": "idempotent-retry-returns-original-receipt", "status": "pass" },
+    { "id": "mismatched-replay-denied", "status": "pass" },
+    { "id": "episode-compensation-preserves-original", "status": "pass" }
+  ],
+  "observations": {
+    "suites": [
+      "framework/core/tests/python/test_agent_work_state_contract.py",
+      "framework/core/tests/storage-node-binding.test.js"
+    ],
+    "authorityBoundary": "named-ref compare-and-swap plus immutable receipts",
+    "compensationModel": "append-only successor mapping"
+  }
+}

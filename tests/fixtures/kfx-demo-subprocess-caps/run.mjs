@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-// Gate: the subprocess capability transport (ADR-0013). A Node host serves mock
+// Gate: the subprocess capability transport (KF-ADR-019f86da-4f90-79f1-8716-aca36b142847). A Node host serves mock
 // capabilities to a sandboxed Python guest over the child's stdio; the guest
 // reaches only its declared capabilities, and a bridged subscription round-trips.
 // Headless — no Electron. Requires node >= 22 (native TS type-stripping) and a

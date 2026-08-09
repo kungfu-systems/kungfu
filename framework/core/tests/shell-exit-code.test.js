@@ -12,6 +12,7 @@
 //
 // Run: node --test tests/shell-exit-code.test.js  (node pinned via .node-version)
 
+// biome-ignore lint/suspicious/noRedundantUseStrict: this test executes as CommonJS
 'use strict';
 
 const test = require('node:test');
@@ -67,9 +68,7 @@ const runDriver = (opts) =>
     process.execPath,
     [
       '-e',
-      `const shell = require(${JSON.stringify(SHELL_PATH)});\n` +
-        `shell.run('kill -s KILL $$', [], true, ${JSON.stringify(opts)});\n` +
-        `process.exit(0);`,
+      `const shell = require(${JSON.stringify(SHELL_PATH)});\nshell.run('kill -s KILL $$', [], true, ${JSON.stringify(opts)});\nprocess.exit(0);`,
     ],
     { encoding: 'utf8' },
   );

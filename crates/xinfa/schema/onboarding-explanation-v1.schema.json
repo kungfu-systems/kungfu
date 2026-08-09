@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://xinfa.dev/schema/onboarding-explanation-v1.schema.json",
+  "title": "Xinfa repository onboarding explanation v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "candidateRoot", "authoritative", "selected", "whyNotSelected", "excluded", "conflicts", "requiredDecisions", "summary", "explanationRoot"],
+  "properties": {
+    "schema": { "const": "xinfa.repository-onboarding-explanation/v1" },
+    "candidateRoot": { "$ref": "#/$defs/root" },
+    "authoritative": { "const": false },
+    "selected": { "type": "array", "items": { "type": "object" } },
+    "whyNotSelected": { "type": "array", "items": { "type": "object" } },
+    "excluded": { "type": "array", "items": { "type": "object" } },
+    "conflicts": { "type": "array", "items": { "type": "object" } },
+    "requiredDecisions": { "type": "array", "items": { "type": "object" } },
+    "summary": { "type": "object" },
+    "explanationRoot": { "$ref": "#/$defs/root" }
+  },
+  "$defs": { "root": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" } }
+}

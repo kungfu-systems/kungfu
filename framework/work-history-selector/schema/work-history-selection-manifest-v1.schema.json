@@ -1,0 +1,189 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kungfu.link/schema/work-history-selection-manifest-v1.schema.json",
+  "title": "Advisory work-history selection manifest v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "advisory",
+    "query",
+    "xinfaRoot",
+    "asOf",
+    "indexSnapshot",
+    "policy",
+    "sourceReferences",
+    "included",
+    "excluded",
+    "coverage",
+    "status",
+    "selectionRoot"
+  ],
+  "properties": {
+    "schema": { "const": "kungfu.work-history.selection-manifest/v1" },
+    "advisory": {
+      "const": {
+        "readOnly": true,
+        "workAuthority": false,
+        "mayMutateAssignments": false
+      }
+    },
+    "query": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["objectiveRoot"],
+      "properties": {
+        "objectiveRoot": { "$ref": "#/$defs/root" }
+      }
+    },
+    "xinfaRoot": { "$ref": "#/$defs/root" },
+    "asOf": { "$ref": "#/$defs/timestamp" },
+    "indexSnapshot": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["root", "capturedAt", "sourceCutRoot"],
+      "properties": {
+        "root": { "$ref": "#/$defs/root" },
+        "capturedAt": { "$ref": "#/$defs/timestamp" },
+        "sourceCutRoot": { "$ref": "#/$defs/root" }
+      }
+    },
+    "policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "version", "root"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "version": { "type": "integer", "minimum": 1 },
+        "root": { "$ref": "#/$defs/root" }
+      }
+    },
+    "sourceReferences": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/sourceReference" }
+    },
+    "included": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/included" }
+    },
+    "excluded": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/excluded" }
+    },
+    "coverage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "candidateCount",
+        "includedCount",
+        "excludedCount",
+        "gaps",
+        "confidence"
+      ],
+      "properties": {
+        "candidateCount": { "type": "integer", "minimum": 0 },
+        "includedCount": { "type": "integer", "minimum": 0 },
+        "excludedCount": { "type": "integer", "minimum": 0 },
+        "gaps": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/id" }
+        },
+        "confidence": { "enum": ["high", "medium", "low", "unknown"] }
+      }
+    },
+    "status": { "enum": ["complete", "incomplete"] },
+    "selectionRoot": { "$ref": "#/$defs/root" }
+  },
+  "$defs": {
+    "root": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]*$"
+    },
+    "timestamp": {
+      "type": "string",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(?:\\.[0-9]{3})?Z$"
+    },
+    "sourceReference": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sourceId", "sourceRoot"],
+      "properties": {
+        "sourceId": { "$ref": "#/$defs/id" },
+        "sourceRoot": { "$ref": "#/$defs/root" }
+      }
+    },
+    "included": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "candidateRoot",
+        "classification",
+        "sourceReference",
+        "evidenceRoots",
+        "rank",
+        "reasons"
+      ],
+      "properties": {
+        "candidateRoot": { "$ref": "#/$defs/root" },
+        "classification": {
+          "enum": [
+            "current-authority",
+            "recent-comparable",
+            "historical-precedent"
+          ]
+        },
+        "sourceReference": { "$ref": "#/$defs/sourceReference" },
+        "evidenceRoots": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/root" }
+        },
+        "rank": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["classOrder", "score", "completedAt"],
+          "properties": {
+            "classOrder": { "type": "integer", "minimum": 0, "maximum": 2 },
+            "score": { "type": "integer", "minimum": 0 },
+            "completedAt": { "$ref": "#/$defs/timestamp" }
+          }
+        },
+        "reasons": { "const": [] }
+      }
+    },
+    "excluded": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "candidateRoot",
+        "classification",
+        "sourceReference",
+        "reasons"
+      ],
+      "properties": {
+        "candidateRoot": { "$ref": "#/$defs/root" },
+        "classification": {
+          "enum": [
+            "current-authority",
+            "recent-comparable",
+            "historical-precedent",
+            "superseded-or-invalidated",
+            "unknown-applicability"
+          ]
+        },
+        "sourceReference": { "$ref": "#/$defs/sourceReference" },
+        "reasons": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/id" }
+        }
+      }
+    }
+  }
+}

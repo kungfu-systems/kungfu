@@ -1,0 +1,10 @@
+{
+  "schema": "kungfu.profile-permissions/v1",
+  "capabilities": [
+    "course.inspect",
+    "course.plan",
+    "course.review",
+    "course.admit",
+    "course.settle"
+  ]
+}

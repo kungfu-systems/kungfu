@@ -1,0 +1,32 @@
+{
+  "schema": "kungfu.project-cut.settlement-contract/v1",
+  "version": 1,
+  "status": "pre-release",
+  "actions": ["abandon", "commit-observe", "inspect", "prepare", "reconcile", "verify"],
+  "defaultMode": "dry-run",
+  "mutationBoundary": {
+    "executeRequiredForWrites": true,
+    "stageRequiredForIndexMutation": true,
+    "commitOwnedByCaller": true,
+    "pushOwnedByCaller": true,
+    "hookOwnsAuthority": false
+  },
+  "states": ["abandoned", "prepared", "published", "reconciled", "sealed-unpublished", "verified"],
+  "schemaBundle": {
+    "files": [
+      "schema/settlement-action-receipt-v1.schema.json",
+      "schema/settlement-plan-v1.schema.json",
+      "schema/settlement-request-v1.schema.json",
+      "schema/settlement-state-v1.schema.json"
+    ],
+    "schemaRoot": "sha256:2f87355a9fb4ef44221f21806e87422ea914d6d3bcafa780627f63aaf3269041"
+  },
+  "recovery": {
+    "stageZero": ["git-index", "tracked-json", "headless-cli"],
+    "commitFailureState": "sealed-unpublished",
+    "sourceDrift": "fail-closed",
+    "hookSkipped": "observable-not-success",
+    "candidateReuse": "same-source-root-only"
+  },
+  "contractRoot": "sha256:5bfc42e0a4955d2f75b94278b2308f556baad4fe2c730168b39074f1ea880f57"
+}

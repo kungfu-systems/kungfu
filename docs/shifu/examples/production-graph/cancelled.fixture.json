@@ -1,0 +1,9 @@
+{
+  "schema": "shifu.production-graph-fixture/v0",
+  "fixtureId": "cancelled",
+  "graphFixture": "qualified",
+  "outcome": {
+    "status": "cancelled",
+    "terminalNodeId": "qualify-contract"
+  }
+}

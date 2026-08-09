@@ -1,0 +1,26 @@
+{
+  "schema": "project.source-projection-policy/v1",
+  "id": "kungfu.project-cut.default-source/v1",
+  "pathNormalization": "utf8-nfc-posix-relative/v1",
+  "entryOrder": "utf8-bytewise-path/v1",
+  "excludePrefixes": [
+    ".git",
+    ".kungfu/cache",
+    ".kungfu/locks",
+    ".kungfu/projections",
+    ".kungfu/runtime",
+    ".xinfa/baselines",
+    ".xinfa/cache",
+    ".xinfa/generated",
+    ".xinfa/index",
+    ".xinfa/store",
+    ".xinfa/tmp"
+  ],
+  "privacyDenyPrefixes": [
+    ".kungfu/private",
+    ".private",
+    ".xinfa/private"
+  ],
+  "protocolOutputPrefixes": [".kungfu/project-cuts"],
+  "policyRoot": "sha256:ff4318baf71b4ad79e609066626b0541e46af4faeeaa9f91260dd15322d7e2d8"
+}

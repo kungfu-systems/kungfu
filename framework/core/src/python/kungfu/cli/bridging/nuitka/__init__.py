@@ -32,6 +32,7 @@ def useEngagedCommands():
                     sys.executable,
                     "-m",
                     "kungfu",
+                    "dev",
                     "engage",
                     "nuitka-data-composer",
                     source_dir,
@@ -47,7 +48,7 @@ def useEngagedCommands():
             + os.pathsep
             + dirname(kungfu.__binding__.__file__)
         )
-        return [sys.executable, "-m", "kungfu", "engage", "scons"]
+        return [sys.executable, "-m", "kungfu", "dev", "engage", "scons"]
 
     DataComposerInterface.runDataComposer = runEngagedDataComposer
     SconsInterface._getSconsBinaryCall = getEngagedSconsBinaryCall

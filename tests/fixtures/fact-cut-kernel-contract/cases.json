@@ -1,0 +1,93 @@
+{
+  "schema": "kungfu.fact-cut-kernel.falsification-fixtures/v1",
+  "valid": [
+    {
+      "id": "stable-object-and-immutable-version",
+      "operation": "admit-version",
+      "objectId": "fact:0123456789abcdef0123456789abcdef",
+      "versionRoot": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+      "bodyRoot": "sha256:2222222222222222222222222222222222222222222222222222222222222222",
+      "schemaRoot": "sha256:3333333333333333333333333333333333333333333333333333333333333333",
+      "admissionRoots": ["sha256:4444444444444444444444444444444444444444444444444444444444444444"]
+    },
+    {
+      "id": "explicit-root-cut",
+      "operation": "admit-cut",
+      "parentCutRoots": [],
+      "objectVersions": [["fact:0123456789abcdef0123456789abcdef", "sha256:1111111111111111111111111111111111111111111111111111111111111111"]],
+      "activeRelationRoots": [],
+      "declarationRoots": ["sha256:5555555555555555555555555555555555555555555555555555555555555555"],
+      "admissionRoots": ["sha256:4444444444444444444444444444444444444444444444444444444444444444"],
+      "episodeFrontier": [],
+      "omissionRoots": [],
+      "conflictRoots": []
+    },
+    {
+      "id": "exact-cas-advance",
+      "operation": "move-ref",
+      "refName": "main",
+      "refExists": true,
+      "currentCutRoot": "sha256:6666666666666666666666666666666666666666666666666666666666666666",
+      "currentRevision": 8,
+      "expectedOldCutRoot": "sha256:6666666666666666666666666666666666666666666666666666666666666666",
+      "expectedOldRevision": 8,
+      "newCutRoot": "sha256:7777777777777777777777777777777777777777777777777777777777777777",
+      "kind": "advance"
+    },
+    {
+      "id": "fork-keeps-source-ref",
+      "operation": "move-ref",
+      "refName": "experiment/a",
+      "refExists": false,
+      "expectedOldCutRoot": null,
+      "expectedOldRevision": 0,
+      "newCutRoot": "sha256:7777777777777777777777777777777777777777777777777777777777777777",
+      "kind": "fork"
+    },
+    {
+      "id": "merge-view-is-a-new-cut",
+      "operation": "admit-cut",
+      "parentCutRoots": [
+        "sha256:6666666666666666666666666666666666666666666666666666666666666666",
+        "sha256:7777777777777777777777777777777777777777777777777777777777777777"
+      ],
+      "objectVersions": [],
+      "activeRelationRoots": [],
+      "declarationRoots": [],
+      "admissionRoots": [],
+      "episodeFrontier": [],
+      "omissionRoots": [],
+      "conflictRoots": [],
+      "kind": "merge-view"
+    },
+    {
+      "id": "rollback-is-an-append-only-cas",
+      "operation": "move-ref",
+      "refName": "main",
+      "refExists": true,
+      "currentCutRoot": "sha256:7777777777777777777777777777777777777777777777777777777777777777",
+      "currentRevision": 9,
+      "expectedOldCutRoot": "sha256:7777777777777777777777777777777777777777777777777777777777777777",
+      "expectedOldRevision": 9,
+      "newCutRoot": "sha256:6666666666666666666666666666666666666666666666666666666666666666",
+      "kind": "rollback",
+      "reasonRoot": "sha256:8888888888888888888888888888888888888888888888888888888888888888",
+      "preserveHistory": true
+    }
+  ],
+  "invalid": [
+    { "id": "path-as-object-identity", "operation": "admit-version", "objectId": "/tmp/facts/customer.json", "expectedFailure": "invalid-identity" },
+    { "id": "git-ref-as-cut-identity", "operation": "query-cut", "cutRoot": "refs/heads/main", "expectedFailure": "invalid-identity" },
+    { "id": "database-key-as-version-identity", "operation": "admit-version", "objectId": "fact:0123456789abcdef0123456789abcdef", "versionRoot": "facts.rowid=42", "expectedFailure": "invalid-identity" },
+    { "id": "process-as-ref-authority", "operation": "move-ref", "refName": "main", "refExists": true, "pid": 4242, "newCutRoot": "sha256:7777777777777777777777777777777777777777777777777777777777777777", "expectedFailure": "expected-old-required" },
+    { "id": "gui-route-as-ref-authority", "operation": "move-ref", "refName": "main", "refExists": true, "guiRoute": "/facts/current", "newCutRoot": "sha256:7777777777777777777777777777777777777777777777777777777777777777", "expectedFailure": "expected-old-required" },
+    { "id": "wall-clock-in-cut-root", "operation": "admit-cut", "wallClock": "2026-07-18T12:00:00Z", "expectedFailure": "invalid-cut" },
+    { "id": "observation-as-admitted-version", "operation": "admit-version", "objectId": "fact:0123456789abcdef0123456789abcdef", "observationRoot": "sha256:9999999999999999999999999999999999999999999999999999999999999999", "admissionRoots": [], "expectedFailure": "admission-missing" },
+    { "id": "episode-as-cut", "operation": "query-cut", "cutRoot": "episode:42", "expectedFailure": "invalid-cut" },
+    { "id": "projection-as-authority", "operation": "admit-version", "objectId": "sqlite:fact_versions:42", "expectedFailure": "invalid-identity" },
+    { "id": "silent-relation-inheritance", "operation": "admit-cut", "inheritRelations": true, "expectedFailure": "invalid-cut" },
+    { "id": "ref-move-without-expected-old", "operation": "move-ref", "refName": "main", "refExists": true, "newCutRoot": "sha256:7777777777777777777777777777777777777777777777777777777777777777", "expectedFailure": "expected-old-required" },
+    { "id": "stale-ref-writer", "operation": "move-ref", "refName": "main", "refExists": true, "currentCutRoot": "sha256:6666666666666666666666666666666666666666666666666666666666666666", "currentRevision": 9, "expectedOldCutRoot": "sha256:5555555555555555555555555555555555555555555555555555555555555555", "expectedOldRevision": 8, "newCutRoot": "sha256:7777777777777777777777777777777777777777777777777777777777777777", "expectedFailure": "stale-ref" },
+    { "id": "rollback-by-history-rewrite", "operation": "move-ref", "refName": "main", "refExists": true, "currentCutRoot": "sha256:7777777777777777777777777777777777777777777777777777777777777777", "currentRevision": 9, "expectedOldCutRoot": "sha256:7777777777777777777777777777777777777777777777777777777777777777", "expectedOldRevision": 9, "newCutRoot": "sha256:6666666666666666666666666666666666666666666666666666666666666666", "kind": "rollback", "rewriteHistory": true, "expectedFailure": "invalid-cut" }
+  ]
+}

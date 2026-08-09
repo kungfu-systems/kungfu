@@ -8,7 +8,8 @@
 #
 # Usage: check_capture.py <runtime-dir> <run-id>
 
-import json
+# ruff: noqa: E402
+
 import os
 import sys
 
@@ -21,21 +22,22 @@ sys.path.insert(0, os.path.join(_core, "dist", "kungfu"))
 import kungfu
 
 from kungfu.rewind import (
-    MSG_MODEL_REQUEST,
-    MSG_RUN_BEGIN,
-    MSG_RUN_END,
-    MSG_TOOL_CALL,
-    MSG_TOOL_RESULT,
+    ACTION_MODEL_REQUEST,
+    ACTION_RUN_BEGIN,
+    ACTION_RUN_END,
+    ACTION_TOOL_CALL,
+    ACTION_TOOL_RESULT,
+    CARRIER_REWIND_ACTION,
 )
+from kungfu.rewind.wire import unwrap_event
 from kungfu.rewind.fb.CallStatus import CallStatus
-from kungfu.rewind.fb.ModelRequest import ModelRequest
 from kungfu.rewind.fb.RunBegin import RunBegin
 from kungfu.rewind.fb.RunEnd import RunEnd
 from kungfu.rewind.fb.ToolCall import ToolCall
 from kungfu.rewind.fb.ToolResult import ToolResult
 
-lf = kungfu.__binding__.longfist
-yjj = kungfu.__binding__.yijinjing
+schema = kungfu.__binding__.yijinjing
+yjj = kungfu.__binding__.runtime
 
 runtime_dir, run_id = sys.argv[1], sys.argv[2]
 failures = []
@@ -49,17 +51,25 @@ def check(name, ok, detail=""):
 
 locator = yjj.locator(runtime_dir)
 location = yjj.location(
-    lf.enums.mode.LIVE, lf.enums.category.SYSTEM, "rewind", run_id, locator
+    schema.enums.mode.LIVE, schema.enums.location_role.SYSTEM, "rewind", run_id, locator
 )
 
 
-def read(msg_type):
-    return yjj.assemble(location, 0).read_bytes(msg_type)
+def read(action_type):
+    result = []
+    for header, payload in yjj.assemble(location, 0).read_bytes(CARRIER_REWIND_ACTION):
+        event = unwrap_event(payload)
+        if event is None:
+            continue
+        current_action_type, event_payload = event
+        if current_action_type == action_type:
+            result.append((header, event_payload))
+    return result
 
 
 # run bracket
-begin = read(MSG_RUN_BEGIN)
-end = read(MSG_RUN_END)
+begin = read(ACTION_RUN_BEGIN)
+end = read(ACTION_RUN_END)
 check("RunBegin/RunEnd present", len(begin) == 1 and len(end) == 1)
 check(
     "run ids match",
@@ -68,13 +78,13 @@ check(
 )
 
 # one model call at the wire
-reqs = read(MSG_MODEL_REQUEST)
+reqs = read(ACTION_MODEL_REQUEST)
 check("ModelRequest present", len(reqs) == 1)
 
 # tool calls: the python delegate and the node lookup — in the SAME journal
 calls = {}
 call_times = {}
-for header, payload in read(MSG_TOOL_CALL):
+for header, payload in read(ACTION_TOOL_CALL):
     c = ToolCall.GetRootAs(bytes(payload), 0)
     name = (c.ToolName() or b"").decode()
     calls[name] = {
@@ -106,7 +116,7 @@ if "delegate" in calls and "node-lookup" in calls:
 
 # results for both, ok, with latency
 results = {}
-for _, payload in read(MSG_TOOL_RESULT):
+for _, payload in read(ACTION_TOOL_RESULT):
     r = ToolResult.GetRootAs(bytes(payload), 0)
     results[(r.SpanId() or b"").decode()] = (r.Status(), r.LatencyNs())
 check(
@@ -124,14 +134,14 @@ if "delegate" in calls and "node-lookup" in calls:
 
 # G-Moat counter-assertion: the whole causal chain lives in one location's
 # frames (one store, one writer, natively re-readable) — nothing was stitched
-all_msg_types = [
-    MSG_RUN_BEGIN,
-    MSG_MODEL_REQUEST,
-    MSG_TOOL_CALL,
-    MSG_TOOL_RESULT,
-    MSG_RUN_END,
+all_action_types = [
+    ACTION_RUN_BEGIN,
+    ACTION_MODEL_REQUEST,
+    ACTION_TOOL_CALL,
+    ACTION_TOOL_RESULT,
+    ACTION_RUN_END,
 ]
-total = sum(len(read(t)) for t in all_msg_types)
+total = sum(len(read(t)) for t in all_action_types)
 check("entire chain in one journal location", total >= 7, f"{total} frames")
 
 bundle_dir = os.path.join(runtime_dir, "rewind", run_id, "bundle")

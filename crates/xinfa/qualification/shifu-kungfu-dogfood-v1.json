@@ -1,0 +1,55 @@
+{
+  "schema": "xinfa.shifu-kungfu-dogfood-receipt/v1",
+  "verdict": "pass",
+  "platform": "macos",
+  "qualifying": false,
+  "selfCertified": false,
+  "task": "change and verify the Xinfa Shifu Kungfu adapter boundary",
+  "roots": {
+    "atlas": "sha256:8a3d7bcf125456348c5b9e0756f42a72f4ffad0c7f4de2bde6907cf712105c93",
+    "standalone": "sha256:8a3d7bcf125456348c5b9e0756f42a72f4ffad0c7f4de2bde6907cf712105c93",
+    "shifu": "sha256:8a3d7bcf125456348c5b9e0756f42a72f4ffad0c7f4de2bde6907cf712105c93",
+    "kungfuParity": "sha256:92580595c4d24e8eb0925d8cfc7ff8fc7f5a641c217ccb88ccf0319f95979209",
+    "implementationDrift": "sha256:21a45c433fc51e0676fb23829593656ec30a5665ae451fa0458b8aef00295d13",
+    "nonClaimDrift": "sha256:63b96bc3deda4a326a48ae1f70257e21c2cb189785ff1d9b4e576113b50eedfb",
+    "acceptedSuccessor": "sha256:53352982c2240451df159564e4861495907c5ee473900bc874a77bf371392ea8"
+  },
+  "properties": {
+    "standaloneShifuParity": true,
+    "kungfuReadOnlyPublicCli": true,
+    "humanAgentGuiParity": true,
+    "implementationDriftStale": true,
+    "expressiveNonClaimNoClaimDrift": true,
+    "generatedFeedbackRejected": true,
+    "trackedXinfaUnchanged": true,
+    "humanProseUnchanged": true,
+    "explicitAcceptCreatesSuccessor": true,
+    "oldAtlasStillVerifies": true
+  },
+  "metrics": {
+    "directCompileMs": 719.58,
+    "standaloneBuildMs": 5465.32,
+    "standaloneCompileMs": 695.89,
+    "shifuAdapterMs": 309.99,
+    "shifuAdapterOverheadMs": 0,
+    "kungfuConsumerMs": 417.33,
+    "taskChartBudget": 4096,
+    "taskChartTokens": 3254,
+    "humanHops": 1,
+    "guiHops": 1,
+    "omissions": { "human": 1, "agent": 5, "gui": 1 }
+  },
+  "commands": [
+    "./shifu xinfa:dogfood",
+    "./shifu xinfa:check",
+    "./shifu xinfa:standalone",
+    "./shifu check:source",
+    "./shifu docs:check:readonly"
+  ],
+  "knownLimits": [
+    "deterministic full compile only; no native incremental store claim",
+    "single-host macOS dogfood; no cross-platform product qualification",
+    "thin read-only consumer materialization; no complete GUI browser claim",
+    "self-dogfood is not N-1 self-certification or Buildchain release attestation"
+  ]
+}

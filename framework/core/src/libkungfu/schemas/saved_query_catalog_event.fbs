@@ -1,0 +1,25 @@
+// SPDX-License-Identifier: Apache-2.0
+// Workspace-local saved-query lifecycle facts. JSON is retained only as the
+// versioned kungfu.query.saved-view/v1 edge artifact inside this typed event.
+
+namespace kungfu.query.fb;
+
+enum SavedQueryEventKind : byte {
+  Created = 0,
+  Updated = 1,
+  Deleted = 2
+}
+
+table SavedQueryCatalogEvent {
+  schema_version:uint;
+  event_id:string;
+  query_id:string;
+  revision:ulong;
+  previous_revision:ulong;
+  kind:SavedQueryEventKind;
+  system_time:long;
+  saved_view_hash:string;
+  saved_view_json:string;
+}
+
+root_type SavedQueryCatalogEvent;

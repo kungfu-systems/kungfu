@@ -1,0 +1,183 @@
+[
+  {
+    "id": "pid-as-readiness",
+    "base": "live-required-ready",
+    "issue": "pid-is-not-readiness",
+    "operations": [
+      {
+        "operation": "set",
+        "path": [
+          "handle",
+          "readiness",
+          "durableCut"
+        ],
+        "value": null
+      },
+      {
+        "operation": "set",
+        "path": [
+          "handle",
+          "readiness",
+          "evidence"
+        ],
+        "value": []
+      },
+      {
+        "operation": "set",
+        "path": [
+          "handle",
+          "host",
+          "diagnostics",
+          "coordinatorPid"
+        ],
+        "value": 4412
+      }
+    ]
+  },
+  {
+    "id": "ready-without-cut",
+    "base": "live-required-ready",
+    "issue": "readiness-cut-missing",
+    "operations": [
+      {
+        "operation": "set",
+        "path": [
+          "handle",
+          "readiness",
+          "durableCut"
+        ],
+        "value": null
+      }
+    ]
+  },
+  {
+    "id": "dual-active-generation",
+    "base": "single-generation-snapshot",
+    "issue": "dual-active-generation",
+    "operations": [
+      {
+        "operation": "append-copy",
+        "path": [
+          "handles"
+        ],
+        "sourceIndex": 0,
+        "mutations": [
+          {
+            "path": [
+              "generation"
+            ],
+            "value": "43"
+          },
+          {
+            "path": [
+              "requirementId"
+            ],
+            "value": "request-live-2"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "authority-broadening",
+    "base": "live-required-ready",
+    "issue": "authority-broadening",
+    "operations": [
+      {
+        "operation": "set",
+        "path": [
+          "grantedAuthorities"
+        ],
+        "value": [
+          "runtime.coordinate",
+          "runtime.capability-use",
+          "runtime.lease",
+          "fact.admit"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "gui-only-activation",
+    "base": "live-required-ready",
+    "issue": "activation-authority-invalid",
+    "operations": [
+      {
+        "operation": "set",
+        "path": [
+          "activatedBy"
+        ],
+        "value": "gui"
+      },
+      {
+        "operation": "set",
+        "path": [
+          "requestSource"
+        ],
+        "value": "gui"
+      }
+    ]
+  },
+  {
+    "id": "silent-live-required-downgrade",
+    "base": "live-required-ready",
+    "issue": "live-required-downgrade",
+    "operations": [
+      {
+        "operation": "set",
+        "path": [
+          "outcome"
+        ],
+        "value": "degraded"
+      },
+      {
+        "operation": "set",
+        "path": [
+          "handle"
+        ],
+        "value": null
+      },
+      {
+        "operation": "set",
+        "path": [
+          "achievedCapabilities"
+        ],
+        "value": []
+      },
+      {
+        "operation": "set",
+        "path": [
+          "missingCapabilities"
+        ],
+        "value": []
+      },
+      {
+        "operation": "set",
+        "path": [
+          "degraded"
+        ],
+        "value": false
+      },
+      {
+        "operation": "set",
+        "path": [
+          "error"
+        ],
+        "value": null
+      }
+    ]
+  },
+  {
+    "id": "native-evidence-without-cut",
+    "base": "native-readiness-evidence",
+    "issue": "schema-invalid",
+    "operations": [
+      {
+        "operation": "remove",
+        "path": [
+          "minimumCut"
+        ]
+      }
+    ]
+  }
+]

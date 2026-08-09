@@ -10,10 +10,10 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
-import { locate, tmpDir, background, waitForFile, kfc, assertContains, fail } from '../_harness.mjs';
+import { locate, tmpDir, background, waitForFile, kfc, assertContains, fail, corePython } from '../_harness.mjs';
 
-const PY = process.platform === 'win32' ? 'python' : 'python3';
 const { fixtureDir, coreDir } = locate(import.meta.url);
+const PY = corePython(coreDir);
 
 const home = tmpDir('rewind-export-home-');
 const opened = tmpDir('rewind-export-opened-');

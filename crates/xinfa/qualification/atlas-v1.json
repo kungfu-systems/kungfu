@@ -1,0 +1,36 @@
+{
+  "schema": "xinfa.atlas-qualification/v1",
+  "verdict": "pass",
+  "platform": "macos",
+  "protocol": "xinfa.atlas/v1",
+  "golden": "fixtures/golden/repository-small-atlas-v1.json",
+  "roots": {
+    "atlas": "sha256:f0df8c6ce112919931579ad6fbcd48c6a5fb3630d826116c12aa1098cd211776",
+    "contextPack": "sha256:7a237656ee7eee66715fc043b0376f6f5bfefd9e876783a587b79ac19a2be858",
+    "manifest": "sha256:90469991a4221deeebd95c3e608c8191317266959c4ef82a514ff8ad8ac616c5",
+    "receipt": "sha256:36b25233fff74e461185737900c93063b0a66310a35aab70466de845d4013541"
+  },
+  "properties": {
+    "immutableContentAddressedIdentity": true,
+    "cutBound": true,
+    "atlasRootDistinctFromContextPackRoot": true,
+    "legacyContextPackBytesUnchanged": true,
+    "legacyContextPackRootsUnchanged": true,
+    "humanAgentSharedIdentity": true,
+    "humanAgentSharedCutStatusEvidenceOmissionsAndExpansionHandles": true,
+    "verifiedContextPackImport": true,
+    "offlineAtlasVerification": true,
+    "atlasDiff": true,
+    "atlasImpact": true,
+    "terminologyDistinct": true,
+    "atomicNoOverwritePublication": true
+  },
+  "proofBoundary": {
+    "qualifying": false,
+    "selfCertified": false,
+    "certifiesRealWorldPurpose": false,
+    "attestsRelease": false,
+    "linuxDeferred": true
+  },
+  "commands": ["./shifu xinfa:check", "./shifu xinfa:standalone", "./shifu docs:check:readonly"]
+}

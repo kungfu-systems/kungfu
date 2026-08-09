@@ -1,0 +1,108 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://libkungfu.dev/schemas/shifu/gate-controller-receipt-v1.schema.json",
+  "title": "Kungfu Gate controller receipt v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "schema",
+    "gateId",
+    "definitionDigest",
+    "source",
+    "registry",
+    "environment",
+    "binding",
+    "run",
+    "startedAt",
+    "finishedAt",
+    "durationMs",
+    "status",
+    "attempted",
+    "conclusion",
+    "integrity"
+  ],
+  "properties": {
+    "$schema": {
+      "const": "https://libkungfu.dev/schemas/shifu/gate-controller-receipt-v1.schema.json"
+    },
+    "schema": { "const": "kungfu.gate-controller-receipt/v1" },
+    "gateId": { "type": "string", "minLength": 1 },
+    "definitionDigest": { "$ref": "#/$defs/digest" },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sha", "dirty"],
+      "properties": {
+        "sha": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+        "dirty": { "const": false }
+      }
+    },
+    "registry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["ref", "digest", "projectId"],
+      "properties": {
+        "ref": { "const": "shifu.gates.json" },
+        "digest": { "$ref": "#/$defs/digest" },
+        "projectId": { "type": "string", "minLength": 1 }
+      }
+    },
+    "environment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["platform", "runnerName", "runnerLabels"],
+      "properties": {
+        "platform": { "type": "string", "minLength": 1 },
+        "runnerName": { "type": "string", "minLength": 1 },
+        "runnerLabels": {
+          "type": "array",
+          "items": { "type": "string" },
+          "uniqueItems": true
+        }
+      }
+    },
+    "binding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "workflow", "job", "adapterDigest"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "workflow": { "type": "string", "minLength": 1 },
+        "job": { "type": "string", "minLength": 1 },
+        "adapterDigest": { "$ref": "#/$defs/digest" }
+      }
+    },
+    "run": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["repository", "workflowRunId", "jobId", "event", "url"],
+      "properties": {
+        "repository": { "type": "string", "minLength": 1 },
+        "workflowRunId": { "type": "integer", "minimum": 1 },
+        "jobId": { "type": "integer", "minimum": 1 },
+        "event": { "type": "string", "minLength": 1 },
+        "url": { "type": "string", "pattern": "^https://github\\.com/" }
+      }
+    },
+    "startedAt": { "$ref": "#/$defs/timestamp" },
+    "finishedAt": { "$ref": "#/$defs/timestamp" },
+    "durationMs": { "type": "integer", "minimum": 0 },
+    "status": { "const": "pass" },
+    "attempted": { "const": true },
+    "conclusion": { "const": "success" },
+    "integrity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["digest"],
+      "properties": { "digest": { "$ref": "#/$defs/digest" } }
+    }
+  },
+  "$defs": {
+    "digest": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+    "timestamp": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{3})?Z$"
+    }
+  }
+}

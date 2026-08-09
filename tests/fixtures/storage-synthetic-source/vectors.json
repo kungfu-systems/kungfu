@@ -1,0 +1,84 @@
+{
+  "schema": "kungfu.storage.synthetic-source.conformance/v1",
+  "case": {
+    "sourceId": "fixture-source",
+    "manifestId": "fixture-manifest",
+    "sourceHead": "fixture-head",
+    "range": {"since": "1", "until": "3"},
+    "records": [
+      {
+        "kind": "note",
+        "source_id": "present",
+        "source_path": "notes/present.json",
+        "source_time": "2026-07-24T00:00:00Z",
+        "schema_version": 2,
+        "payload": {"z": 1, "a": 2}
+      },
+      {
+        "kind": "note",
+        "source_id": "redacted",
+        "payload_state": "redacted",
+        "payload_hash": "sealed-before-redaction",
+        "byte_len": 42
+      },
+      {
+        "kind": "note",
+        "source_id": "absent",
+        "payload_state": "absent"
+      }
+    ],
+    "expectedPayloadWrites": [
+      {
+        "digest": "c2985c5ba6f7d2a55e768f92490ca09388e95bc4cccb9fdf11b15f4d42f93e73",
+        "utf8": "{\"a\":2,\"z\":1}"
+      }
+    ],
+    "expectedManifest": {
+      "manifest_id": "fixture-manifest",
+      "storage_source_id": "fixture-source",
+      "source_type": "synthetic",
+      "source_coordinate": "synthetic:fixture-source",
+      "source_head": "fixture-head",
+      "scope": "source",
+      "range": {"since": "1", "until": "3"},
+      "entries": [
+        {
+          "kind": "note",
+          "source_id": "present",
+          "source_path": "notes/present.json",
+          "source_time": "2026-07-24T00:00:00Z",
+          "schema_version": 2,
+          "content_type": "application/json",
+          "payload_hash": "c2985c5ba6f7d2a55e768f92490ca09388e95bc4cccb9fdf11b15f4d42f93e73",
+          "byte_len": 13,
+          "payload_state": "present"
+        },
+        {
+          "kind": "note",
+          "source_id": "redacted",
+          "source_path": "synthetic/1.json",
+          "source_time": "",
+          "schema_version": 1,
+          "content_type": "application/json",
+          "payload_hash": "sealed-before-redaction",
+          "byte_len": 42,
+          "payload_state": "redacted"
+        },
+        {
+          "kind": "note",
+          "source_id": "absent",
+          "source_path": "synthetic/2.json",
+          "source_time": "",
+          "schema_version": 1,
+          "content_type": "application/json",
+          "payload_hash": "",
+          "byte_len": 0,
+          "payload_state": "absent"
+        }
+      ]
+    }
+  },
+  "rejected": [
+    {"id": "unknown-payload-state", "payloadState": "maybe"}
+  ]
+}

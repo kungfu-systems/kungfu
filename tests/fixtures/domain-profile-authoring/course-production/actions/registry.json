@@ -1,0 +1,25 @@
+{
+  "schema": "kungfu.reference.action-registry/v1",
+  "actions": [
+    {
+      "id": "review-course",
+      "object": "course-map",
+      "capability": "course.review",
+      "requires": [
+        "atlas",
+        "warrant"
+      ],
+      "result": "domain-projection"
+    },
+    {
+      "id": "publish-course",
+      "object": "course-map",
+      "capability": "course.admit",
+      "requires": [
+        "episode",
+        "warrant"
+      ],
+      "result": "fact-proposal"
+    }
+  ]
+}

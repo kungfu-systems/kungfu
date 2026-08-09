@@ -1,0 +1,72 @@
+{
+  "$schema": "https://libkungfu.dev/schemas/shifu/gate-registry-v1.schema.json",
+  "schema": "shifu.gate-registry/v1",
+  "project": {
+    "id": "example-project",
+    "title": "Example project"
+  },
+  "gates": [
+    {
+      "id": "source.format",
+      "title": "Source format",
+      "summary": "Checks source formatting without building artifacts.",
+      "category": "source",
+      "documentation": "docs/shifu/gates.md",
+      "dependencies": [],
+      "platforms": ["linux", "macos", "windows"],
+      "runner": { "capabilities": ["node"] },
+      "cost": { "class": "light", "timeoutSeconds": 60 },
+      "action": { "kind": "task", "task": "check:format", "args": [] },
+      "artifacts": [],
+      "receipt": { "expectation": "none" }
+    },
+    {
+      "id": "source.contract",
+      "title": "Source contract",
+      "summary": "Checks project contracts after formatting succeeds.",
+      "category": "source",
+      "documentation": "docs/shifu/gates.md",
+      "dependencies": ["source.format"],
+      "platforms": ["linux", "macos", "windows"],
+      "runner": { "capabilities": ["node"] },
+      "cost": { "class": "light", "timeoutSeconds": 120 },
+      "action": { "kind": "argv", "command": "node", "args": ["scripts/check-contract.mjs"] },
+      "artifacts": [],
+      "receipt": { "expectation": "optional", "schema": "example.contract-check/v1" }
+    },
+    {
+      "id": "native.smoke",
+      "title": "Native smoke",
+      "summary": "Runs a bounded native artifact smoke on supported hosts.",
+      "category": "native",
+      "documentation": "docs/shifu/gates.md",
+      "dependencies": ["source.contract"],
+      "platforms": ["linux", "macos"],
+      "runner": { "capabilities": ["native-toolchain"] },
+      "cost": { "class": "heavy", "timeoutSeconds": 1800 },
+      "action": { "kind": "handler", "handler": "example.native-smoke", "parameters": { "profile": "bounded" } },
+      "artifacts": [{ "id": "smoke-report", "path": "artifacts/smoke.json", "required": true }],
+      "receipt": { "expectation": "required", "schema": "example.native-smoke-receipt/v1" }
+    }
+  ],
+  "profiles": [
+    {
+      "id": "development",
+      "title": "Development",
+      "decisions": {
+        "source.format": { "mode": "required", "reason": "Formatting is required for every change." },
+        "source.contract": { "mode": "required", "reason": "Contracts are required for every change." },
+        "native.smoke": { "mode": "off", "reason": "Native artifacts are not built in the source-only profile." }
+      }
+    },
+    {
+      "id": "release",
+      "title": "Release",
+      "decisions": {
+        "source.format": { "mode": "required", "reason": "Release retains source formatting." },
+        "source.contract": { "mode": "required", "reason": "Release retains contract checks." },
+        "native.smoke": { "mode": "required", "reason": "Release requires native artifact evidence." }
+      }
+    }
+  ]
+}

@@ -1,0 +1,34 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kungfu.tech/schemas/python-kfx-asyncio-performance-report-v1.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "run_id", "verdict", "source", "environment", "roots", "profile", "setup", "correctness", "observations", "statistics", "claims", "invalidations"],
+  "properties": {
+    "schema": { "const": "kungfu.python-kfx-asyncio.performance-report/v1" },
+    "run_id": { "type": "string", "minLength": 1 },
+    "verdict": { "enum": ["planned", "qualified", "unqualified", "failed"] },
+    "source": {
+      "type": "object", "additionalProperties": false, "required": ["revision", "tree", "dirty"],
+      "properties": { "revision": { "type": "string" }, "tree": { "type": "string" }, "dirty": { "type": "boolean" } }
+    },
+    "environment": { "type": "object" },
+    "roots": {
+      "type": "object", "additionalProperties": false, "required": ["profile", "runner", "workload", "toolchain"],
+      "properties": { "profile": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" }, "runner": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" }, "workload": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" }, "toolchain": { "type": ["string", "null"], "pattern": "^sha256:[0-9a-f]{64}$" } }
+    },
+    "profile": { "type": "string", "minLength": 1 },
+    "setup": { "$ref": "#/$defs/suite" },
+    "correctness": { "$ref": "#/$defs/suite" },
+    "observations": { "type": "object", "additionalProperties": false, "required": ["count", "raw_path", "raw_sha256"], "properties": { "count": { "type": "integer", "minimum": 0 }, "raw_path": { "type": ["string", "null"] }, "raw_sha256": { "type": ["string", "null"], "pattern": "^[0-9a-f]{64}$" } } },
+    "statistics": { "type": "array", "items": { "type": "object" } },
+    "claims": { "type": "object", "additionalProperties": false, "required": ["service_plane_envelope_qualified", "journal_hot_path_qualified", "universal_performance_promise"], "properties": { "service_plane_envelope_qualified": { "type": "boolean" }, "journal_hot_path_qualified": { "const": false }, "universal_performance_promise": { "const": false } } },
+    "invalidations": { "type": "array", "items": { "type": "string", "minLength": 1 } }
+  },
+  "$defs": {
+    "suite": {
+      "type": "object", "additionalProperties": false, "required": ["command", "status", "exit_code", "duration_ms", "raw_log", "raw_sha256"],
+      "properties": { "command": { "type": "array", "items": { "type": "string" } }, "status": { "enum": ["planned", "passed", "failed"] }, "exit_code": { "type": ["integer", "null"] }, "duration_ms": { "type": "integer", "minimum": 0 }, "raw_log": { "type": ["string", "null"] }, "raw_sha256": { "type": ["string", "null"], "pattern": "^[0-9a-f]{64}$" } }
+    }
+  }
+}

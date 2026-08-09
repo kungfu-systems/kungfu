@@ -1,0 +1,135 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kungfu.tech/schema/work-design-replay-report-v1.schema.json",
+  "title": "Content-addressed Work Design policy replay report",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "asOf",
+    "cohortRoot",
+    "baselinePolicyRoot",
+    "candidatePolicyRoot",
+    "sampleCount",
+    "comparison",
+    "drift",
+    "gates",
+    "advisoryModeEligible",
+    "defaultPromotionEligible",
+    "authority",
+    "reportRoot"
+  ],
+  "properties": {
+    "schema": { "const": "kungfu.work-design.replay-report/v1" },
+    "asOf": { "type": "string", "format": "date-time" },
+    "cohortRoot": { "$ref": "#/$defs/root" },
+    "baselinePolicyRoot": { "$ref": "#/$defs/root" },
+    "candidatePolicyRoot": { "$ref": "#/$defs/root" },
+    "sampleCount": { "type": "integer", "minimum": 0 },
+    "comparison": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "selection",
+        "advice",
+        "disposition",
+        "outcome",
+        "coverage"
+      ],
+      "properties": {
+        "selection": { "$ref": "#/$defs/delta" },
+        "advice": { "$ref": "#/$defs/delta" },
+        "disposition": { "$ref": "#/$defs/delta" },
+        "outcome": { "$ref": "#/$defs/delta" },
+        "coverage": { "$ref": "#/$defs/delta" }
+      }
+    },
+    "drift": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "changedSampleIds",
+        "unclassifiedSampleIds",
+        "regressionSampleIds",
+        "regressionRateBps"
+      ],
+      "properties": {
+        "changedSampleIds": { "$ref": "#/$defs/ids" },
+        "unclassifiedSampleIds": { "$ref": "#/$defs/ids" },
+        "regressionSampleIds": { "$ref": "#/$defs/ids" },
+        "regressionRateBps": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 10000
+        }
+      }
+    },
+    "gates": { "$ref": "#/$defs/gates" },
+    "advisoryModeEligible": { "type": "boolean" },
+    "defaultPromotionEligible": { "type": "boolean" },
+    "authority": { "$ref": "#/$defs/authority" },
+    "reportRoot": { "$ref": "#/$defs/root" }
+  },
+  "$defs": {
+    "root": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "ids": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]*$"
+      }
+    },
+    "delta": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["changedCount", "sampleIds"],
+      "properties": {
+        "changedCount": { "type": "integer", "minimum": 0 },
+        "sampleIds": { "$ref": "#/$defs/ids" }
+      }
+    },
+    "gates": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "cohortExact",
+        "evidenceComplete",
+        "driftQualified",
+        "regressionWithinThreshold",
+        "sampleThresholdSatisfied"
+      ],
+      "properties": {
+        "cohortExact": { "type": "boolean" },
+        "evidenceComplete": { "type": "boolean" },
+        "driftQualified": { "type": "boolean" },
+        "regressionWithinThreshold": { "type": "boolean" },
+        "sampleThresholdSatisfied": { "type": "boolean" }
+      }
+    },
+    "authority": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "mode",
+        "assignmentAuthority",
+        "workControlAuthority",
+        "repositoryAuthority",
+        "protectedBranchAuthority",
+        "activeDefaultPolicyAuthority",
+        "mayMutate"
+      ],
+      "properties": {
+        "mode": { "const": "offline-advisory" },
+        "assignmentAuthority": { "const": false },
+        "workControlAuthority": { "const": false },
+        "repositoryAuthority": { "const": false },
+        "protectedBranchAuthority": { "const": false },
+        "activeDefaultPolicyAuthority": { "const": false },
+        "mayMutate": { "const": false }
+      }
+    }
+  }
+}

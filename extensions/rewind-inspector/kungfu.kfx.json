@@ -1,0 +1,24 @@
+{
+  "schema": "kungfu.kfx.manifest/v1",
+  "name": "@kungfu-tech/kfx-view-rewind-inspector",
+  "version": "4.0.0-alpha.1",
+  "kungfuConfig": {
+    "key": "rewind",
+    "name": "Rewind",
+    "product": {
+      "roles": [
+        "devtool"
+      ],
+      "icon": "⏪",
+      "order": 40
+    },
+    "config": {
+      "view": {
+        "title": "Rewind",
+        "capabilities": [
+          "rewind"
+        ]
+      }
+    }
+  }
+}

@@ -1,0 +1,133 @@
+{
+  "schema": "project.cut.fixture/v1",
+  "policy": {
+    "schema": "project.source-projection-policy/v1",
+    "id": "kungfu.project-cut.default-source/v1",
+    "pathNormalization": "utf8-nfc-posix-relative/v1",
+    "entryOrder": "utf8-bytewise-path/v1",
+    "excludePrefixes": [
+      ".git",
+      ".kungfu/cache",
+      ".kungfu/locks",
+      ".kungfu/projections",
+      ".kungfu/runtime",
+      ".xinfa/baselines",
+      ".xinfa/cache",
+      ".xinfa/generated",
+      ".xinfa/index",
+      ".xinfa/store",
+      ".xinfa/tmp"
+    ],
+    "privacyDenyPrefixes": [
+      ".kungfu/private",
+      ".private",
+      ".xinfa/private"
+    ],
+    "protocolOutputPrefixes": [".kungfu/project-cuts"]
+  },
+  "sourceProjectionInput": {
+    "projectId": "kungfu-systems/kungfu",
+    "entries": [
+      {
+        "path": ".kungfu/missions/main.json",
+        "kind": "authority",
+        "visibility": "internal",
+        "digest": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+        "size": 89
+      },
+      {
+        "path": ".xinfa/project.json",
+        "kind": "authority",
+        "visibility": "public",
+        "digest": "sha256:2222222222222222222222222222222222222222222222222222222222222222",
+        "size": 144
+      },
+      {
+        "path": "README.md",
+        "kind": "source",
+        "visibility": "public",
+        "digest": "sha256:3333333333333333333333333333333333333333333333333333333333333333",
+        "size": 377
+      },
+      {
+        "path": "src/index.mjs",
+        "kind": "source",
+        "visibility": "public",
+        "digest": "sha256:4444444444444444444444444444444444444444444444444444444444444444",
+        "size": 233
+      }
+    ],
+    "omissions": [
+      {
+        "path": "docs/private.md",
+        "reason": "declared-private",
+        "visibility": "restricted"
+      }
+    ]
+  },
+  "projectCutInput": {
+    "project": {
+      "id": "kungfu-systems/kungfu",
+      "identityRoot": "sha256:5555555555555555555555555555555555555555555555555555555555555555"
+    },
+    "parentCutRoots": [
+      "sha256:6666666666666666666666666666666666666666666666666666666666666666"
+    ],
+    "sourceProjection": {
+      "schema": "project.source-projection-ref/v1",
+      "root": "sha256:6a17fe167dad47ff2b56407a2faed5c956420ea3bec26909af5e114cc3f2a275",
+      "policyRoot": "sha256:ff4318baf71b4ad79e609066626b0541e46af4faeeaa9f91260dd15322d7e2d8"
+    },
+    "atlas": {
+      "schema": "xinfa.atlas-ref/v1",
+      "root": "sha256:7777777777777777777777777777777777777777777777777777777777777777",
+      "compilerRoot": "sha256:8888888888888888888888888888888888888888888888888888888888888888"
+    },
+    "episodeDelta": {
+      "schema": "kungfu.episode-delta-ref/v1",
+      "empty": false,
+      "nativeRoots": [
+        {
+          "provider": "yijinjing/v1",
+          "root": "sha256:9999999999999999999999999999999999999999999999999999999999999999"
+        }
+      ],
+      "semanticRoot": null,
+      "equivalenceProfileRoot": null
+    },
+    "interpretation": {
+      "schemaRoot": "sha256:3c4193cab90f3b1b48f504033b4d842b721d48c10259bd4ece8ea62a2fd9a055",
+      "protocolRoot": "sha256:d47894a6d80d6f406488bc0731440773cb902385e5711546ff9855aec27482b9",
+      "policyRoots": [
+        "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      ],
+      "providerRoots": [
+        "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+      ]
+    },
+    "visibility": "internal",
+    "omissions": [
+      {
+        "code": "declared-private",
+        "path": "docs/private.md",
+        "root": null,
+        "detail": "Content is intentionally outside this cut."
+      }
+    ],
+    "conflicts": [],
+    "unknowns": [],
+    "compatibility": {
+      "existingRootsPreserved": true,
+      "authorityMode": "bridge",
+      "relations": []
+    }
+  },
+  "expected": {
+    "policyRoot": "sha256:ff4318baf71b4ad79e609066626b0541e46af4faeeaa9f91260dd15322d7e2d8",
+    "sourceProjectionRoot": "sha256:6a17fe167dad47ff2b56407a2faed5c956420ea3bec26909af5e114cc3f2a275",
+    "cutRoot": "sha256:11c1806ceab489c78cb3ccb8865497c52cd3f7eec8e059165bb1d87b068e4561",
+    "serializationRoot": "sha256:3770fce3abc3a0fb652293a515f2c3e402ac315ae1d972ed74299fef842366b2",
+    "artifactDigest": "sha256:f699b3b58f3e1aff09fb31f219707105cfeb4b320eaddb72699e002d9f320209",
+    "receiptRoot": "sha256:13c6a9c870ead0d73bb1ccdcaccc0875f6aa50bd6a95108a56596b07b75c0b7a"
+  }
+}

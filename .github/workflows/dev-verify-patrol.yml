@@ -1,0 +1,171 @@
+# SPDX-License-Identifier: Apache-2.0
+
+# Dev Verify Patrol
+#
+# The heavy Build workflow only fires on alpha/release PRs, so the development
+# mainline (this repository's default dev branch) has no standing
+# verify signal: regressions can accumulate on dev and only surface at alpha
+# promotion, forcing contributors to reproduce the baseline by hand to tell a
+# green change from an already-red tree.
+#
+# This patrol gives dev an authoritative, attributable pass/fail through the
+# Shifu Gate profile declared in shifu.gates.json. Buildchain expands the plan
+# across the supported native runner matrix and aggregates source-bound
+# receipts without owning Kungfu's concrete Gate ids or policy.
+
+name: Dev Verify Patrol
+
+on:
+  workflow_dispatch:
+    inputs:
+      buildchain-ref:
+        description: "Temporary Buildchain train or exact SHA for trusted manual validation"
+        required: false
+        default: ""
+      source-sha:
+        description: "Controller-observed Dev SHA; must equal the dispatch event SHA"
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+
+jobs:
+  bind-source:
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    outputs:
+      source-sha: ${{ steps.source.outputs.source-sha }}
+    steps:
+      - name: Bind workflow event to requested Dev source
+        id: source
+        shell: bash
+        env:
+          EVENT_SHA: ${{ github.sha }}
+          REQUESTED_SHA: ${{ inputs.source-sha }}
+        run: |
+          set -euo pipefail
+          [[ "$EVENT_SHA" =~ ^[0-9a-f]{40}$ ]]
+          if [ -n "$REQUESTED_SHA" ]; then
+            [[ "$REQUESTED_SHA" =~ ^[0-9a-f]{40}$ ]]
+            test "$REQUESTED_SHA" = "$EVENT_SHA"
+          fi
+          echo "source-sha=$EVENT_SHA" >> "$GITHUB_OUTPUT"
+
+  verify:
+    needs: bind-source
+    permissions:
+      contents: read
+      id-token: write
+    uses: kungfu-systems/buildchain/.github/workflows/.gate-profile.yml@916fc84d488ae6f5af271a67487e79ecb47b9ae2
+    with:
+      # Keep the reviewed Gate workflow shell and its streamed runtime aligned
+      # by default. Trusted manual runs may still supply an exact SHA or train
+      # ref. Checkout
+      # cache hits are optional: every source/runtime checkout verifies the
+      # locked SHA and falls back to GitHub when a retained bundle is stale.
+      buildchain-ref: ${{ github.event_name == 'workflow_dispatch' && inputs.buildchain-ref || '' }}
+      source-ref: ${{ needs.bind-source.outputs.source-sha }}
+      # Candidate authority must not depend on persistent runner workspaces or
+      # LAN-only mirrors. Explicit diagnostics retain the self-hosted matrix.
+      checkout-cache-mode: off
+      checkout-cache-fallback: github
+      rust-toolchain: "1.96.0"
+      # GitHub-hosted runners use the public Rust distribution plane directly.
+      # The China mirror remains appropriate for office runners, but routing a
+      # US-hosted macOS runner back through it caused setup timeouts.
+      rustup-dist-server: https://static.rust-lang.org
+      rustup-update-root: https://static.rust-lang.org/rustup
+      gate-profile: dev-patrol
+      runner-preset: custom
+      platforms-json: >-
+        [{"id":"linux-x64","name":"Linux x64","platform":"linux","runner":"[\"ubuntu-24.04\"]","capabilities":["node","native-toolchain","product-artifacts","rust"],"environment":{"CC":"gcc-14","CXX":"g++-14"}},{"id":"macos-arm64","name":"macOS ARM64","platform":"macos","runner":"[\"macos-15\"]","capabilities":["node","native-toolchain","product-artifacts","rust"]},{"id":"windows-x64","name":"Windows x64","platform":"windows","runner":"[\"windows-2022\"]","capabilities":["node","native-toolchain","product-artifacts","rust"]}]
+      artifact-name: kungfu-dev-patrol-gates
+      # Buildchain projects the cache profile as environment. Keep the Gate
+      # argv direct so the controller can append `gate plan/run ...` safely.
+      gate-command-json: >-
+        {"linux":["./shifu"],"macos":["./shifu"],"windows":["./shifu.cmd"]}
+      gate-environment-json: >-
+        {"SHIFU_NATIVE":"1","KUNGFU_BUILDCHAIN_NO_OPTIONAL":"1",
+        "KUNGFU_BUILDCHAIN_SOURCE_BUILD":"1","VSLANG":"1033"}
+
+  # Keep one tracking issue in sync with the patrol result: open or refresh it
+  # when dev is red, close it when dev returns to green. This is the standing
+  # "is dev green?" signal contributors read instead of reproducing the
+  # baseline by hand.
+  report:
+    needs: verify
+    # Always run so the tracking issue is closed on green and opened/refreshed
+    # on red. This workflow is dispatched only through the qualification
+    # controller or a trusted manual diagnostic.
+    if: always()
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      RESULT: ${{ needs.verify.result }}
+      HEAD_SHA: ${{ needs.verify.outputs.source-sha }}
+      DEV_BRANCH: ${{ github.event.repository.default_branch }}
+      RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+      AUTOMATION_LABELS: "kind/internal,area/buildchain,source/automation,state/blocked"
+    steps:
+      - name: Sync tracking issue with patrol result
+        shell: bash
+        run: |
+          set -euo pipefail
+          short_sha="${HEAD_SHA:0:12}"
+          issue_title="Dev verify patrol: ${DEV_BRANCH} verify is failing"
+          existing="$(gh issue list --repo "${GITHUB_REPOSITORY}" \
+            --state open --search "in:title \"${issue_title}\"" \
+            --json number --jq '.[0].number // empty')"
+
+          if [ "${RESULT}" = "success" ]; then
+            if [ -n "${existing}" ]; then
+              gh issue edit "${existing}" --repo "${GITHUB_REPOSITORY}" \
+                --add-label "${AUTOMATION_LABELS}"
+              gh issue comment "${existing}" --repo "${GITHUB_REPOSITORY}" \
+                --body "Dev verify is green again at \`${short_sha}\`. Run: ${RUN_URL}. Closing."
+              gh issue close "${existing}" --repo "${GITHUB_REPOSITORY}" \
+                --reason completed
+            fi
+            echo "dev verify green at ${short_sha}"
+            exit 0
+          fi
+
+          # Only a real verify failure is a dev-health signal. A cancelled or
+          # skipped run (for example, a provider-side cancellation) says
+          # nothing about dev, so leave the tracking issue untouched rather
+          # than raising a false red.
+          if [ "${RESULT}" != "failure" ]; then
+            echo "verify result '${RESULT}' is not a dev-health signal; leaving tracking issue unchanged"
+            exit 0
+          fi
+
+          body="$(cat <<EOF
+          <!-- kungfu-attention-source: automation -->
+
+          The Dev qualification patrol found \`${DEV_BRANCH}\` failing.
+
+          - Commit: \`${short_sha}\`
+          - Run: ${RUN_URL}
+
+          Open the run and read the \`[verify]\` summary line for the exact
+          failing items. This issue is kept in sync automatically: it refreshes
+          while dev stays red and closes when a later patrol run passes.
+          EOF
+          )"
+
+          if [ -n "${existing}" ]; then
+            gh issue edit "${existing}" --repo "${GITHUB_REPOSITORY}" \
+              --add-label "${AUTOMATION_LABELS}"
+            gh issue comment "${existing}" --repo "${GITHUB_REPOSITORY}" --body "${body}"
+            echo "refreshed tracking issue #${existing}"
+          else
+            gh issue create --repo "${GITHUB_REPOSITORY}" \
+              --title "${issue_title}" --body "${body}" \
+              --label "${AUTOMATION_LABELS}"
+            echo "opened tracking issue"
+          fi

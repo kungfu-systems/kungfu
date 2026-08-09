@@ -1,0 +1,42 @@
+{
+  "schema": "kungfu.auditable-demo.public-evidence/v1",
+  "status": "qualified",
+  "sourceSha": "0c584fc0e6446a07a5bdb1462738ffab47dddadb",
+  "workflowUrl": "https://github.com/kungfu-systems/kungfu/actions/runs/30230901970",
+  "buildchainSha": "625384b4927222022a2cd0758399afbf9333ccdc",
+  "rendererImage": "ghcr.io/kungfu-systems/build-images/demo-renderer@sha256:cb5e1dec368d21c7d4e8baded99ac75f12f7eff0d19505751888cf974086efa6",
+  "gate": {
+    "root": "sha256:7587c9bc315f49f88e11152d5387ff13a4fe606ef6ba97be8f70c5995aebf2d6",
+    "artifact": {
+      "id": "8640731842",
+      "name": "auditable-demo-gate-0c584fc0e644-7587c9bc315f49f8",
+      "digest": "sha256:f1c4f976f149a473fc1c56a21c9b976ddecff748d591fe7d31d9eb9c33a449e4",
+      "url": "https://github.com/kungfu-systems/kungfu/actions/runs/30230901970/artifacts/8640731842",
+      "expiresAt": "2026-08-10T02:51:11.000Z"
+    }
+  },
+  "media": {
+    "root": "sha256:ee95e4c65effd4edea98a4355595fe8c9eb3291f1966cb6e46f6fad6a8caab21",
+    "artifact": {
+      "id": "8640746864",
+      "name": "auditable-demo-media-0c584fc0e644-ee95e4c65effd4ed",
+      "digest": "sha256:794bf5a229311de642b3e313ecf92a31e22717239d1d3bdb95fc2058c8adeb40",
+      "url": "https://github.com/kungfu-systems/kungfu/actions/runs/30230901970/artifacts/8640746864",
+      "expiresAt": "2026-08-10T02:52:28.000Z"
+    }
+  },
+  "passport": {
+    "root": "sha256:0c44a9618fd4114340ca460a6fd7e3a391ada4c7a540d76b4136c3173373391e",
+    "artifact": {
+      "id": "8640755422",
+      "name": "kungfu-auditable-demo-passport-0c584fc0e6446a07a5bdb1462738ffab47dddadb-30230901970-1",
+      "digest": "sha256:f968bc0046f529e07ca5be03da1001ffdd642a3581118ded405ed46461793a24",
+      "url": "https://github.com/kungfu-systems/kungfu/actions/runs/30230901970/artifacts/8640755422",
+      "expiresAt": "2026-08-10T02:53:15.000Z"
+    }
+  },
+  "readmeMedia": {
+    "path": "docs/qualification/evidence/auditable-demo/0c44a9618fd4114340ca460a6fd7e3a391ada4c7a540d76b4136c3173373391e/demo.gif",
+    "digest": "sha256:796bdaa2e1de7eb041a12e7bc87871e81ecdee0acac0b83632baba22a3e4c792"
+  }
+}

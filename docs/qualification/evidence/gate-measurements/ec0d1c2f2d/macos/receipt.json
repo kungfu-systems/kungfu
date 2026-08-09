@@ -1,0 +1,88 @@
+{
+  "$schema": "https://libkungfu.dev/schemas/shifu/gate-receipt-v1.schema.json",
+  "schema": "shifu.gate-receipt/v1",
+  "runId": "gate-e41d1c7e-7abd-4791-a938-efac46cf66cf",
+  "project": {
+    "id": "kungfu"
+  },
+  "source": {
+    "sha": "ec0d1c2f2dd406f16083c8f7204420321f35e292",
+    "dirty": false
+  },
+  "registry": {
+    "ref": "shifu.gates.json",
+    "digest": "sha256:94030db29ba8eccd112d2e2dc24afe18466fc2d6e396f3f3daa5cca317e6cd47",
+    "projectId": "kungfu"
+  },
+  "selection": {
+    "profile": null,
+    "includeAdvisory": false,
+    "explicitGates": [
+      "gate.catalog"
+    ]
+  },
+  "environment": {
+    "platform": "macos",
+    "runnerCapabilities": [
+      "native-toolchain",
+      "node",
+      "product-artifacts",
+      "rust"
+    ]
+  },
+  "plan": {
+    "digest": "sha256:4e27bf62ba41e9c41cfc2c10a5562dea7da80768a2c0974edee8ad76b60ff282",
+    "qualifying": false,
+    "expectedActionIds": [
+      "sha256:0c186e824d1447bf4a755e2fce34159cd82a3be69421ee3d7f2f56afa1243843"
+    ],
+    "attemptedActionIds": [
+      "sha256:0c186e824d1447bf4a755e2fce34159cd82a3be69421ee3d7f2f56afa1243843"
+    ]
+  },
+  "startedAt": "2026-07-28T01:38:02.937Z",
+  "finishedAt": "2026-07-28T01:38:03.729Z",
+  "durationMs": 792,
+  "status": "pass",
+  "ok": true,
+  "qualifying": false,
+  "results": [
+    {
+      "gateId": "gate.catalog",
+      "policyMode": null,
+      "selectedBy": [
+        "explicit"
+      ],
+      "actionId": "sha256:0c186e824d1447bf4a755e2fce34159cd82a3be69421ee3d7f2f56afa1243843",
+      "definitionDigest": "sha256:8140073a2a653c172bdfed324ac59e78a463a602e758807d97219ea40dc81aad",
+      "status": "pass",
+      "attempted": true,
+      "durationMs": 790,
+      "exitCode": 0,
+      "signal": null,
+      "reason": null,
+      "artifacts": [],
+      "evidence": {
+        "expectation": "optional",
+        "schema": null,
+        "present": false,
+        "pointers": []
+      },
+      "reproduce": {
+        "argv": [
+          "./shifu",
+          "gate",
+          "run",
+          "gate.catalog",
+          "--registry",
+          "shifu.gates.json"
+        ]
+      }
+    }
+  ],
+  "skipped": [],
+  "unsupported": [],
+  "integrity": {
+    "digest": "sha256:3a965661feac1516a6caeea8d4848c16fcbe09514f4de6c3869a39ba9cd3bfc9"
+  }
+}

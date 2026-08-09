@@ -16,6 +16,7 @@
 #include <kungfu/yijinjing/common.h>
 #include <kungfu/yijinjing/journal/assemble.h>
 #include <kungfu/yijinjing/journal/journal.h>
+#include <kungfu/yijinjing/storage.h>
 #include <kungfu/yijinjing/time.h>
 
 #include <nlohmann/json.hpp>
@@ -27,8 +28,8 @@
 #include <vector>
 
 using namespace kungfu::yijinjing;
-namespace longfist = kungfu::longfist;
-using longfist::enums::FrameDataType;
+namespace schema = kungfu::yijinjing;
+using schema::enums::FrameDataType;
 
 namespace {
 constexpr int32_t MSG_SMOKE = 20001;
@@ -49,18 +50,18 @@ int main(int argc, char **argv) {
     return 2;
   }
   const std::string root = argv[1];
-  const std::string group = "embedding_slice";
+  const std::string namespace_ = "embedding_slice";
   const std::string name = "smoke";
 
   // ── write side ────────────────────────────────────────────────────
   std::vector<uint64_t> written_uids;
   {
     auto locator = std::make_shared<data::locator>(root);
-    auto location = data::location::make_shared(longfist::enums::mode::LIVE, longfist::enums::category::SYSTEM, group,
-                                                name, locator);
+    auto location = data::location::make_shared(schema::enums::mode::LIVE, schema::enums::location_role::SYSTEM,
+                                                namespace_, name, locator);
     auto bus = std::make_shared<journal::bus>(false);
     auto publisher = std::make_shared<journal::noop_publisher>();
-    auto writer = std::make_shared<journal::writer>(location, data::location::PUBLIC, /*lazy=*/true, publisher,
+    auto writer = std::make_shared<journal::writer>(location, data::location::PUBLIC, publisher,
                                                     /*low_latency=*/false, bus);
 
     uint64_t prev_uid = 0;
@@ -69,11 +70,11 @@ int main(int argc, char **argv) {
       const std::string body = nlohmann::json{{"step", i}, {"note", "embedding smoke"}}.dump();
       bus->set_trigger_frame_uid(prev_uid);
       const int64_t gen_time = time::now_in_nano();
-      auto frame = writer->open_frame(/*trigger_time=*/prev_gen_time, MSG_SMOKE, body.size(), STREAM_ID);
-      frame->set_data_type(FrameDataType::Json);
-      std::memcpy(const_cast<void *>(frame->data_address()), body.data(), body.size());
+      auto tx = writer->reserve_frame(/*trigger_time=*/prev_gen_time, MSG_SMOKE, body.size(), STREAM_ID);
+      tx.frame()->set_data_type(FrameDataType::Json);
+      tx.copy_bytes(body.data(), body.size());
       const uint64_t this_uid = writer->current_frame_uid();
-      writer->close_frame(body.size(), gen_time);
+      tx.commit(body.size(), gen_time);
       written_uids.push_back(this_uid);
       prev_uid = this_uid;
       prev_gen_time = gen_time;
@@ -81,10 +82,21 @@ int main(int argc, char **argv) {
   } // writer closed; from here on the process only reads the format
 
   // ── read side: reconstruct the identity, reopen, assert the chain ──
+  // The storage kernel vocabulary for an accepted frame range is the POD
+  // closed-set record (KF-ADR-019f86da-4f90-7828-9142-46f9bca4b0f5), not a heap struct.
+  types::AcceptedRangeRecorded accepted{};
+  kungfu::copy_string(accepted.source_id, "embedding_slice");
+  accepted.first_frame_uid = written_uids.front();
+  accepted.last_frame_uid = written_uids.back();
+  if (accepted.first_frame_uid == 0 || accepted.last_frame_uid == 0) {
+    std::cerr << "FAIL: storage accepted-range record did not preserve frame bounds\n";
+    return 1;
+  }
+
   auto locator = std::make_shared<data::locator>(root);
-  auto location =
-      data::location::make_shared(longfist::enums::mode::LIVE, longfist::enums::category::SYSTEM, group, name, locator);
-  journal::assemble reader(location, data::location::PUBLIC, longfist::enums::AssembleMode::Channel, 0);
+  auto location = data::location::make_shared(schema::enums::mode::LIVE, schema::enums::location_role::SYSTEM,
+                                              namespace_, name, locator);
+  journal::assemble reader(location, data::location::PUBLIC, schema::enums::AssembleMode::Channel, 0);
 
   std::size_t count = 0;
   uint64_t last_uid = 0;

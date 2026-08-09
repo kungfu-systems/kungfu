@@ -1,0 +1,102 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kungfu.tech/schemas/episode-provider/git-workspace-manifest-v1.schema.json",
+  "title": "Kungfu Git Workspace Episode Manifest v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "provider",
+    "providerRootAlgorithm",
+    "authority",
+    "episodeId",
+    "semanticRoot",
+    "semanticRootContract",
+    "integerEncoding",
+    "qualificationRoot",
+    "claims",
+    "contentRefs",
+    "dependencies",
+    "providerRoot"
+  ],
+  "properties": {
+    "schema": { "const": "kungfu.episode.git-workspace-manifest/v1" },
+    "provider": { "const": "git-workspace-jsonl/v1" },
+    "providerRootAlgorithm": {
+      "const": "sha256-kungfu-git-episode-canonical-json-v1"
+    },
+    "authority": { "const": "shadow-of-yijinjing-journal" },
+    "episodeId": { "$ref": "#/$defs/uint64" },
+    "semanticRoot": { "$ref": "#/$defs/root" },
+    "semanticRootContract": { "const": "kungfu.episode-root/v1" },
+    "integerEncoding": {
+      "const": "uint64-decimal-string-above-safe-range/v1"
+    },
+    "qualificationRoot": { "$ref": "#/$defs/root" },
+    "claims": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "digest", "count", "framing"],
+      "properties": {
+        "path": { "const": "claims.jsonl" },
+        "digest": { "$ref": "#/$defs/root" },
+        "count": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "framing": { "const": "canonical-json-lines-lf/v1" }
+      }
+    },
+    "contentRefs": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/root" }
+    },
+    "dependencies": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/object" }
+    },
+    "providerRoot": { "$ref": "#/$defs/root" }
+  },
+  "$defs": {
+    "root": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "uint64": {
+      "oneOf": [
+        {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        {
+          "type": "string",
+          "pattern": "^[1-9][0-9]{15,19}$"
+        }
+      ]
+    },
+    "object": {
+      "type": "object",
+      "additionalProperties": { "$ref": "#/$defs/value" }
+    },
+    "value": {
+      "oneOf": [
+        { "type": "null" },
+        { "type": "boolean" },
+        { "type": "string" },
+        {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        {
+          "type": "array",
+          "items": { "$ref": "#/$defs/value" }
+        },
+        { "$ref": "#/$defs/object" }
+      ]
+    }
+  }
+}

@@ -1,0 +1,62 @@
+[
+  {
+    "id": "unknown-method-fails-closed",
+    "direction": "server-notification",
+    "message": {"method": "future/event", "params": {}},
+    "expectedCode": "unknown-method"
+  },
+  {
+    "id": "stable-but-unmapped-provider-extension-fails-closed",
+    "direction": "client-request",
+    "message": {"id": 9, "method": "account/read", "params": {}},
+    "expectedCode": "unknown-method"
+  },
+  {
+    "id": "missing-exact-turn-precondition-fails-closed",
+    "direction": "client-request",
+    "message": {"id": 10, "method": "turn/interrupt", "params": {"threadId": "thread-1"}},
+    "expectedCode": "missing-required-field"
+  },
+  {
+    "id": "wrong-direction-fails-closed",
+    "direction": "client-notification",
+    "message": {"method": "turn/started", "params": {"threadId": "thread-1", "turn": {"id": "turn-1"}}},
+    "expectedCode": "unknown-method"
+  },
+  {
+    "id": "jsonrpc-field-fails-closed",
+    "direction": "client-request",
+    "message": {"jsonrpc": "2.0", "id": 11, "method": "thread/start", "params": {}},
+    "expectedCode": "jsonrpc-field"
+  },
+  {
+    "id": "approval-without-item-target-fails-closed",
+    "direction": "server-request",
+    "message": {
+      "id": "approval-2",
+      "method": "item/fileChange/requestApproval",
+      "params": {"threadId": "thread-1", "turnId": "turn-1", "startedAtMs": 1}
+    },
+    "expectedCode": "missing-required-field"
+  },
+  {
+    "id": "response-without-request-ledger-correlation-fails-closed",
+    "direction": "server-response",
+    "message": {"id": 12, "error": {"code": -32600, "message": "redacted"}},
+    "expectedCode": "uncorrelated-response"
+  },
+  {
+    "id": "response-for-unmapped-request-fails-closed",
+    "direction": "server-response",
+    "requestMethod": "account/read",
+    "message": {"id": 13, "result": {}},
+    "expectedCode": "uncorrelated-response"
+  },
+  {
+    "id": "response-with-result-and-error-fails-closed",
+    "direction": "server-response",
+    "requestMethod": "thread/read",
+    "message": {"id": 14, "result": {}, "error": {"code": -32600, "message": "redacted"}},
+    "expectedCode": "invalid-response"
+  }
+]

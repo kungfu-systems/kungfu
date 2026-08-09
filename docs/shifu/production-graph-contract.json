@@ -1,0 +1,56 @@
+{
+  "schema": "shifu.production-graph-contract/v0",
+  "maturity": "experimental",
+  "authority": "shifu-production-graph-verifier",
+  "schemas": {
+    "graph": "docs/shifu/schema/production-graph-v0.schema.json",
+    "plan": "docs/shifu/schema/production-graph-plan-v0.schema.json",
+    "executionEvent": "docs/shifu/schema/production-graph-execution-event-v0.schema.json",
+    "receipt": "docs/shifu/schema/production-graph-receipt-v0.schema.json",
+    "failure": "docs/shifu/schema/production-graph-failure-v0.schema.json",
+    "recovery": "docs/shifu/schema/production-graph-recovery-v0.schema.json",
+    "verificationReceipt": "docs/shifu/schema/production-graph-verification-receipt-v0.schema.json"
+  },
+  "rootAlgorithm": {
+    "name": "sha256-canonical-json",
+    "objectKeys": "recursive-lexicographic",
+    "arrayOrder": "preserved",
+    "encoding": "utf-8",
+    "rootFieldExcludedFromPreimage": true
+  },
+  "authorityReferences": {
+    "layers": "framework/core/architecture/layers.json",
+    "buildCapabilities": "framework/core/architecture/build-capabilities.json",
+    "semanticImpactOwner": "xinfa",
+    "semanticImpactInput": "graph.semanticImpact.selectionRoot",
+    "rule": "The graph retains exact roots and opaque identifiers; it never copies or recomputes authority semantics, component closure, or impact."
+  },
+  "verification": {
+    "command": "./shifu check:production-graph",
+    "protectedGate": "./shifu check:source",
+    "validFixtures": "docs/shifu/examples/production-graph",
+    "invalidFixtures": "docs/shifu/examples/production-graph/invalid",
+    "receipt": "shifu.production-graph-verification-receipt/v0",
+    "executesNodes": false
+  },
+  "authorityBoundary": {
+    "mode": "description-and-verification-only",
+    "forbiddenOperations": [
+      "capture",
+      "claim",
+      "dispatch",
+      "execute",
+      "approve",
+      "merge",
+      "close"
+    ],
+    "nonClaims": [
+      "graph-is-not-a-scheduler",
+      "plan-is-not-dispatch-authority",
+      "verification-is-not-execution",
+      "receipt-is-not-work-control-authority",
+      "recovery-is-guidance-not-mutation",
+      "shifu-does-not-own-xinfa-selection"
+    ]
+  }
+}

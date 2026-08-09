@@ -1,0 +1,46 @@
+{
+  "schema": "kungfu.layer-gate-timing-evidence/v1",
+  "source": {
+    "sha": "c4ba70d9542d42bbd75ddd9dd4c7ff079f4570fa",
+    "dirty": false
+  },
+  "platform": "windows-x64",
+  "cacheBoundary": "cold-repository-outputs-warm-global-download-caches",
+  "temporaryStorage": ".buildchain/tmp",
+  "parameters": {
+    "fuzzSecondsPerTarget": 90,
+    "compilerCache": false
+  },
+  "durationsSeconds": {
+    "install": 12.637,
+    "distribution": 520.455,
+    "verifyFuzz": 443.176,
+    "layerGates": 64.477,
+    "computeTotal": 1040.745
+  },
+  "artifactSet": {
+    "files": 10,
+    "bytes": 1284178212
+  },
+  "evidenceCollectionSeconds": 2.0,
+  "receipt": {
+    "path": "windows-x64.raw/layer-artifact-gate-receipt.json",
+    "sha256": "148b934f854ba8a6035548ebd9b937bac3a98b3f6979ed17176a45aeccce0b10",
+    "status": "pass",
+    "durationMs": 63938,
+    "gates": {
+      "gate.catalog": 2008,
+      "layers.contract": 2011,
+      "layers.format": 8263,
+      "layers.sdk": 18834,
+      "layers.surfaces": 32821
+    }
+  },
+  "rawEvidence": {
+    "directory": "windows-x64.raw",
+    "distributionLogGzipSha256": "eb5670bd9f1feed846c874587c4402bf7169ea472fc6bb6646d6c99a47346e23",
+    "verifyLogSha256": "608bf6f042968c6d32288c7c575daa5bff211a47a01fda43f0782b1c30b4bf13",
+    "gateLogSha256": "363021cf5a4ef4d7cba7ebdcb30085e781baea1c7248496120ca116024358195"
+  },
+  "outcome": "pass"
+}

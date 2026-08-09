@@ -1,0 +1,44 @@
+{
+  "schema": "kungfu.durability-clean-host-restart-report/v1",
+  "verdict": "passed-candidate-clean-host-restart",
+  "profile": "linux-agent120-clean-restart-v1",
+  "run_id": "17e807700-agent120-clean-restart-v1",
+  "source_sha": "17e807700289bb5e26304282bac640ced8ed4979",
+  "host_mount": "ext4   /dev/nvme0n1p1",
+  "boot_id_before": "ed3352b6-7f2c-4438-b649-a5680923bea1",
+  "boot_id_after": "9618c4ac-c6a3-4e54-9104-dc9ad081a66f",
+  "boot_id_changed": true,
+  "restart_elapsed_seconds": 118,
+  "restart_limit_seconds": 600,
+  "durable_frontier": {
+    "container_epoch": 1,
+    "frame_uid": 720100003,
+    "sequence": 3,
+    "stream_id": 7201
+  },
+  "durable_record_count": 3,
+  "episode_count": 1,
+  "projection_integrity_sha256": "3a5b18e5492f519535b419592b73a3c77eeb6102fd0ba8e973901ca7101c7a9f",
+  "ownership_generation_before": {
+    "service": 1,
+    "writer": 1
+  },
+  "ownership_generation_after": {
+    "service": 3,
+    "writer": 3
+  },
+  "startup_order_verified": [
+    "host_boot",
+    "filesystem_mount",
+    "state_service_owner",
+    "durable_recovery",
+    "projection_bootstrap",
+    "required_peers"
+  ],
+  "pre_report_sha256": "c3360ff114d9ec1aa556316574279edb6128f8955f44adf7e2429ec7eed93459",
+  "post_report_sha256": "9634399abb7e4df8d50fecc08529ccdb62052bb2d3b351383506f80a0a607271",
+  "resume_token_sha256": "207c24f4ecaccd6b1cb2eabdd18b6e608aa3b13ad162ccbe0a64eaea530f4fc0",
+  "clean_host_restart_qualified": true,
+  "physical_power_loss_qualified": false,
+  "production_eligible": false
+}

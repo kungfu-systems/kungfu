@@ -19,12 +19,14 @@ import { fileURLToPath } from 'node:url';
 const SKIP_DIRS = new Set([
   'node_modules',
   '.git',
+  '.buildchain',
   '.venv',
   'build',
   'dist',
   'out',
 ]);
 const SKIP_PREFIXES = ['.venv-', 'venv-', 'env-'];
+const SKIP_RELATIVE_DIRS = new Set(['.kungfu/qualification']);
 
 function shouldSkipDir(name) {
   return (
@@ -54,7 +56,11 @@ export function scanTree(root) {
     }
     for (const e of entries) {
       if (e.isDirectory()) {
-        if (!shouldSkipDir(e.name)) walk(path.join(dir, e.name));
+        const child = path.join(dir, e.name);
+        const relative = path.relative(root, child);
+        if (!shouldSkipDir(e.name) && !SKIP_RELATIVE_DIRS.has(relative)) {
+          walk(child);
+        }
       } else if (e.name.endsWith('.sh')) {
         hits.push(path.relative(root, path.join(dir, e.name)));
       }

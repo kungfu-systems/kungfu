@@ -1,0 +1,24 @@
+{
+  "schema": "kungfu.kfx.manifest/v1",
+  "name": "@kungfu-tech/kfx-adapter-langchain",
+  "version": "0.1.0",
+  "kungfuConfig": {
+    "key": "langchain-adapter",
+    "name": "LangChain adapter",
+    "config": {
+      "adapter": {
+        "capabilities": [],
+        "targets": [
+          "langchain_core.tools.base",
+          "langchain_core.tools"
+        ],
+        "runtimes": [
+          "python"
+        ],
+        "entry": {
+          "python": "src/adapter/python/index.py"
+        }
+      }
+    }
+  }
+}

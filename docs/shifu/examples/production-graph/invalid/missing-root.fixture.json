@@ -1,0 +1,10 @@
+{
+  "schema": "shifu.production-graph-negative-fixture/v0",
+  "baseFixture": "qualified",
+  "mutation": {
+    "target": "graph",
+    "operation": "delete",
+    "path": ["graphRoot"]
+  },
+  "expect": "missing-root"
+}

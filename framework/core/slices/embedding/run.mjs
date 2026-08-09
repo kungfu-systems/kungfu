@@ -13,15 +13,13 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
-import { locate, fail, tmpDir, run } from '../_harness.mjs';
+import { fail, locate, run, tmpDir } from '../_harness.mjs';
 
 const { sliceDir, buildDir } = locate(import.meta.url);
 const toolchain = path.join(buildDir, 'conan_toolchain.cmake');
 if (!fs.existsSync(toolchain)) {
   fail(
-    `${toolchain} not found\n` +
-      `seed the core build first (conan install / rebuild:core); the embedder\n` +
-      `borrows its dependency provisioning from that toolchain.`,
+    `${toolchain} not found\nseed the core build first (conan install / rebuild:core); the embedder\nborrows its dependency provisioning from that toolchain.`,
   );
 }
 

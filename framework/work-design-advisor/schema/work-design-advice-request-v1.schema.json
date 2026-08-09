@@ -1,0 +1,142 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kungfu.link/schema/work-design-advice-request-v1.schema.json",
+  "title": "Advisory work-design request v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "intent", "history", "xinfaRoot", "asOf", "policy", "proposal"],
+  "properties": {
+    "schema": { "const": "kungfu.work-design.advice-request/v1" },
+    "intent": { "$ref": "#/$defs/intent" },
+    "history": { "$ref": "#/$defs/history" },
+    "xinfaRoot": { "$ref": "#/$defs/root" },
+    "asOf": { "$ref": "#/$defs/timestamp" },
+    "policy": { "$ref": "#/$defs/policy" },
+    "proposal": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["authority", "topology", "slices", "confidence", "gapIds", "humanOverride"],
+      "properties": {
+        "authority": { "$ref": "#/$defs/advisoryBoundary" },
+        "topology": { "enum": ["none", "single", "dag"] },
+        "slices": { "type": "array", "items": { "$ref": "#/$defs/slice" } },
+        "confidence": { "$ref": "#/$defs/confidence" },
+        "gapIds": { "$ref": "#/$defs/idSet" },
+        "humanOverride": { "$ref": "#/$defs/humanOverride" }
+      }
+    }
+  },
+  "$defs": {
+    "root": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+    "id": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]*$" },
+    "timestamp": {
+      "type": "string",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(?:\\.[0-9]{3})?Z$"
+    },
+    "rootSet": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/root" } },
+    "idSet": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/id" } },
+    "confidence": { "enum": ["high", "medium", "low", "unknown"] },
+    "intent": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "root"],
+      "properties": {
+        "kind": { "enum": ["objective", "assignment-request"] },
+        "root": { "$ref": "#/$defs/root" }
+      }
+    },
+    "history": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["selectionRoot", "verificationRoot", "status", "selectedCount", "confidence", "gapIds"],
+      "properties": {
+        "selectionRoot": { "$ref": "#/$defs/root" },
+        "verificationRoot": { "$ref": "#/$defs/root" },
+        "status": { "enum": ["complete", "incomplete"] },
+        "selectedCount": { "type": "integer", "minimum": 0 },
+        "confidence": { "$ref": "#/$defs/confidence" },
+        "gapIds": { "$ref": "#/$defs/idSet" }
+      }
+    },
+    "policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema", "id", "version", "maxSlices", "maxTotalBudgetHours", "maxSliceBudgetHours", "allowedDeliveryClasses", "requiredEvidenceKinds", "policyRoot"],
+      "properties": {
+        "schema": { "const": "kungfu.work-design.policy/v1" },
+        "id": { "$ref": "#/$defs/id" },
+        "version": { "type": "integer", "minimum": 1 },
+        "maxSlices": { "type": "integer", "minimum": 1 },
+        "maxTotalBudgetHours": { "type": "integer", "minimum": 1 },
+        "maxSliceBudgetHours": { "type": "integer", "minimum": 1 },
+        "allowedDeliveryClasses": { "$ref": "#/$defs/idSet" },
+        "requiredEvidenceKinds": { "$ref": "#/$defs/idSet" },
+        "policyRoot": { "$ref": "#/$defs/root" }
+      }
+    },
+    "advisoryBoundary": {
+      "const": {
+        "mode": "advisory-only",
+        "mayCapture": false,
+        "mayClaim": false,
+        "mayDispatch": false,
+        "mayExecute": false,
+        "mayApprove": false,
+        "mayMerge": false,
+        "mayClose": false,
+        "assignmentAuthority": false,
+        "workControlAuthority": false
+      }
+    },
+    "humanOverride": {
+      "const": {
+        "allowed": true,
+        "requiresDisposition": true,
+        "preservesOriginalAdvice": true,
+        "preservesUserIntent": true
+      }
+    },
+    "acceptance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "criterionRoot"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "criterionRoot": { "$ref": "#/$defs/root" }
+      }
+    },
+    "evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "kind", "requirementRoot"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "kind": { "$ref": "#/$defs/id" },
+        "requirementRoot": { "$ref": "#/$defs/root" }
+      }
+    },
+    "slice": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "objectiveRoot", "dependsOn", "budgetHours", "deliveryClass", "acceptance", "requiredEvidence", "continuation"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "objectiveRoot": { "$ref": "#/$defs/root" },
+        "dependsOn": { "$ref": "#/$defs/idSet" },
+        "budgetHours": { "type": "integer", "minimum": 1 },
+        "deliveryClass": { "$ref": "#/$defs/id" },
+        "acceptance": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/acceptance" } },
+        "requiredEvidence": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/evidence" } },
+        "continuation": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["mode", "conditionRoots"],
+          "properties": {
+            "mode": { "enum": ["stop", "continue", "reassess"] },
+            "conditionRoots": { "$ref": "#/$defs/rootSet" }
+          }
+        }
+      }
+    }
+  }
+}

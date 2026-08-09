@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://xinfa.dev/schema/review-chart-v1.schema.json",
+  "title": "Xinfa Review Chart v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "beforeAtlasRoot", "resultAtlasRoot", "resultCut", "episodeRoots", "impact", "omissions", "staleEvidence", "conflictedEvidence", "status", "qualifying", "selfCertified"],
+  "properties": {
+    "schema": { "const": "xinfa.review-chart/v1" },
+    "beforeAtlasRoot": { "$ref": "#/$defs/root" },
+    "resultAtlasRoot": { "$ref": "#/$defs/root" },
+    "resultCut": { "type": "object" },
+    "episodeRoots": { "type": "array", "items": { "type": "object" } },
+    "impact": { "type": "object" },
+    "omissions": { "type": "array" },
+    "staleEvidence": { "type": "array" },
+    "conflictedEvidence": { "type": "array" },
+    "status": { "enum": ["current", "degraded"] },
+    "qualifying": { "const": false },
+    "selfCertified": { "const": false }
+  },
+  "$defs": { "root": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" } }
+}

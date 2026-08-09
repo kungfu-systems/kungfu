@@ -1,0 +1,16 @@
+--- a/Rx/v2/src/rxcpp/rx-notification.hpp
++++ b/Rx/v2/src/rxcpp/rx-notification.hpp
+@@ -142,5 +142,5 @@ private:
+         virtual void accept(const typename base::observer_type& o) const {
+             o.on_next(value);
+         }
+-        const T value;
++        T value;
+     };
+@@ -167,5 +167,5 @@ private:
+         virtual void accept(const typename base::observer_type& o) const {
+             o.on_error(ep);
+         }
+-        const rxu::error_ptr ep;
++        rxu::error_ptr ep;
+     };

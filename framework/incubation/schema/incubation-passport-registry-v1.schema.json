@@ -1,0 +1,260 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kungfu.tech/schema/incubation-passport-registry-v1.schema.json",
+  "title": "Kungfu Incubation Passport Registry v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "contract", "passports"],
+  "properties": {
+    "schema": { "const": "kungfu.incubation-passport.registry/v1" },
+    "contract": { "type": "string", "minLength": 1 },
+    "passports": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/passport" }
+    }
+  },
+  "$defs": {
+    "path": { "type": "string", "minLength": 1 },
+    "pathList": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/path" }
+    },
+    "primitiveDeclaration": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "name",
+        "layer",
+        "classification",
+        "lifecycle",
+        "admissionThreshold",
+        "relations",
+        "authorityRef",
+        "artifacts",
+        "languageEvidence",
+        "promotionEvidence",
+        "nonClaims"
+      ],
+      "properties": {
+        "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]+$" },
+        "name": { "type": "string", "minLength": 1 },
+        "layer": { "type": "string", "minLength": 1 },
+        "classification": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["family", "kind", "layer"],
+          "properties": {
+            "family": {
+              "enum": ["semantic-substrate", "ontology-binding", "coordinate", "domain-projection", "responsibility-role", "ordinary-capability"]
+            },
+            "kind": { "type": "string", "minLength": 1 },
+            "layer": { "type": "string", "minLength": 1 }
+          }
+        },
+        "lifecycle": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["state", "successor"],
+          "properties": {
+            "state": { "enum": ["active", "superseded", "retired"] },
+            "successor": { "type": ["string", "null"], "pattern": "^[a-z0-9][a-z0-9-]+$" }
+          }
+        },
+        "admissionThreshold": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["independentDurableSemantics", "crossDomainOrRuntimeRelevance", "boundaryParticipation", "deletionRationale", "substitutionRationale", "compressionRationale"],
+          "properties": {
+            "independentDurableSemantics": { "const": true },
+            "crossDomainOrRuntimeRelevance": { "enum": ["claimed", "not-claimed"] },
+            "boundaryParticipation": { "enum": ["responsibility", "persistent-fact", "both"] },
+            "deletionRationale": { "type": "string", "minLength": 1 },
+            "substitutionRationale": { "type": "string", "minLength": 1 },
+            "compressionRationale": { "type": "string", "minLength": 1 }
+          }
+        },
+        "relations": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["kind", "target", "layerBoundary", "authorityRef"],
+            "properties": {
+              "kind": { "enum": ["depends-on", "composes", "binds", "projects", "implements"] },
+              "target": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]+$" },
+              "layerBoundary": { "type": "string", "minLength": 1 },
+              "authorityRef": { "$ref": "#/$defs/path" }
+            }
+          }
+        },
+        "authorityRef": { "$ref": "#/$defs/path" },
+        "artifacts": { "$ref": "#/$defs/pathList" },
+        "languageEvidence": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["cpp", "python", "node", "rust"],
+          "properties": {
+            "cpp": { "$ref": "#/$defs/pathList" },
+            "python": { "$ref": "#/$defs/pathList" },
+            "node": { "$ref": "#/$defs/pathList" },
+            "rust": { "$ref": "#/$defs/pathList" }
+          }
+        },
+        "languageProofs": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "cpp": { "$ref": "#/$defs/pathList" },
+            "python": { "$ref": "#/$defs/pathList" },
+            "node": { "$ref": "#/$defs/pathList" },
+            "rust": { "$ref": "#/$defs/pathList" }
+          }
+        },
+        "promotionEvidence": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["contract", "vectors", "invariants", "dogfoodReceipts"],
+          "properties": {
+            "contract": { "$ref": "#/$defs/pathList" },
+            "vectors": { "$ref": "#/$defs/pathList" },
+            "invariants": { "$ref": "#/$defs/pathList" },
+            "dogfoodReceipts": { "$ref": "#/$defs/pathList" }
+          }
+        },
+        "nonClaims": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "passport": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "subject",
+        "subjectKind",
+        "primitiveDeclarations",
+        "anchor",
+        "destinedAuthority",
+        "incubation",
+        "schemaOwnership",
+        "persistence",
+        "identityProtocol"
+      ],
+      "properties": {
+        "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9.-]+$" },
+        "subject": { "type": "string", "minLength": 1 },
+        "subjectKind": {
+          "enum": ["runtime", "schema", "identity-protocol", "domain-profile"]
+        },
+        "primitiveDeclarations": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/primitiveDeclaration" }
+        },
+        "anchor": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "authorityRef"],
+          "properties": {
+            "type": { "enum": ["runtime", "git"] },
+            "authorityRef": { "$ref": "#/$defs/path" }
+          }
+        },
+        "destinedAuthority": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["layer", "owner", "admissionAssignment"],
+          "properties": {
+            "layer": { "type": "string", "minLength": 1 },
+            "owner": { "type": "string", "minLength": 1 },
+            "admissionAssignment": { "type": ["string", "null"] }
+          }
+        },
+        "incubation": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "state",
+            "implementationPaths",
+            "startedOn",
+            "deadline",
+            "admissionTrigger",
+            "currentBoundary"
+          ],
+          "properties": {
+            "state": { "enum": ["incubating", "admitted"] },
+            "implementationPaths": {
+              "type": "array",
+              "minItems": 1,
+              "items": { "$ref": "#/$defs/path" }
+            },
+            "startedOn": { "type": "string", "format": "date" },
+            "deadline": { "type": ["string", "null"], "format": "date" },
+            "admissionTrigger": { "type": "string", "minLength": 1 },
+            "currentBoundary": { "type": "string", "minLength": 1 }
+          }
+        },
+        "schemaOwnership": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["class", "registryRef", "identity", "rationale"],
+          "properties": {
+            "class": {
+              "enum": ["hana", "flatbuffers", "profile-contract-world", "none"]
+            },
+            "registryRef": { "type": ["string", "null"] },
+            "identity": { "type": ["string", "null"] },
+            "rationale": { "type": "string", "minLength": 1 }
+          }
+        },
+        "persistence": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["policy", "byteAuthority", "scriptLayerRole"],
+          "properties": {
+            "policy": {
+              "enum": ["native-journal-only", "git-canonical-bytes", "not-applicable"]
+            },
+            "byteAuthority": { "type": "string", "minLength": 1 },
+            "scriptLayerRole": { "type": "string", "minLength": 1 }
+          }
+        },
+        "identityProtocol": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "mintsRoots",
+            "protocolId",
+            "implementations",
+            "vectors",
+            "goldenFixturePolicy"
+          ],
+          "properties": {
+            "mintsRoots": { "type": "boolean" },
+            "protocolId": { "type": ["string", "null"] },
+            "implementations": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["language", "path"],
+                "properties": {
+                  "language": { "type": "string", "minLength": 1 },
+                  "path": { "$ref": "#/$defs/path" }
+                }
+              }
+            },
+            "vectors": {
+              "type": "array",
+              "items": { "$ref": "#/$defs/path" }
+            },
+            "goldenFixturePolicy": { "type": "string", "minLength": 1 }
+          }
+        }
+      }
+    }
+  }
+}

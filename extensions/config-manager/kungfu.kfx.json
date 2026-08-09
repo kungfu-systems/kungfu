@@ -1,0 +1,24 @@
+{
+  "schema": "kungfu.kfx.manifest/v1",
+  "name": "@kungfu-tech/kfx-view-config-manager",
+  "version": "4.0.0-alpha.1",
+  "kungfuConfig": {
+    "key": "config-manager",
+    "name": "Config",
+    "product": {
+      "roles": [
+        "devtool"
+      ],
+      "icon": "⚙️",
+      "order": 20
+    },
+    "config": {
+      "view": {
+        "title": "Config",
+        "capabilities": [
+          "domain"
+        ]
+      }
+    }
+  }
+}

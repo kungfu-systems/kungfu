@@ -1,0 +1,114 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kungfu.tech/schema/work-design-replay-request-v1.schema.json",
+  "title": "Offline Work Design policy replay request",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "asOf",
+    "cohort",
+    "expectedCohortRoot",
+    "baselinePolicy",
+    "candidatePolicy"
+  ],
+  "properties": {
+    "schema": { "const": "kungfu.work-design.replay-request/v1" },
+    "asOf": { "$ref": "#/$defs/timestamp" },
+    "cohort": { "$ref": "#/$defs/cohort" },
+    "expectedCohortRoot": { "$ref": "#/$defs/root" },
+    "baselinePolicy": {
+      "$ref": "https://kungfu.tech/schema/work-design-replay-policy-v1.schema.json"
+    },
+    "candidatePolicy": {
+      "$ref": "https://kungfu.tech/schema/work-design-replay-policy-v1.schema.json"
+    }
+  },
+  "$defs": {
+    "root": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "evaluation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "policyRoot",
+        "selectionRoot",
+        "adviceRoot",
+        "dispositionRoot",
+        "outcomeRoot",
+        "coverageRoot"
+      ],
+      "properties": {
+        "policyRoot": { "$ref": "#/$defs/root" },
+        "selectionRoot": { "$ref": "#/$defs/root" },
+        "adviceRoot": { "$ref": "#/$defs/root" },
+        "dispositionRoot": { "$ref": "#/$defs/root" },
+        "outcomeRoot": { "$ref": "#/$defs/root" },
+        "coverageRoot": { "$ref": "#/$defs/root" }
+      }
+    },
+    "sample": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema",
+        "id",
+        "qualifiedAt",
+        "qualificationRoot",
+        "baseline",
+        "candidate",
+        "drift",
+        "sampleRoot"
+      ],
+      "properties": {
+        "schema": { "const": "kungfu.work-design.replay-sample/v1" },
+        "id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]*$"
+        },
+        "qualifiedAt": { "$ref": "#/$defs/timestamp" },
+        "qualificationRoot": { "$ref": "#/$defs/root" },
+        "baseline": { "$ref": "#/$defs/evaluation" },
+        "candidate": { "$ref": "#/$defs/evaluation" },
+        "drift": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["classification", "evidenceRoot"],
+          "properties": {
+            "classification": {
+              "enum": [
+                "expected",
+                "improvement",
+                "none",
+                "regression",
+                "unclassified"
+              ]
+            },
+            "evidenceRoot": { "$ref": "#/$defs/root" }
+          }
+        },
+        "sampleRoot": { "$ref": "#/$defs/root" }
+      }
+    },
+    "cohort": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema", "asOf", "samples", "cohortRoot"],
+      "properties": {
+        "schema": { "const": "kungfu.work-design.replay-cohort/v1" },
+        "asOf": { "$ref": "#/$defs/timestamp" },
+        "samples": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/sample" }
+        },
+        "cohortRoot": { "$ref": "#/$defs/root" }
+      }
+    }
+  }
+}

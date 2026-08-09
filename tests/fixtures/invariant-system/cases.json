@@ -1,0 +1,15 @@
+{
+  "schema": "kungfu.invariant-system.fixtures/v1",
+  "registryMutations": [
+    {"id": "unknown-verdict", "path": "/vocabulary/verdict/0", "value": "passed", "expected": "schema-or-contract-drift"},
+    {"id": "missing-owner", "path": "/invariants/0/owner", "operation": "delete", "expected": "schema-invalid"},
+    {"id": "profile-as-constitutional", "path": "/invariants/0/stability", "value": "constitutional", "operation": "remove-model", "expected": "model-required"},
+    {"id": "stale-source", "path": "/invariants/0/source/root", "value": "sha256:0000000000000000000000000000000000000000000000000000000000000000", "expected": "source-root-drift"},
+    {"id": "unknown-checker", "path": "/invariants/0/checkerIds/0", "value": "missing-checker", "expected": "unknown-checker"}
+  ],
+  "passportMutations": [
+    {"id": "tampered-root", "path": "/passportRoot", "expected": "passport-root-mismatch"},
+    {"id": "stale-contract", "path": "/contractRoot", "expected": "stale-contract"},
+    {"id": "platform-omission", "path": "/evidence/0", "operation": "delete", "expected": "passport-coverage-mismatch"}
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "schema": "shifu.production-graph-negative-fixture/v0",
+  "baseFixture": "qualified",
+  "mutation": {
+    "target": "context",
+    "operation": "set",
+    "path": ["source", "revision"],
+    "value": "3333333333333333333333333333333333333333"
+  },
+  "expect": "source-drift"
+}

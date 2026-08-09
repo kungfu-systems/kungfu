@@ -1,79 +1,155 @@
 # @kungfu-tech/spec
 
-The portable fact-ledger **format spec** bundle for kungfu, and the **manifest
-contract** that connects the monorepo to any consumer of the spec.
+`@kungfu-tech/spec` is the portable, agent-readable projection of Kungfu's
+accepted `.kungfu` format authorities. It packages exact authority, reader,
+compatibility, migration, and retained-vector evidence without turning the npm
+package into a second semantic owner.
 
-This package is the **alignment baseline** for the whole spec pipeline: it is
-deliberately landed first, as a skeleton, so the generating flows (core /
-toolchain / node / python) and the downstream site all agree on one contract
-before any content exists.
+The package is content-addressed and deterministic:
 
-## What this package is
+- every normative artifact names its owning source files and their exact
+  `sha256` roots;
+- the manifest binds each generated artifact by exact byte length and artifact
+  root;
+- one canonical preimage binds all normative artifacts into
+  `manifest.normative.root`;
+- mutable build provenance is separate and excluded from that normative root;
+- committed generated artifacts are a cache: source drift or a hand edit fails
+  `generate:check`.
 
-- The **single connection protocol** between the kungfu monorepo (the single
-  source of truth for the format) and any consumer (e.g. a docs site) is the
-  **manifest** of this package. The manifest schema is the versioned contract;
-  changing it changes the two-repo interface.
-- This package **only aggregates and publishes** the bundle. It does **not**
-  own the content of the generated pieces — each source package owns its own
-  generator and its own drift gate.
+The standalone format is still pre-release. That status is explicit in the
+manifest and its non-claims; it is not hidden behind empty registries, seed
+tables, or walking-skeleton language.
 
-## The three version axes (kept separate)
+## Read in layers
 
-| Axis | Example | Role |
-| --- | --- | --- |
-| kungfu software version | `4.0.0-alpha.0` | software release (lerna single source) |
-| this package's version | `4.0.0-alpha.0` | **pickup coordinate** (reproducible pin; tracks lerna) |
-| **spec / format version** | **`1.0`** | **the authoritative contract** (declared in the manifest, independent of the above) |
+Do not start with the complete artifact inventory. Begin with the
+[reader journey](docs/guides/index.md):
 
-Consumers render and route off `spec_version`, never off the npm package
-version. The format identity (`format_namespace`) is **domain-free** on purpose:
-the docs domain may move (e.g. `.dev` ↔ `.cc`) without touching the format.
+1. choose Site for rendering or Spec for direct tooling;
+2. verify one installed authority;
+3. open only the Node API, CLI, or Python task guide you need;
+4. interpret conformance evidence when required;
+5. use the complete reference for exact routes and trust rules.
 
-## The contract
+The same rooted guide set is emitted under `dist/guides/` and projected
+byte-for-byte into `@kungfu-tech/site`, so human pages and agent navigation
+share one reading order.
 
-- `schema/manifest.schema.json` — the manifest contract (JSON Schema). **This is
-  the hard artifact this package pins.**
-- `schema/manifest.example.json` — a reference manifest instance (placeholder
-  paths/values) showing the shape every flow targets.
+## Authority graph
 
-The manifest points at **six categories** (format spec, schema registry, error
-dictionary, capabilities, conformance vectors, conformance map) and **three
-handbooks** (kungfu/CLI, pypi/python, npm/node), plus a resolvable
-`docs_url_base`. Ownership of each generated piece:
+The source of truth remains under `framework/format` and each listed protocol
+owner. This package generates eight projections:
 
-| Piece | Source package |
+| Artifact | Meaning |
 | --- | --- |
-| schema registry, error dictionary, conformance vectors, capabilities | `framework/core` |
-| CLI-ref handbook | `developer/toolchain` |
-| node-ref handbook | `framework/api` |
-| py-ref handbook | python binding |
-| format spec (prose), conformance map, aggregation, manifest | `framework/spec` (this package) |
+| `authority.json` | composition boundary, terminology, version axes, status, and non-claims |
+| `registry.json` | non-empty protocol registry with exact owner source roots |
+| `errors.json` | required-reader and migration error dictionaries |
+| `capabilities.json` | reader outcomes, capabilities, and material states |
+| `reader-matrix.json` | profile preconditions, allowed outcomes, semantic scope, and failure codes |
+| `compatibility.json` | current compatibility tuple and reader outcome map |
+| `migration.json` | directed migration graph, receipts, repair rules, and refusals |
+| `vectors/index.json` | retained real-byte corpus with release and byte roots |
 
-## Scripts (skeleton placeholders)
+The package also carries a stdlib-only independent Python reader at
+`reference-readers/python/portable_format_reader.py`. It verifies every rooted
+artifact and retained vector using only installed package bytes:
 
-- `pnpm --filter @kungfu-tech/spec run build` → `scripts/aggregate.js`: builds a
-  real, schema-valid bundle into `dist/` (`manifest.json` + the six category
-  payloads + three handbook payloads) from `spec.meta.json`, `package.json`, and
-  `docs/format-spec.md`.
-- `pnpm --filter @kungfu-tech/spec run verify` → `scripts/verify.js`: the
-  **integration drift gate**, active. Fails the build if the produced bundle
-  drifts from the manifest contract (missing/extra fields, domain-embedded
-  `format_namespace`, a referenced payload path that does not exist, or a
-  `spec_version` not routed into `docs_url_base`).
+```bash
+python3 node_modules/@kungfu-tech/spec/reference-readers/python/portable_format_reader.py --json
+```
 
-This is a **walking skeleton**: the pipeline produces and gates a real bundle,
-but with minimal content. Only `categories.format_spec` carries real prose
-(`docs/format-spec.md`); the five machine categories and three handbooks are
-minimal stubs, each tagged in the manifest with its owning package. See
-[CONSUMING.md](CONSUMING.md) for how `site-libkungfu-dev` consumes the bundle.
+The six legacy category routes remain available in `manifest.categories`, but
+they now point at these rooted generated artifacts. Additional machine routes
+live in `manifest.artifacts`.
 
-## Not done here (follow-ups)
+Historical Spec 0.1 prose is packaged only at
+`history/spec-0.1-draft.md` with status `historical-non-normative`. It is not
+the `format_spec` route and must not be used to implement a reader.
 
-- Real generators + per-piece drift gates in each owning package
-  (core / toolchain / node / python flows) — they replace the minimal stubs.
-- Full JSON-Schema validation of the manifest via `ajv` (the gate is currently a
-  focused structural check; the schema itself is already the pinned contract).
-- Deep design of the schema registry mechanism.
-- Wiring this package's `verify` into the root `verify` / `buildchain.toml`
-  lifecycle once content is beyond the walking skeleton.
+## Inspect an installed package
+
+An agent does not need the monorepo:
+
+```bash
+kungfu-spec authority
+kungfu-spec authority-verify
+kungfu-spec corpus
+kungfu-spec corpus-verify
+kungfu-spec corpus-vector journal-v1-unknown-carrier
+```
+
+The Node API exposes the same boundary:
+
+```js
+const {
+  inspectAuthority,
+  verifyAuthorityBundle,
+} = require('@kungfu-tech/spec');
+
+const authority = inspectAuthority();
+const proof = verifyAuthorityBundle();
+console.log(authority.normative_root, proof.artifact_count);
+```
+
+`inspectAuthority()` returns the exact authority, compatibility, migration,
+vector, source-root, artifact-root, and non-claim projections.
+`verifyAuthorityBundle()` recomputes the normative root and every installed
+artifact root before returning.
+
+`inspectConformance()`, `verifyConformanceCorpus()`, and
+`conformanceVector(id)` expose the same retained corpus boundary through the
+Node API. See the [complete API guide](docs/guides/api.md).
+
+The existing portable-fixture operations remain available:
+
+```bash
+kungfu-spec inspect BUNDLE
+kungfu-spec verify BUNDLE
+kungfu-spec preserve BUNDLE OUTPUT
+```
+
+## Generate, build, and verify
+
+Enter through `./shifu`; direct package-manager lifecycle commands are rejected
+by repository policy.
+
+```bash
+./shifu exec pnpm --filter @kungfu-tech/spec run generate:check
+./shifu exec pnpm --filter @kungfu-tech/spec run build
+./shifu exec pnpm --filter @kungfu-tech/spec run verify
+./shifu pack:spec
+./shifu layers:qualify:format
+```
+
+To intentionally refresh the committed projection after an owning authority
+changes:
+
+```bash
+./shifu exec pnpm --filter @kungfu-tech/spec run generate
+```
+
+Review the source-root and artifact-root diff. A generated file is never an
+independent edit surface.
+
+## Reproducibility policy
+
+Normative JSON is rendered as sorted-key UTF-8 JSON with two-space indentation
+and one terminal LF:
+
+```text
+canonical-json-sorted-keys-utf8-lf/v1
+```
+
+Artifact roots use `sha256:opaque-bytes/v1`. The bundle root hashes the
+canonical `kungfu.spec.normative-root/v1` preimage. `git_commit` is forensic
+provenance only; time, host paths, operating system, and architecture are not
+normative inputs.
+
+## Consumer boundary
+
+The manifest is the package-to-consumer interface. A site or tool may route,
+render, verify, or re-emit it, but may not redefine protocol identity,
+compatibility, migration, failure semantics, or release status. See
+[CONSUMING.md](CONSUMING.md).

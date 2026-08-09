@@ -1,0 +1,16 @@
+{
+  "schema": "kungfu.release-channel-trust/v1",
+  "channels": {
+    "alpha": {
+      "indexUrl": "https://kungfu.tech/.well-known/kungfu/alpha.json",
+      "activeKeyId": "ed25519-3c473c24ca261745",
+      "trustedKeys": [
+        {
+          "keyId": "ed25519-3c473c24ca261745",
+          "publicKey": "bNB6syHpgY0RKMHPKUhekyQupwgvtwqQ6qqrUV2ecfQ=",
+          "status": "active"
+        }
+      ]
+    }
+  }
+}

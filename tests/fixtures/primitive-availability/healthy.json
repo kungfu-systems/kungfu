@@ -1,0 +1,28 @@
+{
+  "schema": "kungfu.availability-observation/v1",
+  "primitiveId": "fact",
+  "catalogRoot": "CATALOG_ROOT",
+  "runtime": {
+    "id": "fixture-runtime",
+    "workspace": "/fixture/workspace",
+    "platform": "fixture-platform"
+  },
+  "profileRoots": [
+    "sha256:1111111111111111111111111111111111111111111111111111111111111111"
+  ],
+  "boundary": {
+    "authorityPresent": true,
+    "capabilityPresent": true,
+    "storageOwnerAvailable": true
+  },
+  "cut": {
+    "root": "sha256:2222222222222222222222222222222222222222222222222222222222222222",
+    "observedAt": "2026-07-25T00:00:00Z"
+  },
+  "health": {
+    "status": "healthy",
+    "evidenceRoots": [
+      "sha256:3333333333333333333333333333333333333333333333333333333333333333"
+    ]
+  }
+}

@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://libkungfu.dev/schemas/shifu/source-receipt-v1.schema.json",
+  "title": "Shifu exact source receipt",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "status",
+    "planRoot",
+    "repository",
+    "transportLocator",
+    "checkout",
+    "identity",
+    "executionEntrypoint",
+    "repositoryCodeExecuted",
+    "receiptRoot"
+  ],
+  "properties": {
+    "schema": {"const": "shifu.source-receipt/v1"},
+    "status": {"const": "qualified"},
+    "planRoot": {"$ref": "#/$defs/root"},
+    "repository": {"type": "string", "minLength": 1},
+    "transportLocator": {"type": "string", "minLength": 1},
+    "checkout": {"type": "string", "minLength": 1},
+    "identity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["commit", "tree", "tag", "bundleRoot", "releasePassportRoot"],
+      "properties": {
+        "commit": {"$ref": "#/$defs/gitObject"},
+        "tree": {"$ref": "#/$defs/gitObject"},
+        "tag": {"type": ["string", "null"]},
+        "bundleRoot": {"anyOf": [{"$ref": "#/$defs/root"}, {"type": "null"}]},
+        "releasePassportRoot": {"anyOf": [{"$ref": "#/$defs/root"}, {"type": "null"}]}
+      }
+    },
+    "executionEntrypoint": {"const": "./shifu"},
+    "repositoryCodeExecuted": {"const": false},
+    "receiptRoot": {"$ref": "#/$defs/root"}
+  },
+  "$defs": {
+    "root": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "gitObject": {"type": "string", "pattern": "^[0-9a-f]{40}$"}
+  }
+}

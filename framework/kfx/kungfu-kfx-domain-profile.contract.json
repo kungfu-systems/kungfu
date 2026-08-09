@@ -1,0 +1,52 @@
+{
+  "schema": "kungfu.kfx-domain-profile/v1",
+  "id": "kungfu-kfx-domain-profile",
+  "version": 1,
+  "authority": {
+    "factKernel": "yijinjing-hana-pod-journal",
+    "namedCutRef": "profiles/kfx/registry",
+    "mutation": "work-warrant-action-episode-settlement-ref-cas",
+    "projection": "pinned-fact-cut"
+  },
+  "factTypes": [
+    "kungfu.kfx.registry-projection",
+    "kungfu.kfx.package",
+    "kungfu.kfx.provider",
+    "kungfu.kfx.contribution",
+    "kungfu.kfx.dependency",
+    "kungfu.kfx.work",
+    "kungfu.kfx.warrant",
+    "kungfu.kfx.episode",
+    "kungfu.kfx.settlement"
+  ],
+  "relationTypes": [
+    "kfx-package-provides",
+    "kfx-provider-contributes",
+    "kfx-provider-depends-on",
+    "kfx-work-authorized-by",
+    "kfx-work-observed-in",
+    "kfx-work-settled-by",
+    "kfx-settlement-updates-package"
+  ],
+  "operations": [
+    "install",
+    "update",
+    "remove",
+    "enable",
+    "disable",
+    "activate",
+    "qualify"
+  ],
+  "perspectives": {
+    "desired": "accepted package Fact version at the pinned Cut",
+    "observed": "immutable KFX Episode facts",
+    "verdict": "derived from desired Facts, observed Episodes, provider graph and policy"
+  },
+  "boundaries": [
+    "packageKey is a transport and display coordinate, not Fact identity",
+    "filesystem discovery and materialization are observations and Actions, not registry authority",
+    "package.json and kungfu.kfx.json do not contain runtime lifecycle state",
+    "no KFX-specific lifecycle journal or independent generation counter is authoritative",
+    "every accepted mutation advances the named Cut through exact expected-old and revision CAS"
+  ]
+}

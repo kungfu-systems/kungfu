@@ -1,0 +1,323 @@
+{
+  "schema": "kungfu.work-lifecycle.four-language-fixture/v1",
+  "operationSet": "framework/work-lifecycle/kungfu-work-lifecycle-operation-matrix.contract.json",
+  "operationSetRoot": "sha256:7f40bf99ef9c13b122ba3b8a1cae51b909ec2a1ab3dcf5af6b4a6ba6c87fafa3",
+  "request": {
+    "operationId": "work.lifecycle.cut.verify/v1",
+    "input": {
+      "cutRoot": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    },
+    "execute": false,
+    "exactJson": "{\"action\":\"work_lifecycle\",\"execute\":false,\"input\":{\"cutRoot\":\"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\"},\"mode\":\"invoke\",\"operationId\":\"work.lifecycle.cut.verify/v1\"}"
+  },
+  "negative": {
+    "unknownOperation": "work.lifecycle.unknown/v1",
+    "nativeReasonCode": "unsupported-operation"
+  },
+  "failureInjection": {
+    "operationId": "work.lifecycle.cut.settle/v1",
+    "execute": true,
+    "omittedField": "input.authorityReceipt",
+    "error": "delegated mutation requires an exact authority receipt"
+  },
+  "runtimeCases": [
+    {
+      "id": "capabilities",
+      "mode": "capabilities",
+      "assert": [
+        {
+          "path": [
+            "result",
+            "schema"
+          ],
+          "equals": "kungfu.work-lifecycle.capabilities/v1"
+        },
+        {
+          "path": [
+            "result",
+            "operationSetRoot"
+          ],
+          "equals": "sha256:7f40bf99ef9c13b122ba3b8a1cae51b909ec2a1ab3dcf5af6b4a6ba6c87fafa3"
+        }
+      ]
+    },
+    {
+      "id": "cut-verify-prepared",
+      "operationId": "work.lifecycle.cut.verify/v1",
+      "input": {
+        "cutRoot": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "execute": false,
+      "assert": [
+        {
+          "path": [
+            "result",
+            "status"
+          ],
+          "equals": "prepared"
+        },
+        {
+          "path": [
+            "result",
+            "admitted"
+          ],
+          "equals": false
+        },
+        {
+          "path": [
+            "result",
+            "operationSetRoot"
+          ],
+          "equals": "sha256:7f40bf99ef9c13b122ba3b8a1cae51b909ec2a1ab3dcf5af6b4a6ba6c87fafa3"
+        }
+      ]
+    },
+    {
+      "id": "cut-verify-projected",
+      "operationId": "work.lifecycle.cut.verify/v1",
+      "input": {
+        "cutRoot": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "execute": true,
+      "assert": [
+        {
+          "path": [
+            "result",
+            "status"
+          ],
+          "equals": "projected"
+        },
+        {
+          "path": [
+            "result",
+            "reasonCode"
+          ],
+          "equals": "native-authority-not-executed"
+        },
+        {
+          "path": [
+            "result",
+            "admitted"
+          ],
+          "equals": false
+        }
+      ]
+    },
+    {
+      "id": "cut-settle-bypass-receipt-not-admitted",
+      "operationId": "work.lifecycle.cut.settle/v1",
+      "input": {
+        "authorityReceipt": {
+          "schema": "kungfu.cut.receipt/v1",
+          "operationId": "work.lifecycle.cut.settle/v1",
+          "authority": "domain-profile-cut-authority",
+          "receiptRoot": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+        }
+      },
+      "execute": true,
+      "assert": [
+        {
+          "path": [
+            "result",
+            "status"
+          ],
+          "equals": "projected"
+        },
+        {
+          "path": [
+            "result",
+            "reasonCode"
+          ],
+          "equals": "bypass-not-admitted"
+        },
+        {
+          "path": [
+            "result",
+            "admitted"
+          ],
+          "equals": false
+        },
+        {
+          "path": [
+            "result",
+            "authorityExecuted"
+          ],
+          "equals": false
+        }
+      ]
+    },
+    {
+      "id": "cut-settle-missing-authority-receipt",
+      "operationId": "work.lifecycle.cut.settle/v1",
+      "input": {},
+      "execute": true,
+      "assert": [
+        {
+          "path": [
+            "result",
+            "status"
+          ],
+          "equals": "denied"
+        },
+        {
+          "path": [
+            "result",
+            "errorClass"
+          ],
+          "equals": "missing-authority"
+        },
+        {
+          "path": [
+            "result",
+            "admitted"
+          ],
+          "equals": false
+        }
+      ]
+    },
+    {
+      "id": "cut-settle-mismatched-authority-receipt",
+      "operationId": "work.lifecycle.cut.settle/v1",
+      "input": {
+        "authorityReceipt": {
+          "schema": "kungfu.cut.receipt/v1",
+          "operationId": "work.lifecycle.cut.create/v1",
+          "authority": "domain-profile-cut-authority",
+          "receiptRoot": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+        }
+      },
+      "execute": true,
+      "assert": [
+        {
+          "path": [
+            "result",
+            "status"
+          ],
+          "equals": "denied"
+        },
+        {
+          "path": [
+            "result",
+            "errorClass"
+          ],
+          "equals": "authority-mismatch"
+        },
+        {
+          "path": [
+            "result",
+            "admitted"
+          ],
+          "equals": false
+        }
+      ]
+    },
+    {
+      "id": "retired-native-work-inspect-unsupported",
+      "operationId": "work.lifecycle.work.inspect/v1",
+      "input": {},
+      "execute": true,
+      "assert": [
+        {
+          "path": ["result", "status"],
+          "equals": "unsupported"
+        },
+        {
+          "path": ["result", "reasonCode"],
+          "equals": "unsupported-operation"
+        },
+        {
+          "path": ["result", "admitted"],
+          "equals": false
+        },
+        {
+          "path": [
+            "result",
+            "authorityExecuted"
+          ],
+          "equals": false
+        }
+      ]
+    },
+    {
+      "id": "missing-input-rejected",
+      "rawJson": "{\"action\":\"work_lifecycle\",\"mode\":\"invoke\",\"operationId\":\"work.lifecycle.cut.verify/v1\",\"execute\":false}",
+      "assert": [
+        { "path": ["result", "status"], "equals": "invalid-request" },
+        { "path": ["result", "errorClass"], "equals": "invalid-request" },
+        { "path": ["result", "message"], "equals": "input must be an object" },
+        { "path": ["result", "semanticOwner"], "equals": null },
+        { "path": ["result", "admitted"], "equals": false }
+      ]
+    },
+    {
+      "id": "missing-execute-rejected",
+      "rawJson": "{\"action\":\"work_lifecycle\",\"mode\":\"invoke\",\"operationId\":\"work.lifecycle.cut.verify/v1\",\"input\":{}}",
+      "assert": [
+        { "path": ["result", "status"], "equals": "invalid-request" },
+        { "path": ["result", "errorClass"], "equals": "invalid-request" },
+        { "path": ["result", "message"], "equals": "execute must be a boolean" },
+        { "path": ["result", "semanticOwner"], "equals": null },
+        { "path": ["result", "admitted"], "equals": false }
+      ]
+    },
+    {
+      "id": "null-input-rejected",
+      "rawJson": "{\"action\":\"work_lifecycle\",\"mode\":\"invoke\",\"operationId\":\"work.lifecycle.cut.verify/v1\",\"input\":null,\"execute\":false}",
+      "assert": [
+        { "path": ["result", "status"], "equals": "invalid-request" },
+        { "path": ["result", "errorClass"], "equals": "invalid-request" },
+        { "path": ["result", "message"], "equals": "input must be an object" },
+        { "path": ["result", "semanticOwner"], "equals": null },
+        { "path": ["result", "admitted"], "equals": false }
+      ]
+    },
+    {
+      "id": "unknown-field-preserved-to-native",
+      "rawJson": "{\"futureTopLevel\":null,\"execute\":false,\"input\":{\"falseValue\":false,\"futureNested\":null,\"ordered\":[3,2,1]},\"operationId\":\"work.lifecycle.cut.verify/v1\",\"mode\":\"invoke\",\"action\":\"work_lifecycle\"}",
+      "assert": [
+        {
+          "path": [
+            "result",
+            "status"
+          ],
+          "equals": "prepared"
+        },
+        {
+          "path": [
+            "result",
+            "admitted"
+          ],
+          "equals": false
+        }
+      ]
+    },
+    {
+      "id": "unknown-operation",
+      "operationId": "work.lifecycle.unknown/v1",
+      "input": {
+        "unknown": null,
+        "falseValue": false,
+        "ordered": [
+          3,
+          2,
+          1
+        ]
+      },
+      "execute": false,
+      "assert": [
+        {
+          "path": ["result", "status"],
+          "equals": "unsupported"
+        },
+        {
+          "path": ["result", "reasonCode"],
+          "equals": "unsupported-operation"
+        },
+        {
+          "path": ["result", "admitted"],
+          "equals": false
+        }
+      ]
+    }
+  ]
+}

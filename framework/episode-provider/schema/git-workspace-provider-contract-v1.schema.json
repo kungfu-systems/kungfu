@@ -1,0 +1,104 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kungfu.tech/schemas/episode-provider/git-workspace-provider-contract-v1.schema.json",
+  "title": "Kungfu Git Workspace Episode Provider Contract v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "provider",
+    "status",
+    "authority",
+    "semanticRootContract",
+    "providerRootContract",
+    "integerEncoding",
+    "tracked",
+    "ignored",
+    "schemas",
+    "framing",
+    "writer",
+    "equivalence"
+  ],
+  "properties": {
+    "schema": { "const": "kungfu.episode.git-workspace-provider-contract/v1" },
+    "provider": { "const": "git-workspace-jsonl/v1" },
+    "status": { "const": "shadow" },
+    "authority": { "const": "yijinjing-journal" },
+    "semanticRootContract": { "const": "kungfu.episode-root/v1" },
+    "providerRootContract": {
+      "const": "sha256-kungfu-git-episode-canonical-json-v1"
+    },
+    "integerEncoding": {
+      "const": "uint64-decimal-string-above-safe-range/v1"
+    },
+    "tracked": {
+      "const": [
+        ".kungfu/episodes/sealed/sha256/<prefix>/<root>/claims.jsonl",
+        ".kungfu/episodes/sealed/sha256/<prefix>/<root>/manifest.json",
+        ".kungfu/episodes/sealed/sha256/<prefix>/<root>/qualification.json"
+      ]
+    },
+    "ignored": {
+      "const": [
+        ".kungfu/episodes/.tmp/",
+        ".kungfu/runtime/episode-provider/",
+        ".kungfu/private/",
+        ".kungfu/cache/"
+      ]
+    },
+    "schemas": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["manifest", "segment", "qualification", "providerContract"],
+      "properties": {
+        "manifest": {
+          "const": "schema/git-workspace-manifest-v1.schema.json"
+        },
+        "segment": {
+          "const": "schema/git-workspace-segment-v1.schema.json"
+        },
+        "qualification": {
+          "const": "schema/episode-qualification-v1.schema.json"
+        },
+        "providerContract": {
+          "const": "schema/git-workspace-provider-contract-v1.schema.json"
+        }
+      }
+    },
+    "framing": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["canonicalJson", "claims", "contentRefs", "dependencies"],
+      "properties": {
+        "canonicalJson": { "const": "utf8-key-order-compact-nfc-safe-integer/v1" },
+        "claims": { "const": "canonical-json-lines-lf-contiguous-index/v1" },
+        "contentRefs": { "const": "unique-root-utf8-order/v1" },
+        "dependencies": { "const": "declared-order-opaque-native-closure/v1" }
+      }
+    },
+    "writer": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["scope", "lease", "publication", "globalAllocator", "globalLedger", "globalPublicationLock"],
+      "properties": {
+        "scope": { "const": "per-episode" },
+        "lease": { "const": "exclusive-create" },
+        "publication": { "const": "temp-fsync-rename-dir-fsync" },
+        "globalAllocator": { "const": false },
+        "globalLedger": { "const": false },
+        "globalPublicationLock": { "const": false }
+      }
+    },
+    "equivalence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["requiresCppQualification", "recomputesEpisodeSemanticRoot", "preservesQualifiedEpisodeSemanticRoot", "providerRootIsEpisodeRoot"],
+      "properties": {
+        "requiresCppQualification": { "const": true },
+        "recomputesEpisodeSemanticRoot": { "const": false },
+        "preservesQualifiedEpisodeSemanticRoot": { "const": true },
+        "providerRootIsEpisodeRoot": { "const": false }
+      }
+    }
+  }
+}

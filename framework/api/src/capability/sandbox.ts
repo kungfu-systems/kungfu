@@ -109,7 +109,8 @@ export function createCapabilityGuest(
   const marshal = (args: unknown[]): unknown[] =>
     args.map((arg) => {
       if (typeof arg !== 'function') return arg;
-      const id = (callbackSeq += 1);
+      callbackSeq += 1;
+      const id = callbackSeq;
       callbacks.set(id, arg as (...a: unknown[]) => void);
       return { __sandboxCallback: id } satisfies CallbackRef;
     });

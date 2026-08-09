@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kungfu-trader.github.io/schemas/project-cut/composition-v1.schema.json",
+  "title": "Project Cut composition receipt v1",
+  "type": "object",
+  "required": [
+    "schema",
+    "operation",
+    "scope",
+    "inputs",
+    "mappings",
+    "output",
+    "omissions",
+    "conflicts",
+    "diagnostics",
+    "status",
+    "compositionRoot"
+  ],
+  "properties": {
+    "schema": { "const": "project.cut.composition/v1" },
+    "operation": { "const": "scoped-compose" },
+    "scope": { "type": "object" },
+    "inputs": { "type": "array" },
+    "mappings": { "type": "array" },
+    "output": { "type": "object" },
+    "omissions": { "type": "array" },
+    "conflicts": { "type": "array" },
+    "diagnostics": { "type": "array" },
+    "status": { "enum": ["qualified", "incomplete"] },
+    "compositionRoot": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" }
+  },
+  "additionalProperties": false
+}

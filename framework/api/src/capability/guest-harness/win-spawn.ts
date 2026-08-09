@@ -1,7 +1,7 @@
 // Harness helper: on Windows, build the AppContainer launcher kungfu-guest needs
 // by loading the injected libkungfu binding (path via KFX_KUNGFU_BINDING — the
 // built kungfu .node addon). Off-Windows returns undefined so the unix paths are
-// untouched. This mirrors how a real host injects the binding (ADR-0011): the
+// untouched. This mirrors how a real host injects the binding (KF-ADR-019f86da-4f90-7e5e-ae22-2a8fc24086f1): the
 // harness is the host here, so it does the injection.
 import { createRequire } from 'node:module';
 

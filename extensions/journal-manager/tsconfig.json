@@ -1,0 +1,11 @@
+{
+  "extends": "../../framework/kfx/tsconfig.json",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@kungfu-tech/api/*": ["../../framework/api/src/*"],
+      "@kungfu-tech/kfx": ["../../framework/kfx/src/index.ts"]
+    }
+  },
+  "include": ["src/**/*.ts", "src/**/*.tsx"]
+}

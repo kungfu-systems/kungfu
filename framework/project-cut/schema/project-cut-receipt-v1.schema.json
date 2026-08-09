@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kungfu.link/schema/project-cut-receipt-v1.schema.json",
+  "title": "Project Cut receipt v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "cutRoot",
+    "rootAlgorithm",
+    "serializationRoot",
+    "artifactDigest",
+    "schemaRoot",
+    "verdict",
+    "diagnostics",
+    "publication",
+    "receiptRoot"
+  ],
+  "properties": {
+    "schema": { "const": "project.cut.receipt/v1" },
+    "cutRoot": { "$ref": "#/$defs/root" },
+    "rootAlgorithm": { "const": "sha256-project-cut-canonical-json-v1" },
+    "serializationRoot": { "$ref": "#/$defs/root" },
+    "artifactDigest": { "$ref": "#/$defs/root" },
+    "schemaRoot": { "$ref": "#/$defs/nullableRoot" },
+    "verdict": { "enum": ["valid", "invalid"] },
+    "diagnostics": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["code", "path", "message"],
+        "properties": {
+          "code": { "type": "string", "minLength": 1 },
+          "path": { "type": "string", "minLength": 1 },
+          "message": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "publication": { "type": "null" },
+    "receiptRoot": { "$ref": "#/$defs/root" }
+  },
+  "$defs": {
+    "root": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+    "nullableRoot": {
+      "oneOf": [{ "$ref": "#/$defs/root" }, { "type": "null" }]
+    }
+  }
+}

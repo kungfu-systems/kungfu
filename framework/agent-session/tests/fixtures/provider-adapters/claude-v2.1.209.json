@@ -1,0 +1,62 @@
+[
+  {
+    "id": "claude-ready-redacted",
+    "lines": ["Claude Code", "❯ Try a task"],
+    "expectedState": "ready",
+    "signatureId": "claude.ready.prompt"
+  },
+  {
+    "id": "claude-busy-redacted",
+    "lines": ["Thinking… (esc to interrupt)"],
+    "expectedState": "busy",
+    "signatureId": "claude.busy.interrupt-hint"
+  },
+  {
+    "id": "claude-ready-placeholder-redacted",
+    "lines": ["Try \"edit"],
+    "expectedState": "ready",
+    "signatureId": "claude.ready.placeholder"
+  },
+  {
+    "id": "claude-ready-manual-placeholder-redacted",
+    "lines": ["Try a task", "manual mode on"],
+    "expectedState": "ready",
+    "signatureId": "claude.ready.manual-placeholder"
+  },
+  {
+    "id": "claude-approval-redacted",
+    "lines": ["Do you want to proceed?", "1. Yes", "2. No"],
+    "expectedState": "approval-needed",
+    "signatureId": "claude.approval.proceed"
+  },
+  {
+    "id": "claude-approval-permission-title-redacted",
+    "lines": ["Claude needs your permission", "Bash command", "Esc to cancel"],
+    "expectedState": "approval-needed",
+    "signatureId": "claude.approval.needs-permission"
+  },
+  {
+    "id": "claude-approval-permission-rule-redacted",
+    "lines": ["Bash command", "Permission rule Bash requires confirmation", "Esc to cancel"],
+    "expectedState": "approval-needed",
+    "signatureId": "claude.approval.permission-rule"
+  },
+  {
+    "id": "claude-approval-command-redacted",
+    "lines": ["Allow this command?", "Esc to cancel"],
+    "expectedState": "approval-needed",
+    "signatureId": "claude.approval.allow-command"
+  },
+  {
+    "id": "claude-approval-bash-confirmation-with-ready-prompt-redacted",
+    "lines": ["Bash", "Allow", "❯"],
+    "expectedState": "approval-needed",
+    "signatureId": "claude.approval.bash-confirmation"
+  },
+  {
+    "id": "claude-unknown-redacted",
+    "lines": ["A provider screen with no supported state marker"],
+    "expectedState": "unknown",
+    "reason": "no-supported-state-signature"
+  }
+]

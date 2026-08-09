@@ -1,0 +1,10 @@
+{
+  "operation": "aliases",
+  "aliases": [
+    {
+      "path": "kungfu sample legacy",
+      "target": "fixture.sample.read"
+    }
+  ],
+  "expectedCode": "registry-alias-forbidden"
+}

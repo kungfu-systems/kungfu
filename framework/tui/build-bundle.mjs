@@ -51,3 +51,47 @@ await esbuild.build({
   },
   logLevel: 'info',
 });
+
+await esbuild.build({
+  entryPoints: ['../agent-session/src/product-worker.mjs'],
+  bundle: true,
+  platform: 'node',
+  format: 'esm',
+  target: 'node20',
+  outfile: 'dist/agent-session-worker.mjs',
+  external: ['node-pty'],
+  banner: {
+    js: [
+      "import { createRequire as __kfCreateRequire } from 'node:module';",
+      'const require = __kfCreateRequire(import.meta.url);',
+    ].join('\n'),
+  },
+  logLevel: 'info',
+});
+
+await esbuild.build({
+  entryPoints: ['../agent-session/src/mock-provider.mjs'],
+  bundle: true,
+  platform: 'node',
+  format: 'esm',
+  target: 'node20',
+  outfile: 'dist/mock-agent.mjs',
+  logLevel: 'info',
+});
+
+await esbuild.build({
+  entryPoints: ['../agent-session/src/native-interactive-client.mjs'],
+  bundle: true,
+  platform: 'node',
+  format: 'esm',
+  target: 'node20',
+  outfile: 'dist/native-agent-session.mjs',
+  external: ['node-pty'],
+  banner: {
+    js: [
+      "import { createRequire as __kfCreateRequire } from 'node:module';",
+      'const require = __kfCreateRequire(import.meta.url);',
+    ].join('\n'),
+  },
+  logLevel: 'info',
+});

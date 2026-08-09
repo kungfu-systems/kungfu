@@ -4,10 +4,11 @@ import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import { createRequire } from 'node:module';
 import path from 'node:path';
-import { openAtlas } from '../../../framework/api/src/capability/atlas.ts';
-import { fail, locate, tmpDir } from '../_harness.mjs';
+import { openProfile } from '../../../framework/api/src/capability/profile.ts';
+import { openWorkControlProfile } from '../../../extensions/work-dashboard/src/view/work-control-profile.ts';
+import { fail, locate, tmpDir, uvPython } from '../_harness.mjs';
 
-const { fixtureDir } = locate(import.meta.url);
+const { fixtureDir, coreDir } = locate(import.meta.url);
 const repoDir = path.resolve(fixtureDir, '..', '..', '..');
 const sampleRoot = path.resolve(
   fixtureDir,
@@ -30,25 +31,39 @@ const require = createRequire(
 );
 
 if (!fs.existsSync(bin)) {
-  fail('kungfu CLI is not frozen (run ./kungfu-code freeze first)');
+  fail('kungfu CLI is not assembled (run ./shifu freeze first)');
 }
 if (!fs.existsSync(bundlePath)) {
   fail('work-dashboard is not built (run kungfu sdk kfx build first)');
 }
 
-const atlas = openAtlas({
+uvPython(coreDir, [
+  path.join(fixtureDir, '..', '_activate_work_control_profile.py'),
+  runtimeDir,
+  path.join(repoDir, 'extensions', 'work-control'),
+]);
+
+const profile = openProfile({
   runtimeDir,
   execFileSync,
-  env: { KUNGFU_ATLAS_REPO: sampleRoot },
+  env: { ...process.env, KUNGFU_ATLAS_REPO: sampleRoot },
   bin,
 });
-const imported = atlas.importRepo(sampleRoot);
+const atlas = openWorkControlProfile(profile, sampleRoot);
+const imported = await atlas.importRepo(sampleRoot);
 if (imported.missions !== 1 || imported.goals !== 2 || imported.markers !== 1) {
   fail(`unexpected import counts: ${JSON.stringify(imported)}`);
 }
+await atlas.dashboard();
 
 const React = require('react');
 const ReactDomServer = require('react-dom/server');
+globalThis.window = {
+  require: (id) => {
+    if (id !== 'electron') fail(`unexpected host module: ${id}`);
+    return { ipcRenderer: {} };
+  },
+};
 const fakeCaps = {
   work: {
     refresh: () => undefined,
@@ -57,15 +72,53 @@ const fakeCaps = {
   ledger: {
     formatNanos: () => '',
   },
-  atlas,
+  profile,
+  storage: {
+    savedQueries: () => ({ entries: [] }),
+  },
+  projects: {
+    list: async () => ({ schema: 'kungfu.projects.catalog/v1', projects: [] }),
+    runs: () => [],
+    subscribeRuns: () => () => undefined,
+  },
 };
 const fakeShell = {
-  params: { view: 'atlas' },
+  params: {},
   open: () => undefined,
+  notify: () => undefined,
   onRefresh: () => ({ stop: () => undefined }),
 };
 const capabilityModule = {
   WORK_STATUS_NAMES: ['active', 'blocked', 'waiting', 'ready', 'done'],
+  DEFAULT_GOAL_CARD_QUERY: {
+    schema: 'kungfu.work-control.goal-card-query/v1',
+    text: '',
+    sections: [],
+    statuses: [],
+    trust: [],
+    actors: [],
+    tracks: [],
+    roles: [],
+    importance: [],
+    stages: [],
+    updatedWithinDays: null,
+    hasChildren: 'all',
+    closed: 'include',
+    hideClosedChildren: false,
+    sort: { field: 'decision-priority', direction: 'desc' },
+  },
+  emptyQueryChangelogState: () => ({
+    rows: {},
+    evidence: {},
+    changes: {},
+    appliedMessageIds: [],
+    resultSchema: null,
+    frontier: { kind: 'empty', record_count: '0' },
+    resultHash: '',
+    gap: null,
+  }),
+  applyQueryChangelogPage: (state) => state,
+  parseGoalCardQuerySpec: (value) => value,
 };
 const module = { exports: {} };
 const code = fs.readFileSync(bundlePath, 'utf8');
@@ -89,15 +142,13 @@ const html = ReactDomServer.renderToStaticMarkup(
 );
 
 for (const needle of [
-  'Atlas projection',
-  'Demo platform stewardship',
-  '2026-01-02-demo-importer',
-  'Demo importer goal',
-  '1 missions',
-  '2 goals',
-  '1 markers',
+  'All Work',
+  'Connecting All Work…',
+  'active local project workspace',
+  'Loading retained Project Work…',
+  'All Work remains open while Kungfu restores its Work graph.',
 ]) {
-  if (!html.includes(needle)) fail(`live Atlas tab missing ${needle}`);
+  if (!html.includes(needle)) fail(`live All Work view missing ${needle}`);
 }
 
-console.log('[kfx-demo-work-dashboard-atlas-live] render ok');
+console.log('[kfx-demo-work-dashboard-atlas-live] profile + All Work render ok');

@@ -1,5 +1,14 @@
 blank_issues_enabled: false
 contact_links:
+  - name: Questions and open-ended support
+    url: https://github.com/kungfu-systems/kungfu/discussions/new?category=q-a
+    about: Ask how to use or build Kungfu. Do not include secrets or private logs.
+  - name: Ideas and product direction
+    url: https://github.com/kungfu-systems/kungfu/discussions/new?category=ideas
+    about: Explore an early idea before it becomes a bounded feature request.
+  - name: Showcases
+    url: https://github.com/kungfu-systems/kungfu/discussions/new?category=show-and-tell
+    about: Share what you built without opening an actionable issue.
   - name: Report a security vulnerability
     url: https://github.com/kungfu-systems/kungfu/security/advisories/new
     about: Report vulnerabilities privately through GitHub, not in a public issue. See SECURITY.md.

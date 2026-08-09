@@ -1,0 +1,50 @@
+{
+  "schema": "kungfu.layer-gate-excluded-runs/v1",
+  "recordedAt": "2026-07-14",
+  "runs": [
+    {
+      "source": "6afd4d121b3658b1d37e1b3fffc43d54dd2ddd31",
+      "platform": "linux-x64",
+      "stage": "distribution",
+      "outcome": "fail",
+      "reason": "The inherited shared Conan home resolved storage into a runner-owned path and failed on permissions. The authoritative protocol now uses an empty repository-local CONAN_HOME."
+    },
+    {
+      "source": "6afd4d121b3658b1d37e1b3fffc43d54dd2ddd31",
+      "platform": "linux-x64",
+      "stage": "distribution",
+      "outcome": "interrupted",
+      "reason": "The source line advanced while the run was active, so its 218.46-second partial distribution was not a same-source sample."
+    },
+    {
+      "source": "6afd4d121b3658b1d37e1b3fffc43d54dd2ddd31",
+      "platform": "windows-x64",
+      "stage": "distribution",
+      "outcome": "fail",
+      "reason": "The esbuild Windows package stores esbuild.exe at its root while the Unix packages use bin/esbuild; the hard-coded Unix layout failed after 11.635 seconds."
+    },
+    {
+      "source": "81282be93",
+      "platform": "windows-x64",
+      "stage": "distribution",
+      "outcome": "fail",
+      "reason": "The durability power-cut fixture used unguarded POSIX unistd file IO on MSVC. The source was repaired with explicit Windows adapters and a structural regression test."
+    },
+    {
+      "source": "81282be93",
+      "platform": "macos-arm64,linux-x64",
+      "stage": "distribution",
+      "outcome": "interrupted",
+      "reason": "Both runs were stopped when the Windows portability fix advanced the required same-source tuple."
+    },
+    {
+      "source": "2a41a9627f587b0df91dc22b4d5fb559e5540317",
+      "platform": "linux-x64",
+      "stage": "verify-fuzz",
+      "outcome": "fail",
+      "durationSeconds": 602.67,
+      "reason": "All sanitizer and 90-second fuzz targets passed, but Episode smoke timed out because os.tmpdir() resolved to the host mechanical disk. The identical profile passed in 109.26 seconds on repository-scoped NVMe temporary storage.",
+      "evidence": "2a41a9627/linux-x64.excluded"
+    }
+  ]
+}

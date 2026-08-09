@@ -1,0 +1,25 @@
+{
+  "schema": "kungfu.kfx.manifest/v1",
+  "name": "@kungfu-tech/kfx-view-journal-manager",
+  "version": "4.0.0-alpha.1",
+  "kungfuConfig": {
+    "key": "journal-manager",
+    "name": "Journal",
+    "product": {
+      "roles": [
+        "devtool"
+      ],
+      "icon": "📓",
+      "order": 30
+    },
+    "config": {
+      "view": {
+        "title": "Journal",
+        "capabilities": [
+          "ledger",
+          "domain"
+        ]
+      }
+    }
+  }
+}

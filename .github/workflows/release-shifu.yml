@@ -1,0 +1,166 @@
+# SPDX-License-Identifier: Apache-2.0
+#
+# Release the independently installable Shifu and Xinfa components from the
+# exact source tag. Kungfu embeds both libraries but does not package either
+# standalone executable in @kungfu-tech/core.
+#
+# Each component's Cargo.toml is its version source; the tag must match it.
+# Shifu's shims and direct Xinfa users consume these assets without requiring a
+# Rust toolchain. Linux targets musl for a fully static cross-distro binary.
+
+name: Release native components
+
+on:
+  push:
+    tags:
+      - "shifu-v*"
+      - "xinfa-v*"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-14
+            component: shifu
+            crate: shifu
+            target: aarch64-apple-darwin
+            asset: shifu-macos-arm64
+          - os: ubuntu-22.04
+            component: shifu
+            crate: shifu
+            target: x86_64-unknown-linux-musl
+            asset: shifu-linux-x64
+          - os: windows-2022
+            component: shifu
+            crate: shifu
+            target: x86_64-pc-windows-msvc
+            asset: shifu-windows-x64.exe
+          - os: macos-14
+            component: xinfa
+            crate: xinfa
+            target: aarch64-apple-darwin
+            asset: xinfa-macos-arm64
+          - os: ubuntu-22.04
+            component: xinfa
+            crate: xinfa
+            target: x86_64-unknown-linux-musl
+            asset: xinfa-linux-x64
+          - os: windows-2022
+            component: xinfa
+            crate: xinfa
+            target: x86_64-pc-windows-msvc
+            asset: xinfa-windows-x64.exe
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      - name: Install musl target
+        if: contains(matrix.target, 'musl')
+        run: |
+          rustup target add "${{ matrix.target }}"
+          sudo apt-get update -y && sudo apt-get install -y musl-tools
+      - name: Add target
+        if: ${{ !contains(matrix.target, 'musl') }}
+        run: rustup target add "${{ matrix.target }}"
+      - name: Build
+        # shifu-entry-contract: allow this component-release producer to invoke
+        # Cargo after the workflow has selected the repository-pinned toolchain.
+        run: |
+          if [[ "$GITHUB_REF" == refs/tags/${{ matrix.component }}-v* ]]; then
+            ver="$(sed -n 's/^version = "\(.*\)"$/\1/p' "${{ matrix.crate }}/Cargo.toml" | head -n 1)"
+            tag="${GITHUB_REF_NAME#${{ matrix.component }}-v}"
+            if [ "$ver" != "$tag" ]; then
+              echo "tag $GITHUB_REF_NAME does not match ${{ matrix.component }} version $ver" >&2
+              exit 1
+            fi
+          fi
+          cargo build --locked --release -p "${{ matrix.crate }}" --target "${{ matrix.target }}"
+        working-directory: crates
+        env:
+          # Bake the "release" build channel so `shifu --version` can tell a
+          # release asset from a local source build.
+          SHIFU_RELEASE_BUILD: "1"
+      - name: Stage asset
+        run: |
+          mkdir -p dist
+          src="crates/target/${{ matrix.target }}/release/${{ matrix.crate }}"
+          if [ "${{ runner.os }}" = "Windows" ]; then src="${src}.exe"; fi
+          cp "$src" "dist/${{ matrix.asset }}"
+          jq -n \
+            --arg schema "kungfu.component-build-provenance/v1" \
+            --arg component "${{ matrix.component }}" \
+            --arg version "$(sed -n 's/^version = "\(.*\)"$/\1/p' "crates/${{ matrix.crate }}/Cargo.toml" | head -n 1)" \
+            --arg target "${{ matrix.target }}" \
+            --arg asset "${{ matrix.asset }}" \
+            --arg sourceCommit "$(git rev-parse HEAD)" \
+            --arg sourceTree "$(git rev-parse 'HEAD^{tree}')" \
+            '{schema:$schema,component:$component,version:$version,target:$target,asset:$asset,sourceCommit:$sourceCommit,sourceTree:$sourceTree,featureSet:"workspace-default",embeddedParity:"same-crate-source"}' \
+            > "dist/${{ matrix.asset }}.provenance.json"
+          cd dist
+          if command -v sha256sum >/dev/null 2>&1; then
+            sha256sum "${{ matrix.asset }}" > "${{ matrix.asset }}.sha256"
+          else
+            shasum -a 256 "${{ matrix.asset }}" > "${{ matrix.asset }}.sha256"
+          fi
+          digest="$(awk '{print $1}' "${{ matrix.asset }}.sha256")"
+          jq --arg sha256 "$digest" '. + {sha256:$sha256}' \
+            "${{ matrix.asset }}.provenance.json" \
+            > "${{ matrix.asset }}.provenance.tmp"
+          mv "${{ matrix.asset }}.provenance.tmp" \
+            "${{ matrix.asset }}.provenance.json"
+      - name: Sign source-bound build provenance
+        uses: actions/attest-build-provenance@0f67c3f4856b2e3261c31976d6725780e5e4c373 # v4.1.1
+        with:
+          subject-path: dist/${{ matrix.asset }}
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: ${{ matrix.component }}-${{ matrix.asset }}
+          path: dist/*
+          if-no-files-found: error
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/')
+    needs: build
+    runs-on: ubuntu-22.04
+    environment:
+      name: adr0049-production-publication
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          pattern: ${{ startsWith(github.ref_name, 'shifu-v') && 'shifu-*' || 'xinfa-*' }}
+          path: dist
+          merge-multiple: true
+      - name: Combined checksums
+        run: |
+          cd dist
+          cat ./*.sha256 > SHA256SUMS
+          rm -f ./*.sha256
+          jq -s \
+            --arg schema "kungfu.component-release-bom/v1" \
+            --arg tag "$GITHUB_REF_NAME" \
+            --arg sourceCommit "$GITHUB_SHA" \
+            '{schema:$schema,tag:$tag,sourceCommit:$sourceCommit,artifacts:sort_by(.asset)}' \
+            ./*.provenance.json > component-release-bom.json
+      - name: Create release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" dist/* \
+            --repo "$GITHUB_REPOSITORY" \
+            --title "$GITHUB_REF_NAME" \
+            --verify-tag \
+            --notes "Native component binaries for macOS arm64, Linux x64 static/musl, and Windows x64. Verify SHA256SUMS and GitHub build provenance with \`gh attestation verify <asset> --repo $GITHUB_REPOSITORY\`. Kungfu embeds the same crate source in-process; standalone executables remain GitHub-only products."

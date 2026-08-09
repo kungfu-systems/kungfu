@@ -1,0 +1,199 @@
+{
+  "schema": "kungfu.core-build-capability-manifest/v1",
+  "authority_version": 1,
+  "authority_sha256": "sha256:5e234736416b3b74c2818dea1c1cc257898c5ce01eaba1a64a5d09e099f7d80b",
+  "default_profile": "full",
+  "profiles": [
+    {
+      "id": "journal",
+      "status": "supported",
+      "components": [
+        "journal-core"
+      ],
+      "providers": [],
+      "projections": [],
+      "bindings": [
+        "cxx"
+      ],
+      "requires": [],
+      "conflicts": [],
+      "dependency_roots": [
+        "fmt",
+        "nlohmann-json",
+        "spdlog",
+        "xxhash"
+      ]
+    },
+    {
+      "id": "embedded-minimal",
+      "status": "supported",
+      "components": [
+        "journal-core",
+        "storage-provider-sdk"
+      ],
+      "providers": [
+        "custom-content-store"
+      ],
+      "projections": [],
+      "bindings": [
+        "cxx"
+      ],
+      "requires": [],
+      "conflicts": [],
+      "dependency_roots": [
+        "fmt",
+        "nlohmann-json",
+        "spdlog",
+        "xxhash"
+      ]
+    },
+    {
+      "id": "embedded-sqlite",
+      "status": "supported",
+      "components": [
+        "journal-core",
+        "runtime-contracts",
+        "runtime-services",
+        "runtime-adapters",
+        "composition"
+      ],
+      "providers": [
+        "file-storage"
+      ],
+      "projections": [
+        "sqlite-projection",
+        "sqlite-state-cache",
+        "sqlite-query-acceleration"
+      ],
+      "bindings": [
+        "cxx",
+        "c"
+      ],
+      "requires": [
+        "embedded-minimal"
+      ],
+      "conflicts": [],
+      "dependency_roots": [
+        "flatbuffers",
+        "fmt",
+        "nlohmann-json",
+        "nng",
+        "rxcpp",
+        "spdlog",
+        "sqlite",
+        "sqlite-orm",
+        "tabulate",
+        "xxhash"
+      ]
+    },
+    {
+      "id": "server",
+      "status": "planned",
+      "components": [
+        "journal-core",
+        "runtime-contracts",
+        "runtime-services",
+        "runtime-adapters",
+        "composition"
+      ],
+      "providers": [
+        "file-storage",
+        "rocksdb-storage",
+        "rocksdb-live-kv"
+      ],
+      "projections": [
+        "sqlite-projection",
+        "sqlite-state-cache",
+        "sqlite-query-acceleration"
+      ],
+      "bindings": [
+        "cxx",
+        "c",
+        "python",
+        "node"
+      ],
+      "requires": [],
+      "conflicts": [],
+      "dependency_roots": [
+        "flatbuffers",
+        "fmt",
+        "libnode",
+        "nlohmann-json",
+        "nng",
+        "pybind11",
+        "rocksdb",
+        "rxcpp",
+        "spdlog",
+        "sqlite",
+        "sqlite-orm",
+        "tabulate",
+        "xxhash"
+      ]
+    },
+    {
+      "id": "full",
+      "status": "supported",
+      "components": [
+        "journal-core",
+        "runtime-contracts",
+        "runtime-services",
+        "runtime-adapters",
+        "composition"
+      ],
+      "providers": [
+        "file-storage",
+        "rocksdb-storage",
+        "rocksdb-live-kv"
+      ],
+      "projections": [
+        "sqlite-projection",
+        "sqlite-state-cache",
+        "sqlite-query-acceleration"
+      ],
+      "bindings": [
+        "cxx",
+        "c",
+        "python",
+        "node",
+        "electron",
+        "wasm"
+      ],
+      "requires": [],
+      "conflicts": [],
+      "dependency_roots": [
+        "flatbuffers",
+        "fmt",
+        "libnode",
+        "nlohmann-json",
+        "nng",
+        "pybind11",
+        "rocksdb",
+        "rxcpp",
+        "spdlog",
+        "sqlite",
+        "sqlite-orm",
+        "tabulate",
+        "xxhash"
+      ]
+    }
+  ],
+  "build_identity": {
+    "schema": "kungfu.core-build-identity/v1",
+    "fields": [
+      "authority_version",
+      "profile",
+      "components",
+      "providers",
+      "projections",
+      "bindings",
+      "dependency_roots",
+      "live_capability",
+      "build_root",
+      "source_revision",
+      "compiler",
+      "compiler_version",
+      "platform",
+      "architecture"
+    ]
+  }
+}

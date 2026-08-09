@@ -1,0 +1,33 @@
+ninja: no work to do.
+[durable-ingest-test] running /Users/dkr/Worktrees/kungfu/feature/durability-qualification-final/framework/core/build/Release/kungfu_durable_ingest_tests
+ok - group barrier survives verified restart
+ok - unqualified profile fails closed and retains tail
+ok - arbitrary production profile cannot self qualify
+ok - data sync without checkpoint never acknowledges
+ok - unknown after checkpoint publish resolves on restart
+ok - unknown append requires reopen and preserves tail
+ok - stale generation cannot commit pending bytes
+ok - writer may exit after active admission
+ok - stale writer attestation is rejected at admission
+ok - position gap is rejected before append
+ok - sequence assignment authority is crash-safe and monotonic (ADR-0072 Phase 2)
+ok - rollover preserves order and checkpoint
+ok - restart verifies prior sealed segments in durable chain
+ok - corrupt newest checkpoint falls back without overwriting tail
+ok - newest checkpoint with corrupt covered data falls back
+ok - durable record checksum is verified on restart
+ok - completed request is deduplicated after restart
+ok - all completed requests are deduplicated after restart
+ok - concurrent same-request barriers share one completion
+ok - deadline before barrier I/O fails and retry succeeds
+ok - deadline after data sync is unknown without false acknowledgement
+ok - injected sync I/O error has no false acknowledgement
+ok - injected record write error has no false acknowledgement and can retry
+ok - checkpoint rename error has no false acknowledgement
+ok - published hot frame matches inspected durable record after restart
+ok - state service owns shadow ingest lifecycle
+ok - read-only recovery classifies complete tail without mutation
+ok - read-only recovery classifies torn tail
+[durable-ingest-test] cross-process writer attestation passed
+warning: --using-file is deprecated. This is now the default.
+$ node scripts/require-shifu.mjs test:durable-ingest && node scripts/run-durable-ingest-tests.mjs

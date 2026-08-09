@@ -1,0 +1,20 @@
+{
+  "schema": "kungfu.profile-fact-surfaces/v1",
+  "surfaces": [
+    {
+      "id": "kungfu.initiative-assignment.initiative",
+      "schema": "kungfu.initiative-assignment.initiative/v1",
+      "title": "Initiative"
+    },
+    {
+      "id": "kungfu.initiative-assignment.assignment",
+      "schema": "kungfu.initiative-assignment.assignment/v1",
+      "title": "Assignment"
+    },
+    {
+      "id": "kungfu.initiative-assignment.completion-claim",
+      "schema": "kungfu.initiative-assignment.completion-claim/v1",
+      "title": "Assignment completion claim"
+    }
+  ]
+}

@@ -1,0 +1,31 @@
+{
+  "schema": "kungfu.agent-first-entry.qualification/v1",
+  "status": "qualified",
+  "sourceDate": "2026-08-01",
+  "environment": {
+    "os": "macOS",
+    "architecture": "arm64",
+    "python": "3.13.14",
+    "node": "22.22.3",
+    "productVersion": "4.0.0-alpha.1"
+  },
+  "briefBudget": {"maxBytes": 8192, "maxLines": 120, "actualBytes": 4476, "actualLines": 87, "passed": true},
+  "intentCoverage": {"required": 12, "observed": 12, "passed": true},
+  "checks": [
+    {"id": "agent-pack", "command": "node scripts/verify-agent-pack.mjs", "status": "passed"},
+    {"id": "agent-first-entry-pytest", "command": "pytest -q framework/core/tests/python/test_agent_first_entry.py", "status": "passed", "tests": 5},
+    {"id": "shifu-agent", "command": "shifu agent verify --json", "status": "passed", "authority": "shifu"},
+    {"id": "xinfa-agent", "command": "xinfa agent verify --json", "status": "passed", "authority": "xinfa"},
+    {"id": "kungfu-trunk-composition", "command": "kungfu-trunk shifu|xinfa agent verify --json", "status": "passed"},
+    {"id": "packaged-context", "command": "kungfu agent context --task ... --budget 66560 --route kungfu-user-guide-agent --json", "status": "passed", "omissions": 0, "internalPathsExposed": false},
+    {"id": "project-global-work", "command": "pytest -q framework/core/tests/python/test_projects.py", "status": "passed", "tests": 13},
+    {"id": "frozen-product", "command": "dist/kungfu/kungfu agent brief|map|docs|context and shifu|xinfa agent verify", "status": "passed", "sourceCwdRequired": false, "disposableHome": true, "networkRequired": false}
+  ],
+  "nonClaims": [
+    "no-kfd-certification",
+    "no-universal-provider-or-platform-support",
+    "no-real-external-connector",
+    "no-public-release",
+    "projection-or-command-success-is-not-work-completion"
+  ]
+}

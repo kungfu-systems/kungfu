@@ -1,0 +1,151 @@
+{
+  "schema": "shifu.production-graph-fixture/v0",
+  "fixtureId": "qualified",
+  "context": {
+    "source": {
+      "repository": "https://example.invalid/kungfu.git",
+      "revision": "1111111111111111111111111111111111111111",
+      "tree": "2222222222222222222222222222222222222222"
+    },
+    "authorityReferences": {
+      "layers": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "buildCapabilities": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+    },
+    "xinfaSelectionRoot": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+  },
+  "graph": {
+    "graphId": "production-graph-fixture",
+    "intent": {
+      "mode": "describe-only",
+      "summary": "Describe a source-bound, authority-referenced qualification path without executing it.",
+      "requestedOutputs": ["qualification-receipt"],
+      "sideEffects": false
+    },
+    "nodes": [
+      {
+        "id": "inspect-source",
+        "authorityRefs": [
+          { "authority": "layers", "id": "yijinjing-schema" },
+          { "authority": "build-capabilities", "id": "journal-core" }
+        ],
+        "dependencies": [],
+        "executor": {
+          "entrypoint": "./shifu",
+          "task": "check:entry-contract",
+          "executionOwnedBy": "external-orchestrator",
+          "invokedByVerifier": false
+        },
+        "inputs": [
+          {
+            "id": "source-cut",
+            "kind": "source",
+            "root": "sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+          }
+        ],
+        "outputs": [
+          { "id": "source-proof", "kind": "evidence", "root": null }
+        ],
+        "events": ["planned", "started", "succeeded", "failed", "cancelled"],
+        "exit": {
+          "successCodes": [0],
+          "timeoutSeconds": 300,
+          "failureIsNonQualifying": true,
+          "cancellationIsNonQualifying": true
+        },
+        "failure": {
+          "owner": "source-qualification-owner",
+          "retainedEvidence": ["source-log"]
+        },
+        "recovery": {
+          "strategy": "replan",
+          "nextAction": "Resolve source drift and produce a new graph and plan."
+        },
+        "nextAction": "Verify the exact authority roots."
+      },
+      {
+        "id": "verify-authorities",
+        "authorityRefs": [
+          { "authority": "layers", "id": "core-native-qualification" },
+          { "authority": "build-capabilities", "id": "full" }
+        ],
+        "dependencies": ["inspect-source"],
+        "executor": {
+          "entrypoint": "./shifu",
+          "task": "core:build-capabilities:check",
+          "executionOwnedBy": "external-orchestrator",
+          "invokedByVerifier": false
+        },
+        "inputs": [
+          {
+            "id": "authority-roots",
+            "kind": "authority",
+            "root": "sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
+          }
+        ],
+        "outputs": [
+          { "id": "authority-proof", "kind": "evidence", "root": null }
+        ],
+        "events": ["planned", "started", "succeeded", "failed", "cancelled"],
+        "exit": {
+          "successCodes": [0],
+          "timeoutSeconds": 300,
+          "failureIsNonQualifying": true,
+          "cancellationIsNonQualifying": true
+        },
+        "failure": {
+          "owner": "architecture-qualification-owner",
+          "retainedEvidence": ["authority-log"]
+        },
+        "recovery": {
+          "strategy": "replan",
+          "nextAction": "Resolve authority drift and produce a new graph and plan."
+        },
+        "nextAction": "Verify the Production Graph contract."
+      },
+      {
+        "id": "qualify-contract",
+        "authorityRefs": [
+          { "authority": "layers", "id": "core-native-qualification" },
+          { "authority": "build-capabilities", "id": "full" }
+        ],
+        "dependencies": ["verify-authorities"],
+        "executor": {
+          "entrypoint": "./shifu",
+          "task": "check:production-graph",
+          "executionOwnedBy": "external-orchestrator",
+          "invokedByVerifier": false
+        },
+        "inputs": [
+          {
+            "id": "xinfa-selection",
+            "kind": "authority",
+            "root": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+          }
+        ],
+        "outputs": [
+          { "id": "qualification-receipt", "kind": "evidence", "root": null }
+        ],
+        "events": ["planned", "started", "succeeded", "failed", "cancelled"],
+        "exit": {
+          "successCodes": [0],
+          "timeoutSeconds": 300,
+          "failureIsNonQualifying": true,
+          "cancellationIsNonQualifying": true
+        },
+        "failure": {
+          "owner": "shifu-contract-owner",
+          "retainedEvidence": ["verification-receipt"]
+        },
+        "recovery": {
+          "strategy": "retry-node",
+          "nextAction": "Correct the contract input and rerun the external verifier."
+        },
+        "nextAction": "Retain the exact verification receipt for protected CI."
+      }
+    ],
+    "nextAction": "Retain the exact verification receipt for protected CI."
+  },
+  "outcome": {
+    "status": "qualified"
+  }
+}

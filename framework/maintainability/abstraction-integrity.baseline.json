@@ -1,0 +1,402 @@
+{
+  "baselineRoot": "sha256:e73c9da583cce66a70dd04a3256223873124d22a3b9c5656d755daa197e5a6e1",
+  "measurement": {
+    "aggregates": {
+      "kungfu-cli": 21425,
+      "kungfu-flat-root": 34868,
+      "kungfu-runtime-family": 6042
+    },
+    "counts": {
+      "productionFiles": 217,
+      "productionPhysicalLines": 82660,
+      "testFiles": 96,
+      "testPhysicalLines": 45462
+    },
+    "hiddenProductionFiles": [],
+    "modulesOver1000": [
+      {
+        "path": "framework/core/src/python/kungfu/agent/action_loop.py",
+        "physicalLines": 1088
+      },
+      {
+        "path": "framework/core/src/python/kungfu/agent/run_agent.py",
+        "physicalLines": 1693
+      },
+      {
+        "path": "framework/core/src/python/kungfu/agent/work_profile.py",
+        "physicalLines": 1306
+      },
+      {
+        "path": "framework/core/src/python/kungfu/agent_work_lab.py",
+        "physicalLines": 1732
+      },
+      {
+        "path": "framework/core/src/python/kungfu/assignment_orchestration.py",
+        "physicalLines": 2631
+      },
+      {
+        "path": "framework/core/src/python/kungfu/atlas/payloads.py",
+        "physicalLines": 1046
+      },
+      {
+        "path": "framework/core/src/python/kungfu/cli/commands/agent.py",
+        "physicalLines": 1605
+      },
+      {
+        "path": "framework/core/src/python/kungfu/cli/commands/assignment.py",
+        "physicalLines": 3121
+      },
+      {
+        "path": "framework/core/src/python/kungfu/cli/commands/kfx.py",
+        "physicalLines": 1029
+      },
+      {
+        "path": "framework/core/src/python/kungfu/cli/commands/profile.py",
+        "physicalLines": 1019
+      },
+      {
+        "path": "framework/core/src/python/kungfu/cli/commands/storage.py",
+        "physicalLines": 1404
+      },
+      {
+        "path": "framework/core/src/python/kungfu/distribution_update.py",
+        "physicalLines": 3107
+      },
+      {
+        "path": "framework/core/src/python/kungfu/exit_bundle.py",
+        "physicalLines": 2975
+      },
+      {
+        "path": "framework/core/src/python/kungfu/peer_lifecycle.py",
+        "physicalLines": 1218
+      },
+      {
+        "path": "framework/core/src/python/kungfu/profile_composition.py",
+        "physicalLines": 1253
+      },
+      {
+        "path": "framework/core/src/python/kungfu/profile_sdk.py",
+        "physicalLines": 3135
+      },
+      {
+        "path": "framework/core/src/python/kungfu/rewind/reflection_fb.py",
+        "physicalLines": 1363
+      },
+      {
+        "path": "framework/core/src/python/kungfu/runtime_broker.py",
+        "physicalLines": 1781
+      },
+      {
+        "path": "framework/core/src/python/kungfu/runtime_service.py",
+        "physicalLines": 2316
+      },
+      {
+        "path": "framework/core/src/python/kungfu/runtime_upgrade.py",
+        "physicalLines": 1945
+      },
+      {
+        "path": "framework/core/src/python/kungfu/storage/service.py",
+        "physicalLines": 1747
+      },
+      {
+        "path": "framework/core/src/python/kungfu/workspace.py",
+        "physicalLines": 1703
+      },
+      {
+        "path": "framework/core/src/python/kungfu/workspace_federation.py",
+        "physicalLines": 2414
+      }
+    ],
+    "modulesOver2000": [
+      {
+        "path": "framework/core/src/python/kungfu/assignment_orchestration.py",
+        "physicalLines": 2631
+      },
+      {
+        "path": "framework/core/src/python/kungfu/cli/commands/assignment.py",
+        "physicalLines": 3121
+      },
+      {
+        "path": "framework/core/src/python/kungfu/distribution_update.py",
+        "physicalLines": 3107
+      },
+      {
+        "path": "framework/core/src/python/kungfu/exit_bundle.py",
+        "physicalLines": 2975
+      },
+      {
+        "path": "framework/core/src/python/kungfu/profile_sdk.py",
+        "physicalLines": 3135
+      },
+      {
+        "path": "framework/core/src/python/kungfu/runtime_service.py",
+        "physicalLines": 2316
+      },
+      {
+        "path": "framework/core/src/python/kungfu/workspace_federation.py",
+        "physicalLines": 2414
+      }
+    ],
+    "oversizedFiles": [
+      {
+        "contentRoot": "sha256:b605ae03ba009f0312e4057c327dc279ec4bdb1de8791eb787c4a2ca4f6e95ac",
+        "path": "framework/core/src/python/kungfu/agent/action_loop.py",
+        "physicalLines": 1088,
+        "responsibilities": 31
+      },
+      {
+        "contentRoot": "sha256:d07c4e97a5ac6f6fd016ae6ea3a16c11842b28a8bc575caa8b0dfb8999c74b8b",
+        "path": "framework/core/src/python/kungfu/agent/run_agent.py",
+        "physicalLines": 1693,
+        "responsibilities": 37
+      },
+      {
+        "contentRoot": "sha256:97cdedccf1b1d0f9b5201e865c6bd41c67afeb41c94ecffac5c145fc0905113c",
+        "path": "framework/core/src/python/kungfu/agent/work_profile.py",
+        "physicalLines": 1306,
+        "responsibilities": 28
+      },
+      {
+        "contentRoot": "sha256:2a8f672f360abefaa1216e7b07240769090c8ff438e708661b2cf347a40a4a07",
+        "path": "framework/core/src/python/kungfu/agent_work_lab.py",
+        "physicalLines": 1732,
+        "responsibilities": 47
+      },
+      {
+        "contentRoot": "sha256:8144cbd026aed03b8c1fec9988659f4f114f3baa0240d032d266c00ca154df67",
+        "path": "framework/core/src/python/kungfu/assignment_orchestration.py",
+        "physicalLines": 2631,
+        "responsibilities": 60
+      },
+      {
+        "contentRoot": "sha256:cee7d0087eabae3ad1e22b38b897ad28af84d9b31a0a76c26e0c2343926f668a",
+        "path": "framework/core/src/python/kungfu/atlas/payloads.py",
+        "physicalLines": 1046,
+        "responsibilities": 39
+      },
+      {
+        "contentRoot": "sha256:912a408df9c14eb30d335d9c526277ca2957023c921b500c84d2c9ce0a81b4b0",
+        "path": "framework/core/src/python/kungfu/cli/commands/agent.py",
+        "physicalLines": 1605,
+        "responsibilities": 63
+      },
+      {
+        "contentRoot": "sha256:7a246fa54cf706904522969adf1a8060dfb82491d1ba6784bed464dc7517466f",
+        "path": "framework/core/src/python/kungfu/cli/commands/assignment.py",
+        "physicalLines": 3121,
+        "responsibilities": 69
+      },
+      {
+        "contentRoot": "sha256:19f13cce6054d9932b2e53d38721a94609e279c218fbb5aa8a6fdf71c08b9810",
+        "path": "framework/core/src/python/kungfu/cli/commands/kfx.py",
+        "physicalLines": 1029,
+        "responsibilities": 46
+      },
+      {
+        "contentRoot": "sha256:dfb6a83faf223775a4de21cbafc4703a88ba344e8634b0b726a6c5cc5712f108",
+        "path": "framework/core/src/python/kungfu/cli/commands/profile.py",
+        "physicalLines": 1019,
+        "responsibilities": 54
+      },
+      {
+        "contentRoot": "sha256:c6940157bce2b05edda4cf0f539b12f953bdd094f07e5e695e0e3c3677e7136d",
+        "path": "framework/core/src/python/kungfu/cli/commands/storage.py",
+        "physicalLines": 1404,
+        "responsibilities": 46
+      },
+      {
+        "contentRoot": "sha256:4028ee3685cf29c89b1864c8d4ee9f7f44daa898eadfe5d9357396a5c0c0a563",
+        "path": "framework/core/src/python/kungfu/distribution_update.py",
+        "physicalLines": 3107,
+        "responsibilities": 72
+      },
+      {
+        "contentRoot": "sha256:b7f9e0ca643908a3378c5cfa4e89e9ecb473cf634769b5a98b149b042b20939b",
+        "path": "framework/core/src/python/kungfu/exit_bundle.py",
+        "physicalLines": 2975,
+        "responsibilities": 81
+      },
+      {
+        "contentRoot": "sha256:216529e0c2108a9ebd74c620a7008c5905e619c9c3aca8ed5677408b5f72cbea",
+        "path": "framework/core/src/python/kungfu/peer_lifecycle.py",
+        "physicalLines": 1218,
+        "responsibilities": 46
+      },
+      {
+        "contentRoot": "sha256:68d485084b9e159f9cd06a676483b084f091e7932b1e83b767cc011230a02f3c",
+        "path": "framework/core/src/python/kungfu/profile_composition.py",
+        "physicalLines": 1253,
+        "responsibilities": 35
+      },
+      {
+        "contentRoot": "sha256:fe9eb75f5d2960e2536d39f98c017e97186e88a32672bd8ac6db90b445b51d38",
+        "path": "framework/core/src/python/kungfu/profile_sdk.py",
+        "physicalLines": 3135,
+        "responsibilities": 75
+      },
+      {
+        "contentRoot": "sha256:fdca45c45c93bbaf9cc8090eb7813e386bc4cf47d235a3c8c237655caca17235",
+        "path": "framework/core/src/python/kungfu/rewind/reflection_fb.py",
+        "physicalLines": 1363,
+        "responsibilities": 114
+      },
+      {
+        "contentRoot": "sha256:119dd477ff87c249797d23ce7192ab3cf7e982e586eb35f0d12fcc9c887f0d6c",
+        "path": "framework/core/src/python/kungfu/runtime_broker.py",
+        "physicalLines": 1781,
+        "responsibilities": 50
+      },
+      {
+        "contentRoot": "sha256:ca10d46098447ca5ec255a58458c65a2f6894698d1762e26385d1e88ced2a213",
+        "path": "framework/core/src/python/kungfu/runtime_service.py",
+        "physicalLines": 2316,
+        "responsibilities": 106
+      },
+      {
+        "contentRoot": "sha256:6209d0c4c7566a0f4dce029483972f3e58136aff1c4ec15ad2ec30791c2ddad9",
+        "path": "framework/core/src/python/kungfu/runtime_upgrade.py",
+        "physicalLines": 1945,
+        "responsibilities": 61
+      },
+      {
+        "contentRoot": "sha256:0dd3ceeb5e6aef4dcd72e793df8e8384ca6a3159aa9eee2ec1d86429bce0e1a1",
+        "path": "framework/core/src/python/kungfu/storage/service.py",
+        "physicalLines": 1747,
+        "responsibilities": 101
+      },
+      {
+        "contentRoot": "sha256:8214b3493213132c1a6e8f5cf1061ee76ed48e8da6894a5fd8ba9d9b96d9e2ee",
+        "path": "framework/core/src/python/kungfu/workspace.py",
+        "physicalLines": 1703,
+        "responsibilities": 52
+      },
+      {
+        "contentRoot": "sha256:7c68d1a8b841ce9d8433bf30b5574e70fa80f32ca58b8e3dda6a2c3516258ad8",
+        "path": "framework/core/src/python/kungfu/workspace_federation.py",
+        "physicalLines": 2414,
+        "responsibilities": 41
+      }
+    ],
+    "parseErrors": [],
+    "platformBranches": [
+      {
+        "line": 20,
+        "path": "framework/core/src/python/kungfu/agent/session_surface.py",
+        "test": "sys.platform == 'win32'"
+      },
+      {
+        "line": 49,
+        "path": "framework/core/src/python/kungfu/cli/commands/env.py",
+        "test": "os.name == 'nt'"
+      },
+      {
+        "line": 24,
+        "path": "framework/core/src/python/kungfu/cli/commands/xinfa.py",
+        "test": "os.name == 'nt'"
+      },
+      {
+        "line": 192,
+        "path": "framework/core/src/python/kungfu/cli/site.py",
+        "test": "os.name == 'nt'"
+      },
+      {
+        "line": 196,
+        "path": "framework/core/src/python/kungfu/cli/site.py",
+        "test": "sys.platform == 'darwin' and sys._framework"
+      },
+      {
+        "line": 206,
+        "path": "framework/core/src/python/kungfu/cli/site.py",
+        "test": "os.name == 'nt'"
+      },
+      {
+        "line": 209,
+        "path": "framework/core/src/python/kungfu/cli/site.py",
+        "test": "sys.platform == 'darwin' and sys._framework"
+      },
+      {
+        "line": 326,
+        "path": "framework/core/src/python/kungfu/cli/site.py",
+        "test": "sys.platform[:4] == 'java'"
+      },
+      {
+        "line": 418,
+        "path": "framework/core/src/python/kungfu/cli/site.py",
+        "test": "sys.platform == 'darwin' and '__PYVENV_LAUNCHER__' in env"
+      },
+      {
+        "line": 526,
+        "path": "framework/core/src/python/kungfu/cli/site.py",
+        "test": "os.name == 'nt' and sys.maxsize <= 2 ** 32"
+      },
+      {
+        "line": 55,
+        "path": "framework/core/src/python/kungfu/coordination/locks.py",
+        "test": "os.name == 'nt'"
+      },
+      {
+        "line": 105,
+        "path": "framework/core/src/python/kungfu/coordination/locks.py",
+        "test": "os.name == 'nt'"
+      },
+      {
+        "line": 127,
+        "path": "framework/core/src/python/kungfu/coordination/locks.py",
+        "test": "acquired and os.name == 'nt'"
+      },
+      {
+        "line": 97,
+        "path": "framework/core/src/python/kungfu/peer_lifecycle.py",
+        "test": "platform.system() == 'Windows'"
+      },
+      {
+        "line": 582,
+        "path": "framework/core/src/python/kungfu/peer_lifecycle.py",
+        "test": "platform.system() == 'Windows'"
+      },
+      {
+        "line": 1016,
+        "path": "framework/core/src/python/kungfu/peer_lifecycle.py",
+        "test": "platform.system() != 'Windows'"
+      },
+      {
+        "line": 1534,
+        "path": "framework/core/src/python/kungfu/runtime_service.py",
+        "test": "platform.system() == 'Windows'"
+      },
+      {
+        "line": 1554,
+        "path": "framework/core/src/python/kungfu/runtime_service.py",
+        "test": "platform.system() != 'Windows' or getattr(error, 'winerror', None) != 5"
+      },
+      {
+        "line": 1642,
+        "path": "framework/core/src/python/kungfu/runtime_service.py",
+        "test": "platform.system() != 'Windows'"
+      },
+      {
+        "line": 464,
+        "path": "framework/core/src/python/kungfu/workspace_federation.py",
+        "test": "loader is _load_component and os.name == 'posix'"
+      }
+    ],
+    "schema": "kungfu.python-structure-measurement/v1",
+    "sourceRoot": "sha256:7e1dfcd09c49f34fb28de739847a4fb1d5f047166b29b0c67b5aeb42d732969d",
+    "sourceRoots": {
+      "production": [
+        "framework/core/src/python"
+      ],
+      "test": [
+        "framework/core/tests/python"
+      ]
+    },
+    "stronglyConnectedComponents": [
+      [
+        "kungfu.runtime_broker",
+        "kungfu.runtime_service"
+      ]
+    ]
+  },
+  "schema": "kungfu.python-structure-baseline/v1",
+  "sourceRevision": "f029e7de3de5f7614b86472c4135243f8a00b243"
+}

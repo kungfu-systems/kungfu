@@ -17,11 +17,11 @@
 // A callback argument is replaced on the wire by {"__sandboxCallback": id}; when
 // the host bridges it back as an event, the registered callback fires. Every
 // frame crosses the relay serialized — the sandbox tier's defining property
-// (ADR-0014): a result is a copy, never a live handle.
+// (KF-ADR-019f86da-4f90-7789-8b48-620aa694acf9): a result is a copy, never a live handle.
 //
 // Header-only and dependency-light (nlohmann/json + the C++ standard library):
 // a service author compiles their body against this header and ships the
-// resulting binary as the kfx's per-platform cpp entry (ADR-0017). Unlike the
+// resulting binary as the kfx's per-platform cpp entry (KF-ADR-019f86da-4f90-7afa-a1e1-0510f00916be). Unlike the
 // interpreted node/python guests — an interpreter already resident, loading a
 // shipped source entry — a C++ service has no interpreter, so the compiled
 // binary is itself the guest: it links this proxy and its own body into one

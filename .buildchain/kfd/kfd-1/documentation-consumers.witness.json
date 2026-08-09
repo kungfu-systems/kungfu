@@ -1,0 +1,231 @@
+{
+  "schema": "shifu.documentation-consumer-witness/v1",
+  "evidenceRoot": "sha256:6b53a5b221e4a71b5d7822aed7ac8a2685f0fd52f1393683016a7354c1ccb8b8",
+  "inputs": {
+    "contractRoot": "sha256:54d2551396d2165cdcca3228cf4975b5b6e35980856fedfb633af24a78e5f89c",
+    "compiler": [
+      {
+        "path": "crates/xinfa/Cargo.toml",
+        "sha256": "sha256:2d17d5993e570eacbf4d927f0446aa98c24a0001acad635801f588fe0c59fad5"
+      },
+      {
+        "path": "crates/xinfa/src/atlas.rs",
+        "sha256": "sha256:01a8cf5787286b5291020ad98bb3ae795b81d20b9b2f1fd9c8d4d69ac5d92bbd"
+      },
+      {
+        "path": "crates/xinfa/src/cli.rs",
+        "sha256": "sha256:58b690850afa5297c5f870854d810e32ed743b767d3c727ecf0ab840061b0eda"
+      },
+      {
+        "path": "crates/xinfa/src/engine.rs",
+        "sha256": "sha256:6f352cc9cfdc55533674b1ad32ebd0fcd49167c76eb82c7a70946efb747278ac"
+      },
+      {
+        "path": "crates/xinfa/src/episode.rs",
+        "sha256": "sha256:79933a9fad0352d390e6a85888170300cc2ac5a29491221fa178042b3a29a02d"
+      },
+      {
+        "path": "crates/xinfa/src/lib.rs",
+        "sha256": "sha256:bbd244260b4b9431213c6f663915ef32fa6eccf366ef0bc3f70005f129d2dd89"
+      },
+      {
+        "path": "crates/xinfa/src/main.rs",
+        "sha256": "sha256:af7b5ce53fbaab88fe63014305349e53d3fc34aefd33c4ec686e76fa41d178c2"
+      },
+      {
+        "path": "crates/xinfa/src/native_io.rs",
+        "sha256": "sha256:d549341bfc98197395652ed73c4f10d28e78a38a9765b9d9ce92a296418a6a0f"
+      },
+      {
+        "path": "crates/xinfa/src/pack.rs",
+        "sha256": "sha256:858c4be46c6287a5abf5eb6d52db525ed433cb4f91012371492dc47da7d456e2"
+      },
+      {
+        "path": "crates/xinfa/src/projection.rs",
+        "sha256": "sha256:2d81fff4d7009f1eff4a393df7e648251b0e82444ba9c3f54919654a18a1b2c9"
+      },
+      {
+        "path": "crates/xinfa/src/resolver.rs",
+        "sha256": "sha256:7f7cbbe544341d07d80bbe64602b3fc22e5eea3c0dc772e3f3fba6dfcb7afa3b"
+      },
+      {
+        "path": "crates/xinfa/src/semantic_project.rs",
+        "sha256": "sha256:08a98646db39a1b77f3cdbe2642abdf9e678165a974680e881c6246bfde6b1f2"
+      }
+    ],
+    "fixtures": [
+      {
+        "id": "buildchain-engineering",
+        "files": [
+          {
+            "path": ".kungfu/episodes/sealed/sha256/aa/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/claims.jsonl",
+            "sha256": "sha256:f15a38af8eec1a7a9ba9f620c2e124b1489db4190312755a83efa0b5b815d7c7"
+          },
+          {
+            "path": ".kungfu/episodes/sealed/sha256/aa/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/manifest.json",
+            "sha256": "sha256:41d5075ac02432ccea856e5322fba1d9e1bee6e5c4dce340cec747059a3faf6b"
+          },
+          {
+            "path": ".kungfu/episodes/sealed/sha256/aa/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/qualification.json",
+            "sha256": "sha256:06111f5d7e6adea754671a7b9554e904d98d67878c4c2948383388892e828cfd"
+          },
+          {
+            "path": ".xinfa/projection-recipes/contributor.json",
+            "sha256": "sha256:75a8d4ca54935f06b37aa2094eadbd64f5aa8e2bed5adf90b00eaf7549f3c068"
+          },
+          {
+            "path": "AGENTS.md",
+            "sha256": "sha256:76277a0345a80b5b85905d0898cbf4e09b01731ecdcedd385a1281392eae4f27"
+          },
+          {
+            "path": "docs/guide.md",
+            "sha256": "sha256:612ebd3ec305db8ef34c0572f2eb269a61022f48f2e58032ad733b4c756a60e5"
+          },
+          {
+            "path": "evidence/episode-one-qualification.json",
+            "sha256": "sha256:06111f5d7e6adea754671a7b9554e904d98d67878c4c2948383388892e828cfd"
+          },
+          {
+            "path": "evidence/episode-submission.json",
+            "sha256": "sha256:0212f8e6c083ed939a2dc594693613b54491ab073c44a551ca4449be539a7e46"
+          },
+          {
+            "path": "evidence/runtime.json",
+            "sha256": "sha256:a393a88cbb1c00dbdbeed84e2b8312c768d985f8573ce4781dec4a77cc6574b9"
+          },
+          {
+            "path": "project.json",
+            "sha256": "sha256:7c38d46c894f0ec4a0bbc7b3128e75a6858cf277fe5d4dce05aa4607cfbfeb24"
+          },
+          {
+            "path": "src/runtime.rs",
+            "sha256": "sha256:81cdbc36f1eac5ac6a283b01ed7f44d32b1e749154cf165170d8cfd1ad726d57"
+          }
+        ]
+      },
+      {
+        "id": "publication-site-paper",
+        "files": [
+          {
+            "path": "AGENTS.md",
+            "sha256": "sha256:6e2c3a81bd4ead90642fb410a73a76e504d77d496ebf9dda617f57c3556ac07e"
+          },
+          {
+            "path": "docs/api.md",
+            "sha256": "sha256:b406e468ed2879f1c44ce84a2b0e7480e2f530207978da74b5f5b6afbd52dec9"
+          },
+          {
+            "path": "docs/operations.md",
+            "sha256": "sha256:60ba154c712e51cae90fa6f3f86e376cb8c700b1f811f1d0598ceed52d8032fc"
+          },
+          {
+            "path": "evidence/api.json",
+            "sha256": "sha256:5e3aa5c553e7d40dd843773e7861ef467fb0435700a8a1a76d9653591ad3d59c"
+          },
+          {
+            "path": "evidence/review.json",
+            "sha256": "sha256:76dc0e8aa5794060709665be3a476b0409d3c929809ee22100edd00ade673fb0"
+          },
+          {
+            "path": "project.json",
+            "sha256": "sha256:a3d315fc51670e4aa74b9c968449a2d14a1080912f0d453bf8dcdfda39488949"
+          },
+          {
+            "path": "README.md",
+            "sha256": "sha256:070eb1f491bc8f2b13900d16365a06ac207ac9d56cef42eeaec47548914edab3"
+          },
+          {
+            "path": "src/api.rs",
+            "sha256": "sha256:a429936f630504ca5d9151d3cf3e92d44af8122146d5294d71be6e8bd2d85ca6"
+          }
+        ]
+      }
+    ],
+    "evidenceRoot": "sha256:6b53a5b221e4a71b5d7822aed7ac8a2685f0fd52f1393683016a7354c1ccb8b8"
+  },
+  "result": {
+    "schema": "shifu.documentation-consumer-qualification/v1",
+    "verdict": "pass",
+    "compilerAuthority": "xinfa",
+    "compilerSourceChangesRequired": false,
+    "kungfuOnlyCompilerAssumptions": 0,
+    "excludedProjectAdapters": [
+      "episode.rs",
+      "episode_cli.rs"
+    ],
+    "parity": true,
+    "consumers": [
+      {
+        "id": "buildchain-engineering",
+        "shape": "engineering-cli-api-runbook",
+        "roots": {
+          "atlasRoot": "sha256:155157d8b2dc5586637d1033af597eb21903a93be5ff81e920cb3b1ca24008ed",
+          "packRoot": "sha256:7a237656ee7eee66715fc043b0376f6f5bfefd9e876783a587b79ac19a2be858",
+          "manifestRoot": "sha256:eba19bcf17b11fb460925038af07bbf75be70c4fb77adee6be0ce70a64382228",
+          "receiptRoot": "sha256:ce50732257d6f9a2ba704c14a6081c3ea123bc7290061c3a34c14bc60cc5f140"
+        },
+        "deterministic": true,
+        "verificationModes": [
+          "machine",
+          "mixed"
+        ],
+        "compileMilliseconds": [
+          143.856292,
+          132.617834
+        ],
+        "human": {
+          "route": "small.human",
+          "maxHops": 2,
+          "atlasRoot": "sha256:155157d8b2dc5586637d1033af597eb21903a93be5ff81e920cb3b1ca24008ed",
+          "omissions": []
+        },
+        "agent": {
+          "route": "small.agent",
+          "budget": 4096,
+          "atlasRoot": "sha256:155157d8b2dc5586637d1033af597eb21903a93be5ff81e920cb3b1ca24008ed",
+          "omissions": []
+        }
+      },
+      {
+        "id": "publication-site-paper",
+        "shape": "publication-historical-non-claim",
+        "roots": {
+          "atlasRoot": "sha256:2294859007d0932f26cba2872f5c402f0c0f1314490f6309c655aabbc28ca945",
+          "packRoot": "sha256:e472055723dd6ac72afc8223f82dfabb7034f7e01b64bf50644d8c9fcd88512e",
+          "manifestRoot": "sha256:1fa46d4f201ce6e71da2cd73bac3aa14d0c946e98e5bfabf0ea3aaec2140057a",
+          "receiptRoot": "sha256:96bfadaa3d7c078ee3654bd544913a4471e04587fd9c55be9a3bcb88f8c3bb18"
+        },
+        "deterministic": true,
+        "verificationModes": [
+          "human",
+          "machine",
+          "mixed",
+          "non-claim"
+        ],
+        "compileMilliseconds": [
+          131.432666,
+          187.617584
+        ],
+        "human": {
+          "route": "medium.human.public",
+          "maxHops": 2,
+          "atlasRoot": "sha256:2294859007d0932f26cba2872f5c402f0c0f1314490f6309c655aabbc28ca945",
+          "omissions": []
+        },
+        "agent": {
+          "route": "medium.agent.public",
+          "budget": 4096,
+          "atlasRoot": "sha256:2294859007d0932f26cba2872f5c402f0c0f1314490f6309c655aabbc28ca945",
+          "omissions": []
+        }
+      }
+    ],
+    "evidenceRoot": "sha256:6b53a5b221e4a71b5d7822aed7ac8a2685f0fd52f1393683016a7354c1ccb8b8",
+    "evidenceMode": "live-xinfa",
+    "negativeFixtures": [
+      "crates/xinfa/fixtures/negative/private-leak.json",
+      "crates/xinfa/fixtures/negative/provider-broadening.json",
+      "crates/xinfa/fixtures/negative/route-parity.json"
+    ]
+  }
+}

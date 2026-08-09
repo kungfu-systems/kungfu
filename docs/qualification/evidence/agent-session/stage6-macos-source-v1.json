@@ -1,0 +1,121 @@
+{
+  "schema": "kungfu.agent-session.recovery-evidence/v1",
+  "period": "2026-07-14",
+  "platform": "darwin-arm64",
+  "sourceBaseCommit": "5aed1d1547b3302dc9447547777867224f1a09b7",
+  "implementationTreeRoot": "sha256:f9d27270aadc1fe4ffa8b42f16bf4bb40552158871ba1bb7355bd9593e587ed9",
+  "syntheticProductQualification": {
+    "status": "passed",
+    "cases": {
+      "mainRestartReattach": "passed",
+      "providerExitClosesInput": "passed",
+      "workerLossStartsEmptyRuntime": "passed",
+      "boundedOverflowGap": "passed",
+      "portableReceiptPrivacy": "passed"
+    },
+    "localListRpc": {
+      "samples": 40,
+      "p95Milliseconds": 1.645,
+      "ceilingMilliseconds": 250
+    }
+  },
+  "authenticatedProviders": {
+    "codex": {
+      "version": "0.144.3",
+      "status": "passed",
+      "worker": "source-checkout",
+      "durationMilliseconds": 23224,
+      "cases": {
+        "start": "passed",
+        "instructAndObserveOutput": "passed",
+        "approvalDetectedAndDenyKeyWritten": "passed",
+        "interruptDelivered": "passed",
+        "mainRestartReattach": "passed",
+        "providerEndClosesInput": "passed"
+      },
+      "approvalPolicy": "provider-untrusted-approval",
+      "convergenceTimeoutMilliseconds": 90000,
+      "rawTerminalRetained": false,
+      "privateEnvironmentValuesRetained": false
+    },
+    "claude": {
+      "version": "2.1.209",
+      "status": "passed",
+      "worker": "source-checkout",
+      "durationMilliseconds": 10413,
+      "cases": {
+        "start": "passed",
+        "instructAndObserveOutput": "passed",
+        "approvalDetectedAndDenyKeyWritten": "passed",
+        "interruptDelivered": "passed",
+        "mainRestartReattach": "passed",
+        "providerEndClosesInput": "passed"
+      },
+      "approvalPolicy": "explicit-bash-ask",
+      "qualificationProfile": {
+        "model": "sonnet",
+        "effort": "low",
+        "convergenceTimeoutMilliseconds": 90000
+      },
+      "temporaryWorkspaceTrustAccepted": false,
+      "rawTerminalRetained": false,
+      "privateEnvironmentValuesRetained": false
+    }
+  },
+  "packagedProductQualification": {
+    "status": "passed",
+    "build": {
+      "id": "20260714T150829Z-237b7662f",
+      "commit": "237b7662fc3052144be7d45e1078abcc14c4bef2",
+      "worker": "packaged-app",
+      "catalogState": "current",
+      "installedPath": "/Applications/Kungfu Episodes.app",
+      "installedAgentSessionFilesMatchCandidate": true,
+      "nodePtySpawnHelpersExecutable": true
+    },
+    "authenticatedProviders": {
+      "codexPty": {
+        "version": "0.144.3",
+        "status": "passed",
+        "durationMilliseconds": 13840,
+        "transport": "pty",
+        "casesPassed": 6,
+        "casesTotal": 6,
+        "rawTerminalRetained": false,
+        "privateEnvironmentValuesRetained": false
+      },
+      "codexStructured": {
+        "version": "0.144.3",
+        "status": "passed",
+        "durationMilliseconds": 18848,
+        "transport": "structured",
+        "casesPassed": 6,
+        "casesTotal": 6,
+        "rawTerminalRetained": false,
+        "privateEnvironmentValuesRetained": false,
+        "rollback": "KUNGFU_AGENT_SESSION_CODEX_APP_SERVER=0 creates a new PTY attempt"
+      },
+      "claudePty": {
+        "version": "2.1.209",
+        "status": "passed",
+        "durationMilliseconds": 15514,
+        "transport": "pty",
+        "casesPassed": 6,
+        "casesTotal": 6,
+        "approvalPolicy": "explicit-bash-ask",
+        "qualificationProfile": {
+          "model": "sonnet",
+          "effort": "low"
+        },
+        "temporaryWorkspaceTrustAccepted": false,
+        "rawTerminalRetained": false,
+        "privateEnvironmentValuesRetained": false
+      }
+    }
+  },
+  "linuxQualification": "not-run",
+  "windowsQualification": "not-run",
+  "machineRestartQualification": "not-run",
+  "promotionEligible": true,
+  "promotionStatus": "promoted"
+}

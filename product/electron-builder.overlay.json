@@ -1,0 +1,50 @@
+{
+  "config": {
+    "directories": {
+      "output": "../../product/dist/desktop"
+    },
+    "extraResources": [
+      {
+        "from": "../agent-session",
+        "to": "app/node_modules/@kungfu-tech/agent-session",
+        "filter": [
+          "package.json",
+          "src/**/*",
+          "kungfu-agent-session.contract.json",
+          "kungfu-codex-app-server.contract.json",
+          "schemas/**/*"
+        ]
+      },
+      {
+        "from": "../../product/extensions",
+        "to": "extensions"
+      },
+      {
+        "from": "../../product/dist/desktop-authoring/sdk",
+        "to": "sdk"
+      },
+      {
+        "from": "../../product/dist/desktop-authoring/action",
+        "to": "action"
+      },
+      {
+        "from": "../../product/dist/desktop-authoring/kfd",
+        "to": "kfd"
+      },
+      {
+        "from": "../../product/dist/desktop-authoring/templates",
+        "to": "templates"
+      },
+      {
+        "from": "../../product/dist/desktop-authoring/node_modules",
+        "to": "node_modules"
+      }
+    ]
+  },
+  "removeExtraResources": [
+    {
+      "from": "public/logo",
+      "to": "logo"
+    }
+  ]
+}

@@ -1,0 +1,19 @@
+{
+  "schema": "kungfu.kfx.manifest/v1",
+  "name": "@kungfu-tech/kfx-suite-dogfood-feedback",
+  "version": "4.0.0-alpha.1",
+  "kungfuConfig": {
+    "key": "kungfu.dogfood-feedback",
+    "name": "Dogfood Feedback",
+    "suite": {
+      "title": "Dogfood Feedback",
+      "members": [
+        "dogfood-contract",
+        "dogfood-actions",
+        "dogfood-assessment",
+        "work-dashboard"
+      ],
+      "profile": "profile.json"
+    }
+  }
+}

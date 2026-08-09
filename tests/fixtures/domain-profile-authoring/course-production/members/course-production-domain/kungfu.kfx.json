@@ -1,0 +1,8 @@
+{
+  "schema": "kungfu.kfx.manifest/v1",
+  "name": "@kungfu-tech/reference-course-production-domain",
+  "version": "1.0.0",
+  "kungfuConfig": {
+    "key": "course-production-domain"
+  }
+}

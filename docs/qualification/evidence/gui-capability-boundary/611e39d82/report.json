@@ -1,0 +1,79 @@
+{
+  "schema": "kungfu.gui-capability-boundary.qualification-report/v1",
+  "period": "2026-07-14",
+  "platform": "darwin-arm64",
+  "source": {
+    "revision": "611e39d82cc54ba78a41b9041e1d392351c51b83",
+    "dirty": false,
+    "canonicalPackagingFix": "3e9d6e20708233d9316ad2e02b5d2d5b7ab50f90"
+  },
+  "implementation": {
+    "adr": "ADR-0083",
+    "status": "implemented",
+    "closurePullRequest": "https://github.com/kungfu-systems/kungfu/pull/873",
+    "stages": {
+      "shellNeutrality": "passed",
+      "genericProfileOperations": "passed",
+      "profileLocalQueryViewSpec": "passed",
+      "coreWorkConsoleAuthority": "passed",
+      "packagedAgentSessionClosure": "passed"
+    }
+  },
+  "sourceAcceptance": {
+    "status": "passed",
+    "casesPassed": 268,
+    "casesTotal": 268
+  },
+  "productDistribution": {
+    "status": "passed",
+    "command": ["./shifu", "dist"],
+    "buildId": "20260714T154905Z-611e39d82",
+    "bundleAudit": {
+      "status": "passed",
+      "externalMainDependenciesResolved": 7,
+      "singleKungfuRuntime": true,
+      "nodePtySpawnHelperExecutable": true,
+      "agentSessionWorkerPresent": true
+    }
+  },
+  "coldStart": {
+    "status": "passed",
+    "marker": "KF_GUI_QUALIFICATION_READY"
+  },
+  "authenticatedProvider": {
+    "provider": "codex",
+    "providerVersion": "0.144.3",
+    "transport": "structured",
+    "transportAuthority": "codex-app-server-structured-events",
+    "worker": "packaged-app",
+    "status": "passed",
+    "durationMilliseconds": 20806,
+    "cases": {
+      "start": "started",
+      "instructAndObserveOutput": "passed",
+      "approvalDetectedAndDenyKeyWritten": "passed",
+      "interruptDelivered": "passed",
+      "mainRestartReattach": "passed",
+      "providerEndClosesInput": "passed"
+    },
+    "rawTerminalRetained": false,
+    "privateEnvironmentValuesRetained": false,
+    "rollback": "KUNGFU_AGENT_SESSION_CODEX_APP_SERVER=0 creates a new PTY attempt"
+  },
+  "promotion": {
+    "status": "promoted",
+    "installedPath": "/Applications/Kungfu Episodes.app",
+    "catalogState": "current",
+    "installedReceiptBuildId": "20260714T154905Z-611e39d82",
+    "electronMainObserved": true,
+    "electronRendererObserved": true,
+    "existingDetachedSessionsBefore": 3,
+    "existingDetachedSessionsAfter": 3
+  },
+  "qualificationGaps": {
+    "linux": "not-run",
+    "windows": "not-run",
+    "machineRestart": "not-run",
+    "interactivePixels": "not-run"
+  }
+}

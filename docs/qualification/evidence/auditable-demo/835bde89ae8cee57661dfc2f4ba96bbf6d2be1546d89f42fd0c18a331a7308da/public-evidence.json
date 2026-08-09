@@ -1,0 +1,96 @@
+{
+  "authorization": {
+    "nonAuthorities": [
+      "first-party-identity",
+      "system-identity",
+      "kfd-compliance",
+      "product-system-metadata",
+      "local-bundle-presence",
+      "package-metadata",
+      "registry-history",
+      "scan-output",
+      "standalone-generation"
+    ],
+    "requiredSources": [
+      "exact-release-passport",
+      "core-policy",
+      "work-or-warrant",
+      "explicit-capability-grant",
+      "runtime-isolation"
+    ],
+    "status": "not-granted-by-demo"
+  },
+  "buildchainSha": "0e4ac58013ff3e09abb18da9896fad5f5b823ef7",
+  "claims": [
+    "The exact retained Linux artifact executed its installed kungfu agent-work-lab autoplay command in a bounded PTY.",
+    "The autoplay completion sentinel passed with exit status zero.",
+    "The exact terminal capture, transcript, public projection, and scene passed the Buildchain Gate and bound the rendered media."
+  ],
+  "demo": {
+    "catalogRoot": "sha256:6e26482a9b01f3aa922cd73709395919a51a403ca854d057e89add3c9aa6a698",
+    "commandLabel": "kungfu agent-work-lab autoplay",
+    "descriptorRoot": "sha256:06d9c13f6f418e0d681ab706153623e8670936ece56514446361b6e54adbc761",
+    "evidenceClass": "exact-installed-artifact-agent-work-lab-autoplay/v1",
+    "id": "agent-work-lab",
+    "publication": {
+      "readmeFeatured": true,
+      "siteSlug": "agent-work-lab"
+    },
+    "sceneId": "kungfu-agent-work-lab-autoplay"
+  },
+  "evidenceClass": "exact-installed-artifact-agent-work-lab-autoplay/v1",
+  "gate": {
+    "artifact": {
+      "digest": "sha256:ce6ca90c1371ecfe52a5029e672cedc8d291a238254bb4390a5d728cb50d9fdf",
+      "expiresAt": "2026-08-14T18:03:34.000Z",
+      "id": "8802347879",
+      "name": "auditable-demo-gate-7777de45e3fa-9e73aac549a32458",
+      "url": "https://github.com/kungfu-systems/kungfu/actions/runs/30646944258/artifacts/8802347879"
+    },
+    "root": "sha256:9e73aac549a32458ad132ad8166836aa7ab03885210117a15a5d382ef2687c33",
+    "status": "passed"
+  },
+  "media": {
+    "artifact": {
+      "digest": "sha256:bdb1a30c6f277d30f2657939c6fc6f3c87532e1c984d238a8f6d1c166fdebc19",
+      "expiresAt": "2026-08-14T18:05:55.000Z",
+      "id": "8802406105",
+      "name": "auditable-demo-media-7777de45e3fa-8353070c7b204bcc",
+      "url": "https://github.com/kungfu-systems/kungfu/actions/runs/30646944258/artifacts/8802406105"
+    },
+    "profile": "responsive-web-delivery-v1",
+    "qualificationRoot": "sha256:7a6e2bc21fabf90aa1ce440d42f21b9f91c775e899a7463663dea6c72bae9deb",
+    "root": "sha256:8353070c7b204bccb9e51e124cd07de215ef64db742a70333614c4fe065c59aa",
+    "status": "rendered"
+  },
+  "nonClaims": [
+    "cross-run continuity",
+    "provider migration",
+    "macOS execution",
+    "durability",
+    "performance",
+    "FO10",
+    "authorization from first-party or System identity",
+    "authorization from KFD compliance or Product System metadata",
+    "authorization from local bundle presence, package metadata, registry history, scan output, or standalone generation"
+  ],
+  "passport": {
+    "artifact": {
+      "digest": "sha256:6b0bda114fa5ffd5948091e647428ba99252a9bc8b1a2bf03d0a36bb8c69b2ef",
+      "expiresAt": "2026-08-14T18:06:46.000Z",
+      "id": "8802427227",
+      "name": "kungfu-auditable-demo-passport-7777de45e3fa53c6654d39990314efc2bc9ae99a-30646944258-1",
+      "url": "https://github.com/kungfu-systems/kungfu/actions/runs/30646944258/artifacts/8802427227"
+    },
+    "root": "sha256:835bde89ae8cee57661dfc2f4ba96bbf6d2be1546d89f42fd0c18a331a7308da"
+  },
+  "readmeMedia": {
+    "digest": "sha256:daf9d7f933f23d8e96833e105fac93c5a9eeeba051ea9392c11afdbd7bcbff38",
+    "path": "docs/qualification/evidence/auditable-demo/835bde89ae8cee57661dfc2f4ba96bbf6d2be1546d89f42fd0c18a331a7308da/demo.gif"
+  },
+  "rendererImage": "ghcr.io/kungfu-systems/build-images/demo-renderer@sha256:b70a2f5631665f685280bc9d7434c5ed5cf48b760b728873734d0c47bff72b25",
+  "schema": "kungfu.auditable-demo.public-evidence/v2",
+  "sourceSha": "7777de45e3fa53c6654d39990314efc2bc9ae99a",
+  "status": "qualified",
+  "workflowUrl": "https://github.com/kungfu-systems/kungfu/actions/runs/30646944258"
+}

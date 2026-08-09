@@ -1,0 +1,11 @@
+{
+  "schema": "shifu.production-graph-negative-fixture/v0",
+  "baseFixture": "qualified",
+  "mutation": {
+    "target": "context",
+    "operation": "set",
+    "path": ["authorityReferences", "layers"],
+    "value": "sha256:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+  },
+  "expect": "authority-drift"
+}

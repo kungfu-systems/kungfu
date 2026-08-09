@@ -1,0 +1,40 @@
+{
+  "schema": "kungfu.native-loop-qualification.contract/v1",
+  "manifestSchema": "kungfu.native-loop-qualification.manifest/v1",
+  "verificationSchema": "kungfu.native-loop-qualification.verification/v1",
+  "authority": {
+    "workControl": "kungfu-native-runtime",
+    "buildchain": "evidence-producer",
+    "github": "protected-delivery-transport",
+    "projectCut": "portable-settlement-projection",
+    "git": "qualified-git-shadow",
+    "atlas": "client-coordinate-mirror"
+  },
+  "successPredicate": {
+    "deliveryClass": "real-protected-run",
+    "exactSourceHeadBinding": true,
+    "exactMergeGroupBinding": true,
+    "nativeFactAndEpisodeRequired": true,
+    "settledProjectCutRequired": true,
+    "protectedLedgerPublicationRequired": true,
+    "freshCloneRuntimeCachePresent": false,
+    "faultEvidenceRequired": [
+      "duplicate-delivery",
+      "generated-ledger-recursion-suppression",
+      "local-cache-loss-recovery",
+      "mismatched-head",
+      "mismatched-merge",
+      "missing-evidence",
+      "publication-failure",
+      "publication-retry"
+    ]
+  },
+  "historyPolicy": {
+    "minimumDefaultPromotionSamples": 30,
+    "insufficientSamplesBlock": "default-policy-promotion-only",
+    "advisoryModeRemainsEligible": true
+  },
+  "schemaFiles": [
+    "schema/native-loop-qualification-v1.schema.json"
+  ]
+}

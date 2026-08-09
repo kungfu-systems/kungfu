@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 // Gate: a sandboxed Python child reaches only its declared capabilities over the
-// subprocess capability transport (ADR-0013) — the CLI-plane sibling of the GUI
+// subprocess capability transport (KF-ADR-019f86da-4f90-79f1-8716-aca36b142847) — the CLI-plane sibling of the GUI
 // Electron IPC transport, same sandbox.ts core, different channel. Headless: a
 // Node host holding mock caps + a Python guest (child.py), no Electron. The
 // child asserts the roundtrip, an undeclared-capability absence, and a bridged

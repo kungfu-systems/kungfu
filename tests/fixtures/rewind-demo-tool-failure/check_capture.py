@@ -6,6 +6,8 @@
 #
 # Usage: check_capture.py <runtime-dir> <run-id>
 
+# ruff: noqa: E402
+
 import os
 import sys
 
@@ -17,15 +19,21 @@ sys.path.insert(0, os.path.join(_core, "dist", "kungfu"))
 
 import kungfu
 
-from kungfu.rewind import MSG_RUN_END, MSG_TOOL_CALL, MSG_TOOL_RESULT
+from kungfu.rewind import (
+    ACTION_RUN_END,
+    ACTION_TOOL_CALL,
+    ACTION_TOOL_RESULT,
+    CARRIER_REWIND_ACTION,
+)
+from kungfu.rewind.wire import unwrap_event
 from kungfu.rewind.fb.CallStatus import CallStatus
 from kungfu.rewind.fb.RunEnd import RunEnd
 from kungfu.rewind.fb.RunStatus import RunStatus
 from kungfu.rewind.fb.ToolCall import ToolCall
 from kungfu.rewind.fb.ToolResult import ToolResult
 
-lf = kungfu.__binding__.longfist
-yjj = kungfu.__binding__.yijinjing
+schema = kungfu.__binding__.yijinjing
+yjj = kungfu.__binding__.runtime
 
 runtime_dir, run_id = sys.argv[1], sys.argv[2]
 failures = []
@@ -39,22 +47,30 @@ def check(name, ok, detail=""):
 
 locator = yjj.locator(runtime_dir)
 location = yjj.location(
-    lf.enums.mode.LIVE, lf.enums.category.SYSTEM, "rewind", run_id, locator
+    schema.enums.mode.LIVE, schema.enums.location_role.SYSTEM, "rewind", run_id, locator
 )
 
 
-def read(msg_type):
-    return yjj.assemble(location, 0).read_bytes(msg_type)
+def read(action_type):
+    result = []
+    for header, payload in yjj.assemble(location, 0).read_bytes(CARRIER_REWIND_ACTION):
+        event = unwrap_event(payload)
+        if event is None:
+            continue
+        current_action_type, event_payload = event
+        if current_action_type == action_type:
+            result.append((header, event_payload))
+    return result
 
 
-calls = read(MSG_TOOL_CALL)
+calls = read(ACTION_TOOL_CALL)
 check("exactly one tool call (no retry loop)", len(calls) == 1)
 if calls:
     call = ToolCall.GetRootAs(bytes(calls[0][1]), 0)
     check("tool is lookup", (call.ToolName() or b"").decode() == "lookup")
     check("input captured", "query" in (call.Input() or b"").decode())
 
-results = read(MSG_TOOL_RESULT)
+results = read(ACTION_TOOL_RESULT)
 check("exactly one tool result", len(results) == 1)
 if results:
     result = ToolResult.GetRootAs(bytes(results[0][1]), 0)
@@ -63,7 +79,7 @@ if results:
     check("error names the broken contract", "missing field 'answer'" in error)
     check("error carries the query", "the demo answer" in error)
 
-ends = read(MSG_RUN_END)
+ends = read(ACTION_RUN_END)
 check("RunEnd present", len(ends) == 1)
 if ends:
     end = RunEnd.GetRootAs(bytes(ends[0][1]), 0)

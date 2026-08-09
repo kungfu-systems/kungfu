@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: Apache-2.0
 //
-// Event-dispatch latency baseline, node watcher form (ADR-0005 evidence).
+// Event-dispatch latency baseline, node watcher form (KF-ADR-019f86da-4f90-7f7b-90be-c002b024d412 evidence).
 //
-// Constructs the real node Watcher against a running master's KF_HOME and
-// starts its uv pump (hero::step through hero::drain), so the
+// Constructs the real node Watcher against a running coordinator's KF_HOME and
+// starts its uv pump (reactor::step through reactor::drain), so the
 // KF_DISPATCH_PROBE instrument reports the watcher-side per-frame rx
 // traversal cost into the watcher's log. Run under plain node from
 // framework/core; the load is driven separately by dispatch_load.py
@@ -12,10 +12,10 @@
 //
 // Usage: node tests/bench/dispatch_watcher_bench.js <kf-home> <seconds>
 
-const path = require('path');
+const path = require('node:path');
 
 const home = process.argv[2];
-const seconds = parseInt(process.argv[3] || '30', 10);
+const seconds = Number.parseInt(process.argv[3] || '30', 10);
 if (!home) {
   console.error('usage: dispatch_watcher_bench.js <kf-home> <seconds>');
   process.exit(2);
@@ -36,22 +36,61 @@ const watcher = new binding.Watcher(
   runtimeDir,
   'dispatch_bench',
   true, // bypassRestore
-  false, // bypassAccounting
-  false, // bypassTradingData
-  true, // refreshTradingDataBeforeSync
-  false, // bypassRefreshBook
   2, // millisecondsSleepAfterStep
+  true, // captureCustom: enables the explicit public-journal follow contract
 );
+
+const loadLocation = {
+  mode: 'live',
+  role: 'actor',
+  namespace: 'bench',
+  name: 'dispatch_load',
+};
+let followingLoad = false;
 
 console.log('watcher created, starting uv pump for', seconds, 'seconds');
 watcher.start();
 
+// Registering with the same coordinator does not implicitly join another
+// peer's PUBLIC journal. Wait until the load peer is in the live registry,
+// then request the exact source journal from the beginning so the dispatch
+// probe measures the requested carrier instead of coordinator control frames.
+const follow = setInterval(() => {
+  if (followingLoad || !watcher.isLive()) return;
+  const loadUid = watcher.getLocationUID(loadLocation);
+  if (!watcher.getLocation(loadUid)) return;
+  if (!watcher.requestReadFromPublic(loadLocation, 0n)) return;
+  followingLoad = true;
+  clearInterval(follow);
+  console.log('watcher following dispatch_load public journal');
+}, 10);
+
 const sync = setInterval(() => watcher.sync(), 1000);
 
 setTimeout(() => {
+  clearInterval(follow);
   clearInterval(sync);
+  if (!followingLoad) {
+    console.error('watcher never followed dispatch_load public journal');
+    process.exitCode = 1;
+  }
   console.log('watcher bench window done, quitting');
   watcher.quit();
-  // give the uv worker a moment to unwind before process exit
-  setTimeout(() => process.exit(0), 2000);
+  const deadline = Date.now() + 5000;
+  const stopped = setInterval(() => {
+    const stats = watcher.runtimeStats();
+    if (!stats.running) {
+      clearInterval(stopped);
+      console.log(
+        'watcher runtime stats',
+        JSON.stringify(stats, (_key, value) =>
+          typeof value === 'bigint' ? value.toString() : value,
+        ),
+      );
+    } else if (Date.now() > deadline) {
+      clearInterval(stopped);
+      console.error('watcher did not stop within 5 seconds');
+      process.exitCode = 1;
+    }
+  }, 10);
 }, seconds * 1000);

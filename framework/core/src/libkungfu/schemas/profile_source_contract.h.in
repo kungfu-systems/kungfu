@@ -1,0 +1,18 @@
+// SPDX-License-Identifier: Apache-2.0
+// Generated from framework/kfx/kungfu-kfx.contract.json. Do not edit.
+#ifndef KUNGFU_RUNTIME_PROFILE_SOURCE_CONTRACT_H
+#define KUNGFU_RUNTIME_PROFILE_SOURCE_CONTRACT_H
+
+#include <string_view>
+
+namespace kungfu::runtime::profile::schema {
+inline constexpr const char *KFX_CONTRACT_JSON =
+@KFX_CONTRACT_JSON_LITERALS@;
+}
+
+namespace kungfu::runtime::kfx::generated {
+inline constexpr std::string_view KFX_DOMAIN_PROFILE_CONTRACT =
+    R"KFKFXPROFILE(@KFX_DOMAIN_PROFILE_JSON@)KFKFXPROFILE";
+}
+
+#endif // KUNGFU_RUNTIME_PROFILE_SOURCE_CONTRACT_H

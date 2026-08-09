@@ -1,4 +1,4 @@
-// The Windows AppContainer launch orchestration (ADR-0014): the host-side glue
+// The Windows AppContainer launch orchestration (KF-ADR-019f86da-4f90-7789-8b48-620aa694acf9): the host-side glue
 // that turns libkungfu's native `spawn_app_container` into the WindowsSandboxSpawn
 // kungfu-guest expects. It is deliberately thin — the streaming stays in Node so
 // the blind native surface is as small as possible:
@@ -13,7 +13,7 @@
 //      process object's `wait()` drives the exit event and `kill()` terminates it.
 //
 // The native binding is INJECTED (createLibkungfuWindowsSpawn(binding)) so
-// kungfu-guest holds no binding itself — the same injection discipline ADR-0011
+// kungfu-guest holds no binding itself — the same injection discipline KF-ADR-019f86da-4f90-7e5e-ae22-2a8fc24086f1
 // applies to capabilities. The relay never touches stdout/stdin content here; it
 // just gets a GuestChild whose streams happen to be named pipes.
 import { existsSync, mkdirSync, rmSync } from 'node:fs';

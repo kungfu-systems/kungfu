@@ -1,0 +1,40 @@
+{
+  "schemaVersion": 1,
+  "contract": "kungfu-buildchain-kfd-7-evidence-report",
+  "profileId": "kungfu-kfd-7-action-profile",
+  "profileVersion": "0.1.0",
+  "stateMachineVersion": "0.1.0",
+  "sourceSha": "ec3b0c843ad271a34450a69a2da2e538f404f3ce",
+  "category": "backend-migration",
+  "outcome": "pass",
+  "matchedExpectation": true,
+  "checks": [
+    {
+      "id": "storage-backend-switch-delegation-declared",
+      "status": "pass"
+    },
+    {
+      "id": "five-role-identity-conservation-witness",
+      "status": "pass"
+    },
+    {
+      "id": "file-rocksdb-file-rollback",
+      "status": "pass"
+    }
+  ],
+  "observations": {
+    "providers": [
+      "content-addressed-file",
+      "rocksdb"
+    ],
+    "preserved": [
+      "five role object ids",
+      "version roots",
+      "Cut roots",
+      "named ref roots and revisions",
+      "authority bundle root"
+    ],
+    "testPath": "framework/core/tests/python/test_agent_work_profile_native.py",
+    "retainedBoundary": "The witness covers the embedded file-to-RocksDB cut, continued authority on RocksDB, and reverse-sync rollback to file; it does not claim cross-machine consensus."
+  }
+}

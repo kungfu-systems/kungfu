@@ -1,0 +1,50 @@
+{
+  "schema": "kungfu.project-cut.history-contract/v1",
+  "version": 1,
+  "status": "pre-release",
+  "rootAlgorithm": "sha256-project-cut-canonical-json-v1",
+  "cutCompatibility": {
+    "schema": "project.cut/v1",
+    "rootPreimageUnchanged": true,
+    "gitObjectIdsExcluded": true
+  },
+  "operations": {
+    "publish": { "relation": "new", "priorBindings": "forbidden" },
+    "branch": { "relation": "same", "priorBindings": "required" },
+    "merge": { "relation": "successor", "priorBindings": "git-parents", "integrationEpisode": "required-admitted" },
+    "rebase": { "relation": "same", "priorBindings": "required" },
+    "amend": { "relation": "same", "priorBindings": "required" },
+    "squash": { "relation": "same", "priorBindings": "required" },
+    "revert": { "relation": "successor", "priorBindings": "required", "resolutionEpisode": "required" },
+    "cherry-pick": { "relation": "same", "priorBindings": "required" },
+    "empty": { "relation": "new", "cutRoots": "empty", "episodeRoots": "empty" },
+    "recovery": { "relation": "successor", "priorBindings": "required", "resolutionEpisode": "required" }
+  },
+  "cardinality": {
+    "commitToCut": "many-to-many",
+    "commitToEpisode": "many-to-many",
+    "sameCutMultipleCommits": true,
+    "sameCommitMultipleCuts": true
+  },
+  "coordination": {
+    "scope": "per-observation",
+    "globalLock": false,
+    "refContention": "git-compare-and-swap",
+    "ancestryIsCausalAuthority": false
+  },
+  "recovery": {
+    "unqualifiedRewrite": "fail-visible",
+    "missingPrior": "fail-visible",
+    "unreachableBinding": "orphaned",
+    "supersededBinding": "retained",
+    "explicitArchive": true
+  },
+  "schemaBundle": {
+    "files": [
+      "schema/history-observation-v1.schema.json",
+      "schema/history-request-v1.schema.json"
+    ],
+    "schemaRoot": "sha256:5fcd30c3fcbe4720d1ce10ea3c9ebbbd46dba497e6276b5489d94deb8455dd96"
+  },
+  "contractRoot": "sha256:01ff866029f7b19e2a18ba97a96cf1cc75844d145103abdda9a4c6c7420c8720"
+}

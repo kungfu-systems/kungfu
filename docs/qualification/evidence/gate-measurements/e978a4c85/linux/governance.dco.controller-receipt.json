@@ -1,0 +1,44 @@
+{
+  "$schema": "https://libkungfu.dev/schemas/shifu/gate-controller-receipt-v1.schema.json",
+  "schema": "kungfu.gate-controller-receipt/v1",
+  "gateId": "governance.dco",
+  "definitionDigest": "sha256:2a034a3a6be2c010ca9f8f4f6a372e9fd4c66bca8fc1f9736e7cda767bc875c1",
+  "source": {
+    "sha": "e978a4c85942fe260a5916e17dc2d4f69a0925b3",
+    "dirty": false
+  },
+  "registry": {
+    "ref": "shifu.gates.json",
+    "digest": "sha256:eef475e0e5282bec4b4eec8272099f578d93d1461ddfb6ca2af67975bac37598",
+    "projectId": "kungfu"
+  },
+  "environment": {
+    "platform": "linux",
+    "runnerName": "GitHub Actions 1000030120",
+    "runnerLabels": [
+      "ubuntu-22.04"
+    ]
+  },
+  "binding": {
+    "id": "all-pr-dco",
+    "workflow": ".github/workflows/dco.yml",
+    "job": "signoff",
+    "adapterDigest": "sha256:56a4e4cffcadfb202ef1494b75479a4b2ed96a2595e58987101ae0c44b1c06a2"
+  },
+  "run": {
+    "repository": "kungfu-systems/kungfu",
+    "workflowRunId": 29346926114,
+    "jobId": 87132955349,
+    "event": "pull_request",
+    "url": "https://github.com/kungfu-systems/kungfu/actions/runs/29346926114/job/87132955349"
+  },
+  "startedAt": "2026-07-14T15:48:09Z",
+  "finishedAt": "2026-07-14T15:48:21Z",
+  "durationMs": 12000,
+  "status": "pass",
+  "attempted": true,
+  "conclusion": "success",
+  "integrity": {
+    "digest": "sha256:a030b212d4c84214d4466847b3583a874325a2b8cda3cdd917e77de4c51db6b0"
+  }
+}

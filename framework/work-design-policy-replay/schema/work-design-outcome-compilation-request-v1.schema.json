@@ -1,0 +1,89 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kungfu.tech/schema/work-design-outcome-compilation-request-v1.schema.json",
+  "title": "Rooted settled Work outcome compilation request",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "asOf", "work", "activeIntervals", "excludedWaits", "reworkEvents", "dependencyRevisions", "acceptanceAssessments", "completeness", "sourceEvidenceRoots"],
+  "properties": {
+    "schema": { "const": "kungfu.work-design.outcome-compilation-request/v1" },
+    "asOf": { "$ref": "#/$defs/timestamp" },
+    "work": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["assignmentId", "workDefinitionRoot", "adviceRoot", "policyRoot", "deliveryClass", "workClass", "repositoryClass", "plannedBudgetSeconds", "admittedAt", "settledAt", "settledState"],
+      "properties": {
+        "assignmentId": { "$ref": "#/$defs/id" },
+        "workDefinitionRoot": { "$ref": "#/$defs/root" },
+        "adviceRoot": { "$ref": "#/$defs/root" },
+        "policyRoot": { "$ref": "#/$defs/root" },
+        "deliveryClass": { "enum": ["cross-platform", "native-proof-required", "non-native-fast", "release"] },
+        "workClass": { "$ref": "#/$defs/id" },
+        "repositoryClass": { "$ref": "#/$defs/id" },
+        "plannedBudgetSeconds": { "type": ["integer", "null"], "minimum": 0 },
+        "admittedAt": { "$ref": "#/$defs/timestamp" },
+        "settledAt": { "$ref": "#/$defs/timestamp" },
+        "settledState": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["schema", "stateRoot", "queryProofRoot", "phase", "settled"],
+          "properties": {
+            "schema": { "const": "kungfu.assignment-orchestration.sealed-work-coordinate/v1" },
+            "stateRoot": { "$ref": "#/$defs/root" },
+            "queryProofRoot": { "$ref": "#/$defs/root" },
+            "phase": { "const": "continuation-decided" },
+            "settled": { "const": true }
+          }
+        }
+      }
+    },
+    "activeIntervals": { "type": "array", "items": { "$ref": "#/$defs/interval" } },
+    "excludedWaits": { "type": "array", "items": { "$ref": "#/$defs/wait" } },
+    "reworkEvents": { "type": "array", "items": { "$ref": "#/$defs/rework" } },
+    "dependencyRevisions": { "type": "array", "items": { "$ref": "#/$defs/dependency" } },
+    "acceptanceAssessments": { "type": "array", "items": { "$ref": "#/$defs/assessment" } },
+    "completeness": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["timing", "rework", "dependency", "acceptance"],
+      "properties": {
+        "timing": { "type": "boolean" },
+        "rework": { "type": "boolean" },
+        "dependency": { "type": "boolean" },
+        "acceptance": { "type": "boolean" }
+      }
+    },
+    "sourceEvidenceRoots": { "$ref": "#/$defs/roots" }
+  },
+  "$defs": {
+    "root": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+    "roots": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/root" } },
+    "id": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]*$" },
+    "timestamp": { "type": "string", "format": "date-time" },
+    "interval": {
+      "type": "object", "additionalProperties": false,
+      "required": ["start", "end", "evidenceRoot"],
+      "properties": { "start": { "$ref": "#/$defs/timestamp" }, "end": { "$ref": "#/$defs/timestamp" }, "evidenceRoot": { "$ref": "#/$defs/root" } }
+    },
+    "wait": {
+      "type": "object", "additionalProperties": false,
+      "required": ["class", "start", "end", "evidenceRoot"],
+      "properties": { "class": { "enum": ["ci-queue", "external-review", "human-decision", "platform-approval"] }, "start": { "$ref": "#/$defs/timestamp" }, "end": { "$ref": "#/$defs/timestamp" }, "evidenceRoot": { "$ref": "#/$defs/root" } }
+    },
+    "rework": {
+      "type": "object", "additionalProperties": false,
+      "required": ["kind", "observedAt", "evidenceRoot"],
+      "properties": { "kind": { "enum": ["acceptance-reopen", "corrective-successor"] }, "observedAt": { "$ref": "#/$defs/timestamp" }, "evidenceRoot": { "$ref": "#/$defs/root" } }
+    },
+    "dependency": {
+      "type": "object", "additionalProperties": false,
+      "required": ["observedAt", "previousGraphRoot", "nextGraphRoot", "evidenceRoot"],
+      "properties": { "observedAt": { "$ref": "#/$defs/timestamp" }, "previousGraphRoot": { "$ref": "#/$defs/root" }, "nextGraphRoot": { "$ref": "#/$defs/root" }, "evidenceRoot": { "$ref": "#/$defs/root" } }
+    },
+    "assessment": {
+      "type": "object", "additionalProperties": false,
+      "required": ["observedAt", "verdict", "evidenceRoot"],
+      "properties": { "observedAt": { "$ref": "#/$defs/timestamp" }, "verdict": { "enum": ["fit", "unfit", "uncertain"] }, "evidenceRoot": { "$ref": "#/$defs/root" } }
+    }
+  }
+}

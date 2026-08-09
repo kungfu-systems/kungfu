@@ -1,0 +1,305 @@
+{
+  "schema": "kungfu.runtime-activation.qualification-report/v1",
+  "run_id": "runtime-activation-1784034127354-19669",
+  "mode": "execute",
+  "product_mode": "required",
+  "source": {
+    "revision": "b325b97392e6253de11e4b7e61b40b9e2fc639ce",
+    "tree": "1076f009258781abf5bbea97ffc4b5576caaf1fb",
+    "dirty": false
+  },
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "25.5.0"
+  },
+  "suites": [
+    {
+      "id": "activation-core",
+      "command": [
+        "./shifu",
+        "exec",
+        "uv",
+        "run",
+        "--project",
+        "framework/core",
+        "python",
+        "-m",
+        "pytest",
+        "framework/core/tests/python/test_runtime_broker.py",
+        "framework/core/tests/python/test_runtime_service.py",
+        "-q"
+      ],
+      "required": true,
+      "status": "passed",
+      "exit_code": 0,
+      "duration_ms": 15624,
+      "raw_log": "activation-core.log",
+      "raw_sha256": "e012db14498c225a79abc6221c8498568b3ae13e4784897d811c0b61a14f8750"
+    },
+    {
+      "id": "product-distribution",
+      "command": [
+        "./shifu",
+        "dist"
+      ],
+      "required": true,
+      "status": "passed",
+      "exit_code": 0,
+      "duration_ms": 121458,
+      "raw_log": "product-distribution.log",
+      "raw_sha256": "3f3780f8e2936b19a1734992e7b9174fdf4010c6b7e588d1de1a01692b8d2cad"
+    },
+    {
+      "id": "profile-action-admission",
+      "command": [
+        "./shifu",
+        "exec",
+        "uv",
+        "run",
+        "--project",
+        "framework/core",
+        "node",
+        "scripts/run-agent-profile-sdk-tests.mjs"
+      ],
+      "required": true,
+      "status": "passed",
+      "exit_code": 0,
+      "duration_ms": 58845,
+      "raw_log": "profile-action-admission.log",
+      "raw_sha256": "4dd0aa4c4d4b9f00bd0182ab1c7cd64df21359e4ca545679e807ad3d56ba58f4"
+    },
+    {
+      "id": "runtime-surface-parity",
+      "command": [
+        "./shifu",
+        "test:runtime-surface"
+      ],
+      "required": true,
+      "status": "passed",
+      "exit_code": 0,
+      "duration_ms": 2103,
+      "raw_log": "runtime-surface-parity.log",
+      "raw_sha256": "d9b770f9bb8fc49c25bc898f684300d9ce62a6601229317f079ace9d0912c412"
+    },
+    {
+      "id": "activation-performance",
+      "command": [
+        "./shifu",
+        "exec",
+        "uv",
+        "run",
+        "--project",
+        "framework/core",
+        "python",
+        "framework/core/tests/qualification/runtime-activation/performance_workload.py"
+      ],
+      "required": true,
+      "status": "passed",
+      "exit_code": 0,
+      "duration_ms": 3959,
+      "raw_log": "activation-performance.log",
+      "raw_sha256": "a54d156427f82c192e640e321f02018a0180cabbadd40af497158e5bc3e4e5b1"
+    },
+    {
+      "id": "product-runtime-smoke",
+      "command": [
+        "./shifu",
+        "exec",
+        "/Users/dkr/.local/share/fnm/node-versions/v22.22.3/installation/bin/node",
+        "framework/core/tests/qualification/runtime-activation/product_smoke.mjs"
+      ],
+      "required": true,
+      "status": "passed",
+      "exit_code": 0,
+      "duration_ms": 6155,
+      "raw_log": "product-runtime-smoke.log",
+      "raw_sha256": "969bbc9febb16657f4a834ae9bd60b1d3addbd39ec67932f776200509578553b"
+    },
+    {
+      "id": "product-verification",
+      "command": [
+        "./shifu",
+        "verify",
+        "--full",
+        "--with-app"
+      ],
+      "required": true,
+      "status": "passed",
+      "exit_code": 0,
+      "duration_ms": 231053,
+      "raw_log": "product-verification.log",
+      "raw_sha256": "6b1da87870917b4c2e6a4392bd1c7118fb9b226b2b0d7240ce73b8c6451eda86"
+    },
+    {
+      "id": "product-catalog",
+      "command": [
+        "./shifu",
+        "builds",
+        "--json"
+      ],
+      "required": true,
+      "status": "passed",
+      "exit_code": 0,
+      "duration_ms": 2795,
+      "raw_log": "product-catalog.log",
+      "raw_sha256": "5c46adbf7058ec36270b4556010be8f0b0537ab0a8a6daca89321ca08af343c5"
+    }
+  ],
+  "coverage": [
+    {
+      "id": "daemonless-storage",
+      "evidence_suites": [
+        "activation-core"
+      ],
+      "status": "passed"
+    },
+    {
+      "id": "direct-no-fork-coordinator",
+      "evidence_suites": [
+        "activation-core"
+      ],
+      "status": "passed"
+    },
+    {
+      "id": "process-crash-recovery",
+      "evidence_suites": [
+        "activation-core"
+      ],
+      "status": "passed"
+    },
+    {
+      "id": "native-readiness-publication",
+      "evidence_suites": [
+        "activation-core"
+      ],
+      "status": "passed"
+    },
+    {
+      "id": "profile-action-admission",
+      "evidence_suites": [
+        "profile-action-admission"
+      ],
+      "status": "passed"
+    },
+    {
+      "id": "language-product-parity",
+      "evidence_suites": [
+        "runtime-surface-parity"
+      ],
+      "status": "passed"
+    },
+    {
+      "id": "bounded-latency-and-resource-report",
+      "evidence_suites": [
+        "activation-performance"
+      ],
+      "status": "passed"
+    },
+    {
+      "id": "product-artifact-build",
+      "evidence_suites": [
+        "product-distribution"
+      ],
+      "status": "passed"
+    },
+    {
+      "id": "temporary-product-runtime-smoke",
+      "evidence_suites": [
+        "product-runtime-smoke"
+      ],
+      "status": "passed"
+    },
+    {
+      "id": "product-artifact-verification",
+      "evidence_suites": [
+        "product-verification"
+      ],
+      "status": "passed"
+    },
+    {
+      "id": "product-artifact-catalog",
+      "evidence_suites": [
+        "product-catalog"
+      ],
+      "status": "passed"
+    }
+  ],
+  "claims": {
+    "daemonless_storage_operations": true,
+    "direct_no_fork_coordinator": true,
+    "process_crash_recovery": true,
+    "native_readiness_publication": true,
+    "product_artifacts_verified": true,
+    "embedded_runtime_host": false
+  },
+  "non_claims": [
+    "production EmbeddedRuntimeHost",
+    "distributed election, cross-machine leases, or high availability",
+    "physical-host power-loss qualification from process-crash evidence",
+    "default-on production durability or projection candidate profiles",
+    "universal startup, recovery, or activation latency SLO",
+    "readiness descriptor bytes as authority without native revalidation"
+  ],
+  "violations": [],
+  "verdict": "passed",
+  "artifacts": {
+    "log_bundle": {
+      "path": "raw-logs.jsonl.gz",
+      "media_type": "application/x-ndjson",
+      "content_encoding": "gzip",
+      "sha256": "7a6fc31d7edbe1183cd72fb3c7e90a9bde2fee38a8c99fcaf29158daf49bf6eb",
+      "bytes": 101679,
+      "entries": [
+        {
+          "suite_id": "activation-core",
+          "path": "activation-core.log",
+          "sha256": "e012db14498c225a79abc6221c8498568b3ae13e4784897d811c0b61a14f8750",
+          "bytes": 654
+        },
+        {
+          "suite_id": "product-distribution",
+          "path": "product-distribution.log",
+          "sha256": "3f3780f8e2936b19a1734992e7b9174fdf4010c6b7e588d1de1a01692b8d2cad",
+          "bytes": 211108
+        },
+        {
+          "suite_id": "profile-action-admission",
+          "path": "profile-action-admission.log",
+          "sha256": "4dd0aa4c4d4b9f00bd0182ab1c7cd64df21359e4ca545679e807ad3d56ba58f4",
+          "bytes": 162
+        },
+        {
+          "suite_id": "runtime-surface-parity",
+          "path": "runtime-surface-parity.log",
+          "sha256": "d9b770f9bb8fc49c25bc898f684300d9ce62a6601229317f079ace9d0912c412",
+          "bytes": 227
+        },
+        {
+          "suite_id": "activation-performance",
+          "path": "activation-performance.log",
+          "sha256": "a54d156427f82c192e640e321f02018a0180cabbadd40af497158e5bc3e4e5b1",
+          "bytes": 1347
+        },
+        {
+          "suite_id": "product-runtime-smoke",
+          "path": "product-runtime-smoke.log",
+          "sha256": "969bbc9febb16657f4a834ae9bd60b1d3addbd39ec67932f776200509578553b",
+          "bytes": 1232
+        },
+        {
+          "suite_id": "product-verification",
+          "path": "product-verification.log",
+          "sha256": "6b1da87870917b4c2e6a4392bd1c7118fb9b226b2b0d7240ce73b8c6451eda86",
+          "bytes": 226293
+        },
+        {
+          "suite_id": "product-catalog",
+          "path": "product-catalog.log",
+          "sha256": "5c46adbf7058ec36270b4556010be8f0b0537ab0a8a6daca89321ca08af343c5",
+          "bytes": 23376
+        }
+      ]
+    }
+  }
+}

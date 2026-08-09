@@ -1,0 +1,31 @@
+{
+  "schema": "kungfu.project-template/v1",
+  "id": "kungfu.blank-project",
+  "version": "1",
+  "title": "Blank Agent Work Project",
+  "description": "A minimal ordinary project with Agent guidance but no captured Assignment or runtime state.",
+  "suggestedDirectoryName": "agent-work-project",
+  "files": [
+    {
+      "path": "README.md",
+      "content": "# Agent Work Project\n\nThis is an ordinary project directory prepared for governed Agent Work.\n\nDescribe a bounded outcome in `WORK.md`, add any source material the Agent should use, then run `kungfu run codex \"your task\"` from this directory. You can use Claude or OpenCode by changing the provider name.\n\nKungfu will create local `.kungfu/` state only when Work is captured or started. Project files remain ordinary files you control.\n"
+    },
+    {
+      "path": "AGENTS.md",
+      "content": "# Agent instructions\n\nRead `README.md` and `WORK.md` before editing. Inspect the project files relevant to the requested outcome and follow any more specific instructions you find.\n\n- Use only supported facts and report unresolved questions.\n- Do not edit `.kungfu/` directly; use Kungfu's public UI or CLI for Work state.\n- Do not treat process exit or a plausible answer as proof that Work is complete.\n- Do not initialize Git, commit, push, publish, delete files, or broaden permissions unless the user explicitly asks.\n- Report what changed, the checks you ran, retained evidence, and the exact next action.\n"
+    },
+    {
+      "path": "WORK.md",
+      "content": "# Work\n\nDescribe the first bounded outcome here, including the files or evidence the Agent should use and the checks that make the result acceptable.\n\nWhen ready, capture and start it from this project:\n\n```sh\nkungfu run codex \"Describe the bounded outcome\"\n```\n\nA successful Agent process does not complete Work. Review the retained result and evidence before accepting it.\n"
+    }
+  ],
+  "openAction": {
+    "kind": "select-project-workspace",
+    "label": "Open Project"
+  },
+  "nonClaims": [
+    "Creating files does not create or complete Work.",
+    "No Assignment or runtime state is created by this template.",
+    "The template does not initialize Git, edit ignore rules, commit, push, or publish."
+  ]
+}

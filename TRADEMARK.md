@@ -4,6 +4,12 @@ This policy explains how the official Kungfu project names and marks may be
 used. It is about project identity, not the copyright license for this
 repository.
 
+**Kungfu UNGFU™** is a trademark of Kungfu Origin Technology Limited. The ™
+symbol identifies the claimed mark; it does not state that a registration has
+issued. Kungfu remains the product name. UNGFU is the recursive source
+signature described in [Why Kungfu?](docs/concepts/why-kungfu.md), not a second
+product, runtime, package, CLI, or service.
+
 ## Project Marks
 
 Kungfu project marks include names, logos, domain names, release names, product
@@ -11,6 +17,7 @@ names, package names, and other identifiers associated with the official
 project, including:
 
 - Kungfu
+- Kungfu UNGFU™
 - Kungfu Tracer
 - Kungfu Rewind
 - Kungfu Origin
@@ -21,6 +28,9 @@ The Apache-2.0 license for this repository grants copyright and patent
 permissions. It does not grant trademark rights or permission to imply that an
 unofficial product, fork, service, release, package, or organization is the
 official Kungfu project.
+
+The executable gate and public-safe evidence procedure for the first real
+release are documented in [Trademark public-use qualification](docs/qualification/trademark-public-use.md).
 
 ## Allowed Uses
 
@@ -79,4 +89,3 @@ or imply that it is official.
 If you see confusing or misleading use of Kungfu marks, open an issue or contact
 the maintainers through the official project channels. Security-sensitive cases
 should use the private vulnerability reporting path in `SECURITY.md`.
-

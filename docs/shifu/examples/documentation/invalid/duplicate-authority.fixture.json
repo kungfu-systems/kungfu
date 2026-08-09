@@ -1,0 +1,21 @@
+{
+  "schema": "shifu.documentation-negative-fixture/v1",
+  "base": "shifu.documentation.json",
+  "mutation": {
+    "op": "add",
+    "path": "/providers/-",
+    "value": {
+      "id": "kungfu.docs-contract-copy",
+      "kind": "subject",
+      "authority": "project",
+      "lifecycle": "active",
+      "state": "current",
+      "waiver": null,
+      "documentProfile": "compatibility-input",
+      "verificationProfile": "machine-check",
+      "visibility": "public",
+      "source": { "root": "repository-contracts", "path": "docs.contract.json", "format": "json" }
+    }
+  },
+  "expect": "duplicate-authority"
+}

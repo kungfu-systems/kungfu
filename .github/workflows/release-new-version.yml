@@ -3,48 +3,390 @@
 name: Release - New Version
 
 on:
+  workflow_dispatch:
+    inputs:
+      target-ref:
+        description: "Alpha or release channel ref whose existing candidate evidence will be rehearsed"
+        required: true
+        type: string
+      target-sha:
+        description: "Exact candidate source SHA to rehearse without publication or ref mutation"
+        required: true
+        type: string
+      preflight-run-id:
+        description: "Optional exact diagnostic preflight run for the candidate SHA"
+        required: false
+        default: ""
+        type: string
   pull_request:
     types: [closed]
     branches:
       - alpha/v*/v*
       - release/v*/v*
 
+permissions:
+  contents: read
+
 jobs:
-  release:
-    uses: kungfu-trader/workflows/.github/workflows/.release-new-version.yml@v1
-    with:
-      protect-dev-branches: true
-      need-qa-automated: true
-      max-preview-links: 64
-    secrets:
-      GITHUB_PUSH_TOKEN: ${{ secrets.KUNGFU_GITHUB_TOKEN }}
-      AWS_CI_ACCESS_KEY_ID: ${{ secrets.AWS_CI_ACCESS_KEY_ID }}
-      AWS_CI_SECRET_ACCESS_KEY: ${{ secrets.AWS_CI_SECRET_ACCESS_KEY }}
-      AWS_USER_ACCESS_KEY_ID: ${{ secrets.AWS_USER_ACCESS_KEY_ID }}
-      AWS_USER_SECRET_ACCESS_KEY: ${{ secrets.AWS_USER_SECRET_ACCESS_KEY }}
-      MONDAY_API_KEY: ${{ secrets.MONDAY_API_KEY }}
-      AIRTABLE_API_KEY: ${{ secrets.AIRTABLE_API_KEY }}
+  promotion-contract:
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.pull_request.merged == true }}
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+    outputs:
+      candidate-source-sha: ${{ steps.candidate.outputs.source-sha }}
+      candidate-source-tree: ${{ steps.preflight.outputs.source-tree }}
+      preflight-run-id: ${{ steps.preflight.outputs.run-id }}
+      preflight-receipt-root: ${{ steps.preflight.outputs.receipt-root }}
+      promotion-sha: ${{ steps.candidate.outputs.promotion-sha }}
+      promotion-tree: ${{ steps.promotion-tree.outputs.tree }}
+    steps:
+      - name: Resolve immutable Alpha candidate and promotion commits
+        id: candidate
+        env:
+          CANDIDATE_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || inputs.target-sha }}
+          PROMOTION_SHA: ${{ inputs.target-sha || github.event.pull_request.merge_commit_sha || github.sha }}
+        run: |
+          set -euo pipefail
+          [[ "$CANDIDATE_SHA" =~ ^[0-9a-f]{40}$ ]]
+          [[ "$PROMOTION_SHA" =~ ^[0-9a-f]{40}$ ]]
+          {
+            echo "source-sha=$CANDIDATE_SHA"
+            echo "promotion-sha=$PROMOTION_SHA"
+          } >> "$GITHUB_OUTPUT"
 
-  trigger-batch-pr:
-      needs: [release]
-      uses: kungfu-trader/workflows/.github/workflows/.batch-pull-request.yml@dev/v1/v1.2
-      with:
-        repo: group
-        pull-request-title: ${{ github.event.pull_request.title }}
-      secrets:
-        GITHUB_PUSH_TOKEN: ${{ secrets.KUNGFU_GITHUB_TOKEN }}
+      - name: Checkout immutable Alpha candidate
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: ${{ steps.candidate.outputs.source-sha }}
+          fetch-depth: 0
+          persist-credentials: false
 
-  sync-release-page:
-    needs: [release]
-    uses: kungfu-trader/workflows/.github/workflows/.sync-release-page.yml@dev/v1/v1.2
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version: "24"
+
+      - name: Reuse exact development qualification receipt
+        id: preflight
+        if: ${{ startsWith(inputs.target-ref || github.event.pull_request.base.ref, 'alpha/') }}
+        uses: ./.github/actions/require-alpha-preflight
+        with:
+          source-sha: ${{ steps.candidate.outputs.source-sha }}
+          receipt-run-id: ${{ inputs.preflight-run-id || '' }}
+
+      - name: Checkout immutable promotion result
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: ${{ steps.candidate.outputs.promotion-sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Verify Alpha candidate tree survives channel merge
+        id: promotion-tree
+        if: ${{ startsWith(inputs.target-ref || github.event.pull_request.base.ref, 'alpha/') }}
+        env:
+          CANDIDATE_TREE: ${{ steps.preflight.outputs.source-tree }}
+        run: |
+          set -euo pipefail
+          promotion_tree="$(git rev-parse 'HEAD^{tree}')"
+          test "$promotion_tree" = "$CANDIDATE_TREE"
+          echo "tree=$promotion_tree" >> "$GITHUB_OUTPUT"
+
+      - name: Rehearse the Kungfu promotion contract for a pull request
+        if: ${{ github.event_name == 'pull_request' }}
+        env:
+          TARGET_REF: ${{ github.event.pull_request.base.ref }}
+        run: |
+          set -euo pipefail
+          surface=product-stable
+          if [[ "$TARGET_REF" == alpha/* ]]; then
+            surface=product-alpha
+          fi
+          ./shifu release:publication:admit -- --surface "$surface" --operation publication
+          ./shifu gate run governance.promotion-rehearsal
+
+      - name: Rehearse the Kungfu promotion contract for a manual dry-run
+        if: ${{ github.event_name == 'workflow_dispatch' }}
+        env:
+          TARGET_REF: ${{ inputs.target-ref }}
+        run: |
+          set -euo pipefail
+          surface=product-stable
+          if [[ "$TARGET_REF" == alpha/* ]]; then
+            surface=product-alpha
+          fi
+          ./shifu release:publication:admit -- --surface "$surface" --operation rehearsal
+          ./shifu release:promotion:rehearse
+
+  promote:
+    needs: promotion-contract
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.pull_request.merged == true }}
+    permissions:
+      actions: write
+      artifact-metadata: write
+      attestations: write
+      checks: write
+      contents: write
+      issues: write
+      id-token: write
+      pull-requests: write
+    uses: kungfu-systems/buildchain/.github/workflows/release-candidate-promote.yml@2e7e07902ac28d8f3edcfb81098ef9ebc7a91878 # signing workflow path readback authority
     with:
-      product: artifact-kungfu
-      cloudfront-id: E1FE73MM9VXU2T
-      release-url: https://releases.libkungfu.cc
-      repo: kungfu
-      release-path: artifact-kungfu
-      product-name: kungfu
-      lower-edge: 2.0.0
+      channel: ${{ startsWith(inputs.target-ref || github.event.pull_request.base.ref, 'alpha/') && 'alpha' || 'release' }}
+      buildchain-ref: 2e7e07902ac28d8f3edcfb81098ef9ebc7a91878
+      target-ref: ${{ inputs.target-ref || github.event.pull_request.base.ref }}
+      target-sha: ${{ inputs.target-sha || github.event.pull_request.merge_commit_sha || github.sha }}
+      buildchain-contract-lock-path: ${{ startsWith(inputs.target-ref || github.event.pull_request.base.ref, 'alpha/') && '.buildchain/alpha-contract-lock.json' || '.buildchain/contract-lock.json' }}
+      buildchain-contract-compatibility-policy: major-compatible
+      buildchain-contract-drift-issue-mode: compatible-and-breaking
+      release-candidate-wait-seconds: 10800
+      publication-auto-admission: true
+      publication-gate-command: node scripts/assemble-kungfu-publication-gate.mjs
+      publication-consumer-qualification-command: node scripts/kungfu-release-qualification.mjs
+      publication-consumer-predicate-id: kungfu.release-admission/v1
+      publication-publisher-workflow-path: .github/workflows/release-new-version.yml
+      publication-product: Kungfu Episodes
+      publication-target: github-release:kungfu-systems/kungfu
+      publication-package-name: ""
+      package-manager: custom
+      artifact-name: kungfu
+      release-candidate-workflow-file: build.yml
+      release-candidate-workflow-name: Build
+      artifact-patterns: |
+        kungfu-*
+      required-status-check: build / Finalize build controller evidence
+      publish-target: custom
+      publish-artifact-kind: kungfu-product
+      publish-command: node scripts/buildchain-custom-publish-evidence.mjs
+      github-release-payload-patterns: |
+        kungfu-episodes-cli-*.tar.gz
+        kungfu-episodes-cli-*.zip
+        kungfu-episodes-cli-*.qualification.json
+      publication-commit-command: ${{ startsWith(inputs.target-ref || github.event.pull_request.base.ref, 'alpha/') && 'node scripts/alpha-publication-commit.mjs' || '' }}
+      publication-commit-evidence-path: .buildchain/publication-commit/evidence.json
+      release-activation-command: ${{ startsWith(inputs.target-ref || github.event.pull_request.base.ref, 'alpha/') && 'node scripts/activate-ungfu-release.mjs' || '' }}
+      release-activation-receipt-set-path: .buildchain/release-activation/receipt-set.json
+      standalone-binary-distribution: false
+      publish-mode: publish-final-version
+      publish-dist-tag: ${{ startsWith(inputs.target-ref || github.event.pull_request.base.ref, 'alpha/') && 'alpha' || 'latest' }}
+      publish-package-set-order: as-provided
+      trusted-publishing: false
+      runner-preset: kungfu-v4-native
+      required-artifact-count: 5
+      release-passport: true
+      release-passport-product-name: Kungfu Episodes
+      release-passport-kfd-1-witness-jsons: |
+        .buildchain/kfd/kfd-1/contract-world.witness.json
+        .buildchain/kfd/kfd-1/documentation-pack.witness.json
+      release-passport-kfd-2-claim-jsons: |
+        .buildchain/kfd/kfd-2/claims/agent-onboarding-pack.json
+        .buildchain/kfd/kfd-2/claims/codex-report-receipts.json
+        .buildchain/kfd/kfd-2/claims/remote-fact-boundary.json
+      release-passport-kfd-3-prebuild-witness-jsons: |
+        .buildchain/kfd/kfd-3/collaboration-interface.prebuild.json
+      release-passport-kfd-3-artifact-verify-command: node scripts/buildchain-kfd-evidence.mjs --artifact-witness --json
+      release-passport-kfd-support-matrix-json: .buildchain/kfd/support-matrix.json
+      release-passport-kfd-product-gate-jsons: |
+        .buildchain/runtime/kfd-product-gates/kfd-4/gate.json
+        .buildchain/runtime/kfd-product-gates/kfd-5/gate.json
+        .buildchain/runtime/kfd-product-gates/kfd-7/gate.json
+      release-passport-evidence-command: >-
+        node scripts/prepare-ungfu-release-evidence.mjs --release
+        --receipts "$BUILDCHAIN_RELEASE_ACTIVATION_RECEIPTS"
+        --output "$BUILDCHAIN_RELEASE_EVIDENCE_PATH"
+        --readback --json
+      release-passport-evidence-path: .buildchain/release-evidence/ungfu-public-use.json
+      release-passport-invariant-passport-command: >-
+        node scripts/kungfu-invariant.mjs --collect-evidence .
+        --passport product/release/qualification/invariant-passport.json --json
+      github-artifact-attestation-policy-json: auto
+      github-artifact-attestation-environment: buildchain-artifact-attestation
+      dry-run: ${{ github.event_name == 'workflow_dispatch' }}
     secrets:
-      GITHUB_PUSH_TOKEN: ${{ secrets.KUNGFU_GITHUB_TOKEN }}
-      AIRTABLE_API_KEY: ${{ secrets.AIRTABLE_API_KEY }}
+      BUILDCHAIN_PROMOTION_TOKEN: ${{ secrets.KUNGFU_GITHUB_TOKEN }}
+      BUILDCHAIN_PUBLICATION_COMMIT_TOKEN: ${{ secrets.KUNGFU_GITHUB_TOKEN }}
+      BUILDCHAIN_PUBLICATION_COMMIT_SIGNING_KEY: ${{ secrets.KUNGFU_ALPHA_CHANNEL_SIGNING_PRIVATE_KEY }}
+      KUNGFU_GOVERNANCE_AUDITOR_APP_PRIVATE_KEY: ${{ secrets.KUNGFU_GOVERNANCE_AUDITOR_APP_PRIVATE_KEY }}
+      BUILDCHAIN_ISSUE_APP_ID: ${{ secrets.BUILDCHAIN_ISSUE_APP_ID }}
+      BUILDCHAIN_ISSUE_APP_PRIVATE_KEY: ${{ secrets.BUILDCHAIN_ISSUE_APP_PRIVATE_KEY }}
+
+  alpha-timeline:
+    name: Alpha release timeline
+    needs: [promotion-contract, promote]
+    if: ${{ always() && needs.promotion-contract.result == 'success' && needs.promote.result == 'success' && startsWith(inputs.target-ref || github.event.pull_request.base.ref, 'alpha/') }}
+    runs-on: ubuntu-24.04
+    concurrency:
+      group: alpha-release-history-v1
+      cancel-in-progress: false
+    permissions:
+      actions: read
+      contents: write
+    steps:
+      - name: Checkout immutable Alpha candidate
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: ${{ needs.promotion-contract.outputs.candidate-source-sha }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version: "24"
+
+      - name: Restore exact development qualification receipt
+        uses: ./.github/actions/require-alpha-preflight
+        with:
+          source-sha: ${{ needs.promotion-contract.outputs.candidate-source-sha }}
+          receipt-run-id: ${{ needs.promotion-contract.outputs.preflight-run-id }}
+
+      - name: Collect source-bound workflow timelines
+        id: timelines
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CANDIDATE_SHA: ${{ needs.promotion-contract.outputs.candidate-source-sha }}
+          PREFLIGHT_RUN_ID: ${{ needs.promotion-contract.outputs.preflight-run-id }}
+          PROMOTION_RUN_ID: ${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          mkdir -p .buildchain/alpha-release-timeline/runs
+          collect_run() {
+            local run_id="$1"
+            local output="$2"
+            gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${run_id}" \
+              > "${output}.run.json"
+            gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${run_id}/jobs?per_page=100" \
+              > "${output}.jobs.json"
+            jq -s '.[0] + {jobs: .[1].jobs}' \
+              "${output}.run.json" "${output}.jobs.json" > "${output}.json"
+          }
+          candidate_run_id="$(
+            gh api \
+              "repos/${GITHUB_REPOSITORY}/actions/workflows/build.yml/runs?head_sha=${CANDIDATE_SHA}&status=success&per_page=100" \
+              --jq '.workflow_runs | map(select(.event == "pull_request")) | sort_by(.run_number) | last | .id // empty'
+          )"
+          test -n "$candidate_run_id"
+          echo "candidate-run-id=$candidate_run_id" >> "$GITHUB_OUTPUT"
+          collect_run "$PREFLIGHT_RUN_ID" \
+            .buildchain/alpha-release-timeline/runs/preflight
+          collect_run "$candidate_run_id" \
+            .buildchain/alpha-release-timeline/runs/candidate
+          collect_run "$PROMOTION_RUN_ID" \
+            .buildchain/alpha-release-timeline/runs/promotion
+          jq -n \
+            --slurpfile preflight .buildchain/alpha-release-timeline/runs/preflight.json \
+            --slurpfile candidate .buildchain/alpha-release-timeline/runs/candidate.json \
+            --slurpfile promotion .buildchain/alpha-release-timeline/runs/promotion.json \
+            '{preflight: $preflight[0], candidate: $candidate[0], promotion: $promotion[0]}' \
+            > .buildchain/alpha-release-timeline/runs.json
+
+      - name: Restore structured cache evidence from the exact candidate run
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CANDIDATE_RUN_ID: ${{ steps.timelines.outputs.candidate-run-id }}
+        run: |
+          set -euo pipefail
+          diagnostics_dir=".buildchain/alpha-release-timeline/cache-diagnostics"
+          mkdir -p "$diagnostics_dir"
+          gh run download "$CANDIDATE_RUN_ID" \
+            --repo "$GITHUB_REPOSITORY" \
+            --pattern "kungfu-diagnostics-*" \
+            --dir "$diagnostics_dir"
+          ./shifu alpha:cache:evidence write \
+            --preflight .buildchain/alpha-promotion-preflight/receipt.json \
+            --diagnostics "$diagnostics_dir" \
+            --out .buildchain/alpha-release-timeline/cache-evidence.json
+          ./shifu alpha:cache:evidence verify \
+            --preflight .buildchain/alpha-promotion-preflight/receipt.json \
+            --evidence .buildchain/alpha-release-timeline/cache-evidence.json
+
+      - name: Materialize exact promotion evidence references
+        env:
+          CONTROLLER_RECEIPT_JSON: ${{ needs.promote.outputs.controller-receipt-json }}
+          PUBLICATION_EVIDENCE_DIGEST: ${{ needs.promote.outputs.publication-commit-evidence-digest }}
+          PUBLICATION_PAYLOAD_ROOT: ${{ needs.promote.outputs.publication-commit-payload-root }}
+          PUBLICATION_URL: ${{ needs.promote.outputs.publication-commit-url }}
+        run: |
+          set -euo pipefail
+          printf '%s\n' "$CONTROLLER_RECEIPT_JSON" \
+            > .buildchain/alpha-release-timeline/controller-receipt.json
+          jq -n \
+            --arg evidenceDigest "$PUBLICATION_EVIDENCE_DIGEST" \
+            --arg payloadRoot "$PUBLICATION_PAYLOAD_ROOT" \
+            --arg publicUrl "$PUBLICATION_URL" \
+            '{evidenceDigest: $evidenceDigest, payloadRoot: $payloadRoot, publicUrl: $publicUrl}' \
+            > .buildchain/alpha-release-timeline/publication.json
+
+      - name: Checkout durable content-addressed Alpha history
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: alpha-release-history/v1
+          path: .buildchain/alpha-release-history-store
+          fetch-depth: 1
+
+      - name: Verify and export compatible durable Alpha samples
+        run: |
+          set -euo pipefail
+          mkdir -p .buildchain/alpha-release-timeline/samples
+          ./shifu alpha:release:history verify \
+            --history .buildchain/alpha-release-history-store/history
+          ./shifu alpha:release:history export \
+            --history .buildchain/alpha-release-history-store/history \
+            --out .buildchain/alpha-release-timeline/samples
+
+      - name: Write and verify Alpha release timeline
+        env:
+          TIMELINE_MODE: ${{ github.event_name == 'workflow_dispatch' && 'rehearsal' || 'release' }}
+        run: |
+          set -euo pipefail
+          ./shifu alpha:release:timeline write \
+            --preflight .buildchain/alpha-promotion-preflight/receipt.json \
+            --source-commit "${{ needs.promotion-contract.outputs.candidate-source-sha }}" \
+            --source-tree "${{ needs.promotion-contract.outputs.candidate-source-tree }}" \
+            --promotion-commit "${{ needs.promotion-contract.outputs.promotion-sha }}" \
+            --promotion-tree "${{ needs.promotion-contract.outputs.promotion-tree }}" \
+            --runs .buildchain/alpha-release-timeline/runs.json \
+            --controller .buildchain/alpha-release-timeline/controller-receipt.json \
+            --cache-evidence .buildchain/alpha-release-timeline/cache-evidence.json \
+            --candidate-artifact "${{ needs.promote.outputs.release-candidate-artifact }}" \
+            --publication .buildchain/alpha-release-timeline/publication.json \
+            --mode "$TIMELINE_MODE" \
+            --out .buildchain/alpha-release-timeline/receipt.json
+          ./shifu alpha:release:timeline verify \
+            --receipt .buildchain/alpha-release-timeline/receipt.json
+          cp .buildchain/alpha-release-timeline/receipt.json \
+            .buildchain/alpha-release-timeline/samples/current.json
+          ./shifu alpha:release:timeline slo \
+            --inputs .buildchain/alpha-release-timeline/samples \
+            --out .buildchain/alpha-release-timeline/slo.json
+
+      - name: Append real release to durable Alpha history
+        if: ${{ github.event_name == 'pull_request' }}
+        run: |
+          set -euo pipefail
+          history_checkout=".buildchain/alpha-release-history-store"
+          ./shifu alpha:release:history append \
+            --history "${history_checkout}/history" \
+            --receipt .buildchain/alpha-release-timeline/receipt.json \
+            --out .buildchain/alpha-release-timeline/history-append.json
+          if test -n "$(git -C "$history_checkout" status --porcelain -- history)"; then
+            git -C "$history_checkout" config user.name "github-actions[bot]"
+            git -C "$history_checkout" config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git -C "$history_checkout" add history
+            git -C "$history_checkout" commit \
+              -m "chore(alpha): append release timeline ${{ needs.promotion-contract.outputs.candidate-source-sha }}"
+            git -C "$history_checkout" push origin HEAD:alpha-release-history/v1
+          fi
+
+      - name: Upload auditable Alpha timeline and SLO
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: alpha-release-timeline-${{ github.run_id }}
+          path: |
+            .buildchain/alpha-release-timeline/receipt.json
+            .buildchain/alpha-release-timeline/slo.json
+            .buildchain/alpha-release-timeline/cache-evidence.json
+            .buildchain/alpha-release-timeline/history-append.json
+            .buildchain/alpha-release-history-store/history/manifest.json
+          if-no-files-found: error
+          retention-days: 90

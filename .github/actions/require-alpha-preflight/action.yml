@@ -1,0 +1,135 @@
+# SPDX-License-Identifier: Apache-2.0
+
+name: Require Alpha promotion preflight
+description: Resolve and verify the reusable exact-source Alpha preflight receipt.
+
+inputs:
+  source-sha:
+    description: Exact source commit admitted by the promotion workflow.
+    required: true
+  receipt-run-id:
+    description: Optional exact preflight workflow run for a trusted diagnostic replay; successful exact-source dispatches are also discoverable for recovery.
+    required: false
+    default: ""
+  controller-request-json:
+    description: Optional exact-source queue-aware macOS controller envelope.
+    required: false
+    default: "{}"
+  runner-inventory-token:
+    description: Optional trusted token for repository runner inventory.
+    required: false
+    default: ""
+
+outputs:
+  run-id:
+    description: Exact successful preflight workflow run that produced the receipt.
+    value: ${{ steps.run.outputs.run-id }}
+  receipt-root:
+    description: Verified aggregate receipt root.
+    value: ${{ steps.receipt.outputs.receipt-root }}
+  source-tree:
+    description: Exact candidate Git tree bound by the receipt.
+    value: ${{ steps.receipt.outputs.source-tree }}
+  dependency-lock-root:
+    description: Exact dependency lock root bound by the receipt.
+    value: ${{ steps.receipt.outputs.dependency-lock-root }}
+  toolchain-root:
+    description: Exact toolchain root bound by the receipt.
+    value: ${{ steps.receipt.outputs.toolchain-root }}
+  policy-root:
+    description: Exact Alpha qualification policy root bound by the receipt.
+    value: ${{ steps.receipt.outputs.policy-root }}
+
+runs:
+  using: composite
+  steps:
+    - name: Resolve exact-source preflight run
+      id: run
+      if: ${{ fromJSON(inputs.controller-request-json).mode != 'control' }}
+      shell: bash
+      env:
+        GH_TOKEN: ${{ github.token }}
+        SOURCE_SHA: ${{ inputs.source-sha }}
+        RECEIPT_RUN_ID: ${{ inputs.receipt-run-id }}
+      run: |
+        set -euo pipefail
+        run_id="$RECEIPT_RUN_ID"
+        if [ -z "$run_id" ]; then
+          run_id="$(
+            gh api \
+              "repos/${GITHUB_REPOSITORY}/actions/workflows/alpha-promotion-preflight.yml/runs?head_sha=${SOURCE_SHA}&status=success&per_page=100" \
+              --jq '.workflow_runs | map(select((.event == "push" and (.head_branch | startswith("dev/"))) or .event == "workflow_dispatch")) | sort_by(.run_number) | last | .id // empty'
+          )"
+        fi
+        test -n "$run_id"
+        echo "run-id=$run_id" >> "$GITHUB_OUTPUT"
+
+    - name: Download exact-source aggregate receipt
+      if: ${{ fromJSON(inputs.controller-request-json).mode != 'control' }}
+      uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+      with:
+        github-token: ${{ github.token }}
+        repository: ${{ github.repository }}
+        run-id: ${{ steps.run.outputs.run-id }}
+        name: alpha-promotion-preflight-${{ inputs.source-sha }}
+        path: .buildchain/alpha-promotion-preflight
+
+    - name: Verify exact-tree receipt and reuse boundary
+      id: receipt
+      if: ${{ fromJSON(inputs.controller-request-json).mode != 'control' }}
+      shell: bash
+      env:
+        SOURCE_SHA: ${{ inputs.source-sha }}
+      run: |
+        node scripts/alpha-promotion-preflight.mjs verify \
+          --receipt .buildchain/alpha-promotion-preflight/receipt.json \
+          --source-commit "$SOURCE_SHA"
+        node --input-type=module <<'NODE'
+        import fs from 'node:fs';
+        const receipt = JSON.parse(
+          fs.readFileSync(
+            '.buildchain/alpha-promotion-preflight/receipt.json',
+            'utf8',
+          ),
+        );
+        fs.appendFileSync(
+          process.env.GITHUB_OUTPUT,
+          [
+            `receipt-root=${receipt.receiptRoot}`,
+            `source-tree=${receipt.binding.sourceTree}`,
+            `dependency-lock-root=${receipt.binding.dependencyLockRoot}`,
+            `toolchain-root=${receipt.binding.toolchainRoot}`,
+            `policy-root=${receipt.binding.policyRoot}`,
+            '',
+          ].join('\n'),
+        );
+        NODE
+
+    - name: Run queue-aware macOS controller
+      if: ${{ fromJSON(inputs.controller-request-json).mode == 'control' }}
+      shell: bash
+      env:
+        GITHUB_TOKEN: ${{ github.token }}
+        REQUEST_JSON: ${{ inputs.controller-request-json }}
+        RUNNER_INVENTORY_TOKEN: ${{ inputs.runner-inventory-token }}
+      run: |
+        set -euo pipefail
+        test "$GITHUB_SHA" = "${{ fromJSON(inputs.controller-request-json).sourceSha }}"
+        test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+        test -z "$(git status --porcelain)"
+        ./shifu alpha:macos:overflow control \
+          --repository "$GITHUB_REPOSITORY" \
+          --ref "$GITHUB_REF_NAME" \
+          --request-json "$REQUEST_JSON" \
+          --out .buildchain/alpha-macos-overflow/receipt.json
+
+    - name: Upload queue, route, runner, and winner receipt
+      if: ${{ always() && fromJSON(inputs.controller-request-json).mode == 'control' }}
+      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      with:
+        name: alpha-macos-overflow-${{ fromJSON(inputs.controller-request-json).requestId }}-${{ fromJSON(inputs.controller-request-json).sourceSha }}
+        path: .buildchain/alpha-macos-overflow/receipt.json
+        if-no-files-found: error
+        retention-days: 90
+        compression-level: 0
+        overwrite: false

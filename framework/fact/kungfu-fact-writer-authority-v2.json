@@ -1,0 +1,51 @@
+{
+  "schema": "kungfu.fact-writer-authority/v2",
+  "id": "kungfu-fact-writer-authority",
+  "status": "authoritative-writer",
+  "writer": {
+    "rootProtocol": "kungfu.fact-root.canonical/v2",
+    "recordSchemaVersion": 2,
+    "default": true,
+    "mappingReceipt": "kungfu.fact.root-mapping-receipt/v1"
+  },
+  "readers": [
+    {
+      "rootProtocol": "sha256-length-framed-fields-v1",
+      "recordSchemaVersion": 1,
+      "status": "required-legacy-reader",
+      "rewrite": false
+    },
+    {
+      "rootProtocol": "kungfu.fact-root.canonical/v2",
+      "recordSchemaVersion": 2,
+      "status": "authoritative-reader",
+      "rewrite": false
+    }
+  ],
+  "migration": {
+    "mode": "new-writes-only",
+    "legacyHistory": "read-exactly-with-original-protocol",
+    "inPlaceRewrite": false,
+    "mappingReceipt": "binds legacy and successor protocol labels, roots, and admission root without claiming byte equality",
+    "authorityImport": "replays each record under its declared rootProtocol and verifies the exact source record root"
+  },
+  "rollback": {
+    "downgradeWrite": "fail-closed",
+    "unknownRecordSchema": "fail-closed-before-write",
+    "unknownRootProtocol": "fail-closed-before-write",
+    "legacyReaderRemoval": "forbidden"
+  },
+  "qualification": {
+    "exactCandidatePlatforms": ["linux", "macos", "windows"],
+    "sourceGate": "./shifu check:source",
+    "nativeGate": "./shifu test:fact-kernel-native",
+    "integrityGate": "./shifu test:fact-kernel-integrity",
+    "canonicalGate": "./shifu check:fact-root-canonical",
+    "contractGate": "./shifu check:fact-cut-kernel-contract",
+    "corpora": [
+      "tests/fixtures/fact-root-canonical/vectors.json",
+      "tests/fixtures/fact-kernel-characterization/v1.json"
+    ],
+    "claim": "source-bound exact candidate; release qualification remains a separate decision"
+  }
+}

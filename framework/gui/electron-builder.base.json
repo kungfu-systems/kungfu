@@ -1,0 +1,93 @@
+{
+  "appId": "com.kungfu.app",
+  "productName": "Kungfu Episodes",
+  "asar": false,
+  "npmRebuild": false,
+  "beforePack": "./scripts/before-pack.cjs",
+  "afterPack": "./scripts/after-pack.cjs",
+  "generateUpdatesFilesForAllChannels": true,
+  "publish": [
+    {
+      "provider": "github",
+      "owner": "kungfu-systems",
+      "repo": "kungfu",
+      "channel": "alpha",
+      "releaseType": "prerelease"
+    }
+  ],
+  "files": [
+    "out/**/*",
+    "package.json",
+    "!node_modules/@kungfu-tech/core{,/**}",
+    "!node_modules/@kungfu-tech/**/node_modules/@kungfu-tech/core{,/**}",
+    "!node_modules/@kungfu-tech/**/.venv{,/**}",
+    "!node_modules/@kungfu-tech/**/build{,/**}",
+    "!node_modules/@kungfu-tech/**/dist/kungfu{,/**}"
+  ],
+  "extraResources": [
+    {
+      "from": "../agent-session",
+      "to": "app/node_modules/@kungfu-tech/agent-session",
+      "filter": [
+        "package.json",
+        "src/**/*",
+        "*.contract.json",
+        "schemas/**/*"
+      ]
+    },
+    {
+      "from": "../core/dist/kungfu",
+      "to": "kungfu",
+      "filter": [
+        "**/*",
+        "!**/__pycache__/**",
+        "!**/*.pyc"
+      ]
+    },
+    {
+      "from": "dist/update/kungfu-release-manifest.json",
+      "to": "upgrade/kungfu-release-manifest.json"
+    },
+    {
+      "from": "resources/cli",
+      "to": "cli"
+    },
+    {
+      "from": "../tui/dist",
+      "to": "tui"
+    },
+    {
+      "from": "public/logo",
+      "to": "logo"
+    }
+  ],
+  "mac": {
+    "target": [
+      "dir",
+      "dmg",
+      "zip"
+    ],
+    "hardenedRuntime": true,
+    "sign": "./scripts/sign-macos.mjs",
+    "entitlements": "resources/entitlements.mac.plist",
+    "entitlementsInherit": "resources/entitlements.mac.plist",
+    "notarize": true
+  },
+  "linux": {
+    "executableName": "kungfu",
+    "category": "Finance",
+    "target": [
+      "dir",
+      "AppImage"
+    ]
+  },
+  "nsis": {
+    "include": "resources/installer.nsh"
+  },
+  "win": {
+    "target": [
+      "dir",
+      "nsis"
+    ]
+  }
+}

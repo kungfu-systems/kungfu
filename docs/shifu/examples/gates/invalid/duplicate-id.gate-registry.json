@@ -1,0 +1,10 @@
+{
+  "$schema": "https://libkungfu.dev/schemas/shifu/gate-registry-v1.schema.json",
+  "schema": "shifu.gate-registry/v1",
+  "project": { "id": "duplicate", "title": "Duplicate" },
+  "gates": [
+    { "id": "same.gate", "title": "One", "summary": "One.", "category": "source", "documentation": "docs/shifu/gates.md", "dependencies": [], "platforms": ["linux"], "runner": { "capabilities": [] }, "cost": { "class": "light", "timeoutSeconds": 10 }, "action": { "kind": "task", "task": "one" }, "artifacts": [], "receipt": { "expectation": "none" } },
+    { "id": "same.gate", "title": "Two", "summary": "Two.", "category": "source", "documentation": "docs/shifu/gates.md", "dependencies": [], "platforms": ["linux"], "runner": { "capabilities": [] }, "cost": { "class": "light", "timeoutSeconds": 10 }, "action": { "kind": "task", "task": "two" }, "artifacts": [], "receipt": { "expectation": "none" } }
+  ],
+  "profiles": [{ "id": "default", "title": "Default", "decisions": { "same.gate": { "mode": "required", "reason": "Required." } } }]
+}

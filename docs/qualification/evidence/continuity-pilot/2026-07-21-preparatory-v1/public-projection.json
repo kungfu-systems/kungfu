@@ -1,0 +1,30 @@
+{
+  "schema": "kungfu.continuity-public-projection/v1",
+  "publicOutcome": "Keep the work when the chat ends.",
+  "claimClass": "preparatory-smoke",
+  "evidenceClass": "preparatory",
+  "sourceEvidence": {
+    "baselineReportRoot": "sha256:d8e41d4ad3d5477d3f752e65327760c67251abb630c787c2af7e8702f9bc2fc2",
+    "kungfuReportRoot": "sha256:5890e470e17d7e0ae1a76c5b40387804d24c0a9fec0be170611a6839aecec8c9",
+    "rawIndexRoot": "sha256:4c801f8c668713df3b534212eeb38e5ab773725ff99d857b711d6225701fc0fc"
+  },
+  "observed": {
+    "task": "Inspect the repository inventory, preserve the completed inspection across a reset, then write inventory-summary.md with the exact oracle text.",
+    "reset": "Both paths started a fresh deterministic worker with no transcript or private session store.",
+    "baseline": {
+      "verdict": "unsupported",
+      "continuationSource": "none",
+      "oraclePassed": false
+    },
+    "kungfu": {
+      "verdict": "pass",
+      "continuationSource": "durable-fact",
+      "oraclePassed": true
+    }
+  },
+  "limitations": [
+    "The worker is deterministic fixture code, not a hosted or native model agent.",
+    "The baseline has no continuation mechanism; this run validates the pipeline, not a provider performance comparison.",
+    "Durability, multi-hour recovery, user retention, and FO10 remain untested."
+  ]
+}

@@ -1,0 +1,116 @@
+{
+  "schema": "kungfu.spec.reader-journey-source/v1",
+  "title": "Read the portable format without losing the authority boundary",
+  "summary": "Start with one verified package operation, then choose only the task, evidence, or reference depth you need.",
+  "levels": [
+    {
+      "id": "orientation",
+      "label": "Orient",
+      "purpose": "Understand what the package is, what it is not, and which package to use.",
+      "guide_ids": ["start"]
+    },
+    {
+      "id": "quickstart",
+      "label": "First success",
+      "purpose": "Verify the installed authority before reading deeper material.",
+      "guide_ids": ["quickstart"]
+    },
+    {
+      "id": "task-guides",
+      "label": "Do a task",
+      "purpose": "Use the Node API, CLI, or independent Python reader.",
+      "guide_ids": ["api", "cli", "python-reader"]
+    },
+    {
+      "id": "evidence",
+      "label": "Understand evidence",
+      "purpose": "Run and interpret the retained conformance corpus.",
+      "guide_ids": ["conformance"]
+    },
+    {
+      "id": "reference",
+      "label": "Check the contract",
+      "purpose": "Resolve exact artifacts, trust rules, compatibility axes, and non-claims.",
+      "guide_ids": ["reference"]
+    }
+  ],
+  "guides": [
+    {
+      "id": "start",
+      "level": "orientation",
+      "order": 1,
+      "title": "Start here",
+      "summary": "Choose Site for rendering or Spec for direct verification and tooling.",
+      "path": "guides/index.md",
+      "previous": null,
+      "next": "quickstart",
+      "related": ["reference"]
+    },
+    {
+      "id": "quickstart",
+      "level": "quickstart",
+      "order": 2,
+      "title": "Verify your first installed authority",
+      "summary": "Install an exact version and verify its normative root.",
+      "path": "guides/quickstart.md",
+      "previous": "start",
+      "next": "api",
+      "related": ["cli", "python-reader"]
+    },
+    {
+      "id": "api",
+      "level": "task-guides",
+      "order": 3,
+      "title": "Use the Node API",
+      "summary": "Inspect authority, verify the corpus, and handle portable bundles.",
+      "path": "guides/api.md",
+      "previous": "quickstart",
+      "next": "cli",
+      "related": ["conformance", "reference"]
+    },
+    {
+      "id": "cli",
+      "level": "task-guides",
+      "order": 4,
+      "title": "Use the Spec CLI",
+      "summary": "Run every supported kungfu-spec command and interpret its JSON.",
+      "path": "guides/cli.md",
+      "previous": "api",
+      "next": "python-reader",
+      "related": ["quickstart", "conformance"]
+    },
+    {
+      "id": "python-reader",
+      "level": "task-guides",
+      "order": 5,
+      "title": "Run the independent Python reader",
+      "summary": "Verify installed bytes without Kungfu runtime or third-party Python dependencies.",
+      "path": "guides/python-reader.md",
+      "previous": "cli",
+      "next": "conformance",
+      "related": ["reference"]
+    },
+    {
+      "id": "conformance",
+      "level": "evidence",
+      "order": 6,
+      "title": "Run and interpret the conformance corpus",
+      "summary": "Understand retained byte roots, compatibility axes, and the five reader outcomes.",
+      "path": "guides/conformance.md",
+      "previous": "python-reader",
+      "next": "reference",
+      "related": ["api", "cli"]
+    },
+    {
+      "id": "reference",
+      "level": "reference",
+      "order": 7,
+      "title": "Complete contract reference",
+      "summary": "Find every artifact, version axis, trust rule, historical route, and non-claim.",
+      "path": "guides/reference.md",
+      "previous": "conformance",
+      "next": null,
+      "related": ["start", "api"]
+    }
+  ]
+}

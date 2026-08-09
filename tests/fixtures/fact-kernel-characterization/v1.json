@@ -1,0 +1,72 @@
+{
+  "schema": "kungfu.fact-kernel-characterization/v1",
+  "rootProtocol": "kungfu.fact-root.canonical/v2",
+  "coverage": {
+    "mutations": [
+      "object-put",
+      "version-put",
+      "relation-add",
+      "relation-revoke",
+      "cut-put",
+      "ref-cas"
+    ],
+    "reads": [
+      "capabilities",
+      "query",
+      "authority-export"
+    ],
+    "portability": [
+      "authority-import-plan",
+      "authority-import-execute",
+      "record-root-preservation",
+      "final-state-preservation"
+    ],
+    "noWrite": [
+      "idempotent-replay",
+      "stale-ref",
+      "invalid-relation-endpoint"
+    ]
+  },
+  "knownNearMisses": [
+    {
+      "id": "authority-reexport-receipt-drift-after-revocation",
+      "status": "characterized",
+      "invariant": "record roots and final state are preserved",
+      "gap": "the destination bundle root differs because imported receipt identity is not preserved for every action"
+    },
+    {
+      "id": "rejected-object-metadata-materialization",
+      "status": "fixed",
+      "invariant": "rejected requests append no journal record and materialize no object metadata",
+      "resolution": "immutable identity validation precedes object metadata storage"
+    }
+  ],
+  "expected": {
+    "bundle_root": "sha256:ee4c80e0c3a15e45b71d7e49978b8f526222cf8a70a61eca99a846c77cf4e975",
+    "cut_root": "sha256:c2626e3b4af3a286f85ef00998fdf14bdf1bf86944ae6c7912376629a1387ce4",
+    "final_counts": {
+      "cuts": 1,
+      "objects": 1,
+      "relations": 1,
+      "revocations": 1,
+      "transitions": 1,
+      "versions": 1
+    },
+    "imported_bundle_root": "sha256:40b78afe9e7fd1a94ab0dfeb95e50e79f67eee0ceea03f6c63809835fe1e072c",
+    "object_receipt_root": "sha256:7d6a4160a780b54e3fdae8d158cf4dde22c50b6bfe42d0876249179c51259c93",
+    "object_root": "sha256:1ad4bf8a91cce9b5fdb8ee581c807720dc82a0942cbeb0b5c7485b553628b422",
+    "record_roots": [
+      "sha256:1ad4bf8a91cce9b5fdb8ee581c807720dc82a0942cbeb0b5c7485b553628b422",
+      "sha256:c694506da1ad033f04165cb31d660ad1d5bef058d61f8729fc87b9b2933feec8",
+      "sha256:cddc334dd912fe0dd173e2a55ab993f1e980b5cbb1ca66e1dbebf725a4793b04",
+      "sha256:c2626e3b4af3a286f85ef00998fdf14bdf1bf86944ae6c7912376629a1387ce4",
+      "sha256:1b11cf402685b73d5613a6224c9b24aaa1cafc47c23dcd024e0d9bf6b2f3dbdd",
+      "sha256:fdd329adcddce71d812fccea15720b6235393cfdc8abc9d0ec48bd3ccf74a3b6"
+    ],
+    "relation_root": "sha256:cddc334dd912fe0dd173e2a55ab993f1e980b5cbb1ca66e1dbebf725a4793b04",
+    "revoke_root": "sha256:fdd329adcddce71d812fccea15720b6235393cfdc8abc9d0ec48bd3ccf74a3b6",
+    "transition_root": "sha256:1b11cf402685b73d5613a6224c9b24aaa1cafc47c23dcd024e0d9bf6b2f3dbdd",
+    "version_body_root": "sha256:e2802bc370eecd864933eacb587c59d2e49b4d8162290d303d976596dac3049c",
+    "version_root": "sha256:c694506da1ad033f04165cb31d660ad1d5bef058d61f8729fc87b9b2933feec8"
+  }
+}

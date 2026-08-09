@@ -1,0 +1,165 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kungfu.link/schema/project-cut-v1.schema.json",
+  "title": "Project Cut v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "project",
+    "parentCutRoots",
+    "sourceProjection",
+    "atlas",
+    "episodeDelta",
+    "interpretation",
+    "visibility",
+    "omissions",
+    "conflicts",
+    "unknowns",
+    "compatibility",
+    "cutRoot"
+  ],
+  "properties": {
+    "schema": { "const": "project.cut/v1" },
+    "project": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "identityRoot"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "identityRoot": { "$ref": "#/$defs/root" }
+      }
+    },
+    "parentCutRoots": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/root" }
+    },
+    "sourceProjection": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema", "root", "policyRoot"],
+      "properties": {
+        "schema": { "const": "project.source-projection-ref/v1" },
+        "root": { "$ref": "#/$defs/root" },
+        "policyRoot": { "$ref": "#/$defs/root" }
+      }
+    },
+    "atlas": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema", "root", "compilerRoot"],
+      "properties": {
+        "schema": { "const": "xinfa.atlas-ref/v1" },
+        "root": { "$ref": "#/$defs/root" },
+        "compilerRoot": { "$ref": "#/$defs/root" }
+      }
+    },
+    "episodeDelta": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema",
+        "empty",
+        "nativeRoots",
+        "semanticRoot",
+        "equivalenceProfileRoot"
+      ],
+      "properties": {
+        "schema": { "const": "kungfu.episode-delta-ref/v1" },
+        "empty": { "type": "boolean" },
+        "nativeRoots": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["provider", "root"],
+            "properties": {
+              "provider": { "$ref": "#/$defs/id" },
+              "root": { "$ref": "#/$defs/root" }
+            }
+          }
+        },
+        "semanticRoot": { "$ref": "#/$defs/nullableRoot" },
+        "equivalenceProfileRoot": { "$ref": "#/$defs/nullableRoot" }
+      }
+    },
+    "interpretation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schemaRoot", "protocolRoot", "policyRoots", "providerRoots"],
+      "properties": {
+        "schemaRoot": { "$ref": "#/$defs/root" },
+        "protocolRoot": { "$ref": "#/$defs/root" },
+        "policyRoots": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/root" }
+        },
+        "providerRoots": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/root" }
+        }
+      }
+    },
+    "visibility": { "$ref": "#/$defs/visibility" },
+    "omissions": { "$ref": "#/$defs/issues" },
+    "conflicts": { "$ref": "#/$defs/issues" },
+    "unknowns": { "$ref": "#/$defs/issues" },
+    "compatibility": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["existingRootsPreserved", "authorityMode", "relations"],
+      "properties": {
+        "existingRootsPreserved": { "const": true },
+        "authorityMode": { "enum": ["bridge", "native"] },
+        "relations": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["leftRoot", "rightRoot", "profileRoot", "verdict"],
+            "properties": {
+              "leftRoot": { "$ref": "#/$defs/root" },
+              "rightRoot": { "$ref": "#/$defs/root" },
+              "profileRoot": { "$ref": "#/$defs/nullableRoot" },
+              "verdict": {
+                "enum": ["equal", "different", "unsupported", "unverifiable"]
+              }
+            }
+          }
+        }
+      }
+    },
+    "cutRoot": { "$ref": "#/$defs/root" }
+  },
+  "$defs": {
+    "root": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+    "nullableRoot": {
+      "oneOf": [{ "$ref": "#/$defs/root" }, { "type": "null" }]
+    },
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z0-9](?:[a-z0-9._/-]*[a-z0-9])?$"
+    },
+    "visibility": { "enum": ["public", "internal", "restricted"] },
+    "issues": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["code", "path", "root", "detail"],
+        "properties": {
+          "code": { "$ref": "#/$defs/id" },
+          "path": { "type": "string", "minLength": 1 },
+          "root": { "$ref": "#/$defs/nullableRoot" },
+          "detail": { "type": "string", "minLength": 1 }
+        }
+      }
+    }
+  }
+}

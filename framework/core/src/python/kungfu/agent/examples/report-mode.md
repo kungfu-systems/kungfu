@@ -4,9 +4,9 @@ Use report mode when the useful durable fact is work state, not a captured
 process.
 
 ```sh
-kungfu work create "Inspect failed extension load" --kind investigation --json
-kungfu work checkpoint <work-id> "Reproduced with local bundle"
-kungfu work ready <work-id> --reason "Evidence attached" --json
+kungfu work capture request.json
+kungfu work admit request.json --workspace <path> --actor <actor>
+kungfu work status --workspace <path> --initiative-id <initiative-id> --assignment-id <assignment-id>
 ```
 
 For an external agent run that should not be launched by Kungfu:
@@ -17,15 +17,18 @@ kungfu report cost --run <run-id> --provider codex --model gpt-5 --usd 0.42 --js
 kungfu report run end --run <run-id> --status succeeded --json
 ```
 
-For a native Codex goal, use the adapter so closeout has one receipt to verify:
+For native Work, close the exact Assignment through the canonical Profile
+actions:
 
 ```sh
-kungfu codex report-goal --goal-id <goal-id> --status succeeded --tokens-used <n> --json
-kungfu codex verify-goal-report --receipt <receipt-path> --json
+kungfu work claim-completion completion.json --workspace <path> --authorized-by <actor>
+kungfu work review review.json --workspace <path> --authorized-by <reviewer>
+kungfu work decide decision.json --workspace <path> --authorized-by <actor>
 ```
 
-`tokens-used` is a native observed total. It is recorded as usage evidence. Only
-pass split token fields or `--usd` when that cost attribution is actually known.
+The returned action receipt, Episode, and Fact are the completion evidence.
+Token totals remain observed usage evidence; only report split fields or exact
+cost when that attribution is actually known.
 
 Keep facts labeled:
 

@@ -1,0 +1,181 @@
+{
+  "schema": "kungfu.durability.fault-campaign-report/v2",
+  "verdict": "canary-passed",
+  "source": {
+    "revision": "791e09a70780997347347bc4a7dae503c46cba11",
+    "tree": "baf9c05a2af4deefc501475165e0b11d44b0f47d",
+    "dirty": false
+  },
+  "host": {
+    "hostname": "agent-120",
+    "platform": "linux",
+    "arch": "x64",
+    "release": "6.8.0-134-generic",
+    "qemu": "QEMU emulator version 8.2.2 (Debian 1:8.2.2+ds-0ubuntu1.16)",
+    "workspace_filesystem": "ext2/ext3"
+  },
+  "execution": {
+    "schema": "kungfu.durability.fault-campaign-execution-plan/v2",
+    "mode": "execute",
+    "source_revision": "791e09a70780997347347bc4a7dae503c46cba11",
+    "workspace": "/data/qualification/kungfu/durability/791e09a70-linux-ext4-fault-v2",
+    "rootfs_base": "/data/qualification/kungfu/durability/791e09a70-linux-ext4-fault-v2/rootfs-base.ext4",
+    "report": "/data/qualification/kungfu/durability/791e09a70-linux-ext4-fault-v2/evidence/fault-campaign-v2.canary.json",
+    "raw_results": "/data/qualification/kungfu/durability/791e09a70-linux-ext4-fault-v2/evidence/fault-campaign-v2.canary.results.jsonl",
+    "kernel_release": "6.8.0-134-generic",
+    "execution_kind": "non-qualifying-canary",
+    "matrix": {
+      "schema": "kungfu.durability.fault-campaign-matrix/v2",
+      "profile_id": "linux-ext4-qemu-fault-campaign-v2",
+      "profile_digest": "4990612b9135c364d447b620d823e7f2735ad76bd1696ed0115a86298fe3aca7",
+      "trial_count": 360,
+      "required_cycles": 3,
+      "seeds": [
+        104729,
+        130363,
+        155921
+      ],
+      "device_envelopes": [
+        {
+          "id": "raw-none",
+          "data_format": "raw",
+          "cache_mode": "none",
+          "aio_mode": "native"
+        },
+        {
+          "id": "raw-writethrough",
+          "data_format": "raw",
+          "cache_mode": "writethrough",
+          "aio_mode": "threads"
+        },
+        {
+          "id": "raw-writeback",
+          "data_format": "raw",
+          "cache_mode": "writeback",
+          "aio_mode": "threads"
+        },
+        {
+          "id": "qcow2-none",
+          "data_format": "qcow2",
+          "cache_mode": "none",
+          "aio_mode": "native"
+        },
+        {
+          "id": "qcow2-writethrough",
+          "data_format": "qcow2",
+          "cache_mode": "writethrough",
+          "aio_mode": "threads"
+        },
+        {
+          "id": "qcow2-writeback",
+          "data_format": "qcow2",
+          "cache_mode": "writeback",
+          "aio_mode": "threads"
+        }
+      ],
+      "faults": [
+        "before_record_write",
+        "after_record_write",
+        "before_data_sync",
+        "after_data_sync",
+        "before_checkpoint_write",
+        "before_checkpoint_rename",
+        "after_checkpoint_rename",
+        "before_directory_sync",
+        "after_directory_sync",
+        "after_receipt"
+      ],
+      "durability_profiles": [
+        "durable_group",
+        "durable_sync"
+      ],
+      "selected_trials": [
+        "c1-dg-qcow2-writeback-after_data_sync"
+      ]
+    },
+    "safety": {
+      "creates_only_below": "/data/qualification/kungfu/durability/791e09a70-linux-ext4-fault-v2",
+      "refuses_existing_report_or_raw_results": true,
+      "records_each_trial_before_continuing": true,
+      "failed_campaign_workspace_is_not_reused": true,
+      "direct_child_qemu_only": true,
+      "github_workflow": false,
+      "physical_device_write": false,
+      "physical_host_restart": false,
+      "cleanup": "not performed; preserve the complete workspace for review",
+      "canary_is_never_qualification_evidence": true
+    }
+  },
+  "timing": {
+    "started_at": "2026-07-14T02:40:21.882Z",
+    "finished_at": "2026-07-14T02:40:24.493Z",
+    "elapsed_ms": 2611
+  },
+  "integrity": {
+    "raw_results": "evidence/fault-campaign-v2.canary.results.jsonl",
+    "raw_results_sha256": "ebdacd84f225a5f5763c1585aebe90e95d4a5235c3b293c41a1cc281b8b7db20",
+    "raw_result_count": 1,
+    "matrix_profile_digest": "4990612b9135c364d447b620d823e7f2735ad76bd1696ed0115a86298fe3aca7"
+  },
+  "counts": {
+    "required": 360,
+    "executed": 1,
+    "passed": 1,
+    "failed": 0
+  },
+  "claims": {
+    "complete_required_matrix": false,
+    "disposable_vm_device_model_campaign_qualified": false,
+    "repeated_seed_cycles_qualified": false,
+    "fresh_verification_boot_per_trial_qualified": false,
+    "physical_power_loss_qualified": false,
+    "physical_device_cache_qualified": false,
+    "production_profile_eligible": false,
+    "canary_only": true
+  },
+  "results": [
+    {
+      "id": "canary-c1-dg-qcow2-writeback-after_data_sync",
+      "matrix_trial_id": "c1-dg-qcow2-writeback-after_data_sync",
+      "status": "passed",
+      "profile": "durable_group",
+      "fault": "after_data_sync",
+      "cycle": 1,
+      "seed": 104729,
+      "envelope": "qcow2-writeback",
+      "data_format": "qcow2",
+      "cache_mode": "writeback",
+      "aio_mode": "threads",
+      "started_at": "2026-07-14T02:40:21.882Z",
+      "finished_at": "2026-07-14T02:40:24.488Z",
+      "elapsed_ms": 2606,
+      "expected_durable_sequence": {
+        "minimum": 0,
+        "maximum": 0
+      },
+      "verification": {
+        "available": true,
+        "contiguous": true,
+        "durable_record_count": 0,
+        "durable_sequence": 0,
+        "expected_max_sequence": 0,
+        "expected_min_sequence": 0,
+        "last_error": "none",
+        "passed": true,
+        "requires_reopen": false,
+        "schema": "kungfu.durability.powercut-verification/v1",
+        "unacknowledged_tail_bytes": 263,
+        "unacknowledged_tail_integrity": "complete_records"
+      },
+      "evidence": {
+        "write_log": "evidence/canary-c1-dg-qcow2-writeback-after_data_sync.write.serial.log",
+        "write_log_sha256": "67d0062296ade3b9f8e434ae77dfbc7f10fd838212832c04d1115a9a5328ac80",
+        "verify_log": "evidence/canary-c1-dg-qcow2-writeback-after_data_sync.verify.serial.log",
+        "verify_log_sha256": "c83d42ecd5a4973cd2c8433797b08ebc9bb2c92e98ddea533b61d6898f1f5931",
+        "data_image": "canary-c1-dg-qcow2-writeback-after_data_sync-data.qcow2",
+        "data_image_sha256": "747deb6509dfebafb8f14316639a62eec0b23d111fb67101e2860b591251e9f8"
+      },
+      "error": null
+    }
+  ]
+}

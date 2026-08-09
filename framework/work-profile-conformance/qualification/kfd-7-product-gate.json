@@ -1,0 +1,141 @@
+{
+  "schemaVersion": 1,
+  "contract": "kungfu-buildchain-kfd-product-gate",
+  "standard": "kfd-7",
+  "standardRevision": 8,
+  "standardPackage": {
+    "name": "@kungfu-tech/kfd",
+    "version": "1.0.0-alpha.47",
+    "standardsSha256": "sha256:65899780779a8e933f1f3a298bfdf2311104ccde84b773a0828ee4c23dd19d5b"
+  },
+  "source": {
+    "repository": "kungfu-systems/kungfu",
+    "sha": "ec3b0c843ad271a34450a69a2da2e538f404f3ce"
+  },
+  "evidenceCut": {
+    "generatedAt": "2026-08-03T10:48:42.917Z",
+    "expiresAt": "2026-08-04T10:48:42.917Z"
+  },
+  "checkedAt": "2026-08-03T10:48:42.917Z",
+  "status": "passed",
+  "qualifying": false,
+  "selfCertified": false,
+  "records": [
+    {
+      "role": "domain-profile",
+      "path": ".buildchain/runtime/kfd-product-gates/kfd-7/domain-profile.json",
+      "sha256": "sha256:aacbd8e59d5ece31e9dff15c0a993b51ac846c43a77dd92454beb00b0b6cb3fe",
+      "contract": "kfd-7-domain-profile",
+      "verifier": {
+        "valid": true,
+        "reportRoot": "sha256:a7fc70438f21411b22b064942132869473fcdc28ae99c331b83c16140b2e57c5",
+        "qualifying": false,
+        "selfCertified": false
+      }
+    }
+  ],
+  "evidence": [
+    {
+      "id": "atlas-staleness-loss",
+      "kind": "qualification-proof",
+      "path": ".buildchain/runtime/kfd-product-gates/evidence/kfd-7-atlas-staleness-loss.json",
+      "sha256": "sha256:4532df628fae704507ca7871e362bd15a42016753941a12d4e64cacc0ceaea86"
+    },
+    {
+      "id": "backend-migration",
+      "kind": "qualification-proof",
+      "path": ".buildchain/runtime/kfd-product-gates/evidence/kfd-7-backend-migration.json",
+      "sha256": "sha256:010c067c6a69f3f3ce7b7b8b614c543ff46efe03c7feae964049311f3fd2cc36"
+    },
+    {
+      "id": "cold-start-continuation",
+      "kind": "qualification-proof",
+      "path": ".buildchain/runtime/kfd-product-gates/evidence/kfd-7-cold-start-continuation.json",
+      "sha256": "sha256:3e707743ceba9a39a31de4d0a2b7df99a474c4a9b4e5b85213bed45ce0ac9966"
+    },
+    {
+      "id": "concurrency-retry-compensation",
+      "kind": "qualification-proof",
+      "path": ".buildchain/runtime/kfd-product-gates/evidence/kfd-7-concurrency-retry-compensation.json",
+      "sha256": "sha256:5b8842c4183deee0fbf1068e6ca74b5c03016bc1e3217ec7916e499da22957b3"
+    },
+    {
+      "id": "context-insufficiency-counterexample",
+      "kind": "qualification-proof",
+      "path": ".buildchain/runtime/kfd-product-gates/evidence/kfd-7-context-insufficiency-counterexample.json",
+      "sha256": "sha256:c7e5c1f900eda5260c429c9b07aae4a2e0de2eb821d1be10ba1885ea1006e526"
+    },
+    {
+      "id": "episode-replay-contraction",
+      "kind": "qualification-proof",
+      "path": ".buildchain/runtime/kfd-product-gates/evidence/kfd-7-episode-replay-contraction.json",
+      "sha256": "sha256:59556c9443b356cfb1c504c74a210afe2c3f7d7ac47c8663b20ae0c1ef281dab"
+    },
+    {
+      "id": "export-import-rebuild",
+      "kind": "qualification-proof",
+      "path": ".buildchain/runtime/kfd-product-gates/evidence/kfd-7-export-import-rebuild.json",
+      "sha256": "sha256:6c1f21d0a87feea500b56f8845a9651dae29ea7be1520720642416561886d764"
+    },
+    {
+      "id": "independent-review",
+      "kind": "independent-review",
+      "path": ".buildchain/runtime/kfd-product-gates/evidence/kfd-7-independent-review.json",
+      "sha256": "sha256:6b3955e075322fa1895d345f5fb4cb06518c846e86cf2cb49163cbbd7a6dc52e"
+    },
+    {
+      "id": "invalid-transition",
+      "kind": "qualification-proof",
+      "path": ".buildchain/runtime/kfd-product-gates/evidence/kfd-7-invalid-transition.json",
+      "sha256": "sha256:35b79478d10cd601a54b1c6f6156dcb9fe720147f4588c35643798a759fd3f1e"
+    },
+    {
+      "id": "kfd-7-negative",
+      "kind": "negative-fixture",
+      "path": ".buildchain/runtime/kfd-product-gates/evidence/kfd-7-negative.json",
+      "sha256": "sha256:35b79478d10cd601a54b1c6f6156dcb9fe720147f4588c35643798a759fd3f1e"
+    },
+    {
+      "id": "pursuit-continuity-settlement",
+      "kind": "qualification-proof",
+      "path": ".buildchain/runtime/kfd-product-gates/evidence/kfd-7-pursuit-continuity-settlement.json",
+      "sha256": "sha256:db2033db4c174f9d5137898590f2b370f26d42be2b77fc4e2b0618959602c537"
+    },
+    {
+      "id": "semantic-component-deletion-or-fusion",
+      "kind": "qualification-proof",
+      "path": ".buildchain/runtime/kfd-product-gates/evidence/kfd-7-semantic-component-deletion-or-fusion.json",
+      "sha256": "sha256:5c84ac7e1bd831a3154bfbbcd5396ab21c66b62d4795056dd1765811614eb5af"
+    },
+    {
+      "id": "session-complexity-breakpoint",
+      "kind": "qualification-proof",
+      "path": ".buildchain/runtime/kfd-product-gates/evidence/kfd-7-session-complexity-breakpoint.json",
+      "sha256": "sha256:0875fbe67f8ee0e1ddb696f37ae7b63bdbedd5b35134b72dd955fd8d1b978e09"
+    },
+    {
+      "id": "session-round-trip-refinement",
+      "kind": "qualification-proof",
+      "path": ".buildchain/runtime/kfd-product-gates/evidence/kfd-7-session-round-trip-refinement.json",
+      "sha256": "sha256:a2a55f63b6551a6267e54616537320de8c10631e1531f11336f7e22ffd38f928"
+    },
+    {
+      "id": "warrant-decay-revocation",
+      "kind": "qualification-proof",
+      "path": ".buildchain/runtime/kfd-product-gates/evidence/kfd-7-warrant-decay-revocation.json",
+      "sha256": "sha256:9ddd16ec8ac68eeca214430aeeba043f787153f21ba16765b42c890c8234bd5a"
+    }
+  ],
+  "responsibility": {
+    "owner": "kungfu-systems/kungfu",
+    "evidenceOwner": "Kungfu maintainers",
+    "proofOwner": "Buildchain"
+  },
+  "nonClaims": [
+    "KFD-7 qualification is bounded to the Kungfu Product Profile and exact source cut.",
+    "A passed Buildchain gate does not certify other Domain Profiles."
+  ],
+  "issues": [],
+  "inputRoot": "sha256:62e65312c3ebb4e75538ce7e10dc825a5e6b0cd301ecb2875dc912822246ea37",
+  "gateRoot": "sha256:cd877313251ce13512d480672850733ef70eb10f1c865523b89a21e9084fef0d"
+}

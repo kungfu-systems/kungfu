@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kungfu.tech/schemas/invariant-evidence-v1.schema.json",
+  "title": "Kungfu invariant evidence envelope v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "invariant", "verdict", "source", "checker", "environment", "witness", "diagnostics", "residualRisk", "observedAt", "evidenceRoot"],
+  "$defs": {"root": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"}},
+  "properties": {
+    "schema": {"const": "kungfu.invariant-evidence/v1"},
+    "invariant": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "domain", "stability", "maturity", "scope", "quantification"],
+      "properties": {
+        "id": {"type": "string", "minLength": 1}, "domain": {"enum": ["fact", "episode"]},
+        "stability": {"enum": ["constitutional", "protocol", "profile", "policy"]},
+        "maturity": {"enum": ["declared", "falsifiable", "independently-conformant", "qualified", "release-enforced", "battle-tested"]},
+        "scope": {"type": "string", "minLength": 1}, "quantification": {"type": "string", "minLength": 1}
+      }
+    },
+    "verdict": {"enum": ["verified", "falsified", "unqualified", "not-applicable"]},
+    "source": {
+      "type": "object", "additionalProperties": false,
+      "required": ["revision", "tree", "dirty", "contractRoot", "registryRoot", "path", "pointer", "subjectRoot"],
+      "properties": {
+        "revision": {"type": "string", "pattern": "^[0-9a-f]{40}$"}, "tree": {"type": "string", "pattern": "^[0-9a-f]{40}$"}, "dirty": {"type": "boolean"},
+        "contractRoot": {"$ref": "#/$defs/root"}, "registryRoot": {"$ref": "#/$defs/root"}, "path": {"type": "string", "minLength": 1}, "pointer": {"type": "string"}, "subjectRoot": {"$ref": "#/$defs/root"}
+      }
+    },
+    "checker": {
+      "type": "object", "additionalProperties": false,
+      "required": ["id", "level", "kind", "root", "exitCode", "durationMs"],
+      "properties": {"id": {"type": "string"}, "level": {"enum": ["source", "native", "runtime", "object", "release"]}, "kind": {"enum": ["internal", "command"]}, "root": {"$ref": "#/$defs/root"}, "exitCode": {"type": ["integer", "null"]}, "durationMs": {"type": "integer", "minimum": 0}}
+    },
+    "environment": {"type": "object", "additionalProperties": false, "required": ["platform", "arch", "platformId", "profile", "node"], "properties": {"platform": {"type": "string"}, "arch": {"type": "string"}, "platformId": {"type": "string"}, "profile": {"type": "string"}, "node": {"type": "string"}}},
+    "witness": {"type": "object", "additionalProperties": false, "required": ["stdoutRoot", "stderrRoot", "subjectRoot"], "properties": {"stdoutRoot": {"$ref": "#/$defs/root"}, "stderrRoot": {"$ref": "#/$defs/root"}, "subjectRoot": {"$ref": "#/$defs/root"}}},
+    "diagnostics": {"type": "array", "items": {"type": "object", "additionalProperties": false, "required": ["code", "message"], "properties": {"code": {"type": "string", "pattern": "^[a-z0-9-]+$"}, "message": {"type": "string"}}}},
+    "residualRisk": {"type": "array", "items": {"type": "string"}},
+    "observedAt": {"type": "string", "format": "date-time"},
+    "evidenceRoot": {"$ref": "#/$defs/root"}
+  }
+}

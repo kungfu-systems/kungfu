@@ -1,0 +1,50 @@
+{
+  "schema": "kungfu.episode-admission.contract/v1",
+  "version": 1,
+  "status": "pre-release",
+  "owner": "libkungfu",
+  "authority": "destination-yijinjing-journal",
+  "actions": ["contract", "plan", "execute", "inspect", "resume", "reconcile", "cancel"],
+  "initiators": ["destination-pull", "source-push"],
+  "transports": ["local-direct", "bundle", "remote-stream"],
+  "states": ["planned", "transferring", "transferred", "verifying", "admitted", "refused", "conflicted", "interrupted", "cancelled"],
+  "dispositions": ["accepted", "already-present", "refused", "conflicted"],
+  "schemas": {
+    "plan": "kungfu.episode-admission.plan/v1",
+    "state": "kungfu.episode-admission.state/v1",
+    "receipt": "kungfu.episode-admission.receipt/v1",
+    "workspaceIdentity": "kungfu.workspace.identity/v1",
+    "workspaceFrontier": "kungfu.workspace.episode-frontier/v1"
+  },
+  "mutationBoundary": {
+    "planIsReadOnly": true,
+    "executeIsExplicit": true,
+    "sourceIsReadOnly": true,
+    "destinationDecides": true,
+    "gitSideEffect": false,
+    "sourceCleanup": false,
+    "forceOverride": false
+  },
+  "transportBoundary": {
+    "truthDependsOnTransport": false,
+    "localDirectUsesIntermediateFile": false,
+    "bundleIsOfflineAdapter": true,
+    "remoteStreamIsProtocolAdapter": true
+  },
+  "remoteBoundary": {
+    "implementationStatus": "local-simulation-only",
+    "versionNegotiationRequired": true,
+    "authenticationRequired": true,
+    "encryptionRequired": true,
+    "backpressureRequired": true,
+    "resumeBindsPlanRoot": true,
+    "replayRequiresFreshDestinationFrontier": true,
+    "secretsInPlanOrReceipt": false
+  },
+  "projectCutBoundary": {
+    "receiptMayBeReferencedBySettlement": true,
+    "admissionStagesGit": false,
+    "admissionCommitsGit": false,
+    "admissionPushesGit": false
+  }
+}

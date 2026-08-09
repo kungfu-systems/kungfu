@@ -71,7 +71,7 @@ void set_trigger_source_id(uint32_t source_id);
 
 void set_trigger_dest_id(uint32_t dest_id);
 
-void set_trigger_msg_type(int32_t msg_type);
+void set_trigger_carrier_type(int32_t carrier_type);
 
 uint64_t get_trigger_frame_uid();
 
@@ -81,7 +81,7 @@ uint32_t get_trigger_source_id();
 
 uint32_t get_trigger_dest_id();
 
-int32_t get_trigger_msg_type();
+int32_t get_trigger_carrier_type();
 
 void disable_signal_log();
 

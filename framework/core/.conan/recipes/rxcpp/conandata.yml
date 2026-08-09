@@ -1,0 +1,12 @@
+sources:
+  "4.1.1":
+    url: "https://github.com/ReactiveX/RxCpp/archive/v4.1.1.tar.gz"
+    sha256: "054a9be63e66904ecaa552ce56d6458b4545d6da5ea32f5103c7fc379cebb374"
+patches:
+  "4.1.1":
+    - patch_file: "patches/0001-fix-notification-assignment.patch"
+      patch_description: "make notification values assignable under GCC 14"
+      patch_type: "portability"
+    - patch_file: "patches/0002-replace-deprecated-aligned-storage.patch"
+      patch_description: "replace std::aligned_storage (deprecated in C++23) with an alignas byte buffer in maybe<T>"
+      patch_type: "portability"

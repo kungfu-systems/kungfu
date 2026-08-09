@@ -4,7 +4,7 @@
     "name": "Kungfu",
     "email": "info@kungfu.link"
   },
-  "version": "4.0.0-alpha.0",
+  "version": "4.0.0-alpha.1",
   "description": "Kungfu reference TUI — the platform's shell-native reference surface (Ink)",
   "license": "Apache-2.0",
   "repository": {
@@ -18,10 +18,12 @@
   "scripts": {
     "dev": "tsx src/main.tsx",
     "build": "tsc",
-    "clean": "rimraf dist",
+    "test": "tsx --test src/*.test.ts src/compatibility/*.test.ts",
+    "clean": "node -e \"fs.rmSync('dist',{recursive:true,force:true})\"",
     "bundle": "node build-bundle.mjs"
   },
   "dependencies": {
+    "@kungfu-tech/agent-session": "workspace:*",
     "@kungfu-tech/api": "workspace:*",
     "@kungfu-tech/core": "workspace:*",
     "@kungfu-tech/kfx": "workspace:*",
@@ -32,7 +34,6 @@
     "@types/node": "^22.0.0",
     "@types/react": "^18.3.3",
     "esbuild": "^0.28.1",
-    "rimraf": "^6.0.0",
     "tsx": "^4.19.0",
     "typescript": "^5.6.0"
   }

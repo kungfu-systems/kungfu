@@ -1,4 +1,4 @@
-// The CLI-plane transport for the capability relay (ADR-0013): pure stdio framing
+// The CLI-plane transport for the capability relay (KF-ADR-019f86da-4f90-79f1-8716-aca36b142847): pure stdio framing
 // that connects a trusted capability host to a sandboxed guest running in a child
 // process, over the child's stdio as newline-delimited JSON. It is the sibling of
 // the GUI-plane Electron IPC transport (framework/gui/src/sandbox) — the same
@@ -15,9 +15,10 @@
 //   host  -> child  { "t": "result", "id": n, "ok": true,  "value" }
 //                   { "t": "result", "id": n, "ok": false, "error" }
 //   host  -> child  { "t": "event",  "callback": n, "args" }   (a bridged callback)
+//   host  -> child  { "t": "control", "action": "shutdown" }    (graceful stop)
 //
 // Every frame crosses the relay serialized: this is the sandbox tier's defining
-// property (ADR-0014). A capability result is a copy, not a live handle — 64-bit
+// property (KF-ADR-019f86da-4f90-7789-8b48-620aa694acf9). A capability result is a copy, not a live handle — 64-bit
 // identifiers are emitted as decimal strings (bigintSafe), functions and typed
 // arrays do not survive JSON. The trusted co-resident tier keeps those by
 // reference; the relay deliberately does not.
@@ -44,7 +45,10 @@ export type SubprocessChannel = {
   once: (event: 'exit' | 'close', cb: () => void) => void;
 };
 
-export type SubprocessHost = { dispose: () => void };
+export type SubprocessHost = {
+  dispose: () => void;
+  requestShutdown: () => void;
+};
 
 export function serveSubprocessCapabilities(
   child: SubprocessChannel,
@@ -54,6 +58,16 @@ export function serveSubprocessCapabilities(
     child.stdin.write(`${JSON.stringify(msg, bigintSafe)}\n`);
   };
   const host = createHost((event) => send({ t: 'event', ...event }));
+  let pendingInvocations = 0;
+  let shutdownRequested = false;
+  let shutdownSent = false;
+
+  const sendShutdownWhenReady = (): void => {
+    if (shutdownRequested && !shutdownSent && pendingInvocations === 0) {
+      shutdownSent = true;
+      send({ t: 'control', action: 'shutdown' });
+    }
+  };
 
   const lines = createInterface({ input: child.stdout });
   lines.on('line', (line: string) => {
@@ -72,6 +86,7 @@ export function serveSubprocessCapabilities(
     }
     if (msg.t !== 'invoke' || typeof msg.id !== 'number') return;
     const id = msg.id;
+    pendingInvocations += 1;
     Promise.resolve()
       .then(() =>
         host.handle({
@@ -83,13 +98,27 @@ export function serveSubprocessCapabilities(
       .then((value) => send({ t: 'result', id, ok: true, value }))
       .catch((e: unknown) =>
         send({ t: 'result', id, ok: false, error: (e as Error).message }),
-      );
+      )
+      .finally(() => {
+        pendingInvocations -= 1;
+        sendShutdownWhenReady();
+      });
   });
 
   const dispose = () => {
     lines.close();
     host.dispose();
   };
-  child.once('exit', dispose);
-  return { dispose };
+  // A process may exit while its stdout pipe still holds the guest's final
+  // capability invocation. `close` is the transport boundary: Node emits it
+  // only after the child stdio streams have closed, so readline can deliver
+  // the last complete frame before the relay is torn down.
+  child.once('close', dispose);
+  return {
+    dispose,
+    requestShutdown: () => {
+      shutdownRequested = true;
+      sendShutdownWhenReady();
+    },
+  };
 }

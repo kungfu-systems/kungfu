@@ -1,34 +1,611 @@
 # SPDX-License-Identifier: Apache-2.0
 
 name: Build
+run-name: ${{ fromJSON(inputs.macos-overflow-request-json || '{}').mode == 'control' && format('macOS overflow / {0} / {1}', fromJSON(inputs.macos-overflow-request-json).requestId, fromJSON(inputs.macos-overflow-request-json).sourceSha) || (fromJSON(inputs.macos-overflow-request-json || '{}').mode == 'self-hosted' || fromJSON(inputs.macos-overflow-request-json || '{}').mode == 'github-hosted') && format('macOS candidate / {0} / {1}', fromJSON(inputs.macos-overflow-request-json).requestId, fromJSON(inputs.macos-overflow-request-json).mode) || 'Build' }}
 
 on:
   pull_request:
-    types: [opened, reopened, ready_for_review]
+    types: [opened, synchronize, reopened, ready_for_review]
     branches:
       - alpha/v*/v*
       - release/v*/v*
+  # Manual runs validate lifecycle changes (e.g. the ./shifu entrypoint
+  # switch) on the full platform matrix without waiting for an alpha PR.
+  workflow_dispatch:
+    inputs:
+      buildchain-ref:
+        description: "Temporary Buildchain train or exact SHA for trusted manual validation"
+        required: false
+        default: ""
+      platforms-json:
+        description: "Optional custom platform matrix for isolated qualification reruns"
+        required: false
+        default: ""
+      windows-compiler-cache-mode:
+        description: "Windows Alpha compiler cache mode for same-source qualification"
+        required: false
+        type: choice
+        options:
+          - sccache
+          - "off"
+        default: sccache
+      run-kungfu-phase-b:
+        description: "Qualify the Linux CLI package with the reviewed build-images Phase B consumer"
+        required: false
+        type: boolean
+        default: false
+      preflight-run-id:
+        description: "Optional exact Alpha preflight run for a trusted diagnostic replay"
+        required: false
+        default: ""
+      diagnostic-mode:
+        description: "Retain all platform diagnostics instead of cancelling a stale manual run"
+        required: false
+        type: boolean
+        default: false
+      fast-sentinels-only:
+        description: "Run only the exact-source Windows continuity and auditable-demo fast sentinels"
+        required: false
+        type: boolean
+        default: false
+      render-auditable-demo:
+        description: "Run a strict full media refresh; false retains Gate-only validation"
+        required: false
+        type: boolean
+        default: false
+      macos-overflow-request-json:
+        description: "Exact-source queue policy envelope; omitted for normal Build runs"
+        required: false
+        default: "{}"
 
 permissions:
+  actions: write
   contents: read
   pull-requests: read
   issues: write
   id-token: write
 
+concurrency:
+  group: ${{ fromJSON(inputs.macos-overflow-request-json || '{}').mode == 'control' && format('alpha-macos-overflow-{0}', fromJSON(inputs.macos-overflow-request-json).requestId) || (fromJSON(inputs.macos-overflow-request-json || '{}').mode == 'self-hosted' || fromJSON(inputs.macos-overflow-request-json || '{}').mode == 'github-hosted') && format('alpha-macos-candidate-{0}-{1}', fromJSON(inputs.macos-overflow-request-json).requestId, fromJSON(inputs.macos-overflow-request-json).mode) || format('alpha-promotion-build-{0}', github.event.pull_request.base.ref || github.ref) }}
+  cancel-in-progress: ${{ !(github.event_name == 'workflow_dispatch' && inputs.diagnostic-mode) }}
+
 jobs:
+  preflight:
+    name: Require exact-source Alpha preflight
+    if: ${{ github.event_name != 'workflow_dispatch' || !inputs.fast-sentinels-only }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: ${{ fromJSON(inputs.macos-overflow-request-json || '{}').mode == 'control' && 360 || 10 }}
+    outputs:
+      receipt-root: ${{ steps.receipt.outputs.receipt-root }}
+      source-tree: ${{ steps.receipt.outputs.source-tree }}
+      dependency-lock-root: ${{ steps.receipt.outputs.dependency-lock-root }}
+      toolchain-root: ${{ steps.receipt.outputs.toolchain-root }}
+      policy-root: ${{ steps.receipt.outputs.policy-root }}
+    steps:
+      - name: Check out exact candidate source
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: ${{ fromJSON(inputs.macos-overflow-request-json || '{}').sourceSha || github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Admit reusable source and platform probes
+        id: receipt
+        uses: ./.github/actions/require-alpha-preflight
+        with:
+          source-sha: ${{ fromJSON(inputs.macos-overflow-request-json || '{}').sourceSha || github.event.pull_request.head.sha || github.sha }}
+          receipt-run-id: ${{ fromJSON(inputs.macos-overflow-request-json || '{}').preflightRunId || inputs.preflight-run-id || '' }}
+          controller-request-json: ${{ inputs.macos-overflow-request-json || '{}' }}
+          runner-inventory-token: ${{ github.event_name == 'workflow_dispatch' && fromJSON(inputs.macos-overflow-request-json || '{}').mode == 'control' && github.ref == format('refs/heads/{0}', github.event.repository.default_branch) && secrets.KUNGFU_GITHUB_TOKEN || '' }}
+
+  windows-fast-sentinel:
+    name: Windows exact-source fast sentinel
+    needs: preflight
+    if: ${{ always() && (needs.preflight.result == 'success' || (github.event_name == 'workflow_dispatch' && inputs.fast-sentinels-only && needs.preflight.result == 'skipped')) && fromJSON(inputs.macos-overflow-request-json || '{}').mode != 'control' }}
+    runs-on: windows-2025
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    outputs:
+      receipt-root: ${{ steps.continuity.outputs.receipt-root }}
+      source-sha: ${{ steps.continuity.outputs.source-sha }}
+      continuity-input-root: ${{ steps.continuity.outputs.continuity-input-root }}
+    steps:
+      - name: Check out exact candidate source
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: ${{ fromJSON(inputs.macos-overflow-request-json || '{}').sourceSha || github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Run real Windows crash and restart continuity sentinel
+        id: continuity
+        shell: pwsh
+        env:
+          KUNGFU_EXACT_SOURCE_SHA: ${{ fromJSON(inputs.macos-overflow-request-json || '{}').sourceSha || github.event.pull_request.head.sha || github.sha }}
+        run: |
+          .\shifu.cmd node scripts/alpha-promotion-preflight.mjs fast-sentinel --kind windows --source-commit $env:KUNGFU_EXACT_SOURCE_SHA --out .buildchain/fast-sentinel/windows.json
+          $receipt = Get-Content .buildchain/fast-sentinel/windows.json -Raw | ConvertFrom-Json
+          "receipt-root=$($receipt.receiptRoot)" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+          "source-sha=$($receipt.sourceSha)" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+          "continuity-input-root=$($receipt.binding.continuityInputRoot)" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+
+      - name: Independently verify the exact Windows continuity receipt
+        shell: pwsh
+        env:
+          KUNGFU_EXACT_SOURCE_SHA: ${{ fromJSON(inputs.macos-overflow-request-json || '{}').sourceSha || github.event.pull_request.head.sha || github.sha }}
+        run: .\shifu.cmd node scripts/alpha-promotion-preflight.mjs verify-fast-sentinel --receipt .buildchain/fast-sentinel/windows.json --source-commit $env:KUNGFU_EXACT_SOURCE_SHA --platform win32 --architecture x64
+
+  auditable-demo-fast-sentinel:
+    name: Auditable demo exact-source fast sentinel
+    needs: preflight
+    if: ${{ always() && (needs.preflight.result == 'success' || (github.event_name == 'workflow_dispatch' && inputs.fast-sentinels-only && needs.preflight.result == 'skipped')) && fromJSON(inputs.macos-overflow-request-json || '{}').mode != 'control' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - name: Check out exact candidate source
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: ${{ fromJSON(inputs.macos-overflow-request-json || '{}').sourceSha || github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Reject known-invalid auditable demo contracts
+        env:
+          GITHUB_SHA: ${{ fromJSON(inputs.macos-overflow-request-json || '{}').sourceSha || github.event.pull_request.head.sha || github.sha }}
+        run: ./shifu node scripts/alpha-promotion-preflight.mjs fast-sentinel --kind auditable-demo --out .buildchain/fast-sentinel/auditable-demo.json
+
   build:
-    uses: kungfu-systems/buildchain/.github/workflows/.build.yml@v2
-    secrets: inherit
+    needs: [preflight, windows-fast-sentinel, auditable-demo-fast-sentinel]
+    if: ${{ needs.preflight.result == 'success' && needs.windows-fast-sentinel.result == 'success' && needs.auditable-demo-fast-sentinel.result == 'success' && !inputs.fast-sentinels-only && fromJSON(inputs.macos-overflow-request-json || '{}').mode != 'control' }}
+    uses: kungfu-systems/buildchain/.github/workflows/.build.yml@2e7e07902ac28d8f3edcfb81098ef9ebc7a91878 # signing workflow path readback
+    secrets:
+      BUILDCHAIN_PROMOTION_TOKEN: ${{ secrets.KUNGFU_GITHUB_TOKEN }}
+      BUILDCHAIN_ARTIFACT_RELAY_S3_ROLE_ARN: ${{ secrets.BUILDCHAIN_ARTIFACT_RELAY_S3_ROLE_ARN }}
+      BUILDCHAIN_ARTIFACT_RELAY_S3_UPLOAD_ROLE_ARN: ${{ secrets.BUILDCHAIN_ARTIFACT_RELAY_S3_UPLOAD_ROLE_ARN }}
+      BUILDCHAIN_ARTIFACT_RELAY_S3_DOWNLOAD_ROLE_ARN: ${{ secrets.BUILDCHAIN_ARTIFACT_RELAY_S3_DOWNLOAD_ROLE_ARN }}
     with:
-      runner-preset: kungfu-v4-self-hosted
+      buildchain-ref: ${{ inputs.buildchain-ref || '2e7e07902ac28d8f3edcfb81098ef9ebc7a91878' }}
+      runner-preset: custom
+      platforms-json: ${{ fromJSON(inputs.macos-overflow-request-json || '{}').mode == 'self-hosted' && '[{"id":"macos-arm64","name":"macOS ARM64 self-hosted primary","platform":"macos","runner":"[\"self-hosted\",\"macOS\",\"ARM64\",\"kungfu-build-v4-macos-arm64\"]","capabilities":["native-toolchain","node","product-artifacts","rust"]}]' || (fromJSON(inputs.macos-overflow-request-json || '{}').mode == 'github-hosted' && '[{"id":"macos-arm64","name":"macOS ARM64 GitHub-hosted overflow","platform":"macos","runner":"[\"macos-15\"]","capabilities":["native-toolchain","node","product-artifacts","rust"]}]' || (inputs.platforms-json || '[{"id":"linux-x64","name":"Linux x64","platform":"linux","runner":"[\"ubuntu-24.04\"]","capabilities":["node","native-toolchain","product-artifacts","rust"],"environment":{"CC":"gcc-14","CXX":"g++-14"}},{"id":"linux-arm64","name":"Linux ARM64","platform":"linux","runner":"[\"ubuntu-24.04-arm\"]","capabilities":["node","native-toolchain","product-artifacts","rust"]},{"id":"macos-arm64","name":"macOS ARM64","platform":"macos","runner":"[\"macos-15\"]","capabilities":["node","native-toolchain","product-artifacts","rust"]},{"id":"windows-x64","name":"Windows x64","platform":"windows","runner":"[\"windows-2022\"]","capabilities":["node","native-toolchain","product-artifacts","rust"]}]')) }}
+      # Formal Alpha and Release candidates run their credential-free native
+      # build and qualification lanes on fresh GitHub-hosted runners. Detached
+      # signing, notarization, publication, and activation retain their
+      # independent protected authorities below this matrix.
+      self-hosted-offline-fallback: false
+      install-command: ${{ fromJSON(inputs.macos-overflow-request-json || '{}').mode == 'self-hosted' && format('node .github/actions/require-alpha-preflight/alpha-macos-overflow.mjs health --route self-hosted --health-mode {0} && node .github/actions/require-alpha-preflight/windows-alpha-sccache.mjs && node scripts/buildchain-install.mjs', fromJSON(inputs.macos-overflow-request-json).healthMode || 'auto') || fromJSON(inputs.macos-overflow-request-json || '{}').mode == 'github-hosted' && 'node .github/actions/require-alpha-preflight/alpha-macos-overflow.mjs health --route github-hosted --health-mode auto && node .github/actions/require-alpha-preflight/windows-alpha-sccache.mjs && node scripts/buildchain-install.mjs' || 'node .github/actions/require-alpha-preflight/windows-alpha-sccache.mjs && node scripts/buildchain-install.mjs' }}
+      fail-fast: ${{ github.event_name == 'pull_request' || !inputs.diagnostic-mode }}
+      setup-rust: true
+      rust-toolchain: "1.96.0"
+      # Organization Cargo mirrors are private acceleration for explicit
+      # self-hosted/custom diagnostics. Formal hosted candidates use Cargo's
+      # public default and must not depend on LAN reachability.
+      cargo-registry-index: ${{ (fromJSON(inputs.macos-overflow-request-json || '{}').mode == 'self-hosted' || inputs.platforms-json) && vars.BUILDCHAIN_CARGO_REGISTRY_INDEX || '' }}
       artifact-name: kungfu
       artifact-paths: |
-        artifact/dist
+        product/release
+        product/dist/cli/kungfu-episodes-cli-linux-x64
+      pre-upload-transport-smoke-scenario-path: .buildchain/auditable-demo.json
+      pre-upload-transport-smoke-artifact-root: .
+      github-artifact-attestation-subject-path: product/release/cli/kungfu-episodes-cli-linux-x64.tar.gz
+      github-artifact-attestation-signer-sha: 375b2d4b8a904776453773a33b4c4e4556c8c999
+      github-artifact-attestation-platform-id: linux-x64
+      artifact-signing-request-upload-no-proxy: ${{ vars.BUILDCHAIN_ARTIFACT_SIGNING_REQUEST_UPLOAD_NO_PROXY }}
       expected-artifacts-json: >-
-        {"minFiles":1,"minTotalBytes":1}
+        {"minFiles":3,"minTotalBytes":1,"requiredPaths":["product/release/qualification/layer-qualification-summary.json"]}
+      # Every lane must retain its source-bound qualification summary. The
+      # three full-product lanes also fail closed inside lifecycle.verify on
+      # their runtime, desktop, invariant, and layer reports; Linux ARM64 is a
+      # deliberately bounded Core-only lane and retains its exact npm receipt.
       require-install: true
       require-build: true
       require-verify: true
+      # The complete Windows build plus the three retained runtime/product
+      # qualification campaigns exceeds Buildchain's 120-minute default.
+      # Keep the full gate intact and give the slowest supported platform a
+      # bounded completion window instead of cancelling during final evidence.
+      lifecycle-timeout-minutes: 180
+      # This workflow only fires on alpha/release PRs, so it is the recurring
+      # heavy gate (kungfu has no nightly). Override the default lifecycle verify
+      # (.buildchain/buildchain.toml runs quick `verify`) with the kungfu::view
+      # memory-safety long-run: `--fuzz` adds the libFuzzer stage over the three
+      # FlatBuffers access entries under ASan/UBSan (KF-ADR-019f86da-4f90-7a66-b427-f4bcd638d8bc residual risk); a
+      # new crash fails verify and blocks the alpha. The ASan/UBSan corpus-replay
+      # tier runs on every platform (MSVC /fsanitize=address on Windows); the
+      # libFuzzer long-run is the Linux gate and soft-skips where libFuzzer is
+      # absent. KUNGFU_FUZZ_SECONDS bounds the per-target run.
+      #
+      # An explicit verify command runs under the platform default shell and
+      # does not inherit [lifecycle.env]. This Node implementation adapter sets
+      # the same environment, applies the Shifu cache profile, and enters the
+      # canonical shifu/shifu.cmd shim for every qualification stage without
+      # assuming bash exists on Windows. The alpha/release Buildchain verify
+      # gate also runs the complete runtime activation qualification and retains
+      # its report plus compressed raw logs under product/release/qualification.
+      # A final cross-layer desktop gate then binds those runtime/live-Peer
+      # reports to Agent Session and frontend recovery tests, retaining its own
+      # report and compressed raw logs beside the component evidence.
+      # Exact layer artifacts enter through the registered layers.format,
+      # layers.sdk, and layers.surfaces Gates and emit a source-bound receipt.
+      # On Linux it qualifies Episodes before running the ADR
+      # release-admissibility gate.
+      # shifu-entry-contract: allow cross-platform release qualification dispatch into the canonical shifu shim
+      # Functional native qualification stays credential-free. The declarative
+      # signing inventory lets Buildchain seal the exact unsigned macOS app and
+      # finalize signing and notarization inside its protected authority.
+      verify-command: node scripts/run-shifu-lifecycle.mjs cache-apply-command node scripts/run-release-qualification.mjs --execution-profile ${{ startsWith(github.base_ref, 'release/') && 'release-candidate' || 'alpha' }} --native-upgrade-policy skip --source-only-receipt-root ${{ needs.preflight.outputs.receipt-root }} --source-only-source-tree ${{ needs.preflight.outputs.source-tree }} --source-only-policy-root ${{ needs.preflight.outputs.policy-root }}
+      verify-substage-evidence-path: product/release/qualification/layer-qualification-summary.json
       release-candidate: true
+      publish-channel: ${{ (fromJSON(inputs.macos-overflow-request-json || '{}').mode == 'self-hosted' || fromJSON(inputs.macos-overflow-request-json || '{}').mode == 'github-hosted') && 'none' || (github.event_name == 'pull_request' && (startsWith(github.base_ref, 'release/') && 'release' || 'alpha') || 'none') }}
+      # Keep the external-runner relay request explicit. Buildchain resolves
+      # GitHub-hosted rows to native GitHub Artifacts and reserves S3 replay
+      # only for external rows, including mixed matrices.
       artifact-transfer-mode: s3-to-github-artifacts
       artifact-retention-days: 14
+      # Fresh hosted formal lanes fetch the exact source directly from GitHub;
+      # they cannot use runner-local or LAN mirrors. Explicit custom or
+      # self-hosted diagnostics retain the cache route they requested.
+      checkout-cache-mode: ${{ fromJSON(inputs.macos-overflow-request-json || '{}').mode == 'self-hosted' && 'auto' || (inputs.platforms-json && 'auto' || 'off') }}
+      checkout-cache-mirror-url-template: ${{ (fromJSON(inputs.macos-overflow-request-json || '{}').mode == 'self-hosted' || inputs.platforms-json) && vars.BUILDCHAIN_CHECKOUT_CACHE_MIRROR_URL_TEMPLATE || '' }}
+      checkout-cache-reference-repository-template: ${{ (fromJSON(inputs.macos-overflow-request-json || '{}').mode == 'self-hosted' || inputs.platforms-json) && vars.BUILDCHAIN_CHECKOUT_CACHE_REFERENCE_REPOSITORY_TEMPLATE || '' }}
+      checkout-cache-fallback: github
+      checkout-cache-timeout-seconds: 60
+      checkout-history-mode: full
+      # Alpha/release PRs intentionally qualify GitHub's synthetic merge tree
+      # rather than locking the head ref early. The LAN mirror is expected to
+      # advertise pull-request merge refs; retain a bounded 20-minute GitHub
+      # fallback so an independently recorded mirror miss does not strand the
+      # qualification chain.
+      checkout-cache-github-timeout-seconds: 1200
+      # The profile is public and local-only: all lanes can resolve it, while
+      # the source adapter maps the compiler-cache binding only on Windows.
+      # Manual off runs retain the prior profile for same-source baselines.
+      shifu-cache-profile-ref: ${{ github.event_name == 'workflow_dispatch' && inputs.windows-compiler-cache-mode == 'off' && 'docs/shifu/qualification-portable-off.cache-profile.json' || 'docs/shifu/windows-alpha-sccache.cache-profile.json' }}
+      shifu-cache-profile-digest: ${{ github.event_name == 'workflow_dispatch' && inputs.windows-compiler-cache-mode == 'off' && 'sha256:d7002041716ea1e5ad703492815c9557576d5679227743541c13d42b6ea9de5c' || 'sha256:581c430b959c0b45272031cad85a3fae740a6398abf7c1051d1d43b098ee0adb' }}
+      compiler-cache-provider: ${{ github.event_name == 'workflow_dispatch' && inputs.windows-compiler-cache-mode == 'off' && 'none' || 'sccache' }}
+      compiler-cache-platforms-json: ${{ github.event_name == 'workflow_dispatch' && inputs.windows-compiler-cache-mode == 'off' && '[]' || '["windows-x64"]' }}
+      compiler-cache-required: ${{ github.event_name != 'workflow_dispatch' || inputs.windows-compiler-cache-mode != 'off' }}
+      cache-dependency-lock-root: ${{ needs.preflight.outputs.dependency-lock-root }}
+      cache-toolchain-root: ${{ needs.preflight.outputs.toolchain-root }}
+      cache-policy-root: ${{ needs.preflight.outputs.policy-root }}
+      buildchain-contract-lock-path: .buildchain/contract-lock.json
+      buildchain-contract-compatibility-policy: major-compatible
+      buildchain-contract-drift-issue-mode: compatible-and-breaking
+
+  resolve-auditable-demo-source:
+    name: Resolve exact auditable demo artifact
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      actions: read
+      contents: read
+    outputs:
+      applicable: ${{ steps.resolve.outputs.applicable }}
+      reason: ${{ steps.resolve.outputs.reason }}
+      artifact-id: ${{ steps.resolve.outputs.artifact-id }}
+      artifact-name: ${{ steps.resolve.outputs.artifact-name }}
+      artifact-digest: ${{ steps.resolve.outputs.artifact-digest }}
+      artifact-url: ${{ steps.resolve.outputs.artifact-url }}
+      artifact-expires-at: ${{ steps.resolve.outputs.artifact-expires-at }}
+    steps:
+      - name: Resolve exact same-run Linux artifact
+        id: resolve
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
+        env:
+          SOURCE_SHA: ${{ needs.build.outputs.publish-source-sha }}
+          PLATFORMS_JSON: ${{ needs.build.outputs.platforms-json }}
+          ARTIFACT_COORDINATES_JSON: ${{ needs.build.outputs.artifact-coordinates-json }}
+        with:
+          script: |
+            const fs = require("fs");
+            const sourceSha = process.env.SOURCE_SHA || "";
+            if (!/^[0-9a-f]{40}$/.test(sourceSha)) {
+              throw new Error("build did not expose one exact publish source SHA");
+            }
+            let platforms;
+            try {
+              platforms = JSON.parse(process.env.PLATFORMS_JSON || "[]");
+            } catch {
+              throw new Error("build platforms-json is not valid JSON");
+            }
+            const rows = Array.isArray(platforms)
+              ? platforms
+              : Array.isArray(platforms.platforms)
+                ? platforms.platforms
+                : [];
+            if (!rows.length) {
+              throw new Error("build platforms-json has no declared platform rows");
+            }
+            const hasLinux = rows.some((row) => row && row.id === "linux-x64");
+            const name = `kungfu-linux-x64-${sourceSha}`;
+            let coordinateSet;
+            try {
+              coordinateSet = JSON.parse(
+                process.env.ARTIFACT_COORDINATES_JSON || "{}",
+              );
+            } catch {
+              throw new Error(
+                "build artifact-coordinates-json is not valid JSON",
+              );
+            }
+            const currentAttempt =
+              String(process.env.GITHUB_RUN_ATTEMPT || "");
+            const producerAttempt = String(coordinateSet.runAttempt || "");
+            if (
+              coordinateSet.schema !==
+                "buildchain.github-artifact-coordinate-set/v1" ||
+              coordinateSet.repository !== context.repo.owner + "/" + context.repo.repo ||
+              coordinateSet.runId !== String(context.runId) ||
+              !/^[1-9][0-9]*$/.test(currentAttempt) ||
+              !/^[1-9][0-9]*$/.test(producerAttempt) ||
+              BigInt(producerAttempt) > BigInt(currentAttempt) ||
+              coordinateSet.sourceSha !== sourceSha ||
+              !Array.isArray(coordinateSet.artifacts)
+            ) {
+              throw new Error(
+                "build artifact coordinate set is not bound to this exact source run",
+              );
+            }
+            const declaredLinux = coordinateSet.artifacts.filter(
+              (artifact) => artifact && artifact.platformId === "linux-x64",
+            );
+            const artifacts = await github.paginate(
+              github.rest.actions.listWorkflowRunArtifacts,
+              {
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                run_id: context.runId,
+                per_page: 100,
+              },
+            );
+            if (!hasLinux) {
+              if (declaredLinux.length) {
+                throw new Error(
+                  "producer coordinate set declares Linux outside the resolved build matrix",
+                );
+              }
+              const matches = artifacts.filter(
+                (artifact) => artifact.name === name && !artifact.expired,
+              );
+              if (matches.length) {
+                throw new Error(
+                  "undeclared Linux artifact exists outside the resolved build matrix",
+                );
+              }
+              const diagnosis = {
+                schema: "kungfu.auditable-demo.inapplicable/v1",
+                status: "inapplicable",
+                reason: "linux-x64-not-produced",
+                sourceSha,
+                runId: String(context.runId),
+                runAttempt: String(process.env.GITHUB_RUN_ATTEMPT || ""),
+              };
+              fs.writeFileSync(
+                "auditable-demo-inapplicable.json",
+                JSON.stringify(diagnosis, null, 2) + "\n",
+              );
+              core.setOutput("applicable", "false");
+              core.setOutput("reason", diagnosis.reason);
+              await core.summary
+                .addHeading("Auditable demo Gate")
+                .addRaw("Inapplicable: this explicit matrix did not produce linux-x64.")
+                .write();
+              return;
+            }
+            if (declaredLinux.length !== 1) {
+              throw new Error(
+                `expected one producer-owned Linux coordinate, found ${declaredLinux.length}`,
+              );
+            }
+            const declared = declaredLinux[0];
+            const canonicalExpiry = (value, label) => {
+              const milliseconds = Date.parse(value || "");
+              if (!Number.isFinite(milliseconds)) {
+                throw new Error(`${label} is not a valid artifact expiry`);
+              }
+              return new Date(milliseconds).toISOString();
+            };
+            if (
+              !/^[1-9][0-9]*$/.test(declared.id || "") ||
+              declared.name !== name ||
+              !/^sha256:[0-9a-f]{64}$/.test(declared.digest || "") ||
+              declared.url !==
+                `https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}/artifacts/${declared.id}` ||
+              !declared.expiresAt
+            ) {
+              throw new Error(
+                "producer-owned Linux coordinate is incomplete or malformed",
+              );
+            }
+            const declaredExpiry = canonicalExpiry(
+              declared.expiresAt,
+              "producer-owned Linux coordinate expiry",
+            );
+            const matches = artifacts.filter(
+              (artifact) =>
+                String(artifact.id) === declared.id && !artifact.expired,
+            );
+            if (matches.length !== 1) {
+              throw new Error(
+                `expected one live same-run artifact id ${declared.id}, found ${matches.length}`,
+              );
+            }
+            const observed = matches[0];
+            const observedExpiry = canonicalExpiry(
+              observed.expires_at,
+              "live Linux artifact expiry",
+            );
+            if (
+              observed.name !== declared.name ||
+              observed.digest !== declared.digest ||
+              observedExpiry !== declaredExpiry
+            ) {
+              throw new Error(
+                "live Linux artifact drifted from the producer-owned coordinate",
+              );
+            }
+            core.setOutput("applicable", "true");
+            core.setOutput("reason", "linux-x64-exact-artifact");
+            core.setOutput("artifact-id", declared.id);
+            core.setOutput("artifact-name", declared.name);
+            core.setOutput("artifact-digest", declared.digest);
+            core.setOutput("artifact-url", declared.url);
+            core.setOutput("artifact-expires-at", declared.expiresAt);
+
+      - name: Retain machine-readable inapplicable reason
+        if: ${{ steps.resolve.outputs.applicable == 'false' }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: auditable-demo-inapplicable-${{ github.run_id }}-${{ github.run_attempt }}
+          path: auditable-demo-inapplicable.json
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 0
+          overwrite: false
+
+  auditable-demo:
+    name: Declarative multi-demo Gate and media
+    needs: [build, resolve-auditable-demo-source]
+    if: ${{ needs.resolve-auditable-demo-source.outputs.applicable == 'true' }}
+    permissions:
+      actions: read
+      contents: write
+      pull-requests: write
+    uses: kungfu-systems/buildchain/.github/workflows/.declarative-auditable-demo.yml@2e7e07902ac28d8f3edcfb81098ef9ebc7a91878
+    secrets:
+      DEMO_UPDATE_TOKEN: ${{ secrets.KUNGFU_GITHUB_TOKEN }}
+    with:
+      source-ref: ${{ needs.build.outputs.publish-source-sha }}
+      binary-artifact-name: ${{ needs.resolve-auditable-demo-source.outputs.artifact-name }}
+      binary-artifact-digest: ${{ needs.resolve-auditable-demo-source.outputs.artifact-digest }}
+      scenario-path: .buildchain/auditable-demo.json
+      renderer-image: ghcr.io/kungfu-systems/build-images/demo-renderer@sha256:c200589be9dda6f730f1cb3deb5b48a60af9144e7a3e4216b7ef70c8e9274000
+      render-media: ${{ github.event_name != 'workflow_dispatch' || inputs.render-auditable-demo }}
+      # Alpha publication depends on the required Gate, never on renderer
+      # capacity. The media step remains visible but advisory only for Alpha;
+      # Release and explicit media refreshes retain strict failure semantics.
+      render-failure-advisory: ${{ github.event_name == 'pull_request' && startsWith(github.base_ref, 'alpha/') }}
+      media-profile: responsive-long-form-web-delivery-v1
+      materialize: ${{ github.event_name != 'workflow_dispatch' || inputs.render-auditable-demo }}
+      materialize-base-ref: ${{ github.event.repository.default_branch }}
+      artifact-retention-days: 14
+
+  precompute-alpha-publication-tail:
+    name: Precompute non-secret Alpha publication tail
+    needs: build
+    if: ${{ needs.build.result == 'success' && startsWith(github.base_ref, 'alpha/') }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - name: Check out exact qualified source
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: ${{ needs.build.outputs.publish-source-sha }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Set up pinned Node.js
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version-file: .node-version
+          check-latest: false
+
+      - name: Write and verify source-bound publication tail plan
+        env:
+          SOURCE_SHA: ${{ needs.build.outputs.publish-source-sha }}
+          SOURCE_TREE_SHA: ${{ needs.build.outputs.publish-source-tree-sha }}
+        run: |
+          ./shifu alpha:publication:tail write \
+            --source-commit "${SOURCE_SHA}" \
+            --source-tree "${SOURCE_TREE_SHA}" \
+            --out alpha-publication-tail-plan.json
+          ./shifu alpha:publication:tail verify \
+            --plan alpha-publication-tail-plan.json \
+            --source-commit "${SOURCE_SHA}"
+
+      - name: Upload immutable publication tail plan
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: kungfu-alpha-publication-tail-${{ needs.build.outputs.publish-source-sha }}
+          path: alpha-publication-tail-plan.json
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 0
+          overwrite: false
+
+  phase-b-package:
+    name: Prepare Kungfu Phase B package
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.run-kungfu-phase-b }}
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      actions: read
+      contents: read
+    outputs:
+      artifact-name: ${{ steps.artifact.outputs.name }}
+      package-sha256: ${{ steps.identity.outputs.package_sha256 }}
+      package-version: ${{ steps.identity.outputs.package_version }}
+      source-sha: ${{ steps.identity.outputs.source_sha }}
+    steps:
+      - name: Check out the exact package source
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+
+      - name: Download the Linux package build
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          pattern: kungfu-linux-x64-*
+          path: phase-b-build-input
+          merge-multiple: true
+
+      - name: Resolve package identity
+        id: identity
+        env:
+          EXPECTED_SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          set -euo pipefail
+          # shifu-entry-contract: allow read-only package version resolution before the package identity gate
+          expected_version=$(node -p "require('./lerna.json').version")
+          python3 scripts/prepare_kungfu_phase_b_package.py \
+            --input-root phase-b-build-input \
+            --output-dir phase-b-package-output \
+            --expected-source-sha "${EXPECTED_SOURCE_SHA}" \
+            --expected-version "${expected_version}" \
+            --build-images-ref "v1.2.4-alpha.30" \
+            --build-images-sha "3056c23e70b83f5bb63062f04027a93e79039e4b"
+
+      - name: Resolve retained artifact name
+        id: artifact
+        run: echo "name=kungfu-phase-b-package-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}" >> "${GITHUB_OUTPUT}"
+
+      - name: Retain the exact package input
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: ${{ steps.artifact.outputs.name }}
+          path: phase-b-package-output
+          if-no-files-found: error
+          retention-days: 30
+
+  kungfu-phase-b:
+    name: Qualify Kungfu package with build-images
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.run-kungfu-phase-b }}
+    needs: [build, phase-b-package]
+    permissions:
+      actions: read
+      contents: read
+    uses: kungfu-systems/build-images/.github/workflows/comparator-kungfu-package-smoke.yml@3056c23e70b83f5bb63062f04027a93e79039e4b # v1.2.4-alpha.30
+    with:
+      package_artifact_name: ${{ needs.phase-b-package.outputs.artifact-name }}
+      package_sha256: ${{ needs.phase-b-package.outputs.package-sha256 }}
+      package_version: ${{ needs.phase-b-package.outputs.package-version }}
+      source_sha: ${{ needs.phase-b-package.outputs.source-sha }}
+      build_images_ref: v1.2.4-alpha.30
+      build_images_sha: 3056c23e70b83f5bb63062f04027a93e79039e4b

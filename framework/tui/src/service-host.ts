@@ -1,35 +1,28 @@
 // The service host: land a background-service kfx a host discovered through
-// planKfx (ADR-0017). This is where the three runtime-plane pieces the earlier
-// stages built compose into one production caller — the plan entry (stage 2a),
-// the user grant → sandbox profile (stage 2c), and the OS-sandbox launch + stdio
-// relay (stage 2b) — so a discovered service is landed by the same rule on any
-// host that consumes the plan.
+// planKfx. Discovery remains inert; a caller must also provide the exact Core
+// host authorization that roots Passport, policy, Work/Warrant, capability
+// grant, cut and generation. No package identity or install origin selects the
+// landing.
 //
-// The trust verdict picks the landing, the user grant only tunes it:
-//   - trusted  → co-resident: the body runs in this host process against the
-//     zero-copy in-process capability surface, unconfined (it is trusted).
-//   - untrusted → OS sandbox: the body runs in a sandboxed child whose profile
-//     is resolved from the stored grants (resolveServiceLanding), reaching the
-//     host only over the stdio relay. A grant can loosen this sandbox; it can
-//     never promote the service to co-resident (the tier is not user-pierceable).
-//
-// This delivery lands the NODE runtime and the UNTRUSTED (OS-sandboxed) C++
-// runtime end to end. A C++ service ships a prebuilt per-platform binary
-// (ADR-0017): with no interpreter it needs no bootstrap — the host launches the
+// Node may run co-resident when explicitly authorized. Python always runs in a
+// separate interpreter process on the standard asyncio bootstrap; isolated
+// placement adds the OS sandbox and integrated-explicit placement omits only
+// that membrane. A C++ service ships a prebuilt per-platform binary
+// (KF-ADR-019f86da-4f90-7afa-a1e1-0510f00916be): with no interpreter it needs no bootstrap — the host launches the
 // binary directly and it speaks the relay through its linked guest proxy
-// (framework/core/src/capability/guest.hpp). Trusted co-resident C++/Python
-// (an unsandboxed interpreter/binary subprocess) remains the tier x runtime
-// host-wiring follow-up; an unsupported runtime is refused here rather than
-// mis-launched.
+// (framework/core/src/capability/guest.hpp). Unsupported runtime/platform
+// combinations are refused rather than mis-launched.
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
 import {
+  type GuestProcess,
   type SandboxedGuest,
-  type ServiceAuthz,
+  type ServiceAuthorization,
   type SpawnFn,
   type WindowsSandboxSpawn,
   createInProcessAsyncCaps,
+  launchIntegratedGuest,
   launchSandboxedGuest,
   resolveServiceLanding,
 } from '@kungfu-tech/api/capability';
@@ -43,14 +36,18 @@ export type LaunchServiceOptions = {
   // the real capabilities the host resolves the service's relay calls against;
   // only the entry's declared capabilities are reachable.
   caps: Record<string, Record<string, unknown>>;
-  // the stored three-layer authorization; an ungranted untrusted service lands
-  // default-deny.
-  authz: ServiceAuthz;
+  authorization: ServiceAuthorization;
   // override the node bootstrap path (defaults to the sibling service-bootstrap).
   bootstrap?: string;
   // injectable for tests; forwarded to launchSandboxedGuest.
   spawn?: SpawnFn;
   windowsSpawn?: WindowsSandboxSpawn;
+  // Python's executable and import path are explicit host inputs. Production
+  // installations normally need neither override; source-tree qualification
+  // supplies pythonPath so `kungfu.kfx_host` resolves from this checkout.
+  pythonCommand?: string;
+  pythonPath?: string;
+  pythonShutdownTimeoutMs?: number;
 };
 
 // A landed service, uniform across tiers: `done` resolves when the service ends
@@ -65,7 +62,7 @@ export type LaunchedService = {
   networkConsent?: boolean;
 };
 
-// Map this Node platform to the C++ entry's per-platform key (ADR-0017).
+// Map this Node platform to the C++ entry's per-platform key (KF-ADR-019f86da-4f90-7afa-a1e1-0510f00916be).
 const CPP_PLATFORM: Partial<
   Record<NodeJS.Platform, 'darwin' | 'linux' | 'win'>
 > = {
@@ -75,17 +72,28 @@ const CPP_PLATFORM: Partial<
 };
 
 // Resolve the launch for a discovered service. Node runs the shipped bootstrap,
-// which imports the service's node entry and speaks the relay. C++ has no
-// bootstrap: the prebuilt per-platform binary IS the guest, so the host launches
-// it directly. Every entry path is resolved against the package directory
-// planKfx recorded.
+// Python runs `kungfu.kfx_host` on the supported interpreter, and C++ has no
+// bootstrap: the prebuilt per-platform binary IS the guest. Every entry path is
+// resolved against the package directory planKfx recorded.
 export function resolveServiceRuntime(
   entry: KfxServicePlanEntry,
   bootstrap: string,
   declared: readonly string[],
-): { command: string; args: string[]; env: Record<string, string> } {
+  python: {
+    command?: string;
+    path?: string;
+    shutdownTimeoutMs?: number;
+    authorization?: ServiceAuthorization;
+  } = {},
+): {
+  kind: 'node' | 'cpp' | 'python';
+  command: string;
+  args: string[];
+  env: Record<string, string>;
+} {
   if (entry.runtimes.includes('node') && entry.entry.node) {
     return {
+      kind: 'node',
       command: process.execPath,
       args: [bootstrap],
       env: {
@@ -106,49 +114,113 @@ export function resolveServiceRuntime(
       );
     }
     return {
+      kind: 'cpp',
       command: join(entry.dir, relBinary),
       args: [],
       env: { KFX_DECLARED: JSON.stringify(declared) },
     };
   }
+  if (entry.runtimes.includes('python') && entry.entry.python) {
+    const authorization = python.authorization;
+    const shutdownTimeoutMs = python.shutdownTimeoutMs ?? 5_000;
+    return {
+      kind: 'python',
+      command:
+        python.command ?? (process.platform === 'win32' ? 'python' : 'python3'),
+      args: ['-m', 'kungfu.kfx_host'],
+      env: {
+        KFX_DECLARED: JSON.stringify(declared),
+        KFX_SERVICE_ENTRY: join(entry.dir, entry.entry.python),
+        KFX_SERVICE_SHUTDOWN_TIMEOUT: String(shutdownTimeoutMs / 1_000),
+        KFX_SERVICE_PACKAGE_KEY: authorization?.packageKey ?? entry.id,
+        KFX_SERVICE_AUTHORIZATION_ROOT: authorization?.authorizationRoot ?? '',
+        KFX_SERVICE_CAPABILITY_GRANT_ROOT:
+          authorization?.capabilityGrantRoot ?? '',
+        KFX_SERVICE_GENERATION_ROOT: authorization?.generationRoot ?? '',
+        PYTHONDONTWRITEBYTECODE: '1',
+        ...(python.path ? { PYTHONPATH: python.path } : {}),
+      },
+    };
+  }
   throw new Error(
-    `service '${entry.id}' declares no launchable runtime (node or cpp); a trusted co-resident python/cpp interpreter is the tier x runtime host-wiring follow-up`,
+    `service '${entry.id}' declares no launchable runtime (node, cpp, or python)`,
   );
 }
 
-// Land a discovered service. The verdict on the plan entry chooses the tier; the
-// grant only tunes an untrusted service's sandbox profile.
+// Land a discovered service only through its exact Core authorization.
 export async function launchDiscoveredService(
   entry: KfxServicePlanEntry,
   opts: LaunchServiceOptions,
 ): Promise<LaunchedService> {
   const declared = entry.capabilities as readonly string[];
-  const landing = resolveServiceLanding(opts.authz, entry.id, entry.trusted);
+  const required = opts.authorization.requiredCapabilities;
+  if (
+    opts.authorization.packageKey !== entry.id ||
+    required.length !== declared.length ||
+    required.some((capability) => !declared.includes(capability)) ||
+    declared.some(
+      (capability) =>
+        !required.includes(capability) ||
+        !opts.authorization.grantedCapabilities.includes(capability),
+    )
+  ) {
+    throw new Error(
+      'KF_KFX_HOST_NOT_AUTHORIZED: service discovery and authorization do not match',
+    );
+  }
+  const landing = resolveServiceLanding(opts.authorization);
 
   if (landing.tier === 'co-resident') {
-    // trusted: run the body in-process against the zero-copy async surface. Only
-    // node can run in this host process; a trusted python/cpp service is a
-    // co-resident interpreter subprocess — the stage-3 matrix, refused here.
-    if (!entry.runtimes.includes('node') || !entry.entry.node) {
+    // Integrated execution is an explicit placement in the rooted grant.
+    if (entry.runtimes.includes('node') && entry.entry.node) {
+      const caps = createInProcessAsyncCaps(opts.caps, declared);
+      const bodyPath = join(entry.dir, entry.entry.node);
+      const done = import(pathToFileURL(bodyPath).href)
+        .then((mod: { run: (c: Record<string, unknown>) => Promise<void> }) =>
+          mod.run(caps),
+        )
+        .then(() => null);
+      return { tier: 'co-resident', done, dispose: () => {} };
+    }
+    if (!entry.runtimes.includes('python') || !entry.entry.python) {
       throw new Error(
-        `trusted service '${entry.id}' has no node body; a co-resident python/cpp interpreter is the stage-3 host-wiring follow-up`,
+        `integrated service '${entry.id}' has no node or python body`,
       );
     }
-    const caps = createInProcessAsyncCaps(opts.caps, declared);
-    const bodyPath = join(entry.dir, entry.entry.node);
-    const done = import(pathToFileURL(bodyPath).href)
-      .then((mod: { run: (c: Record<string, unknown>) => Promise<void> }) =>
-        mod.run(caps),
-      )
-      .then(() => null);
-    return { tier: 'co-resident', done, dispose: () => {} };
+    const runtime = resolveServiceRuntime(entry, DEFAULT_BOOTSTRAP, declared, {
+      command: opts.pythonCommand,
+      path: opts.pythonPath,
+      shutdownTimeoutMs: opts.pythonShutdownTimeoutMs,
+      authorization: opts.authorization,
+    });
+    const guest: GuestProcess = await launchIntegratedGuest({
+      runtime,
+      caps: opts.caps,
+      declared,
+      spawn: opts.spawn,
+      inheritEnv: false,
+      gracefulShutdown: {
+        timeoutMs: (opts.pythonShutdownTimeoutMs ?? 5_000) + 1_000,
+      },
+    });
+    return {
+      tier: 'co-resident',
+      done: guest.exited,
+      dispose: guest.dispose,
+    };
   }
 
-  // untrusted: OS-sandboxed child, profile resolved from the grants.
+  // Isolated execution is physically confined by the Core-derived profile.
   const runtime = resolveServiceRuntime(
     entry,
     opts.bootstrap ?? DEFAULT_BOOTSTRAP,
     declared,
+    {
+      command: opts.pythonCommand,
+      path: opts.pythonPath,
+      shutdownTimeoutMs: opts.pythonShutdownTimeoutMs,
+      authorization: opts.authorization,
+    },
   );
   const guest: SandboxedGuest = await launchSandboxedGuest({
     runtime,
@@ -157,6 +229,11 @@ export async function launchDiscoveredService(
     profile: landing.profile,
     spawn: opts.spawn,
     windowsSpawn: opts.windowsSpawn,
+    inheritEnv: runtime.kind !== 'python',
+    gracefulShutdown:
+      runtime.kind === 'python'
+        ? { timeoutMs: (opts.pythonShutdownTimeoutMs ?? 5_000) + 1_000 }
+        : undefined,
   });
   return {
     tier: 'sandbox',

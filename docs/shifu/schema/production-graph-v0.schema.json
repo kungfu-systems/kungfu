@@ -1,0 +1,222 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://libkungfu.dev/schemas/shifu/production-graph-v0.schema.json",
+  "title": "Shifu Production Graph v0",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "graphId",
+    "contractRoot",
+    "source",
+    "authorityReferences",
+    "semanticImpact",
+    "intent",
+    "nodes",
+    "nextAction",
+    "graphRoot"
+  ],
+  "properties": {
+    "schema": { "const": "shifu.production-graph/v0" },
+    "graphId": { "$ref": "#/$defs/id" },
+    "contractRoot": { "$ref": "#/$defs/root" },
+    "source": { "$ref": "#/$defs/source" },
+    "authorityReferences": { "$ref": "#/$defs/authorityRoots" },
+    "semanticImpact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["owner", "selectionRoot", "otherInputs"],
+      "properties": {
+        "owner": { "const": "xinfa" },
+        "selectionRoot": { "$ref": "#/$defs/root" },
+        "otherInputs": { "type": "array", "maxItems": 0 }
+      }
+    },
+    "intent": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mode", "summary", "requestedOutputs", "sideEffects"],
+      "properties": {
+        "mode": { "const": "describe-only" },
+        "summary": { "$ref": "#/$defs/nonEmpty" },
+        "requestedOutputs": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/id" }
+        },
+        "sideEffects": { "const": false }
+      }
+    },
+    "nodes": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 64,
+      "items": { "$ref": "#/$defs/node" }
+    },
+    "nextAction": { "$ref": "#/$defs/nonEmpty" },
+    "graphRoot": { "$ref": "#/$defs/root" }
+  },
+  "$defs": {
+    "nonEmpty": { "type": "string", "minLength": 1 },
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z0-9]+(?:[.-][a-z0-9]+)*$"
+    },
+    "root": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "gitObject": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{40}$"
+    },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["repository", "revision", "tree"],
+      "properties": {
+        "repository": { "$ref": "#/$defs/nonEmpty" },
+        "revision": { "$ref": "#/$defs/gitObject" },
+        "tree": { "$ref": "#/$defs/gitObject" }
+      }
+    },
+    "authorityRoots": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["layers", "buildCapabilities"],
+      "properties": {
+        "layers": { "$ref": "#/$defs/root" },
+        "buildCapabilities": { "$ref": "#/$defs/root" }
+      }
+    },
+    "rootedReference": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "kind", "root"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "kind": {
+          "enum": ["source", "authority", "toolchain", "artifact", "evidence"]
+        },
+        "root": {
+          "anyOf": [{ "$ref": "#/$defs/root" }, { "type": "null" }]
+        }
+      }
+    },
+    "authorityReference": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["authority", "id"],
+      "properties": {
+        "authority": { "enum": ["layers", "build-capabilities"] },
+        "id": { "$ref": "#/$defs/id" }
+      }
+    },
+    "executor": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["entrypoint", "task", "executionOwnedBy", "invokedByVerifier"],
+      "properties": {
+        "entrypoint": { "const": "./shifu" },
+        "task": { "$ref": "#/$defs/nonEmpty" },
+        "executionOwnedBy": { "const": "external-orchestrator" },
+        "invokedByVerifier": { "const": false }
+      }
+    },
+    "node": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "authorityRefs",
+        "dependencies",
+        "executor",
+        "inputs",
+        "outputs",
+        "events",
+        "exit",
+        "failure",
+        "recovery",
+        "nextAction"
+      ],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "authorityRefs": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/authorityReference" }
+        },
+        "dependencies": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/id" }
+        },
+        "executor": { "$ref": "#/$defs/executor" },
+        "inputs": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/rootedReference" }
+        },
+        "outputs": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/rootedReference" }
+        },
+        "events": {
+          "type": "array",
+          "minItems": 2,
+          "uniqueItems": true,
+          "items": {
+            "enum": ["planned", "started", "succeeded", "failed", "cancelled"]
+          }
+        },
+        "exit": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "successCodes",
+            "timeoutSeconds",
+            "failureIsNonQualifying",
+            "cancellationIsNonQualifying"
+          ],
+          "properties": {
+            "successCodes": {
+              "type": "array",
+              "minItems": 1,
+              "uniqueItems": true,
+              "items": { "type": "integer", "minimum": 0, "maximum": 255 }
+            },
+            "timeoutSeconds": { "type": "integer", "minimum": 1 },
+            "failureIsNonQualifying": { "const": true },
+            "cancellationIsNonQualifying": { "const": true }
+          }
+        },
+        "failure": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["owner", "retainedEvidence"],
+          "properties": {
+            "owner": { "$ref": "#/$defs/nonEmpty" },
+            "retainedEvidence": {
+              "type": "array",
+              "minItems": 1,
+              "uniqueItems": true,
+              "items": { "$ref": "#/$defs/id" }
+            }
+          }
+        },
+        "recovery": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["strategy", "nextAction"],
+          "properties": {
+            "strategy": { "enum": ["retry-node", "replan", "stop"] },
+            "nextAction": { "$ref": "#/$defs/nonEmpty" }
+          }
+        },
+        "nextAction": { "$ref": "#/$defs/nonEmpty" }
+      }
+    }
+  }
+}

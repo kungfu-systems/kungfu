@@ -1,0 +1,82 @@
+# SPDX-License-Identifier: Apache-2.0
+
+name: Generated Report Projection
+
+on:
+  pull_request:
+    branches:
+      - "dev/v*/v*"
+      - "alpha/v*/v*"
+      - "release/v*/v*"
+    paths:
+      - "framework/core/src/python/**"
+      - "framework/core/tests/python/**"
+      - "framework/core/architecture/layers.json"
+      - "framework/maintainability/**"
+      - "scripts/check-code-complexity*.mjs"
+      - "scripts/check-python-structure*.py"
+      - "framework/report-projection/**"
+      - ".github/workflows/report-projection.yml"
+  merge_group:
+    types: [checks_requested]
+  push:
+    branches:
+      - "dev/v*/v*"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: generated-report-projection-${{ github.event_name == 'push' && github.ref_name || github.sha }}
+  cancel-in-progress: true
+
+jobs:
+  exact-source-projection:
+    name: Exact-source immutable projection
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - name: Check out exact event revision with baseline history
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 24
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: "3.13"
+      - name: Generate and verify exact-source projections
+        env:
+          PROJECTION_KIND: ${{ github.event_name == 'push' && 'protected-development' || 'candidate' }}
+        run: >-
+          ./shifu maintainability:reports generate
+          --output "$RUNNER_TEMP/generated-reports"
+          --projection-kind "$PROJECTION_KIND"
+      - name: Compare protected head immediately before publication
+        if: github.event_name == 'push'
+        id: protected-head
+        shell: bash
+        env:
+          EXPECTED_REVISION: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          protected_head="$(git ls-remote origin "refs/heads/$GITHUB_REF_NAME" | awk '{print $1}')"
+          decision="$(./shifu maintainability:reports projector-decision --expected-revision "$EXPECTED_REVISION" --protected-head "$protected_head")"
+          if [ "$decision" = publish ]; then
+            echo 'publish=true' >>"$GITHUB_OUTPUT"
+          else
+            echo 'publish=false' >>"$GITHUB_OUTPUT"
+            echo "discarded stale projection $EXPECTED_REVISION; protected head is $protected_head"
+          fi
+      - name: Publish content-addressed report bundle
+        if: github.event_name != 'push' || steps.protected-head.outputs.publish == 'true'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: generated-report-projection-${{ github.sha }}
+          path: ${{ runner.temp }}/generated-reports
+          if-no-files-found: error
+          retention-days: 90

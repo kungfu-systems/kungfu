@@ -1,0 +1,18 @@
+{
+  "schema": "kungfu.code-complexity-budget-waiver/v1",
+  "paths_or_scope": ["docs/qualification/gates/workflow-authority.json"],
+  "file_class": "declarative-schema-or-table",
+  "baseline_measurement": 2605,
+  "requested_measurement": 2652,
+  "allowed_delta": 47,
+  "owner": "kungfu/docs",
+  "responsibility_boundary": "Exact post-queue workflow authority projection containing both the native Linux ARM64 Hub CLI qualification job and the already-admitted dev-to-Alpha candidate patrol.",
+  "cohesion_rationale": "The ratchet validates one exact generated authority file after queue integration, so the independently admitted job deltas require one combined current-tree measurement without changing either job's authority boundary.",
+  "rejected_split_alternatives": ["The checker cannot apply two partial line measurements to one exact file state.", "A second authority registry would create competing workflow truth sources."],
+  "affected_tests_and_qualification": ["node scripts/check-kungfu-gate-catalog.test.mjs", "node scripts/kungfu-workflow-authority.mjs", "./shifu check:source"],
+  "requested_by": "dongkeren",
+  "approved_by": "kungfu-origin",
+  "approved_at": "2026-07-27T09:35:00+08:00",
+  "expires_at_or_review_by": "2026-10-31T23:59:59+08:00",
+  "retirement_or_decomposition_ref": "KF-ADR-019f9388-a139-7355-b9f2-f6dd9aa91042"
+}

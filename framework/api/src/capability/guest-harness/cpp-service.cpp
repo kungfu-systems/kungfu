@@ -4,7 +4,7 @@
 // body that runs INSIDE the OS sandbox and, unlike the node/python fixtures,
 // needs no bootstrap — a compiled C++ service IS the guest, linking the guest
 // proxy (framework/core/src/capability/guest.hpp) and this body into one binary
-// the host launches directly (ADR-0017 prebuilt-artifact cpp entry).
+// the host launches directly (KF-ADR-019f86da-4f90-7afa-a1e1-0510f00916be prebuilt-artifact cpp entry).
 //
 // It does the same two independent things the node service facet does, so the
 // same membrane proof applies to the C++ runtime:

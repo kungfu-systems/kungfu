@@ -1,0 +1,76 @@
+{
+  "schema": "kungfu.settlement-publication.contract/v1",
+  "version": 1,
+  "status": "pre-release",
+  "authority": {
+    "nativeSettlement": "kungfu-work-control",
+    "episode": "yijinjing-journal",
+    "projectCut": "project.cut/v1",
+    "git": "protected-projection-only",
+    "completion": "kungfu-work-control"
+  },
+  "batchIdentity": {
+    "schema": "kungfu.settlement-publication.batch-input/v1",
+    "rootAlgorithm": "sha256-project-cut-canonical-json-v1",
+    "sameRootSameBranchAndPullRequest": true,
+    "changedSelectionCreatesSuccessorRoot": true,
+    "sourceBranchPrefix": "machine-ledger/settlement/"
+  },
+  "protection": {
+    "directTargetPush": false,
+    "oneOpenPullRequestPerBatch": true,
+    "sourceBranchContentAddressed": true,
+    "independentReviewRequired": true
+  },
+  "noRecursion": {
+    "schema": "kungfu.settlement-publication.no-recursion/v1",
+    "generatedBy": "kungfu-settlement-publication/v1",
+    "generatedLabel": "kungfu-machine-ledger",
+    "generatedBranchPrefix": "machine-ledger/settlement/",
+    "publicationRootSuppressesSuccessor": true
+  },
+  "materialPolicy": {
+    "included": [
+      "episode-claims",
+      "episode-manifest",
+      "episode-qualification",
+      "project-cut-manifest",
+      "project-cut-receipt",
+      "content-addressed-publication-manifest"
+    ],
+    "excluded": [
+      "raw-journals",
+      "private-payload-bodies",
+      "credentials",
+      "tokens",
+      "signed-urls",
+      "runtime-caches",
+      "locks",
+      "large-artifacts"
+    ]
+  },
+  "bounds": {
+    "maximumEpisodes": 256,
+    "maximumProjectCuts": 256,
+    "maximumTrackedFiles": 1024,
+    "maximumTrackedBytes": 16777216,
+    "maximumOpenPullRequestsPerBatch": 1
+  },
+  "liveness": {
+    "runtimeContinuationBlockedByPublication": false,
+    "publicationLagVisible": true,
+    "unpublishedCutCountVisible": true,
+    "retryCountVisible": true,
+    "latestFailureRootVisible": true
+  },
+  "schemaBundle": {
+    "files": [
+      "schema/settlement-publication-manifest-v1.schema.json",
+      "schema/settlement-publication-observation-v1.schema.json",
+      "schema/settlement-publication-request-v1.schema.json",
+      "schema/settlement-publication-state-v1.schema.json"
+    ],
+    "schemaRoot": "sha256:92446afa8351b406bef0d6d2a650cb554ca2df0788b4f1808851e9b5ae9a11df"
+  },
+  "contractRoot": "sha256:6a1610ab693b2cb770353c167478738678becc4378e9ee1da3474989284c4285"
+}

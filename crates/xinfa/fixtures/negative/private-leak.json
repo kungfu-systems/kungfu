@@ -1,0 +1,6 @@
+{
+  "schema": "xinfa.negative-fixture/v1",
+  "base": "project-alpha.json",
+  "mutations": [{ "pointer": "/roots/0/visibility", "value": "private" }],
+  "expectedCode": "visibility-broadening"
+}

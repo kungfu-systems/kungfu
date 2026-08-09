@@ -1,0 +1,102 @@
+{
+  "schema": "kungfu.profile-suite/v1",
+  "id": "kungfu.work-control",
+  "title": "Work Control",
+  "version": "4.0.0",
+  "members": {
+    "required": [
+      "work-control-actions",
+      "work-control-assessment",
+      "work-control-contract",
+      "work-control-views"
+    ],
+    "optional": [
+      "work-dashboard"
+    ]
+  },
+  "kfd1": {
+    "contractWorld": {
+      "path": "contracts/world.json",
+      "sha256": "b099ab642cdc3c350aab0ecc01060fe4fe81d3f1f1da075a44d56946b867a2d1"
+    },
+    "factSurfaces": [
+      {
+        "path": "contracts/facts.json",
+        "sha256": "aac417b34d70f247be9fc32b69eba549500ebaff153265df2f74d329c81cbc22"
+      }
+    ],
+    "reducers": [
+      {
+        "path": "reducers/five-questions.json",
+        "sha256": "06e17c637094e1e9567687549a0603d74e0b0edd689e113ad45aaf975d4d1b33"
+      }
+    ],
+    "compatibility": {
+      "path": "compatibility/v4.json",
+      "sha256": "8779f18d0655935fb33767b90ceaad4e9cf3d90e3fb80e71b8add65db41d5390"
+    }
+  },
+  "kfd2": {
+    "claims": [
+      {
+        "path": "claims/claims.json",
+        "sha256": "10eb1c7bc445e24f1e44bfa7ffeb3226850725d09908a0942be00ab23333ff3c"
+      }
+    ],
+    "purposes": [
+      "handoff",
+      "operator-review"
+    ],
+    "policies": [
+      {
+        "path": "assessments/policies.json",
+        "sha256": "11a20862a552c8fd4e68035ed24d3ea4d0a13461beb62e28fe308d6f2da4550b"
+      }
+    ]
+  },
+  "actions": {
+    "registry": {
+      "path": "actions/registry.json",
+      "sha256": "0a2e8af8ef2dc690f8f4408d00f2056ca4aca7488c6025166adaf6a21d0268a4"
+    }
+  },
+  "views": {
+    "registry": {
+      "path": "views/registry.json",
+      "sha256": "300c71ae1a0551a8bc80e9267e6eb15c3666506280b7868941895166164e7580"
+    }
+  },
+  "kfd3": {
+    "collaboration": {
+      "path": "collaboration/interface.json",
+      "sha256": "e538121d855e3e3ec46b3515fbe944b36a4906fe6f591f5b50ccff28b5681549"
+    }
+  },
+  "migrations": {
+    "registry": {
+      "path": "migrations/registry.json",
+      "sha256": "012a9e1da8070a816083493e40348a957aa2528a182eda0523d651edeb545f1a"
+    }
+  },
+  "permissions": {
+    "registry": {
+      "path": "permissions.json",
+      "sha256": "d81d7d3d7b5561b1d53930d42c7fa9f34446e5008f9180430ee0d525b6c7142b"
+    }
+  },
+  "qualification": {
+    "profile": {
+      "path": "qualification/profile.json",
+      "sha256": "be38f3c31182245d19d05aa0e71bc1245fc3caf453c4ab84cd55512aaf2f3cfa"
+    }
+  },
+  "work": {
+    "conformance": {
+      "path": "qualification/work-profile-conformance.json",
+      "sha256": "51efb0ab880cb13087aac0afb479731646a61adb03bfbdddaa7caa82350c9bed"
+    }
+  },
+  "experience": {
+    "homeView": "work-dashboard"
+  }
+}

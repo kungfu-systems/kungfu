@@ -1,0 +1,14 @@
+{
+  "issueId": "issue-native-dogfood-completed-pre-workref-dependency",
+  "title": "Completed pre-WorkRef dependency compatibility needs a separate successor",
+  "owner": "dkr",
+  "findingRoots": [
+    "sha256:3539a06d3bf914d6ae95e549295a1653d6d4931c9e4afa029f4683e87c6363cb"
+  ],
+  "impact": "workflow-blocking",
+  "admittedAt": "2026-07-24T01:20:55.987483Z",
+  "verificationCriteria": [
+    "A compatibility successor preserves the exact prerequisite Assignment seal and workspace identity without weakening WorkRef admission."
+  ],
+  "actor": "codex/pro-9598"
+}

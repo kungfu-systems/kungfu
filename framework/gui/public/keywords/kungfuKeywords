@@ -30,7 +30,7 @@ gen_time
 trigger_time
 source
 dest
-msg_type
+carrier_type
 data_length
 data_as_bytes
 data_as_byte_array
@@ -64,9 +64,8 @@ enums
 types
 utils
 libnode
-longfist
+yijinjing-schema
 yijinjing
-wingchun
 length
 header_length
 data_type
@@ -323,7 +322,7 @@ RequestReadFromSync
 RequestWriteTo
 Channel
 ChannelRequest
-Band
+Outlet
 RequestReadFromOthers
 TimeRequest
 TimeReset
@@ -340,7 +339,7 @@ Config
 RiskSetting
 Location
 Basket
-RequestWriteToBand
+RequestWriteToOutlet
 TimeValue
 TimeKeyValue
 run
@@ -614,7 +613,6 @@ set_end_time
 return ej_pair.first
 MD
 TD
-STRATEGY
 SYSTEM
 OPERATOR
 JOURNAL

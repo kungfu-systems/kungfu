@@ -1,0 +1,11 @@
+{
+  "schema": "shifu.production-graph-negative-fixture/v0",
+  "baseFixture": "qualified",
+  "mutation": {
+    "target": "graph",
+    "operation": "set",
+    "path": ["nodes", 0, "dependencies"],
+    "value": ["qualify-contract"]
+  },
+  "expect": "dependency-cycle"
+}

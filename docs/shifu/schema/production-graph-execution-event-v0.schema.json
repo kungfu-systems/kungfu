@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://libkungfu.dev/schemas/shifu/production-graph-execution-event-v0.schema.json",
+  "title": "Shifu Production Graph execution event v0",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "graphRoot",
+    "planRoot",
+    "nodeId",
+    "sequence",
+    "state",
+    "executor",
+    "sourceRevision",
+    "observedOutputRoots",
+    "failureRoot",
+    "eventRoot"
+  ],
+  "properties": {
+    "schema": { "const": "shifu.production-graph-execution-event/v0" },
+    "graphRoot": { "$ref": "production-graph-v0.schema.json#/$defs/root" },
+    "planRoot": { "$ref": "production-graph-v0.schema.json#/$defs/root" },
+    "nodeId": { "$ref": "production-graph-v0.schema.json#/$defs/id" },
+    "sequence": { "type": "integer", "minimum": 0 },
+    "state": { "enum": ["planned", "started", "succeeded", "failed", "cancelled"] },
+    "executor": { "$ref": "production-graph-v0.schema.json#/$defs/executor" },
+    "sourceRevision": { "$ref": "production-graph-v0.schema.json#/$defs/gitObject" },
+    "observedOutputRoots": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": { "$ref": "production-graph-v0.schema.json#/$defs/root" }
+    },
+    "failureRoot": {
+      "anyOf": [
+        { "$ref": "production-graph-v0.schema.json#/$defs/root" },
+        { "type": "null" }
+      ]
+    },
+    "eventRoot": { "$ref": "production-graph-v0.schema.json#/$defs/root" }
+  }
+}

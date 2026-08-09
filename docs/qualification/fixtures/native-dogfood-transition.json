@@ -1,0 +1,8 @@
+{
+  "issueId": "issue-native-dogfood-completed-pre-workref-dependency",
+  "expectedIssueRoot": "sha256:fe3830617b388afbff6a9e49ed1ea1c6e78132152465a7737756fcb889fc3ae8",
+  "toState": "deferred",
+  "reason": "The native dogfood loop records and governs this friction, while dependency-compatibility policy remains a separate successor Assignment.",
+  "actor": "codex/pro-9598",
+  "transitionedAt": "2026-07-24T01:21:08.547233Z"
+}

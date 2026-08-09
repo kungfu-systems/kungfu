@@ -1,0 +1,80 @@
+{
+  "schema": "xinfa.repository-onboarding-corpus/v1",
+  "cases": [
+    {
+      "id": "rust-cargo",
+      "expectedEcosystems": ["rust-cargo"],
+      "files": [
+        { "path": "Cargo.toml", "text": "[package]\nname = \"sample\"\nversion = \"0.1.0\"\n" },
+        { "path": "README.md", "text": "# Rust sample\n" },
+        { "path": "src/lib.rs", "text": "pub fn answer() -> u8 { 42 }\n" }
+      ]
+    },
+    {
+      "id": "node",
+      "expectedEcosystems": ["node"],
+      "files": [
+        { "path": "package.json", "text": "{\"name\":\"sample\",\"version\":\"0.1.0\"}\n" },
+        { "path": "README.md", "text": "# Node sample\n" },
+        { "path": "src/index.js", "text": "export const answer = 42;\n" }
+      ]
+    },
+    {
+      "id": "python",
+      "expectedEcosystems": ["python"],
+      "files": [
+        { "path": "pyproject.toml", "text": "[project]\nname = \"sample\"\nversion = \"0.1.0\"\n" },
+        { "path": "README.md", "text": "# Python sample\n" },
+        { "path": "sample.py", "text": "answer = 42\n" }
+      ]
+    },
+    {
+      "id": "cmake-cpp",
+      "expectedEcosystems": ["cmake"],
+      "files": [
+        { "path": "CMakeLists.txt", "text": "cmake_minimum_required(VERSION 3.20)\nproject(sample)\n" },
+        { "path": "README.md", "text": "# CMake sample\n" },
+        { "path": "src/main.cpp", "text": "int main() { return 0; }\n" }
+      ]
+    },
+    {
+      "id": "go",
+      "expectedEcosystems": ["go"],
+      "files": [
+        { "path": "go.mod", "text": "module example.test/sample\n\ngo 1.22\n" },
+        { "path": "README.md", "text": "# Go sample\n" },
+        { "path": "main.go", "text": "package main\nfunc main() {}\n" }
+      ]
+    },
+    {
+      "id": "documentation",
+      "expectedEcosystems": [],
+      "files": [
+        { "path": "AGENTS.md", "text": "# Agent instructions\n" },
+        { "path": "README.md", "text": "# Documentation project\n" },
+        { "path": "docs/guide.md", "text": "# Guide\n" }
+      ]
+    },
+    {
+      "id": "monorepo",
+      "expectedEcosystems": ["node", "rust-cargo"],
+      "files": [
+        { "path": "README.md", "text": "# Polyglot monorepo\n" },
+        { "path": "package.json", "text": "{\"name\":\"workspace\",\"private\":true}\n" },
+        { "path": "packages/app/package.json", "text": "{\"name\":\"app\"}\n" },
+        { "path": "crates/core/Cargo.toml", "text": "[package]\nname = \"core\"\nversion = \"0.1.0\"\n" },
+        { "path": "crates/core/src/lib.rs", "text": "pub fn core() {}\n" }
+      ]
+    }
+  ],
+  "adversarial": [
+    { "path": ".env", "mode": "100644", "expected": "sensitive-path" },
+    { "path": "vendor/lib.rs", "mode": "100644", "expected": "generated-or-vendor" },
+    { "path": ".xinfa/generated/view.json", "mode": "100644", "expected": "xinfa-control-plane" },
+    { "path": "linked.md", "mode": "120000", "expected": "symlink" },
+    { "path": "asset.bin", "mode": "100644", "expected": "unsupported-encoding" },
+    { "path": "huge.md", "mode": "100644", "expected": "source-too-large" },
+    { "path": "conflicted.toml", "mode": "100644", "stage": 2, "expected": "index-conflict" },
+    { "path": "scratch.txt", "state": "untracked", "expected": "untracked" }
+  ]
+}

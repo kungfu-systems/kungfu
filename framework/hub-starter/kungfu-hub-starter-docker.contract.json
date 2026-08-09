@@ -1,0 +1,282 @@
+{
+  "$schema": "./schema/kungfu-hub-starter-docker-concept-v1.schema.json",
+  "schema": "kungfu.hub-starter-docker.concept/v1",
+  "id": "kungfu-hub-starter-docker",
+  "version": 1,
+  "status": "concept-only",
+  "authority": {
+    "decision": "docs/adr/KF-ADR-019f9388-a139-7355-b9f2-f6dd9aa91042.md",
+    "architecture": "docs/architecture/hub-starter-docker.md",
+    "productQualification": "docs/qualification/kfd-agent-hub-20.md",
+    "installedProfileRegistry": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json",
+    "kfdPackage": "@kungfu-tech/kfd@1.0.0-alpha.46",
+    "kfdProfile": "protocols/agent-hub",
+    "cleanRoomWitness": "https://github.com/kungfu-systems/agent-hub-demo"
+  },
+  "responsibilities": {
+    "starter": [
+      "render-one-explicit-compose-project",
+      "bind-exact-image-and-contract-versions",
+      "project-safe-defaults-and-preflight",
+      "manage-lifecycle-with-visible-receipts",
+      "expose-backup-restore-and-upgrade-plans"
+    ],
+    "protocolAndScaffold": [
+      "define-agent-hub-envelope-and-profile",
+      "provide-four-language-envelope-smoke-scaffolds",
+      "own-hub-20-vectors-failure-inventory-and-verifier"
+    ],
+    "cleanRoomDemo": [
+      "witness-public-kfd-consumption",
+      "witness-two-independent-file-cas-hubs",
+      "remain-non-production-and-non-product-authority"
+    ],
+    "productionImplementation": [
+      "own-hub-semantics-and-persistence",
+      "pass-hub-20-and-starter-evidence-ladder",
+      "publish-supported-images-and-upgrade-policy",
+      "operate-backup-restore-security-and-support"
+    ]
+  },
+  "distribution": {
+    "orchestrator": "docker-compose-v2",
+    "imageStatus": "not-built-or-published",
+    "composeStatus": "not-implemented",
+    "imageReferencePolicy": "digest-required-no-floating-tags",
+    "buildPerformed": false,
+    "publishPerformed": false,
+    "daemonAccessed": false
+  },
+  "topology": {
+    "projectName": "kungfu-hub",
+    "services": [
+      {
+        "id": "hub",
+        "kind": "long-running-product",
+        "required": true,
+        "profiles": ["default"],
+        "runsAsNonRoot": true,
+        "readOnlyRootFilesystem": true,
+        "privileged": false,
+        "dockerSocket": false,
+        "healthAuthority": "semantic-readiness-receipt-not-process-liveness"
+      },
+      {
+        "id": "verify",
+        "kind": "bounded-conformance-job",
+        "required": false,
+        "profiles": ["verify"],
+        "runsAsNonRoot": true,
+        "readOnlyRootFilesystem": true,
+        "privileged": false,
+        "dockerSocket": false,
+        "healthAuthority": "official-kfd-verifier-result"
+      }
+    ],
+    "restartPolicy": "unless-stopped-after-semantic-readiness",
+    "replicas": 1,
+    "multiWriter": false
+  },
+  "oneCommand": {
+    "command": "kungfu hub starter up",
+    "implementationStatus": "not-implemented",
+    "defaultMode": "plan-then-apply",
+    "requiredPreflight": [
+      "resolve-explicit-project-directory",
+      "resolve-exact-image-digest",
+      "validate-contract-version-compatibility",
+      "validate-volume-ownership-and-permissions",
+      "validate-loopback-or-internal-network-exposure",
+      "emit-content-addressed-plan"
+    ],
+    "applyRequires": [
+      "exact-current-plan-root",
+      "explicit-project-scope",
+      "daemon-availability",
+      "no-conflicting-writer"
+    ],
+    "successReceipt": "semantic-ready-with-contract-image-and-volume-roots"
+  },
+  "storage": {
+    "volumes": [
+      {
+        "id": "hub-home",
+        "purpose": "authoritative-hub-state-and-identity",
+        "writers": ["hub"],
+        "readers": ["hub"],
+        "hostPathAllowed": false,
+        "backupClass": "required"
+      },
+      {
+        "id": "qualification-evidence",
+        "purpose": "append-only-exported-verification-evidence",
+        "writers": ["verify"],
+        "readers": ["hub", "verify"],
+        "hostPathAllowed": false,
+        "backupClass": "optional"
+      }
+    ],
+    "realUserHomeMount": false,
+    "anonymousVolumesAllowed": false,
+    "automaticMigration": false,
+    "destructiveInitialization": false
+  },
+  "networking": {
+    "mode": "private-bridge",
+    "hostNetwork": false,
+    "publicPortsByDefault": [],
+    "loopbackPublishRequiresExplicitPlan": true,
+    "egressPolicy": "deny-by-default-with-explicit-destinations",
+    "serviceDiscovery": "compose-service-name-not-authority"
+  },
+  "identity": {
+    "authoritative": [
+      "workspace-identity-root",
+      "hub-instance-id-from-hub-home",
+      "contract-version",
+      "image-manifest-digest",
+      "volume-generation"
+    ],
+    "nonAuthoritative": [
+      "container-id",
+      "container-name",
+      "hostname",
+      "compose-project-display-name",
+      "ip-address"
+    ],
+    "firstBoot": "mint-instance-id-on-empty-explicit-volume-only",
+    "restart": "preserve-instance-id-and-increment-runtime-generation",
+    "clone": "requires-explicit-new-instance-id-and-provenance-receipt"
+  },
+  "lifecycle": {
+    "states": [
+      "absent",
+      "planned",
+      "initialized",
+      "starting",
+      "ready",
+      "draining",
+      "stopped",
+      "upgrading",
+      "recovering",
+      "blocked"
+    ],
+    "readyRequires": [
+      "exact-contract-compatible",
+      "single-writer-fence-held",
+      "authoritative-state-opened",
+      "hub-capabilities-readable",
+      "readiness-receipt-written"
+    ],
+    "stop": "drain-then-fence-release",
+    "uncertainStart": "blocked-until-inspected",
+    "processRunningProvesReady": false
+  },
+  "compatibility": {
+    "pinnedDimensions": [
+      "starter-contract-major",
+      "image-manifest-digest",
+      "kungfu-product-version",
+      "kfd-agent-hub-profile-version",
+      "state-format-version"
+    ],
+    "floatingTagsAllowed": false,
+    "unknownCombination": "fail-closed",
+    "upgrade": "plan-side-by-side-verify-commit",
+    "rollback": "retain-previous-image-and-unmodified-pre-commit-volume-generation",
+    "downgrade": "unsupported-unless-explicitly-qualified"
+  },
+  "recovery": {
+    "backup": "fenced-consistent-cut-plus-manifest",
+    "restoreTarget": "new-empty-volume",
+    "verification": [
+      "manifest-digest",
+      "complete-member-roots",
+      "workspace-and-instance-identity-policy",
+      "state-format-compatibility",
+      "semantic-readiness-after-reopen"
+    ],
+    "inPlaceOverwrite": false,
+    "automaticDataRepair": false,
+    "recoveryClaimRequiresQualifiedCampaign": true
+  },
+  "security": {
+    "secretsInImageOrContract": false,
+    "secretDelivery": "runtime-secret-mount-or-provider",
+    "dockerSocketMount": false,
+    "privilegedContainers": false,
+    "rootUser": false,
+    "capabilityAdditions": [],
+    "readOnlyRootFilesystem": true
+  },
+  "observability": {
+    "stdout": "diagnostic-projection-not-fact-authority",
+    "health": "read-only-semantic-report",
+    "receipts": [
+      "plan",
+      "initialize",
+      "ready",
+      "drain",
+      "upgrade",
+      "rollback",
+      "backup",
+      "restore"
+    ],
+    "secretRedactionRequired": true
+  },
+  "evidenceLadder": [
+    {
+      "id": "concept-static",
+      "status": "passed",
+      "requiredEvidence": ["schema", "semantic-checker", "negative-tests", "documentation-links"],
+      "proves": "source-contract-consistency-only"
+    },
+    {
+      "id": "compose-render",
+      "status": "future",
+      "requiredEvidence": ["deterministic-render", "digest-pins", "policy-lint"],
+      "proves": "rendered-topology-only"
+    },
+    {
+      "id": "daemon-smoke",
+      "status": "future",
+      "requiredEvidence": ["fresh-daemon", "isolated-volumes", "readiness-receipt"],
+      "proves": "named-platform-local-start-only"
+    },
+    {
+      "id": "restart-and-fencing",
+      "status": "future",
+      "requiredEvidence": ["restart", "single-writer-rejection", "uncertain-start"],
+      "proves": "named-platform-process-recovery-only"
+    },
+    {
+      "id": "backup-restore",
+      "status": "future",
+      "requiredEvidence": ["fresh-volume-restore", "root-parity", "fault-injection"],
+      "proves": "named-campaign-restore-only"
+    },
+    {
+      "id": "upgrade-rollback",
+      "status": "future",
+      "requiredEvidence": ["previous-to-candidate", "commit-fence", "rollback-parity"],
+      "proves": "exact-version-pair-only"
+    },
+    {
+      "id": "production-admission",
+      "status": "future",
+      "requiredEvidence": ["supported-platform-matrix", "security-review", "operational-slo", "release-passport"],
+      "proves": "bounded-published-profile-only"
+    }
+  ],
+  "nonClaims": [
+    "no-image-built-or-published",
+    "no-compose-bundle-implemented",
+    "no-docker-daemon-qualification",
+    "no-one-command-cli-implemented",
+    "no-restart-backup-restore-or-upgrade-evidence",
+    "no-production-fitness-security-or-slo-claim",
+    "no-external-adoption-or-kfd-certification",
+    "no-network-interoperability-or-multi-host-claim",
+    "no-stable-release-line-opened"
+  ]
+}

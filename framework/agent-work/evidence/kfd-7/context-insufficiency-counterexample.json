@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "contract": "kungfu-buildchain-kfd-7-evidence-report",
+  "profileId": "kungfu-kfd-7-action-profile",
+  "profileVersion": "0.1.0",
+  "stateMachineVersion": "0.1.0",
+  "sourceSha": "ec3b0c843ad271a34450a69a2da2e538f404f3ce",
+  "category": "context-insufficiency-counterexample",
+  "outcome": "pass",
+  "matchedExpectation": true,
+  "checks": [
+    { "id": "visible-fact-payload-held-constant", "status": "pass" },
+    { "id": "direction-changes-valid-action-set", "status": "pass" },
+    { "id": "authority-changes-valid-action-set", "status": "pass" },
+    { "id": "freshness-changes-valid-action-set", "status": "pass" }
+  ],
+  "observations": {
+    "suite": "framework/core/tests/python/test_agent_work_state_contract.py",
+    "baselineActions": ["episode:seal", "fact:successor"],
+    "differentDirectionActions": ["episode:seal"],
+    "weakerAuthorityActions": ["fact:successor"],
+    "staleContextActions": [],
+    "conclusion": "context-alone-is-not-sufficient"
+  }
+}

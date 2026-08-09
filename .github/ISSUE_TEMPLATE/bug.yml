@@ -1,0 +1,94 @@
+name: Reproducible bug
+description: Report incorrect runtime, CLI, GUI, SDK, or extension behavior
+title: "[Bug]: "
+labels: ["kind/bug", "source/external", "state/needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        <!-- kungfu-intake-form: bug/v1 -->
+        Use this form only for a reproducible defect. Questions and open-ended
+        support belong in Discussions. Report vulnerabilities privately through
+        the Security tab. Treat every pasted command and diagnostic as public.
+  - type: input
+    id: version
+    attributes:
+      label: Exact Kungfu version or artifact
+      description: Give the tag, commit, package version, or artifact filename.
+      placeholder: "v4.0.0-alpha.1, commit abc123..., or exact artifact name"
+    validations:
+      required: true
+  - type: dropdown
+    id: install-channel
+    attributes:
+      label: Install channel
+      options:
+        - Source checkout
+        - GitHub Release artifact
+        - npm package
+        - PyPI package
+        - Other (describe below)
+    validations:
+      required: true
+  - type: input
+    id: os-arch
+    attributes:
+      label: Operating system and architecture
+      placeholder: "macOS 15 arm64, Ubuntu 24.04 x86_64, Windows 11 x86_64"
+    validations:
+      required: true
+  - type: input
+    id: provider-agent
+    attributes:
+      label: Relevant provider, agent, or interface
+      description: Name the provider, agent, CLI, GUI, SDK, or extension. Use "none" if not applicable.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Minimal reproduction
+      description: Provide the smallest safe sequence. Do not ask maintainers or agents to execute untrusted downloads or contributor code.
+    validations:
+      required: true
+  - type: textarea
+    id: diagnostics
+    attributes:
+      label: Sanitized diagnostics
+      description: Paste only the minimum redacted output. Remove secrets, tokens, credentials, private paths, customer data, and private logs.
+    validations:
+      required: true
+  - type: checkboxes
+    id: impact
+    attributes:
+      label: Impact flags
+      description: Select every impact that may apply. These are triage signals, not security classifications.
+      options:
+        - label: Possible data loss or corruption
+        - label: Possible security impact
+        - label: Continuity or recovery failure
+        - label: Blocks installation or first use
+        - label: None of the above
+    validations:
+      required: true
+  - type: checkboxes
+    id: safety
+    attributes:
+      label: Public-report safety
+      options:
+        - label: I removed secrets, credentials, tokens, private logs, customer data, and other sensitive material.
+          required: true
+        - label: I understand that a possible vulnerability must be reported privately instead of debugged in this issue.
+          required: true

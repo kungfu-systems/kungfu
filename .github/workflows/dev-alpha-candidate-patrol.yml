@@ -1,0 +1,97 @@
+# SPDX-License-Identifier: Apache-2.0
+
+name: Dev to Alpha Candidate Patrol
+
+on:
+  workflow_run:
+    workflows:
+      - Dev Verify Patrol
+      - Alpha promotion preflight
+    types:
+      - completed
+  schedule:
+    # Offset 30-minute recovery patrol; avoids GitHub's top-of-hour load peak.
+    - cron: "17,47 * * * *"
+  workflow_dispatch:
+    inputs:
+      buildchain-ref:
+        description: Temporary Buildchain runtime ref for trusted manual validation
+        required: false
+        default: ""
+      create-pull-request:
+        description: Create or reuse the exact source-lock Alpha candidate PR
+        required: false
+        type: boolean
+        default: false
+      dry-run:
+        description: Evaluate exact evidence without GitHub writes
+        required: false
+        type: boolean
+        default: true
+      reactivation-authorized:
+        description: Explicitly authorize reactivation of a tombstoned exact source
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  actions: read
+  contents: read
+  pull-requests: read
+
+concurrency:
+  group: dev-alpha-candidate-patrol-${{ github.repository }}-${{ github.event.repository.default_branch }}
+  cancel-in-progress: false
+
+jobs:
+  resolve-channels:
+    runs-on: ubuntu-24.04
+    permissions: {}
+    outputs:
+      source-branch: ${{ steps.channels.outputs.source-branch }}
+      target-branch: ${{ steps.channels.outputs.target-branch }}
+    steps:
+      - name: Resolve the active dev and Alpha channels
+        id: channels
+        shell: bash
+        env:
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        run: |
+          set -euo pipefail
+          case "$DEFAULT_BRANCH" in
+            dev/v*/v*) ;;
+            *)
+              echo "repository default branch is not a dev channel: $DEFAULT_BRANCH" >&2
+              exit 1
+              ;;
+          esac
+          echo "source-branch=$DEFAULT_BRANCH" >>"$GITHUB_OUTPUT"
+          echo "target-branch=alpha/${DEFAULT_BRANCH#dev/}" >>"$GITHUB_OUTPUT"
+
+  candidate:
+    needs: resolve-channels
+    if: >-
+      github.event_name != 'workflow_run' ||
+      github.event.workflow_run.head_branch == needs.resolve-channels.outputs.source-branch
+    permissions:
+      actions: read
+      contents: write
+      pull-requests: write
+    # The reusable workflow and its runtime are pinned to the same merged,
+    # immutable Buildchain source.
+    uses: kungfu-systems/buildchain/.github/workflows/dev-alpha-candidate-patrol.yml@2e7e07902ac28d8f3edcfb81098ef9ebc7a91878
+    with:
+      buildchain-ref: ${{ inputs.buildchain-ref || '2e7e07902ac28d8f3edcfb81098ef9ebc7a91878' }}
+      source-branch: ${{ needs.resolve-channels.outputs.source-branch }}
+      target-branch: ${{ needs.resolve-channels.outputs.target-branch }}
+      dev-workflow-path: .github/workflows/dev-verify-patrol.yml
+      alpha-workflow-path: .github/workflows/alpha-promotion-preflight.yml
+      max-age-seconds: 604800
+      pull-request-body-prefix-renderer: scripts/adr-release-gate.mjs
+      settlement-authorized: ${{ github.event_name != 'workflow_dispatch' || inputs.create-pull-request }}
+      dry-run: ${{ github.event_name == 'workflow_dispatch' && inputs.dry-run }}
+      reactivation-authorized: ${{ github.event_name == 'workflow_dispatch' && inputs.create-pull-request && inputs.reactivation-authorized }}
+      auto-merge: true
+      merge-method: rebase
+    secrets:
+      promotion-token: ${{ secrets.KUNGFU_GITHUB_TOKEN }}

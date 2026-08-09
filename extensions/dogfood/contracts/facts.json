@@ -1,0 +1,25 @@
+{
+  "schema": "kungfu.profile-fact-surfaces/v1",
+  "surfaces": [
+    {
+      "id": "kungfu.dogfood-feedback.finding",
+      "schema": "kungfu.dogfood-feedback.finding/v1",
+      "title": "Immutable dogfood Finding"
+    },
+    {
+      "id": "kungfu.dogfood-feedback.issue",
+      "schema": "kungfu.dogfood-feedback.issue/v1",
+      "title": "Versioned dogfood Issue"
+    },
+    {
+      "id": "kungfu.dogfood-feedback.consideration",
+      "schema": "kungfu.dogfood-feedback.consideration/v1",
+      "title": "Assignment dogfood consideration receipt"
+    },
+    {
+      "id": "kungfu.dogfood-feedback.migration",
+      "schema": "kungfu.dogfood-feedback.migration/v1",
+      "title": "Lossless source migration receipt"
+    }
+  ]
+}

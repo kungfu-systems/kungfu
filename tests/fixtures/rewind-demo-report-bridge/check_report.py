@@ -4,15 +4,19 @@ import os
 import sys
 
 import kungfu
-from kungfu.rewind import MSG_APPROVAL_DECISION, MSG_COST_SNAPSHOT
+from kungfu.rewind import (
+    ACTION_APPROVAL_DECISION,
+    ACTION_COST_SNAPSHOT,
+    CARRIER_REWIND_ACTION,
+)
 from kungfu.rewind.fb.ApprovalDecision import ApprovalDecision
 from kungfu.rewind.fb.Attribution import Attribution
 from kungfu.rewind.fb.CostSnapshot import CostSnapshot
 from kungfu.rewind.fb.Decision import Decision
-from kungfu.work import store as work_store
+from kungfu.rewind.wire import unwrap_event
 
-lf = kungfu.__binding__.longfist
-yjj = kungfu.__binding__.yijinjing
+schema = kungfu.__binding__.yijinjing
+yjj = kungfu.__binding__.runtime
 
 home, run_id, work_id = sys.argv[1:4]
 failures = []
@@ -23,29 +27,28 @@ def check(name, ok, detail=""):
         failures.append(name + (f" ({detail})" if detail else ""))
 
 
-items = work_store.load(home)
-entry = items.get(work_id)
-check("work item exists", entry is not None)
-if entry:
-    linked = [row["run_id"] for row in entry["runs"]]
-    check("reported run linked to work", run_id in linked, str(linked))
-
 loc = yjj.location(
-    lf.enums.mode.LIVE,
-    lf.enums.category.SYSTEM,
+    schema.enums.mode.LIVE,
+    schema.enums.location_role.SYSTEM,
     "rewind",
     run_id,
     yjj.locator(home),
 )
 
 
-def frames(msg_type):
-    return [
-        bytes(payload) for _header, payload in yjj.assemble(loc, 0).read_bytes(msg_type)
-    ]
+def frames(action_type):
+    result = []
+    for _header, payload in yjj.assemble(loc, 0).read_bytes(CARRIER_REWIND_ACTION):
+        event = unwrap_event(payload)
+        if event is None:
+            continue
+        current_action_type, event_payload = event
+        if current_action_type == action_type:
+            result.append(bytes(event_payload))
+    return result
 
 
-cost_frames = frames(MSG_COST_SNAPSHOT)
+cost_frames = frames(ACTION_COST_SNAPSHOT)
 check("one CostSnapshot frame", len(cost_frames) == 1, str(len(cost_frames)))
 if cost_frames:
     cost = CostSnapshot.GetRootAs(cost_frames[0], 0)
@@ -58,7 +61,7 @@ if cost_frames:
     check("cost output tokens", cost.OutputTokens() == 45)
     check("manual estimate ambiguous", cost.AmbiguousAttribution())
 
-approval_frames = frames(MSG_APPROVAL_DECISION)
+approval_frames = frames(ACTION_APPROVAL_DECISION)
 check(
     "one ApprovalDecision frame",
     len(approval_frames) == 1,

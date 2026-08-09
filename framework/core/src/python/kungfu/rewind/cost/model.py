@@ -4,10 +4,10 @@
 # produces, before any of it becomes a journal event.
 #
 # Layering: this is the parse-layer contract — a plain dataclass shape, NOT a
-# wire event: no flatbuffers, no msg_type, no journal. Its job is to prove a
+# wire event: no flatbuffers, no carrier_type, no journal. Its job is to prove a
 # run's cost/usage facts can be parsed out of a provider CLI's structured output
 # honestly and completely. When a later slice puts these facts on the journal,
-# this contract is the draft the rewind open-layer event (msg_type 30008+) is
+# this contract is the draft the rewind.cost.snapshot action-envelope payload is
 # pinned from — one place decides the fields.
 #
 # Honesty is the whole product promise here. Every snapshot carries an

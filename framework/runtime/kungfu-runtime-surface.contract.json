@@ -1,0 +1,791 @@
+{
+  "schema": "kungfu.runtime-surface.contract/v1",
+  "id": "kungfu-runtime-surface",
+  "version": 1,
+  "weldedSurface": "runtime-surface-provenance",
+  "description": "Fail-closed selection and rooted provenance for installed-product, source-checkout, hybrid-boundary, and capability-negotiated Kungfu execution.",
+  "contractSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+      "schema",
+      "id",
+      "version",
+      "weldedSurface",
+      "description",
+      "contractSchema",
+      "surfaceClasses",
+      "capabilities",
+      "providers",
+      "operations",
+      "receiptSchema",
+      "authorityBoundaries",
+      "qualification"
+    ],
+    "properties": {
+      "schema": {
+        "const": "kungfu.runtime-surface.contract/v1"
+      },
+      "id": {
+        "const": "kungfu-runtime-surface"
+      },
+      "version": {
+        "type": "integer",
+        "minimum": 1
+      },
+      "weldedSurface": {
+        "const": "runtime-surface-provenance"
+      },
+      "description": {
+        "type": "string",
+        "minLength": 1
+      },
+      "contractSchema": {
+        "type": "object"
+      },
+      "surfaceClasses": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "installed-product",
+          "source-checkout",
+          "hybrid-boundary",
+          "capability-negotiated"
+        ],
+        "properties": {
+          "installed-product": {
+            "$ref": "#/$defs/surfaceClass"
+          },
+          "source-checkout": {
+            "$ref": "#/$defs/surfaceClass"
+          },
+          "hybrid-boundary": {
+            "$ref": "#/$defs/surfaceClass"
+          },
+          "capability-negotiated": {
+            "$ref": "#/$defs/surfaceClass"
+          }
+        }
+      },
+      "capabilities": {
+        "type": "array",
+        "minItems": 1,
+        "uniqueItems": true,
+        "items": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9.-]+$"
+        }
+      },
+      "providers": {
+        "type": "array",
+        "minItems": 1,
+        "items": {
+          "$ref": "#/$defs/provider"
+        }
+      },
+      "operations": {
+        "type": "array",
+        "minItems": 1,
+        "items": {
+          "$ref": "#/$defs/operation"
+        }
+      },
+      "receiptSchema": {
+        "type": "object"
+      },
+      "authorityBoundaries": {
+        "type": "object"
+      },
+      "qualification": {
+        "type": "object"
+      }
+    },
+    "$defs": {
+      "surfaceClass": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "owner",
+          "rule"
+        ],
+        "properties": {
+          "owner": {
+            "type": "string",
+            "minLength": 1
+          },
+          "rule": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      },
+      "provider": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "owner",
+          "surfaceClass",
+          "executableKind",
+          "capabilities",
+          "qualificationStates"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9.-]+$"
+          },
+          "owner": {
+            "type": "string",
+            "minLength": 1
+          },
+          "surfaceClass": {
+            "$ref": "#/$defs/surfaceName"
+          },
+          "executableKind": {
+            "enum": [
+              "installed-kungfu",
+              "source-shifu",
+              "composed-boundary",
+              "virtual-selector"
+            ]
+          },
+          "capabilities": {
+            "type": "array",
+            "uniqueItems": true,
+            "items": {
+              "type": "string"
+            }
+          },
+          "qualificationStates": {
+            "type": "array",
+            "minItems": 1,
+            "uniqueItems": true,
+            "items": {
+              "enum": [
+                "qualified",
+                "source-qualified"
+              ]
+            }
+          }
+        }
+      },
+      "operation": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "owner",
+          "allowedSurfaces",
+          "requiredCapabilities",
+          "selectionMode",
+          "providerPreference",
+          "fallback"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9.-]+$"
+          },
+          "owner": {
+            "type": "string",
+            "minLength": 1
+          },
+          "allowedSurfaces": {
+            "type": "array",
+            "minItems": 1,
+            "uniqueItems": true,
+            "items": {
+              "$ref": "#/$defs/surfaceName"
+            }
+          },
+          "requiredCapabilities": {
+            "type": "array",
+            "minItems": 1,
+            "uniqueItems": true,
+            "items": {
+              "type": "string"
+            }
+          },
+          "selectionMode": {
+            "enum": [
+              "exact",
+              "capability-negotiated"
+            ]
+          },
+          "providerPreference": {
+            "type": "array",
+            "minItems": 1,
+            "uniqueItems": true,
+            "items": {
+              "type": "string"
+            }
+          },
+          "fallback": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "mode",
+              "targets",
+              "reasonRequired"
+            ],
+            "properties": {
+              "mode": {
+                "enum": [
+                  "forbidden",
+                  "explicit-qualified"
+                ]
+              },
+              "targets": {
+                "type": "array",
+                "uniqueItems": true,
+                "items": {
+                  "$ref": "#/$defs/surfaceName"
+                }
+              },
+              "reasonRequired": {
+                "const": true
+              }
+            }
+          }
+        }
+      },
+      "surfaceName": {
+        "enum": [
+          "installed-product",
+          "source-checkout",
+          "hybrid-boundary",
+          "capability-negotiated"
+        ]
+      }
+    }
+  },
+  "surfaceClasses": {
+    "installed-product": {
+      "owner": "kungfu-product-runtime",
+      "rule": "Use one exact installed kungfu executable and its qualified product artifacts; a source checkout cannot substitute for it."
+    },
+    "source-checkout": {
+      "owner": "shifu-source-runtime",
+      "rule": "Use shifu and artifacts bound to one exact Git commit, tree, and worktree; an installed product cannot substitute for source build or test."
+    },
+    "hybrid-boundary": {
+      "owner": "kungfu-runtime-surface-composition",
+      "rule": "Compose independently rooted installed and source authorities without transferring ownership or hiding either side."
+    },
+    "capability-negotiated": {
+      "owner": "kungfu-runtime-surface-selector",
+      "rule": "Select deterministically from contract-permitted qualified providers and record the selected concrete surface."
+    }
+  },
+  "capabilities": [
+    "assignment.capture",
+    "assignment.seal-verify",
+    "bundle.read",
+    "context.compose",
+    "dogfood.capture",
+    "runtime.provenance",
+    "source.build",
+    "source.test"
+  ],
+  "providers": [
+    {
+      "id": "installed-kungfu",
+      "owner": "kungfu-product-runtime",
+      "surfaceClass": "installed-product",
+      "executableKind": "installed-kungfu",
+      "capabilities": [
+        "assignment.capture",
+        "assignment.seal-verify",
+        "bundle.read",
+        "dogfood.capture",
+        "runtime.provenance"
+      ],
+      "qualificationStates": [
+        "qualified"
+      ]
+    },
+    {
+      "id": "source-shifu",
+      "owner": "shifu-source-runtime",
+      "surfaceClass": "source-checkout",
+      "executableKind": "source-shifu",
+      "capabilities": [
+        "dogfood.capture",
+        "runtime.provenance",
+        "source.build",
+        "source.test"
+      ],
+      "qualificationStates": [
+        "source-qualified"
+      ]
+    },
+    {
+      "id": "atlas-kungfu-hybrid",
+      "owner": "kungfu-runtime-surface-composition",
+      "surfaceClass": "hybrid-boundary",
+      "executableKind": "composed-boundary",
+      "capabilities": [
+        "context.compose",
+        "dogfood.capture",
+        "runtime.provenance"
+      ],
+      "qualificationStates": [
+        "qualified",
+        "source-qualified"
+      ]
+    },
+    {
+      "id": "contract-selector",
+      "owner": "kungfu-runtime-surface-selector",
+      "surfaceClass": "capability-negotiated",
+      "executableKind": "virtual-selector",
+      "capabilities": [
+        "runtime.provenance"
+      ],
+      "qualificationStates": [
+        "qualified",
+        "source-qualified"
+      ]
+    }
+  ],
+  "operations": [
+    {
+      "id": "assignment.capture",
+      "owner": "kungfu.assignment",
+      "allowedSurfaces": [
+        "installed-product"
+      ],
+      "requiredCapabilities": [
+        "assignment.capture",
+        "runtime.provenance"
+      ],
+      "selectionMode": "exact",
+      "providerPreference": [
+        "installed-kungfu"
+      ],
+      "fallback": {
+        "mode": "forbidden",
+        "targets": [],
+        "reasonRequired": true
+      }
+    },
+    {
+      "id": "source.build",
+      "owner": "shifu",
+      "allowedSurfaces": [
+        "source-checkout"
+      ],
+      "requiredCapabilities": [
+        "runtime.provenance",
+        "source.build"
+      ],
+      "selectionMode": "exact",
+      "providerPreference": [
+        "source-shifu"
+      ],
+      "fallback": {
+        "mode": "forbidden",
+        "targets": [],
+        "reasonRequired": true
+      }
+    },
+    {
+      "id": "source.test",
+      "owner": "shifu",
+      "allowedSurfaces": [
+        "source-checkout"
+      ],
+      "requiredCapabilities": [
+        "runtime.provenance",
+        "source.test"
+      ],
+      "selectionMode": "exact",
+      "providerPreference": [
+        "source-shifu"
+      ],
+      "fallback": {
+        "mode": "forbidden",
+        "targets": [],
+        "reasonRequired": true
+      }
+    },
+    {
+      "id": "portable-bundle.consume",
+      "owner": "kungfu.agent.documentation",
+      "allowedSurfaces": [
+        "installed-product"
+      ],
+      "requiredCapabilities": [
+        "bundle.read",
+        "runtime.provenance"
+      ],
+      "selectionMode": "exact",
+      "providerPreference": [
+        "installed-kungfu"
+      ],
+      "fallback": {
+        "mode": "forbidden",
+        "targets": [],
+        "reasonRequired": true
+      }
+    },
+    {
+      "id": "dogfood.capture",
+      "owner": "kungfu.dogfood-feedback",
+      "allowedSurfaces": [
+        "installed-product",
+        "source-checkout",
+        "hybrid-boundary"
+      ],
+      "requiredCapabilities": [
+        "dogfood.capture",
+        "runtime.provenance"
+      ],
+      "selectionMode": "capability-negotiated",
+      "providerPreference": [
+        "installed-kungfu",
+        "source-shifu",
+        "atlas-kungfu-hybrid"
+      ],
+      "fallback": {
+        "mode": "explicit-qualified",
+        "targets": [
+          "source-checkout",
+          "hybrid-boundary"
+        ],
+        "reasonRequired": true
+      }
+    },
+    {
+      "id": "context.consume",
+      "owner": "xinfa-context-authority",
+      "allowedSurfaces": [
+        "hybrid-boundary"
+      ],
+      "requiredCapabilities": [
+        "context.compose",
+        "runtime.provenance"
+      ],
+      "selectionMode": "exact",
+      "providerPreference": [
+        "atlas-kungfu-hybrid"
+      ],
+      "fallback": {
+        "mode": "forbidden",
+        "targets": [],
+        "reasonRequired": true
+      }
+    },
+    {
+      "id": "assignment.seal-verify",
+      "owner": "kungfu.assignment",
+      "allowedSurfaces": [
+        "installed-product"
+      ],
+      "requiredCapabilities": [
+        "assignment.seal-verify",
+        "runtime.provenance"
+      ],
+      "selectionMode": "exact",
+      "providerPreference": [
+        "installed-kungfu"
+      ],
+      "fallback": {
+        "mode": "forbidden",
+        "targets": [],
+        "reasonRequired": true
+      }
+    }
+  ],
+  "receiptSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+      "schema",
+      "receiptRoot",
+      "contractRoot",
+      "operationId",
+      "runtimeSurface",
+      "selectedProvider",
+      "executable",
+      "source",
+      "bundleRoot",
+      "authorityRoots",
+      "capabilities",
+      "selection",
+      "qualification",
+      "reason"
+    ],
+    "properties": {
+      "schema": {
+        "const": "kungfu.runtime-surface-receipt/v1"
+      },
+      "receiptRoot": {
+        "$ref": "#/$defs/root"
+      },
+      "contractRoot": {
+        "$ref": "#/$defs/root"
+      },
+      "operationId": {
+        "type": "string"
+      },
+      "runtimeSurface": {
+        "enum": [
+          "installed-product",
+          "source-checkout",
+          "hybrid-boundary"
+        ]
+      },
+      "selectedProvider": {
+        "type": "string"
+      },
+      "executable": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "path",
+          "digest",
+          "kind",
+          "version"
+        ],
+        "properties": {
+          "path": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "digest": {
+            "oneOf": [
+              {
+                "$ref": "#/$defs/root"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "kind": {
+            "type": "string"
+          },
+          "version": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "source": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "commit",
+          "tree",
+          "worktree"
+        ],
+        "properties": {
+          "commit": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "pattern": "^[0-9a-f]{40}$"
+          },
+          "tree": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "pattern": "^(git:)?[0-9a-f]{40}$"
+          },
+          "worktree": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "bundleRoot": {
+        "oneOf": [
+          {
+            "$ref": "#/$defs/root"
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "authorityRoots": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "assignmentRequestRoot",
+          "workDefinitionRoot",
+          "workRoot"
+        ],
+        "properties": {
+          "assignmentRequestRoot": {
+            "oneOf": [
+              {
+                "$ref": "#/$defs/root"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "workDefinitionRoot": {
+            "oneOf": [
+              {
+                "$ref": "#/$defs/root"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "workRoot": {
+            "oneOf": [
+              {
+                "$ref": "#/$defs/root"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        }
+      },
+      "capabilities": {
+        "type": "array",
+        "minItems": 1,
+        "uniqueItems": true,
+        "items": {
+          "type": "string"
+        }
+      },
+      "selection": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "mode",
+          "requestedSurface",
+          "fallback"
+        ],
+        "properties": {
+          "mode": {
+            "enum": [
+              "exact",
+              "capability-negotiated"
+            ]
+          },
+          "requestedSurface": {
+            "enum": [
+              "installed-product",
+              "source-checkout",
+              "hybrid-boundary",
+              "capability-negotiated"
+            ]
+          },
+          "fallback": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "allowed",
+              "used",
+              "from",
+              "to",
+              "reason"
+            ],
+            "properties": {
+              "allowed": {
+                "type": "boolean"
+              },
+              "used": {
+                "type": "boolean"
+              },
+              "from": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "to": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "reason": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            }
+          }
+        }
+      },
+      "qualification": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "state",
+          "evidenceRoots"
+        ],
+        "properties": {
+          "state": {
+            "enum": [
+              "qualified",
+              "source-qualified"
+            ]
+          },
+          "evidenceRoots": {
+            "type": "array",
+            "minItems": 1,
+            "uniqueItems": true,
+            "items": {
+              "$ref": "#/$defs/root"
+            }
+          }
+        }
+      },
+      "reason": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "$defs": {
+      "root": {
+        "type": "string",
+        "pattern": "^sha256:[0-9a-f]{64}$"
+      }
+    }
+  },
+  "authorityBoundaries": {
+    "atlas": "consumer-and-ledger-only",
+    "assignmentAndWork": "execution-authority",
+    "xinfa": "context-authority",
+    "shifu": "source-build-authority",
+    "buildchain": "delivery-and-publication-attestation"
+  },
+  "qualification": {
+    "matrixSchema": "kungfu.runtime-surface-qualification/v1",
+    "requiredRows": [
+      "assignment-capture-installed",
+      "source-build-test-source",
+      "portable-bundle-installed",
+      "dogfood-actual-surface",
+      "context-hybrid",
+      "seal-installed"
+    ],
+    "unknownRows": "reject",
+    "rootDisagreement": "reject",
+    "silentFallback": "reject"
+  }
+}

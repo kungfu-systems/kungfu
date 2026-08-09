@@ -1,15 +1,15 @@
 // SPDX-License-Identifier: Apache-2.0
 //
-// Event-dispatch latency baseline, node watcher form (ADR-0005 evidence).
+// Event-dispatch latency baseline, node watcher form (KF-ADR-019f86da-4f90-7f7b-90be-c002b024d412 evidence).
 //
-// Starts a master, attaches the real node Watcher under plain node
+// Starts a coordinator, attaches the real node Watcher under plain node
 // (dispatch_watcher_bench.js), drives typed Quote load through a registered
-// apprentice, then prints the probe reports collected on the watcher side.
+// peer, then prints the probe reports collected on the watcher side.
 // Requires the core dev environment (built dist/kungfu) and the repo-pinned
-// node — run under ./kungfu-code or fnm so process.execPath (used to spawn the
+// node — run under ./shifu or fnm so process.execPath (used to spawn the
 // watcher) matches the ABI of the built kungfu_node.node binding.
 //
-// Usage: node tests/bench/dispatch_bench_watcher.mjs [event-count]
+// Usage: node tests/bench/dispatch_bench_watcher.mjs [event-count] [carrier-type]
 
 import { spawn } from 'node:child_process';
 import fs from 'node:fs';
@@ -24,7 +24,7 @@ import {
   probeEnv,
   runLoad,
   sleep,
-  startMaster,
+  startCoordinator,
   waitExit,
 } from './_bench.mjs';
 
@@ -33,17 +33,20 @@ const coreDir = path.resolve(benchDir, '..', '..'); // framework/core
 const repoDir = path.resolve(coreDir, '..', '..'); // repo root
 
 const count = Number.parseInt(process.argv[2] || '200000', 10);
+const carrierType = process.argv[3] || '601';
 
 const home = benchHome();
 console.log(`bench home: ${home}`);
 
 const env = probeEnv(coreDir);
-const master = startMaster(coreDir, home, env);
+const coordinator = startCoordinator(coreDir, home, env);
 
 await sleep(3000);
-if (!alive(master)) {
-  console.error('master failed to start:');
-  process.stderr.write(fs.readFileSync(path.join(home, 'master.out'), 'utf8'));
+if (!alive(coordinator)) {
+  console.error('coordinator failed to start:');
+  process.stderr.write(
+    fs.readFileSync(path.join(home, 'coordinator.out'), 'utf8'),
+  );
   process.exit(1);
 }
 
@@ -67,10 +70,26 @@ if (!alive(watcher)) {
   process.exit(1);
 }
 
-runLoad(benchDir, home, count, 'quote', env);
+const load = runLoad(benchDir, home, count, carrierType, env);
+if (load.error || load.status !== 0) {
+  console.error(
+    `dispatch load failed${load.error ? `: ${load.error.message}` : ` with status ${load.status}`}`,
+  );
+  process.exit(1);
+}
 
 // the watcher self-exits after its 40s window (+ unwind); wait it out
 await waitExit(watcher, 90000);
+if (alive(watcher)) {
+  watcher.kill();
+  coordinator.kill();
+  await Promise.all([waitExit(watcher, 5000), waitExit(coordinator, 5000)]);
+  console.error('watcher did not exit within 90 seconds');
+  process.exit(1);
+}
+
+coordinator.kill();
+await waitExit(coordinator, 5000);
 
 console.log('--- dispatch probe reports (watcher) ---');
 const reports = collectProbeReports([
@@ -84,4 +103,24 @@ if (reports.length === 0) {
   process.exit(1);
 }
 for (const line of reports) console.log(line);
+
+const carrierHex = Number.parseInt(carrierType, 10)
+  .toString(16)
+  .padStart(8, '0');
+const carrierReports = reports.filter((line) =>
+  line.includes(`carrier_type=0x${carrierHex}`),
+);
+const observed = carrierReports.reduce((maximum, line) => {
+  const match = line.match(/\bn=(\d+)\b/);
+  return match ? Math.max(maximum, Number.parseInt(match[1], 10)) : maximum;
+}, 0);
+if (observed < count) {
+  console.error(
+    `watcher observed ${observed}/${count} requested carrier ${carrierType} frames`,
+  );
+  process.exit(1);
+}
+console.log(
+  `watcher observed ${observed} requested carrier ${carrierType} frames`,
+);
 console.log(`bench home kept for inspection: ${home}`);

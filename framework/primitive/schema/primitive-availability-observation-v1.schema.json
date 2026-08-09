@@ -1,0 +1,64 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kungfu.tech/schema/primitive-availability-observation-v1.schema.json",
+  "title": "Kungfu Primitive Availability Observation v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "primitiveId", "catalogRoot", "runtime", "profileRoots", "boundary", "cut", "health"],
+  "properties": {
+    "schema": { "const": "kungfu.availability-observation/v1" },
+    "primitiveId": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]+$" },
+    "catalogRoot": { "$ref": "#/$defs/root" },
+    "runtime": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "workspace", "platform"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "workspace": { "type": "string", "minLength": 1 },
+        "platform": { "type": "string", "minLength": 1 }
+      }
+    },
+    "profileRoots": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/root" }
+    },
+    "boundary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["authorityPresent", "capabilityPresent", "storageOwnerAvailable"],
+      "properties": {
+        "authorityPresent": { "type": "boolean" },
+        "capabilityPresent": { "type": "boolean" },
+        "storageOwnerAvailable": { "type": "boolean" }
+      }
+    },
+    "cut": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["root", "observedAt"],
+      "properties": {
+        "root": { "$ref": "#/$defs/root" },
+        "observedAt": { "type": "string", "format": "date-time" }
+      }
+    },
+    "health": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "evidenceRoots"],
+      "properties": {
+        "status": { "enum": ["healthy", "degraded", "down"] },
+        "evidenceRoots": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/root" }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "root": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    }
+  }
+}

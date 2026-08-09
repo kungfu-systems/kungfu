@@ -135,6 +135,7 @@ export function openRemoteWork(options: OpenRemoteWorkOptions): RemoteWork {
       const work = openWork({
         binding,
         locator: { runtimeDir: projection.mirrorRuntime },
+        readFile,
       });
       for (const item of work.items()) {
         cachedItems.push({

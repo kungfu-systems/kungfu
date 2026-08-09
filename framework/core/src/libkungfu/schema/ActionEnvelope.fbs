@@ -1,0 +1,90 @@
+// SPDX-License-Identifier: Apache-2.0
+
+namespace kungfu.action.fb;
+
+enum PayloadEncoding : ubyte {
+  NONE = 0,
+  FLATBUFFERS = 1,
+  JSON = 2,
+  CONTENT_REFERENCE = 3,
+  OPAQUE = 4
+}
+
+table SchemaRef {
+  id:string (required);
+  version:uint = 1;
+}
+
+table Actor {
+  id:string;
+  kind:string;
+  storage_source_id:string;
+  source_type:string;
+}
+
+table Session {
+  run_id:string;
+  import_id:string;
+}
+
+table Source {
+  kind:string;
+  source_id:string;
+  source_path:string;
+  source_time:string;
+  schema_version:uint;
+}
+
+table Batch {
+  repo_root:string;
+  repo_head:string;
+  schema_version:uint;
+  missions:ulong;
+  goals:ulong;
+  markers:ulong;
+  warnings:ulong;
+}
+
+table Journal {
+  frame_uid:ulong;
+  trigger_frame_uid:ulong;
+  stream_id:ulong;
+  gen_time:long;
+  trigger_time:long;
+  carrier_type:int = 1000;
+  source:uint;
+  initial_source:uint;
+  dest:uint;
+  data_length:uint;
+  data_type:byte;
+  integrity_version:uint;
+  checksum_algorithm:string;
+  payload_checksum:ulong;
+  frame_checksum:ulong;
+}
+
+table Payload {
+  encoding:PayloadEncoding = NONE;
+  data:[ubyte];
+  hash_algorithm:string;
+  hash:string;
+  byte_len:ulong;
+  content_type:string;
+  state:string;
+}
+
+table ActionEnvelope {
+  version:ushort = 1;
+  action_type:string (required);
+  schema_ref:SchemaRef (required);
+  actor:Actor;
+  session:Session;
+  source:Source;
+  batch:Batch;
+  journal:Journal;
+  payload:Payload;
+}
+
+root_type ActionEnvelope;
+file_identifier "KFAE";
+file_extension "kfae";

@@ -1,0 +1,64 @@
+{
+  "$schema": "kungfu.core-affected-native-baseline/v1",
+  "platformTier": "github-hosted-linux-native-pr",
+  "requiredBudgetSeconds": 1200,
+  "hardTimeoutSeconds": 1500,
+  "maxParallelism": 12,
+  "cachePolicy": {
+    "identityFields": ["source", "profile", "toolchain", "architecture-authority"],
+    "unknownHitPolicy": "record-null-do-not-claim",
+    "overBudgetPolicy": "optimize-graph-or-cache-never-delete-required-tests"
+  },
+  "measurements": [
+    {
+      "measuredAt": "2026-07-15",
+      "environment": "agent-120-linux-x64",
+      "source": "37942d3ad41a2079ed44abe5c8dc8831ba76f184",
+      "profile": "embedded-sqlite",
+      "changedFixture": "framework/core/src/libkungfu/src/runtime/storage/query_render.cpp",
+      "status": "passed",
+      "durationMs": 243184,
+      "budgetMs": 1200000,
+      "cache": {
+        "hit": null,
+        "reason": "The current build tools do not expose trustworthy per-target cache hit facts."
+      },
+      "toolchain": {
+        "compiler": "GCC 14.2.0",
+        "cmake": "3.28.3",
+        "ninja": "1.11.1"
+      },
+      "steps": {
+        "conanInstallMs": 129607,
+        "cmakeConfigureMs": 398,
+        "cmakeBuildMs": 113055,
+        "ctestMs": 115
+      }
+    },
+    {
+      "measuredAt": "2026-07-15",
+      "environment": "github-hosted-ubuntu-24.04",
+      "source": "4b9691f71831f04c98e1aa2bb1c86bd26194b825",
+      "profile": "embedded-sqlite",
+      "changedFixture": "architecture authority and affected-native gate rollout",
+      "status": "passed",
+      "durationMs": 610610,
+      "budgetMs": 1200000,
+      "cache": {
+        "hit": null,
+        "reason": "The current build tools do not expose trustworthy per-target cache hit facts."
+      },
+      "toolchain": {
+        "compiler": "g++-14 (Ubuntu 14.2.0-4ubuntu2~24.04.1) 14.2.0",
+        "cmake": "3.31.6",
+        "ninja": "1.13.2"
+      },
+      "steps": {
+        "conanInstallMs": 122407,
+        "cmakeConfigureMs": 608,
+        "cmakeBuildMs": 481835,
+        "ctestMs": 5745
+      }
+    }
+  ]
+}

@@ -1,0 +1,7 @@
+{
+  "$schema": "https://libkungfu.dev/schemas/shifu/gate-registry-v1.schema.json",
+  "schema": "shifu.gate-registry/v1",
+  "project": { "id": "unknown-dependency", "title": "Unknown dependency" },
+  "gates": [{ "id": "known.gate", "title": "Known", "summary": "Known.", "category": "source", "documentation": "docs/shifu/gates.md", "dependencies": ["missing.gate"], "platforms": ["linux"], "runner": { "capabilities": [] }, "cost": { "class": "light", "timeoutSeconds": 10 }, "action": { "kind": "task", "task": "known" }, "artifacts": [], "receipt": { "expectation": "none" } }],
+  "profiles": [{ "id": "default", "title": "Default", "decisions": { "known.gate": { "mode": "required", "reason": "Required." } } }]
+}

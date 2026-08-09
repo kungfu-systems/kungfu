@@ -1,0 +1,129 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "kungfu.agent-bootstrap-receipt/v1",
+  "x-kungfu-contract": {
+    "schema": "kungfu.agent-bootstrap-contract/v1",
+    "version": 1,
+    "maturity": "experimental",
+    "providers": ["codex", "claude", "amp", "opencode"],
+    "requiredBeforeFirstMeaningfulTaskDecision": [
+      "verify-agent-pack",
+      "verify-documentation-atlas",
+      "verify-provider-skill",
+      "publish-native-environment",
+      "start-provider-process"
+    ],
+    "requiredMaterial": [
+      "agent-pack",
+      "brief",
+      "intent-map",
+      "documentation-atlas",
+      "provider-skill",
+      "runtime-profile"
+    ],
+    "states": ["pending", "verified", "degraded"],
+    "mutationPolicy": {
+      "verified": "existing-public-work-gates-remain-required",
+      "pending": "fail-closed",
+      "degraded": "fail-closed"
+    },
+    "failurePolicy": {
+      "providerNativeUi": "remains-usable",
+      "workMutation": "blocked-until-verified-or-separately-authorized-recovery",
+      "diagnostics": "actionable-and-credential-safe"
+    },
+    "nonClaims": [
+      "delivery-does-not-prove-provider-comprehension",
+      "bootstrap-does-not-grant-work-authority",
+      "provider-exit-does-not-prove-work-completion"
+    ]
+  },
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "attemptId",
+    "consoleId",
+    "provider",
+    "state",
+    "result",
+    "mutationsAllowed",
+    "deliveredBeforeProviderStart",
+    "invocationOrder",
+    "roots",
+    "diagnostics",
+    "nonClaims",
+    "receiptRoot"
+  ],
+  "properties": {
+    "schema": {"const": "kungfu.agent-bootstrap-receipt/v1"},
+    "attemptId": {"type": "string", "minLength": 1},
+    "consoleId": {"type": "string", "minLength": 1},
+    "provider": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9._-]{0,63}$"
+    },
+    "state": {"enum": ["verified", "degraded"]},
+    "result": {"enum": ["delivered", "diagnostic-only"]},
+    "mutationsAllowed": {"type": "boolean"},
+    "deliveredBeforeProviderStart": {"const": true},
+    "invocationOrder": {
+      "type": "array",
+      "minItems": 5,
+      "items": {"type": "string", "minLength": 1}
+    },
+    "roots": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "runtimeProfile",
+        "agentPack",
+        "brief",
+        "intentMap",
+        "documentationAtlas",
+        "documentationPack",
+        "documentationManifest",
+        "documentationReceipt",
+        "providerSkill"
+      ],
+      "properties": {
+        "runtimeProfile": {"$ref": "#/$defs/optionalRoot"},
+        "agentPack": {"$ref": "#/$defs/optionalRoot"},
+        "brief": {"$ref": "#/$defs/optionalRoot"},
+        "intentMap": {"$ref": "#/$defs/optionalRoot"},
+        "documentationAtlas": {"$ref": "#/$defs/optionalRoot"},
+        "documentationPack": {"$ref": "#/$defs/optionalRoot"},
+        "documentationManifest": {"$ref": "#/$defs/optionalRoot"},
+        "documentationReceipt": {"$ref": "#/$defs/optionalRoot"},
+        "providerSkill": {"$ref": "#/$defs/optionalRoot"}
+      }
+    },
+    "diagnostics": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["code", "detail"],
+        "properties": {
+          "code": {"type": "string", "minLength": 1},
+          "detail": {"type": "string"}
+        }
+      }
+    },
+    "nonClaims": {
+      "type": "array",
+      "minItems": 3,
+      "items": {"type": "string", "minLength": 1}
+    },
+    "receiptRoot": {"$ref": "#/$defs/root"}
+  },
+  "$defs": {
+    "root": {
+      "type": "string",
+      "pattern": "^sha256:[a-f0-9]{64}$"
+    },
+    "optionalRoot": {
+      "anyOf": [{"$ref": "#/$defs/root"}, {"type": "null"}]
+    }
+  }
+}

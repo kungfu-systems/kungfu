@@ -4,7 +4,7 @@
     "name": "Kungfu",
     "email": "info@kungfu.link"
   },
-  "version": "4.0.0-alpha.0",
+  "version": "4.0.0-alpha.1",
   "description": "Kungfu view extension: Rewind",
   "license": "Apache-2.0",
   "main": "package.json",
@@ -18,7 +18,8 @@
   "files": [
     "dist",
     "package.json",
-    "README.md"
+    "README.md",
+    "kungfu.kfx.json"
   ],
   "scripts": {
     "build": "kungfu sdk kfx build",
@@ -34,17 +35,5 @@
   },
   "peerDependencies": {
     "react": "^18.3.1"
-  },
-  "kungfuConfig": {
-    "key": "rewind",
-    "name": "Rewind",
-    "config": {
-      "view": {
-        "title": "Rewind",
-        "capabilities": [
-          "rewind"
-        ]
-      }
-    }
   }
 }

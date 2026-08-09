@@ -1,0 +1,23 @@
+{
+  "schema": "kungfu.reference.qualification-profile/v1",
+  "checks": [
+    "unique-object-and-operation-ids",
+    "exact-five-responsibility-mappings",
+    "no-role-fusion",
+    "declared-object-and-operation-references",
+    "acyclic-dependencies",
+    "closed-workflow-states",
+    "claim-assessment-decision-admission-separation",
+    "settlement-binds-episode-and-warrant",
+    "cut-projection-declares-omissions",
+    "migration-preserves-authority-and-history"
+  ],
+  "activationAdmission": [
+    "exact-declaration-root",
+    "exact-profile-suite-root",
+    "valid-supply-chain-signature",
+    "fresh-qualification-receipt",
+    "compatible-migration-path",
+    "explicit-capability-grants"
+  ]
+}

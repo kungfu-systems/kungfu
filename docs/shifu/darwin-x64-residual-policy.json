@@ -1,0 +1,57 @@
+{
+  "schema": "kungfu.darwin-x64-residual-policy/v1",
+  "unsupportedHost": "Intel macOS (Darwin x86_64)",
+  "categories": {
+    "negative-policy-or-test": {
+      "paths": [
+        "docs/adr/KF-ADR-019fbbe4-40c5-7c67-9ed2-910a65430ff7.md",
+        "docs/adr/SHIFU-ADR-019fab1a-2853-737e-8c67-a9b1aa9035aa.md",
+        "docs/architecture/adr-map.json",
+        "docs/architecture/adr-map.md",
+        "docs/shifu/README.md",
+        "docs/shifu/darwin-x64-residual-policy.json",
+        "package.json",
+        "product/scripts/bootstrap-installer.test.mjs",
+        "product/scripts/dist.test.mjs",
+        "scripts/check-shifu-entry-contract.test.mjs",
+        "scripts/platform-command.mjs",
+        "scripts/platform-command.test.mjs",
+        "scripts/source-acceptance.mjs"
+      ],
+      "prefixes": [],
+      "linePatterns": {
+        "crates/shifu-core/src/host.rs": [
+          "^\\s*\"unsupported-host: Intel macOS \\(Darwin x86_64\\) is not supported by Kungfu\";$"
+        ],
+        "product/scripts/bootstrap-installer.mjs": [
+          "^\\[ \"\\$platform/\\$architecture\" != darwin/x64 \\] \\|\\| fail unsupported-host "
+        ],
+        "product/scripts/runtime-pin-snapshot.mjs": [
+          "^\\s*'unsupported-host: Intel macOS \\(Darwin x86_64\\) is not supported by Kungfu';$"
+        ],
+        "shifu": [
+          "^if \\[ \"\\$\\(uname -s .*Darwin/x86_64.*unsupported-host: Intel macOS \\(Darwin x86_64\\) is not supported by Kungfu.*exit 64; fi$"
+        ]
+      }
+    },
+    "immutable-history": {
+      "paths": [],
+      "prefixes": ["docs/qualification/evidence/"],
+      "linePatterns": {}
+    },
+    "upstream-or-third-party": {
+      "paths": [],
+      "prefixes": ["framework/core/.deps/"],
+      "linePatterns": {}
+    },
+    "mechanically-required-lockfile": {
+      "paths": [
+        "examples/probe-python/pdm.lock",
+        "framework/core/uv.lock",
+        "pnpm-lock.yaml"
+      ],
+      "prefixes": [],
+      "linePatterns": {}
+    }
+  }
+}

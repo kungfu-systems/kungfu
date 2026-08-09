@@ -1,0 +1,78 @@
+{
+  "schema": "kungfu.aws-burst-campaign-reactivation/v1",
+  "status": "reactivated-v3",
+  "owner": "kungfu-ci",
+  "retiredAt": "2026-07-30",
+  "reactivatedAt": "2026-07-30",
+  "reason": "The v2 callers were retired until the bounded Linux, Windows, and macOS providers landed in reviewed Buildchain v3 authority. Each active caller fixes both the reusable workflow shell and buildchain-ref to its immutable reviewed provider commit; the Windows caller additionally requires the persistent one-shot campaign ledger, exact campaign/source binding, and the USD 80 phase cap with a frozen spend baseline.",
+  "runtimeSafety": {
+    "workflowShellReferencesV2": false,
+    "buildchainRefInputsV2": false,
+    "operatorSuppliedBuildchainRef": false,
+    "burstRunnerWorkflows": 3,
+    "cloudJobs": "manual-dispatch-only-after-github-hosted-trust",
+    "failureBoundary": "bounded caller inputs plus the exact Buildchain runtime's GitHub-hosted write-actor trust gate before reusable burst runners; direct Windows cleanup jobs retain their caller-local trust gate"
+  },
+  "evidence": {
+    "reviewedBuildchainV3Source": "376fb92fa014102366111b9aaef4856486c1e499",
+    "windowsJitRepairPullRequest": 2083,
+    "windowsJitRepairMergeCommit": "376fb92fa014102366111b9aaef4856486c1e499",
+    "windowsCampaignLedgerPullRequest": 2210,
+    "windowsCampaignLedgerMergeCommit": "ab147fa02d4e17937818c89c1269483fa450d986",
+    "windowsCampaignSourceBindingPullRequest": 2212,
+    "windowsCampaignSourceBindingMergeCommit": "447936a3aa36415a39c75e92fc9b26b0774aeb75",
+    "windowsUsd80PhaseCapPullRequest": 2229,
+    "windowsUsd80PhaseCapMergeCommit": "ae9bd5385cfb8060fb2574521121f1a798e83c6f",
+    "v3RequiredInputs": [
+      "aws-codebuild-project",
+      "aws-ec2-windows-runner-label",
+      "aws-ec2-macos-runner-label"
+    ],
+    "v3RunnerPresets": [
+      "aws-us-codebuild-linux",
+      "aws-us-ec2-windows-jit",
+      "aws-us-ec2-macos-jit"
+    ],
+    "historicalBuildchainRef": "train/v2/v2.3/aws-us-elastic-runner-burst-plane",
+    "historicalRuns": {
+      "linux": {
+        "latestSuccessfulRun": 30408889144,
+        "latestSuccessfulAt": "2026-07-28T23:43:38Z",
+        "caller": "dongkeren",
+        "result": "success"
+      },
+      "windows": {
+        "latestSuccessfulRun": 30418721314,
+        "latestSuccessfulAt": "2026-07-29T03:07:48Z",
+        "caller": "dongkeren",
+        "result": "success"
+      },
+      "observedFinalCampaignRun": {
+        "run": 30533043881,
+        "startedAt": "2026-07-30T10:01:24Z",
+        "caller": "dongkeren",
+        "observedStateAtDecision": "in_progress"
+      }
+    }
+  },
+  "historyPolicy": {
+    "v2TrainRef": "retained-immutable-history",
+    "priorRuns": "retained-immutable-history",
+    "currentWorkflowAuthority": "reviewed-v3-exact-sha"
+  },
+  "reactivation": {
+    "automatic": false,
+    "assignment": "2026-07-28-kungfu-aws-us-elastic-runner-burst-plane",
+    "buildchainPullRequest": 2072,
+    "buildchainMergeCommit": "407445c43df4888bb4464e91aef0debdc62aa0e6",
+    "requirementsSatisfied": [
+      "Protected Assignment remains owned by kungfu-ci and Buildchain maintainers.",
+      "Required runner presets and controller inputs landed in reviewed Buildchain v3.",
+      "Each reusable workflow shell and buildchain-ref pair is pinned to the same immutable reviewed v3 commit.",
+      "Windows admission is one-shot, source-bound, permanently killable, and atomically capped before launch.",
+      "Windows run title and runner label both bind campaign and qualification identity before launch.",
+      "Bounded trust, label, non-publication, timeout, cancellation, and cleanup assertions are restored with targeted tests.",
+      "Provider policy changes remain outside the caller reactivation."
+    ]
+  }
+}

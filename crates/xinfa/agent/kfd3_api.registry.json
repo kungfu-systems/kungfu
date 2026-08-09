@@ -1,0 +1,8 @@
+{"schema":"xinfa.kfd3-agent-api-registry/v1","registryId":"xinfa-agent-interface","product":"xinfa","standard":"KFD-3","authority":"xinfa context engine","apis":[
+{"id":"xinfa.agent.brief","command":"xinfa agent brief","maturity":"stable","access":"read-only","authorization":"none","receipt":"none","diagnostics":"stable exit code and stderr"},
+{"id":"xinfa.agent.map","command":"xinfa agent map --json","maturity":"stable","access":"read-only","authorization":"none","receipt":"none","diagnostics":"stable exit code and stderr"},
+{"id":"xinfa.agent.capabilities","command":"xinfa agent capabilities --json","maturity":"stable","access":"read-only","authorization":"none","receipt":"none","diagnostics":"stable exit code and stderr"},
+{"id":"xinfa.agent.schema","command":"xinfa agent schema --json","maturity":"stable","access":"read-only","authorization":"none","receipt":"none","diagnostics":"stable exit code and stderr"},
+{"id":"xinfa.agent.verify","command":"xinfa agent verify --json","maturity":"stable","access":"read-only","authorization":"none","receipt":"verification result","diagnostics":"machine-readable findings"},
+{"id":"xinfa.context","command":"xinfa context ... --json","maturity":"stable","access":"read-only","authorization":"none","receipt":"rooted Task Chart","diagnostics":"required omissions and stable errors"},
+{"id":"xinfa.expand","command":"xinfa expand ... --json","maturity":"stable","access":"read-only","authorization":"none","receipt":"rooted expansion","diagnostics":"stable errors"}],"nonClaims":["projection-is-not-authority","required-omission-is-not-success","kungfu-composition-does-not-transfer-authority"]}

@@ -2,7 +2,7 @@
 
 SDK for assembling Kungfu applications.
 
-The platform model (see `framework/core/docs/adr/ADR-0006` and `ADR-0011`):
+The platform model (see `docs/adr/KF-ADR-019f86da-4f90-7513-9c95-f19e0c7faa80` and `KF-ADR-019f86da-4f90-7e5e-ae22-2a8fc24086f1`):
 the core provides capability — typed, in-process, zero-copy access to runtime
 data — and applications are thin shells over it. This package scaffolds such
 an application on the reference stack (electron-vite + React + TypeScript +
@@ -18,11 +18,12 @@ kungfu sdk create app my-app   # scaffold into ./my-app
 cd my-app
 pnpm install
 kungfu sdk product gui dev       # launch against a built @kungfu-tech/core
-kungfu sdk product gui dist      # build a distributable Electron artifact
+kungfu sdk product gui dist      # build a distributable Electron product
+kungfu sdk product cli dist      # build a distributable CLI product
 ```
 
 It also scaffolds view extensions (kfx) — installable view packages the
-reference shell discovers and mounts (see `docs/extensions.md` in the
+reference shell discovers and mounts (see `docs/architecture/extensions.md` in the
 repository root for the contract):
 
 ```sh
@@ -49,10 +50,13 @@ print the underlying electron-vite/electron-builder/tsx/tsc/esbuild command.
   `kungfu sdk kfx build`, then launches the reference GUI with
   `KF_EXTENSION_PATH` pointed at the package so the view can be inspected in the
   shell.
-- inside an artifact/product package, `kungfu sdk product gui dist` resolves the
+- inside a product assembly package, `kungfu sdk product gui dist` resolves the
   declared `@kungfu-tech/kfx-*` dependencies, builds and assembles them under
   `extensions/`, bundles the TUI when present, builds the GUI, and runs
-  electron-builder from the artifact's `electron-builder.yml`.
+  electron-builder from the product assembly's `electron-builder.yml`.
+- inside a product assembly package, `kungfu sdk product cli dist` runs the
+  package's CLI product dist script and emits the archive defined by that
+  product.
 
 Options (both `create` targets):
 
@@ -62,6 +66,63 @@ Options (both `create` targets):
 
 The generated app is self-contained: `pnpm pack` produces a distributable
 bundle with the kungfu runtime under `Resources/kungfu`.
+
+## KFD Capability Queries
+
+The SDK carries Kungfu's Buildchain-facing KFD facts, so an installed runtime can
+answer standard and capability questions without asking users to install the
+`buildchain` executable separately:
+
+```sh
+kungfu kfd status --json
+kungfu kfd schema kfd-4 --json
+kungfu kfd 1 witness --json
+kungfu kfd 1 gate --json
+kungfu kfd 1 verify --json
+kungfu kfd 2 claims --json
+kungfu kfd 4 schema --json
+kungfu kfd query --json
+kungfu kfd check --json
+kungfu kfd witness --json
+kungfu kfd upstream --json
+kungfu kfd aggregate --json
+
+kungfu sdk kfd status --json
+kungfu sdk kfd schema kfd-4 --json
+kungfu sdk kfd 1 witness --json
+kungfu sdk kfd 1 gate --json
+kungfu sdk kfd 1 verify --json
+kungfu sdk kfd 2 claims --json
+kungfu sdk kfd 4 schema --json
+kungfu sdk kfd query --json
+kungfu sdk kfd check --json
+kungfu sdk kfd witness --json
+kungfu sdk kfd upstream --json
+kungfu sdk kfd aggregate --json
+```
+
+`kungfu kfd ...` is the installed CLI bridge. It delegates to the SDK-distributed
+implementation and returns the same machine-readable capability facts as
+`kungfu sdk kfd ...`. `status` projects the governed KFD-1 through KFD-13
+support matrix and keeps implementation, verification, Buildchain gating, and
+shipped release qualification separate. `schema` works for every installed KFD
+schema set. `query` stays focused on Kungfu's own declared KFD-3 capability
+facts; `upstream` shows the SDK-packaged KFD aggregate for Kungfu plus KFD,
+libnode, and Buildchain; `aggregate` joins both views for an agent that wants
+the final product plus upstream trust surface in one response.
+
+KFD-1, KFD-2, KFD-3, and KFD-7 have bounded source support. KFD-4 and KFD-5
+pass their product gates but remain non-shipped candidates; Buildchain does not
+self-qualify, activate, or ship either adoption. KFD-6 is explicitly
+unsupported. KFD-8 through KFD-13 expose only non-conforming draft adopter
+evidence. Every shipped claim remains bound to an exact release passport. The
+generated repository-wide boundary is
+[`docs/qualification/kfd-support-matrix.md`](../../docs/qualification/kfd-support-matrix.md).
+
+KFD-1 is exposed as the actual Buildchain contract-world witness, release gate,
+and verify result. KFD-2 `claims` returns the packaged canonical
+`release-claims.json` plus the per-claim Buildchain projection files that feed
+the release passport through `--kfd-2-claim-json`.
 
 ## KFD-1 Contract Prototype
 
@@ -73,10 +134,12 @@ and reproduce the registered surfaces as canonical JSON evidence:
 kungfu sdk contract adopt config --source framework/config/kungfu-config.contract.json --json
 kungfu sdk contract adopt kfx --source framework/kfx/kungfu-kfx.contract.json --json
 kungfu sdk contract adopt skill --source framework/skill/kungfu-skill.contract.json --json
+kungfu sdk contract adopt runtime --source framework/runtime/kungfu-runtime.contract.json --json
 
 kungfu sdk contract render config --check --json
 kungfu sdk contract render kfx --check --json
 kungfu sdk contract render skill --check --json
+kungfu sdk contract render runtime --check --json
 
 kungfu sdk contract evidence --json
 ```

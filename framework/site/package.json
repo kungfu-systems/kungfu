@@ -1,0 +1,54 @@
+{
+  "name": "@kungfu-tech/site",
+  "author": {
+    "name": "Kungfu",
+    "email": "info@kungfu.link"
+  },
+  "version": "4.0.0-alpha.1",
+  "description": "Auditable Kungfu product-positioning bundle for human and agent sites",
+  "license": "Apache-2.0",
+  "repository": {
+    "url": "https://github.com/kungfu-systems/kungfu.git",
+    "directory": "framework/site"
+  },
+  "publishConfig": {
+    "registry": "https://registry.npmjs.org/",
+    "access": "public"
+  },
+  "main": "index.js",
+  "exports": {
+    ".": "./index.js",
+    "./site-bundle.json": "./dist/site/site-bundle.json",
+    "./agent-index.json": "./dist/site/agent-index.json",
+    "./adr-map.json": "./dist/site/adr-map.json",
+    "./format/*": "./dist/site/format/*",
+    "./installer-publication": "./installer-publication.mjs",
+    "./installer-publication-schema": "./schema/installer-publication-bundle.schema.json",
+    "./schema": "./schema/site-bundle.schema.json",
+    "./experience-schema": "./schema/site-experience-config.schema.json",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "index.js",
+    "experience.js",
+    "installer-publication.mjs",
+    "dist/site/",
+    "schema/",
+    "README.md"
+  ],
+  "scripts": {
+    "prepare:spec": "pnpm --filter @kungfu-tech/spec verify",
+    "build": "pnpm run prepare:spec && node scripts/generate.mjs",
+    "verify": "pnpm run build && node scripts/verify.mjs",
+    "test": "pnpm run verify && node --test index.test.js installer-publication.test.mjs",
+    "pack:artifact": "node scripts/pack.mjs",
+    "prepack": "pnpm run test",
+    "prepublishOnly": "pnpm run test",
+    "clean": "rimraf dist"
+  },
+  "devDependencies": {
+    "@kungfu-tech/spec": "workspace:*",
+    "ajv": "8.20.0",
+    "rimraf": "^6.0.0"
+  }
+}

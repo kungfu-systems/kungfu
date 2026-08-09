@@ -1,0 +1,7 @@
+[
+  {
+    "issue_root": "sha256:546a2641c9fc1a8f1eb9ff739096fa43b4b691fe91514314263a9ae1b80b2131",
+    "disposition": "deferred",
+    "reason": "The friction is owned and visible; a separate compatibility Assignment must preserve WorkRef admission rather than weaken it."
+  }
+]

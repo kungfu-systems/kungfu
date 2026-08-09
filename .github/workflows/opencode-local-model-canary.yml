@@ -1,0 +1,88 @@
+# SPDX-License-Identifier: Apache-2.0
+
+name: OpenCode Local Model Canary
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: opencode-local-model-canary
+  cancel-in-progress: false
+
+jobs:
+  canary:
+    name: agent-120 / Qwen3-Coder
+    runs-on:
+      - self-hosted
+      - Linux
+      - X64
+      - agent-120
+      - kungfu-build
+    timeout-minutes: 20
+    env:
+      OPENCODE_IMAGE: ghcr.io/kungfu-systems/build-images/opencode-ci@sha256:4083ee089fa9a419f4915505094a6c1bcce433ff77455605ce8993af3b684ed3
+      OPENCODE_MODEL: qwen3-coder:30b-opencode-64k
+      OPENCODE_BASE_URL: http://host.docker.internal:11435/v1
+      OPENCODE_HOST_PROBE_URL: http://172.17.0.1:11435/v1/models
+    steps:
+      - name: Verify trusted runner and preloaded image
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$RUNNER_NAME" = "agent-120-kungfu-systems"
+          docker image inspect "$OPENCODE_IMAGE" >/dev/null
+          curl -fsS --max-time 5 "$OPENCODE_HOST_PROBE_URL" >/dev/null
+
+      - name: Prepare deterministic fixture
+        shell: bash
+        run: |
+          set -euo pipefail
+          case_dir="$RUNNER_TEMP/opencode-ci-local-model-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
+          install -d -m 0755 "$case_dir/evidence"
+          printf '%s\n' "Read this fixed canary input before producing the requested artifacts." >"$case_dir/input.txt"
+          printf 'OPENCODE_CANARY_DIR=%s\n' "$case_dir" >>"$GITHUB_ENV"
+
+      - name: Run OpenCode with the local model
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker run --rm \
+            --user "$(id -u):$(id -g)" \
+            --read-only \
+            --tmpfs /tmp:rw,noexec,nosuid,nodev,size=256m \
+            --cap-drop ALL \
+            --security-opt no-new-privileges \
+            --network bridge \
+            --add-host host.docker.internal:host-gateway \
+            -v "$OPENCODE_CANARY_DIR:/workspace" \
+            -w /workspace \
+            -e OPENCODE_BASE_URL \
+            -e OPENCODE_MODEL \
+            -e OPENCODE_CONTEXT=65536 \
+            -e OPENCODE_OUTPUT_DIR=/workspace/evidence \
+            -e OPENCODE_TIMEOUT_SECONDS=600 \
+            -e OPENCODE_PROMPT="Read /workspace/input.txt. Write exactly KUNGFU_OPENCODE_CI_OK and a trailing newline to /workspace/output.txt. Run a Bash command that writes exactly bash-ok and a trailing newline to /workspace/bash-ok.txt. Do not modify any other file." \
+            -e OPENCODE_VERIFY_COMMAND="opencode-ci-verify /workspace/evidence/events.jsonl /workspace/output.txt /opt/opencode-ci/expected.txt /workspace/bash-ok.txt" \
+            "$OPENCODE_IMAGE" \
+            opencode-ci-run
+
+          jq -e \
+            --arg model "$OPENCODE_MODEL" \
+            '.passed == true and .model == $model and .opencode_exit == 0 and .verifier_exit == 0' \
+            "$OPENCODE_CANARY_DIR/evidence/run.json" >/dev/null
+
+      - name: Upload bounded canary evidence
+        if: ${{ always() }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: opencode-local-model-canary-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            ${{ runner.temp }}/opencode-ci-local-model-${{ github.run_id }}-${{ github.run_attempt }}/evidence/run.json
+            ${{ runner.temp }}/opencode-ci-local-model-${{ github.run_id }}-${{ github.run_attempt }}/evidence/opencode.stderr
+            ${{ runner.temp }}/opencode-ci-local-model-${{ github.run_id }}-${{ github.run_attempt }}/output.txt
+            ${{ runner.temp }}/opencode-ci-local-model-${{ github.run_id }}-${{ github.run_attempt }}/bash-ok.txt
+          if-no-files-found: warn
+          retention-days: 14

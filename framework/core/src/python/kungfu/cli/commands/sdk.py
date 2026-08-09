@@ -2,10 +2,10 @@
 
 # `kungfu sdk` — the application assembly toolkit: scaffold apps and view
 # extensions, and build/clean kfx packages. It runs the SDK's Node CLI through
-# kungfu's own embedded Node runtime (libnode), the same bridge `kungfu cockpit`
-# uses — no separate node install. Unlike the cockpit, the SDK is a plain Node
-# program (esbuild + fs) that does not load the kungfu_node binding, so it needs
-# no runtime-home wiring.
+# kungfu's own embedded Node runtime (libnode), the same bridge the interactive
+# bare `kungfu` terminal product uses — no separate node install. Unlike the
+# TUI, the SDK is a plain Node program (esbuild + fs) that does not load the
+# kungfu_node binding, so it needs no runtime-home wiring.
 
 import os
 import sys
@@ -21,7 +21,7 @@ def _resolve_sdk_entry():
     if override and os.path.exists(override):
         return os.path.abspath(override)
     binding_dir = os.path.dirname(kungfu.__binding__.__file__)
-    # Packaged app: the SDK ships as a sibling of the frozen runtime.
+    # Packaged app: the SDK ships as a sibling of the assembled runtime.
     for candidate in (
         os.path.join(binding_dir, "..", "sdk", "sdk.js"),
         os.path.join(binding_dir, "sdk", "sdk.js"),

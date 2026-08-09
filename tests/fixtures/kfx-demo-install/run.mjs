@@ -11,7 +11,17 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
-import { locate, tmpDir, run, kfc, uvPython, fail } from '../_harness.mjs';
+import {
+  locate,
+  tmpDir,
+  run,
+  kfc,
+  uvPython,
+  fail,
+  extractPackedKfx,
+  kfxQualificationAuthorityFile,
+  kfxRemovalAuthorityFile,
+} from '../_harness.mjs';
 
 const { fixtureDir, coreDir } = locate(import.meta.url);
 const repoDir = path.resolve(coreDir, '..', '..');
@@ -31,19 +41,38 @@ const tgzName = packed.stdout.trim().split(/\r?\n/).pop();
 const tgz = path.join(packdir, tgzName);
 if (!fs.existsSync(tgz)) fail('npm pack produced no tgz');
 
-k(['kfx', 'install', tgz]);
+const authority = kfxQualificationAuthorityFile(
+  coreDir,
+  home,
+  extractPackedKfx(coreDir, tgz),
+  'work-dashboard',
+);
+const installArgs = ['kfx', 'install', tgz, '--authority-file', authority];
+k(installArgs);
 k(['kfx', 'list']);
 
 // double install must refuse without --force, succeed with it
-if (k(['kfx', 'install', tgz], { allowFail: true }).status === 0) {
+if (k(installArgs, { allowFail: true }).status === 0) {
   fail('double install did not refuse');
 }
-k(['kfx', 'install', tgz, '--force']);
+k([...installArgs, '--force']);
 
 uvPython(coreDir, [path.join(fixtureDir, 'check_install.py'), home]);
 
-k(['kfx', 'remove', 'work-dashboard']);
-if (k(['kfx', 'remove', 'work-dashboard'], { allowFail: true }).status === 0) {
+const removalAuthority = kfxRemovalAuthorityFile(
+  coreDir,
+  home,
+  'work-dashboard',
+);
+const removeArgs = [
+  'kfx',
+  'remove',
+  'work-dashboard',
+  '--authority-file',
+  removalAuthority,
+];
+k(removeArgs);
+if (k(removeArgs, { allowFail: true }).status === 0) {
   fail('removing a missing key did not fail');
 }
 if (fs.existsSync(path.join(home, 'extensions', 'work-dashboard'))) fail('not removed');

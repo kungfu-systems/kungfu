@@ -1,0 +1,129 @@
+{
+  "schema": "buildchain.declarative-binary-demo/v1",
+  "product": {
+    "id": "kungfu",
+    "displayName": "Kungfu",
+    "binaryName": "kungfu"
+  },
+  "artifact": {
+    "platformId": "linux-x64",
+    "binaryPath": "product/dist/cli/kungfu-episodes-cli-linux-x64/kungfu",
+    "metadataPath": "product/dist/cli/kungfu-episodes-cli-linux-x64/auditable-demo-binary.json",
+    "metadataContract": "kungfu.declarative-demo-binary/v1",
+    "runtimeDependencies": []
+  },
+  "execution": {
+    "deterministic": true,
+    "network": "none",
+    "secrets": "none",
+    "durationClass": "long-form",
+    "totalTimeoutSeconds": 180,
+    "environment": {}
+  },
+  "transportSmoke": {
+    "argv": ["agent-work-lab", "demo", "--json"],
+    "timeoutSeconds": 60,
+    "expectedExitCodes": [0],
+    "stdoutIncludes": ["kungfu.agent-work-lab.report/v1"]
+  },
+  "renditions": [
+    {"id": "1080p", "role": "primary", "columns": 150, "rows": 36, "width": 1920, "height": 1080},
+    {"id": "720p", "role": "responsive", "columns": 100, "rows": 28, "width": 1280, "height": 720}
+  ],
+  "demos": [
+    {
+      "id": "agent-work-lab-autoplay",
+      "title": "Can Work survive a new Agent?",
+      "claimBoundary": "This exact standalone Kungfu artifact proves only the bounded offline Agent Work Lab autoplay observed in two independently captured native PTYs; it grants no Work, release, capability, or production authority.",
+      "steps": [
+        {
+          "id": "autoplay",
+          "argv": ["agent-work-lab", "autoplay"],
+          "timeoutSeconds": 90,
+          "expectedExitCodes": [0],
+          "stdoutIncludes": ["KUNGFU_TUI_DEMO_COMPLETE"],
+          "fileAssertions": []
+        }
+      ]
+    },
+    {
+      "id": "project-tour-episode-1",
+      "title": "Can Work survive failure?",
+      "claimBoundary": "This exact standalone Kungfu artifact proves only the bounded disposable Project Tour episode 1 observed at 1x in two independently captured native PTYs; Mock Agent output and terminal observations grant no Work, release, capability, or production authority.",
+      "steps": [
+        {
+          "id": "project-tour-episode-1",
+          "argv": ["agent-work-lab", "project-tour", "--episode", "1", "--speed", "1"],
+          "timeoutSeconds": 180,
+          "expectedExitCodes": [0],
+          "stdoutIncludes": ["KUNGFU_PROJECT_TOUR_COMPLETE"],
+          "fileAssertions": []
+        }
+      ]
+    },
+    {
+      "id": "project-tour-episode-2",
+      "title": "Who is allowed to complete Work?",
+      "claimBoundary": "This exact standalone Kungfu artifact proves only the bounded disposable Project Tour episode 2 observed at 1x in two independently captured native PTYs; Mock Agent output and terminal observations grant no Work, release, capability, or production authority.",
+      "steps": [
+        {
+          "id": "project-tour-episode-2",
+          "argv": ["agent-work-lab", "project-tour", "--episode", "2", "--speed", "1"],
+          "timeoutSeconds": 180,
+          "expectedExitCodes": [0],
+          "stdoutIncludes": ["KUNGFU_PROJECT_TOUR_COMPLETE"],
+          "fileAssertions": []
+        }
+      ]
+    }
+  ],
+  "publication": {
+    "evidencePath": "docs/qualification/evidence/auditable-demo",
+    "readmePath": "README.md",
+    "marker": "kungfu:auditable-demo"
+  },
+  "presentation": {
+    "schema": "buildchain.declarative-demo-presentation/v1",
+    "proofs": [
+      {
+        "demoId": "agent-work-lab-autoplay",
+        "label": "Continuity",
+        "question": "Can Work survive a new Agent?",
+        "summary": "The first proof isolates continuity: one Work continues across two fresh Agent Sessions without copied chat.",
+        "transitionAfter": "The mechanism exists; the next proof asks whether it still holds under real failure conditions."
+      },
+      {
+        "demoId": "project-tour-episode-1",
+        "label": "Failure retention",
+        "question": "Can Work survive failure?",
+        "summary": "Inside a disposable Project, a dropped connection and a crashed replacement process remain as Attempts under the same Work.",
+        "transitionAfter": "Work survival is only the first step. If an Agent can approve its own result, continuity still is not trustworthy."
+      },
+      {
+        "demoId": "project-tour-episode-2",
+        "label": "Review and settlement",
+        "question": "Who is allowed to complete Work?",
+        "summary": "The final proof separates Agent exit, independent review, and Kungfu settlement: an Agent can produce a candidate and evidence, but cannot approve its own Work."
+      }
+    ],
+    "materialization": {
+      "readmeMode": "media-only",
+      "technicalSpecPath": "docs/qualification/auditable-demo-artifact-pipeline.md",
+      "technicalSpecTitle": "Declarative Multi-demo Animation Pipeline",
+      "technicalMarker": "kungfu:auditable-demo:technical"
+    }
+  },
+  "authority": {
+    "grants": [],
+    "nonAuthorities": [
+      "first-party-identity",
+      "system-identity",
+      "kfd-compliance",
+      "product-system-metadata",
+      "package-metadata",
+      "registry-history",
+      "scan-output",
+      "standalone-generation"
+    ]
+  }
+}

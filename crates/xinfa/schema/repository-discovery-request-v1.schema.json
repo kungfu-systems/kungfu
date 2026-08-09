@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://xinfa.dev/schema/repository-discovery-request-v1.schema.json",
+  "title": "Xinfa repository discovery request v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "trackedOnly", "includeUntrackedNames", "limits"],
+  "properties": {
+    "schema": { "const": "xinfa.repository-discovery-request/v1" },
+    "trackedOnly": { "const": true },
+    "includeUntrackedNames": { "type": "boolean" },
+    "limits": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["maxFiles", "maxFileBytes", "maxUntrackedPaths"],
+      "properties": {
+        "maxFiles": { "type": "integer", "minimum": 1, "maximum": 4096 },
+        "maxFileBytes": { "type": "integer", "minimum": 1, "maximum": 4194304 },
+        "maxUntrackedPaths": { "type": "integer", "minimum": 1, "maximum": 256 }
+      }
+    }
+  }
+}

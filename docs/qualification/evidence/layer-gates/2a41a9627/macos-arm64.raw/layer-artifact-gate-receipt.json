@@ -1,0 +1,267 @@
+{
+  "$schema": "https://libkungfu.dev/schemas/shifu/gate-receipt-v1.schema.json",
+  "schema": "shifu.gate-receipt/v1",
+  "runId": "gate-97376f37-8efc-4bbd-8fcb-137704f121e3",
+  "project": {
+    "id": "kungfu"
+  },
+  "source": {
+    "sha": "2a41a9627f587b0df91dc22b4d5fb559e5540317",
+    "dirty": false
+  },
+  "registry": {
+    "ref": "shifu.gates.json",
+    "digest": "sha256:26716c1b1979fa3789f35caf5db97dae103462a7e02aebd4f4026b0ea2923526",
+    "projectId": "kungfu"
+  },
+  "selection": {
+    "profile": null,
+    "includeAdvisory": false,
+    "explicitGates": [
+      "layers.format",
+      "layers.sdk",
+      "layers.surfaces"
+    ]
+  },
+  "environment": {
+    "platform": "macos",
+    "runnerCapabilities": [
+      "native-toolchain",
+      "node",
+      "product-artifacts",
+      "rust"
+    ]
+  },
+  "plan": {
+    "digest": "sha256:9c4a9121725f85c77d94cefc20b356ecd9faf519bdd10fc3a750506ab12c7d71",
+    "qualifying": false,
+    "expectedActionIds": [
+      "sha256:0c186e824d1447bf4a755e2fce34159cd82a3be69421ee3d7f2f56afa1243843",
+      "sha256:71ef13d37eb3ef5473793e0c73c7fc21aaf49a0cd6c462c1b141f63f32277964",
+      "sha256:cd48bfc43d6a449f0c89c8c4cbf0f9d2915614413b1e5ac2dfde86fef96baaac",
+      "sha256:6fa191bfac1b7944c180a40ed01b59be9025ccb1728649b7728ef4821c9e9b33",
+      "sha256:ab1b9bb76c070abda39be9d4ba1e8e9a5397ff7e4fd81c710557f6004bfa1c63"
+    ],
+    "attemptedActionIds": [
+      "sha256:0c186e824d1447bf4a755e2fce34159cd82a3be69421ee3d7f2f56afa1243843",
+      "sha256:71ef13d37eb3ef5473793e0c73c7fc21aaf49a0cd6c462c1b141f63f32277964",
+      "sha256:cd48bfc43d6a449f0c89c8c4cbf0f9d2915614413b1e5ac2dfde86fef96baaac",
+      "sha256:6fa191bfac1b7944c180a40ed01b59be9025ccb1728649b7728ef4821c9e9b33",
+      "sha256:ab1b9bb76c070abda39be9d4ba1e8e9a5397ff7e4fd81c710557f6004bfa1c63"
+    ]
+  },
+  "startedAt": "2026-07-14T05:54:18.430Z",
+  "finishedAt": "2026-07-14T05:54:59.003Z",
+  "durationMs": 40573,
+  "status": "pass",
+  "ok": true,
+  "qualifying": false,
+  "results": [
+    {
+      "gateId": "gate.catalog",
+      "policyMode": null,
+      "selectedBy": [
+        "dependency-of:layers.contract"
+      ],
+      "actionId": "sha256:0c186e824d1447bf4a755e2fce34159cd82a3be69421ee3d7f2f56afa1243843",
+      "definitionDigest": "sha256:2102f39caca0c0286084c59e552b7f42f5d6df2315adac134e5ae9d834559856",
+      "status": "pass",
+      "attempted": true,
+      "durationMs": 685,
+      "exitCode": 0,
+      "signal": null,
+      "reason": null,
+      "artifacts": [],
+      "evidence": {
+        "expectation": "optional",
+        "schema": null,
+        "present": false,
+        "pointers": []
+      },
+      "reproduce": {
+        "argv": [
+          "./shifu",
+          "gate",
+          "run",
+          "gate.catalog",
+          "--registry",
+          "shifu.gates.json"
+        ]
+      }
+    },
+    {
+      "gateId": "layers.contract",
+      "policyMode": null,
+      "selectedBy": [
+        "dependency-of:layers.format",
+        "dependency-of:layers.sdk",
+        "dependency-of:layers.surfaces"
+      ],
+      "actionId": "sha256:71ef13d37eb3ef5473793e0c73c7fc21aaf49a0cd6c462c1b141f63f32277964",
+      "definitionDigest": "sha256:40f678362cf64a02f9397e05a8beaf9ef2f91becb804fb86a5bb4c54eb7b64d8",
+      "status": "pass",
+      "attempted": true,
+      "durationMs": 694,
+      "exitCode": 0,
+      "signal": null,
+      "reason": null,
+      "artifacts": [],
+      "evidence": {
+        "expectation": "optional",
+        "schema": null,
+        "present": false,
+        "pointers": []
+      },
+      "reproduce": {
+        "argv": [
+          "./shifu",
+          "gate",
+          "run",
+          "layers.contract",
+          "--registry",
+          "shifu.gates.json"
+        ]
+      }
+    },
+    {
+      "gateId": "layers.format",
+      "policyMode": null,
+      "selectedBy": [
+        "explicit"
+      ],
+      "actionId": "sha256:cd48bfc43d6a449f0c89c8c4cbf0f9d2915614413b1e5ac2dfde86fef96baaac",
+      "definitionDigest": "sha256:94407629dec03f71b22a719cbc1783e0e99a3757ed2b691315a842f1e0429eda",
+      "status": "pass",
+      "attempted": true,
+      "durationMs": 4726,
+      "exitCode": 0,
+      "signal": null,
+      "reason": null,
+      "artifacts": [
+        {
+          "id": "layer-format-report",
+          "path": "product/release/qualification/layer-format-report.json",
+          "required": true,
+          "present": true
+        }
+      ],
+      "evidence": {
+        "expectation": "required",
+        "schema": "kungfu.layer-qualification.gate-evidence/v1",
+        "present": true,
+        "pointers": [
+          {
+            "id": "format-qualification-report",
+            "ref": "product/release/qualification/layer-format-report.json",
+            "digest": "sha256:a5580aa14bc70de1da833b03528b1c1e51361334d39140a1ce4876eb86a38571"
+          }
+        ]
+      },
+      "reproduce": {
+        "argv": [
+          "./shifu",
+          "gate",
+          "run",
+          "layers.format",
+          "--registry",
+          "shifu.gates.json"
+        ]
+      }
+    },
+    {
+      "gateId": "layers.sdk",
+      "policyMode": null,
+      "selectedBy": [
+        "explicit"
+      ],
+      "actionId": "sha256:6fa191bfac1b7944c180a40ed01b59be9025ccb1728649b7728ef4821c9e9b33",
+      "definitionDigest": "sha256:acb4d1bab4c7a4abbe2bf70da7797a638a3498a3c3cc51fa2e7006695adcb7ce",
+      "status": "pass",
+      "attempted": true,
+      "durationMs": 13038,
+      "exitCode": 0,
+      "signal": null,
+      "reason": null,
+      "artifacts": [
+        {
+          "id": "layer-sdk-report",
+          "path": "product/release/qualification/layer-sdk-report.json",
+          "required": true,
+          "present": true
+        }
+      ],
+      "evidence": {
+        "expectation": "required",
+        "schema": "kungfu.layer-qualification.gate-evidence/v1",
+        "present": true,
+        "pointers": [
+          {
+            "id": "sdk-qualification-report",
+            "ref": "product/release/qualification/layer-sdk-report.json",
+            "digest": "sha256:223de99f66210b20ad60b22d099b84458949738c247705f5ad330d8831f0838c"
+          }
+        ]
+      },
+      "reproduce": {
+        "argv": [
+          "./shifu",
+          "gate",
+          "run",
+          "layers.sdk",
+          "--registry",
+          "shifu.gates.json"
+        ]
+      }
+    },
+    {
+      "gateId": "layers.surfaces",
+      "policyMode": null,
+      "selectedBy": [
+        "explicit"
+      ],
+      "actionId": "sha256:ab1b9bb76c070abda39be9d4ba1e8e9a5397ff7e4fd81c710557f6004bfa1c63",
+      "definitionDigest": "sha256:55d5e6632cc8d9146896dcccbfe612d32ff2249b5029a08cd654f2ec51bd1e53",
+      "status": "pass",
+      "attempted": true,
+      "durationMs": 21427,
+      "exitCode": 0,
+      "signal": null,
+      "reason": null,
+      "artifacts": [
+        {
+          "id": "layer-surface-report",
+          "path": "product/release/qualification/layer-surface-report.json",
+          "required": true,
+          "present": true
+        }
+      ],
+      "evidence": {
+        "expectation": "required",
+        "schema": "kungfu.layer-qualification.gate-evidence/v1",
+        "present": true,
+        "pointers": [
+          {
+            "id": "surfaces-qualification-report",
+            "ref": "product/release/qualification/layer-surface-report.json",
+            "digest": "sha256:721ed11348804e1410e1c7b5f43266f83c296995bbac59b817e5b742f1f84c99"
+          }
+        ]
+      },
+      "reproduce": {
+        "argv": [
+          "./shifu",
+          "gate",
+          "run",
+          "layers.surfaces",
+          "--registry",
+          "shifu.gates.json"
+        ]
+      }
+    }
+  ],
+  "skipped": [],
+  "unsupported": [],
+  "integrity": {
+    "digest": "sha256:f8bf4ba830d644d8b56b0d9b52a7394a8a79c86fc821af3efac23e3050ccf5a8"
+  }
+}

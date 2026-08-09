@@ -1,46 +1,35 @@
 #  SPDX-License-Identifier: Apache-2.0
 #
-# `kungfu kfx install` / `list` disclose the trust verdict (ADR-0013): a package
-# is first-party (trusted) or third-party (untrusted) by source, and each facet's
-# consequence — a sandboxed view, or a refused adapter — is stated at install
-# time so the trust grant is informed.
-
-import json
+# `kungfu kfx install` / `list` disclose only Core-derived authority. Identity
+# and Product System roles are metadata and cannot select a runtime placement.
 
 from kungfu.cli.commands import kfx
 
 
-def _manifest(key, facet):
-    return {"kungfuConfig": {"key": key, "config": {facet: {}}}}
+def test_notice_reports_only_core_authority_and_exact_grant():
+    package = {
+        "supplyChainGrade": "kfd-attested",
+        "admissionGrade": "product-system",
+        "runtimeTier": "isolated",
+        "grantedCapabilities": ["domain"],
+        "productRoles": ["boot-critical"],
+        "authority": {"capabilityGrantRoot": "sha256:grant"},
+    }
+    out = "\n".join(kfx._authority_notice(package))
+    assert "supply-chain=kfd-attested" in out
+    assert "runtime=isolated" in out
+    assert "capabilityGrantRoot: sha256:grant" in out
+    assert "assembly metadata only" in out
+    assert "node-integrated" not in out
+    assert "may inject" not in out
 
 
-def _write_manifest(path, keys):
-    with open(path, "w") as f:
-        json.dump({"version": 1, "keys": {k: {"sha256": None} for k in keys}}, f)
-
-
-def _notice(tmp_path, monkeypatch, key, facet, trusted_keys):
-    manifest_path = tmp_path / "first-party.json"
-    _write_manifest(str(manifest_path), trusted_keys)
-    monkeypatch.setenv("KF_FIRST_PARTY_MANIFEST", str(manifest_path))
-    return "\n".join(kfx._trust_notice(_manifest(key, facet)))
-
-
-def test_trusted_view_is_node_integrated(tmp_path, monkeypatch):
-    out = _notice(tmp_path, monkeypatch, "v", "view", ["v"])
-    assert "first-party" in out and "node-integrated" in out
-
-
-def test_untrusted_view_is_sandboxed(tmp_path, monkeypatch):
-    out = _notice(tmp_path, monkeypatch, "evil", "view", [])
-    assert "third-party" in out and "sandboxed-ipc" in out
-
-
-def test_untrusted_adapter_is_refused(tmp_path, monkeypatch):
-    out = _notice(tmp_path, monkeypatch, "evil", "adapter", [])
-    assert "third-party" in out and "REFUSED" in out
-
-
-def test_trusted_adapter_may_inject(tmp_path, monkeypatch):
-    out = _notice(tmp_path, monkeypatch, "a", "adapter", ["a"])
-    assert "first-party" in out and "may inject" in out
+def test_identity_labels_do_not_change_notice_authority():
+    base = {
+        "runtimeTier": "isolated",
+        "grantedCapabilities": [],
+        "productRoles": [],
+    }
+    first_party = "\n".join(kfx._authority_notice({**base, "firstParty": True}))
+    third_party = "\n".join(kfx._authority_notice({**base, "firstParty": False}))
+    assert first_party == third_party

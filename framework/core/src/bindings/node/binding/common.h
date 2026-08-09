@@ -29,7 +29,7 @@ inline int64_t TryParseTime(const Napi::CallbackInfo &info, int i) {
   typedef yijinjing::time time;
   if (IsValid(info, i, &Napi::Value::IsString)) {
     auto time_string = info[i].ToString().Utf8Value();
-    return time::strptime(time_string, {KUNGFU_DATETIME_FORMAT, KUNGFU_TRADING_DAY_FORMAT, KUNGFU_TIMESTAMP_FORMAT});
+    return time::strptime(time_string, {KUNGFU_DATETIME_FORMAT, KUNGFU_COMPACT_DATE_FORMAT, KUNGFU_TIMESTAMP_FORMAT});
   }
   return INT64_MAX;
 }

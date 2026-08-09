@@ -3,13 +3,13 @@
 # Wiring assertions for a managed provider run. Proves the seam that joins the
 # cost parse layer and the cost wire event into one act: launch a provider,
 # parse its structured output into a CostSnapshot, and emit a CostSnapshot
-# journal event (msg_type 30008) bound to the run.
+# journal event (`rewind.cost.snapshot`) bound to the run.
 #
 # It drives run_managed with an injected fake process runner and a
 # list-collecting emit sink, so nothing here spawns a real CLI or needs the
-# native journal writer. The emit sink's (msg_type, bytes) signature is exactly
-# Supervisor.enqueue, so this is the same seam production wires the supervisor
-# into. It asserts:
+# native journal writer. The emit sink's (action_type, bytes) signature is
+# exactly Supervisor.enqueue, so this is the same seam production wires the
+# supervisor into. It asserts:
 #   1. codex exec --json is invoked and accumulated into an EXACT_RUN cost event
 #      with no fabricated dollar cost, at Supervisor-layer provenance;
 #   2. claude --print --output-format json carries total_cost_usd + session;
@@ -43,7 +43,7 @@ if "kungfu" not in sys.modules:
     )
     sys.modules["kungfu"] = _m
 
-from kungfu.rewind import MSG_COST_SNAPSHOT, MSG_MODEL_RESPONSE, managed_run  # noqa: E402
+from kungfu.rewind import ACTION_COST_SNAPSHOT, ACTION_MODEL_RESPONSE, managed_run  # noqa: E402
 from kungfu.rewind.fb.Attribution import Attribution as FbAttribution  # noqa: E402
 from kungfu.rewind.fb.CallStatus import CallStatus as FbCallStatus  # noqa: E402
 from kungfu.rewind.fb.CaptureLayer import CaptureLayer as FbCaptureLayer  # noqa: E402
@@ -73,22 +73,22 @@ def fake_runner(exit_code, stdout, stderr=""):
 def sink():
     events = []
 
-    def emit(msg_type, data):
-        events.append((msg_type, bytes(data)))
+    def emit(action_type, data):
+        events.append((action_type, bytes(data)))
 
     return emit, events
 
 
 def decode(events):
-    cost_events = [row for row in events if row[0] == MSG_COST_SNAPSHOT]
+    cost_events = [row for row in events if row[0] == ACTION_COST_SNAPSHOT]
     assert len(cost_events) == 1, f"expected 1 cost event, got {len(cost_events)}"
-    msg_type, payload = cost_events[0]
-    assert msg_type == MSG_COST_SNAPSHOT
+    action_type, payload = cost_events[0]
+    assert action_type == ACTION_COST_SNAPSHOT
     return FbCostSnapshot.GetRootAs(payload, 0)
 
 
 def decode_response(events):
-    response_events = [row for row in events if row[0] == MSG_MODEL_RESPONSE]
+    response_events = [row for row in events if row[0] == ACTION_MODEL_RESPONSE]
     assert len(response_events) == 1, (
         f"expected 1 model response event, got {len(response_events)}"
     )
@@ -245,7 +245,8 @@ result = managed_run.run_managed(
 )
 check("no-usage run does not emit", result.emitted is False)
 check(
-    "no-usage emits only response", [row[0] for row in events] == [MSG_MODEL_RESPONSE]
+    "no-usage emits only response",
+    [row[0] for row in events] == [ACTION_MODEL_RESPONSE],
 )
 check("no-usage still returns a snapshot", result.snapshot is not None)
 check("no-usage response text absent", result.response_text is None)

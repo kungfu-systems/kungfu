@@ -1,0 +1,1 @@
+"""Semantic registry test provider."""

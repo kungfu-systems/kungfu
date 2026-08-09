@@ -1,0 +1,29 @@
+ninja: no work to do.
+[projection-bootstrap-test] running /data/worktrees/kungfu/feature/agent120-fault-campaign/framework/core/build/Release/kungfu_projection_bootstrap_tests
+ok - snapshot through T replays strictly after T
+ok - restart loads verified snapshot and replays
+ok - missing snapshot honors peer requirement
+ok - corrupt and wrong-schema snapshots fail closed
+ok - deleted projection rebuilds deterministically
+ok - gapped durable input never advances projection
+ok - failed rebuild preserves the previous snapshot
+ok - actual StateDataTypes match compatibility state at one cut
+ok - actual typed projector fails closed and preserves rollback
+ok - candidate declaration, parity, status and atomic hydration
+ok - state service owns projection shadow and fails closed when stopped
+[projection-bootstrap-test] Python/Node/CLI status parity passed
+[projection-bootstrap-test] cross-process restart passed
+[projection-bootstrap-test] candidate snapshot/replay contracts passed
+[2026-07-14 03:34:46.436] [info] [journal.h:49] Tracer reset
+[2026-07-14 03:34:46.436] [info] [watcher.h:90] Watcher reset
+[2026-07-14 03:34:46.436] [info] [data_table.h:39] DataTable reset
+[2026-07-14 03:34:46.436] [info] [io.h:45] IODevice reset
+[2026-07-14 03:34:46.436] [info] [action_recorder.h:33] ActionRecorder reset
+[2026-07-14 03:34:46.436] [info] [journal.h:151] Assemble reset
+[2026-07-14 03:34:46.436] [info] [journal.h:129] Reader reset
+[2026-07-14 03:34:46.436] [info] [journal.h:94] Frame reset
+[2026-07-14 03:34:46.436] [info] [config_store.h:42] ConfigStore reset
+[2026-07-14 03:34:46.436] [info] [history.h:35] History reset
+[2026-07-14 03:34:46.436] [info] [schema.h:36] Schema reset
+warning: --using-file is deprecated. This is now the default.
+$ node scripts/require-shifu.mjs test:projection-bootstrap && node scripts/run-projection-bootstrap-tests.mjs

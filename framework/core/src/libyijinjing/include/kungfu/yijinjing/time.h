@@ -9,7 +9,7 @@
 
 #define KUNGFU_DATETIME_FORMAT "%F %T"
 #define KUNGFU_TIMESTAMP_FORMAT "%F %T.%N"
-#define KUNGFU_TRADING_DAY_FORMAT "%Y%m%d"
+#define KUNGFU_COMPACT_DATE_FORMAT "%Y%m%d"
 #define KUNGFU_HISTORY_DAY_FORMAT "%Y-%m-%d %H:%M:%S"
 
 namespace kungfu::yijinjing {
@@ -55,12 +55,13 @@ public:
   static int64_t next_minute(int64_t nanotime);
 
   /**
-   * Given a timestamp, returns the next end of trading time, i.e. 16:00 of today if the argument is before that,
-   * otherwise 16:00 of tomorrow.
+   * Given a timestamp, returns the next session boundary. The default v4 runtime
+   * policy is a local 16:00 boundary inherited from earlier dogfood storage
+   * windows; callers should treat it as a session policy, not a market truth.
    * @param nanotime timestamp in nano seconds
-   * @return the next trading session end time point in nano seconds
+   * @return the next session boundary time point in nano seconds
    */
-  static int64_t next_trading_day_end(int64_t nanotime);
+  static int64_t next_session_boundary(int64_t nanotime);
 
   /**
    * Given a timestamp, returns the start time of the corresponding calendar day.
@@ -76,16 +77,16 @@ public:
   static int64_t today_start();
 
   /**
-   * Start time of trading day (the last 16:00:00) in nano seconds.   *
-   * @return yesterday 16:00:00 if now earlier than 4.PM, else today  16:00:00 in nano seconds.
+   * Start time of the current runtime session window.
+   * @return previous session boundary in nano seconds.
    */
-  static int64_t trading_day_start();
+  static int64_t session_window_start();
 
   /**
-   * Start time of trading day (yesterday 16:00:00) in nano seconds.
-   * @return yesterday 16:00:00 in nano seconds, whenever is now.
+   * Start time used for bounded history restore queries.
+   * @return a stable restore lower bound in nano seconds.
    */
-  static int64_t restore_start();
+  static int64_t history_window_start();
 
   /**
    * Parse string time to nano time.

@@ -1,0 +1,132 @@
+{
+  "schema": "kungfu.adr-identity-final-qualification/v1",
+  "verdict": "fit",
+  "qualified_at": "2026-07-24T02:08:00Z",
+  "source": {
+    "implementation_commit": "5fed1ff7e32c55044335bc066399fd9adf642240",
+    "implementation_tree": "fa1a630cc497d9e7eb8c3cf98add88455cbc19d6",
+    "base_commit": "239f0989dd6555c7b38d39c54c6f8ab5d252e44a",
+    "pull_request": "https://github.com/kungfu-systems/kungfu/pull/1386"
+  },
+  "inventory": {
+    "records": 152,
+    "owners": {
+      "kungfu": 143,
+      "shifu": 9
+    },
+    "canonical_identity_schemes": [
+      "KF-ADR-UUIDv7",
+      "SHIFU-ADR-UUIDv7"
+    ],
+    "structural_findings": 0,
+    "current_authority_retired_token_matches": 0,
+    "immutable_history_exclusions": [
+      ".kungfu/episodes/sealed/",
+      ".xinfa/baselines/",
+      "docs/qualification/evidence/"
+    ]
+  },
+  "transition_surface": {
+    "legacy_inventory_present": false,
+    "migration_command_present": false,
+    "migration_fixture_present": false,
+    "dual_parser_present": false,
+    "shared_allocation_or_index_write_present": false
+  },
+  "concurrency": {
+    "fixed_timestamp_unique_ids": 100,
+    "independent_writers": 128,
+    "arbitrary_application_orders": "passed",
+    "real_git_merge_orders": 2,
+    "shared_index_writes": 0
+  },
+  "checks": [
+    {
+      "command": "./shifu adr:identity:test",
+      "status": "passed"
+    },
+    {
+      "command": "./shifu adr:audit -- --json",
+      "status": "passed",
+      "records": 152,
+      "structural_findings": 0
+    },
+    {
+      "command": "./shifu docs:check",
+      "status": "passed"
+    },
+    {
+      "command": "./shifu release:promotion:rehearse",
+      "status": "passed",
+      "side_effects": false
+    },
+    {
+      "command": "./shifu durability:admission",
+      "status": "passed",
+      "production_eligible": false
+    },
+    {
+      "command": "./shifu check:source",
+      "status": "passed"
+    },
+    {
+      "command": "agent-120 fact durable admission qualification",
+      "status": "passed",
+      "tests": 13,
+      "host_envelope": "agent120-linux-x64-ext4-nvme-fact-v1",
+      "report_root": "sha256:6c689deff4fcd0ea33abaef7b35480c45ab21349dcf4dc3cb8839200ff5b9e0c"
+    }
+  ],
+  "acceptance_matrix": [
+    {
+      "id": "A1",
+      "status": "proved",
+      "evidence": ["100 fixed-timestamp identities", "128 independent writers"]
+    },
+    {
+      "id": "A2",
+      "status": "proved",
+      "evidence": ["transition gate served the bounded migration and is now removed"]
+    },
+    {
+      "id": "A3",
+      "status": "proved",
+      "evidence": ["two real Git branch orders converge", "no shared index write"]
+    },
+    {
+      "id": "A4",
+      "status": "proved",
+      "evidence": ["152 canonical records", "owner, filename, heading and metadata audit"]
+    },
+    {
+      "id": "A5",
+      "status": "proved",
+      "evidence": ["zero retired sequential identity matches in current authority"]
+    },
+    {
+      "id": "A6",
+      "status": "proved",
+      "evidence": ["history is non-authoritative and excluded only in content-addressed stores"]
+    },
+    {
+      "id": "A7",
+      "status": "proved",
+      "evidence": ["ADR audit", "documentation gates", "source acceptance", "KFD and Buildchain projections"]
+    },
+    {
+      "id": "A8",
+      "status": "proved",
+      "evidence": ["legacy inventory removed", "migration command removed", "dual parser removed", "independent protected review"]
+    }
+  ],
+  "independent_review": {
+    "reviewer": "kungfu-origin",
+    "status": "approved",
+    "review": "https://github.com/kungfu-systems/kungfu/pull/1386#pullrequestreview-4769461062"
+  },
+  "non_claims": [
+    "No product release or channel promotion was performed.",
+    "No production durability eligibility is claimed.",
+    "Content-addressed historical stores were not rewritten."
+  ]
+}

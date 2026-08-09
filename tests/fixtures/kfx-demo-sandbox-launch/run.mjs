@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-// Gate: the default-tier OS sandbox (ADR-0013). A guest launched under the OS
+// Gate: the default-tier OS sandbox (KF-ADR-019f86da-4f90-79f1-8716-aca36b142847). A guest launched under the OS
 // sandbox relays capabilities over its stdio but cannot touch the filesystem or
 // the network. macOS uses Seatbelt (sandbox-exec); Linux uses bubblewrap (bwrap).
 // On a platform with no sandbox (or Linux without bwrap) parent.mjs skips rather

@@ -1,0 +1,165 @@
+{
+  "schema": "kungfu.data-protection.fixture-corpus/v1",
+  "base": {
+    "schema": "kungfu.data-protection.admission-receipt/v1",
+    "status": "accepted",
+    "contract": {
+      "id": "kungfu-durable-history-data-protection",
+      "version": 1
+    },
+    "entrypointId": "cli-work",
+    "domainFamily": "work-control-history",
+    "memberKind": "accepted-work",
+    "object": {
+      "identity": "kungfu:assignment:fixture-work",
+      "rootProtocol": "kungfu.fact-root.canonical/v2",
+      "root": "sha256:1111111111111111111111111111111111111111111111111111111111111111"
+    },
+    "authority": {
+      "owner": "kungfu.work-control Profile over native Fact and Episode authority",
+      "source": "extensions/work-control/work-control-actions/domain/work_control_assessment.py",
+      "ownerReceiptSchema": "kungfu.initiative-assignment.write-receipt/v1",
+      "ownerReceiptRoot": "sha256:2222222222222222222222222222222222222222222222222222222222222222"
+    },
+    "closure": {
+      "completeForDeclaredScope": true,
+      "unknownRequiredMembers": [],
+      "omissions": [],
+      "hiddenLoss": false
+    },
+    "migration": {
+      "kind": "none",
+      "sourceRoot": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+      "successorRoot": null,
+      "mappingReceiptRoot": null,
+      "downgrade": false,
+      "supported": true
+    },
+    "recovery": {
+      "kind": "verified-export-import",
+      "authorityRoot": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+      "exportRoot": "sha256:3333333333333333333333333333333333333333333333333333333333333333",
+      "importReceiptRoot": "sha256:4444444444444444444444444444444444444444444444444444444444444444",
+      "postflightEquivalent": true
+    },
+    "gc": {
+      "requested": false,
+      "retentionClass": "critical",
+      "successorRoot": null,
+      "successorReceiptRoot": null,
+      "successorEquivalent": false,
+      "exportRecoveryVerified": false
+    },
+    "receiptRoot": "sha256:91ef223412dcf9d8e8e9bfd4d5f66be03a5c6804b1a66e4e6c6d4b05e779b69e"
+  },
+  "cases": [
+    {
+      "id": "accepted-critical-history",
+      "mutation": "none",
+      "expected": {
+        "ok": true
+      }
+    },
+    {
+      "id": "accepted-copy-forward-successor",
+      "mutation": "copy-forward",
+      "expected": {
+        "ok": true
+      }
+    },
+    {
+      "id": "accepted-gc-after-equivalent-successor",
+      "mutation": "gc-with-successor",
+      "expected": {
+        "ok": true
+      }
+    },
+    {
+      "id": "accepted-gc-after-export-recovery",
+      "mutation": "gc-with-export",
+      "expected": {
+        "ok": true
+      }
+    },
+    {
+      "id": "duplicate-domain-member-authority",
+      "mutation": "duplicate-authority",
+      "expected": {
+        "ok": false,
+        "diagnostic": "duplicate-domain-member-authority"
+      }
+    },
+    {
+      "id": "activity-is-not-protected-history",
+      "mutation": "activity-only",
+      "expected": {
+        "ok": false,
+        "diagnostic": "activity-is-not-protected-history"
+      }
+    },
+    {
+      "id": "authority-mismatch",
+      "mutation": "authority-mismatch",
+      "expected": {
+        "ok": false,
+        "diagnostic": "authority-mismatch"
+      }
+    },
+    {
+      "id": "hidden-required-loss",
+      "mutation": "hidden-loss",
+      "expected": {
+        "ok": false,
+        "diagnostic": "hidden-required-loss"
+      }
+    },
+    {
+      "id": "in-place-reinterpretation",
+      "mutation": "reinterpret-in-place",
+      "expected": {
+        "ok": false,
+        "diagnostic": "in-place-reinterpretation"
+      }
+    },
+    {
+      "id": "unknown-required-member",
+      "mutation": "unknown-required-member",
+      "expected": {
+        "ok": false,
+        "diagnostic": "unknown-required-member"
+      }
+    },
+    {
+      "id": "unsupported-downgrade",
+      "mutation": "unsupported-downgrade",
+      "expected": {
+        "ok": false,
+        "diagnostic": "unsupported-downgrade"
+      }
+    },
+    {
+      "id": "cache-dependent-recovery",
+      "mutation": "cache-recovery",
+      "expected": {
+        "ok": false,
+        "diagnostic": "cache-dependent-recovery"
+      }
+    },
+    {
+      "id": "gc-without-successor-or-export",
+      "mutation": "gc-without-recovery",
+      "expected": {
+        "ok": false,
+        "diagnostic": "gc-without-successor-or-export"
+      }
+    },
+    {
+      "id": "tampered-protection-receipt",
+      "mutation": "tampered-root",
+      "expected": {
+        "ok": false,
+        "diagnostic": "protection-receipt-root-mismatch"
+      }
+    }
+  ]
+}

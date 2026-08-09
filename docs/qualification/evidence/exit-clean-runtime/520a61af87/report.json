@@ -1,0 +1,252 @@
+{
+  "artifact": {
+    "digest": "sha256:8c0fcb6ec811c03c11be56b6d10fdd7cea5aed50657bc50979cfcdc805fd5cd3",
+    "name": "kungfu-episodes-cli-darwin-arm64.tar.gz",
+    "product": "official-cli-archive"
+  },
+  "bounds": {
+    "durationMs": 11034,
+    "maximumResidentKiB": 69872,
+    "packageBytes": {
+      "full": 407669,
+      "thin": 9824
+    }
+  },
+  "capabilities": [
+    "inspect",
+    "verify-inventory",
+    "verify-content",
+    "materialize",
+    "rebuild-projections",
+    "continue"
+  ],
+  "continuation": {
+    "boundedSteps": 1,
+    "chatContextUsed": false,
+    "input": {
+      "cutRoot": "sha256:aec27562bd526b0735bd1b46b28b659cd26e10e6df27a3fe19dcfeeecd5de900",
+      "importReceiptRoot": "sha256:da5ad22ecf34a50f8c785e87f233b5c049cfabde7aec6cafd8ff3aab69933b30",
+      "installedDiscoveryRoot": "sha256:691598137a25b1c12dcc4b6f8465655f1b423a508d31e4c3c5f4ea70561958aa",
+      "packageRoot": "sha256:72e9d621e9be0da07e5d9a0488768e3151ec61e6ed8264521b62cab0204f736b",
+      "revision": 2
+    },
+    "receiptRoot": "sha256:e62ed59719f0d43467c1acbe8e2b68baba1f5b2bdaf4ecd95da1de875659f755",
+    "resultCutRoot": "sha256:387892752a4d9f94ab2f02f51930e27a356e06eb6e65b020bb34c0d307a06fbb",
+    "resultRevision": 3
+  },
+  "environment": {
+    "emptyDestination": true,
+    "installedDiscovery": {
+      "contractRegistry": "runtime/config/kungfu-contracts.registry.json",
+      "firstPartySourceRoot": "extensions",
+      "isolatedPython": true,
+      "kungfuPackage": "runtime/python/lib/python3.13/site-packages/kungfu/__init__.py",
+      "nativeBinding": "runtime/pykungfu.cpython-313-darwin.so",
+      "python": "runtime/python/bin/python3",
+      "sourcePathLeak": false
+    },
+    "network": "denied-by-macos-sandbox",
+    "oldRuntimeAvailable": false,
+    "sourceCheckoutOnSysPath": false
+  },
+  "faultCampaign": [
+    {
+      "id": "tamper",
+      "status": "rejected"
+    },
+    {
+      "id": "missing-material",
+      "status": "rejected"
+    },
+    {
+      "id": "version-mismatch",
+      "status": "rejected"
+    },
+    {
+      "code": "thin-materialization-forbidden",
+      "id": "thin-materialization",
+      "status": "rejected"
+    },
+    {
+      "id": "interrupted-import-retry",
+      "remainingAfterRetry": [],
+      "retryStatus": "imported",
+      "status": "partial"
+    }
+  ],
+  "fsckAndRebuild": {
+    "authorityUnchanged": true,
+    "deletedDerivedProjections": [
+      "storage/projections/source-registry.sqlite",
+      "storage/projections/manifest-catalog.sqlite",
+      "storage/projections/episode-manifest.sqlite"
+    ],
+    "episodeRebuild": {
+      "authority": "yijinjing-journal",
+      "ok": true,
+      "projection": "sqlite",
+      "query_records": 65
+    },
+    "factFsckOk": true,
+    "factRebuild": {
+      "after_root": "sha256:5369f2f8b2f6db3d3c468aaea99846763c85a168a8ae71ba46b2dd7e28eb6698",
+      "before_root": "sha256:5369f2f8b2f6db3d3c468aaea99846763c85a168a8ae71ba46b2dd7e28eb6698",
+      "mode": "authority-replay",
+      "ok": true,
+      "projection_count": 0,
+      "write_occurred": false
+    },
+    "projectionLossVisible": true,
+    "storageFsckAfterOk": true,
+    "storageFsckBeforeOk": true,
+    "storageRebuild": {
+      "ok": true,
+      "projections": [
+        {
+          "name": "source-registry-sqlite",
+          "ok": true,
+          "written": true
+        },
+        {
+          "name": "manifest-catalog-sqlite",
+          "ok": true,
+          "written": true
+        }
+      ],
+      "rebuiltFrom": "storage kernel journals",
+      "written": true
+    }
+  },
+  "import": {
+    "destinationStateRoot": "sha256:a9258564eff826b5e7bb69d448c9d2e9bc59ec4620c513ac7e275aa921fd17b4",
+    "executeReceiptRoot": "sha256:da5ad22ecf34a50f8c785e87f233b5c049cfabde7aec6cafd8ff3aab69933b30",
+    "previewReceiptRoot": "sha256:69289f77f5d99925c54224f7ed90cd72da696d1c673e6b3412a8117774f49604",
+    "retryReceiptRoot": "sha256:f0eff06e1aee8fe1aed95f56681602d87e29273f058c6c19ed7ad74d18b5f5c6",
+    "sourceDestinationExact": true,
+    "sourceStateRoot": "sha256:a9258564eff826b5e7bb69d448c9d2e9bc59ec4620c513ac7e275aa921fd17b4"
+  },
+  "installedCli": {
+    "agentWorkCutRoot": "sha256:aec27562bd526b0735bd1b46b28b659cd26e10e6df27a3fe19dcfeeecd5de900",
+    "agentWorkInspectStatus": "current",
+    "entry": "kungfu",
+    "exitInspectStatus": "verified",
+    "exitPackageRoot": "sha256:72e9d621e9be0da07e5d9a0488768e3151ec61e6ed8264521b62cab0204f736b",
+    "factFsckOk": true
+  },
+  "knownLimits": [
+    "This report qualifies one official macOS CLI artifact only.",
+    "GUI/TUI parity, independent verifier implementation, third-party readers, distributed recovery, and physical-media durability are not claimed.",
+    "The network claim is bounded to the named OS or process sandbox used by the orchestrator."
+  ],
+  "packages": {
+    "full": {
+      "bundleRoot": "sha256:de3d1fd3ff5cf7a1cba456a3ed9e782046a218c76e0a28a1b04c29f1ac2139f1",
+      "packageRoot": "sha256:72e9d621e9be0da07e5d9a0488768e3151ec61e6ed8264521b62cab0204f736b",
+      "verdict": "verified",
+      "verifierRoot": "sha256:5850fd3fd6e559871f7ba10973f6db78ac50e738f327169e2457b67628396151"
+    },
+    "thin": {
+      "bundleRoot": "sha256:ca7b1267ec949e494020921c94c811d772241cc134a37c6eb15f1a1297dc2fab",
+      "omissions": [
+        {
+          "affectsCapabilities": [
+            "verify-content",
+            "materialize",
+            "rebuild-projections",
+            "continue"
+          ],
+          "detailRoot": "sha256:cc0aa61428283750b5b477be90db9715fd38b8a94309b1490c92fbc33cea4254",
+          "kind": "missing",
+          "memberId": "mission-profile",
+          "omissionId": "thin-material:mission-profile",
+          "requiredForScope": true
+        },
+        {
+          "affectsCapabilities": [
+            "verify-content",
+            "materialize",
+            "rebuild-projections",
+            "continue"
+          ],
+          "detailRoot": "sha256:8c68a59bc6442f9f75f07d8298c40abc6e1af39bceb9e2f455f3b9007db02091",
+          "kind": "missing",
+          "memberId": "work-authority",
+          "omissionId": "thin-material:work-authority",
+          "requiredForScope": true
+        },
+        {
+          "affectsCapabilities": [
+            "verify-content",
+            "materialize",
+            "rebuild-projections",
+            "continue"
+          ],
+          "detailRoot": "sha256:487f75b687ae1cfdefecaf2e304c936b9b9968bd041c96ad8f9332acca128625",
+          "kind": "missing",
+          "memberId": "work-cut",
+          "omissionId": "thin-material:work-cut",
+          "requiredForScope": true
+        },
+        {
+          "affectsCapabilities": [
+            "verify-content",
+            "materialize",
+            "rebuild-projections",
+            "continue"
+          ],
+          "detailRoot": "sha256:236a21dfd0f7a080570f6ce3f02088e3f8f7592c7f7d5132de02e4b91395b66c",
+          "kind": "missing",
+          "memberId": "qualification-episode",
+          "omissionId": "thin-material:qualification-episode",
+          "requiredForScope": true
+        },
+        {
+          "affectsCapabilities": [
+            "verify-content",
+            "materialize",
+            "rebuild-projections",
+            "continue"
+          ],
+          "detailRoot": "sha256:9e797423c1c5288840302bdfe95d3b6b1a23da798314ec87fadbd6c54ef3ca43",
+          "kind": "missing",
+          "memberId": "mission-state",
+          "omissionId": "thin-material:mission-state",
+          "requiredForScope": true
+        }
+      ],
+      "packageRoot": "sha256:847a470eb67fdc04db112763be8c8601d17c30ee51f42ea89ae6b2e5090cd281",
+      "verdict": "degraded",
+      "verifierRoot": "sha256:a3d5af082349bdcd5008f1e17826556bff774f25bd98c2a3c0b2ddccc7ababfa"
+    }
+  },
+  "platform": {
+    "filesystemProfile": {
+      "device": 16777232,
+      "name": "disposable-host-default"
+    },
+    "machine": "arm64",
+    "python": "3.13.14",
+    "release": "25.5.0",
+    "system": "Darwin"
+  },
+  "releaseMatrix": [
+    {
+      "artifactDigest": "sha256:8c0fcb6ec811c03c11be56b6d10fdd7cea5aed50657bc50979cfcdc805fd5cd3",
+      "platform": "darwin-arm64",
+      "verdict": "qualified"
+    },
+    {
+      "artifactDigest": null,
+      "platform": "linux-x86_64",
+      "verdict": "unqualified-no-artifact-evidence"
+    },
+    {
+      "artifactDigest": null,
+      "platform": "windows-x86_64",
+      "verdict": "unqualified-no-artifact-evidence"
+    }
+  ],
+  "reportRoot": "sha256:105a912f54720bf5665b8cfd666013b788e423cd841b7a5af8525b9bc11d1726",
+  "schema": "kungfu.exit-clean-runtime-qualification/v1",
+  "status": "qualified"
+}

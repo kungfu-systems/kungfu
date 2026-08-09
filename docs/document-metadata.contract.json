@@ -1,0 +1,245 @@
+{
+  "schemaVersion": 1,
+  "metadataSchema": "kungfu.document-metadata/v1",
+  "metadataRegistry": "docs/document-metadata.registry.json",
+  "metadataRegistryShards": [
+    "docs/evolution/document-metadata.registry.json"
+  ],
+  "adrIdentity": {
+    "root": "docs/adr",
+    "scheme": "uuidv7",
+    "prefixes": ["KF-ADR", "SHIFU-ADR"],
+    "filenameProjection": "canonical-id-only"
+  },
+  "optionalFields": [
+    "sources",
+    "last_reviewed",
+    "period",
+    "theme",
+    "confidence",
+    "evidence_grade",
+    "ai_provenance",
+    "review_refs",
+    "open_questions",
+    "implementation_commits",
+    "implementation_prs",
+    "closure_commit",
+    "closure_pr",
+    "qualification_refs",
+    "supersedes",
+    "superseded_by",
+    "amends",
+    "amended_by"
+  ],
+  "sourceKinds": [
+    "architecture-decisions",
+    "executable-probe",
+    "local-files",
+    "official-upstream",
+    "public-reference-systems",
+    "user-consensus",
+    "user-decision"
+  ],
+  "externalFrontmatterSchemas": [
+    {
+      "id": "github-issue-template",
+      "patterns": ["^\\.github/ISSUE_TEMPLATE/.*\\.md$"]
+    },
+    {
+      "id": "kungfu-skill",
+      "patterns": ["(^|/)SKILL\\.md$"]
+    }
+  ],
+  "profiles": [
+    {
+      "id": "architecture-decision",
+      "metadataMode": "inline",
+      "patterns": [
+        "^docs/adr/(?!README\\.md$).+\\.(?:md|markdown)$"
+      ],
+      "required": [
+        "metadata_schema",
+        "doc_type",
+        "adr_id",
+        "decision_status",
+        "implementation_status",
+        "review_state",
+        "sensitivity"
+      ],
+      "constants": {
+        "metadata_schema": "kungfu.document-metadata/v1",
+        "doc_type": "architecture-decision",
+        "sensitivity": "public"
+      },
+      "enums": {
+        "decision_status": [
+          "proposed",
+          "accepted",
+          "superseded",
+          "rejected",
+          "withdrawn"
+        ],
+        "implementation_status": [
+          "not-started",
+          "partial",
+          "staged",
+          "implemented",
+          "not-applicable",
+          "unknown"
+        ],
+        "review_state": [
+          "legacy-unreviewed",
+          "unreviewed",
+          "self-reviewed",
+          "maintainer-reviewed"
+        ]
+      },
+      "forbidden": ["status", "document_status", "source_level"]
+    },
+    {
+      "id": "adr-index",
+      "metadataMode": "inline",
+      "files": ["docs/adr/README.md"],
+      "required": [
+        "metadata_schema",
+        "doc_type",
+        "document_status",
+        "review_state",
+        "sensitivity"
+      ],
+      "constants": {
+        "metadata_schema": "kungfu.document-metadata/v1",
+        "doc_type": "adr-index",
+        "document_status": "active",
+        "sensitivity": "public"
+      },
+      "enums": {
+        "review_state": ["unreviewed", "self-reviewed", "maintainer-reviewed"]
+      },
+      "forbidden": ["status", "decision_status", "source_level"]
+    },
+    {
+      "id": "engineering-evidence",
+      "metadataMode": "inline",
+      "files": [
+        "crates/host-spike/README.md",
+        "docs/qualification/episode-atomicity-qualification.md",
+        "docs/research/libkungfu-embedding-membrane-spike.md",
+        "docs/research/libwasm-embedding-membrane-spike.md",
+        "docs/research/rust-host-spike.md",
+        "docs/qualification/layer-gate-timing-baseline.md",
+        "docs/qualification/node-watcher-runtime-boundary.md",
+        "docs/qualification/python-kfx-asyncio-performance.md",
+        "docs/qualification/single-host-performance-qualification.md",
+      "docs/qualification/runtime-activation-and-product-delivery.md",
+      "docs/qualification/auditable-demo-artifact-pipeline.md",
+      "docs/qualification/evidence/durability/12dd26e899/README.md",
+        "docs/architecture/carrier-type-registry.md",
+        "docs/architecture/strong-durability-and-crash-recovery-design.md",
+        "docs/qualification/mmap-performance.md",
+        "framework/core/slices/libwasm-shared-membrane/README.md"
+      ],
+      "required": [
+        "metadata_schema",
+        "doc_type",
+        "document_status",
+        "review_state",
+        "sensitivity"
+      ],
+      "constants": {
+        "metadata_schema": "kungfu.document-metadata/v1"
+      },
+      "enums": {
+        "document_status": ["draft", "active", "stable", "deprecated", "archived"],
+        "review_state": ["unreviewed", "self-reviewed", "maintainer-reviewed"],
+        "sensitivity": ["public", "internal"]
+      },
+      "forbidden": ["status", "decision_status", "source_level"]
+    },
+    {
+      "id": "public-document",
+      "metadataMode": "registry",
+      "files": ["README.md", "AGENTS.md", "CONTRIBUTING.md"],
+      "patterns": ["^docs/.*\\.md$", "^framework/spec/.*\\.md$"],
+      "required": [
+        "metadata_schema",
+        "doc_type",
+        "document_status",
+        "review_state",
+        "sensitivity"
+      ],
+      "constants": {
+        "metadata_schema": "kungfu.document-metadata/v1",
+        "sensitivity": "public"
+      },
+      "enums": {
+        "document_status": ["draft", "active", "stable", "deprecated", "archived"],
+        "review_state": ["unreviewed", "self-reviewed", "maintainer-reviewed"]
+      },
+      "forbidden": ["status", "decision_status", "source_level"]
+    },
+    {
+      "id": "repository-document",
+      "metadataMode": "inline-optional",
+      "patterns": [".*"],
+      "required": [
+        "metadata_schema",
+        "doc_type",
+        "document_status",
+        "review_state",
+        "sensitivity"
+      ],
+      "constants": {
+        "metadata_schema": "kungfu.document-metadata/v1"
+      },
+      "enums": {
+        "document_status": ["draft", "active", "stable", "deprecated", "archived"],
+        "review_state": ["unreviewed", "self-reviewed", "maintainer-reviewed"],
+        "sensitivity": ["public", "internal"]
+      },
+      "forbidden": ["status", "decision_status", "source_level"]
+    }
+  ],
+  "adrRegistries": [],
+  "adrEvidence": {
+    "commitFields": ["implementation_commits"],
+    "pullRequestFields": ["implementation_prs"],
+    "closureCommitField": "closure_commit",
+    "closurePullRequestField": "closure_pr",
+    "qualificationRefField": "qualification_refs",
+    "statusesRequiringImplementationEvidence": ["partial", "staged", "implemented"],
+    "statusesRequiringClosure": ["implemented"],
+    "statusesForbiddingEvidence": ["not-started", "not-applicable"],
+    "pullRequestPattern": "^https://github\\.com/kungfu-systems/kungfu/pull/[0-9]+$",
+    "legacyEvidenceExemptions": {
+      "KF-ADR-019f86da-4f90-7513-9c95-f19e0c7faa80": "Frontend platform implementation spans legacy history not yet reconstructed.",
+      "KF-ADR-019f86da-4f90-7bf2-9789-1b88bf3ed265": "Schema layout baseline implementation spans legacy history not yet reconstructed.",
+      "KF-ADR-019f86da-4f90-7739-aa31-52af27bc4470": "Self-bootstrap evolved across several renames and needs semantic history review.",
+      "KF-ADR-019f86da-4f90-7463-89b2-78cb94de9a0b": "KFD-1 release versioning implementation spans legacy history not yet reconstructed.",
+      "KF-ADR-019f86da-4f90-7789-8b48-620aa694acf9": "Extension execution contract implementation spans legacy history not yet reconstructed.",
+      "KF-ADR-019f86da-4f90-74c2-9cbb-24f1c34303bf": "Kungfu Skill context implementation spans legacy history not yet reconstructed.",
+      "KF-ADR-019f86da-4f90-7153-a6c1-ab7a0a3cf481": "Managed session host placement spans legacy history not yet reconstructed.",
+      "KF-ADR-019f86da-4f90-76a1-8eda-6e49fa70e7d5": "Source synchronization implementation spans legacy history not yet reconstructed.",
+      "KF-ADR-019f86da-4f90-7c8c-b8ef-5b46308541bf": "Agent action timeline implementation spans legacy history not yet reconstructed.",
+      "KF-ADR-019f86da-4f90-70f3-9a0e-d502826fbc81": "Core action recording implementation spans legacy history not yet reconstructed.",
+      "KF-ADR-019f86da-4f90-7d72-bf9f-1d5913bbb0d5": "Frame integrity gate implementation spans legacy history not yet reconstructed.",
+      "KF-ADR-019f86da-4f90-71ac-bb91-32456981141a": "Location and journal policy implementation spans legacy history not yet reconstructed.",
+      "KF-ADR-019f86da-4f90-7c76-bf49-3e804d3ba63f": "Action envelope implementation spans legacy history not yet reconstructed.",
+      "KF-ADR-019f86da-4f90-76b5-847e-1b56562d15cf": "Greenfield runtime surface implementation spans legacy history not yet reconstructed.",
+      "KF-ADR-019f86da-4f90-7d53-b594-952ae035eb04": "Python core type implementation spans legacy history not yet reconstructed.",
+      "KF-ADR-019f86da-4f90-7d2c-aaa5-974ca5e38654": "Hash taxonomy implementation spans legacy history not yet reconstructed.",
+      "KF-ADR-019f86da-4f90-7a7d-99ba-c5c18088d450": "CRC32C frame checksum implementation spans legacy history not yet reconstructed.",
+      "KF-ADR-019f86da-4f90-765c-9723-069718911491": "Manifest-scoped synchronization implementation spans legacy history not yet reconstructed.",
+      "KF-ADR-019f86da-4f90-764b-a1f8-90375260328c": "XXH3 hash implementation spans legacy history not yet reconstructed.",
+      "KF-ADR-019f86da-4f90-7111-9165-691b834edbab": "Generic source service implementation spans legacy history not yet reconstructed.",
+      "KF-ADR-019f86da-4f90-791c-9b90-4888cca36327": "Episode causal segment implementation spans legacy history not yet reconstructed.",
+      "KF-ADR-019f86da-4f90-762d-a677-5e8984cc6692": "Episode manifest journal implementation spans legacy history not yet reconstructed.",
+      "KF-ADR-019f86da-4f90-7e58-bb03-bee0f101dc01": "Workspace data home implementation spans legacy history not yet reconstructed.",
+      "KF-ADR-019f86da-4f90-760e-9945-f737049d905f": "Location namespace terminology implementation spans legacy history not yet reconstructed.",
+      "KF-ADR-019f86da-4f90-7a66-b427-f4bcd638d8bc": "Unified view interface implementation spans legacy history not yet reconstructed.",
+      "KF-ADR-019f86da-4f90-7e38-b72f-ef8829e14104": "Runtime fact query work is staged and awaiting evidence consolidation.",
+      "KF-ADR-019f86da-4f90-7ecd-9660-81f9f74dc416": "Runtime standard-library pruning implementation spans legacy history not yet reconstructed.",
+      "KF-ADR-019f86da-4f90-7171-9dde-411f02f55950": "Libwasm runtime implementation spans legacy history not yet reconstructed."
+    }
+  }
+}

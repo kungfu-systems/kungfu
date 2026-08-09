@@ -1,0 +1,194 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://libkungfu.dev/schemas/shifu/qualified-assignment-core-qualification-v1.schema.json",
+  "title": "Shifu qualified Assignment Core qualification receipt v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "manifestRoot",
+    "artifactRoot",
+    "identity",
+    "targetCheckout",
+    "checks",
+    "promotionAuthority",
+    "promotionAuthorityRoot",
+    "receiptRoot"
+  ],
+  "properties": {
+    "schema": {
+      "const": "shifu.qualified-assignment-core-qualification/v1"
+    },
+    "manifestRoot": {
+      "$ref": "#/$defs/root"
+    },
+    "artifactRoot": {
+      "$ref": "#/$defs/root"
+    },
+    "identity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "producerRepository",
+        "producerCommit",
+        "targetRepository",
+        "targetCommit",
+        "compatibilityMode",
+        "equivalenceReceiptRoot"
+      ],
+      "properties": {
+        "producerRepository": {
+          "$ref": "#/$defs/repository"
+        },
+        "producerCommit": {
+          "$ref": "#/$defs/commit"
+        },
+        "targetRepository": {
+          "$ref": "#/$defs/repository"
+        },
+        "targetCommit": {
+          "$ref": "#/$defs/commit"
+        },
+        "compatibilityMode": {
+          "enum": ["exact-commit", "explicit-equivalence"]
+        },
+        "equivalenceReceiptRoot": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/root"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      }
+    },
+    "targetCheckout": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["commit", "clean"],
+      "properties": {
+        "commit": {
+          "$ref": "#/$defs/commit"
+        },
+        "clean": {
+          "const": true
+        }
+      }
+    },
+    "checks": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "artifactDigest",
+        "boundedPaths",
+        "safeSymlinks",
+        "platformAndAbi",
+        "buildIdentity",
+        "sourceIdentity",
+        "checkoutCleanliness"
+      ],
+      "properties": {
+        "artifactDigest": {
+          "const": "pass"
+        },
+        "boundedPaths": {
+          "const": "pass"
+        },
+        "safeSymlinks": {
+          "const": "pass"
+        },
+        "platformAndAbi": {
+          "const": "pass"
+        },
+        "buildIdentity": {
+          "const": "pass"
+        },
+        "sourceIdentity": {
+          "const": "pass"
+        },
+        "checkoutCleanliness": {
+          "const": "pass"
+        }
+      }
+    },
+    "promotionAuthority": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema",
+        "mode",
+        "repository",
+        "targetCommit",
+        "protectedRef",
+        "deliveryEvidenceRoot",
+        "authorityCandidates",
+        "status",
+        "validFrom",
+        "validThrough"
+      ],
+      "properties": {
+        "schema": {
+          "const": "kungfu.qualified-assignment-core-promotion-authority/v1"
+        },
+        "mode": {
+          "enum": ["protected-dev-direct", "protected-dev-reused-proof"]
+        },
+        "repository": {
+          "$ref": "#/$defs/repository"
+        },
+        "targetCommit": {
+          "$ref": "#/$defs/commit"
+        },
+        "protectedRef": {
+          "type": "string",
+          "pattern": "^refs/heads/[A-Za-z0-9._/-]+$"
+        },
+        "deliveryEvidenceRoot": {
+          "$ref": "#/$defs/root"
+        },
+        "authorityCandidates": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/root"
+          }
+        },
+        "status": {
+          "const": "active"
+        },
+        "validFrom": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "validThrough": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "promotionAuthorityRoot": {
+      "$ref": "#/$defs/root"
+    },
+    "receiptRoot": {
+      "$ref": "#/$defs/root"
+    }
+  },
+  "$defs": {
+    "root": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "commit": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{40}$"
+    },
+    "repository": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$"
+    }
+  }
+}

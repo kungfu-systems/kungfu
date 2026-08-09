@@ -1,0 +1,92 @@
+name: Installation failure
+description: Report a reproducible source, package, installer, or upgrade failure
+title: "[Install]: "
+labels: ["kind/install", "area/packaging", "source/external", "state/needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        <!-- kungfu-intake-form: install/v1 -->
+        Use this form for a reproducible installation or upgrade failure.
+        General setup questions belong in Discussions. Vulnerabilities belong
+        in private security reporting.
+  - type: input
+    id: version
+    attributes:
+      label: Exact Kungfu version or artifact
+      placeholder: "tag, commit, package version, or exact artifact filename"
+    validations:
+      required: true
+  - type: dropdown
+    id: install-channel
+    attributes:
+      label: Install channel
+      options:
+        - Source checkout
+        - GitHub Release artifact
+        - npm package
+        - PyPI package
+        - Upgrade from an earlier version
+        - Other (describe below)
+    validations:
+      required: true
+  - type: input
+    id: os-arch
+    attributes:
+      label: Operating system and architecture
+    validations:
+      required: true
+  - type: input
+    id: provider-agent
+    attributes:
+      label: Installer, package manager, provider, or agent
+      description: Include the relevant version. Use "none" if not applicable.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected result
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual result
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Minimal reproduction
+      description: Use the smallest safe sequence and identify any mirror or cache without posting private URLs.
+    validations:
+      required: true
+  - type: textarea
+    id: diagnostics
+    attributes:
+      label: Sanitized diagnostics
+      description: Redact tokens, credentials, private paths, signed URLs, customer data, and private logs.
+    validations:
+      required: true
+  - type: checkboxes
+    id: impact
+    attributes:
+      label: Impact flags
+      options:
+        - label: Possible data loss or corruption
+        - label: Possible security impact
+        - label: Continuity or recovery failure
+        - label: Blocks installation or first use
+        - label: None of the above
+    validations:
+      required: true
+  - type: checkboxes
+    id: safety
+    attributes:
+      label: Public-report safety
+      options:
+        - label: I removed secrets, credentials, tokens, private logs, customer data, and other sensitive material.
+          required: true
+        - label: I understand that a possible vulnerability must be reported privately.
+          required: true

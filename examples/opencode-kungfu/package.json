@@ -1,0 +1,30 @@
+{
+  "name": "@kungfu-tech/opencode-kungfu",
+  "version": "0.1.0-alpha.1",
+  "description": "Reference OpenCode plugin that retains lifecycle evidence in libkungfu without taking over the vendor shell",
+  "license": "Apache-2.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./index.mjs",
+    "./runtime": "./runtime.mjs"
+  },
+  "files": [
+    "index.mjs",
+    "runtime.mjs",
+    "README.md",
+    "quickstart/episode.c",
+    "quickstart/episode.mjs",
+    "quickstart/episode.py"
+  ],
+  "scripts": {
+    "test": "node --test tests/*.test.mjs"
+  },
+  "dependencies": {
+    "@kungfu-tech/core": "workspace:*"
+  },
+  "repository": {
+    "url": "https://github.com/kungfu-systems/kungfu.git",
+    "directory": "examples/opencode-kungfu"
+  }
+}

@@ -1,0 +1,75 @@
+{
+  "schema": "kungfu.python-kfx-asyncio-runtime-contract/v1",
+  "version": 1,
+  "supportedPython": ">=3.13,<3.14",
+  "modes": {
+    "deterministicJournal": {
+      "clock": "reactor-journal-time-nanoseconds",
+      "orderingAuthority": "libkungfu-journal-and-rxcpp",
+      "asyncioRole": "public-api-scheduling-checkpoint-only",
+      "ambientEffects": false
+    },
+    "liveService": {
+      "clock": "asyncio-monotonic-time-seconds",
+      "orderingAuthority": "cpython-asyncio",
+      "host": "process-isolated-python-kfx",
+      "entrypoint": "async run(caps)"
+    }
+  },
+  "bridgeInvariants": [
+    "journal-time-never-substitutes-for-asyncio-monotonic-time",
+    "asyncio-time-never-substitutes-for-journal-or-replay-time",
+    "journal-ordering-and-rxcpp-observation-remain-core-owned",
+    "only-public-asyncio-apis-are-used",
+    "reactor-failures-and-task-failures-propagate"
+  ],
+  "standardAsyncioServices": [
+    "tasks",
+    "futures",
+    "cancellation",
+    "timeouts",
+    "network-when-network-granted",
+    "subprocess-when-process-granted",
+    "graceful-shutdown"
+  ],
+  "capabilityBoundary": {
+    "relay": "exact-declared-capabilities-only",
+    "ambientNetwork": "requires-network-grant",
+    "ambientProcess": "requires-process-grant",
+    "ambientFilesystemWrite": "requires-storage-grant",
+    "hostEnvironment": "minimal-allowlist-plus-rooted-runtime-metadata",
+    "denial": "fail-closed-with-KF_KFX_CAPABILITY_DENIED"
+  },
+  "lifecycle": {
+    "states": [
+      "starting",
+      "running",
+      "stopping",
+      "stopped",
+      "failed"
+    ],
+    "hostShutdown": "relay-control-frame-then-bounded-process-termination",
+    "channelClose": "wake-all-waiters-with-CapabilityChannelClosed",
+    "cancelledCall": "remove-waiter-and-discard-late-result",
+    "statusSchema": "kungfu.kfx.python-service-status/v1"
+  },
+  "coreNonChanges": [
+    "journal-frame-ordering",
+    "rxcpp-observation",
+    "replay-time",
+    "request-receipt-semantics",
+    "native-capability-authorization"
+  ],
+  "compatibility": {
+    "alias": "kungfu.runtime.live.event_loop.LiveEventLoop",
+    "target": "JournalAsyncioBridge",
+    "meaning": "source-only-name-compatibility-not-AbstractEventLoop",
+    "removalGate": "after-the-first-stable-python-kfx-sdk-release-has-no-recorded-imports"
+  },
+  "forbiddenProductionCoupling": [
+    "subclass-asyncio.AbstractEventLoop",
+    "asyncio.Handle-construction",
+    "asyncio.TimerHandle-construction",
+    "asyncio-private-scheduling-fields"
+  ]
+}

@@ -1,0 +1,15 @@
+[build-system]
+requires = ["setuptools>=61", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "kungfu-storage"
+version = "4.0.0a1"
+description = "Python SDK over the versioned libkungfu storage contract"
+requires-python = ">=3.13,<3.14"
+license = "Apache-2.0"
+authors = [{ name = "Kungfu", email = "info@kungfu.link" }]
+
+[project.urls]
+homepage = "https://kungfu.tech"
+repository = "https://github.com/kungfu-systems/kungfu.git"

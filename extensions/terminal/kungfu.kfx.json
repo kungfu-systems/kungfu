@@ -1,0 +1,28 @@
+{
+  "schema": "kungfu.kfx.manifest/v1",
+  "name": "@kungfu-tech/kfx-view-terminal",
+  "version": "4.0.0-alpha.1",
+  "kungfuConfig": {
+    "key": "terminal",
+    "name": "Terminal",
+    "product": {
+      "roles": [
+        "agent-console"
+      ],
+      "icon": "💬",
+      "order": 20
+    },
+    "config": {
+      "view": {
+        "title": "Agent Console",
+        "capabilities": [
+          "terminal",
+          "domain",
+          "rewind",
+          "agentRuntime",
+          "agentSession"
+        ]
+      }
+    }
+  }
+}

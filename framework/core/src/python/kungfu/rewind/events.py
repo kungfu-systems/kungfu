@@ -17,6 +17,7 @@ from kungfu.rewind.fb import (
     RetryMarker,
     RunBegin,
     RunEnd,
+    RunProgress,
     ToolCall,
     ToolResult,
 )
@@ -61,6 +62,68 @@ def run_end(run_id: str | None, status: int, exit_code: int) -> bytes:
     RunEnd.AddStatus(b, status)
     RunEnd.AddExitCode(b, exit_code)
     b.Finish(RunEnd.End(b))
+    return bytes(b.Output())
+
+
+def run_progress(
+    run_id: str | None,
+    phase: str | None,
+    message: str | None,
+    severity: str | None = None,
+    pct: int = 0,
+    detail: str | None = None,
+    signal: str | None = None,
+    next_action: str | None = None,
+    workspace_id: str | None = None,
+    profile_id: str | None = None,
+    profile_root: str | None = None,
+    entity_type: str | None = None,
+    entity_id: str | None = None,
+    entity_root: str | None = None,
+) -> bytes:
+    b = flatbuffers.Builder(256)
+    run_id_o = _s(b, run_id)
+    phase_o = _s(b, phase)
+    message_o = _s(b, message)
+    severity_o = _s(b, severity)
+    detail_o = _s(b, detail)
+    signal_o = _s(b, signal)
+    next_action_o = _s(b, next_action)
+    workspace_id_o = _s(b, workspace_id)
+    profile_id_o = _s(b, profile_id)
+    profile_root_o = _s(b, profile_root)
+    entity_type_o = _s(b, entity_type)
+    entity_id_o = _s(b, entity_id)
+    entity_root_o = _s(b, entity_root)
+    RunProgress.Start(b)
+    if run_id_o:
+        RunProgress.AddRunId(b, run_id_o)
+    if phase_o:
+        RunProgress.AddPhase(b, phase_o)
+    if message_o:
+        RunProgress.AddMessage(b, message_o)
+    if severity_o:
+        RunProgress.AddSeverity(b, severity_o)
+    RunProgress.AddPct(b, pct)
+    if detail_o:
+        RunProgress.AddDetail(b, detail_o)
+    if signal_o:
+        RunProgress.AddSignal(b, signal_o)
+    if next_action_o:
+        RunProgress.AddNextAction(b, next_action_o)
+    if workspace_id_o:
+        RunProgress.AddWorkspaceId(b, workspace_id_o)
+    if profile_id_o:
+        RunProgress.AddProfileId(b, profile_id_o)
+    if profile_root_o:
+        RunProgress.AddProfileRoot(b, profile_root_o)
+    if entity_type_o:
+        RunProgress.AddEntityType(b, entity_type_o)
+    if entity_id_o:
+        RunProgress.AddEntityId(b, entity_id_o)
+    if entity_root_o:
+        RunProgress.AddEntityRoot(b, entity_root_o)
+    b.Finish(RunProgress.End(b))
     return bytes(b.Output())
 
 

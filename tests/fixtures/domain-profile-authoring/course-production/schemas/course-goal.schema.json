@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kungfu.link/schema/reference/course-production/course-goal.json",
+  "type": "object",
+  "additionalProperties": true,
+  "required": [
+    "id",
+    "state"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "state": {
+      "enum": [
+        "proposed",
+        "active",
+        "satisfied",
+        "abandoned"
+      ]
+    }
+  }
+}

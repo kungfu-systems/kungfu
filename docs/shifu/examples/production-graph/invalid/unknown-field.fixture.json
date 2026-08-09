@@ -1,0 +1,11 @@
+{
+  "schema": "shifu.production-graph-negative-fixture/v0",
+  "baseFixture": "qualified",
+  "mutation": {
+    "target": "graph",
+    "operation": "set",
+    "path": ["futureAuthority"],
+    "value": true
+  },
+  "expect": "unknown-field"
+}

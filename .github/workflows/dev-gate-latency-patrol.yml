@@ -1,0 +1,241 @@
+# SPDX-License-Identifier: Apache-2.0
+
+name: Dev Gate Latency Patrol
+
+on:
+  push:
+    branches:
+      - "dev/v*/v*"
+  schedule:
+    - cron: "23 18 * * *"
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: Protected admitted dev branch; blank means all
+        required: false
+        type: string
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: dev-gate-latency-patrol-${{ github.ref_name }}
+  cancel-in-progress: false
+
+jobs:
+  collect:
+    name: GitHub-hosted rolling latency collection
+    if: >-
+      github.repository == 'kungfu-systems/kungfu' &&
+      (
+        (github.event_name == 'push' && github.ref_protected == true) ||
+        (
+          (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') &&
+          github.ref == format('refs/heads/{0}', github.event.repository.default_branch) &&
+          github.ref_protected == true
+        )
+      )
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    timeout-minutes: 90
+    steps:
+      - name: Check out exact protected source
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        env:
+          GIT_CONFIG_COUNT: "1"
+          GIT_CONFIG_KEY_0: http.version
+          GIT_CONFIG_VALUE_0: HTTP/1.1
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Select every protected admitted dev branch
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          PATROL_EVENT_NAME: ${{ github.event_name }}
+          PATROL_REF_NAME: ${{ github.ref_name }}
+          PATROL_REF_PROTECTED: ${{ github.ref_protected }}
+          PATROL_REQUESTED_BRANCH: ${{ inputs.branch || '' }}
+        run: |
+          set -euo pipefail
+          evidence_dir="$RUNNER_TEMP/dev-gate-latency-patrol-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
+          mkdir -p "$evidence_dir"
+          printf 'KUNGFU_DEV_GATE_PATROL_EVIDENCE=%s\n' "$evidence_dir" >>"$GITHUB_ENV"
+          ./shifu dev-gate-latency-patrol:select -- \
+            --event-name "$PATROL_EVENT_NAME" \
+            --ref-name "$PATROL_REF_NAME" \
+            --ref-protected "$PATROL_REF_PROTECTED" \
+            --requested-branch "$PATROL_REQUESTED_BRANCH" \
+            --repository "$GITHUB_REPOSITORY" \
+            --output "$evidence_dir/plan.json"
+
+      - name: Collect queue-inclusive rolling windows
+        id: collect
+        continue-on-error: true
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          set -u
+          mkdir -p \
+            "$KUNGFU_DEV_GATE_PATROL_EVIDENCE/reports" \
+            "$KUNGFU_DEV_GATE_PATROL_EVIDENCE/collector"
+          while IFS= read -r branch; do
+            slug="${branch//\//_}"
+            collector_exit=0
+            ./shifu gate:latency:measure \
+              --branch "$branch" \
+              --limit 30 \
+              --latency-only \
+              --output "$KUNGFU_DEV_GATE_PATROL_EVIDENCE/reports/$slug.json" \
+              >"$KUNGFU_DEV_GATE_PATROL_EVIDENCE/collector/$slug.stdout" \
+              2>"$KUNGFU_DEV_GATE_PATROL_EVIDENCE/collector/$slug.stderr" ||
+              collector_exit=$?
+            printf '%s\n' "$collector_exit" \
+              >"$KUNGFU_DEV_GATE_PATROL_EVIDENCE/collector/$slug.exit"
+          done < <(jq -r '.branches[]' "$KUNGFU_DEV_GATE_PATROL_EVIDENCE/plan.json")
+
+      - name: Classify bounded latency evidence
+        if: ${{ always() && steps.collect.outcome != 'skipped' }}
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -u
+          mkdir -p "$KUNGFU_DEV_GATE_PATROL_EVIDENCE/classification"
+          while IFS= read -r branch; do
+            slug="${branch//\//_}"
+            ./shifu dev-gate-latency-patrol:classify -- \
+              --report "$KUNGFU_DEV_GATE_PATROL_EVIDENCE/reports/$slug.json" \
+              --output "$KUNGFU_DEV_GATE_PATROL_EVIDENCE/classification/$slug.json" \
+              --collector-exit "$(cat "$KUNGFU_DEV_GATE_PATROL_EVIDENCE/collector/$slug.exit")" \
+              --repository "$GITHUB_REPOSITORY" \
+              --branch "$branch"
+          done < <(jq -r '.branches[]' "$KUNGFU_DEV_GATE_PATROL_EVIDENCE/plan.json")
+
+      - name: Summarize bounded rolling windows
+        if: ${{ always() && steps.collect.outcome != 'skipped' }}
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -u
+          {
+            printf '## Dev Gate Latency Patrol\n\n'
+            printf -- '- Source: `%s`\n' "$GITHUB_SHA"
+            printf -- '- Run: [%s](%s/%s/actions/runs/%s)\n\n' \
+              "$GITHUB_RUN_ID" "$GITHUB_SERVER_URL" "$GITHUB_REPOSITORY" "$GITHUB_RUN_ID"
+            printf '| Branch | Required P50/P95 | Queue P50/P90 | Classification | Evidence root |\n'
+            printf '| --- | ---: | ---: | --- | --- |\n'
+          } >>"$GITHUB_STEP_SUMMARY"
+          while IFS= read -r branch; do
+            slug="${branch//\//_}"
+            classification="$KUNGFU_DEV_GATE_PATROL_EVIDENCE/classification/$slug.json"
+            test -f "$classification" || continue
+            report="$KUNGFU_DEV_GATE_PATROL_EVIDENCE/reports/$slug.json"
+            categories="$(jq -r 'if .categories | length == 0 then "healthy" else .categories | join(", ") end' "$classification")"
+            report_root="$(jq -r '.reportRoot' "$classification")"
+            if test -f "$report"; then
+              required="$(jq -r '[(.statistics.all.p50Ms // "n/a"), (.statistics.all.p95Ms // "n/a")] | join(" / ")' "$report")"
+              delivery="$(jq -r '[(.mergeQueueDelivery.statistics.p50Ms // "n/a"), (.mergeQueueDelivery.statistics.p90Ms // "n/a")] | join(" / ")' "$report")"
+            else
+              required="n/a"
+              delivery="n/a"
+            fi
+            printf '| `%s` | %s | %s | %s | `%s` |\n' \
+              "$branch" "$required" "$delivery" "$categories" "$report_root" \
+              >>"$GITHUB_STEP_SUMMARY"
+          done < <(jq -r '.branches[]' "$KUNGFU_DEV_GATE_PATROL_EVIDENCE/plan.json")
+
+      - name: Upload bounded diagnostic evidence
+        if: ${{ always() }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: dev-gate-latency-patrol-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            ${{ runner.temp }}/dev-gate-latency-patrol-${{ github.run_id }}-${{ github.run_attempt }}/plan.json
+            ${{ runner.temp }}/dev-gate-latency-patrol-${{ github.run_id }}-${{ github.run_attempt }}/reports/*.json
+            ${{ runner.temp }}/dev-gate-latency-patrol-${{ github.run_id }}-${{ github.run_attempt }}/collector/*.exit
+            ${{ runner.temp }}/dev-gate-latency-patrol-${{ github.run_id }}-${{ github.run_attempt }}/classification/*.json
+          if-no-files-found: warn
+          retention-days: 30
+
+  capture:
+    name: agent-121 native Dogfood capture
+    needs: collect
+    if: ${{ always() && needs.collect.result != 'skipped' }}
+    runs-on:
+      - agent-121
+      - kungfu-agent-patrol
+    continue-on-error: true
+    timeout-minutes: 90
+    steps:
+      - name: Check out exact protected source
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        env:
+          GIT_CONFIG_COUNT: "1"
+          GIT_CONFIG_KEY_0: http.version
+          GIT_CONFIG_VALUE_0: HTTP/1.1
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Download bounded diagnostic evidence
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: dev-gate-latency-patrol-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/dev-gate-latency-patrol-${{ github.run_id }}-${{ github.run_attempt }}
+
+      - name: Prepare native Dogfood runtime only for anomalies
+        continue-on-error: true
+        shell: bash
+        env:
+          KUNGFU_DEV_GATE_PATROL_EVIDENCE: ${{ runner.temp }}/dev-gate-latency-patrol-${{ github.run_id }}-${{ github.run_attempt }}
+        run: |
+          set -euo pipefail
+          capture_required=false
+          for classification in "$KUNGFU_DEV_GATE_PATROL_EVIDENCE"/classification/*.json; do
+            test -f "$classification" || continue
+            if jq -e '.captureRequired == true' "$classification" >/dev/null; then
+              capture_required=true
+              break
+            fi
+          done
+          printf 'KUNGFU_DEV_GATE_PATROL_CAPTURE_REQUIRED=%s\n' "$capture_required" >>"$GITHUB_ENV"
+          if test "$capture_required" = "true"; then
+            ./shifu install --frozen-lockfile
+            ./shifu build:core
+          fi
+
+      - name: Capture or deduplicate native Dogfood Findings
+        if: ${{ always() }}
+        continue-on-error: true
+        shell: bash
+        env:
+          KUNGFU_DEV_GATE_PATROL_EVIDENCE: ${{ runner.temp }}/dev-gate-latency-patrol-${{ github.run_id }}-${{ github.run_attempt }}
+        run: |
+          set -u
+          mkdir -p \
+            "$KUNGFU_DEV_GATE_PATROL_EVIDENCE/dogfood-intent" \
+            "$KUNGFU_DEV_GATE_PATROL_EVIDENCE/dogfood-receipt"
+          while IFS= read -r branch; do
+            slug="${branch//\//_}"
+            classification="$KUNGFU_DEV_GATE_PATROL_EVIDENCE/classification/$slug.json"
+            test -f "$classification" || continue
+            ./shifu dev-gate-latency-patrol:dogfood-capture -- \
+              --classification "$classification" \
+              --intent-directory "$KUNGFU_DEV_GATE_PATROL_EVIDENCE/dogfood-intent/$slug" \
+              --output "$KUNGFU_DEV_GATE_PATROL_EVIDENCE/dogfood-receipt/$slug.json" \
+              --workspace "$HOME/.local/state/kungfu-dev-gate-latency-patrol"
+          done < <(jq -r '.branches[]' "$KUNGFU_DEV_GATE_PATROL_EVIDENCE/plan.json")
+
+      - name: Upload bounded native capture receipts
+        if: ${{ always() }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: dev-gate-latency-dogfood-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/dev-gate-latency-patrol-${{ github.run_id }}-${{ github.run_attempt }}/dogfood-receipt/*.json
+          if-no-files-found: warn
+          retention-days: 30

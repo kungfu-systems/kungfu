@@ -1,0 +1,93 @@
+name: Actionable feature request
+description: Propose a bounded change with a concrete current workflow
+title: "[Feature]: "
+labels: ["kind/feature", "source/external", "state/needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        <!-- kungfu-intake-form: feature/v1 -->
+        Use this form only when a concrete workflow and bounded repository
+        change can be described. Early ideas and open-ended design discussion
+        belong in Discussions.
+  - type: input
+    id: version
+    attributes:
+      label: Exact Kungfu version, commit, or artifact
+    validations:
+      required: true
+  - type: dropdown
+    id: install-channel
+    attributes:
+      label: Relevant channel
+      options:
+        - Source checkout
+        - GitHub Release artifact
+        - npm package
+        - PyPI package
+        - Documentation or API design
+        - Other (describe below)
+    validations:
+      required: true
+  - type: input
+    id: os-arch
+    attributes:
+      label: Operating system and architecture
+      description: Use "not platform-specific" when appropriate.
+    validations:
+      required: true
+  - type: input
+    id: provider-agent
+    attributes:
+      label: Relevant provider, agent, or interface
+      description: Use "none" if not applicable.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Desired outcome
+      description: Describe the user result, not only an implementation.
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Current behavior or limitation
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Minimal current workflow
+      description: Give the smallest safe example that demonstrates the need.
+    validations:
+      required: true
+  - type: textarea
+    id: diagnostics
+    attributes:
+      label: Sanitized evidence
+      description: Provide measurements or public references, or write "none".
+    validations:
+      required: true
+  - type: checkboxes
+    id: impact
+    attributes:
+      label: Impact flags
+      options:
+        - label: Addresses possible data loss or corruption
+        - label: Addresses a possible security boundary
+        - label: Improves continuity or recovery
+        - label: Unblocks installation or first use
+        - label: None of the above
+    validations:
+      required: true
+  - type: checkboxes
+    id: safety
+    attributes:
+      label: Public-report safety
+      options:
+        - label: I removed secrets, credentials, tokens, private logs, customer data, and other sensitive material.
+          required: true
+        - label: I understand that this issue does not create a roadmap or support commitment.
+          required: true

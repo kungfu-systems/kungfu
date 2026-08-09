@@ -1,0 +1,9 @@
+{
+  "schema": "shifu.production-graph-fixture/v0",
+  "fixtureId": "failed",
+  "graphFixture": "qualified",
+  "outcome": {
+    "status": "failed",
+    "terminalNodeId": "verify-authorities"
+  }
+}

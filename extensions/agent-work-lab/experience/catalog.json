@@ -1,0 +1,121 @@
+{
+  "schema": "kungfu.agent-work-lab.suite-catalog/v1",
+  "id": "kungfu.agent-work-lab",
+  "version": "1",
+  "title": "Agent Work Lab",
+  "collection": {
+    "id": "work-continuity",
+    "title": "Work Continuity",
+    "description": "See whether fresh agent sessions can continue the same governed Work without copied chat."
+  },
+  "cases": [
+    {
+      "id": "offline-demo",
+      "title": "Offline demo",
+      "shortTitle": "Demo",
+      "description": "Watch two bundled fresh processes demonstrate a bounded stop and governed continuation.",
+      "sourceRequirement": "bundled",
+      "targetRequirement": "fresh-demo",
+      "runLabel": "running two fresh demo sessions"
+    },
+    {
+      "id": "same-agent",
+      "title": "Same agent",
+      "shortTitle": "Same",
+      "description": "Run the selected agent twice and verify that a fresh process recovers the same Work.",
+      "sourceRequirement": "configured",
+      "targetRequirement": "same",
+      "runLabel": "running selected agent twice"
+    },
+    {
+      "id": "cross-agent",
+      "title": "Agent handoff",
+      "shortTitle": "Handoff",
+      "description": "Start with one agent and ask a different agent to continue from governed evidence.",
+      "sourceRequirement": "configured",
+      "targetRequirement": "different",
+      "runLabel": "running cross-provider handoff"
+    }
+  ],
+  "checks": {
+    "two-distinct-fresh-processes": {
+      "title": "Two genuinely fresh processes",
+      "meaning": "Kungfu observed two different process identities instead of reusing one hidden session."
+    },
+    "distinct-fresh-processes": {
+      "title": "Two genuinely fresh processes",
+      "meaning": "Session 2 did not reuse the Session 1 provider process."
+    },
+    "first-attempt-ended-partial": {
+      "title": "Session 1 stopped at a bounded partial result",
+      "meaning": "The first process left durable evidence instead of pretending to finish."
+    },
+    "second-attempt-no-transcript-or-explanation": {
+      "title": "Session 2 received no copied chat",
+      "meaning": "Continuation came from governed Work, not hidden transcript transfer."
+    },
+    "second-attempt-recognized-partial-state": {
+      "title": "Session 2 recovered the partial state",
+      "meaning": "The fresh process found what was done and what remained."
+    },
+    "fixture-completed": {
+      "title": "The original Work was completed",
+      "meaning": "The second process continued the same identity to its expected result."
+    },
+    "both-processes-exited-cleanly": {
+      "title": "Both agent processes exited cleanly",
+      "meaning": "Process completion was observed for both sessions without treating exit alone as task proof."
+    },
+    "fresh-session-completed-exact-state": {
+      "title": "The fresh session completed the exact governed task",
+      "meaning": "The final state retained the same Work identity and the expected ordered steps."
+    }
+  },
+  "recommendations": {
+    "offline-demo": {
+      "title": "Offline complete · now test your real agent",
+      "instruction": "Run Same agent to verify continuity with your selected provider.",
+      "nextCase": "same-agent"
+    },
+    "same-agent": {
+      "title": "Same-agent complete · now test a handoff",
+      "instruction": "Choose a different target, then run Agent handoff.",
+      "nextCase": "cross-agent"
+    },
+    "cross-agent": {
+      "title": "Handoff complete · inspect the evidence",
+      "instruction": "Open Correct or Failed to see every continuity check and its meaning."
+    }
+  },
+  "recoveryGuidance": {
+    "agent-unavailable": "Discover or configure one exact Agent Runtime Profile, then preview agent-plan before authorizing a run.",
+    "run-failed": "Inspect the canonical report and Episode receipt roots, fix the visible failure, and start a new isolated run.",
+    "existing-work": "Open Work first; return to Agent Work Lab later from product navigation when testing a new or replacement Agent.",
+    "demo-retry": "Start a new offline demo; never repair or reuse a failed fixture directory."
+  },
+  "timing": {
+    "autoplayIntroDurationMs": 5000,
+    "eventIntervalMs": 1000,
+    "verdictIntervalMs": 520,
+    "recommendationDurationMs": 5000,
+    "quietProgressIntervalMs": 1000,
+    "reducedMotionIntervalMs": 24
+  },
+  "capabilityDeclarations": [
+    "agentRuntime",
+    "work"
+  ],
+  "claims": [
+    "continuity mechanism",
+    "deterministic state recognition",
+    "fresh-session continuation"
+  ],
+  "nonClaims": [
+    "model intelligence",
+    "production fitness",
+    "security assessment",
+    "KFD certification",
+    "provider ranking"
+  ],
+  "oracle": "partial-first-attempt-recognized-and-fixture-completed"
+}

@@ -1,0 +1,174 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kungfu.tech/schemas/episode-qualification-v1.schema.json",
+  "title": "Kungfu Episode Qualification Capability Contract v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "policy_source",
+    "episode_id",
+    "lifecycle",
+    "status",
+    "evidence",
+    "issues",
+    "capabilities",
+    "safe_capabilities",
+    "contractions",
+    "repair_prerequisites"
+  ],
+  "properties": {
+    "schema": { "const": "kungfu.episode.qualification/v1" },
+    "policy_source": { "const": "cpp-typed-fold-fsck" },
+    "episode_id": { "type": "integer", "minimum": 0 },
+    "lifecycle": {
+      "enum": ["missing", "dangling", "open", "ended", "aborted", "tombstoned"]
+    },
+    "status": { "enum": ["ok", "degraded", "failed"] },
+    "evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "manifest_records",
+        "manifest_integrity",
+        "causal_closure",
+        "content",
+        "frames",
+        "schemas",
+        "projection"
+      ],
+      "properties": {
+        "manifest_records": { "$ref": "#/$defs/evidence" },
+        "manifest_integrity": { "$ref": "#/$defs/evidence" },
+        "causal_closure": { "$ref": "#/$defs/evidence" },
+        "content": { "$ref": "#/$defs/evidence" },
+        "frames": { "$ref": "#/$defs/evidence" },
+        "schemas": { "$ref": "#/$defs/evidence" },
+        "projection": { "$ref": "#/$defs/evidence" }
+      }
+    },
+    "issues": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/issue" }
+    },
+    "capabilities": {
+      "type": "array",
+      "minItems": 8,
+      "items": { "$ref": "#/$defs/capability" }
+    },
+    "safe_capabilities": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/capabilityName" }
+    },
+    "contractions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["capability", "blocked_by"],
+        "properties": {
+          "capability": { "$ref": "#/$defs/capabilityName" },
+          "blocked_by": {
+            "type": "array",
+            "minItems": 1,
+            "items": { "type": "string", "minLength": 1 }
+          }
+        }
+      }
+    },
+    "repair_prerequisites": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/repairPrerequisite" }
+    }
+  },
+  "$defs": {
+    "evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["state", "issue_codes"],
+      "properties": {
+        "state": {
+          "enum": [
+            "verified",
+            "not_applicable",
+            "not_checked",
+            "missing",
+            "degraded",
+            "failed"
+          ]
+        },
+        "issue_codes": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "issue": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["severity", "code", "evidence", "detail"],
+      "properties": {
+        "severity": { "enum": ["info", "warning", "error"] },
+        "code": { "type": "string", "minLength": 1 },
+        "evidence": {
+          "enum": [
+            "manifest_records",
+            "manifest_integrity",
+            "causal_closure",
+            "content",
+            "frames",
+            "schemas",
+            "projection"
+          ]
+        },
+        "detail": { "type": "object" }
+      }
+    },
+    "capabilityName": {
+      "enum": [
+        "inspect",
+        "fsck",
+        "export_evidence",
+        "plan_repair",
+        "rebuild_projection",
+        "append",
+        "replay",
+        "depend_on"
+      ]
+    },
+    "capability": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "safe", "requires", "blocked_by"],
+      "properties": {
+        "name": { "$ref": "#/$defs/capabilityName" },
+        "safe": { "type": "boolean" },
+        "requires": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "blocked_by": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "repairPrerequisite": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["issue_code", "action", "required_inputs", "subject"],
+      "properties": {
+        "issue_code": { "type": "string", "minLength": 1 },
+        "action": { "type": "string", "minLength": 1 },
+        "required_inputs": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "subject": { "type": "object" }
+      }
+    }
+  }
+}

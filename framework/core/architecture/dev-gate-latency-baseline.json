@@ -1,0 +1,95 @@
+{
+  "$schema": "kungfu.dev-required-latency-baseline/v1",
+  "authorityClassification": "historical-measurement",
+  "versionLineAuthorityRoot": "sha256:2fd580501fb77ae9ee05c8dd6a4bf141fc8cdeb77c8d4d3e9cd550133213b33d",
+  "measuredAt": "2026-07-27T02:55:08.491Z",
+  "repository": "kungfu-systems/kungfu",
+  "branch": "dev/v4/v4.0",
+  "window": {
+    "requestedMergedPullRequests": 30,
+    "qualifiedSamples": 30,
+    "excludedSamples": 0,
+    "exclusionReason": "none"
+  },
+  "metric": {
+    "start": "first authoritative GitHub AddedToMergeQueueEvent",
+    "end": "latest successful required job completion in the first complete required-context set on the eventual merged merge-group round",
+    "retries": "all dequeue, retry, and queue gaps after first enqueue are included; pull-request-head checks are diagnostic only",
+    "percentile": "nearest-rank",
+    "target": {"p50Ms": 300000, "p95Ms": 600000},
+    "minimumSamples": {"all": 20, "native": 10}
+  },
+  "requiredContexts": [
+    "Candidate source acceptance / check",
+    "affected-native / linux"
+  ],
+  "statistics": {
+    "all": {"sampleCount": 30, "p50Ms": 1037000, "p95Ms": 9507000, "maxMs": 21532000},
+    "native": {"sampleCount": 21, "p50Ms": 1048000, "p95Ms": 9507000, "maxMs": 21532000},
+    "nonNative": {"sampleCount": 9, "p50Ms": 771000, "p95Ms": 1917000, "maxMs": 1917000},
+    "unknown": {"sampleCount": 0, "p50Ms": null, "p95Ms": null, "maxMs": null}
+  },
+  "cache": {
+    "outcome": "qualified-but-cold",
+    "warmCount": 0,
+    "coldCount": 21,
+    "notApplicableCount": 9,
+    "unknownCount": 0,
+    "reason": "All 21 native samples have source-bound portable-cache receipts and passed cold fallback, but none restored a usable cache; duration was not used to infer cache reuse."
+  },
+  "mergeQueueDelivery": {
+    "queueObservedCount": 46,
+    "deliveryObservedCount": 37,
+    "incompleteCount": 3,
+    "runnerEvidenceObservedCount": 46,
+    "statistics": {"sampleCount": 37, "p50Ms": 1268000, "p90Ms": 4183000, "maxMs": 89117000},
+    "dequeue": {
+      "pullRequestCount": 16,
+      "rate": 0.34782608695652173,
+      "exitCount": 52,
+      "reasons": {"failed_checks": 10, "merge_conflict": 38, "manual": 3, "invalid_merge_commit": 1}
+    },
+    "repeatedValidationCount": 9,
+    "wastedRunnerMs": 22458000,
+    "postDequeueRunnerMs": 82000,
+    "verdict": "fails-target"
+  },
+  "verdict": "fails-target",
+  "source": {
+    "command": "./shifu gate:latency:measure --branch dev/v4/v4.0 --limit 30",
+    "rawReport": "exact live effective-rule, workflow, artifact, and merge-queue evidence generated locally on 2026-07-27"
+  },
+  "samples": [
+    {"pullRequest": 1581, "kind": "native", "durationMs": 1037000, "cacheOutcome": "miss"},
+    {"pullRequest": 1575, "kind": "native", "durationMs": 1503000, "cacheOutcome": "miss"},
+    {"pullRequest": 1574, "kind": "native", "durationMs": 1032000, "cacheOutcome": "miss"},
+    {"pullRequest": 1573, "kind": "native", "durationMs": 930000, "cacheOutcome": "miss"},
+    {"pullRequest": 1571, "kind": "native", "durationMs": 4024000, "cacheOutcome": "miss"},
+    {"pullRequest": 1570, "kind": "native", "durationMs": 977000, "cacheOutcome": "miss"},
+    {"pullRequest": 1569, "kind": "non-native", "durationMs": 1344000, "cacheOutcome": "not-applicable"},
+    {"pullRequest": 1551, "kind": "native", "durationMs": 21532000, "cacheOutcome": "miss"},
+    {"pullRequest": 1567, "kind": "non-native", "durationMs": 174000, "cacheOutcome": "not-applicable"},
+    {"pullRequest": 1566, "kind": "non-native", "durationMs": 1741000, "cacheOutcome": "not-applicable"},
+    {"pullRequest": 1559, "kind": "native", "durationMs": 9507000, "cacheOutcome": "miss"},
+    {"pullRequest": 1565, "kind": "non-native", "durationMs": 181000, "cacheOutcome": "not-applicable"},
+    {"pullRequest": 1564, "kind": "native", "durationMs": 2895000, "cacheOutcome": "miss"},
+    {"pullRequest": 1563, "kind": "non-native", "durationMs": 760000, "cacheOutcome": "not-applicable"},
+    {"pullRequest": 1562, "kind": "native", "durationMs": 1007000, "cacheOutcome": "miss"},
+    {"pullRequest": 1560, "kind": "native", "durationMs": 947000, "cacheOutcome": "miss"},
+    {"pullRequest": 1557, "kind": "native", "durationMs": 1009000, "cacheOutcome": "miss"},
+    {"pullRequest": 1554, "kind": "native", "durationMs": 1055000, "cacheOutcome": "miss"},
+    {"pullRequest": 1553, "kind": "native", "durationMs": 1503000, "cacheOutcome": "miss"},
+    {"pullRequest": 1549, "kind": "non-native", "durationMs": 771000, "cacheOutcome": "not-applicable"},
+    {"pullRequest": 1548, "kind": "non-native", "durationMs": 165000, "cacheOutcome": "not-applicable"},
+    {"pullRequest": 1547, "kind": "native", "durationMs": 988000, "cacheOutcome": "miss"},
+    {"pullRequest": 1546, "kind": "native", "durationMs": 2229000, "cacheOutcome": "miss"},
+    {"pullRequest": 1545, "kind": "native", "durationMs": 1048000, "cacheOutcome": "miss"},
+    {"pullRequest": 1528, "kind": "native", "durationMs": 4173000, "cacheOutcome": "miss"},
+    {"pullRequest": 1543, "kind": "non-native", "durationMs": 1917000, "cacheOutcome": "not-applicable"},
+    {"pullRequest": 1541, "kind": "native", "durationMs": 1051000, "cacheOutcome": "miss"},
+    {"pullRequest": 1539, "kind": "native", "durationMs": 1024000, "cacheOutcome": "miss"},
+    {"pullRequest": 1535, "kind": "non-native", "durationMs": 1599000, "cacheOutcome": "not-applicable"},
+    {"pullRequest": 1540, "kind": "native", "durationMs": 979000, "cacheOutcome": "miss"}
+  ],
+  "excludedPullRequests": []
+}

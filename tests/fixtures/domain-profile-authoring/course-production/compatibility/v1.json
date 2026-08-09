@@ -1,0 +1,5 @@
+{
+  "core": ">=4.0.0 <5.0.0",
+  "actionGeometrySchema": "kungfu.action-geometry.contract/v1",
+  "unknownFields": "reject"
+}

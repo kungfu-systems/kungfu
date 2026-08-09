@@ -7,8 +7,6 @@
 #include "data_table.h"
 #include "common.h"
 
-using namespace kungfu::yijinjing;
-
 namespace kungfu::node {
 Napi::FunctionReference DataTable::constructor = {};
 

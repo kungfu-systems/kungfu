@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://xinfa.dev/schema/atlas-receipt-v1.schema.json",
+  "title": "Xinfa Atlas Compile Receipt v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "verdict", "atlas_root", "context_pack_root", "qualifying", "selfCertified", "writesCache", "diagnostics", "compiler"],
+  "properties": {
+    "schema": { "const": "xinfa.atlas-compile-receipt/v1" },
+    "verdict": { "enum": ["pass", "fail"] },
+    "atlas_root": { "oneOf": [{ "$ref": "#/$defs/root" }, { "type": "null" }] },
+    "context_pack_root": { "oneOf": [{ "$ref": "#/$defs/root" }, { "type": "null" }] },
+    "manifest_root": { "$ref": "#/$defs/root" },
+    "receipt_root": { "$ref": "#/$defs/root" },
+    "qualifying": { "const": false },
+    "selfCertified": { "const": false },
+    "writesCache": { "const": false },
+    "diagnostics": { "type": "array" },
+    "compiler": { "type": "object" }
+  },
+  "$defs": { "root": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" } }
+}

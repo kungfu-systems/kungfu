@@ -8,10 +8,10 @@
 // Usage: node tests/fixtures/rewind-demo-cross-runtime/run.mjs
 
 import path from 'node:path';
-import { locate, tmpDir, background, waitForFile, kfc, uvPython, findBin, skip } from '../_harness.mjs';
+import { locate, tmpDir, background, waitForFile, kfc, uvPython, findBin, skip, corePython } from '../_harness.mjs';
 
-const PY = process.platform === 'win32' ? 'python' : 'python3';
 const { fixtureDir, coreDir } = locate(import.meta.url);
+const PY = corePython(coreDir);
 
 if (!findBin(['node'])) skip('node not on PATH');
 

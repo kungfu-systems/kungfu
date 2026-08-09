@@ -1,0 +1,6 @@
+{
+  "schema": "shifu.documentation-negative-fixture/v1",
+  "base": "shifu.documentation.json",
+  "mutation": { "op": "replace", "path": "/providers/0/source/path", "value": "docs/**/*.md" },
+  "expect": "invalid-path"
+}

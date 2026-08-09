@@ -1,0 +1,43 @@
+{
+  "schema": "kungfu.episode.qualification-profile/v1",
+  "name": "mvp-candidate-v1",
+  "description": "Bounded release-candidate profile retaining every deterministic semantic dimension while deferring 100k accumulation and multi-seed soak coverage to mvp-baseline-v1.",
+  "seeds": [42042],
+  "payload_profile": "metadata-only",
+  "query_profile": "episode-manifest-direct",
+  "accumulation": {
+    "checkpoints": [1000, 10000],
+    "abort_every": 20
+  },
+  "contention": {
+    "workers": [1, 2, 5, 10],
+    "total_episodes": 1000,
+    "abort_every": 20
+  },
+  "retry": {
+    "initial_delay_ms": 0.25,
+    "max_delay_ms": 25,
+    "max_attempts": 2000,
+    "progress_timeout_ms": 60000
+  },
+  "validation": {
+    "sample_count": 7,
+    "list_limit": 100,
+    "allowed_full_fsck_warnings": ["projection_absent"]
+  },
+  "semantic": {
+    "required_dimensions": [
+      "lifecycle_safety",
+      "capability_soundness",
+      "useful_degradation",
+      "repair_monotonicity",
+      "dependency_containment",
+      "projection_derivation",
+      "publication_recovery",
+      "content_integrity",
+      "portable_identity"
+    ],
+    "timeout_seconds": 120
+  },
+  "scenario_timeout_seconds": 1200
+}

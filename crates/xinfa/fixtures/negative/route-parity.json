@@ -1,0 +1,6 @@
+{
+  "schema": "xinfa.negative-fixture/v1",
+  "base": "project-alpha.json",
+  "mutations": [{ "pointer": "/routes/1/nodes", "value": ["alpha.doc.guide", "alpha.claim.runtime", "alpha.impl.runtime", "alpha.evidence.runtime"] }],
+  "expectedCode": "route-parity"
+}

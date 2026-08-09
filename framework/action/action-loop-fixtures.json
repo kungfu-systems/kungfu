@@ -1,0 +1,145 @@
+{
+  "schema": "kungfu.action-loop.recovery-fixtures/v0",
+  "roots": {
+    "loop": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "fact": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "pursuit": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+    "atlas": "sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+    "warrant": "sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+    "episode": "sha256:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+  },
+  "recoveryCases": [
+    {
+      "id": "planned-resumes-at-bind",
+      "state": "planned",
+      "acceptedSteps": [],
+      "expected": {
+        "ok": true,
+        "code": "resume",
+        "nextStep": "bind-roles"
+      }
+    },
+    {
+      "id": "running-resumes-at-seal",
+      "state": "running",
+      "acceptedSteps": [
+        "bind-roles",
+        "open-episode"
+      ],
+      "expected": {
+        "ok": true,
+        "code": "resume",
+        "nextStep": "seal-episode"
+      }
+    },
+    {
+      "id": "sealed-resumes-at-atlas-refresh",
+      "state": "episode-sealed",
+      "acceptedSteps": [
+        "bind-roles",
+        "open-episode",
+        "seal-episode"
+      ],
+      "expected": {
+        "ok": true,
+        "code": "resume",
+        "nextStep": "refresh-atlas"
+      }
+    },
+    {
+      "id": "repeated-settle-is-idempotent",
+      "state": "settled",
+      "acceptedSteps": [
+        "bind-roles",
+        "open-episode",
+        "seal-episode",
+        "refresh-atlas",
+        "review-completion",
+        "settle-fact-ref",
+        "settle-fact-ref"
+      ],
+      "expected": {
+        "ok": true,
+        "code": "already-settled",
+        "nextStep": null
+      }
+    },
+    {
+      "id": "out-of-order-review-is-refused",
+      "state": "running",
+      "acceptedSteps": [
+        "bind-roles",
+        "open-episode",
+        "review-completion"
+      ],
+      "expected": {
+        "ok": false,
+        "code": "out-of-order-step"
+      }
+    },
+    {
+      "id": "projection-drift-needs-rebuild",
+      "state": "bound",
+      "acceptedSteps": [],
+      "expected": {
+        "ok": false,
+        "code": "state-receipt-mismatch"
+      }
+    }
+  ],
+  "preconditionCases": [
+    {
+      "id": "stale-atlas",
+      "observation": {
+        "atlasCurrent": false
+      },
+      "expectedCode": "stale-atlas"
+    },
+    {
+      "id": "expired-warrant",
+      "observation": {
+        "atlasCurrent": true,
+        "warrantState": "expired"
+      },
+      "expectedCode": "warrant-expired"
+    },
+    {
+      "id": "revoked-warrant",
+      "observation": {
+        "atlasCurrent": true,
+        "warrantState": "revoked"
+      },
+      "expectedCode": "warrant-revoked"
+    },
+    {
+      "id": "stale-fact-ref",
+      "observation": {
+        "atlasCurrent": true,
+        "warrantState": "issued",
+        "factRef": {
+          "cutRoot": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+          "revision": 2
+        }
+      },
+      "expectedCode": "stale-ref"
+    },
+    {
+      "id": "episode-state-mismatch",
+      "observation": {
+        "atlasCurrent": true,
+        "warrantState": "issued",
+        "episodeState": "sealed"
+      },
+      "expectedCode": "episode-state-mismatch"
+    },
+    {
+      "id": "external-effect-without-receipt",
+      "observation": {
+        "atlasCurrent": true,
+        "warrantState": "issued",
+        "externalEffect": "unknown"
+      },
+      "expectedCode": "external-effect-unknown"
+    }
+  ]
+}

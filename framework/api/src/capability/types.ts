@@ -1,10 +1,10 @@
-// Capability SDK types (ADR-0011). Two vocabulary domains over one SDK:
+// Capability SDK types (KF-ADR-019f86da-4f90-7e5e-ae22-2a8fc24086f1). Two vocabulary domains over one SDK:
 // ledger vocabulary for runtime event data, domain vocabulary for domain
 // state. Neither leaks storage-engine terms into the public surface.
 
 // --- locator -----------------------------------------------------------
 // The locator expresses the home/runtime directory layering explicitly
-// (ADR-0011 §4): a kungfu home contains a runtime directory; tools that are
+// (KF-ADR-019f86da-4f90-7e5e-ae22-2a8fc24086f1 §4): a kungfu home contains a runtime directory; tools that are
 // handed a home must not guess.
 
 export type KfLocator =
@@ -17,16 +17,22 @@ export function resolveRuntimeDir(locator: KfLocator): string {
 }
 
 // --- enum mapping ------------------------------------------------------
-// Enum-to-name mapping lives in the SDK, not in each consumer (ADR-0011 §4).
+// Enum-to-name mapping lives in the SDK, not in each consumer (KF-ADR-019f86da-4f90-7e5e-ae22-2a8fc24086f1 §4).
 
-export const CATEGORY_NAMES = ['md', 'td', 'strategy', 'system'] as const;
+export const ROLE_NAMES = [
+  'source',
+  'sink',
+  'actor',
+  'system',
+  'service',
+] as const;
 export const MODE_NAMES = ['live', 'data', 'replay', 'backtest'] as const;
 
-export type KfCategory = (typeof CATEGORY_NAMES)[number];
+export type KfRole = (typeof ROLE_NAMES)[number];
 export type KfMode = (typeof MODE_NAMES)[number];
 
-export function categoryName(value: number | string): string {
-  return CATEGORY_NAMES[Number(value)] ?? String(value);
+export function roleName(value: number | string): string {
+  return ROLE_NAMES[Number(value)] ?? String(value);
 }
 
 export function modeName(value: number | string): string {
@@ -34,15 +40,15 @@ export function modeName(value: number | string): string {
 }
 
 export type KfLocation = {
-  category: KfCategory | string;
-  group: string;
+  role: KfRole | string;
+  namespace: string;
   name: string;
   mode: KfMode | string;
 };
 
 // --- serialization -----------------------------------------------------
 // 64-bit identifiers cross the boundary as BigInt with a defined
-// serialization rule (ADR-0011 §4): decimal strings.
+// serialization rule (KF-ADR-019f86da-4f90-7e5e-ae22-2a8fc24086f1 §4): decimal strings.
 
 export function bigintSafe(_key: string, value: unknown): unknown {
   return typeof value === 'bigint' ? value.toString() : value;
@@ -59,27 +65,37 @@ export type LedgerRecord = {
   // recorded causal anchor of the event pair.
   genTime: bigint;
   triggerTime: bigint;
-  msgType: number;
+  carrierType: number;
+  frameUid: bigint;
+  triggerFrameUid: bigint;
+  streamId: bigint;
   source: number;
+  initialSource: number;
   dest: number;
   dataLength: number;
+  dataType: number;
+  integrityVersion?: number;
+  payloadChecksum?: bigint;
+  frameChecksum?: bigint;
 };
 
 export type RecordFilter = {
-  msgType?: number;
+  carrierType?: number;
   sinceNanos?: bigint;
   limit?: number;
 };
 
 export type ReplayAnchor = {
-  location: KfLocation;
+  episodeId: bigint;
+  locationUid: number;
   beginTime: bigint;
   endTime: bigint;
   frameCount: bigint;
-  dataSize: bigint;
+  lastFrameUid: bigint;
+  closed: boolean;
 };
 
-// Live-bus health is a first-class queryable signal (ADR-0011 §4), not a
+// Live-bus health is a first-class queryable signal (KF-ADR-019f86da-4f90-7e5e-ae22-2a8fc24086f1 §4), not a
 // log line.
 export type LiveHealth = {
   joined: boolean;
@@ -100,17 +116,42 @@ export type Subscription = {
 export type KfNativeFrame = {
   genTime: () => bigint;
   triggerTime: () => bigint;
-  msgType: () => number;
+  frameUid: () => bigint;
+  triggerFrameUid: () => bigint;
+  streamId: () => bigint;
+  carrierType: () => number;
   source: () => number;
+  initialSource: () => number;
   dest: () => number;
   dataLength: () => number;
+  dataType: () => number;
   // raw payload bytes — the decode path for open-layer frames (e.g. rewind
-  // events), whose schemas live outside the compiled longfist registry
+  // events), whose schemas live outside the compiled yijinjing schema registry
   dataBytes: () => Uint8Array;
 };
 
+export type KfActionEnvelope = {
+  version: number;
+  action_type: string;
+  schema_ref: { id: string; version: number };
+  payload?: {
+    encoding: number;
+    data: Uint8Array;
+    hash_algorithm: string;
+    hash: string;
+    byte_len: bigint;
+    content_type: string;
+    state: string;
+  };
+};
+
 export type KfNativeBinding = {
-  Longfist?: new () => {
+  runStorageServiceOperation?: (
+    operation: string,
+    runtimeDir: string,
+    options?: Record<string, unknown>,
+  ) => Record<string, unknown>;
+  Schema?: new () => {
     types: Record<string, () => Record<string, unknown>>;
   };
   Assemble: new (
@@ -120,23 +161,81 @@ export type KfNativeBinding = {
     next: () => void;
     currentFrame: () => KfNativeFrame;
   };
-  SessionStore: new (
-    location: Record<string, string>,
+  ActionRecorder?: new (
     runtimeDir: string,
-  ) => { getAllSessions: () => unknown };
+    namespace: string,
+    name: string,
+    destId?: number,
+    streamId?: bigint | number,
+  ) => {
+    recordBytes: (
+      carrierType: number,
+      payload: Uint8Array,
+      options?: {
+        genTime?: bigint | number;
+        triggerTime?: bigint | number;
+        parentFrameUid?: bigint | number;
+        streamId?: bigint | number;
+        chainToLast?: boolean;
+      },
+    ) => LedgerRecord;
+    recordJson: (
+      carrierType: number,
+      jsonPayload: string,
+      options?: {
+        genTime?: bigint | number;
+        triggerTime?: bigint | number;
+        parentFrameUid?: bigint | number;
+        streamId?: bigint | number;
+        chainToLast?: boolean;
+      },
+    ) => LedgerRecord;
+    recordAction: (
+      value: Record<string, unknown>,
+      options?: {
+        genTime?: bigint | number;
+        triggerTime?: bigint | number;
+        parentFrameUid?: bigint | number;
+        streamId?: bigint | number;
+        chainToLast?: boolean;
+      },
+    ) => LedgerRecord;
+    mark: (
+      carrierType: number,
+      options?: {
+        genTime?: bigint | number;
+        triggerTime?: bigint | number;
+        parentFrameUid?: bigint | number;
+        streamId?: bigint | number;
+        chainToLast?: boolean;
+      },
+    ) => LedgerRecord;
+    lastFrameUid: () => bigint;
+  };
+  decodeActionEnvelope: (value: Uint8Array) => KfActionEnvelope | null;
+  encodeActionEnvelope: (value: Record<string, unknown>) => Uint8Array;
+  verifyFlatbufferPayload: (
+    schemaBfbs: Uint8Array,
+    payload: Uint8Array,
+    objectName?: string,
+  ) => boolean;
+  storageEpisodeListTyped: (
+    runtimeDir: string,
+    options?: { location_uid?: number; limit?: bigint | number },
+  ) => { episodes: unknown[] };
   ConfigStore: new (
     runtimeDir: string,
   ) => {
     setConfig: (
-      category: string,
-      group: string,
+      role: string,
+      namespace: string,
       name: string,
       mode: string,
       value: string,
     ) => boolean;
     removeConfig: (
-      category: string,
-      group: string,
+      role: string,
+      namespace: string,
       name: string,
       mode: string,
     ) => boolean;
@@ -150,16 +249,57 @@ export type KfNativeBinding = {
     runtimeDir: string,
     name: string,
     bypassRestore: boolean,
-    bypassAccounting: boolean,
-    bypassTradingData: boolean,
-    refreshTradingDataBeforeSync: boolean,
-    bypassRefreshBook: boolean,
     millisecondsSleepAfterStep: number,
+    captureCustom?: boolean,
   ) => {
     isUsable: () => boolean;
     isLive: () => boolean;
     isStarted: () => boolean;
     start: () => void;
+    getLocation: (uid?: number | string) => Record<string, unknown> | undefined;
+    issueRawPublic: (carrierType: number, data: Buffer) => boolean;
+    requestReadFromPublic: (
+      location: Record<string, unknown>,
+      fromTime: bigint,
+    ) => boolean;
+    drainCustomData: () => {
+      dropped: bigint;
+      frames: Array<{
+        genTime: bigint;
+        triggerTime: bigint;
+        frameUid: bigint;
+        carrierType: number;
+        source: number;
+        dest: number;
+        data: Buffer;
+      }>;
+    };
+    runtimeStats: () => {
+      schema: 'kungfu.node-watcher-runtime-stats/v1';
+      threadModel: 'dedicated-native-thread';
+      running: boolean;
+      stopRequested: boolean;
+      bridgeQueueCapacity: number;
+      bridgeQueueDepth: number;
+      stepCount: bigint;
+      stepMeanNanos: bigint;
+      stepMaxNanos: bigint;
+      workerLockWaitMeanNanos: bigint;
+      workerLockWaitMaxNanos: bigint;
+      snapshotLockWaitMeanNanos: bigint;
+      snapshotLockWaitMaxNanos: bigint;
+      snapshotHoldMeanNanos: bigint;
+      snapshotHoldMaxNanos: bigint;
+      snapshotRequests: bigint;
+      snapshotDeliveries: bigint;
+      snapshotCoalesced: bigint;
+      bridgeFailures: bigint;
+      customQueueBytes: bigint;
+      customQueueFrames: bigint;
+      customQueueCapacityBytes: bigint;
+      customFramesDropped: bigint;
+    };
+    quit: () => void;
   };
   formatTime?: (nano: bigint, format?: string) => string;
 };

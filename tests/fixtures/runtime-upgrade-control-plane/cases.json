@@ -1,0 +1,51 @@
+{
+  "schema": "kungfu.runtime-upgrade-fixtures/v1",
+  "cases": [
+    {
+      "id": "idle-apply",
+      "active": false,
+      "compatible": true,
+      "migrationClass": "none",
+      "expectedState": "apply-now"
+    },
+    {
+      "id": "active-compatible-handoff",
+      "active": true,
+      "compatible": true,
+      "migrationClass": "reversible",
+      "expectedState": "compatible-handoff"
+    },
+    {
+      "id": "active-incompatible-defer",
+      "active": true,
+      "compatible": false,
+      "migrationClass": "reversible",
+      "expectedState": "defer-until-idle"
+    },
+    {
+      "id": "provider-resume",
+      "active": true,
+      "compatible": true,
+      "providerResumeRequired": true,
+      "providerResumeSupported": true,
+      "migrationClass": "reversible",
+      "expectedState": "resume-required"
+    },
+    {
+      "id": "provider-cannot-resume",
+      "active": true,
+      "compatible": true,
+      "providerResumeRequired": true,
+      "providerResumeSupported": false,
+      "migrationClass": "reversible",
+      "expectedState": "blocked-incompatible"
+    },
+    {
+      "id": "irreversible-needs-approval",
+      "active": false,
+      "compatible": true,
+      "migrationClass": "irreversible",
+      "expectedState": "action-required"
+    }
+  ]
+}

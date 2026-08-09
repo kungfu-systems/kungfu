@@ -1,0 +1,60 @@
+{
+  "schema": "kungfu.project-template/v1",
+  "id": "kungfu.agent-work-starter",
+  "version": "1",
+  "title": "Agent Work Starter",
+  "description": "A small real project where a user can experience governed Agent Work with editable source material and a concrete deliverable.",
+  "suggestedDirectoryName": "agent-work-starter",
+  "files": [
+    {
+      "path": "README.md",
+      "content": "# Agent Work Starter\n\nThis is a real, editable project—not a demo transcript.\n\nYour first Work is to turn the source notes in `inputs/` into a concise launch brief in `deliverables/launch-brief.md`. Kungfu keeps the Work identity, progress, evidence, and next action outside these Markdown files.\n\n## Start\n\n1. Read `AGENTS.md` for the Agent collaboration rules.\n2. Read `WORK.md` for the human-readable brief.\n3. Inspect the captured Work request in Kungfu.\n4. Ask an agent to complete the launch brief.\n5. Review the changed deliverable and the evidence before accepting completion.\n\nThe `.kungfu/` directory is runtime data. Do not treat it as project prose or edit it to change Work state.\n"
+    },
+    {
+      "path": "AGENTS.md",
+      "content": "# Agent instructions\n\nThis directory is a guided Kungfu project. Work from the project files and the current Kungfu Work state, not from assumptions or an earlier chat transcript.\n\n## Start here\n\n1. Read `README.md` and `WORK.md`.\n2. Inspect every file under `inputs/` before changing the deliverable.\n3. Check the current Work in Kungfu. If it is still pending admission, say so instead of inventing progress or authority.\n4. Complete `deliverables/launch-brief.md` using only supported facts.\n5. Verify every acceptance check in `WORK.md` and report the source file behind each factual claim.\n\n## Boundaries\n\n- Treat the current Kungfu Work identity, status, evidence, and next action as authoritative when they differ from explanatory prose.\n- Do not edit `.kungfu/` directly. Use Kungfu's public UI or CLI for Work state changes.\n- Do not treat a process exit or a plausible-looking answer as proof of completion.\n- Do not invent customer quotes, dates, prices, integrations, or metrics.\n- Preserve the source files under `inputs/` unless the user explicitly asks to change them.\n- Do not initialize Git, commit, push, publish, or delete files unless the user explicitly asks.\n\n## Completion report\n\nState what changed, list the acceptance checks you verified, cite the project files used as evidence, and identify any unresolved question.\n"
+    },
+    {
+      "path": "WORK.md",
+      "content": "# First Work: Create a launch brief\n\nUse the three source files under `inputs/` to complete `deliverables/launch-brief.md`.\n\n## Acceptance checks\n\n- The brief names the product and target user.\n- It includes three evidence-backed benefits.\n- It separates confirmed facts from open questions.\n- It proposes one next action.\n- It does not invent customer quotes, dates, or metrics.\n\nThis file explains the task to a human. The authoritative Work request and later progress live in Kungfu.\n"
+    },
+    {
+      "path": "inputs/product-notes.md",
+      "content": "# Product notes\n\nProduct: Northstar Notes\n\nNorthstar Notes turns scattered meeting notes into a shared, reviewable decision trail. It preserves the source note behind each summary and keeps unresolved questions visible.\n\nCurrent audience: small product teams coordinating launches across several agent sessions.\n"
+    },
+    {
+      "path": "inputs/customer-feedback.md",
+      "content": "# Customer feedback\n\nConfirmed observations:\n\n- Teams lose context when a new person or agent continues work from chat alone.\n- Reviewers want to see which source supports a launch claim.\n- Users prefer a short next-action list over another long summary.\n\nNo verbatim customer quotes have been approved for publication.\n"
+    },
+    {
+      "path": "inputs/release-facts.md",
+      "content": "# Release facts\n\nConfirmed for the starter exercise:\n\n- The product can link a summary item to its source note.\n- Open questions remain visible until explicitly resolved.\n- A launch brief can be reviewed as a normal project file.\n\nOpen questions:\n\n- Public release date\n- Pricing\n- Supported integrations\n"
+    },
+    {
+      "path": "deliverables/launch-brief.md",
+      "content": "# Northstar Notes launch brief\n\n<!-- Ask an agent to replace this scaffold using only the facts in inputs/. -->\n\n## Who it is for\n\nTBD\n\n## Why it matters\n\nTBD\n\n## Confirmed benefits\n\n- TBD\n\n## Open questions\n\n- TBD\n\n## Next action\n\nTBD\n"
+    }
+  ],
+  "initialWork": {
+    "initiativeId": "agent-work-starter",
+    "assignmentId": "create-launch-brief",
+    "title": "Create an evidence-backed launch brief",
+    "objective": "Turn the supplied product notes, customer feedback, and release facts into the launch brief without inventing unsupported claims.",
+    "acceptanceChecks": [
+      "Names the product and target user",
+      "Includes three evidence-backed benefits",
+      "Separates confirmed facts from open questions",
+      "Proposes one next action",
+      "Does not invent quotes, dates, or metrics"
+    ]
+  },
+  "openAction": {
+    "kind": "select-project-workspace",
+    "label": "Open Starter Project"
+  },
+  "nonClaims": [
+    "Creating files does not complete the Work.",
+    "Captured Work is not admitted or assigned until the user explicitly starts it.",
+    "The template does not initialize Git, edit ignore rules, commit, push, or publish."
+  ]
+}

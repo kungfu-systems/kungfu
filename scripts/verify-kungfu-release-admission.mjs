@@ -1,0 +1,378 @@
+#!/usr/bin/env node
+// SPDX-License-Identifier: Apache-2.0
+// @ts-check
+
+import crypto from 'node:crypto';
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import {
+  CATALOG_ARTIFACT,
+  CATALOG_SOURCE,
+  verifyPrimitiveCatalogIntegrity,
+  verifyPrimitivePromotion,
+} from './generate-primitive-catalog.mjs';
+import {
+  kungfuBuildchainRuntimePolicy,
+  validateKungfuGateAggregate,
+} from './kungfu-release-qualification.mjs';
+import {
+  authorityDigest,
+  validateWorkflowAuthority,
+} from './kungfu-workflow-authority.mjs';
+
+const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const POLICY = 'docs/qualification/gates/release-admission-policy.json';
+
+function readJson(root, relative) {
+  return JSON.parse(fs.readFileSync(path.resolve(root, relative), 'utf8'));
+}
+
+function requiredFile(value, label) {
+  if (typeof value !== 'string' || !value)
+    throw new Error(`${label} path is required`);
+  return value;
+}
+
+function exactKeys(value, keys, label) {
+  if (!value || typeof value !== 'object' || Array.isArray(value))
+    throw new Error(`${label} must be an object`);
+  const actual = Object.keys(value).sort();
+  const expected = [...keys].sort();
+  if (actual.join('\0') !== expected.join('\0'))
+    throw new Error(`${label} fields must be exactly [${expected.join(', ')}]`);
+}
+
+function stableJson(value) {
+  if (Array.isArray(value)) return `[${value.map(stableJson).join(',')}]`;
+  if (value && typeof value === 'object') {
+    return `{${Object.keys(value)
+      .sort()
+      .map((key) => `${JSON.stringify(key)}:${stableJson(value[key])}`)
+      .join(',')}}`;
+  }
+  return JSON.stringify(value);
+}
+
+function publicationAuthorityDigest(value) {
+  return crypto.createHash('sha256').update(stableJson(value)).digest('hex');
+}
+
+function validatePolicy(root, policy) {
+  exactKeys(
+    policy,
+    [
+      'schema',
+      'repository',
+      'profile',
+      'requiredPlatforms',
+      'workflowAuthority',
+      'buildchain',
+      'publication',
+      'freshness',
+    ],
+    'release admission policy',
+  );
+  if (policy.schema !== 'kungfu.release-admission-policy/v1')
+    throw new Error('unsupported Kungfu release admission policy');
+  if (
+    !Array.isArray(policy.requiredPlatforms) ||
+    policy.requiredPlatforms.join('\0') !==
+      'linux-x64\0linux-arm64\0macos-arm64\0windows-x64'
+  )
+    throw new Error(
+      'Kungfu release admission requires linux-x64, linux-arm64, macos-arm64, and windows-x64',
+    );
+  exactKeys(
+    policy.workflowAuthority,
+    ['manifest', 'workflow', 'job'],
+    'workflowAuthority',
+  );
+  exactKeys(
+    policy.buildchain,
+    [
+      'version',
+      'registry',
+      'authorityRegistryDigest',
+      'publicationAuthority',
+      'runtimes',
+    ],
+    'buildchain',
+  );
+  exactKeys(
+    policy.buildchain.publicationAuthority,
+    [
+      'workflowPath',
+      'authorityClass',
+      'publicationCapable',
+      'publisherWorkflowMode',
+      'environment',
+    ],
+    'buildchain.publicationAuthority',
+  );
+  exactKeys(
+    policy.publication,
+    [
+      'workflowPath',
+      'publisherWorkflowPath',
+      'environment',
+      'product',
+      'target',
+      'channels',
+    ],
+    'publication',
+  );
+  exactKeys(
+    policy.freshness,
+    ['maximumLifetimeSeconds', 'nonceReplay'],
+    'freshness',
+  );
+  if (
+    policy.freshness.maximumLifetimeSeconds !== 900 ||
+    policy.freshness.nonceReplay !== 'deny'
+  )
+    throw new Error(
+      'Kungfu admission freshness must remain fail closed at 900 seconds',
+    );
+  if (
+    !Array.isArray(policy.publication.channels) ||
+    policy.publication.channels.length === 0 ||
+    new Set(policy.publication.channels).size !==
+      policy.publication.channels.length
+  )
+    throw new Error('publication.channels must be a non-empty unique array');
+  if (
+    !/^[0-9a-f]{64}$/.test(policy.buildchain.authorityRegistryDigest) ||
+    policy.buildchain.publicationAuthority.workflowPath !==
+      policy.publication.workflowPath ||
+    policy.buildchain.publicationAuthority.authorityClass !==
+      'product-publication' ||
+    policy.buildchain.publicationAuthority.publicationCapable !== true ||
+    policy.buildchain.publicationAuthority.publisherWorkflowMode !==
+      'caller-bound' ||
+    policy.buildchain.publicationAuthority.environment !==
+      policy.publication.environment
+  )
+    throw new Error(
+      'Buildchain publication authority consumer lock is not qualifying',
+    );
+  const runtimeChannels = Object.keys(policy.buildchain.runtimes || {}).sort();
+  if (
+    runtimeChannels.join('\0') !==
+    [...policy.publication.channels].sort().join('\0')
+  )
+    throw new Error(
+      'Buildchain runtime channels must exactly match publication.channels',
+    );
+  for (const channel of policy.publication.channels) {
+    const runtime = kungfuBuildchainRuntimePolicy(policy, channel);
+    exactKeys(
+      runtime,
+      ['ref', 'runtimeSha', 'contractDigest', 'contractLock'],
+      `buildchain.runtimes.${channel}`,
+    );
+    const lock = readJson(root, runtime.contractLock);
+    if (
+      lock?.buildchain?.ref !== runtime.ref ||
+      lock?.buildchain?.resolvedSha !== runtime.runtimeSha ||
+      lock?.buildchain?.contractDigest !== runtime.contractDigest
+    )
+      throw new Error(
+        `Buildchain ${channel} runtime differs from its contract lock`,
+      );
+  }
+}
+
+function currentBuildchain(root, policy) {
+  const releaseRuntime = kungfuBuildchainRuntimePolicy(policy, 'release');
+  const packageDocument = readJson(
+    root,
+    'node_modules/@kungfu-tech/buildchain/package.json',
+  );
+  if (packageDocument.version !== policy.buildchain.version)
+    throw new Error(
+      'installed Buildchain version differs from release admission policy',
+    );
+  const contract = readJson(
+    root,
+    'node_modules/@kungfu-tech/buildchain/dist/site/buildchain-contract.json',
+  );
+  if (contract.contractDigest !== releaseRuntime.contractDigest)
+    throw new Error(
+      'installed Buildchain contract digest differs from release admission policy',
+    );
+  const registry = readJson(root, policy.buildchain.registry);
+  if (registry.registryDigest !== policy.buildchain.authorityRegistryDigest)
+    throw new Error(
+      'installed Buildchain authority registry differs from release admission policy',
+    );
+  const descriptor = registry.entries?.find(
+    (item) => item.workflowPath === policy.publication.workflowPath,
+  );
+  for (const [key, expected] of Object.entries(
+    policy.buildchain.publicationAuthority,
+  ))
+    if (descriptor?.[key] !== expected)
+      throw new Error(
+        'Buildchain registry does not authorize the configured sealed publication lane',
+      );
+  return registry;
+}
+
+function validateAuthorityJob(authorityDocument, policy) {
+  const workflow = authorityDocument.workflows.find(
+    (item) => item.path === policy.workflowAuthority.workflow,
+  );
+  const job = workflow?.jobs.find(
+    (item) => item.id === policy.workflowAuthority.job,
+  );
+  if (!job)
+    throw new Error('release admission authority job is not classified');
+  if (
+    job.authority !== 'release-control' ||
+    job.publication !== 'channel' ||
+    job.receipt !== 'qualifying'
+  )
+    throw new Error(
+      'release admission authority job classification is not qualifying channel control',
+    );
+}
+
+export function validatePrimitiveCatalogPromotion(catalog) {
+  const issues = (catalog?.primitives || []).flatMap(verifyPrimitivePromotion);
+  if (issues.length > 0) {
+    throw new Error(`primitive promotion denied: ${issues.join(', ')}`);
+  }
+  return catalog;
+}
+
+function validatePrimitiveCatalogAdmission(root) {
+  const source = fs.readFileSync(path.join(root, CATALOG_SOURCE), 'utf8');
+  const artifact = fs.readFileSync(path.join(root, CATALOG_ARTIFACT), 'utf8');
+  if (source !== artifact) {
+    throw new Error(
+      'release admission requires byte-identical primitive catalog projections',
+    );
+  }
+  return validatePrimitiveCatalogPromotion(
+    verifyPrimitiveCatalogIntegrity(JSON.parse(source)),
+  );
+}
+
+export function validateKungfuReleaseAdmissionPolicy(root = ROOT) {
+  const policy = readJson(root, POLICY);
+  validatePolicy(root, policy);
+  const primitiveCatalog = validatePrimitiveCatalogAdmission(root);
+  const authority = validateWorkflowAuthority(root);
+  if (authority.issues.length)
+    throw new Error(
+      `workflow authority is not closed: ${authority.issues.join('; ')}`,
+    );
+  validateAuthorityJob(authority.document, policy);
+  return {
+    policy,
+    authority: authority.document,
+    primitiveCatalog,
+  };
+}
+
+export async function verifyKungfuReleaseAdmission({
+  root = ROOT,
+  admission,
+  runnerProvenance,
+  controlPlaneAudit,
+  publicationEvidence,
+  expected,
+  usedNonces = [],
+  now = new Date(),
+} = {}) {
+  const validated = validateKungfuReleaseAdmissionPolicy(root);
+  const { policy, authority } = validated;
+  const buildchainRegistry = currentBuildchain(root, policy);
+  const { verifyPublicationAdmission } = await import(
+    '@kungfu-tech/buildchain/publication-authority'
+  );
+  const aggregate = publicationEvidence?.gateAggregate;
+  validateKungfuGateAggregate(root, aggregate, policy);
+  const runtime = kungfuBuildchainRuntimePolicy(policy, admission?.channel);
+
+  const fixedBindings = {
+    repository: policy.repository,
+    publisherWorkflowPath: policy.publication.publisherWorkflowPath,
+    runtimeSha: runtime.runtimeSha,
+    contractDigest: runtime.contractDigest.replace(/^sha256:/, ''),
+    environment: policy.publication.environment,
+    product: policy.publication.product,
+    target: policy.publication.target,
+  };
+  for (const [key, value] of Object.entries(fixedBindings))
+    if (expected?.[key] !== value)
+      throw new Error(
+        `Kungfu release admission expected ${key} policy mismatch`,
+      );
+  if (!policy.publication.channels.includes(expected?.channel))
+    throw new Error('Kungfu release admission channel is not allowed');
+  if (admission?.workflowPath !== policy.publication.workflowPath)
+    throw new Error(
+      'Kungfu release admission workflow is not the sealed Buildchain authority',
+    );
+  if (expected?.policyDigest !== aggregate.matrixDigest)
+    throw new Error(
+      'Kungfu release admission policy digest differs from the Gate matrix',
+    );
+
+  const capability = verifyPublicationAdmission({
+    admission,
+    registry: buildchainRegistry,
+    runnerProvenance,
+    controlPlaneAudit,
+    publicationEvidence,
+    expected,
+    usedNonces,
+    now,
+  });
+  const consumerPolicy = {
+    policy,
+    workflowAuthorityDigest: authorityDigest(authority),
+    gateRegistryDigest: aggregate.registry.digest,
+    gateMatrixDigest: aggregate.matrixDigest,
+  };
+  return {
+    schema: 'kungfu.release-admission-capability/v1',
+    qualifying: true,
+    consumerPolicyDigest: publicationAuthorityDigest(consumerPolicy),
+    capability,
+  };
+}
+
+function arg(name) {
+  const index = process.argv.indexOf(`--${name}`);
+  return index >= 0 ? process.argv[index + 1] : '';
+}
+
+async function main() {
+  const result = await verifyKungfuReleaseAdmission({
+    admission: readJson(ROOT, requiredFile(arg('admission'), 'admission')),
+    runnerProvenance: readJson(
+      ROOT,
+      requiredFile(arg('runner-provenance'), 'runner provenance'),
+    ),
+    controlPlaneAudit: readJson(
+      ROOT,
+      requiredFile(arg('control-plane-audit'), 'control-plane audit'),
+    ),
+    publicationEvidence: readJson(
+      ROOT,
+      requiredFile(arg('publication-evidence'), 'publication evidence'),
+    ),
+    expected: readJson(ROOT, requiredFile(arg('expected'), 'expected')),
+    usedNonces: arg('used-nonces') ? readJson(ROOT, arg('used-nonces')) : [],
+  });
+  process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
+}
+
+if (process.argv[1] === fileURLToPath(import.meta.url))
+  main().catch((error) => {
+    process.stderr.write(`${error.stack || error.message}\n`);
+    process.exitCode = 1;
+  });

@@ -1,0 +1,86 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://libkungfu.dev/schemas/shifu/gate-plan-v1.schema.json",
+  "title": "Shifu gate plan v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "schema",
+    "registry",
+    "profile",
+    "platform",
+    "includeAdvisory",
+    "explicitGates",
+    "ok",
+    "qualifying",
+    "groups",
+    "skipped",
+    "unsupported"
+  ],
+  "properties": {
+    "$schema": { "const": "https://libkungfu.dev/schemas/shifu/gate-plan-v1.schema.json" },
+    "schema": { "const": "shifu.gate-plan/v1" },
+    "registry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["ref", "digest", "projectId"],
+      "properties": {
+        "ref": { "type": "string", "minLength": 1 },
+        "digest": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+        "projectId": { "type": "string", "minLength": 1 }
+      }
+    },
+    "profile": { "type": "string", "minLength": 1 },
+    "platform": { "type": ["string", "null"] },
+    "includeAdvisory": { "type": "boolean" },
+    "explicitGates": { "type": "array", "items": { "type": "string" }, "uniqueItems": true },
+    "ok": { "type": "boolean" },
+    "qualifying": { "type": "boolean" },
+    "groups": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["index", "gates"],
+        "properties": {
+          "index": { "type": "integer", "minimum": 0 },
+          "gates": { "type": "array", "items": { "$ref": "#/$defs/plannedGate" } }
+        }
+      }
+    },
+    "skipped": { "type": "array", "items": { "$ref": "#/$defs/omission" } },
+    "unsupported": { "type": "array", "items": { "$ref": "#/$defs/omission" } }
+  },
+  "$defs": {
+    "plannedGate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "mode", "selectedBy", "dependencies", "platforms", "runner", "cost", "action", "actionId", "definitionDigest", "artifacts", "receipt"],
+      "properties": {
+        "id": { "type": "string" },
+        "mode": { "enum": ["required", "advisory", "off"] },
+        "selectedBy": { "type": "array", "items": { "type": "string" } },
+        "dependencies": { "type": "array", "items": { "type": "string" } },
+        "platforms": { "type": "array", "items": { "type": "string" } },
+        "runner": { "type": "object" },
+        "cost": { "type": "object" },
+        "action": { "type": "object" },
+        "actionId": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+        "definitionDigest": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+        "artifacts": { "type": "array" },
+        "receipt": { "type": "object" }
+      }
+    },
+    "omission": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "mode", "reason"],
+      "properties": {
+        "id": { "type": "string" },
+        "mode": { "enum": ["required", "advisory", "off"] },
+        "reason": { "type": "string" }
+      }
+    }
+  }
+}

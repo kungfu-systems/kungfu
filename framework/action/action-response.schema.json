@@ -1,0 +1,63 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kungfu.link/schemas/action-response-v1.schema.json",
+  "title": "Kungfu Action kernel response",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "ok",
+    "exitCode",
+    "request",
+    "payload",
+    "semanticRoot",
+    "host",
+    "package"
+  ],
+  "properties": {
+    "schema": {
+      "const": "kungfu.action.response/v1"
+    },
+    "ok": {
+      "const": true
+    },
+    "exitCode": {
+      "const": 0
+    },
+    "request": {
+      "type": "object"
+    },
+    "payload": {
+      "type": "object"
+    },
+    "semanticRoot": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "host": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "runtime",
+        "layout"
+      ],
+      "properties": {
+        "runtime": {
+          "enum": [
+            "development-node",
+            "embedded-libnode"
+          ]
+        },
+        "layout": {
+          "enum": [
+            "source",
+            "installed"
+          ]
+        }
+      }
+    },
+    "package": {
+      "type": "object"
+    }
+  }
+}

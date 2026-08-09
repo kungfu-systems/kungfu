@@ -1,0 +1,78 @@
+[
+  {
+    "id": "dual-capsule-pty-owner",
+    "base": "single-authoritative-capsule",
+    "issue": "dual-authoritative-capsule",
+    "operations": [
+      {
+        "operation": "append-copy",
+        "path": ["capsules"],
+        "sourceIndex": 0,
+        "mutations": [
+          {"path": ["capsuleId"], "value": "capsule-go-42-duplicate"},
+          {"path": ["capsuleGeneration"], "value": "8"},
+          {"path": ["sessionStreamEpoch"], "value": "4"}
+        ]
+      }
+    ]
+  },
+  {
+    "id": "stale-controller-lease",
+    "base": "ready-instruction-action",
+    "issue": "stale-controller-lease",
+    "operations": [
+      {"operation": "set", "path": ["controllerLease", "capsuleGeneration"], "value": "6"}
+    ]
+  },
+  {
+    "id": "wrong-session-stream-epoch",
+    "base": "ready-instruction-action",
+    "issue": "wrong-session-stream-epoch",
+    "operations": [
+      {"operation": "set", "path": ["expectedSessionStreamEpoch"], "value": "4"}
+    ]
+  },
+  {
+    "id": "duplicate-input-written-twice",
+    "base": "idempotent-input-ledger",
+    "issue": "duplicate-input-write",
+    "operations": [
+      {"operation": "set", "path": ["receipts", 1, "status"], "value": "written"},
+      {"operation": "set", "path": ["receipts", 1, "writtenOffset"], "value": 82}
+    ]
+  },
+  {
+    "id": "unknown-modal-blind-enter",
+    "base": "ready-instruction-action",
+    "issue": "unsafe-modal-instruction",
+    "operations": [
+      {"operation": "set", "path": ["interactionState"], "value": "unknown"}
+    ]
+  },
+  {
+    "id": "provider-exit-shell-fallthrough",
+    "base": "running-session-status",
+    "issue": "shell-fallthrough-risk",
+    "operations": [
+      {"operation": "set", "path": ["foreground", "state"], "value": "ended"},
+      {"operation": "set", "path": ["lifecycleState"], "value": "ended"},
+      {"operation": "set", "path": ["interactionState"], "value": "ended"}
+    ]
+  },
+  {
+    "id": "bounded-output-loss-without-gap",
+    "base": "explicit-bounded-replay-gap",
+    "issue": "output-gap-unmarked",
+    "operations": [
+      {"operation": "set", "path": ["gap"], "value": null}
+    ]
+  },
+  {
+    "id": "terminal-delivery-as-work-proof",
+    "base": "written-delivery-only",
+    "issue": "transcript-as-work-proof",
+    "operations": [
+      {"operation": "set", "path": ["semanticOutcome"], "value": {"status": "complete"}}
+    ]
+  }
+]

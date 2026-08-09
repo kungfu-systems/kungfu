@@ -1,0 +1,76 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kungfu.link/schema/work-design-advice-v1.schema.json",
+  "title": "Content-addressed advisory work design v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "authority", "input", "inputRoot", "design", "confidence", "gapIds", "humanOverride", "status", "adviceRoot"],
+  "properties": {
+    "schema": { "const": "kungfu.work-design.advice/v1" },
+    "authority": { "$ref": "#/$defs/advisoryBoundary" },
+    "input": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["intent", "history", "xinfaRoot", "asOf", "policy"],
+      "properties": {
+        "intent": { "$ref": "work-design-advice-request-v1.schema.json#/$defs/intent" },
+        "history": { "$ref": "work-design-advice-request-v1.schema.json#/$defs/history" },
+        "xinfaRoot": { "$ref": "#/$defs/root" },
+        "asOf": { "$ref": "#/$defs/timestamp" },
+        "policy": { "$ref": "work-design-advice-request-v1.schema.json#/$defs/policy" }
+      }
+    },
+    "inputRoot": { "$ref": "#/$defs/root" },
+    "design": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["topology", "slices"],
+      "properties": {
+        "topology": { "enum": ["none", "single", "dag"] },
+        "slices": {
+          "type": "array",
+          "items": { "$ref": "work-design-advice-request-v1.schema.json#/$defs/slice" }
+        }
+      }
+    },
+    "confidence": { "enum": ["high", "medium", "low", "unknown"] },
+    "gapIds": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/id" }
+    },
+    "humanOverride": { "$ref": "#/$defs/humanOverride" },
+    "status": { "enum": ["ready", "insufficient-history"] },
+    "adviceRoot": { "$ref": "#/$defs/root" }
+  },
+  "$defs": {
+    "root": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+    "id": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]*$" },
+    "timestamp": {
+      "type": "string",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(?:\\.[0-9]{3})?Z$"
+    },
+    "advisoryBoundary": {
+      "const": {
+        "mode": "advisory-only",
+        "mayCapture": false,
+        "mayClaim": false,
+        "mayDispatch": false,
+        "mayExecute": false,
+        "mayApprove": false,
+        "mayMerge": false,
+        "mayClose": false,
+        "assignmentAuthority": false,
+        "workControlAuthority": false
+      }
+    },
+    "humanOverride": {
+      "const": {
+        "allowed": true,
+        "requiresDisposition": true,
+        "preservesOriginalAdvice": true,
+        "preservesUserIntent": true
+      }
+    }
+  }
+}

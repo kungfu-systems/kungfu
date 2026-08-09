@@ -1,0 +1,483 @@
+{
+  "fixture": {
+    "journal_page_size_bytes": 2097152,
+    "payload_bytes": 4096,
+    "primitive_bytes": 67108864,
+    "seek_page_counts": [
+      8,
+      32,
+      128
+    ],
+    "temporary_root": true
+  },
+  "host": {
+    "compiler": "gcc",
+    "compiler_version": "13.3.0",
+    "cpp_standard": 202100,
+    "hardware_threads": 32,
+    "machine": "x86_64",
+    "os": "Linux",
+    "os_page_size": 4096,
+    "os_release": "6.8.0-134-generic",
+    "pointer_bits": 64
+  },
+  "journal": [
+    {
+      "frames_written": 3585,
+      "page_count": 8,
+      "seek": {
+        "iterations_per_position": 80,
+        "page_count": 8,
+        "positions": {
+          "early": {
+            "latency": {
+              "count": 80,
+              "max_ns": 70428,
+              "mean_ns": 60823,
+              "min_ns": 59231,
+              "p50_ns": 60503,
+              "p95_ns": 63040,
+              "p99_ns": 70428
+            },
+            "resources": {
+              "available": true,
+              "major_faults": 0,
+              "mapped_region_count_available": true,
+              "mapped_regions_after": 40,
+              "mapped_regions_before": 40,
+              "max_rss_kib_after": 72888,
+              "max_rss_kib_before": 72888,
+              "minor_faults": 801,
+              "system_us": 1192,
+              "user_us": 3999
+            },
+            "target_page": 1
+          },
+          "late": {
+            "latency": {
+              "count": 80,
+              "max_ns": 165093,
+              "mean_ns": 25686,
+              "min_ns": 23508,
+              "p50_ns": 23825,
+              "p95_ns": 24564,
+              "p99_ns": 165093
+            },
+            "resources": {
+              "available": true,
+              "major_faults": 0,
+              "mapped_region_count_available": true,
+              "mapped_regions_after": 40,
+              "mapped_regions_before": 40,
+              "max_rss_kib_after": 72888,
+              "max_rss_kib_before": 72888,
+              "minor_faults": 242,
+              "system_us": 408,
+              "user_us": 1847
+            },
+            "target_page": 8
+          },
+          "middle": {
+            "latency": {
+              "count": 80,
+              "max_ns": 48797,
+              "mean_ns": 44829,
+              "min_ns": 43666,
+              "p50_ns": 44674,
+              "p95_ns": 47128,
+              "p99_ns": 48797
+            },
+            "resources": {
+              "available": true,
+              "major_faults": 0,
+              "mapped_region_count_available": true,
+              "mapped_regions_after": 40,
+              "mapped_regions_before": 40,
+              "max_rss_kib_after": 72888,
+              "max_rss_kib_before": 72888,
+              "minor_faults": 560,
+              "system_us": 1937,
+              "user_us": 1971
+            },
+            "target_page": 4
+          }
+        }
+      },
+      "sequential_read": {
+        "data_frames_observed": 3585,
+        "estimated_payload_mib_per_second": 12299.945587922715,
+        "frames_observed": 3592,
+        "page_switch": {
+          "count": 7,
+          "max_ns": 29734,
+          "mean_ns": 26369,
+          "min_ns": 25032,
+          "p50_ns": 25859,
+          "p95_ns": 29734,
+          "p99_ns": 29734
+        },
+        "payload_bytes_observed": 14684160,
+        "resources": {
+          "available": true,
+          "major_faults": 0,
+          "mapped_region_count_available": true,
+          "mapped_regions_after": 41,
+          "mapped_regions_before": 40,
+          "max_rss_kib_after": 72888,
+          "max_rss_kib_before": 72888,
+          "minor_faults": 232,
+          "system_us": 605,
+          "user_us": 652
+        },
+        "total_ns": 1138534
+      },
+      "write_page_switch": {
+        "count": 7,
+        "max_ns": 74135,
+        "mean_ns": 67789,
+        "min_ns": 63441,
+        "p50_ns": 67621,
+        "p95_ns": 74135,
+        "p99_ns": 74135
+      },
+      "write_payload_mib_per_second": 2199.7356105555973,
+      "write_resources": {
+        "available": true,
+        "major_faults": 7,
+        "mapped_region_count_available": true,
+        "mapped_regions_after": 41,
+        "mapped_regions_before": 41,
+        "max_rss_kib_after": 72888,
+        "max_rss_kib_before": 72888,
+        "minor_faults": 3652,
+        "system_us": 4669,
+        "user_us": 1924
+      }
+    },
+    {
+      "frames_written": 15657,
+      "page_count": 32,
+      "seek": {
+        "iterations_per_position": 80,
+        "page_count": 32,
+        "positions": {
+          "early": {
+            "latency": {
+              "count": 80,
+              "max_ns": 470745,
+              "mean_ns": 212399,
+              "min_ns": 203260,
+              "p50_ns": 206236,
+              "p95_ns": 222658,
+              "p99_ns": 470745
+            },
+            "resources": {
+              "available": true,
+              "major_faults": 0,
+              "mapped_region_count_available": true,
+              "mapped_regions_after": 40,
+              "mapped_regions_before": 40,
+              "max_rss_kib_after": 72888,
+              "max_rss_kib_before": 72888,
+              "minor_faults": 2720,
+              "system_us": 1491,
+              "user_us": 15662
+            },
+            "target_page": 1
+          },
+          "late": {
+            "latency": {
+              "count": 80,
+              "max_ns": 62623,
+              "mean_ns": 46910,
+              "min_ns": 43148,
+              "p50_ns": 44599,
+              "p95_ns": 58089,
+              "p99_ns": 62623
+            },
+            "resources": {
+              "available": true,
+              "major_faults": 0,
+              "mapped_region_count_available": true,
+              "mapped_regions_after": 40,
+              "mapped_regions_before": 40,
+              "max_rss_kib_after": 72888,
+              "max_rss_kib_before": 72888,
+              "minor_faults": 241,
+              "system_us": 2079,
+              "user_us": 2016
+            },
+            "target_page": 32
+          },
+          "middle": {
+            "latency": {
+              "count": 80,
+              "max_ns": 232256,
+              "mean_ns": 135515,
+              "min_ns": 125895,
+              "p50_ns": 127812,
+              "p95_ns": 162764,
+              "p99_ns": 232256
+            },
+            "resources": {
+              "available": true,
+              "major_faults": 0,
+              "mapped_region_count_available": true,
+              "mapped_regions_after": 40,
+              "mapped_regions_before": 40,
+              "max_rss_kib_after": 72888,
+              "max_rss_kib_before": 72888,
+              "minor_faults": 1520,
+              "system_us": 7100,
+              "user_us": 4019
+            },
+            "target_page": 16
+          }
+        }
+      },
+      "sequential_read": {
+        "data_frames_observed": 15657,
+        "estimated_payload_mib_per_second": 11321.652633110529,
+        "frames_observed": 15688,
+        "page_switch": {
+          "count": 31,
+          "max_ns": 28331,
+          "mean_ns": 26365,
+          "min_ns": 24410,
+          "p50_ns": 26357,
+          "p95_ns": 27842,
+          "p99_ns": 28331
+        },
+        "payload_bytes_observed": 64131072,
+        "resources": {
+          "available": true,
+          "major_faults": 0,
+          "mapped_region_count_available": true,
+          "mapped_regions_after": 41,
+          "mapped_regions_before": 40,
+          "max_rss_kib_after": 72888,
+          "max_rss_kib_before": 72888,
+          "minor_faults": 998,
+          "system_us": 2856,
+          "user_us": 2665
+        },
+        "total_ns": 5402052
+      },
+      "write_page_switch": {
+        "count": 31,
+        "max_ns": 155157,
+        "mean_ns": 69101,
+        "min_ns": 63274,
+        "p50_ns": 66116,
+        "p95_ns": 70619,
+        "p99_ns": 155157
+      },
+      "write_payload_mib_per_second": 2200.6417484564963,
+      "write_resources": {
+        "available": true,
+        "major_faults": 31,
+        "mapped_region_count_available": true,
+        "mapped_regions_after": 41,
+        "mapped_regions_before": 41,
+        "max_rss_kib_after": 72888,
+        "max_rss_kib_before": 72888,
+        "minor_faults": 15939,
+        "system_us": 15950,
+        "user_us": 11904
+      }
+    },
+    {
+      "frames_written": 63945,
+      "page_count": 128,
+      "seek": {
+        "iterations_per_position": 80,
+        "page_count": 128,
+        "positions": {
+          "early": {
+            "latency": {
+              "count": 80,
+              "max_ns": 1004383,
+              "mean_ns": 808649,
+              "min_ns": 779304,
+              "p50_ns": 787612,
+              "p95_ns": 903506,
+              "p99_ns": 1004383
+            },
+            "resources": {
+              "available": true,
+              "major_faults": 0,
+              "mapped_region_count_available": true,
+              "mapped_regions_after": 40,
+              "mapped_regions_before": 40,
+              "max_rss_kib_after": 72888,
+              "max_rss_kib_before": 72888,
+              "minor_faults": 10401,
+              "system_us": 27237,
+              "user_us": 36505
+            },
+            "target_page": 1
+          },
+          "late": {
+            "latency": {
+              "count": 80,
+              "max_ns": 169476,
+              "mean_ns": 128525,
+              "min_ns": 121882,
+              "p50_ns": 126649,
+              "p95_ns": 137520,
+              "p99_ns": 169476
+            },
+            "resources": {
+              "available": true,
+              "major_faults": 0,
+              "mapped_region_count_available": true,
+              "mapped_regions_after": 40,
+              "mapped_regions_before": 40,
+              "max_rss_kib_after": 72888,
+              "max_rss_kib_before": 72888,
+              "minor_faults": 241,
+              "system_us": 0,
+              "user_us": 10621
+            },
+            "target_page": 128
+          },
+          "middle": {
+            "latency": {
+              "count": 80,
+              "max_ns": 664214,
+              "mean_ns": 468804,
+              "min_ns": 453364,
+              "p50_ns": 459683,
+              "p95_ns": 508350,
+              "p99_ns": 664214
+            },
+            "resources": {
+              "available": true,
+              "major_faults": 0,
+              "mapped_region_count_available": true,
+              "mapped_regions_after": 40,
+              "mapped_regions_before": 40,
+              "max_rss_kib_after": 72888,
+              "max_rss_kib_before": 72888,
+              "minor_faults": 5362,
+              "system_us": 10796,
+              "user_us": 26726
+            },
+            "target_page": 64
+          }
+        }
+      },
+      "sequential_read": {
+        "data_frames_observed": 63945,
+        "estimated_payload_mib_per_second": 16041.04415357496,
+        "frames_observed": 64072,
+        "page_switch": {
+          "count": 127,
+          "max_ns": 30742,
+          "mean_ns": 25935,
+          "min_ns": 24679,
+          "p50_ns": 25871,
+          "p95_ns": 27019,
+          "p99_ns": 28375
+        },
+        "payload_bytes_observed": 261918720,
+        "resources": {
+          "available": true,
+          "major_faults": 0,
+          "mapped_region_count_available": true,
+          "mapped_regions_after": 41,
+          "mapped_regions_before": 40,
+          "max_rss_kib_after": 72888,
+          "max_rss_kib_before": 72888,
+          "minor_faults": 4070,
+          "system_us": 10770,
+          "user_us": 4912
+        },
+        "total_ns": 15571627
+      },
+      "write_page_switch": {
+        "count": 127,
+        "max_ns": 141999,
+        "mean_ns": 71522,
+        "min_ns": 57667,
+        "p50_ns": 65816,
+        "p95_ns": 108106,
+        "p99_ns": 119619
+      },
+      "write_payload_mib_per_second": 2146.7829512649078,
+      "write_resources": {
+        "available": true,
+        "major_faults": 127,
+        "mapped_region_count_available": true,
+        "mapped_regions_after": 41,
+        "mapped_regions_before": 41,
+        "max_rss_kib_after": 72888,
+        "max_rss_kib_before": 72888,
+        "minor_faults": 65089,
+        "system_us": 90921,
+        "user_us": 25671
+      }
+    }
+  ],
+  "primitive_mapping": {
+    "fixture_bytes": 67108864,
+    "full_mapping_visibility_flush_ns": 408348007,
+    "iterations": 80,
+    "mapping_open": {
+      "count": 80,
+      "max_ns": 14857,
+      "mean_ns": 2902,
+      "min_ns": 1944,
+      "p50_ns": 2396,
+      "p95_ns": 3654,
+      "p99_ns": 14857
+    },
+    "mapping_read_resources": {
+      "available": true,
+      "major_faults": 0,
+      "mapped_region_count_available": true,
+      "mapped_regions_after": 40,
+      "mapped_regions_before": 40,
+      "max_rss_kib_after": 72888,
+      "max_rss_kib_before": 72704,
+      "minor_faults": 81924,
+      "system_us": 112104,
+      "user_us": 24978
+    },
+    "os_page_cache_cold": "not_measured",
+    "process_first_touch": {
+      "count": 80,
+      "max_ns": 1600199,
+      "mean_ns": 1306444,
+      "min_ns": 1264158,
+      "p50_ns": 1295585,
+      "p95_ns": 1371508,
+      "p99_ns": 1600199
+    },
+    "sequential_write_mib_per_second": 3954.629279766232,
+    "sequential_write_ns": 16183565,
+    "write_and_flush_resources": {
+      "available": true,
+      "major_faults": 0,
+      "mapped_region_count_available": true,
+      "mapped_regions_after": 41,
+      "mapped_regions_before": 41,
+      "max_rss_kib_after": 72888,
+      "max_rss_kib_before": 72888,
+      "minor_faults": 16384,
+      "system_us": 21886,
+      "user_us": 2796
+    }
+  },
+  "profile": "baseline",
+  "schema": "kungfu.mmap-qualification.v1",
+  "semantic_limits": {
+    "mapping_policy": "demand+visibility",
+    "os_page_cache_cold": "not_measured",
+    "power_loss_durability": "not_claimed"
+  },
+  "source": {
+    "git_dirty": "false",
+    "git_head": "bc3dcb7d2976dadb9651b9e4ad115257720d9d75"
+  }
+}

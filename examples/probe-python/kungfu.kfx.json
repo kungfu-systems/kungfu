@@ -1,0 +1,15 @@
+{
+  "schema": "kungfu.kfx.manifest/v1",
+  "name": "@kungfu-tech/examples-probe-python",
+  "version": "4.0.0-alpha.1",
+  "kungfuBuild": {
+    "python": {
+      "dependencies": {
+        "pydantic": ">=2.0"
+      }
+    }
+  },
+  "kungfuConfig": {
+    "key": "ProbePython"
+  }
+}

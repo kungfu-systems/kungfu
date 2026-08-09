@@ -1,0 +1,52 @@
+{
+  "schema": "kungfu.kfx.manifest/v1",
+  "name": "@kungfu-tech/kfx-agent-work-lab-experience",
+  "version": "4.0.0-alpha.1",
+  "kungfuConfig": {
+    "key": "agent-work-lab-experience",
+    "name": "Agent Work Lab Experience",
+    "product": {
+      "roles": [
+        "tool"
+      ],
+      "order": 30
+    },
+    "registry": {
+      "contributions": [
+        {
+          "id": "kungfu.agent-work-lab.experience.first-party",
+          "extensionPoint": "kungfu.agent-work-lab.experience",
+          "version": "1",
+          "capabilities": [
+            "agentRuntime",
+            "work"
+          ],
+          "presentation": {
+            "optional": false,
+            "hosts": [
+              "gui",
+              "tui",
+              "cli",
+              "agent"
+            ]
+          }
+        }
+      ],
+      "dependencies": [
+        {
+          "provider": "kungfu.agent-work-lab",
+          "version": "1",
+          "mode": "required",
+          "capabilities": [
+            "agentRuntime",
+            "work"
+          ],
+          "admissionGrades": [
+            "identity-verified",
+            "kfd-attested"
+          ]
+        }
+      ]
+    }
+  }
+}

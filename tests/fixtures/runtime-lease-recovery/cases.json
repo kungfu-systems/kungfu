@@ -1,0 +1,24 @@
+{
+  "schema": "kungfu.runtime-lease-recovery-fixtures/v1",
+  "lease": {
+    "issuedAtNs": "1000000000",
+    "ttlNs": "5000000000",
+    "renewedAtNs": "3000000000",
+    "releasedAtNs": "4000000000",
+    "idleGraceNs": "2000000000",
+    "drainAtNs": "6000000000"
+  },
+  "adoption": {
+    "generation": "7",
+    "previousSupervisorPid": 1200,
+    "adoptedSupervisorPid": 2200,
+    "coordinatorPid": 1201
+  },
+  "crashLoop": {
+    "windowSeconds": 60,
+    "maxAttempts": 5,
+    "attempts": [100, 105, 110, 115, 120],
+    "blockedAt": 121,
+    "admittedAt": 161
+  }
+}

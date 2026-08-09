@@ -1,0 +1,12 @@
+{
+  "schema": "kungfu.kfx.shared-modules/v1",
+  "modules": [
+    "react",
+    "react/jsx-runtime",
+    "react-dom",
+    "react-dom/client",
+    "@kungfu-tech/api",
+    "@kungfu-tech/api/capability",
+    "@kungfu-tech/api/query"
+  ]
+}

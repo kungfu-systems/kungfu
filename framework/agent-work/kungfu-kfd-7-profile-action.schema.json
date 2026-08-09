@@ -1,0 +1,173 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kungfu.link/schema/kungfu-kfd-7-profile-action.schema.json",
+  "title": "Kungfu KFD-7 Product Profile action",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "actionId",
+    "refName",
+    "basis",
+    "ref",
+    "subject",
+    "responsibilities",
+    "support"
+  ],
+  "properties": {
+    "schema": { "const": "kungfu.kfd7.profile-action/v1" },
+    "actionId": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$" },
+    "refName": { "type": "string", "pattern": "^[a-z][a-z0-9._/-]{0,127}$" },
+    "basis": { "$ref": "#/$defs/cutCoordinate" },
+    "ref": { "$ref": "#/$defs/cutCoordinate" },
+    "subject": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["role", "operation", "fromState", "toState"],
+      "properties": {
+        "role": { "$ref": "#/$defs/role" },
+        "operation": {
+          "enum": [
+            "create",
+            "successor",
+            "fork",
+            "degrade",
+            "seal",
+            "compensate",
+            "reconcile",
+            "continue",
+            "branch",
+            "pause",
+            "complete",
+            "abandon",
+            "refresh",
+            "mark-stale",
+            "mark-conflicted",
+            "supersede",
+            "attenuate",
+            "expire",
+            "revoke",
+            "deny"
+          ]
+        },
+        "fromState": { "type": "string", "minLength": 1 },
+        "toState": { "type": "string", "minLength": 1 }
+      }
+    },
+    "responsibilities": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["fact", "episode", "pursuit", "atlas", "warrant"],
+      "properties": {
+        "fact": { "$ref": "#/$defs/responsibility" },
+        "episode": { "$ref": "#/$defs/responsibility" },
+        "pursuit": { "$ref": "#/$defs/responsibility" },
+        "atlas": { "$ref": "#/$defs/responsibility" },
+        "warrant": { "$ref": "#/$defs/responsibility" }
+      }
+    },
+    "roleInputs": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "fact": { "$ref": "#/$defs/roleInput" },
+        "episode": { "$ref": "#/$defs/roleInput" },
+        "pursuit": { "$ref": "#/$defs/roleInput" },
+        "atlas": { "$ref": "#/$defs/roleInput" },
+        "warrant": { "$ref": "#/$defs/roleInput" }
+      }
+    },
+    "relations": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "relationId",
+          "relationType",
+          "sourceRole",
+          "targetRole",
+          "attributesRoot"
+        ],
+        "properties": {
+          "relationId": { "$ref": "#/$defs/factId" },
+          "relationType": { "type": "string", "minLength": 1 },
+          "sourceRole": { "$ref": "#/$defs/role" },
+          "targetRole": { "$ref": "#/$defs/role" },
+          "attributesRoot": { "$ref": "#/$defs/root" }
+        }
+      }
+    },
+    "payload": { "type": "object" },
+    "episodeFrontier": { "type": "array", "items": { "type": "object" } },
+    "omissionRoots": { "$ref": "#/$defs/rootArray" },
+    "conflictRoots": { "$ref": "#/$defs/rootArray" },
+    "support": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "createdByReceiptRoot",
+        "schemaRoot",
+        "declarationRoots",
+        "admissionRoots",
+        "reasonRoot"
+      ],
+      "properties": {
+        "createdByReceiptRoot": { "$ref": "#/$defs/root" },
+        "schemaRoot": { "$ref": "#/$defs/root" },
+        "declarationRoots": { "$ref": "#/$defs/nonEmptyRootArray" },
+        "admissionRoots": { "$ref": "#/$defs/nonEmptyRootArray" },
+        "reasonRoot": { "$ref": "#/$defs/root" }
+      }
+    }
+  },
+  "$defs": {
+    "root": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+    "factId": { "type": "string", "pattern": "^fact:[0-9a-f]{32}$" },
+    "role": { "enum": ["fact", "episode", "pursuit", "atlas", "warrant"] },
+    "rootArray": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/root" }
+    },
+    "nonEmptyRootArray": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/root" }
+    },
+    "cutCoordinate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["cutRoot", "revision"],
+      "properties": {
+        "cutRoot": { "oneOf": [{ "$ref": "#/$defs/root" }, { "type": "null" }] },
+        "revision": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "responsibility": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["objectId", "expectedVersionRoot"],
+      "properties": {
+        "objectId": { "$ref": "#/$defs/factId" },
+        "expectedVersionRoot": {
+          "oneOf": [{ "$ref": "#/$defs/root" }, { "type": "null" }]
+        }
+      }
+    },
+    "roleInput": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["state", "details"],
+      "properties": {
+        "state": { "type": "string", "minLength": 1 },
+        "details": { "type": "object" },
+        "nonClaims": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        }
+      }
+    }
+  }
+}

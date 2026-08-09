@@ -7,11 +7,13 @@
 #   实测它命中 framework/core/pyproject.toml）。
 
 import json
+import shutil
 import sys
 
 from os import path
 from pathlib import Path
 from setuptools import find_packages, setup
+from setuptools.command.build_py import build_py
 from setuptools.dist import Distribution
 
 if sys.version_info >= (3, 11):
@@ -61,6 +63,40 @@ class BinaryDistribution(Distribution):
         return True
 
 
+class BuildPythonWithExitContract(build_py):
+    """Ship normative contracts and the Work conformance checker."""
+
+    def run(self):
+        super().run()
+        source = (
+            _find_pyproject(_here).parent.parent
+            / "exit"
+            / "kungfu-exit-bundle.contract.json"
+        )
+        destination = Path(self.build_lib) / "kungfu" / "exit_bundle.contract.json"
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(source, destination)
+        conformance_source = (
+            _find_pyproject(_here).parent.parent / "work-profile-conformance"
+        )
+        conformance_destination = (
+            Path(self.build_lib) / "kungfu" / "work_profile_conformance"
+        )
+        shutil.copytree(conformance_source, conformance_destination, dirs_exist_ok=True)
+        manifest = json.loads(
+            (conformance_source / "authority-manifest.json").read_text(encoding="utf-8")
+        )
+        repository_root = _find_pyproject(_here).parent.parent.parent
+        for coordinate in manifest["files"]:
+            relative = Path(coordinate["path"])
+            source_file = (repository_root / relative).resolve()
+            if not source_file.is_relative_to(repository_root.resolve()):
+                raise ValueError(f"invalid Work conformance authority path: {relative}")
+            destination_file = conformance_destination / "authority" / relative
+            destination_file.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(source_file, destination_file)
+
+
 setup(
     name=project["name"],
     version=build_info["version"],
@@ -86,7 +122,12 @@ setup(
     # [project].dependencies 已是 PEP 508 完整约束（含平台 marker），直接作为 wheel
     # 的 install_requires；与旧 poetry 把全部 deps 注入 install_requires 行为等价。
     install_requires=project.get("dependencies", []),
-    entry_points={"console_scripts": ["kfc = kungfu.__main__:main"]},
+    entry_points={
+        "console_scripts": [
+            "kungfu-exit-verify = kungfu.exit_verifier:main",
+        ]
+    },
+    cmdclass={"build_py": BuildPythonWithExitContract},
     distclass=BinaryDistribution,
     has_ext_modules=lambda: True,
 )

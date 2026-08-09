@@ -1,0 +1,20 @@
+{
+  "schema": "kungfu.kfx.manifest/v1",
+  "name": "@kungfu-tech/kfx-suite-work-control",
+  "version": "4.0.0-alpha.1",
+  "kungfuConfig": {
+    "key": "kungfu.work-control",
+    "name": "Work Control",
+    "suite": {
+      "title": "Work Control",
+      "members": [
+        "work-control-contract",
+        "work-control-actions",
+        "work-control-assessment",
+        "work-control-views",
+        "work-dashboard"
+      ],
+      "profile": "profile.json"
+    }
+  }
+}

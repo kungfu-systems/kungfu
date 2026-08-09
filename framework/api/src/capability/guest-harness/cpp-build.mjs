@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 // Compile a C++ guest fixture into a runnable binary for the guest-harness. A
-// C++ service ships a PREBUILT per-platform binary (ADR-0017): there is no
+// C++ service ships a PREBUILT per-platform binary (KF-ADR-019f86da-4f90-7afa-a1e1-0510f00916be): there is no
 // interpreter to load a source entry, so the harness mirrors what a kfx author's
 // build does — resolve the one dependency the guest proxy needs (nlohmann/json,
 // pinned by framework/core/conanfile.py and provided by conan) and invoke the

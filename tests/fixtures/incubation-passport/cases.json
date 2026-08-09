@@ -1,0 +1,17 @@
+{
+  "schema": "kungfu.incubation-passport.fixture-cases/v1",
+  "cases": [
+    {
+      "name": "new schema declaration",
+      "expectedIssue": "unregistered-schema:framework/example/new_fact.fbs"
+    },
+    {
+      "name": "identity protocol without vectors",
+      "expectedIssue": "identity-protocol-conformance-missing:example.runtime"
+    },
+    {
+      "name": "overdue runtime incubation",
+      "expectedIssue": "overdue-runtime-incubation:example.runtime"
+    }
+  ]
+}

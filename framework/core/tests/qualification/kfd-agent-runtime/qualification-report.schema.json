@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kungfu.dev/schemas/kfd-agent-runtime-qualification-report-v1.schema.json",
+  "title": "Kungfu KFD Agent Runtime qualification report",
+  "type": "object",
+  "required": [
+    "schemaVersion",
+    "contract",
+    "verdict",
+    "claim",
+    "source",
+    "platform",
+    "artifacts",
+    "kfd",
+    "negativeFalsification",
+    "faultEvidence",
+    "languageProjection",
+    "residualRisk"
+  ],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "contract": { "const": "kungfu.kfd-agent-runtime.qualification-report/v1" },
+    "verdict": { "enum": ["passed", "development-pass", "failed"] },
+    "claim": { "type": "string" },
+    "source": { "type": "object" },
+    "platform": { "type": "object" },
+    "artifacts": { "type": "object" },
+    "kfd": { "type": "object" },
+    "negativeFalsification": { "type": "object" },
+    "faultEvidence": { "type": "object" },
+    "languageProjection": { "type": "object" },
+    "residualRisk": {
+      "type": "array",
+      "items": { "type": "string" },
+      "minItems": 1
+    }
+  },
+  "additionalProperties": false
+}

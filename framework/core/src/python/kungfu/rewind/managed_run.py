@@ -3,13 +3,13 @@
 # A managed provider run: the seam that turns the cost parse layer and the cost
 # wire event into one real act — launch a provider CLI in a structured-output
 # mode, capture its output, parse it into a CostSnapshot, and emit that fact as
-# a CostSnapshot journal event (msg_type 30008).
+# a CostSnapshot action-envelope event.
 #
 # Everything that touches the outside world is injected so the wiring is
 # testable without a real CLI or the native journal writer:
 #   - `runner`  launches the process and returns (exit_code, stdout, stderr).
 #               Production uses subprocess; tests pass canned provider output.
-#   - `emit`    takes (msg_type, event_bytes). Its signature is exactly
+#   - `emit`    takes (action_type, event_bytes). Its signature is exactly
 #               Supervisor.enqueue, so a Kungfu-managed run wires the supervisor
 #               in with one argument; tests pass a list-collecting sink.
 #
@@ -27,7 +27,7 @@ import subprocess
 import time
 from typing import Any, Callable, List, Optional, TypedDict
 
-from kungfu.rewind import MSG_MODEL_RESPONSE, events
+from kungfu.rewind import ACTION_MODEL_RESPONSE, events
 from kungfu.rewind import cost_wire
 from kungfu.rewind.cost.claude import parse_claude_print_json
 from kungfu.rewind.cost.codex import parse_codex_exec_json_text
@@ -220,7 +220,7 @@ def run_managed(
     binary: str,
     prompt: str,
     *,
-    emit: Callable[[int, bytes], None],
+    emit: Callable[[str, bytes], None],
     run_id: str,
     work_id: Optional[str] = None,
     usage_mode: str = "accumulate",
@@ -254,10 +254,10 @@ def run_managed(
 
     emitted = False
     if snapshot is not None and _has_usage(snapshot):
-        msg_type, payload = cost_wire.snapshot_to_event(
+        action_type, payload = cost_wire.snapshot_to_event(
             snapshot, layer=CaptureLayer.Supervisor
         )
-        emit(msg_type, payload)
+        emit(action_type, payload)
         emitted = True
 
     response_text, response_body, response_error = _extract_response(
@@ -269,7 +269,7 @@ def run_managed(
         input_tokens = snapshot.tokens.input_tokens
         output_tokens = snapshot.tokens.output_tokens
     emit(
-        MSG_MODEL_RESPONSE,
+        ACTION_MODEL_RESPONSE,
         events.model_response(
             run_id=run_id,
             span_id=f"{run_id}:managed-provider",

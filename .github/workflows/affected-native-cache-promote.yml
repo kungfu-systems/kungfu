@@ -1,0 +1,831 @@
+# SPDX-License-Identifier: Apache-2.0
+
+name: Promote affected-native cache
+
+on:
+  push:
+    branches:
+      - dev/v*/v*
+  workflow_dispatch:
+    inputs:
+      target_sha:
+        description: Exact merged dev commit whose immutable cache evidence should be recovered
+        required: true
+        type: string
+
+concurrency:
+  group: affected-native-cache-promote-${{ github.event.inputs.target_sha || github.sha }}
+  cancel-in-progress: false
+
+permissions:
+  actions: write
+  contents: read
+
+jobs:
+  promote:
+    name: Promote qualified merge-group cache
+    runs-on: ubuntu-24.04
+    timeout-minutes: 95
+    outputs:
+      target_sha: ${{ steps.target.outputs.sha }}
+      windows_x86_64_available: ${{ steps.qualified_core_promotion.outputs.windows_x86_64_cp313_available }}
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@v6.4.0
+        with:
+          node-version: "24"
+      - name: Resolve exact cache promotion target
+        id: target
+        env:
+          REQUESTED_TARGET_SHA: ${{ github.event.inputs.target_sha || github.sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ ! "$REQUESTED_TARGET_SHA" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "Cache promotion target must be one exact lowercase commit SHA." >&2
+            exit 1
+          fi
+          target_sha="$(git rev-parse "${REQUESTED_TARGET_SHA}^{commit}")"
+          if [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ]; then
+            case "$GITHUB_REF_NAME" in
+              dev/v*/v*) ;;
+              *)
+                echo "Cache recovery must run from a protected dev channel ref." >&2
+                exit 1
+                ;;
+            esac
+            git merge-base --is-ancestor "$target_sha" HEAD || {
+              echo "Recovery target is not an ancestor of the selected dev head." >&2
+              exit 1
+            }
+          elif [ "$target_sha" != "$(git rev-parse HEAD)" ]; then
+            echo "Push-triggered promotion target drifted from the checked-out dev head." >&2
+            exit 1
+          fi
+          {
+            echo "sha=${target_sha}"
+            echo "tree=$(git rev-parse "${target_sha}^{tree}")"
+          } >> "$GITHUB_OUTPUT"
+      - name: Locate an exact successful merge-group producer
+        id: producer
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TARGET_SHA: ${{ steps.target.outputs.sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          producer_run=""
+          producer_mode=""
+          attempt=1
+          gate_without_authority_polls=0
+          while [ "$attempt" -le 60 ]; do
+            runs="$(
+              gh api --method GET \
+                "repos/${GITHUB_REPOSITORY}/actions/workflows/affected-native-pr.yml/runs" \
+                -f event=merge_group \
+                -f head_sha="$TARGET_SHA" \
+                -f per_page=20 \
+                --jq '.workflow_runs | sort_by(.created_at) | reverse | .[].id'
+            )"
+            gate_observed=false
+            artifact_partial=false
+            for run_id in $runs; do
+              gate_success_count="$(
+                gh api --method GET \
+                  "repos/${GITHUB_REPOSITORY}/actions/runs/${run_id}/jobs" \
+                  -f filter=latest \
+                  -f per_page=100 \
+                  --jq '[.jobs[] | select(.name == "affected-native / linux" and .status == "completed" and .conclusion == "success")] | length'
+              )"
+              [ "$gate_success_count" -eq 1 ] || continue
+              gate_observed=true
+              direct_state="$(
+                gh api \
+                  "repos/${GITHUB_REPOSITORY}/actions/runs/${run_id}/artifacts?per_page=100" \
+                  --jq "[.artifacts[] | select(.expired == false and (.name | startswith(\"core-affected-native-${TARGET_SHA}-partition-\"))) | (.name | capture(\"-partition-(?<index>[0-9]+)-of-(?<count>[0-9]+)$\"))] | if length == 0 then \"absent\" elif ((map(.count) | unique | length) == 1 and (.[0].count | tonumber) == length and (map(.index | tonumber) | sort) == [range(0; (.[0].count | tonumber))]) then \"complete\" else \"partial\" end"
+              )"
+              authority_count="$(
+                gh api \
+                  "repos/${GITHUB_REPOSITORY}/actions/runs/${run_id}/artifacts?per_page=100" \
+                  --jq "[.artifacts[] | select(.expired == false and .name == \"core-affected-native-cache-promotion-authority-${run_id}\")] | length"
+              )"
+              attempt_count="$(
+                gh api \
+                  "repos/${GITHUB_REPOSITORY}/actions/runs/${run_id}/artifacts?per_page=100" \
+                  --jq "[.artifacts[] | select(.expired == false and .name == \"core-affected-native-delivery-attempt-${TARGET_SHA}\")] | length"
+              )"
+              if [ "$direct_state" = "complete" ] &&
+                [ "$authority_count" -eq 0 ]; then
+                if [ "$attempt_count" -eq 1 ]; then
+                  producer_run="$run_id"
+                  producer_mode=direct
+                  break
+                fi
+                artifact_partial=true
+                continue
+              fi
+              if [ "$direct_state" = "absent" ] &&
+                [ "$authority_count" -eq 1 ]; then
+                if [ "$attempt_count" -eq 1 ]; then
+                  producer_run="$run_id"
+                  producer_mode=reused-proof
+                  break
+                fi
+                artifact_partial=true
+                continue
+              fi
+              if [ "$direct_state" = "partial" ] ||
+                [ "$authority_count" -gt 1 ] ||
+                { [ "$direct_state" = "complete" ] &&
+                  [ "$authority_count" -ne 0 ]; }; then
+                artifact_partial=true
+              fi
+            done
+            if [ -n "$producer_run" ]; then
+              break
+            fi
+            if [ "$gate_observed" = "true" ] &&
+              [ "$artifact_partial" = "false" ]; then
+              gate_without_authority_polls=$((gate_without_authority_polls + 1))
+              if [ "$gate_without_authority_polls" -ge 3 ]; then
+                break
+              fi
+            else
+              gate_without_authority_polls=0
+            fi
+            sleep 10
+            attempt=$((attempt + 1))
+          done
+          if [ -z "$producer_run" ]; then
+            {
+              echo "available=false"
+              echo "run-id="
+              echo "mode="
+            } >> "$GITHUB_OUTPUT"
+            echo "No unambiguous cache promotion authority exists for merged source $TARGET_SHA."
+            exit 0
+          fi
+          {
+            echo "available=true"
+            echo "run-id=${producer_run}"
+            echo "mode=${producer_mode}"
+          } >> "$GITHUB_OUTPUT"
+          echo "Exact merge-group authority run: ${producer_run} (${producer_mode})"
+      - name: Download reused-proof promotion authority
+        if: ${{ steps.producer.outputs.mode == 'reused-proof' }}
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          repository: ${{ github.repository }}
+          run-id: ${{ steps.producer.outputs.run-id }}
+          github-token: ${{ github.token }}
+          name: core-affected-native-cache-promotion-authority-${{ steps.producer.outputs.run-id }}
+          path: product/qualification/cache-promotion/authority
+      - name: Download exact family delivery attempt
+        if: ${{ steps.producer.outputs.available == 'true' }}
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          repository: ${{ github.repository }}
+          run-id: ${{ steps.producer.outputs.run-id }}
+          github-token: ${{ github.token }}
+          name: core-affected-native-delivery-attempt-${{ steps.target.outputs.sha }}
+          path: product/qualification/cache-promotion/delivery-attempt
+      - name: Verify reused-proof promotion authority
+        if: ${{ steps.producer.outputs.mode == 'reused-proof' }}
+        id: authority
+        shell: bash
+        run: |
+          set -euo pipefail
+          # shifu-entry-contract: allow trusted dev push to reverify immutable merge-group authority
+          node scripts/affected-native-proof.mjs verify-cache-authority \
+            --bundle product/qualification/cache-promotion/authority \
+            --repository "$GITHUB_REPOSITORY" \
+            --target-run-id "${{ steps.producer.outputs.run-id }}" \
+            --target-head-sha "${{ steps.target.outputs.sha }}" \
+            --target-source-tree "${{ steps.target.outputs.tree }}" \
+            --github-output "$GITHUB_OUTPUT"
+      - name: Verify exact family delivery attempt
+        if: ${{ steps.producer.outputs.available == 'true' }}
+        id: delivery
+        shell: bash
+        env:
+          AUTHORITY_BINDING_ROOT: ${{ steps.authority.outputs.delivery-binding-root }}
+        run: |
+          set -euo pipefail
+          # shifu-entry-contract: allow immutable delivery verification before cache contract tools are installed
+          node scripts/affected-native-proof.mjs verify-attempt \
+            --bundle product/qualification/cache-promotion/delivery-attempt \
+            --repository "$GITHUB_REPOSITORY" \
+            --run-id "${{ steps.producer.outputs.run-id }}" \
+            --head-sha "${{ steps.target.outputs.sha }}" \
+            --source-tree "${{ steps.target.outputs.tree }}" \
+            --github-output "$GITHUB_OUTPUT"
+          attempt_binding="$(
+            jq -r '.deliveryBindingRoot' \
+              product/qualification/cache-promotion/delivery-attempt/delivery-attempt.json
+          )"
+          if [ -n "$AUTHORITY_BINDING_ROOT" ] &&
+            [ "$AUTHORITY_BINDING_ROOT" != "$attempt_binding" ]; then
+            echo "Cache authority and family delivery binding disagree." >&2
+            exit 1
+          fi
+      - name: Select authorized payload producer
+        if: ${{ steps.producer.outputs.available == 'true' }}
+        id: payload-source
+        shell: bash
+        env:
+          MODE: ${{ steps.producer.outputs.mode }}
+          MERGE_GROUP_RUN_ID: ${{ steps.producer.outputs.run-id }}
+          AUTHORITY_DIGEST: ${{ steps.authority.outputs.authority-digest }}
+          AUTHORIZED_RUN_ID: ${{ steps.authority.outputs.producer-run-id }}
+          AUTHORIZED_EVENT: ${{ steps.authority.outputs.producer-event }}
+          AUTHORIZED_TRIGGER_HEAD: ${{ steps.authority.outputs.producer-trigger-head-sha }}
+          AUTHORIZED_PAYLOAD_SOURCE: ${{ steps.authority.outputs.payload-source-sha }}
+          DELIVERY_ATTEMPT_ROOT: ${{ steps.delivery.outputs.attempt-root }}
+          DELIVERY_BINDING_ROOT: ${{ steps.delivery.outputs.delivery-binding-root }}
+          TARGET_SHA: ${{ steps.target.outputs.sha }}
+        run: |
+          set -euo pipefail
+          if [ "$MODE" = "direct" ]; then
+            producer_run_id="$MERGE_GROUP_RUN_ID"
+            producer_event=merge_group
+            producer_trigger_head="$TARGET_SHA"
+            payload_source_sha="$TARGET_SHA"
+            authority_digest=""
+          else
+            producer_run_id="$AUTHORIZED_RUN_ID"
+            producer_event="$AUTHORIZED_EVENT"
+            producer_trigger_head="$AUTHORIZED_TRIGGER_HEAD"
+            payload_source_sha="$AUTHORIZED_PAYLOAD_SOURCE"
+            authority_digest="$AUTHORITY_DIGEST"
+          fi
+          {
+            echo "producer-run-id=${producer_run_id}"
+            echo "producer-event=${producer_event}"
+            echo "producer-trigger-head-sha=${producer_trigger_head}"
+            echo "payload-source-sha=${payload_source_sha}"
+            echo "authority-digest=${authority_digest}"
+            echo "delivery-attempt-root=${DELIVERY_ATTEMPT_ROOT}"
+            echo "delivery-binding-root=${DELIVERY_BINDING_ROOT}"
+          } >> "$GITHUB_OUTPUT"
+      - name: Confirm complete authorized partition payloads
+        if: ${{ steps.producer.outputs.available == 'true' }}
+        id: payload
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PRODUCER_RUN_ID: ${{ steps.payload-source.outputs.producer-run-id }}
+          PRODUCER_EVENT: ${{ steps.payload-source.outputs.producer-event }}
+          PRODUCER_TRIGGER_HEAD: ${{ steps.payload-source.outputs.producer-trigger-head-sha }}
+          PAYLOAD_SOURCE_SHA: ${{ steps.payload-source.outputs.payload-source-sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          trusted="$(
+            gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${PRODUCER_RUN_ID}" |
+              jq -r \
+                --arg event "$PRODUCER_EVENT" \
+                --arg head "$PRODUCER_TRIGGER_HEAD" \
+                '(.event == $event and .head_sha == $head and .status == "completed" and .conclusion == "success" and .path == ".github/workflows/affected-native-pr.yml")'
+          )"
+          state="$(
+            gh api \
+              "repos/${GITHUB_REPOSITORY}/actions/runs/${PRODUCER_RUN_ID}/artifacts?per_page=100" |
+              jq -r \
+                --arg prefix "core-affected-native-${PAYLOAD_SOURCE_SHA}-partition-" \
+                '[.artifacts[] | select(.expired == false and (.name | startswith($prefix))) | (.name | capture("-partition-(?<index>[0-9]+)-of-(?<count>[0-9]+)$"))] | if length == 0 then "absent" elif ((map(.count) | unique | length) == 1 and (.[0].count | tonumber) == length and (map(.index | tonumber) | sort) == [range(0; (.[0].count | tonumber))]) then "complete" else "partial" end'
+          )"
+          if [ "$trusted" != "true" ] || [ "$state" != "complete" ]; then
+            echo "available=false" >> "$GITHUB_OUTPUT"
+            echo "Authorized payload producer is unavailable or incomplete: trusted=${trusted}, state=${state}."
+            exit 0
+          fi
+          echo "available=true" >> "$GITHUB_OUTPUT"
+      - name: Download exact authorized partition payloads
+        if: ${{ steps.payload.outputs.available == 'true' }}
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          repository: ${{ github.repository }}
+          run-id: ${{ steps.payload-source.outputs.producer-run-id }}
+          github-token: ${{ github.token }}
+          pattern: core-affected-native-${{ steps.payload-source.outputs.payload-source-sha }}-partition-*-of-*
+          path: product/qualification/cache-promotion/artifacts
+      - name: Install pinned cache contract tools
+        if: ${{ steps.payload.outputs.available == 'true' }}
+        env:
+          BUILDCHAIN_CHECK_MODE: source
+        # shifu-entry-contract: allow source-tool bootstrap before the promotion verifier is runnable
+        run: node scripts/buildchain-install.mjs
+      - name: Verify promotion authority
+        if: ${{ steps.payload.outputs.available == 'true' }}
+        id: promotion
+        run: |
+          # shifu-entry-contract: allow verifying post-merge cache transport evidence outside the candidate Gate
+          node scripts/write-affected-native-cache-manifests.mjs promote \
+            --artifacts-dir product/qualification/cache-promotion/artifacts \
+            --expected-target-head-sha "${{ steps.target.outputs.sha }}" \
+            --expected-merge-group-run-id "${{ steps.producer.outputs.run-id }}" \
+            --expected-payload-head-sha "${{ steps.payload-source.outputs.payload-source-sha }}" \
+            --expected-producer-run-id "${{ steps.payload-source.outputs.producer-run-id }}" \
+            --expected-producer-event "${{ steps.payload-source.outputs.producer-event }}" \
+            --expected-repository "$GITHUB_REPOSITORY" \
+            --authority-mode "${{ steps.producer.outputs.mode }}" \
+            --authority-digest "${{ steps.payload-source.outputs.authority-digest }}" \
+            --delivery-attempt-root "${{ steps.payload-source.outputs.delivery-attempt-root }}" \
+            --delivery-binding-root "${{ steps.payload-source.outputs.delivery-binding-root }}" \
+            --output product/qualification/cache-promotion/promotion.json \
+            --github-output "$GITHUB_OUTPUT"
+      - name: Materialize qualified cache roots
+        if: ${{ steps.payload.outputs.available == 'true' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          promotion="product/qualification/cache-promotion/promotion.json"
+          dependency_archive="$(jq -r '.dependency.absoluteArchive' "$promotion")"
+          tar -xf "$dependency_archive" -C "$HOME"
+          while IFS= read -r compiler_archive; do
+            tar -xf "$compiler_archive" -C "$HOME"
+          done < <(jq -r '.compiler.archives[].archive' "$promotion")
+      - name: Save default-branch dependency cache
+        if: ${{ steps.payload.outputs.available == 'true' }}
+        uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: ~/.conan2/p
+          key: ${{ steps.promotion.outputs.dependency-key }}
+      - name: Save default-branch compiler cache
+        if: ${{ steps.payload.outputs.available == 'true' }}
+        uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: ~/.cache/ccache
+          key: ${{ steps.promotion.outputs.compiler-key }}
+      - name: Summarize promotion
+        if: ${{ steps.payload.outputs.available == 'true' }}
+        shell: bash
+        run: |
+          {
+            echo "### Affected-native cache promotion"
+            echo
+            echo "- merged source: \`${{ steps.target.outputs.sha }}\`"
+            echo "- merge-group authority: \`${{ steps.producer.outputs.run-id }}\`"
+            echo "- payload producer: \`${{ steps.payload-source.outputs.producer-run-id }}\` (\`${{ steps.payload-source.outputs.producer-event }}\`)"
+            echo "- authority mode: \`${{ steps.producer.outputs.mode }}\`"
+            echo "- delivery attempt: \`${{ steps.payload-source.outputs.delivery-attempt-root }}\`"
+            echo "- delivery binding: \`${{ steps.payload-source.outputs.delivery-binding-root }}\`"
+            echo "- authority: exact source-tree proof plus complete partition receipts and payload digests"
+            echo "- validation: current-source configure/build/CTest remains mandatory on restore"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Locate one exact completed matrix delivery authority
+        if: ${{ github.ref_protected == true }}
+        id: qualified_core_producer
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TARGET_SHA: ${{ steps.target.outputs.sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          producer_run=""
+          attempt=1
+          while [ "$attempt" -le 180 ]; do
+            authorities=""
+            observed_run=false
+            pending_run=false
+            runs="$(
+              gh api --method GET \
+                "repos/${GITHUB_REPOSITORY}/actions/workflows/affected-native-pr.yml/runs" \
+                -f event=merge_group \
+                -f head_sha="$TARGET_SHA" \
+                -f per_page=20 \
+                --jq '.workflow_runs | sort_by(.created_at) | reverse | .[].id'
+            )"
+            for run_id in $runs; do
+              observed_run=true
+              run_status="$(
+                gh api --method GET \
+                  "repos/${GITHUB_REPOSITORY}/actions/runs/${run_id}" \
+                  --jq '.status'
+              )"
+              gate_count="$(
+                gh api --method GET \
+                  "repos/${GITHUB_REPOSITORY}/actions/runs/${run_id}/jobs" \
+                  -f filter=latest \
+                  -f per_page=100 \
+                  --jq '[.jobs[] | select(.name == "affected-native / linux" and .status == "completed" and .conclusion == "success")] | length'
+              )"
+              [ "$gate_count" -eq 1 ] || continue
+              delivery_count="$(
+                gh api \
+                  "repos/${GITHUB_REPOSITORY}/actions/runs/${run_id}/artifacts?per_page=100" \
+                  --jq "[.artifacts[] | select(.expired == false and .name == \"core-affected-native-delivery-attempt-${TARGET_SHA}\")] | length"
+              )"
+              if [ "$delivery_count" -eq 1 ] &&
+                [ "$run_status" = completed ]; then
+                authorities="${authorities}${run_id}"$'\n'
+              elif [ "$delivery_count" -eq 1 ]; then
+                pending_run=true
+              elif [ "$delivery_count" -gt 1 ]; then
+                echo "Qualified Core delivery authority is ambiguous in run ${run_id}." >&2
+                exit 1
+              elif [ "$run_status" != completed ]; then
+                pending_run=true
+              else
+                echo "Completed producer run ${run_id} has no delivery authority; every matrix row remains unqualified."
+              fi
+            done
+            authorities="$(printf '%s' "$authorities" | sed '/^$/d')"
+            authority_count="$(printf '%s\n' "$authorities" | sed '/^$/d' | wc -l | tr -d ' ')"
+            if [ "$authority_count" -gt 1 ]; then
+              echo "Multiple Qualified Core producer authorities exist for ${TARGET_SHA}." >&2
+              exit 1
+            fi
+            if [ "$authority_count" -eq 1 ]; then
+              producer_run="$authorities"
+              break
+            fi
+            if [ "$observed_run" = true ] && [ "$pending_run" = false ]; then
+              echo "available=false" >> "$GITHUB_OUTPUT"
+              echo "No exact Qualified Core producer became available; source build remains authoritative."
+              exit 0
+            fi
+            sleep 30
+            attempt=$((attempt + 1))
+          done
+          if [ -z "$producer_run" ]; then
+            echo "available=false" >> "$GITHUB_OUTPUT"
+            echo "No exact Qualified Core producer became available; source build remains authoritative."
+            exit 0
+          fi
+          {
+            echo "available=true"
+            echo "run-id=${producer_run}"
+          } >> "$GITHUB_OUTPUT"
+          gh run download "$producer_run" \
+            --repo "$GITHUB_REPOSITORY" \
+            --name "core-affected-native-delivery-attempt-${TARGET_SHA}" \
+            --dir product/qualification/qualified-core/delivery
+      - name: Install pinned Qualified Core verifier
+        if: ${{ github.ref_protected == true }}
+        shell: bash
+        run: ./shifu install --frozen-lockfile
+      - name: Check out exact Qualified Core recovery target
+        if: ${{ github.ref_protected == true && github.event_name == 'workflow_dispatch' }}
+        env:
+          TARGET_SHA: ${{ steps.target.outputs.sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          git checkout --detach "$TARGET_SHA"
+          test "$(git rev-parse HEAD)" = "$TARGET_SHA"
+          git diff --quiet
+          git diff --cached --quiet
+      - name: Promote or resolve the exact Qualified Core platform matrix
+        if: ${{ github.ref_protected == true }}
+        id: qualified_core_promotion
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TARGET_SHA: ${{ steps.target.outputs.sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          git diff --quiet
+          git diff --cached --quiet
+          test -z "$(git status --porcelain --untracked-files=no)"
+          root="product/qualification/qualified-core"
+          promoted_root="$root/promoted"
+          status_root="$root/matrix-status"
+          mkdir -p "$promoted_root" "$status_root"
+          rows=(
+            darwin-arm64-cp313
+            linux-x86_64-cp313
+            windows-x86_64-cp313
+          )
+          for row in "${rows[@]}"; do
+            key="${row//-/_}"
+            output="$promoted_root/$row"
+            row_output="$status_root/$row.output"
+            source_mode=""
+            exact_name="qualified-assignment-core-candidate-${TARGET_SHA}-${row}"
+            exact_count=0
+            if [ "${{ steps.qualified_core_producer.outputs.available }}" = true ]; then
+              exact_count="$(
+                gh api \
+                  "repos/${GITHUB_REPOSITORY}/actions/runs/${{ steps.qualified_core_producer.outputs.run-id }}/artifacts?per_page=100" \
+                  --jq "[.artifacts[] | select(.expired == false and .name == \"${exact_name}\")] | length"
+              )"
+            fi
+            if [ "$exact_count" -gt 1 ]; then
+              echo "Qualified Core candidate authority is ambiguous for ${row}." >&2
+              exit 1
+            fi
+            if [ "$exact_count" -eq 1 ]; then
+              candidate="$root/candidate/$row"
+              gh run download "${{ steps.qualified_core_producer.outputs.run-id }}" \
+                --repo "$GITHUB_REPOSITORY" \
+                --name "$exact_name" \
+                --dir "$candidate"
+              # Promotion runs only on an exact protected-dev push.
+              # shifu-entry-contract: allow binding the verified merge-group delivery after Gate
+              node framework/release/qualified-assignment-core-artifact.mjs promote \
+                --repository-root . \
+                --bundle "$candidate" \
+                --output-dir "$output" \
+                --repository "$GITHUB_REPOSITORY" \
+                --target-commit "$TARGET_SHA" \
+                --target-tree "$(git rev-parse "${TARGET_SHA}^{tree}")" \
+                --protected-ref "$GITHUB_REF" \
+                --merge-group-run-id "${{ steps.qualified_core_producer.outputs.run-id }}" \
+                --delivery-attempt "$root/delivery/delivery-attempt.json" \
+                --github-output "$row_output"
+              source_mode=exact-producer
+            else
+              reuse_root="$root/reuse/$row"
+              mkdir -p "$reuse_root"
+              matched_authority=""
+              matched_dir=""
+              matched_output=""
+              candidates="$(
+                gh api \
+                  "repos/${GITHUB_REPOSITORY}/actions/artifacts?per_page=100" |
+                  jq -r \
+                    --arg row "$row" \
+                    --arg exact "qualified-assignment-core-${TARGET_SHA}-${row}" \
+                    '.artifacts
+                      | map(select(
+                          .expired == false
+                          and .name != $exact
+                          and (
+                            (.name | test("^qualified-assignment-core-[0-9a-f]{40}-" + $row + "$"))
+                            or (
+                              $row == "darwin-arm64-cp313"
+                              and (.name | test("^qualified-assignment-core-[0-9a-f]{40}$"))
+                            )
+                          )
+                        ))
+                      | sort_by(.created_at)
+                      | reverse
+                      | .[]
+                      | [.id, .name]
+                      | @tsv'
+              )"
+              while IFS=$'\t' read -r artifact_id artifact_name; do
+                [ -n "${artifact_id:-}" ] || continue
+                candidate="$reuse_root/$artifact_id"
+                mkdir -p "$candidate/bundle"
+                if ! gh api \
+                  "repos/${GITHUB_REPOSITORY}/actions/artifacts/${artifact_id}/zip" \
+                  > "$candidate/artifact.zip"; then
+                  echo "Qualified Core transport ${artifact_id} became unavailable."
+                  continue
+                fi
+                if ! unzip -qq "$candidate/artifact.zip" -d "$candidate/bundle"; then
+                  echo "Qualified Core transport ${artifact_id} is not a bounded zip."
+                  continue
+                fi
+                reusable="$candidate/promoted"
+                reusable_output="$candidate/output"
+                if ! node framework/release/qualified-assignment-core-artifact.mjs reuse \
+                  --repository-root . \
+                  --bundle "$candidate/bundle" \
+                  --output-dir "$reusable" \
+                  --repository "$GITHUB_REPOSITORY" \
+                  --current-commit "$TARGET_SHA" \
+                  --github-output "$reusable_output"; then
+                  continue
+                fi
+                authority_identity="$(sed -n -e 's/^manifest-root=/manifest:/p' -e 's/^qualification-receipt-root=/qualification:/p' -e 's/^promotion-authority-root=/promotion:/p' "$reusable_output" | paste -sd '|' -)"
+                if [ -n "$matched_authority" ] && [ "$authority_identity" != "$matched_authority" ]; then
+                  echo "Multiple distinct compatible Qualified Core authorities are active for ${row}." >&2
+                  exit 1
+                fi
+                matched_authority="$authority_identity"
+                matched_dir="$reusable"
+                matched_output="$reusable_output"
+                echo "Compatible ${row} transport: ${artifact_name} (${artifact_id})."
+              done <<< "$candidates"
+              if [ -n "$matched_dir" ]; then
+                mkdir -p "$output"
+                cp -R "$matched_dir"/. "$output"/
+                cp "$matched_output" "$row_output"
+                source_mode=compatible-reuse
+              fi
+            fi
+            if [ -n "$source_mode" ]; then
+              manifest_root="$(sed -n 's/^manifest-root=//p' "$row_output")"
+              artifact_root="$(sed -n 's/^artifact-root=//p' "$row_output")"
+              qualification_root="$(sed -n 's/^qualification-receipt-root=//p' "$row_output")"
+              promotion_root="$(sed -n 's/^promotion-authority-root=//p' "$row_output")"
+              jq -n \
+                --arg row "$row" \
+                --arg source "$source_mode" \
+                --arg manifest "$manifest_root" \
+                --arg artifact "$artifact_root" \
+                --arg qualification "$qualification_root" \
+                --arg promotion "$promotion_root" \
+                '{row:$row,status:"qualified",source:$source,manifestRoot:$manifest,artifactRoot:$artifact,qualificationReceiptRoot:$qualification,promotionAuthorityRoot:$promotion}' \
+                > "$status_root/$row.json"
+              echo "${key}_available=true" >> "$GITHUB_OUTPUT"
+            else
+              jq -n \
+                --arg row "$row" \
+                '{row:$row,status:"unqualified",reason:"no-exact-or-compatible-authority"}' \
+                > "$status_root/$row.json"
+              echo "${key}_available=false" >> "$GITHUB_OUTPUT"
+              echo "Qualified Core row ${row} is unqualified; source build remains authoritative."
+            fi
+          done
+          jq -s \
+            --arg target "$TARGET_SHA" \
+            '{schema:"shifu.qualified-assignment-core-matrix-index/v1",targetCommit:$target,rows:(sort_by(.row))}' \
+            "$status_root"/*.json > "$root/matrix-index-body.json"
+          # shifu-entry-contract: allow sealing the non-authoritative matrix transport index after per-row verification
+          node --input-type=module --eval '
+            import fs from "node:fs";
+            import { qualifiedAssignmentCoreRoot } from "./scripts/check-shifu-cache-contract.mjs";
+            const [source, destination] = process.argv.slice(1);
+            const body = JSON.parse(fs.readFileSync(source, "utf8"));
+            fs.writeFileSync(
+              destination,
+              `${JSON.stringify({...body, matrixRoot: qualifiedAssignmentCoreRoot(body)}, null, 2)}\n`,
+            );
+          ' "$root/matrix-index-body.json" "$root/matrix-index.json"
+          echo "matrix_available=true" >> "$GITHUB_OUTPUT"
+      - name: Qualify Linux x86_64 consumer remote and local-CAS paths
+        if: ${{ steps.qualified_core_promotion.outputs.linux_x86_64_cp313_available == 'true' }}
+        env:
+          TARGET_SHA: ${{ steps.target.outputs.sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          bundle="$GITHUB_WORKSPACE/product/qualification/qualified-core/promoted/linux-x86_64-cp313"
+          cache_root="$RUNNER_TEMP/qualified-core-linux-consumer-cache"
+          first_checkout="$RUNNER_TEMP/qualified-core-linux-consumer-first"
+          second_checkout="$RUNNER_TEMP/qualified-core-linux-consumer-second"
+          git worktree add --detach "$first_checkout" "$TARGET_SHA"
+          git worktree add --detach "$second_checkout" "$TARGET_SHA"
+          (
+            cd "$first_checkout"
+            # shifu-entry-contract: allow direct consumer qualification before its cached Core can activate Shifu Work Control
+            env KUNGFU_QUALIFIED_CORE_BUNDLE="$bundle" KUNGFU_QUALIFIED_CORE_CACHE_ROOT="$cache_root" node framework/assignment-capture/qualified-assignment-core-consumer.mjs \
+                materialize --repository-root "$PWD"
+            file framework/core/dist/kungfu/pykungfu.cpython-313-x86_64-linux-gnu.so |
+              grep -q 'ELF 64-bit'
+            test "$(stat -c '%a' framework/core/dist/kungfu/kungfubuildinfo.json)" = 644
+            test "$(stat -c '%a' framework/core/dist/kungfu/libkungfu_runtime.so)" = 755
+            test "$(stat -c '%a' framework/core/dist/kungfu/libnode.so.127)" = 755
+            test "$(stat -c '%a' framework/core/dist/kungfu/pykungfu.cpython-313-x86_64-linux-gnu.so)" = 755
+            jq -e '
+              .complete == true
+              and (.manifestRoot | startswith("sha256:"))
+              and (.artifactRoot | startswith("sha256:"))
+              and (.qualificationReceiptRoot | startswith("sha256:"))
+              and (.promotionAuthorityRoot | startswith("sha256:"))
+              and (.receiptRoot | startswith("sha256:"))
+            ' framework/core/dist/kungfu/.qualified-core-materialization.json
+            ./shifu work --help >/dev/null
+          )
+          (
+            cd "$second_checkout"
+            # shifu-entry-contract: allow direct local-CAS qualification before its cached Core can activate Shifu Work Control
+            env KUNGFU_QUALIFIED_CORE_CACHE_ROOT="$cache_root" KUNGFU_QUALIFIED_CORE_GITHUB=0 node framework/assignment-capture/qualified-assignment-core-consumer.mjs \
+                materialize --repository-root "$PWD"
+            ./shifu work --help >/dev/null
+            # shifu-entry-contract: allow direct post-activation observation of the bounded consumer qualification cache
+            env KUNGFU_QUALIFIED_CORE_CACHE_ROOT="$cache_root" node framework/assignment-capture/qualified-assignment-core-consumer.mjs \
+                status --repository-root "$PWD" --json |
+              jq -e '
+                .currentCheckout.eligible == true
+                and .totals.observations == 2
+                and .counts.reasons["explicit-bundle-hit"] == 1
+                and .counts.reasons["local-cas-hit"] == 1
+              '
+          )
+      - name: Upload Qualified Core matrix transports
+        if: ${{ steps.qualified_core_promotion.outputs.matrix_available == 'true' }}
+        uses: ./.github/actions/upload-qualified-core-matrix
+        with:
+          target-sha: ${{ steps.target.outputs.sha }}
+          darwin-arm64-available: ${{ steps.qualified_core_promotion.outputs.darwin_arm64_cp313_available }}
+          linux-x86-64-available: ${{ steps.qualified_core_promotion.outputs.linux_x86_64_cp313_available }}
+          windows-x86-64-available: ${{ steps.qualified_core_promotion.outputs.windows_x86_64_cp313_available }}
+      - name: Summarize Qualified Core promotion
+        if: ${{ steps.qualified_core_promotion.outputs.matrix_available == 'true' }}
+        env:
+          TARGET_SHA: ${{ steps.target.outputs.sha }}
+        shell: bash
+        run: |
+          {
+            echo "### Qualified Assignment Core"
+            echo
+            echo "- protected source: \`$TARGET_SHA\`"
+            echo "- merge-group delivery: \`${{ steps.qualified_core_producer.outputs.run-id || 'no-current-delivery' }}\`"
+            jq -r '.rows[] | "- " + .row + ": `" + .status + "`" + (if .source then " (`" + .source + "`)" else "" end)' \
+              product/qualification/qualified-core/matrix-index.json
+            echo "- transport: replaceable and non-authoritative"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  qualify_windows_x86_64_consumer:
+    name: Qualify Windows x86_64 consumer
+    needs: promote
+    if: ${{ needs.promote.outputs.windows_x86_64_available == 'true' }}
+    runs-on: windows-2022
+    timeout-minutes: 30
+    permissions:
+      actions: read
+      contents: read
+    env:
+      TARGET_SHA: ${{ needs.promote.outputs.target_sha }}
+    steps:
+      - name: Check out exact protected source
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: ${{ needs.promote.outputs.target_sha }}
+          fetch-depth: 1
+          persist-credentials: false
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version: "24"
+      - name: Download exact promoted Windows transport
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: qualified-assignment-core-${{ needs.promote.outputs.target_sha }}-windows-x86_64-cp313
+          path: product/qualification/qualified-core/windows-x86_64-cp313
+      - name: Provision the repository-pinned Shifu toolchain
+        shell: pwsh
+        run: |
+          cmd /d /c shifu.cmd install --frozen-lockfile --no-optional
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Qualify remote and local-CAS consumer paths
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $bundle = Join-Path $env:GITHUB_WORKSPACE "product\qualification\qualified-core\windows-x86_64-cp313"
+          $cacheRoot = Join-Path $env:RUNNER_TEMP "qualified-core-windows-consumer-cache"
+          $firstCheckout = Join-Path $env:RUNNER_TEMP "qualified-core-windows-consumer-first"
+          $secondCheckout = Join-Path $env:RUNNER_TEMP "qualified-core-windows-consumer-second"
+          git worktree add --detach $firstCheckout $env:TARGET_SHA
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          git worktree add --detach $secondCheckout $env:TARGET_SHA
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+          Push-Location $firstCheckout
+          try {
+            $env:KUNGFU_QUALIFIED_CORE_BUNDLE = $bundle
+            $env:KUNGFU_QUALIFIED_CORE_CACHE_ROOT = $cacheRoot
+            # shifu-entry-contract: allow direct consumer qualification before its cached Core can activate Shifu Work Control
+            node framework\assignment-capture\qualified-assignment-core-consumer.mjs materialize --repository-root $firstCheckout
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+            $runtime = Join-Path $firstCheckout "framework\core\dist\kungfu"
+            $nativeFiles = @(
+              Get-Item -LiteralPath (Join-Path $runtime "pykungfu.cp313-win_amd64.pyd")
+              Get-Item -LiteralPath (Join-Path $runtime "libnode.dll")
+            )
+            foreach ($nativeFile in $nativeFiles) {
+              $bytes = [System.IO.File]::ReadAllBytes($nativeFile.FullName)
+              if ($bytes.Length -lt 2 -or $bytes[0] -ne 0x4d -or $bytes[1] -ne 0x5a) {
+                throw "Qualified Windows native payload is not a PE image: $($nativeFile.Name)"
+              }
+            }
+            $receipt = Get-Content -Raw (Join-Path $runtime ".qualified-core-materialization.json") | ConvertFrom-Json
+            if (
+              -not $receipt.complete -or
+              $receipt.manifestRoot -notmatch "^sha256:[0-9a-f]{64}$" -or
+              $receipt.artifactRoot -notmatch "^sha256:[0-9a-f]{64}$" -or
+              $receipt.qualificationReceiptRoot -notmatch "^sha256:[0-9a-f]{64}$" -or
+              $receipt.promotionAuthorityRoot -notmatch "^sha256:[0-9a-f]{64}$" -or
+              $receipt.receiptRoot -notmatch "^sha256:[0-9a-f]{64}$"
+            ) {
+              throw "Qualified Windows materialization receipt is incomplete."
+            }
+            cmd /d /c shifu.cmd work --help
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          } finally {
+            Pop-Location
+            Remove-Item Env:KUNGFU_QUALIFIED_CORE_BUNDLE -ErrorAction SilentlyContinue
+          }
+
+          Push-Location $secondCheckout
+          try {
+            $env:KUNGFU_QUALIFIED_CORE_CACHE_ROOT = $cacheRoot
+            $env:KUNGFU_QUALIFIED_CORE_GITHUB = "0"
+            # shifu-entry-contract: allow direct local-CAS qualification before its cached Core can activate Shifu Work Control
+            node framework\assignment-capture\qualified-assignment-core-consumer.mjs materialize --repository-root $secondCheckout
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+            cmd /d /c shifu.cmd work --help
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+            # shifu-entry-contract: allow direct post-activation observation of the bounded consumer qualification cache
+            $statusJson = node framework\assignment-capture\qualified-assignment-core-consumer.mjs status --repository-root $secondCheckout --json
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+            $status = $statusJson | ConvertFrom-Json
+            if (
+              -not $status.currentCheckout.eligible -or
+              $status.totals.observations -ne 2 -or
+              $status.counts.reasons."explicit-bundle-hit" -ne 1 -or
+              $status.counts.reasons."local-cas-hit" -ne 1
+            ) {
+              throw "Qualified Windows consumer observations do not prove remote and local-CAS paths."
+            }
+          } finally {
+            Pop-Location
+            Remove-Item Env:KUNGFU_QUALIFIED_CORE_GITHUB -ErrorAction SilentlyContinue
+          }

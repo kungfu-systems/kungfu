@@ -1,9 +1,6 @@
 {
   "performance": {
     "rocket": false,
-    "bypassAccounting": false,
-    "bypassTradingData": false,
-    "bypassRefreshBook": false,
     "verifyLocation": false,
     "lowMemory": false
   },

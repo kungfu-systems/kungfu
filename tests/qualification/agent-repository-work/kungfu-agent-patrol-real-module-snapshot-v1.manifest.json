@@ -1,0 +1,81 @@
+{
+  "schema": "kungfu.agent-repository-snapshot-manifest/v1",
+  "id": "kungfu-agent-patrol-real-module-snapshot-v1",
+  "source": {
+    "repository": "kungfu-systems/kungfu",
+    "revisionPolicy": "exact-commit",
+    "trackedRegularFilesOnly": true
+  },
+  "fileCount": 8,
+  "lineCount": 4001,
+  "treeRoot": "sha256:6bb34887b52f1696570b4b2208f61f0ae45b1a48de9804d5732a3a4792f3cb31",
+  "files": [
+    {
+      "path": "framework/agent-patrol/classify.mjs",
+      "mode": "100644",
+      "bytes": 9358,
+      "lines": 270,
+      "root": "sha256:7f20094b88599db43036cfb6d177ba570cecf57ecfde1def3ac05db88e303188"
+    },
+    {
+      "path": "framework/agent-patrol/dogfood-capture.mjs",
+      "mode": "100644",
+      "bytes": 9177,
+      "lines": 306,
+      "root": "sha256:09bcf6c783ca074d1c4f3e50562f304742afc51e373ab8440fbefc67dbeee226"
+    },
+    {
+      "path": "framework/agent-patrol/select.mjs",
+      "mode": "100644",
+      "bytes": 5756,
+      "lines": 176,
+      "root": "sha256:35fc6cd2614fdd602a00c384ee3c692bb9190af3128e63bd97511266514266b9"
+    },
+    {
+      "path": "framework/agent-repository-work/report.mjs",
+      "mode": "100644",
+      "bytes": 28421,
+      "lines": 832,
+      "root": "sha256:efbab2b60a79a328ab826004bb21e158b9a561c98d96d7509fae73351edc3d7d"
+    },
+    {
+      "path": "scripts/agent-patrol.test.mjs",
+      "mode": "100644",
+      "bytes": 14820,
+      "lines": 476,
+      "root": "sha256:5d8ff34cd064cce6eb3c271c9c3e63ee39a4adab4096f5fec602e788108ef9dd"
+    },
+    {
+      "path": "tests/qualification/agent-repository-work/fixture-catalog.mjs",
+      "mode": "100644",
+      "bytes": 4822,
+      "lines": 166,
+      "root": "sha256:b6bf06f87f5499fd7e39e19c4c54786fab8a15dd485817eec9b7e0d00654cc74"
+    },
+    {
+      "path": "tests/qualification/agent-repository-work/incident-board-replay-v1.mjs",
+      "mode": "100644",
+      "bytes": 46555,
+      "lines": 1558,
+      "root": "sha256:5c9498cf308e4ee7f53be1ce2a6025a8b26f3bb197322a3ebd93c5cfa4774de6"
+    },
+    {
+      "path": "tests/qualification/agent-repository-work/incident-board-replay-v1-reference.mjs",
+      "mode": "100644",
+      "bytes": 6666,
+      "lines": 217,
+      "root": "sha256:9c55e48f2d0cbcc5fe88c8a0a8e1a0f9dd242bf12f955519e5738c1b7d6fd634"
+    }
+  ],
+  "mutation": {
+    "path": "framework/agent-patrol/classify.mjs",
+    "id": "disable-large-number-normalization",
+    "from": ".replace(/\\b\\d{6,}\\b/gu, '<number>')",
+    "to": ".replace(/\\b\\d{60,}\\b/gu, '<number>')",
+    "expectedOccurrences": 1
+  },
+  "verification": {
+    "visibleTest": "volatile numeric failure identifiers share one Finding identity",
+    "hiddenVerifierMountedIntoAgentWorkspace": false
+  }
+}

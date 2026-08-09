@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: Apache-2.0
 //
-// The C++ sibling of dogfood-service.mjs (ADR-0017): the first real C++
+// The C++ sibling of dogfood-service.mjs (KF-ADR-019f86da-4f90-7afa-a1e1-0510f00916be): the first real C++
 // config.service body, shaped after an OpenClaw-style agent — a long-lived
 // process that reaches OUT to an external endpoint and reaches the host only
 // over the capability relay. Unlike the node dogfood, a C++ service has no
 // interpreter and no bootstrap: this source is compiled into a prebuilt binary
 // that links the guest proxy (framework/core/src/capability/guest.hpp) and this
 // body into one image, and the service host launches that binary directly — the
-// prebuilt-artifact cpp entry ADR-0017 resolves.
+// prebuilt-artifact cpp entry KF-ADR-019f86da-4f90-7afa-a1e1-0510f00916be resolves.
 //
 // It exercises the service facet on the OS-sandbox plane end to end: discovery →
 // plan → the user's authorization → landing → relay. It reaches the network (a

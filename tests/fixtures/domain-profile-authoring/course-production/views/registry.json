@@ -1,0 +1,25 @@
+{
+  "schema": "kungfu.reference.view-registry/v1",
+  "views": [
+    {
+      "id": "course-brief-detail",
+      "object": "course-brief"
+    },
+    {
+      "id": "production-session-detail",
+      "object": "production-session"
+    },
+    {
+      "id": "course-goal-detail",
+      "object": "course-goal"
+    },
+    {
+      "id": "course-map-detail",
+      "object": "course-map"
+    },
+    {
+      "id": "release-approval-detail",
+      "object": "release-approval"
+    }
+  ]
+}

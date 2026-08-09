@@ -1,0 +1,56 @@
+{
+  "schema": "kungfu.runtime-activation-readiness-fixtures/v1",
+  "valid": {
+    "minimumCut": {
+      "stream_id": "7",
+      "container_epoch": "11",
+      "sequence": "41",
+      "frame_uid": "1041"
+    },
+    "durabilityReconciliation": {
+      "schema": "kungfu.durability.reconciliation/v1",
+      "state": "reconciled",
+      "recovered": true,
+      "receipt": {
+        "schema": "kungfu.durability.receipt/v1",
+        "request_id": 17,
+        "status": "succeeded",
+        "durable_watermark": {
+          "stream_id": 7,
+          "container_epoch": 11,
+          "sequence": 42,
+          "frame_uid": 1042
+        },
+        "barrier_id": 23
+      }
+    },
+    "projectionStatus": {
+      "schema": "kungfu.projection-candidate-status/v1",
+      "authority": "libkungfu",
+      "outcome": "ready",
+      "hydrated": true,
+      "qualification_profile": "candidate/test-local-filesystem/v1",
+      "projection_watermark": {
+        "stream_id": 7,
+        "container_epoch": 11,
+        "sequence": 42,
+        "frame_uid": 1042
+      }
+    }
+  },
+  "behind": {
+    "minimumCut": {
+      "stream_id": "7",
+      "container_epoch": "11",
+      "sequence": "42",
+      "frame_uid": "1042"
+    },
+    "observedCut": {
+      "stream_id": "7",
+      "container_epoch": "11",
+      "sequence": "41",
+      "frame_uid": "1041"
+    },
+    "expectedError": "readiness_cut_unavailable"
+  }
+}

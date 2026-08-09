@@ -4,7 +4,7 @@
 //
 // Decodes a journal directory using ONLY what the bundle carries: the run
 // manifest's schema bindings and the content-addressed .bfbs blobs, accessed
-// through FlatBuffers runtime reflection. No generated code, no longfist type
+// through FlatBuffers runtime reflection. No generated code, no closed schema type
 // registry, no compiled knowledge of the event types. If this program can
 // print named, typed fields, the "opens without a matching binary" promise
 // holds.
@@ -32,7 +32,7 @@
 
 using namespace kungfu::yijinjing;
 using kungfu::slices::sha256;
-namespace longfist = kungfu::longfist;
+namespace schema = kungfu::yijinjing;
 
 namespace {
 std::string read_file(const std::filesystem::path &path) {
@@ -51,10 +51,10 @@ std::string strip_trailing_nuls(std::string s) {
 }
 
 struct Binding {
-  std::string kind;    // "flatbuffers" | "json"
+  std::string kind; // "flatbuffers" | "json"
   std::string name;
   int version = 0;
-  std::string bfbs;    // owned bytes (schema view binds to them)
+  std::string bfbs; // owned bytes (schema view binds to them)
   const reflection::Schema *schema = nullptr;
 };
 } // namespace
@@ -79,7 +79,7 @@ int main(int argc, char **argv) {
       const std::string hash = entry.at("schema_hash");
       b.bfbs = read_file(bundle / "schemas" / (hash + ".bfbs"));
       if (sha256::hex(b.bfbs) != hash) {
-        std::cerr << "FAIL: schema blob hash mismatch for msg_type " << key << "\n";
+        std::cerr << "FAIL: schema blob hash mismatch for carrier_type " << key << "\n";
         return 1;
       }
       b.schema = reflection::GetSchema(b.bfbs.c_str());
@@ -89,18 +89,20 @@ int main(int argc, char **argv) {
 
   // ── reopen the journal independently and decode by binding ────────
   const auto &src = manifest.at("source");
+  const auto namespace_ =
+      src.contains("namespace") ? src.at("namespace").get<std::string>() : src.at("group").get<std::string>();
   auto locator = std::make_shared<data::locator>(root);
-  auto location = data::location::make_shared(longfist::enums::mode::LIVE, longfist::enums::category::SYSTEM,
-                                              src.at("group"), src.at("name"), locator);
-  journal::assemble reader(location, data::location::PUBLIC, longfist::enums::AssembleMode::Channel, 0);
+  auto location = data::location::make_shared(schema::enums::mode::LIVE, schema::enums::location_role::SYSTEM,
+                                              namespace_, src.at("name"), locator);
+  journal::assemble reader(location, data::location::PUBLIC, schema::enums::AssembleMode::Channel, 0);
 
   std::size_t count = 0;
   uint64_t last_uid = 0;
   while (reader.data_available()) {
     auto frame = reader.current_frame();
-    const auto it = bindings.find(frame->msg_type());
+    const auto it = bindings.find(frame->carrier_type());
     if (it == bindings.end()) {
-      std::cerr << "FAIL: no schema binding for msg_type " << frame->msg_type() << "\n";
+      std::cerr << "FAIL: no schema binding for carrier_type " << frame->carrier_type() << "\n";
       return 1;
     }
     const Binding &b = it->second;
@@ -138,7 +140,7 @@ int main(int argc, char **argv) {
 
     nlohmann::json line = {
         {"seq", count},
-        {"msg_type", frame->msg_type()},
+        {"carrier_type", frame->carrier_type()},
         {"type_name", b.name},
         {"schema_kind", b.kind},
         {"schema_version", b.version},

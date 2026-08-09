@@ -11,6 +11,50 @@ Write the description in English. Sign commits with the DCO (git commit -s).
 
 ## Verification
 
+## ADR delivery / release declaration
+
+Keep exactly one machine-readable block below. Select the shape for the PR's
+target channel and replace the example values. See
+`docs/development/version-release-design.md` for the contract and management intent.
+
+<!-- kungfu-adr-release:v1
+{
+  "schema": "kungfu.adr-release-pr/v1",
+  "kind": "adr-neutral",
+  "reason": "Describe why this non-feature change does not alter an architecture contract"
+}
+-->
+
+Feature PRs targeting `dev/*` must replace the block with:
+
+```json
+{
+  "schema": "kungfu.adr-release-pr/v1",
+  "kind": "dev-delivery",
+  "intent": "stage-ready",
+  "adrs": ["KF-ADR-00000000-0000-7000-8000-000000000000"],
+  "summary": "Describe the bounded stage completed by this PR",
+  "verification": ["Name the checks or qualification evidence"]
+}
+```
+
+Alpha and stable promotion manifests are documented in the release design;
+do not use the ADR-neutral form for a channel promotion.
+
+## [Evolution Map](../docs/evolution/README.md) impact
+
+Evolution impact: <!-- none | extends | opens | settles | supersedes -->
+
+Use `extends` for evidence added to the current open Stage. Use `opens`,
+`settles`, or `supersedes` only for a load-bearing abstraction compression or
+authority transition. Settled Stage records are append-only; corrections use a
+new amendment or successor record.
+
+If the current Era thesis may no longer explain at least two future Stages,
+open or update the non-authoritative [Era Candidate ledger](../docs/evolution/candidates.md).
+A Candidate-only PR normally remains `extends`; it cannot allocate an Era
+sequence or change current authority.
+
 ## Governance risk check
 
 Does this PR touch any of these boundaries?

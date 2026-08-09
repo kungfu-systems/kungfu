@@ -1,0 +1,1 @@
+{"$schema":"https://json-schema.org/draft/2020-12/schema","$id":"https://kungfu.link/schema/qualification/week-day/episode.json","type":"object","required":["dayId"],"properties":{"dayId":{"type":"string"}}}

@@ -7,7 +7,7 @@
 #                             manifest schema bindings); owns generated code
 #   schema_registry_decoder   decodes the journal from the bundle alone via
 #                             FlatBuffers runtime reflection; links NO
-#                             generated code and NO longfist type registry
+#                             generated code and NO closed type registry
 #
 # The two demo schemas (v1, v2-adds-a-field) are compiled at build time by the
 # conan-provided flatc, into the build tree: --cpp for the producer only,

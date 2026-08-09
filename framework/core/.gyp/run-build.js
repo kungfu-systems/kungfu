@@ -10,9 +10,51 @@ const CORE = path.join(__dirname, '..');
 const { copyContractArtifacts } = require(
   path.join(CORE, '..', '..', 'scripts', 'contract-registry.cjs'),
 );
+const { measureCandidateStageSync } = require(
+  path.join(CORE, '..', '..', 'scripts', 'candidate-timeline-events.cjs'),
+);
+const SDK_BUILD_PLAN = require('../architecture/sdk-build-plan.json');
+
+function selectedBuildBindings() {
+  const authority = require('../architecture/build-capabilities.json');
+  const profileId =
+    process.env.KUNGFU_BUILD_PROFILE ||
+    shell.getConfigValue('build_profile') ||
+    authority.default_profile;
+  const profile = authority.profiles.find(({ id }) => id === profileId);
+  if (!profile || profile.status !== 'supported') {
+    throw new Error(`unsupported Kungfu Core build profile: ${profileId}`);
+  }
+  return new Set(profile.bindings);
+}
 
 function copyConfigContract() {
   copyContractArtifacts(path.join(CORE, 'dist', 'kungfu'));
+}
+
+/**
+ * @param {string} sourceDir
+ * @param {string} targetDir
+ * @param {Set<string>} staged
+ */
+function copyBuildInfo(sourceDir, targetDir, staged) {
+  const source = path.join(sourceDir, 'kungfubuildinfo.json');
+  if (!fs.existsSync(source) || staged.has('kungfubuildinfo.json')) return;
+  staged.add('kungfubuildinfo.json');
+  fs.copyFileSync(source, path.join(targetDir, 'kungfubuildinfo.json'));
+}
+
+/**
+ * @param {string} sourceDir
+ * @param {string} targetDir
+ * @param {Set<string>} staged
+ */
+function copyBuildIdentity(sourceDir, targetDir, staged) {
+  const name = 'kungfu-core-build-identity.json';
+  const source = path.join(sourceDir, name);
+  if (!fs.existsSync(source) || staged.has(name)) return;
+  staged.add(name);
+  fs.copyFileSync(source, path.join(targetDir, name));
 }
 
 function cpVsDependencies() {
@@ -35,7 +77,10 @@ function cpVsDependencies() {
 // native addons and their sibling shared libraries move together so the
 // addon's @loader_path lookup resolves. libnode is not staged here — it is
 // colocated at install time from @kungfu-tech/libnode (see design decision (1)).
-function stage() {
+/**
+ * @param {Set<string> | null} [requiredArtifacts]
+ */
+function stage(requiredArtifacts = null) {
   const buildType = shell.getConfigValue('build_type') || 'Release';
   const distKungfu = path.join('dist', 'kungfu');
   fs.rmSync(distKungfu, { recursive: true, force: true });
@@ -49,10 +94,18 @@ function stage() {
   // `*.so.*` catches versioned ELF sonames (e.g. libnode.so.127) that pykungfu's
   // DT_NEEDED references; `*.pyd` catches the Windows Python binding, which is a
   // `*.so` on posix.
-  const buildDirs = [path.join('build', buildType)];
-  if (process.platform === 'win32') buildDirs.push('build');
+  const buildDirs = ['build', path.join('build', buildType)];
   const staged = new Set();
   for (const buildDir of buildDirs) {
+    if (!requiredArtifacts || requiredArtifacts.has('kungfubuildinfo.json')) {
+      copyBuildInfo(buildDir, distKungfu, staged);
+    }
+    if (
+      !requiredArtifacts ||
+      requiredArtifacts.has('kungfu-core-build-identity.json')
+    ) {
+      copyBuildIdentity(buildDir, distKungfu, staged);
+    }
     for (const pattern of [
       '*.node',
       '*.pyd',
@@ -63,13 +116,59 @@ function stage() {
     ]) {
       for (const rel of glob.sync(pattern, { cwd: buildDir })) {
         const base = path.basename(rel);
+        if (requiredArtifacts && !requiredArtifacts.has(base)) continue;
         if (staged.has(base)) continue;
         staged.add(base);
         fs.copyFileSync(path.join(buildDir, rel), path.join(distKungfu, base));
       }
     }
   }
+  if (requiredArtifacts) {
+    const missing = [...requiredArtifacts].filter((name) => !staged.has(name));
+    if (missing.length > 0) {
+      throw new Error(
+        `SDK Core build omitted required artifacts: ${missing.join(', ')}`,
+      );
+    }
+  }
   copyConfigContract();
+}
+
+function sdkRequiredArtifacts() {
+  let platformArtifacts;
+  switch (process.platform) {
+    case 'darwin':
+    case 'linux':
+    case 'win32':
+      platformArtifacts = SDK_BUILD_PLAN.required_artifacts[process.platform];
+      break;
+    default:
+      throw new Error(
+        `unsupported SDK Core build platform: ${process.platform}-${process.arch}`,
+      );
+  }
+  return new Set([
+    ...SDK_BUILD_PLAN.required_artifacts.common,
+    ...platformArtifacts,
+  ]);
+}
+
+/**
+ * @template T
+ * @param {string} key
+ * @param {string} value
+ * @param {() => T} action
+ * @returns {T}
+ */
+function withEnvironment(key, value, action) {
+  const previous = process.env[key];
+  process.env[key] = value;
+  try {
+    return action();
+  } finally {
+    if (previous === undefined) delete process.env[key];
+    else process.env[key] = previous;
+  }
 }
 
 // Build the native addon directly through the real builder (run-conan.js →
@@ -78,21 +177,99 @@ function stage() {
 // clean `install` stay a no-op while `build` owns compilation + staging.
 // In-process (not a node subprocess) so process.execPath with spaces —
 // e.g. Windows `C:\Program Files\nodejs\node.exe` — cannot break the call.
-function build() {
+function build(scope = 'full') {
+  const bindings = selectedBuildBindings();
   const { conanInstall, conanBuild } = require('./run-conan');
-  conanInstall();
-  conanBuild();
+  const sdkBuild = scope === 'sdk';
+  if (sdkBuild) {
+    const profile =
+      process.env.KUNGFU_BUILD_PROFILE ||
+      shell.getConfigValue('build_profile') ||
+      'full';
+    if (profile !== SDK_BUILD_PLAN.profile) {
+      throw new Error(
+        `SDK Core build requires profile ${SDK_BUILD_PLAN.profile}, got ${profile}`,
+      );
+    }
+    for (const binding of ['cxx', 'c', 'node']) {
+      if (!bindings.has(binding)) {
+        throw new Error(`SDK Core build profile omits ${binding} binding`);
+      }
+    }
+  } else if (scope !== 'full') {
+    throw new Error(`unsupported Core build scope: ${scope}`);
+  }
+  measureCandidateStageSync(
+    'sdk-core-dependencies',
+    'core-dependency-bootstrap',
+    () =>
+      withEnvironment('KUNGFU_CORE_BUILD_SCOPE', scope, () => conanInstall()),
+    { gateId: 'source.changed-scope' },
+  );
+  measureCandidateStageSync(
+    'sdk-core-native',
+    'core-build',
+    () => withEnvironment('KUNGFU_CORE_BUILD_SCOPE', scope, () => conanBuild()),
+    {
+      gateId: 'source.changed-scope',
+    },
+  );
   // Colocate the libnode runtime into build/<build_type> before staging, so the
   // staged dist/kungfu is self-contained: pykungfu links @rpath/libnode.*, and
   // dist/kungfu is the single runtime surface that kfx and the platform package
   // both depend on. Require lazily (loads @kungfu-tech/libnode) so non-build
   // commands stay light.
-  require('./run-link-node').main();
+  if (
+    !sdkBuild &&
+    [...bindings].some((binding) =>
+      ['python', 'node', 'electron'].includes(binding),
+    )
+  ) {
+    measureCandidateStageSync(
+      'sdk-core-link-node',
+      'core-link',
+      () => require('./run-link-node').main(),
+      { gateId: 'source.changed-scope' },
+    );
+  }
   // With libnode colocated above, pykungfu imports — regenerate its .pyi stubs
   // from the fresh binding so committed stubs/ track the C++ (see gen-stubs.js).
-  require('./gen-stubs').main();
-  stage();
-  cpVsDependencies();
+  if (!sdkBuild && bindings.has('python')) {
+    measureCandidateStageSync(
+      'sdk-core-python-stubs',
+      'sdk-pack-python',
+      () => require('./gen-stubs').main(),
+      { gateId: 'source.changed-scope', language: 'python' },
+    );
+  }
+  // The pykungfu wheel ships in dist/kungfu/wheels — the product install
+  // surface (`kungfu env`) resolves it from there. Build it with the binding
+  // so every build/rebuild leaves a wheel matching the fresh natives; before
+  // this only the gyp kfc chain built it, and the product dist chain shipped
+  // without wheels (run-freeze copyWheel warned but could not fail).
+  // run-wheel.js ends with process.exit, so spawn it instead of requiring.
+  if (!sdkBuild && bindings.has('python')) {
+    measureCandidateStageSync(
+      'sdk-core-python-wheel',
+      'sdk-pack-python',
+      () =>
+        shell.run(
+          process.execPath,
+          [path.join(__dirname, 'run-wheel.js')],
+          true,
+        ),
+      { gateId: 'source.changed-scope', language: 'python' },
+    );
+  }
+  measureCandidateStageSync(
+    'sdk-core-stage',
+    'sdk-pack-native',
+    () => stage(sdkBuild ? sdkRequiredArtifacts() : null),
+    {
+      gateId: 'source.changed-scope',
+    },
+  );
+  if (!sdkBuild) cpVsDependencies();
 }
 
 function clean() {
@@ -115,13 +292,14 @@ function makePackage() {
 // “node native 编译用哪个 python 不确定”的脆弱点。uv 不可用时静默跳过，回退默认查找。
 function useUvPython() {
   const isWin = process.platform === 'win32';
-  // 直接定位 uv 项目 venv 的 python（__dirname=.gyp → 上一级=core 根 → .venv）。
+  // Shifu strict cache execution supplies a disposable UV_PROJECT_ENVIRONMENT;
+  // ordinary development continues to use the project-local .venv.
   // 不解 realpath：venv 的 python 是指向 base python 的 symlink，靠“在 .venv/bin 下”这一
   // 路径语义才会启用 venv site-packages（setuptools 的 _distutils shim）；解到真身就丢了。
+  const environment =
+    process.env.UV_PROJECT_ENVIRONMENT || path.join(__dirname, '..', '.venv');
   const venvPy = path.join(
-    __dirname,
-    '..',
-    '.venv',
+    environment,
     isWin ? 'Scripts' : 'bin',
     isWin ? 'python.exe' : 'python3',
   );
@@ -169,6 +347,7 @@ module.exports = require('../lib/sywac')(
         build();
       })
       .command('build', () => build())
+      .command('build-sdk', () => build('sdk'))
       .command('clean', () => clean())
       .command('rebuild', () => {
         clean();

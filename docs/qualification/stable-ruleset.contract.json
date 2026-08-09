@@ -1,0 +1,86 @@
+{
+  "schema": "kungfu.stable-ruleset-contract/v1",
+  "status": "active",
+  "repository": "kungfu-systems/kungfu",
+  "versionLineAuthorityRoot": "sha256:2fd580501fb77ae9ee05c8dd6a4bf141fc8cdeb77c8d4d3e9cd550133213b33d",
+  "targetRef": "release/v4/v4.0",
+  "ruleset": {
+    "name": "Kungfu stable release authority: release/v4/v4.0",
+    "target": "branch",
+    "enforcement": "active",
+    "bypass_actors": [],
+    "conditions": {
+      "ref_name": {
+        "include": [
+          "refs/heads/release/v4/v4.0"
+        ],
+        "exclude": []
+      }
+    },
+    "rules": [
+      {
+        "type": "pull_request",
+        "parameters": {
+          "allowed_merge_methods": [
+            "merge",
+            "squash",
+            "rebase"
+          ],
+          "dismiss_stale_reviews_on_push": true,
+          "dismissal_restriction": {
+            "allowed_actors": [],
+            "enabled": false
+          },
+          "require_code_owner_review": true,
+          "require_last_push_approval": true,
+          "required_approving_review_count": 1,
+          "required_review_thread_resolution": true,
+          "required_reviewers": []
+        }
+      },
+      {
+        "type": "required_status_checks",
+        "parameters": {
+          "do_not_enforce_on_create": false,
+          "required_status_checks": [
+            {
+              "context": "build"
+            },
+            {
+              "context": "signoff",
+              "integration_id": 15368
+            },
+            {
+              "context": "validate",
+              "integration_id": 15368
+            }
+          ],
+          "strict_required_status_checks_policy": true
+        }
+      },
+      {
+        "type": "deletion"
+      },
+      {
+        "type": "non_fast_forward"
+      }
+    ]
+  },
+  "classicProtection": {
+    "mode": "defense-in-depth",
+    "requiredChecks": [
+      "build",
+      "signoff",
+      "validate"
+    ],
+    "enforceAdmins": true,
+    "requiredApprovals": 1,
+    "dismissStaleReviews": true,
+    "requireCodeOwnerReview": true,
+    "requireLastPushApproval": true,
+    "requireResolvedThreads": true,
+    "allowForcePushes": false,
+    "allowDeletions": false
+  },
+  "contractRoot": "sha256:8677d50a8a364d47aee454036fc8cc3e358a61b66e9e4ff0370bfd770bc1d06c"
+}

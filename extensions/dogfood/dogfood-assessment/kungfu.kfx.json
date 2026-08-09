@@ -1,0 +1,8 @@
+{
+  "schema": "kungfu.kfx.manifest/v1",
+  "name": "@kungfu-tech/kfx-dogfood-assessment",
+  "version": "4.0.0-alpha.1",
+  "kungfuConfig": {
+    "key": "dogfood-assessment"
+  }
+}

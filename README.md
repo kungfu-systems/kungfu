@@ -1,145 +1,190 @@
 # Kungfu
 
-Kungfu is a framework and runtime for building journal-first,
-streaming-data applications. It is built on one discipline: never let a
-load-bearing truth rest on a claim you could fake — weld it to something that
-can't. ([design philosophy](docs/design-philosophy.md); [facts before
-trust](docs/facts-before-trust.md).)
+**Your agents don't hand off the work. You do.**
 
-The product goal is to make fact-first responsibility the path of least
-resistance: once a user starts relying on Kungfu, the natural way to use it
-should be to inspect facts, understand responsibility, and make control
-decisions from local proof rather than from opaque claims.
+Every switch means copying context, re-explaining decisions, chasing updates,
+and checking what got lost. Kungfu keeps the same work moving, no matter which
+agent takes over.
 
-At its core is a low-latency, append-only event journal with a shared,
-strongly-typed schema, exposed zero-copy to C++, Python, and Node. Kungfu
-offers these capabilities — the journal, in-process state, and deterministic
-replay — as a foundation (SDK) to build on, and ships a minimal reference
-application built on that foundation.
+Use the best Agent when it matters. Use a cheaper one when it does not. Keep the
+same Work across Codex, Claude, OpenCode, Amp, or your own execution surface.
 
-Originally created for trading execution, the core is general: anything that
-needs to capture, share, and faithfully replay high-frequency event streams.
+## Start where you already work
 
-## Core ideas
+Once the `kungfu` command is on your
+[`PATH`](docs/guides/installing-cli.md#make-kungfu-available-in-path), choose the
+entry that matches how you already work.
 
-- **Journal-first data plane** — one append-only event log
-  ([`yijinjing`](framework/core)) with a unified type system
-  ([`longfist`](framework/core)) carrying source / destination / nanosecond
-  timestamp / message type. Every component consumes the same frames rather than
-  inventing its own format.
-- **Zero-copy, multi-language runtime** — the same in-process journal data is
-  shared across C++, Python, and Node (N-API) without serialization on the hot
-  path.
-- **Deterministic replay** — live and replay run on the same runtime and the
-  same journal semantics, so recorded streams replay with high precision rather
-  than through a separate engine.
+**Stay in your current Agent.** Paste this sentence into Codex, Claude, OpenCode,
+Amp, or another Agent that can run local commands:
 
-## Build on it
-
-Kungfu is meant to be a base others build on, not a single fixed application:
-
-- **Capabilities SDK** — consume journal / state / replay from your own code in
-  C++, Python, or Node.
-- **Extension points** — add features and UI to a Kungfu application.
-- **Application SDK** — assemble a complete application on top of Kungfu, with
-  Kungfu as the underlying dependency.
-
-The repository ships the core plus a minimal reference application that
-demonstrates and exercises these capabilities.
-
-## The toolchain comes with the runtime
-
-A guiding principle of kungfu is that the machine adapts to the person, not the
-other way around. The `kungfu` runtime is batteries-included: it embeds a Python
-and a Node runtime and brings a full Python development lifecycle — dependency
-management, formatting, and ahead-of-time compilation — reachable through
-`kungfu engage`. Building a kfx extension does not start by assembling a
-toolchain: most extension development needs no separately installed Python,
-Node, or package manager.
-
-The runtime deliberately absorbs this complexity so its users do not have to. To
-keep that convenience sustainable rather than bespoke, the absorbed tooling is
-built on mainstream, well-maintained foundations.
-
-## Components
-
-- **Core & runtime** — `longfist` (type system) and `yijinjing` (journal
-  runtime) with Python and Node bindings, plus the `kungfu` runtime, packaged as
-  `@kungfu-tech/core`. It embeds a Python and a Node runtime and is fronted by
-  the `kungfu` end-user command; operator-facing shell slices such as
-  `kungfu cockpit`, managed runs, and skill context injection grow under the
-  same command.
-- **Capability SDK** — typed, framework-neutral access to journal / state /
-  replay (`framework/api`).
-- **Application SDK** — scaffolding to build kfx extensions, create Kungfu
-  Skills, and assemble applications (`developer/sdk`).
-- **Reference surfaces** — two minimal reference UIs over the same capability
-  SDK: a desktop GUI on Electron + React (`framework/gui`) and a terminal TUI
-  (`framework/tui`).
-- **Distribution** — a dogfood installer bundling the runtime, both reference
-  UIs and the SDK (`artifact`).
-
-Runs on Windows, macOS, and Linux (including arm64). See
-[`docs/architecture.md`](docs/architecture.md) for how these pieces are layered.
-
-## Getting started
-
-See [`CONTRIBUTING.md`](CONTRIBUTING.md) for the toolchain, build steps, coding
-conventions, and the pull request / release flow.
-
-```sh
-# install fnm and uv once, then:
-git clone git@github.com:kungfu-systems/kungfu.git
-cd kungfu
-./kungfu-code sync && ./kungfu-code build
+```text
+Run `kungfu agent brief`, then guide me through my first Project and Work. Keep me in my current agent, and use Kungfu as the durable Work layer.
 ```
 
-## Documentation
+**Start an Agent through Kungfu.** Use its familiar native console while Kungfu
+keeps the Work behind it:
 
-Start at the [**documentation map**](docs/MAP.md) — it routes your question
-(why it's built this way / how to trust the artifact / how to use it) to the
-right document, and is readable by both people and agents.
+```sh
+cd your-project
+kungfu run codex
+```
 
-- Installed agent entrypoint: `kungfu agent brief`,
-  `kungfu agent capabilities --json`, and `kungfu agent choose-mode --json`.
-- [`docs/MAP.md`](docs/MAP.md) — the question-indexed map of all documentation.
-- [`docs/concepts.md`](docs/concepts.md) — the vocabulary in one place
-  (`kungfu`/`kfx`/`sdk`, `libkungfu`, `longfist`, `yijinjing`, journal, …).
-- [`docs/design-philosophy.md`](docs/design-philosophy.md) — the two first
-  principles the whole design follows from, and how the architecture falls out
-  of them.
-- [`docs/facts-before-trust.md`](docs/facts-before-trust.md) — why Kungfu starts
-  from accountability: facts before trust, local proof before control.
-- [`docs/architecture.md`](docs/architecture.md) — how the repository is layered
-  (runtime, capability SDK, application SDK, reference surfaces) and why.
-- [`docs/skills.md`](docs/skills.md) — design target for Kungfu Skills:
-  `SKILL.md` as the minimal source, compact agent catalog injection,
-  Node/Python manage modes, and kfx dependency composition.
-- [`CONTRIBUTING.md`](CONTRIBUTING.md) — toolchain, build, conventions, releases.
-- [`LICENSE-POLICY.md`](LICENSE-POLICY.md) — project licensing, DCO-based
-  contributions, third-party notice policy, and commercial boundary.
-- [`TRADEMARK.md`](TRADEMARK.md) — official project mark and fork identity
-  boundary.
-- [`ACCEPTABLE_USE.md`](ACCEPTABLE_USE.md) — acceptable use of official hosted,
-  managed, and maintainer-operated services.
-- [`PROVIDER_COMPLIANCE.md`](PROVIDER_COMPLIANCE.md) — official posture for
-  provider APIs, CLIs, credentials, usage attribution, and anti-bypass
-  boundaries.
-- [`SECURITY.md`](SECURITY.md) — how to report vulnerabilities privately.
-- [`docs/version-release-design.md`](docs/version-release-design.md) — versioning
-  and release mechanism rationale.
-- [`framework/core/docs/adr/`](framework/core/docs/adr) — architecture decision
-  records.
+Use `claude`, `opencode`, or `amp` instead of `codex` when that is the agent you
+already use. Pass a task to create the first Work directly:
 
-## Feedback & support
+```sh
+kungfu run codex "Prepare the release notes"
+```
 
-Project contact happens through GitHub — there is no email support channel.
+**Open the optional global view later.** The Kungfu TUI and GUI can show and
+manage Kungfu Projects and Work across Agent Sessions. They are sidecar views,
+not a requirement for every Agent conversation.
 
-- Bugs, feature requests, questions, and documentation issues:
-  [open an issue](https://github.com/kungfu-systems/kungfu/issues/new/choose).
-- Changes: open a pull request (see [`CONTRIBUTING.md`](CONTRIBUTING.md)).
-- Security vulnerabilities: report them privately — see [`SECURITY.md`](SECURITY.md).
+> **Kungfu UNGFU™** · Never Guess. Facts Unfold. [Why this signature
+> exists](docs/concepts/why-kungfu.md).
 
-## License
+## What Kungfu preserves
 
-[Apache License 2.0](LICENSE).
+Kungfu keeps the Work—not the chat—outside every Agent Session: its objective,
+progress, evidence, next action, and completion state.
+
+- **Work continuity.** Change the Agent without losing what was done, what
+  remains, or which Work is continuing.
+- **Verified project understanding.** Declared sources, important omissions,
+  conflicts, decisions, and uncertainty remain visible instead of being guessed.
+- **Inspectable history.** People and Agents can see what happened, what the
+  next action is, and where the supporting evidence came from.
+- **Completion authority.** An Agent can produce a result and its evidence;
+  independent review and Kungfu settlement decide whether Work is complete.
+
+The first visible value should arrive within minutes. The deeper value appears
+over the following days, when the same Work survives context loss, changed
+understanding, failed attempts, handoff, and restart.
+
+## Three proofs that Work is durable
+
+Durable Work must answer three questions in order: can it survive a new Agent,
+can it survive failure, and who is allowed to complete it?
+
+### 1. Can Work survive a new Agent?
+
+Yes. The first proof isolates continuity: one Work continues across two fresh
+Agent Sessions without copied chat.
+
+<!-- kungfu:auditable-demo:agent-work-lab-autoplay:start -->
+[![Can Work survive a new Agent?](docs/qualification/evidence/auditable-demo/74f7cf0b18f261001755c43dfd2954262bdb32c865a34f8316e3ec38331fb35b/agent-work-lab-autoplay/demo.gif)](docs/qualification/evidence/auditable-demo/74f7cf0b18f261001755c43dfd2954262bdb32c865a34f8316e3ec38331fb35b/agent-work-lab-autoplay/public-evidence.json)
+<!-- kungfu:auditable-demo:agent-work-lab-autoplay:end -->
+
+### 2. Can Work survive failure?
+
+Yes. The second proof moves from mechanism to real failure conditions. Inside
+a disposable Project, the connection drops, a new process resumes, that process
+crashes, and both Attempts remain under the same Work.
+
+<!-- kungfu:auditable-demo:project-tour-episode-1:start -->
+[![Can Work survive failure?](docs/qualification/evidence/auditable-demo/6751bfdf7a27dd2c4b0c3f0916a512fb7abd172543c94dee220b41a0d679632e/project-tour-episode-1/demo.gif)](docs/qualification/evidence/auditable-demo/6751bfdf7a27dd2c4b0c3f0916a512fb7abd172543c94dee220b41a0d679632e/project-tour-episode-1/public-evidence.json)
+<!-- kungfu:auditable-demo:project-tour-episode-1:end -->
+
+Work survival is only the first step. If an Agent can declare its own result
+complete, continuity still is not trustworthy.
+
+### 3. Who is allowed to complete Work?
+
+Only the governed review and settlement path—not the Agent that did the work.
+The third proof separates Agent exit, independent review, and Kungfu settlement.
+An Agent can produce the candidate and evidence; it cannot approve its own Work.
+
+<!-- kungfu:auditable-demo:project-tour-episode-2:start -->
+[![Who is allowed to complete Work?](docs/qualification/evidence/auditable-demo/2ceca18c5d030d98f693e433bad4981c7931a2ca1f4b2efcbdc7d63538e642db/project-tour-episode-2/demo.gif)](docs/qualification/evidence/auditable-demo/2ceca18c5d030d98f693e433bad4981c7931a2ca1f4b2efcbdc7d63538e642db/project-tour-episode-2/public-evidence.json)
+<!-- kungfu:auditable-demo:project-tour-episode-2:end -->
+
+These are bounded exact-artifact demonstrations—not provider rankings,
+production certification, or authority to complete real Work. See the
+[animation technical specification and auditable evidence](docs/qualification/auditable-demo-artifact-pipeline.md).
+
+Open the optional terminal view whenever you want the larger Work picture:
+
+```sh
+kungfu
+```
+
+Getting Started leads to the same Agent-first prompt. Keep your familiar Agent
+interface as the primary workspace and open Kungfu when you need a global view,
+a handoff, or an explicit review.
+
+## One Work, several ways in
+
+A **Project** remembers where related Work belongs. A **Work** keeps one durable
+objective and its current truth. An **Attempt** records what one Agent tried,
+including failure, without replacing or erasing the Work.
+
+The same Work state is available from native Agent consoles, the Kungfu TUI and
+GUI, the CLI, and APIs. You can spend most of your time in the Agent you already
+know, then open Kungfu for a global view, a handoff, or an explicit review. If
+another live Agent already owns a Work, Kungfu stops a second writer instead of
+letting two Agents silently diverge.
+
+## Go deeper when you need to
+
+The README stops at the product entry. Detailed implementation, evidence, and
+claim boundaries live in their own maintained routes:
+
+- **Use and understand Kungfu:** [System Overview](docs/concepts/system-overview.md),
+  the [Documentation Guide](docs/README.md), and the complete
+  [Documentation Map](docs/MAP.md).
+- **Build or contribute:** [Contributing to Kungfu](CONTRIBUTING.md),
+  [AGENTS.md](AGENTS.md), [Verified Context for Agents](docs/guides/xinfa-agent-context.md),
+  and [runtime surface provenance](docs/concepts/runtime-surface-provenance.md).
+- **Verify guarantees and current limits:** [Contracts](docs/qualification/contracts.md),
+  [Known Limits](docs/qualification/known-limits.md), and the
+  [KFD support matrix](docs/qualification/kfd-support-matrix.md).
+- **Evaluate release, update, and migration behavior:**
+  [Upgrade Kungfu](docs/guides/upgrading.md) and the
+  [Exit and version compatibility policy](docs/guides/exit-and-version-compatibility.md).
+- **Evaluate the wider ecosystem thesis:** the
+  [Agent Supply Chain architecture](docs/architecture/agent-supply-chain.md).
+
+Kungfu v4 is **Coming soon**. The current repository contains source-built
+capabilities and retained qualification evidence; public release artifacts are
+not available yet. Exact status and non-claims live in
+[Known Limits](docs/qualification/known-limits.md).
+
+<!-- buildchain:badges:start -->
+[![KFD-1: declared](https://buildchain.libkungfu.dev/badges/v1/kfd-1/declared.svg)](https://github.com/kungfu-systems/kungfu/releases/latest/download/buildchain.release.json)
+[![KFD-2: declared](https://buildchain.libkungfu.dev/badges/v1/kfd-2/declared.svg)](https://github.com/kungfu-systems/kungfu/releases/latest/download/buildchain.release.json)
+[![KFD-3: declared](https://buildchain.libkungfu.dev/badges/v1/kfd-3/declared.svg)](https://github.com/kungfu-systems/kungfu/releases/latest/download/buildchain.release.json)
+[![KFD-4: declared](https://buildchain.libkungfu.dev/badges/v1/kfd-4/declared.svg)](https://github.com/kungfu-systems/kungfu/releases/latest/download/buildchain.release.json)
+[![Buildchain Release Passport: declared](https://buildchain.libkungfu.dev/badges/v1/buildchain-release-passport/declared.svg)](https://github.com/kungfu-systems/kungfu/releases/latest/download/buildchain.release.json)
+[![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-0969da.svg)](https://github.com/kungfu-systems/kungfu/blob/HEAD/LICENSE)
+[![Platform: macOS | Linux | Windows](https://img.shields.io/badge/platform-macOS%20%7C%20Linux%20%7C%20Windows-6e7781.svg)](https://github.com/kungfu-systems/kungfu/releases/latest/download/buildchain.release.json)
+[![Source Acceptance](https://github.com/kungfu-systems/kungfu/actions/workflows/source-acceptance.yml/badge.svg)](https://github.com/kungfu-systems/kungfu/actions/workflows/source-acceptance.yml)
+[![Buildchain Validate](https://github.com/kungfu-systems/kungfu/actions/workflows/buildchain-validate.yml/badge.svg)](https://github.com/kungfu-systems/kungfu/actions/workflows/buildchain-validate.yml)
+[![DCO](https://github.com/kungfu-systems/kungfu/actions/workflows/dco.yml/badge.svg)](https://github.com/kungfu-systems/kungfu/actions/workflows/dco.yml)
+<!-- buildchain:badges:end -->
+
+## Project links
+
+- Product home: <https://kungfu.tech>
+- Developer and agent surface: <https://libkungfu.dev>
+- Issues and questions: [GitHub issue forms](https://github.com/kungfu-systems/kungfu/issues/new/choose)
+- Security reports: [SECURITY.md](SECURITY.md)
+- License: [Apache License 2.0](LICENSE)
+
+## Open system repositories
+
+Kungfu's protocol, release infrastructure, build environments, and public
+sites are developed in the open:
+
+- [Buildchain](https://github.com/kungfu-systems/buildchain) — auditable build
+  and release infrastructure with verifiable Release Passports.
+- [KFD](https://github.com/kungfu-systems/kfd) — the open engineering standard
+  for reliable action and continuity under uncertainty.
+- [Build Images](https://github.com/kungfu-systems/build-images) — source for
+  the reproducible environments used to build Kungfu system artifacts.
+- [kungfu.tech source](https://github.com/kungfu-systems/site-kungfu-tech) —
+  source for the public product site.
+- [libkungfu.dev source](https://github.com/kungfu-systems/site-libkungfu-dev) —
+  source for the developer and agent surface.
+- [All public repositories](https://github.com/kungfu-systems) — the complete
+  organization-level source map.

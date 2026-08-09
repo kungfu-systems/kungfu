@@ -1,0 +1,25 @@
+{
+  "schema": "kungfu.kfx.manifest/v1",
+  "name": "@kungfu-tech/kfx-view-work-dashboard",
+  "version": "4.0.0-alpha.1",
+  "kungfuConfig": {
+    "key": "work-dashboard",
+    "name": "All Work",
+    "product": {
+      "roles": [
+        "profile-view"
+      ],
+      "icon": "🧭",
+      "order": 10
+    },
+    "config": {
+      "view": {
+        "title": "All Work",
+        "capabilities": [
+          "storage",
+          "projects"
+        ]
+      }
+    }
+  }
+}

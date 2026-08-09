@@ -1,0 +1,49 @@
+# SPDX-License-Identifier: Apache-2.0
+
+name: Dev Qualification Patrol
+
+on:
+  workflow_run:
+    workflows:
+      - Alpha promotion preflight
+      - Dev Verify Patrol
+      - Build
+      - Release - New Version
+      - Release native components
+    types: [completed]
+  schedule:
+    # Offset recovery for delayed or missed workflow_run delivery.
+    - cron: "7,22,37,52 * * * *"
+  workflow_dispatch:
+    inputs:
+      buildchain-ref:
+        description: "Temporary exact Buildchain SHA for trusted controller validation"
+        required: false
+        default: ""
+      dry-run:
+        description: "Observe current qualification state without dispatch or retry"
+        required: false
+        type: boolean
+        default: true
+
+permissions:
+  actions: write
+  contents: read
+
+jobs:
+  patrol:
+    uses: kungfu-systems/buildchain/.github/workflows/dev-qualification-patrol.yml@49da2cd118b04d502fd90deaa57acaf83b0eaed7
+    with:
+      buildchain-ref: ${{ inputs.buildchain-ref || '49da2cd118b04d502fd90deaa57acaf83b0eaed7' }}
+      source-branch: ${{ github.event.repository.default_branch }}
+      dev-workflow-path: .github/workflows/dev-verify-patrol.yml
+      preflight-workflow-path: .github/workflows/alpha-promotion-preflight.yml
+      priority-workflows-json: >-
+        [".github/workflows/build.yml",".github/workflows/release-new-version.yml",".github/workflows/release-shifu.yml"]
+      dispatch-inputs-json: >-
+        {"buildchain-ref":"${{ inputs.buildchain-ref || '49da2cd118b04d502fd90deaa57acaf83b0eaed7' }}"}
+      max-attempts: 2
+      mutation-authorized: ${{ github.event_name != 'workflow_dispatch' }}
+      dry-run: ${{ github.event_name == 'workflow_dispatch' && inputs.dry-run || false }}
+    secrets:
+      qualification-token: ${{ secrets.KUNGFU_GITHUB_TOKEN }}

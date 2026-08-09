@@ -3,51 +3,36 @@
 // agent APIs read and write the same configuration the GUI shows; the GUI
 // holds no private settings file.
 import type { DomainState } from '@kungfu-tech/api/capability';
-import type { ProfileManifest, ShellState } from '@kungfu-tech/kfx';
+import type {
+  ShellNotification,
+  ShellState,
+  StatusBarItem,
+  StatusBarSeverity,
+} from '@kungfu-tech/kfx';
+import React from 'react';
+
+import {
+  EXIT_HISTORY_STATUS_FALLBACK,
+  type ExitHistoryStatus,
+  type RuntimeStatusResult,
+  observeExitHistoryStatus,
+} from '../../runtime-status';
+import { guiKungfuCliArgs } from './runtime';
 
 export const SHELL_STATE_LOCATION = {
-  category: 'system',
-  group: 'shell',
+  role: 'system',
+  namespace: 'shell',
   name: 'state',
   mode: 'live',
 } as const;
-
-// Built-in profiles. A profile is a selection of kfx plus a default first
-// view; the default profile is the working surface, the forensics profile
-// shows the same mechanism carrying a different selection. Opinionated
-// workflow profiles arrive here without shell edits.
-export const PROFILES: ProfileManifest[] = [
-  {
-    id: 'default',
-    title: 'Default — work control plane',
-    kfx: [
-      'work-dashboard',
-      'skill-manager',
-      'rewind',
-      'terminal',
-      'journal-manager',
-      'config-manager',
-    ],
-    defaultView: 'work-dashboard',
-  },
-  {
-    id: 'forensics',
-    title: 'Forensics — run diagnosis first',
-    kfx: ['rewind', 'journal-manager'],
-    defaultView: 'rewind',
-  },
-];
 
 export const DEFAULT_STATE: ShellState = {
   profileId: 'default',
   disabledKfx: [],
   disabledSuites: [],
+  sidebarCollapsed: false,
   settings: {},
 };
-
-export function profileById(profileId: string): ProfileManifest {
-  return PROFILES.find((p) => p.id === profileId) ?? PROFILES[0];
-}
 
 export function loadShellState(domain: DomainState): ShellState {
   try {
@@ -55,8 +40,8 @@ export function loadShellState(domain: DomainState): ShellState {
       .configs()
       .find(
         (row) =>
-          row.location.category === SHELL_STATE_LOCATION.category &&
-          row.location.group === SHELL_STATE_LOCATION.group &&
+          row.location.role === SHELL_STATE_LOCATION.role &&
+          row.location.namespace === SHELL_STATE_LOCATION.namespace &&
           row.location.name === SHELL_STATE_LOCATION.name,
       );
     if (!entry) return DEFAULT_STATE;
@@ -72,6 +57,10 @@ export function loadShellState(domain: DomainState): ShellState {
           : DEFAULT_STATE.profileId,
       disabledKfx: strings(parsed.disabledKfx),
       disabledSuites: strings(parsed.disabledSuites),
+      sidebarCollapsed:
+        typeof parsed.sidebarCollapsed === 'boolean'
+          ? parsed.sidebarCollapsed
+          : DEFAULT_STATE.sidebarCollapsed,
       settings:
         parsed.settings && typeof parsed.settings === 'object'
           ? Object.fromEntries(
@@ -89,4 +78,91 @@ export function loadShellState(domain: DomainState): ShellState {
 
 export function saveShellState(domain: DomainState, state: ShellState): void {
   domain.setConfig(SHELL_STATE_LOCATION, JSON.stringify(state));
+}
+
+export function statusColor(severity: StatusBarSeverity | undefined): string {
+  if (severity === 'ok') return '#4ec9b0';
+  if (severity === 'warning') return '#dcdcaa';
+  if (severity === 'error') return '#f48771';
+  return '#cccccc';
+}
+
+export function trustStatusText(status: RuntimeStatusResult | null): string {
+  const assessments = status?.payload?.assessments;
+  if (!assessments) return 'trust unavailable';
+  const counts = assessments.counts ?? {};
+  const blocked =
+    (counts.stale ?? 0) +
+    (counts['insufficient-evidence'] ?? 0) +
+    (counts.conflicted ?? 0) +
+    (counts.unverifiable ?? 0) +
+    (counts['failed-retryable'] ?? 0);
+  if (blocked > 0) return `trust blocked ${String(blocked)}`;
+  if ((counts.pending ?? 0) + (counts.running ?? 0) > 0)
+    return `trust pending ${String((counts.pending ?? 0) + (counts.running ?? 0))}`;
+  return `trust fresh ${String(counts.fresh ?? 0)}`;
+}
+
+export function trustTooltip(status: RuntimeStatusResult | null): string {
+  const assessments = status?.payload?.assessments?.assessments;
+  if (!assessments) return 'Assessment subscription is unavailable';
+  if (assessments.length === 0) return 'No load-bearing claims assessed';
+  return assessments
+    .map((assessment) => {
+      const request = assessment.request ?? {};
+      const risks = assessment.report?.residual_risks?.join('; ') || '-';
+      return `${assessment.state || '-'}: ${request.claim_id || '-'} for ${
+        request.purpose || '-'
+      }\nresidual risk: ${risks}\nproof: ${
+        assessment.report?.query_proof_root || '-'
+      }`;
+    })
+    .join('\n\n');
+}
+
+export function useExitHistoryStatus(runtimeOk: boolean): ExitHistoryStatus {
+  const [status, setStatus] = React.useState<ExitHistoryStatus>(
+    EXIT_HISTORY_STATUS_FALLBACK,
+  );
+
+  React.useEffect(() => {
+    if (!runtimeOk) {
+      setStatus(EXIT_HISTORY_STATUS_FALLBACK);
+      return undefined;
+    }
+    return observeExitHistoryStatus(window, guiKungfuCliArgs, setStatus);
+  }, [runtimeOk]);
+
+  return status;
+}
+
+export function exitHistoryStatusItem(
+  status: ExitHistoryStatus,
+  command: StatusBarItem['command'],
+): StatusBarItem {
+  return {
+    id: 'system.history-protection',
+    text: `history: ${status.state}`,
+    icon: status.ok ? '◇' : '!',
+    severity: status.ok ? 'ok' : 'warning',
+    side: 'left',
+    priority: -80,
+    tooltip: `Coverage: ${status.coverage}. Last verified export: ${status.lastVerifiedExport?.bundleId ?? 'none'}. Next: ${status.nextActions[0]}`,
+    command,
+  };
+}
+
+export function notificationColor(level: ShellNotification['level']): string {
+  if (level === 'success') return '#4ec9b0';
+  if (level === 'warning') return '#dcdcaa';
+  if (level === 'error') return '#f48771';
+  return '#9cdcfe';
+}
+
+let notificationSeq = 0;
+export function notificationId(): string {
+  notificationSeq += 1;
+  return (
+    globalThis.crypto?.randomUUID?.() ?? `n-${Date.now()}-${notificationSeq}`
+  );
 }

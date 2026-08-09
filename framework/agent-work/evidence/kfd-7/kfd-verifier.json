@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 1,
+  "contract": "kfd.verification-report/v1",
+  "profile": "https://kfd.libkungfu.dev/schemas/kfd-7/action-contract.schema.json",
+  "valid": true,
+  "qualifying": false,
+  "selfCertified": false,
+  "offline": true,
+  "checks": [
+    {
+      "id": "json-schema",
+      "status": "pass"
+    }
+  ],
+  "issues": []
+}

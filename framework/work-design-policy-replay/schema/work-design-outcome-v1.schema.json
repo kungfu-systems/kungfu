@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kungfu.tech/schema/work-design-outcome-v1.schema.json",
+  "title": "Content-addressed settled Work Design outcome",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "assignmentId", "asOf", "bindings", "cohort", "window", "metrics", "coverage", "evidence", "authority", "outcomeRoot"],
+  "properties": {
+    "schema": { "const": "kungfu.work-design.outcome/v1" },
+    "assignmentId": { "$ref": "#/$defs/id" },
+    "asOf": { "$ref": "#/$defs/timestamp" },
+    "bindings": { "$ref": "#/$defs/bindings" },
+    "cohort": { "$ref": "#/$defs/cohort" },
+    "window": { "$ref": "#/$defs/window" },
+    "metrics": { "$ref": "#/$defs/metrics" },
+    "coverage": { "$ref": "#/$defs/coverage" },
+    "evidence": { "$ref": "#/$defs/evidence" },
+    "authority": { "$ref": "#/$defs/authority" },
+    "outcomeRoot": { "$ref": "#/$defs/root" }
+  },
+  "$defs": {
+    "root": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+    "id": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]*$" },
+    "timestamp": { "type": "string", "format": "date-time" },
+    "bindings": { "type": "object", "additionalProperties": false, "required": ["workDefinitionRoot", "adviceRoot", "policyRoot"], "properties": { "workDefinitionRoot": { "$ref": "#/$defs/root" }, "adviceRoot": { "$ref": "#/$defs/root" }, "policyRoot": { "$ref": "#/$defs/root" } } },
+    "cohort": { "type": "object", "additionalProperties": false, "required": ["deliveryClass", "workClass", "repositoryClass", "cohortRoot"], "properties": { "deliveryClass": { "enum": ["cross-platform", "native-proof-required", "non-native-fast", "release"] }, "workClass": { "$ref": "#/$defs/id" }, "repositoryClass": { "$ref": "#/$defs/id" }, "cohortRoot": { "$ref": "#/$defs/root" } } },
+    "window": { "type": "object", "additionalProperties": false, "required": ["admittedAt", "settledAt", "attributableActiveSeconds", "excludedWaitSeconds"], "properties": { "admittedAt": { "$ref": "#/$defs/timestamp" }, "settledAt": { "$ref": "#/$defs/timestamp" }, "attributableActiveSeconds": { "type": "integer", "minimum": 0 }, "excludedWaitSeconds": { "type": "object", "additionalProperties": false, "required": ["ci-queue", "external-review", "human-decision", "platform-approval"], "properties": { "ci-queue": { "type": "integer", "minimum": 0 }, "external-review": { "type": "integer", "minimum": 0 }, "human-decision": { "type": "integer", "minimum": 0 }, "platform-approval": { "type": "integer", "minimum": 0 } } } } },
+    "qualifiedOrUnknown": { "enum": ["qualified", "unknown"] },
+    "timeoutMetric": { "type": "object", "additionalProperties": false, "required": ["status", "plannedBudgetSeconds", "attributableActiveSeconds", "overrunSeconds", "exceeded"], "properties": { "status": { "$ref": "#/$defs/qualifiedOrUnknown" }, "plannedBudgetSeconds": { "type": ["integer", "null"], "minimum": 0 }, "attributableActiveSeconds": { "type": ["integer", "null"], "minimum": 0 }, "overrunSeconds": { "type": ["integer", "null"], "minimum": 0 }, "exceeded": { "type": ["boolean", "null"] } } },
+    "countMetric": { "type": "object", "additionalProperties": false, "required": ["status", "count", "eventRoots"], "properties": { "status": { "$ref": "#/$defs/qualifiedOrUnknown" }, "count": { "type": ["integer", "null"], "minimum": 0 }, "eventRoots": { "$ref": "#/$defs/roots" } } },
+    "revisionMetric": { "type": "object", "additionalProperties": false, "required": ["status", "count", "revisionRoots"], "properties": { "status": { "$ref": "#/$defs/qualifiedOrUnknown" }, "count": { "type": ["integer", "null"], "minimum": 0 }, "revisionRoots": { "$ref": "#/$defs/roots" } } },
+    "assessmentMetric": { "type": "object", "additionalProperties": false, "required": ["status", "count", "assessmentRoots"], "properties": { "status": { "$ref": "#/$defs/qualifiedOrUnknown" }, "count": { "type": ["integer", "null"], "minimum": 0 }, "assessmentRoots": { "$ref": "#/$defs/roots" } } },
+    "metrics": { "type": "object", "additionalProperties": false, "required": ["acceptanceFailure", "dependencyCorrection", "rework", "timeout"], "properties": { "acceptanceFailure": { "$ref": "#/$defs/assessmentMetric" }, "dependencyCorrection": { "$ref": "#/$defs/revisionMetric" }, "rework": { "$ref": "#/$defs/countMetric" }, "timeout": { "$ref": "#/$defs/timeoutMetric" } } },
+    "metricName": { "enum": ["acceptanceFailure", "dependencyCorrection", "rework", "timeout"] },
+    "roots": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/root" } },
+    "coverage": { "type": "object", "additionalProperties": false, "required": ["qualifiedMetrics", "unknownMetrics", "complete", "coverageRoot"], "properties": { "qualifiedMetrics": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/metricName" } }, "unknownMetrics": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/metricName" } }, "complete": { "type": "boolean" }, "coverageRoot": { "$ref": "#/$defs/root" } } },
+    "evidence": { "type": "object", "additionalProperties": false, "required": ["settledStateRoot", "queryProofRoot", "sourceEvidenceRoots"], "properties": { "settledStateRoot": { "$ref": "#/$defs/root" }, "queryProofRoot": { "$ref": "#/$defs/root" }, "sourceEvidenceRoots": { "$ref": "#/$defs/roots" } } },
+    "authority": { "const": { "mode": "settled-work-observation", "factAuthority": false, "episodeAuthority": false, "assignmentAuthority": false, "workControlAuthority": false, "policyAuthority": false, "mayMutate": false } }
+  }
+}

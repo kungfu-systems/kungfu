@@ -1,0 +1,71 @@
+{
+  "deliveries": {
+    "sha256:a30e829609a5ecbaabd3fb32379ccdec17f061f2f92019b864bc5e2c7f5c02a4:delivery-5": "sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+    "sha256:a30e829609a5ecbaabd3fb32379ccdec17f061f2f92019b864bc5e2c7f5c02a4:delivery-6": "sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+  },
+  "events": [
+    {
+      "evidence": {
+        "delayed": false,
+        "delivered": true,
+        "receiptRoot": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+      },
+      "operation": "transport-delivery",
+      "requestId": "hub-004-record-delivery-without-admission"
+    },
+    {
+      "evidence": {
+        "decisionAuthorityRoots": [
+          "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        ],
+        "delivery": true
+      },
+      "operation": "fact-admission",
+      "requestId": "hub-007-admit-under-local-authority"
+    },
+    {
+      "evidence": {
+        "delayed": true,
+        "delivered": false,
+        "receiptRoot": null
+      },
+      "operation": "transport-delivery",
+      "requestId": "hub-008-retain-delayed-delivery"
+    },
+    {
+      "evidence": {
+        "childActions": [
+          "read"
+        ],
+        "childExpiresAt": 150,
+        "parentActions": [
+          "append",
+          "read"
+        ],
+        "parentExpiresAt": 200
+      },
+      "operation": "warrant-attenuation",
+      "requestId": "hub-009-attenuate-delegated-authority"
+    },
+    {
+      "evidence": {
+        "requestedAction": "read",
+        "status": "revoked"
+      },
+      "operation": "warrant-revocation",
+      "requestId": "hub-011-reject-revoked-warrant"
+    },
+    {
+      "evidence": {
+        "bundle": {
+          "payloadRoot": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          "profileRoot": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "schema": "kungfu.agent-hub-portability-bundle/v1"
+        }
+      },
+      "operation": "import",
+      "requestId": "hub-019-preserve-export-import-roots"
+    }
+  ],
+  "schema": "kungfu.agent-hub-exchange-store/v1"
+}

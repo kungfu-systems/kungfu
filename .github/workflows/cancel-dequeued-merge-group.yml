@@ -1,0 +1,43 @@
+# SPDX-License-Identifier: Apache-2.0
+
+name: Cancel dequeued merge-group work
+
+on:
+  pull_request_target:
+    types: [dequeued]
+    branches:
+      - dev/v*/v*
+
+permissions:
+  actions: write
+  contents: read
+  pull-requests: write
+  statuses: write
+
+jobs:
+  cancel:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Checkout trusted base revision
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: refs/heads/${{ github.event.pull_request.base.ref }}
+          persist-credentials: false
+      - name: Cancel active merge-group runs for the dequeued pull request
+        env:
+          DEQUEUED_PULL_REQUEST: ${{ github.event.pull_request.number }}
+          DEQUEUED_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          DEQUEUED_PULL_REQUEST_BODY: ${{ github.event.pull_request.body }}
+          DEQUEUE_EVIDENCE_OUTPUT: product/qualification/dequeue/delivery-evidence.json
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          MERGE_GROUP_WORKFLOW: affected-native-pr.yml
+          QUEUE_ADMISSION_CONTEXT: Queue admission lease
+        run: ./shifu ci:cancel-dequeued-merge-group
+      - name: Upload exact dequeue settlement evidence
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: core-dequeued-family-delivery-${{ github.event.pull_request.head.sha }}
+          path: product/qualification/dequeue/delivery-evidence.json
+          if-no-files-found: error
+          retention-days: 30

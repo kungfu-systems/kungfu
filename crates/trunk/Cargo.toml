@@ -1,0 +1,38 @@
+# SPDX-License-Identifier: Apache-2.0
+#
+# kungfu-trunk — the product-side Rust trunk, at its stage-1 size (KF-ADR-019f86da-4f90-73ff-9543-f0a4f0beef05).
+#
+# Stage 1 scope: the kungfu-owned install surface. It bootstraps the pinned
+# uv (through shifu-core's fetch engine, checksum-required from the shipped
+# runtime-pins manifest), pins the satellite CPython through uv, and derives
+# package environments exclusively from that blessed interpreter. This trunk
+# is the front door and forwards Python-owned subtrees into the assembled tree.
+#
+# Ships inside dist/kungfu as both `kungfu` and `kungfu-trunk` — never released
+# or version-tagged on its own, so this version is informational and follows
+# the product line.
+
+[package]
+name = "kungfu-trunk"
+version = "4.0.0-alpha.1"
+description = "kungfu product trunk (stage 1): pinned-toolchain bootstrap and the kungfu-owned package/env surface"
+publish = false
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[features]
+# Off by default so the trunk builds with no core in reach (the workspace CI
+# gate; a dev checkout without a built core). The product build turns it on to
+# link libkungfu and light up the read-only physical inspection (`doctor`)
+# through the embedding membrane — the trunk as the membrane's first-party
+# consumer (RFC docs/architecture/embedding-contract-face.md D2/D6), compiled
+# against the same core it ships next to.
+embedding = ["dep:kungfu-embedding"]
+
+[dependencies]
+shifu-core = { path = "../shifu-core" }
+shifu = { path = "../shifu" }
+kungfu-embedding = { path = "../kungfu-embedding", optional = true }
+xinfa = { path = "../xinfa" }
+serde_json = "1.0"

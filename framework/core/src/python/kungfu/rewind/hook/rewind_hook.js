@@ -11,12 +11,14 @@
 // runtime's active span across the process boundary (the python adapter sets
 // it around cross-process tool execution); spans created here root under it,
 // so one causal chain spans both runtimes inside the same journal.
+// biome-ignore lint/suspicious/noRedundantUseStrict: injected as a CommonJS preload
 'use strict';
+
 // @ts-check
 
-const net = require('net');
-const crypto = require('crypto');
-const Module = require('module');
+const net = require('node:net');
+const crypto = require('node:crypto');
+const Module = require('node:module');
 
 const endpoint = process.env.KUNGFU_REWIND_INGEST;
 const bootParent = process.env.KUNGFU_REWIND_PARENT_SPAN || null;
@@ -53,7 +55,7 @@ if (endpoint) {
   /** @param {unknown} message */
   const emit = (message) => {
     if (dead) return;
-    const line = JSON.stringify(message) + '\n';
+    const line = `${JSON.stringify(message)}\n`;
     try {
       if (sock && !sock.connecting) sock.write(line);
       else pending.push(line);
@@ -186,7 +188,7 @@ if (endpoint) {
   // registers its patchers before the require hook below goes live. A broken
   // adapter must never break the traced program.
   for (const entry of (process.env.KUNGFU_REWIND_NODE_ADAPTERS || '').split(
-    require('path').delimiter,
+    require('node:path').delimiter,
   )) {
     if (!entry) continue;
     try {
@@ -205,7 +207,7 @@ if (endpoint) {
     /** @type {any} */ parent,
     /** @type {boolean} */ isMain,
   ) {
-    const exports = originalLoad.apply(this, arguments);
+    const exports = originalLoad.call(this, request, parent, isMain);
     try {
       const name = request.replace(/\.js$/, '').split(/[\\/]/).pop();
       const patcher = name ? ADAPTERS[name] : undefined;

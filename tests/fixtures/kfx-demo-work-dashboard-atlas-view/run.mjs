@@ -1,10 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 //
-// Render-smoke the work-dashboard Atlas tab without opening Electron. The kfx
-// bundle is loaded the same CommonJS-wrapped way the GUI loader consumes it,
-// while this fixture injects React and a fake Atlas capability. It proves the
-// built view can display imported Mission/go projection data when opened with
-// shell.params.view=atlas.
+// Render-smoke the current read-only Portfolio view without opening Electron.
+// The kfx bundle is loaded the same CommonJS-wrapped way the GUI loader consumes
+// it, while this fixture injects React and the Electron IPC boundary.
 //
 // Usage: node tests/fixtures/kfx-demo-work-dashboard-atlas-view/run.mjs
 
@@ -42,6 +40,12 @@ if (!fs.existsSync(bundlePath)) {
 
 const React = require('react');
 const ReactDomServer = require('react-dom/server');
+globalThis.window = {
+  require: (id) => {
+    if (id !== 'electron') throw new Error(`unexpected host module: ${id}`);
+    return { ipcRenderer: {} };
+  },
+};
 
 const fakeCaps = {
   work: {
@@ -51,60 +55,94 @@ const fakeCaps = {
   ledger: {
     formatNanos: () => '',
   },
-  atlas: {
+  profile: {
     runtimeDir: '/tmp/kungfu-runtime',
-    defaultRepoRoot: '/tmp/atlas',
-    importInfo: () => ({
-      import_id: 'fixture-import',
-      repo_root: '/tmp/atlas',
-      missions: 1,
-      goals: 2,
-      markers: 3,
+    discover: () => ({ source: '/profiles/work-control' }),
+    memberCall: () => ({
+      result: {
+      schema: 'kungfu.work-control.dashboard-snapshot/v1',
+      cut: { kind: 'system_time', system_time: '2026-07-12T12:00:00Z' },
+      freshness: { status: 'fresh', basis: 'request-cut' },
+      import_info: {
+        import_id: 'fixture-import',
+        repo_root: '/tmp/atlas',
+        missions: 1,
+        goals: 2,
+        markers: 3,
+      },
+      missions: [
+        {
+          mission_id: 'mission-fixture',
+          title: 'Fixture Mission',
+          stage_name: 'dogfood',
+        },
+      ],
+      goals: [
+        {
+          goal_id: 'goal-fixture-active',
+          status: 'active',
+          title: 'Active fixture goal',
+          mission_id: 'mission-fixture',
+          next_action: 'verify atlas tab',
+        },
+        {
+          goal_id: 'goal-fixture-ready',
+          status: 'ready',
+          title: 'Ready fixture goal',
+          mission_id: 'mission-fixture',
+        },
+      ],
+      },
     }),
-    missions: () => [
-      {
-        mission_id: 'mission-fixture',
-        title: 'Fixture Mission',
-        stage_name: 'dogfood',
-      },
-    ],
-    goals: () => [
-      {
-        goal_id: 'goal-fixture-active',
-        status: 'active',
-        title: 'Active fixture goal',
-        mission_id: 'mission-fixture',
-        next_action: 'verify atlas tab',
-      },
-      {
-        goal_id: 'goal-fixture-ready',
-        status: 'ready',
-        title: 'Ready fixture goal',
-        mission_id: 'mission-fixture',
-      },
-    ],
-    importRepo: () => ({
-      import_id: 'fixture-import-2',
-      repo_root: '/tmp/atlas',
-      missions: 1,
-      goals: 2,
-      markers: 3,
-      warnings: [],
-    }),
-    mission: () => null,
-    goal: () => null,
-    markers: () => [],
+  },
+  storage: {
+    savedQueries: () => ({ entries: [] }),
+  },
+  projects: {
+    list: async () => ({ schema: 'kungfu.projects.catalog/v1', projects: [] }),
+    runs: () => [],
+    subscribeRuns: () => () => undefined,
   },
 };
 
 const fakeShell = {
-  params: { view: 'atlas' },
+  params: {},
   open: () => undefined,
+  notify: () => undefined,
   onRefresh: () => ({ stop: () => undefined }),
 };
 
 const capabilityModule = {
   WORK_STATUS_NAMES: ['active', 'blocked', 'waiting', 'ready', 'done'],
+  DEFAULT_GOAL_CARD_QUERY: {
+    schema: 'kungfu.work-control.goal-card-query/v1',
+    text: '',
+    sections: [],
+    statuses: [],
+    trust: [],
+    actors: [],
+    tracks: [],
+    roles: [],
+    importance: [],
+    stages: [],
+    updatedWithinDays: null,
+    hasChildren: 'all',
+    closed: 'include',
+    hideClosedChildren: false,
+    sort: { field: 'decision-priority', direction: 'desc' },
+  },
+  emptyQueryChangelogState: () => ({
+    rows: {},
+    evidence: {},
+    changes: {},
+    appliedMessageIds: [],
+    resultSchema: null,
+    frontier: { kind: 'empty', record_count: '0' },
+    resultHash: '',
+    gap: null,
+  }),
+  applyQueryChangelogPage: (state) => state,
+  parseGoalCardQuerySpec: (value) => value,
 };
 
 const module = { exports: {} };
@@ -129,16 +167,13 @@ const html = ReactDomServer.renderToStaticMarkup(
 );
 
 for (const needle of [
-  'Atlas projection',
-  'mission-fixture',
-  'Fixture Mission',
-  'goal-fixture-active',
-  'Active fixture goal',
-  '1 missions',
-  '2 goals',
-  '3 markers',
+  'All Work',
+  'Connecting All Work…',
+  'active local project workspace',
+  'Loading retained Project Work…',
+  'All Work remains open while Kungfu restores its Work graph.',
 ]) {
-  if (!html.includes(needle)) fail(`rendered Atlas tab missing ${needle}`);
+  if (!html.includes(needle)) fail(`rendered All Work view missing ${needle}`);
 }
 
-console.log('[kfx-demo-work-dashboard-atlas-view] render ok');
+console.log('[kfx-demo-work-dashboard-atlas-view] All Work render ok');

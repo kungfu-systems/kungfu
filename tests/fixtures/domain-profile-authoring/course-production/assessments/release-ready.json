@@ -1,0 +1,8 @@
+{
+  "schema": "kungfu.reference.assessment/v1",
+  "owner": "atlas",
+  "policy": {
+    "path": "policies/assessment.json",
+    "sha256": "d79ea3a516f0c7271d13b5026e44e3f5accb7a8c1b52adcd4091ddd12e9d3010"
+  }
+}

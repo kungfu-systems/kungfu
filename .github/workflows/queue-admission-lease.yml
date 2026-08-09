@@ -1,0 +1,79 @@
+# SPDX-License-Identifier: Apache-2.0
+
+name: Queue admission lease
+
+on:
+  merge_group:
+    types: [checks_requested]
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  admission:
+    name: Queue admission lease
+    runs-on: ubuntu-24.04
+    timeout-minutes: 2
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          repository: kungfu-systems/buildchain
+          ref: ed978d70b246fcfdb5e80009d58e1ce4926ad593
+          path: .buildchain/dev-delivery-runtime
+          persist-credentials: false
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version: "24"
+      - name: Install pinned Buildchain Warrant runtime
+        working-directory: .buildchain/dev-delivery-runtime
+        shell: bash
+        run: |
+          # shifu-entry-contract: allow exact pinned Buildchain dependency bootstrap before its CLI is runnable
+          corepack pnpm install --frozen-lockfile --ignore-scripts
+      - name: Consume the exact Buildchain Warrant lease
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GITHUB_TOKEN: ${{ github.token }}
+          MERGE_GROUP_HEAD_SHA: ${{ github.event.merge_group.head_sha }}
+          MERGE_GROUP_HEAD_REF: ${{ github.event.merge_group.head_ref }}
+          MERGE_GROUP_BASE_REF: ${{ github.event.merge_group.base_ref }}
+        run: |
+          set -euo pipefail
+          if [ "$GITHUB_EVENT_NAME" != "merge_group" ]; then
+            echo "Queue admission lease accepts only merge_group events." >&2
+            exit 1
+          fi
+          if [ -z "$MERGE_GROUP_HEAD_SHA" ] || [ "$MERGE_GROUP_HEAD_SHA" != "$GITHUB_SHA" ]; then
+            echo "Merge-group head does not match the checked execution source." >&2
+            exit 1
+          fi
+          if [[ "$MERGE_GROUP_HEAD_REF" =~ /pr-([0-9]+)- ]]; then
+            pull_request="${BASH_REMATCH[1]}"
+          else
+            echo "Cannot resolve one PR from merge-group head ref: $MERGE_GROUP_HEAD_REF" >&2
+            exit 1
+          fi
+          source_head="$(gh api "repos/$GITHUB_REPOSITORY/pulls/$pull_request" --jq .head.sha)"
+          protected_base="${MERGE_GROUP_BASE_REF#refs/heads/}"
+          state_ref="buildchain/dev-delivery-warrant/${protected_base//\//-}"
+          runtime=.buildchain/dev-delivery-runtime
+          mkdir -p .buildchain/dev-delivery-warrant
+          # shifu-entry-contract: allow exact pinned Buildchain state-ref readback in CI
+          node "$runtime/bin/buildchain.mjs" dev warrant observe \
+            --repository "$GITHUB_REPOSITORY" \
+            --branch "$protected_base" \
+            --state-ref "$state_ref" \
+            --output .buildchain/dev-delivery-warrant/view.json
+          # shifu-entry-contract: allow exact Warrant consumer verification in CI
+          node scripts/affected-native-proof.mjs queue-lease-verify \
+            --view .buildchain/dev-delivery-warrant/view.json \
+            --pull-request "$pull_request" \
+            --source-head "$source_head" \
+            --output .buildchain/dev-delivery-warrant/queue-lease-receipt.json
+          jq -r '"Buildchain Warrant queue lease verified: " + .receiptRoot' \
+            .buildchain/dev-delivery-warrant/queue-lease-receipt.json

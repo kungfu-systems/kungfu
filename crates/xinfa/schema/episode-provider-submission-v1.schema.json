@@ -1,0 +1,76 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://xinfa.dev/schema/episode-provider-submission-v1.schema.json",
+  "title": "Xinfa Episode provider submission v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "provider", "providerId", "root", "beforeAtlasRoot", "resultCut", "episodes", "units", "edges"],
+  "properties": {
+    "schema": { "const": "xinfa.episode-provider-submission/v1" },
+    "provider": { "const": "git-workspace-jsonl/v1" },
+    "providerId": { "$ref": "#/$defs/id" },
+    "root": { "$ref": "#/$defs/id" },
+    "beforeAtlasRoot": { "$ref": "#/$defs/root" },
+    "resultCut": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id"],
+      "properties": { "id": { "$ref": "#/$defs/id" } }
+    },
+    "episodes": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/episode" } },
+    "units": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/unit" } },
+    "edges": { "type": "array", "items": { "$ref": "#/$defs/edge" } }
+  },
+  "$defs": {
+    "id": { "type": "string", "pattern": "^[a-z][a-z0-9]*(?:[._-][a-z0-9]+)*$" },
+    "root": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+    "path": { "type": "string", "minLength": 1, "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$))(?!.*[\\\\*?\\[\\]{}]).+$" },
+    "episode": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "manifestPath", "claimsPath", "qualificationPath", "semanticRoot", "providerRoot", "qualificationRoot", "visibility"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "manifestPath": { "$ref": "#/$defs/path" },
+        "claimsPath": { "$ref": "#/$defs/path" },
+        "qualificationPath": { "$ref": "#/$defs/path" },
+        "semanticRoot": { "$ref": "#/$defs/root" },
+        "providerRoot": { "$ref": "#/$defs/root" },
+        "qualificationRoot": { "$ref": "#/$defs/root" },
+        "visibility": { "const": "public" }
+      }
+    },
+    "dependency": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["node", "expectedRevision"],
+      "properties": {
+        "node": { "$ref": "#/$defs/id" },
+        "expectedRevision": { "$ref": "#/$defs/root" }
+      }
+    },
+    "unit": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "type", "episode", "recordIndex", "dependsOn", "routes"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "type": { "enum": ["mission-declaration", "go-declaration", "proof-ref", "receipt-ref", "review-finding"] },
+        "episode": { "$ref": "#/$defs/id" },
+        "recordIndex": { "type": "integer", "minimum": 0 },
+        "dependsOn": { "type": "array", "items": { "$ref": "#/$defs/dependency" } },
+        "routes": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "$ref": "#/$defs/id" } }
+      }
+    },
+    "edge": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["from", "relation", "to"],
+      "properties": {
+        "from": { "$ref": "#/$defs/id" },
+        "to": { "$ref": "#/$defs/id" },
+        "relation": { "enum": ["defines", "explains", "constrains", "decides", "implements", "proves", "depends-on", "supersedes", "expands-to"] }
+      }
+    }
+  }
+}

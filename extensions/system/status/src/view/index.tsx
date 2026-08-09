@@ -1,10 +1,12 @@
-// System kfx: system status. Runtime facts (master liveness, versions,
-// binding exports, runtime home) plus the live longfist type registry — the
-// diagnostics face of the shell. The future storage health story
-// (fsck/export overview) mounts here.
-import React from 'react';
 import type { KfxCapabilities, Shell } from '@kungfu-tech/kfx';
 import { headingStyle, mono, panelStyle } from '@kungfu-tech/kfx';
+import React from 'react';
+import { QueryReferencePanel } from './query-reference';
+
+// System kfx: system status. Runtime facts (coordinator liveness, versions,
+// binding exports, runtime home) plus the core schema type registry — the
+// diagnostics face of the shell. The future storage health story
+// (fsck/export overview) mounts here.
 
 function SystemStatusView({
   caps,
@@ -20,11 +22,51 @@ function SystemStatusView({
   );
 
   const [selected, setSelected] = React.useState<string | null>(null);
-  const registry = shell.info.longfistTypes;
+  const [episodeId, setEpisodeId] = React.useState('');
+  const [sourceId, setSourceId] = React.useState('');
+  const [storageResult, setStorageResult] = React.useState(
+    'Choose an operation. Every action below calls the public storage capability.',
+  );
+  const runStorage = (label: string, operation: () => unknown) => {
+    try {
+      setStorageResult(`${label}\n${JSON.stringify(operation(), null, 2)}`);
+    } catch (error) {
+      setStorageResult(
+        `${label} failed\n${error instanceof Error ? error.message : String(error)}`,
+      );
+    }
+  };
+  const registry = shell.info.schemaTypes;
   const current = registry.find((t) => t.name === selected);
 
   const info = shell.info;
   const versions = window.process.versions;
+  const runtimeStatus = info.runtimeStatus;
+  const runtimePayload = runtimeStatus?.payload as
+    | {
+        status?: string;
+        configHome?: string;
+        dataRoot?: string;
+        runtimeDir?: string;
+        lifecycle?: {
+          state?: string;
+          healthy?: boolean;
+          warnings?: string[];
+        };
+        supervisor?: { running?: boolean; pid?: number | null };
+        coordinator?: { running?: boolean; pid?: number | null };
+        route?: {
+          routeId?: string;
+          registered?: boolean;
+          stale?: boolean;
+          freshness?: { ageSeconds?: number | null; ttlSeconds?: number };
+        };
+        routes?: { count?: number; staleCount?: number };
+      }
+    | null
+    | undefined;
+  const supervisorLive = runtimePayload?.supervisor?.running === true;
+  const coordinatorLive = runtimePayload?.coordinator?.running === true || live;
 
   return (
     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
@@ -32,20 +74,69 @@ function SystemStatusView({
         <h2 style={headingStyle}>Runtime</h2>
         <div style={{ ...mono }}>
           <div>
-            master:{' '}
-            <span style={{ color: live ? '#4ec9b0' : '#858585' }}>
-              {live ? '● live (connected)' : '○ offline (no master)'}
+            coordinator:{' '}
+            <span style={{ color: coordinatorLive ? '#4ec9b0' : '#858585' }}>
+              {coordinatorLive ? '● live' : '○ offline'}
             </span>
+          </div>
+          <div>
+            supervisor:{' '}
+            <span style={{ color: supervisorLive ? '#4ec9b0' : '#858585' }}>
+              {supervisorLive ? '● live' : '○ stopped'}
+            </span>
+          </div>
+          <div>service status: {runtimePayload?.status ?? 'unknown'}</div>
+          <div>
+            lifecycle:{' '}
+            <span
+              style={{
+                color: runtimePayload?.lifecycle?.healthy
+                  ? '#4ec9b0'
+                  : '#dcdcaa',
+              }}
+            >
+              {runtimePayload?.lifecycle?.state ?? 'unknown'}
+            </span>
+          </div>
+          <div>
+            lifecycle warnings:{' '}
+            {runtimePayload?.lifecycle?.warnings?.join(', ') || '-'}
           </div>
           <div>core: {String(info.buildInfo?.version ?? 'unknown')}</div>
           <div>kungfu: {info.kungfuVersion || 'unavailable'}</div>
           <div>
             electron: {versions.electron} · node: {versions.node}
           </div>
-          <div>runtime home: {info.runtimeDir}</div>
+          <div>
+            runtime home: {runtimePayload?.runtimeDir ?? info.runtimeDir}
+          </div>
+          <div>data root: {runtimePayload?.dataRoot ?? 'unknown'}</div>
+          <div>config home: {runtimePayload?.configHome ?? 'unknown'}</div>
+          <div>
+            route: {runtimePayload?.route?.routeId ?? 'unknown'} ·{' '}
+            {runtimePayload?.route?.registered
+              ? 'registered'
+              : 'not registered'}
+            {runtimePayload?.route?.stale ? ' · stale' : ''}
+          </div>
+          <div>
+            route lease age:{' '}
+            {runtimePayload?.route?.freshness?.ageSeconds == null
+              ? 'unknown'
+              : `${runtimePayload.route.freshness.ageSeconds.toFixed(1)}s`}
+          </div>
+          <div>
+            routes: {String(runtimePayload?.routes?.count ?? 'unknown')} ·
+            stale: {String(runtimePayload?.routes?.staleCount ?? 0)}
+          </div>
           <div style={{ color: info.ok ? '#4ec9b0' : '#f48771' }}>
             binding: {info.message}
           </div>
+          {runtimeStatus && !runtimeStatus.ok ? (
+            <div style={{ color: '#f48771' }}>
+              coordinator status: {runtimeStatus.error || 'unavailable'}
+            </div>
+          ) : null}
         </div>
         <h2 style={{ ...headingStyle, marginTop: 12 }}>
           Binding exports · {info.exports.length}
@@ -65,7 +156,7 @@ function SystemStatusView({
         </ul>
       </section>
       <section style={panelStyle}>
-        <h2 style={headingStyle}>Longfist type registry · {registry.length}</h2>
+        <h2 style={headingStyle}>Core schema registry · {registry.length}</h2>
         <div style={{ display: 'flex', gap: 12 }}>
           <ul
             style={{ listStyle: 'none', margin: 0, padding: 0, minWidth: 180 }}
@@ -105,12 +196,98 @@ function SystemStatusView({
               </>
             ) : (
               <span style={{ color: '#6a6a6a' }}>
-                select a type — fields come from the live C++ type registry
+                select a type — fields come from the public C++ core registry
               </span>
             )}
           </div>
         </div>
       </section>
+      <section style={{ ...panelStyle, gridColumn: '1 / -1' }}>
+        <h2 style={headingStyle}>Storage operations · public capability</h2>
+        <div
+          style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 8 }}
+        >
+          <button
+            type="button"
+            onClick={() => runStorage('layout', caps.storage.layout)}
+          >
+            Layout / init
+          </button>
+          <button
+            type="button"
+            onClick={() =>
+              runStorage('timeline', () => caps.storage.episodes())
+            }
+          >
+            Episode timeline
+          </button>
+          <input
+            aria-label="Episode id"
+            placeholder="episode id"
+            value={episodeId}
+            onChange={(event) => setEpisodeId(event.target.value)}
+          />
+          <button
+            type="button"
+            onClick={() =>
+              runStorage('inspect', () =>
+                caps.storage.inspectEpisode(Number.parseInt(episodeId, 10)),
+              )
+            }
+          >
+            Inspect
+          </button>
+          <input
+            aria-label="Source id"
+            placeholder="source id (optional)"
+            value={sourceId}
+            onChange={(event) => setSourceId(event.target.value)}
+          />
+          <button
+            type="button"
+            onClick={() =>
+              runStorage('query', () => caps.storage.query(sourceId))
+            }
+          >
+            Query
+          </button>
+          <button
+            type="button"
+            onClick={() => runStorage('fsck', caps.storage.fsck)}
+          >
+            Verify / fsck
+          </button>
+          <button
+            type="button"
+            onClick={() => runStorage('repair plan', caps.storage.repairPlan)}
+          >
+            Repair plan
+          </button>
+          <button
+            type="button"
+            onClick={() =>
+              runStorage('portable export', () =>
+                caps.storage.exportBundle(sourceId),
+              )
+            }
+          >
+            Export bundle
+          </button>
+        </div>
+        <pre
+          style={{
+            ...mono,
+            margin: 0,
+            maxHeight: 260,
+            overflow: 'auto',
+            whiteSpace: 'pre-wrap',
+            color: '#9cdcfe',
+          }}
+        >
+          {storageResult}
+        </pre>
+      </section>
+      <QueryReferencePanel caps={caps} />
     </div>
   );
 }

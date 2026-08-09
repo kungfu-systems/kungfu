@@ -1,0 +1,1198 @@
+{
+  "schema": "kungfu.agent-first-value-local-codex-qualification/v2",
+  "qualified": true,
+  "provider": {
+    "surface": "codex-cli",
+    "version": "codex-cli 0.146.0",
+    "executionMode": "codex-exec-ephemeral",
+    "contextIsolation": "ephemeral-auth-link-candidate-project-skill",
+    "model": "gpt-5.6-sol",
+    "reasoningEffort": "medium"
+  },
+  "platform": {
+    "system": "darwin",
+    "arch": "arm64"
+  },
+  "candidate": {
+    "executableRoot": "sha256:1fbf5274a9c7bf4d3c13b70297e97ff9e18ba053c92f55362ff6ec99917a2f39",
+    "sourceRevision": "1298aa8bbe4dc45372255c3de6423425bbbb1266",
+    "productCandidateRoot": "sha256:42f6feef22a541a369a0e4c6dac25ab09362cf683fc7faaa697a89e34a4cabb2",
+    "providerSkillRoot": "sha256:a4cef2feeebe6c6950c20a15194db2df8e50703355b4753684019069fe6257ac"
+  },
+  "promptRoot": "sha256:97314a340dd8b7350d2e1a4610ab8dc4c65636ab93d5e01836fc9cebde599ac5",
+  "promptCoverage": [
+    {
+      "id": "canonical",
+      "root": "sha256:97314a340dd8b7350d2e1a4610ab8dc4c65636ab93d5e01836fc9cebde599ac5",
+      "requiredCount": 5,
+      "count": 5
+    },
+    {
+      "id": "new-user-first-result",
+      "root": "sha256:a1e49d7eb9e0d5418715947698db18da6140ae3adb8676226c2f7b1abef4a6c3",
+      "requiredCount": 1,
+      "count": 1
+    },
+    {
+      "id": "work-style-first-step",
+      "root": "sha256:ff3fe12029ff0e12c5df109957769842d81a6c6ac12a191dde7913dbd1dc1be2",
+      "requiredCount": 1,
+      "count": 1
+    },
+    {
+      "id": "complete-beginner-verifiable",
+      "root": "sha256:f93d6fcab1ad3d0198579d0094a886cca2f6d24e0e48b7121c69765c500be451",
+      "requiredCount": 1,
+      "count": 1
+    },
+    {
+      "id": "safe-practical-experience",
+      "root": "sha256:36ac5e4e64c757c7a78443b59bc25a0207d67ce0af5d01d176c6c379b6c84f74",
+      "requiredCount": 1,
+      "count": 1
+    },
+    {
+      "id": "low-question-direct-start",
+      "root": "sha256:19895b56b44b18caf9b2bd2b64acc372617f2386c3c66fa32e56430cedd0d281",
+      "requiredCount": 1,
+      "count": 1
+    }
+  ],
+  "canonicalTrialCount": 5,
+  "experienceDimensions": [
+    "autonomous-pack-verification",
+    "exactly-one-declared-intent",
+    "safe-discovery",
+    "question-count-at-most-one",
+    "candidate-bound-receipt-verification",
+    "personalized-plain-language-explanation",
+    "user-visible-verification",
+    "actionable-safe-next-step",
+    "qualification-non-claims"
+  ],
+  "trialCount": 10,
+  "trials": [
+    {
+      "attemptId": "codex-local-1-fb9756b2-d49a-4f16-9cc5-c6bff6f52706",
+      "verified": true,
+      "promptId": "canonical",
+      "promptRoot": "sha256:97314a340dd8b7350d2e1a4610ab8dc4c65636ab93d5e01836fc9cebde599ac5",
+      "workspaceRoot": "sha256:23ee01b1dfe3cb68bb52ebdd51282c792b2b165f41951842b6b59e51da48d93b",
+      "eventStreamRoot": "sha256:2f9a37fccc3ed4e99ce6e208be23804f52dbbc52266d12bb434739aff1ae071f",
+      "responseRoot": "sha256:b7267c52ff3cf467c08f9f5397fd4ea96a1b5529de99d421bae375b31b7a8692",
+      "questionMarkCount": 0,
+      "providerSkill": {
+        "target": "codex",
+        "scope": "project",
+        "root": "sha256:a4cef2feeebe6c6950c20a15194db2df8e50703355b4753684019069fe6257ac"
+      },
+      "protocolEvidence": {
+        "provider-skill": {
+          "commandRoot": "sha256:af634c2faa725d242b2491deaf72071c804ca7b31b4a24cbe91731a73a09c14f",
+          "outputRoot": "sha256:a4cef2feeebe6c6950c20a15194db2df8e50703355b4753684019069fe6257ac"
+        },
+        "brief": {
+          "commandRoot": "sha256:5d5cf072994f488fd283c92bd4c244109a4ede4ce41d50712a4d29b2d1e89124",
+          "outputRoot": "sha256:44acbfbe132e7771062f6e07412e1503ff8ebec7a71af903e57c409621daca06"
+        },
+        "first-value-start": {
+          "commandRoot": "sha256:fbbd4390b34d6abbf2a57edee42e9815a2d614af538bac6ea6b41d6270ce1c92",
+          "outputRoot": "sha256:088ada9d29e3fb9bf61ed3776b85e24429508cacf11968201e8ac34d9745b7ef"
+        }
+      },
+      "receipt": {
+        "agentResponseGuide": {
+          "answerTemplate": "Kungfu 是为 Agent 工作提供本地项目边界、权限路径和可核验证据的协作层；这次第一步已完成只读环境发现。\n个性化依据：用户目标\n验证命令：kungfu agent status --target codex --scope project --json\n下一步：kungfu project list\n回执：{receiptRoot}\n本次只验证了这个本地 Codex 与候选 CLI；未验证 Claude、CI 托管 Codex、其他平台或公开发布。",
+          "explanationSeed": "Kungfu 是为 Agent 工作提供本地项目边界、权限路径和可核验证据的协作层；这次第一步已完成只读环境发现。",
+          "instruction": "协议已完成，禁止再执行命令、解释、扩展或提问。最终回答必须只输出 answerTemplate，并将其中唯一的 {receiptRoot} 替换为顶层 receiptRoot。",
+          "language": "zh-CN",
+          "mustNotRunMoreCommands": true,
+          "nextStepCommand": "kungfu project list",
+          "personalizationBasis": "user-goal",
+          "personalizationLabel": "个性化依据：用户目标",
+          "protocolComplete": true,
+          "scopeStatement": "本次只验证了这个本地 Codex 与候选 CLI；未验证 Claude、CI 托管 Codex、其他平台或公开发布。",
+          "verificationCommand": "kungfu agent status --target codex --scope project --json"
+        },
+        "attemptId": "codex-local-1-fb9756b2-d49a-4f16-9cc5-c6bff6f52706",
+        "diagnostics": [],
+        "discovery": {
+          "command": "kungfu agent status --target codex --scope project --json",
+          "exitCode": 0,
+          "outputBytes": 1009,
+          "outputRoot": "sha256:8f8be1b52d933fc4126a5ec56271513dc9da5d5d2a6a3d767643ce95198e6122",
+          "safetyClass": "read-only"
+        },
+        "intentId": "onboarding",
+        "nonClaims": [
+          "claude-qualified",
+          "ci-hosted-codex-qualified",
+          "other-platforms-qualified",
+          "public-release-qualified",
+          "model-output-alone-is-proof",
+          "brief-or-skill-grants-write-authority"
+        ],
+        "observedAt": "2026-08-02T15:46:23.616917Z",
+        "outcome": {
+          "kind": "verified-discovery",
+          "summaryRoot": "sha256:ea80d909055cfb856189eb63f8e34f15648359da75fde1472584a35c071b9d4b",
+          "verificationRoot": "sha256:70c23fcc6ff37603418874fc45a4865b96a04a079355bc50223a0db994c86fe0"
+        },
+        "platform": {
+          "machine": "arm64",
+          "system": "darwin"
+        },
+        "productIdentity": {
+          "briefRoot": "sha256:44acbfbe132e7771062f6e07412e1503ff8ebec7a71af903e57c409621daca06",
+          "candidateRoot": "sha256:42f6feef22a541a369a0e4c6dac25ab09362cf683fc7faaa697a89e34a4cabb2",
+          "contractRoot": "sha256:422a43e3f6c22e89e754c73f2ec6570ab0185ff23bc74e91ba6ed34a629f7f04",
+          "intentMapRoot": "sha256:d483703e85a9db94b462bc4d7d09eed89af7333ad3723800f3a0496386a80531",
+          "sourceRevision": "1298aa8bbe4dc45372255c3de6423425bbbb1266",
+          "version": "4.0.0-alpha.1"
+        },
+        "promptRoot": "sha256:97314a340dd8b7350d2e1a4610ab8dc4c65636ab93d5e01836fc9cebde599ac5",
+        "provider": {
+          "qualificationScope": "candidate-local-rerun",
+          "surface": "kungfu-cli"
+        },
+        "questionCount": 0,
+        "receiptRoot": "sha256:59c4c579f53189873a51bfa02c82ec3ed74e6830ead2435cbf844b503ae4ee28",
+        "schema": "kungfu.agent-first-value-receipt/v1",
+        "verdict": "verified"
+      },
+      "verificationRoot": "sha256:672f7e1923a4ca7f1c0dea45d2c2ab47393e6ce78cf81b583b25636a3ece19e9",
+      "experience": {
+        "intentId": "onboarding",
+        "personalizationBasis": [
+          "user-goal"
+        ],
+        "personalizationExplanationRoot": "sha256:b7267c52ff3cf467c08f9f5397fd4ea96a1b5529de99d421bae375b31b7a8692",
+        "receiptCitationRoot": "sha256:85ba4366e7ca6eea72710c997a0877a1a2478b84d1406eba97f6a853a31b43e5",
+        "verificationCommand": "kungfu agent status --target codex --scope project --json",
+        "verificationExpectedRoot": "sha256:70c23fcc6ff37603418874fc45a4865b96a04a079355bc50223a0db994c86fe0",
+        "nextStepCommand": "kungfu project list",
+        "nextStepSafetyClass": "read-only",
+        "nextStepReasonRoot": "sha256:b7267c52ff3cf467c08f9f5397fd4ea96a1b5529de99d421bae375b31b7a8692",
+        "scopeStatementRoot": "sha256:0998126aadbe36e48ae1db98da041ed3275cdf2d7c137185879c48acfe712acd",
+        "nonClaims": [
+          "ci-hosted-codex-qualified",
+          "claude-qualified",
+          "other-platforms-qualified",
+          "public-release-qualified"
+        ],
+        "independentVerificationRoot": "sha256:672f7e1923a4ca7f1c0dea45d2c2ab47393e6ce78cf81b583b25636a3ece19e9"
+      }
+    },
+    {
+      "attemptId": "codex-local-2-30496988-b080-40bb-86e9-b90d36bbfe95",
+      "verified": true,
+      "promptId": "canonical",
+      "promptRoot": "sha256:97314a340dd8b7350d2e1a4610ab8dc4c65636ab93d5e01836fc9cebde599ac5",
+      "workspaceRoot": "sha256:bf50a6ea5662030966dddec90037d38f8fb5ff770f6e1d92d5a6b0b814f3a6a3",
+      "eventStreamRoot": "sha256:193cf1fef13db75178c9da3c8af5db01cd1103f4ffb9cb54ec84a518772bbc9b",
+      "responseRoot": "sha256:2ceec569f93a5936893d1c00e357a9afffb47f8755d49b013d3be7e1678c1ea5",
+      "questionMarkCount": 0,
+      "providerSkill": {
+        "target": "codex",
+        "scope": "project",
+        "root": "sha256:a4cef2feeebe6c6950c20a15194db2df8e50703355b4753684019069fe6257ac"
+      },
+      "protocolEvidence": {
+        "provider-skill": {
+          "commandRoot": "sha256:af634c2faa725d242b2491deaf72071c804ca7b31b4a24cbe91731a73a09c14f",
+          "outputRoot": "sha256:a4cef2feeebe6c6950c20a15194db2df8e50703355b4753684019069fe6257ac"
+        },
+        "brief": {
+          "commandRoot": "sha256:5d5cf072994f488fd283c92bd4c244109a4ede4ce41d50712a4d29b2d1e89124",
+          "outputRoot": "sha256:44acbfbe132e7771062f6e07412e1503ff8ebec7a71af903e57c409621daca06"
+        },
+        "first-value-start": {
+          "commandRoot": "sha256:fbbd4390b34d6abbf2a57edee42e9815a2d614af538bac6ea6b41d6270ce1c92",
+          "outputRoot": "sha256:11a95987fa633e84f14f3f783ca32dc2df7114cd5cf8b7bc66a1bfa9ffac676d"
+        }
+      },
+      "receipt": {
+        "agentResponseGuide": {
+          "answerTemplate": "Kungfu 是为 Agent 工作提供本地项目边界、权限路径和可核验证据的协作层；这次第一步已完成只读环境发现。\n个性化依据：用户目标\n验证命令：kungfu agent status --target codex --scope project --json\n下一步：kungfu project list\n回执：{receiptRoot}\n本次只验证了这个本地 Codex 与候选 CLI；未验证 Claude、CI 托管 Codex、其他平台或公开发布。",
+          "explanationSeed": "Kungfu 是为 Agent 工作提供本地项目边界、权限路径和可核验证据的协作层；这次第一步已完成只读环境发现。",
+          "instruction": "协议已完成，禁止再执行命令、解释、扩展或提问。最终回答必须只输出 answerTemplate，并将其中唯一的 {receiptRoot} 替换为顶层 receiptRoot。",
+          "language": "zh-CN",
+          "mustNotRunMoreCommands": true,
+          "nextStepCommand": "kungfu project list",
+          "personalizationBasis": "user-goal",
+          "personalizationLabel": "个性化依据：用户目标",
+          "protocolComplete": true,
+          "scopeStatement": "本次只验证了这个本地 Codex 与候选 CLI；未验证 Claude、CI 托管 Codex、其他平台或公开发布。",
+          "verificationCommand": "kungfu agent status --target codex --scope project --json"
+        },
+        "attemptId": "codex-local-2-30496988-b080-40bb-86e9-b90d36bbfe95",
+        "diagnostics": [],
+        "discovery": {
+          "command": "kungfu agent status --target codex --scope project --json",
+          "exitCode": 0,
+          "outputBytes": 1009,
+          "outputRoot": "sha256:25f81ab6f0248ac1018b7cb873421166b31c672a416da168cb5f0f6168210ce9",
+          "safetyClass": "read-only"
+        },
+        "intentId": "onboarding",
+        "nonClaims": [
+          "claude-qualified",
+          "ci-hosted-codex-qualified",
+          "other-platforms-qualified",
+          "public-release-qualified",
+          "model-output-alone-is-proof",
+          "brief-or-skill-grants-write-authority"
+        ],
+        "observedAt": "2026-08-02T15:47:23.948437Z",
+        "outcome": {
+          "kind": "verified-discovery",
+          "summaryRoot": "sha256:ea80d909055cfb856189eb63f8e34f15648359da75fde1472584a35c071b9d4b",
+          "verificationRoot": "sha256:b5be75041ff7ff1dd2e7307246f5f5334aff7af178e1b24c84718df8ba5015e2"
+        },
+        "platform": {
+          "machine": "arm64",
+          "system": "darwin"
+        },
+        "productIdentity": {
+          "briefRoot": "sha256:44acbfbe132e7771062f6e07412e1503ff8ebec7a71af903e57c409621daca06",
+          "candidateRoot": "sha256:42f6feef22a541a369a0e4c6dac25ab09362cf683fc7faaa697a89e34a4cabb2",
+          "contractRoot": "sha256:422a43e3f6c22e89e754c73f2ec6570ab0185ff23bc74e91ba6ed34a629f7f04",
+          "intentMapRoot": "sha256:d483703e85a9db94b462bc4d7d09eed89af7333ad3723800f3a0496386a80531",
+          "sourceRevision": "1298aa8bbe4dc45372255c3de6423425bbbb1266",
+          "version": "4.0.0-alpha.1"
+        },
+        "promptRoot": "sha256:97314a340dd8b7350d2e1a4610ab8dc4c65636ab93d5e01836fc9cebde599ac5",
+        "provider": {
+          "qualificationScope": "candidate-local-rerun",
+          "surface": "kungfu-cli"
+        },
+        "questionCount": 0,
+        "receiptRoot": "sha256:78f6cce59d82cd51fefb81ea3319d861ee4972920a0974c06f7c7886e8be5d43",
+        "schema": "kungfu.agent-first-value-receipt/v1",
+        "verdict": "verified"
+      },
+      "verificationRoot": "sha256:51c5cbd03a7aa8c90c02cef931dfbec10da4282c99e57ef0d5286b9a3f19852a",
+      "experience": {
+        "intentId": "onboarding",
+        "personalizationBasis": [
+          "user-goal"
+        ],
+        "personalizationExplanationRoot": "sha256:2ceec569f93a5936893d1c00e357a9afffb47f8755d49b013d3be7e1678c1ea5",
+        "receiptCitationRoot": "sha256:62809318f743a99e34cd9ca22220c674bbf1db80ee486cddca17696ed32cc9ef",
+        "verificationCommand": "kungfu agent status --target codex --scope project --json",
+        "verificationExpectedRoot": "sha256:b5be75041ff7ff1dd2e7307246f5f5334aff7af178e1b24c84718df8ba5015e2",
+        "nextStepCommand": "kungfu project list",
+        "nextStepSafetyClass": "read-only",
+        "nextStepReasonRoot": "sha256:2ceec569f93a5936893d1c00e357a9afffb47f8755d49b013d3be7e1678c1ea5",
+        "scopeStatementRoot": "sha256:0998126aadbe36e48ae1db98da041ed3275cdf2d7c137185879c48acfe712acd",
+        "nonClaims": [
+          "ci-hosted-codex-qualified",
+          "claude-qualified",
+          "other-platforms-qualified",
+          "public-release-qualified"
+        ],
+        "independentVerificationRoot": "sha256:51c5cbd03a7aa8c90c02cef931dfbec10da4282c99e57ef0d5286b9a3f19852a"
+      }
+    },
+    {
+      "attemptId": "codex-local-3-4f44e944-519b-4ed8-a8fd-f94a10178a48",
+      "verified": true,
+      "promptId": "canonical",
+      "promptRoot": "sha256:97314a340dd8b7350d2e1a4610ab8dc4c65636ab93d5e01836fc9cebde599ac5",
+      "workspaceRoot": "sha256:0201fe05c2050df993ac429e091c94bb21afb4bed4c545fc0dcca43164267204",
+      "eventStreamRoot": "sha256:74e1107117df26eb36282ae691a2b23cdccf8b9f0f9a6bea544e904d931bc34f",
+      "responseRoot": "sha256:ac0db89e34407e441f404bae51577464f292f8e21a17083e59541ea97676b12b",
+      "questionMarkCount": 0,
+      "providerSkill": {
+        "target": "codex",
+        "scope": "project",
+        "root": "sha256:a4cef2feeebe6c6950c20a15194db2df8e50703355b4753684019069fe6257ac"
+      },
+      "protocolEvidence": {
+        "provider-skill": {
+          "commandRoot": "sha256:af634c2faa725d242b2491deaf72071c804ca7b31b4a24cbe91731a73a09c14f",
+          "outputRoot": "sha256:a4cef2feeebe6c6950c20a15194db2df8e50703355b4753684019069fe6257ac"
+        },
+        "brief": {
+          "commandRoot": "sha256:5d5cf072994f488fd283c92bd4c244109a4ede4ce41d50712a4d29b2d1e89124",
+          "outputRoot": "sha256:44acbfbe132e7771062f6e07412e1503ff8ebec7a71af903e57c409621daca06"
+        },
+        "first-value-start": {
+          "commandRoot": "sha256:fbbd4390b34d6abbf2a57edee42e9815a2d614af538bac6ea6b41d6270ce1c92",
+          "outputRoot": "sha256:12168c75057d4b4fcf5455fc8900294ffd56b41540ab34e6ddffb02211f9f243"
+        }
+      },
+      "receipt": {
+        "agentResponseGuide": {
+          "answerTemplate": "Kungfu 是为 Agent 工作提供本地项目边界、权限路径和可核验证据的协作层；这次第一步已完成只读环境发现。\n个性化依据：用户目标\n验证命令：kungfu agent status --target codex --scope project --json\n下一步：kungfu project list\n回执：{receiptRoot}\n本次只验证了这个本地 Codex 与候选 CLI；未验证 Claude、CI 托管 Codex、其他平台或公开发布。",
+          "explanationSeed": "Kungfu 是为 Agent 工作提供本地项目边界、权限路径和可核验证据的协作层；这次第一步已完成只读环境发现。",
+          "instruction": "协议已完成，禁止再执行命令、解释、扩展或提问。最终回答必须只输出 answerTemplate，并将其中唯一的 {receiptRoot} 替换为顶层 receiptRoot。",
+          "language": "zh-CN",
+          "mustNotRunMoreCommands": true,
+          "nextStepCommand": "kungfu project list",
+          "personalizationBasis": "user-goal",
+          "personalizationLabel": "个性化依据：用户目标",
+          "protocolComplete": true,
+          "scopeStatement": "本次只验证了这个本地 Codex 与候选 CLI；未验证 Claude、CI 托管 Codex、其他平台或公开发布。",
+          "verificationCommand": "kungfu agent status --target codex --scope project --json"
+        },
+        "attemptId": "codex-local-3-4f44e944-519b-4ed8-a8fd-f94a10178a48",
+        "diagnostics": [],
+        "discovery": {
+          "command": "kungfu agent status --target codex --scope project --json",
+          "exitCode": 0,
+          "outputBytes": 1009,
+          "outputRoot": "sha256:0d5621281db47f5e038be25e5dce8449731c9e34eec2653a1410ec9efcf34e0e",
+          "safetyClass": "read-only"
+        },
+        "intentId": "onboarding",
+        "nonClaims": [
+          "claude-qualified",
+          "ci-hosted-codex-qualified",
+          "other-platforms-qualified",
+          "public-release-qualified",
+          "model-output-alone-is-proof",
+          "brief-or-skill-grants-write-authority"
+        ],
+        "observedAt": "2026-08-02T15:48:25.223840Z",
+        "outcome": {
+          "kind": "verified-discovery",
+          "summaryRoot": "sha256:ea80d909055cfb856189eb63f8e34f15648359da75fde1472584a35c071b9d4b",
+          "verificationRoot": "sha256:b09e5bc817d2d04a119eee4e70b139af8e6230a9d9737bbb14ad36c4fdbf5daa"
+        },
+        "platform": {
+          "machine": "arm64",
+          "system": "darwin"
+        },
+        "productIdentity": {
+          "briefRoot": "sha256:44acbfbe132e7771062f6e07412e1503ff8ebec7a71af903e57c409621daca06",
+          "candidateRoot": "sha256:42f6feef22a541a369a0e4c6dac25ab09362cf683fc7faaa697a89e34a4cabb2",
+          "contractRoot": "sha256:422a43e3f6c22e89e754c73f2ec6570ab0185ff23bc74e91ba6ed34a629f7f04",
+          "intentMapRoot": "sha256:d483703e85a9db94b462bc4d7d09eed89af7333ad3723800f3a0496386a80531",
+          "sourceRevision": "1298aa8bbe4dc45372255c3de6423425bbbb1266",
+          "version": "4.0.0-alpha.1"
+        },
+        "promptRoot": "sha256:97314a340dd8b7350d2e1a4610ab8dc4c65636ab93d5e01836fc9cebde599ac5",
+        "provider": {
+          "qualificationScope": "candidate-local-rerun",
+          "surface": "kungfu-cli"
+        },
+        "questionCount": 0,
+        "receiptRoot": "sha256:cb7503684261d6ba62b719eca7bb44a232c13d0ab743d5eb14c593c298c9ebb6",
+        "schema": "kungfu.agent-first-value-receipt/v1",
+        "verdict": "verified"
+      },
+      "verificationRoot": "sha256:be2e2d4a73f1c080e0d4900dfe0c228054498898145bc79878865d0aea986a39",
+      "experience": {
+        "intentId": "onboarding",
+        "personalizationBasis": [
+          "user-goal"
+        ],
+        "personalizationExplanationRoot": "sha256:ac0db89e34407e441f404bae51577464f292f8e21a17083e59541ea97676b12b",
+        "receiptCitationRoot": "sha256:d95f1a0157c5f70dd9462ce6c68dd6f8fd4145d0d0f4d17c0f2798e5104d9ec2",
+        "verificationCommand": "kungfu agent status --target codex --scope project --json",
+        "verificationExpectedRoot": "sha256:b09e5bc817d2d04a119eee4e70b139af8e6230a9d9737bbb14ad36c4fdbf5daa",
+        "nextStepCommand": "kungfu project list",
+        "nextStepSafetyClass": "read-only",
+        "nextStepReasonRoot": "sha256:ac0db89e34407e441f404bae51577464f292f8e21a17083e59541ea97676b12b",
+        "scopeStatementRoot": "sha256:0998126aadbe36e48ae1db98da041ed3275cdf2d7c137185879c48acfe712acd",
+        "nonClaims": [
+          "ci-hosted-codex-qualified",
+          "claude-qualified",
+          "other-platforms-qualified",
+          "public-release-qualified"
+        ],
+        "independentVerificationRoot": "sha256:be2e2d4a73f1c080e0d4900dfe0c228054498898145bc79878865d0aea986a39"
+      }
+    },
+    {
+      "attemptId": "codex-local-4-a7d7c403-ddac-489c-93d7-5b7bfb7ee977",
+      "verified": true,
+      "promptId": "canonical",
+      "promptRoot": "sha256:97314a340dd8b7350d2e1a4610ab8dc4c65636ab93d5e01836fc9cebde599ac5",
+      "workspaceRoot": "sha256:9f6d1868a127ac803a369f5455fe76177cb974331d3d536115705664ed0c1073",
+      "eventStreamRoot": "sha256:762b5749ab41ed3e42d3ebd3b35188c72f9d9d36ba17f859c3f8e0eeb575fbe4",
+      "responseRoot": "sha256:de022afaa69c1ef7fad0b4bbea74722692083940ddbc4ebff94e0b90838f26d4",
+      "questionMarkCount": 0,
+      "providerSkill": {
+        "target": "codex",
+        "scope": "project",
+        "root": "sha256:a4cef2feeebe6c6950c20a15194db2df8e50703355b4753684019069fe6257ac"
+      },
+      "protocolEvidence": {
+        "provider-skill": {
+          "commandRoot": "sha256:af634c2faa725d242b2491deaf72071c804ca7b31b4a24cbe91731a73a09c14f",
+          "outputRoot": "sha256:a4cef2feeebe6c6950c20a15194db2df8e50703355b4753684019069fe6257ac"
+        },
+        "brief": {
+          "commandRoot": "sha256:5d5cf072994f488fd283c92bd4c244109a4ede4ce41d50712a4d29b2d1e89124",
+          "outputRoot": "sha256:44acbfbe132e7771062f6e07412e1503ff8ebec7a71af903e57c409621daca06"
+        },
+        "first-value-start": {
+          "commandRoot": "sha256:fbbd4390b34d6abbf2a57edee42e9815a2d614af538bac6ea6b41d6270ce1c92",
+          "outputRoot": "sha256:0580527d57bb99cb4b2386d755a97047fddc24c49d6ef05d1838195e7e12ae02"
+        }
+      },
+      "receipt": {
+        "agentResponseGuide": {
+          "answerTemplate": "Kungfu 是为 Agent 工作提供本地项目边界、权限路径和可核验证据的协作层；这次第一步已完成只读环境发现。\n个性化依据：用户目标\n验证命令：kungfu agent status --target codex --scope project --json\n下一步：kungfu project list\n回执：{receiptRoot}\n本次只验证了这个本地 Codex 与候选 CLI；未验证 Claude、CI 托管 Codex、其他平台或公开发布。",
+          "explanationSeed": "Kungfu 是为 Agent 工作提供本地项目边界、权限路径和可核验证据的协作层；这次第一步已完成只读环境发现。",
+          "instruction": "协议已完成，禁止再执行命令、解释、扩展或提问。最终回答必须只输出 answerTemplate，并将其中唯一的 {receiptRoot} 替换为顶层 receiptRoot。",
+          "language": "zh-CN",
+          "mustNotRunMoreCommands": true,
+          "nextStepCommand": "kungfu project list",
+          "personalizationBasis": "user-goal",
+          "personalizationLabel": "个性化依据：用户目标",
+          "protocolComplete": true,
+          "scopeStatement": "本次只验证了这个本地 Codex 与候选 CLI；未验证 Claude、CI 托管 Codex、其他平台或公开发布。",
+          "verificationCommand": "kungfu agent status --target codex --scope project --json"
+        },
+        "attemptId": "codex-local-4-a7d7c403-ddac-489c-93d7-5b7bfb7ee977",
+        "diagnostics": [],
+        "discovery": {
+          "command": "kungfu agent status --target codex --scope project --json",
+          "exitCode": 0,
+          "outputBytes": 1009,
+          "outputRoot": "sha256:0b23277ea2baaeb6c8cf5ff6867c253ed24f4ca74e9ece13833ea5caace0a19a",
+          "safetyClass": "read-only"
+        },
+        "intentId": "onboarding",
+        "nonClaims": [
+          "claude-qualified",
+          "ci-hosted-codex-qualified",
+          "other-platforms-qualified",
+          "public-release-qualified",
+          "model-output-alone-is-proof",
+          "brief-or-skill-grants-write-authority"
+        ],
+        "observedAt": "2026-08-02T15:49:21.214811Z",
+        "outcome": {
+          "kind": "verified-discovery",
+          "summaryRoot": "sha256:ea80d909055cfb856189eb63f8e34f15648359da75fde1472584a35c071b9d4b",
+          "verificationRoot": "sha256:7d844f0fc77aa0d1d937148be8a49d0b4711e5faefcf47ec4418aac3bd3fc0c8"
+        },
+        "platform": {
+          "machine": "arm64",
+          "system": "darwin"
+        },
+        "productIdentity": {
+          "briefRoot": "sha256:44acbfbe132e7771062f6e07412e1503ff8ebec7a71af903e57c409621daca06",
+          "candidateRoot": "sha256:42f6feef22a541a369a0e4c6dac25ab09362cf683fc7faaa697a89e34a4cabb2",
+          "contractRoot": "sha256:422a43e3f6c22e89e754c73f2ec6570ab0185ff23bc74e91ba6ed34a629f7f04",
+          "intentMapRoot": "sha256:d483703e85a9db94b462bc4d7d09eed89af7333ad3723800f3a0496386a80531",
+          "sourceRevision": "1298aa8bbe4dc45372255c3de6423425bbbb1266",
+          "version": "4.0.0-alpha.1"
+        },
+        "promptRoot": "sha256:97314a340dd8b7350d2e1a4610ab8dc4c65636ab93d5e01836fc9cebde599ac5",
+        "provider": {
+          "qualificationScope": "candidate-local-rerun",
+          "surface": "kungfu-cli"
+        },
+        "questionCount": 0,
+        "receiptRoot": "sha256:7c005edb1b036306900ccd553ac1402d76793d9dcf39fbce0cb86b8055ee838b",
+        "schema": "kungfu.agent-first-value-receipt/v1",
+        "verdict": "verified"
+      },
+      "verificationRoot": "sha256:ef417738265a336e2db656fc852da543797f3530cb4253ea6c9ffda83b7fbfd0",
+      "experience": {
+        "intentId": "onboarding",
+        "personalizationBasis": [
+          "user-goal"
+        ],
+        "personalizationExplanationRoot": "sha256:de022afaa69c1ef7fad0b4bbea74722692083940ddbc4ebff94e0b90838f26d4",
+        "receiptCitationRoot": "sha256:3d8a1f2523fcde6858472673d7b089fc476a121c8a628a29aff8acb4714f7456",
+        "verificationCommand": "kungfu agent status --target codex --scope project --json",
+        "verificationExpectedRoot": "sha256:7d844f0fc77aa0d1d937148be8a49d0b4711e5faefcf47ec4418aac3bd3fc0c8",
+        "nextStepCommand": "kungfu project list",
+        "nextStepSafetyClass": "read-only",
+        "nextStepReasonRoot": "sha256:de022afaa69c1ef7fad0b4bbea74722692083940ddbc4ebff94e0b90838f26d4",
+        "scopeStatementRoot": "sha256:0998126aadbe36e48ae1db98da041ed3275cdf2d7c137185879c48acfe712acd",
+        "nonClaims": [
+          "ci-hosted-codex-qualified",
+          "claude-qualified",
+          "other-platforms-qualified",
+          "public-release-qualified"
+        ],
+        "independentVerificationRoot": "sha256:ef417738265a336e2db656fc852da543797f3530cb4253ea6c9ffda83b7fbfd0"
+      }
+    },
+    {
+      "attemptId": "codex-local-5-f29cd7aa-2692-4564-b57c-1d36241ce8c7",
+      "verified": true,
+      "promptId": "canonical",
+      "promptRoot": "sha256:97314a340dd8b7350d2e1a4610ab8dc4c65636ab93d5e01836fc9cebde599ac5",
+      "workspaceRoot": "sha256:e94e5299da6f6c0c72c544f8592ee4282ea31e9870f2f5c815e54487c11d13ea",
+      "eventStreamRoot": "sha256:ae5678df8703d4c46888f0754180ab2f22a6c5769b5550988272a3da14acbaa6",
+      "responseRoot": "sha256:f3856bef1e94405a95a1e025b3920f77e4413fbaffb64d6dfea9da9d50c8b39e",
+      "questionMarkCount": 0,
+      "providerSkill": {
+        "target": "codex",
+        "scope": "project",
+        "root": "sha256:a4cef2feeebe6c6950c20a15194db2df8e50703355b4753684019069fe6257ac"
+      },
+      "protocolEvidence": {
+        "provider-skill": {
+          "commandRoot": "sha256:af634c2faa725d242b2491deaf72071c804ca7b31b4a24cbe91731a73a09c14f",
+          "outputRoot": "sha256:a4cef2feeebe6c6950c20a15194db2df8e50703355b4753684019069fe6257ac"
+        },
+        "brief": {
+          "commandRoot": "sha256:5d5cf072994f488fd283c92bd4c244109a4ede4ce41d50712a4d29b2d1e89124",
+          "outputRoot": "sha256:44acbfbe132e7771062f6e07412e1503ff8ebec7a71af903e57c409621daca06"
+        },
+        "first-value-start": {
+          "commandRoot": "sha256:fbbd4390b34d6abbf2a57edee42e9815a2d614af538bac6ea6b41d6270ce1c92",
+          "outputRoot": "sha256:af4859c8122e02c31e179dc6ee927508c9d5d080ac12708f83e86fb286ec6501"
+        }
+      },
+      "receipt": {
+        "agentResponseGuide": {
+          "answerTemplate": "Kungfu 是为 Agent 工作提供本地项目边界、权限路径和可核验证据的协作层；这次第一步已完成只读环境发现。\n个性化依据：用户目标\n验证命令：kungfu agent status --target codex --scope project --json\n下一步：kungfu project list\n回执：{receiptRoot}\n本次只验证了这个本地 Codex 与候选 CLI；未验证 Claude、CI 托管 Codex、其他平台或公开发布。",
+          "explanationSeed": "Kungfu 是为 Agent 工作提供本地项目边界、权限路径和可核验证据的协作层；这次第一步已完成只读环境发现。",
+          "instruction": "协议已完成，禁止再执行命令、解释、扩展或提问。最终回答必须只输出 answerTemplate，并将其中唯一的 {receiptRoot} 替换为顶层 receiptRoot。",
+          "language": "zh-CN",
+          "mustNotRunMoreCommands": true,
+          "nextStepCommand": "kungfu project list",
+          "personalizationBasis": "user-goal",
+          "personalizationLabel": "个性化依据：用户目标",
+          "protocolComplete": true,
+          "scopeStatement": "本次只验证了这个本地 Codex 与候选 CLI；未验证 Claude、CI 托管 Codex、其他平台或公开发布。",
+          "verificationCommand": "kungfu agent status --target codex --scope project --json"
+        },
+        "attemptId": "codex-local-5-f29cd7aa-2692-4564-b57c-1d36241ce8c7",
+        "diagnostics": [],
+        "discovery": {
+          "command": "kungfu agent status --target codex --scope project --json",
+          "exitCode": 0,
+          "outputBytes": 1009,
+          "outputRoot": "sha256:fc4f19eac1506b217b0a82486928cad8de272b5355818d81d14f89fe3c52a8c8",
+          "safetyClass": "read-only"
+        },
+        "intentId": "onboarding",
+        "nonClaims": [
+          "claude-qualified",
+          "ci-hosted-codex-qualified",
+          "other-platforms-qualified",
+          "public-release-qualified",
+          "model-output-alone-is-proof",
+          "brief-or-skill-grants-write-authority"
+        ],
+        "observedAt": "2026-08-02T15:50:17.524265Z",
+        "outcome": {
+          "kind": "verified-discovery",
+          "summaryRoot": "sha256:ea80d909055cfb856189eb63f8e34f15648359da75fde1472584a35c071b9d4b",
+          "verificationRoot": "sha256:da95dbc17bdc3fc42785990c670b07995aa7f193ff4b4fc0a45e4ea4e6fb2b38"
+        },
+        "platform": {
+          "machine": "arm64",
+          "system": "darwin"
+        },
+        "productIdentity": {
+          "briefRoot": "sha256:44acbfbe132e7771062f6e07412e1503ff8ebec7a71af903e57c409621daca06",
+          "candidateRoot": "sha256:42f6feef22a541a369a0e4c6dac25ab09362cf683fc7faaa697a89e34a4cabb2",
+          "contractRoot": "sha256:422a43e3f6c22e89e754c73f2ec6570ab0185ff23bc74e91ba6ed34a629f7f04",
+          "intentMapRoot": "sha256:d483703e85a9db94b462bc4d7d09eed89af7333ad3723800f3a0496386a80531",
+          "sourceRevision": "1298aa8bbe4dc45372255c3de6423425bbbb1266",
+          "version": "4.0.0-alpha.1"
+        },
+        "promptRoot": "sha256:97314a340dd8b7350d2e1a4610ab8dc4c65636ab93d5e01836fc9cebde599ac5",
+        "provider": {
+          "qualificationScope": "candidate-local-rerun",
+          "surface": "kungfu-cli"
+        },
+        "questionCount": 0,
+        "receiptRoot": "sha256:264af08025acff5c6ccb24488712c3b1bf7c1f57a97737bef140880a67286ee2",
+        "schema": "kungfu.agent-first-value-receipt/v1",
+        "verdict": "verified"
+      },
+      "verificationRoot": "sha256:8aa6dbd232a290ec8d374cfeb2fde613150029c81727aacf855ade018757bd06",
+      "experience": {
+        "intentId": "onboarding",
+        "personalizationBasis": [
+          "user-goal"
+        ],
+        "personalizationExplanationRoot": "sha256:f3856bef1e94405a95a1e025b3920f77e4413fbaffb64d6dfea9da9d50c8b39e",
+        "receiptCitationRoot": "sha256:3c466e2c7b34d7f03cec8691ab251b951887246928bce586050feee278cb04a4",
+        "verificationCommand": "kungfu agent status --target codex --scope project --json",
+        "verificationExpectedRoot": "sha256:da95dbc17bdc3fc42785990c670b07995aa7f193ff4b4fc0a45e4ea4e6fb2b38",
+        "nextStepCommand": "kungfu project list",
+        "nextStepSafetyClass": "read-only",
+        "nextStepReasonRoot": "sha256:f3856bef1e94405a95a1e025b3920f77e4413fbaffb64d6dfea9da9d50c8b39e",
+        "scopeStatementRoot": "sha256:0998126aadbe36e48ae1db98da041ed3275cdf2d7c137185879c48acfe712acd",
+        "nonClaims": [
+          "ci-hosted-codex-qualified",
+          "claude-qualified",
+          "other-platforms-qualified",
+          "public-release-qualified"
+        ],
+        "independentVerificationRoot": "sha256:8aa6dbd232a290ec8d374cfeb2fde613150029c81727aacf855ade018757bd06"
+      }
+    },
+    {
+      "attemptId": "codex-local-6-13071cf0-102e-40c8-803e-e22ccecb6b0e",
+      "verified": true,
+      "promptId": "new-user-first-result",
+      "promptRoot": "sha256:a1e49d7eb9e0d5418715947698db18da6140ae3adb8676226c2f7b1abef4a6c3",
+      "workspaceRoot": "sha256:c07ff01cfe4a6396b2228b4d33652cfee0c04b16656050b3bfb213a22f7c623d",
+      "eventStreamRoot": "sha256:4d45ad3d316c78eed95fa2002b747f9e95e9bbe9f5cd9b6b5b848d60b135af0c",
+      "responseRoot": "sha256:21bb68c907227981fab4690437ac01092dd5cf817d5a30247c3e11f55a887d2d",
+      "questionMarkCount": 0,
+      "providerSkill": {
+        "target": "codex",
+        "scope": "project",
+        "root": "sha256:a4cef2feeebe6c6950c20a15194db2df8e50703355b4753684019069fe6257ac"
+      },
+      "protocolEvidence": {
+        "provider-skill": {
+          "commandRoot": "sha256:af634c2faa725d242b2491deaf72071c804ca7b31b4a24cbe91731a73a09c14f",
+          "outputRoot": "sha256:a4cef2feeebe6c6950c20a15194db2df8e50703355b4753684019069fe6257ac"
+        },
+        "brief": {
+          "commandRoot": "sha256:5d5cf072994f488fd283c92bd4c244109a4ede4ce41d50712a4d29b2d1e89124",
+          "outputRoot": "sha256:44acbfbe132e7771062f6e07412e1503ff8ebec7a71af903e57c409621daca06"
+        },
+        "first-value-start": {
+          "commandRoot": "sha256:fbbd4390b34d6abbf2a57edee42e9815a2d614af538bac6ea6b41d6270ce1c92",
+          "outputRoot": "sha256:f9e69c7fc9be49936e889515aa81e01337f2214f9b5e95397838eb08456af97f"
+        }
+      },
+      "receipt": {
+        "agentResponseGuide": {
+          "answerTemplate": "Kungfu 是为 Agent 工作提供本地项目边界、权限路径和可核验证据的协作层；这次第一步已完成只读环境发现。\n个性化依据：用户目标\n验证命令：kungfu agent status --target codex --scope project --json\n下一步：kungfu project list\n回执：{receiptRoot}\n本次只验证了这个本地 Codex 与候选 CLI；未验证 Claude、CI 托管 Codex、其他平台或公开发布。",
+          "explanationSeed": "Kungfu 是为 Agent 工作提供本地项目边界、权限路径和可核验证据的协作层；这次第一步已完成只读环境发现。",
+          "instruction": "协议已完成，禁止再执行命令、解释、扩展或提问。最终回答必须只输出 answerTemplate，并将其中唯一的 {receiptRoot} 替换为顶层 receiptRoot。",
+          "language": "zh-CN",
+          "mustNotRunMoreCommands": true,
+          "nextStepCommand": "kungfu project list",
+          "personalizationBasis": "user-goal",
+          "personalizationLabel": "个性化依据：用户目标",
+          "protocolComplete": true,
+          "scopeStatement": "本次只验证了这个本地 Codex 与候选 CLI；未验证 Claude、CI 托管 Codex、其他平台或公开发布。",
+          "verificationCommand": "kungfu agent status --target codex --scope project --json"
+        },
+        "attemptId": "codex-local-6-13071cf0-102e-40c8-803e-e22ccecb6b0e",
+        "diagnostics": [],
+        "discovery": {
+          "command": "kungfu agent status --target codex --scope project --json",
+          "exitCode": 0,
+          "outputBytes": 1009,
+          "outputRoot": "sha256:cd7c9150d3aef0712d7c3af7e535b163ba9d673345bf9c3f8d36dd7d2677eada",
+          "safetyClass": "read-only"
+        },
+        "intentId": "onboarding",
+        "nonClaims": [
+          "claude-qualified",
+          "ci-hosted-codex-qualified",
+          "other-platforms-qualified",
+          "public-release-qualified",
+          "model-output-alone-is-proof",
+          "brief-or-skill-grants-write-authority"
+        ],
+        "observedAt": "2026-08-02T15:51:24.489930Z",
+        "outcome": {
+          "kind": "verified-discovery",
+          "summaryRoot": "sha256:ea80d909055cfb856189eb63f8e34f15648359da75fde1472584a35c071b9d4b",
+          "verificationRoot": "sha256:0d6cb3c92d6c2c02f2c92ad65d1e768e6a8d4b9371d84ca0118b4691a2abb3d3"
+        },
+        "platform": {
+          "machine": "arm64",
+          "system": "darwin"
+        },
+        "productIdentity": {
+          "briefRoot": "sha256:44acbfbe132e7771062f6e07412e1503ff8ebec7a71af903e57c409621daca06",
+          "candidateRoot": "sha256:42f6feef22a541a369a0e4c6dac25ab09362cf683fc7faaa697a89e34a4cabb2",
+          "contractRoot": "sha256:422a43e3f6c22e89e754c73f2ec6570ab0185ff23bc74e91ba6ed34a629f7f04",
+          "intentMapRoot": "sha256:d483703e85a9db94b462bc4d7d09eed89af7333ad3723800f3a0496386a80531",
+          "sourceRevision": "1298aa8bbe4dc45372255c3de6423425bbbb1266",
+          "version": "4.0.0-alpha.1"
+        },
+        "promptRoot": "sha256:a1e49d7eb9e0d5418715947698db18da6140ae3adb8676226c2f7b1abef4a6c3",
+        "provider": {
+          "qualificationScope": "candidate-local-rerun",
+          "surface": "kungfu-cli"
+        },
+        "questionCount": 0,
+        "receiptRoot": "sha256:37159668a75745c97e77e134138b15784c5fdb3c6c990ea77b573668612ad92a",
+        "schema": "kungfu.agent-first-value-receipt/v1",
+        "verdict": "verified"
+      },
+      "verificationRoot": "sha256:c010790b4506abc79cf85eb074eca50356975f37cc682d3e930c7acde3ab3f1f",
+      "experience": {
+        "intentId": "onboarding",
+        "personalizationBasis": [
+          "user-goal"
+        ],
+        "personalizationExplanationRoot": "sha256:21bb68c907227981fab4690437ac01092dd5cf817d5a30247c3e11f55a887d2d",
+        "receiptCitationRoot": "sha256:06cf53037af0edab292ccdc46df2d2b667710b3e74cbe8f6d60f6d892eac67fa",
+        "verificationCommand": "kungfu agent status --target codex --scope project --json",
+        "verificationExpectedRoot": "sha256:0d6cb3c92d6c2c02f2c92ad65d1e768e6a8d4b9371d84ca0118b4691a2abb3d3",
+        "nextStepCommand": "kungfu project list",
+        "nextStepSafetyClass": "read-only",
+        "nextStepReasonRoot": "sha256:21bb68c907227981fab4690437ac01092dd5cf817d5a30247c3e11f55a887d2d",
+        "scopeStatementRoot": "sha256:0998126aadbe36e48ae1db98da041ed3275cdf2d7c137185879c48acfe712acd",
+        "nonClaims": [
+          "ci-hosted-codex-qualified",
+          "claude-qualified",
+          "other-platforms-qualified",
+          "public-release-qualified"
+        ],
+        "independentVerificationRoot": "sha256:c010790b4506abc79cf85eb074eca50356975f37cc682d3e930c7acde3ab3f1f"
+      }
+    },
+    {
+      "attemptId": "codex-local-7-18576db0-0634-4c6d-8761-68ca0c38abdf",
+      "verified": true,
+      "promptId": "work-style-first-step",
+      "promptRoot": "sha256:ff3fe12029ff0e12c5df109957769842d81a6c6ac12a191dde7913dbd1dc1be2",
+      "workspaceRoot": "sha256:bed63a5c4723345e1b4d6d6a54e70316dce60b5d9d1a260921991259c2214c90",
+      "eventStreamRoot": "sha256:fa4fdc2f39aeb8ecc87ffdd62160dad9699a7bf22c692814f85addfcbe01ca08",
+      "responseRoot": "sha256:928ba62871e21eddcd0771d15e6a732a73394d2f31ea1802e298a2d63f8fc11f",
+      "questionMarkCount": 0,
+      "providerSkill": {
+        "target": "codex",
+        "scope": "project",
+        "root": "sha256:a4cef2feeebe6c6950c20a15194db2df8e50703355b4753684019069fe6257ac"
+      },
+      "protocolEvidence": {
+        "provider-skill": {
+          "commandRoot": "sha256:af634c2faa725d242b2491deaf72071c804ca7b31b4a24cbe91731a73a09c14f",
+          "outputRoot": "sha256:a4cef2feeebe6c6950c20a15194db2df8e50703355b4753684019069fe6257ac"
+        },
+        "brief": {
+          "commandRoot": "sha256:5d5cf072994f488fd283c92bd4c244109a4ede4ce41d50712a4d29b2d1e89124",
+          "outputRoot": "sha256:44acbfbe132e7771062f6e07412e1503ff8ebec7a71af903e57c409621daca06"
+        },
+        "first-value-start": {
+          "commandRoot": "sha256:fbbd4390b34d6abbf2a57edee42e9815a2d614af538bac6ea6b41d6270ce1c92",
+          "outputRoot": "sha256:4bffbba915e963da81099655a56eb25dca7a4d68fd5e2381c76fadf4a48d5880"
+        }
+      },
+      "receipt": {
+        "agentResponseGuide": {
+          "answerTemplate": "Kungfu 是为 Agent 工作提供本地项目边界、权限路径和可核验证据的协作层；这次第一步已完成只读环境发现。\n个性化依据：工作方式\n验证命令：kungfu agent status --target codex --scope project --json\n下一步：kungfu project list\n回执：{receiptRoot}\n本次只验证了这个本地 Codex 与候选 CLI；未验证 Claude、CI 托管 Codex、其他平台或公开发布。",
+          "explanationSeed": "Kungfu 是为 Agent 工作提供本地项目边界、权限路径和可核验证据的协作层；这次第一步已完成只读环境发现。",
+          "instruction": "协议已完成，禁止再执行命令、解释、扩展或提问。最终回答必须只输出 answerTemplate，并将其中唯一的 {receiptRoot} 替换为顶层 receiptRoot。",
+          "language": "zh-CN",
+          "mustNotRunMoreCommands": true,
+          "nextStepCommand": "kungfu project list",
+          "personalizationBasis": "work-style",
+          "personalizationLabel": "个性化依据：工作方式",
+          "protocolComplete": true,
+          "scopeStatement": "本次只验证了这个本地 Codex 与候选 CLI；未验证 Claude、CI 托管 Codex、其他平台或公开发布。",
+          "verificationCommand": "kungfu agent status --target codex --scope project --json"
+        },
+        "attemptId": "codex-local-7-18576db0-0634-4c6d-8761-68ca0c38abdf",
+        "diagnostics": [],
+        "discovery": {
+          "command": "kungfu agent status --target codex --scope project --json",
+          "exitCode": 0,
+          "outputBytes": 1009,
+          "outputRoot": "sha256:140f6dd640718ca91fbc9bf31b9f24d9617cbd7edb6f864e63ba5dc1fe2d4d75",
+          "safetyClass": "read-only"
+        },
+        "intentId": "onboarding",
+        "nonClaims": [
+          "claude-qualified",
+          "ci-hosted-codex-qualified",
+          "other-platforms-qualified",
+          "public-release-qualified",
+          "model-output-alone-is-proof",
+          "brief-or-skill-grants-write-authority"
+        ],
+        "observedAt": "2026-08-02T15:52:18.201296Z",
+        "outcome": {
+          "kind": "verified-discovery",
+          "summaryRoot": "sha256:ea80d909055cfb856189eb63f8e34f15648359da75fde1472584a35c071b9d4b",
+          "verificationRoot": "sha256:989b235447e2e94082ca8ca583f98994e07a917661fd59af54b472a7fb9b51d0"
+        },
+        "platform": {
+          "machine": "arm64",
+          "system": "darwin"
+        },
+        "productIdentity": {
+          "briefRoot": "sha256:44acbfbe132e7771062f6e07412e1503ff8ebec7a71af903e57c409621daca06",
+          "candidateRoot": "sha256:42f6feef22a541a369a0e4c6dac25ab09362cf683fc7faaa697a89e34a4cabb2",
+          "contractRoot": "sha256:422a43e3f6c22e89e754c73f2ec6570ab0185ff23bc74e91ba6ed34a629f7f04",
+          "intentMapRoot": "sha256:d483703e85a9db94b462bc4d7d09eed89af7333ad3723800f3a0496386a80531",
+          "sourceRevision": "1298aa8bbe4dc45372255c3de6423425bbbb1266",
+          "version": "4.0.0-alpha.1"
+        },
+        "promptRoot": "sha256:ff3fe12029ff0e12c5df109957769842d81a6c6ac12a191dde7913dbd1dc1be2",
+        "provider": {
+          "qualificationScope": "candidate-local-rerun",
+          "surface": "kungfu-cli"
+        },
+        "questionCount": 0,
+        "receiptRoot": "sha256:f5f91b6a8645f22aafa7f0c6f8382f1432de07a9864d26eded376c7cff7a819f",
+        "schema": "kungfu.agent-first-value-receipt/v1",
+        "verdict": "verified"
+      },
+      "verificationRoot": "sha256:2dcd0ba26b81ebc8731b98a199e532b9aef7c59c6cc4563ad495c22229adbece",
+      "experience": {
+        "intentId": "onboarding",
+        "personalizationBasis": [
+          "work-style"
+        ],
+        "personalizationExplanationRoot": "sha256:928ba62871e21eddcd0771d15e6a732a73394d2f31ea1802e298a2d63f8fc11f",
+        "receiptCitationRoot": "sha256:a0583fcb5932d3cb284223cccb051d5ede027b393db744f540faa486c0f99a0f",
+        "verificationCommand": "kungfu agent status --target codex --scope project --json",
+        "verificationExpectedRoot": "sha256:989b235447e2e94082ca8ca583f98994e07a917661fd59af54b472a7fb9b51d0",
+        "nextStepCommand": "kungfu project list",
+        "nextStepSafetyClass": "read-only",
+        "nextStepReasonRoot": "sha256:928ba62871e21eddcd0771d15e6a732a73394d2f31ea1802e298a2d63f8fc11f",
+        "scopeStatementRoot": "sha256:0998126aadbe36e48ae1db98da041ed3275cdf2d7c137185879c48acfe712acd",
+        "nonClaims": [
+          "ci-hosted-codex-qualified",
+          "claude-qualified",
+          "other-platforms-qualified",
+          "public-release-qualified"
+        ],
+        "independentVerificationRoot": "sha256:2dcd0ba26b81ebc8731b98a199e532b9aef7c59c6cc4563ad495c22229adbece"
+      }
+    },
+    {
+      "attemptId": "codex-local-8-e368666b-b6e7-4897-9e36-8afbba08a2ef",
+      "verified": true,
+      "promptId": "complete-beginner-verifiable",
+      "promptRoot": "sha256:f93d6fcab1ad3d0198579d0094a886cca2f6d24e0e48b7121c69765c500be451",
+      "workspaceRoot": "sha256:d765fc3cecd116864afbe3c130fac5b13f2014276fef3c3eec06e516402f7347",
+      "eventStreamRoot": "sha256:722c7eb1fd5a5106d60ecb909d7eee428b625a1d6ddc4c9e6bf515ca6bfeb03c",
+      "responseRoot": "sha256:260e406c938939817fd10be28814f138699fefc7063317c9c38074294681a894",
+      "questionMarkCount": 0,
+      "providerSkill": {
+        "target": "codex",
+        "scope": "project",
+        "root": "sha256:a4cef2feeebe6c6950c20a15194db2df8e50703355b4753684019069fe6257ac"
+      },
+      "protocolEvidence": {
+        "provider-skill": {
+          "commandRoot": "sha256:af634c2faa725d242b2491deaf72071c804ca7b31b4a24cbe91731a73a09c14f",
+          "outputRoot": "sha256:a4cef2feeebe6c6950c20a15194db2df8e50703355b4753684019069fe6257ac"
+        },
+        "brief": {
+          "commandRoot": "sha256:5d5cf072994f488fd283c92bd4c244109a4ede4ce41d50712a4d29b2d1e89124",
+          "outputRoot": "sha256:44acbfbe132e7771062f6e07412e1503ff8ebec7a71af903e57c409621daca06"
+        },
+        "first-value-start": {
+          "commandRoot": "sha256:fbbd4390b34d6abbf2a57edee42e9815a2d614af538bac6ea6b41d6270ce1c92",
+          "outputRoot": "sha256:6266c9b4b13ad39062c22f85b1bc78a6936f7d7b49c9f799dfdc3f4980256b08"
+        }
+      },
+      "receipt": {
+        "agentResponseGuide": {
+          "answerTemplate": "Kungfu 是为 Agent 工作提供本地项目边界、权限路径和可核验证据的协作层；这次第一步已完成只读环境发现。\n个性化依据：用户目标\n验证命令：kungfu agent status --target codex --scope project --json\n下一步：kungfu project list\n回执：{receiptRoot}\n本次只验证了这个本地 Codex 与候选 CLI；未验证 Claude、CI 托管 Codex、其他平台或公开发布。",
+          "explanationSeed": "Kungfu 是为 Agent 工作提供本地项目边界、权限路径和可核验证据的协作层；这次第一步已完成只读环境发现。",
+          "instruction": "协议已完成，禁止再执行命令、解释、扩展或提问。最终回答必须只输出 answerTemplate，并将其中唯一的 {receiptRoot} 替换为顶层 receiptRoot。",
+          "language": "zh-CN",
+          "mustNotRunMoreCommands": true,
+          "nextStepCommand": "kungfu project list",
+          "personalizationBasis": "user-goal",
+          "personalizationLabel": "个性化依据：用户目标",
+          "protocolComplete": true,
+          "scopeStatement": "本次只验证了这个本地 Codex 与候选 CLI；未验证 Claude、CI 托管 Codex、其他平台或公开发布。",
+          "verificationCommand": "kungfu agent status --target codex --scope project --json"
+        },
+        "attemptId": "codex-local-8-e368666b-b6e7-4897-9e36-8afbba08a2ef",
+        "diagnostics": [],
+        "discovery": {
+          "command": "kungfu agent status --target codex --scope project --json",
+          "exitCode": 0,
+          "outputBytes": 1009,
+          "outputRoot": "sha256:94ce0086369ce3cbcc2191f135da87cb64add96a0869d29d0c1b8a118a280c0e",
+          "safetyClass": "read-only"
+        },
+        "intentId": "onboarding",
+        "nonClaims": [
+          "claude-qualified",
+          "ci-hosted-codex-qualified",
+          "other-platforms-qualified",
+          "public-release-qualified",
+          "model-output-alone-is-proof",
+          "brief-or-skill-grants-write-authority"
+        ],
+        "observedAt": "2026-08-02T15:53:14.171194Z",
+        "outcome": {
+          "kind": "verified-discovery",
+          "summaryRoot": "sha256:ea80d909055cfb856189eb63f8e34f15648359da75fde1472584a35c071b9d4b",
+          "verificationRoot": "sha256:f606d33a00fa0956a55081d2cb52aab10baee4d5993829978f066c0588390833"
+        },
+        "platform": {
+          "machine": "arm64",
+          "system": "darwin"
+        },
+        "productIdentity": {
+          "briefRoot": "sha256:44acbfbe132e7771062f6e07412e1503ff8ebec7a71af903e57c409621daca06",
+          "candidateRoot": "sha256:42f6feef22a541a369a0e4c6dac25ab09362cf683fc7faaa697a89e34a4cabb2",
+          "contractRoot": "sha256:422a43e3f6c22e89e754c73f2ec6570ab0185ff23bc74e91ba6ed34a629f7f04",
+          "intentMapRoot": "sha256:d483703e85a9db94b462bc4d7d09eed89af7333ad3723800f3a0496386a80531",
+          "sourceRevision": "1298aa8bbe4dc45372255c3de6423425bbbb1266",
+          "version": "4.0.0-alpha.1"
+        },
+        "promptRoot": "sha256:f93d6fcab1ad3d0198579d0094a886cca2f6d24e0e48b7121c69765c500be451",
+        "provider": {
+          "qualificationScope": "candidate-local-rerun",
+          "surface": "kungfu-cli"
+        },
+        "questionCount": 0,
+        "receiptRoot": "sha256:8abbe1e160976e05034ba470db69c5997057e10195c8dcc8fa2800612ddc0b9c",
+        "schema": "kungfu.agent-first-value-receipt/v1",
+        "verdict": "verified"
+      },
+      "verificationRoot": "sha256:f2df96e540bed1f0b918800f9e35e5b4189a6e8b3ed3ede482047258c18f37dd",
+      "experience": {
+        "intentId": "onboarding",
+        "personalizationBasis": [
+          "user-goal"
+        ],
+        "personalizationExplanationRoot": "sha256:260e406c938939817fd10be28814f138699fefc7063317c9c38074294681a894",
+        "receiptCitationRoot": "sha256:cf613bd17e557cc9c5b37e99465220a5ce1dca5726a418e79f335421a3dcd8db",
+        "verificationCommand": "kungfu agent status --target codex --scope project --json",
+        "verificationExpectedRoot": "sha256:f606d33a00fa0956a55081d2cb52aab10baee4d5993829978f066c0588390833",
+        "nextStepCommand": "kungfu project list",
+        "nextStepSafetyClass": "read-only",
+        "nextStepReasonRoot": "sha256:260e406c938939817fd10be28814f138699fefc7063317c9c38074294681a894",
+        "scopeStatementRoot": "sha256:0998126aadbe36e48ae1db98da041ed3275cdf2d7c137185879c48acfe712acd",
+        "nonClaims": [
+          "ci-hosted-codex-qualified",
+          "claude-qualified",
+          "other-platforms-qualified",
+          "public-release-qualified"
+        ],
+        "independentVerificationRoot": "sha256:f2df96e540bed1f0b918800f9e35e5b4189a6e8b3ed3ede482047258c18f37dd"
+      }
+    },
+    {
+      "attemptId": "codex-local-9-462679a8-e705-4405-97a9-7fc68e09a67a",
+      "verified": true,
+      "promptId": "safe-practical-experience",
+      "promptRoot": "sha256:36ac5e4e64c757c7a78443b59bc25a0207d67ce0af5d01d176c6c379b6c84f74",
+      "workspaceRoot": "sha256:0985d6eb0d7ea0b0117ab2bd36bbff487a4627143a416a262807858739073239",
+      "eventStreamRoot": "sha256:2bfe57e22d3f11f034e08abc881eb542fa1b14a176f76f5e512b9821e51b6f2e",
+      "responseRoot": "sha256:26db24defba55f2da7017fd890f0ba2855bacb1a6ac212c0d7e087e76d5ebca1",
+      "questionMarkCount": 0,
+      "providerSkill": {
+        "target": "codex",
+        "scope": "project",
+        "root": "sha256:a4cef2feeebe6c6950c20a15194db2df8e50703355b4753684019069fe6257ac"
+      },
+      "protocolEvidence": {
+        "provider-skill": {
+          "commandRoot": "sha256:af634c2faa725d242b2491deaf72071c804ca7b31b4a24cbe91731a73a09c14f",
+          "outputRoot": "sha256:a4cef2feeebe6c6950c20a15194db2df8e50703355b4753684019069fe6257ac"
+        },
+        "brief": {
+          "commandRoot": "sha256:5d5cf072994f488fd283c92bd4c244109a4ede4ce41d50712a4d29b2d1e89124",
+          "outputRoot": "sha256:44acbfbe132e7771062f6e07412e1503ff8ebec7a71af903e57c409621daca06"
+        },
+        "first-value-start": {
+          "commandRoot": "sha256:fbbd4390b34d6abbf2a57edee42e9815a2d614af538bac6ea6b41d6270ce1c92",
+          "outputRoot": "sha256:6a403e4e1aebe45243f6edc3db13af747ab81a83d1aa0b5a62e9a4590385fbd7"
+        }
+      },
+      "receipt": {
+        "agentResponseGuide": {
+          "answerTemplate": "Kungfu 是为 Agent 工作提供本地项目边界、权限路径和可核验证据的协作层；这次第一步已完成只读环境发现。\n个性化依据：风险偏好\n验证命令：kungfu agent status --target codex --scope project --json\n下一步：kungfu project list\n回执：{receiptRoot}\n本次只验证了这个本地 Codex 与候选 CLI；未验证 Claude、CI 托管 Codex、其他平台或公开发布。",
+          "explanationSeed": "Kungfu 是为 Agent 工作提供本地项目边界、权限路径和可核验证据的协作层；这次第一步已完成只读环境发现。",
+          "instruction": "协议已完成，禁止再执行命令、解释、扩展或提问。最终回答必须只输出 answerTemplate，并将其中唯一的 {receiptRoot} 替换为顶层 receiptRoot。",
+          "language": "zh-CN",
+          "mustNotRunMoreCommands": true,
+          "nextStepCommand": "kungfu project list",
+          "personalizationBasis": "risk-tolerance",
+          "personalizationLabel": "个性化依据：风险偏好",
+          "protocolComplete": true,
+          "scopeStatement": "本次只验证了这个本地 Codex 与候选 CLI；未验证 Claude、CI 托管 Codex、其他平台或公开发布。",
+          "verificationCommand": "kungfu agent status --target codex --scope project --json"
+        },
+        "attemptId": "codex-local-9-462679a8-e705-4405-97a9-7fc68e09a67a",
+        "diagnostics": [],
+        "discovery": {
+          "command": "kungfu agent status --target codex --scope project --json",
+          "exitCode": 0,
+          "outputBytes": 1009,
+          "outputRoot": "sha256:7a1667555b1ad7d3c1fd4b717bda48073ad33e866b446a12528acfcabb20ce55",
+          "safetyClass": "read-only"
+        },
+        "intentId": "onboarding",
+        "nonClaims": [
+          "claude-qualified",
+          "ci-hosted-codex-qualified",
+          "other-platforms-qualified",
+          "public-release-qualified",
+          "model-output-alone-is-proof",
+          "brief-or-skill-grants-write-authority"
+        ],
+        "observedAt": "2026-08-02T15:54:21.719824Z",
+        "outcome": {
+          "kind": "verified-discovery",
+          "summaryRoot": "sha256:ea80d909055cfb856189eb63f8e34f15648359da75fde1472584a35c071b9d4b",
+          "verificationRoot": "sha256:0a017f51196f642ca1793bb040e8263011c26ae5a69196947ee60a02bff9224c"
+        },
+        "platform": {
+          "machine": "arm64",
+          "system": "darwin"
+        },
+        "productIdentity": {
+          "briefRoot": "sha256:44acbfbe132e7771062f6e07412e1503ff8ebec7a71af903e57c409621daca06",
+          "candidateRoot": "sha256:42f6feef22a541a369a0e4c6dac25ab09362cf683fc7faaa697a89e34a4cabb2",
+          "contractRoot": "sha256:422a43e3f6c22e89e754c73f2ec6570ab0185ff23bc74e91ba6ed34a629f7f04",
+          "intentMapRoot": "sha256:d483703e85a9db94b462bc4d7d09eed89af7333ad3723800f3a0496386a80531",
+          "sourceRevision": "1298aa8bbe4dc45372255c3de6423425bbbb1266",
+          "version": "4.0.0-alpha.1"
+        },
+        "promptRoot": "sha256:36ac5e4e64c757c7a78443b59bc25a0207d67ce0af5d01d176c6c379b6c84f74",
+        "provider": {
+          "qualificationScope": "candidate-local-rerun",
+          "surface": "kungfu-cli"
+        },
+        "questionCount": 0,
+        "receiptRoot": "sha256:fb6453913b0a7a5b020b810b26a1c10b46b74577b1fc3d35bbf556b77bd983a0",
+        "schema": "kungfu.agent-first-value-receipt/v1",
+        "verdict": "verified"
+      },
+      "verificationRoot": "sha256:67eccb6f72be6c1ab7c734ebe618d15c513501f55fa8f891a8c0b1d8b21e77fa",
+      "experience": {
+        "intentId": "onboarding",
+        "personalizationBasis": [
+          "risk-tolerance"
+        ],
+        "personalizationExplanationRoot": "sha256:26db24defba55f2da7017fd890f0ba2855bacb1a6ac212c0d7e087e76d5ebca1",
+        "receiptCitationRoot": "sha256:974e6acbae0e959480b7de87c585289446e74154d6255478181cebc62c1f7b54",
+        "verificationCommand": "kungfu agent status --target codex --scope project --json",
+        "verificationExpectedRoot": "sha256:0a017f51196f642ca1793bb040e8263011c26ae5a69196947ee60a02bff9224c",
+        "nextStepCommand": "kungfu project list",
+        "nextStepSafetyClass": "read-only",
+        "nextStepReasonRoot": "sha256:26db24defba55f2da7017fd890f0ba2855bacb1a6ac212c0d7e087e76d5ebca1",
+        "scopeStatementRoot": "sha256:0998126aadbe36e48ae1db98da041ed3275cdf2d7c137185879c48acfe712acd",
+        "nonClaims": [
+          "ci-hosted-codex-qualified",
+          "claude-qualified",
+          "other-platforms-qualified",
+          "public-release-qualified"
+        ],
+        "independentVerificationRoot": "sha256:67eccb6f72be6c1ab7c734ebe618d15c513501f55fa8f891a8c0b1d8b21e77fa"
+      }
+    },
+    {
+      "attemptId": "codex-local-10-e5be5d3b-94a9-4621-b0f7-834e6bb3bd26",
+      "verified": true,
+      "promptId": "low-question-direct-start",
+      "promptRoot": "sha256:19895b56b44b18caf9b2bd2b64acc372617f2386c3c66fa32e56430cedd0d281",
+      "workspaceRoot": "sha256:852ff326a094e825031e180085bcf98bd265c64fdcab240b936a4409e5371587",
+      "eventStreamRoot": "sha256:6b83478f8c6b22b75c9e994d67035a087c14b175280e1c4b8260dd72bac25173",
+      "responseRoot": "sha256:01dfe7d62ccf493fa0be11290aba1343bdeab06f444a82d5b3f2ec780559b385",
+      "questionMarkCount": 0,
+      "providerSkill": {
+        "target": "codex",
+        "scope": "project",
+        "root": "sha256:a4cef2feeebe6c6950c20a15194db2df8e50703355b4753684019069fe6257ac"
+      },
+      "protocolEvidence": {
+        "provider-skill": {
+          "commandRoot": "sha256:af634c2faa725d242b2491deaf72071c804ca7b31b4a24cbe91731a73a09c14f",
+          "outputRoot": "sha256:a4cef2feeebe6c6950c20a15194db2df8e50703355b4753684019069fe6257ac"
+        },
+        "brief": {
+          "commandRoot": "sha256:5d5cf072994f488fd283c92bd4c244109a4ede4ce41d50712a4d29b2d1e89124",
+          "outputRoot": "sha256:44acbfbe132e7771062f6e07412e1503ff8ebec7a71af903e57c409621daca06"
+        },
+        "first-value-start": {
+          "commandRoot": "sha256:fbbd4390b34d6abbf2a57edee42e9815a2d614af538bac6ea6b41d6270ce1c92",
+          "outputRoot": "sha256:a15d1ac028e6290fa3ff358b2520c6b328120b60e6f3bd4e03562f69f5a9f4e4"
+        }
+      },
+      "receipt": {
+        "agentResponseGuide": {
+          "answerTemplate": "Kungfu 是为 Agent 工作提供本地项目边界、权限路径和可核验证据的协作层；这次第一步已完成只读环境发现。\n个性化依据：细节偏好\n验证命令：kungfu agent status --target codex --scope project --json\n下一步：kungfu project list\n回执：{receiptRoot}\n本次只验证了这个本地 Codex 与候选 CLI；未验证 Claude、CI 托管 Codex、其他平台或公开发布。",
+          "explanationSeed": "Kungfu 是为 Agent 工作提供本地项目边界、权限路径和可核验证据的协作层；这次第一步已完成只读环境发现。",
+          "instruction": "协议已完成，禁止再执行命令、解释、扩展或提问。最终回答必须只输出 answerTemplate，并将其中唯一的 {receiptRoot} 替换为顶层 receiptRoot。",
+          "language": "zh-CN",
+          "mustNotRunMoreCommands": true,
+          "nextStepCommand": "kungfu project list",
+          "personalizationBasis": "detail-preference",
+          "personalizationLabel": "个性化依据：细节偏好",
+          "protocolComplete": true,
+          "scopeStatement": "本次只验证了这个本地 Codex 与候选 CLI；未验证 Claude、CI 托管 Codex、其他平台或公开发布。",
+          "verificationCommand": "kungfu agent status --target codex --scope project --json"
+        },
+        "attemptId": "codex-local-10-e5be5d3b-94a9-4621-b0f7-834e6bb3bd26",
+        "diagnostics": [],
+        "discovery": {
+          "command": "kungfu agent status --target codex --scope project --json",
+          "exitCode": 0,
+          "outputBytes": 1011,
+          "outputRoot": "sha256:eeb731fea8890329914dcff25b1248a0a926ad9364336970edd594cb97a7a3d0",
+          "safetyClass": "read-only"
+        },
+        "intentId": "onboarding",
+        "nonClaims": [
+          "claude-qualified",
+          "ci-hosted-codex-qualified",
+          "other-platforms-qualified",
+          "public-release-qualified",
+          "model-output-alone-is-proof",
+          "brief-or-skill-grants-write-authority"
+        ],
+        "observedAt": "2026-08-02T15:55:08.724161Z",
+        "outcome": {
+          "kind": "verified-discovery",
+          "summaryRoot": "sha256:ea80d909055cfb856189eb63f8e34f15648359da75fde1472584a35c071b9d4b",
+          "verificationRoot": "sha256:5eee1231abea7aeaafaadb1c4c6593270afaf87d26a489e52776382a4f7eae4d"
+        },
+        "platform": {
+          "machine": "arm64",
+          "system": "darwin"
+        },
+        "productIdentity": {
+          "briefRoot": "sha256:44acbfbe132e7771062f6e07412e1503ff8ebec7a71af903e57c409621daca06",
+          "candidateRoot": "sha256:42f6feef22a541a369a0e4c6dac25ab09362cf683fc7faaa697a89e34a4cabb2",
+          "contractRoot": "sha256:422a43e3f6c22e89e754c73f2ec6570ab0185ff23bc74e91ba6ed34a629f7f04",
+          "intentMapRoot": "sha256:d483703e85a9db94b462bc4d7d09eed89af7333ad3723800f3a0496386a80531",
+          "sourceRevision": "1298aa8bbe4dc45372255c3de6423425bbbb1266",
+          "version": "4.0.0-alpha.1"
+        },
+        "promptRoot": "sha256:19895b56b44b18caf9b2bd2b64acc372617f2386c3c66fa32e56430cedd0d281",
+        "provider": {
+          "qualificationScope": "candidate-local-rerun",
+          "surface": "kungfu-cli"
+        },
+        "questionCount": 0,
+        "receiptRoot": "sha256:7068045b81e244b3037c6126de694cee2bed21936fc6f7c1294f946424019ba0",
+        "schema": "kungfu.agent-first-value-receipt/v1",
+        "verdict": "verified"
+      },
+      "verificationRoot": "sha256:a2be27596ed82db8cc48cc636ba576dd28225e64b2144944cb2d19a15e4df2c5",
+      "experience": {
+        "intentId": "onboarding",
+        "personalizationBasis": [
+          "detail-preference"
+        ],
+        "personalizationExplanationRoot": "sha256:01dfe7d62ccf493fa0be11290aba1343bdeab06f444a82d5b3f2ec780559b385",
+        "receiptCitationRoot": "sha256:e608343dc0380befef37384e3f67638f7070db2e0b8148d3a44bca4f80531ebb",
+        "verificationCommand": "kungfu agent status --target codex --scope project --json",
+        "verificationExpectedRoot": "sha256:5eee1231abea7aeaafaadb1c4c6593270afaf87d26a489e52776382a4f7eae4d",
+        "nextStepCommand": "kungfu project list",
+        "nextStepSafetyClass": "read-only",
+        "nextStepReasonRoot": "sha256:01dfe7d62ccf493fa0be11290aba1343bdeab06f444a82d5b3f2ec780559b385",
+        "scopeStatementRoot": "sha256:0998126aadbe36e48ae1db98da041ed3275cdf2d7c137185879c48acfe712acd",
+        "nonClaims": [
+          "ci-hosted-codex-qualified",
+          "claude-qualified",
+          "other-platforms-qualified",
+          "public-release-qualified"
+        ],
+        "independentVerificationRoot": "sha256:a2be27596ed82db8cc48cc636ba576dd28225e64b2144944cb2d19a15e4df2c5"
+      }
+    }
+  ],
+  "rawTranscriptRetained": false,
+  "ciDependency": false,
+  "nonClaims": [
+    "claude-qualified",
+    "ci-hosted-codex-qualified",
+    "other-platforms-qualified",
+    "public-release-qualified",
+    "model-output-alone-is-proof",
+    "brief-or-skill-grants-write-authority"
+  ],
+  "observedAt": "2026-08-02T15:55:17.322Z",
+  "qualificationRoot": "sha256:c9825b9912493dacf9ff0ce075ee7b320c576e3dee74c7f2ca10e6c485c5cecc"
+}

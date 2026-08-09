@@ -1,0 +1,1 @@
+{"schema":"xinfa.kfd3-agent-api-schema/v1","requiredTopLevel":["schema","registryId","product","standard","authority","apis","nonClaims"],"apiRequiredFields":["id","command","maturity","access","authorization","receipt","diagnostics"]}

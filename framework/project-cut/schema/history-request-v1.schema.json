@@ -1,0 +1,80 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kungfu.link/schema/project-cut-history-request-v1.schema.json",
+  "title": "Project Cut Git history qualification request v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "operation",
+    "commit",
+    "cutRoots",
+    "episodeRoots",
+    "integrationEpisodeRoot",
+    "semanticRelation",
+    "priorBindings",
+    "ref"
+  ],
+  "properties": {
+    "schema": { "const": "project.cut.history-request/v1" },
+    "operation": { "$ref": "#/$defs/operation" },
+    "commit": { "type": "string", "minLength": 1 },
+    "cutRoots": { "$ref": "#/$defs/roots" },
+    "episodeRoots": { "$ref": "#/$defs/roots" },
+    "integrationEpisodeRoot": {
+      "oneOf": [{ "$ref": "#/$defs/root" }, { "type": "null" }]
+    },
+    "semanticRelation": { "enum": ["new", "same", "successor"] },
+    "priorBindings": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "$ref": "https://kungfu.link/schema/project-cut-history-observation-v1.schema.json"
+      }
+    },
+    "ref": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["name", "expectedOid"],
+          "properties": {
+            "name": { "$ref": "#/$defs/ref" },
+            "expectedOid": { "$ref": "#/$defs/oid" }
+          }
+        },
+        { "type": "null" }
+      ]
+    }
+  },
+  "$defs": {
+    "operation": {
+      "enum": [
+        "publish",
+        "branch",
+        "merge",
+        "rebase",
+        "amend",
+        "squash",
+        "revert",
+        "cherry-pick",
+        "empty",
+        "recovery"
+      ]
+    },
+    "root": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+    "roots": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/root" }
+    },
+    "oid": {
+      "type": "string",
+      "pattern": "^(?:[0-9a-f]{40}|[0-9a-f]{64})$"
+    },
+    "ref": {
+      "type": "string",
+      "pattern": "^refs/(?:heads|tags)/[A-Za-z0-9._/-]+$"
+    }
+  }
+}

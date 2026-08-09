@@ -1,0 +1,166 @@
+{
+  "schema": "shifu.qualified-assignment-core-platform-matrix/v1",
+  "status": "development",
+  "owner": "shifu",
+  "shared": {
+    "dependencyLocks": [
+      ".buildchain/contract-lock.json",
+      "framework/core/conanfile.py",
+      "framework/core/uv.lock",
+      "pnpm-lock.yaml"
+    ],
+    "toolchainFacts": ["compiler", "cmake", "ninja", "runner"],
+    "artifactNaming": {
+      "candidate": "qualified-assignment-core-candidate-{commit}-{row}",
+      "promoted": "qualified-assignment-core-{commit}-{row}",
+      "matrixIndex": "qualified-assignment-core-matrix-{commit}"
+    },
+    "qualificationPolicy": {
+      "candidateWorkflow": ".github/workflows/affected-native-pr.yml",
+      "event": "merge_group",
+      "sourceBinding": "exact-commit-and-tree",
+      "missingRow": "unqualified",
+      "substitution": "forbidden"
+    },
+    "promotionPolicy": {
+      "controllerWorkflow": ".github/workflows/affected-native-cache-promote.yml",
+      "protectedRefPolicy": "github-default-branch",
+      "authorityCardinality": "one-active-per-row",
+      "isolation": "platform-row"
+    }
+  },
+  "rows": [
+    {
+      "id": "darwin-arm64-cp313",
+      "operatingSystem": "darwin",
+      "architecture": "arm64",
+      "pythonAbi": "cp313",
+      "runner": {
+        "label": "macos-15",
+        "environment": "github-hosted",
+        "os": "macOS",
+        "arch": "ARM64",
+        "shell": "bash"
+      },
+      "buildInfo": {
+        "osVersionPrefix": "macOS-",
+        "architectureToken": "arm64"
+      },
+      "payload": {
+        "targetRoot": "framework/core/dist/kungfu",
+        "entries": [
+          {
+            "role": "build-metadata",
+            "pathPattern": "^kungfubuildinfo\\.json$",
+            "type": "regular-file",
+            "mode": "0644"
+          },
+          {
+            "role": "kungfu-runtime",
+            "pathPattern": "^libkungfu_runtime\\.dylib$",
+            "type": "regular-file",
+            "mode": "0755"
+          },
+          {
+            "role": "node-runtime",
+            "pathPattern": "^libnode\\.[0-9]+\\.dylib$",
+            "type": "regular-file",
+            "mode": "0755"
+          },
+          {
+            "role": "python-binding",
+            "pathPattern": "^pykungfu\\.cpython-313-darwin\\.so$",
+            "type": "regular-file",
+            "mode": "0755"
+          }
+        ]
+      }
+    },
+    {
+      "id": "linux-x86_64-cp313",
+      "operatingSystem": "linux",
+      "architecture": "x64",
+      "pythonAbi": "cp313",
+      "runner": {
+        "label": "ubuntu-24.04",
+        "environment": "github-hosted",
+        "os": "Linux",
+        "arch": "X64",
+        "shell": "bash"
+      },
+      "buildInfo": {
+        "osVersionPrefix": "Linux-",
+        "architectureToken": "x86_64"
+      },
+      "payload": {
+        "targetRoot": "framework/core/dist/kungfu",
+        "entries": [
+          {
+            "role": "build-metadata",
+            "pathPattern": "^kungfubuildinfo\\.json$",
+            "type": "regular-file",
+            "mode": "0644"
+          },
+          {
+            "role": "kungfu-runtime",
+            "pathPattern": "^libkungfu_runtime\\.so$",
+            "type": "regular-file",
+            "mode": "0755"
+          },
+          {
+            "role": "node-runtime",
+            "pathPattern": "^libnode\\.so\\.[0-9]+$",
+            "type": "regular-file",
+            "mode": "0755"
+          },
+          {
+            "role": "python-binding",
+            "pathPattern": "^pykungfu\\.cpython-313-x86_64-linux-gnu\\.so$",
+            "type": "regular-file",
+            "mode": "0755"
+          }
+        ]
+      }
+    },
+    {
+      "id": "windows-x86_64-cp313",
+      "operatingSystem": "windows",
+      "architecture": "x64",
+      "pythonAbi": "cp313",
+      "runner": {
+        "label": "windows-2022",
+        "environment": "github-hosted",
+        "os": "Windows",
+        "arch": "X64",
+        "shell": "pwsh"
+      },
+      "buildInfo": {
+        "osVersionPrefix": "Windows-",
+        "architectureToken": "AMD64"
+      },
+      "payload": {
+        "targetRoot": "framework/core/dist/kungfu",
+        "entries": [
+          {
+            "role": "build-metadata",
+            "pathPattern": "^kungfubuildinfo\\.json$",
+            "type": "regular-file",
+            "mode": "0644"
+          },
+          {
+            "role": "node-runtime",
+            "pathPattern": "^libnode\\.dll$",
+            "type": "regular-file",
+            "mode": "0644"
+          },
+          {
+            "role": "python-binding",
+            "pathPattern": "^pykungfu\\.cp313-win_amd64\\.pyd$",
+            "type": "regular-file",
+            "mode": "0644"
+          }
+        ]
+      }
+    }
+  ]
+}
