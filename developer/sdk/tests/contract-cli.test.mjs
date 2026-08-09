@@ -24,13 +24,6 @@ const buildchainPackagePath = require.resolve(
 );
 const buildchainRequire = createRequire(buildchainPackagePath);
 const buildchainPackage = require(buildchainPackagePath);
-const buildchainAlphaPackagePath = require.resolve(
-  '@kungfu-tech/buildchain-alpha/package.json',
-);
-const buildchainAlphaRequire = createRequire(buildchainAlphaPackagePath);
-const buildchainAlphaPackage = buildchainAlphaRequire(
-  '@kungfu-tech/buildchain-alpha/package.json',
-);
 const corePackage = require('../../../framework/core/package.json');
 const buildchainKfdVersion = buildchainPackage.dependencies['@kungfu-tech/kfd'];
 const sdkKfd2ReleaseClaims = JSON.parse(
@@ -113,18 +106,12 @@ function makeContractRepo(t) {
   return root;
 }
 
-test('keeps stable and Alpha Buildchain KFD metadata on their declared lines', () => {
+test('keeps production Buildchain v3 KFD metadata on its declared line', () => {
   const stableKfd = buildchainRequire('@kungfu-tech/kfd/package.json');
-  const alphaKfd = buildchainAlphaRequire('@kungfu-tech/kfd/package.json');
   assert.equal(
     stableKfd.version,
     buildchainPackage.dependencies['@kungfu-tech/kfd'],
   );
-  assert.equal(
-    alphaKfd.version,
-    buildchainAlphaPackage.dependencies['@kungfu-tech/kfd'],
-  );
-  assert.notEqual(stableKfd.version, alphaKfd.version);
 });
 
 for (const [surface, source] of [

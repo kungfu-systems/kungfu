@@ -54,7 +54,7 @@ Each section is bound to the registry id by the catalog meta gate.
 - **Evidence:** unified Gate receipt; no separate artifact is currently required.
 - **Diagnosis:** `./shifu gate explain governance.buildchain-config --profile <profile>`; reproduce with `./shifu gate run governance.buildchain-config` on a capable runner.
 - **Cost:** light; timeout 120 seconds.
-- **Current source:** .github/workflows/affected-native-pr.yml (candidate_buildchain_config; every dev pull request and merge-group candidate before governance preflight or expensive queue work); .github/workflows/buildchain-validate.yml (validate; pull requests except dev/v*/v*, or alpha/release channel push); .github/workflows/release-new-version.yml (promote; merged alpha or release pull request, or manual source-locked dry-run measurement); .github/workflows/release-new-version.yml (recover; manual recovery of the single pre-existing sealed Alpha 1 candidate without product rebuild).
+- **Current source:** .github/workflows/affected-native-pr.yml (candidate_buildchain_config; every dev pull request and merge-group candidate before governance preflight or expensive queue work); .github/workflows/buildchain-validate.yml (validate; pull requests except dev/v*/v*, or alpha/release channel push); .github/workflows/release-new-version.yml (promote; merged alpha or release pull request, or manual source-locked dry-run measurement); .github/workflows/release-new-version.yml (recover; manual recovery of one verified sealed Alpha candidate without product rebuild).
 - **Retirement:** remove only after every selecting profile and workflow binding is migrated or explicitly replaced, with the registry and matrix changed in the same review.
 <!-- /gate-doc:governance.buildchain-config -->
 

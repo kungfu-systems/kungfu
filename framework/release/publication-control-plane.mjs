@@ -227,17 +227,39 @@ export function validateRegistry(r, { root = ROOT } = {}) {
     if (!b.some((x) => ss.has(x)) || !b.some((x) => rs.has(x)))
       throw new Error(`Buildchain capability ${cap} unbound`);
   }
-  for (const f of [
-    '.github/workflows/build.yml',
-    '.github/workflows/release-new-version.yml',
-  ]) {
-    const text = fs.readFileSync(path.join(root, f), 'utf8');
-    if (
-      !text.includes(bc.sourceRevision) ||
-      text.includes('kungfu-trader/workflows@v1')
-    )
-      throw new Error(`${f} authority drift`);
-  }
+  const buildWorkflow = fs.readFileSync(
+    path.join(root, '.github/workflows/build.yml'),
+    'utf8',
+  );
+  if (
+    !buildWorkflow.includes(
+      'uses: kungfu-systems/buildchain/.github/workflows/.build.yml@v3',
+    ) ||
+    !/^\s+buildchain-ref: v3\s*$/mu.test(buildWorkflow) ||
+    /kungfu-systems\/buildchain\/\.github\/workflows\/\.build\.yml@[0-9a-f]{40}/u.test(
+      buildWorkflow,
+    ) ||
+    buildWorkflow.includes('kungfu-trader/workflows@v1')
+  )
+    throw new Error('.github/workflows/build.yml authority drift');
+  const promotionWorkflow = fs.readFileSync(
+    path.join(root, '.github/workflows/release-new-version.yml'),
+    'utf8',
+  );
+  if (
+    !promotionWorkflow.includes(
+      'uses: kungfu-systems/buildchain/.github/workflows/release-candidate-promote.yml@v3',
+    ) ||
+    !promotionWorkflow.includes("&& 'v3-alpha' || 'v3'") ||
+    !/^\s+buildchain-ref: v3-alpha\s*$/mu.test(promotionWorkflow) ||
+    /kungfu-systems\/buildchain\/\.github\/workflows\/release-candidate-promote\.yml@[0-9a-f]{40}/u.test(
+      promotionWorkflow,
+    ) ||
+    promotionWorkflow.includes('kungfu-trader/workflows@v1')
+  )
+    throw new Error(
+      '.github/workflows/release-new-version.yml authority drift',
+    );
   if (r.registryRoot !== digest(omit(r, 'registryRoot')))
     throw new Error('registry root mismatch');
   return r;
