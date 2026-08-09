@@ -79,6 +79,11 @@ export function validateWorkflowSources(root, contract, overrides = {}) {
   const preflight = extractWorkflowJob(promotion, 'promotion-contract');
   const promote = extractWorkflowJob(promotion, 'promote');
   const recovery = extractWorkflowJob(promotion, 'recover');
+  const releaseAdmission = readJson(
+    path.join(root, 'docs/qualification/gates/release-admission-policy.json'),
+  );
+  const recoveryRuntimeSha =
+    releaseAdmission.buildchain.runtimes.alpha.publicationRuntimeSha;
   const productAdmission = extractWorkflowJob(
     build,
     'finalize-upgrade-publication-admission',
@@ -314,15 +319,17 @@ export function validateWorkflowSources(root, contract, overrides = {}) {
   }
   requirePattern(
     recovery,
-    /uses: kungfu-systems\/buildchain\/\.github\/workflows\/release-candidate-promote\.yml@v3/u,
+    new RegExp(
+      `uses: kungfu-systems/buildchain/\\.github/workflows/release-candidate-promote\\.yml@${escapeRegExp(recoveryRuntimeSha)}`,
+    ),
     findings,
-    'recovery must consume the production v3 floating router contract',
+    'recovery must consume the exact reviewed publication runtime',
   );
   requirePattern(
     recovery,
-    /^\s+buildchain-channel: alpha[\s\S]*^\s+buildchain-ref: v3-alpha$/mu,
+    /^\s+buildchain-channel: alpha[\s\S]*^\s+buildchain-ref: \$\{\{ inputs\.resume-buildchain-runtime-sha \}\}$/mu,
     findings,
-    'Alpha recovery must resolve the v3-alpha runtime through the v3 router',
+    'Alpha recovery must resolve the exact reviewed publication runtime',
   );
   for (const permission of ['artifact-metadata', 'attestations']) {
     requirePattern(
