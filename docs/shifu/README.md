@@ -51,11 +51,24 @@ execution; Shifu owns how the task is executed after source checkout.
   Run
   `./shifu check:production-graph` to emit the exact protected-CI verification
   receipt over the deterministic conformance fixtures.
+  Before any node starts, `./shifu production-graph:admit --request REQUEST`
+  verifies one exact native `kungfu.work-ref/v1`, Work Control query and run-gate
+  roots, external authorization evidence, actor, attempt, executor policy,
+  intended node set, source, graph, plan, project-authority, Xinfa selection,
+  lease, and expiry. Missing, stale, drifted, expired, mismatched, replayed, or
+  denied evidence produces a content-addressed rejection with
+  `nodesStarted=false` and `authorityMutations=[]`. An admitted decision is
+  only permission for its exact node set until `expiresAt`; admission itself
+  never starts a node. Shifu does not mint or modify Assignment, Work Control,
+  Warrant, approval, merge, or close authority.
   The additive `./shifu core:affected:graph-shadow` route is the first bounded
-  external consumer. It requires an exact graph, compiled plan, and
-  `./shifu production-graph:verify` receipt; admits only one dependency-free
-  `core:affected` node with the Core native qualification authority; and then
-  delegates planning and execution to the unchanged `core:affected` command.
+  external consumer. It requires an exact graph, compiled plan,
+  `./shifu production-graph:verify` receipt, execution-admission request, and
+  matching admitted decision. Immediately before spawn it re-verifies the full
+  request, exact decision, source, roots, node set, and live expiry; only then
+  does it admit one dependency-free `core:affected` node with the Core native
+  qualification authority and delegate to the unchanged `core:affected`
+  command.
   Shadow events and receipts bind the current plan, toolchain, raw current
   receipt, exit status, and parity result under the operating system temporary
   root. Nonzero exits and cancellation remain non-qualifying. Removing or

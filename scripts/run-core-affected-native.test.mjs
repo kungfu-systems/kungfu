@@ -7,7 +7,11 @@ import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 
-import { checkProductionGraphContract } from '../framework/production-graph/check.mjs';
+import { createExecutionAdmissionDecision } from '../framework/production-graph/admission/index.mjs';
+import {
+  checkProductionGraphContract,
+  materializeExecutionAdmissionFixture,
+} from '../framework/production-graph/check.mjs';
 import {
   contractRoot,
   createPlan,
@@ -351,6 +355,32 @@ function productionGraphShadowFixture() {
   return { graph, plan: createPlan(graph) };
 }
 
+async function shadowExecutionAdmission(graph, plan) {
+  const fixture = JSON.parse(
+    fs.readFileSync(
+      path.join(
+        shadowRoot,
+        'docs/shifu/examples/production-graph/admission/admitted.fixture.json',
+      ),
+      'utf8',
+    ),
+  );
+  const observed = Date.now();
+  const spec = {
+    ...fixture.request,
+    observedAt: new Date(observed - 1000).toISOString(),
+    issuedAt: new Date(observed - 60_000).toISOString(),
+    leaseExpiresAt: new Date(observed + 3_600_000).toISOString(),
+    authorizationExpiresAt: new Date(observed + 1_800_000).toISOString(),
+  };
+  const request = materializeExecutionAdmissionFixture(graph, plan, spec);
+  const { decision } = await createExecutionAdmissionDecision(request, {
+    root: shadowRoot,
+  });
+  assert.equal(decision.status, 'admitted');
+  return { request, decision };
+}
+
 function shadowCurrentPlan() {
   const head = shadowGit('rev-parse', 'HEAD');
   return planFromChanged(
@@ -373,21 +403,35 @@ async function shadowDiskFixture(t) {
   t.after(() => fs.rmSync(temporary, { recursive: true, force: true }));
   const { graph, plan } = productionGraphShadowFixture();
   const verificationReceipt = await checkProductionGraphContract();
+  const executionAdmission = await shadowExecutionAdmission(graph, plan);
   const graphPath = path.join(temporary, 'graph.json');
   const planPath = path.join(temporary, 'plan.json');
   const verificationPath = path.join(temporary, 'verification.json');
+  const executionAdmissionRequestPath = path.join(
+    temporary,
+    'execution-admission-request.json',
+  );
+  const executionAdmissionDecisionPath = path.join(
+    temporary,
+    'execution-admission-decision.json',
+  );
   writeShadowJson(graphPath, graph);
   writeShadowJson(planPath, plan);
   writeShadowJson(verificationPath, verificationReceipt);
+  writeShadowJson(executionAdmissionRequestPath, executionAdmission.request);
+  writeShadowJson(executionAdmissionDecisionPath, executionAdmission.decision);
   return {
     temporary,
     graph,
     plan,
     verificationReceipt,
+    executionAdmission,
     options: {
       graph: graphPath,
       plan: planPath,
       verificationReceipt: verificationPath,
+      executionAdmissionRequest: executionAdmissionRequestPath,
+      executionAdmissionDecision: executionAdmissionDecisionPath,
       outputDir: path.join(temporary, 'output'),
       execute: true,
       base: '',
@@ -402,8 +446,15 @@ async function shadowDiskFixture(t) {
 test('graph shadow admission binds exact plan, source, authority, and verifier', async () => {
   const { graph, plan } = productionGraphShadowFixture();
   const verificationReceipt = await checkProductionGraphContract();
+  const executionAdmission = await shadowExecutionAdmission(graph, plan);
   const admission = await verifyProductionGraphShadowInput(
-    { graph, plan, verificationReceipt },
+    {
+      graph,
+      plan,
+      verificationReceipt,
+      executionAdmissionRequest: executionAdmission.request,
+      executionAdmissionDecision: executionAdmission.decision,
+    },
     {
       root: shadowRoot,
       trustedVerificationReceipt: verificationReceipt,
@@ -413,11 +464,38 @@ test('graph shadow admission binds exact plan, source, authority, and verifier',
   assert.match(admission.compilerRoot, /^sha256:[0-9a-f]{64}$/u);
 });
 
+test('standalone execution admission verifies the live checkout cut', async (t) => {
+  const fixture = await shadowDiskFixture(t);
+  const result = spawnSync(
+    process.execPath,
+    [
+      'framework/production-graph/admission/index.mjs',
+      '--request',
+      fixture.options.executionAdmissionRequest,
+    ],
+    { cwd: shadowRoot, encoding: 'utf8' },
+  );
+  assert.equal(result.status, 0, `${result.stderr}\n${result.stdout}`);
+  const output = JSON.parse(result.stdout);
+  assert.equal(output.decision.status, 'admitted');
+  assert.equal(output.decision.nodesStarted, false);
+  assert.deepEqual(output.decision.authorityMutations, []);
+});
+
 test('graph shadow rejects missing, stale, mismatched, cyclic, and unauthorized inputs', async () => {
   const base = productionGraphShadowFixture();
   const verificationReceipt = await checkProductionGraphContract();
+  const executionAdmission = await shadowExecutionAdmission(
+    base.graph,
+    base.plan,
+  );
   const rejects = async (mutate, pattern) => {
-    const fixture = structuredClone({ ...base, verificationReceipt });
+    const fixture = structuredClone({
+      ...base,
+      verificationReceipt,
+      executionAdmissionRequest: executionAdmission.request,
+      executionAdmissionDecision: executionAdmission.decision,
+    });
     mutate(fixture);
     await assert.rejects(
       verifyProductionGraphShadowInput(fixture, {
@@ -458,7 +536,12 @@ test('graph shadow rejects missing, stale, mismatched, cyclic, and unauthorized 
   }, /verification receipt root mismatch/u);
   await assert.rejects(
     verifyProductionGraphShadowInput(
-      { ...base, verificationReceipt: null },
+      {
+        ...base,
+        verificationReceipt: null,
+        executionAdmissionRequest: executionAdmission.request,
+        executionAdmissionDecision: executionAdmission.decision,
+      },
       {
         root: shadowRoot,
         trustedVerificationReceipt: verificationReceipt,
@@ -466,6 +549,70 @@ test('graph shadow rejects missing, stale, mismatched, cyclic, and unauthorized 
     ),
     /verification receipt is missing/u,
   );
+});
+
+test('every execution-admission rejection starts zero graph nodes', async (t) => {
+  const mutations = [
+    (request) => Reflect.deleteProperty(request, 'work'),
+    (request) => Reflect.deleteProperty(request, 'authorization'),
+    (request) => {
+      request.work.status = 'stale';
+    },
+    (request) => {
+      request.graph.source.revision = '7'.repeat(40);
+    },
+    (request) => {
+      request.authorization.expiresAt = new Date(
+        Date.parse(request.observedAt) - 1,
+      ).toISOString();
+    },
+    (request) => {
+      request.authorization.actor = 'different-actor';
+    },
+    (request) => {
+      request.authorization.intendedNodeIds = ['different-node'];
+    },
+    (request) => {
+      request.authorization.replayState = 'consumed';
+    },
+    (request) => {
+      request.authorization.decision = 'denied';
+    },
+    (request) => {
+      request.authorization.status = 'stale';
+    },
+    (request) => {
+      request.authorization.authority = 'shifu.production-graph';
+    },
+  ];
+  for (const mutate of mutations) {
+    const fixture = await shadowDiskFixture(t);
+    const request = structuredClone(fixture.executionAdmission.request);
+    mutate(request);
+    if (request.graph?.graphRoot)
+      request.graph = rooted(request.graph, 'graphRoot');
+    if (request.work?.verificationRoot) {
+      request.work = rooted(request.work, 'verificationRoot');
+    }
+    if (request.authorization?.verificationRoot) {
+      request.authorization = rooted(request.authorization, 'verificationRoot');
+    }
+    const changed = rooted(request, 'requestRoot');
+    writeShadowJson(fixture.options.executionAdmissionRequest, changed);
+    let delegated = 0;
+    await assert.rejects(
+      runProductionGraphShadow(fixture.options, {
+        root: shadowRoot,
+        trustedVerificationReceipt: fixture.verificationReceipt,
+        delegate: async () => {
+          delegated += 1;
+          return { exitCode: 0, signal: null, error: null };
+        },
+      }),
+      /execution admission|schema invalid/u,
+    );
+    assert.equal(delegated, 0);
+  }
 });
 
 test('graph shadow success delegates unchanged and binds current evidence', async (t) => {

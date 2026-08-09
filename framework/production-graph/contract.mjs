@@ -33,6 +33,14 @@ export const SCHEMA_PATHS = Object.freeze({
   feedback: 'docs/shifu/schema/production-graph-feedback-v0.schema.json',
   verificationReceipt:
     'docs/shifu/schema/production-graph-verification-receipt-v0.schema.json',
+  executionAdmissionRequest:
+    'docs/shifu/schema/production-graph-execution-admission-request-v0.schema.json',
+  executionAdmissionRejection:
+    'docs/shifu/schema/production-graph-execution-admission-rejection-v0.schema.json',
+  executionAdmissionDecision:
+    'docs/shifu/schema/production-graph-execution-admission-decision-v0.schema.json',
+  executionAdmissionVerificationReceipt:
+    'docs/shifu/schema/production-graph-execution-admission-verification-receipt-v0.schema.json',
 });
 
 const readJson = (root, relative) =>
@@ -72,6 +80,18 @@ export function fileRoot(file) {
     .createHash('sha256')
     .update(fs.readFileSync(file))
     .digest('hex')}`;
+}
+
+function productionGraphAjv() {
+  const ajv = new Ajv2020({ allErrors: true, strict: false });
+  ajv.addFormat('date-time', {
+    type: 'string',
+    validate: (value) =>
+      /^\d{4}-\d{2}-\d{2}[Tt]\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:[Zz]|[+-]\d{2}:\d{2})$/u.test(
+        value,
+      ) && Number.isFinite(Date.parse(value)),
+  });
+  return ajv;
 }
 
 export function contractRoot(root = ROOT) {
@@ -529,8 +549,7 @@ function schemaDiagnostic(kind, error) {
 }
 
 export async function schemaValidators(root = ROOT) {
-  const Ajv2020 = (await import('ajv/dist/2020.js')).default;
-  const ajv = new Ajv2020({ allErrors: true, strict: false });
+  const ajv = productionGraphAjv();
   const schemas = Object.fromEntries(
     Object.entries(SCHEMA_PATHS).map(([kind, relative]) => [
       kind,
@@ -661,7 +680,7 @@ function assertSame(label, actual, expected) {
 }
 
 async function inputValidators(root) {
-  const ajv = new Ajv2020({ allErrors: true, strict: false });
+  const ajv = productionGraphAjv();
   for (const relative of Object.values(SCHEMA_PATHS)) {
     ajv.addSchema(readJsonFile(path.join(root, relative)));
   }
@@ -675,28 +694,50 @@ async function inputValidators(root) {
     verificationReceipt: ajv.getSchema(
       'https://libkungfu.dev/schemas/shifu/production-graph-verification-receipt-v0.schema.json',
     ),
+    executionAdmissionRequest: ajv.getSchema(
+      'https://libkungfu.dev/schemas/shifu/production-graph-execution-admission-request-v0.schema.json',
+    ),
+    executionAdmissionDecision: ajv.getSchema(
+      'https://libkungfu.dev/schemas/shifu/production-graph-execution-admission-decision-v0.schema.json',
+    ),
+    executionAdmissionRejection: ajv.getSchema(
+      'https://libkungfu.dev/schemas/shifu/production-graph-execution-admission-rejection-v0.schema.json',
+    ),
   };
 }
 
 async function shadowReceiptValidator(root) {
-  const ajv = new Ajv2020({ allErrors: true, strict: false });
+  const ajv = productionGraphAjv();
   ajv.addSchema(readJsonFile(path.join(root, SCHEMA_PATHS.graph)));
   const schema = readJsonFile(path.join(root, SHADOW_RECEIPT_SCHEMA_PATH));
   return ajv.compile(schema);
 }
 
 export async function verifyProductionGraphShadowInput(
-  { graph, plan, verificationReceipt },
+  {
+    graph,
+    plan,
+    verificationReceipt,
+    executionAdmissionRequest,
+    executionAdmissionDecision,
+  },
   {
     root = ROOT,
     trustedVerificationReceipt = verificationReceipt,
     validators = null,
+    observedAt = new Date().toISOString(),
   } = {},
 ) {
   if (!graph) throw new Error('Production Graph input is missing');
   if (!plan) throw new Error('Production Graph plan input is missing');
   if (!verificationReceipt) {
     throw new Error('Production Graph verification receipt is missing');
+  }
+  if (!executionAdmissionRequest) {
+    throw new Error('Production Graph execution admission request is missing');
+  }
+  if (!executionAdmissionDecision) {
+    throw new Error('Production Graph execution admission decision is missing');
   }
   const checks = validators || (await inputValidators(root));
   assertSchema('Production Graph', checks.graph, graph);
@@ -706,12 +747,32 @@ export async function verifyProductionGraphShadowInput(
     checks.verificationReceipt,
     verificationReceipt,
   );
+  assertSchema(
+    'Production Graph execution admission request',
+    checks.executionAdmissionRequest,
+    executionAdmissionRequest,
+  );
+  assertSchema(
+    'Production Graph execution admission decision',
+    checks.executionAdmissionDecision,
+    executionAdmissionDecision,
+  );
   assertRooted(graph, 'graphRoot', 'Production Graph');
   assertRooted(plan, 'planRoot', 'Production Graph plan');
   assertRooted(
     verificationReceipt,
     'receiptRoot',
     'Production Graph verification receipt',
+  );
+  assertRooted(
+    executionAdmissionRequest,
+    'requestRoot',
+    'Production Graph execution admission request',
+  );
+  assertRooted(
+    executionAdmissionDecision,
+    'decisionRoot',
+    'Production Graph execution admission decision',
   );
   assertSame(
     'Production Graph verification receipt root',
@@ -800,11 +861,69 @@ export async function verifyProductionGraphShadowInput(
   ) {
     throw new Error('Production Graph intent cannot authorize execution');
   }
+  assertSame(
+    'Production Graph execution admission graph',
+    executionAdmissionRequest.graph,
+    graph,
+  );
+  assertSame(
+    'Production Graph execution admission plan',
+    executionAdmissionRequest.plan,
+    plan,
+  );
+  const expectedExecutionAdmission = {
+    contractRoot: graph.contractRoot,
+    graphRoot: graph.graphRoot,
+    planRoot: plan.planRoot,
+    sourceRevision: graph.source.revision,
+    sourceTree: graph.source.tree,
+    authorityReferences: graph.authorityReferences,
+    xinfaSelectionRoot: graph.semanticImpact.selectionRoot,
+    executorPolicyRoot: executionAdmissionRequest.executorPolicyRoot,
+  };
+  const admissionVerifier = await import('./admission/index.mjs');
+  const recomputed = await admissionVerifier.createExecutionAdmissionDecision(
+    executionAdmissionRequest,
+    { root, expected: expectedExecutionAdmission, validators: checks },
+  );
+  if (recomputed.decision.status !== 'admitted') {
+    throw new Error(
+      `Production Graph execution admission rejected: ${recomputed.verification.codes.join(', ')}`,
+    );
+  }
+  assertSame(
+    'Production Graph execution admission decision',
+    executionAdmissionDecision,
+    recomputed.decision,
+  );
+  const observed = Date.parse(observedAt);
+  if (!Number.isFinite(observed)) {
+    throw new Error(
+      'Production Graph execution admission observation is invalid',
+    );
+  }
+  if (Date.parse(executionAdmissionRequest.observedAt) > observed) {
+    throw new Error(
+      'Production Graph execution admission observation is in the future',
+    );
+  }
+  if (Date.parse(executionAdmissionDecision.expiresAt) <= observed) {
+    throw new Error('Production Graph execution admission is expired');
+  }
+  if (
+    !same(executionAdmissionDecision.intendedNodeIds, plan.orderedNodeIds) ||
+    executionAdmissionDecision.nodesStarted !== false ||
+    executionAdmissionDecision.authorityMutations.length !== 0
+  ) {
+    throw new Error('Production Graph execution admission is unsafe');
+  }
   return {
     graph,
     plan,
     node,
     verificationReceipt,
+    executionAdmissionRequest,
+    executionAdmissionDecision,
     compilerRoot: fileRoot(path.join(root, COMPILER_PATH)),
   };
 }
@@ -814,6 +933,8 @@ function parseArgs(argv) {
     graph: '',
     plan: '',
     verificationReceipt: '',
+    executionAdmissionRequest: '',
+    executionAdmissionDecision: '',
     outputDir: '',
     execute: false,
     base: '',
@@ -830,7 +951,11 @@ function parseArgs(argv) {
     else if (arg === '--verification-receipt') {
       options.verificationReceipt = argv[++index];
     } else if (arg === '--output-dir') options.outputDir = argv[++index];
-    else if (arg === '--base') options.base = argv[++index];
+    else if (arg === '--execution-admission-request') {
+      options.executionAdmissionRequest = argv[++index];
+    } else if (arg === '--execution-admission-decision') {
+      options.executionAdmissionDecision = argv[++index];
+    } else if (arg === '--base') options.base = argv[++index];
     else if (arg === '--changed-file') {
       options.changedFiles.push(argv[++index]);
     } else if (arg === '--current-plan-input') {
@@ -842,7 +967,13 @@ function parseArgs(argv) {
     } else if (arg === '--execute') options.execute = true;
     else throw new Error(`unknown argument: ${arg}`);
   }
-  for (const field of ['graph', 'plan', 'verificationReceipt']) {
+  for (const field of [
+    'graph',
+    'plan',
+    'verificationReceipt',
+    'executionAdmissionRequest',
+    'executionAdmissionDecision',
+  ]) {
     if (!options[field])
       throw new Error(
         `--${field.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`)} is required`,
@@ -1046,13 +1177,25 @@ export async function runProductionGraphShadow(
   const verificationReceipt = readJsonFile(
     path.resolve(options.verificationReceipt),
   );
+  const executionAdmissionRequest = readJsonFile(
+    path.resolve(options.executionAdmissionRequest),
+  );
+  const executionAdmissionDecision = readJsonFile(
+    path.resolve(options.executionAdmissionDecision),
+  );
   let trusted = trustedVerificationReceipt;
   if (!trusted) {
     const verifier = await import('./check.mjs');
     trusted = await verifier.checkProductionGraphContract();
   }
   const admission = await verifyProductionGraphShadowInput(
-    { graph, plan, verificationReceipt },
+    {
+      graph,
+      plan,
+      verificationReceipt,
+      executionAdmissionRequest,
+      executionAdmissionDecision,
+    },
     { root, trustedVerificationReceipt: trusted },
   );
   const outputDir = resolveOutputDir(options.outputDir, admission, root);
@@ -1118,6 +1261,12 @@ export async function runProductionGraphShadow(
   });
   const outputRoots = currentReceiptRoot ? [currentReceiptRoot] : [];
   const evidenceRoots = [
+    admission.executionAdmissionRequest.requestRoot,
+    admission.executionAdmissionDecision.workRefRoot,
+    admission.executionAdmissionDecision.workVerificationRoot,
+    ...admission.executionAdmissionDecision.authorizationEvidenceRoots,
+    admission.executionAdmissionDecision.authorizationVerificationRoot,
+    admission.executionAdmissionDecision.decisionRoot,
     currentPlanRoot,
     currentReceiptRoot,
     toolchainRoot,
@@ -1177,6 +1326,19 @@ export async function runProductionGraphShadow(
       compilerRoot: admission.compilerRoot,
       verifierRoot: admission.verificationReceipt.verifierRoot,
       verificationReceiptRoot: admission.verificationReceipt.receiptRoot,
+      executionAdmissionRequestRoot:
+        admission.executionAdmissionRequest.requestRoot,
+      executionAdmissionDecisionRoot:
+        admission.executionAdmissionDecision.decisionRoot,
+      workRefRoot: admission.executionAdmissionDecision.workRefRoot,
+      workVerificationRoot:
+        admission.executionAdmissionDecision.workVerificationRoot,
+      authorizationEvidenceRoots:
+        admission.executionAdmissionDecision.authorizationEvidenceRoots,
+      authorizationVerificationRoot:
+        admission.executionAdmissionDecision.authorizationVerificationRoot,
+      executionAdmissionExpiresAt:
+        admission.executionAdmissionDecision.expiresAt,
       graphRoot: admission.graph.graphRoot,
       graphPlanRoot: admission.plan.planRoot,
       xinfaSelectionRoot: admission.graph.semanticImpact.selectionRoot,
@@ -1190,6 +1352,12 @@ export async function runProductionGraphShadow(
       signal: result.signal,
       parity: classified.parity,
       artifacts: {
+        executionAdmissionRequest: path.resolve(
+          options.executionAdmissionRequest,
+        ),
+        executionAdmissionDecision: path.resolve(
+          options.executionAdmissionDecision,
+        ),
         events: eventsPath,
         graphReceipt: graphReceiptPath,
         currentPlan: currentPlanPath,
