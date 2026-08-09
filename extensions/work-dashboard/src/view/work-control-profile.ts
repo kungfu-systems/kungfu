@@ -611,7 +611,7 @@ const ADAPTER_MEMBER = 'work-control-actions';
 
 function directMutationRejected(intentId: string): Error {
   const error = new Error(
-    `Direct GUI Profile mutation is read-only compatibility: ${intentId}; use kungfu.assignment-runtime/v1`,
+    `Direct GUI Profile mutation is outside the projection client authority: ${intentId}; use kungfu.assignment-runtime/v1`,
   ) as Error & { code?: string };
   error.code = 'authority-bypass';
   return error;
