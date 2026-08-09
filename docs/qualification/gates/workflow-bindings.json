@@ -467,7 +467,7 @@
       "adapter": {
         "type": "buildchain-heavy-build",
         "kind": "job-uses",
-        "uses": "kungfu-systems/buildchain/.github/workflows/.build.yml@2e7e07902ac28d8f3edcfb81098ef9ebc7a91878",
+        "uses": "kungfu-systems/buildchain/.github/workflows/.build.yml@v3",
         "job": {
       "needs": [
         "preflight",
@@ -482,7 +482,7 @@
           }
         },
         "with": {
-          "buildchain-ref": "${{ inputs.buildchain-ref || '2e7e07902ac28d8f3edcfb81098ef9ebc7a91878' }}",
+          "buildchain-ref": "v3",
           "runner-preset": "custom",
           "platforms-json": "${{ fromJSON(inputs.macos-overflow-request-json || '{}').mode == 'self-hosted' && '[{\"id\":\"macos-arm64\",\"name\":\"macOS ARM64 self-hosted primary\",\"platform\":\"macos\",\"runner\":\"[\\\"self-hosted\\\",\\\"macOS\\\",\\\"ARM64\\\",\\\"kungfu-build-v4-macos-arm64\\\"]\",\"capabilities\":[\"native-toolchain\",\"node\",\"product-artifacts\",\"rust\"]}]' || (fromJSON(inputs.macos-overflow-request-json || '{}').mode == 'github-hosted' && '[{\"id\":\"macos-arm64\",\"name\":\"macOS ARM64 GitHub-hosted overflow\",\"platform\":\"macos\",\"runner\":\"[\\\"macos-15\\\"]\",\"capabilities\":[\"native-toolchain\",\"node\",\"product-artifacts\",\"rust\"]}]' || (inputs.platforms-json || '[{\"id\":\"linux-x64\",\"name\":\"Linux x64\",\"platform\":\"linux\",\"runner\":\"[\\\"ubuntu-24.04\\\"]\",\"capabilities\":[\"node\",\"native-toolchain\",\"product-artifacts\",\"rust\"],\"environment\":{\"CC\":\"gcc-14\",\"CXX\":\"g++-14\"}},{\"id\":\"linux-arm64\",\"name\":\"Linux ARM64\",\"platform\":\"linux\",\"runner\":\"[\\\"ubuntu-24.04-arm\\\"]\",\"capabilities\":[\"node\",\"native-toolchain\",\"product-artifacts\",\"rust\"]},{\"id\":\"macos-arm64\",\"name\":\"macOS ARM64\",\"platform\":\"macos\",\"runner\":\"[\\\"macos-15\\\"]\",\"capabilities\":[\"node\",\"native-toolchain\",\"product-artifacts\",\"rust\"]},{\"id\":\"windows-x64\",\"name\":\"Windows x64\",\"platform\":\"windows\",\"runner\":\"[\\\"windows-2022\\\"]\",\"capabilities\":[\"node\",\"native-toolchain\",\"product-artifacts\",\"rust\"]}]')) }}",
           "self-hosted-offline-fallback": false,
@@ -610,14 +610,15 @@
       "adapter": {
         "type": "buildchain-release-admission",
         "kind": "job-uses",
-        "uses": "kungfu-systems/buildchain/.github/workflows/release-candidate-promote.yml@train/v3/v3.0/resume-candidate-run",
+        "uses": "kungfu-systems/buildchain/.github/workflows/release-candidate-promote.yml@v3",
         "job": {
           "needs": "promotion-contract",
           "if": "${{ (github.event_name == 'workflow_dispatch' && inputs.resume-candidate-run-id == '') || github.event.pull_request.merged == true }}"
         },
         "with": {
           "channel": "${{ startsWith(inputs.target-ref || github.event.pull_request.base.ref, 'alpha/') && 'alpha' || 'release' }}",
-          "buildchain-ref": "2e7e07902ac28d8f3edcfb81098ef9ebc7a91878",
+          "buildchain-channel": "${{ startsWith(inputs.target-ref || github.event.pull_request.base.ref, 'alpha/') && 'alpha' || 'stable' }}",
+          "buildchain-ref": "${{ startsWith(inputs.target-ref || github.event.pull_request.base.ref, 'alpha/') && 'v3-alpha' || 'v3' }}",
           "target-sha": "${{ inputs.target-sha || github.event.pull_request.merge_commit_sha || github.sha }}",
           "required-status-check": "build / Finalize build controller evidence",
           "publication-auto-admission": true,
@@ -650,17 +651,18 @@
         "governance.buildchain-config",
         "release.artifact-admission"
       ],
-      "activation": "manual recovery of the single pre-existing sealed Alpha 1 candidate without product rebuild",
+      "activation": "manual recovery of one verified sealed Alpha candidate without product rebuild",
       "adapter": {
         "type": "buildchain-release-candidate-recovery",
         "kind": "job-uses",
-        "uses": "kungfu-systems/buildchain/.github/workflows/release-candidate-promote.yml@train/v3/v3.0/resume-candidate-run",
+        "uses": "kungfu-systems/buildchain/.github/workflows/release-candidate-promote.yml@v3",
         "job": {
           "needs": "recovery-preflight",
           "if": "${{ always() && github.event_name == 'workflow_dispatch' && inputs.resume-candidate-run-id != '' && needs.recovery-preflight.result == 'success' }}"
         },
         "with": {
-          "buildchain-ref": "train/v3/v3.0/resume-candidate-run",
+          "buildchain-channel": "alpha",
+          "buildchain-ref": "v3-alpha",
           "channel": "alpha",
           "target-ref": "${{ inputs.target-ref }}",
           "target-sha": "${{ inputs.target-sha }}",
@@ -671,6 +673,7 @@
           "resume-expected-source-tree": "${{ inputs.resume-expected-source-tree }}",
           "resume-expected-candidate-runtime-sha": "${{ inputs.resume-expected-candidate-runtime-sha }}",
           "resume-buildchain-runtime-sha": "${{ inputs.resume-buildchain-runtime-sha }}",
+          "resume-transaction-id": "${{ inputs.resume-transaction-id }}",
           "publish-transaction-override": "${{ inputs.publish-transaction-override }}",
           "required-status-check": "build / Finalize build controller evidence",
           "publication-auto-admission": true,
