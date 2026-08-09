@@ -96,6 +96,24 @@ test('Buildchain inventory detects additions', () => {
   assert.deepEqual(x.unregistered, ['.github/workflows/release-surprise.yml']);
 });
 
+test('candidate builds stay pinned independently of the alpha publication contract', () => {
+  const v = get();
+  assert.match(
+    v.repositories.buildchain.candidateBuildRevision,
+    /^[0-9a-f]{40}$/u,
+  );
+  assert.notEqual(
+    v.repositories.buildchain.candidateBuildRevision,
+    v.repositories.buildchain.sourceRevision,
+  );
+  v.repositories.buildchain.candidateBuildRevision = '0'.repeat(40);
+  reroot(v);
+  assert.throws(
+    () => validateRegistry(v),
+    /.github\/workflows\/build.yml authority drift/,
+  );
+});
+
 test('live inspection reads exact Buildchain and both admitted channel rulesets', () => {
   const v = get();
   const alpha = JSON.parse(
