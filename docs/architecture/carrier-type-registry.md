@@ -49,7 +49,7 @@ Rules:
   carrier is needed at the journal adapter layer.
 - KFX and first-party features must not allocate a raw carrier merely to name a
   business action. Add an `action_type` and schema binding instead.
-- Rewind, Work, Atlas import, and KFX dynamic events all dispatch business
+- Rewind, Work, source import, and KFX dynamic events all dispatch business
   semantics through action envelopes.
 - `carrier_type` may appear in fsck/export/debug output as journal metadata.
   GUI/KFX/domain APIs should treat it as implementation metadata.
@@ -69,5 +69,5 @@ historical/runtime compatibility material, not the v4 business allocation model.
 
 Initiative/Assignment, Rewind, Work, and KFX first-party runtime facts use
 `carrier_type=1000`. The envelope above illustrates the current
-Initiative/Assignment semantic binding; Mission/Go names remain bounded
+Initiative/Assignment semantic binding; Initiative/Assignment names remain bounded
 compatibility aliases and are not new action-type authority.
