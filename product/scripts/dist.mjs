@@ -26,6 +26,7 @@ import {
   isShippedKfdSupport,
   runInstalledActionPrimitiveDiscovery,
   runInstalledCliSemanticSmoke,
+  runInstalledEmbeddedNodeAddonSmoke,
   runInstalledKungfu,
   runInstalledKungfuActionSmoke,
   runInstalledKungfuAgentHubSmoke,
@@ -38,6 +39,7 @@ export {
   installedKungfuInvocation,
   isShippedKfdSupport,
   runInstalledCliSemanticSmoke,
+  runInstalledEmbeddedNodeAddonSmoke,
   runInstalledKungfu,
   runInstalledKungfuAgentHubSmoke,
   runInstalledKungfuCommand,
@@ -1803,6 +1805,11 @@ export function smokeCliProductArchive({ archivePath, archiveBase }) {
         runInstalledKungfuAgentHubSmoke({
           installRoot,
           kungfuBin,
+          env: smokeEnv,
+        });
+        runInstalledEmbeddedNodeAddonSmoke({
+          installRoot,
+          runtimeEntry,
           env: smokeEnv,
         });
         runInstalledTuiBootstrapSmoke({

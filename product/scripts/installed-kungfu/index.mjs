@@ -123,6 +123,55 @@ export function runInstalledTuiBootstrapSmoke(
   }
 }
 
+export function runInstalledEmbeddedNodeAddonSmoke(
+  { installRoot, runtimeEntry, env },
+  { spawn = spawnSync } = {},
+) {
+  const nodePtyEntry = path.join(
+    installRoot,
+    'tui',
+    'node_modules',
+    'node-pty',
+    'lib',
+    'index.js',
+  );
+  assertFile(nodePtyEntry, 'installed node-pty entry');
+  const result = spawn(
+    runtimeEntry,
+    [
+      '-e',
+      [
+        'const nodePty = require(process.env.KUNGFU_NODE_PTY_ENTRY);',
+        "if (typeof nodePty.spawn !== 'function') process.exit(42);",
+        "process.stdout.write('KUNGFU_NODE_PTY_READY\\n');",
+      ].join(''),
+    ],
+    {
+      cwd: installRoot,
+      env: {
+        ...env,
+        KUNGFU_AS_VARIANT: 'node',
+        KUNGFU_NODE_PTY_ENTRY: nodePtyEntry,
+      },
+      encoding: 'utf8',
+    },
+  );
+  if (
+    result.status !== 0 ||
+    !(result.stdout || '').includes('KUNGFU_NODE_PTY_READY')
+  ) {
+    throw new Error(
+      [
+        `installed embedded Node could not load node-pty (exit ${exitLabel(result.status, result.signal)})`,
+        result.stdout?.trim() ? `stdout:\n${result.stdout.trim()}` : '',
+        result.stderr?.trim() ? `stderr:\n${result.stderr.trim()}` : '',
+      ]
+        .filter(Boolean)
+        .join('\n'),
+    );
+  }
+}
+
 export function runInstalledKungfu({
   kungfuBin,
   installRoot,

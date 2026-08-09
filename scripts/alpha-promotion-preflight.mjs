@@ -168,7 +168,7 @@ export function inspectAuditableDemoFastSentinel({
   if (
     scenarioValue?.schema !== 'buildchain.declarative-binary-demo/v1' ||
     scenarioValue?.execution?.durationClass !== 'long-form' ||
-    scenarioValue?.execution?.totalTimeoutSeconds !== 180 ||
+    scenarioValue?.execution?.totalTimeoutSeconds !== 360 ||
     scenarioValue?.authority?.grants?.length !== 0 ||
     demos.length !== 3 ||
     JSON.stringify(autoplay?.steps?.[0]?.argv) !==
@@ -181,9 +181,9 @@ export function inspectAuditableDemoFastSentinel({
         '--episode',
         '1',
         '--speed',
-        '1',
+        '4',
       ]) ||
-    projectTourEpisode1?.steps?.[0]?.timeoutSeconds !== 180 ||
+    projectTourEpisode1?.steps?.[0]?.timeoutSeconds !== 360 ||
     JSON.stringify(projectTourEpisode2?.steps?.[0]?.argv) !==
       JSON.stringify([
         'agent-work-lab',
@@ -191,9 +191,9 @@ export function inspectAuditableDemoFastSentinel({
         '--episode',
         '2',
         '--speed',
-        '1',
+        '4',
       ]) ||
-    projectTourEpisode2?.steps?.[0]?.timeoutSeconds !== 180
+    projectTourEpisode2?.steps?.[0]?.timeoutSeconds !== 360
   ) {
     issues.push(
       'auditable-demo scenario no longer declares the exact bounded three-demo cut',
@@ -204,6 +204,12 @@ export function inspectAuditableDemoFastSentinel({
     product,
     /writeAuditableDemoBinaryMetadata\(stageRoot, layout\)/u,
     'Kungfu product no longer emits exact declarative demo binary metadata',
+  );
+  requirePattern(
+    issues,
+    product,
+    /runInstalledEmbeddedNodeAddonSmoke\([\s\S]*runtimeEntry/u,
+    'Kungfu product no longer executes the staged node-pty addon before upload',
   );
   requirePattern(
     issues,
