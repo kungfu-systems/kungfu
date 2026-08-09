@@ -348,6 +348,7 @@ jobs:
       github.event_name != 'workflow_run' ||
       github.event.workflow_run.event == 'pull_request'
     permissions:
+      actions: write
       checks: read
       contents: write
       pull-requests: write
@@ -358,6 +359,7 @@ jobs:
       target-branch: ${{ needs.resolve-target.outputs.target-branch }}
       expected-pr-number: ${{ fromJSON(needs.resolve-target.outputs.expected-pr-number || '0') }}
       expected-head-sha: ${{ needs.resolve-target.outputs.expected-head-sha }}
+      source-workflow-run-id: ${{ fromJSON(needs.resolve-target.outputs.source-workflow-run-id || '0') }}
       handoff-workflow-id: dev-pr-auto-merge.yml
       source-workflow-id: affected-native-pr.yml
       diagnostic-context: Buildchain delivery intent
