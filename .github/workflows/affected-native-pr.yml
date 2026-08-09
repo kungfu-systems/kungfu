@@ -70,9 +70,9 @@ jobs:
 
   source_acceptance:
     name: Candidate source acceptance
-    uses: kungfu-systems/buildchain/.github/workflows/check.yml@9e904de2c85dbea7c799780ee166510b3336d812 # v3.0.0
+    uses: kungfu-systems/buildchain/.github/workflows/check.yml@58e48d73ae7fef0dd06ae02baf6d090e4da5487d
     with:
-      buildchain-ref: v3
+      buildchain-ref: 58e48d73ae7fef0dd06ae02baf6d090e4da5487d
       mode: source
       upload-artifacts: true
 
@@ -101,7 +101,7 @@ jobs:
         with:
           persist-credentials: false
       - name: Validate .buildchain/buildchain.toml
-        uses: kungfu-systems/buildchain/actions/validate-config@v3
+        uses: kungfu-systems/buildchain/actions/validate-config@58e48d73ae7fef0dd06ae02baf6d090e4da5487d
         with:
           require-version-state: "true"
           require-lifecycle-stages: "install,check,build,verify"
