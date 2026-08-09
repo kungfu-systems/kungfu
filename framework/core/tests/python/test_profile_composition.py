@@ -448,7 +448,7 @@ def test_query_receipt_preserves_core_definition_and_proof_roots(tmp_path):
     assert receipt["queryProofRoot"].startswith("sha256:")
 
 
-def test_non_mission_profile_resolves_query_materializes_contract_and_binds_claim_instance(
+def test_non_work_control_profile_resolves_query_materializes_contract_and_binds_claim_instance(
     tmp_path,
 ):
     source = _dynamic_source(tmp_path)

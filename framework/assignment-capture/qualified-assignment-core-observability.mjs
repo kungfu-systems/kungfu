@@ -113,7 +113,7 @@ export function validateQualifiedCoreUsage(observation) {
   exactKeys(observation.fallback, ['required', 'command'], 'fallback');
   if (
     typeof observation.fallback.required !== 'boolean' ||
-    !['', './shifu build:core'].includes(observation.fallback.command)
+    observation.fallback.command !== ''
   ) {
     throw new Error('Qualified Core usage fallback is invalid');
   }
