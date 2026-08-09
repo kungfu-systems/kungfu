@@ -157,6 +157,12 @@
         "key_id": "ed25519-668812bf28659460",
         "algorithm": "ed25519",
         "public_key_pem": "-----BEGIN PUBLIC KEY-----\nMCowBQYDK2VwAyEAgAti4fLF9HdgLlDoAiGXaKln9GZVGcYCFJG2eJ1/45Q=\n-----END PUBLIC KEY-----\n"
+      },
+      {
+        "authority_id": "kungfu-origin-complexity-transition-review-v2",
+        "key_id": "ed25519-9ff21f6e6f64c985",
+        "algorithm": "ed25519",
+        "public_key_pem": "-----BEGIN PUBLIC KEY-----\nMCowBQYDK2VwAyEAhihl4wBSlb08qstTTlwPBHUUWbspgENqsZz5X3jnLzE=\n-----END PUBLIC KEY-----\n"
       }
     ],
     "requiredFields": [
