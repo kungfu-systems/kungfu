@@ -16,7 +16,7 @@
       "id": "invariant-registry",
       "source": "framework/invariant/kungfu-invariant.registry.json",
       "artifact": "config/invariant/kungfu-invariant.registry.json",
-      "root": "sha256:f39b9fe0b7784b6f2b68388e01b44393926c329ed3771bc7c76eebefefdfac4b"
+      "root": "sha256:1b07c95426679e2689bed6172c5ebbff3781c40719bc6d569396a974bbc544e0"
     }
   ]
 }

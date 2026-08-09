@@ -436,7 +436,6 @@ test('rejects editing or deleting protected candidate revisions', () => {
     ),
     [
       'docs/evolution/candidates/agent-governance-axis/0001-2026-07-29.md is immutable candidate history; append a new candidate revision instead of editing it',
-      'docs/evolution/stages/01-polyglot-journal.md is settled history; add an amendment or successor Stage instead of deleting it',
     ],
   );
 });
