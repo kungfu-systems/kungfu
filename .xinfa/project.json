@@ -501,6 +501,7 @@
         "mode": "exact",
         "paths": [
           "docs/architecture/kfx-topology.md",
+          "docs/adr/KF-ADR-019f9f8a-9f40-7d6e-a4d2-5a334a9ab201.md",
           "docs/adr/KF-ADR-019f86da-4f90-7f46-b195-3af6228d17b1.md",
           "docs/adr/KF-ADR-019f86da-4f90-79d7-a4b7-044fcf998708.md",
           "docs/adr/KF-ADR-019f86da-4f90-72df-add3-948f3ae38c3a.md"
@@ -555,9 +556,120 @@
         "mode": "exact",
         "paths": [
           "docs/architecture/kfx-topology.md",
+          "docs/adr/KF-ADR-019f9f8a-9f40-7d6e-a4d2-5a334a9ab201.md",
           "docs/adr/KF-ADR-019f86da-4f90-7f46-b195-3af6228d17b1.md",
           "docs/adr/KF-ADR-019f86da-4f90-79d7-a4b7-044fcf998708.md",
           "docs/adr/KF-ADR-019f86da-4f90-72df-add3-948f3ae38c3a.md"
+        ]
+      }
+    },
+    {
+      "id": "kungfu-kfx-service-webhook-human",
+      "audience": "human",
+      "parityGroup": "kungfu-kfx-service-webhook",
+      "entrypoints": [
+        "docs/adr/KF-ADR-019f9f8a-9f40-7d6e-a4d2-5a334a9ab201.md"
+      ],
+      "capabilities": [
+        "value",
+        "use",
+        "authority",
+        "constraints",
+        "known-limits",
+        "evidence",
+        "next-action"
+      ],
+      "resolution": {
+        "subjects": [
+          "kfx",
+          "service",
+          "webhook"
+        ],
+        "capabilities": [
+          "service-host",
+          "webhook-intake"
+        ],
+        "owners": [
+          "core",
+          "kfx"
+        ],
+        "roles": [
+          "implementer",
+          "reviewer"
+        ],
+        "mission_tracks": [
+          "external",
+          "kfx-runtime"
+        ],
+        "terms": [
+          "callback",
+          "listener",
+          "service",
+          "webhook"
+        ]
+      },
+      "selection": {
+        "mode": "exact",
+        "paths": [
+          "docs/adr/KF-ADR-019f9f8a-9f40-7d6e-a4d2-5a334a9ab201.md",
+          "docs/architecture/extensions.md",
+          "docs/architecture/kfx-topology.md",
+          "docs/adr/KF-ADR-019f86da-4f90-79d7-a4b7-044fcf998708.md"
+        ]
+      }
+    },
+    {
+      "id": "kungfu-kfx-service-webhook-agent",
+      "audience": "agent",
+      "parityGroup": "kungfu-kfx-service-webhook",
+      "entrypoints": [
+        "docs/adr/KF-ADR-019f9f8a-9f40-7d6e-a4d2-5a334a9ab201.md"
+      ],
+      "capabilities": [
+        "value",
+        "use",
+        "authority",
+        "constraints",
+        "known-limits",
+        "evidence",
+        "next-action"
+      ],
+      "resolution": {
+        "subjects": [
+          "kfx",
+          "service",
+          "webhook"
+        ],
+        "capabilities": [
+          "service-host",
+          "webhook-intake"
+        ],
+        "owners": [
+          "core",
+          "kfx"
+        ],
+        "roles": [
+          "implementer",
+          "reviewer"
+        ],
+        "mission_tracks": [
+          "external",
+          "kfx-runtime"
+        ],
+        "terms": [
+          "callback",
+          "listener",
+          "service",
+          "webhook"
+        ]
+      },
+      "selection": {
+        "mode": "exact",
+        "paths": [
+          "docs/adr/KF-ADR-019f9f8a-9f40-7d6e-a4d2-5a334a9ab201.md",
+          "docs/architecture/extensions.md",
+          "docs/architecture/kfx-topology.md",
+          "docs/adr/KF-ADR-019f86da-4f90-79d7-a4b7-044fcf998708.md"
         ]
       }
     },

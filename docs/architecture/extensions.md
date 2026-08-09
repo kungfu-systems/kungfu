@@ -12,12 +12,12 @@ Three words carry the model — keep them apart:
 
 - **facet** — what a package *does*, declared under `kungfuConfig.config`. A
   package may declare more than one; a facet's loader picks up only what it
-  understands. Two are implemented today: `view` (a GUI screen the shell loads)
-  and `adapter` (a **runtime facet** — capture-side framework instrumentation
-  the trace supervisor loads; the first v4 runtime facet). A background
-  `service` facet is proposed by
-  [KF-ADR-019f86da-4f90-7afa-a1e1-0510f00916be](../adr/KF-ADR-019f86da-4f90-7afa-a1e1-0510f00916be.md)
-  for kfx-owned long-lived processes. Older trading adapters and operators are
+  understands. Three are implemented today: `view` (a GUI screen the shell loads),
+  `adapter` (a **runtime facet** — capture-side framework instrumentation the
+  trace supervisor loads), and `service` (a KFX-owned long-lived process). The
+  stable service/webhook host is specified by
+  [KF-ADR-019f9f8a-9f40-7d6e-a4d2-5a334a9ab201](../adr/KF-ADR-019f9f8a-9f40-7d6e-a4d2-5a334a9ab201.md).
+  Older trading adapters and operators are
   a separate earlier-generation line, still mid-migration (see
   [status](#runtime-extensions-current-status)).
 - **package (kfx)** — the unit of development and distribution: an npm
@@ -104,16 +104,20 @@ extension project's installed `node_modules/@kungfu-tech/kfx` package:
 | `config.adapter.runtimes` | Child runtimes this adapter instruments (`python`, `node`). The supervisor injects an adapter into a child of a matching runtime. |
 | `config.adapter.entry` | Adapter source per runtime, relative to the package root (e.g. `{ "python": "src/adapter/python/index.py" }`). An adapter ships source — there is no bundle step. |
 | `config.adapter.capabilities` | Capture-side capabilities the adapter needs; the same permission seam as a view's `capabilities` (reserved for enforcement). |
+| `config.service.runtimes` / `entry` | Long-running service bodies for Python, Node, or a per-platform prebuilt C++ binary. |
+| `config.service.capabilities` | Exact service capability requests. Stable webhook hosts use `network.listen`, optional `network.listen.non-loopback`, and `credential.verify`. |
+| `config.service.host` | Optional stable `kungfu.kfx.service-host/v1` lifecycle and webhook declaration. Legacy service declarations remain readable but cannot activate the v1 webhook host. See [the stable service and webhook host ADR](../adr/KF-ADR-019f9f8a-9f40-7d6e-a4d2-5a334a9ab201.md). |
 | `suite.title`, `suite.members` | Marks a suite package; `members` lists member `key`s. Members arrive as their own packages (npm `dependencies`) and install individually. |
 | `suite.profile` | Optional relative path to a `kungfu.profile-suite/v1` document. Parent traversal and absolute paths are rejected. The document binds required/optional members and every KFD/action/view/migration/permission/qualification artifact by path and SHA-256. |
 
 The manifest is a welded surface. Do not invent fields: `kungfu kfx install`,
 `kungfu kfx inspect`, `@kungfu-tech/kfx`, the GUI/TUI loaders, Skill dependency
 binding, and assembled artifact verification all validate against the same KFX
-contract. The `service` facet is present in the contract as a draft facet while
-[KF-ADR-019f86da-4f90-7afa-a1e1-0510f00916be](../adr/KF-ADR-019f86da-4f90-7afa-a1e1-0510f00916be.md)'s process-hosting path hardens.
+contract. The `service` facet and provider-neutral webhook host v1 are stable;
+host-specific HTTP transport adapters remain outside the provider contract.
 
-The same contract also carries `profileSuiteSchema`. Inspect the exact installed
+The same contract also carries `serviceHostContractSchema` and
+`profileSuiteSchema`. Inspect the exact installed
 schema with:
 
 ```sh

@@ -16,6 +16,8 @@
 namespace fs = std::filesystem;
 namespace kfx = kungfu::runtime::kfx;
 
+void test_native_kfx_service_host_contract();
+
 namespace {
 
 void require(bool condition, const std::string &message) {
@@ -100,7 +102,7 @@ void test_contract_is_versioned_and_core_owned() {
   require(first.at("contractVersion") == 3, "native contract version drifted");
   require(first.at("versionNegotiation").at("supported") == nlohmann::json::array({3}),
           "native contract retained pre-cutover authority documents");
-  require(first.at("sourceContractVersion") == 13, "native contract did not expose its source compatibility version");
+  require(first.at("sourceContractVersion") == 14, "native contract did not expose its source compatibility version");
   require(contains_text(first.at("coreCapabilityPolicy").at("allowedCapabilities"), "projects"),
           "native Core capability policy omitted the Projects application service");
   require(first.at("runtimeTiers") == nlohmann::json::array({"isolated", "integrated-explicit", "metadata-only"}),
@@ -1186,6 +1188,7 @@ void test_control_suite_recursively_dogfoods_public_fact_work() {
 int main() {
   try {
     test_contract_is_versioned_and_core_owned();
+    test_native_kfx_service_host_contract();
     test_positive_and_negative_fixtures();
     test_manifest_normalization_uses_the_embedded_source_contract();
     test_service_interface_routes_only_validated_requests();

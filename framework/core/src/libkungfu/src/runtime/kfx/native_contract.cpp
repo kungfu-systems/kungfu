@@ -358,6 +358,13 @@ json normalize_native_kfx_manifest(const json &manifest) {
     refuse("KF_KFX_SCHEMA_INVALID", "source contract does not contain packageManifestSchema");
   validate_schema_value(manifest, contract.at("packageManifestSchema"), contract.at("packageManifestSchema"),
                         "packageManifest");
+  if (manifest.contains("kungfuConfig") && manifest.at("kungfuConfig").contains("config") &&
+      manifest.at("kungfuConfig").at("config").contains("service") &&
+      manifest.at("kungfuConfig").at("config").at("service").contains("host")) {
+    validate_schema_value(manifest.at("kungfuConfig").at("config").at("service").at("host"),
+                          contract.at("serviceHostContractSchema"), contract.at("serviceHostContractSchema"),
+                          "packageManifest.kungfuConfig.config.service.host");
+  }
   return json::parse(manifest.dump());
 }
 
