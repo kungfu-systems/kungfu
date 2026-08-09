@@ -17,7 +17,7 @@ review the plan from `kungfu recover`.
 - [Configuration](config.md)
 - [Native Agent adapters](native-agent-adapters.md)
 - [Durability Configuration](durability-configuration.md)
-- [Make the Kungfu command available and install the standalone CLI](installing-cli.md)
+- [Install the Kungfu CLI](installing-cli.md)
 - [Upgrade Kungfu](upgrading.md)
 - [Exit, Migration, and Version Compatibility](exit-and-version-compatibility.md)
 - [Debugging](debugging.md)
