@@ -343,6 +343,7 @@ run('public API transport projection', 'pnpm', [
   '--test',
   path.join(root, 'framework/api/tests/storage.test.ts'),
   path.join(root, 'framework/api/tests/kfx-host.test.ts'),
+  path.join(root, 'framework/api/tests/service-webhook-host.test.ts'),
 ]);
 
 run(

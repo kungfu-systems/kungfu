@@ -17,6 +17,7 @@ import type {
   AssignmentRuntime,
   DomainState,
   KfxControl,
+  KfxServiceHostDeclaration,
   Ledger,
   Profile,
   Projects,
@@ -62,6 +63,7 @@ export type {
   KfxControlPlan,
   KfxControlRoot,
   KfxControlStatus,
+  KfxServiceHostDeclaration,
   Terminal,
   TerminalBackend,
   TerminalExit,
@@ -150,8 +152,11 @@ export type KfxCapabilities = {
 export type KfxCapabilityKey = keyof KfxCapabilities;
 export type KfxServiceCapabilityKey =
   | KfxCapabilityKey
+  | 'credential.verify'
   | 'journal.read.batch'
   | 'network'
+  | 'network.listen'
+  | 'network.listen.non-loopback'
   | 'process';
 
 // ── manifest data (`kungfu.kfx.json`) ─────────────────────────────────────
@@ -275,6 +280,10 @@ export type KfxServiceDecl = {
   // binary map (KfxServiceCppEntry) — no interpreter, so the host launches the
   // binary directly.
   entry: { python?: string; node?: string; cpp?: KfxServiceCppEntry };
+  // Stable provider-neutral lifecycle and webhook host contract. Legacy service
+  // declarations without this field remain discoverable, but are not eligible
+  // for webhook host activation.
+  host?: KfxServiceHostDeclaration;
   // kungfu relay capabilities the service needs; undeclared stay absent — the
   // same permission seam a view's `capabilities` is
   capabilities: KfxServiceCapabilityKey[];
@@ -453,6 +462,7 @@ export type KfxServicePlanEntry = {
   source: 'built-in' | string; // extension root the entry was loaded from
   runtimes: KfxServiceRuntime[];
   entry: { python?: string; node?: string; cpp?: KfxServiceCppEntry };
+  host?: KfxServiceHostDeclaration;
 };
 
 export type KfxPlanFailure = {
@@ -823,6 +833,17 @@ export function validateKfxPackageManifest(
     objectValue(contract.packageManifestSchema) ?? {},
     'KFX package manifest',
   );
+  const host = objectValue(
+    objectValue(objectValue(objectValue(manifest)?.kungfuConfig)?.config)
+      ?.service,
+  )?.host;
+  if (host !== undefined) {
+    validateJsonSchema(
+      host,
+      objectValue(contract.serviceHostContractSchema) ?? {},
+      'KFX service host declaration',
+    );
+  }
 }
 
 export function validateKfxProfileSuite(
@@ -1179,6 +1200,7 @@ export function planKfx(
                   cpp?: KfxServiceCppEntry;
                 };
                 capabilities?: KfxServiceCapabilityKey[];
+                host?: KfxServiceHostDeclaration;
               };
             };
           };
@@ -1262,6 +1284,7 @@ export function planKfx(
             source: root,
             runtimes: service.runtimes ?? [],
             entry: service.entry ?? {},
+            host: service.host,
           });
         }
       } catch (e) {

@@ -13,17 +13,17 @@ domain, then open a decision or its bounded neighborhood.
 Use browser find to search titles, themes, statuses, or compact keys. The
 full IDs stay behind links so filenames do not dominate the page.
 
-Coverage: **173 ADRs** across **8 domains**; **2 authoritative edges**.
+Coverage: **174 ADRs** across **8 domains**; **2 authoritative edges**.
 
 ## Domain overview
 
 ```mermaid
 flowchart LR
-  root["ADR corpus · 173"]
+  root["ADR corpus · 174"]
   root --> d0["Facts, storage, and replay · 42"]
   root --> d1["Agent and work control · 24"]
   root --> d2["Xinfa and documentation · 15"]
-  root --> d3["Extensions, SDKs, and language boundaries · 16"]
+  root --> d3["Extensions, SDKs, and language boundaries · 17"]
   root --> d4["Runtime, live services, and lifecycle · 22"]
   root --> d5["Build, distribution, and release · 8"]
   root --> d6["Product and user surfaces · 8"]
@@ -154,7 +154,7 @@ review`; evidence is the number of declared qualification references.
 </details>
 
 <details id="extensions-sdk">
-<summary><strong>Extensions, SDKs, and language boundaries</strong> · 16</summary>
+<summary><strong>Extensions, SDKs, and language boundaries</strong> · 17</summary>
 
 | Key | Decision | Theme | Status | Evidence | Nearby (navigation only) |
 |---|---|---|---|---:|---|
@@ -168,11 +168,12 @@ review`; evidence is the number of declared qualification references.
 | KF · 2847 | [extension isolation and the trusted channel on the runtime plane](../adr/KF-ADR-019f86da-4f90-79f1-8716-aca36b142847.md) | — | proposed / not-started / legacy-unreviewed | 0 | [KF · 16be](../adr/KF-ADR-019f86da-4f90-7afa-a1e1-0510f00916be.md) (shared terms: plane)<br>[KF · af2f](../adr/KF-ADR-019fb64f-ba63-7620-a384-063adec7af2f.md) (shared terms: runtime)<br>[KF · ef05](../adr/KF-ADR-019f86da-4f90-73ff-9543-f0a4f0beef05.md) (shared terms: runtime) |
 | KF · 053d | [control axis — the Python coroutine integration layer (continue / redesign / drop)](../adr/KF-ADR-019f86da-4f90-7a30-8697-5c648120053d.md) | — | withdrawn / not-applicable / self-reviewed | 0 | [KF · 6704](../adr/KF-ADR-019f86da-4f90-7fb3-a803-393d3bbe6704.md) (shared terms: axis, control)<br>[KF · 3f06](../adr/KF-ADR-019f86da-4f90-7a4b-b1a3-256ce6fa3f06.md) (shared terms: python)<br>[KF · af2f](../adr/KF-ADR-019fb64f-ba63-7620-a384-063adec7af2f.md) (shared terms: python) |
 | KF · 3f06 | [CLI implementation split — Rust trunk vs Python, and growing the embedding membrane's diagnostic surface](../adr/KF-ADR-019f86da-4f90-7a4b-b1a3-256ce6fa3f06.md) | cli-implementation-language-split | accepted / partial / self-reviewed | 20 | [KF · ef05](../adr/KF-ADR-019f86da-4f90-73ff-9543-f0a4f0beef05.md) (shared terms: cli, rust, trunk)<br>[KF · bc81](../adr/KF-ADR-019f86da-4f90-70f3-9a0e-d502826fbc81.md) (shared terms: membrane, surface)<br>[KF · 053d](../adr/KF-ADR-019f86da-4f90-7a30-8697-5c648120053d.md) (shared terms: python)<br>[KF · 31c6](../adr/KF-ADR-019f86da-4f90-7d41-a4a0-e6b01d4b31c6.md) (shared terms: rust) |
-| KF · 16be | [dual-host kfx loading — a host-agnostic load plan and the background service facet on the OS-sandbox plane](../adr/KF-ADR-019f86da-4f90-7afa-a1e1-0510f00916be.md) | — | proposed / not-started / legacy-unreviewed | 0 | [KF · d390](../adr/KF-ADR-019f86da-4f90-7809-898a-ccc0f52bd390.md) (shared terms: dual, host)<br>[KF · 8708](../adr/KF-ADR-019f86da-4f90-79d7-a4b7-044fcf998708.md) (shared terms: kfx)<br>[KF · 2847](../adr/KF-ADR-019f86da-4f90-79f1-8716-aca36b142847.md) (shared terms: plane)<br>[KF · e8ab](../adr/KF-ADR-019f86da-4f90-7d6c-926a-ddd27dbde8ab.md) (shared terms: kfx) |
+| KF · 16be | [dual-host kfx loading — a host-agnostic load plan and the background service facet on the OS-sandbox plane](../adr/KF-ADR-019f86da-4f90-7afa-a1e1-0510f00916be.md) | — | proposed / not-started / legacy-unreviewed | 0 | [KF · b201](../adr/KF-ADR-019f9f8a-9f40-7d6e-a4d2-5a334a9ab201.md) (shared terms: host, kfx, service)<br>[KF · d390](../adr/KF-ADR-019f86da-4f90-7809-898a-ccc0f52bd390.md) (shared terms: dual, host)<br>[KF · 8708](../adr/KF-ADR-019f86da-4f90-79d7-a4b7-044fcf998708.md) (shared terms: kfx)<br>[KF · 2847](../adr/KF-ADR-019f86da-4f90-79f1-8716-aca36b142847.md) (shared terms: plane) |
 | KF · 31c6 | [KFX execution profiles — Rust-primary native, WebAssembly components, managed runtimes, and subprocesses](../adr/KF-ADR-019f86da-4f90-7d41-a4a0-e6b01d4b31c6.md) | kfx-execution-profiles | accepted / implemented / maintainer-reviewed | 1 | [KF · 8708](../adr/KF-ADR-019f86da-4f90-79d7-a4b7-044fcf998708.md) (shared terms: kfx)<br>[KF · 3f06](../adr/KF-ADR-019f86da-4f90-7a4b-b1a3-256ce6fa3f06.md) (shared terms: rust)<br>[KF · 16be](../adr/KF-ADR-019f86da-4f90-7afa-a1e1-0510f00916be.md) (shared terms: kfx)<br>[KF · e8ab](../adr/KF-ADR-019f86da-4f90-7d6c-926a-ddd27dbde8ab.md) (shared terms: kfx) |
 | KF · e8ab | [KFX admission consumes KFD facts and exact Buildchain attestations](../adr/KF-ADR-019f86da-4f90-7d6c-926a-ddd27dbde8ab.md) | kfd-aware-kfx-trust-buildchain-admission | accepted / implemented / self-reviewed | 7 | [KF · 8708](../adr/KF-ADR-019f86da-4f90-79d7-a4b7-044fcf998708.md) (shared terms: kfx)<br>[KF · 16be](../adr/KF-ADR-019f86da-4f90-7afa-a1e1-0510f00916be.md) (shared terms: kfx)<br>[KF · 31c6](../adr/KF-ADR-019f86da-4f90-7d41-a4a0-e6b01d4b31c6.md) (shared terms: kfx)<br>[KF · 8bcc](../adr/KF-ADR-019f86da-4f90-73f3-b027-c343b2bc8bcc.md) (shared terms: kfx) |
 | KF · 6704 | [control axis — the Node watcher snapshot model](../adr/KF-ADR-019f86da-4f90-7fb3-a803-393d3bbe6704.md) | — | withdrawn / not-applicable / self-reviewed | 0 | [KF · 053d](../adr/KF-ADR-019f86da-4f90-7a30-8697-5c648120053d.md) (shared terms: axis, control)<br>[KF · d390](../adr/KF-ADR-019f86da-4f90-7809-898a-ccc0f52bd390.md) (shared terms: node) |
 | KF · b500 | [Layered APIs share one C ABI waist and each identity protocol owns its canonical bytes](../adr/KF-ADR-019f87cb-b4e7-7cda-80ec-be5aceb7b500.md) | layered-api-and-protocol-owned-canonical-encoding | accepted / staged / self-reviewed | 13 | [KF · 8f82](../adr/KF-ADR-019f86da-4f90-74d7-9ddd-84adc0f38f82.md) (shared terms: one, share)<br>[KF · 8bcc](../adr/KF-ADR-019f86da-4f90-73f3-b027-c343b2bc8bcc.md) (shared terms: owns)<br>[KF · d390](../adr/KF-ADR-019f86da-4f90-7809-898a-ccc0f52bd390.md) (shared terms: one)<br>[KF · ef05](../adr/KF-ADR-019f86da-4f90-73ff-9543-f0a4f0beef05.md) (shared terms: layered) |
+| KF · b201 | [stable KFX service and webhook host v1](../adr/KF-ADR-019f9f8a-9f40-7d6e-a4d2-5a334a9ab201.md) | kfx-service-webhook-host | accepted / not-started / self-reviewed | 0 | [KF · 16be](../adr/KF-ADR-019f86da-4f90-7afa-a1e1-0510f00916be.md) (shared terms: host, kfx, service)<br>[KF · 8708](../adr/KF-ADR-019f86da-4f90-79d7-a4b7-044fcf998708.md) (shared terms: kfx)<br>[KF · e8ab](../adr/KF-ADR-019f86da-4f90-7d6c-926a-ddd27dbde8ab.md) (shared terms: kfx)<br>[KF · 31c6](../adr/KF-ADR-019f86da-4f90-7d41-a4a0-e6b01d4b31c6.md) (shared terms: kfx) |
 | KF · af2f | [Python KFX services use standard asyncio behind a journal bridge](../adr/KF-ADR-019fb64f-ba63-7620-a384-063adec7af2f.md) | python-kfx-asyncio-runtime | accepted / implemented / self-reviewed | 7 | [KF · 8708](../adr/KF-ADR-019f86da-4f90-79d7-a4b7-044fcf998708.md) (shared terms: kfx)<br>[KF · 3f06](../adr/KF-ADR-019f86da-4f90-7a4b-b1a3-256ce6fa3f06.md) (shared terms: python)<br>[KF · 053d](../adr/KF-ADR-019f86da-4f90-7a30-8697-5c648120053d.md) (shared terms: python)<br>[KF · 16be](../adr/KF-ADR-019f86da-4f90-7afa-a1e1-0510f00916be.md) (shared terms: kfx) |
 
 </details>
