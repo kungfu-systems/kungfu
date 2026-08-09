@@ -6,6 +6,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 import { digest } from './affected-native-proof.mjs';
+import { parseFamilyQueueLeaseMarker } from './project-cut-merge-queue-admission.mjs';
 
 const ROOT = /^sha256:[0-9a-f]{64}$/u;
 const SHA = /^[0-9a-f]{40}$/u;
@@ -28,6 +29,11 @@ function requireSha(value, label) {
 
 function uniqueStrings(values = []) {
   return [...new Set(values.map(String).filter(Boolean))].sort();
+}
+
+export function activeLeaseContextForPullRequest(pullRequest, sourceHead) {
+  const lease = parseFamilyQueueLeaseMarker(pullRequest?.body || '');
+  return lease?.pullRequestHead === sourceHead ? lease.statusContext : '';
 }
 
 export function createDevDeliveryWarrantInput({
@@ -131,7 +137,7 @@ function parseArgs(args) {
   return result;
 }
 
-function appendOutputs(file, value) {
+function appendOutputs(file, value, activeLeaseContext = '') {
   if (!file) return;
   const outputs = {
     'assignment-root': value.assignmentRoot,
@@ -147,6 +153,7 @@ function appendOutputs(file, value) {
     'delivery-class': value.deliveryClass,
     priority: value.priority,
     'input-root': value.inputRoot,
+    'active-lease-context': activeLeaseContext,
   };
   fs.appendFileSync(
     file,
@@ -159,9 +166,10 @@ function appendOutputs(file, value) {
 if (import.meta.url === `file://${process.argv[1]}`) {
   try {
     const options = parseArgs(process.argv.slice(2));
+    const pullRequest = readJson(options['pull-request']);
     const result = createDevDeliveryWarrantInput({
       repository: options.repository,
-      pullRequest: readJson(options['pull-request']),
+      pullRequest,
       descriptor: readJson(options.descriptor),
       plan: readJson(options.plan),
     });
@@ -172,7 +180,11 @@ if (import.meta.url === `file://${process.argv[1]}`) {
       path.resolve(options.output),
       `${JSON.stringify(result, null, 2)}\n`,
     );
-    appendOutputs(options['github-output'], result);
+    appendOutputs(
+      options['github-output'],
+      result,
+      activeLeaseContextForPullRequest(pullRequest, result.sourceHead),
+    );
     console.log(JSON.stringify(result, null, 2));
   } catch (error) {
     console.error(error instanceof Error ? error.message : String(error));
