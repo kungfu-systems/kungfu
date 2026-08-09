@@ -1,0 +1,1 @@
+{"baseFixture":"admitted","mutation":{"target":"request","operation":"set","path":["authorization","decision"],"value":"denied"},"expect":"unauthorized"}

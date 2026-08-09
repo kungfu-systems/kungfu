@@ -64,6 +64,7 @@
     "docs:portable-bundle:write": "node scripts/require-shifu.mjs docs:portable-bundle:write && node scripts/portable-atlas-bundle.mjs compile --output .xinfa/product-atlas-bundle.json",
     "check:production-graph": "node scripts/require-shifu.mjs check:production-graph && node framework/production-graph/check.mjs && node --test framework/production-graph/check.test.mjs scripts/run-core-affected-native.test.mjs",
     "production-graph:verify": "node scripts/require-shifu.mjs production-graph:verify && node framework/production-graph/check.mjs",
+    "production-graph:admit": "node scripts/require-shifu.mjs production-graph:admit && node framework/production-graph/admission/index.mjs",
     "production-graph:feedback": "node scripts/require-shifu.mjs production-graph:feedback && node framework/production-graph/feedback/index.mjs",
     "check:shifu-gate-contract": "node scripts/require-shifu.mjs check:shifu-gate-contract && node scripts/check-shifu-gate-contract.mjs",
     "check:gate-catalog": "node scripts/require-shifu.mjs check:gate-catalog && node scripts/check-kungfu-gate-catalog.mjs",

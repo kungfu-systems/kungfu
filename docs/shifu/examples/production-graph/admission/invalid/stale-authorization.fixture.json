@@ -1,0 +1,1 @@
+{"baseFixture":"admitted","mutation":{"target":"request","operation":"set","path":["authorization","status"],"value":"stale"},"expect":"stale-authorization"}

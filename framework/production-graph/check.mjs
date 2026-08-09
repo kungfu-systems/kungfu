@@ -8,6 +8,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
+import { createExecutionAdmissionDecision } from './admission/index.mjs';
 import {
   SCHEMA_PATHS,
   applyFixtureMutation,
@@ -29,6 +30,8 @@ const ROOT = path.resolve(
 );
 const FIXTURE_ROOT = 'docs/shifu/examples/production-graph';
 const INVALID_ROOT = `${FIXTURE_ROOT}/invalid`;
+const ADMISSION_ROOT = `${FIXTURE_ROOT}/admission`;
+const ADMISSION_INVALID_ROOT = `${ADMISSION_ROOT}/invalid`;
 
 function fixtureFiles(relativeRoot) {
   return fs
@@ -38,12 +41,113 @@ function fixtureFiles(relativeRoot) {
     .map((name) => `${relativeRoot}/${name}`);
 }
 
+// Conformance-fixture materialization only. These synthetic envelopes carry no
+// Assignment, Work Control, Warrant, approval, merge, close, or execution
+// authority.
+export function materializeExecutionAdmissionFixture(graph, plan, spec) {
+  const workRef = {
+    schema: 'kungfu.work-ref/v1',
+    workspaceId: spec.workspaceId,
+    profileId: spec.profileId,
+    profileRoot: spec.profileRoot,
+    entityType: 'assignment',
+    entityId: spec.assignmentId,
+    initiativeId: spec.initiativeId,
+    entityRoot: spec.assignmentRequestRoot,
+    purpose: 'complete-project-assignment',
+    systemTimeCut: spec.queryProofRoot,
+  };
+  const executionClaimRoot = spec.executionClaimRoot;
+  const work = rooted(
+    {
+      authority: 'kungfu.work-control',
+      status: 'verified',
+      phase: 'executing',
+      workRef,
+      workRefRoot: semanticRoot(workRef),
+      assignmentRequestRoot: spec.assignmentRequestRoot,
+      workDefinitionRoot: spec.workDefinitionRoot,
+      assignmentStateRoot: spec.assignmentStateRoot,
+      queryProofRoot: spec.queryProofRoot,
+      executionClaimRoot,
+      runGateRoot: spec.runGateRoot,
+      attemptId: spec.attemptId,
+      actor: spec.actor,
+      leaseExpiresAt: spec.leaseExpiresAt,
+    },
+    'verificationRoot',
+  );
+  const authorization = rooted(
+    {
+      authority: spec.authorizationAuthority || 'kungfu.warrant',
+      status: 'verified',
+      decision: 'allowed',
+      action: 'start-production-graph-nodes',
+      actor: spec.actor,
+      attemptId: spec.attemptId,
+      executorPolicyRoot: spec.executorPolicyRoot,
+      intendedNodeIds: plan.orderedNodeIds,
+      issuedAt: spec.issuedAt,
+      expiresAt: spec.authorizationExpiresAt,
+      replayState: 'fresh',
+      evidence: [
+        { kind: 'execution-claim', root: executionClaimRoot },
+        { kind: 'warrant', root: spec.warrantRoot },
+      ],
+    },
+    'verificationRoot',
+  );
+  return rooted(
+    {
+      schema: 'shifu.production-graph-execution-admission-request/v0',
+      requestId: spec.requestId,
+      graph,
+      plan,
+      executorPolicyRoot: spec.executorPolicyRoot,
+      work,
+      authorization,
+      actor: spec.actor,
+      attemptId: spec.attemptId,
+      intendedNodeIds: plan.orderedNodeIds,
+      observedAt: spec.observedAt,
+    },
+    'requestRoot',
+  );
+}
+
 function verifyContractBoundary(contract) {
   assert.equal(contract.schema, 'shifu.production-graph-contract/v0');
   assert.deepEqual(contract.schemas, SCHEMA_PATHS);
   assert.equal(contract.verification.command, './shifu check:production-graph');
   assert.equal(contract.verification.protectedGate, './shifu check:source');
   assert.equal(contract.verification.executesNodes, false);
+  assert.equal(
+    contract.executionAdmission.command,
+    './shifu production-graph:admit',
+  );
+  assert.equal(contract.executionAdmission.requiredBeforeNodeStart, true);
+  assert.equal(contract.executionAdmission.failClosed, true);
+  assert.equal(contract.executionAdmission.nodesStartedByAdmission, false);
+  assert.equal(contract.executionAdmission.authorityMutations, false);
+  assert.deepEqual(contract.executionAdmission.authorizationAuthorities, [
+    'kungfu.work-control',
+    'kungfu.warrant',
+    'external-approval-authority',
+  ]);
+  assert.deepEqual(contract.executionAdmission.shifuForbiddenAuthority, [
+    'mint-assignment',
+    'mutate-assignment',
+    'mint-work-control',
+    'mutate-work-control',
+    'mint-warrant',
+    'mutate-warrant',
+    'mint-approval',
+    'mutate-approval',
+    'mint-merge-authority',
+    'mutate-merge-authority',
+    'mint-close-authority',
+    'mutate-close-authority',
+  ]);
   assert.equal(contract.feedback.command, './shifu production-graph:feedback');
   assert.equal(contract.feedback.sideEffects, false);
   assert.equal(contract.feedback.executesRecovery, false);
@@ -77,12 +181,136 @@ function verifierRoot() {
       'framework/production-graph/check.mjs',
       'framework/production-graph/check.test.mjs',
       'framework/production-graph/feedback/index.mjs',
+      'framework/production-graph/admission/index.mjs',
       'framework/production-graph/compiler/polyglot.fixture.mjs',
     ].map((relative) => ({
       path: relative,
       root: fileRoot(path.join(ROOT, relative)),
     })),
   );
+}
+
+function executionAdmissionExpected(request) {
+  return {
+    contractRoot: request.graph.contractRoot,
+    graphRoot: request.graph.graphRoot,
+    planRoot: request.plan.planRoot,
+    sourceRevision: request.graph.source.revision,
+    sourceTree: request.graph.source.tree,
+    authorityReferences: request.graph.authorityReferences,
+    xinfaSelectionRoot: request.graph.semanticImpact.selectionRoot,
+    executorPolicyRoot: request.executorPolicyRoot,
+  };
+}
+
+function mutateAdmission(request, expected, mutation) {
+  const documents = {
+    request: structuredClone(request),
+    expected: structuredClone(expected),
+  };
+  let parent = documents[mutation.target];
+  for (const key of mutation.path.slice(0, -1)) parent = parent[key];
+  const key = mutation.path.at(-1);
+  if (mutation.operation === 'delete') delete parent[key];
+  else parent[key] = structuredClone(mutation.value);
+  return documents;
+}
+
+export async function checkExecutionAdmissionContract(
+  graph,
+  plan,
+  { validators = null, sourceRevision = null } = {},
+) {
+  const checks = validators || (await schemaValidators(ROOT));
+  const fixture = loadFixture(ROOT, `${ADMISSION_ROOT}/admitted.fixture.json`);
+  const request = materializeExecutionAdmissionFixture(
+    graph,
+    plan,
+    fixture.request,
+  );
+  const expected = executionAdmissionExpected(request);
+  const admitted = await createExecutionAdmissionDecision(request, {
+    root: ROOT,
+    expected,
+    validators: checks,
+  });
+  assert.equal(admitted.verification.valid, true);
+  assert.equal(admitted.decision.status, 'admitted');
+  assert.equal(admitted.decision.nodesStarted, false);
+  assert.deepEqual(admitted.decision.authorityMutations, []);
+
+  const rejectedDecisionRoots = [];
+  const rejectionCodes = new Set();
+  for (const relative of fixtureFiles(ADMISSION_INVALID_ROOT)) {
+    const invalid = loadFixture(ROOT, relative);
+    const changed = mutateAdmission(request, expected, invalid.mutation);
+    const rejected = await createExecutionAdmissionDecision(changed.request, {
+      root: ROOT,
+      expected: changed.expected,
+      validators: checks,
+    });
+    assert.equal(rejected.decision.status, 'rejected', relative);
+    assert.equal(rejected.decision.nodesStarted, false, relative);
+    assert.deepEqual(rejected.decision.authorityMutations, [], relative);
+    assert.ok(rejected.rejection, `${relative}: rejection is missing`);
+    assert.equal(rejected.rejection.nodesStarted, false, relative);
+    assert.deepEqual(rejected.rejection.authorityMutations, [], relative);
+    assert.ok(
+      rejected.verification.codes.includes(invalid.expect),
+      `${relative}: expected ${invalid.expect}, got ${JSON.stringify(rejected.verification.codes)}`,
+    );
+    rejectedDecisionRoots.push(rejected.decision.decisionRoot);
+    rejectionCodes.add(invalid.expect);
+  }
+  assert.ok(rejectedDecisionRoots.length >= 8);
+  assert.ok(rejectionCodes.size >= 8);
+
+  const receipt = rooted(
+    {
+      schema:
+        'shifu.production-graph-execution-admission-verification-receipt/v0',
+      status: 'qualified',
+      sourceRevision: sourceRevision || graph.source.revision,
+      contractRoot: graph.contractRoot,
+      schemaRoots: {
+        request: semanticRoot(
+          loadFixture(ROOT, SCHEMA_PATHS.executionAdmissionRequest),
+        ),
+        decision: semanticRoot(
+          loadFixture(ROOT, SCHEMA_PATHS.executionAdmissionDecision),
+        ),
+        rejection: semanticRoot(
+          loadFixture(ROOT, SCHEMA_PATHS.executionAdmissionRejection),
+        ),
+        verificationReceipt: semanticRoot(
+          loadFixture(ROOT, SCHEMA_PATHS.executionAdmissionVerificationReceipt),
+        ),
+      },
+      verifierRoot: semanticRoot(
+        [
+          'framework/production-graph/admission/index.mjs',
+          `${ADMISSION_ROOT}/admitted.fixture.json`,
+          ...fixtureFiles(ADMISSION_INVALID_ROOT),
+        ].map((relative) => ({
+          path: relative,
+          root: fileRoot(path.join(ROOT, relative)),
+        })),
+      ),
+      admittedDecisionRoots: [admitted.decision.decisionRoot],
+      rejectedDecisionRoots,
+      rejectionCodes: [...rejectionCodes].sort(),
+      protectedGate: './shifu check:source',
+      nodesStarted: false,
+      authorityMutations: [],
+    },
+    'receiptRoot',
+  );
+  assert.equal(
+    checks.executionAdmissionVerificationReceipt(receipt),
+    true,
+    JSON.stringify(checks.executionAdmissionVerificationReceipt.errors),
+  );
+  return receipt;
 }
 
 export async function checkProductionGraphContract() {
@@ -135,6 +363,9 @@ export async function checkProductionGraphContract() {
     valid.set(fixture.fixtureId, { fixture, bundle });
   }
 
+  const qualified = valid.get('qualified');
+  assert.ok(qualified, 'qualified fixture is required for execution admission');
+
   for (const relative of invalidFiles) {
     const fixture = loadFixture(ROOT, relative);
     const base = valid.get(fixture.baseFixture);
@@ -159,6 +390,11 @@ export async function checkProductionGraphContract() {
     cwd: ROOT,
     encoding: 'utf8',
   }).trim();
+  const executionAdmissionReceipt = await checkExecutionAdmissionContract(
+    qualified.bundle.graph,
+    qualified.bundle.plan,
+    { validators, sourceRevision },
+  );
   const receipt = rooted(
     {
       schema: 'shifu.production-graph-verification-receipt/v0',
@@ -183,6 +419,7 @@ export async function checkProductionGraphContract() {
       ),
       validFixtureCount: validFiles.length,
       invalidFixtureCount: invalidFiles.length,
+      executionAdmissionReceiptRoot: executionAdmissionReceipt.receiptRoot,
       protectedGate: './shifu check:source',
       nodesExecuted: false,
     },

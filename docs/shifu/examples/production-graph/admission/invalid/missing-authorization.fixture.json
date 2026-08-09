@@ -1,0 +1,1 @@
+{"baseFixture":"admitted","mutation":{"target":"request","operation":"delete","path":["authorization"]},"expect":"missing-authorization"}

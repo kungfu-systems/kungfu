@@ -1,0 +1,27 @@
+{
+  "schema": "shifu.production-graph-execution-admission-fixture/v0",
+  "fixtureId": "admitted",
+  "baseGraphFixture": "qualified",
+  "request": {
+    "requestId": "execution-admission-fixture",
+    "workspaceId": "workspace-fixture",
+    "profileId": "profile-fixture",
+    "profileRoot": "sha256:0101010101010101010101010101010101010101010101010101010101010101",
+    "assignmentId": "assignment-fixture",
+    "initiativeId": "initiative-fixture",
+    "assignmentRequestRoot": "sha256:0202020202020202020202020202020202020202020202020202020202020202",
+    "workDefinitionRoot": "sha256:0303030303030303030303030303030303030303030303030303030303030303",
+    "assignmentStateRoot": "sha256:0404040404040404040404040404040404040404040404040404040404040404",
+    "queryProofRoot": "sha256:0505050505050505050505050505050505050505050505050505050505050505",
+    "executionClaimRoot": "sha256:0606060606060606060606060606060606060606060606060606060606060606",
+    "runGateRoot": "sha256:0707070707070707070707070707070707070707070707070707070707070707",
+    "warrantRoot": "sha256:0808080808080808080808080808080808080808080808080808080808080808",
+    "executorPolicyRoot": "sha256:0909090909090909090909090909090909090909090909090909090909090909",
+    "actor": "codex-fixture",
+    "attemptId": "attempt-fixture",
+    "observedAt": "2026-08-09T08:00:00Z",
+    "issuedAt": "2026-08-09T07:55:00Z",
+    "leaseExpiresAt": "2026-08-09T08:30:00Z",
+    "authorizationExpiresAt": "2026-08-09T08:15:00Z"
+  }
+}

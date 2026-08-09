@@ -1,0 +1,1 @@
+{"baseFixture":"admitted","mutation":{"target":"request","operation":"set","path":["work","leaseExpiresAt"],"value":"2026-08-09T08:00:00Z"},"expect":"expired-work-lease"}
