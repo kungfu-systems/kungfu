@@ -213,6 +213,47 @@ def test_agent_session_ensure_reuses_an_explicit_product_endpoint(
     assert runners == []
 
 
+def test_agent_session_worker_launch_restores_standard_stream_inheritance(
+    monkeypatch, tmp_path
+):
+    monkeypatch.delenv("KUNGFU_AGENT_SESSION_ENDPOINT", raising=False)
+    calls = []
+
+    def invoke(*_args, **_kwargs):
+        calls.append(True)
+        if len(calls) == 1:
+            raise FileNotFoundError("cold worker")
+        return NATIVE_SURFACE_CAPABILITIES
+
+    inheritance = {0: True, 1: False, 2: True}
+
+    def run_worker(*_args):
+        for descriptor in inheritance:
+            inheritance[descriptor] = False
+        return 0
+
+    monkeypatch.setattr(session_surface, "invoke", invoke)
+    monkeypatch.setattr(session_surface, "_resolve_native_entry", lambda: "/entry.mjs")
+    monkeypatch.setattr(
+        session_surface, "_resolve_worker_executable", lambda: "/kungfu"
+    )
+    monkeypatch.setattr(
+        session_surface.os,
+        "get_inheritable",
+        lambda descriptor: inheritance[descriptor],
+    )
+    monkeypatch.setattr(
+        session_surface.os,
+        "set_inheritable",
+        lambda descriptor, value: inheritance.__setitem__(descriptor, value),
+    )
+
+    endpoint = session_surface.ensure(tmp_path / "runtime", runner=run_worker)
+
+    assert endpoint == session_surface.endpoint_for_runtime(tmp_path / "runtime")
+    assert inheritance == {0: True, 1: False, 2: True}
+
+
 def test_native_interactive_uses_controlling_terminal_before_registering_attempt(
     monkeypatch, tmp_path
 ):
