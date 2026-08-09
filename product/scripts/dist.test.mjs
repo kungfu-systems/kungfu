@@ -450,7 +450,7 @@ test('Linux CLI staging restores only the exact node-pty native runtime closure'
   const source = path.join(parent, 'source');
   const target = path.join(parent, 'target');
   for (const [relative, content] of [
-    ['package.json', '{}\n'],
+    ['package.json', '{"name":"node-pty","version":"1.1.0"}\n'],
     ['index.js', 'export {};\n'],
     ['build/Release/pty.node', 'native-addon\n'],
     ['build/Release/spawn-helper', 'native-helper\n'],
@@ -489,6 +489,10 @@ test('Darwin CLI staging preserves the prebuilt node-pty helper contract', (t) =
   const target = path.join(parent, 'target');
   const prebuild = path.join(source, 'prebuilds', 'darwin-arm64');
   fs.mkdirSync(prebuild, { recursive: true });
+  fs.writeFileSync(
+    path.join(source, 'package.json'),
+    '{"name":"node-pty","version":"1.1.0"}\n',
+  );
   fs.writeFileSync(path.join(prebuild, 'pty.node'), 'native-addon\n');
   fs.writeFileSync(path.join(prebuild, 'spawn-helper'), 'native-helper\n');
   fs.mkdirSync(path.join(source, 'prebuilds', 'darwin-x64'));
@@ -514,11 +518,14 @@ test('Linux CLI staging fails closed when the node-pty native addon is missing',
   const source = path.join(parent, 'source');
   const target = path.join(parent, 'target');
   fs.mkdirSync(path.join(source, 'build', 'Release'), { recursive: true });
-  fs.writeFileSync(path.join(source, 'package.json'), '{}\n');
+  fs.writeFileSync(
+    path.join(source, 'package.json'),
+    '{"name":"node-pty","version":"1.1.0"}\n',
+  );
 
   assert.throws(
     () => stageNodePtyForCli(source, target, 'linux', 'x64'),
-    /required Linux node-pty runtime not found/u,
+    /required node-pty runtime file not found/u,
   );
 });
 
