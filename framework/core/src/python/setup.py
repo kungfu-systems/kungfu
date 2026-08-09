@@ -116,7 +116,17 @@ setup(
             "*.md",
             "examples/*.md",
             "skills/*/SKILL.md",
-        ]
+        ],
+        "kungfu.kfx_authoring_assets": [
+            "brief.md",
+            "contract.json",
+            "sdk/*.d.ts",
+            "sdk/*.mjs",
+            "templates/webhook-service/*.tmpl",
+            "templates/webhook-service/fixtures/*.mjs",
+            "templates/webhook-service/src/*.tmpl",
+            "templates/webhook-service/test/*.tmpl",
+        ],
     },
     include_package_data=True,
     # [project].dependencies 已是 PEP 508 完整约束（含平台 marker），直接作为 wheel

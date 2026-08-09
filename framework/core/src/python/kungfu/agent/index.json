@@ -30,6 +30,7 @@
     { "path": "kfd3_api.registry.json", "purpose": "single KFD-3 collaboration-interface registry", "maturity": "stable" },
     { "path": "kfd3_api.schema.json", "purpose": "local KFD-3 registry shape contract", "maturity": "stable" },
     { "path": "profile-sdk.contract.json", "purpose": "Agent Profile SDK brief, decision, and action schemas", "maturity": "experimental" },
+    { "path": "kfx-authoring.md", "purpose": "installed KFX SDK, webhook starter, lifecycle, and qualification route", "maturity": "experimental" },
     { "path": "bootstrap-receipt.schema.json", "purpose": "attempt-bound native Agent bootstrap receipt schema", "maturity": "experimental" },
     { "path": "safety.md", "purpose": "fact boundaries and non-goals", "maturity": "stable" },
     { "path": "examples/report-mode.md", "purpose": "structured work facts without process capture", "maturity": "stable" },
