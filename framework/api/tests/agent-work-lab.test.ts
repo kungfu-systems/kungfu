@@ -922,6 +922,88 @@ test('GUI and TUI share the same fail-closed startup surface policy', () => {
   );
 });
 
+test('Project Tour runs one controller process with one final inventory query per episode', async () => {
+  const calls: string[][] = [];
+  const events: string[] = [];
+  const report = {
+    schema: 'kungfu.project-tour.episode-report/v1',
+    status: 'qualified',
+    episode: '1',
+    projectPath: '/projects/tour',
+    controller: { pid: 42, processCount: 1, inventoryQueryCount: 1 },
+    project: {},
+    attemptReceipts: [],
+    reviewReceipt: null,
+    closeReceipt: null,
+    followupCapture: null,
+    finalInventory: { works: [] },
+    stageTimings: [],
+    eventCount: 1,
+    durationMs: 100,
+    reportRoot: `sha256:${'a'.repeat(64)}`,
+  };
+  const event = {
+    schema: 'kungfu.project-tour.episode-event/v1',
+    index: 1,
+    episode: '1',
+    elapsedMs: 0,
+    kind: 'inventory',
+    section: 'PROJECT WORK · FINAL RECONCILIATION',
+    sectionTag: 'WORK',
+    status: 'completed',
+    text: 'one final inventory',
+    root: `sha256:${'b'.repeat(64)}`,
+  };
+  const lab = openAgentWorkLab({
+    runtimeDir: '/runtime',
+    bin: '/product/kungfu',
+    execFile: async () => {
+      throw new Error('Project Tour must not launch a second CLI process');
+    },
+    execFileSync: () => JSON.stringify(startup),
+    execFileEvents: async (_file, args, _options, onLine) => {
+      calls.push(args);
+      onLine(JSON.stringify(event));
+      onLine(JSON.stringify(report));
+    },
+  });
+
+  const result = await lab.runProjectTourEpisode(
+    {
+      destination: '/projects/tour',
+      episode: '1',
+      guideDwellMs: 8000,
+      guideGapMs: 400,
+      episodeTwoGuideDwellMs: 7000,
+      episodeTwoFinalGuideDwellMs: 6400,
+    },
+    (value) => events.push(value.text),
+  );
+
+  assert.equal(result.controller.processCount, 1);
+  assert.equal(result.controller.inventoryQueryCount, 1);
+  assert.deepEqual(events, ['one final inventory']);
+  assert.deepEqual(calls, [
+    [
+      'agent-work-lab',
+      'project-tour-run',
+      '--destination',
+      '/projects/tour',
+      '--episode',
+      '1',
+      '--guide-dwell-ms',
+      '8000',
+      '--guide-gap-ms',
+      '400',
+      '--episode-two-guide-dwell-ms',
+      '7000',
+      '--episode-two-final-guide-dwell-ms',
+      '6400',
+      '--events-json',
+    ],
+  ]);
+});
+
 test('run progress distinguishes a live wait from an admitted event', () => {
   assert.equal(
     agentWorkLabRunProgressLabel({

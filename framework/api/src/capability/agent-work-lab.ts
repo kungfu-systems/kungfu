@@ -684,6 +684,84 @@ export type WorkCloseReceipt = {
   writeOccurred: boolean;
 };
 
+export type ProjectTourEpisodeEvent = {
+  schema: 'kungfu.project-tour.episode-event/v1';
+  index: number;
+  episode: '1' | '2';
+  elapsedMs: number;
+  kind:
+    | 'guide'
+    | 'operation'
+    | 'native'
+    | 'project'
+    | 'receipt'
+    | 'artifact'
+    | 'inventory';
+  section: string;
+  sectionTag: string;
+  status: string;
+  text: string;
+  root: string | null;
+  durationMs?: number;
+  sceneId?: string;
+  relativePath?: string;
+  activity?: WorkStartEvent['activity'];
+  nativeEvent?: WorkStartEvent | WorkReviewEvent;
+  project?: {
+    schema: 'kungfu.project-tour.project/v1';
+    status: 'created' | 'resumed';
+    destination: string;
+    receipt: ProjectTemplateCreationReceipt;
+    initialWork: ProjectWork;
+    selection: Record<string, unknown>;
+  };
+  receipt?: WorkStartReceipt | WorkReviewReceipt | WorkCloseReceipt;
+  inventory?: {
+    schema: 'kungfu.project-work.inventory/v1';
+    projectPath: string;
+    works: ProjectWork[];
+    activeWork: ProjectWork | null;
+    writeOccurred: false;
+    inventoryRoot: string;
+  };
+};
+
+export type ProjectTourEpisodeReport = {
+  schema: 'kungfu.project-tour.episode-report/v1';
+  status: 'qualified';
+  episode: '1' | '2';
+  projectPath: string;
+  controller: {
+    pid: number;
+    processCount: 1;
+    inventoryQueryCount: 1;
+  };
+  project: NonNullable<ProjectTourEpisodeEvent['project']>;
+  attemptReceipts: WorkStartReceipt[];
+  reviewReceipt: WorkReviewReceipt | null;
+  closeReceipt: WorkCloseReceipt | null;
+  followupCapture: Record<string, unknown> | null;
+  finalInventory: NonNullable<ProjectTourEpisodeEvent['inventory']>;
+  stageTimings: Array<{
+    section: string;
+    sectionTag: string;
+    durationMs: number;
+  }>;
+  eventCount: number;
+  durationMs: number;
+  reportRoot: string;
+};
+
+export type ProjectTourEpisodeRunOptions = {
+  destination: string;
+  episode: '1' | '2';
+  resume?: boolean;
+  guideDwellMs: number;
+  guideGapMs: number;
+  episodeTwoGuideDwellMs: number;
+  episodeTwoFinalGuideDwellMs: number;
+};
+
 export function projectWorkspaceEnvironment(
   selection: ProjectTemplateWorkspaceSelection,
 ): Record<string, string> {
@@ -757,6 +835,10 @@ export type AgentWorkLab = {
     receipt: ProjectWorkReference,
   ) => Promise<ProjectWorkResume>;
   resumeStarterProject: () => Promise<StarterProjectResume | null>;
+  runProjectTourEpisode: (
+    runOptions: ProjectTourEpisodeRunOptions,
+    onEvent?: (event: ProjectTourEpisodeEvent) => void,
+  ) => Promise<ProjectTourEpisodeReport>;
 };
 
 type ExecOptions = {
@@ -955,6 +1037,55 @@ export function openAgentWorkLab(
         [sourceProfileId, '--execute', '--target-profile', targetProfileId],
         onEvent,
       ),
+    runProjectTourEpisode: async (runOptions, onEvent) => {
+      const argv = [
+        'agent-work-lab',
+        'project-tour-run',
+        '--destination',
+        runOptions.destination,
+        '--episode',
+        runOptions.episode,
+        ...(runOptions.resume ? ['--resume'] : []),
+        '--guide-dwell-ms',
+        String(runOptions.guideDwellMs),
+        '--guide-gap-ms',
+        String(runOptions.guideGapMs),
+        '--episode-two-guide-dwell-ms',
+        String(runOptions.episodeTwoGuideDwellMs),
+        '--episode-two-final-guide-dwell-ms',
+        String(runOptions.episodeTwoFinalGuideDwellMs),
+        ...(options.allowForeignBinding ? ['--allow-foreign-binding'] : []),
+      ];
+      if (!onEvent || !options.execFileEvents) {
+        return runCli<ProjectTourEpisodeReport>([...argv, '--json']);
+      }
+      let report: ProjectTourEpisodeReport | null = null;
+      await options.execFileEvents(
+        bin,
+        [...argv, '--events-json'],
+        {
+          encoding: 'utf8',
+          env,
+          maxBuffer: 64 * 1024 * 1024,
+        },
+        (line) => {
+          const payload = parse<
+            ProjectTourEpisodeEvent | ProjectTourEpisodeReport
+          >(line);
+          if (payload.schema === 'kungfu.project-tour.episode-event/v1') {
+            onEvent(payload);
+          } else {
+            report = payload;
+          }
+        },
+      );
+      if (!report) {
+        throw new Error(
+          'Project Tour controller stream ended without a canonical report',
+        );
+      }
+      return report;
+    },
     planStarterProject: (destination) =>
       run<ProjectTemplatePlan>(
         'starter-plan',
