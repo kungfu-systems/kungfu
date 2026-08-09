@@ -29,7 +29,7 @@ from kungfu.coordination.arbiter import (
     grant_payload,
     parse_name,
 )
-from kungfu.runtime import readiness as runtime_readiness
+from kungfu.execution_surface import readiness as runtime_readiness
 from kungfu.storage import service as storage_service
 from kungfu.action_wire import unwrap_event, wrap_event
 from pykungfu.runtime import coordinator as NativeCoordinator
