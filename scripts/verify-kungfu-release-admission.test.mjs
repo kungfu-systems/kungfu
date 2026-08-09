@@ -381,7 +381,7 @@ function fixture(options = {}) {
   };
 }
 
-test('Kungfu independently accepts only a current sealed qualifying capability', async () => {
+test('Kungfu independently accepts only a durable sealed qualifying capability', async () => {
   const result = await verifyKungfuReleaseAdmission(fixture());
   assert.equal(result.qualifying, true);
   assert.equal(result.capability.decision, 'allow');
