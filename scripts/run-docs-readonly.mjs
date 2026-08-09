@@ -75,6 +75,7 @@ try {
       'pnpm-lock.yaml',
       'pnpm-workspace.yaml',
       '.npmrc',
+      'patches/**',
     ])
       .split('\0')
       .filter(Boolean);
