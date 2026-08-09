@@ -173,7 +173,12 @@ test('the build fails the real transported binary before either upload path', ()
   );
   assert.equal(
     demo.uses,
-    'kungfu-systems/buildchain/.github/workflows/.declarative-auditable-demo.yml@41d4dce2f38aa4821c794b49dcfb2bcf59d0984a',
+    'kungfu-systems/buildchain/.github/workflows/.declarative-auditable-demo.yml@733812ff9405241705f5f267fe2e5ec6351e1a2d',
+  );
+  assert.equal(
+    workflow.on.workflow_dispatch.inputs['buildchain-ref'].default,
+    demo.uses.slice(demo.uses.lastIndexOf('@') + 1),
+    'manual dispatch must default transport validation and capture to one runtime',
   );
   assert.equal(
     build.with['pre-upload-transport-smoke-scenario-path'],
@@ -198,6 +203,30 @@ test('manual full refresh and promotion reuse the same materializer', () => {
   assert.equal(
     demo.secrets.DEMO_UPDATE_TOKEN,
     '${{ secrets.KUNGFU_GITHUB_TOKEN }}',
+  );
+});
+
+test('manual media publication builds exactly one Linux x64 product artifact', () => {
+  const platformExpression = build.with['platforms-json'];
+  assert.match(
+    platformExpression,
+    /github\.event_name == 'workflow_dispatch' && inputs\.render-auditable-demo/u,
+  );
+  assert.match(
+    platformExpression,
+    /^\$\{\{[\s\S]*inputs\.render-auditable-demo && '\[\{"id":"linux-x64","name":"Linux x64 auditable demo publication"[\s\S]*\}\]'[\s\S]*\|\| \(inputs\.platforms-json \|\| '\[\{"id":"linux-x64"[\s\S]*"id":"linux-arm64"[\s\S]*"id":"macos-arm64"[\s\S]*"id":"windows-x64"/u,
+  );
+  assert.equal(
+    build.with['buildchain-ref'],
+    "${{ inputs.buildchain-ref || '2e7e07902ac28d8f3edcfb81098ef9ebc7a91878' }}",
+  );
+  assert.equal(
+    build.with['compiler-cache-platforms-json'],
+    '${{ github.event_name == \'workflow_dispatch\' && (inputs.render-auditable-demo || inputs.windows-compiler-cache-mode == \'off\') && \'[]\' || \'["windows-x64"]\' }}',
+  );
+  assert.equal(
+    build.with['compiler-cache-required'],
+    "${{ github.event_name != 'workflow_dispatch' || (!inputs.render-auditable-demo && inputs.windows-compiler-cache-mode != 'off') }}",
   );
 });
 

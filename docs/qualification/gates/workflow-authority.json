@@ -274,16 +274,16 @@
     {
       "path": ".github/workflows/build.yml",
       "authority": "product-publication",
-      "definitionDigest": "sha256:9cae1ec7ea1247a9a6282fd680a60021445aa58a38936d87205e562914ab81d8",
+      "definitionDigest": "sha256:f5c0ce31e9a60da028c861c757b864a9009fc38f6c7a09fc585f552a8b4afd58",
       "jobs": [
         {
           "id": "auditable-demo",
           "authority": "qualification",
           "publication": "none",
           "receipt": "qualifying",
-          "definitionDigest": "sha256:7b4cf57bda0843563c3499dfedce43b98719b2935569aac36ec6145d8aa9722c",
+          "definitionDigest": "sha256:d00a04b08d056cd07853bb93ada9f1aeeff658a5b9677470154f1a51683cc4af",
           "credentials": {"githubToken":"write","oidc":false,"repositorySecrets":["KUNGFU_GITHUB_TOKEN"],"inheritedSecrets":false,"environment":null},
-          "externalActions": ["kungfu-systems/buildchain/.github/workflows/.declarative-auditable-demo.yml@41d4dce2f38aa4821c794b49dcfb2bcf59d0984a"],
+          "externalActions": ["kungfu-systems/buildchain/.github/workflows/.declarative-auditable-demo.yml@733812ff9405241705f5f267fe2e5ec6351e1a2d"],
           "steps": []
         },
         {
@@ -301,7 +301,7 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "qualifying",
-          "definitionDigest": "sha256:e0bb48b22d8b738260bb08031cb44aef493782a1055d72703e0e484831146fe4",
+          "definitionDigest": "sha256:8d90afd9fcbb0be76c4836fe52121579463a302368f7206b0e883fa9bc31758d",
           "credentials": {"githubToken":"write","oidc":true,"repositorySecrets":["BUILDCHAIN_ARTIFACT_RELAY_S3_DOWNLOAD_ROLE_ARN","BUILDCHAIN_ARTIFACT_RELAY_S3_ROLE_ARN","BUILDCHAIN_ARTIFACT_RELAY_S3_UPLOAD_ROLE_ARN","KUNGFU_GITHUB_TOKEN"],"inheritedSecrets":false,"environment":null},
           "externalActions": ["kungfu-systems/buildchain/.github/workflows/.build.yml@2e7e07902ac28d8f3edcfb81098ef9ebc7a91878"],
           "steps": []
