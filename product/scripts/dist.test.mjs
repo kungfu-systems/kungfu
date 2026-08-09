@@ -473,12 +473,8 @@ test('Linux CLI staging restores only the exact node-pty native runtime closure'
     'native-addon\n',
   );
   assert.equal(
-    fs.readFileSync(path.join(target, 'build/Release/spawn-helper'), 'utf8'),
-    'native-helper\n',
-  );
-  assert.notEqual(
-    fs.statSync(path.join(target, 'build/Release/spawn-helper')).mode & 0o111,
-    0,
+    fs.existsSync(path.join(target, 'build/Release/spawn-helper')),
+    false,
   );
   assert.equal(fs.existsSync(path.join(target, 'build/Debug')), false);
   assert.equal(
@@ -523,24 +519,6 @@ test('Linux CLI staging fails closed when the node-pty native addon is missing',
   assert.throws(
     () => stageNodePtyForCli(source, target, 'linux', 'x64'),
     /required Linux node-pty runtime not found/u,
-  );
-});
-
-test('Linux CLI staging fails closed when the node-pty spawn helper is missing', (t) => {
-  const parent = fs.mkdtempSync(path.join(os.tmpdir(), 'kungfu-node-pty-'));
-  t.after(() => fs.rmSync(parent, { recursive: true, force: true }));
-  const source = path.join(parent, 'source');
-  const target = path.join(parent, 'target');
-  fs.mkdirSync(path.join(source, 'build', 'Release'), { recursive: true });
-  fs.writeFileSync(path.join(source, 'package.json'), '{}\n');
-  fs.writeFileSync(
-    path.join(source, 'build', 'Release', 'pty.node'),
-    'native-addon\n',
-  );
-
-  assert.throws(
-    () => stageNodePtyForCli(source, target, 'linux', 'x64'),
-    /required Linux node-pty runtime not found: .*spawn-helper/u,
   );
 });
 
