@@ -613,8 +613,7 @@
         "paths": [
           "docs/adr/KF-ADR-019f9f8a-9f40-7d6e-a4d2-5a334a9ab201.md",
           "docs/architecture/extensions.md",
-          "docs/architecture/kfx-topology.md",
-          "docs/adr/KF-ADR-019f86da-4f90-79d7-a4b7-044fcf998708.md"
+          "docs/architecture/kfx-topology.md"
         ]
       }
     },
@@ -668,8 +667,7 @@
         "paths": [
           "docs/adr/KF-ADR-019f9f8a-9f40-7d6e-a4d2-5a334a9ab201.md",
           "docs/architecture/extensions.md",
-          "docs/architecture/kfx-topology.md",
-          "docs/adr/KF-ADR-019f86da-4f90-79d7-a4b7-044fcf998708.md"
+          "docs/architecture/kfx-topology.md"
         ]
       }
     },
