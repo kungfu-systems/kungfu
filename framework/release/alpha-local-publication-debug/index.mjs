@@ -20,6 +20,8 @@ const EXPECTED_VERSION = '4.0.0-alpha.1';
 const BUILDCHAIN_REHEARSAL_MERGE = 'fadcdfbf87a5e8f16b80df2ab39384dee0c8a601';
 const PLATFORM_IDS = ['linux-x64', 'linux-arm64', 'macos-arm64', 'windows-x64'];
 
+/** @typedef {Error & {alphaDebugCode?: string, alphaDebugClass?: string, rehearsalCode?: string, rehearsalClass?: string, bindingRoot?: string}} DebugError */
+
 function canonical(value) {
   if (Array.isArray(value)) return value.map(canonical);
   if (value && typeof value === 'object') {
@@ -233,15 +235,44 @@ function writeExact(filePath, contents) {
   fs.writeFileSync(filePath, contents);
 }
 
+function debugFailure(code, message) {
+  /** @type {DebugError} */
+  const error = new Error(message);
+  error.alphaDebugCode = code;
+  error.alphaDebugClass = 'input';
+  throw error;
+}
+
+function writeCandidateFile(filePath, contents, code) {
+  const bytes = Buffer.isBuffer(contents) ? contents : Buffer.from(contents);
+  if (fs.existsSync(filePath)) {
+    if (
+      !fs.statSync(filePath).isFile() ||
+      fs.lstatSync(filePath).isSymbolicLink() ||
+      !fs.readFileSync(filePath).equals(bytes)
+    )
+      debugFailure(code, `candidate binding drift: ${path.basename(filePath)}`);
+    return;
+  }
+  fs.mkdirSync(path.dirname(filePath), { recursive: true });
+  fs.writeFileSync(filePath, bytes);
+}
+
 function stageFile(source, target, expected) {
   fs.mkdirSync(path.dirname(target), { recursive: true });
-  if (
-    fs.existsSync(target) &&
-    fs.statSync(target).isFile() &&
-    fs.statSync(target).size === expected.size &&
-    fileDigest(target) === expected.root
-  )
-    return;
+  if (fs.existsSync(target)) {
+    if (
+      fs.statSync(target).isFile() &&
+      !fs.lstatSync(target).isSymbolicLink() &&
+      fs.statSync(target).size === expected.size &&
+      fileDigest(target) === expected.root
+    )
+      return;
+    debugFailure(
+      'candidate-payload-drift',
+      `candidate payload drift: ${path.basename(target)}`,
+    );
+  }
   for (const options of [['--reflink=auto'], ['-c'], []]) {
     const result = childProcess.spawnSync('cp', [...options, source, target], {
       encoding: 'utf8',
@@ -363,6 +394,62 @@ function inventoryEntry(role, relativePath, filePath) {
   };
 }
 
+function regularFilesUnder(root, relative = '') {
+  const directory = path.join(root, relative);
+  const files = [];
+  for (const entry of fs
+    .readdirSync(directory, { withFileTypes: true })
+    .sort((left, right) => left.name.localeCompare(right.name))) {
+    const childRelative = relative ? `${relative}/${entry.name}` : entry.name;
+    const child = path.join(root, childRelative);
+    if (entry.isSymbolicLink())
+      debugFailure(
+        'candidate-inventory-symbolic-link',
+        `candidate inventory contains a symbolic link: ${childRelative}`,
+      );
+    if (entry.isDirectory())
+      files.push(...regularFilesUnder(root, childRelative));
+    else if (entry.isFile()) files.push(childRelative);
+    else
+      debugFailure(
+        'candidate-inventory-non-regular',
+        `candidate inventory contains a non-regular entry: ${childRelative}`,
+      );
+  }
+  return files;
+}
+
+export function completeRegularFileInventory(capsuleRoot, declaredFiles) {
+  const actual = regularFilesUnder(capsuleRoot);
+  const declared = [...declaredFiles]
+    .map((entry) => entry.path)
+    .sort((left, right) => left.localeCompare(right));
+  if (JSON.stringify(actual) !== JSON.stringify(declared))
+    debugFailure(
+      'candidate-inventory-drift',
+      `candidate regular-file inventory differs: actual=${actual.join(',')}; declared=${declared.join(',')}`,
+    );
+  const files = declaredFiles
+    .map((entry) => {
+      const filePath = path.join(capsuleRoot, entry.path);
+      const size = fs.statSync(filePath).size;
+      const root = fileDigest(filePath);
+      if (size !== entry.size || root !== entry.root)
+        debugFailure(
+          'candidate-file-binding-drift',
+          `candidate file binding drift: ${entry.path}`,
+        );
+      return { ...entry, size, root };
+    })
+    .sort((left, right) => left.path.localeCompare(right.path));
+  const body = {
+    schema: 'kungfu.alpha-local-exact-candidate-inventory/v1',
+    fileCount: files.length,
+    files,
+  };
+  return { ...body, inventoryRoot: digest(body) };
+}
+
 async function loadBuildchainRuntime(buildchainRoot) {
   return import(
     pathToFileURL(
@@ -374,11 +461,76 @@ async function loadBuildchainRuntime(buildchainRoot) {
   );
 }
 
-export async function runAlphaLocalPublicationDebug(
+export async function runPortableSmoke(rawOptions) {
+  const capsulePath = required(rawOptions.capsule, '--capsule');
+  if (!path.isAbsolute(capsulePath))
+    throw new Error('--capsule must be an explicit absolute path');
+  const exactCapsulePath = fs.realpathSync(
+    regularFile(capsulePath, '--capsule'),
+  );
+  const capsuleRoot = explicitDirectory(
+    rawOptions.capsuleRoot,
+    '--capsule-root',
+  );
+  const buildchainRoot = explicitDirectory(
+    rawOptions.buildchainRoot,
+    '--buildchain-root',
+  );
+  const expectedBindingRoot = required(
+    rawOptions.expectedBindingRoot,
+    '--expected-binding-root',
+  );
+  const expectedTransactionRoot = required(
+    rawOptions.expectedTransactionRoot,
+    '--expected-transaction-root',
+  );
+  if (
+    !/^sha256:[0-9a-f]{64}$/u.test(expectedBindingRoot) ||
+    !/^sha256:[0-9a-f]{64}$/u.test(expectedTransactionRoot)
+  )
+    throw new Error('expected roots must be sha256 content roots');
+  const buildchain = verifyBuildchain(buildchainRoot);
+  const runtime = await loadBuildchainRuntime(buildchainRoot);
+  const capsule = JSON.parse(fs.readFileSync(exactCapsulePath, 'utf8'));
+  const result = await runtime.executePublicationRehearsal({
+    capsule,
+    capsuleRoot,
+    mode: 'simulate',
+    environment: {},
+  });
+  if (
+    result.evidence.bindingRoot !== expectedBindingRoot ||
+    result.transaction.transactionRoot !== expectedTransactionRoot
+  )
+    throw new Error(
+      'portable deterministic roots differ from the admitted Mac run',
+    );
+  if (result.evidence.externalPublicationClaimed !== false)
+    throw new Error('portable smoke claimed external publication');
+  return {
+    schema: 'kungfu.alpha-local-publication-portable-smoke/v1',
+    status: 'passed',
+    platform: process.platform,
+    architecture: process.arch,
+    mode: 'simulate',
+    capsuleRoot: capsule.root,
+    bindingRoot: result.evidence.bindingRoot,
+    transactionRoot: result.transaction.transactionRoot,
+    stateRoot: result.transaction.stateRoot,
+    evidenceRoot: result.evidence.evidenceRoot,
+    externalPublicationClaimed: false,
+    buildchainSha: buildchain.commit,
+    buildchainTree: buildchain.tree,
+    buildchainRequiredMerge: BUILDCHAIN_REHEARSAL_MERGE,
+  };
+}
+
+async function runAlphaLocalPublicationDebugInternal(
   rawOptions,
   injectedRuntime,
 ) {
   const coordinates = validateCoordinates(rawOptions);
+  assertCleanCheckout(ROOT, 'Kungfu source checkout');
   const before = artifactSnapshot(coordinates.artifactRoot);
   const buildchain = verifyBuildchain(coordinates.buildchainRoot);
   const outputRoot = path.join(
@@ -390,10 +542,21 @@ export async function runAlphaLocalPublicationDebug(
 
   const sourceTree = git(ROOT, ['rev-parse', `${EXPECTED_SOURCE}^{tree}`]);
   if (sourceTree !== EXPECTED_TREE)
-    throw new Error('candidate source tree mismatch');
+    debugFailure('candidate-source-drift', 'candidate source tree mismatch');
+  const sourceBinding = {
+    schema: 'kungfu.alpha-local-source-binding/v1',
+    sourceCommit: EXPECTED_SOURCE,
+    sourceTree,
+  };
   writeExact(
     path.join(outputRoot, 'source-binding.json'),
-    `${JSON.stringify({ sourceCommit: EXPECTED_SOURCE, sourceTree }, null, 2)}\n`,
+    `${JSON.stringify(sourceBinding, null, 2)}\n`,
+  );
+  const sourceBindingPath = path.join(capsuleRoot, 'bindings/source.json');
+  writeCandidateFile(
+    sourceBindingPath,
+    `${JSON.stringify(sourceBinding, null, 2)}\n`,
+    'candidate-source-drift',
   );
 
   const passportArchive = exactlyOne(
@@ -450,9 +613,13 @@ export async function runAlphaLocalPublicationDebug(
     capsuleRoot,
     'evidence/release-candidate-receipt.json',
   );
-  writeExact(passportPath, passportBytes);
-  writeExact(tailPath, tailBytes);
-  writeExact(receiptPath, receiptBytes);
+  writeCandidateFile(passportPath, passportBytes, 'candidate-passport-drift');
+  writeCandidateFile(tailPath, tailBytes, 'candidate-policy-drift');
+  writeCandidateFile(
+    receiptPath,
+    receiptBytes,
+    'candidate-activation-receipt-drift',
+  );
 
   const platformEntries = [];
   for (const platformId of PLATFORM_IDS) {
@@ -504,8 +671,16 @@ export async function runAlphaLocalPublicationDebug(
   };
   const channelPath = path.join(capsuleRoot, 'documents/channel.json');
   const activationPath = path.join(capsuleRoot, 'documents/activation.json');
-  writeExact(channelPath, `${JSON.stringify(channel, null, 2)}\n`);
-  writeExact(activationPath, `${JSON.stringify(activation, null, 2)}\n`);
+  writeCandidateFile(
+    channelPath,
+    `${JSON.stringify(channel, null, 2)}\n`,
+    'candidate-channel-drift',
+  );
+  writeCandidateFile(
+    activationPath,
+    `${JSON.stringify(activation, null, 2)}\n`,
+    'candidate-activation-drift',
+  );
   const channelEntry = inventoryEntry(
     'signed-channel-index',
     'documents/channel.json',
@@ -535,7 +710,10 @@ export async function runAlphaLocalPublicationDebug(
     tailPlan.planRoot,
   ].sort();
   if (policyRoots.some((root) => !/^sha256:[0-9a-f]{64}$/u.test(root)))
-    throw new Error('publication-tail policy roots are incomplete');
+    debugFailure(
+      'candidate-policy-drift',
+      'publication-tail policy roots are incomplete',
+    );
   const transactionRoot = digest({
     candidateRoot: before.root,
     passportRoot: passportEntry.root,
@@ -576,6 +754,38 @@ export async function runAlphaLocalPublicationDebug(
       output: 'output/released-evidence.json',
     },
   };
+  const sourceBindingEntry = inventoryEntry(
+    'candidate-source-binding',
+    'bindings/source.json',
+    sourceBindingPath,
+  );
+  const policyBinding = {
+    schema: 'kungfu.alpha-local-policy-binding/v1',
+    publicationTailPlanRoot: tailPlan.planRoot,
+    policyRoots,
+  };
+  const policyBindingPath = path.join(capsuleRoot, 'bindings/policy.json');
+  const declarationPath = path.join(capsuleRoot, 'bindings/declaration.json');
+  const providerBindingsPath = path.join(
+    capsuleRoot,
+    'bindings/provider-bindings.json',
+  );
+  const transactionPath = path.join(capsuleRoot, 'bindings/transaction.json');
+  writeCandidateFile(
+    policyBindingPath,
+    `${JSON.stringify(policyBinding, null, 2)}\n`,
+    'candidate-policy-drift',
+  );
+  writeCandidateFile(
+    declarationPath,
+    `${JSON.stringify(declaration, null, 2)}\n`,
+    'candidate-declaration-drift',
+  );
+  writeCandidateFile(
+    providerBindingsPath,
+    `${JSON.stringify(providerBindings, null, 2)}\n`,
+    'candidate-provider-binding-drift',
+  );
   const runtime =
     injectedRuntime ||
     (await loadBuildchainRuntime(coordinates.buildchainRoot));
@@ -586,18 +796,71 @@ export async function runAlphaLocalPublicationDebug(
   ])
     if (typeof runtime[name] !== 'function')
       throw new Error(`Buildchain public runtime is missing ${name}`);
-  const capsule = runtime.createPublicationRehearsalCapsule({
+  const preliminaryCapsule = runtime.createPublicationRehearsalCapsule({
     declaration,
     policyRoots,
     passport: { path: passportEntry.path, root: passportEntry.root },
     files,
     providerBindings,
   });
+  writeCandidateFile(
+    transactionPath,
+    `${JSON.stringify(preliminaryCapsule.transaction, null, 2)}\n`,
+    'candidate-transaction-drift',
+  );
+  const completeFiles = [
+    ...files,
+    sourceBindingEntry,
+    inventoryEntry(
+      'publication-policy-binding',
+      'bindings/policy.json',
+      policyBindingPath,
+    ),
+    inventoryEntry(
+      'release-tail-declaration',
+      'bindings/declaration.json',
+      declarationPath,
+    ),
+    inventoryEntry(
+      'provider-bindings',
+      'bindings/provider-bindings.json',
+      providerBindingsPath,
+    ),
+    inventoryEntry(
+      'release-tail-transaction',
+      'bindings/transaction.json',
+      transactionPath,
+    ),
+  ].sort((left, right) => left.path.localeCompare(right.path));
+  const candidateInventory = completeRegularFileInventory(
+    capsuleRoot,
+    completeFiles,
+  );
+  const capsule = runtime.createPublicationRehearsalCapsule({
+    declaration,
+    policyRoots,
+    passport: { path: passportEntry.path, root: passportEntry.root },
+    transaction: preliminaryCapsule.transaction,
+    files: candidateInventory.files,
+    providerBindings,
+  });
+  if (
+    capsule.transaction.transactionRoot !==
+    preliminaryCapsule.transaction.transactionRoot
+  )
+    debugFailure(
+      'candidate-transaction-drift',
+      'complete inventory changed the release-tail transaction',
+    );
   const capsulePath = path.join(outputRoot, 'rehearsal-capsule.json');
   const statePath = path.join(outputRoot, 'rehearsal-state.json');
   const evidencePath = path.join(outputRoot, 'rehearsal-evidence.json');
   const diagnosticPath = path.join(outputRoot, 'rehearsal-diagnostic.json');
   writeExact(capsulePath, `${JSON.stringify(capsule, null, 2)}\n`);
+  writeExact(
+    path.join(outputRoot, 'candidate-inventory.json'),
+    `${JSON.stringify(candidateInventory, null, 2)}\n`,
+  );
   let result;
   try {
     result = await runtime.executePublicationRehearsal({
@@ -651,6 +914,8 @@ export async function runAlphaLocalPublicationDebug(
     buildchainTree: buildchain.tree,
     buildchainRequiredMerge: BUILDCHAIN_REHEARSAL_MERGE,
     candidateInputRoot: before.root,
+    candidateInventoryRoot: candidateInventory.inventoryRoot,
+    candidateRegularFileCount: candidateInventory.fileCount,
     capsuleRoot: capsule.root,
     bindingRoot: result.evidence.bindingRoot,
     transactionRoot: result.transaction.transactionRoot,
@@ -666,6 +931,46 @@ export async function runAlphaLocalPublicationDebug(
     `${JSON.stringify(report, null, 2)}\n`,
   );
   return report;
+}
+
+export async function runAlphaLocalPublicationDebug(
+  rawOptions,
+  injectedRuntime,
+) {
+  let coordinates;
+  try {
+    coordinates = validateCoordinates(rawOptions);
+    return await runAlphaLocalPublicationDebugInternal(
+      coordinates,
+      injectedRuntime,
+    );
+  } catch (caught) {
+    /** @type {DebugError} */
+    const error = caught instanceof Error ? caught : new Error(String(caught));
+    if (coordinates) {
+      const outputRoot = path.join(
+        coordinates.scratchRoot,
+        'alpha-publication-debug',
+      );
+      const body = {
+        contract: 'kungfu.alpha-local-publication-debug-diagnostic/v1',
+        status: 'failed',
+        code:
+          error.alphaDebugCode ||
+          error.rehearsalCode ||
+          'alpha-local-debug-failed',
+        classification:
+          error.alphaDebugClass || error.rehearsalClass || 'input',
+        message: error.message,
+        bindingRoot: error.bindingRoot || '',
+      };
+      writeExact(
+        path.join(outputRoot, 'rehearsal-diagnostic.json'),
+        `${JSON.stringify({ ...body, diagnosticRoot: digest(body) }, null, 2)}\n`,
+      );
+    }
+    throw error;
+  }
 }
 
 export function parseArguments(argv) {
@@ -687,7 +992,52 @@ export function parseArguments(argv) {
   return options;
 }
 
+export function parsePortableArguments(argv) {
+  const args = argv[0] === '--' ? argv.slice(1) : argv;
+  const options = {};
+  for (let index = 0; index < args.length; index += 2) {
+    const flag = args[index];
+    if (!flag?.startsWith('--') || index + 1 >= args.length)
+      throw new Error(`invalid option: ${flag || '<missing>'}`);
+    const name = flag.slice(2);
+    if (
+      ![
+        'capsule',
+        'capsule-root',
+        'buildchain-root',
+        'expected-binding-root',
+        'expected-transaction-root',
+      ].includes(name)
+    )
+      throw new Error(`unknown option: ${flag}`);
+    if (Object.hasOwn(options, name))
+      throw new Error(`duplicate option: ${flag}`);
+    options[name] = args[index + 1];
+  }
+  for (const name of [
+    'capsule',
+    'capsule-root',
+    'buildchain-root',
+    'expected-binding-root',
+    'expected-transaction-root',
+  ])
+    required(options[name], `--${name}`);
+  return options;
+}
+
 async function main(argv = process.argv.slice(2)) {
+  if (argv[0] === 'portable-smoke') {
+    const options = parsePortableArguments(argv.slice(1));
+    const report = await runPortableSmoke({
+      capsule: options.capsule,
+      capsuleRoot: options['capsule-root'],
+      buildchainRoot: options['buildchain-root'],
+      expectedBindingRoot: options['expected-binding-root'],
+      expectedTransactionRoot: options['expected-transaction-root'],
+    });
+    process.stdout.write(`${JSON.stringify(report, null, 2)}\n`);
+    return;
+  }
   const options = parseArguments(argv);
   const report = await runAlphaLocalPublicationDebug({
     artifactRoot: options['artifact-root'],
