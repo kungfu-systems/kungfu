@@ -40,6 +40,7 @@ import React from 'react';
 import {
   type GlobalWorkObserverEvent,
   type GlobalWorkObserverIpc,
+  observeAssignmentRuntimeStatus,
   subscribeGlobalWorkObserver,
 } from './global-work-observer';
 import {
@@ -994,80 +995,14 @@ function GlobalWorkView({
     [host],
   );
 
-  React.useEffect(() => {
-    let active = true;
-    let timer: number | undefined;
-    const observe = async () => {
-      try {
-        const discovery = await assignmentRuntime.discover();
-        if (discovery.status !== 'ok') {
-          throw new Error(
-            discovery.error?.message ?? 'Work Runtime discovery failed',
-          );
-        }
-        const snapshot = await assignmentRuntime.snapshot();
-        if (snapshot.status !== 'ok') {
-          const diagnostics = await assignmentRuntime.diagnostics();
-          const recovery = await assignmentRuntime.recoveryPlan();
-          throw new Error(
-            snapshot.error?.message ??
-              diagnostics.error?.message ??
-              recovery.error?.message ??
-              'Work Runtime snapshot failed',
-          );
-        }
-        const watched = await assignmentRuntime.watch();
-        if (!active) return;
-        if (watched.status !== 'ok') {
-          const diagnostics = await assignmentRuntime.diagnostics();
-          const recovery = await assignmentRuntime.recoveryPlan();
-          if (!active) return;
-          if (
-            watched.error?.code === 'event-resume-gap' ||
-            watched.error?.code === 'generation-fenced'
-          ) {
-            const connected = await assignmentRuntime.connect();
-            const resumed = await assignmentRuntime.watch(
-              connected.genesisCursor,
-            );
-            if (!active) return;
-            if (resumed.status === 'ok') {
-              setAssignmentRuntimeStatus(
-                `Work Runtime · recovered · ${snapshot.revision.value}`,
-              );
-              return;
-            }
-          }
-          setAssignmentRuntimeStatus(
-            `Work Runtime · ${watched.error?.code ?? 'watch unavailable'} · ${String(
-              (recovery.result as { status?: unknown } | null)?.status ??
-                diagnostics.error?.code ??
-                'recovery inspected',
-            )}`,
-          );
-        } else {
-          setAssignmentRuntimeStatus(
-            `Work Runtime · ${snapshot.revision.value}`,
-          );
-        }
-      } catch (reason: unknown) {
-        if (active) {
-          setAssignmentRuntimeStatus(
-            `Work Runtime unavailable · ${
-              reason instanceof Error ? reason.message : String(reason)
-            }`,
-          );
-        }
-      } finally {
-        if (active) timer = window.setTimeout(() => void observe(), 5000);
-      }
-    };
-    void observe();
-    return () => {
-      active = false;
-      if (timer !== undefined) window.clearTimeout(timer);
-    };
-  }, [assignmentRuntime]);
+  React.useEffect(
+    () =>
+      observeAssignmentRuntimeStatus(
+        assignmentRuntime,
+        setAssignmentRuntimeStatus,
+      ),
+    [assignmentRuntime],
+  );
   React.useEffect(() => {
     const requestedWorkId = shell.params.workId?.trim();
     if (!requestedWorkId) return;

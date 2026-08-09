@@ -8,7 +8,7 @@ import type {
   AssignmentRuntimeResponse,
 } from '@kungfu-tech/api/capability';
 
-import { createAssignmentRuntimeHost } from './assignment-runtime-host.ts';
+import { createAssignmentRuntimeHost } from './runtime-recovery.ts';
 
 const ROOT = `sha256:${'a'.repeat(64)}`;
 const READY = {

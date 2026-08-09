@@ -25,7 +25,6 @@ export * from './product-search.js';
 export * from './global-work.js';
 export * from './projects/index.js';
 export * from './runtime.js';
-export * from './assignment-runtime.js';
 
 // The runtime-plane trust boundary (KF-ADR-019f86da-4f90-79f1-8716-aca36b142847 / KF-ADR-019f86da-4f90-7789-8b48-620aa694acf9): the OS-sandbox
 // launcher, the child-process relay transport, the Node child-side guest proxy,

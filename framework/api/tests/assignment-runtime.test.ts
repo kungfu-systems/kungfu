@@ -6,7 +6,7 @@ import {
   type AssignmentRuntimeRequest,
   type AssignmentRuntimeResponse,
   openAssignmentRuntime,
-} from '../src/capability/assignment-runtime.ts';
+} from '../src/capability/runtime.ts';
 
 const ROOT = `sha256:${'a'.repeat(64)}`;
 const REALM = {

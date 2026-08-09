@@ -73,10 +73,6 @@ import {
   bindElectronAgentSessionHost,
   createMainAgentSessionHost,
 } from './agent-session-host';
-import {
-  bindElectronAssignmentRuntime,
-  createAssignmentRuntimeHost,
-} from './assignment-runtime-host';
 import { configureProductCacheEnvironment } from './desktop-python-environment';
 import {
   type ProductionDesktopUpdateProvider,
@@ -102,6 +98,8 @@ import {
 } from './profile-cli';
 import {
   backupAndResetRuntime,
+  bindElectronAssignmentRuntime,
+  createAssignmentRuntimeHost,
   stopRuntimeForRecovery,
 } from './runtime-recovery';
 import { type Rect, SandboxManager } from './sandbox-manager';
