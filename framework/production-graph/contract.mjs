@@ -41,6 +41,10 @@ export const SCHEMA_PATHS = Object.freeze({
     'docs/shifu/schema/production-graph-execution-admission-decision-v0.schema.json',
   executionAdmissionVerificationReceipt:
     'docs/shifu/schema/production-graph-execution-admission-verification-receipt-v0.schema.json',
+  localExecutorPolicy:
+    'docs/shifu/schema/production-graph-local-executor-policy-v0.schema.json',
+  localExecutionReceipt:
+    'docs/shifu/schema/production-graph-local-execution-receipt-v0.schema.json',
 });
 
 const readJson = (root, relative) =>
