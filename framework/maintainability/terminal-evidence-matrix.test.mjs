@@ -164,11 +164,14 @@ function fixture() {
       parent_assignment_identity: {
         assignment_id: fixtureMatrix.dependencies[0].requiredAssignmentId,
       },
-      dependency_identities: fixtureMatrix.dependencies
-        .slice(1)
-        .map(({ requiredAssignmentId }) => ({
+      // The retained v4 request repeats its parent in dependency_identities.
+      // Authority comparison is set-based, so this must not invent a ninth
+      // dependency or reject the one exact parent/dependency identity.
+      dependency_identities: fixtureMatrix.dependencies.map(
+        ({ requiredAssignmentId }) => ({
           assignment_id: requiredAssignmentId,
-        })),
+        }),
+      ),
       review_baseline: {
         open_pull_requests_at_review: [
           '#2235',
