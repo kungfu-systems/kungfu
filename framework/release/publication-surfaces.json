@@ -329,7 +329,7 @@
             "product-stable",
             "product-binaries"
           ],
-          "sourceRoot": "sha256:8df45f55b1f4026f4220c540f843d548d8f3094994543ce3046ad86c366f8d23"
+          "sourceRoot": "sha256:ada6ff9e164d74c7ef96caaf2ac08bccde83765557d69ce2a8f57ad9c11b6c34"
         },
         {
           "path": ".github/workflows/release-shifu.yml",
@@ -860,5 +860,5 @@
       }
     }
   ],
-  "registryRoot": "sha256:378baa3a46536e360203484b572e792c355df5a609245b85fa4fc15ed664e502"
+  "registryRoot": "sha256:ff33c9e166f620786cef943f521899af09419ef5a338a3951fd4bb67ae4b41a1"
 }

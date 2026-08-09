@@ -415,7 +415,7 @@ jobs:
       pull-requests: write
     uses: kungfu-systems/buildchain/.github/workflows/release-candidate-promote.yml@c49897528e04f38124869d0e5a6ce73acfb9d7ca
     with:
-      buildchain-channel: alpha
+      buildchain-channel: auto
       buildchain-ref: ${{ inputs.resume-buildchain-runtime-sha }}
       channel: alpha
       target-ref: ${{ inputs.target-ref }}
