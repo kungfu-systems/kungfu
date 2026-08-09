@@ -147,12 +147,19 @@ internal Agent Session protocol operations advertised for product adapters;
 they are not canonical CLI entrypoints and Agents must not invoke them through
 `kungfu agent session`.
 
-The human does not choose or calculate a Console name. The local Agent Session
-worker atomically gives one live attempt the Work binding. A simultaneous
-attempt to bind the same Work fails with `native_work_already_active` and names
-the active provider, attempt, Console, and recovery choices. Different Work
-bindings remain concurrent. Exiting the owning provider releases the live
-single-writer guard; provider exit still does not claim Work completion.
+The human does not choose or calculate a Console name. A live Agent session may
+serially observe any number of Work items; choosing another Work atomically
+replaces only the session's current observation. It does not end or advance the
+prior Assignment, and Assignment admission, review, closeout, and sealing never
+depend on `WorkConsole` or `SessionAttempt` lifecycle.
+
+The local Agent Session worker still coordinates one runtime-local writer per
+exact Work. A simultaneous attempt to bind the same Work fails with
+`native_work_already_active` and names the active provider, attempt, Console,
+and recovery choices. Switching one session to another Work releases its prior
+runtime-local guard, while the Work's authoritative state remains unchanged.
+Exiting the provider also releases the guard; provider exit never claims Work
+completion.
 
 Custom adapter Skills must retain this same pre-write binding boundary. Public
 `kungfu work claim` and kickoff paths also bind automatically when invoked from

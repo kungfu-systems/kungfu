@@ -796,9 +796,9 @@ export class AgentSessionProductSurface {
       workRef: structuredClone(workRef),
       bindingScope,
       sourceWorkspaceId: declaredSourceWorkspaceId,
-      effects: ['bind-active-native-attempt-to-work'],
+      effects: ['replace-native-attempt-current-work-observation'],
       workEffects: [],
-      rollback: 'end-native-attempt-or-bind-after-active-attempt-ends',
+      rollback: 'bind-the-prior-work-again-or-end-native-attempt',
     };
     return { ...body, root: agentSessionSurfaceRoot(body) };
   }
