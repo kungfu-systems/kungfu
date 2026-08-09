@@ -7,40 +7,9 @@ import {
   openWorkControlProfile,
 } from '../src/view/work-control-profile.ts';
 
-test('Work Control uses the exact-root Profile projection and intent surfaces', async () => {
+test('Work Control Profile compatibility is read-only in the GUI', async () => {
   const source = '/profiles/work-control';
-  const initiativeInput = {
-    initiativeId: 'initiative-a',
-    title: 'Initiative A',
-    intent: 'Use the successor L3 vocabulary',
-    actor: 'test-owner',
-  };
-  const assignmentInput = {
-    initiativeId: 'initiative-a',
-    assignmentId: 'assignment-a',
-    title: 'Assignment A',
-    objective: 'Prove the shared intent surface',
-    actor: 'test-owner',
-  };
-  const executionClaimInput = {
-    initiativeId: 'initiative-a',
-    assignmentId: 'assignment-a',
-    owner: 'test-owner',
-    agent: 'agent-a',
-    slot: 'slot-a',
-    leaseId: 'lease-a',
-    leaseExpiresAt: '2030-01-01T00:00:00Z',
-    authorizedBy: 'test-owner',
-  };
-  const phaseTransitionInput = {
-    initiativeId: 'initiative-a',
-    assignmentId: 'assignment-a',
-    toPhase: 'executing',
-    expectedPhase: 'claimed',
-    actor: 'test-owner',
-    reason: 'begin the bounded execution stage',
-  };
-  const snapshot: AtlasDashboardSnapshot = {
+  const snapshot = {
     schema: 'kungfu.work-control.dashboard-snapshot/v1',
     cut: { kind: 'system_time', system_time: '42' },
     freshness: { status: 'fresh', basis: 'request-cut' },
@@ -64,202 +33,118 @@ test('Work Control uses the exact-root Profile projection and intent surfaces', 
     },
     missions: [],
     goals: [],
-  };
-  const calls: Array<{ operation: string; input?: unknown }> = [];
+  } as AtlasDashboardSnapshot;
+  const calls: string[] = [];
   const profile = {
     runtimeDir: '/runtime',
-    discover: (profileId: string) => {
-      assert.equal(profileId, 'kungfu.work-control');
-      return { source };
-    },
+    discover: () => ({ source }),
     memberCallAsync: async (
-      memberSource: string,
-      memberId: string,
+      _source: string,
+      _member: string,
       operation: string,
-      memberInput?: unknown,
     ) => {
-      assert.equal(memberSource, source);
-      assert.equal(memberId, 'work-control-actions');
-      calls.push({ operation, input: memberInput });
+      calls.push(operation);
       return { result: snapshot };
-    },
-    intentPlan: (
-      intentSource: string,
-      intentId: string,
-      intentInput?: unknown,
-    ) => {
-      assert.equal(intentSource, source);
-      calls.push({ operation: `plan:${intentId}`, input: intentInput });
-      return { planId: 'sha256:plan' };
-    },
-    authorizeIntentAsync: async (
-      intentSource: string,
-      intentId: string,
-      planId: string,
-      choice: string,
-      authorizedBy: string,
-      intentInput?: unknown,
-    ) => {
-      assert.equal(intentSource, source);
-      assert.equal(planId, 'sha256:plan');
-      assert.equal(choice, 'approve');
-      assert.equal(authorizedBy, 'test-owner');
-      calls.push({ operation: `authorize:${intentId}`, input: intentInput });
-      return {
-        executionReceiptVerified: true,
-        actionReceipt: {
-          verified: true,
-          coreReceipt: { mission_subject: 'mission-a' },
-        },
-      };
     },
   } as unknown as Profile;
 
-  const workControl = openWorkControlProfile(profile);
-  const projected = await workControl.dashboard();
-  await workControl.missionHome('mission-a', { source: 'atlas' });
-  await workControl.createInitiative('initiative-a', {
-    title: initiativeInput.title,
-    intent: initiativeInput.intent,
-    actor: initiativeInput.actor,
-  });
-  await workControl.createAssignment('initiative-a', {
-    assignmentId: assignmentInput.assignmentId,
-    title: assignmentInput.title,
-    objective: assignmentInput.objective,
-    actor: assignmentInput.actor,
-  });
-  const relationEventInput = {
-    workspaceIdentityRoot: `sha256:${'a'.repeat(64)}`,
-    relation: {
-      schema: 'kungfu.assignment-graph.relation/v1' as const,
-      relation_type: 'related-to',
-      source: {
-        schema: 'kungfu.assignment-graph.work-ref/v1' as const,
-        workspace_identity_root: `sha256:${'a'.repeat(64)}`,
-        object_kind: 'assignment' as const,
-        subject: 'kungfu:assignment-a',
-        version_root: `sha256:${'b'.repeat(64)}`,
-        cut_root: `sha256:${'c'.repeat(64)}`,
-      },
-      target: {
-        schema: 'kungfu.assignment-graph.work-ref/v1' as const,
-        workspace_identity_root: `sha256:${'d'.repeat(64)}`,
-        object_kind: 'assignment' as const,
-        subject: 'kungfu:assignment-b',
-        version_root: `sha256:${'e'.repeat(64)}`,
-        cut_root: `sha256:${'f'.repeat(64)}`,
-      },
-      state: 'accepted' as const,
-      evidence_roots: [],
-      semantics: {},
-      relation_root: `sha256:${'9'.repeat(64)}`,
-    },
-    eventType: 'delegation-offer' as const,
-    actor: 'test-owner',
-  };
-  await workControl.appendAssignmentRelationEvent(relationEventInput);
-  await workControl.claimAssignment('initiative-a', 'assignment-a', {
-    owner: executionClaimInput.owner,
-    agent: executionClaimInput.agent,
-    slot: executionClaimInput.slot,
-    leaseId: executionClaimInput.leaseId,
-    leaseExpiresAt: executionClaimInput.leaseExpiresAt,
-    authorizedBy: executionClaimInput.authorizedBy,
-  });
-  await workControl.advanceAssignment('initiative-a', 'assignment-a', {
-    toPhase: phaseTransitionInput.toPhase,
-    expectedPhase: phaseTransitionInput.expectedPhase,
-    actor: phaseTransitionInput.actor,
-    reason: phaseTransitionInput.reason,
-  });
-  await workControl.reviewCompletion('mission-a', 'goal-a', {
-    reviewer: 'test-owner',
-    reviewerSource: 'new-review-session',
-  });
-  await workControl.decideContinuation('mission-a', 'goal-a', {
-    reviewId: 'review-a',
-    expectedReviewRoot: 'sha256:review',
-    expectedPlanRoot: 'sha256:plan-root',
-    action: 'close',
-    actor: 'test-owner',
-    reason: 'the exact claim is fit',
-  });
-
-  assert.equal(projected.projection_authority.writableAuthority, false);
-  assert.equal(workControl.currentDashboard(), projected);
-  assert.deepEqual(calls, [
-    { operation: 'dashboard', input: {} },
-    {
-      operation: 'mission-home',
-      input: {
-        missionId: 'mission-a',
-        source: 'atlas',
-        cutSystemTime: undefined,
-      },
-    },
-    { operation: 'plan:create-initiative', input: initiativeInput },
-    { operation: 'authorize:create-initiative', input: initiativeInput },
-    { operation: 'plan:create-assignment', input: assignmentInput },
-    { operation: 'authorize:create-assignment', input: assignmentInput },
-    {
-      operation: 'plan:append-assignment-relation-event',
-      input: relationEventInput,
-    },
-    {
-      operation: 'authorize:append-assignment-relation-event',
-      input: relationEventInput,
-    },
-    { operation: 'plan:claim-assignment', input: executionClaimInput },
-    { operation: 'authorize:claim-assignment', input: executionClaimInput },
-    { operation: 'plan:advance-assignment', input: phaseTransitionInput },
-    {
-      operation: 'authorize:advance-assignment',
-      input: phaseTransitionInput,
-    },
-    {
-      operation: 'plan:review-completion',
-      input: {
-        initiativeId: 'mission-a',
-        assignmentId: 'goal-a',
-        reviewer: 'test-owner',
-        reviewerSource: 'new-review-session',
-      },
-    },
-    {
-      operation: 'authorize:review-completion',
-      input: {
-        initiativeId: 'mission-a',
-        assignmentId: 'goal-a',
-        reviewer: 'test-owner',
-        reviewerSource: 'new-review-session',
-      },
-    },
-    {
-      operation: 'plan:decide-continuation',
-      input: {
-        initiativeId: 'mission-a',
-        assignmentId: 'goal-a',
-        reviewId: 'review-a',
-        expectedReviewRoot: 'sha256:review',
-        expectedPlanRoot: 'sha256:plan-root',
-        action: 'close',
-        actor: 'test-owner',
-        reason: 'the exact claim is fit',
-      },
-    },
-    {
-      operation: 'authorize:decide-continuation',
-      input: {
-        initiativeId: 'mission-a',
-        assignmentId: 'goal-a',
-        reviewId: 'review-a',
-        expectedReviewRoot: 'sha256:review',
-        expectedPlanRoot: 'sha256:plan-root',
-        action: 'close',
-        actor: 'test-owner',
-        reason: 'the exact claim is fit',
-      },
-    },
-  ]);
+  const compatibility = openWorkControlProfile(profile);
+  assert.equal((await compatibility.dashboard()).schema, snapshot.schema);
+  const mutations: Array<[string, () => Promise<unknown>]> = [
+    ['importRepo', () => compatibility.importRepo('/repo')],
+    [
+      'activateWorkControl',
+      () => compatibility.activateWorkControl({ actor: 'test-owner' } as never),
+    ],
+    [
+      'restoreAtlasAuthority',
+      () =>
+        compatibility.restoreAtlasAuthority({ actor: 'test-owner' } as never),
+    ],
+    ['assessMission', () => compatibility.assessMission('initiative-a')],
+    [
+      'assessInitiativeAsync',
+      () => compatibility.assessInitiativeAsync('initiative-a'),
+    ],
+    [
+      'createInitiative',
+      () =>
+        compatibility.createInitiative('initiative-a', {
+          actor: 'test-owner',
+        } as never),
+    ],
+    [
+      'exportInitiative',
+      () => compatibility.exportInitiative('initiative-a', '/out'),
+    ],
+    ['importInitiative', () => compatibility.importInitiative('/in')],
+    [
+      'createAssignment',
+      () =>
+        compatibility.createAssignment('initiative-a', {
+          actor: 'test-owner',
+        } as never),
+    ],
+    [
+      'appendAssignmentRelationEvent',
+      () =>
+        compatibility.appendAssignmentRelationEvent({
+          actor: 'test-owner',
+        } as never),
+    ],
+    [
+      'claimAssignment',
+      () =>
+        compatibility.claimAssignment('initiative-a', 'assignment-a', {
+          authorizedBy: 'test-owner',
+        } as never),
+    ],
+    [
+      'advanceAssignment',
+      () =>
+        compatibility.advanceAssignment('initiative-a', 'assignment-a', {
+          actor: 'test-owner',
+        } as never),
+    ],
+    [
+      'claimCompletion',
+      () =>
+        compatibility.claimCompletion('initiative-a', 'assignment-a', {
+          actor: 'test-owner',
+        } as never),
+    ],
+    [
+      'assessCompletion',
+      () => compatibility.assessCompletion('initiative-a', 'assignment-a'),
+    ],
+    [
+      'assessCompletionAsync',
+      () => compatibility.assessCompletionAsync('initiative-a', 'assignment-a'),
+    ],
+    [
+      'reviewCompletion',
+      () =>
+        compatibility.reviewCompletion('initiative-a', 'assignment-a', {
+          reviewer: 'test-owner',
+        } as never),
+    ],
+    [
+      'decideContinuation',
+      () =>
+        compatibility.decideContinuation('initiative-a', 'assignment-a', {
+          actor: 'test-owner',
+        } as never),
+    ],
+  ];
+  for (const [name, mutate] of mutations) {
+    await assert.rejects(mutate(), (error: Error & { code?: string }) => {
+      assert.equal(error.code, 'authority-bypass', name);
+      assert.match(
+        error.message,
+        /read-only compatibility.*kungfu\.assignment-runtime\/v1/,
+      );
+      return true;
+    });
+  }
+  assert.deepEqual(calls, ['dashboard']);
 });

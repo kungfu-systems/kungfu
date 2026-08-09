@@ -18,6 +18,7 @@ from .authority import (
     _stable,
 )
 from .local import EmbeddedLocalAssignmentRuntime
+from .stdio import HOST_SCHEMA, serve
 
 
 class EmbeddedAssignmentRuntimeClient:
@@ -132,6 +133,8 @@ __all__ = [
     "SNAPSHOT_SCHEMA",
     "EmbeddedAssignmentRuntimeClient",
     "EmbeddedLocalAssignmentRuntime",
+    "HOST_SCHEMA",
     "LocalRuntimeError",
     "WorkControlAuthority",
+    "serve",
 ]
