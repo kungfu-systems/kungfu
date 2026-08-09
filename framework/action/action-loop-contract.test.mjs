@@ -31,7 +31,7 @@ function envelope(state, acceptedSteps = []) {
     state,
     roles: {
       pursuit: {
-        id: 'pursuit:go',
+        id: 'pursuit:assignment',
         root: fixtures.roots.pursuit,
         state: 'active',
       },
