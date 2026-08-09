@@ -109,9 +109,9 @@
     {
       "name": "kungfu-agent-session",
       "sourcePath": "framework/agent-session/kungfu-agent-session.contract.json",
-      "sourceSha256": "0401a124be2037ddd7c968fbb0f090ca7fadf6acaa68cdc6cba7af26eb2dc52d",
+      "sourceSha256": "2a2e289bf045490d319856ddbbc7289debd734e32ebb9c6ad046c0d247c195cb",
       "artifactPath": "config/kungfu-agent-session.contract.json",
-      "expectedSha256": "0401a124be2037ddd7c968fbb0f090ca7fadf6acaa68cdc6cba7af26eb2dc52d",
+      "expectedSha256": "2a2e289bf045490d319856ddbbc7289debd734e32ebb9c6ad046c0d247c195cb",
       "byteForByte": true
     },
     {
