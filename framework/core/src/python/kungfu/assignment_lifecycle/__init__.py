@@ -11,12 +11,58 @@ from kungfu import assignment_orchestration as orchestration
 from kungfu.assignment_lifecycle.ports import AssignmentAdvancePort, JsonObject
 
 
+def claim(
+    *,
+    workspace_root: str | None,
+    home: bool,
+    initiative_id: str,
+    assignment_id: str,
+    owner: str,
+    agent: str,
+    slot: str,
+    lease_id: str,
+    lease_expires_at: str,
+    authorized_by: str,
+    grant_scope: str,
+    actor_type: str,
+    runtime: Callable[..., tuple[Any, str, JsonObject]],
+    ensure_profile: Callable[..., Any],
+    profile_action: Callable[..., JsonObject],
+    status: Callable[..., JsonObject],
+) -> JsonObject:
+    """Claim Work without consulting any Agent Session implementation state."""
+    _, runtime_dir, _ = runtime(workspace_root, home)
+    ensure_profile(runtime_dir, authorized_by)
+    receipt = profile_action(
+        runtime_dir,
+        "claim-assignment",
+        {
+            "initiativeId": initiative_id,
+            "assignmentId": assignment_id,
+            "owner": owner,
+            "agent": agent,
+            "slot": slot,
+            "leaseId": lease_id,
+            "leaseExpiresAt": lease_expires_at,
+            "authorizedBy": authorized_by,
+            "grantScope": grant_scope,
+            "actorType": actor_type,
+            "source": "atlas",
+        },
+        authorized_by,
+    )
+    return {
+        **receipt,
+        "status": status(runtime_dir, initiative_id, assignment_id),
+    }
+
+
 def work_ref(
     admission: Mapping[str, Any],
     plan: Mapping[str, Any],
     status: Mapping[str, Any],
 ) -> dict[str, Any]:
-    """Bind a SessionAttempt to the exact admitted Assignment observation."""
+    """Build an optional Agent Session observation of an admitted Assignment."""
     return {
         "schema": "kungfu.work-ref/v1",
         "workspaceId": admission["workspace"]["workspace_id"],
@@ -38,7 +84,7 @@ def kickoff(
     plan: Mapping[str, Any],
     actor: str,
 ) -> tuple[JsonObject, JsonObject]:
-    """Enter execution only after the exact Work-bound SessionAttempt exists."""
+    """Advance Work under its own active execution lease."""
     receipt = advance_bound(
         workspace_root,
         home,
@@ -59,7 +105,7 @@ def require_run_gate(status: Mapping[str, Any]) -> None:
 
 
 def requires_kickoff(continuation_mode: str) -> bool:
-    """Return whether the new SessionAttempt must advance Work to execution."""
+    """Return whether this delivery workflow still needs to advance Work."""
     return continuation_mode in {
         "first-attempt",
         "existing-admitted-work",

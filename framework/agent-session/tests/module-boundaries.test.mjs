@@ -46,3 +46,20 @@ test('published package exports every reusable Agent Session service', () => {
     assert.equal(typeof manifest.exports[name], 'string', name);
   }
 });
+
+test('Work Control actions do not depend on Agent Session lifecycle', () => {
+  const assignment = source(
+    'framework/core/src/python/kungfu/cli/commands/assignment.py',
+  );
+  assert.doesNotMatch(assignment, /bind_current_native_work/u);
+  assert.doesNotMatch(assignment, /native_work_bound/u);
+
+  const contract = JSON.parse(
+    source('framework/product/project-work-agent.contract.json'),
+  );
+  assert.match(contract.firstLayer.agentExecution.workOwns, /no WorkConsole/u);
+  assert.match(
+    contract.firstLayer.agentExecution.agentSessionObserves,
+    /optional|replaceable/u,
+  );
+});

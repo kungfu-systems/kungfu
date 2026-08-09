@@ -32,12 +32,13 @@
       "Review and complete Work"
     ],
     "agentExecution": {
-      "workOwns": "one durable WorkConsole with one or more SessionAttempt records",
+      "workOwns": "no WorkConsole or SessionAttempt lifecycle; Work remains authoritative without any Agent Session",
+      "agentSessionObserves": "an Agent-owned WorkConsole may hold one replaceable current Work observation, but it cannot admit, claim, advance, review, complete, or seal Work",
       "attemptStates": ["starting", "working", "waiting", "ended", "unrecoverable"],
       "attentionStates": ["needs-answer", "needs-approval", "blocked", "ready-for-review"],
       "completionRule": "Agent output, readiness, or exit never completes Work; human review and native Work evidence remain required",
       "recoveryRule": "A lost process creates an unrecoverable attempt and an explicit new-attempt action without creating a second Work item",
-      "nativeInteractiveRule": "A bare kungfu run <agent> preserves the provider-native terminal while registering an observer-only SessionAttempt in the same primary WorkConsole",
+      "nativeInteractiveRule": "A bare kungfu run <agent> preserves the provider-native terminal while registering an Agent-owned observer-only SessionAttempt; any current Work observation is optional and replaceable",
       "nativeObserverRule": "TUI shows explicit fresh, stale, disconnected, degraded, or unknown Core Work observation and never reads terminal bytes or controls provider input",
       "deterministicQualificationProvider": "synthetic"
     }
