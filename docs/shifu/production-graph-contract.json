@@ -14,7 +14,9 @@
     "executionAdmissionRequest": "docs/shifu/schema/production-graph-execution-admission-request-v0.schema.json",
     "executionAdmissionRejection": "docs/shifu/schema/production-graph-execution-admission-rejection-v0.schema.json",
     "executionAdmissionDecision": "docs/shifu/schema/production-graph-execution-admission-decision-v0.schema.json",
-    "executionAdmissionVerificationReceipt": "docs/shifu/schema/production-graph-execution-admission-verification-receipt-v0.schema.json"
+    "executionAdmissionVerificationReceipt": "docs/shifu/schema/production-graph-execution-admission-verification-receipt-v0.schema.json",
+    "localExecutorPolicy": "docs/shifu/schema/production-graph-local-executor-policy-v0.schema.json",
+    "localExecutionReceipt": "docs/shifu/schema/production-graph-local-execution-receipt-v0.schema.json"
   },
   "rootAlgorithm": {
     "name": "sha256-canonical-json",
@@ -76,6 +78,17 @@
       "mutate-close-authority"
     ]
   },
+  "localExecutor": {
+    "command": "./shifu production-graph:execute",
+    "policy": "shifu.production-graph-local-executor-policy/v0",
+    "receipt": "shifu.production-graph-local-execution-receipt/v0",
+    "concurrency": 1,
+    "fixtureSafeOnly": true,
+    "requiresExactAdmission": true,
+    "replayStartsNodes": false,
+    "schedulerAuthority": false,
+    "workAuthorityMutations": false
+  },
   "feedback": {
     "command": "./shifu production-graph:feedback",
     "schema": "shifu.production-graph-feedback/v0",
@@ -97,12 +110,12 @@
     "executesRecovery": false
   },
   "authorityBoundary": {
-    "mode": "description-and-verification-only",
+    "mode": "description-verification-and-bounded-local-execution",
     "forbiddenOperations": [
       "capture",
       "claim",
       "dispatch",
-      "execute",
+      "schedule",
       "approve",
       "merge",
       "close"
@@ -112,6 +125,8 @@
       "plan-is-not-dispatch-authority",
       "verification-is-not-execution",
       "execution-admission-is-not-node-start",
+      "local-executor-is-not-a-scheduler",
+      "receipt-replay-does-not-reexecute",
       "receipt-is-not-work-control-authority",
       "recovery-is-guidance-not-mutation",
       "shifu-does-not-own-xinfa-selection"

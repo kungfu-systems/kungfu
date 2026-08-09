@@ -148,6 +148,16 @@ function verifyContractBoundary(contract) {
     'mint-close-authority',
     'mutate-close-authority',
   ]);
+  assert.equal(
+    contract.localExecutor.command,
+    './shifu production-graph:execute',
+  );
+  assert.equal(contract.localExecutor.concurrency, 1);
+  assert.equal(contract.localExecutor.fixtureSafeOnly, true);
+  assert.equal(contract.localExecutor.requiresExactAdmission, true);
+  assert.equal(contract.localExecutor.replayStartsNodes, false);
+  assert.equal(contract.localExecutor.schedulerAuthority, false);
+  assert.equal(contract.localExecutor.workAuthorityMutations, false);
   assert.equal(contract.feedback.command, './shifu production-graph:feedback');
   assert.equal(contract.feedback.sideEffects, false);
   assert.equal(contract.feedback.executesRecovery, false);
@@ -166,7 +176,7 @@ function verifyContractBoundary(contract) {
     'capture',
     'claim',
     'dispatch',
-    'execute',
+    'schedule',
     'approve',
     'merge',
     'close',
@@ -182,6 +192,8 @@ function verifierRoot() {
       'framework/production-graph/check.test.mjs',
       'framework/production-graph/feedback/index.mjs',
       'framework/production-graph/admission/index.mjs',
+      'framework/production-graph/executor/index.mjs',
+      'framework/production-graph/executor/index.test.mjs',
       'framework/production-graph/compiler/polyglot.fixture.mjs',
     ].map((relative) => ({
       path: relative,
