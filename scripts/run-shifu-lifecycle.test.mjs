@@ -31,7 +31,7 @@ test('Buildchain keeps full product builds on the three established platforms', 
   }
 });
 
-test('Buildchain gives Linux ARM64 one bounded Core-only build lane', () => {
+test('Buildchain gives Linux ARM64 one bounded Core and CLI build lane', () => {
   const root = path.resolve('/repo');
   assert.deepEqual(buildchainBuildPlan('linux', 'arm64', root), [
     { args: ['install', '--frozen-lockfile'], env: {} },
@@ -43,6 +43,7 @@ test('Buildchain gives Linux ARM64 one bounded Core-only build lane', () => {
         KF_PACKAGE_STAGE_DIR: path.join(root, 'product', 'release', 'npm'),
       },
     },
+    { args: ['dist:cli'], env: {} },
   ]);
 });
 

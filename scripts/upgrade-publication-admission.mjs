@@ -6,6 +6,7 @@ import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
 import { assertUpgradePublicationEligible } from '../product/scripts/upgrade-manifest.mjs';
+import { verifyCliSurfaceQualification } from '../product/scripts/verify-cli-surface-qualification.mjs';
 import {
   loadUpgradeQualificationContract,
   qualificationContentRoot,
@@ -28,6 +29,36 @@ const EXPECTED_CANDIDATE_PLATFORM_ROLES = {
   'product-support': ['linux-arm64'],
   'product-upgrade': ['darwin-arm64', 'linux-x64', 'win32-x64'],
 };
+const EXPECTED_CLI_PLATFORMS = [
+  {
+    bundlePlatformId: 'darwin-arm64',
+    platformId: 'darwin-arm64',
+    platform: 'darwin',
+    architecture: 'arm64',
+    archive: 'kungfu-episodes-cli-darwin-arm64.tar.gz',
+  },
+  {
+    bundlePlatformId: 'linux-arm64',
+    platformId: 'linux-arm64',
+    platform: 'linux',
+    architecture: 'arm64',
+    archive: 'kungfu-episodes-cli-linux-arm64.tar.gz',
+  },
+  {
+    bundlePlatformId: 'linux-x64',
+    platformId: 'linux-x64',
+    platform: 'linux',
+    architecture: 'x64',
+    archive: 'kungfu-episodes-cli-linux-x64.tar.gz',
+  },
+  {
+    bundlePlatformId: 'win32-x64',
+    platformId: 'windows-x64',
+    platform: 'win32',
+    architecture: 'x64',
+    archive: 'kungfu-episodes-cli-windows-x64.zip',
+  },
+];
 export const PRODUCT_UPGRADE_PUBLICATION_ADMISSION_SCHEMA =
   'kungfu.product-upgrade.publication-admission/v1';
 export const PRODUCT_UPGRADE_PUBLICATION_CAPSULE_SCHEMA =
@@ -294,10 +325,100 @@ function candidatePlatformRoot(bundles) {
   );
 }
 
+export function verifyCliPublicationPayloads({
+  payloadRoot,
+  bundles,
+  expectedVersion,
+  acceptedSources,
+}) {
+  const qualified = [];
+  for (const expected of EXPECTED_CLI_PLATFORMS) {
+    const matchingBundles = bundles.filter(
+      (bundle) => bundle.platformId === expected.bundlePlatformId,
+    );
+    if (matchingBundles.length !== 1) {
+      throw new Error(
+        `CLI publication requires exactly one ${expected.platformId} payload bundle; found ${matchingBundles.length}`,
+      );
+    }
+    const bundleRoot = path.join(payloadRoot, matchingBundles[0].name);
+    const archivePath = path.join(
+      bundleRoot,
+      'product',
+      'release',
+      'cli',
+      expected.archive,
+    );
+    const qualificationName = expected.archive.replace(
+      /\.(?:tar\.gz|zip)$/u,
+      '.qualification.json',
+    );
+    const qualificationPath = path.join(
+      bundleRoot,
+      'product',
+      'release',
+      'cli',
+      qualificationName,
+    );
+    if (!fs.existsSync(archivePath) || !fs.statSync(archivePath).isFile()) {
+      throw new Error(
+        `CLI publication is missing ${expected.platformId} archive ${expected.archive}`,
+      );
+    }
+    if (
+      !fs.existsSync(qualificationPath) ||
+      !fs.statSync(qualificationPath).isFile()
+    ) {
+      throw new Error(
+        `CLI publication is missing ${expected.platformId} qualification ${qualificationName}`,
+      );
+    }
+    const report = readJson(
+      qualificationPath,
+      `${expected.platformId} CLI qualification`,
+    );
+    const archiveRoot = fileRoot(archivePath);
+    const verification = verifyCliSurfaceQualification({
+      report,
+      expectedPlatform: expected.platformId,
+      archiveName: expected.archive,
+      archiveSha256: archiveRoot,
+    });
+    if (
+      report.architecture !== expected.architecture ||
+      report.version !== expectedVersion ||
+      !acceptedSources.has(report.identity?.sourceCommit)
+    ) {
+      throw new Error(
+        `${expected.platformId} CLI qualification identity is not bound to the release candidate`,
+      );
+    }
+    qualified.push({
+      platform: expected.platform,
+      architecture: expected.architecture,
+      platformId: expected.platformId,
+      archive: {
+        path: safeRelative(payloadRoot, archivePath, 'CLI archive'),
+        name: expected.archive,
+        digest: archiveRoot,
+      },
+      qualification: {
+        path: safeRelative(payloadRoot, qualificationPath, 'CLI qualification'),
+        root: verification.qualificationRoot,
+      },
+      version: report.version,
+      sourceCommit: report.identity.sourceCommit,
+    });
+  }
+  return qualified;
+}
+
 function toolingRoot() {
   const files = [
     'scripts/upgrade-publication-admission.mjs',
     'scripts/upgrade-qualification.mjs',
+    'product/scripts/cli-surface-qualification.mjs',
+    'product/scripts/verify-cli-surface-qualification.mjs',
     'product/scripts/upgrade-manifest.mjs',
   ].map((relativePath) => ({
     path: relativePath,
@@ -1053,6 +1174,13 @@ export function verifyUpgradePublicationPayloads({
     .filter((entry) => entry.isDirectory())
     .map((entry) => path.join(payloadRoot, entry.name))
     .sort((left, right) => left.localeCompare(right));
+  const artifacts = candidateArtifactRoot(payloadRoot);
+  const cliArtifacts = verifyCliPublicationPayloads({
+    payloadRoot,
+    bundles: artifacts.bundles,
+    expectedVersion,
+    acceptedSources,
+  });
   let admitted = bundleRoots
     .map((bundleRoot) =>
       verifyBundle({
@@ -1152,6 +1280,7 @@ export function verifyUpgradePublicationPayloads({
         ),
       ),
     credentialIsland: credentialIsland[0],
+    cliArtifacts,
   };
 }
 
@@ -1168,6 +1297,7 @@ function receiptAdmission(admission, payloadRoot) {
       architecture: entry.architecture,
       path: safeRelative(payloadRoot, entry.manifestPath, 'upgrade manifest'),
     })),
+    cliArtifacts: admission.cliArtifacts,
     credentialIsland: {
       platformId: admission.credentialIsland.platformId,
       runtimeSha: admission.credentialIsland.runtimeSha,
@@ -1195,6 +1325,8 @@ export function createUpgradePublicationAdmission({
 } = {}) {
   const resolvedPayloadRoot = fs.realpathSync(payloadRoot);
   const resolvedPassportPath = fs.realpathSync(releaseCandidatePassportPath);
+  const artifacts = candidateArtifactRoot(resolvedPayloadRoot);
+  assertCandidateBundleRoles(artifacts.bundles);
   const admission = verifyUpgradePublicationPayloads({
     payloadRoot: resolvedPayloadRoot,
     releaseCandidatePassportPath: resolvedPassportPath,
@@ -1203,8 +1335,6 @@ export function createUpgradePublicationAdmission({
   });
   const passport = readJson(resolvedPassportPath, 'release-candidate passport');
   const sources = [...releaseCandidateSources(passport)].sort();
-  const artifacts = candidateArtifactRoot(resolvedPayloadRoot);
-  assertCandidateBundleRoles(artifacts.bundles);
   const passportByteRoot = fileRoot(resolvedPassportPath);
   const roots = {
     source: contentRoot(sources),
@@ -1409,6 +1539,18 @@ export function verifyUpgradePublicationAdmission({
     throw new Error('product admission candidate file inventory drift');
   }
   assertCandidateBundleRoles(artifacts.bundles);
+  const cliArtifacts = verifyCliPublicationPayloads({
+    payloadRoot: resolvedPayloadRoot,
+    bundles: artifacts.bundles,
+    expectedVersion: receipt.identity?.version,
+    acceptedSources: new Set(sources),
+  });
+  if (
+    JSON.stringify(canonical(receipt.admission?.cliArtifacts || [])) !==
+    JSON.stringify(canonical(cliArtifacts))
+  ) {
+    throw new Error('product admission CLI publication inventory drift');
+  }
   if (
     JSON.stringify(receipt.identity?.sources || []) !== JSON.stringify(sources)
   ) {

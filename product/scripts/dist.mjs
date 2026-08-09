@@ -1836,6 +1836,7 @@ export function smokeCliProductArchive({ archivePath, archiveBase }) {
           identity: {
             archive: path.basename(archivePath),
             archiveSha256: sha256File(archivePath),
+            sourceCommit: upgradeIdentity.sourceCommit,
             ...(platformVerification ? { platformVerification } : {}),
           },
           environment: smokeEnv,
