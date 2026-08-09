@@ -112,16 +112,16 @@ def serve(
 
     try:
         runtime.start()
-    except LocalRuntimeError as error:
-        _write_line(output_stream, error_envelope(error))
+    except LocalRuntimeError as runtime_error:
+        _write_line(output_stream, error_envelope(runtime_error))
         raise
     except Exception as cause:
-        error = LocalRuntimeError(
+        wrapped_error = LocalRuntimeError(
             "backend-unavailable",
             "Local Assignment Runtime writer failed to start",
         )
-        _write_line(output_stream, error_envelope(error))
-        raise error from cause
+        _write_line(output_stream, error_envelope(wrapped_error))
+        raise wrapped_error from cause
     try:
         _write_line(output_stream, ready_envelope(runtime))
         try:
@@ -141,16 +141,16 @@ def serve(
                         "invalid-command", "Runtime transport request must be an object"
                     )
                 _write_line(output_stream, runtime.handle(request))
-        except LocalRuntimeError as error:
-            _write_line(output_stream, error_envelope(error))
+        except LocalRuntimeError as runtime_error:
+            _write_line(output_stream, error_envelope(runtime_error))
             raise
         except Exception as cause:
-            error = LocalRuntimeError(
+            wrapped_error = LocalRuntimeError(
                 "backend-unavailable",
                 "Local Assignment Runtime transport failed",
             )
-            _write_line(output_stream, error_envelope(error))
-            raise error from cause
+            _write_line(output_stream, error_envelope(wrapped_error))
+            raise wrapped_error from cause
     finally:
         runtime.close()
 

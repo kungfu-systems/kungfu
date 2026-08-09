@@ -36,7 +36,7 @@ def coordinator_running_state(
     pid: int,
     start_identity: Any,
     runtime_image: Mapping[str, Any] | None,
-    updated_at: str,
+    updated_at: float,
 ) -> dict[str, Any]:
     """Project ready state only after the native coordinator is constructed."""
 
