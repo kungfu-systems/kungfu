@@ -32,6 +32,10 @@ KUNGFU_BUILDCHAIN_SOURCE_BUILD = "1"
 SHIFU_NATIVE = "1"
 # Fail fast on Windows when MSVC cannot be located (no-op elsewhere).
 SHIFU_REQUIRE_MSVC = "1"
+# Reusable source-check workflows do not preserve GITHUB_BASE_REF for the
+# repository lifecycle. Keep the protected v4 delivery lane explicit here;
+# source acceptance still validates it against the dev-channel contract.
+KUNGFU_DEV_BRANCH = "dev/v4/v4.0"
 
 [lifecycle.install]
 # shifu-entry-contract: allow Buildchain mode selection before repository lifecycle dispatch
