@@ -32,7 +32,7 @@ test('unclassified, writing, or missing routes fail closed', () => {
 
 test('every shim-routed Work Design query remains classified', () => {
   for (const id of [
-    'work-design-open-card-preflight',
+    'work-design-preflight-preflight',
     'work-design-feedback',
   ]) {
     const broken = structuredClone(inventory);

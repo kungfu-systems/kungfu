@@ -90,7 +90,7 @@ export type RewindEvent = {
   detail?: string;
   reason?: string;
   // live narration facts (RunProgress). These are observation-only: they do
-  // not mutate canonical Go state or prove completion.
+  // not mutate canonical Assignment state or prove completion.
   phase?: string;
   message?: string;
   severity?: string;

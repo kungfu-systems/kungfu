@@ -3,7 +3,7 @@ import test from 'node:test';
 
 import type { Profile } from '../../../framework/api/src/capability/profile.ts';
 import {
-  type AtlasDashboardSnapshot,
+  type WorkControlDashboardSnapshot,
   openWorkControlProfile,
 } from '../src/view/work-control-profile.ts';
 
@@ -40,30 +40,25 @@ test('Work Control uses the exact-root Profile projection and intent surfaces', 
     actor: 'test-owner',
     reason: 'begin the bounded execution stage',
   };
-  const snapshot: AtlasDashboardSnapshot = {
+  const snapshot: WorkControlDashboardSnapshot = {
     schema: 'kungfu.work-control.dashboard-snapshot/v1',
     cut: { kind: 'system_time', system_time: '42' },
     freshness: { status: 'fresh', basis: 'request-cut' },
     projection_authority: {
-      mode: 'adapter-projection',
-      source: 'atlas-and-kungfu-facts',
+      mode: 'native-fact-projection',
+      source: 'kungfu-facts',
       profileSuiteRoot: 'sha256:profile-root',
       memberRoot: 'sha256:member-root',
       cutSystemTime: '42',
       writableAuthority: false,
     },
-    import_info: null,
     authority: {
       schema: 'kungfu.work-control.authority-status/v1',
-      state: 'pre-cutover',
-      write_authority: 'atlas-adapter',
-      legacy_mutation_path: 'available',
-      migration_id: '',
-      parity_root: '',
-      transition_count: 0,
+      state: 'native-only',
+      write_authority: 'kungfu-native',
     },
-    missions: [],
-    goals: [],
+    initiatives: [],
+    assignments: [],
   };
   const calls: Array<{ operation: string; input?: unknown }> = [];
   const profile = {
@@ -109,7 +104,7 @@ test('Work Control uses the exact-root Profile projection and intent surfaces', 
         executionReceiptVerified: true,
         actionReceipt: {
           verified: true,
-          coreReceipt: { mission_subject: 'mission-a' },
+          coreReceipt: { initiative_subject: 'initiative-a' },
         },
       };
     },
@@ -117,7 +112,7 @@ test('Work Control uses the exact-root Profile projection and intent surfaces', 
 
   const workControl = openWorkControlProfile(profile);
   const projected = await workControl.dashboard();
-  await workControl.missionHome('mission-a', { source: 'atlas' });
+  await workControl.initiativeHome('initiative-a', { source: 'kungfu' });
   await workControl.createInitiative('initiative-a', {
     title: initiativeInput.title,
     intent: initiativeInput.intent,
@@ -173,11 +168,11 @@ test('Work Control uses the exact-root Profile projection and intent surfaces', 
     actor: phaseTransitionInput.actor,
     reason: phaseTransitionInput.reason,
   });
-  await workControl.reviewCompletion('mission-a', 'goal-a', {
+  await workControl.reviewCompletion('initiative-a', 'assignment-a', {
     reviewer: 'test-owner',
     reviewerSource: 'new-review-session',
   });
-  await workControl.decideContinuation('mission-a', 'goal-a', {
+  await workControl.decideContinuation('initiative-a', 'assignment-a', {
     reviewId: 'review-a',
     expectedReviewRoot: 'sha256:review',
     expectedPlanRoot: 'sha256:plan-root',
@@ -191,10 +186,10 @@ test('Work Control uses the exact-root Profile projection and intent surfaces', 
   assert.deepEqual(calls, [
     { operation: 'dashboard', input: {} },
     {
-      operation: 'mission-home',
+      operation: 'initiative-home',
       input: {
-        missionId: 'mission-a',
-        source: 'atlas',
+        initiativeId: 'initiative-a',
+        source: 'kungfu',
         cutSystemTime: undefined,
       },
     },
@@ -220,8 +215,8 @@ test('Work Control uses the exact-root Profile projection and intent surfaces', 
     {
       operation: 'plan:review-completion',
       input: {
-        initiativeId: 'mission-a',
-        assignmentId: 'goal-a',
+        initiativeId: 'initiative-a',
+        assignmentId: 'assignment-a',
         reviewer: 'test-owner',
         reviewerSource: 'new-review-session',
       },
@@ -229,8 +224,8 @@ test('Work Control uses the exact-root Profile projection and intent surfaces', 
     {
       operation: 'authorize:review-completion',
       input: {
-        initiativeId: 'mission-a',
-        assignmentId: 'goal-a',
+        initiativeId: 'initiative-a',
+        assignmentId: 'assignment-a',
         reviewer: 'test-owner',
         reviewerSource: 'new-review-session',
       },
@@ -238,8 +233,8 @@ test('Work Control uses the exact-root Profile projection and intent surfaces', 
     {
       operation: 'plan:decide-continuation',
       input: {
-        initiativeId: 'mission-a',
-        assignmentId: 'goal-a',
+        initiativeId: 'initiative-a',
+        assignmentId: 'assignment-a',
         reviewId: 'review-a',
         expectedReviewRoot: 'sha256:review',
         expectedPlanRoot: 'sha256:plan-root',
@@ -251,8 +246,8 @@ test('Work Control uses the exact-root Profile projection and intent surfaces', 
     {
       operation: 'authorize:decide-continuation',
       input: {
-        initiativeId: 'mission-a',
-        assignmentId: 'goal-a',
+        initiativeId: 'initiative-a',
+        assignmentId: 'assignment-a',
         reviewId: 'review-a',
         expectedReviewRoot: 'sha256:review',
         expectedPlanRoot: 'sha256:plan-root',

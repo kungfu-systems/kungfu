@@ -137,10 +137,10 @@
       "dependencyInstallation": false
     },
     {
-      "id": "work-design-open-card-preflight",
-      "command": "./shifu work-design:open-card-preflight",
+      "id": "work-design-preflight-preflight",
+      "command": "./shifu work-design:preflight",
       "classification": "read-only-source",
-      "implementation": "framework/work-design-open-card/tooling/open-card-preflight.mjs",
+      "implementation": "framework/work-design-preflight/tooling/work-design-preflight.mjs",
       "transitiveWriters": [],
       "network": false,
       "dependencyInstallation": false
