@@ -1,10 +1,52 @@
 {
-  "schema": "kungfu.maintainability-terminal-evidence-matrix/v3",
-  "goalId": "2026-07-29-kungfu-terminal-review-remediation",
+  "schema": "kungfu.maintainability-terminal-evidence-matrix/v4",
+  "goalId": "2026-08-08-kungfu-terminal-review-freeze-and-evidence-closure-v4",
   "predecessor": {
     "assignmentId": "2026-07-27-kungfu-maintainability-terminal-closure",
     "sealedStateRoot": "sha256:41449544ae9f64f6a6e6e7ae69f24c0fd9049e38beef4bba2bbed3e3e730e98c"
   },
+  "dependencies": [
+    {
+      "requiredAssignmentId": "2026-08-03-kungfu-terminal-review-freeze-and-evidence-closure-v3",
+      "assignmentId": "2026-08-03-kungfu-terminal-review-freeze-and-evidence-closure-v3",
+      "sealedStateRoot": "sha256:c0050b4f3ef0bab9c24c3a07336684fc2ef381c2e6cc462930973c02a10d6f68"
+    },
+    {
+      "requiredAssignmentId": "2026-08-03-kungfu-repository-hotspot-convergence",
+      "assignmentId": "2026-08-03-kungfu-repository-hotspot-convergence-v3",
+      "sealedStateRoot": "sha256:4ea0bb938ea173b986699baaac47e5040ffefe16b9ea494438b21c15700057e5"
+    },
+    {
+      "requiredAssignmentId": "2026-08-03-kungfu-strict-length-budget-authorization",
+      "assignmentId": "2026-08-03-kungfu-strict-length-budget-authorization-v2",
+      "sealedStateRoot": "sha256:43388c983b1ef8b16c5837c988bb5270ecbafed965846cd8848fbd85b17d7f8f"
+    },
+    {
+      "requiredAssignmentId": "2026-08-03-kungfu-unregistered-fragmentation-census",
+      "assignmentId": "2026-08-03-kungfu-unregistered-fragmentation-census-v2",
+      "sealedStateRoot": "sha256:3f65cc9ab367b06b75cac939dc9b48a52b0c775695b45e93ccd8514f9f3340e5"
+    },
+    {
+      "requiredAssignmentId": "2026-08-01-kungfu-protected-source-terminal-closure",
+      "assignmentId": "2026-08-01-kungfu-protected-source-terminal-closure",
+      "sealedStateRoot": "sha256:c3bf0d1a86ad403d4d2ea93a54d0110d45c59d7776dc457479064fe889ff6afe"
+    },
+    {
+      "requiredAssignmentId": "2026-07-31-kungfu-pyinstaller-total-retirement",
+      "assignmentId": "2026-07-31-kungfu-pyinstaller-total-retirement",
+      "sealedStateRoot": "sha256:416f55e4cb51dd8bcddfa0987bc73db2cd25b3cc3ccb10b5a451468922cbe4f7"
+    },
+    {
+      "requiredAssignmentId": "2026-08-01-kungfu-python-kfx-asyncio-performance-qualification",
+      "assignmentId": "2026-08-01-kungfu-python-kfx-asyncio-performance-qualification",
+      "sealedStateRoot": "sha256:d7657d21cdf54ab8ea7215a9a46aae341c7ea00c07b6c4a27daaf99923ccd892"
+    },
+    {
+      "requiredAssignmentId": "2026-07-29-kungfu-terminal-review-remediation",
+      "assignmentId": "2026-07-29-kungfu-terminal-review-remediation",
+      "sealedStateRoot": "sha256:d61e9d23660f8c41d35b74c3441cd0301ea9e1f524d614db0592b0edbd1294d1"
+    }
+  ],
   "sourceBinding": {
     "repository": "kungfu-systems/kungfu",
     "protectedBranch": "dev/v4/v4.0",
@@ -20,8 +62,122 @@
       }
     ]
   },
+  "reconciliation": {
+    "scopeAuthority": "The retained native Assignment request supplies the exact parent, dependency identities, and review-baseline pull requests. Live GitHub enumeration of open pull requests against the protected base is filtered by those immutable Assignment families; the matrix cannot suppress an observed in-scope open pull request.",
+    "branchPolicy": "Closed remediation pull-request head refs are retained as immutable audit and recovery coordinates only. They carry no delivery or continuation authority after the declared disposition.",
+    "pullRequests": [
+      {
+        "number": 2485,
+        "state": "CLOSED",
+        "headRef": "feature/runtime-surface-provenance-contract-v4",
+        "head": "6510df9df3a57c44cd2979febd892d30abfd84e8",
+        "disposition": "superseded-by",
+        "successor": 2495,
+        "successorHeadRef": "feature/runtime-surface-provenance-contract-v5",
+        "successorHead": "1ca9818760a0f5c0154c8886f08ff0f803175e5a",
+        "successorTree": "70c5b0b4cd923e7c3fd9d52aa6689e3966533bcf",
+        "successorState": "CLOSED"
+      },
+      {
+        "number": 2495,
+        "state": "CLOSED",
+        "headRef": "feature/runtime-surface-provenance-contract-v5",
+        "head": "1ca9818760a0f5c0154c8886f08ff0f803175e5a",
+        "disposition": "superseded-by",
+        "successor": 2507,
+        "successorHeadRef": "feature/runtime-surface-provenance-contract-v6",
+        "successorHead": "b2499473358c824c306fbfce9282a9fb1cf658a8",
+        "successorTree": "d27b35f218d0a7ee9af1be59f2925596897387ca",
+        "successorState": "CLOSED"
+      },
+      {
+        "number": 2507,
+        "state": "CLOSED",
+        "headRef": "feature/runtime-surface-provenance-contract-v6",
+        "head": "b2499473358c824c306fbfce9282a9fb1cf658a8",
+        "disposition": "superseded-by",
+        "successor": 2519,
+        "successorHeadRef": "feature/runtime-surface-provenance-contract-v7",
+        "successorHead": "3ad296ea5d1a31bd84863409254201e239bd4b64",
+        "successorTree": "d27b35f218d0a7ee9af1be59f2925596897387ca",
+        "successorState": "MERGED",
+        "successorMergeCommit": "1fa379e07dc7197714b233f6227800e79a6b871f"
+      },
+      {
+        "number": 2519,
+        "state": "MERGED",
+        "headRef": "feature/runtime-surface-provenance-contract-v7",
+        "head": "3ad296ea5d1a31bd84863409254201e239bd4b64",
+        "mergeCommit": "1fa379e07dc7197714b233f6227800e79a6b871f",
+        "disposition": "delivered"
+      },
+      {
+        "number": 2235,
+        "state": "CLOSED",
+        "headRef": "fix/protected-source-terminal-closure-replay19",
+        "head": "975f4eb623de687a094f19ebd7376068a9c8cf17",
+        "disposition": "superseded-by",
+        "successor": 2246,
+        "successorHeadRef": "fix/protected-source-terminal-closure-replay20",
+        "successorHead": "5d08b59cd229ab3a2bf3aedc0160057a8eaaa58e",
+        "successorTree": "9100a451304f13dbc4152e9c4c6f0a8d448519b4",
+        "successorState": "CLOSED"
+      },
+      {
+        "number": 2212,
+        "state": "CLOSED",
+        "headRef": "fix/protected-source-terminal-closure-replay13",
+        "head": "cda9c30d68f043fd33fcf56d067c376e984fe469",
+        "disposition": "superseded-by",
+        "successor": 2235,
+        "successorHeadRef": "fix/protected-source-terminal-closure-replay19",
+        "successorHead": "975f4eb623de687a094f19ebd7376068a9c8cf17",
+        "successorTree": "c1c7576a15fa5333cdfab7d63b16375cf8d5ca73",
+        "successorState": "CLOSED"
+      },
+      {
+        "number": 2193,
+        "state": "CLOSED",
+        "headRef": "fix/protected-source-terminal-closure-replay7",
+        "head": "5193abee554b09ecbf5df9dbbb86218165e29cae",
+        "disposition": "superseded-by",
+        "successor": 2235,
+        "successorHeadRef": "fix/protected-source-terminal-closure-replay19",
+        "successorHead": "975f4eb623de687a094f19ebd7376068a9c8cf17",
+        "successorTree": "c1c7576a15fa5333cdfab7d63b16375cf8d5ca73",
+        "successorState": "CLOSED"
+      },
+      {
+        "number": 2173,
+        "state": "CLOSED",
+        "headRef": "fix/protected-source-terminal-closure-replay3",
+        "head": "1e28c3325b224e3c0dc42a1dd7f351b24f3d3610",
+        "disposition": "superseded-by",
+        "successor": 2235,
+        "successorHeadRef": "fix/protected-source-terminal-closure-replay19",
+        "successorHead": "975f4eb623de687a094f19ebd7376068a9c8cf17",
+        "successorTree": "c1c7576a15fa5333cdfab7d63b16375cf8d5ca73",
+        "successorState": "CLOSED"
+      },
+      {
+        "number": 2109,
+        "state": "CLOSED",
+        "headRef": "feature/python-kfx-asyncio-performance-qualification",
+        "head": "ca9a8f37ac2ba45e4ff46209d7c2e540b6bd4d88",
+        "disposition": "historical-nonmerge"
+      },
+      {
+        "number": 1997,
+        "state": "MERGED",
+        "headRef": "fix/pyinstaller-total-retirement",
+        "head": "9939bda59696587520c944e7b02edf8f2198c5db",
+        "mergeCommit": "a2967f22d0d23766eb887168e8fffc41251bad54",
+        "disposition": "delivered"
+      }
+    ]
+  },
   "terminalEvidence": {
-    "schema": "kungfu.maintainability-terminal-evidence/v3",
+    "schema": "kungfu.maintainability-terminal-evidence/v4",
     "verifier": "framework/maintainability/terminal-evidence.mjs",
     "runGroups": [
       {
@@ -119,7 +275,7 @@
         "macos-arm64",
         "windows-x64"
       ],
-      "reviewDisposition": "terminalEvidence.reviewRule"
+      "reviewDisposition": "terminalEvidence.terminalReviewRule"
     },
     {
       "assignmentId": "2026-07-26-kungfu-responsibility-hotspot-decomposition",
@@ -152,7 +308,7 @@
         "macos-arm64",
         "windows-x64"
       ],
-      "reviewDisposition": "terminalEvidence.reviewRule"
+      "reviewDisposition": "terminalEvidence.terminalReviewRule"
     },
     {
       "assignmentId": "2026-07-26-kungfu-linux-product-qualification",
@@ -180,7 +336,7 @@
       "productPlatforms": [
         "linux-x64"
       ],
-      "reviewDisposition": "terminalEvidence.reviewRule"
+      "reviewDisposition": "terminalEvidence.terminalReviewRule"
     },
     {
       "assignmentId": "2026-07-26-kungfu-windows-product-qualification",
@@ -208,7 +364,7 @@
       "productPlatforms": [
         "windows-x64"
       ],
-      "reviewDisposition": "terminalEvidence.reviewRule"
+      "reviewDisposition": "terminalEvidence.terminalReviewRule"
     },
     {
       "assignmentId": "2026-07-26-kungfu-dogfood-operational-hardening",
@@ -233,7 +389,7 @@
       "productPlatforms": [
         "macos-arm64"
       ],
-      "reviewDisposition": "independently approved at both listed prerequisite commits and rechecked by terminalEvidence.reviewRule"
+      "reviewDisposition": "independently approved at both listed prerequisite commits and rechecked by terminalEvidence.terminalReviewRule"
     },
     {
       "assignmentId": "2026-07-27-kungfu-complexity-gate-integrity",
@@ -261,7 +417,7 @@
         "macos-arm64",
         "windows-x64"
       ],
-      "reviewDisposition": "terminalEvidence.reviewRule"
+      "reviewDisposition": "terminalEvidence.terminalReviewRule"
     },
     {
       "assignmentId": "2026-07-27-kungfu-readonly-source-acceptance-closure",
@@ -290,7 +446,7 @@
         "macos-arm64",
         "windows-x64"
       ],
-      "reviewDisposition": "terminalEvidence.reviewRule"
+      "reviewDisposition": "terminalEvidence.terminalReviewRule"
     }
   ]
 }
