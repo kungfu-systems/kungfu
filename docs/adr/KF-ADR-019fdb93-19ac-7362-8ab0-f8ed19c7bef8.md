@@ -4,8 +4,8 @@ doc_type: architecture-decision
 adr_id: KF-ADR-019fdb93-19ac-7362-8ab0-f8ed19c7bef8
 decision_status: accepted
 implementation_status: staged
-implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/2590, https://github.com/kungfu-systems/kungfu/pull/2618]
-qualification_refs: [framework/assignment-runtime/assignment-runtime.contract.json, framework/assignment-runtime/schema/assignment-runtime-envelope-v1.schema.json, framework/assignment-runtime/fixtures/contract-cases-v1.json, framework/assignment-runtime/assignment-runtime.test.mjs, framework/core/tests/python/test_assignment_runtime.py, docs/architecture/assignment-runtime-r0-evidence.md, docs/architecture/assignment-runtime-r1-local-profile.md]
+implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/2590, https://github.com/kungfu-systems/kungfu/pull/2618, https://github.com/kungfu-systems/kungfu/pull/2691]
+qualification_refs: [framework/assignment-runtime/assignment-runtime.contract.json, framework/assignment-runtime/schema/assignment-runtime-envelope-v1.schema.json, framework/assignment-runtime/fixtures/contract-cases-v1.json, framework/assignment-runtime/assignment-runtime.test.mjs, framework/api/tests/assignment-runtime.test.ts, framework/core/tests/python/test_assignment_runtime.py, framework/gui/src/main/assignment-runtime-host.test.ts, extensions/work-dashboard/tests/work-control-profile.test.ts, docs/architecture/assignment-runtime-r0-evidence.md, docs/architecture/assignment-runtime-r1-local-profile.md, docs/architecture/assignment-runtime-r2-gui-client.md]
 review_state: self-reviewed
 sensitivity: public
 sources: [local-files, user-consensus]
@@ -13,13 +13,13 @@ period: 2026-08-07
 theme: local-first-assignment-runtime-api
 confidence: high
 evidence_grade: A
-last_reviewed: 2026-08-08
-ai_provenance: GPT-5 via Codex on 2026-08-08; based on the exact R0 and R1 Assignments, the protected R0 delivery in PR 2590, the linearly replayable R1 candidate in PR 2618, current Kungfu source, and disposable-Home qualification; no claim about GUI, CLI, Agent, KFX, or Cluster Runtime cutover
+last_reviewed: 2026-08-09
+ai_provenance: GPT-5 via Codex on 2026-08-09; based on the exact R0 and R1 Assignments, protected delivery in PRs 2590 and 2618, the current R2 GUI source candidate, and disposable-Home qualification; protected R2 delivery and any R3 or Cluster Runtime cutover are not claimed
 ---
 
 # KF-ADR-019fdb93-19ac-7362-8ab0-f8ed19c7bef8: Assignment clients converge on one local-first transport-neutral Runtime API
 
-- Status: accepted; R0 contract staged, R1 Local Profile stage-ready, client cutover deferred
+- Status: accepted; R0 contract and R1 Local Profile delivered, R2 GUI source candidate, R3 client convergence deferred
 - Date: 2026-08-07
 - Category: Work Control / Assignment Runtime / client boundary
 - Related: [Assignment orchestration](KF-ADR-019f87cc-bd1f-786d-896d-07ea9245861e.md),
@@ -89,7 +89,7 @@ planned before execution and remains revision- and idempotency-fenced.
 ### 4. The Local Runtime Profile is the first implementation target
 
 R1 implements this contract for the selected logical Home or project Workspace
-in the stage-ready candidate recorded by PR 2618. The current private
+in the protected delivery recorded by PR 2618. The current private
 `.kungfu` Fact/Episode/runtime tree remains its
 initial backing, not its public API. A command is successful only when its
 authoritative receipt is durable; process liveness is diagnostic only. Crash

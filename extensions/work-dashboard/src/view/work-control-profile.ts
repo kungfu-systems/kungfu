@@ -1,8 +1,4 @@
-import type {
-  Profile,
-  ProfileIntentReceipt,
-  QueryDefinition,
-} from '@kungfu-tech/api/capability';
+import type { Profile, QueryDefinition } from '@kungfu-tech/api/capability';
 
 // Work Control domain client over the public, exact-root Profile surface.
 // Domain types live with this Profile KFX rather than in the generic API.
@@ -689,15 +685,16 @@ export type Atlas = {
   markers: () => AtlasMarker[];
 };
 
-type IntentExecutionReceipt<TResult> = ProfileIntentReceipt & {
-  actionReceipt: {
-    verified: boolean;
-    coreReceipt: TResult;
-  };
-};
-
 const PROFILE_ID = 'kungfu.work-control';
 const ADAPTER_MEMBER = 'work-control-actions';
+
+function directMutationRejected(intentId: string): Error {
+  const error = new Error(
+    `Direct GUI Profile mutation is read-only compatibility: ${intentId}; use kungfu.assignment-runtime/v1`,
+  ) as Error & { code?: string };
+  error.code = 'authority-bypass';
+  return error;
+}
 
 export function openWorkControlProfile(
   profile: Profile,
@@ -719,23 +716,10 @@ export function openWorkControlProfile(
     ).result;
   const authorize = async <TResult>(
     intentId: string,
-    input: unknown,
-    authorizedBy: string,
-  ) => {
-    const profileSource = source();
-    const plan = profile.intentPlan(profileSource, intentId, input);
-    const receipt = (await profile.authorizeIntentAsync(
-      profileSource,
-      intentId,
-      plan.planId,
-      'approve',
-      authorizedBy,
-      input,
-    )) as IntentExecutionReceipt<TResult>;
-    if (!receipt.executionReceiptVerified || !receipt.actionReceipt.verified) {
-      throw new Error(`Profile intent execution was not verified: ${intentId}`);
-    }
-    return receipt.actionReceipt.coreReceipt;
+    _input: unknown,
+    _authorizedBy: string,
+  ): Promise<TResult> => {
+    throw directMutationRejected(intentId);
   };
 
   return {

@@ -127,7 +127,7 @@ def bind_current_native_work(
 
     status = work_commands._status(work_runtime_dir, initiative_id, assignment_id)
     work_control = profile_sdk.validate_source(
-        work_commands._profile_source(), work_runtime_dir
+        work_commands.profile_source(), work_runtime_dir
     )["inspection"]
     work_ref = {
         "schema": "kungfu.work-ref/v1",
