@@ -23,6 +23,12 @@ const CONTRACT = JSON.parse(
     'utf8',
   ),
 );
+const RELEASE_ADMISSION = JSON.parse(
+  fs.readFileSync(
+    path.join(ROOT, 'docs/qualification/gates/release-admission-policy.json'),
+    'utf8',
+  ),
+);
 
 test('the committed Buildchain promotion consumer contract is coherent', () => {
   const result = validatePromotionContract(ROOT);
@@ -254,7 +260,7 @@ test('promotion rehearsal rejects restored activation or passport evidence comma
   }
 });
 
-test('Alpha recovery reuses a verified sealed candidate through the v3 router', () => {
+test('Alpha recovery reuses a verified sealed candidate through the reviewed publication runtime', () => {
   const workflow = fs.readFileSync(
     path.join(ROOT, CONTRACT.workflows.promotion),
     'utf8',
@@ -263,11 +269,14 @@ test('Alpha recovery reuses a verified sealed candidate through the v3 router', 
   assert.ok(recovery);
   assert.match(
     recovery,
-    /uses: kungfu-systems\/buildchain\/\.github\/workflows\/release-candidate-promote\.yml@v3/u,
+    new RegExp(
+      `uses: kungfu-systems/buildchain/\\.github/workflows/release-candidate-promote\\.yml@${RELEASE_ADMISSION.buildchain.runtimes.alpha.publicationRuntimeSha}`,
+      'u',
+    ),
   );
   for (const binding of [
     'buildchain-channel: alpha',
-    'buildchain-ref: v3-alpha',
+    'buildchain-ref: ${{ inputs.resume-buildchain-runtime-sha }}',
     'target-ref: ${{ inputs.target-ref }}',
     'target-sha: ${{ inputs.target-sha }}',
     'resume-candidate-repository: ${{ inputs.resume-candidate-repository }}',
@@ -285,7 +294,7 @@ test('Alpha recovery reuses a verified sealed candidate through the v3 router', 
   ]) {
     assert.ok(recovery.includes(binding), binding);
   }
-  assert.doesNotMatch(recovery, /release-candidate-promote\.yml@[0-9a-f]{40}/u);
+  assert.match(recovery, /release-candidate-promote\.yml@[0-9a-f]{40}/u);
   assert.doesNotMatch(recovery, /^\s+strategy:\s*$/mu);
   assert.doesNotMatch(workflow, /test "\$CANDIDATE_RUN_ID" = "[0-9]+"/u);
   assert.doesNotMatch(workflow, /test "\$PREFLIGHT_RUN_ID" = "[0-9]+"/u);
