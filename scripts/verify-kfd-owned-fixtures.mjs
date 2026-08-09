@@ -14,7 +14,7 @@ const XINFA_MANIFEST = path.join(XINFA_ROOT, 'Cargo.toml');
 const KFD_ROOT = path.dirname(
   fileURLToPath(import.meta.resolve('@kungfu-tech/kfd/package.json')),
 );
-const KFD_BIN = path.join(KFD_ROOT, 'bin', 'kfd.mjs');
+const KFD_BIN = path.join(KFD_ROOT, 'bin', 'kfd-verify-current.mjs');
 const KFD_ATLAS_FIXTURE = path.join(
   KFD_ROOT,
   'verifier',

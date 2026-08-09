@@ -380,17 +380,20 @@ export function assertExternalSourceAcceptanceTarget(
 
 export function sourceCheckoutSnapshot(root) {
   const rows = (kind, paths) =>
-    paths.sort().map((relative) => {
-      const absolute = path.join(root, relative);
-      const stat = fs.lstatSync(absolute);
-      const bytes = stat.isSymbolicLink()
-        ? Buffer.from(fs.readlinkSync(absolute))
-        : fs.readFileSync(absolute);
-      return `${kind}:${stat.isSymbolicLink() ? 'link' : 'file'}:${relative}:${crypto
-        .createHash('sha256')
-        .update(bytes)
-        .digest('hex')}`;
-    });
+    paths
+      .filter((relative) => fs.existsSync(path.join(root, relative)))
+      .sort()
+      .map((relative) => {
+        const absolute = path.join(root, relative);
+        const stat = fs.lstatSync(absolute);
+        const bytes = stat.isSymbolicLink()
+          ? Buffer.from(fs.readlinkSync(absolute))
+          : fs.readFileSync(absolute);
+        return `${kind}:${stat.isSymbolicLink() ? 'link' : 'file'}:${relative}:${crypto
+          .createHash('sha256')
+          .update(bytes)
+          .digest('hex')}`;
+      });
   const tracked = gitNull(root, ['ls-files', '-z']);
   const untracked = gitNull(root, [
     'ls-files',
@@ -401,8 +404,12 @@ export function sourceCheckoutSnapshot(root) {
   return {
     trackedTreeRoot: digestRows(rows('tracked', tracked)),
     untrackedInventoryRoot: digestRows(rows('untracked', untracked)),
-    trackedCount: tracked.length,
-    untrackedCount: untracked.length,
+    trackedCount: tracked.filter((relative) =>
+      fs.existsSync(path.join(root, relative)),
+    ).length,
+    untrackedCount: untracked.filter((relative) =>
+      fs.existsSync(path.join(root, relative)),
+    ).length,
   };
 }
 
