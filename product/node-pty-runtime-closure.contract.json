@@ -1,0 +1,37 @@
+{
+  "schema": "kungfu.node-pty-runtime-closure/v1",
+  "dependency": {
+    "name": "node-pty",
+    "version": "1.1.0"
+  },
+  "platforms": {
+    "linux": {
+      "nativeStrategy": "forkpty",
+      "requiredFiles": ["build/Release/pty.node"],
+      "executableFiles": [],
+      "excludedFiles": ["build/Release/spawn-helper"]
+    },
+    "darwin": {
+      "nativeStrategy": "posix-spawn-helper",
+      "requiredFiles": [
+        "prebuilds/{platform}-{architecture}/pty.node",
+        "prebuilds/{platform}-{architecture}/spawn-helper"
+      ],
+      "executableFiles": [
+        "prebuilds/{platform}-{architecture}/spawn-helper"
+      ],
+      "excludedFiles": []
+    },
+    "win32": {
+      "nativeStrategy": "conpty-winpty",
+      "requiredFiles": ["prebuilds/{platform}-{architecture}/pty.node"],
+      "executableFiles": [],
+      "excludedFiles": []
+    }
+  },
+  "evidence": {
+    "upstreamBindingCondition": "OS==mac",
+    "linuxNativeBranch": "forkpty",
+    "correctionPullRequest": "https://github.com/kungfu-systems/kungfu/pull/2531"
+  }
+}
