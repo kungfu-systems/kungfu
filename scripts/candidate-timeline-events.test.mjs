@@ -318,14 +318,15 @@ function deliveryAttempt(overrides = {}) {
       checkout: mergeGroupHead,
     },
     family: {
-      initiativeId: 'go-family-native-state-contract',
-      assignmentId: 'go-family-proof-evidence-binding',
+      initiativeId: 'assignment-family-native-state-contract',
+      assignmentId: 'assignment-family-proof-evidence-binding',
       deliveryClass: 'native-proof-required',
       queueAttempt: 'attempt-one',
       leaseRoot: `sha256:${'1'.repeat(64)}`,
       admissionProofRoot: `sha256:${'2'.repeat(64)}`,
       admissionProofRoots: [`sha256:${'2'.repeat(64)}`],
-      statusContext: 'project-cut / family-go-family-native-state-contract',
+      statusContext:
+        'project-cut / family-assignment-family-native-state-contract',
     },
     requiredChecks: {
       contexts,

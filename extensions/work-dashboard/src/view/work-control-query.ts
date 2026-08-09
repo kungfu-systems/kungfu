@@ -1,9 +1,7 @@
 import type { ProfileQueryViewSpec } from '@kungfu-tech/kfx';
 
-import { projectMissionControlV3GoalCardView } from './compatibility/mission-control-v3-query.ts';
-
-export type GoalCardQuerySpec = {
-  schema: 'kungfu.work-control.goal-card-query/v1';
+export type AssignmentCardQuerySpec = {
+  schema: 'kungfu.work-control.assignment-card-query/v1';
   text: string;
   sections: Array<'attention' | 'in-motion' | 'delegated' | 'closed'>;
   statuses: string[];
@@ -30,20 +28,20 @@ export type GoalCardQuerySpec = {
   };
 };
 
-export type WorkControlGoalCardViewSpec = ProfileQueryViewSpec & {
+export type WorkControlAssignmentCardViewSpec = ProfileQueryViewSpec & {
   profileId: 'kungfu.work-control';
   memberId: 'work-control-views';
-  viewId: 'goal-cards';
+  viewId: 'assignment-cards';
   spec: {
-    schema: 'kungfu.work-control.goal-card-view/v1';
+    schema: 'kungfu.work-control.assignment-card-view/v1';
     questionId: 'observed-progress';
     reducer: 'kungfu.work-control.five-questions';
-    goalCards: GoalCardQuerySpec;
+    assignmentCards: AssignmentCardQuerySpec;
   };
 };
 
-export const DEFAULT_GOAL_CARD_QUERY: GoalCardQuerySpec = {
-  schema: 'kungfu.work-control.goal-card-query/v1',
+export const DEFAULT_ASSIGNMENT_CARD_QUERY: AssignmentCardQuerySpec = {
+  schema: 'kungfu.work-control.assignment-card-query/v1',
   text: '',
   sections: [],
   statuses: [],
@@ -60,20 +58,20 @@ export const DEFAULT_GOAL_CARD_QUERY: GoalCardQuerySpec = {
   sort: { field: 'decision-priority', direction: 'desc' },
 };
 
-const GOAL_CARD_SECTIONS = new Set([
+const ASSIGNMENT_CARD_SECTIONS = new Set([
   'attention',
   'in-motion',
   'delegated',
   'closed',
 ]);
-const GOAL_CARD_TRUST = new Set([
+const ASSIGNMENT_CARD_TRUST = new Set([
   'established',
   'partial',
   'attention',
   'stale',
   'unknown',
 ]);
-const GOAL_CARD_SORTS = new Set([
+const ASSIGNMENT_CARD_SORTS = new Set([
   'decision-priority',
   'updated',
   'importance',
@@ -91,36 +89,42 @@ function objectValue(value: unknown): Record<string, unknown> | null {
 
 function stringList(value: unknown, label: string): string[] {
   if (!Array.isArray(value) || value.some((item) => typeof item !== 'string')) {
-    throw new Error(`goal card query ${label} must be a string array`);
+    throw new Error(`assignment card query ${label} must be a string array`);
   }
   return [...new Set(value as string[])];
 }
 
-export function parseGoalCardQuerySpec(value: unknown): GoalCardQuerySpec {
-  const query = objectValue(value) as Partial<GoalCardQuerySpec> | null;
-  if (!query) throw new Error('goal card query must be an object');
-  if (query.schema !== 'kungfu.work-control.goal-card-query/v1') {
-    throw new Error('unsupported goal card query schema');
+export function parseAssignmentCardQuerySpec(
+  value: unknown,
+): AssignmentCardQuerySpec {
+  const query = objectValue(value) as Partial<AssignmentCardQuerySpec> | null;
+  if (!query) throw new Error('assignment card query must be an object');
+  if (query.schema !== 'kungfu.work-control.assignment-card-query/v1') {
+    throw new Error('unsupported assignment card query schema');
   }
   const sections = stringList(query.sections, 'sections');
   const trust = stringList(query.trust, 'trust');
-  if (sections.some((item) => !GOAL_CARD_SECTIONS.has(item))) {
-    throw new Error('goal card query contains an unsupported section');
+  if (sections.some((item) => !ASSIGNMENT_CARD_SECTIONS.has(item))) {
+    throw new Error('assignment card query contains an unsupported section');
   }
-  if (trust.some((item) => !GOAL_CARD_TRUST.has(item))) {
-    throw new Error('goal card query contains an unsupported trust state');
+  if (trust.some((item) => !ASSIGNMENT_CARD_TRUST.has(item))) {
+    throw new Error(
+      'assignment card query contains an unsupported trust state',
+    );
   }
-  if (!query.sort || !GOAL_CARD_SORTS.has(query.sort.field)) {
-    throw new Error('goal card query requires a supported sort field');
+  if (!query.sort || !ASSIGNMENT_CARD_SORTS.has(query.sort.field)) {
+    throw new Error('assignment card query requires a supported sort field');
   }
   if (!['asc', 'desc'].includes(query.sort.direction)) {
-    throw new Error('goal card query requires asc or desc sort direction');
+    throw new Error(
+      'assignment card query requires asc or desc sort direction',
+    );
   }
   if (!['all', 'yes', 'no'].includes(query.hasChildren ?? '')) {
-    throw new Error('goal card query requires a valid hasChildren value');
+    throw new Error('assignment card query requires a valid hasChildren value');
   }
   if (!['include', 'exclude', 'only'].includes(query.closed ?? '')) {
-    throw new Error('goal card query requires a valid closed value');
+    throw new Error('assignment card query requires a valid closed value');
   }
   if (
     query.updatedWithinDays !== null &&
@@ -129,79 +133,77 @@ export function parseGoalCardQuerySpec(value: unknown): GoalCardQuerySpec {
       query.updatedWithinDays < 0)
   ) {
     throw new Error(
-      'goal card query updatedWithinDays must be null or non-negative',
+      'assignment card query updatedWithinDays must be null or non-negative',
     );
   }
   if (typeof query.text !== 'string') {
-    throw new Error('goal card query text must be a string');
+    throw new Error('assignment card query text must be a string');
   }
   if (typeof query.hideClosedChildren !== 'boolean') {
-    throw new Error('goal card query hideClosedChildren must be boolean');
+    throw new Error('assignment card query hideClosedChildren must be boolean');
   }
   return {
     schema: query.schema,
     text: query.text,
-    sections: sections as GoalCardQuerySpec['sections'],
+    sections: sections as AssignmentCardQuerySpec['sections'],
     statuses: stringList(query.statuses, 'statuses'),
-    trust: trust as GoalCardQuerySpec['trust'],
+    trust: trust as AssignmentCardQuerySpec['trust'],
     actors: stringList(query.actors, 'actors'),
     tracks: stringList(query.tracks, 'tracks'),
     roles: stringList(query.roles, 'roles'),
     importance: stringList(query.importance, 'importance'),
     stages: stringList(query.stages, 'stages'),
     updatedWithinDays: query.updatedWithinDays as number | null,
-    hasChildren: query.hasChildren as GoalCardQuerySpec['hasChildren'],
-    closed: query.closed as GoalCardQuerySpec['closed'],
+    hasChildren: query.hasChildren as AssignmentCardQuerySpec['hasChildren'],
+    closed: query.closed as AssignmentCardQuerySpec['closed'],
     hideClosedChildren: query.hideClosedChildren,
     sort: { ...query.sort },
   };
 }
 
-export function workControlGoalCardView(
+export function workControlAssignmentCardView(
   profileVersion: string,
-  goalCards: GoalCardQuerySpec,
-): WorkControlGoalCardViewSpec {
+  assignmentCards: AssignmentCardQuerySpec,
+): WorkControlAssignmentCardViewSpec {
   return {
     kind: 'profile',
     profileId: 'kungfu.work-control',
     profileVersion,
     memberId: 'work-control-views',
-    viewId: 'goal-cards',
+    viewId: 'assignment-cards',
     spec: {
-      schema: 'kungfu.work-control.goal-card-view/v1',
+      schema: 'kungfu.work-control.assignment-card-view/v1',
       questionId: 'observed-progress',
       reducer: 'kungfu.work-control.five-questions',
-      goalCards: parseGoalCardQuerySpec(goalCards),
+      assignmentCards: parseAssignmentCardQuerySpec(assignmentCards),
     },
   };
 }
 
-export function goalCardQueryFromView(
+export function assignmentCardQueryFromView(
   value: unknown,
-): GoalCardQuerySpec | null {
+): AssignmentCardQuerySpec | null {
   const view = objectValue(value);
   if (!view) return null;
-  const compatibility = projectMissionControlV3GoalCardView(value);
-  if (compatibility) return parseGoalCardQuerySpec(compatibility);
   if (view.profileId !== 'kungfu.work-control') return null;
   if (view.kind === 'profile') {
     if (
       view.memberId !== 'work-control-views' ||
-      view.viewId !== 'goal-cards'
+      view.viewId !== 'assignment-cards'
     ) {
       return null;
     }
     const spec = objectValue(view.spec);
-    if (spec?.schema !== 'kungfu.work-control.goal-card-view/v1') {
-      throw new Error('unsupported Work Control goal-card view schema');
+    if (spec?.schema !== 'kungfu.work-control.assignment-card-view/v1') {
+      throw new Error('unsupported Work Control assignment-card view schema');
     }
     if (
       spec.questionId !== 'observed-progress' ||
       spec.reducer !== 'kungfu.work-control.five-questions'
     ) {
-      throw new Error('unsupported Work Control goal-card view contract');
+      throw new Error('unsupported Work Control assignment-card view contract');
     }
-    return parseGoalCardQuerySpec(spec.goalCards);
+    return parseAssignmentCardQuerySpec(spec.assignmentCards);
   }
   return null;
 }

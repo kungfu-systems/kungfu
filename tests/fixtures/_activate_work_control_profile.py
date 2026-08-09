@@ -1,16 +1,15 @@
 # SPDX-License-Identifier: Apache-2.0
 
-"""Authorize the exact Work Control Profile used by Atlas fixtures."""
+"""Authorize the exact Work Control Profile used by qualification fixtures."""
 
-from pathlib import Path
 import sys
+from pathlib import Path
 
 core_dir = Path(__file__).resolve().parents[2] / "framework" / "core"
 sys.path.insert(0, str(core_dir / "src" / "python"))
 sys.path.insert(0, str(core_dir / "dist" / "kungfu"))
 
 from kungfu import profile_composition, profile_sdk  # noqa: E402
-
 
 runtime_dir = Path(sys.argv[1])
 source = Path(sys.argv[2])
