@@ -38,9 +38,10 @@ execution; Shifu owns how the task is executed after source checkout.
   content, and submission roots. Kungfu's compatibility submission is
   [`../../shifu.documentation.json`](../../shifu.documentation.json).
 - [`production-graph-contract.json`](production-graph-contract.json) defines the
-  project-independent Production Graph v0 description and verification
-  boundary. Its content-addressed graph, plan, execution-event, receipt,
-  failure, recovery, and verification-receipt schemas retain exact source,
+  project-independent Production Graph v0 description, verification, and
+  bounded local execution boundary. Its content-addressed graph, plan,
+  execution-event, receipt, failure, recovery, executor-policy, local-execution,
+  and verification-receipt schemas retain exact source,
   project-authority, and Xinfa selection roots without executing nodes or
   acquiring Assignment or Work Control authority. Kungfu's compiler seam in
   [`framework/production-graph/compiler/index.mjs`](../../framework/production-graph/compiler/index.mjs)
@@ -61,6 +62,16 @@ execution; Shifu owns how the task is executed after source checkout.
   only permission for its exact node set until `expiresAt`; admission itself
   never starts a node. Shifu does not mint or modify Assignment, Work Control,
   Warrant, approval, merge, or close authority.
+  `./shifu production-graph:execute --graph GRAPH --plan PLAN
+  --verification-receipt RECEIPT --execution-admission-request REQUEST
+  --execution-admission-decision DECISION --executor-policy POLICY --execute`
+  is the v0 local executor. It accepts only a clean exact source, the same
+  rooted graph, plan, policy, and non-expired admitted node set, plus exact
+  `production-graph:fixture:*` tasks allowlisted by the policy. Concurrency is
+  fixed to one. It emits deterministic started, terminal, timeout, and
+  dependency-skip events and one rooted receipt. Replaying the same inputs
+  returns the existing exact receipt without starting a process. It is not a
+  scheduler, and it cannot mutate Work or Assignment authority.
   The additive `./shifu core:affected:graph-shadow` route is the first bounded
   external consumer. It requires an exact graph, compiled plan,
   `./shifu production-graph:verify` receipt, execution-admission request, and
