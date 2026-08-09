@@ -6,12 +6,24 @@ from types import SimpleNamespace
 import pytest
 from click.testing import CliRunner
 
+from kungfu import assignment_lifecycle
 from kungfu import assignment_orchestration as orchestration
 from kungfu.agent import first_value as onboarding
+from kungfu.agent import managed_run
 from kungfu.agent import native_launch
 from kungfu.agent import run_agent
 from kungfu.cli.commands import assignment, kfc, run
 from kungfu.workspace import resolve_workspace_target
+
+
+@pytest.mark.parametrize("command", ["claim", "status", "gate"])
+def test_assignment_identity_options_are_reusable_across_commands(command):
+    result = CliRunner().invoke(kfc, ["work", command, "--help"])
+
+    assert result.exit_code == 0, result.output
+    assert "--workspace" in result.output
+    assert "--initiative-id" in result.output
+    assert "--assignment-id" in result.output
 
 
 def _capture(project: Path, assignment_id: str):
@@ -153,6 +165,29 @@ def test_work_start_phase_plan_rejects_settled_or_review_work(phase):
     assert phase in blocked_reason
 
 
+def test_managed_work_start_builds_a_strict_assignment_work_ref():
+    plan = {
+        "work": {
+            "initiativeId": "project-work",
+            "assignmentId": "first",
+        },
+        "workControl": {
+            "profileId": "kungfu.work-control",
+            "profileRoot": "sha256:" + "2" * 64,
+        },
+    }
+    admission = {"workspace": {"workspace_id": "workspace:test"}}
+    status = {
+        "assignment": {"assignment_id": "first"},
+        "query_proof_root": "sha256:" + "3" * 64,
+    }
+
+    work_ref = assignment_lifecycle.work_ref(admission, plan, status)
+
+    assert work_ref["initiativeId"] == "project-work"
+    assert run_agent.validate_work_ref(work_ref) == work_ref
+
+
 def test_resumed_authority_writes_remain_visible_when_run_gate_fails(
     tmp_path, monkeypatch
 ):
@@ -240,6 +275,8 @@ def test_resumed_authority_writes_remain_visible_when_run_gate_fails(
     )
 
     def start_bound_session(**kwargs):
+        assert kwargs["work_ref"]["initiativeId"] == "project-work"
+        run_agent.session_contract.validate_work_ref(kwargs["work_ref"])
         kwargs["session_started_callback"](
             {
                 "workConsoleId": "work:kungfu.work-control:assignment:first",
@@ -1075,6 +1112,12 @@ def test_project_work_session_yields_at_deterministic_attention(tmp_path):
     statuses = [
         {
             "live": True,
+            "lifecycleState": "starting",
+            "interactionState": "unknown",
+            "output": {"nextSequence": 0},
+        },
+        {
+            "live": True,
             "lifecycleState": "ready",
             "interactionState": "ready",
             "output": {"nextSequence": 10},
@@ -1179,6 +1222,97 @@ def test_project_work_session_yields_at_deterministic_attention(tmp_path):
     )
     assert start_input["binding"] == {"kind": "work", "workRef": work}
     assert start_input["workConsoleId"] == ("work:kungfu.work-control:assignment:first")
+
+
+def test_terminal_mock_scenarios_ignore_ready_echo_until_the_process_ends():
+    recovery = {
+        "provider": "synthetic",
+        "launch": {"argv": ["/mock-provider.mjs", "--scenario", "recovery-story"]},
+    }
+    interactive = {
+        "provider": "synthetic",
+        "launch": {"argv": ["/mock-provider.mjs", "--scenario", "multi-step"]},
+    }
+    ready_after_echo = {
+        "live": True,
+        "interactionState": "ready",
+        "output": {"nextSequence": 42},
+    }
+    ended = {
+        "live": False,
+        "interactionState": "ended",
+        "output": {"nextSequence": 43},
+    }
+
+    assert managed_run._terminal_mock_scenario(recovery) is True
+    assert managed_run._terminal_mock_scenario(interactive) is False
+    assert (
+        managed_run._session_boundary_reached(
+            ready_after_echo,
+            before_sequence=10,
+            terminal_mock=True,
+        )
+        is False
+    )
+    assert (
+        managed_run._session_boundary_reached(
+            ready_after_echo,
+            before_sequence=10,
+            terminal_mock=False,
+        )
+        is True
+    )
+    assert (
+        managed_run._session_boundary_reached(
+            ended,
+            before_sequence=10,
+            terminal_mock=True,
+        )
+        is True
+    )
+
+
+def test_initial_session_wait_ignores_only_the_transient_missing_signature():
+    assert (
+        managed_run._initial_session_boundary_reached(
+            {
+                "interactionState": "unknown",
+                "providerAdapter": {
+                    "compatible": True,
+                    "reason": "no-supported-state-signature",
+                },
+            }
+        )
+        is False
+    )
+    assert (
+        managed_run._initial_session_boundary_reached(
+            {
+                "interactionState": "unknown",
+                "providerAdapter": {
+                    "compatible": False,
+                    "reason": "adapter-version-drift",
+                },
+            }
+        )
+        is True
+    )
+    assert (
+        managed_run._initial_session_boundary_reached(
+            {
+                "interactionState": "unknown",
+                "providerAdapter": {
+                    "compatible": True,
+                    "reason": "provider-reported-blocked",
+                },
+            }
+        )
+        is True
+    )
+    assert (
+        managed_run._initial_session_boundary_reached({"interactionState": "ready"})
+        is True
+    )
 
 
 def test_mock_profile_probes_the_deterministic_provider_version():

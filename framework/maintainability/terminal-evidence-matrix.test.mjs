@@ -8,6 +8,7 @@ import { fileURLToPath } from 'node:url';
 
 import { semanticRoot } from '../project-cut/src/project-cut.mjs';
 import {
+  observeRun,
   parseCommandJson,
   parseTerminalReviewAttestation,
 } from '../terminal-evidence/live-observations.mjs';
@@ -467,6 +468,53 @@ test('live observation parser preserves object and array authority payloads', ()
   assert.equal(parseTerminalReviewAttestation('not json'), undefined);
 });
 
+test('live run observation binds run and jobs to the declared attempt', () => {
+  const calls = [];
+  const observed = observeRun(
+    matrix,
+    { role: 'source', runId: 123, runAttempt: 2 },
+    (endpoint) => {
+      calls.push(endpoint);
+      if (endpoint.endsWith('/attempts/2')) {
+        return {
+          id: 123,
+          run_attempt: 2,
+          path: '.github/workflows/affected-native-pr.yml',
+          event: 'merge_group',
+          head_sha: HEAD,
+          head_branch: matrix.sourceBinding.protectedBranch,
+          status: 'completed',
+          conclusion: 'success',
+        };
+      }
+      if (endpoint.endsWith('/attempts/2/jobs?per_page=100')) {
+        return {
+          jobs: [
+            {
+              id: 456,
+              name: 'Candidate source acceptance / check',
+              status: 'completed',
+              conclusion: 'success',
+            },
+          ],
+        };
+      }
+      return { artifacts: [] };
+    },
+  );
+  assert.deepEqual(calls, [
+    '/repos/kungfu-systems/kungfu/actions/runs/123/attempts/2',
+    '/repos/kungfu-systems/kungfu/actions/runs/123/attempts/2/jobs?per_page=100',
+    '/repos/kungfu-systems/kungfu/actions/runs/123/artifacts?per_page=100',
+  ]);
+  assert.equal(observed.runAttempt, 2);
+  assert.equal(observed.jobs[0].id, 456);
+  assert.throws(
+    () => observeRun(matrix, { role: 'source', runId: 123, runAttempt: 0 }),
+    /source run attempt must be a positive integer/u,
+  );
+});
+
 test('terminal maintainability matrix declares an exact-head v3 contract', () => {
   assert.equal(
     matrix.schema,
@@ -647,6 +695,28 @@ test('self-consistent declared runs cannot replace GitHub live truth', () => {
   assert.ok(
     issueCodes(verify(candidate)).has('run-runId-live-mismatch'),
     'positive, retained, internally consistent run id must still match live API',
+  );
+
+  const wrongAttempt = clone(evidence);
+  const attemptRun = wrongAttempt.runs.find(({ role }) => role === 'source');
+  const attemptRetained = wrongAttempt.retainedObjects.find(
+    ({ root }) => root === attemptRun.evidenceRoot,
+  );
+  const attemptSnapshot = JSON.parse(
+    retainedBytes.get(attemptRetained.path).toString('utf8'),
+  );
+  attemptSnapshot.runAttempt = 2;
+  attemptRun.runAttempt = 2;
+  const attemptRoot = semanticRoot(attemptSnapshot);
+  attemptRun.evidenceRoot = attemptRoot;
+  attemptRetained.root = attemptRoot;
+  retainedBytes.set(
+    attemptRetained.path,
+    Buffer.from(`${JSON.stringify(attemptSnapshot)}\n`),
+  );
+  assert.ok(
+    issueCodes(verify(wrongAttempt)).has('run-runAttempt-live-mismatch'),
+    'positive, retained, internally consistent attempt must still match live API',
   );
 
   const missingJob = clone(liveRuns);

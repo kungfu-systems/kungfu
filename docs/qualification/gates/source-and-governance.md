@@ -86,6 +86,14 @@ Each section is bound to the registry id by the catalog meta gate.
   native contract regressions that the deliberately build-free source gate
   cannot observe.
 - **Action:** `./shifu core:affected -- --execute`
+- **Production Graph shadow:**
+  `./shifu core:affected:graph-shadow -- --graph GRAPH --plan PLAN
+  --verification-receipt VERIFICATION --execute` is an additive, temporary-root
+  consumer of one verified `core:affected` graph node. It validates the exact
+  contract/compiler verifier, source, authority, Xinfa selection, topology and
+  compiled plan before delegating to this unchanged action. Its graph receipt
+  and parity result are evidence only and never replace this Gate, planner,
+  executor, Buildchain logging, native qualification, or current receipt.
 - **Dependencies:** `gate.catalog`, `source.acceptance`.
 - **Workflow execution:** the partition worker uses the explicit diagnostic
   `--omit-dependency source.acceptance` form. The staged candidate workflow has
