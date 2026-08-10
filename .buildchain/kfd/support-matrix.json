@@ -274,7 +274,7 @@
           },
           {
             "path": "framework/primitive/kungfu-primitive-catalog.contract.json",
-            "sha256": "sha256:3f0d20ad0bf3eb43d53964af00bc8503ebab6f280c96562a1c988e14f8365e49"
+        "sha256": "sha256:5cbd3c1170d04551073e525073774cf63eb603355d0a692e3e372bc9b3378024"
           }
         ]
       },
