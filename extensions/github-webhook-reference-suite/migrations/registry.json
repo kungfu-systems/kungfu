@@ -1,0 +1,5 @@
+{
+  "schema": "kungfu.profile-migrations/v1",
+  "mode": "additive",
+  "migrations": []
+}

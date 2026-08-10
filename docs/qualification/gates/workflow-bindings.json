@@ -655,7 +655,7 @@
       "adapter": {
         "type": "buildchain-release-candidate-recovery",
         "kind": "job-uses",
-        "uses": "kungfu-systems/buildchain/.github/workflows/release-candidate-promote.yml@c49897528e04f38124869d0e5a6ce73acfb9d7ca",
+        "uses": "kungfu-systems/buildchain/.github/workflows/release-candidate-promote.yml@3d46b490748b87a7163fab6da6b77ef0c86a4460",
         "job": {
           "needs": "recovery-preflight",
           "if": "${{ always() && github.event_name == 'workflow_dispatch' && inputs.resume-candidate-run-id != '' && needs.recovery-preflight.result == 'success' }}"

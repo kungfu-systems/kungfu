@@ -55,31 +55,30 @@ offer `kungfu run <agent>` for durable Work. Keep Agent Work Lab and Guided Proj
 Tour optional; never require migration or chat reconstruction. Exit cannot settle Work.
 
 ## Mental model
-- **Project** binds a directory to local `.kungfu` state. A normal directory does
-  not need Git. In an existing Git repository, `.kungfu` sits beside `.git` and
-  runtime/history data is not silently staged or committed.
-- **Work** is the durable authority. Provider UI, Console text, GUI/TUI focus,
-  command success, and Skill prose are observations—not completion proof.
-- **Kungfu Skills** describe repeatable Kungfu workflows and may declare KFX
-  dependencies. A **provider Skill** only teaches Codex or Claude how to route to
-  the installed Kungfu truth.
-- **KFX** is the product extension layer. It resolves declared dependencies but
-  grants no ambient capability. Slack/email-style connectors remain plans until
-  network, credential, external-write, capability, and qualification gates pass.
-- **GUI/TUI** is a machine-local observer/manager over explicitly registered
-  Projects. It does not scan arbitrary directories and does not create a second
-  Work authority.
-- **managed-run** is optional stronger supervision and evidence capture; native
-  provider onboarding and public Work management do not depend on it.
+- **Project** binds a directory to local `.kungfu` state. A normal directory does not need Git. In a Git repository,
+  `.kungfu` sits beside `.git`; Kungfu never stages, commits, or pushes it.
+- **Work** is the durable authority. Provider UI, Console text, GUI/TUI focus, command success, and Skill prose are observations—not completion proof.
+- **Kungfu Skills** describe repeatable Kungfu workflows and may declare KFX dependencies. A **provider Skill** only
+  teaches Codex or Claude how to route to the installed Kungfu truth.
+- **KFX** is the product extension layer. It resolves declared dependencies but grants no ambient capability.
+  Slack/email-style connectors remain plans until network, credential, external-write, capability, and qualification gates pass.
+- **GUI/TUI** is a machine-local observer/manager over explicitly registered Projects. It does not scan arbitrary
+  directories and does not create a second Work authority.
+- **managed-run** is optional stronger supervision and evidence capture; native provider onboarding and public Work management do not depend on it.
 - **native-interactive** keeps the provider's familiar UI through bare `kungfu
-  run <provider>`. It injects content-bound Project/Console/Skill envelopes but
-  captures no transcript and grants no Work authority. Bind an accepted Work
-  before mutation; the TUI remains an observer, not an input controller.
-- **Shifu** is the one-stop development/recovery launcher. Use `kungfu shifu
-  agent brief`; Shifu owns clone, pinned uv/fnm/pnpm bootstrap, dependencies,
-  build, checks, artifacts, promotion, doctor, and recovery guidance.
-- **Xinfa** owns verified context selection. Use `kungfu xinfa agent brief`;
-  Kungfu composes its interface without copying its Atlas or authority.
+  run <provider>`. It injects content-bound Project/Console/Skill envelopes but captures no transcript and grants no
+  Work authority. Bind an accepted Work before mutation; the TUI remains an observer, not an input controller.
+- **Shifu** is the one-stop development/recovery launcher. Use `kungfu shifu agent brief`; Shifu owns clone, pinned
+  uv/fnm/pnpm bootstrap, dependencies, build, checks, artifacts, promotion, doctor, and recovery guidance.
+- **Xinfa** owns verified context selection. Use `kungfu xinfa agent brief`; Kungfu composes its interface without copying its Atlas or authority.
+
+## `.kungfu` Git boundary
+Never stage `.kungfu/` wholesale. Before staging any path, read `workspaceGit`
+from `kungfu agent map --json`: stage only a path matched by `publishAllowlist`
+and authorized by that row's `selection`; publisher content must use the exact
+returned path. Keep every `localOnly` or unmatched path local. Durable does not
+mean Git-tracked. An unmatched path requires an explicit repository policy; do
+not infer one. The same rooted policy is in `kungfu agent capabilities --json`.
 
 ## Compact routes
 Run `kungfu agent map --json` for exact maturity, authority, authorization,
@@ -96,7 +95,6 @@ kungfu agent install-skill --target codex --scope project --json
 kungfu shifu agent capabilities --json
 kungfu xinfa agent capabilities --json
 kungfu xinfa compile --workspace <repo> --output <atlas-dir> --json
-kungfu agent docs --projection agent --json
 ```
 
 Installation and onboarding commands only preview by default. Add `--execute`

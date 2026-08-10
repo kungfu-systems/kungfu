@@ -19,7 +19,7 @@
   "documents": [
     { "path": "index.json", "purpose": "pack manifest", "maturity": "stable" },
     { "path": "brief.md", "purpose": "first-read overview", "maturity": "stable" },
-    { "path": "intent-map.json", "purpose": "stable complete first-entry intent routing map", "maturity": "stable" },
+    { "path": "intent-map.json", "purpose": "stable first-entry intent map and workspace Git boundary", "maturity": "stable" },
     { "path": "first-value.contract.json", "purpose": "deterministic first-value result and qualification contract", "maturity": "stable" },
     { "path": "first-value-receipt.schema.json", "purpose": "sanitized first-value evidence receipt schema", "maturity": "stable" },
     { "path": "xinfa-context.md", "purpose": "verified-context discovery, help, and automation boundary", "maturity": "stable" },
