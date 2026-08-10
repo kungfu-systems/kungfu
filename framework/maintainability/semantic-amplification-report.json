@@ -2,13 +2,13 @@
   "schema": "kungfu.semantic-amplification-report/v1",
   "verdict": "pass",
   "authoritySemantics": "navigation-only-projection-over-existing-authorities",
-  "sourceRevision": "fd0a1f3aa9db3fefc68b16ad56ff007882dc7874",
+  "sourceRevision": "05515230a396543f6a749f6b5b8b937677acb93d",
   "manifestPath": "framework/maintainability/semantic-amplification.manifest.json",
   "manifestRoot": "sha256:db46439a29c9619e7966f24d2b64fb9a86e52cba76b8eff45442fa18df90e939",
   "generatorRoot": "sha256:a62c635839b1d7f32dccdaa770ba424b2858be41f2ae017561dbf2c83ee760ec",
   "baselineRef": "dbfed9ca1785d147b26f4f06e7e6895ac7368fee",
   "baselineRoot": "sha256:a6e7ee9aeea7213807abdf830f8b4e60aede2352289539ddc31ad0fa67b1da50",
-  "sourceRoot": "sha256:7cb3e14c96f6a83c487f7e84498f9f23e32ccb2057fd8112f8adc1a116487356",
+  "sourceRoot": "sha256:f1fc83585c533e2f8402cbd3ba43ab3daaac6cf473b99a9941794d0a005fd7fe",
   "roles": {
     "authority": "exactly one authority route per family; the route may name multiple co-owned source files",
     "allowedProjectionRoles": [
@@ -1222,7 +1222,7 @@
           "path": "docs/qualification/gates/release-admission-policy.json",
           "currentLines": 58,
           "baselineLines": 41,
-          "currentRoot": "sha256:c494a55fa8b1ec262c6af37874a83ab8b93a78c02f5e77a7291be898ddd5de38",
+          "currentRoot": "sha256:c96664c6e28dce11a31062ec9c6690f24d40fd9fe13efc1314d434597159bd2f",
           "baselineRoot": "sha256:e8a0f7037f2331610f3b9c07e7cdf5e47ea701045c73d0f67bf909372e77e0ac",
           "changedSinceBaseline": true
         },
@@ -1262,7 +1262,7 @@
           "path": "docs/qualification/gates/workflow-bindings.json",
           "currentLines": 721,
           "baselineLines": 580,
-          "currentRoot": "sha256:c5b27f70b08f560ebf1993b83e350f02d0dde77e2edb55db0cfcb6a2b06a9df1",
+          "currentRoot": "sha256:989c554759f897a408b64cd5e3098f187a90774a353da0f1caf4b10e75b14193",
           "baselineRoot": "sha256:233cd22ebce4c9930e0e4889808b88661d77c202d5e5f73121823dcdc461576d",
           "changedSinceBaseline": true
         },
@@ -1270,7 +1270,7 @@
           "path": ".github/workflows/release-new-version.yml",
           "currentLines": 685,
           "baselineLines": 362,
-          "currentRoot": "sha256:ada6ff9e164d74c7ef96caaf2ac08bccde83765557d69ce2a8f57ad9c11b6c34",
+          "currentRoot": "sha256:fd2b272b93f278d4a0e1494955940144eb514ed14e6035caf235421eb2961cc7",
           "baselineRoot": "sha256:3bdd847c80a05030de1d826282cef2e76a85e31dc0904df02c7f0cdda7a5eb74",
           "changedSinceBaseline": true
         },
@@ -2073,5 +2073,5 @@
     "findings": []
   },
   "issues": [],
-  "reportRoot": "sha256:32480f4709b5d86fa0902af4750bba0de040d5ea97050843e90e6eb594722c85"
+  "reportRoot": "sha256:4ad7316252a55778e14e64b6a1f2bdbc6407e44a448612dd8e982affc8079ef9"
 }
