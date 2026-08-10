@@ -333,8 +333,7 @@ export function qualifyCliSurface({
       'kungfu dev env',
       'kungfu engage',
       'kungfu schema',
-      'kungfu atlas authority-status',
-      'kungfu atlas show missions',
+      'kungfu atlas',
       'kungfu profile mission-control',
     ]) {
       assert(

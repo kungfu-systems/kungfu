@@ -14,7 +14,6 @@ from . import agent
 from . import rewind
 from . import schema
 from . import cut
-from . import atlas
 from . import assignment
 from . import dogfood
 from . import storage
@@ -63,7 +62,6 @@ __all__ = [
     "rewind",
     "schema",
     "cut",
-    "atlas",
     "assignment",
     "dogfood",
     "storage",
