@@ -38,8 +38,18 @@ const isWin = process.platform === 'win32';
 
 /** @typedef {{label: string, command: string, args: string[], cwd?: string, env?: NodeJS.ProcessEnv}} Command */
 
-function git(args) {
-  const result = spawnSync('git', args, { cwd: ROOT, encoding: 'utf8' });
+const SOURCE_ACCEPTANCE_GIT_MAX_BUFFER_BYTES = 64 * 1024 * 1024;
+
+export function readSourceAcceptanceGit(
+  args,
+  { cwd = ROOT, optional = false } = {},
+) {
+  const result = spawnSync('git', args, {
+    cwd,
+    encoding: 'utf8',
+    maxBuffer: SOURCE_ACCEPTANCE_GIT_MAX_BUFFER_BYTES,
+  });
+  if (optional) return result.status === 0 ? result.stdout.trim() : '';
   if (result.status !== 0) {
     throw new Error(
       `git ${args.join(' ')} failed: ${(result.stderr || '').trim()}`,
@@ -48,9 +58,12 @@ function git(args) {
   return result.stdout.trim();
 }
 
+function git(args) {
+  return readSourceAcceptanceGit(args);
+}
+
 function gitMaybe(args) {
-  const result = spawnSync('git', args, { cwd: ROOT, encoding: 'utf8' });
-  return result.status === 0 ? result.stdout.trim() : '';
+  return readSourceAcceptanceGit(args, { optional: true });
 }
 
 function commandAvailable(command) {
@@ -785,6 +798,7 @@ export function sourceAcceptancePlan(files, evidenceBaseCommit = '') {
         'scripts/buildchain-install.test.mjs',
         'scripts/run-shifu-lifecycle.test.mjs',
         'scripts/check-typescript-files.test.mjs',
+        'scripts/source-acceptance-git.test.mjs',
         'scripts/source-acceptance.test.mjs',
         'scripts/platform-command.test.mjs',
         'product/scripts/dist.test.mjs',
