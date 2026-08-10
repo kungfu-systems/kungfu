@@ -1,7 +1,7 @@
 {
   "schema": "kungfu.code-complexity-budget-baseline/v1",
-  "policyRoot": "sha256:16c4705ba737989c5bc19e22df7142e61250f792260b12ab4680e78150f79f6a",
-  "baselineRef": "ff5c820e26272439f03b1841a2588ecb14a6912e",
+  "policyRoot": "sha256:d21beeaac4125d4182ba736e5a393c805c4690cb34cb7e281f5aded28a60689c",
+  "baselineRef": "cd61362cd5b62a7b9b3b83be418342716db97155",
   "classification": "ordered-policy-and-content-marker/v1",
   "calibration": {
     "groupBy": [
@@ -15,8 +15,8 @@
   },
   "summary": {
     "declarative-schema-or-table": {
-      "files": 1419,
-      "lines": 556823
+      "files": 1355,
+      "lines": 556498
     },
     "first-party-handwritten-implementation": {
       "files": 1044,
@@ -31,8 +31,8 @@
       "lines": 59800
     },
     "retained-evidence": {
-      "files": 187,
-      "lines": 1630492
+      "files": 186,
+      "lines": 1630358
     },
     "test-or-fixture": {
       "files": 886,
@@ -55,8 +55,8 @@
     "declarative-schema-or-table:declarative": {
       "class": "declarative-schema-or-table",
       "language": "declarative",
-      "population": 1392,
-      "soft": 218,
+      "population": 1328,
+      "soft": 226,
       "hard": 2096,
       "calibration": "p90/p99"
     },
@@ -191,7 +191,7 @@
     "retained-evidence:declarative": {
       "class": "retained-evidence",
       "language": "declarative",
-      "population": 186,
+      "population": 185,
       "soft": 400,
       "hard": 631942,
       "calibration": "p90/p99"
@@ -697,7 +697,7 @@
       "language": "declarative",
       "owner": "kungfu/repository-contract",
       "lines": 5262,
-      "contentRoot": "sha256:b90e5c36dcb68ea5f2dc92ef6e5a7d755b82b9a3d16c5b705e858f4745bfadaf"
+      "contentRoot": "sha256:6724db178864cad20ed34f0d3dda3b7992022c31b6aa8686f3c2e5320211d11e"
     },
     {
       "path": ".buildchain/kfd/kfd-3/surfaces.json",
@@ -2158,42 +2158,6 @@
       "contentRoot": "sha256:100f32e533d30a42a616a78c69c73dcd23be5a9f7c17ba146eaccc678fde02a3"
     },
     {
-      "path": ".xinfa/baselines/sha256/2dcf9dc910ef32105d607d692b05bb55b79eb3082d8bebc0b951295d50390856/compatibility/context-pack-v1/manifest.json",
-      "class": "declarative-schema-or-table",
-      "generatedProvenance": false,
-      "language": "declarative",
-      "owner": "kungfu/repository-contract",
-      "lines": 1,
-      "contentRoot": "sha256:1202025ca6a9435be35e0d36801c3d94ebcb41e2c1f970115c8da7cc26244f97"
-    },
-    {
-      "path": ".xinfa/baselines/sha256/2dcf9dc910ef32105d607d692b05bb55b79eb3082d8bebc0b951295d50390856/compatibility/context-pack-v1/receipt.json",
-      "class": "declarative-schema-or-table",
-      "generatedProvenance": false,
-      "language": "declarative",
-      "owner": "kungfu/repository-contract",
-      "lines": 1,
-      "contentRoot": "sha256:9633fbfcb15ccbb840374bc1ecb15d68873779a31baf0936d78bda5f547b0450"
-    },
-    {
-      "path": ".xinfa/baselines/sha256/2dcf9dc910ef32105d607d692b05bb55b79eb3082d8bebc0b951295d50390856/manifest.json",
-      "class": "declarative-schema-or-table",
-      "generatedProvenance": false,
-      "language": "declarative",
-      "owner": "kungfu/repository-contract",
-      "lines": 38,
-      "contentRoot": "sha256:b2ee3de2f33e3708186b320065dc814cdbd8139e04adc431144f432dfc8704b5"
-    },
-    {
-      "path": ".xinfa/baselines/sha256/2dcf9dc910ef32105d607d692b05bb55b79eb3082d8bebc0b951295d50390856/receipt.json",
-      "class": "declarative-schema-or-table",
-      "generatedProvenance": false,
-      "language": "declarative",
-      "owner": "kungfu/repository-contract",
-      "lines": 16,
-      "contentRoot": "sha256:e9fb31a0aa549f80247196cd83a6ca69e58e4d6524126e3a242dfbf969b1846d"
-    },
-    {
       "path": ".xinfa/baselines/sha256/2f641d2954bbe091f1163ae74f56c63100db5f707714aad6431f766e2561c780/compatibility/context-pack-v1/manifest.json",
       "class": "declarative-schema-or-table",
       "generatedProvenance": false,
@@ -2878,42 +2842,6 @@
       "contentRoot": "sha256:01bf32b5d2bcccba9fd3d152e258df2d27dfff2c3821227bcd2627e1e4908549"
     },
     {
-      "path": ".xinfa/baselines/sha256/57abaf4985767afd17dadb0fe57a559af9128abd0cf5790a17ccde0085f4d488/compatibility/context-pack-v1/manifest.json",
-      "class": "declarative-schema-or-table",
-      "generatedProvenance": false,
-      "language": "declarative",
-      "owner": "kungfu/repository-contract",
-      "lines": 1,
-      "contentRoot": "sha256:712518ec316a6dcecf9e3d5f88503608a2cba9b3f0faa720a27586c29cb94286"
-    },
-    {
-      "path": ".xinfa/baselines/sha256/57abaf4985767afd17dadb0fe57a559af9128abd0cf5790a17ccde0085f4d488/compatibility/context-pack-v1/receipt.json",
-      "class": "declarative-schema-or-table",
-      "generatedProvenance": false,
-      "language": "declarative",
-      "owner": "kungfu/repository-contract",
-      "lines": 1,
-      "contentRoot": "sha256:7d53a77bf7dd0a11db68855dcbb8023c587d95788bfc5bdc71624719e39b69dd"
-    },
-    {
-      "path": ".xinfa/baselines/sha256/57abaf4985767afd17dadb0fe57a559af9128abd0cf5790a17ccde0085f4d488/manifest.json",
-      "class": "declarative-schema-or-table",
-      "generatedProvenance": false,
-      "language": "declarative",
-      "owner": "kungfu/repository-contract",
-      "lines": 38,
-      "contentRoot": "sha256:6129256aad6c384c78e4b52c714ed86135448f0909036d1ea76111a370d83969"
-    },
-    {
-      "path": ".xinfa/baselines/sha256/57abaf4985767afd17dadb0fe57a559af9128abd0cf5790a17ccde0085f4d488/receipt.json",
-      "class": "declarative-schema-or-table",
-      "generatedProvenance": false,
-      "language": "declarative",
-      "owner": "kungfu/repository-contract",
-      "lines": 16,
-      "contentRoot": "sha256:bb231de143573f31066fc1e6327882bde52d4900f0da5c596bb51413cf80e9fa"
-    },
-    {
       "path": ".xinfa/baselines/sha256/584c9c2c02510af8beeb28d5ad7376e34ea79ae20c07078a69fb867c005d204e/compatibility/context-pack-v1/manifest.json",
       "class": "declarative-schema-or-table",
       "generatedProvenance": false,
@@ -3056,42 +2984,6 @@
       "owner": "kungfu/repository-contract",
       "lines": 1,
       "contentRoot": "sha256:59e81eb21a024982b54d718753cca58cdbf9e63d6abf4d04b2acbe0f0d6fd527"
-    },
-    {
-      "path": ".xinfa/baselines/sha256/60f471bd6fb2b570b5e8a4cbdcfbbd1be9569aacabf3b2bbf9fa8a8ced98365b/compatibility/context-pack-v1/manifest.json",
-      "class": "declarative-schema-or-table",
-      "generatedProvenance": false,
-      "language": "declarative",
-      "owner": "kungfu/repository-contract",
-      "lines": 1,
-      "contentRoot": "sha256:68d0279e1f53e4d275de84ecbdb07c9e562c99410b2dde04ef3049d1fb3529b6"
-    },
-    {
-      "path": ".xinfa/baselines/sha256/60f471bd6fb2b570b5e8a4cbdcfbbd1be9569aacabf3b2bbf9fa8a8ced98365b/compatibility/context-pack-v1/receipt.json",
-      "class": "declarative-schema-or-table",
-      "generatedProvenance": false,
-      "language": "declarative",
-      "owner": "kungfu/repository-contract",
-      "lines": 1,
-      "contentRoot": "sha256:b19f419e13acb09e3a2bac78c908d9c1793980eef9373e714a7340826502464d"
-    },
-    {
-      "path": ".xinfa/baselines/sha256/60f471bd6fb2b570b5e8a4cbdcfbbd1be9569aacabf3b2bbf9fa8a8ced98365b/manifest.json",
-      "class": "declarative-schema-or-table",
-      "generatedProvenance": false,
-      "language": "declarative",
-      "owner": "kungfu/repository-contract",
-      "lines": 38,
-      "contentRoot": "sha256:9b22ba9a36afe7abaa1ec536ed0848511f67f47fbadc65270597f3c5b2fb446b"
-    },
-    {
-      "path": ".xinfa/baselines/sha256/60f471bd6fb2b570b5e8a4cbdcfbbd1be9569aacabf3b2bbf9fa8a8ced98365b/receipt.json",
-      "class": "declarative-schema-or-table",
-      "generatedProvenance": false,
-      "language": "declarative",
-      "owner": "kungfu/repository-contract",
-      "lines": 16,
-      "contentRoot": "sha256:9510b18b4731c0eb1748cb1082fa024baf061115d54cbdd1eefa0402b6f7f311"
     },
     {
       "path": ".xinfa/baselines/sha256/644ee0ea020c74cf7400930044a884fd4b183ca87cc0c753829747bb95d04853/compatibility/context-pack-v1/manifest.json",
@@ -3238,78 +3130,6 @@
       "contentRoot": "sha256:c044821934d8ce213158a58bf63e11d3ef4d6af47f2b3f4d13864ab9fe3a4296"
     },
     {
-      "path": ".xinfa/baselines/sha256/682693a07fb6abcd210b45374923a4672bc42b27bec7e2f2b710139bc2c27cde/atlas.json",
-      "class": "declarative-schema-or-table",
-      "generatedProvenance": false,
-      "language": "declarative",
-      "owner": "kungfu/repository-contract",
-      "lines": 1,
-      "contentRoot": "sha256:d57d1d975c50c9e128b19dc5993cb88cc5f510bdfc836595931ab132e6da6f89"
-    },
-    {
-      "path": ".xinfa/baselines/sha256/682693a07fb6abcd210b45374923a4672bc42b27bec7e2f2b710139bc2c27cde/compatibility/context-pack-v1/manifest.json",
-      "class": "declarative-schema-or-table",
-      "generatedProvenance": false,
-      "language": "declarative",
-      "owner": "kungfu/repository-contract",
-      "lines": 1,
-      "contentRoot": "sha256:a187ba3e11500e0d7d394fa5228a97c5b527ec1d90d8e3f106b542e05ce395a9"
-    },
-    {
-      "path": ".xinfa/baselines/sha256/682693a07fb6abcd210b45374923a4672bc42b27bec7e2f2b710139bc2c27cde/compatibility/context-pack-v1/pack.json",
-      "class": "declarative-schema-or-table",
-      "generatedProvenance": false,
-      "language": "declarative",
-      "owner": "kungfu/repository-contract",
-      "lines": 1,
-      "contentRoot": "sha256:3a90a75b5151f2466a1c7240fa3401fdde266dfbc0d17e313176b35b8e41a3d4"
-    },
-    {
-      "path": ".xinfa/baselines/sha256/682693a07fb6abcd210b45374923a4672bc42b27bec7e2f2b710139bc2c27cde/compatibility/context-pack-v1/receipt.json",
-      "class": "declarative-schema-or-table",
-      "generatedProvenance": false,
-      "language": "declarative",
-      "owner": "kungfu/repository-contract",
-      "lines": 1,
-      "contentRoot": "sha256:9471e4d072bc2b1e3d77e1f57ce367be60facec0a49fff8564aacdc8a97d70c6"
-    },
-    {
-      "path": ".xinfa/baselines/sha256/682693a07fb6abcd210b45374923a4672bc42b27bec7e2f2b710139bc2c27cde/manifest.json",
-      "class": "declarative-schema-or-table",
-      "generatedProvenance": false,
-      "language": "declarative",
-      "owner": "kungfu/repository-contract",
-      "lines": 1,
-      "contentRoot": "sha256:748fcb9aa1f8224f1e88dc8d3c09c306b31801bfccc9b03c3bff26de0b73e97b"
-    },
-    {
-      "path": ".xinfa/baselines/sha256/682693a07fb6abcd210b45374923a4672bc42b27bec7e2f2b710139bc2c27cde/receipt.json",
-      "class": "declarative-schema-or-table",
-      "generatedProvenance": false,
-      "language": "declarative",
-      "owner": "kungfu/repository-contract",
-      "lines": 1,
-      "contentRoot": "sha256:ef3a71a3cbde109df8d386a0ec9584ce25425b1993261c58b0ff2b4103681812"
-    },
-    {
-      "path": ".xinfa/baselines/sha256/682693a07fb6abcd210b45374923a4672bc42b27bec7e2f2b710139bc2c27cde/views/agent.json",
-      "class": "declarative-schema-or-table",
-      "generatedProvenance": false,
-      "language": "declarative",
-      "owner": "kungfu/repository-contract",
-      "lines": 1,
-      "contentRoot": "sha256:3f03cdedaccb7e36bd48e853f5b167c74f3cd3dca025602b10291f7f9c151025"
-    },
-    {
-      "path": ".xinfa/baselines/sha256/682693a07fb6abcd210b45374923a4672bc42b27bec7e2f2b710139bc2c27cde/views/human.json",
-      "class": "declarative-schema-or-table",
-      "generatedProvenance": false,
-      "language": "declarative",
-      "owner": "kungfu/repository-contract",
-      "lines": 1,
-      "contentRoot": "sha256:15b9b5227a607ee80a7a49a219db652cf26ba6703e9959608742c835ff0a77ab"
-    },
-    {
       "path": ".xinfa/baselines/sha256/6e41409116fa74f2417b96edddf05d766bbcda8adb18201eb3ea49eefcfb9c3f/compatibility/context-pack-v1/manifest.json",
       "class": "declarative-schema-or-table",
       "generatedProvenance": false,
@@ -3382,42 +3202,6 @@
       "contentRoot": "sha256:008975af7d0e5fe969f6a2251b585c07fb75c4af73a707f385521db594e3385d"
     },
     {
-      "path": ".xinfa/baselines/sha256/6f812d5299d96c51fefa19ca25221699a273f51aac7216d844915fa0fa2f6277/compatibility/context-pack-v1/manifest.json",
-      "class": "declarative-schema-or-table",
-      "generatedProvenance": false,
-      "language": "declarative",
-      "owner": "kungfu/repository-contract",
-      "lines": 1,
-      "contentRoot": "sha256:d2b22f6ff5dbfce786e455e696646aeda757d968fe8a8d22c8a71fc440d9e758"
-    },
-    {
-      "path": ".xinfa/baselines/sha256/6f812d5299d96c51fefa19ca25221699a273f51aac7216d844915fa0fa2f6277/compatibility/context-pack-v1/receipt.json",
-      "class": "declarative-schema-or-table",
-      "generatedProvenance": false,
-      "language": "declarative",
-      "owner": "kungfu/repository-contract",
-      "lines": 1,
-      "contentRoot": "sha256:dbc515b5f8a85ef5508b85dc07bd3f3c227dbaca9f96e6cefa81e6eb134193b9"
-    },
-    {
-      "path": ".xinfa/baselines/sha256/6f812d5299d96c51fefa19ca25221699a273f51aac7216d844915fa0fa2f6277/manifest.json",
-      "class": "declarative-schema-or-table",
-      "generatedProvenance": false,
-      "language": "declarative",
-      "owner": "kungfu/repository-contract",
-      "lines": 38,
-      "contentRoot": "sha256:be9b9295668eec7df137c2809c79fb791053755314595f1ea313a9784faa02ec"
-    },
-    {
-      "path": ".xinfa/baselines/sha256/6f812d5299d96c51fefa19ca25221699a273f51aac7216d844915fa0fa2f6277/receipt.json",
-      "class": "declarative-schema-or-table",
-      "generatedProvenance": false,
-      "language": "declarative",
-      "owner": "kungfu/repository-contract",
-      "lines": 16,
-      "contentRoot": "sha256:463838cf4493d82e713e3986080d349513cfce3fe6c2c5a517adb4b58931a032"
-    },
-    {
       "path": ".xinfa/baselines/sha256/7022861fd03d4a63379386fc235c5bba303046befe9ca65ac74cb3a091ca98c7/compatibility/context-pack-v1/manifest.json",
       "class": "declarative-schema-or-table",
       "generatedProvenance": false,
@@ -3488,78 +3272,6 @@
       "owner": "kungfu/repository-contract",
       "lines": 1,
       "contentRoot": "sha256:6e3557b8539c3c196713d9f00ce7a0383308349606608164b58445509508ed8e"
-    },
-    {
-      "path": ".xinfa/baselines/sha256/75146578e8c15cc3d46185eecaad0060d6fd387e9cea91f33990632fb820e767/atlas.json",
-      "class": "declarative-schema-or-table",
-      "generatedProvenance": false,
-      "language": "declarative",
-      "owner": "kungfu/repository-contract",
-      "lines": 1,
-      "contentRoot": "sha256:ef6884a552c65827c416d5897027bf346293082a32cd2103c151ead1fac21bc9"
-    },
-    {
-      "path": ".xinfa/baselines/sha256/75146578e8c15cc3d46185eecaad0060d6fd387e9cea91f33990632fb820e767/compatibility/context-pack-v1/manifest.json",
-      "class": "declarative-schema-or-table",
-      "generatedProvenance": false,
-      "language": "declarative",
-      "owner": "kungfu/repository-contract",
-      "lines": 1,
-      "contentRoot": "sha256:4fe59af8a833f6a3577b5850d2e78929d764d00014441bab413022a27fabe95f"
-    },
-    {
-      "path": ".xinfa/baselines/sha256/75146578e8c15cc3d46185eecaad0060d6fd387e9cea91f33990632fb820e767/compatibility/context-pack-v1/pack.json",
-      "class": "declarative-schema-or-table",
-      "generatedProvenance": false,
-      "language": "declarative",
-      "owner": "kungfu/repository-contract",
-      "lines": 1,
-      "contentRoot": "sha256:501d7e3b7a41e9f6834eed4747168243448d333664ea6271335bfbe8e16ccd92"
-    },
-    {
-      "path": ".xinfa/baselines/sha256/75146578e8c15cc3d46185eecaad0060d6fd387e9cea91f33990632fb820e767/compatibility/context-pack-v1/receipt.json",
-      "class": "declarative-schema-or-table",
-      "generatedProvenance": false,
-      "language": "declarative",
-      "owner": "kungfu/repository-contract",
-      "lines": 1,
-      "contentRoot": "sha256:c4dcb0812c88c09bc2e1faa6c621f8edc2f413acbd06db409936c6699c845c90"
-    },
-    {
-      "path": ".xinfa/baselines/sha256/75146578e8c15cc3d46185eecaad0060d6fd387e9cea91f33990632fb820e767/manifest.json",
-      "class": "declarative-schema-or-table",
-      "generatedProvenance": false,
-      "language": "declarative",
-      "owner": "kungfu/repository-contract",
-      "lines": 1,
-      "contentRoot": "sha256:57b8b9e1173da86984069c181b7da6e0764c43e05d415ca8b585652cba05fa33"
-    },
-    {
-      "path": ".xinfa/baselines/sha256/75146578e8c15cc3d46185eecaad0060d6fd387e9cea91f33990632fb820e767/receipt.json",
-      "class": "declarative-schema-or-table",
-      "generatedProvenance": false,
-      "language": "declarative",
-      "owner": "kungfu/repository-contract",
-      "lines": 1,
-      "contentRoot": "sha256:0750a8ec9cfc676ac7b2cf3188ce68eb77468aea895141df55d96cc55e34ae73"
-    },
-    {
-      "path": ".xinfa/baselines/sha256/75146578e8c15cc3d46185eecaad0060d6fd387e9cea91f33990632fb820e767/views/agent.json",
-      "class": "declarative-schema-or-table",
-      "generatedProvenance": false,
-      "language": "declarative",
-      "owner": "kungfu/repository-contract",
-      "lines": 1,
-      "contentRoot": "sha256:6a7952b2cb84f30a93650e3ca68ebc999aaa3cbac2828ab0103a113350df2769"
-    },
-    {
-      "path": ".xinfa/baselines/sha256/75146578e8c15cc3d46185eecaad0060d6fd387e9cea91f33990632fb820e767/views/human.json",
-      "class": "declarative-schema-or-table",
-      "generatedProvenance": false,
-      "language": "declarative",
-      "owner": "kungfu/repository-contract",
-      "lines": 1,
-      "contentRoot": "sha256:9baca02b3506b61f0dafe552f56c068a00a511ef2dc420cd88768e7019d461ed"
     },
     {
       "path": ".xinfa/baselines/sha256/7568b8adf5ec891a53f33b134fb4948e5a2b9ba3f2d556f4a08643a3a0a83b0a/compatibility/context-pack-v1/manifest.json",
@@ -4426,42 +4138,6 @@
       "contentRoot": "sha256:07f650dad014311f7d3c6be215d5ecf3ae159e9d2946dd9cc63ce3381d642521"
     },
     {
-      "path": ".xinfa/baselines/sha256/a59d5ff50ac80f8046b656c692f53f43a181ff5de9563448cbedd86c8ddfedd8/compatibility/context-pack-v1/manifest.json",
-      "class": "declarative-schema-or-table",
-      "generatedProvenance": false,
-      "language": "declarative",
-      "owner": "kungfu/repository-contract",
-      "lines": 1,
-      "contentRoot": "sha256:ec08841982f27a1d049d8bb5d4e579c6e7c3c9949cce556d610f7ea0b53ba5d6"
-    },
-    {
-      "path": ".xinfa/baselines/sha256/a59d5ff50ac80f8046b656c692f53f43a181ff5de9563448cbedd86c8ddfedd8/compatibility/context-pack-v1/receipt.json",
-      "class": "declarative-schema-or-table",
-      "generatedProvenance": false,
-      "language": "declarative",
-      "owner": "kungfu/repository-contract",
-      "lines": 1,
-      "contentRoot": "sha256:6831ffac7aefbfae69bcb48b22cbaf37695ae4cb8fa311e638835b5b33fa8efd"
-    },
-    {
-      "path": ".xinfa/baselines/sha256/a59d5ff50ac80f8046b656c692f53f43a181ff5de9563448cbedd86c8ddfedd8/manifest.json",
-      "class": "declarative-schema-or-table",
-      "generatedProvenance": false,
-      "language": "declarative",
-      "owner": "kungfu/repository-contract",
-      "lines": 1,
-      "contentRoot": "sha256:08d7401190832cc673cabe6c75b509ae99de045c386779e8f30fa9a2ae033ca8"
-    },
-    {
-      "path": ".xinfa/baselines/sha256/a59d5ff50ac80f8046b656c692f53f43a181ff5de9563448cbedd86c8ddfedd8/receipt.json",
-      "class": "declarative-schema-or-table",
-      "generatedProvenance": false,
-      "language": "declarative",
-      "owner": "kungfu/repository-contract",
-      "lines": 1,
-      "contentRoot": "sha256:afeaa439582dec0671c31818d4b6c7ce2082abcccd66b5a7e62f0102194ad3f9"
-    },
-    {
       "path": ".xinfa/baselines/sha256/a5b1ee7ad43ce507e4ccda60ac289e1292586bf33dcd2a47dca48dfeebcb8d31/compatibility/context-pack-v1/manifest.json",
       "class": "declarative-schema-or-table",
       "generatedProvenance": false,
@@ -4640,78 +4316,6 @@
       "owner": "kungfu/repository-contract",
       "lines": 1,
       "contentRoot": "sha256:66dbde3a1e10b4f60801456d55f5dd7a74e23ab3e711692033de70bbe15369f8"
-    },
-    {
-      "path": ".xinfa/baselines/sha256/abb362cc02bdae38eb6322b96b928a0cb6a1084e6ec0d12bfe8b43947ae9ae4c/atlas.json",
-      "class": "declarative-schema-or-table",
-      "generatedProvenance": false,
-      "language": "declarative",
-      "owner": "kungfu/repository-contract",
-      "lines": 1,
-      "contentRoot": "sha256:cdc710a514a78792785766cadf5ffb4b86bef6ee508941b8fe80a81dbbc0b8e4"
-    },
-    {
-      "path": ".xinfa/baselines/sha256/abb362cc02bdae38eb6322b96b928a0cb6a1084e6ec0d12bfe8b43947ae9ae4c/compatibility/context-pack-v1/manifest.json",
-      "class": "declarative-schema-or-table",
-      "generatedProvenance": false,
-      "language": "declarative",
-      "owner": "kungfu/repository-contract",
-      "lines": 1,
-      "contentRoot": "sha256:bcb820ccab9bb0b6ac03c341eaea2469d00b57c058d9aac190630f603e04f47f"
-    },
-    {
-      "path": ".xinfa/baselines/sha256/abb362cc02bdae38eb6322b96b928a0cb6a1084e6ec0d12bfe8b43947ae9ae4c/compatibility/context-pack-v1/pack.json",
-      "class": "declarative-schema-or-table",
-      "generatedProvenance": false,
-      "language": "declarative",
-      "owner": "kungfu/repository-contract",
-      "lines": 1,
-      "contentRoot": "sha256:e80051f7fc1121881e8649e6ec0eeff87cd53b4c63708913b63675fe4e81b71c"
-    },
-    {
-      "path": ".xinfa/baselines/sha256/abb362cc02bdae38eb6322b96b928a0cb6a1084e6ec0d12bfe8b43947ae9ae4c/compatibility/context-pack-v1/receipt.json",
-      "class": "declarative-schema-or-table",
-      "generatedProvenance": false,
-      "language": "declarative",
-      "owner": "kungfu/repository-contract",
-      "lines": 1,
-      "contentRoot": "sha256:cf11b94ab228fb89091c4124b6a0fa8c687d1e902df24c98daf107bfa5bd1d5d"
-    },
-    {
-      "path": ".xinfa/baselines/sha256/abb362cc02bdae38eb6322b96b928a0cb6a1084e6ec0d12bfe8b43947ae9ae4c/manifest.json",
-      "class": "declarative-schema-or-table",
-      "generatedProvenance": false,
-      "language": "declarative",
-      "owner": "kungfu/repository-contract",
-      "lines": 1,
-      "contentRoot": "sha256:3167b3a3e8efff3941ab43b3c4fbf8a3563e523752861517d4be7c45606fc580"
-    },
-    {
-      "path": ".xinfa/baselines/sha256/abb362cc02bdae38eb6322b96b928a0cb6a1084e6ec0d12bfe8b43947ae9ae4c/receipt.json",
-      "class": "declarative-schema-or-table",
-      "generatedProvenance": false,
-      "language": "declarative",
-      "owner": "kungfu/repository-contract",
-      "lines": 1,
-      "contentRoot": "sha256:7f817f8da9b338a80d6c592bfec40faf3e367cce56032831387ca46adce8841c"
-    },
-    {
-      "path": ".xinfa/baselines/sha256/abb362cc02bdae38eb6322b96b928a0cb6a1084e6ec0d12bfe8b43947ae9ae4c/views/agent.json",
-      "class": "declarative-schema-or-table",
-      "generatedProvenance": false,
-      "language": "declarative",
-      "owner": "kungfu/repository-contract",
-      "lines": 1,
-      "contentRoot": "sha256:72cb1207a5221cdbbf28b2805bc63e78a38fa08067f5e3a64df4f5970ffb4cb8"
-    },
-    {
-      "path": ".xinfa/baselines/sha256/abb362cc02bdae38eb6322b96b928a0cb6a1084e6ec0d12bfe8b43947ae9ae4c/views/human.json",
-      "class": "declarative-schema-or-table",
-      "generatedProvenance": false,
-      "language": "declarative",
-      "owner": "kungfu/repository-contract",
-      "lines": 1,
-      "contentRoot": "sha256:3e67d4c1fe569449d8f7e2ef69c93767029becf9a2d02c6353b29721a998b391"
     },
     {
       "path": ".xinfa/baselines/sha256/abc91d603a2fe0ff3facf427adf478c74b5238f1b98a6a366d69dcff13ca9f3a/compatibility/context-pack-v1/manifest.json",
@@ -5686,114 +5290,6 @@
       "contentRoot": "sha256:81b3a850231231c11e4425d09885cfdd291d7b8c8a07f397d21db1bab50434ac"
     },
     {
-      "path": ".xinfa/baselines/sha256/e2efdfcbd23eabb0c30eabc1e3e19e3e019329a1ac45cff42ccb6367e4564e3c/compatibility/context-pack-v1/manifest.json",
-      "class": "declarative-schema-or-table",
-      "generatedProvenance": false,
-      "language": "declarative",
-      "owner": "kungfu/repository-contract",
-      "lines": 1,
-      "contentRoot": "sha256:0a6264639637a867ce647186a33fa59bca98d7b541dc5d609679df7ba4cd1fd7"
-    },
-    {
-      "path": ".xinfa/baselines/sha256/e2efdfcbd23eabb0c30eabc1e3e19e3e019329a1ac45cff42ccb6367e4564e3c/compatibility/context-pack-v1/receipt.json",
-      "class": "declarative-schema-or-table",
-      "generatedProvenance": false,
-      "language": "declarative",
-      "owner": "kungfu/repository-contract",
-      "lines": 1,
-      "contentRoot": "sha256:f1ef4201c5c8aa275736e5ccbcda2ca8adfe9d850761648727f5a2d5be671186"
-    },
-    {
-      "path": ".xinfa/baselines/sha256/e2efdfcbd23eabb0c30eabc1e3e19e3e019329a1ac45cff42ccb6367e4564e3c/manifest.json",
-      "class": "declarative-schema-or-table",
-      "generatedProvenance": false,
-      "language": "declarative",
-      "owner": "kungfu/repository-contract",
-      "lines": 38,
-      "contentRoot": "sha256:3bfc9f36563f359c7233a148a2506fadcac13572b096e87518d48abe5713aca7"
-    },
-    {
-      "path": ".xinfa/baselines/sha256/e2efdfcbd23eabb0c30eabc1e3e19e3e019329a1ac45cff42ccb6367e4564e3c/receipt.json",
-      "class": "declarative-schema-or-table",
-      "generatedProvenance": false,
-      "language": "declarative",
-      "owner": "kungfu/repository-contract",
-      "lines": 16,
-      "contentRoot": "sha256:6284b570ed7f2e2e4fd13764b573921f6bdc97ef3e7257f754de712d1eb90707"
-    },
-    {
-      "path": ".xinfa/baselines/sha256/e4c4dfce214f4c172129e6d9cb35f0cae6810aeee4399953e82182a208783bac/atlas.json",
-      "class": "declarative-schema-or-table",
-      "generatedProvenance": false,
-      "language": "declarative",
-      "owner": "kungfu/repository-contract",
-      "lines": 1,
-      "contentRoot": "sha256:024d287650adcf890ebc1d6adb78ef887394a8fff42074dd9038204221a044ed"
-    },
-    {
-      "path": ".xinfa/baselines/sha256/e4c4dfce214f4c172129e6d9cb35f0cae6810aeee4399953e82182a208783bac/compatibility/context-pack-v1/manifest.json",
-      "class": "declarative-schema-or-table",
-      "generatedProvenance": false,
-      "language": "declarative",
-      "owner": "kungfu/repository-contract",
-      "lines": 1,
-      "contentRoot": "sha256:40d723aff7164d3b1bba312f8d2c1b95e8115f18d02de96eccddee45391d0218"
-    },
-    {
-      "path": ".xinfa/baselines/sha256/e4c4dfce214f4c172129e6d9cb35f0cae6810aeee4399953e82182a208783bac/compatibility/context-pack-v1/pack.json",
-      "class": "declarative-schema-or-table",
-      "generatedProvenance": false,
-      "language": "declarative",
-      "owner": "kungfu/repository-contract",
-      "lines": 1,
-      "contentRoot": "sha256:f89476f2006aee476c9b424db748d36d47d80200323f4ffd089dae259e46fdd5"
-    },
-    {
-      "path": ".xinfa/baselines/sha256/e4c4dfce214f4c172129e6d9cb35f0cae6810aeee4399953e82182a208783bac/compatibility/context-pack-v1/receipt.json",
-      "class": "declarative-schema-or-table",
-      "generatedProvenance": false,
-      "language": "declarative",
-      "owner": "kungfu/repository-contract",
-      "lines": 1,
-      "contentRoot": "sha256:4e463fe9a01404775c87ae8bf90913dbe14779833af43360efb33d5c8ac90157"
-    },
-    {
-      "path": ".xinfa/baselines/sha256/e4c4dfce214f4c172129e6d9cb35f0cae6810aeee4399953e82182a208783bac/manifest.json",
-      "class": "declarative-schema-or-table",
-      "generatedProvenance": false,
-      "language": "declarative",
-      "owner": "kungfu/repository-contract",
-      "lines": 1,
-      "contentRoot": "sha256:fbf9372e10aebbf3ea45041f9353c6a60ec6e8394a5e0be339642584df6f9e77"
-    },
-    {
-      "path": ".xinfa/baselines/sha256/e4c4dfce214f4c172129e6d9cb35f0cae6810aeee4399953e82182a208783bac/receipt.json",
-      "class": "declarative-schema-or-table",
-      "generatedProvenance": false,
-      "language": "declarative",
-      "owner": "kungfu/repository-contract",
-      "lines": 1,
-      "contentRoot": "sha256:61ac123417162a627d5b2654f901186cef4c01893ffd38e7f32f1ad6f573cfb3"
-    },
-    {
-      "path": ".xinfa/baselines/sha256/e4c4dfce214f4c172129e6d9cb35f0cae6810aeee4399953e82182a208783bac/views/agent.json",
-      "class": "declarative-schema-or-table",
-      "generatedProvenance": false,
-      "language": "declarative",
-      "owner": "kungfu/repository-contract",
-      "lines": 1,
-      "contentRoot": "sha256:7f17f242a98519f23bdc2acd0a9667c09599ee1a4e9755f26ba90edf0e46859f"
-    },
-    {
-      "path": ".xinfa/baselines/sha256/e4c4dfce214f4c172129e6d9cb35f0cae6810aeee4399953e82182a208783bac/views/human.json",
-      "class": "declarative-schema-or-table",
-      "generatedProvenance": false,
-      "language": "declarative",
-      "owner": "kungfu/repository-contract",
-      "lines": 1,
-      "contentRoot": "sha256:045249b310bd223ee254390ed8cb2e4b15f4de352ff01ace59c03e9212068356"
-    },
-    {
       "path": ".xinfa/baselines/sha256/e9487df9ae210ea2224f7679e2c7b89bab88199f878c7f8b70daeb39988c81f9/compatibility/context-pack-v1/manifest.json",
       "class": "declarative-schema-or-table",
       "generatedProvenance": false,
@@ -6487,15 +5983,6 @@
       "contentRoot": "sha256:f0b23f204746d9c8ca8aaffff935abe822e041f8a6c7afd0de79218c1e14799f"
     },
     {
-      "path": ".xinfa/manifests/project-cuts/57abaf4985767afd17dadb0fe57a559af9128abd0cf5790a17ccde0085f4d488.json",
-      "class": "declarative-schema-or-table",
-      "generatedProvenance": false,
-      "language": "declarative",
-      "owner": "kungfu/repository-contract",
-      "lines": 1,
-      "contentRoot": "sha256:8a5cb4821c1ee9b6adfac50dace055f2651fa7519b080657b149acbc4517a961"
-    },
-    {
       "path": ".xinfa/manifests/project-cuts/584c9c2c02510af8beeb28d5ad7376e34ea79ae20c07078a69fb867c005d204e.json",
       "class": "declarative-schema-or-table",
       "generatedProvenance": false,
@@ -6568,15 +6055,6 @@
       "contentRoot": "sha256:3a37e10719459f949f1473ee216ce52ece4de191b0c1e3a82961ba0268c4a632"
     },
     {
-      "path": ".xinfa/manifests/project-cuts/682693a07fb6abcd210b45374923a4672bc42b27bec7e2f2b710139bc2c27cde.json",
-      "class": "declarative-schema-or-table",
-      "generatedProvenance": false,
-      "language": "declarative",
-      "owner": "kungfu/repository-contract",
-      "lines": 1,
-      "contentRoot": "sha256:50aa4b92574d2d9ff06c2e57e62d24905a51131097160602c00a1b2168f72dc3"
-    },
-    {
       "path": ".xinfa/manifests/project-cuts/6e41409116fa74f2417b96edddf05d766bbcda8adb18201eb3ea49eefcfb9c3f.json",
       "class": "declarative-schema-or-table",
       "generatedProvenance": false,
@@ -6595,15 +6073,6 @@
       "contentRoot": "sha256:dbd002be0128b645e0dcde349372d5c9bb752485cfb11925fa6b41fdb06cd461"
     },
     {
-      "path": ".xinfa/manifests/project-cuts/6f812d5299d96c51fefa19ca25221699a273f51aac7216d844915fa0fa2f6277.json",
-      "class": "declarative-schema-or-table",
-      "generatedProvenance": false,
-      "language": "declarative",
-      "owner": "kungfu/repository-contract",
-      "lines": 1,
-      "contentRoot": "sha256:2ae39b78ba165d57e3f176db20f619dbb4140fce3ea53644e8f14a77a6f1f7a8"
-    },
-    {
       "path": ".xinfa/manifests/project-cuts/7022861fd03d4a63379386fc235c5bba303046befe9ca65ac74cb3a091ca98c7.json",
       "class": "declarative-schema-or-table",
       "generatedProvenance": false,
@@ -6620,15 +6089,6 @@
       "owner": "kungfu/repository-contract",
       "lines": 1,
       "contentRoot": "sha256:43fe0345199b0b62b041ef7410c745835bc496ced41a9f6d17b0d97e6a50bbe7"
-    },
-    {
-      "path": ".xinfa/manifests/project-cuts/75146578e8c15cc3d46185eecaad0060d6fd387e9cea91f33990632fb820e767.json",
-      "class": "declarative-schema-or-table",
-      "generatedProvenance": false,
-      "language": "declarative",
-      "owner": "kungfu/repository-contract",
-      "lines": 1,
-      "contentRoot": "sha256:f3033d0b628c247899405512c841f43271118b327e7a35305963cbd89d2ede1f"
     },
     {
       "path": ".xinfa/manifests/project-cuts/7568b8adf5ec891a53f33b134fb4948e5a2b9ba3f2d556f4a08643a3a0a83b0a.json",
@@ -6865,15 +6325,6 @@
       "contentRoot": "sha256:f81079bd207d4823a67a489a41cd322835338a816afb39f2f29b38008aef2a9c"
     },
     {
-      "path": ".xinfa/manifests/project-cuts/a59d5ff50ac80f8046b656c692f53f43a181ff5de9563448cbedd86c8ddfedd8.json",
-      "class": "declarative-schema-or-table",
-      "generatedProvenance": false,
-      "language": "declarative",
-      "owner": "kungfu/repository-contract",
-      "lines": 1,
-      "contentRoot": "sha256:8a80793c2dbed47014b00f7514c877d4ffe238159d2acd9c015705cd1b01c946"
-    },
-    {
       "path": ".xinfa/manifests/project-cuts/a5b1ee7ad43ce507e4ccda60ac289e1292586bf33dcd2a47dca48dfeebcb8d31.json",
       "class": "declarative-schema-or-table",
       "generatedProvenance": false,
@@ -6917,15 +6368,6 @@
       "owner": "kungfu/repository-contract",
       "lines": 1,
       "contentRoot": "sha256:1a390104378bc9be14253be6dc7a9e174472c324504161c5d4a93cac9dca2c05"
-    },
-    {
-      "path": ".xinfa/manifests/project-cuts/abb362cc02bdae38eb6322b96b928a0cb6a1084e6ec0d12bfe8b43947ae9ae4c.json",
-      "class": "declarative-schema-or-table",
-      "generatedProvenance": false,
-      "language": "declarative",
-      "owner": "kungfu/repository-contract",
-      "lines": 1,
-      "contentRoot": "sha256:0fb4737e1a64feb96be1ec7ca55d1f9b1faa4563b2d88e07409c42976a851b18"
     },
     {
       "path": ".xinfa/manifests/project-cuts/abc91d603a2fe0ff3facf427adf478c74b5238f1b98a6a366d69dcff13ca9f3a.json",
@@ -7171,24 +6613,6 @@
       "contentRoot": "sha256:59e12266d3265ff85ebb6c80aa58202e561154886e3e5f203952fcf280c0d568"
     },
     {
-      "path": ".xinfa/manifests/project-cuts/e2efdfcbd23eabb0c30eabc1e3e19e3e019329a1ac45cff42ccb6367e4564e3c.json",
-      "class": "declarative-schema-or-table",
-      "generatedProvenance": false,
-      "language": "declarative",
-      "owner": "kungfu/repository-contract",
-      "lines": 1,
-      "contentRoot": "sha256:b51388acf9695e60bc36295dc247e7c0e4eb7d28614c5de603392f5eadf30aee"
-    },
-    {
-      "path": ".xinfa/manifests/project-cuts/e4c4dfce214f4c172129e6d9cb35f0cae6810aeee4399953e82182a208783bac.json",
-      "class": "declarative-schema-or-table",
-      "generatedProvenance": false,
-      "language": "declarative",
-      "owner": "kungfu/repository-contract",
-      "lines": 1,
-      "contentRoot": "sha256:f8b6a2dbd2659c0129472bf762c44b2caa17747dbaf92dd67f580a27e9b824d0"
-    },
-    {
       "path": ".xinfa/manifests/project-cuts/e9487df9ae210ea2224f7679e2c7b89bab88199f878c7f8b70daeb39988c81f9.json",
       "class": "declarative-schema-or-table",
       "generatedProvenance": false,
@@ -7258,7 +6682,7 @@
       "language": "declarative",
       "owner": "kungfu/repository-contract",
       "lines": 1,
-      "contentRoot": "sha256:8982d20f575b21ab051af8b0ae4d4d3abed12e7f6a79d6920ddb4f37dab16d28"
+      "contentRoot": "sha256:afd141731246ce64fc788870c97661376fe7d6a213b4fb30c477bfdb40eb5662"
     },
     {
       "path": ".xinfa/product-documentation-pack.json",
@@ -10906,15 +10330,6 @@
       "contentRoot": "sha256:caffa5ddd74fd4993b0db2b9133c9af91f2eef6a38bfd033d24469f112a5395a"
     },
     {
-      "path": "docs/qualification/evidence/layer-gates/6afd4d121/macos-arm64-authoritative.json",
-      "class": "retained-evidence",
-      "generatedProvenance": false,
-      "language": "declarative",
-      "owner": "kungfu/docs",
-      "lines": 113,
-      "contentRoot": "sha256:b2e2c80d43964430fc1952a7fe3b122f32097f819fa74d4c45c5953232343756"
-    },
-    {
       "path": "docs/qualification/evidence/layer-gates/c4ba70d95/linux-x64-authoritative.json",
       "class": "retained-evidence",
       "generatedProvenance": false,
@@ -10983,8 +10398,8 @@
       "generatedProvenance": false,
       "language": "declarative",
       "owner": "kungfu/docs",
-      "lines": 50,
-      "contentRoot": "sha256:c03a8e140d68921b67377807d927902c878453d2862ae8b72cf2cda82d284208"
+      "lines": 29,
+      "contentRoot": "sha256:ef39a53010e674a47d594b7a2e8d6e5c7eb2aa624be2f45f0e3be39bde103858"
     },
     {
       "path": "docs/qualification/evidence/mmap/mmap-linux-x86_64-285158703-candidate-01.json",
@@ -25689,8 +25104,8 @@
       "generatedProvenance": false,
       "language": "declarative",
       "owner": "core/package",
-      "lines": 153,
-      "contentRoot": "sha256:39a63cf6e780b895a7d11779b8c16b653d81ed93d70330285741360c53f6001b"
+      "lines": 152,
+      "contentRoot": "sha256:8a642023fc4fe054e6471522f239b7a56899c1dccb5ec4abae760c2de3b03047"
     },
     {
       "path": "framework/core/src/python/kungfu/cli/surface_contract.schema.json",
@@ -30451,7 +29866,7 @@
       "language": "declarative",
       "owner": "framework/maintainability",
       "lines": 171,
-      "contentRoot": "sha256:d748e624d927eba721c0203974a28a9999d020cb8faa384eb06f57a8967ae19e"
+      "contentRoot": "sha256:30202fa25c361bce0447776cce2bcdb0f2dbe0787fdba850df5c2f8b0d611a81"
     },
     {
       "path": "framework/maintainability/complexity-governance.mjs",
@@ -30496,7 +29911,7 @@
       "language": "declarative",
       "owner": "framework/maintainability",
       "lines": 2077,
-      "contentRoot": "sha256:5f3451fcec47c67d08bc406339b2366303b5d7e1c7c9fd80b5f745be427fe4e2"
+      "contentRoot": "sha256:ea80e8baf4454bfc981b799399a02a126b381416b8925890591caaed03375aa1"
     },
     {
       "path": "framework/maintainability/semantic-amplification.fixtures.json",
@@ -31189,7 +30604,7 @@
       "language": "declarative",
       "owner": "framework/release",
       "lines": 864,
-      "contentRoot": "sha256:9a0ca325456d77896b9c6605de1ba36de1fa023c9f957c01e22a034a972a06bd"
+      "contentRoot": "sha256:e38fed014950a6deb4828879286355ac38ac2054b9924adff964c8b768ea3646"
     },
     {
       "path": "framework/release/qualified-assignment-core-artifact.mjs",
@@ -38942,5 +38357,5 @@
     }
   ],
   "issues": [],
-  "measurementRoot": "sha256:6b103b57b062000a6ae3d19d3053240d9a264fdfa42a23aaa1f9151a40a2f6e0"
+  "measurementRoot": "sha256:456969a3a970b761e922970cb6bac69ccbde07a1844c55faa2b1fe1529b0473d"
 }

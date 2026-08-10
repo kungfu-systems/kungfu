@@ -585,8 +585,6 @@ test('declared discovery routes are zero-write in a cold read-only fixture', (t)
     'framework/maintainability/code-complexity-policy.json',
     'framework/maintainability/code-complexity-baseline.json',
     'framework/maintainability/baseline-transitions/2026-08-08-zero-residue-baseline-reconstruction.json',
-    'framework/maintainability/waivers/2026-08-09-document-metadata-zero-residue-regeneration.json',
-    'framework/maintainability/waivers/2026-08-09-pnpm-lock-zero-residue-dependency-cutover.json',
     'framework/maintainability/waivers/retired/hub-cli-linux-arm64-dist-platform-map.v1.json',
     'framework/maintainability/waivers/retired/hub-cli-linux-arm64-post-queue-workflow-authority.v1.json',
     'framework/maintainability/waivers/retired/hub-cli-linux-arm64-workflow-authority.v1.json',
