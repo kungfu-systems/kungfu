@@ -64,6 +64,7 @@
     "config": {"audience": ["human", "agent", "operator"], "visibility": "advanced", "section": "system-maintenance"},
     "lock": {"audience": ["agent", "developer", "operator"], "visibility": "advanced", "section": "system-maintenance"},
     "work": {"visibility": "advanced", "section": "advanced"},
+    "work-design": {"audience": ["human", "agent"], "maturity": "preview", "visibility": "public", "section": "action-model", "owner": "core"},
     "action": {"audience": ["agent", "developer"], "visibility": "advanced", "section": "advanced"},
     "managed-run": {"audience": ["agent", "developer", "operator"], "visibility": "advanced", "section": "advanced"},
     "report": {"audience": ["agent", "developer"], "visibility": "advanced", "section": "advanced"},
@@ -118,7 +119,6 @@
     {"pair": "source/remote", "decision": "keep-distinct", "evidence": ["source uses kungfu.sources.store for Atlas-style read-only storage imports with range filters", "remote uses kungfu.remote.store for host/home transport and source-scoped mirrors", "handlers, persisted schemas, and side effects differ"]},
     {"pair": "profile/kfx-profile", "decision": "keep-distinct", "evidence": ["profile authors and executes generic Profile Suite intents and receipts", "kfx manages package installation, native execution, trust, and package schemas", "kfx profile-schema is schema discovery, not a second Profile action handler"]},
     {"pair": "work/agent-work", "decision": "keep-distinct", "evidence": ["work owns the legacy journal work-item lifecycle", "agent work owns the KFD-7 Product Profile Fact/action API", "schemas and mutation authorities are intentionally separate"]},
-    {"pair": "atlas/profile-mission-control-v3-compatibility", "decision": "split-canonical", "canonical": {"current-work": "kungfu work", "atlas-bridge": "kungfu atlas"}, "evidence": ["kungfu profile mission-control is hidden compatibility-only and has no KFD-3 API identity", "its removal gate is the retained v3 read/import/migration/rollback/bundle qualification plus zero installed retained-v3 observations", "Atlas bridge import/verify and KF-ADR-019f86da-4f90-710c-a3b6-5e0cb5a28ad0 capabilities/inspect/action remain only under kungfu atlas"]},
     {"pair": "developer-top-level/dev", "decision": "split-canonical", "canonical": {"engage": "kungfu dev engage", "env": "kungfu env", "schema": "kungfu dev schema", "sdk": "kungfu sdk"}, "evidence": ["each developer capability has exactly one live path", "env is dispatched by the native installed runtime", "sdk is the public application assembly and KFD/build entrypoint"]}
   ],
   "contributions": [],
@@ -132,7 +132,7 @@
   "catalogProjection": {
     "artifact": "kungfu.agent/cli_surface.catalog.json",
     "authority": "runtime-fold",
-    "expectedSurfaceRoot": "sha256:a99ecbfc7e49368a6befb23a38fd9f7f069363c2deca4d2954b243fd207eca49",
+    "expectedSurfaceRoot": "sha256:1f263bd1ed7dc58bc42cefdc9e51bb65b36f0e90db96e8d8891dd932803acf78",
     "consumers": {
       "agentCapabilities": "embed-complete",
       "agentCommands": "strict-link",

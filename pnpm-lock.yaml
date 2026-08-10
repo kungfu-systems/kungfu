@@ -1,9 +1,11 @@
 lockfileVersion: '9.0'
+
 settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
 overrides:
+  '@kungfu-tech/kfd': 1.0.0-alpha.57
   node-gyp: ^13.0.0
   nx>axios: 1.18.1
   brace-expansion: 5.0.8
@@ -46,9 +48,12 @@ importers:
       '@kungfu-tech/buildchain':
         specifier: 3.0.6
         version: 3.0.6
+      '@kungfu-tech/buildchain-alpha':
+        specifier: npm:@kungfu-tech/buildchain@3.0.6-alpha.1
+        version: '@kungfu-tech/buildchain@3.0.6-alpha.1'
       '@kungfu-tech/kfd':
-        specifier: 1.0.0-alpha.53
-        version: 1.0.0-alpha.53
+        specifier: 1.0.0-alpha.57
+        version: 1.0.0-alpha.57
       '@types/fs-extra':
         specifier: ^11.0.4
         version: 11.0.4
@@ -92,8 +97,8 @@ importers:
         specifier: workspace:*
         version: link:../../framework/gui
       '@kungfu-tech/kfd':
-        specifier: 1.0.0-alpha.53
-        version: 1.0.0-alpha.53
+        specifier: 1.0.0-alpha.57
+        version: 1.0.0-alpha.57
       '@kungfu-tech/kfx':
         specifier: workspace:*
         version: link:../../framework/kfx
@@ -612,12 +617,8 @@ importers:
     dependencies:
       '@kungfu-tech/agent-session': {specifier: 'workspace:*', version: 'link:../agent-session'}
       '@kungfu-tech/api': {specifier: 'workspace:*', version: 'link:../api'}
-      '@kungfu-tech/core':
-        specifier: workspace:*
-        version: link:../core
-      '@kungfu-tech/kfx':
-        specifier: workspace:*
-        version: link:../kfx
+      '@kungfu-tech/core': {specifier: 'workspace:*', version: 'link:../core'}
+      '@kungfu-tech/kfx': {specifier: 'workspace:*', version: 'link:../kfx'}
       ink:
         specifier: ^5.2.0
         version: 5.2.1(@types/react@18.3.31)(react@18.3.1)
@@ -643,16 +644,12 @@ importers:
 
   product:
     dependencies:
-      '@kungfu-tech/core':
+      '@kungfu-tech/core': {specifier: 'workspace:*', version: 'link:../framework/core'}
+      '@kungfu-tech/gui': {specifier: 'workspace:*', version: 'link:../framework/gui'}
+      '@kungfu-tech/kfx-adapter-langchain': {specifier: 'workspace:*', version: 'link:../extensions/langchain-adapter'}
+      '@kungfu-tech/kfx-agent-work-lab-experience':
         specifier: workspace:*
-        version: link:../framework/core
-      '@kungfu-tech/gui':
-        specifier: workspace:*
-        version: link:../framework/gui
-      '@kungfu-tech/kfx-adapter-langchain':
-        specifier: workspace:*
-        version: link:../extensions/langchain-adapter
-      '@kungfu-tech/kfx-agent-work-lab-experience': {specifier: 'workspace:*', version: 'link:../extensions/agent-work-lab/experience'}
+        version: link:../extensions/agent-work-lab/experience
       '@kungfu-tech/kfx-dogfood-actions':
         specifier: workspace:*
         version: link:../extensions/dogfood/dogfood-actions
@@ -662,7 +659,9 @@ importers:
       '@kungfu-tech/kfx-dogfood-contract':
         specifier: workspace:*
         version: link:../extensions/dogfood/dogfood-contract
-      '@kungfu-tech/kfx-suite-agent-work-lab': {specifier: 'workspace:*', version: 'link:../extensions/agent-work-lab'}
+      '@kungfu-tech/kfx-suite-agent-work-lab':
+        specifier: workspace:*
+        version: link:../extensions/agent-work-lab
       '@kungfu-tech/kfx-suite-dogfood-feedback':
         specifier: workspace:*
         version: link:../extensions/dogfood
@@ -1450,12 +1449,13 @@ packages:
     engines: {node: '>=22.14.0'}
     hasBin: true
 
-  '@kungfu-tech/kfd@1.0.0-alpha.41':
-    resolution: {integrity: sha512-e+iIuvsijDLSFotb3gPKqwn649lLGRX3xEWOwn7xfBeu8L8kvw5RPRznJ4xKVM+NYCrfYCRVmUzpJI58k97C+Q==}
+  '@kungfu-tech/buildchain@3.0.6-alpha.1':
+    resolution: {integrity: sha512-rmElQ2qeK/hN3PWPseclXp2AeedvKhtRQUPc/gZ3zi3kXRWWD1EuPKVuHreBsYBYsOcfAZKz2N0/dWXkOE/WJg==}
+    engines: {node: '>=22.14.0'}
     hasBin: true
 
-  '@kungfu-tech/kfd@1.0.0-alpha.53':
-    resolution: {integrity: sha512-t7ZyBXhhfYKNYo+KgBan/SBsBK1UygTf8RaTxQ+toTStwuq4wR5Z85sSAO/kmC2F/oqHeYVaan6nU28e1sVERw==}
+  '@kungfu-tech/kfd@1.0.0-alpha.57':
+    resolution: {integrity: sha512-eabyBT5LAUFhwekiEfQbT2XlfBIYN/FE2y6lp0o3veansfmSFVRntXEaGOLetCdi4rTmUqPM4UsoYrRswj8mJw==}
     hasBin: true
 
   '@kungfu-tech/libnode-darwin-arm64@22.22.3-kf.5-alpha.3':
@@ -5802,17 +5802,20 @@ snapshots:
 
   '@kungfu-tech/buildchain@3.0.0':
     dependencies:
-      '@kungfu-tech/kfd': 1.0.0-alpha.41
+      '@kungfu-tech/kfd': 1.0.0-alpha.57
       smol-toml: 1.7.0
 
   '@kungfu-tech/buildchain@3.0.6':
     dependencies:
-      '@kungfu-tech/kfd': 1.0.0-alpha.53
+      '@kungfu-tech/kfd': 1.0.0-alpha.57
       smol-toml: 1.7.0
 
-  '@kungfu-tech/kfd@1.0.0-alpha.41': {}
+  '@kungfu-tech/buildchain@3.0.6-alpha.1':
+    dependencies:
+      '@kungfu-tech/kfd': 1.0.0-alpha.57
+      smol-toml: 1.7.0
 
-  '@kungfu-tech/kfd@1.0.0-alpha.53': {}
+  '@kungfu-tech/kfd@1.0.0-alpha.57': {}
 
   '@kungfu-tech/libnode-darwin-arm64@22.22.3-kf.5-alpha.3':
     optional: true

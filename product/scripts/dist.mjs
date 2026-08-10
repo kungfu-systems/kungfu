@@ -1482,9 +1482,7 @@ export function runInstalledKungfuAssignmentAdmissionSmoke({
         source: { kind: initiativeId, sourceId: assignmentId },
         retention: { policy: retentionPolicy, expiresAt: null },
         workDefinition: {
-          goal_id: assignmentId,
           assignment_id: assignmentId,
-          mission_id: initiativeId,
           initiative_id: initiativeId,
           title: 'Verify installed Assignment admission',
           objective: 'Prove the packaged Work Control Suite is closed.',
@@ -1774,21 +1772,10 @@ export function smokeCliProductArchive({ archivePath, archiveBase }) {
           KF_BUNDLED_EXTENSION_ROOT: extensionsRoot,
           KUNGFU_ACTION_ENTRY: actionEntry,
         };
-        runInstalledKungfuXinfaSmoke({
-          installRoot,
-          kungfuBin,
-          env: smokeEnv,
-        });
-        runInstalledActionPrimitiveDiscovery({
-          installRoot,
-          kungfuBin,
-          env: smokeEnv,
-        });
-        runInstalledKungfuAssignmentAdmissionSmoke({
-          installRoot,
-          kungfuBin,
-          env: smokeEnv,
-        });
+        const cliSmoke = { installRoot, kungfuBin, env: smokeEnv };
+        runInstalledKungfuXinfaSmoke(cliSmoke);
+        runInstalledActionPrimitiveDiscovery(cliSmoke);
+        runInstalledKungfuAssignmentAdmissionSmoke(cliSmoke);
         runInstalledKungfuActionSmoke({
           installRoot,
           kungfuBin,
@@ -1804,11 +1791,7 @@ export function smokeCliProductArchive({ archivePath, archiveBase }) {
           extensionsRoot,
           env: smokeEnv,
         });
-        runInstalledKungfuAgentHubSmoke({
-          installRoot,
-          kungfuBin,
-          env: smokeEnv,
-        });
+        runInstalledKungfuAgentHubSmoke(cliSmoke);
         runInstalledEmbeddedNodeAddonSmoke({
           installRoot,
           runtimeEntry,

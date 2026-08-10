@@ -1398,25 +1398,6 @@ def run_agent(
     return report
 
 
-def report_status(
-    report: Mapping[str, Any], identity: Mapping[str, Any]
-) -> dict[str, Any]:
-    current_root = content_root(identity)
-    recorded_root = report.get("identityRoot")
-    return {
-        "schema": "kungfu.agent-work-lab.report-status/v1",
-        "status": (
-            str(report.get("status") or "failed")
-            if current_root == recorded_root
-            else "stale"
-        ),
-        "recordedIdentityRoot": recorded_root,
-        "currentIdentityRoot": current_root,
-        "stale": current_root != recorded_root,
-        "writeOccurred": False,
-    }
-
-
 class ProjectTemplateError(ValueError):
     """A fail-closed project-template diagnosis."""
 
@@ -1625,8 +1606,8 @@ def _assignment_request(payload: dict[str, Any], template_root: str) -> dict[str
             "expiresAt": None,
         },
         "workDefinition": {
-            "goal_id": work["assignmentId"],
-            "mission_id": work["initiativeId"],
+            "assignment_id": work["assignmentId"],
+            "initiative_id": work["initiativeId"],
             "title": work["title"],
             "objective": work["objective"],
             "acceptance_criteria": work["acceptanceChecks"],

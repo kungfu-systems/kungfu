@@ -9,7 +9,7 @@
         "path": ["capsules"],
         "sourceIndex": 0,
         "mutations": [
-          {"path": ["capsuleId"], "value": "capsule-go-42-duplicate"},
+          {"path": ["capsuleId"], "value": "capsule-assignment-42-duplicate"},
           {"path": ["capsuleGeneration"], "value": "8"},
           {"path": ["sessionStreamEpoch"], "value": "4"}
         ]

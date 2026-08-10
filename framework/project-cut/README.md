@@ -11,7 +11,7 @@ history qualification implements
 [KF-ADR-019f86da-4f90-7272-b883-cb90fc4613b1](../../docs/adr/KF-ADR-019f86da-4f90-7272-b883-cb90fc4613b1.md)
 as a separate rooted observation layer.
 
-The layer owns no source, Atlas, Episode, Mission, Go, or Git authority. It
+The layer owns no source, Atlas, Episode, Initiative, Assignment, or Git authority. It
 validates references to those authorities and computes four deliberately
 separate identities:
 
@@ -118,7 +118,7 @@ Git, or repository state.
 ./shifu test:work-history-selector
 ```
 
-The open-card preflight can compile Selector input directly from the installed
+The work-design preflight can compile Selector input directly from the installed
 controller's verified global Work query. Only settled portable sealed-work
 coordinates enter the candidate set; replicas are deduplicated by immutable
 state root, partial global coverage remains explicit in the advice gaps, and a
@@ -135,7 +135,7 @@ approval gate:
 ```sh
 kungfu workspace work --home --scope all --include-settled \
   --details components --json > global-work.json
-./shifu work-design:open-card-preflight --input request.json \
+./shifu work-design:preflight --input request.json \
   --history-query global-work.json
 ```
 
