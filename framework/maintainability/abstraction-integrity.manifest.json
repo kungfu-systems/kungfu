@@ -97,6 +97,13 @@
       ]
     },
     {
+      "owner": "release/provenance-object",
+      "paths": [
+        "framework/core/src/python/kungfu/release_provenance/__init__.py",
+        "scripts/release-provenance-object.py"
+      ]
+    },
+    {
       "owner": "core/python-project-cut-exit",
       "paths": [
         "framework/core/src/python/kungfu/project_cut_exit.py"

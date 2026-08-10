@@ -1,0 +1,87 @@
+{
+  "schema": "kungfu.release-provenance-contract/v1",
+  "id": "kungfu-release-provenance",
+  "status": "implemented",
+  "rootProtocol": "kungfu.fact-root.canonical/v2",
+  "objective": "Represent candidate and promotion history with immutable semantic objects and typed temporal relations while retaining Git topology as a verified transport projection.",
+  "envelopes": {
+    "schema": "kungfu.release-provenance-envelope/v1",
+    "phases": ["candidate", "promotion"],
+    "objectSchema": "kungfu.fact.provenance-object/v1",
+    "relationSchema": "kungfu.fact.temporal-relation/v1",
+    "predicateSchema": "kungfu.fact.temporal-predicate/v1",
+    "requiredRelations": [
+      "derived-from",
+      "acknowledges",
+      "qualified-by",
+      "authorized-by",
+      "implements-contract",
+      "projected-as"
+    ]
+  },
+  "semantics": {
+    "identity": "Candidate and promotion objects are independently rooted even when their Git trees are equal.",
+    "derivation": "Candidate derivation accepts an explicit semantic dev Cut root independent of Git coordinates; promotion derivation targets the exact candidate provenance object root.",
+    "acknowledgement": "Both phases bind an explicit semantic previous-Alpha root through an acknowledges relation without inferring it from Git parentage.",
+    "sourceTree": "The source tree is bound by a semantic digest root on the subject while the Git tree object id remains an exact projection coordinate.",
+    "qualification": "Qualification is an explicit rooted relation target and is never inferred from a branch, commit, tree, workflow conclusion, or artifact name.",
+    "authority": "Exactly one authorized-by relation is required for each object; zero or plural authority is rejected.",
+    "projection": "Git commit, tree, parent order, and ancestry are exact rooted observations with explicit drift and no semantic authority.",
+    "appendOnly": "A later promotion object references but never rewrites the candidate object."
+  },
+  "projectionPolicy": {
+    "candidate": {
+      "failClosedOn": ["candidate-tree-mismatch", "parent-order-mismatch"],
+      "advisoryOverride": ["parent-order-mismatch"]
+    },
+    "promotion": {
+      "failClosedOn": ["promotion-tree-mismatch"],
+      "visibleAdvisoryDrift": ["candidate-not-ancestor"]
+    },
+    "forbiddenInference": "Tree equality, ancestry, parent order, merge-queue topology, ff-only delivery, and provider topology never establish semantic derivation or acknowledgement by themselves."
+  },
+  "dualWrite": {
+    "candidateFlow": ".github/workflows/dev-alpha-candidate-patrol.yml",
+    "promotionFlow": ".github/workflows/release-new-version.yml",
+    "producer": "scripts/release-provenance-object.py",
+    "reader": "framework/core/src/python/kungfu/release_provenance/__init__.py",
+    "legacyRule": "Existing candidate and promotion projections are copied without mutation and retain their exact canonical bytes and root.",
+    "publicationAuthority": false
+  },
+  "stableFailures": [
+    "unknown-schema",
+    "invalid-envelope",
+    "orphan-root",
+    "subject-root-mismatch",
+    "scope-root-mismatch",
+    "cut-root-mismatch",
+    "object-root-mismatch",
+    "object-identity-mismatch",
+    "invalid-predicate",
+    "invalid-relation",
+    "relation-root-mismatch",
+    "derived-from-target-mismatch",
+    "acknowledges-relation-count",
+    "ambiguous-authority",
+    "git-projection-root-mismatch",
+    "git-projection-status-mismatch",
+    "candidate-tree-mismatch",
+    "parent-order-mismatch",
+    "promotion-tree-mismatch"
+  ],
+  "falsifiers": [
+    {"id": "same-tree-different-history", "expected": "distinct-object-roots"},
+    {"id": "swapped-dev-and-alpha-cuts", "expected": "expected-devCutCommit-mismatch"},
+    {"id": "missing-acknowledgement", "expected": "acknowledges-relation-count"},
+    {"id": "ambiguous-authority", "expected": "ambiguous-authority"},
+    {"id": "mismatched-tree", "expected": "candidate-tree-mismatch"},
+    {"id": "forged-projection-root", "expected": "git-projection-root-mismatch"},
+    {"id": "merge-queue-ancestry-drift", "expected": "visible-advisory-drift"}
+  ],
+  "qualification": {
+    "fixture": "tests/fixtures/release-provenance-object/cases.json",
+    "test": "framework/core/tests/python/test_release_provenance.py",
+    "gate": "./shifu check:release-provenance-object",
+    "realPublicationRequired": false
+  }
+}
