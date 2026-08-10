@@ -6,11 +6,15 @@ import fs from 'node:fs';
 import path from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
-import Ajv2020 from 'ajv/dist/2020.js';
 
-import { validateAgentWorkProfile } from '../framework/agent-work/validate-profile.mjs';
+import { optionalAjv2020 } from './readonly-source-toolchain.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const Ajv2020 = optionalAjv2020();
+const validateAgentWorkProfile = Ajv2020
+  ? (await import('../framework/agent-work/validate-profile.mjs'))
+      .validateAgentWorkProfile
+  : null;
 const read = (relative) => fs.readFileSync(path.join(ROOT, relative), 'utf8');
 const readJson = (relative) => JSON.parse(read(relative));
 const canonicalJson = (value) => {
@@ -122,7 +126,11 @@ test('registers one layered Agent Work contract with bounded claims', () => {
   );
 });
 
-test('validates Profile shape and cross-object semantics from one contract', () => {
+test('validates Profile shape and cross-object semantics from one contract', (t) => {
+  if (!Ajv2020) {
+    t.skip('ajv is not installed; CI enforces JSON Schema conformance');
+    return;
+  }
   const ajv = new Ajv2020({ allErrors: true, strict: false });
   ajv.addFormat('date-time', {
     type: 'string',
@@ -206,7 +214,11 @@ test('separates Action Geometry from the Agent Work Domain Profile by exact root
   );
 });
 
-test('proves context payload alone cannot determine action validity', () => {
+test('proves context payload alone cannot determine action validity', (t) => {
+  if (!validateAgentWorkProfile) {
+    t.skip('ajv is not installed; CI enforces Profile validation');
+    return;
+  }
   const [authorizedPath, deniedPath] = fixtureManifest.contextInsufficiencyPair;
   const authorized = readJson(
     `framework/agent-work/fixtures/${authorizedPath}`,
@@ -255,7 +267,11 @@ test('publishes every invalid inference and P17 check', () => {
   );
 });
 
-test('separates continuity smoke, comparison, and public projection evidence', () => {
+test('separates continuity smoke, comparison, and public projection evidence', (t) => {
+  if (!Ajv2020) {
+    t.skip('ajv is not installed; CI enforces JSON Schema conformance');
+    return;
+  }
   const ajv = new Ajv2020({ allErrors: true, strict: false });
   ajv.addFormat('date-time', {
     type: 'string',

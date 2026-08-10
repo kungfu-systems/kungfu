@@ -846,6 +846,7 @@ export function sourceAcceptancePlan(files, evidenceBaseCommit = '') {
         'scripts/check-cli-catalog-parity.test.mjs',
         'framework/deprecation/deprecation-surface-discovery.test.mjs',
         'scripts/check-fact-cut-kernel-contract.test.mjs',
+        'scripts/check-temporal-relation-contract.test.mjs',
         'scripts/check-data-protection-contract.test.mjs',
         'scripts/check-durable-history-qualification.test.mjs',
         'scripts/check-work-agent-history-continuity.test.mjs',
