@@ -68,11 +68,85 @@ jobs:
           echo "source-branch=$DEFAULT_BRANCH" >>"$GITHUB_OUTPUT"
           echo "target-branch=alpha/${DEFAULT_BRANCH#dev/}" >>"$GITHUB_OUTPUT"
 
-  candidate:
+  release-cut-lock:
+    name: Verify frozen Alpha Release Cut source lock
     needs: resolve-channels
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    outputs:
+      candidate-settlement-authorized: ${{ steps.lock.outputs.candidate-settlement-authorized }}
+    steps:
+      - name: Check out the dev mirror verifier
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Fetch exact frozen Release Cut objects
+        shell: bash
+        run: |
+          set -euo pipefail
+          lock=.buildchain/alpha-release-cut-lock.json
+          git fetch --no-tags --depth=2 origin \
+            "$(jq -er '.candidate.sha' "$lock")" \
+            "$(jq -er '.devCut.sha' "$lock")" \
+            "$(jq -er '.alphaBase.sha' "$lock")"
+
+      - name: Verify frozen Alpha Release Cut source lock
+        id: lock
+        shell: bash
+        run: |
+          set -euo pipefail
+          lock=.buildchain/alpha-release-cut-lock.json
+          test "$(jq -er '.schema' "$lock")" = "kungfu.alpha-release-cut-lock/v1"
+          test "$(jq -er '.release' "$lock")" = "v4.0.0-alpha.2"
+          test "$(jq -er '.cut' "$lock")" = "r16"
+          test "$(jq -er '.state' "$lock")" = "frozen"
+          jq -e '
+            .candidate.ref == "refs/heads/fix/alpha2-lineage-repair-r16" and
+            .candidate.sha == "89781ff7236239aa310696e6bf40f8af3445c371" and
+            .candidate.tree == "095f2ea60cce5bb96c22314ae02dfad48d904052" and
+            .devCut.sha == "a392762ab2d0d325bd8202cfc7b37ea525aaf6dc" and
+            .devCut.tree == "095f2ea60cce5bb96c22314ae02dfad48d904052" and
+            .alphaBase.ref == "refs/heads/alpha/v4/v4.0" and
+            .alphaBase.sha == "f9e6b0e34bcdd6407b2a18206ace7982d64de2c8" and
+            .alphaBase.tree == "67a93b5831596555e7c29104421de3a0b97eb865" and
+            .buildchain.build.resolvedSha == "81c49578bff72a9784a1b63ce8698bd9dd23d7bf" and
+            .buildchain.build.contractDigest == "sha256:8e9a161653c40611ffd76aa878ae348fc215506c1caa88347111fb122cfe7c12" and
+            .buildchain.promotion.resolvedSha == "36b08dc7bf417e57bffcc3dc784a2473254fe4c1" and
+            .buildchain.promotion.contractDigest == "sha256:8e565f9ac5146d5dceafc3da6b267147fb412937db979bf35a0429966da82197"
+          ' "$lock" >/dev/null
+          candidate_sha="$(jq -er '.candidate.sha' "$lock")"
+          candidate_tree="$(jq -er '.candidate.tree' "$lock")"
+          dev_cut_sha="$(jq -er '.devCut.sha' "$lock")"
+          dev_cut_tree="$(jq -er '.devCut.tree' "$lock")"
+          alpha_base_sha="$(jq -er '.alphaBase.sha' "$lock")"
+          alpha_base_tree="$(jq -er '.alphaBase.tree' "$lock")"
+          test "$(jq -erc '.lineage.parentOrder' "$lock")" = "[\"$dev_cut_sha\",\"$alpha_base_sha\"]"
+          test "$(git show -s --format=%P "$candidate_sha")" = "$dev_cut_sha $alpha_base_sha"
+          test "$(git rev-parse "$candidate_sha^{tree}")" = "$candidate_tree"
+          test "$(git rev-parse "$dev_cut_sha^{tree}")" = "$dev_cut_tree"
+          test "$(git rev-parse "$alpha_base_sha^{tree}")" = "$alpha_base_tree"
+          test "$candidate_tree" = "$dev_cut_tree"
+          test "$(jq -er '.buildchain.sourcePinPolicy' "$lock")" = "floating-contract-with-recorded-resolution"
+          test "$(jq -er '.buildchain.build.ref' "$lock")" = "v3"
+          test "$(jq -er '.buildchain.promotion.ref' "$lock")" = "v3-alpha"
+          jq -e '
+            .policy.devMovementInvalidatesCut == false and
+            .policy.devMirrorIsBuildInput == false and
+            .policy.blockerRepairOrder == "release-cut-first-then-independent-dev-forward-port" and
+            .policy.recutRequiresNewDevSemanticsEvidence == true and
+            .policy.tailFailureReusesSealedCandidate == true
+          ' "$lock" >/dev/null
+          echo "candidate-settlement-authorized=false" >>"$GITHUB_OUTPUT"
+
+  candidate:
+    needs: [resolve-channels, release-cut-lock]
     if: >-
-      github.event_name != 'workflow_run' ||
-      github.event.workflow_run.head_branch == needs.resolve-channels.outputs.source-branch
+      needs.release-cut-lock.outputs.candidate-settlement-authorized == 'true' &&
+      (github.event_name != 'workflow_run' ||
+      github.event.workflow_run.head_branch == needs.resolve-channels.outputs.source-branch)
     permissions:
       actions: read
       contents: write

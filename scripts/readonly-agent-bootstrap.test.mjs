@@ -151,11 +151,21 @@ function boundedDiagnosticTail(...values) {
   const failureSummaryIndex = lines.findLastIndex((line) =>
     /^(?:ℹ fail [1-9]|# fail [1-9])/u.test(line.trimStart()),
   );
-  if (failureSummaryIndex >= 0)
+  if (failureSummaryIndex >= 0) {
+    const failedTestIndex = lines.findLastIndex(
+      (line, index) => index < failureSummaryIndex && /^not ok \d+/u.test(line),
+    );
     return lines
-      .slice(Math.max(0, failureSummaryIndex - 8), failureSummaryIndex + 40)
+      .slice(
+        Math.max(
+          0,
+          failedTestIndex >= 0 ? failedTestIndex : failureSummaryIndex - 80,
+        ),
+        failureSummaryIndex + 40,
+      )
       .join('\n')
       .slice(0, 24 * 1024);
+  }
   return output.slice(-24 * 1024);
 }
 
@@ -278,6 +288,7 @@ test('declared discovery routes are zero-write in a cold read-only fixture', (t)
     '.buildchain/kfd/kfd-2/claims/remote-fact-boundary.json',
     '.buildchain/kfd/kfd-3/surfaces.json',
     '.buildchain/kfd/kfd-3/capability-query.json',
+    '.buildchain/alpha-release-cut-lock.json',
     '.buildchain/alpha-contract-lock.json',
     'config/kungfu-agent-first-canonical-policy.json',
     'developer/sdk/kfd/kfd-1/contract-world.witness.json',
@@ -765,10 +776,6 @@ test('declared discovery routes are zero-write in a cold read-only fixture', (t)
     KUNGFU_READONLY_TOOL_LOG: toolLog,
     KUNGFU_READONLY_NESTED_SOURCE_ACCEPTANCE: '1',
     PYTHONDONTWRITEBYTECODE: '1',
-    KUNGFU_DOCUMENTATION_CONSUMER_XINFA: path.join(
-      fixture,
-      '.readonly-retained-xinfa',
-    ),
     KUNGFU_READONLY_PYTEST: pytest,
     KUNGFU_DEV_BRANCH: 'dev/v4/v4.0',
     KUNGFU_READONLY_TSX: requireFromGui.resolve('tsx/cli'),

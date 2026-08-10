@@ -1,7 +1,7 @@
 {
   "schema": "kungfu.release-publication-control-plane/v1",
   "status": "active",
-  "versionLineAuthorityRoot": "sha256:2fd580501fb77ae9ee05c8dd6a4bf141fc8cdeb77c8d4d3e9cd550133213b33d",
+  "versionLineAuthorityRoot": "sha256:8e5a196ab4c194d19efb7c0dd52e885adf0da99af73b660da0d2fa8ccac0213b",
   "protocol": {
     "schema": "kungfu.release-publication-protocol/v1",
     "authority": "adapter-only",
@@ -170,7 +170,7 @@
             "product-alpha",
             "product-binaries"
           ],
-          "sourceRoot": "sha256:795857454372ce1f340e126cbb2326e0de19f171acb90fe2a027759cc1ca7926"
+          "sourceRoot": "sha256:e5257bedaff28719851177797c240f7ecdf7a78d6e465ae2e8d4acef67a72a20"
         },
         {
           "path": ".github/workflows/dev-delivery-warrant-terminal.yml",
@@ -860,5 +860,5 @@
       }
     }
   ],
-  "registryRoot": "sha256:8a7fa9a9aba97368db6b732c38c503b9aa363bced5572258a1601eba0c798b79"
+  "registryRoot": "sha256:d702b9b6f3aff641882ddbbaed0d2b816a8ac31b9249661ca6b01b7852121742"
 }

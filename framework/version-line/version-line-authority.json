@@ -91,9 +91,11 @@
   },
   "sourceBoundaries": {
     "activeProjectionPaths": [
+      ".buildchain/alpha-release-cut-lock.json",
       ".buildchain/buildchain.toml",
       ".github/actionlint.yaml",
       ".github/workflows/build.yml",
+      ".github/workflows/dev-alpha-candidate-patrol.yml",
       ".github/workflows/dev-verify-patrol.yml",
       ".github/workflows/gate-measurement.yml",
       ".github/workflows/release-new-version.yml",
@@ -122,5 +124,5 @@
       "framework/maintainability/waivers/retired/"
     ]
   },
-  "authorityRoot": "sha256:2fd580501fb77ae9ee05c8dd6a4bf141fc8cdeb77c8d4d3e9cd550133213b33d"
+  "authorityRoot": "sha256:8e5a196ab4c194d19efb7c0dd52e885adf0da99af73b660da0d2fa8ccac0213b"
 }

@@ -515,10 +515,14 @@ export function sourceAcceptancePlan(files, evidenceBaseCommit = '') {
       'Shifu Documentation Protocol',
       'scripts/check-shifu-documentation-contract.mjs',
     ],
-    [
-      'documentation material lane',
-      'scripts/run-documentation-material-tests.mjs',
-    ],
+    ...(coldReadOnlySourceAcceptance
+      ? []
+      : [
+          [
+            'documentation material lane',
+            'scripts/run-documentation-material-tests.mjs',
+          ],
+        ]),
     [
       'read-only source and Agent route inventory',
       'scripts/check-readonly-source-routes.mjs',
@@ -977,6 +981,13 @@ export function sourceAcceptancePlan(files, evidenceBaseCommit = '') {
           },
         ]),
   ];
+
+  if (coldReadOnlySourceAcceptance) {
+    const nestedContractIndex = plan.findIndex(
+      (step) => step.label === 'source-acceptance contract tests',
+    );
+    if (nestedContractIndex >= 0) plan.splice(nestedContractIndex, 1);
+  }
 
   const web = files.filter(
     (file) =>

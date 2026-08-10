@@ -1114,7 +1114,7 @@ test('cold read-only source acceptance skips dependency-backed checks', () => {
     ]);
     assert.equal(
       plan.some((step) =>
-        /^(changed GUI TypeScript check|agent-first canonical policy|agent-first contract audit|Shifu Production Graph contract|source-acceptance contract tests|agent work state contract and CLI parity|runtime upgrade control-plane tests|desktop update adapter tests)$/u.test(
+        /^(changed GUI TypeScript check|agent-first canonical policy|agent-first contract audit|Shifu Production Graph contract|documentation material lane|source-acceptance contract tests|agent work state contract and CLI parity|runtime upgrade control-plane tests|desktop update adapter tests)$/u.test(
           step.label,
         ),
       ),
