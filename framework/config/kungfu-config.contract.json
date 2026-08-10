@@ -738,6 +738,7 @@
         "required": [
           "entrypoint",
           "skillInstallRoots",
+          "nativeProcessEnvironment",
           "nativeProviderAdapters",
           "runtimeProfiles",
           "defaultRuntimeProfile",
@@ -763,6 +764,42 @@
                 "type": "string"
               }
             }
+          },
+          "nativeProcessEnvironment": {
+            "type": "array",
+            "items": {
+              "enum": [
+                "TMUX",
+                "TMUX_PANE"
+              ]
+            },
+            "uniqueItems": true,
+            "allOf": [
+              {
+                "if": {
+                  "contains": {
+                    "const": "TMUX"
+                  }
+                },
+                "then": {
+                  "contains": {
+                    "const": "TMUX_PANE"
+                  }
+                }
+              },
+              {
+                "if": {
+                  "contains": {
+                    "const": "TMUX_PANE"
+                  }
+                },
+                "then": {
+                  "contains": {
+                    "const": "TMUX"
+                  }
+                }
+              }
+            ]
           },
           "nativeProviderAdapters": {
             "type": "array",
@@ -1348,6 +1385,10 @@
         "codex": "~/.codex/skills",
         "claude": "~/.claude/skills"
       },
+      "nativeProcessEnvironment": [
+        "TMUX",
+        "TMUX_PANE"
+      ],
       "nativeProviderAdapters": [],
       "runtimeProfiles": [],
       "defaultRuntimeProfile": null,
