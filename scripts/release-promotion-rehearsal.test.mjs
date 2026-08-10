@@ -446,7 +446,9 @@ test('PR-stage builds reject a premature publish-source lock', () => {
   assert.equal(result.ok, false);
   assert.ok(
     result.findings.some((entry) =>
-      entry.message.includes('leave publish-source locking to post-merge'),
+      entry.message.includes(
+        'leave publish-source locking to exact manual Release Cut recovery',
+      ),
     ),
   );
 });
