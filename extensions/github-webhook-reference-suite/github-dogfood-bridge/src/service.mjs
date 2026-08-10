@@ -215,7 +215,8 @@ export class GitHubDogfoodBridge {
       !ROOT_PATTERN.test(effect.findingRoot ?? '') ||
       effect.issueAdmitted === true ||
       effect.workMutated === true ||
-      effect.githubMutated === true
+      effect.githubMutated === true ||
+      effect.semanticCompletion === true
     ) {
       throw new Error('Dogfood capability returned an invalid Finding effect');
     }
