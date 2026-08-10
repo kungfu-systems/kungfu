@@ -28,7 +28,7 @@ Rules:
 - Close native Work only through `kungfu work claim-completion`, `review`, and
   `decide`, and verify every returned Profile action receipt.
 - Switching to `managed-run` does not require disabling report mode. Keep the
-  receipt closeout gate available as a fallback for native Work or interrupted
+  receipt closeout gate available as a fallback for native Assignment or interrupted
   runs.
 - Treat `remote-sync` as source-scoped import: remote facts stay under
   `remotes/<source-id>/runtime` unless a later command explicitly promotes

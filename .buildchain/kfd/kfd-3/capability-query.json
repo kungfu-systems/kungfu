@@ -9,8 +9,8 @@
   "status": "passed",
   "verificationMode": "product-declared-registry",
   "summary": {
-    "detected": 184,
-    "declared": 184,
+    "detected": 183,
+    "declared": 183,
     "enforced": 0,
     "detectedButUnregistered": 0,
     "declaredButMissing": 0
@@ -377,29 +377,6 @@
         "sourcePath": "scripts/buildchain-kfd-evidence.mjs",
         "artifactPath": ".buildchain/kfd/kfd-3/surfaces.json",
         "digest": "sha256:79bef98b357228e95b5678a2e2c71ca7342c3d287878ec4e76a3ffec15890daa"
-      },
-      "kfd2Trust": {
-        "status": "unknown",
-        "trustImpact": "passport-claim-not-found",
-        "residualRisk": []
-      },
-      "residualRisk": []
-    },
-    {
-      "id": "kungfu.codex.verify-goal-report",
-      "kind": "cli",
-      "name": "kungfu codex verify-goal-report --receipt <path> --json",
-      "state": "declared",
-      "detected": true,
-      "enforced": false,
-      "sourcePath": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json",
-      "artifactPath": "framework/core/src/python/kungfu/agent/commands.json",
-      "evidencePath": "framework/core/src/python/kungfu/agent/commands.json",
-      "kfd1Basis": {
-        "registryPath": ".buildchain/kfd/kfd-3/surfaces.json",
-        "sourcePath": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json",
-        "artifactPath": "framework/core/src/python/kungfu/agent/commands.json",
-        "digest": "sha256:ad7f9699696f37c11c2377431fbf021d3047b5abe6bce307f2381da6ac6a9f94"
       },
       "kfd2Trust": {
         "status": "unknown",

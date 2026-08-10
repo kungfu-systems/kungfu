@@ -56,7 +56,7 @@ def parse_lease_expiry(value: str) -> datetime:
 
 def assignment_row(state: dict[str, Any], assignment_id: str) -> dict[str, Any]:
     stable_id = work_control._stable_id(assignment_id, "assignment_id")
-    assignments = state.get("assignments") or state.get("goals") or []
+    assignments = state.get("assignments") or state.get("assignments") or []
     row = next(
         (
             item
@@ -64,7 +64,8 @@ def assignment_row(state: dict[str, Any], assignment_id: str) -> dict[str, Any]:
             if item.get("subject_key") in {stable_id, f"kungfu:{stable_id}"}
             or item.get("payload", {}).get("record", {}).get("assignment_id")
             == stable_id
-            or item.get("payload", {}).get("record", {}).get("goal_id") == stable_id
+            or item.get("payload", {}).get("record", {}).get("assignment_id")
+            == stable_id
         ),
         None,
     )
@@ -123,14 +124,14 @@ def query_state(
     runtime_dir: str,
     *,
     initiative_id: str,
-    storage_source_id: str = "atlas",
+    storage_source_id: str = "kungfu",
     cut_system_time: int = 0,
 ) -> dict[str, Any]:
     """Return native Initiative/Assignment state without legacy vocabulary."""
 
     definition = work_control.build_state_query(
         runtime_dir,
-        mission_id=initiative_id,
+        initiative_id=initiative_id,
         storage_source_id=storage_source_id,
         cut_system_time=cut_system_time,
     )
@@ -166,7 +167,7 @@ def query_state(
     reviews.sort(key=lambda row: str(row.get("subject_key") or ""))
     initiative_subject = str(
         (initiative or {}).get("subject_key")
-        or definition["mission_control"]["mission_subject"]
+        or definition["work_control"]["initiative_subject"]
     )
     return {
         "schema": "kungfu.work-control.state/v1",

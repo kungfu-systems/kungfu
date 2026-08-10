@@ -133,6 +133,19 @@ def test_start_resume_accepts_the_generic_project_work_purpose(tmp_path, monkeyp
     )
 
 
+def test_atlas_primitive_has_no_work_mutation_commands():
+    atlas_commands = set(kfc.commands["atlas"].commands)
+    assert atlas_commands.isdisjoint(
+        {
+            "claim-completion",
+            "create-go",
+            "create-mission",
+            "decide-continuation",
+            "review-completion",
+        }
+    )
+
+
 def test_reviewer_result_requires_exact_criterion_coverage():
     checks = ["Names the product", "Uses retained evidence"]
     report = {

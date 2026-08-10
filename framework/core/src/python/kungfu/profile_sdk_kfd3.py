@@ -180,12 +180,28 @@ def _shared_api_release_audit(
             "view"
         ) or {}
         bundle = gui_package / str(view.get("entry") or "dist/view/index.js")
-        source_view = gui_package / "src" / "view" / "index.tsx"
-        projection_path = bundle if bundle.is_file() else source_view
-        projection_kind = "built-view-bundle" if bundle.is_file() else "source-view"
-        projection_data = (
-            projection_path.read_bytes() if projection_path.is_file() else b""
-        )
+        source_root = gui_package / "src" / "view"
+        if bundle.is_file():
+            projection_kind = "built-view-bundle"
+            projection_data = bundle.read_bytes()
+        elif source_root.is_dir():
+            projection_kind = "source-view"
+            projection_data = b"\n".join(
+                relative.as_posix().encode("utf-8")
+                + b"\0"
+                + (source_root / relative).read_bytes()
+                for relative in sorted(
+                    (
+                        path.relative_to(source_root)
+                        for path in source_root.rglob("*")
+                        if path.is_file() and path.suffix in {".ts", ".tsx"}
+                    ),
+                    key=lambda path: path.as_posix().encode("utf-8"),
+                )
+            )
+        else:
+            projection_kind = "source-view-missing"
+            projection_data = b""
         gui_bound = bool(
             projection_data
             and re.search(

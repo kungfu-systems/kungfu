@@ -693,11 +693,10 @@ test('checked-in deprecation authority distinguishes live debt from settled hist
   });
   assert.equal(report.ok, true);
   assert.equal(report.readOnly, true);
-  assert.equal(report.summary.entries, 4);
+  assert.equal(report.summary.entries, 3);
   assert.equal(report.summary.dispositions['not-due'], 3);
-  assert.equal(report.summary.dispositions.removed, 1);
   assert.equal(report.inventory.live.length, 9);
-  assert.equal(report.inventory.settled.length, 1);
+  assert.equal(report.inventory.settled.length, 0);
   assert.equal(report.inventory.classifications.historicalEvidence.length, 1);
 });
 
@@ -852,39 +851,6 @@ test('future dates and versions beyond product authority fail closed', () => {
   assert.ok(
     laterVersion.findings.some(
       (finding) => finding.code === 'deprecation-version-after-context',
-    ),
-  );
-});
-
-test('the checked-in zero-window settlement is exact and non-copyable', () => {
-  const registry = JSON.parse(
-    fs.readFileSync(
-      path.join(REPO_ROOT, 'framework/deprecation/deprecation-registry.json'),
-      'utf8',
-    ),
-  );
-  const copied = structuredClone(registry);
-  const settlement = copied.entries.find(
-    (entry) => entry.id === 'cli.prestable-compatibility-aliases',
-  );
-  settlement.id = 'cli.copied-zero-window';
-  copied.entries = [settlement];
-  const report = auditDeprecations({
-    root: REPO_ROOT,
-    contract: DEPRECATION_CONTRACT,
-    registry: copied,
-    releaseDate: '2026-07-29',
-  });
-  assert.equal(report.ok, false);
-  assert.ok(
-    report.findings.some(
-      (finding) =>
-        finding.code === 'deprecation-historical-grandfather-invalid',
-    ),
-  );
-  assert.ok(
-    report.findings.some(
-      (finding) => finding.code === 'deprecation-window-below-minimum',
     ),
   );
 });

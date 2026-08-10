@@ -488,12 +488,6 @@
       "purpose": "Close a reported external run and refresh its manifest."
     },
     {
-      "apiId": "kungfu.codex.verify-goal-report",
-      "name": "kungfu codex verify-goal-report --receipt <path> --json",
-      "maturity": "stable",
-      "purpose": "Verify a Codex goal report receipt before closeout."
-    },
-    {
       "apiId": "kungfu.work.capture",
       "name": "kungfu work capture <request.json>",
       "maturity": "experimental",

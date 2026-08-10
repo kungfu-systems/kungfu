@@ -1212,22 +1212,6 @@
       ]
     },
     {
-      "id": "kungfu.codex.verify-goal-report",
-      "surface": "cli",
-      "name": "kungfu codex verify-goal-report --receipt <path> --json",
-      "purpose": "Verify a Codex goal report receipt before closeout.",
-      "maturity": "stable",
-      "visibility": "adjacent-agent",
-      "anchor": {
-        "kind": "catalog"
-      },
-      "projections": [
-        "commands.json",
-        "agent-pack-doc",
-        "provider-skill"
-      ]
-    },
-    {
       "id": "kungfu.work.capture",
       "surface": "cli-api-gui",
       "name": "kungfu work capture <request.json>",

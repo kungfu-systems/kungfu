@@ -342,11 +342,6 @@ def discover_source(
         )
         if runtime_dir:
             roots.append(Path(runtime_dir).expanduser().resolve().parent / "extensions")
-        for parent in Path(__file__).resolve().parents:
-            candidate = parent / "extensions"
-            if candidate.is_dir():
-                roots.append(candidate)
-                break
     matches = []
     seen = set()
     for root in roots:

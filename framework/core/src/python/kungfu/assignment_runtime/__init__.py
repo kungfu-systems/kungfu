@@ -7,6 +7,7 @@ from __future__ import annotations
 import threading
 from collections.abc import Callable, Mapping
 import json
+import os
 from pathlib import Path
 from typing import Any, TextIO
 
@@ -32,16 +33,21 @@ HOST_SCHEMA = "kungfu.gui.assignment-runtime-host/v1"
 
 
 def profile_source() -> Path:
-    """Resolve the packaged Work Control Profile with source compatibility."""
+    """Resolve Work Control only from explicit installed extension roots."""
 
-    profiles = Path(orchestration.__file__).resolve().parent / "profiles"
-    extensions = orchestration.source_root() / "extensions"
-    for root in (profiles, extensions):
-        for name in ("work-control", "mission-control"):
-            source = root / name
-            if source.is_dir():
-                return source
-    raise ValueError("Work Control Profile is absent from this Kungfu product")
+    from kungfu import profile_sdk
+
+    roots = [
+        Path(value).expanduser()
+        for value in os.environ.get("KF_EXTENSION_PATH", "").split(os.pathsep)
+        if value
+    ]
+    if not roots:
+        raise ValueError(
+            "KF_EXTENSION_PATH does not name an installed Work Control Profile"
+        )
+    discovered = profile_sdk.discover_source("kungfu.work-control", search_roots=roots)
+    return Path(discovered["source"])
 
 
 def create_runtime_host_command(

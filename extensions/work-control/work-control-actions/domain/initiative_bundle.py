@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: Apache-2.0
 
-"""Portable Initiative closure plus exact legacy Mission bundle readers."""
+"""Portable native Initiative closure and verified replay."""
 
 import json
 from pathlib import Path
@@ -10,10 +10,8 @@ from kungfu import profile_composition, profile_sdk
 from kungfu.canonical_json import canonical_json_text
 from kungfu.storage import service as storage_service
 
-from .. import work_control
+from . import work_control
 
-BUNDLE_SCHEMA = "kungfu.mission-control.bundle/v2"
-LEGACY_BUNDLE_SCHEMA = "kungfu.mission-control.bundle/v1"
 INITIATIVE_BUNDLE_SCHEMA = "kungfu.work-control.initiative-bundle/v1"
 BUNDLE_MODES = ("full", "thin")
 
@@ -62,7 +60,7 @@ def _material_missing(bundle: dict[str, Any]) -> int:
 
 
 def _active_profile_binding(runtime_dir: str) -> dict[str, Any]:
-    discovered = work_control.mission_control_profile_source(runtime_dir)
+    discovered = work_control.work_control_profile_source(runtime_dir)
     catalog = profile_composition.catalog(
         discovered["source"], runtime_dir, require_active=True
     )
@@ -92,8 +90,8 @@ def _verify_profile_binding(runtime_dir: str, bundle: dict[str, Any]) -> dict[st
     mismatches = [name for name in fields if expected.get(name) != current.get(name)]
     if mismatches:
         raise profile_sdk.ProfileSdkError(
-            "mission-bundle-profile-mismatch",
-            "Mission bundle belongs to another active Profile closure",
+            "initiative-bundle-profile-mismatch",
+            "Initiative bundle belongs to another active Profile closure",
             mismatches=mismatches,
             expected=expected,
             current=current,
@@ -101,28 +99,28 @@ def _verify_profile_binding(runtime_dir: str, bundle: dict[str, Any]) -> dict[st
     return current
 
 
-def build_mission_bundle(
+def build_initiative_bundle(
     runtime_dir: str,
     *,
-    mission_id: str,
+    initiative_id: str,
     mode: str = "full",
-    storage_source_id: str = "atlas",
+    storage_source_id: str = "kungfu",
     purpose: str = work_control.PROGRESS_PURPOSE,
 ) -> dict[str, Any]:
-    """Build a bounded Mission closure from the Episodes that prove its state."""
+    """Build a bounded Initiative closure from the Episodes that prove its state."""
 
     if mode not in BUNDLE_MODES:
-        raise ValueError("Mission bundle mode must be full or thin")
+        raise ValueError("Initiative bundle mode must be full or thin")
     state = work_control.query_state(
         runtime_dir,
-        mission_id=mission_id,
+        initiative_id=initiative_id,
         storage_source_id=storage_source_id,
     )
     report = None
-    if state["goals"]:
+    if state["assignments"]:
         report = work_control.assess_progress(
             runtime_dir,
-            mission_id=mission_id,
+            initiative_id=initiative_id,
             storage_source_id=storage_source_id,
             purpose=purpose,
         )
@@ -161,7 +159,7 @@ def build_mission_bundle(
         ):
             add_episode(surface.get("episode_id"), "fact-surface")
     for row in state["rows"]:
-        add_episode(row.get("episode_id"), "mission-state")
+        add_episode(row.get("episode_id"), "initiative-state")
         source = row.get("payload", {}).get("source", {})
         add_episode(source.get("import_episode_id"), "source-provenance")
     for claim in state.get("claims", []):
@@ -221,13 +219,16 @@ def build_mission_bundle(
         }
     )
     body = {
-        "schema": BUNDLE_SCHEMA,
+        "schema": INITIATIVE_BUNDLE_SCHEMA,
         "mode": mode,
         "status": "portable" if full_closure else "degraded",
-        "mission_subject": state["mission_subject"],
-        "mission_id": str(
-            state["mission"].get("payload", {}).get("record", {}).get("mission_id")
-            or mission_id
+        "initiative_subject": state["initiative_subject"],
+        "initiative_id": str(
+            state["initiative"]
+            .get("payload", {})
+            .get("record", {})
+            .get("initiative_id")
+            or initiative_id
         ),
         "profile": profile_binding,
         "contract": {
@@ -262,8 +263,8 @@ def build_mission_bundle(
             "known_limits": (
                 [
                     (
-                        "Atlas bridge provenance may be a shared import Episode with "
-                        "records outside this Mission"
+                        "External provenance may share an Episode with "
+                        "records outside this Initiative"
                     )
                 ]
                 if source_provenance
@@ -272,78 +273,6 @@ def build_mission_bundle(
         },
         "episodes": entries,
     }
-    body["bundle_id"] = (
-        "mission:"
-        + _root(
-            {
-                "mission_subject": body["mission_subject"],
-                "result_hash": body["expected_state"]["result_hash"],
-                "mode": mode,
-            }
-        )[7:31]
-    )
-    body["bundle_root"] = _bundle_root(body)
-    return body
-
-
-def build_initiative_bundle(
-    runtime_dir: str,
-    *,
-    initiative_id: str,
-    mode: str = "full",
-    storage_source_id: str = "atlas",
-    purpose: str = work_control.PROGRESS_PURPOSE,
-) -> dict[str, Any]:
-    """Build a native Initiative bundle without changing sealed Episodes."""
-
-    legacy = build_mission_bundle(
-        runtime_dir,
-        mission_id=initiative_id,
-        mode=mode,
-        storage_source_id=storage_source_id,
-        purpose=purpose,
-    )
-    closure = dict(legacy["closure"])
-    closure["known_limits"] = [
-        (
-            "Atlas bridge provenance may be a shared import Episode with "
-            "records outside this Initiative"
-        )
-        for _ in closure.get("known_limits") or []
-    ]
-    episodes = [
-        {
-            **dict(entry),
-            "roles": [
-                "initiative-state" if role == "mission-state" else role
-                for role in entry.get("roles") or []
-            ],
-        }
-        for entry in legacy["episodes"]
-    ]
-    body = {
-        key: value
-        for key, value in legacy.items()
-        if key
-        not in {
-            "schema",
-            "mission_subject",
-            "mission_id",
-            "bundle_id",
-            "bundle_root",
-            "closure",
-            "episodes",
-        }
-    }
-    body.update(
-        {
-            "schema": INITIATIVE_BUNDLE_SCHEMA,
-            "initiative_subject": legacy["mission_subject"],
-            "initiative_id": legacy["mission_id"],
-            "closure": closure,
-            "episodes": episodes,
-        }
-    )
     body["bundle_id"] = (
         "initiative:"
         + _root(
@@ -356,30 +285,6 @@ def build_initiative_bundle(
     )
     body["bundle_root"] = _bundle_root(body)
     return body
-
-
-def write_mission_bundle(
-    runtime_dir: str,
-    out_path: str | Path,
-    **options: Any,
-) -> dict[str, Any]:
-    bundle = build_mission_bundle(runtime_dir, **options)
-    path = Path(out_path).expanduser()
-    if not path.parent.exists():
-        raise FileNotFoundError(f"Mission bundle parent does not exist: {path.parent}")
-    path.write_text(
-        json.dumps(bundle, indent=2, sort_keys=True) + "\n", encoding="utf-8"
-    )
-    return {
-        "schema": "kungfu.mission-control.bundle-export/v1",
-        "status": bundle["status"],
-        "mode": bundle["mode"],
-        "mission_subject": bundle["mission_subject"],
-        "bundle_id": bundle["bundle_id"],
-        "bundle_root": bundle["bundle_root"],
-        "episode_count": bundle["closure"]["episode_count"],
-        "out": str(path.resolve()),
-    }
 
 
 def write_initiative_bundle(
@@ -408,51 +313,48 @@ def write_initiative_bundle(
     }
 
 
-def read_mission_bundle(path: str | Path) -> dict[str, Any]:
+def read_initiative_bundle(path: str | Path) -> dict[str, Any]:
     return json.loads(Path(path).expanduser().read_text(encoding="utf-8"))
 
 
-def import_mission_bundle(
+def import_initiative_bundle(
     runtime_dir: str,
     bundle: dict[str, Any],
     *,
     execute: bool = False,
 ) -> dict[str, Any]:
-    """Verify a Mission bundle and optionally materialize a full closure."""
+    """Verify a Initiative bundle and optionally materialize a full closure."""
 
     schema = str(bundle.get("schema") or "")
-    if schema not in {BUNDLE_SCHEMA, LEGACY_BUNDLE_SCHEMA}:
-        raise ValueError(f"unsupported Mission bundle schema: {bundle.get('schema')}")
-    legacy = schema == LEGACY_BUNDLE_SCHEMA
+    if schema != INITIATIVE_BUNDLE_SCHEMA:
+        raise ValueError(
+            f"unsupported Initiative bundle schema: {bundle.get('schema')}"
+        )
     mode = str(bundle.get("mode") or "")
     if mode not in BUNDLE_MODES:
-        raise ValueError("Mission bundle mode must be full or thin")
+        raise ValueError("Initiative bundle mode must be full or thin")
     expected_root = str(bundle.get("bundle_root") or "")
     computed_root = _bundle_root(bundle)
     if not expected_root or expected_root != computed_root:
-        raise ValueError("Mission bundle root mismatch")
-    profile_verification = None
-    if not legacy:
-        profile_verification = {
-            "ok": True,
-            "active": _verify_profile_binding(runtime_dir, bundle),
-        }
+        raise ValueError("Initiative bundle root mismatch")
+    profile_verification = {
+        "ok": True,
+        "active": _verify_profile_binding(runtime_dir, bundle),
+    }
     entries = list(bundle.get("episodes") or [])
     if int(bundle.get("closure", {}).get("episode_count") or 0) != len(entries):
-        raise ValueError("Mission bundle episode inventory count mismatch")
+        raise ValueError("Initiative bundle episode inventory count mismatch")
     for entry in entries:
         episode_bundle = entry.get("bundle") or {}
         if str(episode_bundle.get("episode_id") or "") != str(
             entry.get("episode_id") or ""
         ):
-            raise ValueError("Mission bundle episode id mismatch")
+            raise ValueError("Initiative bundle episode id mismatch")
         if _episode_root(episode_bundle) != str(entry.get("episode_root") or ""):
-            raise ValueError("Mission bundle Episode root mismatch")
+            raise ValueError("Initiative bundle Episode root mismatch")
 
     receipts = []
-    # v1 remains readable for audit, but it cannot be executed because it does
-    # not bind the Profile Suite, member, catalog, or policy closure.
-    materialize = execute and mode == "full" and not legacy
+    materialize = execute and mode == "full"
     for entry in sorted(
         entries, key=lambda row: (int(row.get("order_time") or 0), row["episode_id"])
     ):
@@ -479,7 +381,7 @@ def import_mission_bundle(
     if materialize and not failed and not missing_material_count:
         state = work_control.query_state(
             runtime_dir,
-            mission_id=str(bundle["mission_subject"]),
+            initiative_id=str(bundle["initiative_subject"]),
         )
         expected = bundle["expected_state"]
         state_verification = {
@@ -503,17 +405,17 @@ def import_mission_bundle(
     )
     if accepted:
         status = "imported"
-    elif not execute or legacy:
+    elif not execute:
         status = "validated"
     else:
         status = "degraded"
     return {
-        "schema": "kungfu.mission-control.bundle-import/v1",
+        "schema": "kungfu.work-control.initiative-bundle-import/v1",
         "status": status,
         "accepted": accepted,
         "materialized": materialize and not failed,
         "mode": mode,
-        "mission_subject": bundle["mission_subject"],
+        "initiative_subject": bundle["initiative_subject"],
         "bundle_id": bundle["bundle_id"],
         "bundle_root": computed_root,
         "profile_verification": profile_verification,
@@ -523,116 +425,9 @@ def import_mission_bundle(
         "state_verification": state_verification,
         "receipts": receipts,
         "diagnosis": (
-            (
-                "v1 bundles are audit-readable but cannot be materialized because "
-                "they do not bind an exact Profile closure"
-                if legacy and execute
-                else "thin bundles preserve roots and references but require a "
-                "full bundle before Mission state can be materialized"
-            )
-            if (legacy and execute) or (execute and mode == "thin")
-            else ""
-        ),
-    }
-
-
-def import_mission_bundle_file(
-    runtime_dir: str,
-    path: str | Path,
-    *,
-    execute: bool = False,
-) -> dict[str, Any]:
-    return import_mission_bundle(
-        runtime_dir, read_mission_bundle(path), execute=execute
-    )
-
-
-def import_initiative_bundle(
-    runtime_dir: str,
-    bundle: dict[str, Any],
-    *,
-    execute: bool = False,
-) -> dict[str, Any]:
-    """Verify or materialize one native Initiative bundle."""
-
-    if bundle.get("schema") != INITIATIVE_BUNDLE_SCHEMA:
-        raise ValueError(
-            f"unsupported Initiative bundle schema: {bundle.get('schema')}"
-        )
-    declared_root = str(bundle.get("bundle_root") or "")
-    if not declared_root or declared_root != _bundle_root(bundle):
-        raise ValueError("Initiative bundle root mismatch")
-    legacy = {
-        key: value
-        for key, value in bundle.items()
-        if key
-        not in {
-            "schema",
-            "initiative_subject",
-            "initiative_id",
-            "bundle_id",
-            "bundle_root",
-            "closure",
-            "episodes",
-        }
-    }
-    closure = dict(bundle.get("closure") or {})
-    closure["known_limits"] = [
-        (
-            "Atlas bridge provenance may be a shared import Episode with "
-            "records outside this Mission"
-        )
-        for _ in closure.get("known_limits") or []
-    ]
-    legacy.update(
-        {
-            "schema": BUNDLE_SCHEMA,
-            "mission_subject": bundle.get("initiative_subject"),
-            "mission_id": bundle.get("initiative_id"),
-            "closure": closure,
-            "episodes": [
-                {
-                    **dict(entry),
-                    "roles": [
-                        "mission-state" if role == "initiative-state" else role
-                        for role in entry.get("roles") or []
-                    ],
-                }
-                for entry in bundle.get("episodes") or []
-            ],
-        }
-    )
-    legacy["bundle_id"] = (
-        "mission:"
-        + _root(
-            {
-                "mission_subject": legacy["mission_subject"],
-                "result_hash": legacy["expected_state"]["result_hash"],
-                "mode": legacy["mode"],
-            }
-        )[7:31]
-    )
-    legacy["bundle_root"] = _bundle_root(legacy)
-    result = import_mission_bundle(runtime_dir, legacy, execute=execute)
-    return {
-        "schema": "kungfu.work-control.initiative-bundle-import/v1",
-        "status": result["status"],
-        "accepted": result["accepted"],
-        "materialized": result["materialized"],
-        "mode": result["mode"],
-        "initiative_subject": bundle["initiative_subject"],
-        "bundle_id": bundle["bundle_id"],
-        "bundle_root": declared_root,
-        "profile_verification": result["profile_verification"],
-        "episode_count": result["episode_count"],
-        "missing_material_count": result["missing_material_count"],
-        "missing_episodes": result["missing_episodes"],
-        "state_verification": result["state_verification"],
-        "receipts": result["receipts"],
-        "diagnosis": (
-            "thin bundles preserve roots and references but require a full "
-            "bundle before Initiative state can be materialized"
-            if execute and result["mode"] == "thin"
+            "thin bundles preserve roots and references but require a full bundle "
+            "before Initiative state can be materialized"
+            if execute and mode == "thin"
             else ""
         ),
     }
@@ -645,5 +440,5 @@ def import_initiative_bundle_file(
     execute: bool = False,
 ) -> dict[str, Any]:
     return import_initiative_bundle(
-        runtime_dir, read_mission_bundle(path), execute=execute
+        runtime_dir, read_initiative_bundle(path), execute=execute
     )
