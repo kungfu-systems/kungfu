@@ -97,8 +97,11 @@ test('tampered portable classification fails closed', () => {
       ),
     );
     classification.unknown = 1;
+    const classificationPath = path.join(temporary, 'classification.json.gz');
+    if (fs.existsSync(classificationPath))
+      fs.chmodSync(classificationPath, 0o644);
     fs.writeFileSync(
-      path.join(temporary, 'classification.json.gz'),
+      classificationPath,
       zlib.gzipSync(Buffer.from(`${JSON.stringify(classification)}\n`)),
     );
     const receipt = probe(temporary);
@@ -118,6 +121,7 @@ test('tampered product bytes fail closed before any read', () => {
   try {
     fs.cpSync(ATLAS, temporary, { recursive: true });
     const receiptPath = path.join(temporary, 'receipt.json');
+    fs.chmodSync(receiptPath, 0o644);
     const tampered = JSON.parse(fs.readFileSync(receiptPath, 'utf8'));
     tampered.verdict = 'tampered';
     fs.writeFileSync(receiptPath, `${JSON.stringify(tampered)}\n`);

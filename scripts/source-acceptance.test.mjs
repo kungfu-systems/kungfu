@@ -1113,26 +1113,11 @@ test('cold read-only source acceptance skips dependency-backed checks', () => {
       'framework/gui/src/renderer/src/runtime.ts',
     ]);
     assert.equal(
-      plan.some((step) => step.label === 'changed GUI TypeScript check'),
-      false,
-    );
-    assert.equal(
-      plan.some((step) => step.label === 'agent-first canonical policy'),
-      false,
-    );
-    assert.equal(
-      plan.some((step) => step.label === 'agent-first contract audit'),
-      false,
-    );
-    assert.equal(
-      plan.some((step) => step.label === 'Shifu Production Graph contract'),
-      false,
-    );
-    const contractTests = plan.find(
-      (step) => step.label === 'source-acceptance contract tests',
-    );
-    assert.equal(
-      contractTests?.args.includes('framework/production-graph/check.test.mjs'),
+      plan.some((step) =>
+        /^(changed GUI TypeScript check|agent-first canonical policy|agent-first contract audit|Shifu Production Graph contract|source-acceptance contract tests|agent work state contract and CLI parity|runtime upgrade control-plane tests|desktop update adapter tests)$/u.test(
+          step.label,
+        ),
+      ),
       false,
     );
   } finally {
