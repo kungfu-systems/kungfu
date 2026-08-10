@@ -170,7 +170,7 @@
             "product-alpha",
             "product-binaries"
           ],
-          "sourceRoot": "sha256:e5257bedaff28719851177797c240f7ecdf7a78d6e465ae2e8d4acef67a72a20"
+          "sourceRoot": "sha256:521eb00649e376aea3ed84b6574302dea24312ce6effd735766a56445f086050"
         },
         {
           "path": ".github/workflows/dev-delivery-warrant-terminal.yml",
@@ -329,7 +329,7 @@
             "product-stable",
             "product-binaries"
           ],
-          "sourceRoot": "sha256:910e66b557c62e7867d5964ed89c5186438abca78e4feebf7e4e44f158c04bf8"
+          "sourceRoot": "sha256:2a5c89e77c4f843391010493f97a04ca618d5dc88649d7295ce4dccec36cd092"
         },
         {
           "path": ".github/workflows/release-shifu.yml",
@@ -860,5 +860,5 @@
       }
     }
   ],
-  "registryRoot": "sha256:847abae3c10df7bf28c3ea424581ca7c578b4da94fbc452e7b46b98cb0de80e8"
+  "registryRoot": "sha256:4c1f70542235b3869b05951697d490a7fe33e4c5a6625a4f7d7021e9dbbf2cd2"
 }

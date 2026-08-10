@@ -96,6 +96,8 @@ jobs:
       preflight-receipt-root: ${{ steps.preflight.outputs.receipt-root }}
       promotion-sha: ${{ steps.candidate.outputs.promotion-sha }}
       promotion-tree: ${{ steps.promotion-tree.outputs.tree }}
+      candidate-provenance-root: ${{ steps.candidate-provenance.outputs.object-root }}
+      promotion-provenance-root: ${{ steps.promotion-provenance.outputs.object-root }}
     steps:
       - name: Resolve immutable Alpha candidate and promotion commits
         id: candidate
@@ -130,6 +132,56 @@ jobs:
           source-sha: ${{ steps.candidate.outputs.source-sha }}
           receipt-run-id: ${{ inputs.preflight-run-id || '' }}
 
+      - name: Dual-write immutable candidate provenance
+        id: candidate-provenance
+        if: ${{ startsWith(inputs.target-ref || github.event.pull_request.base.ref, 'alpha/') }}
+        shell: bash
+        env:
+          RELEASE_ID: ${{ inputs.target-ref || github.event.pull_request.base.ref }}
+          CANDIDATE_SHA: ${{ steps.candidate.outputs.source-sha }}
+          CANDIDATE_TREE: ${{ steps.preflight.outputs.source-tree }}
+          PREFLIGHT_RECEIPT_ROOT: ${{ steps.preflight.outputs.receipt-root }}
+          PREFLIGHT_RUN_ID: ${{ steps.preflight.outputs.run-id }}
+        run: |
+          set -euo pipefail
+          output_dir="$RUNNER_TEMP/release-provenance"
+          mkdir -p "$output_dir"
+          read -r -a candidate_parents <<<"$(git show -s --format=%P "$CANDIDATE_SHA")"
+          test "${#candidate_parents[@]}" -eq 2
+          dev_cut_sha="${candidate_parents[0]}"
+          previous_alpha_sha="${candidate_parents[1]}"
+          dev_cut_tree="$(git rev-parse "$dev_cut_sha^{tree}")"
+          previous_alpha_tree="$(git rev-parse "$previous_alpha_sha^{tree}")"
+          jq -n \
+            --arg sourceSha "$CANDIDATE_SHA" \
+            --arg sourceTree "$CANDIDATE_TREE" \
+            --arg preflightRunId "$PREFLIGHT_RUN_ID" \
+            --arg preflightReceiptRoot "$PREFLIGHT_RECEIPT_ROOT" \
+            '{sourceSha: $sourceSha, sourceTree: $sourceTree, preflightRunId: $preflightRunId, preflightReceiptRoot: $preflightReceiptRoot}' \
+            > "$output_dir/promotion-candidate-legacy-projection.json"
+          PYTHONPATH=framework/core/src/python python3 scripts/release-provenance-object.py candidate \
+            --release-id "$RELEASE_ID" \
+            --candidate-id "release-candidate:$RELEASE_ID:$PREFLIGHT_RECEIPT_ROOT" \
+            --candidate-commit "$CANDIDATE_SHA" \
+            --candidate-tree "$CANDIDATE_TREE" \
+            --dev-cut-commit "$dev_cut_sha" \
+            --dev-cut-tree "$dev_cut_tree" \
+            --dev-cut-id "release-cut:$RELEASE_ID:development:$PREFLIGHT_RECEIPT_ROOT" \
+            --previous-alpha-commit "$previous_alpha_sha" \
+            --previous-alpha-tree "$previous_alpha_tree" \
+            --previous-alpha-id "release-cut:$RELEASE_ID:previous-alpha:$PREFLIGHT_RECEIPT_ROOT" \
+            --qualification-root "$PREFLIGHT_RECEIPT_ROOT" \
+            --authority-id "${GITHUB_REPOSITORY}:.github/workflows/release-new-version.yml" \
+            --contract-file framework/release/kungfu-release-provenance.contract.json \
+            --legacy-projection "$output_dir/promotion-candidate-legacy-projection.json" \
+            --observed-parent "$dev_cut_sha" \
+            --observed-parent "$previous_alpha_sha" \
+            --output "$output_dir/candidate.json" \
+            > "$output_dir/candidate-write-receipt.json"
+          PYTHONPATH=framework/core/src/python python3 scripts/release-provenance-object.py verify \
+            --input "$output_dir/candidate.json"
+          echo "object-root=$(jq -er '.objectRoot' "$output_dir/candidate.json")" >> "$GITHUB_OUTPUT"
+
       - name: Checkout immutable promotion result
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
@@ -147,6 +199,56 @@ jobs:
           promotion_tree="$(git rev-parse 'HEAD^{tree}')"
           test "$promotion_tree" = "$CANDIDATE_TREE"
           echo "tree=$promotion_tree" >> "$GITHUB_OUTPUT"
+
+      - name: Dual-write immutable promotion provenance
+        id: promotion-provenance
+        if: ${{ startsWith(inputs.target-ref || github.event.pull_request.base.ref, 'alpha/') }}
+        shell: bash
+        env:
+          PROMOTION_SHA: ${{ steps.candidate.outputs.promotion-sha }}
+          PROMOTION_TREE: ${{ steps.promotion-tree.outputs.tree }}
+          CANDIDATE_SHA: ${{ steps.candidate.outputs.source-sha }}
+          CANDIDATE_TREE: ${{ steps.preflight.outputs.source-tree }}
+          PREFLIGHT_RECEIPT_ROOT: ${{ steps.preflight.outputs.receipt-root }}
+        run: |
+          set -euo pipefail
+          output_dir="$RUNNER_TEMP/release-provenance"
+          candidate_ancestry_observed=false
+          if git merge-base --is-ancestor "$CANDIDATE_SHA" "$PROMOTION_SHA"; then
+            candidate_ancestry_observed=true
+          fi
+          jq -n \
+            --arg candidateSha "$CANDIDATE_SHA" \
+            --arg candidateTree "$CANDIDATE_TREE" \
+            --arg promotionSha "$PROMOTION_SHA" \
+            --arg promotionTree "$PROMOTION_TREE" \
+            '{candidateSha: $candidateSha, candidateTree: $candidateTree, promotionSha: $promotionSha, promotionTree: $promotionTree}' \
+            > "$output_dir/promotion-legacy-projection.json"
+          PYTHONPATH=framework/core/src/python python3 scripts/release-provenance-object.py promotion \
+            --release-id "${{ inputs.target-ref || github.event.pull_request.base.ref }}" \
+            --candidate-envelope "$output_dir/candidate.json" \
+            --promotion-id "release-promotion:${{ inputs.target-ref || github.event.pull_request.base.ref }}:$PREFLIGHT_RECEIPT_ROOT" \
+            --promotion-commit "$PROMOTION_SHA" \
+            --promotion-tree "$PROMOTION_TREE" \
+            --qualification-root "$PREFLIGHT_RECEIPT_ROOT" \
+            --authority-id "${GITHUB_REPOSITORY}:.github/workflows/release-new-version.yml" \
+            --contract-file framework/release/kungfu-release-provenance.contract.json \
+            --legacy-projection "$output_dir/promotion-legacy-projection.json" \
+            --candidate-ancestry-observed "$candidate_ancestry_observed" \
+            --output "$output_dir/promotion.json" \
+            > "$output_dir/promotion-write-receipt.json"
+          PYTHONPATH=framework/core/src/python python3 scripts/release-provenance-object.py verify \
+            --input "$output_dir/promotion.json"
+          echo "object-root=$(jq -er '.objectRoot' "$output_dir/promotion.json")" >> "$GITHUB_OUTPUT"
+
+      - name: Retain candidate and promotion provenance evidence
+        if: ${{ startsWith(inputs.target-ref || github.event.pull_request.base.ref, 'alpha/') }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: release-provenance-promotion-${{ steps.candidate.outputs.promotion-sha }}
+          path: ${{ runner.temp }}/release-provenance
+          if-no-files-found: error
+          retention-days: 90
 
       - name: Rehearse the Kungfu promotion contract for a pull request
         if: ${{ github.event_name == 'pull_request' }}
