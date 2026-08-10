@@ -203,6 +203,39 @@ if (intentMap) {
       if (!(field in row))
         fail(`intent-map.json intent ${row.id} missing ${field}`);
   }
+  const workspaceGit = intentMap.workspaceGit || {};
+  if (
+    workspaceGit.schema !== 'kungfu.workspace-git-boundary/v1' ||
+    workspaceGit.scope !== '.kungfu/' ||
+    workspaceGit.neverStageWholeHome !== true ||
+    workspaceGit.publicationDisposition !== 'stage-only-after-row-selection' ||
+    workspaceGit.defaultDisposition !== 'keep-local' ||
+    workspaceGit.unmatchedPathPolicy !==
+      'keep-local-unless-explicit-repository-policy'
+  )
+    fail('intent-map.json workspace Git boundary defaults are invalid');
+  const gitRows = [
+    ...(workspaceGit.publishAllowlist || []),
+    ...(workspaceGit.localOnly || []),
+  ];
+  const gitIds = gitRows.map((row) => row.id);
+  if (new Set(gitIds).size !== gitIds.length)
+    fail('intent-map.json workspace Git boundary has duplicate ids');
+  for (const row of gitRows) {
+    if (
+      typeof row.pathRegex !== 'string' ||
+      !row.pathRegex.startsWith('^') ||
+      !row.pathRegex.endsWith('$')
+    ) {
+      fail(`intent-map.json workspace Git rule ${row.id} is not anchored`);
+      continue;
+    }
+    try {
+      new RegExp(row.pathRegex, 'u');
+    } catch {
+      fail(`intent-map.json workspace Git rule ${row.id} is invalid`);
+    }
+  }
 }
 if (firstValueContract) {
   const prompt = firstValueContract.prompt || {};

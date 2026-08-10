@@ -226,12 +226,54 @@ def validate_brief(text: str) -> str:
     return text
 
 
+def workspace_git_policy_view() -> dict[str, Any]:
+    policy = resources.intent_map().get("workspaceGit")
+    if not isinstance(policy, dict):
+        raise ValueError("installed Agent intent map has no workspace Git boundary")
+    if (
+        policy.get("schema") != "kungfu.workspace-git-boundary/v1"
+        or policy.get("scope") != ".kungfu/"
+        or policy.get("neverStageWholeHome") is not True
+        or policy.get("publicationDisposition") != "stage-only-after-row-selection"
+        or policy.get("defaultDisposition") != "keep-local"
+        or policy.get("unmatchedPathPolicy")
+        != "keep-local-unless-explicit-repository-policy"
+    ):
+        raise ValueError("installed workspace Git boundary has invalid defaults")
+    allowlist = policy.get("publishAllowlist")
+    local_only = policy.get("localOnly")
+    if not isinstance(allowlist, list) or not isinstance(local_only, list):
+        raise ValueError("installed workspace Git boundary has invalid path rules")
+    rows = [*allowlist, *local_only]
+    ids = [row.get("id") for row in rows if isinstance(row, dict)]
+    if len(rows) != len(ids) or len(ids) != len(set(ids)):
+        raise ValueError("installed workspace Git boundary has duplicate path rules")
+    for row in rows:
+        pattern = row.get("pathRegex")
+        if (
+            not isinstance(pattern, str)
+            or not pattern.startswith("^")
+            or not pattern.endswith("$")
+        ):
+            raise ValueError(
+                "installed workspace Git boundary has an unanchored path rule"
+            )
+        try:
+            re.compile(pattern)
+        except re.error as error:
+            raise ValueError(
+                "installed workspace Git boundary has an invalid path rule"
+            ) from error
+    return policy
+
+
 def intent_map_view() -> dict[str, Any]:
     payload = resources.intent_map()
     required = payload.get("requiredIntentIds", [])
     actual = [row.get("id") for row in payload.get("intents", [])]
     if len(actual) != len(set(actual)) or set(required) != set(actual):
         raise ValueError("installed Agent intent map has invalid required coverage")
+    workspace_git_policy_view()
     return payload
 
 
