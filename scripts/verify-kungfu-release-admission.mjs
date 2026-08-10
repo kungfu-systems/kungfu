@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // @ts-check
 
+import childProcess from 'node:child_process';
 import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -79,6 +80,7 @@ function validatePolicy(root, policy) {
       'buildchain',
       'publication',
       'freshness',
+      'temporalAdmission',
     ],
     'release admission policy',
   );
@@ -135,6 +137,11 @@ function validatePolicy(root, policy) {
     policy.freshness,
     ['maximumLifetimeSeconds', 'nonceReplay'],
     'freshness',
+  );
+  exactKeys(
+    policy.temporalAdmission,
+    ['contract', 'proofProjection', 'releaseProvenanceContract'],
+    'temporalAdmission',
   );
   if (
     policy.freshness.maximumLifetimeSeconds !== 900 ||
@@ -197,6 +204,94 @@ function validatePolicy(root, policy) {
         `Buildchain ${channel} runtime differs from its contract lock`,
       );
   }
+}
+
+export function verifyTemporalReleaseAdmission({
+  root,
+  policy,
+  runtime,
+  expected,
+  publicationEvidence,
+  temporalAdmission,
+  consumerPolicyDigest,
+} = {}) {
+  if (!temporalAdmission?.releaseProvenance)
+    throw new Error('temporal release admission provenance object is required');
+  const contract = readJson(root, policy.temporalAdmission.contract);
+  const proofProjection = readJson(
+    root,
+    policy.temporalAdmission.proofProjection,
+  );
+  const releaseProvenanceContract = readJson(
+    root,
+    policy.temporalAdmission.releaseProvenanceContract,
+  );
+  const request = {
+    contract,
+    proofProjection,
+    releaseProvenanceContract,
+    releaseProvenance: temporalAdmission.releaseProvenance,
+    currentContractLock: readJson(root, runtime.contractLock),
+    legacyContractDigests: runtime.publicationContractDigests,
+    currentContractDigest: runtime.contractDigest,
+    mode:
+      process.env.KUNGFU_TEMPORAL_RELEASE_ADMISSION_MODE ||
+      contract.defaultMode,
+    bindings: {
+      repository: expected.repository,
+      channel: expected.channel,
+      sourceSha: expected.sourceSha,
+      sourceTree: publicationEvidence.sourceTreeSha,
+      promotionSha: temporalAdmission.promotionSha,
+      artifactRoot: `sha256:${normalizeDigest(expected.artifactDigest, 'artifact digest')}`,
+      runtimeSha: expected.runtimeSha,
+      acceptedContractDigest: `sha256:${normalizeDigest(expected.contractDigest, 'contract digest')}`,
+      qualificationRoot: temporalAdmission.qualificationRoot,
+      approvalRoot:
+        temporalAdmission.approvalRoot || `sha256:${consumerPolicyDigest}`,
+      authorityRoot: temporalAdmission.authorityRoot,
+    },
+  };
+  const pythonPath = path.join(root, 'framework/core/src/python');
+  const result = childProcess.spawnSync(
+    process.env.PYTHON || 'python3',
+    [path.join(root, 'scripts/release-provenance-object.py'), 'admission'],
+    {
+      cwd: root,
+      encoding: 'utf8',
+      input: JSON.stringify(request),
+      maxBuffer: 4 * 1024 * 1024,
+      env: {
+        ...process.env,
+        PYTHONPATH: process.env.PYTHONPATH
+          ? `${pythonPath}${path.delimiter}${process.env.PYTHONPATH}`
+          : pythonPath,
+      },
+    },
+  );
+  let report;
+  try {
+    report = JSON.parse(result.stdout || '{}');
+  } catch {
+    throw new Error(
+      `temporal release admission verifier returned invalid JSON: ${String(result.stderr || '').trim()}`,
+    );
+  }
+  if (result.status !== 0 || report.ok !== true) {
+    const codes =
+      report.receipt?.reasonCodes?.join(', ') || report.error || 'unknown';
+    throw Object.assign(
+      new Error(`temporal release admission rejected: ${codes}`),
+      { receipt: report.receipt },
+    );
+  }
+  if (
+    report.receipt?.schema !== 'kungfu.temporal-release-admission-receipt/v1' ||
+    report.receipt?.status !== 'accepted' ||
+    report.receipt?.containsPrivatePayload !== false
+  )
+    throw new Error('temporal release admission receipt is not qualifying');
+  return report.receipt;
 }
 
 function currentBuildchain(root, policy) {
@@ -301,6 +396,8 @@ export async function verifyKungfuReleaseAdmission({
   expected,
   usedNonces = [],
   now = new Date(),
+  temporalAdmission,
+  temporalVerifier = verifyTemporalReleaseAdmission,
 } = {}) {
   const validated = validateKungfuReleaseAdmissionPolicy(root);
   const { policy, authority } = validated;
@@ -362,10 +459,21 @@ export async function verifyKungfuReleaseAdmission({
     gateRegistryDigest: aggregate.registry.digest,
     gateMatrixDigest: aggregate.matrixDigest,
   };
+  const consumerPolicyDigest = publicationAuthorityDigest(consumerPolicy);
+  const temporalAdmissionReceipt = temporalVerifier({
+    root,
+    policy,
+    runtime,
+    expected,
+    publicationEvidence,
+    temporalAdmission,
+    consumerPolicyDigest,
+  });
   return {
     schema: 'kungfu.release-admission-capability/v1',
     qualifying: true,
-    consumerPolicyDigest: publicationAuthorityDigest(consumerPolicy),
+    consumerPolicyDigest,
+    temporalAdmissionReceipt,
     capability,
   };
 }
@@ -392,6 +500,10 @@ async function main() {
     ),
     expected: readJson(ROOT, requiredFile(arg('expected'), 'expected')),
     usedNonces: arg('used-nonces') ? readJson(ROOT, arg('used-nonces')) : [],
+    temporalAdmission: readJson(
+      ROOT,
+      requiredFile(arg('temporal-admission'), 'temporal admission'),
+    ),
   });
   process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
 }

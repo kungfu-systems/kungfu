@@ -24,6 +24,7 @@ A qualifying capability must bind all of the following exact values:
 | Artifact | recomputed manifests and every product payload byte for the exact RC platform set |
 | Target | Kungfu Episodes, `github-release:kungfu-systems/kungfu`, exact version, and only `alpha` or `release` |
 | Freshness | unique nonce, no replay, and no more than 15 minutes from issue to expiry |
+| Temporal path | exact release-provenance object plus either the current direct contract binding or the explicitly composed Buildchain proof projection; repository, source/tree, promotion, artifacts, runtime, contract, qualification, approval, and authority are all rooted |
 
 The verifier ignores a producer's own allow/deny statement. It recomputes the
 Buildchain registry, admission, controller, Gate aggregate, runner,
@@ -75,8 +76,15 @@ For a collected evidence directory, invoke the verifier with exact JSON files:
   --control-plane-audit control-plane.json \
   --publication-evidence publication-evidence.json \
   --expected expected.json \
+  --temporal-admission temporal-admission.json \
   --used-nonces used-nonces.json
 ```
 
 The command prints a `kungfu.release-admission-capability/v1` object only after
-both the Buildchain protocol and Kungfu policy pass. It does not publish.
+the Buildchain protocol, Kungfu policy, and bounded temporal path pass. The
+temporal input carries the verified promotion provenance object, promotion SHA,
+qualification root, and authority root. The result includes a deterministic
+`kungfu.temporal-release-admission-receipt/v1` without private payload. Setting
+`KUNGFU_TEMPORAL_RELEASE_ADMISSION_MODE=legacy-exact` is the bounded rollback to
+the prior exact whitelist; it never mutates historical facts. The command does
+not publish.

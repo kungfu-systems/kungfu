@@ -18,6 +18,7 @@ from kungfu.release_provenance import (
     semantic_root,
     verify,
 )
+from kungfu.temporal_release_admission import verify_admission
 
 
 def _json_file(path: str | None, default: Any) -> Any:
@@ -122,12 +123,28 @@ def _parser() -> argparse.ArgumentParser:
     verification = commands.add_parser("verify")
     verification.add_argument("--input", required=True)
     verification.add_argument("--expected")
+    commands.add_parser("admission")
     return parser
 
 
 def main(argv: list[str] | None = None) -> int:
     args = _parser().parse_args(argv)
     try:
+        if args.command == "admission":
+            request = json.load(sys.stdin)
+            report = verify_admission(
+                contract=request["contract"],
+                proof_projection=request["proofProjection"],
+                release_provenance_contract=request["releaseProvenanceContract"],
+                release_provenance=request["releaseProvenance"],
+                current_contract_lock=request["currentContractLock"],
+                legacy_contract_digests=request["legacyContractDigests"],
+                current_contract_digest=request["currentContractDigest"],
+                bindings=request["bindings"],
+                mode=request.get("mode", "dual-read"),
+            )
+            print(json.dumps(report, sort_keys=True))
+            return 0 if report["ok"] else 1
         if args.command == "verify":
             report = verify(_json_file(args.input, {}), _json_file(args.expected, None))
             print(json.dumps(report, indent=2, sort_keys=True))

@@ -13,19 +13,19 @@ domain, then open a decision or its bounded neighborhood.
 Use browser find to search titles, themes, statuses, or compact keys. The
 full IDs stay behind links so filenames do not dominate the page.
 
-Coverage: **175 ADRs** across **8 domains**; **2 authoritative edges**.
+Coverage: **176 ADRs** across **8 domains**; **2 authoritative edges**.
 
 ## Domain overview
 
 ```mermaid
 flowchart LR
-  root["ADR corpus · 175"]
+  root["ADR corpus · 176"]
   root --> d0["Facts, storage, and replay · 43"]
   root --> d1["Agent and work control · 24"]
   root --> d2["Xinfa and documentation · 15"]
   root --> d3["Extensions, SDKs, and language boundaries · 17"]
   root --> d4["Runtime, live services, and lifecycle · 22"]
-  root --> d5["Build, distribution, and release · 8"]
+  root --> d5["Build, distribution, and release · 9"]
   root --> d6["Product and user surfaces · 8"]
   root --> d7["Architecture and governance · 38"]
 ```
@@ -210,7 +210,7 @@ review`; evidence is the number of declared qualification references.
 </details>
 
 <details id="build-release">
-<summary><strong>Build, distribution, and release</strong> · 8</summary>
+<summary><strong>Build, distribution, and release</strong> · 9</summary>
 
 | Key | Decision | Theme | Status | Evidence | Nearby (navigation only) |
 |---|---|---|---|---:|---|
@@ -218,10 +218,11 @@ review`; evidence is the number of declared qualification references.
 | KF · e848 | [Kungfu UNGFU source signature and public-release evidence boundary](../adr/KF-ADR-019f8cc4-e796-7b0e-9a16-50c08614e848.md) | kungfu-ungfu-public-use | accepted / staged / self-reviewed | 15 | [KF · 87f2](../adr/KF-ADR-019f86da-4f90-7b6b-ae6d-76cea57487f2.md) (shared terms: boundary, release)<br>[SHIFU · 4d50](../adr/SHIFU-ADR-019f86da-4f90-7eac-ad5f-db132ae04d50.md) (shared terms: release)<br>[KF · c2aa](../adr/KF-ADR-019fbd57-00fe-74a6-b2e7-11579923c2aa.md) (shared terms: release)<br>[KF · c239](../adr/KF-ADR-019fabb5-62a0-7b8d-8f8d-6505efdbc239.md) (shared terms: release) |
 | KF · c239 | [Product Release Cut is the exact updater identity](../adr/KF-ADR-019fabb5-62a0-7b8d-8f8d-6505efdbc239.md) | product-release-cut-updater | accepted / staged / self-reviewed | 10 | [KF · c2aa](../adr/KF-ADR-019fbd57-00fe-74a6-b2e7-11579923c2aa.md) (shared terms: cut, product, release)<br>[KF · 87f2](../adr/KF-ADR-019f86da-4f90-7b6b-ae6d-76cea57487f2.md) (shared terms: release)<br>[SHIFU · 4d50](../adr/SHIFU-ADR-019f86da-4f90-7eac-ad5f-db132ae04d50.md) (shared terms: release)<br>[KF · e848](../adr/KF-ADR-019f8cc4-e796-7b0e-9a16-50c08614e848.md) (shared terms: release) |
 | KF · c2aa | [Product Release Cut history is portable independently of caches](../adr/KF-ADR-019fbd57-00fe-74a6-b2e7-11579923c2aa.md) | durable-history-data-protection | accepted / staged / self-reviewed | 4 | [KF · c239](../adr/KF-ADR-019fabb5-62a0-7b8d-8f8d-6505efdbc239.md) (shared terms: cut, product, release)<br>[KF · 87f2](../adr/KF-ADR-019f86da-4f90-7b6b-ae6d-76cea57487f2.md) (shared terms: release)<br>[SHIFU · 4d50](../adr/SHIFU-ADR-019f86da-4f90-7eac-ad5f-db132ae04d50.md) (shared terms: release)<br>[KF · e848](../adr/KF-ADR-019f8cc4-e796-7b0e-9a16-50c08614e848.md) (shared terms: release) |
+| KF · fd73 | [Temporal release admission](../adr/KF-ADR-019fedcf-b519-73be-b847-2930340efd73.md) | temporal-release-admission | accepted / not-started / self-reviewed | 0 | [SHIFU · 4d50](../adr/SHIFU-ADR-019f86da-4f90-7eac-ad5f-db132ae04d50.md) (shared terms: admission, release)<br>[KF · 87f2](../adr/KF-ADR-019f86da-4f90-7b6b-ae6d-76cea57487f2.md) (shared terms: release)<br>[KF · e848](../adr/KF-ADR-019f8cc4-e796-7b0e-9a16-50c08614e848.md) (shared terms: release)<br>[KF · c2aa](../adr/KF-ADR-019fbd57-00fe-74a6-b2e7-11579923c2aa.md) (shared terms: release) |
 | SHIFU · 7288 | [Cache profile contract and ownership](../adr/SHIFU-ADR-019f86da-4f90-7222-b238-9683f61e7288.md) | shifu-cache-profile-contract | accepted / implemented / self-reviewed | 6 | [SHIFU · 3b13](../adr/SHIFU-ADR-019f86da-4f90-7b07-b137-378fb5533b13.md) (shared terms: cache, shifu)<br>[SHIFU · 4453](../adr/SHIFU-ADR-019f86da-4f90-7885-9597-bfdcb4fd4453.md) (shared terms: shifu) |
 | SHIFU · 4453 | [Local artifact catalog and safe promotion](../adr/SHIFU-ADR-019f86da-4f90-7885-9597-bfdcb4fd4453.md) | shifu-local-artifact-catalog | accepted / partial / unreviewed | 0 | [KF · 87f2](../adr/KF-ADR-019f86da-4f90-7b6b-ae6d-76cea57487f2.md) (shared terms: promotion)<br>[SHIFU · 7288](../adr/SHIFU-ADR-019f86da-4f90-7222-b238-9683f61e7288.md) (shared terms: shifu)<br>[SHIFU · 3b13](../adr/SHIFU-ADR-019f86da-4f90-7b07-b137-378fb5533b13.md) (shared terms: shifu) |
 | SHIFU · 3b13 | [uv cache enforcement uses a disposable effective lock](../adr/SHIFU-ADR-019f86da-4f90-7b07-b137-378fb5533b13.md) | shifu-uv-effective-lock | accepted / implemented / self-reviewed | 3 | [SHIFU · 7288](../adr/SHIFU-ADR-019f86da-4f90-7222-b238-9683f61e7288.md) (shared terms: cache, shifu)<br>[SHIFU · 4453](../adr/SHIFU-ADR-019f86da-4f90-7885-9597-bfdcb4fd4453.md) (shared terms: shifu) |
-| SHIFU · 4d50 | [Closed-world workflow and release admission](../adr/SHIFU-ADR-019f86da-4f90-7eac-ad5f-db132ae04d50.md) | closed-world-release-admission | accepted / implemented / self-reviewed | 7 | [KF · 87f2](../adr/KF-ADR-019f86da-4f90-7b6b-ae6d-76cea57487f2.md) (shared terms: release)<br>[KF · e848](../adr/KF-ADR-019f8cc4-e796-7b0e-9a16-50c08614e848.md) (shared terms: release)<br>[KF · c2aa](../adr/KF-ADR-019fbd57-00fe-74a6-b2e7-11579923c2aa.md) (shared terms: release)<br>[KF · c239](../adr/KF-ADR-019fabb5-62a0-7b8d-8f8d-6505efdbc239.md) (shared terms: release) |
+| SHIFU · 4d50 | [Closed-world workflow and release admission](../adr/SHIFU-ADR-019f86da-4f90-7eac-ad5f-db132ae04d50.md) | closed-world-release-admission | accepted / implemented / self-reviewed | 7 | [KF · fd73](../adr/KF-ADR-019fedcf-b519-73be-b847-2930340efd73.md) (shared terms: admission, release)<br>[KF · 87f2](../adr/KF-ADR-019f86da-4f90-7b6b-ae6d-76cea57487f2.md) (shared terms: release)<br>[KF · e848](../adr/KF-ADR-019f8cc4-e796-7b0e-9a16-50c08614e848.md) (shared terms: release)<br>[KF · c2aa](../adr/KF-ADR-019fbd57-00fe-74a6-b2e7-11579923c2aa.md) (shared terms: release) |
 
 </details>
 
