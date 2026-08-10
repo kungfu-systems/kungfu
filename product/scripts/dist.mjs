@@ -584,12 +584,17 @@ function parseJsonOutput(output, label) {
   }
 }
 
-function listKfxPackages() {
+export function listKfxPackages() {
   const packages = [];
   const visit = (dir, depth) => {
     if (depth > 2 || !fs.existsSync(dir)) return;
+    const packagePath = path.join(dir, 'package.json');
+    if (fs.existsSync(packagePath)) {
+      const pkg = readJson(packagePath);
+      if (pkg.kungfuProduct?.assembly === 'reference-only') return;
+    }
     if (fs.existsSync(path.join(dir, 'kungfu.kfx.json'))) {
-      const pkg = readJson(path.join(dir, 'package.json'));
+      const pkg = readJson(packagePath);
       const manifest = readJson(path.join(dir, 'kungfu.kfx.json'));
       if (manifest?.name && manifest?.kungfuConfig) {
         packages.push({

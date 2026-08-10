@@ -42,16 +42,26 @@ test('qualification proves external bytecode without changing the app tree', () 
     app,
     verifySignature: false,
     runCommand: (_command, args, options) => {
-      const prefix = path.join(
-        options.env.KF_CACHE_HOME,
-        'python',
-        'runtime-fixture',
-      );
+      const nativeNode = options.env.KUNGFU_AS_VARIANT === 'node';
+      const prefix = nativeNode
+        ? path.join(
+            options.env.HOME,
+            'Library',
+            'Caches',
+            'kungfu',
+            'python',
+            'runtime-fixture',
+          )
+        : path.join(options.env.KF_CACHE_HOME, 'python', 'runtime-fixture');
       fs.mkdirSync(prefix, { recursive: true });
       fs.writeFileSync(path.join(prefix, 'module.pyc'), 'bytecode');
       return {
         status: 0,
-        stdout: args.length === 0 ? 'KF_GUI_QUALIFICATION_READY\n' : 'brief',
+        stdout: nativeNode
+          ? 'KF_NATIVE_NODE_CACHE_READY\n'
+          : args.length === 0
+            ? 'KF_GUI_QUALIFICATION_READY\n'
+            : 'brief',
         stderr: '',
       };
     },
@@ -60,6 +70,7 @@ test('qualification proves external bytecode without changing the app tree', () 
   assert.equal(report.appDigest, before);
   assert.equal(report.pythonBytecodeFiles, 1);
   assert.equal(report.checks.packagedGuiBoot, true);
+  assert.equal(report.checks.nativeNodeWorkerCacheBootstrap, true);
   assert.equal(treeDigest(app), before);
 });
 
