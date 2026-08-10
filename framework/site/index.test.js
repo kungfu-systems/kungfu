@@ -15,6 +15,7 @@ const {
   formatGuideIndexPath,
   formatManifestPath,
   loadBundle,
+  loadKfxSiteBundle,
   loadFormatAuthorityManifest,
   loadFormatAuthorityRoute,
   loadFormatGuide,
@@ -29,6 +30,7 @@ const {
   renderSiteExperience,
   schemaPath,
   verifyBundle,
+  verifyKfxSiteBundle,
   verifySiteExperience,
 } = require('./index.js');
 
@@ -53,6 +55,22 @@ test('publishes one integrity-bound human and agent product map', () => {
     new Ajv2020({ strict: true, validateFormats: false }).compile(
       experienceSchema,
     ),
+  );
+});
+
+test('publishes an additive exact-root KFX developer bundle', () => {
+  const bundle = loadKfxSiteBundle();
+  const receipt = verifyKfxSiteBundle();
+  assert.equal(bundle.contract, 'kungfu.kfx-site-bundle/v1');
+  assert.equal(receipt.status, 'passing');
+  assert.deepEqual(bundle.humanReadingOrder, bundle.agentReadingOrder);
+  assert.ok(bundle.facets.length >= 10);
+  assert.ok(bundle.sources.length >= 15);
+  assert.ok(
+    bundle.nonClaims.some((entry) => entry.includes('does not publish')),
+  );
+  assert.ok(
+    bundle.nonClaims.some((entry) => entry.includes('does not consume')),
   );
 });
 
