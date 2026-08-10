@@ -654,13 +654,9 @@ test('type baseline covers every Python surface declared by [tool.mypy]', () => 
 test('release verification reuses the exact mypy tool lane without project sync', () => {
   const verify = fs.readFileSync(path.join(ROOT, 'scripts/verify.mjs'), 'utf8');
   assert.match(verify, /sourceMypyCommand\(\[\]\)/);
-  assert.doesNotMatch(verify, /uv['"], \['run', '--frozen', 'mypy'/);
-});
-
-test('release verification binds the KFD-2 projection check to its sealed source SHA', () => {
-  const verify = fs.readFileSync(path.join(ROOT, 'scripts/verify.mjs'), 'utf8');
   assert.match(verify, /\.buildchain\/kfd\/kfd-2\/release-claims\.json/);
   assert.match(verify, /'--source-sha',\s*sourceSha/);
+  assert.doesNotMatch(verify, /uv['"], \['run', '--frozen', 'mypy'/);
 });
 
 test('cross-platform full verification keeps Python resolution frozen and allows the bounded Episode workload', () => {
