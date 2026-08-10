@@ -7,18 +7,17 @@
   },
   "buildchain": {
     "workflow_shell_ref": "v3",
-    "workflow_shell_resolved_sha": "380b2d8c2a660b07ed785e71276f71dc6a9184f7",
-    "candidate_build_sha": "58e48d73ae7fef0dd06ae02baf6d090e4da5487d",
+    "workflow_shell_resolved_sha": "81c49578bff72a9784a1b63ce8698bd9dd23d7bf",
     "alpha": {
       "workflow_ref": "v3-alpha",
-      "resolved_sha": "dd702f22e6afef137c86c5456e167e6db20e88f2",
+      "resolved_sha": "36b08dc7bf417e57bffcc3dc784a2473254fe4c1",
       "contract_lock": ".buildchain/alpha-contract-lock.json",
       "publish_channel": "alpha",
       "publish_dist_tag": "alpha"
     },
     "stable": {
       "workflow_ref": "v3",
-      "resolved_sha": "380b2d8c2a660b07ed785e71276f71dc6a9184f7",
+      "resolved_sha": "81c49578bff72a9784a1b63ce8698bd9dd23d7bf",
       "contract_lock": ".buildchain/contract-lock.json",
       "publish_channel": "release",
       "publish_dist_tag": "latest"

@@ -4,14 +4,18 @@
   "qualifying": false,
   "matrixStatus": "proved",
   "product": {
-    "atlasRoot": "sha256:a59d5ff50ac80f8046b656c692f53f43a181ff5de9563448cbedd86c8ddfedd8",
+    "atlasRoot": "sha256:57abaf4985767afd17dadb0fe57a559af9128abd0cf5790a17ccde0085f4d488",
+    "bundleRoot": "sha256:da9de25342c377c8ca4f746d91c663fc06dc7f17862bd20fe3097147cd833ff2",
+    "classificationRoot": "sha256:9f1d24f61f680a75281794f3f6e77a3602327e1387cb784f171ad09f4aa15e53",
     "compiler": "xinfa",
-    "cutRoot": "sha256:b9ea3037494e3e4b6461488a768940a9de510dd884b3a38f62338d947af6c4fa",
+    "cutRoot": "sha256:5f38d619702a78b7fabab94c13e5fa41f5cf60a081bfe6ea14aabe081640e6c8",
     "diagnostics": [],
-    "manifestRoot": "sha256:57ac8ca0cae9dec54a742e003253e617cbe5f94da1c6d931eb2b69236479239a",
-    "packRoot": "sha256:70f584ba2d28b01d2b76b9fc76582deb791b88dba8eff2f0a5212ed6e941be9b",
+    "manifestRoot": "sha256:831bdb5fb3dbec8005c9203866aed37c87eca3b0ab0b68206fdd6d7ed0d22b37",
+    "packRoot": "sha256:3287addd01dee88dee504d670425d0eee368b56ff579678899b21de27d0b57e5",
     "readOnly": true,
-    "receiptRoot": "sha256:dc33928ca472cbfcabb96b1247fa78b5a48a8312cd04fa8169959bf387666382",
+    "receiptRoot": "sha256:632d7d22e6064673092aec73897d30449d79173ef096fde70da33be4e1b5299d",
+    "releasePassportRoot": null,
+    "releaseQualified": false,
     "schema": "kungfu.documentation-pack-verification/v1",
     "valid": true
   },
@@ -31,10 +35,10 @@
         "id": "buildchain-engineering",
         "shape": "engineering-cli-api-runbook",
         "roots": {
-          "atlasRoot": "sha256:155157d8b2dc5586637d1033af597eb21903a93be5ff81e920cb3b1ca24008ed",
-          "packRoot": "sha256:7a237656ee7eee66715fc043b0376f6f5bfefd9e876783a587b79ac19a2be858",
-          "manifestRoot": "sha256:eba19bcf17b11fb460925038af07bbf75be70c4fb77adee6be0ce70a64382228",
-          "receiptRoot": "sha256:ce50732257d6f9a2ba704c14a6081c3ea123bc7290061c3a34c14bc60cc5f140"
+          "atlasRoot": "sha256:b0fe5fcd8bfaebe9b80a8fb021977e8128319c1b87cba6783a6cbabf2e559ac9",
+          "packRoot": "sha256:927b26f160f615e89623513dbe5f8164ed1d0872753d2f7a20160332e6b91dec",
+          "manifestRoot": "sha256:2d0feefaeda58bba984ec4fdf57e72874658dca4edabd21fda24c0b3a0924e55",
+          "receiptRoot": "sha256:0e74fd0f49d3113fcf4e1e6edfa360898f9d62a0f38ef7ebe84593a8d960e764"
         },
         "deterministic": true,
         "verificationModes": [
@@ -42,19 +46,19 @@
           "mixed"
         ],
         "compileMilliseconds": [
-          130.498583,
-          176.870708
+          157.076917,
+          149.243959
         ],
         "human": {
           "route": "small.human",
           "maxHops": 2,
-          "atlasRoot": "sha256:155157d8b2dc5586637d1033af597eb21903a93be5ff81e920cb3b1ca24008ed",
+          "atlasRoot": "sha256:b0fe5fcd8bfaebe9b80a8fb021977e8128319c1b87cba6783a6cbabf2e559ac9",
           "omissions": []
         },
         "agent": {
           "route": "small.agent",
           "budget": 4096,
-          "atlasRoot": "sha256:155157d8b2dc5586637d1033af597eb21903a93be5ff81e920cb3b1ca24008ed",
+          "atlasRoot": "sha256:b0fe5fcd8bfaebe9b80a8fb021977e8128319c1b87cba6783a6cbabf2e559ac9",
           "omissions": []
         }
       },
@@ -62,10 +66,10 @@
         "id": "publication-site-paper",
         "shape": "publication-historical-non-claim",
         "roots": {
-          "atlasRoot": "sha256:2294859007d0932f26cba2872f5c402f0c0f1314490f6309c655aabbc28ca945",
-          "packRoot": "sha256:e472055723dd6ac72afc8223f82dfabb7034f7e01b64bf50644d8c9fcd88512e",
-          "manifestRoot": "sha256:1fa46d4f201ce6e71da2cd73bac3aa14d0c946e98e5bfabf0ea3aaec2140057a",
-          "receiptRoot": "sha256:96bfadaa3d7c078ee3654bd544913a4471e04587fd9c55be9a3bcb88f8c3bb18"
+          "atlasRoot": "sha256:fd8b0cead1bab614aeed8cab4749bbf1915fa430994776a7fbb7800d0037bc2b",
+          "packRoot": "sha256:fee1872a06481d726f464128e104ea6e0d285c3eec9fa3d65228ab643eb12486",
+          "manifestRoot": "sha256:4e90eab029ba9d78629a9d2e11c0e3ee557fa77f3c911eddaceeef40b0c5863e",
+          "receiptRoot": "sha256:71f37df4fa3b8876e0231385efd77bf8088373d869ad6625782812b2529128fc"
         },
         "deterministic": true,
         "verificationModes": [
@@ -75,24 +79,24 @@
           "non-claim"
         ],
         "compileMilliseconds": [
-          134.615583,
-          133.884708
+          146.837167,
+          157.496833
         ],
         "human": {
           "route": "medium.human.public",
           "maxHops": 2,
-          "atlasRoot": "sha256:2294859007d0932f26cba2872f5c402f0c0f1314490f6309c655aabbc28ca945",
+          "atlasRoot": "sha256:fd8b0cead1bab614aeed8cab4749bbf1915fa430994776a7fbb7800d0037bc2b",
           "omissions": []
         },
         "agent": {
           "route": "medium.agent.public",
           "budget": 4096,
-          "atlasRoot": "sha256:2294859007d0932f26cba2872f5c402f0c0f1314490f6309c655aabbc28ca945",
+          "atlasRoot": "sha256:fd8b0cead1bab614aeed8cab4749bbf1915fa430994776a7fbb7800d0037bc2b",
           "omissions": []
         }
       }
     ],
-    "evidenceRoot": "sha256:6b53a5b221e4a71b5d7822aed7ac8a2685f0fd52f1393683016a7354c1ccb8b8",
+    "evidenceRoot": "sha256:6aea1c56c2f4eaff89a6722b4c513e3fb49272b68c6f317a5e86379a95a74426",
     "evidenceMode": "live-xinfa",
     "negativeFixtures": [
       "crates/xinfa/fixtures/negative/private-leak.json",
@@ -102,28 +106,28 @@
   },
   "diagnostics": [],
   "proof": {
-    "matrixRoot": "sha256:e3009d551b111bcd01cfdd936cd072d307e8662a7a56399c450567f935698a63",
+    "matrixRoot": "sha256:84586958bd773a87721bfbc4041d0ae7d5a38296c10f0a62fe1a0f3287b31b38",
     "productRoots": {
-      "atlasRoot": "sha256:a59d5ff50ac80f8046b656c692f53f43a181ff5de9563448cbedd86c8ddfedd8",
-      "packRoot": "sha256:70f584ba2d28b01d2b76b9fc76582deb791b88dba8eff2f0a5212ed6e941be9b",
-      "cutRoot": "sha256:b9ea3037494e3e4b6461488a768940a9de510dd884b3a38f62338d947af6c4fa",
-      "manifestRoot": "sha256:57ac8ca0cae9dec54a742e003253e617cbe5f94da1c6d931eb2b69236479239a",
-      "receiptRoot": "sha256:dc33928ca472cbfcabb96b1247fa78b5a48a8312cd04fa8169959bf387666382"
+      "atlasRoot": "sha256:57abaf4985767afd17dadb0fe57a559af9128abd0cf5790a17ccde0085f4d488",
+      "packRoot": "sha256:3287addd01dee88dee504d670425d0eee368b56ff579678899b21de27d0b57e5",
+      "cutRoot": "sha256:5f38d619702a78b7fabab94c13e5fa41f5cf60a081bfe6ea14aabe081640e6c8",
+      "manifestRoot": "sha256:831bdb5fb3dbec8005c9203866aed37c87eca3b0ab0b68206fdd6d7ed0d22b37",
+      "receiptRoot": "sha256:632d7d22e6064673092aec73897d30449d79173ef096fde70da33be4e1b5299d"
     },
     "consumerRoots": [
       {
         "id": "buildchain-engineering",
-        "atlasRoot": "sha256:155157d8b2dc5586637d1033af597eb21903a93be5ff81e920cb3b1ca24008ed",
-        "packRoot": "sha256:7a237656ee7eee66715fc043b0376f6f5bfefd9e876783a587b79ac19a2be858",
-        "manifestRoot": "sha256:eba19bcf17b11fb460925038af07bbf75be70c4fb77adee6be0ce70a64382228",
-        "receiptRoot": "sha256:ce50732257d6f9a2ba704c14a6081c3ea123bc7290061c3a34c14bc60cc5f140"
+        "atlasRoot": "sha256:b0fe5fcd8bfaebe9b80a8fb021977e8128319c1b87cba6783a6cbabf2e559ac9",
+        "packRoot": "sha256:927b26f160f615e89623513dbe5f8164ed1d0872753d2f7a20160332e6b91dec",
+        "manifestRoot": "sha256:2d0feefaeda58bba984ec4fdf57e72874658dca4edabd21fda24c0b3a0924e55",
+        "receiptRoot": "sha256:0e74fd0f49d3113fcf4e1e6edfa360898f9d62a0f38ef7ebe84593a8d960e764"
       },
       {
         "id": "publication-site-paper",
-        "atlasRoot": "sha256:2294859007d0932f26cba2872f5c402f0c0f1314490f6309c655aabbc28ca945",
-        "packRoot": "sha256:e472055723dd6ac72afc8223f82dfabb7034f7e01b64bf50644d8c9fcd88512e",
-        "manifestRoot": "sha256:1fa46d4f201ce6e71da2cd73bac3aa14d0c946e98e5bfabf0ea3aaec2140057a",
-        "receiptRoot": "sha256:96bfadaa3d7c078ee3654bd544913a4471e04587fd9c55be9a3bcb88f8c3bb18"
+        "atlasRoot": "sha256:fd8b0cead1bab614aeed8cab4749bbf1915fa430994776a7fbb7800d0037bc2b",
+        "packRoot": "sha256:fee1872a06481d726f464128e104ea6e0d285c3eec9fa3d65228ab643eb12486",
+        "manifestRoot": "sha256:4e90eab029ba9d78629a9d2e11c0e3ee557fa77f3c911eddaceeef40b0c5863e",
+        "receiptRoot": "sha256:71f37df4fa3b8876e0231385efd77bf8088373d869ad6625782812b2529128fc"
       }
     ],
     "authorityConservation": {
@@ -144,5 +148,5 @@
       ]
     }
   },
-  "proofRoot": "sha256:f206b36cc568a6d4cedf4391afd5af9ecad32efce8552171ebefd795a461406e"
+  "proofRoot": "sha256:67be6c0bc758d8f42b5d8e33b5da5b18152dc72cea93fc131b03119f22bfd036"
 }

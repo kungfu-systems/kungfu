@@ -1112,19 +1112,14 @@ test('cold read-only source acceptance skips dependency-backed checks', () => {
     const plan = sourceAcceptancePlan([
       'framework/gui/src/renderer/src/runtime.ts',
     ]);
-    const labels = new Set(plan.map((step) => step.label));
-    for (const label of [
-      'changed GUI TypeScript check',
-      'agent-first canonical policy',
-      'agent-first contract audit',
-      'Shifu Production Graph contract',
-      'documentation material lane',
-      'source-acceptance contract tests',
-      'agent work state contract and CLI parity',
-      'runtime upgrade control-plane tests',
-      'desktop update adapter tests',
-    ])
-      assert.equal(labels.has(label), false, `${label} needs installed deps`);
+    assert.equal(
+      plan.some((step) =>
+        /^(changed GUI TypeScript check|agent-first canonical policy|agent-first contract audit|Shifu Production Graph contract|documentation material lane|source-acceptance contract tests|agent work state contract and CLI parity|runtime upgrade control-plane tests|desktop update adapter tests)$/u.test(
+          step.label,
+        ),
+      ),
+      false,
+    );
   } finally {
     if (previous === undefined) {
       Reflect.deleteProperty(
@@ -1135,6 +1130,18 @@ test('cold read-only source acceptance skips dependency-backed checks', () => {
       process.env.KUNGFU_READONLY_NESTED_SOURCE_ACCEPTANCE = previous;
     }
   }
+});
+
+test('Buildchain KFD check reuses the committed source binding without environment hints', () => {
+  const env = { ...process.env };
+  Reflect.deleteProperty(env, 'BUILDCHAIN_SOURCE_SHA');
+  Reflect.deleteProperty(env, 'KUNGFU_KFD_SOURCE_SHA');
+  const result = spawnSync(
+    process.execPath,
+    ['scripts/buildchain-kfd-evidence.mjs', '--check', '--json'],
+    { cwd: ROOT, encoding: 'utf8', env },
+  );
+  assert.equal(result.status, 0, `${result.stdout}${result.stderr}`);
 });
 
 test('RocksDB source archive keeps an explicit tar filename', () => {
