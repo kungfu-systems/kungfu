@@ -3,7 +3,7 @@
   "contract": "kungfu-buildchain-dev-delivery-warrant-queue",
   "repository": "kungfu-systems/kungfu",
   "protectedBase": "dev/v4/v4.0",
-  "generation": 770,
+  "generation": 771,
   "fencingCounter": 200,
   "policy": {
     "agingSeconds": 900,
@@ -7408,8 +7408,33 @@
         "fencingToken": "sha256:1598c8eabd49b3f2f77ce27f1f611e75650dfe5ef0250b6ce458e2ba284819fe",
         "leaseGeneration": 200
       }
+    },
+    {
+      "repository": "kungfu-systems/kungfu",
+      "protectedBase": "dev/v4/v4.0",
+      "pullRequestNumber": 2798,
+      "assignmentRoot": "sha256:887397c57a7817c04db1e9cfe0fd82f4434703cf881fd133e2cc53c9af273b10",
+      "initiativeRoot": "sha256:bfff817933e5a5ad693e4b902a84f6cc3a251235dd7377cb4091d92f805fa7ff",
+      "sourceIdentityRoot": "sha256:0cf733acbfe01691f035bd1fa9d53af50ecf5258403dd399e23ed6462ccc3330",
+      "deliveryClass": "non-native-fast",
+      "candidateId": "sha256:7f9023018a4cca7495603ae42d8b653f05be559d1f0ccafc40cea3905881ce02",
+      "sourceHead": "bf3fbe471b7bb0f359b489d65bb9b80b026760d5",
+      "sourcePatchRoot": "sha256:b5ed5f6d33cd65b651c766054fc3f7ffcea534c5254c3f17a014f42b302583eb",
+      "sourceProofRoot": "sha256:8d8f85604bbfc113da325939678fcac42745e4cd34e1f51ad9f2890ff4ebd8bb",
+      "planRoot": "sha256:078d7c21be22c7f623c9c435275811b97b8ae752b00713261f61a80a2ba78cb3",
+      "closureRoot": "sha256:ac6e52dc4778bd7be1e6224c9a526a00dc7fcdd56a84e07165a811b168158f3e",
+      "dependencyRoot": "sha256:30c55b7a770892b32a8b67e857345077b27e9e7920eb42188c3ebf05f881abbe",
+      "toolchainRoot": "sha256:2ecb07894954a2e0de022615d4561e5ba3ae68376401941ecff77be03cd75a0f",
+      "sourceWorkflowRunId": 0,
+      "priority": "ordinary",
+      "enqueuedAt": "2026-08-10T02:40:20.245Z",
+      "updatedAt": "2026-08-10T02:40:20.245Z",
+      "attempts": 1,
+      "recoveries": 0,
+      "status": "queued",
+      "terminal": null
     }
   ],
-  "updatedAt": "2026-08-10T02:30:19.393Z",
-  "stateRoot": "sha256:5f524325b4f6db37a81c66531f59da9e73841d1ba08f390f3c191bfaf0442fb9"
+  "updatedAt": "2026-08-10T02:40:20.245Z",
+  "stateRoot": "sha256:e8887fa28bc6ec7deb17279423cd2413953a24d4a54fab85e988dbd0fe97a58b"
 }
