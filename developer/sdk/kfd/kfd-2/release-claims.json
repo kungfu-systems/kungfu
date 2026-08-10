@@ -21,7 +21,7 @@
       "source": {
         "kind": "file",
         "path": "framework/core/src/python/kungfu/agent/index.json",
-        "sha256": "6f29137515e98724b29532287763061104bf2f30feb29e1c9fa5ed6b7d0dec0b"
+        "sha256": "aa2cd458830564caddda26aab343b5b708552cff6807b3d87b9af774ad55f90d"
       },
       "evidence": [
         {
@@ -83,7 +83,7 @@
           "pointer": {
             "kind": "file",
             "path": "scripts/verify-agent-pack.mjs",
-            "sha256": "c137b536cfc06c6501d12209cbe1df22e7769d398f090a2c36d4745ef7718f7c"
+            "sha256": "88f48e71cef06894aa1d4280810eade11b3a6fc002274255dad51adfcb07c8d9"
           },
           "description": "Read-only verifier for installed agent pack completeness and command/doc consistency."
         },
@@ -267,7 +267,7 @@
           "pointer": {
             "kind": "file",
             "path": "framework/core/src/python/kungfu/cli/commands/agent.py",
-            "sha256": "b32b44091a771a0d9e356f5d8dc4df858b08db846c17aea059da59585b3831a1"
+            "sha256": "913f1fadf69e179e785d7a4570b7b195c7ff5f668a93c4791332c7f18c702033"
           },
           "description": "Agent command surface including mode selection and bootstrap status."
         }

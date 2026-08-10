@@ -323,11 +323,7 @@ def docs(
     )
 
 
-@agent.command(help=api_help("kungfu.agent.capabilities"))
-@click.option("--json", "as_json", is_flag=True, help="machine-readable output")
-@kfd3_api("kungfu.agent.capabilities")
-@agent_command_context
-def capabilities(ctx, as_json):
+def _capabilities_payload():
     work_model = contract_runtime.contract_metadata("agent-work-state")
     action_geometry = contract_runtime.contract_metadata("action-geometry")
     work_domain_profile = contract_runtime.contract_metadata(
@@ -347,7 +343,17 @@ def capabilities(ctx, as_json):
         "actionGeometry": action_geometry,
         "workDomainProfile": work_domain_profile,
         "workLoop": first_value_protocol.work_authority_capabilities(),
+        "workspaceGit": first_value_protocol.workspace_git_policy_view(),
     }
+    return payload
+
+
+@agent.command(help=api_help("kungfu.agent.capabilities"))
+@click.option("--json", "as_json", is_flag=True, help="machine-readable output")
+@kfd3_api("kungfu.agent.capabilities")
+@agent_command_context
+def capabilities(ctx, as_json):
+    payload = _capabilities_payload()
     if as_json:
         _json(payload)
         return

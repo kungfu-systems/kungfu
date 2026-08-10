@@ -265,7 +265,7 @@ test('seals one immutable JSONL segment and re-import is idempotent', (t) => {
   assert.equal(first.status, 'sealed');
   assert.equal(
     fs.readFileSync(path.join(root, '.kungfu', '.gitignore'), 'utf8'),
-    'runtime/\ninbox/\nepisodes/.tmp/\nprivate/\ncache/\n',
+    'runtime/\ninbox/\nepisodes/.tmp/\nprivate/\ncache/\nlocks/\nprojections/\n',
   );
   assert.equal(fsckGitEpisode(root, segment.semanticRoot).ok, true);
   assert.match(
@@ -301,6 +301,21 @@ test('seals one immutable JSONL segment and re-import is idempotent', (t) => {
   const exported = exportGitEpisode(root, segment.semanticRoot);
   assert.equal(exported.semanticRoot, segment.semanticRoot);
   assert.equal(exported.providerRoot, segment.providerRoot);
+});
+
+test('accepts the original workspace ignore policy without widening it', (t) => {
+  const root = workspace(t);
+  const ignore = path.join(root, '.kungfu', '.gitignore');
+  const original = 'runtime/\ninbox/\nepisodes/.tmp/\nprivate/\ncache/\n';
+  fs.mkdirSync(path.dirname(ignore), { recursive: true });
+  fs.writeFileSync(ignore, original);
+
+  const segment = buildGitEpisodeSegment(bundle(), qualification());
+  assert.equal(
+    sealGitEpisode(root, segment, { writerId: 'legacy' }).status,
+    'sealed',
+  );
+  assert.equal(fs.readFileSync(ignore, 'utf8'), original);
 });
 
 test('projects valid int63 Episode identities to lossless decimal strings', () => {

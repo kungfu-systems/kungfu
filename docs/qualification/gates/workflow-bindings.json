@@ -506,7 +506,7 @@
           "compiler-cache-required": "${{ github.event_name != 'workflow_dispatch' || (!inputs.render-auditable-demo && inputs.windows-compiler-cache-mode != 'off') }}",
           "buildchain-contract-lock-path": ".buildchain/contract-lock.json",
           "buildchain-contract-compatibility-policy": "major-compatible",
-          "pre-upload-transport-smoke-scenario-path": ".buildchain/auditable-demo.json",
+      "pre-upload-transport-smoke-scenario-path": ".buildchain/auditable-demo-transport-smoke.json",
           "pre-upload-transport-smoke-artifact-root": "."
         }
       }
