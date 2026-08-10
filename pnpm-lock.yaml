@@ -615,18 +615,10 @@ importers:
 
   framework/tui:
     dependencies:
-      '@kungfu-tech/agent-session':
-        specifier: workspace:*
-        version: link:../agent-session
-      '@kungfu-tech/api':
-        specifier: workspace:*
-        version: link:../api
-      '@kungfu-tech/core':
-        specifier: workspace:*
-        version: link:../core
-      '@kungfu-tech/kfx':
-        specifier: workspace:*
-        version: link:../kfx
+      '@kungfu-tech/agent-session': {specifier: 'workspace:*', version: 'link:../agent-session'}
+      '@kungfu-tech/api': {specifier: 'workspace:*', version: 'link:../api'}
+      '@kungfu-tech/core': {specifier: 'workspace:*', version: 'link:../core'}
+      '@kungfu-tech/kfx': {specifier: 'workspace:*', version: 'link:../kfx'}
       ink:
         specifier: ^5.2.0
         version: 5.2.1(@types/react@18.3.31)(react@18.3.1)
@@ -652,15 +644,9 @@ importers:
 
   product:
     dependencies:
-      '@kungfu-tech/core':
-        specifier: workspace:*
-        version: link:../framework/core
-      '@kungfu-tech/gui':
-        specifier: workspace:*
-        version: link:../framework/gui
-      '@kungfu-tech/kfx-adapter-langchain':
-        specifier: workspace:*
-        version: link:../extensions/langchain-adapter
+      '@kungfu-tech/core': {specifier: 'workspace:*', version: 'link:../framework/core'}
+      '@kungfu-tech/gui': {specifier: 'workspace:*', version: 'link:../framework/gui'}
+      '@kungfu-tech/kfx-adapter-langchain': {specifier: 'workspace:*', version: 'link:../extensions/langchain-adapter'}
       '@kungfu-tech/kfx-agent-work-lab-experience':
         specifier: workspace:*
         version: link:../extensions/agent-work-lab/experience
