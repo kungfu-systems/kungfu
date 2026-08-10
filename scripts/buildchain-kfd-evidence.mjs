@@ -183,8 +183,6 @@ const CORE_PACKAGE_PATH = path.join(ROOT, 'framework', 'core', 'package.json');
 const ARTIFACT_VERIFY_COMMAND =
   'node scripts/buildchain-kfd-evidence.mjs --artifact-witness --json';
 const STRICT_KFD3_MODE = 'strict-buildchain-managed-registry';
-const KFD_EVIDENCE_SOURCE_SHA =
-  process.env.KUNGFU_KFD_SOURCE_SHA || 'local-dev-snapshot';
 function usage() {
   return `Usage:
   node scripts/buildchain-kfd-evidence.mjs --check [--json]
@@ -1119,17 +1117,17 @@ function buildKfd1VerifyResult(kfd1Gate) {
   };
 }
 
-function buildKfd2Claims({ write, outputDir = KFD2_OUTPUT_DIR }) {
+function buildKfd2Claims({ write, sourceSha, outputDir = KFD2_OUTPUT_DIR }) {
   const result = write
     ? runtime.kfd2.writeProductClaimOutputs({
         cwd: ROOT,
         outputDir: rel(outputDir),
-        sourceSha: KFD_EVIDENCE_SOURCE_SHA,
+        sourceSha,
       })
     : runtime.kfd2.checkProductClaimOutputs({
         cwd: ROOT,
         outputDir: rel(outputDir),
-        sourceSha: KFD_EVIDENCE_SOURCE_SHA,
+        sourceSha,
       });
   if (!result.ok) {
     throw new Error(
@@ -1155,13 +1153,13 @@ function buildKfd2Claims({ write, outputDir = KFD2_OUTPUT_DIR }) {
   };
 }
 
-function writeKfd2PackagedOutputs(outputDir) {
-  return buildKfd2Claims({ write: true, outputDir });
+function writeKfd2PackagedOutputs(outputDir, sourceSha) {
+  return buildKfd2Claims({ write: true, outputDir, sourceSha });
 }
 
-function assertCurrentKfd2Output(outputDir, label) {
+function assertCurrentKfd2Output(outputDir, label, sourceSha) {
   try {
-    return buildKfd2Claims({ write: false, outputDir });
+    return buildKfd2Claims({ write: false, outputDir, sourceSha });
   } catch (error) {
     throw new Error(
       `${label}: ${error instanceof Error ? error.message : error}`,
@@ -1801,9 +1799,14 @@ async function runCheckOrWrite(options) {
         .join('\n')}`,
     );
   }
+  const sourceSha = resolveKfdEvidenceSourceSha({ write: options.write });
   const kfd2Summary = options.write
-    ? writeKfd2PackagedOutputs(KFD2_OUTPUT_DIR)
-    : assertCurrentKfd2Output(KFD2_OUTPUT_DIR, 'Buildchain KFD-2 output');
+    ? writeKfd2PackagedOutputs(KFD2_OUTPUT_DIR, sourceSha)
+    : assertCurrentKfd2Output(
+        KFD2_OUTPUT_DIR,
+        'Buildchain KFD-2 output',
+        sourceSha,
+      );
   if (options.write) {
     writeIfChanged(KFD3_REGISTRY_PATH, registry);
     writeIfChanged(SDK_KFD3_CANONICAL_REGISTRY_PATH, registry);
@@ -1811,7 +1814,7 @@ async function runCheckOrWrite(options) {
     writeJson(SDK_KFD1_WITNESS_PATH, kfd1Witness);
     writeJson(SDK_KFD1_RELEASE_GATE_PATH, kfd1Gate);
     writeJson(SDK_KFD1_VERIFY_RESULT_PATH, kfd1VerifyResult);
-    writeKfd2PackagedOutputs(SDK_KFD2_OUTPUT_DIR);
+    writeKfd2PackagedOutputs(SDK_KFD2_OUTPUT_DIR, sourceSha);
   } else {
     assertCurrent(KFD3_REGISTRY_PATH, registry, 'Buildchain KFD-3 registry');
     assertCurrent(
@@ -1850,11 +1853,14 @@ async function runCheckOrWrite(options) {
       kfd1VerifyResult,
       'SDK packaged KFD-1 verify result',
     );
-    assertCurrentKfd2Output(SDK_KFD2_OUTPUT_DIR, 'SDK packaged KFD-2 output');
+    assertCurrentKfd2Output(
+      SDK_KFD2_OUTPUT_DIR,
+      'SDK packaged KFD-2 output',
+      sourceSha,
+    );
   }
   const strictAudit = buildStrictBuildchainAudit(registry);
   assertStrictBuildchainAudit(strictAudit);
-  const sourceSha = resolveKfdEvidenceSourceSha({ write: options.write });
   const checkedAt = resolveKfdProductGateCheckedAt({
     write: options.write,
     now: () => new Date().toISOString(),
