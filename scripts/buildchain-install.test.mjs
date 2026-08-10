@@ -242,6 +242,13 @@ test('reactivated AWS burst workflows pin reviewed immutable Buildchain v3 sourc
     windowsUsd80PhaseCapSource,
     'ae9bd5385cfb8060fb2574521121f1a798e83c6f',
   );
+  assert.equal(retirement.evidence.macosBudgetGuardPullRequest, 2525);
+  const macosBudgetGuardSource =
+    retirement.evidence.macosBudgetGuardMergeCommit;
+  assert.equal(
+    macosBudgetGuardSource,
+    '56aee4f72e3b6beb9eead71c8d596640313f6e7d',
+  );
 
   for (const name of [
     'aws-us-linux-burst-qualification.yml',
@@ -255,7 +262,9 @@ test('reactivated AWS burst workflows pin reviewed immutable Buildchain v3 sourc
     const expectedBuildchainSource =
       name === 'aws-us-windows-burst-qualification.yml'
         ? windowsUsd80PhaseCapSource
-        : buildchainSource;
+        : name === 'aws-us-macos-burst-qualification.yml'
+          ? macosBudgetGuardSource
+          : buildchainSource;
     assert.match(workflow, /workflow_dispatch:/);
     assert.doesNotMatch(workflow, /\n {2}pull_request:|\n {2}push:/);
     if (name === 'aws-us-windows-burst-qualification.yml') {
