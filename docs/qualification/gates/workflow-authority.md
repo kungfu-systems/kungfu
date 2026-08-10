@@ -78,6 +78,7 @@ without changing and refreshing the manifest fails the Gate catalog check.
 | `.github/workflows/core-build-profiles.yml` | `shifu_observation` | qualification | none | diagnostic | token:read | none | 4 |
 | `.github/workflows/dco.yml` | `signoff` | qualification | none | diagnostic | token:read | none | 2 |
 | `.github/workflows/dev-alpha-candidate-patrol.yml` | `candidate` | qualification | none | diagnostic | token:write, repo-secret:KUNGFU_GITHUB_TOKEN | none | 0 |
+| `.github/workflows/dev-alpha-candidate-patrol.yml` | `candidate-provenance` | qualification | none | diagnostic | token:read | none | 3 |
 | `.github/workflows/dev-alpha-candidate-patrol.yml` | `release-cut-lock` | qualification | none | diagnostic | token:read | none | 3 |
 | `.github/workflows/dev-alpha-candidate-patrol.yml` | `resolve-channels` | qualification | none | diagnostic | token:none | none | 1 |
 | `.github/workflows/dev-delivery-warrant-terminal.yml` | `cancel-queued` | qualification | none | diagnostic | token:write, repo-secret:KUNGFU_GITHUB_TOKEN | none | 0 |
@@ -115,7 +116,7 @@ without changing and refreshing the manifest fails the Gate catalog check.
 | `.github/workflows/queue-admission-lease.yml` | `admission` | qualification | none | diagnostic | token:read | none | 5 |
 | `.github/workflows/release-new-version.yml` | `alpha-timeline` | qualification | none | diagnostic | token:write | none | 11 |
 | `.github/workflows/release-new-version.yml` | `promote` | release-control | channel | qualifying | token:write, oidc, repo-secret:BUILDCHAIN_ISSUE_APP_ID+BUILDCHAIN_ISSUE_APP_PRIVATE_KEY+KUNGFU_ALPHA_CHANNEL_SIGNING_PRIVATE_KEY+KUNGFU_GITHUB_TOKEN+KUNGFU_GOVERNANCE_AUDITOR_APP_PRIVATE_KEY | none | 0 |
-| `.github/workflows/release-new-version.yml` | `promotion-contract` | qualification | none | diagnostic | token:read | none | 8 |
+| `.github/workflows/release-new-version.yml` | `promotion-contract` | qualification | none | diagnostic | token:read | none | 11 |
 | `.github/workflows/release-new-version.yml` | `recover` | release-control | channel | qualifying | token:write, oidc, repo-secret:BUILDCHAIN_ISSUE_APP_ID+BUILDCHAIN_ISSUE_APP_PRIVATE_KEY+KUNGFU_ALPHA_CHANNEL_SIGNING_PRIVATE_KEY+KUNGFU_GITHUB_TOKEN+KUNGFU_GOVERNANCE_AUDITOR_APP_PRIVATE_KEY | none | 0 |
 | `.github/workflows/release-new-version.yml` | `recovery-preflight` | qualification | none | diagnostic | token:read | none | 8 |
 | `.github/workflows/release-shifu.yml` | `build` | qualification | none | diagnostic | token:write, oidc | none | 7 |

@@ -1,0 +1,50 @@
+{
+  "schema": "kungfu.release-provenance-fixtures/v1",
+  "candidate": {
+    "releaseId": "v4.0.0-alpha.fixture",
+    "candidateId": "fixture-candidate",
+    "candidateCommit": "1111111111111111111111111111111111111111",
+    "candidateTree": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "devCutCommit": "2222222222222222222222222222222222222222",
+    "devCutTree": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "devCutRoot": "sha256:8888888888888888888888888888888888888888888888888888888888888888",
+    "previousAlphaCommit": "3333333333333333333333333333333333333333",
+    "previousAlphaTree": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "previousAlphaRoot": "sha256:9999999999999999999999999999999999999999999999999999999999999999",
+    "qualificationRoot": "sha256:4444444444444444444444444444444444444444444444444444444444444444",
+    "authorityRoot": "sha256:5555555555555555555555555555555555555555555555555555555555555555",
+    "contractRoot": "sha256:6666666666666666666666666666666666666666666666666666666666666666",
+    "admissionRoots": [
+      "sha256:7777777777777777777777777777777777777777777777777777777777777777"
+    ],
+    "observedParents": [
+      "2222222222222222222222222222222222222222",
+      "3333333333333333333333333333333333333333"
+    ],
+    "legacyProjection": {
+      "candidateSha": "1111111111111111111111111111111111111111",
+      "candidateTree": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "promotionRule": "exact-candidate-or-tree-equivalent-channel-merge"
+    }
+  },
+  "promotion": {
+    "promotionId": "fixture-promotion",
+    "promotionCommit": "9999999999999999999999999999999999999999",
+    "promotionTree": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "candidateAncestryObserved": false,
+    "legacyProjection": {
+      "candidateSha": "1111111111111111111111111111111111111111",
+      "promotionSha": "9999999999999999999999999999999999999999",
+      "treePreserved": true
+    }
+  },
+  "cases": [
+    {"id": "same-tree-different-history", "mutation": "none", "expected": "distinct-object-roots"},
+    {"id": "swapped-dev-and-alpha-cuts", "mutation": "swap-cuts", "expected": "expected-devCutCommit-mismatch"},
+    {"id": "missing-acknowledgement", "mutation": "remove-acknowledgement", "expected": "acknowledges-relation-count"},
+    {"id": "ambiguous-authority", "mutation": "duplicate-authority", "expected": "ambiguous-authority"},
+    {"id": "mismatched-tree", "mutation": "candidate-tree", "expected": "candidate-tree-mismatch"},
+    {"id": "forged-projection-root", "mutation": "projection-root", "expected": "git-projection-root-mismatch"},
+    {"id": "merge-queue-ancestry-drift", "mutation": "none", "expected": "candidate-not-ancestor"}
+  ]
+}

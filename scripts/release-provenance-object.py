@@ -1,0 +1,229 @@
+#!/usr/bin/env python3
+# SPDX-License-Identifier: Apache-2.0
+
+"""Produce and verify immutable release provenance envelopes."""
+
+from __future__ import annotations
+
+import argparse
+import json
+import sys
+from pathlib import Path
+from typing import Any
+
+from kungfu.release_provenance import (
+    ReleaseProvenanceError,
+    build_candidate,
+    build_promotion,
+    semantic_root,
+    verify,
+)
+
+
+def _json_file(path: str | None, default: Any) -> Any:
+    return json.loads(Path(path).read_text()) if path else default
+
+
+def _write(path: str, value: Any) -> None:
+    Path(path).parent.mkdir(parents=True, exist_ok=True)
+    Path(path).write_text(
+        json.dumps(value, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+
+
+def _root_or_identity(root: str | None, identity: str | None, field: str) -> str:
+    if root:
+        return root
+    if identity:
+        return semantic_root(
+            {
+                "schema": "kungfu.release-provenance-external-identity/v1",
+                "kind": field,
+                "identity": identity,
+            }
+        )
+    raise ReleaseProvenanceError(
+        "missing-input", f"{field} root or identity is required"
+    )
+
+
+def _common(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument("--release-id", required=True)
+    parser.add_argument("--qualification-root")
+    parser.add_argument("--qualification-id")
+    parser.add_argument("--authority-root")
+    parser.add_argument("--authority-id")
+    parser.add_argument("--contract-root")
+    parser.add_argument("--contract-file")
+    parser.add_argument("--admission-root", action="append", default=[])
+    parser.add_argument("--legacy-projection")
+    parser.add_argument("--output", required=True)
+
+
+def _contract_root(args: argparse.Namespace) -> str:
+    if args.contract_root:
+        return args.contract_root
+    if args.contract_file:
+        return semantic_root(_json_file(args.contract_file, {}))
+    raise ReleaseProvenanceError(
+        "missing-input", "contract root or contract file is required"
+    )
+
+
+def _roots(args: argparse.Namespace) -> tuple[str, str, str, list[str]]:
+    qualification_root = _root_or_identity(
+        args.qualification_root, args.qualification_id, "qualification"
+    )
+    authority_root = _root_or_identity(
+        args.authority_root, args.authority_id, "authority"
+    )
+    contract_root = _contract_root(args)
+    admission_roots = list(
+        dict.fromkeys([*args.admission_root, qualification_root, contract_root])
+    )
+    return qualification_root, authority_root, contract_root, admission_roots
+
+
+def _parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(description=__doc__)
+    commands = parser.add_subparsers(dest="command", required=True)
+
+    candidate = commands.add_parser("candidate")
+    _common(candidate)
+    candidate.add_argument("--candidate-id", required=True)
+    candidate.add_argument("--candidate-commit", required=True)
+    candidate.add_argument("--candidate-tree", required=True)
+    candidate.add_argument("--dev-cut-commit", required=True)
+    candidate.add_argument("--dev-cut-tree", required=True)
+    candidate.add_argument("--dev-cut-root")
+    candidate.add_argument("--dev-cut-id")
+    candidate.add_argument("--previous-alpha-commit", required=True)
+    candidate.add_argument("--previous-alpha-tree", required=True)
+    candidate.add_argument("--previous-alpha-root")
+    candidate.add_argument("--previous-alpha-id")
+    candidate.add_argument("--observed-parent", action="append", default=[])
+    candidate.add_argument(
+        "--advisory-parentage",
+        action="store_true",
+        help="report parent-order drift without rejecting the semantic object",
+    )
+
+    promotion = commands.add_parser("promotion")
+    _common(promotion)
+    promotion.add_argument("--candidate-envelope", required=True)
+    promotion.add_argument("--promotion-id", required=True)
+    promotion.add_argument("--promotion-commit", required=True)
+    promotion.add_argument("--promotion-tree", required=True)
+    promotion.add_argument(
+        "--candidate-ancestry-observed", choices=("true", "false"), required=True
+    )
+
+    verification = commands.add_parser("verify")
+    verification.add_argument("--input", required=True)
+    verification.add_argument("--expected")
+    return parser
+
+
+def main(argv: list[str] | None = None) -> int:
+    args = _parser().parse_args(argv)
+    try:
+        if args.command == "verify":
+            report = verify(_json_file(args.input, {}), _json_file(args.expected, None))
+            print(json.dumps(report, indent=2, sort_keys=True))
+            return 0 if report["ok"] else 1
+
+        qualification_root, authority_root, contract_root, admission_roots = _roots(
+            args
+        )
+        legacy_projection = _json_file(args.legacy_projection, {})
+        if args.command == "candidate":
+            dev_cut_root = _root_or_identity(
+                args.dev_cut_root,
+                args.dev_cut_id,
+                "dev-cut",
+            )
+            previous_alpha_root = _root_or_identity(
+                args.previous_alpha_root,
+                args.previous_alpha_id,
+                "previous-alpha",
+            )
+            fail_closed_on = ["candidate-tree-mismatch"]
+            if not args.advisory_parentage:
+                fail_closed_on.append("parent-order-mismatch")
+            envelope = build_candidate(
+                release_id=args.release_id,
+                candidate_id=args.candidate_id,
+                candidate_commit=args.candidate_commit,
+                candidate_tree=args.candidate_tree,
+                dev_cut_commit=args.dev_cut_commit,
+                dev_cut_tree=args.dev_cut_tree,
+                previous_alpha_commit=args.previous_alpha_commit,
+                previous_alpha_tree=args.previous_alpha_tree,
+                dev_cut_root=dev_cut_root,
+                previous_alpha_root=previous_alpha_root,
+                qualification_root=qualification_root,
+                authority_root=authority_root,
+                contract_root=contract_root,
+                admission_roots=admission_roots,
+                observed_parents=args.observed_parent,
+                legacy_projection=legacy_projection,
+                fail_closed_on=fail_closed_on,
+            )
+        else:
+            envelope = build_promotion(
+                candidate_envelope=_json_file(args.candidate_envelope, {}),
+                promotion_id=args.promotion_id,
+                promotion_commit=args.promotion_commit,
+                promotion_tree=args.promotion_tree,
+                qualification_root=qualification_root,
+                authority_root=authority_root,
+                contract_root=contract_root,
+                admission_roots=admission_roots,
+                candidate_ancestry_observed=(
+                    args.candidate_ancestry_observed == "true"
+                ),
+                legacy_projection=legacy_projection,
+            )
+        report = verify(envelope)
+        if not report["ok"]:
+            print(json.dumps(report, indent=2, sort_keys=True), file=sys.stderr)
+            return 1
+        _write(args.output, envelope)
+        print(
+            json.dumps(
+                {
+                    "schema": "kungfu.release-provenance-write-receipt/v1",
+                    "ok": True,
+                    "output": args.output,
+                    "objectRoot": envelope["objectRoot"],
+                    "gitProjectionRoot": envelope["gitProjectionRoot"],
+                    "legacyProjectionRoot": envelope["legacyProjectionRoot"],
+                    "projectionStatus": envelope["gitProjection"]["status"],
+                    "projectionDrift": envelope["gitProjection"]["drift"],
+                },
+                indent=2,
+                sort_keys=True,
+            )
+        )
+        return 0
+    except (ReleaseProvenanceError, OSError, json.JSONDecodeError) as error:
+        code = getattr(error, "code", "invalid-input")
+        print(
+            json.dumps(
+                {
+                    "schema": "kungfu.release-provenance-error/v1",
+                    "ok": False,
+                    "code": code,
+                    "message": str(error),
+                },
+                indent=2,
+                sort_keys=True,
+            ),
+            file=sys.stderr,
+        )
+        return 1
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

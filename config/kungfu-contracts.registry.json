@@ -369,7 +369,14 @@
           "fact-cut-kernel",
           "--json"
         ]
-      }
+      },
+      "extraArtifacts": [
+        {
+          "label": "Release provenance semantic object contract",
+          "source": "framework/release/kungfu-release-provenance.contract.json",
+          "artifact": "config/release/kungfu-release-provenance.contract.json"
+        }
+      ]
     },
     {
       "surface": "exit-bundle",

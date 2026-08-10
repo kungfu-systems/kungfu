@@ -169,3 +169,87 @@ jobs:
       merge-method: rebase
     secrets:
       promotion-token: ${{ secrets.KUNGFU_GITHUB_TOKEN }}
+
+  candidate-provenance:
+    name: Dual-write immutable candidate provenance
+    needs: [resolve-channels, release-cut-lock, candidate]
+    if: >-
+      needs.candidate.result == 'success' &&
+      needs.candidate.outputs.selected-sha != '' &&
+      needs.candidate.outputs.source-lock-ref != ''
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    outputs:
+      object-root: ${{ steps.provenance.outputs.object-root }}
+      projection-root: ${{ steps.provenance.outputs.projection-root }}
+    steps:
+      - name: Check out exact selected candidate source
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: ${{ needs.candidate.outputs.selected-sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Produce and verify semantic candidate provenance
+        id: provenance
+        shell: bash
+        env:
+          RELEASE_ID: ${{ needs.resolve-channels.outputs.target-branch }}
+          SELECTED_SHA: ${{ needs.candidate.outputs.selected-sha }}
+          SOURCE_LOCK_REF: ${{ needs.candidate.outputs.source-lock-ref }}
+          TARGET_BRANCH: ${{ needs.resolve-channels.outputs.target-branch }}
+          QUALIFICATION_STATE_ROOT: ${{ needs.candidate.outputs.prior-state-root }}
+        run: |
+          set -euo pipefail
+          output_dir="$RUNNER_TEMP/release-provenance"
+          mkdir -p "$output_dir"
+          git fetch --no-tags origin \
+            "$SOURCE_LOCK_REF:refs/remotes/origin/provenance-source-lock" \
+            "$TARGET_BRANCH:refs/remotes/origin/provenance-previous-alpha"
+          candidate_sha="$(git rev-parse refs/remotes/origin/provenance-source-lock)"
+          candidate_tree="$(git rev-parse "$candidate_sha^{tree}")"
+          dev_cut_tree="$(git rev-parse "$SELECTED_SHA^{tree}")"
+          previous_alpha_sha="$(git rev-parse refs/remotes/origin/provenance-previous-alpha)"
+          previous_alpha_tree="$(git rev-parse "$previous_alpha_sha^{tree}")"
+          observed_parent_args=()
+          for parent in $(git show -s --format=%P "$candidate_sha"); do
+            observed_parent_args+=(--observed-parent "$parent")
+          done
+          jq -n \
+            --arg selectedSha "$SELECTED_SHA" \
+            --arg sourceLockRef "$SOURCE_LOCK_REF" \
+            --arg priorStateRoot "$QUALIFICATION_STATE_ROOT" \
+            '{selectedSha: $selectedSha, sourceLockRef: $sourceLockRef, priorStateRoot: $priorStateRoot}' \
+            > "$output_dir/candidate-legacy-projection.json"
+          PYTHONPATH=framework/core/src/python python3 scripts/release-provenance-object.py candidate \
+            --release-id "$RELEASE_ID" \
+            --candidate-id "release-candidate:$RELEASE_ID:$QUALIFICATION_STATE_ROOT" \
+            --candidate-commit "$candidate_sha" \
+            --candidate-tree "$candidate_tree" \
+            --dev-cut-commit "$SELECTED_SHA" \
+            --dev-cut-tree "$dev_cut_tree" \
+            --dev-cut-id "release-cut:$RELEASE_ID:development:$QUALIFICATION_STATE_ROOT" \
+            --previous-alpha-commit "$previous_alpha_sha" \
+            --previous-alpha-tree "$previous_alpha_tree" \
+            --previous-alpha-id "release-cut:$RELEASE_ID:previous-alpha:$QUALIFICATION_STATE_ROOT" \
+            --qualification-id "buildchain-candidate-patrol:$SELECTED_SHA:$QUALIFICATION_STATE_ROOT" \
+            --authority-id "${GITHUB_REPOSITORY}:.github/workflows/dev-alpha-candidate-patrol.yml" \
+            --contract-file framework/release/kungfu-release-provenance.contract.json \
+            --legacy-projection "$output_dir/candidate-legacy-projection.json" \
+            --advisory-parentage \
+            "${observed_parent_args[@]}" \
+            --output "$output_dir/candidate.json" \
+            > "$output_dir/candidate-write-receipt.json"
+          PYTHONPATH=framework/core/src/python python3 scripts/release-provenance-object.py verify \
+            --input "$output_dir/candidate.json"
+          echo "object-root=$(jq -er '.objectRoot' "$output_dir/candidate.json")" >> "$GITHUB_OUTPUT"
+          echo "projection-root=$(jq -er '.gitProjectionRoot' "$output_dir/candidate.json")" >> "$GITHUB_OUTPUT"
+
+      - name: Retain candidate provenance evidence
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: release-provenance-candidate-${{ needs.candidate.outputs.selected-sha }}
+          path: ${{ runner.temp }}/release-provenance
+          if-no-files-found: error
+          retention-days: 30
