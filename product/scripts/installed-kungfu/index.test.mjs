@@ -52,6 +52,9 @@ test('installed embedded Node spawns through the staged node-pty native addon', 
   assert.match(invocation.args[1], /nodePty\.spawn\(process\.execPath/u);
   assert.match(invocation.args[1], /child\.onData/u);
   assert.match(invocation.args[1], /KUNGFU_NODE_PTY_CHILD_READY/u);
+  assert.match(invocation.args[1], /writeSync\(1,/u);
+  assert.match(invocation.args[1], /process\.exit\(0\)/u);
+  assert.equal(invocation.options.timeout, 30000);
 });
 
 test('installed embedded Node node-pty smoke fails closed', (t) => {
@@ -73,5 +76,28 @@ test('installed embedded Node node-pty smoke fails closed', (t) => {
         },
       ),
     /could not spawn through node-pty[\s\S]*napi_create_function/u,
+  );
+});
+
+test('installed embedded Node node-pty smoke reports an outer timeout', (t) => {
+  const { installRoot, runtimeEntry } = fixture(t);
+
+  assert.throws(
+    () =>
+      runInstalledEmbeddedNodeAddonSmoke(
+        { installRoot, runtimeEntry, env: {} },
+        {
+          spawn() {
+            return {
+              status: null,
+              signal: 'SIGTERM',
+              stdout: '',
+              stderr: '',
+              error: new Error('spawnSync timed out'),
+            };
+          },
+        },
+      ),
+    /could not spawn through node-pty[\s\S]*spawnSync timed out/u,
   );
 });

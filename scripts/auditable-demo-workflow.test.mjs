@@ -111,7 +111,7 @@ test('pre-upload transport uses a v3-compatible scenario bound to the exact prod
     {
       id: '720p',
       role: 'responsive',
-      columns: 100,
+      columns: 150,
       rows: 28,
       width: 1280,
       height: 720,

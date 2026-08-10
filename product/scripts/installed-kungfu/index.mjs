@@ -148,7 +148,7 @@ export function runInstalledEmbeddedNodeAddonSmoke(
         "let output = '';",
         'child.onData((data) => { output += data; });',
         'const timeout = setTimeout(() => { child.kill(); process.exit(43); }, 10000);',
-        "child.onExit(({exitCode}) => { clearTimeout(timeout); if (exitCode !== 0 || !output.includes(token)) process.exit(44); process.stdout.write('KUNGFU_NODE_PTY_READY\\n'); });",
+        "child.onExit(({exitCode}) => { clearTimeout(timeout); if (exitCode !== 0 || !output.includes(token)) process.exit(44); require('node:fs').writeSync(1, 'KUNGFU_NODE_PTY_READY\\n'); process.exit(0); });",
       ].join(''),
     ],
     {
@@ -159,6 +159,7 @@ export function runInstalledEmbeddedNodeAddonSmoke(
         KUNGFU_NODE_PTY_ENTRY: nodePtyEntry,
       },
       encoding: 'utf8',
+      timeout: 30000,
     },
   );
   if (
@@ -168,6 +169,7 @@ export function runInstalledEmbeddedNodeAddonSmoke(
     throw new Error(
       [
         `installed embedded Node could not spawn through node-pty (exit ${exitLabel(result.status, result.signal)})`,
+        result.error?.message ? `error: ${result.error.message}` : '',
         result.stdout?.trim() ? `stdout:\n${result.stdout.trim()}` : '',
         result.stderr?.trim() ? `stderr:\n${result.stderr.trim()}` : '',
       ]
