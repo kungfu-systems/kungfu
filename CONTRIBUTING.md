@@ -32,6 +32,32 @@ Read [Alpha Status](docs/guides/alpha-status.md) before treating an Alpha
 artifact or channel as available, and check [Known Issues](docs/guides/known-issues.md)
 before opening a duplicate report.
 
+## Start with intent, not the whole codebase
+
+Kungfu is designed for Agent-first contribution. Start by telling your Agent
+the outcome, constraints, and evidence you need, rather than trying to
+reconstruct the entire system from source. Ask it to read `AGENTS.md`, use the
+repository's verified task-context route, and explain the smallest useful
+mental model for your task: the relevant concepts, current implementation
+owners, authority boundaries, likely change surface, qualification path, and
+any unresolved gaps.
+
+```text
+Read `AGENTS.md`. I want to <task>. Use the repository's verified task-context route. Before editing, explain only the concepts, current implementation owners, authority boundaries, and qualification path this task requires.
+```
+
+The human contributor owns intent, tradeoffs, and acceptance. The Agent handles
+repository-scale discovery and the mechanical workflow, while keeping its
+claims grounded in checked-in contracts, source, and verification output.
+
+Unless you already understand the affected subsystem, avoid starting with an
+unprepared, unaided reading of the source tree. A few plausible files can expose
+expanded implementation complexity while still giving a partial or stale view
+of current authority. Read code after the task slice is established to inspect
+and verify the exact implementation; do not use ad hoc browsing as a substitute
+for task routing. Agent output is not authority by itself, so review the proposed
+model and require repository evidence before accepting a change.
+
 ## Prerequisites
 
 - A compiler in the native matrix (Apple Clang on macOS, GCC on Linux, MSVC on
