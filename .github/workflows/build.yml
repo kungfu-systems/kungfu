@@ -371,6 +371,7 @@ jobs:
   resolve-auditable-demo-source:
     name: Resolve exact auditable demo artifact
     needs: build
+    if: ${{ always() && needs.build.result == 'success' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     permissions:
@@ -563,7 +564,7 @@ jobs:
   auditable-demo:
     name: Declarative multi-demo Gate and media
     needs: [build, resolve-auditable-demo-source]
-    if: ${{ needs.resolve-auditable-demo-source.outputs.applicable == 'true' }}
+    if: ${{ always() && needs.build.result == 'success' && needs.resolve-auditable-demo-source.result == 'success' && needs.resolve-auditable-demo-source.outputs.applicable == 'true' }}
     permissions:
       actions: read
       contents: write

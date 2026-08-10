@@ -281,7 +281,7 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "qualifying",
-          "definitionDigest": "sha256:7b4cf57bda0843563c3499dfedce43b98719b2935569aac36ec6145d8aa9722c",
+          "definitionDigest": "sha256:b141275e8d819ee4a9d09ccb20056c4b33c26ccb1290ca5e0ceae5346c0143a3",
           "credentials": {"githubToken":"write","oidc":false,"repositorySecrets":["KUNGFU_GITHUB_TOKEN"],"inheritedSecrets":false,"environment":null},
           "externalActions": ["kungfu-systems/buildchain/.github/workflows/.declarative-auditable-demo.yml@41d4dce2f38aa4821c794b49dcfb2bcf59d0984a"],
           "steps": []
@@ -361,7 +361,7 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "diagnostic",
-          "definitionDigest": "sha256:6f21a7dfe16deedab6047bd80b8279e7aa67b5ff116daa08b123fbaae62c31dd",
+          "definitionDigest": "sha256:08cb80ffcd61ebc97a5ec74e24c0613f7bb9420316c33f403c94e3862a5b6002",
           "credentials": {"githubToken":"read","oidc":false,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
           "externalActions": ["actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd","actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a"],
           "steps": [{"index":1,"label":"id:resolve","definitionDigest":"sha256:c7fb80856c78364e30e47cf16634ef4d0f94abcefc8af3ecb58a32a526d3828b"},{"index":2,"label":"name:Retain machine-readable inapplicable reason","authority":"evidence-publication","definitionDigest":"sha256:a7a896172c158f321b28ee061bc1048c1d616464509938d0930aafcc361c6ba6"}]
