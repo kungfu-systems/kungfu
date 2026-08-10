@@ -1,0 +1,43 @@
+{
+  "schema": "kungfu.profile-suite/v1",
+  "id": "kungfu.github-webhook-reference",
+  "title": "GitHub Webhook Reference",
+  "version": "0.1.0",
+  "members": {
+    "required": ["github-webhook-ingress", "github-event-view"],
+    "optional": ["github-dogfood-bridge"]
+  },
+  "kfd1": {
+    "contractWorld": { "path": "contracts/world.json", "sha256": "376953f7e14d81ee41d8b41d5052134f95dff23250d26da578363fdcb4990a25" },
+    "factSurfaces": [
+      { "path": "contracts/facts.json", "sha256": "09b3407cd3ce05f2a6202b9ec3820a7aabff96eb69fabe9a748db60f342cef54" }
+    ],
+    "reducers": [],
+    "compatibility": { "path": "compatibility/v1.json", "sha256": "2e412389f248a149d07529d083e7ac9800915016d77b19a073ee2d8bcf6dcfa1" }
+  },
+  "kfd2": {
+    "claims": [
+      { "path": "claims/claims.json", "sha256": "6b1e6f0533343e7e479a732a94475a6b56707736fa8f6e56112f64b2d07fb571" }
+    ],
+    "purposes": ["operator-review"],
+    "policies": [
+      { "path": "assessments/policies.json", "sha256": "30b4828fc2928e8aa02691fb877c0f088a9065c3068ab9b227fdf86cc98acda5" }
+    ]
+  },
+  "actions": {
+    "registry": { "path": "actions/registry.json", "sha256": "c4387552fe6b701562717e33b03cb33ad25e972c83c88de8b9a65333ae53670a" }
+  },
+  "views": {
+    "registry": { "path": "views/registry.json", "sha256": "f6427e14020324cfa50522e823df894609f227239e74241717dbb12064d95714" }
+  },
+  "migrations": {
+    "registry": { "path": "migrations/registry.json", "sha256": "440c1dd01fc89f137dd3636a262a7e00b21b9d38d4c030330e5ccfc7e21675a8" }
+  },
+  "permissions": {
+    "registry": { "path": "permissions.json", "sha256": "58ca51de69b2d9d72e9f8d60c175d00e6517c533ef355d0a4e7cb4c59bc84c85" }
+  },
+  "qualification": {
+    "profile": { "path": "qualification/profile.json", "sha256": "be38f3c31182245d19d05aa0e71bc1245fc3caf453c4ab84cd55512aaf2f3cfa" }
+  },
+  "experience": { "homeView": "github-event-view" }
+}

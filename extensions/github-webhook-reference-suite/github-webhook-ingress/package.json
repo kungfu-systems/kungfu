@@ -1,0 +1,26 @@
+{
+  "name": "@kungfu-kfx/github-webhook-ingress",
+  "version": "0.1.0",
+  "description": "Provider-specific GitHub webhook ingress over the public KFX service host",
+  "license": "Apache-2.0",
+  "type": "module",
+  "files": [
+    "README.md",
+    "fixtures",
+    "kungfu.kfx.json",
+    "sdk",
+    "src",
+    "test"
+  ],
+  "scripts": {
+    "qualify": "node test/qualify.mjs"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "kungfuAuthoring": {
+    "productVersion": "4.0.0-alpha.1",
+    "kitRoot": "sha256:16eee9fafca2422a613dcb3217689ca03d8b04d51f26b5666eef9af432df9da2",
+    "sdkRoot": "sha256:8afedffb614388b70d7fcb2744bcb34a4eeb167e2b766f301a8df5a62e3a6c68"
+  }
+}

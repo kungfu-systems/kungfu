@@ -1,0 +1,10 @@
+{
+  "schema": "kungfu.profile-fact-surfaces/v1",
+  "surfaces": [
+    {
+      "id": "kungfu.github-webhook-reference.observation",
+      "schema": "kungfu.github-webhook-observation/v1",
+      "title": "Authenticated normalized GitHub webhook observation"
+    }
+  ]
+}

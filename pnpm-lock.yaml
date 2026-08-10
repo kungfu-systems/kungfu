@@ -185,6 +185,8 @@ importers:
         specifier: ^18.3.3
         version: 18.3.31
 
+  extensions/github-webhook-reference-suite: {}
+
   extensions/journal-manager:
     dependencies:
       '@kungfu-tech/api':
