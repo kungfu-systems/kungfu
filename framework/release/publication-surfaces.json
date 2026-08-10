@@ -104,7 +104,7 @@
           "classification": "non-publication",
           "owner": "kungfu-ci",
           "surfaceIds": [],
-          "sourceRoot": "sha256:dda8ea7be873ce25703a8e77d72acce1c591d8ae272b2a70573586ed7df138ea"
+          "sourceRoot": "sha256:378269823c1f08d4ff9545380adf6cc10ab2bd5273b9e3d46f57c10a8462833a"
         },
         {
           "path": ".github/workflows/aws-us-windows-burst-qualification.yml",
@@ -860,5 +860,5 @@
       }
     }
   ],
-  "registryRoot": "sha256:87a49238e1ab3a5084b2d71e5ac8864e4b31a8aa8d72f657bb8f3b5b2f6f05ca"
+  "registryRoot": "sha256:847abae3c10df7bf28c3ea424581ca7c578b4da94fbc452e7b46b98cb0de80e8"
 }

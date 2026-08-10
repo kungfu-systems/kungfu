@@ -249,6 +249,16 @@ test('reactivated AWS burst workflows pin reviewed immutable Buildchain v3 sourc
     macosBudgetGuardSource,
     '56aee4f72e3b6beb9eead71c8d596640313f6e7d',
   );
+  assert.equal(
+    retirement.evidence.macosAllocateHostsPreflightPullRequest,
+    2526,
+  );
+  const macosAllocateHostsPreflightSource =
+    retirement.evidence.macosAllocateHostsPreflightMergeCommit;
+  assert.equal(
+    macosAllocateHostsPreflightSource,
+    'b27e567473b4faee97b920bbbccf08e8412620b6',
+  );
 
   for (const name of [
     'aws-us-linux-burst-qualification.yml',
@@ -263,7 +273,7 @@ test('reactivated AWS burst workflows pin reviewed immutable Buildchain v3 sourc
       name === 'aws-us-windows-burst-qualification.yml'
         ? windowsUsd80PhaseCapSource
         : name === 'aws-us-macos-burst-qualification.yml'
-          ? macosBudgetGuardSource
+          ? macosAllocateHostsPreflightSource
           : buildchainSource;
     assert.match(workflow, /workflow_dispatch:/);
     assert.doesNotMatch(workflow, /\n {2}pull_request:|\n {2}push:/);

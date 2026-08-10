@@ -25,6 +25,8 @@
     "windowsUsd80PhaseCapMergeCommit": "ae9bd5385cfb8060fb2574521121f1a798e83c6f",
     "macosBudgetGuardPullRequest": 2525,
     "macosBudgetGuardMergeCommit": "56aee4f72e3b6beb9eead71c8d596640313f6e7d",
+    "macosAllocateHostsPreflightPullRequest": 2526,
+    "macosAllocateHostsPreflightMergeCommit": "b27e567473b4faee97b920bbbccf08e8412620b6",
     "v3RequiredInputs": [
       "aws-codebuild-project",
       "aws-ec2-windows-runner-label",
