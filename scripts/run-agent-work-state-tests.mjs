@@ -10,11 +10,15 @@ const CORE = path.join(ROOT, 'framework/core');
 const isWin = process.platform === 'win32';
 const shifu = path.join(ROOT, isWin ? 'shifu.cmd' : 'shifu');
 const readonlyPytest = process.env.KUNGFU_READONLY_PYTEST;
+const standaloneEnv = { ...process.env };
+standaloneEnv.NODE_TEST_CONTEXT = undefined;
+standaloneEnv.NODE_TEST_WORKER_ID = undefined;
 const steps = [
   {
     command: process.execPath,
-    args: ['--test', 'scripts/check-agent-work-state-contract.test.mjs'],
+    args: ['scripts/check-agent-work-state-contract.test.mjs'],
     cwd: ROOT,
+    env: standaloneEnv,
   },
   {
     command: readonlyPytest || shifu,
@@ -38,7 +42,7 @@ const steps = [
         ],
     cwd: CORE,
     env: {
-      ...process.env,
+      ...standaloneEnv,
       PYTHONPATH: [path.join(CORE, 'src/python'), process.env.PYTHONPATH]
         .filter(Boolean)
         .join(path.delimiter),

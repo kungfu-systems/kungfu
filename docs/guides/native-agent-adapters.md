@@ -94,9 +94,24 @@ ends only the SessionAttempt; it does not claim Work completion.
 
 Native launch also preserves bounded, non-secret terminal capability metadata
 such as `TERM_PROGRAM`, `TERMINFO_DIRS`, `LC_TERMINAL`, and common color-mode
-variables. Session and pane control handles remain excluded. This lets a
-provider select the correct input protocol for the inherited PTY without
-receiving the rest of the ambient shell environment.
+variables. The separate `agent.nativeProcessEnvironment` array controls
+registered ambient process capabilities. Its system default is
+`["TMUX", "TMUX_PANE"]`, which lets a provider launched inside tmux retain the
+exact current session and pane handles. Kungfu resolves those values only at
+process launch; config, receipts, diagnostics, and durable state retain names,
+never handle values. The two names form one capability and must be enabled as a
+pair. Outside tmux, or when either value has an invalid shape, Kungfu passes
+neither. Set the array to `[]` to disable this capability:
+
+```sh
+kungfu config set agent.nativeProcessEnvironment '[]' --json
+```
+
+This field is a closed registry, not a general environment allowlist:
+unregistered names, wildcards, partial pairs, and `inheritAll` are rejected by
+the config schema. Credential names remain governed separately by each
+adapter's `credentialEnvironment`, and Kungfu still does not copy the rest of
+the ambient shell environment.
 
 `kungfu run <provider>` resolves its launch directory in this order:
 

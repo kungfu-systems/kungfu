@@ -1036,6 +1036,7 @@ def test_registered_third_party_adapter_materializes_only_bounded_runtime_state(
     assert skill_file.is_relative_to(runtime_dir)
     assert adapter["argv"] == ["--instructions", str(skill_file)]
     assert adapter["credentialEnvironment"] == ["TERMAGENT_API_KEY"]
+    assert adapter["processEnvironment"] == ["TMUX", "TMUX_PANE"]
     assert adapter["environment"]["TERMAGENT_SKILL"] == str(skill_file)
     context = json.loads(adapter["environment"]["TERMAGENT_CONTEXT"])
     assert context["skill"] == str(skill_file)
@@ -1291,6 +1292,8 @@ def test_third_party_adapter_rejects_builtin_replacement_and_unsafe_templates(
 
 def test_native_interactive_runner_inherits_terminal_descriptors(monkeypatch, tmp_path):
     calls = []
+    monkeypatch.setenv("TMUX", "/private/tmp/tmux-501/agentctl,12345,7")
+    monkeypatch.setenv("TMUX_PANE", "%42")
     profile = {
         "provider": "amp",
         "cwdPolicy": "workspace-root",
@@ -1332,6 +1335,8 @@ def test_native_interactive_runner_inherits_terminal_descriptors(monkeypatch, tm
     assert set(calls[0][1]) == {"cwd", "env", "check"}
     assert calls[0][1]["check"] is False
     assert calls[0][1]["env"]["KUNGFU_AGENT_ENVIRONMENT"] == "native-interactive"
+    assert calls[0][1]["env"]["TMUX"] == "/private/tmp/tmux-501/agentctl,12345,7"
+    assert calls[0][1]["env"]["TMUX_PANE"] == "%42"
     assert "stdin" not in calls[0][1]
     assert "stdout" not in calls[0][1]
     assert "stderr" not in calls[0][1]
