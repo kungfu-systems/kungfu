@@ -1,0 +1,180 @@
+{
+  "schema": "kungfu.fact.temporal-relation-fixtures/v1",
+  "cuts": [
+    {"id": "cut0", "parents": [], "activeRelations": ["relation-a-b", "relation-b-c", "chain-a-b", "chain-b-c"], "declarations": ["compatibility", "bounded-chain"]},
+    {"id": "cut1", "parents": ["cut0"], "activeRelations": ["relation-a-b-v2", "relation-b-c", "chain-a-b", "chain-b-c"], "declarations": ["compatibility", "bounded-chain"]},
+    {"id": "cut2", "parents": ["cut1"], "activeRelations": ["relation-b-c", "chain-a-b", "chain-b-c"], "declarations": ["compatibility", "bounded-chain"]}
+  ],
+  "predicates": [
+    {
+      "id": "compatibility",
+      "record": {
+        "schema": "kungfu.fact.temporal-predicate/v1",
+        "predicateId": "predicate:compatibility",
+        "operations": ["inspect"],
+        "direction": "source-to-target",
+        "pathPolicy": "single-edge",
+        "cyclePolicy": "forbid",
+        "authorityRoot": "$governing-authority"
+      }
+    },
+    {
+      "id": "bounded-chain",
+      "record": {
+        "schema": "kungfu.fact.temporal-predicate/v1",
+        "predicateId": "predicate:bounded-chain",
+        "operations": ["inspect"],
+        "direction": "source-to-target",
+        "pathPolicy": "explicit-bounded",
+        "cyclePolicy": "forbid",
+        "authorityRoot": "$governing-authority"
+      }
+    }
+  ],
+  "relations": [
+    {
+      "id": "relation-a-b",
+      "record": {
+        "schema": "kungfu.fact.temporal-relation/v1",
+        "relationId": "relation:a-b:v1",
+        "predicateRoot": "$compatibility",
+        "sourceRoot": "$subject-a",
+        "targetRoot": "$subject-b",
+        "validFromCutRoot": "$cut0",
+        "scopeRoot": "$scope",
+        "authorityRoot": "$delegated-authority",
+        "admissionRoots": ["$admission"]
+      }
+    },
+    {
+      "id": "relation-a-b-v2",
+      "record": {
+        "schema": "kungfu.fact.temporal-relation/v1",
+        "relationId": "relation:a-b:v2",
+        "predicateRoot": "$compatibility",
+        "sourceRoot": "$subject-a",
+        "targetRoot": "$subject-b",
+        "validFromCutRoot": "$cut1",
+        "scopeRoot": "$scope",
+        "authorityRoot": "$delegated-authority",
+        "admissionRoots": ["$admission"]
+      }
+    },
+    {
+      "id": "relation-b-c",
+      "record": {
+        "schema": "kungfu.fact.temporal-relation/v1",
+        "relationId": "relation:b-c:v1",
+        "predicateRoot": "$compatibility",
+        "sourceRoot": "$subject-b",
+        "targetRoot": "$subject-c",
+        "validFromCutRoot": "$cut0",
+        "scopeRoot": "$scope",
+        "authorityRoot": "$delegated-authority",
+        "admissionRoots": ["$admission"]
+      }
+    },
+    {
+      "id": "chain-a-b",
+      "record": {
+        "schema": "kungfu.fact.temporal-relation/v1",
+        "relationId": "relation:chain-a-b:v1",
+        "predicateRoot": "$bounded-chain",
+        "sourceRoot": "$subject-a",
+        "targetRoot": "$subject-b",
+        "validFromCutRoot": "$cut0",
+        "scopeRoot": "$scope",
+        "authorityRoot": "$governing-authority",
+        "admissionRoots": ["$admission"]
+      }
+    },
+    {
+      "id": "chain-b-c",
+      "record": {
+        "schema": "kungfu.fact.temporal-relation/v1",
+        "relationId": "relation:chain-b-c:v1",
+        "predicateRoot": "$bounded-chain",
+        "sourceRoot": "$subject-b",
+        "targetRoot": "$subject-c",
+        "validFromCutRoot": "$cut0",
+        "scopeRoot": "$scope",
+        "authorityRoot": "$governing-authority",
+        "admissionRoots": ["$admission"]
+      }
+    }
+  ],
+  "supersessions": [
+    {
+      "id": "supersede-a-b",
+      "record": {
+        "schema": "kungfu.fact.temporal-supersession/v1",
+        "priorRelationRoot": "$relation-a-b",
+        "successorRelationRoot": "$relation-a-b-v2",
+        "effectiveCutRoot": "$cut1",
+        "reasonRoot": "$reason",
+        "authorityRoot": "$governing-authority",
+        "admissionRoots": ["$admission"]
+      }
+    }
+  ],
+  "revocations": [
+    {
+      "id": "revoke-a-b-v2",
+      "record": {
+        "schema": "kungfu.fact.temporal-revocation/v1",
+        "relationRoot": "$relation-a-b-v2",
+        "effectiveCutRoot": "$cut2",
+        "reasonRoot": "$reason",
+        "authorityRoot": "$governing-authority",
+        "admissionRoots": ["$admission"]
+      }
+    }
+  ],
+  "authorityProofs": [
+    {
+      "id": "delegation",
+      "record": {
+        "schema": "kungfu.fact.temporal-authority-proof/v1",
+        "proofId": "authority-proof:delegation:v1",
+        "subjectAuthorityRoot": "$delegated-authority",
+        "governingAuthorityRoot": "$governing-authority",
+        "operations": ["inspect"],
+        "validFromCutRoot": "$cut0",
+        "revokedAtCutRoot": null,
+        "admissionRoots": ["$admission"]
+      }
+    }
+  ],
+  "provenanceObjects": [
+    {
+      "id": "provenance-a",
+      "record": {
+        "schema": "kungfu.fact.provenance-object/v1",
+        "objectId": "provenance:subject-a:v1",
+        "subjectRoot": "$subject-a",
+        "materialRoots": ["$material"],
+        "relationRoots": ["$relation-a-b"],
+        "cutRoot": "$cut0",
+        "authorityRoot": "$governing-authority",
+        "admissionRoots": ["$admission"]
+      }
+    }
+  ],
+  "cases": [
+    {"id": "old-cut-remains-valid-after-supersession", "cut": "cut0", "source": "subject-a", "target": "subject-b", "path": ["relation-a-b"], "operation": "inspect", "expected": "accepted"},
+    {"id": "superseded-at-later-cut", "cut": "cut1", "source": "subject-a", "target": "subject-b", "path": ["relation-a-b"], "operation": "inspect", "expected": "relation-superseded"},
+    {"id": "successor-valid-before-revocation", "cut": "cut1", "source": "subject-a", "target": "subject-b", "path": ["relation-a-b-v2"], "operation": "inspect", "expected": "accepted"},
+    {"id": "revocation-does-not-rewrite-old-cut", "cut": "cut1", "source": "subject-a", "target": "subject-b", "path": ["relation-a-b-v2"], "operation": "inspect", "expected": "accepted"},
+    {"id": "revoked-at-current-cut", "cut": "cut2", "source": "subject-a", "target": "subject-b", "path": ["relation-a-b-v2"], "operation": "inspect", "expected": "relation-revoked"},
+    {"id": "direction-is-not-symmetric", "cut": "cut0", "source": "subject-b", "target": "subject-a", "path": ["relation-a-b"], "operation": "inspect", "expected": "direction-mismatch"},
+    {"id": "operation-must-be-scoped", "cut": "cut0", "source": "subject-a", "target": "subject-b", "path": ["relation-a-b"], "operation": "publish", "expected": "unscoped-compatibility"},
+    {"id": "transitivity-is-not-inferred", "cut": "cut0", "source": "subject-a", "target": "subject-c", "path": ["relation-a-b", "relation-b-c"], "operation": "inspect", "expected": "implicit-transitive-acceptance"},
+    {"id": "explicit-bounded-path-is-verified", "cut": "cut0", "source": "subject-a", "target": "subject-c", "path": ["chain-a-b", "chain-b-c"], "operation": "inspect", "predicate": "bounded-chain", "maxDepth": 2, "expectedProofs": 0, "expected": "accepted"},
+    {"id": "explicit-path-still-obeys-bound", "cut": "cut0", "source": "subject-a", "target": "subject-c", "path": ["chain-a-b", "chain-b-c"], "operation": "inspect", "predicate": "bounded-chain", "maxDepth": 1, "expected": "path-bound-exceeded"},
+    {"id": "orphan-path-root-rejects", "cut": "cut0", "source": "subject-a", "target": "subject-b", "path": ["orphan"], "operation": "inspect", "expected": "orphan-root"},
+    {"id": "unknown-predicate-rejects", "cut": "cut0", "source": "subject-a", "target": "subject-b", "path": ["relation-a-b"], "operation": "inspect", "predicate": "unknown-predicate", "expected": "unknown-predicate"},
+    {"id": "ambiguous-authority-rejects", "cut": "cut0", "source": "subject-a", "target": "subject-b", "path": ["relation-a-b"], "operation": "inspect", "mutation": "duplicate-authority", "expected": "ambiguous-authority"},
+    {"id": "supersession-cycle-rejects", "cut": "cut0", "source": "subject-a", "target": "subject-b", "path": ["relation-a-b"], "operation": "inspect", "mutation": "supersession-cycle", "expected": "forbidden-cycle"},
+    {"id": "cut-orphan-rejects", "cut": "cut0", "source": "subject-a", "target": "subject-b", "path": ["relation-a-b"], "operation": "inspect", "mutation": "cut-orphan", "expected": "orphan-root"}
+  ]
+}

@@ -4,7 +4,7 @@ This page is generated from the append-only Era and Stage corpus. It is a
 longitudinal learning path, not a replacement for current architecture, runtime,
 or qualification authority.
 
-Coverage: **5 eras**, **10 stages**, and **36 evidence references**.
+Coverage: **5 eras**, **11 stages**, and **38 evidence references**.
 
 ## Era 1: Journal substrate
 
@@ -135,6 +135,16 @@ Initiative, Assignment, Work Control, Primitive governance, and native KFX manag
 **Compression:** Version label, artifact provenance, compatibility, publication trust, local selection, native installation, and rollback converge on one Cut identity and one explicit transition.
 
 [Open the immutable Stage record](stages/10-product-release-cut-updater.md) for the full capability, authority transition, downstream consumers, and evidence.
+
+### 11. Temporal relation proof
+
+**Period:** 2026-08-10 to ongoing · **Recorded status:** open
+
+**Pressure:** Exact Facts and Cuts identified immutable worlds, but consumers still encoded compatibility, provenance, supersession, revocation, and historical path acceptance inside transport-specific projections.
+
+**Compression:** Historical relation meaning, authority, Cut membership, path bounds, and receipt identity converge on explicit immutable Facts while transport projections remain derived consumers.
+
+[Open the immutable Stage record](stages/11-temporal-relation-proof.md) for the full capability, authority transition, downstream consumers, and evidence.
 
 ## Maintenance
 
