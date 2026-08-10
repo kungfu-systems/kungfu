@@ -530,6 +530,27 @@ describe('Git-sensitive promotion rehearsals', { concurrency: false }, () => {
     }
   });
 
+  test('an intermediate Release Cut PR does not become ADR admission', () => {
+    const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'kungfu-event-'));
+    const eventPath = path.join(directory, 'event.json');
+    fs.writeFileSync(
+      eventPath,
+      JSON.stringify({
+        pull_request: {
+          base: { ref: 'fix/alpha2-lineage-repair-r16' },
+          head: { ref: 'fix/alpha2-r16-recovery-identity' },
+        },
+      }),
+    );
+    try {
+      const result = runRehearsal({ root: ROOT, eventPath });
+      assert.equal(result.ok, true, JSON.stringify(result.findings, null, 2));
+      assert.equal(result.event, null);
+    } finally {
+      fs.rmSync(directory, { recursive: true, force: true });
+    }
+  });
+
   test('an actual GitHub promotion event traverses the ADR gate CLI', () => {
     const head = execFileSync('git', ['rev-parse', 'HEAD'], {
       cwd: ROOT,

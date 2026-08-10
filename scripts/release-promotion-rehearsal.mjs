@@ -844,6 +844,8 @@ function gitSnapshot(root) {
 function evaluateActualEvent(root, eventPath) {
   const payload = readJson(eventPath);
   if (!payload.pull_request) return null;
+  const baseRef = String(payload.pull_request.base?.ref || '');
+  if (!modeForBaseRef(baseRef)) return null;
   const directory = fs.mkdtempSync(
     path.join(os.tmpdir(), 'kungfu-promotion-event-'),
   );
