@@ -68,6 +68,31 @@ export function kungfuBuildchainRuntimePolicy(policy, channel) {
       `Kungfu Buildchain publication runtime SHA is invalid for ${channel}`,
     );
   normalizeDigest(runtime.contractDigest, `${channel} contract digest`);
+  if (
+    !Array.isArray(runtime.publicationContractDigests) ||
+    runtime.publicationContractDigests.length === 0
+  )
+    throw new Error(
+      `Kungfu Buildchain publication contract digests are missing for ${channel}`,
+    );
+  const publicationContractDigests = runtime.publicationContractDigests.map(
+    (value) => normalizeDigest(value, `${channel} publication contract digest`),
+  );
+  if (
+    new Set(publicationContractDigests).size !==
+    publicationContractDigests.length
+  )
+    throw new Error(
+      `Kungfu Buildchain publication contract digests contain duplicates for ${channel}`,
+    );
+  if (
+    !publicationContractDigests.includes(
+      normalizeDigest(runtime.contractDigest, `${channel} contract digest`),
+    )
+  )
+    throw new Error(
+      `Kungfu Buildchain publication contract digests omit the current ${channel} contract`,
+    );
   if (!runtime.ref || !runtime.contractLock)
     throw new Error(
       `Kungfu Buildchain runtime metadata is incomplete for ${channel}`,
@@ -197,8 +222,16 @@ export async function createKungfuConsumerPublicationDecision({
   exact(capability?.target, policy.publication.target, 'target');
   exact(capability?.runtimeSha, runtime.publicationRuntimeSha, 'runtime SHA');
   if (
-    normalizeDigest(capability?.contractDigest, 'capability.contractDigest') !==
-    normalizeDigest(runtime.contractDigest, 'policy.contractDigest')
+    !runtime.publicationContractDigests
+      .map((value) =>
+        normalizeDigest(value, 'policy.publicationContractDigests'),
+      )
+      .includes(
+        normalizeDigest(
+          capability?.contractDigest,
+          'capability.contractDigest',
+        ),
+      )
   )
     throw new Error('Buildchain contract digest policy mismatch');
   if (!policy.publication.channels.includes(capability?.channel))

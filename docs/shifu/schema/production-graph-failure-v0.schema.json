@@ -22,7 +22,7 @@
     "planRoot": { "$ref": "production-graph-v0.schema.json#/$defs/root" },
     "nodeId": { "$ref": "production-graph-v0.schema.json#/$defs/id" },
     "classification": {
-      "enum": ["executor-failed", "timed-out", "cancelled", "source-drift", "authority-drift", "invalid-output"]
+      "enum": ["executor-failed", "timed-out", "cancelled", "dependency-skipped", "source-drift", "authority-drift", "invalid-output"]
     },
     "owner": { "$ref": "production-graph-v0.schema.json#/$defs/nonEmpty" },
     "evidenceRoots": {
