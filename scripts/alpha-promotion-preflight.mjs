@@ -77,6 +77,24 @@ const NON_REUSABLE_EVIDENCE = [
   'signing',
 ];
 const EXACT_BUILDCHAIN_SHA = /^[0-9a-f]{40}$/u;
+const BUILDCHAIN_V3_NATIVE_RENDITIONS = [
+  {
+    id: '1080p',
+    role: 'primary',
+    columns: 150,
+    rows: 36,
+    width: 1920,
+    height: 1080,
+  },
+  {
+    id: '720p',
+    role: 'responsive',
+    columns: 150,
+    rows: 28,
+    width: 1280,
+    height: 720,
+  },
+];
 const WINDOWS_CONTINUITY_FILES = [
   'framework/core/src/python/kungfu/peer_lifecycle.py',
   'framework/core/tests/python/test_peer_lifecycle.py',
@@ -213,6 +231,8 @@ export function inspectAuditableDemoFastSentinel({
     transportScenarioValue?.schema !==
       'buildchain.declarative-binary-demo/v1' ||
     transportScenarioValue?.execution?.totalTimeoutSeconds !== 60 ||
+    JSON.stringify(transportScenarioValue?.renditions) !==
+      JSON.stringify(BUILDCHAIN_V3_NATIVE_RENDITIONS) ||
     JSON.stringify(transportScenarioValue?.product) !==
       JSON.stringify(scenarioValue?.product) ||
     JSON.stringify(transportScenarioValue?.artifact) !==
@@ -223,7 +243,7 @@ export function inspectAuditableDemoFastSentinel({
       JSON.stringify(scenarioValue?.authority)
   ) {
     issues.push(
-      'auditable-demo transport scenario no longer binds the exact bounded v3-compatible artifact smoke',
+      'auditable-demo transport scenario no longer binds the exact bounded v3-compatible artifact smoke and native rendition profiles',
     );
   }
   requirePattern(
