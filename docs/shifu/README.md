@@ -67,11 +67,22 @@ execution; Shifu owns how the task is executed after source checkout.
   --execution-admission-decision DECISION --executor-policy POLICY --execute`
   is the v0 local executor. It accepts only a clean exact source, the same
   rooted graph, plan, policy, and non-expired admitted node set, plus exact
-  `production-graph:fixture:*` tasks allowlisted by the policy. Concurrency is
-  fixed to one. It emits deterministic started, terminal, timeout, and
+  `production-graph:fixture:*` tasks allowlisted by the policy, plus exactly
+  one bounded real `build:core` node only when the policy binds
+  `KUNGFU_BUILD_PROFILE=journal`. Concurrency is fixed to one. It emits
+  deterministic started, terminal, timeout, and
   dependency-skip events and one rooted receipt. Replaying the same inputs
   returns the existing exact receipt without starting a process. It is not a
   scheduler, and it cannot mutate Work or Assignment authority.
+  `./shifu build:core:graph-shadow` is an additive comparison route. After the
+  same exact admission is reverified, it runs the unchanged
+  `./shifu build:core` command once as the authoritative lane and once through
+  the admitted one-node local executor, both with the bounded `journal`
+  profile. Its rooted receipt retains exact command, environment, stdout,
+  stderr, exit, event, failure, local receipt, and evidence roots and classifies
+  every compared dimension as parity, explainable nondeterminism, authority or
+  source drift, executor drift, or blocker. It does not cut over or modify the
+  authoritative `build:core` route.
   The additive `./shifu core:affected:graph-shadow` route is the first bounded
   external consumer. It requires an exact graph, compiled plan,
   `./shifu production-graph:verify` receipt, execution-admission request, and

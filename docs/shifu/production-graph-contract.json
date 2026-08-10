@@ -16,7 +16,8 @@
     "executionAdmissionDecision": "docs/shifu/schema/production-graph-execution-admission-decision-v0.schema.json",
     "executionAdmissionVerificationReceipt": "docs/shifu/schema/production-graph-execution-admission-verification-receipt-v0.schema.json",
     "localExecutorPolicy": "docs/shifu/schema/production-graph-local-executor-policy-v0.schema.json",
-    "localExecutionReceipt": "docs/shifu/schema/production-graph-local-execution-receipt-v0.schema.json"
+    "localExecutionReceipt": "docs/shifu/schema/production-graph-local-execution-receipt-v0.schema.json",
+    "buildCoreShadowReceipt": "docs/shifu/schema/build-core-production-graph-shadow-receipt-v0.schema.json"
   },
   "rootAlgorithm": {
     "name": "sha256-canonical-json",
@@ -83,11 +84,25 @@
     "policy": "shifu.production-graph-local-executor-policy/v0",
     "receipt": "shifu.production-graph-local-execution-receipt/v0",
     "concurrency": 1,
-    "fixtureSafeOnly": true,
+    "fixtureSafeOnly": false,
+    "boundedRealTasks": ["build:core"],
+    "boundedTaskEnvironment": {
+      "build:core": { "KUNGFU_BUILD_PROFILE": "journal" }
+    },
     "requiresExactAdmission": true,
     "replayStartsNodes": false,
     "schedulerAuthority": false,
     "workAuthorityMutations": false
+  },
+  "buildCoreShadow": {
+    "command": "./shifu build:core:graph-shadow",
+    "authoritativeCommand": "./shifu build:core",
+    "profile": "journal",
+    "nodes": 1,
+    "concurrency": 1,
+    "receipt": "kungfu.build-core-production-graph-shadow-receipt/v0",
+    "classifiesEveryComparedDimension": true,
+    "cutover": false
   },
   "feedback": {
     "command": "./shifu production-graph:feedback",

@@ -73,7 +73,11 @@ function node(id, task, dependencies = [], recovery = 'retry-node') {
   };
 }
 
-async function admittedInput(nodes, allowedTasks = null) {
+async function admittedInput(
+  nodes,
+  allowedTasks = null,
+  taskEnvironment = null,
+) {
   const source = {
     repository: 'https://github.com/kungfu-systems/kungfu.git',
     revision: git('rev-parse', 'HEAD'),
@@ -119,6 +123,7 @@ async function admittedInput(nodes, allowedTasks = null) {
       allowedTasks: [
         ...new Set(allowedTasks || nodes.map(({ executor }) => executor.task)),
       ].sort(),
+      ...(taskEnvironment ? { taskEnvironment } : {}),
       maxOutputBytes: 65536,
     },
     'executorPolicyRoot',
@@ -235,6 +240,75 @@ test('ready nodes execute in deterministic dependency order with concurrency one
     ],
   );
   assert.equal(result.receipt.concurrency, 1);
+});
+
+test('one build:core node is admitted only as the bounded journal slice', async (t) => {
+  const fixture = await admittedInput(
+    [node('build-core-journal', 'build:core')],
+    null,
+    { KUNGFU_BUILD_PROFILE: 'journal' },
+  );
+  const calls = [];
+  const result = await runLocalProductionGraph(fixture.input, {
+    root: ROOT,
+    outputDir: temporaryOutput(t),
+    observedAt: fixture.input.executionAdmissionRequest.observedAt,
+    trustedVerificationReceipt: fixture.input.verificationReceipt,
+    source: fixture.source,
+    delegate: async ({ node: current, policy }) => {
+      calls.push({
+        nodeId: current.id,
+        environment: policy.taskEnvironment,
+      });
+      return successResult();
+    },
+  });
+  assert.deepEqual(calls, [
+    {
+      nodeId: 'build-core-journal',
+      environment: { KUNGFU_BUILD_PROFILE: 'journal' },
+    },
+  ]);
+  assert.equal(result.receipt.status, 'qualified');
+  const evidence = JSON.parse(
+    fs.readFileSync(
+      path.join(result.runDir, 'build-core-journal.evidence.json'),
+      'utf8',
+    ),
+  );
+  assert.deepEqual(evidence.command, ['./shifu', 'build:core']);
+  assert.deepEqual(evidence.environment, {
+    KUNGFU_BUILD_PROFILE: 'journal',
+  });
+});
+
+test('build:core policy rejects missing environment and wider task sets', async () => {
+  for (const fixture of [
+    await admittedInput([node('build-core-journal', 'build:core')]),
+    await admittedInput(
+      [node('fixture', 'production-graph:fixture:success')],
+      null,
+      { KUNGFU_BUILD_PROFILE: 'journal' },
+    ),
+    await admittedInput(
+      [
+        node('build-core-journal', 'build:core'),
+        node('fixture', 'production-graph:fixture:success'),
+      ],
+      null,
+      { KUNGFU_BUILD_PROFILE: 'journal' },
+    ),
+  ]) {
+    await assert.rejects(
+      runLocalProductionGraph(fixture.input, {
+        root: ROOT,
+        trustedVerificationReceipt: fixture.input.verificationReceipt,
+        source: fixture.source,
+        delegate: async () => successResult(),
+      }),
+      /local executor policy schema invalid|bounded journal slice/u,
+    );
+  }
 });
 
 test('retry-ineligible failure skips its dependency without a second spawn', async (t) => {

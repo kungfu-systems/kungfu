@@ -30,6 +30,10 @@ const AUTHORITY_PATHS = Object.freeze({
   layers: 'framework/core/architecture/layers.json',
   buildCapabilities: 'framework/core/architecture/build-capabilities.json',
 });
+const BUILD_CORE_TASK = 'build:core';
+const BUILD_CORE_ENVIRONMENT = Object.freeze({
+  KUNGFU_BUILD_PROFILE: 'journal',
+});
 
 function readJson(file) {
   return JSON.parse(fs.readFileSync(file, 'utf8'));
@@ -264,6 +268,16 @@ export async function verifyLocalExecutionInput(
     sortedTasks,
   );
   const allowed = new Set(sortedTasks);
+  const taskEnvironment = input.executorPolicy.taskEnvironment || {};
+  if (
+    allowed.has(BUILD_CORE_TASK) &&
+    (input.graph.nodes.length !== 1 ||
+      canonicalJson(taskEnvironment) !== canonicalJson(BUILD_CORE_ENVIRONMENT))
+  ) {
+    throw new Error(
+      'Production Graph build:core execution is not the bounded journal slice',
+    );
+  }
   for (const node of input.graph.nodes) {
     if (
       node.executor.entrypoint !== './shifu' ||
@@ -271,7 +285,9 @@ export async function verifyLocalExecutionInput(
       node.executor.invokedByVerifier !== false ||
       !allowed.has(node.executor.task)
     ) {
-      throw new Error(`Production Graph node ${node.id} is not fixture-safe`);
+      throw new Error(
+        `Production Graph node ${node.id} is not allowed by the local executor policy`,
+      );
     }
   }
   if (
@@ -371,12 +387,20 @@ async function executeNode({ root, node, policy, runDir, signal }) {
   const stdout = bufferCollector(policy.maxOutputBytes);
   const stderr = bufferCollector(policy.maxOutputBytes);
   const counterPath = path.join(runDir, `${node.id}.counter`);
+  const fixtureEnvironment = node.executor.task.startsWith(
+    'production-graph:fixture:',
+  )
+    ? {
+        SHIFU_PRODUCTION_GRAPH_NODE_ID: node.id,
+        SHIFU_PRODUCTION_GRAPH_FIXTURE_COUNTER: counterPath,
+      }
+    : {};
   const child = spawn(path.join(root, 'shifu'), [node.executor.task], {
     cwd: root,
     env: {
       ...process.env,
-      SHIFU_PRODUCTION_GRAPH_NODE_ID: node.id,
-      SHIFU_PRODUCTION_GRAPH_FIXTURE_COUNTER: counterPath,
+      ...(policy.taskEnvironment || {}),
+      ...fixtureEnvironment,
     },
     stdio: ['ignore', 'pipe', 'pipe'],
     shell: false,
@@ -638,21 +662,38 @@ export async function runLocalProductionGraph(
       stdoutRoot: semanticRoot(execution.stdout || ''),
       stderrRoot: semanticRoot(execution.stderr || ''),
     });
+    const stdoutRoot = semanticRoot(execution.stdout || '');
+    const stderrRoot = semanticRoot(execution.stderr || '');
     const evidence = {
       schema: 'shifu.production-graph-node-execution-evidence/v0',
       graphRoot: admitted.graph.graphRoot,
       planRoot: admitted.plan.planRoot,
       nodeId: node.id,
       command: ['./shifu', node.executor.task],
+      environment: Object.fromEntries(
+        Object.entries(admitted.executorPolicy.taskEnvironment || {}).sort(
+          ([left], [right]) => left.localeCompare(right),
+        ),
+      ),
       state,
       exitCode: execution.exitCode,
       signal: execution.signal,
       timedOut: Boolean(execution.timedOut),
       cancelled: Boolean(execution.cancelled),
       outputExceeded: Boolean(execution.outputExceeded),
+      stdoutRoot,
+      stderrRoot,
       outputRoot,
     };
     const evidenceRoot = semanticRoot(evidence);
+    fs.writeFileSync(
+      path.join(runDir, `${node.id}.stdout.log`),
+      execution.stdout || '',
+    );
+    fs.writeFileSync(
+      path.join(runDir, `${node.id}.stderr.log`),
+      execution.stderr || '',
+    );
     writeJson(path.join(runDir, `${node.id}.evidence.json`), {
       ...evidence,
       evidenceRoot,
