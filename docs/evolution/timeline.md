@@ -4,7 +4,7 @@ This page is generated from the append-only Era and Stage corpus. It is a
 longitudinal learning path, not a replacement for current architecture, runtime,
 or qualification authority.
 
-Coverage: **5 eras**, **11 stages**, and **38 evidence references**.
+Coverage: **5 eras**, **12 stages**, and **40 evidence references**.
 
 ## Era 1: Journal substrate
 
@@ -145,6 +145,16 @@ Initiative, Assignment, Work Control, Primitive governance, and native KFX manag
 **Compression:** Historical relation meaning, authority, Cut membership, path bounds, and receipt identity converge on explicit immutable Facts while transport projections remain derived consumers.
 
 [Open the immutable Stage record](stages/11-temporal-relation-proof.md) for the full capability, authority transition, downstream consumers, and evidence.
+
+### 12. Project compatibility zero residue
+
+**Period:** 2026-08-08 to ongoing · **Recorded status:** open
+
+**Pressure:** A complete Kungfu product must expose a self-contained Work vocabulary and runtime instead of inheriting commands, storage readers, fixtures, or documentation routes from one external project.
+
+**Compression:** Project-specific adapters, aliases, readers, fixtures, and terminology collapse into native product concepts with no compatibility path.
+
+[Open the immutable Stage record](stages/12-project-compatibility-zero-residue.md) for the full capability, authority transition, downstream consumers, and evidence.
 
 ## Maintenance
 

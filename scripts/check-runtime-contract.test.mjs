@@ -18,7 +18,7 @@ const CONTRACT = JSON.parse(
     'utf8',
   ),
 );
-const MISSION_CONTROL_ACTIONS = JSON.parse(
+const WORK_CONTROL_ACTIONS = JSON.parse(
   fs.readFileSync(
     path.join(ROOT, 'extensions', 'work-control', 'actions', 'registry.json'),
     'utf8',
@@ -122,38 +122,38 @@ test('the existing Profile action registry references the runtime operation auth
       operation,
     ]),
   );
-  for (const action of MISSION_CONTROL_ACTIONS.actions) {
+  for (const action of WORK_CONTROL_ACTIONS.actions) {
     assert.ok(
       operations.has(action.runtimeOperation),
       `${action.id} references an unknown runtime operation`,
     );
   }
   assert.equal(
-    MISSION_CONTROL_ACTIONS.actions.find(
+    WORK_CONTROL_ACTIONS.actions.find(
       (action) => action.id === 'create-initiative',
     ).runtimeOperation,
     'episode.append',
   );
   assert.equal(
-    MISSION_CONTROL_ACTIONS.actions.some(
+    WORK_CONTROL_ACTIONS.actions.some(
       (action) => action.id === 'create-mission' || action.id === 'create-go',
     ),
     false,
   );
   assert.equal(
-    MISSION_CONTROL_ACTIONS.actions.find(
+    WORK_CONTROL_ACTIONS.actions.find(
       (action) => action.id === 'create-initiative',
     ).compatibility,
     undefined,
   );
   assert.equal(
-    MISSION_CONTROL_ACTIONS.actions.find(
+    WORK_CONTROL_ACTIONS.actions.find(
       (action) => action.id === 'create-assignment',
     ).compatibility,
     undefined,
   );
   assert.equal(
-    MISSION_CONTROL_ACTIONS.actions.find(
+    WORK_CONTROL_ACTIONS.actions.find(
       (action) => action.id === 'assess-progress',
     ).runtimeOperation,
     'assessment.request',

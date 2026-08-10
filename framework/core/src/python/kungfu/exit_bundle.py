@@ -164,10 +164,10 @@ _KINDS: dict[str, dict[str, Any]] = {
             "declared-capability-equivalence",
         ],
     },
-    "mission-control-v2": {
-        "authority": "Work Control compatibility adapter over Episode bundles and proof-carrying queries",
-        "schema": "kungfu.mission-control.bundle/v2",
-        "protocol": "mission-control-portability/v2",
+    "initiative-bundle-v1": {
+        "authority": "Native Work Control over Episode bundles and proof-carrying queries",
+        "schema": "kungfu.work-control.initiative-bundle/v1",
+        "protocol": "work-control-initiative-portability/v1",
         "rank": 70,
         "idempotent": True,
         "capabilities": _ALL_CAPABILITIES,
@@ -315,7 +315,7 @@ def _describe(kind: str, material: Mapping[str, Any]) -> dict[str, Any]:
         content_root = _normalized_root(verified.get("bundleRoot"), "bundleRoot")
     elif kind == "fact-library-v1":
         identity_root = content_root = _fact_library_root(material)
-    elif kind == "mission-control-v2":
+    elif kind == "initiative-bundle-v1":
         identity_root = content_root = _normalized_root(
             material.get("bundle_root"), "bundle_root"
         )
@@ -373,7 +373,7 @@ def _require_full_material(kind: str, material: Mapping[str, Any]) -> None:
             and material.get("self_contained") is True
             and counts.get("missing_frame_count") == 0
         )
-    elif kind == "mission-control-v2":
+    elif kind == "initiative-bundle-v1":
         complete = (
             material.get("mode") == "full"
             and material.get("status") == "portable"
@@ -444,17 +444,17 @@ def _build_material(
                 "member-option-required", "profile source is required"
             )
         return profile_sdk.export_source_bundle(source, runtime_dir, thin=thin)
-    if kind == "mission-control-v2":
-        from kungfu.atlas import mission_bundle
+    if kind == "initiative-bundle-v1":
+        from kungfu import initiative_bundle
 
-        mission_id = str(options.get("missionId") or "")
-        if not mission_id:
-            raise ExitBundleError("member-option-required", "missionId is required")
-        return mission_bundle.build_mission_bundle(
+        initiative_id = str(options.get("initiativeId") or "")
+        if not initiative_id:
+            raise ExitBundleError("member-option-required", "initiativeId is required")
+        return initiative_bundle.build_initiative_bundle(
             str(runtime_dir),
-            mission_id=mission_id,
+            initiative_id=initiative_id,
             mode=mode,
-            storage_source_id=str(options.get("sourceId") or "atlas"),
+            storage_source_id=str(options.get("sourceId") or "kungfu"),
             purpose=str(options.get("purpose") or "operator-review"),
         )
     raise ExitBundleError("unsupported-member-kind", kind)
@@ -581,16 +581,16 @@ def build(
         }
         if kind == "profile-source-v1":
             execution_entry["profileSuiteRoot"] = described["identityRoot"]
-        elif kind == "mission-control-v2":
+        elif kind == "initiative-bundle-v1":
             execution_entry["requiresProfileSuiteRoot"] = str(
                 (material.get("profile") or {}).get("suite_root") or ""
             )
         execution[member_id] = execution_entry
 
-    mission_profile_roots = {
+    initiative_profile_roots = {
         str(value.get("requiresProfileSuiteRoot") or "")
         for value in execution.values()
-        if value.get("kind") == "mission-control-v2"
+        if value.get("kind") == "initiative-bundle-v1"
     }
     fact_library_present = any(
         value.get("kind") == "fact-library-v1" for value in execution.values()
@@ -598,7 +598,7 @@ def build(
     for value in execution.values():
         if value.get("kind") == "profile-source-v1" and (
             fact_library_present
-            or value.get("profileSuiteRoot") in mission_profile_roots
+            or value.get("profileSuiteRoot") in initiative_profile_roots
         ):
             value["deferContractMaterialization"] = True
 
@@ -668,7 +668,7 @@ def build(
             }
             omissions.append(
                 {
-                    "omissionId": f"thin-material:{row['memberId']}",
+                    "oinitiativeId": f"thin-material:{row['memberId']}",
                     "memberId": row["memberId"],
                     "kind": "missing",
                     "requiredForScope": row["requiredForScope"],
@@ -754,7 +754,7 @@ def _validate_dependency_closure(package: Mapping[str, Any]) -> None:
         if value.get("kind") == "profile-source-v1"
     ]
     for member_id, value in execution.items():
-        if value.get("kind") != "mission-control-v2":
+        if value.get("kind") != "initiative-bundle-v1":
             continue
         expected = str(value.get("requiresProfileSuiteRoot") or "")
         matches = [
@@ -764,9 +764,9 @@ def _validate_dependency_closure(package: Mapping[str, Any]) -> None:
         ]
         if len(matches) != 1:
             raise ExitBundleError(
-                "mission-profile-closure-invalid",
-                "Mission material requires exactly one matching Profile source member",
-                missionMemberId=member_id,
+                "initiative-profile-closure-invalid",
+                "Initiative material requires exactly one matching Profile source member",
+                initiativeMemberId=member_id,
                 profileSuiteRoot=expected,
                 matchingProfileMembers=matches,
             )
@@ -1176,10 +1176,10 @@ def _apply_member(
             )
         except product_release_history.ProductReleaseHistoryError as error:
             raise ExitBundleError(error.code, str(error), **error.details) from error
-    if kind == "mission-control-v2":
-        from kungfu.atlas import mission_bundle
+    if kind == "initiative-bundle-v1":
+        from kungfu import initiative_bundle
 
-        result = mission_bundle.import_mission_bundle(
+        result = initiative_bundle.import_initiative_bundle(
             str(runtime_dir), dict(material), execute=True
         )
         write_occurred = any(
