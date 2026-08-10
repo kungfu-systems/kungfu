@@ -429,7 +429,7 @@ test('candidate build rejects a committed exact Buildchain runtime pin', () => {
   );
 });
 
-test('PR-stage builds reject a premature publish-source lock', () => {
+test('PR-stage builds reject an unverified publish-source lock', () => {
   const buildPath = CONTRACT.workflows.build;
   const original = fs.readFileSync(path.join(ROOT, buildPath), 'utf8');
   const buildchainRef =
@@ -447,7 +447,7 @@ test('PR-stage builds reject a premature publish-source lock', () => {
   assert.ok(
     result.findings.some((entry) =>
       entry.message.includes(
-        'leave publish-source locking to exact manual Release Cut recovery',
+        'consume only the preflight-verified Release Cut output',
       ),
     ),
   );

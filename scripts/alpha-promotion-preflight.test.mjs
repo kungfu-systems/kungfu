@@ -578,7 +578,7 @@ test('patrol, normal Alpha builds and sentinels keep one controller authority', 
   assert.match(build, /build:[\s\S]*!inputs\.fast-sentinels-only/u);
   assert.match(
     build,
-    /RELEASE_CUT_SOURCE_REF: \$\{\{ fromJSON\(inputs\.macos-overflow-request-json \|\| '\{\}'\)\.releaseCutSourceRef \|\| '' \}\}[\s\S]*RELEASE_CUT_SOURCE_SHA: \$\{\{ fromJSON\(inputs\.macos-overflow-request-json \|\| '\{\}'\)\.sourceSha \|\| '' \}\}/u,
+    /RELEASE_CUT_PR:[\s\S]*alpha\/v4\/v4\.0[\s\S]*fix\/alpha2-lineage-repair-r16[\s\S]*RELEASE_CUT_SOURCE_REF:[\s\S]*publish-gate\/anchor[\s\S]*RELEASE_CUT_SOURCE_SHA:[\s\S]*github\.event\.pull_request\.head\.sha/u,
   );
   assert.match(
     build,
@@ -586,7 +586,7 @@ test('patrol, normal Alpha builds and sentinels keep one controller authority', 
   );
   assert.match(
     build,
-    /buildchain-ref: \$\{\{ inputs\.buildchain-ref \|\| 'v3' \}\}[\s\S]*publish-source-ref: \$\{\{ fromJSON\(inputs\.macos-overflow-request-json \|\| '\{\}'\)\.releaseCutSourceRef \|\| '' \}\}[\s\S]*publish-anchor-request-json: \$\{\{ fromJSON\(inputs\.macos-overflow-request-json \|\| '\{\}'\)\.releaseCutSourceRef && toJSON/u,
+    /buildchain-ref: \$\{\{ inputs\.buildchain-ref \|\| 'v3' \}\}[\s\S]*publish-source-ref: \$\{\{ needs\.preflight\.outputs\.release-cut-source-ref \}\}[\s\S]*publish-anchor-request-json: \$\{\{ needs\.preflight\.outputs\.release-cut-anchor-request-json \}\}/u,
   );
   assert.doesNotMatch(
     build,

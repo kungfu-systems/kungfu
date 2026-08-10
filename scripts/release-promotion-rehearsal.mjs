@@ -167,15 +167,21 @@ export function validateWorkflowSources(root, contract, overrides = {}) {
   );
   requirePattern(
     build,
-    /^\s+publish-source-ref: \$\{\{ fromJSON\(inputs\.macos-overflow-request-json \|\| '\{\}'\)\.releaseCutSourceRef \|\| '' \}\}$/m,
+    /^\s+publish-source-ref: \$\{\{ needs\.preflight\.outputs\.release-cut-source-ref \}\}$/m,
     findings,
-    'manual Release Cut recovery must bind Buildchain to the source-lock ref carried by the trusted controller envelope',
+    'Release Cut builds must bind Buildchain to the preflight-verified source-lock ref',
+  );
+  requirePattern(
+    build,
+    /RELEASE_CUT_PR:[\s\S]*alpha\/v4\/v4\.0[\s\S]*fix\/alpha2-lineage-repair-r16[\s\S]*RELEASE_CUT_PR_BASE_SHA:[\s\S]*publish-gate\/anchor[\s\S]*test "\$RELEASE_CUT_PR_BASE_SHA" = "f9e6b0e34bcdd6407b2a18206ace7982d64de2c8"/u,
+    findings,
+    'the r16 PR build must bind the frozen Alpha base and exact Release Cut source lock',
   );
   forbidPattern(
     build,
     /^\s+publish-source-ref:\s+.*(?:github\.head_ref|github\.event\.pull_request)/m,
     findings,
-    'PR-stage release-candidate builds must leave publish-source locking to exact manual Release Cut recovery or post-merge promotion',
+    'Buildchain publish-source locking must consume only the preflight-verified Release Cut output',
   );
   requirePattern(
     build,
