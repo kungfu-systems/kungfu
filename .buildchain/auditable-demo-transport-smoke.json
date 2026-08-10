@@ -1,0 +1,67 @@
+{
+  "schema": "buildchain.declarative-binary-demo/v1",
+  "product": {
+    "id": "kungfu",
+    "displayName": "Kungfu",
+    "binaryName": "kungfu"
+  },
+  "artifact": {
+    "platformId": "linux-x64",
+    "binaryPath": "product/dist/cli/kungfu-episodes-cli-linux-x64/kungfu",
+    "metadataPath": "product/dist/cli/kungfu-episodes-cli-linux-x64/auditable-demo-binary.json",
+    "metadataContract": "kungfu.declarative-demo-binary/v1",
+    "runtimeDependencies": []
+  },
+  "execution": {
+    "deterministic": true,
+    "network": "none",
+    "secrets": "none",
+    "totalTimeoutSeconds": 60,
+    "environment": {}
+  },
+  "transportSmoke": {
+    "argv": ["agent-work-lab", "demo", "--json"],
+    "timeoutSeconds": 60,
+    "expectedExitCodes": [0],
+    "stdoutIncludes": ["kungfu.agent-work-lab.report/v1"]
+  },
+  "renditions": [
+    {"id": "1080p", "role": "primary", "columns": 150, "rows": 36, "width": 1920, "height": 1080},
+    {"id": "720p", "role": "responsive", "columns": 100, "rows": 28, "width": 1280, "height": 720}
+  ],
+  "demos": [
+    {
+      "id": "pre-upload-transport-smoke",
+      "title": "Kungfu pre-upload transport smoke",
+      "claimBoundary": "This scenario proves only that the exact transported standalone CLI restores its declared executable closure and runs the bounded Agent Work Lab smoke; it grants no media, release, network, or production authority.",
+      "steps": [
+        {
+          "id": "execute-transported-cli",
+          "argv": ["agent-work-lab", "demo", "--json"],
+          "timeoutSeconds": 60,
+          "expectedExitCodes": [0],
+          "stdoutIncludes": ["kungfu.agent-work-lab.report/v1"],
+          "fileAssertions": []
+        }
+      ]
+    }
+  ],
+  "publication": {
+    "evidencePath": "docs/evidence/auditable-demo",
+    "readmePath": "README.md",
+    "marker": "kungfu-auditable-demo-transport-smoke"
+  },
+  "authority": {
+    "grants": [],
+    "nonAuthorities": [
+      "first-party-identity",
+      "system-identity",
+      "kfd-compliance",
+      "product-system-metadata",
+      "package-metadata",
+      "registry-history",
+      "scan-output",
+      "standalone-generation"
+    ]
+  }
+}

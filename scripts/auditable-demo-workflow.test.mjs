@@ -12,6 +12,9 @@ const workflow = parse(workflowText);
 const scenario = JSON.parse(
   fs.readFileSync('.buildchain/auditable-demo.json', 'utf8'),
 );
+const transportScenario = JSON.parse(
+  fs.readFileSync('.buildchain/auditable-demo-transport-smoke.json', 'utf8'),
+);
 const demo = workflow.jobs['auditable-demo'];
 const build = workflow.jobs.build;
 const readme = fs.readFileSync('README.md', 'utf8');
@@ -78,6 +81,42 @@ test('one exact Buildchain workflow owns every declared demo', () => {
     demo.with['media-profile'],
     'responsive-long-form-web-delivery-v1',
   );
+});
+
+test('pre-upload transport uses a v3-compatible scenario bound to the exact product artifact', () => {
+  assert.equal(
+    build.with['pre-upload-transport-smoke-scenario-path'],
+    '.buildchain/auditable-demo-transport-smoke.json',
+  );
+  assert.deepEqual(transportScenario.product, scenario.product);
+  assert.deepEqual(transportScenario.artifact, scenario.artifact);
+  assert.deepEqual(transportScenario.transportSmoke, scenario.transportSmoke);
+  assert.deepEqual(transportScenario.authority, scenario.authority);
+  assert.deepEqual(transportScenario.execution, {
+    deterministic: true,
+    network: 'none',
+    secrets: 'none',
+    totalTimeoutSeconds: 60,
+    environment: {},
+  });
+  assert.deepEqual(transportScenario.renditions, [
+    {
+      id: '1080p',
+      role: 'primary',
+      columns: 150,
+      rows: 36,
+      width: 1920,
+      height: 1080,
+    },
+    {
+      id: '720p',
+      role: 'responsive',
+      columns: 100,
+      rows: 28,
+      width: 1280,
+      height: 720,
+    },
+  ]);
 });
 
 test('native 720p keeps full-width terminal coverage without copying 1080p geometry', () => {
@@ -188,7 +227,7 @@ test('the build fails the real transported binary before either upload path', ()
   );
   assert.equal(
     build.with['pre-upload-transport-smoke-scenario-path'],
-    '.buildchain/auditable-demo.json',
+    '.buildchain/auditable-demo-transport-smoke.json',
   );
   assert.equal(build.with['pre-upload-transport-smoke-artifact-root'], '.');
 });

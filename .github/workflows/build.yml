@@ -194,7 +194,7 @@ jobs:
       artifact-paths: |
         product/release
         product/dist/cli/kungfu-episodes-cli-linux-x64
-      pre-upload-transport-smoke-scenario-path: .buildchain/auditable-demo.json
+      pre-upload-transport-smoke-scenario-path: .buildchain/auditable-demo-transport-smoke.json
       pre-upload-transport-smoke-artifact-root: .
       github-artifact-attestation-subject-path: product/release/cli/kungfu-episodes-cli-linux-x64.tar.gz
       github-artifact-attestation-signer-sha: 375b2d4b8a904776453773a33b4c4e4556c8c999
