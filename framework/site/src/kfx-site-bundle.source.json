@@ -1,0 +1,257 @@
+{
+  "contract": "kungfu.kfx-site-bundle-source/v1",
+  "maturity": "pre-release",
+  "value": {
+    "title": "KFX developer platform",
+    "summary": "KFX lets developers add inspectable views, adapters, services, Profiles, and Suites without turning package identity into runtime authority.",
+    "firstValue": "Use the installed Agent-first authoring kit to scaffold, validate, build, and qualify an inert extension before native admission.",
+    "authorityBoundary": "This bundle is a documentation projection. Core KFX, KFD, Work, Warrant, capability, lifecycle, and Release Passport sources retain authority."
+  },
+  "sources": [
+    {
+      "id": "kfx-topology",
+      "path": "docs/architecture/kfx-topology.md",
+      "role": "architecture",
+      "maturity": "pre-release",
+      "status": "implemented",
+      "nonClaim": "Architecture prose does not admit or launch a KFX."
+    },
+    {
+      "id": "extensions-guide",
+      "path": "docs/architecture/extensions.md",
+      "role": "developer-guide",
+      "maturity": "pre-release",
+      "status": "implemented",
+      "nonClaim": "Author guidance does not grant runtime capabilities."
+    },
+    {
+      "id": "kfx-contract",
+      "path": "framework/kfx/kungfu-kfx.contract.json",
+      "role": "machine-contract",
+      "maturity": "pre-release",
+      "status": "implemented",
+      "nonClaim": "A valid package declaration is an input, not execution authority."
+    },
+    {
+      "id": "kfx-domain-profile",
+      "path": "framework/kfx/kungfu-kfx-domain-profile.contract.json",
+      "role": "registry-lifecycle-contract",
+      "maturity": "pre-release",
+      "status": "staged",
+      "nonClaim": "Registry projection is not an independent lifecycle journal or generation authority."
+    },
+    {
+      "id": "capability-ownership",
+      "path": "docs/adr/KF-ADR-019f86da-4f90-79d7-a4b7-044fcf998708.md",
+      "role": "authority-decision",
+      "maturity": "pre-release",
+      "status": "accepted",
+      "nonClaim": "Capability ownership does not imply a grant to any package."
+    },
+    {
+      "id": "surface-neutral-contributions",
+      "path": "docs/adr/KF-ADR-019f86da-4f90-72df-add3-948f3ae38c3a.md",
+      "role": "authority-decision",
+      "maturity": "pre-release",
+      "status": "accepted",
+      "nonClaim": "Surface neutrality does not collapse physical host isolation boundaries."
+    },
+    {
+      "id": "profile-suite-decision",
+      "path": "docs/adr/KF-ADR-019f86da-4f90-7f46-b195-3af6228d17b1.md",
+      "role": "profile-suite-contract",
+      "maturity": "pre-release",
+      "status": "accepted",
+      "nonClaim": "A Suite dependency graph is not installation or activation authority."
+    },
+    {
+      "id": "service-webhook-host",
+      "path": "docs/adr/KF-ADR-019f9f8a-9f40-7d6e-a4d2-5a334a9ab201.md",
+      "role": "service-host-contract",
+      "maturity": "pre-release",
+      "status": "staged",
+      "nonClaim": "The stable host contract does not authorize a listener or expose credentials."
+    },
+    {
+      "id": "installed-agent-index",
+      "path": "framework/core/src/python/kungfu/agent/index.json",
+      "role": "installed-agent-index",
+      "maturity": "pre-release",
+      "status": "implemented",
+      "nonClaim": "Installed discovery metadata does not make an extension qualified."
+    },
+    {
+      "id": "installed-authoring-brief",
+      "path": "framework/core/src/python/kungfu/agent/kfx-authoring.md",
+      "role": "installed-authoring-guide",
+      "maturity": "pre-release",
+      "status": "experimental",
+      "nonClaim": "Scaffold, build, and qualification commands do not install or activate a package."
+    },
+    {
+      "id": "cli-surface-catalog",
+      "path": "framework/core/src/python/kungfu/agent/cli_surface.catalog.json",
+      "role": "cli-catalog",
+      "maturity": "pre-release",
+      "status": "implemented",
+      "nonClaim": "Catalog availability does not bypass command mutation policy."
+    },
+    {
+      "id": "kfd7-release-passport",
+      "path": "framework/core/architecture/kfd7-release-passport.json",
+      "role": "release-passport-evidence",
+      "maturity": "pre-release",
+      "status": "qualified",
+      "nonClaim": "Release Passport evidence proves a declared release boundary, not runtime permission."
+    },
+    {
+      "id": "kfx-terminal-qualification",
+      "path": "docs/qualification/kfx-identity-neutral-terminal.md",
+      "role": "qualification-evidence",
+      "maturity": "pre-release",
+      "status": "qualified",
+      "nonClaim": "Retained terminal qualification does not promote KFX to stable or authorize a new package."
+    },
+    {
+      "id": "github-webhook-suite-readme",
+      "path": "extensions/github-webhook-reference-suite/README.md",
+      "role": "reference-suite-guide",
+      "maturity": "pre-release",
+      "status": "implemented",
+      "nonClaim": "Reference observations do not mutate GitHub, admit Issues, or complete Work."
+    },
+    {
+      "id": "github-webhook-suite-manifest",
+      "path": "extensions/github-webhook-reference-suite/kungfu.kfx.json",
+      "role": "reference-suite-manifest",
+      "maturity": "pre-release",
+      "status": "implemented",
+      "nonClaim": "Suite membership does not grant component capabilities."
+    },
+    {
+      "id": "github-webhook-profile",
+      "path": "extensions/github-webhook-reference-suite/profile.json",
+      "role": "reference-profile",
+      "maturity": "pre-release",
+      "status": "implemented",
+      "nonClaim": "Profile closure is not production endpoint or secret configuration."
+    },
+    {
+      "id": "github-webhook-qualification",
+      "path": "extensions/github-webhook-reference-suite/qualification/profile.json",
+      "role": "reference-qualification",
+      "maturity": "pre-release",
+      "status": "qualified",
+      "nonClaim": "Local content and runtime checks do not prove a real GitHub canary."
+    }
+  ],
+  "facets": [
+    {
+      "id": "value",
+      "title": "Why KFX",
+      "summary": "Extend Kungfu through inspectable, rooted packages while Core retains admission and runtime authority.",
+      "maturity": "pre-release",
+      "status": "implemented",
+      "sourceIds": ["kfx-topology", "extensions-guide"],
+      "nonClaim": "KFX is not a trust shortcut for first-party or bundled code."
+    },
+    {
+      "id": "architecture",
+      "title": "Architecture and hosts",
+      "summary": "Views, adapters, and services have distinct physical hosts and preserve one Core descriptor.",
+      "maturity": "pre-release",
+      "status": "implemented",
+      "sourceIds": ["kfx-topology", "surface-neutral-contributions"],
+      "nonClaim": "Presentation parity does not merge renderer, injected adapter, and service isolation."
+    },
+    {
+      "id": "package-facets",
+      "title": "Packages and facets",
+      "summary": "The versioned KFX manifest declares package identity, facets, requested capabilities, and host inputs.",
+      "maturity": "pre-release",
+      "status": "implemented",
+      "sourceIds": ["kfx-contract", "extensions-guide"],
+      "nonClaim": "A conforming manifest remains inert until native admission."
+    },
+    {
+      "id": "registry-admission-lifecycle",
+      "title": "Registry, admission, and lifecycle",
+      "summary": "A pinned Fact cut, Work, Warrant, policy, exact roots, and CAS guard every accepted lifecycle mutation.",
+      "maturity": "pre-release",
+      "status": "staged",
+      "sourceIds": ["kfx-domain-profile", "kfx-topology"],
+      "nonClaim": "Filesystem discovery and package metadata are observations, not registry authority."
+    },
+    {
+      "id": "capabilities",
+      "title": "Capabilities and confinement",
+      "summary": "Packages request capabilities; Core policy and an explicit exact grant select the allowed subset for one host.",
+      "maturity": "pre-release",
+      "status": "implemented",
+      "sourceIds": ["kfx-contract", "capability-ownership", "kfx-topology"],
+      "nonClaim": "Declaration, KFD success, or package origin does not grant a capability."
+    },
+    {
+      "id": "trust",
+      "title": "KFD and Release Passport trust",
+      "summary": "KFD and the exact Release Passport provide conformance and release evidence before Core admission.",
+      "maturity": "pre-release",
+      "status": "qualified",
+      "sourceIds": ["kfd7-release-passport", "kfx-topology", "kfx-terminal-qualification"],
+      "nonClaim": "Qualification and release evidence are eligibility inputs, not execution permission."
+    },
+    {
+      "id": "agent-first-authoring",
+      "title": "Installed Agent-first authoring",
+      "summary": "The installed, version-matched kit supports offline scaffold, inspect, validate, build, qualify, and package steps.",
+      "maturity": "pre-release",
+      "status": "experimental",
+      "sourceIds": ["installed-agent-index", "installed-authoring-brief"],
+      "nonClaim": "Authoring output does not install, authorize, activate, or expose a listener."
+    },
+    {
+      "id": "sdk-cli",
+      "title": "SDK and CLI surfaces",
+      "summary": "The runtime SDK projection and public CLI catalog expose version-matched authoring and native inspection routes.",
+      "maturity": "pre-release",
+      "status": "implemented",
+      "sourceIds": ["installed-authoring-brief", "cli-surface-catalog", "kfx-contract"],
+      "nonClaim": "A visible CLI route does not change its declared mutation or approval policy."
+    },
+    {
+      "id": "profiles-suites",
+      "title": "Profiles and Suites",
+      "summary": "Profiles compose domain contracts and qualification; Suites declare required and optional member dependency closure.",
+      "maturity": "pre-release",
+      "status": "staged",
+      "sourceIds": ["profile-suite-decision", "github-webhook-profile", "github-webhook-suite-manifest"],
+      "nonClaim": "Dependency closure does not install, activate, or widen a member."
+    },
+    {
+      "id": "github-webhook-reference",
+      "title": "GitHub Webhook reference suite",
+      "summary": "A maintained service/view/optional-bridge suite demonstrates authenticated intake, inspectable evidence, and dormant optional integration.",
+      "maturity": "pre-release",
+      "status": "qualified",
+      "sourceIds": ["service-webhook-host", "github-webhook-suite-readme", "github-webhook-suite-manifest", "github-webhook-profile", "github-webhook-qualification"],
+      "nonClaim": "The retained local qualification is not a deployed public webhook or real-secret canary."
+    },
+    {
+      "id": "qualification-status",
+      "title": "Current qualification status",
+      "summary": "Identity-neutral terminal evidence and the maintained webhook Profile fixture cover the current bounded KFX slice.",
+      "maturity": "pre-release",
+      "status": "qualified",
+      "sourceIds": ["kfx-terminal-qualification", "github-webhook-qualification"],
+      "nonClaim": "Current retained evidence does not establish stable compatibility or downstream Site adoption."
+    }
+  ],
+  "humanReadingOrder": ["value", "architecture", "package-facets", "registry-admission-lifecycle", "capabilities", "trust", "agent-first-authoring", "sdk-cli", "profiles-suites", "github-webhook-reference", "qualification-status"],
+  "agentReadingOrder": ["value", "architecture", "package-facets", "registry-admission-lifecycle", "capabilities", "trust", "agent-first-authoring", "sdk-cli", "profiles-suites", "github-webhook-reference", "qualification-status"],
+  "nonClaims": [
+    "The dedicated KFX Site Bundle is a deterministic documentation projection, not a registry, permission system, lifecycle authority, or maturity oracle.",
+    "This source change does not publish @kungfu-tech/site or any other npm package.",
+    "The production KFX Site does not consume this bundle until a separately reviewed downstream adoption.",
+    "No source-built or retained qualification evidence opens a stable KFX compatibility line."
+  ]
+}

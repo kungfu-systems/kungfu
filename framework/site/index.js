@@ -13,6 +13,9 @@ const packageRoot = __dirname;
 const siteRoot = path.join(packageRoot, 'dist', 'site');
 const bundlePath = path.join(siteRoot, 'site-bundle.json');
 const agentIndexPath = path.join(siteRoot, 'agent-index.json');
+const kfxSiteRoot = path.join(siteRoot, 'kfx');
+const kfxSiteBundlePath = path.join(kfxSiteRoot, 'site-bundle.json');
+const kfxSiteManifestPath = path.join(kfxSiteRoot, 'manifest.json');
 const adrMapPath = path.join(siteRoot, 'adr-map.json');
 const formatManifestPath = path.join(siteRoot, 'format', 'manifest.json');
 const formatGuideIndexPath = path.join(
@@ -50,6 +53,65 @@ function readJson(file) {
 
 function loadBundle() {
   return readJson(bundlePath);
+}
+
+function loadKfxSiteBundle() {
+  return readJson(kfxSiteBundlePath);
+}
+
+function verifyKfxSiteBundle() {
+  const bundle = loadKfxSiteBundle();
+  const manifest = readJson(kfxSiteManifestPath);
+  const { contentRoot: _bundleRoot, ...bundlePreimage } = bundle;
+  const { contentRoot: _manifestRoot, ...manifestPreimage } = manifest;
+  if (
+    sha256(JSON.stringify(canonical(bundlePreimage))) !== bundle.contentRoot
+  ) {
+    throw new Error('Kungfu KFX Site Bundle content root mismatch');
+  }
+  if (
+    sha256(JSON.stringify(canonical(manifestPreimage))) !== manifest.contentRoot
+  ) {
+    throw new Error('Kungfu KFX Site Bundle manifest root mismatch');
+  }
+  const facetOrder = bundle.facets.map(({ id }) => id);
+  if (
+    JSON.stringify(facetOrder) !== JSON.stringify(bundle.humanReadingOrder) ||
+    JSON.stringify(facetOrder) !== JSON.stringify(bundle.agentReadingOrder)
+  ) {
+    throw new Error('Kungfu KFX Site Bundle reading-order parity mismatch');
+  }
+  for (const descriptor of manifest.artifacts) {
+    const artifact = resolveKfxSitePath(descriptor.path);
+    const bytes = fs.readFileSync(artifact);
+    if (
+      sha256(bytes) !== descriptor.contentRoot ||
+      bytes.length !== descriptor.byteLength
+    ) {
+      throw new Error(
+        `Kungfu KFX Site Bundle artifact root mismatch: ${descriptor.path}`,
+      );
+    }
+  }
+  return {
+    status: 'passing',
+    revision: bundle.source.revision,
+    sourceRoot: bundle.sourceRoot,
+    contentRoot: bundle.contentRoot,
+    facets: bundle.facets.length,
+    sources: bundle.sources.length,
+  };
+}
+
+function resolveKfxSitePath(relative) {
+  if (!relative || path.isAbsolute(relative)) {
+    throw new Error(`Invalid Kungfu KFX Site Bundle path: ${relative}`);
+  }
+  const resolved = path.resolve(kfxSiteRoot, relative);
+  if (!resolved.startsWith(`${kfxSiteRoot}${path.sep}`)) {
+    throw new Error(`Kungfu KFX Site Bundle path escapes package: ${relative}`);
+  }
+  return resolved;
 }
 
 function resolveSitePath(relative) {
@@ -1078,8 +1140,12 @@ module.exports = {
   bundlePath,
   formatGuideIndexPath,
   formatManifestPath,
+  kfxSiteBundlePath,
+  kfxSiteManifestPath,
+  kfxSiteRoot,
   experienceSchemaPath,
   loadBundle,
+  loadKfxSiteBundle,
   loadFormatAuthorityManifest,
   loadFormatAuthorityRoute,
   loadFormatGuide,
@@ -1095,5 +1161,6 @@ module.exports = {
   schemaPath,
   siteRoot,
   verifyBundle,
+  verifyKfxSiteBundle,
   verifySiteExperience,
 };
