@@ -32,6 +32,45 @@ from .local import EmbeddedLocalAssignmentRuntime
 HOST_SCHEMA = "kungfu.gui.assignment-runtime-host/v1"
 
 
+class ProfileDomain:
+    """Lazy native module whose calls retain the installed Profile source."""
+
+    def __init__(self, module_name: str):
+        self.module_name = module_name
+
+    def _domain(self):
+        from kungfu import profile_sdk
+
+        source = profile_sdk.discover_source("kungfu.work-control")["source"]
+        package = profile_sdk.load_member_python_package(
+            source, "work-control-actions", "domain"
+        )
+        return source, getattr(package, self.module_name), package.work_control
+
+    def __getattr__(self, name: str):
+        source, module, binder = self._domain()
+        value = getattr(module, name)
+        if not callable(value):
+            return value
+
+        def bound(*args, **kwargs):
+            return binder._with_profile_source(source, lambda: value(*args, **kwargs))
+
+        bound.__name__ = getattr(value, "__name__", name)
+        bound.__doc__ = getattr(value, "__doc__", None)
+        return bound
+
+    def __dir__(self):
+        _, module, _ = self._domain()
+        return sorted(set(dir(module)))
+
+
+def profile_domain(module_name: str) -> ProfileDomain:
+    """Expose one native Work Control domain without a wrapper-only module."""
+
+    return ProfileDomain(module_name)
+
+
 def profile_source() -> Path:
     """Resolve Work Control only from explicit installed extension roots."""
 
