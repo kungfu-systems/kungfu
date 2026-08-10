@@ -387,11 +387,41 @@ function main() {
   // Product intent remains Kungfu-owned; Buildchain validates the canonical
   // registry and generated release projections without writing files.
   console.log('\n[verify] stage 0d: KFD-2 release claims registry');
-  const kfd2Claims = spawnSync(
-    'pnpm',
-    ['exec', 'buildchain', 'kfd', '2', 'product-claims', 'check'],
-    { encoding: 'utf8', shell: isWin },
-  );
+  let kfd2Claims;
+  try {
+    const releaseClaims = JSON.parse(
+      fs.readFileSync(
+        path.join(ROOT, '.buildchain/kfd/kfd-2/release-claims.json'),
+        'utf8',
+      ),
+    );
+    const sourceSha = String(releaseClaims.release?.sourceSha || '');
+    if (!/^[0-9a-f]{40}$/u.test(sourceSha)) {
+      throw new Error(
+        `release claims require an exact Git source SHA, got ${sourceSha || '<empty>'}`,
+      );
+    }
+    kfd2Claims = spawnSync(
+      'pnpm',
+      [
+        'exec',
+        'buildchain',
+        'kfd',
+        '2',
+        'product-claims',
+        'check',
+        '--source-sha',
+        sourceSha,
+      ],
+      { encoding: 'utf8', shell: isWin },
+    );
+  } catch (error) {
+    kfd2Claims = {
+      status: 1,
+      stdout: '',
+      stderr: error instanceof Error ? error.message : String(error),
+    };
+  }
   if (kfd2Claims.status === 0)
     pass('KFD-2 release claims registry', (kfd2Claims.stdout || '').trim());
   else
