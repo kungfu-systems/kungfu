@@ -253,6 +253,7 @@ test('manual full refresh and promotion reuse the same materializer', () => {
 
 test('manual media publication runs only the Linux x64 product path', () => {
   const platformExpression = build.with['platforms-json'];
+  const resolver = workflow.jobs['resolve-auditable-demo-source'];
   assert.match(
     platformExpression,
     /github\.event_name == 'workflow_dispatch' && inputs\.render-auditable-demo/u,
@@ -268,6 +269,14 @@ test('manual media publication runs only the Linux x64 product path', () => {
   assert.match(
     build.if,
     /^\$\{\{ always\(\) &&[\s\S]*inputs\.render-auditable-demo && needs\.windows-fast-sentinel\.result == 'skipped'/u,
+  );
+  assert.equal(
+    resolver.if,
+    "${{ always() && needs.build.result == 'success' }}",
+  );
+  assert.equal(
+    demo.if,
+    "${{ always() && needs.build.result == 'success' && needs.resolve-auditable-demo-source.result == 'success' && needs.resolve-auditable-demo-source.outputs.applicable == 'true' }}",
   );
   assert.equal(
     build.with['compiler-cache-platforms-json'],
