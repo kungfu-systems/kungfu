@@ -1,16 +1,16 @@
 {
-  "schema": "kungfu.work-design.open-card-contract/v1",
+  "schema": "kungfu.work-design.contract/v1",
   "version": 1,
   "status": "pre-release",
-  "requestSchema": "kungfu.work-design.open-card-preflight-request/v1",
-  "resultSchema": "kungfu.work-design.open-card-preflight/v1",
+  "requestSchema": "kungfu.work-design.preflight-request/v1",
+  "resultSchema": "kungfu.work-design.preflight/v1",
   "rootAlgorithm": "sha256-project-cut-canonical-json-v1",
   "historySource": {
-    "schema": "kungfu.work-design.open-card-history-source/v1",
+    "schema": "kungfu.work-design.history-source/v1",
     "querySchema": "kungfu.workspace-federation.query/v1",
     "recordSchema": "kungfu.assignment-orchestration.sealed-work-coordinate/v1",
     "sourceId": "kungfu.workspace-federation.sealed-work-index",
-    "outcomeHistorySchema": "kungfu.work-design.open-card-outcome-history/v1",
+    "outcomeHistorySchema": "kungfu.work-design.outcome-history/v1",
     "outcomeBindingSchema": "kungfu.assignment-orchestration.work-design-outcome-binding/v1",
     "outcomeJoin": "exact-settled-state-root",
     "outcomeAdmission": [
@@ -40,15 +40,12 @@
     "merge": false,
     "close": false
   },
-  "cardState": {
-    "captureOnly": true,
-    "pointerOnly": true,
-    "status": "paused",
-    "claimed": false,
-    "dispatched": false
+  "operation": {
+    "phase": "pre-capture",
+    "mutates": false
   },
   "autoAdoption": {
-    "schema": "kungfu.work-design.open-card-auto-adoption-policy/v1",
+    "schema": "kungfu.work-design.auto-adoption-policy/v1",
     "id": "verified-history-within-authorized-boundary",
     "version": 1,
     "minimumConfidence": "medium",
@@ -59,7 +56,7 @@
     "requiresVerifiedAdvice": true,
     "preservesWorkDefinition": true,
     "escalationOutcome": "human-decision-required",
-    "policyRoot": "sha256:9d64a0b5fef826552678c0451154320733dbe4b76ff21d9167e516750e904f07"
+    "policyRoot": "sha256:2c0d10cbbefc7f08f1dd31a2012bb4db99a5b3105211a63895c0b6a07363165c"
   },
   "dispositions": [
     "policy-accepted",
@@ -89,5 +86,5 @@
     "preservesHumanWorkDefinition": true,
     "failure": "explicit-manual-capture-without-silent-adoption"
   },
-  "contractRoot": "sha256:a655d99c14815182a7f9dc53e0d0deaaf0021e49d71edd8c01a1ee264b01dfa2"
+  "contractRoot": "sha256:3eb8b898fb2811b125c5b41a074fcac82f314c23f023d672c22bee41433b8690"
 }
