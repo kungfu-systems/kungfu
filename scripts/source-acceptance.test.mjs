@@ -1112,34 +1112,19 @@ test('cold read-only source acceptance skips dependency-backed checks', () => {
     const plan = sourceAcceptancePlan([
       'framework/gui/src/renderer/src/runtime.ts',
     ]);
-    assert.equal(
-      plan.some((step) => step.label === 'changed GUI TypeScript check'),
-      false,
-    );
-    assert.equal(
-      plan.some((step) => step.label === 'agent-first canonical policy'),
-      false,
-    );
-    assert.equal(
-      plan.some((step) => step.label === 'agent-first contract audit'),
-      false,
-    );
-    assert.equal(
-      plan.some((step) => step.label === 'Shifu Production Graph contract'),
-      false,
-    );
+    const labels = new Set(plan.map((step) => step.label));
     for (const label of [
+      'changed GUI TypeScript check',
+      'agent-first canonical policy',
+      'agent-first contract audit',
+      'Shifu Production Graph contract',
       'documentation material lane',
       'source-acceptance contract tests',
       'agent work state contract and CLI parity',
       'runtime upgrade control-plane tests',
       'desktop update adapter tests',
     ])
-      assert.equal(
-        plan.some((step) => step.label === label),
-        false,
-        `${label} requires the installed dependency graph`,
-      );
+      assert.equal(labels.has(label), false, `${label} needs installed deps`);
   } finally {
     if (previous === undefined) {
       Reflect.deleteProperty(
