@@ -963,8 +963,8 @@ function writePlan(plan, output) {
 
 async function loadBuildchainToolkit() {
   const [diagnostics, logging] = await Promise.all([
-    import('@kungfu-tech/buildchain/diagnostics'),
-    import('@kungfu-tech/buildchain/logging'),
+    import('@kungfu-tech/buildchain-alpha/diagnostics'),
+    import('@kungfu-tech/buildchain-alpha/logging'),
   ]);
   return { ...diagnostics, ...logging };
 }

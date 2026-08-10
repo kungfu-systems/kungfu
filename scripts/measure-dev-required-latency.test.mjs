@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import crypto from 'node:crypto';
 import test from 'node:test';
 
-import { createCandidateTimeline } from '@kungfu-tech/buildchain/candidate-timeline';
+import { createCandidateTimeline } from '@kungfu-tech/buildchain-alpha/candidate-timeline';
 
 import {
   collectLatestMergedPullWindow,

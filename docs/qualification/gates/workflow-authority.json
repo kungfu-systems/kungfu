@@ -86,10 +86,10 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "diagnostic",
-          "definitionDigest": "sha256:459c5b1ec4bce54df37f49780985484861d89112cbbf566db17624dc2dabe6c0",
+          "definitionDigest": "sha256:0281e089c0987a6f7ddc92e4be02dcb78a2005ad40f42187e787abc7748c3b08",
           "credentials": {"githubToken":"read","oidc":false,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
-          "externalActions": ["actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0","kungfu-systems/buildchain/actions/validate-config@v3"],
-          "steps": [{"index":1,"label":"uses:actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0","definitionDigest":"sha256:78d7ae6e479b47dfaedac84727a66b40468ac463895b29adc37ba62b1433a77c"},{"index":2,"label":"name:Validate .buildchain/buildchain.toml","definitionDigest":"sha256:bcc6354106f521d2013d57ebbe37029462402390ddaf8cf955f919c39701bb63"}]
+          "externalActions": ["actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0","kungfu-systems/buildchain/actions/validate-config@58e48d73ae7fef0dd06ae02baf6d090e4da5487d"],
+          "steps": [{"index":1,"label":"uses:actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0","definitionDigest":"sha256:78d7ae6e479b47dfaedac84727a66b40468ac463895b29adc37ba62b1433a77c"},{"index":2,"label":"name:Validate .buildchain/buildchain.toml","definitionDigest":"sha256:16a3a97f9383bade15f4ddebdab1d075f445af68a960b01bcf38d05d7a9f08e9"}]
         },
         {
           "id": "candidate_preflight",
@@ -156,9 +156,9 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "diagnostic",
-          "definitionDigest": "sha256:70e9db205319e6f55e1eb5c3adfedc732731a525d0649ba5acbf25ee91924cc9",
+          "definitionDigest": "sha256:959385f0d70ee1a9d092e6a9a0c4884329f73c6f9b270aa333c374bbad1161b0",
           "credentials": {"githubToken":"read","oidc":false,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
-          "externalActions": ["kungfu-systems/buildchain/.github/workflows/check.yml@9e904de2c85dbea7c799780ee166510b3336d812"],
+          "externalActions": ["kungfu-systems/buildchain/.github/workflows/check.yml@58e48d73ae7fef0dd06ae02baf6d090e4da5487d"],
           "steps": []
         }
       ]
@@ -476,9 +476,9 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "diagnostic",
-          "definitionDigest": "sha256:98609d1683a146adf7c502da420b2f5388a4cccbc3f7ca29f0195af27c8f2f04",
+          "definitionDigest": "sha256:81355650d39c82d4c8530b11972079ee74e4db5e4538da0bc63a64d288da410b",
           "credentials": {"githubToken":"write","oidc":false,"repositorySecrets":["KUNGFU_GITHUB_TOKEN"],"inheritedSecrets":false,"environment":null},
-          "externalActions": ["kungfu-systems/buildchain/.github/workflows/dev-alpha-candidate-patrol.yml@2e7e07902ac28d8f3edcfb81098ef9ebc7a91878"],
+          "externalActions": ["kungfu-systems/buildchain/.github/workflows/dev-alpha-candidate-patrol.yml@58e48d73ae7fef0dd06ae02baf6d090e4da5487d"],
           "steps": []
         },
         {
