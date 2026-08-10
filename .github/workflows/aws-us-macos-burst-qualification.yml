@@ -34,6 +34,11 @@ concurrency:
 jobs:
   qualify:
     name: ${{ inputs.mode == 'smoke' && 'macOS JIT runner profile smoke' || 'Trusted exact-source full macOS qualification' }}
+    permissions:
+      actions: read
+      contents: read
+      issues: write
+      id-token: write
     if: >-
       ${{
         github.repository == 'kungfu-systems/kungfu' &&

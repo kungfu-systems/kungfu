@@ -159,23 +159,35 @@ export function pathRemovalDiagnostics(
   return diagnostics;
 }
 
-export function removeEmptyDirectoryShells(target) {
-  if (!fs.existsSync(target)) return true;
-  const stat = fs.lstatSync(target);
+export function removeEmptyDirectoryShells(target, filesystem = fs) {
+  let stat;
+  try {
+    stat = filesystem.lstatSync(target);
+  } catch (error) {
+    if (error?.code === 'ENOENT') return true;
+    throw error;
+  }
   if (!stat.isDirectory() || stat.isSymbolicLink()) return false;
 
-  for (const entry of fs.readdirSync(target, { withFileTypes: true })) {
+  let entries;
+  try {
+    entries = filesystem.readdirSync(target, { withFileTypes: true });
+  } catch (error) {
+    if (error?.code === 'ENOENT') return true;
+    throw error;
+  }
+  for (const entry of entries) {
     const child = path.join(target, entry.name);
     if (
       entry.isSymbolicLink() ||
       !entry.isDirectory() ||
-      !removeEmptyDirectoryShells(child)
+      !removeEmptyDirectoryShells(child, filesystem)
     )
       return false;
   }
 
   try {
-    fs.rmdirSync(target);
+    filesystem.rmdirSync(target);
   } catch (error) {
     if (error?.code === 'ENOENT') return true;
     if (
@@ -186,7 +198,7 @@ export function removeEmptyDirectoryShells(target) {
       return false;
     throw error;
   }
-  return !fs.existsSync(target);
+  return !filesystem.existsSync(target);
 }
 
 export async function waitForPathRemoval(

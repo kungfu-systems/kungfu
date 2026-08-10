@@ -1,0 +1,71 @@
+{
+  "schema": "kungfu.temporal-release-admission-contract/v1",
+  "id": "kungfu-temporal-release-admission",
+  "status": "implemented",
+  "objective": "Admit a release only through one exact bounded path joining Buildchain compatibility proofs, Kungfu release provenance, qualification, approval, and authority.",
+  "maximumPathDepth": 2,
+  "defaultMode": "dual-read",
+  "rollbackMode": "legacy-exact",
+  "releaseAuthorityIdentity": "kungfu-systems/kungfu:.github/workflows/release-new-version.yml",
+  "requiredReleaseSurfaces": [
+    "advanced-release-candidate-promote",
+    "promote-buildchain-ref-action",
+    "release-candidate-promote"
+  ],
+  "exactBindings": [
+    "repository",
+    "channel",
+    "sourceSha",
+    "sourceTree",
+    "candidateObjectRoot",
+    "artifactRoot",
+    "runtimeSha",
+    "contractDigest",
+    "qualificationRoot",
+    "approvalRoot",
+    "authorityRoot"
+  ],
+  "paths": {
+    "alpha": {
+      "sha256:13c4679c4ac8764c85e29693bfb59099e21e9786cc6082552198d39393467490": {
+        "kind": "composed",
+        "proofRoots": [
+          "sha256:36c85ba487be1528e85776d2bc5f766a971d42ac238aec30071945f7d60d9fc5",
+          "sha256:cb642b68aaf60e9c0eb93d46a2a1fc482810142201c7340ad7efe824b1683921",
+          "sha256:e6f93f44a6613a9d6de776ebe8f29b1779b0cd18a24bdf126ec6c1a07770fa75"
+        ]
+      },
+      "sha256:8e565f9ac5146d5dceafc3da6b267147fb412937db979bf35a0429966da82197": {
+        "kind": "direct",
+        "proofRoots": []
+      }
+    },
+    "release": {
+      "sha256:8e9a161653c40611ffd76aa878ae348fc215506c1caa88347111fb122cfe7c12": {
+        "kind": "direct",
+        "proofRoots": []
+      }
+    }
+  },
+  "dualRead": {
+    "legacyField": "publicationContractDigests",
+    "parity": "exact-set",
+    "mismatch": "fail-closed"
+  },
+  "rollback": {
+    "switch": "KUNGFU_TEMPORAL_RELEASE_ADMISSION_MODE=legacy-exact",
+    "scope": "prior exact contract whitelist only",
+    "historicalMutation": false
+  },
+  "receipt": {
+    "schema": "kungfu.temporal-release-admission-receipt/v1",
+    "positiveAndNegative": true,
+    "privatePayload": false,
+    "diagnostics": "stable rooted reason codes"
+  },
+  "safety": {
+    "realPublicationRequired": false,
+    "implicitComposition": "forbidden",
+    "majorLineInference": "forbidden"
+  }
+}
