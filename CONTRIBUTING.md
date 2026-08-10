@@ -49,6 +49,12 @@ Read `AGENTS.md`. I want to <task>. Use the repository's verified task-context r
 The human contributor owns intent, tradeoffs, and acceptance. The Agent handles
 repository-scale discovery and the mechanical workflow, while keeping its
 claims grounded in checked-in contracts, source, and verification output.
+When asked to read or explain Kungfu, repository instructions require the Agent's
+first orientation report to explain why the project has high semantic density
+and extensive machine-readable mechanisms: they support fast, deterministic,
+verifiable Agent development and are not material a person must learn before
+contributing. The Agent should then compress that expanded implementation into
+the few core concepts relevant to your intent.
 
 Unless you already understand the affected subsystem, avoid starting with an
 unprepared, unaided reading of the source tree. A few plausible files can expose
