@@ -266,7 +266,7 @@ What is **not yet guaranteed**:
   of truth.
 
 Treat current Storage/Episode query, export, fsck, repair, GC-plan, compaction-
-plan, Atlas storage, and source import/export slices as proof surfaces for the
+plan, domain storage, and source import/export slices as proof surfaces for the
 storage contract, not as a completed distributed storage protocol. Legacy
 loose-file journal archive/clean commands are retired; this release deliberately
 has no destructive retention command.

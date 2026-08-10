@@ -81,10 +81,6 @@ and the dispositions bundle used across the four consideration stages. Set
 `KF_PROFILE_KFD3_MANIFEST` to the bundled `profile-kfd3.json` before
 `profile kfd3-status`.
 
-The Atlas migration must first run `dogfood import-atlas` without `--execute`,
-then bind the returned `source.source_root` through `--expected-source-root`
-for the authorized execution, and finally run `dogfood export-atlas`.
-
 ## Evidence boundary
 
 This qualification proves the macOS arm64 directory Product and bundled

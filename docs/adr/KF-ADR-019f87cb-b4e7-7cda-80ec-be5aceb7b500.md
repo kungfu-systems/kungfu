@@ -5,7 +5,7 @@ adr_id: KF-ADR-019f87cb-b4e7-7cda-80ec-be5aceb7b500
 decision_status: accepted
 implementation_status: staged
 implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/1393]
-qualification_refs: [framework/core/architecture/layered-api-encoding-boundary.contract.json, framework/action/action-canonical-json-v1.json, framework/core/src/python/kungfu/canonical_json.py, framework/core/src/libkungfu/src/runtime/action/action_canonical_json.cpp, framework/core/src/libkungfu/include/kungfu/runtime/storage/json_edge.h, scripts/check-layered-api-encoding-boundary.test.mjs, scripts/check-canonical-json.test.mjs, framework/core/src/libkungfu/include/kungfu/api.h, framework/core/src/libkungfu/tests/api_contract_tests.cpp, framework/core/tests/python/test_canonical_json.py, framework/core/tests/python/test_atlas_storage.py, tests/qualification/layers/sdk/wire-fixture-v1.json, tests/fixtures/canonical-json/vectors.json]
+qualification_refs: [framework/core/architecture/layered-api-encoding-boundary.contract.json, framework/action/action-canonical-json-v1.json, framework/core/src/python/kungfu/canonical_json.py, framework/core/src/libkungfu/src/runtime/action/action_canonical_json.cpp, framework/core/src/libkungfu/include/kungfu/runtime/storage/json_edge.h, scripts/check-layered-api-encoding-boundary.test.mjs, scripts/check-canonical-json.test.mjs, framework/core/src/libkungfu/include/kungfu/api.h, framework/core/src/libkungfu/tests/api_contract_tests.cpp, framework/core/tests/python/test_canonical_json.py, framework/core/tests/python/test_fact_kernel_integrity.py, tests/qualification/layers/sdk/wire-fixture-v1.json, tests/fixtures/canonical-json/vectors.json]
 review_state: self-reviewed
 sensitivity: public
 sources: [local-files, user-consensus]

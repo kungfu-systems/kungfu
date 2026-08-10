@@ -11,6 +11,6 @@
     {"id": "worktree-and-ui-session-loss", "proof": "framework/core/tests/python/test_exit_bundle.py::test_project_cut_history_member_survives_source_removal", "expected": "portable member verification survives source worktree and UI/session absence"},
     {"id": "qualified-rollback", "proof": "framework/core/tests/python/test_agent_work_profile_native.py::test_native_profile_backend_switch_and_rollback_preserve_five_role_identity", "expected": "rollback preserves all declared role identities under exact roots"},
     {"id": "unknown-required-member", "proof": "framework/core/tests/python/test_product_release_history.py::test_product_release_history_rejects_unknown_features_and_thin_import", "expectedDiagnostic": "unknown-required-member"},
-    {"id": "gc-with-retained-recovery-root", "proof": "framework/core/tests/python/test_atlas_storage.py::test_storage_maintenance_rebuild_gc_compact_and_sync_check", "expected": "GC remains plan-bound and retains the authority needed for rebuild and verification"}
+    {"id": "gc-with-retained-recovery-root", "proof": "framework/core/tests/python/test_fact_kernel_integrity.py::test_rebuild_retention_and_backend_switch_preserve_semantic_roots", "expected": "Rebuild and retention preserve the semantic authority required for verification"}
   ]
 }

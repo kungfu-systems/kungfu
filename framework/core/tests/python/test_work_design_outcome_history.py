@@ -3,6 +3,7 @@
 import pytest
 
 from kungfu import assignment_orchestration
+from kungfu.initiative_family import canonical as assignment_canonical
 
 
 def _sha256(marker):
@@ -37,7 +38,7 @@ def _work_design_outcome(state_root, query_root, *, complete=True, marker="a"):
         },
         "cohort": {
             **cohort_body,
-            "cohortRoot": assignment_orchestration.semantic_root(cohort_body),
+            "cohortRoot": assignment_canonical.semantic_root(cohort_body),
         },
         "window": {
             "admittedAt": "2026-08-01T00:00:00Z",
@@ -72,7 +73,7 @@ def _work_design_outcome(state_root, query_root, *, complete=True, marker="a"):
         },
         "coverage": {
             **coverage_body,
-            "coverageRoot": assignment_orchestration.semantic_root(coverage_body),
+            "coverageRoot": assignment_canonical.semantic_root(coverage_body),
         },
         "evidence": {
             "settledStateRoot": state_root,
@@ -89,7 +90,7 @@ def _work_design_outcome(state_root, query_root, *, complete=True, marker="a"):
             "mayMutate": False,
         },
     }
-    return {**body, "outcomeRoot": assignment_orchestration.semantic_root(body)}
+    return {**body, "outcomeRoot": assignment_canonical.semantic_root(body)}
 
 
 def _settled_coordinate(state_root, query_root):
@@ -154,7 +155,7 @@ def test_outcome_binding_rejects_private_payload_fields(tmp_path):
     query_root = _sha256("6")
     outcome = _work_design_outcome(state_root, query_root)
     outcome["window"]["transcript"] = "private terminal bytes"
-    outcome["outcomeRoot"] = assignment_orchestration.semantic_root(
+    outcome["outcomeRoot"] = assignment_canonical.semantic_root(
         {key: value for key, value in outcome.items() if key != "outcomeRoot"}
     )
     with pytest.raises(ValueError, match="window has an invalid field set"):
