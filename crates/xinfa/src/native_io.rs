@@ -453,7 +453,7 @@ pub fn compile_repository_atlas_bytes(
 
 pub fn import_context_pack(reference: &Path) -> Result<AtlasArtifacts, String> {
     if !reference.is_dir() {
-        return Err("Atlas import requires a complete Context Pack directory".to_owned());
+        return Err("Context Pack import requires a complete directory".to_owned());
     }
     import_context_pack_artifacts(
         &fs::read(reference.join("pack.json"))

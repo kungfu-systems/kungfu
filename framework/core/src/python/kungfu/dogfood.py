@@ -293,13 +293,11 @@ def read(
     runtime_dir: str, operation: str, values: Mapping[str, Any] | None = None
 ) -> dict[str, Any]:
     input_value = dict(values or {})
-    if operation in {"capabilities", "migration-plan"}:
+    if operation == "capabilities":
         domain = profile_sdk.load_member_python_package(
             str(source()), MEMBER_ID, "domain"
         ).dogfood
-        if operation == "capabilities":
-            return domain.capabilities()
-        return domain.atlas_migration_plan(str(input_value.get("sourcePath") or ""))
+        return domain.capabilities()
     diagnosis = profile_diagnosis(runtime_dir)
     if not diagnosis["ok"]:
         raise profile_sdk.ProfileSdkError(

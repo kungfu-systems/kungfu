@@ -47,7 +47,7 @@ Cost alone is a bill. The profile always binds cost to a stable run, Assignment,
 Episode coordinate and exposes whether the work is advancing, blocked, stale,
 waiting, or unsupported by evidence.
 
-For the first Atlas bridge, a Rewind `CostSnapshot.work_id` matches either the
+For an external evidence adapter, a Rewind `CostSnapshot.work_id` matches either the
 stable imported Assignment id or its namespaced subject key. Tokens remain visible when
 the provider does not report money; unknown USD is rendered as unknown rather
 than zero. Unsealed runs, unreadable runs, weak attribution, and ambiguous

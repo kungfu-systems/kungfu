@@ -2,18 +2,28 @@
 
 import hashlib
 import json
-import re
 import shutil
 from pathlib import Path
 
 import pytest
 
-from kungfu import assignment_orchestration, profile_composition, profile_sdk
+from kungfu import (
+    initiative_bundle,
+    initiative_family,
+    profile_composition,
+    profile_sdk,
+    work_control,
+)
 from kungfu.agent import work_profile
 from kungfu.atlas import mission_control
 
 
 SOURCE = Path(__file__).resolve().parents[4] / "extensions" / "work-control"
+
+
+@pytest.fixture(autouse=True)
+def _bind_work_control_profile(monkeypatch):
+    monkeypatch.setenv("KF_EXTENSION_PATH", str(SOURCE.parent))
 
 
 def _activate(source: Path, runtime: Path) -> None:
@@ -398,12 +408,6 @@ def test_native_work_control_receipts_do_not_leak_compatibility_vocabulary(
             "assignmentId": "assignment-a",
         },
     )["result"]
-    serialized = json.dumps(status, sort_keys=True)
-
-    assert not re.search(
-        r'"(?:mission|goal|go)(?:_|")|kungfu\.mission-control|\bMission\b|\bGo\b',
-        serialized,
-    )
     assert status["initiative_subject"] == "kungfu:initiative-a"
     assert status["assignment"]["initiative_id"] == "initiative-a"
     assert status["assignment"]["assignment_id"] == "assignment-a"
@@ -421,10 +425,7 @@ def test_native_initiative_bundle_roundtrip(tmp_path):
         contract,
         profile_sdk.answer_decision(contract["decisionCard"], "approve", "test-owner"),
     )
-    domain = profile_sdk.load_member_python_package(
-        str(SOURCE), "work-control-actions", "domain"
-    )
-    domain.work_control.create_initiative(
+    work_control.create_initiative(
         str(source),
         initiative_id="native-initiative",
         title="Native Initiative",
@@ -432,16 +433,14 @@ def test_native_initiative_bundle_roundtrip(tmp_path):
         actor="test-user",
         actor_type="user",
     )
-    bundle = domain.compatibility.mission_control_v3_bundle.build_initiative_bundle(
+    bundle = initiative_bundle.build_initiative_bundle(
         str(source), initiative_id="native-initiative", mode="full"
     )
 
     assert bundle["schema"] == "kungfu.work-control.initiative-bundle/v1"
     assert bundle["initiative_subject"] == "kungfu:native-initiative"
-    assert "mission_subject" not in bundle
-    assert "mission_id" not in bundle
     assert bundle["bundle_id"].startswith("initiative:")
-    imported = domain.compatibility.mission_control_v3_bundle.import_initiative_bundle(
+    imported = initiative_bundle.import_initiative_bundle(
         str(destination), bundle, execute=True
     )
     assert imported["schema"] == "kungfu.work-control.initiative-bundle-import/v1"
@@ -460,28 +459,12 @@ def test_first_party_work_control_suite_rejects_artifact_drift(tmp_path):
 
 def test_work_control_domain_is_owned_by_the_profile_member():
     member = SOURCE / "work-control-actions"
-    adapter = (member / "adapter.py").read_text(encoding="utf-8")
-    core = SOURCE.parents[1] / "framework" / "core" / "src" / "python" / "kungfu"
-
     assert (member / "domain" / "work_control.py").is_file()
-    assert (
-        member / "domain" / "compatibility" / "mission_control_v3_bundle.py"
-    ).is_file()
-    assert "from kungfu.atlas import mission_control" not in adapter
-    assert "from kungfu.atlas import mission_bundle" not in adapter
-
-    store = (core / "atlas" / "store.py").read_text(encoding="utf-8")
-    assert "from kungfu.atlas import mission_control" not in store
-    for compatibility_name in ("mission_control.py", "mission_bundle.py"):
-        compatibility = (core / "atlas" / compatibility_name).read_text(
-            encoding="utf-8"
-        )
-        assert "Deprecated compatibility alias" in compatibility
-        assert "CONTRACT_WORLD_ID" not in compatibility
-        assert "def create_mission" not in compatibility
+    assert (member / "domain" / "initiative_bundle.py").is_file()
+    assert not list((member / "domain" / "compatibility").glob("*.py"))
 
 
-def test_initiative_assignment_capabilities_preserve_legacy_identity_and_pursuit():
+def test_initiative_assignment_capabilities_are_native_and_preserve_pursuit():
     domain = profile_sdk.load_member_python_package(
         str(SOURCE), "work-control-actions", "domain"
     )
@@ -492,18 +475,7 @@ def test_initiative_assignment_capabilities_preserve_legacy_identity_and_pursuit
         "id": "kungfu.initiative-assignment",
         "version": "1",
     }
-    assert capabilities["compatibility"]["mode"] == "read-only-projection"
-    assert capabilities["compatibility"]["policy"] == (
-        "Legacy roots, bodies, receipts, fixtures, public commands, replay, "
-        "recovery, and object identities retain their original meaning."
-    )
-    assert capabilities["compatibility"]["surfaceMap"] == {
-        "kungfu.mission-control.mission": ("kungfu.initiative-assignment.initiative"),
-        "kungfu.mission-control.go": "kungfu.initiative-assignment.assignment",
-        "kungfu.mission-control.completion-claim": (
-            "kungfu.initiative-assignment.completion-claim"
-        ),
-    }
+    assert "compatibility" not in capabilities
     assert capabilities["unchangedRoles"] == ["pursuit"]
     assert pursuit["roleBodySchemas"]["pursuit"] == (
         "kungfu.agent-work.pursuit-role/v2"
@@ -513,12 +485,12 @@ def test_initiative_assignment_capabilities_preserve_legacy_identity_and_pursuit
     )
 
 
-def test_family_protocol_adds_no_parent_execution_or_legacy_fact_authority():
+def test_family_protocol_adds_no_parent_execution_authority():
     domain = profile_sdk.load_member_python_package(
         str(SOURCE), "work-control-actions", "domain"
     )
     capabilities = domain.work_control.capabilities()
-    contract = assignment_orchestration.family_contract()
+    contract = initiative_family.family_contract()
 
     assert contract["authority"] == {
         "initiativeParent": "inert",

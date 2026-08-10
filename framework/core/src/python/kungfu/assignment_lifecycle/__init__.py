@@ -8,6 +8,7 @@ from collections.abc import Callable, Mapping
 from typing import Any
 
 from kungfu import assignment_orchestration as orchestration
+from kungfu.initiative_family.canonical import semantic_root
 from kungfu.assignment_lifecycle.ports import AssignmentAdvancePort, JsonObject
 
 
@@ -71,7 +72,7 @@ def work_ref(
         "entityType": "assignment",
         "entityId": plan["work"]["assignmentId"],
         "initiativeId": plan["work"]["initiativeId"],
-        "entityRoot": orchestration.semantic_root(status["assignment"]),
+        "entityRoot": semantic_root(status["assignment"]),
         "purpose": "complete-project-assignment",
         "systemTimeCut": status["query_proof_root"],
     }

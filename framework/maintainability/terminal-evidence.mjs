@@ -169,9 +169,9 @@ function verifyRetainedBinding(
         'kungfu.assignment-request/v1',
       );
       mismatch(
-        'retained-request-goal',
-        'assignment.request.goalId',
-        document?.workDefinition?.goal_id,
+        'retained-request-assignment',
+        'assignment.request.assignmentId',
+        document?.workDefinition?.assignment_id,
         matrix.goalId,
       );
       mismatch(

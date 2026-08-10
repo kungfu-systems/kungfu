@@ -1,0 +1,27 @@
+{
+  "schema": "kungfu.assignment-capture.fixture/v1",
+  "provenance": {
+    "sourceSystem": "external work coordinator",
+    "fieldSet": "representative public Assignment definition",
+    "topLevelFieldCount": 10,
+    "topLevelFieldRoot": "sha256:1418e525d8a38a1b2c3c27790cd6415e844a810b8576c3556282beaecb315ed7",
+    "values": "public-safe fixture values"
+  },
+  "workDefinition": {
+    "schema_version": 1,
+    "assignment_id": "assignment-roundtrip-example",
+    "initiative_id": "initiative-roundtrip-example",
+    "status": "captured",
+    "title": "Assignment capture roundtrip",
+    "objective": "Preserve a source work definition without interpreting it.",
+    "owner_agent": "test-agent",
+    "acceptance_criteria": ["captured bytes roundtrip exactly"],
+    "context_admission": {
+      "role": "implementer",
+      "subjects": ["assignment", "capture"]
+    },
+    "unknown_source_field": {
+      "must": "survive"
+    }
+  }
+}

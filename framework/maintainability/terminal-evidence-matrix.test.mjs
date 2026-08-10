@@ -153,8 +153,8 @@ function fixture() {
       expiresAt: null,
       policy: 'explicit-expiry-retain-bytes-v1',
     },
-    source: { kind: 'atlas-go-card', sourceId: fixtureMatrix.goalId },
-    workDefinition: { goal_id: fixtureMatrix.goalId },
+    source: { kind: 'external-assignment', sourceId: fixtureMatrix.goalId },
+    workDefinition: { assignment_id: fixtureMatrix.goalId },
   };
   const requestRoot = retain(
     'assignment-request',
