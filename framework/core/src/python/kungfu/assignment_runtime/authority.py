@@ -60,12 +60,20 @@ _ERROR_RETRYABLE = {
     "internal": True,
 }
 _COMMAND_OPERATIONS = {
+    "initiative.create": "create-initiative",
     "assignment.create": "create-assignment",
     "assignment.claim": "claim-assignment",
+    "assignment.relation.append": "append-assignment-relation-event",
     "assignment.stage": "advance-assignment",
     "assignment.completion.claim": "claim-completion",
+    "initiative.progress.assess": "assess-progress",
     "assignment.completion.review": "review-completion",
     "assignment.continuation.decide": "decide-continuation",
+    "assignment.atlas.import": "import-atlas",
+    "assignment.authority.activate": "activate-work-control",
+    "assignment.authority.restore": "restore-atlas-authority",
+    "initiative.bundle.export": "export-initiative",
+    "initiative.bundle.import": "import-initiative",
 }
 _LEASE_COMMANDS = {"assignment.claim", "assignment.stage"}
 _PROCESS_WRITERS: set[str] = set()
@@ -267,6 +275,7 @@ class WorkControlAuthority:
                     },
                 )
                 status = dict(status_receipt.get("result") or {})
+                projected["lifecycle"] = _copy_json(status)
                 projected["phase"] = str(status.get("phase") or "admitted")
                 projected["attempt"] = self._attempt(status)
                 projected["lease"] = self._lease(status)
@@ -362,9 +371,24 @@ class WorkControlAuthority:
                 "Command type is not implemented by the Local Profile",
             )
         arguments = dict(command.get("arguments") or {})
+        # These routing-only values satisfy the versioned Runtime command target
+        # shape for Initiative-wide and authority-wide actions. They never
+        # reach Work Control or become native Assignment identities.
+        runtime_initiative_id = arguments.pop("_runtimeInitiativeId", None)
+        runtime_assignment_id = arguments.pop("_runtimeAssignmentId", None)
         target = dict(command.get("target") or {})
-        arguments.setdefault("initiativeId", target.get("initiativeId"))
-        arguments.setdefault("assignmentId", target.get("assignmentId"))
+        if runtime_initiative_id is None:
+            arguments.setdefault("initiativeId", target.get("initiativeId"))
+        elif runtime_initiative_id != target.get("initiativeId"):
+            raise LocalRuntimeError(
+                "malformed-identity", "Runtime Initiative routing identity drifted"
+            )
+        if runtime_assignment_id is None:
+            arguments.setdefault("assignmentId", target.get("assignmentId"))
+        elif runtime_assignment_id != target.get("assignmentId"):
+            raise LocalRuntimeError(
+                "malformed-identity", "Runtime Assignment routing identity drifted"
+            )
         lease = command.get("lease")
         if operation == "claim-assignment" and isinstance(lease, Mapping):
             arguments.setdefault("leaseId", lease.get("leaseId"))

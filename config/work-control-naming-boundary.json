@@ -58,6 +58,7 @@
         "framework/deprecation/deprecation-registry.json",
         "framework/exit/kungfu-exit-bundle.contract.json",
         "framework/assignment-runtime/assignment-runtime.contract.json",
+        "framework/assignment-runtime/consumer-inventory-v1.json",
         "product/scripts/cli-surface-qualification.mjs",
         "scripts/check-exit-bundle-contract.test.mjs",
         "scripts/exit-clean-runtime-worker.py"

@@ -11,7 +11,7 @@
     "version": "4.0.0-alpha.1",
     "channel": "repository-default",
     "tag": "v4.0.0-alpha.1",
-    "sourceSha": "5123109df3f5c57e66ca74dc165367a08fef0de6"
+    "sourceSha": "b4a8908642cc4ea66ad4c7564ae5eceb1f842081"
   },
   "claims": [
     {
@@ -385,7 +385,7 @@
       "source": {
         "kind": "file",
         "path": "framework/work-lifecycle/kungfu-work-lifecycle-operation-matrix.contract.json",
-        "sha256": "bca8cf2cb144dd05250e3bea9d274394cdf47b141a7795c5a1ffc2d95bcd5ca6"
+        "sha256": "3feacc972ba83311045dd5f6b219fd92827a50c8d6f5240f13cb127908965063"
       },
       "evidence": [
         {

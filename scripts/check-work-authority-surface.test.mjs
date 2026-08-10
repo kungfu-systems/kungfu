@@ -42,11 +42,11 @@ test('the only public Work mutation family is kungfu work', () => {
   assert.match(command, /@kfc\.group\(\s*name="work"/u);
   assert.doesNotMatch(command, /@kfc\.group\(\s*name="assignment"/u);
 
-  const missionControl = read(
-    'extensions/work-control/work-control-actions/domain/mission_control.py',
+  const workControl = read(
+    'extensions/work-control/work-control-actions/domain/work_control.py',
   );
-  assert.doesNotMatch(missionControl, /^def create_mission\(/mu);
-  assert.doesNotMatch(missionControl, /^def create_go\(/mu);
+  assert.doesNotMatch(workControl, /^def create_mission\(/mu);
+  assert.doesNotMatch(workControl, /^def create_go\(/mu);
 
   const atlas = read('framework/core/src/python/kungfu/cli/commands/atlas.py');
   for (const alias of [

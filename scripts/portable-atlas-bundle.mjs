@@ -14,6 +14,12 @@ const SELECTOR = '.xinfa/product-documentation-pack.json';
 const OUTPUT = '.xinfa/product-atlas-bundle.json';
 const CLASSIFICATION_BUNDLE = '.xinfa/portable-atlas-classification.json.gz';
 const WITNESS = '.buildchain/kfd/kfd-1/documentation-pack.witness.json';
+const CONTENT_ADDRESSED_EVIDENCE_COLLECTIONS = [
+  {
+    prefix: 'framework/site/src/kfx-site-impact-proofs/',
+    path: 'framework/site/src/kfx-site-impact-proofs/',
+  },
+];
 const PORTABLE_GZIP_OPTIONS = {
   level: 9,
   strategy: zlib.constants.Z_HUFFMAN_ONLY,
@@ -86,8 +92,57 @@ function trackedFiles() {
     .sort();
 }
 
+/** @param {string[]} files */
+export function portableClassificationPaths(files) {
+  const paths = files.filter(
+    (relative) =>
+      !CONTENT_ADDRESSED_EVIDENCE_COLLECTIONS.some(({ prefix }) =>
+        relative.startsWith(prefix),
+      ),
+  );
+  paths.push(
+    ...CONTENT_ADDRESSED_EVIDENCE_COLLECTIONS.map(
+      ({ path: relative }) => relative,
+    ),
+  );
+  return [...new Set(paths)].sort();
+}
+
+/** @param {string[]} files @param {string[]} classifiedPaths */
+function classificationCovers(files, classifiedPaths) {
+  const filesSet = new Set(files);
+  const classifiedSet = new Set(classifiedPaths);
+  return (
+    files.every(
+      (relative) =>
+        classifiedSet.has(relative) ||
+        CONTENT_ADDRESSED_EVIDENCE_COLLECTIONS.some(({ prefix }) =>
+          relative.startsWith(prefix),
+        ),
+    ) &&
+    classifiedPaths.every(
+      (relative) =>
+        filesSet.has(relative) ||
+        CONTENT_ADDRESSED_EVIDENCE_COLLECTIONS.some(
+          ({ path: collectionPath }) => relative === collectionPath,
+        ),
+    )
+  );
+}
+
 /** @param {string} relative @param {Set<string>} embedded */
 function classify(relative, embedded) {
+  if (
+    CONTENT_ADDRESSED_EVIDENCE_COLLECTIONS.some(
+      ({ path: collectionPath }) => relative === collectionPath,
+    )
+  )
+    return {
+      class: 'excluded',
+      owner: 'product-security-and-release',
+      reason:
+        'content-addressed control evidence represented as a stable collection',
+    };
   if (embedded.has(relative) || NATIVE_EMBEDDED.includes(relative))
     return {
       class: 'embedded',
@@ -189,7 +244,9 @@ export function compilePortableBundle(options = {}) {
   );
   const inventory = new Map(pack.inventory.map((row) => [row.path, row]));
   const embedded = new Set(inventory.keys());
-  const classifications = trackedFiles().map((relative) => ({
+  const files = trackedFiles();
+  const classificationPaths = portableClassificationPaths(files);
+  const classifications = classificationPaths.map((relative) => ({
     path: relative,
     ...classify(relative, embedded),
   }));
@@ -347,7 +404,7 @@ export function compilePortableBundle(options = {}) {
     priorReleaseDeltaBytes:
       priorReleaseDeltaBytes <= LIMITS.priorReleaseDeltaBytes,
     routeClosure: routeEntries.every((route) => route.missing.length === 0),
-    classification: classifications.length === trackedFiles().length,
+    classification: classificationCovers(files, classificationPaths),
   };
   const witnessBytes = fs.readFileSync(path.join(ROOT, WITNESS));
   const sourceTree = execFileSync(
@@ -519,10 +576,12 @@ if (
         const classification = {
           schema: manifest.classification.schema,
           counts: manifest.classification.counts,
-          entries: trackedFiles().map((relative) => ({
-            path: relative,
-            ...classify(relative, embedded),
-          })),
+          entries: portableClassificationPaths(trackedFiles()).map(
+            (relative) => ({
+              path: relative,
+              ...classify(relative, embedded),
+            }),
+          ),
           total: manifest.classification.total,
           unknown: 0,
           silentOmissions: 0,

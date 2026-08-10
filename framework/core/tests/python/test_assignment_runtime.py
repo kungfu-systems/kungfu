@@ -20,6 +20,7 @@ from kungfu.assignment_runtime import (
     SNAPSHOT_SCHEMA,
     EmbeddedAssignmentRuntimeClient,
     EmbeddedLocalAssignmentRuntime,
+    LocalAssignmentRuntimeApplication,
     LocalRuntimeError,
     WorkControlAuthority,
     serve,
@@ -117,6 +118,20 @@ class FakeAuthority:
                     "phase": state["phase"],
                     "attempt": state["attempt"],
                     "lease": state["lease"],
+                    "lifecycle": {
+                        "phase": state["phase"],
+                        "execution_claims": (
+                            [
+                                {
+                                    "attempt_id": state["attempt"]["attemptId"],
+                                    "claim_id": state["attempt"].get("claimId"),
+                                }
+                            ]
+                            if state["attempt"]
+                            else []
+                        ),
+                        "active_lease": state["lease"],
+                    },
                     "sealedIdentity": {
                         "contractWorldId": "kungfu.initiative-assignment",
                         "factSurfaceId": "kungfu.initiative-assignment.assignment",
@@ -145,7 +160,14 @@ class FakeAuthority:
         effect_root = _root(command)
         if effect_root in state["effects"]:
             return {
-                "authorityReceipt": {"status": "already-present", "root": effect_root},
+                "authorityReceipt": {
+                    "result": {
+                        "coreReceipt": {
+                            "status": "already-present",
+                            "root": effect_root,
+                        }
+                    }
+                },
                 "episodeRefs": [{"episodeRoot": ROOT_A}],
             }
         if command_type == "assignment.claim":
@@ -167,7 +189,9 @@ class FakeAuthority:
         state["effects"].append(effect_root)
         self._write(state)
         return {
-            "authorityReceipt": {"status": "admitted", "root": effect_root},
+            "authorityReceipt": {
+                "result": {"coreReceipt": {"status": "admitted", "root": effect_root}}
+            },
             "episodeRefs": [{"episodeRoot": ROOT_A}],
         }
 
@@ -431,6 +455,142 @@ def test_typed_embedded_client_preserves_envelopes_roots_and_receipts(local_runt
     assert client.diagnostics()["status"] == "ok"
     assert client.recovery_plan()["result"]["status"] == "not-required"
     assert len(authority._read()["effects"]) == 1
+
+
+@pytest.mark.parametrize("attempt_id", [None, "attempt-r3"])
+def test_cli_agent_and_kfx_application_edges_share_runtime_state(
+    tmp_path, monkeypatch, attempt_id
+):
+    runtime_dir = tmp_path / ".kungfu" / "runtime"
+    runtime_dir.parent.mkdir(parents=True)
+    (runtime_dir.parent / "workspace-identity.json").write_text(
+        json.dumps(
+            {
+                "schema": "kungfu.workspace.identity-material/v1",
+                "workspaceKind": "project",
+                "workspaceKey": "workspace:test",
+                "identityRoot": ROOT_A,
+            },
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    authority = FakeAuthority(runtime_dir)
+
+    def application(kind: str) -> LocalAssignmentRuntimeApplication:
+        app = LocalAssignmentRuntimeApplication(
+            runtime_dir,
+            client_id=f"kungfu.{kind}.test",
+            kind=kind,
+            source=PROFILE_SOURCE,
+        )
+        monkeypatch.setattr(
+            app,
+            "_runtime",
+            lambda: EmbeddedLocalAssignmentRuntime(
+                runtime_dir,
+                realm_id=f"project:{ROOT_A[7:23]}",
+                generation=ROOT_A,
+                authority=authority,
+                contract=ASSIGNMENT_RUNTIME_CONTRACT,
+                request_schema=ENVELOPE_SCHEMA,
+            ),
+        )
+        return app
+
+    cli = application("cli")
+    agent = application("agent")
+    kfx = application("kfx")
+    assert cli.status("initiative-a", "assignment-a") == agent.status(
+        "initiative-a", "assignment-a"
+    )
+    assert kfx.status("initiative-a", "assignment-a")["phase"] == "admitted"
+
+    expires = (
+        (datetime.now(UTC) + timedelta(hours=1)).isoformat().replace("+00:00", "Z")
+    )
+    claim_values = {
+        "initiativeId": "initiative-a",
+        "assignmentId": "assignment-a",
+        "leaseId": "lease-r3",
+        "leaseExpiresAt": expires,
+        "owner": "owner-r3",
+        "agent": "agent-r3",
+        "slot": "slot-r3",
+        "authorizedBy": "owner-r3",
+    }
+    if attempt_id is None:
+        expected_attempt_id = (
+            "attempt:"
+            + _root(
+                {
+                    "intentId": "claim-assignment",
+                    "arguments": claim_values,
+                    "authorizedBy": "owner-r3",
+                }
+            )[7:39]
+        )
+    else:
+        claim_values["attemptId"] = attempt_id
+        expected_attempt_id = attempt_id
+    claimed = cli.authorize("claim-assignment", claim_values, "owner-r3")
+    assert claimed["status"] == "admitted"
+    assert authority._read()["attempt"]["attemptId"] == expected_attempt_id
+    advanced = agent.authorize(
+        "advance-assignment",
+        {
+            "initiativeId": "initiative-a",
+            "assignmentId": "assignment-a",
+            "expectedPhase": "claimed",
+            "toPhase": "executing",
+            "actor": "agent-r3",
+            "reason": "prove the shared Runtime application edge",
+        },
+        "agent-r3",
+    )
+    assert advanced["status"] == "admitted"
+    assert kfx.status("initiative-a", "assignment-a")["phase"] == "executing"
+
+    state = json.loads(
+        (runtime_dir / "assignment-runtime" / "local-v1" / "state.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    assert len(state["commands"]) == 2
+    assert all(record["authorityReceipt"] for record in state["commands"].values())
+
+
+def test_work_control_authority_strips_runtime_only_routing_ids(tmp_path, monkeypatch):
+    authority = WorkControlAuthority(tmp_path, source=PROFILE_SOURCE)
+    captured = {}
+
+    def invoke(operation, values, *, write=False):
+        captured.update(operation=operation, values=values, write=write)
+        return {"result": {"coreReceipt": {"status": "imported"}}}
+
+    monkeypatch.setattr(authority, "_invoke", invoke)
+    result = authority.apply(
+        {
+            "type": "assignment.atlas.import",
+            "target": {
+                "initiativeId": "runtime:initiative:route",
+                "assignmentId": "runtime:assignment:route",
+            },
+            "arguments": {
+                "_runtimeInitiativeId": "runtime:initiative:route",
+                "_runtimeAssignmentId": "runtime:assignment:route",
+                "repo": "/repo",
+                "source": "atlas",
+            },
+        }
+    )
+    assert captured == {
+        "operation": "import-atlas",
+        "values": {"repo": "/repo", "source": "atlas"},
+        "write": True,
+    }
+    assert result["authorityReceipt"]["result"]["coreReceipt"]["status"] == "imported"
 
 
 def test_command_cas_idempotency_attempt_lease_warrant_and_receipts(local_runtime):

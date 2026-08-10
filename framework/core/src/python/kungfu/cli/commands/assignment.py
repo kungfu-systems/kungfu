@@ -17,7 +17,11 @@ from kungfu import assignment_close
 from kungfu import assignment_evidence
 from kungfu import assignment_review_lifecycle
 from kungfu import assignment_start
-from kungfu.assignment_runtime import create_runtime_host_command, profile_source
+from kungfu.assignment_runtime import (
+    LocalAssignmentRuntimeApplication,
+    create_runtime_host_command,
+    profile_source,
+)
 from kungfu import dogfood as dogfood_api
 from kungfu import profile_composition, profile_sdk
 from kungfu.agent import run_agent
@@ -243,21 +247,21 @@ def _prepare_resume_profile(runtime_dir, actor):
 
 
 def _profile_read(runtime_dir, operation, values):
-    return profile_sdk.invoke_member_adapter(
-        str(profile_source()),
+    if operation != "assignment-status":
+        raise ValueError(f"unsupported Assignment Runtime read: {operation}")
+    return LocalAssignmentRuntimeApplication(
         runtime_dir,
-        "work-control-actions",
-        operation,
-        values,
-    )["result"]
+        client_id="kungfu.work.cli",
+        kind="cli",
+    ).status(values.get("initiativeId"), values.get("assignmentId"))
 
 
 def _profile_action(runtime_dir, intent_id, values, authorized_by):
-    source = str(profile_source())
-    plan = profile_sdk.intent_plan(source, runtime_dir, intent_id, values)
-    answer = profile_sdk.answer_decision(plan["decisionCard"], "approve", authorized_by)
-    receipt = profile_sdk.intent_apply(runtime_dir, plan, answer)
-    return receipt["actionReceipt"]["coreReceipt"]
+    return LocalAssignmentRuntimeApplication(
+        runtime_dir,
+        client_id="kungfu.work.cli",
+        kind="cli",
+    ).authorize(intent_id, values, authorized_by)
 
 
 def _status(runtime_dir, initiative_id, assignment_id, now=""):

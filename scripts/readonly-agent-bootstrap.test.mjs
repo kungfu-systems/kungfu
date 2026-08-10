@@ -510,6 +510,8 @@ test('declared discovery routes are zero-write in a cold read-only fixture', (t)
     'scripts/readonly-agent-bootstrap.test.mjs',
     'scripts/generate-kfx-authoring-kit.mjs',
     'scripts/run-documentation-material-tests.mjs',
+    'scripts/portable-atlas-bundle.mjs',
+    'scripts/portable-atlas-bundle.test.mjs',
     'scripts/run-agent-work-state-tests.mjs',
     'scripts/run-desktop-update-tests.mjs',
     'scripts/run-runtime-upgrade-tests.mjs',
@@ -686,6 +688,22 @@ test('declared discovery routes are zero-write in a cold read-only fixture', (t)
     'framework/work-design-preflight/work-design-preflight.contract.json',
   ])
     copyFile(ROOT, fixture, relative);
+  const impactProofDirectory = path.join(
+    ROOT,
+    'framework/site/src/kfx-site-impact-proofs',
+  );
+  if (fs.existsSync(impactProofDirectory)) {
+    for (const entry of fs
+      .readdirSync(impactProofDirectory, { withFileTypes: true })
+      .filter((value) => value.isFile() && value.name.endsWith('.json'))
+      .sort((left, right) => left.name.localeCompare(right.name))) {
+      copyFile(
+        ROOT,
+        fixture,
+        `framework/site/src/kfx-site-impact-proofs/${entry.name}`,
+      );
+    }
+  }
   fs.rmSync(
     path.join(fixture, 'framework/core/src/python/kungfu/release_cut.py'),
     { force: true },

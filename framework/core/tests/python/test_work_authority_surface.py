@@ -45,6 +45,7 @@ def test_work_family_contains_only_profile_backed_orchestration_commands():
         "review-agent-plan",
         "review-agent-run",
         "resume-prepare",
+        "runtime-host",
         "seal",
         "stage",
         "start",

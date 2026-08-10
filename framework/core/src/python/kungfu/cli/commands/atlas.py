@@ -70,13 +70,13 @@ def _profile_read(ctx, operation, values):
 
 
 def _profile_action(ctx, intent_id, values):
-    from kungfu import profile_sdk
+    from kungfu.assignment_runtime import LocalAssignmentRuntimeApplication
 
-    source = _profile_source(ctx)
-    plan = profile_sdk.intent_plan(source, ctx.runtime_dir, intent_id, values)
-    answer = profile_sdk.answer_decision(plan["decisionCard"], "approve", "kungfu-cli")
-    receipt = profile_sdk.intent_apply(ctx.runtime_dir, plan, answer)
-    return receipt["actionReceipt"]["coreReceipt"]
+    return LocalAssignmentRuntimeApplication(
+        ctx.runtime_dir,
+        client_id="kungfu.atlas.cli",
+        kind="cli",
+    ).authorize(intent_id, values, "kungfu-cli")
 
 
 def _load(ctx):

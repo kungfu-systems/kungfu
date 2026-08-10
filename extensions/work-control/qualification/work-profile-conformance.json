@@ -21,7 +21,7 @@
       "atlas": "framework/agent-work/role-schemas/atlas.schema.json",
       "warrant": "framework/agent-work/role-schemas/warrant.schema.json"
     },
-    "abstractionAuthorityRoot": "sha256:bca8cf2cb144dd05250e3bea9d274394cdf47b141a7795c5a1ffc2d95bcd5ca6",
+    "abstractionAuthorityRoot": "sha256:3feacc972ba83311045dd5f6b219fd92827a50c8d6f5240f13cb127908965063",
     "abstractionAuthorityPath": "framework/work-lifecycle/kungfu-work-lifecycle-operation-matrix.contract.json",
     "sourceRoot": "sha256:be4c92b368d0b015b78d1a67a1087c2a11c9f85eaebfc8c203ad695ac6ba3e4d",
     "sourcePath": "framework/agent-work/kungfu-agent-work-domain-profile.contract.json"
