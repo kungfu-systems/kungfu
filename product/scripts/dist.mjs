@@ -630,7 +630,7 @@ function productKfxDeclarations() {
   return new Set([...dependencies, ...metadata]);
 }
 
-function assertDeclaredKfx(packages) {
+export function assertDeclaredKfx(packages) {
   const declared = productKfxDeclarations();
   const actual = new Set(packages.map((pkg) => pkg.name));
   const missing = [...actual].filter((name) => !declared.has(name)).sort();
