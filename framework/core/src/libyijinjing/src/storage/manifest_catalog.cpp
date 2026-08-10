@@ -215,7 +215,7 @@ nlohmann::json sync_root_edge(const ImportManifestAccepted &record) {
   ordering_fields.push_back("source_path");
   return {
       {"schema", SYNC_ROOT_SCHEMA_V1},
-      {"scope", SYNC_ROOT_SCOPE_ATLAS_IMPORT_MANIFEST},
+      {"scope", SYNC_ROOT_SCOPE_SOURCE_IMPORT_MANIFEST},
       {"proof", SYNC_ROOT_PROOF_LINEAR_CHAIN_V1},
       {"algorithm", fixed_string(record.sync_root_algo)},
       {"value", fixed_string(record.sync_root_value)},

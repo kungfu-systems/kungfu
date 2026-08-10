@@ -1,7 +1,7 @@
 {
   "schema": "xinfa.go-route-corpus/v1",
   "provenance": {
-    "source": "Atlas goal registry",
+    "source": "external Assignment registry",
     "captured_on": "2026-07-17",
     "content": "goal identifiers plus routing-only task summaries; no private goal body"
   },

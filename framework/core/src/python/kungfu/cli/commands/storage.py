@@ -4,8 +4,6 @@ import json
 from pathlib import Path
 import sys
 import tempfile
-from typing import Any
-
 import click
 
 from kungfu.cli.commands import PrioritizedCommandGroup, initialize_runtime_context, kfc
@@ -287,22 +285,17 @@ def layout(ctx, provider, as_json, verify):
 
 
 @storage.command(help="summarize a storage scope")
-@click.option("--scope", type=click.Choice(["atlas", "source", "all"]), required=True)
+@click.option("--scope", type=click.Choice(["source", "all"]), required=True)
 @click.option("--source", "storage_source_id", type=str, default=None)
 @click.option("--json", "as_json", is_flag=True, help="machine-readable output")
 @storage_command_context
 def status(ctx, scope, storage_source_id, as_json):
-    if scope == "atlas":
-        from kungfu.atlas import store
+    from kungfu.storage import service
 
-        result = store.status(ctx.runtime_dir)
-    else:
-        from kungfu.storage import service
-
-        result = service.status(
-            ctx.runtime_dir,
-            source_id=storage_source_id if scope == "source" else None,
-        )
+    result = service.status(
+        ctx.runtime_dir,
+        source_id=storage_source_id if scope == "source" else None,
+    )
     if as_json:
         _echo_json(result)
         return
@@ -311,9 +304,7 @@ def status(ctx, scope, storage_source_id, as_json):
 
 
 @storage.command(help="verify runtime storage integrity for a scope")
-@click.option(
-    "--scope", type=click.Choice(["atlas", "source", "episode", "all"]), required=True
-)
+@click.option("--scope", type=click.Choice(["source", "episode", "all"]), required=True)
 @click.option("--source", "storage_source_id", type=str, default=None)
 @click.option("--episode-id", type=int, default=0)
 @click.option(
@@ -325,27 +316,20 @@ def status(ctx, scope, storage_source_id, as_json):
 @click.option("--json", "as_json", is_flag=True, help="machine-readable output")
 @storage_command_context
 def fsck(ctx, scope, storage_source_id, episode_id, verify_frames, as_json):
-    if scope == "atlas":
-        from kungfu.atlas import store
+    from kungfu.storage import service
 
-        result = store.fsck(ctx.runtime_dir)
-    else:
-        from kungfu.storage import service
-
-        if scope == "episode" and not episode_id:
-            click.echo(
-                "[storage] --episode-id is required for --scope episode", err=True
-            )
-            sys.exit(2)
-        if verify_frames and scope != "episode":
-            click.echo("[storage] --verify-frames requires --scope episode", err=True)
-            sys.exit(2)
-        result = service.fsck(
-            ctx.runtime_dir,
-            source_id=storage_source_id if scope == "source" else None,
-            episode_id=episode_id if scope == "episode" else None,
-            verify_frames=verify_frames,
-        )
+    if scope == "episode" and not episode_id:
+        click.echo("[storage] --episode-id is required for --scope episode", err=True)
+        sys.exit(2)
+    if verify_frames and scope != "episode":
+        click.echo("[storage] --verify-frames requires --scope episode", err=True)
+        sys.exit(2)
+    result = service.fsck(
+        ctx.runtime_dir,
+        source_id=storage_source_id if scope == "source" else None,
+        episode_id=episode_id if scope == "episode" else None,
+        verify_frames=verify_frames,
+    )
     if as_json:
         _echo_json(result)
     else:
@@ -506,9 +490,7 @@ def repair(
 
 
 @storage.command(help="export a storage scope")
-@click.option(
-    "--scope", type=click.Choice(["atlas", "source", "episode"]), required=True
-)
+@click.option("--scope", type=click.Choice(["source", "episode"]), required=True)
 @click.option("--source", "storage_source_id", type=str, default=None)
 @click.option("--episode-id", type=int, default=0)
 @click.option("--since", type=str, default=None, help="relative window such as 3d/12h")
@@ -546,57 +528,44 @@ def export(
     out_path,
     as_json,
 ):
-    if scope == "atlas" and format_ != "jsonl":
-        click.echo("[storage] --scope atlas supports only --format jsonl", err=True)
-        sys.exit(1)
     if scope == "episode" and format_ != "bundle-json":
         click.echo(
             "[storage] --scope episode supports only --format bundle-json", err=True
         )
         sys.exit(1)
     try:
-        if scope == "atlas":
-            from kungfu.atlas import store
+        from kungfu.storage import service
 
-            result = store.export_jsonl(
+        if scope == "episode":
+            if not episode_id:
+                click.echo(
+                    "[storage] --episode-id is required for --scope episode",
+                    err=True,
+                )
+                sys.exit(2)
+            result = service.export_bundle_json(
                 ctx.runtime_dir,
                 out_path,
-                storage_source_id=storage_source_id,
+                episode_id=episode_id,
+                range_filter=_range_filter(since, from_time, until),
+                thin=thin,
+            )
+        elif format_ == "bundle-json":
+            _require_source(storage_source_id)
+            result = service.export_bundle_json(
+                ctx.runtime_dir,
+                out_path,
+                source_id=storage_source_id,
                 range_filter=_range_filter(since, from_time, until),
             )
         else:
-            from kungfu.storage import service
-
-            if scope == "episode":
-                if not episode_id:
-                    click.echo(
-                        "[storage] --episode-id is required for --scope episode",
-                        err=True,
-                    )
-                    sys.exit(2)
-                result = service.export_bundle_json(
-                    ctx.runtime_dir,
-                    out_path,
-                    episode_id=episode_id,
-                    range_filter=_range_filter(since, from_time, until),
-                    thin=thin,
-                )
-            elif format_ == "bundle-json":
-                _require_source(storage_source_id)
-                result = service.export_bundle_json(
-                    ctx.runtime_dir,
-                    out_path,
-                    source_id=storage_source_id,
-                    range_filter=_range_filter(since, from_time, until),
-                )
-            else:
-                _require_source(storage_source_id)
-                result = service.export_jsonl(
-                    ctx.runtime_dir,
-                    out_path,
-                    source_id=storage_source_id,
-                    range_filter=_range_filter(since, from_time, until),
-                )
+            _require_source(storage_source_id)
+            result = service.export_jsonl(
+                ctx.runtime_dir,
+                out_path,
+                source_id=storage_source_id,
+                range_filter=_range_filter(since, from_time, until),
+            )
     except ValueError as e:
         click.echo(f"[storage] {e}", err=True)
         sys.exit(1)
@@ -722,7 +691,7 @@ def import_cmd(
 
 
 @storage.command(name="rebuild-index", help="rebuild derived storage indexes")
-@click.option("--scope", type=click.Choice(["atlas", "source", "all"]), required=True)
+@click.option("--scope", type=click.Choice(["source", "all"]), required=True)
 @click.option("--source", "storage_source_id", type=str, default=None)
 @click.option(
     "--dry-run",
@@ -735,26 +704,11 @@ def import_cmd(
 def rebuild_index(ctx, scope, storage_source_id, dry_run, as_json):
     from kungfu.storage import service
 
-    if scope == "atlas":
-        result: dict[str, Any] = {
-            "ok": True,
-            "scope": "atlas",
-            "dry_run": True,
-            "projection": {
-                "name": "atlas-journal-fold",
-                "rebuildable": False,
-                "reason": (
-                    "Atlas cards are folded from journal frames at read time; "
-                    "there is no standalone SQLite projection to rebuild."
-                ),
-            },
-        }
-    else:
-        result = service.rebuild_index(
-            ctx.runtime_dir,
-            source_id=_source_for_scope(scope, storage_source_id),
-            dry_run=dry_run,
-        )
+    result = service.rebuild_index(
+        ctx.runtime_dir,
+        source_id=_source_for_scope(scope, storage_source_id),
+        dry_run=dry_run,
+    )
     if as_json:
         _echo_json(result)
         return

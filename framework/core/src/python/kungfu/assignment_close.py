@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Any, Callable
 
 from kungfu import assignment_orchestration as orchestration
+from kungfu.initiative_family.canonical import semantic_root
 from kungfu.assignment_lifecycle.ports import AssignmentRuntimePort
 
 JsonObject = dict[str, Any]
@@ -111,7 +112,7 @@ def build_plan(
     allowed_actions = list(
         (review.get("continuation_plan") or {}).get("allowed_actions") or []
     )
-    review_root = orchestration.semantic_root(review)
+    review_root = semantic_root(review)
     executable = bool(
         review.get("verdict") == "fit"
         and "close" in allowed_actions
@@ -156,7 +157,7 @@ def build_plan(
             "assignmentId": assignment_id,
             "phase": current["phase"],
             "queryProofRoot": current["query_proof_root"],
-            "assignmentRoot": orchestration.semantic_root(current["assignment"]),
+            "assignmentRoot": semantic_root(current["assignment"]),
         },
         "review": {
             "id": review["review_id"],
@@ -168,9 +169,7 @@ def build_plan(
         "decision": {
             "mode": decision_mode,
             "action": "close",
-            "root": (
-                orchestration.semantic_root(decision) if decision is not None else None
-            ),
+            "root": (semantic_root(decision) if decision is not None else None),
         },
         "effects": effects,
         "skippedEffects": ["git-init", "git-commit", "git-push", "publish"],
@@ -178,7 +177,7 @@ def build_plan(
         "executable": executable,
         "writeOccurred": False,
     }
-    return {**body, "planRoot": orchestration.semantic_root(body)}
+    return {**body, "planRoot": semantic_root(body)}
 
 
 def resume(

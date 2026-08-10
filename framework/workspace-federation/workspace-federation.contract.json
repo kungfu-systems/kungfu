@@ -7,7 +7,7 @@
     "projectWorkspace": "The sole mutable authority for objects admitted to <project>/.kungfu.",
     "locatorCatalog": "Machine-local discovery metadata under KF_CONFIG_HOME; never Initiative or Assignment authority.",
     "federatedQuery": "Read-only component projections with independent cuts; never an atomic global snapshot.",
-    "atlasProjection": "Workspace-qualified recovery and integration coordinates; never lifecycle or settlement authority."
+    "coordinationProjection": "Workspace-qualified recovery and integration coordinates; never lifecycle or settlement authority."
   },
   "workspaceIdentity": {
     "schema": "kungfu.workspace.identity-material/v1",
