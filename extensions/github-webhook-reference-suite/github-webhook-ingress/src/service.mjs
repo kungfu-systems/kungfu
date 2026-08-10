@@ -11,9 +11,9 @@ export const packageIdentity = Object.freeze({
   version: '0.1.0',
   productVersion: '4.0.0-alpha.1',
   kitRoot:
-    'sha256:16eee9fafca2422a613dcb3217689ca03d8b04d51f26b5666eef9af432df9da2',
+    'sha256:819ae3f7ebd4934cadb28ee5b37f346e1feeb8d4fb1de35d290d75c35ed8c62f',
   sdkRoot:
-    'sha256:8afedffb614388b70d7fcb2744bcb34a4eeb167e2b766f301a8df5a62e3a6c68',
+    'sha256:422a4c00c8f42a5aacc0cca8ed80c96ed433bd0e9f56a9ed297f60719264e842',
 });
 
 export const declaration = Object.freeze({
