@@ -515,10 +515,14 @@ export function sourceAcceptancePlan(files, evidenceBaseCommit = '') {
       'Shifu Documentation Protocol',
       'scripts/check-shifu-documentation-contract.mjs',
     ],
-    [
-      'documentation material lane',
-      'scripts/run-documentation-material-tests.mjs',
-    ],
+    ...(coldReadOnlySourceAcceptance
+      ? []
+      : [
+          [
+            'documentation material lane',
+            'scripts/run-documentation-material-tests.mjs',
+          ],
+        ]),
     [
       'read-only source and Agent route inventory',
       'scripts/check-readonly-source-routes.mjs',
@@ -935,21 +939,25 @@ export function sourceAcceptancePlan(files, evidenceBaseCommit = '') {
         'scripts.test_prepare_kungfu_phase_b_package',
       ],
     },
-    {
-      label: 'agent work state contract and CLI parity',
-      command: process.execPath,
-      args: ['scripts/run-agent-work-state-tests.mjs'],
-    },
-    {
-      label: 'runtime upgrade control-plane tests',
-      command: process.execPath,
-      args: ['scripts/run-runtime-upgrade-tests.mjs'],
-    },
-    {
-      label: 'desktop update adapter tests',
-      command: process.execPath,
-      args: ['scripts/run-desktop-update-tests.mjs'],
-    },
+    ...(coldReadOnlySourceAcceptance
+      ? []
+      : [
+          {
+            label: 'agent work state contract and CLI parity',
+            command: process.execPath,
+            args: ['scripts/run-agent-work-state-tests.mjs'],
+          },
+          {
+            label: 'runtime upgrade control-plane tests',
+            command: process.execPath,
+            args: ['scripts/run-runtime-upgrade-tests.mjs'],
+          },
+          {
+            label: 'desktop update adapter tests',
+            command: process.execPath,
+            args: ['scripts/run-desktop-update-tests.mjs'],
+          },
+        ]),
     ...(coldReadOnlySourceAcceptance
       ? []
       : [
@@ -964,6 +972,13 @@ export function sourceAcceptancePlan(files, evidenceBaseCommit = '') {
           },
         ]),
   ];
+
+  if (coldReadOnlySourceAcceptance) {
+    const nestedContractIndex = plan.findIndex(
+      (step) => step.label === 'source-acceptance contract tests',
+    );
+    if (nestedContractIndex >= 0) plan.splice(nestedContractIndex, 1);
+  }
 
   const web = files.filter(
     (file) =>

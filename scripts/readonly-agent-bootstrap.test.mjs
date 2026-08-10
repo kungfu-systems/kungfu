@@ -138,8 +138,6 @@ function sourceAuditRoot(rows) {
 }
 
 function boundedDiagnosticTail(...values) {
-  const [stderr] = values;
-  if (stderr) return stderr.slice(-24 * 1024);
   const output = values.filter(Boolean).join('\n');
   const lines = output.split(/\r?\n/u);
   const failingTestsIndex = lines.findLastIndex(
@@ -153,11 +151,21 @@ function boundedDiagnosticTail(...values) {
   const failureSummaryIndex = lines.findLastIndex((line) =>
     /^(?:ℹ fail [1-9]|# fail [1-9])/u.test(line.trimStart()),
   );
-  if (failureSummaryIndex >= 0)
+  if (failureSummaryIndex >= 0) {
+    const failedTestIndex = lines.findLastIndex(
+      (line, index) => index < failureSummaryIndex && /^not ok \d+/u.test(line),
+    );
     return lines
-      .slice(Math.max(0, failureSummaryIndex - 8), failureSummaryIndex + 40)
+      .slice(
+        Math.max(
+          0,
+          failedTestIndex >= 0 ? failedTestIndex : failureSummaryIndex - 80,
+        ),
+        failureSummaryIndex + 40,
+      )
       .join('\n')
       .slice(0, 24 * 1024);
+  }
   return output.slice(-24 * 1024);
 }
 
@@ -697,10 +705,17 @@ test('declared discovery routes are zero-write in a cold read-only fixture', (t)
     }
   }
   for (const relative of evidencePaths) copyFile(ROOT, fixture, relative);
+  for (const relative of [
+    'node_modules/@kungfu-tech/buildchain/package.json',
+    'node_modules/@kungfu-tech/buildchain/dist/site/buildchain-contract.json',
+    'node_modules/@kungfu-tech/buildchain/dist/site/publication-authority-registry.json',
+  ])
+    copyFile(ROOT, fixture, relative);
   fs.chmodSync(path.join(fixture, 'shifu'), 0o755);
 
   fs.symlinkSync(git, path.join(tools, 'git'));
   fs.symlinkSync(node, path.join(tools, 'node'));
+  fs.symlinkSync(executableOnPath('python3'), path.join(tools, 'python3'));
   for (const [name, relative] of [
     ['ruff', 'framework/core/.venv/bin/ruff'],
     ['mypy', 'framework/core/.venv/bin/mypy'],
@@ -753,6 +768,7 @@ test('declared discovery routes are zero-write in a cold read-only fixture', (t)
     XDG_CONFIG_HOME: path.join(home, 'config'),
     KUNGFU_READONLY_TOOL_LOG: toolLog,
     KUNGFU_READONLY_NESTED_SOURCE_ACCEPTANCE: '1',
+    PYTHONDONTWRITEBYTECODE: '1',
     KUNGFU_READONLY_PYTEST: pytest,
     KUNGFU_DEV_BRANCH: 'dev/v4/v4.0',
     KUNGFU_READONLY_TSX: requireFromGui.resolve('tsx/cli'),
@@ -763,6 +779,7 @@ test('declared discovery routes are zero-write in a cold read-only fixture', (t)
     KUNGFU_COMPLEXITY_PROTECTED_REF: protectedRef,
     PATH: `${tools}:/usr/bin:/bin`,
   };
+  env.NODE_TEST_CONTEXT = undefined;
   const cases = [
     [
       'architecture',
@@ -838,6 +855,8 @@ test('declared discovery routes are zero-write in a cold read-only fixture', (t)
       );
     }
   }
+  restoreWritable(fixture);
+  fs.chmodSync(path.join(fixture, 'shifu'), 0o755);
   const sourceAcceptance = spawnSync(
     path.join(fixture, 'shifu'),
     ['check:source'],
