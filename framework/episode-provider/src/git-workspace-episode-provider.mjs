@@ -29,7 +29,10 @@ const UINT64_MAX = 18446744073709551615n;
 const SEGMENT_FILE = 'claims.jsonl';
 const MANIFEST_FILE = 'manifest.json';
 const QUALIFICATION_FILE = 'qualification.json';
-const WORKSPACE_IGNORE = 'runtime/\ninbox/\nepisodes/.tmp/\nprivate/\ncache/\n';
+const REQUIRED_WORKSPACE_IGNORE =
+  'runtime/\ninbox/\nepisodes/.tmp/\nprivate/\ncache/\n';
+const WORKSPACE_IGNORE =
+  'runtime/\ninbox/\nepisodes/.tmp/\nprivate/\ncache/\nlocks/\nprojections/\n';
 
 function failure(code, message, details = {}) {
   return Object.assign(new Error(message), { code, ...details });
@@ -429,7 +432,7 @@ function ensureWorkspaceIgnore(workspaceRoot) {
       .map((entry) => entry.trim())
       .filter(Boolean),
   );
-  for (const required of WORKSPACE_IGNORE.trimEnd().split('\n')) {
+  for (const required of REQUIRED_WORKSPACE_IGNORE.trimEnd().split('\n')) {
     if (!entries.has(required)) {
       throw failure(
         'workspace-ignore-incomplete',

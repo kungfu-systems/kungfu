@@ -3,3 +3,5 @@ inbox/
 episodes/.tmp/
 private/
 cache/
+locks/
+projections/

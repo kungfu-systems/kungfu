@@ -1,0 +1,11 @@
+{
+  "schema": "kungfu.profile-claims/v1",
+  "claims": [
+    {
+      "id": "webhook-observation",
+      "type": "kungfu.github-webhook-reference.observation/v1",
+      "factSurfaces": ["kungfu.github-webhook-reference.observation"]
+    }
+  ],
+  "evidenceStrength": "independently-observed"
+}
