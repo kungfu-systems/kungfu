@@ -83,3 +83,11 @@ Historical context: [Product Release Cut and updater convergence](stages/10-prod
 Start current reading at [docs/guides/upgrading.md](../guides/upgrading.md).
 
 Deepen through [framework/upgrade/kungfu-product-release-cut.contract.json](../../framework/upgrade/kungfu-product-release-cut.contract.json), [docs/adr/KF-ADR-019fabb5-62a0-7b8d-8f8d-6505efdbc239.md](../adr/KF-ADR-019fabb5-62a0-7b8d-8f8d-6505efdbc239.md), [docs/development/versioning.md](../development/versioning.md).
+
+## Understand how immutable Facts prove a directional temporal path at one exact historical Cut
+
+Historical context: [Temporal relation proof](stages/11-temporal-relation-proof.md).
+
+Start current reading at [docs/adr/KF-ADR-019fe996-1912-7144-8fa5-3fceaa416365.md](../adr/KF-ADR-019fe996-1912-7144-8fa5-3fceaa416365.md).
+
+Deepen through [framework/fact/kungfu-fact-cut-kernel.contract.json](../../framework/fact/kungfu-fact-cut-kernel.contract.json), [framework/core/src/python/kungfu/storage/fact_root_canonical.py](../../framework/core/src/python/kungfu/storage/fact_root_canonical.py).
