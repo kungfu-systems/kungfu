@@ -143,23 +143,11 @@ function validateCurrentDiscovery(inventory) {
   const compatibilityRows = (catalog.surfaces ?? []).filter((row) =>
     LEGACY.test(String(row.canonical_path ?? '')),
   );
-  if (!compatibilityRows.length)
-    throw new Error('hidden v3 CLI compatibility reader is missing');
-  for (const row of compatibilityRows) {
-    if (
-      row.visibility !== 'hidden-internal' ||
-      (row.kfd3_api_ids ?? []).length !== 0
-    )
-      throw new Error(
-        `legacy CLI row is discoverable or owns KFD identity: ${row.canonical_path}`,
-      );
-  }
-  const group = compatibilityRows.find(
-    (row) => row.canonical_path === 'kungfu profile mission-control',
-  );
-  if (!group || !/replacement: kungfu work/u.test(group.summary ?? ''))
+  if (compatibilityRows.length)
     throw new Error(
-      'legacy CLI alias does not report its Work Control replacement',
+      `legacy CLI compatibility readers remain: ${compatibilityRows
+        .map((row) => row.canonical_path)
+        .join(', ')}`,
     );
 }
 
