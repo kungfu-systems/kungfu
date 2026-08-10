@@ -749,9 +749,10 @@ def assess_completion(
         or row.get("subject_key") == f"kungfu:{goal_id}"
         or row.get("payload", {}).get("record", {}).get("goal_id") == goal_id
     ]
-    if len(goals) != 1:
+    goal_subjects = {str(row.get("subject_key") or "") for row in goals}
+    if len(goal_subjects) != 1 or "" in goal_subjects:
         raise ValueError(f"Go is missing or ambiguous under Mission: {goal_id}")
-    goal_subject = str(goals[0]["subject_key"])
+    goal_subject = next(iter(goal_subjects))
     claims = [
         row
         for row in state["claims"]
