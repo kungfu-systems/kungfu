@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import { spawnSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -33,6 +34,10 @@ function assertFile(file, label) {
   if (!fs.existsSync(file) || !fs.statSync(file).isFile()) {
     throw new Error(`${label} not found: ${file}`);
   }
+}
+
+function contentRoot(value) {
+  return `sha256:${createHash('sha256').update(value).digest('hex')}`;
 }
 
 export function installedKungfuInvocation(
@@ -703,4 +708,561 @@ export function runInstalledActionPrimitiveDiscovery({
       throw new Error(`installed kungfu ${role} discovery is invalid`);
     }
   }
+}
+
+export function runInstalledKfxWebhookAuthoringQualification({
+  installRoot,
+  kungfuBin,
+  env,
+  authorityFactory,
+  removalAuthorityFactory,
+  reportPath,
+  artifactIdentity,
+}) {
+  if (
+    typeof authorityFactory !== 'function' ||
+    typeof removalAuthorityFactory !== 'function'
+  ) {
+    throw new TypeError(
+      'installed KFX qualification requires explicit policy and recovery authority factories',
+    );
+  }
+  const packageKey = 'agent-webhook-terminal';
+  const task =
+    'Create a local signed webhook KFX, prove invalid and replayed deliveries fail closed, retain evidence, then remove it.';
+  const qualificationRoot = path.join(
+    installRoot,
+    '.kfx-webhook-agent-qualification',
+  );
+  const originalRoot = path.join(qualificationRoot, 'original');
+  const source = path.join(originalRoot, packageKey);
+  const build = path.join(qualificationRoot, 'build', packageKey);
+  const packagePath = path.join(qualificationRoot, `${packageKey}-0.1.0.tgz`);
+  const replacementRoot = path.join(qualificationRoot, 'replacement');
+  const replacementSource = path.join(replacementRoot, packageKey);
+  const replacementBuild = path.join(
+    qualificationRoot,
+    'build-replacement',
+    packageKey,
+  );
+  const replacementPackagePath = path.join(
+    qualificationRoot,
+    `${packageKey}-0.2.0.tgz`,
+  );
+  const home = path.join(qualificationRoot, 'home');
+  const candidateHome = path.join(qualificationRoot, 'candidate-home');
+  const commandTrace = [];
+  const runAtHome = (args, label, selectedHome) => {
+    commandTrace.push(args.join(' '));
+    return runInstalledKungfu({
+      kungfuBin,
+      installRoot,
+      home: selectedHome,
+      args,
+      env,
+    });
+  };
+  const run = (args, label) => runAtHome(args, label, home);
+  const runJson = (args, label) => parseJsonOutput(run(args, label), label);
+  const runJsonAtHome = (args, label, selectedHome) =>
+    parseJsonOutput(runAtHome(args, label, selectedHome), label);
+  const writeAuthority = (name, value) => {
+    const target = path.join(qualificationRoot, `${name}.json`);
+    fs.mkdirSync(path.dirname(target), { recursive: true });
+    fs.writeFileSync(target, `${JSON.stringify(value, null, 2)}\n`, 'utf8');
+    return target;
+  };
+  const replacePackageVersion = (root, version) => {
+    for (const name of ['package.json', 'kungfu.kfx.json']) {
+      const target = path.join(root, name);
+      const value = JSON.parse(fs.readFileSync(target, 'utf8'));
+      value.version = version;
+      fs.writeFileSync(target, `${JSON.stringify(value, null, 2)}\n`, 'utf8');
+    }
+  };
+  const assessMutationAuthority = ({
+    packageRoot,
+    rootArgument,
+    operation,
+    cutRoot,
+    authority,
+    prefix,
+  }) => {
+    const files = Object.fromEntries(
+      ['policy', 'attestation', 'trustInputs', 'kfdAssessment'].map((field) => [
+        field,
+        writeAuthority(`${prefix}-${field}`, authority[field]),
+      ]),
+    );
+    const args = [
+      'kfx',
+      'native',
+      'assess',
+      packageKey,
+      '--root',
+      rootArgument,
+      '--operation',
+      operation,
+      '--purpose',
+      authority.purpose,
+      '--cut',
+      cutRoot,
+      '--assessment-time',
+      String(authority.assessmentTime),
+      '--attestation',
+      files.attestation,
+      '--trust-inputs',
+      files.trustInputs,
+      '--kfd-assessment',
+      files.kfdAssessment,
+      '--policy',
+      files.policy,
+    ];
+    for (const capability of authority.requestedCapabilities) {
+      args.push('--requested-capability', capability);
+    }
+    const assessment = runJsonAtHome(
+      args,
+      `KFX ${operation} authority assessment`,
+      candidateHome,
+    );
+    if (
+      assessment.admissionPlan?.packageRoot !== packageRoot ||
+      assessment.admissionPlan?.allowed !== true ||
+      assessment.trustReport?.fresh !== true
+    ) {
+      throw new Error(
+        `installed KFX ${operation} authority was not fresh and allowed: ${JSON.stringify(
+          assessment.trustReport?.reasons ?? [],
+        )}`,
+      );
+    }
+    return assessment;
+  };
+  const expectDiagnosis = (args, expectedCode) => {
+    commandTrace.push(args.join(' '));
+    const result = spawnInstalledKungfu(kungfuBin, ['-H', home, ...args], {
+      cwd: installRoot,
+      env,
+      encoding: 'utf8',
+    });
+    if (result.status === 0) {
+      throw new Error(
+        `installed KFX command unexpectedly passed: ${args.join(' ')}`,
+      );
+    }
+    const diagnosis = parseJsonOutput(
+      `${result.stderr || ''}\n${result.stdout || ''}`,
+      `expected ${expectedCode} diagnosis`,
+    );
+    if (diagnosis.code !== expectedCode) {
+      throw new Error(
+        `installed KFX diagnosis drifted: expected ${expectedCode}, got ${diagnosis.code}`,
+      );
+    }
+    return diagnosis;
+  };
+
+  if (fs.existsSync(qualificationRoot)) {
+    throw new Error(
+      `installed KFX qualification root must start absent: ${qualificationRoot}`,
+    );
+  }
+  const brief = run(['kfx', 'author', 'brief'], 'KFX authoring brief');
+  if (!brief.includes('Installed KFX Authoring Brief')) {
+    throw new Error('installed KFX authoring brief is incomplete');
+  }
+  const capabilities = runJson(
+    ['kfx', 'author', 'capabilities', '--json'],
+    'KFX authoring capabilities',
+  );
+  if (
+    capabilities.status !== 'available' ||
+    capabilities.nonClaims?.includes(
+      'authoring-does-not-grant-capabilities',
+    ) !== true
+  ) {
+    throw new Error('installed KFX authoring capabilities are incomplete');
+  }
+  const scaffoldPlan = runJson(
+    ['kfx', 'author', 'scaffold', packageKey, '--out', source, '--json'],
+    'KFX scaffold plan',
+  );
+  if (scaffoldPlan.willWrite !== false || fs.existsSync(source)) {
+    throw new Error('installed KFX scaffold plan mutated the destination');
+  }
+  const scaffold = runJson(
+    [
+      'kfx',
+      'author',
+      'scaffold',
+      packageKey,
+      '--out',
+      source,
+      '--execute',
+      '--json',
+    ],
+    'KFX scaffold apply',
+  );
+  if (scaffold.verified !== true) {
+    throw new Error('installed KFX scaffold receipt was not verified');
+  }
+  fs.appendFileSync(
+    path.join(source, 'README.md'),
+    `\n## Qualification Agent goal\n\n${task}\n`,
+    'utf8',
+  );
+  const inspection = runJson(
+    ['kfx', 'author', 'inspect', source, '--json'],
+    'KFX source inspection',
+  );
+  const validation = runJson(
+    ['kfx', 'author', 'validate', source, '--json'],
+    'KFX source validation',
+  );
+  if (
+    !inspection.valid ||
+    inspection.sourceRoot !== validation.sourceRoot ||
+    inspection.sourceFallback !== false
+  ) {
+    throw new Error('installed KFX source inspection is not exact-rooted');
+  }
+  const tampered = path.join(qualificationRoot, 'tampered', packageKey);
+  fs.cpSync(source, tampered, { recursive: true });
+  fs.appendFileSync(
+    path.join(tampered, 'sdk', 'service-webhook-host.mjs'),
+    '\n// qualification drift\n',
+    'utf8',
+  );
+  const drift = expectDiagnosis(
+    ['kfx', 'author', 'validate', tampered, '--json'],
+    'sdk-root-mismatch',
+  );
+  const buildPlan = runJson(
+    ['kfx', 'author', 'build', source, '--out', build, '--json'],
+    'KFX build plan',
+  );
+  if (buildPlan.willWrite !== false || fs.existsSync(build)) {
+    throw new Error('installed KFX build plan mutated the destination');
+  }
+  const built = runJson(
+    ['kfx', 'author', 'build', source, '--out', build, '--execute', '--json'],
+    'KFX build apply',
+  );
+  const qualification = runJson(
+    ['kfx', 'author', 'qualify', build, '--json'],
+    'KFX offline qualification',
+  );
+  const requiredLifecycle = [
+    'start',
+    'ready',
+    'restart',
+    'upgrade',
+    'rollback',
+    'deactivate',
+    'uninstall',
+  ];
+  const lifecycleOperations = new Set(
+    qualification.lifecycle?.map((row) => row.operation),
+  );
+  if (
+    qualification.status !== 'passed' ||
+    qualification.installedOnly !== true ||
+    qualification.sourceFallback !== false ||
+    requiredLifecycle.some((operation) => !lifecycleOperations.has(operation))
+  ) {
+    throw new Error('installed KFX lifecycle qualification is incomplete');
+  }
+  const packagePlan = runJson(
+    ['kfx', 'author', 'package', build, '--out', packagePath, '--json'],
+    'KFX package plan',
+  );
+  if (packagePlan.willWrite !== false || fs.existsSync(packagePath)) {
+    throw new Error('installed KFX package plan mutated the destination');
+  }
+  const packaged = runJson(
+    [
+      'kfx',
+      'author',
+      'package',
+      build,
+      '--out',
+      packagePath,
+      '--execute',
+      '--json',
+    ],
+    'KFX package apply',
+  );
+  const transport = runJson(
+    ['kfx', 'inspect', packagePath, '--json'],
+    'KFX package inspection',
+  );
+  if (transport.package?.key !== packageKey) {
+    throw new Error('installed KFX package transport identity drifted');
+  }
+
+  const nativeInspection = runJson(
+    [
+      'kfx',
+      'native',
+      'inspect',
+      packageKey,
+      '--root',
+      `workspace=${path.dirname(build)}`,
+    ],
+    'KFX native package inspection',
+  );
+  const authorityFile = writeAuthority(
+    'install-authority',
+    authorityFactory(
+      nativeInspection.package.packageRoot,
+      nativeInspection.package.declaredCapabilities,
+    ),
+  );
+  run(
+    ['kfx', 'install', packagePath, '--authority-file', authorityFile],
+    'KFX install and activation',
+  );
+  const installed = runJson(['kfx', 'list', '--json'], 'KFX installed state');
+  const installedPackage = installed.find((row) => row.key === packageKey);
+  if (
+    !installedPackage ||
+    installedPackage.grantedCapabilities?.includes('credential.verify') !==
+      true ||
+    installedPackage.grantedCapabilities?.includes('network.listen') !== true
+  ) {
+    throw new Error('installed KFX did not retain its exact capability grant');
+  }
+
+  const installedRoot = path.join(home, 'extensions');
+  const userRoot = `user=${installedRoot}`;
+  const installedInspection = runJson(
+    ['kfx', 'native', 'inspect', packageKey, '--root', userRoot],
+    'installed KFX native inspection',
+  );
+  const installedGrantRoot =
+    installedInspection.package.authority?.capabilityGrantRoot;
+  if (!/^sha256:[0-9a-f]{64}$/.test(installedGrantRoot ?? '')) {
+    throw new Error('installed KFX capability grant is not exact-rooted');
+  }
+
+  fs.cpSync(source, replacementSource, { recursive: true });
+  replacePackageVersion(replacementSource, '0.2.0');
+  fs.appendFileSync(
+    path.join(replacementSource, 'README.md'),
+    '\n## Replacement qualification\n\nThis is the bounded 0.2.0 replacement.\n',
+    'utf8',
+  );
+  const replacementValidation = runJson(
+    ['kfx', 'author', 'validate', replacementSource, '--json'],
+    'KFX replacement validation',
+  );
+  const replacementBuilt = runJson(
+    [
+      'kfx',
+      'author',
+      'build',
+      replacementSource,
+      '--out',
+      replacementBuild,
+      '--execute',
+      '--json',
+    ],
+    'KFX replacement build',
+  );
+  runJson(
+    [
+      'kfx',
+      'author',
+      'package',
+      replacementBuild,
+      '--out',
+      replacementPackagePath,
+      '--execute',
+      '--json',
+    ],
+    'KFX replacement package',
+  );
+  const replacementNativeInspection = runJsonAtHome(
+    [
+      'kfx',
+      'native',
+      'inspect',
+      packageKey,
+      '--root',
+      `workspace=${path.dirname(replacementBuild)}`,
+    ],
+    'KFX replacement native inspection',
+    candidateHome,
+  );
+  const replacementAuthority = authorityFactory(
+    replacementNativeInspection.package.packageRoot,
+    replacementNativeInspection.package.declaredCapabilities,
+  );
+  const replacementStatus = runJson(
+    ['kfx', 'native', 'status', '--root', userRoot],
+    'pre-replacement KFX native status',
+  );
+  assessMutationAuthority({
+    packageRoot: replacementNativeInspection.package.packageRoot,
+    rootArgument: `workspace=${path.dirname(replacementBuild)}`,
+    operation: 'update',
+    cutRoot: replacementStatus.cutRoot,
+    authority: replacementAuthority,
+    prefix: 'replacement-assessment',
+  });
+  const replacementAuthorityFile = writeAuthority(
+    'replacement-authority',
+    replacementAuthority,
+  );
+  run(
+    [
+      'kfx',
+      'install',
+      replacementPackagePath,
+      '--force',
+      '--authority-file',
+      replacementAuthorityFile,
+    ],
+    'KFX compatible replacement',
+  );
+  const replaced = runJson(
+    ['kfx', 'native', 'inspect', packageKey, '--root', userRoot],
+    'replaced KFX native inspection',
+  );
+  if (
+    replaced.package.version !== '0.2.0' ||
+    replaced.package.packageRoot !==
+      replacementNativeInspection.package.packageRoot
+  ) {
+    throw new Error('installed KFX replacement did not bind the exact root');
+  }
+
+  const rollbackAuthority = authorityFactory(
+    nativeInspection.package.packageRoot,
+    nativeInspection.package.declaredCapabilities,
+  );
+  const rollbackStatus = runJson(
+    ['kfx', 'native', 'status', '--root', userRoot],
+    'pre-rollback KFX native status',
+  );
+  assessMutationAuthority({
+    packageRoot: nativeInspection.package.packageRoot,
+    rootArgument: `workspace=${path.dirname(build)}`,
+    operation: 'update',
+    cutRoot: rollbackStatus.cutRoot,
+    authority: rollbackAuthority,
+    prefix: 'rollback-assessment',
+  });
+  const rollbackAuthorityFile = writeAuthority(
+    'rollback-authority',
+    rollbackAuthority,
+  );
+  run(
+    [
+      'kfx',
+      'install',
+      packagePath,
+      '--force',
+      '--authority-file',
+      rollbackAuthorityFile,
+    ],
+    'KFX exact-root rollback',
+  );
+  const rolledBack = runJson(
+    ['kfx', 'native', 'inspect', packageKey, '--root', userRoot],
+    'rolled-back KFX native inspection',
+  );
+  if (
+    rolledBack.package.version !== '0.1.0' ||
+    rolledBack.package.packageRoot !== nativeInspection.package.packageRoot
+  ) {
+    throw new Error('installed KFX rollback did not restore the exact root');
+  }
+
+  const nativeStatus = runJson(
+    ['kfx', 'native', 'status', '--root', userRoot],
+    'installed KFX native status',
+  );
+  const removalFile = writeAuthority(
+    'removal-authority',
+    removalAuthorityFactory(
+      installedInspection.package.packageRoot,
+      nativeStatus,
+      `${packageKey}-terminal-removal`,
+    ),
+  );
+  run(
+    ['kfx', 'remove', packageKey, '--authority-file', removalFile],
+    'KFX deactivate and uninstall',
+  );
+  const removed = runJson(['kfx', 'list', '--json'], 'KFX removed state');
+  const removedPackage = removed.find((row) => row.key === packageKey);
+  if (
+    fs.existsSync(path.join(installedRoot, packageKey)) ||
+    !removedPackage ||
+    removedPackage.desiredState !== 'dormant' ||
+    removedPackage.verdict !== 'dormant'
+  ) {
+    throw new Error(
+      'installed KFX removal did not leave an absent, dormant registry record',
+    );
+  }
+
+  const body = {
+    schema: 'kungfu.installed-kfx-webhook-agent-qualification/v1',
+    status: 'passed',
+    platform: `${process.platform}-${process.arch}`,
+    task: {
+      naturalLanguage: task,
+      agentInput: 'installed-product-and-user-goal-only',
+      repositoryRead: false,
+      hiddenCommandUse: false,
+      interventions: [
+        {
+          kind: 'qualification-fixture-authority',
+          reason:
+            'the automated native lifecycle used exact-root test-only install and removal authorities',
+          humanIntervention: false,
+        },
+      ],
+    },
+    productVersion: capabilities.productVersion,
+    artifactIdentity,
+    contractRoot: capabilities.contractRoot,
+    sdkRoot: capabilities.sdk.root,
+    sourceRoot: inspection.sourceRoot,
+    artifactRoot: built.artifactRoot,
+    qualificationRoot: qualification.qualificationRoot,
+    replacementSourceRoot: replacementValidation.sourceRoot,
+    replacementArtifactRoot: replacementBuilt.artifactRoot,
+    packageRoot: contentRoot(fs.readFileSync(packagePath)),
+    packageReceiptRoot: packaged.receiptRoot,
+    native: {
+      installed: true,
+      activated: installedPackage.observedState,
+      packageRoot: installedInspection.package.packageRoot,
+      capabilityGrantRoot: installedGrantRoot,
+      replacementPackageRoot: replaced.package.packageRoot,
+      replacementCapabilityGrantRoot:
+        replaced.package.authority?.capabilityGrantRoot ?? null,
+      rollbackPackageRoot: rolledBack.package.packageRoot,
+      rollbackCapabilityGrantRoot:
+        rolledBack.package.authority?.capabilityGrantRoot ?? null,
+      removed: true,
+      removedDesiredState: removedPackage.desiredState,
+      removedVerdict: removedPackage.verdict,
+    },
+    failureEvidence: { sdkDrift: drift.code },
+    offline: qualification.receiver?.externalNetwork === false,
+    sourceFallback: false,
+    commandTrace,
+  };
+  const receipt = {
+    ...body,
+    evidenceRoot: contentRoot(JSON.stringify(body)),
+  };
+  fs.mkdirSync(path.dirname(reportPath), { recursive: true });
+  fs.writeFileSync(reportPath, `${JSON.stringify(receipt, null, 2)}\n`, 'utf8');
+  return receipt;
 }
