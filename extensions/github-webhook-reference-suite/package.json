@@ -3,5 +3,8 @@
   "version": "0.1.0",
   "description": "Maintained GitHub webhook ingress, evidence view, and optional Dogfood Finding bridge",
   "license": "Apache-2.0",
-  "private": true
+  "private": true,
+  "kungfuProduct": {
+    "assembly": "reference-only"
+  }
 }
