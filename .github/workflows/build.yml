@@ -127,7 +127,7 @@ jobs:
                   cut: "r16",
                   candidateSha: $source,
                   alphaBaseSha: "f9e6b0e34bcdd6407b2a18206ace7982d64de2c8",
-                  buildchainRef: "v3",
+                  buildchainRef: "81c49578bff72a9784a1b63ce8698bd9dd23d7bf",
                   devMirrorIsBuildInput: false
                 }'
             )"
@@ -139,7 +139,7 @@ jobs:
              .cut == "r16" and
              .candidateSha == $source and
              .alphaBaseSha == "f9e6b0e34bcdd6407b2a18206ace7982d64de2c8" and
-             .buildchainRef == "v3" and
+             .buildchainRef == "81c49578bff72a9784a1b63ce8698bd9dd23d7bf" and
              .devMirrorIsBuildInput == false' \
             <<<"$RELEASE_CUT_ANCHOR_REQUEST_JSON" >/dev/null
           {
