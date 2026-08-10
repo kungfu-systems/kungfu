@@ -2,13 +2,13 @@
   "schema": "kungfu.semantic-amplification-report/v1",
   "verdict": "pass",
   "authoritySemantics": "navigation-only-projection-over-existing-authorities",
-  "sourceRevision": "2aa52d4832b582f6aa4e4c05bfbf416e4fc5b7ba",
+  "sourceRevision": "9803912a47e2affbc7810816c759f51ac3d21ed1",
   "manifestPath": "framework/maintainability/semantic-amplification.manifest.json",
   "manifestRoot": "sha256:db46439a29c9619e7966f24d2b64fb9a86e52cba76b8eff45442fa18df90e939",
   "generatorRoot": "sha256:a62c635839b1d7f32dccdaa770ba424b2858be41f2ae017561dbf2c83ee760ec",
   "baselineRef": "dbfed9ca1785d147b26f4f06e7e6895ac7368fee",
   "baselineRoot": "sha256:a6e7ee9aeea7213807abdf830f8b4e60aede2352289539ddc31ad0fa67b1da50",
-  "sourceRoot": "sha256:578a09a79522f98a43ea6e3479a7d9ad847f068c4a37b0779796dc9b51823536",
+  "sourceRoot": "sha256:b9dabb0051678ba88f35f037819b220d4e697b4c617a30402cb32ecd34982c06",
   "roles": {
     "authority": "exactly one authority route per family; the route may name multiple co-owned source files",
     "allowedProjectionRoles": [
@@ -125,9 +125,9 @@
       "measurements": [
         {
           "path": "framework/core/src/python/kungfu/cli/surface_contract.registry.json",
-          "currentLines": 152,
+          "currentLines": 153,
           "baselineLines": 155,
-          "currentRoot": "sha256:a0d7576eea281123d41368c4bcc20b3cea6cac091ac6d7b1335b382a84e86ab6",
+          "currentRoot": "sha256:39a63cf6e780b895a7d11779b8c16b653d81ed93d70330285741360c53f6001b",
           "baselineRoot": "sha256:7af1893015500d9d54e2783e44af30cd4af8753787d9d9b70c77356b0e788c17",
           "changedSinceBaseline": true
         },
@@ -157,9 +157,9 @@
         },
         {
           "path": "framework/core/src/python/kungfu/agent/cli_surface.catalog.json",
-          "currentLines": 1046,
+          "currentLines": 984,
           "baselineLines": 33927,
-          "currentRoot": "sha256:75abcea646905ddad72cd11b8b7e5b74632417d4e5d171275b04b8f641de5444",
+          "currentRoot": "sha256:c5f18db89bdaa8c9d983fb7a5bb3e42e379e7e9694b8a95ac61c9f5de16513de",
           "baselineRoot": "sha256:9f2f17fca5aa4e4daa28a276c1e3a153fa263e791b497f7ea83a93796f7aeb1f",
           "changedSinceBaseline": true
         },
@@ -749,9 +749,9 @@
         },
         {
           "path": "product/scripts/dist.mjs",
-          "currentLines": 2070,
+          "currentLines": 2055,
           "baselineLines": 2514,
-          "currentRoot": "sha256:f256c6a38b5b1a9b43752318d7fa47bfce3eaa4e8b331cdbf165f44876af92d8",
+          "currentRoot": "sha256:37794c25d0cb7695b55ab7e9e5d560e8acd8e8569daa739482d11cf97d1127d5",
           "baselineRoot": "sha256:6cfd6c55e296163ab863fb1d79a4a51198ad12943274fc0858338bb651a108da",
           "changedSinceBaseline": true
         },
@@ -2047,7 +2047,7 @@
         "topology": "product-assembly",
         "kind": "line-count",
         "status": "remediated",
-        "metric": 2070,
+        "metric": 2055,
         "threshold": 2450,
         "finding": null
       },
@@ -2073,5 +2073,5 @@
     "findings": []
   },
   "issues": [],
-  "reportRoot": "sha256:3288690db5fc7d2e304230b543d99ae9d8f129e7840ea26f791e98d4623831b1"
+  "reportRoot": "sha256:40c5f24760cafe9066407c78c83dff67468eb496320a2eccc84aa06e4330c8a7"
 }
