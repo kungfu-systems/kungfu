@@ -165,11 +165,17 @@ export function validateWorkflowSources(root, contract, overrides = {}) {
     findings,
     'manual Buildchain runtime validation must remain an optional empty-default workflow_dispatch input',
   );
+  requirePattern(
+    build,
+    /^\s+publish-source-ref: \$\{\{ fromJSON\(inputs\.macos-overflow-request-json \|\| '\{\}'\)\.releaseCutSourceRef \|\| '' \}\}$/m,
+    findings,
+    'manual Release Cut recovery must bind Buildchain to the source-lock ref carried by the trusted controller envelope',
+  );
   forbidPattern(
     build,
-    /^\s+publish-source-ref:/m,
+    /^\s+publish-source-ref:\s+.*(?:github\.head_ref|github\.event\.pull_request)/m,
     findings,
-    'PR-stage release-candidate builds must leave publish-source locking to post-merge promotion',
+    'PR-stage release-candidate builds must leave publish-source locking to exact manual Release Cut recovery or post-merge promotion',
   );
   requirePattern(
     build,
