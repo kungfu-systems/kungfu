@@ -4,7 +4,7 @@
   "executionProfiles": "docs/qualification/gates/execution-profiles.json",
   "bindings": [
     {
-      "id": "dev-source",
+  "id": "dev-source",
       "execution": "controller",
       "workflow": ".github/workflows/source-acceptance.yml",
       "job": "source-acceptance",
@@ -20,9 +20,9 @@
       "adapter": {
         "type": "buildchain-source-staged",
         "kind": "job-uses",
-        "uses": "kungfu-systems/buildchain/.github/workflows/check.yml@9e904de2c85dbea7c799780ee166510b3336d812",
-        "with": {
-          "buildchain-ref": "v3",
+    "uses": "kungfu-systems/buildchain/.github/workflows/check.yml@9e904de2c85dbea7c799780ee166510b3336d812",
+    "with": {
+      "buildchain-ref": "v3",
           "mode": "source",
           "upload-artifacts": true
         }
@@ -50,7 +50,7 @@
       }
     },
     {
-      "id": "dev-candidate-source",
+  "id": "dev-candidate-source",
       "execution": "controller",
       "workflow": ".github/workflows/affected-native-pr.yml",
       "job": "source_acceptance",
@@ -65,9 +65,9 @@
       "adapter": {
         "type": "buildchain-source",
         "kind": "job-uses",
-        "uses": "kungfu-systems/buildchain/.github/workflows/check.yml@9e904de2c85dbea7c799780ee166510b3336d812",
-        "with": {
-          "buildchain-ref": "v3",
+    "uses": "kungfu-systems/buildchain/.github/workflows/check.yml@58e48d73ae7fef0dd06ae02baf6d090e4da5487d",
+    "with": {
+      "buildchain-ref": "58e48d73ae7fef0dd06ae02baf6d090e4da5487d",
           "mode": "source",
           "upload-artifacts": true
         }
@@ -88,7 +88,7 @@
       "adapter": {
         "type": "buildchain-config-staged",
         "kind": "step-uses",
-        "uses": "kungfu-systems/buildchain/actions/validate-config@v3",
+        "uses": "kungfu-systems/buildchain/actions/validate-config@58e48d73ae7fef0dd06ae02baf6d090e4da5487d",
         "name": "Validate .buildchain/buildchain.toml",
         "with": {
           "require-version-state": "true",
