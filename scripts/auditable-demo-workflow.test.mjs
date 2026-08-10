@@ -81,6 +81,7 @@ test('one exact Buildchain workflow owns every declared demo', () => {
 });
 
 test('native 720p keeps full-width terminal coverage without copying 1080p geometry', () => {
+  assert.equal(scenario.compositionMode, 'terminal-fill');
   assert.deepEqual(scenario.renditions, [
     {
       id: '1080p',
@@ -208,6 +209,34 @@ test('manual full refresh and promotion reuse the same materializer', () => {
   assert.equal(
     demo.secrets.DEMO_UPDATE_TOKEN,
     '${{ secrets.KUNGFU_GITHUB_TOKEN }}',
+  );
+});
+
+test('manual media publication runs only the Linux x64 product path', () => {
+  const platformExpression = build.with['platforms-json'];
+  assert.match(
+    platformExpression,
+    /github\.event_name == 'workflow_dispatch' && inputs\.render-auditable-demo/u,
+  );
+  assert.match(
+    platformExpression,
+    /^\$\{\{[\s\S]*inputs\.render-auditable-demo && '\[\{"id":"linux-x64","name":"Linux x64 auditable demo publication"[\s\S]*\}\]'[\s\S]*\|\| \(inputs\.platforms-json \|\| '\[\{"id":"linux-x64"[\s\S]*"id":"linux-arm64"[\s\S]*"id":"macos-arm64"[\s\S]*"id":"windows-x64"/u,
+  );
+  assert.match(
+    workflow.jobs['windows-fast-sentinel'].if,
+    /!\(github\.event_name == 'workflow_dispatch' && inputs\.render-auditable-demo\)/u,
+  );
+  assert.match(
+    build.if,
+    /^\$\{\{ always\(\) &&[\s\S]*inputs\.render-auditable-demo && needs\.windows-fast-sentinel\.result == 'skipped'/u,
+  );
+  assert.equal(
+    build.with['compiler-cache-platforms-json'],
+    "${{ github.event_name == 'workflow_dispatch' && (inputs.render-auditable-demo || inputs.windows-compiler-cache-mode == 'off') && '[]' || '[\"windows-x64\"]' }}",
+  );
+  assert.equal(
+    build.with['compiler-cache-required'],
+    "${{ github.event_name != 'workflow_dispatch' || (!inputs.render-auditable-demo && inputs.windows-compiler-cache-mode != 'off') }}",
   );
 });
 
