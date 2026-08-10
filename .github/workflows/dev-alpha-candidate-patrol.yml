@@ -68,11 +68,45 @@ jobs:
           echo "source-branch=$DEFAULT_BRANCH" >>"$GITHUB_OUTPUT"
           echo "target-branch=alpha/${DEFAULT_BRANCH#dev/}" >>"$GITHUB_OUTPUT"
 
-  candidate:
+  release-cut-lock:
+    name: Verify frozen Alpha Release Cut source lock
     needs: resolve-channels
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    outputs:
+      candidate-settlement-authorized: ${{ steps.lock.outputs.candidate-settlement-authorized }}
+    steps:
+      - name: Check out the dev mirror verifier
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Fetch exact frozen Release Cut objects
+        shell: bash
+        run: |
+          set -euo pipefail
+          lock=.buildchain/alpha-release-cut-lock.json
+          git fetch --no-tags --depth=2 origin \
+            "$(jq -er '.candidate.sha' "$lock")" \
+            "$(jq -er '.devCut.sha' "$lock")" \
+            "$(jq -er '.alphaBase.sha' "$lock")"
+
+      - name: Verify frozen Alpha Release Cut source lock
+        id: lock
+        shell: bash
+        run: |
+          set -euo pipefail
+          ./shifu node scripts/verify-alpha-release-cut-lock.mjs
+          echo "candidate-settlement-authorized=false" >>"$GITHUB_OUTPUT"
+
+  candidate:
+    needs: [resolve-channels, release-cut-lock]
     if: >-
-      github.event_name != 'workflow_run' ||
-      github.event.workflow_run.head_branch == needs.resolve-channels.outputs.source-branch
+      needs.release-cut-lock.outputs.candidate-settlement-authorized == 'true' &&
+      (github.event_name != 'workflow_run' ||
+      github.event.workflow_run.head_branch == needs.resolve-channels.outputs.source-branch)
     permissions:
       actions: read
       contents: write

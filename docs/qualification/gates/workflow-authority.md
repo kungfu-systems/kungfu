@@ -78,6 +78,7 @@ without changing and refreshing the manifest fails the Gate catalog check.
 | `.github/workflows/core-build-profiles.yml` | `shifu_observation` | qualification | none | diagnostic | token:read | none | 4 |
 | `.github/workflows/dco.yml` | `signoff` | qualification | none | diagnostic | token:read | none | 2 |
 | `.github/workflows/dev-alpha-candidate-patrol.yml` | `candidate` | qualification | none | diagnostic | token:write, repo-secret:KUNGFU_GITHUB_TOKEN | none | 0 |
+| `.github/workflows/dev-alpha-candidate-patrol.yml` | `release-cut-lock` | qualification | none | diagnostic | token:read | none | 3 |
 | `.github/workflows/dev-alpha-candidate-patrol.yml` | `resolve-channels` | qualification | none | diagnostic | token:none | none | 1 |
 | `.github/workflows/dev-delivery-warrant-terminal.yml` | `cancel-queued` | qualification | none | diagnostic | token:write, repo-secret:KUNGFU_GITHUB_TOKEN | none | 0 |
 | `.github/workflows/dev-delivery-warrant-terminal.yml` | `close` | qualification | none | diagnostic | token:write, repo-secret:KUNGFU_GITHUB_TOKEN | none | 0 |
