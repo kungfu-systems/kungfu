@@ -15,6 +15,7 @@ from kungfu.storage import service as storage_service
 from .compatibility import mission_control_v3
 from .work_control_runtime import (
     AGENT_FACT_SOURCE_ID,
+    ASSIGNMENT_SURFACE_ID,
     ATTRIBUTION_NAMES,
     COMPLETION_CLAIM,
     COMPLETION_PURPOSE,
@@ -28,27 +29,70 @@ from .work_control_runtime import (
     PROGRESS_PURPOSE,
     REVIEW_SURFACE_ID,
     REVIEW_VERDICTS,
+    ROOT_ID,
+    USER_FACT_SOURCE_ID,
     WORK_CONTROL_PROFILE_ID,
     WORK_CONTROL_PROFILE_VERSION,
     WORK_CONTROL_QUESTIONS,
     WORK_CONTROL_REDUCER,
-    _profile_context,
-    _sha256_root,
-)
-from .work_control_runtime import (
     _ensure_native_write_allowed,
     _native_source,
+    _profile_context,
     _put_native_fact,
     _root_id,
     _runtime_query_definition,
+    _sha256_root,
     _stable_id,
-    query_state,
-)
-from .work_control_runtime import (
     _tracked_completion_evidence,
     _verified_episode,
     create_assignment,
+    query_state,
 )
+
+
+def _assessment_conflicts(state: dict[str, Any]) -> list[dict[str, Any]]:
+    """Retain raw lineage while excluding one exact native Assignment definition."""
+
+    rows = {str(row.get("observation_id") or ""): row for row in state.get("rows", [])}
+    unresolved = []
+    for conflict in state["lineage"].get("conflicts", []):
+        admitted = [
+            rows.get(str(observation_id or ""))
+            for observation_id in conflict.get("observation_ids", [])
+        ]
+        if len(admitted) != 2 or any(row is None for row in admitted):
+            unresolved.append(conflict)
+            continue
+        versions = []
+        for row in admitted:
+            if row is None:
+                continue
+            record = dict(row.get("payload", {}).get("record", {}))
+            roots = (
+                str(record.get("request_root") or ""),
+                str(record.get("work_definition_root") or ""),
+            )
+            record.pop("actor", None)
+            record.pop("actor_type", None)
+            versions.append(
+                (
+                    str(row.get("fact_surface_id") or ""),
+                    str(row.get("source_id") or ""),
+                    *roots,
+                    _sha256_root(record),
+                )
+            )
+        equivalent = (
+            len(versions) == 2
+            and {row[0] for row in versions} == {ASSIGNMENT_SURFACE_ID}
+            and {row[1] for row in versions}
+            == {AGENT_FACT_SOURCE_ID, USER_FACT_SOURCE_ID}
+            and all(ROOT_ID.fullmatch(root) for row in versions for root in row[2:4])
+            and len({row[2:] for row in versions}) == 1
+        )
+        if not equivalent:
+            unresolved.append(conflict)
+    return unresolved
 
 
 def _assessment_evidence(state: dict[str, Any]) -> dict[str, int]:
@@ -66,7 +110,7 @@ def _assessment_evidence(state: dict[str, Any]) -> dict[str, int]:
             counts[outcome] += int(row.get("record_count") or 0)
     return {
         "canonical_fact_count": len(state["rows"]),
-        "conflict_count": len(lineage.get("conflicts", [])),
+        "conflict_count": len(_assessment_conflicts(state)),
         "admitted_count": counts["admitted"],
         "unregistered_surface_count": counts["unregistered-surface"],
         "incompatible_schema_count": counts["incompatible-schema"],
@@ -605,7 +649,14 @@ def _execute_profile_assessment(
     independent_observation: dict[str, Any],
     executor_profile: str,
     authorized_by: str,
+    assessment_conflicts: list[dict[str, Any]] | None = None,
 ) -> tuple[dict[str, Any], dict[str, Any], dict[str, Any]]:
+    if assessment_conflicts is not None:
+        result = dict(query_receipt["result"])
+        lineage = dict(result["lineage"])
+        lineage["conflicts"] = assessment_conflicts
+        result["lineage"] = lineage
+        query_receipt = {**query_receipt, "result": result}
     plan = profile_composition.assessment_plan(
         source,
         runtime_dir,
@@ -832,6 +883,7 @@ def assess_completion(
                 },
                 executor_profile=executor_profile,
                 authorized_by=authorized_by,
+                assessment_conflicts=_assessment_conflicts(state),
             )
         )
         assessed = assessment_receipt["assessment"]
