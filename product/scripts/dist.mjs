@@ -15,6 +15,10 @@ import {
   createBuildchainLogger,
   verifyBuildchainLogEvents,
 } from '@kungfu-tech/buildchain/logging';
+import {
+  qualificationAuthority,
+  removalAuthority,
+} from '../../tests/fixtures/_kfx-authority.mjs';
 import { extractTarGz, extractZip, writeTarGz, writeZip } from './archive.mjs';
 import { cliLauncherContent } from './cli-launcher.mjs';
 import { qualifyCliSurface } from './cli-surface-qualification.mjs';
@@ -27,6 +31,7 @@ import {
   runInstalledActionPrimitiveDiscovery,
   runInstalledCliSemanticSmoke,
   runInstalledEmbeddedNodeAddonSmoke,
+  runInstalledKfxWebhookAuthoringQualification,
   runInstalledKungfu,
   runInstalledKungfuActionSmoke,
   runInstalledKungfuAgentHubSmoke,
@@ -605,10 +610,16 @@ function listKfxPackages() {
   return packages.sort((a, b) => a.name.localeCompare(b.name));
 }
 
+export function isKfxPackageName(name) {
+  return (
+    name.startsWith('@kungfu-tech/kfx-') || name.startsWith('@kungfu-kfx/')
+  );
+}
+
 function productKfxDeclarations() {
   const pkg = readJson(path.join(PRODUCT_DIR, 'package.json'));
-  const dependencies = Object.keys(pkg.dependencies || {}).filter((name) =>
-    name.startsWith('@kungfu-tech/kfx-'),
+  const dependencies = Object.keys(pkg.dependencies || {}).filter(
+    isKfxPackageName,
   );
   const metadata = pkg.kungfuProduct?.extensionPackages || [];
   return new Set([...dependencies, ...metadata]);
@@ -691,7 +702,8 @@ function buildKfx(packages, baseEnv = process.env) {
       });
       continue;
     }
-    runPnpm(`build kfx ${pkg.name}`, ['--filter', pkg.name, 'run', 'build'], {
+    runPnpm(`build kfx ${pkg.name}`, ['run', 'build'], {
+      cwd: pkg.dir,
       env,
       phase: 'extensions',
       event: 'product.kfx.build',
@@ -1404,7 +1416,7 @@ function listInstalledKfxPackages(extensionsRoot) {
       const pkgPath = path.join(full, 'package.json');
       if (fs.existsSync(pkgPath)) {
         const pkg = readJson(pkgPath);
-        if (pkg.name?.startsWith('@kungfu-tech/kfx-')) {
+        if (pkg.name && isKfxPackageName(pkg.name)) {
           names.add(pkg.name);
         }
       }
@@ -1773,6 +1785,7 @@ export function smokeCliProductArchive({ archivePath, archiveBase }) {
           KUNGFU_KFD_AGENT_RUNTIME_MANIFEST: kfdAgentRuntimeManifest,
           KF_BUNDLED_EXTENSION_ROOT: extensionsRoot,
           KUNGFU_ACTION_ENTRY: actionEntry,
+          KUNGFU_CONTROLLER_ENTRYPOINT: runtimeEntry,
         };
         runInstalledKungfuXinfaSmoke({
           installRoot,
@@ -1825,6 +1838,25 @@ export function smokeCliProductArchive({ archivePath, archiveBase }) {
           installRoot,
           kungfuBin,
           env: smokeEnv,
+        });
+        runInstalledKfxWebhookAuthoringQualification({
+          installRoot,
+          kungfuBin,
+          env: smokeEnv,
+          authorityFactory: (packageRoot, declaredCapabilities) =>
+            qualificationAuthority(ROOT, packageRoot, declaredCapabilities),
+          removalAuthorityFactory: removalAuthority,
+          reportPath: path.join(
+            RELEASE_DIR,
+            'qualification',
+            'kfx-webhook-installed-agent',
+            `${process.platform}-${process.arch}.json`,
+          ),
+          artifactIdentity: {
+            archive: path.basename(archivePath),
+            archiveRoot: sha256File(archivePath),
+            sourceCommit: upgradeIdentity.sourceCommit,
+          },
         });
         const platformVerification =
           verifyDarwinCliExecutableLayout(installRoot);
