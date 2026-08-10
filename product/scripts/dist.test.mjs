@@ -11,6 +11,7 @@ import { readElectronBuilderProjection } from '../../framework/maintainability/s
 import { cliLauncherContent } from './cli-launcher.mjs';
 import { isPythonBytecodePath, sha256Tree } from './compatibility.mjs';
 import {
+  assertDeclaredKfx,
   cliArchiveBase,
   cliArchiveLayout,
   copyTree,
@@ -56,13 +57,15 @@ const {
 } = require('../../framework/gui/scripts/before-pack.cjs');
 
 test('reference-only KFX suites stay outside product assembly', () => {
-  const packageNames = listKfxPackages().map((pkg) => pkg.name);
+  const packages = listKfxPackages();
+  const packageNames = packages.map((pkg) => pkg.name);
   assert.ok(packageNames.includes('@kungfu-tech/kfx-suite-agent-work-lab'));
   assert.ok(
     packageNames.every((name) => !name.includes('github-webhook')),
     packageNames.join(', '),
   );
   assert.ok(!packageNames.includes('@kungfu-kfx/github-dogfood-bridge'));
+  assert.doesNotThrow(() => assertDeclaredKfx(packages));
 });
 
 test('Intel macOS is rejected by the product-wide host policy', () => {
