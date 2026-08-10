@@ -131,6 +131,21 @@ know, then open Kungfu for a global view, a handoff, or an explicit review. If
 another live Agent already owns a Work, Kungfu stops a second writer instead of
 letting two Agents silently diverge.
 
+## Contribute with your Agent
+
+You do not need to learn every Kungfu subsystem before making a bounded change.
+From a source checkout, give your Agent the task you actually want to complete:
+
+```text
+Read `AGENTS.md`. I want to <task>. Use the repository's verified task-context route. Before editing, explain only the concepts, current implementation owners, authority boundaries, and qualification path this task requires.
+```
+
+For a whole-system explanation, start with the [Evolution
+Map](docs/evolution/README.md). For a bounded change, Shifu compiles a verified
+[Agent Task Chart](docs/guides/xinfa-agent-context.md) and expands it only when
+the task requires more context. Required omissions, stale authority, and
+ambiguous routing remain visible instead of being filled by guesswork.
+
 ## Go deeper when you need to
 
 The README stops at the product entry. Detailed implementation, evidence, and

@@ -38,8 +38,18 @@ const isWin = process.platform === 'win32';
 
 /** @typedef {{label: string, command: string, args: string[], cwd?: string, env?: NodeJS.ProcessEnv}} Command */
 
-function git(args) {
-  const result = spawnSync('git', args, { cwd: ROOT, encoding: 'utf8' });
+const SOURCE_ACCEPTANCE_GIT_MAX_BUFFER_BYTES = 64 * 1024 * 1024;
+
+export function readSourceAcceptanceGit(
+  args,
+  { cwd = ROOT, optional = false } = {},
+) {
+  const result = spawnSync('git', args, {
+    cwd,
+    encoding: 'utf8',
+    maxBuffer: SOURCE_ACCEPTANCE_GIT_MAX_BUFFER_BYTES,
+  });
+  if (optional) return result.status === 0 ? result.stdout.trim() : '';
   if (result.status !== 0) {
     throw new Error(
       `git ${args.join(' ')} failed: ${(result.stderr || '').trim()}`,
@@ -48,9 +58,12 @@ function git(args) {
   return result.stdout.trim();
 }
 
+function git(args) {
+  return readSourceAcceptanceGit(args);
+}
+
 function gitMaybe(args) {
-  const result = spawnSync('git', args, { cwd: ROOT, encoding: 'utf8' });
-  return result.status === 0 ? result.stdout.trim() : '';
+  return readSourceAcceptanceGit(args, { optional: true });
 }
 
 function commandAvailable(command) {
@@ -502,10 +515,14 @@ export function sourceAcceptancePlan(files, evidenceBaseCommit = '') {
       'Shifu Documentation Protocol',
       'scripts/check-shifu-documentation-contract.mjs',
     ],
-    [
-      'documentation material lane',
-      'scripts/run-documentation-material-tests.mjs',
-    ],
+    ...(coldReadOnlySourceAcceptance
+      ? []
+      : [
+          [
+            'documentation material lane',
+            'scripts/run-documentation-material-tests.mjs',
+          ],
+        ]),
     [
       'read-only source and Agent route inventory',
       'scripts/check-readonly-source-routes.mjs',
@@ -785,6 +802,7 @@ export function sourceAcceptancePlan(files, evidenceBaseCommit = '') {
         'scripts/buildchain-install.test.mjs',
         'scripts/run-shifu-lifecycle.test.mjs',
         'scripts/check-typescript-files.test.mjs',
+        'scripts/source-acceptance-git.test.mjs',
         'scripts/source-acceptance.test.mjs',
         'scripts/platform-command.test.mjs',
         'product/scripts/dist.test.mjs',
@@ -846,6 +864,7 @@ export function sourceAcceptancePlan(files, evidenceBaseCommit = '') {
         'scripts/check-cli-catalog-parity.test.mjs',
         'framework/deprecation/deprecation-surface-discovery.test.mjs',
         'scripts/check-fact-cut-kernel-contract.test.mjs',
+        'scripts/check-temporal-relation-contract.test.mjs',
         'scripts/check-data-protection-contract.test.mjs',
         'scripts/check-durable-history-qualification.test.mjs',
         'scripts/check-work-agent-history-continuity.test.mjs',
@@ -925,21 +944,25 @@ export function sourceAcceptancePlan(files, evidenceBaseCommit = '') {
         'scripts.test_prepare_kungfu_phase_b_package',
       ],
     },
-    {
-      label: 'agent work state contract and CLI parity',
-      command: process.execPath,
-      args: ['scripts/run-agent-work-state-tests.mjs'],
-    },
-    {
-      label: 'runtime upgrade control-plane tests',
-      command: process.execPath,
-      args: ['scripts/run-runtime-upgrade-tests.mjs'],
-    },
-    {
-      label: 'desktop update adapter tests',
-      command: process.execPath,
-      args: ['scripts/run-desktop-update-tests.mjs'],
-    },
+    ...(coldReadOnlySourceAcceptance
+      ? []
+      : [
+          {
+            label: 'agent work state contract and CLI parity',
+            command: process.execPath,
+            args: ['scripts/run-agent-work-state-tests.mjs'],
+          },
+          {
+            label: 'runtime upgrade control-plane tests',
+            command: process.execPath,
+            args: ['scripts/run-runtime-upgrade-tests.mjs'],
+          },
+          {
+            label: 'desktop update adapter tests',
+            command: process.execPath,
+            args: ['scripts/run-desktop-update-tests.mjs'],
+          },
+        ]),
     ...(coldReadOnlySourceAcceptance
       ? []
       : [
@@ -954,6 +977,13 @@ export function sourceAcceptancePlan(files, evidenceBaseCommit = '') {
           },
         ]),
   ];
+
+  if (coldReadOnlySourceAcceptance) {
+    const nestedContractIndex = plan.findIndex(
+      (step) => step.label === 'source-acceptance contract tests',
+    );
+    if (nestedContractIndex >= 0) plan.splice(nestedContractIndex, 1);
+  }
 
   const web = files.filter(
     (file) =>
