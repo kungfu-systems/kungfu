@@ -1132,6 +1132,18 @@ test('cold read-only source acceptance skips dependency-backed checks', () => {
   }
 });
 
+test('Buildchain KFD check reuses the committed source binding without environment hints', () => {
+  const env = { ...process.env };
+  Reflect.deleteProperty(env, 'BUILDCHAIN_SOURCE_SHA');
+  Reflect.deleteProperty(env, 'KUNGFU_KFD_SOURCE_SHA');
+  const result = spawnSync(
+    process.execPath,
+    ['scripts/buildchain-kfd-evidence.mjs', '--check', '--json'],
+    { cwd: ROOT, encoding: 'utf8', env },
+  );
+  assert.equal(result.status, 0, `${result.stdout}${result.stderr}`);
+});
+
 test('RocksDB source archive keeps an explicit tar filename', () => {
   const recipe = fs.readFileSync(
     path.join(ROOT, 'framework/core/.conan/recipes/rocksdb/conanfile.py'),
