@@ -168,7 +168,7 @@ def test_cli_missing_lookup_is_one_stable_json_result(tmp_path):
     assert payload["match_count"] == 0
 
 
-def test_profile_closes_and_declares_four_kfd1_fact_surfaces(tmp_path):
+def test_profile_closes_and_declares_native_kfd1_fact_surfaces(tmp_path):
     validated = profile_sdk.validate_source(SOURCE, tmp_path / "runtime")
     world = json.loads((SOURCE / "contracts" / "world.json").read_text())
 
@@ -202,7 +202,6 @@ def test_profile_closes_and_declares_four_kfd1_fact_surfaces(tmp_path):
             "kungfu.dogfood-feedback.finding",
             "kungfu.dogfood-feedback.issue",
             "kungfu.dogfood-feedback.consideration",
-            "kungfu.dogfood-feedback.migration",
         ],
     }
 
@@ -1058,104 +1057,3 @@ def test_federation_preserves_independent_component_cuts_and_unavailable_state(
         row["issue_root"] != right_issue["issue_root"]
         for row in degraded_starvation["attention"]
     )
-
-
-def test_atlas_jsonl_import_preserves_every_revision_and_source_root(tmp_path):
-    identity, runtime = _active_runtime(tmp_path)
-    source = tmp_path / "items.jsonl"
-    rows = [
-        {
-            "id": "dogfood-a",
-            "revision": 1,
-            "title": "Installed command mismatch",
-            "status": "captured",
-            "category": "cli",
-            "created_at": "2026-07-01T00:00:00Z",
-            "updated_at": "2026-07-01T00:00:00Z",
-        },
-        {
-            "id": "dogfood-a",
-            "revision": 2,
-            "title": "Installed command mismatch",
-            "status": "triaged",
-            "category": "cli",
-            "created_at": "2026-07-01T00:00:00Z",
-            "updated_at": "2026-07-02T00:00:00Z",
-        },
-        {
-            "id": "dogfood-b",
-            "revision": 1,
-            "title": "Installed command mismatch",
-            "status": "captured",
-            "category": "cli",
-            "created_at": "2026-07-03T00:00:00Z",
-            "updated_at": "2026-07-03T00:00:00Z",
-        },
-    ]
-    source.write_bytes(
-        b"".join(
-            json.dumps(row, sort_keys=True, separators=(",", ":")).encode() + b"\n"
-            for row in rows
-        )
-    )
-    plan = dogfood_api.read(str(runtime), "migration-plan", {"sourcePath": str(source)})
-    assert plan["source"]["revision_count"] == 3
-    assert plan["current_item_count"] == 2
-    assert plan["automatic_resolution"] is False
-    assert len(plan["candidate_duplicate_clusters"]) == 1
-
-    imported = dogfood_api.action(
-        str(runtime),
-        "import-atlas-jsonl",
-        {
-            "sourcePath": str(source),
-            "expectedSourceRoot": plan["source"]["source_root"],
-            "actor": "test-owner",
-            "importedAt": "2026-07-04T00:00:00Z",
-        },
-        "test-owner",
-    )
-    verified = dogfood_api.read(
-        str(runtime), "migration-verify", {"sourcePath": str(source)}
-    )
-    retried = dogfood_api.action(
-        str(runtime),
-        "import-atlas-jsonl",
-        {
-            "sourcePath": str(source),
-            "expectedSourceRoot": plan["source"]["source_root"],
-            "actor": "test-owner",
-        },
-        "test-owner",
-    )
-
-    assert imported["source_revision_count"] == 3
-    assert imported["admitted_revision_count"] == 3
-    assert imported["migration"]["automatic_resolution"] is False
-    assert (
-        retried["migration"]["migration_root"]
-        == imported["migration"]["migration_root"]
-    )
-    assert retried["admitted_revision_count"] == 3
-    assert retried["migration_write"]["status"] == "already-present"
-    assert all(write["status"] == "already-present" for write in retried["writes"])
-    assert verified["ok"] is True
-    assert verified["source_bytes_retained"] is True
-    assert verified["imported_revision_count"] == 3
-
-    health = dogfood_api.read(
-        str(runtime),
-        "health",
-        {
-            "workspaceRoot": identity.workspace_root,
-            "scope": "local",
-            "now": "2026-08-01T00:00:00Z",
-        },
-    )
-    assert health["counts"]["raw_finding_observations"] == 3
-    assert health["counts"]["unique_logical_findings"] == 2
-    assert health["counts"]["finding_replicas_or_revisions"] == 1
-    assert health["atomic_global_cut"] is False
-    assert health["p10"]["supports_human_evidence_gate"] is True
-    assert health["p10"]["completion_authority"] is False
-    assert health["writes"] == []

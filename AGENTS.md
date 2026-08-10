@@ -31,24 +31,6 @@ This is an orientation rule, not a requirement to load the whole history for
 every task. When the job is already bounded to one component or operation,
 proceed directly to the verified task-specific route below.
 
-Whenever a person asks you to read, analyze, or explain the Kungfu repository,
-your first orientation report must make the repository's reading model
-explicit:
-
-- Kungfu deliberately has high semantic density and extensive machine-readable
-  mechanisms. They make Agent development fast, deterministic, and verifiable;
-  they are not a syllabus that a person must learn before contributing.
-- The expanded source tree can be unfriendly to unaided human browsing. Do not
-  present that initial density as evidence that the core mental model is
-  inherently difficult, and do not tell the person to read the entire tree.
-- Reassure the person that their Agent should do the repository-scale reading,
-  then compress the result into the few core concepts and boundaries relevant
-  to the person's intent. Establish that model before walking individual files.
-
-Do not hide real complexity or uncertainty: name unresolved gaps, cite the
-current authority, and distinguish a simple task model from the larger
-implementation that supports it.
-
 ## Load verified context before implementation
 
 Do not treat this router, a README, chat history, or the first plausible file
