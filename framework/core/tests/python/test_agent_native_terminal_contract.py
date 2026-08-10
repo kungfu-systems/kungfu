@@ -1,17 +1,24 @@
 # SPDX-License-Identifier: Apache-2.0
 
 import json
+from pathlib import Path
 import sys
 from types import SimpleNamespace
 
 from click.testing import CliRunner
 import pytest
 
+from kungfu import config
 from kungfu.agent import native_launch
+from kungfu.agent import provider_bootstrap
 from kungfu.agent import run_agent
 from kungfu.agent import runtime_profiles
 from kungfu.agent import session_surface
 from kungfu.cli.commands import agent as agent_commands, kfc
+
+
+ROOT = Path(__file__).resolve().parents[4]
+CONTRACT = ROOT / "framework" / "config" / "kungfu-config.contract.json"
 
 
 NATIVE_SURFACE_CAPABILITIES = {
@@ -26,6 +33,70 @@ NATIVE_SURFACE_CAPABILITIES = {
         "end-native",
     ],
 }
+
+
+def test_native_environment_inherits_only_a_valid_registered_tmux_capability(
+    tmp_path,
+):
+    valid_source = {
+        "PATH": "/usr/bin",
+        "TMUX": "/private/tmp/tmux-501/agentctl,12345,7",
+        "TMUX_PANE": "%42",
+        "SSH_AUTH_SOCK": "/private/tmp/secret-agent.sock",
+    }
+
+    inherited = provider_bootstrap.native_process_environment(
+        valid_source, ["TMUX", "TMUX_PANE"]
+    )
+    assert inherited["TMUX"] == valid_source["TMUX"]
+    assert inherited["TMUX_PANE"] == "%42"
+    assert "SSH_AUTH_SOCK" not in inherited
+
+    for source in (
+        {"PATH": "/usr/bin"},
+        {"PATH": "/usr/bin", "TMUX": valid_source["TMUX"]},
+        {"PATH": "/usr/bin", "TMUX_PANE": "%42"},
+        {**valid_source, "TMUX": "not-a-tmux-handle"},
+        {**valid_source, "TMUX_PANE": "42"},
+    ):
+        rejected = provider_bootstrap.native_process_environment(
+            source, ["TMUX", "TMUX_PANE"]
+        )
+        assert "TMUX" not in rejected
+        assert "TMUX_PANE" not in rejected
+
+
+def test_native_process_environment_can_be_disabled_and_rejects_unregistered_names(
+    monkeypatch, tmp_path
+):
+    monkeypatch.setenv("TMUX", "/tmp/tmux-501/default,123,0")
+    monkeypatch.setenv("TMUX_PANE", "%1")
+    defaults = config.raw_default_config(str(CONTRACT))
+    defaults["agent"]["nativeProcessEnvironment"] = []
+    config.validate_config(defaults, contract=config.load_contract(str(CONTRACT)))
+    adapter = runtime_profiles.materialize_adapter(
+        "codex",
+        runtime_dir=str(tmp_path / "runtime"),
+        resolved_config={"config": defaults},
+    )
+    assert adapter["processEnvironment"] == []
+
+    assert "TMUX" not in adapter["environment"]
+    assert "TMUX_PANE" not in adapter["environment"]
+
+    with pytest.raises(ValueError, match="complete registered"):
+        provider_bootstrap.native_process_environment(
+            {"TMUX": "/tmp/tmux-501/default,123,0", "TMUX_PANE": "%1"},
+            ["SSH_AUTH_SOCK"],
+        )
+
+    for invalid in (["TMUX"], ["TMUX_PANE"], ["SSH_AUTH_SOCK"], ["*"]):
+        candidate = config.raw_default_config(str(CONTRACT))
+        candidate["agent"]["nativeProcessEnvironment"] = invalid
+        with pytest.raises(ValueError):
+            config.validate_config(
+                candidate, contract=config.load_contract(str(CONTRACT))
+            )
 
 
 def test_agent_session_resolves_the_current_project_runtime(monkeypatch, tmp_path):
