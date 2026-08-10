@@ -315,6 +315,15 @@ test('reactivated AWS burst workflows pin reviewed immutable Buildchain v3 sourc
         ).length,
         2,
       );
+    } else if (name === 'aws-us-macos-burst-qualification.yml') {
+      assert.equal(
+        (
+          workflow.match(
+            /permissions:\n {6}actions: read\n {6}contents: read\n {6}issues: write\n {6}id-token: write/g,
+          ) || []
+        ).length,
+        1,
+      );
     } else {
       assert.doesNotMatch(workflow, /id-token:\s*write/);
     }
@@ -414,6 +423,10 @@ test('AWS macOS burst workflow requires three sequential one-job JIT slots', () 
     /inputs\.runner-label == format\('aws-us-ec2-macos-jit-\{0\}', inputs\.qualification-id\)/,
   );
   assert.match(workflow, /group: aws-us-macos-burst/);
+  assert.match(
+    workflow,
+    /permissions:\n {6}actions: read\n {6}contents: read\n {6}issues: write\n {6}id-token: write/,
+  );
   assert.match(workflow, /aws-ec2-macos-runner-label:/);
   assert.doesNotMatch(workflow, /\n {2}trust:/);
 });

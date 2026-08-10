@@ -73,6 +73,41 @@ const PREDICATE_DIGEST = crypto
   .update(PREDICATE_COMMAND)
   .digest('hex');
 
+function readJson(relative) {
+  return JSON.parse(fs.readFileSync(path.join(ROOT, relative), 'utf8'));
+}
+
+test('temporal release admission has exact legacy/proof parity and protected proof evidence', () => {
+  const contract = readJson(
+    'framework/release/kungfu-temporal-release-admission.contract.json',
+  );
+  for (const channel of RELEASE_POLICY.publication.channels) {
+    assert.deepEqual(
+      Object.keys(contract.paths[channel]).sort(),
+      [
+        ...RELEASE_POLICY.buildchain.runtimes[channel]
+          .publicationContractDigests,
+      ].sort(),
+    );
+  }
+  const projection = readJson(
+    'docs/qualification/evidence/buildchain-compatibility-proof-projection.json',
+  );
+  assert.equal(contract.maximumPathDepth, 2);
+  assert.equal(contract.rollbackMode, 'legacy-exact');
+  assert.equal(contract.safety.realPublicationRequired, false);
+  assert.equal(
+    projection.source.sourceCommit,
+    '913b5d3fc486e225cf19f6e677129434db4850a6',
+  );
+  assert.equal(
+    projection.source.mergeCommit,
+    '10745d50aa93192c06b13f76942c4c291b482518',
+  );
+  assert.equal(projection.proofs.length, 3);
+  assert.equal(new Set(projection.registry.proofRoots).size, 5);
+});
+
 test('release admission denies promoted primitive without complete receipts', () => {
   const languageStates = Object.fromEntries(
     ['cpp', 'python', 'node', 'rust'].map((language) => [
@@ -396,6 +431,26 @@ function fixture(options = {}) {
     controlPlaneAudit,
     publicationEvidence,
     expected,
+    temporalAdmission: {
+      releaseProvenance: { objectRoot: `sha256:${'9'.repeat(64)}` },
+      promotionSha: SOURCE_SHA,
+      qualificationRoot: `sha256:${'6'.repeat(64)}`,
+      authorityRoot: `sha256:${'5'.repeat(64)}`,
+    },
+    temporalVerifier: ({ expected: observed, temporalAdmission }) => {
+      assert.equal(observed.sourceSha, SOURCE_SHA);
+      assert.match(temporalAdmission.releaseProvenance.objectRoot, /^sha256:/u);
+      return {
+        schema: 'kungfu.temporal-release-admission-receipt/v1',
+        status: 'accepted',
+        pathKind:
+          observed.contractDigest === RECOVERED_CONTRACT_DIGEST
+            ? 'composed'
+            : 'direct',
+        containsPrivatePayload: false,
+        receiptRoot: `sha256:${'4'.repeat(64)}`,
+      };
+    },
     now: new Date('2026-07-15T00:05:00.000Z'),
   };
 }
@@ -406,6 +461,7 @@ test('Kungfu independently accepts only a durable sealed qualifying capability',
   assert.equal(result.capability.decision, 'allow');
   assert.equal(result.capability.runtimeSha, PUBLICATION_RUNTIME_SHA);
   assert.match(result.consumerPolicyDigest, /^[0-9a-f]{64}$/);
+  assert.equal(result.temporalAdmissionReceipt.status, 'accepted');
 
   const recovered = await verifyKungfuReleaseAdmission(
     fixture({ contractDigest: RECOVERED_CONTRACT_DIGEST }),

@@ -54,5 +54,10 @@
   "freshness": {
     "maximumLifetimeSeconds": 900,
     "nonceReplay": "deny"
+  },
+  "temporalAdmission": {
+    "contract": "framework/release/kungfu-temporal-release-admission.contract.json",
+    "proofProjection": "docs/qualification/evidence/buildchain-compatibility-proof-projection.json",
+    "releaseProvenanceContract": "framework/release/kungfu-release-provenance.contract.json"
   }
 }
