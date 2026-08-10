@@ -496,6 +496,23 @@ test('fast sentinels fail the representative recent invalid fixtures', () => {
   );
 });
 
+test('auditable-demo fast sentinel rejects Buildchain v3 rendition drift', () => {
+  const scenario = JSON.parse(
+    fs.readFileSync('.buildchain/auditable-demo.json', 'utf8'),
+  );
+  const transportScenario = JSON.parse(
+    fs.readFileSync('.buildchain/auditable-demo-transport-smoke.json', 'utf8'),
+  );
+  transportScenario.renditions[1].columns = 100;
+  const issues = inspectAuditableDemoFastSentinel({
+    workflow: fs.readFileSync('.github/workflows/build.yml', 'utf8'),
+    scenario,
+    transportScenario,
+    product: fs.readFileSync('product/scripts/dist.mjs', 'utf8'),
+  });
+  assert.match(issues.join('\n'), /native rendition profiles/u);
+});
+
 test('patrol, normal Alpha builds and sentinels keep one controller authority', () => {
   const patrol = fs.readFileSync(
     '.github/workflows/dev-alpha-candidate-patrol.yml',
