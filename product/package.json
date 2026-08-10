@@ -14,12 +14,8 @@
     "displayName": "Kungfu Episodes",
     "extensions": "dependencies",
     "extensionPackages": [
-      "@kungfu-kfx/github-dogfood-bridge",
-      "@kungfu-kfx/github-webhook-ingress",
       "@kungfu-tech/kfx-agent-work-lab-experience",
-      "@kungfu-tech/kfx-suite-agent-work-lab",
-      "@kungfu-tech/kfx-suite-github-webhook-reference",
-      "@kungfu-tech/kfx-view-github-events"
+      "@kungfu-tech/kfx-suite-agent-work-lab"
     ],
     "surfaces": [
       "gui",
