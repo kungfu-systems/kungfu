@@ -683,6 +683,12 @@ test('declared discovery routes are zero-write in a cold read-only fixture', (t)
     }
   }
   for (const relative of evidencePaths) copyFile(ROOT, fixture, relative);
+  for (const relative of [
+    'node_modules/@kungfu-tech/buildchain/package.json',
+    'node_modules/@kungfu-tech/buildchain/dist/site/buildchain-contract.json',
+    'node_modules/@kungfu-tech/buildchain/dist/site/publication-authority-registry.json',
+  ])
+    copyFile(ROOT, fixture, relative);
   fs.chmodSync(path.join(fixture, 'shifu'), 0o755);
 
   fs.symlinkSync(git, path.join(tools, 'git'));
@@ -740,6 +746,7 @@ test('declared discovery routes are zero-write in a cold read-only fixture', (t)
     XDG_CONFIG_HOME: path.join(home, 'config'),
     KUNGFU_READONLY_TOOL_LOG: toolLog,
     KUNGFU_READONLY_NESTED_SOURCE_ACCEPTANCE: '1',
+    PYTHONDONTWRITEBYTECODE: '1',
     KUNGFU_DOCUMENTATION_CONSUMER_XINFA: path.join(
       fixture,
       '.readonly-retained-xinfa',
@@ -830,6 +837,8 @@ test('declared discovery routes are zero-write in a cold read-only fixture', (t)
       );
     }
   }
+  restoreWritable(fixture);
+  fs.chmodSync(path.join(fixture, 'shifu'), 0o755);
   const sourceAcceptance = spawnSync(
     path.join(fixture, 'shifu'),
     ['check:source'],
