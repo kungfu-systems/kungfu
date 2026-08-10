@@ -153,11 +153,25 @@ function verifyContractBoundary(contract) {
     './shifu production-graph:execute',
   );
   assert.equal(contract.localExecutor.concurrency, 1);
-  assert.equal(contract.localExecutor.fixtureSafeOnly, true);
+  assert.equal(contract.localExecutor.fixtureSafeOnly, false);
+  assert.deepEqual(contract.localExecutor.boundedRealTasks, ['build:core']);
+  assert.deepEqual(contract.localExecutor.boundedTaskEnvironment, {
+    'build:core': { KUNGFU_BUILD_PROFILE: 'journal' },
+  });
   assert.equal(contract.localExecutor.requiresExactAdmission, true);
   assert.equal(contract.localExecutor.replayStartsNodes, false);
   assert.equal(contract.localExecutor.schedulerAuthority, false);
   assert.equal(contract.localExecutor.workAuthorityMutations, false);
+  assert.equal(
+    contract.buildCoreShadow.command,
+    './shifu build:core:graph-shadow',
+  );
+  assert.equal(
+    contract.buildCoreShadow.authoritativeCommand,
+    './shifu build:core',
+  );
+  assert.equal(contract.buildCoreShadow.profile, 'journal');
+  assert.equal(contract.buildCoreShadow.cutover, false);
   assert.equal(contract.feedback.command, './shifu production-graph:feedback');
   assert.equal(contract.feedback.sideEffects, false);
   assert.equal(contract.feedback.executesRecovery, false);
@@ -194,6 +208,8 @@ function verifierRoot() {
       'framework/production-graph/admission/index.mjs',
       'framework/production-graph/executor/index.mjs',
       'framework/production-graph/executor/index.test.mjs',
+      'framework/production-graph/shadow-build-core/index.mjs',
+      'framework/production-graph/shadow-build-core/index.test.mjs',
       'framework/production-graph/compiler/polyglot.fixture.mjs',
     ].map((relative) => ({
       path: relative,

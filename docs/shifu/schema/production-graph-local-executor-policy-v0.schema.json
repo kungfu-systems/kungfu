@@ -21,8 +21,21 @@
       "minItems": 1,
       "uniqueItems": true,
       "items": {
+        "anyOf": [
+          {
+            "type": "string",
+            "pattern": "^production-graph:fixture:[a-z0-9]+(?:[-:][a-z0-9]+)*$"
+          },
+          { "const": "build:core" }
+        ]
+      }
+    },
+    "taskEnvironment": {
+      "type": "object",
+      "propertyNames": { "pattern": "^[A-Z][A-Z0-9_]*$" },
+      "additionalProperties": {
         "type": "string",
-        "pattern": "^production-graph:fixture:[a-z0-9]+(?:[-:][a-z0-9]+)*$"
+        "maxLength": 1024
       }
     },
     "maxOutputBytes": {
@@ -31,5 +44,27 @@
       "maximum": 1048576
     },
     "executorPolicyRoot": { "$ref": "production-graph-v0.schema.json#/$defs/root" }
-  }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "allowedTasks": { "contains": { "const": "build:core" } }
+        },
+        "required": ["allowedTasks"]
+      },
+      "then": {
+        "properties": {
+          "allowedTasks": { "const": ["build:core"] },
+          "taskEnvironment": {
+            "const": { "KUNGFU_BUILD_PROFILE": "journal" }
+          }
+        },
+        "required": ["taskEnvironment"]
+      },
+      "else": {
+        "not": { "required": ["taskEnvironment"] }
+      }
+    }
+  ]
 }
