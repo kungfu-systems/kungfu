@@ -226,7 +226,10 @@ function qualify(consumer, xinfa) {
 
 export function runConsumerQualification(options = {}) {
   const contract = JSON.parse(fs.readFileSync(CONTRACT, 'utf8'));
-  const xinfa = options.xinfa || DEFAULT_XINFA;
+  const xinfa =
+    options.xinfa ||
+    process.env.KUNGFU_DOCUMENTATION_CONSUMER_XINFA ||
+    DEFAULT_XINFA;
   const currentEvidence = evidence(contract);
   const xinfaSource = fs
     .readdirSync(path.join(ROOT, 'crates', 'xinfa', 'src'))

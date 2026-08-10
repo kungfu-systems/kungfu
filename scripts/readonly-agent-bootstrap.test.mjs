@@ -138,8 +138,6 @@ function sourceAuditRoot(rows) {
 }
 
 function boundedDiagnosticTail(...values) {
-  const [stderr] = values;
-  if (stderr) return stderr.slice(-24 * 1024);
   const output = values.filter(Boolean).join('\n');
   const lines = output.split(/\r?\n/u);
   const failingTestsIndex = lines.findLastIndex(
@@ -272,6 +270,8 @@ test('declared discovery routes are zero-write in a cold read-only fixture', (t)
     '.buildchain/kfd/kfd-2/registry.json',
     '.buildchain/kfd/kfd-2/release-claims.json',
     '.buildchain/kfd/kfd-2/claims/agent-onboarding-pack.json',
+    '.buildchain/kfd/kfd-1/documentation-consumers.witness.json',
+    '.buildchain/kfd/kfd-1/documentation-pack.witness.json',
     '.buildchain/kfd/kfd-2/claims/agent-work-state-contract.json',
     '.buildchain/kfd/kfd-2/claims/codex-report-receipts.json',
     '.buildchain/kfd/kfd-2/claims/cross-language-authority-membrane.json',
@@ -483,6 +483,7 @@ test('declared discovery routes are zero-write in a cold read-only fixture', (t)
     'scripts/registry-envelope.mjs',
     'scripts/runtime-contract.mjs',
     'scripts/run-docs-source-check.mjs',
+    'scripts/shifu-documentation-consumers.mjs',
     'scripts/shifu-documentation-qualification.mjs',
     'scripts/shifu-readonly-entry.mjs',
     'scripts/shifu-cache-runtime.test.mjs',
@@ -594,6 +595,7 @@ test('declared discovery routes are zero-write in a cold read-only fixture', (t)
     'framework/report-projection/authority.mjs',
     'framework/report-projection/authority.test.mjs',
     'docs/qualification/evidence/generated-report-authority-queue/report.json',
+    'docs/qualification/documentation-control-plane.receipt.json',
     'framework/maintainability/waivers/README.md',
     'framework/work-history-selector/schema/work-history-selection-manifest-v1.schema.json',
     'framework/work-history-selector/schema/work-history-selection-request-v1.schema.json',
@@ -685,6 +687,7 @@ test('declared discovery routes are zero-write in a cold read-only fixture', (t)
 
   fs.symlinkSync(git, path.join(tools, 'git'));
   fs.symlinkSync(node, path.join(tools, 'node'));
+  fs.symlinkSync(executableOnPath('python3'), path.join(tools, 'python3'));
   for (const [name, relative] of [
     ['ruff', 'framework/core/.venv/bin/ruff'],
     ['mypy', 'framework/core/.venv/bin/mypy'],
@@ -737,6 +740,10 @@ test('declared discovery routes are zero-write in a cold read-only fixture', (t)
     XDG_CONFIG_HOME: path.join(home, 'config'),
     KUNGFU_READONLY_TOOL_LOG: toolLog,
     KUNGFU_READONLY_NESTED_SOURCE_ACCEPTANCE: '1',
+    KUNGFU_DOCUMENTATION_CONSUMER_XINFA: path.join(
+      fixture,
+      '.readonly-retained-xinfa',
+    ),
     KUNGFU_READONLY_PYTEST: pytest,
     KUNGFU_DEV_BRANCH: 'dev/v4/v4.0',
     KUNGFU_READONLY_TSX: requireFromGui.resolve('tsx/cli'),
@@ -747,6 +754,7 @@ test('declared discovery routes are zero-write in a cold read-only fixture', (t)
     KUNGFU_COMPLEXITY_PROTECTED_REF: protectedRef,
     PATH: `${tools}:/usr/bin:/bin`,
   };
+  env.NODE_TEST_CONTEXT = undefined;
   const cases = [
     [
       'architecture',

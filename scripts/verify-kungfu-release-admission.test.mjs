@@ -38,18 +38,35 @@ import {
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const SOURCE_SHA = '1'.repeat(40);
-const RUNTIME_SHA = 'dd702f22e6afef137c86c5456e167e6db20e88f2';
-const PUBLICATION_RUNTIME_SHA = '3d46b490748b87a7163fab6da6b77ef0c86a4460';
+const RELEASE_POLICY = JSON.parse(
+  fs.readFileSync(
+    path.join(ROOT, 'docs/qualification/gates/release-admission-policy.json'),
+    'utf8',
+  ),
+);
+const RUNTIME_SHA = RELEASE_POLICY.buildchain.runtimes.alpha.runtimeSha;
+const PUBLICATION_RUNTIME_SHA =
+  RELEASE_POLICY.buildchain.runtimes.alpha.publicationRuntimeSha;
 const RETIRED_PUBLICATION_RUNTIME_SHA =
   '21030efd277301d642fd9baaa1bd75f02dd3ddc6';
-const STABLE_RUNTIME_SHA = '380b2d8c2a660b07ed785e71276f71dc6a9184f7';
+const STABLE_RUNTIME_SHA =
+  RELEASE_POLICY.buildchain.runtimes.release.runtimeSha;
 const SOURCE_TREE_SHA = 'a'.repeat(40);
 const CONTRACT_DIGEST =
-  '15d9f6feaa7f774b7223943de4326285d4a02db459e8ddda4a20418552e65d96';
+  RELEASE_POLICY.buildchain.runtimes.alpha.contractDigest.replace(
+    /^sha256:/u,
+    '',
+  );
 const RECOVERED_CONTRACT_DIGEST =
-  '5a6dc69d8905ed852260076da13d3aa3fa63533007dba706c164fe86f8b8f1e6';
+  RELEASE_POLICY.buildchain.runtimes.alpha.publicationContractDigests[1].replace(
+    /^sha256:/u,
+    '',
+  );
 const STABLE_CONTRACT_DIGEST =
-  '900b03120a2ae9b7e7e67fdb854039849339f96bd6285a13c2ced30b9b02f2c0';
+  RELEASE_POLICY.buildchain.runtimes.release.contractDigest.replace(
+    /^sha256:/u,
+    '',
+  );
 const PREDICATE_COMMAND = 'node scripts/kungfu-release-qualification.mjs';
 const PREDICATE_DIGEST = crypto
   .createHash('sha256')
