@@ -278,6 +278,7 @@ test('declared discovery routes are zero-write in a cold read-only fixture', (t)
     '.buildchain/kfd/kfd-2/claims/remote-fact-boundary.json',
     '.buildchain/kfd/kfd-3/surfaces.json',
     '.buildchain/kfd/kfd-3/capability-query.json',
+    '.buildchain/alpha-release-cut-lock.json',
     '.buildchain/alpha-contract-lock.json',
     'config/kungfu-agent-first-canonical-policy.json',
     'developer/sdk/kfd/kfd-1/contract-world.witness.json',
