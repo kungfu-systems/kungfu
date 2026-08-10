@@ -185,6 +185,28 @@ importers:
         specifier: ^18.3.3
         version: 18.3.31
 
+  extensions/github-webhook-reference-suite: {}
+
+  extensions/github-webhook-reference-suite/github-dogfood-bridge: {}
+
+  extensions/github-webhook-reference-suite/github-event-view:
+    dependencies:
+      '@kungfu-tech/kfx':
+        specifier: workspace:*
+        version: link:../../../framework/kfx
+      react:
+        specifier: ^18.3.1
+        version: 18.3.1
+    devDependencies:
+      '@kungfu-tech/sdk':
+        specifier: workspace:*
+        version: link:../../../developer/sdk
+      '@types/react':
+        specifier: ^18.3.3
+        version: 18.3.31
+
+  extensions/github-webhook-reference-suite/github-webhook-ingress: {}
+
   extensions/journal-manager:
     dependencies:
       '@kungfu-tech/api':

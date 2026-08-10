@@ -1,0 +1,22 @@
+{
+  "schema": "kungfu.profile-assessment-policies/v1",
+  "policies": [
+    {
+      "id": "github-webhook-observation-v1",
+      "version": "1",
+      "claimId": "webhook-observation",
+      "purposes": ["operator-review"],
+      "requiredEvidence": [
+        "signature-verification",
+        "delivery-identity",
+        "normalized-content-roots"
+      ],
+      "responsibility": "The operator supplies exact repository, event, action, credential, and listener authority; the ingress records only authenticated bounded observations.",
+      "residualRisks": [
+        "a GitHub observation is never domain authority",
+        "a Finding capture does not admit an Issue or assert completion"
+      ],
+      "executorProfile": "thread"
+    }
+  ]
+}
