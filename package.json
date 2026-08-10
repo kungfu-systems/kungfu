@@ -334,6 +334,8 @@
     "test:durability-contract": "node scripts/require-shifu.mjs test:durability-contract && node scripts/run-durability-contract-tests.mjs",
     "test:state-service": "node scripts/require-shifu.mjs test:state-service && node scripts/run-state-service-tests.mjs",
     "test:kfx-profile-suite": "node scripts/require-shifu.mjs test:kfx-profile-suite && node scripts/run-kfx-profile-suite-tests.mjs",
+    "test:kfx-github-webhook-reference": "node scripts/require-shifu.mjs test:kfx-github-webhook-reference && node --test extensions/github-webhook-reference-suite/test/real-github-canary.test.mjs && node extensions/github-webhook-reference-suite/test/qualify.mjs",
+    "qualify:kfx-github-webhook-real-canary": "node scripts/require-shifu.mjs qualify:kfx-github-webhook-real-canary && node extensions/github-webhook-reference-suite/scripts/real-github-canary.mjs",
     "test:agent-work-lab": "node scripts/require-shifu.mjs test:agent-work-lab && node scripts/run-kfx-profile-suite-tests.mjs --agent-work-lab",
     "qualify:kfx-identity-neutral-terminal": "node scripts/require-shifu.mjs qualify:kfx-identity-neutral-terminal && node framework/kfx/tooling/run-identity-neutral-terminal-qualification.mjs",
     "test:mission-authority-cutover": "node scripts/require-shifu.mjs test:mission-authority-cutover && node scripts/run-mission-authority-cutover-tests.mjs",
