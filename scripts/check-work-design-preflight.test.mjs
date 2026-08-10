@@ -13,12 +13,12 @@ import {
   workDesignAdvisoryBoundary,
 } from '../framework/work-design-advisor/src/work-design-advisor.mjs';
 import {
-  OPEN_CARD_PREFLIGHT_SCHEMA,
+  WORK_DESIGN_PREFLIGHT_SCHEMA,
   buildOpenCardHistorySelectionRequest,
   buildOpenCardOutcomeHistory,
   runOpenCardPreflight,
   verifyOpenCardPreflight,
-} from '../framework/work-design-open-card/src/work-design-open-card.mjs';
+} from '../framework/work-design-preflight/src/work-design-preflight.mjs';
 import {
   buildWorkHistoryCandidate,
   buildWorkHistoryIndexSnapshot,
@@ -29,8 +29,8 @@ import {
 const AS_OF = '2026-07-30T08:00:00Z';
 const AUTHORITY_ROOT = semanticRoot({ authority: 'native-work-control' });
 const SOURCE_ROOT = semanticRoot({ source: 'qualified-work-history' });
-const SOURCE_CUT_ROOT = semanticRoot({ cut: 'open-card-history-index' });
-const XINFA_ROOT = semanticRoot({ xinfa: 'open-card-current' });
+const SOURCE_CUT_ROOT = semanticRoot({ cut: 'work-design-history-index' });
+const XINFA_ROOT = semanticRoot({ xinfa: 'work-design-current' });
 const RECORD_SCHEMA = 'kungfu.assignment-orchestration.status/v1';
 const RATIONALE_ROOT = semanticRoot({ rationale: 'explicit-human-choice' });
 const { authority, humanOverride } = workDesignAdvisoryBoundary();
@@ -74,7 +74,7 @@ function candidate() {
 
 function selectionPolicy() {
   return buildWorkHistorySelectionPolicy({
-    id: 'open-card-history-v1',
+    id: 'work-design-history-v1',
     version: 1,
     maxSelected: 8,
     recentWindowSeconds: 86400,
@@ -88,7 +88,7 @@ function selectionPolicy() {
 
 function designPolicy() {
   return buildWorkDesignPolicy({
-    id: 'open-card-advisory-v1',
+    id: 'work-design-advisory-v1',
     version: 1,
     maxSlices: 3,
     maxTotalBudgetHours: 12,
@@ -120,8 +120,8 @@ function proposal(insufficient = false, overrides = {}) {
         deliveryClass: 'native-proof-required',
         acceptance: [
           {
-            id: 'open-card-contract',
-            criterionRoot: semanticRoot({ acceptance: 'open-card-contract' }),
+            id: 'work-design-contract',
+            criterionRoot: semanticRoot({ acceptance: 'work-design-contract' }),
           },
         ],
         requiredEvidence: [
@@ -153,7 +153,7 @@ function request(action, overrides = {}) {
   const humanWorkDefinitionRoot = semanticRoot(humanWorkDefinition);
   const insufficient = overrides.insufficient === true;
   return {
-    schema: 'kungfu.work-design.open-card-preflight-request/v1',
+    schema: 'kungfu.work-design.preflight-request/v1',
     humanWorkDefinition,
     humanWorkDefinitionRoot,
     selectionRequest: {
@@ -197,12 +197,9 @@ function request(action, overrides = {}) {
 
 function assertCaptureBoundary(result) {
   assert.equal(verifyOpenCardPreflight(result).ok, true);
-  assert.deepEqual(result.cardState, {
-    captureOnly: true,
-    pointerOnly: true,
-    status: 'paused',
-    claimed: false,
-    dispatched: false,
+  assert.deepEqual(result.operation, {
+    phase: 'pre-capture',
+    mutates: false,
   });
   assert.equal(result.authority.capture, false);
   assert.equal(result.authority.claim, false);
@@ -446,7 +443,7 @@ test('history compilation deduplicates replica observations by sealed state root
   );
 });
 
-test('open-card invokes rooted outcome estimation before preserving human authority', () => {
+test('work-design invokes rooted outcome estimation before preserving human authority', () => {
   const { input, outcomeHistory } = outcomeInformedRequest({
     outcomeCount: 10,
     partialCount: 1,
@@ -570,9 +567,9 @@ test('history compilation fails closed when the installed Work proof is invalid'
   );
 });
 
-test('Shifu dispatches open-card preflight without package lifecycle bootstrap', (t) => {
+test('Shifu dispatches work-design preflight without package lifecycle bootstrap', (t) => {
   const directory = fs.mkdtempSync(
-    path.join(os.tmpdir(), 'kungfu-open-card-preflight-'),
+    path.join(os.tmpdir(), 'kungfu-work-design-preflight-'),
   );
   t.after(() => fs.rmSync(directory, { recursive: true, force: true }));
   const input = path.join(directory, 'input.json');
@@ -582,7 +579,7 @@ test('Shifu dispatches open-card preflight without package lifecycle bootstrap',
   const result = spawnSync(
     path.resolve('shifu'),
     [
-      'work-design:open-card-preflight',
+      'work-design:preflight',
       '--input',
       input,
       '--history-query',
@@ -592,7 +589,7 @@ test('Shifu dispatches open-card preflight without package lifecycle bootstrap',
   );
   assert.equal(result.status, 0, result.stderr || result.stdout);
   const preflight = JSON.parse(result.stdout);
-  assert.equal(preflight.schema, OPEN_CARD_PREFLIGHT_SCHEMA);
+  assert.equal(preflight.schema, WORK_DESIGN_PREFLIGHT_SCHEMA);
   assert.equal(preflight.history.source.complete, false);
   assert.ok(preflight.advice.advice.gapIds.includes('global-work-partial'));
   assert.equal(preflight.outcome, 'advisory-auto-adopted');

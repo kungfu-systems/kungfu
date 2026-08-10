@@ -37,6 +37,12 @@ already use. Pass a task to create the first Work directly:
 kungfu run codex "Prepare the release notes"
 ```
 
+**When `.kungfu/` appears.** It is Kungfu's project-local workspace for durable
+Work and runtime state. Do not delete it or add the whole directory to Git. Ask
+your Agent to run `kungfu agent map --json` and follow its `workspaceGit` policy
+before staging anything. Most contents stay local; Kungfu never stages,
+commits, or pushes files for you.
+
 **Open the optional global view later.** The Kungfu TUI and GUI can show and
 manage Kungfu Projects and Work across Agent Sessions. They are sidecar views,
 not a requirement for every Agent conversation.

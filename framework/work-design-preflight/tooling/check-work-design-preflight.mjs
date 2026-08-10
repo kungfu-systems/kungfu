@@ -7,9 +7,9 @@ import { fileURLToPath } from 'node:url';
 
 import { semanticRoot } from '../../project-cut/src/project-cut.mjs';
 import {
-  openCardAuthorityBoundary,
-  openCardAutoAdoptionPolicy,
-} from '../src/work-design-open-card.mjs';
+  workDesignAuthorityBoundary,
+  workDesignAutoAdoptionPolicy,
+} from '../src/work-design-preflight.mjs';
 
 const root = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -21,7 +21,7 @@ const contract = JSON.parse(
   fs.readFileSync(
     path.join(
       root,
-      'framework/work-design-open-card/work-design-open-card.contract.json',
+      'framework/work-design-preflight/work-design-preflight.contract.json',
     ),
     'utf8',
   ),
@@ -30,19 +30,19 @@ const { contractRoot, ...preimage } = contract;
 const actualRoot = semanticRoot(preimage);
 if (contractRoot !== actualRoot)
   throw new Error(
-    `open-card contract root mismatch: expected ${contractRoot}, got ${actualRoot}`,
+    `work-design contract root mismatch: expected ${contractRoot}, got ${actualRoot}`,
   );
-const boundary = openCardAuthorityBoundary();
+const boundary = workDesignAuthorityBoundary();
 if (
   JSON.stringify(boundary.authority) !== JSON.stringify(contract.authority) ||
-  JSON.stringify(boundary.cardState) !== JSON.stringify(contract.cardState)
+  JSON.stringify(boundary.operation) !== JSON.stringify(contract.operation)
 )
-  throw new Error('open-card authority or card-state boundary drifted');
+  throw new Error('work-design authority or operation boundary drifted');
 if (
-  JSON.stringify(openCardAutoAdoptionPolicy()) !==
+  JSON.stringify(workDesignAutoAdoptionPolicy()) !==
   JSON.stringify(contract.autoAdoption)
 )
-  throw new Error('open-card auto-adoption policy drifted');
+  throw new Error('work-design auto-adoption policy drifted');
 if (
   contract.outcomeEstimate?.runsAfterSelector !== true ||
   contract.outcomeEstimate?.runsBeforeCapture !== true ||
@@ -51,5 +51,5 @@ if (
     'explicit-manual-capture-without-silent-adoption' ||
   !contract.fallbackReasons.includes('outcome-history-unqualified')
 )
-  throw new Error('open-card outcome estimate boundary drifted');
-console.log(`[work-design-open-card] contract=${actualRoot}`);
+  throw new Error('work-design outcome estimate boundary drifted');
+console.log(`[work-design-preflight] contract=${actualRoot}`);

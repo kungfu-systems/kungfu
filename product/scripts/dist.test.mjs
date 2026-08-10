@@ -20,6 +20,7 @@ import {
   installedKungfuInvocation,
   isShippedKfdSupport,
   kfxBundleExternalModules,
+  listKfxPackages,
   materializeProductRuntimeEntrypoints,
   requiresManagedEsbuildPlatform,
   runInstalledKungfuAgentHubSmoke,
@@ -53,6 +54,16 @@ const {
   esmEntrypointArgs,
   toEsmEntrypointSpecifier,
 } = require('../../framework/gui/scripts/before-pack.cjs');
+
+test('reference-only KFX suites stay outside product assembly', () => {
+  const packageNames = listKfxPackages().map((pkg) => pkg.name);
+  assert.ok(packageNames.includes('@kungfu-tech/kfx-suite-agent-work-lab'));
+  assert.ok(
+    packageNames.every((name) => !name.includes('github-webhook')),
+    packageNames.join(', '),
+  );
+  assert.ok(!packageNames.includes('@kungfu-kfx/github-dogfood-bridge'));
+});
 
 test('Intel macOS is rejected by the product-wide host policy', () => {
   for (const architecture of ['x64', 'x86_64']) {

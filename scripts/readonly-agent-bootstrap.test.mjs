@@ -465,7 +465,7 @@ test('declared discovery routes are zero-write in a cold read-only fixture', (t)
     'scripts/check-work-history-selector.test.mjs',
     'scripts/check-work-design-advisor.test.mjs',
     'scripts/check-work-design-policy-replay.test.mjs',
-    'scripts/check-work-design-open-card.test.mjs',
+    'scripts/check-work-design-preflight.test.mjs',
     'scripts/documentation-product-pack.test.mjs',
     'scripts/docs-markdown-readonly.mjs',
     'scripts/kungfu-gate-workflow-facts.mjs',
@@ -625,10 +625,10 @@ test('declared discovery routes are zero-write in a cold read-only fixture', (t)
     'framework/work-design-policy-replay/tooling/check-work-design-policy-replay.mjs',
     'framework/work-design-policy-replay/tooling/work-design-policy-replay-contract.mjs',
     'framework/work-design-policy-replay/work-design-policy-replay.contract.json',
-    'framework/work-design-open-card/src/work-design-open-card.mjs',
-    'framework/work-design-open-card/tooling/check-work-design-open-card.mjs',
-    'framework/work-design-open-card/tooling/open-card-preflight.mjs',
-    'framework/work-design-open-card/work-design-open-card.contract.json',
+    'framework/work-design-preflight/src/work-design-preflight.mjs',
+    'framework/work-design-preflight/tooling/check-work-design-preflight.mjs',
+    'framework/work-design-preflight/tooling/work-design-preflight.mjs',
+    'framework/work-design-preflight/work-design-preflight.contract.json',
   ])
     copyFile(ROOT, fixture, relative);
   fs.rmSync(

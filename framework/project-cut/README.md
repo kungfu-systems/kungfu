@@ -118,7 +118,7 @@ Git, or repository state.
 ./shifu test:work-history-selector
 ```
 
-The open-card preflight can compile Selector input directly from the installed
+The work-design preflight can compile Selector input directly from the installed
 controller's verified global Work query. Only settled portable sealed-work
 coordinates enter the candidate set; replicas are deduplicated by immutable
 state root, partial global coverage remains explicit in the advice gaps, and a
@@ -135,7 +135,7 @@ approval gate:
 ```sh
 kungfu workspace work --home --scope all --include-settled \
   --details components --json > global-work.json
-./shifu work-design:open-card-preflight --input request.json \
+./shifu work-design:preflight --input request.json \
   --history-query global-work.json
 ```
 
