@@ -26,7 +26,7 @@
     "claimGraphRoot": "sha256:783aaaac54bbba91cc4df8c824d4a18f24cfa23c648af6b4979cfa2d651253ea",
     "manifestRoot": "sha256:831bdb5fb3dbec8005c9203866aed37c87eca3b0ab0b68206fdd6d7ed0d22b37",
     "compileReceiptRoot": "sha256:632d7d22e6064673092aec73897d30449d79173ef096fde70da33be4e1b5299d",
-    "qualificationRoot": "sha256:f206b36cc568a6d4cedf4391afd5af9ecad32efce8552171ebefd795a461406e"
+    "qualificationRoot": "sha256:67be6c0bc758d8f42b5d8e33b5da5b18152dc72cea93fc131b03119f22bfd036"
   },
   "responsibility": {
     "compiler": "xinfa",
