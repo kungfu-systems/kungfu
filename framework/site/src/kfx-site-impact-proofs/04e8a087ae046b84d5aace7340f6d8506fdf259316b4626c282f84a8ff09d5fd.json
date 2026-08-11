@@ -1,7 +1,7 @@
 {
   "contract": "kungfu.kfx-site-impact-proof/v1",
   "baseRevision": "37dae2d44259ab6268e0075e161561faeadb6deb",
-  "changeRoot": "sha256:6d1df35d587f09fefec38cac67f310cc86ed1735288e01f3dba51ae6935bf1df",
+  "changeRoot": "sha256:edc573c20258e14868629ce595cea21c845aeb439e166b312a9dc8b596d4f0c6",
   "changes": [
     {
       "baseContentRoot": "sha256:010f38e884141fbfba005cdfd40d5e12826b644fe2d1206f9959108ac5bf42f3",
@@ -103,6 +103,24 @@
       "baseContentRoot": "sha256:be3458fac7176c840cede2ccd1d0b38136c6d3f716f6e1fce2cedd8b7187510b",
       "contentRoot": "sha256:dc9f8aaadd944a8afa641cd3efbf6a7e323a0e02f487fbedc04bafd9a7ff5a27",
       "path": "developer/sdk/kfd/support-matrix.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:76f6e80778f148222bf824b4458a5650e0d31bdff5d8279b8187fde46bf3c96d",
+      "contentRoot": "sha256:d23ea51e47fa378d39aec6317719977b957006ae82c84750f072298630bd53fe",
+      "path": "docs/adr/KF-ADR-019fdb93-19ac-7362-8ab0-f8ed19c7bef8.md",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:4edc142031b69c5c95eb5da650d7f9fd96d19c8a85d38c8f6cafb98d6987ef9d",
+      "contentRoot": "sha256:6cd9b1ce905046f8923f6e3c6db678006def190617890573c7de7e57b96ec8f2",
+      "path": "docs/architecture/adr-map.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:ae3226678de7eb47795b767ef215e60c011a791aa82099230ad1c838bc59407a",
+      "contentRoot": "sha256:e2d124c9a606ebb9d49bfd2de4c45b2f8fe89f901779e1ec6c198a3372bf849e",
+      "path": "docs/architecture/adr-map.md",
       "status": "modified"
     },
     {
@@ -294,11 +312,11 @@
     "package-facets",
     "profiles-suites"
   ],
-  "rationale": "R3 converges local Assignment runtime consumers and updates generated authority evidence without changing the public KFX reader journey or site contract.",
+  "rationale": "R3 converges local Assignment runtime consumers, synchronizes its staged ADR projection, and updates generated authority evidence without changing the public KFX reader journey or site contract.",
   "attestation": {
     "publicBehaviorUnchanged": true,
     "publicContractUnchanged": true,
     "readerJourneyUnchanged": true
   },
-  "proofRoot": "sha256:111500ec5fb4c894274311b41a28aca88489711b4d3ba5b2058ff75b0da26107"
+  "proofRoot": "sha256:04e8a087ae046b84d5aace7340f6d8506fdf259316b4626c282f84a8ff09d5fd"
 }
