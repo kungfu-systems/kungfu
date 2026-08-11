@@ -166,6 +166,8 @@ test('protected workflow lane remains single-platform and authority-free', () =>
   assert.match(job, /runs-on: ubuntu-24\.04/u);
   assert.match(job, /permissions:\n\s+contents: read/u);
   assert.match(job, /node-version: "22"/u);
+  assert.match(job, /ref: \$\{\{ github\.sha \}\}/u);
+  assert.doesNotMatch(job, /github\.event\.pull_request/u);
   assert.match(job, /production-graph:local-ci-parity run/u);
   assert.match(job, /production-graph:local-ci-parity verify/u);
   assert.doesNotMatch(job, /pull-requests: write|contents: write/u);
