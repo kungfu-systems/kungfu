@@ -1032,6 +1032,49 @@ test('candidate finalization retains Linux ARM64 as product support when it carr
   });
 });
 
+test('candidate finalization treats a real Linux ARM64 upgrade manifest without a root projection as support-only', () => {
+  withFixture((value) => {
+    fs.rmSync(path.join(value.support.bundleRoot, 'manifest.json'));
+    const supportManifestPath = path.join(
+      value.support.bundleRoot,
+      'product',
+      'release',
+      'cli',
+      `kungfu-upgrade-${VERSION}-linux-arm64.json`,
+    );
+    const supportManifest = JSON.parse(
+      fs.readFileSync(value.platforms.linux.cliManifestPath, 'utf8'),
+    );
+    supportManifest.platform = 'linux';
+    supportManifest.architecture = 'arm64';
+    writeJson(supportManifestPath, supportManifest);
+    const outputRoot = path.join(
+      value.payloadRoot,
+      `kungfu-product-admission-${SOURCE}`,
+    );
+    const written = writeUpgradePublicationAdmission({
+      payloadRoot: value.payloadRoot,
+      releaseCandidatePassportPath: value.passportPath,
+      expectedVersion: VERSION,
+      outputPath: path.join(
+        outputRoot,
+        PRODUCT_UPGRADE_PUBLICATION_ADMISSION_FILE,
+      ),
+      capsulePath: path.join(
+        outputRoot,
+        PRODUCT_UPGRADE_PUBLICATION_CAPSULE_FILE,
+      ),
+    });
+    assert.equal(written.receipt.candidate.bundleCount, 5);
+    assert.equal(
+      written.receipt.candidate.bundles.find(
+        ({ role }) => role === 'product-support',
+      ).platformId,
+      'linux-arm64',
+    );
+  });
+});
+
 test('candidate finalization rejects a candidate without the exact five bundle roles', () => {
   withFixture((value) => {
     fs.rmSync(value.support.bundleRoot, { recursive: true });

@@ -177,11 +177,7 @@ function safeRelative(root, filePath, label) {
 }
 
 function candidateBundleIdentity(directory) {
-  // Build retains manifest/diagnostic projections as separate artifacts next
-  // to the actual candidate payloads.  A root manifest alone is therefore not
-  // sufficient to make an artifact a publication bundle: the authoritative
-  // bundles all contain the product bytes they describe.
-  if (!fs.existsSync(path.join(directory, 'product'))) return null;
+  const hasProductPayload = fs.existsSync(path.join(directory, 'product'));
   const platformManifestPath = path.join(
     directory,
     CANDIDATE_PLATFORM_MANIFEST_FILE,
@@ -192,8 +188,9 @@ function candidateBundleIdentity(directory) {
       'candidate platform manifest',
     );
     if (
-      manifest.lifecycle?.stage === 'credential-island' ||
-      manifest.platform?.id === 'macos-arm64-credential'
+      (manifest.lifecycle?.stage === 'credential-island' ||
+        manifest.platform?.id === 'macos-arm64-credential') &&
+      filesNamed(directory, CREDENTIAL_EVIDENCE_FILE).length > 0
     ) {
       return {
         role: 'credential-island',
@@ -215,21 +212,20 @@ function candidateBundleIdentity(directory) {
     }
     const platformId = [...platformIds][0];
     if (
+      hasProductPayload &&
       EXPECTED_CANDIDATE_PLATFORM_ROLES['product-support'].includes(platformId)
     ) {
       return { role: 'product-support', platformId };
     }
     return { role: 'product-upgrade', platformId };
   }
-  if (fs.existsSync(platformManifestPath)) {
+  if (hasProductPayload && fs.existsSync(platformManifestPath)) {
     const manifest = readJson(
       platformManifestPath,
       'product-support platform manifest',
     );
-    return {
-      role: 'product-support',
-      platformId: String(manifest.platform?.id || ''),
-    };
+    const platformId = String(manifest.platform?.id || '');
+    return { role: 'product-support', platformId };
   }
   return null;
 }
