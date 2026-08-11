@@ -4,6 +4,12 @@
   "summary": "Local facts for agents and people working with an installed Kungfu runtime.",
   "version": 1,
   "maturity": "stable",
+  "skillDecision": {
+    "contract": "skill-decision.contract.json",
+    "policyRoot": "sha256:dc8ebb873760e55c40ef19b8354ba1e2b91706064a48dec00b1eb8dac0479267",
+    "entrypoint": "kungfu agent skill-advisory --signals <signals.json> --json",
+    "authority": "read-only-advisory"
+  },
   "contextCompiler": {
     "product": "xinfa",
     "authority": "kungfu xinfa contract --json",
@@ -22,6 +28,7 @@
     { "path": "intent-map.json", "purpose": "stable first-entry intent map and workspace Git boundary", "maturity": "stable" },
     { "path": "first-value.contract.json", "purpose": "deterministic first-value result and qualification contract", "maturity": "stable" },
     { "path": "first-value-receipt.schema.json", "purpose": "sanitized first-value evidence receipt schema", "maturity": "stable" },
+    { "path": "skill-decision.contract.json", "purpose": "rooted six-outcome Skill decision policy", "maturity": "preview", "policyRoot": "sha256:dc8ebb873760e55c40ef19b8354ba1e2b91706064a48dec00b1eb8dac0479267" },
     { "path": "xinfa-context.md", "purpose": "verified-context discovery, help, and automation boundary", "maturity": "stable" },
     { "path": "primitive-management.md", "purpose": "Primitive authoring context binding and installed read-only discovery", "maturity": "experimental" },
     { "path": "mode-selection.md", "purpose": "choose the right operating mode", "maturity": "stable" },
@@ -59,6 +66,7 @@
     "machine": "kungfu agent capabilities --json",
     "map": "kungfu agent map --json",
     "firstValue": "kungfu agent first-value start --json",
+    "skillDecision": "kungfu agent skill-advisory --signals <signals.json> --json",
     "context": "kungfu agent context --task <task> --role <role> --budget <tokens> --route <route-id> --json",
     "workModel": "kungfu agent work-model --json",
     "modeChoice": "kungfu agent choose-mode --json",

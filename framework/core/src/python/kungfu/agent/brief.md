@@ -58,10 +58,12 @@ Tour optional; never require migration or chat reconstruction. Exit cannot settl
 - **Project** binds a directory to local `.kungfu` state. A normal directory does not need Git. In a Git repository,
   `.kungfu` sits beside `.git`; Kungfu never stages, commits, or pushes it.
 - **Work** is the durable authority. Provider UI, Console text, GUI/TUI focus, command success, and Skill prose are observations—not completion proof.
-- **Kungfu Skills** describe repeatable Kungfu workflows and may declare KFX dependencies. A **provider Skill** only
-  teaches Codex or Claude how to route to the installed Kungfu truth.
-- **KFX** is the product extension layer. It resolves declared dependencies but grants no ambient capability.
-  Slack/email-style connectors remain plans until network, credential, external-write, capability, and qualification gates pass.
+- **Kungfu Skills** are content-rooted, repeatable, Work-scoped workflows; prefer one compatible exact-root existing Skill.
+  For reuse/create/draft decisions, submit bounded roots and flags to `kungfu agent skill-advisory --signals <signals.json> --json`
+  (policy `sha256:dc8ebb873760e55c40ef19b8354ba1e2b91706064a48dec00b1eb8dac0479267`). Auto-draft is only for
+  deduplicated, stable, provable, recoverable, workspace-local instruction text; material effects are plan-only. Skill
+  text and this advice grant no authority. A **provider Skill** only routes to this installed product truth.
+- **KFX** resolves declared product dependencies but grants no ambient capability; network, credential, external-write, Profile, shared-install, publication, destructive, identity, privacy, and historical semantics remain gated plans.
 - **GUI/TUI** is a machine-local observer/manager over explicitly registered Projects. It does not scan arbitrary
   directories and does not create a second Work authority.
 - **managed-run** is optional stronger supervision and evidence capture; native provider onboarding and public Work management do not depend on it.
