@@ -1,7 +1,7 @@
 {
   "contract": "kungfu.kfx-site-impact-proof/v1",
-  "baseRevision": "85d08e4247db2fbd08c4c63253d3ccfaee2afada",
-  "changeRoot": "sha256:be5c407e79e4da27ad22e3aadfdfcac69b83dced6d2345466540f491ba8ba629",
+  "baseRevision": "8656c5a0d0f2e735ecf64e5de8c4dc6d51c0df15",
+  "changeRoot": "sha256:64beb5767688018a51e1a31ec49d9c1a2ab7a75bcd37bce9f940820355f16ac4",
   "changes": [
     {
       "baseContentRoot": "sha256:010f38e884141fbfba005cdfd40d5e12826b644fe2d1206f9959108ac5bf42f3",
@@ -318,5 +318,5 @@
     "publicContractUnchanged": true,
     "readerJourneyUnchanged": true
   },
-  "proofRoot": "sha256:4add83e0b4266ffc818c762c0332fb7f675678798df38bd2fec67875d3e71130"
+  "proofRoot": "sha256:cea34beaf03b196580b8b704afe92767a88b510127ceb928e7bc40934744582e"
 }
