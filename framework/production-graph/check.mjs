@@ -22,6 +22,7 @@ import {
   semanticRoot,
   verifyBundle,
 } from './contract.mjs';
+import { checkBuildResultContract } from './result-projection/index.mjs';
 
 const ROOT = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -172,6 +173,22 @@ function verifyContractBoundary(contract) {
   );
   assert.equal(contract.buildCoreShadow.profile, 'journal');
   assert.equal(contract.buildCoreShadow.cutover, false);
+  assert.equal(
+    contract.buildResult.command,
+    './shifu production-graph:build-result',
+  );
+  assert.equal(contract.buildResult.authority, 'projection-only');
+  for (const field of [
+    'canonicalCutAuthority',
+    'buildchainEvidenceAuthority',
+    'kfdAuthority',
+    'artifactStorageAuthority',
+    'publishingAuthority',
+    'signingAuthority',
+    'releaseCutAuthority',
+  ]) {
+    assert.equal(contract.buildResult[field], false, field);
+  }
   assert.equal(contract.feedback.command, './shifu production-graph:feedback');
   assert.equal(contract.feedback.sideEffects, false);
   assert.equal(contract.feedback.executesRecovery, false);
@@ -210,6 +227,17 @@ function verifierRoot() {
       'framework/production-graph/executor/index.test.mjs',
       'framework/production-graph/shadow-build-core/index.mjs',
       'framework/production-graph/shadow-build-core/index.test.mjs',
+      'framework/production-graph/result-projection/index.mjs',
+      'framework/production-graph/result-projection/index.test.mjs',
+      'docs/shifu/examples/production-graph/result-projection/cancellation.fixture.json',
+      'docs/shifu/examples/production-graph/result-projection/failure.fixture.json',
+      'docs/shifu/examples/production-graph/result-projection/partial-output.fixture.json',
+      'docs/shifu/examples/production-graph/result-projection/success.fixture.json',
+      'docs/shifu/examples/production-graph/result-projection/invalid/completeness-mismatch.fixture.json',
+      'docs/shifu/examples/production-graph/result-projection/invalid/execution-receipt-drift.fixture.json',
+      'docs/shifu/examples/production-graph/result-projection/invalid/missing-digest.fixture.json',
+      'docs/shifu/examples/production-graph/result-projection/invalid/settlement-receipt-mismatch.fixture.json',
+      'docs/shifu/examples/production-graph/result-projection/invalid/source-drift.fixture.json',
       'framework/production-graph/compiler/polyglot.fixture.mjs',
     ].map((relative) => ({
       path: relative,
@@ -393,6 +421,8 @@ export async function checkProductionGraphContract() {
 
   const qualified = valid.get('qualified');
   assert.ok(qualified, 'qualified fixture is required for execution admission');
+
+  await checkBuildResultContract({ validators });
 
   for (const relative of invalidFiles) {
     const fixture = loadFixture(ROOT, relative);

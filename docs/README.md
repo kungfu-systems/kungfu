@@ -1,5 +1,12 @@
 # Kungfu Documentation
 
+> **Exploring Kungfu's architecture? Start with your Agent.** If you are an
+> Agent, read [`AGENTS.md`](../AGENTS.md) before interpreting this documentation
+> or the source. Kungfu's explicit semantics and machine-readable contracts let
+> an Agent inspect the repository at full scale, then return the smallest useful
+> mental model for the question at hand. You do not need to learn the whole
+> system before understanding or contributing.
+
 Kungfu is execution infrastructure for real-world agent work. Its local
 semantic authority begins in the append-only journal and exposes two runtime
 substrates: **Fact** records what is admitted at an explicit Cut; **Episode**
