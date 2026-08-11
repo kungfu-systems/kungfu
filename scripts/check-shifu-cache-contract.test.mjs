@@ -522,7 +522,7 @@ test('portable-off qualification profiles cover every native Build lane', () => 
   );
   assert.match(
     buildWorkflow,
-    /compiler-cache-provider: \$\{\{ github\.event_name == 'workflow_dispatch' && \(inputs\.render-auditable-demo \|\| inputs\.windows-compiler-cache-mode == 'off'\) && 'none' \|\| 'sccache' \}\}/u,
+    /compiler-cache-provider: \$\{\{ github\.event_name == 'workflow_dispatch' && inputs\.windows-compiler-cache-mode == 'off' && 'none' \|\| 'sccache' \}\}/u,
   );
   assert.match(
     buildWorkflow,
