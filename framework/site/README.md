@@ -88,6 +88,53 @@ does not publish npm, update a downstream Site dependency, or claim that
 `kfx.libkungfu.dev` consumes the generated files. A future downstream pickup
 must pin an exact published package and verify the package-local manifest.
 
+## KFX change impact gate
+
+`src/kfx-site-impact.contract.json` maps KFX-owned source paths to the existing
+KFX Site Bundle facets. `check:source` passes its exact base revision and
+changed-file set to the build-free checker. A changed declared source, such as
+the KFX contract or authoring guide, is itself a semantic bundle update for the
+facets that bind it. Other public contract, schema, SDK, CLI, Agent, manifest,
+qualification, and reference surfaces must update a bound source or make a
+meaningful semantic change in `src/kfx-site-bundle.source.json`.
+
+Internal implementation and test changes may instead carry one immutable
+`kungfu.kfx-site-impact-proof/v1`. The proof binds the exact merge base, every
+changed path outside the proof directory, before/after content roots, and the
+still-unresolved facet set. Public surfaces are never proof-eligible. Proofs
+also cannot authorize themselves: proof files are excluded from the change
+root, and a proof-only change fails.
+
+Run the same check used by source acceptance:
+
+```sh
+./shifu check:kfx-site-impact
+```
+
+When the diagnostic lists only proof-eligible internal changes, create the
+exact content-addressed proof with a specific explanation:
+
+```sh
+./shifu check:kfx-site-impact -- --write-proof \
+  --rationale "The allocation refactor preserves public contracts, observable behavior, and every documented reader journey."
+./shifu check:kfx-site-impact
+```
+
+Commit the generated JSON together with the implementation. Do not edit its
+base, paths, roots, facets, attestations, filename, or rationale afterward; a
+subsequent change requires a new proof. The stable diagnostics are:
+
+- `KFX_SITE_BUNDLE_IMPACT_UNMAPPED`: add an explicit path-to-facet rule; KFX
+  ownership fails closed.
+- `KFX_SITE_BUNDLE_UPDATE_REQUIRED`: update the listed facets through the
+  declaration or one of their bound sources; use a proof only when every
+  remaining path is reported as eligible.
+- `KFX_SITE_BUNDLE_IMPACT_PROOF_INVALID`: regenerate the proof from the current
+  exact diff and replace generic rationale with the concrete non-impact case.
+- `KFX_SITE_BUNDLE_IMPACT_CONTRACT_WEAKENED`: restore removed ownership,
+  selectors, facets, exclusions, or non-waivable disposition. New mappings may
+  add coverage but the same change cannot weaken existing coverage.
+
 The bundle schema version, npm pickup version, `.kungfu` layout/spec versions,
 ABI versions, and component contract versions are independent axes. The
 `@kungfu-tech/spec` package version is a pickup coordinate; compatibility is
