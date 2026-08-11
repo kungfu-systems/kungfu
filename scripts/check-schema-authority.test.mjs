@@ -7,6 +7,7 @@ import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 
 import {
+  validateContractSchemaArtifactBindings,
   validateManifest,
   validateRepository,
 } from './check-schema-authority.mjs';
@@ -43,4 +44,40 @@ test('projection route is exclusive to its schema owner', () => {
 
 test('repository inventory matches production sources', () => {
   assert.deepEqual(validateRepository(ROOT), []);
+});
+
+test('every declared contract schema is frozen by the central artifact registry', () => {
+  const registry = JSON.parse(
+    fs.readFileSync(
+      path.join(ROOT, 'framework/contract/kungfu-contracts.registry.json'),
+      'utf8',
+    ),
+  );
+  const skillEntry = registry.contracts.find(
+    (entry) => entry.surface === 'skill',
+  );
+  assert.ok(skillEntry);
+  const contractsBySource = {
+    [skillEntry.source]: JSON.parse(
+      fs.readFileSync(path.join(ROOT, skillEntry.source), 'utf8'),
+    ),
+  };
+  assert.deepEqual(
+    validateContractSchemaArtifactBindings(registry, contractsBySource),
+    [],
+  );
+
+  const incomplete = structuredClone(registry);
+  const incompleteSkill = incomplete.contracts.find(
+    (entry) => entry.surface === 'skill',
+  );
+  incompleteSkill.extraArtifacts = incompleteSkill.extraArtifacts.filter(
+    (entry) => !entry.source.endsWith('skill-dependency-plan-v2.schema.json'),
+  );
+  assert.match(
+    validateContractSchemaArtifactBindings(incomplete, contractsBySource).join(
+      '\n',
+    ),
+    /schemaFiles\.dependencyPlanV2 is not frozen by registry extraArtifacts/u,
+  );
 });

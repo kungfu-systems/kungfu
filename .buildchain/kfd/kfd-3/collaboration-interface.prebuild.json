@@ -8,13 +8,13 @@
     "cwd": ".",
     "sourceSha": "7f97ecb625e1c5e374ff392473da881dd40eac3b",
     "registryPath": ".buildchain/kfd/kfd-3/surfaces.json",
-    "registryDigest": "sha256:5722db7858011aaaea6302535f795bb23015e4612eba472ce43c9722a5d950b6"
+    "registryDigest": "sha256:3e28e2e8de049a465466fd6d6e51aea855ce50a864c34fd907410799a60deb36"
   },
   "sourceRegistry": {
     "id": "kungfu",
     "path": ".buildchain/kfd/kfd-3/surfaces.json",
-    "sha256": "755202d04392b695fc0161ecc263e638bd526999628123a36a96759d90ed2777",
-    "digest": "sha256:5722db7858011aaaea6302535f795bb23015e4612eba472ce43c9722a5d950b6"
+    "sha256": "789c23cb2b57f9d6fbbbf80a469b3cdf759ea1acdbc7d1866b166fb804d0e983",
+    "digest": "sha256:3e28e2e8de049a465466fd6d6e51aea855ce50a864c34fd907410799a60deb36"
   },
   "upstreamKfd": {
     "aggregatePath": "developer/sdk/kfd/upstream-aggregate.json",
@@ -29,12 +29,12 @@
       "libnode": "22.22.3-kf.5-alpha.3",
       "buildchain": "3.0.0"
     },
-    "digest": "sha256:eec155c6eb75c270fcd2b03427c4f94366b16395690525a414f69558669f0899"
+    "digest": "sha256:801bf37d5d9af26df517ff8b0819f338886efd86bf71be3f2897bb78c34bb64e"
   },
   "expectedArtifactVerification": {
     "command": "node scripts/buildchain-kfd-evidence.mjs --artifact-witness --json"
   },
-  "collaborationInterfaceDigest": "sha256:186cba76d75acd8bc45f1972ee85325221effdba4d7c010f66301aa840d6f12b",
+  "collaborationInterfaceDigest": "sha256:719f04d0a71ec1149307920294091500b78bc57857c1d6a27e2c5981b8847ed8",
   "collaborationInterface": {
     "schemaVersion": 1,
     "contract": "kungfu-buildchain-kfd-3-surface-registry",
@@ -57,7 +57,7 @@
         "libnode": "22.22.3-kf.5-alpha.3",
         "buildchain": "3.0.0"
       },
-      "digest": "sha256:eec155c6eb75c270fcd2b03427c4f94366b16395690525a414f69558669f0899"
+      "digest": "sha256:801bf37d5d9af26df517ff8b0819f338886efd86bf71be3f2897bb78c34bb64e"
     },
     "surfaces": [
       {

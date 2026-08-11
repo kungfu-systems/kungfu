@@ -147,7 +147,7 @@
       "status": "supported",
       "mode": "contract-world",
       "source": "framework/contract/kungfu-contracts.registry.json",
-      "sha256": "sha256:f0225132b8fbc809e6ed37e2ba1350191c848abed9172534363a67a3c42ecae1",
+      "sha256": "sha256:95879bbe4a816ced66cee102014e6c4d80ee145d9465b6f648c17a6fcad425e5",
       "contractCount": 19,
       "witnessCommand": "kungfu sdk contract witness --json",
       "gateCommand": "kungfu sdk kfd 1 gate --json",

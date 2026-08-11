@@ -91,6 +91,16 @@
           "artifact": "config/skill/schema/skill-lifecycle-receipt-v2.schema.json"
         },
         {
+          "label": "skill v2 dependency plan schema",
+          "source": "framework/skill/schema/skill-dependency-plan-v2.schema.json",
+          "artifact": "config/skill/schema/skill-dependency-plan-v2.schema.json"
+        },
+        {
+          "label": "skill v2 dependency invocation receipt schema",
+          "source": "framework/skill/schema/skill-dependency-invocation-receipt-v2.schema.json",
+          "artifact": "config/skill/schema/skill-dependency-invocation-receipt-v2.schema.json"
+        },
+        {
           "label": "skill v2 definition schema",
           "source": "framework/skill/schema/skill-definition-v2.schema.json",
           "artifact": "config/skill/schema/skill-definition-v2.schema.json"

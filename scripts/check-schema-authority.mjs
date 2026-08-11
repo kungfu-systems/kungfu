@@ -12,6 +12,7 @@ import { fileURLToPath } from 'node:url';
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(HERE, '..');
 const MANIFEST = 'framework/core/schema-authority.json';
+const CONTRACT_REGISTRY = 'framework/contract/kungfu-contracts.registry.json';
 
 const EXPECTED_ROUTE = {
   hana: 'hana-sqlite-orm',
@@ -98,12 +99,64 @@ export function validateManifest(manifest) {
   return errors;
 }
 
+export function validateContractSchemaArtifactBindings(
+  registry,
+  contractsBySource,
+) {
+  const errors = [];
+  for (const entry of registry?.contracts || []) {
+    const contract = contractsBySource[entry.source];
+    if (!contract || !contract.schemaFiles) continue;
+    const registered = new Set(
+      (entry.extraArtifacts || []).map(
+        (artifact) => `${artifact.source}\0${artifact.artifact}`,
+      ),
+    );
+    for (const [name, schemaFile] of Object.entries(contract.schemaFiles)) {
+      if (!schemaFile?.source || !schemaFile?.artifact) {
+        errors.push(
+          `${entry.surface} contract schemaFiles.${name} must declare source and artifact`,
+        );
+        continue;
+      }
+      const source = path.posix.join(
+        path.posix.dirname(entry.source),
+        schemaFile.source,
+      );
+      const artifact = path.posix.join(
+        path.posix.dirname(entry.artifact),
+        schemaFile.artifact,
+      );
+      if (!registered.has(`${source}\0${artifact}`)) {
+        errors.push(
+          `${entry.surface} contract schemaFiles.${name} is not frozen by registry extraArtifacts: ${source} -> ${artifact}`,
+        );
+      }
+    }
+  }
+  return errors;
+}
+
+function validateContractSchemaArtifacts(root) {
+  const registry = JSON.parse(
+    fs.readFileSync(path.join(root, CONTRACT_REGISTRY), 'utf8'),
+  );
+  const contractsBySource = Object.fromEntries(
+    (registry.contracts || []).map((entry) => [
+      entry.source,
+      JSON.parse(fs.readFileSync(path.join(root, entry.source), 'utf8')),
+    ]),
+  );
+  return validateContractSchemaArtifactBindings(registry, contractsBySource);
+}
+
 export function validateRepository(root = ROOT) {
   const errors = [];
   const manifest = JSON.parse(
     fs.readFileSync(path.join(root, MANIFEST), 'utf8'),
   );
   errors.push(...validateManifest(manifest));
+  errors.push(...validateContractSchemaArtifacts(root));
 
   const authorities = manifest.authorities || [];
   const declaredFbs = new Set();
