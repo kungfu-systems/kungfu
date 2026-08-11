@@ -177,23 +177,26 @@ function safeRelative(root, filePath, label) {
 }
 
 function candidateBundleIdentity(directory) {
+  const hasProductPayload = fs.existsSync(path.join(directory, 'product'));
   const platformManifestPath = path.join(
     directory,
     CANDIDATE_PLATFORM_MANIFEST_FILE,
   );
-  const credentialEvidence = filesNamed(directory, CREDENTIAL_EVIDENCE_FILE);
-  if (credentialEvidence.length > 0) {
-    if (!fs.existsSync(platformManifestPath)) {
-      throw new Error('credential-island bundle has no platform manifest');
-    }
+  if (fs.existsSync(platformManifestPath)) {
     const manifest = readJson(
       platformManifestPath,
-      'credential-island platform manifest',
+      'candidate platform manifest',
     );
-    return {
-      role: 'credential-island',
-      platformId: String(manifest.platform?.id || ''),
-    };
+    if (
+      (manifest.lifecycle?.stage === 'credential-island' ||
+        manifest.platform?.id === 'macos-arm64-credential') &&
+      filesNamed(directory, CREDENTIAL_EVIDENCE_FILE).length > 0
+    ) {
+      return {
+        role: 'credential-island',
+        platformId: String(manifest.platform?.id || ''),
+      };
+    }
   }
   const upgradeManifests = upgradeManifestFiles(directory);
   if (upgradeManifests.length > 0) {
@@ -207,17 +210,22 @@ function candidateBundleIdentity(directory) {
         `product-upgrade bundle has multiple platform roles: ${[...platformIds].join(', ')}`,
       );
     }
-    return { role: 'product-upgrade', platformId: [...platformIds][0] };
+    const platformId = [...platformIds][0];
+    if (
+      hasProductPayload &&
+      EXPECTED_CANDIDATE_PLATFORM_ROLES['product-support'].includes(platformId)
+    ) {
+      return { role: 'product-support', platformId };
+    }
+    return { role: 'product-upgrade', platformId };
   }
-  if (fs.existsSync(platformManifestPath)) {
+  if (hasProductPayload && fs.existsSync(platformManifestPath)) {
     const manifest = readJson(
       platformManifestPath,
       'product-support platform manifest',
     );
-    return {
-      role: 'product-support',
-      platformId: String(manifest.platform?.id || ''),
-    };
+    const platformId = String(manifest.platform?.id || '');
+    return { role: 'product-support', platformId };
   }
   return null;
 }
@@ -1063,6 +1071,13 @@ function verifyBundle({
     throw new Error(
       `upgrade manifest source ${manifest.sourceCommit || '<empty>'} is not bound by the release-candidate passport`,
     );
+  }
+  if (
+    EXPECTED_CANDIDATE_PLATFORM_ROLES['product-support'].includes(
+      platformIdentity(manifest),
+    )
+  ) {
+    return null;
   }
 
   let evidence = null;
