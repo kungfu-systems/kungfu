@@ -23,7 +23,8 @@
   },
   "scripts": {
     "build": "tsc --noEmit",
-    "test:golden": "node --experimental-transform-types scripts/golden.mjs"
+    "test:golden": "node --experimental-transform-types scripts/golden.mjs",
+    "test:contract-v2": "node scripts/contract-v2.mjs"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",

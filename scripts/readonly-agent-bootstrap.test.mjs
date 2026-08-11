@@ -95,6 +95,20 @@ function executableOnPath(name) {
   throw new Error(`${name} is not available on PATH`);
 }
 
+function pinnedUvToolExecutable(packageSpec, name) {
+  const result = spawnSync(
+    executableOnPath('uv'),
+    ['tool', 'run', '--from', packageSpec, 'which', name],
+    { encoding: 'utf8' },
+  );
+  if (result.status !== 0) {
+    throw new Error(
+      `could not resolve ${packageSpec}: ${result.stderr || result.stdout}`,
+    );
+  }
+  return declaredExecutable(name, result.stdout.trim());
+}
+
 function declaredExecutable(name, candidate) {
   if (!candidate) return null;
   try {
@@ -436,7 +450,17 @@ test('declared discovery routes are zero-write in a cold read-only fixture', (t)
     'crates/shifu/src/promote_desktop.rs',
     'crates/shifu/src/promote_tests.rs',
     'crates/shifu/src/registrar.rs',
+    'config/kungfu-skill.contract.json',
     'config/kungfu-contracts.registry.json',
+    'docs/adr/KF-ADR-019f86da-4f90-74c2-9cbb-24f1c34303bf.md',
+    'docs/adr/KF-ADR-019fee22-e71d-7da9-8a44-9403c21a5d62.md',
+    'docs/architecture/skills.md',
+    'framework/skill/README.md',
+    'framework/skill/fixtures/contract-v2/cases.json',
+    'framework/skill/kungfu-skill.contract.json',
+    'framework/skill/package.json',
+    'framework/skill/schema/skill-definition-v2.schema.json',
+    'framework/skill/scripts/contract-v2.mjs',
     'framework/core/src/python/kungfu/distribution_update.py',
     'framework/core/src/python/kungfu/distribution_update_planning.py',
     'framework/core/src/python/kungfu/distribution_update_policy.py',
@@ -750,7 +774,6 @@ test('declared discovery routes are zero-write in a cold read-only fixture', (t)
   for (const [name, relative] of [
     ['ruff', 'framework/core/.venv/bin/ruff'],
     ['mypy', 'framework/core/.venv/bin/mypy'],
-    ['clang-format', 'framework/core/.venv/bin/clang-format'],
   ]) {
     const projectExecutable = path.join(ROOT, relative);
     const executable = fs.existsSync(projectExecutable)
@@ -758,6 +781,10 @@ test('declared discovery routes are zero-write in a cold read-only fixture', (t)
       : executableOnPath(name);
     fs.symlinkSync(executable, path.join(tools, name));
   }
+  fs.symlinkSync(
+    pinnedUvToolExecutable('clang-format==20.1.8', 'clang-format'),
+    path.join(tools, 'clang-format'),
+  );
   for (const name of ['cargo', 'corepack', 'curl', 'fnm', 'pnpm', 'uv']) {
     const file = path.join(tools, name);
     fs.writeFileSync(
