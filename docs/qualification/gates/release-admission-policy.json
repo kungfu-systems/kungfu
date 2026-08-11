@@ -22,6 +22,9 @@
     "runtimes": {
       "alpha": {
         "ref": "v3-alpha",
+        "packageVersion": "3.0.9-alpha.2",
+        "registry": "node_modules/@kungfu-tech/buildchain/dist/site/publication-authority-registry.json",
+        "authorityRegistryDigest": "26e5356238677038bda4efe2b91dbf3939270b31c65ff8a36bbdf0d3e5227913",
         "runtimeSha": "e5e7078c67978051016c2ceb1fec114e8956397a",
         "publicationRuntimeSha": "e5e7078c67978051016c2ceb1fec114e8956397a",
         "contractDigest": "sha256:a67cf7f6bcfe9c0afb1969735a09d77225ad1252ff161fa156da8deaf5863a0e",
@@ -32,6 +35,9 @@
       },
       "release": {
         "ref": "v3",
+        "packageVersion": "3.0.6",
+        "registry": "node_modules/@kungfu-tech/buildchain-stable/dist/site/publication-authority-registry.json",
+        "authorityRegistryDigest": "fd4b5def78f58e64badfd6d9d4cce801cab3c15ae81aa89357ef02d15f7ad99d",
         "runtimeSha": "380b2d8c2a660b07ed785e71276f71dc6a9184f7",
         "publicationRuntimeSha": "380b2d8c2a660b07ed785e71276f71dc6a9184f7",
         "contractDigest": "sha256:900b03120a2ae9b7e7e67fdb854039849339f96bd6285a13c2ced30b9b02f2c0",
