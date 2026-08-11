@@ -1,0 +1,11 @@
+{
+  "fixtureId": "build-result-partial-output",
+  "outcome": "failed",
+  "sourceRevision": "1111111111111111111111111111111111111111",
+  "sourceTree": "2222222222222222222222222222222222222222",
+  "nodes": [
+    { "id": "compile", "state": "succeeded", "started": true, "retryEligible": false },
+    { "id": "package", "state": "failed", "started": true, "retryEligible": true }
+  ],
+  "nextAction": "inspect retained package evidence before requesting a new run"
+}

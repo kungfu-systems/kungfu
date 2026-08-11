@@ -1,0 +1,11 @@
+{
+  "baseFixture": "build-result-success",
+  "mutation": {
+    "target": "projection",
+    "path": ["source", "tree"],
+    "operation": "replace",
+    "value": "3333333333333333333333333333333333333333",
+    "rerootProjection": true
+  },
+  "expect": "source-drift"
+}

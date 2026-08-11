@@ -1,0 +1,11 @@
+{
+  "fixtureId": "build-result-cancellation",
+  "outcome": "cancelled",
+  "sourceRevision": "1111111111111111111111111111111111111111",
+  "sourceTree": "2222222222222222222222222222222222222222",
+  "nodes": [
+    { "id": "compile", "state": "cancelled", "started": true, "retryEligible": true },
+    { "id": "package", "state": "skipped", "started": false, "retryEligible": false }
+  ],
+  "nextAction": "request a newly admitted run after cancellation review"
+}

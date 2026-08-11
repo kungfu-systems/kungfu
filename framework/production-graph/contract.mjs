@@ -47,6 +47,9 @@ export const SCHEMA_PATHS = Object.freeze({
     'docs/shifu/schema/production-graph-local-execution-receipt-v0.schema.json',
   buildCoreShadowReceipt:
     'docs/shifu/schema/build-core-production-graph-shadow-receipt-v0.schema.json',
+  buildResult: 'docs/shifu/schema/production-graph-build-result-v0.schema.json',
+  buildResultSettlementReceipt:
+    'docs/shifu/schema/production-graph-build-result-settlement-receipt-v0.schema.json',
 });
 
 const readJson = (root, relative) =>
