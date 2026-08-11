@@ -493,15 +493,15 @@
       "sources": [
         "local-files"
       ],
-      "period": "2026-07-28",
-      "theme": "kungfu-configuration",
+      "period": "ongoing",
+      "theme": "kungfu-skills",
       "confidence": "high",
-      "evidence_grade": "B",
-      "last_reviewed": "2026-07-28",
+      "evidence_grade": "A",
+      "last_reviewed": "2026-08-11",
       "ai_provenance": {
         "model_family": "OpenAI GPT-5",
         "product": "Codex",
-        "generated_at": "2026-07-28",
+        "generated_at": "2026-08-11",
         "invisible_context_boundary": "Unobserved runtime state and unpublished release artifacts are not claimed"
       }
     },

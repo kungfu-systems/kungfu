@@ -1,0 +1,77 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "kungfu.skill-registry-state/v2",
+  "title": "Kungfu Skill registry state",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "generation", "entries", "events", "stateRoot"],
+  "properties": {
+    "schema": {"const": "kungfu.skill-registry-state/v2"},
+    "generation": {"type": "integer", "minimum": 0},
+    "stateRoot": {"$ref": "#/$defs/root"},
+    "entries": {
+      "type": "object",
+      "additionalProperties": {"$ref": "#/$defs/entry"}
+    },
+    "events": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/event"}
+    }
+  },
+  "$defs": {
+    "root": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "entry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["key", "revisions", "activeRevision", "activeReference", "status", "workSelections"],
+      "properties": {
+        "key": {"type": "string", "minLength": 1},
+        "revisions": {"type": "object", "additionalProperties": {"$ref": "#/$defs/revision"}},
+        "activeRevision": {"type": ["integer", "null"], "minimum": 1},
+        "activeReference": {"type": "boolean"},
+        "status": {"enum": ["installed", "enabled", "selected", "loaded", "invoked", "suspended", "retired", "historical"]},
+        "workSelections": {"type": "array", "items": {"$ref": "#/$defs/selection"}}
+      }
+    },
+    "revision": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["revision", "contentRoot", "definitionRoot", "definitionRef", "payloadRef", "class", "provenance", "dependencies"],
+      "properties": {
+        "revision": {"type": "integer", "minimum": 1},
+        "contentRoot": {"$ref": "#/$defs/root"},
+        "definitionRoot": {"$ref": "#/$defs/root"},
+        "definitionRef": {"type": "string", "pattern": "^definitions/sha256/[0-9a-f]{64}\\.json$"},
+        "payloadRef": {"type": "string", "pattern": "^payloads/sha256/[0-9a-f]{64}$"},
+        "class": {"enum": ["instruction-only", "operational", "domain"]},
+        "provenance": {"type": "object"},
+        "dependencies": {"type": "object"}
+      }
+    },
+    "selection": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["workRef", "revision", "contentRoot", "active"],
+      "properties": {
+        "workRef": {"type": "string", "minLength": 1},
+        "revision": {"type": "integer", "minimum": 1},
+        "contentRoot": {"$ref": "#/$defs/root"},
+        "active": {"type": "boolean"}
+      }
+    },
+    "event": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["generation", "operation", "operationRoot", "key", "revision", "contentRoot", "status"],
+      "properties": {
+        "generation": {"type": "integer", "minimum": 1},
+        "operation": {"enum": ["install", "update", "enable", "select", "load", "invoke", "suspend", "retire", "remove", "rollback"]},
+        "operationRoot": {"$ref": "#/$defs/root"},
+        "key": {"type": "string", "minLength": 1},
+        "revision": {"type": ["integer", "null"], "minimum": 1},
+        "contentRoot": {"oneOf": [{"$ref": "#/$defs/root"}, {"type": "null"}]},
+        "status": {"enum": ["installed", "enabled", "selected", "loaded", "invoked", "suspended", "retired", "historical"]}
+      }
+    }
+  }
+}

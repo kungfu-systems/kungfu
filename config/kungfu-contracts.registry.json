@@ -76,6 +76,21 @@
       },
       "extraArtifacts": [
         {
+          "label": "skill v2 registry state schema",
+          "source": "framework/skill/schema/skill-registry-state-v2.schema.json",
+          "artifact": "config/skill/schema/skill-registry-state-v2.schema.json"
+        },
+        {
+          "label": "skill v2 lifecycle plan schema",
+          "source": "framework/skill/schema/skill-lifecycle-plan-v2.schema.json",
+          "artifact": "config/skill/schema/skill-lifecycle-plan-v2.schema.json"
+        },
+        {
+          "label": "skill v2 lifecycle receipt schema",
+          "source": "framework/skill/schema/skill-lifecycle-receipt-v2.schema.json",
+          "artifact": "config/skill/schema/skill-lifecycle-receipt-v2.schema.json"
+        },
+        {
           "label": "skill v2 definition schema",
           "source": "framework/skill/schema/skill-definition-v2.schema.json",
           "artifact": "config/skill/schema/skill-definition-v2.schema.json"

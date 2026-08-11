@@ -107,6 +107,22 @@ def validate_manager(value: dict[str, Any]) -> None:
     _validate("manager", value, "skill manager")
 
 
+def validate_definition_v2(value: dict[str, Any]) -> None:
+    _validate("definitionV2", value, "Skill v2 definition")
+
+
+def validate_registry_state_v2(value: dict[str, Any]) -> None:
+    _validate("registryStateV2", value, "Skill registry v2 state")
+
+
+def validate_lifecycle_plan_v2(value: dict[str, Any]) -> None:
+    _validate("lifecyclePlanV2", value, "Skill lifecycle v2 plan")
+
+
+def validate_lifecycle_receipt_v2(value: dict[str, Any]) -> None:
+    _validate("lifecycleReceiptV2", value, "Skill lifecycle v2 receipt")
+
+
 def _validate(schema_name: str, value: dict[str, Any], label: str) -> None:
     contract_runtime.validate_json_schema(
         value,
