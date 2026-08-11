@@ -170,10 +170,51 @@ function chmodIfPossible(file, mode) {
   }
 }
 
+function readPaxRecords(body) {
+  const records = Object.create(null);
+  let offset = 0;
+  while (offset < body.length) {
+    const space = body.indexOf(0x20, offset);
+    if (space < 0) throw new Error('invalid PAX record length');
+    const lengthText = body.toString('ascii', offset, space);
+    if (!/^[1-9][0-9]*$/u.test(lengthText)) {
+      throw new Error('invalid PAX record length');
+    }
+    const length = Number(lengthText);
+    const end = offset + length;
+    if (
+      !Number.isSafeInteger(length) ||
+      end <= space + 1 ||
+      end > body.length ||
+      body[end - 1] !== 0x0a
+    ) {
+      throw new Error('malformed PAX record');
+    }
+    const record = body.toString('utf8', space + 1, end - 1);
+    const separator = record.indexOf('=');
+    if (separator <= 0) throw new Error('malformed PAX record');
+    records[record.slice(0, separator)] = record.slice(separator + 1);
+    offset = end;
+  }
+  return records;
+}
+
+function paxEntrySize(value, entryName) {
+  if (!/^(?:0|[1-9][0-9]*)$/u.test(value)) {
+    throw new Error(`invalid PAX entry size for ${entryName}`);
+  }
+  const size = Number(value);
+  if (!Number.isSafeInteger(size)) {
+    throw new Error(`invalid PAX entry size for ${entryName}`);
+  }
+  return size;
+}
+
 export function extractTarGz({ archiveFile, targetDir }) {
   const buffer = zlib.gunzipSync(fs.readFileSync(archiveFile));
   fs.mkdirSync(targetDir, { recursive: true });
   let offset = 0;
+  let pendingPax = null;
   while (offset + TAR_BLOCK <= buffer.length) {
     const header = buffer.subarray(offset, offset + TAR_BLOCK);
     offset += TAR_BLOCK;
@@ -181,20 +222,41 @@ export function extractTarGz({ archiveFile, targetDir }) {
 
     const name = readTarString(header, 0, 100);
     const prefix = readTarString(header, 345, 155);
-    const entryName = prefix ? `${prefix}/${name}` : name;
-    const size = readTarOctal(header, 124, 12);
     const mode = readTarOctal(header, 100, 8) || 0o644;
     const type = readTarString(header, 156, 1) || '0';
+    const headerSize = readTarOctal(header, 124, 12);
+    const headerName = prefix ? `${prefix}/${name}` : name;
+    if (!Number.isSafeInteger(headerSize) || headerSize < 0) {
+      throw new Error(`invalid tar entry size for ${headerName}`);
+    }
+    if (type === 'x' && pendingPax !== null) {
+      throw new Error('consecutive PAX local headers are unsupported');
+    }
+    const size =
+      type !== 'x' && pendingPax?.size !== undefined
+        ? paxEntrySize(pendingPax.size, headerName)
+        : headerSize;
+    if (offset + size > buffer.length) {
+      throw new Error(`truncated tar entry: ${headerName}`);
+    }
     const body = buffer.subarray(offset, offset + size);
     offset += size + (size % TAR_BLOCK ? TAR_BLOCK - (size % TAR_BLOCK) : 0);
 
+    if (type === 'x') {
+      pendingPax = readPaxRecords(body);
+      continue;
+    }
+
+    const pax = pendingPax;
+    pendingPax = null;
+    const entryName = pax?.path ?? headerName;
     const target = extractPath(targetDir, entryName);
     if (type === '5') {
       fs.mkdirSync(target, { recursive: true });
       continue;
     }
     if (type === '2') {
-      const link = readTarString(header, 157, 100);
+      const link = pax?.linkpath ?? readTarString(header, 157, 100);
       if (!link || path.isAbsolute(link) || /^[a-zA-Z]:/.test(link)) {
         throw new Error(`unsafe tar symlink for ${entryName}`);
       }
