@@ -4,7 +4,7 @@
   "owner": "kungfu-ci",
   "retiredAt": "2026-07-30",
   "reactivatedAt": "2026-07-30",
-  "reason": "The v2 callers were retired until the bounded Linux, Windows, and macOS providers landed in reviewed Buildchain v3 authority. Each active caller fixes both the reusable workflow shell and buildchain-ref to its immutable reviewed provider commit; the Windows caller additionally requires the persistent one-shot campaign ledger, exact campaign/source binding, and the USD 80 phase cap with a frozen spend baseline.",
+  "reason": "The v2 callers were retired until the bounded Linux, Windows, and macOS providers landed in reviewed Buildchain v3 authority. Linux and Windows fix the reusable workflow shell and buildchain-ref to immutable reviewed provider commits. The bounded macOS campaign uses the protected v3 shell with one named validation train whose exact head is retained below; the Windows caller additionally requires the persistent one-shot campaign ledger, exact campaign/source binding, and the USD 80 phase cap with a frozen spend baseline.",
   "runtimeSafety": {
     "workflowShellReferencesV2": false,
     "buildchainRefInputsV2": false,
@@ -29,6 +29,11 @@
     "macosAllocateHostsPreflightMergeCommit": "b27e567473b4faee97b920bbbccf08e8412620b6",
     "macosFailedSourceRebindPullRequest": 2587,
     "macosFailedSourceRebindMergeCommit": "028383e592a8e942396c1792761ec66a4b0d6020",
+    "macosHistoricalRebindPullRequest": 2599,
+    "macosHistoricalRebindMergeCommit": "1724840a37b2b80c9cd0c5d91a42b43ff8d270e4",
+    "macosValidationWorkflowShell": "v3",
+    "macosValidationTrain": "train/v3/v3.0/aws-macos-burst-20260811",
+    "macosValidationTrainHead": "6b39d6f72224a8b2fa93c1bb997ed72cbed6cdf4",
     "v3RequiredInputs": [
       "aws-codebuild-project",
       "aws-ec2-windows-runner-label",
@@ -64,7 +69,7 @@
   "historyPolicy": {
     "v2TrainRef": "retained-immutable-history",
     "priorRuns": "retained-immutable-history",
-    "currentWorkflowAuthority": "reviewed-v3-exact-sha"
+    "currentWorkflowAuthority": "reviewed-v3-exact-sha-except-bounded-macos-validation-train"
   },
   "reactivation": {
     "automatic": false,
@@ -74,7 +79,8 @@
     "requirementsSatisfied": [
       "Protected Assignment remains owned by kungfu-ci and Buildchain maintainers.",
       "Required runner presets and controller inputs landed in reviewed Buildchain v3.",
-      "Each reusable workflow shell and buildchain-ref pair is pinned to the same immutable reviewed v3 commit.",
+      "Linux and Windows reusable workflow shell and buildchain-ref pairs remain pinned to the same immutable reviewed v3 commit.",
+      "The macOS qualification caller alone uses the protected v3 shell with the named validation train and retained exact train head.",
       "Windows admission is one-shot, source-bound, permanently killable, and atomically capped before launch.",
       "Windows run title and runner label both bind campaign and qualification identity before launch.",
       "Bounded trust, label, non-publication, timeout, cancellation, and cleanup assertions are restored with targeted tests.",
