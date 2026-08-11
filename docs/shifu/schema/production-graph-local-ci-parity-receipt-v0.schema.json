@@ -1,0 +1,95 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://libkungfu.dev/schemas/shifu/production-graph-local-ci-parity-receipt-v0.schema.json",
+  "title": "Shifu Production Graph local-CI parity lane receipt v0",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "status",
+    "lane",
+    "bindings",
+    "environment",
+    "authorityBoundary",
+    "nextAction",
+    "receiptRoot"
+  ],
+  "properties": {
+    "schema": { "const": "shifu.production-graph-local-ci-parity-receipt/v0" },
+    "status": { "const": "qualified" },
+    "lane": { "enum": ["local", "protected-ci"] },
+    "bindings": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "sourceRoot",
+        "contractRoot",
+        "graphRoot",
+        "planRoot",
+        "verificationReceiptRoot",
+        "executionAdmissionRequestRoot",
+        "executionAdmissionDecisionRoot",
+        "executorPolicyRoot",
+        "nodeSetRoot",
+        "eventSetRoot",
+        "outputSetRoot",
+        "executionReceiptRoot",
+        "buildResultProjectionRoot",
+        "buildResultSettlementReceiptRoot",
+        "resultContractRoot"
+      ],
+      "properties": {
+        "sourceRoot": { "$ref": "production-graph-v0.schema.json#/$defs/root" },
+        "contractRoot": { "$ref": "production-graph-v0.schema.json#/$defs/root" },
+        "graphRoot": { "$ref": "production-graph-v0.schema.json#/$defs/root" },
+        "planRoot": { "$ref": "production-graph-v0.schema.json#/$defs/root" },
+        "verificationReceiptRoot": { "$ref": "production-graph-v0.schema.json#/$defs/root" },
+        "executionAdmissionRequestRoot": { "$ref": "production-graph-v0.schema.json#/$defs/root" },
+        "executionAdmissionDecisionRoot": { "$ref": "production-graph-v0.schema.json#/$defs/root" },
+        "executorPolicyRoot": { "$ref": "production-graph-v0.schema.json#/$defs/root" },
+        "nodeSetRoot": { "$ref": "production-graph-v0.schema.json#/$defs/root" },
+        "eventSetRoot": { "$ref": "production-graph-v0.schema.json#/$defs/root" },
+        "outputSetRoot": { "$ref": "production-graph-v0.schema.json#/$defs/root" },
+        "executionReceiptRoot": { "$ref": "production-graph-v0.schema.json#/$defs/root" },
+        "buildResultProjectionRoot": { "$ref": "production-graph-v0.schema.json#/$defs/root" },
+        "buildResultSettlementReceiptRoot": { "$ref": "production-graph-v0.schema.json#/$defs/root" },
+        "resultContractRoot": { "$ref": "production-graph-v0.schema.json#/$defs/root" }
+      }
+    },
+    "environment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["platform", "architecture", "nodeVersion", "classification"],
+      "properties": {
+        "platform": { "type": "string", "minLength": 1 },
+        "architecture": { "type": "string", "minLength": 1 },
+        "nodeVersion": { "type": "string", "pattern": "^v[0-9]+\\.[0-9]+\\.[0-9]+" },
+        "classification": { "const": "declared-environment-variance" }
+      }
+    },
+    "authorityBoundary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "additiveShadowOnly",
+        "conformanceAdmissionOnly",
+        "approves",
+        "merges",
+        "publishes",
+        "releases",
+        "weakensChecks"
+      ],
+      "properties": {
+        "additiveShadowOnly": { "const": true },
+        "conformanceAdmissionOnly": { "const": true },
+        "approves": { "const": false },
+        "merges": { "const": false },
+        "publishes": { "const": false },
+        "releases": { "const": false },
+        "weakensChecks": { "const": false }
+      }
+    },
+    "nextAction": { "$ref": "production-graph-v0.schema.json#/$defs/nonEmpty" },
+    "receiptRoot": { "$ref": "production-graph-v0.schema.json#/$defs/root" }
+  }
+}

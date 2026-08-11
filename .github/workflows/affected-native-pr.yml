@@ -20,6 +20,42 @@ permissions:
   statuses: read
 
 jobs:
+  production_graph_parity:
+    name: Production Graph parity shadow / linux
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout exact protected candidate
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha }}
+          persist-credentials: false
+          fetch-depth: 0
+      - name: Set up Node.js
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version: "22"
+      - name: Install verifier dependencies
+        run: ./shifu install --frozen-lockfile
+      - name: Run additive protected-CI shadow lane
+        run: >-
+          ./shifu production-graph:local-ci-parity run
+          --lane protected-ci
+          --output-dir "$RUNNER_TEMP/production-graph-parity"
+      - name: Verify retained parity artifact
+        run: >-
+          ./shifu production-graph:local-ci-parity verify
+          --artifact-dir "$RUNNER_TEMP/production-graph-parity"
+      - name: Upload retained parity artifact
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: production-graph-parity-${{ github.event_name }}-${{ github.sha }}
+          path: ${{ runner.temp }}/production-graph-parity
+          if-no-files-found: error
+          retention-days: 14
+
   dco:
     name: Candidate DCO
     if: ${{ github.event_name == 'pull_request' }}
