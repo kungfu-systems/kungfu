@@ -378,10 +378,10 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "diagnostic",
-          "definitionDigest": "sha256:c318f1adf76ebe003546662460366e8ab0d98cdd8e2698fc77b0dbe47b8e6f58",
+          "definitionDigest": "sha256:810952bb0c408c9b547089c4750c1402fac907a03954bf671e5ca1a2092aa353",
           "credentials": {"githubToken":"write","oidc":true,"repositorySecrets":["KUNGFU_GITHUB_TOKEN"],"inheritedSecrets":false,"environment":null},
           "externalActions": ["actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0"],
-          "steps": [{"index":1,"label":"name:Check out exact candidate source","definitionDigest":"sha256:90b7875c1b8263fc6ee031b6f446decfc1fe5eb289f08dbc3d506c4bce43f113"},{"index":2,"label":"name:Verify explicit Release Cut source lock","definitionDigest":"sha256:bba3271fae38681661ce80936a677cca6f0ff7235181dc264bd1b3842ad54ac3"},{"index":3,"label":"id:receipt","definitionDigest":"sha256:49dbd179361e6e926d6eab7b762bfa7bb7292e2f3c452a3b7ddd2d8bd626b623"}]
+          "steps": [{"index":1,"label":"name:Check out exact candidate source","definitionDigest":"sha256:90b7875c1b8263fc6ee031b6f446decfc1fe5eb289f08dbc3d506c4bce43f113"},{"index":2,"label":"name:Verify explicit Release Cut source lock","definitionDigest":"sha256:2d697968b5f8eb6e0c8e3a1aee3dccb930f9218ff60cc1afb87bf95c6c08c048"},{"index":3,"label":"id:receipt","definitionDigest":"sha256:49dbd179361e6e926d6eab7b762bfa7bb7292e2f3c452a3b7ddd2d8bd626b623"}]
         },
         {
           "id": "windows-fast-sentinel",

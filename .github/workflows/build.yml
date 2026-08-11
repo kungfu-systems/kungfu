@@ -102,7 +102,7 @@ jobs:
             --arg source "$RELEASE_CUT_SOURCE_SHA" \
             '.schema == "kungfu.alpha-release-cut-build-lock/v1" and
              .release == "v4.0.0-alpha.2" and
-             .cut == "r18" and
+             .cut == "r19" and
              .candidateSha == $source and
              .alphaBaseSha == "f9e6b0e34bcdd6407b2a18206ace7982d64de2c8" and
              .buildchainRef == "v3" and
