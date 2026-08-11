@@ -177,6 +177,11 @@ function safeRelative(root, filePath, label) {
 }
 
 function candidateBundleIdentity(directory) {
+  // Build retains manifest/diagnostic projections as separate artifacts next
+  // to the actual candidate payloads.  A root manifest alone is therefore not
+  // sufficient to make an artifact a publication bundle: the authoritative
+  // bundles all contain the product bytes they describe.
+  if (!fs.existsSync(path.join(directory, 'product'))) return null;
   const platformManifestPath = path.join(
     directory,
     CANDIDATE_PLATFORM_MANIFEST_FILE,

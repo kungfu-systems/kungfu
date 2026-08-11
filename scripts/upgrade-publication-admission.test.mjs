@@ -934,6 +934,54 @@ test('candidate finalization seals one rooted product admission receipt into its
   });
 });
 
+test('candidate finalization ignores root-manifest-only artifact projections', () => {
+  withFixture((value) => {
+    for (const [name, manifestPath] of [
+      ['kungfu-credential-manifest-macos', value.credential.manifestPath],
+      [
+        'kungfu-manifest-linux-arm64',
+        path.join(value.support.bundleRoot, 'manifest.json'),
+      ],
+      [
+        'kungfu-manifest-linux-x64',
+        path.join(value.platforms.linux.bundleRoot, 'manifest.json'),
+      ],
+    ]) {
+      const projectionRoot = path.join(value.payloadRoot, name);
+      fs.mkdirSync(projectionRoot, { recursive: true });
+      fs.copyFileSync(manifestPath, path.join(projectionRoot, 'manifest.json'));
+    }
+    const outputRoot = path.join(
+      value.payloadRoot,
+      `kungfu-product-admission-${SOURCE}`,
+    );
+    const written = writeUpgradePublicationAdmission({
+      payloadRoot: value.payloadRoot,
+      releaseCandidatePassportPath: value.passportPath,
+      expectedVersion: VERSION,
+      outputPath: path.join(
+        outputRoot,
+        PRODUCT_UPGRADE_PUBLICATION_ADMISSION_FILE,
+      ),
+      capsulePath: path.join(
+        outputRoot,
+        PRODUCT_UPGRADE_PUBLICATION_CAPSULE_FILE,
+      ),
+    });
+    assert.equal(written.receipt.candidate.bundleCount, 5);
+    assert.deepEqual(
+      written.receipt.candidate.bundles.map(({ name }) => name).sort(),
+      [
+        path.basename(value.credential.bundleRoot),
+        path.basename(value.platforms.darwin.bundleRoot),
+        path.basename(value.platforms.linux.bundleRoot),
+        path.basename(value.platforms.win32.bundleRoot),
+        path.basename(value.support.bundleRoot),
+      ].sort(),
+    );
+  });
+});
+
 test('candidate finalization rejects a candidate without the exact five bundle roles', () => {
   withFixture((value) => {
     fs.rmSync(value.support.bundleRoot, { recursive: true });
