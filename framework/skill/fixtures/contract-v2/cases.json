@@ -1,0 +1,297 @@
+{
+  "schema": "kungfu.skill-v2-contract-fixtures/v1",
+  "base": {
+    "schema": "kungfu.skill-definition/v2",
+    "identity": {
+      "key": "trace-failure-investigator",
+      "revision": 1,
+      "contentRoot": "sha256:98ab66d129e3bbaab173ac104a04462f4e8421f7190acad06d609f6fa1be6b62"
+    },
+    "class": "instruction-only",
+    "content": {
+      "algorithm": "sha256-canonical-json",
+      "root": "sha256:98ab66d129e3bbaab173ac104a04462f4e8421f7190acad06d609f6fa1be6b62",
+      "entrypoint": "SKILL.md",
+      "members": [
+        {
+          "path": "SKILL.md",
+          "root": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+          "bytes": 128,
+          "mediaType": "text/markdown"
+        }
+      ]
+    },
+    "provenance": {
+      "sourceKind": "workspace",
+      "sourceRoot": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "sourceRef": "workspace:fixture",
+      "generated": false
+    },
+    "scope": {
+      "distribution": "workspace-local",
+      "appliesTo": ["trace-investigation"],
+      "work": {
+        "binding": "optional",
+        "selectionAuthority": "kungfu-work",
+        "completionAuthority": "kungfu-work"
+      }
+    },
+    "dependencies": {
+      "kfx": [],
+      "profiles": []
+    },
+    "effects": {
+      "mode": "none",
+      "declarations": []
+    },
+    "compatibility": {
+      "contractVersion": 2,
+      "predecessor": null,
+      "requires": [
+        {
+          "surface": "skill",
+          "contractRoot": "sha256:4444444444444444444444444444444444444444444444444444444444444444"
+        }
+      ],
+      "history": "preserve-original-meaning"
+    },
+    "proof": {
+      "requirements": [
+        {
+          "id": "focused-check",
+          "kind": "check",
+          "description": "Run the declared focused verification."
+        }
+      ],
+      "completion": "work-acceptance-not-skill-output"
+    },
+    "recovery": {
+      "strategy": "disable-and-inspect",
+      "steps": ["Inspect the exact definition and Work binding before reuse."],
+      "history": "preserve-roots-receipts-and-work-meaning"
+    },
+    "authority": {
+      "capability": "none",
+      "work": "reference-only",
+      "profile": "reference-only",
+      "factEpisode": "reference-only",
+      "kfd": "reference-only",
+      "kfx": "reference-only",
+      "nonClaims": [
+        "skill-prose-is-not-capability",
+        "skill-is-not-work-authority",
+        "skill-is-not-profile-authority",
+        "skill-is-not-fact-or-episode-authority",
+        "skill-is-not-kfd-authority",
+        "skill-is-not-kfx-authority",
+        "selection-load-or-invocation-is-not-completion",
+        "retirement-does-not-reinterpret-history"
+      ]
+    }
+  },
+  "cases": [
+    {
+      "id": "valid-instruction-only",
+      "expected": "valid",
+      "patch": {}
+    },
+    {
+      "id": "valid-operational",
+      "expected": "valid",
+      "patch": {
+        "class": "operational",
+        "scope": {"work": {"binding": "required"}},
+        "dependencies": {
+          "kfx": [
+            {
+              "key": "rewind-inspector",
+              "revision": 14,
+              "root": "sha256:2222222222222222222222222222222222222222222222222222222222222222",
+              "required": true,
+              "capabilityRequests": ["rewind.read"]
+            }
+          ]
+        },
+        "effects": {
+          "mode": "declared",
+          "declarations": [
+            {
+              "id": "rewind-read",
+              "type": "capability",
+              "authorityRef": "kfx:rewind-inspector@14#sha256:2222222222222222222222222222222222222222222222222222222222222222"
+            }
+          ]
+        },
+        "authority": {"capability": "separate-kfx-admission-required"}
+      }
+    },
+    {
+      "id": "valid-domain",
+      "expected": "valid",
+      "patch": {
+        "class": "domain",
+        "scope": {"work": {"binding": "required"}},
+        "dependencies": {
+          "profiles": [
+            {
+              "id": "course-review",
+              "revision": 3,
+              "root": "sha256:3333333333333333333333333333333333333333333333333333333333333333",
+              "required": true,
+              "contributions": ["review.assess"]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "reject-mutable-identity",
+      "expected": "mutable-identity",
+      "patch": {
+        "compatibility": {
+          "predecessor": {
+            "key": "trace-failure-investigator",
+            "revision": 1,
+            "contentRoot": "sha256:5555555555555555555555555555555555555555555555555555555555555555"
+          }
+        }
+      }
+    },
+    {
+      "id": "reject-incomplete-content-root",
+      "expected": "incomplete-content-root",
+      "patch": {
+        "content": {
+          "members": [
+            {
+              "path": "docs/guide.md",
+              "root": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+              "bytes": 128,
+              "mediaType": "text/markdown"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "reject-undeclared-dependency",
+      "expected": "undeclared-dependency",
+      "patch": {
+        "class": "operational",
+        "scope": {"work": {"binding": "required"}},
+        "dependencies": {
+          "kfx": [
+            {
+              "key": "rewind-inspector",
+              "revision": 14,
+              "root": "sha256:2222222222222222222222222222222222222222222222222222222222222222",
+              "required": true,
+              "capabilityRequests": ["rewind.read"]
+            }
+          ]
+        },
+        "effects": {
+          "mode": "declared",
+          "declarations": [
+            {
+              "id": "hidden-adapter",
+              "type": "external-write",
+              "authorityRef": "kfx:undeclared-adapter@1#sha256:7777777777777777777777777777777777777777777777777777777777777777"
+            }
+          ]
+        },
+        "authority": {"capability": "separate-kfx-admission-required"}
+      }
+    },
+    {
+      "id": "reject-class-capability-mismatch",
+      "expected": "class-capability-mismatch",
+      "patch": {
+        "dependencies": {
+          "kfx": [
+            {
+              "key": "rewind-inspector",
+              "revision": 14,
+              "root": "sha256:2222222222222222222222222222222222222222222222222222222222222222",
+              "required": true,
+              "capabilityRequests": ["rewind.read"]
+            }
+          ]
+        },
+        "authority": {"capability": "separate-kfx-admission-required"}
+      }
+    },
+    {
+      "id": "reject-hidden-external-effect",
+      "expected": "hidden-external-effect",
+      "patch": {
+        "class": "operational",
+        "scope": {"work": {"binding": "required"}},
+        "dependencies": {
+          "kfx": [
+            {
+              "key": "webhook-adapter",
+              "revision": 1,
+              "root": "sha256:8888888888888888888888888888888888888888888888888888888888888888",
+              "required": true,
+              "capabilityRequests": ["network.send"]
+            }
+          ]
+        },
+        "authority": {"capability": "separate-kfx-admission-required"}
+      }
+    },
+    {
+      "id": "reject-domain-kfx-without-admission",
+      "expected": "class-capability-mismatch",
+      "patch": {
+        "class": "domain",
+        "scope": {"work": {"binding": "required"}},
+        "dependencies": {
+          "kfx": [
+            {
+              "key": "course-review-view",
+              "revision": 2,
+              "root": "sha256:9999999999999999999999999999999999999999999999999999999999999999",
+              "required": true,
+              "capabilityRequests": []
+            }
+          ],
+          "profiles": [
+            {
+              "id": "course-review",
+              "revision": 3,
+              "root": "sha256:3333333333333333333333333333333333333333333333333333333333333333",
+              "required": true,
+              "contributions": ["review.assess"]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "reject-ambiguous-scope",
+      "expected": "ambiguous-scope",
+      "patch": {"scope": {"work": {"binding": null}}}
+    },
+    {
+      "id": "reject-history-reinterpretation",
+      "expected": "history-reinterpretation",
+      "patch": {"recovery": {"history": "reinterpret-from-latest"}}
+    },
+    {
+      "id": "reject-duplicate-authority",
+      "expected": "duplicate-authority",
+      "patch": {"authority": {"work": "skill-owned"}}
+    },
+    {
+      "id": "reject-content-root-mismatch",
+      "expected": "content-root-mismatch",
+      "patch": {
+        "identity": {
+          "contentRoot": "sha256:6666666666666666666666666666666666666666666666666666666666666666"
+        }
+      }
+    }
+  ]
+}

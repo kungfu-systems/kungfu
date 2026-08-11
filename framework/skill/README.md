@@ -1,8 +1,27 @@
 # Kungfu Skill Contract
 
 This package contains the shared schemas, fixtures, and TypeScript helpers for
-Kungfu Skills. A skill is the agent-facing capability object above kfx. The
-minimum valid source is a directory containing only `SKILL.md`.
+Kungfu Skills. A skill is the agent-facing orchestration object above KFX and
+Profile authorities. Existing v1 sources may still begin as a directory
+containing only `SKILL.md`; they are not silently reinterpreted as v2.
+
+The staged v2 definition contract adds an immutable `key + revision +
+contentRoot` coordinate, a root over the complete declared package closure,
+explicit scope and Work binding, proof and recovery requirements, and exactly
+three classes:
+
+- `instruction-only` carries no executable dependency, capability, or effect;
+- `operational` resolves effects through separately admitted exact KFX refs;
+- `domain` resolves domain meaning through separately admitted exact Profile
+  refs and uses separately admitted KFX for any executable behavior.
+
+Skill definitions reference those authorities. They do not grant capability,
+select or complete Work, own Profile meaning, or replace Fact, Episode, KFD,
+or KFX contracts. Run the deterministic v2 contract gate with:
+
+```sh
+./shifu check:skill-contract-v2
+```
 
 The runtime injects only a compact catalog into agent prompts. Full `SKILL.md`
 content stays on demand through `kungfu.skill.read`, and declared kfx
@@ -43,5 +62,6 @@ agent is launched.
 `fixtures/golden/` pins the catalog and context envelopes used to keep the
 Python and TypeScript implementations schema-equivalent.
 
-See [`../../docs/architecture/skills.md`](../../docs/architecture/skills.md) and
-[`../core/docs/adr/KF-ADR-019f86da-4f90-74c2-9cbb-24f1c34303bf.md`](../../docs/adr/KF-ADR-019f86da-4f90-74c2-9cbb-24f1c34303bf.md).
+See [`../../docs/architecture/skills.md`](../../docs/architecture/skills.md),
+the [original Skill context-layer decision](../../docs/adr/KF-ADR-019f86da-4f90-74c2-9cbb-24f1c34303bf.md),
+and its [v2 contract amendment](../../docs/adr/KF-ADR-019fee22-e71d-7da9-8a44-9403c21a5d62.md).
