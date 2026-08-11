@@ -7,6 +7,7 @@ import path from 'node:path';
 import zlib from 'node:zlib';
 
 const TAR_BLOCK = 512;
+const TAR_METADATA_TYPES = new Set(['g', 'x']);
 const ZIP_EPOCH = new Date('1980-01-01T00:00:00Z');
 
 function normalizePath(value) {
@@ -187,6 +188,11 @@ export function extractTarGz({ archiveFile, targetDir }) {
     const type = readTarString(header, 156, 1) || '0';
     const body = buffer.subarray(offset, offset + size);
     offset += size + (size % TAR_BLOCK ? TAR_BLOCK - (size % TAR_BLOCK) : 0);
+
+    // POSIX PAX global and per-entry headers carry archive metadata rather
+    // than filesystem payloads. The concrete entry that follows is still
+    // validated independently before extraction.
+    if (TAR_METADATA_TYPES.has(type)) continue;
 
     const target = extractPath(targetDir, entryName);
     if (type === '5') {
