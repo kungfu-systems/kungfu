@@ -429,7 +429,7 @@ def test_skill_dependency_binding_resolves_installed_kfx(tmp_path):
                 "version": "4.0.0-alpha.1",
                 "kungfuConfig": {
                     "key": "journal-manager",
-                    "config": {"view": {}},
+                    "config": {"view": {"capabilities": []}},
                 },
             }
         ),
@@ -461,7 +461,7 @@ def test_multiple_skills_bind_one_shared_kfx_without_duplicate_registry(tmp_path
                 "version": "1.2.3",
                 "kungfuConfig": {
                     "key": "shared-view",
-                    "config": {"view": {}},
+                    "config": {"view": {"capabilities": []}},
                 },
             }
         ),
@@ -517,7 +517,7 @@ def test_skill_dependency_binding_marks_version_mismatch_unresolved(tmp_path):
                 "version": "1.0.0",
                 "kungfuConfig": {
                     "key": "versioned-view",
-                    "config": {"view": {}},
+                    "config": {"view": {"capabilities": []}},
                 },
             }
         ),
