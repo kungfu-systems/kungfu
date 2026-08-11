@@ -19,7 +19,9 @@
     "localExecutionReceipt": "docs/shifu/schema/production-graph-local-execution-receipt-v0.schema.json",
     "buildCoreShadowReceipt": "docs/shifu/schema/build-core-production-graph-shadow-receipt-v0.schema.json",
     "buildResult": "docs/shifu/schema/production-graph-build-result-v0.schema.json",
-    "buildResultSettlementReceipt": "docs/shifu/schema/production-graph-build-result-settlement-receipt-v0.schema.json"
+    "buildResultSettlementReceipt": "docs/shifu/schema/production-graph-build-result-settlement-receipt-v0.schema.json",
+    "localCiParityReceipt": "docs/shifu/schema/production-graph-local-ci-parity-receipt-v0.schema.json",
+    "localCiParityReport": "docs/shifu/schema/production-graph-local-ci-parity-report-v0.schema.json"
   },
   "rootAlgorithm": {
     "name": "sha256-canonical-json",
@@ -119,6 +121,35 @@
     "publishingAuthority": false,
     "signingAuthority": false,
     "releaseCutAuthority": false
+  },
+  "localCiParity": {
+    "command": "./shifu production-graph:local-ci-parity",
+    "slice": "production-graph:fixture:success",
+    "platforms": ["ubuntu"],
+    "conformanceAdmissionOnly": true,
+    "exactBindings": [
+      "source",
+      "contract",
+      "graph",
+      "plan",
+      "verification",
+      "execution-admission",
+      "executor-policy",
+      "node-set",
+      "events",
+      "outputs",
+      "execution-receipt",
+      "build-result-projection",
+      "build-result-settlement",
+      "result-contract"
+    ],
+    "declaredDrift": ["platform", "architecture", "node-version"],
+    "authority": "additive-shadow-only",
+    "approvalAuthority": false,
+    "mergeAuthority": false,
+    "publishingAuthority": false,
+    "releaseAuthority": false,
+    "weakensChecks": false
   },
   "feedback": {
     "command": "./shifu production-graph:feedback",
