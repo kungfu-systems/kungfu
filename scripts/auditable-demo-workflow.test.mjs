@@ -215,11 +215,11 @@ test('the build fails the real transported binary before either upload path', ()
   });
   assert.equal(
     build.uses,
-    'kungfu-systems/buildchain/.github/workflows/.build.yml@73f10bb29f06a392d54fb223643be52b693057a6',
+    'kungfu-systems/buildchain/.github/workflows/.build.yml@v3-alpha',
   );
   assert.equal(
     build.with['buildchain-ref'],
-    "${{ inputs.buildchain-ref || '73f10bb29f06a392d54fb223643be52b693057a6' }}",
+    "${{ inputs.buildchain-ref || 'v3-alpha' }}",
   );
   assert.equal(
     demo.uses,

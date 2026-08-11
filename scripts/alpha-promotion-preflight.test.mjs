@@ -582,15 +582,19 @@ test('patrol, normal Alpha builds and sentinels keep one controller authority', 
   );
   assert.match(
     build,
-    /Verify explicit Release Cut source lock[\s\S]*publish-gate\/anchor[\s\S]*kungfu\.alpha-release-cut-build-lock\/v1[\s\S]*v4\.0\.0-alpha\.2[\s\S]*r16[\s\S]*f9e6b0e34bcdd6407b2a18206ace7982d64de2c8[\s\S]*buildchainRef == "73f10bb29f06a392d54fb223643be52b693057a6"[\s\S]*devMirrorIsBuildInput == false/u,
+    /Verify explicit Release Cut source lock[\s\S]*publish-gate\/anchor[\s\S]*kungfu\.alpha-release-cut-build-lock\/v1[\s\S]*v4\.0\.0-alpha\.2[\s\S]*r16[\s\S]*f9e6b0e34bcdd6407b2a18206ace7982d64de2c8[\s\S]*buildchainRef == "v3-alpha"[\s\S]*devMirrorIsBuildInput == false/u,
   );
   assert.match(
     build,
-    /buildchain-ref: \$\{\{ inputs\.buildchain-ref \|\| '73f10bb29f06a392d54fb223643be52b693057a6' \}\}[\s\S]*publish-source-ref: \$\{\{ needs\.preflight\.outputs\.release-cut-source-ref \}\}[\s\S]*publish-anchor-request-json: \$\{\{ needs\.preflight\.outputs\.release-cut-anchor-request-json \}\}/u,
+    /jq -er '\.version \| strings \| select\(length > 0\)' lerna\.json\)" = "4\.0\.0-alpha\.2"/u,
   );
   assert.match(
     build,
-    /uses: kungfu-systems\/buildchain\/\.github\/workflows\/\.build\.yml@73f10bb29f06a392d54fb223643be52b693057a6/u,
+    /buildchain-ref: \$\{\{ inputs\.buildchain-ref \|\| 'v3-alpha' \}\}[\s\S]*publish-source-ref: \$\{\{ needs\.preflight\.outputs\.release-cut-source-ref \}\}[\s\S]*publish-anchor-request-json: \$\{\{ needs\.preflight\.outputs\.release-cut-anchor-request-json \}\}/u,
+  );
+  assert.match(
+    build,
+    /uses: kungfu-systems\/buildchain\/\.github\/workflows\/\.build\.yml@v3-alpha/u,
   );
   const preBuild = build.slice(0, build.indexOf('\n  build:'));
   assert.doesNotMatch(

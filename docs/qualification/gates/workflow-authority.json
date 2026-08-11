@@ -301,9 +301,9 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "qualifying",
-          "definitionDigest": "sha256:a343895463aedd2d1284e6c94ab8b93711b4e9ea640c35189dee08af28fc028f",
+          "definitionDigest": "sha256:142a33f7a8f0f19b13758ece808bf31199725c92ffd76be3912ab322017b9a32",
           "credentials": {"githubToken":"write","oidc":true,"repositorySecrets":["BUILDCHAIN_ARTIFACT_RELAY_S3_DOWNLOAD_ROLE_ARN","BUILDCHAIN_ARTIFACT_RELAY_S3_ROLE_ARN","BUILDCHAIN_ARTIFACT_RELAY_S3_UPLOAD_ROLE_ARN","KUNGFU_GITHUB_TOKEN"],"inheritedSecrets":false,"environment":null},
-          "externalActions": ["kungfu-systems/buildchain/.github/workflows/.build.yml@73f10bb29f06a392d54fb223643be52b693057a6"],
+          "externalActions": ["kungfu-systems/buildchain/.github/workflows/.build.yml@v3-alpha"],
           "steps": []
         },
         {
@@ -351,10 +351,10 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "diagnostic",
-          "definitionDigest": "sha256:7c6730b98dff131d1e40d17161ffcc2e0741092fdb445a18e0024d4b2d0d4bd7",
+          "definitionDigest": "sha256:b0c1a66ea9fb212d06b1e7ff46874e4839ee213a9fd56d727f8e14274afb0c9e",
           "credentials": {"githubToken":"write","oidc":true,"repositorySecrets":["KUNGFU_GITHUB_TOKEN"],"inheritedSecrets":false,"environment":null},
           "externalActions": ["actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0"],
-          "steps": [{"index":1,"label":"name:Check out exact candidate source","definitionDigest":"sha256:90b7875c1b8263fc6ee031b6f446decfc1fe5eb289f08dbc3d506c4bce43f113"},{"index":2,"label":"id:source-lock","definitionDigest":"sha256:e4f2af74b5613f17f75f5586f64d057b159ab027e7857d94c322f45f141df7d8"},{"index":3,"label":"id:receipt","definitionDigest":"sha256:49dbd179361e6e926d6eab7b762bfa7bb7292e2f3c452a3b7ddd2d8bd626b623"}]
+          "steps": [{"index":1,"label":"name:Check out exact candidate source","definitionDigest":"sha256:90b7875c1b8263fc6ee031b6f446decfc1fe5eb289f08dbc3d506c4bce43f113"},{"index":2,"label":"id:source-lock","definitionDigest":"sha256:810898bdbd35857cb9c4da8c9647c8cc74d849fecc2b1fa4037b367c9a64e3fd"},{"index":3,"label":"id:receipt","definitionDigest":"sha256:49dbd179361e6e926d6eab7b762bfa7bb7292e2f3c452a3b7ddd2d8bd626b623"}]
         },
         {
           "id": "resolve-auditable-demo-source",
