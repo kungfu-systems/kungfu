@@ -4,6 +4,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import {
+  awsPartitionForRegion,
   canaryPlan,
   lambdaHandlerSource,
 } from '../scripts/real-github-canary.mjs';
@@ -11,11 +12,12 @@ import {
 test('real canary plan is bounded, rooted, and teardown-complete', () => {
   const plan = canaryPlan({
     repo: 'kungfu-origin/kungfu',
-    region: 'cn-northwest-1',
+    region: 'us-east-1',
     nonce: 'fixture',
   });
   assert.match(plan.planRoot, /^sha256:[0-9a-f]{64}$/);
   assert.equal(plan.mode, 'one-shot-ping-only');
+  assert.equal(plan.awsPartition, 'aws');
   assert.deepEqual(plan.retains, ['redacted-rooted-receipt']);
   assert.deepEqual(plan.retainsNo, [
     'secret',
@@ -35,6 +37,13 @@ test('real canary plan is bounded, rooted, and teardown-complete', () => {
     plan.verifies.includes('lambda-invocation-policy-absent'),
     false,
   );
+});
+
+test('real canary derives the AWS ARN partition from the selected region', () => {
+  assert.equal(awsPartitionForRegion('us-east-1'), 'aws');
+  assert.equal(awsPartitionForRegion('cn-northwest-1'), 'aws-cn');
+  assert.equal(awsPartitionForRegion('us-gov-west-1'), 'aws-us-gov');
+  assert.throws(() => awsPartitionForRegion('not-a-region'), /invalid/u);
 });
 
 test('canary handler only accepts bounded signed GitHub ping deliveries', () => {

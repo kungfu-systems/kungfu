@@ -67,7 +67,7 @@ lifecycle.
 ```sh
 ./shifu test:kfx-github-webhook-reference
 ./shifu qualify:kfx-github-webhook-real-canary -- \
-  --repo OWNER/REPO --region AWS_CHINA_REGION
+  --repo OWNER/REPO --region us-east-1
 ```
 
 The first command is mandatory and fully offline. The second prints a
