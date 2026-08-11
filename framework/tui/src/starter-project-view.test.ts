@@ -255,7 +255,7 @@ test('human-confirmed close is shown as completed with retained evidence', () =>
       schema: 'kungfu.assignment-orchestration.seal-receipt/v1',
       stateRoot: `sha256:${'f'.repeat(64)}`,
       statePath: '/project/.kungfu/assignment-states/state.json',
-      storageKind: 'workspace-fallback',
+      storageKind: 'workspace-local',
       portable: true,
       runtimeIndependentVerification: true,
       worktreeDeletionSafe: false,

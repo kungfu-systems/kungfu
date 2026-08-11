@@ -186,7 +186,7 @@ test('freeze assembly accepts only the assembled product selector', () => {
 
 test('freeze replaces transient workspace links with stable Suite members', (t) => {
   const temporary = fs.mkdtempSync(
-    path.join(os.tmpdir(), 'kungfu-mission-profile-'),
+    path.join(os.tmpdir(), 'kungfu-initiative-profile-'),
   );
   t.after(() => fs.rmSync(temporary, { recursive: true, force: true }));
   const extensions = path.join(temporary, 'extensions');

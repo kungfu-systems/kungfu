@@ -14,13 +14,11 @@ from . import agent
 from . import rewind
 from . import schema
 from . import cut
-from . import atlas
 from . import assignment
 from . import dogfood
 from . import storage
 from . import query
 from . import facts
-from . import source
 from . import kfx
 from . import kfx_authoring
 from . import skill
@@ -45,6 +43,7 @@ from . import release
 from . import recover
 from . import exit
 from . import dev
+from . import work_design
 
 kfx_authoring.register_authoring_commands(kfx.kfx, kfx.kfx_command_context)
 
@@ -63,13 +62,11 @@ __all__ = [
     "rewind",
     "schema",
     "cut",
-    "atlas",
     "assignment",
     "dogfood",
     "storage",
     "query",
     "facts",
-    "source",
     "kfx",
     "kfx_authoring",
     "skill",
@@ -94,4 +91,5 @@ __all__ = [
     "recover",
     "exit",
     "dev",
+    "work_design",
 ]
