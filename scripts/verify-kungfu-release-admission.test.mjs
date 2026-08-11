@@ -380,7 +380,9 @@ function fixture(options = {}) {
       fs.readFileSync(
         path.join(
           ROOT,
-          'node_modules/@kungfu-tech/buildchain/dist/site/publication-authority-registry.json',
+          channel === 'alpha'
+            ? 'node_modules/@kungfu-tech/buildchain/dist/site/publication-authority-registry.json'
+            : 'node_modules/@kungfu-tech/buildchain-stable/dist/site/publication-authority-registry.json',
         ),
         'utf8',
       ),
