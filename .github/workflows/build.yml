@@ -127,7 +127,7 @@ jobs:
                   cut: "r16",
                   candidateSha: $source,
                   alphaBaseSha: "f9e6b0e34bcdd6407b2a18206ace7982d64de2c8",
-                  buildchainRef: "v3",
+                  buildchainRef: "v3-alpha",
                   devMirrorIsBuildInput: false
                 }'
             )"
@@ -139,7 +139,7 @@ jobs:
              .cut == "r16" and
              .candidateSha == $source and
              .alphaBaseSha == "f9e6b0e34bcdd6407b2a18206ace7982d64de2c8" and
-             .buildchainRef == "v3" and
+             .buildchainRef == "v3-alpha" and
              .devMirrorIsBuildInput == false' \
             <<<"$RELEASE_CUT_ANCHOR_REQUEST_JSON" >/dev/null
           {
@@ -219,17 +219,17 @@ jobs:
   build:
     needs: [preflight, windows-fast-sentinel, auditable-demo-fast-sentinel]
     if: ${{ always() && needs.preflight.result == 'success' && (needs.windows-fast-sentinel.result == 'success' || (github.event_name == 'workflow_dispatch' && inputs.render-auditable-demo && needs.windows-fast-sentinel.result == 'skipped')) && needs.auditable-demo-fast-sentinel.result == 'success' && !inputs.fast-sentinels-only && fromJSON(inputs.macos-overflow-request-json || '{}').mode != 'control' }}
-    uses: kungfu-systems/buildchain/.github/workflows/.build.yml@v3
+    uses: kungfu-systems/buildchain/.github/workflows/.build.yml@v3-alpha
     secrets:
       BUILDCHAIN_PROMOTION_TOKEN: ${{ secrets.KUNGFU_GITHUB_TOKEN }}
       BUILDCHAIN_ARTIFACT_RELAY_S3_ROLE_ARN: ${{ secrets.BUILDCHAIN_ARTIFACT_RELAY_S3_ROLE_ARN }}
       BUILDCHAIN_ARTIFACT_RELAY_S3_UPLOAD_ROLE_ARN: ${{ secrets.BUILDCHAIN_ARTIFACT_RELAY_S3_UPLOAD_ROLE_ARN }}
       BUILDCHAIN_ARTIFACT_RELAY_S3_DOWNLOAD_ROLE_ARN: ${{ secrets.BUILDCHAIN_ARTIFACT_RELAY_S3_DOWNLOAD_ROLE_ARN }}
     with:
-      # The production v3 workflow shell and default runtime remain the source
+      # The production v3-alpha workflow shell and default runtime remain the source
       # of authority. Buildchain admits train/exact-SHA overrides only for a
       # trusted manual actor and records the resolved immutable runtime.
-      buildchain-ref: ${{ inputs.buildchain-ref || 'v3' }}
+      buildchain-ref: ${{ inputs.buildchain-ref || 'v3-alpha' }}
       publish-source-ref: ${{ needs.preflight.outputs.release-cut-source-ref }}
       publish-anchor-request-json: ${{ needs.preflight.outputs.release-cut-anchor-request-json }}
       runner-preset: custom
@@ -337,7 +337,7 @@ jobs:
       cache-dependency-lock-root: ${{ needs.preflight.outputs.dependency-lock-root }}
       cache-toolchain-root: ${{ needs.preflight.outputs.toolchain-root }}
       cache-policy-root: ${{ needs.preflight.outputs.policy-root }}
-      buildchain-contract-lock-path: .buildchain/contract-lock.json
+      buildchain-contract-lock-path: .buildchain/alpha-contract-lock.json
       buildchain-contract-compatibility-policy: major-compatible
       buildchain-contract-drift-issue-mode: compatible-and-breaking
 

@@ -22,12 +22,11 @@
     "runtimes": {
       "alpha": {
         "ref": "v3-alpha",
-        "runtimeSha": "dd702f22e6afef137c86c5456e167e6db20e88f2",
-        "publicationRuntimeSha": "3d46b490748b87a7163fab6da6b77ef0c86a4460",
-        "contractDigest": "sha256:15d9f6feaa7f774b7223943de4326285d4a02db459e8ddda4a20418552e65d96",
+        "runtimeSha": "827fa0252c0546816c33ec89e66ca505ad6d5162",
+        "publicationRuntimeSha": "827fa0252c0546816c33ec89e66ca505ad6d5162",
+        "contractDigest": "sha256:00a40bcbcdde2531a3bdc2201515f91ac6ee4245ba2aec896ae7f68fa545f995",
         "publicationContractDigests": [
-          "sha256:15d9f6feaa7f774b7223943de4326285d4a02db459e8ddda4a20418552e65d96",
-          "sha256:5a6dc69d8905ed852260076da13d3aa3fa63533007dba706c164fe86f8b8f1e6"
+          "sha256:00a40bcbcdde2531a3bdc2201515f91ac6ee4245ba2aec896ae7f68fa545f995"
         ],
         "contractLock": ".buildchain/alpha-contract-lock.json"
       },

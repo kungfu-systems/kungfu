@@ -149,7 +149,7 @@ export function validateWorkflowSources(root, contract, overrides = {}) {
       `uses: kungfu-systems/buildchain/\\.github/workflows/\\.build\\.yml@${contract.buildchain.workflow_shell_ref}`,
     ),
     findings,
-    'release-candidate build must consume the production v3 floating workflow contract',
+    'release-candidate build must consume the production v3-alpha floating workflow contract',
   );
   requirePattern(
     build,
@@ -157,13 +157,25 @@ export function validateWorkflowSources(root, contract, overrides = {}) {
       `buildchain-ref: \\$\\{\\{ inputs\\.buildchain-ref \\|\\| '${contract.buildchain.workflow_shell_ref}' \\}\\}`,
     ),
     findings,
-    'candidate builds must default to the production v3 runtime while retaining the trusted manual pass-through',
+    'candidate builds must default to the production v3-alpha runtime while retaining the trusted manual pass-through',
   );
   requirePattern(
     build,
     /workflow_dispatch:[\s\S]*?inputs:[\s\S]*?buildchain-ref:[\s\S]*?required: false[\s\S]*?default: ""/u,
     findings,
     'manual Buildchain runtime validation must remain an optional empty-default workflow_dispatch input',
+  );
+  requirePattern(
+    build,
+    /^\s+buildchain-contract-lock-path: \.buildchain\/alpha-contract-lock\.json$/mu,
+    findings,
+    'Alpha candidate builds must consume only the v3-alpha contract lock',
+  );
+  requirePattern(
+    build,
+    /buildchainRef: "v3-alpha"[\s\S]*\.buildchainRef == "v3-alpha"/u,
+    findings,
+    'the r16 source lock must bind only the v3-alpha channel',
   );
   requirePattern(
     build,
@@ -275,6 +287,14 @@ export function validateWorkflowSources(root, contract, overrides = {}) {
     'promotion workflow must cover alpha and stable channel branches',
   );
   requirePattern(
+    validation,
+    new RegExp(
+      `uses: kungfu-systems/buildchain/actions/validate-config@${escapeRegExp(contract.buildchain.workflow_shell_resolved_sha)}`,
+    ),
+    findings,
+    'Alpha validation must consume the resolved v3-alpha action SHA',
+  );
+  requirePattern(
     preflight,
     /if: \$\{\{ \(github\.event_name == 'workflow_dispatch' && inputs\.resume-candidate-run-id == ''\) \|\| github\.event\.pull_request\.merged == true \}\}/,
     findings,
@@ -298,7 +318,7 @@ export function validateWorkflowSources(root, contract, overrides = {}) {
       `uses: kungfu-systems/buildchain/\\.github/workflows/release-candidate-promote\\.yml@${contract.buildchain.workflow_shell_ref}`,
     ),
     findings,
-    'promotion must consume the production v3 floating router contract',
+    'promotion must consume the production v3-alpha floating router contract',
   );
   requirePattern(
     promote,

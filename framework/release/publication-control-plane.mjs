@@ -76,7 +76,7 @@ export function validatePromotionWorkflowAuthority(
   const recover = workflowJob(promotionWorkflow, 'recover');
   if (
     !promote.includes(
-      'uses: kungfu-systems/buildchain/.github/workflows/release-candidate-promote.yml@v3',
+      'uses: kungfu-systems/buildchain/.github/workflows/release-candidate-promote.yml@v3-alpha',
     ) ||
     !promote.includes("&& 'v3-alpha' || 'v3'") ||
     /kungfu-systems\/buildchain\/\.github\/workflows\/release-candidate-promote\.yml@[0-9a-f]{40}/u.test(
@@ -276,9 +276,12 @@ export function validateRegistry(r, { root = ROOT } = {}) {
   );
   if (
     !buildWorkflow.includes(
-      'uses: kungfu-systems/buildchain/.github/workflows/.build.yml@v3',
+      'uses: kungfu-systems/buildchain/.github/workflows/.build.yml@v3-alpha',
     ) ||
-    !/^\s+buildchain-ref: \$\{\{ inputs\.buildchain-ref \|\| 'v3' \}\}\s*$/mu.test(
+    !/^\s+buildchain-ref: \$\{\{ inputs\.buildchain-ref \|\| 'v3-alpha' \}\}\s*$/mu.test(
+      buildWorkflow,
+    ) ||
+    !/^\s+buildchain-contract-lock-path: \.buildchain\/alpha-contract-lock\.json\s*$/mu.test(
       buildWorkflow,
     ) ||
     /kungfu-systems\/buildchain\/\.github\/workflows\/\.build\.yml@[0-9a-f]{40}/u.test(

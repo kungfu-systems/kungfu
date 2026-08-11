@@ -122,7 +122,7 @@
             "product-stable",
             "product-binaries"
           ],
-          "sourceRoot": "sha256:4ef5de32201d11813baf27a6368472e39d0a10a6c6b20d16a7634ea4c24d19e7"
+          "sourceRoot": "sha256:97a20724a0fab1754e83a4fb340d610657af82d2486f36477f63738846ec41f1"
         },
         {
           "path": ".github/workflows/buildchain-validate.yml",
@@ -132,7 +132,7 @@
             "product-alpha",
             "product-stable"
           ],
-          "sourceRoot": "sha256:0705b36624cbe89157bf6859bc3e7f762e8fefd9a0334a05692cb4e579a56a77"
+          "sourceRoot": "sha256:d523b073938fdb620b5da4faf03b3b54c79be6a8598c54117e33bb794b844f2c"
         },
         {
           "path": ".github/workflows/cancel-dequeued-merge-group.yml",
@@ -272,7 +272,7 @@
             "product-stable",
             "product-binaries"
           ],
-          "sourceRoot": "sha256:20618795b9bafbb08a12b41a48fe139549d76f9bedc2d14791d28956a7c4c63a"
+          "sourceRoot": "sha256:28477427583477d102c17860c4b2476cd6f17f85a3c80bf4cb5c8f1cd02f919f"
         },
         {
           "path": ".github/workflows/kungfu-agent-patrol.yml",
@@ -329,7 +329,7 @@
             "product-stable",
             "product-binaries"
           ],
-          "sourceRoot": "sha256:fd2b272b93f278d4a0e1494955940144eb514ed14e6035caf235421eb2961cc7"
+          "sourceRoot": "sha256:789a75f4b46b23917f0a23313bdd5564129d6481badb4351ce5787f30745e15e"
         },
         {
           "path": ".github/workflows/release-shifu.yml",
@@ -364,8 +364,8 @@
     "buildchain": {
       "repository": "kungfu-systems/buildchain",
       "owner": "kungfu-systems/buildchain",
-      "sourceRevision": "dd702f22e6afef137c86c5456e167e6db20e88f2",
-      "version": "3.0.7-alpha.0",
+      "sourceRevision": "827fa0252c0546816c33ec89e66ca505ad6d5162",
+      "version": "3.0.8-alpha.0",
       "compatibilityMode": "stable-v3-contract-plus-alpha-v3-contract",
       "stableContractLock": ".buildchain/contract-lock.json",
       "runtimeContractLock": ".buildchain/alpha-contract-lock.json",
@@ -860,5 +860,5 @@
       }
     }
   ],
-  "registryRoot": "sha256:c669d8a9a9106675dffbceb2432b9ec47157855451847bfa4bf169ccb28b8db4"
+  "registryRoot": "sha256:ff505e5464200afffab8067748a4f9dd0da35c86770fc00352b100e7dfb274e0"
 }
