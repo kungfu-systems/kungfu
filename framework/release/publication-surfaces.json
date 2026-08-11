@@ -129,7 +129,7 @@
             "product-stable",
             "product-binaries"
           ],
-          "sourceRoot": "sha256:03b5888f87d83186d5553f414fee531e362550c7deff80bb242d8de6af67a1c8"
+          "sourceRoot": "sha256:9c6f1bed6aa0971796b62436092480296bc15899759827804583b95806931c87"
         },
         {
           "path": ".github/workflows/buildchain-validate.yml",
@@ -867,5 +867,5 @@
       }
     }
   ],
-  "registryRoot": "sha256:f2ee3c6ebd031e37de406eb673a85ee0418e8699d629c4db5c5620fdf22281ad"
+  "registryRoot": "sha256:6d0366f2ebd12d41d6361ae2f47b61f923550c53829d6033b679197a6a6d8062"
 }
