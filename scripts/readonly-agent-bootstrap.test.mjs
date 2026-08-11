@@ -304,11 +304,14 @@ test('declared discovery routes are zero-write in a cold read-only fixture', (t)
   for (const relative of [
     'shifu',
     'shifu.cmd',
+    '.gitignore',
     '.xinfa/portable-atlas-classification.json.gz',
     '.xinfa/product-atlas-bundle.json',
     '.buildchain/kfd/kfd-1/contract-world.witness.json',
     '.buildchain/kfd/kfd-1/release-gate.json',
     '.buildchain/kfd/kfd-1/verify-result.json',
+    '.buildchain/kfd/adopter-manifest.json',
+    '.buildchain/kfd/adopter-manifest-gate.json',
     '.buildchain/kfd/support-matrix.json',
     '.buildchain/kfd/kfd-2/registry.json',
     '.buildchain/kfd/kfd-2/release-claims.json',
@@ -327,6 +330,8 @@ test('declared discovery routes are zero-write in a cold read-only fixture', (t)
     'developer/sdk/kfd/kfd-1/contract-world.witness.json',
     'developer/sdk/kfd/kfd-1/release-gate.json',
     'developer/sdk/kfd/kfd-1/verify-result.json',
+    'developer/sdk/kfd/adopter-manifest.json',
+    'developer/sdk/kfd/adopter-manifest-gate.json',
     'developer/sdk/kfd/support-matrix.json',
     'docs/qualification/kfd-support-matrix.md',
     '.github/actions/qualified-core-candidate-build/action.yml',
@@ -564,6 +569,8 @@ test('declared discovery routes are zero-write in a cold read-only fixture', (t)
     'scripts/check-docs.mjs',
     'scripts/check-incubation-passport.mjs',
     'scripts/check-incubation-passport.test.mjs',
+    'scripts/check-primitive-authority-boundary.mjs',
+    'scripts/check-primitive-authority-boundary.test.mjs',
     'scripts/check-hub-starter-docker-concept.mjs',
     'scripts/check-hub-starter-docker-concept.test.mjs',
     'scripts/check-evidence-envelope.test.mjs',
@@ -1017,8 +1024,8 @@ test('declared discovery routes are zero-write in a cold read-only fixture', (t)
     sourceAcceptance.status,
     0,
     `check:source (bounded tail):\n${boundedDiagnosticTail(
-      sourceAcceptance.stderr,
       sourceAcceptance.stdout,
+      sourceAcceptance.stderr,
     )}`,
   );
   const after = snapshotSource(fixture);

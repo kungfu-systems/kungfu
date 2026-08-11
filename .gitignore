@@ -55,6 +55,8 @@ dist/
 product/.buildchain/
 !.buildchain/kfd/
 .buildchain/kfd/*
+!.buildchain/kfd/adopter-manifest.json
+!.buildchain/kfd/adopter-manifest-gate.json
 !.buildchain/kfd/kfd-1/
 !.buildchain/kfd/kfd-1/**
 !.buildchain/kfd/kfd-2/
