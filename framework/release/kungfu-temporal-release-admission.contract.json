@@ -27,6 +27,10 @@
   ],
   "paths": {
     "alpha": {
+      "sha256:a67cf7f6bcfe9c0afb1969735a09d77225ad1252ff161fa156da8deaf5863a0e": {
+        "kind": "direct",
+        "proofRoots": []
+      },
       "sha256:13c4679c4ac8764c85e29693bfb59099e21e9786cc6082552198d39393467490": {
         "kind": "composed",
         "proofRoots": [

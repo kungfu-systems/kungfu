@@ -191,6 +191,9 @@ function validatePolicy(root, policy) {
         'contractDigest',
         'publicationContractDigests',
         'contractLock',
+        'packageVersion',
+        'registry',
+        'authorityRegistryDigest',
       ],
       `buildchain.runtimes.${channel}`,
     );
@@ -294,26 +297,36 @@ export function verifyTemporalReleaseAdmission({
   return report.receipt;
 }
 
-function currentBuildchain(root, policy) {
-  const releaseRuntime = kungfuBuildchainRuntimePolicy(policy, 'release');
+function currentBuildchain(root, policy, channel) {
+  const releaseRuntime = kungfuBuildchainRuntimePolicy(policy, channel);
+  const packageName =
+    channel === 'alpha'
+      ? '@kungfu-tech/buildchain'
+      : '@kungfu-tech/buildchain-stable';
+  const packageVersion =
+    releaseRuntime.packageVersion || policy.buildchain.version;
+  const registryPath = releaseRuntime.registry || policy.buildchain.registry;
+  const registryDigest =
+    releaseRuntime.authorityRegistryDigest ||
+    policy.buildchain.authorityRegistryDigest;
   const packageDocument = readJson(
     root,
-    'node_modules/@kungfu-tech/buildchain/package.json',
+    `node_modules/${packageName}/package.json`,
   );
-  if (packageDocument.version !== policy.buildchain.version)
+  if (packageDocument.version !== packageVersion)
     throw new Error(
       'installed Buildchain version differs from release admission policy',
     );
   const contract = readJson(
     root,
-    'node_modules/@kungfu-tech/buildchain/dist/site/buildchain-contract.json',
+    `node_modules/${packageName}/dist/site/buildchain-contract.json`,
   );
   if (contract.contractDigest !== releaseRuntime.contractDigest)
     throw new Error(
       'installed Buildchain contract digest differs from release admission policy',
     );
-  const registry = readJson(root, policy.buildchain.registry);
-  if (registry.registryDigest !== policy.buildchain.authorityRegistryDigest)
+  const registry = readJson(root, registryPath);
+  if (registry.registryDigest !== registryDigest)
     throw new Error(
       'installed Buildchain authority registry differs from release admission policy',
     );
@@ -401,13 +414,18 @@ export async function verifyKungfuReleaseAdmission({
 } = {}) {
   const validated = validateKungfuReleaseAdmissionPolicy(root);
   const { policy, authority } = validated;
-  const buildchainRegistry = currentBuildchain(root, policy);
+  const channel = admission?.channel;
+  const buildchainRegistry = currentBuildchain(root, policy, channel);
+  const buildchainPackage =
+    channel === 'alpha'
+      ? '@kungfu-tech/buildchain'
+      : '@kungfu-tech/buildchain-stable';
   const { verifyPublicationAdmission } = await import(
-    '@kungfu-tech/buildchain/publication-authority'
+    `${buildchainPackage}/publication-authority`
   );
   const aggregate = publicationEvidence?.gateAggregate;
   validateKungfuGateAggregate(root, aggregate, policy);
-  const runtime = kungfuBuildchainRuntimePolicy(policy, admission?.channel);
+  const runtime = kungfuBuildchainRuntimePolicy(policy, channel);
 
   const fixedBindings = {
     repository: policy.repository,
