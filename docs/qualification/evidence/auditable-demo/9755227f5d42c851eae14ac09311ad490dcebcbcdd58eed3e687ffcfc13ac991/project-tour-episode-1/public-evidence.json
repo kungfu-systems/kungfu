@@ -1,0 +1,86 @@
+{
+  "captureRoot": "sha256:8aa0eb1f012e5ca56e9f65670a230020bbf38c43aeb70ae890d93b4ae225ce4b",
+  "demoId": "project-tour-episode-1",
+  "evidenceRoot": "sha256:9755227f5d42c851eae14ac09311ad490dcebcbcdd58eed3e687ffcfc13ac991",
+  "files": [
+    {
+      "bytes": 1026294,
+      "path": "demo-720p.mp4",
+      "root": "sha256:bd321defeaef1021b57f374850dcb6a95d842a013405057c58b8765d0e0b982e"
+    },
+    {
+      "bytes": 841593,
+      "path": "demo-720p.webm",
+      "root": "sha256:a683d2f4822a4bbada1ef7a66371ea70d6b37f2bbfbc522faf43f4f562dd9fc7"
+    },
+    {
+      "bytes": 895745,
+      "path": "demo.gif",
+      "root": "sha256:1f40b7562e70f44e926d53724aeb840195302fc9cb3c6a1ecf2cc7161f29759e"
+    },
+    {
+      "bytes": 2108765,
+      "path": "demo.mp4",
+      "root": "sha256:8a17e765cda876a0d3668a3820463f9b8ecdb5de0f118b75069cbd2d129ac779"
+    },
+    {
+      "bytes": 1565033,
+      "path": "demo.webm",
+      "root": "sha256:ad88ea3fcf00fa1054b67b5e8a73118d4aeba1bf9a6cea96bad94a3ebcf8ab8d"
+    },
+    {
+      "bytes": 3115,
+      "path": "gate-receipt.json",
+      "root": "sha256:a1cd699402aa0ffdcffc4e7323819b2dd2e7f8bf6c40d4ba0322c6b960e2acf0"
+    },
+    {
+      "bytes": 32743035,
+      "path": "manifest.json",
+      "root": "sha256:9a1cdcfc50561de4e8a5cfd706ed551ad0fe6d3580f1e68f842f2ece6a900ef7"
+    },
+    {
+      "bytes": 2993,
+      "path": "media-inspection.json",
+      "root": "sha256:6d98896cf046bf543ac1cd611b45930e2e099b0cb7fb0791643272c5f7e4a113"
+    },
+    {
+      "bytes": 1144,
+      "path": "media-probe.json",
+      "root": "sha256:0458dd82a523d21e73237bf060368a41863971df21a5fb34e160c3a94c0e6686"
+    },
+    {
+      "bytes": 4853,
+      "path": "media-receipt.json",
+      "root": "sha256:6ea17a798e355d99c4f90c613c116d70ca41ec11fe7f54a6e93c813207a4cc8d"
+    },
+    {
+      "bytes": 173764,
+      "path": "poster.png",
+      "root": "sha256:25fa73e094868c495bc2ece57a8e7d68ae6ba2178d36ccff35b34b94b0b62fe1"
+    },
+    {
+      "bytes": 883,
+      "path": "renderer-checksums.sha256",
+      "root": "sha256:d841f658e529611a57cbf7fc6b7570cf50ab31049f9d15bd9d82d74ed7d24613"
+    }
+  ],
+  "gateRoot": "sha256:8a1b861ba67aaeeedc76ca397493f784988042e406ec473357735906ea97961d",
+  "mediaRoot": "sha256:135bcf188c36f9a1be97b09ef54fa2a3801fb57256905b6ad3801f682e38a7fe",
+  "passportRoot": "sha256:656f62c4035fcd310b87eabb9e1c8cdde6c5d7f49c652ca15a6015f88f7e248e",
+  "scenarioRoot": "sha256:6b7601fb0da94a3f1ba7954fde62aeb1660eace1c8880a0793cf577544da0292",
+  "schema": "buildchain.declarative-demo-evidence-root/v1",
+  "source": {
+    "createdAt": "2026-08-11T07:50:36Z",
+    "digest": "sha256:e7f1d769a6bce062e18efefce28e192df5f6649ec0a7b5adeb2052e5000d25de",
+    "expiresAt": "2026-08-25T07:50:22Z",
+    "id": "9093190284",
+    "name": "kungfu-linux-x64-b1418c3e3b576c53dc079ff2fc52dd6fa5fdc8a8",
+    "nodeId": "MDg6QXJ0aWZhY3Q5MDkzMTkwMjg0",
+    "repository": "kungfu-systems/kungfu",
+    "runAttempt": "2",
+    "runId": "31464061921",
+    "schema": "buildchain.github-artifact-coordinate/v1",
+    "sizeInBytes": 1276770662,
+    "sourceSha": "b1418c3e3b576c53dc079ff2fc52dd6fa5fdc8a8"
+  }
+}
