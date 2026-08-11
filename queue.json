@@ -3,7 +3,7 @@
   "contract": "kungfu-buildchain-dev-delivery-warrant-queue",
   "repository": "kungfu-systems/kungfu",
   "protectedBase": "dev/v4/v4.0",
-  "generation": 1058,
+  "generation": 1059,
   "fencingCounter": 278,
   "policy": {
     "agingSeconds": 900,
@@ -10258,8 +10258,33 @@
       "recoveries": 0,
       "status": "queued",
       "terminal": null
+    },
+    {
+      "repository": "kungfu-systems/kungfu",
+      "protectedBase": "dev/v4/v4.0",
+      "pullRequestNumber": 2968,
+      "assignmentRoot": "sha256:33a6363be3d32f7956caa76992c9514645a2c4cde0809e4d545cc1e53381dbdc",
+      "initiativeRoot": "sha256:bfff817933e5a5ad693e4b902a84f6cc3a251235dd7377cb4091d92f805fa7ff",
+      "sourceIdentityRoot": "sha256:13125f4f2ca6395c9e394afb930712ee4dbab1cafc1a73e35ccbad810d2090f3",
+      "deliveryClass": "non-native-fast",
+      "candidateId": "sha256:5893e2e26fdb5744c5763909b7280031dbb96af93a07498a7ff115e99bdade53",
+      "sourceHead": "b7fedb3c8dd3e433ab274a3097ff9d4035c38e24",
+      "sourcePatchRoot": "sha256:6963671c588a327ac72ab39cb149bda6b29aab6865eeb1510818e2baf076c348",
+      "sourceProofRoot": "sha256:092842035fa34672f17ab255a723a9b4c66bbad68e98305421fb539692e6c0c2",
+      "planRoot": "sha256:9dfb31b74808488d2d177971bfc21f66caa79bb872a478878ce357811e5d3ec7",
+      "closureRoot": "sha256:ac6e52dc4778bd7be1e6224c9a526a00dc7fcdd56a84e07165a811b168158f3e",
+      "dependencyRoot": "sha256:d0068952c861816e572519f5f65dbe3289b6df981b50fb1deaa2b84426330b6a",
+      "toolchainRoot": "sha256:2ecb07894954a2e0de022615d4561e5ba3ae68376401941ecff77be03cd75a0f",
+      "sourceWorkflowRunId": 0,
+      "priority": "ordinary",
+      "enqueuedAt": "2026-08-11T09:03:58.942Z",
+      "updatedAt": "2026-08-11T09:03:58.942Z",
+      "attempts": 1,
+      "recoveries": 0,
+      "status": "queued",
+      "terminal": null
     }
   ],
-  "updatedAt": "2026-08-11T08:57:23.280Z",
-  "stateRoot": "sha256:45543023a1a1c51b323ea1d28db54ee5f978f9696162d4808cce7d6e67b94407"
+  "updatedAt": "2026-08-11T09:03:58.942Z",
+  "stateRoot": "sha256:9e89c871a3e53922fce07b6e997be0450d355134005721a690afee980bc4722b"
 }
