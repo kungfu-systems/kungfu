@@ -21,7 +21,11 @@
     "buildResult": "docs/shifu/schema/production-graph-build-result-v0.schema.json",
     "buildResultSettlementReceipt": "docs/shifu/schema/production-graph-build-result-settlement-receipt-v0.schema.json",
     "localCiParityReceipt": "docs/shifu/schema/production-graph-local-ci-parity-receipt-v0.schema.json",
-    "localCiParityReport": "docs/shifu/schema/production-graph-local-ci-parity-report-v0.schema.json"
+    "localCiParityReport": "docs/shifu/schema/production-graph-local-ci-parity-report-v0.schema.json",
+    "coreProductionSubgraphCompileRequest": "docs/shifu/schema/core-production-subgraph-compile-request-v0.schema.json",
+    "coreProductionSubgraph": "docs/shifu/schema/core-production-subgraph-v0.schema.json",
+    "coreProductionSubgraphPlan": "docs/shifu/schema/core-production-subgraph-plan-v0.schema.json",
+    "coreProductionSubgraphVerificationReceipt": "docs/shifu/schema/core-production-subgraph-verification-receipt-v0.schema.json"
   },
   "rootAlgorithm": {
     "name": "sha256-canonical-json",
@@ -107,6 +111,21 @@
     "receipt": "kungfu.build-core-production-graph-shadow-receipt/v0",
     "classifiesEveryComparedDimension": true,
     "cutover": false
+  },
+  "coreProductionSubgraph": {
+    "contract": "docs/shifu/core-production-subgraph-contract.json",
+    "compiler": "framework/production-graph/core-subgraph/index.mjs",
+    "profile": "journal",
+    "orderedNodes": [
+      "dependency-bootstrap",
+      "native-build",
+      "artifact-stage"
+    ],
+    "authoritativeCommand": "./shifu build:core",
+    "stagesDirectlyInvocable": false,
+    "describeOnly": true,
+    "cutover": false,
+    "receipt": "shifu.core-production-subgraph-verification-receipt/v0"
   },
   "buildResult": {
     "command": "./shifu production-graph:build-result",

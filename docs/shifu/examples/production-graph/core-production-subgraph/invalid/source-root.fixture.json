@@ -1,0 +1,8 @@
+{
+  "mutation": {
+    "operation": "set",
+    "path": ["source", "root"],
+    "value": "sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
+  },
+  "expect": "source-root-mismatch"
+}

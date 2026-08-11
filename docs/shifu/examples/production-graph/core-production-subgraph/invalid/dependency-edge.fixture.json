@@ -1,0 +1,8 @@
+{
+  "mutation": {
+    "operation": "set",
+    "path": ["stages", 1, "dependencies"],
+    "value": []
+  },
+  "expect": "dependency-order-mismatch"
+}

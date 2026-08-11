@@ -1,0 +1,8 @@
+{
+  "mutation": {
+    "operation": "set",
+    "path": ["xinfaVerification", "selectionRoot"],
+    "value": "sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
+  },
+  "expect": "xinfa-selection-root-mismatch"
+}

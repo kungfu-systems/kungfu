@@ -52,8 +52,12 @@ test('affected-native diagnostics accepts the declarative signing contract', () 
   const diagnostics = createDiagnosticsArtifact({ cwd: process.cwd() });
   const [cliArtifact] =
     diagnostics.buildchain.config.validation.signing.artifacts;
-  assert.equal(cliArtifact.entitlementsProfile, 'none');
-  assert.deepEqual(cliArtifact.entitlementsPaths, []);
+  assert.equal(cliArtifact.entitlementsProfile, 'jit-executable-v1');
+  assert.deepEqual(cliArtifact.entitlementsPaths, [
+    'kungfu-episodes-cli-darwin-arm64/runtime/kungfu',
+    'kungfu-episodes-cli-darwin-arm64/runtime/python/bin/python3',
+    'kungfu-episodes-cli-darwin-arm64/runtime/python/bin/python3.13',
+  ]);
 });
 
 function affectedNativeWorkflowFixture() {

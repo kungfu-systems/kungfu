@@ -22,6 +22,7 @@ import {
   semanticRoot,
   verifyBundle,
 } from './contract.mjs';
+import { checkCoreProductionSubgraphContract } from './core-subgraph/index.mjs';
 import { checkBuildResultContract } from './result-projection/index.mjs';
 
 const ROOT = path.resolve(
@@ -185,6 +186,18 @@ function verifyContractBoundary(contract) {
   );
   assert.equal(contract.buildCoreShadow.profile, 'journal');
   assert.equal(contract.buildCoreShadow.cutover, false);
+  assert.deepEqual(contract.coreProductionSubgraph.orderedNodes, [
+    'dependency-bootstrap',
+    'native-build',
+    'artifact-stage',
+  ]);
+  assert.equal(
+    contract.coreProductionSubgraph.authoritativeCommand,
+    './shifu build:core',
+  );
+  assert.equal(contract.coreProductionSubgraph.stagesDirectlyInvocable, false);
+  assert.equal(contract.coreProductionSubgraph.describeOnly, true);
+  assert.equal(contract.coreProductionSubgraph.cutover, false);
   assert.equal(
     contract.buildResult.command,
     './shifu production-graph:build-result',
@@ -253,6 +266,17 @@ function verifierRoot() {
       'docs/shifu/examples/production-graph/result-projection/invalid/settlement-receipt-mismatch.fixture.json',
       'docs/shifu/examples/production-graph/result-projection/invalid/source-drift.fixture.json',
       'framework/production-graph/compiler/polyglot.fixture.mjs',
+      'framework/production-graph/core-subgraph/index.mjs',
+      'framework/production-graph/core-subgraph/index.test.mjs',
+      'docs/shifu/core-production-subgraph-contract.json',
+      'docs/shifu/examples/production-graph/core-production-subgraph/journal.fixture.json',
+      'docs/shifu/examples/production-graph/core-production-subgraph/invalid/dependency-edge.fixture.json',
+      'docs/shifu/examples/production-graph/core-production-subgraph/invalid/input-root.fixture.json',
+      'docs/shifu/examples/production-graph/core-production-subgraph/invalid/output-root.fixture.json',
+      'docs/shifu/examples/production-graph/core-production-subgraph/invalid/project-authority-root.fixture.json',
+      'docs/shifu/examples/production-graph/core-production-subgraph/invalid/responsibility.fixture.json',
+      'docs/shifu/examples/production-graph/core-production-subgraph/invalid/source-root.fixture.json',
+      'docs/shifu/examples/production-graph/core-production-subgraph/invalid/xinfa-root.fixture.json',
     ].map((relative) => ({
       path: relative,
       root: fileRoot(path.join(ROOT, relative)),
@@ -467,6 +491,8 @@ export async function checkProductionGraphContract() {
     qualified.bundle.plan,
     { validators, sourceRevision },
   );
+  const coreProductionSubgraphReceipt =
+    await checkCoreProductionSubgraphContract({ validators });
   const receipt = rooted(
     {
       schema: 'shifu.production-graph-verification-receipt/v0',
@@ -492,6 +518,8 @@ export async function checkProductionGraphContract() {
       validFixtureCount: validFiles.length,
       invalidFixtureCount: invalidFiles.length,
       executionAdmissionReceiptRoot: executionAdmissionReceipt.receiptRoot,
+      coreProductionSubgraphReceiptRoot:
+        coreProductionSubgraphReceipt.receiptRoot,
       protectedGate: './shifu check:source',
       nodesExecuted: false,
     },

@@ -1,0 +1,87 @@
+{
+  "schema": "shifu.core-production-subgraph-contract/v0",
+  "maturity": "experimental",
+  "authority": "shifu-production-graph-verifier",
+  "schemas": {
+    "compileRequest": "docs/shifu/schema/core-production-subgraph-compile-request-v0.schema.json",
+    "subgraph": "docs/shifu/schema/core-production-subgraph-v0.schema.json",
+    "plan": "docs/shifu/schema/core-production-subgraph-plan-v0.schema.json",
+    "verificationReceipt": "docs/shifu/schema/core-production-subgraph-verification-receipt-v0.schema.json"
+  },
+  "profile": "journal",
+  "stages": [
+    {
+      "id": "dependency-bootstrap",
+      "responsibility": "resolve-and-materialize-native-dependencies",
+      "dependencies": [],
+      "requiredInputs": [
+        "build-profile",
+        "project-authority",
+        "source",
+        "toolchain",
+        "xinfa-selection"
+      ],
+      "output": "dependency-context"
+    },
+    {
+      "id": "native-build",
+      "responsibility": "compile-native-core",
+      "dependencies": ["dependency-bootstrap"],
+      "requiredInputs": [
+        "build-profile",
+        "dependency-context",
+        "project-authority",
+        "source",
+        "toolchain",
+        "xinfa-selection"
+      ],
+      "output": "native-build-artifacts"
+    },
+    {
+      "id": "artifact-stage",
+      "responsibility": "stage-runtime-artifacts",
+      "dependencies": ["native-build"],
+      "requiredInputs": [
+        "build-profile",
+        "native-build-artifacts",
+        "project-authority",
+        "source",
+        "toolchain",
+        "xinfa-selection"
+      ],
+      "output": "staged-core-runtime"
+    }
+  ],
+  "executionBoundary": {
+    "command": ["./shifu", "build:core"],
+    "environment": { "KUNGFU_BUILD_PROFILE": "journal" },
+    "executionOwnedBy": "current-build-core-route",
+    "stagesDirectlyInvocable": false,
+    "compilerExecutesStages": false,
+    "cutover": false
+  },
+  "rootAlgorithm": {
+    "name": "sha256-canonical-json",
+    "objectKeys": "recursive-lexicographic",
+    "arrayOrder": "preserved",
+    "encoding": "utf-8",
+    "rootFieldExcludedFromPreimage": true
+  },
+  "authorityBoundary": {
+    "mode": "describe-only",
+    "sideEffects": false,
+    "nonClaims": [
+      "stage-description-is-not-an-executable-entrypoint",
+      "subgraph-plan-is-not-execution-admission",
+      "output-declaration-root-is-not-observed-artifact-content",
+      "compiler-does-not-own-project-authority",
+      "compiler-does-not-own-xinfa-selection",
+      "build-core-authority-is-unchanged"
+    ]
+  },
+  "verification": {
+    "command": "./shifu check:production-graph",
+    "protectedGate": "./shifu check:source",
+    "nodesExecuted": false
+  }
+}

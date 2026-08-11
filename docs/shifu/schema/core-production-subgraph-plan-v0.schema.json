@@ -1,0 +1,77 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://libkungfu.dev/schemas/shifu/core-production-subgraph-plan-v0.schema.json",
+  "title": "Shifu Core Production Subgraph plan v0",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "contractRoot",
+    "subgraphRoot",
+    "sourceRevision",
+    "bindings",
+    "orderedNodeIds",
+    "steps",
+    "executionBoundary",
+    "planRoot"
+  ],
+  "properties": {
+    "schema": { "const": "shifu.core-production-subgraph-plan/v0" },
+    "contractRoot": { "$ref": "core-production-subgraph-compile-request-v0.schema.json#/$defs/root" },
+    "subgraphRoot": { "$ref": "core-production-subgraph-compile-request-v0.schema.json#/$defs/root" },
+    "sourceRevision": { "$ref": "core-production-subgraph-compile-request-v0.schema.json#/$defs/gitObject" },
+    "bindings": { "$ref": "core-production-subgraph-compile-request-v0.schema.json#/properties/bindings" },
+    "orderedNodeIds": {
+      "type": "array",
+      "prefixItems": [
+        { "const": "dependency-bootstrap" },
+        { "const": "native-build" },
+        { "const": "artifact-stage" }
+      ],
+      "minItems": 3,
+      "maxItems": 3
+    },
+    "steps": {
+      "type": "array",
+      "minItems": 3,
+      "maxItems": 3,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "index",
+          "nodeId",
+          "dependsOn",
+          "inputIds",
+          "outputIds",
+          "directlyInvocable"
+        ],
+        "properties": {
+          "index": { "type": "integer", "minimum": 0, "maximum": 2 },
+          "nodeId": { "$ref": "core-production-subgraph-compile-request-v0.schema.json#/$defs/id" },
+          "dependsOn": {
+            "type": "array",
+            "uniqueItems": true,
+            "items": { "$ref": "core-production-subgraph-compile-request-v0.schema.json#/$defs/id" }
+          },
+          "inputIds": {
+            "type": "array",
+            "minItems": 5,
+            "uniqueItems": true,
+            "items": { "$ref": "core-production-subgraph-compile-request-v0.schema.json#/$defs/id" }
+          },
+          "outputIds": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 1,
+            "uniqueItems": true,
+            "items": { "$ref": "core-production-subgraph-compile-request-v0.schema.json#/$defs/id" }
+          },
+          "directlyInvocable": { "const": false }
+        }
+      }
+    },
+    "executionBoundary": { "$ref": "core-production-subgraph-v0.schema.json#/properties/executionBoundary" },
+    "planRoot": { "$ref": "core-production-subgraph-compile-request-v0.schema.json#/$defs/root" }
+  }
+}

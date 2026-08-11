@@ -16,6 +16,7 @@
     "validFixtureCount",
     "invalidFixtureCount",
     "executionAdmissionReceiptRoot",
+    "coreProductionSubgraphReceiptRoot",
     "protectedGate",
     "nodesExecuted",
     "receiptRoot"
@@ -47,7 +48,11 @@
         "buildResult",
         "buildResultSettlementReceipt",
         "localCiParityReceipt",
-        "localCiParityReport"
+        "localCiParityReport",
+        "coreProductionSubgraphCompileRequest",
+        "coreProductionSubgraph",
+        "coreProductionSubgraphPlan",
+        "coreProductionSubgraphVerificationReceipt"
       ],
       "properties": {
         "graph": { "$ref": "production-graph-v0.schema.json#/$defs/root" },
@@ -68,7 +73,11 @@
         "buildResult": { "$ref": "production-graph-v0.schema.json#/$defs/root" },
         "buildResultSettlementReceipt": { "$ref": "production-graph-v0.schema.json#/$defs/root" },
         "localCiParityReceipt": { "$ref": "production-graph-v0.schema.json#/$defs/root" },
-        "localCiParityReport": { "$ref": "production-graph-v0.schema.json#/$defs/root" }
+        "localCiParityReport": { "$ref": "production-graph-v0.schema.json#/$defs/root" },
+        "coreProductionSubgraphCompileRequest": { "$ref": "production-graph-v0.schema.json#/$defs/root" },
+        "coreProductionSubgraph": { "$ref": "production-graph-v0.schema.json#/$defs/root" },
+        "coreProductionSubgraphPlan": { "$ref": "production-graph-v0.schema.json#/$defs/root" },
+        "coreProductionSubgraphVerificationReceipt": { "$ref": "production-graph-v0.schema.json#/$defs/root" }
       }
     },
     "authorityReferences": { "$ref": "production-graph-v0.schema.json#/$defs/authorityRoots" },
@@ -82,6 +91,7 @@
     "validFixtureCount": { "type": "integer", "minimum": 3 },
     "invalidFixtureCount": { "type": "integer", "minimum": 7 },
     "executionAdmissionReceiptRoot": { "$ref": "production-graph-v0.schema.json#/$defs/root" },
+    "coreProductionSubgraphReceiptRoot": { "$ref": "production-graph-v0.schema.json#/$defs/root" },
     "protectedGate": { "const": "./shifu check:source" },
     "nodesExecuted": { "const": false },
     "receiptRoot": { "$ref": "production-graph-v0.schema.json#/$defs/root" }
