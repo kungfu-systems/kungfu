@@ -11,7 +11,7 @@
     "build_workflow_shell_sha": "dbad2f383a6ab93abd192c4edefb4689c9eebc78",
     "alpha": {
       "workflow_ref": "v3-alpha",
-      "resolved_sha": "36b08dc7bf417e57bffcc3dc784a2473254fe4c1",
+      "resolved_sha": "e5e7078c67978051016c2ceb1fec114e8956397a",
       "contract_lock": ".buildchain/alpha-contract-lock.json",
       "publish_channel": "alpha",
       "publish_dist_tag": "alpha"
