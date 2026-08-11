@@ -1,0 +1,78 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://libkungfu.dev/schemas/shifu/production-graph-local-ci-parity-report-v0.schema.json",
+  "title": "Shifu Production Graph local-CI parity report v0",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "status",
+    "protectedCiReceiptRoot",
+    "localReceiptRoot",
+    "exactBindings",
+    "drift",
+    "authorityBoundaryRoot",
+    "nextAction",
+    "reportRoot"
+  ],
+  "properties": {
+    "schema": { "const": "shifu.production-graph-local-ci-parity-report/v0" },
+    "status": { "enum": ["parity", "blocked-by-drift"] },
+    "protectedCiReceiptRoot": { "$ref": "production-graph-v0.schema.json#/$defs/root" },
+    "localReceiptRoot": { "$ref": "production-graph-v0.schema.json#/$defs/root" },
+    "exactBindings": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": { "$ref": "production-graph-v0.schema.json#/$defs/root" }
+    },
+    "drift": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["dimension", "classification", "protectedCi", "local"],
+        "properties": {
+          "dimension": {
+            "enum": [
+              "platform",
+              "architecture",
+              "nodeVersion",
+              "sourceRoot",
+              "contractRoot",
+              "graphRoot",
+              "planRoot",
+              "verificationReceiptRoot",
+              "executionAdmissionRequestRoot",
+              "executionAdmissionDecisionRoot",
+              "executorPolicyRoot",
+              "nodeSetRoot",
+              "eventSetRoot",
+              "outputSetRoot",
+              "executionReceiptRoot",
+              "buildResultProjectionRoot",
+              "buildResultSettlementReceiptRoot",
+              "resultContractRoot"
+            ]
+          },
+          "classification": {
+            "enum": [
+              "declared-environment-variance",
+              "source-drift",
+              "contract-drift",
+              "plan-drift",
+              "authority-drift",
+              "toolchain-drift",
+              "output-drift",
+              "nondeterminism"
+            ]
+          },
+          "protectedCi": { "type": "string", "minLength": 1 },
+          "local": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "authorityBoundaryRoot": { "$ref": "production-graph-v0.schema.json#/$defs/root" },
+    "nextAction": { "$ref": "production-graph-v0.schema.json#/$defs/nonEmpty" },
+    "reportRoot": { "$ref": "production-graph-v0.schema.json#/$defs/root" }
+  }
+}

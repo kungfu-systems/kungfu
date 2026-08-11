@@ -122,6 +122,16 @@
           "steps": [{"index":1,"label":"uses:actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0","definitionDigest":"sha256:86e974e8ec8e828d53576df6fcf46da9a32d9fccdd6ea0212e28bbcb36cdc2e7"},{"index":2,"label":"uses:actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e","definitionDigest":"sha256:a869cc671103a9106dc90b4275a4148de9a5d18cd3578a2642d8ae8076d8dbf0"},{"index":3,"label":"name:Install frozen workspace","definitionDigest":"sha256:87d057d2738138405008a036b85811bea2d8f7dadedf7179c773faf5f3d6fb12"},{"index":4,"label":"name:Verify product-owned fixtures","definitionDigest":"sha256:2250b93c5189f38bcbac7c7da2220a55e73148d7091e9ab548b01ff58f681654"}]
         },
         {
+          "id": "production_graph_parity",
+          "authority": "qualification",
+          "publication": "none",
+          "receipt": "diagnostic",
+          "definitionDigest": "sha256:19b64003f72b19896f1464617b79eb4f2fc2ab3ca37acd60ae0948ba1dd0174e",
+          "credentials": {"githubToken":"read","oidc":false,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
+          "externalActions": ["actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0","actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e","actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02"],
+          "steps": [{"index":1,"label":"name:Checkout exact protected candidate","definitionDigest":"sha256:444b2ba765811488dd1ea1b9be9540057383ec30deb024d0de746896264aa90d"},{"index":2,"label":"name:Set up Node.js","definitionDigest":"sha256:240318553f49b01ebfa090056f2ae49ed9af888a2e97b02dd93958242e0905ff"},{"index":3,"label":"name:Install verifier dependencies","definitionDigest":"sha256:b1cbc386dee40965085b39ac39249dad54628598df49807795e877154fcd2195"},{"index":4,"label":"name:Run additive protected-CI shadow lane","definitionDigest":"sha256:822541f003c8aa143302fa2ca1243dedd8b5a0fe5525d6bf8f67b4faa765bb62"},{"index":5,"label":"name:Verify retained parity artifact","definitionDigest":"sha256:a650ed77aa8e867b2ae87fa1050ce988d5dc0f3836b6b6e92233ac32d623027c"},{"index":6,"label":"name:Upload retained parity artifact","authority":"evidence-publication","definitionDigest":"sha256:43fbfa0c7aba962f08d207b881b6f89853e7ac180b366a181fd1bb09336d04c7"}]
+        },
+        {
           "id": "proof_probe",
           "authority": "qualification",
           "publication": "none",
