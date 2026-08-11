@@ -50,6 +50,12 @@
       "purpose": "Return authority-free deterministic advice, a minimal Work preview, one-confirmation requirement, and the existing create-bind action path from bounded structured signals."
     },
     {
+      "apiId": "kungfu.agent.skill-advisory",
+      "name": "kungfu agent skill-advisory --signals <signals.json> --json",
+      "maturity": "preview",
+      "purpose": "Return exactly one rooted, authority-free Skill reuse, creation, draft, plan, or none decision from bounded structured signals."
+    },
+    {
       "apiId": "kungfu.agent.map",
       "name": "kungfu agent map --json",
       "maturity": "stable",

@@ -50,6 +50,12 @@ the returned existing `kungfu.work.capture`, `kungfu.work.admit`, and
 original task. Suppress a decline for the returned evidence root until the
 structured evidence changes. Advice grants no external authority.
 
+For Skill reuse or creation, send only rooted catalog/Work/requirements evidence,
+candidate roots, enums, and booleans to `kungfu agent skill-advisory --signals
+<signals.json> --json`. Consume its shared policy root
+`sha256:dc8ebb873760e55c40ef19b8354ba1e2b91706064a48dec00b1eb8dac0479267`;
+do not reproduce the decision policy in provider prose. The result is read-only.
+
 Use `kungfu agent context --task "<task>" --role <role> --budget <tokens>
 --route <route-id> --json` when detail is needed. Stop on invalid roots,
 ambiguity, stale state, or required omissions; use returned expansion handles

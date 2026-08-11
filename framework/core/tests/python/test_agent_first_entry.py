@@ -26,6 +26,7 @@ runtime.compute_content_hash_value = lambda payload, algorithm: hashlib.sha256(
     payload
 ).hexdigest()
 runtime.format_content_hash = lambda algorithm, value: f"{algorithm}:{value}"
+runtime.durability_capability_typed = lambda: {}
 fake.runtime = runtime
 sys.modules.setdefault("pykungfu", fake)
 sys.modules.setdefault("pykungfu.runtime", runtime)
