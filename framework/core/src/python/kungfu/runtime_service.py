@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import copy
 import json
 import os
 import platform
@@ -30,6 +29,7 @@ from kungfu.coordination.arbiter import (
     grant_payload,
     parse_name,
 )
+from kungfu.execution_surface import authority as runtime_surface_authority
 from kungfu.storage import service as storage_service
 from kungfu.action_wire import unwrap_event, wrap_event
 from pykungfu.runtime import coordinator as NativeCoordinator
@@ -53,6 +53,7 @@ RESTART_MAX_ATTEMPTS = 5
 RUNTIME_IDLE_GRACE_SECONDS = 30.0
 SUPERVISOR_LIFECYCLE_LOCK = "supervisor-lifecycle"
 _SUPERVISOR_LIFECYCLE_THREAD_LOCK = threading.RLock()
+
 
 SCHEMA_PLAN = runtime_service_config.SCHEMA_PLAN
 SCHEMA_RESULT = runtime_service_config.SCHEMA_RESULT
@@ -1289,37 +1290,36 @@ class ProcessRuntimeHost:
         state_dir(runtime_dir).mkdir(parents=True, exist_ok=True)
         write_pid(coordinator_pid_path(runtime_dir), os.getpid())
         coordinator_start_identity = _process_start_identity(os.getpid())
-        _json_write(
-            state_path(runtime_dir),
-            {
-                "schema": SCHEMA_STATUS,
-                "status": "coordinator-running",
-                "home": home,
-                "runtimeDir": runtime_dir,
-                **authority,
-                "coordinatorPid": os.getpid(),
-                "coordinatorStartIdentity": coordinator_start_identity,
-                "runtimeImage": copy.deepcopy(dict(self.runtime_image))
-                if self.runtime_image is not None
-                else None,
-                "updatedAt": _now(),
-            },
-        )
-        engine = CoordinatorEngine(
-            home,
-            runtime_dir,
-            low_latency=low_latency,
-            runtime_generation=authority["runtimeGeneration"],
-            coordinator_epoch=authority["coordinatorEpoch"],
-            assessment_executor=ProcessAssessmentExecutor(
-                home, runtime_dir, self.log_level
-            ),
-        )
         try:
-            engine.run()
-            return 0
+            engine = CoordinatorEngine(
+                home,
+                runtime_dir,
+                low_latency=low_latency,
+                runtime_generation=authority["runtimeGeneration"],
+                coordinator_epoch=authority["coordinatorEpoch"],
+                assessment_executor=ProcessAssessmentExecutor(
+                    home, runtime_dir, self.log_level
+                ),
+            )
+            _json_write(
+                state_path(runtime_dir),
+                runtime_surface_authority.coordinator_running_state(
+                    schema=SCHEMA_STATUS,
+                    home=home,
+                    runtime_dir=runtime_dir,
+                    authority=authority,
+                    pid=os.getpid(),
+                    start_identity=coordinator_start_identity,
+                    runtime_image=self.runtime_image,
+                    updated_at=_now(),
+                ),
+            )
+            try:
+                engine.run()
+                return 0
+            finally:
+                engine.close()
         finally:
-            engine.close()
             unlink_coordinator_pid_files(runtime_dir)
 
     def spawn_coordinator(
@@ -1893,7 +1893,7 @@ def _wait_for_coordinator(
     deadline = time.time() + 5
     while time.time() < deadline:
         current = route_status(home, runtime_dir, config_home)
-        if current["supervisor"]["running"] and current["coordinator"]["running"]:
+        if runtime_surface_authority.coordinator_ready(current):
             payload = {
                 **current,
                 "changed": changed,

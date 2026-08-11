@@ -1,8 +1,8 @@
 import type {
+  AssignmentRuntime,
   GlobalWorkFilter,
   GlobalWorkRow,
   GlobalWorkSnapshot,
-  Profile,
   ProjectFileTreeEntry,
   ProjectRemovePlan,
   ProjectSummary,
@@ -40,6 +40,7 @@ import React from 'react';
 import {
   type GlobalWorkObserverEvent,
   type GlobalWorkObserverIpc,
+  observeAssignmentRuntimeStatus,
   subscribeGlobalWorkObserver,
 } from './global-work-observer';
 import {
@@ -57,59 +58,14 @@ import {
   settleRetainedProjectRunBusy,
   shouldRestoreRetainedProjectRun,
 } from './project-work-run';
-import { openWorkControlProfile } from './work-control-profile';
-
-// Preserve the qualified Profile application service without restoring its
-// retired legacy presentation. The visible Work view is intentionally
-// read-only.
-export function openProfileApplication(profile: Profile, defaultRepoRoot = '') {
-  const application = openWorkControlProfile(profile, defaultRepoRoot);
-  return {
-    createInitiative: (
-      ...args: Parameters<typeof application.createInitiative>
-    ) => application.createInitiative(...args),
-    createAssignment: (
-      ...args: Parameters<typeof application.createAssignment>
-    ) => application.createAssignment(...args),
-    appendAssignmentRelationEvent: (
-      ...args: Parameters<typeof application.appendAssignmentRelationEvent>
-    ) => application.appendAssignmentRelationEvent(...args),
-    claimAssignment: (
-      ...args: Parameters<typeof application.claimAssignment>
-    ) => application.claimAssignment(...args),
-    advanceAssignment: (
-      ...args: Parameters<typeof application.advanceAssignment>
-    ) => application.advanceAssignment(...args),
-    claimCompletion: (
-      ...args: Parameters<typeof application.claimCompletion>
-    ) => application.claimCompletion(...args),
-    assessInitiativeAsync: (
-      ...args: Parameters<typeof application.assessInitiativeAsync>
-    ) => application.assessInitiativeAsync(...args),
-    reviewCompletion: (
-      ...args: Parameters<typeof application.reviewCompletion>
-    ) => application.reviewCompletion(...args),
-    decideContinuation: (
-      ...args: Parameters<typeof application.decideContinuation>
-    ) => application.decideContinuation(...args),
-    importRepo: (...args: Parameters<typeof application.importRepo>) =>
-      application.importRepo(...args),
-    activateWorkControl: (
-      ...args: Parameters<typeof application.activateWorkControl>
-    ) => application.activateWorkControl(...args),
-    restoreAtlasAuthority: (
-      ...args: Parameters<typeof application.restoreAtlasAuthority>
-    ) => application.restoreAtlasAuthority(...args),
-    exportInitiative: (
-      ...args: Parameters<typeof application.exportInitiative>
-    ) => application.exportInitiative(...args),
-    importInitiative: (
-      ...args: Parameters<typeof application.importInitiative>
-    ) => application.importInitiative(...args),
-    intentPlan: (...args: Parameters<typeof profile.intentPlan>) =>
-      profile.intentPlan(...args),
-  };
+// The GUI application surface is the versioned Runtime Client.  Domain-specific
+// Profile reads remain in work-control-profile.ts only as an explicit read-only
+// compatibility seam; no GUI transition can enter there.
+export function openProfileApplication(runtime: AssignmentRuntime) {
+  return runtime;
 }
+
+export { openKfd3ProfileApplication } from './work-control-profile';
 
 type NodeHost = {
   require: NodeRequire;
@@ -948,9 +904,11 @@ function NewProjectWorkDialog({
 function GlobalWorkView({
   shell,
   projects,
+  assignmentRuntime,
 }: {
   shell: Shell;
   projects: Projects;
+  assignmentRuntime: AssignmentRuntime;
 }) {
   const host = window as unknown as NodeHost;
   const projectMemoryKey =
@@ -990,6 +948,9 @@ function GlobalWorkView({
   const [agentMenuOpen, setAgentMenuOpen] = React.useState(false);
   const [status, setStatus] = React.useState('Connecting All Work…');
   const [error, setError] = React.useState('');
+  const [assignmentRuntimeStatus, setAssignmentRuntimeStatus] = React.useState(
+    'Work Runtime connecting…',
+  );
   const [projectsCatalog, setProjectsCatalog] =
     React.useState<ProjectsCatalog>();
   const [projectsCatalogReady, setProjectsCatalogReady] = React.useState(false);
@@ -1036,6 +997,14 @@ function GlobalWorkView({
     [host],
   );
 
+  React.useEffect(
+    () =>
+      observeAssignmentRuntimeStatus(
+        assignmentRuntime,
+        setAssignmentRuntimeStatus,
+      ),
+    [assignmentRuntime],
+  );
   React.useEffect(() => {
     const requestedWorkId = shell.params.workId?.trim();
     if (!requestedWorkId) return;
@@ -2369,6 +2338,9 @@ function GlobalWorkView({
           {(snapshot?.aggregate?.component_count ?? 1) === 2 ? '' : 's'} ·{' '}
           {rows.length} visible Work
         </div>
+        <div style={{ ...mono, color: '#858585' }}>
+          {assignmentRuntimeStatus}
+        </div>
         {error ? (
           <div style={{ ...mono, color: '#dcdcaa' }}>{error}</div>
         ) : null}
@@ -2401,17 +2373,40 @@ function WorkDashboardView({
       </section>
     );
   }
-  return <ProjectWorkControlView shell={shell} projects={caps.projects} />;
+  if (!caps.assignmentRuntime) {
+    return (
+      <section style={panelStyle}>
+        <div style={{ ...mono, color: '#f48771' }}>
+          Work Runtime capability unavailable
+        </div>
+      </section>
+    );
+  }
+  return (
+    <ProjectWorkControlView
+      shell={shell}
+      projects={caps.projects}
+      assignmentRuntime={caps.assignmentRuntime}
+    />
+  );
 }
 
 export function ProjectWorkControlView({
   projects,
   shell,
+  assignmentRuntime,
 }: {
   projects: Projects;
   shell: Shell;
+  assignmentRuntime: AssignmentRuntime;
 }) {
-  return <GlobalWorkView shell={shell} projects={projects} />;
+  return (
+    <GlobalWorkView
+      shell={shell}
+      projects={projects}
+      assignmentRuntime={assignmentRuntime}
+    />
+  );
 }
 
 export const View = WorkDashboardView;

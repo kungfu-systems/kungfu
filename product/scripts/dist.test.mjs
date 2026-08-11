@@ -20,6 +20,7 @@ import {
   installedKungfuInvocation,
   isShippedKfdSupport,
   kfxBundleExternalModules,
+  listKfxPackages,
   materializeProductRuntimeEntrypoints,
   requiresManagedEsbuildPlatform,
   runInstalledKungfuAgentHubSmoke,
@@ -53,6 +54,16 @@ const {
   esmEntrypointArgs,
   toEsmEntrypointSpecifier,
 } = require('../../framework/gui/scripts/before-pack.cjs');
+
+test('reference-only KFX suites stay outside product assembly', () => {
+  const packageNames = listKfxPackages().map((pkg) => pkg.name);
+  assert.ok(packageNames.includes('@kungfu-tech/kfx-suite-agent-work-lab'));
+  assert.ok(
+    packageNames.every((name) => !name.includes('github-webhook')),
+    packageNames.join(', '),
+  );
+  assert.ok(!packageNames.includes('@kungfu-kfx/github-dogfood-bridge'));
+});
 
 test('Intel macOS is rejected by the product-wide host policy', () => {
   for (const architecture of ['x64', 'x86_64']) {
@@ -330,6 +341,8 @@ test('CLI product materializes symlinked demo executables as regular files', (t)
   assert.equal(fs.lstatSync(python).isSymbolicLink(), false);
   assert.equal(fs.readFileSync(python, 'utf8'), 'python\n');
   assert.notEqual(fs.statSync(python).mode & 0o111, 0);
+  assert.equal(fs.statSync(python).ino, fs.statSync(pythonTarget).ino);
+  assert.equal(fs.statSync(python).nlink, 2);
 });
 
 test('CLI runtime identity is stable after demo executable metadata', (t) => {
@@ -448,9 +461,10 @@ test('Linux CLI staging restores only the exact node-pty native runtime closure'
   const source = path.join(parent, 'source');
   const target = path.join(parent, 'target');
   for (const [relative, content] of [
-    ['package.json', '{}\n'],
+    ['package.json', '{"name":"node-pty","version":"1.1.0"}\n'],
     ['index.js', 'export {};\n'],
     ['build/Release/pty.node', 'native-addon\n'],
+    ['build/Release/spawn-helper', 'native-helper\n'],
     ['build/Debug/pty.node', 'debug-addon\n'],
     ['build/Release/obj.target/unshipped.o', 'object\n'],
   ]) {
@@ -486,8 +500,17 @@ test('Darwin CLI staging preserves the prebuilt node-pty helper contract', (t) =
   const target = path.join(parent, 'target');
   const prebuild = path.join(source, 'prebuilds', 'darwin-arm64');
   fs.mkdirSync(prebuild, { recursive: true });
+  fs.writeFileSync(
+    path.join(source, 'package.json'),
+    '{"name":"node-pty","version":"1.1.0"}\n',
+  );
   fs.writeFileSync(path.join(prebuild, 'pty.node'), 'native-addon\n');
   fs.writeFileSync(path.join(prebuild, 'spawn-helper'), 'native-helper\n');
+  fs.mkdirSync(path.join(source, 'prebuilds', 'darwin-x64'));
+  fs.writeFileSync(
+    path.join(source, 'prebuilds', 'darwin-x64', 'pty.node'),
+    'foreign-native-addon\n',
+  );
   fs.chmodSync(path.join(prebuild, 'spawn-helper'), 0o644);
   stageNodePtyForCli(source, target, 'darwin', 'arm64');
   const addon = path.join(target, 'prebuilds/darwin-arm64/pty.node');
@@ -495,6 +518,9 @@ test('Darwin CLI staging preserves the prebuilt node-pty helper contract', (t) =
   const helper = path.join(target, 'prebuilds/darwin-arm64/spawn-helper');
   assert.equal(fs.readFileSync(helper, 'utf8'), 'native-helper\n');
   assert.notEqual(fs.statSync(helper).mode & 0o111, 0);
+  assert.deepEqual(fs.readdirSync(path.join(target, 'prebuilds')), [
+    'darwin-arm64',
+  ]);
 });
 
 test('Linux CLI staging fails closed when the node-pty native addon is missing', (t) => {
@@ -503,11 +529,14 @@ test('Linux CLI staging fails closed when the node-pty native addon is missing',
   const source = path.join(parent, 'source');
   const target = path.join(parent, 'target');
   fs.mkdirSync(path.join(source, 'build', 'Release'), { recursive: true });
-  fs.writeFileSync(path.join(source, 'package.json'), '{}\n');
+  fs.writeFileSync(
+    path.join(source, 'package.json'),
+    '{"name":"node-pty","version":"1.1.0"}\n',
+  );
 
   assert.throws(
     () => stageNodePtyForCli(source, target, 'linux', 'x64'),
-    /required Linux node-pty runtime not found/u,
+    /required node-pty runtime file not found/u,
   );
 });
 

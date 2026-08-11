@@ -9,8 +9,8 @@ confidence: high
 sensitivity: public
 evidence_grade: A
 review_state: self-reviewed
-last_reviewed: 2026-08-02
-ai_provenance: GPT-5 via Codex on 2026-08-02; derived from the frozen profile, public runtime APIs, exact-revision runner, and retained observations; no unretained platform result is claimed
+last_reviewed: 2026-08-03
+ai_provenance: GPT-5 via Codex on 2026-08-03; derived from the frozen profile, public runtime APIs, exact-revision runner, and retained observations; no unretained platform result is claimed
 ---
 
 # Python KFX asyncio Performance Qualification
@@ -55,6 +55,14 @@ Before measurements, the runner builds the exact checkout and requires
 `test:native-kfx-admission` to pass. A dirty tree, unsupported CPython/platform,
 failed correctness gate, malformed/missing observation, or diagnostic `--quick`
 run cannot produce a qualified claim.
+
+Peak RSS is mandatory evidence. Windows reads the current process through the
+typed `GetCurrentProcess` and `GetProcessMemoryInfo` APIs with the native
+64-bit handle and `SIZE_T` layout. An API failure, process-exit race, missing
+value, non-integer value, or value less than one byte fails the workload or
+invalidates the report; the harness never converts unavailable memory evidence
+to zero. The independent verifier applies the same positive-integer rule to
+retained raw observations.
 
 Dry-run is the default and does not write evidence or make a claim:
 

@@ -2,6 +2,88 @@
   "schema": "kungfu.agent-intent-map/v1",
   "product": "kungfu",
   "maturity": "stable",
+  "workspaceGit": {
+    "schema": "kungfu.workspace-git-boundary/v1",
+    "scope": ".kungfu/",
+    "maturity": "stable",
+    "neverStageWholeHome": true,
+    "publicationDisposition": "stage-only-after-row-selection",
+    "defaultDisposition": "keep-local",
+    "unmatchedPathPolicy": "keep-local-unless-explicit-repository-policy",
+    "rules": [
+      "never-stage-.kungfu-wholesale",
+      "publish-allowlist-and-row-selection-required",
+      "publisher-content-requires-exact-returned-path",
+      "unmatched-paths-stay-local",
+      "durable-does-not-imply-git-tracked",
+      "kungfu-does-not-stage-commit-or-push"
+    ],
+    "publishAllowlist": [
+      {
+        "id": "workspace-ignore-policy",
+        "pathRegex": "^\\.kungfu/\\.gitignore$",
+        "selection": "repository-reviewed-policy-file"
+      },
+      {
+        "id": "sealed-episode-claims",
+        "pathRegex": "^\\.kungfu/episodes/sealed/sha256/[0-9a-f]{2}/[0-9a-f]{64}/claims\\.jsonl$",
+        "selection": "qualified-git-workspace-episode-provider"
+      },
+      {
+        "id": "sealed-episode-manifest",
+        "pathRegex": "^\\.kungfu/episodes/sealed/sha256/[0-9a-f]{2}/[0-9a-f]{64}/manifest\\.json$",
+        "selection": "qualified-git-workspace-episode-provider"
+      },
+      {
+        "id": "sealed-episode-qualification",
+        "pathRegex": "^\\.kungfu/episodes/sealed/sha256/[0-9a-f]{2}/[0-9a-f]{64}/qualification\\.json$",
+        "selection": "qualified-git-workspace-episode-provider"
+      },
+      {
+        "id": "project-cut-manifest",
+        "pathRegex": "^\\.kungfu/project-cuts/sha256/[0-9a-f]{2}/[0-9a-f]{64}/manifest\\.json$",
+        "selection": "settled-project-cut-publisher"
+      },
+      {
+        "id": "project-cut-receipt",
+        "pathRegex": "^\\.kungfu/project-cuts/sha256/[0-9a-f]{2}/[0-9a-f]{64}/receipt\\.json$",
+        "selection": "settled-project-cut-publisher"
+      },
+      {
+        "id": "ledger-publication-manifest",
+        "pathRegex": "^\\.kungfu/ledger-publications/sha256/[0-9a-f]{2}/[0-9a-f]{64}/manifest\\.json$",
+        "selection": "protected-settlement-publication"
+      }
+    ],
+    "localOnly": [
+      {"id":"runtime","pathRegex":"^\\.kungfu/runtime(?:/.*)?$"},
+      {"id":"inbox","pathRegex":"^\\.kungfu/inbox(?:/.*)?$"},
+      {"id":"episode-temporary","pathRegex":"^\\.kungfu/episodes/\\.tmp(?:/.*)?$"},
+      {"id":"private","pathRegex":"^\\.kungfu/private(?:/.*)?$"},
+      {"id":"cache","pathRegex":"^\\.kungfu/cache(?:/.*)?$"},
+      {"id":"locks","pathRegex":"^\\.kungfu/locks(?:/.*)?$"},
+      {"id":"projections","pathRegex":"^\\.kungfu/projections(?:/.*)?$"}
+    ],
+    "unmatchedExamples": [
+      ".kungfu/workspace-identity.json",
+      ".kungfu/config.json",
+      ".kungfu/first-party.json",
+      ".kungfu/extensions/",
+      ".kungfu/dataset/",
+      ".kungfu/backtest/",
+      ".kungfu/backups/",
+      ".kungfu/contract/",
+      ".kungfu/missions/",
+      ".kungfu/skills/",
+      ".kungfu/skill-bindings/"
+    ],
+    "authority": {
+      "layout": "docs/adr/KF-ADR-019f86da-4f90-713d-8626-d70bca82cb76.md",
+      "portableGuide": "docs/architecture/kungfu-format-contract.md",
+      "episodeProvider": "framework/episode-provider/git-workspace-provider.contract.json",
+      "protectedPublication": "framework/project-cut/publication.contract.json"
+    }
+  },
   "requiredIntentIds": [
     "onboarding", "project-local", "project-git", "work", "provider-skill",
     "kungfu-skill", "kfx-extension", "global-observer", "managed-run",
@@ -10,11 +92,11 @@
   "intents": [
     {"id":"onboarding","summary":"Personalized progressive first entry","audience":["human","agent"],"maturity":"stable","authorityRoots":["kungfu-agent-pack","installed-documentation-atlas","provider-skill-state"],"access":"read-only","authorization":"none","nonClaims":["brief-is-not-completion-evidence","brief-grants-no-authority"],"discoveryCommands":["kungfu agent docs --verify --json","kungfu agent status --target codex --scope project --json","kungfu agent capabilities --json"],"expansionHandles":["agent-first-entry","kungfu-user-guide-agent"]},
     {"id":"project-local","summary":"Use local .kungfu Work without Git","audience":["human","agent"],"maturity":"stable","authorityRoots":["project-registry","workspace-identity"],"access":"preview-then-write","authorization":"--execute","nonClaims":["does-not-install-or-initialize-git","does-not-scan-arbitrary-directories"],"discoveryCommands":["kungfu project open-plan --path <directory> --json"],"expansionHandles":["project-local-no-git","kungfu-work-control-agent"]},
-    {"id":"project-git","summary":"Place .kungfu beside an existing .git","audience":["human","agent"],"maturity":"stable","authorityRoots":["project-registry","workspace-identity"],"access":"preview-then-write","authorization":"--execute","nonClaims":["does-not-stage-commit-or-push","runtime-history-is-not-portable-git-input"],"discoveryCommands":["kungfu project open-plan --path <repository> --json"],"expansionHandles":["project-existing-git","kungfu-work-control-agent"]},
+    {"id":"project-git","summary":"Use the exact .kungfu Git publication boundary beside an existing .git","audience":["human","agent"],"maturity":"stable","authorityRoots":["project-registry","workspace-identity","workspace-git-boundary"],"access":"preview-then-write","authorization":"--execute","nonClaims":["does-not-stage-commit-or-push","runtime-history-is-not-portable-git-input","durable-does-not-imply-git-tracked","unmatched-paths-stay-local"],"discoveryCommands":["kungfu agent map --json","kungfu agent capabilities --json","kungfu project open-plan --path <repository> --json"],"expansionHandles":["project-existing-git","kungfu-format-contract","kungfu-work-control-agent"]},
     {"id":"work","summary":"Inspect and advance durable Work","audience":["human","agent"],"maturity":"stable","authorityRoots":["yijinjing-journal","work-profile-actions"],"access":"mixed","authorization":"explicit action receipt","nonClaims":["provider-exit-is-not-completion","projection-is-not-authority"],"discoveryCommands":["kungfu work status --workspace <path> --initiative-id <id> --assignment-id <id>"],"expansionHandles":["native-work-lifecycle","kungfu-work-control-agent"]},
     {"id":"provider-skill","summary":"Install a thin Codex or Claude onboarding router","audience":["agent"],"maturity":"stable","authorityRoots":["installed-agent-pack","provider-skill-file"],"access":"preview-then-write","authorization":"--execute","nonClaims":["provider-skill-is-not-kungfu-workflow","installation-does-not-bootstrap-policy"],"discoveryCommands":["kungfu agent status --target codex --scope project --json","kungfu agent install-skill --target codex --scope project --json"],"expansionHandles":["provider-skill-install","provider-skill-status"]},
     {"id":"kungfu-skill","summary":"Discover or author repeatable Kungfu workflows","audience":["human","agent"],"maturity":"stable","authorityRoots":["kungfu-skill-contract","skill-registry"],"access":"mixed","authorization":"contract-specific explicit execute","nonClaims":["skill-text-grants-no-capability","provider-skill-is-a-separate-host-artifact"],"discoveryCommands":["kungfu skill contract --json","kungfu skill catalog --json"],"expansionHandles":["kungfu-skill-authoring","kungfu-agent-surfaces"]},
-    {"id":"kfx-extension","summary":"Design and resolve bounded product extensions","audience":["human","agent"],"maturity":"experimental","authorityRoots":["kfx-contract","profile-lifecycle"],"access":"mixed","authorization":"capability and explicit execute","nonClaims":["dependency-resolution-grants-no-privilege","connector-is-not-qualified-by-design"],"discoveryCommands":["kungfu kfx contract --json","kungfu kfx list --json"],"expansionHandles":["kfx-extension-design","kungfu-kfx-development-agent"]},
+    {"id":"kfx-extension","summary":"Author and resolve bounded product extensions","audience":["human","agent"],"maturity":"experimental","authorityRoots":["kfx-contract","installed-kfx-authoring-kit","profile-lifecycle"],"access":"mixed","authorization":"plan-first source writes plus Core capability and lifecycle authority","nonClaims":["authoring-does-not-grant-capabilities","qualification-does-not-install-or-activate","dependency-resolution-grants-no-privilege"],"discoveryCommands":["kungfu kfx author brief","kungfu kfx author capabilities --json","kungfu kfx contract --json","kungfu kfx list --json"],"expansionHandles":["installed-kfx-authoring","kungfu-kfx-development-agent"]},
     {"id":"global-observer","summary":"Observe registered Project Work in GUI/TUI/CLI","audience":["human","agent"],"maturity":"stable","authorityRoots":["project-registry","work-projection"],"access":"read-only","authorization":"none","nonClaims":["no-arbitrary-filesystem-scanning","observer-does-not-complete-work"],"discoveryCommands":["kungfu project works --json","kungfu project list --json"],"expansionHandles":["machine-local-global-work","kungfu-gui-agent"]},
     {"id":"managed-run","summary":"Optionally supervise a provider process","audience":["human","agent"],"maturity":"experimental","authorityRoots":["managed-run-envelope","episode-facts"],"access":"preview-then-write","authorization":"explicit managed-run start","nonClaims":["not-required-for-native-provider-work","process-exit-is-not-work-completion"],"discoveryCommands":["kungfu agent choose-mode --needs-supervision --json","kungfu run agent --help"],"expansionHandles":["managed-run","kungfu-agent-surfaces"]},
     {"id":"durability","summary":"Inspect Fact, Episode, receipt, and recovery boundaries","audience":["human","agent"],"maturity":"stable","authorityRoots":["fact-cut","episode-journal","action-receipts"],"access":"mixed","authorization":"operation-specific","nonClaims":["content-body-alone-is-not-admitted-fact","success-text-is-not-receipt"],"discoveryCommands":["kungfu agent work-model --json","kungfu storage fsck --scope all --json"],"expansionHandles":["durability-and-recovery","kungfu-storage-journal-agent"]},

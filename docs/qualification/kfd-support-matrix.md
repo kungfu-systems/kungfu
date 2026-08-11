@@ -2,17 +2,17 @@
 
 This document is generated from `.buildchain/kfd/support-matrix.json`. The KFD package remains the normative authority; this matrix is Kungfu's authority for adoption and support claims.
 
-Source implementation is not the same as released support. Verification, Buildchain gating, and shipped release qualification are independent dimensions. The current Alpha release declaration ships KFD-1, KFD-2, KFD-3, KFD-7 only; the public claim becomes qualifying when the exact release passport is published.
+Source implementation is not the same as released support. Verification, Buildchain gating, and shipped release qualification are independent dimensions. The current Alpha release declaration ships KFD-1, KFD-2, KFD-3, KFD-7 only. The published `v4.0.0-alpha.1` Release Passport qualifies that exact bounded claim; every later release must carry its own passport.
 
 | Standard | Normative | Product status | Implementation | Verification | Buildchain | Release qualification | Shipped | Next gate |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| KFD-1 | active r6 | source-supported | implemented | passed | passed | alpha-release-passport | yes | Publish and retain the exact Alpha release passport. |
-| KFD-2 | active r3 | source-supported | implemented | passed | passed | alpha-release-passport | yes | Publish and retain all KFD-2 claim evaluations in the Alpha release passport. |
-| KFD-3 | active r5 | source-supported | implemented | passed | passed | alpha-release-passport | yes | Publish the exact product-declared registry audit and artifact closure in the Alpha release passport. |
+| KFD-1 | active r6 | source-supported | implemented | passed | passed | alpha-release-passport | yes | Retain and verify the exact Alpha release passport for every claimed release. |
+| KFD-2 | active r3 | source-supported | implemented | passed | passed | alpha-release-passport | yes | Retain and verify all KFD-2 claim evaluations in every claimed Alpha release passport. |
+| KFD-3 | active r5 | source-supported | implemented | passed | passed | alpha-release-passport | yes | Retain and verify the exact product-declared registry audit and artifact closure in every claimed Alpha release passport. |
 | KFD-4 | active r10 | candidate | implemented-candidate-profile | passed | passed | not-qualified | no | Retain the exact-source gate and release passport, then obtain independent adopter evidence and an explicit release decision before changing shipped support. |
 | KFD-5 | active r7 | candidate | implemented-candidate-profile | passed | passed | not-qualified | no | Retain the Primitive Management evidence roots and exact-source gate, then obtain independent adopter evidence and an explicit release decision before changing shipped support. |
 | KFD-6 | draft r10 | unsupported | not-implemented | none | not-applicable | not-qualified | no | Keep unsupported; admit a separate causal-experience discovery initiative only after the listed missing gates have executable contracts and evidence. |
-| KFD-7 | active r8 | source-supported | implemented | passed | passed | alpha-release-passport | yes | Publish and retain the exact KFD-7 product gate and support projection in the Alpha release passport. |
+| KFD-7 | active r8 | source-supported | implemented | passed | passed | alpha-release-passport | yes | Retain and verify the exact KFD-7 product gate and support projection in every claimed Alpha release passport. |
 | KFD-8 | draft r2 | draft-adopter-evidence | partial | non-conforming-evidence | not-applicable-draft | forbidden-while-draft | no | Keep evidence non-conforming until KFD-8 activation and an adopter qualification contract exist. |
 | KFD-9 | draft r2 | draft-adopter-evidence | partial | non-conforming-evidence | not-applicable-draft | forbidden-while-draft | no | Keep evidence non-conforming until KFD-9 activation and an adopter qualification contract exist. |
 | KFD-10 | draft r2 | draft-adopter-evidence | partial | non-conforming-evidence | not-applicable-draft | forbidden-while-draft | no | Keep evidence non-conforming until KFD-10 activation and an adopter qualification contract exist. |

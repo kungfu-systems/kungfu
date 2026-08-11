@@ -1,0 +1,24 @@
+{
+  "name": "@kungfu-tech/kfx-view-github-events",
+  "version": "0.1.0",
+  "description": "Inspectable normalized GitHub webhook observation and processing evidence",
+  "license": "Apache-2.0",
+  "type": "module",
+  "main": "package.json",
+  "files": ["dist", "package.json", "README.md", "kungfu.kfx.json"],
+  "scripts": {
+    "build": "kungfu sdk kfx build",
+    "clean": "kungfu sdk kfx clean",
+    "test": "node test/event-presentation.test.mjs"
+  },
+  "dependencies": {
+    "@kungfu-tech/kfx": "workspace:*"
+  },
+  "devDependencies": {
+    "@kungfu-tech/sdk": "workspace:*",
+    "@types/react": "^18.3.3"
+  },
+  "peerDependencies": {
+    "react": "^18.3.1"
+  }
+}

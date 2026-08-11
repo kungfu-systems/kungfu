@@ -14,6 +14,9 @@ import threading
 import time
 from pathlib import Path
 
+if os.name != "nt":
+    import fcntl
+
 _LOCKS_PATH = (
     Path(__file__).resolve().parents[2]
     / "src"
@@ -120,6 +123,23 @@ def test_same_thread_reentrancy_releases_only_at_outer_exit(tmp_path):
         assert locks.status(root)[name]["depth"] == 1
 
     assert name not in locks.status(root)
+
+
+def test_try_acquire_never_waits_for_busy_table_guard(tmp_path):
+    if os.name == "nt":
+        return
+    root = tmp_path / "runtime"
+    guard = locks.table_path(root).with_suffix(".guard")
+    guard.parent.mkdir(parents=True, exist_ok=True)
+    fd = os.open(guard, os.O_CREAT | os.O_RDWR, 0o644)
+    try:
+        fcntl.flock(fd, fcntl.LOCK_EX)
+        started = time.monotonic()
+        assert locks.try_acquire(root, "writer") is False
+        assert time.monotonic() - started < 0.2
+    finally:
+        fcntl.flock(fd, fcntl.LOCK_UN)
+        os.close(fd)
 
 
 def test_waiter_proceeds_after_release(tmp_path):

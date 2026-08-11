@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://libkungfu.dev/schemas/shifu/production-graph-execution-admission-verification-receipt-v0.schema.json",
+  "title": "Shifu Production Graph execution admission verification receipt v0",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "status", "sourceRevision", "contractRoot", "schemaRoots", "verifierRoot", "admittedDecisionRoots", "rejectedDecisionRoots", "rejectionCodes", "protectedGate", "nodesStarted", "authorityMutations", "receiptRoot"],
+  "properties": {
+    "schema": { "const": "shifu.production-graph-execution-admission-verification-receipt/v0" },
+    "status": { "const": "qualified" },
+    "sourceRevision": { "$ref": "production-graph-v0.schema.json#/$defs/gitObject" },
+    "contractRoot": { "$ref": "production-graph-v0.schema.json#/$defs/root" },
+    "schemaRoots": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["request", "decision", "rejection", "verificationReceipt"],
+      "properties": {
+        "request": { "$ref": "production-graph-v0.schema.json#/$defs/root" },
+        "decision": { "$ref": "production-graph-v0.schema.json#/$defs/root" },
+        "rejection": { "$ref": "production-graph-v0.schema.json#/$defs/root" },
+        "verificationReceipt": { "$ref": "production-graph-v0.schema.json#/$defs/root" }
+      }
+    },
+    "verifierRoot": { "$ref": "production-graph-v0.schema.json#/$defs/root" },
+    "admittedDecisionRoots": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "$ref": "production-graph-v0.schema.json#/$defs/root" } },
+    "rejectedDecisionRoots": { "type": "array", "minItems": 8, "uniqueItems": true, "items": { "$ref": "production-graph-v0.schema.json#/$defs/root" } },
+    "rejectionCodes": { "type": "array", "minItems": 8, "uniqueItems": true, "items": { "$ref": "production-graph-v0.schema.json#/$defs/id" } },
+    "protectedGate": { "const": "./shifu check:source" },
+    "nodesStarted": { "const": false },
+    "authorityMutations": { "type": "array", "maxItems": 0 },
+    "receiptRoot": { "$ref": "production-graph-v0.schema.json#/$defs/root" }
+  }
+}

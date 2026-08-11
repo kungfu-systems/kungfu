@@ -12,7 +12,7 @@ from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any, Callable, Protocol
 
-from kungfu import assignment_orchestration as orchestration
+from kungfu import assignment_lifecycle as bound_session
 from kungfu.assignment_lifecycle.ports import (
     AssignmentAdvancePort,
     AssignmentEventSink,
@@ -21,6 +21,7 @@ from kungfu.agent import run_agent
 from kungfu.workspace import resolve_workspace_target
 
 JsonObject = dict[str, Any]
+claim = bound_session.claim
 
 
 class StartPlanPort(Protocol):
@@ -83,7 +84,7 @@ class StartServices:
     admission_summary: Callable[[JsonObject, JsonObject], JsonObject]
     profile_action: Callable[[str, str, JsonObject, str], JsonObject]
     claim_summary: Callable[[JsonObject, JsonObject], JsonObject]
-    advance: AssignmentAdvancePort
+    advance_bound: AssignmentAdvancePort
     kickoff_summary: Callable[[JsonObject], JsonObject]
     project_prompt: Callable[[JsonObject], str]
     agent_report_summary: Callable[[JsonObject], JsonObject]
@@ -277,53 +278,49 @@ def execute(
                 last_status["query_proof_root"],
             )
 
-        if continuation_mode in {
-            "first-attempt",
-            "existing-admitted-work",
-            "existing-claimed-work",
-        }:
+        if last_status is None:
+            raise RuntimeError("Assignment status unavailable before Session start")
+        needs_kickoff = bound_session.requires_kickoff(continuation_mode)
+        work_ref = bound_session.work_ref(admission, plan, last_status)
+        if needs_kickoff:
             stage = "kickoff"
-            event(stage, "started", "Entering the executing phase.")
-            kickoff_receipt = services.advance(
-                workspace_root,
-                home,
-                plan["work"]["initiativeId"],
-                plan["work"]["assignmentId"],
-                "executing",
-                actor,
-                "Start the user-selected verified Agent for this Assignment",
+            event(
+                stage,
+                "started",
+                "Starting an Agent Session with an optional observation of this Work.",
+                work_ref["entityRoot"],
             )
-            write_occurred = True
-            last_status = kickoff_receipt["status"]
-            receipts["kickoff"] = services.kickoff_summary(kickoff_receipt)
-        run_gate = orchestration.gate(last_status, "run")
-        if run_gate["ok"] is not True:
-            raise RuntimeError(run_gate["reason"])
-        event(
-            stage,
-            "completed",
-            "Work is executing under the active lease.",
-            last_status["query_proof_root"],
+        else:
+            bound_session.require_run_gate(last_status)
+
+        invoke_session = bound_session.session_invoker(
+            run_agent.session_surface, runtime_dir
         )
 
+        def on_session_started(_session_ref, _started):
+            nonlocal last_status, write_occurred, stage
+            if needs_kickoff:
+                stage = "kickoff"
+                kickoff_receipt, last_status = bound_session.kickoff(
+                    services.advance_bound,
+                    workspace_root,
+                    home,
+                    plan,
+                    actor,
+                )
+                write_occurred = True
+                receipts["kickoff"] = services.kickoff_summary(kickoff_receipt)
+                bound_session.require_run_gate(last_status)
+                event(
+                    stage,
+                    "completed",
+                    "Work execution admitted; Agent Session observes the current Work.",
+                    last_status["query_proof_root"],
+                )
+            stage = "run"
+            bound_session.emit_run_start(event, plan["agent"]["label"], work_ref)
+
         stage = "run"
-        work_ref = {
-            "schema": "kungfu.work-ref/v1",
-            "workspaceId": admission["workspace"]["workspace_id"],
-            "profileId": plan["workControl"]["profileId"],
-            "profileRoot": plan["workControl"]["profileRoot"],
-            "entityType": "assignment",
-            "entityId": plan["work"]["assignmentId"],
-            "entityRoot": orchestration.semantic_root(last_status["assignment"]),
-            "purpose": "complete-project-assignment",
-            "systemTimeCut": last_status["query_proof_root"],
-        }
-        event(
-            stage,
-            "started",
-            f"Launching fresh {plan['agent']['label']} process.",
-            work_ref["entityRoot"],
-        )
 
         def on_agent_activity(activity):
             event(
@@ -342,6 +339,9 @@ def execute(
             home=str(request.runtime_home),
             work_ref=work_ref,
             event_sink=on_agent_activity,
+            session_invoker=invoke_session,
+            use_session=True,
+            session_started_callback=on_session_started,
         )
         exit_code = int(agent_report["launch"]["exitCode"])
         session_value = agent_report.get("session") or {}

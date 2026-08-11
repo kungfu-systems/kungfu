@@ -34,6 +34,15 @@ function requiredFile(value, label) {
   return value;
 }
 
+function normalizeDigest(value, label) {
+  const digest = String(value || '')
+    .replace(/^sha256:/, '')
+    .toLowerCase();
+  if (!/^[0-9a-f]{64}$/.test(digest))
+    throw new Error(`${label} must be a SHA-256 digest`);
+  return digest;
+}
+
 function exactKeys(value, keys, label) {
   if (!value || typeof value !== 'object' || Array.isArray(value))
     throw new Error(`${label} must be an object`);
@@ -168,7 +177,14 @@ function validatePolicy(root, policy) {
     const runtime = kungfuBuildchainRuntimePolicy(policy, channel);
     exactKeys(
       runtime,
-      ['ref', 'runtimeSha', 'contractDigest', 'contractLock'],
+      [
+        'ref',
+        'runtimeSha',
+        'publicationRuntimeSha',
+        'contractDigest',
+        'publicationContractDigests',
+        'contractLock',
+      ],
       `buildchain.runtimes.${channel}`,
     );
     const lock = readJson(root, runtime.contractLock);
@@ -299,8 +315,7 @@ export async function verifyKungfuReleaseAdmission({
   const fixedBindings = {
     repository: policy.repository,
     publisherWorkflowPath: policy.publication.publisherWorkflowPath,
-    runtimeSha: runtime.runtimeSha,
-    contractDigest: runtime.contractDigest.replace(/^sha256:/, ''),
+    runtimeSha: runtime.publicationRuntimeSha,
     environment: policy.publication.environment,
     product: policy.publication.product,
     target: policy.publication.target,
@@ -310,6 +325,16 @@ export async function verifyKungfuReleaseAdmission({
       throw new Error(
         `Kungfu release admission expected ${key} policy mismatch`,
       );
+  if (
+    !runtime.publicationContractDigests
+      .map((value) => normalizeDigest(value, 'publication contract digest'))
+      .includes(
+        normalizeDigest(expected?.contractDigest, 'expected contract digest'),
+      )
+  )
+    throw new Error(
+      'Kungfu release admission expected contractDigest policy mismatch',
+    );
   if (!policy.publication.channels.includes(expected?.channel))
     throw new Error('Kungfu release admission channel is not allowed');
   if (admission?.workflowPath !== policy.publication.workflowPath)

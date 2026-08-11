@@ -60,6 +60,9 @@ def test_brief_and_intent_map_enforce_complete_bounded_first_entry():
     assert "never reconstruct or recompute" in normalized_brief
     assert "the user does not need to name any protocol step" in normalized_brief
     assert "one copyable read-only verification command" in normalized_brief
+    assert "Never stage `.kungfu/` wholesale" in brief
+    assert "Durable does not mean Git-tracked" in normalized_brief
+    assert "workspaceGit" in brief
     assert set(intent_map["requiredIntentIds"]) == {
         row["id"] for row in intent_map["intents"]
     }
@@ -70,6 +73,39 @@ def test_brief_and_intent_map_enforce_complete_bounded_first_entry():
         assert row["nonClaims"]
         assert row["discoveryCommands"]
         assert row["expansionHandles"]
+
+    workspace_git = first_value.workspace_git_policy_view()
+    assert workspace_git == intent_map["workspaceGit"]
+    assert workspace_git["neverStageWholeHome"] is True
+    assert workspace_git["defaultDisposition"] == "keep-local"
+    assert workspace_git["unmatchedPathPolicy"] == (
+        "keep-local-unless-explicit-repository-policy"
+    )
+    assert {row["id"] for row in workspace_git["publishAllowlist"]} == {
+        "workspace-ignore-policy",
+        "sealed-episode-claims",
+        "sealed-episode-manifest",
+        "sealed-episode-qualification",
+        "project-cut-manifest",
+        "project-cut-receipt",
+        "ledger-publication-manifest",
+    }
+    assert {row["id"] for row in workspace_git["localOnly"]} == {
+        "runtime",
+        "inbox",
+        "episode-temporary",
+        "private",
+        "cache",
+        "locks",
+        "projections",
+    }
+
+
+def test_agent_capabilities_and_map_share_one_workspace_git_contract():
+    intent_map = first_value.intent_map_view()
+    capabilities = agent_command._capabilities_payload()
+
+    assert capabilities["workspaceGit"] == intent_map["workspaceGit"]
 
 
 def test_first_value_receipt_accepts_the_explicit_discovery_alias():

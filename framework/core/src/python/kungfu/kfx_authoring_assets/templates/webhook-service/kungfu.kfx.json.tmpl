@@ -1,0 +1,62 @@
+{
+  "schema": "kungfu.kfx.manifest/v1",
+  "name": "@kungfu-kfx/{{PACKAGE_KEY}}",
+  "version": "{{PACKAGE_VERSION}}",
+  "kungfuConfig": {
+    "key": "{{PACKAGE_KEY}}",
+    "config": {
+      "service": {
+        "runtimes": [
+          "node"
+        ],
+        "entry": {
+          "node": "src/service.mjs"
+        },
+        "host": {
+          "schema": "kungfu.kfx.service-host/v1",
+          "contractVersion": 1,
+          "lifecycle": {
+            "restartPolicy": "on-failure",
+            "readinessTimeoutMs": 5000,
+            "drainTimeoutMs": 5000,
+            "shutdownTimeoutMs": 5000
+          },
+          "webhook": {
+            "listener": {
+              "mode": "loopback",
+              "bindAddress": "127.0.0.1",
+              "port": 9911,
+              "path": "/events",
+              "methods": [
+                "POST"
+              ]
+            },
+            "credentials": [
+              {
+                "handle": "credential:webhook/signing",
+                "purpose": "webhook-signature-verification",
+                "algorithms": [
+                  "hmac-sha256"
+                ]
+              }
+            ],
+            "intake": {
+              "maxPayloadBytes": 65536,
+              "maxQueueDepth": 32,
+              "maxInflight": 4,
+              "maxRequestsPerWindow": 60,
+              "rateWindowMs": 60000,
+              "handlerTimeoutMs": 5000,
+              "replayWindowMs": 300000
+            }
+          }
+        },
+        "capabilities": [
+          "credential.verify",
+          "network.listen"
+        ]
+      }
+    }
+  }
+}
+

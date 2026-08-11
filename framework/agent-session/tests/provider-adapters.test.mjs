@@ -24,6 +24,7 @@ function fixtures(name) {
 for (const [provider, version, filename] of [
   ['codex', '0.144.3', 'codex-v0.144.3.json'],
   ['codex', '0.146.0', 'codex-v0.146.0.json'],
+  ['codex', '0.147.0', 'codex-v0.147.0.json'],
   ['claude', '2.1.209', 'claude-v2.1.209.json'],
   ['claude', '2.1.220', 'claude-v2.1.220.json'],
 ]) {
@@ -51,6 +52,24 @@ for (const [provider, version, filename] of [
     }
   });
 }
+
+test('synthetic adapter accepts the current mock provider and its v1 compatibility floor', () => {
+  for (const version of ['1.0.0', '1.1.0']) {
+    const adapter = createProviderAdapter({ provider: 'synthetic', version });
+    assert.equal(adapter.compatible, true, version);
+    assert.equal(adapter.tested, true, version);
+    assert.equal(
+      adapter.inspect({
+        lines: ['mock› '],
+        lifecycleState: 'ready',
+        inputAdmission: 'open',
+        foreground: { provider: 'synthetic' },
+      }).state,
+      'ready',
+      version,
+    );
+  }
+});
 
 test('version drift and foreground mismatch fail visibly to raw human fallback', () => {
   const drifted = createProviderAdapter({

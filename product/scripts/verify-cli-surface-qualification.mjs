@@ -5,9 +5,13 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { cliQualificationRoot } from './cli-surface-qualification.mjs';
+import {
+  cliQualificationNonClaims,
+  cliQualificationRoot,
+} from './cli-surface-qualification.mjs';
 
 const ROOT_PATTERN = /^sha256:[0-9a-f]{64}$/u;
+const SOURCE_PATTERN = /^[0-9a-f]{40}$/u;
 
 function assert(condition, message) {
   if (!condition) throw new Error(message);
@@ -29,6 +33,19 @@ export function verifyCliSurfaceQualification({
     report.platform === expectedPlatform,
     `platform mismatch: expected ${expectedPlatform}, got ${report.platform}`,
   );
+  const expectedArchitecture = expectedPlatform.split('-').at(-1);
+  assert(
+    report.architecture === expectedArchitecture,
+    `architecture mismatch: expected ${expectedArchitecture}, got ${report.architecture}`,
+  );
+  assert(
+    typeof report.version === 'string' && report.version.length > 0,
+    'qualification omitted the installed version',
+  );
+  assert(
+    SOURCE_PATTERN.test(report.identity?.sourceCommit || ''),
+    'qualification omitted an exact source commit',
+  );
   assert(
     report.identity?.archive === archiveName,
     `archive name mismatch: expected ${archiveName}, got ${report.identity?.archive}`,
@@ -44,6 +61,16 @@ export function verifyCliSurfaceQualification({
   assert(
     report.productIdentity?.verifiedFromInstalledCommand === true,
     'product identity was not verified from the installed command',
+  );
+  assert(
+    report.claims?.installedProduct === true &&
+      report.claims?.qualifiedPlatform === expectedPlatform,
+    'qualification claims do not bind the qualified platform',
+  );
+  assert(
+    JSON.stringify(report.nonClaims) ===
+      JSON.stringify(cliQualificationNonClaims(expectedPlatform)),
+    'qualification non-claims contradict the qualified platform',
   );
   assert(
     report.checks?.kfd3?.linkedApiCount > 0,
@@ -72,6 +99,9 @@ export function verifyCliSurfaceQualification({
     schema: 'kungfu.cli-installed-product-qualification-verification/v1',
     verified: true,
     platform: report.platform,
+    architecture: report.architecture,
+    version: report.version,
+    sourceCommit: report.identity.sourceCommit,
     archive: report.identity.archive,
     archiveSha256: report.identity.archiveSha256,
     qualificationRoot,

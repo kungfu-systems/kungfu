@@ -1,0 +1,162 @@
+{
+  "schema": "kungfu.kfx-authoring-kit/v1",
+  "version": 1,
+  "productVersion": "4.0.0-alpha.1",
+  "nativeKfx": {
+    "contractVersion": 14,
+    "serviceHostSchema": "kungfu.kfx.service-host/v1",
+    "receiptSchema": "kungfu.kfx.service-host-receipt/v1"
+  },
+  "sdk": {
+    "schema": "kungfu.kfx-authoring-sdk-projection/v1",
+    "productVersion": "4.0.0-alpha.1",
+    "apiVersion": "4.0.0-alpha.1",
+    "kfxVersion": "4.0.0-alpha.1",
+    "source": "framework/api/src/capability/service-authz.ts",
+    "sourceRoot": "sha256:75342c374616da7718d306a2c05241cca6d8edc8bac6f007a4e62f905ad8c27a",
+    "files": [
+      "kfx-host.d.ts",
+      "sandbox-launcher.d.ts",
+      "service-authz.d.ts",
+      "service-webhook-host.mjs",
+      "types.d.ts"
+    ],
+    "roots": {
+      "kfx-host.d.ts": "202333a2f4f6ab101b00387489d4bc886166630cbaf0ec422cc6616f4188e09d",
+      "sandbox-launcher.d.ts": "835fd421f0cf6f23a8da03cf96b0df18b96a39c5fdc2d48938d129c5d5858ffd",
+      "service-authz.d.ts": "5760a9c11e4662b9d9579538f26c51bb4f1d7884e892b8af586b2e525c3aa7bf",
+      "service-webhook-host.mjs": "460cb9938c8c0596d160fbcd61eb42bcfd9838cf8d154553b2544321af340a11",
+      "types.d.ts": "df3021c6e02edc51fb0d02bc9a9f185e2ef6c5b76ebb934e4e3ab30cddbefe35"
+    },
+    "root": "sha256:8afedffb614388b70d7fcb2744bcb34a4eeb167e2b766f301a8df5a62e3a6c68"
+  },
+  "schemas": {
+    "packageManifest": "kungfu.kfx.manifest/v1",
+    "serviceHost": "kungfu.kfx.service-host/v1",
+    "serviceReceipt": "kungfu.kfx.service-host-receipt/v1"
+  },
+  "templates": {
+    "webhookService": {
+      "id": "webhook-service",
+      "files": [
+        "README.md.tmpl",
+        "fixtures/local-receiver.mjs",
+        "kungfu.kfx.json.tmpl",
+        "package.json.tmpl",
+        "src/service.mjs.tmpl",
+        "test/qualify.mjs.tmpl"
+      ],
+      "roots": {
+        "README.md.tmpl": "e96ff11c209f95480599d8a645342446d906ebf9adbc020f8f9ce67c39e31fc8",
+        "fixtures/local-receiver.mjs": "a308533e3fdbe80b0da357851043b2035b7e5f684cc31f46104257ffc1f9de28",
+        "kungfu.kfx.json.tmpl": "1aec1373ff4e6017342a5b309c12564ba411ee625798d86920caa1b40fe53a47",
+        "package.json.tmpl": "6bf94ffd707e9892447836a7ea782b8c43edf84be4a5996effc82ae52b6103c0",
+        "src/service.mjs.tmpl": "a4a791b1d891c7137807fb27ac353251c178d43ebf4f5f1a910c0bc8052bb64a",
+        "test/qualify.mjs.tmpl": "a7096a4394e4923ac0aaab6bd515b3f259ccb2b74e9e71d6fe849810cf2cb8e3"
+      },
+      "root": "sha256:5d9f5ea8cd0b6ec401560e9a2118d0c01e4d807956741f9665cf366db8a2f451"
+    }
+  },
+  "lifecycle": [
+    "inspect",
+    "scaffold",
+    "validate",
+    "build",
+    "qualify",
+    "package",
+    "native-plan",
+    "authorize",
+    "install",
+    "activate",
+    "run",
+    "observe",
+    "diagnose",
+    "deactivate",
+    "rollback",
+    "upgrade",
+    "uninstall"
+  ],
+  "commands": {
+    "brief": "kungfu kfx author brief",
+    "capabilities": "kungfu kfx author capabilities --json",
+    "scaffold": "kungfu kfx author scaffold <key> --out <dir> --execute --json",
+    "inspect": "kungfu kfx author inspect <dir> --json",
+    "validate": "kungfu kfx author validate <dir> --json",
+    "build": "kungfu kfx author build <dir> --out <build-dir> --execute --json",
+    "qualify": "kungfu kfx author qualify <dir> --json",
+    "package": "kungfu kfx author package <dir> --out <package.tgz> --execute --json",
+    "nativePlan": "kungfu kfx native plan --root workspace=<dir>",
+    "nativeStatus": "kungfu kfx native status --root workspace=<dir>",
+    "nativeHistory": "kungfu kfx native history --package-key <key>"
+  },
+  "nonClaims": [
+    "authoring-does-not-grant-capabilities",
+    "authoring-does-not-issue-warrant-or-passport",
+    "qualification-does-not-install-or-activate",
+    "loopback-fixture-does-not-prove-production-network-admission",
+    "source-or-schema-validity-does-not-prove-kfd-or-release-readiness"
+  ],
+  "files": [
+    {
+      "path": "brief.md",
+      "sha256": "e904e5941ac00faa9f228746c6dff0cb5103ae64b157255f2eb64d0838543640",
+      "bytes": 2474
+    },
+    {
+      "path": "sdk/kfx-host.d.ts",
+      "sha256": "202333a2f4f6ab101b00387489d4bc886166630cbaf0ec422cc6616f4188e09d",
+      "bytes": 6599
+    },
+    {
+      "path": "sdk/sandbox-launcher.d.ts",
+      "sha256": "835fd421f0cf6f23a8da03cf96b0df18b96a39c5fdc2d48938d129c5d5858ffd",
+      "bytes": 759
+    },
+    {
+      "path": "sdk/service-authz.d.ts",
+      "sha256": "5760a9c11e4662b9d9579538f26c51bb4f1d7884e892b8af586b2e525c3aa7bf",
+      "bytes": 6076
+    },
+    {
+      "path": "sdk/service-webhook-host.mjs",
+      "sha256": "460cb9938c8c0596d160fbcd61eb42bcfd9838cf8d154553b2544321af340a11",
+      "bytes": 19204
+    },
+    {
+      "path": "sdk/types.d.ts",
+      "sha256": "df3021c6e02edc51fb0d02bc9a9f185e2ef6c5b76ebb934e4e3ab30cddbefe35",
+      "bytes": 6931
+    },
+    {
+      "path": "templates/webhook-service/README.md.tmpl",
+      "sha256": "e96ff11c209f95480599d8a645342446d906ebf9adbc020f8f9ce67c39e31fc8",
+      "bytes": 849
+    },
+    {
+      "path": "templates/webhook-service/fixtures/local-receiver.mjs",
+      "sha256": "a308533e3fdbe80b0da357851043b2035b7e5f684cc31f46104257ffc1f9de28",
+      "bytes": 2358
+    },
+    {
+      "path": "templates/webhook-service/kungfu.kfx.json.tmpl",
+      "sha256": "1aec1373ff4e6017342a5b309c12564ba411ee625798d86920caa1b40fe53a47",
+      "bytes": 1596
+    },
+    {
+      "path": "templates/webhook-service/package.json.tmpl",
+      "sha256": "6bf94ffd707e9892447836a7ea782b8c43edf84be4a5996effc82ae52b6103c0",
+      "bytes": 513
+    },
+    {
+      "path": "templates/webhook-service/src/service.mjs.tmpl",
+      "sha256": "a4a791b1d891c7137807fb27ac353251c178d43ebf4f5f1a910c0bc8052bb64a",
+      "bytes": 2014
+    },
+    {
+      "path": "templates/webhook-service/test/qualify.mjs.tmpl",
+      "sha256": "a7096a4394e4923ac0aaab6bd515b3f259ccb2b74e9e71d6fe849810cf2cb8e3",
+      "bytes": 4338
+    }
+  ],
+  "contractRoot": "sha256:16eee9fafca2422a613dcb3217689ca03d8b04d51f26b5666eef9af432df9da2"
+}

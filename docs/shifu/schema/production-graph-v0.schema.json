@@ -61,7 +61,7 @@
     "nonEmpty": { "type": "string", "minLength": 1 },
     "id": {
       "type": "string",
-      "pattern": "^[a-z0-9]+(?:[.-][a-z0-9]+)*$"
+      "pattern": "^[a-z0-9]+(?:[._-][a-z0-9]+)*$"
     },
     "root": {
       "type": "string",
@@ -168,7 +168,7 @@
           "minItems": 2,
           "uniqueItems": true,
           "items": {
-            "enum": ["planned", "started", "succeeded", "failed", "cancelled"]
+            "enum": ["planned", "started", "succeeded", "failed", "cancelled", "timed-out", "skipped"]
           }
         },
         "exit": {

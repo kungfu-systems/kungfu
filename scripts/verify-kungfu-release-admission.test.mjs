@@ -38,13 +38,18 @@ import {
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const SOURCE_SHA = '1'.repeat(40);
-const RUNTIME_SHA = '2e7e07902ac28d8f3edcfb81098ef9ebc7a91878';
-const STABLE_RUNTIME_SHA = '9e904de2c85dbea7c799780ee166510b3336d812';
+const RUNTIME_SHA = '827fa0252c0546816c33ec89e66ca505ad6d5162';
+const PUBLICATION_RUNTIME_SHA = RUNTIME_SHA;
+const RETIRED_PUBLICATION_RUNTIME_SHA =
+  '21030efd277301d642fd9baaa1bd75f02dd3ddc6';
+const STABLE_RUNTIME_SHA = '380b2d8c2a660b07ed785e71276f71dc6a9184f7';
 const SOURCE_TREE_SHA = 'a'.repeat(40);
 const CONTRACT_DIGEST =
-  '5a6dc69d8905ed852260076da13d3aa3fa63533007dba706c164fe86f8b8f1e6';
+  '00a40bcbcdde2531a3bdc2201515f91ac6ee4245ba2aec896ae7f68fa545f995';
+const RECOVERED_CONTRACT_DIGEST =
+  '00a40bcbcdde2531a3bdc2201515f91ac6ee4245ba2aec896ae7f68fa545f995';
 const STABLE_CONTRACT_DIGEST =
-  '914720131f07664cd187a1033f357c4952ef1008f5553cb6b285a75f786a7fbc';
+  '900b03120a2ae9b7e7e67fdb854039849339f96bd6285a13c2ced30b9b02f2c0';
 const PREDICATE_COMMAND = 'node scripts/kungfu-release-qualification.mjs';
 const PREDICATE_DIGEST = crypto
   .createHash('sha256')
@@ -89,11 +94,17 @@ function manifestSummaryDigest(files) {
   return hash.digest('hex');
 }
 
-function fixture({
-  channel = 'alpha',
-  runtimeSha = RUNTIME_SHA,
-  contractDigest = CONTRACT_DIGEST,
-} = {}) {
+function fixture(options = {}) {
+  const channel = options.channel || 'alpha';
+  const runtimeSha =
+    options.runtimeSha ||
+    (channel === 'alpha' ? RUNTIME_SHA : STABLE_RUNTIME_SHA);
+  const publicationRuntimeSha =
+    options.publicationRuntimeSha ||
+    (channel === 'alpha' ? PUBLICATION_RUNTIME_SHA : STABLE_RUNTIME_SHA);
+  const contractDigest =
+    options.contractDigest ||
+    (channel === 'alpha' ? CONTRACT_DIGEST : STABLE_CONTRACT_DIGEST);
   const registry = JSON.parse(
     fs.readFileSync(path.join(ROOT, 'shifu.gates.json'), 'utf8'),
   );
@@ -166,7 +177,7 @@ function fixture({
   });
   const controlPlaneAudit = createPublicationControlPlaneAudit({
     repository: 'kungfu-systems/kungfu',
-    workflowPath: '.github/workflows/release-candidate-promote.yml',
+    workflowPath: '.github/workflows/.release-candidate-promote.yml',
     publisherWorkflowPath: '.github/workflows/release-new-version.yml',
     environment: 'none',
     facts: [
@@ -316,11 +327,11 @@ function fixture({
         'utf8',
       ),
     ).registryDigest,
-    workflowPath: '.github/workflows/release-candidate-promote.yml',
+    workflowPath: '.github/workflows/.release-candidate-promote.yml',
     publisherWorkflowPath: '.github/workflows/release-new-version.yml',
     repository: 'kungfu-systems/kungfu',
     sourceSha: SOURCE_SHA,
-    runtimeSha,
+    runtimeSha: publicationRuntimeSha,
     contractDigest,
     policyDigest: matrixDigest,
     gateRegistryDigest: registryDigest,
@@ -372,18 +383,22 @@ function fixture({
   };
 }
 
-test('Kungfu independently accepts only a current sealed qualifying capability', async () => {
+test('Kungfu independently accepts only a durable sealed qualifying capability', async () => {
   const result = await verifyKungfuReleaseAdmission(fixture());
   assert.equal(result.qualifying, true);
   assert.equal(result.capability.decision, 'allow');
-  assert.equal(result.capability.runtimeSha, RUNTIME_SHA);
+  assert.equal(result.capability.runtimeSha, PUBLICATION_RUNTIME_SHA);
   assert.match(result.consumerPolicyDigest, /^[0-9a-f]{64}$/);
+
+  const recovered = await verifyKungfuReleaseAdmission(
+    fixture({ contractDigest: RECOVERED_CONTRACT_DIGEST }),
+  );
+  assert.equal(recovered.capability.contractDigest, RECOVERED_CONTRACT_DIGEST);
 
   const stable = await verifyKungfuReleaseAdmission(
     fixture({
       channel: 'release',
-      runtimeSha: STABLE_RUNTIME_SHA,
-      contractDigest: STABLE_CONTRACT_DIGEST,
+      publicationRuntimeSha: STABLE_RUNTIME_SHA,
     }),
   );
   assert.equal(stable.capability.runtimeSha, STABLE_RUNTIME_SHA);
@@ -393,11 +408,15 @@ test('Kungfu independently accepts only a current sealed qualifying capability',
       verifyKungfuReleaseAdmission(
         fixture({
           channel: 'alpha',
-          runtimeSha: STABLE_RUNTIME_SHA,
-          contractDigest: STABLE_CONTRACT_DIGEST,
+          publicationRuntimeSha: RETIRED_PUBLICATION_RUNTIME_SHA,
         }),
       ),
     /runtimeSha policy mismatch/,
+  );
+  await assert.rejects(
+    async () =>
+      verifyKungfuReleaseAdmission(fixture({ contractDigest: 'f'.repeat(64) })),
+    /contractDigest policy mismatch/,
   );
 });
 
@@ -457,7 +476,7 @@ test('Kungfu rejects policy, runner, control-plane, and artifact substitution', 
 });
 
 test('Kungfu consumer qualification seals only an exact current handoff', async () => {
-  const input = fixture();
+  const input = fixture({ contractDigest: RECOVERED_CONTRACT_DIGEST });
   const capability = (await verifyKungfuReleaseAdmission(input)).capability;
   const gateAggregate = input.publicationEvidence.gateAggregate;
   const decision = await createKungfuConsumerPublicationDecision({
@@ -473,6 +492,22 @@ test('Kungfu consumer qualification seals only an exact current handoff', async 
   assert.equal(decision.sourceSha, SOURCE_SHA);
   assert.equal(decision.artifactDigest, capability.artifactDigest);
 
+  const unlistedContract = structuredClone(capability);
+  unlistedContract.contractDigest = 'f'.repeat(64);
+  await assert.rejects(
+    async () =>
+      createKungfuConsumerPublicationDecision({
+        root: ROOT,
+        capability: unlistedContract,
+        gateAggregate,
+        predicateId: KUNGFU_PUBLICATION_PREDICATE_ID,
+        predicateDigest: PREDICATE_DIGEST,
+        createDecision: createConsumerPublicationDecision,
+        now: input.now,
+      }),
+    /Buildchain contract digest policy mismatch/,
+  );
+
   const receipt = createPublicationQualificationReceipt({
     capability,
     gateAggregate,
@@ -485,7 +520,7 @@ test('Kungfu consumer qualification seals only an exact current handoff', async 
     gateAggregate,
     expected: {
       sourceSha: SOURCE_SHA,
-      runtimeSha: RUNTIME_SHA,
+      runtimeSha: PUBLICATION_RUNTIME_SHA,
       artifactDigest: capability.artifactDigest,
       version: capability.version,
       channel: capability.channel,

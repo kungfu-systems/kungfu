@@ -9,7 +9,15 @@
     "receipt": "docs/shifu/schema/production-graph-receipt-v0.schema.json",
     "failure": "docs/shifu/schema/production-graph-failure-v0.schema.json",
     "recovery": "docs/shifu/schema/production-graph-recovery-v0.schema.json",
-    "verificationReceipt": "docs/shifu/schema/production-graph-verification-receipt-v0.schema.json"
+    "feedback": "docs/shifu/schema/production-graph-feedback-v0.schema.json",
+    "verificationReceipt": "docs/shifu/schema/production-graph-verification-receipt-v0.schema.json",
+    "executionAdmissionRequest": "docs/shifu/schema/production-graph-execution-admission-request-v0.schema.json",
+    "executionAdmissionRejection": "docs/shifu/schema/production-graph-execution-admission-rejection-v0.schema.json",
+    "executionAdmissionDecision": "docs/shifu/schema/production-graph-execution-admission-decision-v0.schema.json",
+    "executionAdmissionVerificationReceipt": "docs/shifu/schema/production-graph-execution-admission-verification-receipt-v0.schema.json",
+    "localExecutorPolicy": "docs/shifu/schema/production-graph-local-executor-policy-v0.schema.json",
+    "localExecutionReceipt": "docs/shifu/schema/production-graph-local-execution-receipt-v0.schema.json",
+    "buildCoreShadowReceipt": "docs/shifu/schema/build-core-production-graph-shadow-receipt-v0.schema.json"
   },
   "rootAlgorithm": {
     "name": "sha256-canonical-json",
@@ -33,13 +41,96 @@
     "receipt": "shifu.production-graph-verification-receipt/v0",
     "executesNodes": false
   },
+  "executionAdmission": {
+    "command": "./shifu production-graph:admit",
+    "request": "shifu.production-graph-execution-admission-request/v0",
+    "decision": "shifu.production-graph-execution-admission-decision/v0",
+    "rejection": "shifu.production-graph-execution-admission-rejection/v0",
+    "verificationReceipt": "shifu.production-graph-execution-admission-verification-receipt/v0",
+    "requiredBeforeNodeStart": true,
+    "failClosed": true,
+    "nodesStartedByAdmission": false,
+    "authorityMutations": false,
+    "externalAuthorities": [
+      "kungfu.assignment",
+      "kungfu.work-control",
+      "kungfu.warrant",
+      "external-approval-authority",
+      "protected-merge-authority",
+      "assignment-close-authority"
+    ],
+    "authorizationAuthorities": [
+      "kungfu.work-control",
+      "kungfu.warrant",
+      "external-approval-authority"
+    ],
+    "shifuForbiddenAuthority": [
+      "mint-assignment",
+      "mutate-assignment",
+      "mint-work-control",
+      "mutate-work-control",
+      "mint-warrant",
+      "mutate-warrant",
+      "mint-approval",
+      "mutate-approval",
+      "mint-merge-authority",
+      "mutate-merge-authority",
+      "mint-close-authority",
+      "mutate-close-authority"
+    ]
+  },
+  "localExecutor": {
+    "command": "./shifu production-graph:execute",
+    "policy": "shifu.production-graph-local-executor-policy/v0",
+    "receipt": "shifu.production-graph-local-execution-receipt/v0",
+    "concurrency": 1,
+    "fixtureSafeOnly": false,
+    "boundedRealTasks": ["build:core"],
+    "boundedTaskEnvironment": {
+      "build:core": { "KUNGFU_BUILD_PROFILE": "journal" }
+    },
+    "requiresExactAdmission": true,
+    "replayStartsNodes": false,
+    "schedulerAuthority": false,
+    "workAuthorityMutations": false
+  },
+  "buildCoreShadow": {
+    "command": "./shifu build:core:graph-shadow",
+    "authoritativeCommand": "./shifu build:core",
+    "profile": "journal",
+    "nodes": 1,
+    "concurrency": 1,
+    "receipt": "kungfu.build-core-production-graph-shadow-receipt/v0",
+    "classifiesEveryComparedDimension": true,
+    "cutover": false
+  },
+  "feedback": {
+    "command": "./shifu production-graph:feedback",
+    "schema": "shifu.production-graph-feedback/v0",
+    "modes": ["human", "json"],
+    "decisions": [
+      "complete",
+      "inspect",
+      "resume-eligible",
+      "restart-required",
+      "blocked-by-drift"
+    ],
+    "exitCodes": {
+      "0": "complete",
+      "1": "bounded-human-action-required",
+      "2": "blocked-by-drift",
+      "3": "invalid-command-or-input"
+    },
+    "sideEffects": false,
+    "executesRecovery": false
+  },
   "authorityBoundary": {
-    "mode": "description-and-verification-only",
+    "mode": "description-verification-and-bounded-local-execution",
     "forbiddenOperations": [
       "capture",
       "claim",
       "dispatch",
-      "execute",
+      "schedule",
       "approve",
       "merge",
       "close"
@@ -48,6 +139,9 @@
       "graph-is-not-a-scheduler",
       "plan-is-not-dispatch-authority",
       "verification-is-not-execution",
+      "execution-admission-is-not-node-start",
+      "local-executor-is-not-a-scheduler",
+      "receipt-replay-does-not-reexecute",
       "receipt-is-not-work-control-authority",
       "recovery-is-guidance-not-mutation",
       "shifu-does-not-own-xinfa-selection"

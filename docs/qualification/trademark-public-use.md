@@ -3,7 +3,7 @@
 This qualification keeps four states separate:
 
 1. the brand signature is implemented in source and public copy;
-2. a future release has the surfaces needed to make a public-use record;
+2. a release has the surfaces needed to make a public-use record;
 3. downloadable software is actually available through those surfaces; and
 4. any legal conclusion about first use or registration is made outside this
    engineering contract.
@@ -15,10 +15,12 @@ or libkungfu replacement.
 
 ## Current state
 
-Kungfu v4 is Coming Soon. Public release artifacts are not available, so the
-repository does not claim released-software use or a first-use date. Source
+Kungfu `v4.0.0-alpha.1` is the first public v4 Alpha. Its public acquisition
+and product evidence supports the engineering `releasedSoftwareUseClaim` for
+that exact release. The status does not make a legal first-use-date,
+registration, ownership, specimen-sufficiency, or filing conclusion. Source
 code, a pull-request preview, staging, a screenshot without a real acquisition
-path, and a Coming Soon page do not satisfy this gate.
+path, and a Coming Soon page still do not satisfy this gate.
 
 The public machine-readable current state is
 `https://kungfu.tech/.well-known/kungfu-release-status.json`. An installed
@@ -51,12 +53,12 @@ The packaged desktop app sets a native About panel for **Kungfu Episodes** with
 **Kungfu UNGFU™** as its secondary signature and **Never Guess. Facts Unfold.**
 as its credits line. Kungfu Episodes remains the application name.
 
-These are source-implemented product surfaces, not release evidence. The
-contract records them separately from `currentState.productSurfaces`, which
-remains empty until a real public artifact binds one of these surfaces to a
-reviewed release coordinate.
+These source-implemented surfaces are not release evidence by themselves. The
+static contract keeps a preparation-state baseline; the synthesized public
+release status and evidence index bind the observed product surface to the
+reviewed `v4.0.0-alpha.1` coordinate.
 
-## Gate for the first real public release
+## Gate used by the first and later public releases
 
 Before `releasedSoftwareUseClaim` can become true, one reviewable change must
 provide both:
@@ -158,10 +160,11 @@ sufficiency, or replace counsel review.
 
 ## US Class 9 filing-readiness profile
 
-The contract records an engineering candidate for a future Section 1(a)
-application after a genuine public alpha exists. It is not a legal conclusion.
-Counsel must still confirm the final identification text, application basis,
-first-use dates, ownership, and specimen sufficiency.
+The contract records an engineering candidate for a possible Section 1(a)
+application. The `v4.0.0-alpha.1` publication satisfies only the engineering
+availability precondition; it is not a legal conclusion. Counsel must still
+confirm the final identification text, application basis, first-use dates,
+ownership, and specimen sufficiency.
 
 The six core identifications cover:
 
@@ -233,7 +236,7 @@ advice, a registration claim, or a legal determination of first use.
 
 The implementation PR proves copy, ownership attribution, exact-mark surfaces,
 protected repository/package/domain/CLI identities, the bounded Class 9 filing
-plan, and executable negative tests. The future release PR proves one
-source-bound real acquisition and product-surface pair plus released capability
-evidence for every selected Class 9 identification. Production publication and
-any legal conclusion remain separate explicit review gates.
+plan, and executable negative tests. Each release claiming public use must
+prove one source-bound real acquisition and product-surface pair plus released
+capability evidence for every selected Class 9 identification. Production
+publication and any legal conclusion remain separate explicit review gates.

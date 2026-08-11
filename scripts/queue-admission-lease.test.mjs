@@ -12,7 +12,7 @@ import {
 } from './cancel-dequeued-merge-group-runs.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const WARRANT_RUNTIME_SHA = 'ed978d70b246fcfdb5e80009d58e1ce4926ad593';
+const WARRANT_RUNTIME_SHA = '733812ff9405241705f5f267fe2e5ec6351e1a2d';
 const CONTRACT = JSON.parse(
   fs.readFileSync(
     path.join(
@@ -29,7 +29,10 @@ const CONTRACT = JSON.parse(
 test('queue admission lease has distinct PR-head and merge-group authorities', () => {
   assert.equal(CONTRACT.schema, 'kungfu.dev-queue-admission/v1');
   assert.equal(CONTRACT.requiredContext, 'Queue admission lease');
-  assert.equal(CONTRACT.authority.pullRequestHead, 'atlas-serialized-wrapper');
+  assert.equal(
+    CONTRACT.authority.pullRequestHead,
+    'buildchain-serialized-pr-head',
+  );
   assert.equal(
     CONTRACT.authority.mergeGroup,
     '.github/workflows/queue-admission-lease.yml',

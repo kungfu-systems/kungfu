@@ -37,6 +37,21 @@ under those pinned tools.
 | distributable products | product runtime + GUI/TUI/CLI + all product-declared first-party kfx | `./shifu dist` |
 | product loops | SDK-distributed GUI/TUI/CLI dev/build verbs | single kfx: `kungfu sdk product gui dev`; product assembly: `kungfu sdk product gui dist`; repo dogfood via `./shifu product ...` |
 
+### node-pty platform runtime closure
+
+The CLI product stages `node-pty` according to the machine-readable
+[`node-pty-runtime-closure.contract.json`](../../product/node-pty-runtime-closure.contract.json).
+For the pinned `node-pty@1.1.0`, Linux uses `forkpty` and ships only
+`build/Release/pty.node`; `spawn-helper` is a Darwin-only build target. Darwin
+ships the architecture-exact prebuild containing `pty.node` and an executable
+`spawn-helper`, while Windows ships its architecture-exact prebuilt addon.
+
+The contract is enforced twice: staging rejects dependency-version or file-set
+drift, and the extracted product archive must actually create a child PTY via
+`nodePty.spawn()`. A source-only fixture cannot authorize a different platform
+closure. Changing this contract requires updating the dependency pin and
+proving the resulting archive on the affected native platform before upload.
+
 ## Freeze retirement ledger (fully retired 2026-07-11)
 
 [KF-ADR-019f86da-4f90-73ff-9543-f0a4f0beef05](../adr/KF-ADR-019f86da-4f90-73ff-9543-f0a4f0beef05.md) stage 2 retired freezing platform by platform, and Windows — the last

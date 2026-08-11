@@ -4,6 +4,19 @@ import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 import { ensureNativeInteractiveSessionSurface } from '../src/native-interactive-client.mjs';
 
+const nativeCapabilities = {
+  schema: 'kungfu.agent-session.surface-capabilities/v1',
+  actions: [
+    'capabilities',
+    'show',
+    'plan-native-start',
+    'start-native',
+    'heartbeat-native',
+    'project-native-work',
+    'end-native',
+  ],
+};
+
 test('provider-native bootstrap resolves the default source worker', async () => {
   const calls = [];
   const endpoint = await ensureNativeInteractiveSessionSurface({
@@ -15,7 +28,7 @@ test('provider-native bootstrap resolves the default source worker', async () =>
         endpoint: '/tmp/native-agent-session.sock',
         async invoke(request) {
           assert.deepEqual(request, { operation: 'capabilities' });
-          return { schema: 'kungfu.agent-session.capabilities/v1' };
+          return nativeCapabilities;
         },
       };
     },
@@ -42,7 +55,7 @@ test('provider-native bootstrap does not resolve or forward node-pty', async () 
         endpoint: '/tmp/native-agent-session.sock',
         async invoke(request) {
           assert.deepEqual(request, { operation: 'capabilities' });
-          return { schema: 'kungfu.agent-session.capabilities/v1' };
+          return nativeCapabilities;
         },
       };
     },
@@ -53,5 +66,26 @@ test('provider-native bootstrap does not resolve or forward node-pty', async () 
   assert.equal(
     Object.hasOwn(calls[0].env, 'KUNGFU_AGENT_SESSION_NODE_PTY_MODULE'),
     false,
+  );
+});
+
+test('provider-native bootstrap rejects an incompatible live operation vocabulary', async () => {
+  await assert.rejects(
+    ensureNativeInteractiveSessionSurface({
+      runtimeDir: '/tmp/kungfu-native-stale-worker',
+      env: {},
+      createHost() {
+        return {
+          endpoint: '/tmp/native-agent-session.sock',
+          async invoke() {
+            return {
+              schema: 'kungfu.agent-session.surface-capabilities/v1',
+              actions: ['capabilities', 'show'],
+            };
+          },
+        };
+      },
+    }),
+    /Agent Session protocol mismatch: missing operations:.*plan-native-start.*Project data does not need to be deleted/u,
   );
 });

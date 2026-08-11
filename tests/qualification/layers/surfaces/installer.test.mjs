@@ -89,6 +89,40 @@ test('removes only empty directory shells left by NSIS', async () => {
   assert.equal(fs.existsSync(root), false);
 });
 
+test('tolerates NSIS removing a child during empty-shell traversal', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'kungfu-uninstall-race-'));
+  const vanishing = path.join(
+    root,
+    'resources',
+    'app',
+    'node_modules',
+    'node-pty',
+  );
+  const retained = path.join(root, 'retained.exe');
+  fs.mkdirSync(vanishing, { recursive: true });
+  fs.writeFileSync(retained, 'fixture');
+  let raced = false;
+  const filesystem = {
+    existsSync: fs.existsSync,
+    lstatSync(target) {
+      if (!raced && target === vanishing) {
+        raced = true;
+        fs.rmSync(vanishing, { recursive: true, force: true });
+      }
+      return fs.lstatSync(target);
+    },
+    readdirSync: fs.readdirSync,
+    rmdirSync: fs.rmdirSync,
+  };
+  try {
+    assert.equal(removeEmptyDirectoryShells(root, filesystem), false);
+    assert.equal(raced, true);
+    assert.equal(fs.existsSync(retained), true);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
 test('does not remove a file or link while cleaning empty directory shells', () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'kungfu-uninstall-file-'));
   const resource = path.join(root, 'resources', 'app');

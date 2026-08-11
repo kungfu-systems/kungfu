@@ -2155,6 +2155,7 @@ def claim_assignment_execution(
     lease_id: str,
     lease_expires_at: str,
     authorized_by: str,
+    attempt_id: str = "",
     grant_scope: str = "assignment-execution",
     actor_type: str = "agent",
     storage_source_id: str = "atlas",
@@ -2188,8 +2189,10 @@ def claim_assignment_execution(
     now = datetime.now(expiry.tzinfo)
     if expiry <= now:
         raise ValueError("execution lease must expire in the future")
+    claim_id = f"execution-{_sha256_root({**values, 'assignment': assignment_id, 'expires': lease_expires_at})[7:31]}"
     record = {
-        "claim_id": f"execution-{_sha256_root({**values, 'assignment': assignment_id, 'expires': lease_expires_at})[7:31]}",
+        "claim_id": claim_id,
+        "attempt_id": _stable_id(attempt_id or claim_id, "attempt_id"),
         "claim_type": ASSIGNMENT_EXECUTION_CLAIM,
         "assignment_id": _stable_id(assignment_id, "assignment_id"),
         **values,

@@ -77,6 +77,7 @@
     {
       "owner": "core/python-assignment-start-review",
       "paths": [
+        "framework/core/src/python/kungfu/assignment_lifecycle/__init__.py",
         "framework/core/src/python/kungfu/assignment_lifecycle/ports.py",
         "framework/core/src/python/kungfu/assignment_start.py",
         "framework/core/src/python/kungfu/assignment_review_lifecycle.py"
@@ -99,6 +100,12 @@
       "owner": "core/python-project-cut-exit",
       "paths": [
         "framework/core/src/python/kungfu/project_cut_exit.py"
+      ]
+    },
+    {
+      "owner": "core/python-project-tour",
+      "paths": [
+        "framework/core/src/python/kungfu/project_tour/orchestration.py"
       ]
     },
     {
@@ -291,6 +298,25 @@
       "owner": "release/publication-authority-consumer",
       "paths": [
         "scripts/assemble-kungfu-publication-gate.mjs"
+      ]
+    },
+    {
+      "owner": "core/python-kfx-authoring",
+      "paths": [
+        "framework/core/src/python/kungfu/cli/commands/kfx_authoring.py",
+        "framework/core/src/python/kungfu/kfx_authoring_assets/__init__.py",
+        "framework/core/src/python/kungfu/kfx_authoring/__init__.py",
+        "framework/core/src/python/kungfu/kfx_authoring_assets/sdk/kfx-host.d.ts",
+        "framework/core/src/python/kungfu/kfx_authoring_assets/sdk/sandbox-launcher.d.ts",
+        "framework/core/src/python/kungfu/kfx_authoring_assets/sdk/service-authz.d.ts",
+        "framework/core/src/python/kungfu/kfx_authoring_assets/sdk/service-webhook-host.mjs",
+        "framework/core/src/python/kungfu/kfx_authoring_assets/sdk/types.d.ts"
+      ]
+    },
+    {
+      "owner": "shifu/kfx-authoring-generator",
+      "paths": [
+        "scripts/generate-kfx-authoring-kit.mjs"
       ]
     }
   ],

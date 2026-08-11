@@ -21,7 +21,7 @@
       "source": {
         "kind": "file",
         "path": "framework/core/src/python/kungfu/agent/index.json",
-        "sha256": "c1101dea12f478b95a3ff588143fedef59cab20b1d961d298f62a2a4dd61df68"
+        "sha256": "aa2cd458830564caddda26aab343b5b708552cff6807b3d87b9af774ad55f90d"
       },
       "evidence": [
         {
@@ -38,7 +38,7 @@
           "pointer": {
             "kind": "file",
             "path": "framework/core/src/python/kungfu/agent/cli_surface.catalog.json",
-            "sha256": "cf4e0fe7a6a383d9926f2afd7821df05b8838b329e0a280d4cd62d0c6d66176e"
+            "sha256": "75abcea646905ddad72cd11b8b7e5b74632417d4e5d171275b04b8f641de5444"
           },
           "description": "Complete deterministic CLI surface graph shared by offline Agent capabilities and catalog parity checks."
         },
@@ -83,7 +83,7 @@
           "pointer": {
             "kind": "file",
             "path": "scripts/verify-agent-pack.mjs",
-            "sha256": "c137b536cfc06c6501d12209cbe1df22e7769d398f090a2c36d4745ef7718f7c"
+            "sha256": "88f48e71cef06894aa1d4280810eade11b3a6fc002274255dad51adfcb07c8d9"
           },
           "description": "Read-only verifier for installed agent pack completeness and command/doc consistency."
         },
@@ -267,7 +267,7 @@
           "pointer": {
             "kind": "file",
             "path": "framework/core/src/python/kungfu/cli/commands/agent.py",
-            "sha256": "b32b44091a771a0d9e356f5d8dc4df858b08db846c17aea059da59585b3831a1"
+            "sha256": "913f1fadf69e179e785d7a4570b7b195c7ff5f668a93c4791332c7f18c702033"
           },
           "description": "Agent command surface including mode selection and bootstrap status."
         }
@@ -320,7 +320,7 @@
           "pointer": {
             "kind": "file",
             "path": "scripts/check-agent-work-state-contract.test.mjs",
-            "sha256": "20b5c03a32073605d9f29e4730b56ca63807045414e37ca012ddb2e88633928f"
+            "sha256": "1e91331147a84659540a425e5ef1fd8c7d44543208edf85e072b7511c386b366"
           },
           "description": "Source, package, KFD-2, KFD-3, and continuity evidence-boundary checks."
         },

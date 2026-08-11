@@ -1,0 +1,88 @@
+{
+  "schema": "kungfu.kfx.service-host-conformance/v1",
+  "declaration": {
+    "schema": "kungfu.kfx.service-host/v1",
+    "contractVersion": 1,
+    "lifecycle": {
+      "restartPolicy": "on-failure",
+      "readinessTimeoutMs": 5000,
+      "drainTimeoutMs": 5000,
+      "shutdownTimeoutMs": 5000
+    },
+    "webhook": {
+      "listener": {
+        "mode": "loopback",
+        "bindAddress": "127.0.0.1",
+        "port": 9911,
+        "path": "/events",
+        "methods": [
+          "POST"
+        ]
+      },
+      "credentials": [
+        {
+          "handle": "credential:webhook/signing",
+          "purpose": "webhook-signature-verification",
+          "algorithms": [
+            "hmac-sha256"
+          ]
+        }
+      ],
+      "intake": {
+        "maxPayloadBytes": 16,
+        "maxQueueDepth": 2,
+        "maxInflight": 1,
+        "maxRequestsPerWindow": 2,
+        "rateWindowMs": 60000,
+        "handlerTimeoutMs": 50,
+        "replayWindowMs": 300000
+      }
+    }
+  },
+  "refusals": [
+    {
+      "name": "unsigned",
+      "request": {
+        "method": "POST",
+        "path": "/events",
+        "body": "{}",
+        "signature": null,
+        "replayKey": "unsigned-1"
+      },
+      "expectedCode": "KF_KFX_WEBHOOK_UNSIGNED"
+    },
+    {
+      "name": "unsupported-method",
+      "request": {
+        "method": "GET",
+        "path": "/events",
+        "body": "{}",
+        "signature": "valid",
+        "replayKey": "method-1"
+      },
+      "expectedCode": "KF_KFX_WEBHOOK_METHOD_UNSUPPORTED"
+    },
+    {
+      "name": "unsupported-path",
+      "request": {
+        "method": "POST",
+        "path": "/other",
+        "body": "{}",
+        "signature": "valid",
+        "replayKey": "path-1"
+      },
+      "expectedCode": "KF_KFX_WEBHOOK_PATH_UNSUPPORTED"
+    },
+    {
+      "name": "oversized",
+      "request": {
+        "method": "POST",
+        "path": "/events",
+        "body": "12345678901234567",
+        "signature": "valid",
+        "replayKey": "oversized-1"
+      },
+      "expectedCode": "KF_KFX_WEBHOOK_OVERSIZED"
+    }
+  ]
+}

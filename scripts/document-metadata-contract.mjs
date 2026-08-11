@@ -354,17 +354,103 @@ export function validateReachableCommit(root, commit, pullRequestBaseCommit) {
   return `is not reachable from ${reachability.label}`;
 }
 
-/** @param {string} value @param {string} field @param {string} rel @param {number} line @param {string} root @param {Finding[]} findings @param {string | undefined} pullRequestBaseCommit */
-function checkCommit(
-  value,
-  field,
-  rel,
-  line,
-  root,
-  findings,
-  pullRequestBaseCommit,
-) {
-  const problem = validateReachableCommit(root, value, pullRequestBaseCommit);
+/**
+ * Resolve every evidence commit in one Git cut. The previous per-reference
+ * validation spawned up to three Git processes for every SHA, which made a
+ * complete ADR authority pass disproportionately expensive.
+ *
+ * @param {string} root
+ * @param {Set<string>} commits
+ * @param {string | undefined} pullRequestBaseCommit
+ */
+function batchReachableCommitProblems(root, commits, pullRequestBaseCommit) {
+  const candidates = [...commits].filter((commit) =>
+    /^[0-9a-f]{40}$/.test(commit),
+  );
+  /** @type {Map<string, string | null>} */
+  const problems = new Map();
+  if (candidates.length === 0) return problems;
+
+  const env = isolatedGitEnvironment();
+  const reachability = reachabilityRoots(root, pullRequestBaseCommit);
+  const objects = childProcess.spawnSync(
+    'git',
+    ['cat-file', '--batch-check=%(objectname) %(objecttype)'],
+    {
+      cwd: root,
+      env,
+      encoding: 'utf8',
+      input: `${candidates.map((commit) => `${commit}^{commit}`).join('\n')}\n`,
+    },
+  );
+  const objectLines = String(objects.stdout || '')
+    .trimEnd()
+    .split('\n');
+
+  /** @type {Map<string, string>} */
+  const commitObjects = new Map();
+  for (const [index, commit] of candidates.entries()) {
+    const match = /^([0-9a-f]{40}) commit$/.exec(objectLines[index] || '');
+    if (objects.status !== 0 || !match) {
+      problems.set(commit, 'does not identify a commit in this checkout');
+      continue;
+    }
+    commitObjects.set(commit, match[1]);
+  }
+
+  const history = childProcess.spawnSync(
+    'git',
+    ['rev-list', ...reachability.roots],
+    { cwd: root, env, encoding: 'utf8', maxBuffer: 16 * 1024 * 1024 },
+  );
+  const reachable = new Set(
+    history.status === 0
+      ? String(history.stdout || '')
+          .split('\n')
+          .filter(Boolean)
+      : [],
+  );
+  for (const [commit, object] of commitObjects) {
+    problems.set(
+      commit,
+      reachable.has(object)
+        ? null
+        : `is not reachable from ${reachability.label}`,
+    );
+  }
+  return problems;
+}
+
+/** @param {string} root @param {string[]} files @param {MetadataContract} contract */
+function evidenceCommitCandidates(root, files, contract) {
+  const commits = new Set();
+  const evidence = contract.adrEvidence;
+  if (!evidence) return commits;
+  const fields = [
+    ...evidence.commitFields,
+    evidence.closureCommitField,
+    evidence.qualificationRefField,
+  ];
+  for (const rel of files) {
+    const text = fs.readFileSync(path.join(root, rel), 'utf8');
+    for (const line of text.split(/\r?\n/)) {
+      if (!fields.some((field) => line.startsWith(`${field}:`))) continue;
+      for (const match of line.matchAll(
+        /(?<![0-9a-f])[0-9a-f]{40}(?![0-9a-f])/g,
+      ))
+        commits.add(match[0]);
+    }
+  }
+  return commits;
+}
+
+/** @param {string} value @param {string} field @param {string} rel @param {number} line @param {Finding[]} findings @param {Map<string, string | null>} commitProblems */
+function checkCommit(value, field, rel, line, findings, commitProblems) {
+  const problem = /^[0-9a-f]{40}$/.test(value)
+    ? commitProblems.has(value)
+      ? commitProblems.get(value)
+      : 'does not identify a commit in this checkout'
+    : 'must be a full 40-character lowercase Git SHA';
   if (problem) {
     findings.push({
       code: 'adr-evidence-commit',
@@ -375,14 +461,14 @@ function checkCommit(
   }
 }
 
-/** @param {Map<string, {value: unknown, line: number}>} fields @param {string} rel @param {string} root @param {MetadataContract} contract @param {Finding[]} findings @param {string | undefined} pullRequestBaseCommit */
+/** @param {Map<string, {value: unknown, line: number}>} fields @param {string} rel @param {string} root @param {MetadataContract} contract @param {Finding[]} findings @param {Map<string, string | null>} commitProblems */
 function validateAdrEvidence(
   fields,
   rel,
   root,
   contract,
   findings,
-  pullRequestBaseCommit,
+  commitProblems,
 ) {
   const evidence = contract.adrEvidence;
   if (!evidence) return;
@@ -468,9 +554,8 @@ function validateAdrEvidence(
         evidence.commitFields[0],
         rel,
         commits.line,
-        root,
         findings,
-        pullRequestBaseCommit,
+        commitProblems,
       );
   }
   if (closureCommit) {
@@ -479,9 +564,8 @@ function validateAdrEvidence(
       evidence.closureCommitField,
       rel,
       closureCommit.line,
-      root,
       findings,
-      pullRequestBaseCommit,
+      commitProblems,
     );
   }
   const prPattern = new RegExp(evidence.pullRequestPattern);
@@ -514,9 +598,8 @@ function validateAdrEvidence(
           evidence.qualificationRefField,
           rel,
           qualifications.line,
-          root,
           findings,
-          pullRequestBaseCommit,
+          commitProblems,
         );
       } else if (
         path.isAbsolute(value) ||
@@ -555,6 +638,11 @@ export function validateDocumentMetadata(options) {
   const fileSet = new Set(options.files);
   const adrIds = new Set();
   const adrRecords = new Map();
+  const commitProblems = batchReachableCommitProblems(
+    root,
+    evidenceCommitCandidates(root, options.files, contract),
+    pullRequestBaseCommit,
+  );
 
   for (const rel of options.files) {
     const text = fs.readFileSync(path.join(root, rel), 'utf8');
@@ -838,7 +926,7 @@ export function validateDocumentMetadata(options) {
         root,
         contract,
         findings,
-        pullRequestBaseCommit,
+        commitProblems,
       );
     }
   }

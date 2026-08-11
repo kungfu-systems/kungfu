@@ -523,6 +523,7 @@ function checkLayerQualification() {
       path.join('framework', 'gui', 'scripts', 'bundle-core-audit.test.cjs'),
       path.join('product', 'scripts', 'compatibility.test.mjs'),
       path.join('product', 'scripts', 'dist.test.mjs'),
+      path.join('product', 'scripts', 'dist-cli-executable-layout.test.mjs'),
     ],
   );
   run(

@@ -3,7 +3,7 @@
   "id": "kungfu-fact-cut-kernel",
   "version": 1,
   "weldedSurface": "fact-cut-kernel-contract",
-  "description": "Backend-neutral identity, immutable version, typed relation, Fact Cut, named ref, compare-and-swap, and receipt semantics for the Kungfu fact kernel.",
+  "description": "Backend-neutral identity, immutable version, typed and temporal relation, Fact Cut, named ref, compare-and-swap, bounded path proof, and receipt semantics for the Kungfu fact kernel.",
   "status": {
     "specification": "accepted",
     "authoritativeWriter": "implemented",
@@ -28,6 +28,7 @@
       "rootCanonical",
       "cut",
       "relations",
+      "temporalRelations",
       "refs",
       "durableAdmission",
       "ownership",
@@ -107,6 +108,9 @@
         "type": "object"
       },
       "relations": {
+        "type": "object"
+      },
+      "temporalRelations": {
         "type": "object"
       },
       "refs": {
@@ -540,6 +544,63 @@
     "revoke": "Revocation appends a relation-revoke record; it does not delete or rewrite the add record.",
     "cutRule": "A relation is active only when its add root is included and no accepted revoke applies at the Cut.",
     "forbiddenInference": "A relation never copies identity, state, admission, trust, authority, completion, or another relation to either endpoint."
+  },
+  "temporalRelations": {
+    "status": "implemented",
+    "adr": "docs/adr/KF-ADR-019fe996-1912-7144-8fa5-3fceaa416365.md",
+    "implementation": "framework/core/src/python/kungfu/storage/fact_root_canonical.py",
+    "fixture": "tests/fixtures/temporal-relation-contract/cases.json",
+    "gate": "framework/core/tests/python/test_temporal_relation.py",
+    "rootProtocol": "kungfu.fact-root.canonical/v2",
+    "schemas": [
+      "kungfu.fact.temporal-predicate/v1",
+      "kungfu.fact.temporal-relation/v1",
+      "kungfu.fact.temporal-supersession/v1",
+      "kungfu.fact.temporal-revocation/v1",
+      "kungfu.fact.temporal-authority-proof/v1",
+      "kungfu.fact.provenance-object/v1",
+      "kungfu.fact.temporal-path-query/v1",
+      "kungfu.fact.temporal-path-receipt/v1"
+    ],
+    "semantics": {
+      "identity": "Every declaration, relation, supersession, revocation, authority proof, provenance object, query, and receipt has an immutable KFR2 content root.",
+      "direction": "A path follows sourceRoot to targetRoot only. Reverse compatibility requires another admitted relation.",
+      "operationScope": "A predicate and every authority proof name the exact operations for which they apply.",
+      "transitivity": "No path is discovered or inferred. More than one edge is accepted only when the caller supplies the complete ordered path and the predicate declares explicit-bounded composition.",
+      "cut": "Validity, supersession, revocation, declarations, active relations, and authority are evaluated at the exact requested immutable Fact Cut.",
+      "history": "Supersession and revocation append new rooted facts. They never mutate their subject relation or change the result of an earlier Cut query.",
+      "authority": "Each non-governing relation authority requires exactly one operation-scoped authority proof valid at the Cut; zero is missing and more than one is ambiguous.",
+      "receipt": "Every accepted or rejected explicit path produces a rooted receipt binding the query, Cut, ordered relation roots, authority proof roots, omissions, and stable outcome."
+    },
+    "queryBoundary": {
+      "mode": "explicit-path-verification-only",
+      "maximumDepth": 32,
+      "graphSearch": "forbidden",
+      "mutableHead": "forbidden",
+      "omissionPolicy": "explicit-rooted-only",
+      "projectionAuthority": "none"
+    },
+    "stableFailures": [
+      "orphan-root",
+      "unknown-predicate",
+      "ambiguous-authority",
+      "authority-missing",
+      "forbidden-cycle",
+      "unscoped-compatibility",
+      "implicit-transitive-acceptance",
+      "direction-mismatch",
+      "path-bound-exceeded",
+      "relation-not-yet-valid",
+      "relation-inactive-at-cut",
+      "relation-superseded",
+      "relation-revoked"
+    ],
+    "nonClaims": [
+      "A path receipt does not assert universal truth or external side effects.",
+      "A relation does not transfer identity, trust, authority, admission, or completion.",
+      "The bounded verifier is not a mutable central graph, search engine, or inference engine.",
+      "A provenance object binds exact roots but does not specialize them into release vocabulary."
+    ]
   },
   "refs": {
     "namePattern": "^[a-z][a-z0-9._/-]{0,127}$",

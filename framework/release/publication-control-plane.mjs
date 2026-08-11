@@ -53,6 +53,49 @@ const workflows = (root = ROOT) =>
     .filter((n) => /\.ya?ml$/.test(n))
     .map((n) => `.github/workflows/${n}`)
     .sort();
+const workflowJob = (source, id) => {
+  const lines = source.split(/\r?\n/u);
+  const start = lines.findIndex((line) => line === `  ${id}:`);
+  if (start < 0) return '';
+  let end = lines.length;
+  for (let index = start + 1; index < lines.length; index += 1) {
+    if (/^ {2}[A-Za-z0-9_-]+:\s*$/u.test(lines[index])) {
+      end = index;
+      break;
+    }
+  }
+  return lines.slice(start, end).join('\n');
+};
+export function validatePromotionWorkflowAuthority(
+  promotionWorkflow,
+  recoveryRuntimeSha,
+) {
+  if (!/^[0-9a-f]{40}$/u.test(recoveryRuntimeSha))
+    throw new Error('Alpha recovery publication runtime is invalid');
+  const promote = workflowJob(promotionWorkflow, 'promote');
+  const recover = workflowJob(promotionWorkflow, 'recover');
+  if (
+    !promote.includes(
+      'uses: kungfu-systems/buildchain/.github/workflows/release-candidate-promote.yml@v3-alpha',
+    ) ||
+    !promote.includes("&& 'v3-alpha' || 'v3'") ||
+    /kungfu-systems\/buildchain\/\.github\/workflows\/release-candidate-promote\.yml@[0-9a-f]{40}/u.test(
+      promote,
+    ) ||
+    !recover.includes(
+      `uses: kungfu-systems/buildchain/.github/workflows/release-candidate-promote.yml@${recoveryRuntimeSha}`,
+    ) ||
+    !/^\s+buildchain-channel: auto\s*$/mu.test(recover) ||
+    !/^\s+buildchain-ref: \$\{\{ inputs\.resume-buildchain-runtime-sha \}\}\s*$/mu.test(
+      recover,
+    ) ||
+    promotionWorkflow.includes('kungfu-trader/workflows@v1')
+  )
+    throw new Error(
+      '.github/workflows/release-new-version.yml authority drift',
+    );
+  return true;
+}
 export function discoverBuildchainReleaseWorkflows(r, paths) {
   const p = new RegExp(r.repositories.buildchain.workflowDiscoveryPattern);
   return paths
@@ -227,17 +270,37 @@ export function validateRegistry(r, { root = ROOT } = {}) {
     if (!b.some((x) => ss.has(x)) || !b.some((x) => rs.has(x)))
       throw new Error(`Buildchain capability ${cap} unbound`);
   }
-  for (const f of [
-    '.github/workflows/build.yml',
-    '.github/workflows/release-new-version.yml',
-  ]) {
-    const text = fs.readFileSync(path.join(root, f), 'utf8');
-    if (
-      !text.includes(bc.sourceRevision) ||
-      text.includes('kungfu-trader/workflows@v1')
-    )
-      throw new Error(`${f} authority drift`);
-  }
+  const buildWorkflow = fs.readFileSync(
+    path.join(root, '.github/workflows/build.yml'),
+    'utf8',
+  );
+  if (
+    !buildWorkflow.includes(
+      'uses: kungfu-systems/buildchain/.github/workflows/.build.yml@v3-alpha',
+    ) ||
+    !/^\s+buildchain-ref: \$\{\{ inputs\.buildchain-ref \|\| 'v3-alpha' \}\}\s*$/mu.test(
+      buildWorkflow,
+    ) ||
+    !/^\s+buildchain-contract-lock-path: \.buildchain\/alpha-contract-lock\.json\s*$/mu.test(
+      buildWorkflow,
+    ) ||
+    /kungfu-systems\/buildchain\/\.github\/workflows\/\.build\.yml@[0-9a-f]{40}/u.test(
+      buildWorkflow,
+    ) ||
+    buildWorkflow.includes('kungfu-trader/workflows@v1')
+  )
+    throw new Error('.github/workflows/build.yml authority drift');
+  const promotionWorkflow = fs.readFileSync(
+    path.join(root, '.github/workflows/release-new-version.yml'),
+    'utf8',
+  );
+  const releaseAdmission = read(
+    path.join(root, 'docs/qualification/gates/release-admission-policy.json'),
+  );
+  validatePromotionWorkflowAuthority(
+    promotionWorkflow,
+    releaseAdmission.buildchain.runtimes.alpha.publicationRuntimeSha,
+  );
   if (r.registryRoot !== digest(omit(r, 'registryRoot')))
     throw new Error('registry root mismatch');
   return r;

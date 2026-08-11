@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { Writable } from 'node:stream';
 import test from 'node:test';
 import { render } from 'ink';
@@ -16,6 +17,8 @@ import {
   PROJECT_TOUR_STORY_STEPS,
   PROJECT_TOUR_STREAM_TRANSITIONS,
   ProjectTourHeader,
+  type ProjectTourLiveEvent,
+  ProjectTourLiveStream,
   parseProjectTourEpisode,
   parseProjectTourLaunchOptions,
   parseProjectTourSpeed,
@@ -33,6 +36,51 @@ import {
   projectTourSummaryTitles,
   updateProjectTourStream,
 } from './starter-project-view/index.js';
+
+test('Project tour awaits the shared Agent Session before rendering', () => {
+  const source = readFileSync(new URL('./main.tsx', import.meta.url), 'utf8');
+  const main = source.slice(source.indexOf('async function main()'));
+  assert.match(
+    main,
+    /await openTuiAgentWorkLab\(Boolean\(projectTourRoot\)\)/u,
+  );
+  assert.ok(
+    main.indexOf('await openTuiAgentWorkLab') <
+      main.indexOf('const lifecycle = new TerminalLifecycle'),
+  );
+  const lab = source.slice(
+    source.indexOf('async function openTuiAgentWorkLab'),
+  );
+  assert.match(
+    lab,
+    /const endpoint = await ensureTuiAgentSession\(paths\.runtimeDir\)/u,
+  );
+  assert.match(lab, /cli\.env\.KUNGFU_AGENT_SESSION_ENDPOINT = endpoint/u);
+  assert.match(lab, /KUNGFU_MOCK_AGENT_EXECUTABLE \|\|= paths\.packagedBin/u);
+  assert.doesNotMatch(
+    source,
+    /KUNGFU_MOCK_AGENT_EXECUTABLE\s*=\s*process\.execPath/u,
+  );
+});
+
+test('Project Tour delegates each episode to one controller without intermediate Work queries', () => {
+  const source = readFileSync(
+    new URL('./starter-project-view/index.tsx', import.meta.url),
+    'utf8',
+  );
+  const view = source.slice(source.indexOf('export function ProjectTourView'));
+
+  assert.match(view, /lab\.runProjectTourEpisode\(/u);
+  assert.match(view, /report\.controller\.processCount !== 1/u);
+  assert.match(view, /report\.controller\.inventoryQueryCount !== 1/u);
+  assert.doesNotMatch(view, /projects\.works\(/u);
+  assert.doesNotMatch(view, /lab\.planStarterWork\(/u);
+  assert.doesNotMatch(view, /lab\.startStarterWork\(/u);
+  assert.doesNotMatch(view, /lab\.planStarterReview\(/u);
+  assert.doesNotMatch(view, /lab\.runStarterReview\(/u);
+  assert.doesNotMatch(view, /lab\.planStarterClose\(/u);
+  assert.doesNotMatch(view, /lab\.closeStarterWork\(/u);
+});
 
 test('Project tour launch options preserve defaults and validate explicit values', () => {
   assert.deepEqual(parseProjectTourLaunchOptions(['node', 'tui']), {
@@ -258,7 +306,7 @@ test('Project tour event stream projects exact admitted Mock Agent language', ()
   );
 });
 
-test('Project tour audience projection keeps story events and hides protocol noise', () => {
+test('Project tour audience projection keeps story and authority events while hiding markers', () => {
   const setup = projectTourAudienceLine(
     {
       schema: 'kungfu.work-start.event/v1',
@@ -331,7 +379,7 @@ test('Project tour audience projection keeps story events and hides protocol noi
     4,
   );
 
-  assert.equal(setup, null);
+  assert.equal(setup?.text, 'Minting a bounded Agent execution lease.');
   assert.equal(marker, null);
   assert.equal(agent?.text, 'I recovered the objective without prior chat.');
   assert.equal(tool?.source, 'tool');
@@ -477,4 +525,117 @@ test('Project tour guide paints six complete opaque rows at 80 columns', () => {
     assert.match(lines.join('\n'), /LIVE EVENT STREAM PAUSED/u);
     assert.doesNotMatch(lines.join('\n'), /\p{Script=Han}/u);
   }
+});
+
+type LiveLine = { id: number; status: string; text: string };
+
+function liveStreamFixture() {
+  let sequence = 0;
+  let now = 0;
+  let timer: (() => void) | undefined;
+  const lines: LiveLine[] = [];
+  const waits: Array<() => void> = [];
+  const stream = new ProjectTourLiveStream<LiveLine>({
+    active: () => true,
+    nextId: () => ++sequence,
+    project: (event, id) => ({ id, status: event.status, text: event.text }),
+    operationLine: (id, status, text) => ({ id, status, text }),
+    append: (line) => lines.push(line),
+    replace: (line) => {
+      const index = lines.findIndex((candidate) => candidate.id === line.id);
+      if (index >= 0) lines[index] = line;
+    },
+    delay: () => new Promise<void>((resolve) => waits.push(resolve)),
+    activityDelayMs: 900,
+    protocolDelayMs: 600,
+    clock: {
+      now: () => now,
+      repeat: (callback) => {
+        timer = callback;
+        return callback;
+      },
+      cancel: (handle) => {
+        if (timer === handle) timer = undefined;
+      },
+    },
+  });
+  return {
+    lines,
+    stream,
+    waits,
+    advance(milliseconds: number) {
+      now += milliseconds;
+      timer?.();
+    },
+  };
+}
+
+function liveEvent(index: number, text: string): ProjectTourLiveEvent {
+  return {
+    schema: 'kungfu.work-start.event/v1',
+    index,
+    stage: 'run',
+    status: 'started',
+    text,
+    root: null,
+  };
+}
+
+test('Project Tour shows truthful elapsed progress while an operation is pending', async () => {
+  const { advance, lines, stream } = liveStreamFixture();
+  let finish!: (value: string) => void;
+  const operation = new Promise<string>((resolve) => {
+    finish = resolve;
+  });
+
+  const pending = stream.during(
+    'Checking the Mock Agent launch plan',
+    () => operation,
+  );
+  await Promise.resolve();
+  await Promise.resolve();
+  advance(2_100);
+  assert.equal(
+    lines[0]?.text,
+    'Checking the Mock Agent launch plan · 2s elapsed',
+  );
+
+  finish('qualified');
+  assert.equal(await pending, 'qualified');
+  assert.deepEqual(lines[0], {
+    id: 1,
+    status: 'completed',
+    text: 'Checking the Mock Agent launch plan · complete',
+  });
+});
+
+test('Project Tour streams source-ordered events once and retains failures', async () => {
+  const { lines, stream, waits } = liveStreamFixture();
+  const first = liveEvent(1, 'Starting the Mock Agent.');
+  stream.push(first);
+  stream.push(first);
+  stream.push(liveEvent(2, 'Minting the execution lease.'));
+  await Promise.resolve();
+  assert.deepEqual(
+    lines.map((line) => line.text),
+    ['Starting the Mock Agent.'],
+  );
+
+  waits.shift()?.();
+  await new Promise<void>((resolve) => setImmediate(resolve));
+  assert.deepEqual(
+    lines.map((line) => line.text),
+    ['Starting the Mock Agent.', 'Minting the execution lease.'],
+  );
+  waits.shift()?.();
+  await stream.flush();
+
+  await assert.rejects(
+    stream.during('Checking independent review', async () => {
+      throw new Error('native review failed closed');
+    }),
+    /native review failed closed/u,
+  );
+  assert.equal(lines.at(-1)?.status, 'failed');
+  assert.equal(lines.at(-1)?.text, 'Checking independent review · failed');
 });

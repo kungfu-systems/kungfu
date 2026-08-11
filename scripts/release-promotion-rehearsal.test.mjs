@@ -23,10 +23,41 @@ const CONTRACT = JSON.parse(
     'utf8',
   ),
 );
+const RELEASE_ADMISSION = JSON.parse(
+  fs.readFileSync(
+    path.join(ROOT, 'docs/qualification/gates/release-admission-policy.json'),
+    'utf8',
+  ),
+);
 
 test('the committed Buildchain promotion consumer contract is coherent', () => {
   const result = validatePromotionContract(ROOT);
   assert.equal(result.ok, true, JSON.stringify(result.findings, null, 2));
+});
+
+test('candidate finalization owns product qualification and release tails only verify its seal', () => {
+  const build = fs.readFileSync(
+    path.join(ROOT, CONTRACT.workflows.build),
+    'utf8',
+  );
+  const finalization = extractWorkflowJob(
+    build,
+    'finalize-upgrade-publication-admission',
+  );
+  assert.match(finalization, /upgrade-publication-admission\.mjs write/u);
+  assert.match(finalization, /product-upgrade-publication-capsule\.json/u);
+  for (const relativePath of [
+    'scripts/buildchain-custom-publish-evidence.mjs',
+    'scripts/alpha-publication-commit.mjs',
+  ]) {
+    const source = fs.readFileSync(path.join(ROOT, relativePath), 'utf8');
+    assert.match(source, /verifyUpgradePublicationAdmission/u, relativePath);
+    assert.doesNotMatch(
+      source,
+      /verifyUpgradePublicationPayloads/u,
+      relativePath,
+    );
+  }
 });
 
 test('the expensive build retains preflight when additional fast sentinels are required', () => {
@@ -132,6 +163,174 @@ test('promotion caller grants the write permissions required by Buildchain', () 
   }
 });
 
+test('Alpha promotion caller uses the production v3-alpha floating router', () => {
+  const workflow = fs.readFileSync(
+    path.join(ROOT, CONTRACT.workflows.promotion),
+    'utf8',
+  );
+  const promote = extractWorkflowJob(workflow, 'promote');
+  assert.ok(promote);
+  assert.match(
+    promote,
+    /uses: kungfu-systems\/buildchain\/\.github\/workflows\/release-candidate-promote\.yml@v3-alpha/u,
+  );
+  assert.doesNotMatch(promote, /release-candidate-promote\.yml@[0-9a-f]{40}/u);
+});
+
+test('publication and recovery clear activation commands while preserving publication surfaces', () => {
+  const workflow = fs.readFileSync(
+    path.join(ROOT, CONTRACT.workflows.promotion),
+    'utf8',
+  );
+  const jobs = [
+    ['promote', extractWorkflowJob(workflow, 'promote')],
+    ['recover', extractWorkflowJob(workflow, 'recover')],
+  ];
+  for (const [name, job] of jobs) {
+    assert.ok(job, name);
+    assert.match(job, /release-activation-command: ""/u, name);
+    assert.match(job, /release-passport-evidence-command: ""/u, name);
+    assert.match(
+      job,
+      name === 'recover'
+        ? /publish-command: node \.buildchain\/publication-controller\/scripts\/buildchain-custom-publish-evidence\.mjs/u
+        : /publish-command: node scripts\/buildchain-custom-publish-evidence\.mjs/u,
+      name,
+    );
+    assert.match(
+      job,
+      name === 'recover'
+        ? /release-passport-kfd-3-artifact-verify-command: node "\$GITHUB_WORKSPACE\/\.buildchain\/publication-controller\/scripts\/buildchain-kfd-evidence\.mjs" --write --json >\/dev\/null && node "\$GITHUB_WORKSPACE\/\.buildchain\/publication-controller\/scripts\/buildchain-kfd-evidence\.mjs" --artifact-witness --json/u
+        : /release-passport-kfd-3-artifact-verify-command: node scripts\/buildchain-kfd-evidence\.mjs --artifact-witness --json/u,
+      name,
+    );
+    assert.match(
+      job,
+      /publication-commit-evidence-path: \.buildchain\/publication-commit\/evidence\.json/u,
+      name,
+    );
+    assert.match(job, /release-passport: true/u, name);
+    assert.match(
+      job,
+      /publication-target: github-release:kungfu-systems\/kungfu/u,
+      name,
+    );
+    assert.match(
+      job,
+      /github-release-payload-patterns:[\s\S]*kungfu-episodes-cli-\*\.tar\.gz[\s\S]*kungfu-episodes-cli-\*\.zip[\s\S]*kungfu-episodes-cli-\*\.qualification\.json[\s\S]*Kungfu-Episodes-\*-macos-arm64\.dmg[\s\S]*Kungfu-Episodes-\*-macos-arm64\.zip[\s\S]*Kungfu Episodes-\*\.AppImage[\s\S]*Kungfu Episodes Setup \*\.exe/u,
+      name,
+    );
+  }
+  assert.match(
+    jobs[0][1],
+    /publication-commit-command: \$\{\{ startsWith\(inputs\.target-ref \|\| github\.event\.pull_request\.base\.ref, 'alpha\/'\) && 'node scripts\/alpha-publication-commit\.mjs' \|\| '' \}\}/u,
+  );
+  assert.match(
+    jobs[1][1],
+    /publication-commit-command: BUILDCHAIN_PUBLICATION_COMMIT_PRODUCT_ROOT=\$GITHUB_WORKSPACE BUILDCHAIN_PUBLICATION_COMMIT_CANDIDATE_SOURCE_SHA=\$\{\{ inputs\.resume-candidate-source-sha \}\} node \.buildchain\/publication-controller\/scripts\/alpha-publication-commit\.mjs/u,
+  );
+});
+
+test('promotion rehearsal rejects restored activation or passport evidence commands', () => {
+  const promotionPath = CONTRACT.workflows.promotion;
+  const original = fs.readFileSync(path.join(ROOT, promotionPath), 'utf8');
+  for (const jobName of ['promote', 'recover']) {
+    const job = extractWorkflowJob(original, jobName);
+    for (const [emptyBinding, restoredBinding] of [
+      [
+        '      release-activation-command: ""',
+        '      release-activation-command: node scripts/activate-ungfu-release.mjs',
+      ],
+      [
+        '      release-passport-evidence-command: ""',
+        '      release-passport-evidence-command: node scripts/prepare-ungfu-release-evidence.mjs',
+      ],
+    ]) {
+      const driftedJob = job.replace(emptyBinding, restoredBinding);
+      assert.notEqual(driftedJob, job, `${jobName}: ${emptyBinding}`);
+      const result = validateWorkflowSources(ROOT, CONTRACT, {
+        promotion: original.replace(job, driftedJob),
+      });
+      assert.equal(result.ok, false, `${jobName}: ${emptyBinding}`);
+      assert.ok(
+        result.findings.some((entry) => entry.message.includes('must leave')),
+        `${jobName}: ${emptyBinding}`,
+      );
+    }
+  }
+});
+
+test('Alpha recovery reuses a verified sealed candidate through the reviewed publication runtime', () => {
+  const workflow = fs.readFileSync(
+    path.join(ROOT, CONTRACT.workflows.promotion),
+    'utf8',
+  );
+  const recovery = extractWorkflowJob(workflow, 'recover');
+  assert.ok(recovery);
+  assert.match(
+    recovery,
+    new RegExp(
+      `uses: kungfu-systems/buildchain/\\.github/workflows/release-candidate-promote\\.yml@${RELEASE_ADMISSION.buildchain.runtimes.alpha.publicationRuntimeSha}`,
+      'u',
+    ),
+  );
+  for (const binding of [
+    'buildchain-channel: auto',
+    'buildchain-ref: ${{ inputs.resume-buildchain-runtime-sha }}',
+    'target-ref: ${{ inputs.target-ref }}',
+    'target-sha: ${{ inputs.target-sha }}',
+    'resume-candidate-repository: ${{ inputs.resume-candidate-repository }}',
+    'resume-candidate-run-id: ${{ inputs.resume-candidate-run-id }}',
+    'resume-expected-workflow-file: ${{ inputs.resume-expected-workflow-file }}',
+    'resume-expected-workflow-name: ${{ inputs.resume-expected-workflow-name }}',
+    'resume-expected-source-tree: ${{ inputs.resume-expected-source-tree }}',
+    'resume-expected-candidate-runtime-sha: ${{ inputs.resume-expected-candidate-runtime-sha }}',
+    'resume-buildchain-runtime-sha: ${{ inputs.resume-buildchain-runtime-sha }}',
+    'resume-transaction-id: ${{ inputs.resume-transaction-id }}',
+    'publication-gate-controller-sha: ${{ inputs.resume-publication-gate-controller-sha }}',
+    'publish-command: node .buildchain/publication-controller/scripts/buildchain-custom-publish-evidence.mjs',
+    'publish-transaction-override: ${{ inputs.publish-transaction-override }}',
+    'dry-run: false',
+  ]) {
+    assert.ok(recovery.includes(binding), binding);
+  }
+  assert.match(recovery, /release-candidate-promote\.yml@[0-9a-f]{40}/u);
+  assert.doesNotMatch(recovery, /^\s+strategy:\s*$/mu);
+  assert.doesNotMatch(workflow, /test "\$CANDIDATE_RUN_ID" = "[0-9]+"/u);
+  assert.doesNotMatch(workflow, /test "\$PREFLIGHT_RUN_ID" = "[0-9]+"/u);
+  assert.match(workflow, /\[\[ "\$CANDIDATE_RUN_ID" =~ \^\[0-9\]\+\$ \]\]/u);
+  assert.match(workflow, /\[\[ "\$PREFLIGHT_RUN_ID" =~ \^\[0-9\]\+\$ \]\]/u);
+  assert.match(
+    workflow,
+    /candidate_run_head_sha="\$\([\s\S]*actions\/runs\/\$\{CANDIDATE_RUN_ID\}[\s\S]*\.conclusion == "success"[\s\S]*\.event == "pull_request"[\s\S]*\.path == "\.github\/workflows\/build\.yml"[\s\S]*\)"[\s\S]*git\/commits\/\$\{CANDIDATE_SOURCE_SHA\}[\s\S]*\.tree\.sha == [\s\S]*any\(\.parents\[\]; \.sha ==/u,
+  );
+  assert.doesNotMatch(workflow, /\.head_sha == "'"\$CANDIDATE_SOURCE_SHA"'"/u);
+  assert.match(
+    workflow,
+    /resume-publication-gate-controller-sha must be an exact lowercase 40-character commit SHA/u,
+  );
+  assert.match(
+    workflow,
+    /actions\/runs\/\$\{PREFLIGHT_RUN_ID\}[\s\S]*\.path == "\.github\/workflows\/alpha-promotion-preflight\.yml"[\s\S]*artifact-name=alpha-promotion-preflight-\$preflight_source_sha/u,
+  );
+  assert.match(
+    workflow,
+    /working-directory: \.buildchain\/alpha-preflight-source[\s\S]*\.\/shifu alpha:promotion:preflight verify[\s\S]*--source-commit "\$PREFLIGHT_SOURCE_SHA"[\s\S]*test "\$\(git rev-parse 'HEAD\^\{tree\}'\)" = "\$EXPECTED_TREE"/u,
+  );
+  assert.match(
+    workflow,
+    /test "\$\(git rev-parse 'HEAD\^\{tree\}'\)" = "\$EXPECTED_TREE"/u,
+  );
+  assert.match(
+    workflow,
+    /\[\[ ! "\$RECOVERY_RUNTIME_SHA" =~ \^\[0-9a-f\]\{40\}\$ \]\]/u,
+  );
+  assert.doesNotMatch(
+    workflow,
+    /test "\$RECOVERY_RUNTIME_SHA" = "[0-9a-f]{40}"/u,
+  );
+});
+
 test('promotion rejects an event-scoped Buildchain runtime override', () => {
   const promotionPath = CONTRACT.workflows.promotion;
   const original = fs.readFileSync(path.join(ROOT, promotionPath), 'utf8');
@@ -139,8 +338,8 @@ test('promotion rejects an event-scoped Buildchain runtime override', () => {
   const drifted = original.replace(
     promote,
     promote.replace(
-      `      buildchain-ref: ${CONTRACT.buildchain.workflow_shell_sha}`,
-      "      buildchain-ref: ${{ inputs.buildchain-ref || 'v3' }}",
+      "      buildchain-ref: ${{ startsWith(inputs.target-ref || github.event.pull_request.base.ref, 'alpha/') && 'v3-alpha' || 'v3' }}",
+      "      buildchain-ref: ${{ inputs.buildchain-ref || 'v3-alpha' }}",
     ),
   );
   assert.notEqual(drifted, original);
@@ -150,7 +349,7 @@ test('promotion rejects an event-scoped Buildchain runtime override', () => {
   assert.equal(result.ok, false);
   assert.ok(
     result.findings.some((entry) =>
-      entry.message.includes('event-scoped override'),
+      entry.message.includes('v3-alpha or v3 floating contracts'),
     ),
   );
 });
@@ -162,7 +361,7 @@ test('promotion rejects a static Buildchain ref that differs from its workflow s
   const drifted = original.replace(
     promote,
     promote.replace(
-      `      buildchain-ref: ${CONTRACT.buildchain.workflow_shell_sha}`,
+      "      buildchain-ref: ${{ startsWith(inputs.target-ref || github.event.pull_request.base.ref, 'alpha/') && 'v3-alpha' || 'v3' }}",
       '      buildchain-ref: 0000000000000000000000000000000000000000',
     ),
   );
@@ -172,14 +371,108 @@ test('promotion rejects a static Buildchain ref that differs from its workflow s
   });
   assert.equal(result.ok, false);
   assert.ok(
-    result.findings.some((entry) => entry.message.includes('mismatched ref')),
+    result.findings.some((entry) =>
+      entry.message.includes('v3-alpha or v3 floating contracts'),
+    ),
   );
 });
 
-test('PR-stage builds reject a premature publish-source lock', () => {
+test('manual Buildchain validation retains the qualified immutable default and declared input boundary', () => {
   const buildPath = CONTRACT.workflows.build;
   const original = fs.readFileSync(path.join(ROOT, buildPath), 'utf8');
-  const buildchainRef = `      buildchain-ref: \${{ inputs.buildchain-ref || '${CONTRACT.buildchain.workflow_shell_sha}' }}`;
+  const binding = `      buildchain-ref: \${{ inputs.buildchain-ref || '${CONTRACT.buildchain.candidate_build_sha}' }}`;
+  const withoutDefault = original.replace(
+    binding,
+    '      buildchain-ref: ${{ inputs.buildchain-ref }}',
+  );
+  assert.notEqual(withoutDefault, original);
+  const missingDefault = validateWorkflowSources(ROOT, CONTRACT, {
+    build: withoutDefault,
+  });
+  assert.equal(missingDefault.ok, false);
+  assert.ok(
+    missingDefault.findings.some((entry) =>
+      entry.message.includes('default to the qualified immutable Buildchain runtime'),
+    ),
+  );
+
+  const withoutInput = original.replace(
+    / {6}buildchain-ref:\n {8}description: "Temporary Buildchain train or exact SHA for trusted manual validation"\n {8}required: false\n {8}default: ""\n/u,
+    '',
+  );
+  assert.notEqual(withoutInput, original);
+  const missingInput = validateWorkflowSources(ROOT, CONTRACT, {
+    build: withoutInput,
+  });
+  assert.equal(missingInput.ok, false);
+  assert.ok(
+    missingInput.findings.some((entry) =>
+      entry.message.includes('optional empty-default workflow_dispatch input'),
+    ),
+  );
+});
+
+test('Alpha Build and validation cannot fall back to stable v3 surfaces', () => {
+  const buildPath = CONTRACT.workflows.build;
+  const validationPath = CONTRACT.workflows.validation;
+  const build = fs.readFileSync(path.join(ROOT, buildPath), 'utf8');
+  const validation = fs.readFileSync(path.join(ROOT, validationPath), 'utf8');
+  for (const [name, source, replacement] of [
+    [
+      'contract lock',
+      build,
+      build.replace(
+        'buildchain-contract-lock-path: .buildchain/alpha-contract-lock.json',
+        'buildchain-contract-lock-path: .buildchain/contract-lock.json',
+      ),
+    ],
+    [
+      'source lock',
+      build,
+      build.replaceAll(
+        `buildchainRef: "${CONTRACT.buildchain.candidate_build_sha}"`,
+        'buildchainRef: "v3"',
+      ),
+    ],
+    [
+      'validation action',
+      validation,
+      validation.replace(
+        `validate-config@${CONTRACT.buildchain.workflow_shell_resolved_sha}`,
+        'validate-config@f4ca5182f53fddf76bdf4246be0993afa5a592bc',
+      ),
+    ],
+  ]) {
+    assert.notEqual(replacement, source, name);
+    const result = validateWorkflowSources(ROOT, CONTRACT, {
+      ...(source === build ? { build: replacement } : {}),
+      ...(source === validation ? { validation: replacement } : {}),
+    });
+    assert.equal(result.ok, false, name);
+  }
+});
+
+test('candidate build rejects a different exact Buildchain runtime pin', () => {
+  const buildPath = CONTRACT.workflows.build;
+  const original = fs.readFileSync(path.join(ROOT, buildPath), 'utf8');
+  const drifted = original.replace(
+    `      buildchain-ref: \${{ inputs.buildchain-ref || '${CONTRACT.buildchain.candidate_build_sha}' }}`,
+    '      buildchain-ref: 733812ff9405241705f5f267fe2e5ec6351e1a2d',
+  );
+  assert.notEqual(drifted, original);
+  const result = validateWorkflowSources(ROOT, CONTRACT, { build: drifted });
+  assert.equal(result.ok, false);
+  assert.ok(
+    result.findings.some((entry) =>
+      entry.message.includes('default to the qualified immutable Buildchain runtime'),
+    ),
+  );
+});
+
+test('PR-stage builds reject an unverified publish-source lock', () => {
+  const buildPath = CONTRACT.workflows.build;
+  const original = fs.readFileSync(path.join(ROOT, buildPath), 'utf8');
+  const buildchainRef = `      buildchain-ref: \${{ inputs.buildchain-ref || '${CONTRACT.buildchain.candidate_build_sha}' }}`;
   const drifted = original.replace(
     buildchainRef,
     [
@@ -192,7 +485,9 @@ test('PR-stage builds reject a premature publish-source lock', () => {
   assert.equal(result.ok, false);
   assert.ok(
     result.findings.some((entry) =>
-      entry.message.includes('leave publish-source locking to post-merge'),
+      entry.message.includes(
+        'consume only the preflight-verified Release Cut output',
+      ),
     ),
   );
 });
@@ -264,6 +559,27 @@ describe('Git-sensitive promotion rehearsals', { concurrency: false }, () => {
     fs.writeFileSync(
       eventPath,
       JSON.stringify({ action: 'workflow_dispatch', inputs: {} }),
+    );
+    try {
+      const result = runRehearsal({ root: ROOT, eventPath });
+      assert.equal(result.ok, true, JSON.stringify(result.findings, null, 2));
+      assert.equal(result.event, null);
+    } finally {
+      fs.rmSync(directory, { recursive: true, force: true });
+    }
+  });
+
+  test('an intermediate Release Cut PR does not become ADR admission', () => {
+    const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'kungfu-event-'));
+    const eventPath = path.join(directory, 'event.json');
+    fs.writeFileSync(
+      eventPath,
+      JSON.stringify({
+        pull_request: {
+          base: { ref: 'fix/alpha2-lineage-repair-r16' },
+          head: { ref: 'fix/alpha2-r16-recovery-identity' },
+        },
+      }),
     );
     try {
       const result = runRehearsal({ root: ROOT, eventPath });

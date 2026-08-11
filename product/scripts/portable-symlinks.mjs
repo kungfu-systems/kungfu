@@ -15,8 +15,7 @@ export function materializeRegularFile(file) {
     throw new Error(`executable symlink target is not a regular file: ${file}`);
   }
   const materialized = `${file}.materialized-regular-file`;
-  fs.copyFileSync(resolved, materialized);
-  fs.chmodSync(materialized, entry.mode & 0o777);
+  fs.linkSync(resolved, materialized);
   fs.renameSync(materialized, file);
 }
 

@@ -123,6 +123,62 @@ export function runInstalledTuiBootstrapSmoke(
   }
 }
 
+export function runInstalledEmbeddedNodeAddonSmoke(
+  { installRoot, runtimeEntry, env },
+  { spawn = spawnSync } = {},
+) {
+  const nodePtyEntry = path.join(
+    installRoot,
+    'tui',
+    'node_modules',
+    'node-pty',
+    'lib',
+    'index.js',
+  );
+  assertFile(nodePtyEntry, 'installed node-pty entry');
+  const result = spawn(
+    runtimeEntry,
+    [
+      '-e',
+      [
+        'const nodePty = require(process.env.KUNGFU_NODE_PTY_ENTRY);',
+        "if (typeof nodePty.spawn !== 'function') process.exit(42);",
+        "const token = 'KUNGFU_NODE_PTY_CHILD_READY';",
+        "const child = nodePty.spawn(process.execPath, ['-e', `process.stdout.write('${token}\\\\n')`], {name: 'xterm-color', cols: 80, rows: 24, cwd: process.cwd(), env: process.env});",
+        "let output = '';",
+        'child.onData((data) => { output += data; });',
+        'const timeout = setTimeout(() => { child.kill(); process.exit(43); }, 10000);',
+        "child.onExit(({exitCode}) => { clearTimeout(timeout); if (exitCode !== 0 || !output.includes(token)) process.exit(44); require('node:fs').writeSync(1, 'KUNGFU_NODE_PTY_READY\\n'); process.exit(0); });",
+      ].join(''),
+    ],
+    {
+      cwd: installRoot,
+      env: {
+        ...env,
+        KUNGFU_AS_VARIANT: 'node',
+        KUNGFU_NODE_PTY_ENTRY: nodePtyEntry,
+      },
+      encoding: 'utf8',
+      timeout: 30000,
+    },
+  );
+  if (
+    result.status !== 0 ||
+    !(result.stdout || '').includes('KUNGFU_NODE_PTY_READY')
+  ) {
+    throw new Error(
+      [
+        `installed embedded Node could not spawn through node-pty (exit ${exitLabel(result.status, result.signal)})`,
+        result.error?.message ? `error: ${result.error.message}` : '',
+        result.stdout?.trim() ? `stdout:\n${result.stdout.trim()}` : '',
+        result.stderr?.trim() ? `stderr:\n${result.stderr.trim()}` : '',
+      ]
+        .filter(Boolean)
+        .join('\n'),
+    );
+  }
+}
+
 export function runInstalledKungfu({
   kungfuBin,
   installRoot,

@@ -1,0 +1,61 @@
+{
+  "schema": "kungfu.kfx.manifest/v1",
+  "name": "@kungfu-kfx/github-webhook-ingress",
+  "version": "0.1.0",
+  "kungfuConfig": {
+    "key": "github-webhook-ingress",
+    "config": {
+      "service": {
+        "runtimes": [
+          "node"
+        ],
+        "entry": {
+          "node": "src/service.mjs"
+        },
+        "host": {
+          "schema": "kungfu.kfx.service-host/v1",
+          "contractVersion": 1,
+          "lifecycle": {
+            "restartPolicy": "on-failure",
+            "readinessTimeoutMs": 5000,
+            "drainTimeoutMs": 5000,
+            "shutdownTimeoutMs": 5000
+          },
+          "webhook": {
+            "listener": {
+              "mode": "loopback",
+              "bindAddress": "127.0.0.1",
+              "port": 9911,
+              "path": "/github/events",
+              "methods": [
+                "POST"
+              ]
+            },
+            "credentials": [
+              {
+                "handle": "credential:github/webhook",
+                "purpose": "github-webhook-signature-verification",
+                "algorithms": [
+                  "hmac-sha256"
+                ]
+              }
+            ],
+            "intake": {
+              "maxPayloadBytes": 262144,
+              "maxQueueDepth": 32,
+              "maxInflight": 4,
+              "maxRequestsPerWindow": 60,
+              "rateWindowMs": 60000,
+              "handlerTimeoutMs": 5000,
+              "replayWindowMs": 86400000
+            }
+          }
+        },
+        "capabilities": [
+          "credential.verify",
+          "network.listen"
+        ]
+      }
+    }
+  }
+}

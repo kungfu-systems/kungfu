@@ -13,9 +13,11 @@ Tracked layout:
   qualification.json
 ```
 
-The provider creates `.kungfu/.gitignore` on first use and refuses an existing
-file that does not ignore `runtime/`, `episodes/.tmp/`, `private/`, and
-`cache/`. It never silently widens or overwrites repository ignore policy.
+The provider creates `.kungfu/.gitignore` on first use with `runtime/`,
+`inbox/`, `episodes/.tmp/`, `private/`, `cache/`, `locks/`, and `projections/`.
+For backward compatibility, an existing file must contain the original first
+five entries; the provider never silently widens or overwrites repository
+ignore policy.
 
 Open state, writer leases, private material, projections, caches, and temporary
 seals stay local under `.kungfu/runtime/episode-provider/` or

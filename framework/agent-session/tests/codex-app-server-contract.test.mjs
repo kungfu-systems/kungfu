@@ -106,6 +106,15 @@ test('contract gate pins CLI, stable schema and non-experimental capability shap
       createCodexAppServerContractGate({
         contract,
         manifest,
+        cliVersion: '0.147.0',
+      }),
+    'cli-version-drift',
+  );
+  expectCode(
+    () =>
+      createCodexAppServerContractGate({
+        contract,
+        manifest,
         cliVersion: '0.146.0',
         initializeCapabilities: { experimentalApi: true },
       }),
