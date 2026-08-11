@@ -1,0 +1,97 @@
+# SPDX-License-Identifier: Apache-2.0
+
+name: KFX webhook real canary r19
+
+on:
+  push:
+    branches:
+      - feature/kfx-webhook-terminal-qualification-linear-r19
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: kfx-webhook-real-canary-r19-${{ github.run_id }}
+  cancel-in-progress: false
+
+jobs:
+  canary:
+    if: "${{ startsWith(github.event.head_commit.message, 'ci(canary): execute kfx webhook r19') }}"
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Check out exact source
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version: "24"
+
+      - name: Assume branch-scoped canary controller role
+        uses: aws-actions/configure-aws-credentials@00943011d9042930efac3dcd3a170e4273319bc8 # v5.1.0
+        with:
+          role-to-assume: arn:aws:iam::727884401362:role/kungfu-kfx-webhook-canary-r19-controller
+          role-session-name: kungfu-kfx-webhook-canary-r19
+          aws-region: us-east-1
+          role-duration-seconds: 1800
+          unset-current-credentials: true
+
+      - name: Verify exact caller and webhook administration
+        env:
+          GH_TOKEN: ${{ secrets.KUNGFU_GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(aws sts get-caller-identity --query Account --output text)" = "727884401362"
+          test -n "${GH_TOKEN}"
+          gh api "repos/${GITHUB_REPOSITORY}/hooks" --paginate --jq 'length' >/dev/null
+
+      - name: Execute one-shot signed GitHub ping canary
+        env:
+          GH_TOKEN: ${{ secrets.KUNGFU_GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          ./shifu qualify:kfx-github-webhook-real-canary -- \
+            --execute \
+            --confirm-credential-rotation \
+            --repo "${GITHUB_REPOSITORY}" \
+            --region us-east-1 \
+            --report product/release/qualification/kfx-webhook-real-canary.json
+
+      - name: Verify redacted zero-residue receipt
+        shell: bash
+        run: |
+          set -euo pipefail
+          receipt=product/release/qualification/kfx-webhook-real-canary.json
+          jq -e '
+            .status == "passed" and
+            .region == "us-east-1" and
+            .delivery.event == "ping" and
+            .delivery.statusCode == 202 and
+            .endpointRetained == false and
+            .secretRetained == false and
+            .payloadRetained == false and
+            .teardown.repositoryWebhookAbsent == true and
+            .teardown.httpApiAbsent == true and
+            .teardown.lambdaFunctionAbsent == true and
+            .teardown.iamRoleAbsent == true and
+            .teardown.logGroupAbsent == true and
+            (has("secret") | not) and
+            (has("signature") | not) and
+            (has("payload") | not)
+          ' "${receipt}" >/dev/null
+
+      - name: Upload rooted canary receipt
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: kfx-webhook-real-canary-r19-${{ github.run_id }}
+          path: product/release/qualification/kfx-webhook-real-canary.json
+          if-no-files-found: error
+          retention-days: 7

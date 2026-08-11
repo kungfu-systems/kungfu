@@ -103,6 +103,7 @@ without changing and refreshing the manifest fails the Gate catalog check.
 | `.github/workflows/gate-measurement.yml` | `measure` | qualification | none | qualifying | token:read | none | 0 |
 | `.github/workflows/gate-measurement.yml` | `python-kfx-asyncio-performance` | qualification | none | diagnostic | token:read | none | 7 |
 | `.github/workflows/kfd-verifier-drift.yml` | `verify-owned-fixtures` | qualification | none | qualifying | token:read | none | 4 |
+| `.github/workflows/kfx-webhook-real-canary-r19.yml` | `canary` | qualification | none | diagnostic | token:write, oidc, repo-secret:KUNGFU_GITHUB_TOKEN | none | 7 |
 | `.github/workflows/kungfu-agent-patrol.yml` | `patrol` | qualification | none | diagnostic | token:read | none | 9 |
 | `.github/workflows/linux-arm64-alpha-qualification.yml` | `artifact` | qualification | none | diagnostic | token:write, oidc, repo-secret:BUILDCHAIN_ARTIFACT_RELAY_S3_DOWNLOAD_ROLE_ARN+BUILDCHAIN_ARTIFACT_RELAY_S3_ROLE_ARN+BUILDCHAIN_ARTIFACT_RELAY_S3_UPLOAD_ROLE_ARN | none | 0 |
 | `.github/workflows/linux-arm64-alpha-qualification.yml` | `preflight` | qualification | none | diagnostic | token:write, oidc | none | 2 |
