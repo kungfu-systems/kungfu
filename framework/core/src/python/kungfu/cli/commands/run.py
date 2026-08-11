@@ -1,7 +1,6 @@
 # SPDX-License-Identifier: Apache-2.0
 
 import json
-import os
 import re
 import sys
 from pathlib import Path
@@ -545,8 +544,8 @@ def _run_provider(
     from kungfu.cli.commands import assignment as work_commands
 
     try:
-        target = resolve_workspace_target(
-            "read-only", workspace_root or None, cwd=os.getcwd()
+        target, _launch_root, _resolution = native_launch.resolve_native_launch_target(
+            ctx, workspace_root
         )
     except WorkspaceTargetRequired as error:
         raise click.ClickException(

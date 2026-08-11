@@ -13,7 +13,11 @@ from kungfu.agent import managed_run
 from kungfu.agent import native_launch
 from kungfu.agent import run_agent
 from kungfu.cli.commands import assignment, kfc, run
-from kungfu.workspace import resolve_workspace_target
+from kungfu.workspace import (
+    inspect_workspace,
+    resolve_workspace_target,
+    select_workspace,
+)
 
 
 @pytest.mark.parametrize("command", ["claim", "status", "gate"])
@@ -508,7 +512,9 @@ def test_successful_managed_work_start_completes_agent_onboarding(
         )
     )
     monkeypatch.setattr(
-        run, "resolve_workspace_target", lambda *_args, **_kwargs: target
+        native_launch,
+        "resolve_native_launch_target",
+        lambda *_args, **_kwargs: (target, str(project), "explicit-project"),
     )
     monkeypatch.setattr(
         run,
@@ -573,6 +579,80 @@ def test_successful_managed_work_start_completes_agent_onboarding(
             "runtime_home": str(tmp_path / "home"),
         }
     ]
+
+
+def test_managed_provider_plan_uses_selected_current_project_outside_it(
+    tmp_path, monkeypatch
+):
+    source = tmp_path / "outside"
+    project = tmp_path / "selected"
+    source.mkdir()
+    project.mkdir()
+    request = project / "request.json"
+    request.write_text("{}\n", encoding="utf-8")
+    config_home = tmp_path / "config"
+    runtime_home = tmp_path / "home"
+    environment = {
+        "HOME": str(tmp_path / "user"),
+        "KF_CONFIG_HOME": str(config_home),
+        "KF_HOME": str(runtime_home),
+    }
+    identity = inspect_workspace(str(project), env=environment)
+    assert identity is not None
+    select_workspace(identity, config_home=str(config_home), env=environment)
+    monkeypatch.chdir(source)
+    for name, value in environment.items():
+        monkeypatch.setenv(name, value)
+    for name in ("KF_WORKSPACE_ROOT", "KF_RUNTIME_DIR", "KUNGFU_WORKSPACE_ROOT"):
+        monkeypatch.delenv(name, raising=False)
+
+    selected_roots = []
+    monkeypatch.setattr(
+        run,
+        "_choose_work",
+        lambda root, **_kwargs: (
+            selected_roots.append(root)
+            or {
+                "requestPath": str(request),
+                "initiativeId": "project-work",
+                "assignmentId": "first",
+            }
+        ),
+    )
+    monkeypatch.setattr(
+        run,
+        "_provider_profile",
+        lambda *_args, **_kwargs: {"id": "codex.test", "provider": "codex"},
+    )
+    monkeypatch.setattr(
+        assignment,
+        "_work_start_plan",
+        lambda **_kwargs: {
+            "planRoot": "sha256:" + "1" * 64,
+            "workspace": {"root": str(project)},
+            "work": {"assignmentId": "first", "title": "First Work"},
+            "agent": {
+                "label": "Codex",
+                "verification": {"version": "1.0.0"},
+            },
+            "effects": [],
+        },
+    )
+
+    run._run_provider(
+        SimpleNamespace(config_home=str(config_home), home=str(runtime_home)),
+        "codex",
+        None,
+        None,
+        None,
+        True,
+        True,
+        False,
+        None,
+        False,
+    )
+
+    assert selected_roots == [str(project)]
 
 
 def test_only_bare_provider_invocation_selects_native_interactive_mode():
