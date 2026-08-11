@@ -146,10 +146,10 @@ export function validateWorkflowSources(root, contract, overrides = {}) {
   requirePattern(
     build,
     new RegExp(
-      `uses: kungfu-systems/buildchain/\\.github/workflows/\\.build\\.yml@${contract.buildchain.workflow_shell_ref}`,
+      `uses: kungfu-systems/buildchain/\\.github/workflows/\\.build\\.yml@${contract.buildchain.build_workflow_shell_sha}`,
     ),
     findings,
-    'release-candidate build must consume the production v3 floating workflow contract',
+    'release-candidate build must consume the pinned native-finalization workflow contract',
   );
   requirePattern(
     build,
