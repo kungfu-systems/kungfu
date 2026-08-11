@@ -32,6 +32,7 @@ import {
   gateDigest,
 } from './shifu-gate-runtime.mjs';
 import {
+  temporalAdmissionFactProjection,
   validatePrimitiveCatalogPromotion,
   verifyKungfuReleaseAdmission,
 } from './verify-kungfu-release-admission.mjs';
@@ -81,9 +82,10 @@ test('temporal release admission has exact legacy/proof parity and protected pro
   const contract = readJson(
     'framework/release/kungfu-temporal-release-admission.contract.json',
   );
+  const factProjection = temporalAdmissionFactProjection(ROOT, RELEASE_POLICY);
   for (const channel of RELEASE_POLICY.publication.channels) {
     assert.deepEqual(
-      Object.keys(contract.paths[channel]).sort(),
+      factProjection.channels[channel],
       [
         ...RELEASE_POLICY.buildchain.runtimes[channel]
           .publicationContractDigests,
@@ -95,6 +97,10 @@ test('temporal release admission has exact legacy/proof parity and protected pro
   );
   assert.equal(contract.maximumPathDepth, 2);
   assert.equal(contract.rollbackMode, 'legacy-exact');
+  assert.equal(
+    contract.factAuthority.admittedDigests,
+    'derived-from-active-proof-records',
+  );
   assert.equal(contract.safety.realPublicationRequired, false);
   assert.equal(
     projection.source.sourceCommit,
