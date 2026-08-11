@@ -23,11 +23,6 @@ on:
         required: true
         default: true
         type: boolean
-      base-ref:
-        description: "Target branch for the protected README media pull request"
-        required: true
-        default: dev/v4/v4.0
-        type: string
 
 permissions:
   actions: read
@@ -169,5 +164,5 @@ jobs:
       render-failure-advisory: ${{ github.event_name == 'pull_request' && startsWith(github.base_ref, 'alpha/') }}
       media-profile: responsive-long-form-web-delivery-v1
       materialize: ${{ github.event_name != 'workflow_dispatch' || (inputs.mode == 'full' && inputs.materialize) }}
-      materialize-base-ref: ${{ github.event_name == 'workflow_dispatch' && inputs.base-ref || github.event.repository.default_branch }}
+      materialize-base-ref: ${{ github.event.repository.default_branch }}
       artifact-retention-days: 14

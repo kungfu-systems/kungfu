@@ -193,14 +193,14 @@
     {
       "path": ".github/workflows/auditable-demo.yml",
       "authority": "qualification",
-      "definitionDigest": "sha256:2fe9f6d978aa83fadffac270c43f6db4180e84ceb25f73b6c1098c162c748eb4",
+      "definitionDigest": "sha256:337a028487ec437330c7e8b9544756749205e8ba79978f10f6ee2434b4f470a8",
       "jobs": [
         {
           "id": "auditable-demo",
           "authority": "qualification",
           "publication": "none",
           "receipt": "qualifying",
-          "definitionDigest": "sha256:65d50b97250c0ddf99b45e9543f4200a77d8a670251c77db806a0d005d9b3279",
+          "definitionDigest": "sha256:84782e97945d28aa6032fe983bfc6910ec5ec8a5d109c0ae4e2bf3e25eaa1327",
           "credentials": {"githubToken":"write","oidc":false,"repositorySecrets":["KUNGFU_GITHUB_TOKEN"],"inheritedSecrets":false,"environment":null},
           "externalActions": ["kungfu-systems/buildchain/.github/workflows/.declarative-auditable-demo.yml@41d4dce2f38aa4821c794b49dcfb2bcf59d0984a"],
           "steps": []

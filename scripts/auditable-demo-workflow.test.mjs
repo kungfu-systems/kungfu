@@ -251,7 +251,7 @@ test('manual full refresh and promotion reuse the same materializer', () => {
   );
   assert.equal(
     demo.with['materialize-base-ref'],
-    "${{ github.event_name == 'workflow_dispatch' && inputs.base-ref || github.event.repository.default_branch }}",
+    '${{ github.event.repository.default_branch }}',
   );
   assert.equal(
     demo.secrets.DEMO_UPDATE_TOKEN,
