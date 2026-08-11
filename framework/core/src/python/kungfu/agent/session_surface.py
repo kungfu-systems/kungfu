@@ -17,6 +17,18 @@ from kungfu.workspace import WorkspaceTargetRequired, resolve_workspace_target
 
 MAX_MESSAGE_BYTES = 1024 * 1024
 _READ_CHUNK_BYTES = 65536
+_SURFACE_CAPABILITIES_SCHEMA = "kungfu.agent-session.surface-capabilities/v1"
+_REQUIRED_NATIVE_OPERATIONS = frozenset(
+    {
+        "capabilities",
+        "show",
+        "plan-native-start",
+        "start-native",
+        "heartbeat-native",
+        "project-native-work",
+        "end-native",
+    }
+)
 
 
 def _deadline(timeout):
@@ -283,16 +295,63 @@ def _resolve_worker_executable():
     )
 
 
+def _validate_surface_capabilities(capabilities, *, endpoint):
+    schema = capabilities.get("schema") if isinstance(capabilities, dict) else None
+    actions = capabilities.get("actions") if isinstance(capabilities, dict) else None
+    supported = (
+        {str(action) for action in actions if isinstance(action, str)}
+        if isinstance(actions, list)
+        else set()
+    )
+    missing = sorted(_REQUIRED_NATIVE_OPERATIONS - supported)
+    if schema == _SURFACE_CAPABILITIES_SCHEMA and not missing:
+        return capabilities
+    details = []
+    if schema != _SURFACE_CAPABILITIES_SCHEMA:
+        details.append(
+            f"schema is {schema or 'missing'}; expected {_SURFACE_CAPABILITIES_SCHEMA}"
+        )
+    if missing:
+        details.append("missing operations: " + ", ".join(missing))
+    raise ValueError(
+        f"Agent Session protocol mismatch at {endpoint}: {'; '.join(details)}. "
+        "Close running Kungfu processes for this Project and retry. Project data "
+        "does not need to be deleted."
+    )
+
+
+def _run_worker_preserving_standard_streams(runner, *argv):
+    """Start the detached worker without changing caller stdio inheritance."""
+
+    inheritance = []
+    for descriptor in (0, 1, 2):
+        try:
+            inheritance.append((descriptor, os.get_inheritable(descriptor)))
+        except OSError:
+            pass
+    try:
+        return runner(*argv)
+    finally:
+        for descriptor, inheritable in inheritance:
+            os.set_inheritable(descriptor, inheritable)
+
+
 def ensure(runtime_dir, *, runner=None):
     """Ensure and return the runtime-scoped detached Agent Session endpoint."""
 
-    endpoint = endpoint_for_runtime(runtime_dir)
-    os.environ["KUNGFU_AGENT_SESSION_ENDPOINT"] = endpoint
+    explicit_endpoint = os.environ.get("KUNGFU_AGENT_SESSION_ENDPOINT")
+    endpoint = explicit_endpoint or endpoint_for_runtime(runtime_dir)
+    if explicit_endpoint is None:
+        os.environ["KUNGFU_AGENT_SESSION_ENDPOINT"] = endpoint
     try:
-        invoke({"operation": "capabilities"}, endpoint=endpoint, timeout=0.25)
+        capabilities = invoke(
+            {"operation": "capabilities"}, endpoint=endpoint, timeout=0.25
+        )
+        _validate_surface_capabilities(capabilities, endpoint=endpoint)
         return endpoint
-    except (OSError, ValueError, socket.timeout):
-        pass
+    except (OSError, socket.timeout):
+        if explicit_endpoint is not None:
+            raise
 
     entry = _resolve_native_entry()
     if entry is None:
@@ -306,12 +365,17 @@ def ensure(runtime_dir, *, runner=None):
         import kungfu
 
         runner = kungfu.__binding__.libnode.run
-    exit_code = runner(sys.argv[0], entry)
+    # The embedded Node bootstrap marks inherited descriptors close-on-exec on
+    # some platforms. Restore the exact caller flags before a provider-native
+    # child is launched; otherwise the first provider process starts without a
+    # terminal while later attempts (which reuse the worker) happen to work.
+    exit_code = _run_worker_preserving_standard_streams(runner, sys.argv[0], entry)
     if exit_code not in (None, 0):
         raise ValueError(
             f"native Agent Session bridge exited with status {int(exit_code)}"
         )
-    invoke({"operation": "capabilities"}, endpoint=endpoint, timeout=5.0)
+    capabilities = invoke({"operation": "capabilities"}, endpoint=endpoint, timeout=5.0)
+    _validate_surface_capabilities(capabilities, endpoint=endpoint)
     return endpoint
 
 

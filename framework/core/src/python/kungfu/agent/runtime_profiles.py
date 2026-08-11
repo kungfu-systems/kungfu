@@ -205,6 +205,9 @@ def adapter_catalog(
         _validate_templates(adapter_id, adapter)
         result[adapter_id] = adapter
         seen.add(adapter_id)
+    process_environment = _agent_config(resolved).get("nativeProcessEnvironment") or []
+    for adapter in result.values():
+        adapter["processEnvironment"] = list(process_environment)
     return result
 
 

@@ -178,16 +178,17 @@ Aeron Archive may be used as declared reference comparators, but the current
 profile intentionally has no comparator and Kungfu makes no `Aeron-class`,
 equivalence, compatibility, or superiority claim.
 
-## The GitHub build-and-release path is still being brought up
+## The first public v4 Alpha does not open a Stable release line
 
-The release mechanism is designed and has a long tag history, but the current v4
-build-and-release pipeline on this repository is not yet fully operational —
-there is outstanding infrastructure work. Until it is, treat published v4
-artifacts as pre-release, and note that the consumer-side provenance
-documentation (how to verify a downloaded binary's signature and that it matches
-its tag) is intentionally deferred rather than written ahead of the
-infrastructure it would describe (see [`MAP.md`](../MAP.md), `provenance.md` —
-`blocked`).
+The v4 build-and-release path produced `v4.0.0-alpha.1` with public desktop and
+standalone CLI artifacts, a signed Alpha channel, installers, Release Passport,
+and public status readback. That closes the former “release infrastructure not
+operational” limit for this exact Alpha. It does not establish a Stable channel,
+native package-manager publication, a production support commitment, or
+automatic qualification of a later release. Use the
+[installation guide](../guides/installing-cli.md),
+[Alpha Status](../guides/alpha-status.md), and the exact release evidence rather
+than inferring those broader claims from the existence of one Alpha.
 
 ## The end-user shell is partial, not complete
 
@@ -198,7 +199,7 @@ view. That is not yet the same as a complete end-user shell.
 
 What is **not yet guaranteed**:
 
-- a polished one-command user install / launch path for non-contributors;
+- Stable and native package-manager installation paths for non-contributors;
 - full parity between GUI-launched and CLI-launched managed sessions;
 - all planned multi-window/session workspace behavior being default-on;
 - a final product surface that hides internal implementation terms such as tmux,
@@ -218,9 +219,11 @@ silently receiving an unqualified verdict.
 The [KFX identity-neutral terminal](kfx-identity-neutral-terminal.md) qualifies
 the native authority chain and exact Agent Work Lab Suite cut; it does not turn
 KFD, first-party identity, or Product System metadata into permission. The
-retained limits are public release publication, packaged Linux/Windows desktop
-experience, universal native-code confinement, marketplace operation, and
-independent third-party production adoption.
+retained limits are Stable publication, native package-manager channels,
+universal native-code confinement, marketplace operation, production
+qualification, and independent third-party production adoption. The current
+Alpha already includes Linux and Windows desktop artifacts; their existence
+does not widen those remaining claims.
 
 ## Ecosystem SDK qualification is source-complete on one platform, not released
 

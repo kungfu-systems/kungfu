@@ -156,7 +156,7 @@ retain the 25-minute default.
 - **Evidence:** unified Gate receipt; no separate artifact is currently required.
 - **Diagnosis:** `./shifu gate explain release.artifact-admission --profile <profile>`; reproduce with `./shifu gate run release.artifact-admission` on a capable runner.
 - **Cost:** heavy; timeout 1800 seconds.
-- **Current source:** .github/workflows/release-new-version.yml (promote; merged alpha or release pull request, or manual source-locked dry-run measurement).
+- **Current source:** .github/workflows/release-new-version.yml (promote; merged alpha or release pull request, or manual source-locked dry-run measurement); .github/workflows/release-new-version.yml (recover; manual recovery of one verified sealed Alpha candidate without product rebuild).
 - **Retirement:** remove only after every selecting profile and workflow binding is migrated or explicitly replaced, with the registry and matrix changed in the same review.
 <!-- /gate-doc:release.artifact-admission -->
 

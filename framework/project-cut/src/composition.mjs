@@ -287,8 +287,12 @@ function scopedManifestPaths(root, base, commit, allPaths, cuts) {
   const evidencePaths = changedEvidencePaths(root, base, commit);
   const paths = new Set();
   for (const path of evidencePaths) {
-    if (MANIFEST.test(path)) paths.add(path);
-    else if (path.startsWith(PROTOCOL_PREFIX) && path.endsWith('/receipt.json'))
+    if (MANIFEST.test(path) && allPaths.includes(path)) paths.add(path);
+    else if (
+      path.startsWith(PROTOCOL_PREFIX) &&
+      path.endsWith('/receipt.json') &&
+      allPaths.includes(posix.join(posix.dirname(path), 'manifest.json'))
+    )
       paths.add(posix.join(posix.dirname(path), 'manifest.json'));
   }
   const providerRoots = providerRootsForEvidence(

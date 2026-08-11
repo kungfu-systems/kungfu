@@ -222,6 +222,25 @@
       "review_state": "self-reviewed",
       "sensitivity": "public"
     },
+    "docs/evolution/stages/11-temporal-relation-proof.md": {
+      "metadata_schema": "kungfu.document-metadata/v1",
+      "document_status": "active",
+      "doc_type": "evolution-stage",
+      "review_state": "self-reviewed",
+      "sensitivity": "public",
+      "sources": ["architecture-decisions", "local-files"],
+      "period": "2026-08-10",
+      "theme": "temporal-relation-proof",
+      "confidence": "high",
+      "evidence_grade": "A",
+      "last_reviewed": "2026-08-10",
+      "ai_provenance": {
+        "model_family": "OpenAI GPT-5",
+        "product": "Codex",
+        "generated_at": "2026-08-10",
+        "invisible_context_boundary": "external release projections and unobserved runtime state are not claimed"
+      }
+    },
     "docs/evolution/timeline.md": {
       "metadata_schema": "kungfu.document-metadata/v1",
       "document_status": "active",

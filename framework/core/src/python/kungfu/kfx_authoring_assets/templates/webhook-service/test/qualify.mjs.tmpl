@@ -1,0 +1,129 @@
+// SPDX-License-Identifier: Apache-2.0
+
+import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
+import { readFile } from 'node:fs/promises';
+import { fileURLToPath } from 'node:url';
+import { createWebhookService, packageIdentity } from '../src/service.mjs';
+import { startLocalReceiver } from '../fixtures/local-receiver.mjs';
+
+const rooted = (character) => `sha256:${character.repeat(64)}`;
+const events = [];
+const evidence = (version = packageIdentity.version) => ({
+  packageKey: packageIdentity.key,
+  packageVersion: version,
+  kfdRoot: rooted('1'),
+  warrantRoot: rooted('2'),
+  passportRoot: rooted('3'),
+  authorizationRoot: rooted('4'),
+  capabilityGrantRoot: rooted('5'),
+  dependencyRoot: rooted('6'),
+  qualified: true,
+  authorized: true,
+  grantedCapabilities: ['credential.verify', 'network.listen'],
+  dependencies: [
+    {
+      providerId: 'fixture-runtime-support',
+      version: packageIdentity.productVersion,
+      installed: true,
+      qualified: true,
+      authorized: true,
+      compatible: true,
+    },
+  ],
+});
+
+let now = 1_000;
+const host = createWebhookService({
+  evidence: evidence(),
+  credentialBroker: {
+    async verify(request) {
+      return request.handle === 'credential:webhook/signing'
+        && request.algorithm === 'hmac-sha256'
+        && request.signature === 'fixture-valid';
+    },
+  },
+  async onEvent(event) {
+    events.push(event);
+  },
+  clock: { now: () => now++ },
+});
+
+const lifecycle = [];
+lifecycle.push(host.start(), host.ready());
+const receiver = await startLocalReceiver(host);
+try {
+  const invalid = await fetch(receiver.url, {
+    method: 'POST',
+    headers: {
+      'content-type': 'application/json',
+      'x-fixture-delivery': 'invalid-1',
+      'x-fixture-signature': 'fixture-invalid',
+    },
+    body: JSON.stringify({ kind: 'fixture.invalid' }),
+  }).then((response) => response.json());
+  assert.equal(invalid.accepted, false);
+  assert.equal(invalid.receipt.code, 'KF_KFX_WEBHOOK_AUTHENTICATION_FAILED');
+
+  const request = {
+    method: 'POST',
+    headers: {
+      'content-type': 'application/json',
+      'x-fixture-delivery': 'accepted-1',
+      'x-fixture-signature': 'fixture-valid',
+    },
+    body: JSON.stringify({ kind: 'fixture.accepted', payload: { value: 1 } }),
+  };
+  const accepted = await fetch(receiver.url, request).then((response) => response.json());
+  assert.equal(accepted.accepted, true);
+  assert.equal(events.length, 1);
+  const replayed = await fetch(receiver.url, request).then((response) => response.json());
+  assert.equal(replayed.accepted, false);
+  assert.equal(replayed.receipt.code, 'KF_KFX_WEBHOOK_REPLAYED');
+  assert.equal(events.length, 1);
+
+  lifecycle.push(host.drain(), host.stop(), host.restart(), host.ready(), host.crash());
+  lifecycle.push(host.restart(), host.stop());
+  lifecycle.push(host.upgrade('0.2.0', evidence('0.2.0')));
+  lifecycle.push(host.rollback(packageIdentity.version, evidence()));
+  lifecycle.push(host.deactivate(), host.uninstall());
+  assert.equal(host.start().code, 'KF_KFX_SERVICE_LIFECYCLE_INVALID');
+
+  const sdkPath = fileURLToPath(new URL('../sdk/service-webhook-host.mjs', import.meta.url));
+  const sdkBytes = await readFile(sdkPath);
+  const sdkProjectionRoot = `sha256:${createHash('sha256').update(sdkBytes).digest('hex')}`;
+  const receipt = {
+    schema: 'kungfu.kfx-authoring-qualification/v1',
+    status: 'passed',
+    packageKey: packageIdentity.key,
+    packageVersion: packageIdentity.version,
+    sdkRoot: packageIdentity.sdkRoot,
+    sdkProjectionRoot,
+    receiver: {
+      bindAddress: receiver.bindAddress,
+      externalNetwork: false,
+      credentialMaterial: false,
+    },
+    intake: {
+      invalidCode: invalid.receipt.code,
+      acceptedRoot: accepted.receipt.receiptRoot,
+      replayCode: replayed.receipt.code,
+      events: events.length,
+    },
+    lifecycle: lifecycle.map((row) => ({
+      operation: row.operation,
+      outcome: row.outcome,
+      state: row.state,
+      code: row.code,
+      receiptRoot: row.receiptRoot,
+    })),
+    nonClaims: [
+      'fixture-does-not-grant-capabilities',
+      'fixture-does-not-issue-warrant-or-passport',
+      'fixture-does-not-prove-production-network-admission',
+    ],
+  };
+  process.stdout.write(`${JSON.stringify(receipt)}\n`);
+} finally {
+  await receiver.close();
+}

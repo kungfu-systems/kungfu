@@ -407,7 +407,7 @@ test('build-free read-only routes bypass launcher bootstrap on both shims', () =
   assert.doesNotMatch(windowsFloor, /fnm install|pnpm|diagnostics/u);
 });
 
-test('open-card Work Design preflight is build-free on both shims', () => {
+test('work-design Work Design preflight is build-free on both shims', () => {
   const posix = fs.readFileSync(path.join(ROOT, 'shifu'), 'utf8');
   const windows = fs.readFileSync(path.join(ROOT, 'shifu.cmd'), 'utf8');
   const readonly = fs.readFileSync(
@@ -415,12 +415,12 @@ test('open-card Work Design preflight is build-free on both shims', () => {
     'utf8',
   );
   for (const entrypoint of [posix, windows]) {
-    assert.match(entrypoint, /work-design:open-card-preflight/u);
+    assert.match(entrypoint, /work-design:preflight/u);
     assert.match(entrypoint, /shifu-readonly-entry\.mjs/u);
   }
   assert.match(
     readonly,
-    /framework[\\/]work-design-open-card[\\/]tooling[\\/]open-card-preflight\.mjs/u,
+    /framework[\\/]work-design-preflight[\\/]tooling[\\/]work-design-preflight\.mjs/u,
   );
   assert.doesNotMatch(
     readonly,

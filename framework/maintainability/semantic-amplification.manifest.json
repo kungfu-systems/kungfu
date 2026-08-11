@@ -794,6 +794,36 @@
           "role": "thin-binding"
         },
         {
+          "path": "framework/core/src/python/kungfu/cli/commands/kfx_authoring.py",
+          "role": "thin-binding"
+        },
+        {
+          "path": "framework/core/src/python/kungfu/kfx_authoring/__init__.py",
+          "role": "thin-binding"
+        },
+        {
+          "path": "scripts/generate-kfx-authoring-kit.mjs",
+          "role": "generated-projection"
+        },
+        {
+          "path": "framework/core/src/python/kungfu/kfx_authoring_assets/contract.json",
+          "role": "generated-projection",
+          "generator": "scripts/generate-kfx-authoring-kit.mjs"
+        },
+        {
+          "path": "framework/core/src/python/kungfu/kfx_authoring_assets/sdk/service-webhook-host.mjs",
+          "role": "generated-projection",
+          "generator": "scripts/generate-kfx-authoring-kit.mjs"
+        },
+        {
+          "path": "framework/core/tests/python/test_kfx_authoring.py",
+          "role": "test"
+        },
+        {
+          "path": "framework/core/src/python/kungfu/agent/kfx-authoring.md",
+          "role": "documentation"
+        },
+        {
           "path": "framework/core/src/python/kungfu/agent/intent-map.json",
           "role": "thin-binding"
         },

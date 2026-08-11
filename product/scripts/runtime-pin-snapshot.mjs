@@ -4,6 +4,91 @@ import fs from 'node:fs';
 import path from 'node:path';
 import process from 'node:process';
 
+const NODE_PTY_CONTRACT_PATH = new URL(
+  '../node-pty-runtime-closure.contract.json',
+  import.meta.url,
+);
+const NODE_PTY_CONTRACT_SCHEMA = 'kungfu.node-pty-runtime-closure/v1';
+
+function readNodePtyRuntimeContract() {
+  const contract = JSON.parse(fs.readFileSync(NODE_PTY_CONTRACT_PATH, 'utf8'));
+  if (contract.schema !== NODE_PTY_CONTRACT_SCHEMA) {
+    throw new Error(
+      `unsupported node-pty runtime closure schema: ${contract.schema}`,
+    );
+  }
+  return contract;
+}
+
+function expandNodePtyPath(relative, platform, architecture) {
+  return relative
+    .replaceAll('{platform}', platform)
+    .replaceAll('{architecture}', architecture);
+}
+
+export function nodePtyRuntimeClosure(platform, architecture) {
+  const contract = readNodePtyRuntimeContract();
+  const closure = contract.platforms[platform];
+  if (!closure) {
+    throw new Error(`unsupported node-pty runtime platform: ${platform}`);
+  }
+  const expand = (entries) =>
+    entries.map((relative) =>
+      expandNodePtyPath(relative, platform, architecture),
+    );
+  return {
+    dependency: { ...contract.dependency },
+    nativeStrategy: closure.nativeStrategy,
+    requiredFiles: expand(closure.requiredFiles),
+    executableFiles: expand(closure.executableFiles),
+    excludedFiles: expand(closure.excludedFiles),
+  };
+}
+
+export function assertNodePtyPackageIdentity(source) {
+  const contract = readNodePtyRuntimeContract();
+  const packagePath = path.join(source, 'package.json');
+  let packageJson;
+  try {
+    packageJson = JSON.parse(fs.readFileSync(packagePath, 'utf8'));
+  } catch (error) {
+    throw new Error(
+      `could not read staged node-pty package identity: ${packagePath}: ${error.message}`,
+    );
+  }
+  if (
+    packageJson.name !== contract.dependency.name ||
+    packageJson.version !== contract.dependency.version
+  ) {
+    throw new Error(
+      `node-pty runtime closure expects ${contract.dependency.name}@${contract.dependency.version}, got ${packageJson.name || '<missing-name>'}@${packageJson.version || '<missing-version>'}`,
+    );
+  }
+}
+
+export function verifyNodePtyRuntimeClosure(root, platform, architecture) {
+  const closure = nodePtyRuntimeClosure(platform, architecture);
+  for (const relative of closure.requiredFiles) {
+    const file = path.join(root, relative);
+    if (!fs.existsSync(file) || !fs.lstatSync(file).isFile()) {
+      throw new Error(`required node-pty runtime file not found: ${file}`);
+    }
+  }
+  for (const relative of closure.executableFiles) {
+    const file = path.join(root, relative);
+    if ((fs.statSync(file).mode & 0o111) === 0) {
+      throw new Error(`node-pty runtime executable bit is missing: ${file}`);
+    }
+  }
+  for (const relative of closure.excludedFiles) {
+    const file = path.join(root, relative);
+    if (fs.existsSync(file)) {
+      throw new Error(`excluded node-pty runtime file is present: ${file}`);
+    }
+  }
+  return closure;
+}
+
 export const INTEL_MACOS_DIAGNOSTIC =
   'unsupported-host: Intel macOS (Darwin x86_64) is not supported by Kungfu';
 

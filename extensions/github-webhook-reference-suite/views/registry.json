@@ -1,0 +1,21 @@
+{
+  "schema": "kungfu.profile-views/v1",
+  "views": [
+    {
+      "id": "github-webhook-events",
+      "title": "GitHub Webhook Events",
+      "factSurfaces": ["kungfu.github-webhook-reference.observation"],
+      "view": {
+        "kind": "table",
+        "columns": [
+          "delivery",
+          "outcome",
+          "event",
+          "action",
+          "repository",
+          "payload_root"
+        ]
+      }
+    }
+  ]
+}

@@ -22,6 +22,7 @@ from . import query
 from . import facts
 from . import source
 from . import kfx
+from . import kfx_authoring
 from . import skill
 from . import codex
 from . import sdk
@@ -44,6 +45,8 @@ from . import release
 from . import recover
 from . import exit
 from . import dev
+
+kfx_authoring.register_authoring_commands(kfx.kfx, kfx.kfx_command_context)
 
 __all__ = [
     "engage",
@@ -68,6 +71,7 @@ __all__ = [
     "facts",
     "source",
     "kfx",
+    "kfx_authoring",
     "skill",
     "codex",
     "sdk",

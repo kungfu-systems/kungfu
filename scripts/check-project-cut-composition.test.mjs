@@ -707,6 +707,34 @@ test('receipt-only and Episode-only evidence deletion enter the scoped gate', (t
   );
 });
 
+test('complete Cut and Episode evidence retirement leaves no compatibility residue', (t) => {
+  const { root, parent } = baseline(t);
+  git(root, 'checkout', '-qb', 'retirement', parent.commit);
+  fs.writeFileSync(path.join(root, 'episode.txt'), 'episode\n');
+  const providerRoot = admittedEpisode(root);
+  git(root, 'add', '--all');
+  git(root, 'commit', '-qm', 'feat: evidence source');
+  const child = publishCut(root, [parent.cut.cutRoot], providerRoot);
+  const base = child.commit;
+  const cutDir = `.kungfu/project-cuts/sha256/${child.cut.cutRoot.slice(7, 9)}/${child.cut.cutRoot.slice(7)}`;
+  const providerManifest = git(
+    root,
+    'ls-files',
+    '*episodes/sealed/*/manifest.json',
+  );
+  git(root, 'rm', `${cutDir}/manifest.json`, `${cutDir}/receipt.json`);
+  git(root, 'rm', '-r', path.posix.dirname(providerManifest));
+  git(root, 'commit', '-qm', 'test: retire complete evidence bundle');
+  const receipt = observeComposition(root, base, 'HEAD');
+  assert.equal(
+    receipt.status,
+    'qualified',
+    JSON.stringify(receipt.diagnostics),
+  );
+  assert.deepEqual(receipt.scope.changedCutRoots, []);
+  assert.equal(verifyComposition(root, receipt).ok, true);
+});
+
 test('multiple project identities receive separate candidate projections', (t) => {
   const { root, parent, base } = baseline(t);
   feature(root, 'project-a', parent, 'src/a.txt', 'a\n', null, {

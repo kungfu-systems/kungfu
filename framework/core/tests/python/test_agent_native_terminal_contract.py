@@ -1,17 +1,102 @@
 # SPDX-License-Identifier: Apache-2.0
 
 import json
+from pathlib import Path
 import sys
 from types import SimpleNamespace
 
 from click.testing import CliRunner
 import pytest
 
+from kungfu import config
 from kungfu.agent import native_launch
+from kungfu.agent import provider_bootstrap
 from kungfu.agent import run_agent
 from kungfu.agent import runtime_profiles
 from kungfu.agent import session_surface
 from kungfu.cli.commands import agent as agent_commands, kfc
+
+
+ROOT = Path(__file__).resolve().parents[4]
+CONTRACT = ROOT / "framework" / "config" / "kungfu-config.contract.json"
+
+
+NATIVE_SURFACE_CAPABILITIES = {
+    "schema": "kungfu.agent-session.surface-capabilities/v1",
+    "actions": [
+        "capabilities",
+        "show",
+        "plan-native-start",
+        "start-native",
+        "heartbeat-native",
+        "project-native-work",
+        "end-native",
+    ],
+}
+
+
+def test_native_environment_inherits_only_a_valid_registered_tmux_capability(
+    tmp_path,
+):
+    valid_source = {
+        "PATH": "/usr/bin",
+        "TMUX": "/private/tmp/tmux-501/agentctl,12345,7",
+        "TMUX_PANE": "%42",
+        "SSH_AUTH_SOCK": "/private/tmp/secret-agent.sock",
+    }
+
+    inherited = provider_bootstrap.native_process_environment(
+        valid_source, ["TMUX", "TMUX_PANE"]
+    )
+    assert inherited["TMUX"] == valid_source["TMUX"]
+    assert inherited["TMUX_PANE"] == "%42"
+    assert "SSH_AUTH_SOCK" not in inherited
+
+    for source in (
+        {"PATH": "/usr/bin"},
+        {"PATH": "/usr/bin", "TMUX": valid_source["TMUX"]},
+        {"PATH": "/usr/bin", "TMUX_PANE": "%42"},
+        {**valid_source, "TMUX": "not-a-tmux-handle"},
+        {**valid_source, "TMUX_PANE": "42"},
+    ):
+        rejected = provider_bootstrap.native_process_environment(
+            source, ["TMUX", "TMUX_PANE"]
+        )
+        assert "TMUX" not in rejected
+        assert "TMUX_PANE" not in rejected
+
+
+def test_native_process_environment_can_be_disabled_and_rejects_unregistered_names(
+    monkeypatch, tmp_path
+):
+    monkeypatch.setenv("TMUX", "/tmp/tmux-501/default,123,0")
+    monkeypatch.setenv("TMUX_PANE", "%1")
+    defaults = config.raw_default_config(str(CONTRACT))
+    defaults["agent"]["nativeProcessEnvironment"] = []
+    config.validate_config(defaults, contract=config.load_contract(str(CONTRACT)))
+    adapter = runtime_profiles.materialize_adapter(
+        "codex",
+        runtime_dir=str(tmp_path / "runtime"),
+        resolved_config={"config": defaults},
+    )
+    assert adapter["processEnvironment"] == []
+
+    assert "TMUX" not in adapter["environment"]
+    assert "TMUX_PANE" not in adapter["environment"]
+
+    with pytest.raises(ValueError, match="complete registered"):
+        provider_bootstrap.native_process_environment(
+            {"TMUX": "/tmp/tmux-501/default,123,0", "TMUX_PANE": "%1"},
+            ["SSH_AUTH_SOCK"],
+        )
+
+    for invalid in (["TMUX"], ["TMUX_PANE"], ["SSH_AUTH_SOCK"], ["*"]):
+        candidate = config.raw_default_config(str(CONTRACT))
+        candidate["agent"]["nativeProcessEnvironment"] = invalid
+        with pytest.raises(ValueError):
+            config.validate_config(
+                candidate, contract=config.load_contract(str(CONTRACT))
+            )
 
 
 def test_agent_session_resolves_the_current_project_runtime(monkeypatch, tmp_path):
@@ -128,6 +213,116 @@ def test_agent_session_does_not_replace_an_explicit_environment_endpoint(
     assert result.exit_code == 1
     assert "explicit endpoint unavailable" in result.output
     assert ensured == []
+
+
+def test_agent_session_rejects_a_live_worker_with_stale_native_operations(
+    monkeypatch, tmp_path
+):
+    monkeypatch.delenv("KUNGFU_AGENT_SESSION_ENDPOINT", raising=False)
+    monkeypatch.setattr(
+        session_surface,
+        "invoke",
+        lambda *_args, **_kwargs: {
+            "schema": "kungfu.agent-session.surface-capabilities/v1",
+            "actions": ["capabilities", "show"],
+        },
+    )
+    runners = []
+
+    with pytest.raises(ValueError) as raised:
+        session_surface.ensure(
+            tmp_path / "runtime", runner=lambda *_args: runners.append(True)
+        )
+
+    assert "Agent Session protocol mismatch" in str(raised.value)
+    assert "plan-native-start" in str(raised.value)
+    assert "Project data does not need to be deleted" in str(raised.value)
+    assert runners == []
+
+
+def test_agent_session_accepts_the_versioned_native_operation_vocabulary(
+    monkeypatch, tmp_path
+):
+    monkeypatch.delenv("KUNGFU_AGENT_SESSION_ENDPOINT", raising=False)
+    monkeypatch.setattr(
+        session_surface,
+        "invoke",
+        lambda *_args, **_kwargs: NATIVE_SURFACE_CAPABILITIES,
+    )
+    runners = []
+
+    endpoint = session_surface.ensure(
+        tmp_path / "runtime", runner=lambda *_args: runners.append(True)
+    )
+
+    assert endpoint == session_surface.endpoint_for_runtime(tmp_path / "runtime")
+    assert runners == []
+
+
+def test_agent_session_ensure_reuses_an_explicit_product_endpoint(
+    monkeypatch, tmp_path
+):
+    explicit = "/tmp/product-agent-session.sock"
+    monkeypatch.setenv("KUNGFU_AGENT_SESSION_ENDPOINT", explicit)
+    calls = []
+    monkeypatch.setattr(
+        session_surface,
+        "invoke",
+        lambda request, **kwargs: (
+            calls.append((request, kwargs)) or NATIVE_SURFACE_CAPABILITIES
+        ),
+    )
+    runners = []
+
+    endpoint = session_surface.ensure(
+        tmp_path / "different-project-runtime",
+        runner=lambda *_args: runners.append(True),
+    )
+
+    assert endpoint == explicit
+    assert calls[0][1]["endpoint"] == explicit
+    assert runners == []
+
+
+def test_agent_session_worker_launch_restores_standard_stream_inheritance(
+    monkeypatch, tmp_path
+):
+    monkeypatch.delenv("KUNGFU_AGENT_SESSION_ENDPOINT", raising=False)
+    calls = []
+
+    def invoke(*_args, **_kwargs):
+        calls.append(True)
+        if len(calls) == 1:
+            raise FileNotFoundError("cold worker")
+        return NATIVE_SURFACE_CAPABILITIES
+
+    inheritance = {0: True, 1: False, 2: True}
+
+    def run_worker(*_args):
+        for descriptor in inheritance:
+            inheritance[descriptor] = False
+        return 0
+
+    monkeypatch.setattr(session_surface, "invoke", invoke)
+    monkeypatch.setattr(session_surface, "_resolve_native_entry", lambda: "/entry.mjs")
+    monkeypatch.setattr(
+        session_surface, "_resolve_worker_executable", lambda: "/kungfu"
+    )
+    monkeypatch.setattr(
+        session_surface.os,
+        "get_inheritable",
+        lambda descriptor: inheritance[descriptor],
+    )
+    monkeypatch.setattr(
+        session_surface.os,
+        "set_inheritable",
+        lambda descriptor, value: inheritance.__setitem__(descriptor, value),
+    )
+
+    endpoint = session_surface.ensure(tmp_path / "runtime", runner=run_worker)
+
+    assert endpoint == session_surface.endpoint_for_runtime(tmp_path / "runtime")
+    assert inheritance == {0: True, 1: False, 2: True}
 
 
 def test_native_interactive_uses_controlling_terminal_before_registering_attempt(

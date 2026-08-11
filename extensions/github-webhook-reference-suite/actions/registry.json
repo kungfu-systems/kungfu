@@ -1,0 +1,15 @@
+{
+  "schema": "kungfu.profile-actions/v1",
+  "actions": [
+    {
+      "id": "capture-finding-proposal",
+      "title": "Propose immutable Dogfood Finding capture",
+      "runner": "kfx-member",
+      "operation": "github-dogfood-bridge",
+      "runtimeOperation": "capability.invoke",
+      "authorityClass": "dogfood-finding-author",
+      "requiredCapabilities": ["dogfood.finding.capture"],
+      "effects": ["append-immutable-finding"]
+    }
+  ]
+}

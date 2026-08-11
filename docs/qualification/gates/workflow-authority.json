@@ -56,10 +56,10 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "diagnostic",
-          "definitionDigest": "sha256:ca04128a8eadda2436d7340d33db27dc15459b901ce00f29ab867e5aace0bc5f",
+          "definitionDigest": "sha256:8ad40d8ed8029211ce2b182df97f24103da9bb3bf3981c2b9397302d7349baff",
           "credentials": {"githubToken":"write","oidc":false,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
           "externalActions": ["actions/checkout@v4","actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0","actions/setup-node@v6.4.0","actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093","actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093","actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093","actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02","actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02","actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02","actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02","actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02"],
-          "steps": [{"index":1,"label":"uses:actions/checkout@v4","definitionDigest":"sha256:013f3e07e00504e33bda746183e505021d945acc2dfb178cf1d094ef09ea5c8f"},{"index":2,"label":"uses:actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0","definitionDigest":"sha256:9b7846da42731851ec82ae49c0786a0c47c96ac6a58c0ae088e3c984157cdc2a"},{"index":3,"label":"uses:actions/setup-node@v6.4.0","definitionDigest":"sha256:789e56d63991440fb89fffa3b2795c1cab043e6b7df6237a0c830c5c89759690"},{"index":4,"label":"name:Install pinned Buildchain proof runtime","authority":"evidence-publication","definitionDigest":"sha256:783242f94d9b1fcb7f81547dacd80cbd7bf49804e11686dcbce5b7adba853576"},{"index":5,"label":"name:Admit staged candidate dependency graph","definitionDigest":"sha256:e1190d35b582e2200e0f25a7a5066cc6c86f44f3ef6193a84443cd2fb84045a2"},{"index":6,"label":"name:Download current proof descriptor","authority":"evidence-publication","definitionDigest":"sha256:a622dea0e3fb312d92a2fdec4a8727bf051757beeedf4fd11e45ecc62a4946eb"},{"index":7,"label":"name:Revalidate exact affected-native source binding","authority":"evidence-publication","definitionDigest":"sha256:7bff3d26dbaee52e707dea03ed036cc558b82ac03fc6e92746ea952201316ec2"},{"index":8,"label":"name:Download admitted producer proof","authority":"evidence-publication","definitionDigest":"sha256:c6b84878600569041c7b0dabc910113f680d57237ecbb737b0c5114371d88c87"},{"index":9,"label":"name:Download current partition evidence","authority":"evidence-publication","definitionDigest":"sha256:4b57bb62fe678978688b21349fe0af530202dfa888fb586f3fc2b7f008c5f324"},{"index":10,"label":"id:admit","authority":"evidence-publication","definitionDigest":"sha256:374b62ed926149dae77db3805b5063481c3e8522d66fdfdb6cc90a7859087e61"},{"index":11,"label":"id:source_proof","definitionDigest":"sha256:819baf92b3ce7802d3cf57a6543899c43e798680e6d4ff04ecc82efa18af0df9"},{"index":12,"label":"name:Upload exact Buildchain Source Proof","authority":"evidence-publication","definitionDigest":"sha256:bdd46255936f45dcee78c15b7b295d295587ed026cb302f8407b287d25f5ec7a"},{"index":13,"label":"name:Seal reconstructable family delivery attempt","authority":"evidence-publication","definitionDigest":"sha256:aeeccf8bc63598280cfce17191571adcdd7ae7836aeacfb38c9863a0b0681869"},{"index":14,"label":"name:Consume Warrant and record exact Integration Delivery Proof","definitionDigest":"sha256:368c76aa903ee8a8ff7514100bccd7c2e21584e6af41300a4636f3f29334a71c"},{"index":15,"label":"name:Upload exact Integration Delivery Proof","authority":"evidence-publication","definitionDigest":"sha256:e6c58269912fe02cab132a145ff5541e022e0bd976ae7b52bdd18f8d0238d34e"},{"index":16,"label":"name:Upload reconstructable family delivery attempt","authority":"evidence-publication","definitionDigest":"sha256:96fd3d33843182611d0ad1af3546c3995d607049647a4300befd0ac87605cbdf"},{"index":17,"label":"name:Seal reused-proof cache promotion authority","definitionDigest":"sha256:dba0908dcde9277b704c7690eb25ecabac31f48a4dc98ce3a8a26d54b354c241"},{"index":18,"label":"name:Upload authoritative producer proof","authority":"evidence-publication","definitionDigest":"sha256:fe1606def564bd546877397a1b84e548fd45f241c958dbed56376fc448d85336"},{"index":19,"label":"name:Upload reused-proof cache promotion authority","authority":"evidence-publication","definitionDigest":"sha256:cd6594bf6e2bcb1ebbcbe1aa42683ef6488bb31e68ddc1eb0a060ce6cc749d5f"}]
+          "steps": [{"index":1,"label":"uses:actions/checkout@v4","definitionDigest":"sha256:013f3e07e00504e33bda746183e505021d945acc2dfb178cf1d094ef09ea5c8f"},{"index":2,"label":"uses:actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0","definitionDigest":"sha256:4e2b6da5cd6a3ddffae7c69863b6823506092660f058e3868497c112eb1c1316"},{"index":3,"label":"uses:actions/setup-node@v6.4.0","definitionDigest":"sha256:789e56d63991440fb89fffa3b2795c1cab043e6b7df6237a0c830c5c89759690"},{"index":4,"label":"name:Install pinned Buildchain proof runtime","authority":"evidence-publication","definitionDigest":"sha256:783242f94d9b1fcb7f81547dacd80cbd7bf49804e11686dcbce5b7adba853576"},{"index":5,"label":"name:Admit staged candidate dependency graph","definitionDigest":"sha256:e1190d35b582e2200e0f25a7a5066cc6c86f44f3ef6193a84443cd2fb84045a2"},{"index":6,"label":"name:Download current proof descriptor","authority":"evidence-publication","definitionDigest":"sha256:a622dea0e3fb312d92a2fdec4a8727bf051757beeedf4fd11e45ecc62a4946eb"},{"index":7,"label":"name:Revalidate exact affected-native source binding","authority":"evidence-publication","definitionDigest":"sha256:7bff3d26dbaee52e707dea03ed036cc558b82ac03fc6e92746ea952201316ec2"},{"index":8,"label":"name:Download admitted producer proof","authority":"evidence-publication","definitionDigest":"sha256:c6b84878600569041c7b0dabc910113f680d57237ecbb737b0c5114371d88c87"},{"index":9,"label":"name:Download current partition evidence","authority":"evidence-publication","definitionDigest":"sha256:4b57bb62fe678978688b21349fe0af530202dfa888fb586f3fc2b7f008c5f324"},{"index":10,"label":"id:admit","authority":"evidence-publication","definitionDigest":"sha256:374b62ed926149dae77db3805b5063481c3e8522d66fdfdb6cc90a7859087e61"},{"index":11,"label":"id:source_proof","definitionDigest":"sha256:819baf92b3ce7802d3cf57a6543899c43e798680e6d4ff04ecc82efa18af0df9"},{"index":12,"label":"name:Upload exact Buildchain Source Proof","authority":"evidence-publication","definitionDigest":"sha256:bdd46255936f45dcee78c15b7b295d295587ed026cb302f8407b287d25f5ec7a"},{"index":13,"label":"name:Seal reconstructable family delivery attempt","authority":"evidence-publication","definitionDigest":"sha256:aeeccf8bc63598280cfce17191571adcdd7ae7836aeacfb38c9863a0b0681869"},{"index":14,"label":"name:Consume Warrant and record exact Integration Delivery Proof","definitionDigest":"sha256:368c76aa903ee8a8ff7514100bccd7c2e21584e6af41300a4636f3f29334a71c"},{"index":15,"label":"name:Upload exact Integration Delivery Proof","authority":"evidence-publication","definitionDigest":"sha256:e6c58269912fe02cab132a145ff5541e022e0bd976ae7b52bdd18f8d0238d34e"},{"index":16,"label":"name:Upload reconstructable family delivery attempt","authority":"evidence-publication","definitionDigest":"sha256:96fd3d33843182611d0ad1af3546c3995d607049647a4300befd0ac87605cbdf"},{"index":17,"label":"name:Seal reused-proof cache promotion authority","definitionDigest":"sha256:dba0908dcde9277b704c7690eb25ecabac31f48a4dc98ce3a8a26d54b354c241"},{"index":18,"label":"name:Upload authoritative producer proof","authority":"evidence-publication","definitionDigest":"sha256:fe1606def564bd546877397a1b84e548fd45f241c958dbed56376fc448d85336"},{"index":19,"label":"name:Upload reused-proof cache promotion authority","authority":"evidence-publication","definitionDigest":"sha256:cd6594bf6e2bcb1ebbcbe1aa42683ef6488bb31e68ddc1eb0a060ce6cc749d5f"}]
         },
         {
           "id": "affected_native_shards",
@@ -86,10 +86,10 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "diagnostic",
-          "definitionDigest": "sha256:459c5b1ec4bce54df37f49780985484861d89112cbbf566db17624dc2dabe6c0",
+          "definitionDigest": "sha256:0281e089c0987a6f7ddc92e4be02dcb78a2005ad40f42187e787abc7748c3b08",
           "credentials": {"githubToken":"read","oidc":false,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
-          "externalActions": ["actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0","kungfu-systems/buildchain/actions/validate-config@v3"],
-          "steps": [{"index":1,"label":"uses:actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0","definitionDigest":"sha256:78d7ae6e479b47dfaedac84727a66b40468ac463895b29adc37ba62b1433a77c"},{"index":2,"label":"name:Validate .buildchain/buildchain.toml","definitionDigest":"sha256:bcc6354106f521d2013d57ebbe37029462402390ddaf8cf955f919c39701bb63"}]
+          "externalActions": ["actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0","kungfu-systems/buildchain/actions/validate-config@58e48d73ae7fef0dd06ae02baf6d090e4da5487d"],
+          "steps": [{"index":1,"label":"uses:actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0","definitionDigest":"sha256:78d7ae6e479b47dfaedac84727a66b40468ac463895b29adc37ba62b1433a77c"},{"index":2,"label":"name:Validate .buildchain/buildchain.toml","definitionDigest":"sha256:16a3a97f9383bade15f4ddebdab1d075f445af68a960b01bcf38d05d7a9f08e9"}]
         },
         {
           "id": "candidate_preflight",
@@ -156,9 +156,9 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "diagnostic",
-          "definitionDigest": "sha256:70e9db205319e6f55e1eb5c3adfedc732731a525d0649ba5acbf25ee91924cc9",
+          "definitionDigest": "sha256:959385f0d70ee1a9d092e6a9a0c4884329f73c6f9b270aa333c374bbad1161b0",
           "credentials": {"githubToken":"read","oidc":false,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
-          "externalActions": ["kungfu-systems/buildchain/.github/workflows/check.yml@9e904de2c85dbea7c799780ee166510b3336d812"],
+          "externalActions": ["kungfu-systems/buildchain/.github/workflows/check.yml@58e48d73ae7fef0dd06ae02baf6d090e4da5487d"],
           "steps": []
         }
       ]
@@ -274,16 +274,16 @@
     {
       "path": ".github/workflows/build.yml",
       "authority": "product-publication",
-      "definitionDigest": "sha256:9cae1ec7ea1247a9a6282fd680a60021445aa58a38936d87205e562914ab81d8",
+      "definitionDigest": "sha256:840e4e95c31c34420a4a583924c4f75a3df8a33b4d94cba2a0872ceb8db20c9a",
       "jobs": [
         {
           "id": "auditable-demo",
           "authority": "qualification",
           "publication": "none",
           "receipt": "qualifying",
-          "definitionDigest": "sha256:6611b27546153af6c40414b3bcb98b7655d4e91c08bea4be91fdd3c6e4072965",
+          "definitionDigest": "sha256:7b4cf57bda0843563c3499dfedce43b98719b2935569aac36ec6145d8aa9722c",
           "credentials": {"githubToken":"write","oidc":false,"repositorySecrets":["KUNGFU_GITHUB_TOKEN"],"inheritedSecrets":false,"environment":null},
-          "externalActions": ["kungfu-systems/buildchain/.github/workflows/.declarative-auditable-demo.yml@2e7e07902ac28d8f3edcfb81098ef9ebc7a91878"],
+          "externalActions": ["kungfu-systems/buildchain/.github/workflows/.declarative-auditable-demo.yml@41d4dce2f38aa4821c794b49dcfb2bcf59d0984a"],
           "steps": []
         },
         {
@@ -301,10 +301,20 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "qualifying",
-          "definitionDigest": "sha256:e0bb48b22d8b738260bb08031cb44aef493782a1055d72703e0e484831146fe4",
+          "definitionDigest": "sha256:a343895463aedd2d1284e6c94ab8b93711b4e9ea640c35189dee08af28fc028f",
           "credentials": {"githubToken":"write","oidc":true,"repositorySecrets":["BUILDCHAIN_ARTIFACT_RELAY_S3_DOWNLOAD_ROLE_ARN","BUILDCHAIN_ARTIFACT_RELAY_S3_ROLE_ARN","BUILDCHAIN_ARTIFACT_RELAY_S3_UPLOAD_ROLE_ARN","KUNGFU_GITHUB_TOKEN"],"inheritedSecrets":false,"environment":null},
-          "externalActions": ["kungfu-systems/buildchain/.github/workflows/.build.yml@2e7e07902ac28d8f3edcfb81098ef9ebc7a91878"],
+          "externalActions": ["kungfu-systems/buildchain/.github/workflows/.build.yml@73f10bb29f06a392d54fb223643be52b693057a6"],
           "steps": []
+        },
+        {
+          "id": "finalize-upgrade-publication-admission",
+          "authority": "qualification",
+          "publication": "none",
+          "receipt": "diagnostic",
+          "definitionDigest": "sha256:6d0cde77096323dc757392c8b2141a3cb13d21733b277e24f72a5dd0df0a2918",
+          "credentials": {"githubToken":"read","oidc":false,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
+          "externalActions": ["actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0","actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e","actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093","actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093","actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a"],
+          "steps": [{"index":1,"label":"name:Check out exact qualified source","definitionDigest":"sha256:29b1db9963a2029aabffae82fe0ec406fa6ec8d3a522d80493e9e84be9967dbe"},{"index":2,"label":"uses:actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e","definitionDigest":"sha256:0519ae7ef76b1b87fef7deb473d97cbf8f907413a7bd0c725596270fec7c0af6"},{"index":3,"label":"name:Restore exact release-candidate Passport","authority":"evidence-publication","definitionDigest":"sha256:fc271b217841d4cc2640243191c339fb5c8791016d544cdd3811d82da9463dc3"},{"index":4,"label":"name:Restore exact candidate payload artifacts","authority":"evidence-publication","definitionDigest":"sha256:a9a974cd4262757504227dffce39a79eaa9ae79e2b62e732e2fff263169bad2b"},{"index":5,"label":"name:Qualify exact product bytes and seal admission receipt","definitionDigest":"sha256:f5d9bf8f1f72542a63cfac486d9f2aec33624f9696bd614a3b9d7fa7dc754add"},{"index":6,"label":"name:Upload sealed product admission capsule","authority":"evidence-publication","definitionDigest":"sha256:b03ecdcd6505304c03301561871cae5d959f46b4038ae510e6af96e7dfebfc01"}]
         },
         {
           "id": "kungfu-phase-b",
@@ -341,10 +351,10 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "diagnostic",
-          "definitionDigest": "sha256:9d72930d913021ac3d18731e4d5c4a72547dd307c2d361d1b77855180f2f33f5",
+          "definitionDigest": "sha256:7c6730b98dff131d1e40d17161ffcc2e0741092fdb445a18e0024d4b2d0d4bd7",
           "credentials": {"githubToken":"write","oidc":true,"repositorySecrets":["KUNGFU_GITHUB_TOKEN"],"inheritedSecrets":false,"environment":null},
           "externalActions": ["actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0"],
-          "steps": [{"index":1,"label":"name:Check out exact candidate source","definitionDigest":"sha256:90b7875c1b8263fc6ee031b6f446decfc1fe5eb289f08dbc3d506c4bce43f113"},{"index":2,"label":"id:receipt","definitionDigest":"sha256:49dbd179361e6e926d6eab7b762bfa7bb7292e2f3c452a3b7ddd2d8bd626b623"}]
+          "steps": [{"index":1,"label":"name:Check out exact candidate source","definitionDigest":"sha256:90b7875c1b8263fc6ee031b6f446decfc1fe5eb289f08dbc3d506c4bce43f113"},{"index":2,"label":"id:source-lock","definitionDigest":"sha256:e4f2af74b5613f17f75f5586f64d057b159ab027e7857d94c322f45f141df7d8"},{"index":3,"label":"id:receipt","definitionDigest":"sha256:49dbd179361e6e926d6eab7b762bfa7bb7292e2f3c452a3b7ddd2d8bd626b623"}]
         },
         {
           "id": "resolve-auditable-demo-source",
@@ -361,7 +371,7 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "diagnostic",
-          "definitionDigest": "sha256:f7dc63acebe5c10defce5fac27e65ce16aa95d6c554102da98d441333c100199",
+          "definitionDigest": "sha256:d224e571059d840b05a2ec82dd085cf52ba84fa9b91e7e57f795d72cca8b54ec",
           "credentials": {"githubToken":"read","oidc":false,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
           "externalActions": ["actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0"],
           "steps": [{"index":1,"label":"name:Check out exact candidate source","definitionDigest":"sha256:90b7875c1b8263fc6ee031b6f446decfc1fe5eb289f08dbc3d506c4bce43f113"},{"index":2,"label":"id:continuity","definitionDigest":"sha256:aae979c9b8b143b19076785a8b475412dfaf38549d5e0a6764fb006a52c72a5d"},{"index":3,"label":"name:Independently verify the exact Windows continuity receipt","definitionDigest":"sha256:02b95433a8c2b062797026a17d1f6579c78ebc31c89a569daf2ec9a93cb4455e"}]
@@ -388,10 +398,10 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "diagnostic",
-          "definitionDigest": "sha256:8cccfbe630507ee2b23d3e204b680ca872ef46d41b7ede1b845690521668a920",
+          "definitionDigest": "sha256:026fbfc4ea9bf908087adace2e83c8a4f85b34c21efd83cf32b36927545aebf9",
           "credentials": {"githubToken":"read","oidc":false,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
-          "externalActions": ["actions/checkout@v4","kungfu-systems/buildchain/actions/validate-config@v3"],
-          "steps": [{"index":1,"label":"uses:actions/checkout@v4","definitionDigest":"sha256:dd0465395fff2eaf34fe466af3f46904442331f18fbcb4d67ae136cd3ae05d18"},{"index":2,"label":"name:Validate .buildchain/buildchain.toml","definitionDigest":"sha256:bcc6354106f521d2013d57ebbe37029462402390ddaf8cf955f919c39701bb63"}]
+          "externalActions": ["actions/checkout@v4","kungfu-systems/buildchain/actions/validate-config@827fa0252c0546816c33ec89e66ca505ad6d5162"],
+          "steps": [{"index":1,"label":"uses:actions/checkout@v4","definitionDigest":"sha256:dd0465395fff2eaf34fe466af3f46904442331f18fbcb4d67ae136cd3ae05d18"},{"index":2,"label":"name:Validate .buildchain/buildchain.toml","definitionDigest":"sha256:a35caf30ed95de84258ba0ebab43bf4c0d33451357551bf16fb29e39db6f97a3"}]
         }
       ]
     },
@@ -466,9 +476,9 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "diagnostic",
-          "definitionDigest": "sha256:98609d1683a146adf7c502da420b2f5388a4cccbc3f7ca29f0195af27c8f2f04",
+          "definitionDigest": "sha256:81355650d39c82d4c8530b11972079ee74e4db5e4538da0bc63a64d288da410b",
           "credentials": {"githubToken":"write","oidc":false,"repositorySecrets":["KUNGFU_GITHUB_TOKEN"],"inheritedSecrets":false,"environment":null},
-          "externalActions": ["kungfu-systems/buildchain/.github/workflows/dev-alpha-candidate-patrol.yml@2e7e07902ac28d8f3edcfb81098ef9ebc7a91878"],
+          "externalActions": ["kungfu-systems/buildchain/.github/workflows/dev-alpha-candidate-patrol.yml@58e48d73ae7fef0dd06ae02baf6d090e4da5487d"],
           "steps": []
         },
         {
@@ -486,16 +496,16 @@
     {
       "path": ".github/workflows/dev-delivery-warrant-terminal.yml",
       "authority": "qualification",
-      "definitionDigest": "sha256:c01b03edd1c7dfc6581857a23c0ea347bcaf098d9cc1e931c11c881fc2ee9378",
+      "definitionDigest": "sha256:3ae39e719d36f5d6b80b88975a464a5828cc670a3a7dff1ac768db215ffacc9a",
       "jobs": [
         {
           "id": "cancel-queued",
           "authority": "qualification",
           "publication": "none",
           "receipt": "diagnostic",
-          "definitionDigest": "sha256:161e8db5bb82ec667be1a48b313c272aed849c74e46453e2207fa50a31068a9b",
+          "definitionDigest": "sha256:1e08d3f23453f5b480e808d1b3ed9efc350d729e223512d73f445530428835d9",
           "credentials": {"githubToken":"write","oidc":false,"repositorySecrets":["KUNGFU_GITHUB_TOKEN"],"inheritedSecrets":false,"environment":null},
-          "externalActions": ["kungfu-systems/buildchain/.github/workflows/dev-delivery-warrant-cancel.yml@ed978d70b246fcfdb5e80009d58e1ce4926ad593"],
+          "externalActions": ["kungfu-systems/buildchain/.github/workflows/dev-delivery-warrant-cancel.yml@733812ff9405241705f5f267fe2e5ec6351e1a2d"],
           "steps": []
         },
         {
@@ -503,9 +513,9 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "diagnostic",
-          "definitionDigest": "sha256:9faf0e3cc867c4297d552ccd85377880438210da332723cad2ea53997525cd1c",
+          "definitionDigest": "sha256:0fad1e46895dc1ef197ab9c0dfccc523c696406a578e600986e9fd90574177a6",
           "credentials": {"githubToken":"write","oidc":false,"repositorySecrets":["KUNGFU_GITHUB_TOKEN"],"inheritedSecrets":false,"environment":null},
-          "externalActions": ["kungfu-systems/buildchain/.github/workflows/dev-delivery-warrant-close.yml@ed978d70b246fcfdb5e80009d58e1ce4926ad593"],
+          "externalActions": ["kungfu-systems/buildchain/.github/workflows/dev-delivery-warrant-close.yml@733812ff9405241705f5f267fe2e5ec6351e1a2d"],
           "steps": []
         },
         {
@@ -513,10 +523,10 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "diagnostic",
-          "definitionDigest": "sha256:06892dc63f7971613dd57e309ae166cf4803dfd2d807bf445341f4ed55c67ed3",
+          "definitionDigest": "sha256:b68defd0cd42d46cafc7af1aff05d7435cffcfb4e9a0e5e2d25d3ebc7ee428a8",
           "credentials": {"githubToken":"write","oidc":false,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
           "externalActions": ["actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0"],
-          "steps": [{"index":1,"label":"name:Check out protected Buildchain runtime","definitionDigest":"sha256:a4927e0cf19653150ce5f2e411de72bedf45422ccf873e17908c316f05605f60"},{"index":2,"label":"id:terminal","definitionDigest":"sha256:125df3159ee945ce311f3910a8925f34d61904df1e5ab218387895011f316e61"}]
+          "steps": [{"index":1,"label":"name:Check out protected Buildchain runtime","definitionDigest":"sha256:9fdd31d40910607f4bc322747c8cab68ad4d354e35f45a0f9e42df14c716087e"},{"index":2,"label":"id:terminal","definitionDigest":"sha256:2736ca19d2dd5289ce4451628cda37f2f9f51443ce63587e619c4d1b24f4fbf0"}]
         }
       ]
     },
@@ -557,9 +567,9 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "diagnostic",
-          "definitionDigest": "sha256:d182f9a3b080adc5e15ec14eb16e70d0b172db13e6c2ac7ec3a2d2abd5d40684",
+          "definitionDigest": "sha256:af72bbde44686a13ed8f7b475f3f96285730758f4dce99b6bb9e97b13d656084",
           "credentials": {"githubToken":"write","oidc":false,"repositorySecrets":["KUNGFU_GITHUB_TOKEN"],"inheritedSecrets":false,"environment":null},
-          "externalActions": ["kungfu-systems/buildchain/.github/workflows/dev-pr-auto-merge.yml@ed978d70b246fcfdb5e80009d58e1ce4926ad593"],
+          "externalActions": ["kungfu-systems/buildchain/.github/workflows/dev-pr-auto-merge.yml@733812ff9405241705f5f267fe2e5ec6351e1a2d"],
           "steps": []
         },
         {
@@ -567,20 +577,20 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "diagnostic",
-          "definitionDigest": "sha256:54a698f36feecce589c06444b4134bd7c930a42c6f07675d7f9a3fcac6bdd59b",
+          "definitionDigest": "sha256:b41d505ab5ff5671c2c49046ca49c9c1915e945f58d176c6876b163bbd553b94",
           "credentials": {"githubToken":"read","oidc":false,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
           "externalActions": ["actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0","actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0","actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e","actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093","actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02"],
-          "steps": [{"index":1,"label":"name:Check out protected consumer adapter","definitionDigest":"sha256:7a6e2b7a4219bc394a436c2b5c62af8c7e88a4ee217160392af47145517ded7e"},{"index":2,"label":"name:Check out exact Buildchain delivery runtime","authority":"evidence-publication","definitionDigest":"sha256:7a0e88a5af373711bc7081f90af5180845f26a5c37270401ae6368406e175d93"},{"index":3,"label":"name:Use Node.js 24 for exact delivery proof","definitionDigest":"sha256:9a97d7c7a2267e05fe44eeb809814e7bf942ee5e9ac9b9471b9bde0e6be2c9a4"},{"index":4,"label":"name:Install exact Buildchain delivery runtime","authority":"evidence-publication","definitionDigest":"sha256:71ee76abd8d8d888d22ecd9ba4ea9c53746220b18a08f6431df9ac3f18948eb7"},{"index":5,"label":"name:Verify exact source qualification run","authority":"evidence-publication","definitionDigest":"sha256:79e4b6cf8b8f87e78dd33827ef218dd94112cef2402c124f4dcaaa0c228db805"},{"index":6,"label":"name:Download exact source qualification descriptor","authority":"evidence-publication","definitionDigest":"sha256:5c13a140aea8777e4749d8259cf091f804756e2b76ee35f00521d750c974429e"},{"index":7,"label":"id:contract","definitionDigest":"sha256:10d761264755f395be38654bf8df8d8d437d4972f631f5473a0c500f36c92bf5"},{"index":8,"label":"id:project-cut","authority":"evidence-publication","definitionDigest":"sha256:ad91e14cd423a17c99cc037c1a3a15f85bbcdcbf3d0b8e487556f6f98f48c3e0"},{"index":9,"label":"name:Upload exact Warrant input projection","authority":"evidence-publication","definitionDigest":"sha256:374066139a234c9aa55cfffa25084b2938d17d83c6d14c62429fabef79a57bd8"}]
+          "steps": [{"index":1,"label":"name:Check out protected consumer adapter","definitionDigest":"sha256:7a6e2b7a4219bc394a436c2b5c62af8c7e88a4ee217160392af47145517ded7e"},{"index":2,"label":"name:Check out exact Buildchain delivery runtime","authority":"evidence-publication","definitionDigest":"sha256:8358ac81036d6e745c56de437954946ad0183e857a19352b598b0f847160ca7f"},{"index":3,"label":"name:Use Node.js 24 for exact delivery proof","definitionDigest":"sha256:9a97d7c7a2267e05fe44eeb809814e7bf942ee5e9ac9b9471b9bde0e6be2c9a4"},{"index":4,"label":"name:Install exact Buildchain delivery runtime","authority":"evidence-publication","definitionDigest":"sha256:71ee76abd8d8d888d22ecd9ba4ea9c53746220b18a08f6431df9ac3f18948eb7"},{"index":5,"label":"name:Verify exact source qualification run","authority":"evidence-publication","definitionDigest":"sha256:79e4b6cf8b8f87e78dd33827ef218dd94112cef2402c124f4dcaaa0c228db805"},{"index":6,"label":"name:Download exact source qualification descriptor","authority":"evidence-publication","definitionDigest":"sha256:5c13a140aea8777e4749d8259cf091f804756e2b76ee35f00521d750c974429e"},{"index":7,"label":"id:contract","definitionDigest":"sha256:10d761264755f395be38654bf8df8d8d437d4972f631f5473a0c500f36c92bf5"},{"index":8,"label":"id:project-cut","authority":"evidence-publication","definitionDigest":"sha256:ad91e14cd423a17c99cc037c1a3a15f85bbcdcbf3d0b8e487556f6f98f48c3e0"},{"index":9,"label":"name:Upload exact Warrant input projection","authority":"evidence-publication","definitionDigest":"sha256:374066139a234c9aa55cfffa25084b2938d17d83c6d14c62429fabef79a57bd8"}]
         },
         {
           "id": "resolve-target",
           "authority": "qualification",
           "publication": "none",
           "receipt": "diagnostic",
-          "definitionDigest": "sha256:d6c9e6bb881868dd82cac3ff32864f50b3eb461582ad6fd3962e4a02bd73969e",
+          "definitionDigest": "sha256:3dc462dc45e012eb1ab431ae6cc5bcbeca449d251b94f0846aa83dcb7abfaf8e",
           "credentials": {"githubToken":"none","oidc":false,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
           "externalActions": [],
-          "steps": [{"index":1,"label":"id:target","definitionDigest":"sha256:92154f8831e5718e47e16df5fa366159c40740479458558c6e2d879525f28c2d"}]
+          "steps": [{"index":1,"label":"id:target","definitionDigest":"sha256:359a6e4b4d4572e6a21d303290108fdd07354704d316ff1d56f627a064462de5"}]
         }
       ]
     },
@@ -790,7 +800,7 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "diagnostic",
-          "definitionDigest": "sha256:05a579aed425ab3f19ea8f79bd2ff77b2aaec2e89588f607217f62e5649e3d58",
+          "definitionDigest": "sha256:9562f4b978e129616a17fc1c2e803fd14d02fc9c4382e838503b71a553d5d499",
           "credentials": {"githubToken":"write","oidc":true,"repositorySecrets":["BUILDCHAIN_ARTIFACT_RELAY_S3_DOWNLOAD_ROLE_ARN","BUILDCHAIN_ARTIFACT_RELAY_S3_ROLE_ARN","BUILDCHAIN_ARTIFACT_RELAY_S3_UPLOAD_ROLE_ARN"],"inheritedSecrets":false,"environment":null},
           "externalActions": ["kungfu-systems/buildchain/.github/workflows/.build.yml@bfe43b0fe5577f15d2af01bc542de8a8ce587457"],
           "steps": []
@@ -925,17 +935,17 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "diagnostic",
-          "definitionDigest": "sha256:f79fb663e01c66d336e5a1c082ebd23158ef34a1f534f0bbf7889726205ddaf8",
+          "definitionDigest": "sha256:1321691af80913fffade45e29d8ca080039b0e517ddd54f13dd3133bf70c2691",
           "credentials": {"githubToken":"read","oidc":false,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
           "externalActions": ["actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0","actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0","actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e"],
-          "steps": [{"index":1,"label":"uses:actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0","definitionDigest":"sha256:78d7ae6e479b47dfaedac84727a66b40468ac463895b29adc37ba62b1433a77c"},{"index":2,"label":"uses:actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0","definitionDigest":"sha256:9b7846da42731851ec82ae49c0786a0c47c96ac6a58c0ae088e3c984157cdc2a"},{"index":3,"label":"uses:actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e","definitionDigest":"sha256:a869cc671103a9106dc90b4275a4148de9a5d18cd3578a2642d8ae8076d8dbf0"},{"index":4,"label":"name:Install pinned Buildchain Warrant runtime","definitionDigest":"sha256:ec7b05b5ce26fd88b9cf114ae1bec4d5a039b03f9982b9cbe04f51e8d77342f6"},{"index":5,"label":"name:Consume the exact Buildchain Warrant lease","definitionDigest":"sha256:c48365088276cd6104591cc238427fa409bb9f87255c27ba833d810754711368"}]
+          "steps": [{"index":1,"label":"uses:actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0","definitionDigest":"sha256:78d7ae6e479b47dfaedac84727a66b40468ac463895b29adc37ba62b1433a77c"},{"index":2,"label":"uses:actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0","definitionDigest":"sha256:4e2b6da5cd6a3ddffae7c69863b6823506092660f058e3868497c112eb1c1316"},{"index":3,"label":"uses:actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e","definitionDigest":"sha256:a869cc671103a9106dc90b4275a4148de9a5d18cd3578a2642d8ae8076d8dbf0"},{"index":4,"label":"name:Install pinned Buildchain Warrant runtime","definitionDigest":"sha256:ec7b05b5ce26fd88b9cf114ae1bec4d5a039b03f9982b9cbe04f51e8d77342f6"},{"index":5,"label":"name:Consume the exact Buildchain Warrant lease","definitionDigest":"sha256:c48365088276cd6104591cc238427fa409bb9f87255c27ba833d810754711368"}]
         }
       ]
     },
     {
       "path": ".github/workflows/release-new-version.yml",
       "authority": "release-control",
-      "definitionDigest": "sha256:605743db259b0bf409d49070a30a092034bee9b1e105e7f20f923fef8ce51db4",
+      "definitionDigest": "sha256:26ac5b52d5bf4475c2902d249827466c1c4355deabd05377688795138700c2f6",
       "jobs": [
         {
           "id": "alpha-timeline",
@@ -952,9 +962,9 @@
           "authority": "release-control",
           "publication": "channel",
           "receipt": "qualifying",
-          "definitionDigest": "sha256:9c6edfce28b097a3097c3e02484588363688123813886acf253e8ddc20f529de",
+          "definitionDigest": "sha256:375567b8b95d453168c684d792ec47fe0b0c0a0b7f6530657001327fea16758d",
           "credentials": {"githubToken":"write","oidc":true,"repositorySecrets":["BUILDCHAIN_ISSUE_APP_ID","BUILDCHAIN_ISSUE_APP_PRIVATE_KEY","KUNGFU_ALPHA_CHANNEL_SIGNING_PRIVATE_KEY","KUNGFU_GITHUB_TOKEN","KUNGFU_GOVERNANCE_AUDITOR_APP_PRIVATE_KEY"],"inheritedSecrets":false,"environment":null},
-          "externalActions": ["kungfu-systems/buildchain/.github/workflows/release-candidate-promote.yml@2e7e07902ac28d8f3edcfb81098ef9ebc7a91878"],
+          "externalActions": ["kungfu-systems/buildchain/.github/workflows/release-candidate-promote.yml@v3-alpha"],
           "steps": []
         },
         {
@@ -962,10 +972,30 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "diagnostic",
-          "definitionDigest": "sha256:928b92797b78a1666e40d816dd7b25e7c95478af3465dcd6620fbd2ebc857335",
+          "definitionDigest": "sha256:4e9e5ddb616e8d063176be8f6c2b810e8b05d9468d8dc1dc4b63aa370ec5b93d",
           "credentials": {"githubToken":"read","oidc":false,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
           "externalActions": ["actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0","actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e","actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0"],
           "steps": [{"index":1,"label":"id:candidate","definitionDigest":"sha256:b26ccd80ef6de735f425e42a2f6bc52b4d0473bf52771cc1d9c2efecb674843a"},{"index":2,"label":"name:Checkout immutable Alpha candidate","definitionDigest":"sha256:8f1ff28917c625d57760451e82ab1239ddf747a611068bf9c6ad1067ad8f6284"},{"index":3,"label":"uses:actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e","definitionDigest":"sha256:a869cc671103a9106dc90b4275a4148de9a5d18cd3578a2642d8ae8076d8dbf0"},{"index":4,"label":"id:preflight","definitionDigest":"sha256:de360134fee9dbf785d19794d87d62f16b07c7bf2872c83ce97be75fa0b8a02f"},{"index":5,"label":"name:Checkout immutable promotion result","definitionDigest":"sha256:9ff1aa9f5707e1bed64e57983cf9e409bd19fc8146dd5aa1801e1f6d4b8413f4"},{"index":6,"label":"id:promotion-tree","definitionDigest":"sha256:391088f704e8df632f937c4fe9c1265efb3846849c489032170178e871bde248"},{"index":7,"label":"name:Rehearse the Kungfu promotion contract for a pull request","definitionDigest":"sha256:0af2d30832fe4041d9997fd0a331f528a62b23fba2e3c9cfc23e45dd8ab38947"},{"index":8,"label":"name:Rehearse the Kungfu promotion contract for a manual dry-run","definitionDigest":"sha256:ac10175c46721c013cdc70ec9c5db82713fabd00be703439cf665365bef6c05d"}]
+        },
+        {
+          "id": "recover",
+          "authority": "release-control",
+          "publication": "channel",
+          "receipt": "qualifying",
+          "definitionDigest": "sha256:98fa8b4e65d1c5211909814eafb4dcd83830c32b676c4b231d7889554827d3fb",
+          "credentials": {"githubToken":"write","oidc":true,"repositorySecrets":["BUILDCHAIN_ISSUE_APP_ID","BUILDCHAIN_ISSUE_APP_PRIVATE_KEY","KUNGFU_ALPHA_CHANNEL_SIGNING_PRIVATE_KEY","KUNGFU_GITHUB_TOKEN","KUNGFU_GOVERNANCE_AUDITOR_APP_PRIVATE_KEY"],"inheritedSecrets":false,"environment":null},
+          "externalActions": ["kungfu-systems/buildchain/.github/workflows/release-candidate-promote.yml@827fa0252c0546816c33ec89e66ca505ad6d5162"],
+          "steps": []
+        },
+        {
+          "id": "recovery-preflight",
+          "authority": "qualification",
+          "publication": "none",
+          "receipt": "diagnostic",
+          "definitionDigest": "sha256:98fd4510b38553a3cbe4454ff94b53bac9f83f1d42d5e86c21064d678248cf11",
+          "credentials": {"githubToken":"read","oidc":false,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
+          "externalActions": ["actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0","actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e","actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0","actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093"],
+          "steps": [{"index":1,"label":"name:Require a bounded Alpha recovery identity","definitionDigest":"sha256:c3e3730090f41cef228cad9d874fd3f1585dee5e0930af46d9c8fede6fd40e11"},{"index":2,"label":"name:Checkout immutable candidate source","definitionDigest":"sha256:e40649f5b143d21ffd7142da1bc68a742801f31c93e3ab2ada4aee4b6c2d967b"},{"index":3,"label":"uses:actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e","definitionDigest":"sha256:a869cc671103a9106dc90b4275a4148de9a5d18cd3578a2642d8ae8076d8dbf0"},{"index":4,"label":"id:recovery-preflight","definitionDigest":"sha256:928d42586c058a371bbf42e97504e267899a7b5e93e92b38f1097ab9954bc9a6"},{"index":5,"label":"name:Checkout the pinned Alpha preflight source","definitionDigest":"sha256:9a71cedbd18fda60df1b8412c351a2337187bad302098db2b110523777fe58c6"},{"index":6,"label":"name:Download the pinned Alpha preflight receipt","authority":"evidence-publication","definitionDigest":"sha256:3a7a33ef66ee436f5afbd556a303d51cd7715e270492f536c1f2569a02f64f29"},{"index":7,"label":"name:Verify the pinned Alpha preflight at its source","definitionDigest":"sha256:ec35f1079fe66c4a8ce96c1e910d6225f12070f7aef1b2f15a59791b3af1febd"},{"index":8,"label":"name:Verify promotion target preserves the candidate tree","definitionDigest":"sha256:094cc4ca0517fd5060a6e7cb51a99988b68d7ef0c64ce3b6dcc6fba5ff68e9fc"}]
         }
       ]
     },

@@ -39,6 +39,21 @@ const NODE_HOST_LIB: &str = "libkungfu_node_host.so";
 #[cfg(windows)]
 const NODE_HOST_LIB: &str = "kungfu_node_host.dll";
 
+#[cfg(unix)]
+const RTLD_NOW: std::ffi::c_int = 2;
+// `RTLD_GLOBAL` is platform-defined rather than POSIX-numeric.  The embedded
+// Node host must publish libnode's N-API exports so native addons loaded later
+// by Node (for example node-pty) can resolve them from the process scope.
+#[cfg(target_os = "macos")]
+const RTLD_GLOBAL: std::ffi::c_int = 0x8;
+#[cfg(all(unix, not(target_os = "macos")))]
+const RTLD_GLOBAL: std::ffi::c_int = 0x100;
+
+#[cfg(unix)]
+fn node_host_loader_flags() -> std::ffi::c_int {
+    RTLD_NOW | RTLD_GLOBAL
+}
+
 pub fn native_node_available() -> bool {
     env::current_exe()
         .ok()
@@ -57,6 +72,13 @@ pub fn dispatch() -> Option<i32> {
                 env::args_os().nth(1).as_deref(),
             ) =>
         {
+            // This fast path bypasses the normal product launch functions, so
+            // the worker itself must establish the external Python cache
+            // contract before it can launch any bundled interpreter child.
+            if let Err(message) = crate::launch::configure_product_cache_environment() {
+                eprintln!("kungfu: {message}");
+                return Some(1);
+            }
             run_node()
         }
         Some("node") => {
@@ -146,7 +168,6 @@ fn run_node() -> Option<i32> {
     use std::path::PathBuf;
 
     // POSIX dynamic-loader entry points; std-only, no crate dependency.
-    const RTLD_NOW: c_int = 2;
     extern "C" {
         fn dlopen(filename: *const c_char, flag: c_int) -> *mut c_void;
         fn dlsym(handle: *mut c_void, symbol: *const c_char) -> *mut c_void;
@@ -159,7 +180,7 @@ fn run_node() -> Option<i32> {
     let lib_c = CString::new(lib_path.as_os_str().as_bytes()).ok()?;
 
     // Absent library → not the product build → fall through to the Python path.
-    let handle = unsafe { dlopen(lib_c.as_ptr(), RTLD_NOW) };
+    let handle = unsafe { dlopen(lib_c.as_ptr(), node_host_loader_flags()) };
     if handle.is_null() {
         return None;
     }
@@ -316,5 +337,13 @@ mod tests {
             );
             expected_offset += expected.len() + 1;
         }
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn node_host_loader_publishes_native_addon_symbols() {
+        let flags = node_host_loader_flags();
+        assert_ne!(flags & RTLD_NOW, 0);
+        assert_ne!(flags & RTLD_GLOBAL, 0);
     }
 }

@@ -17,6 +17,41 @@ _TEMPLATE = re.compile(
     r"\{(skill_file|skill_dir|skills_root|adapter_root|provider_log_dir)(:json)?\}"
 )
 _UNRESOLVED_TEMPLATE = re.compile(r"\{[a-z_]+(?::json)?\}")
+_TMUX_PROCESS_ENVIRONMENT = frozenset({"TMUX", "TMUX_PANE"})
+
+
+def native_process_environment(
+    ambient: Mapping[str, str], names: list[str]
+) -> dict[str, str]:
+    """Resolve registered ambient process capabilities without persisting values."""
+
+    configured = set(names)
+    if not configured:
+        return {}
+    if configured != _TMUX_PROCESS_ENVIRONMENT:
+        raise ValueError(
+            "native process environment must contain the complete registered "
+            "TMUX/TMUX_PANE capability"
+        )
+
+    tmux = str(ambient.get("TMUX") or "").strip()
+    pane = str(ambient.get("TMUX_PANE") or "").strip()
+    if not tmux and not pane:
+        return {}
+    if not tmux or not pane or "\x00" in tmux or "\x00" in pane:
+        return {}
+    socket_path, separator, coordinates = tmux.rpartition(",")
+    server_prefix, second_separator, server_pid = socket_path.rpartition(",")
+    if (
+        not separator
+        or not second_separator
+        or not server_prefix
+        or not server_pid.isdigit()
+        or not coordinates.isdigit()
+        or re.fullmatch(r"%[0-9]+", pane) is None
+    ):
+        return {}
+    return {"TMUX": tmux, "TMUX_PANE": pane}
 
 
 def render_text(value: str, paths: Mapping[str, str]) -> str:
@@ -184,6 +219,12 @@ class ProviderBootstrapAdapter:
             str(key): render_text(str(value), paths)
             for key, value in dict(skill.get("environment") or {}).items()
         }
+        environment.update(
+            native_process_environment(
+                os.environ,
+                [str(value) for value in definition.get("processEnvironment") or []],
+            )
+        )
         for key, value in dict(skill.get("environmentJson") or {}).items():
             environment[str(key)] = json.dumps(
                 render(value, paths),
@@ -203,5 +244,6 @@ class ProviderBootstrapAdapter:
             "credentialEnvironment": list(
                 definition.get("credentialEnvironment") or []
             ),
+            "processEnvironment": list(definition.get("processEnvironment") or []),
             "knownLimits": list(definition.get("knownLimits") or []),
         }

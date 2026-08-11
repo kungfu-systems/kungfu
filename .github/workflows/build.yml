@@ -9,8 +9,9 @@ on:
     branches:
       - alpha/v*/v*
       - release/v*/v*
-  # Manual runs validate lifecycle changes (e.g. the ./shifu entrypoint
-  # switch) on the full platform matrix without waiting for an alpha PR.
+  # Manual runs validate lifecycle changes without waiting for an alpha PR.
+  # An explicit media refresh is narrower: one Linux x64 artifact is the only
+  # product input required by the declarative animation pipeline.
   workflow_dispatch:
     inputs:
       buildchain-ref:
@@ -18,7 +19,7 @@ on:
         required: false
         default: ""
       platforms-json:
-        description: "Optional custom platform matrix for isolated qualification reruns"
+        description: "Optional custom platform matrix for isolated qualification reruns; ignored by a full auditable-demo refresh"
         required: false
         default: ""
       windows-compiler-cache-mode:
@@ -49,7 +50,7 @@ on:
         type: boolean
         default: false
       render-auditable-demo:
-        description: "Run a strict full media refresh; false retains Gate-only validation"
+        description: "Run a strict Linux x64-only media refresh; false retains Gate-only validation"
         required: false
         type: boolean
         default: false
@@ -76,6 +77,9 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: ${{ fromJSON(inputs.macos-overflow-request-json || '{}').mode == 'control' && 360 || 10 }}
     outputs:
+      release-cut-source-ref: ${{ steps.source-lock.outputs.source-ref }}
+      release-cut-source-sha: ${{ steps.source-lock.outputs.source-sha }}
+      release-cut-anchor-request-json: ${{ steps.source-lock.outputs.anchor-request-json }}
       receipt-root: ${{ steps.receipt.outputs.receipt-root }}
       source-tree: ${{ steps.receipt.outputs.source-tree }}
       dependency-lock-root: ${{ steps.receipt.outputs.dependency-lock-root }}
@@ -89,6 +93,61 @@ jobs:
           fetch-depth: 1
           persist-credentials: false
 
+      - name: Verify explicit Release Cut source lock
+        id: source-lock
+        shell: bash
+        env:
+          RELEASE_CUT_PR: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.ref == 'alpha/v4/v4.0' && github.event.pull_request.head.ref == 'fix/alpha2-lineage-repair-r16' && 'true' || 'false' }}
+          RELEASE_CUT_PR_BASE_SHA: ${{ github.event.pull_request.base.sha || '' }}
+          RELEASE_CUT_SOURCE_REF: ${{ fromJSON(inputs.macos-overflow-request-json || '{}').releaseCutSourceRef || (github.event_name == 'pull_request' && github.event.pull_request.base.ref == 'alpha/v4/v4.0' && github.event.pull_request.head.ref == 'fix/alpha2-lineage-repair-r16' && 'publish-gate/anchor') || '' }}
+          RELEASE_CUT_SOURCE_SHA: ${{ fromJSON(inputs.macos-overflow-request-json || '{}').sourceSha || (github.event_name == 'pull_request' && github.event.pull_request.base.ref == 'alpha/v4/v4.0' && github.event.pull_request.head.ref == 'fix/alpha2-lineage-repair-r16' && github.event.pull_request.head.sha) || '' }}
+          RELEASE_CUT_ANCHOR_REQUEST_JSON: ${{ toJSON(fromJSON(inputs.macos-overflow-request-json || '{}').releaseCutAnchorRequest) }}
+        run: |
+          set -euo pipefail
+          if [[ -z "$RELEASE_CUT_SOURCE_REF" ]]; then
+            {
+              echo "source-ref="
+              echo "source-sha="
+              echo "anchor-request-json="
+            } >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          test "$RELEASE_CUT_SOURCE_REF" = "publish-gate/anchor"
+          [[ "$RELEASE_CUT_SOURCE_SHA" =~ ^[0-9a-f]{40}$ ]]
+          test "$(git rev-parse HEAD)" = "$RELEASE_CUT_SOURCE_SHA"
+          test "$(git ls-remote origin "refs/heads/$RELEASE_CUT_SOURCE_REF" | awk '{print $1}')" = "$RELEASE_CUT_SOURCE_SHA"
+          if [[ "$RELEASE_CUT_PR" = "true" ]]; then
+            test "$RELEASE_CUT_PR_BASE_SHA" = "f9e6b0e34bcdd6407b2a18206ace7982d64de2c8"
+            RELEASE_CUT_ANCHOR_REQUEST_JSON="$(
+              jq -cn \
+                --arg source "$RELEASE_CUT_SOURCE_SHA" \
+                '{
+                  schema: "kungfu.alpha-release-cut-build-lock/v1",
+                  release: "v4.0.0-alpha.2",
+                  cut: "r16",
+                  candidateSha: $source,
+                  alphaBaseSha: "f9e6b0e34bcdd6407b2a18206ace7982d64de2c8",
+                  buildchainRef: "73f10bb29f06a392d54fb223643be52b693057a6",
+                  devMirrorIsBuildInput: false
+                }'
+            )"
+          fi
+          jq -e \
+            --arg source "$RELEASE_CUT_SOURCE_SHA" \
+            '.schema == "kungfu.alpha-release-cut-build-lock/v1" and
+             .release == "v4.0.0-alpha.2" and
+             .cut == "r16" and
+             .candidateSha == $source and
+             .alphaBaseSha == "f9e6b0e34bcdd6407b2a18206ace7982d64de2c8" and
+             .buildchainRef == "73f10bb29f06a392d54fb223643be52b693057a6" and
+             .devMirrorIsBuildInput == false' \
+            <<<"$RELEASE_CUT_ANCHOR_REQUEST_JSON" >/dev/null
+          {
+            echo "source-ref=$RELEASE_CUT_SOURCE_REF"
+            echo "source-sha=$RELEASE_CUT_SOURCE_SHA"
+            echo "anchor-request-json=$RELEASE_CUT_ANCHOR_REQUEST_JSON"
+          } >> "$GITHUB_OUTPUT"
+
       - name: Admit reusable source and platform probes
         id: receipt
         uses: ./.github/actions/require-alpha-preflight
@@ -101,7 +160,7 @@ jobs:
   windows-fast-sentinel:
     name: Windows exact-source fast sentinel
     needs: preflight
-    if: ${{ always() && (needs.preflight.result == 'success' || (github.event_name == 'workflow_dispatch' && inputs.fast-sentinels-only && needs.preflight.result == 'skipped')) && fromJSON(inputs.macos-overflow-request-json || '{}').mode != 'control' }}
+    if: ${{ always() && (needs.preflight.result == 'success' || (github.event_name == 'workflow_dispatch' && inputs.fast-sentinels-only && needs.preflight.result == 'skipped')) && !(github.event_name == 'workflow_dispatch' && inputs.render-auditable-demo) && fromJSON(inputs.macos-overflow-request-json || '{}').mode != 'control' }}
     runs-on: windows-2025
     timeout-minutes: 10
     permissions:
@@ -159,17 +218,25 @@ jobs:
 
   build:
     needs: [preflight, windows-fast-sentinel, auditable-demo-fast-sentinel]
-    if: ${{ needs.preflight.result == 'success' && needs.windows-fast-sentinel.result == 'success' && needs.auditable-demo-fast-sentinel.result == 'success' && !inputs.fast-sentinels-only && fromJSON(inputs.macos-overflow-request-json || '{}').mode != 'control' }}
-    uses: kungfu-systems/buildchain/.github/workflows/.build.yml@2e7e07902ac28d8f3edcfb81098ef9ebc7a91878 # signing workflow path readback
+    if: ${{ always() && needs.preflight.result == 'success' && (needs.windows-fast-sentinel.result == 'success' || (github.event_name == 'workflow_dispatch' && inputs.render-auditable-demo && needs.windows-fast-sentinel.result == 'skipped')) && needs.auditable-demo-fast-sentinel.result == 'success' && !inputs.fast-sentinels-only && fromJSON(inputs.macos-overflow-request-json || '{}').mode != 'control' }}
+    uses: kungfu-systems/buildchain/.github/workflows/.build.yml@73f10bb29f06a392d54fb223643be52b693057a6
     secrets:
       BUILDCHAIN_PROMOTION_TOKEN: ${{ secrets.KUNGFU_GITHUB_TOKEN }}
       BUILDCHAIN_ARTIFACT_RELAY_S3_ROLE_ARN: ${{ secrets.BUILDCHAIN_ARTIFACT_RELAY_S3_ROLE_ARN }}
       BUILDCHAIN_ARTIFACT_RELAY_S3_UPLOAD_ROLE_ARN: ${{ secrets.BUILDCHAIN_ARTIFACT_RELAY_S3_UPLOAD_ROLE_ARN }}
       BUILDCHAIN_ARTIFACT_RELAY_S3_DOWNLOAD_ROLE_ARN: ${{ secrets.BUILDCHAIN_ARTIFACT_RELAY_S3_DOWNLOAD_ROLE_ARN }}
     with:
-      buildchain-ref: ${{ inputs.buildchain-ref || '2e7e07902ac28d8f3edcfb81098ef9ebc7a91878' }}
+      # One already-qualified immutable v3-alpha workflow shell and runtime
+      # remain the source of authority. Buildchain admits an explicit override
+      # only for a trusted manual actor and records the resolved runtime.
+      buildchain-ref: ${{ inputs.buildchain-ref || '73f10bb29f06a392d54fb223643be52b693057a6' }}
+      publish-source-ref: ${{ needs.preflight.outputs.release-cut-source-ref }}
+      publish-anchor-request-json: ${{ needs.preflight.outputs.release-cut-anchor-request-json }}
       runner-preset: custom
-      platforms-json: ${{ fromJSON(inputs.macos-overflow-request-json || '{}').mode == 'self-hosted' && '[{"id":"macos-arm64","name":"macOS ARM64 self-hosted primary","platform":"macos","runner":"[\"self-hosted\",\"macOS\",\"ARM64\",\"kungfu-build-v4-macos-arm64\"]","capabilities":["native-toolchain","node","product-artifacts","rust"]}]' || (fromJSON(inputs.macos-overflow-request-json || '{}').mode == 'github-hosted' && '[{"id":"macos-arm64","name":"macOS ARM64 GitHub-hosted overflow","platform":"macos","runner":"[\"macos-15\"]","capabilities":["native-toolchain","node","product-artifacts","rust"]}]' || (inputs.platforms-json || '[{"id":"linux-x64","name":"Linux x64","platform":"linux","runner":"[\"ubuntu-24.04\"]","capabilities":["node","native-toolchain","product-artifacts","rust"],"environment":{"CC":"gcc-14","CXX":"g++-14"}},{"id":"linux-arm64","name":"Linux ARM64","platform":"linux","runner":"[\"ubuntu-24.04-arm\"]","capabilities":["node","native-toolchain","product-artifacts","rust"]},{"id":"macos-arm64","name":"macOS ARM64","platform":"macos","runner":"[\"macos-15\"]","capabilities":["node","native-toolchain","product-artifacts","rust"]},{"id":"windows-x64","name":"Windows x64","platform":"windows","runner":"[\"windows-2022\"]","capabilities":["node","native-toolchain","product-artifacts","rust"]}]')) }}
+      # Manual media publication consumes exactly one same-run Linux x64
+      # product artifact. Protected Alpha and Release candidates retain the
+      # complete four-platform matrix below.
+      platforms-json: ${{ fromJSON(inputs.macos-overflow-request-json || '{}').mode == 'self-hosted' && '[{"id":"macos-arm64","name":"macOS ARM64 self-hosted primary","platform":"macos","runner":"[\"self-hosted\",\"macOS\",\"ARM64\",\"kungfu-build-v4-macos-arm64\"]","capabilities":["native-toolchain","node","product-artifacts","rust"]}]' || (fromJSON(inputs.macos-overflow-request-json || '{}').mode == 'github-hosted' && '[{"id":"macos-arm64","name":"macOS ARM64 GitHub-hosted overflow","platform":"macos","runner":"[\"macos-15\"]","capabilities":["native-toolchain","node","product-artifacts","rust"]}]' || (github.event_name == 'workflow_dispatch' && inputs.render-auditable-demo && '[{"id":"linux-x64","name":"Linux x64 auditable demo publication","platform":"linux","runner":"[\"ubuntu-24.04\"]","capabilities":["node","native-toolchain","product-artifacts","rust"],"environment":{"CC":"gcc-14","CXX":"g++-14"}}]' || (inputs.platforms-json || '[{"id":"linux-x64","name":"Linux x64","platform":"linux","runner":"[\"ubuntu-24.04\"]","capabilities":["node","native-toolchain","product-artifacts","rust"],"environment":{"CC":"gcc-14","CXX":"g++-14"}},{"id":"linux-arm64","name":"Linux ARM64","platform":"linux","runner":"[\"ubuntu-24.04-arm\"]","capabilities":["node","native-toolchain","product-artifacts","rust"]},{"id":"macos-arm64","name":"macOS ARM64","platform":"macos","runner":"[\"macos-15\"]","capabilities":["node","native-toolchain","product-artifacts","rust"]},{"id":"windows-x64","name":"Windows x64","platform":"windows","runner":"[\"windows-2022\"]","capabilities":["node","native-toolchain","product-artifacts","rust"]}]'))) }}
       # Formal Alpha and Release candidates run their credential-free native
       # build and qualification lanes on fresh GitHub-hosted runners. Detached
       # signing, notarization, publication, and activation retain their
@@ -187,7 +254,7 @@ jobs:
       artifact-paths: |
         product/release
         product/dist/cli/kungfu-episodes-cli-linux-x64
-      pre-upload-transport-smoke-scenario-path: .buildchain/auditable-demo.json
+      pre-upload-transport-smoke-scenario-path: .buildchain/auditable-demo-transport-smoke.json
       pre-upload-transport-smoke-artifact-root: .
       github-artifact-attestation-subject-path: product/release/cli/kungfu-episodes-cli-linux-x64.tar.gz
       github-artifact-attestation-signer-sha: 375b2d4b8a904776453773a33b4c4e4556c8c999
@@ -262,17 +329,80 @@ jobs:
       # The profile is public and local-only: all lanes can resolve it, while
       # the source adapter maps the compiler-cache binding only on Windows.
       # Manual off runs retain the prior profile for same-source baselines.
-      shifu-cache-profile-ref: ${{ github.event_name == 'workflow_dispatch' && inputs.windows-compiler-cache-mode == 'off' && 'docs/shifu/qualification-portable-off.cache-profile.json' || 'docs/shifu/windows-alpha-sccache.cache-profile.json' }}
-      shifu-cache-profile-digest: ${{ github.event_name == 'workflow_dispatch' && inputs.windows-compiler-cache-mode == 'off' && 'sha256:d7002041716ea1e5ad703492815c9557576d5679227743541c13d42b6ea9de5c' || 'sha256:581c430b959c0b45272031cad85a3fae740a6398abf7c1051d1d43b098ee0adb' }}
-      compiler-cache-provider: ${{ github.event_name == 'workflow_dispatch' && inputs.windows-compiler-cache-mode == 'off' && 'none' || 'sccache' }}
-      compiler-cache-platforms-json: ${{ github.event_name == 'workflow_dispatch' && inputs.windows-compiler-cache-mode == 'off' && '[]' || '["windows-x64"]' }}
-      compiler-cache-required: ${{ github.event_name != 'workflow_dispatch' || inputs.windows-compiler-cache-mode != 'off' }}
+      shifu-cache-profile-ref: ${{ github.event_name == 'workflow_dispatch' && (inputs.render-auditable-demo || inputs.windows-compiler-cache-mode == 'off') && 'docs/shifu/qualification-portable-off.cache-profile.json' || 'docs/shifu/windows-alpha-sccache.cache-profile.json' }}
+      shifu-cache-profile-digest: ${{ github.event_name == 'workflow_dispatch' && (inputs.render-auditable-demo || inputs.windows-compiler-cache-mode == 'off') && 'sha256:d7002041716ea1e5ad703492815c9557576d5679227743541c13d42b6ea9de5c' || 'sha256:581c430b959c0b45272031cad85a3fae740a6398abf7c1051d1d43b098ee0adb' }}
+      compiler-cache-provider: ${{ github.event_name == 'workflow_dispatch' && (inputs.render-auditable-demo || inputs.windows-compiler-cache-mode == 'off') && 'none' || 'sccache' }}
+      compiler-cache-platforms-json: ${{ github.event_name == 'workflow_dispatch' && (inputs.render-auditable-demo || inputs.windows-compiler-cache-mode == 'off') && '[]' || '["windows-x64"]' }}
+      compiler-cache-required: ${{ github.event_name != 'workflow_dispatch' || (!inputs.render-auditable-demo && inputs.windows-compiler-cache-mode != 'off') }}
       cache-dependency-lock-root: ${{ needs.preflight.outputs.dependency-lock-root }}
       cache-toolchain-root: ${{ needs.preflight.outputs.toolchain-root }}
       cache-policy-root: ${{ needs.preflight.outputs.policy-root }}
-      buildchain-contract-lock-path: .buildchain/contract-lock.json
+      buildchain-contract-lock-path: .buildchain/alpha-contract-lock.json
       buildchain-contract-compatibility-policy: major-compatible
       buildchain-contract-drift-issue-mode: compatible-and-breaking
+
+  finalize-upgrade-publication-admission:
+    name: Finalize product upgrade publication admission
+    needs: build
+    if: ${{ needs.build.result == 'success' && github.event_name == 'pull_request' && (startsWith(github.base_ref, 'alpha/') || startsWith(github.base_ref, 'release/')) }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      actions: read
+      contents: read
+    steps:
+      - name: Check out exact qualified source
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: ${{ needs.build.outputs.publish-source-sha }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version-file: .node-version
+          check-latest: false
+
+      - name: Restore exact release-candidate Passport
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: ${{ needs.build.outputs.release-candidate-passport-artifact }}
+          path: .buildchain/product-admission/passport
+
+      - name: Restore exact candidate payload artifacts
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          pattern: kungfu-*
+          path: .buildchain/product-admission/payloads
+
+      - name: Qualify exact product bytes and seal admission receipt
+        env:
+          BUILDCHAIN_CONSUMER_VERSION: ${{ needs.build.outputs.publish-source-consumer-version }}
+        run: |
+          set -euo pipefail
+          mapfile -t passports < <(find .buildchain/product-admission/passport -type f -name release-candidate-passport.json)
+          test "${#passports[@]}" -eq 1
+          VERSION="$(jq -er '.version | strings | select(length > 0)' lerna.json)"
+          if [[ -n "$BUILDCHAIN_CONSUMER_VERSION" ]]; then
+            test "$BUILDCHAIN_CONSUMER_VERSION" = "$VERSION"
+          fi
+          output_dir=".buildchain/product-admission/payloads/kungfu-product-upgrade-publication-admission-${{ needs.build.outputs.publish-source-sha }}"
+          ./shifu node scripts/upgrade-publication-admission.mjs write \
+            --payload-root .buildchain/product-admission/payloads \
+            --passport "${passports[0]}" \
+            --version "$VERSION" \
+            --output "$output_dir/product-upgrade-publication-admission.json" \
+            --capsule "$output_dir/product-upgrade-publication-capsule.json"
+
+      - name: Upload sealed product admission capsule
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: kungfu-product-upgrade-publication-admission-${{ needs.build.outputs.publish-source-sha }}
+          path: .buildchain/product-admission/payloads/kungfu-product-upgrade-publication-admission-${{ needs.build.outputs.publish-source-sha }}
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 0
+          overwrite: false
 
   resolve-auditable-demo-source:
     name: Resolve exact auditable demo artifact
@@ -474,7 +604,7 @@ jobs:
       actions: read
       contents: write
       pull-requests: write
-    uses: kungfu-systems/buildchain/.github/workflows/.declarative-auditable-demo.yml@2e7e07902ac28d8f3edcfb81098ef9ebc7a91878
+    uses: kungfu-systems/buildchain/.github/workflows/.declarative-auditable-demo.yml@41d4dce2f38aa4821c794b49dcfb2bcf59d0984a
     secrets:
       DEMO_UPDATE_TOKEN: ${{ secrets.KUNGFU_GITHUB_TOKEN }}
     with:
@@ -482,7 +612,7 @@ jobs:
       binary-artifact-name: ${{ needs.resolve-auditable-demo-source.outputs.artifact-name }}
       binary-artifact-digest: ${{ needs.resolve-auditable-demo-source.outputs.artifact-digest }}
       scenario-path: .buildchain/auditable-demo.json
-      renderer-image: ghcr.io/kungfu-systems/build-images/demo-renderer@sha256:c200589be9dda6f730f1cb3deb5b48a60af9144e7a3e4216b7ef70c8e9274000
+      renderer-image: ghcr.io/kungfu-systems/build-images/demo-renderer@sha256:3a49708163fedaaabe07b45bba910026a1828151b5d4e9bbdaf0d62e75c927c1
       render-media: ${{ github.event_name != 'workflow_dispatch' || inputs.render-auditable-demo }}
       # Alpha publication depends on the required Gate, never on renderer
       # capacity. The media step remains visible but advisory only for Alpha;

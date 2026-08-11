@@ -7,6 +7,59 @@ from __future__ import annotations
 from typing import Any, Callable, Mapping
 
 
+_TERMINAL_MOCK_SCENARIOS = frozenset(
+    {
+        "crash",
+        "deliverable",
+        "disconnect",
+        "recovery-delivery",
+        "recovery-story",
+        "review-fit",
+    }
+)
+
+
+def _terminal_mock_scenario(selected: Mapping[str, Any]) -> bool:
+    if selected.get("provider") != "synthetic":
+        return False
+    argv = list((selected.get("launch") or {}).get("argv") or [])
+    try:
+        scenario = str(argv[argv.index("--scenario") + 1])
+    except (ValueError, IndexError):
+        return False
+    return scenario in _TERMINAL_MOCK_SCENARIOS
+
+
+def _initial_session_boundary_reached(status: Mapping[str, Any]) -> bool:
+    interaction = status.get("interactionState")
+    if interaction in {"ready", "approval-needed", "ended"}:
+        return True
+    if interaction != "unknown":
+        return False
+    adapter = status.get("providerAdapter") or {}
+    return adapter.get("compatible") is False or adapter.get("reason") not in {
+        None,
+        "no-supported-state-signature",
+    }
+
+
+def _session_boundary_reached(
+    status: Mapping[str, Any],
+    *,
+    before_sequence: int,
+    terminal_mock: bool,
+) -> bool:
+    interaction = status.get("interactionState")
+    if terminal_mock:
+        return interaction == "ended" and status.get("live") is not True
+    if interaction in {"approval-needed", "unknown", "ended"}:
+        return True
+    return (
+        interaction == "ready"
+        and int((status.get("output") or {}).get("nextSequence") or 0) > before_sequence
+    )
+
+
 class ManagedRunCoordinator:
     """Start, instruct, observe, and snapshot one managed SessionAttempt."""
 
@@ -38,6 +91,8 @@ class ManagedRunCoordinator:
         prompt: str,
         timeout_seconds: float,
         event_sink: Callable[[Mapping[str, Any]], None] | None = None,
+        session_started: Callable[[Mapping[str, str], Mapping[str, Any]], None]
+        | None = None,
     ) -> tuple[Any, dict[str, Any]]:
         provider = str(selected["provider"])
         ref = self.session_ref(work, run_id)
@@ -82,13 +137,12 @@ class ManagedRunCoordinator:
                 "workConsoleId": actual_console,
                 "sessionAttemptId": actual_attempt,
             }
+        if session_started is not None:
+            session_started(ref, started)
         ready = self.wait_for_session(
             invoke,
             ref,
-            lambda status: (
-                status.get("interactionState")
-                in {"ready", "approval-needed", "unknown", "ended"}
-            ),
+            _initial_session_boundary_reached,
             timeout_seconds=min(timeout_seconds, 30.0),
         )
         if ready.get("interactionState") != "ready":
@@ -112,17 +166,14 @@ class ManagedRunCoordinator:
                     "rawToolArgumentsExposed": False,
                 }
             )
+        terminal_mock_scenario = _terminal_mock_scenario(selected)
         boundary = self.wait_for_session(
             invoke,
             ref,
-            lambda status: (
-                status.get("interactionState")
-                in {"approval-needed", "unknown", "ended"}
-                or (
-                    status.get("interactionState") == "ready"
-                    and int((status.get("output") or {}).get("nextSequence") or 0)
-                    > before_sequence
-                )
+            lambda status: _session_boundary_reached(
+                status,
+                before_sequence=before_sequence,
+                terminal_mock=terminal_mock_scenario,
             ),
             timeout_seconds=timeout_seconds,
         )

@@ -64,10 +64,11 @@ without changing and refreshing the manifest fails the Gate catalog check.
 | `.github/workflows/build.yml` | `auditable-demo` | qualification | none | qualifying | token:write, repo-secret:KUNGFU_GITHUB_TOKEN | none | 0 |
 | `.github/workflows/build.yml` | `auditable-demo-fast-sentinel` | qualification | none | diagnostic | token:read | none | 2 |
 | `.github/workflows/build.yml` | `build` | qualification | none | qualifying | token:write, oidc, repo-secret:BUILDCHAIN_ARTIFACT_RELAY_S3_DOWNLOAD_ROLE_ARN+BUILDCHAIN_ARTIFACT_RELAY_S3_ROLE_ARN+BUILDCHAIN_ARTIFACT_RELAY_S3_UPLOAD_ROLE_ARN+KUNGFU_GITHUB_TOKEN | none | 0 |
+| `.github/workflows/build.yml` | `finalize-upgrade-publication-admission` | qualification | none | diagnostic | token:read | none | 6 |
 | `.github/workflows/build.yml` | `kungfu-phase-b` | qualification | none | qualifying | token:read | none | 0 |
 | `.github/workflows/build.yml` | `phase-b-package` | qualification | none | diagnostic | token:read | none | 5 |
 | `.github/workflows/build.yml` | `precompute-alpha-publication-tail` | qualification | none | diagnostic | token:read | none | 4 |
-| `.github/workflows/build.yml` | `preflight` | qualification | none | diagnostic | token:write, oidc, repo-secret:KUNGFU_GITHUB_TOKEN | none | 2 |
+| `.github/workflows/build.yml` | `preflight` | qualification | none | diagnostic | token:write, oidc, repo-secret:KUNGFU_GITHUB_TOKEN | none | 3 |
 | `.github/workflows/build.yml` | `resolve-auditable-demo-source` | qualification | none | diagnostic | token:read | none | 2 |
 | `.github/workflows/build.yml` | `windows-fast-sentinel` | qualification | none | diagnostic | token:read | none | 3 |
 | `.github/workflows/buildchain-validate.yml` | `promotion-rehearsal` | qualification | none | diagnostic | token:read | none | 2 |
@@ -114,6 +115,8 @@ without changing and refreshing the manifest fails the Gate catalog check.
 | `.github/workflows/release-new-version.yml` | `alpha-timeline` | qualification | none | diagnostic | token:write | none | 11 |
 | `.github/workflows/release-new-version.yml` | `promote` | release-control | channel | qualifying | token:write, oidc, repo-secret:BUILDCHAIN_ISSUE_APP_ID+BUILDCHAIN_ISSUE_APP_PRIVATE_KEY+KUNGFU_ALPHA_CHANNEL_SIGNING_PRIVATE_KEY+KUNGFU_GITHUB_TOKEN+KUNGFU_GOVERNANCE_AUDITOR_APP_PRIVATE_KEY | none | 0 |
 | `.github/workflows/release-new-version.yml` | `promotion-contract` | qualification | none | diagnostic | token:read | none | 8 |
+| `.github/workflows/release-new-version.yml` | `recover` | release-control | channel | qualifying | token:write, oidc, repo-secret:BUILDCHAIN_ISSUE_APP_ID+BUILDCHAIN_ISSUE_APP_PRIVATE_KEY+KUNGFU_ALPHA_CHANNEL_SIGNING_PRIVATE_KEY+KUNGFU_GITHUB_TOKEN+KUNGFU_GOVERNANCE_AUDITOR_APP_PRIVATE_KEY | none | 0 |
+| `.github/workflows/release-new-version.yml` | `recovery-preflight` | qualification | none | diagnostic | token:read | none | 8 |
 | `.github/workflows/release-shifu.yml` | `build` | qualification | none | diagnostic | token:write, oidc | none | 7 |
 | `.github/workflows/release-shifu.yml` | `release` | product-publication | product | none | token:write, repo-secret:GITHUB_TOKEN | `adr0049-production-publication` | 3 |
 | `.github/workflows/report-projection.yml` | `exact-source-projection` | qualification | none | diagnostic | token:read | none | 6 |

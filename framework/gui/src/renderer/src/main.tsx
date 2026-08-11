@@ -141,6 +141,7 @@ function subsetCaps(runtime: Runtime, entry: KfxEntry): KfxCapabilities | null {
     workLoop: runtime.workLoop,
     kfxControl: runtime.kfxControl,
     profile: runtime.profile,
+    assignmentRuntime: runtime.assignmentRuntime,
     agentRuntime: runtime.agentRuntime,
     agentSession: runtime.agentSession,
     agentWorkLab: runtime.agentWorkLab,
@@ -176,6 +177,7 @@ function sandboxSubset(
     workLoop: runtime.workLoop,
     kfxControl: runtime.kfxControl,
     profile: runtime.profile,
+    assignmentRuntime: runtime.assignmentRuntime,
     agentRuntime: runtime.agentRuntime,
     agentSession: runtime.agentSession,
     agentWorkLab: runtime.agentWorkLab,
@@ -2315,7 +2317,13 @@ function App() {
                   onLabComplete={labOnboarding.completeLab}
                   onOpenStarterProject={labOnboarding.openStarterProject}
                   work={
-                    <ProjectWorkControlView projects={projects} shell={shell} />
+                    runtime.assignmentRuntime ? (
+                      <ProjectWorkControlView
+                        projects={projects}
+                        shell={shell}
+                        assignmentRuntime={runtime.assignmentRuntime}
+                      />
+                    ) : null
                   }
                 />
                 {!projectsOpen && !labOpen && !coreWorkOpen ? (

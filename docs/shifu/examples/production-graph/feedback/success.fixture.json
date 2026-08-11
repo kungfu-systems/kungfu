@@ -1,0 +1,6 @@
+{
+  "schema": "shifu.production-graph-feedback-fixture/v0",
+  "id": "success",
+  "outcome": "qualified",
+  "expectedState": "complete"
+}

@@ -1,12 +1,14 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import assert from 'node:assert/strict';
+import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
 
+import { resolveGitBoundKfdEvidenceSourceSha } from '../framework/release/buildchain-kfd-runtime.mjs';
 import { scanTree } from './no-bash-guard.mjs';
 import {
   SOURCE_ACCEPTANCE_RUNTIME_OWNER,
@@ -16,6 +18,7 @@ import {
 import {
   assertKfdEvidenceSourceBinding,
   findGitTreeEquivalentAncestor,
+  githubMergeGroupCoordinates,
   isLocalQualificationRuntime,
   resolveKfdProductGateCheckedAt,
   runSourceAcceptanceStep,
@@ -218,6 +221,38 @@ test('KFD evidence accepts an exact tree-equivalent ancestor after queue rebase'
   );
 });
 
+test('KFD evidence runtime adapts the repository-bound Git reader for queue replay', () => {
+  const sourceSha = 'a'.repeat(40);
+  const resolved = resolveGitBoundKfdEvidenceSourceSha({
+    root: ROOT,
+    write: false,
+    committed: sourceSha,
+    configured: sourceSha,
+    prepareHistory: () => {},
+    selectSourceSha: () => sourceSha,
+    assertBinding: ({
+      sourceSha: selectedSourceSha,
+      headSha,
+      findTreeEquivalentAncestor,
+    }) => {
+      assert.equal(selectedSourceSha, sourceSha);
+      assert.equal(
+        findTreeEquivalentAncestor(selectedSourceSha, headSha),
+        'c'.repeat(40),
+      );
+      return selectedSourceSha;
+    },
+    findTreeEquivalentAncestor: (selectedSourceSha, headSha, gitRead) => {
+      assert.equal(selectedSourceSha, sourceSha);
+      assert.match(headSha, /^[0-9a-f]{40}$/u);
+      assert.equal(typeof gitRead, 'function');
+      assert.equal(gitRead(['rev-parse', 'HEAD']), headSha);
+      return 'c'.repeat(40);
+    },
+  });
+  assert.equal(resolved, sourceSha);
+});
+
 test('KFD evidence checks the committed witness binding under an exact CI source', () => {
   const committed = 'a'.repeat(40);
   const configured = 'b'.repeat(40);
@@ -298,6 +333,219 @@ test('KFD tree-equivalence admits an unchanged GitHub PR merge candidate parent'
       candidateParent,
     ],
   ]);
+});
+
+test('KFD equivalence admits an exact cumulative Project Cut replay on an advanced base', () => {
+  const sourceSha = 'a'.repeat(40);
+  const headSha = 'b'.repeat(40);
+  const baseParent = 'c'.repeat(40);
+  const candidateParent = 'd'.repeat(40);
+  const replayedSha = 'e'.repeat(40);
+  const sourceBase = 'f'.repeat(40);
+  const sourceTree = '1'.repeat(40);
+  const checkedTree = '2'.repeat(40);
+  const exactPatch = 'diff --git a/runtime.cc b/runtime.cc\n+runtime client';
+  assert.equal(
+    findGitTreeEquivalentAncestor(sourceSha, headSha, (args) => {
+      if (args[0] === 'cat-file') return 'commit';
+      if (args[0] === 'rev-list')
+        return `${headSha} ${baseParent} ${candidateParent}`;
+      if (args[0] === 'rev-parse') {
+        if (args[1] === `${sourceSha}^{tree}`) return sourceTree;
+        return checkedTree;
+      }
+      if (args[0] === 'merge-base') return sourceBase;
+      if (args[0] === 'diff') {
+        if (args[5] === sourceSha || args[5] === replayedSha) return exactPatch;
+        return 'different patch';
+      }
+      if (args.at(-1) === candidateParent && args.includes('--format=%H %T')) {
+        return `${candidateParent} ${checkedTree}\n${replayedSha} ${'3'.repeat(40)}\n${baseParent} ${'4'.repeat(40)}`;
+      }
+      if (args.at(-1) === candidateParent && args.includes('--format=%H')) {
+        return `${candidateParent}\n${replayedSha}\n${baseParent}`;
+      }
+      return `${headSha} ${checkedTree}\n${baseParent} ${'4'.repeat(40)}`;
+    }),
+    replayedSha,
+  );
+});
+
+test('KFD equivalence rejects a changed cumulative Project Cut replay', () => {
+  const sourceSha = 'a'.repeat(40);
+  const headSha = 'b'.repeat(40);
+  const baseParent = 'c'.repeat(40);
+  const candidateParent = 'd'.repeat(40);
+  const sourceBase = 'f'.repeat(40);
+  const checkedTree = '2'.repeat(40);
+  assert.equal(
+    findGitTreeEquivalentAncestor(sourceSha, headSha, (args) => {
+      if (args[0] === 'cat-file') return 'commit';
+      if (args[0] === 'rev-list')
+        return `${headSha} ${baseParent} ${candidateParent}`;
+      if (args[0] === 'rev-parse') {
+        if (args[1] === `${sourceSha}^{tree}`) return '1'.repeat(40);
+        return checkedTree;
+      }
+      if (args[0] === 'merge-base') return sourceBase;
+      if (args[0] === 'diff') {
+        return args[5] === sourceSha ? 'original patch' : 'changed patch';
+      }
+      if (args.at(-1) === candidateParent && args.includes('--format=%H %T')) {
+        return `${candidateParent} ${checkedTree}\n${baseParent} ${'3'.repeat(40)}`;
+      }
+      if (args.at(-1) === candidateParent && args.includes('--format=%H')) {
+        return `${candidateParent}\n${baseParent}`;
+      }
+      return `${headSha} ${checkedTree}\n${baseParent} ${'3'.repeat(40)}`;
+    }),
+    '',
+  );
+});
+
+test('KFD equivalence recognizes an exact replay in a real synthetic merge graph', (t) => {
+  const repository = fs.mkdtempSync(
+    path.join(os.tmpdir(), 'kungfu-kfd-protected-replay-'),
+  );
+  t.after(() => fs.rmSync(repository, { recursive: true, force: true }));
+  const gitRead = (args) => {
+    const result = spawnSync('git', args, {
+      cwd: repository,
+      encoding: 'utf8',
+    });
+    assert.equal(result.status, 0, result.stderr);
+    return result.stdout.trim();
+  };
+  gitRead(['init', '--quiet']);
+  gitRead(['config', 'user.name', 'KFD Fixture']);
+  gitRead(['config', 'user.email', 'kfd-fixture@kungfu.invalid']);
+  fs.writeFileSync(path.join(repository, 'base.txt'), 'base\n');
+  gitRead(['add', 'base.txt']);
+  gitRead(['commit', '--quiet', '-m', 'base']);
+  const sourceBase = gitRead(['rev-parse', 'HEAD']);
+
+  gitRead(['switch', '--quiet', '-c', 'original']);
+  fs.writeFileSync(path.join(repository, 'runtime.txt'), 'runtime client\n');
+  gitRead(['add', 'runtime.txt']);
+  gitRead(['commit', '--quiet', '-m', 'runtime']);
+  const sourceSha = gitRead(['rev-parse', 'HEAD']);
+
+  gitRead(['switch', '--quiet', '-c', 'protected', sourceBase]);
+  fs.writeFileSync(path.join(repository, 'unrelated.txt'), 'advanced base\n');
+  gitRead(['add', 'unrelated.txt']);
+  gitRead(['commit', '--quiet', '-m', 'unrelated']);
+  const baseParent = gitRead(['rev-parse', 'HEAD']);
+  gitRead(['switch', '--quiet', '-c', 'candidate']);
+  gitRead(['cherry-pick', '--quiet', sourceSha]);
+  const candidateParent = gitRead(['rev-parse', 'HEAD']);
+  const headSha = gitRead([
+    'commit-tree',
+    `${candidateParent}^{tree}`,
+    '-p',
+    baseParent,
+    '-p',
+    candidateParent,
+    '-m',
+    'synthetic protected merge',
+  ]);
+
+  assert.equal(
+    findGitTreeEquivalentAncestor(sourceSha, headSha, gitRead),
+    candidateParent,
+  );
+});
+
+test('KFD equivalence recognizes an exact GitHub linear merge-group replay', (t) => {
+  const repository = fs.mkdtempSync(
+    path.join(os.tmpdir(), 'kungfu-kfd-linear-protected-replay-'),
+  );
+  t.after(() => fs.rmSync(repository, { recursive: true, force: true }));
+  const gitRead = (args) => {
+    const result = spawnSync('git', args, {
+      cwd: repository,
+      encoding: 'utf8',
+    });
+    assert.equal(result.status, 0, result.stderr);
+    return result.stdout.trim();
+  };
+  gitRead(['init', '--quiet']);
+  gitRead(['config', 'user.name', 'KFD Fixture']);
+  gitRead(['config', 'user.email', 'kfd-fixture@kungfu.invalid']);
+  fs.writeFileSync(path.join(repository, 'base.txt'), 'base\n');
+  gitRead(['add', 'base.txt']);
+  gitRead(['commit', '--quiet', '-m', 'base']);
+  const sourceBase = gitRead(['rev-parse', 'HEAD']);
+
+  gitRead(['switch', '--quiet', '-c', 'original']);
+  fs.writeFileSync(path.join(repository, 'runtime.txt'), 'runtime client\n');
+  gitRead(['add', 'runtime.txt']);
+  gitRead(['commit', '--quiet', '-m', 'runtime']);
+  const sourceSha = gitRead(['rev-parse', 'HEAD']);
+
+  gitRead(['switch', '--quiet', '-c', 'protected', sourceBase]);
+  fs.writeFileSync(path.join(repository, 'unrelated.txt'), 'advanced base\n');
+  gitRead(['add', 'unrelated.txt']);
+  gitRead(['commit', '--quiet', '-m', 'unrelated']);
+  const baseSha = gitRead(['rev-parse', 'HEAD']);
+  gitRead(['cherry-pick', '--quiet', sourceSha]);
+  const replayedSha = gitRead(['rev-parse', 'HEAD']);
+  fs.writeFileSync(path.join(repository, 'docs.txt'), 'later replay commit\n');
+  gitRead(['add', 'docs.txt']);
+  gitRead(['commit', '--quiet', '-m', 'later replay commit']);
+  const headSha = gitRead(['rev-parse', 'HEAD']);
+
+  assert.equal(
+    findGitTreeEquivalentAncestor(sourceSha, headSha, gitRead, {
+      baseSha,
+      headSha,
+    }),
+    replayedSha,
+  );
+  assert.equal(
+    findGitTreeEquivalentAncestor(sourceSha, headSha, gitRead, {
+      baseSha,
+      headSha: 'f'.repeat(40),
+    }),
+    '',
+  );
+});
+
+test('GitHub merge-group coordinates fail closed outside an exact event payload', () => {
+  const baseSha = 'a'.repeat(40);
+  const headSha = 'b'.repeat(40);
+  assert.deepEqual(
+    githubMergeGroupCoordinates(
+      {
+        GITHUB_EVENT_NAME: 'merge_group',
+        GITHUB_EVENT_PATH: '/event.json',
+      },
+      () =>
+        JSON.stringify({
+          merge_group: { base_sha: baseSha, head_sha: headSha },
+        }),
+    ),
+    { baseSha, headSha },
+  );
+  assert.equal(
+    githubMergeGroupCoordinates(
+      { GITHUB_EVENT_NAME: 'pull_request', GITHUB_EVENT_PATH: '/event.json' },
+      () =>
+        JSON.stringify({
+          merge_group: { base_sha: baseSha, head_sha: headSha },
+        }),
+    ),
+    null,
+  );
+  assert.equal(
+    githubMergeGroupCoordinates(
+      {
+        GITHUB_EVENT_NAME: 'merge_group',
+        GITHUB_EVENT_PATH: '/event.json',
+      },
+      () => '{invalid',
+    ),
+    null,
+  );
 });
 
 test('KFD tree-equivalence rejects a PR merge whose tree differs from its candidate parent', () => {

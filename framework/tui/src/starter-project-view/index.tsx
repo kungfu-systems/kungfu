@@ -10,6 +10,8 @@ import type {
   ProjectFileTreeEntry,
   ProjectTemplateCreationReceipt,
   ProjectTemplateWorkspaceSelection,
+  ProjectTourEpisodeEvent,
+  ProjectTourEpisodeReport,
   ProjectWork,
   ProjectWorkReference,
   ProjectWorkRunEvent,
@@ -73,6 +75,179 @@ export type OpenedStarterProject = {
   work?: ProjectWork;
   works?: ProjectWork[];
 };
+
+export type ProjectTourLiveEvent = ProjectWorkRunEvent | WorkReviewEvent;
+
+type ProjectTourLiveLine = {
+  id: number;
+  status: string;
+  text: string;
+};
+
+type ProjectTourLiveClock = {
+  now(): number;
+  repeat(callback: () => void, milliseconds: number): unknown;
+  cancel(handle: unknown): void;
+};
+
+type ProjectTourLiveStreamOptions<Line extends ProjectTourLiveLine> = {
+  active(): boolean;
+  nextId(): number;
+  project(event: ProjectTourLiveEvent, id: number): Line | null;
+  operationLine(id: number, status: string, text: string): Line;
+  append(line: Line): void;
+  replace(line: Line): void;
+  delay(milliseconds: number): Promise<void>;
+  activityDelayMs: number;
+  protocolDelayMs: number;
+  clock?: ProjectTourLiveClock;
+};
+
+const projectTourLiveClock: ProjectTourLiveClock = {
+  now: () => Date.now(),
+  repeat: (callback, milliseconds) => setInterval(callback, milliseconds),
+  cancel: (handle) => clearInterval(handle as ReturnType<typeof setInterval>),
+};
+
+const PROJECT_TOUR_ACTIVE_STAGE_STATUSES = new Set([
+  'progress',
+  'running',
+  'started',
+  'waiting',
+]);
+
+function projectTourEventKey(event: ProjectTourLiveEvent): string {
+  return `${event.schema}:${event.index}`;
+}
+
+function projectTourElapsedText(text: string, seconds: number): string {
+  return `${text.replace(/ · \d+s elapsed$/u, '')} · ${seconds}s elapsed`;
+}
+
+export class ProjectTourLiveStream<Line extends ProjectTourLiveLine> {
+  readonly #clock: ProjectTourLiveClock;
+  readonly #seen = new Set<string>();
+  #tail: Promise<void> = Promise.resolve();
+  #elapsed:
+    | {
+        stage: string;
+        line: Line;
+        startedAt: number;
+        lastSecond: number;
+        handle: unknown;
+      }
+    | undefined;
+  #disposed = false;
+
+  constructor(readonly options: ProjectTourLiveStreamOptions<Line>) {
+    this.#clock = options.clock ?? projectTourLiveClock;
+  }
+
+  push(event: ProjectTourLiveEvent): void {
+    const key = projectTourEventKey(event);
+    if (this.#disposed || this.#seen.has(key)) return;
+    this.#seen.add(key);
+    this.#tail = this.#tail.then(async () => {
+      if (!this.options.active() || this.#disposed) return;
+      const line = this.options.project(event, this.options.nextId());
+      if (!line) return;
+
+      if (event.activity) this.#stopElapsed();
+      else if (
+        this.#elapsed?.stage === event.stage &&
+        !PROJECT_TOUR_ACTIVE_STAGE_STATUSES.has(event.status)
+      )
+        this.#stopElapsed();
+
+      this.options.append(line);
+      if (
+        !event.activity &&
+        PROJECT_TOUR_ACTIVE_STAGE_STATUSES.has(event.status)
+      )
+        this.#startElapsed(event.stage, line);
+      await this.options.delay(
+        event.activity
+          ? this.options.activityDelayMs
+          : this.options.protocolDelayMs,
+      );
+    });
+  }
+
+  async during<T>(
+    text: string,
+    operation: () => Promise<T>,
+    completedText = `${text} · complete`,
+  ): Promise<T> {
+    await this.flush();
+    if (!this.options.active() || this.#disposed)
+      throw new Error('Project tour stopped');
+    const line = this.options.operationLine(
+      this.options.nextId(),
+      'running',
+      text,
+    );
+    this.options.append(line);
+    this.#startElapsed('operation', line);
+    try {
+      const result = await operation();
+      this.#stopElapsed();
+      this.options.replace({
+        ...line,
+        status: 'completed',
+        text: completedText,
+      });
+      return result;
+    } catch (error) {
+      this.#stopElapsed();
+      this.options.replace({
+        ...line,
+        status: 'failed',
+        text: `${text} · failed`,
+      });
+      throw error;
+    }
+  }
+
+  async flush(): Promise<void> {
+    await this.#tail;
+  }
+
+  dispose(): void {
+    this.#disposed = true;
+    this.#stopElapsed();
+  }
+
+  #startElapsed(stage: string, line: Line): void {
+    this.#stopElapsed();
+    const elapsed = {
+      stage,
+      line,
+      startedAt: this.#clock.now(),
+      lastSecond: 0,
+      handle: undefined as unknown,
+    };
+    elapsed.handle = this.#clock.repeat(() => {
+      if (!this.options.active() || this.#disposed) return;
+      const seconds = Math.floor(
+        (this.#clock.now() - elapsed.startedAt) / 1000,
+      );
+      if (seconds <= elapsed.lastSecond) return;
+      elapsed.lastSecond = seconds;
+      elapsed.line = {
+        ...elapsed.line,
+        text: projectTourElapsedText(elapsed.line.text, seconds),
+      };
+      this.options.replace(elapsed.line);
+    }, 250);
+    this.#elapsed = elapsed;
+  }
+
+  #stopElapsed(): void {
+    if (!this.#elapsed) return;
+    this.#clock.cancel(this.#elapsed.handle);
+    this.#elapsed = undefined;
+  }
+}
 
 function starterInitialWork(project: OpenedStarterProject): ProjectWork {
   if (!project.receipt)
@@ -1978,9 +2153,13 @@ export type ProjectTourStreamLine = {
 export function updateProjectTourStream(
   current: readonly ProjectTourStreamLine[],
   line: ProjectTourStreamLine,
-  mode: 'append' | 'begin',
+  mode: 'append' | 'begin' | 'replace',
 ): ProjectTourStreamLine[] {
   if (mode === 'begin') return [line];
+  if (mode === 'replace')
+    return current.map((currentLine) =>
+      currentLine.id === line.id ? line : currentLine,
+    );
   return [...current, line].slice(-120);
 }
 
@@ -2015,12 +2194,23 @@ export function projectTourAudienceLine(
   const line = projectTourProtocolLine(event, section, sectionTag, id);
   if (!event.activity) {
     if (
+      ![
+        'admit',
+        'assess',
+        'claim',
+        'kickoff',
+        'lease',
+        'plan',
+        'review',
+        'run',
+        'stage',
+      ].includes(event.stage) &&
       !/Agent process (?:exited|finished)|Every acceptance criterion passed/u.test(
         line.text,
       )
     )
       return null;
-    return line;
+    return { ...line, text: sentenceCase(line.text.trim()) };
   }
 
   let text = line.text.trim();
@@ -2360,11 +2550,6 @@ export function ProjectTourView({
         }),
       );
     };
-    const refreshWorks = async () => {
-      const inventory = await projects.works(destination);
-      if (active) setWorks(inventory.works);
-      return inventory;
-    };
     let streamSequence = 0;
     const beginStream = (section: string, sectionTag: string, text: string) => {
       if (!active) return;
@@ -2382,87 +2567,6 @@ export function ProjectTourView({
       setStreamLines((current) =>
         updateProjectTourStream(current, line, 'begin'),
       );
-    };
-    const showGuide = async (
-      scene: ProjectTourGuideScene,
-      nextStream?: {
-        section: string;
-        sectionTag: string;
-        text: string;
-      },
-      dwellMs = pacing.guideDwellMs,
-    ) => {
-      if (!active) return;
-      setGuide(scene);
-      await wait(dwellMs);
-      if (active) {
-        if (nextStream) {
-          beginStream(
-            nextStream.section,
-            nextStream.sectionTag,
-            nextStream.text,
-          );
-        }
-        setGuide(null);
-      }
-      await wait(pacing.guideGapMs);
-    };
-    const showGuideDuring = async <T,>(
-      scene: ProjectTourGuideScene,
-      operation: () => Promise<T>,
-      nextStream?: {
-        section: string;
-        sectionTag: string;
-        text: string;
-      },
-      dwellMs = pacing.guideDwellMs,
-    ): Promise<T> => {
-      if (!active) throw new Error('Project tour stopped');
-      setGuide(scene);
-      const operationPromise = operation().then(
-        (result) => ({ ok: true as const, result }),
-        (error: unknown) => ({ ok: false as const, error }),
-      );
-      await wait(dwellMs);
-      if (active) {
-        setGuide(null);
-      }
-      await wait(pacing.guideGapMs);
-      const outcome = await operationPromise;
-      if (!outcome.ok) throw outcome.error;
-      if (active && nextStream) {
-        beginStream(nextStream.section, nextStream.sectionTag, nextStream.text);
-      }
-      return outcome.result;
-    };
-    const replayEvents = async (
-      section: string,
-      sectionTag: string,
-      captured: Array<ProjectWorkRunEvent | WorkReviewEvent>,
-      presentationScale = 1,
-    ) => {
-      if (!active) return;
-      setStreamHeading(section);
-      for (const event of captured) {
-        if (!active) return;
-        streamSequence += 1;
-        const line = projectTourAudienceLine(
-          event,
-          section,
-          sectionTag,
-          streamSequence,
-        );
-        if (!line) continue;
-        setStreamLines((current) =>
-          updateProjectTourStream(current, line, 'append'),
-        );
-        await wait(
-          Math.round(
-            (event.activity ? pacing.activityEventMs : pacing.protocolEventMs) *
-              presentationScale,
-          ),
-        );
-      }
     };
     const appendStream = (
       section: string,
@@ -2487,59 +2591,6 @@ export function ProjectTourView({
         updateProjectTourStream(current, line, 'append'),
       );
     };
-    const recordReceipt = (
-      section: string,
-      sectionTag: string,
-      receipt: WorkCloseReceipt,
-    ) => {
-      if (!active) return;
-      appendStream(
-        section,
-        sectionTag,
-        'receipt',
-        receipt.status,
-        projectTourReceiptText(receipt),
-      );
-    };
-    const runAttempt = async (
-      assignmentId: string,
-      expectedStatus: 'agent-failed' | 'agent-finished',
-      section: string,
-      sectionTag: string,
-      present = true,
-      presentationScale = 1,
-      scenario = 'recovery-story',
-    ): Promise<WorkStartReceipt> => {
-      const plan = await projects.planRun('mock', {
-        workspace: destination,
-        work: assignmentId,
-        scenario,
-      });
-      if (!plan.executable) {
-        throw new Error(
-          `Mock recovery Work plan is blocked: binding=${plan.admissionBinding.state}; agent=${plan.agent.verification.error ?? (plan.agent.verification.ok ? 'verified' : 'unavailable')}`,
-        );
-      }
-      const captured: ProjectWorkRunEvent[] = [];
-      const receipt = await projects.run(
-        'mock',
-        {
-          workspace: destination,
-          work: assignmentId,
-          scenario,
-          expectedPlanRoot: plan.planRoot,
-        },
-        (event) => captured.push(event),
-      );
-      if (present)
-        await replayEvents(section, sectionTag, captured, presentationScale);
-      if (receipt.status !== expectedStatus) {
-        throw new Error(
-          `Mock recovery attempt returned ${receipt.status}; expected ${expectedStatus}`,
-        );
-      }
-      return receipt;
-    };
     const completeTour = (
       completedEpisode: ProjectTourEpisode,
       evidence: Record<string, unknown>,
@@ -2558,263 +2609,198 @@ export function ProjectTourView({
       if (active) onSettled({ state: 'completed', report });
     };
 
-    void (async () => {
-      try {
-        const plan = await lab.planStarterProject(destination);
-        const created = await lab.createStarterProject(plan, 'project-tour');
-        await lab.openStarterProject(created);
-        setStep(0);
+    const sceneById = (sceneId: string): ProjectTourGuideScene | undefined =>
+      sceneId === PROJECT_TOUR_EPISODE_TWO_STANDALONE_SCENE.id
+        ? PROJECT_TOUR_EPISODE_TWO_STANDALONE_SCENE
+        : PROJECT_TOUR_GUIDE_SCENES.find((scene) => scene.id === sceneId);
+    const handleControllerEvent = (event: ProjectTourEpisodeEvent) => {
+      if (!active) return;
+      setDisplayEpisode(event.episode);
+      if (event.kind === 'guide') {
+        const scene = event.sceneId ? sceneById(event.sceneId) : undefined;
+        if (event.status === 'visible' && scene) setGuide(scene);
+        if (event.status === 'dismissed') setGuide(null);
+        return;
+      }
+      if (event.kind === 'project' && event.project) {
+        setWorks([event.project.initialWork]);
         refreshFiles();
-        const initial = await refreshWorks();
-        const work = initial.activeWork ?? initial.works[0];
-        if (!work) throw new Error('Starter Project has no captured Work');
-        let disconnected: WorkStartReceipt | undefined;
-        let crashed: WorkStartReceipt | undefined;
-
-        if (episode !== '2') {
-          await showGuide(PROJECT_TOUR_GUIDE_SCENES[0]);
-          record({
-            title: 'Starter Project created',
-            detail:
-              'The Mock Agent is synthetic; this temporary Project and its complete Work lifecycle use the real Kungfu path.',
-            tone: 'good',
-          });
-
-          setStep(1);
-          await showGuide(PROJECT_TOUR_GUIDE_SCENES[1], {
-            section: 'MOCK AGENT · ATTEMPT 1',
-            sectionTag: 'A1',
-            text: PROJECT_TOUR_STREAM_TRANSITIONS.A1,
-          });
-          disconnected = await runAttempt(
-            work.assignmentId,
-            'agent-failed',
-            'MOCK AGENT · ATTEMPT 1',
-            'A1',
-          );
-          record({
-            title: 'Connection lost · exit 75',
-            detail:
-              'The launch brief was not written, but Kungfu retained the same Work, the failed Attempt, and the next action.',
-            tone: 'bad',
-          });
-          await refreshWorks();
-          await showGuide(PROJECT_TOUR_GUIDE_SCENES[2]);
-
-          setStep(2);
-          await showGuide(PROJECT_TOUR_GUIDE_SCENES[3], {
-            section: 'MOCK AGENT · ATTEMPT 2',
-            sectionTag: 'A2',
-            text: PROJECT_TOUR_STREAM_TRANSITIONS.A2,
-          });
-          crashed = await runAttempt(
-            work.assignmentId,
-            'agent-failed',
-            'MOCK AGENT · ATTEMPT 2',
-            'A2',
-          );
-          record({
-            title: 'Agent process crashed · exit 23',
-            detail:
-              'The resumed draft stopped before submission; the original launch-brief Work still remained intact.',
-            tone: 'bad',
-          });
-          const retainedInventory = await refreshWorks();
-          setStep(3);
-          await showGuide(PROJECT_TOUR_GUIDE_SCENES[4]);
-
-          if (episode === '1') {
-            completeTour(
-              '1',
-              {
-                projectPath: destination,
-                requestRoot: created.initialWork.requestRoot,
-                failedAttempts: [
-                  disconnected.agentReport?.reportRoot,
-                  crashed.agentReport?.reportRoot,
-                ],
-                inventoryRoot: retainedInventory.inventoryRoot,
-              },
-              4,
-              retainedInventory.works.length,
-            );
-            return;
-          }
-        }
-
-        setDisplayEpisode('2');
-        setStep(0);
-        const recoveryTransition = {
-          section: 'MOCK AGENT · RECOVERY ATTEMPT',
-          sectionTag: 'REC',
-          text: PROJECT_TOUR_STREAM_TRANSITIONS.REC,
-        };
-        await showGuide(
-          episode === '2'
-            ? PROJECT_TOUR_EPISODE_TWO_STANDALONE_SCENE
-            : PROJECT_TOUR_GUIDE_SCENES[5],
-          recoveryTransition,
-        );
-
-        const completed = await runAttempt(
-          work.assignmentId,
-          'agent-finished',
-          'MOCK AGENT · RECOVERY ATTEMPT',
-          'REC',
-          true,
-          PROJECT_TOUR_EPISODE_TWO_EVENT_SCALE,
-          episode === '2' ? 'recovery-delivery' : 'recovery-story',
-        );
+        record({
+          title:
+            event.project.status === 'resumed'
+              ? 'Starter Project resumed'
+              : 'Starter Project created',
+          detail:
+            'The Mock Agent is synthetic; the Project and complete Work lifecycle use the real Kungfu path.',
+          tone: 'good',
+        });
+        return;
+      }
+      if (event.kind === 'artifact' && event.relativePath) {
         refreshFiles();
         setArtifactPreview(
           projectTourArtifactPreview(
-            readFileSync(
-              path.join(destination, 'deliverables/launch-brief.md'),
-              'utf8',
-            ),
+            readFileSync(path.join(destination, event.relativePath), 'utf8'),
           ),
         );
         record({
           title: 'Fresh attempt produced evidence',
           detail:
-            'Mock Agent completed deliverables/launch-brief.md against the original Work; process exit still did not settle it.',
+            'Mock Agent completed deliverables/launch-brief.md; process exit still did not settle the Work.',
           tone: 'good',
         });
-        setStep(1);
-        await showGuide(
-          PROJECT_TOUR_GUIDE_SCENES[6],
-          {
-            section: 'INDEPENDENT REVIEW',
-            sectionTag: 'REV',
-            text: PROJECT_TOUR_STREAM_TRANSITIONS.REV,
-          },
-          Math.round(
-            pacing.guideDwellMs * PROJECT_TOUR_EPISODE_TWO_GUIDE_SCALE,
-          ),
+        return;
+      }
+      if (event.kind === 'inventory' && event.inventory) {
+        setWorks(event.inventory.works);
+        record({
+          title: 'All Work inventory reconciled',
+          detail: `${event.inventory.works.length} Works are visible from one final authoritative query.`,
+          tone: 'info',
+        });
+      }
+      if (event.kind === 'operation' && event.status === 'running') {
+        beginStream(event.section, event.sectionTag, event.text);
+        if (event.sectionTag === 'A1') setStep(1);
+        if (event.sectionTag === 'A2') setStep(2);
+        if (event.sectionTag === 'WORK' && event.episode === '1') setStep(3);
+        if (event.sectionTag === 'REV') setStep(1);
+        if (event.sectionTag === 'SET') setStep(2);
+        return;
+      }
+      if (event.kind === 'native' && event.nativeEvent) {
+        streamSequence += 1;
+        const line = projectTourAudienceLine(
+          event.nativeEvent,
+          event.section,
+          event.sectionTag,
+          streamSequence,
         );
-        const reviewPlan = await lab.planStarterReview(
-          completed,
-          'kungfu.mock-agent.review-fit',
-        );
-        if (!reviewPlan.executable)
-          throw new Error('Mock review plan is blocked');
-        const reviewEvents: WorkReviewEvent[] = [];
-        const review = await lab.runStarterReview(reviewPlan, (event) =>
-          reviewEvents.push(event),
-        );
-        await replayEvents(
-          'INDEPENDENT REVIEW',
-          'REV',
-          reviewEvents,
-          PROJECT_TOUR_EPISODE_TWO_EVENT_SCALE,
-        );
-        if (review.status !== 'review-passed') {
-          throw new Error(
-            `Mock review returned ${review.status}: ${review.message ?? 'no settlement detail'}`,
+        if (line) {
+          setStreamHeading(event.section);
+          setStreamLines((current) =>
+            updateProjectTourStream(current, line, 'append'),
           );
         }
+        return;
+      }
+      if (event.kind === 'receipt') {
         appendStream(
-          'INDEPENDENT REVIEW',
-          'REV',
-          'kungfu',
-          'completed',
-          'Review passed · this Work is eligible for settlement.',
+          event.section,
+          event.sectionTag,
+          'receipt',
+          event.status,
+          event.receipt?.schema === 'kungfu.work-close.receipt/v1'
+            ? projectTourReceiptText(event.receipt)
+            : event.text,
         );
-        await wait(
-          Math.round(
-            pacing.activityEventMs * PROJECT_TOUR_EPISODE_TWO_EVENT_SCALE,
-          ),
-        );
-        const closePlan = await lab.planStarterClose({
+        if (event.sectionTag === 'A1') {
+          record({
+            title: 'Connection lost · exit 75',
+            detail:
+              'Kungfu retained the same Work, failed Attempt, and next action without a silent retry.',
+            tone: 'bad',
+          });
+        }
+        if (event.sectionTag === 'A2') {
+          record({
+            title: 'Agent process crashed · exit 23',
+            detail:
+              'The resumed process stopped; the original launch-brief Work remained intact.',
+            tone: 'bad',
+          });
+        }
+        if (event.sectionTag === 'SET') {
+          setArtifactPreview([]);
+          record({
+            title: 'Independent review and native settlement',
+            detail:
+              'A fresh read-only Reviewer passed the checks; Kungfu retained the settlement receipt.',
+            tone: 'good',
+          });
+        }
+        return;
+      }
+      appendStream(
+        event.section,
+        event.sectionTag,
+        'kungfu',
+        event.status,
+        event.text,
+      );
+    };
+    const runController = async (
+      chapter: '1' | '2',
+      resume: boolean,
+    ): Promise<ProjectTourEpisodeReport> => {
+      const report = await lab.runProjectTourEpisode(
+        {
           destination,
-          initialWork: {
-            initiativeId: work.initiativeId,
-            assignmentId: work.assignmentId,
-            requestPath: work.requestPath,
-          },
-        });
-        setStep(2);
-        await showGuide(
-          PROJECT_TOUR_GUIDE_SCENES[7],
-          {
-            section: 'NATIVE SETTLEMENT',
-            sectionTag: 'SET',
-            text: PROJECT_TOUR_STREAM_TRANSITIONS.SET,
-          },
-          Math.round(
+          episode: chapter,
+          resume,
+          guideDwellMs: pacing.guideDwellMs,
+          guideGapMs: pacing.guideGapMs,
+          episodeTwoGuideDwellMs: Math.round(
             pacing.guideDwellMs * PROJECT_TOUR_EPISODE_TWO_GUIDE_SCALE,
           ),
-        );
-        const closed = await lab.closeStarterWork(closePlan);
-        if (closed.status !== 'completed') {
-          throw new Error(`Native Work close returned ${closed.status}`);
-        }
-        appendStream(
-          'NATIVE SETTLEMENT',
-          'SET',
-          'kungfu',
-          'completed',
-          'Passing review bound to this Work and deliverables/launch-brief.md.',
-        );
-        await wait(
-          Math.round(
-            pacing.activityEventMs * PROJECT_TOUR_EPISODE_TWO_EVENT_SCALE,
-          ),
-        );
-        recordReceipt('NATIVE SETTLEMENT', 'SET', closed);
-        setArtifactPreview([]);
-        record({
-          title: 'Independent review and native settlement',
-          detail:
-            'A fresh read-only Mock Reviewer passed the original checks; Kungfu then recorded the settlement receipt.',
-          tone: 'good',
-        });
-        await refreshWorks();
-
-        const finalInventory = await showGuideDuring(
-          PROJECT_TOUR_GUIDE_SCENES[8],
-          async () => {
-            const followupPlan = projects.prepareWork(
-              'Prepare the launch handoff for the next operator',
-              'A new business outcome remains visible beside the settled launch-brief Work',
-            );
-            await projects.captureWork(destination, followupPlan);
-            const inventory = await refreshWorks();
-            record({
-              title: 'All Work inventory restored',
-              detail: `${inventory.works.length} Works are visible: completed history plus the next captured outcome.`,
-              tone: 'info',
-            });
-            return inventory;
-          },
-          undefined,
-          Math.round(
+          episodeTwoFinalGuideDwellMs: Math.round(
             pacing.guideDwellMs * PROJECT_TOUR_EPISODE_TWO_FINAL_GUIDE_SCALE,
           ),
+        },
+        handleControllerEvent,
+      );
+      if (
+        report.controller.processCount !== 1 ||
+        report.controller.inventoryQueryCount !== 1
+      ) {
+        throw new Error(
+          'Project Tour controller did not preserve the one-process, one-inventory-query contract',
         );
+      }
+      return report;
+    };
 
-        const evidence = {
-          episode,
-          projectPath: destination,
-          requestRoot: created.initialWork.requestRoot,
-          failedAttempts: [
-            ...(episode === 'all'
-              ? [
-                  disconnected?.agentReport?.reportRoot,
-                  crashed?.agentReport?.reportRoot,
-                ]
-              : []),
-          ],
-          completedAttempt: completed.agentReport?.reportRoot,
-          reviewRoot: review.receiptRoot,
-          closeRoot: closed.receiptRoot,
-          inventoryRoot: finalInventory.inventoryRoot,
-        };
+    void (async () => {
+      try {
+        const first =
+          episode === '2' ? undefined : await runController('1', false);
+        if (episode === '1' && first) {
+          completeTour(
+            '1',
+            {
+              controllerReportRoot: first.reportRoot,
+              requestRoot: first.project.initialWork.requestRoot,
+              failedAttempts: first.attemptReceipts.map(
+                (receipt) => receipt.agentReport?.reportRoot,
+              ),
+              inventoryRoot: first.finalInventory.inventoryRoot,
+            },
+            4,
+            first.finalInventory.works.length,
+          );
+          return;
+        }
+        setDisplayEpisode('2');
+        setStep(0);
+        const second = await runController('2', episode === 'all');
         completeTour(
           episode,
-          evidence,
+          {
+            firstControllerReportRoot: first?.reportRoot,
+            secondControllerReportRoot: second.reportRoot,
+            requestRoot: second.project.initialWork.requestRoot,
+            failedAttempts:
+              first?.attemptReceipts.map(
+                (receipt) => receipt.agentReport?.reportRoot,
+              ) ?? [],
+            completedAttempt:
+              second.attemptReceipts[0]?.agentReport?.reportRoot,
+            reviewRoot: second.reviewReceipt?.receiptRoot,
+            closeRoot: second.closeReceipt?.receiptRoot,
+            inventoryRoot: second.finalInventory.inventoryRoot,
+          },
           episode === 'all' ? 7 : 3,
-          finalInventory.works.length,
+          second.finalInventory.works.length,
         );
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);

@@ -7,18 +7,22 @@ import hashlib
 import json
 import os
 import platform
+import shutil
 import signal
 import subprocess
 import sys
 import tempfile
 import time
+from contextlib import contextmanager
 from pathlib import Path
-from typing import Any
+from typing import Any, Iterator
 
 import psutil
 
 
 SCHEMA = "kungfu.runtime.live-peer-continuity-campaign/v1"
+WINDOWS_CLEANUP_TIMEOUT_SECONDS = 5.0
+WINDOWS_CLEANUP_RETRY_SECONDS = 0.1
 
 
 def _append_json(path: Path, payload: dict[str, Any]) -> None:
@@ -75,6 +79,30 @@ def _wait_for_process_exit(
     except subprocess.TimeoutExpired:
         process.kill()
         process.wait(timeout=timeout)
+
+
+@contextmanager
+def _temporary_workspace(temp_parent: Path | None = None) -> Iterator[Path]:
+    root = Path(tempfile.mkdtemp(prefix="kfp-", dir=temp_parent))
+    try:
+        yield root
+    finally:
+        deadline = time.monotonic() + WINDOWS_CLEANUP_TIMEOUT_SECONDS
+        while True:
+            try:
+                shutil.rmtree(root)
+                break
+            except FileNotFoundError:
+                break
+            except PermissionError:
+                # A Windows process can have exited while its inherited log
+                # handle is still being released.  Preserve strict cleanup,
+                # but allow that bounded transition instead of converting a
+                # passed continuity campaign into a false qualification
+                # failure.
+                if platform.system() != "Windows" or time.monotonic() >= deadline:
+                    raise
+                time.sleep(WINDOWS_CLEANUP_RETRY_SECONDS)
 
 
 def _wait_for_coordinator_storage(
@@ -251,12 +279,12 @@ def _run_campaign(output_dir: Path, temp_parent: Path | None = None) -> int:
     # NNG's ipc transport inherits the platform Unix-domain socket path limit.
     # Keep this test-owned workspace short so macOS does not reject valid
     # runtime endpoints solely because $TMPDIR is deeply nested.
-    with tempfile.TemporaryDirectory(prefix="kfp-", dir=temp_parent) as root:
-        runtime_dir = Path(root) / "workspace" / "runtime"
-        marker_path = Path(root) / "peer-ready.jsonl"
-        capsule_command_path = Path(root) / "capsule-authority.jsonl"
-        capsule_marker_path = Path(root) / "capsule-ready.jsonl"
-        capsule_rejection_path = Path(root) / "capsule-rejection.jsonl"
+    with _temporary_workspace(temp_parent) as root:
+        runtime_dir = root / "workspace" / "runtime"
+        marker_path = root / "peer-ready.jsonl"
+        capsule_command_path = root / "capsule-authority.jsonl"
+        capsule_marker_path = root / "capsule-ready.jsonl"
+        capsule_rejection_path = root / "capsule-rejection.jsonl"
         runtime_dir.mkdir(parents=True)
         coordinator: subprocess.Popen[Any] | None = None
         peer_spec: dict[str, Any] | None = None

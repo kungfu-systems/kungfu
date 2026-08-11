@@ -1,0 +1,20 @@
+{
+  "schema": "kungfu.kfx.manifest/v1",
+  "name": "@kungfu-tech/kfx-view-github-events",
+  "version": "0.1.0",
+  "kungfuConfig": {
+    "key": "github-event-view",
+    "name": "GitHub Webhook Events",
+    "product": {
+      "roles": ["tool", "devtool"],
+      "icon": "🪝",
+      "order": 45
+    },
+    "config": {
+      "view": {
+        "title": "GitHub Webhook Events",
+        "capabilities": []
+      }
+    }
+  }
+}

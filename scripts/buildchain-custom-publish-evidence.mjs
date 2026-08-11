@@ -4,8 +4,11 @@
 import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-import { verifyUpgradePublicationPayloads } from './upgrade-publication-admission.mjs';
+import { verifyUpgradePublicationAdmission } from './upgrade-publication-admission.mjs';
+
+const SCRIPT_DIR = path.dirname(fileURLToPath(import.meta.url));
 
 function requireEnv(name) {
   const value = process.env[name];
@@ -41,13 +44,14 @@ function normalizeArtifact(artifact, index) {
     ...(artifact.ref ? { ref: artifact.ref } : {}),
     digest: artifact.digest,
     ...(artifact.role ? { role: artifact.role } : {}),
+    ...(artifact.platform ? { platform: artifact.platform } : {}),
   };
 }
 
 function generateKfdEvidence() {
   const result = spawnSync(
     process.execPath,
-    ['scripts/buildchain-kfd-evidence.mjs', '--write'],
+    [path.join(SCRIPT_DIR, 'buildchain-kfd-evidence.mjs'), '--write'],
     {
       cwd: process.cwd(),
       encoding: 'utf8',
@@ -71,9 +75,10 @@ function main() {
     '.buildchain',
     'release-candidate',
   );
-  const upgradeAdmission = verifyUpgradePublicationPayloads({
+  const upgradeAdmission = verifyUpgradePublicationAdmission({
     payloadRoot:
       process.env.KF_UPGRADE_PUBLISH_PAYLOAD_ROOT ||
+      process.env.BUILDCHAIN_RELEASE_CANDIDATE_PAYLOAD_ROOT ||
       path.join(releaseCandidateRoot, 'payloads'),
     releaseCandidatePassportPath:
       process.env.KF_UPGRADE_RELEASE_CANDIDATE_PASSPORT ||
@@ -83,9 +88,10 @@ function main() {
         'release-candidate-passport.json',
       ),
     expectedVersion: version,
+    expectedSourceSha: requireEnv('BUILDCHAIN_SOURCE_SHA'),
   });
   console.log(
-    `buildchain custom publish admitted upgrade evidence for ${upgradeAdmission.platforms.join(', ')}`,
+    `buildchain custom publish verified sealed upgrade admission ${upgradeAdmission.receiptRoot} for ${upgradeAdmission.platforms.join(', ')}`,
   );
   console.log(
     `buildchain custom publish admitted ${upgradeAdmission.credentialIsland.platformId} credential evidence from runtime ${upgradeAdmission.credentialIsland.runtimeSha}`,
@@ -121,6 +127,10 @@ function main() {
     artifacts: requiredArtifacts.map(normalizeArtifact),
     upgrade_qualification: {
       schema: 'kungfu.product-update.release-passport-evidence/v1',
+      admission_receipt_root: upgradeAdmission.receiptRoot,
+      candidate_capsule_root: upgradeAdmission.capsuleRoot,
+      candidate_root: upgradeAdmission.candidateRoot,
+      artifact_root: upgradeAdmission.artifactRoot,
       release_passport_root: upgradeAdmission.releasePassportRoot,
       channel_index_roots: upgradeAdmission.channelIndexRoots,
       campaign_roots: upgradeAdmission.campaignRoots,

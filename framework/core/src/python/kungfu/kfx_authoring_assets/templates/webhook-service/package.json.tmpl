@@ -1,0 +1,26 @@
+{
+  "name": "@kungfu-kfx/{{PACKAGE_KEY}}",
+  "version": "{{PACKAGE_VERSION}}",
+  "description": {{PACKAGE_DESCRIPTION_JSON}},
+  "license": "Apache-2.0",
+  "type": "module",
+  "files": [
+    "README.md",
+    "fixtures",
+    "kungfu.kfx.json",
+    "sdk",
+    "src",
+    "test"
+  ],
+  "scripts": {
+    "qualify": "node test/qualify.mjs"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "kungfuAuthoring": {
+    "productVersion": "{{PRODUCT_VERSION}}",
+    "kitRoot": "{{KIT_ROOT}}",
+    "sdkRoot": "{{SDK_ROOT}}"
+  }
+}

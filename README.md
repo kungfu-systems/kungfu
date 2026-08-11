@@ -11,9 +11,9 @@ same Work across Codex, Claude, OpenCode, Amp, or your own execution surface.
 
 ## Start where you already work
 
-Once the `kungfu` command is on your
-[`PATH`](docs/guides/installing-cli.md#make-kungfu-available-in-path), choose the
-entry that matches how you already work.
+First, [install Kungfu and make the `kungfu` command available on your
+`PATH`](docs/guides/installing-cli.md), then choose the entry that matches how
+you already work.
 
 **Stay in your current Agent.** Paste this sentence into Codex, Claude, OpenCode,
 Amp, or another Agent that can run local commands:
@@ -36,6 +36,12 @@ already use. Pass a task to create the first Work directly:
 ```sh
 kungfu run codex "Prepare the release notes"
 ```
+
+**When `.kungfu/` appears.** It is Kungfu's project-local workspace for durable
+Work and runtime state. Do not delete it or add the whole directory to Git. Ask
+your Agent to run `kungfu agent map --json` and follow its `workspaceGit` policy
+before staging anything. Most contents stay local; Kungfu never stages,
+commits, or pushes files for you.
 
 **Open the optional global view later.** The Kungfu TUI and GUI can show and
 manage Kungfu Projects and Work across Agent Sessions. They are sidecar views,
@@ -145,9 +151,12 @@ claim boundaries live in their own maintained routes:
 - **Evaluate the wider ecosystem thesis:** the
   [Agent Supply Chain architecture](docs/architecture/agent-supply-chain.md).
 
-Kungfu v4 is **Coming soon**. The current repository contains source-built
-capabilities and retained qualification evidence; public release artifacts are
-not available yet. Exact status and non-claims live in
+Kungfu v4.0.0-alpha.1 is the first public v4 Alpha. Download the
+[release artifacts](https://github.com/kungfu-systems/kungfu/releases/tag/v4.0.0-alpha.1)
+or follow the [installation guide](docs/guides/installing-cli.md). This is a
+prerelease, not a stable or generally available release; exact support,
+qualification, and non-claims remain in
+[Alpha Status](docs/guides/alpha-status.md) and
 [Known Limits](docs/qualification/known-limits.md).
 
 <!-- buildchain:badges:start -->

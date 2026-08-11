@@ -11,6 +11,8 @@ from __future__ import annotations
 import hashlib
 import re
 import struct
+from collections.abc import Iterable
+from dataclasses import dataclass
 from typing import Any, NoReturn
 
 PROTOCOL = "kungfu.fact-root.canonical/v2"
@@ -28,6 +30,14 @@ _SCHEMA_FIELDS = {
     "kungfu.fact.operation-request/v2": (1, 2),
     "kungfu.fact.root-set/v2": (1, 2),
     "kungfu.fact.authority-bundle/v2": (1, 2, 3, 4),
+    "kungfu.fact.temporal-predicate/v1": (1, 2, 3, 4, 5, 6, 7),
+    "kungfu.fact.temporal-relation/v1": (1, 2, 3, 4, 5, 6, 7, 8, 9),
+    "kungfu.fact.temporal-supersession/v1": (1, 2, 3, 4, 5, 6, 7),
+    "kungfu.fact.temporal-revocation/v1": (1, 2, 3, 4, 5, 6),
+    "kungfu.fact.temporal-authority-proof/v1": (1, 2, 3, 4, 5, 6, 7, 8),
+    "kungfu.fact.provenance-object/v1": (1, 2, 3, 4, 5, 6, 7, 8),
+    "kungfu.fact.temporal-path-query/v1": (1, 2, 3, 4, 5, 6, 7, 8, 9, 10),
+    "kungfu.fact.temporal-path-receipt/v1": (1, 2, 3, 4, 5, 6, 7, 8),
     "kungfu.fact.root-mapping-receipt/v1": (1, 2, 3, 4, 5, 6),
 }
 
@@ -226,3 +236,557 @@ def canonical_root(value: Any) -> str:
     """Return the lowercase SHA-256 content root for one KFR2 value."""
 
     return f"sha256:{hashlib.sha256(canonical_bytes(value)).hexdigest()}"
+
+
+ROOT_PATTERN = re.compile(r"sha256:[0-9a-f]{64}\Z")
+MAX_PATH_DEPTH = 32
+
+SCHEMA_FIELDS: dict[str, tuple[str, ...]] = {
+    "kungfu.fact.temporal-predicate/v1": (
+        "schema",
+        "predicateId",
+        "operations",
+        "direction",
+        "pathPolicy",
+        "cyclePolicy",
+        "authorityRoot",
+    ),
+    "kungfu.fact.temporal-relation/v1": (
+        "schema",
+        "relationId",
+        "predicateRoot",
+        "sourceRoot",
+        "targetRoot",
+        "validFromCutRoot",
+        "scopeRoot",
+        "authorityRoot",
+        "admissionRoots",
+    ),
+    "kungfu.fact.temporal-supersession/v1": (
+        "schema",
+        "priorRelationRoot",
+        "successorRelationRoot",
+        "effectiveCutRoot",
+        "reasonRoot",
+        "authorityRoot",
+        "admissionRoots",
+    ),
+    "kungfu.fact.temporal-revocation/v1": (
+        "schema",
+        "relationRoot",
+        "effectiveCutRoot",
+        "reasonRoot",
+        "authorityRoot",
+        "admissionRoots",
+    ),
+    "kungfu.fact.temporal-authority-proof/v1": (
+        "schema",
+        "proofId",
+        "subjectAuthorityRoot",
+        "governingAuthorityRoot",
+        "operations",
+        "validFromCutRoot",
+        "revokedAtCutRoot",
+        "admissionRoots",
+    ),
+    "kungfu.fact.provenance-object/v1": (
+        "schema",
+        "objectId",
+        "subjectRoot",
+        "materialRoots",
+        "relationRoots",
+        "cutRoot",
+        "authorityRoot",
+        "admissionRoots",
+    ),
+    "kungfu.fact.temporal-path-query/v1": (
+        "schema",
+        "queryId",
+        "operation",
+        "predicateRoot",
+        "sourceRoot",
+        "targetRoot",
+        "cutRoot",
+        "relationPathRoots",
+        "requiredAuthorityRoot",
+        "maxDepth",
+    ),
+    "kungfu.fact.temporal-path-receipt/v1": (
+        "schema",
+        "queryRoot",
+        "status",
+        "failureCode",
+        "cutRoot",
+        "relationPathRoots",
+        "authorityProofRoots",
+        "omissionRoots",
+    ),
+}
+
+SET_FIELDS = {
+    "operations",
+    "admissionRoots",
+    "materialRoots",
+    "relationRoots",
+    "authorityProofRoots",
+    "omissionRoots",
+}
+ARRAY_FIELDS = {"relationPathRoots"}
+NULLABLE_ROOT_FIELDS = {"revokedAtCutRoot"}
+U64_FIELDS = {"maxDepth"}
+
+
+class TemporalRelationError(ValueError):
+    """Stable rejection from the temporal relation verifier."""
+
+    def __init__(self, code: str, message: str):
+        super().__init__(message)
+        self.code = code
+
+
+def _temporal_fail(code: str, message: str) -> NoReturn:
+    raise TemporalRelationError(code, message)
+
+
+def _typed_text(value: Any, field: str) -> dict[str, Any]:
+    if not isinstance(value, str) or (not value and field != "failureCode"):
+        _temporal_fail(
+            "invalid-record",
+            f"{field} must be a string with its declared identity semantics",
+        )
+    return {"type": "text", "value": value}
+
+
+def _typed_root(value: Any, field: str) -> dict[str, Any]:
+    if not isinstance(value, str) or not ROOT_PATTERN.fullmatch(value):
+        _temporal_fail("orphan-root", f"{field} must be a lowercase SHA-256 root")
+    return {"type": "text", "value": value}
+
+
+def _typed_set(values: Any, field: str) -> dict[str, Any]:
+    if not isinstance(values, list) or any(
+        not isinstance(item, str) for item in values
+    ):
+        _temporal_fail("invalid-record", f"{field} must be an array of strings")
+    if len(values) != len(set(values)):
+        _temporal_fail("invalid-record", f"{field} contains a duplicate")
+    encoder = _typed_root if field.endswith("Roots") else _typed_text
+    return {"type": "set", "items": [encoder(item, field) for item in values]}
+
+
+def _typed_array(values: Any, field: str) -> dict[str, Any]:
+    if not isinstance(values, list):
+        _temporal_fail("invalid-record", f"{field} must be an array")
+    return {"type": "array", "items": [_typed_root(item, field) for item in values]}
+
+
+def record_descriptor(record: dict[str, Any]) -> dict[str, Any]:
+    """Project a closed temporal record into the authoritative KFR2 protocol."""
+
+    if not isinstance(record, dict):
+        _temporal_fail("invalid-record", "record must be an object")
+    schema = record.get("schema")
+    if not isinstance(schema, str):
+        _temporal_fail("unknown-schema", "temporal record schema is not registered")
+    fields = SCHEMA_FIELDS.get(schema)
+    if fields is None:
+        _temporal_fail("unknown-schema", "temporal record schema is not registered")
+    if set(record) != set(fields):
+        _temporal_fail(
+            "invalid-record", "temporal record fields do not match its closed schema"
+        )
+
+    children: list[dict[str, Any]] = []
+    for field_id, field in enumerate(fields, 1):
+        value = record[field]
+        if field in SET_FIELDS:
+            typed = _typed_set(value, field)
+        elif field in ARRAY_FIELDS:
+            typed = _typed_array(value, field)
+        elif field in NULLABLE_ROOT_FIELDS and value is None:
+            typed = {"type": "null"}
+        elif field in U64_FIELDS:
+            if not isinstance(value, int) or isinstance(value, bool) or value < 0:
+                _temporal_fail("invalid-record", f"{field} must be an unsigned integer")
+            typed = {"type": "u64", "value": str(value)}
+        elif field.endswith("Root"):
+            typed = _typed_root(value, field)
+        else:
+            typed = _typed_text(value, field)
+        children.append({"id": str(field_id), "value": typed})
+    return {"type": "record", "schema": schema, "fields": children}
+
+
+def record_root(record: dict[str, Any]) -> str:
+    """Return the independently reproducible KFR2 root for a temporal record."""
+
+    return canonical_root(record_descriptor(record))
+
+
+def _index(records: Any, family: str) -> dict[str, dict[str, Any]]:
+    if not isinstance(records, list):
+        _temporal_fail("invalid-bundle", f"{family} must be an array")
+    result: dict[str, dict[str, Any]] = {}
+    for item in records:
+        if not isinstance(item, dict) or set(item) != {"root", "record"}:
+            _temporal_fail(
+                "invalid-bundle", f"{family} entries require root and record"
+            )
+        root = item["root"]
+        if root != record_root(item["record"]):
+            _temporal_fail(
+                "root-mismatch", f"{family} record root does not match its bytes"
+            )
+        if root in result:
+            _temporal_fail("ambiguous-root", f"{family} contains a duplicate root")
+        result[root] = item["record"]
+    return result
+
+
+@dataclass(frozen=True)
+class _Bundle:
+    cuts: dict[str, dict[str, Any]]
+    predicates: dict[str, dict[str, Any]]
+    relations: dict[str, dict[str, Any]]
+    supersessions: dict[str, dict[str, Any]]
+    revocations: dict[str, dict[str, Any]]
+    authority_proofs: dict[str, dict[str, Any]]
+    provenance_objects: dict[str, dict[str, Any]]
+
+    def ancestor(self, earlier: str, later: str) -> bool:
+        pending = [later]
+        visited: set[str] = set()
+        while pending:
+            current = pending.pop()
+            if current == earlier:
+                return True
+            if current in visited:
+                continue
+            visited.add(current)
+            if len(visited) > len(self.cuts):
+                _temporal_fail("forbidden-cycle", "Cut lineage is cyclic")
+            cut = self.cuts.get(current)
+            if cut is None:
+                _temporal_fail("orphan-root", "Cut lineage references an unknown root")
+            pending.extend(cut["parentCutRoots"])
+        return False
+
+
+def _assert_root(value: Any, field: str) -> str:
+    if not isinstance(value, str) or not ROOT_PATTERN.fullmatch(value):
+        _temporal_fail("orphan-root", f"{field} is not a content root")
+    return value
+
+
+def _load_bundle(document: dict[str, Any]) -> _Bundle:
+    expected = {
+        "schema",
+        "cuts",
+        "predicates",
+        "relations",
+        "supersessions",
+        "revocations",
+        "authorityProofs",
+        "provenanceObjects",
+    }
+    if not isinstance(document, dict) or set(document) != expected:
+        _temporal_fail("invalid-bundle", "bundle fields do not match the closed schema")
+    if document["schema"] != "kungfu.fact.temporal-bundle/v1":
+        _temporal_fail("unknown-schema", "bundle schema is not supported")
+
+    cuts: dict[str, dict[str, Any]] = {}
+    if not isinstance(document["cuts"], list):
+        _temporal_fail("invalid-bundle", "cuts must be an array")
+    for cut in document["cuts"]:
+        if not isinstance(cut, dict) or set(cut) != {
+            "root",
+            "parentCutRoots",
+            "activeRelationRoots",
+            "declarationRoots",
+        }:
+            _temporal_fail("invalid-bundle", "Cut projection has unexpected fields")
+        root = _assert_root(cut["root"], "cut.root")
+        if root in cuts:
+            _temporal_fail("ambiguous-root", "Cut projection contains a duplicate root")
+        for field in ("parentCutRoots", "activeRelationRoots", "declarationRoots"):
+            if not isinstance(cut[field], list) or len(cut[field]) != len(
+                set(cut[field])
+            ):
+                _temporal_fail(
+                    "invalid-bundle", f"{field} must be a duplicate-free array"
+                )
+            for value in cut[field]:
+                _assert_root(value, field)
+        cuts[root] = cut
+
+    bundle = _Bundle(
+        cuts=cuts,
+        predicates=_index(document["predicates"], "predicates"),
+        relations=_index(document["relations"], "relations"),
+        supersessions=_index(document["supersessions"], "supersessions"),
+        revocations=_index(document["revocations"], "revocations"),
+        authority_proofs=_index(document["authorityProofs"], "authorityProofs"),
+        provenance_objects=_index(document["provenanceObjects"], "provenanceObjects"),
+    )
+    _validate_bundle(bundle)
+    return bundle
+
+
+def _validate_bundle(bundle: _Bundle) -> None:
+    visiting_cuts: set[str] = set()
+    visited_cuts: set[str] = set()
+
+    def visit_cut(root: str) -> None:
+        if root in visiting_cuts:
+            _temporal_fail("forbidden-cycle", "Cut lineage is cyclic")
+        if root in visited_cuts:
+            return
+        cut = bundle.cuts.get(root)
+        if cut is None:
+            _temporal_fail("orphan-root", "Cut lineage references an unknown root")
+        visiting_cuts.add(root)
+        for parent in cut["parentCutRoots"]:
+            visit_cut(parent)
+        visiting_cuts.remove(root)
+        visited_cuts.add(root)
+
+    for cut in bundle.cuts.values():
+        for parent in cut["parentCutRoots"]:
+            if parent not in bundle.cuts:
+                _temporal_fail(
+                    "orphan-root", "Cut parent is not present in the bounded bundle"
+                )
+        for relation_root_value in cut["activeRelationRoots"]:
+            if relation_root_value not in bundle.relations:
+                _temporal_fail("orphan-root", "Cut contains an unknown active relation")
+        for declaration in cut["declarationRoots"]:
+            if declaration not in bundle.predicates:
+                _temporal_fail(
+                    "orphan-root", "Cut contains an unknown predicate declaration"
+                )
+        visit_cut(cut["root"])
+
+    for relation in bundle.relations.values():
+        if relation["predicateRoot"] not in bundle.predicates:
+            _temporal_fail(
+                "unknown-predicate", "relation references an unknown predicate"
+            )
+        if relation["validFromCutRoot"] not in bundle.cuts:
+            _temporal_fail("orphan-root", "relation references an unknown validity Cut")
+
+    for predicate in bundle.predicates.values():
+        if predicate["direction"] != "source-to-target":
+            _temporal_fail(
+                "invalid-record", "temporal predicates must declare one-way direction"
+            )
+        if predicate["pathPolicy"] not in {"single-edge", "explicit-bounded"}:
+            _temporal_fail("invalid-record", "predicate path policy is not supported")
+        if predicate["cyclePolicy"] != "forbid":
+            _temporal_fail(
+                "invalid-record", "the first temporal contract forbids cycles"
+            )
+        if not predicate["operations"]:
+            _temporal_fail(
+                "invalid-record", "predicate must scope at least one operation"
+            )
+
+    supersession_edges: dict[str, list[str]] = {}
+    for record in bundle.supersessions.values():
+        prior = record["priorRelationRoot"]
+        successor = record["successorRelationRoot"]
+        if prior not in bundle.relations or successor not in bundle.relations:
+            _temporal_fail("orphan-root", "supersession references an unknown relation")
+        if record["effectiveCutRoot"] not in bundle.cuts:
+            _temporal_fail("orphan-root", "supersession references an unknown Cut")
+        supersession_edges.setdefault(prior, []).append(successor)
+
+    visiting: set[str] = set()
+    visited: set[str] = set()
+
+    def visit(root: str) -> None:
+        if root in visiting:
+            _temporal_fail("forbidden-cycle", "supersession records form a cycle")
+        if root in visited:
+            return
+        visiting.add(root)
+        for successor in supersession_edges.get(root, []):
+            visit(successor)
+        visiting.remove(root)
+        visited.add(root)
+
+    for root in supersession_edges:
+        visit(root)
+
+    for record in bundle.revocations.values():
+        if record["relationRoot"] not in bundle.relations:
+            _temporal_fail("orphan-root", "revocation references an unknown relation")
+        if record["effectiveCutRoot"] not in bundle.cuts:
+            _temporal_fail("orphan-root", "revocation references an unknown Cut")
+
+    for record in bundle.authority_proofs.values():
+        if record["validFromCutRoot"] not in bundle.cuts:
+            _temporal_fail("orphan-root", "authority proof references an unknown Cut")
+        revoked = record["revokedAtCutRoot"]
+        if revoked is not None and revoked not in bundle.cuts:
+            _temporal_fail("orphan-root", "authority proof revocation Cut is unknown")
+
+    for record in bundle.provenance_objects.values():
+        if record["cutRoot"] not in bundle.cuts:
+            _temporal_fail("orphan-root", "provenance object references an unknown Cut")
+        if any(root not in bundle.relations for root in record["relationRoots"]):
+            _temporal_fail(
+                "orphan-root", "provenance object references an unknown relation"
+            )
+
+
+def _relation_current(bundle: _Bundle, relation_root_value: str, cut_root: str) -> None:
+    relation = bundle.relations[relation_root_value]
+    if not bundle.ancestor(relation["validFromCutRoot"], cut_root):
+        _temporal_fail(
+            "relation-not-yet-valid", "relation is not valid at the requested Cut"
+        )
+    for record in bundle.supersessions.values():
+        if record["priorRelationRoot"] == relation_root_value and bundle.ancestor(
+            record["effectiveCutRoot"], cut_root
+        ):
+            _temporal_fail("relation-superseded", "relation was superseded at this Cut")
+    for record in bundle.revocations.values():
+        if record["relationRoot"] == relation_root_value and bundle.ancestor(
+            record["effectiveCutRoot"], cut_root
+        ):
+            _temporal_fail("relation-revoked", "relation was revoked at this Cut")
+    if relation_root_value not in bundle.cuts[cut_root]["activeRelationRoots"]:
+        _temporal_fail(
+            "relation-inactive-at-cut", "relation is not active at the requested Cut"
+        )
+
+
+def _authority_receipts(
+    bundle: _Bundle,
+    authority_root: str,
+    governing_root: str,
+    operation: str,
+    cut_root: str,
+) -> list[str]:
+    if authority_root == governing_root:
+        return []
+    matches: list[str] = []
+    for root, proof in bundle.authority_proofs.items():
+        if (
+            proof["subjectAuthorityRoot"] == authority_root
+            and proof["governingAuthorityRoot"] == governing_root
+            and operation in proof["operations"]
+            and bundle.ancestor(proof["validFromCutRoot"], cut_root)
+            and (
+                proof["revokedAtCutRoot"] is None
+                or not bundle.ancestor(proof["revokedAtCutRoot"], cut_root)
+            )
+        ):
+            matches.append(root)
+    if not matches:
+        _temporal_fail(
+            "authority-missing", "no exact authority proof applies at this Cut"
+        )
+    if len(matches) != 1:
+        _temporal_fail("ambiguous-authority", "more than one authority proof applies")
+    return matches
+
+
+def _receipt(
+    query: dict[str, Any], status: str, failure: str, proofs: Iterable[str]
+) -> dict[str, Any]:
+    record = {
+        "schema": "kungfu.fact.temporal-path-receipt/v1",
+        "queryRoot": record_root(query),
+        "status": status,
+        "failureCode": failure,
+        "cutRoot": query["cutRoot"],
+        "relationPathRoots": list(query["relationPathRoots"]),
+        "authorityProofRoots": sorted(set(proofs)),
+        "omissionRoots": [],
+    }
+    return {"record": record, "root": record_root(record)}
+
+
+def verify_path(document: dict[str, Any], query: dict[str, Any]) -> dict[str, Any]:
+    """Verify one explicit path at one immutable Cut and return a rooted receipt."""
+
+    if query.get("schema") != "kungfu.fact.temporal-path-query/v1":
+        _temporal_fail("unknown-schema", "query schema is not supported")
+    # Root the query before semantic evaluation so every semantic rejection has
+    # a stable subject and a reproducible negative receipt.
+    record_root(query)
+    proof_roots: list[str] = []
+    try:
+        bundle = _load_bundle(document)
+        cut_root = query["cutRoot"]
+        if cut_root not in bundle.cuts:
+            _temporal_fail("orphan-root", "query Cut is absent from the bounded bundle")
+        predicate = bundle.predicates.get(query["predicateRoot"])
+        if predicate is None:
+            _temporal_fail("unknown-predicate", "query predicate is not declared")
+        if query["predicateRoot"] not in bundle.cuts[cut_root]["declarationRoots"]:
+            _temporal_fail("unknown-predicate", "predicate is not declared at this Cut")
+        if predicate["authorityRoot"] != query["requiredAuthorityRoot"]:
+            _temporal_fail(
+                "authority-missing",
+                "query authority does not own the predicate declaration",
+            )
+        operation = query["operation"]
+        if operation not in predicate["operations"]:
+            _temporal_fail(
+                "unscoped-compatibility", "operation is outside predicate scope"
+            )
+
+        path = query["relationPathRoots"]
+        max_depth = query["maxDepth"]
+        if not 1 <= max_depth <= MAX_PATH_DEPTH or len(path) > max_depth:
+            _temporal_fail(
+                "path-bound-exceeded", "path exceeds the declared verifier bound"
+            )
+        if not path:
+            _temporal_fail("path-missing", "the verifier does not search for a path")
+        if len(path) != len(set(path)):
+            _temporal_fail(
+                "forbidden-cycle", "a relation root repeats in the explicit path"
+            )
+        if len(path) > 1 and predicate["pathPolicy"] != "explicit-bounded":
+            _temporal_fail(
+                "implicit-transitive-acceptance", "predicate forbids composed paths"
+            )
+
+        cursor = query["sourceRoot"]
+        visited_endpoints = {cursor}
+        for relation_root_value in path:
+            relation = bundle.relations.get(relation_root_value)
+            if relation is None:
+                _temporal_fail("orphan-root", "query path contains an unknown relation")
+            if relation["predicateRoot"] != query["predicateRoot"]:
+                _temporal_fail(
+                    "predicate-mismatch", "query path crosses predicate declarations"
+                )
+            _relation_current(bundle, relation_root_value, cut_root)
+            if relation["sourceRoot"] != cursor:
+                _temporal_fail(
+                    "direction-mismatch", "relation direction does not match the path"
+                )
+            cursor = relation["targetRoot"]
+            if cursor in visited_endpoints and predicate["cyclePolicy"] == "forbid":
+                _temporal_fail("forbidden-cycle", "explicit path repeats an endpoint")
+            visited_endpoints.add(cursor)
+            proof_roots.extend(
+                _authority_receipts(
+                    bundle,
+                    relation["authorityRoot"],
+                    query["requiredAuthorityRoot"],
+                    operation,
+                    cut_root,
+                )
+            )
+        if cursor != query["targetRoot"]:
+            _temporal_fail(
+                "direction-mismatch", "explicit path does not reach the target"
+            )
+        return _receipt(query, "accepted", "", proof_roots)
+    except TemporalRelationError as error:
+        return _receipt(query, "rejected", error.code, proof_roots)

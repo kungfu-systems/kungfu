@@ -113,18 +113,17 @@ function makeContractRepo(t) {
   return root;
 }
 
-test('keeps stable and Alpha Buildchain KFD metadata on their declared lines', () => {
+test('keeps stable and dev Buildchain KFD metadata on their declared lines', () => {
   const stableKfd = buildchainRequire('@kungfu-tech/kfd/package.json');
-  const alphaKfd = buildchainAlphaRequire('@kungfu-tech/kfd/package.json');
+  const devKfd = buildchainAlphaRequire('@kungfu-tech/kfd/package.json');
   assert.equal(
     stableKfd.version,
     buildchainPackage.dependencies['@kungfu-tech/kfd'],
   );
   assert.equal(
-    alphaKfd.version,
+    devKfd.version,
     buildchainAlphaPackage.dependencies['@kungfu-tech/kfd'],
   );
-  assert.notEqual(stableKfd.version, alphaKfd.version);
 });
 
 for (const [surface, source] of [

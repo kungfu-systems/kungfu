@@ -127,7 +127,7 @@ def bind_current_native_work(
 
     status = work_commands._status(work_runtime_dir, initiative_id, assignment_id)
     work_control = profile_sdk.validate_source(
-        work_commands._profile_source(), work_runtime_dir
+        work_commands.profile_source(), work_runtime_dir
     )["inspection"]
     work_ref = {
         "schema": "kungfu.work-ref/v1",
@@ -910,6 +910,8 @@ def run_session_attempt(
     prompt: str,
     timeout_seconds: float,
     event_sink: Callable[[Mapping[str, Any]], None] | None = None,
+    session_started_callback: Callable[[Mapping[str, str], Mapping[str, Any]], None]
+    | None = None,
 ) -> tuple[ProcessResult, dict[str, Any]]:
     """Start one Work-bound Session, deliver the first turn, and yield at attention."""
     coordinator = ManagedRunCoordinator(
@@ -930,6 +932,7 @@ def run_session_attempt(
         prompt=prompt,
         timeout_seconds=timeout_seconds,
         event_sink=event_sink,
+        session_started=session_started_callback,
     )
 
 
@@ -1029,6 +1032,8 @@ def execute(
     event_sink: Callable[[Mapping[str, Any]], None] | None = None,
     session_invoker: Callable[[Mapping[str, Any]], Mapping[str, Any]] | None = None,
     use_session: bool | None = None,
+    session_started_callback: Callable[[Mapping[str, str], Mapping[str, Any]], None]
+    | None = None,
 ) -> dict[str, Any]:
     from kungfu.storage.episode_lifecycle import RuntimeEpisodeLifecycle
 
@@ -1131,6 +1136,7 @@ def execute(
                 prompt=argv[-1],
                 timeout_seconds=timeout_seconds,
                 event_sink=event_sink,
+                session_started_callback=session_started_callback,
             )
         elif process_runner is run_process:
             result = process_runner(

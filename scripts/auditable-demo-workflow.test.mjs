@@ -12,6 +12,9 @@ const workflow = parse(workflowText);
 const scenario = JSON.parse(
   fs.readFileSync('.buildchain/auditable-demo.json', 'utf8'),
 );
+const transportScenario = JSON.parse(
+  fs.readFileSync('.buildchain/auditable-demo-transport-smoke.json', 'utf8'),
+);
 const demo = workflow.jobs['auditable-demo'];
 const build = workflow.jobs.build;
 const readme = fs.readFileSync('README.md', 'utf8');
@@ -40,7 +43,7 @@ test('one exact Buildchain workflow owns every declared demo', () => {
           '--episode',
           '1',
           '--speed',
-          '1',
+          '4',
         ],
       },
       {
@@ -51,15 +54,15 @@ test('one exact Buildchain workflow owns every declared demo', () => {
           '--episode',
           '2',
           '--speed',
-          '1',
+          '4',
         ],
       },
     ],
   );
   assert.equal(scenario.execution.durationClass, 'long-form');
-  assert.equal(scenario.execution.totalTimeoutSeconds, 180);
-  assert.equal(scenario.demos[1].steps[0].timeoutSeconds, 180);
-  assert.equal(scenario.demos[2].steps[0].timeoutSeconds, 180);
+  assert.equal(scenario.execution.totalTimeoutSeconds, 360);
+  assert.equal(scenario.demos[1].steps[0].timeoutSeconds, 360);
+  assert.equal(scenario.demos[2].steps[0].timeoutSeconds, 360);
   assert.deepEqual(scenario.transportSmoke, {
     argv: ['agent-work-lab', 'demo', '--json'],
     timeoutSeconds: 60,
@@ -77,6 +80,69 @@ test('one exact Buildchain workflow owns every declared demo', () => {
   assert.equal(
     demo.with['media-profile'],
     'responsive-long-form-web-delivery-v1',
+  );
+});
+
+test('pre-upload transport uses a v3-compatible scenario bound to the exact product artifact', () => {
+  assert.equal(
+    build.with['pre-upload-transport-smoke-scenario-path'],
+    '.buildchain/auditable-demo-transport-smoke.json',
+  );
+  assert.deepEqual(transportScenario.product, scenario.product);
+  assert.deepEqual(transportScenario.artifact, scenario.artifact);
+  assert.deepEqual(transportScenario.transportSmoke, scenario.transportSmoke);
+  assert.deepEqual(transportScenario.authority, scenario.authority);
+  assert.deepEqual(transportScenario.execution, {
+    deterministic: true,
+    network: 'none',
+    secrets: 'none',
+    totalTimeoutSeconds: 60,
+    environment: {},
+  });
+  assert.deepEqual(transportScenario.renditions, [
+    {
+      id: '1080p',
+      role: 'primary',
+      columns: 150,
+      rows: 36,
+      width: 1920,
+      height: 1080,
+    },
+    {
+      id: '720p',
+      role: 'responsive',
+      columns: 150,
+      rows: 28,
+      width: 1280,
+      height: 720,
+    },
+  ]);
+});
+
+test('native 720p keeps full-width terminal coverage without copying 1080p geometry', () => {
+  assert.equal(scenario.compositionMode, 'terminal-fill');
+  assert.deepEqual(scenario.renditions, [
+    {
+      id: '1080p',
+      role: 'primary',
+      columns: 150,
+      rows: 36,
+      width: 1920,
+      height: 1080,
+    },
+    {
+      id: '720p',
+      role: 'responsive',
+      columns: 150,
+      rows: 28,
+      width: 1280,
+      height: 720,
+    },
+  ]);
+  assert.notEqual(
+    scenario.renditions[0].rows,
+    scenario.renditions[1].rows,
+    '720p must remain an independently reflowed native PTY',
   );
 });
 
@@ -141,17 +207,27 @@ test('Kungfu owns the ordered three-proof argument while Buildchain updates only
 });
 
 test('the build fails the real transported binary before either upload path', () => {
+  assert.deepEqual(workflow.on.workflow_dispatch.inputs['buildchain-ref'], {
+    description:
+      'Temporary Buildchain train or exact SHA for trusted manual validation',
+    required: false,
+    default: '',
+  });
   assert.equal(
     build.uses,
-    'kungfu-systems/buildchain/.github/workflows/.build.yml@2e7e07902ac28d8f3edcfb81098ef9ebc7a91878',
+    'kungfu-systems/buildchain/.github/workflows/.build.yml@73f10bb29f06a392d54fb223643be52b693057a6',
+  );
+  assert.equal(
+    build.with['buildchain-ref'],
+    "${{ inputs.buildchain-ref || '73f10bb29f06a392d54fb223643be52b693057a6' }}",
   );
   assert.equal(
     demo.uses,
-    'kungfu-systems/buildchain/.github/workflows/.declarative-auditable-demo.yml@2e7e07902ac28d8f3edcfb81098ef9ebc7a91878',
+    'kungfu-systems/buildchain/.github/workflows/.declarative-auditable-demo.yml@41d4dce2f38aa4821c794b49dcfb2bcf59d0984a',
   );
   assert.equal(
     build.with['pre-upload-transport-smoke-scenario-path'],
-    '.buildchain/auditable-demo.json',
+    '.buildchain/auditable-demo-transport-smoke.json',
   );
   assert.equal(build.with['pre-upload-transport-smoke-artifact-root'], '.');
 });
@@ -175,6 +251,34 @@ test('manual full refresh and promotion reuse the same materializer', () => {
   );
 });
 
+test('manual media publication runs only the Linux x64 product path', () => {
+  const platformExpression = build.with['platforms-json'];
+  assert.match(
+    platformExpression,
+    /github\.event_name == 'workflow_dispatch' && inputs\.render-auditable-demo/u,
+  );
+  assert.match(
+    platformExpression,
+    /^\$\{\{[\s\S]*inputs\.render-auditable-demo && '\[\{"id":"linux-x64","name":"Linux x64 auditable demo publication"[\s\S]*\}\]'[\s\S]*\|\| \(inputs\.platforms-json \|\| '\[\{"id":"linux-x64"[\s\S]*"id":"linux-arm64"[\s\S]*"id":"macos-arm64"[\s\S]*"id":"windows-x64"/u,
+  );
+  assert.match(
+    workflow.jobs['windows-fast-sentinel'].if,
+    /!\(github\.event_name == 'workflow_dispatch' && inputs\.render-auditable-demo\)/u,
+  );
+  assert.match(
+    build.if,
+    /^\$\{\{ always\(\) &&[\s\S]*inputs\.render-auditable-demo && needs\.windows-fast-sentinel\.result == 'skipped'/u,
+  );
+  assert.equal(
+    build.with['compiler-cache-platforms-json'],
+    "${{ github.event_name == 'workflow_dispatch' && (inputs.render-auditable-demo || inputs.windows-compiler-cache-mode == 'off') && '[]' || '[\"windows-x64\"]' }}",
+  );
+  assert.equal(
+    build.with['compiler-cache-required'],
+    "${{ github.event_name != 'workflow_dispatch' || (!inputs.render-auditable-demo && inputs.windows-compiler-cache-mode != 'off') }}",
+  );
+});
+
 test('the exact same-run artifact contains the standalone demo distribution', () => {
   assert.match(
     workflowText,
@@ -189,9 +293,9 @@ test('the exact same-run artifact contains the standalone demo distribution', ()
     'kungfu.declarative-demo-binary/v1',
   );
   assert.deepEqual(scenario.artifact.runtimeDependencies, []);
-  assert.match(
+  assert.equal(
     demo.with['renderer-image'],
-    /^ghcr\.io\/kungfu-systems\/build-images\/demo-renderer@sha256:[0-9a-f]{64}$/u,
+    'ghcr.io/kungfu-systems/build-images/demo-renderer@sha256:3a49708163fedaaabe07b45bba910026a1828151b5d4e9bbdaf0d62e75c927c1',
   );
 });
 
