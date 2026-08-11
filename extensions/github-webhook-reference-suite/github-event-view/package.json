@@ -11,9 +11,6 @@
     "clean": "kungfu sdk kfx clean",
     "test": "node test/event-presentation.test.mjs"
   },
-  "dependencies": {
-    "@kungfu-tech/kfx": "workspace:*"
-  },
   "devDependencies": {
     "@kungfu-tech/sdk": "workspace:*",
     "@types/react": "^18.3.3"

@@ -88,9 +88,43 @@ const capabilityExecutor = {
       issueAdmitted: false,
       workMutated: false,
       githubMutated: false,
+      semanticCompletion: false,
     };
   },
 };
+
+const forbiddenEffects = [
+  ['issue-admission', { issueAdmitted: true }],
+  ['work-mutation', { workMutated: true }],
+  ['github-mutation', { githubMutated: true }],
+  ['semantic-completion', { semanticCompletion: true }],
+];
+for (const [label, forbidden] of forbiddenEffects) {
+  const refusingBridge = new GitHubDogfoodBridge({
+    authority: authority(),
+    capabilityExecutor: {
+      async invoke() {
+        return {
+          kind: 'finding',
+          immutable: true,
+          findingRoot: rooted('d'),
+          issueAdmitted: false,
+          workMutated: false,
+          githubMutated: false,
+          semanticCompletion: false,
+          ...forbidden,
+        };
+      },
+    },
+  });
+  await assert.rejects(
+    refusingBridge.captureObservation({
+      ...observation,
+      delivery: `forbidden-${label}`,
+    }),
+    /invalid Finding effect/,
+  );
+}
 
 const captureLedger = new Map();
 const bridge = new GitHubDogfoodBridge({
@@ -231,6 +265,7 @@ const receipt = {
     findingRoot: captured.effect.findingRoot,
     duplicateCode: deduplicated.code,
     automaticEffects: ['immutable-finding-capture'],
+    refusedEffects: forbiddenEffects.map(([label]) => label),
   },
   intake: {
     acceptedRoot: accepted.receipt.receiptRoot,
