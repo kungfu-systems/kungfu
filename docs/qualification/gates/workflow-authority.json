@@ -351,10 +351,10 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "diagnostic",
-          "definitionDigest": "sha256:834c21d5b8e3f365878df8e39ad1317f910876e265c562fdadb18705427bd3e6",
+          "definitionDigest": "sha256:65878741c0e531efb3cf31fcfd023d27572fe6d5b89d30aad539314a01126d41",
           "credentials": {"githubToken":"write","oidc":true,"repositorySecrets":["KUNGFU_GITHUB_TOKEN"],"inheritedSecrets":false,"environment":null},
           "externalActions": ["actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0"],
-          "steps": [{"index":1,"label":"name:Check out exact candidate source","definitionDigest":"sha256:90b7875c1b8263fc6ee031b6f446decfc1fe5eb289f08dbc3d506c4bce43f113"},{"index":2,"label":"id:source-lock","definitionDigest":"sha256:d263cd93d2ca2c2143466ba9cfc3614f1dd927a6586adf50f790d0ad756c437e"},{"index":3,"label":"id:receipt","definitionDigest":"sha256:49dbd179361e6e926d6eab7b762bfa7bb7292e2f3c452a3b7ddd2d8bd626b623"}]
+          "steps": [{"index":1,"label":"name:Check out exact candidate source","definitionDigest":"sha256:90b7875c1b8263fc6ee031b6f446decfc1fe5eb289f08dbc3d506c4bce43f113"},{"index":2,"label":"id:source-lock","definitionDigest":"sha256:e18af30e10312a6d1acf0be6d65ff64c6ad60138cdcc314b05be93d67df58974"},{"index":3,"label":"id:receipt","definitionDigest":"sha256:49dbd179361e6e926d6eab7b762bfa7bb7292e2f3c452a3b7ddd2d8bd626b623"}]
         },
         {
           "id": "resolve-auditable-demo-source",

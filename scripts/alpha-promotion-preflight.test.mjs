@@ -582,7 +582,7 @@ test('patrol, normal Alpha builds and sentinels keep one controller authority', 
   );
   assert.match(
     build,
-    /RUNTIME_IMAGES_CANDIDATE_PR:[\s\S]*alpha\/v4\/v4\.0-runtime-images-candidate[\s\S]*fix\/alpha2-signing-authority-ref[\s\S]*RUNTIME_IMAGES_CANDIDATE_BASE_SHA:[\s\S]*test "\$RELEASE_CUT_SOURCE_REF" = "fix\/alpha2-signing-authority-ref"[\s\S]*git ls-remote origin "refs\/heads\/\$RELEASE_CUT_SOURCE_REF"/u,
+    /RUNTIME_IMAGES_CANDIDATE_PR:[\s\S]*alpha\/v4\/v4\.0-runtime-images-candidate[\s\S]*fix\/alpha2-signing-authority-ref[\s\S]*RUNTIME_IMAGES_CANDIDATE_BASE_SHA:[\s\S]*test "\$RELEASE_CUT_SOURCE_REF" = "publish-gate\/alpha\/v4\/v4\.0-runtime-images-candidate"[\s\S]*git ls-remote origin "refs\/heads\/\$RELEASE_CUT_SOURCE_REF"/u,
   );
   assert.match(
     build,

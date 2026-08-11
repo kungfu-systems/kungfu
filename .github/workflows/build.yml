@@ -101,7 +101,7 @@ jobs:
           RELEASE_CUT_PR_BASE_SHA: ${{ github.event.pull_request.base.sha || '' }}
           RUNTIME_IMAGES_CANDIDATE_PR: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.ref == 'alpha/v4/v4.0-runtime-images-candidate' && github.event.pull_request.head.ref == 'fix/alpha2-signing-authority-ref' && 'true' || 'false' }}
           RUNTIME_IMAGES_CANDIDATE_BASE_SHA: ${{ github.event.pull_request.base.sha || '' }}
-          RELEASE_CUT_SOURCE_REF: ${{ fromJSON(inputs.macos-overflow-request-json || '{}').releaseCutSourceRef || (github.event_name == 'pull_request' && github.event.pull_request.base.ref == 'alpha/v4/v4.0' && github.event.pull_request.head.ref == 'fix/alpha2-lineage-repair-r16' && 'publish-gate/anchor') || (github.event_name == 'pull_request' && github.event.pull_request.base.ref == 'alpha/v4/v4.0-runtime-images-candidate' && github.event.pull_request.head.ref == 'fix/alpha2-signing-authority-ref' && github.event.pull_request.head.ref) || '' }}
+          RELEASE_CUT_SOURCE_REF: ${{ fromJSON(inputs.macos-overflow-request-json || '{}').releaseCutSourceRef || (github.event_name == 'pull_request' && github.event.pull_request.base.ref == 'alpha/v4/v4.0' && github.event.pull_request.head.ref == 'fix/alpha2-lineage-repair-r16' && 'publish-gate/anchor') || (github.event_name == 'pull_request' && github.event.pull_request.base.ref == 'alpha/v4/v4.0-runtime-images-candidate' && github.event.pull_request.head.ref == 'fix/alpha2-signing-authority-ref' && 'publish-gate/alpha/v4/v4.0-runtime-images-candidate') || '' }}
           RELEASE_CUT_SOURCE_SHA: ${{ fromJSON(inputs.macos-overflow-request-json || '{}').sourceSha || (github.event_name == 'pull_request' && ((github.event.pull_request.base.ref == 'alpha/v4/v4.0' && github.event.pull_request.head.ref == 'fix/alpha2-lineage-repair-r16') || (github.event.pull_request.base.ref == 'alpha/v4/v4.0-runtime-images-candidate' && github.event.pull_request.head.ref == 'fix/alpha2-signing-authority-ref')) && github.event.pull_request.head.sha) || '' }}
           RELEASE_CUT_ANCHOR_REQUEST_JSON: ${{ toJSON(fromJSON(inputs.macos-overflow-request-json || '{}').releaseCutAnchorRequest) }}
         run: |
@@ -116,7 +116,7 @@ jobs:
           fi
           if [[ "$RUNTIME_IMAGES_CANDIDATE_PR" = "true" ]]; then
             test "$RUNTIME_IMAGES_CANDIDATE_BASE_SHA" = "f9e6b0e34bcdd6407b2a18206ace7982d64de2c8"
-            test "$RELEASE_CUT_SOURCE_REF" = "fix/alpha2-signing-authority-ref"
+            test "$RELEASE_CUT_SOURCE_REF" = "publish-gate/alpha/v4/v4.0-runtime-images-candidate"
             [[ "$RELEASE_CUT_SOURCE_SHA" =~ ^[0-9a-f]{40}$ ]]
             test "$(git rev-parse HEAD)" = "$RELEASE_CUT_SOURCE_SHA"
             test "$(git ls-remote origin "refs/heads/$RELEASE_CUT_SOURCE_REF" | awk '{print $1}')" = "$RELEASE_CUT_SOURCE_SHA"
