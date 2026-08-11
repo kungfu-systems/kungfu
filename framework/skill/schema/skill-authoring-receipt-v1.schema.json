@@ -1,0 +1,68 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "kungfu.skill-authoring.receipt/v1",
+  "title": "Kungfu Skill safe authoring receipt",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "planRoot",
+    "decisionRoot",
+    "candidateCatalogRoot",
+    "target",
+    "fileRoots",
+    "definitionRoot",
+    "contentRoot",
+    "qualificationRoot",
+    "allowedActions",
+    "blockedActions",
+    "rollback",
+    "lifecycleMutation",
+    "draftOnly",
+    "nonClaims"
+  ],
+  "properties": {
+    "schema": {"const": "kungfu.skill-authoring.receipt/v1"},
+    "planRoot": {"$ref": "#/$defs/root"},
+    "decisionRoot": {"$ref": "#/$defs/root"},
+    "candidateCatalogRoot": {"$ref": "#/$defs/root"},
+    "target": {"type": "string", "minLength": 1},
+    "fileRoots": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["SKILL.md", "skill-definition.json"],
+      "properties": {
+        "SKILL.md": {"$ref": "#/$defs/root"},
+        "skill-definition.json": {"$ref": "#/$defs/root"}
+      }
+    },
+    "definitionRoot": {"$ref": "#/$defs/root"},
+    "contentRoot": {"$ref": "#/$defs/root"},
+    "qualificationRoot": {"$ref": "#/$defs/root"},
+    "allowedActions": {"$ref": "#/$defs/actions"},
+    "blockedActions": {"$ref": "#/$defs/actions"},
+    "rollback": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mode", "target", "preserveExisting"],
+      "properties": {
+        "mode": {"const": "remove-only-this-new-draft"},
+        "target": {"type": "string", "minLength": 1},
+        "preserveExisting": {"const": true}
+      }
+    },
+    "lifecycleMutation": {"const": false},
+    "draftOnly": {"const": true},
+    "nonClaims": {"$ref": "#/$defs/actions"},
+    "receiptRoot": {"$ref": "#/$defs/root"}
+  },
+  "$defs": {
+    "root": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "actions": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {"type": "string", "minLength": 1}
+    }
+  }
+}

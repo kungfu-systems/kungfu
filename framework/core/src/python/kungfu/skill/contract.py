@@ -111,6 +111,18 @@ def validate_definition_v2(value: dict[str, Any]) -> None:
     _validate("definitionV2", value, "Skill v2 definition")
 
 
+def validate_authoring_spec_v1(value: dict[str, Any]) -> None:
+    _validate("authoringSpecV1", value, "Skill authoring spec")
+
+
+def validate_authoring_plan_v1(value: dict[str, Any]) -> None:
+    _validate("authoringPlanV1", value, "Skill authoring plan")
+
+
+def validate_authoring_receipt_v1(value: dict[str, Any]) -> None:
+    _validate("authoringReceiptV1", value, "Skill authoring receipt")
+
+
 def validate_registry_state_v2(value: dict[str, Any]) -> None:
     _validate("registryStateV2", value, "Skill registry v2 state")
 

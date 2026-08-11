@@ -101,6 +101,21 @@
           "artifact": "config/skill/schema/skill-dependency-invocation-receipt-v2.schema.json"
         },
         {
+          "label": "skill authoring spec schema",
+          "source": "framework/skill/schema/skill-authoring-spec-v1.schema.json",
+          "artifact": "config/skill/schema/skill-authoring-spec-v1.schema.json"
+        },
+        {
+          "label": "skill authoring plan schema",
+          "source": "framework/skill/schema/skill-authoring-plan-v1.schema.json",
+          "artifact": "config/skill/schema/skill-authoring-plan-v1.schema.json"
+        },
+        {
+          "label": "skill authoring receipt schema",
+          "source": "framework/skill/schema/skill-authoring-receipt-v1.schema.json",
+          "artifact": "config/skill/schema/skill-authoring-receipt-v1.schema.json"
+        },
+        {
           "label": "skill v2 definition schema",
           "source": "framework/skill/schema/skill-definition-v2.schema.json",
           "artifact": "config/skill/schema/skill-definition-v2.schema.json"

@@ -3,7 +3,7 @@
   "id": "kungfu-skill",
   "version": 2,
   "weldedSurface": "skill-contract",
-  "description": "Single source for content-rooted, Work-scoped Kungfu Skill definitions, lifecycle, dependency authority, and compatible v1 catalog, context, dependency, and manager projections.",
+  "description": "Single source for content-rooted, Work-scoped Kungfu Skill definitions, safe workspace-local authoring, lifecycle, dependency authority, and compatible v1 catalog, context, dependency, and manager projections.",
   "contractSchema": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "type": "object",
@@ -17,6 +17,7 @@
       "contractSchema",
       "resolution",
       "authorityBoundary",
+      "authoring",
       "lifecycleVocabulary",
       "compatibility",
       "schemaFiles"
@@ -114,6 +115,26 @@
           "definitionAuthority": {
             "const": "content-rooted-instructions-and-orchestration-only"
           }
+        }
+      },
+      "authoring": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "mode",
+          "deduplication",
+          "writeBoundary",
+          "authorization",
+          "blockedActions",
+          "nonClaims"
+        ],
+        "properties": {
+          "mode": {"const": "workspace-local-instruction-only"},
+          "deduplication": {"const": "required-current-catalog-root"},
+          "writeBoundary": {"const": "new-relative-target-no-overwrite"},
+          "authorization": {"const": "rooted-auto-draft-plus-exact-plan-root"},
+          "blockedActions": {"type": "array", "minItems": 1, "uniqueItems": true},
+          "nonClaims": {"type": "array", "minItems": 1, "uniqueItems": true}
         }
       },
       "lifecycleVocabulary": {
@@ -216,7 +237,10 @@
           "lifecyclePlanV2",
           "lifecycleReceiptV2",
           "dependencyPlanV2",
-          "dependencyReceiptV2"
+          "dependencyReceiptV2",
+          "authoringSpecV1",
+          "authoringPlanV1",
+          "authoringReceiptV1"
         ]
       }
     }
@@ -238,6 +262,34 @@
     "profileOwner": "admitted-profile-contribution",
     "factEpisodeOwner": "core-fact-episode-runtime",
     "definitionAuthority": "content-rooted-instructions-and-orchestration-only"
+  },
+  "authoring": {
+    "mode": "workspace-local-instruction-only",
+    "deduplication": "required-current-catalog-root",
+    "writeBoundary": "new-relative-target-no-overwrite",
+    "authorization": "rooted-auto-draft-plus-exact-plan-root",
+    "blockedActions": [
+      "install-skill",
+      "activate-skill",
+      "enable-skill",
+      "publish-skill",
+      "invoke-kfx",
+      "change-profile",
+      "grant-capability",
+      "use-credential",
+      "open-network",
+      "write-external-system",
+      "mutate-shared-scope",
+      "claim-work-completion"
+    ],
+    "nonClaims": [
+      "draft-is-not-installation",
+      "draft-is-not-activation",
+      "draft-is-not-publication",
+      "validation-is-not-capability",
+      "qualification-is-not-work-completion",
+      "skill-prose-is-not-authority"
+    ]
   },
   "lifecycleVocabulary": {
     "schema": "kungfu.skill-lifecycle-vocabulary/v2",
@@ -293,6 +345,21 @@
       "schema": "kungfu.skill-dependency-invocation-receipt/v2",
       "source": "schema/skill-dependency-invocation-receipt-v2.schema.json",
       "artifact": "skill/schema/skill-dependency-invocation-receipt-v2.schema.json"
+    },
+    "authoringSpecV1": {
+      "schema": "kungfu.skill-authoring.spec/v1",
+      "source": "schema/skill-authoring-spec-v1.schema.json",
+      "artifact": "skill/schema/skill-authoring-spec-v1.schema.json"
+    },
+    "authoringPlanV1": {
+      "schema": "kungfu.skill-authoring.plan/v1",
+      "source": "schema/skill-authoring-plan-v1.schema.json",
+      "artifact": "skill/schema/skill-authoring-plan-v1.schema.json"
+    },
+    "authoringReceiptV1": {
+      "schema": "kungfu.skill-authoring.receipt/v1",
+      "source": "schema/skill-authoring-receipt-v1.schema.json",
+      "artifact": "skill/schema/skill-authoring-receipt-v1.schema.json"
     },
     "definitionV2": {
       "schema": "kungfu.skill-definition/v2",
