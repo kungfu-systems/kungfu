@@ -24,7 +24,8 @@
   "scripts": {
     "build": "tsc --noEmit",
     "test:golden": "node --experimental-transform-types scripts/golden.mjs",
-    "test:contract-v2": "node scripts/contract-v2.mjs"
+    "test:contract-v2": "node scripts/contract-v2.mjs",
+    "registry": "node --experimental-transform-types scripts/registry.mjs"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",

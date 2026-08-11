@@ -15,20 +15,27 @@ from kungfu.rewind.managed_cli import run_and_report
 from kungfu.rewind.managed_run import managed_providers
 from kungfu.skill import (
     SkillError,
+    SkillRegistryError,
     append_audit_event,
+    apply_plan,
     build_skill_dependency_binding,
     build_catalog,
     build_skill_context,
+    dependency_coordinates,
     discover_skills,
+    diagnose_registry,
+    diff_revisions,
     find_skill,
     has_advertised_skills,
     load_skill_context_file,
+    normalize_package,
+    inspect_registry,
     parse_skill,
+    plan_operation,
     read_audit_file,
     read_skill_markdown,
-    skill_dependencies_bound_event,
+    registry_history,
     skill_loaded_event,
-    write_skill_dependency_binding,
     skill_contract,
 )
 
@@ -123,13 +130,6 @@ def _default_skill_audit_log(ctx):
     return os.path.join(ctx.runtime_dir, "skill-audit.jsonl")
 
 
-def _copy_skill_source(source, dest):
-    def ignore_kfx_payloads(path, names):
-        return {"kfx"} if path == os.path.abspath(source) and "kfx" in names else set()
-
-    shutil.copytree(source, dest, ignore=ignore_kfx_payloads)
-
-
 def _bundle_audit_path(ctx, run_id, bundle_dir=None, audit_file=None):
     if audit_file:
         return audit_file
@@ -193,7 +193,9 @@ def contract_cmd(ctx, as_json):
 @skill.command("schema", help="print Skill JSON schemas")
 @click.option(
     "--name",
-    type=click.Choice(["source", "catalog", "context", "dependencies", "manager"]),
+    type=click.Choice(
+        ["source", "catalog", "context", "dependencies", "manager", "definitionV2"]
+    ),
     default=None,
     help="schema name; omit to print the whole schema bundle",
 )
@@ -219,70 +221,269 @@ def schema_cmd(ctx, name, as_json):
 @skill_command_context
 def validate(ctx, path, as_json):
     try:
-        parsed = parse_skill(path)
-    except SkillError as e:
+        if any(
+            (Path(path) / name).is_file()
+            for name in ("skill-definition.json", "kungfu.skill.json")
+        ):
+            package = normalize_package(path)
+            result = {"ok": True, "package": package}
+            label = (
+                f"{package['definition']['identity']['key']}@"
+                f"{package['definition']['identity']['revision']} root={package['contentRoot']}"
+            )
+        else:
+            parsed = parse_skill(path)
+            result = {"ok": True, "skill": parsed}
+            label = (
+                f"{parsed['key']} ({parsed['kind']}) from {parsed['source']['path']}"
+            )
+    except (SkillError, SkillRegistryError) as e:
         if as_json:
-            _json({"ok": False, "error": str(e)})
+            _json({"ok": False, "code": getattr(e, "code", "invalid"), "error": str(e)})
         else:
             click.echo(f"[skill] invalid: {e}", err=True)
         sys.exit(1)
     if as_json:
-        _json({"ok": True, "skill": parsed})
+        _json(result)
     else:
+        click.echo(f"[skill] ok {label}")
+
+
+def _mutation_result(ctx, plan, execute, expected_plan_root, as_json):
+    if not execute:
+        if as_json:
+            _json(plan)
+        else:
+            click.echo(
+                f"[skill] plan {plan['operation']} {plan['request']['key']} "
+                f"root={plan['planRoot']} changed={str(plan['changed']).lower()}"
+            )
+            click.echo(
+                f"[skill] apply with --execute --expected-plan-root {plan['planRoot']}"
+            )
+        return
+    if not expected_plan_root:
+        raise SkillRegistryError(
+            "expected-plan-root-required",
+            "--execute requires --expected-plan-root from the exact plan",
+        )
+    receipt = apply_plan(ctx.home, plan, expected_plan_root=expected_plan_root)
+    if as_json:
+        _json(receipt)
+    else:
+        result = receipt["result"]
         click.echo(
-            f"[skill] ok {parsed['key']} ({parsed['kind']}) "
-            f"from {parsed['source']['path']}"
+            f"[skill] applied {receipt['operation']} "
+            f"state={result['stateRoot']} generation={result['generation']} "
+            f"receipt={receipt['receiptRoot']}"
         )
 
 
-@skill.command(help="install a Kungfu Skill source directory into this home")
+def _run_mutation(
+    ctx,
+    operation,
+    *,
+    key=None,
+    source=None,
+    work_ref=None,
+    target_revision=None,
+    execute=False,
+    expected_plan_root=None,
+    as_json=False,
+):
+    try:
+        plan = plan_operation(
+            ctx.home,
+            operation,
+            key=key,
+            source=source,
+            work_ref=work_ref,
+            target_revision=target_revision,
+        )
+        _mutation_result(ctx, plan, execute, expected_plan_root, as_json)
+    except SkillRegistryError as error:
+        if as_json:
+            _json({"ok": False, "code": error.code, "error": str(error)})
+        else:
+            click.echo(f"[skill] {error.code}: {error}", err=True)
+        raise click.exceptions.Exit(1) from error
+
+
+def _mutation_options(function):
+    function = click.option(
+        "--expected-plan-root",
+        default=None,
+        help="exact planRoot required for apply",
+    )(function)
+    function = click.option("--execute", is_flag=True, help="apply the exact plan")(
+        function
+    )
+    function = click.option(
+        "--json", "as_json", is_flag=True, help="machine-readable output"
+    )(function)
+    return function
+
+
+@skill.command(help="plan or apply a Skill v2 package install")
 @click.argument("source", type=click.Path(exists=True))
-@click.option("--force", is_flag=True, help="replace an existing skill install")
+@click.option(
+    "--force", is_flag=True, help="compatibility alias for an exact update plan"
+)
+@_mutation_options
+@skill_command_context
+def install(ctx, source, force, execute, expected_plan_root, as_json):
+    _run_mutation(
+        ctx,
+        "update" if force else "install",
+        source=source,
+        execute=execute,
+        expected_plan_root=expected_plan_root,
+        as_json=as_json,
+    )
+
+
+@skill.command(help="plan or apply a compatible Skill v2 revision update")
+@click.argument("source", type=click.Path(exists=True))
+@_mutation_options
+@skill_command_context
+def update(ctx, source, execute, expected_plan_root, as_json):
+    _run_mutation(
+        ctx,
+        "update",
+        source=source,
+        execute=execute,
+        expected_plan_root=expected_plan_root,
+        as_json=as_json,
+    )
+
+
+def _simple_mutation_command(name, help_text):
+    def command(ctx, key, execute, expected_plan_root, as_json):
+        _run_mutation(
+            ctx,
+            name,
+            key=key,
+            execute=execute,
+            expected_plan_root=expected_plan_root,
+            as_json=as_json,
+        )
+
+    command.__name__ = f"{name}_cmd"
+    decorated = skill.command(name=name, help=help_text)(command)
+    decorated = click.argument("key", type=str)(decorated)
+    decorated = _mutation_options(decorated)
+    return skill_command_context(decorated)
+
+
+enable_cmd = _simple_mutation_command("enable", "plan or apply Skill enablement")
+load_cmd = _simple_mutation_command("load", "plan or apply an exact Skill load state")
+invoke_cmd = _simple_mutation_command(
+    "invoke", "plan or apply an exact Skill invocation state"
+)
+suspend_cmd = _simple_mutation_command("suspend", "plan or apply Skill suspension")
+retire_cmd = _simple_mutation_command("retire", "plan or apply Skill retirement")
+remove_cmd = _simple_mutation_command(
+    "remove", "plan or apply removal of active refs while retaining history"
+)
+
+
+@skill.command(help="plan or apply an exact Work-scoped Skill selection")
+@click.argument("key", type=str)
+@click.option("--work-ref", required=True, help="exact Kungfu Work reference")
+@_mutation_options
+@skill_command_context
+def select(ctx, key, work_ref, execute, expected_plan_root, as_json):
+    _run_mutation(
+        ctx,
+        "select",
+        key=key,
+        work_ref=work_ref,
+        execute=execute,
+        expected_plan_root=expected_plan_root,
+        as_json=as_json,
+    )
+
+
+@skill.command(help="plan or apply an active-ref rollback to a retained revision")
+@click.argument("key", type=str)
+@click.option("--target-revision", required=True, type=int)
+@_mutation_options
+@skill_command_context
+def rollback(ctx, key, target_revision, execute, expected_plan_root, as_json):
+    _run_mutation(
+        ctx,
+        "rollback",
+        key=key,
+        target_revision=target_revision,
+        execute=execute,
+        expected_plan_root=expected_plan_root,
+        as_json=as_json,
+    )
+
+
+@skill.command(help="inspect the canonical Skill registry fold")
+@click.argument("key", required=False)
 @click.option("--json", "as_json", is_flag=True, help="machine-readable output")
 @skill_command_context
-def install(ctx, source, force, as_json):
+def inspect(ctx, key, as_json):
     try:
-        parsed = parse_skill(source)
-    except SkillError as e:
-        click.echo(f"[skill] invalid: {e}", err=True)
-        sys.exit(1)
-    root = os.path.join(ctx.home, "skills")
-    dest = os.path.join(root, parsed["key"])
-    if os.path.exists(dest):
-        if not force:
-            click.echo(
-                f"[skill] {parsed['key']} is already installed "
-                "(use --force to replace)",
-                err=True,
-            )
-            sys.exit(1)
-        shutil.rmtree(dest)
-    os.makedirs(root, exist_ok=True)
-    _copy_skill_source(os.path.abspath(source), dest)
-    installed = parse_skill(dest)
-    binding_path, binding = write_skill_dependency_binding(ctx.home, installed)
-    append_audit_event(
-        _default_skill_audit_log(ctx),
-        skill_dependencies_bound_event(binding, source="cli", manager="python"),
-    )
-    result = {
-        "skill": installed,
-        "install_path": dest,
-        "binding_path": binding_path,
-        "dependencies": binding,
-    }
+        result = inspect_registry(ctx.home, key)
+    except SkillRegistryError as error:
+        click.echo(f"[skill] {error.code}: {error}", err=True)
+        raise click.exceptions.Exit(1) from error
     if as_json:
         _json(result)
-        return
-    click.echo(f"[skill] installed {installed['key']} -> {dest}")
-    if os.path.exists(os.path.join(os.path.abspath(source), "kfx")):
-        click.echo("[skill] skipped bundled kfx/ payloads; dependencies bind by key")
-    summary = binding["summary"]
-    click.echo(
-        "[skill] kfx bindings "
-        f"{summary['total']} total, {summary['resolved']} resolved, "
-        f"{summary['unresolved']} unresolved -> {binding_path}"
-    )
+    else:
+        click.echo(
+            f"Skill registry generation={result['generation']} root={result['stateRoot']}"
+        )
+        for entry in result["entries"].values():
+            click.echo(
+                f"{entry['key']}  {entry['status']}  revision={entry.get('activeRevision') or '-'}"
+            )
+
+
+@skill.command(help="inspect retained Skill lifecycle events and receipts")
+@click.argument("key", required=False)
+@click.option("--json", "as_json", is_flag=True, help="machine-readable output")
+@skill_command_context
+def history(ctx, key, as_json):
+    result = registry_history(ctx.home, key)
+    if as_json:
+        _json(result)
+    else:
+        click.echo(json.dumps(result, indent=2, sort_keys=True))
+
+
+@skill.command(help="verify registry roots, immutable packages, and recovery state")
+@click.option("--json", "as_json", is_flag=True, help="machine-readable output")
+@skill_command_context
+def diagnose(ctx, as_json):
+    result = diagnose_registry(ctx.home)
+    if as_json:
+        _json(result)
+    else:
+        click.echo(json.dumps(result, indent=2, sort_keys=True))
+    if result["verdict"] != "pass":
+        raise click.exceptions.Exit(1)
+
+
+@skill.command(name="diff", help="diff two retained Skill definition revisions")
+@click.argument("key")
+@click.option("--left", required=True, type=int)
+@click.option("--right", required=True, type=int)
+@click.option("--json", "as_json", is_flag=True, help="machine-readable output")
+@skill_command_context
+def diff_cmd(ctx, key, left, right, as_json):
+    try:
+        result = diff_revisions(ctx.home, key, left, right)
+    except SkillRegistryError as error:
+        click.echo(f"[skill] {error.code}: {error}", err=True)
+        raise click.exceptions.Exit(1) from error
+    if as_json:
+        _json(result)
+    else:
+        click.echo(json.dumps(result, indent=2, sort_keys=True))
 
 
 @skill.command(name="list", help="list installed or path-provided Kungfu Skills")
@@ -589,6 +790,35 @@ def audit(ctx, run_id, bundle_dir, audit_file, as_json):
 @click.option("--json", "as_json", is_flag=True, help="machine-readable output")
 @skill_command_context
 def deps(ctx, key_or_path, paths, as_json):
+    coordinates = None
+    try:
+        coordinates = dependency_coordinates(ctx.home, key_or_path)
+    except SkillRegistryError as e:
+        if e.code != "skill-not-found":
+            click.echo(f"[skill] {e}", err=True)
+            sys.exit(1)
+    if coordinates is not None:
+        if as_json:
+            _json(coordinates)
+            return
+        identity = coordinates["skill"]
+        click.echo(
+            f"{identity['key']}@{identity['revision']} exact dependency coordinates "
+            "(admission not evaluated)"
+        )
+        for row in coordinates["dependencies"]["kfx"]:
+            click.echo(
+                f"kfx:{row['key']}@{row['revision']}#{row['root']} "
+                f"required={str(row['required']).lower()} "
+                f"capabilities={','.join(row['capabilityRequests']) or '-'}"
+            )
+        for row in coordinates["dependencies"]["profiles"]:
+            click.echo(
+                f"profile:{row['id']}@{row['revision']}#{row['root']} "
+                f"required={str(row['required']).lower()} "
+                f"contributions={','.join(row['contributions'])}"
+            )
+        return
     try:
         parsed = find_skill(ctx.home, key_or_path, _extra_paths(paths))
     except SkillError as e:
@@ -625,6 +855,13 @@ def deps(ctx, key_or_path, paths, as_json):
 @click.option("--json", "as_json", is_flag=True, help="machine-readable output")
 @skill_command_context
 def explain(ctx, key_or_path, paths, as_json):
+    coordinates = None
+    try:
+        coordinates = dependency_coordinates(ctx.home, key_or_path)
+    except SkillRegistryError as e:
+        if e.code != "skill-not-found":
+            click.echo(f"[skill] {e}", err=True)
+            sys.exit(1)
     try:
         parsed = find_skill(ctx.home, key_or_path, _extra_paths(paths))
     except SkillError as e:
@@ -646,6 +883,10 @@ def explain(ctx, key_or_path, paths, as_json):
             "dependency remains governed by the kfx trust gate."
         ),
     }
+    if coordinates is not None:
+        explanation["registryIdentity"] = coordinates["skill"]
+        explanation["dependencies"] = coordinates
+        explanation["kfx"] = coordinates["dependencies"]["kfx"]
     if as_json:
         _json(explanation)
         return

@@ -1074,7 +1074,7 @@ export function sourceAcceptancePlan(
   const typedPython = python.filter((file) =>
     TYPED_PYTHON_ROOTS.some((root) => file.startsWith(root)),
   );
-  if (typedPython.length) {
+  if (typedPython.length && !coldReadOnlySourceAcceptance) {
     const mypy = sourceMypyCommand(['--config-file', 'pyproject.toml']);
     plan.push({
       label: 'Python type baseline',

@@ -96,6 +96,27 @@ export function validatePromotionWorkflowAuthority(
     );
   return true;
 }
+export function validateBuildWorkflowAuthority(
+  buildWorkflow,
+  workflowShellSha,
+) {
+  if (!/^[0-9a-f]{40}$/u.test(workflowShellSha))
+    throw new Error('Build workflow shell revision is invalid');
+  if (
+    !buildWorkflow.includes(
+      `uses: kungfu-systems/buildchain/.github/workflows/.build.yml@${workflowShellSha}`,
+    ) ||
+    !/^\s+buildchain-ref: \$\{\{ inputs\.buildchain-ref \|\| 'v3' \}\}\s*$/mu.test(
+      buildWorkflow,
+    ) ||
+    buildWorkflow.includes(
+      'uses: kungfu-systems/buildchain/.github/workflows/.build.yml@v3',
+    ) ||
+    buildWorkflow.includes('kungfu-trader/workflows@v1')
+  )
+    throw new Error('.github/workflows/build.yml authority drift');
+  return true;
+}
 export function discoverBuildchainReleaseWorkflows(r, paths) {
   const p = new RegExp(r.repositories.buildchain.workflowDiscoveryPattern);
   return paths
@@ -274,19 +295,13 @@ export function validateRegistry(r, { root = ROOT } = {}) {
     path.join(root, '.github/workflows/build.yml'),
     'utf8',
   );
-  if (
-    !buildWorkflow.includes(
-      'uses: kungfu-systems/buildchain/.github/workflows/.build.yml@v3',
-    ) ||
-    !/^\s+buildchain-ref: \$\{\{ inputs\.buildchain-ref \|\| 'v3' \}\}\s*$/mu.test(
-      buildWorkflow,
-    ) ||
-    /kungfu-systems\/buildchain\/\.github\/workflows\/\.build\.yml@[0-9a-f]{40}/u.test(
-      buildWorkflow,
-    ) ||
-    buildWorkflow.includes('kungfu-trader/workflows@v1')
-  )
-    throw new Error('.github/workflows/build.yml authority drift');
+  const promotionRehearsal = read(
+    path.join(root, 'docs/release-promotion-rehearsal.contract.json'),
+  );
+  validateBuildWorkflowAuthority(
+    buildWorkflow,
+    promotionRehearsal.buildchain.build_workflow_shell_sha,
+  );
   const promotionWorkflow = fs.readFileSync(
     path.join(root, '.github/workflows/release-new-version.yml'),
     'utf8',
