@@ -80,5 +80,5 @@ def test_cutover_contract_has_no_hand_maintained_digest_path_map():
 
 def test_cutover_delivery_repair_requires_a_fresh_project_cut_proof():
     decision = ADR.read_text()
-    assert "a dequeued source identity is never reused" in decision
+    assert decision.count("a dequeued source identity is never reused") == 1
     assert "recompute its Project Cut replay proof" in decision
