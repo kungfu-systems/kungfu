@@ -48,9 +48,9 @@ jobs:
           (inputs.mode == 'full' && inputs.qualification-id == 'mac-full-01')
         )
       }}
-    uses: kungfu-systems/buildchain/.github/workflows/.build.yml@028383e592a8e942396c1792761ec66a4b0d6020
+    uses: kungfu-systems/buildchain/.github/workflows/.build.yml@v3
     with:
-      buildchain-ref: 028383e592a8e942396c1792761ec66a4b0d6020
+      buildchain-ref: train/v3/v3.0/aws-macos-burst-20260811
       runner-preset: aws-us-ec2-macos-jit
       aws-ec2-macos-runner-label: ${{ inputs.runner-label }}
       setup-rust: true

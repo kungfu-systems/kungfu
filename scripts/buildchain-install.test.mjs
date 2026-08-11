@@ -196,7 +196,7 @@ test('AWS CodeBuild qualification rejects static and release credentials', () =>
   }
 });
 
-test('reactivated AWS burst workflows pin reviewed immutable Buildchain v3 sources', () => {
+test('reactivated AWS burst workflows use reviewed bounded Buildchain v3 sources', () => {
   const retirement = JSON.parse(
     fs.readFileSync(
       path.join(
@@ -266,6 +266,20 @@ test('reactivated AWS burst workflows pin reviewed immutable Buildchain v3 sourc
     macosFailedSourceRebindSource,
     '028383e592a8e942396c1792761ec66a4b0d6020',
   );
+  assert.equal(retirement.evidence.macosHistoricalRebindPullRequest, 2599);
+  assert.equal(
+    retirement.evidence.macosHistoricalRebindMergeCommit,
+    '1724840a37b2b80c9cd0c5d91a42b43ff8d270e4',
+  );
+  assert.equal(retirement.evidence.macosValidationWorkflowShell, 'v3');
+  assert.equal(
+    retirement.evidence.macosValidationTrain,
+    'train/v3/v3.0/aws-macos-burst-20260811',
+  );
+  assert.equal(
+    retirement.evidence.macosValidationTrainHead,
+    '6b39d6f72224a8b2fa93c1bb997ed72cbed6cdf4',
+  );
 
   for (const name of [
     'aws-us-linux-burst-qualification.yml',
@@ -276,12 +290,16 @@ test('reactivated AWS burst workflows pin reviewed immutable Buildchain v3 sourc
       path.join(repositoryRoot, '.github/workflows', name),
       'utf8',
     );
-    const expectedBuildchainSource =
+    const expectedWorkflowShell =
       name === 'aws-us-windows-burst-qualification.yml'
         ? windowsUsd80PhaseCapSource
         : name === 'aws-us-macos-burst-qualification.yml'
-          ? macosFailedSourceRebindSource
+          ? retirement.evidence.macosValidationWorkflowShell
           : buildchainSource;
+    const expectedBuildchainSource =
+      name === 'aws-us-macos-burst-qualification.yml'
+        ? retirement.evidence.macosValidationTrain
+        : expectedWorkflowShell;
     assert.match(workflow, /workflow_dispatch:/);
     assert.doesNotMatch(workflow, /\n {2}pull_request:|\n {2}push:/);
     if (name === 'aws-us-windows-burst-qualification.yml') {
@@ -294,7 +312,7 @@ test('reactivated AWS burst workflows pin reviewed immutable Buildchain v3 sourc
     const shellPins =
       workflow.match(
         new RegExp(
-          `uses: kungfu-systems/buildchain/\\.github/workflows/\\.build\\.yml@${expectedBuildchainSource}`,
+          `uses: kungfu-systems/buildchain/\\.github/workflows/\\.build\\.yml@${expectedWorkflowShell}`,
           'g',
         ),
       ) || [];
@@ -305,6 +323,8 @@ test('reactivated AWS burst workflows pin reviewed immutable Buildchain v3 sourc
     assert.ok(shellPins.length >= 1);
     assert.equal(runtimePins.length, shellPins.length);
     assert.doesNotMatch(workflow, /train\/v2|buildchain-ref:\s*[\r\n]/);
+    if (name !== 'aws-us-macos-burst-qualification.yml')
+      assert.doesNotMatch(workflow, /train\/v3/);
     assert.doesNotMatch(
       workflow,
       /secrets:\s*inherit|notar|signing|npm-publish|release-new-version|deploy/,
