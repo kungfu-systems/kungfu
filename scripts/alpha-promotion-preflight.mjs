@@ -281,7 +281,7 @@ export function inspectAuditableDemoFastSentinel({
   requirePattern(
     issues,
     workflow,
-    /render-failure-advisory:\s*\$\{\{ github\.event_name == 'pull_request' && startsWith\(github\.base_ref, 'alpha\/'\) \}\}[\s\S]*media-profile:\s*responsive-long-form-web-delivery-v1[\s\S]*materialize:\s*\$\{\{ github\.event_name != 'workflow_dispatch' \|\| inputs\.render-auditable-demo \}\}/u,
+    /render-failure-advisory:\s*\$\{\{ github\.event_name == 'pull_request' && startsWith\(github\.base_ref, 'alpha\/'\) \}\}[\s\S]*media-profile:\s*responsive-long-form-web-delivery-v1[\s\S]*materialize:\s*\$\{\{ github\.event_name != 'workflow_dispatch' \|\| \(inputs\.mode == 'full' && inputs\.materialize\) \}\}/u,
     'declarative auditable-demo no longer preserves a required Gate with Alpha-only advisory rendering',
   );
   return issues;
@@ -300,7 +300,7 @@ export function runAlphaFastSentinel(kind, root = ROOT) {
   if (kind === 'auditable-demo') {
     return inspectAuditableDemoFastSentinel({
       workflow: fs.readFileSync(
-        path.join(root, '.github', 'workflows', 'build.yml'),
+        path.join(root, '.github', 'workflows', 'auditable-demo.yml'),
         'utf8',
       ),
       scenario: fs.readFileSync(

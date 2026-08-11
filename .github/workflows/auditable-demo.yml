@@ -1,0 +1,173 @@
+# SPDX-License-Identifier: Apache-2.0
+
+name: Auditable Demo
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+    branches:
+      - alpha/v*/v*
+      - release/v*/v*
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "Run the required Gate only, or Gate plus native media rendering"
+        required: true
+        default: full
+        type: choice
+        options:
+          - gate-only
+          - full
+      materialize:
+        description: "Open or update the protected README media pull request"
+        required: true
+        default: true
+        type: boolean
+      base-ref:
+        description: "Target branch for the protected README media pull request"
+        required: true
+        default: dev/v4/v4.0
+        type: string
+
+permissions:
+  actions: read
+  contents: read
+
+concurrency:
+  group: kungfu-auditable-demo-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build exact Linux x64 demo binary
+    permissions:
+      actions: read
+      contents: read
+    uses: kungfu-systems/buildchain/.github/workflows/.build.yml@41d4dce2f38aa4821c794b49dcfb2bcf59d0984a
+    with:
+      buildchain-ref: 41d4dce2f38aa4821c794b49dcfb2bcf59d0984a
+      buildchain-contract-lock-path: .buildchain/contract-lock.json
+      buildchain-contract-compatibility-policy: major-compatible
+      buildchain-contract-drift-issue-mode: off
+      runner-preset: custom
+      platforms-json: >-
+        [{"id":"linux-x64","name":"Linux x64 auditable demo","platform":"linux","runner":"[\"ubuntu-24.04\"]","capabilities":["node","native-toolchain","product-artifacts","rust"],"environment":{"CC":"gcc-14","CXX":"g++-14"}}]
+      fail-fast: true
+      setup-rust: true
+      rust-toolchain: "1.96.0"
+      install-command: node scripts/buildchain-install.mjs
+      require-install: true
+      require-build: true
+      require-verify: false
+      artifact-name: kungfu
+      artifact-name-template: "{artifact}-{platform}-{sha}"
+      artifact-paths: |
+        product/dist/cli/kungfu-episodes-cli-linux-x64
+      pre-upload-transport-smoke-scenario-path: .buildchain/auditable-demo-transport-smoke.json
+      pre-upload-transport-smoke-artifact-root: .
+      expected-artifacts-json: >-
+        {"minFiles":2,"minTotalBytes":1,"requiredPaths":["product/dist/cli/kungfu-episodes-cli-linux-x64/kungfu","product/dist/cli/kungfu-episodes-cli-linux-x64/auditable-demo-binary.json"]}
+      release-candidate: false
+      publish-channel: none
+      artifact-retention-days: 14
+
+  resolve-binary:
+    name: Resolve exact same-run Linux artifact
+    needs: build
+    if: ${{ always() && needs.build.result == 'success' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      actions: read
+      contents: read
+    outputs:
+      artifact-name: ${{ steps.resolve.outputs.artifact-name }}
+      artifact-digest: ${{ steps.resolve.outputs.artifact-digest }}
+    steps:
+      - name: Bind the producer-owned artifact coordinate
+        id: resolve
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
+        env:
+          SOURCE_SHA: ${{ needs.build.outputs.publish-source-sha }}
+          ARTIFACT_COORDINATES_JSON: ${{ needs.build.outputs.artifact-coordinates-json }}
+        with:
+          script: |
+            const sourceSha = process.env.SOURCE_SHA || "";
+            if (!/^[0-9a-f]{40}$/.test(sourceSha)) {
+              throw new Error("build did not expose one exact source SHA");
+            }
+            let coordinates;
+            try {
+              coordinates = JSON.parse(process.env.ARTIFACT_COORDINATES_JSON || "{}");
+            } catch {
+              throw new Error("build artifact coordinates are not valid JSON");
+            }
+            if (
+              coordinates.schema !== "buildchain.github-artifact-coordinate-set/v1" ||
+              coordinates.repository !== `${context.repo.owner}/${context.repo.repo}` ||
+              coordinates.runId !== String(context.runId) ||
+              coordinates.sourceSha !== sourceSha ||
+              !Array.isArray(coordinates.artifacts)
+            ) {
+              throw new Error("build artifact coordinates are not bound to this source run");
+            }
+            const declared = coordinates.artifacts.filter(
+              (artifact) => artifact && artifact.platformId === "linux-x64",
+            );
+            if (declared.length !== 1) {
+              throw new Error(`expected one Linux x64 artifact, found ${declared.length}`);
+            }
+            const coordinate = declared[0];
+            const expectedName = `kungfu-linux-x64-${sourceSha}`;
+            if (
+              !/^[1-9][0-9]*$/.test(coordinate.id || "") ||
+              coordinate.name !== expectedName ||
+              !/^sha256:[0-9a-f]{64}$/.test(coordinate.digest || "")
+            ) {
+              throw new Error("Linux x64 artifact coordinate is incomplete");
+            }
+            const artifacts = await github.paginate(
+              github.rest.actions.listWorkflowRunArtifacts,
+              {
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                run_id: context.runId,
+                per_page: 100,
+              },
+            );
+            const live = artifacts.filter(
+              (artifact) =>
+                String(artifact.id) === coordinate.id &&
+                artifact.name === coordinate.name &&
+                artifact.digest === coordinate.digest &&
+                !artifact.expired,
+            );
+            if (live.length !== 1) {
+              throw new Error("exact same-run Linux x64 artifact is unavailable");
+            }
+            core.setOutput("artifact-name", coordinate.name);
+            core.setOutput("artifact-digest", coordinate.digest);
+
+  auditable-demo:
+    name: Generate all declared animations
+    needs: [build, resolve-binary]
+    if: ${{ always() && needs.build.result == 'success' && needs.resolve-binary.result == 'success' }}
+    permissions:
+      actions: read
+      contents: write
+      pull-requests: write
+    uses: kungfu-systems/buildchain/.github/workflows/.declarative-auditable-demo.yml@41d4dce2f38aa4821c794b49dcfb2bcf59d0984a
+    secrets:
+      DEMO_UPDATE_TOKEN: ${{ secrets.KUNGFU_GITHUB_TOKEN }}
+    with:
+      source-ref: ${{ needs.build.outputs.publish-source-sha }}
+      binary-artifact-name: ${{ needs.resolve-binary.outputs.artifact-name }}
+      binary-artifact-digest: ${{ needs.resolve-binary.outputs.artifact-digest }}
+      scenario-path: .buildchain/auditable-demo.json
+      renderer-image: ghcr.io/kungfu-systems/build-images/demo-renderer@sha256:3a49708163fedaaabe07b45bba910026a1828151b5d4e9bbdaf0d62e75c927c1
+      render-media: ${{ github.event_name != 'workflow_dispatch' || inputs.mode == 'full' }}
+      render-failure-advisory: ${{ github.event_name == 'pull_request' && startsWith(github.base_ref, 'alpha/') }}
+      media-profile: responsive-long-form-web-delivery-v1
+      materialize: ${{ github.event_name != 'workflow_dispatch' || (inputs.mode == 'full' && inputs.materialize) }}
+      materialize-base-ref: ${{ github.event_name == 'workflow_dispatch' && inputs.base-ref || github.event.repository.default_branch }}
+      artifact-retention-days: 14

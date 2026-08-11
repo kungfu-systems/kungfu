@@ -209,6 +209,8 @@ function initialJobPolicy(workflowPath, jobId) {
     (workflowPath.endsWith('/gate-measurement.yml') && jobId === 'measure') ||
     (workflowPath.endsWith('/kfd-verifier-drift.yml') &&
       jobId === 'verify-owned-fixtures') ||
+    (workflowPath.endsWith('/auditable-demo.yml') &&
+      ['build', 'auditable-demo'].includes(jobId)) ||
     (workflowPath.endsWith('/build.yml') && jobId === 'build') ||
     (workflowPath.endsWith('/source-acceptance.yml') &&
       jobId === 'source-acceptance')
