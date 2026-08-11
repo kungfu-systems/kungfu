@@ -225,6 +225,12 @@ test('the build fails the real transported binary before either upload path', ()
     build.with['buildchain-ref'],
     '41d4dce2f38aa4821c794b49dcfb2bcf59d0984a',
   );
+  assert.deepEqual(build.permissions, {
+    actions: 'read',
+    contents: 'read',
+    issues: 'write',
+    'id-token': 'write',
+  });
   assert.equal(
     demo.uses,
     'kungfu-systems/buildchain/.github/workflows/.declarative-auditable-demo.yml@41d4dce2f38aa4821c794b49dcfb2bcf59d0984a',
