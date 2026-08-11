@@ -30,7 +30,7 @@ jobs:
       - name: Checkout exact protected candidate
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
-          ref: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha }}
+          ref: ${{ github.sha }}
           persist-credentials: false
           fetch-depth: 0
       - name: Set up Node.js
