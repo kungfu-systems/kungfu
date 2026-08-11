@@ -19,19 +19,19 @@
   "facetRoots": {
     "vocabulary": {
       "path": "docs/vocabulary.registry.json",
-      "root": "sha256:3ca68fc672de768875b6acb50d32b201f57e3856574ac82831c04a7c6a6a5dbb"
+      "root": "sha256:0ef3bd57311868c25e5f132964cd42654c73a513bb771284ec4e620d8c75a5bd"
     },
     "incubationPassports": {
       "path": "framework/incubation/incubation-passport.registry.json",
-      "root": "sha256:66441c1baa6bdbf9662074019af594bef4a9c08c3292a5387f2c8b3d906ee9c8"
+      "root": "sha256:c24e9bdca26ac8ea9e153c6ca6a4de40cb28ea3b8308eb021d894f35adbd192c"
     },
     "kfd1Contracts": {
       "path": "framework/contract/kungfu-contracts.registry.json",
-      "root": "sha256:99fd90ba99ccd9fbf87ce94362e2bd15d0fb1656b54384aa99d7eff520464826"
+      "root": "sha256:79b307e582f0bea386998966818c8a4cee0e7b2a6eea75779c47394234018696"
     },
     "invariants": {
       "path": "framework/invariant/kungfu-invariant.registry.json",
-      "root": "sha256:f39b9fe0b7784b6f2b68388e01b44393926c329ed3771bc7c76eebefefdfac4b"
+      "root": "sha256:1b07c95426679e2689bed6172c5ebbff3781c40719bc6d569396a974bbc544e0"
     },
     "workLifecycle": {
       "path": "framework/work-lifecycle/kungfu-work-lifecycle-operation-matrix.contract.json",
@@ -39,7 +39,7 @@
     },
     "languageBoundary": {
       "path": "framework/core/architecture/layered-api-encoding-boundary.contract.json",
-      "root": "sha256:44f182fa7def13375d074ba525b57e1dd93f8529366ee4a1a172fd93528f956f"
+      "root": "sha256:5d57d352c43d5ab8cfcef545437d68ad4150109494d98ac3874ffda7da6071eb"
     }
   },
   "relationGraph": {
@@ -54,7 +54,7 @@
         "layerBoundary": "responsibility-role-to-ontology-binding",
         "authority": {
           "path": "extensions/work-control/contracts/world.json",
-          "root": "sha256:b099ab642cdc3c350aab0ecc01060fe4fe81d3f1f1da075a44d56946b867a2d1"
+          "root": "sha256:0f03794fb5f5a366d0814daf9f201cf970a55b146fef2909086a7179083f5c78"
         }
       },
       {
@@ -64,7 +64,7 @@
         "layerBoundary": "bounded-responsibility-to-intent-responsibility",
         "authority": {
           "path": "extensions/work-control/contracts/world.json",
-          "root": "sha256:b099ab642cdc3c350aab0ecc01060fe4fe81d3f1f1da075a44d56946b867a2d1"
+          "root": "sha256:0f03794fb5f5a366d0814daf9f201cf970a55b146fef2909086a7179083f5c78"
         }
       },
       {
@@ -104,7 +104,7 @@
         "layerBoundary": "responsibility-role-to-ontology-binding",
         "authority": {
           "path": "extensions/work-control/contracts/world.json",
-          "root": "sha256:b099ab642cdc3c350aab0ecc01060fe4fe81d3f1f1da075a44d56946b867a2d1"
+          "root": "sha256:0f03794fb5f5a366d0814daf9f201cf970a55b146fef2909086a7179083f5c78"
         }
       },
       {
@@ -124,7 +124,7 @@
         "layerBoundary": "domain-projection-to-causal-substrate",
         "authority": {
           "path": "extensions/work-control/contracts/world.json",
-          "root": "sha256:b099ab642cdc3c350aab0ecc01060fe4fe81d3f1f1da075a44d56946b867a2d1"
+          "root": "sha256:0f03794fb5f5a366d0814daf9f201cf970a55b146fef2909086a7179083f5c78"
         }
       }
     ]
@@ -346,7 +346,7 @@
         "semantics": {
           "authority": {
             "path": "extensions/work-control/contracts/world.json",
-            "root": "sha256:b099ab642cdc3c350aab0ecc01060fe4fe81d3f1f1da075a44d56946b867a2d1"
+            "root": "sha256:0f03794fb5f5a366d0814daf9f201cf970a55b146fef2909086a7179083f5c78"
           },
           "invariants": [],
           "admissionThreshold": {
@@ -366,7 +366,7 @@
             "refs": [
               {
                 "path": "extensions/work-control/contracts/world.json",
-                "root": "sha256:b099ab642cdc3c350aab0ecc01060fe4fe81d3f1f1da075a44d56946b867a2d1"
+                "root": "sha256:0f03794fb5f5a366d0814daf9f201cf970a55b146fef2909086a7179083f5c78"
               }
             ],
             "policy": "active authority plus invariant evidence qualifies semantic stability"
@@ -376,7 +376,7 @@
             "refs": [
               {
                 "path": "extensions/work-control/work-control-actions/domain/work_control_runtime.py",
-                "root": "sha256:2ce8fe8ef1a08ce6fa0109929955a58f572c4c13ef1cb3cea9a328fb4dda8ba9"
+                "root": "sha256:0e5f9bb1e690062dc80ebb8c23b6ff197d5e7f2fd8cca8f2805c857289015ebd"
               }
             ],
             "policy": "all four language implementation references are required for complete"
@@ -396,7 +396,7 @@
             "refs": [
               {
                 "path": "extensions/work-control/contracts/world.json",
-                "root": "sha256:b099ab642cdc3c350aab0ecc01060fe4fe81d3f1f1da075a44d56946b867a2d1"
+                "root": "sha256:0f03794fb5f5a366d0814daf9f201cf970a55b146fef2909086a7179083f5c78"
               }
             ],
             "policy": "contract, vector, and invariant evidence are jointly required"
@@ -406,7 +406,7 @@
             "refs": [
               {
                 "path": "extensions/work-control/work-control-actions/domain/work_control_runtime.py",
-                "root": "sha256:2ce8fe8ef1a08ce6fa0109929955a58f572c4c13ef1cb3cea9a328fb4dda8ba9"
+                "root": "sha256:0e5f9bb1e690062dc80ebb8c23b6ff197d5e7f2fd8cca8f2805c857289015ebd"
               }
             ],
             "policy": "implementation references are bounded operational evidence, not availability"
@@ -428,7 +428,7 @@
             "refs": [
               {
                 "path": "extensions/work-control/work-control-actions/domain/work_control_runtime.py",
-                "root": "sha256:2ce8fe8ef1a08ce6fa0109929955a58f572c4c13ef1cb3cea9a328fb4dda8ba9"
+                "root": "sha256:0e5f9bb1e690062dc80ebb8c23b6ff197d5e7f2fd8cca8f2805c857289015ebd"
               }
             ],
             "proofRefs": []
@@ -450,7 +450,7 @@
             "refs": [
               {
                 "path": "extensions/work-control/contracts/world.json",
-                "root": "sha256:b099ab642cdc3c350aab0ecc01060fe4fe81d3f1f1da075a44d56946b867a2d1"
+                "root": "sha256:0f03794fb5f5a366d0814daf9f201cf970a55b146fef2909086a7179083f5c78"
               }
             ]
           },
@@ -504,7 +504,7 @@
           "invariants": [
             {
               "path": "framework/invariant/kungfu-invariant.registry.json",
-              "root": "sha256:f39b9fe0b7784b6f2b68388e01b44393926c329ed3771bc7c76eebefefdfac4b"
+              "root": "sha256:1b07c95426679e2689bed6172c5ebbff3781c40719bc6d569396a974bbc544e0"
             }
           ],
           "admissionThreshold": {
@@ -528,7 +528,7 @@
               },
               {
                 "path": "framework/invariant/kungfu-invariant.registry.json",
-                "root": "sha256:f39b9fe0b7784b6f2b68388e01b44393926c329ed3771bc7c76eebefefdfac4b"
+                "root": "sha256:1b07c95426679e2689bed6172c5ebbff3781c40719bc6d569396a974bbc544e0"
               }
             ],
             "policy": "active authority plus invariant evidence qualifies semantic stability"
@@ -566,7 +566,7 @@
               },
               {
                 "path": "framework/invariant/kungfu-invariant.registry.json",
-                "root": "sha256:f39b9fe0b7784b6f2b68388e01b44393926c329ed3771bc7c76eebefefdfac4b"
+                "root": "sha256:1b07c95426679e2689bed6172c5ebbff3781c40719bc6d569396a974bbc544e0"
               }
             ],
             "policy": "contract, vector, and invariant evidence are jointly required"
@@ -642,7 +642,7 @@
             "refs": [
               {
                 "path": "framework/invariant/kungfu-invariant.registry.json",
-                "root": "sha256:f39b9fe0b7784b6f2b68388e01b44393926c329ed3771bc7c76eebefefdfac4b"
+                "root": "sha256:1b07c95426679e2689bed6172c5ebbff3781c40719bc6d569396a974bbc544e0"
               }
             ]
           },
@@ -854,7 +854,7 @@
           "invariants": [
             {
               "path": "framework/invariant/kungfu-invariant.registry.json",
-              "root": "sha256:f39b9fe0b7784b6f2b68388e01b44393926c329ed3771bc7c76eebefefdfac4b"
+              "root": "sha256:1b07c95426679e2689bed6172c5ebbff3781c40719bc6d569396a974bbc544e0"
             }
           ],
           "admissionThreshold": {
@@ -878,7 +878,7 @@
               },
               {
                 "path": "framework/invariant/kungfu-invariant.registry.json",
-                "root": "sha256:f39b9fe0b7784b6f2b68388e01b44393926c329ed3771bc7c76eebefefdfac4b"
+                "root": "sha256:1b07c95426679e2689bed6172c5ebbff3781c40719bc6d569396a974bbc544e0"
               }
             ],
             "policy": "active authority plus invariant evidence qualifies semantic stability"
@@ -916,7 +916,7 @@
               },
               {
                 "path": "framework/invariant/kungfu-invariant.registry.json",
-                "root": "sha256:f39b9fe0b7784b6f2b68388e01b44393926c329ed3771bc7c76eebefefdfac4b"
+                "root": "sha256:1b07c95426679e2689bed6172c5ebbff3781c40719bc6d569396a974bbc544e0"
               }
             ],
             "policy": "contract, vector, and invariant evidence are jointly required"
@@ -992,7 +992,7 @@
             "refs": [
               {
                 "path": "framework/invariant/kungfu-invariant.registry.json",
-                "root": "sha256:f39b9fe0b7784b6f2b68388e01b44393926c329ed3771bc7c76eebefefdfac4b"
+                "root": "sha256:1b07c95426679e2689bed6172c5ebbff3781c40719bc6d569396a974bbc544e0"
               }
             ]
           },
@@ -1038,7 +1038,7 @@
           "invariants": [
             {
               "path": "framework/invariant/kungfu-invariant.registry.json",
-              "root": "sha256:f39b9fe0b7784b6f2b68388e01b44393926c329ed3771bc7c76eebefefdfac4b"
+              "root": "sha256:1b07c95426679e2689bed6172c5ebbff3781c40719bc6d569396a974bbc544e0"
             }
           ],
           "admissionThreshold": {
@@ -1062,7 +1062,7 @@
               },
               {
                 "path": "framework/invariant/kungfu-invariant.registry.json",
-                "root": "sha256:f39b9fe0b7784b6f2b68388e01b44393926c329ed3771bc7c76eebefefdfac4b"
+                "root": "sha256:1b07c95426679e2689bed6172c5ebbff3781c40719bc6d569396a974bbc544e0"
               }
             ],
             "policy": "active authority plus invariant evidence qualifies semantic stability"
@@ -1113,7 +1113,7 @@
               },
               {
                 "path": "framework/invariant/kungfu-invariant.registry.json",
-                "root": "sha256:f39b9fe0b7784b6f2b68388e01b44393926c329ed3771bc7c76eebefefdfac4b"
+                "root": "sha256:1b07c95426679e2689bed6172c5ebbff3781c40719bc6d569396a974bbc544e0"
               }
             ],
             "policy": "contract, vector, and invariant evidence are jointly required"
@@ -1204,7 +1204,7 @@
             "refs": [
               {
                 "path": "framework/invariant/kungfu-invariant.registry.json",
-                "root": "sha256:f39b9fe0b7784b6f2b68388e01b44393926c329ed3771bc7c76eebefefdfac4b"
+                "root": "sha256:1b07c95426679e2689bed6172c5ebbff3781c40719bc6d569396a974bbc544e0"
               }
             ]
           },
@@ -1245,7 +1245,7 @@
         "semantics": {
           "authority": {
             "path": "extensions/work-control/contracts/world.json",
-            "root": "sha256:b099ab642cdc3c350aab0ecc01060fe4fe81d3f1f1da075a44d56946b867a2d1"
+            "root": "sha256:0f03794fb5f5a366d0814daf9f201cf970a55b146fef2909086a7179083f5c78"
           },
           "invariants": [],
           "admissionThreshold": {
@@ -1265,7 +1265,7 @@
             "refs": [
               {
                 "path": "extensions/work-control/contracts/world.json",
-                "root": "sha256:b099ab642cdc3c350aab0ecc01060fe4fe81d3f1f1da075a44d56946b867a2d1"
+                "root": "sha256:0f03794fb5f5a366d0814daf9f201cf970a55b146fef2909086a7179083f5c78"
               }
             ],
             "policy": "active authority plus invariant evidence qualifies semantic stability"
@@ -1275,7 +1275,7 @@
             "refs": [
               {
                 "path": "extensions/work-control/work-control-actions/domain/work_control_runtime.py",
-                "root": "sha256:2ce8fe8ef1a08ce6fa0109929955a58f572c4c13ef1cb3cea9a328fb4dda8ba9"
+                "root": "sha256:0e5f9bb1e690062dc80ebb8c23b6ff197d5e7f2fd8cca8f2805c857289015ebd"
               }
             ],
             "policy": "all four language implementation references are required for complete"
@@ -1295,7 +1295,7 @@
             "refs": [
               {
                 "path": "extensions/work-control/contracts/world.json",
-                "root": "sha256:b099ab642cdc3c350aab0ecc01060fe4fe81d3f1f1da075a44d56946b867a2d1"
+                "root": "sha256:0f03794fb5f5a366d0814daf9f201cf970a55b146fef2909086a7179083f5c78"
               }
             ],
             "policy": "contract, vector, and invariant evidence are jointly required"
@@ -1305,7 +1305,7 @@
             "refs": [
               {
                 "path": "extensions/work-control/work-control-actions/domain/work_control_runtime.py",
-                "root": "sha256:2ce8fe8ef1a08ce6fa0109929955a58f572c4c13ef1cb3cea9a328fb4dda8ba9"
+                "root": "sha256:0e5f9bb1e690062dc80ebb8c23b6ff197d5e7f2fd8cca8f2805c857289015ebd"
               }
             ],
             "policy": "implementation references are bounded operational evidence, not availability"
@@ -1327,7 +1327,7 @@
             "refs": [
               {
                 "path": "extensions/work-control/work-control-actions/domain/work_control_runtime.py",
-                "root": "sha256:2ce8fe8ef1a08ce6fa0109929955a58f572c4c13ef1cb3cea9a328fb4dda8ba9"
+                "root": "sha256:0e5f9bb1e690062dc80ebb8c23b6ff197d5e7f2fd8cca8f2805c857289015ebd"
               }
             ],
             "proofRefs": []
@@ -1349,7 +1349,7 @@
             "refs": [
               {
                 "path": "extensions/work-control/contracts/world.json",
-                "root": "sha256:b099ab642cdc3c350aab0ecc01060fe4fe81d3f1f1da075a44d56946b867a2d1"
+                "root": "sha256:0f03794fb5f5a366d0814daf9f201cf970a55b146fef2909086a7179083f5c78"
               }
             ]
           },
@@ -1551,7 +1551,7 @@
         "semantics": {
           "authority": {
             "path": "extensions/work-control/contracts/world.json",
-            "root": "sha256:b099ab642cdc3c350aab0ecc01060fe4fe81d3f1f1da075a44d56946b867a2d1"
+            "root": "sha256:0f03794fb5f5a366d0814daf9f201cf970a55b146fef2909086a7179083f5c78"
           },
           "invariants": [],
           "admissionThreshold": {
@@ -1571,7 +1571,7 @@
             "refs": [
               {
                 "path": "extensions/work-control/contracts/world.json",
-                "root": "sha256:b099ab642cdc3c350aab0ecc01060fe4fe81d3f1f1da075a44d56946b867a2d1"
+                "root": "sha256:0f03794fb5f5a366d0814daf9f201cf970a55b146fef2909086a7179083f5c78"
               }
             ],
             "policy": "active authority plus invariant evidence qualifies semantic stability"
@@ -1581,19 +1581,19 @@
             "refs": [
               {
                 "path": "extensions/work-control/work-control-actions/domain/work_control.py",
-                "root": "sha256:0e63cd8eb1dc5356d7d6514f9cc991766b321bc7b76effd85e20ca7049275790"
+                "root": "sha256:243ae60a6f34042e951667fa52a3c7f9f9dcad121f73d263a667979bfb460e68"
               },
               {
                 "path": "extensions/work-control/work-control-actions/domain/work_control_assessment.py",
-                "root": "sha256:1673f7ede576b1730ed756d2d624cc53984850815515513714ab31f7d1c8c89c"
+                "root": "sha256:30c230b8b2cc54ea93343e4964a53542140d764a344fe8d60cf7eea1da2fbc87"
               },
               {
                 "path": "extensions/work-control/work-control-actions/domain/work_control_runtime.py",
-                "root": "sha256:2ce8fe8ef1a08ce6fa0109929955a58f572c4c13ef1cb3cea9a328fb4dda8ba9"
+                "root": "sha256:0e5f9bb1e690062dc80ebb8c23b6ff197d5e7f2fd8cca8f2805c857289015ebd"
               },
               {
                 "path": "framework/core/src/python/kungfu/assignment_orchestration.py",
-                "root": "sha256:5c49399a62d43e478fe6d538c0ccb945296ebfc3dbbf9a9a914c85cd094ad412"
+                "root": "sha256:5018b0be21cc71e6b457058c54e88cbe2d35ca163bf77f5d78b2fc91803281a6"
               }
             ],
             "policy": "all four language implementation references are required for complete"
@@ -1613,7 +1613,7 @@
             "refs": [
               {
                 "path": "extensions/work-control/contracts/world.json",
-                "root": "sha256:b099ab642cdc3c350aab0ecc01060fe4fe81d3f1f1da075a44d56946b867a2d1"
+                "root": "sha256:0f03794fb5f5a366d0814daf9f201cf970a55b146fef2909086a7179083f5c78"
               }
             ],
             "policy": "contract, vector, and invariant evidence are jointly required"
@@ -1623,19 +1623,19 @@
             "refs": [
               {
                 "path": "extensions/work-control/work-control-actions/domain/work_control.py",
-                "root": "sha256:0e63cd8eb1dc5356d7d6514f9cc991766b321bc7b76effd85e20ca7049275790"
+                "root": "sha256:243ae60a6f34042e951667fa52a3c7f9f9dcad121f73d263a667979bfb460e68"
               },
               {
                 "path": "extensions/work-control/work-control-actions/domain/work_control_assessment.py",
-                "root": "sha256:1673f7ede576b1730ed756d2d624cc53984850815515513714ab31f7d1c8c89c"
+                "root": "sha256:30c230b8b2cc54ea93343e4964a53542140d764a344fe8d60cf7eea1da2fbc87"
               },
               {
                 "path": "extensions/work-control/work-control-actions/domain/work_control_runtime.py",
-                "root": "sha256:2ce8fe8ef1a08ce6fa0109929955a58f572c4c13ef1cb3cea9a328fb4dda8ba9"
+                "root": "sha256:0e5f9bb1e690062dc80ebb8c23b6ff197d5e7f2fd8cca8f2805c857289015ebd"
               },
               {
                 "path": "framework/core/src/python/kungfu/assignment_orchestration.py",
-                "root": "sha256:5c49399a62d43e478fe6d538c0ccb945296ebfc3dbbf9a9a914c85cd094ad412"
+                "root": "sha256:5018b0be21cc71e6b457058c54e88cbe2d35ca163bf77f5d78b2fc91803281a6"
               }
             ],
             "policy": "implementation references are bounded operational evidence, not availability"
@@ -1657,19 +1657,19 @@
             "refs": [
               {
                 "path": "extensions/work-control/work-control-actions/domain/work_control.py",
-                "root": "sha256:0e63cd8eb1dc5356d7d6514f9cc991766b321bc7b76effd85e20ca7049275790"
+                "root": "sha256:243ae60a6f34042e951667fa52a3c7f9f9dcad121f73d263a667979bfb460e68"
               },
               {
                 "path": "extensions/work-control/work-control-actions/domain/work_control_assessment.py",
-                "root": "sha256:1673f7ede576b1730ed756d2d624cc53984850815515513714ab31f7d1c8c89c"
+                "root": "sha256:30c230b8b2cc54ea93343e4964a53542140d764a344fe8d60cf7eea1da2fbc87"
               },
               {
                 "path": "extensions/work-control/work-control-actions/domain/work_control_runtime.py",
-                "root": "sha256:2ce8fe8ef1a08ce6fa0109929955a58f572c4c13ef1cb3cea9a328fb4dda8ba9"
+                "root": "sha256:0e5f9bb1e690062dc80ebb8c23b6ff197d5e7f2fd8cca8f2805c857289015ebd"
               },
               {
                 "path": "framework/core/src/python/kungfu/assignment_orchestration.py",
-                "root": "sha256:5c49399a62d43e478fe6d538c0ccb945296ebfc3dbbf9a9a914c85cd094ad412"
+                "root": "sha256:5018b0be21cc71e6b457058c54e88cbe2d35ca163bf77f5d78b2fc91803281a6"
               }
             ],
             "proofRefs": []
@@ -1691,7 +1691,7 @@
             "refs": [
               {
                 "path": "extensions/work-control/contracts/world.json",
-                "root": "sha256:b099ab642cdc3c350aab0ecc01060fe4fe81d3f1f1da075a44d56946b867a2d1"
+                "root": "sha256:0f03794fb5f5a366d0814daf9f201cf970a55b146fef2909086a7179083f5c78"
               }
             ]
           },
@@ -1721,5 +1721,5 @@
       "artifacts": []
     }
   ],
-  "catalogRoot": "sha256:846c565b61e152edce7ca24aca68981ca9665b1ba3d1604de753cebda6ab8159"
+  "catalogRoot": "sha256:38c9345d019c1f3adddb9fa8e782bbc409339a1e8e5fd072b26410c6880c9eca"
 }

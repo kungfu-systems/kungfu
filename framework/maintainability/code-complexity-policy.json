@@ -1,7 +1,7 @@
 {
   "schema": "kungfu.code-complexity-budget-policy/v1",
   "status": "p1-trusted-governance",
-  "baselineRef": "a7605d74513867b94851a6763c51fcdc803e5d30",
+  "baselineRef": "cd61362cd5b62a7b9b3b83be418342716db97155",
   "baselinePath": "framework/maintainability/code-complexity-baseline.json",
   "waiverDirectory": "framework/maintainability/waivers",
   "classificationOrder": [
@@ -89,28 +89,7 @@
   "antiGaming": {
     "maxNewHandwrittenFilesPerOwner": 3,
     "newGeneratedProjectionRequiresProvenance": true,
-    "allowedOwnerRenamePrefixes": [
-      {
-        "from": "extension/mission-control/mission-control-actions",
-        "to": "extension/work-control/work-control-actions"
-      },
-      {
-        "from": "extension/mission-control/mission-control-assessment",
-        "to": "extension/work-control/work-control-assessment"
-      },
-      {
-        "from": "extension/mission-control/mission-control-contract",
-        "to": "extension/work-control/work-control-contract"
-      },
-      {
-        "from": "extension/mission-control/mission-control-views",
-        "to": "extension/work-control/work-control-views"
-      },
-      {
-        "from": "extension/mission-control",
-        "to": "extension/work-control"
-      }
-    ],
+    "allowedOwnerRenamePrefixes": [],
     "blockClassificationOrOwnerRelabeling": true,
     "blockResponsibilityPreservingSplit": true,
     "blockGeneratedOrVendorLaundering": true
@@ -142,8 +121,10 @@
     "protectedRefEnv": "KUNGFU_COMPLEXITY_PROTECTED_REF",
     "transitionDirectory": "framework/maintainability/baseline-transitions",
     "transitionSchema": "kungfu.code-complexity-baseline-transition/v1",
+    "reconstructionSchema": "kungfu.code-complexity-baseline-reconstruction/v1",
     "requiresExpectedOldRoot": true,
     "requiresIndependentSignedReceipt": true,
+    "requiresExactChangeManifestRoot": true,
     "maxChangedMeasurements": 256,
     "maxAggregateLineDelta": 20000
   },

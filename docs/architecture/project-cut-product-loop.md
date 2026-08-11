@@ -142,9 +142,9 @@ An Assignment may contribute to several Initiatives, and an Initiative may
 contain several Assignments. Containment, dependency, delegation, and
 continuation are separate typed relations. None implies another.
 
-Mission/Go compatibility adapters may initially supply these projections. They
+Initiative/Assignment compatibility adapters may initially supply these projections. They
 must expose the original root and mapping version, and they may not relabel an
-existing Mission or Go root as a native Initiative or Assignment root.
+existing Initiative or Assignment root as a native Initiative or Assignment root.
 
 ## Agent loop
 
@@ -190,7 +190,7 @@ settlement or generate a stronger receipt.
 1. **Read-only cut aggregate (implemented):** expose current, active-work,
    candidate, history, and problem projections without creating `.kungfu`.
 2. **Work projection (implemented):** versioned Initiative/Assignment schemas
-   and native writes are current; Mission/Go remains a bounded compatibility
+   and native writes are current; Initiative/Assignment remains a bounded compatibility
    projection with explicit source and mapping identity.
 3. **Transactional settlement:** compose prepare, verify, and explicit settle
    over existing Project Cut, Agent Work, and trust contracts.

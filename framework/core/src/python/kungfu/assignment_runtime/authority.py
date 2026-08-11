@@ -271,7 +271,7 @@ class WorkControlAuthority:
                     {
                         "initiativeId": initiative_id,
                         "assignmentId": assignment_id,
-                        "source": "atlas",
+                        "source": "kungfu",
                     },
                 )
                 status = dict(status_receipt.get("result") or {})
@@ -312,10 +312,10 @@ class WorkControlAuthority:
             )
         )
         fact_refs.sort(key=lambda row: (str(row["surfaceId"]), str(row["subjectKey"])))
-        authority_receipt = self._invoke("runtime-authority-status", {})
-        authority = dict(authority_receipt.get("result") or {}).get("authority") or {}
+        authority_receipt = self._invoke("authority-status", {})
+        authority = dict(authority_receipt.get("result") or {})
         write_authority = str(authority.get("write_authority") or "")
-        if write_authority not in {"atlas-adapter", "kungfu-native"}:
+        if write_authority != "kungfu-native":
             raise LocalRuntimeError(
                 "ambiguous-identity",
                 "Work Control reports an ambiguous write authority",

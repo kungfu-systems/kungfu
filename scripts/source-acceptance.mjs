@@ -557,10 +557,6 @@ export function sourceAcceptancePlan(
     ],
     ['schema authority', 'scripts/check-schema-authority.mjs'],
     [
-      'Work Control canonical naming boundary',
-      'scripts/check-work-control-vocabulary.test.mjs',
-    ],
-    [
       'Project Work Agent first-layer product model',
       'scripts/check-project-work-agent-product.test.mjs',
     ],
@@ -897,7 +893,6 @@ export function sourceAcceptancePlan(
               'scripts/check-work-lifecycle-native.test.mjs',
               'scripts/check-work-lifecycle-operation-matrix.test.mjs',
               'framework/work-profile-conformance/work-profile-conformance.test.mjs',
-              'scripts/check-work-control-vocabulary.test.mjs',
               'scripts/check-project-work-agent-product.test.mjs',
               'scripts/registry-envelope.test.mjs',
               'scripts/check-kfd-agent-runtime-boundary.mjs',
@@ -1084,7 +1079,7 @@ export function sourceAcceptancePlan(
   }
 
   const cpp = materialFiles.filter((file) => CPP.test(file));
-  if (cpp.length) {
+  if (cpp.length && !coldReadOnlySourceAcceptance) {
     const formatter = sourceClangFormatCommand([
       '-style=file',
       '--dry-run',

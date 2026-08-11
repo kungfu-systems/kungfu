@@ -238,7 +238,7 @@
         "cleanRuntime": {
           "path": "docs/qualification/evidence/exit-clean-runtime/520a61af87/report.json",
           "schema": "kungfu.exit-clean-runtime-qualification/v1",
-          "reportRoot": "sha256:105a912f54720bf5665b8cfd666013b788e423cd841b7a5af8525b9bc11d1726",
+          "reportRoot": "sha256:a9cff1062c4debd0be2104b3a799051958ade835ceb160663f29d621464b28b5",
           "sourceRevision": "520a61af87"
         },
         "providerMigration": {

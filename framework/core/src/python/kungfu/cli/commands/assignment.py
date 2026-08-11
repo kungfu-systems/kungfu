@@ -17,11 +17,8 @@ from kungfu import assignment_close
 from kungfu import assignment_evidence
 from kungfu import assignment_review_lifecycle
 from kungfu import assignment_start
-from kungfu.assignment_runtime import (
-    LocalAssignmentRuntimeApplication,
-    create_runtime_host_command,
-    profile_source,
-)
+from kungfu import initiative_family
+from kungfu.assignment_runtime import create_runtime_host_command, profile_source
 from kungfu import dogfood as dogfood_api
 from kungfu import profile_composition, profile_sdk
 from kungfu.agent import run_agent
@@ -247,21 +244,21 @@ def _prepare_resume_profile(runtime_dir, actor):
 
 
 def _profile_read(runtime_dir, operation, values):
-    if operation != "assignment-status":
-        raise ValueError(f"unsupported Assignment Runtime read: {operation}")
-    return LocalAssignmentRuntimeApplication(
+    return profile_sdk.invoke_member_adapter(
+        str(profile_source()),
         runtime_dir,
-        client_id="kungfu.work.cli",
-        kind="cli",
-    ).status(values.get("initiativeId"), values.get("assignmentId"))
+        "work-control-actions",
+        operation,
+        values,
+    )["result"]
 
 
 def _profile_action(runtime_dir, intent_id, values, authorized_by):
-    return LocalAssignmentRuntimeApplication(
-        runtime_dir,
-        client_id="kungfu.work.cli",
-        kind="cli",
-    ).authorize(intent_id, values, authorized_by)
+    source = str(profile_source())
+    plan = profile_sdk.intent_plan(source, runtime_dir, intent_id, values)
+    answer = profile_sdk.answer_decision(plan["decisionCard"], "approve", authorized_by)
+    receipt = profile_sdk.intent_apply(runtime_dir, plan, answer)
+    return receipt["actionReceipt"]["coreReceipt"]
 
 
 def _status(runtime_dir, initiative_id, assignment_id, now=""):
@@ -271,7 +268,7 @@ def _status(runtime_dir, initiative_id, assignment_id, now=""):
         {
             "initiativeId": initiative_id,
             "assignmentId": assignment_id,
-            "source": "atlas",
+            "source": "kungfu",
             "now": now,
         },
     )
@@ -304,9 +301,9 @@ def _admit_captured_assignment(
             "binding": binding,
             "next_actions": [
                 {
-                    "action": "build-core",
-                    "command": "./shifu build:core",
-                    "description": "Assemble pykungfu from the current checkout",
+                    "action": "use-installed-product",
+                    "command": "kungfu work",
+                    "description": "Run admission through an installed qualified Kungfu product",
                 }
             ],
         }
@@ -316,7 +313,7 @@ def _admit_captured_assignment(
         promoted = orchestration.load_initiative_admission(
             initiative_admission, stdin_text=initiative_admission_stdin
         )
-    projected = orchestration.atlas_assignment_projection(
+    projected = orchestration.assignment_projection(
         captured,
         initiative_id=initiative_id,
         assignment_id=assignment_id,
@@ -351,9 +348,8 @@ def _admit_captured_assignment(
             "objective": projected["objective"],
             "actor": actor,
             "actorType": actor_type,
-            # The Initiative above is created under Kungfu-native authority.
-            # Select that same source family when linking the Assignment;
-            # capture roots preserve the Atlas request provenance.
+            # The Initiative and Assignment share one native Work Control
+            # source family; captured request roots remain ordinary evidence.
             "source": "kungfu",
             "status": "active",
             "parentAssignmentId": projected["parent_assignment_id"],
@@ -364,7 +360,6 @@ def _admit_captured_assignment(
             "dependencyRefs": projected["dependency_refs"],
             "responsibility": projected["responsibility"],
             "acceptanceRoot": "",
-            "atlasRoot": "",
             "contextBinding": projected["context_binding"],
             "projectCutRoot": projected["project_cut_root"],
             "evidenceEpisodeRoots": projected["evidence_episode_roots"],
@@ -1475,7 +1470,7 @@ def _advance(
             "actor": actor,
             "actorType": "agent",
             "reason": reason,
-            "source": "atlas",
+            "source": "kungfu",
         },
         actor,
     )
@@ -1550,7 +1545,7 @@ def status(ctx, workspace_root, home, initiative_id, assignment_id, now):
 )
 @assignment_context
 def family_contract_command(ctx):
-    _emit(orchestration.family_contract())
+    _emit(initiative_family.family_contract())
 
 
 @assignment.command(
@@ -1566,13 +1561,13 @@ def family_contract_command(ctx):
 def family_create(ctx, blueprint_file, out):
     def operation():
         blueprint = json.loads(blueprint_file.read_text(encoding="utf-8"))
-        state = orchestration.create_family_state(blueprint)
+        state = initiative_family.create_family_state(blueprint)
         return {
             "schema": "kungfu.work-control.initiative-family-create/v1",
             "state": state,
             "stateRoot": state["stateRoot"],
             "outputPath": _write_immutable_json(out, state),
-            "verification": orchestration.verify_family_state(state),
+            "verification": initiative_family.verify_family_state(state),
         }
 
     _emit(_run(operation))
@@ -1596,14 +1591,14 @@ def family_transition(ctx, state_file, transition_file, out):
     def operation():
         state = json.loads(state_file.read_text(encoding="utf-8"))
         transition = json.loads(transition_file.read_text(encoding="utf-8"))
-        successor = orchestration.transition_family_state(state, transition)
+        successor = initiative_family.transition_family_state(state, transition)
         return {
             "schema": "kungfu.work-control.initiative-family-transition-result/v1",
             "state": successor,
             "stateRoot": successor["stateRoot"],
             "previousStateRoot": successor["previousStateRoot"],
             "outputPath": _write_immutable_json(out, successor),
-            "verification": orchestration.verify_family_state(successor),
+            "verification": initiative_family.verify_family_state(successor),
         }
 
     _emit(_run(operation))
@@ -1621,95 +1616,7 @@ def family_transition(ctx, state_file, transition_file, out):
 def family_verify(ctx, state_file):
     def operation():
         state = json.loads(state_file.read_text(encoding="utf-8"))
-        return orchestration.verify_family_state(state)
-
-    _emit(_run(operation))
-
-
-@assignment.command(
-    name="family-contract-v2",
-    help="show the additive typed Initiative-family envelope protocol",
-)
-@assignment_context
-def family_contract_v2_command(ctx):
-    _emit(orchestration.family_contract_v2())
-
-
-@assignment.command(
-    name="family-upgrade-v2",
-    help="explicitly bind one immutable v1 state into a typed v2 envelope",
-)
-@click.argument(
-    "state_file",
-    type=click.Path(exists=True, dir_okay=False, path_type=Path),
-)
-@click.argument(
-    "binding_file",
-    type=click.Path(exists=True, dir_okay=False, path_type=Path),
-)
-@click.option("--out", type=click.Path(dir_okay=False, path_type=Path))
-@assignment_context
-def family_upgrade_v2(ctx, state_file, binding_file, out):
-    def operation():
-        state = json.loads(state_file.read_text(encoding="utf-8"))
-        bindings = json.loads(binding_file.read_text(encoding="utf-8"))
-        upgrade = orchestration.upgrade_family_state_v2(state, bindings)
-        successor = upgrade["successorState"]
-        return {
-            **upgrade,
-            "outputPath": _write_immutable_json(out, successor),
-            "verification": orchestration.verify_family_state_v2(successor),
-        }
-
-    _emit(_run(operation))
-
-
-@assignment.command(
-    name="family-transition-v2",
-    help="advance a typed family state with an exact v1 transition and bindings",
-)
-@click.argument(
-    "state_file",
-    type=click.Path(exists=True, dir_okay=False, path_type=Path),
-)
-@click.argument(
-    "transition_file",
-    type=click.Path(exists=True, dir_okay=False, path_type=Path),
-)
-@click.option("--out", type=click.Path(dir_okay=False, path_type=Path))
-@assignment_context
-def family_transition_v2(ctx, state_file, transition_file, out):
-    def operation():
-        state = json.loads(state_file.read_text(encoding="utf-8"))
-        transition = json.loads(transition_file.read_text(encoding="utf-8"))
-        successor = orchestration.transition_family_state_v2(state, transition)
-        return {
-            "schema": "kungfu.work-control.initiative-family-transition-result/v2",
-            "state": successor,
-            "stateRoot": successor["stateRoot"],
-            "previousStateRoot": successor["previousStateRoot"],
-            "v1ProjectionRoot": successor["v1ProjectionRoot"],
-            "typedBindingRoot": successor["typedBindingRoot"],
-            "outputPath": _write_immutable_json(out, successor),
-            "verification": orchestration.verify_family_state_v2(successor),
-        }
-
-    _emit(_run(operation))
-
-
-@assignment.command(
-    name="family-verify-v2",
-    help="read v1 as under-typed or verify one complete typed v2 state",
-)
-@click.argument(
-    "state_file",
-    type=click.Path(exists=True, dir_okay=False, path_type=Path),
-)
-@assignment_context
-def family_verify_v2(ctx, state_file):
-    def operation():
-        state = json.loads(state_file.read_text(encoding="utf-8"))
-        return orchestration.verify_family_state_v2(state)
+        return initiative_family.verify_family_state(state)
 
     _emit(_run(operation))
 

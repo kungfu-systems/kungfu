@@ -25,7 +25,9 @@ function copyFile(sourceRoot, targetRoot, relative) {
 
 function semanticAmplificationFixturePaths(manifest) {
   const paths = new Set([
+    'framework/core/architecture/ARCHITECTURE_HEALTH.md',
     'framework/core/architecture/layers.json',
+    'framework/core/architecture/review-routes.json',
     'framework/maintainability/semantic-amplification.manifest.json',
     'framework/maintainability/semantic-amplification.mjs',
     'framework/maintainability/terminal-evidence-matrix.json',
@@ -171,8 +173,17 @@ function sourceAuditRoot(rows) {
 }
 
 function boundedDiagnosticTail(...values) {
-  const output = values.filter(Boolean).join('\n');
+  const output = [...values].reverse().filter(Boolean).join('\n');
   const lines = output.split(/\r?\n/u);
+  const sourceFailureIndex = lines.findLastIndex((line) =>
+    /^\[source-acceptance\] .+ failed:/u.test(line.trim()),
+  );
+  if (sourceFailureIndex >= 0)
+    return lines
+      .slice(Math.max(0, sourceFailureIndex - 20), sourceFailureIndex + 20)
+      .map((line) => line.slice(0, 2 * 1024))
+      .join('\n')
+      .slice(0, 24 * 1024);
   const failingTestsIndex = lines.findLastIndex(
     (line) => line.trim() === '✖ failing tests:',
   );
@@ -184,21 +195,11 @@ function boundedDiagnosticTail(...values) {
   const failureSummaryIndex = lines.findLastIndex((line) =>
     /^(?:ℹ fail [1-9]|# fail [1-9])/u.test(line.trimStart()),
   );
-  if (failureSummaryIndex >= 0) {
-    const failedTestIndex = lines.findLastIndex(
-      (line, index) => index < failureSummaryIndex && /^not ok \d+/u.test(line),
-    );
+  if (failureSummaryIndex >= 0)
     return lines
-      .slice(
-        Math.max(
-          0,
-          failedTestIndex >= 0 ? failedTestIndex : failureSummaryIndex - 80,
-        ),
-        failureSummaryIndex + 40,
-      )
+      .slice(Math.max(0, failureSummaryIndex - 8), failureSummaryIndex + 40)
       .join('\n')
       .slice(0, 24 * 1024);
-  }
   return output.slice(-24 * 1024);
 }
 
@@ -541,7 +542,6 @@ test('declared discovery routes are zero-write in a cold read-only fixture', (t)
     'scripts/check-work-design-advisor.test.mjs',
     'scripts/check-work-design-policy-replay.test.mjs',
     'scripts/check-work-design-preflight.test.mjs',
-    'scripts/check-agent-work-state-contract.test.mjs',
     'scripts/documentation-product-pack.test.mjs',
     'scripts/docs-markdown-readonly.mjs',
     'scripts/kungfu-gate-workflow-facts.mjs',
@@ -652,29 +652,13 @@ test('declared discovery routes are zero-write in a cold read-only fixture', (t)
     'framework/core/src/python/kungfu/kfx_authoring_assets/templates/webhook-service/src/service.mjs.tmpl',
     'framework/core/src/python/kungfu/kfx_authoring_assets/templates/webhook-service/test/qualify.mjs.tmpl',
     'framework/core/tests/python/test_kfx_authoring.py',
-    'docs/adr/KF-ADR-019fe996-1912-7144-8fa5-3fceaa416365.md',
-    'docs/evolution/current-authority.md',
-    'docs/evolution/document-metadata.registry.json',
-    'docs/evolution/map.json',
-    'docs/evolution/reader-routes.md',
-    'docs/evolution/stages/11-temporal-relation-proof.md',
-    'docs/evolution/timeline.md',
-    'framework/contract/kungfu-contracts.registry.json',
-    'framework/core/architecture/layered-api-encoding-boundary.contract.json',
-    'framework/core/src/libkungfu/src/runtime/storage/fact_protocol.cpp',
-    'framework/core/src/python/kungfu/storage/fact_root_canonical.py',
-    'framework/core/tests/python/test_temporal_relation.py',
-    'framework/fact/kungfu-fact-cut-kernel.contract.json',
-    'framework/fact/kungfu-fact-root-canonical-v2.json',
-    'scripts/check-temporal-relation-contract.test.mjs',
-    'tests/fixtures/fact-root-canonical/vectors.json',
-    'tests/fixtures/temporal-relation-contract/cases.json',
     'framework/core/src/python/kungfu/cli/commands/shifu.py',
     'framework/gui/src/renderer/src/main.tsx',
     'framework/gui/src/runtime-status.ts',
     'framework/maintainability/baseline-transitions/README.md',
     'framework/maintainability/code-complexity-policy.json',
     'framework/maintainability/code-complexity-baseline.json',
+    'framework/maintainability/baseline-transitions/2026-08-08-zero-residue-baseline-reconstruction.json',
     'framework/maintainability/waivers/retired/hub-cli-linux-arm64-dist-platform-map.v1.json',
     'framework/maintainability/waivers/retired/hub-cli-linux-arm64-post-queue-workflow-authority.v1.json',
     'framework/maintainability/waivers/retired/hub-cli-linux-arm64-workflow-authority.v1.json',
@@ -791,23 +775,46 @@ test('declared discovery routes are zero-write in a cold read-only fixture', (t)
   for (const row of matrix.rows) {
     for (const section of [
       row.verification?.evidenceRoots,
+      row.precursorEvidence?.evidenceRoots,
       row.releaseQualification?.evidenceRoots,
     ]) {
       for (const evidence of section || []) evidencePaths.add(evidence.path);
     }
   }
   for (const relative of evidencePaths) copyFile(ROOT, fixture, relative);
-  for (const relative of [
-    'node_modules/@kungfu-tech/buildchain/package.json',
-    'node_modules/@kungfu-tech/buildchain/dist/site/buildchain-contract.json',
-    'node_modules/@kungfu-tech/buildchain/dist/site/publication-authority-registry.json',
-  ])
+  const changedCandidatePaths = spawnSync(
+    git,
+    [
+      '-C',
+      ROOT,
+      'diff',
+      '--name-only',
+      '--diff-filter=ACMRTUXB',
+      '-z',
+      'HEAD',
+      '--',
+    ],
+    { encoding: 'utf8' },
+  );
+  assert.equal(changedCandidatePaths.status, 0, changedCandidatePaths.stderr);
+  for (const relative of changedCandidatePaths.stdout
+    .split('\0')
+    .filter(Boolean))
     copyFile(ROOT, fixture, relative);
+  const deletedCandidatePaths = spawnSync(
+    git,
+    ['-C', ROOT, 'diff', '--name-only', '--diff-filter=D', '-z', 'HEAD', '--'],
+    { encoding: 'utf8' },
+  );
+  assert.equal(deletedCandidatePaths.status, 0, deletedCandidatePaths.stderr);
+  for (const relative of deletedCandidatePaths.stdout
+    .split('\0')
+    .filter(Boolean))
+    fs.rmSync(path.join(fixture, relative), { recursive: true, force: true });
   fs.chmodSync(path.join(fixture, 'shifu'), 0o755);
 
   fs.symlinkSync(git, path.join(tools, 'git'));
   fs.symlinkSync(node, path.join(tools, 'node'));
-  fs.symlinkSync(executableOnPath('python3'), path.join(tools, 'python3'));
   for (const [name, relative] of [
     ['ruff', 'framework/core/.venv/bin/ruff'],
     ['mypy', 'framework/core/.venv/bin/mypy'],
@@ -831,12 +838,24 @@ test('declared discovery routes are zero-write in a cold read-only fixture', (t)
     fs.chmodSync(file, 0o755);
   }
 
+  const sourceAuthorName = spawnSync(
+    git,
+    ['-C', ROOT, 'show', '-s', '--format=%an', exactSourceSha],
+    { encoding: 'utf8' },
+  );
+  const sourceAuthorEmail = spawnSync(
+    git,
+    ['-C', ROOT, 'show', '-s', '--format=%ae', exactSourceSha],
+    { encoding: 'utf8' },
+  );
+  assert.equal(sourceAuthorName.status, 0, sourceAuthorName.stderr);
+  assert.equal(sourceAuthorEmail.status, 0, sourceAuthorEmail.stderr);
   const gitEnv = {
     ...process.env,
-    GIT_AUTHOR_NAME: 'Kungfu Fixture',
-    GIT_AUTHOR_EMAIL: 'fixture@kungfu.invalid',
-    GIT_COMMITTER_NAME: 'Kungfu Fixture',
-    GIT_COMMITTER_EMAIL: 'fixture@kungfu.invalid',
+    GIT_AUTHOR_NAME: sourceAuthorName.stdout.trim(),
+    GIT_AUTHOR_EMAIL: sourceAuthorEmail.stdout.trim(),
+    GIT_COMMITTER_NAME: sourceAuthorName.stdout.trim(),
+    GIT_COMMITTER_EMAIL: sourceAuthorEmail.stdout.trim(),
   };
   for (const args of [
     ['config', 'core.fileMode', 'false'],
@@ -863,7 +882,6 @@ test('declared discovery routes are zero-write in a cold read-only fixture', (t)
     XDG_CONFIG_HOME: path.join(home, 'config'),
     KUNGFU_READONLY_TOOL_LOG: toolLog,
     KUNGFU_READONLY_NESTED_SOURCE_ACCEPTANCE: '1',
-    PYTHONDONTWRITEBYTECODE: '1',
     KUNGFU_READONLY_PYTEST: pytest,
     KUNGFU_DEV_BRANCH: 'dev/v4/v4.0',
     KUNGFU_READONLY_TSX: requireFromGui.resolve('tsx/cli'),
@@ -874,7 +892,6 @@ test('declared discovery routes are zero-write in a cold read-only fixture', (t)
     KUNGFU_COMPLEXITY_PROTECTED_REF: protectedRef,
     PATH: `${tools}:/usr/bin:/bin`,
   };
-  env.NODE_TEST_CONTEXT = undefined;
   const cases = [
     [
       'architecture',
@@ -950,8 +967,6 @@ test('declared discovery routes are zero-write in a cold read-only fixture', (t)
       );
     }
   }
-  restoreWritable(fixture);
-  fs.chmodSync(path.join(fixture, 'shifu'), 0o755);
   const sourceAcceptance = spawnSync(
     path.join(fixture, 'shifu'),
     ['check:source'],
