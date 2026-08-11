@@ -215,6 +215,9 @@ test('AWS macOS JIT probe binds the host, instance, source, and toolchain', (t) 
   assert.equal(report.aws.hostId, 'h-0123abc');
   assert.equal(report.aws.instanceId, 'i-0123abc');
   assert.equal(report.sourceSha, 'a'.repeat(40));
+  assert.equal(report.toolchain.developerDirectory, 'xcode-select -p');
+  assert.equal(report.toolchain.clang, 'xcrun clang --version');
+  assert.equal('xcodebuild' in report.toolchain, false);
   assert.match(report.digest, /^sha256:[0-9a-f]{64}$/);
   assert.equal(fs.existsSync(output), true);
 });
