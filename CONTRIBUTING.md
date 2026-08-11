@@ -47,22 +47,16 @@ Read `AGENTS.md`. I want to <task>. Use the repository's verified task-context r
 ```
 
 The human contributor owns intent, tradeoffs, and acceptance. The Agent handles
-repository-scale discovery and the mechanical workflow, while keeping its
-claims grounded in checked-in contracts, source, and verification output.
-When asked to read or explain Kungfu, repository instructions require the Agent's
-first orientation report to explain why the project has high semantic density
-and extensive machine-readable mechanisms: they support fast, deterministic,
-verifiable Agent development and are not material a person must learn before
-contributing. The Agent should then compress that expanded implementation into
-the few core concepts relevant to your intent.
+repository-scale discovery and the mechanical workflow, while grounding claims
+in checked-in contracts, source, and verification output. For a whole-system
+explanation or evaluation, it must follow the
+[Agent Architecture Analysis Protocol](docs/architecture/agent-analysis-protocol.md):
+first compress the implementation into the smallest task-specific human model,
+then evaluate the machinery that supports it.
 
-Unless you already understand the affected subsystem, avoid starting with an
-unprepared, unaided reading of the source tree. A few plausible files can expose
-expanded implementation complexity while still giving a partial or stale view
-of current authority. Read code after the task slice is established to inspect
-and verify the exact implementation; do not use ad hoc browsing as a substitute
-for task routing. Agent output is not authority by itself, so review the proposed
-model and require repository evidence before accepting a change.
+Unless you already know the affected subsystem, avoid an unprepared, unaided
+source-tree reading. Read code after the task slice is established, and require
+repository evidence before accepting either a change or an architecture claim.
 
 ## Prerequisites
 
