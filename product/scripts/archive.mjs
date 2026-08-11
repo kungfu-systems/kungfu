@@ -163,6 +163,50 @@ function readTarOctal(buffer, offset, length) {
   return value ? Number.parseInt(value, 8) : 0;
 }
 
+function parsePaxRecords(buffer) {
+  const records = new Map();
+  let offset = 0;
+  while (offset < buffer.length) {
+    const separator = buffer.indexOf(0x20, offset);
+    if (separator <= offset) {
+      throw new Error('invalid PAX record length');
+    }
+    const lengthText = buffer.toString('ascii', offset, separator);
+    if (!/^[0-9]+$/u.test(lengthText)) {
+      throw new Error(`invalid PAX record length: ${lengthText}`);
+    }
+    const length = Number.parseInt(lengthText, 10);
+    const end = offset + length;
+    if (
+      !Number.isSafeInteger(length) ||
+      length <= separator - offset + 2 ||
+      end > buffer.length ||
+      buffer[end - 1] !== 0x0a
+    ) {
+      throw new Error(`invalid PAX record size: ${lengthText}`);
+    }
+    const equals = buffer.indexOf(0x3d, separator + 1);
+    if (equals < separator + 2 || equals >= end - 1) {
+      throw new Error('invalid PAX record payload');
+    }
+    const key = buffer.toString('ascii', separator + 1, equals);
+    if (!/^[A-Za-z0-9._-]+$/u.test(key)) {
+      throw new Error(`invalid PAX record key: ${key}`);
+    }
+    if (records.has(key)) {
+      throw new Error(`duplicate PAX record key: ${key}`);
+    }
+    const valueBuffer = buffer.subarray(equals + 1, end - 1);
+    const value = valueBuffer.toString('utf8');
+    if (!Buffer.from(value, 'utf8').equals(valueBuffer)) {
+      throw new Error(`invalid UTF-8 in PAX record: ${key}`);
+    }
+    records.set(key, value);
+    offset = end;
+  }
+  return records;
+}
+
 function chmodIfPossible(file, mode) {
   try {
     fs.chmodSync(file, mode);
@@ -174,6 +218,8 @@ function chmodIfPossible(file, mode) {
 export function extractTarGz({ archiveFile, targetDir }) {
   const buffer = zlib.gunzipSync(fs.readFileSync(archiveFile));
   fs.mkdirSync(targetDir, { recursive: true });
+  const globalPax = new Map();
+  let entryPax = null;
   let offset = 0;
   while (offset + TAR_BLOCK <= buffer.length) {
     const header = buffer.subarray(offset, offset + TAR_BLOCK);
@@ -182,17 +228,32 @@ export function extractTarGz({ archiveFile, targetDir }) {
 
     const name = readTarString(header, 0, 100);
     const prefix = readTarString(header, 345, 155);
-    const entryName = prefix ? `${prefix}/${name}` : name;
+    const headerName = prefix ? `${prefix}/${name}` : name;
     const size = readTarOctal(header, 124, 12);
     const mode = readTarOctal(header, 100, 8) || 0o644;
     const type = readTarString(header, 156, 1) || '0';
     const body = buffer.subarray(offset, offset + size);
     offset += size + (size % TAR_BLOCK ? TAR_BLOCK - (size % TAR_BLOCK) : 0);
 
-    // POSIX PAX global and per-entry headers carry archive metadata rather
-    // than filesystem payloads. The concrete entry that follows is still
-    // validated independently before extraction.
-    if (TAR_METADATA_TYPES.has(type)) continue;
+    if (TAR_METADATA_TYPES.has(type)) {
+      const records = parsePaxRecords(body);
+      if (type === 'g') {
+        for (const [key, value] of records) {
+          if (value) globalPax.set(key, value);
+          else globalPax.delete(key);
+        }
+      } else {
+        if (!entryPax) entryPax = new Map();
+        for (const [key, value] of records) entryPax.set(key, value);
+      }
+      continue;
+    }
+
+    const paxValue = (key) =>
+      entryPax?.has(key) ? entryPax.get(key) || undefined : globalPax.get(key);
+    const entryName = paxValue('path') || headerName;
+    const linkName = paxValue('linkpath') || readTarString(header, 157, 100);
+    entryPax = null;
 
     const target = extractPath(targetDir, entryName);
     if (type === '5') {
@@ -200,7 +261,7 @@ export function extractTarGz({ archiveFile, targetDir }) {
       continue;
     }
     if (type === '2') {
-      const link = readTarString(header, 157, 100);
+      const link = linkName;
       if (!link || path.isAbsolute(link) || /^[a-zA-Z]:/.test(link)) {
         throw new Error(`unsafe tar symlink for ${entryName}`);
       }
