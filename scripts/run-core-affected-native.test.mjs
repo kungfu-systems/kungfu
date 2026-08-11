@@ -48,13 +48,12 @@ const buildAuthority = JSON.parse(
   ),
 );
 
-test('affected-native diagnostics accepts the exact candidate signing contract', () => {
+test('affected-native diagnostics accepts the declarative signing contract', () => {
   const diagnostics = createDiagnosticsArtifact({ cwd: process.cwd() });
-  assert.equal(
-    diagnostics.buildchain.config.validation.signing.artifacts[0]
-      .entitlementsProfile,
-    'jit-executable-v1',
-  );
+  const [cliArtifact] =
+    diagnostics.buildchain.config.validation.signing.artifacts;
+  assert.equal(cliArtifact.entitlementsProfile, 'none');
+  assert.deepEqual(cliArtifact.entitlementsPaths, []);
 });
 
 function affectedNativeWorkflowFixture() {
