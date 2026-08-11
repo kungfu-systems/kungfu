@@ -480,6 +480,7 @@ function verifyCodexPlanWithoutCodex({
       project,
       '--expected-plan-root',
       projectPlan.planRoot,
+      '--execute',
       '--actor',
       'post-sign-smoke',
       '--json',

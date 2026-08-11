@@ -337,6 +337,10 @@ test('post-sign Codex planning is credential-free and selects only the fixture p
   const source = fs.readFileSync(SCRIPT, 'utf8');
   assert.match(source, /!\['CODEX_HOME', 'OPENAI_API_KEY'\]\.includes\(key\)/u);
   assert.match(source, /agent\.defaultRuntimeProfile/u);
+  assert.match(
+    source,
+    /'starter-create',[\s\S]*?'--expected-plan-root',[\s\S]*?'--execute'/u,
+  );
   assert.match(source, /'run',[\s\S]*?'codex',[\s\S]*?'--plan'/u);
   assert.match(source, /realCodexRequired: false/u);
   assert.match(source, /providerCredentialsRead: false/u);
