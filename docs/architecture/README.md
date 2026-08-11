@@ -23,6 +23,7 @@ journal, runtime, services, language adapters, SDK, extensions, and skills.
 Architecture decisions and their historical rationale remain in
 [ADR](../adr/README.md).
 
+- [Agent Architecture Analysis Protocol](agent-analysis-protocol.md)
 - [Architecture Overview](overview.md)
 - [Agent Supply Chain](agent-supply-chain.md)
 - [Assignment Runtime R0 Evidence](assignment-runtime-r0-evidence.md)

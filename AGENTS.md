@@ -4,232 +4,117 @@ This file orients coding agents (and people) working with this repository. It is
 a router, not a duplicate: it points to the authoritative documents rather than
 restating them.
 
-## Are you using Kungfu, or building it?
+## Start from the person's objective
 
-- **Using Kungfu** — install it, inspect / replay / rewind Episodes, or operate
-  it: start at the curated documentation guide,
-  [`docs/README.md`](docs/README.md). Use the exhaustive
-  [`docs/MAP.md`](docs/MAP.md) when you need to ground one specific question or
-  claim. In an installed runtime, agents should first
-  read the local pack with `kungfu agent brief` and choose a mode with
-  `kungfu agent choose-mode --json`.
-- **Building or contributing to this repo** — read the rest of this file, then
-  [`CONTRIBUTING.md`](CONTRIBUTING.md).
+Restate the requested outcome in one sentence, then choose the single matching
+route. Do not inventory the repository or preload multiple routes "just in
+case."
 
-### Establish orientation before a repository-wide analysis
+| Objective | First route |
+| --- | --- |
+| Use or operate an installed Kungfu | Read the curated [`docs/README.md`](docs/README.md); run `kungfu agent brief`, then `kungfu agent choose-mode --json`. |
+| Explain or evaluate Kungfu as a whole | Follow the [`Agent Architecture Analysis Protocol`](docs/architecture/agent-analysis-protocol.md), then use the [`Evolution Map`](docs/evolution/README.md) to enter current authority. |
+| Change one bounded component, behavior, or document | Read [`CONTRIBUTING.md`](CONTRIBUTING.md), then compile the verified task context below. |
+| Promote or publish a release | Load the [version and release design](docs/development/version-release-design.md) and [publication admission](docs/development/publication-admission.md) before acting. |
 
-When a person or agent is trying to understand Kungfu as a whole, do not start
-by walking the current directories and modules side by side. Read the
-[`Evolution Map`](docs/evolution/README.md), its generated
-[`timeline`](docs/evolution/timeline.md), and
-[`reader routes`](docs/evolution/reader-routes.md) first. They establish the
-historical pressures, abstraction compressions, and authority transitions that
-make the current cross-section intelligible; follow their current-authority
-links before treating a historical surface as an implementation owner.
+Use the exhaustive [`docs/MAP.md`](docs/MAP.md) only to ground a specific claim
+or locate authority not resolved by the selected route. Expand context when a
+verified route reports an omission or the task actually crosses a boundary—not
+because the repository contains more concepts.
 
-This is an orientation rule, not a requirement to load the whole history for
-every task. When the job is already bounded to one component or operation,
-proceed directly to the verified task-specific route below.
+## Rules that always apply
 
-Whenever a person asks you to read, analyze, or explain the Kungfu repository,
-your first orientation report must make the repository's reading model
-explicit:
+- Treat checked-in contracts, source, and current verification output as
+  authority. README text, chat history, generated projections, and Agent output
+  are routes or evidence, not authority by themselves.
+- Keep the person's mental model task-sized. Do not export implementation
+  vocabulary, subsystem count, or repository structure unless it changes the
+  answer or the person asks for it.
+- Use `./shifu` for every development, build, test, package, and documentation
+  task. Do not invoke pnpm, node, conan, or cmake directly.
+- Prefer the smallest change that preserves existing behavior and authority;
+  read the affected source and tests before editing.
+- Never include secrets, credentials, tokens, or private logs in code, commits,
+  issues, or pull requests. Follow [`SECURITY.md`](SECURITY.md) for private
+  vulnerability reporting.
+- Do not create official integrations that scrape private provider sessions,
+  bypass billing or quotas, or misrepresent usage attribution. See
+  [`PROVIDER_COMPLIANCE.md`](PROVIDER_COMPLIANCE.md).
 
-- Kungfu deliberately has high semantic density and extensive machine-readable
-  mechanisms. They make Agent development fast, deterministic, and verifiable;
-  they are not a syllabus that a person must learn before contributing.
-- The expanded source tree can be unfriendly to unaided human browsing. Do not
-  present that initial density as evidence that the core mental model is
-  inherently difficult, and do not tell the person to read the entire tree.
-- Reassure the person that their Agent should do the repository-scale reading,
-  then compress the result into the few core concepts and boundaries relevant
-  to the person's intent. Establish that model before walking individual files.
+## Load bounded context before changing the repository
 
-Do not hide real complexity or uncertainty: name unresolved gaps, cite the
-current authority, and distinguish a simple task model from the larger
-implementation that supports it.
-
-## Load verified context before implementation
-
-Do not treat this router, a README, chat history, or the first plausible file
-as complete task context. In a source checkout, compile a bounded Agent Task
-Chart from the current documentation Atlas before changing code or prose:
+Do not implement from this router, the first plausible file, or a guessed docs
+route. In a source checkout, compile an Agent Task Chart for the exact task:
 
 ```sh
 ./shifu docs inventory --json
 ./shifu docs context --task "<exact task>" --role implementer --budget <tokens> --route <agent-route> --json
 ```
 
-Choose the route from the inventory's declared Agent routes; do not guess it.
-Current measured complete budgets and route-selection examples are in
+Choose a route declared by the inventory. Missing required context, stale
+authority, ambiguity, or required omissions are blockers until resolved or
+explicitly expanded. The Task Chart narrows inspection; it does not replace
+source reading, tests, review, or user authority. Budget guidance lives in
 [`docs/guides/xinfa-agent-context.md`](docs/guides/xinfa-agent-context.md).
-Required omissions, stale authority, an ambiguous route, or a failed Atlas
-verification are blockers: resolve or explicitly expand them before acting.
-The Task Chart narrows what to inspect; it does not replace repository rules,
-source reading, tests, review, or user authority.
 
-An installed runtime has no compiler or selector. It can verify and read the
-precompiled documentation Atlas, and exposes the exact boundary locally:
+An installed runtime can verify the precompiled documentation Atlas but cannot
+compile a new route:
 
 ```sh
 kungfu agent brief
-kungfu agent docs --json
 kungfu agent docs --verify --json
 kungfu agent docs --projection agent --json
 ```
 
-Automatic Xinfa admission exists only when the active work coordinator invokes
-the public task-envelope and route-resolution contract and binds the resulting
-roots. Merely writing a Go card or an Episode does not trigger Xinfa.
+Automatic Xinfa admission occurs only when a coordinator invokes the public
+task-envelope and route-resolution contract and binds the returned roots. A Go
+card or Episode alone does not trigger it.
 
-## Building this repo
-
-One entrypoint runs every task under the pinned toolchain. Do not invoke pnpm,
-node, conan, or cmake directly — go through it:
+## Execute and verify through Shifu
 
 ```sh docs-exec=shifu-version
 ./shifu --version
 ```
 
 ```sh
-./shifu doctor    # check the development environment (install pointers)
-./shifu sync      # install JS dependencies (frozen lockfile)
-./shifu build     # build all workspaces (C++ core + bindings + app)
-./shifu rebuild   # clear generated build outputs, then run build
-./shifu check     # changed-scope read-only quality gate (lint/type/tests)
-./shifu check:source # build-free source gate used by every dev pull request
-./shifu fix       # explicit formatting / safe auto-fixes for changed files
-./shifu product gui dev   # run the reference GUI through the product loop
-./shifu product cli dist  # build the CLI product archive
-./shifu dist      # build distributable products under product/release
-./shifu <task>    # any pnpm task, run under the pinned node
+./shifu doctor       # environment facts and install pointers
+./shifu sync         # frozen dependency installation
+./shifu build        # full workspace build when the task requires it
+./shifu check        # changed-scope quality gate
+./shifu check:source # build-free source acceptance required by dev PRs
+./shifu docs:check   # deterministic documentation contract gate
+./shifu verify       # existing product/runtime artifact verification
 ```
 
-There is nothing to preinstall beyond `curl`: on first run `./shifu`
-bootstraps the pinned toolchain automatically (node via
-[fnm](https://github.com/Schniz/fnm) and `.node-version`, python via
-[uv](https://docs.astral.sh/uv/), and Buildchain via `.buildchain-version`) into
-`~/.cache/kungfu`. An fnm / uv you
-already have on PATH is used as-is; Buildchain remains pin-first. See
-[`docs/development/rust-adoption.md`](docs/development/rust-adoption.md) for how the launcher works.
-For versioned cache policy and machine-readable schema discovery, see
-[`docs/shifu/`](docs/shifu/). When a controller projects both
-`SHIFU_CACHE_PROFILE_REF` and `SHIFU_CACHE_PROFILE_DIGEST`, ordinary
-`./shifu <task>` invocations automatically resolve and apply that profile once;
-the explicit `./shifu cache ...` control surface remains outside the wrapper.
-Use `./shifu cache status` for local-only inspection and
-`./shifu cache doctor [--probe]` for resolution and optional reachability;
-`cache use/unset` are dry-run unless `--execute` is explicit.
+The launcher bootstraps the pinned toolchain on first use. Full build, product,
+cache, and packaging commands live in [`CONTRIBUTING.md`](CONTRIBUTING.md) and
+the [`Shifu` documentation](docs/shifu/README.md); load them only when the task
+needs them.
 
-See [`CONTRIBUTING.md`](CONTRIBUTING.md) for the full toolchain, repository
-layout, and code style.
+Use the narrowest applicable route:
 
-## Checking your work is green
+| When the task changes… | Load and run… |
+| --- | --- |
+| Core ownership or a cross-layer boundary | [Architecture Overview](docs/architecture/overview.md), then `./shifu core:architecture --path <path> --json`; use `core:architecture:health` or `core:affected` only when relevant. |
+| Documentation | [Documentation checks](CONTRIBUTING.md#documentation-checks); run `./shifu docs:check` and `./shifu docs:prose:required`. Do not enter native build or artifact lifecycles for a docs-only change. |
+| A Primitive definition or admission | [Primitive Management Plane](docs/architecture/primitive-management-plane.md); begin with its incubation passport and `./shifu primitive:new`. |
+| Fact or Episode invariants | [Invariant Verification](docs/qualification/invariant-verification.md); discover the registry with `./shifu invariant:verify -- --list --json`. |
+| An ADR or load-bearing architecture decision | [`docs/adr/`](docs/adr/README.md) and the [metadata contract](docs/development/document-metadata.md); use `./shifu adr:audit -- --json`. |
+| A release, promotion, or upgrade publication | [Version and Release Design](docs/development/version-release-design.md) plus [Publication Admission](docs/development/publication-admission.md); consume rooted candidate evidence rather than rebuilding conclusions at the tail. |
+| Public branding, hosted use, or provider integration | [`TRADEMARK.md`](TRADEMARK.md), [`ACCEPTABLE_USE.md`](ACCEPTABLE_USE.md), and [`PROVIDER_COMPLIANCE.md`](PROVIDER_COMPLIANCE.md). |
 
-```sh
-./shifu check           # changed-scope lint, typecheck and unit/tooling tests
-./shifu check:source    # GitHub-hosted source acceptance; no build or artifacts
-./shifu core:architecture --path <repo-relative-path> # locate owner, targets, tests, docs and review route
-./shifu core:architecture --capability <name> --json # stable machine-readable architecture query
-./shifu core:architecture:health # inspect structural health budgets and ratchets
-KUNGFU_BUILD_PROFILE=embedded-sqlite ./shifu rebuild:core # select one supported trimmed Core closure
-./shifu core:affected -- --base <base> --head <head> --json # explain the native PR closure
-./shifu verify          # assert existing build artifacts (quick)
-./shifu verify --full   # rebuild + freeze, then assert (slow; needs the full toolchain)
-./shifu docs:check      # deterministic Markdown, local-link, anchor, and docs-contract gate
-./shifu docs validate --json # inspect the project-independent Documentation Protocol submission
-./shifu docs:prose      # advisory vocabulary and load-bearing prose policy
-./shifu adr:audit       # inspect all ADR lifecycle, evidence, and release debt
-./shifu invariant:verify -- --list --json # discover authoritative Fact/Episode invariants, checker routes, and residual risk
-```
+## Completion and contribution boundary
 
-`check:source` is the required development-PR gate: it checks the exact source
-revision on GitHub-hosted Linux and never enters compiler, build, artifact, or
-release lifecycles. `check` remains the broader local changed-scope gate with
-shared unit/tooling tests. `check:all` exists for whole-tree cleanup once the
-lint baseline is clean.
-`verify` is the runtime/product done-check: it asserts the build artifacts and
-runs a `kungfu` runtime smoke plus the `mvp-smoke-v1` Episode qualification,
-rather than trusting a "looks built" impression. The larger Episode baseline
-remains an explicit periodic/release-readiness command:
-
-```sh
-./shifu episode:qualify:release
-```
-
-It emits a self-contained evidence envelope; it is not a per-PR gate.
-
-Invariant work starts from `./shifu invariant:verify -- --list --json`. The
-registry points to Fact/Episode authority by content-addressed JSON pointer;
-do not copy domain semantics into a new checker or workflow. The safe default
-runner executes source binding only. Native/runtime layers are explicit, and a
-missing prerequisite is `unqualified`, never a skipped pass.
-
-Primitive work starts at the incubation passport, never at a hand-maintained
-catalog or an ad hoc contract. Read
-[`docs/architecture/primitive-management-plane.md`](docs/architecture/primitive-management-plane.md),
-plan birth with `./shifu primitive:new -- --id <id> --name <name> --layer
-<layer> --actor agent`, return its current `context.projectionRoot` on an Agent
-`--write`, and run `./shifu check:primitive-catalog`. The entrypoint compiles
-the exact Primitive Management Task Chart; do not bypass its missing, stale,
-degraded, mismatched, or omission-bearing context failures. Machine-readable
-Primitive artifacts are detected repository-wide by their schema and
-`primitiveId`; a different directory does not bypass governance. Installed
-discovery is read-only through `kungfu primitive list|show|explain --json`.
-
-`docs:check` is the same deterministic gate used by documentation pull
-requests and pre-commit checks. It also verifies that the public Vocabulary
-reference matches its machine-readable registry. `docs:prose` projects the
-registry into Vale and reports both required rules and advisory terminology or
-claim-language findings; CI blocks only on `docs:prose:required`. Network-dependent
-URL validation remains separate in `docs:check:external`, and CI runs the same
-Lychee configuration on a schedule.
-
-Core `KF-ADR-<UUIDv7>` and Shifu `SHIFU-ADR-<UUIDv7>` records share the
-canonical [`docs/adr/`](docs/adr/) authority and exactly the same machine gates.
-Create them offline with `./shifu adr:new -- --owner kungfu|shifu --title
-"..."`; the filename is the complete identity plus `.md`, with readable wording
-kept in headings and link labels. Do not allocate a sequence number, edit a
-shared identity index, or introduce a parser for the retired sequential scheme.
-Run
-`./shifu adr:audit -- --json` for the complete status inventory,
-`--strict` to fail on review/evidence debt, or `--release stable` to exercise
-the stable-admission obligation without publishing a release.
-
-## Proposing changes
-
-- Open pull requests against the relevant `dev/*` channel branch (see
-  [`CONTRIBUTING.md`](CONTRIBUTING.md) → "Branches, pull requests & releases").
-- Preserve the PR template's `kungfu-adr-release:v1` manifest. A feature PR must
-  declare a bounded `stage-ready` or `implemented` delivery against accepted
-  ADRs; do not use commit messages as implementation authority. Alpha and
-  stable promotion semantics live in
-  [`docs/development/version-release-design.md`](docs/development/version-release-design.md).
-  Product upgrade publication work must also follow
-  [`docs/development/publication-admission.md`](docs/development/publication-admission.md):
-  qualify exact candidate bytes once before finalization, then consume only the
-  rooted receipt and capsule at the release tail.
-- Write commit messages and PR descriptions in English, using lightweight
-  [Conventional Commits](https://www.conventionalcommits.org/)
-  (`type(scope): summary`).
-- Sign off every commit with the DCO: `git commit -s`.
-- Bugs, feature requests, questions, and documentation issues go through GitHub
-  issues; security vulnerabilities use private vulnerability reporting — see
-  [`SECURITY.md`](SECURITY.md).
-- Brand, hosted-service, and upstream-provider boundaries are documented in
-  [`TRADEMARK.md`](TRADEMARK.md), [`ACCEPTABLE_USE.md`](ACCEPTABLE_USE.md), and
-  [`PROVIDER_COMPLIANCE.md`](PROVIDER_COMPLIANCE.md).
-
-## Ground rules
-
-- Never include secrets, credentials, tokens, or private logs in code, commits,
-  issues, or pull requests.
-- Do not build or document official integrations that scrape private provider
-  sessions, bypass provider billing or quota systems, or misrepresent usage
-  attribution.
-- Prefer the smallest change that holds, and keep documentation in sync with
-  behavior.
-- [`docs/README.md`](docs/README.md), [`docs/MAP.md`](docs/MAP.md), and
-  [`CONTRIBUTING.md`](CONTRIBUTING.md) route to the relevant sources of truth;
-  when this summary and a canonical document disagree, follow the canonical
-  document.
+- Run the smallest gate that proves the changed surface. `check:source` is the
+  exact-revision development PR gate; runtime or product changes also require
+  their qualified build/verification route.
+- Documentation-only work runs documentation gates, not the native compiler
+  matrix. External URL health remains a separate scheduled or explicit check.
+- Open pull requests against the relevant `dev/*` channel branch. Preserve the
+  PR template's `kungfu-adr-release:v1` manifest and declare the bounded ADR
+  delivery state when applicable.
+- Write English Conventional Commit messages and PR descriptions, and sign off
+  every commit with the DCO. Full branch, review, and release rules remain in
+  [`CONTRIBUTING.md`](CONTRIBUTING.md).
+- When this router conflicts with a canonical document selected above, follow
+  the canonical document and repair this route in the same change when needed.

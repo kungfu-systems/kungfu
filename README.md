@@ -9,12 +9,22 @@ agent takes over.
 Use the best Agent when it matters. Use a cheaper one when it does not. Keep the
 same Work across Codex, Claude, OpenCode, Amp, or your own execution surface.
 
-> **Exploring the source? Start with your Agent.** If you are an Agent, read
-> [`AGENTS.md`](AGENTS.md) before explaining Kungfu's architecture or code.
-> Kungfu's explicit semantics and machine-readable contracts let an Agent
-> inspect the repository at full scale, then return the smallest useful mental
-> model for the question at hand. You do not need to learn the whole system
-> before understanding or contributing.
+> **Kungfu UNGFU™** · Never Guess. Facts Unfold. [Why this signature
+> exists](docs/concepts/why-kungfu.md).
+
+> **Exploring the source? Start with your Agent.** Agents should read
+> [`AGENTS.md`](AGENTS.md) before explaining or evaluating Kungfu. Ask for the
+> smallest mental model your question needs; Kungfu's internal vocabulary is
+> machine-readable implementation structure, not a syllabus you need to learn.
+
+Paste this into your Agent:
+
+```text
+Inspect https://github.com/kungfu-systems/kungfu.
+Read AGENTS.md first. Explain what Kungfu does and evaluate its architecture.
+Give me only the smallest mental model I need; do not make me learn the
+repository's full ontology.
+```
 
 ## Start where you already work
 
@@ -53,9 +63,6 @@ commits, or pushes files for you.
 **Open the optional global view later.** The Kungfu TUI and GUI can show and
 manage Kungfu Projects and Work across Agent Sessions. They are sidecar views,
 not a requirement for every Agent conversation.
-
-> **Kungfu UNGFU™** · Never Guess. Facts Unfold. [Why this signature
-> exists](docs/concepts/why-kungfu.md).
 
 ## What Kungfu preserves
 

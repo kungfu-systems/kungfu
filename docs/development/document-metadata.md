@@ -10,6 +10,7 @@ The machine authority is
 sidecar records live in its ordered registry set: the main
 [`document-metadata.registry.json`](../document-metadata.registry.json) and
 bounded domain shards such as the
+[Architecture registry](../architecture/document-metadata.registry.json) and
 [Evolution registry](../evolution/document-metadata.registry.json). The
 deterministic `./shifu docs:check` gate validates both authorities, governed
 frontmatter, ADR body projections, immutable implementation evidence, and the

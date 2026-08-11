@@ -3,6 +3,7 @@
   "metadataSchema": "kungfu.document-metadata/v1",
   "metadataRegistry": "docs/document-metadata.registry.json",
   "metadataRegistryShards": [
+    "docs/architecture/document-metadata.registry.json",
     "docs/evolution/document-metadata.registry.json"
   ],
   "adrIdentity": {
