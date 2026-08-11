@@ -97,7 +97,7 @@
           "classification": "non-publication",
           "owner": "kungfu-docs",
           "surfaceIds": [],
-          "sourceRoot": "sha256:ec4237c0c3cd1ad639446d28f22acce071187fd2f364b1bb156f3460eac48c96"
+          "sourceRoot": "sha256:ef6eea6a5bf57325d6f1d8b9c2eaba911f9ab950cd720300f9fa286619283421"
         },
         {
           "path": ".github/workflows/aws-us-linux-burst-qualification.yml",
@@ -867,5 +867,5 @@
       }
     }
   ],
-  "registryRoot": "sha256:611460a44d1029f0780845f63588215f51c95c1904f06586e33108218c00268c"
+  "registryRoot": "sha256:2f933e68b2ff7135a976d2c70bef2df1eedfc6ea3fe39a6016cd584188448cbe"
 }
