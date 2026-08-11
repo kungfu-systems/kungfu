@@ -37,7 +37,7 @@ const { authority, humanOverride } = workDesignAdvisoryBoundary();
 
 function workDefinition(seed = 'future-work') {
   return {
-    goal_id: seed,
+    assignment_id: seed,
     objective: 'Human-authorized final work definition',
     scope: { included: ['bounded-change'], excluded: ['automatic-execution'] },
     acceptance_criteria: ['capture remains paused and unclaimed'],
@@ -497,7 +497,7 @@ for (const [count, phase, budget] of [
   });
 }
 
-test('partial and legacy sealed outcomes remain explicit coverage unknowns', () => {
+test('partial sealed outcomes and missing timestamps remain explicit coverage unknowns', () => {
   const { outcomeHistory } = outcomeInformedRequest({
     outcomeCount: 1,
     partialCount: 1,
@@ -578,13 +578,7 @@ test('Shifu dispatches work-design preflight without package lifecycle bootstrap
   fs.writeFileSync(history, `${JSON.stringify(globalWorkQuery())}\n`);
   const result = spawnSync(
     path.resolve('shifu'),
-    [
-      'work-design:preflight',
-      '--input',
-      input,
-      '--history-query',
-      history,
-    ],
+    ['work-design:preflight', '--input', input, '--history-query', history],
     { cwd: path.resolve('.'), encoding: 'utf8' },
   );
   assert.equal(result.status, 0, result.stderr || result.stdout);

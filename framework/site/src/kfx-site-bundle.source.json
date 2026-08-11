@@ -176,7 +176,7 @@
     {
       "id": "registry-admission-lifecycle",
       "title": "Registry, admission, and lifecycle",
-      "summary": "A pinned Fact cut, Work, Warrant, policy, exact roots, and CAS guard every accepted lifecycle mutation.",
+      "summary": "A pinned Fact cut, Work, Warrant, policy, exact roots, and CAS guard every accepted lifecycle mutation; extension domain schemas do not require a project-compatibility payload.",
       "maturity": "pre-release",
       "status": "staged",
       "sourceIds": ["kfx-domain-profile", "kfx-topology"],
@@ -239,7 +239,7 @@
     {
       "id": "qualification-status",
       "title": "Current qualification status",
-      "summary": "Identity-neutral terminal evidence and the maintained webhook Profile fixture cover the current bounded KFX slice.",
+      "summary": "Identity-neutral terminal evidence, the compatibility-free extension domain contract, and the maintained webhook Profile fixture cover the current bounded KFX slice.",
       "maturity": "pre-release",
       "status": "qualified",
       "sourceIds": ["kfx-terminal-qualification", "github-webhook-qualification"],

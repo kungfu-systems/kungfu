@@ -141,9 +141,7 @@ The complete consumer contract is exactly these four Shifu commands:
 4. `alpha:publication:debug:hosted-parity` roots the hosted wrapper binding and
    local/hosted-core contract parity.
 
-Existing Atlas goal
-`2026-08-07-kungfu-alpha-build-publication-rehearsal-gate` is the sole
-downstream consumer. It must call this contract and consume its rooted reports;
+Downstream rehearsal must call this contract and consume its rooted reports;
 it must not copy the harness, reconstruct a second capsule, or add another
 Kungfu-specific local release path. Candidate and capsule rejection,
 deterministic retry, idempotency, collision, tamper, contract-root mismatch,

@@ -18,6 +18,7 @@ from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
 
+from kungfu import work_control
 from kungfu.agent import work_profile
 from kungfu.agent.native_authority import inspect_native_authority
 from kungfu.storage import service
@@ -538,28 +539,16 @@ def refresh_atlas(runtime_dir: str | Path, payload: dict[str, Any]) -> dict[str,
     }
 
 
-def _mission_action(
-    runtime_dir: str | Path, intent_id: str, values: dict[str, Any]
-) -> dict[str, Any]:
-    from kungfu.assignment_runtime import LocalAssignmentRuntimeApplication
-
-    return LocalAssignmentRuntimeApplication(
-        runtime_dir,
-        client_id="kungfu.action-loop.agent",
-        kind="agent",
-    ).authorize(intent_id, values, "action-loop")
-
-
 def review_completion(
     runtime_dir: str | Path, payload: dict[str, Any]
 ) -> dict[str, Any]:
     completion = payload.get("completion") or {}
     common = {
-        "missionId": completion["missionId"],
-        "goalId": completion["goalId"],
-        "source": completion.get("source") or "atlas",
+        "initiativeId": completion["initiativeId"],
+        "assignmentId": completion["assignmentId"],
+        "source": completion.get("source") or "kungfu",
     }
-    claim = _mission_action(
+    claim = work_control.apply_intent(
         runtime_dir,
         "claim-completion",
         {
@@ -568,7 +557,9 @@ def review_completion(
             "actor": completion.get("actor") or "agent",
             "actorType": completion.get("actorType") or "agent",
             "evidenceEpisodeIds": list(completion.get("evidenceEpisodeIds") or []),
-            "goSet": list(completion.get("goSet") or [completion["goalId"]]),
+            "assignmentSet": list(
+                completion.get("assignmentSet") or [completion["assignmentId"]]
+            ),
             "acceptanceRoot": completion.get("acceptanceRoot") or "",
             "inputAtlasRoot": completion.get("inputAtlasRoot") or "",
             "resultAtlasRoot": payload["envelope"]["roles"]["atlas"]["root"],
@@ -581,7 +572,7 @@ def review_completion(
             "evidenceAvailability": list(completion.get("evidenceAvailability") or []),
         },
     )
-    reviewed = _mission_action(
+    reviewed = work_control.apply_intent(
         runtime_dir,
         "review-completion",
         {
@@ -609,7 +600,7 @@ def review_completion(
             "writeOccurred": True,
         }
     decision_action = completion.get("decisionAction") or "close"
-    decided = _mission_action(
+    decided = work_control.apply_intent(
         runtime_dir,
         "decide-continuation",
         {

@@ -180,7 +180,7 @@ if exist "%~dp0framework\core\dist\kungfu\pykungfu*.pyd" (
     )
   )
 )
-echo {"schema":"kungfu.assignment-orchestration.diagnosis/v1","ok":false,"code":"assignment-current-checkout-binding-missing","message":"Assignment admission requires pykungfu from the current checkout","next_actions":[{"action":"build-core","command":"shifu.cmd build:core","description":"Assemble pykungfu from the current checkout"}]}
+echo {"schema":"kungfu.assignment-orchestration.diagnosis/v1","ok":false,"code":"qualified-product-required","message":"Assignment orchestration requires an installed qualified Kungfu product","next_actions":[{"action":"use-installed-product","command":"kungfu work","description":"Run Work through an installed qualified Kungfu product"}]}
 exit /b 127
 
 :assignmentcapture

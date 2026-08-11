@@ -113,44 +113,6 @@
       ]
     },
     {
-      "id": "import-atlas",
-      "title": "Import Atlas projection source",
-      "runner": "kfx-member",
-      "operation": "work-control-actions",
-      "runtimeOperation": "episode.append",
-      "authorityClass": "work-control-author",
-      "requiredCapabilities": ["storage"],
-      "effects": ["append-admitted-fact", "seal-episode"]
-    },
-    {
-      "id": "activate-work-control",
-      "title": "Activate Work Control authority after exact Atlas parity",
-      "runner": "kfx-member",
-      "operation": "work-control-actions",
-      "runtimeOperation": "episode.append",
-      "authorityClass": "work-control-author",
-      "requiredCapabilities": ["storage"],
-      "effects": [
-        "verify-atlas-parity",
-        "append-authority-receipt",
-        "freeze-atlas-mutation"
-      ]
-    },
-    {
-      "id": "restore-atlas-authority",
-      "title": "Restore Atlas adapter authority",
-      "runner": "kfx-member",
-      "operation": "work-control-actions",
-      "runtimeOperation": "episode.append",
-      "authorityClass": "work-control-author",
-      "requiredCapabilities": ["storage"],
-      "effects": [
-        "append-authority-receipt",
-        "restore-atlas-mutation",
-        "retain-native-facts-read-only"
-      ]
-    },
-    {
       "id": "export-initiative",
       "title": "Export portable Initiative bundle",
       "runner": "kfx-member",

@@ -4,7 +4,7 @@ This page is generated from the append-only Era and Stage corpus. It is a
 longitudinal learning path, not a replacement for current architecture, runtime,
 or qualification authority.
 
-Coverage: **5 eras**, **11 stages**, and **38 evidence references**.
+Coverage: **5 eras**, **11 stages**, and **37 evidence references**.
 
 ## Era 1: Journal substrate
 
@@ -118,11 +118,11 @@ Initiative, Assignment, Work Control, Primitive governance, and native KFX manag
 
 ### 9. Work Control canonical name
 
-**Period:** 2026-07-29 to ongoing · **Recorded status:** open
+**Period:** 2026-07-29 to ongoing · **Recorded status:** settled
 
 **Pressure:** The native authority had cut over to Work Control while current product paths, catalogs, documentation, and generated surfaces still presented the retired name as a peer.
 
-**Compression:** One canonical name now carries the current Profile, package, CLI, GUI, TUI, Agent, documentation, build, and publication surfaces while exact historical evidence remains readable without becoming writable.
+**Compression:** One canonical name carries the Profile, package, CLI, GUI, TUI, Agent, documentation, build, and publication surfaces.
 
 [Open the immutable Stage record](stages/09-work-control-canonical-name.md) for the full capability, authority transition, downstream consumers, and evidence.
 

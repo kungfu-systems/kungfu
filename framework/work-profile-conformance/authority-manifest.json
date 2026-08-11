@@ -15,7 +15,7 @@
     },
     {
       "path": "framework/action/action-loop-begin.mjs",
-      "sha256": "sha256:71dd1a0665a296f6b19587b76c5094ee20a00d15627feeb3dda91ce90a896364"
+      "sha256": "sha256:8646bf32fc1bbb8f1dcaed4e8b9b46b15bfcf8f7adc40bded1947e28617e4318"
     },
     {
       "path": "framework/action/action-loop-fixtures.json",
@@ -23,7 +23,7 @@
     },
     {
       "path": "framework/action/action-loop-qualification-adapters.mjs",
-      "sha256": "sha256:53577c1e92692309bcf3f28142128254c0d4b7400aa5721d44eb6a0e26cb1fe5"
+      "sha256": "sha256:ef5d2442144c7b5b0754431058c431028162cb9eb4560785761a3cb0bc4f239a"
     },
     {
       "path": "framework/action/action-loop-settle.mjs",
@@ -31,7 +31,7 @@
     },
     {
       "path": "framework/action/action-loop.contract.json",
-      "sha256": "sha256:88d5f17d333230f05f9e6c31f1930b1402d33e3cf78ad1352f0a3fee2b840ebe"
+      "sha256": "sha256:4b477eead59f4019efc1a287f27959063a9189d2c07ef76c0d23deb9a7b354df"
     },
     {
       "path": "framework/action/action-loop.mjs",
@@ -91,7 +91,7 @@
     },
     {
       "path": "framework/work-loop/work-api.contract.json",
-      "sha256": "sha256:3e906d1babcb49b78e2183cbecc800d8161ed1c0353e6563c79217044fbd06de"
+      "sha256": "sha256:819eb262f6b16df9b187d82539f749ed05f1a1ccc45793f774eea4317c1414c9"
     },
     {
       "path": "framework/work-profile-conformance/qualification/kfd-7-product-gate.json",
@@ -99,11 +99,11 @@
     },
     {
       "path": "framework/work-profile-conformance/qualification/reference-scenarios.json",
-      "sha256": "sha256:3a7a665c28679269bc6871e93e232bff2b781abe58e01d328bbc92b9318d2ff8"
+      "sha256": "sha256:d2fb85c4c649d61fa54ef4144485c25780ef1bfc8e7054d561fdd5ba47b2b8b1"
     },
     {
       "path": "framework/work-profile-conformance/qualification/retained-witnesses.json",
-      "sha256": "sha256:ba4bfcd7f4f99efeb02a4b203516601127b4c0e9e16296fde899208209137710"
+      "sha256": "sha256:71a6f680026dc88dfc076c0e15a1e223a16e689dd7b87f282d7ab7796bd89ac8"
     },
     {
       "path": "framework/work-profile-conformance/qualification/week-day-domain-profile.json",
@@ -154,5 +154,5 @@
       "sha256": "sha256:132d2a638e6535a00483991fc2676378c440a8a70058a6b8c488eac4e7612bc2"
     }
   ],
-  "bundleRoot": "sha256:63a7d5516ff9559c64e6aba0f841ec2bd9daf1608cc27d02c5080da245bb7f2d"
+  "bundleRoot": "sha256:a0d1a70e6c62cf5fe3ece1f26195f48d660ca11ec1baf4c3dc52bf608bf63cb4"
 }

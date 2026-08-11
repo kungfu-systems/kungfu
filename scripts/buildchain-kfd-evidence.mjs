@@ -736,10 +736,6 @@ function sdkAndProductSurfaces() {
       sourcePath: 'product/scripts/dist.mjs',
       evidencePath: 'product/package.json',
       maturity: 'stable',
-      // Build-output facts for the shifu registrar: when one of these tasks
-      // succeeds under shifu, the launcher stashes the host platform's
-      // artifact user-globally for `shifu builds` / `shifu promote`
-      // A repo onboards its artifacts here; crates/shifu/src/registrar.rs consumes it.
       distribution: {
         registrar: 'shifu',
         tasks: ['dist*', 'package'],
@@ -892,7 +888,6 @@ function missingSurfaceFields(surface) {
     'declaration',
   ].filter((field) => !surface[field]);
 }
-
 function buildStrictBuildchainAudit(registry) {
   const onDisk = readJson(KFD3_REGISTRY_PATH);
   const buildchainRegistry = runtime.kfd3.readSurfaceRegistry({
@@ -908,7 +903,6 @@ function buildStrictBuildchainAudit(registry) {
     sdkAndProductSurfaces().map((surface) => surface.id),
   );
   const issues = [];
-
   if (onDisk.contract !== KFD3_SURFACE_REGISTRY_CONTRACT) {
     issues.push(`registry contract is ${onDisk.contract}`);
   }
@@ -1406,7 +1400,7 @@ function kfd5GateInput({ workspace, sourceSha, checkedAt, standards }) {
       'assignment-minimum-closure',
       'minimum-closure',
       repoPath(
-        'framework/assignment-capture/fixtures/atlas-go-card-roundtrip-v1.json',
+        'framework/assignment-capture/fixtures/native-assignment-dogfood-request-v1.json',
       ),
     ),
     gateEvidence(

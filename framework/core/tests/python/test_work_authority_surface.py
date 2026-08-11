@@ -31,13 +31,9 @@ def test_work_family_contains_only_profile_backed_orchestration_commands():
         "close-resume",
         "decide",
         "family-contract",
-        "family-contract-v2",
         "family-create",
         "family-transition",
-        "family-transition-v2",
-        "family-upgrade-v2",
         "family-verify",
-        "family-verify-v2",
         "gate",
         "kickoff",
         "relation-event",
@@ -134,17 +130,12 @@ def test_start_resume_accepts_the_generic_project_work_purpose(tmp_path, monkeyp
     )
 
 
-def test_atlas_bridge_has_no_work_mutation_aliases():
-    atlas_commands = set(kfc.commands["atlas"].commands)
-    assert atlas_commands.isdisjoint(
-        {
-            "claim-completion",
-            "create-go",
-            "create-mission",
-            "decide-continuation",
-            "review-completion",
-        }
-    )
+def test_xinfa_atlas_remains_component_native_and_has_no_top_level_work_bridge():
+    assert "xinfa" in kfc.commands
+    assert "atlas" not in kfc.commands
+    assert "claim-completion" not in kfc.commands
+    assert "decide-continuation" not in kfc.commands
+    assert "review-completion" not in kfc.commands
 
 
 def test_reviewer_result_requires_exact_criterion_coverage():

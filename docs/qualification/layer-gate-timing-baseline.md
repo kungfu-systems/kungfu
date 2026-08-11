@@ -214,10 +214,6 @@ silently averaged into the result:
 - Subsequent development attempts exposed missing or mismatched exact esbuild
   platform binaries for SDK, TUI, GUI, and electron-builder subprocesses. The
   distribution staging was repaired before freezing the authoritative SHA.
-- A clean pre-final run passed distribution but generated pybind stubs that did
-  not match the committed tree. Two small source/stub ownership corrections
-  were committed, and the clean authoritative source was advanced to
-  `6afd4d121`.
 - A command routed through the optional-installing `shifu` bootstrap was
   rejected as an invalid measurement because it did not preserve the declared
   no-optional profile.
@@ -227,10 +223,8 @@ silently averaged into the result:
   WDC disk, while the canonical worktree was on Samsung NVMe. The same complete
   smoke profile passed in `109.26s` when `TMPDIR/TEMP/TMP` pointed to
   `.buildchain/tmp`; this led to the source-bound `c4ba70d95` fix and full rerun.
-- Earlier same-source Linux and Windows scouts that failed on shared Conan
-  permissions, Windows esbuild package layout, or Windows-only POSIX fixture IO
-  are retained as excluded debugging evidence. They are not averaged into the
-  baseline.
+- Earlier scouts that failed on Windows-only POSIX fixture IO remain excluded
+  from the baseline.
 
 These attempts are prerequisite debugging evidence, not comparable performance
 samples. The policy must not use them as runtime observations.

@@ -249,8 +249,8 @@ maturity; ADRs own why a load-bearing decision was made.
 Work Control organizes continuing work as Initiative and bounded
 responsibility as Assignment, federates exact workspace observations through
 Portfolio, and settles a successor Project Cut. None of these terms redefines
-the domain-neutral Fact and Episode substrates. Atlas-shaped vocabulary is
-retained only by its explicit adapter and exact compatibility readers. See
+the domain-neutral Fact and Episode substrates. External consumers enter only
+through Kungfu's neutral public contracts and contribute no internal vocabulary. See
 [Work Control](profiles/work-control.md),
 [The Project Cut Product Loop](concepts/project-cut-product-loop.md), and
 [Domain Horizons](concepts/domain-horizons.md).
