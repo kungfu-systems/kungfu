@@ -1,0 +1,59 @@
+{
+  "errors": [],
+  "media": [
+    {
+      "bytes": 2126468,
+      "codec": "h264",
+      "durationMs": 69700,
+      "frameRate": "10/1",
+      "height": 1080,
+      "name": "demo.mp4",
+      "width": 1920
+    },
+    {
+      "bytes": 1607182,
+      "codec": "vp9",
+      "durationMs": 69700,
+      "frameRate": "10/1",
+      "height": 1080,
+      "name": "demo.webm",
+      "width": 1920
+    },
+    {
+      "bytes": 1014369,
+      "codec": "h264",
+      "durationMs": 69700,
+      "frameRate": "10/1",
+      "height": 720,
+      "name": "demo-720p.mp4",
+      "width": 1280
+    },
+    {
+      "bytes": 853978,
+      "codec": "vp9",
+      "durationMs": 69700,
+      "frameRate": "10/1",
+      "height": 720,
+      "name": "demo-720p.webm",
+      "width": 1280
+    },
+    {
+      "bytes": 894502,
+      "codec": "gif",
+      "durationMs": 69700,
+      "frameRate": "10/1",
+      "height": 720,
+      "name": "demo.gif",
+      "width": 1280
+    },
+    {
+      "bytes": 174045,
+      "codec": "png",
+      "height": 1080,
+      "name": "poster.png",
+      "width": 1920
+    }
+  ],
+  "passed": true,
+  "schema": "build-images.demo-media-probe/v1"
+}
