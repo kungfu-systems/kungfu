@@ -22,17 +22,24 @@
     "runtimes": {
       "alpha": {
         "ref": "v3-alpha",
-        "runtimeSha": "36b08dc7bf417e57bffcc3dc784a2473254fe4c1",
-        "publicationRuntimeSha": "1d9b35b75e16d492e6d8b18c32504e89f8806855",
-        "contractDigest": "sha256:8e565f9ac5146d5dceafc3da6b267147fb412937db979bf35a0429966da82197",
+        "packageVersion": "3.0.9-alpha.2",
+        "registry": "node_modules/@kungfu-tech/buildchain/dist/site/publication-authority-registry.json",
+        "authorityRegistryDigest": "26e5356238677038bda4efe2b91dbf3939270b31c65ff8a36bbdf0d3e5227913",
+        "runtimeSha": "e5e7078c67978051016c2ceb1fec114e8956397a",
+        "publicationRuntimeSha": "e5e7078c67978051016c2ceb1fec114e8956397a",
+        "contractDigest": "sha256:a67cf7f6bcfe9c0afb1969735a09d77225ad1252ff161fa156da8deaf5863a0e",
         "publicationContractDigests": [
-          "sha256:8e565f9ac5146d5dceafc3da6b267147fb412937db979bf35a0429966da82197",
-          "sha256:13c4679c4ac8764c85e29693bfb59099e21e9786cc6082552198d39393467490"
+          "sha256:a67cf7f6bcfe9c0afb1969735a09d77225ad1252ff161fa156da8deaf5863a0e",
+          "sha256:13c4679c4ac8764c85e29693bfb59099e21e9786cc6082552198d39393467490",
+          "sha256:8e565f9ac5146d5dceafc3da6b267147fb412937db979bf35a0429966da82197"
         ],
         "contractLock": ".buildchain/alpha-contract-lock.json"
       },
       "release": {
         "ref": "v3",
+        "packageVersion": "3.0.7",
+        "registry": "node_modules/@kungfu-tech/buildchain-stable/dist/site/publication-authority-registry.json",
+        "authorityRegistryDigest": "074111987b82f532c9c0a7da9c81a7bf36e93c35ab8ec1a51b9321c8f657fdae",
         "runtimeSha": "81c49578bff72a9784a1b63ce8698bd9dd23d7bf",
         "publicationRuntimeSha": "81c49578bff72a9784a1b63ce8698bd9dd23d7bf",
         "contractDigest": "sha256:8e9a161653c40611ffd76aa878ae348fc215506c1caa88347111fb122cfe7c12",
