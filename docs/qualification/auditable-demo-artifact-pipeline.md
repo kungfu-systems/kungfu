@@ -154,3 +154,67 @@ The path rejects, at minimum:
 
 Only a retained passing run and its content-addressed evidence may update the
 README. A failed or cancelled run is diagnostic evidence, never qualification.
+
+<!-- kungfu:auditable-demo:technical:agent-work-lab-autoplay:start -->
+## Continuity: Can Work survive a new Agent?
+
+The first proof isolates continuity: one Work continues across two fresh Agent Sessions without copied chat.
+
+[![Can Work survive a new Agent?](evidence/auditable-demo/19bc21d693e843878c33f412599f91c5a2d24e129c1fe9d34d61cc5878a4d547/agent-work-lab-autoplay/demo.gif)](evidence/auditable-demo/19bc21d693e843878c33f412599f91c5a2d24e129c1fe9d34d61cc5878a4d547/agent-work-lab-autoplay/public-evidence.json)
+
+Commands:
+
+```text
+$ kungfu agent-work-lab autoplay
+```
+
+Native renditions: [1080p MP4](evidence/auditable-demo/19bc21d693e843878c33f412599f91c5a2d24e129c1fe9d34d61cc5878a4d547/agent-work-lab-autoplay/demo.mp4) · [1080p WebM](evidence/auditable-demo/19bc21d693e843878c33f412599f91c5a2d24e129c1fe9d34d61cc5878a4d547/agent-work-lab-autoplay/demo.webm) · [720p MP4](evidence/auditable-demo/19bc21d693e843878c33f412599f91c5a2d24e129c1fe9d34d61cc5878a4d547/agent-work-lab-autoplay/demo-720p.mp4) · [720p WebM](evidence/auditable-demo/19bc21d693e843878c33f412599f91c5a2d24e129c1fe9d34d61cc5878a4d547/agent-work-lab-autoplay/demo-720p.webm)
+
+Claim boundary: This exact standalone Kungfu artifact proves only the bounded offline Agent Work Lab autoplay observed in two independently captured native PTYs; it grants no Work, release, capability, or production authority.
+
+[Release Passport](evidence/auditable-demo/19bc21d693e843878c33f412599f91c5a2d24e129c1fe9d34d61cc5878a4d547/agent-work-lab-autoplay/release-passport.json) · [auditable evidence](evidence/auditable-demo/19bc21d693e843878c33f412599f91c5a2d24e129c1fe9d34d61cc5878a4d547/agent-work-lab-autoplay/public-evidence.json)
+
+The mechanism exists; the next proof asks whether it still holds under real failure conditions.
+<!-- kungfu:auditable-demo:technical:agent-work-lab-autoplay:end -->
+
+<!-- kungfu:auditable-demo:technical:project-tour-episode-1:start -->
+## Failure retention: Can Work survive failure?
+
+Inside a disposable Project, a dropped connection and a crashed replacement process remain as Attempts under the same Work.
+
+[![Can Work survive failure?](evidence/auditable-demo/5e785473d7383a9228f56edc55da231031af2fe611df657cc31dd0b7d7131b9d/project-tour-episode-1/demo.gif)](evidence/auditable-demo/5e785473d7383a9228f56edc55da231031af2fe611df657cc31dd0b7d7131b9d/project-tour-episode-1/public-evidence.json)
+
+Commands:
+
+```text
+$ kungfu agent-work-lab project-tour --episode 1 --speed 4
+```
+
+Native renditions: [1080p MP4](evidence/auditable-demo/5e785473d7383a9228f56edc55da231031af2fe611df657cc31dd0b7d7131b9d/project-tour-episode-1/demo.mp4) · [1080p WebM](evidence/auditable-demo/5e785473d7383a9228f56edc55da231031af2fe611df657cc31dd0b7d7131b9d/project-tour-episode-1/demo.webm) · [720p MP4](evidence/auditable-demo/5e785473d7383a9228f56edc55da231031af2fe611df657cc31dd0b7d7131b9d/project-tour-episode-1/demo-720p.mp4) · [720p WebM](evidence/auditable-demo/5e785473d7383a9228f56edc55da231031af2fe611df657cc31dd0b7d7131b9d/project-tour-episode-1/demo-720p.webm)
+
+Claim boundary: This exact standalone Kungfu artifact proves only the bounded disposable Project Tour episode 1 observed at 4x in two independently captured native PTYs; Mock Agent output and terminal observations grant no Work, release, capability, or production authority.
+
+[Release Passport](evidence/auditable-demo/5e785473d7383a9228f56edc55da231031af2fe611df657cc31dd0b7d7131b9d/project-tour-episode-1/release-passport.json) · [auditable evidence](evidence/auditable-demo/5e785473d7383a9228f56edc55da231031af2fe611df657cc31dd0b7d7131b9d/project-tour-episode-1/public-evidence.json)
+
+Work survival is only the first step. If an Agent can approve its own result, continuity still is not trustworthy.
+<!-- kungfu:auditable-demo:technical:project-tour-episode-1:end -->
+
+<!-- kungfu:auditable-demo:technical:project-tour-episode-2:start -->
+## Review and settlement: Who is allowed to complete Work?
+
+The final proof separates Agent exit, independent review, and Kungfu settlement: an Agent can produce a candidate and evidence, but cannot approve its own Work.
+
+[![Who is allowed to complete Work?](evidence/auditable-demo/027df54ec3d7a0b162d91b7b825e49d9de055cc35b8554a43921e6add2069e55/project-tour-episode-2/demo.gif)](evidence/auditable-demo/027df54ec3d7a0b162d91b7b825e49d9de055cc35b8554a43921e6add2069e55/project-tour-episode-2/public-evidence.json)
+
+Commands:
+
+```text
+$ kungfu agent-work-lab project-tour --episode 2 --speed 4
+```
+
+Native renditions: [1080p MP4](evidence/auditable-demo/027df54ec3d7a0b162d91b7b825e49d9de055cc35b8554a43921e6add2069e55/project-tour-episode-2/demo.mp4) · [1080p WebM](evidence/auditable-demo/027df54ec3d7a0b162d91b7b825e49d9de055cc35b8554a43921e6add2069e55/project-tour-episode-2/demo.webm) · [720p MP4](evidence/auditable-demo/027df54ec3d7a0b162d91b7b825e49d9de055cc35b8554a43921e6add2069e55/project-tour-episode-2/demo-720p.mp4) · [720p WebM](evidence/auditable-demo/027df54ec3d7a0b162d91b7b825e49d9de055cc35b8554a43921e6add2069e55/project-tour-episode-2/demo-720p.webm)
+
+Claim boundary: This exact standalone Kungfu artifact proves only the bounded disposable Project Tour episode 2 observed at 4x in two independently captured native PTYs; Mock Agent output and terminal observations grant no Work, release, capability, or production authority.
+
+[Release Passport](evidence/auditable-demo/027df54ec3d7a0b162d91b7b825e49d9de055cc35b8554a43921e6add2069e55/project-tour-episode-2/release-passport.json) · [auditable evidence](evidence/auditable-demo/027df54ec3d7a0b162d91b7b825e49d9de055cc35b8554a43921e6add2069e55/project-tour-episode-2/public-evidence.json)
+<!-- kungfu:auditable-demo:technical:project-tour-episode-2:end -->

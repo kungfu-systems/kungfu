@@ -1,0 +1,14 @@
+{
+  "createdAt": "2026-08-11T10:14:11Z",
+  "digest": "sha256:09bec7957a2a78a6651aca3f62a274686be9d6cbf4d1ecf0d17e62ba6745ec0a",
+  "expiresAt": "2026-08-25T10:13:56Z",
+  "id": "9097297909",
+  "name": "kungfu-linux-x64-7e281eab861f99a63ffde7e324cc7bd55f300ebf",
+  "nodeId": "MDg6QXJ0aWZhY3Q5MDk3Mjk3OTA5",
+  "repository": "kungfu-systems/kungfu",
+  "runAttempt": "2",
+  "runId": "31473536025",
+  "schema": "buildchain.github-artifact-coordinate/v1",
+  "sizeInBytes": 1276770743,
+  "sourceSha": "7e281eab861f99a63ffde7e324cc7bd55f300ebf"
+}
