@@ -13,6 +13,7 @@ FACTS = (
 QUALIFICATION = (
     ROOT / "docs/qualification/evidence/kungfu-temporal-provenance-cutover.json"
 )
+ADR = ROOT / "docs/adr/KF-ADR-019fe996-1912-7144-8fa5-3fceaa416365.md"
 
 
 def _json(path):
@@ -75,3 +76,9 @@ def test_cutover_contract_has_no_hand_maintained_digest_path_map():
         "orphanPolicy": "reject",
     }
     assert policy["temporalAdmission"]["admissionFacts"] == str(FACTS.relative_to(ROOT))
+
+
+def test_cutover_delivery_repair_requires_a_fresh_project_cut_proof():
+    decision = ADR.read_text()
+    assert "a dequeued source identity is never reused" in decision
+    assert "recompute its Project Cut replay proof" in decision
