@@ -811,23 +811,6 @@
       ]
     },
     {
-      "path": ".github/workflows/kfx-webhook-real-canary-r19.yml",
-      "authority": "qualification",
-      "definitionDigest": "sha256:7765a6278082da2deb51d51526cadb13d0d91653a039663dc0cf2fb2e72f6481",
-      "jobs": [
-        {
-          "id": "canary",
-          "authority": "qualification",
-          "publication": "none",
-          "receipt": "diagnostic",
-          "definitionDigest": "sha256:8d44f757a7357d73e17c4b13547497c3a527c243362f206dcaa05181c0041f0e",
-          "credentials": {"githubToken":"write","oidc":true,"repositorySecrets":["KUNGFU_GITHUB_TOKEN"],"inheritedSecrets":false,"environment":null},
-          "externalActions": ["actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0","actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e","aws-actions/configure-aws-credentials@00943011d9042930efac3dcd3a170e4273319bc8","actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a"],
-          "steps": [{"index":1,"label":"name:Check out exact source","definitionDigest":"sha256:51ed40a077a4c67faf96e81aeb8965aea520597cfc6a6a0d1a749c9458f2c408"},{"index":2,"label":"name:Set up Node.js","definitionDigest":"sha256:af0a76d96665302f3614641413b2401fde66c1f4a77050962f15faa27743d2e3"},{"index":3,"label":"name:Assume branch-scoped canary controller role","definitionDigest":"sha256:541ac80023cd7df3ba83217c1fbe939277c05414d6a3738cf6541c0f5f76ad24"},{"index":4,"label":"name:Verify exact caller and webhook administration","definitionDigest":"sha256:8745358f3defc718d8ec711c1c189b2af7e25f00f2a8b832fb8442cd598b7191"},{"index":5,"label":"name:Execute one-shot signed GitHub ping canary","definitionDigest":"sha256:efc1ae1f867e1906975ff3adf028e2ccd37a6e0b6c192b97bc6925ae07c8d50e"},{"index":6,"label":"name:Verify redacted zero-residue receipt","definitionDigest":"sha256:9a4ab408e702c49520ed61270b3d987cf6b3656fc96a0161fa6e7871dafc5a06"},{"index":7,"label":"name:Upload rooted canary receipt","authority":"evidence-publication","definitionDigest":"sha256:a7abfa50515b092825c8652de13970adaf72425d23802e5257e1a7abc9649e15"}]
-        }
-      ]
-    },
-    {
       "path": ".github/workflows/kungfu-agent-patrol.yml",
       "authority": "qualification",
       "definitionDigest": "sha256:a0b849745a905d9028b21a6298fbce2907e62cf80becd8bbfdfcde1f608ef033",
