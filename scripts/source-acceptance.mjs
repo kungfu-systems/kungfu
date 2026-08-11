@@ -478,7 +478,11 @@ export function resolveKfdProductGateCheckedAt({
 }) {
   if (write) return now();
   for (const gate of retainedGateResults) {
-    const checkedAt = String(gate?.checkedAt || '');
+    const retainedSourceSha = String(gate?.source?.sha || '');
+    if (retainedSourceSha && retainedSourceSha !== sourceSha) continue;
+    const checkedAt = String(
+      gate?.verificationCut?.checkedAt || gate?.checkedAt || '',
+    );
     if (checkedAt) return checkedAt;
   }
   const checkedAt = commitTimestamp(sourceSha);

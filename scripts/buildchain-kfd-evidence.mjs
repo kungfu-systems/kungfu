@@ -1862,7 +1862,10 @@ async function runCheckOrWrite(options) {
   const checkedAt = resolveKfdProductGateCheckedAt({
     write: options.write,
     now: () => new Date().toISOString(),
-    retainedGateResults: KFD_PRODUCT_GATE_PATHS.map(readOptionalJson),
+    retainedGateResults: [
+      readOptionalJson(KFD_ADOPTER_MANIFEST_GATE_PATH),
+      ...KFD_PRODUCT_GATE_PATHS.map(readOptionalJson),
+    ],
     sourceSha,
     commitTimestamp: (commit) =>
       gitValue(ROOT, ['show', '-s', '--format=%cI', commit]),
