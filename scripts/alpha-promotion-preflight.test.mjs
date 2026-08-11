@@ -586,7 +586,7 @@ test('patrol, normal Alpha builds and sentinels keep one controller authority', 
   );
   assert.match(
     build,
-    /buildchain-ref: \$\{\{ inputs\.buildchain-ref \|\| 'v3' \}\}[\s\S]*publish-source-ref: \$\{\{ needs\.preflight\.outputs\.release-cut-source-ref \}\}[\s\S]*publish-anchor-request-json: \$\{\{ needs\.preflight\.outputs\.release-cut-anchor-request-json \}\}/u,
+    /buildchain-ref: \$\{\{ inputs\.buildchain-ref \|\| '81c49578bff72a9784a1b63ce8698bd9dd23d7bf' \}\}[\s\S]*publish-source-ref: \$\{\{ needs\.preflight\.outputs\.release-cut-source-ref \}\}[\s\S]*publish-anchor-request-json: \$\{\{ needs\.preflight\.outputs\.release-cut-anchor-request-json \}\}/u,
   );
   assert.doesNotMatch(
     build,
