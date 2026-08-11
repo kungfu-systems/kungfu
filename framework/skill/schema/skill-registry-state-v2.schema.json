@@ -54,6 +54,7 @@
       "required": ["workRef", "revision", "contentRoot", "active"],
       "properties": {
         "workRef": {"type": "string", "minLength": 1},
+        "workRoot": {"$ref": "#/$defs/root"},
         "revision": {"type": "integer", "minimum": 1},
         "contentRoot": {"$ref": "#/$defs/root"},
         "active": {"type": "boolean"}

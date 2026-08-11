@@ -1,0 +1,65 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "kungfu.skill-dependency-invocation-receipt/v2",
+  "title": "Kungfu Skill dependency invocation receipt",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "planRoot", "skill", "work", "authority", "nativeAuthorizationDecisions", "profileReceipts", "auditIdentityRoot", "status", "kfxInvocationBoundary", "selectionLoadOrInvocationIsCompletion", "receiptRoot", "surfaceProjections"],
+  "properties": {
+    "schema": {"const": "kungfu.skill-dependency-invocation-receipt/v2"},
+    "planRoot": {"$ref": "#/$defs/root"},
+    "skill": {"type": "object", "required": ["key", "revision", "contentRoot", "definitionRoot", "class"]},
+    "work": {"type": "object", "required": ["ref", "root"]},
+    "authority": {
+      "type": "object",
+      "required": ["skillRegistryRoot", "profileAuthority", "policyRoot", "cutRoot", "host", "trustReportRoots", "capabilityDecisionRoot"]
+    },
+    "nativeAuthorizationDecisions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["mode", "request", "decision"],
+        "properties": {
+          "mode": {"const": "authorized-host-dispatch"},
+          "request": {"type": "object"},
+          "decision": {"type": "object"}
+        }
+      }
+    },
+    "profileReceipts": {"type": "array", "items": {"type": "object", "required": ["profile", "contribution", "receipt"]}},
+    "auditIdentityRoot": {"$ref": "#/$defs/root"},
+    "status": {"const": "verified"},
+    "kfxInvocationBoundary": {"const": "authorized-host-dispatch"},
+    "selectionLoadOrInvocationIsCompletion": {"const": false},
+    "receiptRoot": {"$ref": "#/$defs/root"},
+    "surfaceProjections": {"$ref": "#/$defs/surfaces"}
+  },
+  "$defs": {
+    "root": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "projection": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["surface", "planRoot", "receiptRoot", "capabilityDecisionRoot", "trustReportRoots", "auditIdentityRoot"],
+      "properties": {
+        "surface": {"enum": ["agent", "cli", "gui", "tui"]},
+        "planRoot": {"$ref": "#/$defs/root"},
+        "receiptRoot": {"$ref": "#/$defs/root"},
+        "capabilityDecisionRoot": {"$ref": "#/$defs/root"},
+        "trustReportRoots": {"type": "array", "uniqueItems": true, "items": {"$ref": "#/$defs/root"}},
+        "auditIdentityRoot": {"$ref": "#/$defs/root"}
+      }
+    },
+    "surfaces": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["agent", "cli", "gui", "tui"],
+      "properties": {
+        "agent": {"$ref": "#/$defs/projection"},
+        "cli": {"$ref": "#/$defs/projection"},
+        "gui": {"$ref": "#/$defs/projection"},
+        "tui": {"$ref": "#/$defs/projection"}
+      }
+    }
+  }
+}

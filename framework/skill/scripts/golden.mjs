@@ -14,6 +14,7 @@ import {
   kungfuConfigContractHash,
   loadKungfuConfigContract,
   parseSkill,
+  projectSkillDependencyAuthority,
   resolveKungfuConfig,
   writeSkillContextFile,
   writeSkillManagerViewFile,
@@ -36,6 +37,41 @@ const envelope = buildContextEnvelope(catalog, {
 
 assert.deepEqual(catalog, readJson('fixtures/golden/catalog.json'));
 assert.deepEqual(envelope, readJson('fixtures/golden/context-node.json'));
+const authorityProjection = {
+  surface: 'gui',
+  planRoot: `sha256:${'1'.repeat(64)}`,
+  receiptRoot: null,
+  capabilityDecisionRoot: `sha256:${'2'.repeat(64)}`,
+  trustReportRoots: [`sha256:${'3'.repeat(64)}`],
+  auditIdentityRoot: `sha256:${'4'.repeat(64)}`,
+};
+const authorityDocument = {
+  schema: 'kungfu.skill-dependency-plan/v2',
+  planRoot: authorityProjection.planRoot,
+  auditIdentityRoot: authorityProjection.auditIdentityRoot,
+  authority: {
+    capabilityDecisionRoot: authorityProjection.capabilityDecisionRoot,
+    trustReportRoots: authorityProjection.trustReportRoots,
+  },
+  surfaceProjections: { gui: authorityProjection },
+};
+assert.deepEqual(
+  projectSkillDependencyAuthority(authorityDocument, 'gui'),
+  authorityProjection,
+);
+assert.throws(
+  () =>
+    projectSkillDependencyAuthority(
+      {
+        ...authorityDocument,
+        surfaceProjections: {
+          gui: { ...authorityProjection, planRoot: `sha256:${'f'.repeat(64)}` },
+        },
+      },
+      'gui',
+    ),
+  /changed rooted identity/,
+);
 assert.equal(
   injectSkillContext('hello', envelope).endsWith('\n\nUser task:\nhello'),
   true,

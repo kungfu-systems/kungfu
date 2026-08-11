@@ -15,6 +15,7 @@ from kungfu.rewind.managed_cli import run_and_report
 from kungfu.rewind.managed_run import managed_providers
 from kungfu.skill import (
     SkillError,
+    SkillAuthorityError,
     SkillRegistryError,
     append_audit_event,
     apply_plan,
@@ -22,6 +23,7 @@ from kungfu.skill import (
     build_catalog,
     build_skill_context,
     dependency_coordinates,
+    dependency_audit_event,
     discover_skills,
     diagnose_registry,
     diff_revisions,
@@ -30,8 +32,10 @@ from kungfu.skill import (
     load_skill_context_file,
     normalize_package,
     inspect_registry,
+    invoke_dependency_plan,
     parse_skill,
     plan_operation,
+    plan_dependency_invocation,
     read_audit_file,
     read_skill_markdown,
     registry_history,
@@ -84,6 +88,27 @@ def _skill_context_env(ctx):
     if ctx.extension_path:
         env["KF_EXTENSION_PATH"] = ctx.extension_path
     return env
+
+
+def _json_file(path):
+    if not path:
+        return None
+    with open(path, encoding="utf-8") as source:
+        return json.load(source)
+
+
+def _keyed_paths(values, label):
+    result = {}
+    for value in values:
+        key, separator, path = value.partition("=")
+        if not separator or not key or not path:
+            raise SkillAuthorityError(
+                "KF_SKILL_CLI_BINDING_INVALID",
+                f"{label} must use KEY=PATH",
+                f"pass each {label} as an exact KEY=PATH binding",
+            )
+        result[key] = path
+    return result
 
 
 def _write_node_envelope_file(ctx, paths, source, profile, agent):
@@ -286,6 +311,7 @@ def _run_mutation(
     key=None,
     source=None,
     work_ref=None,
+    work_root=None,
     target_revision=None,
     execute=False,
     expected_plan_root=None,
@@ -298,6 +324,7 @@ def _run_mutation(
             key=key,
             source=source,
             work_ref=work_ref,
+            work_root=work_root,
             target_revision=target_revision,
         )
         _mutation_result(ctx, plan, execute, expected_plan_root, as_json)
@@ -390,14 +417,16 @@ remove_cmd = _simple_mutation_command(
 @skill.command(help="plan or apply an exact Work-scoped Skill selection")
 @click.argument("key", type=str)
 @click.option("--work-ref", required=True, help="exact Kungfu Work reference")
+@click.option("--work-root", required=True, help="exact Kungfu Work root")
 @_mutation_options
 @skill_command_context
-def select(ctx, key, work_ref, execute, expected_plan_root, as_json):
+def select(ctx, key, work_ref, work_root, execute, expected_plan_root, as_json):
     _run_mutation(
         ctx,
         "select",
         key=key,
         work_ref=work_ref,
+        work_root=work_root,
         execute=execute,
         expected_plan_root=expected_plan_root,
         as_json=as_json,
@@ -419,6 +448,115 @@ def rollback(ctx, key, target_revision, execute, expected_plan_root, as_json):
         expected_plan_root=expected_plan_root,
         as_json=as_json,
     )
+
+
+@skill.command(
+    name="admit",
+    help="plan or invoke exact Skill dependencies through KFX/Profile authority",
+)
+@click.argument("key", type=str)
+@click.option("--work-ref", required=True)
+@click.option("--work-root", required=True)
+@click.option("--cut-root", required=True)
+@click.option("--policy-root", required=True)
+@click.option("--host", required=True)
+@click.option("--run-id", default=None)
+@click.option("--kfx-request", type=click.Path(exists=True), default=None)
+@click.option("--profile-source", multiple=True, help="exact PROFILE_ID=PATH binding")
+@click.option("--profile-input", multiple=True, help="PROFILE_ID:ACTION=JSON_FILE")
+@click.option("--profile-answer", multiple=True, help="PROFILE_ID:ACTION=JSON_FILE")
+@_mutation_options
+@skill_command_context
+def admit(
+    ctx,
+    key,
+    work_ref,
+    work_root,
+    cut_root,
+    policy_root,
+    host,
+    run_id,
+    kfx_request,
+    profile_source,
+    profile_input,
+    profile_answer,
+    execute,
+    expected_plan_root,
+    as_json,
+):
+    try:
+        inputs = {
+            name: _json_file(path)
+            for name, path in _keyed_paths(profile_input, "--profile-input").items()
+        }
+        answers = {
+            name: _json_file(path)
+            for name, path in _keyed_paths(profile_answer, "--profile-answer").items()
+        }
+        plan = plan_dependency_invocation(
+            ctx.home,
+            ctx.runtime_dir,
+            key,
+            work_ref=work_ref,
+            work_root=work_root,
+            cut_root=cut_root,
+            policy_root=policy_root,
+            host=host,
+            kfx_request=_json_file(kfx_request),
+            profile_sources=_keyed_paths(profile_source, "--profile-source"),
+            profile_inputs=inputs,
+            run_id=run_id,
+        )
+        if not execute:
+            _json(plan) if as_json else click.echo(
+                f"[skill] dependency plan {key} status={plan['decision']['status']} "
+                f"root={plan['planRoot']}"
+            )
+            return
+        if not expected_plan_root:
+            raise SkillAuthorityError(
+                "KF_SKILL_EXPECTED_PLAN_ROOT_REQUIRED",
+                "--execute requires --expected-plan-root",
+                "use the exact root from the read-only admit plan",
+            )
+        try:
+            receipt = invoke_dependency_plan(
+                ctx.home,
+                ctx.runtime_dir,
+                plan,
+                expected_plan_root=expected_plan_root,
+                profile_answers=answers,
+            )
+        except SkillAuthorityError:
+            append_audit_event(
+                _default_skill_audit_log(ctx),
+                dependency_audit_event(
+                    plan, event_type="SkillTrustRefused", run_id=run_id
+                ),
+            )
+            raise
+        append_audit_event(
+            _default_skill_audit_log(ctx),
+            dependency_audit_event(
+                receipt, event_type="SkillDependencyInvoked", run_id=run_id
+            ),
+        )
+    except (OSError, ValueError, SkillAuthorityError) as error:
+        code = getattr(error, "code", "KF_SKILL_ADMISSION_INVALID")
+        recovery = getattr(error, "recovery", "inspect the exact authority inputs")
+        if as_json:
+            _json(
+                {"ok": False, "code": code, "error": str(error), "recovery": recovery}
+            )
+        else:
+            click.echo(f"[skill] {code}: {error}; recovery: {recovery}", err=True)
+        raise click.exceptions.Exit(1) from error
+    if as_json:
+        _json(receipt)
+    else:
+        click.echo(
+            f"[skill] invoked {key} receipt={receipt['receiptRoot']} completion=false"
+        )
 
 
 @skill.command(help="inspect the canonical Skill registry fold")
