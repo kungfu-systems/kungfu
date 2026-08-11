@@ -16,6 +16,11 @@ const ROOT = path.resolve(fileURLToPath(new URL('../..', import.meta.url)));
 const SOURCE = '1'.repeat(40);
 const BEFORE = `sha256:${'a'.repeat(64)}`;
 const AFTER = `sha256:${'b'.repeat(64)}`;
+const JIT_EXECUTABLES = [
+  'kungfu-episodes-cli-darwin-arm64/runtime/kungfu',
+  'kungfu-episodes-cli-darwin-arm64/runtime/python/bin/python3',
+  'kungfu-episodes-cli-darwin-arm64/runtime/python/bin/python3.13',
+];
 
 function qualification() {
   const report = {
@@ -70,6 +75,15 @@ function signing() {
       status: 'passed',
       result: { artifactDigest: AFTER },
     },
+    providerEvidence: {
+      contract: 'kungfu-buildchain-apple-developer-id-evidence/v1',
+      status: 'passed',
+      compound: {
+        entitlementsProfile: 'jit-executable-v1',
+        entitledExecutableCount: JIT_EXECUTABLES.length,
+        entitledPaths: JIT_EXECUTABLES,
+      },
+    },
   };
 }
 
@@ -82,6 +96,7 @@ function finalize(changes = {}) {
     archiveSha256: AFTER,
     signingResult: evidence.result,
     signingReceipt: evidence.receipt,
+    signingProviderEvidence: evidence.providerEvidence,
     expectedSourceCommit: SOURCE,
     ...changes,
   });
@@ -111,6 +126,29 @@ test('signed CLI finalization rejects archive bytes outside signing evidence', (
   );
 });
 
+test('signed CLI finalization rejects provider evidence without JIT entitlements', () => {
+  const evidence = signing();
+  evidence.providerEvidence.compound = {
+    entitlementsProfile: 'none',
+    entitledExecutableCount: 0,
+    entitledPaths: [],
+  };
+  assert.throws(
+    () => finalize({ signingProviderEvidence: evidence.providerEvidence }),
+    /omitted the jit-executable-v1 entitlement profile/u,
+  );
+});
+
+test('signed CLI finalization rejects incomplete JIT executable coverage', () => {
+  const evidence = signing();
+  evidence.providerEvidence.compound.entitledExecutableCount = 1;
+  evidence.providerEvidence.compound.entitledPaths = [JIT_EXECUTABLES[0]];
+  assert.throws(
+    () => finalize({ signingProviderEvidence: evidence.providerEvidence }),
+    /must bind the JIT executables/u,
+  );
+});
+
 test('Buildchain signing-finalization runs the consumer-owned qualification rebind', () => {
   const config = fs.readFileSync(
     path.join(ROOT, '.buildchain', 'buildchain.toml'),
@@ -119,6 +157,6 @@ test('Buildchain signing-finalization runs the consumer-owned qualification rebi
   assert.match(config, /\[lifecycle\.signing-finalization\]/u);
   assert.match(
     config,
-    /verify-cli-surface-qualification\.mjs[\s\S]*--signing-result[\s\S]*--signing-receipt/u,
+    /verify-cli-surface-qualification\.mjs[\s\S]*--signing-result[\s\S]*--signing-receipt[\s\S]*--signing-provider-evidence/u,
   );
 });

@@ -12,6 +12,11 @@ import {
 
 const ROOT_PATTERN = /^sha256:[0-9a-f]{64}$/u;
 const SOURCE_PATTERN = /^[0-9a-f]{40}$/u;
+const MACOS_CLI_JIT_EXECUTABLES = [
+  'kungfu-episodes-cli-darwin-arm64/runtime/kungfu',
+  'kungfu-episodes-cli-darwin-arm64/runtime/python/bin/python3',
+  'kungfu-episodes-cli-darwin-arm64/runtime/python/bin/python3.13',
+];
 
 function assert(condition, message) {
   if (!condition) throw new Error(message);
@@ -115,6 +120,7 @@ export function finalizeSignedCliQualification({
   archiveSha256,
   signingResult,
   signingReceipt,
+  signingProviderEvidence,
   expectedSourceCommit,
 }) {
   assert(
@@ -145,6 +151,26 @@ export function finalizeSignedCliQualification({
       'kungfu-buildchain-artifact-signing-receipt/v1' &&
       signingReceipt.status === 'passed',
     'Buildchain signing receipt did not pass',
+  );
+  assert(
+    signingProviderEvidence?.contract ===
+      'kungfu-buildchain-apple-developer-id-evidence/v1' &&
+      signingProviderEvidence.status === 'passed',
+    'Buildchain Apple Developer ID provider evidence did not pass',
+  );
+  assert(
+    signingProviderEvidence.compound?.entitlementsProfile ===
+      'jit-executable-v1',
+    'signed CLI provider evidence omitted the jit-executable-v1 entitlement profile',
+  );
+  const entitledPaths = signingProviderEvidence.compound?.entitledPaths;
+  assert(
+    Array.isArray(entitledPaths) &&
+      signingProviderEvidence.compound?.entitledExecutableCount ===
+        MACOS_CLI_JIT_EXECUTABLES.length &&
+      JSON.stringify([...entitledPaths].sort()) ===
+        JSON.stringify([...MACOS_CLI_JIT_EXECUTABLES].sort()),
+    `signed CLI provider evidence must bind the JIT executables: ${MACOS_CLI_JIT_EXECUTABLES.join(', ')}`,
   );
   assert(
     signingResult.requestDigest === signingReceipt.requestDigest,
@@ -181,6 +207,7 @@ function parseArgs(argv) {
     '--platform',
     '--signing-result',
     '--signing-receipt',
+    '--signing-provider-evidence',
     '--source-commit',
   ]);
   for (let index = 0; index < argv.length; index += 1) {
@@ -228,8 +255,16 @@ async function main(argv) {
   const qualification = path.resolve(options.qualification);
   const archive = path.resolve(options.archive);
   const archiveSha256 = await sha256File(archive);
-  if (options['signing-result'] || options['signing-receipt']) {
-    for (const required of ['signing-result', 'signing-receipt']) {
+  if (
+    options['signing-result'] ||
+    options['signing-receipt'] ||
+    options['signing-provider-evidence']
+  ) {
+    for (const required of [
+      'signing-result',
+      'signing-receipt',
+      'signing-provider-evidence',
+    ]) {
       if (!options[required]) throw new Error(`--${required} is required`);
     }
     const sourceCommit =
@@ -246,6 +281,10 @@ async function main(argv) {
       signingReceipt: readJson(
         path.resolve(options['signing-receipt']),
         'signing receipt',
+      ),
+      signingProviderEvidence: readJson(
+        path.resolve(options['signing-provider-evidence']),
+        'signing provider evidence',
       ),
       expectedSourceCommit: sourceCommit,
     });
