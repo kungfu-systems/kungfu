@@ -24,7 +24,7 @@
   },
   "kfd3Enforcement": {
     "schema": "kungfu-kfd-3-release-gate-enforcement/v1",
-    "declaredSurfaceCount": 187,
+    "declaredSurfaceCount": 188,
     "enforcedSurfaceCount": 0,
     "gateBindings": [],
     "claimBoundary": "Declared means discoverable; enforced requires a retained passed hard release Gate. Merely detected or declared surfaces are not enforced."
@@ -102,7 +102,7 @@
         "evidenceRoots": [
           {
             "path": ".buildchain/kfd/kfd-2/release-claims.json",
-            "sha256": "sha256:903e216aeb35813c21fa69b5ed1b45e3060d077685bd27510ccfd3394a40fb2b"
+            "sha256": "sha256:9187c5b3514cb92bde545fe54853a431f6c7fa073e143d76c6d85c53c94de00c"
           },
           {
             "path": "docs/qualification/kfd2-trust-assessment.md",
@@ -152,11 +152,11 @@
         "evidenceRoots": [
           {
             "path": ".buildchain/kfd/kfd-3/surfaces.json",
-            "sha256": "sha256:755202d04392b695fc0161ecc263e638bd526999628123a36a96759d90ed2777"
+            "sha256": "sha256:481d80598505149c60b1b4d5ee3973cb9272d1c1ce1c63080a1687fcd96db2d9"
           },
           {
             "path": ".buildchain/kfd/kfd-3/capability-query.json",
-            "sha256": "sha256:a8558882b2a053152ff0f88dfed122e026aca9d70ac3f88c7848d1a444afb5a7"
+            "sha256": "sha256:5425c3d5f5f80ceee6edcd420aa3d282a388055095e867fa7804b734ea917ff7"
           }
         ]
       },

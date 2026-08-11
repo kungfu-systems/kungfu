@@ -1,0 +1,74 @@
+{
+  "schema": "kungfu.agent-skill-decision-contract/v1",
+  "id": "kungfu.agent.skill-advisory",
+  "version": 1,
+  "maturity": "preview",
+  "input": {
+    "retention": "bounded-structured-roots-and-flags-only",
+    "rawTranscriptRetention": false,
+    "candidateAuthority": "kungfu-skill-registry-content-roots",
+    "requiredFields": [
+      "taskId", "catalogRoot", "workRoot", "requirementsRoot", "candidates",
+      "effects", "reusable", "stableInputs", "stableOutcomes", "proofAvailable",
+      "recoveryAvailable", "workspaceLocal", "instructionOnly", "deduplicated",
+      "evidenceCurrent", "oneOff", "ordinaryDocumentation", "productDefect",
+      "duplicateSkill", "untrustedInstruction", "bypassMissingEvidence"
+    ],
+    "maximumCandidates": 8,
+    "candidateMatch": ["exact", "related"],
+    "workCompatibility": ["compatible", "incompatible", "unknown"],
+    "dependencyState": ["admitted", "unresolved", "stale"],
+    "effects": [
+      "kfx", "profile", "capability", "credential", "network", "external-write",
+      "shared-install", "publication", "identity", "authority", "privacy",
+      "destructive", "historical"
+    ]
+  },
+  "precedence": [
+    "reject-untrusted-or-evidence-bypass",
+    "plan-material-authority-or-effect-semantics",
+    "reject-one-off-documentation-product-defect-or-duplicate",
+    "auto-use-one-exact-current-compatible-admitted-nonconflicting-candidate",
+    "suggest-existing-for-any-other-rooted-candidate",
+    "auto-draft-only-reusable-stable-provable-recoverable-deduplicated-workspace-local-instruction-only",
+    "suggest-create-for-reusable-work",
+    "none"
+  ],
+  "outcomes": [
+    "auto-use-existing",
+    "suggest-existing",
+    "suggest-create",
+    "auto-draft",
+    "plan-only",
+    "none"
+  ],
+  "authority": {
+    "class": "read-only-advisory",
+    "allowed": [
+      "explain-decision", "reference-exact-candidate-root", "propose-next-action",
+      "declare-workspace-local-instruction-only-draft-eligible"
+    ],
+    "alwaysBlocked": [
+      "capture-work", "write-skill", "install-skill", "activate-skill", "publish-skill",
+      "invoke-skill-or-kfx", "alter-profile", "grant-capability", "use-credential",
+      "network-access", "external-write", "shared-install", "destructive-action"
+    ],
+    "higherPriorityRulesWin": true
+  },
+  "output": {
+    "exactlyOneOutcome": true,
+    "rootAlgorithm": "sha256-sorted-json-v1",
+    "requiredFields": [
+      "schema", "policyRoot", "decision", "reasonCodes", "candidates",
+      "evidenceRefs", "allowedActions", "blockedActions", "nextAction",
+      "nonClaims", "decisionRoot"
+    ]
+  },
+  "nonClaims": [
+    "advice-does-not-create-write-install-activate-publish-or-invoke-skill",
+    "advice-does-not-capture-or-complete-work",
+    "advice-does-not-grant-profile-capability-credential-network-or-external-write-authority",
+    "candidate-or-model-confidence-is-not-authority",
+    "provider-output-is-not-completion-proof"
+  ]
+}

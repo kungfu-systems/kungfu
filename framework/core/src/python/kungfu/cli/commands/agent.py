@@ -195,23 +195,7 @@ def intent_map(ctx, as_json):
         click.echo(f"{row['id']} [{row['maturity']}]: {row['summary']}")
 
 
-@agent.command(
-    name="work-advisory",
-    help="assess bounded structured signals before proposing durable Work",
-)
-@click.option(
-    "--signals",
-    "signals_file",
-    type=click.File("r", encoding="utf-8"),
-    required=True,
-    help="structured JSON signals; transcripts and hidden reasoning are rejected",
-)
-@click.option("--json", "as_json", is_flag=True, help="machine-readable output")
-@kfd3_api("kungfu.agent.work-advisory")
-@agent_command_context
-def work_advisory_command(ctx, signals_file, as_json):
-    del ctx
-    agent_work_lab_commands.emit_agent_work_advisory(signals_file, as_json)
+agent_work_lab_commands.register_advisories(agent, agent_command_context)
 
 
 @agent.group(

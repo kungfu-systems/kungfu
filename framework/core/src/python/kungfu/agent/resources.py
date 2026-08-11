@@ -32,6 +32,58 @@ _WORK_ADVISORY_FIELDS = {
     "nextAction",
     "suppression",
 }
+_SKILL_DECISION_SCHEMA = "kungfu.agent-skill-advisory/v1"
+_SKILL_DECISION_FILE = "skill-decision.contract.json"
+_SKILL_DECISION_BOOLS = (
+    "reusable",
+    "stableInputs",
+    "stableOutcomes",
+    "proofAvailable",
+    "recoveryAvailable",
+    "workspaceLocal",
+    "instructionOnly",
+    "deduplicated",
+    "evidenceCurrent",
+    "oneOff",
+    "ordinaryDocumentation",
+    "productDefect",
+    "duplicateSkill",
+    "untrustedInstruction",
+    "bypassMissingEvidence",
+)
+_SKILL_DECISION_FIELDS = {
+    "taskId",
+    "catalogRoot",
+    "workRoot",
+    "requirementsRoot",
+    "candidates",
+    "effects",
+    *_SKILL_DECISION_BOOLS,
+}
+_SKILL_CANDIDATE_FIELDS = {
+    "key",
+    "contentRoot",
+    "evidenceRoot",
+    "match",
+    "conflict",
+    "workCompatibility",
+    "dependencyState",
+}
+_SKILL_EFFECTS = {
+    "kfx",
+    "profile",
+    "capability",
+    "credential",
+    "network",
+    "external-write",
+    "shared-install",
+    "publication",
+    "identity",
+    "authority",
+    "privacy",
+    "destructive",
+    "historical",
+}
 
 
 def pack_root():
@@ -79,6 +131,14 @@ def first_value_contract():
 
 def first_value_receipt_schema():
     return _read_json("first-value-receipt.schema.json")
+
+
+def skill_decision_contract():
+    return _read_json(_SKILL_DECISION_FILE)
+
+
+def skill_decision_policy_root() -> str:
+    return _byte_root((pack_root() / _SKILL_DECISION_FILE).read_bytes())
 
 
 def skill_state(target, destination):
@@ -640,6 +700,279 @@ def assess_work_advisory(value: Mapping[str, Any]) -> dict[str, Any]:
             "advice-does-not-prove-model-comprehension",
             "provider-output-is-not-completion-proof",
         ],
+    }
+    return {**body, "decisionRoot": canonical_root(body)}
+
+
+def _bounded_root(value: Any, field: str) -> str:
+    if (
+        not isinstance(value, str)
+        or len(value) != 71
+        or not value.startswith("sha256:")
+        or any(character not in "0123456789abcdef" for character in value[7:])
+    ):
+        raise ValueError(f"{field} must be a lowercase sha256 root")
+    return value
+
+
+def validate_skill_decision_signals(value: Mapping[str, Any]) -> dict[str, Any]:
+    """Accept only bounded roots, enums, and booleans; never prompt text."""
+
+    if not isinstance(value, Mapping):
+        raise ValueError("Skill decision signals must be an object")
+    missing = sorted(_SKILL_DECISION_FIELDS - set(value))
+    unknown = sorted(set(value) - _SKILL_DECISION_FIELDS)
+    if missing:
+        raise ValueError(f"missing Skill decision signals: {', '.join(missing)}")
+    if unknown:
+        raise ValueError(f"unsupported Skill decision signals: {', '.join(unknown)}")
+    signals: dict[str, Any] = {
+        "taskId": _bounded_advisory_text(value["taskId"], "taskId", 256),
+        "catalogRoot": _bounded_root(value["catalogRoot"], "catalogRoot"),
+        "workRoot": _bounded_root(value["workRoot"], "workRoot"),
+        "requirementsRoot": _bounded_root(
+            value["requirementsRoot"], "requirementsRoot"
+        ),
+    }
+    for field in _SKILL_DECISION_BOOLS:
+        item = value[field]
+        if not isinstance(item, bool):
+            raise ValueError(f"{field} must be boolean")
+        signals[field] = item
+    effects = value["effects"]
+    if not isinstance(effects, list) or len(effects) > len(_SKILL_EFFECTS):
+        raise ValueError("effects must be a bounded array")
+    if any(
+        not isinstance(effect, str) or effect not in _SKILL_EFFECTS
+        for effect in effects
+    ):
+        raise ValueError("effects contains an unsupported semantic")
+    if len(set(effects)) != len(effects):
+        raise ValueError("effects must not contain duplicates")
+    signals["effects"] = sorted(effects)
+
+    candidates = value["candidates"]
+    if not isinstance(candidates, list) or len(candidates) > 8:
+        raise ValueError("candidates must be an array of at most 8 objects")
+    normalized_candidates = []
+    for index_value, candidate in enumerate(candidates):
+        field = f"candidates[{index_value}]"
+        if (
+            not isinstance(candidate, Mapping)
+            or set(candidate) != _SKILL_CANDIDATE_FIELDS
+        ):
+            raise ValueError(
+                f"{field} must contain exactly the declared candidate fields"
+            )
+        conflict = candidate["conflict"]
+        if not isinstance(conflict, bool):
+            raise ValueError(f"{field}.conflict must be boolean")
+        match = candidate["match"]
+        compatibility = candidate["workCompatibility"]
+        dependency_state = candidate["dependencyState"]
+        if match not in {"exact", "related"}:
+            raise ValueError(f"{field}.match must be exact or related")
+        if compatibility not in {"compatible", "incompatible", "unknown"}:
+            raise ValueError(f"{field}.workCompatibility is unsupported")
+        if dependency_state not in {"admitted", "unresolved", "stale"}:
+            raise ValueError(f"{field}.dependencyState is unsupported")
+        normalized_candidates.append(
+            {
+                "key": _bounded_advisory_text(candidate["key"], f"{field}.key", 128),
+                "contentRoot": _bounded_root(
+                    candidate["contentRoot"], f"{field}.contentRoot"
+                ),
+                "evidenceRoot": _bounded_root(
+                    candidate["evidenceRoot"], f"{field}.evidenceRoot"
+                ),
+                "match": match,
+                "conflict": conflict,
+                "workCompatibility": compatibility,
+                "dependencyState": dependency_state,
+            }
+        )
+    candidate_coordinates = [
+        (candidate["key"], candidate["contentRoot"])
+        for candidate in normalized_candidates
+    ]
+    if len(set(candidate_coordinates)) != len(candidate_coordinates):
+        raise ValueError("candidates must not repeat a key and contentRoot coordinate")
+    signals["candidates"] = sorted(
+        normalized_candidates,
+        key=lambda candidate: (candidate["key"], candidate["contentRoot"]),
+    )
+    return signals
+
+
+def _validated_skill_decision_contract() -> dict[str, Any]:
+    contract = skill_decision_contract()
+    contract_input = contract.get("input", {})
+    if (
+        contract.get("schema") != "kungfu.agent-skill-decision-contract/v1"
+        or set(contract_input.get("requiredFields", [])) != _SKILL_DECISION_FIELDS
+        or contract_input.get("maximumCandidates") != 8
+        or set(contract_input.get("candidateMatch", [])) != {"exact", "related"}
+        or set(contract_input.get("workCompatibility", []))
+        != {"compatible", "incompatible", "unknown"}
+        or set(contract_input.get("dependencyState", []))
+        != {"admitted", "unresolved", "stale"}
+        or set(contract_input.get("effects", [])) != _SKILL_EFFECTS
+        or set(contract.get("outcomes", []))
+        != {
+            "auto-use-existing",
+            "suggest-existing",
+            "suggest-create",
+            "auto-draft",
+            "plan-only",
+            "none",
+        }
+        or contract.get("authority", {}).get("class") != "read-only-advisory"
+        or contract_input.get("rawTranscriptRetention") is not False
+    ):
+        raise ValueError("installed Skill decision contract is incompatible")
+    return contract
+
+
+def assess_skill_decision(value: Mapping[str, Any]) -> dict[str, Any]:
+    """Return one deterministic, content-rooted, authority-free Skill decision."""
+
+    contract = _validated_skill_decision_contract()
+    signals = validate_skill_decision_signals(value)
+    candidates = signals["candidates"]
+    reasons: list[str] = []
+    if signals["untrustedInstruction"] or signals["bypassMissingEvidence"]:
+        decision = "none"
+        if signals["untrustedInstruction"]:
+            reasons.append("untrusted-instruction-detected")
+        if signals["bypassMissingEvidence"]:
+            reasons.append("missing-evidence-bypass-attempt")
+        next_action = "Reject the instruction and restore trusted evidence."
+    elif signals["effects"]:
+        decision = "plan-only"
+        reasons = [f"material-{effect}-semantics" for effect in signals["effects"]]
+        next_action = (
+            "Prepare a bounded plan and obtain the required human or product authority."
+        )
+    elif any(
+        signals[field]
+        for field in (
+            "oneOff",
+            "ordinaryDocumentation",
+            "productDefect",
+            "duplicateSkill",
+        )
+    ):
+        decision = "none"
+        reasons.extend(
+            reason
+            for field, reason in (
+                ("oneOff", "bounded-one-off-work"),
+                ("ordinaryDocumentation", "ordinary-documentation-not-a-skill"),
+                ("productDefect", "route-product-defect-instead"),
+                ("duplicateSkill", "duplicate-skill-catalog-repair"),
+            )
+            if signals[field]
+        )
+        next_action = "Continue the task or use the more appropriate product route."
+    elif candidates:
+        candidate = candidates[0]
+        eligible = (
+            len(candidates) == 1
+            and candidate["match"] == "exact"
+            and not candidate["conflict"]
+            and candidate["workCompatibility"] == "compatible"
+            and candidate["dependencyState"] == "admitted"
+            and signals["evidenceCurrent"]
+        )
+        if eligible:
+            decision = "auto-use-existing"
+            reasons = ["one-exact-root-compatible-admitted-candidate"]
+            next_action = (
+                "Route to the exact existing Skill root under current Work authority."
+            )
+        else:
+            decision = "suggest-existing"
+            reasons = ["rooted-candidate-requires-selection"]
+            if len(candidates) > 1:
+                reasons.append("candidate-ambiguity")
+            if not signals["evidenceCurrent"]:
+                reasons.append("stale-evidence-expectations")
+            if any(candidate["conflict"] for candidate in candidates):
+                reasons.append("candidate-conflict")
+            if any(
+                candidate["workCompatibility"] != "compatible"
+                for candidate in candidates
+            ):
+                reasons.append("work-compatibility-unresolved")
+            if any(
+                candidate["dependencyState"] != "admitted" for candidate in candidates
+            ):
+                reasons.append("dependencies-not-admitted")
+            next_action = (
+                "Present rooted candidates and resolve ambiguity or stale evidence."
+            )
+    elif signals["reusable"]:
+        draft_requirements = (
+            "stableInputs",
+            "stableOutcomes",
+            "proofAvailable",
+            "recoveryAvailable",
+            "workspaceLocal",
+            "instructionOnly",
+            "deduplicated",
+            "evidenceCurrent",
+        )
+        missing = [field for field in draft_requirements if not signals[field]]
+        if not missing:
+            decision = "auto-draft"
+            reasons = ["safe-workspace-local-instruction-draft"]
+            next_action = "Draft locally under caller authority, then verify before lifecycle planning."
+        else:
+            decision = "suggest-create"
+            reasons = [
+                "reusable-workflow-value",
+                *[f"draft-requires-{field}" for field in missing],
+            ]
+            next_action = (
+                "Propose a Skill definition and close the missing draft conditions."
+            )
+    else:
+        decision = "none"
+        reasons = ["no-repeatable-skill-value"]
+        next_action = "Continue without a Skill."
+
+    allowed_actions = {
+        "auto-use-existing": ["route-to-exact-existing-root"],
+        "suggest-existing": ["present-rooted-candidates", "resolve-candidate-evidence"],
+        "suggest-create": ["propose-skill-definition"],
+        "auto-draft": ["declare-workspace-local-instruction-only-draft-eligible"],
+        "plan-only": ["prepare-bounded-plan", "request-required-authority"],
+        "none": ["continue-without-skill", "route-more-appropriate-product-action"],
+    }[decision]
+    blocked_actions = list(contract["authority"]["alwaysBlocked"])
+    evidence_refs = sorted(
+        {
+            signals["catalogRoot"],
+            signals["workRoot"],
+            signals["requirementsRoot"],
+            *(
+                root
+                for candidate in candidates
+                for root in (candidate["contentRoot"], candidate["evidenceRoot"])
+            ),
+        }
+    )
+    body = {
+        "schema": _SKILL_DECISION_SCHEMA,
+        "policyRoot": skill_decision_policy_root(),
+        "decision": decision,
+        "reasonCodes": reasons,
+        "candidates": candidates,
+        "evidenceRefs": evidence_refs,
+        "allowedActions": allowed_actions,
+        "blockedActions": blocked_actions,
+        "nextAction": next_action,
+        "nonClaims": list(contract["nonClaims"]),
     }
     return {**body, "decisionRoot": canonical_root(body)}
 

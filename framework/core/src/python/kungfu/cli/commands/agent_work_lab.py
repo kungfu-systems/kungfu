@@ -83,6 +83,67 @@ def emit_agent_work_advisory(signals_file, as_json):
     click.echo(f"Decision: {payload['decisionRoot']}")
 
 
+def emit_agent_skill_advisory(signals_file, as_json):
+    try:
+        payload = agent_pack.assess_skill_decision(json.load(signals_file))
+    except (TypeError, ValueError, json.JSONDecodeError) as exc:
+        raise click.ClickException(str(exc)) from exc
+    if as_json:
+        agent_json_output(payload)
+        return
+    click.echo(f"{payload['decision']} · {', '.join(payload['reasonCodes'])}")
+    click.echo(f"Next: {payload['nextAction']}")
+    click.echo(f"Decision: {payload['decisionRoot']}")
+
+
+@kfd3_api("kungfu.agent.work-advisory")
+def work_advisory_command(ctx, signals_file, as_json):
+    del ctx
+    emit_agent_work_advisory(signals_file, as_json)
+
+
+@kfd3_api("kungfu.agent.skill-advisory")
+def skill_advisory_command(ctx, signals_file, as_json):
+    del ctx
+    emit_agent_skill_advisory(signals_file, as_json)
+
+
+def _advisory_signals_option(command):
+    return click.option(
+        "--signals",
+        "signals_file",
+        type=click.File("r", encoding="utf-8"),
+        required=True,
+        help="bounded structured signals; prompt text and transcripts are rejected",
+    )(command)
+
+
+def register_advisories(agent, command_context) -> None:
+    """Register bounded advisory commands outside the oversized Agent root."""
+
+    work_command = command_context(work_advisory_command)
+    work_command = click.option(
+        "--json", "as_json", is_flag=True, help="machine-readable output"
+    )(work_command)
+    work_command = _advisory_signals_option(work_command)
+    work_command = click.command(
+        name="work-advisory",
+        help="assess bounded structured signals before proposing durable Work",
+    )(work_command)
+    agent.add_command(work_command)
+
+    skill_command = command_context(skill_advisory_command)
+    skill_command = click.option(
+        "--json", "as_json", is_flag=True, help="machine-readable output"
+    )(skill_command)
+    skill_command = _advisory_signals_option(skill_command)
+    skill_command = click.command(
+        name="skill-advisory",
+        help="choose one rooted Skill reuse, creation, draft, plan, or none outcome",
+    )(skill_command)
+    agent.add_command(skill_command)
+
+
 @kfc.group(
     name="agent-work-lab",
     cls=PrioritizedCommandGroup,

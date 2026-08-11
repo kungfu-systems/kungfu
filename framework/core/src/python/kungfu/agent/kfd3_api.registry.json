@@ -135,6 +135,11 @@
       "projections": ["commands.json", "provider-skill"]
     },
     {
+      "id": "kungfu.agent.skill-advisory", "surface": "cli",
+      "name": "kungfu agent skill-advisory --signals <signals.json> --json", "purpose": "Return exactly one rooted, authority-free Skill reuse, creation, draft, plan, or none decision from bounded structured signals.",
+      "maturity": "preview", "visibility": "public-agent", "anchor": {"kind": "runtime-click", "symbol": "skill_advisory_command"}, "projections": ["commands.json", "agent-pack-doc", "provider-skill"]
+    },
+    {
       "id": "kungfu.agent.map",
       "surface": "cli",
       "name": "kungfu agent map --json",
