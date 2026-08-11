@@ -1,0 +1,186 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://libkungfu.dev/schemas/shifu/production-graph-build-result-v0.schema.json",
+  "title": "Shifu Production Graph build-result projection v0",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "authority",
+    "outcome",
+    "source",
+    "bindings",
+    "outputs",
+    "retainedEvidenceRoots",
+    "completeness",
+    "failure",
+    "cancellation",
+    "nextAction",
+    "authorityBoundary",
+    "projectionRoot"
+  ],
+  "properties": {
+    "schema": { "const": "shifu.production-graph-build-result/v0" },
+    "authority": { "const": "shifu.projection-only" },
+    "outcome": { "enum": ["qualified", "failed", "cancelled", "timed-out"] },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["revision", "tree"],
+      "properties": {
+        "revision": { "$ref": "production-graph-v0.schema.json#/$defs/gitObject" },
+        "tree": { "$ref": "production-graph-v0.schema.json#/$defs/gitObject" }
+      }
+    },
+    "bindings": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "contractRoot",
+        "graphRoot",
+        "planRoot",
+        "executorPolicyRoot",
+        "executionAdmissionRequestRoot",
+        "executionAdmissionDecisionRoot",
+        "executionReceiptRoot",
+        "idempotencyRoot",
+        "eventRoots"
+      ],
+      "properties": {
+        "contractRoot": { "$ref": "production-graph-v0.schema.json#/$defs/root" },
+        "graphRoot": { "$ref": "production-graph-v0.schema.json#/$defs/root" },
+        "planRoot": { "$ref": "production-graph-v0.schema.json#/$defs/root" },
+        "executorPolicyRoot": { "$ref": "production-graph-v0.schema.json#/$defs/root" },
+        "executionAdmissionRequestRoot": { "$ref": "production-graph-v0.schema.json#/$defs/root" },
+        "executionAdmissionDecisionRoot": { "$ref": "production-graph-v0.schema.json#/$defs/root" },
+        "executionReceiptRoot": { "$ref": "production-graph-v0.schema.json#/$defs/root" },
+        "idempotencyRoot": { "$ref": "production-graph-v0.schema.json#/$defs/root" },
+        "eventRoots": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "$ref": "production-graph-v0.schema.json#/$defs/root" }
+        }
+      }
+    },
+    "outputs": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/output" }
+    },
+    "retainedEvidenceRoots": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "$ref": "production-graph-v0.schema.json#/$defs/root" }
+    },
+    "completeness": { "$ref": "#/$defs/completeness" },
+    "failure": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["observed", "nodeIds", "roots"],
+      "properties": {
+        "observed": { "type": "boolean" },
+        "nodeIds": { "$ref": "#/$defs/nodeIds" },
+        "roots": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "$ref": "production-graph-v0.schema.json#/$defs/root" }
+        }
+      }
+    },
+    "cancellation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["observed", "nodeIds"],
+      "properties": {
+        "observed": { "type": "boolean" },
+        "nodeIds": { "$ref": "#/$defs/nodeIds" }
+      }
+    },
+    "nextAction": { "$ref": "production-graph-v0.schema.json#/$defs/nonEmpty" },
+    "authorityBoundary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "projectionOnly",
+        "canonicalCutClaimed",
+        "buildchainEvidenceClaimed",
+        "kfdClaimed",
+        "artifactStorageClaimed",
+        "publishingClaimed",
+        "signingClaimed",
+        "releaseCutClaimed"
+      ],
+      "properties": {
+        "projectionOnly": { "const": true },
+        "canonicalCutClaimed": { "const": false },
+        "buildchainEvidenceClaimed": { "const": false },
+        "kfdClaimed": { "const": false },
+        "artifactStorageClaimed": { "const": false },
+        "publishingClaimed": { "const": false },
+        "signingClaimed": { "const": false },
+        "releaseCutClaimed": { "const": false }
+      }
+    },
+    "projectionRoot": { "$ref": "production-graph-v0.schema.json#/$defs/root" }
+  },
+  "$defs": {
+    "nodeIds": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": { "$ref": "production-graph-v0.schema.json#/$defs/id" }
+    },
+    "output": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["position", "kind", "digest", "provenance"],
+      "properties": {
+        "position": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind", "index", "nodeId"],
+          "properties": {
+            "kind": { "const": "production-graph-node-result" },
+            "index": { "type": "integer", "minimum": 0 },
+            "nodeId": { "$ref": "production-graph-v0.schema.json#/$defs/id" }
+          }
+        },
+        "kind": { "const": "production-graph-observed-output" },
+        "digest": { "$ref": "production-graph-v0.schema.json#/$defs/root" },
+        "provenance": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["executionReceiptRoot", "evidenceRoot"],
+          "properties": {
+            "executionReceiptRoot": { "$ref": "production-graph-v0.schema.json#/$defs/root" },
+            "evidenceRoot": { "$ref": "production-graph-v0.schema.json#/$defs/root" }
+          }
+        }
+      }
+    },
+    "completeness": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "complete",
+        "expectedNodeCount",
+        "settledNodeCount",
+        "startedNodeCount",
+        "outputCount",
+        "skippedNodeIds",
+        "missingOutputNodeIds"
+      ],
+      "properties": {
+        "status": { "enum": ["complete", "partial", "none"] },
+        "complete": { "type": "boolean" },
+        "expectedNodeCount": { "type": "integer", "minimum": 1 },
+        "settledNodeCount": { "type": "integer", "minimum": 1 },
+        "startedNodeCount": { "type": "integer", "minimum": 0 },
+        "outputCount": { "type": "integer", "minimum": 0 },
+        "skippedNodeIds": { "$ref": "#/$defs/nodeIds" },
+        "missingOutputNodeIds": { "$ref": "#/$defs/nodeIds" }
+      }
+    }
+  }
+}

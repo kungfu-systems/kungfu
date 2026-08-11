@@ -74,6 +74,16 @@ execution; Shifu owns how the task is executed after source checkout.
   dependency-skip events and one rooted receipt. Replaying the same inputs
   returns the existing exact receipt without starting a process. It is not a
   scheduler, and it cannot mutate Work or Assignment authority.
+  `./shifu production-graph:build-result --execution-receipt RECEIPT
+  --output-dir DIR [--expected-receipt-root ROOT]` deterministically settles
+  one exact terminal local-execution receipt into a content-addressed
+  build-result projection and settlement receipt. Successful node output roots
+  become typed-position digests bound to their node evidence and exact run;
+  partial output, failure, cancellation, skipped nodes, retained evidence,
+  completeness, and next action remain explicit. This projection is not a
+  Core Cut or Project Cut, Buildchain or KFD evidence, stored artifact,
+  signature, publication decision, or Release Cut. Those authorities must
+  independently consume and qualify the projection if it is useful to them.
   `./shifu build:core:graph-shadow` is an additive comparison route. After the
   same exact admission is reverified, it runs the unchanged
   `./shifu build:core` command once as the authoritative lane and once through
