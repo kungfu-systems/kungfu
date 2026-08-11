@@ -9,6 +9,7 @@ import { fileURLToPath } from 'node:url';
 
 const ROOT_PATTERN = /^sha256:[0-9a-f]{64}$/;
 const NAME_PATTERN = /^[A-Za-z0-9._-]+\/[A-Za-z0-9._-]+$/;
+const REGION_PATTERN = /^[a-z]{2}(?:-gov)?-[a-z]+-\d+$/;
 
 function root(value) {
   return `sha256:${createHash('sha256').update(value).digest('hex')}`;
@@ -99,7 +100,17 @@ def handler(event, context):
 `;
 }
 
+export function awsPartitionForRegion(region) {
+  if (!REGION_PATTERN.test(region)) {
+    throw new Error('AWS region is invalid');
+  }
+  if (region.startsWith('cn-')) return 'aws-cn';
+  if (region.startsWith('us-gov-')) return 'aws-us-gov';
+  return 'aws';
+}
+
 export function canaryPlan({ repo, region, nonce = 'planned' }) {
+  const resolvedRegion = region ?? 'us-east-1';
   const labels = {
     function: `kungfu-kfx-webhook-${nonce}`,
     api: `kungfu-kfx-webhook-${nonce}`,
@@ -109,7 +120,8 @@ export function canaryPlan({ repo, region, nonce = 'planned' }) {
     schema: 'kungfu.kfx.github-webhook-real-canary-plan/v1',
     mode: 'one-shot-ping-only',
     repo: repo ?? 'OWNER/REPO',
-    region: region ?? 'AWS_CHINA_REGION',
+    region: resolvedRegion,
+    awsPartition: awsPartitionForRegion(resolvedRegion),
     transport: 'api-gateway-http-api-to-lambda',
     resources: labels,
     creates: ['iam-role', 'lambda-function', 'http-api', 'repository-webhook'],
@@ -312,7 +324,7 @@ export async function executeCanary(options) {
       '--principal',
       'apigateway.amazonaws.com',
       '--source-arn',
-      `arn:aws-cn:execute-api:${options.region}:${account}:${api.ApiId}/*/*`,
+      `arn:${plan.awsPartition}:execute-api:${options.region}:${account}:${api.ApiId}/*/*`,
       '--query',
       'Statement',
       '--output',

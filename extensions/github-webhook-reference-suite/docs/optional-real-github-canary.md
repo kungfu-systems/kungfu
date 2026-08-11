@@ -10,7 +10,7 @@ sensitivity: internal
 evidence_grade: A
 review_state: unreviewed
 last_reviewed: 2026-08-10
-ai_provenance: GPT-5 via Codex on 2026-08-10; based on local canary code and linked official GitHub and AWS China documentation; hidden model checkpoints and unobserved cloud execution are not claimed
+ai_provenance: GPT-5 via Codex on 2026-08-10; based on local canary code and linked official GitHub and AWS documentation; hidden model checkpoints and unobserved cloud execution are not claimed
 ---
 
 # Real GitHub webhook canary
@@ -21,23 +21,24 @@ environment. It creates no Issue, comment, branch, or commit: GitHub sends the
 automatic `ping` delivery produced when the temporary repository webhook is
 created.
 
-AWS Lambda Function URLs are unavailable in AWS China Regions, so the canary
-uses a temporary API Gateway HTTP API in front of a temporary Lambda. This
-matches the AWS China guidance for a Lambda HTTP integration. The Lambda accepts
-only `POST` GitHub `ping` requests with a bounded body, delivery ID, and valid
-`X-Hub-Signature-256`; it never logs or returns the payload, signature, or
-secret.
+The canary uses a temporary API Gateway HTTP API in front of a temporary
+Lambda. It derives the AWS ARN partition from the selected region; the current
+real witness targets `us-east-1`. The Lambda accepts only `POST` GitHub `ping`
+requests with a bounded body, delivery ID, and valid `X-Hub-Signature-256`; it
+never logs or returns the payload, signature, or secret.
 
 ## Preflight and plan
 
-Rotate any credential previously exposed by diagnostics before continuing.
-Then verify the intended GitHub repository and AWS China region through
-read-only identity checks. The default invocation only prints a rooted plan:
+Invalidate any credential previously exposed by diagnostics before continuing.
+Then verify the intended GitHub repository, AWS region, and temporary OIDC
+caller identity through read-only checks. Do not use long-lived AWS access keys
+and do not call Lambda configuration/list APIs. The default invocation only
+prints a rooted plan:
 
 ```sh
 ./shifu qualify:kfx-github-webhook-real-canary -- \
   --repo OWNER/REPO \
-  --region cn-northwest-1
+  --region us-east-1
 ```
 
 The plan names every resource class and the teardown/absence checks. It does
@@ -50,7 +51,7 @@ not contact GitHub or AWS.
   --execute \
   --confirm-credential-rotation \
   --repo OWNER/REPO \
-  --region cn-northwest-1 \
+  --region us-east-1 \
   --report product/release/qualification/kfx-webhook-real-canary.json
 ```
 
@@ -97,5 +98,5 @@ and do not install the optional Dogfood bridge unless its exact dependency and
 Finding capture grant are intentionally admitted.
 
 References: [GitHub repository webhook REST API](https://docs.github.com/en/rest/repos/webhooks),
-[AWS China Lambda differences](https://docs.amazonaws.cn/en_us/aws/latest/userguide/lambda.html),
-and [AWS China HTTP API quick create](https://docs.amazonaws.cn/en_us/cli/latest/userguide/cli_apigatewayv2_code_examples.html).
+[AWS API Gateway v2 create-api](https://docs.aws.amazon.com/cli/latest/reference/apigatewayv2/create-api.html),
+and [AWS IAM OIDC roles](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_providers_create_oidc.html).
