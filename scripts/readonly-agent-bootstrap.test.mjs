@@ -109,6 +109,25 @@ function pinnedUvToolExecutable(packageSpec, name) {
   return declaredExecutable(name, result.stdout.trim());
 }
 
+function pinnedClangFormatExecutable() {
+  const candidates = [path.join(ROOT, 'framework/core/.venv/bin/clang-format')];
+  try {
+    candidates.push(executableOnPath('clang-format'));
+  } catch {
+    // The pinned uv fallback below remains available when PATH has no formatter.
+  }
+  for (const candidate of candidates) {
+    if (!fs.existsSync(candidate)) continue;
+    const version = spawnSync(candidate, ['--version'], { encoding: 'utf8' });
+    if (
+      version.status === 0 &&
+      /clang-format version 20\.1\.8(?:\s|$)/u.test(version.stdout)
+    )
+      return declaredExecutable('clang-format', candidate);
+  }
+  return pinnedUvToolExecutable('clang-format==20.1.8', 'clang-format');
+}
+
 function declaredExecutable(name, candidate) {
   if (!candidate) return null;
   try {
@@ -778,7 +797,7 @@ test('declared discovery routes are zero-write in a cold read-only fixture', (t)
     fs.symlinkSync(executable, path.join(tools, name));
   }
   fs.symlinkSync(
-    pinnedUvToolExecutable('clang-format==20.1.8', 'clang-format'),
+    pinnedClangFormatExecutable(),
     path.join(tools, 'clang-format'),
   );
   for (const name of ['cargo', 'corepack', 'curl', 'fnm', 'pnpm', 'uv']) {
