@@ -387,9 +387,36 @@ function main() {
   // Product intent remains Kungfu-owned; Buildchain validates the canonical
   // registry and generated release projections without writing files.
   console.log('\n[verify] stage 0d: KFD-2 release claims registry');
+  const kfd3PrebuildWitness = JSON.parse(
+    fs.readFileSync(
+      path.join(
+        ROOT,
+        '.buildchain',
+        'kfd',
+        'kfd-3',
+        'collaboration-interface.prebuild.json',
+      ),
+      'utf8',
+    ),
+  );
+  const kfd2SourceSha = kfd3PrebuildWitness?.source?.sourceSha;
+  if (typeof kfd2SourceSha !== 'string' || kfd2SourceSha.length === 0) {
+    throw new Error(
+      'KFD-2 release claims check requires source.sourceSha from the canonical KFD-3 prebuild witness',
+    );
+  }
   const kfd2Claims = spawnSync(
     'pnpm',
-    ['exec', 'buildchain', 'kfd', '2', 'product-claims', 'check'],
+    [
+      'exec',
+      'buildchain',
+      'kfd',
+      '2',
+      'product-claims',
+      'check',
+      '--source-sha',
+      kfd2SourceSha,
+    ],
     { encoding: 'utf8', shell: isWin },
   );
   if (kfd2Claims.status === 0)
