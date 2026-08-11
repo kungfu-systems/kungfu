@@ -482,6 +482,7 @@ function verifyCodexPlanWithoutCodex({
       projectPlan.planRoot,
       '--actor',
       'post-sign-smoke',
+      '--execute',
       '--json',
     ],
     { cwd: temporaryRoot, env },
@@ -508,7 +509,7 @@ function verifyCodexPlanWithoutCodex({
   };
 }
 
-function ptyDriverSource() {
+export function ptyDriverSource() {
   return [
     'const nodePty = require(process.argv[1]);',
     'const command = process.argv[2];',
@@ -516,7 +517,9 @@ function ptyDriverSource() {
     'const expected = process.argv[4];',
     'const timeoutMs = Number(process.argv[5]);',
     "let output = '';",
-    "const child = nodePty.spawn(command, args, {name: 'xterm-256color', cols: 120, rows: 40, cwd: process.cwd(), env: process.env});",
+    'const childEnv = {...process.env};',
+    'delete childEnv.KUNGFU_AS_VARIANT;',
+    "const child = nodePty.spawn(command, args, {name: 'xterm-256color', cols: 120, rows: 40, cwd: process.cwd(), env: childEnv});",
     'child.onData((data) => { output += data; if (output.length > 64 * 1024 * 1024) { child.kill(); process.exit(93); } });',
     'const timeout = setTimeout(() => { child.kill(); process.exit(94); }, timeoutMs);',
     'child.onExit(({exitCode}) => { clearTimeout(timeout); if (exitCode !== 0) process.exit(95); if (!output.includes(expected)) process.exit(96); process.stdout.write(output); process.exit(0); });',

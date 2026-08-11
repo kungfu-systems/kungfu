@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import assert from 'node:assert/strict';
+import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -14,6 +15,7 @@ import {
 import {
   bindSignedMacosRuntimeQualification,
   finalizeSignedCliQualification,
+  ptyDriverSource,
   signedMacosRuntimeReceiptRoot,
   verifyCodesignEntitlements,
 } from './verify-cli-surface-qualification.mjs';
@@ -333,9 +335,51 @@ test('signed runtime receipt root changes with runtime evidence', () => {
   );
 });
 
+test('signed runtime PTY driver does not leak its outer Node variant into the CLI child', (t) => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'kungfu-pty-driver-'));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const fixture = path.join(root, 'node-pty-fixture.cjs');
+  fs.writeFileSync(
+    fixture,
+    [
+      'module.exports.spawn = (_command, _args, options) => {',
+      "  const output = options.env.KUNGFU_AS_VARIANT === undefined ? 'KUNGFU_CHILD_VARIANT_UNSET' : `KUNGFU_CHILD_VARIANT_${options.env.KUNGFU_AS_VARIANT}`;",
+      '  return {',
+      '    kill() {},',
+      '    onData(callback) { callback(output); },',
+      '    onExit(callback) { callback({ exitCode: 0 }); },',
+      '  };',
+      '};',
+    ].join('\n'),
+  );
+  const result = spawnSync(
+    process.execPath,
+    [
+      '-e',
+      ptyDriverSource(),
+      fixture,
+      '/fixture/kungfu',
+      JSON.stringify(['agent-work-lab', 'autoplay']),
+      'KUNGFU_CHILD_VARIANT_UNSET',
+      '1000',
+    ],
+    {
+      encoding: 'utf8',
+      env: { ...process.env, KUNGFU_AS_VARIANT: 'node' },
+    },
+  );
+  assert.equal(result.status, 0, result.stderr || result.stdout);
+  assert.equal(result.stdout, 'KUNGFU_CHILD_VARIANT_UNSET');
+});
+
 test('post-sign Codex planning is credential-free and selects only the fixture profile', () => {
   const source = fs.readFileSync(SCRIPT, 'utf8');
+  const starterCreate = source.slice(
+    source.indexOf("'starter-create'"),
+    source.indexOf('const plan =', source.indexOf("'starter-create'")),
+  );
   assert.match(source, /!\['CODEX_HOME', 'OPENAI_API_KEY'\]\.includes\(key\)/u);
+  assert.match(starterCreate, /'--execute'/u);
   assert.match(source, /agent\.defaultRuntimeProfile/u);
   assert.match(source, /'run',[\s\S]*?'codex',[\s\S]*?'--plan'/u);
   assert.match(source, /realCodexRequired: false/u);
