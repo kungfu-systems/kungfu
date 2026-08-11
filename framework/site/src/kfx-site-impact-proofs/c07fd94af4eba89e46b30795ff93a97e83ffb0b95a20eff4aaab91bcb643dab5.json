@@ -1,7 +1,7 @@
 {
   "contract": "kungfu.kfx-site-impact-proof/v1",
   "baseRevision": "52230bcb2ed98cd83e4da4d6d30974f69e480f7f",
-  "changeRoot": "sha256:ccd451255af2dc7b75b528bbaa9de8f1c70697d37c9ef83eaf2393745c29ab30",
+  "changeRoot": "sha256:efc313b1865fe6e4dcb0b85809c1603dab5a9f53c822906729b172449a724fca",
   "changes": [
     {
       "baseContentRoot": "sha256:a34d83865c144128bce57739af166042aa2abf22273e06e1629370931417e8aa",
@@ -11,19 +11,19 @@
     },
     {
       "baseContentRoot": "sha256:a442d29579ebea2c769d5be08caeefd0374620fa5d30fe722b625570ef362358",
-      "contentRoot": "sha256:2261822b93fe0f82c5575d276fc10ddb8765a73ec6ba39f47f236a15ca532d24",
+      "contentRoot": "sha256:31b8589b959c9cf02d6d6cb4fed56d34f2e255703a2ecdd89f6e7a18f1f444ce",
       "path": ".buildchain/kfd/kfd-2/release-claims.json",
       "status": "modified"
     },
     {
       "baseContentRoot": "sha256:83a0edb0972ed7e359753a37498b3c294dbe5f521873b7ad7e43e72de1e97f1a",
-      "contentRoot": "sha256:80e294756520a6eb6f14e9561bef117007ba37ec8cbdc41b7f3dd81e977f573d",
+      "contentRoot": "sha256:4f03b0e5dc987bf27f84cf0e6fddcf2b7a58e6462c96879a7f330773a0ec3d14",
       "path": ".buildchain/kfd/kfd-3/collaboration-interface.prebuild.json",
       "status": "modified"
     },
     {
       "baseContentRoot": "sha256:e24dbba220767159d210ffeeb57271c6ac69a71d53c46a045da5a49024a4c3bc",
-      "contentRoot": "sha256:5c3711101bfa506538b35558394bde07ee626b3ce7e851057b14ac43d89edbb3",
+      "contentRoot": "sha256:599c5c573ed5f4100f174e8af25e22cc701d1af076be12b0c088b236d300c504",
       "path": ".buildchain/kfd/support-matrix.json",
       "status": "modified"
     },
@@ -35,13 +35,13 @@
     },
     {
       "baseContentRoot": "sha256:a442d29579ebea2c769d5be08caeefd0374620fa5d30fe722b625570ef362358",
-      "contentRoot": "sha256:2261822b93fe0f82c5575d276fc10ddb8765a73ec6ba39f47f236a15ca532d24",
+      "contentRoot": "sha256:31b8589b959c9cf02d6d6cb4fed56d34f2e255703a2ecdd89f6e7a18f1f444ce",
       "path": "developer/sdk/kfd/kfd-2/release-claims.json",
       "status": "modified"
     },
     {
       "baseContentRoot": "sha256:e24dbba220767159d210ffeeb57271c6ac69a71d53c46a045da5a49024a4c3bc",
-      "contentRoot": "sha256:5c3711101bfa506538b35558394bde07ee626b3ce7e851057b14ac43d89edbb3",
+      "contentRoot": "sha256:599c5c573ed5f4100f174e8af25e22cc701d1af076be12b0c088b236d300c504",
       "path": "developer/sdk/kfd/support-matrix.json",
       "status": "modified"
     },
@@ -153,5 +153,5 @@
     "publicContractUnchanged": true,
     "readerJourneyUnchanged": true
   },
-  "proofRoot": "sha256:907e56100b895c52f00df087d5090582e56ec5211814772a2662ddc3d90a7c7c"
+  "proofRoot": "sha256:c07fd94af4eba89e46b30795ff93a97e83ffb0b95a20eff4aaab91bcb643dab5"
 }
