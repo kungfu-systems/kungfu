@@ -3,7 +3,7 @@
   "contract": "kungfu-buildchain-dev-delivery-warrant-queue",
   "repository": "kungfu-systems/kungfu",
   "protectedBase": "dev/v4/v4.0",
-  "generation": 1041,
+  "generation": 1042,
   "fencingCounter": 273,
   "policy": {
     "agingSeconds": 900,
@@ -10050,8 +10050,35 @@
         "fencingToken": "sha256:9776a57d628f8dfec357eb39cfd3daf33990aadc630a07874d510158c9ba4f63",
         "leaseGeneration": 273
       }
+    },
+    {
+      "repository": "kungfu-systems/kungfu",
+      "protectedBase": "dev/v4/v4.0",
+      "pullRequestNumber": 2953,
+      "assignmentRoot": "sha256:58506c5cac5d333043eb300486fa8bd4a387b3713229c9d193a02fcf9fc7e828",
+      "initiativeRoot": "sha256:bfff817933e5a5ad693e4b902a84f6cc3a251235dd7377cb4091d92f805fa7ff",
+      "sourceIdentityRoot": "sha256:88f0789ac494ae2b0232a37e9527f018cab3b46cabf0167e34da0edff9c009ee",
+      "deliveryClass": "native-proof-required",
+      "identitySemantics": "chained-attempt-v2",
+      "predecessorCandidateId": "sha256:6c90c5a8e23c67730b02ac0327acc6c7b628e94f1d17dee0e09ce4f4bb8621ba",
+      "candidateId": "sha256:b805ecab9cb14de4ff4947374c990ee281db08728ed788b6fd9b7ea9aeb454b0",
+      "sourceHead": "8e6ca309586c8aa8fd519238b92dca83afddf714",
+      "sourcePatchRoot": "sha256:e61a4169eead4b8d51a6c179c29049c019361fadd82d771b326dc1a277196086",
+      "sourceProofRoot": "sha256:279ec6a1d5c0f3234c03db7c6027337a7e52e962c6b1138d3f8af6a66f7cdd40",
+      "planRoot": "sha256:b35c33a1d55266ed30d62a2946ed7aacde460fdcf9b3690b0b6f313c2f1b745c",
+      "closureRoot": "sha256:cccac6fb74fb3ab2478aa3e56cda7b47e6e301be63519f0ee992aeb3fea2eea6",
+      "dependencyRoot": "sha256:048a43b813a172c6978fc880a0702dcd1ea36147287cce5241059d7ef6613681",
+      "toolchainRoot": "sha256:2ecb07894954a2e0de022615d4561e5ba3ae68376401941ecff77be03cd75a0f",
+      "sourceWorkflowRunId": 0,
+      "priority": "ordinary",
+      "enqueuedAt": "2026-08-11T07:07:49.293Z",
+      "updatedAt": "2026-08-11T07:07:49.293Z",
+      "attempts": 1,
+      "recoveries": 0,
+      "status": "queued",
+      "terminal": null
     }
   ],
-  "updatedAt": "2026-08-11T07:06:41.735Z",
-  "stateRoot": "sha256:6d6303f35b24e132d89bff17c140296df1f8f05bf67cf2652e0a56298d1c1032"
+  "updatedAt": "2026-08-11T07:07:49.293Z",
+  "stateRoot": "sha256:e65b8c3fb3c0c4415afbda8a2530a296a679e69980e1ed6b51ada8641a0abf72"
 }
