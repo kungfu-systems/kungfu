@@ -163,19 +163,20 @@ export function sourceChangedFiles() {
   /** @type {Set<string>} */
   const files = new Set();
   for (const args of [
-    ['diff', '--name-only', '--diff-filter=ACM', `${base.sha}...HEAD`],
-    ['diff', '--name-only', '--diff-filter=ACM'],
-    ['diff', '--cached', '--name-only', '--diff-filter=ACM'],
+    [
+      'diff',
+      '--name-only',
+      '--no-renames',
+      '--diff-filter=ACDMR',
+      `${base.sha}...HEAD`,
+    ],
+    ['diff', '--name-only', '--no-renames', '--diff-filter=ACDMR'],
+    ['diff', '--cached', '--name-only', '--no-renames', '--diff-filter=ACDMR'],
     ['ls-files', '--others', '--exclude-standard'],
   ]) {
     for (const file of git(args).split('\n')) {
       const rel = file.trim();
-      if (
-        rel &&
-        !isLocalQualificationRuntime(rel) &&
-        fs.existsSync(path.join(ROOT, rel))
-      )
-        files.add(rel);
+      if (rel && !isLocalQualificationRuntime(rel)) files.add(rel);
     }
   }
   console.log(
@@ -492,8 +493,15 @@ export function resolveKfdProductGateCheckedAt({
 /**
  * @param {string[]} files
  * @param {string} [evidenceBaseCommit]
+ * @param {string[]} [deletedFiles]
  */
-export function sourceAcceptancePlan(files, evidenceBaseCommit = '') {
+export function sourceAcceptancePlan(
+  files,
+  evidenceBaseCommit = '',
+  deletedFiles = [],
+) {
+  const deleted = new Set(deletedFiles);
+  const materialFiles = files.filter((file) => !deleted.has(file));
   const settlementPublicationPresent = fs.existsSync(
     path.join(ROOT, 'framework/project-cut/publication.contract.json'),
   );
@@ -629,6 +637,12 @@ export function sourceAcceptancePlan(files, evidenceBaseCommit = '') {
     ],
     ['agent session contract', 'scripts/check-agent-session-contract.mjs'],
     ['CLI catalog parity', 'scripts/check-cli-catalog-parity.mjs'],
+    [
+      'KFX Site Bundle impact dispositions',
+      'framework/site/tooling/check-kfx-site-impact.mjs',
+      ...(evidenceBaseCommit ? ['--base', evidenceBaseCommit] : []),
+      ...files.flatMap((file) => ['--changed-file', file]),
+    ],
     [
       'deprecation lifecycle authority',
       'framework/deprecation/deprecation-lifecycle.mjs',
@@ -865,6 +879,7 @@ export function sourceAcceptancePlan(files, evidenceBaseCommit = '') {
               'scripts/upgrade-publication-admission.test.mjs',
               'scripts/check-agent-session-contract.test.mjs',
               'scripts/check-cli-catalog-parity.test.mjs',
+              'scripts/check-kfx-site-impact.test.mjs',
               'framework/deprecation/deprecation-surface-discovery.test.mjs',
               'scripts/check-fact-cut-kernel-contract.test.mjs',
               'scripts/check-temporal-relation-contract.test.mjs',
@@ -990,7 +1005,7 @@ export function sourceAcceptancePlan(files, evidenceBaseCommit = '') {
     if (nestedContractIndex >= 0) plan.splice(nestedContractIndex, 1);
   }
 
-  const web = files.filter(
+  const web = materialFiles.filter(
     (file) =>
       WEB.test(file) &&
       !GENERATED_EVIDENCE_ROOTS.some((root) => file.startsWith(root)),
@@ -1009,7 +1024,7 @@ export function sourceAcceptancePlan(files, evidenceBaseCommit = '') {
     });
   }
 
-  const guiTypeScript = files.filter(
+  const guiTypeScript = materialFiles.filter(
     (file) => file.startsWith('framework/gui/src/') && /\.tsx?$/.test(file),
   );
   if (guiTypeScript.length && !coldReadOnlySourceAcceptance) {
@@ -1025,7 +1040,7 @@ export function sourceAcceptancePlan(files, evidenceBaseCommit = '') {
     });
   }
 
-  const python = files.filter((file) => file.endsWith('.py'));
+  const python = materialFiles.filter((file) => file.endsWith('.py'));
   if (python.length) {
     const format = sourcePythonCommand([
       'format',
@@ -1068,7 +1083,7 @@ export function sourceAcceptancePlan(files, evidenceBaseCommit = '') {
     });
   }
 
-  const cpp = files.filter((file) => CPP.test(file));
+  const cpp = materialFiles.filter((file) => CPP.test(file));
   if (cpp.length) {
     const formatter = sourceClangFormatCommand([
       '-style=file',
@@ -1167,7 +1182,14 @@ function main() {
         '[source-acceptance] cold read-only lane: the installed TypeScript dependency graph is absent; normal source acceptance and CI enforce tooling type checks.',
       );
     }
-    for (const step of sourceAcceptancePlan(files, sourceMergeBase().sha))
+    const deletedFiles = files.filter(
+      (file) => !fs.existsSync(path.join(ROOT, file)),
+    );
+    for (const step of sourceAcceptancePlan(
+      files,
+      sourceMergeBase().sha,
+      deletedFiles,
+    ))
       runSourceAcceptanceStep(step, runtime.env);
   } catch (error) {
     failure = error;

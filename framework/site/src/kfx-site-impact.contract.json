@@ -1,0 +1,204 @@
+{
+  "contract": "kungfu.kfx-site-impact/v1",
+  "declarationPath": "framework/site/src/kfx-site-bundle.source.json",
+  "proofDirectory": "framework/site/src/kfx-site-impact-proofs",
+  "ownership": {
+    "selectors": [
+      { "kind": "contains", "value": "kfx" },
+      { "kind": "prefix", "value": "extensions/" }
+    ],
+    "excludedSelectors": [
+      { "kind": "prefix", "value": "framework/site/" },
+      {
+        "kind": "exact",
+        "value": "framework/site/tooling/check-kfx-site-impact.mjs"
+      },
+      { "kind": "exact", "value": "scripts/check-kfx-site-impact.test.mjs" }
+    ]
+  },
+  "impactRules": [
+    {
+      "id": "public-kfx-contract",
+      "selectors": [
+        { "kind": "exact", "value": "config/kungfu-kfx.contract.json" }
+      ],
+      "facets": [
+        "architecture",
+        "registry-admission-lifecycle",
+        "capabilities"
+      ],
+      "disposition": "semantic-update-required"
+    },
+    {
+      "id": "public-typescript-sdk",
+      "selectors": [
+        { "kind": "exact", "value": "framework/kfx/src/index.ts" },
+        { "kind": "exact", "value": "framework/api/src/capability/kfx-host.ts" }
+      ],
+      "facets": ["package-facets", "capabilities", "sdk-cli"],
+      "disposition": "semantic-update-required"
+    },
+    {
+      "id": "typescript-kfx-implementation",
+      "selectors": [
+        { "kind": "prefix", "value": "framework/kfx/" },
+        { "kind": "prefix", "value": "framework/gui/src/kfx-availability/" },
+        { "kind": "contains", "value": "/kfx-loader" },
+        { "kind": "contains", "value": "/kfx-host-descriptor" }
+      ],
+      "facets": ["architecture", "package-facets", "sdk-cli"],
+      "disposition": "proof-eligible"
+    },
+    {
+      "id": "public-native-kfx-headers",
+      "selectors": [
+        {
+          "kind": "prefix",
+          "value": "framework/core/src/libkungfu/include/kungfu/runtime/kfx/"
+        }
+      ],
+      "facets": [
+        "architecture",
+        "registry-admission-lifecycle",
+        "capabilities"
+      ],
+      "disposition": "semantic-update-required"
+    },
+    {
+      "id": "native-kfx-implementation",
+      "selectors": [
+        {
+          "kind": "prefix",
+          "value": "framework/core/src/libkungfu/src/runtime/kfx/"
+        }
+      ],
+      "facets": [
+        "architecture",
+        "registry-admission-lifecycle",
+        "capabilities"
+      ],
+      "disposition": "proof-eligible"
+    },
+    {
+      "id": "public-kfx-cli",
+      "selectors": [
+        {
+          "kind": "prefix",
+          "value": "framework/core/src/python/kungfu/cli/commands/kfx"
+        }
+      ],
+      "facets": [
+        "package-facets",
+        "registry-admission-lifecycle",
+        "agent-first-authoring",
+        "sdk-cli"
+      ],
+      "disposition": "semantic-update-required"
+    },
+    {
+      "id": "installed-kfx-authoring-surface",
+      "selectors": [
+        {
+          "kind": "prefix",
+          "value": "framework/core/src/python/kungfu/kfx_authoring_assets/"
+        },
+        {
+          "kind": "prefix",
+          "value": "developer/sdk/templates/extension/"
+        }
+      ],
+      "facets": ["package-facets", "agent-first-authoring", "sdk-cli"],
+      "disposition": "semantic-update-required"
+    },
+    {
+      "id": "python-kfx-implementation",
+      "selectors": [
+        {
+          "kind": "prefix",
+          "value": "framework/core/src/python/kungfu/kfx_"
+        }
+      ],
+      "facets": [
+        "registry-admission-lifecycle",
+        "capabilities",
+        "agent-first-authoring",
+        "sdk-cli"
+      ],
+      "disposition": "proof-eligible"
+    },
+    {
+      "id": "kfx-qualification-surface",
+      "selectors": [
+        { "kind": "prefix", "value": "docs/qualification/kfx" },
+        { "kind": "prefix", "value": "docs/qualification/python-kfx" }
+      ],
+      "facets": ["trust", "sdk-cli", "qualification-status"],
+      "disposition": "semantic-update-required"
+    },
+    {
+      "id": "kfx-tooling",
+      "selectors": [
+        { "kind": "prefix", "value": "scripts/generate-kfx" },
+        { "kind": "prefix", "value": "scripts/run-kfx" },
+        { "kind": "prefix", "value": "scripts/run-native-kfx" },
+        { "kind": "prefix", "value": "framework/kfx/tooling/" }
+      ],
+      "facets": ["agent-first-authoring", "sdk-cli", "qualification-status"],
+      "disposition": "proof-eligible"
+    },
+    {
+      "id": "kfx-test-fixtures",
+      "selectors": [
+        {
+          "kind": "prefix",
+          "value": "framework/core/src/libkungfu/tests/native_kfx"
+        },
+        {
+          "kind": "prefix",
+          "value": "framework/core/src/libkungfu/tests/fixtures/native_kfx"
+        },
+        { "kind": "contains", "value": "/tests/kfx" },
+        { "kind": "contains", "value": "/tests/fixtures/kfx" }
+      ],
+      "facets": [
+        "architecture",
+        "registry-admission-lifecycle",
+        "capabilities",
+        "qualification-status"
+      ],
+      "disposition": "proof-eligible"
+    },
+    {
+      "id": "github-webhook-reference-implementation",
+      "selectors": [
+        {
+          "kind": "prefix",
+          "value": "extensions/github-webhook-reference-suite/"
+        }
+      ],
+      "facets": [
+        "trust",
+        "profiles-suites",
+        "github-webhook-reference",
+        "qualification-status"
+      ],
+      "disposition": "semantic-update-required"
+    },
+    {
+      "id": "public-extension-manifest",
+      "selectors": [
+        { "kind": "suffix", "value": "/kungfu.kfx.json" }
+      ],
+      "facets": ["package-facets", "capabilities", "profiles-suites"],
+      "disposition": "semantic-update-required"
+    },
+    {
+      "id": "extension-implementation",
+      "selectors": [
+        { "kind": "prefix", "value": "extensions/" }
+      ],
+      "facets": ["package-facets", "capabilities", "profiles-suites"],
+      "disposition": "proof-eligible"
+    }
+  ]
+}
