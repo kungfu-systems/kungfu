@@ -192,6 +192,73 @@ try {
   );
   broker.restore();
 
+  const timeoutService = createGitHubWebhookService({
+    evidence: evidence(),
+    credentialBroker: {
+      verify: () => new Promise(() => {}),
+    },
+    repositories: ['kungfu-systems/kungfu'],
+    processEvent: async () => {},
+    clock,
+  });
+  timeoutService.host.start();
+  timeoutService.host.ready();
+  const timeoutBody = Buffer.from(JSON.stringify(fixturePayload()));
+  const timedOut = await timeoutService.host.intake({
+    method: 'POST',
+    path: '/github/events',
+    headers: {
+      'content-type': 'application/json',
+      'x-github-event': 'issues',
+      'x-github-delivery': 'delivery-timeout-1',
+    },
+    body: timeoutBody,
+    signature: broker.sign(timeoutBody),
+    replayKey: 'delivery-timeout-1',
+  });
+  assert.equal(timedOut.receipt.code, 'KF_KFX_WEBHOOK_TIMEOUT');
+
+  let releaseVerification;
+  const revokedProcessed = [];
+  const revocationService = createGitHubWebhookService({
+    evidence: evidence(),
+    credentialBroker: {
+      verify: () =>
+        new Promise((resolve) => {
+          releaseVerification = resolve;
+        }),
+    },
+    repositories: ['kungfu-systems/kungfu'],
+    processEvent: async (event) => revokedProcessed.push(event),
+    clock,
+  });
+  revocationService.host.start();
+  revocationService.host.ready();
+  const revocationBody = Buffer.from(JSON.stringify(fixturePayload()));
+  const revocationPending = revocationService.host.intake({
+    method: 'POST',
+    path: '/github/events',
+    headers: {
+      'content-type': 'application/json',
+      'x-github-event': 'issues',
+      'x-github-delivery': 'delivery-revoked-1',
+    },
+    body: revocationBody,
+    signature: broker.sign(revocationBody),
+    replayKey: 'delivery-revoked-1',
+  });
+  await Promise.resolve();
+  revocationService.host.updateDependencies(
+    [{ ...evidence().dependencies[0], authorized: false }],
+    rooted('e'),
+  );
+  releaseVerification(true);
+  const revoked = await revocationPending;
+  assert.equal(revoked.accepted, false);
+  assert.equal(revoked.receipt.code, 'KF_KFX_SERVICE_DEPENDENCY_DORMANT');
+  await revocationService.queue.flush();
+  assert.equal(revokedProcessed.length, 0);
+
   lifecycle.push(
     service.host.crash(),
     service.host.restart(),
@@ -309,6 +376,8 @@ try {
       queueSaturation: 'KF_GITHUB_QUEUE_FULL',
       restartReplay: afterRestart.body.receipt.code,
       processRecoveryDuplicate: recoveredDuplicate.event.code,
+      timeout: timedOut.receipt.code,
+      dependencyRevocation: revoked.receipt.code,
     },
     lifecycle: lifecycle.map((row) => ({
       operation: row.operation,
