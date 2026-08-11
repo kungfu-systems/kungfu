@@ -113,6 +113,7 @@
     "xinfa:wasm:check": "node scripts/require-shifu.mjs xinfa:wasm:check && node crates/xinfa/tooling/qualify-wasm.mjs",
     "xinfa:dogfood": "node scripts/require-shifu.mjs xinfa:dogfood && node crates/xinfa/tooling/dogfood.mjs",
     "kfd:verify-owned-fixtures": "node scripts/require-shifu.mjs kfd:verify-owned-fixtures && node scripts/verify-kfd-owned-fixtures.mjs",
+    "test:kfd2-release-claims-source-binding": "node scripts/require-shifu.mjs test:kfd2-release-claims-source-binding && node --test scripts/verify-kfd2-source-binding.test.mjs",
     "check:kfd-agent-runtime-boundary": "node scripts/require-shifu.mjs check:kfd-agent-runtime-boundary && node scripts/check-kfd-agent-runtime-boundary.mjs",
     "kfd:agent-runtime:qualify": "node scripts/require-shifu.mjs kfd:agent-runtime:qualify && node framework/core/tests/qualification/kfd-agent-runtime/run.mjs",
     "test:kfd-agent-hub-20": "node scripts/require-shifu.mjs test:kfd-agent-hub-20 && node --test tests/qualification/agent-hub-20/qualification.test.mjs && PYTHONPATH=framework/core/src/python uv run --project framework/core --frozen pytest -q framework/core/tests/python/test_agent_hub_profile.py",
