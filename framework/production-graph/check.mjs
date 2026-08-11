@@ -161,6 +161,18 @@ function verifyContractBoundary(contract) {
   });
   assert.equal(contract.localExecutor.requiresExactAdmission, true);
   assert.equal(contract.localExecutor.replayStartsNodes, false);
+  assert.equal(
+    contract.localCiParity.command,
+    './shifu production-graph:local-ci-parity',
+  );
+  assert.deepEqual(contract.localCiParity.platforms, ['ubuntu']);
+  assert.equal(contract.localCiParity.conformanceAdmissionOnly, true);
+  assert.equal(contract.localCiParity.authority, 'additive-shadow-only');
+  assert.equal(contract.localCiParity.approvalAuthority, false);
+  assert.equal(contract.localCiParity.mergeAuthority, false);
+  assert.equal(contract.localCiParity.publishingAuthority, false);
+  assert.equal(contract.localCiParity.releaseAuthority, false);
+  assert.equal(contract.localCiParity.weakensChecks, false);
   assert.equal(contract.localExecutor.schedulerAuthority, false);
   assert.equal(contract.localExecutor.workAuthorityMutations, false);
   assert.equal(
@@ -229,6 +241,8 @@ function verifierRoot() {
       'framework/production-graph/shadow-build-core/index.test.mjs',
       'framework/production-graph/result-projection/index.mjs',
       'framework/production-graph/result-projection/index.test.mjs',
+      'framework/production-graph/local-ci-parity/index.mjs',
+      'framework/production-graph/local-ci-parity/index.test.mjs',
       'docs/shifu/examples/production-graph/result-projection/cancellation.fixture.json',
       'docs/shifu/examples/production-graph/result-projection/failure.fixture.json',
       'docs/shifu/examples/production-graph/result-projection/partial-output.fixture.json',

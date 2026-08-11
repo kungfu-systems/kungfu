@@ -50,6 +50,10 @@ export const SCHEMA_PATHS = Object.freeze({
   buildResult: 'docs/shifu/schema/production-graph-build-result-v0.schema.json',
   buildResultSettlementReceipt:
     'docs/shifu/schema/production-graph-build-result-settlement-receipt-v0.schema.json',
+  localCiParityReceipt:
+    'docs/shifu/schema/production-graph-local-ci-parity-receipt-v0.schema.json',
+  localCiParityReport:
+    'docs/shifu/schema/production-graph-local-ci-parity-report-v0.schema.json',
 });
 
 const readJson = (root, relative) =>

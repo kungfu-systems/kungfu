@@ -84,6 +84,19 @@ execution; Shifu owns how the task is executed after source checkout.
   Core Cut or Project Cut, Buildchain or KFD evidence, stored artifact,
   signature, publication decision, or Release Cut. Those authorities must
   independently consume and qualify the projection if it is useful to them.
+  `./shifu production-graph:local-ci-parity run --lane protected-ci
+  --output-dir DIR` runs one fixture-safe, conformance-admitted Production
+  Graph slice in the additive Linux shadow job of the protected PR workflow.
+  The retained artifact binds the exact source, contract, graph, plan,
+  verification, admission, executor policy, node set, events, outputs, local
+  execution receipt, and build-result roots. From the exact source, use
+  `./shifu production-graph:local-ci-parity replay --artifact-dir CI_DIR
+  --output-dir LOCAL_DIR` to execute the same slice locally and emit a rooted
+  parity report. Only platform, architecture, and Node version are declared
+  environment variance; every semantic-root difference blocks parity. The
+  lane has read-only repository permission, uses synthetic conformance
+  evidence that grants no real Work authority, and cannot approve, merge,
+  publish, release, or weaken another check.
   `./shifu build:core:graph-shadow` is an additive comparison route. After the
   same exact admission is reverified, it runs the unchanged
   `./shifu build:core` command once as the authoritative lane and once through
