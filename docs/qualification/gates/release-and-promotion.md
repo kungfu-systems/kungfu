@@ -6,14 +6,37 @@ Each section is bound to the registry id by the catalog meta gate.
 
 ## Required development delivery Warrant
 
-Targeted development `workflow_run` deliveries require one exact, bounded
-Buildchain Warrant before queue admission. The Warrant binds the pull request
-head, reusable source proof, integration base, required checks, and lease; a
-protected terminal workflow closes it after merge or dequeue. Manual dispatch
-and cadence patrol remain outside that authority and run with Warrant mode off.
+Targeted development delivery is two-phase. Source acceptance and the
+base-independent affected-closure descriptor run first. Once the exact PR head
+is ready and approved, Buildchain may select it for a TTL-bounded
+**provisional** Warrant with a fencing token. Other PRs continue source work and
+CI, but they cannot acquire queue admission ahead of that active Warrant.
 
-This gate grants neither approval nor publication authority and does not enable
-paid runner campaigns. Shared AWS Windows Burst and macOS campaigns remain
+Only the provisional owner runs the expensive native command. Buildchain
+composes the immutable PR head with the current protected dev head, heartbeats
+the lease while Kungfu runs both affected-native partitions and any selected
+SDK, Shifu-workspace, or KFD gates, and fails closed on source drift, conflicts,
+heartbeat loss, cancellation, timeout, or native failure. A successful command
+publishes the existing `affected-native / linux` required context for that exact
+source head; Buildchain then atomically binds its native proof and upgrades the
+same fenced generation to a **qualified** Warrant before entering GitHub's merge
+queue. `Queue admission lease` remains non-successful until that upgrade.
+
+The proof identity is bound to semantic source, affected closure, dependency
+graph, toolchain, and shard evidence. Dev-base or replay movement is classified
+separately: a graph-known non-overlapping delta reuses the proof, while overlap
+or an unknown graph triggers a bounded fresh native attempt. The merge-group
+workflow independently requires the qualified Warrant and revalidates or reuses
+the exact source-bound proof against its replay. A protected terminal workflow
+closes the Warrant after merge or dequeue; expired or failed generations are
+released by Buildchain fencing and the next deterministic candidate is woken.
+
+`workflow_run`, ready-label, and review events recover targeted delivery. An
+executing targeted manual dispatch uses the same required path; dry-run manual
+dispatch and cadence patrol remain outside Warrant mutation.
+
+This mechanism grants neither approval nor publication authority and does not
+weaken branch protection or enable paid runner campaigns. Shared AWS Windows Burst and macOS campaigns remain
 separately governed and disabled unless explicitly activated by their own
 resource authority.
 

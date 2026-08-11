@@ -481,15 +481,135 @@ jobs:
           } >> "$GITHUB_OUTPUT"
           echo "Exact PR or same-SHA queue proof reuse=${reuse}."
 
-  affected_native_shards:
-    name: affected-native shard ${{ matrix.partition }} of 2 / linux
+  warrant_admission:
+    name: Provisional Delivery Warrant admission / linux
     needs:
       - candidate_preflight
       - proof_probe
     if: >-
       ${{
         needs.candidate_preflight.result == 'success' &&
+        needs.proof_probe.result == 'success'
+      }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: read
+    steps:
+      - name: Admit the bounded two-phase migration bootstrap
+        id: migration
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          bootstrap=false
+          if [ "$GITHUB_EVENT_NAME" != "pull_request" ]; then
+            echo "bootstrap=$bootstrap" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          base_sha="$(jq -r '.pull_request.base.sha' "$GITHUB_EVENT_PATH")"
+          head_sha="$(jq -r '.pull_request.head.sha' "$GITHUB_EVENT_PATH")"
+          base_controller="$RUNNER_TEMP/base-dev-pr-auto-merge.yml"
+          head_controller="$RUNNER_TEMP/head-dev-pr-auto-merge.yml"
+          head_native="$RUNNER_TEMP/head-affected-native-pr.yml"
+          gh api --method GET -H "Accept: application/vnd.github.raw+json" \
+            "repos/$GITHUB_REPOSITORY/contents/.github/workflows/dev-pr-auto-merge.yml" \
+            -f ref="$base_sha" > "$base_controller"
+          gh api --method GET -H "Accept: application/vnd.github.raw+json" \
+            "repos/$GITHUB_REPOSITORY/contents/.github/workflows/dev-pr-auto-merge.yml" \
+            -f ref="$head_sha" > "$head_controller"
+          gh api --method GET -H "Accept: application/vnd.github.raw+json" \
+            "repos/$GITHUB_REPOSITORY/contents/.github/workflows/affected-native-pr.yml" \
+            -f ref="$head_sha" > "$head_native"
+
+          runtime_ref=6057d71142dfc6a9d78872e316eca87d9510e176
+          if ! grep -Fq 'dev-delivery:native-under-warrant' "$base_controller" && \
+             grep -Fq 'dev-delivery:native-under-warrant' "$head_controller" && \
+             grep -Fq "dev-pr-auto-merge.yml@$runtime_ref" "$head_controller" && \
+             grep -Fq 'delivery-warrant-mode:' "$head_controller" && \
+             grep -Fq 'warrant_admission:' "$head_native" && \
+             grep -Fq 'dev warrant observe' "$head_native" && \
+             grep -Fq "$runtime_ref" "$head_native"; then
+            bootstrap=true
+            echo "::notice::Bounded migration bootstrap admitted; legacy protected native qualification remains mandatory for this transition PR."
+          fi
+          echo "bootstrap=$bootstrap" >> "$GITHUB_OUTPUT"
+      - name: Check out exact Buildchain Warrant runtime
+        if: steps.migration.outputs.bootstrap != 'true'
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          repository: kungfu-systems/buildchain
+          ref: 6057d71142dfc6a9d78872e316eca87d9510e176
+          path: .buildchain/dev-delivery-runtime
+          fetch-depth: 1
+          persist-credentials: false
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        if: steps.migration.outputs.bootstrap != 'true'
+        with:
+          node-version: "24"
+      - name: Install exact Buildchain Warrant runtime
+        if: steps.migration.outputs.bootstrap != 'true'
+        working-directory: .buildchain/dev-delivery-runtime
+        run: |
+          # shifu-entry-contract: allow exact pinned Buildchain dependency bootstrap before its CLI is runnable
+          corepack pnpm install --frozen-lockfile --ignore-scripts
+      - name: Require the exact active Warrant before expensive qualification
+        if: steps.migration.outputs.bootstrap != 'true'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          case "$GITHUB_EVENT_NAME" in
+            pull_request)
+              pull_request="$(jq -r '.pull_request.number' "$GITHUB_EVENT_PATH")"
+              source_head="$(jq -r '.pull_request.head.sha' "$GITHUB_EVENT_PATH")"
+              protected_base="$(jq -r '.pull_request.base.ref' "$GITHUB_EVENT_PATH")"
+              allowed_phase='^(provisional|qualified)$'
+              ;;
+            merge_group)
+              pull_request="$(sed -nE 's#^.*/pr-([0-9]+)-[0-9a-f]+$#\1#p' <<< "$(jq -r '.merge_group.head_ref' "$GITHUB_EVENT_PATH")")"
+              test -n "$pull_request"
+              source_head="$(gh api "repos/$GITHUB_REPOSITORY/pulls/$pull_request" --jq .head.sha)"
+              protected_base="$(jq -r '.merge_group.base_ref' "$GITHUB_EVENT_PATH" | sed 's#^refs/heads/##')"
+              allowed_phase='^qualified$'
+              ;;
+            *)
+              echo "unsupported event: $GITHUB_EVENT_NAME" >&2
+              exit 1
+              ;;
+          esac
+          runtime=.buildchain/dev-delivery-runtime
+          # shifu-entry-contract: allow exact pinned Buildchain state-ref readback before expensive Gate execution
+          node "$runtime/bin/buildchain.mjs" dev warrant observe \
+            --repository "$GITHUB_REPOSITORY" \
+            --branch "$protected_base" \
+            --output .buildchain/warrant-observation.json
+          jq -e \
+            --argjson pullRequest "$pull_request" \
+            --arg sourceHead "$source_head" \
+            --arg allowedPhase "$allowed_phase" \
+            '.observation.activeWarrant.pullRequestNumber == $pullRequest
+             and .observation.activeWarrant.sourceHead == $sourceHead
+             and (.observation.activeWarrant.phase | test($allowedPhase))' \
+            .buildchain/warrant-observation.json >/dev/null
+          echo "Exact $GITHUB_EVENT_NAME Warrant admitted for PR #$pull_request at $source_head."
+
+  affected_native_shards:
+    name: affected-native shard ${{ matrix.partition }} of 2 / linux
+    needs:
+      - candidate_preflight
+      - proof_probe
+      - warrant_admission
+    if: >-
+      ${{
+        needs.candidate_preflight.result == 'success' &&
         needs.proof_probe.result == 'success' &&
+        needs.warrant_admission.result == 'success' &&
         needs.proof_probe.outputs.reuse != 'true' &&
         (needs.candidate_preflight.outputs.native-required == 'true' ||
          needs.candidate_preflight.outputs.sdk-required == 'true')
@@ -784,10 +904,12 @@ jobs:
     needs:
       - candidate_preflight
       - proof_probe
+      - warrant_admission
     if: >-
       ${{
         needs.candidate_preflight.result == 'success' &&
         needs.proof_probe.result == 'success' &&
+        needs.warrant_admission.result == 'success' &&
         needs.proof_probe.outputs.reuse != 'true' &&
         needs.candidate_preflight.outputs.shifu-required == 'true'
       }}
@@ -810,10 +932,12 @@ jobs:
     needs:
       - candidate_preflight
       - proof_probe
+      - warrant_admission
     if: >-
       ${{
         needs.candidate_preflight.result == 'success' &&
         needs.proof_probe.result == 'success' &&
+        needs.warrant_admission.result == 'success' &&
         needs.proof_probe.outputs.reuse != 'true' &&
         needs.candidate_preflight.outputs.kfd-required == 'true'
       }}
@@ -837,6 +961,7 @@ jobs:
       - source_acceptance
       - candidate_preflight
       - proof_probe
+      - warrant_admission
       - affected_native_shards
       - shifu_workspace
       - kfd_verifier
@@ -854,10 +979,16 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+      - name: Fail closed without the exact active Warrant
+        if: ${{ needs.warrant_admission.result != 'success' }}
+        shell: bash
+        run: |
+          echo "Expensive native qualification requires the exact active Delivery Warrant." >&2
+          exit 1
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           repository: kungfu-systems/buildchain
-          ref: 733812ff9405241705f5f267fe2e5ec6351e1a2d
+          ref: 6057d71142dfc6a9d78872e316eca87d9510e176
           path: .buildchain/dev-delivery-runtime
           persist-credentials: false
       - uses: actions/setup-node@v6.4.0
