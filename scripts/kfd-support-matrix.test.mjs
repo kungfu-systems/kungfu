@@ -3,7 +3,16 @@
 
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import {
+  appendFileSync,
+  copyFileSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  unlinkSync,
+  writeFileSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
@@ -12,339 +21,314 @@ import { fileURLToPath } from 'node:url';
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const SCRIPT = path.join(ROOT, 'scripts', 'kfd-support-matrix.mjs');
 const SHIFU = path.join(ROOT, 'shifu');
-const AUTHORITY = path.join(ROOT, '.buildchain', 'kfd', 'support-matrix.json');
-const KFD3_QUERY = path.join(
-  ROOT,
-  '.buildchain',
-  'kfd',
-  'kfd-3',
-  'capability-query.json',
-);
-const BASE = JSON.parse(readFileSync(AUTHORITY, 'utf8'));
-const BASE_QUERY = JSON.parse(readFileSync(KFD3_QUERY, 'utf8'));
+const MANIFEST = '.buildchain/kfd/adopter-manifest.json';
+const GATE = '.buildchain/kfd/adopter-manifest-gate.json';
+const MATRIX = '.buildchain/kfd/support-matrix.json';
+const CLOSURE_PATHS = [
+  MANIFEST,
+  GATE,
+  MATRIX,
+  'developer/sdk/kfd/adopter-manifest.json',
+  'developer/sdk/kfd/adopter-manifest-gate.json',
+  'developer/sdk/kfd/support-matrix.json',
+  'docs/qualification/kfd-support-matrix.md',
+  '.buildchain/kfd/kfd-3/surfaces.json',
+  '.buildchain/kfd/kfd-3/capability-query.json',
+];
 
-function clone(value) {
-  return JSON.parse(JSON.stringify(value));
+function readJson(root, relative) {
+  return JSON.parse(readFileSync(path.join(root, relative), 'utf8'));
 }
 
-function validateFixture(t, value) {
-  const directory = mkdtempSync(path.join(tmpdir(), 'kungfu-kfd-matrix-'));
+function writeJson(root, relative, value) {
+  writeFileSync(
+    path.join(root, relative),
+    `${JSON.stringify(value, null, 2)}\n`,
+  );
+}
+
+function copyRelative(target, relative) {
+  const destination = path.join(target, relative);
+  mkdirSync(path.dirname(destination), { recursive: true });
+  copyFileSync(path.join(ROOT, relative), destination);
+}
+
+function localEvidencePaths(manifest) {
+  const result = new Set();
+  for (const decision of manifest.decisions) {
+    for (const group of [
+      'implementationEvidence',
+      'verificationEvidence',
+      'negativeEvidence',
+      'reviews',
+    ]) {
+      for (const evidence of decision[group] || []) {
+        if (
+          evidence.coordinate?.startsWith(
+            'git+https://github.com/kungfu-systems/kungfu.git@',
+          )
+        ) {
+          result.add(
+            evidence.coordinate.slice(evidence.coordinate.indexOf('#') + 1),
+          );
+        }
+      }
+    }
+    for (const witness of decision.witnessBindings || []) {
+      if (witness.witnessCoordinate?.startsWith('kungfu-systems/kungfu@')) {
+        result.add(
+          witness.witnessCoordinate.slice(
+            witness.witnessCoordinate.indexOf('#') + 1,
+          ),
+        );
+      }
+    }
+  }
+  return [...result];
+}
+
+function fixture(t, mutate = () => {}, args = ['--validate']) {
+  const directory = mkdtempSync(path.join(tmpdir(), 'kungfu-kfd-closure-'));
   t.after(() => rmSync(directory, { recursive: true, force: true }));
-  const matrixPath = path.join(directory, 'support-matrix.json');
-  writeFileSync(matrixPath, `${JSON.stringify(value, null, 2)}\n`);
-  return spawnSync(process.execPath, [SCRIPT, '--validate'], {
+  const manifest = readJson(ROOT, MANIFEST);
+  for (const relative of [...CLOSURE_PATHS, ...localEvidencePaths(manifest)]) {
+    copyRelative(directory, relative);
+  }
+  mutate(directory);
+  return spawnSync(process.execPath, [SCRIPT, ...args], {
     cwd: ROOT,
-    env: {
-      ...process.env,
-      KUNGFU_KFD_SUPPORT_MATRIX_AUTHORITY: matrixPath,
-    },
+    env: { ...process.env, KUNGFU_KFD_CLOSURE_ROOT: directory },
     encoding: 'utf8',
   });
 }
 
-function sourceFixture(t, matrix, query = BASE_QUERY) {
-  const directory = mkdtempSync(path.join(tmpdir(), 'kungfu-kfd-source-'));
-  t.after(() => rmSync(directory, { recursive: true, force: true }));
-  const matrixPath = path.join(directory, 'support-matrix.json');
-  const queryPath = path.join(directory, 'capability-query.json');
-  writeFileSync(matrixPath, `${JSON.stringify(matrix, null, 2)}\n`);
-  writeFileSync(queryPath, `${JSON.stringify(query, null, 2)}\n`);
-  return spawnSync(process.execPath, [SCRIPT, '--source-check', '--json'], {
-    cwd: ROOT,
-    env: {
-      ...process.env,
-      KUNGFU_KFD_SUPPORT_MATRIX_AUTHORITY: matrixPath,
-      KUNGFU_KFD3_QUERY_AUTHORITY: queryPath,
-    },
-    encoding: 'utf8',
-  });
+function mutateJson(relative, update) {
+  return (directory) => {
+    const value = readJson(directory, relative);
+    update(value, directory);
+    writeJson(directory, relative, value);
+  };
 }
 
-test('validates the exact KFD-1 through KFD-13 authority', (t) => {
-  const result = validateFixture(t, BASE);
+function diagnosis(result) {
+  assert.equal(result.status, 1);
+  assert.equal(result.stderr, '');
+  const value = JSON.parse(result.stdout);
+  assert.equal(value.schema, 'shifu.kfd-source-diagnosis/v1');
+  return value;
+}
+
+test('validates the exact standard full-cut closure with the declared verifier boundary', (t) => {
+  const result = fixture(t);
   assert.equal(result.status, 0, result.stderr);
-  assert.equal(JSON.parse(result.stdout).rowCount, 13);
-  const kfd4 = BASE.rows.find((row) => row.key === 'kfd-4');
-  assert.equal(kfd4.supportStatus, 'candidate');
-  assert.equal(kfd4.verification.status, 'passed');
-  assert.equal(kfd4.buildchain.gateStatus, 'passed');
-  assert.equal(kfd4.releaseQualification.shippedSupport, false);
-  assert.deepEqual(kfd4.implementation.surfaces, [
-    'framework/core/src/python/kungfu/rewind/perspective.py',
-    'framework/core/tests/qualification/kfd4-perspective.mjs',
+  const report = JSON.parse(result.stdout);
+  assert.equal(report.rowCount, 13);
+  assert.equal(
+    report.verificationMode,
+    process.env.KUNGFU_READONLY_NESTED_SOURCE_ACCEPTANCE === '1'
+      ? 'cold-source'
+      : 'published-package',
+  );
+  assert.match(report.manifestRoot, /^sha256:[0-9a-f]{64}$/u);
+  assert.match(report.manifestGateRoot, /^sha256:[0-9a-f]{64}$/u);
+});
+
+test('fails closed when a manifest decision is omitted or duplicated', (t) => {
+  for (const update of [
+    (manifest) => manifest.decisions.pop(),
+    (manifest) => {
+      manifest.decisions[12] = structuredClone(manifest.decisions[11]);
+    },
+  ]) {
+    const result = fixture(t, mutateJson(MANIFEST, update));
+    assert.equal(result.status, 1);
+    assert.match(
+      result.stderr,
+      /complete KFD-1\.\.13 cut|decision order or closure/,
+    );
+  }
+});
+
+test('fails closed when the gate fails or loses its exact source binding', (t) => {
+  const failed = fixture(
+    t,
+    mutateJson(GATE, (gate) => {
+      gate.status = 'failed';
+    }),
+  );
+  assert.equal(failed.status, 1);
+  assert.match(failed.stderr, /gate identity or exact cut drifted/);
+
+  const sourceDrift = fixture(
+    t,
+    mutateJson(GATE, (gate) => {
+      gate.gateResults[0].sourceSha = '0'.repeat(40);
+    }),
+  );
+  assert.equal(sourceDrift.status, 1);
+  assert.match(sourceDrift.stderr, /product gate projection drifted/);
+});
+
+test('fails closed when the legacy projection widens or changes authority', (t) => {
+  const result = fixture(
+    t,
+    mutateJson(MATRIX, (matrix) => {
+      matrix.authority.gateRoot = `sha256:${'0'.repeat(64)}`;
+    }),
+  );
+  assert.equal(result.status, 1);
+  assert.match(result.stderr, /does not bind the standard manifest authority/);
+});
+
+test('fails closed on SDK and documentation projection drift', (t) => {
+  const sdk = fixture(
+    t,
+    mutateJson('developer/sdk/kfd/adopter-manifest.json', (manifest) => {
+      manifest.manifestId = 'stale-sdk-projection';
+    }),
+  );
+  assert.equal(sdk.status, 1);
+  assert.match(sdk.stderr, /SDK adopter manifest projection is stale/);
+
+  const docs = fixture(t, (directory) => {
+    appendFileSync(
+      path.join(directory, 'docs/qualification/kfd-support-matrix.md'),
+      '\nstale\n',
+    );
+  });
+  assert.equal(docs.status, 1);
+  assert.match(docs.stderr, /documentation support projection is stale/);
+});
+
+test('KFD-6 unsupported and draft evidence cannot silently widen', (t) => {
+  for (const [index, state] of [
+    [5, 'candidate'],
+    [12, 'adopted'],
+  ]) {
+    const result = fixture(
+      t,
+      mutateJson(MANIFEST, (manifest) => {
+        manifest.decisions[index].state = state;
+      }),
+    );
+    assert.equal(result.status, 1);
+    assert.match(
+      result.stderr,
+      /projection is stale|published KFD verifier rejected|published Buildchain verifier rejected/,
+    );
+  }
+});
+
+test('source status reports candidate, unsupported, and draft-evidence boundaries', (t) => {
+  const result = fixture(t, () => {}, ['--source-status', '--json']);
+  assert.equal(result.status, 0, result.stderr);
+  const report = JSON.parse(result.stdout);
+  assert.equal(report.verdict, 'manifest-bound-candidate-closure');
+  assert.deepEqual(report.support.candidates, [
+    'KFD-1',
+    'KFD-2',
+    'KFD-3',
+    'KFD-4',
+    'KFD-5',
+    'KFD-7',
   ]);
-  assert.deepEqual(
-    kfd4.verification.evidenceRoots.map((entry) => entry.path),
-    [
-      'docs/qualification/evidence/kfd-4-perspective/d73cab0d69/report.json',
-      'framework/core/tests/python/test_kfd4_perspective.py',
-    ],
-  );
-  const kfd5 = BASE.rows.find((row) => row.key === 'kfd-5');
-  assert.equal(kfd5.supportStatus, 'candidate');
-  assert.equal(kfd5.verification.status, 'passed');
-  assert.equal(kfd5.buildchain.gateStatus, 'passed');
-  assert.equal(kfd5.releaseQualification.shippedSupport, false);
-  assert.deepEqual(
-    kfd5.verification.evidenceRoots.map((entry) => entry.path),
-    [
-      'docs/qualification/evidence/assignment-organization-rollout/7aae2c562a/report.json',
-      'framework/core/tests/python/test_assignment_orchestration.py',
-      'docs/architecture/primitive-management-plane.md',
-      'framework/incubation/incubation-passport.registry.json',
-      'framework/primitive/kungfu-primitive-catalog.contract.json',
-    ],
-  );
-  const kfd6 = BASE.rows.find((row) => row.key === 'kfd-6');
-  assert.equal(kfd6.supportStatus, 'unsupported');
-  assert.equal(kfd6.implementation.status, 'not-implemented');
-  assert.equal(kfd6.verification.status, 'none');
-  assert.equal(kfd6.precursorEvidence.status, 'non-conforming-evidence');
-  assert.deepEqual(kfd6.precursorEvidence.surfaces, [
-    'framework/work-design-advisor/work-design-advisor.contract.json',
-    'framework/work-design-policy-replay/work-design-policy-replay.contract.json',
-    'framework/project-cut/README.md',
+  assert.deepEqual(report.support.unsupported, ['KFD-6']);
+  assert.deepEqual(report.support.draftEvidenceOnly, [
+    'KFD-8',
+    'KFD-9',
+    'KFD-10',
+    'KFD-11',
+    'KFD-12',
+    'KFD-13',
   ]);
-  assert.equal(kfd6.releaseQualification.shippedSupport, false);
+  assert.equal(report.kfd3.declaredSurfaceCount, 193);
+  assert.equal(report.kfd3.counts.enforced, 0);
 });
 
-test('fails closed when the KFD-5 candidate loses its passed product gate', (t) => {
-  const matrix = clone(BASE);
-  matrix.rows[4].buildchain.gateStatus = 'failed';
-  const result = validateFixture(t, matrix);
-  assert.equal(result.status, 1);
-  assert.match(
-    result.stderr,
-    /kfd-5 must remain a verified, Buildchain-gated, non-shipped candidate/,
-  );
-});
-
-test('fails closed when KFD-5 loses Primitive Management evidence', (t) => {
-  const matrix = clone(BASE);
-  matrix.rows[4].verification.evidenceRoots.pop();
-  const result = validateFixture(t, matrix);
-  assert.equal(result.status, 1);
-  assert.match(result.stderr, /KFD-5 Primitive Management evidence drifted/);
-});
-
-test('fails closed when a KFD row is omitted', (t) => {
-  const matrix = clone(BASE);
-  matrix.rows.pop();
-  const result = validateFixture(t, matrix);
-  assert.equal(result.status, 1);
-  assert.match(result.stderr, /exactly 13 rows/);
-});
-
-test('fails closed when a KFD row is duplicated', (t) => {
-  const matrix = clone(BASE);
-  matrix.rows[12] = clone(matrix.rows[11]);
-  const result = validateFixture(t, matrix);
-  assert.equal(result.status, 1);
-  assert.match(result.stderr, /duplicate KFD keys/);
-});
-
-test('fails closed when KFD-6 implies adoption', (t) => {
-  const matrix = clone(BASE);
-  matrix.rows[5].supportStatus = 'candidate';
-  const result = validateFixture(t, matrix);
-  assert.equal(result.status, 1);
-  assert.match(result.stderr, /KFD-6 must remain an explicit unsupported/);
-});
-
-test('fails closed when KFD-6 precursor evidence implies conformance', (t) => {
-  const matrix = clone(BASE);
-  matrix.rows[5].precursorEvidence.status = 'passed';
-  const result = validateFixture(t, matrix);
-  assert.equal(result.status, 1);
-  assert.match(
-    result.stderr,
-    /precursor evidence must remain bounded and non-conforming/,
-  );
-});
-
-test('fails closed when KFD-6 precursor evidence widens its claim', (t) => {
-  const matrix = clone(BASE);
-  matrix.rows[5].precursorEvidence.claimBoundary =
-    'Work Design implements KFD-6 discovery.';
-  const result = validateFixture(t, matrix);
-  assert.equal(result.status, 1);
-  assert.match(
-    result.stderr,
-    /precursor evidence must remain bounded and non-conforming/,
-  );
-});
-
-test('fails closed when draft evidence becomes shipped support', (t) => {
-  const matrix = clone(BASE);
-  matrix.rows[12].releaseQualification.shippedSupport = true;
-  const result = validateFixture(t, matrix);
-  assert.equal(result.status, 1);
-  assert.match(result.stderr, /draft and cannot claim shipped support/);
-});
-
-test('fails closed when a KFD-4 candidate becomes shipped support', (t) => {
-  const matrix = clone(BASE);
-  matrix.rows[3].releaseQualification.shippedSupport = true;
-  const result = validateFixture(t, matrix);
-  assert.equal(result.status, 1);
-  assert.match(result.stderr, /shipped support must remain exactly/);
-});
-
-test('fails closed when KFD-4 loses its retained perspective qualification', (t) => {
-  const matrix = clone(BASE);
-  matrix.rows[3].verification.evidenceRoots = [];
-  const result = validateFixture(t, matrix);
-  assert.equal(result.status, 1);
-  assert.match(
-    result.stderr,
-    /KFD-4 perspective qualification evidence drifted/,
-  );
-});
-
-test('fails closed when a supported release claim is omitted', (t) => {
-  const matrix = clone(BASE);
-  matrix.rows[6].releaseQualification.shippedSupport = false;
-  const result = validateFixture(t, matrix);
-  assert.equal(result.status, 1);
-  assert.match(result.stderr, /shipped support must remain exactly/);
-});
-
-test('fails closed on stale normative KFD metadata', (t) => {
-  const matrix = clone(BASE);
-  matrix.rows[0].normative.revision += 1;
-  const result = validateFixture(t, matrix);
-  assert.equal(result.status, 1);
-  assert.match(result.stderr, /normative projection drifts/);
-});
-
-test('Shifu separates the immediate human verdict from stable agent JSON', () => {
+test('Shifu human and agent surfaces preserve one source verdict', () => {
   const human = spawnSync(SHIFU, ['kfd', 'status'], {
     cwd: ROOT,
     encoding: 'utf8',
   });
   assert.equal(human.status, 0, human.stderr);
-  assert.match(human.stdout, /BOUNDED SUPPORT/);
-  assert.match(human.stdout, /193 declared, 0 enforced/);
+  assert.match(human.stdout, /MANIFEST-BOUND CANDIDATE CLOSURE/);
   assert.doesNotMatch(human.stdout, /^\s*\{/u);
 
-  const agent = spawnSync(SHIFU, ['kfd', 'status', '--json'], {
+  const agent = spawnSync(SHIFU, ['kfd:query', 'KFD-3', '--json'], {
     cwd: ROOT,
     encoding: 'utf8',
   });
   assert.equal(agent.status, 0, agent.stderr);
   const report = JSON.parse(agent.stdout);
-  assert.equal(report.schema, 'shifu.kfd-source-report/v1');
-  assert.equal(report.scope, 'source-checkout');
-  assert.deepEqual(report.support.shipped, [
-    'KFD-1',
-    'KFD-2',
-    'KFD-3',
-    'KFD-7',
-  ]);
-  assert.equal(report.kfd3.enforcement.declaredSurfaceCount, 193);
-  assert.equal(report.kfd3.enforcement.enforcedSurfaceCount, 0);
-});
-
-test('legacy KFD query alias delegates to the same source report', () => {
-  const result = spawnSync(SHIFU, ['kfd:query', 'KFD-3', '--json'], {
-    cwd: ROOT,
-    encoding: 'utf8',
-  });
-  assert.equal(result.status, 0, result.stderr);
-  const report = JSON.parse(result.stdout);
-  assert.equal(report.schema, 'shifu.kfd-source-report/v1');
   assert.equal(report.operation, 'query');
   assert.equal(report.selection.id, 'KFD-3');
 });
 
 test('source check fails closed when retained evidence disappears', (t) => {
-  const matrix = clone(BASE);
-  matrix.rows[0].verification.evidenceRoots[0].path =
-    '.buildchain/kfd/kfd-1/does-not-exist.json';
-  const result = sourceFixture(t, matrix);
-  assert.equal(result.status, 1);
-  const diagnosis = JSON.parse(result.stdout);
-  assert.equal(diagnosis.schema, 'shifu.kfd-source-diagnosis/v1');
-  assert.match(diagnosis.message, /evidence is missing/);
-  assert.equal(result.stderr, '');
-});
-
-test('source check never follows evidence outside the checkout', (t) => {
-  const matrix = clone(BASE);
-  matrix.rows[0].verification.evidenceRoots[0].path = '../outside.json';
-  const result = sourceFixture(t, matrix);
-  assert.equal(result.status, 1);
-  assert.match(
-    JSON.parse(result.stdout).message,
-    /escapes the source checkout/,
+  const result = fixture(
+    t,
+    mutateJson(MANIFEST, (manifest, directory) => {
+      const evidence = manifest.decisions[0].implementationEvidence[0];
+      const relative = evidence.coordinate.slice(
+        evidence.coordinate.indexOf('#') + 1,
+      );
+      unlinkSync(path.join(directory, relative));
+    }),
+    ['--source-check', '--json'],
   );
+  assert.match(diagnosis(result).message, /is missing/);
 });
 
-test('source check rejects malformed and claim-widened matrices', (t) => {
-  const malformed = clone(BASE);
-  malformed.rows.pop();
-  const malformedResult = sourceFixture(t, malformed);
-  assert.equal(malformedResult.status, 1);
-  assert.match(JSON.parse(malformedResult.stdout).message, /exactly 13 rows/);
-
-  const widened = clone(BASE);
-  widened.rows[3].releaseQualification.shippedSupport = true;
-  const widenedResult = sourceFixture(t, widened);
-  assert.equal(widenedResult.status, 1);
-  assert.match(
-    JSON.parse(widenedResult.stdout).message,
-    /shipped support must remain exactly/,
+test('source check rejects evidence escapes and byte-root drift', (t) => {
+  const escaped = fixture(
+    t,
+    mutateJson(MANIFEST, (manifest) => {
+      const evidence = manifest.decisions[0].implementationEvidence[0];
+      evidence.coordinate = evidence.coordinate.replace(
+        /#[\s\S]*$/u,
+        '#../outside.json',
+      );
+    }),
+    ['--source-check', '--json'],
   );
-});
+  assert.match(diagnosis(escaped).message, /escapes the source checkout/);
 
-test('source check rejects a stale support projection', (t) => {
-  const matrix = clone(BASE);
-  matrix.rows[0].owner = 'stale-projection-fixture';
-  const result = sourceFixture(t, matrix);
-  assert.equal(result.status, 1);
-  assert.match(JSON.parse(result.stdout).message, /projection is stale/);
-});
-
-test('source check rejects a malformed or failed KFD-3 query', (t) => {
-  const query = clone(BASE_QUERY);
-  query.status = 'failed';
-  const result = sourceFixture(t, BASE, query);
-  assert.equal(result.status, 1);
-  assert.match(
-    JSON.parse(result.stdout).message,
-    /capability query is malformed or not passed/,
+  const drifted = fixture(
+    t,
+    mutateJson(MANIFEST, (manifest, directory) => {
+      const evidence = manifest.decisions[0].implementationEvidence[0];
+      const relative = evidence.coordinate.slice(
+        evidence.coordinate.indexOf('#') + 1,
+      );
+      appendFileSync(path.join(directory, relative), '\nroot drift\n');
+    }),
+    ['--source-check', '--json'],
   );
+  assert.match(diagnosis(drifted).message, /root drift/);
 });
 
-test('declared KFD-3 surfaces cannot silently become enforced', (t) => {
-  const matrix = clone(BASE);
-  const query = clone(BASE_QUERY);
-  query.capabilities[0].enforced = true;
-  query.summary.enforced = 1;
-  matrix.kfd3Enforcement.enforcedSurfaceCount = 1;
-  const result = sourceFixture(t, matrix, query);
-  assert.equal(result.status, 1);
-  assert.match(JSON.parse(result.stdout).message, /enforced count drift/);
-});
+test('source check rejects malformed or set-drifted KFD-3 query evidence', (t) => {
+  const failed = fixture(
+    t,
+    mutateJson('.buildchain/kfd/kfd-3/capability-query.json', (query) => {
+      query.status = 'failed';
+    }),
+    ['--source-check', '--json'],
+  );
+  assert.match(
+    diagnosis(failed).message,
+    /root drift|registry or capability query is invalid/,
+  );
 
-test('an enforced KFD-3 surface requires a retained passed hard Gate', (t) => {
-  const matrix = clone(BASE);
-  const query = clone(BASE_QUERY);
-  const surfaceId = query.capabilities[0].id;
-  query.capabilities[0].enforced = true;
-  query.summary.enforced = 1;
-  matrix.kfd3Enforcement.enforcedSurfaceCount = 1;
-  matrix.kfd3Enforcement.gateBindings = [
-    {
-      surfaceId,
-      gate: {
-        path: '.buildchain/kfd/kfd-3/missing-hard-gate.json',
-        sha256: `sha256:${'0'.repeat(64)}`,
-        requiredStatus: 'passed',
-      },
-    },
-  ];
-  const result = sourceFixture(t, matrix, query);
-  assert.equal(result.status, 1);
-  assert.match(JSON.parse(result.stdout).message, /enforced Gate is missing/);
+  const setDrift = fixture(
+    t,
+    mutateJson('.buildchain/kfd/kfd-3/capability-query.json', (query) => {
+      query.capabilities.pop();
+    }),
+    ['--source-check', '--json'],
+  );
+  assert.match(
+    diagnosis(setDrift).message,
+    /root drift|declared surface set drifts/,
+  );
 });
