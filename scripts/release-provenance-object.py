@@ -134,6 +134,7 @@ def main(argv: list[str] | None = None) -> int:
             request = json.load(sys.stdin)
             report = verify_admission(
                 contract=request["contract"],
+                admission_facts=request["admissionFacts"],
                 proof_projection=request["proofProjection"],
                 release_provenance_contract=request["releaseProvenanceContract"],
                 release_provenance=request["releaseProvenance"],

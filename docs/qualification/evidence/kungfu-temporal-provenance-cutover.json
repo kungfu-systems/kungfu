@@ -1,0 +1,43 @@
+{
+  "acceptedContractDigest": "sha256:13c4679c4ac8764c85e29693bfb59099e21e9786cc6082552198d39393467490",
+  "admissionFactSetRoot": "sha256:57f1160987308819ab114dfbc05edd4493ebb2690ea0d59f3809d1d161c56b33",
+  "admissionPathReceiptRoot": "sha256:9b712617007818556b1277a59ebb2d88f4d2fdcf53eab7932191145067f8cc3b",
+  "admissionReceiptRoot": "sha256:0d63bda8da323b1eea1c59808241d14bfd2beed25c92a32e8ce24445ff0828e4",
+  "ancestrySemanticAuthority": false,
+  "artifactCount": 44,
+  "artifactSetRoot": "sha256:46169f7d385e5cc296352578cafd29f66762d73b6301f3180ce59560d9f5eef3",
+  "buildRunId": "31051528142",
+  "buildchainProofRoots": [
+    "sha256:36c85ba487be1528e85776d2bc5f766a971d42ac238aec30071945f7d60d9fc5",
+    "sha256:cb642b68aaf60e9c0eb93d46a2a1fc482810142201c7340ad7efe824b1683921",
+    "sha256:e6f93f44a6613a9d6de776ebe8f29b1779b0cd18a24bdf126ec6c1a07770fa75"
+  ],
+  "candidateAncestryObserved": false,
+  "candidateInventoryRoot": "sha256:02c630ec99189e1aedcb13b0794f5a17d951c196c75131ed7805c7a9b5dee67f",
+  "candidateProvenanceObjectRoot": "sha256:eac7fb65b542a951dda314b736fc27fafd86b6d819344510a7ce1802f0a82cdd",
+  "candidateRegularFileCount": 14,
+  "capsuleRoot": "sha256:8bbc2c4439a99970760cd4f62bb76e55a1323923fa2951aa1985865ab8010dd4",
+  "currentContractDigest": "sha256:8e565f9ac5146d5dceafc3da6b267147fb412937db979bf35a0429966da82197",
+  "externalPublicationClaimed": false,
+  "heavyRebuildPerformed": false,
+  "inputUnchanged": true,
+  "manifestRoots": [
+    {
+      "path": "SHA256SUMS",
+      "root": "sha256:4f41281ab98ab5b3022c5f5edec424ab8afd772050e4be6315c2ec32f09c29ca",
+      "size": 6447
+    },
+    {
+      "path": "artifacts.json",
+      "root": "sha256:ea71560737404a9cd38f2b19645f0f4c9bc5bfcd13e86ec415c04f2e0a57d279",
+      "size": 33701
+    }
+  ],
+  "promotionProvenanceObjectRoot": "sha256:dcca03a618d7c493a7fa06c93acc1f38e9d1d4ee799e89ca57a92eb1f7825df4",
+  "qualificationRoot": "sha256:81a6dc46bf72db9c50f92e6df7175275496a00f6b283c95b5cc899d51fb94605",
+  "schema": "kungfu.temporal-provenance-cutover-qualification/v1",
+  "sourceSha": "ad7c7db6df076f969c5939728bcbe70ccd4771b3",
+  "sourceTree": "67a93b5831596555e7c29104421de3a0b97eb865",
+  "status": "passed",
+  "version": "4.0.0-alpha.1"
+}
