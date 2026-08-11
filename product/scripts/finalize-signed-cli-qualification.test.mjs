@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import assert from 'node:assert/strict';
+import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -14,6 +15,7 @@ import {
 import {
   bindSignedMacosRuntimeQualification,
   finalizeSignedCliQualification,
+  ptyDriverSource,
   signedMacosRuntimeReceiptRoot,
   verifyCodesignEntitlements,
 } from './verify-cli-surface-qualification.mjs';
@@ -32,6 +34,48 @@ const JIT_EXECUTABLES = [
   'kungfu-episodes-cli-darwin-arm64/runtime/python/bin/python3',
   'kungfu-episodes-cli-darwin-arm64/runtime/python/bin/python3.13',
 ];
+
+test('post-sign PTY driver does not leak embedded Node mode into the CLI', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'kungfu-pty-driver-'));
+  try {
+    const fakeNodePty = path.join(root, 'node-pty.cjs');
+    fs.writeFileSync(
+      fakeNodePty,
+      [
+        'module.exports = {',
+        '  spawn(command, args, options) {',
+        "    const output = `KUNGFU_TUI_DEMO_COMPLETE variant=${Object.hasOwn(options.env, 'KUNGFU_AS_VARIANT')}`;",
+        '    return {',
+        '      onData(callback) { callback(output); },',
+        '      onExit(callback) { callback({exitCode: 0}); },',
+        '      kill() {},',
+        '    };',
+        '  },',
+        '};',
+      ].join('\n'),
+    );
+    const result = spawnSync(
+      process.execPath,
+      [
+        '-e',
+        ptyDriverSource(),
+        fakeNodePty,
+        '/fixture/kungfu',
+        JSON.stringify(['agent-work-lab', 'autoplay']),
+        'KUNGFU_TUI_DEMO_COMPLETE variant=false',
+        '1000',
+      ],
+      {
+        encoding: 'utf8',
+        env: { ...process.env, KUNGFU_AS_VARIANT: 'node' },
+      },
+    );
+    assert.equal(result.status, 0, result.stderr);
+    assert.match(result.stdout, /KUNGFU_TUI_DEMO_COMPLETE variant=false/u);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
 
 function qualification() {
   const report = {
