@@ -1,16 +1,16 @@
 {
   "schema": "kungfu.alpha-release-cut-lock/v1",
   "release": "v4.0.0-alpha.2",
-  "cut": "r16",
+  "cut": "r17",
   "state": "frozen",
   "candidate": {
-    "ref": "refs/heads/fix/alpha2-lineage-repair-r16",
-    "sha": "89781ff7236239aa310696e6bf40f8af3445c371",
-    "tree": "095f2ea60cce5bb96c22314ae02dfad48d904052"
+    "ref": "refs/heads/fix/alpha2-lineage-repair-r17",
+    "sha": "77a66f7141143e524484a548dbba76a1ae1ecc38",
+    "tree": "6f3a82c10712ec344ecefbf30d11a580aeb4f22b"
   },
   "devCut": {
-    "sha": "a392762ab2d0d325bd8202cfc7b37ea525aaf6dc",
-    "tree": "095f2ea60cce5bb96c22314ae02dfad48d904052"
+    "sha": "c3938d8fc5e71578c960cc8137a853a8817b09ca",
+    "tree": "6f3a82c10712ec344ecefbf30d11a580aeb4f22b"
   },
   "alphaBase": {
     "ref": "refs/heads/alpha/v4/v4.0",
@@ -19,7 +19,7 @@
   },
   "lineage": {
     "parentOrder": [
-      "a392762ab2d0d325bd8202cfc7b37ea525aaf6dc",
+      "c3938d8fc5e71578c960cc8137a853a8817b09ca",
       "f9e6b0e34bcdd6407b2a18206ace7982d64de2c8"
     ],
     "candidateTreeEqualsDevCut": true
@@ -28,8 +28,8 @@
     "sourcePinPolicy": "floating-contract-with-recorded-resolution",
     "build": {
       "ref": "v3",
-      "resolvedSha": "81c49578bff72a9784a1b63ce8698bd9dd23d7bf",
-      "contractDigest": "sha256:8e9a161653c40611ffd76aa878ae348fc215506c1caa88347111fb122cfe7c12"
+      "resolvedSha": "f4ca5182f53fddf76bdf4246be0993afa5a592bc",
+      "contractDigest": "sha256:52cdb871cb0559534f78548f2487d8f3ceb64bb92e8a587f440a2946f78e7386"
     },
     "promotion": {
       "ref": "v3-alpha",

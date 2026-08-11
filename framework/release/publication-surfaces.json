@@ -170,7 +170,7 @@
             "product-alpha",
             "product-binaries"
           ],
-          "sourceRoot": "sha256:521eb00649e376aea3ed84b6574302dea24312ce6effd735766a56445f086050"
+          "sourceRoot": "sha256:d563654f01552dbf52dcb1294f0d87fe627be10457deadb4259f47152ea1a355"
         },
         {
           "path": ".github/workflows/dev-delivery-warrant-terminal.yml",
@@ -860,5 +860,5 @@
       }
     }
   ],
-  "registryRoot": "sha256:133fada065488df7ec2e1a63563af0d99ce9f04f17b386cc7ea803431036ac75"
+  "registryRoot": "sha256:a30cf64591ec56bcd99c308dd72a9ac0c0e82f3bb172a36bbd5c92c427c7ae3b"
 }

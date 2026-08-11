@@ -496,10 +496,10 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "diagnostic",
-          "definitionDigest": "sha256:31eb10938d77f7604b3b1285f08b297a7cc97d93005762ecaba9aa5410c31611",
+          "definitionDigest": "sha256:b33778ba4b57a95e37dc344c5874e8b78eefa250b98f8edac34914fe7c14284c",
           "credentials": {"githubToken":"read","oidc":false,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
           "externalActions": ["actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0"],
-          "steps": [{"index":1,"label":"name:Check out the dev mirror verifier","definitionDigest":"sha256:8d92682cf7803f194bf70107c82b9ee6d73e0de0b37f91a3ed75850183e688e3"},{"index":2,"label":"name:Fetch exact frozen Release Cut objects","definitionDigest":"sha256:74cc2b6e4607b8069f49ae903e6992163f007c8fa940342ba28a2efa110d41ce"},{"index":3,"label":"id:lock","definitionDigest":"sha256:24c3ad75cc83436b2862e8179a571bf6025d8ae22d71e144d0057c9e1283cf8c"}]
+          "steps": [{"index":1,"label":"name:Check out the dev mirror verifier","definitionDigest":"sha256:8d92682cf7803f194bf70107c82b9ee6d73e0de0b37f91a3ed75850183e688e3"},{"index":2,"label":"name:Fetch exact frozen Release Cut objects","definitionDigest":"sha256:74cc2b6e4607b8069f49ae903e6992163f007c8fa940342ba28a2efa110d41ce"},{"index":3,"label":"id:lock","definitionDigest":"sha256:8552126f1e8c9f119ef7060e2b4221bc0c8f6dc861981bdcc88df70ebf223e67"}]
         },
         {
           "id": "resolve-channels",
