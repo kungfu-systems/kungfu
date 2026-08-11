@@ -5,6 +5,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { test } from 'node:test';
+import zlib from 'node:zlib';
 import { extractTarGz, extractZip, writeTarGz, writeZip } from './archive.mjs';
 
 function makeFixture(parent) {
@@ -59,6 +60,49 @@ function assertExtracted(targetDir) {
   );
 }
 
+function paxRecord(key, value) {
+  const content = `${key}=${value}\n`;
+  let length = Buffer.byteLength(content) + 2;
+  while (Buffer.byteLength(`${length} ${content}`) !== length) {
+    length = Buffer.byteLength(`${length} ${content}`);
+  }
+  return Buffer.from(`${length} ${content}`);
+}
+
+function malformedPaxRecord(content) {
+  const value = `${content}\n`;
+  let length = Buffer.byteLength(value) + 2;
+  while (Buffer.byteLength(`${length} ${value}`) !== length) {
+    length = Buffer.byteLength(`${length} ${value}`);
+  }
+  return Buffer.from(`${length} ${value}`);
+}
+
+function prependPaxHeader(archiveFile, bodySource) {
+  const archive = zlib.gunzipSync(fs.readFileSync(archiveFile));
+  const header = Buffer.from(archive.subarray(0, 512));
+  const name = header.toString('utf8', 0, 100).replace(/\0.*$/u, '');
+  const prefix = header.toString('utf8', 345, 500).replace(/\0.*$/u, '');
+  const entryPath = prefix ? `${prefix}/${name}` : name;
+  const body =
+    typeof bodySource === 'function' ? bodySource(entryPath) : bodySource;
+  header.fill(0, 0, 100);
+  header.write('././@PaxHeader', 0, 100, 'utf8');
+  header.write('x', 156, 1, 'ascii');
+  header.fill(0, 124, 136);
+  header.write(body.length.toString(8).padStart(11, '0'), 124, 11, 'ascii');
+  header.fill(0x20, 148, 156);
+  const checksum = [...header].reduce((sum, byte) => sum + byte, 0);
+  header.write(checksum.toString(8).padStart(6, '0'), 148, 6, 'ascii');
+  header[154] = 0;
+  header[155] = 0x20;
+  const padding = Buffer.alloc((512 - (body.length % 512)) % 512);
+  fs.writeFileSync(
+    archiveFile,
+    zlib.gzipSync(Buffer.concat([header, body, padding, archive])),
+  );
+}
+
 test('tar.gz archives round-trip the product layout', () => {
   const parent = fs.mkdtempSync(path.join(os.tmpdir(), 'kungfu-archive-test-'));
   try {
@@ -76,6 +120,72 @@ test('tar.gz archives round-trip the product layout', () => {
     }
   } finally {
     fs.rmSync(parent, { recursive: true, force: true });
+  }
+});
+
+test('tar.gz extraction accepts safe POSIX PAX local metadata', () => {
+  const parent = fs.mkdtempSync(path.join(os.tmpdir(), 'kungfu-archive-test-'));
+  try {
+    const { sourceDir } = makeFixture(parent);
+    const archiveFile = path.join(parent, 'product.tar.gz');
+    const targetDir = path.join(parent, 'tar-out');
+    writeTarGz({ sourceDir, outputFile: archiveFile });
+    prependPaxHeader(archiveFile, (entryPath) =>
+      Buffer.concat([
+        paxRecord('path', entryPath),
+        paxRecord('SCHILY.xattr.com.apple.provenance', 'opaque-test-value'),
+      ]),
+    );
+    extractTarGz({ archiveFile, targetDir });
+    assertExtracted(targetDir);
+  } finally {
+    fs.rmSync(parent, { recursive: true, force: true });
+  }
+});
+
+test('tar.gz extraction rejects traversal in a PAX path override', () => {
+  const parent = fs.mkdtempSync(path.join(os.tmpdir(), 'kungfu-archive-test-'));
+  try {
+    const { sourceDir } = makeFixture(parent);
+    const archiveFile = path.join(parent, 'product.tar.gz');
+    const targetDir = path.join(parent, 'tar-out');
+    writeTarGz({ sourceDir, outputFile: archiveFile });
+    prependPaxHeader(archiveFile, paxRecord('path', '../outside'));
+    assert.throws(
+      () => extractTarGz({ archiveFile, targetDir }),
+      /unsafe archive path: \.\.\/outside/u,
+    );
+    assert.equal(fs.existsSync(path.join(parent, 'outside')), false);
+  } finally {
+    fs.rmSync(parent, { recursive: true, force: true });
+  }
+});
+
+test('tar.gz extraction rejects malformed PAX records', () => {
+  for (const body of [
+    Buffer.from('not-a-length path=value\n'),
+    Buffer.from('99 path=value\n'),
+    malformedPaxRecord('pathvalue'),
+  ]) {
+    const parent = fs.mkdtempSync(
+      path.join(os.tmpdir(), 'kungfu-archive-test-'),
+    );
+    try {
+      const { sourceDir } = makeFixture(parent);
+      const archiveFile = path.join(parent, 'product.tar.gz');
+      writeTarGz({ sourceDir, outputFile: archiveFile });
+      prependPaxHeader(archiveFile, body);
+      assert.throws(
+        () =>
+          extractTarGz({
+            archiveFile,
+            targetDir: path.join(parent, 'tar-out'),
+          }),
+        /(?:invalid PAX record length|malformed PAX record)/u,
+      );
+    } finally {
+      fs.rmSync(parent, { recursive: true, force: true });
+    }
   }
 });
 
