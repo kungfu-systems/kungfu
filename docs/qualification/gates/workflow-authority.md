@@ -55,13 +55,15 @@ without changing and refreshing the manifest fails the Gate catalog check.
 | `.github/workflows/affected-native-pr.yml` | `source_acceptance` | qualification | none | diagnostic | token:read | none | 0 |
 | `.github/workflows/alpha-promotion-preflight.yml` | `aggregate` | qualification | none | diagnostic | token:read | none | 4 |
 | `.github/workflows/alpha-promotion-preflight.yml` | `probe` | qualification | none | diagnostic | token:read | none | 10 |
+| `.github/workflows/auditable-demo.yml` | `auditable-demo` | qualification | none | qualifying | token:write, repo-secret:KUNGFU_GITHUB_TOKEN | none | 0 |
+| `.github/workflows/auditable-demo.yml` | `build` | qualification | none | qualifying | token:read | none | 0 |
+| `.github/workflows/auditable-demo.yml` | `resolve-binary` | qualification | none | diagnostic | token:read | none | 1 |
 | `.github/workflows/aws-us-linux-burst-qualification.yml` | `qualify` | qualification | none | diagnostic | token:read | none | 0 |
 | `.github/workflows/aws-us-macos-burst-qualification.yml` | `qualify` | qualification | none | diagnostic | token:write, oidc | none | 0 |
 | `.github/workflows/aws-us-windows-burst-qualification.yml` | `cleanup-exercise` | qualification | none | diagnostic | token:read | none | 2 |
 | `.github/workflows/aws-us-windows-burst-qualification.yml` | `full` | qualification | none | diagnostic | token:write, oidc | none | 0 |
 | `.github/workflows/aws-us-windows-burst-qualification.yml` | `smoke` | qualification | none | diagnostic | token:write, oidc | none | 0 |
 | `.github/workflows/aws-us-windows-burst-qualification.yml` | `trust` | qualification | none | diagnostic | token:read | none | 2 |
-| `.github/workflows/build.yml` | `auditable-demo` | qualification | none | qualifying | token:write, repo-secret:KUNGFU_GITHUB_TOKEN | none | 0 |
 | `.github/workflows/build.yml` | `auditable-demo-fast-sentinel` | qualification | none | diagnostic | token:read | none | 2 |
 | `.github/workflows/build.yml` | `build` | qualification | none | qualifying | token:write, oidc, repo-secret:BUILDCHAIN_ARTIFACT_RELAY_S3_DOWNLOAD_ROLE_ARN+BUILDCHAIN_ARTIFACT_RELAY_S3_ROLE_ARN+BUILDCHAIN_ARTIFACT_RELAY_S3_UPLOAD_ROLE_ARN+KUNGFU_GITHUB_TOKEN | none | 0 |
 | `.github/workflows/build.yml` | `finalize-upgrade-publication-admission` | qualification | none | diagnostic | token:read | none | 6 |
@@ -69,7 +71,6 @@ without changing and refreshing the manifest fails the Gate catalog check.
 | `.github/workflows/build.yml` | `phase-b-package` | qualification | none | diagnostic | token:read | none | 5 |
 | `.github/workflows/build.yml` | `precompute-alpha-publication-tail` | qualification | none | diagnostic | token:read | none | 4 |
 | `.github/workflows/build.yml` | `preflight` | qualification | none | diagnostic | token:write, oidc, repo-secret:KUNGFU_GITHUB_TOKEN | none | 3 |
-| `.github/workflows/build.yml` | `resolve-auditable-demo-source` | qualification | none | diagnostic | token:read | none | 2 |
 | `.github/workflows/build.yml` | `windows-fast-sentinel` | qualification | none | diagnostic | token:read | none | 3 |
 | `.github/workflows/buildchain-validate.yml` | `promotion-rehearsal` | qualification | none | diagnostic | token:read | none | 2 |
 | `.github/workflows/buildchain-validate.yml` | `validate` | qualification | none | diagnostic | token:read | none | 2 |

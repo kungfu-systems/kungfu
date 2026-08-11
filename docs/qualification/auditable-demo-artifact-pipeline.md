@@ -9,8 +9,8 @@ confidence: high
 sensitivity: public
 evidence_grade: A
 review_state: self-reviewed
-last_reviewed: 2026-08-10
-ai_provenance: GPT-5 via Codex on 2026-08-02; updated by GPT-5 via Codex on 2026-08-03 to separate non-interactive artifact transport verification from native PTY playback after an exact Build failure, on 2026-08-04 to split the Project Tour into two independently captured 1x episodes, on 2026-08-05 to bind the consumer-owned three-proof presentation contract, on 2026-08-08 to bind the 720p full-width native PTY geometry, and on 2026-08-10 to require terminal-fill geometry and isolate manual media publication to Linux x64; based on checked-in Kungfu, Buildchain, and Build Images contracts plus exact workflow evidence visible to this task; no claim is made for a render that has not passed the retained Gate
+last_reviewed: 2026-08-11
+ai_provenance: GPT-5 via Codex on 2026-08-02; updated by GPT-5 via Codex on 2026-08-03 to separate non-interactive artifact transport verification from native PTY playback after an exact Build failure, on 2026-08-04 to split the Project Tour into two independently captured 1x episodes, on 2026-08-05 to bind the consumer-owned three-proof presentation contract, on 2026-08-08 to bind the 720p full-width native PTY geometry, on 2026-08-10 to require terminal-fill geometry and isolate manual media publication to Linux x64, and on 2026-08-11 to make the Linux x64 animation pipeline a standalone one-start workflow independent of release qualification; based on checked-in Kungfu, Buildchain, and Build Images contracts plus exact workflow evidence visible to this task; no claim is made for a render that has not passed the retained Gate
 ---
 
 # Declarative Multi-demo Animation Pipeline
@@ -53,20 +53,19 @@ exact same-run Kungfu Linux artifact
 -> protected README materialization pull request
 ```
 
-`.github/workflows/build.yml` calls one exact
-`.declarative-auditable-demo.yml` revision. Manual Gate-only validation leaves
-`render-auditable-demo` disabled. Enabling it selects exactly one GitHub-hosted
-Linux x64 build row, skips the unrelated Windows sentinel and compiler-cache
-contract, and ignores any caller-supplied diagnostic matrix. Alpha and Release
-promotion retain the complete native matrix while using the same declarative
-capture, rendering, and materializer implementation. Alpha keeps the required
-Gate strict but treats only the full-media step as advisory: renderer failure
-remains visible and suppresses materialization without blocking binary
-publication. Release and explicit media refreshes remain strict. There is no product-specific adapter,
+`.github/workflows/auditable-demo.yml` is the only animation entry. A manual
+run, Alpha refresh, and Release refresh execute the same three jobs: build one
+Linux x64 binary, bind its same-run artifact coordinate, then call one exact
+`.declarative-auditable-demo.yml` revision. The manual input can stop after the
+Gate or continue through rendering and materialization. It has no preflight
+run id, Release Cut, KFD, Windows sentinel, compiler-cache, promotion, or
+four-platform dependency. Alpha keeps the required Gate strict but treats only
+the full-media step as advisory: renderer failure remains visible and
+suppresses materialization without blocking binary publication. Release and
+explicit media refreshes remain strict. There is no product-specific adapter,
 trigger-plan compiler, Passport writer, renderer wrapper, or README updater.
 
-The Linux build artifact contains both `product/release` and the exact
-standalone distribution at
+The Linux build artifact contains the exact standalone distribution at
 `product/dist/cli/kungfu-episodes-cli-linux-x64/`. The latter includes the
 launcher and `auditable-demo-binary.json`, which binds the launcher SHA-256,
 platform id, metadata contract, and an empty runtime-dependency set. Capture
