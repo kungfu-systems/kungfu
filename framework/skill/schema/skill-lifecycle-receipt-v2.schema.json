@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "kungfu.skill-lifecycle-receipt/v2",
+  "title": "Kungfu Skill lifecycle receipt",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "planRoot", "operationRoot", "operation", "affected", "basis", "result", "idempotency", "history", "receiptRoot"],
+  "properties": {
+    "schema": {"const": "kungfu.skill-lifecycle-receipt/v2"},
+    "planRoot": {"$ref": "#/$defs/root"},
+    "operationRoot": {"$ref": "#/$defs/root"},
+    "operation": {"enum": ["install", "update", "enable", "select", "load", "invoke", "suspend", "retire", "remove", "rollback"]},
+    "affected": {"type": "object", "required": ["key", "identities"]},
+    "basis": {"$ref": "#/$defs/ref"},
+    "result": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["generation", "stateRoot", "changed", "recovered"],
+      "properties": {
+        "generation": {"type": "integer", "minimum": 0},
+        "stateRoot": {"$ref": "#/$defs/root"},
+        "changed": {"type": "boolean"},
+        "recovered": {"type": "boolean"}
+      }
+    },
+    "idempotency": {"const": "exact-plan-root"},
+    "history": {"const": "retained"},
+    "receiptRoot": {"$ref": "#/$defs/root"}
+  },
+  "$defs": {
+    "root": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "ref": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["generation", "stateRoot"],
+      "properties": {
+        "generation": {"type": "integer", "minimum": 0},
+        "stateRoot": {"$ref": "#/$defs/root"}
+      }
+    }
+  }
+}

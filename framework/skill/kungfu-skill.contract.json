@@ -51,6 +51,9 @@
           "contractEnv",
           "skillPathEnv",
           "installRoot",
+          "registryRoot",
+          "payloadRoot",
+          "legacyReadRoot",
           "sourceFile",
           "duplicateKeyPolicy",
           "loadPolicy"
@@ -63,6 +66,15 @@
             "type": "string"
           },
           "installRoot": {
+            "type": "string"
+          },
+          "registryRoot": {
+            "type": "string"
+          },
+          "payloadRoot": {
+            "type": "string"
+          },
+          "legacyReadRoot": {
             "type": "string"
           },
           "sourceFile": {
@@ -199,7 +211,10 @@
           "context",
           "dependencies",
           "manager",
-          "definitionV2"
+          "definitionV2",
+          "registryStateV2",
+          "lifecyclePlanV2",
+          "lifecycleReceiptV2"
         ]
       }
     }
@@ -207,7 +222,10 @@
   "resolution": {
     "contractEnv": "KUNGFU_SKILL_CONTRACT",
     "skillPathEnv": "KF_SKILL_PATH",
-    "installRoot": "${home}/skills",
+    "installRoot": "${home}/skill-registry/v2/payloads/sha256",
+    "registryRoot": "${home}/skill-registry/v2",
+    "payloadRoot": "${home}/skill-registry/v2/payloads/sha256",
+    "legacyReadRoot": "${home}/skills",
     "sourceFile": "SKILL.md",
     "duplicateKeyPolicy": "reject-same-key-revision-different-root",
     "loadPolicy": "on-demand"
@@ -249,6 +267,21 @@
     "history": "preserve-original-roots-receipts-work-bindings-and-meaning"
   },
   "schemaFiles": {
+    "registryStateV2": {
+      "schema": "kungfu.skill-registry-state/v2",
+      "source": "schema/skill-registry-state-v2.schema.json",
+      "artifact": "skill/schema/skill-registry-state-v2.schema.json"
+    },
+    "lifecyclePlanV2": {
+      "schema": "kungfu.skill-lifecycle-plan/v2",
+      "source": "schema/skill-lifecycle-plan-v2.schema.json",
+      "artifact": "skill/schema/skill-lifecycle-plan-v2.schema.json"
+    },
+    "lifecycleReceiptV2": {
+      "schema": "kungfu.skill-lifecycle-receipt/v2",
+      "source": "schema/skill-lifecycle-receipt-v2.schema.json",
+      "artifact": "skill/schema/skill-lifecycle-receipt-v2.schema.json"
+    },
     "definitionV2": {
       "schema": "kungfu.skill-definition/v2",
       "source": "schema/skill-definition-v2.schema.json",

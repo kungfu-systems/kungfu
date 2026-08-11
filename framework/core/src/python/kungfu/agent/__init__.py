@@ -22,6 +22,13 @@ from .resources import (
 )
 from . import documentation
 
+
+def skill_registry(home):
+    from kungfu.skill import inspect_registry
+
+    return inspect_registry(home)
+
+
 __all__ = [
     "assess_work_advisory",
     "bootstrap_contract",
@@ -40,6 +47,7 @@ __all__ = [
     "registry_schema",
     "skill_state",
     "skill_path",
+    "skill_registry",
     "work_authority_capabilities",
     "documentation",
 ]

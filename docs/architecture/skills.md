@@ -14,8 +14,8 @@ amended by
 
 ## Staged v2 definition contract
 
-The v1 implementation remains readable while registry and runtime adoption are
-staged. A v1 `sourceHash` covers `SKILL.md`; it is not a v2 package identity.
+The v1 implementation remains readable as a compatibility projection. A v1
+`sourceHash` covers `SKILL.md`; it is not a v2 package identity.
 The v2 definition instead binds a stable key, immutable revision, and root over
 the complete sorted content closure. It declares provenance, distribution and
 Work scope, exact KFX/Profile dependencies, effects, proof, recovery,
@@ -33,6 +33,35 @@ remains capability and execution authority. Profile remains domain-meaning
 authority. Loading, invoking, or retiring a Skill cannot rewrite historical
 Work meaning. The v2 schema and rejection fixtures are checked by
 `./shifu check:skill-contract-v2`.
+
+## V2 registry and lifecycle authority
+
+Python owns the only Skill lifecycle writer under
+`<home>/skill-registry/v2`. A package install publishes the complete verified
+closure to `payloads/sha256/<content-root>` and its exact definition to
+`definitions/sha256/<definition-root>.json`, then atomically advances one
+rooted `state.json` fold. Immutable payloads, definitions, receipts, state
+snapshots, old revisions, and Work selection rows are retained.
+
+Every mutation is a two-step machine protocol. Planning is read-only and binds
+the current state root and generation, the affected Skill identity, the next
+state root, rollback guidance, and recovery policy. Apply requires the exact
+`planRoot`. A fenced writer replays the plan against the current fold, rejects
+stale or concurrent callers, publishes verified immutable bytes before the
+atomic state cut, and emits an idempotent receipt keyed by the plan root.
+
+The lifecycle states `installed`, `enabled`, `selected`, `loaded`, `invoked`,
+`suspended`, `retired`, and `historical` are distinct. Removing a Skill only
+removes active references; it does not delete package bytes, old revisions,
+receipts, Work bindings, facts, or KFX dependencies. Work selection is stored
+only as an exact Work reference. GUI focus or the currently visible page is
+never lifecycle authority.
+
+Python, Node, CLI, and Agent surfaces read the same rooted registry report.
+Node and outer managers are thin readers and cannot publish registry state.
+The v1 catalog/context projection reads active immutable payloads from this
+registry while continuing to read legacy `<home>/skills` sources for
+compatibility.
 
 ## The model
 
@@ -125,31 +154,29 @@ Help an agent inspect a failed trace run, identify likely failure layers, and
 produce a short audit note.
 ```
 
-Larger skills may add explicit metadata and packaged dependencies:
+V2 packages add one explicit definition beside the declared content closure:
 
 ```text
 trace-failure-investigator/
   SKILL.md
-  skill.json
-  kfx/
-    rewind-inspector-0.1.0.tgz
-    journal-manager-0.1.0.tgz
+  skill-definition.json
 ```
 
-`skill.json` is not required for the minimal form. It is for cases where a skill
-needs exact dependency versions, provenance, policy, or a generated catalog that
-should not be inferred from prose alone.
+The definition declares every payload member by relative path, byte count,
+media type, and SHA-256 root. Undeclared files, missing members, symlinks, path
+escape, path collisions, mutable identity, and incomplete closure roots fail
+before staging. KFX package bodies are forbidden inside the Skill closure;
+only exact KFX coordinates may appear in the definition.
 
 ## Skill packages and kfx dependencies
 
-A skill can contain or reference multiple kfx packages, but kfx remains
-deduplicated and governed independently:
+A skill can reference multiple kfx packages, but kfx remains deduplicated and
+governed independently:
 
-- Installing a skill writes a skill-to-kfx binding document under the Kungfu
-  home. kfx packages are resolved from the normal kfx registry by
-  `kungfuConfig.key`; the same kfx package is not copied per skill.
-- Removing a skill removes the skill binding. It does not remove shared kfx
-  dependencies unless an explicit orphan-cleanup command proves they are unused.
+- A v2 definition retains exact KFX key, revision, and content root coordinates.
+  Package bodies remain exclusively under the Core-native KFX registry.
+- Removing a Skill marks its active references historical. It cannot remove
+  shared KFX dependencies or reinterpret an older Work selection.
 - A kfx package does not gain more authority because a skill referenced it.
 - A third-party view kfx still runs under the sandboxed view tier.
 - A third-party adapter/runtime facet is not made executable by being wrapped in
@@ -315,7 +342,15 @@ The first CLI should be explicit and inspectable:
 kungfu skill validate <path>
 kungfu skill contract --json
 kungfu skill schema [--name source|catalog|context|dependencies|manager] --json
-kungfu skill install <path>
+kungfu skill install <v2-package> [--execute --expected-plan-root <root>]
+kungfu skill update <v2-package> [--execute --expected-plan-root <root>]
+kungfu skill enable|load|invoke|suspend|retire|remove <key>
+kungfu skill select <key> --work-ref <exact-work-ref>
+kungfu skill rollback <key> --target-revision <n>
+kungfu skill inspect [key] --json
+kungfu skill diff <key> --left <n> --right <n> --json
+kungfu skill history [key] --json
+kungfu skill diagnose --json
 kungfu skill list [--path <dir>] [--json]
 kungfu skill catalog [--path <dir>] [--json]
 kungfu skill context [--path <dir>] [--source cli|gui|test] [--manager python|node]
@@ -326,12 +361,9 @@ kungfu skill audit --run-id <id>
 kungfu skill explain <key-or-path>
 ```
 
-`kungfu skill install` installs the skill source into the Kungfu home skill
-directory, writes a kfx dependency binding under `<home>/skill-bindings/`, and
-skips any embedded `kfx/` payload directory so kfx package bodies do not get
-duplicated under each skill. Dependency rows are `resolved` when a matching
-package already exists in `<home>/extensions/<kfx-key>` and `unresolved`
-otherwise. `catalog` is the compact agent-visible catalog before full skill
+Mutation commands print a plan by default and write nothing. `--execute`
+requires the exact printed `--expected-plan-root`; a stale basis fails visibly.
+`catalog` is the compact agent-visible catalog before full skill
 loading. `context` wraps that catalog in the same envelope shape used by Python
 and Node manage modes. `deps` prints the binding/resolution state. The Node
 manager also builds a `kungfu.skill-manager/v1` document for GUI use, joining
@@ -410,9 +442,8 @@ The first audit slice records:
 - `SkillLoaded` when `kungfu skill read` loads full `SKILL.md` content. This
   records the selected skill key, source hash, content hash, source path, source,
   manager, and optional run id.
-- `SkillDependenciesBound` when `kungfu skill install` writes the kfx dependency
-  binding document. This records the skill key, dependency keys, registry paths,
-  and resolved/unresolved counts without copying kfx package bodies per skill.
+- rooted lifecycle receipts for install, update, enable, Work selection, load,
+  invocation, suspend, retire, remove-reference, and rollback operations;
 - `kungfu skill audit --run-id <id>` to inspect bundle evidence, plus
   `--audit-file` for standalone JSON/JSONL audit files.
 
@@ -430,8 +461,10 @@ The first slice proves the context loop before broad execution:
 7. Verify Python and Node manager envelopes through `managed-run` response
    evidence.
 8. Scaffold a minimal skill with only `SKILL.md` through the developer SDK.
-9. Bind declared kfx dependencies through `<home>/skill-bindings/<skill>.json`
-   while resolving package bodies only from `<home>/extensions/<kfx-key>`.
+9. Bind declared KFX dependencies as exact coordinates while resolving package
+   bodies only from the shared Core-native KFX registry.
+10. Fold v2 install, update, lifecycle, Work selection, history, and recovery
+    through the single fenced Python writer.
 
 Follow-up slices should:
 

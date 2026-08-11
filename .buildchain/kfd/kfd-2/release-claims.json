@@ -11,7 +11,7 @@
     "version": "4.0.0-alpha.1",
     "channel": "repository-default",
     "tag": "v4.0.0-alpha.1",
-    "sourceSha": "7c06e04f222aa8ddfe28e59fbfbf321cd4dd4a7b"
+    "sourceSha": "b4a10ea2a165f0d8eb1010b6d913069b1f17f39f"
   },
   "claims": [
     {
@@ -38,7 +38,7 @@
           "pointer": {
             "kind": "file",
             "path": "framework/core/src/python/kungfu/agent/cli_surface.catalog.json",
-            "sha256": "75abcea646905ddad72cd11b8b7e5b74632417d4e5d171275b04b8f641de5444"
+            "sha256": "4fc36086e5d8cbd803f6a2b266c1a012822a65e56a6df148276be767b06be3d5"
           },
           "description": "Complete deterministic CLI surface graph shared by offline Agent capabilities and catalog parity checks."
         },
@@ -267,7 +267,7 @@
           "pointer": {
             "kind": "file",
             "path": "framework/core/src/python/kungfu/cli/commands/agent.py",
-            "sha256": "913f1fadf69e179e785d7a4570b7b195c7ff5f668a93c4791332c7f18c702033"
+            "sha256": "2425506f34973fc3ce0c2cdf01a5b1d564b82bceadda75850a8120c184a881ec"
           },
           "description": "Agent command surface including mode selection and bootstrap status."
         }
