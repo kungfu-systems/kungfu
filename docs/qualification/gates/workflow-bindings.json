@@ -241,7 +241,7 @@
       "adapter": {
         "type": "buildchain-config",
         "kind": "step-uses",
-        "uses": "kungfu-systems/buildchain/actions/validate-config@827fa0252c0546816c33ec89e66ca505ad6d5162",
+        "uses": "kungfu-systems/buildchain/actions/validate-config@v3-alpha",
         "name": "Validate .buildchain/buildchain.toml",
         "with": {
           "require-version-state": "true",
@@ -655,7 +655,7 @@
       "adapter": {
         "type": "buildchain-release-candidate-recovery",
         "kind": "job-uses",
-        "uses": "kungfu-systems/buildchain/.github/workflows/release-candidate-promote.yml@827fa0252c0546816c33ec89e66ca505ad6d5162",
+        "uses": "kungfu-systems/buildchain/.github/workflows/release-candidate-promote.yml@v3-alpha",
         "job": {
           "needs": "recovery-preflight",
           "if": "${{ always() && github.event_name == 'workflow_dispatch' && inputs.resume-candidate-run-id != '' && needs.recovery-preflight.result == 'success' }}"

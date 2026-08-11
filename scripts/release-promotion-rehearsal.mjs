@@ -79,11 +79,6 @@ export function validateWorkflowSources(root, contract, overrides = {}) {
   const preflight = extractWorkflowJob(promotion, 'promotion-contract');
   const promote = extractWorkflowJob(promotion, 'promote');
   const recovery = extractWorkflowJob(promotion, 'recover');
-  const releaseAdmission = readJson(
-    path.join(root, 'docs/qualification/gates/release-admission-policy.json'),
-  );
-  const recoveryRuntimeSha =
-    releaseAdmission.buildchain.runtimes.alpha.publicationRuntimeSha;
   const productAdmission = extractWorkflowJob(
     build,
     'finalize-upgrade-publication-admission',
@@ -292,10 +287,10 @@ export function validateWorkflowSources(root, contract, overrides = {}) {
   requirePattern(
     validation,
     new RegExp(
-      `uses: kungfu-systems/buildchain/actions/validate-config@${escapeRegExp(contract.buildchain.workflow_shell_resolved_sha)}`,
+      `uses: kungfu-systems/buildchain/actions/validate-config@${escapeRegExp(contract.buildchain.workflow_shell_ref)}`,
     ),
     findings,
-    'Alpha validation must consume the resolved v3-alpha action SHA',
+    'Alpha validation must consume the floating v3-alpha action contract',
   );
   requirePattern(
     preflight,
@@ -355,10 +350,10 @@ export function validateWorkflowSources(root, contract, overrides = {}) {
   requirePattern(
     recovery,
     new RegExp(
-      `uses: kungfu-systems/buildchain/\\.github/workflows/release-candidate-promote\\.yml@${escapeRegExp(recoveryRuntimeSha)}`,
+      `uses: kungfu-systems/buildchain/\\.github/workflows/release-candidate-promote\\.yml@${escapeRegExp(contract.buildchain.workflow_shell_ref)}`,
     ),
     findings,
-    'recovery must consume the exact reviewed publication runtime',
+    'recovery must consume the floating v3-alpha shell and verify the reviewed runtime as data',
   );
   requirePattern(
     recovery,

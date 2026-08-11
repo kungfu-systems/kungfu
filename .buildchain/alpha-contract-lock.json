@@ -3,14 +3,14 @@
   "contract": "kungfu-buildchain-contract-lock",
   "buildchain": {
     "ref": "v3-alpha",
-    "resolvedSha": "827fa0252c0546816c33ec89e66ca505ad6d5162",
+    "resolvedSha": "e5e7078c67978051016c2ceb1fec114e8956397a",
     "contract": "kungfu-buildchain-runtime-contract-world",
-    "contractDigest": "sha256:00a40bcbcdde2531a3bdc2201515f91ac6ee4245ba2aec896ae7f68fa545f995",
-    "compatibilityDigest": "sha256:c74d76789e49291503292e0a5c38fffc5e3ef420ad85eeb8a2480d287fccfed7",
+    "contractDigest": "sha256:a67cf7f6bcfe9c0afb1969735a09d77225ad1252ff161fa156da8deaf5863a0e",
+    "compatibilityDigest": "sha256:80f65cc191b1f771475184edf8a1bf9c10dd69bb58060aa09313d0e1e57f508a",
     "compatibilityProofRegistryRoot": "sha256:f11b62ce69cfb0ff25b66861474b99a75148192c0474c9d1cc2067e347b05abd",
     "majorLine": "v3",
     "compatibilityPolicy": "major-compatible",
-    "acceptedAt": "2026-08-11T02:09:00Z",
+    "acceptedAt": "2026-08-11T11:05:30Z",
     "surfaces": [
       {
         "id": "reusable-build",
@@ -150,7 +150,7 @@
       {
         "id": "controller:build-channel-router",
         "kind": "controller",
-        "breakingDigest": "sha256:d40dd05d7e07473d4b2dc1b62fbb0ed6f06449b4d3a7c44a2e8014313e3c0273",
+        "breakingDigest": "sha256:30549aa26cd1e1dd81f10fe3529d3c6e3f8438a6efa0100c47ebae4d2f3d71df",
         "compatibilityProofRoots": []
       },
       {

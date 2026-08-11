@@ -132,7 +132,7 @@
             "product-alpha",
             "product-stable"
           ],
-          "sourceRoot": "sha256:d523b073938fdb620b5da4faf03b3b54c79be6a8598c54117e33bb794b844f2c"
+          "sourceRoot": "sha256:d9da06e5f7c850ea0ba6aa2a7e99990d7528c2acc9e1e28c0babe181c0156fe0"
         },
         {
           "path": ".github/workflows/cancel-dequeued-merge-group.yml",
@@ -329,7 +329,7 @@
             "product-stable",
             "product-binaries"
           ],
-          "sourceRoot": "sha256:789a75f4b46b23917f0a23313bdd5564129d6481badb4351ce5787f30745e15e"
+          "sourceRoot": "sha256:f7d7120bae5439957ece96c23bfe7ec5448ed0fd986c57a977a3e2c4569b42f2"
         },
         {
           "path": ".github/workflows/release-shifu.yml",
@@ -364,8 +364,8 @@
     "buildchain": {
       "repository": "kungfu-systems/buildchain",
       "owner": "kungfu-systems/buildchain",
-      "sourceRevision": "827fa0252c0546816c33ec89e66ca505ad6d5162",
-      "version": "3.0.8-alpha.0",
+      "sourceRevision": "e5e7078c67978051016c2ceb1fec114e8956397a",
+      "version": "3.0.9-alpha.2",
       "compatibilityMode": "stable-v3-contract-plus-alpha-v3-contract",
       "stableContractLock": ".buildchain/contract-lock.json",
       "runtimeContractLock": ".buildchain/alpha-contract-lock.json",
@@ -860,5 +860,5 @@
       }
     }
   ],
-  "registryRoot": "sha256:ba03ea63be170389c4bbfb37010b216c699e3c1274b3284241ba32badbd487f1"
+  "registryRoot": "sha256:35d3a31a03b2a3961b0976e1add77b9228398b7694db262c370a4d6db79a5fba"
 }

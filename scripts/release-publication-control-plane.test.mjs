@@ -43,7 +43,7 @@ test('checked registry closes workflows and invariants', () => {
   assert.equal(validateRegistry(v), v);
   assert.equal(status(v).sourceAcceptance, 'passed');
 });
-test('promotion authority separates floating release routing from exact recovery runtime', () => {
+test('promotion authority keeps floating Alpha routing while verifying exact recovery runtime data', () => {
   const source = fs.readFileSync(
     '.github/workflows/release-new-version.yml',
     'utf8',
@@ -58,7 +58,7 @@ test('promotion authority separates floating release routing from exact recovery
   assert.equal(validatePromotionWorkflowAuthority(source, runtime), true);
   assert.throws(
     () => validatePromotionWorkflowAuthority(source, '0'.repeat(40)),
-    /authority drift/u,
+    /runtime is invalid/u,
   );
   assert.throws(
     () =>

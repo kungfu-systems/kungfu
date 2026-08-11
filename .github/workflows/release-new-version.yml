@@ -413,7 +413,7 @@ jobs:
       issues: write
       id-token: write
       pull-requests: write
-    uses: kungfu-systems/buildchain/.github/workflows/release-candidate-promote.yml@827fa0252c0546816c33ec89e66ca505ad6d5162
+    uses: kungfu-systems/buildchain/.github/workflows/release-candidate-promote.yml@v3-alpha
     with:
       buildchain-channel: auto
       buildchain-ref: ${{ inputs.resume-buildchain-runtime-sha }}

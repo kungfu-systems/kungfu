@@ -7,11 +7,11 @@
   },
   "buildchain": {
     "workflow_shell_ref": "v3-alpha",
-    "workflow_shell_resolved_sha": "827fa0252c0546816c33ec89e66ca505ad6d5162",
+    "workflow_shell_resolved_sha": "e5e7078c67978051016c2ceb1fec114e8956397a",
     "candidate_build_sha": "v3-alpha",
     "alpha": {
       "workflow_ref": "v3-alpha",
-      "resolved_sha": "827fa0252c0546816c33ec89e66ca505ad6d5162",
+      "resolved_sha": "e5e7078c67978051016c2ceb1fec114e8956397a",
       "contract_lock": ".buildchain/alpha-contract-lock.json",
       "publish_channel": "alpha",
       "publish_dist_tag": "alpha"

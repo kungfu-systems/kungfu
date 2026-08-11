@@ -38,16 +38,16 @@ import {
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const SOURCE_SHA = '1'.repeat(40);
-const RUNTIME_SHA = '827fa0252c0546816c33ec89e66ca505ad6d5162';
+const RUNTIME_SHA = 'e5e7078c67978051016c2ceb1fec114e8956397a';
 const PUBLICATION_RUNTIME_SHA = RUNTIME_SHA;
 const RETIRED_PUBLICATION_RUNTIME_SHA =
   '21030efd277301d642fd9baaa1bd75f02dd3ddc6';
 const STABLE_RUNTIME_SHA = '380b2d8c2a660b07ed785e71276f71dc6a9184f7';
 const SOURCE_TREE_SHA = 'a'.repeat(40);
 const CONTRACT_DIGEST =
-  '00a40bcbcdde2531a3bdc2201515f91ac6ee4245ba2aec896ae7f68fa545f995';
+  'a67cf7f6bcfe9c0afb1969735a09d77225ad1252ff161fa156da8deaf5863a0e';
 const RECOVERED_CONTRACT_DIGEST =
-  '00a40bcbcdde2531a3bdc2201515f91ac6ee4245ba2aec896ae7f68fa545f995';
+  'a67cf7f6bcfe9c0afb1969735a09d77225ad1252ff161fa156da8deaf5863a0e';
 const STABLE_CONTRACT_DIGEST =
   '900b03120a2ae9b7e7e67fdb854039849339f96bd6285a13c2ced30b9b02f2c0';
 const PREDICATE_COMMAND = 'node scripts/kungfu-release-qualification.mjs';

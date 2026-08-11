@@ -23,13 +23,6 @@ const CONTRACT = JSON.parse(
     'utf8',
   ),
 );
-const RELEASE_ADMISSION = JSON.parse(
-  fs.readFileSync(
-    path.join(ROOT, 'docs/qualification/gates/release-admission-policy.json'),
-    'utf8',
-  ),
-);
-
 test('the committed Buildchain promotion consumer contract is coherent', () => {
   const result = validatePromotionContract(ROOT);
   assert.equal(result.ok, true, JSON.stringify(result.findings, null, 2));
@@ -270,7 +263,7 @@ test('Alpha recovery reuses a verified sealed candidate through the reviewed pub
   assert.match(
     recovery,
     new RegExp(
-      `uses: kungfu-systems/buildchain/\\.github/workflows/release-candidate-promote\\.yml@${RELEASE_ADMISSION.buildchain.runtimes.alpha.publicationRuntimeSha}`,
+      `uses: kungfu-systems/buildchain/\\.github/workflows/release-candidate-promote\\.yml@${CONTRACT.buildchain.workflow_shell_ref}`,
       'u',
     ),
   );
@@ -294,7 +287,8 @@ test('Alpha recovery reuses a verified sealed candidate through the reviewed pub
   ]) {
     assert.ok(recovery.includes(binding), binding);
   }
-  assert.match(recovery, /release-candidate-promote\.yml@[0-9a-f]{40}/u);
+  assert.match(recovery, /release-candidate-promote\.yml@v3-alpha/u);
+  assert.doesNotMatch(recovery, /release-candidate-promote\.yml@[0-9a-f]{40}/u);
   assert.doesNotMatch(recovery, /^\s+strategy:\s*$/mu);
   assert.doesNotMatch(workflow, /test "\$CANDIDATE_RUN_ID" = "[0-9]+"/u);
   assert.doesNotMatch(workflow, /test "\$PREFLIGHT_RUN_ID" = "[0-9]+"/u);
@@ -392,7 +386,9 @@ test('manual Buildchain validation retains the qualified immutable default and d
   assert.equal(missingDefault.ok, false);
   assert.ok(
     missingDefault.findings.some((entry) =>
-      entry.message.includes('default to the qualified immutable Buildchain runtime'),
+      entry.message.includes(
+        'default to the qualified immutable Buildchain runtime',
+      ),
     ),
   );
 
@@ -438,8 +434,8 @@ test('Alpha Build and validation cannot fall back to stable v3 surfaces', () => 
       'validation action',
       validation,
       validation.replace(
-        `validate-config@${CONTRACT.buildchain.workflow_shell_resolved_sha}`,
-        'validate-config@f4ca5182f53fddf76bdf4246be0993afa5a592bc',
+        `validate-config@${CONTRACT.buildchain.workflow_shell_ref}`,
+        'validate-config@v3',
       ),
     ],
   ]) {
@@ -464,7 +460,9 @@ test('candidate build rejects a different exact Buildchain runtime pin', () => {
   assert.equal(result.ok, false);
   assert.ok(
     result.findings.some((entry) =>
-      entry.message.includes('default to the qualified immutable Buildchain runtime'),
+      entry.message.includes(
+        'default to the qualified immutable Buildchain runtime',
+      ),
     ),
   );
 });
