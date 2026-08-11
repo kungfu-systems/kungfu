@@ -1,0 +1,564 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "kungfu.skill-definition/v2",
+  "title": "Kungfu Skill v2 Definition",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "identity",
+    "class",
+    "content",
+    "provenance",
+    "scope",
+    "dependencies",
+    "effects",
+    "compatibility",
+    "proof",
+    "recovery",
+    "authority"
+  ],
+  "properties": {
+    "schema": {
+      "const": "kungfu.skill-definition/v2"
+    },
+    "identity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["key", "revision", "contentRoot"],
+      "properties": {
+        "key": {
+          "type": "string",
+          "pattern": "^[a-z0-9](?:[a-z0-9._-]*[a-z0-9])?$",
+          "maxLength": 128
+        },
+        "revision": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "contentRoot": {
+          "$ref": "#/$defs/root"
+        }
+      }
+    },
+    "class": {
+      "enum": ["instruction-only", "operational", "domain"]
+    },
+    "content": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["algorithm", "root", "entrypoint", "members"],
+      "properties": {
+        "algorithm": {
+          "const": "sha256-canonical-json"
+        },
+        "root": {
+          "$ref": "#/$defs/root"
+        },
+        "entrypoint": {
+          "const": "SKILL.md"
+        },
+        "members": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["path", "root", "bytes", "mediaType"],
+            "properties": {
+              "path": {
+                "$ref": "#/$defs/path"
+              },
+              "root": {
+                "$ref": "#/$defs/root"
+              },
+              "bytes": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "mediaType": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          }
+        }
+      }
+    },
+    "provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sourceKind", "sourceRoot", "sourceRef", "generated"],
+      "properties": {
+        "sourceKind": {
+          "enum": ["workspace", "repository", "archive", "installed"]
+        },
+        "sourceRoot": {
+          "$ref": "#/$defs/root"
+        },
+        "sourceRef": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1024
+        },
+        "generated": {
+          "type": "boolean"
+        },
+        "generatorRoot": {
+          "$ref": "#/$defs/root"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {"generated": {"const": true}},
+            "required": ["generated"]
+          },
+          "then": {
+            "required": ["generatorRoot"],
+            "properties": {
+              "generatorRoot": {"$ref": "#/$defs/root"}
+            }
+          },
+          "else": {
+            "not": {"required": ["generatorRoot"]}
+          }
+        }
+      ]
+    },
+    "scope": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["distribution", "appliesTo", "work"],
+      "properties": {
+        "distribution": {
+          "enum": ["workspace-local", "project-local", "account-local", "shared"]
+        },
+        "appliesTo": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          }
+        },
+        "work": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["binding", "selectionAuthority", "completionAuthority"],
+          "properties": {
+            "binding": {
+              "enum": ["optional", "required"]
+            },
+            "selectionAuthority": {
+              "const": "kungfu-work"
+            },
+            "completionAuthority": {
+              "const": "kungfu-work"
+            }
+          }
+        }
+      }
+    },
+    "dependencies": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kfx", "profiles"],
+      "properties": {
+        "kfx": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/kfxDependency"
+          }
+        },
+        "profiles": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/profileDependency"
+          }
+        }
+      }
+    },
+    "effects": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mode", "declarations"],
+      "properties": {
+        "mode": {
+          "enum": ["none", "declared"]
+        },
+        "declarations": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["id", "type", "authorityRef"],
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[a-z0-9][a-z0-9._-]*$"
+              },
+              "type": {
+                "enum": [
+                  "filesystem-read",
+                  "filesystem-write",
+                  "process",
+                  "network",
+                  "credential",
+                  "external-write",
+                  "capability"
+                ]
+              },
+              "authorityRef": {
+                "type": "string",
+                "pattern": "^(kfx|profile):[a-z0-9][a-z0-9._-]*@[1-9][0-9]*#sha256:[0-9a-f]{64}$"
+              }
+            }
+          }
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {"mode": {"const": "none"}},
+            "required": ["mode"]
+          },
+          "then": {
+            "properties": {"declarations": {"type": "array", "maxItems": 0}}
+          },
+          "else": {
+            "properties": {"declarations": {"type": "array", "minItems": 1}}
+          }
+        }
+      ]
+    },
+    "compatibility": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["contractVersion", "predecessor", "requires", "history"],
+      "properties": {
+        "contractVersion": {
+          "const": 2
+        },
+        "predecessor": {
+          "oneOf": [
+            {"type": "null"},
+            {"$ref": "#/$defs/predecessor"}
+          ]
+        },
+        "requires": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["surface", "contractRoot"],
+            "properties": {
+              "surface": {
+                "enum": ["skill", "work", "kfx", "profile"]
+              },
+              "contractRoot": {
+                "$ref": "#/$defs/root"
+              }
+            }
+          }
+        },
+        "history": {
+          "const": "preserve-original-meaning"
+        }
+      }
+    },
+    "proof": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["requirements", "completion"],
+      "properties": {
+        "requirements": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["id", "kind", "description"],
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[a-z0-9][a-z0-9._-]*$"
+              },
+              "kind": {
+                "enum": ["check", "receipt", "fact", "review", "user-acceptance"]
+              },
+              "description": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          }
+        },
+        "completion": {
+          "const": "work-acceptance-not-skill-output"
+        }
+      }
+    },
+    "recovery": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["strategy", "steps", "history"],
+      "properties": {
+        "strategy": {
+          "enum": ["disable-and-inspect", "rollback-to-predecessor", "remove-reference-only"]
+        },
+        "steps": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "history": {
+          "const": "preserve-roots-receipts-and-work-meaning"
+        }
+      }
+    },
+    "authority": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["capability", "work", "profile", "factEpisode", "kfd", "kfx", "nonClaims"],
+      "properties": {
+        "capability": {
+          "enum": ["none", "separate-kfx-admission-required"]
+        },
+        "work": {
+          "const": "reference-only"
+        },
+        "profile": {
+          "const": "reference-only"
+        },
+        "factEpisode": {
+          "const": "reference-only"
+        },
+        "kfd": {
+          "const": "reference-only"
+        },
+        "kfx": {
+          "const": "reference-only"
+        },
+        "nonClaims": {
+          "type": "array",
+          "minItems": 8,
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "skill-prose-is-not-capability",
+              "skill-is-not-work-authority",
+              "skill-is-not-profile-authority",
+              "skill-is-not-fact-or-episode-authority",
+              "skill-is-not-kfd-authority",
+              "skill-is-not-kfx-authority",
+              "selection-load-or-invocation-is-not-completion",
+              "retirement-does-not-reinterpret-history"
+            ]
+          }
+        }
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {"class": {"const": "instruction-only"}},
+        "required": ["class"]
+      },
+      "then": {
+        "properties": {
+          "dependencies": {
+            "type": "object",
+            "properties": {
+              "kfx": {"type": "array", "maxItems": 0},
+              "profiles": {"type": "array", "maxItems": 0}
+            }
+          },
+          "effects": {
+            "type": "object",
+            "properties": {"mode": {"const": "none"}}
+          },
+          "authority": {
+            "type": "object",
+            "properties": {"capability": {"const": "none"}}
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {"class": {"const": "operational"}},
+        "required": ["class"]
+      },
+      "then": {
+        "properties": {
+          "dependencies": {
+            "type": "object",
+            "properties": {
+              "kfx": {"type": "array", "minItems": 1},
+              "profiles": {"type": "array", "maxItems": 0}
+            }
+          },
+          "scope": {
+            "type": "object",
+            "properties": {
+              "work": {
+                "type": "object",
+                "properties": {"binding": {"const": "required"}}
+              }
+            }
+          },
+          "authority": {
+            "type": "object",
+            "properties": {"capability": {"const": "separate-kfx-admission-required"}}
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "class": {"const": "domain"},
+          "dependencies": {
+            "type": "object",
+            "properties": {"kfx": {"type": "array", "minItems": 1}},
+            "required": ["kfx"]
+          }
+        },
+        "required": ["class", "dependencies"]
+      },
+      "then": {
+        "properties": {
+          "authority": {
+            "type": "object",
+            "properties": {"capability": {"const": "separate-kfx-admission-required"}}
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {"class": {"const": "domain"}},
+        "required": ["class"]
+      },
+      "then": {
+        "properties": {
+          "dependencies": {
+            "type": "object",
+            "properties": {"profiles": {"type": "array", "minItems": 1}}
+          },
+          "scope": {
+            "type": "object",
+            "properties": {
+              "work": {
+                "type": "object",
+                "properties": {"binding": {"const": "required"}}
+              }
+            }
+          }
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "root": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "path": {
+      "type": "string",
+      "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$))(?!.*//)[A-Za-z0-9._-]+(?:/[A-Za-z0-9._-]+)*$",
+      "maxLength": 512
+    },
+    "kfxDependency": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["key", "revision", "root", "required", "capabilityRequests"],
+      "properties": {
+        "key": {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9._-]*$"
+        },
+        "revision": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "root": {
+          "$ref": "#/$defs/root"
+        },
+        "required": {
+          "type": "boolean"
+        },
+        "capabilityRequests": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z0-9][a-z0-9._-]*$"
+          }
+        }
+      }
+    },
+    "profileDependency": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "revision", "root", "required", "contributions"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9._-]*$"
+        },
+        "revision": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "root": {
+          "$ref": "#/$defs/root"
+        },
+        "required": {
+          "type": "boolean"
+        },
+        "contributions": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z0-9][a-z0-9._-]*$"
+          }
+        }
+      }
+    },
+    "predecessor": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["key", "revision", "contentRoot"],
+      "properties": {
+        "key": {
+          "type": "string",
+          "pattern": "^[a-z0-9](?:[a-z0-9._-]*[a-z0-9])?$"
+        },
+        "revision": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "contentRoot": {
+          "$ref": "#/$defs/root"
+        }
+      }
+    }
+  }
+}
