@@ -899,6 +899,144 @@ test('candidate finalization seals one rooted product admission receipt into its
   });
 });
 
+test('candidate finalization ignores root-manifest-only artifact projections', () => {
+  withFixture((value) => {
+    for (const [name, manifestPath] of [
+      ['kungfu-credential-manifest-macos', value.credential.manifestPath],
+      [
+        'kungfu-manifest-linux-arm64',
+        path.join(value.support.bundleRoot, 'manifest.json'),
+      ],
+      [
+        'kungfu-manifest-linux-x64',
+        path.join(value.platforms.linux.bundleRoot, 'manifest.json'),
+      ],
+    ]) {
+      const projectionRoot = path.join(value.payloadRoot, name);
+      fs.mkdirSync(projectionRoot, { recursive: true });
+      fs.copyFileSync(manifestPath, path.join(projectionRoot, 'manifest.json'));
+    }
+    const outputRoot = path.join(
+      value.payloadRoot,
+      `kungfu-product-admission-${SOURCE}`,
+    );
+    const written = writeUpgradePublicationAdmission({
+      payloadRoot: value.payloadRoot,
+      releaseCandidatePassportPath: value.passportPath,
+      expectedVersion: VERSION,
+      outputPath: path.join(
+        outputRoot,
+        PRODUCT_UPGRADE_PUBLICATION_ADMISSION_FILE,
+      ),
+      capsulePath: path.join(
+        outputRoot,
+        PRODUCT_UPGRADE_PUBLICATION_CAPSULE_FILE,
+      ),
+    });
+    assert.equal(written.receipt.candidate.bundleCount, 5);
+    assert.deepEqual(
+      written.receipt.candidate.bundles.map(({ name }) => name).sort(),
+      [
+        path.basename(value.credential.bundleRoot),
+        path.basename(value.platforms.darwin.bundleRoot),
+        path.basename(value.platforms.linux.bundleRoot),
+        path.basename(value.platforms.win32.bundleRoot),
+        path.basename(value.support.bundleRoot),
+      ].sort(),
+    );
+  });
+});
+
+test('candidate finalization retains Linux ARM64 as product support when it carries an upgrade manifest', () => {
+  withFixture((value) => {
+    const supportManifestPath = path.join(
+      value.support.bundleRoot,
+      'product',
+      'release',
+      'cli',
+      `kungfu-upgrade-${VERSION}-linux-arm64.json`,
+    );
+    const supportManifest = JSON.parse(
+      fs.readFileSync(value.platforms.linux.cliManifestPath, 'utf8'),
+    );
+    supportManifest.platform = 'linux';
+    supportManifest.architecture = 'arm64';
+    writeJson(supportManifestPath, supportManifest);
+    const outputRoot = path.join(
+      value.payloadRoot,
+      `kungfu-product-admission-${SOURCE}`,
+    );
+    const written = writeUpgradePublicationAdmission({
+      payloadRoot: value.payloadRoot,
+      releaseCandidatePassportPath: value.passportPath,
+      expectedVersion: VERSION,
+      outputPath: path.join(
+        outputRoot,
+        PRODUCT_UPGRADE_PUBLICATION_ADMISSION_FILE,
+      ),
+      capsulePath: path.join(
+        outputRoot,
+        PRODUCT_UPGRADE_PUBLICATION_CAPSULE_FILE,
+      ),
+    });
+    assert.equal(written.receipt.candidate.bundleCount, 5);
+    assert.deepEqual(
+      written.receipt.candidate.bundles
+        .filter(({ platformId }) => platformId === 'linux-arm64')
+        .map(({ role }) => role),
+      ['product-support'],
+    );
+    assert.deepEqual(written.receipt.admission.platforms, [
+      'darwin-arm64',
+      'linux-x64',
+      'win32-x64',
+    ]);
+  });
+});
+
+test('candidate finalization treats a real Linux ARM64 upgrade manifest without a root projection as support-only', () => {
+  withFixture((value) => {
+    fs.rmSync(path.join(value.support.bundleRoot, 'manifest.json'));
+    const supportManifestPath = path.join(
+      value.support.bundleRoot,
+      'product',
+      'release',
+      'cli',
+      `kungfu-upgrade-${VERSION}-linux-arm64.json`,
+    );
+    const supportManifest = JSON.parse(
+      fs.readFileSync(value.platforms.linux.cliManifestPath, 'utf8'),
+    );
+    supportManifest.platform = 'linux';
+    supportManifest.architecture = 'arm64';
+    writeJson(supportManifestPath, supportManifest);
+    const outputRoot = path.join(
+      value.payloadRoot,
+      `kungfu-product-admission-${SOURCE}`,
+    );
+    const written = writeUpgradePublicationAdmission({
+      payloadRoot: value.payloadRoot,
+      releaseCandidatePassportPath: value.passportPath,
+      expectedVersion: VERSION,
+      outputPath: path.join(
+        outputRoot,
+        PRODUCT_UPGRADE_PUBLICATION_ADMISSION_FILE,
+      ),
+      capsulePath: path.join(
+        outputRoot,
+        PRODUCT_UPGRADE_PUBLICATION_CAPSULE_FILE,
+      ),
+    });
+    assert.equal(written.receipt.candidate.bundleCount, 5);
+    assert.equal(
+      written.receipt.candidate.bundles.find(
+        ({ role }) => role === 'product-support',
+      ).platformId,
+      'linux-arm64',
+    );
+  });
+});
+
 test('candidate finalization rejects a candidate without the exact five bundle roles', () => {
   withFixture((value) => {
     fs.rmSync(value.support.bundleRoot, { recursive: true });
