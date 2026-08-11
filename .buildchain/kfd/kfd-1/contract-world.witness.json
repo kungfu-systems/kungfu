@@ -230,7 +230,7 @@
   "metadata": {
     "kfdPackage": {
       "name": "@kungfu-tech/kfd",
-      "version": "1.0.0-alpha.53",
+      "version": "1.0.0-alpha.41",
       "repository": "git+https://github.com/kungfu-systems/kfd.git"
     },
     "schemaIds": {

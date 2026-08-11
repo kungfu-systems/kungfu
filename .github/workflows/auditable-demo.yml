@@ -38,6 +38,8 @@ jobs:
     permissions:
       actions: read
       contents: read
+      issues: write
+      id-token: write
     uses: kungfu-systems/buildchain/.github/workflows/.build.yml@41d4dce2f38aa4821c794b49dcfb2bcf59d0984a
     with:
       buildchain-ref: 41d4dce2f38aa4821c794b49dcfb2bcf59d0984a

@@ -56,7 +56,7 @@ without changing and refreshing the manifest fails the Gate catalog check.
 | `.github/workflows/alpha-promotion-preflight.yml` | `aggregate` | qualification | none | diagnostic | token:read | none | 4 |
 | `.github/workflows/alpha-promotion-preflight.yml` | `probe` | qualification | none | diagnostic | token:read | none | 10 |
 | `.github/workflows/auditable-demo.yml` | `auditable-demo` | qualification | none | qualifying | token:write, repo-secret:KUNGFU_GITHUB_TOKEN | none | 0 |
-| `.github/workflows/auditable-demo.yml` | `build` | qualification | none | qualifying | token:read | none | 0 |
+| `.github/workflows/auditable-demo.yml` | `build` | qualification | none | qualifying | token:write, oidc | none | 0 |
 | `.github/workflows/auditable-demo.yml` | `resolve-binary` | qualification | none | diagnostic | token:read | none | 1 |
 | `.github/workflows/aws-us-linux-burst-qualification.yml` | `qualify` | qualification | none | diagnostic | token:read | none | 0 |
 | `.github/workflows/aws-us-macos-burst-qualification.yml` | `qualify` | qualification | none | diagnostic | token:write, oidc | none | 0 |
