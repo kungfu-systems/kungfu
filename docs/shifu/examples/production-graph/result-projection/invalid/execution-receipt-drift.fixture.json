@@ -1,0 +1,11 @@
+{
+  "baseFixture": "build-result-success",
+  "expectedExecutionReceiptRoot": "sha256:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+  "mutation": {
+    "target": "projection",
+    "path": ["authority"],
+    "operation": "replace",
+    "value": "shifu.projection-only"
+  },
+  "expect": "execution-receipt-drift"
+}

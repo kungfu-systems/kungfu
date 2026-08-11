@@ -17,7 +17,9 @@
     "executionAdmissionVerificationReceipt": "docs/shifu/schema/production-graph-execution-admission-verification-receipt-v0.schema.json",
     "localExecutorPolicy": "docs/shifu/schema/production-graph-local-executor-policy-v0.schema.json",
     "localExecutionReceipt": "docs/shifu/schema/production-graph-local-execution-receipt-v0.schema.json",
-    "buildCoreShadowReceipt": "docs/shifu/schema/build-core-production-graph-shadow-receipt-v0.schema.json"
+    "buildCoreShadowReceipt": "docs/shifu/schema/build-core-production-graph-shadow-receipt-v0.schema.json",
+    "buildResult": "docs/shifu/schema/production-graph-build-result-v0.schema.json",
+    "buildResultSettlementReceipt": "docs/shifu/schema/production-graph-build-result-settlement-receipt-v0.schema.json"
   },
   "rootAlgorithm": {
     "name": "sha256-canonical-json",
@@ -103,6 +105,20 @@
     "receipt": "kungfu.build-core-production-graph-shadow-receipt/v0",
     "classifiesEveryComparedDimension": true,
     "cutover": false
+  },
+  "buildResult": {
+    "command": "./shifu production-graph:build-result",
+    "projection": "shifu.production-graph-build-result/v0",
+    "settlementReceipt": "shifu.production-graph-build-result-settlement-receipt/v0",
+    "source": "one exact shifu.production-graph-local-execution-receipt/v0",
+    "authority": "projection-only",
+    "canonicalCutAuthority": false,
+    "buildchainEvidenceAuthority": false,
+    "kfdAuthority": false,
+    "artifactStorageAuthority": false,
+    "publishingAuthority": false,
+    "signingAuthority": false,
+    "releaseCutAuthority": false
   },
   "feedback": {
     "command": "./shifu production-graph:feedback",

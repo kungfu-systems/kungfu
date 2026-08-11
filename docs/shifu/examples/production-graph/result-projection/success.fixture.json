@@ -1,0 +1,11 @@
+{
+  "fixtureId": "build-result-success",
+  "outcome": "qualified",
+  "sourceRevision": "1111111111111111111111111111111111111111",
+  "sourceTree": "2222222222222222222222222222222222222222",
+  "nodes": [
+    { "id": "compile", "state": "succeeded", "started": true, "retryEligible": false },
+    { "id": "package", "state": "succeeded", "started": true, "retryEligible": false }
+  ],
+  "nextAction": "submit the projection to the canonical Build Cut authority"
+}

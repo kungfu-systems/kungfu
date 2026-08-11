@@ -1,0 +1,11 @@
+{
+  "fixtureId": "build-result-failure",
+  "outcome": "failed",
+  "sourceRevision": "1111111111111111111111111111111111111111",
+  "sourceTree": "2222222222222222222222222222222222222222",
+  "nodes": [
+    { "id": "compile", "state": "failed", "started": true, "retryEligible": false },
+    { "id": "package", "state": "skipped", "started": false, "retryEligible": false }
+  ],
+  "nextAction": "inspect retained compile evidence"
+}

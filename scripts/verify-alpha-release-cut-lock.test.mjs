@@ -18,12 +18,12 @@ function git(...args) {
   return execFileSync('git', args, { cwd: ROOT, encoding: 'utf8' }).trim();
 }
 
-test('Alpha.2 r16 lock verifies the exact Release Cut and fixed runtimes', () => {
+test('Alpha.2 r17 lock verifies the exact Release Cut and fixed runtimes', () => {
   assert.equal(LOCK.schema, 'kungfu.alpha-release-cut-lock/v1');
   assert.equal(LOCK.release, 'v4.0.0-alpha.2');
-  assert.equal(LOCK.cut, 'r16');
+  assert.equal(LOCK.cut, 'r17');
   assert.equal(LOCK.state, 'frozen');
-  assert.equal(LOCK.candidate.sha, '89781ff7236239aa310696e6bf40f8af3445c371');
+  assert.equal(LOCK.candidate.sha, '77a66f7141143e524484a548dbba76a1ae1ecc38');
   assert.equal(LOCK.alphaBase.sha, 'f9e6b0e34bcdd6407b2a18206ace7982d64de2c8');
   assert.equal(
     git('show', '-s', '--format=%P', LOCK.candidate.sha),
@@ -51,15 +51,15 @@ test('Alpha.2 r16 lock verifies the exact Release Cut and fixed runtimes', () =>
   );
 });
 
-test('Alpha.2 r16 lock keeps Buildchain invocation floating', () => {
+test('Alpha.2 r17 lock keeps Buildchain invocation floating', () => {
   assert.equal(LOCK.buildchain.build.ref, 'v3');
   assert.equal(
     LOCK.buildchain.build.resolvedSha,
-    '81c49578bff72a9784a1b63ce8698bd9dd23d7bf',
+    'f4ca5182f53fddf76bdf4246be0993afa5a592bc',
   );
   assert.equal(
     LOCK.buildchain.build.contractDigest,
-    'sha256:8e9a161653c40611ffd76aa878ae348fc215506c1caa88347111fb122cfe7c12',
+    'sha256:52cdb871cb0559534f78548f2487d8f3ceb64bb92e8a587f440a2946f78e7386',
   );
   assert.equal(LOCK.buildchain.promotion.ref, 'v3-alpha');
   assert.equal(

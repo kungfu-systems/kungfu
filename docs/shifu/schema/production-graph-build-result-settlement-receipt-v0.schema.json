@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://libkungfu.dev/schemas/shifu/production-graph-build-result-settlement-receipt-v0.schema.json",
+  "title": "Shifu Production Graph build-result settlement receipt v0",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "status",
+    "outcome",
+    "executionReceiptRoot",
+    "projectionRoot",
+    "outputDigests",
+    "provenanceRoot",
+    "completenessRoot",
+    "failureRoot",
+    "cancellationRoot",
+    "authorityBoundaryRoot",
+    "receiptRoot"
+  ],
+  "properties": {
+    "schema": { "const": "shifu.production-graph-build-result-settlement-receipt/v0" },
+    "status": { "const": "settled" },
+    "outcome": { "enum": ["qualified", "failed", "cancelled", "timed-out"] },
+    "executionReceiptRoot": { "$ref": "production-graph-v0.schema.json#/$defs/root" },
+    "projectionRoot": { "$ref": "production-graph-v0.schema.json#/$defs/root" },
+    "outputDigests": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": { "$ref": "production-graph-v0.schema.json#/$defs/root" }
+    },
+    "provenanceRoot": { "$ref": "production-graph-v0.schema.json#/$defs/root" },
+    "completenessRoot": { "$ref": "production-graph-v0.schema.json#/$defs/root" },
+    "failureRoot": { "$ref": "production-graph-v0.schema.json#/$defs/root" },
+    "cancellationRoot": { "$ref": "production-graph-v0.schema.json#/$defs/root" },
+    "authorityBoundaryRoot": { "$ref": "production-graph-v0.schema.json#/$defs/root" },
+    "receiptRoot": { "$ref": "production-graph-v0.schema.json#/$defs/root" }
+  }
+}

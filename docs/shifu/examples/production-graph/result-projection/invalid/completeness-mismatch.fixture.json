@@ -1,0 +1,11 @@
+{
+  "baseFixture": "build-result-success",
+  "mutation": {
+    "target": "projection",
+    "path": ["completeness", "outputCount"],
+    "operation": "replace",
+    "value": 1,
+    "rerootProjection": true
+  },
+  "expect": "completeness-mismatch"
+}

@@ -43,7 +43,9 @@
         "executionAdmissionVerificationReceipt",
         "localExecutorPolicy",
         "localExecutionReceipt",
-        "buildCoreShadowReceipt"
+        "buildCoreShadowReceipt",
+        "buildResult",
+        "buildResultSettlementReceipt"
       ],
       "properties": {
         "graph": { "$ref": "production-graph-v0.schema.json#/$defs/root" },
@@ -60,7 +62,9 @@
         "executionAdmissionVerificationReceipt": { "$ref": "production-graph-v0.schema.json#/$defs/root" },
         "localExecutorPolicy": { "$ref": "production-graph-v0.schema.json#/$defs/root" },
         "localExecutionReceipt": { "$ref": "production-graph-v0.schema.json#/$defs/root" },
-        "buildCoreShadowReceipt": { "$ref": "production-graph-v0.schema.json#/$defs/root" }
+        "buildCoreShadowReceipt": { "$ref": "production-graph-v0.schema.json#/$defs/root" },
+        "buildResult": { "$ref": "production-graph-v0.schema.json#/$defs/root" },
+        "buildResultSettlementReceipt": { "$ref": "production-graph-v0.schema.json#/$defs/root" }
       }
     },
     "authorityReferences": { "$ref": "production-graph-v0.schema.json#/$defs/authorityRoots" },

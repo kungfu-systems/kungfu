@@ -1,0 +1,11 @@
+{
+  "baseFixture": "build-result-success",
+  "mutation": {
+    "target": "settlementReceipt",
+    "path": ["executionReceiptRoot"],
+    "operation": "replace",
+    "value": "sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+    "rerootSettlement": true
+  },
+  "expect": "settlement-receipt-mismatch"
+}

@@ -101,19 +101,19 @@ jobs:
           lock=.buildchain/alpha-release-cut-lock.json
           test "$(jq -er '.schema' "$lock")" = "kungfu.alpha-release-cut-lock/v1"
           test "$(jq -er '.release' "$lock")" = "v4.0.0-alpha.2"
-          test "$(jq -er '.cut' "$lock")" = "r16"
+          test "$(jq -er '.cut' "$lock")" = "r17"
           test "$(jq -er '.state' "$lock")" = "frozen"
           jq -e '
-            .candidate.ref == "refs/heads/fix/alpha2-lineage-repair-r16" and
-            .candidate.sha == "89781ff7236239aa310696e6bf40f8af3445c371" and
-            .candidate.tree == "095f2ea60cce5bb96c22314ae02dfad48d904052" and
-            .devCut.sha == "a392762ab2d0d325bd8202cfc7b37ea525aaf6dc" and
-            .devCut.tree == "095f2ea60cce5bb96c22314ae02dfad48d904052" and
+            .candidate.ref == "refs/heads/fix/alpha2-lineage-repair-r17" and
+            .candidate.sha == "77a66f7141143e524484a548dbba76a1ae1ecc38" and
+            .candidate.tree == "6f3a82c10712ec344ecefbf30d11a580aeb4f22b" and
+            .devCut.sha == "c3938d8fc5e71578c960cc8137a853a8817b09ca" and
+            .devCut.tree == "6f3a82c10712ec344ecefbf30d11a580aeb4f22b" and
             .alphaBase.ref == "refs/heads/alpha/v4/v4.0" and
             .alphaBase.sha == "f9e6b0e34bcdd6407b2a18206ace7982d64de2c8" and
             .alphaBase.tree == "67a93b5831596555e7c29104421de3a0b97eb865" and
-            .buildchain.build.resolvedSha == "81c49578bff72a9784a1b63ce8698bd9dd23d7bf" and
-            .buildchain.build.contractDigest == "sha256:8e9a161653c40611ffd76aa878ae348fc215506c1caa88347111fb122cfe7c12" and
+            .buildchain.build.resolvedSha == "f4ca5182f53fddf76bdf4246be0993afa5a592bc" and
+            .buildchain.build.contractDigest == "sha256:52cdb871cb0559534f78548f2487d8f3ceb64bb92e8a587f440a2946f78e7386" and
             .buildchain.promotion.resolvedSha == "36b08dc7bf417e57bffcc3dc784a2473254fe4c1" and
             .buildchain.promotion.contractDigest == "sha256:8e565f9ac5146d5dceafc3da6b267147fb412937db979bf35a0429966da82197"
           ' "$lock" >/dev/null

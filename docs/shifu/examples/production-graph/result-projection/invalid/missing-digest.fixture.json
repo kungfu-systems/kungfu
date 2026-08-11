@@ -1,0 +1,9 @@
+{
+  "baseFixture": "build-result-success",
+  "mutation": {
+    "target": "projection",
+    "path": ["outputs", 0, "digest"],
+    "operation": "delete"
+  },
+  "expect": "schema-invalid"
+}
