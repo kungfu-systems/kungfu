@@ -1,0 +1,121 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "kungfu.skill-dependency-plan/v2",
+  "title": "Kungfu Skill dependency authority plan",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "skill", "work", "authority", "dependencies", "effects", "decision", "runId", "nonClaims", "planRoot", "auditIdentityRoot", "surfaceProjections"],
+  "properties": {
+    "schema": {"const": "kungfu.skill-dependency-plan/v2"},
+    "skill": {"$ref": "#/$defs/skill"},
+    "work": {"$ref": "#/$defs/work"},
+    "authority": {"$ref": "#/$defs/authority"},
+    "dependencies": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kfx", "profiles"],
+      "properties": {
+        "kfx": {"type": "array", "items": {"$ref": "#/$defs/dependency"}},
+        "profiles": {"type": "array", "items": {"$ref": "#/$defs/dependency"}}
+      }
+    },
+    "effects": {"type": "object"},
+    "decision": {"$ref": "#/$defs/decision"},
+    "runId": {"type": ["string", "null"]},
+    "nonClaims": {"type": "array", "minItems": 5, "uniqueItems": true, "items": {"type": "string"}},
+    "planRoot": {"$ref": "#/$defs/root"},
+    "auditIdentityRoot": {"$ref": "#/$defs/root"},
+    "surfaceProjections": {"$ref": "#/$defs/surfaces"}
+  },
+  "$defs": {
+    "root": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "nullableRoot": {"anyOf": [{"$ref": "#/$defs/root"}, {"type": "null"}]},
+    "skill": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["key", "revision", "contentRoot", "definitionRoot", "class"],
+      "properties": {
+        "key": {"type": "string", "minLength": 1},
+        "revision": {"type": "integer", "minimum": 1},
+        "contentRoot": {"$ref": "#/$defs/root"},
+        "definitionRoot": {"$ref": "#/$defs/root"},
+        "class": {"enum": ["instruction-only", "operational", "domain"]}
+      }
+    },
+    "work": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["ref", "root"],
+      "properties": {
+        "ref": {"type": "string", "minLength": 1},
+        "root": {"$ref": "#/$defs/root"}
+      }
+    },
+    "authority": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["skillRegistryRoot", "kfxPlanRoot", "kfxGraphRoot", "profileAuthority", "policyRoot", "cutRoot", "host", "trustReportRoots", "capabilityDecisionRoot"],
+      "properties": {
+        "skillRegistryRoot": {"$ref": "#/$defs/root"},
+        "kfxPlanRoot": {"$ref": "#/$defs/nullableRoot"},
+        "kfxGraphRoot": {"$ref": "#/$defs/nullableRoot"},
+        "profileAuthority": {"const": "core-profile-lifecycle-and-action-runtime"},
+        "policyRoot": {"$ref": "#/$defs/root"},
+        "cutRoot": {"$ref": "#/$defs/root"},
+        "host": {"type": "string", "minLength": 1},
+        "trustReportRoots": {"type": "array", "uniqueItems": true, "items": {"$ref": "#/$defs/root"}},
+        "capabilityDecisionRoot": {"$ref": "#/$defs/root"}
+      }
+    },
+    "dependency": {
+      "type": "object",
+      "required": ["kind", "key", "revision", "root", "required", "status", "code", "recovery", "requestedCapabilities"],
+      "properties": {
+        "kind": {"enum": ["kfx", "profile"]},
+        "key": {"type": "string", "minLength": 1},
+        "revision": {"type": "integer", "minimum": 1},
+        "root": {"$ref": "#/$defs/root"},
+        "required": {"type": "boolean"},
+        "status": {"enum": ["available", "refused"]},
+        "code": {"type": "string", "pattern": "^KF_SKILL_[A-Z0-9_]+$"},
+        "recovery": {"type": "string", "minLength": 1},
+        "requestedCapabilities": {"type": "array", "uniqueItems": true, "items": {"type": "string"}}
+      }
+    },
+    "decision": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "code", "executionAllowed", "recovery"],
+      "properties": {
+        "status": {"enum": ["inert", "refused", "degraded", "ready"]},
+        "code": {"type": "string", "pattern": "^KF_SKILL_[A-Z0-9_]+$"},
+        "executionAllowed": {"type": "boolean"},
+        "recovery": {"type": "string", "minLength": 1}
+      }
+    },
+    "projection": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["surface", "planRoot", "receiptRoot", "capabilityDecisionRoot", "trustReportRoots", "auditIdentityRoot"],
+      "properties": {
+        "surface": {"enum": ["agent", "cli", "gui", "tui"]},
+        "planRoot": {"$ref": "#/$defs/root"},
+        "receiptRoot": {"type": "null"},
+        "capabilityDecisionRoot": {"$ref": "#/$defs/root"},
+        "trustReportRoots": {"type": "array", "uniqueItems": true, "items": {"$ref": "#/$defs/root"}},
+        "auditIdentityRoot": {"$ref": "#/$defs/root"}
+      }
+    },
+    "surfaces": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["agent", "cli", "gui", "tui"],
+      "properties": {
+        "agent": {"$ref": "#/$defs/projection"},
+        "cli": {"$ref": "#/$defs/projection"},
+        "gui": {"$ref": "#/$defs/projection"},
+        "tui": {"$ref": "#/$defs/projection"}
+      }
+    }
+  }
+}

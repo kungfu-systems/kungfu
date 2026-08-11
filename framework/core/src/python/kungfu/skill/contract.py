@@ -123,6 +123,14 @@ def validate_lifecycle_receipt_v2(value: dict[str, Any]) -> None:
     _validate("lifecycleReceiptV2", value, "Skill lifecycle v2 receipt")
 
 
+def validate_dependency_plan_v2(value: dict[str, Any]) -> None:
+    _validate("dependencyPlanV2", value, "Skill dependency v2 plan")
+
+
+def validate_dependency_receipt_v2(value: dict[str, Any]) -> None:
+    _validate("dependencyReceiptV2", value, "Skill dependency v2 receipt")
+
+
 def _validate(schema_name: str, value: dict[str, Any], label: str) -> None:
     contract_runtime.validate_json_schema(
         value,
