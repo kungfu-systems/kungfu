@@ -26,6 +26,39 @@ So the toolchain is reproducible from checked-in pins, not from whatever Node,
 Python, or Buildchain happens to be on the host. `./shifu <task>` runs any `pnpm` task
 under those pinned tools.
 
+## Protected dev delivery
+
+Kungfu consumes Buildchain's two-phase Delivery Warrant on protected dev lines.
+The ordinary PR workflow first runs source acceptance and emits a semantic
+affected-native descriptor without starting the costly native partitions. A
+ready, approved exact head can then acquire the next provisional Warrant. Its
+TTL is renewed by heartbeat while Buildchain tests a composed tree containing
+that immutable source head and the current dev base.
+
+The protected native command is
+`./shifu dev-delivery:native-under-warrant`. It executes the affected closure in
+both partitions plus the selected SDK, Shifu workspace, and KFD checks, writes a
+rooted receipt into the Buildchain evidence artifact, and updates the existing
+`affected-native / linux` required context only for the exact PR head. Native
+success does not itself admit a merge: Buildchain must atomically upgrade the
+fenced provisional generation to qualified, after which `Queue admission
+lease` and GitHub's merge queue remain the landing authorities.
+
+Buildchain classifies a moving dev base against the semantic source, closure,
+dependency, and toolchain roots. Non-overlapping base-only movement reuses the
+native proof; overlap, an unknown comparison graph, a source change, or a
+conflict fails closed into bounded requalification or safe Warrant release.
+The source workflow also observes the active phase before every legacy hosted
+native lane, so no normal PR event can start those expensive jobs without the
+same provisional or qualified authority.
+
+The integration PR has one bounded bootstrap: it may use the pre-upgrade
+controller only when the protected base lacks the native-under-Warrant marker
+and the exact candidate contains the pinned controller plus Warrant observer.
+That transition still runs every legacy protected native check. Once the
+marker reaches protected dev, the condition is permanently false and all
+subsequent candidates require the active Warrant.
+
 ## Source → binary
 
 | Output | From | Via |
