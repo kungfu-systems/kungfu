@@ -26,7 +26,7 @@
       "evidencePath": "framework/work-profile-conformance/qualification/kfd-7-product-gate.json",
       "evidencePointer": null,
       "authorityPath": ".buildchain/alpha-contract-lock.json",
-      "authorityRoot": "sha256:9072d1e0514f5e3637f9af568d521731577e69699a9b6e90b30b404e4c462911"
+      "authorityRoot": "sha256:8b7bd9e9d9bdba2576f1c48d0fe158f193aca8df3a57f8ffc9197715efb0955b"
     },
     "stale": {
       "status": "stale",
@@ -41,7 +41,7 @@
       "evidencePath": "framework/work-profile-conformance/qualification/kfd-7-product-gate.json",
       "evidencePointer": null,
       "authorityPath": ".buildchain/alpha-contract-lock.json",
-      "authorityRoot": "sha256:9072d1e0514f5e3637f9af568d521731577e69699a9b6e90b30b404e4c462911"
+      "authorityRoot": "sha256:8b7bd9e9d9bdba2576f1c48d0fe158f193aca8df3a57f8ffc9197715efb0955b"
     },
     "mismatch": {
       "status": "mismatch",
@@ -56,7 +56,7 @@
       "evidencePath": "framework/work-profile-conformance/qualification/kfd-7-product-gate.json",
       "evidencePointer": null,
       "authorityPath": ".buildchain/alpha-contract-lock.json",
-      "authorityRoot": "sha256:9072d1e0514f5e3637f9af568d521731577e69699a9b6e90b30b404e4c462911"
+      "authorityRoot": "sha256:8b7bd9e9d9bdba2576f1c48d0fe158f193aca8df3a57f8ffc9197715efb0955b"
     },
     "manual-allowlist": {
       "status": "passed",
@@ -71,7 +71,7 @@
       "evidencePath": "framework/work-profile-conformance/qualification/kfd-7-product-gate.json",
       "evidencePointer": null,
       "authorityPath": ".buildchain/alpha-contract-lock.json",
-      "authorityRoot": "sha256:9072d1e0514f5e3637f9af568d521731577e69699a9b6e90b30b404e4c462911"
+      "authorityRoot": "sha256:8b7bd9e9d9bdba2576f1c48d0fe158f193aca8df3a57f8ffc9197715efb0955b"
     },
     "incompatible": {
       "status": "incompatible",
@@ -86,7 +86,7 @@
       "evidencePath": "framework/work-profile-conformance/qualification/kfd-7-product-gate.json",
       "evidencePointer": null,
       "authorityPath": ".buildchain/alpha-contract-lock.json",
-      "authorityRoot": "sha256:9072d1e0514f5e3637f9af568d521731577e69699a9b6e90b30b404e4c462911"
+      "authorityRoot": "sha256:8b7bd9e9d9bdba2576f1c48d0fe158f193aca8df3a57f8ffc9197715efb0955b"
     },
     "report-revision-drift": {
       "schemaVersion": 1,
