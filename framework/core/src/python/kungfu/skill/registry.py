@@ -67,6 +67,7 @@ def plan_operation(
     key: str | None = None,
     source: str | os.PathLike[str] | None = None,
     work_ref: str | None = None,
+    work_root: str | None = None,
     target_revision: int | None = None,
 ) -> dict[str, Any]:
     """Build a read-only, exact-basis lifecycle mutation plan."""
@@ -95,6 +96,9 @@ def plan_operation(
         if not work_ref.strip():
             raise SkillRegistryError("work-ref-required", "Work ref cannot be empty")
         request["workRef"] = work_ref
+    if work_root is not None:
+        _require_root(work_root, "work-root-invalid")
+        request["workRoot"] = work_root
     if target_revision is not None:
         request["targetRevision"] = int(target_revision)
 
@@ -207,6 +211,7 @@ def apply_plan(
             key=str(plan["request"]["key"]),
             source=plan["request"].get("sourcePath"),
             work_ref=plan["request"].get("workRef"),
+            work_root=plan["request"].get("workRoot"),
             target_revision=plan["request"].get("targetRevision"),
         )
         if replay["planRoot"] != actual_root:
@@ -639,10 +644,15 @@ def _fold(
             work_ref = request.get("workRef")
             if not work_ref:
                 raise SkillRegistryError("work-ref-required", key)
+            work_root = request.get("workRoot")
+            if not work_root:
+                raise SkillRegistryError("work-root-required", key)
+            _require_root(str(work_root), "work-root-invalid")
             current_revision = int(entry["activeRevision"])
             current = entry["revisions"][str(current_revision)]
             exact = {
                 "workRef": work_ref,
+                "workRoot": work_root,
                 "revision": current_revision,
                 "contentRoot": current["contentRoot"],
                 "active": True,
@@ -986,6 +996,15 @@ def _root(value: Any) -> str:
 
 def _bytes_root(value: bytes) -> str:
     return f"sha256:{hashlib.sha256(value).hexdigest()}"
+
+
+def _require_root(value: str, code: str) -> None:
+    if (
+        len(value) != 71
+        or not value.startswith("sha256:")
+        or any(character not in "0123456789abcdef" for character in value[7:])
+    ):
+        raise SkillRegistryError(code, value)
 
 
 def _closure_root(entrypoint: str, members: Any) -> str:

@@ -174,6 +174,72 @@ export interface SkillManagerView {
   };
 }
 
+export type SkillDependencySurface = 'agent' | 'cli' | 'gui' | 'tui';
+
+export interface SkillDependencySurfaceProjection {
+  surface: SkillDependencySurface;
+  planRoot: string;
+  receiptRoot: string | null;
+  capabilityDecisionRoot: string;
+  trustReportRoots: string[];
+  auditIdentityRoot: string;
+}
+
+/**
+ * Read one Python/Core-produced Skill authority projection without recomputing
+ * trust, capability, Work, KFX, or Profile decisions in the Node manager.
+ */
+export function projectSkillDependencyAuthority(
+  document: unknown,
+  surface: SkillDependencySurface,
+): SkillDependencySurfaceProjection {
+  const root = objectValue(document);
+  if (
+    root?.schema !== 'kungfu.skill-dependency-plan/v2' &&
+    root?.schema !== 'kungfu.skill-dependency-invocation-receipt/v2'
+  ) {
+    throw new Error('Kungfu Skill dependency authority schema is invalid');
+  }
+  const projections = objectValue(root.surfaceProjections);
+  const projection = objectValue(projections?.[surface]);
+  if (!projection || projection.surface !== surface) {
+    throw new Error(`Kungfu Skill ${surface} authority projection is absent`);
+  }
+  const authority = objectValue(root.authority);
+  const expected = {
+    planRoot: requiredRoot(root.planRoot, 'planRoot'),
+    receiptRoot:
+      root.receiptRoot === undefined || root.receiptRoot === null
+        ? null
+        : requiredRoot(root.receiptRoot, 'receiptRoot'),
+    capabilityDecisionRoot: requiredRoot(
+      authority?.capabilityDecisionRoot,
+      'authority.capabilityDecisionRoot',
+    ),
+    trustReportRoots: (stringArrayValue(authority?.trustReportRoots) ?? []).map(
+      (value, index) =>
+        requiredRoot(value, `authority.trustReportRoots[${index}]`),
+    ),
+    auditIdentityRoot: requiredRoot(
+      root.auditIdentityRoot,
+      'auditIdentityRoot',
+    ),
+  };
+  if (
+    projection.planRoot !== expected.planRoot ||
+    (projection.receiptRoot ?? null) !== expected.receiptRoot ||
+    projection.capabilityDecisionRoot !== expected.capabilityDecisionRoot ||
+    JSON.stringify(projection.trustReportRoots) !==
+      JSON.stringify(expected.trustReportRoots) ||
+    projection.auditIdentityRoot !== expected.auditIdentityRoot
+  ) {
+    throw new Error(
+      `Kungfu Skill ${surface} authority projection changed rooted identity`,
+    );
+  }
+  return projection as unknown as SkillDependencySurfaceProjection;
+}
+
 export type AgentSkillProvider = 'codex' | 'claude';
 
 export type AgentSkillRootType =
@@ -1894,6 +1960,14 @@ function requiredString(value: unknown, path: string): string {
   if (!string)
     throw new Error(`Kungfu config contract missing string: ${path}`);
   return string;
+}
+
+function requiredRoot(value: unknown, path: string): string {
+  const root = requiredString(value, path);
+  if (!/^sha256:[0-9a-f]{64}$/.test(root)) {
+    throw new Error(`Kungfu Skill ${path} must be a canonical SHA-256 root`);
+  }
+  return root;
 }
 
 function requiredStringArray(value: unknown, path: string): string[] {

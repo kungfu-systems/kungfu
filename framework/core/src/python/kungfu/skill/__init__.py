@@ -3,7 +3,11 @@
 from .catalog import build_catalog, catalog_entry
 from .context import build_context_envelope, build_kungfu_environment
 from .dependencies import (
+    SkillAuthorityError,
     build_skill_dependency_binding,
+    dependency_audit_event,
+    invoke_dependency_plan,
+    plan_dependency_invocation,
     read_skill_dependency_binding,
     skill_binding_path,
     skill_binding_root,
@@ -50,6 +54,7 @@ from . import contract as skill_contract
 
 __all__ = [
     "SkillError",
+    "SkillAuthorityError",
     "SkillRegistryError",
     "active_payload_bindings",
     "active_payload_paths",
@@ -65,6 +70,7 @@ __all__ = [
     "discover_skills",
     "diagnose_registry",
     "dependency_coordinates",
+    "dependency_audit_event",
     "diff_revisions",
     "find_skill",
     "format_skill_context_prompt",
@@ -72,8 +78,10 @@ __all__ = [
     "has_context_envelope_info",
     "inject_skill_context",
     "inspect_registry",
+    "invoke_dependency_plan",
     "load_skill_context_file",
     "parse_skill",
+    "plan_dependency_invocation",
     "plan_operation",
     "read_audit_file",
     "read_skill_dependency_binding",

@@ -53,9 +53,10 @@ atomic state cut, and emits an idempotent receipt keyed by the plan root.
 The lifecycle states `installed`, `enabled`, `selected`, `loaded`, `invoked`,
 `suspended`, `retired`, and `historical` are distinct. Removing a Skill only
 removes active references; it does not delete package bytes, old revisions,
-receipts, Work bindings, facts, or KFX dependencies. Work selection is stored
-only as an exact Work reference. GUI focus or the currently visible page is
-never lifecycle authority.
+receipts, Work bindings, facts, or KFX dependencies. New Work selections store
+both the exact Work reference and its canonical root; a reference without its
+root is insufficient for dependency admission. GUI focus or the currently
+visible page is never lifecycle authority.
 
 Python, Node, CLI, and Agent surfaces read the same rooted registry report.
 Node and outer managers are thin readers and cannot publish registry state.
@@ -184,6 +185,32 @@ governed independently:
 
 This makes skill composition useful without creating a permission laundering
 path.
+
+## Dependency authority and invocation
+
+`kungfu skill admit` is the single Skill-level composition edge over the
+existing native authorities. Its default read-only plan binds the exact Skill
+revision and definition root, Work reference and root, KFX plan and graph,
+Profile suite/action plans, Core policy, Fact cut, host placement, requested
+capabilities, TrustReport roots, and one capability-decision root. Instruction-
+only Skills return `KF_SKILL_INSTRUCTION_ONLY_INERT` without calling a runtime
+authority. Missing, stale, incompatible, untrusted, revoked, conflicting, and
+unauthorized dependencies return stable `KF_SKILL_*` refusal codes plus a
+specific recovery action; required refusals never partially activate a Skill.
+
+Execution requires the exact printed `planRoot`. KFX dependencies are
+re-authorized by the Core-native `authorize-host` operation at the dispatch
+boundary; the selected host remains responsible for its host-specific action.
+Profile contributions are planned and invoked by the admitted Profile action
+runtime. Skill code owns neither execution path and cannot turn source text,
+provenance, KFD attestation, or Agent confidence into a capability grant or
+Product System identity. It also never copies or removes shared KFX payloads.
+
+The rooted plan and invocation receipt carry identical capability decision,
+TrustReport, Work, and audit identities to thin Agent, CLI, GUI, and TUI
+projections. The Node reader verifies those identities without recomputing
+trust. Audit records retain metadata and roots, not dependency payloads, and
+explicitly state that selection, loading, or invocation is not Work completion.
 
 ## Skill catalog
 
@@ -345,7 +372,9 @@ kungfu skill schema [--name source|catalog|context|dependencies|manager] --json
 kungfu skill install <v2-package> [--execute --expected-plan-root <root>]
 kungfu skill update <v2-package> [--execute --expected-plan-root <root>]
 kungfu skill enable|load|invoke|suspend|retire|remove <key>
-kungfu skill select <key> --work-ref <exact-work-ref>
+kungfu skill select <key> --work-ref <exact-work-ref> --work-root <exact-work-root>
+kungfu skill admit <key> --work-ref <ref> --work-root <root> --cut-root <root> \
+  --policy-root <root> --host <host> [--execute --expected-plan-root <root>]
 kungfu skill rollback <key> --target-revision <n>
 kungfu skill inspect [key] --json
 kungfu skill diff <key> --left <n> --right <n> --json
@@ -378,6 +407,14 @@ agent tool uses to load the full `SKILL.md` after selection. `audit` reads the
 Skill audit sidecar from a managed-run bundle or a standalone audit file.
 `contract` and `schema` expose the same KFD-1 Skill contract and schema bundle
 that Python and Node managers validate against.
+
+`admit` produces the dependency authority plan by default. Profile bindings use
+`--profile-source PROFILE_ID=PATH` plus optional
+`--profile-input PROFILE_ID:ACTION=JSON_FILE`; KFX discovery can receive an
+exact native request through `--kfx-request`. `--execute` rechecks the KFX host
+authorization and invokes admitted Profile contributions, then emits a rooted,
+metadata-only audit receipt. It does not execute arbitrary host code on behalf
+of KFX and does not claim Work completion.
 
 The SDK may add:
 

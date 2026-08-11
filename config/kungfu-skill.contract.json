@@ -3,7 +3,7 @@
   "id": "kungfu-skill",
   "version": 2,
   "weldedSurface": "skill-contract",
-  "description": "Single source for content-rooted, Work-scoped Kungfu Skill definitions and their compatible v1 catalog, context, dependency, and manager projections.",
+  "description": "Single source for content-rooted, Work-scoped Kungfu Skill definitions, lifecycle, dependency authority, and compatible v1 catalog, context, dependency, and manager projections.",
   "contractSchema": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "type": "object",
@@ -214,7 +214,9 @@
           "definitionV2",
           "registryStateV2",
           "lifecyclePlanV2",
-          "lifecycleReceiptV2"
+          "lifecycleReceiptV2",
+          "dependencyPlanV2",
+          "dependencyReceiptV2"
         ]
       }
     }
@@ -281,6 +283,16 @@
       "schema": "kungfu.skill-lifecycle-receipt/v2",
       "source": "schema/skill-lifecycle-receipt-v2.schema.json",
       "artifact": "skill/schema/skill-lifecycle-receipt-v2.schema.json"
+    },
+    "dependencyPlanV2": {
+      "schema": "kungfu.skill-dependency-plan/v2",
+      "source": "schema/skill-dependency-plan-v2.schema.json",
+      "artifact": "skill/schema/skill-dependency-plan-v2.schema.json"
+    },
+    "dependencyReceiptV2": {
+      "schema": "kungfu.skill-dependency-invocation-receipt/v2",
+      "source": "schema/skill-dependency-invocation-receipt-v2.schema.json",
+      "artifact": "skill/schema/skill-dependency-invocation-receipt-v2.schema.json"
     },
     "definitionV2": {
       "schema": "kungfu.skill-definition/v2",

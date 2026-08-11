@@ -481,6 +481,8 @@ test('declared discovery routes are zero-write in a cold read-only fixture', (t)
     'framework/skill/kungfu-skill.contract.json',
     'framework/skill/package.json',
     'framework/skill/schema/skill-definition-v2.schema.json',
+    'framework/skill/schema/skill-dependency-invocation-receipt-v2.schema.json',
+    'framework/skill/schema/skill-dependency-plan-v2.schema.json',
     'framework/skill/schema/skill-lifecycle-plan-v2.schema.json',
     'framework/skill/schema/skill-lifecycle-receipt-v2.schema.json',
     'framework/skill/schema/skill-registry-state-v2.schema.json',
