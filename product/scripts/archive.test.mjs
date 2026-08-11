@@ -5,7 +5,45 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { test } from 'node:test';
+import zlib from 'node:zlib';
 import { extractTarGz, extractZip, writeTarGz, writeZip } from './archive.mjs';
+
+const TAR_BLOCK = 512;
+
+function writeTarOctal(buffer, value, offset, length) {
+  const text = Math.trunc(value)
+    .toString(8)
+    .padStart(length - 1, '0');
+  buffer.write(text.slice(-length + 1), offset, length - 1, 'ascii');
+  buffer[offset + length - 1] = 0;
+}
+
+function prependTarEntry({ archiveFile, name, type, body }) {
+  const archive = zlib.gunzipSync(fs.readFileSync(archiveFile));
+  const header = Buffer.alloc(TAR_BLOCK, 0);
+  header.write(name, 0, 100, 'utf8');
+  writeTarOctal(header, 0o644, 100, 8);
+  writeTarOctal(header, 0, 108, 8);
+  writeTarOctal(header, 0, 116, 8);
+  writeTarOctal(header, body.length, 124, 12);
+  writeTarOctal(header, 0, 136, 12);
+  header.fill(0x20, 148, 156);
+  header.write(type, 156, 1, 'ascii');
+  header.write('ustar', 257, 6, 'ascii');
+  header.write('00', 263, 2, 'ascii');
+  let checksum = 0;
+  for (const byte of header) checksum += byte;
+  writeTarOctal(header, checksum, 148, 8);
+  header[155] = 0x20;
+  const remainder = body.length % TAR_BLOCK;
+  const padding = remainder
+    ? Buffer.alloc(TAR_BLOCK - remainder, 0)
+    : Buffer.alloc(0);
+  fs.writeFileSync(
+    archiveFile,
+    zlib.gzipSync(Buffer.concat([header, body, padding, archive])),
+  );
+}
 
 function makeFixture(parent) {
   const sourceDir = path.join(parent, 'source');
@@ -74,6 +112,48 @@ test('tar.gz archives round-trip the product layout', () => {
           .mode & 0o777;
       assert.equal(mode, 0o755);
     }
+  } finally {
+    fs.rmSync(parent, { recursive: true, force: true });
+  }
+});
+
+test('tar.gz extraction ignores POSIX PAX metadata entries', () => {
+  const parent = fs.mkdtempSync(path.join(os.tmpdir(), 'kungfu-archive-test-'));
+  try {
+    const { sourceDir } = makeFixture(parent);
+    const archiveFile = path.join(parent, 'product.tar.gz');
+    const targetDir = path.join(parent, 'tar-out');
+    writeTarGz({ sourceDir, outputFile: archiveFile });
+    prependTarEntry({
+      archiveFile,
+      name: '././@PaxHeader',
+      type: 'x',
+      body: Buffer.from('26 comment=signed-fixture\n'),
+    });
+    extractTarGz({ archiveFile, targetDir });
+    assertExtracted(targetDir);
+    assert.equal(fs.existsSync(path.join(targetDir, '@PaxHeader')), false);
+  } finally {
+    fs.rmSync(parent, { recursive: true, force: true });
+  }
+});
+
+test('tar.gz extraction still rejects unknown entry types', () => {
+  const parent = fs.mkdtempSync(path.join(os.tmpdir(), 'kungfu-archive-test-'));
+  try {
+    const { sourceDir } = makeFixture(parent);
+    const archiveFile = path.join(parent, 'product.tar.gz');
+    writeTarGz({ sourceDir, outputFile: archiveFile });
+    prependTarEntry({
+      archiveFile,
+      name: 'unsupported-entry',
+      type: '7',
+      body: Buffer.alloc(0),
+    });
+    assert.throws(
+      () => extractTarGz({ archiveFile, targetDir: path.join(parent, 'out') }),
+      /unsupported tar entry type 7/u,
+    );
   } finally {
     fs.rmSync(parent, { recursive: true, force: true });
   }
