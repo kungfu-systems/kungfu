@@ -293,6 +293,18 @@ export interface SkillManagerViewFileOptions extends SkillManagerViewOptions {
   out?: string;
 }
 
+export interface SkillRegistryReport {
+  schema: 'kungfu.skill-registry-report/v2';
+  authority: 'python-single-writer-skill-registry-fold';
+  stateRoot: string;
+  generation: number;
+  entries: Record<string, Record<string, unknown>>;
+  activePayloadPaths: string[];
+  kfxRegistry: string;
+  nonClaims: string[];
+  reportRoot: string;
+}
+
 export function parseSkill(skillDir: string): SkillSource {
   const root = resolve(skillDir);
   if (!statSync(root).isDirectory()) {
@@ -381,8 +393,86 @@ export function skillRoots(
     roots.push(...envPath.split(pathDelimiter()).filter(Boolean));
   }
   roots.push(...extraPaths);
+  roots.push(...registrySkillRoots(home));
   roots.push(join(home, 'skills'));
   return roots;
+}
+
+export function readSkillRegistry(home: string): SkillRegistryReport {
+  const canonicalHome = canonicalPath(resolve(home));
+  const root = join(canonicalHome, 'skill-registry', 'v2');
+  const statePath = join(root, 'state.json');
+  const blank = withStateRoot({
+    schema: 'kungfu.skill-registry-state/v2',
+    generation: 0,
+    entries: {},
+    events: [],
+  });
+  const state = existsSync(statePath)
+    ? (JSON.parse(readFileSync(statePath, 'utf8')) as Record<string, unknown>)
+    : blank;
+  if (state.schema !== 'kungfu.skill-registry-state/v2') {
+    throw new Error(`invalid Skill registry schema: ${String(state.schema)}`);
+  }
+  validateSkillRegistryState(state);
+  const expected = stringValue(state.stateRoot);
+  const actual = stringValue(withStateRoot(state).stateRoot);
+  if (!expected || expected !== actual) {
+    throw new Error(
+      `Skill registry state root mismatch: expected ${expected}, actual ${actual}`,
+    );
+  }
+  const entries = objectValue(state.entries) ?? {};
+  const activePayloadPaths = Object.values(entries)
+    .flatMap((raw) => {
+      const entry = objectValue(raw);
+      const revision = entry?.activeRevision;
+      if (!entry?.activeReference || typeof revision !== 'number') return [];
+      const revisions = objectValue(entry.revisions);
+      const record = objectValue(revisions?.[String(revision)]);
+      const payloadRef = stringValue(record?.payloadRef);
+      return payloadRef ? [join(root, payloadRef)] : [];
+    })
+    .sort();
+  const report = {
+    schema: 'kungfu.skill-registry-report/v2' as const,
+    authority: 'python-single-writer-skill-registry-fold' as const,
+    stateRoot: expected,
+    generation: Number(state.generation),
+    entries: entries as Record<string, Record<string, unknown>>,
+    activePayloadPaths,
+    kfxRegistry: join(canonicalHome, 'extensions'),
+    nonClaims: [
+      'work-authority',
+      'profile-authority',
+      'fact-or-episode-authority',
+      'kfx-package-or-capability-authority',
+    ],
+  };
+  return { ...report, reportRoot: contentRoot(report) };
+}
+
+export function registrySkillRoots(home: string): string[] {
+  return readSkillRegistry(home).activePayloadPaths;
+}
+
+export function registrySkillBindings(home: string): Map<string, string> {
+  const report = readSkillRegistry(home);
+  const bindings = new Map<string, string>();
+  for (const [key, raw] of Object.entries(report.entries)) {
+    const entry = objectValue(raw);
+    const revision = entry?.activeRevision;
+    if (!entry?.activeReference || typeof revision !== 'number') continue;
+    const record = objectValue(
+      objectValue(entry.revisions)?.[String(revision)],
+    );
+    const payloadRef = stringValue(record?.payloadRef);
+    const path = payloadRef
+      ? report.activePayloadPaths.find((value) => value.endsWith(payloadRef))
+      : undefined;
+    if (path) bindings.set(resolve(path), key);
+  }
+  return bindings;
 }
 
 export function discoverSkills(
@@ -392,6 +482,7 @@ export function discoverSkills(
 ): SkillSource[] {
   const rows: SkillSource[] = [];
   const seen = new Set<string>();
+  const bindings = registrySkillBindings(home);
   for (const root of skillRoots(home, extraPaths, env)) {
     for (const skillDir of candidateSkillDirs(root)) {
       let skill: SkillSource;
@@ -400,6 +491,8 @@ export function discoverSkills(
       } catch {
         continue;
       }
+      const registryKey = bindings.get(resolve(skillDir));
+      if (registryKey) skill.key = registryKey;
       if (seen.has(skill.key)) continue;
       seen.add(skill.key);
       rows.push(skill);
@@ -1438,6 +1531,26 @@ export function stableStringify(value: unknown): string {
   return JSON.stringify(value);
 }
 
+function contentRoot(value: unknown): string {
+  return `sha256:${createHash('sha256').update(stableStringify(value)).digest('hex')}`;
+}
+
+function canonicalPath(path: string): string {
+  if (existsSync(path)) return realpathSync(path);
+  const parent = dirname(path);
+  if (parent === path) return path;
+  return join(canonicalPath(parent), basename(path));
+}
+
+function withStateRoot(
+  value: Record<string, unknown>,
+): Record<string, unknown> {
+  const payload = Object.fromEntries(
+    Object.entries(value).filter(([key]) => key !== 'stateRoot'),
+  );
+  return { ...payload, stateRoot: contentRoot(payload) };
+}
+
 function candidateSkillDirs(root: string): string[] {
   if (!root || !existsSync(root)) return [];
   const absolute = resolve(root);
@@ -1928,6 +2041,26 @@ function validateKungfuSkillContract(contract: Record<string, unknown>): void {
   const path = first?.instancePath || '<root>';
   throw new Error(
     `Kungfu skill contract validation failed at ${path}: ${first?.message || 'invalid contract'}`,
+  );
+}
+
+function validateSkillRegistryState(state: Record<string, unknown>): void {
+  const schema = kungfuSkillSchema('registryStateV2');
+  const AjvCtor = Ajv as unknown as new (options: {
+    allErrors: boolean;
+    strict: boolean;
+  }) => {
+    compile: (schema: unknown) => {
+      (value: unknown): boolean;
+      errors?: Array<{ instancePath?: string; message?: string }>;
+    };
+  };
+  const ajv = new AjvCtor({ allErrors: true, strict: false });
+  const validate = ajv.compile(schema);
+  if (validate(state)) return;
+  const first = validate.errors?.[0];
+  throw new Error(
+    `Kungfu Skill registry validation failed at ${first?.instancePath || '<root>'}: ${first?.message || 'invalid state'}`,
   );
 }
 

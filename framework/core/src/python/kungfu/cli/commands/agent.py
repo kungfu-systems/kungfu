@@ -84,8 +84,10 @@ def _context(ctx):
             "config": "kungfu config show --json",
             "skills": "kungfu skill list --json",
             "skillCatalog": "kungfu skill catalog --json",
+            "skillRegistry": "kungfu skill inspect --json",
             "kfx": "kungfu kfx list --json",
         },
+        "skillRegistry": agent_pack.skill_registry(ctx.home),
         "docs": documentation_pack.discovery_context(
             agent_work_lab_commands.find_repo_root()
         ),
