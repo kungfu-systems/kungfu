@@ -344,6 +344,7 @@ framework/core/src/python/kungfu/skill/
   parser.py
   catalog.py
   context.py
+  authoring.py
   registry.py
 
 framework/core/src/python/kungfu/cli/commands/skill.py
@@ -368,7 +369,14 @@ The first CLI should be explicit and inspectable:
 ```sh
 kungfu skill validate <path>
 kungfu skill contract --json
-kungfu skill schema [--name source|catalog|context|dependencies|manager] --json
+kungfu skill schema [--name source|catalog|context|dependencies|manager|definitionV2|authoringSpecV1|authoringPlanV1|authoringReceiptV1] --json
+kungfu skill author contract --json
+kungfu skill author catalog [--path <dir>] --json
+kungfu skill author inspect --spec <spec.json> [--path <dir>] --json
+kungfu skill author scaffold --signals <signals.json> --spec <spec.json> \
+  --workspace <path> --target <relative-path> \
+  [--execute --expected-plan-root <root>] --json
+kungfu skill author qualify <draft-path> --json
 kungfu skill install <v2-package> [--execute --expected-plan-root <root>]
 kungfu skill update <v2-package> [--execute --expected-plan-root <root>]
 kungfu skill enable|load|invoke|suspend|retire|remove <key>
@@ -407,6 +415,19 @@ agent tool uses to load the full `SKILL.md` after selection. `audit` reads the
 Skill audit sidecar from a managed-run bundle or a standalone audit file.
 `contract` and `schema` expose the same KFD-1 Skill contract and schema bundle
 that Python and Node managers validate against.
+
+`author` is the Agent-first creation boundary. `catalog` emits the exact root
+used for mandatory deduplication; `inspect` classifies exact and plausible
+candidates from that root. `scaffold` independently recomputes the bounded
+`kungfu agent skill-advisory` result and writes only when it is `auto-draft`,
+the catalog root is current, the target is a new relative path under the exact
+workspace, and the approved plan root still matches. The generated package is
+deterministic `workspace-local` `instruction-only` content with no KFX/Profile
+dependencies or effects. Its receipt binds the decision, catalog, target, file,
+definition, content, and qualification roots plus rollback guidance. Install,
+enablement, activation, KFX/Profile admission, capability, credential, network,
+external write, shared mutation, publication, and Work completion remain
+separate blocked actions.
 
 `admit` produces the dependency authority plan by default. Profile bindings use
 `--profile-source PROFILE_ID=PATH` plus optional

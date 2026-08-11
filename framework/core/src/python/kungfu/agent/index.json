@@ -67,6 +67,7 @@
     "map": "kungfu agent map --json",
     "firstValue": "kungfu agent first-value start --json",
     "skillDecision": "kungfu agent skill-advisory --signals <signals.json> --json",
+    "skillAuthoring": "kungfu skill author contract --json",
     "context": "kungfu agent context --task <task> --role <role> --budget <tokens> --route <route-id> --json",
     "workModel": "kungfu agent work-model --json",
     "modeChoice": "kungfu agent choose-mode --json",

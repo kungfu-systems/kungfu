@@ -1,0 +1,54 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "kungfu.skill-authoring.spec/v1",
+  "title": "Kungfu Skill workspace-local authoring spec",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "key",
+    "title",
+    "description",
+    "triggers",
+    "intendedUsers",
+    "workScopes",
+    "inputs",
+    "outcomes",
+    "proof",
+    "recovery",
+    "higherPriorityRules"
+  ],
+  "properties": {
+    "schema": {"const": "kungfu.skill-authoring.spec/v1"},
+    "key": {
+      "type": "string",
+      "pattern": "^[a-z0-9](?:[a-z0-9._-]*[a-z0-9])?$",
+      "maxLength": 128
+    },
+    "title": {"$ref": "#/$defs/text"},
+    "description": {"$ref": "#/$defs/text"},
+    "triggers": {"$ref": "#/$defs/textList"},
+    "intendedUsers": {"$ref": "#/$defs/textList"},
+    "workScopes": {"$ref": "#/$defs/textList"},
+    "inputs": {"$ref": "#/$defs/textList"},
+    "outcomes": {"$ref": "#/$defs/textList"},
+    "proof": {"$ref": "#/$defs/textList"},
+    "recovery": {"$ref": "#/$defs/textList"},
+    "higherPriorityRules": {"$ref": "#/$defs/textList"}
+  },
+  "$defs": {
+    "text": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 1024,
+      "pattern": "^[^\\r\\n]+$"
+    },
+    "textList": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 32,
+      "uniqueItems": true,
+      "items": {"$ref": "#/$defs/text"}
+    }
+  }
+}
