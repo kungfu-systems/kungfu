@@ -170,10 +170,35 @@ function chmodIfPossible(file, mode) {
   }
 }
 
+function readPaxRecords(body) {
+  const records = {};
+  let offset = 0;
+  while (offset < body.length) {
+    const space = body.indexOf(0x20, offset);
+    if (space < 0) throw new Error('invalid PAX record length');
+    const length = Number.parseInt(body.toString('ascii', offset, space), 10);
+    if (!Number.isSafeInteger(length) || length <= space - offset + 1) {
+      throw new Error('invalid PAX record length');
+    }
+    const end = offset + length;
+    if (end > body.length || body[end - 1] !== 0x0a) {
+      throw new Error('truncated PAX record');
+    }
+    const record = body.toString('utf8', space + 1, end - 1);
+    const separator = record.indexOf('=');
+    if (separator <= 0) throw new Error('invalid PAX record');
+    records[record.slice(0, separator)] = record.slice(separator + 1);
+    offset = end;
+  }
+  return records;
+}
+
 export function extractTarGz({ archiveFile, targetDir }) {
   const buffer = zlib.gunzipSync(fs.readFileSync(archiveFile));
   fs.mkdirSync(targetDir, { recursive: true });
   let offset = 0;
+  let globalPax = {};
+  let pendingPax = null;
   while (offset + TAR_BLOCK <= buffer.length) {
     const header = buffer.subarray(offset, offset + TAR_BLOCK);
     offset += TAR_BLOCK;
@@ -181,12 +206,32 @@ export function extractTarGz({ archiveFile, targetDir }) {
 
     const name = readTarString(header, 0, 100);
     const prefix = readTarString(header, 345, 155);
-    const entryName = prefix ? `${prefix}/${name}` : name;
-    const size = readTarOctal(header, 124, 12);
     const mode = readTarOctal(header, 100, 8) || 0o644;
     const type = readTarString(header, 156, 1) || '0';
+    const pax = pendingPax || globalPax;
+    const headerSize = readTarOctal(header, 124, 12);
+    const size = type === 'x' || type === 'g' || pax.size === undefined
+      ? headerSize
+      : Number.parseInt(pax.size, 10);
+    if (!Number.isSafeInteger(size) || size < 0) {
+      throw new Error(`invalid PAX entry size for ${name}`);
+    }
+    if (offset + size > buffer.length) {
+      throw new Error(`truncated tar entry: ${name}`);
+    }
     const body = buffer.subarray(offset, offset + size);
     offset += size + (size % TAR_BLOCK ? TAR_BLOCK - (size % TAR_BLOCK) : 0);
+
+    if (type === 'x' || type === 'g') {
+      const records = readPaxRecords(body);
+      if (type === 'g') globalPax = { ...globalPax, ...records };
+      else pendingPax = { ...globalPax, ...records };
+      continue;
+    }
+
+    pendingPax = null;
+    const headerName = prefix ? `${prefix}/${name}` : name;
+    const entryName = pax.path || headerName;
 
     const target = extractPath(targetDir, entryName);
     if (type === '5') {
@@ -194,7 +239,7 @@ export function extractTarGz({ archiveFile, targetDir }) {
       continue;
     }
     if (type === '2') {
-      const link = readTarString(header, 157, 100);
+      const link = pax.linkpath || readTarString(header, 157, 100);
       if (!link || path.isAbsolute(link) || /^[a-zA-Z]:/.test(link)) {
         throw new Error(`unsafe tar symlink for ${entryName}`);
       }
