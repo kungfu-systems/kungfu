@@ -204,8 +204,9 @@ test('exact-source admission can recover a successful trusted dispatch', () => {
   );
   assert.match(
     action,
-    /head_sha=\$\{SOURCE_SHA\}&status=success[\s\S]*\.event == "push"[\s\S]*\.head_branch \| startswith\("dev\/"\)[\s\S]*or \.event == "workflow_dispatch"/u,
+    /head_sha=\$\{SOURCE_SHA\}&per_page=100[\s\S]*\.status == "completed"[\s\S]*\.conclusion == "success"[\s\S]*\.event == "push"[\s\S]*\.head_branch \| startswith\("dev\/"\)[\s\S]*or \.event == "workflow_dispatch"/u,
   );
+  assert.doesNotMatch(action, /head_sha=\$\{SOURCE_SHA\}&status=/u);
 });
 
 test('hosted preflight retries the public mirror before the official Rust fallback', () => {

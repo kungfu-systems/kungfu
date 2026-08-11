@@ -57,8 +57,8 @@ runs:
         if [ -z "$run_id" ]; then
           run_id="$(
             gh api \
-              "repos/${GITHUB_REPOSITORY}/actions/workflows/alpha-promotion-preflight.yml/runs?head_sha=${SOURCE_SHA}&status=success&per_page=100" \
-              --jq '.workflow_runs | map(select((.event == "push" and (.head_branch | startswith("dev/"))) or .event == "workflow_dispatch")) | sort_by(.run_number) | last | .id // empty'
+              "repos/${GITHUB_REPOSITORY}/actions/workflows/alpha-promotion-preflight.yml/runs?head_sha=${SOURCE_SHA}&per_page=100" \
+              --jq '.workflow_runs | map(select(.status == "completed" and .conclusion == "success" and ((.event == "push" and (.head_branch | startswith("dev/"))) or .event == "workflow_dispatch"))) | sort_by(.run_number) | last | .id // empty'
           )"
         fi
         test -n "$run_id"
