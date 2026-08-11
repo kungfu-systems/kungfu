@@ -292,7 +292,7 @@
       "targetKind": "claim",
       "targetPath": "docs/qualification/documentation-control-plane.receipt.json",
       "relation": "proves",
-      "expectedRevision": "sha256:68056769b277aa638f092971a44d082f2973901c2440f18dcf1ec4e298c99e8c"
+      "expectedRevision": "sha256:80d118b358000f413f2e131324aeb37eb0585d9e996eedd50502abbe7d1e9ddd"
     },
     {
       "id": "storage-authority-decision",
@@ -319,7 +319,7 @@
       "targetKind": "probe",
       "targetPath": "scripts/buildchain-kfd-evidence.mjs",
       "relation": "explains",
-      "expectedRevision": "sha256:edf2d1ab0e5cbbaca6c3cc8cac442fb2663934b92c7a694011db1999b3d5a092"
+      "expectedRevision": "sha256:b7bfa9e508e27f00b886d1f27a74d4c63e2c0d22c7cd57a903016990527cb172"
     }
   ],
   "routes": [
