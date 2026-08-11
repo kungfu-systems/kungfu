@@ -76,6 +76,11 @@
       },
       "extraArtifacts": [
         {
+          "label": "skill v2 definition schema",
+          "source": "framework/skill/schema/skill-definition-v2.schema.json",
+          "artifact": "config/skill/schema/skill-definition-v2.schema.json"
+        },
+        {
           "label": "skill source schema",
           "source": "framework/skill/schema/skill.schema.json",
           "artifact": "config/skill/schema/skill.schema.json"
@@ -137,8 +142,18 @@
       "source": "framework/runtime/kungfu-runtime-surface.contract.json",
       "artifact": "config/kungfu-runtime-surface.contract.json",
       "cli": {
-        "contract": ["runtime", "surface", "contract", "--json"],
-        "schema": ["contract", "show", "runtime-surface", "--json"]
+        "contract": [
+          "runtime",
+          "surface",
+          "contract",
+          "--json"
+        ],
+        "schema": [
+          "contract",
+          "show",
+          "runtime-surface",
+          "--json"
+        ]
       }
     },
     {
@@ -602,8 +617,18 @@
       "source": "framework/primitive/kungfu-primitive-catalog.contract.json",
       "artifact": "config/primitive/kungfu-primitive-catalog.contract.json",
       "cli": {
-        "contract": ["contract", "show", "primitive-catalog", "--json"],
-        "schema": ["contract", "show", "primitive-catalog", "--json"]
+        "contract": [
+          "contract",
+          "show",
+          "primitive-catalog",
+          "--json"
+        ],
+        "schema": [
+          "contract",
+          "show",
+          "primitive-catalog",
+          "--json"
+        ]
       }
     }
   ]
