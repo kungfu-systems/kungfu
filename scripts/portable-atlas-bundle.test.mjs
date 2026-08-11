@@ -8,6 +8,7 @@ import { fileURLToPath } from 'node:url';
 
 import {
   compilePortableBundle,
+  portableClassificationPaths,
   verifyPortableBundle,
 } from './portable-atlas-bundle.mjs';
 
@@ -30,6 +31,17 @@ test('portable bundle root fails closed on tamper', () => {
   const receipt = verifyPortableBundle(manifest);
   assert.equal(receipt.valid, false);
   assert.ok(receipt.diagnostics.some((row) => row.code === 'bundle-root'));
+});
+
+test('content-addressed control proofs retain one stable classification', () => {
+  const baseline = portableClassificationPaths(['README.md']);
+  const withProofs = portableClassificationPaths([
+    'README.md',
+    `framework/site/src/kfx-site-impact-proofs/${'1'.repeat(64)}.json`,
+    `framework/site/src/kfx-site-impact-proofs/${'2'.repeat(64)}.json`,
+  ]);
+  assert.deepEqual(withProofs, baseline);
+  assert.ok(baseline.includes('framework/site/src/kfx-site-impact-proofs/'));
 });
 
 test('active product surfaces do not retain the retired clone command', () => {

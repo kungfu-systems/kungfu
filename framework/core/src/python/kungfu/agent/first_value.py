@@ -104,7 +104,7 @@ def work_authority_capabilities():
     return {
         "schema": "kungfu.work.authority-capabilities/v1",
         "commandFamily": "kungfu work",
-        "mutationAuthority": "work-control-profile-actions",
+        "mutationAuthority": "kungfu.assignment-runtime/v1",
         "durableEvidence": ["episode", "fact", "action-receipt"],
         "commands": [
             "capture",

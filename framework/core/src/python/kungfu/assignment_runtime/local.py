@@ -717,6 +717,7 @@ class EmbeddedLocalAssignmentRuntime:
         }
         receipt_root = _root(receipt_preimage)
         episode_refs = list(authority_result.get("episodeRefs") or [])
+        authority_receipt = _copy_json(authority_result.get("authorityReceipt") or {})
         record = {
             "commandId": str(command["commandId"]),
             "idempotencyKey": str(command["idempotencyKey"]),
@@ -729,6 +730,7 @@ class EmbeddedLocalAssignmentRuntime:
             "warrant": command.get("warrant"),
             "factRefs": list(snapshot.get("factRefs") or []),
             "episodeRefs": episode_refs,
+            "authorityReceipt": authority_receipt,
             "recovered": recovered,
         }
         commands = dict(self._state.get("commands") or {})
@@ -762,7 +764,8 @@ class EmbeddedLocalAssignmentRuntime:
                 "disposition": disposition,
                 "originalReceiptRoot": record["receiptRoot"],
                 "commandRoot": record["commandRoot"],
-            }
+            },
+            "authorityReceipt": _copy_json(record.get("authorityReceipt") or {}),
         }
         return self._ok(
             request_id,
@@ -811,7 +814,8 @@ class EmbeddedLocalAssignmentRuntime:
                     "commandRoot": record["commandRoot"],
                     "receiptRoot": record["receiptRoot"],
                     "recovered": record["recovered"],
-                }
+                },
+                "authorityReceipt": _copy_json(record.get("authorityReceipt") or {}),
             },
             receipts=[{"receiptRoot": record["receiptRoot"], "kind": "command"}],
         )

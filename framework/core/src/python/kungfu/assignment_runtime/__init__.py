@@ -24,11 +24,30 @@ from .authority import (
     REQUEST_SCHEMA,
     LocalRuntimeError,
     _copy_json,
+    _root,
     _stable,
 )
 from .local import EmbeddedLocalAssignmentRuntime
 
 HOST_SCHEMA = "kungfu.gui.assignment-runtime-host/v1"
+COMMAND_SCHEMA = "kungfu.assignment-runtime.command/v1"
+
+_INTENT_COMMAND_TYPES = {
+    "create-initiative": "initiative.create",
+    "create-assignment": "assignment.create",
+    "append-assignment-relation-event": "assignment.relation.append",
+    "claim-assignment": "assignment.claim",
+    "advance-assignment": "assignment.stage",
+    "claim-completion": "assignment.completion.claim",
+    "assess-progress": "initiative.progress.assess",
+    "review-completion": "assignment.completion.review",
+    "decide-continuation": "assignment.continuation.decide",
+    "import-atlas": "assignment.atlas.import",
+    "activate-work-control": "assignment.authority.activate",
+    "restore-atlas-authority": "assignment.authority.restore",
+    "export-initiative": "initiative.bundle.export",
+    "import-initiative": "initiative.bundle.import",
+}
 
 
 def profile_source() -> Path:
@@ -270,12 +289,212 @@ class EmbeddedAssignmentRuntimeClient:
         return self.invoke("recovery.execute", payload=plan)
 
 
+def _workspace_realm(runtime_dir: str | Path) -> tuple[str, str]:
+    runtime_path = Path(runtime_dir).expanduser().resolve()
+    material_path = runtime_path.parent / "workspace-identity.json"
+    try:
+        material = json.loads(material_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as error:
+        raise LocalRuntimeError(
+            "malformed-identity",
+            "Assignment Runtime requires qualified Workspace identity material",
+        ) from error
+    workspace_kind = str(material.get("workspaceKind") or "")
+    generation = _stable(material.get("identityRoot"), "generation")
+    if workspace_kind == "home":
+        realm_id = "home"
+    elif workspace_kind == "project":
+        realm_id = f"project:{generation.removeprefix('sha256:')[:16]}"
+    else:
+        raise LocalRuntimeError(
+            "malformed-identity",
+            "Assignment Runtime supports only Home or Project Workspace realms",
+        )
+    return realm_id, generation
+
+
+def _runtime_result(response: Mapping[str, Any]) -> dict[str, Any]:
+    if response.get("status") == "ok" and isinstance(response.get("result"), Mapping):
+        return dict(response["result"])
+    error = dict(response.get("error") or {})
+    raise LocalRuntimeError(
+        str(error.get("code") or "internal"),
+        str(error.get("message") or "Assignment Runtime request failed"),
+        details=dict(error.get("details") or {}),
+        diagnostics=[dict(row) for row in response.get("diagnostics") or []],
+    )
+
+
+def _normalize_action_values(values: Mapping[str, Any]) -> dict[str, Any]:
+    normalized = _copy_json(dict(values))
+    aliases = (
+        ("missionId", "initiativeId"),
+        ("goalId", "assignmentId"),
+        ("goSet", "assignmentSet"),
+    )
+    for legacy, canonical in aliases:
+        if legacy not in normalized:
+            continue
+        if canonical in normalized and normalized[canonical] != normalized[legacy]:
+            raise LocalRuntimeError(
+                "ambiguous-identity",
+                f"Conflicting {legacy} and {canonical} values",
+            )
+        normalized.setdefault(canonical, normalized[legacy])
+        normalized.pop(legacy, None)
+    return normalized
+
+
+class LocalAssignmentRuntimeApplication:
+    """CLI, Agent, and KFX application edge over the versioned Runtime v1 API."""
+
+    def __init__(
+        self,
+        runtime_dir: str | Path,
+        *,
+        client_id: str,
+        kind: str,
+        source: str | Path | None = None,
+    ) -> None:
+        self.runtime_dir = Path(runtime_dir).expanduser().resolve()
+        self.client_id = _stable(client_id, "clientId")
+        self.kind = kind
+        self.source = source or profile_source()
+        self.realm_id, self.generation = _workspace_realm(self.runtime_dir)
+
+    def _runtime(self) -> EmbeddedLocalAssignmentRuntime:
+        return EmbeddedLocalAssignmentRuntime(
+            self.runtime_dir,
+            realm_id=self.realm_id,
+            generation=self.generation,
+            profile_source=self.source,
+        )
+
+    def status(self, initiative_id: str, assignment_id: str) -> dict[str, Any]:
+        with self._runtime() as runtime:
+            client = EmbeddedAssignmentRuntimeClient(
+                runtime, client_id=self.client_id, kind=self.kind
+            )
+            result = _runtime_result(
+                client.get_assignment(initiative_id, assignment_id)
+            )
+        assignment = dict(result.get("assignment") or {})
+        lifecycle = assignment.get("lifecycle")
+        if not isinstance(lifecycle, Mapping):
+            raise LocalRuntimeError(
+                "backend-unavailable",
+                "Assignment Runtime snapshot omitted the lifecycle projection",
+            )
+        return _copy_json(lifecycle)
+
+    def authorize(
+        self,
+        intent_id: str,
+        values: Mapping[str, Any],
+        authorized_by: str,
+    ) -> dict[str, Any]:
+        command_type = _INTENT_COMMAND_TYPES.get(intent_id)
+        if command_type is None:
+            raise LocalRuntimeError(
+                "invalid-command", "Runtime application intent is unsupported"
+            )
+        arguments = _normalize_action_values(values)
+        initiative_id = str(arguments.get("initiativeId") or "")
+        assignment_id = str(arguments.get("assignmentId") or "")
+        action_root = _root(
+            {
+                "intentId": intent_id,
+                "arguments": arguments,
+                "authorizedBy": authorized_by,
+            }
+        )
+        if not initiative_id:
+            initiative_id = f"runtime:initiative:{action_root[7:31]}"
+            arguments["_runtimeInitiativeId"] = initiative_id
+        if not assignment_id:
+            assignment_id = f"runtime:assignment:{action_root[7:31]}"
+            arguments["_runtimeAssignmentId"] = assignment_id
+
+        with self._runtime() as runtime:
+            client = EmbeddedAssignmentRuntimeClient(
+                runtime, client_id=self.client_id, kind=self.kind
+            )
+            snapshot_response = client.snapshot()
+            snapshot = _runtime_result(snapshot_response)
+            revision = dict(snapshot_response.get("revision") or {})
+            attempt = None
+            lease = None
+            if command_type == "assignment.claim":
+                attempt_id = arguments.get("attemptId")
+                if not attempt_id:
+                    attempt_id = f"attempt:{action_root[7:39]}"
+                    arguments["attemptId"] = attempt_id
+                attempt = {
+                    "attemptId": _stable(attempt_id, "attemptId"),
+                    "state": "claimed",
+                }
+                lease = {
+                    "leaseId": _stable(arguments.get("leaseId"), "leaseId"),
+                    "state": "active",
+                    "expiresAt": str(arguments.get("leaseExpiresAt") or ""),
+                }
+            elif command_type == "assignment.stage":
+                matches = [
+                    row
+                    for row in snapshot.get("assignments") or []
+                    if row.get("initiativeId") == initiative_id
+                    and row.get("assignmentId") == assignment_id
+                ]
+                if len(matches) != 1:
+                    raise LocalRuntimeError(
+                        "ambiguous-identity",
+                        "Runtime stage target does not resolve exactly once",
+                    )
+                attempt = _copy_json(matches[0].get("attempt"))
+                lease = _copy_json(matches[0].get("lease"))
+
+            command_basis = {
+                "clientId": self.client_id,
+                "intentId": intent_id,
+                "authorizedBy": authorized_by,
+                "expectedRevision": revision,
+                "arguments": arguments,
+            }
+            command_root = _root(command_basis)
+            command = {
+                "schema": COMMAND_SCHEMA,
+                "commandId": f"command:{self.kind}:{command_root[7:39]}",
+                "type": command_type,
+                "target": {
+                    "initiativeId": initiative_id,
+                    "assignmentId": assignment_id,
+                },
+                "expectedRevision": revision,
+                "idempotencyKey": f"idempotency:{command_root[7:]}",
+                "attempt": attempt,
+                "lease": lease,
+                "warrant": None,
+                "arguments": arguments,
+            }
+            result = _runtime_result(client.submit(command))
+
+        authority_receipt = dict(result.get("authorityReceipt") or {})
+        profile_result = dict(authority_receipt.get("result") or {})
+        if "coreReceipt" not in profile_result:
+            raise LocalRuntimeError(
+                "backend-unavailable",
+                "Assignment Runtime omitted the native authority receipt",
+            )
+        return _copy_json(profile_result["coreReceipt"])
+
+
 __all__ = [
     "EVENT_SCHEMA",
     "SNAPSHOT_SCHEMA",
     "EmbeddedAssignmentRuntimeClient",
     "EmbeddedLocalAssignmentRuntime",
     "HOST_SCHEMA",
+    "LocalAssignmentRuntimeApplication",
     "LocalRuntimeError",
     "WorkControlAuthority",
     "create_runtime_host_command",

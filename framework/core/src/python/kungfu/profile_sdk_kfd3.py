@@ -6,7 +6,6 @@ from __future__ import annotations
 
 import json
 import os
-import re
 import sys
 from collections.abc import Callable
 from dataclasses import dataclass
@@ -14,6 +13,9 @@ from pathlib import Path
 from typing import Any, Mapping
 
 from kungfu import kfx_contract
+from kungfu.profile_sdk_kfd3_release import (
+    _shared_api_release_audit as _shared_api_release_audit,
+)
 from kungfu.storage import service as storage_service
 from kungfu.profile_sdk_support import (
     KFD3_QUALIFICATION_PLAN_SCHEMA,
@@ -149,114 +151,6 @@ def _profile_facet_audit(resolved: Mapping[str, Any]) -> dict[str, Any]:
         "customViews": custom_views,
         "executableFacetCount": 0,
     }
-
-
-def _shared_api_release_audit(
-    projection: Mapping[str, Any], resolved: Mapping[str, Any]
-) -> tuple[dict[str, Any], list[dict[str, Any]]]:
-    """Prove bundled GUI/Agent parity through the installed API authority."""
-
-    from kungfu.agent.kfd3 import registry
-
-    apis = {row.get("id"): row for row in registry().get("apis", [])}
-    probes = []
-    failures = []
-    for intent in projection["intents"]:
-        protocol = intent.get("protocol") or {}
-        api_id = protocol.get("apiId") if protocol.get("mode") == "shared-api" else None
-        api = apis.get(api_id)
-        projections = set((api or {}).get("projections") or [])
-        gui_member = str(protocol.get("guiMember") or "")
-        gui_method = str(protocol.get("guiMethod") or "")
-        gui_package = Path(
-            str((resolved.get("memberPackages") or {}).get(gui_member, ""))
-        )
-        gui_manifest = (
-            kfx_contract.read_manifest_from_dir(str(gui_package))
-            if gui_package.is_dir()
-            else {}
-        )
-        view = ((gui_manifest.get("kungfuConfig") or {}).get("config") or {}).get(
-            "view"
-        ) or {}
-        bundle = gui_package / str(view.get("entry") or "dist/view/index.js")
-        source_view = gui_package / "src" / "view" / "index.tsx"
-        projection_path = bundle if bundle.is_file() else source_view
-        projection_kind = "built-view-bundle" if bundle.is_file() else "source-view"
-        projection_data = (
-            projection_path.read_bytes() if projection_path.is_file() else b""
-        )
-        gui_bound = bool(
-            projection_data
-            and re.search(
-                rb"\." + re.escape(gui_method.encode("utf-8")) + rb"\s*\(",
-                projection_data,
-            )
-        )
-        matched = bool(
-            api
-            and api.get("surface") == "cli-api-gui"
-            and "work-dashboard-gui" in projections
-            and "provider-skill" in projections
-            and gui_bound
-        )
-        if not matched:
-            failures.append(
-                {
-                    "intentId": intent["id"],
-                    "apiId": api_id,
-                    "guiMember": gui_member,
-                    "guiMethod": gui_method,
-                    "reason": "shared API lacks a bound GUI method or matching Agent projection",
-                }
-            )
-            continue
-        probes.append(
-            {
-                "intentId": intent["id"],
-                "apiId": api_id,
-                "surface": "cli-api-gui",
-                "humanProjection": "work-dashboard-gui",
-                "agentProjection": "provider-skill",
-                "guiMember": gui_member,
-                "guiMethod": gui_method,
-                "guiProjectionRoot": "sha256:" + _sha256(projection_data),
-                "guiProjectionKind": projection_kind,
-                "matched": True,
-            }
-        )
-    if failures:
-        raise ProfileSdkError(
-            "kfd3-release-api-parity-failed",
-            "one or more bundled intents lack the same GUI and Agent API surface",
-            failures=failures,
-        )
-    facets = []
-    executable_count = 0
-    for key, package_dir in sorted(
-        {
-            "suite": Path(str(resolved["source"])),
-            **{
-                str(key): Path(str(path))
-                for key, path in (resolved.get("memberPackages") or {}).items()
-            },
-        }.items()
-    ):
-        manifest = kfx_contract.read_manifest_from_dir(str(package_dir))
-        config = (manifest.get("kungfuConfig") or {}).get("config") or {}
-        for facet in ("view", "adapter", "service", "wasm"):
-            if config.get(facet) is not None:
-                executable_count += 1
-                facets.append({"packageKey": key, "facet": facet})
-    return (
-        {
-            "passed": True,
-            "policy": "release-owned-shared-api-parity/v1",
-            "customViews": facets,
-            "executableFacetCount": executable_count,
-        },
-        probes,
-    )
 
 
 def _earn_kfd3(

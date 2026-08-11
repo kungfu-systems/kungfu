@@ -1,0 +1,213 @@
+{
+  "schema": "kungfu.assignment-runtime.consumer-inventory/v1",
+  "protocol": "kungfu.assignment-runtime/v1",
+  "status": "r3-source-candidate",
+  "mutableAuthority": "realm-runtime",
+  "clusterRuntime": "not-started-out-of-scope",
+  "operations": [
+    "capabilities.discover",
+    "assignment.snapshot",
+    "assignment.list",
+    "assignment.get",
+    "assignment.query",
+    "events.watch",
+    "command.submit",
+    "command.get",
+    "diagnostics.get",
+    "recovery.plan",
+    "recovery.execute"
+  ],
+  "consumers": [
+    {
+      "id": "cli-work",
+      "kind": "cli",
+      "visibility": "public",
+      "paths": [
+        "kungfu work status",
+        "kungfu work gate",
+        "kungfu work admit",
+        "kungfu work claim",
+        "kungfu work kickoff",
+        "kungfu work stage",
+        "kungfu work relation-event",
+        "kungfu work claim-completion",
+        "kungfu work review",
+        "kungfu work decide",
+        "kungfu work close"
+      ],
+      "operations": ["assignment.get", "command.submit"],
+      "disposition": "runtime-client",
+      "mutation": "runtime-only"
+    },
+    {
+      "id": "cli-runtime-host",
+      "kind": "cli",
+      "visibility": "hidden-private-transport",
+      "paths": ["kungfu work runtime-host"],
+      "operations": [
+        "capabilities.discover",
+        "assignment.snapshot",
+        "assignment.list",
+        "assignment.get",
+        "assignment.query",
+        "events.watch",
+        "command.submit",
+        "command.get",
+        "diagnostics.get",
+        "recovery.plan",
+        "recovery.execute"
+      ],
+      "disposition": "runtime-host",
+      "mutation": "single-realm-writer"
+    },
+    {
+      "id": "cli-atlas-bridge",
+      "kind": "cli",
+      "visibility": "public-and-hidden-compatibility",
+      "paths": [
+        "kungfu atlas import",
+        "kungfu profile mission-control authority-cutover",
+        "kungfu profile mission-control authority-rollback",
+        "kungfu profile mission-control import-mission",
+        "kungfu profile mission-control assess-completion"
+      ],
+      "operations": ["command.submit"],
+      "disposition": "runtime-writer-with-read-only-compatibility",
+      "mutation": "runtime-only"
+    },
+    {
+      "id": "agent-action-loop",
+      "kind": "agent",
+      "visibility": "provider-runtime",
+      "paths": ["refresh-atlas", "review-completion"],
+      "operations": ["command.submit"],
+      "disposition": "runtime-client",
+      "mutation": "runtime-only"
+    },
+    {
+      "id": "kfx-work-dashboard",
+      "kind": "kfx",
+      "visibility": "production-capability",
+      "paths": ["assignmentRuntime", "All Work"],
+      "operations": [
+        "capabilities.discover",
+        "assignment.snapshot",
+        "assignment.list",
+        "assignment.get",
+        "assignment.query",
+        "events.watch",
+        "command.submit",
+        "command.get",
+        "diagnostics.get",
+        "recovery.plan",
+        "recovery.execute"
+      ],
+      "disposition": "typed-runtime-client",
+      "mutation": "runtime-only"
+    },
+    {
+      "id": "kfx-work-control-compatibility",
+      "kind": "kfx",
+      "visibility": "bounded-internal",
+      "paths": ["openWorkControlProfile", "openKfd3ProfileApplication"],
+      "operations": [],
+      "disposition": "read-only-production-seam-and-factory-qualification-exception",
+      "mutation": "production-rejected",
+      "productionFallback": false
+    }
+  ],
+  "boundedCompatibility": [
+    {
+      "id": "atlas-profile-reads",
+      "source": "framework/core/src/python/kungfu/cli/commands/atlas.py#_profile_read",
+      "mode": "read-only",
+      "deletionGate": "retained-v3-read-import-migration-rollback-bundle-qualification-and-zero-installed-observations"
+    },
+    {
+      "id": "work-dashboard-profile-reads",
+      "source": "extensions/work-dashboard/src/view/work-control-profile.ts#openWorkControlProfile",
+      "mode": "read-only-production",
+      "mutationError": "authority-bypass"
+    },
+    {
+      "id": "kfd3-factory-qualification",
+      "source": "extensions/work-dashboard/src/view/work-control-profile.ts#openKfd3ProfileApplication",
+      "mode": "factory-only-injected",
+      "productionFallback": false
+    }
+  ],
+  "nonRuntimeOwnedPaths": [
+    {
+      "id": "request-capture",
+      "paths": ["kungfu work capture"],
+      "reason": "captures an immutable Work Definition before runtime admission"
+    },
+    {
+      "id": "initiative-family-artifacts",
+      "paths": ["kungfu work family-*"],
+      "reason": "pure content-addressed offline family planning and verification"
+    },
+    {
+      "id": "project-agent-orchestration",
+      "paths": ["kungfu work start-*", "kungfu work review-agent-*"],
+      "reason": "launches or reviews Agent runs without becoming Assignment state authority"
+    }
+  ],
+  "sourceAssertions": [
+    {
+      "path": "framework/core/src/python/kungfu/cli/commands/assignment.py",
+      "required": ["LocalAssignmentRuntimeApplication", ".status(", ".authorize("],
+      "forbidden": ["profile_sdk.intent_apply("]
+    },
+    {
+      "path": "framework/core/src/python/kungfu/cli/commands/atlas.py",
+      "required": ["LocalAssignmentRuntimeApplication", "def _profile_read(", ".authorize("],
+      "forbidden": ["profile_sdk.intent_apply("]
+    },
+    {
+      "path": "framework/core/src/python/kungfu/agent/action_loop.py",
+      "required": ["LocalAssignmentRuntimeApplication", "def _mission_action(", ".authorize("],
+      "forbidden": ["profile_sdk.intent_apply("]
+    },
+    {
+      "path": "framework/core/src/python/kungfu/agent/resources.py",
+      "required": ["\"mutationAuthority\": \"kungfu.assignment-runtime/v1\""],
+      "forbidden": ["\"mutationAuthority\": \"work-control-profile-actions\""]
+    },
+    {
+      "path": "framework/core/src/python/kungfu/agent/first_value.py",
+      "required": ["\"mutationAuthority\": \"kungfu.assignment-runtime/v1\""],
+      "forbidden": ["\"mutationAuthority\": \"work-control-profile-actions\""]
+    },
+    {
+      "path": "framework/api/src/capability/runtime.ts",
+      "required": ["export type AssignmentRuntime", "openAssignmentRuntime", "recoveryExecute"],
+      "forbidden": []
+    },
+    {
+      "path": "framework/gui/src/main/runtime-recovery.ts",
+      "required": ["createAssignmentRuntimeHost", "'runtime-host'"],
+      "forbidden": []
+    },
+    {
+      "path": "framework/gui/src/renderer/src/runtime.ts",
+      "required": ["openAssignmentRuntime", "assignmentRuntimeIpc"],
+      "forbidden": []
+    },
+    {
+      "path": "extensions/work-dashboard/src/view/global-work-observer.ts",
+      "required": ["assignmentRuntime.snapshot()", "assignmentRuntime.watch(", "assignmentRuntime.recoveryPlan()"],
+      "forbidden": ["profile.intentApply", "profile.memberCallAsync"]
+    },
+    {
+      "path": "extensions/work-dashboard/src/view/index.tsx",
+      "required": ["openProfileApplication(runtime: AssignmentRuntime)", "return runtime;", "openKfd3ProfileApplication"],
+      "forbidden": ["profile.intentApply"]
+    },
+    {
+      "path": "extensions/work-dashboard/src/view/work-control-profile.ts",
+      "required": ["error.code = 'authority-bypass'", "mutationAuthority: 'kfd3-application'", "openKfd3ProfileApplication"],
+      "forbidden": []
+    }
+  ]
+}

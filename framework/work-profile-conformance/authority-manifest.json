@@ -87,7 +87,7 @@
     },
     {
       "path": "framework/work-lifecycle/kungfu-work-lifecycle-operation-matrix.contract.json",
-      "sha256": "sha256:bca8cf2cb144dd05250e3bea9d274394cdf47b141a7795c5a1ffc2d95bcd5ca6"
+      "sha256": "sha256:3feacc972ba83311045dd5f6b219fd92827a50c8d6f5240f13cb127908965063"
     },
     {
       "path": "framework/work-loop/work-api.contract.json",
@@ -99,7 +99,7 @@
     },
     {
       "path": "framework/work-profile-conformance/qualification/reference-scenarios.json",
-      "sha256": "sha256:05182d652a73fa2aee9066030cc8786a7abd890c04580a7f4e5f945ed7269ac4"
+      "sha256": "sha256:3a7a665c28679269bc6871e93e232bff2b781abe58e01d328bbc92b9318d2ff8"
     },
     {
       "path": "framework/work-profile-conformance/qualification/retained-witnesses.json",
@@ -154,5 +154,5 @@
       "sha256": "sha256:132d2a638e6535a00483991fc2676378c440a8a70058a6b8c488eac4e7612bc2"
     }
   ],
-  "bundleRoot": "sha256:98421ff61e4b89b252649da9ff4867003a8a4ea2bc3ad21c8a0352caa4a27efc"
+  "bundleRoot": "sha256:63a7d5516ff9559c64e6aba0f841ec2bd9daf1608cc27d02c5080da245bb7f2d"
 }
