@@ -5,6 +5,8 @@ import { execFileSync, spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 
+import { alphaKfdSupportCompatibility } from './buildchain-kfd-support-compat.mjs';
+
 const COMPACT_SURFACE_IDS = ['kungfu.agent.', 'shifu.agent.', 'xinfa.agent.'];
 
 function isCompactSurface(value) {
@@ -54,7 +56,12 @@ export async function loadBuildchainKfdRuntime() {
       import('@kungfu-tech/buildchain-alpha/kfd'),
       import('@kungfu-tech/buildchain-alpha/kfd-product-gates'),
     ]);
-    return { kfd1, kfd2, kfd3, productGates };
+    const support =
+      typeof productGates.createKfdSupportProjection === 'function' &&
+      typeof productGates.validateKfdSupportProjection === 'function'
+        ? {}
+        : alphaKfdSupportCompatibility(productGates);
+    return { kfd1, kfd2, kfd3, productGates: { ...productGates, ...support } };
   } catch (error) {
     if (
       error &&
