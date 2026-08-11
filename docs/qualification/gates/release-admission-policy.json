@@ -57,6 +57,7 @@
   },
   "temporalAdmission": {
     "contract": "framework/release/kungfu-temporal-release-admission.contract.json",
+    "admissionFacts": "docs/qualification/evidence/kungfu-temporal-release-admission-facts.json",
     "proofProjection": "docs/qualification/evidence/buildchain-compatibility-proof-projection.json",
     "releaseProvenanceContract": "framework/release/kungfu-release-provenance.contract.json"
   }

@@ -31,6 +31,15 @@ Buildchain registry, admission, controller, Gate aggregate, runner,
 control-plane, manifest, payload, and capability digests. Missing expected
 fields are errors, not wildcards. Unreadable external audit state fails closed.
 
+Temporal admission is governed by the immutable fact set referenced by
+`temporalAdmission.admissionFacts`. Each active allowance has one proof root
+that closes its reason, scope, evidence, authority, and Cut roots. Accepted
+contract digests are derived from those active proofs; the
+`publicationContractDigests` list is retained only as an exact, mechanically
+checked rollback projection. Revoked proofs, orphan roots, implicit
+transitivity, ancestry substituted for authority, or any mismatch in the
+source, tree, artifact, runtime, contract, proof, authority, or Cut fail closed.
+
 ## Three different publication meanings
 
 - **Test evidence publication** uploads logs, receipts, or failure reports. It
@@ -65,7 +74,23 @@ Run the static and negative contract suite:
 ```text
 ./shifu check:gate-catalog
 ./shifu test:release-admission
+./shifu check:temporal-release-admission
 ```
+
+To re-qualify the historical Alpha allowance against retained sealed material,
+use the read-only cutover task with the original archive directory and its
+already reconstructed candidate directory:
+
+```text
+./shifu release:temporal-provenance:qualify \
+  --artifact-root /path/to/original-alpha-archives \
+  --reconstruction-root /path/to/reconstructed-candidate \
+  --output /tmp/kungfu-temporal-provenance-cutover-qualification.json
+```
+
+The task hashes the retained inputs and verifies byte identity, provenance,
+fact authority, admission, rollback projection, and orphan closure. It does not
+build, reconstruct, publish, promote, retag, or mutate historical evidence.
 
 For a collected evidence directory, invoke the verifier with exact JSON files:
 
@@ -86,5 +111,5 @@ temporal input carries the verified promotion provenance object, promotion SHA,
 qualification root, and authority root. The result includes a deterministic
 `kungfu.temporal-release-admission-receipt/v1` without private payload. Setting
 `KUNGFU_TEMPORAL_RELEASE_ADMISSION_MODE=legacy-exact` is the bounded rollback to
-the prior exact whitelist; it never mutates historical facts. The command does
-not publish.
+the exact projection derived from the retained active proofs; it never mutates
+historical facts or receipts. The command does not publish.
