@@ -16,7 +16,10 @@ from kungfu.storage.fact_root_canonical import ROOT_PATTERN, record_root, verify
 RECEIPT_SCHEMA = "kungfu.temporal-release-admission-receipt/v1"
 PROJECTION_SCHEMA = "kungfu.buildchain.compatibility-proof-projection/v1"
 PROOF_SCHEMA = "kungfu.buildchain.compatibility-proof/v1"
+FACT_SET_SCHEMA = "kungfu.temporal-release-admission-fact-set/v1"
+ADMISSION_PROOF_SCHEMA = "kungfu.temporal-release-admission-proof/v1"
 _SHA1 = re.compile(r"[0-9a-f]{40}\Z")
+_DEV_BASE = re.compile(r"dev/v([1-9][0-9]*)/v([1-9][0-9]*)\.[0-9]+\Z")
 _MODES = {"dual-read", "legacy-exact"}
 
 
@@ -36,6 +39,13 @@ def _sha(value: Any, label: str, issues: list[str]) -> str:
         issues.append(f"orphan-sha:{label}")
         return "0" * 40
     return value
+
+
+def _protected_dev_base(value: Any) -> bool:
+    if not isinstance(value, str):
+        return False
+    match = _DEV_BASE.fullmatch(value)
+    return bool(match and match.group(1) == match.group(2) and int(match.group(1)) >= 4)
 
 
 def _proof_body(proof: dict[str, Any]) -> dict[str, Any]:
@@ -110,6 +120,134 @@ def _verify_projection(
     return observed_projection_root, proofs_by_root
 
 
+def _verify_admission_facts(
+    document: Any, issues: list[str]
+) -> tuple[str, dict[tuple[str, str], dict[str, Any]], dict[str, list[str]]]:
+    if (
+        not isinstance(document, dict)
+        or set(document)
+        != {"schema", "source", "activeProofRoots", "proofs", "factSetRoot"}
+        or document.get("schema") != FACT_SET_SCHEMA
+    ):
+        issues.append("unsupported-admission-fact-set")
+        return semantic_root({"invalid": "admission-fact-set"}), {}, {}
+    body = {key: value for key, value in document.items() if key != "factSetRoot"}
+    observed_root = _content_root(body)
+    if document.get("factSetRoot") != observed_root:
+        issues.append("admission-fact-set-root-mismatch")
+    source = document.get("source", {})
+    protected_base = source.get("protectedBase")
+    if (
+        not isinstance(source, dict)
+        or set(source) != {"repository", "protectedBase", "sourceCommit", "mergeCommit"}
+        or source.get("repository") != "kungfu-systems/kungfu"
+        or not _protected_dev_base(protected_base)
+        or not _SHA1.fullmatch(str(source.get("sourceCommit", "")))
+        or not _SHA1.fullmatch(str(source.get("mergeCommit", "")))
+    ):
+        issues.append("admission-fact-source-mismatch")
+    active_roots = document.get("activeProofRoots", [])
+    if not isinstance(active_roots, list) or active_roots != sorted(set(active_roots)):
+        issues.append("invalid-active-admission-proof-roots")
+        active_roots = []
+    proofs = document.get("proofs", [])
+    if not isinstance(proofs, list):
+        issues.append("invalid-admission-proofs")
+        proofs = []
+    by_root: dict[str, dict[str, Any]] = {}
+    by_binding: dict[tuple[str, str], dict[str, Any]] = {}
+    generated: dict[str, list[str]] = {}
+    expected_fields = {
+        "schema",
+        "proofId",
+        "status",
+        "channel",
+        "acceptedContractDigest",
+        "currentContractDigest",
+        "pathKind",
+        "buildchainProofRoots",
+        "reason",
+        "scope",
+        "scopeRoot",
+        "evidence",
+        "evidenceRoot",
+        "authority",
+        "authorityRoot",
+        "cut",
+        "cutRoot",
+    }
+    for row in proofs:
+        if not isinstance(row, dict) or set(row) != {"proofRoot", "record"}:
+            issues.append("invalid-admission-proof")
+            continue
+        record = row.get("record")
+        proof_root = row.get("proofRoot")
+        if not isinstance(record, dict) or set(record) != expected_fields:
+            issues.append("invalid-admission-proof")
+            continue
+        if proof_root != _content_root(record):
+            issues.append("admission-proof-root-mismatch")
+            continue
+        if proof_root in by_root:
+            issues.append("ambiguous-admission-proof")
+            continue
+        by_root[proof_root] = record
+        for name in ("scope", "evidence", "authority", "cut"):
+            if record.get(f"{name}Root") != _content_root(record.get(name)):
+                issues.append(f"admission-proof-{name}-root-mismatch")
+        channel = record.get("channel")
+        accepted_digest = record.get("acceptedContractDigest")
+        current_digest = record.get("currentContractDigest")
+        for label, value in (
+            ("accepted-contract", accepted_digest),
+            ("current-contract", current_digest),
+        ):
+            _root(value, f"admissionProof.{label}", issues)
+        scope = record.get("scope", {})
+        authority = record.get("authority", {})
+        cut = record.get("cut", {})
+        buildchain_roots = record.get("buildchainProofRoots")
+        if (
+            record.get("schema") != ADMISSION_PROOF_SCHEMA
+            or record.get("status") != "active"
+            or channel not in {"alpha", "release"}
+            or record.get("pathKind") not in {"direct", "composed"}
+            or not isinstance(record.get("reason"), str)
+            or not record.get("reason")
+            or not isinstance(buildchain_roots, list)
+            or buildchain_roots != sorted(set(buildchain_roots))
+            or scope
+            != {
+                "repository": source.get("repository"),
+                "channel": channel,
+                "operation": "release-admission",
+                "maximumPathDepth": 2,
+            }
+            or authority
+            != {
+                "kind": "protected-release-admission-authority",
+                "repository": source.get("repository"),
+                "protectedBase": protected_base,
+            }
+            or cut.get("kind") != "protected-git-cut"
+            or cut.get("repository") != source.get("repository")
+            or cut.get("protectedBase") != protected_base
+            or cut.get("commit") != source.get("mergeCommit")
+        ):
+            issues.append("unscoped-admission-proof")
+        binding = (str(channel), str(accepted_digest))
+        if binding in by_binding:
+            issues.append("ambiguous-admission-binding")
+        else:
+            by_binding[binding] = record
+        generated.setdefault(str(channel), []).append(str(accepted_digest))
+    if set(active_roots) != set(by_root):
+        issues.append("orphan-admission-proof")
+    for channel in generated:
+        generated[channel] = sorted(set(generated[channel]))
+    return observed_root, by_binding, generated
+
+
 def _provenance_bindings(
     envelope: Any,
     release_provenance_contract: dict[str, Any],
@@ -132,7 +270,6 @@ def _provenance_bindings(
     if not isinstance(envelope, dict):
         return semantic_root({"invalid": "release-provenance"})
     identities = envelope.get("identities", {})
-    projection = envelope.get("gitProjection", {})
     if identities.get("contractRoot") != semantic_root(release_provenance_contract):
         issues.append("sealed-contract-root-mismatch")
     if identities.get("qualificationRoot") != bindings.get("qualificationRoot"):
@@ -152,8 +289,9 @@ def _provenance_bindings(
         f"release-promotion:{envelope.get('releaseId')}:{bindings.get('qualificationRoot')}"
     ):
         issues.append("qualification-identity-mismatch")
-    if projection.get("candidateAncestryObserved") is not True:
-        issues.append("candidate-ancestry-mismatch")
+    # Ancestry remains a rooted Git observation, not semantic release
+    # authority. Changing it without re-rooting the envelope still fails the
+    # release-provenance verifier above.
     return _root(envelope.get("objectRoot"), "releaseProvenance.objectRoot", issues)
 
 
@@ -165,6 +303,7 @@ def _temporal_receipt(
     path_kind: str,
     policy_root: str,
     provenance_root: str,
+    admission_fact_set_root: str,
     proof_projection_root: str,
     proof_roots: list[str],
     binding_roots: dict[str, str],
@@ -175,6 +314,7 @@ def _temporal_receipt(
             "schema": "kungfu.temporal-release-admission-cut/v1",
             "policyRoot": policy_root,
             "provenanceObjectRoot": provenance_root,
+            "admissionFactSetRoot": admission_fact_set_root,
             "proofProjectionRoot": proof_projection_root,
             "bindingRoots": binding_roots,
         }
@@ -215,7 +355,14 @@ def _temporal_receipt(
             "scopeRoot": policy_root,
             "authorityRoot": authority_root,
             "admissionRoots": sorted(
-                set([provenance_root, proof_projection_root, *proof_roots])
+                set(
+                    [
+                        provenance_root,
+                        admission_fact_set_root,
+                        proof_projection_root,
+                        *proof_roots,
+                    ]
+                )
             ),
         }
         relations.append({"root": record_root(relation), "record": relation})
@@ -264,6 +411,7 @@ def _temporal_receipt(
         "maximumDepth": 2,
         "policyRoot": policy_root,
         "provenanceObjectRoot": provenance_root,
+        "admissionFactSetRoot": admission_fact_set_root,
         "proofProjectionRoot": proof_projection_root,
         "buildchainProofRoots": proof_roots,
         "bindingRoots": binding_roots,
@@ -279,6 +427,7 @@ def _temporal_receipt(
 def verify_admission(
     *,
     contract: dict[str, Any],
+    admission_facts: dict[str, Any],
     proof_projection: dict[str, Any],
     release_provenance_contract: dict[str, Any],
     release_provenance: dict[str, Any],
@@ -297,6 +446,9 @@ def verify_admission(
     if contract.get("schema") != "kungfu.temporal-release-admission-contract/v1":
         issues.append("unsupported-admission-contract")
     policy_root = semantic_root(contract)
+    fact_set_root, admission_proofs, generated_digests = _verify_admission_facts(
+        admission_facts, issues
+    )
     if mode == "dual-read":
         projection_root, proofs_by_root = _verify_projection(proof_projection, issues)
     else:
@@ -340,15 +492,37 @@ def verify_admission(
     current_contract_digest = _root(
         current_contract_digest, "currentContractDigest", issues
     )
-    if bindings.get("acceptedContractDigest") not in legacy_contract_digests:
+    channel = str(bindings.get("channel"))
+    accepted_digest = str(bindings.get("acceptedContractDigest"))
+    generated_for_channel = generated_digests.get(channel, [])
+    if sorted(set(legacy_contract_digests)) != generated_for_channel:
+        issues.append("legacy-generated-projection-mismatch")
+    proof = admission_proofs.get((channel, accepted_digest))
+    if mode == "dual-read" and proof is None:
+        issues.append("temporal-contract-not-admitted")
+    if proof is None:
+        proof = {}
+    if mode == "legacy-exact" and accepted_digest not in legacy_contract_digests:
         issues.append("legacy-contract-not-admitted")
-
-    paths = contract.get("paths", {}).get(bindings.get("channel"), {})
-    if set(paths) != set(legacy_contract_digests):
-        issues.append("legacy-proof-projection-mismatch")
-    path = paths.get(bindings.get("acceptedContractDigest"), {})
-    proof_roots = path.get("proofRoots", [])
-    path_kind = path.get("kind", "composed")
+    proof_roots = proof.get("buildchainProofRoots", [])
+    path_kind = proof.get("pathKind", "composed")
+    if proof and proof.get("currentContractDigest") != current_contract_digest:
+        issues.append("admission-proof-current-contract-mismatch")
+    evidence = proof.get("evidence", {})
+    if mode == "dual-read" and evidence.get("kind") == (
+        "sealed-alpha-recovery-and-compatibility"
+    ):
+        sealed_bindings = {
+            "sourceSha": "sourceSha",
+            "sourceTree": "sourceTree",
+            "artifactRoot": "artifactRoot",
+            "runtimeSha": "runtimeSha",
+            "qualificationRoot": "qualificationRoot",
+            "approvalRoot": "approvalRoot",
+        }
+        for binding_field, evidence_field in sealed_bindings.items():
+            if bindings.get(binding_field) != evidence.get(evidence_field):
+                issues.append(f"sealed-candidate-{binding_field}-mismatch")
     if path_kind not in {"direct", "composed"}:
         issues.append("unsupported-path-kind")
         path_kind = "composed"
@@ -453,6 +627,7 @@ def verify_admission(
         path_kind=path_kind,
         policy_root=policy_root,
         provenance_root=provenance_root,
+        admission_fact_set_root=fact_set_root,
         proof_projection_root=projection_root,
         proof_roots=proof_roots,
         binding_roots=binding_roots,
