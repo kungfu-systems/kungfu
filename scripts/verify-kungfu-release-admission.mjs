@@ -64,6 +64,57 @@ function stableJson(value) {
   return JSON.stringify(value);
 }
 
+function contentRoot(value) {
+  return `sha256:${crypto
+    .createHash('sha256')
+    .update(`${stableJson(value)}\n`)
+    .digest('hex')}`;
+}
+
+export function temporalAdmissionFactProjection(root, policy) {
+  const document = readJson(root, policy.temporalAdmission.admissionFacts);
+  if (document?.schema !== 'kungfu.temporal-release-admission-fact-set/v1')
+    throw new Error('unsupported temporal release admission fact set');
+  const { factSetRoot, ...body } = document;
+  if (factSetRoot !== contentRoot(body))
+    throw new Error('temporal release admission fact-set root mismatch');
+  const active = document.activeProofRoots;
+  if (
+    !Array.isArray(active) ||
+    active.join('\0') !== [...new Set(active)].sort().join('\0')
+  )
+    throw new Error('temporal release admission active proof roots drift');
+  const byRoot = new Map();
+  for (const row of document.proofs || []) {
+    if (row?.proofRoot !== contentRoot(row?.record))
+      throw new Error('temporal release admission proof root mismatch');
+    if (byRoot.has(row.proofRoot))
+      throw new Error('temporal release admission proof root is ambiguous');
+    byRoot.set(row.proofRoot, row.record);
+  }
+  if (
+    active.length !== byRoot.size ||
+    active.some((proofRoot) => !byRoot.has(proofRoot))
+  )
+    throw new Error('temporal release admission contains orphan proof entries');
+  const channels = {};
+  for (const proofRoot of active) {
+    const record = byRoot.get(proofRoot);
+    if (record?.status !== 'active')
+      throw new Error('temporal release admission selected an inactive proof');
+    const channel = String(record.channel || '');
+    const digest = `sha256:${normalizeDigest(
+      record.acceptedContractDigest,
+      'temporal accepted contract digest',
+    )}`;
+    channels[channel] ||= [];
+    channels[channel].push(digest);
+  }
+  for (const channel of Object.keys(channels))
+    channels[channel] = [...new Set(channels[channel])].sort();
+  return { factSetRoot, channels };
+}
+
 function publicationAuthorityDigest(value) {
   return crypto.createHash('sha256').update(stableJson(value)).digest('hex');
 }
@@ -140,9 +191,15 @@ function validatePolicy(root, policy) {
   );
   exactKeys(
     policy.temporalAdmission,
-    ['contract', 'proofProjection', 'releaseProvenanceContract'],
+    [
+      'contract',
+      'admissionFacts',
+      'proofProjection',
+      'releaseProvenanceContract',
+    ],
     'temporalAdmission',
   );
+  const temporalProjection = temporalAdmissionFactProjection(root, policy);
   if (
     policy.freshness.maximumLifetimeSeconds !== 900 ||
     policy.freshness.nonceReplay !== 'deny'
@@ -203,6 +260,14 @@ function validatePolicy(root, policy) {
       throw new Error(
         `Buildchain ${channel} runtime differs from its contract lock`,
       );
+    const generated = temporalProjection.channels[channel] || [];
+    if (
+      generated.join('\0') !==
+      [...runtime.publicationContractDigests].sort().join('\0')
+    )
+      throw new Error(
+        `Buildchain ${channel} rollback digests differ from active temporal proofs`,
+      );
   }
 }
 
@@ -218,6 +283,10 @@ export function verifyTemporalReleaseAdmission({
   if (!temporalAdmission?.releaseProvenance)
     throw new Error('temporal release admission provenance object is required');
   const contract = readJson(root, policy.temporalAdmission.contract);
+  const admissionFacts = readJson(
+    root,
+    policy.temporalAdmission.admissionFacts,
+  );
   const proofProjection = readJson(
     root,
     policy.temporalAdmission.proofProjection,
@@ -228,6 +297,7 @@ export function verifyTemporalReleaseAdmission({
   );
   const request = {
     contract,
+    admissionFacts,
     proofProjection,
     releaseProvenanceContract,
     releaseProvenance: temporalAdmission.releaseProvenance,
@@ -422,9 +492,14 @@ export async function verifyKungfuReleaseAdmission({
       throw new Error(
         `Kungfu release admission expected ${key} policy mismatch`,
       );
+  if (!policy.publication.channels.includes(expected?.channel))
+    throw new Error('Kungfu release admission channel is not allowed');
+  const temporalDigests =
+    temporalAdmissionFactProjection(root, policy).channels[expected.channel] ||
+    [];
   if (
-    !runtime.publicationContractDigests
-      .map((value) => normalizeDigest(value, 'publication contract digest'))
+    !temporalDigests
+      .map((value) => normalizeDigest(value, 'temporal contract digest'))
       .includes(
         normalizeDigest(expected?.contractDigest, 'expected contract digest'),
       )
@@ -432,8 +507,6 @@ export async function verifyKungfuReleaseAdmission({
     throw new Error(
       'Kungfu release admission expected contractDigest policy mismatch',
     );
-  if (!policy.publication.channels.includes(expected?.channel))
-    throw new Error('Kungfu release admission channel is not allowed');
   if (admission?.workflowPath !== policy.publication.workflowPath)
     throw new Error(
       'Kungfu release admission workflow is not the sealed Buildchain authority',
