@@ -6,8 +6,33 @@ of delegated agent work. It may guide agent actions, but action is not its root
 authority: kfx packages remain the governed runtime artifacts that execute UI,
 runtime facets, and future tool surfaces.
 
-This page is the design contract for the first Kungfu Skill surface. The
-architecture decision is [KF-ADR-019f86da-4f90-74c2-9cbb-24f1c34303bf](../adr/KF-ADR-019f86da-4f90-74c2-9cbb-24f1c34303bf.md).
+This page describes the shipped v1 context surface and the staged v2 contract.
+The original architecture decision is
+[KF-ADR-019f86da-4f90-74c2-9cbb-24f1c34303bf](../adr/KF-ADR-019f86da-4f90-74c2-9cbb-24f1c34303bf.md),
+amended by
+[KF-ADR-019fee22-e71d-7da9-8a44-9403c21a5d62](../adr/KF-ADR-019fee22-e71d-7da9-8a44-9403c21a5d62.md).
+
+## Staged v2 definition contract
+
+The v1 implementation remains readable while registry and runtime adoption are
+staged. A v1 `sourceHash` covers `SKILL.md`; it is not a v2 package identity.
+The v2 definition instead binds a stable key, immutable revision, and root over
+the complete sorted content closure. It declares provenance, distribution and
+Work scope, exact KFX/Profile dependencies, effects, proof, recovery,
+compatibility, and explicit non-authority claims.
+
+V2 has exactly three classes:
+
+- `instruction-only`: instructions only; no dependency, capability, or effect;
+- `operational`: Work-bound orchestration through separately admitted KFX;
+- `domain`: Work-bound domain semantics from an admitted Profile contribution,
+  with separately admitted KFX required for executable behavior.
+
+Work remains the only selection, acceptance, and completion authority. KFX
+remains capability and execution authority. Profile remains domain-meaning
+authority. Loading, invoking, or retiring a Skill cannot rewrite historical
+Work meaning. The v2 schema and rejection fixtures are checked by
+`./shifu check:skill-contract-v2`.
 
 ## The model
 
