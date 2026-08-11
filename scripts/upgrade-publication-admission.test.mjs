@@ -696,6 +696,41 @@ test('publication admission keeps exact installer bytes while omitting unadverti
   });
 });
 
+test('publication admission ignores auxiliary evidence copies without a root artifact manifest', () => {
+  withFixture((value) => {
+    const auxiliaryRoot = path.join(
+      value.payloadRoot,
+      'kungfu-signing-control-request-macos-arm64',
+      '.buildchain',
+      'signing',
+    );
+    fs.mkdirSync(auxiliaryRoot, { recursive: true });
+    fs.copyFileSync(
+      value.credential.evidencePath,
+      path.join(auxiliaryRoot, 'credential-island-evidence.json'),
+    );
+    const admitted = verify(value);
+    assert.equal(admitted.credentialIsland.platformId, 'macos-arm64-credential');
+    assert.equal(admitted.cliArtifacts.length, 4);
+  });
+});
+
+test('Build admission resolves version from the exact qualified checkout', () => {
+  const workflow = fs.readFileSync('.github/workflows/build.yml', 'utf8');
+  assert.match(
+    workflow,
+    /BUILDCHAIN_CONSUMER_VERSION: \$\{\{ needs\.build\.outputs\.publish-source-consumer-version \}\}/u,
+  );
+  assert.match(
+    workflow,
+    /VERSION="\$\(jq -er '\.version \| strings \| select\(length > 0\)' lerna\.json\)"/u,
+  );
+  assert.match(
+    workflow,
+    /if \[\[ -n "\$BUILDCHAIN_CONSUMER_VERSION" \]\]; then\s+test "\$BUILDCHAIN_CONSUMER_VERSION" = "\$VERSION"/u,
+  );
+});
+
 test('publication admission still requires evidence for every advertised upgrade platform', () => {
   withFixture((value) => {
     fs.rmSync(value.platforms.linux.evidencePath);

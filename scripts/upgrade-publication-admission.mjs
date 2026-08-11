@@ -181,19 +181,20 @@ function candidateBundleIdentity(directory) {
     directory,
     CANDIDATE_PLATFORM_MANIFEST_FILE,
   );
-  const credentialEvidence = filesNamed(directory, CREDENTIAL_EVIDENCE_FILE);
-  if (credentialEvidence.length > 0) {
-    if (!fs.existsSync(platformManifestPath)) {
-      throw new Error('credential-island bundle has no platform manifest');
-    }
+  if (fs.existsSync(platformManifestPath)) {
     const manifest = readJson(
       platformManifestPath,
-      'credential-island platform manifest',
+      'candidate platform manifest',
     );
-    return {
-      role: 'credential-island',
-      platformId: String(manifest.platform?.id || ''),
-    };
+    if (
+      manifest.lifecycle?.stage === 'credential-island' ||
+      manifest.platform?.id === 'macos-arm64-credential'
+    ) {
+      return {
+        role: 'credential-island',
+        platformId: String(manifest.platform?.id || ''),
+      };
+    }
   }
   const upgradeManifests = upgradeManifestFiles(directory);
   if (upgradeManifests.length > 0) {

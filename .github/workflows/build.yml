@@ -377,11 +377,15 @@ jobs:
 
       - name: Qualify exact product bytes and seal admission receipt
         env:
-          VERSION: ${{ needs.build.outputs.publish-source-consumer-version }}
+          BUILDCHAIN_CONSUMER_VERSION: ${{ needs.build.outputs.publish-source-consumer-version }}
         run: |
           set -euo pipefail
           mapfile -t passports < <(find .buildchain/product-admission/passport -type f -name release-candidate-passport.json)
           test "${#passports[@]}" -eq 1
+          VERSION="$(jq -er '.version | strings | select(length > 0)' lerna.json)"
+          if [[ -n "$BUILDCHAIN_CONSUMER_VERSION" ]]; then
+            test "$BUILDCHAIN_CONSUMER_VERSION" = "$VERSION"
+          fi
           output_dir=".buildchain/product-admission/payloads/kungfu-product-upgrade-publication-admission-${{ needs.build.outputs.publish-source-sha }}"
           ./shifu node scripts/upgrade-publication-admission.mjs write \
             --payload-root .buildchain/product-admission/payloads \
