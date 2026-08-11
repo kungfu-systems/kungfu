@@ -1,7 +1,7 @@
 {
   "contract": "kungfu.kfx-site-impact-proof/v1",
-  "baseRevision": "37dae2d44259ab6268e0075e161561faeadb6deb",
-  "changeRoot": "sha256:edc573c20258e14868629ce595cea21c845aeb439e166b312a9dc8b596d4f0c6",
+  "baseRevision": "85d08e4247db2fbd08c4c63253d3ccfaee2afada",
+  "changeRoot": "sha256:be5c407e79e4da27ad22e3aadfdfcac69b83dced6d2345466540f491ba8ba629",
   "changes": [
     {
       "baseContentRoot": "sha256:010f38e884141fbfba005cdfd40d5e12826b644fe2d1206f9959108ac5bf42f3",
@@ -312,11 +312,11 @@
     "package-facets",
     "profiles-suites"
   ],
-  "rationale": "R3 converges local Assignment runtime consumers, synchronizes its staged ADR projection, and updates generated authority evidence without changing the public KFX reader journey or site contract.",
+  "rationale": "R3 local Assignment Runtime and consumer convergence update Work Control source and qualification projections without changing the KFX site bundle contract or generated site assets.",
   "attestation": {
     "publicBehaviorUnchanged": true,
     "publicContractUnchanged": true,
     "readerJourneyUnchanged": true
   },
-  "proofRoot": "sha256:04e8a087ae046b84d5aace7340f6d8506fdf259316b4626c282f84a8ff09d5fd"
+  "proofRoot": "sha256:4add83e0b4266ffc818c762c0332fb7f675678798df38bd2fec67875d3e71130"
 }
