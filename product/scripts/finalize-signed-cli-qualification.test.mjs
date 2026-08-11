@@ -342,6 +342,16 @@ test('post-sign Codex planning is credential-free and selects only the fixture p
   assert.match(source, /providerCredentialsRead: false/u);
 });
 
+test('post-sign TUI smoke keeps the outer Node variant private to its driver', () => {
+  const source = fs.readFileSync(SCRIPT, 'utf8');
+  assert.match(source, /delete childEnv\.KUNGFU_AS_VARIANT/u);
+  assert.match(source, /nodePty\.spawn\([\s\S]*env: childEnv/u);
+  assert.match(
+    source,
+    /process\.stdout\.write\(output\); if \(exitCode !== 0\) process\.exit\(95\)/u,
+  );
+});
+
 test('Buildchain signing-finalization runs the consumer-owned qualification rebind', () => {
   const config = fs.readFileSync(
     path.join(ROOT, '.buildchain', 'buildchain.toml'),
