@@ -377,10 +377,10 @@ test('promotion rejects a static Buildchain ref that differs from its workflow s
   );
 });
 
-test('manual Buildchain validation retains the v3-alpha default and declared input boundary', () => {
+test('manual Buildchain validation retains the qualified immutable default and declared input boundary', () => {
   const buildPath = CONTRACT.workflows.build;
   const original = fs.readFileSync(path.join(ROOT, buildPath), 'utf8');
-  const binding = "      buildchain-ref: ${{ inputs.buildchain-ref || 'v3-alpha' }}";
+  const binding = `      buildchain-ref: \${{ inputs.buildchain-ref || '${CONTRACT.buildchain.candidate_build_sha}' }}`;
   const withoutDefault = original.replace(
     binding,
     '      buildchain-ref: ${{ inputs.buildchain-ref }}',
@@ -392,7 +392,7 @@ test('manual Buildchain validation retains the v3-alpha default and declared inp
   assert.equal(missingDefault.ok, false);
   assert.ok(
     missingDefault.findings.some((entry) =>
-      entry.message.includes('default to the production v3-alpha runtime'),
+      entry.message.includes('default to the qualified immutable Buildchain runtime'),
     ),
   );
 
@@ -429,7 +429,10 @@ test('Alpha Build and validation cannot fall back to stable v3 surfaces', () => 
     [
       'source lock',
       build,
-      build.replaceAll('buildchainRef: "v3-alpha"', 'buildchainRef: "v3"'),
+      build.replaceAll(
+        `buildchainRef: "${CONTRACT.buildchain.candidate_build_sha}"`,
+        'buildchainRef: "v3"',
+      ),
     ],
     [
       'validation action',
@@ -449,11 +452,11 @@ test('Alpha Build and validation cannot fall back to stable v3 surfaces', () => 
   }
 });
 
-test('candidate build rejects a committed exact Buildchain runtime pin', () => {
+test('candidate build rejects a different exact Buildchain runtime pin', () => {
   const buildPath = CONTRACT.workflows.build;
   const original = fs.readFileSync(path.join(ROOT, buildPath), 'utf8');
   const drifted = original.replace(
-    "      buildchain-ref: ${{ inputs.buildchain-ref || 'v3-alpha' }}",
+    `      buildchain-ref: \${{ inputs.buildchain-ref || '${CONTRACT.buildchain.candidate_build_sha}' }}`,
     '      buildchain-ref: 733812ff9405241705f5f267fe2e5ec6351e1a2d',
   );
   assert.notEqual(drifted, original);
@@ -461,7 +464,7 @@ test('candidate build rejects a committed exact Buildchain runtime pin', () => {
   assert.equal(result.ok, false);
   assert.ok(
     result.findings.some((entry) =>
-      entry.message.includes('default to the production v3-alpha runtime'),
+      entry.message.includes('default to the qualified immutable Buildchain runtime'),
     ),
   );
 });
@@ -469,8 +472,7 @@ test('candidate build rejects a committed exact Buildchain runtime pin', () => {
 test('PR-stage builds reject an unverified publish-source lock', () => {
   const buildPath = CONTRACT.workflows.build;
   const original = fs.readFileSync(path.join(ROOT, buildPath), 'utf8');
-  const buildchainRef =
-    "      buildchain-ref: ${{ inputs.buildchain-ref || 'v3-alpha' }}";
+  const buildchainRef = `      buildchain-ref: \${{ inputs.buildchain-ref || '${CONTRACT.buildchain.candidate_build_sha}' }}`;
   const drifted = original.replace(
     buildchainRef,
     [

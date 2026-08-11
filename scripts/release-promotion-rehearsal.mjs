@@ -146,18 +146,18 @@ export function validateWorkflowSources(root, contract, overrides = {}) {
   requirePattern(
     build,
     new RegExp(
-      `uses: kungfu-systems/buildchain/\\.github/workflows/\\.build\\.yml@${contract.buildchain.workflow_shell_ref}`,
+      `uses: kungfu-systems/buildchain/\\.github/workflows/\\.build\\.yml@${contract.buildchain.candidate_build_sha}`,
     ),
     findings,
-    'release-candidate build must consume the production v3-alpha floating workflow contract',
+    'release-candidate build must consume the qualified immutable Buildchain workflow contract',
   );
   requirePattern(
     build,
     new RegExp(
-      `buildchain-ref: \\$\\{\\{ inputs\\.buildchain-ref \\|\\| '${contract.buildchain.workflow_shell_ref}' \\}\\}`,
+      `buildchain-ref: \\$\\{\\{ inputs\\.buildchain-ref \\|\\| '${contract.buildchain.candidate_build_sha}' \\}\\}`,
     ),
     findings,
-    'candidate builds must default to the production v3-alpha runtime while retaining the trusted manual pass-through',
+    'candidate builds must default to the qualified immutable Buildchain runtime while retaining the trusted manual pass-through',
   );
   requirePattern(
     build,
@@ -173,9 +173,12 @@ export function validateWorkflowSources(root, contract, overrides = {}) {
   );
   requirePattern(
     build,
-    /buildchainRef: "v3-alpha"[\s\S]*\.buildchainRef == "v3-alpha"/u,
+    new RegExp(
+      `buildchainRef: "${contract.buildchain.candidate_build_sha}"[\\s\\S]*\\.buildchainRef == "${contract.buildchain.candidate_build_sha}"`,
+      'u',
+    ),
     findings,
-    'the r16 source lock must bind only the v3-alpha channel',
+    'the r16 source lock must bind only the qualified immutable Buildchain runtime',
   );
   requirePattern(
     build,
