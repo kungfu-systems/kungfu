@@ -219,7 +219,7 @@ jobs:
   build:
     needs: [preflight, windows-fast-sentinel, auditable-demo-fast-sentinel]
     if: ${{ always() && needs.preflight.result == 'success' && (needs.windows-fast-sentinel.result == 'success' || (github.event_name == 'workflow_dispatch' && inputs.render-auditable-demo && needs.windows-fast-sentinel.result == 'skipped')) && needs.auditable-demo-fast-sentinel.result == 'success' && !inputs.fast-sentinels-only && fromJSON(inputs.macos-overflow-request-json || '{}').mode != 'control' }}
-    uses: kungfu-systems/buildchain/.github/workflows/.build.yml@v3
+    uses: kungfu-systems/buildchain/.github/workflows/.build.yml@81c49578bff72a9784a1b63ce8698bd9dd23d7bf
     secrets:
       BUILDCHAIN_PROMOTION_TOKEN: ${{ secrets.KUNGFU_GITHUB_TOKEN }}
       BUILDCHAIN_ARTIFACT_RELAY_S3_ROLE_ARN: ${{ secrets.BUILDCHAIN_ARTIFACT_RELAY_S3_ROLE_ARN }}

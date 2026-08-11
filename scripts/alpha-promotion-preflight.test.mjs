@@ -588,9 +588,9 @@ test('patrol, normal Alpha builds and sentinels keep one controller authority', 
     build,
     /buildchain-ref: \$\{\{ inputs\.buildchain-ref \|\| '81c49578bff72a9784a1b63ce8698bd9dd23d7bf' \}\}[\s\S]*publish-source-ref: \$\{\{ needs\.preflight\.outputs\.release-cut-source-ref \}\}[\s\S]*publish-anchor-request-json: \$\{\{ needs\.preflight\.outputs\.release-cut-anchor-request-json \}\}/u,
   );
-  assert.doesNotMatch(
+  assert.match(
     build,
-    /uses: kungfu-systems\/buildchain\/\.github\/workflows\/\.build\.yml@[0-9a-f]{40}/u,
+    /uses: kungfu-systems\/buildchain\/\.github\/workflows\/\.build\.yml@81c49578bff72a9784a1b63ce8698bd9dd23d7bf/u,
   );
   const preBuild = build.slice(0, build.indexOf('\n  build:'));
   assert.doesNotMatch(

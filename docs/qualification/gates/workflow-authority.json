@@ -301,9 +301,9 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "qualifying",
-          "definitionDigest": "sha256:3a7248322e7d219906a41ac0781dcf09d551dfc6af0cfbb789d5923545db2f55",
+          "definitionDigest": "sha256:88926414a22bd55ffdd0385b1afc5f2523527dbaeb9df6df3c9190f3b20f9d61",
           "credentials": {"githubToken":"write","oidc":true,"repositorySecrets":["BUILDCHAIN_ARTIFACT_RELAY_S3_DOWNLOAD_ROLE_ARN","BUILDCHAIN_ARTIFACT_RELAY_S3_ROLE_ARN","BUILDCHAIN_ARTIFACT_RELAY_S3_UPLOAD_ROLE_ARN","KUNGFU_GITHUB_TOKEN"],"inheritedSecrets":false,"environment":null},
-          "externalActions": ["kungfu-systems/buildchain/.github/workflows/.build.yml@v3"],
+          "externalActions": ["kungfu-systems/buildchain/.github/workflows/.build.yml@81c49578bff72a9784a1b63ce8698bd9dd23d7bf"],
           "steps": []
         },
         {

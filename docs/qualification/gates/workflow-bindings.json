@@ -467,7 +467,7 @@
       "adapter": {
         "type": "buildchain-heavy-build",
         "kind": "job-uses",
-        "uses": "kungfu-systems/buildchain/.github/workflows/.build.yml@v3",
+        "uses": "kungfu-systems/buildchain/.github/workflows/.build.yml@81c49578bff72a9784a1b63ce8698bd9dd23d7bf",
         "job": {
       "needs": [
         "preflight",
