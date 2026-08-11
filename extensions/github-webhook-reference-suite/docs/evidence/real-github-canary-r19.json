@@ -1,0 +1,30 @@
+{
+  "schema": "kungfu.kfx.github-webhook-real-canary/v1",
+  "status": "passed",
+  "planRoot": "sha256:8a7255764d843b5a48d153e2a045c6b3b1589a4b088d426da6bafa77cd5b75ff",
+  "repo": "kungfu-systems/kungfu",
+  "region": "us-east-1",
+  "transport": "api-gateway-http-api-to-lambda",
+  "delivery": {
+    "event": "ping",
+    "statusCode": 202,
+    "deliveryRoot": "sha256:4fbd38e2897ccb897e695ba7ba645542bba7f6c2c0a41a3bd8f937ed714e2659"
+  },
+  "endpointRetained": false,
+  "secretRetained": false,
+  "payloadRetained": false,
+  "teardown": {
+    "attempted": [
+      "iam-role",
+      "lambda-function",
+      "http-api",
+      "repository-webhook"
+    ],
+    "repositoryWebhookAbsent": true,
+    "httpApiAbsent": true,
+    "lambdaFunctionAbsent": true,
+    "iamRoleAbsent": true,
+    "logGroupAbsent": true
+  },
+  "evidenceRoot": "sha256:3bbdc776748e9a0371adf2c174d51e1cfb2020c3d9d42071581469a12ca3d5d9"
+}
