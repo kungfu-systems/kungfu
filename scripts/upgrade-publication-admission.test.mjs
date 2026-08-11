@@ -710,7 +710,10 @@ test('publication admission ignores auxiliary evidence copies without a root art
       path.join(auxiliaryRoot, 'credential-island-evidence.json'),
     );
     const admitted = verify(value);
-    assert.equal(admitted.credentialIsland.platformId, 'macos-arm64-credential');
+    assert.equal(
+      admitted.credentialIsland.platformId,
+      'macos-arm64-credential',
+    );
     assert.equal(admitted.cliArtifacts.length, 4);
   });
 });
@@ -979,6 +982,53 @@ test('candidate finalization ignores root-manifest-only artifact projections', (
         path.basename(value.support.bundleRoot),
       ].sort(),
     );
+  });
+});
+
+test('candidate finalization retains Linux ARM64 as product support when it carries an upgrade manifest', () => {
+  withFixture((value) => {
+    const supportManifestPath = path.join(
+      value.support.bundleRoot,
+      'product',
+      'release',
+      'cli',
+      `kungfu-upgrade-${VERSION}-linux-arm64.json`,
+    );
+    const supportManifest = JSON.parse(
+      fs.readFileSync(value.platforms.linux.cliManifestPath, 'utf8'),
+    );
+    supportManifest.platform = 'linux';
+    supportManifest.architecture = 'arm64';
+    writeJson(supportManifestPath, supportManifest);
+    const outputRoot = path.join(
+      value.payloadRoot,
+      `kungfu-product-admission-${SOURCE}`,
+    );
+    const written = writeUpgradePublicationAdmission({
+      payloadRoot: value.payloadRoot,
+      releaseCandidatePassportPath: value.passportPath,
+      expectedVersion: VERSION,
+      outputPath: path.join(
+        outputRoot,
+        PRODUCT_UPGRADE_PUBLICATION_ADMISSION_FILE,
+      ),
+      capsulePath: path.join(
+        outputRoot,
+        PRODUCT_UPGRADE_PUBLICATION_CAPSULE_FILE,
+      ),
+    });
+    assert.equal(written.receipt.candidate.bundleCount, 5);
+    assert.deepEqual(
+      written.receipt.candidate.bundles
+        .filter(({ platformId }) => platformId === 'linux-arm64')
+        .map(({ role }) => role),
+      ['product-support'],
+    );
+    assert.deepEqual(written.receipt.admission.platforms, [
+      'darwin-arm64',
+      'linux-x64',
+      'win32-x64',
+    ]);
   });
 });
 

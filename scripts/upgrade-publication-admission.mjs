@@ -213,7 +213,13 @@ function candidateBundleIdentity(directory) {
         `product-upgrade bundle has multiple platform roles: ${[...platformIds].join(', ')}`,
       );
     }
-    return { role: 'product-upgrade', platformId: [...platformIds][0] };
+    const platformId = [...platformIds][0];
+    if (
+      EXPECTED_CANDIDATE_PLATFORM_ROLES['product-support'].includes(platformId)
+    ) {
+      return { role: 'product-support', platformId };
+    }
+    return { role: 'product-upgrade', platformId };
   }
   if (fs.existsSync(platformManifestPath)) {
     const manifest = readJson(
@@ -1069,6 +1075,13 @@ function verifyBundle({
     throw new Error(
       `upgrade manifest source ${manifest.sourceCommit || '<empty>'} is not bound by the release-candidate passport`,
     );
+  }
+  if (
+    EXPECTED_CANDIDATE_PLATFORM_ROLES['product-support'].includes(
+      platformIdentity(manifest),
+    )
+  ) {
+    return null;
   }
 
   let evidence = null;
