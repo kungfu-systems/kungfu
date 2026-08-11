@@ -20,6 +20,10 @@ import {
   BUILDCHAIN_KFD2_REGISTRY_PATH,
   BUILDCHAIN_KFD3_DIR,
   KFD3_DEFAULT_REGISTRY_PATH,
+  KFD_ADOPTER_MANIFEST_GATE_PATH,
+  KFD_ADOPTER_MANIFEST_PATH,
+  KFD_SUPPORT_MATRIX_PATH as KFD_SUPPORT_MATRIX_RELATIVE_PATH,
+  assertKungfuKfdAdopterClosureCurrent,
   checkColdBuildchainKfd,
   gitValue,
   loadBuildchainKfdRuntime,
@@ -27,6 +31,7 @@ import {
   releaseCandidateKfdRoot,
   renderKfdJson,
   resolveGitBoundKfdEvidenceSourceSha,
+  resolveKungfuKfdAdopterClosure,
 } from '../framework/release/buildchain-kfd-runtime.mjs';
 import { prepareGateMeasurementHistory } from './prepare-gate-measurement-history.mjs';
 import {
@@ -97,9 +102,8 @@ const KFD3_ARTIFACT_WITNESS_PATH = path.join(
 );
 const KFD3_QUERY_PATH = path.join(KFD3_OUTPUT_DIR, 'capability-query.json');
 const KFD_SUPPORT_MATRIX_PATH = path.join(
-  BUILDCHAIN_DIR,
-  'kfd',
-  'support-matrix.json',
+  ROOT,
+  KFD_SUPPORT_MATRIX_RELATIVE_PATH,
 );
 const KFD_PRODUCT_GATE_RUNTIME_DIR = path.join(
   BUILDCHAIN_DIR,
@@ -1652,31 +1656,22 @@ async function buildProductGates({ write, sourceSha, checkedAt }) {
         );
       }
     }
-    const matrix = readJson(KFD_SUPPORT_MATRIX_PATH);
-    const projection = runtime.productGates.createKfdSupportProjection({
-      matrix,
-      matrixRoot: `sha256:${sha256File(KFD_SUPPORT_MATRIX_PATH)}`,
-      gateResults: gates,
-      expectedSourceSha: sourceSha,
+    const closure = resolveKungfuKfdAdopterClosure({
+      root: ROOT,
+      sourceSha,
       checkedAt,
+      gates,
+      write,
     });
-    const projectionValidation =
-      runtime.productGates.validateKfdSupportProjection(projection, {
-        expectedSourceSha: sourceSha,
-        checkedAt,
-      });
-    if (!projectionValidation.valid) {
-      throw new Error(
-        `KFD support projection is invalid: ${JSON.stringify(projectionValidation.issues)}`,
-      );
-    }
-    if (write) writeJson(KFD_SUPPORT_PROJECTION_PATH, projection);
+    if (write) writeJson(KFD_SUPPORT_PROJECTION_PATH, closure.projection);
     return {
       sourceSha,
       checkedAt,
       inputs,
       gates,
-      projection,
+      manifest: closure.manifest,
+      manifestGate: closure.gate,
+      projection: closure.projection,
     };
   } finally {
     if (!write) fs.rmSync(workspace, { recursive: true, force: true });
@@ -1711,6 +1706,7 @@ function buildSummary({
         ),
         kfd3PrebuildWitnessJsons: [rel(KFD3_PREBUILD_WITNESS_PATH)],
         kfd3ArtifactVerifyCommand: ARTIFACT_VERIFY_COMMAND,
+        kfdAdopterManifestJson: KFD_ADOPTER_MANIFEST_PATH,
         kfdSupportMatrixJson: rel(KFD_SUPPORT_MATRIX_PATH),
         kfdProductGateJsons: KFD_PRODUCT_GATE_PATHS.map(rel),
       },
@@ -1758,9 +1754,11 @@ function buildSummary({
     },
     productGates: {
       sourceSha: productGates.sourceSha,
+      manifestRoot: productGates.manifestGate.authority.manifestRoot,
+      manifestGateRoot: productGates.manifestGate.gateRoot,
       projection: rel(KFD_SUPPORT_PROJECTION_PATH),
-      projectionRoot: productGates.projection.projectionRoot,
-      status: productGates.projection.status,
+      projectionRoot: `sha256:${sha256RenderedJson(productGates.projection)}`,
+      status: productGates.manifestGate.status,
       gates: productGates.gates.map((gate) => ({
         standard: gate.standard,
         status: gate.status,
@@ -1928,6 +1926,7 @@ async function runCheckOrWrite(options) {
       productGates.projection,
       'Buildchain KFD support projection',
     );
+    assertKungfuKfdAdopterClosureCurrent(ROOT, productGates, assertCurrent);
     assertCurrentIfPresent(
       SUMMARY_PATH,
       summary,
