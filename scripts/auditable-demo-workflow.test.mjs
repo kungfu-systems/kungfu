@@ -7,8 +7,13 @@ import test from 'node:test';
 
 import { parse } from 'yaml';
 
-const workflowText = fs.readFileSync('.github/workflows/build.yml', 'utf8');
+const workflowText = fs.readFileSync(
+  '.github/workflows/auditable-demo.yml',
+  'utf8',
+);
 const workflow = parse(workflowText);
+const releaseBuildText = fs.readFileSync('.github/workflows/build.yml', 'utf8');
+const releaseBuild = parse(releaseBuildText);
 const scenario = JSON.parse(
   fs.readFileSync('.buildchain/auditable-demo.json', 'utf8'),
 );
@@ -207,19 +212,18 @@ test('Kungfu owns the ordered three-proof argument while Buildchain updates only
 });
 
 test('the build fails the real transported binary before either upload path', () => {
-  assert.deepEqual(workflow.on.workflow_dispatch.inputs['buildchain-ref'], {
-    description:
-      'Temporary Buildchain train or exact SHA for trusted manual validation',
-    required: false,
-    default: '',
-  });
+  assert.deepEqual(workflow.on.workflow_dispatch.inputs.mode.options, [
+    'gate-only',
+    'full',
+  ]);
+  assert.equal(workflow.on.workflow_dispatch.inputs.mode.default, 'full');
   assert.equal(
     build.uses,
-    'kungfu-systems/buildchain/.github/workflows/.build.yml@v3',
+    'kungfu-systems/buildchain/.github/workflows/.build.yml@41d4dce2f38aa4821c794b49dcfb2bcf59d0984a',
   );
   assert.equal(
     build.with['buildchain-ref'],
-    "${{ inputs.buildchain-ref || 'v3' }}",
+    '41d4dce2f38aa4821c794b49dcfb2bcf59d0984a',
   );
   assert.equal(
     demo.uses,
@@ -233,14 +237,18 @@ test('the build fails the real transported binary before either upload path', ()
 });
 
 test('manual full refresh and promotion reuse the same materializer', () => {
-  const sharedIntent =
-    "${{ github.event_name != 'workflow_dispatch' || inputs.render-auditable-demo }}";
-  assert.equal(demo.with['render-media'], sharedIntent);
+  assert.equal(
+    demo.with['render-media'],
+    "${{ github.event_name != 'workflow_dispatch' || inputs.mode == 'full' }}",
+  );
   assert.equal(
     demo.with['render-failure-advisory'],
     "${{ github.event_name == 'pull_request' && startsWith(github.base_ref, 'alpha/') }}",
   );
-  assert.equal(demo.with.materialize, sharedIntent);
+  assert.equal(
+    demo.with.materialize,
+    "${{ github.event_name != 'workflow_dispatch' || (inputs.mode == 'full' && inputs.materialize) }}",
+  );
   assert.equal(
     demo.with['materialize-base-ref'],
     '${{ github.event.repository.default_branch }}',
@@ -253,45 +261,36 @@ test('manual full refresh and promotion reuse the same materializer', () => {
 
 test('manual media publication runs only the Linux x64 product path', () => {
   const platformExpression = build.with['platforms-json'];
-  const resolver = workflow.jobs['resolve-auditable-demo-source'];
-  assert.match(
-    platformExpression,
-    /github\.event_name == 'workflow_dispatch' && inputs\.render-auditable-demo/u,
+  const platforms = JSON.parse(platformExpression);
+  assert.deepEqual(
+    platforms.map(({ id }) => id),
+    ['linux-x64'],
   );
-  assert.match(
-    platformExpression,
-    /^\$\{\{[\s\S]*inputs\.render-auditable-demo && '\[\{"id":"linux-x64","name":"Linux x64 auditable demo publication"[\s\S]*\}\]'[\s\S]*\|\| \(inputs\.platforms-json \|\| '\[\{"id":"linux-x64"[\s\S]*"id":"linux-arm64"[\s\S]*"id":"macos-arm64"[\s\S]*"id":"windows-x64"/u,
-  );
-  assert.match(
-    workflow.jobs['windows-fast-sentinel'].if,
-    /!\(github\.event_name == 'workflow_dispatch' && inputs\.render-auditable-demo\)/u,
-  );
-  assert.match(
-    build.if,
-    /^\$\{\{ always\(\) &&[\s\S]*inputs\.render-auditable-demo && needs\.windows-fast-sentinel\.result == 'skipped'/u,
-  );
+  assert.equal(build.with['require-verify'], false);
+  assert.equal(build.with['release-candidate'], false);
+  assert.equal(build.with['publish-channel'], 'none');
   assert.equal(
-    resolver.if,
-    "${{ always() && needs.build.result == 'success' }}",
+    build.with['artifact-name-template'],
+    '{artifact}-{platform}-{sha}',
   );
+  assert.equal(workflow.jobs['resolve-binary'].needs, 'build');
   assert.equal(
     demo.if,
-    "${{ always() && needs.build.result == 'success' && needs.resolve-auditable-demo-source.result == 'success' && needs.resolve-auditable-demo-source.outputs.applicable == 'true' }}",
+    "${{ always() && needs.build.result == 'success' && needs.resolve-binary.result == 'success' }}",
   );
   assert.equal(
-    build.with['compiler-cache-platforms-json'],
-    "${{ github.event_name == 'workflow_dispatch' && (inputs.render-auditable-demo || inputs.windows-compiler-cache-mode == 'off') && '[]' || '[\"windows-x64\"]' }}",
+    releaseBuild.on.workflow_dispatch.inputs['render-auditable-demo'],
+    undefined,
   );
-  assert.equal(
-    build.with['compiler-cache-required'],
-    "${{ github.event_name != 'workflow_dispatch' || (!inputs.render-auditable-demo && inputs.windows-compiler-cache-mode != 'off') }}",
-  );
+  assert.equal(releaseBuild.jobs['resolve-auditable-demo-source'], undefined);
+  assert.equal(releaseBuild.jobs['auditable-demo'], undefined);
+  assert.doesNotMatch(releaseBuildText, /render-auditable-demo/u);
 });
 
 test('the exact same-run artifact contains the standalone demo distribution', () => {
   assert.match(
     workflowText,
-    /artifact-paths:[\s\S]*product\/release[\s\S]*product\/dist\/cli\/kungfu-episodes-cli-linux-x64/u,
+    /artifact-paths:[\s\S]*product\/dist\/cli\/kungfu-episodes-cli-linux-x64/u,
   );
   assert.equal(
     scenario.artifact.binaryPath,
@@ -316,6 +315,8 @@ test('legacy product-specific demo authorities are absent', () => {
     workflowText,
     /\.auditable-demo\.yml|auditable-demo-adapter|auditable-demo-passport|update-auditable-demo-readme/u,
   );
+  assert.equal(releaseBuild.jobs['auditable-demo-plan'], undefined);
+  assert.equal(releaseBuild.jobs['auditable-demo-passport'], undefined);
   assert.deepEqual(scenario.authority.grants, []);
 });
 
