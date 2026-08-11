@@ -1470,6 +1470,9 @@ export function runInstalledKungfuAssignmentAdmissionSmoke({
     ...env,
     HOME: userHome,
     USERPROFILE: userHome,
+    KF_CONFIG_HOME: path.join(userHome, '.kungfu-config'),
+    KF_HOME: home,
+    KF_RUNTIME_DIR: path.join(home, 'runtime'),
     KUNGFU_INSTALL_SOURCE: 'archive',
     KUNGFU_DIR: installRoot,
     KUNGFU_UPGRADE_MANIFEST: path.join(
