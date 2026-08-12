@@ -3,7 +3,7 @@
   "contract": "kungfu-buildchain-dev-delivery-warrant-queue",
   "repository": "kungfu-systems/kungfu",
   "protectedBase": "dev/v4/v4.0",
-  "generation": 1476,
+  "generation": 1477,
   "fencingCounter": 353,
   "policy": {
     "agingSeconds": 900,
@@ -17847,11 +17847,20 @@
       "sourceWorkflowRunId": 0,
       "priority": "ordinary",
       "enqueuedAt": "2026-08-12T15:04:36.436Z",
-      "updatedAt": "2026-08-12T15:04:36.436Z",
+      "updatedAt": "2026-08-12T15:16:36.333Z",
       "attempts": 1,
       "recoveries": 0,
-      "status": "queued",
-      "terminal": null,
+      "status": "cancelled",
+      "terminal": {
+        "outcome": "cancelled",
+        "reason": "Core affected native run 31606299864 failed at exact source 439cc69cd2e79f5642aa33648a6d32176988cb55",
+        "evidenceRoot": "sha256:7f2b65793d4870643478538634923ea08323dfcee7709d937ef58a53cac29b70",
+        "authority": "queued-candidate-cancellation",
+        "expectedSourceHead": "439cc69cd2e79f5642aa33648a6d32176988cb55",
+        "observedSourceHead": "439cc69cd2e79f5642aa33648a6d32176988cb55",
+        "eventAction": "cancelled",
+        "closedAt": "2026-08-12T15:16:36.333Z"
+      },
       "affectedPaths": [
         "config/release/kungfu-release-provenance.contract.json",
         "docs/adr/KF-ADR-019fe996-1912-7144-8fa5-3fceaa416365.md",
@@ -18097,6 +18106,6 @@
       ]
     }
   ],
-  "updatedAt": "2026-08-12T15:16:04.450Z",
-  "stateRoot": "sha256:6f73251267481ac21fad14cff5e34d7c46be20ef31c0fd07d9dffb318e3d7c2f"
+  "updatedAt": "2026-08-12T15:16:36.333Z",
+  "stateRoot": "sha256:2c9d9d95b8d95916663dc553b0c412907be1429ec9eec73a61879a15b1d56189"
 }
