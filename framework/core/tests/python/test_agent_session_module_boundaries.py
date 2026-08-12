@@ -60,6 +60,7 @@ def test_terminal_mock_session_waits_for_process_exit_after_reviewable_output():
                 "lifecycleState": "ready",
                 "interactionState": "ready",
                 "output": {"nextSequence": 1},
+                "controller": {"holderId": "kungfu-project-work"},
             }
         ],
         [
