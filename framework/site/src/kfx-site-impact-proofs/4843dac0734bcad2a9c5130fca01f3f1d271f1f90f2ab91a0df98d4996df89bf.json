@@ -1,7 +1,7 @@
 {
   "contract": "kungfu.kfx-site-impact-proof/v1",
   "baseRevision": "445b2fd84ec7f613ccbfc3d5f06980a3b07f0690",
-  "changeRoot": "sha256:20bc1daab17f3e0773d03f8adf5efc588bc4818c8fd0cf6549c6952461d38497",
+  "changeRoot": "sha256:768bc7a3e0cb9adfacc9c6a2764a5bb2b086f92b8370e15954cf3f462ba1f9f0",
   "changes": [
     {
       "baseContentRoot": "sha256:b232b82e3bc0ac15ede89d816b4c745a1ade5f7277d16ae5adc544aa4dbdc911",
@@ -274,6 +274,12 @@
       "status": "modified"
     },
     {
+      "baseContentRoot": "sha256:037b7b3ad863bb60b6e4c289303998c0181991f4cb2b2449bcb7d0c8c81845ad",
+      "contentRoot": "sha256:25bc0c917ef181b380ca53ff3901cb633ca869ade318d880bfdff65ac0543044",
+      "path": "framework/registry/contract.registry-envelope.json",
+      "status": "modified"
+    },
+    {
       "baseContentRoot": "sha256:2f3c1cf8701f82c5759d363604fb15c819d253706373d36a8d880928325e570a",
       "contentRoot": "sha256:307934f964f5d084c31594315a7b4de8421ad084120bd956576a24a9565bae8c",
       "path": "framework/skill/kungfu-skill.contract.json",
@@ -319,11 +325,11 @@
     "package-facets",
     "profiles-suites"
   ],
-  "rationale": "Agent Skill runtime-audit wiring and its regenerated KFD projections change native execution evidence only; KFX public contracts, Site Bundle content, extension behavior, and documented KFX reader journeys remain unchanged.",
+  "rationale": "Agent Skill runtime-audit wiring and its regenerated registry and KFD projections change native execution evidence only; KFX public contracts, Site Bundle content, extension behavior, and documented KFX reader journeys remain unchanged.",
   "attestation": {
     "publicBehaviorUnchanged": true,
     "publicContractUnchanged": true,
     "readerJourneyUnchanged": true
   },
-  "proofRoot": "sha256:e2d69fd7144170f4a8a9c98ab5dff80dd10ecbfbdeb8271f990c4be9f1a8306a"
+  "proofRoot": "sha256:4843dac0734bcad2a9c5130fca01f3f1d271f1f90f2ab91a0df98d4996df89bf"
 }
