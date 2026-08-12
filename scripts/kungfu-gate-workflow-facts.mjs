@@ -8,6 +8,8 @@ import { parseDocument } from './readonly-source-toolchain.mjs';
 
 const WORKFLOW_ROOT = '.github/workflows';
 const GATE_PROFILE_WORKFLOW = '/.github/workflows/.gate-profile.yml@';
+const WARRANTED_NATIVE_ACTION =
+  './.github/actions/native-execution-under-warrant';
 const GATE_COMMAND =
   /(?:^|[\n;]|&&|\|\|)\s*(\.\/shifu|\.\\shifu\.cmd)\s+gate\s+run(?:\s+("[^"]*"|'[^']*'|[^\s;&|]+))?([^\n;]*?)(?=$|\n|;|&&|\|\|)/g;
 
@@ -54,10 +56,19 @@ function shellWords(value) {
 function directGateFacts(workflow, jobId, steps, gateIds, issues) {
   const facts = [];
   for (const [stepIndex, step] of steps.entries()) {
-    if (!step || typeof step !== 'object' || typeof step.run !== 'string') {
-      continue;
-    }
-    const run = commandText(step.run);
+    if (!step || typeof step !== 'object') continue;
+    const commandSource =
+      typeof step.run === 'string'
+        ? { text: step.run, source: `steps[${stepIndex}].run` }
+        : step.uses === WARRANTED_NATIVE_ACTION &&
+            typeof step.with?.command === 'string'
+          ? {
+              text: step.with.command,
+              source: `steps[${stepIndex}].with.command`,
+            }
+          : null;
+    if (!commandSource) continue;
+    const run = commandText(commandSource.text);
     GATE_COMMAND.lastIndex = 0;
     for (const match of run.matchAll(GATE_COMMAND)) {
       const gate = staticToken(match[2]);
@@ -79,7 +90,7 @@ function directGateFacts(workflow, jobId, steps, gateIds, issues) {
         profile: null,
         gates: [gate],
         args: shellWords(match[3] || ''),
-        source: `steps[${stepIndex}].run`,
+        source: commandSource.source,
       });
     }
   }
