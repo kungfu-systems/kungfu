@@ -26,6 +26,10 @@ MISSION_PROFILE_SOURCE = (
 )
 
 
+def _mission_control_process_runner():
+    return mission_control._tracked_completion_evidence.__globals__["subprocess"]
+
+
 def _activate_mission_profile(runtime_dir, *, materialize=True):
     for action in ("install", "qualify", "activate"):
         plan = profile_sdk.lifecycle_plan(
@@ -1064,7 +1068,7 @@ def test_tracked_completion_selects_claimed_cut_in_multi_cut_commit(
         }
         return subprocess.CompletedProcess(argv, 1, json.dumps(reconcile), "")
 
-    monkeypatch.setattr(mission_control.subprocess, "run", fake_run)
+    monkeypatch.setattr(_mission_control_process_runner(), "run", fake_run)
     state = {
         "goals": [
             {
@@ -1129,7 +1133,7 @@ def test_native_assignment_completion_treats_starting_project_cut_as_context(
         }
         return subprocess.CompletedProcess(argv, 0, values[argv[-1]] + "\n", "")
 
-    monkeypatch.setattr(mission_control.subprocess, "run", fake_run)
+    monkeypatch.setattr(_mission_control_process_runner(), "run", fake_run)
     state = {
         "goals": [
             {
@@ -1643,7 +1647,7 @@ def test_tracked_completion_evidence_rejects_fault_campaign(tmp_path, monkeypatc
             return subprocess.CompletedProcess(args, 0, json.dumps(reconcile), "")
         return real_run(args, **kwargs)
 
-    monkeypatch.setattr(mission_control.subprocess, "run", fake_run)
+    monkeypatch.setattr(_mission_control_process_runner(), "run", fake_run)
     valid = mission_control._tracked_completion_evidence(
         str(checkout), state, "parent-go", claim
     )

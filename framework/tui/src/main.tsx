@@ -3,8 +3,7 @@
 import { execFile, execFileSync, spawn } from 'node:child_process';
 import fs from 'node:fs';
 import { createRequire } from 'node:module';
-import { constants as osConstants } from 'node:os';
-import { homedir } from 'node:os';
+import { homedir, constants as osConstants } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
@@ -44,7 +43,6 @@ import {
   createDetachedAgentSessionHost,
   prepareAgentSessionNodePty,
 } from '../../agent-session/src/product-client.mjs';
-
 import {
   AGENT_WORK_LAB_QUICK_COMMANDS,
   AgentFirstOnboardingView,
@@ -65,10 +63,16 @@ import {
   ControlPlaneBar,
   ControlPlaneOverlay,
   type ControlPlaneState,
+  KUNGFU_EMPTY_WORK_NEBULA_PATTERN,
+  KUNGFU_PROJECT_DISCOVERY_PATTERN,
+  KUNGFU_STARTUP_NEBULA_PATTERN,
+  KUNGFU_WORK_DISCOVERY_PATTERN,
   PlaybackBar,
   type ProductSurface,
   QUICK_COMMANDS,
+  TerminalAmbientScene,
   type TerminalDimensions,
+  TerminalLoadingScene,
   buildTuiProductSearchDocuments,
   contextualProjectRestoreCanCommit,
   createControlPlaneInputFence,
@@ -80,14 +84,6 @@ import {
   resolveProductStartupSurface,
   shouldStartContextualProjectRestore,
   splitHorizontalPointerActionAtPoint,
-} from './profile-shell.js';
-import {
-  KUNGFU_EMPTY_WORK_NEBULA_PATTERN,
-  KUNGFU_PROJECT_DISCOVERY_PATTERN,
-  KUNGFU_STARTUP_NEBULA_PATTERN,
-  KUNGFU_WORK_DISCOVERY_PATTERN,
-  TerminalAmbientScene,
-  TerminalLoadingScene,
   terminalAnimationsEnabled,
 } from './profile-shell.js';
 import {
@@ -151,13 +147,11 @@ import {
   cycleWorkSort,
   workWindowListContainsPoint,
 } from './work-window/index.js';
-
 const nodeRequire = createRequire(import.meta.url);
 let tuiAgentSessionEndpoint = '';
 let tuiAgentSessionReady: Promise<string> | undefined;
 let tuiAgentSessionHost: ReturnType<typeof createDetachedAgentSessionHost>;
 let tuiAgentSessionRuntimeDir = '';
-
 function ensureTuiAgentSession(runtimeDir: string): Promise<string> {
   const resolvedRuntimeDir = path.resolve(runtimeDir);
   if (tuiAgentSessionReady && tuiAgentSessionRuntimeDir === resolvedRuntimeDir)
@@ -190,13 +184,11 @@ function ensureTuiAgentSession(runtimeDir: string): Promise<string> {
   process.env.KUNGFU_AGENT_SESSION_WORKER = workerPath;
   process.env.KUNGFU_MOCK_AGENT_SCRIPT = mockPath;
   process.env.KUNGFU_PROJECT_WORK_AGENT_SESSION = '1';
-  const paths = runtimePaths();
   const host = createDetachedAgentSessionHost({
     runtimeDir: resolvedRuntimeDir,
     executable: resolveTuiAgentSessionExecutable({
+      ...runtimePaths(),
       env: process.env,
-      cliBin: paths.bin,
-      sourceCliFallback: paths.sourceCliFallback,
       processExecPath: process.execPath,
     }),
     workerPath,
@@ -211,7 +203,6 @@ function ensureTuiAgentSession(runtimeDir: string): Promise<string> {
   ).then(() => host.endpoint);
   return tuiAgentSessionReady;
 }
-
 async function invokeTuiAgentSession(
   request: Record<string, unknown> & { operation: string },
 ) {
@@ -228,11 +219,9 @@ async function invokeTuiAgentSession(
     return host.invoke(request);
   }
 }
-
 function cliEnvironment(): NodeJS.ProcessEnv {
   return tuiChildCliEnvironment(process.env);
 }
-
 function runtimePaths() {
   const { coreDir, kungfuDir, packagedBin } = resolveTuiProductPaths({
     env: process.env,
@@ -257,7 +246,6 @@ function runtimePaths() {
     ...cli,
   };
 }
-
 function tuiCliInvocation(paths: ReturnType<typeof runtimePaths>) {
   const argsPrefix = paths.sourceCliFallback
     ? ['run', '--project', paths.coreDir, '--frozen', 'python', '-m', 'kungfu']
@@ -280,7 +268,6 @@ function tuiCliInvocation(paths: ReturnType<typeof runtimePaths>) {
     args: (values: string[]) => [...argsPrefix, ...values],
   };
 }
-
 type ExitHistoryStatus = {
   ok: boolean;
   state: string;
@@ -288,7 +275,6 @@ type ExitHistoryStatus = {
   lastVerifiedExport: { bundleId: string; packageRoot: string } | null;
   nextActions: string[];
 };
-
 const EXIT_HISTORY_STATUS_FALLBACK: ExitHistoryStatus = {
   ok: false,
   state: 'unavailable',
@@ -296,7 +282,6 @@ const EXIT_HISTORY_STATUS_FALLBACK: ExitHistoryStatus = {
   lastVerifiedExport: null,
   nextActions: ['kungfu exit history status --json'],
 };
-
 async function openTuiAgentWorkLab(projectTour = false): Promise<AgentWorkLab> {
   const paths = runtimePaths();
   const cli = tuiCliInvocation(paths);
@@ -393,7 +378,6 @@ async function openTuiAgentWorkLab(projectTour = false): Promise<AgentWorkLab> {
       }),
   });
 }
-
 function openTuiProjects(useAgentSession = true, allowForeignBinding = false) {
   const paths = runtimePaths();
   const cli = tuiCliInvocation(paths);
