@@ -3,7 +3,7 @@
   "contract": "kungfu-buildchain-dev-delivery-warrant-queue",
   "repository": "kungfu-systems/kungfu",
   "protectedBase": "dev/v4/v4.0",
-  "generation": 1541,
+  "generation": 1542,
   "fencingCounter": 364,
   "policy": {
     "agingSeconds": 900,
@@ -19252,8 +19252,49 @@
         "scripts/verify-kungfu-release-admission.mjs",
         "scripts/verify-kungfu-release-admission.test.mjs"
       ]
+    },
+    {
+      "repository": "kungfu-systems/kungfu",
+      "protectedBase": "dev/v4/v4.0",
+      "pullRequestNumber": 3053,
+      "assignmentRoot": "sha256:2f0af5ea797c5a7d4e0307e644047d1e2ecb5bf7fd639eff20584943dee02d3b",
+      "initiativeRoot": "sha256:bfff817933e5a5ad693e4b902a84f6cc3a251235dd7377cb4091d92f805fa7ff",
+      "sourceIdentityRoot": "sha256:ea5f494e9866b564c9d2eebb54e736792a303bb1488c53cb40a25574a5428ff7",
+      "deliveryClass": "native-proof-required",
+      "candidateId": "sha256:22f366b4ba2d5eb12a1ab3f40ce0c1a06bba65aae6445031826fac9674e9bc8c",
+      "sourceHead": "dd5e3c4741e05141c61d4288e64f4b605aba506a",
+      "sourcePatchRoot": "sha256:a295c7979a604a8fbd22c72d709039c0beb56259c796038ae26a27d312ab171d",
+      "sourceProofRoot": "sha256:a6bd44af59e77a8c43b3f8c48caf138d8d41eb7553b6d024ab790312f047e41b",
+      "planRoot": "sha256:c7eaa7e1970c70242ad398b250a73980dec31da622cc44200544feb3eb1e84f0",
+      "closureRoot": "sha256:106d175611d8634c988192302b9c464ae8ba3b6d023c2cff9910e401344c9624",
+      "dependencyRoot": "sha256:003a43a7a7979bfffc4c02ed406f67666dff51139cd6ca4adf7835e49fd97e9b",
+      "toolchainRoot": "sha256:2ecb07894954a2e0de022615d4561e5ba3ae68376401941ecff77be03cd75a0f",
+      "sourceWorkflowRunId": 0,
+      "priority": "ordinary",
+      "enqueuedAt": "2026-08-12T18:17:14.743Z",
+      "updatedAt": "2026-08-12T18:17:14.743Z",
+      "attempts": 1,
+      "recoveries": 0,
+      "status": "queued",
+      "terminal": null,
+      "affectedPaths": [
+        ".github/actions/qualified-core-candidate-build/action.yml",
+        ".github/workflows/affected-native-cache-promote.yml",
+        ".github/workflows/affected-native-pr.yml",
+        ".github/workflows/dev-post-merge-advisory.yml",
+        ".xinfa/portable-atlas-classification.json.gz",
+        ".xinfa/product-atlas-bundle.json",
+        "docs/qualification/gates/README.md",
+        "docs/qualification/gates/workflow-authority.json",
+        "docs/qualification/gates/workflow-authority.md",
+        "framework/release/publication-surfaces.json",
+        "framework/release/qualified-assignment-core-artifact.mjs",
+        "scripts/check-kungfu-gate-catalog.test.mjs",
+        "scripts/qualified-assignment-core-artifact.test.mjs",
+        "scripts/readonly-agent-bootstrap.test.mjs"
+      ]
     }
   ],
-  "updatedAt": "2026-08-12T18:11:15.949Z",
-  "stateRoot": "sha256:fef70b0e98b0333639d0a0240b34fb48db8d60502eb27c094b6b0e73f891a56b"
+  "updatedAt": "2026-08-12T18:17:14.743Z",
+  "stateRoot": "sha256:1d18f49e80e144274cb9fbb5c6e09c750547748a02fdebb63d47b8648d57087e"
 }
