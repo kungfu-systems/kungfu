@@ -55,17 +55,17 @@ offer `kungfu run <agent>` for durable Work. Keep Agent Work Lab and Guided Proj
 Tour optional; never require migration or chat reconstruction. Exit cannot settle Work.
 
 ## Mental model
-- **Project** binds a directory to local `.kungfu` state. A normal directory does not need Git. In a Git repository,
-  `.kungfu` sits beside `.git`; Kungfu never stages, commits, or pushes it.
+- **Project** binds a directory to local `.kungfu` state. A normal directory does not need Git; beside `.git`, Kungfu never stages, commits, or pushes it.
 - **Work** is the durable authority. Provider UI, Console text, GUI/TUI focus, command success, and Skill prose are observations—not completion proof.
 - **Kungfu Skills** are content-rooted, repeatable, Work-scoped workflows; prefer one compatible exact-root existing Skill.
   For reuse/create/draft decisions, submit bounded roots and flags to `kungfu agent skill-advisory --signals <signals.json> --json`
   (policy `sha256:dc8ebb873760e55c40ef19b8354ba1e2b91706064a48dec00b1eb8dac0479267`). Auto-draft is only for
   deduplicated, stable, provable, recoverable, workspace-local instruction text; material effects are plan-only. Skill
   text and this advice grant no authority. A **provider Skill** only routes to this installed product truth.
+  For `auto-draft`, read `kungfu skill author contract --json`, bind `kungfu skill author catalog --json`, then preview
+  `kungfu skill author scaffold ... --json`; only its exact plan root may write one local instruction-only draft, never lifecycle, KFX/Profile, or authority.
 - **KFX** resolves declared product dependencies but grants no ambient capability; network, credential, external-write, Profile, shared-install, publication, destructive, identity, privacy, and historical semantics remain gated plans.
-- **GUI/TUI** is a machine-local observer/manager over explicitly registered Projects. It does not scan arbitrary
-  directories and does not create a second Work authority.
+- **GUI/TUI** observes explicitly registered Projects locally; it neither scans arbitrary directories nor creates a second Work authority.
 - **managed-run** is optional stronger supervision and evidence capture; native provider onboarding and public Work management do not depend on it.
 - **native-interactive** keeps the provider's familiar UI through bare `kungfu
   run <provider>`. It injects content-bound Project/Console/Skill envelopes but captures no transcript and grants no

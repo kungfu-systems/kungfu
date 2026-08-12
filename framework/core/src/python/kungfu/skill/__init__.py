@@ -1,6 +1,16 @@
 # SPDX-License-Identifier: Apache-2.0
 
-from .catalog import build_catalog, catalog_entry
+from .catalog import (
+    SkillAuthoringError,
+    apply_scaffold,
+    authoring_contract,
+    build_catalog,
+    candidate_catalog,
+    catalog_entry,
+    inspect_candidates,
+    plan_scaffold,
+    qualify_draft,
+)
 from .context import build_context_envelope, build_kungfu_environment
 from .dependencies import (
     SkillAuthorityError,
@@ -55,17 +65,21 @@ from . import contract as skill_contract
 __all__ = [
     "SkillError",
     "SkillAuthorityError",
+    "SkillAuthoringError",
     "SkillRegistryError",
     "active_payload_bindings",
     "active_payload_paths",
     "append_audit_event",
     "apply_plan",
+    "apply_scaffold",
+    "authoring_contract",
     "build_catalog",
     "build_context_envelope",
     "build_kungfu_environment",
     "build_skill_dependency_binding",
     "build_skill_context",
     "catalog_entry",
+    "candidate_catalog",
     "context_file_from_env",
     "discover_skills",
     "diagnose_registry",
@@ -78,14 +92,17 @@ __all__ = [
     "has_context_envelope_info",
     "inject_skill_context",
     "inspect_registry",
+    "inspect_candidates",
     "invoke_dependency_plan",
     "load_skill_context_file",
     "parse_skill",
     "plan_dependency_invocation",
+    "plan_scaffold",
     "plan_operation",
     "read_audit_file",
     "read_skill_dependency_binding",
     "read_skill_markdown",
+    "qualify_draft",
     "registry_history",
     "registry_root",
     "normalize_package",

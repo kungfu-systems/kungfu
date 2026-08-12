@@ -1,0 +1,78 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "kungfu.skill-authoring.plan/v1",
+  "title": "Kungfu Skill safe authoring plan",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "execute",
+    "decisionRoot",
+    "candidateCatalogRoot",
+    "inspectionRoot",
+    "workspace",
+    "workspaceRoot",
+    "target",
+    "relativeTarget",
+    "files",
+    "definitionRoot",
+    "contentRoot",
+    "qualificationRoot",
+    "allowedActions",
+    "blockedActions",
+    "rollback",
+    "nonClaims"
+  ],
+  "properties": {
+    "schema": {"const": "kungfu.skill-authoring.plan/v1"},
+    "execute": {"const": false},
+    "decisionRoot": {"$ref": "#/$defs/root"},
+    "candidateCatalogRoot": {"$ref": "#/$defs/root"},
+    "inspectionRoot": {"$ref": "#/$defs/root"},
+    "workspace": {"type": "string", "minLength": 1},
+    "workspaceRoot": {"$ref": "#/$defs/root"},
+    "target": {"type": "string", "minLength": 1},
+    "relativeTarget": {"type": "string", "minLength": 1},
+    "files": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 2,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["path", "root", "bytes"],
+        "properties": {
+          "path": {"enum": ["SKILL.md", "skill-definition.json"]},
+          "root": {"$ref": "#/$defs/root"},
+          "bytes": {"type": "integer", "minimum": 1}
+        }
+      }
+    },
+    "definitionRoot": {"$ref": "#/$defs/root"},
+    "contentRoot": {"$ref": "#/$defs/root"},
+    "qualificationRoot": {"$ref": "#/$defs/root"},
+    "allowedActions": {"$ref": "#/$defs/actions"},
+    "blockedActions": {"$ref": "#/$defs/actions"},
+    "rollback": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mode", "target", "preserveExisting"],
+      "properties": {
+        "mode": {"const": "remove-only-this-new-draft"},
+        "target": {"type": "string", "minLength": 1},
+        "preserveExisting": {"const": true}
+      }
+    },
+    "nonClaims": {"$ref": "#/$defs/actions"},
+    "planRoot": {"$ref": "#/$defs/root"}
+  },
+  "$defs": {
+    "root": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "actions": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {"type": "string", "minLength": 1}
+    }
+  }
+}

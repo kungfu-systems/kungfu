@@ -836,6 +836,36 @@
       "purpose": "Load a full SKILL.md on demand with audit evidence."
     },
     {
+      "apiId": "kungfu.skill.author.contract",
+      "name": "kungfu skill author contract --json",
+      "maturity": "stable",
+      "purpose": "Discover the exact rooted workspace-local Skill authoring constraints, schemas, examples, actions, and non-claims."
+    },
+    {
+      "apiId": "kungfu.skill.author.catalog",
+      "name": "kungfu skill author catalog --json",
+      "maturity": "stable",
+      "purpose": "Read the exact current Skill candidate catalog root required for mandatory deduplication."
+    },
+    {
+      "apiId": "kungfu.skill.author.inspect",
+      "name": "kungfu skill author inspect --spec <spec.json> --json",
+      "maturity": "stable",
+      "purpose": "Compare one bounded Skill proposal with the current rooted catalog and fail closed on duplicates or ambiguity."
+    },
+    {
+      "apiId": "kungfu.skill.author.scaffold",
+      "name": "kungfu skill author scaffold --signals <signals.json> --spec <spec.json> --workspace <path> --target <relative-path> --json",
+      "maturity": "stable",
+      "purpose": "Preview or exact-root execute one deterministic new workspace-local instruction-only Skill draft without lifecycle mutation."
+    },
+    {
+      "apiId": "kungfu.skill.author.qualify",
+      "name": "kungfu skill author qualify <draft-path> --json",
+      "maturity": "stable",
+      "purpose": "Qualify one exact draft as workspace-local instruction-only content without claiming installation, activation, or Work completion."
+    },
+    {
       "apiId": "kungfu.kfx.install",
       "name": "kungfu kfx install <source>",
       "maturity": "stable",
