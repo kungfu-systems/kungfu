@@ -47,7 +47,8 @@ importers:
         specifier: 3.0.7
         version: 3.0.7
       '@kungfu-tech/buildchain-alpha': {specifier: 'npm:@kungfu-tech/buildchain@3.0.7-alpha.1', version: '@kungfu-tech/buildchain@3.0.7-alpha.1'}
-      '@kungfu-tech/kfd': {specifier: 1.0.0-alpha.57, version: 1.0.0-alpha.57}
+      '@kungfu-tech/kfd': {specifier: 1.0.0-alpha.53, version: 1.0.0-alpha.53}
+      '@kungfu-tech/kfd-verifier-fixtures': {specifier: 'npm:@kungfu-tech/kfd@1.0.0-alpha.57', version: '@kungfu-tech/kfd@1.0.0-alpha.57'}
       '@types/fs-extra':
         specifier: ^11.0.4
         version: 11.0.4
@@ -5806,7 +5807,6 @@ snapshots:
   '@kungfu-tech/buildchain@3.0.7': {dependencies: {'@kungfu-tech/kfd': 1.0.0-alpha.53, ajv: 8.20.0, smol-toml: 1.7.0}}
   '@kungfu-tech/buildchain@3.0.7-alpha.1': {dependencies: {'@kungfu-tech/kfd': 1.0.0-alpha.53, ajv: 8.20.0, smol-toml: 1.7.0}}
   '@kungfu-tech/kfd@1.0.0-alpha.41': {}
-
   '@kungfu-tech/kfd@1.0.0-alpha.53': {}
   '@kungfu-tech/kfd@1.0.0-alpha.57': {}
   '@kungfu-tech/libnode-darwin-arm64@22.22.3-kf.5-alpha.3':

@@ -12,7 +12,9 @@ const ROOT = path.resolve(import.meta.dirname, '..');
 const XINFA_ROOT = path.join(ROOT, 'crates', 'xinfa');
 const XINFA_MANIFEST = path.join(XINFA_ROOT, 'Cargo.toml');
 const KFD_ROOT = path.dirname(
-  fileURLToPath(import.meta.resolve('@kungfu-tech/kfd/package.json')),
+  fileURLToPath(
+    import.meta.resolve('@kungfu-tech/kfd-verifier-fixtures/package.json'),
+  ),
 );
 const KFD_BIN = path.join(KFD_ROOT, 'bin', 'kfd-verify-current.mjs');
 const KFD_ATLAS_FIXTURE = path.join(
