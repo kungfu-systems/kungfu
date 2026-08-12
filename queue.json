@@ -3,7 +3,7 @@
   "contract": "kungfu-buildchain-dev-delivery-warrant-queue",
   "repository": "kungfu-systems/kungfu",
   "protectedBase": "dev/v4/v4.0",
-  "generation": 1470,
+  "generation": 1471,
   "fencingCounter": 352,
   "policy": {
     "agingSeconds": 900,
@@ -17674,11 +17674,20 @@
       "sourceWorkflowRunId": 0,
       "priority": "ordinary",
       "enqueuedAt": "2026-08-12T14:18:43.630Z",
-      "updatedAt": "2026-08-12T14:18:43.630Z",
+      "updatedAt": "2026-08-12T15:09:10.272Z",
       "attempts": 1,
       "recoveries": 0,
-      "status": "queued",
-      "terminal": null,
+      "status": "cancelled",
+      "terminal": {
+        "outcome": "cancelled",
+        "reason": "Temporarily dequeue untouched PR #3037: run 31606283989 proved current dev rejects qualified Warrants; let exact repair PR #3029 land, then normal automation may resubmit this unchanged PR.",
+        "evidenceRoot": "sha256:78ebe477cfa22eb1004a077930d6c5f4e4d2f3884451d3d21094e658ca289d49",
+        "authority": "queued-candidate-cancellation",
+        "expectedSourceHead": "21889cc2620b43217aef5ed5a4473e864cfe73b2",
+        "observedSourceHead": "21889cc2620b43217aef5ed5a4473e864cfe73b2",
+        "eventAction": "synchronize",
+        "closedAt": "2026-08-12T15:09:10.272Z"
+      },
       "affectedPaths": [
         ".github/workflows/affected-native-pr.yml",
         ".github/workflows/dev-delivery-warrant-terminal.yml",
@@ -17899,6 +17908,6 @@
       ]
     }
   ],
-  "updatedAt": "2026-08-12T15:08:46.983Z",
-  "stateRoot": "sha256:735b4c0b9ccec27ae54f00b9c12c7f93fb01d54d3242acdbeadd4b51a2ced4bf"
+  "updatedAt": "2026-08-12T15:09:10.272Z",
+  "stateRoot": "sha256:5c3cf26c1bfad0fbebbfd15a1d9655a2fc376dd52eed4601492e895ba70ac64e"
 }
