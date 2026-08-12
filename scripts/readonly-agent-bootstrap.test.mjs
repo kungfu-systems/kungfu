@@ -366,6 +366,7 @@ test('declared discovery routes are zero-write in a cold read-only fixture', (t)
     'docs/adr/KF-ADR-019f96a2-c686-76e1-9261-f6106aa50429.md',
     'docs/adr/KF-ADR-019fbbe4-40c5-7c67-9ed2-910a65430ff7.md',
     'docs/adr/SHIFU-ADR-019fab1a-2853-737e-8c67-a9b1aa9035aa.md',
+    'docs/adr/SHIFU-ADR-019f86da-4f90-79a1-bc85-4b542fecf011.md',
     'docs/adr/KF-ADR-019fbe04-6548-7b3a-8358-22c8fe8238a9.md',
     'docs/architecture/adr-map.json',
     'docs/architecture/adr-map.md',
