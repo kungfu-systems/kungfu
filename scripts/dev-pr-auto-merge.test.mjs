@@ -17,7 +17,7 @@ test('Dev auto-merge admits only explicitly ready reviewed same-repository PRs',
   const reusableRef = workflow.match(
     /uses: kungfu-systems\/buildchain\/\.github\/workflows\/dev-pr-auto-merge\.yml@([0-9a-f]{40})/u,
   )?.[1];
-  assert.equal(reusableRef, '6057d71142dfc6a9d78872e316eca87d9510e176');
+  assert.equal(reusableRef, 'ce4300567edbf8cdd81d77ee8fa57c25cd348cfe');
   assert.match(workflow, new RegExp(`buildchain-ref: ${reusableRef}`, 'u'));
   assert.match(workflow, /workflow_run:[\s\S]*Core affected native/u);
   assert.match(workflow, /pull_request_target:[\s\S]*ready_for_review/u);
@@ -143,7 +143,7 @@ test('Dev behind admission produces and forwards an exact Project Cut replay pro
   );
   assert.match(
     workflow,
-    /Check out exact Buildchain delivery runtime[\s\S]*ref: 6057d71142dfc6a9d78872e316eca87d9510e176/u,
+    /Check out exact Buildchain delivery runtime[\s\S]*ref: ce4300567edbf8cdd81d77ee8fa57c25cd348cfe/u,
   );
   assert.match(
     workflow,
@@ -280,6 +280,7 @@ test('hosted native jobs remain fail-closed behind the exact active Warrant', ()
     'affected_native_shards',
     'shifu_workspace',
     'kfd_verifier',
+    'qualified_core_candidate',
   ]) {
     const start = sourceWorkflow.indexOf(`  ${job}:\n`);
     const remainder = sourceWorkflow.slice(start + 3);
@@ -288,6 +289,10 @@ test('hosted native jobs remain fail-closed behind the exact active Warrant', ()
     const body = sourceWorkflow.slice(start, end);
     assert.match(body, /- warrant_admission/u);
     assert.match(body, /needs\.warrant_admission\.result == 'success'/u);
+    assert.match(
+      body,
+      /uses: \.\/\.github\/actions\/native-execution-under-warrant/u,
+    );
   }
   assert.match(
     sourceWorkflow,
@@ -299,25 +304,34 @@ test('hosted native jobs remain fail-closed behind the exact active Warrant', ()
   );
 });
 
-test('the protected migration bootstrap is one-way and retains legacy native qualification', () => {
+test('the completed migration has no bootstrap bypass around Warrant admission', () => {
   const sourceWorkflow = fs.readFileSync(
     '.github/workflows/affected-native-pr.yml',
     'utf8',
   );
+  assert.match(sourceWorkflow, /Check out exact Buildchain Warrant runtime/u);
   assert.match(
     sourceWorkflow,
-    /Admit the bounded two-phase migration bootstrap[\s\S]*pull_request\)[\s\S]*\.pull_request\.base\.sha[\s\S]*merge_group\)[\s\S]*\.merge_group\.base_sha/u,
-  );
-  assert.match(
-    sourceWorkflow,
-    /! grep -Fq 'dev-delivery:native-under-warrant' "\$base_controller" &&[\s\S]*grep -Fq 'dev-delivery:native-under-warrant' "\$head_controller" &&[\s\S]*grep -Fq 'warrant_admission:' "\$head_native"/u,
-  );
-  assert.match(
-    sourceWorkflow,
-    /exact PR native qualification and merge-group replay remain mandatory for this transition PR/u,
+    /ref: ce4300567edbf8cdd81d77ee8fa57c25cd348cfe/u,
   );
   assert.doesNotMatch(
     sourceWorkflow,
-    /if ! grep -Fq 'dev-delivery:native-under-warrant' "\$head_controller"/u,
+    /migration\.outputs\.bootstrap|bounded two-phase migration bootstrap/u,
+  );
+});
+
+test('native execution uses one exact protected runtime and continuous fence wrapper', () => {
+  const action = fs.readFileSync(
+    '.github/actions/native-execution-under-warrant/action.yml',
+    'utf8',
+  );
+  assert.match(action, /ref: ce4300567edbf8cdd81d77ee8fa57c25cd348cfe/u);
+  assert.match(
+    action,
+    /test "\$\(git rev-parse HEAD\)" = ce4300567edbf8cdd81d77ee8fa57c25cd348cfe/u,
+  );
+  assert.match(
+    action,
+    /native-execution-under-warrant\.mjs[\s\S]*--heartbeat-seconds 300[\s\S]*--lease-seconds 5400/u,
   );
 });
