@@ -3,7 +3,7 @@
   "contract": "kungfu-buildchain-dev-delivery-warrant-queue",
   "repository": "kungfu-systems/kungfu",
   "protectedBase": "dev/v4/v4.0",
-  "generation": 1466,
+  "generation": 1467,
   "fencingCounter": 352,
   "policy": {
     "agingSeconds": 900,
@@ -16875,11 +16875,20 @@
       "sourceWorkflowRunId": 0,
       "priority": "ordinary",
       "enqueuedAt": "2026-08-12T14:02:04.856Z",
-      "updatedAt": "2026-08-12T14:02:04.856Z",
+      "updatedAt": "2026-08-12T15:07:49.777Z",
       "attempts": 1,
       "recoveries": 0,
-      "status": "queued",
-      "terminal": null,
+      "status": "cancelled",
+      "terminal": {
+        "outcome": "cancelled",
+        "reason": "Temporarily dequeue untouched PR #3042: run 31606283989 proved current dev rejects qualified Warrants; let exact repair PR #3029 land, then normal automation may resubmit this unchanged PR.",
+        "evidenceRoot": "sha256:78ebe477cfa22eb1004a077930d6c5f4e4d2f3884451d3d21094e658ca289d49",
+        "authority": "queued-candidate-cancellation",
+        "expectedSourceHead": "9ba061317290b3fb1a67710f37a30f6b1265a20d",
+        "observedSourceHead": "9ba061317290b3fb1a67710f37a30f6b1265a20d",
+        "eventAction": "synchronize",
+        "closedAt": "2026-08-12T15:07:49.777Z"
+      },
       "affectedPaths": [
         ".buildchain/kfd/kfd-1/contract-world.witness.json",
         ".buildchain/kfd/kfd-1/release-gate.json",
@@ -17872,6 +17881,6 @@
       ]
     }
   ],
-  "updatedAt": "2026-08-12T15:07:24.892Z",
-  "stateRoot": "sha256:6cef055e0d76ca500ebfc91229f9ab24b6d612308be47cd9a86352acfe0562ef"
+  "updatedAt": "2026-08-12T15:07:49.777Z",
+  "stateRoot": "sha256:cda7014c86a47e1486e0aedd692dc7e24bcae31f8261b211af9b4860c91a5698"
 }
