@@ -88,7 +88,7 @@
       "standard": "KFD-1",
       "standardKey": "kfd-1",
       "result": "passed",
-      "preBuildWitnessSha256": "0357783c5da172d20ae05b5e6a502f5f3d4251844d23bd609358e12e0f5fd002",
+      "preBuildWitnessSha256": "64d167354b1875b709ef95431b085dad8cd975c9bb646b28247982d816dc34e3",
       "sourceHashes": {
         "sha256": "90ec18764a0cfa39ba294cf0d0ecb98f9d087ff036ea743a58bcab5beb35116b",
         "surfaceCount": 23
@@ -134,7 +134,7 @@
         "sourceVerificationRequired": true,
         "canonicalPolicy": {
           "path": "framework/contract/kungfu-agent-first-canonical-policy.json",
-          "sha256": "87871aa296138f917e8b41cad9fe93d433c71fd42381cd5243faca77a6737cf1"
+          "sha256": "ad05e79ad2321f53f2e066319c928c5ff61a8eab551ed1ffe16085edf051593d"
         },
         "registry": {
           "path": "framework/contract/kungfu-contracts.registry.json",
