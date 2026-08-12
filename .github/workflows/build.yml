@@ -303,7 +303,7 @@ jobs:
       # Functional native qualification stays credential-free. The declarative
       # signing inventory lets Buildchain seal the exact unsigned macOS app and
       # finalize signing and notarization inside its protected authority.
-      verify-command: node scripts/run-shifu-lifecycle.mjs cache-apply-command node scripts/run-release-qualification.mjs --execution-profile ${{ startsWith(github.base_ref, 'release/') && 'release-candidate' || 'alpha' }} --native-upgrade-policy required --source-only-receipt-root ${{ needs.preflight.outputs.receipt-root }} --source-only-source-tree ${{ needs.preflight.outputs.source-tree }} --source-only-policy-root ${{ needs.preflight.outputs.policy-root }}
+      verify-command: node scripts/run-shifu-lifecycle.mjs cache-apply-command node scripts/run-release-qualification.mjs --execution-profile ${{ startsWith(github.base_ref, 'release/') && 'release-candidate' || 'alpha' }} --native-upgrade-policy defer-macos-signing --source-only-receipt-root ${{ needs.preflight.outputs.receipt-root }} --source-only-source-tree ${{ needs.preflight.outputs.source-tree }} --source-only-policy-root ${{ needs.preflight.outputs.policy-root }}
       verify-substage-evidence-path: product/release/qualification/layer-qualification-summary.json
       release-candidate: true
       publish-channel: ${{ (fromJSON(inputs.macos-overflow-request-json || '{}').mode == 'self-hosted' || fromJSON(inputs.macos-overflow-request-json || '{}').mode == 'github-hosted') && 'none' || (github.event_name == 'pull_request' && (startsWith(github.base_ref, 'release/') && 'release' || 'alpha') || 'none') }}

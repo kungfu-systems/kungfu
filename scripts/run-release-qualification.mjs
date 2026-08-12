@@ -178,8 +178,12 @@ export function parseReleaseQualificationOptions(argv) {
     throw new Error(
       '--execution-profile is required (alpha, release-candidate, or full-patrol)',
     );
-  if (!['required', 'skip'].includes(nativeUpgradePolicy))
-    throw new Error('--native-upgrade-policy must be required or skip');
+  if (
+    !['required', 'skip', 'defer-macos-signing'].includes(nativeUpgradePolicy)
+  )
+    throw new Error(
+      '--native-upgrade-policy must be required, skip, or defer-macos-signing',
+    );
   if (!['product', 'hub-cli'].includes(artifactScope))
     throw new Error('--artifact-scope must be product or hub-cli');
   if (artifactScope === 'hub-cli' && nativeUpgradePolicy !== 'skip')
@@ -277,7 +281,9 @@ export function releaseQualificationStages(
   artifactScope = 'product',
   arch = 'x64',
 ) {
-  if (!['required', 'skip'].includes(nativeUpgradePolicy))
+  if (
+    !['required', 'skip', 'defer-macos-signing'].includes(nativeUpgradePolicy)
+  )
     throw new Error(`unknown native upgrade policy: ${nativeUpgradePolicy}`);
   if (!['product', 'hub-cli'].includes(artifactScope))
     throw new Error(`unknown artifact scope: ${artifactScope}`);
@@ -357,7 +363,10 @@ export function releaseQualificationStages(
       policyRef: execution.policyRef,
     }),
   ]);
-  if (nativeUpgradePolicy === 'required')
+  if (
+    nativeUpgradePolicy === 'required' ||
+    (nativeUpgradePolicy === 'defer-macos-signing' && platform !== 'darwin')
+  )
     stages.push(['upgrade:qualify:native']);
   stages.push([
     'invariant:verify',

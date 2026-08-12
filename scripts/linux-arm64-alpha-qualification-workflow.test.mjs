@@ -40,7 +40,7 @@ test('Linux ARM64 Hub qualification remains isolated from the authority-derived 
   assert.doesNotMatch(common, /hub-cli-linux-arm64/u);
   assert.match(
     common,
-    /verify-command: .*run-release-qualification\.mjs .*--native-upgrade-policy required/u,
+    /verify-command: .*run-release-qualification\.mjs .*--native-upgrade-policy defer-macos-signing/u,
   );
   assert.deepEqual(Object.keys(arm.jobs), ['preflight', 'artifact']);
   assert.equal(arm.jobs.artifact.needs, 'preflight');
