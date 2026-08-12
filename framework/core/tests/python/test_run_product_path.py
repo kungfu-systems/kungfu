@@ -1268,6 +1268,20 @@ def test_project_work_session_yields_at_deterministic_attention(tmp_path):
             "live": True,
             "lifecycleState": "ready",
             "interactionState": "ready",
+            "output": {"nextSequence": 20},
+            "controller": {"holderId": "kungfu-project-work"},
+        },
+        {
+            "live": True,
+            "lifecycleState": "running",
+            "interactionState": "busy",
+            "output": {"nextSequence": 30},
+            "controller": {"holderId": "kungfu-project-work"},
+        },
+        {
+            "live": True,
+            "lifecycleState": "ready",
+            "interactionState": "ready",
             "output": {"nextSequence": 42},
             "workAgent": {
                 "attempt": "waiting",
@@ -1483,6 +1497,15 @@ def test_terminal_mock_scenarios_ignore_ready_echo_until_the_process_ends():
             ready_after_echo,
             before_sequence=10,
             terminal_mock=False,
+        )
+        is False
+    )
+    assert (
+        managed_run._session_boundary_reached(
+            ready_after_echo,
+            before_sequence=10,
+            terminal_mock=False,
+            observed_busy=True,
         )
         is True
     )

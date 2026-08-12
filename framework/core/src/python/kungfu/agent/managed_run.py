@@ -83,6 +83,7 @@ def _session_boundary_reached(
     *,
     before_sequence: int,
     terminal_mock: bool,
+    observed_busy: bool = False,
 ) -> bool:
     interaction = status.get("interactionState")
     if terminal_mock:
@@ -91,6 +92,7 @@ def _session_boundary_reached(
         return True
     return (
         interaction == "ready"
+        and observed_busy
         and int((status.get("output") or {}).get("nextSequence") or 0) > before_sequence
     )
 
@@ -217,14 +219,23 @@ class ManagedRunCoordinator:
                 }
             )
         terminal_mock_scenario = _terminal_mock_scenario(selected)
-        boundary = self.wait_for_session(
-            invoke,
-            ref,
-            lambda status: _session_boundary_reached(
+        observed_busy = False
+
+        def completed_turn(status: Mapping[str, Any]) -> bool:
+            nonlocal observed_busy
+            if status.get("interactionState") == "busy":
+                observed_busy = True
+            return _session_boundary_reached(
                 status,
                 before_sequence=before_sequence,
                 terminal_mock=terminal_mock_scenario,
-            ),
+                observed_busy=observed_busy,
+            )
+
+        boundary = self.wait_for_session(
+            invoke,
+            ref,
+            completed_turn,
             timeout_seconds=timeout_seconds,
         )
         snapshot = invoke(
