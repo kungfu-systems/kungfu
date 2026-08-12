@@ -176,10 +176,10 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "diagnostic",
-          "definitionDigest": "sha256:676d074687d543c7b71e5193f11e73bd810e1f443f50b5a52c8d49bc8ee78b55",
+          "definitionDigest": "sha256:1df415842025ea5a198c8d5fe98c50fb59a21685e2a057b89f685c085417e669",
           "credentials": {"githubToken":"read","oidc":false,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
           "externalActions": ["actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0","actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e"],
-          "steps": [{"index":1,"label":"id:migration","definitionDigest":"sha256:158b9f59ec5b04df083da356114ede3a03efa07b03c408753a024c5958b81e7e"},{"index":2,"label":"name:Check out exact Buildchain Warrant runtime","definitionDigest":"sha256:daf04f0322b390982f708873302c0407c5fdae0a416451bf9dbf7e2a9dfe5488"},{"index":3,"label":"uses:actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e","definitionDigest":"sha256:bcb74c3b476968e4ab9f8ab86132237212152ad45fce22c16c86a81e7e19a362"},{"index":4,"label":"name:Install exact Buildchain Warrant runtime","definitionDigest":"sha256:c2139066d594947765928ce976badf9a46848855bcc2dba6f02a97387ddd83f6"},{"index":5,"label":"name:Require the exact active Warrant before expensive qualification","definitionDigest":"sha256:ac4e72bec036691143269811b6bfd86fb9be89b7da59bc9184d187f10fc6a20d"}]
+          "steps": [{"index":1,"label":"id:migration","definitionDigest":"sha256:d8c4d127762f4ae352dbdf0a7135628f2bd6fc1aafb7ff3f8e3dd9a43e91080d"},{"index":2,"label":"name:Check out exact Buildchain Warrant runtime","definitionDigest":"sha256:daf04f0322b390982f708873302c0407c5fdae0a416451bf9dbf7e2a9dfe5488"},{"index":3,"label":"uses:actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e","definitionDigest":"sha256:bcb74c3b476968e4ab9f8ab86132237212152ad45fce22c16c86a81e7e19a362"},{"index":4,"label":"name:Install exact Buildchain Warrant runtime","definitionDigest":"sha256:c2139066d594947765928ce976badf9a46848855bcc2dba6f02a97387ddd83f6"},{"index":5,"label":"name:Require the exact active Warrant before expensive qualification","definitionDigest":"sha256:ac4e72bec036691143269811b6bfd86fb9be89b7da59bc9184d187f10fc6a20d"}]
         }
       ]
     },

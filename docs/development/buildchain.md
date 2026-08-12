@@ -55,9 +55,11 @@ same provisional or qualified authority.
 The integration PR has one bounded bootstrap: it may use the pre-upgrade
 controller only when the protected base lacks the native-under-Warrant marker
 and the exact candidate contains the pinned controller plus Warrant observer.
-That transition still runs every legacy protected native check. Once the
-marker reaches protected dev, the condition is permanently false and all
-subsequent candidates require the active Warrant.
+The same exact check covers its PR and merge-group events: the PR must finish
+native qualification, and the merge-group must replay that proof or run the
+closed fallback before landing. Once the marker reaches protected dev, the
+condition is permanently false and all subsequent candidates require the
+active Warrant.
 
 ## Source → binary
 

@@ -306,7 +306,7 @@ test('the protected migration bootstrap is one-way and retains legacy native qua
   );
   assert.match(
     sourceWorkflow,
-    /Admit the bounded two-phase migration bootstrap[\s\S]*GITHUB_EVENT_NAME" != "pull_request"/u,
+    /Admit the bounded two-phase migration bootstrap[\s\S]*pull_request\)[\s\S]*\.pull_request\.base\.sha[\s\S]*merge_group\)[\s\S]*\.merge_group\.base_sha/u,
   );
   assert.match(
     sourceWorkflow,
@@ -314,7 +314,7 @@ test('the protected migration bootstrap is one-way and retains legacy native qua
   );
   assert.match(
     sourceWorkflow,
-    /legacy protected native qualification remains mandatory for this transition PR/u,
+    /exact PR native qualification and merge-group replay remain mandatory for this transition PR/u,
   );
   assert.doesNotMatch(
     sourceWorkflow,

@@ -505,13 +505,21 @@ jobs:
         run: |
           set -euo pipefail
           bootstrap=false
-          if [ "$GITHUB_EVENT_NAME" != "pull_request" ]; then
-            echo "bootstrap=$bootstrap" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
+          case "$GITHUB_EVENT_NAME" in
+            pull_request)
+              base_sha="$(jq -r '.pull_request.base.sha' "$GITHUB_EVENT_PATH")"
+              head_sha="$(jq -r '.pull_request.head.sha' "$GITHUB_EVENT_PATH")"
+              ;;
+            merge_group)
+              base_sha="$(jq -r '.merge_group.base_sha' "$GITHUB_EVENT_PATH")"
+              head_sha="$(jq -r '.merge_group.head_sha' "$GITHUB_EVENT_PATH")"
+              ;;
+            *)
+              echo "bootstrap=$bootstrap" >> "$GITHUB_OUTPUT"
+              exit 0
+              ;;
+          esac
 
-          base_sha="$(jq -r '.pull_request.base.sha' "$GITHUB_EVENT_PATH")"
-          head_sha="$(jq -r '.pull_request.head.sha' "$GITHUB_EVENT_PATH")"
           base_controller="$RUNNER_TEMP/base-dev-pr-auto-merge.yml"
           head_controller="$RUNNER_TEMP/head-dev-pr-auto-merge.yml"
           head_native="$RUNNER_TEMP/head-affected-native-pr.yml"
@@ -534,7 +542,7 @@ jobs:
              grep -Fq 'dev warrant observe' "$head_native" && \
              grep -Fq "$runtime_ref" "$head_native"; then
             bootstrap=true
-            echo "::notice::Bounded migration bootstrap admitted; legacy protected native qualification remains mandatory for this transition PR."
+            echo "::notice::Bounded migration bootstrap admitted; exact PR native qualification and merge-group replay remain mandatory for this transition PR."
           fi
           echo "bootstrap=$bootstrap" >> "$GITHUB_OUTPUT"
       - name: Check out exact Buildchain Warrant runtime
