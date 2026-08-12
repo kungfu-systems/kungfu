@@ -160,10 +160,11 @@ export class CodexAppServerProductRuntime {
   planRoute(input) {
     if (input.provider !== 'codex' || input.fallbackFrom) return null;
     if (input.providerVersion !== '0.146.0') {
-      throw Object.assign(
-        new Error('structured Codex route requires provider version 0.146.0'),
-        { code: 'provider_version_drift' },
-      );
+      // The structured route is qualified against one exact app-server
+      // schema. A different, PTY-qualified Codex version must keep working
+      // through the ordinary console route; it must not inherit structured
+      // authority merely because the provider is still Codex.
+      return null;
     }
     return routeStatus(this.appServerArgv);
   }

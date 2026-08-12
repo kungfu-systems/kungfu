@@ -342,6 +342,7 @@ def execute(
             session_invoker=invoke_session,
             use_session=True,
             session_started_callback=on_session_started,
+            project_trust=plan["agent"].get("projectTrust"),
         )
         exit_code = int(agent_report["launch"]["exitCode"])
         session_value = agent_report.get("session") or {}

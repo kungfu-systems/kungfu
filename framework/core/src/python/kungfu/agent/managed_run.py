@@ -4,6 +4,8 @@
 
 from __future__ import annotations
 
+import json
+import os
 from typing import Any, Callable, Mapping
 
 
@@ -28,6 +30,39 @@ def _terminal_mock_scenario(selected: Mapping[str, Any]) -> bool:
     except (ValueError, IndexError):
         return False
     return scenario in _TERMINAL_MOCK_SCENARIOS
+
+
+def _session_argv(
+    provider: str,
+    launch: Mapping[str, Any],
+    cwd: str,
+    project_trust: Mapping[str, Any] | None,
+) -> list[str]:
+    if provider == "synthetic":
+        return [str(value) for value in launch.get("argv") or []]
+    if provider != "codex" or project_trust is None:
+        return []
+    if project_trust.get("schema") != "kungfu.agent-project-trust/v1":
+        raise ValueError("Codex Project trust grant schema is invalid")
+    if project_trust.get("provider") != "codex":
+        raise ValueError("Codex Project trust grant provider is invalid")
+    if project_trust.get("scope") != "single-invocation":
+        raise ValueError("Codex Project trust grant scope is invalid")
+    if project_trust.get("persistent") is not False:
+        raise ValueError("Codex Project trust grant must be invocation-scoped")
+    workspace_root = str(project_trust.get("workspaceRoot") or "")
+    canonical_cwd = os.path.realpath(cwd)
+    if not workspace_root or os.path.realpath(workspace_root) != canonical_cwd:
+        raise ValueError("Codex Project trust grant does not match the exact workspace")
+    expected_allows = [
+        "project-local-config",
+        "project-local-hooks",
+        "project-local-exec-policies",
+    ]
+    if project_trust.get("allows") != expected_allows:
+        raise ValueError("Codex Project trust grant effects are invalid")
+    override = f'projects={{{json.dumps(canonical_cwd)}={{trust_level="trusted"}}}}'
+    return ["-c", override]
 
 
 def _initial_session_boundary_reached(status: Mapping[str, Any]) -> bool:
@@ -93,15 +128,12 @@ class ManagedRunCoordinator:
         event_sink: Callable[[Mapping[str, Any]], None] | None = None,
         session_started: Callable[[Mapping[str, str], Mapping[str, Any]], None]
         | None = None,
+        project_trust: Mapping[str, Any] | None = None,
     ) -> tuple[Any, dict[str, Any]]:
         provider = str(selected["provider"])
         ref = self.session_ref(work, run_id)
         launch = dict(selected.get("launch") or {})
-        argv = (
-            [str(value) for value in launch.get("argv") or []]
-            if provider == "synthetic"
-            else []
-        )
+        argv = _session_argv(provider, launch, cwd, project_trust)
         start_input = {
             **ref,
             "workspaceId": str(work["workspaceId"]),
@@ -149,6 +181,14 @@ class ManagedRunCoordinator:
             raise ValueError(
                 "Agent Session requires attention before the initial Work instruction"
             )
+        controller = ready.get("controller") or {}
+        if controller.get("holderId") != "kungfu-project-work":
+            acquired = self.invoke_control(invoke, ref, "acquire-control", {})
+            if acquired.get("status") not in {"granted", "duplicate"}:
+                raise ValueError(
+                    "Agent Session could not acquire control for the initial "
+                    f"Work instruction: {acquired.get('reason') or acquired.get('status')}"
+                )
         before_sequence = int((ready.get("output") or {}).get("nextSequence") or 0)
         delivered = self.invoke_control(invoke, ref, "instruct", {"text": prompt})
         if delivered.get("status") not in {"written", "duplicate"}:

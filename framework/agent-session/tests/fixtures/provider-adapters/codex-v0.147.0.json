@@ -18,6 +18,17 @@
     "signatureId": "codex.approval.run-command"
   },
   {
+    "id": "codex-project-trust-redacted",
+    "lines": [
+      "Do you trust the contents of this directory?",
+      "› 1. Yes, continue",
+      "  2. No, quit",
+      "Press enter to continue"
+    ],
+    "expectedState": "approval-needed",
+    "signatureId": "codex.approval.project-trust"
+  },
+  {
     "id": "codex-unknown-modal-redacted",
     "lines": ["A changed layout says permission required"],
     "expectedState": "unknown",

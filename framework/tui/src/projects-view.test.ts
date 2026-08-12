@@ -28,6 +28,35 @@ test('Projects exposes only New, Open, and safe removal on the first layer', () 
   );
 });
 
+test('Project modals own terminal input over the global control plane', () => {
+  const projectsSource = readFileSync(
+    new URL('./projects-view/index.tsx', import.meta.url),
+    'utf8',
+  );
+  const mainSource = readFileSync(
+    new URL('./main.tsx', import.meta.url),
+    'utf8',
+  );
+
+  assert.match(
+    projectsSource,
+    /onInputModeChange: \(active: boolean\) => void/,
+  );
+  assert.match(
+    projectsSource,
+    /const inputModeActive =[\s\S]*?importPath !== undefined[\s\S]*?Boolean\(importPlan\)[\s\S]*?Boolean\(removePlan\)[\s\S]*?Boolean\(createPlan\)/,
+  );
+  assert.match(
+    projectsSource,
+    /onInputModeChange\(inputModeActive\)[\s\S]*?onInputModeChange\(false\)/,
+  );
+  assert.match(
+    mainSource,
+    /<ProjectsHost[\s\S]*?onInputModeChange=\{setWorkspaceInputActive\}/,
+  );
+  assert.match(mainSource, /workspaceInputActive[\s\S]*?'PROJECT INPUT'/);
+});
+
 test('ordinary Project selection enters an explicit Project surface', () => {
   const source = readFileSync(new URL('./main.tsx', import.meta.url), 'utf8');
   const openProject = source.slice(

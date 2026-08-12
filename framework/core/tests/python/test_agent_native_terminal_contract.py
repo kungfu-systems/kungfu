@@ -297,8 +297,10 @@ def test_agent_session_worker_launch_restores_standard_stream_inheritance(
         return NATIVE_SURFACE_CAPABILITIES
 
     inheritance = {0: True, 1: False, 2: True}
+    worker_argv = []
 
     def run_worker(*_args):
+        worker_argv.append(_args)
         for descriptor in inheritance:
             inheritance[descriptor] = False
         return 0
@@ -322,7 +324,58 @@ def test_agent_session_worker_launch_restores_standard_stream_inheritance(
     endpoint = session_surface.ensure(tmp_path / "runtime", runner=run_worker)
 
     assert endpoint == session_surface.endpoint_for_runtime(tmp_path / "runtime")
+    assert worker_argv == [("/kungfu", "/entry.mjs")]
     assert inheritance == {0: True, 1: False, 2: True}
+
+
+def test_agent_session_default_worker_launch_is_detached(monkeypatch):
+    launches = []
+
+    class WorkerProcess:
+        returncode = 0
+
+        def __init__(self, argv, **options):
+            launches.append((argv, options))
+
+        def communicate(self, timeout=None):
+            assert timeout == 20
+            return ("", "")
+
+    monkeypatch.setattr(session_surface.subprocess, "Popen", WorkerProcess)
+    monkeypatch.setattr(session_surface.sys, "platform", "darwin")
+    monkeypatch.setenv("KUNGFU_AS_VARIANT", "python")
+    monkeypatch.setenv("KUNGFU_NODE_VARIANT_ENTRY", "/product/tui/tui.mjs")
+
+    assert session_surface._spawn_detached_worker("/kungfu", "/entry.mjs") == 0
+    assert launches[0][0] == ["/kungfu", "/entry.mjs"]
+    assert launches[0][1]["env"]["KUNGFU_AS_VARIANT"] == "node"
+    assert launches[0][1]["env"]["ELECTRON_RUN_AS_NODE"] == "1"
+    assert "KUNGFU_NODE_VARIANT_ENTRY" not in launches[0][1]["env"]
+    assert launches[0][1]["start_new_session"] is True
+    assert launches[0][1]["stdin"] == session_surface.subprocess.DEVNULL
+    assert launches[0][1]["stdout"] == session_surface.subprocess.DEVNULL
+    assert launches[0][1]["stderr"] == session_surface.subprocess.PIPE
+    assert launches[0][1]["text"] is True
+
+
+def test_agent_session_waits_for_detached_worker_capabilities(monkeypatch):
+    calls = []
+
+    def invoke(*_args, **_kwargs):
+        calls.append(True)
+        if len(calls) < 3:
+            raise FileNotFoundError("worker is starting")
+        return NATIVE_SURFACE_CAPABILITIES
+
+    monkeypatch.setattr(session_surface, "invoke", invoke)
+    monkeypatch.setattr(session_surface.time, "sleep", lambda _seconds: None)
+
+    capabilities = session_surface._await_surface_capabilities(
+        "/tmp/agent-session.sock"
+    )
+
+    assert capabilities == NATIVE_SURFACE_CAPABILITIES
+    assert len(calls) == 3
 
 
 def test_native_interactive_uses_controlling_terminal_before_registering_attempt(

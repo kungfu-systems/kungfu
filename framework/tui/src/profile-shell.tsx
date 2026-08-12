@@ -37,6 +37,7 @@ export {
   directWorkspaceNavigationFromInput,
   buildTuiProductSearchDocuments,
   initialProductSurface,
+  onboardingContinueSurface,
   quickCommandMatches,
   reduceControlPlaneInput,
   resolveProductStartupSurface,

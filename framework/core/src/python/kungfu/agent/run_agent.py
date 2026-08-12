@@ -912,6 +912,7 @@ def run_session_attempt(
     event_sink: Callable[[Mapping[str, Any]], None] | None = None,
     session_started_callback: Callable[[Mapping[str, str], Mapping[str, Any]], None]
     | None = None,
+    project_trust: Mapping[str, Any] | None = None,
 ) -> tuple[ProcessResult, dict[str, Any]]:
     """Start one Work-bound Session, deliver the first turn, and yield at attention."""
     coordinator = ManagedRunCoordinator(
@@ -933,6 +934,7 @@ def run_session_attempt(
         timeout_seconds=timeout_seconds,
         event_sink=event_sink,
         session_started=session_started_callback,
+        project_trust=project_trust,
     )
 
 
@@ -1034,6 +1036,7 @@ def execute(
     use_session: bool | None = None,
     session_started_callback: Callable[[Mapping[str, str], Mapping[str, Any]], None]
     | None = None,
+    project_trust: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     from kungfu.storage.episode_lifecycle import RuntimeEpisodeLifecycle
 
@@ -1137,6 +1140,7 @@ def execute(
                 timeout_seconds=timeout_seconds,
                 event_sink=event_sink,
                 session_started_callback=session_started_callback,
+                project_trust=project_trust,
             )
         elif process_runner is run_process:
             result = process_runner(

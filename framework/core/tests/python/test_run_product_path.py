@@ -1,5 +1,6 @@
 # SPDX-License-Identifier: Apache-2.0
 
+import json
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -12,7 +13,7 @@ from kungfu.agent import first_value as onboarding
 from kungfu.agent import managed_run
 from kungfu.agent import native_launch
 from kungfu.agent import run_agent
-from kungfu.cli.commands import assignment, kfc, run
+from kungfu.cli.commands import assignment, assignment_review, kfc, run
 from kungfu.workspace import (
     inspect_workspace,
     resolve_workspace_target,
@@ -167,6 +168,43 @@ def test_work_start_phase_plan_rejects_settled_or_review_work(phase):
     assert mode is None
     assert effects == []
     assert phase in blocked_reason
+
+
+def test_codex_work_start_plan_discloses_exact_invocation_project_trust(tmp_path):
+    effects = [{"stage": "run", "label": "Launch Codex"}]
+    grant = assignment_review.provider_project_trust("codex", str(tmp_path))
+
+    assert grant == {
+        "schema": "kungfu.agent-project-trust/v1",
+        "provider": "codex",
+        "workspaceRoot": str(tmp_path),
+        "scope": "single-invocation",
+        "allows": [
+            "project-local-config",
+            "project-local-hooks",
+            "project-local-exec-policies",
+        ],
+        "persistent": False,
+    }
+    planned = assignment_review.effects_with_project_trust(effects, grant)
+    assert [effect["stage"] for effect in planned] == ["project-trust", "run"]
+    assert str(tmp_path) in planned[0]["label"]
+    assert "project-local config, hooks, and exec policies" in planned[0]["label"]
+    assert assignment_review.provider_project_trust("claude", str(tmp_path)) is None
+
+
+def test_codex_project_trust_is_exact_explicit_and_invocation_scoped(tmp_path):
+    project = tmp_path / "project"
+    project.mkdir()
+    grant = assignment_review.provider_project_trust("codex", str(project))
+
+    assert managed_run._session_argv("codex", {}, str(project), None) == []
+    assert managed_run._session_argv("codex", {}, str(project), grant) == [
+        "-c",
+        f'projects={{{json.dumps(str(project.resolve()))}={{trust_level="trusted"}}}}',
+    ]
+    with pytest.raises(ValueError, match="does not match the exact workspace"):
+        managed_run._session_argv("codex", {}, str(tmp_path), grant)
 
 
 def test_managed_work_start_builds_a_strict_assignment_work_ref():
@@ -1230,6 +1268,8 @@ def test_project_work_session_yields_at_deterministic_attention(tmp_path):
             return statuses.pop(0) if len(statuses) > 1 else statuses[0]
         if operation == "plan-control":
             return {"root": "sha256:" + "2" * 64}
+        if operation == "acquire-control":
+            return {"status": "granted"}
         if operation == "instruct":
             return {"status": "written"}
         if operation == "snapshot":
@@ -1294,9 +1334,13 @@ def test_project_work_session_yields_at_deterministic_attention(tmp_path):
             {"status": "started"},
         )
     ]
-    assert calls.index(
-        next(call for call in calls if call["operation"] == "start")
-    ) < calls.index(next(call for call in calls if call["operation"] == "instruct"))
+    assert (
+        calls.index(next(call for call in calls if call["operation"] == "start"))
+        < calls.index(
+            next(call for call in calls if call["operation"] == "acquire-control")
+        )
+        < calls.index(next(call for call in calls if call["operation"] == "instruct"))
+    )
     start_input = next(
         call["input"] for call in calls if call["operation"] == "plan-start"
     )

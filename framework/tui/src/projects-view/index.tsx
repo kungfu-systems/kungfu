@@ -133,6 +133,7 @@ export function ProjectsHost({
   onOpenProject,
   onOpenLab,
   onSearchDocuments,
+  onInputModeChange,
   onWorkspacePointer,
   openedProject,
   actionRequest,
@@ -149,6 +150,7 @@ export function ProjectsHost({
   onOpenProject: (selection: ProjectWorkspaceSelection) => void;
   onOpenLab: () => void;
   onSearchDocuments: (catalog: ProjectsCatalog) => void;
+  onInputModeChange: (active: boolean) => void;
   onWorkspacePointer: () => void;
   openedProject?: ProjectWorkspaceSelection;
   actionRequest?: ProjectsActionRequest;
@@ -198,6 +200,15 @@ export function ProjectsHost({
   React.useEffect(() => {
     void refresh();
   }, [refresh]);
+  const inputModeActive =
+    importPath !== undefined ||
+    Boolean(importPlan) ||
+    Boolean(removePlan) ||
+    Boolean(createPlan);
+  React.useEffect(() => {
+    onInputModeChange(inputModeActive);
+    return () => onInputModeChange(false);
+  }, [inputModeActive, onInputModeChange]);
   const planProject = React.useCallback(() => {
     setBusy(true);
     setMessage('Planning a new Project under ~/Documents/Kungfu…');

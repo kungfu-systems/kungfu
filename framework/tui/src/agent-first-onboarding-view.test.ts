@@ -13,6 +13,7 @@ import {
 import {
   buildTuiProductSearchDocuments,
   initialProductSurface,
+  onboardingContinueSurface,
 } from './control-plane-state.js';
 
 class CaptureOutput extends EventEmitter {
@@ -212,4 +213,9 @@ test('initial product surface keeps onboarding ahead of routine loading', () => 
     }),
     'lab',
   );
+});
+
+test('first-use Continue opens Projects while later visits return to All Work', () => {
+  assert.equal(onboardingContinueSurface(true), 'projects');
+  assert.equal(onboardingContinueSurface(false), 'all-work');
 });
