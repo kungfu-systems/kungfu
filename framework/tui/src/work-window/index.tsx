@@ -752,13 +752,19 @@ export function ProjectWorkHost({
     const receipt = visibleRun?.receipt;
     if (busy || !retainedAgentReviewable || !receipt) return;
     setBusy(true);
-    setMessage('Ending this Agent attempt and opening independent review…');
-    const end =
-      session?.live && session.controllable !== false
-        ? projects.endRun(visibleRun.id)
-        : Promise.resolve(visibleRun);
-    void end
-      .then(() => onContinueRetainedWork(receipt))
+    setMessage('Refreshing the Agent attempt before independent review…');
+    void projects
+      .refreshRun(visibleRun.id)
+      .then(async (refreshed) => {
+        const current = refreshed ?? visibleRun;
+        if (current.session?.live && current.session.controllable !== false) {
+          setMessage(
+            'Ending this Agent attempt and opening independent review…',
+          );
+          await projects.endRun(current.id);
+        }
+        return onContinueRetainedWork(current.receipt ?? receipt);
+      })
       .catch((error) =>
         setMessage(error instanceof Error ? error.message : String(error)),
       )
@@ -768,8 +774,6 @@ export function ProjectWorkHost({
     onContinueRetainedWork,
     projects,
     retainedAgentReviewable,
-    session?.controllable,
-    session?.live,
     visibleRun,
     visibleRun?.receipt,
   ]);

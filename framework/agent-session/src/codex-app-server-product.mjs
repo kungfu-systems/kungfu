@@ -230,6 +230,7 @@ export class CodexAppServerProductRuntime {
     const state = {
       providerSessionId: null,
       providerTurnId: null,
+      turnBoundarySequence: 0,
       lastReceiptRoot: null,
       pendingControls: new Map(),
       eventFailure: null,
@@ -242,6 +243,12 @@ export class CodexAppServerProductRuntime {
       if (receipt.providerMethod === 'turn/started')
         state.providerTurnId = receipt.providerTurnId;
       if (receipt.providerTerminal) state.providerTurnId = null;
+      if (
+        receipt.providerMethod === 'turn/started' ||
+        receipt.providerMethod === 'turn/completed'
+      ) {
+        state.turnBoundarySequence += 1;
+      }
       if (receipt.receiptKind === 'control-request') {
         state.pendingControls.set(String(receipt.providerRequestId), receipt);
       }
@@ -402,6 +409,7 @@ export class CodexAppServerProductRuntime {
     };
     const execute = async (request, operation, params) => {
       if (state.eventFailure) throw state.eventFailure;
+      const priorTurnBoundarySequence = state.turnBoundarySequence;
       const providerPlan = interaction.planRequest({
         actionId: request.actionId,
         operation,
@@ -413,6 +421,27 @@ export class CodexAppServerProductRuntime {
         plan: providerPlan,
       });
       drain();
+      if (operation === 'instruct') {
+        const deadline = Date.now() + 10_000;
+        while (
+          state.turnBoundarySequence === priorTurnBoundarySequence &&
+          !state.eventFailure &&
+          !runtime.status().exit &&
+          Date.now() < deadline
+        ) {
+          await new Promise((resolve) => setTimeout(resolve, 5));
+          drain();
+        }
+        if (state.eventFailure) throw state.eventFailure;
+        if (state.turnBoundarySequence === priorTurnBoundarySequence) {
+          throw Object.assign(
+            new Error(
+              'Codex turn/start returned before any turn boundary was observed',
+            ),
+            { code: 'missing_turn_boundary' },
+          );
+        }
+      }
       return { status: 'delivered', deliveryReceipt };
     };
     const port = {

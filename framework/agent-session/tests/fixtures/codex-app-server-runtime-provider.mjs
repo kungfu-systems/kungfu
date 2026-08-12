@@ -58,7 +58,10 @@ lines.on('line', (line) => {
     }
     return;
   }
-  if (message.method === 'thread/start' && mode === 'product-route') {
+  if (
+    message.method === 'thread/start' &&
+    ['product-route', 'response-first-product-route'].includes(mode)
+  ) {
     send({
       method: 'thread/started',
       params: { thread: { id: 'thread-product' } },
@@ -68,6 +71,23 @@ lines.on('line', (line) => {
   }
   if (message.method === 'turn/start') {
     const threadId = message.params.threadId;
+    if (mode === 'response-first-product-route') {
+      send({ id: message.id, result: { turn: { id: 'turn-authority' } } });
+      setTimeout(() => {
+        send({
+          method: 'turn/started',
+          params: { threadId, turn: turn(threadId, 'turn-authority') },
+        });
+        send({
+          method: 'turn/completed',
+          params: {
+            threadId,
+            turn: turn(threadId, 'turn-authority', 'completed'),
+          },
+        });
+      }, 25);
+      return;
+    }
     send({
       method: 'turn/started',
       params: { threadId, turn: turn(threadId, 'turn-authority') },
