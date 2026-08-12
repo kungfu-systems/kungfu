@@ -628,6 +628,7 @@ export function planFromChanged(
     '.github/workflows/affected-native-pr.yml',
     'framework/release/qualified-assignment-core-artifact.mjs',
     'framework/assignment-capture/qualified-assignment-core-consumer.mjs',
+    'product/scripts/verify-cli-surface-qualification.mjs',
     'scripts/check-shifu-cache-contract.mjs',
     'docs/shifu/artifact-contract.json',
     'docs/shifu/cache-contract.json',

@@ -1,0 +1,229 @@
+{
+  "contract": "kungfu.kfx-site-impact-proof/v1",
+  "baseRevision": "445b2fd84ec7f613ccbfc3d5f06980a3b07f0690",
+  "changeRoot": "sha256:312c5230d4c797442c59e00e4cea96d9b9e663564bcd667e38113d7dbd051909",
+  "changes": [
+    {
+      "baseContentRoot": "sha256:a34d83865c144128bce57739af166042aa2abf22273e06e1629370931417e8aa",
+      "contentRoot": "sha256:e36f382e47ec5d4cd9a3e5087fc0110deab6568ac14c7797abf3759de65d5191",
+      "path": ".buildchain/alpha-contract-lock.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:dda00ff148593ac007fedbaf4aa69c0dd6c5973ccf1fb6af5baf3c4666000d2a",
+      "contentRoot": "sha256:9b2622dfa10a654d7bebae356d312e749aba3f6223d206f2bb3f3233e5fba270",
+      "path": ".buildchain/kfd/kfd-1/release-gate.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:842fdcb3dda1c96da23f451345efd30f2840f3cfb67faf7740c2394417434b62",
+      "contentRoot": "sha256:3fd67d398173d285122496db82d3c85ffbc804e492550f2a655f39ec65e4a9c4",
+      "path": ".buildchain/kfd/kfd-2/release-claims.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:5018f1db5b8f11f6e3e671d8749088612106f13bdf84e56b589b642b19cfa857",
+      "contentRoot": "sha256:b2d21b17340602d3b49973a8d6fa73e6e7e9c619e7f775602a207284736b7c96",
+      "path": ".buildchain/kfd/kfd-3/collaboration-interface.prebuild.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:f8ee3878653e7fecdfef622e001269942a53d00605d5fa42e41374f79d0cf332",
+      "contentRoot": "sha256:4143b1d89587add3aa199e8e2b5e7f2ed47c34e43a88ada0c0ee604a33b036e6",
+      "path": ".buildchain/kfd/support-matrix.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:2a5c89e77c4f843391010493f97a04ca618d5dc88649d7295ce4dccec36cd092",
+      "contentRoot": "sha256:174c590111ff3fd8275851a3afb48a5b737066fcc5ffad67114cc7d42c9ef6e4",
+      "path": ".github/workflows/release-new-version.yml",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:dda00ff148593ac007fedbaf4aa69c0dd6c5973ccf1fb6af5baf3c4666000d2a",
+      "contentRoot": "sha256:9b2622dfa10a654d7bebae356d312e749aba3f6223d206f2bb3f3233e5fba270",
+      "path": "developer/sdk/kfd/kfd-1/release-gate.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:842fdcb3dda1c96da23f451345efd30f2840f3cfb67faf7740c2394417434b62",
+      "contentRoot": "sha256:3fd67d398173d285122496db82d3c85ffbc804e492550f2a655f39ec65e4a9c4",
+      "path": "developer/sdk/kfd/kfd-2/release-claims.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:f8ee3878653e7fecdfef622e001269942a53d00605d5fa42e41374f79d0cf332",
+      "contentRoot": "sha256:0147fc2a7267fdcab2323a479d70a5236a2b6f1541716557e419080e84629a9e",
+      "path": "developer/sdk/kfd/support-matrix.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:963ee4bbaaa5ed08902339751a2b2d67da4de25a556ba0c21d7d389775956cf3",
+      "contentRoot": "sha256:81b31a33593a007d561008d984bebf039345d6ad63dda2e8b1ad947c68597987",
+      "path": "docs/qualification/evidence/kungfu-temporal-provenance-cutover.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:53b3de58ff98dc25cd54a99b0b36ab60bb3fceb00518a365865ede5510520d0d",
+      "contentRoot": "sha256:29d1fa5a1a54bcd72fee126998ad141bea629d6673dd20a9f962a5a71e2e6785",
+      "path": "docs/qualification/evidence/kungfu-temporal-release-admission-facts.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:75f66ade795c26829e4efc02ed7fffb1706d269f160dde43a25abde8a3f57815",
+      "contentRoot": "sha256:bd5f5cd0de839a806d73839967615f8796ed482b4de8e5d71642c84d87e76850",
+      "path": "docs/qualification/gates/release-admission-policy.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:9e9f7c786bb3cd644db903418a8ee52ee93b694b9abf799f8ba9b0385966adaf",
+      "contentRoot": "sha256:d29f1d106a6516a2a25dae151a42dee08d55fb23e280a9eaeb25213fbf2d1b9d",
+      "path": "docs/qualification/gates/release-admission.md",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:e6f0fac0a938da3f3d36773b75ecb85b91e54c9c5cd01b97319d5b7c99c3859b",
+      "contentRoot": "sha256:0faad026c46c1e4c7665b2ba0e93e0b59319b73e851c59c2ba76722ecf389aaa",
+      "path": "docs/qualification/gates/workflow-authority.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:31e58bf5ae62070c6df03c84449a0c27afe1c4d8646eaa2634b9934f795c0e36",
+      "contentRoot": "sha256:1b2e216bdcd7d941dfcdc1b53489b86a20e831ba7226ecb4bd9ee20a1455128e",
+      "path": "docs/qualification/gates/workflow-bindings.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:d8b4c229f4c4a3661f51c6fc2362c7ee9b67bc809ebd934264ae4125881b0c4c",
+      "contentRoot": "sha256:97818f871afcf39d78309b7b1afaf0f47e57c2c1affc692b7d0bd04987ff870d",
+      "path": "docs/release-promotion-rehearsal.contract.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:ae794fad25ee222c88dfb0847f72ab68f0f8248c043344a337e657caf26b9788",
+      "contentRoot": "sha256:8b33be3274a1789f04ac1efa7728f6c7034d1cf88572c19d0b5e0d370c5cddf4",
+      "path": "extensions/work-control/profile.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:373d3207e380270b7a075a182f2570add9ae4224eb5492ff1cc0b6315a72f917",
+      "contentRoot": "sha256:1b9fa9f92041ac9f34fd93b5871c3a67ec10d8ddf32d87995d02de8913a4eeb9",
+      "path": "extensions/work-control/qualification/work-profile-conformance.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:b544bb0ed8a4aa7d2168ae583ef2b91e20d2e33a435d578fe4edae97e36ec4ac",
+      "contentRoot": "sha256:246bb304450e2ea0b7cfb22f84d939cae7302030075f7747091d25f28fd10042",
+      "path": "framework/core/tests/python/test_temporal_release_admission.py",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:93214c5d987239a46f1998e043d4efddd7246219c88f2f37d484cea559380c66",
+      "contentRoot": "sha256:6fe81eab5f1c2b3d3d7f5c1aa76791fb068d3e75f2e4b0e30ecdd0ef0f3e0a77",
+      "path": "framework/release/buildchain-kfd-runtime.mjs",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:95c314e59c97b58e08037e31b39ca9212f8605d78c9573e514d2555006a967d4",
+      "contentRoot": "sha256:7acc972f9837c38efc79860dd7ab56487eab0f6914d661b3c9f1f714c5bd8661",
+      "path": "framework/release/publication-control-plane.mjs",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:9a6084c7a9c7d692ff15cdab614e031da340de077fd3d10bc9e119a8891d0211",
+      "contentRoot": "sha256:5a731ece991e3c3992ec9fd87cb79155a7ddd4ac8e20eebae92f6715b0ab30f6",
+      "path": "framework/release/publication-surfaces.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:b4aff968b9bef2dd4a1bd1aaefecd056ef5638e9c5180dd57e899989b6922857",
+      "contentRoot": "sha256:48591a3951e86cf178e72e59b2d4816310acd3a9a57b6256f12ee8b3166efef7",
+      "path": "framework/work-profile-conformance/authority-manifest.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:98d5ee6c9c1b6c2c5ac0ec0cd5a22db6f7b8da1ee2e82c389ee146df3a3767dd",
+      "contentRoot": "sha256:27ba318ddc3e6df0ff313ff8da42e1b404eb03006e73a16b7ec66b79328dedcc",
+      "path": "framework/work-profile-conformance/qualification/negative-witnesses.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:3a7a665c28679269bc6871e93e232bff2b781abe58e01d328bbc92b9318d2ff8",
+      "contentRoot": "sha256:d73fa7a1c6721a15fb854a04399abb0f7689ff9a7151e2607ce66036279c8ea6",
+      "path": "framework/work-profile-conformance/qualification/reference-scenarios.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:7cca5871e53b748e725f6c92993ef5f0207e0a956b4087eeb072f537824e850a",
+      "contentRoot": "sha256:9add849da9b65445c455c33f2ec40a4ab2a90816144f0db77861e7e9f71a189e",
+      "path": "package.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:001e2afa654d47f8ece38c57860c9f6592bfe4fef233712123d79061651d1209",
+      "contentRoot": "sha256:1c61b5f26e040de3b7ec5778edf7cd05c32a305af04492bd10e22e1b81f2b55f",
+      "path": "pnpm-lock.yaml",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:77943e891908c6682cd810205bb79f91aba31bb4d150b3f119f4915649fab136",
+      "contentRoot": "sha256:f82bb712d86475d28324db4126c6d2afca80fdd965cbd5a6659aeff530ddb6a3",
+      "path": "scripts/kungfu-workflow-authority.mjs",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:943a7e56c3446789c6bf8d4e5f0a9cbf77d6263d0f651954a2b52e8e1c799e6c",
+      "contentRoot": "sha256:2c793ac84835834022591eaad0b8d7bde49826f79c9c53fbb368a02fe7eb45e0",
+      "path": "scripts/readonly-agent-bootstrap.test.mjs",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:ec29b039d081376f28736a4eed887ee2717f8e6cf9e1b4c293693e161986cdca",
+      "contentRoot": "sha256:da78a338097f99060aaf8c7566ab58f9a6dcbe9228c386232dfdf1ee73f35194",
+      "path": "scripts/release-promotion-rehearsal.mjs",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:7660c3f061b151324e6f9efa44abd5c5edeec8335167e75cef61ff9462a952ef",
+      "contentRoot": "sha256:44b440452a2eb1b981738218b5437e85ec849fe847681cfd812817941f100f5d",
+      "path": "scripts/release-promotion-rehearsal.test.mjs",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:15b67c4ac15f46cbec641dd260998cb651631074f9e14d401daf5ba757f49aa3",
+      "contentRoot": "sha256:56dcdc1d7a00cfaa01eb799b888dd4083daf339745e631baa50a5081320bd3e6",
+      "path": "scripts/release-publication-control-plane.test.mjs",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:4fddba8aa333f046eb3215ea094b6575f09ea1c82b63d168574bc5add28a1af7",
+      "contentRoot": "sha256:3860cfffe74aaeb0865123d258137a047d974787828afabfa212f3fcf1670baa",
+      "path": "scripts/temporal-provenance-cutover.py",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:d05e0261a18fa3a95f066631b23cddf13d46f0ab4ed94e2272946cafdbeb22a1",
+      "contentRoot": "sha256:4614d77d1eb875703fba9b623dbd121a5d2ac2e5b5f6e9165874819cb478a99f",
+      "path": "scripts/verify-kungfu-release-admission.mjs",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:eabff7c740b9aca9db2a10e14d6799818f2bbfd6a21d8c2d6b852aec5844c6ba",
+      "contentRoot": "sha256:b015a95a8eedf71185a762a3e6e119f07a0c427853cb2229917ba084befc8a2e",
+      "path": "scripts/verify-kungfu-release-admission.test.mjs",
+      "status": "modified"
+    }
+  ],
+  "affectedFacets": [
+    "capabilities",
+    "package-facets",
+    "profiles-suites"
+  ],
+  "rationale": "The Alpha.2 release-blocker forward-port and two-phase delivery Warrant integration change release governance, CI orchestration, and internal qualification evidence only; they do not change the KFX public site bundle or its user-visible behavior.",
+  "attestation": {
+    "publicBehaviorUnchanged": true,
+    "publicContractUnchanged": true,
+    "readerJourneyUnchanged": true
+  },
+  "proofRoot": "sha256:3280f375b277a70048c5c0fd9b8faa931f183a1818701ce4f0c808f50f20905d"
+}
