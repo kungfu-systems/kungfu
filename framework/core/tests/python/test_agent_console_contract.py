@@ -1894,6 +1894,24 @@ def test_native_interactive_runner_reuses_work_console_with_fresh_attempts(
 
     def runner(argv, **kwargs):
         launches.append((argv, kwargs))
+        audit_path = Path(kwargs["env"]["KUNGFU_SKILL_AUDIT_FILE"])
+        audit_path.parent.mkdir(parents=True, exist_ok=True)
+        audit_path.write_text(
+            json.dumps(
+                {
+                    "schema": "kungfu.skill-audit-event/v1",
+                    "type": "SkillLoaded",
+                    "run_id": kwargs["env"]["KUNGFU_SKILL_RUN_ID"],
+                    "work_id": kwargs["env"]["KUNGFU_SKILL_WORK_REF"],
+                    "skill": {
+                        "key": "kungfu-agent",
+                        "contentHash": ROOT_HASH,
+                    },
+                }
+            )
+            + "\n",
+            encoding="utf-8",
+        )
         time.sleep(0.03)
         return SimpleNamespace(returncode=0)
 
@@ -1942,6 +1960,29 @@ def test_native_interactive_runner_reuses_work_console_with_fresh_attempts(
         assert envelope["workRef"] == work_ref
         assert skill_context["catalog"] == [{"key": "kungfu-agent"}]
         assert kwargs["env"]["KUNGFU_PRIOR_TRANSCRIPT_BYTES"] == "0"
+        launch_audit = json.loads(
+            Path(kwargs["env"]["KUNGFU_SKILL_RUNTIME_AUDIT_FILE"]).read_text(
+                encoding="utf-8"
+            )
+        )
+        final_audit = json.loads(
+            Path(kwargs["env"]["KUNGFU_SKILL_RUNTIME_AUDIT_FINAL_FILE"]).read_text(
+                encoding="utf-8"
+            )
+        )
+        assert launch_audit["scope"] == {
+            "runId": kwargs["env"]["KUNGFU_SKILL_RUN_ID"],
+            "workRef": work_ref["entityId"],
+        }
+        assert (
+            launch_audit["runtimeAuditRoot"]
+            == envelope["skillRuntimeAudit"]["runtimeAuditRoot"]
+        )
+        assert final_audit["skills"][0]["observedStates"] == ["loaded"]
+        assert final_audit["evidence"][0]["proof"] == {
+            "status": "rooted",
+            "roots": [ROOT_HASH],
+        }
         assert "stdin" not in kwargs
         assert "stdout" not in kwargs
         assert "stderr" not in kwargs

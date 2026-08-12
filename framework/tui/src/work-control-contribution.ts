@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import type { ChildProcessByStdio } from 'node:child_process';
+import { readFileSync } from 'node:fs';
 import type { Readable } from 'node:stream';
 
 import type {
@@ -15,6 +16,7 @@ import {
 import type { KfxLoadPlan } from '@kungfu-tech/kfx';
 
 import type { ProfileShellModel } from './profile-shell.js';
+import { describeTuiSkillRuntimeAudit } from './skill-runtime-audit.js';
 
 const PROFILE_ID = 'kungfu.work-control';
 const MEMBER_ID = 'work-control-actions';
@@ -234,9 +236,48 @@ export function globalWorkObserverArgs(
 
 export function globalWorkContribution(
   snapshot: GlobalWorkSnapshot,
+  options: {
+    runtimeAuditFile?: string;
+    readFile?: (path: string) => string;
+  } = {},
 ): GlobalWorkContribution {
+  const searchDocuments = globalWorkSearchDocuments(snapshot);
+  const runtimeAuditFile =
+    options.runtimeAuditFile ?? process.env.KF_SKILL_RUNTIME_AUDIT_FILE;
+  if (runtimeAuditFile) {
+    try {
+      const [identity, detail] = describeTuiSkillRuntimeAudit(
+        JSON.parse(
+          (options.readFile ?? ((path) => readFileSync(path, 'utf8')))(
+            runtimeAuditFile,
+          ),
+        ),
+      );
+      searchDocuments.unshift({
+        id: 'help.skill-runtime-audit',
+        kind: 'help',
+        title: identity,
+        summary: detail,
+        section: 'Runtime evidence',
+        keywords: [
+          'skill',
+          'audit',
+          'work',
+          'dependency',
+          'trust',
+          'receipt',
+          'history',
+          'recovery',
+        ],
+        priority: 0,
+        action: { kind: 'show-help', topicId: 'skill-runtime-audit' },
+      });
+    } catch {
+      // An absent or drifting audit remains unavailable; it is never reinterpreted.
+    }
+  }
   return {
-    searchDocuments: globalWorkSearchDocuments(snapshot),
+    searchDocuments,
   };
 }
 

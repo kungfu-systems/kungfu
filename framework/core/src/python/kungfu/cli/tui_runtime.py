@@ -15,6 +15,7 @@ import sys
 import click
 
 import kungfu
+from kungfu.skill import build_skill_runtime_audit, write_skill_runtime_audit
 
 
 def _resolve_tui_entry():
@@ -48,10 +49,19 @@ def _configure_tui_environment(binding_file, runtime_dir):
     os.environ.setdefault("KF_RUNTIME_DIR", runtime_dir)
 
 
+def _configure_tui_skill_runtime_audit(home, runtime_dir):
+    output = os.path.join(runtime_dir, "skill-manager", "tui-runtime-audit.json")
+    document = build_skill_runtime_audit(home)
+    write_skill_runtime_audit(output, document)
+    os.environ["KF_SKILL_RUNTIME_AUDIT_FILE"] = output
+    return output
+
+
 def run_tui(ctx, commands=()):
     """Launch the shipped TUI without creating a second command authority."""
 
     _configure_tui_environment(kungfu.__binding__.__file__, ctx.runtime_dir)
+    _configure_tui_skill_runtime_audit(ctx.home, ctx.runtime_dir)
     entry = _resolve_tui_entry()
     if not entry:
         raise click.ClickException(
