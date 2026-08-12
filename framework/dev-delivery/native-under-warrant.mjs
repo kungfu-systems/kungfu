@@ -11,6 +11,8 @@ import { digest } from '../../scripts/affected-native-proof.mjs';
 
 const SHA = /^[0-9a-f]{40}$/u;
 
+class RetryableGitHubRequestError extends Error {}
+
 function flag(args, name, fallback = '') {
   const index = args.indexOf(`--${name}`);
   return index === -1 ? fallback : args[index + 1] || '';
@@ -38,6 +40,9 @@ export class GitHubNativeStatusClient {
     token,
     apiUrl = 'https://api.github.com',
     fetchImpl = globalThis.fetch,
+    sleepImpl = (milliseconds) =>
+      new Promise((resolve) => setTimeout(resolve, milliseconds)),
+    maxAttempts = 4,
   }) {
     if (!repository) throw new Error('repository is required');
     if (!token) throw new Error('GITHUB_TOKEN is required');
@@ -45,24 +50,45 @@ export class GitHubNativeStatusClient {
     this.token = token;
     this.apiUrl = apiUrl.replace(/\/+$/u, '');
     this.fetch = fetchImpl;
+    this.sleep = sleepImpl;
+    this.maxAttempts = positiveInteger(maxAttempts, 'GitHub API max attempts');
   }
 
   async request(requestPath, { method = 'GET', body } = {}) {
-    const response = await this.fetch(`${this.apiUrl}${requestPath}`, {
-      method,
-      headers: {
-        accept: 'application/vnd.github+json',
-        authorization: `Bearer ${this.token}`,
-        'content-type': 'application/json',
-        'x-github-api-version': '2022-11-28',
-      },
-      body: body === undefined ? undefined : JSON.stringify(body),
-    });
-    const raw = await response.text();
-    const data = raw ? JSON.parse(raw) : null;
-    if (!response.ok)
-      throw new Error(data?.message || `${method} ${requestPath} failed`);
-    return data;
+    let lastError;
+    for (let attempt = 1; attempt <= this.maxAttempts; attempt += 1) {
+      try {
+        const response = await this.fetch(`${this.apiUrl}${requestPath}`, {
+          method,
+          headers: {
+            accept: 'application/vnd.github+json',
+            authorization: `Bearer ${this.token}`,
+            'content-type': 'application/json',
+            'x-github-api-version': '2022-11-28',
+          },
+          body: body === undefined ? undefined : JSON.stringify(body),
+        });
+        const raw = await response.text();
+        const data = raw ? JSON.parse(raw) : null;
+        if (response.ok) return data;
+        const message = data?.message || `${method} ${requestPath} failed`;
+        if (response.status === 429 || response.status >= 500)
+          throw new RetryableGitHubRequestError(message);
+        throw new Error(message);
+      } catch (error) {
+        if (
+          attempt === this.maxAttempts ||
+          !(
+            error instanceof RetryableGitHubRequestError ||
+            error instanceof TypeError
+          )
+        )
+          throw error;
+        lastError = error;
+      }
+      await this.sleep(1000 * 2 ** (attempt - 1));
+    }
+    throw lastError;
   }
 
   async requirePullRequest(number, expectedHead, targetBranch) {
