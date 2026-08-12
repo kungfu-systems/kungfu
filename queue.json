@@ -3,7 +3,7 @@
   "contract": "kungfu-buildchain-dev-delivery-warrant-queue",
   "repository": "kungfu-systems/kungfu",
   "protectedBase": "dev/v4/v4.0",
-  "generation": 1527,
+  "generation": 1528,
   "fencingCounter": 362,
   "policy": {
     "agingSeconds": 900,
@@ -19010,8 +19010,52 @@
         "framework/production-graph/executor/index.mjs",
         "package.json"
       ]
+    },
+    {
+      "repository": "kungfu-systems/kungfu",
+      "protectedBase": "dev/v4/v4.0",
+      "pullRequestNumber": 3048,
+      "assignmentRoot": "sha256:5937c269f5a72c1e921003ff5e922cc52b72b6f797c76de3154fe39d59504e8f",
+      "initiativeRoot": "sha256:bfff817933e5a5ad693e4b902a84f6cc3a251235dd7377cb4091d92f805fa7ff",
+      "sourceIdentityRoot": "sha256:5fb39204928ce13743e6bf1f768e587832a37fa42f2ade20e65c9eeeadbef4f5",
+      "deliveryClass": "native-proof-required",
+      "candidateId": "sha256:7bc0c7c3de8e33f72c11ec97b1dd3f3a71c563c6fa098de62e01fe523033012c",
+      "sourceHead": "9284e67e87252303f58b259c5425644e7a76e491",
+      "sourcePatchRoot": "sha256:a9b8e2dd536aee5dc60e4cfb82b6ba6771465754b0959ba6dc32e614af01fa80",
+      "sourceProofRoot": "sha256:bf6c0e130d8acefaa168cab11a6be90dd2de88ba66ca9788c8c41df387d267e5",
+      "planRoot": "sha256:326784ccca4e0072963ec2556681b829c5f48623b2ed20d0633178be4878319a",
+      "closureRoot": "sha256:106d175611d8634c988192302b9c464ae8ba3b6d023c2cff9910e401344c9624",
+      "dependencyRoot": "sha256:103b28d6a5874ee14e92809d3efe55f2d228899b9aa5524502f9a8c0bd6c7e64",
+      "toolchainRoot": "sha256:2ecb07894954a2e0de022615d4561e5ba3ae68376401941ecff77be03cd75a0f",
+      "sourceWorkflowRunId": 0,
+      "priority": "ordinary",
+      "enqueuedAt": "2026-08-12T17:39:09.105Z",
+      "updatedAt": "2026-08-12T17:39:09.105Z",
+      "attempts": 1,
+      "recoveries": 0,
+      "status": "queued",
+      "terminal": null,
+      "affectedPaths": [
+        "config/release/kungfu-release-provenance.contract.json",
+        "docs/adr/KF-ADR-019fe996-1912-7144-8fa5-3fceaa416365.md",
+        "docs/architecture/adr-map.json",
+        "docs/architecture/adr-map.md",
+        "docs/development/version-release-design.md",
+        "docs/development/versioning.md",
+        "docs/qualification/gates/release-and-promotion.md",
+        "framework/core/src/python/kungfu/release_provenance/__init__.py",
+        "framework/core/tests/python/test_release_provenance.py",
+        "framework/dev-delivery/native-under-warrant.mjs",
+        "framework/release/kungfu-release-provenance.contract.json",
+        "scripts/affected-native-proof.mjs",
+        "scripts/check-release-provenance-object.test.mjs",
+        "scripts/dev-delivery-proof-consumer.test.mjs",
+        "scripts/dev-pr-auto-merge.test.mjs",
+        "scripts/release-provenance-object.py",
+        "tests/fixtures/release-provenance-object/cases.json"
+      ]
     }
   ],
-  "updatedAt": "2026-08-12T17:37:29.607Z",
-  "stateRoot": "sha256:9ae02563b2006a0380edb35fc215f04814c2f803b1c402d83aa68226e33a872f"
+  "updatedAt": "2026-08-12T17:39:09.105Z",
+  "stateRoot": "sha256:e80d6d4f30948b2d570b50c4265ce752372c221bc6da74abc335d2723159ae0e"
 }
