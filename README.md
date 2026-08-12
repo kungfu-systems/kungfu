@@ -79,7 +79,7 @@ Yes. The first proof isolates continuity: one Work continues across two fresh
 Agent Sessions without copied chat.
 
 <!-- kungfu:auditable-demo:agent-work-lab-autoplay:start -->
-[![Can Work survive a new Agent?](docs/qualification/evidence/auditable-demo/74f7cf0b18f261001755c43dfd2954262bdb32c865a34f8316e3ec38331fb35b/agent-work-lab-autoplay/demo.gif)](docs/qualification/evidence/auditable-demo/74f7cf0b18f261001755c43dfd2954262bdb32c865a34f8316e3ec38331fb35b/agent-work-lab-autoplay/public-evidence.json)
+[![Can Work survive a new Agent?](docs/qualification/evidence/auditable-demo/c7a7dd9cdc7474b9fa047520733ae13072cdaf6eae1d515b63d265ed2eaee3f6/agent-work-lab-autoplay/demo.gif)](docs/qualification/evidence/auditable-demo/c7a7dd9cdc7474b9fa047520733ae13072cdaf6eae1d515b63d265ed2eaee3f6/agent-work-lab-autoplay/public-evidence.json)
 <!-- kungfu:auditable-demo:agent-work-lab-autoplay:end -->
 
 ### 2. Can Work survive failure?
@@ -89,7 +89,7 @@ a disposable Project, the connection drops, a new process resumes, that process
 crashes, and both Attempts remain under the same Work.
 
 <!-- kungfu:auditable-demo:project-tour-episode-1:start -->
-[![Can Work survive failure?](docs/qualification/evidence/auditable-demo/6751bfdf7a27dd2c4b0c3f0916a512fb7abd172543c94dee220b41a0d679632e/project-tour-episode-1/demo.gif)](docs/qualification/evidence/auditable-demo/6751bfdf7a27dd2c4b0c3f0916a512fb7abd172543c94dee220b41a0d679632e/project-tour-episode-1/public-evidence.json)
+[![Can Work survive failure?](docs/qualification/evidence/auditable-demo/c775b9799ef99405700cb26dd679ef742e835565549086e61484e9a377b140ac/project-tour-episode-1/demo.gif)](docs/qualification/evidence/auditable-demo/c775b9799ef99405700cb26dd679ef742e835565549086e61484e9a377b140ac/project-tour-episode-1/public-evidence.json)
 <!-- kungfu:auditable-demo:project-tour-episode-1:end -->
 
 Work survival is only the first step. If an Agent can declare its own result
@@ -102,7 +102,7 @@ The third proof separates Agent exit, independent review, and Kungfu settlement.
 An Agent can produce the candidate and evidence; it cannot approve its own Work.
 
 <!-- kungfu:auditable-demo:project-tour-episode-2:start -->
-[![Who is allowed to complete Work?](docs/qualification/evidence/auditable-demo/2ceca18c5d030d98f693e433bad4981c7931a2ca1f4b2efcbdc7d63538e642db/project-tour-episode-2/demo.gif)](docs/qualification/evidence/auditable-demo/2ceca18c5d030d98f693e433bad4981c7931a2ca1f4b2efcbdc7d63538e642db/project-tour-episode-2/public-evidence.json)
+[![Who is allowed to complete Work?](docs/qualification/evidence/auditable-demo/c1088de8f5b944ae2bcd3d7106ab2430303c21b6cce2216f64ed96cd4f124aa4/project-tour-episode-2/demo.gif)](docs/qualification/evidence/auditable-demo/c1088de8f5b944ae2bcd3d7106ab2430303c21b6cce2216f64ed96cd4f124aa4/project-tour-episode-2/public-evidence.json)
 <!-- kungfu:auditable-demo:project-tour-episode-2:end -->
 
 These are bounded exact-artifact demonstrations—not provider rankings,

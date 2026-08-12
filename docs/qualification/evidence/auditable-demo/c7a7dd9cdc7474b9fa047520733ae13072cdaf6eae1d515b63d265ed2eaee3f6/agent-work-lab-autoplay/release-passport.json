@@ -1,0 +1,75 @@
+{
+  "authority": {
+    "authorizationSources": [
+      "exact-release-passport",
+      "core-policy",
+      "work-or-warrant",
+      "explicit-capability-grant",
+      "runtime-isolation"
+    ],
+    "grants": [],
+    "nonAuthorities": [
+      "first-party-identity",
+      "system-identity",
+      "kfd-compliance",
+      "product-system-metadata",
+      "package-metadata",
+      "registry-history",
+      "scan-output",
+      "standalone-generation"
+    ],
+    "productSystemRole": "assembly-and-distribution-metadata-only"
+  },
+  "capture": {
+    "binary": {
+      "binaryRoot": "sha256:86d5c810f37c3e474dbde1682ed4a9d98aa2ab308c1349f8f754fa8fdd08c76b",
+      "metadataContract": "kungfu.declarative-demo-binary/v1",
+      "metadataRoot": "sha256:db72750dcc42136e7d91c8e2e940b5560eec86eca9666ca1f3f966d90cbd68ba",
+      "platformId": "linux-x64",
+      "runtimeDependencies": []
+    },
+    "networkIsolation": "docker-none",
+    "root": "sha256:cd5c8aa3dd748ee231e18c537dd32ed222c8977454d6d504947c3de19b19e5c5"
+  },
+  "demo": {
+    "claimBoundary": "This exact standalone Kungfu artifact proves only the bounded offline Agent Work Lab autoplay observed in two independently captured native PTYs; it grants no Work, release, capability, or production authority.",
+    "id": "agent-work-lab-autoplay",
+    "title": "Can Work survive a new Agent?"
+  },
+  "evidenceRoot": "sha256:c7a7dd9cdc7474b9fa047520733ae13072cdaf6eae1d515b63d265ed2eaee3f6",
+  "gate": {
+    "root": "sha256:2fd87d7ac07b2f68ba270a7fcd248c34ef5126e6e5ced506dff38215c2d2c79a"
+  },
+  "media": {
+    "profile": "responsive-long-form-web-delivery-v1",
+    "qualificationRoot": "sha256:6e267935283409d6ff3c661620653b411459cdf63046e9a1b19cbd6dfbca53a9",
+    "root": "sha256:faf491723568dabf9e5f623737c9072be2060524306ad3232db65224642e7f66"
+  },
+  "passportRoot": "sha256:5eaede311d8ff6d3e21074ba3abb389d8afa0b6ea6a79059059a30b8f15b0b3e",
+  "product": {
+    "binaryName": "kungfu",
+    "displayName": "Kungfu",
+    "id": "kungfu"
+  },
+  "scenarioRoot": "sha256:6b7601fb0da94a3f1ba7954fde62aeb1660eace1c8880a0793cf577544da0292",
+  "schema": "buildchain.declarative-demo-release-passport/v1",
+  "source": {
+    "createdAt": "2026-08-12T14:03:27Z",
+    "digest": "sha256:3fb822765f90109f581712facc51f2872a9bbf7919891787143f0636674169f8",
+    "expiresAt": "2026-08-26T14:03:17Z",
+    "id": "9144577495",
+    "name": "kungfu-linux-x64-4c84cd4d7a68ab85a25bc9bcc0e42c0ae725cfc0",
+    "nodeId": "MDg6QXJ0aWZhY3Q5MTQ0NTc3NDk1",
+    "repository": "kungfu-systems/kungfu",
+    "runAttempt": "1",
+    "runId": "31596687047",
+    "schema": "buildchain.github-artifact-coordinate/v1",
+    "sizeInBytes": 1276775908,
+    "sourceSha": "4c84cd4d7a68ab85a25bc9bcc0e42c0ae725cfc0"
+  },
+  "status": "qualified",
+  "toolchain": {
+    "buildchainSha": "41d4dce2f38aa4821c794b49dcfb2bcf59d0984a",
+    "rendererImage": "ghcr.io/kungfu-systems/build-images/demo-renderer@sha256:3a49708163fedaaabe07b45bba910026a1828151b5d4e9bbdaf0d62e75c927c1"
+  }
+}

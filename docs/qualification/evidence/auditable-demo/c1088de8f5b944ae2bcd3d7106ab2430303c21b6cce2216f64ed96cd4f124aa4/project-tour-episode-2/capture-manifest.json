@@ -1,0 +1,71 @@
+{
+  "artifact": {
+    "binaryRoot": "sha256:86d5c810f37c3e474dbde1682ed4a9d98aa2ab308c1349f8f754fa8fdd08c76b",
+    "metadataContract": "kungfu.declarative-demo-binary/v1",
+    "metadataRoot": "sha256:db72750dcc42136e7d91c8e2e940b5560eec86eca9666ca1f3f966d90cbd68ba",
+    "platformId": "linux-x64",
+    "runtimeDependencies": []
+  },
+  "authority": {
+    "classification": "capture-source-evidence",
+    "grants": [],
+    "nonAuthorities": [
+      "first-party-identity",
+      "system-identity",
+      "kfd-compliance",
+      "product-system-metadata",
+      "package-metadata",
+      "registry-history",
+      "scan-output",
+      "standalone-generation"
+    ]
+  },
+  "demo": {
+    "claimBoundary": "This exact standalone Kungfu artifact proves only the bounded disposable Project Tour episode 2 observed at 4x in two independently captured native PTYs; Mock Agent output and terminal observations grant no Work, release, capability, or production authority.",
+    "id": "project-tour-episode-2",
+    "title": "Who is allowed to complete Work?"
+  },
+  "execution": {
+    "durationClass": "long-form"
+  },
+  "networkIsolation": "docker-none",
+  "product": {
+    "binaryName": "kungfu",
+    "displayName": "Kungfu",
+    "distribution": "standalone-binary",
+    "id": "kungfu"
+  },
+  "renditions": [
+    {
+      "columns": 150,
+      "height": 1080,
+      "id": "1080p",
+      "role": "primary",
+      "rows": 36,
+      "runSummary": "renditions/1080p/run-summary.json",
+      "runSummaryRoot": "sha256:0e3560c7a71dd9675fb018cb4454ebd8cd11b4e5f8821f8f378db458a16c1a47",
+      "terminalCapture": "renditions/1080p/terminal-capture.json",
+      "terminalCaptureRoot": "sha256:011053e2112328b176618c5ca8683c628944e4bb57b9748f42cb1f4975164016",
+      "transcript": "renditions/1080p/complete-transcript.txt",
+      "width": 1920
+    },
+    {
+      "columns": 150,
+      "height": 720,
+      "id": "720p",
+      "role": "responsive",
+      "rows": 28,
+      "runSummary": "renditions/720p/run-summary.json",
+      "runSummaryRoot": "sha256:379e97728ebe8b402835b21a72483711f2f9279efbf47c1c5e72db44c12be69b",
+      "terminalCapture": "renditions/720p/terminal-capture.json",
+      "terminalCaptureRoot": "sha256:e9a3d0c50748deee3d8eedcd6b98a34d75f2fcf6c6d5026d65f0534300aed20d",
+      "transcript": "renditions/720p/complete-transcript.txt",
+      "width": 1280
+    }
+  ],
+  "root": "sha256:103a5e2c87a4e37bb7aa1b02ff52603951931231a640878cef7465eb62eee456",
+  "scenarioRoot": "sha256:6b7601fb0da94a3f1ba7954fde62aeb1660eace1c8880a0793cf577544da0292",
+  "schema": "buildchain.declarative-demo-capture/v1",
+  "sourceCoordinateRoot": "sha256:65d089de0fc5195a074e85cac72d105f1bcadfeb7f438ea64a76bb1e82ef5675",
+  "status": "qualified"
+}

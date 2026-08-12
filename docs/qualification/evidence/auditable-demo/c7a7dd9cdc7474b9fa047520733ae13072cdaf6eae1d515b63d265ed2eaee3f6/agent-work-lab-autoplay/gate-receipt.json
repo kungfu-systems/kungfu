@@ -1,0 +1,57 @@
+{
+  "adapter": {
+    "argumentsRoot": "sha256:37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
+    "path": "scripts/auditable-demo-platform.mjs",
+    "sha256": "sha256:7039a4551d44d8ff033eeb4d0c9ebe84cc4a21f23b70f8a216b07216826fa208"
+  },
+  "qualifiedInputs": {
+    "claimBoundary": "This exact standalone Kungfu artifact proves only the bounded offline Agent Work Lab autoplay observed in two independently captured native PTYs; it grants no Work, release, capability, or production authority.",
+    "evidenceClass": "exact-standalone-binary-declarative-demo/v1",
+    "projection": "sha256:d3509efa07e353657de1af503202314c4ae523daa3d1ec54d622cf1f31e5a867",
+    "renditionSet": {
+      "renditions": [
+        {
+          "captureRoot": "sha256:640dddb58acc778e29e408d2ca3b1d1c9ee68af189ead86e3d98c07eceb4d728",
+          "id": "1080p",
+          "projectionRoot": "sha256:d3509efa07e353657de1af503202314c4ae523daa3d1ec54d622cf1f31e5a867",
+          "role": "primary",
+          "sceneRoot": "sha256:e0f1dc84eb4db059a7c72bb4375302b8d02bc1142ad13a96b21dfd180343e543",
+          "transcriptRoot": "sha256:d378f61874c751169c6618c153e8e5b6fbe64648bc9f814bc4352a8c6db8f5f6"
+        },
+        {
+          "captureRoot": "sha256:bde1583eac778f24e1782b7882fc061d0653111305156ce51c7a6af265bad3b0",
+          "id": "720p",
+          "projectionRoot": "sha256:b6404cc4a6a3098fa4e9133eb1755f52d2243fb32515c132393300fd7c9abd4d",
+          "role": "responsive",
+          "sceneRoot": "sha256:df85d0dd82eae62603381830fb12583f4e2c4c40c810c9310b30782b151b090e",
+          "transcriptRoot": "sha256:818348de7925a90f82067f3cb0cbb787faf4c65c041e661775cbc3c0d5bddbad"
+        }
+      ],
+      "root": "sha256:7bc7aa8c993f17642bb560dee040bc4ef6a660c6af8f1eb9ea67c204e3675c0a",
+      "schema": "kungfu.auditable-demo.rendition-set/v1"
+    },
+    "scene": "sha256:e0f1dc84eb4db059a7c72bb4375302b8d02bc1142ad13a96b21dfd180343e543",
+    "terminalCapture": {
+      "root": "sha256:640dddb58acc778e29e408d2ca3b1d1c9ee68af189ead86e3d98c07eceb4d728",
+      "schema": "kungfu.terminal-capture/v1"
+    },
+    "transcript": "sha256:d378f61874c751169c6618c153e8e5b6fbe64648bc9f814bc4352a8c6db8f5f6"
+  },
+  "renderer": {
+    "image": "ghcr.io/kungfu-systems/build-images/demo-renderer@sha256:3a49708163fedaaabe07b45bba910026a1828151b5d4e9bbdaf0d62e75c927c1",
+    "mediaProfile": "responsive-long-form-web-delivery-v1",
+    "mediaQualificationRoot": "sha256:7b7e80542e13e7918a6c636e58596ac8d188709565828f2d8f086aff0b85b4cf",
+    "smokeManifestRoot": "sha256:efee52c7261d31b4ee7ddfbe2d221de0b9c57a5004e05374b823d95b230bdf8c"
+  },
+  "schema": "buildchain.auditable-demo-gate/v1",
+  "sourceArtifact": {
+    "digest": "sha256:10882254b7bee6e9841957f1016d3f392d5ef18ef625b87d5759f1609830fc9c",
+    "expiresAt": "2026-08-26T14:30:21Z",
+    "id": "9145575713",
+    "name": "declarative-demo-captures-4c84cd4d7a68-31596687047-1",
+    "runId": "31596687047"
+  },
+  "sourceRepository": "kungfu-systems/kungfu",
+  "sourceSha": "4c84cd4d7a68ab85a25bc9bcc0e42c0ae725cfc0",
+  "status": "passed"
+}
