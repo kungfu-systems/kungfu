@@ -154,6 +154,10 @@ test('Dev auto-merge waits for PR checks and lands through the native queue', ()
     /native-command: >-[\s\S]*dev-delivery:native-under-warrant[\s\S]*--status-context 'affected-native \/ linux'/u,
   );
   assert.match(workflow, /native-heartbeat-seconds: 300/u);
+  assert.match(
+    workflow,
+    /native-proof-json: \$\{\{ needs\.delivery-contract\.outputs\.native-proof-json \}\}/u,
+  );
   assert.match(workflow, /statuses: write/u);
   assert.match(workflow, /queue-admission-context: Queue admission lease/u);
   assert.match(workflow, /merge-method: rebase/u);
@@ -167,6 +171,25 @@ test('Dev auto-merge waits for PR checks and lands through the native queue', ()
     /github-token: \$\{\{ secrets\.KUNGFU_GITHUB_TOKEN \}\}/u,
   );
   assert.doesNotMatch(workflow, /gh pr merge|npm publish|git tag/iu);
+});
+
+test('Dev delivery reuses only an exact verified semantic native proof', () => {
+  assert.match(
+    workflow,
+    /Resolve optional exact native proof artifact[\s\S]*core-dev-delivery-source-proof-\$EXPECTED_HEAD[\s\S]*actions\/runs\/\$SOURCE_RUN_ID\/artifacts/u,
+  );
+  assert.match(
+    workflow,
+    /Materialize optional reusable semantic native proof[\s\S]*dev-delivery-proof\.mjs verify-source[\s\S]*sourceIdentityRoot == \$input\[0\]\.sourceIdentityRoot[\s\S]*toolchainRoot == \$input\[0\]\.toolchainRoot[\s\S]*affectedPaths == \$input\[0\]\.affectedPaths/u,
+  );
+  assert.match(
+    workflow,
+    /dev-delivery-proof\.mjs native[\s\S]*--qualified-base[\s\S]*--shard-evidence-roots-json[\s\S]*dev-delivery-proof\.mjs verify-native[\s\S]*native-proof-json<<BUILDCHAIN_NATIVE_PROOF_EOF/u,
+  );
+  assert.match(
+    workflow,
+    /Older retained artifacts predate Native Qualification Proof projection[\s\S]*native-proof-json=/u,
+  );
 });
 
 test('Dev behind admission produces and forwards an exact Project Cut replay proof', () => {

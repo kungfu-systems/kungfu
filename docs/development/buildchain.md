@@ -48,6 +48,12 @@ Buildchain classifies a moving dev base against the semantic source, closure,
 dependency, and toolchain roots. Non-overlapping base-only movement reuses the
 native proof; overlap, an unknown comparison graph, a source change, or a
 conflict fails closed into bounded requalification or safe Warrant release.
+Kungfu reconstructs that optional Native Qualification Proof only from the
+exact source workflow run's `core-dev-delivery-source-proof-<head>` artifact.
+The protected caller verifies its Source Proof, PR/head/base coordinate, and
+all semantic roots against its independently projected Warrant input before it
+passes `native-proof-json` to Buildchain. A missing legacy artifact means a
+full native run; malformed or cross-head evidence cannot become reusable.
 The source workflow also observes the active phase before every legacy hosted
 native lane, so no normal PR event can start those expensive jobs without the
 same provisional or qualified authority.
