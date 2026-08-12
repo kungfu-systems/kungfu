@@ -2,15 +2,15 @@
   "$schema": "https://kfd.libkungfu.dev/schemas/kfd-adopter-conformance/manifest.schema.json",
   "schemaVersion": 1,
   "contract": "kfd.adopter-conformance-manifest/v1",
-  "manifestId": "kungfu-full-cut-93e12817afd3",
+  "manifestId": "kungfu-full-cut-b001740fbd0f",
   "rootAlgorithm": "sha256-kfd-canonical-json-v1",
   "byteDigestAlgorithm": "sha256-bytes-v1",
   "adopter": {
     "id": "kungfu-systems/kungfu",
     "artifact": {
       "kind": "git-commit",
-      "coordinate": "kungfu-systems/kungfu@93e12817afd31bba7109acd161f1551d2437caf4",
-      "root": "sha256:05cee8bc65bda9570c4208d32ef1efcc1db06bed584a98c594f098037d0f4914"
+      "coordinate": "kungfu-systems/kungfu@b001740fbd0fff48e37a86c78494432b213bb32c",
+      "root": "sha256:c7b352f837e67fc9d73b3e43f440ce4a973db55ff2f9d4711c0f667236811982"
     },
     "scope": "Kungfu KFD implementation, product gates, SDK and CLI projections, and release evidence"
   },
@@ -73,43 +73,43 @@
       "implementationEvidence": [
         {
           "kind": "implementation",
-          "coordinate": "git+https://github.com/kungfu-systems/kungfu.git@93e12817afd31bba7109acd161f1551d2437caf4#framework/contract/kungfu-contracts.registry.json",
+          "coordinate": "git+https://github.com/kungfu-systems/kungfu.git@b001740fbd0fff48e37a86c78494432b213bb32c#framework/contract/kungfu-contracts.registry.json",
           "root": "sha256:00ae9385e093fd6bbbe689e686cc8fda5e793b12146467f3deb0b1028ad37124",
-          "observedAt": "2026-08-12T02:26:55.549Z",
+          "observedAt": "2026-08-12T03:25:14.764Z",
           "kfdPackageRoot": "sha256:07bea3dacab8cba10901539a5acb958db1ee09738fd424c9933f9baa2187675b"
         }
       ],
       "verificationEvidence": [
         {
           "kind": "verification",
-          "coordinate": "git+https://github.com/kungfu-systems/kungfu.git@93e12817afd31bba7109acd161f1551d2437caf4#.buildchain/kfd/kfd-1/verify-result.json",
+          "coordinate": "git+https://github.com/kungfu-systems/kungfu.git@b001740fbd0fff48e37a86c78494432b213bb32c#.buildchain/kfd/kfd-1/verify-result.json",
           "root": "sha256:5c78dfce2dc1eaefb6ad32dd90ad5eff6a59619836f1c3c82859c9683618ed89",
-          "observedAt": "2026-08-12T02:26:55.549Z",
+          "observedAt": "2026-08-12T03:25:14.764Z",
           "kfdPackageRoot": "sha256:07bea3dacab8cba10901539a5acb958db1ee09738fd424c9933f9baa2187675b"
         },
         {
           "kind": "verification",
-          "coordinate": "git+https://github.com/kungfu-systems/kungfu.git@93e12817afd31bba7109acd161f1551d2437caf4#framework/contract/kungfu-contracts.registry.json",
+          "coordinate": "git+https://github.com/kungfu-systems/kungfu.git@b001740fbd0fff48e37a86c78494432b213bb32c#framework/contract/kungfu-contracts.registry.json",
           "root": "sha256:00ae9385e093fd6bbbe689e686cc8fda5e793b12146467f3deb0b1028ad37124",
-          "observedAt": "2026-08-12T02:26:55.549Z",
+          "observedAt": "2026-08-12T03:25:14.764Z",
           "kfdPackageRoot": "sha256:07bea3dacab8cba10901539a5acb958db1ee09738fd424c9933f9baa2187675b"
         }
       ],
       "negativeEvidence": [
         {
           "kind": "negative",
-          "coordinate": "git+https://github.com/kungfu-systems/kungfu.git@93e12817afd31bba7109acd161f1551d2437caf4#scripts/kfd-support-matrix.test.mjs",
+          "coordinate": "git+https://github.com/kungfu-systems/kungfu.git@b001740fbd0fff48e37a86c78494432b213bb32c#scripts/kfd-support-matrix.test.mjs",
           "root": "sha256:379a659202a0ae6095626aadae92e54c0f1ec3953570486aa9187327c8f5b2ff",
-          "observedAt": "2026-08-12T02:26:55.549Z",
+          "observedAt": "2026-08-12T03:25:14.764Z",
           "kfdPackageRoot": "sha256:07bea3dacab8cba10901539a5acb958db1ee09738fd424c9933f9baa2187675b"
         }
       ],
       "reviews": [
         {
           "kind": "review",
-          "coordinate": "git+https://github.com/kungfu-systems/kungfu.git@93e12817afd31bba7109acd161f1551d2437caf4#docs/qualification/alpha-ruleset.contract.json",
+          "coordinate": "git+https://github.com/kungfu-systems/kungfu.git@b001740fbd0fff48e37a86c78494432b213bb32c#docs/qualification/alpha-ruleset.contract.json",
           "root": "sha256:fafba639d47a1ade80eab8c2cc453cac2cdb96a6f762627e474c152834c0deef",
-          "observedAt": "2026-08-12T02:26:55.549Z",
+          "observedAt": "2026-08-12T03:25:14.764Z",
           "kfdPackageRoot": "sha256:07bea3dacab8cba10901539a5acb958db1ee09738fd424c9933f9baa2187675b"
         }
       ],
@@ -131,50 +131,50 @@
       "implementationEvidence": [
         {
           "kind": "implementation",
-          "coordinate": "git+https://github.com/kungfu-systems/kungfu.git@93e12817afd31bba7109acd161f1551d2437caf4#.buildchain/kfd/kfd-2/release-claims.json",
-          "root": "sha256:78d1bbd5ee2aa5581fb63f0ca9bf6580a2f75556a4b53daafc6c2a9a3e0102e5",
-          "observedAt": "2026-08-12T02:26:55.549Z",
+          "coordinate": "git+https://github.com/kungfu-systems/kungfu.git@b001740fbd0fff48e37a86c78494432b213bb32c#.buildchain/kfd/kfd-2/release-claims.json",
+          "root": "sha256:cff5cc429485117ddd4b7a6e920f57c9e3c7de5dba9f14c7fdbde0df71cab809",
+          "observedAt": "2026-08-12T03:25:14.764Z",
           "kfdPackageRoot": "sha256:07bea3dacab8cba10901539a5acb958db1ee09738fd424c9933f9baa2187675b"
         },
         {
           "kind": "implementation",
-          "coordinate": "git+https://github.com/kungfu-systems/kungfu.git@93e12817afd31bba7109acd161f1551d2437caf4#docs/qualification/kfd2-trust-assessment.md",
+          "coordinate": "git+https://github.com/kungfu-systems/kungfu.git@b001740fbd0fff48e37a86c78494432b213bb32c#docs/qualification/kfd2-trust-assessment.md",
           "root": "sha256:3545a723795bb2565fc29a92d03d0cb2958b210801ae92110c14ebec8a4fb529",
-          "observedAt": "2026-08-12T02:26:55.549Z",
+          "observedAt": "2026-08-12T03:25:14.764Z",
           "kfdPackageRoot": "sha256:07bea3dacab8cba10901539a5acb958db1ee09738fd424c9933f9baa2187675b"
         }
       ],
       "verificationEvidence": [
         {
           "kind": "verification",
-          "coordinate": "git+https://github.com/kungfu-systems/kungfu.git@93e12817afd31bba7109acd161f1551d2437caf4#.buildchain/kfd/kfd-2/release-claims.json",
-          "root": "sha256:78d1bbd5ee2aa5581fb63f0ca9bf6580a2f75556a4b53daafc6c2a9a3e0102e5",
-          "observedAt": "2026-08-12T02:26:55.549Z",
+          "coordinate": "git+https://github.com/kungfu-systems/kungfu.git@b001740fbd0fff48e37a86c78494432b213bb32c#.buildchain/kfd/kfd-2/release-claims.json",
+          "root": "sha256:cff5cc429485117ddd4b7a6e920f57c9e3c7de5dba9f14c7fdbde0df71cab809",
+          "observedAt": "2026-08-12T03:25:14.764Z",
           "kfdPackageRoot": "sha256:07bea3dacab8cba10901539a5acb958db1ee09738fd424c9933f9baa2187675b"
         },
         {
           "kind": "verification",
-          "coordinate": "git+https://github.com/kungfu-systems/kungfu.git@93e12817afd31bba7109acd161f1551d2437caf4#docs/qualification/kfd2-trust-assessment.md",
+          "coordinate": "git+https://github.com/kungfu-systems/kungfu.git@b001740fbd0fff48e37a86c78494432b213bb32c#docs/qualification/kfd2-trust-assessment.md",
           "root": "sha256:3545a723795bb2565fc29a92d03d0cb2958b210801ae92110c14ebec8a4fb529",
-          "observedAt": "2026-08-12T02:26:55.549Z",
+          "observedAt": "2026-08-12T03:25:14.764Z",
           "kfdPackageRoot": "sha256:07bea3dacab8cba10901539a5acb958db1ee09738fd424c9933f9baa2187675b"
         }
       ],
       "negativeEvidence": [
         {
           "kind": "negative",
-          "coordinate": "git+https://github.com/kungfu-systems/kungfu.git@93e12817afd31bba7109acd161f1551d2437caf4#scripts/verify-kfd2-source-binding.test.mjs",
+          "coordinate": "git+https://github.com/kungfu-systems/kungfu.git@b001740fbd0fff48e37a86c78494432b213bb32c#scripts/verify-kfd2-source-binding.test.mjs",
           "root": "sha256:ff7c43f0146e125bc3c30c4b10e4258b1948310faa918877a085954726c38da0",
-          "observedAt": "2026-08-12T02:26:55.549Z",
+          "observedAt": "2026-08-12T03:25:14.764Z",
           "kfdPackageRoot": "sha256:07bea3dacab8cba10901539a5acb958db1ee09738fd424c9933f9baa2187675b"
         }
       ],
       "reviews": [
         {
           "kind": "review",
-          "coordinate": "git+https://github.com/kungfu-systems/kungfu.git@93e12817afd31bba7109acd161f1551d2437caf4#docs/qualification/alpha-ruleset.contract.json",
+          "coordinate": "git+https://github.com/kungfu-systems/kungfu.git@b001740fbd0fff48e37a86c78494432b213bb32c#docs/qualification/alpha-ruleset.contract.json",
           "root": "sha256:fafba639d47a1ade80eab8c2cc453cac2cdb96a6f762627e474c152834c0deef",
-          "observedAt": "2026-08-12T02:26:55.549Z",
+          "observedAt": "2026-08-12T03:25:14.764Z",
           "kfdPackageRoot": "sha256:07bea3dacab8cba10901539a5acb958db1ee09738fd424c9933f9baa2187675b"
         }
       ],
@@ -196,43 +196,43 @@
       "implementationEvidence": [
         {
           "kind": "implementation",
-          "coordinate": "git+https://github.com/kungfu-systems/kungfu.git@93e12817afd31bba7109acd161f1551d2437caf4#.buildchain/kfd/kfd-3/surfaces.json",
+          "coordinate": "git+https://github.com/kungfu-systems/kungfu.git@b001740fbd0fff48e37a86c78494432b213bb32c#.buildchain/kfd/kfd-3/surfaces.json",
           "root": "sha256:0b7cd246307a9472bb3100df59cb9e7985bb74bc5af75a0bef8f3141330d9443",
-          "observedAt": "2026-08-12T02:26:55.549Z",
+          "observedAt": "2026-08-12T03:25:14.764Z",
           "kfdPackageRoot": "sha256:07bea3dacab8cba10901539a5acb958db1ee09738fd424c9933f9baa2187675b"
         }
       ],
       "verificationEvidence": [
         {
           "kind": "verification",
-          "coordinate": "git+https://github.com/kungfu-systems/kungfu.git@93e12817afd31bba7109acd161f1551d2437caf4#.buildchain/kfd/kfd-3/capability-query.json",
+          "coordinate": "git+https://github.com/kungfu-systems/kungfu.git@b001740fbd0fff48e37a86c78494432b213bb32c#.buildchain/kfd/kfd-3/capability-query.json",
           "root": "sha256:099afa294cc691103de931869ac5aa7737db30970226b60d4497e5b8e9118236",
-          "observedAt": "2026-08-12T02:26:55.549Z",
+          "observedAt": "2026-08-12T03:25:14.764Z",
           "kfdPackageRoot": "sha256:07bea3dacab8cba10901539a5acb958db1ee09738fd424c9933f9baa2187675b"
         },
         {
           "kind": "verification",
-          "coordinate": "git+https://github.com/kungfu-systems/kungfu.git@93e12817afd31bba7109acd161f1551d2437caf4#.buildchain/kfd/kfd-3/surfaces.json",
+          "coordinate": "git+https://github.com/kungfu-systems/kungfu.git@b001740fbd0fff48e37a86c78494432b213bb32c#.buildchain/kfd/kfd-3/surfaces.json",
           "root": "sha256:0b7cd246307a9472bb3100df59cb9e7985bb74bc5af75a0bef8f3141330d9443",
-          "observedAt": "2026-08-12T02:26:55.549Z",
+          "observedAt": "2026-08-12T03:25:14.764Z",
           "kfdPackageRoot": "sha256:07bea3dacab8cba10901539a5acb958db1ee09738fd424c9933f9baa2187675b"
         }
       ],
       "negativeEvidence": [
         {
           "kind": "negative",
-          "coordinate": "git+https://github.com/kungfu-systems/kungfu.git@93e12817afd31bba7109acd161f1551d2437caf4#framework/core/tests/fixtures/cli-surface-contract/dangling-kfd3.json",
+          "coordinate": "git+https://github.com/kungfu-systems/kungfu.git@b001740fbd0fff48e37a86c78494432b213bb32c#framework/core/tests/fixtures/cli-surface-contract/dangling-kfd3.json",
           "root": "sha256:f53d002f76bc6944f0219915d7f803c38a5aa4d74ac8ee0e889f87eac4290079",
-          "observedAt": "2026-08-12T02:26:55.549Z",
+          "observedAt": "2026-08-12T03:25:14.764Z",
           "kfdPackageRoot": "sha256:07bea3dacab8cba10901539a5acb958db1ee09738fd424c9933f9baa2187675b"
         }
       ],
       "reviews": [
         {
           "kind": "review",
-          "coordinate": "git+https://github.com/kungfu-systems/kungfu.git@93e12817afd31bba7109acd161f1551d2437caf4#docs/qualification/alpha-ruleset.contract.json",
+          "coordinate": "git+https://github.com/kungfu-systems/kungfu.git@b001740fbd0fff48e37a86c78494432b213bb32c#docs/qualification/alpha-ruleset.contract.json",
           "root": "sha256:fafba639d47a1ade80eab8c2cc453cac2cdb96a6f762627e474c152834c0deef",
-          "observedAt": "2026-08-12T02:26:55.549Z",
+          "observedAt": "2026-08-12T03:25:14.764Z",
           "kfdPackageRoot": "sha256:07bea3dacab8cba10901539a5acb958db1ee09738fd424c9933f9baa2187675b"
         }
       ],
@@ -254,57 +254,57 @@
       "implementationEvidence": [
         {
           "kind": "implementation",
-          "coordinate": "git+https://github.com/kungfu-systems/kungfu.git@93e12817afd31bba7109acd161f1551d2437caf4#framework/core/src/python/kungfu/rewind/perspective.py",
+          "coordinate": "git+https://github.com/kungfu-systems/kungfu.git@b001740fbd0fff48e37a86c78494432b213bb32c#framework/core/src/python/kungfu/rewind/perspective.py",
           "root": "sha256:638c21946d445f0497637476891f0255cfae07c4666a76fc32b55e56e28310c8",
-          "observedAt": "2026-08-12T02:26:55.549Z",
+          "observedAt": "2026-08-12T03:25:14.764Z",
           "kfdPackageRoot": "sha256:07bea3dacab8cba10901539a5acb958db1ee09738fd424c9933f9baa2187675b"
         },
         {
           "kind": "implementation",
-          "coordinate": "git+https://github.com/kungfu-systems/kungfu.git@93e12817afd31bba7109acd161f1551d2437caf4#framework/core/tests/qualification/kfd4-perspective.mjs",
+          "coordinate": "git+https://github.com/kungfu-systems/kungfu.git@b001740fbd0fff48e37a86c78494432b213bb32c#framework/core/tests/qualification/kfd4-perspective.mjs",
           "root": "sha256:14e4a96384a9af8be87c497fe13d7d431fd74e444fd384160440109bcdc85ef5",
-          "observedAt": "2026-08-12T02:26:55.549Z",
+          "observedAt": "2026-08-12T03:25:14.764Z",
           "kfdPackageRoot": "sha256:07bea3dacab8cba10901539a5acb958db1ee09738fd424c9933f9baa2187675b"
         }
       ],
       "verificationEvidence": [
         {
           "kind": "verification",
-          "coordinate": "buildchain-product-gate:kfd-4@sha256:b08fec6d7494f2f152fe753f71ea07aa44f8770abc09bc2e28b74b732a480859",
-          "root": "sha256:b08fec6d7494f2f152fe753f71ea07aa44f8770abc09bc2e28b74b732a480859",
-          "observedAt": "2026-08-12T02:26:55.549Z",
+          "coordinate": "buildchain-product-gate:kfd-4@sha256:f0388899cb86351f1005e977e6ca6819f43fcce9e086df99797a19c0d71a5fac",
+          "root": "sha256:f0388899cb86351f1005e977e6ca6819f43fcce9e086df99797a19c0d71a5fac",
+          "observedAt": "2026-08-12T03:25:14.764Z",
           "kfdPackageRoot": "sha256:07bea3dacab8cba10901539a5acb958db1ee09738fd424c9933f9baa2187675b"
         },
         {
           "kind": "verification",
-          "coordinate": "git+https://github.com/kungfu-systems/kungfu.git@93e12817afd31bba7109acd161f1551d2437caf4#docs/qualification/evidence/kfd-4-perspective/d73cab0d69/report.json",
+          "coordinate": "git+https://github.com/kungfu-systems/kungfu.git@b001740fbd0fff48e37a86c78494432b213bb32c#docs/qualification/evidence/kfd-4-perspective/d73cab0d69/report.json",
           "root": "sha256:c086e9588f3bde00105c91080e4e3e00d558b8ea560486ae0b7df685b967b2e8",
-          "observedAt": "2026-08-12T02:26:55.549Z",
+          "observedAt": "2026-08-12T03:25:14.764Z",
           "kfdPackageRoot": "sha256:07bea3dacab8cba10901539a5acb958db1ee09738fd424c9933f9baa2187675b"
         },
         {
           "kind": "verification",
-          "coordinate": "git+https://github.com/kungfu-systems/kungfu.git@93e12817afd31bba7109acd161f1551d2437caf4#framework/core/tests/python/test_kfd4_perspective.py",
+          "coordinate": "git+https://github.com/kungfu-systems/kungfu.git@b001740fbd0fff48e37a86c78494432b213bb32c#framework/core/tests/python/test_kfd4_perspective.py",
           "root": "sha256:e07a44456d83bed34b83df02ab94e9562c5c5b4cf52b3f7ae3562370a36d3460",
-          "observedAt": "2026-08-12T02:26:55.549Z",
+          "observedAt": "2026-08-12T03:25:14.764Z",
           "kfdPackageRoot": "sha256:07bea3dacab8cba10901539a5acb958db1ee09738fd424c9933f9baa2187675b"
         }
       ],
       "negativeEvidence": [
         {
           "kind": "negative",
-          "coordinate": "buildchain-product-gate:kfd-4@sha256:b08fec6d7494f2f152fe753f71ea07aa44f8770abc09bc2e28b74b732a480859#kfd-4-negative",
+          "coordinate": "buildchain-product-gate:kfd-4@sha256:f0388899cb86351f1005e977e6ca6819f43fcce9e086df99797a19c0d71a5fac#kfd-4-negative",
           "root": "sha256:c0b00e3e8b78c85a500698e1e41ac910752b2927e2fa5cd734be4b787879a11c",
-          "observedAt": "2026-08-12T02:26:55.549Z",
+          "observedAt": "2026-08-12T03:25:14.764Z",
           "kfdPackageRoot": "sha256:07bea3dacab8cba10901539a5acb958db1ee09738fd424c9933f9baa2187675b"
         }
       ],
       "reviews": [
         {
           "kind": "review",
-          "coordinate": "git+https://github.com/kungfu-systems/kungfu.git@93e12817afd31bba7109acd161f1551d2437caf4#docs/qualification/alpha-ruleset.contract.json",
+          "coordinate": "git+https://github.com/kungfu-systems/kungfu.git@b001740fbd0fff48e37a86c78494432b213bb32c#docs/qualification/alpha-ruleset.contract.json",
           "root": "sha256:fafba639d47a1ade80eab8c2cc453cac2cdb96a6f762627e474c152834c0deef",
-          "observedAt": "2026-08-12T02:26:55.549Z",
+          "observedAt": "2026-08-12T03:25:14.764Z",
           "kfdPackageRoot": "sha256:07bea3dacab8cba10901539a5acb958db1ee09738fd424c9933f9baa2187675b"
         }
       ],
@@ -326,64 +326,64 @@
       "implementationEvidence": [
         {
           "kind": "implementation",
-          "coordinate": "git+https://github.com/kungfu-systems/kungfu.git@93e12817afd31bba7109acd161f1551d2437caf4#docs/architecture/primitive-management-plane.md",
+          "coordinate": "git+https://github.com/kungfu-systems/kungfu.git@b001740fbd0fff48e37a86c78494432b213bb32c#docs/architecture/primitive-management-plane.md",
           "root": "sha256:487177ad3247adbfed6fd1ccdecf7c31a7a6c93387bfba98af41cf1256426bcb",
-          "observedAt": "2026-08-12T02:26:55.549Z",
+          "observedAt": "2026-08-12T03:25:14.764Z",
           "kfdPackageRoot": "sha256:07bea3dacab8cba10901539a5acb958db1ee09738fd424c9933f9baa2187675b"
         },
         {
           "kind": "implementation",
-          "coordinate": "git+https://github.com/kungfu-systems/kungfu.git@93e12817afd31bba7109acd161f1551d2437caf4#framework/core/src/python/kungfu/assignment_orchestration.py",
+          "coordinate": "git+https://github.com/kungfu-systems/kungfu.git@b001740fbd0fff48e37a86c78494432b213bb32c#framework/core/src/python/kungfu/assignment_orchestration.py",
           "root": "sha256:5c49399a62d43e478fe6d538c0ccb945296ebfc3dbbf9a9a914c85cd094ad412",
-          "observedAt": "2026-08-12T02:26:55.549Z",
+          "observedAt": "2026-08-12T03:25:14.764Z",
           "kfdPackageRoot": "sha256:07bea3dacab8cba10901539a5acb958db1ee09738fd424c9933f9baa2187675b"
         },
         {
           "kind": "implementation",
-          "coordinate": "git+https://github.com/kungfu-systems/kungfu.git@93e12817afd31bba7109acd161f1551d2437caf4#framework/primitive/kungfu-primitive-catalog.contract.json",
+          "coordinate": "git+https://github.com/kungfu-systems/kungfu.git@b001740fbd0fff48e37a86c78494432b213bb32c#framework/primitive/kungfu-primitive-catalog.contract.json",
           "root": "sha256:7a80d30af429064b8e12fc241d46e680c41b977c36d18634f1cfd2200d2c893d",
-          "observedAt": "2026-08-12T02:26:55.549Z",
+          "observedAt": "2026-08-12T03:25:14.764Z",
           "kfdPackageRoot": "sha256:07bea3dacab8cba10901539a5acb958db1ee09738fd424c9933f9baa2187675b"
         }
       ],
       "verificationEvidence": [
         {
           "kind": "verification",
-          "coordinate": "buildchain-product-gate:kfd-5@sha256:cd4c3e55bd34999656394fba6f107fa63243d113100897ff26be9a438453d5ec",
-          "root": "sha256:cd4c3e55bd34999656394fba6f107fa63243d113100897ff26be9a438453d5ec",
-          "observedAt": "2026-08-12T02:26:55.549Z",
+          "coordinate": "buildchain-product-gate:kfd-5@sha256:d40ce49111be2c9b72e0145dfca4fa2db5f9c1cd2d51b09fce343d2cc40ecc27",
+          "root": "sha256:d40ce49111be2c9b72e0145dfca4fa2db5f9c1cd2d51b09fce343d2cc40ecc27",
+          "observedAt": "2026-08-12T03:25:14.764Z",
           "kfdPackageRoot": "sha256:07bea3dacab8cba10901539a5acb958db1ee09738fd424c9933f9baa2187675b"
         },
         {
           "kind": "verification",
-          "coordinate": "git+https://github.com/kungfu-systems/kungfu.git@93e12817afd31bba7109acd161f1551d2437caf4#docs/qualification/evidence/assignment-organization-rollout/7aae2c562a/report.json",
+          "coordinate": "git+https://github.com/kungfu-systems/kungfu.git@b001740fbd0fff48e37a86c78494432b213bb32c#docs/qualification/evidence/assignment-organization-rollout/7aae2c562a/report.json",
           "root": "sha256:b852b810293452b277edd79033c71adbdea341aba082c0380bdc60e0e90d0ca4",
-          "observedAt": "2026-08-12T02:26:55.549Z",
+          "observedAt": "2026-08-12T03:25:14.764Z",
           "kfdPackageRoot": "sha256:07bea3dacab8cba10901539a5acb958db1ee09738fd424c9933f9baa2187675b"
         },
         {
           "kind": "verification",
-          "coordinate": "git+https://github.com/kungfu-systems/kungfu.git@93e12817afd31bba7109acd161f1551d2437caf4#framework/core/tests/python/test_assignment_orchestration.py",
+          "coordinate": "git+https://github.com/kungfu-systems/kungfu.git@b001740fbd0fff48e37a86c78494432b213bb32c#framework/core/tests/python/test_assignment_orchestration.py",
           "root": "sha256:362a6b85e1162bb04566e778c03eb511c65ac57035ad794bb893802aa4e6d28c",
-          "observedAt": "2026-08-12T02:26:55.549Z",
+          "observedAt": "2026-08-12T03:25:14.764Z",
           "kfdPackageRoot": "sha256:07bea3dacab8cba10901539a5acb958db1ee09738fd424c9933f9baa2187675b"
         }
       ],
       "negativeEvidence": [
         {
           "kind": "negative",
-          "coordinate": "buildchain-product-gate:kfd-5@sha256:cd4c3e55bd34999656394fba6f107fa63243d113100897ff26be9a438453d5ec#kfd-5-negative",
+          "coordinate": "buildchain-product-gate:kfd-5@sha256:d40ce49111be2c9b72e0145dfca4fa2db5f9c1cd2d51b09fce343d2cc40ecc27#kfd-5-negative",
           "root": "sha256:971b3886cd15e4343c10aa3e125d9a686c5fced4daebf9f8d6c6de1a37cb052a",
-          "observedAt": "2026-08-12T02:26:55.549Z",
+          "observedAt": "2026-08-12T03:25:14.764Z",
           "kfdPackageRoot": "sha256:07bea3dacab8cba10901539a5acb958db1ee09738fd424c9933f9baa2187675b"
         }
       ],
       "reviews": [
         {
           "kind": "review",
-          "coordinate": "git+https://github.com/kungfu-systems/kungfu.git@93e12817afd31bba7109acd161f1551d2437caf4#docs/qualification/evidence/assignment-organization-rollout/7aae2c562a/report.json",
+          "coordinate": "git+https://github.com/kungfu-systems/kungfu.git@b001740fbd0fff48e37a86c78494432b213bb32c#docs/qualification/evidence/assignment-organization-rollout/7aae2c562a/report.json",
           "root": "sha256:b852b810293452b277edd79033c71adbdea341aba082c0380bdc60e0e90d0ca4",
-          "observedAt": "2026-08-12T02:26:55.549Z",
+          "observedAt": "2026-08-12T03:25:14.764Z",
           "kfdPackageRoot": "sha256:07bea3dacab8cba10901539a5acb958db1ee09738fd424c9933f9baa2187675b"
         }
       ],
@@ -422,71 +422,71 @@
       "implementationEvidence": [
         {
           "kind": "implementation",
-          "coordinate": "git+https://github.com/kungfu-systems/kungfu.git@93e12817afd31bba7109acd161f1551d2437caf4#framework/agent-work/kungfu-kfd-7-action-contract.json",
+          "coordinate": "git+https://github.com/kungfu-systems/kungfu.git@b001740fbd0fff48e37a86c78494432b213bb32c#framework/agent-work/kungfu-kfd-7-action-contract.json",
           "root": "sha256:b3d788344e93518bb4fecac6fea05a6fea87707c6325e50bcf01980492309ce0",
-          "observedAt": "2026-08-12T02:26:55.549Z",
+          "observedAt": "2026-08-12T03:25:14.764Z",
           "kfdPackageRoot": "sha256:07bea3dacab8cba10901539a5acb958db1ee09738fd424c9933f9baa2187675b"
         },
         {
           "kind": "implementation",
-          "coordinate": "git+https://github.com/kungfu-systems/kungfu.git@93e12817afd31bba7109acd161f1551d2437caf4#framework/core/architecture/kfd7-release-passport.json",
+          "coordinate": "git+https://github.com/kungfu-systems/kungfu.git@b001740fbd0fff48e37a86c78494432b213bb32c#framework/core/architecture/kfd7-release-passport.json",
           "root": "sha256:2264cec1d9c27fb124c3aaf8b3eb29d8f1833995c3ce6f1675fbccd9c5fefe21",
-          "observedAt": "2026-08-12T02:26:55.549Z",
+          "observedAt": "2026-08-12T03:25:14.764Z",
           "kfdPackageRoot": "sha256:07bea3dacab8cba10901539a5acb958db1ee09738fd424c9933f9baa2187675b"
         }
       ],
       "verificationEvidence": [
         {
           "kind": "verification",
-          "coordinate": "buildchain-product-gate:kfd-7@sha256:2fa983b88924b5974e8b3f090adeee180b2eee959dc6f5e9cc1e3ec5979b087f",
-          "root": "sha256:2fa983b88924b5974e8b3f090adeee180b2eee959dc6f5e9cc1e3ec5979b087f",
-          "observedAt": "2026-08-12T02:26:55.549Z",
+          "coordinate": "buildchain-product-gate:kfd-7@sha256:86653f4862ad7b3c20c02ef5e5dfae6504a369c6494849454f8228abb2e60088",
+          "root": "sha256:86653f4862ad7b3c20c02ef5e5dfae6504a369c6494849454f8228abb2e60088",
+          "observedAt": "2026-08-12T03:25:14.764Z",
           "kfdPackageRoot": "sha256:07bea3dacab8cba10901539a5acb958db1ee09738fd424c9933f9baa2187675b"
         },
         {
           "kind": "verification",
-          "coordinate": "git+https://github.com/kungfu-systems/kungfu.git@93e12817afd31bba7109acd161f1551d2437caf4#framework/agent-work/evidence/kfd-7/kfd-verifier.json",
+          "coordinate": "git+https://github.com/kungfu-systems/kungfu.git@b001740fbd0fff48e37a86c78494432b213bb32c#framework/agent-work/evidence/kfd-7/kfd-verifier.json",
           "root": "sha256:dc1742cd0192870c4dd20a0f519ba2b1717149ab66cbd55d1deaacc1e7f3e4d2",
-          "observedAt": "2026-08-12T02:26:55.549Z",
+          "observedAt": "2026-08-12T03:25:14.764Z",
           "kfdPackageRoot": "sha256:07bea3dacab8cba10901539a5acb958db1ee09738fd424c9933f9baa2187675b"
         },
         {
           "kind": "verification",
-          "coordinate": "git+https://github.com/kungfu-systems/kungfu.git@93e12817afd31bba7109acd161f1551d2437caf4#framework/agent-work/kungfu-kfd-7-release-gate.json",
+          "coordinate": "git+https://github.com/kungfu-systems/kungfu.git@b001740fbd0fff48e37a86c78494432b213bb32c#framework/agent-work/kungfu-kfd-7-release-gate.json",
           "root": "sha256:6487665537ca0acde2ef130dbbf76bcc0476acf148253d302d9d6a2fd0abd812",
-          "observedAt": "2026-08-12T02:26:55.549Z",
+          "observedAt": "2026-08-12T03:25:14.764Z",
           "kfdPackageRoot": "sha256:07bea3dacab8cba10901539a5acb958db1ee09738fd424c9933f9baa2187675b"
         },
         {
           "kind": "verification",
-          "coordinate": "git+https://github.com/kungfu-systems/kungfu.git@93e12817afd31bba7109acd161f1551d2437caf4#framework/core/architecture/kfd7-release-passport.json",
+          "coordinate": "git+https://github.com/kungfu-systems/kungfu.git@b001740fbd0fff48e37a86c78494432b213bb32c#framework/core/architecture/kfd7-release-passport.json",
           "root": "sha256:2264cec1d9c27fb124c3aaf8b3eb29d8f1833995c3ce6f1675fbccd9c5fefe21",
-          "observedAt": "2026-08-12T02:26:55.549Z",
+          "observedAt": "2026-08-12T03:25:14.764Z",
           "kfdPackageRoot": "sha256:07bea3dacab8cba10901539a5acb958db1ee09738fd424c9933f9baa2187675b"
         }
       ],
       "negativeEvidence": [
         {
           "kind": "negative",
-          "coordinate": "buildchain-product-gate:kfd-7@sha256:2fa983b88924b5974e8b3f090adeee180b2eee959dc6f5e9cc1e3ec5979b087f#kfd-7-negative",
+          "coordinate": "buildchain-product-gate:kfd-7@sha256:86653f4862ad7b3c20c02ef5e5dfae6504a369c6494849454f8228abb2e60088#kfd-7-negative",
           "root": "sha256:35b79478d10cd601a54b1c6f6156dcb9fe720147f4588c35643798a759fd3f1e",
-          "observedAt": "2026-08-12T02:26:55.549Z",
+          "observedAt": "2026-08-12T03:25:14.764Z",
           "kfdPackageRoot": "sha256:07bea3dacab8cba10901539a5acb958db1ee09738fd424c9933f9baa2187675b"
         }
       ],
       "reviews": [
         {
           "kind": "review",
-          "coordinate": "buildchain-product-gate:kfd-7@sha256:2fa983b88924b5974e8b3f090adeee180b2eee959dc6f5e9cc1e3ec5979b087f#independent-review",
+          "coordinate": "buildchain-product-gate:kfd-7@sha256:86653f4862ad7b3c20c02ef5e5dfae6504a369c6494849454f8228abb2e60088#independent-review",
           "root": "sha256:6b3955e075322fa1895d345f5fb4cb06518c846e86cf2cb49163cbbd7a6dc52e",
-          "observedAt": "2026-08-12T02:26:55.549Z",
+          "observedAt": "2026-08-12T03:25:14.764Z",
           "kfdPackageRoot": "sha256:07bea3dacab8cba10901539a5acb958db1ee09738fd424c9933f9baa2187675b"
         },
         {
           "kind": "review",
-          "coordinate": "git+https://github.com/kungfu-systems/kungfu.git@93e12817afd31bba7109acd161f1551d2437caf4#framework/agent-work/kungfu-kfd-7-action-contract.json",
+          "coordinate": "git+https://github.com/kungfu-systems/kungfu.git@b001740fbd0fff48e37a86c78494432b213bb32c#framework/agent-work/kungfu-kfd-7-action-contract.json",
           "root": "sha256:b3d788344e93518bb4fecac6fea05a6fea87707c6325e50bcf01980492309ce0",
-          "observedAt": "2026-08-12T02:26:55.549Z",
+          "observedAt": "2026-08-12T03:25:14.764Z",
           "kfdPackageRoot": "sha256:07bea3dacab8cba10901539a5acb958db1ee09738fd424c9933f9baa2187675b"
         }
       ],
@@ -508,18 +508,18 @@
       "implementationEvidence": [
         {
           "kind": "implementation",
-          "coordinate": "git+https://github.com/kungfu-systems/kungfu.git@93e12817afd31bba7109acd161f1551d2437caf4#framework/agent-work/evidence/kfd-7/atlas-staleness-loss.json",
+          "coordinate": "git+https://github.com/kungfu-systems/kungfu.git@b001740fbd0fff48e37a86c78494432b213bb32c#framework/agent-work/evidence/kfd-7/atlas-staleness-loss.json",
           "root": "sha256:df945b2e695457ab021b0d56633086b73c837f71841eb409c6ea70276908e5d1",
-          "observedAt": "2026-08-12T02:26:55.549Z",
+          "observedAt": "2026-08-12T03:25:14.764Z",
           "kfdPackageRoot": "sha256:07bea3dacab8cba10901539a5acb958db1ee09738fd424c9933f9baa2187675b"
         }
       ],
       "verificationEvidence": [
         {
           "kind": "verification",
-          "coordinate": "git+https://github.com/kungfu-systems/kungfu.git@93e12817afd31bba7109acd161f1551d2437caf4#framework/agent-work/evidence/kfd-7/atlas-staleness-loss.json",
+          "coordinate": "git+https://github.com/kungfu-systems/kungfu.git@b001740fbd0fff48e37a86c78494432b213bb32c#framework/agent-work/evidence/kfd-7/atlas-staleness-loss.json",
           "root": "sha256:df945b2e695457ab021b0d56633086b73c837f71841eb409c6ea70276908e5d1",
-          "observedAt": "2026-08-12T02:26:55.549Z",
+          "observedAt": "2026-08-12T03:25:14.764Z",
           "kfdPackageRoot": "sha256:07bea3dacab8cba10901539a5acb958db1ee09738fd424c9933f9baa2187675b"
         }
       ],
@@ -541,18 +541,18 @@
       "implementationEvidence": [
         {
           "kind": "implementation",
-          "coordinate": "git+https://github.com/kungfu-systems/kungfu.git@93e12817afd31bba7109acd161f1551d2437caf4#framework/agent-work/evidence/kfd-7/pursuit-continuity-settlement.json",
+          "coordinate": "git+https://github.com/kungfu-systems/kungfu.git@b001740fbd0fff48e37a86c78494432b213bb32c#framework/agent-work/evidence/kfd-7/pursuit-continuity-settlement.json",
           "root": "sha256:7f18af674c5636a515daea74931b4bc7c0372ba38a74c38e1b0bb20b3072bc67",
-          "observedAt": "2026-08-12T02:26:55.549Z",
+          "observedAt": "2026-08-12T03:25:14.764Z",
           "kfdPackageRoot": "sha256:07bea3dacab8cba10901539a5acb958db1ee09738fd424c9933f9baa2187675b"
         }
       ],
       "verificationEvidence": [
         {
           "kind": "verification",
-          "coordinate": "git+https://github.com/kungfu-systems/kungfu.git@93e12817afd31bba7109acd161f1551d2437caf4#framework/agent-work/evidence/kfd-7/pursuit-continuity-settlement.json",
+          "coordinate": "git+https://github.com/kungfu-systems/kungfu.git@b001740fbd0fff48e37a86c78494432b213bb32c#framework/agent-work/evidence/kfd-7/pursuit-continuity-settlement.json",
           "root": "sha256:7f18af674c5636a515daea74931b4bc7c0372ba38a74c38e1b0bb20b3072bc67",
-          "observedAt": "2026-08-12T02:26:55.549Z",
+          "observedAt": "2026-08-12T03:25:14.764Z",
           "kfdPackageRoot": "sha256:07bea3dacab8cba10901539a5acb958db1ee09738fd424c9933f9baa2187675b"
         }
       ],
@@ -574,18 +574,18 @@
       "implementationEvidence": [
         {
           "kind": "implementation",
-          "coordinate": "git+https://github.com/kungfu-systems/kungfu.git@93e12817afd31bba7109acd161f1551d2437caf4#framework/agent-work/evidence/kfd-7/warrant-decay-revocation.json",
+          "coordinate": "git+https://github.com/kungfu-systems/kungfu.git@b001740fbd0fff48e37a86c78494432b213bb32c#framework/agent-work/evidence/kfd-7/warrant-decay-revocation.json",
           "root": "sha256:f6d15823561abed00ed00e32dd26a8f05468015eb653092f0e7867f7355c31b8",
-          "observedAt": "2026-08-12T02:26:55.549Z",
+          "observedAt": "2026-08-12T03:25:14.764Z",
           "kfdPackageRoot": "sha256:07bea3dacab8cba10901539a5acb958db1ee09738fd424c9933f9baa2187675b"
         }
       ],
       "verificationEvidence": [
         {
           "kind": "verification",
-          "coordinate": "git+https://github.com/kungfu-systems/kungfu.git@93e12817afd31bba7109acd161f1551d2437caf4#framework/agent-work/evidence/kfd-7/warrant-decay-revocation.json",
+          "coordinate": "git+https://github.com/kungfu-systems/kungfu.git@b001740fbd0fff48e37a86c78494432b213bb32c#framework/agent-work/evidence/kfd-7/warrant-decay-revocation.json",
           "root": "sha256:f6d15823561abed00ed00e32dd26a8f05468015eb653092f0e7867f7355c31b8",
-          "observedAt": "2026-08-12T02:26:55.549Z",
+          "observedAt": "2026-08-12T03:25:14.764Z",
           "kfdPackageRoot": "sha256:07bea3dacab8cba10901539a5acb958db1ee09738fd424c9933f9baa2187675b"
         }
       ],
@@ -597,7 +597,7 @@
           "profileId": "kfd-warrant-evidence",
           "profileManifestPath": "profiles/warrant-evidence/manifest.json",
           "profileManifestRoot": "sha256:1032006a7435408761916de291abc8ee239594e70d739f28c3b29b60da75a755",
-          "witnessCoordinate": "kungfu-systems/kungfu@93e12817afd31bba7109acd161f1551d2437caf4#framework/agent-work/evidence/kfd-7/warrant-decay-revocation.json",
+          "witnessCoordinate": "kungfu-systems/kungfu@b001740fbd0fff48e37a86c78494432b213bb32c#framework/agent-work/evidence/kfd-7/warrant-decay-revocation.json",
           "witnessRoot": "sha256:f6d15823561abed00ed00e32dd26a8f05468015eb653092f0e7867f7355c31b8",
           "verifierRoot": "sha256:d15753d39938aa91cc50eb9bfa91dfc013570565a2395fd35d93d4ddda10adea",
           "kfdPackageRoot": "sha256:07bea3dacab8cba10901539a5acb958db1ee09738fd424c9933f9baa2187675b"
@@ -618,18 +618,18 @@
       "implementationEvidence": [
         {
           "kind": "implementation",
-          "coordinate": "git+https://github.com/kungfu-systems/kungfu.git@93e12817afd31bba7109acd161f1551d2437caf4#framework/core/src/python/kungfu/agent/profile-sdk.contract.json",
+          "coordinate": "git+https://github.com/kungfu-systems/kungfu.git@b001740fbd0fff48e37a86c78494432b213bb32c#framework/core/src/python/kungfu/agent/profile-sdk.contract.json",
           "root": "sha256:ec14e1332412ad219570ad36b5d0df3e27fec82f69985367947735fdd364d823",
-          "observedAt": "2026-08-12T02:26:55.549Z",
+          "observedAt": "2026-08-12T03:25:14.764Z",
           "kfdPackageRoot": "sha256:07bea3dacab8cba10901539a5acb958db1ee09738fd424c9933f9baa2187675b"
         }
       ],
       "verificationEvidence": [
         {
           "kind": "verification",
-          "coordinate": "git+https://github.com/kungfu-systems/kungfu.git@93e12817afd31bba7109acd161f1551d2437caf4#framework/core/src/python/kungfu/agent/profile-sdk.contract.json",
+          "coordinate": "git+https://github.com/kungfu-systems/kungfu.git@b001740fbd0fff48e37a86c78494432b213bb32c#framework/core/src/python/kungfu/agent/profile-sdk.contract.json",
           "root": "sha256:ec14e1332412ad219570ad36b5d0df3e27fec82f69985367947735fdd364d823",
-          "observedAt": "2026-08-12T02:26:55.549Z",
+          "observedAt": "2026-08-12T03:25:14.764Z",
           "kfdPackageRoot": "sha256:07bea3dacab8cba10901539a5acb958db1ee09738fd424c9933f9baa2187675b"
         }
       ],
@@ -651,18 +651,18 @@
       "implementationEvidence": [
         {
           "kind": "implementation",
-          "coordinate": "git+https://github.com/kungfu-systems/kungfu.git@93e12817afd31bba7109acd161f1551d2437caf4#framework/core/src/python/kungfu/assignment_orchestration.py",
+          "coordinate": "git+https://github.com/kungfu-systems/kungfu.git@b001740fbd0fff48e37a86c78494432b213bb32c#framework/core/src/python/kungfu/assignment_orchestration.py",
           "root": "sha256:5c49399a62d43e478fe6d538c0ccb945296ebfc3dbbf9a9a914c85cd094ad412",
-          "observedAt": "2026-08-12T02:26:55.549Z",
+          "observedAt": "2026-08-12T03:25:14.764Z",
           "kfdPackageRoot": "sha256:07bea3dacab8cba10901539a5acb958db1ee09738fd424c9933f9baa2187675b"
         }
       ],
       "verificationEvidence": [
         {
           "kind": "verification",
-          "coordinate": "git+https://github.com/kungfu-systems/kungfu.git@93e12817afd31bba7109acd161f1551d2437caf4#framework/core/src/python/kungfu/assignment_orchestration.py",
+          "coordinate": "git+https://github.com/kungfu-systems/kungfu.git@b001740fbd0fff48e37a86c78494432b213bb32c#framework/core/src/python/kungfu/assignment_orchestration.py",
           "root": "sha256:5c49399a62d43e478fe6d538c0ccb945296ebfc3dbbf9a9a914c85cd094ad412",
-          "observedAt": "2026-08-12T02:26:55.549Z",
+          "observedAt": "2026-08-12T03:25:14.764Z",
           "kfdPackageRoot": "sha256:07bea3dacab8cba10901539a5acb958db1ee09738fd424c9933f9baa2187675b"
         }
       ],
@@ -684,18 +684,18 @@
       "implementationEvidence": [
         {
           "kind": "implementation",
-          "coordinate": "git+https://github.com/kungfu-systems/kungfu.git@93e12817afd31bba7109acd161f1551d2437caf4#framework/project-cut/project-cut.contract.json",
+          "coordinate": "git+https://github.com/kungfu-systems/kungfu.git@b001740fbd0fff48e37a86c78494432b213bb32c#framework/project-cut/project-cut.contract.json",
           "root": "sha256:593ce64d41e7979cb908e1e52269d3f9ec550ba9ba3182679f91dfa6457824ee",
-          "observedAt": "2026-08-12T02:26:55.549Z",
+          "observedAt": "2026-08-12T03:25:14.764Z",
           "kfdPackageRoot": "sha256:07bea3dacab8cba10901539a5acb958db1ee09738fd424c9933f9baa2187675b"
         }
       ],
       "verificationEvidence": [
         {
           "kind": "verification",
-          "coordinate": "git+https://github.com/kungfu-systems/kungfu.git@93e12817afd31bba7109acd161f1551d2437caf4#framework/project-cut/project-cut.contract.json",
+          "coordinate": "git+https://github.com/kungfu-systems/kungfu.git@b001740fbd0fff48e37a86c78494432b213bb32c#framework/project-cut/project-cut.contract.json",
           "root": "sha256:593ce64d41e7979cb908e1e52269d3f9ec550ba9ba3182679f91dfa6457824ee",
-          "observedAt": "2026-08-12T02:26:55.549Z",
+          "observedAt": "2026-08-12T03:25:14.764Z",
           "kfdPackageRoot": "sha256:07bea3dacab8cba10901539a5acb958db1ee09738fd424c9933f9baa2187675b"
         }
       ],
