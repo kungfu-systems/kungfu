@@ -37,8 +37,11 @@ const WARRANT = {
   candidateId: ROOT_C,
   fencingToken: ROOT_B,
   generation: 7,
+  phase: 'qualified',
   pullRequestNumber: 42,
   sourceHead: SOURCE,
+  nativeProofRoot: ROOT_A,
+  nativeProofReuseRoot: ROOT_B,
   issuedAt: '2026-08-04T02:00:00.000Z',
   expiresAt: '2026-08-04T03:00:00.000Z',
 };
@@ -160,7 +163,7 @@ function queueView(sourceProofRoot, overrides = {}) {
         pullRequestNumber: 42,
         sourceHead: SOURCE,
         sourceProofRoot,
-        status: 'selected',
+        status: 'qualified',
         ...overrides,
       },
     },
@@ -284,6 +287,28 @@ test('queue lease readback binds revision, Warrant, fence, and exact source', ()
   assert.equal(receipt.fencingToken, WARRANT.fencingToken);
   assert.equal(receipt.generation, WARRANT.generation);
   assert.match(receipt.receiptRoot, /^sha256:[0-9a-f]{64}$/u);
+  assert.throws(
+    () =>
+      verifyQueueAdmissionLease({
+        view: queueView(ROOT_A, { status: 'proving' }),
+        pullRequestNumber: 42,
+        sourceHeadSha: SOURCE,
+        now: '2026-08-04T02:30:00.000Z',
+      }),
+    /not delivery-ready: proving/u,
+  );
+  const provisional = queueView(ROOT_A);
+  provisional.observation.activeWarrant.phase = 'provisional';
+  assert.throws(
+    () =>
+      verifyQueueAdmissionLease({
+        view: provisional,
+        pullRequestNumber: 42,
+        sourceHeadSha: SOURCE,
+        now: '2026-08-04T02:30:00.000Z',
+      }),
+    /not delivery-ready: qualified/u,
+  );
   assert.throws(
     () =>
       verifyQueueAdmissionLease({

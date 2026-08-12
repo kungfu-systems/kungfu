@@ -67,6 +67,15 @@ What carries meaning is the tag — an immutable object pinning a commit, repres
 state is frozen and committed to." The version string inside `package.json` is merely an
 npm-ecosystem projection; if it drifts it is a cosmetic mismatch, not a functional fault.
 
+The tag is also a transport coordinate, not the semantic identity of candidate
+history. The versioned release-provenance contract roots source content with an
+explicit algorithm and relates the candidate to its development Cut, prior Alpha,
+qualification, approval, and authority Facts. Exact commit, tree, ancestry, parent
+count, and parent order remain independently rooted observations. Merge, linear,
+flattened, reordered-parent, and ff-only delivery therefore cannot silently rewrite
+the declared history. Historical v1 objects retain their original roots and verifier;
+v1-to-v2 migration appends an explicit `succeeds` relation and rooted receipt.
+
 **3. A release tag carries weight = code-freeze ⊗ binary distribution, performed
 atomically.** kungfu ships **prebuilt cross-platform binaries** (node-pre-gyp artifacts via
 `prebuilt.libkungfu.cc`, plus the assembled `kungfu` runtime), not source for users to compile. For such

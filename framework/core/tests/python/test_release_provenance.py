@@ -5,7 +5,14 @@ import json
 from pathlib import Path
 
 from kungfu.canonical_json import canonical_json_bytes
-from kungfu.release_provenance import build_candidate, build_promotion, verify
+from kungfu.release_provenance import (
+    build_candidate,
+    build_candidate_v2,
+    build_promotion,
+    migrate_candidate_v1,
+    verify,
+    verify_migration,
+)
 from kungfu.storage.fact_root_canonical import record_root
 
 ROOT = Path(__file__).resolve().parents[4]
@@ -57,6 +64,33 @@ def _promotion(candidate=None, **overrides):
         admission_roots=source["admissionRoots"],
         candidate_ancestry_observed=values["candidateAncestryObserved"],
         legacy_projection=values["legacyProjection"],
+    )
+
+
+def _candidate_v2(**overrides):
+    fixture = _fixture()
+    values = deepcopy(fixture["candidate"])
+    values.update(fixture["v2Candidate"])
+    values.update(overrides)
+    return build_candidate_v2(
+        release_id=values["releaseId"],
+        candidate_id=values["candidateId"],
+        source_content_algorithm=values["sourceContentAlgorithm"],
+        source_content_digest=values["sourceContentDigest"],
+        candidate_commit=values["candidateCommit"],
+        candidate_tree=values["candidateTree"],
+        dev_cut_commit=values["devCutCommit"],
+        dev_cut_tree=values["devCutTree"],
+        previous_alpha_commit=values["previousAlphaCommit"],
+        previous_alpha_tree=values["previousAlphaTree"],
+        dev_cut_root=values["devCutRoot"],
+        previous_alpha_root=values["previousAlphaRoot"],
+        qualification_root=values["qualificationRoot"],
+        approval_root=values["approvalRoot"],
+        authority_root=values["authorityRoot"],
+        contract_root=values["contractRoot"],
+        admission_roots=values["admissionRoots"],
+        observed_parents=values["observedParents"],
     )
 
 
@@ -246,3 +280,133 @@ def test_malformed_container_shapes_return_diagnostics_instead_of_raising():
         report = verify(envelope)
         assert report["ok"] is False, field
         assert report["issues"], field
+
+
+def test_v2_object_root_is_independent_of_zero_one_two_or_many_git_parents():
+    fixture = _fixture()
+    candidates = [
+        _candidate_v2(observedParents=case["observedParents"])
+        for case in fixture["topologyCases"]
+    ]
+
+    assert all(verify(candidate)["ok"] for candidate in candidates)
+    assert {candidate["objectRoot"] for candidate in candidates} == {
+        candidates[0]["objectRoot"]
+    }
+    assert len({candidate["gitProjectionRoot"] for candidate in candidates}) == len(
+        candidates
+    )
+
+
+def test_v2_identical_semantics_are_deterministic_and_history_roots_distinguish():
+    baseline = _candidate_v2()
+    repeated = _candidate_v2()
+    distinct_history = _candidate_v2(devCutRoot="sha256:" + "c" * 64)
+
+    assert baseline["objectRoot"] == repeated["objectRoot"]
+    assert baseline["gitProjectionRoot"] == repeated["gitProjectionRoot"]
+    assert baseline["objectRoot"] != distinct_history["objectRoot"]
+    assert (
+        baseline["gitProjection"]["candidateTree"]
+        == distinct_history["gitProjection"]["candidateTree"]
+    )
+
+
+def test_v2_projection_cannot_override_semantic_history_or_authority():
+    baseline = _candidate_v2()
+    transported = _candidate_v2(
+        candidateCommit="f" * 40,
+        devCutCommit="e" * 40,
+        previousAlphaCommit="d" * 40,
+        observedParents=["d" * 40, "e" * 40, "c" * 40],
+    )
+
+    assert verify(transported)["ok"] is True
+    assert baseline["objectRoot"] == transported["objectRoot"]
+    assert baseline["gitProjectionRoot"] != transported["gitProjectionRoot"]
+    assert transported["gitProjection"]["semanticAuthority"] is False
+    assert (
+        transported["gitProjectionRoot"] not in transported["object"]["materialRoots"]
+    )
+
+
+def test_v2_relations_fail_closed_when_missing_ambiguous_or_conflicting():
+    for mutation, expected in (
+        ("missing", "approved-by-relation-count"),
+        ("ambiguous", "ambiguous-authority"),
+        ("conflicting", "derived-from-relation-mismatch"),
+        ("reordered", "relation-order-mismatch"),
+    ):
+        envelope = deepcopy(_candidate_v2())
+        if mutation == "missing":
+            envelope["relations"] = [
+                row
+                for row in envelope["relations"]
+                if not row["record"]["relationId"].endswith(":approved-by")
+            ]
+        elif mutation == "ambiguous":
+            envelope["relations"].append(
+                deepcopy(
+                    next(
+                        row
+                        for row in envelope["relations"]
+                        if row["record"]["relationId"].endswith(":authorized-by")
+                    )
+                )
+            )
+        else:
+            if mutation == "conflicting":
+                row = next(
+                    row
+                    for row in envelope["relations"]
+                    if row["record"]["relationId"].endswith(":derived-from")
+                )
+                row["record"]["targetRoot"] = "sha256:" + "f" * 64
+                row["root"] = record_root(row["record"])
+            else:
+                envelope["relations"] = list(reversed(envelope["relations"]))
+                envelope["object"]["relationRoots"] = [
+                    row["root"] for row in envelope["relations"]
+                ]
+                envelope["objectRoot"] = record_root(envelope["object"])
+        report = verify(envelope)
+        assert report["ok"] is False, mutation
+        assert expected in report["issues"], (mutation, report)
+
+
+def test_v1_migration_preserves_predecessor_and_emits_verified_successor_receipt():
+    predecessor = _candidate()
+    original_bytes = canonical_json_bytes(predecessor)
+    values = _fixture()["v2Candidate"]
+    bundle = migrate_candidate_v1(
+        predecessor,
+        source_content_algorithm=values["sourceContentAlgorithm"],
+        source_content_digest=values["sourceContentDigest"],
+        approval_root=values["approvalRoot"],
+    )
+
+    assert canonical_json_bytes(predecessor) == original_bytes
+    assert verify(predecessor)["ok"] is True
+    assert verify(bundle["successor"])["ok"] is True
+    assert verify_migration(bundle)["ok"] is True
+    assert (
+        bundle["successorRelation"]["record"]["sourceRoot"]
+        == bundle["successor"]["objectRoot"]
+    )
+    assert (
+        bundle["successorRelation"]["record"]["targetRoot"] == predecessor["objectRoot"]
+    )
+    assert bundle["receipt"]["record"]["priorObjectMutated"] is False
+
+
+def test_v2_malformed_content_and_projection_fail_closed():
+    content = deepcopy(_candidate_v2())
+    content["sourceContent"]["record"]["algorithm"] = "SHA 256"
+    assert "invalid-content" in verify(content)["issues"]
+
+    projection = deepcopy(_candidate_v2())
+    projection["gitProjection"]["candidateTree"] = "not-an-oid"
+    assert verify(projection)["ok"] is False
+
+    tree_drift = _candidate_v2(candidateTree="c" * 40)
+    assert "candidate-tree-mismatch" in verify(tree_drift)["issues"]

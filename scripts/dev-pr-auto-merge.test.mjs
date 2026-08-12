@@ -6,7 +6,10 @@ import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 
-import { runNativeUnderWarrant } from '../framework/dev-delivery/native-under-warrant.mjs';
+import {
+  GitHubNativeStatusClient,
+  runNativeUnderWarrant,
+} from '../framework/dev-delivery/native-under-warrant.mjs';
 
 const workflow = fs.readFileSync(
   '.github/workflows/dev-pr-auto-merge.yml',
@@ -171,6 +174,81 @@ test('Dev behind admission produces and forwards an exact Project Cut replay pro
   );
 });
 
+function githubResponse(status, body) {
+  return {
+    ok: status >= 200 && status < 300,
+    status,
+    async text() {
+      return JSON.stringify(body);
+    },
+  };
+}
+
+test('native status client retries bounded transient fetch failures', async () => {
+  const delays = [];
+  let attempts = 0;
+  const client = new GitHubNativeStatusClient({
+    repository: 'kungfu-systems/kungfu',
+    token: 'test-token',
+    fetchImpl: async () => {
+      attempts += 1;
+      if (attempts < 3) throw new TypeError('fetch failed');
+      return githubResponse(201, { state: 'success' });
+    },
+    sleepImpl: async (delay) => delays.push(delay),
+  });
+  assert.deepEqual(
+    await client.request('/repos/kungfu-systems/kungfu/statuses/head', {
+      method: 'POST',
+      body: { state: 'success' },
+    }),
+    { state: 'success' },
+  );
+  assert.equal(attempts, 3);
+  assert.deepEqual(delays, [1_000, 2_000]);
+});
+
+test('native status client fails semantic API errors without retrying', async () => {
+  let attempts = 0;
+  const client = new GitHubNativeStatusClient({
+    repository: 'kungfu-systems/kungfu',
+    token: 'test-token',
+    fetchImpl: async () => {
+      attempts += 1;
+      return githubResponse(422, { message: 'Validation Failed' });
+    },
+    sleepImpl: async () => assert.fail('semantic failure must not retry'),
+  });
+  await assert.rejects(
+    client.request('/repos/kungfu-systems/kungfu/statuses/head', {
+      method: 'POST',
+      body: { state: 'success' },
+    }),
+    /Validation Failed/u,
+  );
+  assert.equal(attempts, 1);
+});
+
+test('native status client fails closed after bounded retry exhaustion', async () => {
+  const delays = [];
+  let attempts = 0;
+  const client = new GitHubNativeStatusClient({
+    repository: 'kungfu-systems/kungfu',
+    token: 'test-token',
+    fetchImpl: async () => {
+      attempts += 1;
+      throw new TypeError('fetch failed');
+    },
+    sleepImpl: async (delay) => delays.push(delay),
+  });
+  await assert.rejects(
+    client.request('/repos/kungfu-systems/kungfu/statuses/head'),
+    /fetch failed/u,
+  );
+  assert.equal(attempts, 3);
+  assert.deepEqual(delays, [1_000, 2_000]);
+});
+
 function nativeFixture(runStep = () => {}) {
   const cwd = fs.mkdtempSync(path.join(os.tmpdir(), 'kungfu-warrant-native-'));
   const head = '1'.repeat(40);
@@ -250,6 +328,40 @@ test('two-phase native adapter runs both partitions and seals exact-head success
       .receiptRoot,
     receipt.receiptRoot,
   );
+});
+
+test('two-phase native adapter delegates Conan profile setup to the core SDK build', async (t) => {
+  const commands = [];
+  const value = nativeFixture((_cwd, name, args, environment) =>
+    commands.push({ name, args, environment }),
+  );
+  value.dependencies.readPlan = () => ({
+    schema: 'kungfu.core-affected-native-plan/v1',
+    closureComponents: [],
+    sdkQualification: { required: true },
+    devQueueQualification: {
+      shifuWorkspace: { required: false },
+      kfdVerifier: { required: false },
+    },
+  });
+  t.after(() => fs.rmSync(value.cwd, { recursive: true, force: true }));
+
+  await runNativeUnderWarrant(value.options, value.dependencies);
+
+  assert.deepEqual(
+    commands.map(({ name }) => name),
+    [
+      'Plan current affected closure',
+      'Install frozen workspace',
+      'Build Core SDK artifacts',
+      'Pack four-language SDK artifacts',
+      'Qualify installed SDK wire contract',
+    ],
+  );
+  assert.deepEqual(commands[2].args, ['build:core:sdk']);
+  assert.equal(commands[2].environment.CC, 'gcc-14');
+  assert.equal(commands[2].environment.CXX, 'g++-14');
+  assert.equal(commands[2].environment.KUNGFU_BUILDCHAIN_SOURCE_BUILD, '1');
 });
 
 test('two-phase native adapter fails closed and replaces pending with failure', async (t) => {

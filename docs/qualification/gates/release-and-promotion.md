@@ -56,6 +56,21 @@ fail-fast and cancel stale runs for the same pull request. The manual Build
 workflow and preflight workflow expose an explicit diagnostic mode that keeps
 all platform lanes running.
 
+### Topology-independent candidate provenance
+
+The candidate provenance v2 object accepts zero or more observed Git parents.
+Its semantic root binds an algorithm-tagged transport-neutral content root and
+explicit `derived-from`, `acknowledges`, `has-content`, `qualified-by`,
+`approved-by`, `authorized-by`, and `implements-contract` relations. Git commit
+and tree OIDs and any parent sequence are retained in a separately rooted
+`projected-as` observation; they cannot supply or override those semantic roots.
+
+The v1 reader remains fail-closed and byte-compatible. Migration never rewrites
+the predecessor: it emits one independently verifiable v2 successor, a rooted
+`succeeds` relation, and a migration receipt binding both object and projection
+roots. This producer/API stage grants no publication or admission-default
+authority and does not change release workflow topology.
+
 ### Fresh GitHub-hosted functional matrix
 
 Formal Alpha and Release candidates execute credential-free Linux x64, Linux

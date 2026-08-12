@@ -10,6 +10,15 @@ import { pathToFileURL } from 'node:url';
 import { digest } from '../../scripts/affected-native-proof.mjs';
 
 const SHA = /^[0-9a-f]{40}$/u;
+const RETRYABLE_HTTP_STATUSES = new Set([429, 500, 502, 503, 504]);
+const RETRYABLE_NETWORK_CODES = new Set([
+  'EAI_AGAIN',
+  'ECONNRESET',
+  'ETIMEDOUT',
+  'UND_ERR_CONNECT_TIMEOUT',
+  'UND_ERR_HEADERS_TIMEOUT',
+  'UND_ERR_SOCKET',
+]);
 
 function flag(args, name, fallback = '') {
   const index = args.indexOf(`--${name}`);
@@ -32,12 +41,32 @@ function positiveInteger(value, label) {
   return parsed;
 }
 
+function nonNegativeInteger(value, label) {
+  const parsed = Number(value);
+  if (!Number.isInteger(parsed) || parsed < 0)
+    throw new Error(`${label} must be a non-negative integer`);
+  return parsed;
+}
+
+function retryableNetworkError(error) {
+  if (error instanceof TypeError) return true;
+  const code = String(error?.code || error?.cause?.code || '');
+  return RETRYABLE_NETWORK_CODES.has(code);
+}
+
+function defaultSleep(milliseconds) {
+  return new Promise((resolve) => setTimeout(resolve, milliseconds));
+}
+
 export class GitHubNativeStatusClient {
   constructor({
     repository,
     token,
     apiUrl = 'https://api.github.com',
     fetchImpl = globalThis.fetch,
+    requestAttempts = 3,
+    retryDelayMs = 1_000,
+    sleepImpl = defaultSleep,
   }) {
     if (!repository) throw new Error('repository is required');
     if (!token) throw new Error('GITHUB_TOKEN is required');
@@ -45,24 +74,48 @@ export class GitHubNativeStatusClient {
     this.token = token;
     this.apiUrl = apiUrl.replace(/\/+$/u, '');
     this.fetch = fetchImpl;
+    this.requestAttempts = positiveInteger(
+      requestAttempts,
+      'GitHub request attempts',
+    );
+    this.retryDelayMs = nonNegativeInteger(retryDelayMs, 'GitHub retry delay');
+    this.sleep = sleepImpl;
   }
 
   async request(requestPath, { method = 'GET', body } = {}) {
-    const response = await this.fetch(`${this.apiUrl}${requestPath}`, {
-      method,
-      headers: {
-        accept: 'application/vnd.github+json',
-        authorization: `Bearer ${this.token}`,
-        'content-type': 'application/json',
-        'x-github-api-version': '2022-11-28',
-      },
-      body: body === undefined ? undefined : JSON.stringify(body),
-    });
-    const raw = await response.text();
-    const data = raw ? JSON.parse(raw) : null;
-    if (!response.ok)
+    for (let attempt = 1; attempt <= this.requestAttempts; attempt += 1) {
+      let response;
+      let raw;
+      try {
+        response = await this.fetch(`${this.apiUrl}${requestPath}`, {
+          method,
+          headers: {
+            accept: 'application/vnd.github+json',
+            authorization: `Bearer ${this.token}`,
+            'content-type': 'application/json',
+            'x-github-api-version': '2022-11-28',
+          },
+          body: body === undefined ? undefined : JSON.stringify(body),
+        });
+        raw = await response.text();
+      } catch (error) {
+        if (attempt === this.requestAttempts || !retryableNetworkError(error))
+          throw error;
+        await this.sleep(this.retryDelayMs * 2 ** (attempt - 1));
+        continue;
+      }
+      const data = raw ? JSON.parse(raw) : null;
+      if (response.ok) return data;
+      if (
+        attempt < this.requestAttempts &&
+        RETRYABLE_HTTP_STATUSES.has(response.status)
+      ) {
+        await this.sleep(this.retryDelayMs * 2 ** (attempt - 1));
+        continue;
+      }
       throw new Error(data?.message || `${method} ${requestPath} failed`);
-    return data;
+    }
+    throw new Error(`${method} ${requestPath} exhausted retry attempts`);
   }
 
   async requirePullRequest(number, expectedHead, targetBranch) {
@@ -223,6 +276,7 @@ export async function runNativeUnderWarrant(options, dependencies = {}) {
       const cmakeJs = sdkPath(cwd);
       const sdkEnvironment = {
         ...toolchainEnvironment,
+        KUNGFU_BUILDCHAIN_SOURCE_BUILD: '1',
         PATH: cmakeJs ? `${cmakeJs}:${process.env.PATH}` : process.env.PATH,
       };
       execute('Build Core SDK artifacts', ['build:core:sdk'], sdkEnvironment);
