@@ -386,6 +386,10 @@ test('workflow consumes exact Buildchain Source and Integration Proofs', () => {
   );
   assert.match(
     aggregate,
+    /buildchain\.mjs dev proof native[\s\S]*--environment-root[\s\S]*--qualified-base[\s\S]*--shard-evidence-roots-json/u,
+  );
+  assert.match(
+    aggregate,
     /Consume Warrant and record exact Integration Delivery Proof[\s\S]*dev warrant observe[\s\S]*affected-native-proof\.mjs queue-lease-verify[\s\S]*affected-native-proof\.mjs integration-input[\s\S]*dev proof integration[\s\S]*--warrant-result/u,
   );
   assert.match(aggregate, /--branch "\$protected_base"/u);
