@@ -311,6 +311,7 @@ test('declared discovery routes are zero-write in a cold read-only fixture', (t)
     '.buildchain/kfd/kfd-1/verify-result.json',
     '.buildchain/kfd/support-matrix.json',
     '.buildchain/kfd/kfd-2/registry.json',
+    '.buildchain/kfd/kfd-2/buildchain-claim-args.txt',
     '.buildchain/kfd/kfd-2/release-claims.json',
     '.buildchain/kfd/kfd-2/claims/agent-onboarding-pack.json',
     '.buildchain/kfd/kfd-1/documentation-consumers.witness.json',
@@ -327,6 +328,7 @@ test('declared discovery routes are zero-write in a cold read-only fixture', (t)
     'developer/sdk/kfd/kfd-1/contract-world.witness.json',
     'developer/sdk/kfd/kfd-1/release-gate.json',
     'developer/sdk/kfd/kfd-1/verify-result.json',
+    'developer/sdk/kfd/kfd-2/buildchain-claim-args.txt',
     'developer/sdk/kfd/support-matrix.json',
     'docs/qualification/kfd-support-matrix.md',
     '.github/actions/qualified-core-candidate-build/action.yml',
@@ -370,6 +372,7 @@ test('declared discovery routes are zero-write in a cold read-only fixture', (t)
     'docs/architecture/adr-map.md',
     'framework/release/publication-surfaces.json',
     'framework/release/publication-control-plane.mjs',
+    'scripts/release-publication-control-plane.test.mjs',
     'framework/release/kungfu-release-provenance.contract.json',
     'config/release/kungfu-release-provenance.contract.json',
     'framework/release/kungfu-temporal-release-admission.contract.json',
@@ -833,6 +836,9 @@ test('declared discovery routes are zero-write in a cold read-only fixture', (t)
   }
   for (const relative of evidencePaths) copyFile(ROOT, fixture, relative);
   for (const relative of [
+    'node_modules/@kungfu-tech/kfd/package.json',
+    'node_modules/@kungfu-tech/kfd/standards.json',
+    'node_modules/@kungfu-tech/kfd/kfd.release.json',
     'node_modules/@kungfu-tech/buildchain/package.json',
     'node_modules/@kungfu-tech/buildchain/dist/site/buildchain-contract.json',
     'node_modules/@kungfu-tech/buildchain/dist/site/publication-authority-registry.json',
