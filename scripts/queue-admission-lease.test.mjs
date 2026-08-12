@@ -6,6 +6,7 @@ import path from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 
+import { digest, verifyQueueAdmissionLease } from './affected-native-proof.mjs';
 import {
   queueAdmissionRequiredContexts,
   validateDevRequiredLatencyBaseline,
@@ -13,6 +14,7 @@ import {
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const WARRANT_RUNTIME_SHA = '5cca9d518133b30ff10aa47b8cf237d548bee25e';
+const SOURCE_HEAD = '2'.repeat(40);
 const CONTRACT = JSON.parse(
   fs.readFileSync(
     path.join(
@@ -25,6 +27,89 @@ const CONTRACT = JSON.parse(
     'utf8',
   ),
 );
+
+function qualifiedWarrantView(overrides = {}) {
+  const candidateId = digest({ candidate: 'qualified' });
+  const sourceProofRoot = digest({ proof: 'source' });
+  const candidate = {
+    pullRequestNumber: 1728,
+    sourceHead: SOURCE_HEAD,
+    candidateId,
+    sourceProofRoot,
+    status: 'qualified',
+    ...(overrides.candidate || {}),
+  };
+  const warrant = {
+    pullRequestNumber: 1728,
+    sourceHead: SOURCE_HEAD,
+    candidateId,
+    sourceProofRoot,
+    phase: 'qualified',
+    nativeProofRoot: digest({ proof: 'native' }),
+    nativeProofReuseRoot: digest({ proof: 'native-reuse' }),
+    fencingToken: digest({ fence: 'qualified' }),
+    generation: 7,
+    expiresAt: '2026-08-12T12:00:00.000Z',
+    ...(overrides.warrant || {}),
+  };
+  return {
+    schema: 'kungfu.buildchain.dev-delivery-command-result/v1',
+    observation: {
+      schema: 'kungfu.buildchain.dev-delivery-queue-observation/v1',
+      repository: 'kungfu-systems/kungfu',
+      protectedBase: 'dev/v4/v4.0',
+      stateRoot: digest({ queue: 'qualified' }),
+      observedAt: '2026-08-12T11:00:00.000Z',
+      activeCandidate: candidate,
+      activeWarrant: warrant,
+    },
+  };
+}
+
+test('queue admission consumes only an exact qualified two-phase Warrant', () => {
+  const receipt = verifyQueueAdmissionLease({
+    view: qualifiedWarrantView(),
+    pullRequestNumber: 1728,
+    sourceHeadSha: SOURCE_HEAD,
+    now: '2026-08-12T11:30:00.000Z',
+  });
+  assert.equal(receipt.candidateState, 'qualified');
+  assert.equal(receipt.nativeProofRoot, digest({ proof: 'native' }));
+  assert.equal(receipt.nativeProofReuseRoot, digest({ proof: 'native-reuse' }));
+});
+
+test('queue admission rejects provisional and legacy single-phase states', () => {
+  for (const status of ['selected', 'proving', 'waiting', 'blocked']) {
+    assert.throws(
+      () =>
+        verifyQueueAdmissionLease({
+          view: qualifiedWarrantView({
+            candidate: { status },
+            warrant: { phase: 'provisional' },
+          }),
+          pullRequestNumber: 1728,
+          sourceHeadSha: SOURCE_HEAD,
+          now: '2026-08-12T11:30:00.000Z',
+        }),
+      /not delivery-ready/u,
+    );
+  }
+});
+
+test('queue admission rejects qualified state without native proof binding', () => {
+  assert.throws(
+    () =>
+      verifyQueueAdmissionLease({
+        view: qualifiedWarrantView({
+          warrant: { nativeProofRoot: undefined },
+        }),
+        pullRequestNumber: 1728,
+        sourceHeadSha: SOURCE_HEAD,
+        now: '2026-08-12T11:30:00.000Z',
+      }),
+    /nativeProofRoot/u,
+  );
+});
 
 test('queue admission lease has distinct PR-head and merge-group authorities', () => {
   assert.equal(CONTRACT.schema, 'kungfu.dev-queue-admission/v1');

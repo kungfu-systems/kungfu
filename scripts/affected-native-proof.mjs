@@ -251,13 +251,13 @@ export function verifyQueueAdmissionLease(input = {}) {
     pullRequestNumber,
     sourceHeadSha,
   );
-  if (
-    !['selected', 'proving', 'waiting', 'blocked'].includes(candidate.status)
-  ) {
+  if (warrant.phase !== 'qualified' || candidate.status !== 'qualified') {
     throw new Error(
       `active Warrant candidate is not delivery-ready: ${candidate.status}`,
     );
   }
+  for (const field of ['nativeProofRoot', 'nativeProofReuseRoot'])
+    requireRoot(warrant[field], `Warrant ${field}`);
   const observedAt = new Date(input.now || observation.observedAt).getTime();
   if (
     !Number.isFinite(observedAt) ||
@@ -275,6 +275,8 @@ export function verifyQueueAdmissionLease(input = {}) {
     sourceHeadSha,
     candidateId: warrant.candidateId,
     sourceProofRoot: candidate.sourceProofRoot,
+    nativeProofRoot: warrant.nativeProofRoot,
+    nativeProofReuseRoot: warrant.nativeProofReuseRoot,
     fencingToken: warrant.fencingToken,
     generation: warrant.generation,
     candidateState: candidate.status,
