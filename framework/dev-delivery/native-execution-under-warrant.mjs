@@ -40,6 +40,12 @@ function phases(value) {
   return new Set(parsed);
 }
 
+function concurrentStateWrite(error) {
+  return /Update is not a fast forward|expected-old state drift/u.test(
+    String(error?.message || error),
+  );
+}
+
 function assertLiveBinding(result, expected, observedAt) {
   const observation = result?.observation;
   const warrant = observation?.activeWarrant;
@@ -145,6 +151,10 @@ export async function runNativeExecutionUnderWarrant(
     ? dependencies
     : await runtimeDependencies(path.resolve(options.runtimeRoot));
   const clock = dependencies.now || (() => new Date().toISOString());
+  const wait =
+    dependencies.wait ||
+    ((milliseconds) =>
+      new Promise((resolve) => setTimeout(resolve, milliseconds)));
   const initial = await runtime.observe({ repository, branch });
   const warrant = assertLiveBinding(
     initial,
@@ -162,14 +172,24 @@ export async function runNativeExecutionUnderWarrant(
   };
 
   const heartbeat = async () => {
-    const result = await runtime.heartbeat({
-      repository,
-      branch,
-      fencingToken: binding.fencingToken,
-      leaseGeneration: binding.leaseGeneration,
-      leaseSeconds,
-    });
-    assertLiveBinding(result, { ...binding, allowedPhases }, clock());
+    for (let attempt = 1; attempt <= 5; attempt += 1) {
+      try {
+        const result = await runtime.heartbeat({
+          repository,
+          branch,
+          fencingToken: binding.fencingToken,
+          leaseGeneration: binding.leaseGeneration,
+          leaseSeconds,
+        });
+        assertLiveBinding(result, { ...binding, allowedPhases }, clock());
+        return;
+      } catch (error) {
+        if (!concurrentStateWrite(error) || attempt === 5) throw error;
+        const latest = await runtime.observe({ repository, branch });
+        assertLiveBinding(latest, { ...binding, allowedPhases }, clock());
+        await wait(200 * 2 ** (attempt - 1));
+      }
+    }
   };
   const native = await runtime.runNative({
     command: options.command,

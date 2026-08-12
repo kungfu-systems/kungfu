@@ -131,3 +131,47 @@ test('fence change during execution fails closed', async () => {
     /stale Delivery Warrant fencing token/u,
   );
 });
+
+test('same-fence concurrent heartbeat write is observed and retried', async () => {
+  const value = fixture();
+  let attempts = 0;
+  let waits = 0;
+  value.dependencies.heartbeat = async () => {
+    attempts += 1;
+    if (attempts === 1) throw new Error('Update is not a fast forward');
+    return observation();
+  };
+  value.dependencies.wait = async (milliseconds) => {
+    waits += 1;
+    assert.equal(milliseconds, 200);
+  };
+  const receipt = await runNativeExecutionUnderWarrant(
+    options(),
+    value.dependencies,
+  );
+  assert.equal(value.spawned, true);
+  assert.equal(waits, 1);
+  assert.equal(receipt.fencingToken, TOKEN);
+});
+
+test('concurrent heartbeat retry fails closed when the fence changed', async () => {
+  const value = fixture();
+  let observations = 0;
+  value.dependencies.observe = async () => {
+    observations += 1;
+    return observations === 1
+      ? observation()
+      : observation({ fencingToken: `sha256:${'6'.repeat(64)}` });
+  };
+  value.dependencies.heartbeat = async () => {
+    throw new Error('Update is not a fast forward');
+  };
+  value.dependencies.wait = async () => {
+    assert.fail('changed fence must not be retried');
+  };
+  await assert.rejects(
+    runNativeExecutionUnderWarrant(options(), value.dependencies),
+    /stale Delivery Warrant fencing token/u,
+  );
+  assert.equal(value.spawned, false);
+});
