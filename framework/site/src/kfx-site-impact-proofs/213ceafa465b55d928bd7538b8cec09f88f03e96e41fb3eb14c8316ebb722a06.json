@@ -1,0 +1,376 @@
+{
+  "contract": "kungfu.kfx-site-impact-proof/v1",
+  "baseRevision": "6f9cfe1659cf2536e0e426bfd0224b5c140b9d2e",
+  "changeRoot": "sha256:e891fba1d88b1c353f7ee1b4f4ba563acac3a38eb5052021c57083840258c613",
+  "changes": [
+    {
+      "baseContentRoot": "sha256:b232b82e3bc0ac15ede89d816b4c745a1ade5f7277d16ae5adc544aa4dbdc911",
+      "contentRoot": "sha256:ce58d51aa23d2c1d8429b1747b28937e171e373769b25e4a4c29e29f3e113838",
+      "path": ".buildchain/kfd/kfd-1/contract-world.witness.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:dda00ff148593ac007fedbaf4aa69c0dd6c5973ccf1fb6af5baf3c4666000d2a",
+      "contentRoot": "sha256:811d51ab582ba2eb503df852defc5be84e51f3271443f0fdb11666f84a489322",
+      "path": ".buildchain/kfd/kfd-1/release-gate.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:f8a8e5c3be1fa80ec3112c2feea80e2974de5bd1a0d20a89ac3c669b51153ff6",
+      "contentRoot": "sha256:19edd81490c81701ee26b1fa08ce282a0f0876d0c3fa93b15c992794d39863bb",
+      "path": ".buildchain/kfd/kfd-2/release-claims.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:329db9fc052ef41046ff0b4626e75fcc32da697f223d085f4ff628d0e68dde3b",
+      "contentRoot": "sha256:d5722ca0a7220ab585645c97868489ac72a2b517a0db1d244575ced124da476e",
+      "path": ".buildchain/kfd/kfd-3/collaboration-interface.artifact.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:9068a8b769c232e71618795bfb100e75c0a790bba3252c5d4c307312c9b66f96",
+      "contentRoot": "sha256:9780013753a774187e050c5a37a8b8a8c45d434dc6bfb0714b6acab9bf8c029e",
+      "path": ".buildchain/kfd/kfd-3/collaboration-interface.prebuild.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:ab6e22a01ba276e15b775d610a9accf1972299a81f0525906809f1fc5274b8a2",
+      "contentRoot": "sha256:f878fff9933338e62ddadb4e09ffdfd80e1b4034b1908560b861c73e5f5e38bb",
+      "path": ".buildchain/kfd/kfd-3/surfaces.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:87117b93b5a498db2921648ef7e699e359b3d7207c7011d0ca1ad79af11d8c01",
+      "contentRoot": "sha256:1fd328cc3e8448a534836507c88cd31f318956058132bebbeb699ce0fd9ada6f",
+      "path": ".buildchain/kfd/support-matrix.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:c0542922f584c794233bc809fdb41cebc2af5b9fc36e25be34ae4c8810ec9308",
+      "contentRoot": "sha256:2ab27e12ab0e36de2fb55507c9d30fc66652693109d2c4842824d4a0132865b3",
+      "path": ".xinfa/portable-atlas-classification.json.gz",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:99480ffce25a9a87d0182667b99b22735f8b598bff93431c7c104d8ac662d5eb",
+      "contentRoot": "sha256:7c24827ac2e23f3d0bb98683d6e850f77bdc91dea4941db79d9630001cbe0819",
+      "path": ".xinfa/product-atlas-bundle.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:eae8bc38c312d205cd5507c4f2cc3b293e3eb61564bebeccaffb0755731fce97",
+      "contentRoot": "sha256:34e4775cf195b47d7ed85636ead0f0864f88cdd9ca58dbfb3d05a4075c77c9b8",
+      "path": "config/kungfu-agent-first-canonical-policy.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:00ae9385e093fd6bbbe689e686cc8fda5e793b12146467f3deb0b1028ad37124",
+      "contentRoot": "sha256:b15570df99e7115019e6fcc314aec6f2bf6a806a3675e291474e6d0116b27e85",
+      "path": "config/kungfu-contracts.registry.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:2f3c1cf8701f82c5759d363604fb15c819d253706373d36a8d880928325e570a",
+      "contentRoot": "sha256:307934f964f5d084c31594315a7b4de8421ad084120bd956576a24a9565bae8c",
+      "path": "config/kungfu-skill.contract.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:7a80d30af429064b8e12fc241d46e680c41b977c36d18634f1cfd2200d2c893d",
+      "contentRoot": "sha256:c766fb19e02ad5a180c5271f40b150d3229d0f15d0e981e4d768737a10206eda",
+      "path": "config/primitive/kungfu-primitive-catalog.contract.json",
+      "status": "modified"
+    },
+    {
+      "contentRoot": "sha256:5707f7349186f835a0d272e6fc5413fed23e1948308eb30187bf45622446ee5f",
+      "path": "deliverables/2026-08-11-kungfu-skill-multi-surface-runtime-audit.txt",
+      "status": "added"
+    },
+    {
+      "baseContentRoot": "sha256:b232b82e3bc0ac15ede89d816b4c745a1ade5f7277d16ae5adc544aa4dbdc911",
+      "contentRoot": "sha256:ce58d51aa23d2c1d8429b1747b28937e171e373769b25e4a4c29e29f3e113838",
+      "path": "developer/sdk/kfd/kfd-1/contract-world.witness.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:dda00ff148593ac007fedbaf4aa69c0dd6c5973ccf1fb6af5baf3c4666000d2a",
+      "contentRoot": "sha256:811d51ab582ba2eb503df852defc5be84e51f3271443f0fdb11666f84a489322",
+      "path": "developer/sdk/kfd/kfd-1/release-gate.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:f8a8e5c3be1fa80ec3112c2feea80e2974de5bd1a0d20a89ac3c669b51153ff6",
+      "contentRoot": "sha256:19edd81490c81701ee26b1fa08ce282a0f0876d0c3fa93b15c992794d39863bb",
+      "path": "developer/sdk/kfd/kfd-2/release-claims.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:ab6e22a01ba276e15b775d610a9accf1972299a81f0525906809f1fc5274b8a2",
+      "contentRoot": "sha256:f878fff9933338e62ddadb4e09ffdfd80e1b4034b1908560b861c73e5f5e38bb",
+      "path": "developer/sdk/kfd/kfd-3-surfaces.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:594e216cdfe01260137b5b124376bfa6de8135bd59b0d1f026ba311611d35a2f",
+      "contentRoot": "sha256:1fd328cc3e8448a534836507c88cd31f318956058132bebbeb699ce0fd9ada6f",
+      "path": "developer/sdk/kfd/support-matrix.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:ca6b5d5ef7e3c4af2084f4e1fe195376746107f9c19f0ce87789dd09447b0288",
+      "contentRoot": "sha256:5b1f29bd212be3a4c0e14f3de5b6c1dc7b20b46ac2689b31df805302d5f7cb03",
+      "path": "developer/sdk/kfd/upstream-aggregate.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:222c9a95f161a4cc46f8f7bf593f8d932cd34a2f7667f8776991093d0e38e854",
+      "contentRoot": "sha256:71c80c077500ebcbf2ea6d8fd0f3766ba6e3235b3f3146008512ebb00588e164",
+      "path": "docs/adr/KF-ADR-019f86da-4f90-74c2-9cbb-24f1c34303bf.md",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:3061ab89bea6a9996f1d0b1293abf11cd0151e21e0a8215665d5c414491fc478",
+      "contentRoot": "sha256:d0b310fadf57630b9825fc5939d8c8a8c8aa60bd28ccfbf5d714b35b55656c8f",
+      "path": "docs/architecture/adr-map.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:3cd4353cf2157d31aaef82b981f637075d1b7f713825a5d31a78e04001b36b7c",
+      "contentRoot": "sha256:c2177fa32e45658cce41f4f3a9bda62c24db36aea48af5d93556ffe27b2b3cef",
+      "path": "docs/architecture/adr-map.md",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:dc9011f617e97840ad85d0b1c151a3f293a5de1bab0b93e16d90761dec13dec0",
+      "contentRoot": "sha256:14bda49a59123a0c9e1fcb0931af768eaa1c6a7e71c1e4dab514758928ec42fa",
+      "path": "docs/document-metadata.contract.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:275f80dda08933eb6b63df1ad21c7ad1de0b288f62966c09f991437769bf512e",
+      "contentRoot": "sha256:c46e24bb31a915f29676bfa588e8adf04085104bc7ae0fbb47367e3817cf2c87",
+      "path": "extensions/system/skill-manager/src/view/index.tsx",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:47d24c8d9bd093abd443cc3781c7fcd2b747aeb9b14dcf98709e280791e33bf2",
+      "contentRoot": "sha256:9386bb2f1b65adc666adacb415fb19a90a93f37240a5ce199e00a6a7adf5b445",
+      "path": "framework/agent-session/schemas/agent-session-core.schema.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:4eed93fd318eeb9b3ba0f4b76498123597ada71a966ae2175960f368a0edb501",
+      "contentRoot": "sha256:d14df0d9f45494eea1aa0b9aa3218192b029db68423b25e004c7aa21f4a200ca",
+      "path": "framework/agent-session/src/session-contract.mjs",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:a9f1d4a62380a2d4944524d75ba0a4d3adb766468734500472397b3a87b39985",
+      "contentRoot": "sha256:42b99706e44e94f3b52d99195d4ae2e44c26f73a712c8b805cb38122191294e9",
+      "path": "framework/agent-session/tests/session-contract.test.mjs",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:0f6100ed8d4864305bd9677d0fd2d4f7e8e1d51a666c1fd78ece4779a1fa8396",
+      "contentRoot": "sha256:861f37e2d091680b1a813a41b4d08c10f70fc849260804231bc6e93d0db0e58b",
+      "path": "framework/config/kungfu-config.contract.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:eae8bc38c312d205cd5507c4f2cc3b293e3eb61564bebeccaffb0755731fce97",
+      "contentRoot": "sha256:34e4775cf195b47d7ed85636ead0f0864f88cdd9ca58dbfb3d05a4075c77c9b8",
+      "path": "framework/contract/kungfu-agent-first-canonical-policy.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:00ae9385e093fd6bbbe689e686cc8fda5e793b12146467f3deb0b1028ad37124",
+      "contentRoot": "sha256:b15570df99e7115019e6fcc314aec6f2bf6a806a3675e291474e6d0116b27e85",
+      "path": "framework/contract/kungfu-contracts.registry.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:f9feb0675c0da9d8ae711229fdbb1f2c8ca0804feec25418a44c3c2a9191e85c",
+      "contentRoot": "sha256:3a725d0d57238173f96152c2f2a48a972eac67c5f9af68830255349b0e06cedb",
+      "path": "framework/core/src/libkungfu/include/kungfu/sdk/generated/primitive_catalog_v2.hpp",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:5143c4ccf30ddcb4cc07266b586e1a647a58820667a1eff2a32100a7d4c98096",
+      "contentRoot": "sha256:771432b65305c10aa18cc64d85b352d235fd99565942310df929bce1cd70aea3",
+      "path": "framework/core/src/libkungfu/src/runtime/storage/domain_dispatch.cpp",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:0226c1e6d374e232ef02d7467fd302b8e4c75ac52425074873bc94ee1422d81e",
+      "contentRoot": "sha256:cdb330dbd00181e696a28d107af659abfe8ea9febad3395bc30e2ce74628f3f2",
+      "path": "framework/core/src/python/kungfu/agent/native_launch.py",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:8224c8fcc110f6160b4f302c3e4cf40b6e269f778f17072ba5529f9ec10b47c4",
+      "contentRoot": "sha256:6163dbc32115e18b719d874263e1477570296b5c52cfd627953b0c3812e8724f",
+      "path": "framework/core/src/python/kungfu/agent/run_agent.py",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:79ff065b9dcf83c2bd505e98e638f6f2893e9701fa93ca9fb7fb1fab4451baec",
+      "contentRoot": "sha256:2bbc9bb58ca703515dbdcc1960440cd45b0c710415cb29c9243aae0977a6f774",
+      "path": "framework/core/src/python/kungfu/agent/session_contract.py",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:2b9c0e7501d9cfd41cb3ce3eb89b616650d52a5bb6d996fe325aae44815fe3a7",
+      "contentRoot": "sha256:1c88a4f1532ee2ab21512be69734e4e712ffa24c6b532aa6f6612caba45b302b",
+      "path": "framework/core/src/python/kungfu/cli/commands/skill.py",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:b8fbf9d261e7535157d4a8d81d6cd2980472b1793fff7ca8ecd70e21fb8a0ca2",
+      "contentRoot": "sha256:dfa2ce30b88a60f2c21cd9c162df3e6521cd2e0022e9b66db1752382bb324d46",
+      "path": "framework/core/src/python/kungfu/cli/tui_runtime.py",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:9fe772a1932552a4374f11d652280c2e1d5bc86ae6baa0b0ee8d6a450d0445d5",
+      "contentRoot": "sha256:e7bebe4180736d0c12073b9892bb6ee841078275451bf39b0b2afdd93a49d6fa",
+      "path": "framework/core/src/python/kungfu/profile_composition.py",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:6d41dca8c4399e44c7822f0006df7be7ce86ce6b33e51aebc9c9553493d76a00",
+      "contentRoot": "sha256:befcf6d65d95276d8195b8099da462b517216a2ae44281ccc9aed20482e449f2",
+      "path": "framework/core/src/python/kungfu/profile_sdk_kfd3.py",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:65c0001029cad26f11383d3f9458ed797af0e27fab27e7db5770b1a1ff19d1d3",
+      "contentRoot": "sha256:0eb0a3984d61a5a4239d40b1a3b0ae438f6044199170c21943e313dac15a37fb",
+      "path": "framework/core/src/python/kungfu/rewind/managed_cli.py",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:1a7f8b16bfda26114d5bd624d91de6eae358ccefe45e58f177850755d91743e3",
+      "contentRoot": "sha256:aef8646cfc345321363cd8fd0ab30e2a23de7a3fc7a9cd89a59662b5f3862693",
+      "path": "framework/core/src/python/kungfu/skill/__init__.py",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:9a1f3467a59cc613fa1b23fec3da35a09a14befaf742287152606b1a71e900f4",
+      "contentRoot": "sha256:d1be4de4cddc9a0f561af60aabbb2b5227b5810c6b310b098f52dca1b7c2b75c",
+      "path": "framework/core/src/python/kungfu/skill/audit.py",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:ab9e30fdb258bcfbb1bbefba03191369e0cbdfd973564739d3b91be59a5aaa9b",
+      "contentRoot": "sha256:7c2cef68d9faf6630c04ba6f4a40ad2ed361b1d408bc419caaebcbbd32569503",
+      "path": "framework/core/src/python/kungfu/skill/contract.py",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:920b4d4367760a57573c187e7d4519a050255dc45ccf421cbfc2c2ada2fea989",
+      "contentRoot": "sha256:c30e830f1789116e4288d3867ad213471ff495a68b00d232c4bcf641ad3699d1",
+      "path": "framework/core/tests/python/test_agent_console_contract.py",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:f5b68ed3bc58db9d4d916839d52aac0194d028dac685a0cfd2714d09b2746cce",
+      "contentRoot": "sha256:2288709b474491e7057b84b23645e49327e63d45ffe6907dc61e22f9ef2e06e0",
+      "path": "framework/core/tests/python/test_episode_control.py",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:d52e6fa8b55f51793152e6cbde841c4c56a013146d6c10e42106bb42f50dba94",
+      "contentRoot": "sha256:195dab9d6860115287e56639369169ee07fc891585a92c5c3766669324ba99ce",
+      "path": "framework/core/tests/python/test_profile_composition.py",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:3f50bb9975f751a35c2ce17d57652c31d49f8f8c5cd1d1f0a85afc56cc48ffdc",
+      "contentRoot": "sha256:5f13d62e2897b70c136651d684ebd3934b35d05ddff5775ee0413c2c34912314",
+      "path": "framework/core/tests/python/test_skill_lifecycle.py",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:abd87554056a85ce7f629d3e12ce9d78bd26d8d10d6e3f8ceec8ad482e097f18",
+      "contentRoot": "sha256:b34aa560e6f160219937648c1f7730f804ba821b21c858f3d03ce018aebb47b8",
+      "path": "framework/core/tests/python/test_tui_runtime.py",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:51acb02730befff2b59346e17a33db8e30a4b36558d3b711de0d78a59818c981",
+      "contentRoot": "sha256:969b89253a284780220674ca7675d57932f7a791f4311bc2228327632ec48a8d",
+      "path": "framework/gui/src/main/index.ts",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:7a80d30af429064b8e12fc241d46e680c41b977c36d18634f1cfd2200d2c893d",
+      "contentRoot": "sha256:c766fb19e02ad5a180c5271f40b150d3229d0f15d0e981e4d768737a10206eda",
+      "path": "framework/primitive/kungfu-primitive-catalog.contract.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:037b7b3ad863bb60b6e4c289303998c0181991f4cb2b2449bcb7d0c8c81845ad",
+      "contentRoot": "sha256:25bc0c917ef181b380ca53ff3901cb633ca869ade318d880bfdff65ac0543044",
+      "path": "framework/registry/contract.registry-envelope.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:2f3c1cf8701f82c5759d363604fb15c819d253706373d36a8d880928325e570a",
+      "contentRoot": "sha256:307934f964f5d084c31594315a7b4de8421ad084120bd956576a24a9565bae8c",
+      "path": "framework/skill/kungfu-skill.contract.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:bedaf677ba0287e2c5d4e4288a72d8d041c2c20b909563947d0c2c17eb6d41fa",
+      "contentRoot": "sha256:96cdc92f0901799e61eb503b139f4560452fd8fc2ac90d2c5ea5bfc9081b9953",
+      "path": "framework/skill/schema/skill-context.schema.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:f6ca473c9104f1f34dbabe29973da4e7734181c5ce9dba8919a8f3fd89e8f106",
+      "contentRoot": "sha256:57439a78be864be93025b90bc9650d6d19f46e5d56f12295379d8407bf31ca3b",
+      "path": "framework/skill/schema/skill-manager.schema.json",
+      "status": "modified"
+    },
+    {
+      "contentRoot": "sha256:d01b26a50ce0c7d308bea3e92833dabd78dd3aa4b3d11c933f1dc335c5c7ed7d",
+      "path": "framework/skill/schema/skill-runtime-audit-v2.schema.json",
+      "status": "added"
+    },
+    {
+      "baseContentRoot": "sha256:767a2ba2e97e3eb6cf01a2211a7f4ef0d78974f8cdd5ecb0e3f5c1696b8b76a6",
+      "contentRoot": "sha256:96c2c8c500a114c41ad5e9835740793af04dde595a1f939d69efc454309f6197",
+      "path": "framework/skill/src/index.ts",
+      "status": "modified"
+    },
+    {
+      "contentRoot": "sha256:ef5eb42c9cc2d1367d4f5df134379520107ea451ece1669dd274e3dc21b337be",
+      "path": "framework/tui/src/skill-runtime-audit.test.ts",
+      "status": "added"
+    },
+    {
+      "baseContentRoot": "sha256:8fe2dd86261638904e4c56242767aca12fa9e73453791d4c14b398511bfe6713",
+      "contentRoot": "sha256:4ea3181319f04909eedb41aba839719ea1f6833345da774b760fe142ac384de5",
+      "path": "framework/tui/src/work-control-contribution.ts",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:943a7e56c3446789c6bf8d4e5f0a9cbf77d6263d0f651954a2b52e8e1c799e6c",
+      "contentRoot": "sha256:ccd675fc7c05005a9648a4bc8e340d7b1457b3ef1f7a541815112c1da0459c8e",
+      "path": "scripts/readonly-agent-bootstrap.test.mjs",
+      "status": "modified"
+    }
+  ],
+  "affectedFacets": [
+    "capabilities",
+    "package-facets",
+    "profiles-suites"
+  ],
+  "rationale": "Rebased the Skill multi-surface runtime audit onto the qualified Agent Work Lab command-surface repair; shared Skill, Agent, Work, KFD, ADR, and KFX source bindings remain explicitly covered.",
+  "attestation": {
+    "publicBehaviorUnchanged": true,
+    "publicContractUnchanged": true,
+    "readerJourneyUnchanged": true
+  },
+  "proofRoot": "sha256:213ceafa465b55d928bd7538b8cec09f88f03e96e41fb3eb14c8316ebb722a06"
+}
