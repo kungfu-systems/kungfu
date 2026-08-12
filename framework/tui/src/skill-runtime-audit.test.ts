@@ -5,7 +5,7 @@ import test from 'node:test';
 import {
   describeTuiSkillRuntimeAudit,
   projectTuiSkillRuntimeAudit,
-} from './skill-runtime-audit.js';
+} from './work-control-contribution.js';
 
 test('TUI preserves the shared Skill runtime audit root', () => {
   const sha = (value: string) => `sha256:${value.repeat(64)}`;
