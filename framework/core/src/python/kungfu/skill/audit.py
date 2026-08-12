@@ -238,7 +238,7 @@ def build_skill_runtime_audit(
         str(value.get("receiptRoot") or value.get("planRoot"))
         for value in scoped_dependencies
     ]
-    base = {
+    base: dict[str, Any] = {
         "schema": RUNTIME_AUDIT_SCHEMA,
         "authority": {
             "registry": "python-single-writer-skill-registry-fold",
