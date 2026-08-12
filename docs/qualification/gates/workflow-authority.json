@@ -49,7 +49,7 @@
     {
       "path": ".github/workflows/affected-native-pr.yml",
       "authority": "qualification",
-      "definitionDigest": "sha256:b6ea11581e16d1792b6ed57f1d1d3736b9a21eb3746ec3cb9f77b559901b1d6b",
+      "definitionDigest": "sha256:e53eeeffd1c4e815659fa6cadcecb1bdc0e634d94d4046a2a39d7866201395ce",
       "jobs": [
         {
           "id": "affected_native",
