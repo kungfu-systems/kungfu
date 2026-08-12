@@ -18,7 +18,12 @@ const PROVIDER_PROFILES = {
         ],
         ['codex.approval.confirm', /press enter to confirm or esc to cancel/iu],
       ],
-      busy: [['codex.busy.interrupt-hint', /esc to interrupt/iu]],
+      busy: [
+        [
+          'codex.busy.interrupt-hint',
+          /(?:esc to interrupt|\bWorking\b[\s\S]{0,80}\besc to inte\s*rupt\b)/iu,
+        ],
+      ],
       ready: [
         ['codex.ready.prompt', /^\s*›(?:\s|$)/mu],
         [

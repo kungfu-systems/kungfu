@@ -1169,6 +1169,14 @@ def execute(
             run_id=run_id,
         )
         parsed = parse_provider_output(provider, result.stdout)
+        if session_value is not None and parsed.get("text") is None:
+            visible = _ANSI_ESCAPE.sub("", result.stdout).strip()
+            if visible:
+                # Managed Provider UIs expose a credential-safe VT text-grid
+                # snapshot rather than their JSONL process protocol. Retain
+                # that bounded final view so independent review can inspect
+                # the actual answer instead of mistaking it for no answer.
+                parsed["text"] = visible[:128_000]
         if (
             event_sink is not None
             and not streamed_agent_text
