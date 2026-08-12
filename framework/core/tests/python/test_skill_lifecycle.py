@@ -233,6 +233,7 @@ def test_runtime_audit_projects_one_root_across_every_surface(tmp_path):
     audit_document = {
         "schema": "kungfu.skill-audit/v1",
         "run_id": "run-shared",
+        "work_id": "work:shared-runtime-audit",
         "events": [
             {
                 "schema": "kungfu.skill-audit-event/v1",
@@ -301,6 +302,60 @@ def test_runtime_audit_retains_removed_skill_identity_and_history(tmp_path):
     assert skill["identity"]["active"] is False
     assert skill["identity"]["contentRoot"] == content_root
     assert skill["historyPreserved"] is True
+
+
+def test_runtime_audit_strictly_isolates_run_and_work_evidence(tmp_path):
+    home = tmp_path / "home"
+    package = _package(tmp_path / "package")
+    work_root = _root({"work": "target"})
+    _install_and_select(home, package, "work:target", work_root)
+    target = {
+        "schema": "kungfu.skill-audit/v1",
+        "run_id": "run-target",
+        "work_id": "work:target",
+        "events": [
+            {
+                "schema": "kungfu.skill-audit-event/v1",
+                "type": "SkillLoaded",
+                "skill": {
+                    "key": "exact-skill",
+                    "contentHash": _root({"content": "target"}),
+                },
+            }
+        ],
+    }
+    foreign = {
+        "schema": "kungfu.skill-audit/v1",
+        "run_id": "run-foreign",
+        "work_id": "work:foreign",
+        "events": [
+            {
+                "schema": "kungfu.skill-audit-event/v1",
+                "type": "SkillTrustRefused",
+                "skill": {"key": "exact-skill"},
+                "planRoot": _root({"plan": "foreign"}),
+                "decision": {"status": "refused", "code": "KF_FOREIGN"},
+            }
+        ],
+    }
+
+    document = build_skill_runtime_audit(
+        home,
+        audit_documents=[foreign, target],
+        run_id="run-target",
+        work_ref="work:target",
+    )
+
+    run_evidence = [
+        row
+        for row in document["evidence"]
+        if row["source"]["kind"] == "run-audit-event"
+    ]
+    assert [(row["runId"], row["workRef"], row["state"]) for row in run_evidence] == [
+        ("run-target", "work:target", "loaded")
+    ]
+    assert document["skills"][0]["observedStates"].count("blocked") == 0
+    assert document["roots"]["auditRoots"] == [_root(target)]
 
 
 def test_runtime_audit_cli_returns_the_verified_shared_document(tmp_path):

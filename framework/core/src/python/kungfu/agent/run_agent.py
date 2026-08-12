@@ -39,6 +39,7 @@ from kungfu.content_hash import compute_content_hash_value
 from kungfu.skill import (
     build_skill_context,
     build_skill_runtime_audit,
+    read_audit_file,
     write_skill_runtime_audit,
 )
 from kungfu.rewind import (
@@ -501,6 +502,32 @@ def native_provider_adapter(
     )
 
 
+def _native_skill_work_ref(work_ref: Mapping[str, Any] | None) -> str | None:
+    if work_ref is None:
+        return None
+    return str(work_ref.get("entityId") or work_ref.get("workspaceId") or "") or None
+
+
+def refresh_native_skill_runtime_audit(env: Mapping[str, str]) -> None:
+    """Refresh the Agent Console pointer after rooted on-demand Skill activity."""
+
+    output_path = env.get("KUNGFU_SKILL_RUNTIME_AUDIT_FINAL_FILE")
+    runtime_home = env.get("KF_HOME")
+    if not output_path or not runtime_home:
+        return
+    audit_documents = []
+    audit_path = env.get("KUNGFU_SKILL_AUDIT_FILE")
+    if audit_path and Path(audit_path).is_file():
+        audit_documents.append(read_audit_file(audit_path))
+    document = build_skill_runtime_audit(
+        runtime_home,
+        audit_documents=audit_documents,
+        run_id=env.get("KUNGFU_SKILL_RUN_ID"),
+        work_ref=env.get("KUNGFU_SKILL_WORK_REF"),
+    )
+    write_skill_runtime_audit(output_path, document)
+
+
 def native_environment(
     provider: str,
     *,
@@ -644,6 +671,13 @@ def native_environment(
         }
     )
     if session_ref is not None:
+        attempt_id = str(session_ref["sessionAttemptId"])
+        skill_work_ref = _native_skill_work_ref(work_ref)
+        skill_audit_log_path = os.path.join(
+            runtime_dir,
+            "skill-manager",
+            f"agent-console-{attempt_id}-events.jsonl",
+        )
         skill_context = build_skill_context(
             runtime_home,
             source="cli",
@@ -654,11 +688,20 @@ def native_environment(
             env=ambient,
             cwd=workspace_root,
         )
-        skill_runtime_audit = build_skill_runtime_audit(runtime_home)
+        skill_runtime_audit = build_skill_runtime_audit(
+            runtime_home,
+            run_id=attempt_id,
+            work_ref=skill_work_ref,
+        )
         skill_runtime_audit_path = os.path.join(
             runtime_dir,
             "skill-manager",
-            f"agent-console-{session_ref['sessionAttemptId']}.json",
+            f"agent-console-{attempt_id}.json",
+        )
+        skill_runtime_audit_final_path = os.path.join(
+            runtime_dir,
+            "skill-manager",
+            f"agent-console-{attempt_id}-final.json",
         )
         write_skill_runtime_audit(skill_runtime_audit_path, skill_runtime_audit)
         agent_skill_projection = skill_runtime_audit["surfaceProjections"]["agent"]
@@ -734,12 +777,25 @@ def native_environment(
                     sort_keys=True,
                     separators=(",", ":"),
                 ),
+                "KUNGFU_SKILL_AUDIT_FILE": skill_audit_log_path,
+                "KUNGFU_SKILL_READ_ENTRYPOINT": (
+                    f"{shlex.quote(cli_bin)} skill read <key-or-path> "
+                    f"--run-id {shlex.quote(attempt_id)} --audit-file "
+                    f"{shlex.quote(skill_audit_log_path)} --json"
+                ),
+                "KUNGFU_SKILL_RUN_ID": attempt_id,
+                "KUNGFU_SKILL_RUNTIME_AUDIT_FILE": skill_runtime_audit_path,
+                "KUNGFU_SKILL_RUNTIME_AUDIT_FINAL_FILE": (
+                    skill_runtime_audit_final_path
+                ),
                 "KUNGFU_AGENT_SESSION_ACTOR": (
                     f"native:{provider}:{session_ref['sessionAttemptId']}"
                 ),
                 "KUNGFU_AGENT_PROVIDER_VERSION": provider_version,
             }
         )
+        if skill_work_ref:
+            env["KUNGFU_SKILL_WORK_REF"] = skill_work_ref
         if session_endpoint:
             env["KUNGFU_AGENT_SESSION_ENDPOINT"] = session_endpoint
     if work_ref is not None:
@@ -779,6 +835,7 @@ def run_native_interactive(
         interactive_argv=interactive_launch_argv,
         semantic_root=canonical_root,
         heartbeat_observation=session_surface.native_heartbeat_observation,
+        finalize_environment=refresh_native_skill_runtime_audit,
     )
     return coordinator.run(
         profile,
