@@ -470,23 +470,6 @@ test('manual qualification can explicitly omit the credential-bearing native sig
   }
 });
 
-test('protected Build defers only macOS native upgrade evidence to signing finalization', () => {
-  for (const platform of ['linux', 'win32']) {
-    const stages = releaseQualificationStages(
-      platform,
-      loadExecutionProfile('alpha'),
-      'defer-macos-signing',
-    ).map(([name]) => name);
-    assert.ok(stages.includes('upgrade:qualify:native'));
-  }
-  const macosStages = releaseQualificationStages(
-    'darwin',
-    loadExecutionProfile('alpha'),
-    'defer-macos-signing',
-  ).map(([name]) => name);
-  assert.ok(!macosStages.includes('upgrade:qualify:native'));
-});
-
 test('cryptographic upgrade qualification runs before artifact layer admission', () => {
   for (const platform of ['linux', 'darwin', 'win32']) {
     const stages = names(platform);
@@ -721,7 +704,7 @@ test('execution profile parsing fails closed on missing, duplicate, and unknown 
         '--native-upgrade-policy',
         'invalid',
       ]),
-    /must be required, skip, or defer-macos-signing/,
+    /must be required or skip/,
   );
   assert.throws(
     () =>

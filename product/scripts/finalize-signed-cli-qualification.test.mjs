@@ -380,8 +380,4 @@ test('Buildchain signing-finalization runs the consumer-owned qualification rebi
     /options\.platform === 'darwin-arm64'[\s\S]*verifySignedMacosCliRuntime/u,
   );
   assert.match(finalizer, /bindSignedMacosRuntimeQualification/u);
-  assert.match(
-    finalizer,
-    /options\.platform === 'darwin-arm64'[\s\S]*runUpgradeNativeQualification\(\)/u,
-  );
 });

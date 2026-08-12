@@ -7,7 +7,6 @@ import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { runUpgradeNativeQualification } from '../../scripts/run-upgrade-native-qualification.mjs';
 import { extractTarGz } from './archive.mjs';
 import {
   cliQualificationNonClaims,
@@ -797,7 +796,6 @@ async function main(argv) {
         archiveSha256,
         expectedSourceCommit: sourceCommit,
       });
-      runUpgradeNativeQualification();
     }
     writeJsonAtomic(qualification, report);
     process.stdout.write(
