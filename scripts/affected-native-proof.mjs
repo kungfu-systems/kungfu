@@ -251,15 +251,13 @@ export function verifyQueueAdmissionLease(input = {}) {
     pullRequestNumber,
     sourceHeadSha,
   );
-  if (
-    !['selected', 'proving', 'qualified', 'waiting', 'blocked'].includes(
-      candidate.status,
-    )
-  ) {
+  if (warrant.phase !== 'qualified' || candidate.status !== 'qualified') {
     throw new Error(
       `active Warrant candidate is not delivery-ready: ${candidate.status}`,
     );
   }
+  requireRoot(warrant.nativeProofRoot, 'Warrant native Proof root');
+  requireRoot(warrant.nativeProofReuseRoot, 'Warrant native Proof reuse root');
   const observedAt = new Date(input.now || observation.observedAt).getTime();
   if (
     !Number.isFinite(observedAt) ||
