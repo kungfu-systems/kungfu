@@ -330,7 +330,7 @@ test('two-phase native adapter runs both partitions and seals exact-head success
   );
 });
 
-test('two-phase native adapter detects the Conan profile before an SDK build', async (t) => {
+test('two-phase native adapter delegates Conan profile setup to the core SDK build', async (t) => {
   const commands = [];
   const value = nativeFixture((_cwd, name, args, environment) =>
     commands.push({ name, args, environment }),
@@ -353,24 +353,15 @@ test('two-phase native adapter detects the Conan profile before an SDK build', a
     [
       'Plan current affected closure',
       'Install frozen workspace',
-      'Detect Conan default profile',
       'Build Core SDK artifacts',
       'Pack four-language SDK artifacts',
       'Qualify installed SDK wire contract',
     ],
   );
-  assert.deepEqual(commands[2].args, [
-    'exec',
-    'uv',
-    'run',
-    '--frozen',
-    'conan',
-    'profile',
-    'detect',
-    '--force',
-  ]);
+  assert.deepEqual(commands[2].args, ['build:core:sdk']);
   assert.equal(commands[2].environment.CC, 'gcc-14');
   assert.equal(commands[2].environment.CXX, 'g++-14');
+  assert.equal(commands[2].environment.KUNGFU_BUILDCHAIN_SOURCE_BUILD, '1');
 });
 
 test('two-phase native adapter fails closed and replaces pending with failure', async (t) => {

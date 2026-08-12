@@ -276,22 +276,9 @@ export async function runNativeUnderWarrant(options, dependencies = {}) {
       const cmakeJs = sdkPath(cwd);
       const sdkEnvironment = {
         ...toolchainEnvironment,
+        KUNGFU_BUILDCHAIN_SOURCE_BUILD: '1',
         PATH: cmakeJs ? `${cmakeJs}:${process.env.PATH}` : process.env.PATH,
       };
-      execute(
-        'Detect Conan default profile',
-        [
-          'exec',
-          'uv',
-          'run',
-          '--frozen',
-          'conan',
-          'profile',
-          'detect',
-          '--force',
-        ],
-        sdkEnvironment,
-      );
       execute('Build Core SDK artifacts', ['build:core:sdk'], sdkEnvironment);
       execute('Pack four-language SDK artifacts', ['pack:sdk'], sdkEnvironment);
       execute(
