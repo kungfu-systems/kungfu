@@ -71,6 +71,13 @@ def _work_ref():
     }
 
 
+def test_agent_session_cli_exposes_structured_control_response():
+    result = CliRunner().invoke(kfc, ["agent", "session", "--help"])
+
+    assert result.exit_code == 0
+    assert "respond-control" in result.output
+
+
 def test_agent_session_core_contract_matches_cross_language_golden():
     schema = json.loads(
         (

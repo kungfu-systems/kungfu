@@ -2061,7 +2061,7 @@ function ProductHost({
             },
           });
           setStarterProject({ workspace, work, works: inventory.works });
-          setStarterWorkReceipt(receipt);
+          setStarterWorkReceipt(resumed.workReceipt ?? receipt);
           setStarterReviewReceipt(resumed.reviewReceipt);
           setStarterCloseReceipt(resumed.closeReceipt);
           setSurface('project-assignment');

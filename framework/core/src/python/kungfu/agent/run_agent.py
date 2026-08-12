@@ -909,6 +909,7 @@ def run_session_attempt(
     env: Mapping[str, str],
     prompt: str,
     timeout_seconds: float,
+    permission_mode: str = "workspace-write",
     event_sink: Callable[[Mapping[str, Any]], None] | None = None,
     session_started_callback: Callable[[Mapping[str, str], Mapping[str, Any]], None]
     | None = None,
@@ -932,6 +933,7 @@ def run_session_attempt(
         env=env,
         prompt=prompt,
         timeout_seconds=timeout_seconds,
+        permission_mode=permission_mode,
         event_sink=event_sink,
         session_started=session_started_callback,
         project_trust=project_trust,
@@ -1138,6 +1140,7 @@ def execute(
                 env=env,
                 prompt=argv[-1],
                 timeout_seconds=timeout_seconds,
+                permission_mode=permission_mode,
                 event_sink=event_sink,
                 session_started_callback=session_started_callback,
                 project_trust=project_trust,

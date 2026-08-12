@@ -178,6 +178,22 @@ def test_reviewer_result_requires_exact_criterion_coverage():
     assert all(row["passed"] for row in result["criteria"])
 
 
+def test_reviewer_prompt_requires_exact_structured_criterion_coverage():
+    checks = ["Names the product", "Reports evidence and unresolved risks"]
+    prompt = assignment_review.review_agent_prompt(
+        {
+            "work": {"acceptanceChecks": checks},
+            "deliverable": {"path": "README.md", "root": f"sha256:{'1' * 64}"},
+            "inputs": [],
+        }
+    )
+
+    assert "criteria array must contain exactly 2 objects" in prompt
+    assert '1. criterion must equal "Names the product"' in prompt
+    assert '2. criterion must equal "Reports evidence and unresolved risks"' in prompt
+    assert "A statement in summary does not count as criterion coverage" in prompt
+
+
 def test_exact_retained_passing_reviewer_evidence_is_reusable(tmp_path):
     command = importlib.import_module("kungfu.cli.commands.assignment")
     runtime = tmp_path / "runtime"
