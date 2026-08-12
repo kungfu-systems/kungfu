@@ -3,7 +3,7 @@
   "contract": "kungfu-buildchain-dev-delivery-warrant-queue",
   "repository": "kungfu-systems/kungfu",
   "protectedBase": "dev/v4/v4.0",
-  "generation": 1283,
+  "generation": 1284,
   "fencingCounter": 329,
   "policy": {
     "agingSeconds": 900,
@@ -14054,8 +14054,49 @@
         "scripts/release-provenance-object.py",
         "tests/fixtures/release-provenance-object/cases.json"
       ]
+    },
+    {
+      "repository": "kungfu-systems/kungfu",
+      "protectedBase": "dev/v4/v4.0",
+      "pullRequestNumber": 3041,
+      "assignmentRoot": "sha256:76dbecda796dc3c3db8b20f81e8b9d9afd903d6aedadec61e881e6c75df36e4d",
+      "initiativeRoot": "sha256:bfff817933e5a5ad693e4b902a84f6cc3a251235dd7377cb4091d92f805fa7ff",
+      "sourceIdentityRoot": "sha256:4820d163c8182014e75108779fa12686dc11221958905e6c053a098867a4b0be",
+      "deliveryClass": "native-proof-required",
+      "candidateId": "sha256:4c7a8599c8ce5ad50256a56ccc66da2a1bfcf2bbdca1a3766bd3beab9b659370",
+      "sourceHead": "2185e3e8015a08928507326a1cb2b3fd1103ac7b",
+      "sourcePatchRoot": "sha256:c52a3cc2399baad453d3dcc01993f3274c35affe3230116db9e3446ef23372a2",
+      "sourceProofRoot": "sha256:764cfd64de9c736f8ccac7c9a98ff2e2fff987749af4085e745441f174e2e14c",
+      "planRoot": "sha256:03872061250ae753bac929516e09830fec469f01ac33e90a0740b96893b023d2",
+      "closureRoot": "sha256:106d175611d8634c988192302b9c464ae8ba3b6d023c2cff9910e401344c9624",
+      "dependencyRoot": "sha256:4bede977186674fe0b6355a4985fb683c9bb86e1bb73acf43c3c37e5ea315e2c",
+      "toolchainRoot": "sha256:2ecb07894954a2e0de022615d4561e5ba3ae68376401941ecff77be03cd75a0f",
+      "sourceWorkflowRunId": 0,
+      "priority": "ordinary",
+      "enqueuedAt": "2026-08-12T08:59:13.691Z",
+      "updatedAt": "2026-08-12T08:59:13.691Z",
+      "attempts": 1,
+      "recoveries": 0,
+      "status": "queued",
+      "terminal": null,
+      "affectedPaths": [
+        ".xinfa/portable-atlas-classification.json.gz",
+        ".xinfa/product-atlas-bundle.json",
+        "docs/adr/SHIFU-ADR-019f86da-4f90-79a1-bc85-4b542fecf011.md",
+        "docs/shifu/README.md",
+        "docs/shifu/production-graph-contract.json",
+        "docs/shifu/schema/production-graph-local-executor-policy-v0.schema.json",
+        "docs/shifu/schema/production-graph-v0.schema.json",
+        "framework/core/.gyp/run-build.js",
+        "framework/production-graph/check.mjs",
+        "framework/production-graph/core-subgraph/index.mjs",
+        "framework/production-graph/core-subgraph/index.test.mjs",
+        "framework/production-graph/core-subgraph/stage-executor/index.mjs",
+        "framework/production-graph/executor/index.mjs",
+        "package.json"
+      ]
     }
   ],
-  "updatedAt": "2026-08-12T08:45:39.682Z",
-  "stateRoot": "sha256:1575a6c3f6dd6fd997caa56869108599e510ade689ae4b3ac54b47ed4d14fc1a"
+  "updatedAt": "2026-08-12T08:59:13.691Z",
+  "stateRoot": "sha256:988b322ded02921ead8b6864d4c7243049a9782025d402e166cff77ea688e1ff"
 }
