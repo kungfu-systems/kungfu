@@ -125,6 +125,7 @@ test('Qualified Core native consumer changes require the platform matrix', () =>
     'framework/agent-session/tests/runtime-port.native-peer.mjs',
     'framework/agent-session/tests/runtime-port.native.test.mjs',
     '.github/actions/qualified-core-candidate-build/action.yml',
+    'product/scripts/verify-cli-surface-qualification.mjs',
   ]) {
     const plan = planFromChanged(
       [file],

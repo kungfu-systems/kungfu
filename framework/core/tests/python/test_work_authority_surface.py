@@ -4,6 +4,8 @@ from datetime import UTC, datetime
 import importlib
 import json
 
+from click.testing import CliRunner
+
 from kungfu import assignment_close, assignment_evidence
 from kungfu.cli.commands import __registry__  # noqa: F401
 from kungfu.cli.commands import assignment_review
@@ -15,6 +17,13 @@ def test_click_tree_exposes_one_work_family_and_no_assignment_alias():
     assert "work" in kfc.commands
     assert "assignment" not in kfc.commands
     assert kfc.commands["work"].name == "work"
+
+
+def test_work_help_accepts_hidden_commands_added_without_a_priority():
+    result = CliRunner().invoke(kfc, ["work", "--help"])
+
+    assert result.exit_code == 0, result.output
+    assert "runtime-host" not in result.output
 
 
 def test_work_family_contains_only_profile_backed_orchestration_commands():

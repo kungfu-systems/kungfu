@@ -8,6 +8,14 @@ on:
       - Core affected native
     types:
       - completed
+  pull_request_target:
+    branches:
+      - dev/v*/v*
+    types: [labeled, unlabeled, ready_for_review]
+  pull_request_review:
+    branches:
+      - dev/v*/v*
+    types: [submitted, dismissed]
   schedule:
     # Recovery patrol for ready PRs whose final signal did not emit a usable event.
     - cron: "23,53 * * * *"
@@ -24,7 +32,7 @@ on:
         type: string
         default: ""
       source-workflow-run-id:
-        description: Exact successful Core affected native run that produced the source descriptor
+        description: Exact source-accepted Core affected native run that produced the source descriptor
         required: false
         type: number
         default: 0
@@ -45,7 +53,10 @@ concurrency:
 jobs:
   resolve-target:
     runs-on: ubuntu-24.04
-    permissions: {}
+    permissions:
+      actions: read
+      contents: read
+      pull-requests: read
     outputs:
       target-branch: ${{ steps.target.outputs.target-branch }}
       expected-pr-number: ${{ steps.target.outputs.expected-pr-number }}
@@ -66,6 +77,9 @@ jobs:
           DISPATCH_HEAD_SHA: ${{ inputs.expected-head-sha }}
           DISPATCH_SOURCE_RUN_ID: ${{ inputs.source-workflow-run-id }}
           DISPATCH_DRY_RUN: ${{ inputs.dry-run }}
+          EVENT_PR_NUMBER: ${{ github.event.pull_request.number }}
+          EVENT_PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
           case "$DEFAULT_BRANCH" in
@@ -88,6 +102,22 @@ jobs:
             expected_pr_number="$(jq -r '.[0].number' <<<"$WORKFLOW_PULL_REQUESTS")"
             expected_head_sha="$WORKFLOW_HEAD_SHA"
             source_workflow_run_id="$WORKFLOW_RUN_ID"
+          elif [ "$EVENT_NAME" = "pull_request_target" ] || [ "$EVENT_NAME" = "pull_request_review" ]; then
+            expected_pr_number="$EVENT_PR_NUMBER"
+            expected_head_sha="$EVENT_PR_HEAD_SHA"
+            source_runs="$(gh api --method GET \
+              "repos/$GITHUB_REPOSITORY/actions/workflows/affected-native-pr.yml/runs" \
+              -f head_sha="$expected_head_sha" \
+              -f event=pull_request \
+              -f status=completed \
+              -f per_page=100)"
+            source_workflow_run_id="$(jq -er \
+              --argjson pullRequest "$expected_pr_number" \
+              --arg head "$expected_head_sha" \
+              '[.workflow_runs[]
+                | select(.head_sha == $head)
+                | select(any(.pull_requests[]?; .number == $pullRequest))]
+               | sort_by(.id) | last | .id' <<<"$source_runs")"
           elif [ "$EVENT_NAME" = "workflow_dispatch" ]; then
             expected_pr_number="${DISPATCH_PR_NUMBER:-0}"
             expected_head_sha="$DISPATCH_HEAD_SHA"
@@ -182,7 +212,7 @@ jobs:
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           repository: kungfu-systems/buildchain
-          ref: 733812ff9405241705f5f267fe2e5ec6351e1a2d
+          ref: 6057d71142dfc6a9d78872e316eca87d9510e176
           path: .buildchain/dev-delivery-runtime
           fetch-depth: 1
           persist-credentials: false
@@ -227,11 +257,18 @@ jobs:
              and .path == ".github/workflows/affected-native-pr.yml"
              and .event == "pull_request"
              and .status == "completed"
-             and .conclusion == "success"
              and .head_sha == $head
              and (.pull_requests | length) == 1
              and .pull_requests[0].number == $pullRequest' \
             .buildchain/dev-delivery-input/source-workflow-run.json >/dev/null
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/$SOURCE_RUN_ID/jobs?filter=latest&per_page=100" \
+            > .buildchain/dev-delivery-input/source-workflow-jobs.json
+          jq -e \
+            '[.jobs[]
+              | select(.name == "Candidate source acceptance / check")
+              | select(.status == "completed" and .conclusion == "success")]
+             | length == 1' \
+            .buildchain/dev-delivery-input/source-workflow-jobs.json >/dev/null
 
       - name: Download exact source qualification descriptor
         if: >-
@@ -356,9 +393,9 @@ jobs:
       contents: write
       pull-requests: write
       statuses: write
-    uses: kungfu-systems/buildchain/.github/workflows/dev-pr-auto-merge.yml@733812ff9405241705f5f267fe2e5ec6351e1a2d
+    uses: kungfu-systems/buildchain/.github/workflows/dev-pr-auto-merge.yml@6057d71142dfc6a9d78872e316eca87d9510e176
     with:
-      buildchain-ref: 733812ff9405241705f5f267fe2e5ec6351e1a2d
+      buildchain-ref: 6057d71142dfc6a9d78872e316eca87d9510e176
       target-branch: ${{ needs.resolve-target.outputs.target-branch }}
       expected-pr-number: ${{ fromJSON(needs.resolve-target.outputs.expected-pr-number || '0') }}
       expected-head-sha: ${{ needs.resolve-target.outputs.expected-head-sha }}
@@ -366,7 +403,7 @@ jobs:
       handoff-workflow-id: dev-pr-auto-merge.yml
       source-workflow-id: affected-native-pr.yml
       diagnostic-context: Buildchain delivery intent
-      delivery-warrant-mode: ${{ (github.event_name == 'workflow_run' || (github.event_name == 'workflow_dispatch' && inputs.dry-run == false)) && 'required' || 'off' }}
+      delivery-warrant-mode: ${{ (github.event_name == 'workflow_run' || github.event_name == 'pull_request_target' || github.event_name == 'pull_request_review' || (github.event_name == 'workflow_dispatch' && inputs.dry-run == false)) && 'required' || 'off' }}
       assignment-root: ${{ needs.delivery-contract.outputs.assignment-root }}
       initiative-root: ${{ needs.delivery-contract.outputs.initiative-root }}
       source-identity-root: ${{ needs.delivery-contract.outputs.source-identity-root }}
@@ -378,12 +415,20 @@ jobs:
       toolchain-root: ${{ needs.delivery-contract.outputs.toolchain-root }}
       affected-paths-json: ${{ needs.delivery-contract.outputs.affected-paths-json || '[]' }}
       shard-evidence-roots-json: ${{ needs.delivery-contract.outputs.shard-evidence-roots-json || '[]' }}
+      native-command: >-
+        ./shifu dev-delivery:native-under-warrant --
+        --repository ${{ github.repository }}
+        --target-branch ${{ needs.resolve-target.outputs.target-branch }}
+        --pull-request ${{ needs.resolve-target.outputs.expected-pr-number }}
+        --expected-head ${{ needs.resolve-target.outputs.expected-head-sha }}
+        --status-context 'affected-native / linux'
+        --output ../dev-delivery/kungfu-native-receipt.json
+      native-heartbeat-seconds: 300
       delivery-class: ${{ needs.delivery-contract.outputs.delivery-class || 'native-proof-required' }}
       delivery-priority: ${{ needs.delivery-contract.outputs.priority || 'ordinary' }}
       warrant-lease-seconds: 5400
       required-status-checks: |-
         Candidate source acceptance / check
-        affected-native / linux
       queue-admission-context: Queue admission lease
       active-lease-context: ${{ needs.delivery-contract.outputs.active-lease-context }}
       ready-label: state/ready
