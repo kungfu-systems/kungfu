@@ -118,7 +118,9 @@
       "additionalProperties": false,
       "required": ["entrypoint", "task", "executionOwnedBy", "invokedByVerifier"],
       "properties": {
-        "entrypoint": { "const": "./shifu" },
+        "entrypoint": {
+          "enum": ["./shifu", "./shifu core-production-subgraph:execute"]
+        },
         "task": { "$ref": "#/$defs/nonEmpty" },
         "executionOwnedBy": { "const": "external-orchestrator" },
         "invokedByVerifier": { "const": false }
