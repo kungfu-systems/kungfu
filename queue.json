@@ -3,7 +3,7 @@
   "contract": "kungfu-buildchain-dev-delivery-warrant-queue",
   "repository": "kungfu-systems/kungfu",
   "protectedBase": "dev/v4/v4.0",
-  "generation": 1445,
+  "generation": 1446,
   "fencingCounter": 351,
   "policy": {
     "agingSeconds": 900,
@@ -17519,11 +17519,20 @@
       "sourceWorkflowRunId": 0,
       "priority": "expedited",
       "enqueuedAt": "2026-08-12T14:12:32.916Z",
-      "updatedAt": "2026-08-12T14:12:32.916Z",
+      "updatedAt": "2026-08-12T14:17:55.428Z",
       "attempts": 1,
       "recoveries": 0,
-      "status": "queued",
-      "terminal": null,
+      "status": "cancelled",
+      "terminal": {
+        "outcome": "cancelled",
+        "reason": "Requeue the exact unchanged independently approved queue-contract repair as emergency priority so it can restore qualified-Warrant admission before further candidates repeat the same failure.",
+        "evidenceRoot": "sha256:a6453f700d16f7ae447abf4834ebbb0c51006bf4364fa718e80c6a034864119a",
+        "authority": "queued-candidate-cancellation",
+        "expectedSourceHead": "dbe0fa58ceffb9f118a3fe8c4002f6fb89f9598f",
+        "observedSourceHead": "dbe0fa58ceffb9f118a3fe8c4002f6fb89f9598f",
+        "eventAction": "synchronize",
+        "closedAt": "2026-08-12T14:17:55.428Z"
+      },
       "affectedPaths": [
         ".buildchain/kfd/kfd-2/claims/agent-onboarding-pack.json",
         ".buildchain/kfd/kfd-2/claims/agent-work-state-contract.json",
@@ -17620,6 +17629,6 @@
       ]
     }
   ],
-  "updatedAt": "2026-08-12T14:17:35.031Z",
-  "stateRoot": "sha256:c2a4ba8295ab045ded2bc7de6c0d70097dee802850274d6c4ec3c1f889b715e0"
+  "updatedAt": "2026-08-12T14:17:55.428Z",
+  "stateRoot": "sha256:504ca01af9a6555dd206ba82f93f08cb7c102dd628f51edbe75802d68669e7c0"
 }
