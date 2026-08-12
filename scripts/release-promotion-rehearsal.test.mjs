@@ -260,7 +260,7 @@ test('promotion rehearsal rejects restored activation or passport evidence comma
   }
 });
 
-test('Alpha recovery reuses a verified sealed candidate through the reviewed publication runtime', () => {
+test('Alpha recovery reuses a verified sealed candidate through the reviewed floating contract', () => {
   const workflow = fs.readFileSync(
     path.join(ROOT, CONTRACT.workflows.promotion),
     'utf8',
@@ -270,7 +270,7 @@ test('Alpha recovery reuses a verified sealed candidate through the reviewed pub
   assert.match(
     recovery,
     new RegExp(
-      `uses: kungfu-systems/buildchain/\\.github/workflows/release-candidate-promote\\.yml@${RELEASE_ADMISSION.buildchain.runtimes.alpha.publicationRuntimeSha}`,
+      `uses: kungfu-systems/buildchain/\\.github/workflows/release-candidate-promote\\.yml@${RELEASE_ADMISSION.buildchain.runtimes.alpha.ref}`,
       'u',
     ),
   );
@@ -294,7 +294,7 @@ test('Alpha recovery reuses a verified sealed candidate through the reviewed pub
   ]) {
     assert.ok(recovery.includes(binding), binding);
   }
-  assert.match(recovery, /release-candidate-promote\.yml@[0-9a-f]{40}/u);
+  assert.doesNotMatch(recovery, /release-candidate-promote\.yml@[0-9a-f]{40}/u);
   assert.doesNotMatch(recovery, /^\s+strategy:\s*$/mu);
   assert.doesNotMatch(workflow, /test "\$CANDIDATE_RUN_ID" = "[0-9]+"/u);
   assert.doesNotMatch(workflow, /test "\$PREFLIGHT_RUN_ID" = "[0-9]+"/u);

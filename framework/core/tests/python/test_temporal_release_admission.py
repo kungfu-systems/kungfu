@@ -23,7 +23,7 @@ PROVENANCE_CONTRACT = ROOT / "framework/release/kungfu-release-provenance.contra
 PROVENANCE_FIXTURE = ROOT / "tests/fixtures/release-provenance-object/cases.json"
 ALPHA_LOCK = ROOT / ".buildchain/alpha-contract-lock.json"
 
-CURRENT = "sha256:8e565f9ac5146d5dceafc3da6b267147fb412937db979bf35a0429966da82197"
+CURRENT = "sha256:521394028d66ab5985da4c43f4fed46cdb04b838a3b403d3712073dd59858b78"
 HISTORICAL = "sha256:13c4679c4ac8764c85e29693bfb59099e21e9786cc6082552198d39393467490"
 
 
@@ -58,7 +58,7 @@ def _case(contract_digest=CURRENT):
     candidate_values = deepcopy(source["candidate"])
     promotion_values = deepcopy(source["promotion"])
     artifact_root = "sha256:" + "a" * 64
-    runtime_sha = "36b08dc7bf417e57bffcc3dc784a2473254fe4c1"
+    runtime_sha = "82701ca66f5366ade6ec694c9950d5d8d6db082d"
     approval_root = "sha256:" + "b" * 64
     if contract_digest == HISTORICAL:
         candidate_values.update(

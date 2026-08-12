@@ -6,7 +6,10 @@ import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 
-import { runNativeUnderWarrant } from '../framework/dev-delivery/native-under-warrant.mjs';
+import {
+  GitHubNativeStatusClient,
+  runNativeUnderWarrant,
+} from '../framework/dev-delivery/native-under-warrant.mjs';
 
 const workflow = fs.readFileSync(
   '.github/workflows/dev-pr-auto-merge.yml',
@@ -252,6 +255,30 @@ test('two-phase native adapter runs both partitions and seals exact-head success
   );
 });
 
+test('two-phase native adapter enables source-build bootstrap for the SDK build', async (t) => {
+  const commands = [];
+  const value = nativeFixture((_cwd, name, args, environment) =>
+    commands.push({ name, args, environment }),
+  );
+  value.dependencies.readPlan = () => ({
+    schema: 'kungfu.core-affected-native-plan/v1',
+    closureComponents: [],
+    sdkQualification: { required: true },
+    devQueueQualification: {
+      shifuWorkspace: { required: false },
+      kfdVerifier: { required: false },
+    },
+  });
+  t.after(() => fs.rmSync(value.cwd, { recursive: true, force: true }));
+
+  await runNativeUnderWarrant(value.options, value.dependencies);
+
+  const sdkBuild = commands.find(
+    ({ name }) => name === 'Build Core SDK artifacts',
+  );
+  assert.equal(sdkBuild.environment.KUNGFU_BUILDCHAIN_SOURCE_BUILD, '1');
+});
+
 test('two-phase native adapter fails closed and replaces pending with failure', async (t) => {
   const value = nativeFixture((_cwd, name) => {
     if (name.includes('partition 0')) throw new Error('native shard failed');
@@ -265,6 +292,53 @@ test('two-phase native adapter fails closed and replaces pending with failure', 
     value.statuses.map(({ state }) => state),
     ['pending', 'failure'],
   );
+});
+
+test('native Warrant GitHub client retries transient fetch failures only', async () => {
+  const delays = [];
+  let attempts = 0;
+  const client = new GitHubNativeStatusClient({
+    repository: 'kungfu-systems/kungfu',
+    token: 'test-only',
+    fetchImpl: async () => {
+      attempts += 1;
+      if (attempts < 3) throw new TypeError('fetch failed');
+      return {
+        ok: true,
+        status: 200,
+        async text() {
+          return '{"ok":true}';
+        },
+      };
+    },
+    sleepImpl: async (milliseconds) => delays.push(milliseconds),
+  });
+
+  assert.deepEqual(await client.request('/test'), { ok: true });
+  assert.equal(attempts, 3);
+  assert.deepEqual(delays, [1000, 2000]);
+});
+
+test('native Warrant GitHub client does not retry semantic failures', async () => {
+  let attempts = 0;
+  const client = new GitHubNativeStatusClient({
+    repository: 'kungfu-systems/kungfu',
+    token: 'test-only',
+    fetchImpl: async () => {
+      attempts += 1;
+      return {
+        ok: false,
+        status: 422,
+        async text() {
+          return '{"message":"semantic rejection"}';
+        },
+      };
+    },
+    sleepImpl: async () => assert.fail('semantic failures must not sleep'),
+  });
+
+  await assert.rejects(client.request('/test'), /semantic rejection/u);
+  assert.equal(attempts, 1);
 });
 
 test('hosted native jobs remain fail-closed behind the exact active Warrant', () => {
