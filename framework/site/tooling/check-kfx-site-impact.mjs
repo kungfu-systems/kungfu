@@ -497,6 +497,7 @@ export function evaluateKfxSiteImpact({
   baseRevision,
   changes,
   proofs = [],
+  refreshStaleProofs = false,
 }) {
   validateImpactContract(contract, declaration);
   if (baseContract) {
@@ -575,7 +576,7 @@ export function evaluateKfxSiteImpact({
     }
   }
   if (!accepted) {
-    if (proofFailure) throw proofFailure;
+    if (proofFailure && !refreshStaleProofs) throw proofFailure;
     fail(
       'KFX_SITE_BUNDLE_UPDATE_REQUIRED',
       `eligible internal KFX changes require semantic updates or an exact no-public-content-change proof for facets ${unresolved.join(', ')}`,
@@ -704,7 +705,8 @@ function main() {
       baseDeclaration,
       baseRevision,
       changes,
-      proofs: options.writeProof ? [] : readProofs(),
+      proofs: readProofs(),
+      refreshStaleProofs: options.writeProof,
     });
     console.log(
       JSON.stringify(

@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 # SPDX-License-Identifier: Apache-2.0
 
 """Qualify the sealed Alpha candidate through temporal admission without rebuild."""
@@ -307,12 +306,14 @@ def qualify(root: Path, artifact_root: Path, reconstruction: Path) -> dict[str, 
         _fail("candidate-inventory-root-mismatch", "report inventory root drift")
     source_roots = {row["fileName"]: row["root"] for row in snapshot["files"]}
     for row in inventory["files"]:
-        if row["role"].startswith("installable-product-"):
-            if source_roots.get(Path(row["path"]).name) != row["root"]:
-                _fail(
-                    "candidate-byte-substitution",
-                    f"staged artifact drift: {row['path']}",
-                )
+        if (
+            row["role"].startswith("installable-product-")
+            and source_roots.get(Path(row["path"]).name) != row["root"]
+        ):
+            _fail(
+                "candidate-byte-substitution",
+                f"staged artifact drift: {row['path']}",
+            )
     capsule = _read_json(reconstruction / "rehearsal-capsule.json", "rehearsal capsule")
     capsule_root = capsule.pop("root", "")
     if capsule_root != _json_root(capsule) or capsule_root != report.get("capsuleRoot"):
@@ -327,6 +328,11 @@ def qualify(root: Path, artifact_root: Path, reconstruction: Path) -> dict[str, 
     )
     facts = _read_json(
         root / policy["temporalAdmission"]["admissionFacts"], "admission facts"
+    )
+    historical_proof = next(
+        row["record"]
+        for row in facts["proofs"]
+        if row["record"]["proofId"] == "alpha-sealed-candidate-historical-contract"
     )
     proof_projection = _read_json(
         root / policy["temporalAdmission"]["proofProjection"],
@@ -356,7 +362,7 @@ def qualify(root: Path, artifact_root: Path, reconstruction: Path) -> dict[str, 
             "sourceTree": EXPECTED_TREE,
             "promotionSha": PROMOTION_COMMIT,
             "artifactRoot": report["candidateInputRoot"],
-            "runtimeSha": runtime["publicationRuntimeSha"],
+            "runtimeSha": historical_proof["evidence"]["runtimeSha"],
             "acceptedContractDigest": HISTORICAL_CONTRACT,
             "qualificationRoot": report["evidenceRoot"],
             "approvalRoot": report["stateRoot"],
