@@ -296,24 +296,23 @@ test('queue lease readback binds revision, Warrant, fence, and exact source', ()
   );
 });
 
-test('queue lease accepts the exact candidate after native qualification', () => {
-  const receipt = verifyQueueAdmissionLease({
+test('queue lease accepts the exact qualified Warrant and rejects terminal state', () => {
+  const qualified = verifyQueueAdmissionLease({
     view: queueView(ROOT_A, { status: 'qualified' }),
     pullRequestNumber: 42,
     sourceHeadSha: SOURCE,
     now: '2026-08-04T02:30:00.000Z',
   });
-  assert.equal(receipt.candidateState, 'qualified');
-
+  assert.equal(qualified.candidateState, 'qualified');
   assert.throws(
     () =>
       verifyQueueAdmissionLease({
-        view: queueView(ROOT_A, { status: 'queued' }),
+        view: queueView(ROOT_A, { status: 'dequeued' }),
         pullRequestNumber: 42,
         sourceHeadSha: SOURCE,
         now: '2026-08-04T02:30:00.000Z',
       }),
-    /not delivery-ready: queued/u,
+    /not delivery-ready: dequeued/u,
   );
 });
 
