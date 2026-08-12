@@ -3,7 +3,7 @@
   "contract": "kungfu-buildchain-dev-delivery-warrant-queue",
   "repository": "kungfu-systems/kungfu",
   "protectedBase": "dev/v4/v4.0",
-  "generation": 1501,
+  "generation": 1502,
   "fencingCounter": 356,
   "policy": {
     "agingSeconds": 900,
@@ -18810,8 +18810,40 @@
         "scripts/verify-kungfu-release-admission.mjs",
         "scripts/verify-kungfu-release-admission.test.mjs"
       ]
+    },
+    {
+      "repository": "kungfu-systems/kungfu",
+      "protectedBase": "dev/v4/v4.0",
+      "pullRequestNumber": 3046,
+      "assignmentRoot": "sha256:c56124526e10265026f7d20291474b780d6247c9efeb02de4014effb67667cc4",
+      "initiativeRoot": "sha256:bfff817933e5a5ad693e4b902a84f6cc3a251235dd7377cb4091d92f805fa7ff",
+      "sourceIdentityRoot": "sha256:5da83d480f6fe959b47f6472be3197039dd7a762cfcb14653174fdae2e9b325a",
+      "deliveryClass": "non-native-fast",
+      "candidateId": "sha256:f90d2bd4cb617c5a06f1e3a7d5b139b1df8810fb900b4e2398e0cff038e0e356",
+      "sourceHead": "e6666c07dc60c9d4093ec5fa35bd5f6e9a71cbfa",
+      "sourcePatchRoot": "sha256:966e3ab0587c8efa69e915fe489250471525114912f476f6f4bc595081362cf5",
+      "sourceProofRoot": "sha256:82b5f9a9f5703047d4584f93283f0309bd7a2e6aa289a57ebcc060a4135d1862",
+      "planRoot": "sha256:ca12b08666c1fcedd4c1468284a59ea568c1e982a04dc753556fd107111b1ba4",
+      "closureRoot": "sha256:ac6e52dc4778bd7be1e6224c9a526a00dc7fcdd56a84e07165a811b168158f3e",
+      "dependencyRoot": "sha256:3f80cf5677b88921eb3b7072820bbd87cfc335257bc0948379f90684b3cfff28",
+      "toolchainRoot": "sha256:2ecb07894954a2e0de022615d4561e5ba3ae68376401941ecff77be03cd75a0f",
+      "sourceWorkflowRunId": 0,
+      "priority": "ordinary",
+      "enqueuedAt": "2026-08-12T16:20:48.161Z",
+      "updatedAt": "2026-08-12T16:20:48.161Z",
+      "attempts": 1,
+      "recoveries": 0,
+      "status": "queued",
+      "terminal": null,
+      "affectedPaths": [
+        "framework/maintainability/terminal-evidence-matrix.json",
+        "framework/maintainability/terminal-evidence-matrix.test.mjs",
+        "framework/maintainability/terminal-evidence.mjs",
+        "framework/terminal-evidence/live-observations.mjs",
+        "framework/terminal-evidence/live-verification.mjs"
+      ]
     }
   ],
-  "updatedAt": "2026-08-12T16:19:11.473Z",
-  "stateRoot": "sha256:1db04d7fa7c2753fea152e9b6cb4e532e507231d6e648f76e35e45a9d9c15f2c"
+  "updatedAt": "2026-08-12T16:20:48.161Z",
+  "stateRoot": "sha256:60d02fe0921925f55c694a6069e599b4d76e7ad037b5959ac1177f4699392554"
 }
