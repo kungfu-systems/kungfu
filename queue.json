@@ -3,7 +3,7 @@
   "contract": "kungfu-buildchain-dev-delivery-warrant-queue",
   "repository": "kungfu-systems/kungfu",
   "protectedBase": "dev/v4/v4.0",
-  "generation": 1508,
+  "generation": 1509,
   "fencingCounter": 358,
   "policy": {
     "agingSeconds": 900,
@@ -11,50 +11,7 @@
     "leaseSeconds": 3600,
     "emergencyPolicy": "reviewed-explicit-only"
   },
-  "activeWarrant": {
-    "schema": "kungfu.buildchain.dev-delivery-warrant/v1",
-    "repository": "kungfu-systems/kungfu",
-    "protectedBase": "dev/v4/v4.0",
-    "candidateId": "sha256:8204a967d5385f9aaeee6e3c312389ce353b7663a97d8e8c4e4089a8f845bcdc",
-    "pullRequestNumber": 3041,
-    "sourceHead": "b2249b64f1d6574f4e03949fc4965d775680e43c",
-    "assignmentRoot": "sha256:76dbecda796dc3c3db8b20f81e8b9d9afd903d6aedadec61e881e6c75df36e4d",
-    "initiativeRoot": "sha256:bfff817933e5a5ad693e4b902a84f6cc3a251235dd7377cb4091d92f805fa7ff",
-    "sourceIdentityRoot": "sha256:4820d163c8182014e75108779fa12686dc11221958905e6c053a098867a4b0be",
-    "sourcePatchRoot": "sha256:11433a4cb191ba6c6a7a89dca0d7c37e28ba912a52ea7a8aaa3048a1800f01fb",
-    "sourceProofRoot": "sha256:7818066ce6fd2ac307adc88ae5516e4cd3c1fc52cf148b4ec81b3eeea388ee10",
-    "planRoot": "sha256:edd933c4643f105436eeea4b1855073391392025dd3cb92231fb049906699262",
-    "closureRoot": "sha256:106d175611d8634c988192302b9c464ae8ba3b6d023c2cff9910e401344c9624",
-    "dependencyRoot": "sha256:15dfe00f1fb7823b3ca27d23bd692f5031f2af536dcb52b9f2d853697e803e9e",
-    "toolchainRoot": "sha256:2ecb07894954a2e0de022615d4561e5ba3ae68376401941ecff77be03cd75a0f",
-    "affectedPaths": [
-      ".xinfa/portable-atlas-classification.json.gz",
-      ".xinfa/product-atlas-bundle.json",
-      "docs/adr/SHIFU-ADR-019f86da-4f90-79a1-bc85-4b542fecf011.md",
-      "docs/shifu/README.md",
-      "docs/shifu/production-graph-contract.json",
-      "docs/shifu/schema/production-graph-local-executor-policy-v0.schema.json",
-      "docs/shifu/schema/production-graph-v0.schema.json",
-      "framework/core/.gyp/run-build.js",
-      "framework/dev-delivery/native-under-warrant.mjs",
-      "framework/production-graph/check.mjs",
-      "framework/production-graph/core-subgraph/index.mjs",
-      "framework/production-graph/core-subgraph/index.test.mjs",
-      "framework/production-graph/core-subgraph/stage-executor/index.mjs",
-      "framework/production-graph/executor/index.mjs",
-      "package.json",
-      "scripts/dev-pr-auto-merge.test.mjs"
-    ],
-    "sourceWorkflowRunId": 0,
-    "deliveryClass": "native-proof-required",
-    "generation": 358,
-    "phase": "provisional",
-    "expectedOldStateRoot": "sha256:05b32244037f3b7ee8613ddbfe3e30437f9582625d4d6a3c64e62c00c733cae3",
-    "issuedAt": "2026-08-12T16:31:12.910Z",
-    "expiresAt": "2026-08-12T18:01:12.910Z",
-    "fencingToken": "sha256:30f4b03cf2513111cdc11297860b771004c251e80e17e47726cfd8ac0e723cc9",
-    "nextAction": "Run or reuse the exact semantic native proof, then atomically qualify this fenced Warrant."
-  },
+  "activeWarrant": null,
   "candidates": [
     {
       "repository": "kungfu-systems/kungfu",
@@ -18079,11 +18036,18 @@
       "sourceWorkflowRunId": 0,
       "priority": "ordinary",
       "enqueuedAt": "2026-08-12T15:16:04.450Z",
-      "updatedAt": "2026-08-12T16:31:12.910Z",
+      "updatedAt": "2026-08-12T16:33:42.494Z",
       "attempts": 1,
       "recoveries": 0,
-      "status": "selected",
-      "terminal": null,
+      "status": "terminal-failure",
+      "terminal": {
+        "outcome": "terminal-failure",
+        "reason": "Exact PR #3041 head b2249b64f1d6574f4e03949fc4965d775680e43c is GitHub CONFLICTING/DIRTY against current dev 6f9cfe1659cf2536e0e426bfd0224b5c140b9d2e; repair head before resubmission.",
+        "evidenceRoot": "sha256:5fd8734f8e8ae8ee12f973a53f1e99c2d8876f21b33b3f8a3da892d62a308c79",
+        "closedAt": "2026-08-12T16:33:42.494Z",
+        "fencingToken": "sha256:30f4b03cf2513111cdc11297860b771004c251e80e17e47726cfd8ac0e723cc9",
+        "leaseGeneration": 358
+      },
       "affectedPaths": [
         ".xinfa/portable-atlas-classification.json.gz",
         ".xinfa/product-atlas-bundle.json",
@@ -18851,6 +18815,6 @@
       ]
     }
   ],
-  "updatedAt": "2026-08-12T16:31:12.910Z",
-  "stateRoot": "sha256:bfe96f3448944e1383313857be6d783cc4fafba6afe986ecf24edce36abac136"
+  "updatedAt": "2026-08-12T16:33:42.494Z",
+  "stateRoot": "sha256:dd246a52f76813ff66f2ea34067135225b3f0da28964b3a62bf85466463de6a2"
 }
