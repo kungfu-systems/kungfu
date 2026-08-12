@@ -3,7 +3,7 @@
   "contract": "kungfu-buildchain-dev-delivery-warrant-queue",
   "repository": "kungfu-systems/kungfu",
   "protectedBase": "dev/v4/v4.0",
-  "generation": 1513,
+  "generation": 1514,
   "fencingCounter": 360,
   "policy": {
     "agingSeconds": 900,
@@ -11,51 +11,7 @@
     "leaseSeconds": 3600,
     "emergencyPolicy": "reviewed-explicit-only"
   },
-  "activeWarrant": {
-    "schema": "kungfu.buildchain.dev-delivery-warrant/v1",
-    "repository": "kungfu-systems/kungfu",
-    "protectedBase": "dev/v4/v4.0",
-    "candidateId": "sha256:7dfe224556609c0716fb7062167964e0a4d149e2d446494e14e978c388010b4c",
-    "pullRequestNumber": 3039,
-    "sourceHead": "439cc69cd2e79f5642aa33648a6d32176988cb55",
-    "assignmentRoot": "sha256:02c99e2fd2a79353f4664f3da3b075fa285fb006eea57653e395b746c8220cdf",
-    "initiativeRoot": "sha256:bfff817933e5a5ad693e4b902a84f6cc3a251235dd7377cb4091d92f805fa7ff",
-    "sourceIdentityRoot": "sha256:a271c935aabf801cebf4c5095674478eb349c4786f71c96df43dcc5d150d48d1",
-    "sourcePatchRoot": "sha256:fdf8d208cf6cee008fe4d808e659abce2cca14f9cc83de4df9e1644c008f3d65",
-    "sourceProofRoot": "sha256:9661d0caa7507d361cb53a58932a03135809b7076aed397fed5ff30dace9698b",
-    "planRoot": "sha256:326784ccca4e0072963ec2556681b829c5f48623b2ed20d0633178be4878319a",
-    "closureRoot": "sha256:106d175611d8634c988192302b9c464ae8ba3b6d023c2cff9910e401344c9624",
-    "dependencyRoot": "sha256:aecdd848bb7bee2a5d5cca782ffe4f1292b3d6238fc90696f397319acb3c8f94",
-    "toolchainRoot": "sha256:2ecb07894954a2e0de022615d4561e5ba3ae68376401941ecff77be03cd75a0f",
-    "affectedPaths": [
-      "config/release/kungfu-release-provenance.contract.json",
-      "docs/adr/KF-ADR-019fe996-1912-7144-8fa5-3fceaa416365.md",
-      "docs/architecture/adr-map.json",
-      "docs/architecture/adr-map.md",
-      "docs/development/version-release-design.md",
-      "docs/development/versioning.md",
-      "docs/qualification/gates/release-and-promotion.md",
-      "framework/core/src/python/kungfu/release_provenance/__init__.py",
-      "framework/core/tests/python/test_release_provenance.py",
-      "framework/dev-delivery/native-under-warrant.mjs",
-      "framework/release/kungfu-release-provenance.contract.json",
-      "scripts/affected-native-proof.mjs",
-      "scripts/check-release-provenance-object.test.mjs",
-      "scripts/dev-delivery-proof-consumer.test.mjs",
-      "scripts/dev-pr-auto-merge.test.mjs",
-      "scripts/release-provenance-object.py",
-      "tests/fixtures/release-provenance-object/cases.json"
-    ],
-    "sourceWorkflowRunId": 0,
-    "deliveryClass": "native-proof-required",
-    "generation": 360,
-    "phase": "provisional",
-    "expectedOldStateRoot": "sha256:96608ad72d467c7fbcab65e6dbf0f9d2335cbe8239d2e484387dd08426cdb7f1",
-    "issuedAt": "2026-08-12T16:46:04.866Z",
-    "expiresAt": "2026-08-12T18:16:04.866Z",
-    "fencingToken": "sha256:f0b5519c92d768c4f517621ff7e37ba34fcc1a52dc4b4e9a7df5991e60da591e",
-    "nextAction": "Run or reuse the exact semantic native proof, then atomically qualify this fenced Warrant."
-  },
+  "activeWarrant": null,
   "candidates": [
     {
       "repository": "kungfu-systems/kungfu",
@@ -18625,11 +18581,18 @@
       "sourceWorkflowRunId": 0,
       "priority": "ordinary",
       "enqueuedAt": "2026-08-12T15:26:44.715Z",
-      "updatedAt": "2026-08-12T16:46:04.866Z",
+      "updatedAt": "2026-08-12T16:48:38.288Z",
       "attempts": 1,
       "recoveries": 0,
-      "status": "selected",
-      "terminal": null,
+      "status": "terminal-failure",
+      "terminal": {
+        "outcome": "terminal-failure",
+        "reason": "Exact PR #3039 head 439cc69cd2e79f5642aa33648a6d32176988cb55 is GitHub dirty against current dev 6f9cfe1659cf2536e0e426bfd0224b5c140b9d2e and exact source workflow run 31606299864 concluded failure; repair the head before resubmission.",
+        "evidenceRoot": "sha256:cbd74890823b1761e5351aa10d6eb4c2464bf512fc76b76e951b080d7acf793d",
+        "closedAt": "2026-08-12T16:48:38.288Z",
+        "fencingToken": "sha256:f0b5519c92d768c4f517621ff7e37ba34fcc1a52dc4b4e9a7df5991e60da591e",
+        "leaseGeneration": 360
+      },
       "affectedPaths": [
         "config/release/kungfu-release-provenance.contract.json",
         "docs/adr/KF-ADR-019fe996-1912-7144-8fa5-3fceaa416365.md",
@@ -18866,6 +18829,6 @@
       ]
     }
   ],
-  "updatedAt": "2026-08-12T16:46:04.866Z",
-  "stateRoot": "sha256:8e192fe497aa24a59f1ee41e77e8c08fa5833c2a91ada7d5b4433c0c0e8bba5e"
+  "updatedAt": "2026-08-12T16:48:38.288Z",
+  "stateRoot": "sha256:985be6980a0222487d97173b3f848178346abd4c0a66a78523291d15d3b702e6"
 }
