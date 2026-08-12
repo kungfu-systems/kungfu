@@ -83,6 +83,16 @@ execution; Shifu owns how the task is executed after source checkout.
   dependency-skip events and one rooted receipt. Replaying the same inputs
   returns the existing exact receipt without starting a process. It is not a
   scheduler, and it cannot mutate Work or Assignment authority.
+  `./shifu core-production-subgraph:execute` is the additive adapter for the
+  typed journal Core slice. It re-verifies the typed subgraph and plan, the
+  current describe-only verification receipt, the projected execution graph,
+  policy, source, toolchain, and live execution admission before delegating
+  `dependency-bootstrap`, `native-build`, and `artifact-stage` serially to the
+  existing Core build internals. Each internal handler requires the exact
+  admitted node and policy bindings; later stages are dependency-skipped after
+  failure, timeout, or cancellation. The public `./shifu build:core` argv and
+  package scripts remain unchanged and authoritative, while removing this
+  adapter restores the prior describe-only state without a cutover.
   `./shifu production-graph:build-result --execution-receipt RECEIPT
   --output-dir DIR [--expected-receipt-root ROOT]` deterministically settles
   one exact terminal local-execution receipt into a content-addressed

@@ -156,9 +156,23 @@ function verifyContractBoundary(contract) {
   );
   assert.equal(contract.localExecutor.concurrency, 1);
   assert.equal(contract.localExecutor.fixtureSafeOnly, false);
-  assert.deepEqual(contract.localExecutor.boundedRealTasks, ['build:core']);
+  assert.deepEqual(contract.localExecutor.boundedRealTasks, [
+    'build:core',
+    'core-production-subgraph:dependency-bootstrap',
+    'core-production-subgraph:native-build',
+    'core-production-subgraph:artifact-stage',
+  ]);
   assert.deepEqual(contract.localExecutor.boundedTaskEnvironment, {
     'build:core': { KUNGFU_BUILD_PROFILE: 'journal' },
+    'core-production-subgraph:dependency-bootstrap': {
+      KUNGFU_BUILD_PROFILE: 'journal',
+    },
+    'core-production-subgraph:native-build': {
+      KUNGFU_BUILD_PROFILE: 'journal',
+    },
+    'core-production-subgraph:artifact-stage': {
+      KUNGFU_BUILD_PROFILE: 'journal',
+    },
   });
   assert.equal(contract.localExecutor.requiresExactAdmission, true);
   assert.equal(contract.localExecutor.replayStartsNodes, false);
@@ -198,6 +212,15 @@ function verifyContractBoundary(contract) {
   assert.equal(contract.coreProductionSubgraph.stagesDirectlyInvocable, false);
   assert.equal(contract.coreProductionSubgraph.describeOnly, true);
   assert.equal(contract.coreProductionSubgraph.cutover, false);
+  assert.equal(
+    contract.coreProductionSubgraph.stageExecutor,
+    './shifu core-production-subgraph:execute',
+  );
+  assert.equal(
+    contract.coreProductionSubgraph.stageExecutorAuthority,
+    'additive-admitted-shadow-only',
+  );
+  assert.equal(contract.coreProductionSubgraph.stageExecutorConcurrency, 1);
   assert.equal(
     contract.buildResult.command,
     './shifu production-graph:build-result',
@@ -268,6 +291,7 @@ function verifierRoot() {
       'framework/production-graph/compiler/polyglot.fixture.mjs',
       'framework/production-graph/core-subgraph/index.mjs',
       'framework/production-graph/core-subgraph/index.test.mjs',
+      'framework/production-graph/core-subgraph/stage-executor/index.mjs',
       'docs/shifu/core-production-subgraph-contract.json',
       'docs/shifu/examples/production-graph/core-production-subgraph/journal.fixture.json',
       'docs/shifu/examples/production-graph/core-production-subgraph/invalid/dependency-edge.fixture.json',

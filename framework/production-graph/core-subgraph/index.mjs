@@ -33,6 +33,7 @@ const TOOLCHAIN_PATHS = Object.freeze([
   'framework/core/.gyp/run-link-node.js',
   'framework/core/.gyp/gen-stubs.js',
   'framework/core/.gyp/run-wheel.js',
+  'framework/production-graph/core-subgraph/stage-executor/index.mjs',
 ]);
 const AUTHORITY_PATHS = Object.freeze({
   layers: 'framework/core/architecture/layers.json',
