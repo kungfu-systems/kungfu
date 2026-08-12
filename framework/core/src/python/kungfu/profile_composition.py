@@ -11,7 +11,6 @@ from __future__ import annotations
 
 import hashlib
 import json
-import time
 from pathlib import Path
 from typing import Any, Mapping, NoReturn, Sequence
 
@@ -622,27 +621,45 @@ def authorized_contract_materialize(
             "planId"
         ) != plan.get("planId"):
             _fail("decision-denied", "contract materialization was not approved")
-    system_time = time.time_ns()
+    system_time = _native_system_time()
     receipts = []
     contract = dict(refreshed["contract"])
+    world = contract["contractWorld"]
+    current = storage_service.fact_type_list(runtime_dir)
+    world_reference = next(
+        (
+            {
+                "id": row["id"],
+                "version": row["version"],
+                "root": row["root"],
+            }
+            for row in current.get("contract_worlds") or []
+            if row.get("id") == world["id"] and row.get("version") == world["version"]
+        ),
+        None,
+    )
     for index, operation in enumerate(refreshed["operations"]):
         at = system_time + index
         if operation["kind"] == "declare-contract-world":
-            world = contract["contractWorld"]
-            receipts.append(
-                storage_service.fact_declare_contract_world(
-                    runtime_dir,
-                    {
-                        "id": world["id"],
-                        "version": world["version"],
-                        "effective_from": at,
-                        "effective_until": 0,
-                        "fact_surface_ids": world["factSurfaceIds"],
-                    },
-                    system_time=at,
-                )
+            receipt = storage_service.fact_declare_contract_world(
+                runtime_dir,
+                {
+                    "id": world["id"],
+                    "version": world["version"],
+                    "effective_from": at,
+                    "effective_until": 0,
+                    "fact_surface_ids": world["factSurfaceIds"],
+                },
+                system_time=at,
             )
+            receipts.append(receipt)
+            world_reference = receipt["reference"]
         elif operation["kind"] == "declare-fact-surface":
+            if world_reference is None:
+                _fail(
+                    "contract-world-reference-missing",
+                    "contract materialization requires the exact contract-world reference",
+                )
             surface = next(
                 row for row in contract["factSurfaces"] if row["id"] == operation["id"]
             )
@@ -653,6 +670,7 @@ def authorized_contract_materialize(
                         "id": surface["id"],
                         "version": surface["version"],
                         "contract_world_id": surface["contractWorldId"],
+                        "contract_world": world_reference,
                         "source_authorities": surface["sourceAuthorities"],
                         "schema": surface["schema"],
                         "effective_from": at,
@@ -1147,6 +1165,12 @@ def _diagnostics(
             }
         )
     return diagnostics
+
+
+def _native_system_time() -> int:
+    import kungfu
+
+    return int(kungfu.__binding__.runtime.now_in_nano())
 
 
 def _read_ref(inspection: Mapping[str, Any], ref: Mapping[str, Any]) -> dict[str, Any]:

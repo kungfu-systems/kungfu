@@ -367,15 +367,28 @@ public:
         int64_or(definition, "effective_from",
                  int64_or(options.operation_options, "system_time", kungfu::yijinjing::time::now_in_nano()));
     const auto effective_until = int64_or(definition, "effective_until");
-    const auto world_id = text_or(definition, "contract_world_id", type_id + ".world");
+    const auto explicit_world_reference = object_or_empty(definition, "contract_world");
+    const auto world_id = explicit_world_reference.empty()
+                              ? text_or(definition, "contract_world_id", type_id + ".world")
+                              : required_text(explicit_world_reference, "id");
+    const auto world_version =
+        explicit_world_reference.empty() ? version : required_text(explicit_world_reference, "version");
+    if (!explicit_world_reference.empty() && text_or(explicit_world_reference, "root").empty()) {
+      throw std::invalid_argument("contract_world.root is required");
+    }
+    if (!text_or(definition, "contract_world_id").empty() && text_or(definition, "contract_world_id") != world_id) {
+      throw std::invalid_argument("contract_world_id must match contract_world.id");
+    }
 
     const auto existing = fact_type_list(options);
     const auto provider = shared_provider(options);
-    nlohmann::json world_reference;
-    for (const auto &world : array_or_empty(existing, "contract_worlds")) {
-      if (text_or(world, "id") == world_id && text_or(world, "version") == version) {
-        world_reference = {{"id", world.at("id")}, {"version", world.at("version")}, {"root", world.at("root")}};
-        break;
+    nlohmann::json world_reference = explicit_world_reference;
+    if (world_reference.empty()) {
+      for (const auto &world : array_or_empty(existing, "contract_worlds")) {
+        if (text_or(world, "id") == world_id && text_or(world, "version") == world_version) {
+          world_reference = {{"id", world.at("id")}, {"version", world.at("version")}, {"root", world.at("root")}};
+          break;
+        }
       }
     }
     for (const auto &type : array_or_empty(existing, "fact_types")) {
@@ -383,8 +396,11 @@ public:
         if (text_or(type, "schema_owner_root") != schema_hash) {
           throw std::invalid_argument("fact type version already exists with a different schema root");
         }
+        const auto existing_world = object_or_empty(type, "contract_world");
         if (canonical_json(array_or_empty(type, "source_authorities")) != canonical_json(sources) ||
-            text_or(object_or_empty(type, "contract_world"), "id") != world_id) {
+            text_or(existing_world, "id") != world_id || text_or(existing_world, "version") != world_version ||
+            (!explicit_world_reference.empty() &&
+             text_or(existing_world, "root") != text_or(explicit_world_reference, "root"))) {
           throw std::invalid_argument("fact type version already exists with a different immutable definition");
         }
         const auto stored =
@@ -410,7 +426,7 @@ public:
     if (world_reference.is_null() || world_reference.empty()) {
       world_receipt = facts::declare_contract_world(options.runtime_dir,
                                                     {{"id", world_id},
-                                                     {"version", version},
+                                                     {"version", world_version},
                                                      {"effective_from", effective_from},
                                                      {"effective_until", effective_until},
                                                      {"fact_surface_ids", nlohmann::json::array({type_id})}},
