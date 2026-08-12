@@ -2,11 +2,14 @@
 
 import json
 import os
+import time
 from pathlib import Path
 
+import pytest
 from click.testing import CliRunner
 
 from kungfu import agent_work_lab
+from kungfu.agent import runtime_profiles
 from kungfu.cli.commands import kfc
 from kungfu.cli.commands import agent_work_lab as agent_work_lab_commands  # noqa: F401
 from kungfu.cli.commands.assignment import (
@@ -33,6 +36,22 @@ def _verified_query(canonical_work_count=0):
         "proof": {"proof_root": proof_root},
         "writes": [],
     }
+
+
+def _write_observer(config_home, query, surface="tui"):
+    path = config_home / surface / "global-work-observer.json"
+    path.parent.mkdir(parents=True)
+    path.write_text(
+        json.dumps(
+            {
+                "schema": "kungfu.gui.global-work-observer/v2",
+                "query": query,
+                "cursors": {},
+            }
+        ),
+        encoding="utf-8",
+    )
+    return path
 
 
 def test_generic_project_review_selects_bounded_project_evidence(tmp_path):
@@ -105,15 +124,12 @@ def test_absent_runtime_is_verified_empty_without_materializing_it(
     tmp_path, monkeypatch
 ):
     runtime = tmp_path / "home" / "runtime"
+    config_home = tmp_path / "config"
+    _write_observer(config_home, _verified_query())
     before = list(tmp_path.rglob("*"))
-    monkeypatch.setattr(
-        agent_work_lab,
-        "query_federation",
-        lambda *_args, **_kwargs: _verified_query(),
-    )
     result = agent_work_lab.inspect_startup(
         runtime,
-        config_home=tmp_path / "config",
+        config_home=config_home,
         env={"HOME": str(tmp_path / "user")},
     )
     assert result["route"] == "agent-work-lab"
@@ -121,6 +137,96 @@ def test_absent_runtime_is_verified_empty_without_materializing_it(
     assert result["reasonCode"] == "global-work-verified-empty"
     assert result["writeOccurred"] is False
     assert list(tmp_path.rglob("*")) == before
+
+
+def test_startup_without_observer_is_bounded_and_fails_to_lab_diagnostic(tmp_path):
+    started = time.monotonic()
+    result = agent_work_lab.inspect_startup(
+        tmp_path / "runtime", config_home=tmp_path / "config"
+    )
+
+    assert time.monotonic() - started < 0.25
+    assert result["route"] == "diagnostic"
+    assert result["reasonCode"] == "global-work-observation-unavailable"
+    assert result["writeOccurred"] is False
+    assert not (tmp_path / "config").exists()
+
+
+def test_noninteractive_root_prints_the_bounded_beginner_journey():
+    result = CliRunner().invoke(kfc, ["agent-work-lab"])
+
+    assert result.exit_code == 0, result.output
+    for command in ("open", "watch", "tour", "try", "test", "report"):
+        assert command in result.output
+    assert "agent-run" not in result.output
+
+
+def test_default_help_hides_compatible_low_level_steps():
+    result = CliRunner().invoke(kfc, ["agent-work-lab", "--help"])
+
+    assert result.exit_code == 0, result.output
+    for command in ("open", "watch", "tour", "try", "test", "report"):
+        assert command in result.output
+    for internal_step in ("starter-create", "agent-plan", "agent-run"):
+        assert internal_step not in result.output
+
+
+def test_open_and_watch_launch_explicit_tui_surfaces(monkeypatch):
+    from kungfu.cli import tui_runtime
+
+    launches = []
+    monkeypatch.setattr(
+        agent_work_lab_commands,
+        "_interactive_terminal",
+        lambda: True,
+    )
+    monkeypatch.setattr(
+        tui_runtime,
+        "run_tui",
+        lambda _ctx, commands=(): launches.append(tuple(commands)),
+    )
+
+    opened = CliRunner().invoke(kfc, ["agent-work-lab", "open"])
+    watched = CliRunner().invoke(kfc, ["agent-work-lab", "watch"])
+
+    assert opened.exit_code == 0, opened.output
+    assert watched.exit_code == 0, watched.output
+    assert launches == [
+        ("--agent-work-lab-open",),
+        ("--agent-work-lab-autoplay",),
+    ]
+
+
+def test_test_command_defaults_to_a_script_safe_plan(monkeypatch):
+    catalog = {
+        "agents": [{"id": "codex.one", "label": "Codex", "provider": "codex"}],
+        "credentialContentsRead": False,
+    }
+    monkeypatch.setattr(
+        agent_work_lab,
+        "resolve_agent_selector",
+        lambda _selector, **_kwargs: ("codex.one", catalog),
+    )
+    monkeypatch.setattr(
+        agent_work_lab,
+        "agent_plan",
+        lambda profile_id, **_kwargs: {
+            "schema": "kungfu.agent-work-lab.agent-plan/v1",
+            "identity": {"profileId": profile_id},
+            "planRoot": "sha256:" + "1" * 64,
+            "writeOccurred": False,
+        },
+    )
+
+    result = CliRunner().invoke(kfc, ["agent-work-lab", "test", "--json"])
+
+    assert result.exit_code == 0, result.output
+    payload = json.loads(result.output)
+    assert payload["schema"] == "kungfu.agent-work-lab.test-plan/v1"
+    assert payload["mode"] == "same-agent"
+    assert payload["source"]["identity"]["profileId"] == "codex.one"
+    assert payload["requiresExecute"] is True
+    assert payload["writeOccurred"] is False
 
 
 def test_starter_create_requires_explicit_execute():
@@ -308,10 +414,10 @@ def test_project_tour_episode_cli_invokes_one_native_controller(monkeypatch, tmp
 
 def test_existing_global_work_routes_to_work_graph(tmp_path, monkeypatch):
     runtime = tmp_path / "runtime"
-    monkeypatch.setattr(
-        agent_work_lab,
-        "query_federation",
-        lambda *_args, **_kwargs: {
+    config_home = tmp_path / "config"
+    observer = _write_observer(
+        config_home,
+        {
             **_verified_query(1),
             "aggregate": {
                 "complete": False,
@@ -322,7 +428,7 @@ def test_existing_global_work_routes_to_work_graph(tmp_path, monkeypatch):
     )
     result = agent_work_lab.inspect_startup(
         runtime,
-        config_home=tmp_path / "config",
+        config_home=config_home,
         env={"HOME": str(tmp_path / "user")},
     )
     assert result["route"] == "work-graph"
@@ -331,6 +437,7 @@ def test_existing_global_work_routes_to_work_graph(tmp_path, monkeypatch):
     assert result["evidence"] == [
         "sha256:" + "a" * 64,
         "sha256:" + "b" * 64,
+        str(observer),
     ]
 
 
@@ -338,10 +445,10 @@ def test_unknown_or_incomplete_global_work_fails_closed_to_diagnostic(
     tmp_path, monkeypatch
 ):
     runtime = tmp_path / "runtime"
-    monkeypatch.setattr(
-        agent_work_lab,
-        "query_federation",
-        lambda *_args, **_kwargs: {
+    config_home = tmp_path / "config"
+    _write_observer(
+        config_home,
+        {
             **_verified_query(),
             "aggregate": {
                 "complete": False,
@@ -352,7 +459,7 @@ def test_unknown_or_incomplete_global_work_fails_closed_to_diagnostic(
     )
     result = agent_work_lab.inspect_startup(
         runtime,
-        config_home=tmp_path / "config",
+        config_home=config_home,
         env={"HOME": str(tmp_path / "user")},
     )
     assert result["route"] == "diagnostic"
@@ -430,14 +537,11 @@ def test_agent_work_lab_identity_change_marks_report_stale():
 
 def test_catalog_exposes_one_authority_for_cli_gui_and_tui(tmp_path, monkeypatch):
     _, _, suite_catalog_root = agent_work_lab._load_suite_catalog()
-    monkeypatch.setattr(
-        agent_work_lab,
-        "query_federation",
-        lambda *_args, **_kwargs: _verified_query(),
-    )
+    config_home = tmp_path / "config"
+    _write_observer(config_home, _verified_query())
     catalog = agent_work_lab.catalog(
         tmp_path / "missing",
-        config_home=tmp_path / "config",
+        config_home=config_home,
         env={"HOME": str(tmp_path / "user")},
     )
     assert catalog["authority"]["surfaces"] == ["cli", "gui", "tui"]
@@ -453,12 +557,24 @@ def test_catalog_exposes_one_authority_for_cli_gui_and_tui(tmp_path, monkeypatch
     assert catalog["suite"]["capabilityDeclarations"] == ["agentRuntime", "work"]
     assert catalog["suite"]["catalogRoot"] == suite_catalog_root
     assert [row["id"] for row in catalog["actions"]] == [
+        "agent-work-lab.open",
+        "agent-work-lab.watch",
+        "agent-work-lab.tour",
+        "agent-work-lab.try.plan",
+        "agent-work-lab.try.create",
+        "agent-work-lab.test.plan",
+        "agent-work-lab.test.run",
+        "agent-work-lab.report.open",
+        "agent-work-lab.agents.discover",
+        "agent-work-lab.startup.inspect",
+        "agent-work-lab.surface.catalog",
         "agent-work-lab.demo.plan",
         "agent-work-lab.demo.run",
         "agent-work-lab.agent.plan",
         "agent-work-lab.agent.run",
         "agent-work-lab.starter-project.plan",
         "agent-work-lab.starter-project.create",
+        "agent-work-lab.starter-project.resume",
     ]
 
 
@@ -479,6 +595,139 @@ def test_provider_commands_are_exact_and_non_interactive():
         "workspace-write",
         "fixture",
     ]
+    assert agent_work_lab._provider_command(
+        {"provider": "amp", "launch": {"executable": "/usr/bin/amp", "argv": []}},
+        "fixture",
+    ) == ["/usr/bin/amp", "--execute", "fixture"]
+    assert agent_work_lab._provider_command(
+        {
+            "provider": "opencode",
+            "launch": {"executable": "/usr/bin/opencode", "argv": []},
+        },
+        "fixture",
+    ) == [
+        "/usr/bin/opencode",
+        "run",
+        "--pure",
+        "--format",
+        "json",
+        "fixture",
+    ]
+
+
+def test_human_agent_catalog_deduplicates_and_marks_default(monkeypatch):
+    profile = {
+        "id": "codex.path.one",
+        "label": "Codex",
+        "provider": "codex",
+        "source": "configured",
+    }
+    monkeypatch.setattr(
+        agent_work_lab.runtime_profiles,
+        "discover_catalog",
+        lambda **_kwargs: {
+            "schema": "kungfu.agent-runtime-profile-catalog/v1",
+            "configured": [profile],
+            "discovered": [
+                {
+                    "profile": {**profile, "source": "discovered"},
+                    "available": True,
+                    "version": "1.2.3",
+                }
+            ],
+            "defaultProfileId": "codex.path.one",
+            "recommendedProfileId": "codex.path.one",
+            "diagnostics": [],
+        },
+    )
+    monkeypatch.setattr(
+        agent_work_lab.runtime_profiles,
+        "verify_profile",
+        lambda _profile: {"ok": True, "version": "1.2.3"},
+    )
+
+    catalog = agent_work_lab.human_agent_catalog()
+
+    assert len(catalog["agents"]) == 1
+    assert catalog["agents"][0] == {
+        "id": "codex.path.one",
+        "label": "Codex",
+        "provider": "codex",
+        "source": "configured",
+        "configured": True,
+        "discovered": True,
+        "available": True,
+        "version": "1.2.3",
+        "default": True,
+        "recommended": True,
+    }
+    assert catalog["credentialContentsRead"] is False
+
+
+def test_agent_selector_accepts_default_provider_label_and_exact_id(monkeypatch):
+    catalog = {
+        "agents": [
+            {
+                "id": "codex.path.one",
+                "label": "Codex Stable",
+                "provider": "codex",
+                "configured": True,
+                "default": True,
+                "recommended": True,
+            },
+            {
+                "id": "codex.path.discovered",
+                "label": "Codex",
+                "provider": "codex",
+                "configured": False,
+                "default": False,
+                "recommended": False,
+            },
+            {
+                "id": "claude.path.two",
+                "label": "Claude Local",
+                "provider": "claude",
+            },
+        ],
+        "defaultProfileId": "codex.path.one",
+        "recommendedProfileId": "codex.path.one",
+    }
+    monkeypatch.setattr(
+        runtime_profiles, "human_agent_catalog", lambda **_kwargs: catalog
+    )
+
+    assert agent_work_lab.resolve_agent_selector(None)[0] == "codex.path.one"
+    assert agent_work_lab.resolve_agent_selector("codex")[0] == "codex.path.one"
+    assert agent_work_lab.resolve_agent_selector("claude")[0] == "claude.path.two"
+    assert agent_work_lab.resolve_agent_selector("Claude Local")[0] == "claude.path.two"
+    assert (
+        agent_work_lab.resolve_agent_selector("codex.path.one")[0] == "codex.path.one"
+    )
+
+
+def test_report_reopens_latest_root_verified_result(tmp_path):
+    runtime = tmp_path / "runtime"
+    first = agent_work_lab.next_result_directory(runtime)
+    report = agent_work_lab.run_demo(first)
+
+    loaded = agent_work_lab.load_report(None, runtime_dir=runtime)
+
+    assert loaded["reportRoot"] == report["reportRoot"]
+    assert loaded["reportPath"] == str(first / "report.json")
+    assert loaded["writeOccurred"] is False
+
+
+def test_report_rejects_modified_result_and_missing_latest(tmp_path):
+    with pytest.raises(ValueError, match="no retained"):
+        agent_work_lab.load_report(None, runtime_dir=tmp_path / "empty")
+    output = tmp_path / "result"
+    agent_work_lab.run_demo(output)
+    path = output / "report.json"
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    payload["status"] = "failed"
+    path.write_text(json.dumps(payload), encoding="utf-8")
+    with pytest.raises(ValueError, match="root does not verify"):
+        agent_work_lab.load_report(path, runtime_dir=tmp_path)
 
 
 def test_selected_agent_and_cross_profile_handoff_use_fresh_processes(

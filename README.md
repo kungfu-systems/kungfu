@@ -133,6 +133,10 @@ These are bounded exact-artifact demonstrations—not provider rankings,
 production certification, or authority to complete real Work. See the
 [animation technical specification and auditable evidence](docs/qualification/auditable-demo-artifact-pipeline.md).
 
+To enter the Lab yourself instead of watching an artifact, run
+`kungfu agent-work-lab`. Its short `open → watch/tour → try → test → report`
+journey is documented in the [Agent Work Lab guide](docs/guides/agent-work-lab.md).
+
 Open the optional terminal view whenever you want the larger Work picture:
 
 ```sh
