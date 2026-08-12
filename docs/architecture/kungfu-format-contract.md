@@ -131,6 +131,29 @@ Selected Git-provider artifacts may appear under `.kungfu/episodes/` or
 `.kungfu/project-cuts/`. They do not turn live runtime storage into a Git
 authority and do not move `.xinfa` declarations into `.kungfu/runtime/`.
 
+## Git publication boundary
+
+An Agent must not infer Git policy from persistence class and must never stage
+the whole `.kungfu/` directory. The installed, version-matched machine contract
+is `workspaceGit` in `kungfu agent map --json` and
+`kungfu agent capabilities --json`. Its default is closed: a path enters Git
+only when it matches a publication-allowlist row and satisfies that row's
+selection rule. Publisher content must use the exact path it returns.
+
+| Disposition | Exact workspace paths |
+| --- | --- |
+| publish after repository review | `.kungfu/.gitignore` |
+| publish qualified sealed Episode shadows | `.kungfu/episodes/sealed/sha256/<2-hex>/<64-hex>/{claims.jsonl,manifest.json,qualification.json}` |
+| publish settled Project Cuts | `.kungfu/project-cuts/sha256/<2-hex>/<64-hex>/{manifest.json,receipt.json}` |
+| publish protected settlement batches | `.kungfu/ledger-publications/sha256/<2-hex>/<64-hex>/manifest.json` |
+| always local | `.kungfu/{runtime,inbox,private,cache,locks,projections}/` and `.kungfu/episodes/.tmp/` |
+
+Every unmatched path stays local unless the repository has an explicit policy
+for it. This includes workspace identity, config, installed extensions,
+datasets, backtests, backups, contracts, missions, and skills by default.
+“Durable” means deletion may lose accepted state; it does not mean Git should
+track that state. Kungfu itself does not stage, commit, or push any path.
+
 Within `.kungfu/`, authority remains singular:
 
 - append-only journals and admitted content are durable authority;

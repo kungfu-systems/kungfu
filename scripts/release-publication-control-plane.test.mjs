@@ -9,6 +9,7 @@ import {
   inspectLive,
   status,
   validateExternalWorkflowInventory,
+  validatePromotionWorkflowAuthority,
   validateRegistry,
 } from '../framework/release/publication-control-plane.mjs';
 const p = path.join(
@@ -41,6 +42,35 @@ test('checked registry closes workflows and invariants', () => {
   const v = get();
   assert.equal(validateRegistry(v), v);
   assert.equal(status(v).sourceAcceptance, 'passed');
+});
+test('promotion authority keeps floating Alpha routing while verifying exact recovery runtime data', () => {
+  const source = fs.readFileSync(
+    '.github/workflows/release-new-version.yml',
+    'utf8',
+  );
+  const policy = JSON.parse(
+    fs.readFileSync(
+      'docs/qualification/gates/release-admission-policy.json',
+      'utf8',
+    ),
+  );
+  const runtime = policy.buildchain.runtimes.alpha.publicationRuntimeSha;
+  assert.equal(validatePromotionWorkflowAuthority(source, runtime), true);
+  assert.throws(
+    () => validatePromotionWorkflowAuthority(source, '0'.repeat(40)),
+    /runtime is invalid/u,
+  );
+  assert.throws(
+    () =>
+      validatePromotionWorkflowAuthority(
+        source.replace(
+          'buildchain-ref: ${{ inputs.resume-buildchain-runtime-sha }}',
+          'buildchain-ref: v3-alpha',
+        ),
+        runtime,
+      ),
+    /authority drift/u,
+  );
 });
 test('unregistered local workflow fails', () => {
   const v = get();

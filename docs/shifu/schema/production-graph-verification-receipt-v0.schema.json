@@ -15,6 +15,7 @@
     "validFixtureRoots",
     "validFixtureCount",
     "invalidFixtureCount",
+    "executionAdmissionReceiptRoot",
     "protectedGate",
     "nodesExecuted",
     "receiptRoot"
@@ -34,7 +35,15 @@
         "receipt",
         "failure",
         "recovery",
-        "verificationReceipt"
+        "feedback",
+        "verificationReceipt",
+        "executionAdmissionRequest",
+        "executionAdmissionRejection",
+        "executionAdmissionDecision",
+        "executionAdmissionVerificationReceipt",
+        "localExecutorPolicy",
+        "localExecutionReceipt",
+        "buildCoreShadowReceipt"
       ],
       "properties": {
         "graph": { "$ref": "production-graph-v0.schema.json#/$defs/root" },
@@ -43,7 +52,15 @@
         "receipt": { "$ref": "production-graph-v0.schema.json#/$defs/root" },
         "failure": { "$ref": "production-graph-v0.schema.json#/$defs/root" },
         "recovery": { "$ref": "production-graph-v0.schema.json#/$defs/root" },
-        "verificationReceipt": { "$ref": "production-graph-v0.schema.json#/$defs/root" }
+        "feedback": { "$ref": "production-graph-v0.schema.json#/$defs/root" },
+        "verificationReceipt": { "$ref": "production-graph-v0.schema.json#/$defs/root" },
+        "executionAdmissionRequest": { "$ref": "production-graph-v0.schema.json#/$defs/root" },
+        "executionAdmissionRejection": { "$ref": "production-graph-v0.schema.json#/$defs/root" },
+        "executionAdmissionDecision": { "$ref": "production-graph-v0.schema.json#/$defs/root" },
+        "executionAdmissionVerificationReceipt": { "$ref": "production-graph-v0.schema.json#/$defs/root" },
+        "localExecutorPolicy": { "$ref": "production-graph-v0.schema.json#/$defs/root" },
+        "localExecutionReceipt": { "$ref": "production-graph-v0.schema.json#/$defs/root" },
+        "buildCoreShadowReceipt": { "$ref": "production-graph-v0.schema.json#/$defs/root" }
       }
     },
     "authorityReferences": { "$ref": "production-graph-v0.schema.json#/$defs/authorityRoots" },
@@ -56,6 +73,7 @@
     },
     "validFixtureCount": { "type": "integer", "minimum": 3 },
     "invalidFixtureCount": { "type": "integer", "minimum": 7 },
+    "executionAdmissionReceiptRoot": { "$ref": "production-graph-v0.schema.json#/$defs/root" },
     "protectedGate": { "const": "./shifu check:source" },
     "nodesExecuted": { "const": false },
     "receiptRoot": { "$ref": "production-graph-v0.schema.json#/$defs/root" }

@@ -689,6 +689,9 @@ export type Atlas = {
   markers: () => AtlasMarker[];
 };
 
+const PROFILE_ID = 'kungfu.work-control';
+const ADAPTER_MEMBER = 'work-control-actions';
+
 type IntentExecutionReceipt<TResult> = ProfileIntentReceipt & {
   actionReceipt: {
     verified: boolean;
@@ -696,12 +699,22 @@ type IntentExecutionReceipt<TResult> = ProfileIntentReceipt & {
   };
 };
 
-const PROFILE_ID = 'kungfu.work-control';
-const ADAPTER_MEMBER = 'work-control-actions';
+type WorkControlProfileOptions = {
+  mutationAuthority?: 'reject' | 'kfd3-application';
+};
+
+function directMutationRejected(intentId: string): Error {
+  const error = new Error(
+    `Direct GUI Profile mutation is read-only compatibility: ${intentId}; use kungfu.assignment-runtime/v1`,
+  ) as Error & { code?: string };
+  error.code = 'authority-bypass';
+  return error;
+}
 
 export function openWorkControlProfile(
   profile: Profile,
   defaultRepoRoot = '',
+  options: WorkControlProfileOptions = {},
 ): Atlas {
   let dashboardSnapshot: AtlasDashboardSnapshot | null = null;
   const source = () => profile.discover(PROFILE_ID).source;
@@ -721,7 +734,10 @@ export function openWorkControlProfile(
     intentId: string,
     input: unknown,
     authorizedBy: string,
-  ) => {
+  ): Promise<TResult> => {
+    if (options.mutationAuthority !== 'kfd3-application') {
+      throw directMutationRejected(intentId);
+    }
     const profileSource = source();
     const plan = profile.intentPlan(profileSource, intentId, input);
     const receipt = (await profile.authorizeIntentAsync(
@@ -893,4 +909,59 @@ export function openWorkControlProfile(
   };
 }
 
-/** Explicit compatibility alias for callers that have not migrated yet. */
+// KFD-3 factory qualification owns this separate, explicitly injected Profile
+// application surface. It is never selected as a fallback by the production
+// Work Dashboard, whose only Assignment authority is openProfileApplication().
+export function openKfd3ProfileApplication(
+  profile: Profile,
+  defaultRepoRoot = '',
+) {
+  const application = openWorkControlProfile(profile, defaultRepoRoot, {
+    mutationAuthority: 'kfd3-application',
+  });
+  return {
+    createInitiative: (
+      ...args: Parameters<typeof application.createInitiative>
+    ) => application.createInitiative(...args),
+    createAssignment: (
+      ...args: Parameters<typeof application.createAssignment>
+    ) => application.createAssignment(...args),
+    appendAssignmentRelationEvent: (
+      ...args: Parameters<typeof application.appendAssignmentRelationEvent>
+    ) => application.appendAssignmentRelationEvent(...args),
+    claimAssignment: (
+      ...args: Parameters<typeof application.claimAssignment>
+    ) => application.claimAssignment(...args),
+    advanceAssignment: (
+      ...args: Parameters<typeof application.advanceAssignment>
+    ) => application.advanceAssignment(...args),
+    claimCompletion: (
+      ...args: Parameters<typeof application.claimCompletion>
+    ) => application.claimCompletion(...args),
+    assessInitiativeAsync: (
+      ...args: Parameters<typeof application.assessInitiativeAsync>
+    ) => application.assessInitiativeAsync(...args),
+    reviewCompletion: (
+      ...args: Parameters<typeof application.reviewCompletion>
+    ) => application.reviewCompletion(...args),
+    decideContinuation: (
+      ...args: Parameters<typeof application.decideContinuation>
+    ) => application.decideContinuation(...args),
+    importRepo: (...args: Parameters<typeof application.importRepo>) =>
+      application.importRepo(...args),
+    activateWorkControl: (
+      ...args: Parameters<typeof application.activateWorkControl>
+    ) => application.activateWorkControl(...args),
+    restoreAtlasAuthority: (
+      ...args: Parameters<typeof application.restoreAtlasAuthority>
+    ) => application.restoreAtlasAuthority(...args),
+    exportInitiative: (
+      ...args: Parameters<typeof application.exportInitiative>
+    ) => application.exportInitiative(...args),
+    importInitiative: (
+      ...args: Parameters<typeof application.importInitiative>
+    ) => application.importInitiative(...args),
+    intentPlan: (...args: Parameters<typeof profile.intentPlan>) =>
+      profile.intentPlan(...args),
+  };
+}

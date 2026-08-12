@@ -6,7 +6,7 @@
       "protocol_id": "kungfu.fact-cut-kernel.contract/v1",
       "source": "framework/fact/kungfu-fact-cut-kernel.contract.json",
       "source_role": "fact-object-cut-and-admission-semantics",
-      "source_root": "sha256:848dbaafca59b1d7534c569f83552d8674e890345e008c2ece319c29e2caea44",
+      "source_root": "sha256:63736a25cac825216749f971d672ab8e5ab98d2015bd1d50bc91ddf68775f8b1",
       "version_axis": "Fact record schema and Cut protocol"
     },
     {
@@ -15,7 +15,7 @@
       "protocol_id": "kungfu.fact-root.canonical/v2",
       "source": "framework/fact/kungfu-fact-cut-kernel.contract.json",
       "source_role": "portable-canonical-Fact-root-preimage",
-      "source_root": "sha256:848dbaafca59b1d7534c569f83552d8674e890345e008c2ece319c29e2caea44",
+      "source_root": "sha256:63736a25cac825216749f971d672ab8e5ab98d2015bd1d50bc91ddf68775f8b1",
       "version_axis": "Fact root canonicalization protocol"
     },
     {
@@ -78,7 +78,7 @@
       "protocol_id": "kungfu.layered-api-encoding-boundary.contract/v1",
       "source": "framework/core/architecture/layered-api-encoding-boundary.contract.json",
       "source_role": "Hana-POD-versus-FlatBuffers-payload-schema-ownership",
-      "source_root": "sha256:2597f77626c9236b40f614d554a5e2f385935009e7a8785d02339b4692fa2ad2",
+      "source_root": "sha256:44f182fa7def13375d074ba525b57e1dd93f8529366ee4a1a172fd93528f956f",
       "version_axis": "payload schema owner and protocol-selected encoding"
     },
     {
@@ -96,7 +96,7 @@
       "protocol_id": "kungfu.kfx.manifest/v1",
       "source": "config/kungfu-kfx.contract.json",
       "source_role": "KFX-identity-neutral-package-declaration-schema",
-      "source_root": "sha256:f0e6cfddac711123a969d7d88c8995b95fcb397b99438674902372fb38ff8d0c",
+      "source_root": "sha256:4c17dddae597d19eb9ead4d3767669e3f8343a3b41cc9deb42c8eb5ff08a514d",
       "version_axis": "KFX package manifest schema version"
     },
     {
@@ -121,7 +121,7 @@
       },
       {
         "path": "framework/fact/kungfu-fact-cut-kernel.contract.json",
-        "root": "sha256:848dbaafca59b1d7534c569f83552d8674e890345e008c2ece319c29e2caea44"
+        "root": "sha256:63736a25cac825216749f971d672ab8e5ab98d2015bd1d50bc91ddf68775f8b1"
       },
       {
         "path": "framework/episode/kungfu-episode-invariants.contract.json",
@@ -149,7 +149,7 @@
       },
       {
         "path": "framework/core/architecture/layered-api-encoding-boundary.contract.json",
-        "root": "sha256:2597f77626c9236b40f614d554a5e2f385935009e7a8785d02339b4692fa2ad2"
+        "root": "sha256:44f182fa7def13375d074ba525b57e1dd93f8529366ee4a1a172fd93528f956f"
       },
       {
         "path": "framework/spec/schema/manifest.schema.json",
@@ -157,7 +157,7 @@
       },
       {
         "path": "config/kungfu-kfx.contract.json",
-        "root": "sha256:f0e6cfddac711123a969d7d88c8995b95fcb397b99438674902372fb38ff8d0c"
+        "root": "sha256:4c17dddae597d19eb9ead4d3767669e3f8343a3b41cc9deb42c8eb5ff08a514d"
       },
       {
         "path": "framework/core/src/libyijinjing/include/kungfu/yijinjing/storage/common.h",

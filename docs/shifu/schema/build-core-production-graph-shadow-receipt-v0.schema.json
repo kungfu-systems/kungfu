@@ -1,0 +1,152 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://libkungfu.dev/schemas/shifu/build-core-production-graph-shadow-receipt-v0.schema.json",
+  "title": "Shifu build:core Production Graph shadow receipt v0",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "status",
+    "sourceRevision",
+    "sourceTree",
+    "contractRoot",
+    "verificationReceiptRoot",
+    "graphRoot",
+    "planRoot",
+    "executorPolicyRoot",
+    "executionAdmissionRequestRoot",
+    "executionAdmissionDecisionRoot",
+    "executionAdmissionExpiresAt",
+    "idempotencyRoot",
+    "authoritativeEvidence",
+    "graphEvidence",
+    "localExecutionReceiptRoot",
+    "eventRoots",
+    "failureRoots",
+    "classifications",
+    "retainedEvidenceRoots",
+    "nextAction",
+    "receiptRoot"
+  ],
+  "properties": {
+    "schema": { "const": "kungfu.build-core-production-graph-shadow-receipt/v0" },
+    "status": { "enum": ["qualified", "non-qualifying"] },
+    "sourceRevision": { "$ref": "production-graph-v0.schema.json#/$defs/gitObject" },
+    "sourceTree": { "$ref": "production-graph-v0.schema.json#/$defs/gitObject" },
+    "contractRoot": { "$ref": "production-graph-v0.schema.json#/$defs/root" },
+    "verificationReceiptRoot": { "$ref": "production-graph-v0.schema.json#/$defs/root" },
+    "graphRoot": { "$ref": "production-graph-v0.schema.json#/$defs/root" },
+    "planRoot": { "$ref": "production-graph-v0.schema.json#/$defs/root" },
+    "executorPolicyRoot": { "$ref": "production-graph-v0.schema.json#/$defs/root" },
+    "executionAdmissionRequestRoot": { "$ref": "production-graph-v0.schema.json#/$defs/root" },
+    "executionAdmissionDecisionRoot": { "$ref": "production-graph-v0.schema.json#/$defs/root" },
+    "executionAdmissionExpiresAt": { "type": "string", "format": "date-time" },
+    "idempotencyRoot": { "$ref": "production-graph-v0.schema.json#/$defs/root" },
+    "authoritativeEvidence": { "$ref": "#/$defs/laneEvidence" },
+    "graphEvidence": { "$ref": "#/$defs/laneEvidence" },
+    "localExecutionReceiptRoot": { "$ref": "production-graph-v0.schema.json#/$defs/root" },
+    "eventRoots": {
+      "type": "array",
+      "minItems": 2,
+      "uniqueItems": true,
+      "items": { "$ref": "production-graph-v0.schema.json#/$defs/root" }
+    },
+    "failureRoots": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": { "$ref": "production-graph-v0.schema.json#/$defs/root" }
+    },
+    "classifications": {
+      "type": "array",
+      "minItems": 8,
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/classification" }
+    },
+    "retainedEvidenceRoots": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "$ref": "production-graph-v0.schema.json#/$defs/root" }
+    },
+    "nextAction": { "$ref": "production-graph-v0.schema.json#/$defs/nonEmpty" },
+    "receiptRoot": { "$ref": "production-graph-v0.schema.json#/$defs/root" }
+  },
+  "$defs": {
+    "nullableExit": {
+      "anyOf": [
+        { "type": "integer", "minimum": 0, "maximum": 255 },
+        { "type": "null" }
+      ]
+    },
+    "nullableSignal": {
+      "anyOf": [
+        { "$ref": "production-graph-v0.schema.json#/$defs/nonEmpty" },
+        { "type": "null" }
+      ]
+    },
+    "laneEvidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "command",
+        "environment",
+        "state",
+        "exitCode",
+        "signal",
+        "timedOut",
+        "cancelled",
+        "outputExceeded",
+        "stdoutRoot",
+        "stderrRoot",
+        "outputRoot",
+        "evidenceRoot"
+      ],
+      "properties": {
+        "command": { "const": ["./shifu", "build:core"] },
+        "environment": { "const": { "KUNGFU_BUILD_PROFILE": "journal" } },
+        "state": { "enum": ["succeeded", "failed", "cancelled", "timed-out"] },
+        "exitCode": { "$ref": "#/$defs/nullableExit" },
+        "signal": { "$ref": "#/$defs/nullableSignal" },
+        "timedOut": { "type": "boolean" },
+        "cancelled": { "type": "boolean" },
+        "outputExceeded": { "type": "boolean" },
+        "stdoutRoot": { "$ref": "production-graph-v0.schema.json#/$defs/root" },
+        "stderrRoot": { "$ref": "production-graph-v0.schema.json#/$defs/root" },
+        "outputRoot": { "$ref": "production-graph-v0.schema.json#/$defs/root" },
+        "evidenceRoot": { "$ref": "production-graph-v0.schema.json#/$defs/root" }
+      }
+    },
+    "classification": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["dimension", "classification", "detail"],
+      "properties": {
+        "dimension": {
+          "enum": [
+            "source",
+            "authority",
+            "graph",
+            "plan",
+            "admission",
+            "command",
+            "environment",
+            "exit",
+            "output",
+            "receipt"
+          ]
+        },
+        "classification": {
+          "enum": [
+            "parity",
+            "explainable-nondeterminism",
+            "authority-drift",
+            "source-drift",
+            "executor-drift",
+            "blocker"
+          ]
+        },
+        "detail": { "$ref": "production-graph-v0.schema.json#/$defs/nonEmpty" }
+      }
+    }
+  }
+}

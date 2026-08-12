@@ -1,0 +1,73 @@
+{
+  "schema": "kungfu.kfx.manifest/v1",
+  "name": "@kungfu-kfx/github-dogfood-bridge",
+  "version": "0.1.0",
+  "kungfuConfig": {
+    "key": "github-dogfood-bridge",
+    "registry": {
+      "dependencies": [
+        {
+          "provider": "kungfu.dogfood-feedback",
+          "version": "4.0.0-alpha.1",
+          "mode": "uses-if-present",
+          "capabilities": ["dogfood.finding.capture"],
+          "admissionGrades": ["kfd-attested"]
+        }
+      ]
+    },
+    "config": {
+      "service": {
+        "runtimes": [
+          "node"
+        ],
+        "entry": {
+          "node": "src/service.mjs"
+        },
+        "host": {
+          "schema": "kungfu.kfx.service-host/v1",
+          "contractVersion": 1,
+          "lifecycle": {
+            "restartPolicy": "on-failure",
+            "readinessTimeoutMs": 5000,
+            "drainTimeoutMs": 5000,
+            "shutdownTimeoutMs": 5000
+          },
+          "webhook": {
+            "listener": {
+              "mode": "loopback",
+              "bindAddress": "127.0.0.1",
+              "port": 9912,
+              "path": "/github/observations",
+              "methods": [
+                "POST"
+              ]
+            },
+            "credentials": [
+              {
+                "handle": "credential:github/observation-bridge",
+                "purpose": "authenticated-normalized-observation-delivery",
+                "algorithms": [
+                  "hmac-sha256"
+                ]
+              }
+            ],
+            "intake": {
+              "maxPayloadBytes": 65536,
+              "maxQueueDepth": 16,
+              "maxInflight": 4,
+              "maxRequestsPerWindow": 60,
+              "rateWindowMs": 60000,
+              "handlerTimeoutMs": 5000,
+              "replayWindowMs": 86400000
+            }
+          }
+        },
+        "capabilities": [
+          "credential.verify",
+          "network.listen",
+          "dogfood.finding.capture"
+        ]
+      }
+    }
+  }
+}

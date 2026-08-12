@@ -32,6 +32,10 @@ KUNGFU_BUILDCHAIN_SOURCE_BUILD = "1"
 SHIFU_NATIVE = "1"
 # Fail fast on Windows when MSVC cannot be located (no-op elsewhere).
 SHIFU_REQUIRE_MSVC = "1"
+# Reusable source-check workflows do not preserve GITHUB_BASE_REF for the
+# repository lifecycle. Keep the protected v4 delivery lane explicit here;
+# source acceptance still validates it against the dev-channel contract.
+KUNGFU_DEV_BRANCH = "dev/v4/v4.0"
 
 [lifecycle.install]
 # shifu-entry-contract: allow Buildchain mode selection before repository lifecycle dispatch
@@ -48,6 +52,10 @@ command = "node scripts/run-shifu-lifecycle.mjs buildchain-build"
 [lifecycle.verify]
 # shifu-entry-contract: allow the cross-platform dispatcher to enter the canonical shifu shim
 command = "node scripts/run-shifu-lifecycle.mjs cache-apply verify"
+
+[lifecycle.signing-finalization]
+# shifu-entry-contract: allow Buildchain's GitHub-hosted finalizer to rebind consumer qualification to imported signed bytes
+command = "node product/scripts/verify-cli-surface-qualification.mjs --qualification product/release/cli/kungfu-episodes-cli-darwin-arm64.qualification.json --archive product/release/cli/kungfu-episodes-cli-darwin-arm64.tar.gz --platform darwin-arm64 --signing-result .buildchain/artifacts/signing/macos-arm64/kungfu-cli-macos-arm64/result.json --signing-receipt .buildchain/artifacts/signing/macos-arm64/kungfu-cli-macos-arm64/receipt.json --signing-provider-evidence .buildchain/artifacts/signing/macos-arm64/kungfu-cli-macos-arm64/provider-evidence.json"
 
 [lifecycle.publish]
 # shifu-entry-contract: allow Buildchain publish adapter bootstraps before repository lifecycle dispatch
@@ -80,6 +88,12 @@ profile = "auto"
 kind = "archive"
 platforms = ["macos-arm64"]
 required = true
+entitlements_profile = "jit-executable-v1"
+entitlements_paths = [
+  "kungfu-episodes-cli-darwin-arm64/runtime/kungfu",
+  "kungfu-episodes-cli-darwin-arm64/runtime/python/bin/python3",
+  "kungfu-episodes-cli-darwin-arm64/runtime/python/bin/python3.13",
+]
 
 [[signing.artifacts]]
 id = "kungfu-desktop-macos-arm64"

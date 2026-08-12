@@ -94,9 +94,39 @@ ends only the SessionAttempt; it does not claim Work completion.
 
 Native launch also preserves bounded, non-secret terminal capability metadata
 such as `TERM_PROGRAM`, `TERMINFO_DIRS`, `LC_TERMINAL`, and common color-mode
-variables. Session and pane control handles remain excluded. This lets a
-provider select the correct input protocol for the inherited PTY without
-receiving the rest of the ambient shell environment.
+variables. The separate `agent.nativeProcessEnvironment` array controls
+registered ambient process capabilities. Its system default is
+`["TMUX", "TMUX_PANE"]`, which lets a provider launched inside tmux retain the
+exact current session and pane handles. Kungfu resolves those values only at
+process launch; config, receipts, diagnostics, and durable state retain names,
+never handle values. The two names form one capability and must be enabled as a
+pair. Outside tmux, or when either value has an invalid shape, Kungfu passes
+neither. Set the array to `[]` to disable this capability:
+
+```sh
+kungfu config set agent.nativeProcessEnvironment '[]' --json
+```
+
+This field is a closed registry, not a general environment allowlist:
+unregistered names, wildcards, partial pairs, and `inheritAll` are rejected by
+the config schema. Credential names remain governed separately by each
+adapter's `credentialEnvironment`, and Kungfu still does not copy the rest of
+the ambient shell environment.
+
+`kungfu run <provider>` resolves its launch directory in this order:
+
+1. an explicit `--workspace` or `KF_WORKSPACE_ROOT`;
+2. a Project discovered from the current working directory;
+3. the active `KUNGFU_WORKSPACE_ROOT`, when the command is launched from an
+   existing Kungfu Agent session;
+4. the Project selected by the machine-local Project registry; and
+5. the current working directory without durable Work binding.
+
+The final case is a supported provider launch, not an error. Kungfu tells the
+user that no Project is bound and points to `kungfu project create-plan` and
+`kungfu project select <path>`; the provider still opens in the requested
+directory. A selected Project is reported before launch when it is used from a
+different directory.
 
 The built-in Codex adapter uses Codex's native inline TUI (`--no-alt-screen`).
 This keeps the required first-use Project trust prompt and any startup error in
@@ -105,6 +135,15 @@ SessionAttempt, preventing a fresh Project trust launch from contending with an
 ambient Codex log target while leaving the user's Codex home, login, config,
 and trust state unchanged. Kungfu never answers that trust decision for the
 user.
+
+Before starting Codex, Kungfu names the directory whose trust prompt may
+appear. The prompt reads and writes through the same provider PTY; users do not
+need to start Codex separately. Kungfu also checks the versioned Agent Session
+capability schema and all native lifecycle operations before it registers a
+SessionAttempt. An older detached worker therefore fails before
+`plan-native-start` with an actionable protocol-mismatch error. Close the
+running Kungfu processes for that Project and retry; do not delete Project
+data.
 
 Once the Agent chooses an Assignment, its onboarding Skill runs the binding
 boundary through the exact front door injected by the launch before edits or
@@ -123,17 +162,26 @@ internal Agent Session protocol operations advertised for product adapters;
 they are not canonical CLI entrypoints and Agents must not invoke them through
 `kungfu agent session`.
 
-The human does not choose or calculate a Console name. The local Agent Session
-worker atomically gives one live attempt the Work binding. A simultaneous
-attempt to bind the same Work fails with `native_work_already_active` and names
-the active provider, attempt, Console, and recovery choices. Different Work
-bindings remain concurrent. Exiting the owning provider releases the live
-single-writer guard; provider exit still does not claim Work completion.
+The human does not choose or calculate a Console name. A live Agent session may
+serially observe any number of Work items; choosing another Work atomically
+replaces only the session's current observation. It does not end or advance the
+prior Assignment, and Assignment admission, review, closeout, and sealing never
+depend on `WorkConsole` or `SessionAttempt` lifecycle.
 
-Custom adapter Skills must retain this same pre-write binding boundary. Public
-`kungfu work claim` and kickoff paths also bind automatically when invoked from
-inside a native Console, so a compatible third-party PTY Agent cannot create a
-second authoritative Work lease through those commands.
+The local Agent Session worker still coordinates one runtime-local writer per
+exact Work. A simultaneous attempt to bind the same Work fails with
+`native_work_already_active` and names the active provider, attempt, Console,
+and recovery choices. Switching one session to another Work releases its prior
+runtime-local guard, while the Work's authoritative state remains unchanged.
+Exiting the provider also releases the guard; provider exit never claims Work
+completion.
+
+Custom adapter Skills may retain this pre-project-write observation boundary
+for runtime-local coordination. Public `kungfu work claim` and kickoff paths
+never bind an Agent Session automatically: they remain valid without a Console,
+and their Work authority cannot be blocked by ambient provider state. A
+third-party PTY Agent that wants observer projection must use the explicit
+Agent-owned bind entrypoint separately.
 
 ## Compatibility boundary
 

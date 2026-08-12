@@ -10,6 +10,7 @@ import pytest
 
 from kungfu import assignment_orchestration, profile_composition, profile_sdk
 from kungfu.agent import work_profile
+from kungfu.atlas import mission_control
 
 
 SOURCE = Path(__file__).resolve().parents[4] / "extensions" / "work-control"
@@ -19,6 +20,86 @@ def _activate(source: Path, runtime: Path) -> None:
     for action in ("install", "qualify", "activate"):
         plan = profile_sdk.lifecycle_plan(runtime, action, source)["corePlan"]
         profile_sdk.lifecycle_apply(runtime, plan, f"test:{action}")
+
+
+def _materialize_contract(source: Path, runtime: Path) -> None:
+    contract = profile_composition.contract_materialization_plan(source, runtime)
+    if contract["operations"]:
+        profile_composition.authorized_contract_materialize(
+            runtime,
+            contract,
+            profile_sdk.answer_decision(
+                contract["decisionCard"], "approve", "test-owner"
+            ),
+        )
+
+
+def test_completion_review_deduplicates_one_subject_across_authorities(tmp_path):
+    runtime = tmp_path / "runtime"
+    _activate(SOURCE, runtime)
+    _materialize_contract(SOURCE, runtime)
+    mission_control.create_initiative(
+        str(runtime),
+        initiative_id="user-mission",
+        title="User Mission",
+        intent="Retain the user authority fact",
+        actor="test-user",
+        actor_type="user",
+    )
+    mission_control.create_initiative(
+        str(runtime),
+        initiative_id="agent-mission",
+        title="Agent Mission",
+        intent="Retain the agent authority fact",
+        actor="test-agent",
+        actor_type="agent",
+    )
+    for initiative_id, actor, actor_type in (
+        ("user-mission", "test-user", "user"),
+        ("agent-mission", "test-agent", "agent"),
+    ):
+        mission_control.create_assignment(
+            str(runtime),
+            initiative_id=initiative_id,
+            assignment_id="shared-assignment",
+            title="Shared Assignment",
+            objective="Preserve both authority claims for one subject",
+            actor=actor,
+            actor_type=actor_type,
+        )
+
+    state = mission_control.query_state(
+        str(runtime), mission_id="agent-mission", storage_source_id="kungfu"
+    )
+    matching = [
+        row
+        for row in state["goals"]
+        if row["subject_key"] == "kungfu:shared-assignment"
+    ]
+    assert len(matching) == 2
+    assert {row["source_id"] for row in matching} == {
+        "kungfu-agent",
+        "kungfu-user",
+    }
+
+    mission_control.claim_completion(
+        str(runtime),
+        mission_id="agent-mission",
+        goal_id="shared-assignment",
+        statement="The shared Assignment is ready for review",
+        actor="test-agent",
+        storage_source_id="kungfu",
+    )
+    review = mission_control.review_completion(
+        str(runtime),
+        mission_id="agent-mission",
+        goal_id="shared-assignment",
+        reviewer="independent-reviewer",
+        reviewer_source="independent-review-run",
+        storage_source_id="kungfu",
+    )
+    assert review["review"]["claimant"] == "test-agent"
+    assert review["review"]["reviewer"] == "independent-reviewer"
 
 
 def _copy_source(tmp_path: Path) -> Path:

@@ -100,7 +100,16 @@
         ]
       },
       "removalEvidence": null,
-      "extensionWarrant": null,
+      "extensionWarrant": {
+        "authority": "kungfu.warrant",
+        "warrantRoot": "sha256:b7650b74cc0883aea18c6fdddb3f256d9b7f2eb952140c566201411b6ff71d16",
+        "entryId": "core.yijinjing.boolean-mmap-adapters",
+        "authorizedBy": "dongkeren",
+        "issuedAt": "2026-08-11",
+        "expiresOn": "2026-08-12",
+        "expiresAfterRelease": "4.0.0-alpha.2",
+        "evidenceRef": "framework/deprecation/deprecation-registry.json"
+      },
       "contributedFrom": {
         "authority": "framework/core/architecture/layers.json",
         "entryId": "yijinjing-boolean-mmap-adapters"
@@ -180,7 +189,16 @@
         ]
       },
       "removalEvidence": null,
-      "extensionWarrant": null,
+      "extensionWarrant": {
+        "authority": "kungfu.warrant",
+        "warrantRoot": "sha256:f752ae23d870dbd68f9d7a20b14edcb2d0d5880a5a016f610dccb8384d59ce47",
+        "entryId": "core.yijinjing.journal-open-policy-adapters",
+        "authorizedBy": "dongkeren",
+        "issuedAt": "2026-08-11",
+        "expiresOn": "2026-08-12",
+        "expiresAfterRelease": "4.0.0-alpha.2",
+        "evidenceRef": "framework/deprecation/deprecation-registry.json"
+      },
       "contributedFrom": {
         "authority": "git-history",
         "entryId": "cb8dfb6be51be65c93c813843396a6349da4f1b7"
@@ -260,7 +278,16 @@
         ]
       },
       "removalEvidence": null,
-      "extensionWarrant": null,
+      "extensionWarrant": {
+        "authority": "kungfu.warrant",
+        "warrantRoot": "sha256:77a6dad43811d499eb4b29874ff82e155af2c04ac0e1b1a78ba9962f0b976e2e",
+        "entryId": "core.yijinjing.page-open-policy-adapters",
+        "authorizedBy": "dongkeren",
+        "issuedAt": "2026-08-11",
+        "expiresOn": "2026-08-12",
+        "expiresAfterRelease": "4.0.0-alpha.2",
+        "evidenceRef": "framework/deprecation/deprecation-registry.json"
+      },
       "contributedFrom": {
         "authority": "git-history",
         "entryId": "cb8dfb6be51be65c93c813843396a6349da4f1b7"

@@ -18,6 +18,61 @@ on:
         required: false
         default: ""
         type: string
+      resume-candidate-repository:
+        description: "Exact repository that owns an existing sealed candidate run"
+        required: false
+        default: ""
+        type: string
+      resume-candidate-run-id:
+        description: "Exact successful Build run to recover without rebuilding"
+        required: false
+        default: ""
+        type: string
+      resume-candidate-source-sha:
+        description: "Exact source commit recorded by the existing candidate"
+        required: false
+        default: ""
+        type: string
+      resume-expected-workflow-file:
+        description: "Exact Build workflow file recorded by the existing candidate"
+        required: false
+        default: ""
+        type: string
+      resume-expected-workflow-name:
+        description: "Exact Build workflow display name recorded by the existing candidate"
+        required: false
+        default: ""
+        type: string
+      resume-expected-source-tree:
+        description: "Exact source tree recorded by the existing candidate"
+        required: false
+        default: ""
+        type: string
+      resume-expected-candidate-runtime-sha:
+        description: "Exact Buildchain runtime recorded by the existing candidate"
+        required: false
+        default: ""
+        type: string
+      resume-buildchain-runtime-sha:
+        description: "Exact Buildchain tooling SHA resolved by the recovery train"
+        required: false
+        default: ""
+        type: string
+      resume-transaction-id:
+        description: "Optional exact durable publication transaction identity to resume"
+        required: false
+        default: ""
+        type: string
+      resume-publication-gate-controller-sha:
+        description: "Exact Kungfu commit that owns the read-only recovery Gate controller"
+        required: false
+        default: ""
+        type: string
+      publish-transaction-override:
+        description: "Allow only the matching durable transaction to resume"
+        required: false
+        default: false
+        type: boolean
   pull_request:
     types: [closed]
     branches:
@@ -29,7 +84,7 @@ permissions:
 
 jobs:
   promotion-contract:
-    if: ${{ github.event_name == 'workflow_dispatch' || github.event.pull_request.merged == true }}
+    if: ${{ (github.event_name == 'workflow_dispatch' && inputs.resume-candidate-run-id == '') || github.event.pull_request.merged == true }}
     runs-on: ubuntu-latest
     permissions:
       actions: read
@@ -119,9 +174,142 @@ jobs:
           ./shifu release:publication:admit -- --surface "$surface" --operation rehearsal
           ./shifu release:promotion:rehearse
 
+  recovery-preflight:
+    name: Verify immutable Alpha recovery coordinates
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.resume-candidate-run-id != '' }}
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+    steps:
+      - name: Require a bounded Alpha recovery identity
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CANDIDATE_REPOSITORY: ${{ inputs.resume-candidate-repository }}
+          CANDIDATE_RUN_ID: ${{ inputs.resume-candidate-run-id }}
+          CANDIDATE_SOURCE_SHA: ${{ inputs.resume-candidate-source-sha }}
+          EXPECTED_WORKFLOW_FILE: ${{ inputs.resume-expected-workflow-file }}
+          EXPECTED_WORKFLOW_NAME: ${{ inputs.resume-expected-workflow-name }}
+          EXPECTED_SOURCE_TREE: ${{ inputs.resume-expected-source-tree }}
+          EXPECTED_CANDIDATE_RUNTIME_SHA: ${{ inputs.resume-expected-candidate-runtime-sha }}
+          RECOVERY_RUNTIME_SHA: ${{ inputs.resume-buildchain-runtime-sha }}
+          RECOVERY_GATE_CONTROLLER_SHA: ${{ inputs.resume-publication-gate-controller-sha }}
+          TARGET_REF: ${{ inputs.target-ref }}
+          TARGET_SHA: ${{ inputs.target-sha }}
+          PREFLIGHT_RUN_ID: ${{ inputs.preflight-run-id }}
+          TRANSACTION_OVERRIDE: ${{ inputs.publish-transaction-override }}
+        run: |
+          set -euo pipefail
+          test "$CANDIDATE_REPOSITORY" = "kungfu-systems/kungfu"
+          [[ "$CANDIDATE_RUN_ID" =~ ^[0-9]+$ ]]
+          [[ "$CANDIDATE_SOURCE_SHA" =~ ^[0-9a-f]{40}$ ]]
+          test "$EXPECTED_WORKFLOW_FILE" = "build.yml"
+          test "$EXPECTED_WORKFLOW_NAME" = "Build"
+          [[ "$EXPECTED_SOURCE_TREE" =~ ^[0-9a-f]{40}$ ]]
+          [[ "$EXPECTED_CANDIDATE_RUNTIME_SHA" =~ ^[0-9a-f]{40}$ ]]
+          if [[ ! "$RECOVERY_RUNTIME_SHA" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "::error::resume-buildchain-runtime-sha must be an exact lowercase 40-character commit SHA"
+            exit 1
+          fi
+          if [[ ! "$RECOVERY_GATE_CONTROLLER_SHA" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "::error::resume-publication-gate-controller-sha must be an exact lowercase 40-character commit SHA"
+            exit 1
+          fi
+          test "$TARGET_REF" = "alpha/v4/v4.0"
+          [[ "$TARGET_SHA" =~ ^[0-9a-f]{40}$ ]]
+          [[ "$PREFLIGHT_RUN_ID" =~ ^[0-9]+$ ]]
+          test "$TRANSACTION_OVERRIDE" = "true"
+          candidate_run_head_sha="$(
+            gh api "repos/${CANDIDATE_REPOSITORY}/actions/runs/${CANDIDATE_RUN_ID}" \
+              --jq 'select(
+              .repository.full_name == "kungfu-systems/kungfu" and
+              .head_repository.full_name == "kungfu-systems/kungfu" and
+              .status == "completed" and
+              .conclusion == "success" and
+              .event == "pull_request" and
+              .path == ".github/workflows/build.yml" and
+              .name == "Build"
+            ) | .head_sha // empty'
+          )"
+          [[ "$candidate_run_head_sha" =~ ^[0-9a-f]{40}$ ]]
+          gh api "repos/${CANDIDATE_REPOSITORY}/git/commits/${CANDIDATE_SOURCE_SHA}" \
+            --jq 'select(
+              .sha == "'"$CANDIDATE_SOURCE_SHA"'" and
+              .tree.sha == "'"$EXPECTED_SOURCE_TREE"'" and
+              (
+                .sha == "'"$candidate_run_head_sha"'" or
+                any(.parents[]; .sha == "'"$candidate_run_head_sha"'")
+              )
+            ) | .sha' | grep -qx "$CANDIDATE_SOURCE_SHA"
+
+      - name: Checkout immutable candidate source
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: ${{ inputs.resume-candidate-source-sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version: "24"
+
+      - name: Resolve the pinned Alpha preflight source
+        id: recovery-preflight
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PREFLIGHT_RUN_ID: ${{ inputs.preflight-run-id }}
+        run: |
+          set -euo pipefail
+          preflight_source_sha="$(
+            gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${PREFLIGHT_RUN_ID}" \
+              --jq 'select(.status == "completed" and .conclusion == "success" and .path == ".github/workflows/alpha-promotion-preflight.yml") | .head_sha // empty'
+          )"
+          [[ "$preflight_source_sha" =~ ^[0-9a-f]{40}$ ]]
+          echo "source-sha=$preflight_source_sha" >> "$GITHUB_OUTPUT"
+          echo "artifact-name=alpha-promotion-preflight-$preflight_source_sha" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout the pinned Alpha preflight source
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: ${{ steps.recovery-preflight.outputs.source-sha }}
+          path: .buildchain/alpha-preflight-source
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Download the pinned Alpha preflight receipt
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          run-id: ${{ inputs.preflight-run-id }}
+          name: ${{ steps.recovery-preflight.outputs.artifact-name }}
+          path: .buildchain/alpha-promotion-preflight
+
+      - name: Verify the pinned Alpha preflight at its source
+        working-directory: .buildchain/alpha-preflight-source
+        env:
+          EXPECTED_TREE: ${{ inputs.resume-expected-source-tree }}
+          PREFLIGHT_SOURCE_SHA: ${{ steps.recovery-preflight.outputs.source-sha }}
+        run: |
+          set -euo pipefail
+          ./shifu alpha:promotion:preflight verify \
+            --receipt ../alpha-promotion-preflight/receipt.json \
+            --source-commit "$PREFLIGHT_SOURCE_SHA"
+          test "$(git rev-parse 'HEAD^{tree}')" = "$EXPECTED_TREE"
+
+      - name: Verify promotion target preserves the candidate tree
+        env:
+          TARGET_SHA: ${{ inputs.target-sha }}
+          EXPECTED_TREE: ${{ inputs.resume-expected-source-tree }}
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse 'HEAD^{tree}')" = "$EXPECTED_TREE"
+          git fetch --no-tags origin "$TARGET_SHA"
+          test "$(git rev-parse "$TARGET_SHA^{tree}")" = "$EXPECTED_TREE"
+
   promote:
     needs: promotion-contract
-    if: ${{ github.event_name == 'workflow_dispatch' || github.event.pull_request.merged == true }}
+    if: ${{ (github.event_name == 'workflow_dispatch' && inputs.resume-candidate-run-id == '') || github.event.pull_request.merged == true }}
     permissions:
       actions: write
       artifact-metadata: write
@@ -131,10 +319,11 @@ jobs:
       issues: write
       id-token: write
       pull-requests: write
-    uses: kungfu-systems/buildchain/.github/workflows/release-candidate-promote.yml@2e7e07902ac28d8f3edcfb81098ef9ebc7a91878 # signing workflow path readback authority
+    uses: kungfu-systems/buildchain/.github/workflows/release-candidate-promote.yml@v3-alpha
     with:
       channel: ${{ startsWith(inputs.target-ref || github.event.pull_request.base.ref, 'alpha/') && 'alpha' || 'release' }}
-      buildchain-ref: 2e7e07902ac28d8f3edcfb81098ef9ebc7a91878
+      buildchain-channel: ${{ startsWith(inputs.target-ref || github.event.pull_request.base.ref, 'alpha/') && 'alpha' || 'stable' }}
+      buildchain-ref: ${{ startsWith(inputs.target-ref || github.event.pull_request.base.ref, 'alpha/') && 'v3-alpha' || 'v3' }}
       target-ref: ${{ inputs.target-ref || github.event.pull_request.base.ref }}
       target-sha: ${{ inputs.target-sha || github.event.pull_request.merge_commit_sha || github.sha }}
       buildchain-contract-lock-path: ${{ startsWith(inputs.target-ref || github.event.pull_request.base.ref, 'alpha/') && '.buildchain/alpha-contract-lock.json' || '.buildchain/contract-lock.json' }}
@@ -163,9 +352,13 @@ jobs:
         kungfu-episodes-cli-*.tar.gz
         kungfu-episodes-cli-*.zip
         kungfu-episodes-cli-*.qualification.json
+        Kungfu-Episodes-*-macos-arm64.dmg
+        Kungfu-Episodes-*-macos-arm64.zip
+        Kungfu Episodes-*.AppImage
+        Kungfu Episodes Setup *.exe
       publication-commit-command: ${{ startsWith(inputs.target-ref || github.event.pull_request.base.ref, 'alpha/') && 'node scripts/alpha-publication-commit.mjs' || '' }}
       publication-commit-evidence-path: .buildchain/publication-commit/evidence.json
-      release-activation-command: ${{ startsWith(inputs.target-ref || github.event.pull_request.base.ref, 'alpha/') && 'node scripts/activate-ungfu-release.mjs' || '' }}
+      release-activation-command: ""
       release-activation-receipt-set-path: .buildchain/release-activation/receipt-set.json
       standalone-binary-distribution: false
       publish-mode: publish-final-version
@@ -191,11 +384,7 @@ jobs:
         .buildchain/runtime/kfd-product-gates/kfd-4/gate.json
         .buildchain/runtime/kfd-product-gates/kfd-5/gate.json
         .buildchain/runtime/kfd-product-gates/kfd-7/gate.json
-      release-passport-evidence-command: >-
-        node scripts/prepare-ungfu-release-evidence.mjs --release
-        --receipts "$BUILDCHAIN_RELEASE_ACTIVATION_RECEIPTS"
-        --output "$BUILDCHAIN_RELEASE_EVIDENCE_PATH"
-        --readback --json
+      release-passport-evidence-command: ""
       release-passport-evidence-path: .buildchain/release-evidence/ungfu-public-use.json
       release-passport-invariant-passport-command: >-
         node scripts/kungfu-invariant.mjs --collect-evidence .
@@ -203,6 +392,110 @@ jobs:
       github-artifact-attestation-policy-json: auto
       github-artifact-attestation-environment: buildchain-artifact-attestation
       dry-run: ${{ github.event_name == 'workflow_dispatch' }}
+    secrets:
+      BUILDCHAIN_PROMOTION_TOKEN: ${{ secrets.KUNGFU_GITHUB_TOKEN }}
+      BUILDCHAIN_PUBLICATION_COMMIT_TOKEN: ${{ secrets.KUNGFU_GITHUB_TOKEN }}
+      BUILDCHAIN_PUBLICATION_COMMIT_SIGNING_KEY: ${{ secrets.KUNGFU_ALPHA_CHANNEL_SIGNING_PRIVATE_KEY }}
+      KUNGFU_GOVERNANCE_AUDITOR_APP_PRIVATE_KEY: ${{ secrets.KUNGFU_GOVERNANCE_AUDITOR_APP_PRIVATE_KEY }}
+      BUILDCHAIN_ISSUE_APP_ID: ${{ secrets.BUILDCHAIN_ISSUE_APP_ID }}
+      BUILDCHAIN_ISSUE_APP_PRIVATE_KEY: ${{ secrets.BUILDCHAIN_ISSUE_APP_PRIVATE_KEY }}
+
+  recover:
+    name: Reuse sealed Alpha candidate
+    needs: recovery-preflight
+    if: ${{ always() && github.event_name == 'workflow_dispatch' && inputs.resume-candidate-run-id != '' && needs.recovery-preflight.result == 'success' }}
+    permissions:
+      actions: write
+      artifact-metadata: write
+      attestations: write
+      checks: write
+      contents: write
+      issues: write
+      id-token: write
+      pull-requests: write
+    uses: kungfu-systems/buildchain/.github/workflows/release-candidate-promote.yml@v3-alpha
+    with:
+      buildchain-channel: auto
+      buildchain-ref: ${{ inputs.resume-buildchain-runtime-sha }}
+      channel: alpha
+      target-ref: ${{ inputs.target-ref }}
+      target-sha: ${{ inputs.target-sha }}
+      buildchain-contract-lock-path: .buildchain/alpha-contract-lock.json
+      buildchain-contract-compatibility-policy: major-compatible
+      buildchain-contract-drift-issue-mode: compatible-and-breaking
+      resume-candidate-repository: ${{ inputs.resume-candidate-repository }}
+      resume-candidate-run-id: ${{ inputs.resume-candidate-run-id }}
+      resume-expected-workflow-file: ${{ inputs.resume-expected-workflow-file }}
+      resume-expected-workflow-name: ${{ inputs.resume-expected-workflow-name }}
+      resume-expected-source-tree: ${{ inputs.resume-expected-source-tree }}
+      resume-expected-candidate-runtime-sha: ${{ inputs.resume-expected-candidate-runtime-sha }}
+      resume-buildchain-runtime-sha: ${{ inputs.resume-buildchain-runtime-sha }}
+      resume-transaction-id: ${{ inputs.resume-transaction-id }}
+      publish-transaction-override: ${{ inputs.publish-transaction-override }}
+      release-candidate-wait-seconds: 10800
+      publication-auto-admission: true
+      publication-gate-command: node scripts/assemble-kungfu-publication-gate.mjs
+      publication-gate-controller-sha: ${{ inputs.resume-publication-gate-controller-sha }}
+      publication-consumer-qualification-command: node scripts/kungfu-release-qualification.mjs
+      publication-consumer-predicate-id: kungfu.release-admission/v1
+      publication-publisher-workflow-path: .github/workflows/release-new-version.yml
+      publication-product: Kungfu Episodes
+      publication-target: github-release:kungfu-systems/kungfu
+      publication-package-name: ""
+      package-manager: custom
+      artifact-name: kungfu
+      release-candidate-workflow-file: build.yml
+      release-candidate-workflow-name: Build
+      artifact-patterns: |
+        kungfu-*
+      required-status-check: build / Finalize build controller evidence
+      publish-target: custom
+      publish-artifact-kind: kungfu-product
+      publish-command: node .buildchain/publication-controller/scripts/buildchain-custom-publish-evidence.mjs
+      github-release-payload-patterns: |
+        kungfu-episodes-cli-*.tar.gz
+        kungfu-episodes-cli-*.zip
+        kungfu-episodes-cli-*.qualification.json
+        Kungfu-Episodes-*-macos-arm64.dmg
+        Kungfu-Episodes-*-macos-arm64.zip
+        Kungfu Episodes-*.AppImage
+        Kungfu Episodes Setup *.exe
+      publication-commit-command: BUILDCHAIN_PUBLICATION_COMMIT_PRODUCT_ROOT=$GITHUB_WORKSPACE BUILDCHAIN_PUBLICATION_COMMIT_CANDIDATE_SOURCE_SHA=${{ inputs.resume-candidate-source-sha }} node .buildchain/publication-controller/scripts/alpha-publication-commit.mjs
+      publication-commit-evidence-path: .buildchain/publication-commit/evidence.json
+      release-activation-command: ""
+      release-activation-receipt-set-path: .buildchain/release-activation/receipt-set.json
+      standalone-binary-distribution: false
+      publish-mode: publish-final-version
+      publish-dist-tag: alpha
+      publish-package-set-order: as-provided
+      trusted-publishing: false
+      runner-preset: kungfu-v4-native
+      required-artifact-count: 5
+      release-passport: true
+      release-passport-product-name: Kungfu Episodes
+      release-passport-kfd-1-witness-jsons: |
+        .buildchain/kfd/kfd-1/contract-world.witness.json
+        .buildchain/kfd/kfd-1/documentation-pack.witness.json
+      release-passport-kfd-2-claim-jsons: |
+        .buildchain/kfd/kfd-2/claims/agent-onboarding-pack.json
+        .buildchain/kfd/kfd-2/claims/codex-report-receipts.json
+        .buildchain/kfd/kfd-2/claims/remote-fact-boundary.json
+      release-passport-kfd-3-prebuild-witness-jsons: |
+        .buildchain/kfd/kfd-3/collaboration-interface.prebuild.json
+      release-passport-kfd-3-artifact-verify-command: node "$GITHUB_WORKSPACE/.buildchain/publication-controller/scripts/buildchain-kfd-evidence.mjs" --write --json >/dev/null && node "$GITHUB_WORKSPACE/.buildchain/publication-controller/scripts/buildchain-kfd-evidence.mjs" --artifact-witness --json
+      release-passport-kfd-support-matrix-json: .buildchain/kfd/support-matrix.json
+      release-passport-kfd-product-gate-jsons: |
+        .buildchain/runtime/kfd-product-gates/kfd-4/gate.json
+        .buildchain/runtime/kfd-product-gates/kfd-5/gate.json
+        .buildchain/runtime/kfd-product-gates/kfd-7/gate.json
+      release-passport-evidence-command: ""
+      release-passport-evidence-path: .buildchain/release-evidence/ungfu-public-use.json
+      release-passport-invariant-passport-command: >-
+        node scripts/kungfu-invariant.mjs --collect-evidence .
+        --passport product/release/qualification/invariant-passport.json --json
+      github-artifact-attestation-policy-json: ""
+      github-artifact-attestation-environment: buildchain-artifact-attestation
+      dry-run: false
     secrets:
       BUILDCHAIN_PROMOTION_TOKEN: ${{ secrets.KUNGFU_GITHUB_TOKEN }}
       BUILDCHAIN_PUBLICATION_COMMIT_TOKEN: ${{ secrets.KUNGFU_GITHUB_TOKEN }}

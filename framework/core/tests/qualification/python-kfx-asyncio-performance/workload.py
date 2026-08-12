@@ -41,36 +41,81 @@ def percentile(values: list[int], quantile: float) -> int:
     return ordered[index]
 
 
+def _positive_rss(value: int, source: str) -> int:
+    if value <= 0:
+        raise RuntimeError(f"{source} returned a non-positive peak RSS")
+    return value
+
+
+def _windows_peak_rss_bytes(ctypes_module: Any | None = None) -> int:
+    if ctypes_module is None:
+        import ctypes as ctypes_module
+
+    # Win32 DWORD and BOOL are always 32-bit, including on 64-bit Windows.
+    # Fixed-width declarations also let non-Windows unit tests verify the ABI
+    # layout without inheriting the host C long width.
+    dword = ctypes_module.c_uint32
+    bool32 = ctypes_module.c_int32
+    handle = ctypes_module.c_void_p
+
+    class ProcessMemoryCounters(ctypes_module.Structure):
+        _fields_ = [
+            ("cb", dword),
+            ("PageFaultCount", dword),
+            ("PeakWorkingSetSize", ctypes_module.c_size_t),
+            ("WorkingSetSize", ctypes_module.c_size_t),
+            ("QuotaPeakPagedPoolUsage", ctypes_module.c_size_t),
+            ("QuotaPagedPoolUsage", ctypes_module.c_size_t),
+            ("QuotaPeakNonPagedPoolUsage", ctypes_module.c_size_t),
+            ("QuotaNonPagedPoolUsage", ctypes_module.c_size_t),
+            ("PagefileUsage", ctypes_module.c_size_t),
+            ("PeakPagefileUsage", ctypes_module.c_size_t),
+        ]
+
+    kernel32 = ctypes_module.WinDLL("kernel32", use_last_error=True)
+    psapi = ctypes_module.WinDLL("psapi", use_last_error=True)
+    get_current_process = kernel32.GetCurrentProcess
+    get_current_process.argtypes = []
+    get_current_process.restype = handle
+    get_process_memory_info = psapi.GetProcessMemoryInfo
+    get_process_memory_info.argtypes = [
+        handle,
+        ctypes_module.POINTER(ProcessMemoryCounters),
+        dword,
+    ]
+    get_process_memory_info.restype = bool32
+
+    counters = ProcessMemoryCounters()
+    counters.cb = ctypes_module.sizeof(counters)
+    if not get_process_memory_info(
+        get_current_process(), ctypes_module.byref(counters), counters.cb
+    ):
+        error_code = ctypes_module.get_last_error()
+        detail = ctypes_module.FormatError(error_code).strip()
+        raise OSError(error_code, f"GetProcessMemoryInfo failed: {detail}")
+    return _positive_rss(int(counters.PeakWorkingSetSize), "GetProcessMemoryInfo")
+
+
+def _posix_peak_rss_bytes(
+    resource_module: Any | None = None, platform_name: str | None = None
+) -> int:
+    if resource_module is None:
+        import resource as resource_module
+
+    platform_name = platform_name or sys.platform
+    value = int(resource_module.getrusage(resource_module.RUSAGE_SELF).ru_maxrss)
+    return _positive_rss(
+        value if platform_name == "darwin" else value * 1024,
+        "getrusage",
+    )
+
+
 def peak_rss_bytes() -> int:
-    if sys.platform == "win32":
-        import ctypes
-        from ctypes import wintypes
-
-        class ProcessMemoryCounters(ctypes.Structure):
-            _fields_ = [
-                ("cb", wintypes.DWORD),
-                ("PageFaultCount", wintypes.DWORD),
-                ("PeakWorkingSetSize", ctypes.c_size_t),
-                ("WorkingSetSize", ctypes.c_size_t),
-                ("QuotaPeakPagedPoolUsage", ctypes.c_size_t),
-                ("QuotaPagedPoolUsage", ctypes.c_size_t),
-                ("QuotaPeakNonPagedPoolUsage", ctypes.c_size_t),
-                ("QuotaNonPagedPoolUsage", ctypes.c_size_t),
-                ("PagefileUsage", ctypes.c_size_t),
-                ("PeakPagefileUsage", ctypes.c_size_t),
-            ]
-
-        counters = ProcessMemoryCounters()
-        counters.cb = ctypes.sizeof(counters)
-        process_handle = ctypes.windll.kernel32.GetCurrentProcess()
-        ok = ctypes.windll.psapi.GetProcessMemoryInfo(
-            process_handle, ctypes.byref(counters), counters.cb
-        )
-        return int(counters.PeakWorkingSetSize) if ok else 0
-    import resource
-
-    value = int(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss)
-    return value if sys.platform == "darwin" else value * 1024
+    return (
+        _windows_peak_rss_bytes()
+        if sys.platform == "win32"
+        else _posix_peak_rss_bytes()
+    )
 
 
 def observation(

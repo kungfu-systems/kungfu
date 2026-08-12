@@ -355,11 +355,51 @@ function result(status, value) {
   };
 }
 
+function sourceInspection() {
+  return {
+    buildInfo: {
+      version: '4.0.0-alpha.1',
+      git: { revision: '1'.repeat(40), pristine: true },
+    },
+    buildInfoRoot: ROOT_A,
+    shifuPath: '/repo/shifu',
+    shifuRoot: ROOT_B,
+    head: '1'.repeat(40),
+    tree: '2'.repeat(40),
+    dirty: false,
+    worktree: '/repo',
+  };
+}
+
+function runtimeSurfaceResult(args) {
+  if (args[0] !== 'runtime') return null;
+  if (args[2] === 'resolve')
+    return result(0, {
+      schema: 'kungfu.runtime-surface-receipt/v1',
+      operationId: 'dogfood.capture',
+      runtimeSurface: 'source-checkout',
+      selectedProvider: 'source-shifu',
+      receiptRoot: ROOT_A,
+    });
+  if (args[2] === 'verify')
+    return result(0, {
+      schema: 'kungfu.runtime-surface-verification/v1',
+      ok: true,
+      operationId: 'dogfood.capture',
+      runtimeSurface: 'source-checkout',
+      selectedProvider: 'source-shifu',
+      receiptRoot: ROOT_A,
+    });
+  return null;
+}
+
 test('capture adapter creates one Finding and exposes no Issue path', () => {
   const classification = classifyReport(baseReport(), options());
   const calls = [];
   const run = (args) => {
     calls.push(args);
+    const runtimeResult = runtimeSurfaceResult(args);
+    if (runtimeResult) return runtimeResult;
     if (args[0] === 'workspace') return result(0, { ok: true });
     if (args[1] === 'doctor') return result(0, { ok: true });
     if (args[1] === 'show')
@@ -379,11 +419,14 @@ test('capture adapter creates one Finding and exposes no Issue path', () => {
   };
   const receipt = captureFinding(classification, {
     run,
+    inspectSource: sourceInspection,
     intentPath: '/tmp/kungfu-agent-patrol-test-intent.json',
     workspaceRoot: '/tmp/kungfu-agent-patrol-test-workspace',
   });
   assert.equal(receipt.status, 'captured');
   assert.equal(receipt.issueAdmitted, false);
+  assert.equal(receipt.runtimeReceipt.receiptRoot, ROOT_A);
+  assert.equal(receipt.runtimeVerification.ok, true);
   assert.equal(
     calls.some((args) => args.includes('admit')),
     false,
@@ -399,6 +442,8 @@ test('capture adapter reuses an existing Finding without capture', () => {
   const calls = [];
   const run = (args) => {
     calls.push(args);
+    const runtimeResult = runtimeSurfaceResult(args);
+    if (runtimeResult) return runtimeResult;
     if (args[0] === 'workspace') return result(0, { ok: true });
     if (args[1] === 'doctor') return result(0, { ok: true });
     return result(0, {
@@ -418,12 +463,13 @@ test('capture adapter reuses an existing Finding without capture', () => {
   };
   const receipt = captureFinding(classification, {
     run,
+    inspectSource: sourceInspection,
     intentPath: '/tmp/kungfu-agent-patrol-test-dedup-intent.json',
     workspaceRoot: '/tmp/kungfu-agent-patrol-test-workspace',
   });
   assert.equal(receipt.status, 'deduplicated');
   assert.equal(receipt.capturePerformed, false);
-  assert.equal(calls.length, 3);
+  assert.equal(calls.length, 5);
 });
 
 test('capture adapter skips Dogfood writes after a pass', () => {

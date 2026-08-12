@@ -1,0 +1,382 @@
+{
+  "schema": "kungfu.assignment-runtime.contract/v1",
+  "id": "kungfu-assignment-runtime",
+  "version": 1,
+  "weldedSurface": "assignment-runtime-contract",
+  "status": "pre-release",
+  "description": "Transport- and backend-neutral Assignment Runtime API for one fenced authority realm and peer GUI, CLI, Agent, and KFX clients.",
+  "contractSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+      "schema",
+      "id",
+      "version",
+      "weldedSurface",
+      "status",
+      "description",
+      "contractSchema",
+      "protocol",
+      "authority",
+      "transports",
+      "capabilities",
+      "operations",
+      "schemas",
+      "concurrency",
+      "idempotency",
+      "events",
+      "errors",
+      "compatibility",
+      "localRuntimeProfile",
+      "implementationStatus",
+      "nonClaims"
+    ],
+    "properties": {
+      "schema": {
+        "const": "kungfu.assignment-runtime.contract/v1"
+      },
+      "id": {
+        "const": "kungfu-assignment-runtime"
+      },
+      "version": {
+        "const": 1
+      },
+      "weldedSurface": {
+        "const": "assignment-runtime-contract"
+      },
+      "status": {
+        "const": "pre-release"
+      },
+      "description": {
+        "type": "string",
+        "minLength": 1
+      },
+      "contractSchema": {
+        "type": "object"
+      },
+      "protocol": {
+        "type": "object"
+      },
+      "authority": {
+        "type": "object"
+      },
+      "transports": {
+        "type": "array",
+        "minItems": 3
+      },
+      "capabilities": {
+        "type": "array",
+        "minItems": 10,
+        "uniqueItems": true
+      },
+      "operations": {
+        "type": "array",
+        "minItems": 10
+      },
+      "schemas": {
+        "type": "object"
+      },
+      "concurrency": {
+        "type": "object"
+      },
+      "idempotency": {
+        "type": "object"
+      },
+      "events": {
+        "type": "object"
+      },
+      "errors": {
+        "type": "array",
+        "minItems": 10
+      },
+      "compatibility": {
+        "type": "object"
+      },
+      "localRuntimeProfile": {
+        "type": "object"
+      },
+      "implementationStatus": {
+        "type": "object"
+      },
+      "nonClaims": {
+        "type": "array",
+        "minItems": 1
+      }
+    }
+  },
+  "protocol": {
+    "id": "kungfu.assignment-runtime/v1",
+    "stability": "pre-release-additive-only",
+    "canonicalEncoding": "canonical-json-utf8-nfc-no-trailing-newline/v1",
+    "rootAlgorithm": "sha256-canonical-json/v1",
+    "publicBoundary": "logical-identities-roots-revisions-receipts-only"
+  },
+  "authority": {
+    "realmRule": "Exactly one declared Assignment transition authority is active for a realm generation.",
+    "writer": "realm-runtime",
+    "clients": [
+      "gui",
+      "cli",
+      "agent",
+      "kfx"
+    ],
+    "clientRule": "Clients submit commands and consume receipts; they never mutate backend storage directly.",
+    "canonicalIdentity": {
+      "realm": [
+        "realmId",
+        "realmKind",
+        "generation"
+      ],
+      "assignment": [
+        "initiativeId",
+        "assignmentId"
+      ],
+      "attempt": [
+        "attemptId",
+        "assignmentId"
+      ],
+      "command": [
+        "commandId",
+        "idempotencyKey"
+      ],
+      "event": [
+        "streamId",
+        "generation",
+        "sequence",
+        "eventRoot"
+      ]
+    },
+    "rootParity": "Equivalent clients observing the same realm revision receive identical canonical identities, state roots, Fact/Episode references, and receipt roots.",
+    "forbiddenPublicDetails": [
+      "filesystem-path",
+      "json-layout",
+      "journal-directory",
+      "sqlite-layout",
+      "postgresql-table",
+      "electron-internal",
+      "language-private-type"
+    ]
+  },
+  "transports": [
+    {
+      "id": "embedded",
+      "status": "local-profile-target",
+      "semantics": "in-process adapter with the same request, response, fencing, and receipt contract"
+    },
+    {
+      "id": "loopback",
+      "status": "local-profile-target",
+      "semantics": "same-host authenticated transport with reconnect and event-resume semantics"
+    },
+    {
+      "id": "cluster",
+      "status": "future-replaceable-adapter-only",
+      "semantics": "may implement the same protocol later; no database, scheduler, HA, or capacity behavior is implied"
+    }
+  ],
+  "capabilities": [
+    "assignment.capabilities.discover",
+    "assignment.snapshot.read",
+    "assignment.list.read",
+    "assignment.get.read",
+    "assignment.query.read",
+    "assignment.events.watch",
+    "assignment.command.submit",
+    "assignment.command.inspect",
+    "assignment.diagnostics.read",
+    "assignment.recovery.plan",
+    "assignment.recovery.execute"
+  ],
+  "operations": [
+    {
+      "id": "capabilities.discover",
+      "class": "read",
+      "capability": "assignment.capabilities.discover"
+    },
+    {
+      "id": "assignment.snapshot",
+      "class": "read",
+      "capability": "assignment.snapshot.read"
+    },
+    {
+      "id": "assignment.list",
+      "class": "read",
+      "capability": "assignment.list.read"
+    },
+    {
+      "id": "assignment.get",
+      "class": "read",
+      "capability": "assignment.get.read"
+    },
+    {
+      "id": "assignment.query",
+      "class": "read",
+      "capability": "assignment.query.read"
+    },
+    {
+      "id": "events.watch",
+      "class": "read-resumable",
+      "capability": "assignment.events.watch"
+    },
+    {
+      "id": "command.submit",
+      "class": "write-fenced",
+      "capability": "assignment.command.submit"
+    },
+    {
+      "id": "command.get",
+      "class": "read",
+      "capability": "assignment.command.inspect"
+    },
+    {
+      "id": "diagnostics.get",
+      "class": "read",
+      "capability": "assignment.diagnostics.read"
+    },
+    {
+      "id": "recovery.plan",
+      "class": "read",
+      "capability": "assignment.recovery.plan"
+    },
+    {
+      "id": "recovery.execute",
+      "class": "write-fenced",
+      "capability": "assignment.recovery.execute"
+    }
+  ],
+  "schemas": {
+    "bundle": "schema/assignment-runtime-envelope-v1.schema.json",
+    "request": "kungfu.assignment-runtime.request/v1",
+    "response": "kungfu.assignment-runtime.response/v1",
+    "snapshot": "kungfu.assignment-runtime.snapshot/v1",
+    "event": "kungfu.assignment-runtime.event/v1",
+    "command": "kungfu.assignment-runtime.command/v1",
+    "receipt": "kungfu.assignment-runtime.receipt/v1",
+    "diagnostic": "kungfu.assignment-runtime.diagnostic/v1"
+  },
+  "concurrency": {
+    "revision": "Every successful read names the observed realm revision and root.",
+    "cas": "Every state-changing command carries expectedRevision and fails with stale-revision before mutation when it differs.",
+    "generation": "Every request and response names the realm generation; an older generation fails with generation-fenced.",
+    "claimAndLease": "Claim and phase commands bind the exact attempt, active lease or Warrant, Assignment identity, and expected revision.",
+    "singleWriter": "No adapter may fall through to direct storage or a second writer when the realm runtime is unavailable."
+  },
+  "idempotency": {
+    "requiredFor": [
+      "command.submit",
+      "recovery.execute"
+    ],
+    "sameKeySameBody": "Return the original command and receipt roots with disposition=replayed and perform no second mutation.",
+    "sameKeyDifferentBody": "Fail with idempotency-conflict and perform no mutation.",
+    "retention": "The realm advertises the bounded replay window through capability discovery."
+  },
+  "events": {
+    "cursor": [
+      "streamId",
+      "generation",
+      "sequence",
+      "eventRoot"
+    ],
+    "resume": "Resume after the exact acknowledged cursor without duplicating an applied command.",
+    "gap": "If the cursor is outside retained history, fail with event-resume-gap and return a recovery snapshot revision; never guess a successor cursor.",
+    "reconnect": "Reconnect re-negotiates capabilities and generation before resuming."
+  },
+  "errors": [
+    {
+      "code": "stale-revision",
+      "retryable": true
+    },
+    {
+      "code": "generation-fenced",
+      "retryable": true
+    },
+    {
+      "code": "idempotency-conflict",
+      "retryable": false
+    },
+    {
+      "code": "unsupported-capability",
+      "retryable": false
+    },
+    {
+      "code": "malformed-identity",
+      "retryable": false
+    },
+    {
+      "code": "ambiguous-identity",
+      "retryable": false
+    },
+    {
+      "code": "backend-unavailable",
+      "retryable": true
+    },
+    {
+      "code": "event-resume-gap",
+      "retryable": true
+    },
+    {
+      "code": "authority-bypass",
+      "retryable": false
+    },
+    {
+      "code": "lease-required",
+      "retryable": true
+    },
+    {
+      "code": "warrant-invalid",
+      "retryable": false
+    },
+    {
+      "code": "unauthorized",
+      "retryable": false
+    },
+    {
+      "code": "invalid-command",
+      "retryable": false
+    },
+    {
+      "code": "internal",
+      "retryable": true
+    }
+  ],
+  "compatibility": {
+    "legacyReaders": [
+      "kungfu.mission-control-v1-v3-read-only",
+      "atlas-gate-projection-read-only",
+      "captured-assignment-request-v1"
+    ],
+    "legacyWriters": "Existing Profile/CLI/GUI writers remain implementation facts until their phase-specific cutover; they are not additional Runtime API authority.",
+    "aliases": "Mission/Go names may translate at client edges while sealed legacy identities and roots remain unchanged.",
+    "deletionGate": "A direct path may be removed only after its Runtime Client successor has exact-root parity evidence and an explicit reviewed deletion decision.",
+    "dualWrite": "forbidden"
+  },
+  "localRuntimeProfile": {
+    "status": "frozen-r1-implementation-target",
+    "realmKind": "local",
+    "logicalAuthority": "selected Home or project Workspace",
+    "currentBacking": "private .kungfu Fact/Episode/runtime implementation",
+    "publicPathContract": false,
+    "allowedTransports": [
+      "embedded",
+      "loopback"
+    ],
+    "crashRule": "A command is successful only when its authoritative receipt is durable; process liveness is diagnostic, not proof.",
+    "reconnectRule": "Clients rediscover capability and generation, then resume from an exact cursor or recovery snapshot.",
+    "migrationSeam": "Backend replacement preserves protocol identities, revisions, roots, receipts, error codes, CAS, idempotency, and event-resume behavior.",
+    "callerStorageMutation": "forbidden"
+  },
+  "implementationStatus": {
+    "r0Contract": "proved-by-schema-fixtures-and-source-audit",
+    "localRuntime": "deferred-r1",
+    "guiRuntimeClient": "deferred-r2",
+    "cliAgentKfxConvergence": "deferred-r3",
+    "clusterRuntime": "not-started-out-of-scope"
+  },
+  "nonClaims": [
+    "This contract does not implement a Runtime server or client.",
+    "This contract does not migrate, initialize, or mutate a real Home Workspace.",
+    "This contract does not qualify PostgreSQL, distributed scheduling, multi-host recovery, high availability, sharding, or capacity.",
+    "Registering the contract does not prove that existing GUI, CLI, Agent, or KFX paths already consume it."
+  ]
+}

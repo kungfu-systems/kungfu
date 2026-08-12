@@ -999,6 +999,8 @@ test('provider exit metadata remains visible without retaining terminal output',
   });
   runtime.list()[0].child.emit('exit', { exitCode: 64, signal: 0 });
   const status = clients.cli.show(ref);
+  assert.equal(status.live || status.controllable, false);
+  assert.equal(clients.cli.list().attempts[0].live, false);
   assert.equal(status.lifecycleState, 'ended');
   assert.equal(status.inputAdmission, 'closed');
   assert.equal(status.exit.exitCode, 64);

@@ -49,6 +49,7 @@ dist/
 .buildchain/*
 !.buildchain/buildchain.toml
 !.buildchain/auditable-demo.json
+!.buildchain/auditable-demo-transport-smoke.json
 !.buildchain/alpha-contract-lock.json
 !.buildchain/contract-lock.json
 product/.buildchain/

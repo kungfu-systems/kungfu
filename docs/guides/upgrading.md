@@ -10,11 +10,12 @@ Downloading or installing an update never grants it live authority. Existing wor
 keeps the exact runtime bytes it already owns until Core produces a compatible plan,
 stages a new generation, and accepts semantic readiness.
 
-> **Pre-release boundary:** the shared Core contract and explicit archive CLI are
-> implemented in the v4 source line. Desktop transport wiring, official signed
-> update channels, native package-manager artifacts, and cross-platform release
-> qualification are still staged. A build without qualified publication evidence
-> must not offer the update as releasable.
+> **Alpha boundary:** `v4.0.0-alpha.1` publishes the signed Alpha channel,
+> standalone CLI archives, and desktop artifacts for the declared macOS arm64,
+> Linux x86_64, and Windows x86_64 surfaces. It does not open a Stable channel,
+> native package-manager publication, or a general production claim. A build
+> without matching qualified publication evidence must not offer itself as an
+> update.
 
 Before relying on a version-to-version data claim, read
 [Exit, Migration, and Version Compatibility](exit-and-version-compatibility.md)
@@ -24,13 +25,17 @@ schema, protocol, artifact, and platform evidence.
 
 ## Current install and update claims
 
-No Kungfu v4 update channel is advertised today. Darwin, Linux, and Windows
-remain `source-fixture`, `advertised: false`, and `promotionEligible: false` in
-the machine contract. There is no official hosted channel index, production
-trust key, installable Homebrew Formula, WinGet package, deb, rpm, or signed
-standalone CLI archive. The commands below describe implemented behavior and
-the release-blocking qualification path; they are not installation instructions
-for a public artifact that does not yet exist.
+The public Alpha channel currently identifies `v4.0.0-alpha.1`. Its hosted
+channel index, trust anchor, Release Passport, installers, and standalone CLI
+archives are published for Darwin arm64, Linux x86_64, and Windows x86_64. The
+[installation guide](installing-cli.md) owns acquisition instructions. There
+is still no Stable channel or official Homebrew Formula, WinGet package, deb,
+or rpm publication.
+
+Because `v4.0.0-alpha.1` is the first public v4 Alpha, it establishes an
+acquisition baseline but not an observed public old-to-new transition. Claims
+about upgrading from it require a later qualified release and the exact
+transition evidence described below.
 
 The first Windows Alpha is intentionally an unsigned PE distribution. Kungfu
 does not require or claim Authenticode certification for that cut. Its bootstrap
@@ -39,7 +44,7 @@ manifest root, artifact root, and installed-product read-back. The verifier
 reports `platformCodeSigning: false`; users must not interpret the Alpha as an
 operating-system publisher-identity claim.
 
-A future release may advertise only a platform, architecture, channel, and
+A release may advertise only a platform, architecture, channel, and
 install-source tuple whose retained native campaign starts from one exact older
 public version and reaches the exact candidate. The campaign must bind both
 channel-index roots, both release-passport roots, source commits, manifests,
@@ -108,8 +113,9 @@ The prepared Homebrew Formula owns one local contract in `product.json`:
 `brew upgrade --formula kungfu-systems/tap/kungfu`, followed by
 `kungfu --version`. Core accepts only that exact argument pair, invokes it without
 shell interpolation or ambient secrets, and verifies the selected target version
-before reporting success. The Formula remains non-installable until an official
-release passport supplies qualified standalone CLI archives and exact checksums.
+before reporting success. The Formula remains non-installable until the tap
+publishes an official Formula bound to qualified archives and exact checksums;
+the Alpha archive publication alone does not create that package-manager entry.
 Other package-manager sources still show no invented package name until their own
 locally allowlisted contract is implemented and embedded.
 
@@ -155,11 +161,11 @@ implicitly. Each plan and receipt reports the current/target Cut roots and the
 transition root so a human or agent can distinguish identical, successor,
 conflict, recovery, and refused movement.
 
-The current
-pre-release adapter verifies archive size and SHA-256 against that manifest and
-requires non-placeholder signing evidence. Client-side cryptographic verification
-of that evidence is not yet a qualified release claim; official publication must
-remain closed until the release gate supplies that proof.
+The published Alpha archive adapter verifies archive size and SHA-256 against
+the manifest, requires non-placeholder signing evidence, and binds the signed
+channel and Release Passport before selection. That qualifies only the exact
+`v4.0.0-alpha.1` acquisition path; it does not qualify a later transition or a
+Stable channel by implication.
 
 The release gate separately requires retained native-packaged qualification evidence
 whose source, product, platform, architecture, artifact digest, size, and signing
@@ -171,7 +177,8 @@ receipt, `--version`, `--help`, `run agent`, update status, package smoke,
 activation behavior, and every required fault verdict. Its Ed25519 statement
 verification, message/manual checks, and at least 128 runtime-generation churn
 iterations must all pass. Source fixtures prove the verifier fails closed, but
-do not promote any current platform to a supported signed update channel.
+do not promote another version, platform, architecture, or install source
+beyond the published Alpha coordinates.
 
 For publication, every platform payload must carry the retained record at
 `product/release/qualification/kungfu-upgrade-qualification-evidence.json`.

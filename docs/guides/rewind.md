@@ -183,12 +183,13 @@ rejection, export/open, cross-runtime edges, managed runs, approvals, and cost
 Facts. The fixtures live under `tests/fixtures/rewind-demo-*` and use `run.mjs`
 drivers.
 
-This is pre-release evidence, not a polished one-command install or a claim of
-complete framework coverage. Current limits include partial framework
-instrumentation, profile-specific `run_id` commands beside the Episode-native
-storage surface, raw streaming capture in some paths, sensitive-body policy
-remaining operator-owned, and re-execution deliberately not being a default
-mode.
+This is bounded prerelease evidence, not a claim of complete framework coverage
+or a separately qualified Rewind product experience. Availability of the
+current Alpha installer does not widen this capability claim. Current limits
+include partial framework instrumentation, profile-specific `run_id` commands
+beside the Episode-native storage surface, raw streaming capture in some paths,
+sensitive-body policy remaining operator-owned, and re-execution deliberately
+not being a default mode.
 
 Go next to [The Episode](../concepts/the-episode.md), [Event Model](../architecture/event-model.md),
 [Vocabulary](../concepts/vocabulary.md), and [Known Limits](../qualification/known-limits.md).

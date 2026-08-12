@@ -1,0 +1,29 @@
+{
+  "schema": "kungfu.profile-contract-world/v1",
+  "profileId": "kungfu.github-webhook-reference",
+  "identityAuthority": "owning-workspace-authority",
+  "contractWorld": {
+    "id": "kungfu.github-webhook-reference",
+    "version": "1",
+    "factSurfaceIds": ["kungfu.github-webhook-reference.observation"]
+  },
+  "factSurfaces": [
+    {
+      "id": "kungfu.github-webhook-reference.observation",
+      "version": "1",
+      "contractWorldId": "kungfu.github-webhook-reference",
+      "sourceAuthorities": ["github-webhook-ingress"],
+      "schema": {
+        "$id": "kungfu://github-webhook-reference/observation/v1",
+        "type": "object",
+        "properties": {
+          "record": { "type": "object" },
+          "source": { "type": "object" },
+          "links": { "type": "object" }
+        },
+        "required": ["record", "source", "links"],
+        "additionalProperties": false
+      }
+    }
+  ]
+}

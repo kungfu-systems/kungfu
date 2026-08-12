@@ -1,21 +1,24 @@
 # Kungfu Alpha Known Issues
 
-Last reviewed: 2026-07-26.
+Last reviewed: 2026-08-09.
 
-This is the canonical public index for issues that affect a future Kungfu
-product Alpha. It does not imply that an Alpha artifact is currently available.
+This is the canonical public index for issues affecting the Kungfu product
+Alpha. The current prerelease is
+[`v4.0.0-alpha.1`](https://github.com/kungfu-systems/kungfu/releases/tag/v4.0.0-alpha.1);
+availability and support boundaries are owned by [Alpha Status](alpha-status.md).
 
-## Launch blockers
+## First-Alpha launch-readiness record
 
 | ID | Affected surface | Status | Workaround | Fixed version |
 | --- | --- | --- | --- | --- |
-| `ALPHA-OPS-1` | Public feedback routing | Blocked pending live readback of Discussions categories and the complete label taxonomy | Do not publish or amplify a Kungfu product Alpha | Not yet proven |
-| `ALPHA-OPS-2` | Launch operations | Blocked pending exact protected PR, rehearsal, on-call assignment, and parent handoff | Keep the product Alpha channel unchanged | Not yet proven |
+| `ALPHA-OPS-1` | Public feedback routing | Closed for the first Alpha publication | Use the current Issues, Discussions, and private-security routes | `v4.0.0-alpha.1` |
+| `ALPHA-OPS-2` | Launch operations | Closed for the first Alpha publication | Apply the runbook again before any later Alpha promotion | `v4.0.0-alpha.1` |
 
-No runtime defect is listed here yet because this readiness work has not
-admitted a product Alpha artifact. A future entry must identify the affected
-artifact or version, qualified platforms and channels, impact, workaround, and
-fixed version only when evidence proves them.
+These two entries preserve the launch-readiness history; they are not runtime
+defects. The absence of a runtime defect from this page is not evidence that no
+defect exists. Every new entry must identify the affected artifact or version,
+qualified platforms and channels, impact, workaround, and fixed version only
+when evidence proves them.
 
 ## Duplicate consolidation
 

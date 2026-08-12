@@ -1,11 +1,16 @@
 // Runtime access for the reference app: load the native kungfu binding
 // in-process (nodeIntegration renderer), inject it into the capability SDK
-// (KF-ADR-019f86da-4f90-7e5e-ae22-2a8fc24086f1), and hand capability handles to the shell and its kfx. This is
-// the moat: the renderer reaches the runtime directly, no IPC copy.
+// (KF-ADR-019f86da-4f90-7e5e-ae22-2a8fc24086f1), and hand capability handles to the shell and its kfx. Native JS
+// handles stay direct; process-owned authorities such as Assignment Runtime
+// cross only their versioned envelopes over a private IPC transport.
 import {
   type AgentRuntime,
   type AgentSession,
   type AgentWorkLab,
+  type AssignmentRuntime,
+  type AssignmentRuntimeHostReady,
+  type AssignmentRuntimeRequest,
+  type AssignmentRuntimeResponse,
   type DomainState,
   type KfNativeBinding,
   type KfxControl,
@@ -24,6 +29,7 @@ import {
   managedTmuxSocket,
   openAgentRuntime,
   openAgentWorkLab,
+  openAssignmentRuntime,
   openDomainState,
   openKfxControl,
   openLedger,
@@ -38,6 +44,7 @@ import {
 } from '@kungfu-tech/api/capability';
 import {
   AGENT_RUNTIME_CLI_EXEC_CHANNEL,
+  ASSIGNMENT_RUNTIME_CALL_CHANNEL,
   PROFILE_CLI_EXEC_CHANNEL,
   WORK_LOOP_CLI_EXEC_CHANNEL,
 } from '../../sandbox/channels';
@@ -162,6 +169,7 @@ export type Runtime = {
   workLoop: WorkLoop | null;
   kfxControl: KfxControl | null;
   profile: Profile | null;
+  assignmentRuntime: AssignmentRuntime | null;
   agentRuntime: AgentRuntime | null;
   agentSession: AgentSession | null;
   workspace: WorkspaceGuidance | null;
@@ -334,6 +342,7 @@ export function deferredRuntime(
     workLoop: null,
     kfxControl: null,
     profile: null,
+    assignmentRuntime: null,
     agentRuntime: null,
     agentSession: null,
     workspace: null,
@@ -388,6 +397,7 @@ function createRuntime(): Runtime {
     workLoop: null,
     kfxControl: null,
     profile: null,
+    assignmentRuntime: null,
     agentRuntime: null,
     agentSession: null,
     workspace: null,
@@ -521,6 +531,30 @@ function createRuntime(): Runtime {
         return result.stdout;
       },
     });
+    const assignmentRuntimeIpc = (
+      window.require('electron') as {
+        ipcRenderer: {
+          invoke: <TResult>(
+            channel: string,
+            payload: unknown,
+          ) => Promise<TResult>;
+        };
+      }
+    ).ipcRenderer;
+    const assignmentRuntime = openAssignmentRuntime({
+      transport: {
+        connect: () =>
+          assignmentRuntimeIpc.invoke<AssignmentRuntimeHostReady>(
+            ASSIGNMENT_RUNTIME_CALL_CHANNEL,
+            { operation: 'connect' },
+          ),
+        invoke: (request: AssignmentRuntimeRequest) =>
+          assignmentRuntimeIpc.invoke<AssignmentRuntimeResponse>(
+            ASSIGNMENT_RUNTIME_CALL_CHANNEL,
+            { operation: 'invoke', request },
+          ),
+      },
+    });
     const workLoop = openWorkLoop({
       runtimeDir,
       repoRoot: env.KF_WORKSPACE_ROOT || '',
@@ -605,6 +639,7 @@ function createRuntime(): Runtime {
       workLoop,
       kfxControl,
       profile,
+      assignmentRuntime,
       agentRuntime,
       agentSession,
       workspace,

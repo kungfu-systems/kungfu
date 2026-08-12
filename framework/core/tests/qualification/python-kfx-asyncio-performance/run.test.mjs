@@ -20,6 +20,7 @@ import {
   qualificationPlan,
   renderSummary,
   validateCoverage,
+  validatePeakRssObservations,
   validateReport,
   verifyEvidence,
 } from './run.mjs';
@@ -242,6 +243,19 @@ test('raw parser keeps every observation and rejects failure records', () => {
   );
 });
 
+test('zero, missing, and malformed peak RSS observations fail closed', () => {
+  for (const peak_rss_bytes of [0, null, '1024']) {
+    assert.throws(
+      () => validatePeakRssObservations([record({ peak_rss_bytes })]),
+      /peak_rss_bytes must be a positive safe integer/u,
+    );
+  }
+  assert.throws(
+    () => validatePeakRssObservations([record({ peak_rss_bytes: undefined })]),
+    /peak_rss_bytes must be a positive safe integer/u,
+  );
+});
+
 test('statistics retain tails, errors, cancellations, backpressure, and resources', () => {
   const statistics = deriveStatistics([
     record({ p99_microseconds: 10, cancelled_operations: 2 }),
@@ -340,6 +354,19 @@ test('dirty and quick evidence fail closed while dry-run makes no claim', () => 
     quick: true,
   });
   assert.equal(quick.verdict, 'unqualified');
+  const zeroRss = evaluateReport({
+    ...base,
+    mode: 'execute',
+    source: source(),
+    observations: [record({ peak_rss_bytes: 0 })],
+  });
+  assert.equal(zeroRss.verdict, 'unqualified');
+  assert.equal(zeroRss.claims.service_plane_envelope_qualified, false);
+  assert.ok(
+    zeroRss.invalidations.includes(
+      'peak RSS observation is missing or non-credible',
+    ),
+  );
   const planned = evaluateReport({
     ...base,
     mode: 'dry-run',

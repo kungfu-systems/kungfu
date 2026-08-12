@@ -77,6 +77,24 @@ const NON_REUSABLE_EVIDENCE = [
   'signing',
 ];
 const EXACT_BUILDCHAIN_SHA = /^[0-9a-f]{40}$/u;
+const BUILDCHAIN_V3_NATIVE_RENDITIONS = [
+  {
+    id: '1080p',
+    role: 'primary',
+    columns: 150,
+    rows: 36,
+    width: 1920,
+    height: 1080,
+  },
+  {
+    id: '720p',
+    role: 'responsive',
+    columns: 150,
+    rows: 28,
+    width: 1280,
+    height: 720,
+  },
+];
 const WINDOWS_CONTINUITY_FILES = [
   'framework/core/src/python/kungfu/peer_lifecycle.py',
   'framework/core/tests/python/test_peer_lifecycle.py',
@@ -147,15 +165,25 @@ export function inspectWindowsFastSentinel({ shifuCmd, lifecycle }) {
 export function inspectAuditableDemoFastSentinel({
   workflow,
   scenario,
+  transportScenario,
   product,
 }) {
   const issues = [];
   let scenarioValue;
+  let transportScenarioValue;
   try {
     scenarioValue =
       typeof scenario === 'string' ? JSON.parse(scenario) : scenario;
   } catch {
     issues.push('auditable-demo scenario is not valid JSON');
+  }
+  try {
+    transportScenarioValue =
+      typeof transportScenario === 'string'
+        ? JSON.parse(transportScenario)
+        : transportScenario;
+  } catch {
+    issues.push('auditable-demo transport scenario is not valid JSON');
   }
   const demos = scenarioValue?.demos || [];
   const autoplay = demos.find((demo) => demo?.id === 'agent-work-lab-autoplay');
@@ -168,7 +196,7 @@ export function inspectAuditableDemoFastSentinel({
   if (
     scenarioValue?.schema !== 'buildchain.declarative-binary-demo/v1' ||
     scenarioValue?.execution?.durationClass !== 'long-form' ||
-    scenarioValue?.execution?.totalTimeoutSeconds !== 180 ||
+    scenarioValue?.execution?.totalTimeoutSeconds !== 360 ||
     scenarioValue?.authority?.grants?.length !== 0 ||
     demos.length !== 3 ||
     JSON.stringify(autoplay?.steps?.[0]?.argv) !==
@@ -181,9 +209,9 @@ export function inspectAuditableDemoFastSentinel({
         '--episode',
         '1',
         '--speed',
-        '1',
+        '4',
       ]) ||
-    projectTourEpisode1?.steps?.[0]?.timeoutSeconds !== 180 ||
+    projectTourEpisode1?.steps?.[0]?.timeoutSeconds !== 360 ||
     JSON.stringify(projectTourEpisode2?.steps?.[0]?.argv) !==
       JSON.stringify([
         'agent-work-lab',
@@ -191,12 +219,31 @@ export function inspectAuditableDemoFastSentinel({
         '--episode',
         '2',
         '--speed',
-        '1',
+        '4',
       ]) ||
-    projectTourEpisode2?.steps?.[0]?.timeoutSeconds !== 180
+    projectTourEpisode2?.steps?.[0]?.timeoutSeconds !== 360
   ) {
     issues.push(
       'auditable-demo scenario no longer declares the exact bounded three-demo cut',
+    );
+  }
+  if (
+    transportScenarioValue?.schema !==
+      'buildchain.declarative-binary-demo/v1' ||
+    transportScenarioValue?.execution?.totalTimeoutSeconds !== 60 ||
+    JSON.stringify(transportScenarioValue?.renditions) !==
+      JSON.stringify(BUILDCHAIN_V3_NATIVE_RENDITIONS) ||
+    JSON.stringify(transportScenarioValue?.product) !==
+      JSON.stringify(scenarioValue?.product) ||
+    JSON.stringify(transportScenarioValue?.artifact) !==
+      JSON.stringify(scenarioValue?.artifact) ||
+    JSON.stringify(transportScenarioValue?.transportSmoke) !==
+      JSON.stringify(scenarioValue?.transportSmoke) ||
+    JSON.stringify(transportScenarioValue?.authority) !==
+      JSON.stringify(scenarioValue?.authority)
+  ) {
+    issues.push(
+      'auditable-demo transport scenario no longer binds the exact bounded v3-compatible artifact smoke and native rendition profiles',
     );
   }
   requirePattern(
@@ -207,9 +254,21 @@ export function inspectAuditableDemoFastSentinel({
   );
   requirePattern(
     issues,
+    product,
+    /runInstalledEmbeddedNodeAddonSmoke\([\s\S]*runtimeEntry/u,
+    'Kungfu product no longer executes the staged node-pty addon before upload',
+  );
+  requirePattern(
+    issues,
     workflow,
     /artifact-paths:[\s\S]*product\/dist\/cli\/kungfu-episodes-cli-linux-x64/u,
     'build artifact no longer retains the exact standalone demo distribution',
+  );
+  requirePattern(
+    issues,
+    workflow,
+    /pre-upload-transport-smoke-scenario-path:\s*\.buildchain\/auditable-demo-transport-smoke\.json/u,
+    'build no longer uses the bounded v3-compatible pre-upload transport scenario',
   );
   const runtime = workflow.match(
     /uses:\s*kungfu-systems\/buildchain\/\.github\/workflows\/\.declarative-auditable-demo\.yml@([0-9a-f]{40})/u,
@@ -246,6 +305,10 @@ export function runAlphaFastSentinel(kind, root = ROOT) {
       ),
       scenario: fs.readFileSync(
         path.join(root, '.buildchain', 'auditable-demo.json'),
+        'utf8',
+      ),
+      transportScenario: fs.readFileSync(
+        path.join(root, '.buildchain', 'auditable-demo-transport-smoke.json'),
         'utf8',
       ),
       product: fs.readFileSync(

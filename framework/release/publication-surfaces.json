@@ -80,7 +80,7 @@
             "product-stable",
             "product-binaries"
           ],
-          "sourceRoot": "sha256:1040e7f1cf3bad82ee2957427c620af9c683be63dc7e268b10cc9ba4166c41fb"
+          "sourceRoot": "sha256:e590285f72200b9150245afc2904df4be8c6682495e02dc5c09fca1aad09b8f3"
         },
         {
           "path": ".github/workflows/alpha-promotion-preflight.yml",
@@ -122,7 +122,7 @@
             "product-stable",
             "product-binaries"
           ],
-          "sourceRoot": "sha256:f6f169aa28499e8d3fe8ce0db2f0d1740492828d3035f227b0d4bb9efb2071a5"
+          "sourceRoot": "sha256:3ac5546976b18657ba9ed3783694476bd8a36564004a5adcb470427cd432e24f"
         },
         {
           "path": ".github/workflows/buildchain-validate.yml",
@@ -132,7 +132,7 @@
             "product-alpha",
             "product-stable"
           ],
-          "sourceRoot": "sha256:0705b36624cbe89157bf6859bc3e7f762e8fefd9a0334a05692cb4e579a56a77"
+          "sourceRoot": "sha256:d9da06e5f7c850ea0ba6aa2a7e99990d7528c2acc9e1e28c0babe181c0156fe0"
         },
         {
           "path": ".github/workflows/cancel-dequeued-merge-group.yml",
@@ -146,7 +146,7 @@
           "classification": "non-publication",
           "owner": "kungfu-ci",
           "surfaceIds": [],
-          "sourceRoot": "sha256:86c1e24718d4a56db85743f158e4723e7c1c01b3b78f1e086b073b7284259667"
+          "sourceRoot": "sha256:7a90447e51fca99cf72172df3b51acb1c8360f2537d84db3bea16210ab33ce7e"
         },
         {
           "path": ".github/workflows/core-build-profiles.yml",
@@ -170,21 +170,21 @@
             "product-alpha",
             "product-binaries"
           ],
-          "sourceRoot": "sha256:33f05f9a4b40a51045b60159da450db000a975008ec185836626cad3fa75dc7a"
+          "sourceRoot": "sha256:795857454372ce1f340e126cbb2326e0de19f171acb90fe2a027759cc1ca7926"
         },
         {
           "path": ".github/workflows/dev-delivery-warrant-terminal.yml",
           "classification": "non-publication",
           "owner": "kungfu-ci",
           "surfaceIds": [],
-          "sourceRoot": "sha256:f34962e877c4399e2b14f9804811f00a30c3ff6ffc55ad5b1e635b79574d9d7d"
+          "sourceRoot": "sha256:880acc1c6d216d38a874f372b48cc0f2408b82f7d96166ac4e97bae82fdc8bb8"
         },
         {
           "path": ".github/workflows/dev-pr-auto-merge.yml",
           "classification": "non-publication",
           "owner": "kungfu-ci",
           "surfaceIds": [],
-          "sourceRoot": "sha256:417bbb46cc60f86945d4f50abf548fe98abadb293665f1fd5c798ec4bb43ad48"
+          "sourceRoot": "sha256:bc58fcd578401a98ceca59bb40fb0ce25027a4fd993d610dc0d4cc40499f0141"
         },
         {
           "path": ".github/workflows/dev-gate-latency-patrol.yml",
@@ -272,7 +272,7 @@
             "product-stable",
             "product-binaries"
           ],
-          "sourceRoot": "sha256:20618795b9bafbb08a12b41a48fe139549d76f9bedc2d14791d28956a7c4c63a"
+          "sourceRoot": "sha256:28477427583477d102c17860c4b2476cd6f17f85a3c80bf4cb5c8f1cd02f919f"
         },
         {
           "path": ".github/workflows/kungfu-agent-patrol.yml",
@@ -329,7 +329,7 @@
             "product-stable",
             "product-binaries"
           ],
-          "sourceRoot": "sha256:614e0af91d0c9b42e0ad3a06ae4a11567610c2d1b1f19047ea9213b5ebd3c15e"
+          "sourceRoot": "sha256:f7d7120bae5439957ece96c23bfe7ec5448ed0fd986c57a977a3e2c4569b42f2"
         },
         {
           "path": ".github/workflows/release-shifu.yml",
@@ -364,9 +364,9 @@
     "buildchain": {
       "repository": "kungfu-systems/buildchain",
       "owner": "kungfu-systems/buildchain",
-      "sourceRevision": "2e7e07902ac28d8f3edcfb81098ef9ebc7a91878",
-      "version": "3.0.5-alpha.6",
-      "compatibilityMode": "stable-v3-contract-plus-exact-additive-runtime",
+      "sourceRevision": "e5e7078c67978051016c2ceb1fec114e8956397a",
+      "version": "3.0.9-alpha.2",
+      "compatibilityMode": "stable-v3-contract-plus-alpha-v3-contract",
       "stableContractLock": ".buildchain/contract-lock.json",
       "runtimeContractLock": ".buildchain/alpha-contract-lock.json",
       "workflowInventoryRoot": "sha256:18c8418a96df4c01f0505ed8c5e8c892b944f3385ab844febe540590e4c96bdf",
@@ -860,5 +860,5 @@
       }
     }
   ],
-  "registryRoot": "sha256:f6d5798d32aa14c535cfc00e910cd9c71a7ed46aa5902b62ca78e79ec9b1ff24"
+  "registryRoot": "sha256:35d3a31a03b2a3961b0976e1add77b9228398b7694db262c370a4d6db79a5fba"
 }

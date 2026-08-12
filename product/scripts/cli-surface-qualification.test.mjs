@@ -3,6 +3,9 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import {
+  cliQualificationNonClaims,
+  cliQualificationPlatform,
+  cliQualificationRoot,
   cliSpawnSpecification,
   qualifyCliSurface,
 } from './cli-surface-qualification.mjs';
@@ -104,7 +107,7 @@ function runner(observed = catalog()) {
         stderr: '',
       };
     }
-    if (joined.endsWith('--help')) {
+    if (joined === '' || joined.endsWith('--help')) {
       if (joined.includes(' sdk ')) {
         return {
           status: 0,
@@ -167,11 +170,21 @@ test('qualification binds help, canonical CLI, KFD-3 and mutation receipts', () 
     identity: {
       archive: 'kungfu-episodes-cli-fixture.tar.gz',
       archiveSha256: `sha256:${'a'.repeat(64)}`,
+      sourceCommit: '1'.repeat(40),
     },
     runCommand: runner(),
   });
   assert.equal(report.qualified, true);
   assert.equal(report.version, '4.0.0');
+  assert.equal(report.architecture, process.arch);
+  assert.deepEqual(report.claims, {
+    installedProduct: true,
+    qualifiedPlatform: report.platform,
+  });
+  assert.deepEqual(
+    report.nonClaims,
+    cliQualificationNonClaims(report.platform),
+  );
   assert.deepEqual(report.productIdentity, {
     exactMark: 'Kungfu UNGFU™',
     principle: 'Never Guess. Facts Unfold.',
@@ -194,6 +207,25 @@ test('qualification binds help, canonical CLI, KFD-3 and mutation receipts', () 
   );
 });
 
+test('qualification accepts presentation-only alignment drift in bare help', () => {
+  const baseRunner = runner();
+  const report = qualifyCliSurface({
+    cli: '/fixture/kungfu',
+    expectedCatalog: catalog(),
+    runCommand(input) {
+      const result = baseRunner(input);
+      if (input.args.length === 0) {
+        return {
+          ...result,
+          stdout: result.stdout.replace('Project → Work', 'Project  →  Work'),
+        };
+      }
+      return result;
+    },
+  });
+  assert.equal(report.qualified, true);
+});
+
 test('verification binds the qualification to the exact archive digest', () => {
   const report = qualifyCliSurface({
     cli: '/fixture/kungfu',
@@ -202,6 +234,7 @@ test('verification binds the qualification to the exact archive digest', () => {
     identity: {
       archive: 'kungfu-episodes-cli-fixture.tar.gz',
       archiveSha256: `sha256:${'a'.repeat(64)}`,
+      sourceCommit: '1'.repeat(40),
     },
     runCommand: runner(),
   });
@@ -225,6 +258,7 @@ test('verification rejects a tampered qualification root', () => {
     identity: {
       archive: 'kungfu-episodes-cli-fixture.tar.gz',
       archiveSha256: `sha256:${'a'.repeat(64)}`,
+      sourceCommit: '1'.repeat(40),
     },
     runCommand: runner(),
   });
@@ -238,6 +272,42 @@ test('verification rejects a tampered qualification root', () => {
         archiveSha256: report.identity.archiveSha256,
       }),
     /qualification semantic root mismatch/u,
+  );
+});
+
+test('verification rejects a qualified platform OS non-claim', () => {
+  const report = qualifyCliSurface({
+    cli: '/fixture/kungfu',
+    expectedCatalog: catalog(),
+    label: 'cli-archive',
+    identity: {
+      archive: 'kungfu-episodes-cli-fixture.tar.gz',
+      archiveSha256: `sha256:${'a'.repeat(64)}`,
+      sourceCommit: '1'.repeat(40),
+    },
+    runCommand: runner(),
+  });
+  const system = report.platform.split('-')[0];
+  const qualifiedSystemLabel = {
+    darwin: 'macOS',
+    linux: 'Linux',
+    windows: 'Windows',
+  }[system];
+  report.nonClaims = [
+    `${qualifiedSystemLabel} is not qualified by this receipt.`,
+    ...cliQualificationNonClaims(report.platform),
+  ];
+  Reflect.deleteProperty(report, 'qualificationRoot');
+  report.qualificationRoot = cliQualificationRoot(report);
+  assert.throws(
+    () =>
+      verifyCliSurfaceQualification({
+        report,
+        expectedPlatform: report.platform,
+        archiveName: report.identity.archive,
+        archiveSha256: report.identity.archiveSha256,
+      }),
+    /qualification non-claims contradict the qualified platform/u,
   );
 });
 
@@ -257,6 +327,20 @@ test('qualification rejects a product without the secondary signature', () => {
       }),
     /omitted the secondary product signature/u,
   );
+});
+
+test('qualification non-claims exclude the exact qualified platform', () => {
+  const claims = cliQualificationNonClaims('linux-arm64');
+  assert.deepEqual(claims, [
+    'macOS is not qualified by this receipt.',
+    'Windows is not qualified by this receipt.',
+    'Availability metadata does not activate a KFX contribution.',
+  ]);
+  assert.ok(!claims.some((claim) => claim.includes('Linux')));
+});
+
+test('qualification maps the Windows runtime name to its public platform id', () => {
+  assert.equal(cliQualificationPlatform('win32', 'x64'), 'windows-x64');
 });
 
 test('qualification fails closed when installed roots drift', () => {

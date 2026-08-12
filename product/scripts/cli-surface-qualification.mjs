@@ -34,6 +34,19 @@ const PROFILE_BRIEF = {
 };
 const PRODUCT_SIGNATURE = 'Kungfu UNGFU™';
 const PRODUCT_PRINCIPLE = 'Never Guess. Facts Unfold.';
+const QUALIFIED_CLI_PLATFORMS = [
+  'darwin-arm64',
+  'linux-arm64',
+  'linux-x64',
+  'windows-x64',
+];
+const QUALIFIED_CLI_SYSTEMS = [
+  { id: 'darwin', label: 'macOS' },
+  { id: 'linux', label: 'Linux' },
+  { id: 'windows', label: 'Windows' },
+];
+const SHA1_PATTERN = /^[a-f0-9]{40}$/u;
+const SHA256_PATTERN = /^sha256:[a-f0-9]{64}$/u;
 
 function stable(value) {
   if (Array.isArray(value)) return value.map(stable);
@@ -50,6 +63,28 @@ function stable(value) {
 export function cliQualificationRoot(value) {
   const bytes = JSON.stringify(stable(value));
   return `sha256:${crypto.createHash('sha256').update(bytes).digest('hex')}`;
+}
+
+export function cliQualificationPlatform(
+  platform = process.platform,
+  architecture = process.arch,
+) {
+  const publicPlatform = platform === 'win32' ? 'windows' : platform;
+  return `${publicPlatform}-${architecture}`;
+}
+
+export function cliQualificationNonClaims(qualifiedPlatform) {
+  assert(
+    QUALIFIED_CLI_PLATFORMS.includes(qualifiedPlatform),
+    `unsupported CLI qualification platform: ${qualifiedPlatform}`,
+  );
+  const qualifiedSystem = qualifiedPlatform.split('-')[0];
+  return [
+    ...QUALIFIED_CLI_SYSTEMS.filter(({ id }) => id !== qualifiedSystem).map(
+      ({ label }) => `${label} is not qualified by this receipt.`,
+    ),
+    'Availability metadata does not activate a KFX contribution.',
+  ];
 }
 
 function digest(value) {
@@ -122,6 +157,14 @@ function assertRoots(actual, expected, label) {
   }
 }
 
+function normalizeHelpPresentation(value) {
+  return String(value)
+    .split(/\r?\n/u)
+    .map((line) => line.trim().replace(/\s+/gu, ' '))
+    .join('\n')
+    .trim();
+}
+
 function commandRunner({ cli, home, workspace, env, runCommand }) {
   const baseEnv = {
     ...env,
@@ -153,6 +196,17 @@ export function qualifyCliSurface({
     expectedCatalog?.schema === 'kungfu.cli-surface-catalog/v1',
     'expected CLI surface catalog is invalid',
   );
+  if (label === 'cli-archive') {
+    assert(identity.archive, 'CLI archive qualification omitted its filename');
+    assert(
+      SHA256_PATTERN.test(identity.archiveSha256 || ''),
+      'CLI archive qualification omitted its SHA-256 digest',
+    );
+    assert(
+      SHA1_PATTERN.test(identity.sourceCommit || ''),
+      'CLI archive qualification omitted its exact source commit',
+    );
+  }
   const expectedRoots = rootsFrom(expectedCatalog);
   const tempRoot = fs.mkdtempSync(
     path.join(os.tmpdir(), 'kungfu-cli-surface-qualification-'),
@@ -190,6 +244,7 @@ export function qualifyCliSurface({
     const defaultHelp = run(['--help'], 'kungfu --help', {
       withHome: false,
     }).stdout;
+    const bareHelp = run([], 'bare kungfu', { withHome: false }).stdout;
     const fullHelp = run(['--help-all'], 'kungfu --help-all', {
       withHome: false,
     }).stdout;
@@ -220,6 +275,11 @@ export function qualifyCliSurface({
     assert(
       defaultHelp.includes('Project → Work → Agent'),
       'default help omitted the Project, Work, Agent product model',
+    );
+    assert(
+      normalizeHelpPresentation(bareHelp) ===
+        normalizeHelpPresentation(defaultHelp),
+      'bare kungfu did not match the standalone default help path',
     );
     assert(
       defaultHelp.includes('START HERE'),
@@ -409,13 +469,19 @@ export function qualifyCliSurface({
           ).length,
         ]),
     );
+    const qualifiedPlatform = cliQualificationPlatform();
     const result = {
       schema: 'kungfu.cli-installed-product-qualification/v1',
       qualified: true,
       label,
       identity,
-      platform: `${process.platform}-${process.arch}`,
+      platform: qualifiedPlatform,
+      architecture: process.arch,
       version,
+      claims: {
+        installedProduct: true,
+        qualifiedPlatform,
+      },
       productIdentity: {
         exactMark: PRODUCT_SIGNATURE,
         principle: PRODUCT_PRINCIPLE,
@@ -467,11 +533,7 @@ export function qualifyCliSurface({
         sourceCheckoutRequired: false,
         guiPrivateStateRequired: false,
       },
-      nonClaims: [
-        'Linux is not qualified by this receipt.',
-        'Windows is not qualified by this receipt.',
-        'Availability metadata does not activate a KFX contribution.',
-      ],
+      nonClaims: cliQualificationNonClaims(qualifiedPlatform),
     };
     result.qualificationRoot = cliQualificationRoot(result);
     return result;

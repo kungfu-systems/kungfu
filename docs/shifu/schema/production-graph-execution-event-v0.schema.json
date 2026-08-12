@@ -23,7 +23,7 @@
     "planRoot": { "$ref": "production-graph-v0.schema.json#/$defs/root" },
     "nodeId": { "$ref": "production-graph-v0.schema.json#/$defs/id" },
     "sequence": { "type": "integer", "minimum": 0 },
-    "state": { "enum": ["planned", "started", "succeeded", "failed", "cancelled"] },
+    "state": { "enum": ["planned", "started", "succeeded", "failed", "cancelled", "timed-out", "skipped"] },
     "executor": { "$ref": "production-graph-v0.schema.json#/$defs/executor" },
     "sourceRevision": { "$ref": "production-graph-v0.schema.json#/$defs/gitObject" },
     "observedOutputRoots": {

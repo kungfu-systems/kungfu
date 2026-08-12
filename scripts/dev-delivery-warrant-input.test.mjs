@@ -9,7 +9,11 @@ import {
   createProofDescriptor,
   digest,
 } from './affected-native-proof.mjs';
-import { createDevDeliveryWarrantInput } from './dev-delivery-warrant-input.mjs';
+import {
+  activeLeaseContextForPullRequest,
+  createDevDeliveryWarrantInput,
+} from './dev-delivery-warrant-input.mjs';
+import { createFamilyQueueLease } from './project-cut-merge-queue-admission.mjs';
 
 const BASE = '1'.repeat(40);
 const HEAD = '2'.repeat(40);
@@ -124,6 +128,41 @@ test('consumer input rejects a descriptor bound to another head', () => {
   );
 });
 
+test('consumer forwards only the exact-head active family lease context', () => {
+  const lease = createFamilyQueueLease(
+    {
+      ok: true,
+      decision: 'qualified',
+      schema: 'project.cut.merge-queue-admission/v1',
+      baseCommitOid: BASE,
+      headCommitOid: HEAD,
+      candidateCommitOid: '4'.repeat(40),
+      candidateTreeOid: TREE,
+      replayedCommitCount: 1,
+      compositionChanged: false,
+      compositionRoot: null,
+      reasonCodes: [],
+    },
+    {
+      initiativeId: 'local-assignment-runtime-api',
+      assignmentId: 'local-assignment-runtime-api-r1',
+      deliveryClass: 'native-proof-required',
+      queueAttempt: 'retry-one',
+      admissionProofRoots: [digest({ proof: 'exact' })],
+    },
+  );
+  const pullRequest = { body: lease.marker };
+
+  assert.equal(
+    activeLeaseContextForPullRequest(pullRequest, HEAD),
+    lease.statusContext,
+  );
+  assert.equal(
+    activeLeaseContextForPullRequest(pullRequest, '5'.repeat(40)),
+    '',
+  );
+});
+
 test('consumer delta classifier reuses only unrelated base movement', () => {
   const proofPlan = plan();
   const advancedBase = '6'.repeat(40);
@@ -170,23 +209,31 @@ test('terminal consumer executes only protected event and Buildchain authority',
     'utf8',
   );
   assert.match(workflow, /pull_request_target:/u);
-  assert.match(workflow, /types: \[closed, dequeued\]/u);
+  assert.match(workflow, /types: \[closed, dequeued, synchronize\]/u);
   assert.match(workflow, /No matching active Warrant or queued candidate/u);
   assert.match(workflow, /\.observation\.queued\[\]\?/u);
   assert.match(workflow, /needs\.prepare\.outputs\.queued == 'true'/u);
   assert.match(
     workflow,
-    /if \[ "\$MERGED" = "true" \]; then\s+outcome=merged\s+elif \[ "\$EVENT_ACTION" = "dequeued" \]; then\s+outcome=dequeued/u,
+    /if \[ "\$MERGED" = "true" \] && \[ "\$recorded_head" = "\$EXPECTED_HEAD" \]; then\s+outcome=merged\s+elif \[ "\$EVENT_ACTION" = "dequeued" \] && \[ "\$recorded_head" = "\$EXPECTED_HEAD" \]; then\s+outcome=dequeued/u,
+  );
+  assert.match(
+    workflow,
+    /expected-head-sha: \$\{\{ needs\.prepare\.outputs\.active-source-head-sha \}\}/u,
+  );
+  assert.match(
+    workflow,
+    /recordedSourceHead:\$recordedHead,observedSourceHead:\$observedHead/u,
   );
   assert.match(workflow, /GH_TOKEN: \$\{\{ github\.token \}\}/u);
   assert.match(workflow, /GITHUB_TOKEN: \$\{\{ github\.token \}\}/u);
   assert.match(
     workflow,
-    /dev-delivery-warrant-close\.yml@ed978d70b246fcfdb5e80009d58e1ce4926ad593/u,
+    /dev-delivery-warrant-close\.yml@733812ff9405241705f5f267fe2e5ec6351e1a2d/u,
   );
   assert.match(
     workflow,
-    /dev-delivery-warrant-cancel\.yml@ed978d70b246fcfdb5e80009d58e1ce4926ad593/u,
+    /dev-delivery-warrant-cancel\.yml@733812ff9405241705f5f267fe2e5ec6351e1a2d/u,
   );
   assert.doesNotMatch(workflow, /github\.event\.pull_request\.head\.ref/u);
   assert.doesNotMatch(workflow, /checkout[^\n]*pull_request\.head/u);
@@ -203,4 +250,8 @@ test('protected caller makes the Warrant mandatory for exact delivery', () => {
     /workflow_dispatch.*inputs\.dry-run == false.*required/u,
   );
   assert.doesNotMatch(workflow, /delivery-warrant-mode:.*shadow/u);
+  assert.match(
+    workflow,
+    /active-lease-context: \$\{\{ needs\.delivery-contract\.outputs\.active-lease-context \}\}/u,
+  );
 });

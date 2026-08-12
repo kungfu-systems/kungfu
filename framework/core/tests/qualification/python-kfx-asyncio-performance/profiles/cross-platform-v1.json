@@ -44,6 +44,7 @@
     "unsupported CPython, operating system, or architecture",
     "Core build or correctness gate failure",
     "missing, failed, or malformed observation",
+    "missing, zero, non-integer, or unavailable peak RSS observation",
     "silent task, future, cancellation, timeout, error, relay, or shutdown failure",
     "deleted or selectively excluded scored observation"
   ],

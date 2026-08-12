@@ -290,6 +290,11 @@ are in the
 
 ### Side-effect-free promotion rehearsal
 
+The product-specific pre-publication boundary is documented in
+[`publication-admission.md`](publication-admission.md). It seals exact upgrade
+payload qualification into the candidate before this release tail begins; the
+tail validates roots and never repeats the product predicates.
+
 Kungfu does not need to publish an alpha or stable release to test its side of
 the promotion contract. `./shifu release:promotion:rehearse` executes committed
 positive and fail-closed fixtures for both channels, validates the real GitHub

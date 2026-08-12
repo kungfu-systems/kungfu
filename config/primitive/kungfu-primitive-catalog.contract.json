@@ -27,7 +27,7 @@
     },
     "kfd1Contracts": {
       "path": "framework/contract/kungfu-contracts.registry.json",
-      "root": "sha256:77f3710f9fe27401b1bdf55bfe7433e8a48bfbe98442d16a8e914ee84c284a7e"
+      "root": "sha256:c8b7cd8fcaddaf81eaa06bd2b0280457a75905c1c51e7ba5e0d69a76fdf8ced2"
     },
     "invariants": {
       "path": "framework/invariant/kungfu-invariant.registry.json",
@@ -39,7 +39,7 @@
     },
     "languageBoundary": {
       "path": "framework/core/architecture/layered-api-encoding-boundary.contract.json",
-      "root": "sha256:2597f77626c9236b40f614d554a5e2f385935009e7a8785d02339b4692fa2ad2"
+      "root": "sha256:44f182fa7def13375d074ba525b57e1dd93f8529366ee4a1a172fd93528f956f"
     }
   },
   "relationGraph": {
@@ -74,7 +74,7 @@
         "layerBoundary": "coordinate-to-semantic-substrate",
         "authority": {
           "path": "framework/fact/kungfu-fact-cut-kernel.contract.json",
-          "root": "sha256:848dbaafca59b1d7534c569f83552d8674e890345e008c2ece319c29e2caea44"
+          "root": "sha256:63736a25cac825216749f971d672ab8e5ab98d2015bd1d50bc91ddf68775f8b1"
         }
       },
       {
@@ -376,7 +376,7 @@
             "refs": [
               {
                 "path": "extensions/work-control/work-control-actions/domain/work_control_runtime.py",
-                "root": "sha256:901bcf7fb18f81a2599927ac60b3540c67ef42680e8855c3d8a1c1993540bcf5"
+                "root": "sha256:2ce8fe8ef1a08ce6fa0109929955a58f572c4c13ef1cb3cea9a328fb4dda8ba9"
               }
             ],
             "policy": "all four language implementation references are required for complete"
@@ -406,7 +406,7 @@
             "refs": [
               {
                 "path": "extensions/work-control/work-control-actions/domain/work_control_runtime.py",
-                "root": "sha256:901bcf7fb18f81a2599927ac60b3540c67ef42680e8855c3d8a1c1993540bcf5"
+                "root": "sha256:2ce8fe8ef1a08ce6fa0109929955a58f572c4c13ef1cb3cea9a328fb4dda8ba9"
               }
             ],
             "policy": "implementation references are bounded operational evidence, not availability"
@@ -428,7 +428,7 @@
             "refs": [
               {
                 "path": "extensions/work-control/work-control-actions/domain/work_control_runtime.py",
-                "root": "sha256:901bcf7fb18f81a2599927ac60b3540c67ef42680e8855c3d8a1c1993540bcf5"
+                "root": "sha256:2ce8fe8ef1a08ce6fa0109929955a58f572c4c13ef1cb3cea9a328fb4dda8ba9"
               }
             ],
             "proofRefs": []
@@ -499,7 +499,7 @@
         "semantics": {
           "authority": {
             "path": "framework/fact/kungfu-fact-cut-kernel.contract.json",
-            "root": "sha256:848dbaafca59b1d7534c569f83552d8674e890345e008c2ece319c29e2caea44"
+            "root": "sha256:63736a25cac825216749f971d672ab8e5ab98d2015bd1d50bc91ddf68775f8b1"
           },
           "invariants": [
             {
@@ -524,7 +524,7 @@
             "refs": [
               {
                 "path": "framework/fact/kungfu-fact-cut-kernel.contract.json",
-                "root": "sha256:848dbaafca59b1d7534c569f83552d8674e890345e008c2ece319c29e2caea44"
+                "root": "sha256:63736a25cac825216749f971d672ab8e5ab98d2015bd1d50bc91ddf68775f8b1"
               },
               {
                 "path": "framework/invariant/kungfu-invariant.registry.json",
@@ -562,7 +562,7 @@
             "refs": [
               {
                 "path": "framework/fact/kungfu-fact-cut-kernel.contract.json",
-                "root": "sha256:848dbaafca59b1d7534c569f83552d8674e890345e008c2ece319c29e2caea44"
+                "root": "sha256:63736a25cac825216749f971d672ab8e5ab98d2015bd1d50bc91ddf68775f8b1"
               },
               {
                 "path": "framework/invariant/kungfu-invariant.registry.json",
@@ -629,7 +629,7 @@
             "refs": [
               {
                 "path": "framework/fact/kungfu-fact-cut-kernel.contract.json",
-                "root": "sha256:848dbaafca59b1d7534c569f83552d8674e890345e008c2ece319c29e2caea44"
+                "root": "sha256:63736a25cac825216749f971d672ab8e5ab98d2015bd1d50bc91ddf68775f8b1"
               }
             ]
           },
@@ -1033,7 +1033,7 @@
         "semantics": {
           "authority": {
             "path": "framework/fact/kungfu-fact-cut-kernel.contract.json",
-            "root": "sha256:848dbaafca59b1d7534c569f83552d8674e890345e008c2ece319c29e2caea44"
+            "root": "sha256:63736a25cac825216749f971d672ab8e5ab98d2015bd1d50bc91ddf68775f8b1"
           },
           "invariants": [
             {
@@ -1058,7 +1058,7 @@
             "refs": [
               {
                 "path": "framework/fact/kungfu-fact-cut-kernel.contract.json",
-                "root": "sha256:848dbaafca59b1d7534c569f83552d8674e890345e008c2ece319c29e2caea44"
+                "root": "sha256:63736a25cac825216749f971d672ab8e5ab98d2015bd1d50bc91ddf68775f8b1"
               },
               {
                 "path": "framework/invariant/kungfu-invariant.registry.json",
@@ -1072,11 +1072,11 @@
             "refs": [
               {
                 "path": "framework/core/src/libkungfu/src/runtime/storage/fact_protocol.cpp",
-                "root": "sha256:bf160ac8ee0c4673611ef18d2a9a88c8257a9ae158623aedf0c28f4a439a3a31"
+                "root": "sha256:0615902664bb15b647e4d2f8db9309b32e9b93e95f0e204b6733348c48e5f050"
               },
               {
                 "path": "framework/core/src/python/kungfu/storage/fact_root_canonical.py",
-                "root": "sha256:9170310dfe78c8c1114c080abf784c60b8390819e020ddc42634d1de1e76346f"
+                "root": "sha256:4c4835ad95aa70c76dbdcaaa3caf2548de862bb5d430392fdd7a16bd96fc48f0"
               }
             ],
             "policy": "all four language implementation references are required for complete"
@@ -1086,11 +1086,11 @@
             "refs": [
               {
                 "path": "tests/fixtures/fact-root-canonical/vectors.json",
-                "root": "sha256:d096556ca97bd94608161d012a84d0954509a5e25c06ddfcf52776ed52fb5859"
+                "root": "sha256:b9d2dd94a195b1e7d3c92b84ecddc578bd4d414b5626375314873150876bbae8"
               },
               {
                 "path": "tests/fixtures/fact-root-canonical/vectors.json",
-                "root": "sha256:d096556ca97bd94608161d012a84d0954509a5e25c06ddfcf52776ed52fb5859"
+                "root": "sha256:b9d2dd94a195b1e7d3c92b84ecddc578bd4d414b5626375314873150876bbae8"
               }
             ],
             "policy": "all four language proof references are required for proved"
@@ -1105,11 +1105,11 @@
             "refs": [
               {
                 "path": "framework/fact/kungfu-fact-cut-kernel.contract.json",
-                "root": "sha256:848dbaafca59b1d7534c569f83552d8674e890345e008c2ece319c29e2caea44"
+                "root": "sha256:63736a25cac825216749f971d672ab8e5ab98d2015bd1d50bc91ddf68775f8b1"
               },
               {
                 "path": "tests/fixtures/fact-root-canonical/vectors.json",
-                "root": "sha256:d096556ca97bd94608161d012a84d0954509a5e25c06ddfcf52776ed52fb5859"
+                "root": "sha256:b9d2dd94a195b1e7d3c92b84ecddc578bd4d414b5626375314873150876bbae8"
               },
               {
                 "path": "framework/invariant/kungfu-invariant.registry.json",
@@ -1123,11 +1123,11 @@
             "refs": [
               {
                 "path": "framework/core/src/libkungfu/src/runtime/storage/fact_protocol.cpp",
-                "root": "sha256:bf160ac8ee0c4673611ef18d2a9a88c8257a9ae158623aedf0c28f4a439a3a31"
+                "root": "sha256:0615902664bb15b647e4d2f8db9309b32e9b93e95f0e204b6733348c48e5f050"
               },
               {
                 "path": "framework/core/src/python/kungfu/storage/fact_root_canonical.py",
-                "root": "sha256:9170310dfe78c8c1114c080abf784c60b8390819e020ddc42634d1de1e76346f"
+                "root": "sha256:4c4835ad95aa70c76dbdcaaa3caf2548de862bb5d430392fdd7a16bd96fc48f0"
               }
             ],
             "policy": "implementation references are bounded operational evidence, not availability"
@@ -1144,13 +1144,13 @@
             "refs": [
               {
                 "path": "framework/core/src/libkungfu/src/runtime/storage/fact_protocol.cpp",
-                "root": "sha256:bf160ac8ee0c4673611ef18d2a9a88c8257a9ae158623aedf0c28f4a439a3a31"
+                "root": "sha256:0615902664bb15b647e4d2f8db9309b32e9b93e95f0e204b6733348c48e5f050"
               }
             ],
             "proofRefs": [
               {
                 "path": "tests/fixtures/fact-root-canonical/vectors.json",
-                "root": "sha256:d096556ca97bd94608161d012a84d0954509a5e25c06ddfcf52776ed52fb5859"
+                "root": "sha256:b9d2dd94a195b1e7d3c92b84ecddc578bd4d414b5626375314873150876bbae8"
               }
             ]
           },
@@ -1159,13 +1159,13 @@
             "refs": [
               {
                 "path": "framework/core/src/python/kungfu/storage/fact_root_canonical.py",
-                "root": "sha256:9170310dfe78c8c1114c080abf784c60b8390819e020ddc42634d1de1e76346f"
+                "root": "sha256:4c4835ad95aa70c76dbdcaaa3caf2548de862bb5d430392fdd7a16bd96fc48f0"
               }
             ],
             "proofRefs": [
               {
                 "path": "tests/fixtures/fact-root-canonical/vectors.json",
-                "root": "sha256:d096556ca97bd94608161d012a84d0954509a5e25c06ddfcf52776ed52fb5859"
+                "root": "sha256:b9d2dd94a195b1e7d3c92b84ecddc578bd4d414b5626375314873150876bbae8"
               }
             ]
           },
@@ -1186,7 +1186,7 @@
             "refs": [
               {
                 "path": "framework/fact/kungfu-fact-cut-kernel.contract.json",
-                "root": "sha256:848dbaafca59b1d7534c569f83552d8674e890345e008c2ece319c29e2caea44"
+                "root": "sha256:63736a25cac825216749f971d672ab8e5ab98d2015bd1d50bc91ddf68775f8b1"
               }
             ]
           },
@@ -1195,7 +1195,7 @@
             "refs": [
               {
                 "path": "tests/fixtures/fact-root-canonical/vectors.json",
-                "root": "sha256:d096556ca97bd94608161d012a84d0954509a5e25c06ddfcf52776ed52fb5859"
+                "root": "sha256:b9d2dd94a195b1e7d3c92b84ecddc578bd4d414b5626375314873150876bbae8"
               }
             ]
           },
@@ -1275,7 +1275,7 @@
             "refs": [
               {
                 "path": "extensions/work-control/work-control-actions/domain/work_control_runtime.py",
-                "root": "sha256:901bcf7fb18f81a2599927ac60b3540c67ef42680e8855c3d8a1c1993540bcf5"
+                "root": "sha256:2ce8fe8ef1a08ce6fa0109929955a58f572c4c13ef1cb3cea9a328fb4dda8ba9"
               }
             ],
             "policy": "all four language implementation references are required for complete"
@@ -1305,7 +1305,7 @@
             "refs": [
               {
                 "path": "extensions/work-control/work-control-actions/domain/work_control_runtime.py",
-                "root": "sha256:901bcf7fb18f81a2599927ac60b3540c67ef42680e8855c3d8a1c1993540bcf5"
+                "root": "sha256:2ce8fe8ef1a08ce6fa0109929955a58f572c4c13ef1cb3cea9a328fb4dda8ba9"
               }
             ],
             "policy": "implementation references are bounded operational evidence, not availability"
@@ -1327,7 +1327,7 @@
             "refs": [
               {
                 "path": "extensions/work-control/work-control-actions/domain/work_control_runtime.py",
-                "root": "sha256:901bcf7fb18f81a2599927ac60b3540c67ef42680e8855c3d8a1c1993540bcf5"
+                "root": "sha256:2ce8fe8ef1a08ce6fa0109929955a58f572c4c13ef1cb3cea9a328fb4dda8ba9"
               }
             ],
             "proofRefs": []
@@ -1585,11 +1585,11 @@
               },
               {
                 "path": "extensions/work-control/work-control-actions/domain/work_control_assessment.py",
-                "root": "sha256:354af0e10ab2a35d243814fc23a11644a953b7c854e0a454cf358e226b296578"
+                "root": "sha256:4d8402bf36bfffb2b8054075d404141c269974d48385de5fb30ed835122a46b8"
               },
               {
                 "path": "extensions/work-control/work-control-actions/domain/work_control_runtime.py",
-                "root": "sha256:901bcf7fb18f81a2599927ac60b3540c67ef42680e8855c3d8a1c1993540bcf5"
+                "root": "sha256:2ce8fe8ef1a08ce6fa0109929955a58f572c4c13ef1cb3cea9a328fb4dda8ba9"
               },
               {
                 "path": "framework/core/src/python/kungfu/assignment_orchestration.py",
@@ -1627,11 +1627,11 @@
               },
               {
                 "path": "extensions/work-control/work-control-actions/domain/work_control_assessment.py",
-                "root": "sha256:354af0e10ab2a35d243814fc23a11644a953b7c854e0a454cf358e226b296578"
+                "root": "sha256:4d8402bf36bfffb2b8054075d404141c269974d48385de5fb30ed835122a46b8"
               },
               {
                 "path": "extensions/work-control/work-control-actions/domain/work_control_runtime.py",
-                "root": "sha256:901bcf7fb18f81a2599927ac60b3540c67ef42680e8855c3d8a1c1993540bcf5"
+                "root": "sha256:2ce8fe8ef1a08ce6fa0109929955a58f572c4c13ef1cb3cea9a328fb4dda8ba9"
               },
               {
                 "path": "framework/core/src/python/kungfu/assignment_orchestration.py",
@@ -1661,11 +1661,11 @@
               },
               {
                 "path": "extensions/work-control/work-control-actions/domain/work_control_assessment.py",
-                "root": "sha256:354af0e10ab2a35d243814fc23a11644a953b7c854e0a454cf358e226b296578"
+                "root": "sha256:4d8402bf36bfffb2b8054075d404141c269974d48385de5fb30ed835122a46b8"
               },
               {
                 "path": "extensions/work-control/work-control-actions/domain/work_control_runtime.py",
-                "root": "sha256:901bcf7fb18f81a2599927ac60b3540c67ef42680e8855c3d8a1c1993540bcf5"
+                "root": "sha256:2ce8fe8ef1a08ce6fa0109929955a58f572c4c13ef1cb3cea9a328fb4dda8ba9"
               },
               {
                 "path": "framework/core/src/python/kungfu/assignment_orchestration.py",
@@ -1721,5 +1721,5 @@
       "artifacts": []
     }
   ],
-  "catalogRoot": "sha256:20796b7ba62086acb65924ffcad279d2acbdddfc27511d9945dd2a809ca1b792"
+  "catalogRoot": "sha256:368ae1d733b01bd833d1105b945db79b26695549615cb57ea959153e58bc49b4"
 }

@@ -11,7 +11,7 @@
     },
     "factRootProtocol": {
       "path": "framework/fact/kungfu-fact-root-canonical-v2.json",
-      "sha256": "15c35a71b716b06b75742edfd52f9f43f413d85e6a25ad18e1fb7ed16bc153df"
+      "sha256": "05e5a92db42d59957fc39d61820ce1ef1c37b894687f2db63f2d7446ca66156a"
     },
     "actionGeometry": {
       "path": "framework/action/action-geometry.contract.json",
