@@ -3,7 +3,7 @@
   "contract": "kungfu-buildchain-dev-delivery-warrant-queue",
   "repository": "kungfu-systems/kungfu",
   "protectedBase": "dev/v4/v4.0",
-  "generation": 1339,
+  "generation": 1340,
   "fencingCounter": 333,
   "policy": {
     "agingSeconds": 900,
@@ -14561,11 +14561,20 @@
       "sourceWorkflowRunId": 0,
       "priority": "ordinary",
       "enqueuedAt": "2026-08-12T11:32:56.454Z",
-      "updatedAt": "2026-08-12T11:32:56.454Z",
+      "updatedAt": "2026-08-12T11:46:46.122Z",
       "attempts": 1,
       "recoveries": 0,
-      "status": "queued",
-      "terminal": null,
+      "status": "cancelled",
+      "terminal": {
+        "outcome": "cancelled",
+        "reason": "protected pull request event: synchronize",
+        "evidenceRoot": "sha256:a7c077e9c0e42d13942d70c81fa7d890b2f70039dcc21479a24162cac1f4756d",
+        "authority": "queued-candidate-cancellation",
+        "expectedSourceHead": "8e9654057e3c9d699b38d8ec4f3b7cbbc333ced9",
+        "observedSourceHead": "fa4f4c15812be931e8790ec657308bed3a28b45c",
+        "eventAction": "synchronize",
+        "closedAt": "2026-08-12T11:46:46.122Z"
+      },
       "affectedPaths": [
         ".buildchain/kfd/adopter-manifest-gate.json",
         ".buildchain/kfd/adopter-manifest.json",
@@ -14605,6 +14614,6 @@
       ]
     }
   ],
-  "updatedAt": "2026-08-12T11:45:43.838Z",
-  "stateRoot": "sha256:69b2ec611c3e0730ad5b74e09810bc5ae1dac94b722c545b3a1f28cb6a218ba1"
+  "updatedAt": "2026-08-12T11:46:46.122Z",
+  "stateRoot": "sha256:961dd1fc69be6aeaf81f9930692ff2303cc7976b556373b2bbfc4ea8b7a687b3"
 }
