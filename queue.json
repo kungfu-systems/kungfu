@@ -3,7 +3,7 @@
   "contract": "kungfu-buildchain-dev-delivery-warrant-queue",
   "repository": "kungfu-systems/kungfu",
   "protectedBase": "dev/v4/v4.0",
-  "generation": 1380,
+  "generation": 1381,
   "fencingCounter": 338,
   "policy": {
     "agingSeconds": 900,
@@ -15582,14 +15582,23 @@
       "sourceWorkflowRunId": 0,
       "priority": "expedited",
       "enqueuedAt": "2026-08-12T13:11:46.725Z",
-      "updatedAt": "2026-08-12T13:11:46.725Z",
+      "updatedAt": "2026-08-12T13:12:57.550Z",
       "attempts": 1,
       "recoveries": 0,
-      "status": "queued",
-      "terminal": null,
+      "status": "cancelled",
+      "terminal": {
+        "outcome": "cancelled",
+        "reason": "Replace incomplete local CLI projection with workflow-bound exact recovery",
+        "evidenceRoot": "sha256:36e1d0789fc158d311ecd511a0cb77f4a8e0629f5ffa64571b0e3aef0da680f9",
+        "authority": "queued-candidate-cancellation",
+        "expectedSourceHead": "f8a74ae4ae5bbb21eed959cb508baf2f07358163",
+        "observedSourceHead": "f8a74ae4ae5bbb21eed959cb508baf2f07358163",
+        "eventAction": "cancelled",
+        "closedAt": "2026-08-12T13:12:57.550Z"
+      },
       "affectedPaths": []
     }
   ],
-  "updatedAt": "2026-08-12T13:11:46.725Z",
-  "stateRoot": "sha256:dd169befcad0653e4b677dc7a16b8f840ed375ea8806472bd9190f9912e72a80"
+  "updatedAt": "2026-08-12T13:12:57.550Z",
+  "stateRoot": "sha256:6ea228d9193bf7fe8370197dcffabc5fb70766ee9a1334f60897d91a45f2d08e"
 }
