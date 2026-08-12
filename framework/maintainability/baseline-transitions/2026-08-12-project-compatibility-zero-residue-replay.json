@@ -1,0 +1,29 @@
+{
+  "schema": "kungfu.code-complexity-baseline-reconstruction/v1",
+  "expected_old_measurement_root": "sha256:4fd6d3566bd76b1f999f8528bd3bb60f301a4616fc56c971ff421c5ec22a7b2f",
+  "expected_old_baseline_ref": "a7605d74513867b94851a6763c51fcdc803e5d30",
+  "new_measurement_root": "sha256:49cffa1ffd048d1300df18df363d2b0846829169f8bc70d45f979afc66f116fc",
+  "new_baseline_ref": "0485fb6d352abf3a2f834dba26dbcd77f3b07426",
+  "changed_measurements": 2468,
+  "aggregate_line_delta": 4241501,
+  "change_manifest_root": "sha256:7ea22efcab85ca6269842c94fe19fdc5670196fa5bb7d199c22f66c45e82b878",
+  "reconstruction_scope": "full-exact-baseline",
+  "reconstruction_reason_codes": [
+    "project-compatibility-retirement",
+    "protected-base-replay"
+  ],
+  "requested_by": "keren.dong@kungfu.link",
+  "reason": "Rebind the reviewed zero-residue semantic cut to the exact protected dev base after preserving all newer unrelated KFD, Delivery Warrant, release, and evidence work.",
+  "retirement_or_decomposition_ref": "https://github.com/kungfu-systems/kungfu/pull/2825",
+  "approval_receipt": {
+    "schema": "kungfu.code-complexity-budget-approval-receipt/v1",
+    "authority_id": "kungfu-origin-complexity-transition-review-v2",
+    "key_id": "ed25519-9ff21f6e6f64c985",
+    "algorithm": "ed25519",
+    "issued_at": "2026-08-12T04:46:13Z",
+    "approved_at": "2026-08-12T04:46:13Z",
+    "expires_at": "2026-08-17T04:46:13Z",
+    "authorization_root": "sha256:9f28190fb500ee50651724df9252c63842e567147e1963fe40d2ca84e66d6420",
+    "signature": "wKVUfWqq7OND119O314DyKjE4/X/6MCDlAhJ13ggLaaSop7WKO0Z3/Pbf7e7CfTUuK8BfEk/kQQQrm5NPebnCQ=="
+  }
+}
