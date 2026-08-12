@@ -3,7 +3,7 @@
   "contract": "kungfu-buildchain-dev-delivery-warrant-queue",
   "repository": "kungfu-systems/kungfu",
   "protectedBase": "dev/v4/v4.0",
-  "generation": 1441,
+  "generation": 1442,
   "fencingCounter": 350,
   "policy": {
     "agingSeconds": 900,
@@ -11,57 +11,7 @@
     "leaseSeconds": 3600,
     "emergencyPolicy": "reviewed-explicit-only"
   },
-  "activeWarrant": {
-    "schema": "kungfu.buildchain.dev-delivery-warrant/v1",
-    "repository": "kungfu-systems/kungfu",
-    "protectedBase": "dev/v4/v4.0",
-    "candidateId": "sha256:37501e8a120867a517a02a2207ede56a2abc718af0c5c13540092e7fbab1f824",
-    "pullRequestNumber": 3037,
-    "sourceHead": "21889cc2620b43217aef5ed5a4473e864cfe73b2",
-    "assignmentRoot": "sha256:00412b5b2d672b7be24f427bd500ead9a535968978723c80a0ce4b1c3eb05304",
-    "initiativeRoot": "sha256:bfff817933e5a5ad693e4b902a84f6cc3a251235dd7377cb4091d92f805fa7ff",
-    "sourceIdentityRoot": "sha256:baf49f2b6a22853fc2cf41cb8c06955d64a147fcb71dd84e9a307cb3415ad938",
-    "sourcePatchRoot": "sha256:a0c51af37630d4351ab8e792ad5f4de8cac418d7c80adec39ef1d529cc5c5d57",
-    "sourceProofRoot": "sha256:fa75177810ff2465604e5f5ae5c3a0ebd3ae2ef7e056216bd258a6aa90779c4e",
-    "planRoot": "sha256:8e903d6890072c63c462a046854008cb175f03d6391b0a1d869410f7e034a040",
-    "closureRoot": "sha256:106d175611d8634c988192302b9c464ae8ba3b6d023c2cff9910e401344c9624",
-    "dependencyRoot": "sha256:a5279f953d26131a9c8cdf45239a4809e7231067f1c50999e9e12720a2abdc67",
-    "toolchainRoot": "sha256:2ecb07894954a2e0de022615d4561e5ba3ae68376401941ecff77be03cd75a0f",
-    "affectedPaths": [
-      ".github/workflows/affected-native-pr.yml",
-      ".github/workflows/dev-delivery-warrant-terminal.yml",
-      ".github/workflows/dev-pr-auto-merge.yml",
-      ".github/workflows/queue-admission-lease.yml",
-      ".xinfa/portable-atlas-classification.json.gz",
-      ".xinfa/product-atlas-bundle.json",
-      "docs/adr/KF-ADR-019f86da-4f90-7b6b-ae6d-76cea57487f2.md",
-      "docs/development/buildchain.md",
-      "docs/qualification/gates/dev-queue-admission.contract.json",
-      "docs/qualification/gates/source-and-governance.md",
-      "docs/qualification/gates/workflow-authority.json",
-      "docs/qualification/gates/workflow-authority.md",
-      "framework/core/tests/fixtures/dev-delivery-warrant-steady-state.json",
-      "framework/release/publication-surfaces.json",
-      "package.json",
-      "scripts/affected-native-proof.mjs",
-      "scripts/affected-native-semantic-source.test.mjs",
-      "scripts/dev-delivery-proof-consumer.test.mjs",
-      "scripts/dev-delivery-warrant-input.test.mjs",
-      "scripts/dev-pr-auto-merge.test.mjs",
-      "scripts/queue-admission-lease.test.mjs",
-      "scripts/readonly-agent-bootstrap.test.mjs",
-      "scripts/source-acceptance.mjs"
-    ],
-    "sourceWorkflowRunId": 0,
-    "deliveryClass": "native-proof-required",
-    "generation": 350,
-    "phase": "provisional",
-    "expectedOldStateRoot": "sha256:6995dd877e1675161d3cc4dda03c2f04fb237b02c1c041e6e367de66691c9da7",
-    "issuedAt": "2026-08-12T14:12:26.188Z",
-    "expiresAt": "2026-08-12T15:44:55.362Z",
-    "fencingToken": "sha256:e853babe169e7a2abe6d8389705afb9777dd80f87188b366b5074f5e1ed42a4c",
-    "nextAction": "Run or reuse the exact semantic native proof, then atomically qualify this fenced Warrant."
-  },
+  "activeWarrant": null,
   "candidates": [
     {
       "repository": "kungfu-systems/kungfu",
@@ -16540,11 +16490,18 @@
       "sourceWorkflowRunId": 0,
       "priority": "ordinary",
       "enqueuedAt": "2026-08-12T13:49:30.457Z",
-      "updatedAt": "2026-08-12T14:14:55.362Z",
+      "updatedAt": "2026-08-12T14:15:46.474Z",
       "attempts": 1,
       "recoveries": 0,
-      "status": "proving",
-      "terminal": null,
+      "status": "terminal-failure",
+      "terminal": {
+        "outcome": "terminal-failure",
+        "reason": "native command failed with exit 1",
+        "evidenceRoot": "sha256:0df136dbb4bb5b3b4819f37c5155f2eff2b6efebc28ca1effa14975dcadf9b1c",
+        "closedAt": "2026-08-12T14:15:46.474Z",
+        "fencingToken": "sha256:e853babe169e7a2abe6d8389705afb9777dd80f87188b366b5074f5e1ed42a4c",
+        "leaseGeneration": 350
+      },
       "affectedPaths": [
         ".github/workflows/affected-native-pr.yml",
         ".github/workflows/dev-delivery-warrant-terminal.yml",
@@ -17547,6 +17504,6 @@
       ]
     }
   ],
-  "updatedAt": "2026-08-12T14:14:55.362Z",
-  "stateRoot": "sha256:355d508ccd0a5bcc670d86e4cfec1b5424db699e1c4d41231d75bf41feccfc24"
+  "updatedAt": "2026-08-12T14:15:46.474Z",
+  "stateRoot": "sha256:51acf6ffd894e7cc2634d837af96148dbc0b43313395c1bbbd1468a7aeed9925"
 }
