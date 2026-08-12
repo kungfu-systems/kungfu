@@ -129,12 +129,28 @@
           "nonClaims"
         ],
         "properties": {
-          "mode": {"const": "workspace-local-instruction-only"},
-          "deduplication": {"const": "required-current-catalog-root"},
-          "writeBoundary": {"const": "new-relative-target-no-overwrite"},
-          "authorization": {"const": "rooted-auto-draft-plus-exact-plan-root"},
-          "blockedActions": {"type": "array", "minItems": 1, "uniqueItems": true},
-          "nonClaims": {"type": "array", "minItems": 1, "uniqueItems": true}
+          "mode": {
+            "const": "workspace-local-instruction-only"
+          },
+          "deduplication": {
+            "const": "required-current-catalog-root"
+          },
+          "writeBoundary": {
+            "const": "new-relative-target-no-overwrite"
+          },
+          "authorization": {
+            "const": "rooted-auto-draft-plus-exact-plan-root"
+          },
+          "blockedActions": {
+            "type": "array",
+            "minItems": 1,
+            "uniqueItems": true
+          },
+          "nonClaims": {
+            "type": "array",
+            "minItems": 1,
+            "uniqueItems": true
+          }
         }
       },
       "lifecycleVocabulary": {
