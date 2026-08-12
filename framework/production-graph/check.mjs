@@ -212,6 +212,23 @@ function verifyContractBoundary(contract) {
   assert.equal(contract.coreProductionSubgraph.stagesDirectlyInvocable, false);
   assert.equal(contract.coreProductionSubgraph.describeOnly, true);
   assert.equal(contract.coreProductionSubgraph.cutover, false);
+  assert.equal(contract.nativeBuildLoweringExploration.profile, 'journal');
+  assert.equal(contract.nativeBuildLoweringExploration.node, 'native-build');
+  assert.equal(contract.nativeBuildLoweringExploration.backend, 'bazel');
+  assert.equal(
+    contract.nativeBuildLoweringExploration.verdict,
+    'conditional-go',
+  );
+  assert.equal(contract.nativeBuildLoweringExploration.fixtureOnly, true);
+  assert.equal(contract.nativeBuildLoweringExploration.executable, false);
+  assert.equal(contract.nativeBuildLoweringExploration.writesBuildFiles, false);
+  assert.equal(contract.nativeBuildLoweringExploration.invokesBackend, false);
+  assert.equal(contract.nativeBuildLoweringExploration.nodesExecuted, false);
+  assert.equal(
+    contract.nativeBuildLoweringExploration.authoritativeCommand,
+    './shifu build:core',
+  );
+  assert.equal(contract.nativeBuildLoweringExploration.cutover, false);
   assert.equal(
     contract.coreProductionSubgraph.stageExecutor,
     './shifu core-production-subgraph:execute',
