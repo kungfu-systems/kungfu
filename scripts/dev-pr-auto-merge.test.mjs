@@ -12,6 +12,8 @@ const workflow = fs.readFileSync(
   '.github/workflows/dev-pr-auto-merge.yml',
   'utf8',
 );
+const steadyStateDogfoodFixturePath =
+  'framework/core/tests/fixtures/dev-delivery-warrant-steady-state.json';
 
 test('Dev auto-merge admits only explicitly ready reviewed same-repository PRs', () => {
   const reusableRef = workflow.match(
@@ -319,5 +321,36 @@ test('the protected migration bootstrap is one-way and retains legacy native qua
   assert.doesNotMatch(
     sourceWorkflow,
     /if ! grep -Fq 'dev-delivery:native-under-warrant' "\$head_controller"/u,
+  );
+});
+
+test('steady-state Warrant dogfood remains a full-native canary with explicit safety invariants', () => {
+  const fixture = JSON.parse(
+    fs.readFileSync(steadyStateDogfoodFixturePath, 'utf8'),
+  );
+  const planner = fs.readFileSync(
+    'scripts/run-core-affected-native.mjs',
+    'utf8',
+  );
+
+  assert.equal(
+    fixture.schema,
+    'kungfu.dev-delivery-warrant-steady-state-canary/v1',
+  );
+  assert.equal(fixture.protectedBase, 'dev/v4/v4.0');
+  assert.equal(fixture.qualificationClass, 'full-native');
+  assert.equal(fixture.runtimeBehaviorChange, false);
+  assert.deepEqual(fixture.requiredInvariants, [
+    'exclusive-provisional-owner',
+    'heartbeat-renews-ttl',
+    'fencing-rejects-stale-owner',
+    'active-warrant-prevents-overtake',
+    'qualified-before-merge-queue',
+    'semantic-proof-reuse-fails-closed-on-overlap',
+  ]);
+  assert.match(steadyStateDogfoodFixturePath, /^framework\/core\/tests\//u);
+  assert.match(
+    planner,
+    /if \(file\.startsWith\('framework\/core\/tests\/'\)\) forceFull = true;/u,
   );
 });

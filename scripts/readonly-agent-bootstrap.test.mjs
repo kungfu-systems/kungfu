@@ -584,6 +584,7 @@ test('declared discovery routes are zero-write in a cold read-only fixture', (t)
     'scripts/kungfu-workflow-authority.mjs',
     'scripts/readonly-source-toolchain.mjs',
     'scripts/readonly-agent-bootstrap.test.mjs',
+    'framework/core/tests/fixtures/dev-delivery-warrant-steady-state.json',
     'scripts/generate-kfx-authoring-kit.mjs',
     'scripts/run-documentation-material-tests.mjs',
     'scripts/portable-atlas-bundle.mjs',
