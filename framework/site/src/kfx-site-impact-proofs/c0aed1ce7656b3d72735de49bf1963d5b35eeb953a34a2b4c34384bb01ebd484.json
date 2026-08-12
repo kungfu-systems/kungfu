@@ -1,7 +1,7 @@
 {
   "contract": "kungfu.kfx-site-impact-proof/v1",
   "baseRevision": "445b2fd84ec7f613ccbfc3d5f06980a3b07f0690",
-  "changeRoot": "sha256:768bc7a3e0cb9adfacc9c6a2764a5bb2b086f92b8370e15954cf3f462ba1f9f0",
+  "changeRoot": "sha256:10a4e5d061b1c6013bbb4c45c07d4a2ef8caad08957b38bf4bd41587f9c0eb17",
   "changes": [
     {
       "baseContentRoot": "sha256:b232b82e3bc0ac15ede89d816b4c745a1ade5f7277d16ae5adc544aa4dbdc911",
@@ -221,7 +221,7 @@
     },
     {
       "baseContentRoot": "sha256:9a1f3467a59cc613fa1b23fec3da35a09a14befaf742287152606b1a71e900f4",
-      "contentRoot": "sha256:84ef4a8311eb7808b435554d4748ab84493b75d99a99f3a58665425d47ab78c4",
+      "contentRoot": "sha256:d1be4de4cddc9a0f561af60aabbb2b5227b5810c6b310b098f52dca1b7c2b75c",
       "path": "framework/core/src/python/kungfu/skill/audit.py",
       "status": "modified"
     },
@@ -325,11 +325,11 @@
     "package-facets",
     "profiles-suites"
   ],
-  "rationale": "Agent Skill runtime-audit wiring and its regenerated registry and KFD projections change native execution evidence only; KFX public contracts, Site Bundle content, extension behavior, and documented KFX reader journeys remain unchanged.",
+  "rationale": "Agent Skill runtime-audit wiring, typing annotation, and regenerated registry projections change native execution evidence only; KFX public contracts, Site Bundle content, extension behavior, and documented KFX reader journeys remain unchanged.",
   "attestation": {
     "publicBehaviorUnchanged": true,
     "publicContractUnchanged": true,
     "readerJourneyUnchanged": true
   },
-  "proofRoot": "sha256:4843dac0734bcad2a9c5130fca01f3f1d271f1f90f2ab91a0df98d4996df89bf"
+  "proofRoot": "sha256:c0aed1ce7656b3d72735de49bf1963d5b35eeb953a34a2b4c34384bb01ebd484"
 }
