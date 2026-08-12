@@ -1,7 +1,7 @@
 {
   "contract": "kungfu.kfx-site-impact-proof/v1",
   "baseRevision": "445b2fd84ec7f613ccbfc3d5f06980a3b07f0690",
-  "changeRoot": "sha256:f484c253d5eb145b7b4242e941e9f8b4e5ec2c1b4eb45d6b8502143e7d88b1fa",
+  "changeRoot": "sha256:c616277243b7a014223f0b628b8e722c4e365bd378ebbdc98afee55d56ea28f9",
   "changes": [
     {
       "baseContentRoot": "sha256:c5ce83e5d260fd6a350807981916cce46e92d2b8c84e8e5fd738dc762b5b70a2",
@@ -17,7 +17,7 @@
     },
     {
       "baseContentRoot": "sha256:842fdcb3dda1c96da23f451345efd30f2840f3cfb67faf7740c2394417434b62",
-      "contentRoot": "sha256:11431062d81626d0ef62ff9a8f2eb3999b635ce26849ae653a760f9d4d464ffd",
+      "contentRoot": "sha256:f8a8e5c3be1fa80ec3112c2feea80e2974de5bd1a0d20a89ac3c669b51153ff6",
       "path": ".buildchain/kfd/kfd-2/release-claims.json",
       "status": "modified"
     },
@@ -35,7 +35,7 @@
     },
     {
       "baseContentRoot": "sha256:5018f1db5b8f11f6e3e671d8749088612106f13bdf84e56b589b642b19cfa857",
-      "contentRoot": "sha256:4075247bb23d740c5f889a6007b0a336cf8314aa3e901120fbd801bc26da5a57",
+      "contentRoot": "sha256:9068a8b769c232e71618795bfb100e75c0a790bba3252c5d4c307312c9b66f96",
       "path": ".buildchain/kfd/kfd-3/collaboration-interface.prebuild.json",
       "status": "modified"
     },
@@ -47,7 +47,7 @@
     },
     {
       "baseContentRoot": "sha256:f8ee3878653e7fecdfef622e001269942a53d00605d5fa42e41374f79d0cf332",
-      "contentRoot": "sha256:1ffc1cc92f2275e7c3a66222e06e86a04c836330dbe7100b3ab3eb9cd219e093",
+      "contentRoot": "sha256:87117b93b5a498db2921648ef7e699e359b3d7207c7011d0ca1ad79af11d8c01",
       "path": ".buildchain/kfd/support-matrix.json",
       "status": "modified"
     },
@@ -77,7 +77,7 @@
     },
     {
       "baseContentRoot": "sha256:842fdcb3dda1c96da23f451345efd30f2840f3cfb67faf7740c2394417434b62",
-      "contentRoot": "sha256:11431062d81626d0ef62ff9a8f2eb3999b635ce26849ae653a760f9d4d464ffd",
+      "contentRoot": "sha256:f8a8e5c3be1fa80ec3112c2feea80e2974de5bd1a0d20a89ac3c669b51153ff6",
       "path": "developer/sdk/kfd/kfd-2/release-claims.json",
       "status": "modified"
     },
@@ -89,13 +89,13 @@
     },
     {
       "baseContentRoot": "sha256:f8ee3878653e7fecdfef622e001269942a53d00605d5fa42e41374f79d0cf332",
-      "contentRoot": "sha256:1ffc1cc92f2275e7c3a66222e06e86a04c836330dbe7100b3ab3eb9cd219e093",
+      "contentRoot": "sha256:594e216cdfe01260137b5b124376bfa6de8135bd59b0d1f026ba311611d35a2f",
       "path": "developer/sdk/kfd/support-matrix.json",
       "status": "modified"
     },
     {
       "baseContentRoot": "sha256:b1c463c3b15a76bce69c1f61578628980aab75a2db642f042afd6727bca3f53c",
-      "contentRoot": "sha256:23b85b0299dff1d9717e5360f93f486ad2aa11ae01f7868ae25de25fcdee137f",
+      "contentRoot": "sha256:51fdc0fd8e9ea763460e1cd4e6d01c81ff2abba64030830bec6aea61259f83f3",
       "path": "docs/adr/KF-ADR-019fb2de-4a59-7bf4-8231-b32b62aa7e9b.md",
       "status": "modified"
     },
@@ -259,11 +259,11 @@
     "agent-first-authoring",
     "qualification-status"
   ],
-  "rationale": "Agent Work Lab command-surface changes are bounded to CLI/TUI/docs and do not alter the public website runtime; retain one exact repair-branch no-impact proof.",
+  "rationale": "Agent Work Lab command, TUI, Core, KFD, and documentation changes do not alter the website-owned KFX bundle manifest or rendered site facets.",
   "attestation": {
     "publicBehaviorUnchanged": true,
     "publicContractUnchanged": true,
     "readerJourneyUnchanged": true
   },
-  "proofRoot": "sha256:0a46e254ea4054b1cfd3e2e06da41df2d5a3960fdabfd4dc3f1a93dc19d017a3"
+  "proofRoot": "sha256:febd3875231c345c0679d0e4dc38d5ee28472a60801fc4292721c56fccdad6bd"
 }
