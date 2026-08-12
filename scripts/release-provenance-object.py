@@ -14,9 +14,12 @@ from typing import Any
 from kungfu.release_provenance import (
     ReleaseProvenanceError,
     build_candidate,
+    build_candidate_v2,
     build_promotion,
+    migrate_candidate_v1,
     semantic_root,
     verify,
+    verify_migration,
 )
 from kungfu.temporal_release_admission import verify_admission
 
@@ -110,6 +113,25 @@ def _parser() -> argparse.ArgumentParser:
         help="report parent-order drift without rejecting the semantic object",
     )
 
+    candidate_v2 = commands.add_parser("candidate-v2")
+    _common(candidate_v2)
+    candidate_v2.add_argument("--candidate-id", required=True)
+    candidate_v2.add_argument("--source-content-algorithm", required=True)
+    candidate_v2.add_argument("--source-content-digest", required=True)
+    candidate_v2.add_argument("--candidate-commit", required=True)
+    candidate_v2.add_argument("--candidate-tree", required=True)
+    candidate_v2.add_argument("--dev-cut-commit", required=True)
+    candidate_v2.add_argument("--dev-cut-tree", required=True)
+    candidate_v2.add_argument("--dev-cut-root")
+    candidate_v2.add_argument("--dev-cut-id")
+    candidate_v2.add_argument("--previous-alpha-commit", required=True)
+    candidate_v2.add_argument("--previous-alpha-tree", required=True)
+    candidate_v2.add_argument("--previous-alpha-root")
+    candidate_v2.add_argument("--previous-alpha-id")
+    candidate_v2.add_argument("--approval-root")
+    candidate_v2.add_argument("--approval-id")
+    candidate_v2.add_argument("--observed-parent", action="append", default=[])
+
     promotion = commands.add_parser("promotion")
     _common(promotion)
     promotion.add_argument("--candidate-envelope", required=True)
@@ -123,6 +145,15 @@ def _parser() -> argparse.ArgumentParser:
     verification = commands.add_parser("verify")
     verification.add_argument("--input", required=True)
     verification.add_argument("--expected")
+    migration = commands.add_parser("migrate-candidate")
+    migration.add_argument("--input", required=True)
+    migration.add_argument("--source-content-algorithm", required=True)
+    migration.add_argument("--source-content-digest", required=True)
+    migration.add_argument("--approval-root")
+    migration.add_argument("--approval-id")
+    migration.add_argument("--output", required=True)
+    migration_verification = commands.add_parser("verify-migration")
+    migration_verification.add_argument("--input", required=True)
     commands.add_parser("admission")
     return parser
 
@@ -150,12 +181,45 @@ def main(argv: list[str] | None = None) -> int:
             report = verify(_json_file(args.input, {}), _json_file(args.expected, None))
             print(json.dumps(report, indent=2, sort_keys=True))
             return 0 if report["ok"] else 1
+        if args.command == "verify-migration":
+            report = verify_migration(_json_file(args.input, {}))
+            print(json.dumps(report, indent=2, sort_keys=True))
+            return 0 if report["ok"] else 1
+        if args.command == "migrate-candidate":
+            bundle = migrate_candidate_v1(
+                _json_file(args.input, {}),
+                source_content_algorithm=args.source_content_algorithm,
+                source_content_digest=args.source_content_digest,
+                approval_root=_root_or_identity(
+                    args.approval_root, args.approval_id, "approval"
+                ),
+            )
+            report = verify_migration(bundle)
+            if not report["ok"]:
+                print(json.dumps(report, indent=2, sort_keys=True), file=sys.stderr)
+                return 1
+            _write(args.output, bundle)
+            print(
+                json.dumps(
+                    {
+                        "schema": "kungfu.release-provenance-migration-write-receipt/v1",
+                        "ok": True,
+                        "output": args.output,
+                        "predecessorObjectRoot": report["predecessorObjectRoot"],
+                        "successorObjectRoot": report["successorObjectRoot"],
+                        "migrationReceiptRoot": bundle["receipt"]["root"],
+                    },
+                    indent=2,
+                    sort_keys=True,
+                )
+            )
+            return 0
 
         qualification_root, authority_root, contract_root, admission_roots = _roots(
             args
         )
         legacy_projection = _json_file(args.legacy_projection, {})
-        if args.command == "candidate":
+        if args.command in {"candidate", "candidate-v2"}:
             dev_cut_root = _root_or_identity(
                 args.dev_cut_root,
                 args.dev_cut_id,
@@ -166,28 +230,41 @@ def main(argv: list[str] | None = None) -> int:
                 args.previous_alpha_id,
                 "previous-alpha",
             )
-            fail_closed_on = ["candidate-tree-mismatch"]
-            if not args.advisory_parentage:
-                fail_closed_on.append("parent-order-mismatch")
-            envelope = build_candidate(
-                release_id=args.release_id,
-                candidate_id=args.candidate_id,
-                candidate_commit=args.candidate_commit,
-                candidate_tree=args.candidate_tree,
-                dev_cut_commit=args.dev_cut_commit,
-                dev_cut_tree=args.dev_cut_tree,
-                previous_alpha_commit=args.previous_alpha_commit,
-                previous_alpha_tree=args.previous_alpha_tree,
-                dev_cut_root=dev_cut_root,
-                previous_alpha_root=previous_alpha_root,
-                qualification_root=qualification_root,
-                authority_root=authority_root,
-                contract_root=contract_root,
-                admission_roots=admission_roots,
-                observed_parents=args.observed_parent,
-                legacy_projection=legacy_projection,
-                fail_closed_on=fail_closed_on,
-            )
+            common = {
+                "release_id": args.release_id,
+                "candidate_id": args.candidate_id,
+                "candidate_commit": args.candidate_commit,
+                "candidate_tree": args.candidate_tree,
+                "dev_cut_commit": args.dev_cut_commit,
+                "dev_cut_tree": args.dev_cut_tree,
+                "previous_alpha_commit": args.previous_alpha_commit,
+                "previous_alpha_tree": args.previous_alpha_tree,
+                "dev_cut_root": dev_cut_root,
+                "previous_alpha_root": previous_alpha_root,
+                "qualification_root": qualification_root,
+                "authority_root": authority_root,
+                "contract_root": contract_root,
+                "admission_roots": admission_roots,
+                "observed_parents": args.observed_parent,
+            }
+            if args.command == "candidate-v2":
+                envelope = build_candidate_v2(
+                    **common,
+                    source_content_algorithm=args.source_content_algorithm,
+                    source_content_digest=args.source_content_digest,
+                    approval_root=_root_or_identity(
+                        args.approval_root, args.approval_id, "approval"
+                    ),
+                )
+            else:
+                fail_closed_on = ["candidate-tree-mismatch"]
+                if not args.advisory_parentage:
+                    fail_closed_on.append("parent-order-mismatch")
+                envelope = build_candidate(
+                    **common,
+                    legacy_projection=legacy_projection,
+                    fail_closed_on=fail_closed_on,
+                )
         else:
             envelope = build_promotion(
                 candidate_envelope=_json_file(args.candidate_envelope, {}),
@@ -216,9 +293,9 @@ def main(argv: list[str] | None = None) -> int:
                     "output": args.output,
                     "objectRoot": envelope["objectRoot"],
                     "gitProjectionRoot": envelope["gitProjectionRoot"],
-                    "legacyProjectionRoot": envelope["legacyProjectionRoot"],
-                    "projectionStatus": envelope["gitProjection"]["status"],
-                    "projectionDrift": envelope["gitProjection"]["drift"],
+                    "legacyProjectionRoot": envelope.get("legacyProjectionRoot"),
+                    "projectionStatus": envelope["gitProjection"].get("status"),
+                    "projectionDrift": envelope["gitProjection"].get("drift", []),
                 },
                 indent=2,
                 sort_keys=True,

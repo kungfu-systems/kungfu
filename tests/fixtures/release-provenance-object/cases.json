@@ -38,6 +38,20 @@
       "treePreserved": true
     }
   },
+  "v2Candidate": {
+    "sourceContentAlgorithm": "sha256-canonical-file-set-v1",
+    "sourceContentDigest": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+    "approvalRoot": "sha256:abababababababababababababababababababababababababababababababab"
+  },
+  "topologyCases": [
+    {"id": "root", "observedParents": []},
+    {"id": "linear", "observedParents": ["2222222222222222222222222222222222222222"]},
+    {"id": "merge", "observedParents": ["2222222222222222222222222222222222222222", "3333333333333333333333333333333333333333"]},
+    {"id": "reordered-merge", "observedParents": ["3333333333333333333333333333333333333333", "2222222222222222222222222222222222222222"]},
+    {"id": "octopus", "observedParents": ["2222222222222222222222222222222222222222", "3333333333333333333333333333333333333333", "4444444444444444444444444444444444444444"]},
+    {"id": "flattened", "observedParents": ["5555555555555555555555555555555555555555"]},
+    {"id": "ff-only", "observedParents": ["6666666666666666666666666666666666666666"]}
+  ],
   "cases": [
     {"id": "same-tree-different-history", "mutation": "none", "expected": "distinct-object-roots"},
     {"id": "swapped-dev-and-alpha-cuts", "mutation": "swap-cuts", "expected": "expected-devCutCommit-mismatch"},
