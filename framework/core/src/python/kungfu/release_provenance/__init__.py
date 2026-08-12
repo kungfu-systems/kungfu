@@ -1,15 +1,11 @@
 # SPDX-License-Identifier: Apache-2.0
 
-"""Immutable release provenance package built on KFR2 temporal relation roots.
-
-Git object ids are retained as an exact transport projection.  They are never
-used as the identity of a release history edge or as a substitute for the
-rooted semantic relation.
-"""
+"""KFR2 release provenance with Git retained as an evidence projection."""
 
 from __future__ import annotations
 
 import hashlib
+import re
 from copy import deepcopy
 from typing import Any
 
@@ -388,7 +384,7 @@ def build_promotion(
     )
 
 
-def verify(envelope: Any, expected: dict[str, Any] | None = None) -> dict[str, Any]:
+def _verify_v1(envelope: Any, expected: dict[str, Any] | None = None) -> dict[str, Any]:
     """Verify roots, relation roles, projection policy, and optional exact inputs."""
 
     issues: list[str] = []
@@ -803,3 +799,200 @@ def verify(envelope: Any, expected: dict[str, Any] | None = None) -> dict[str, A
         "projectionStatus": projection.get("status"),
         "projectionDrift": projection.get("drift", []),
     }
+
+
+# fmt: off
+ENVELOPE_SCHEMA_V2 = "kungfu.release-provenance-envelope/v2"
+PROJECTION_SCHEMA_V2 = "kungfu.release-provenance-git-projection/v2"
+MIGRATION_SCHEMA = "kungfu.release-provenance-migration/v1"
+CONTENT_SCHEMA = "kungfu.release-source-content/v1"
+SEMANTIC_RELATIONS_V2 = ("derived-from", "acknowledges", "has-content", "qualified-by", "approved-by", "authorized-by", "implements-contract")
+_V2_ALGORITHM = re.compile(r"[a-z0-9][a-z0-9._/-]{0,63}")
+_V2_DIGEST = re.compile(r"[0-9a-f]{32,256}")
+
+
+def _v2_content(algorithm: str, digest: str) -> tuple[str, dict[str, str]]:
+    if not isinstance(algorithm, str) or not _V2_ALGORITHM.fullmatch(algorithm):
+        _fail("invalid-content", "sourceContent.algorithm is invalid")
+    if not isinstance(digest, str) or not _V2_DIGEST.fullmatch(digest):
+        _fail("invalid-content", "sourceContent.digest must be lowercase hex")
+    record = {"schema": CONTENT_SCHEMA, "algorithm": algorithm, "digest": digest}
+    return semantic_root(record), record
+
+
+def build_candidate_v2(*, release_id: str, candidate_id: str, source_content_algorithm: str, source_content_digest: str,
+                       candidate_commit: str, candidate_tree: str, dev_cut_commit: str, dev_cut_tree: str,
+                       previous_alpha_commit: str, previous_alpha_tree: str, dev_cut_root: str,
+                       previous_alpha_root: str, qualification_root: str, approval_root: str, authority_root: str,
+                       contract_root: str, admission_roots: list[str], observed_parents: list[str]) -> dict[str, Any]:
+    """Build a candidate whose semantic object root contains no Git OID."""
+    content_root, content = _v2_content(source_content_algorithm, source_content_digest)
+    if not release_id or not candidate_id:
+        _fail("invalid-identity", "releaseId and candidate identity are required")
+    subject = {"schema": "kungfu.release-provenance-identity/v2", "kind": "candidate",
+               "releaseId": release_id, "identity": candidate_id, "contentRoot": content_root}
+    subject_root = semantic_root(subject)
+    identities = {"subjectRoot": subject_root, "contentRoot": content_root,
+                  "derivationRoot": _require_root(dev_cut_root, "devCutRoot"),
+                  "acknowledgementRoot": _require_root(previous_alpha_root, "previousAlphaRoot"),
+                  "qualificationRoot": _require_root(qualification_root, "qualificationRoot"),
+                  "approvalRoot": _require_root(approval_root, "approvalRoot"),
+                  "authorityRoot": _require_root(authority_root, "authorityRoot"),
+                  "contractRoot": _require_root(contract_root, "contractRoot")}
+    identities["scopeRoot"] = semantic_root({"schema": "kungfu.release-provenance-scope/v2", "releaseId": release_id, "phase": "candidate"})
+    identities["cutRoot"] = semantic_root({"schema": "kungfu.release-provenance-cut/v2", "releaseId": release_id,
+                                            "candidateRoot": subject_root, "contentRoot": content_root,
+                                            "devCutRoot": identities["derivationRoot"],
+                                            "previousAlphaRoot": identities["acknowledgementRoot"]})
+    admitted = [_require_root(root, "admissionRoots") for root in admission_roots]
+    if len(admitted) != len(set(admitted)):
+        _fail("ambiguous-admission", "admissionRoots must be unique")
+    targets = dict(zip(SEMANTIC_RELATIONS_V2, (identities["derivationRoot"], identities["acknowledgementRoot"],
+                   content_root, identities["qualificationRoot"], identities["approvalRoot"],
+                   identities["authorityRoot"], identities["contractRoot"])))
+    object_id = f"release-provenance:candidate:{candidate_id}:v2"
+    predicates, relations = [], []
+    for name in SEMANTIC_RELATIONS_V2:
+        predicate_root, predicate = _predicate(name, identities["authorityRoot"])
+        relation_root, relation = _relation(object_id=object_id, relation=name, predicate_root=predicate_root,
+            source_root=subject_root, target_root=targets[name], cut_root=identities["cutRoot"],
+            scope_root=identities["scopeRoot"], authority_root=identities["authorityRoot"], admission_roots=admitted)
+        predicates.append({"root": predicate_root, "record": predicate})
+        relations.append({"root": relation_root, "record": relation})
+    obj = {"schema": "kungfu.fact.provenance-object/v1", "objectId": object_id, "subjectRoot": subject_root,
+           "materialRoots": [subject_root, content_root, identities["qualificationRoot"], identities["approvalRoot"], identities["contractRoot"]],
+           "relationRoots": [row["root"] for row in relations], "cutRoot": identities["cutRoot"],
+           "authorityRoot": identities["authorityRoot"], "admissionRoots": admitted}
+    object_root = record_root(obj)
+    projection = {"schema": PROJECTION_SCHEMA_V2, "kind": "candidate-transport", "subjectRoot": subject_root,
+                  "candidateCommit": _require_oid(candidate_commit, "candidateCommit"),
+                  "candidateTree": _require_oid(candidate_tree, "candidateTree"),
+                  "devCutCommit": _require_oid(dev_cut_commit, "devCutCommit"), "devCutTree": _require_oid(dev_cut_tree, "devCutTree"),
+                  "previousAlphaCommit": _require_oid(previous_alpha_commit, "previousAlphaCommit"),
+                  "previousAlphaTree": _require_oid(previous_alpha_tree, "previousAlphaTree"),
+                  "observedParents": [_require_oid(value, "observedParents") for value in observed_parents], "semanticAuthority": False}
+    projection_root = semantic_root(projection)
+    pp_root, pp = _predicate("projected-as", identities["authorityRoot"])
+    pr_root, pr = _relation(object_id=object_id, relation="projected-as", predicate_root=pp_root,
+        source_root=object_root, target_root=projection_root, cut_root=identities["cutRoot"],
+        scope_root=identities["scopeRoot"], authority_root=identities["authorityRoot"], admission_roots=admitted)
+    return {"schema": ENVELOPE_SCHEMA_V2, "phase": "candidate", "releaseId": release_id, "objectRoot": object_root,
+            "object": obj, "subject": subject, "sourceContent": {"root": content_root, "record": content},
+            "identities": identities, "predicates": predicates, "relations": relations, "gitProjection": projection,
+            "gitProjectionRoot": projection_root, "projectionPredicate": {"root": pp_root, "record": pp},
+            "projectionRelation": {"root": pr_root, "record": pr}}
+
+
+def _v2_rebuild(envelope: dict[str, Any]) -> dict[str, Any]:
+    i, p, c, s, o = envelope["identities"], envelope["gitProjection"], envelope["sourceContent"]["record"], envelope["subject"], envelope["object"]
+    return build_candidate_v2(release_id=envelope["releaseId"], candidate_id=s["identity"],
+        source_content_algorithm=c["algorithm"], source_content_digest=c["digest"], candidate_commit=p["candidateCommit"],
+        candidate_tree=p["candidateTree"], dev_cut_commit=p["devCutCommit"], dev_cut_tree=p["devCutTree"],
+        previous_alpha_commit=p["previousAlphaCommit"], previous_alpha_tree=p["previousAlphaTree"],
+        dev_cut_root=i["derivationRoot"], previous_alpha_root=i["acknowledgementRoot"],
+        qualification_root=i["qualificationRoot"], approval_root=i["approvalRoot"], authority_root=i["authorityRoot"],
+        contract_root=i["contractRoot"], admission_roots=o["admissionRoots"], observed_parents=p["observedParents"])
+
+
+def verify_v2(envelope: Any, expected: dict[str, Any] | None = None) -> dict[str, Any]:
+    issues: list[str] = []
+    required = {"schema", "phase", "releaseId", "objectRoot", "object", "subject", "sourceContent", "identities",
+                "predicates", "relations", "gitProjection", "gitProjectionRoot", "projectionPredicate", "projectionRelation"}
+    if not isinstance(envelope, dict) or envelope.get("schema") != ENVELOPE_SCHEMA_V2:
+        return {"ok": False, "issues": ["unknown-schema"]}
+    if set(envelope) != required or envelope.get("phase") != "candidate":
+        return {"ok": False, "issues": ["invalid-envelope"]}
+    relations = envelope.get("relations") if isinstance(envelope.get("relations"), list) else []
+    names = [row.get("record", {}).get("relationId", "").rsplit(":", 1)[-1] for row in relations if isinstance(row, dict)]
+    for name in SEMANTIC_RELATIONS_V2:
+        count = names.count(name)
+        if count != 1:
+            issues.append("ambiguous-authority" if name == "authorized-by" and count > 1 else f"{name}-relation-count")
+    if names != list(SEMANTIC_RELATIONS_V2):
+        issues.append("relation-order-mismatch")
+    try:
+        rebuilt = _v2_rebuild(envelope)
+        if envelope["gitProjection"]["candidateTree"] != envelope["gitProjection"]["devCutTree"]:
+            issues.append("candidate-tree-mismatch")
+        if envelope["gitProjection"].get("semanticAuthority") is not False:
+            issues.append("projection-semantic-authority")
+        for name, row in zip(SEMANTIC_RELATIONS_V2, relations):
+            if row != rebuilt["relations"][list(SEMANTIC_RELATIONS_V2).index(name)]:
+                issues.append(f"{name}-relation-mismatch")
+        for field, code in (("sourceContent", "content-root-mismatch"), ("subject", "subject-root-mismatch"),
+                            ("object", "object-root-mismatch"), ("gitProjection", "git-projection-root-mismatch"),
+                            ("projectionRelation", "projected-as-relation-mismatch")):
+            if envelope[field] != rebuilt[field]:
+                issues.append(code)
+        if envelope != rebuilt:
+            issues.append("invalid-envelope")
+        observed = {"objectRoot": envelope["objectRoot"], **envelope["identities"], **envelope["gitProjection"]}
+        for field, value in (expected or {}).items():
+            if observed.get(field) != value:
+                issues.append(f"expected-{field}-mismatch")
+    except (KeyError, TypeError, ValueError, ReleaseProvenanceError):
+        issues.append("invalid-content" if isinstance(envelope.get("sourceContent"), dict) else "invalid-envelope")
+    projection = envelope.get("gitProjection", {})
+    return {"schema": "kungfu.release-provenance-verification/v2", "ok": not issues, "issues": sorted(set(issues)),
+            "objectRoot": envelope.get("objectRoot"), "phase": "candidate", "projectionRoot": envelope.get("gitProjectionRoot"),
+            "observedParentCount": len(projection.get("observedParents", [])) if isinstance(projection, dict) and isinstance(projection.get("observedParents"), list) else None}
+
+
+def migrate_candidate_v1(envelope: dict[str, Any], *, source_content_algorithm: str,
+                         source_content_digest: str, approval_root: str) -> dict[str, Any]:
+    old = deepcopy(envelope)
+    if not _verify_v1(old)["ok"] or old.get("phase") != "candidate":
+        _fail("invalid-predecessor", "migration requires a verified v1 candidate")
+    p, i, o = old["gitProjection"], old["identities"], old["object"]
+    successor = build_candidate_v2(release_id=old["releaseId"], candidate_id=old["subject"]["identity"],
+        source_content_algorithm=source_content_algorithm, source_content_digest=source_content_digest,
+        candidate_commit=p["candidateCommit"], candidate_tree=p["candidateTree"], dev_cut_commit=p["devCutCommit"],
+        dev_cut_tree=p["devCutTree"], previous_alpha_commit=p["previousAlphaCommit"], previous_alpha_tree=p["previousAlphaTree"],
+        dev_cut_root=i["derivationRoot"], previous_alpha_root=i["acknowledgementRoot"], qualification_root=i["qualificationRoot"],
+        approval_root=approval_root, authority_root=i["authorityRoot"], contract_root=i["contractRoot"],
+        admission_roots=o["admissionRoots"], observed_parents=p["observedParents"])
+    si, so = successor["identities"], successor["object"]
+    predicate_root, predicate = _predicate("succeeds", si["authorityRoot"])
+    relation_root, relation = _relation(object_id=f"release-provenance:migration:{old['objectRoot']}", relation="succeeds",
+        predicate_root=predicate_root, source_root=successor["objectRoot"], target_root=old["objectRoot"],
+        cut_root=si["cutRoot"], scope_root=si["scopeRoot"], authority_root=si["authorityRoot"], admission_roots=so["admissionRoots"])
+    receipt = {"schema": "kungfu.release-provenance-migration-receipt/v1", "predecessorSchema": old["schema"],
+        "predecessorObjectRoot": old["objectRoot"], "predecessorProjectionRoot": old["gitProjectionRoot"],
+        "successorSchema": successor["schema"], "successorObjectRoot": successor["objectRoot"],
+        "successorProjectionRoot": successor["gitProjectionRoot"], "successorRelationRoot": relation_root,
+        "authorityRoot": si["authorityRoot"], "cutRoot": si["cutRoot"], "priorObjectMutated": False}
+    return {"schema": MIGRATION_SCHEMA, "predecessor": old, "successor": successor,
+            "successorPredicate": {"root": predicate_root, "record": predicate},
+            "successorRelation": {"root": relation_root, "record": relation},
+            "receipt": {"root": semantic_root(receipt), "record": receipt}}
+
+
+def verify_migration(bundle: Any) -> dict[str, Any]:
+    issues: list[str] = []
+    try:
+        successor, predecessor = bundle["successor"], bundle["predecessor"]
+        content = successor["sourceContent"]["record"]
+        rebuilt = migrate_candidate_v1(predecessor, source_content_algorithm=content["algorithm"],
+                                       source_content_digest=content["digest"], approval_root=successor["identities"]["approvalRoot"])
+        if bundle != rebuilt:
+            issues.append("migration-receipt-mismatch")
+        if not _verify_v1(predecessor)["ok"]:
+            issues.append("invalid-predecessor")
+        if not verify_v2(successor)["ok"]:
+            issues.append("invalid-successor")
+    except (KeyError, TypeError, ValueError, ReleaseProvenanceError):
+        issues.append("invalid-migration")
+    predecessor = bundle.get("predecessor", {}) if isinstance(bundle, dict) else {}
+    successor = bundle.get("successor", {}) if isinstance(bundle, dict) else {}
+    return {"schema": "kungfu.release-provenance-migration-verification/v1", "ok": not issues, "issues": sorted(set(issues)),
+            "predecessorObjectRoot": predecessor.get("objectRoot"), "successorObjectRoot": successor.get("objectRoot")}
+# fmt: on
+def verify(envelope: Any, expected: dict[str, Any] | None = None) -> dict[str, Any]:
+    """Verify either the historical v1 envelope or topology-independent v2."""
+
+    schema = envelope.get("schema") if isinstance(envelope, dict) else None
+    if schema == ENVELOPE_SCHEMA:
+        return _verify_v1(envelope, expected)
+    if schema == ENVELOPE_SCHEMA_V2:
+        return verify_v2(envelope, expected)
+    return {"ok": False, "issues": ["unknown-schema"]}
