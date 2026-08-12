@@ -1579,3 +1579,55 @@ def test_synthetic_provider_retains_its_explicit_qualification_result():
     parsed = run_agent.parse_provider_output("synthetic", output)
 
     assert parsed["text"] == output.strip()
+
+
+def test_managed_session_retains_its_visible_terminal_answer(tmp_path, monkeypatch):
+    retained = "Independent assessment: README has exactly one heading."
+    monkeypatch.setattr(
+        run_agent,
+        "run_session_attempt",
+        lambda **_kwargs: (
+            run_agent.ProcessResult(0, retained, "", False, False),
+            {"schema": "kungfu.agent-run-session/v1"},
+        ),
+    )
+    monkeypatch.setattr(
+        run_agent,
+        "select_profile",
+        lambda *_args, **_kwargs: (
+            {
+                "id": "codex.test",
+                "provider": "codex",
+                "cwdPolicy": "workspace-root",
+                "launch": {"executable": "/usr/bin/codex", "argv": []},
+            },
+            {},
+        ),
+    )
+    monkeypatch.setattr(
+        run_agent.runtime_profiles,
+        "verify_profile",
+        lambda _profile: {"ok": True, "version": "0.147.0"},
+    )
+
+    result = run_agent.execute(
+        prompt="inspect README",
+        runtime_dir=str(tmp_path / "runtime"),
+        workspace_root=str(tmp_path),
+        work_ref={
+            "schema": "kungfu.work-ref/v1",
+            "workspaceId": "workspace:test",
+            "profileId": "kungfu.work-control",
+            "profileRoot": "sha256:" + "1" * 64,
+            "entityType": "assignment",
+            "entityId": "first",
+            "entityRoot": "sha256:" + "2" * 64,
+            "purpose": "complete-project-assignment",
+            "systemTimeCut": "sha256:" + "3" * 64,
+        },
+        session_invoker=lambda _request: {},
+        use_session=True,
+    )
+
+    response = json.loads(Path(result["episode"]["responsePath"]).read_text())
+    assert response["parsed"]["text"] == retained
