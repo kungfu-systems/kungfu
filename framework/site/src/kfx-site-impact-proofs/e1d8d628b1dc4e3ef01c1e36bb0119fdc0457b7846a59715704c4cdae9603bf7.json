@@ -1,7 +1,7 @@
 {
   "contract": "kungfu.kfx-site-impact-proof/v1",
   "baseRevision": "445b2fd84ec7f613ccbfc3d5f06980a3b07f0690",
-  "changeRoot": "sha256:ad023e1c505340c97c05f79b19eb2f19bb3e22a5c53405a2cbebd6e74ea9333a",
+  "changeRoot": "sha256:fe011e5a143b1b30ca20f8e09132cab29057d87dc3663b704f5daf51e67a94bd",
   "changes": [
     {
       "baseContentRoot": "sha256:a34d83865c144128bce57739af166042aa2abf22273e06e1629370931417e8aa",
@@ -119,7 +119,7 @@
     },
     {
       "baseContentRoot": "sha256:37b3c9d21464d58e786457c312326d99851f7e24a4179abe14954c19aa825c9a",
-      "contentRoot": "sha256:6be2b45796f428782ebfece35497290c0c6f1ab31f14434aa0435fd8eb75cfc1",
+      "contentRoot": "sha256:ad3ab5f51a809376ebf302677d07c32ba2d064c327deed357cd9f91c72f46320",
       "path": "framework/dev-delivery/native-under-warrant.mjs",
       "status": "modified"
     },
@@ -173,7 +173,7 @@
     },
     {
       "baseContentRoot": "sha256:d13785020c7cae3adea3e1834a8d4e577ba8ec41e2f65989b11fd6f14207ae23",
-      "contentRoot": "sha256:47e82d48c1b8bb9a6f6e2a0d2ac83fbb9b340f35be360eb389a1e3126c7d57cc",
+      "contentRoot": "sha256:0aef67ad766e7c57c9ddd1dcd53b80d529f3a5b380c28d8cc78b414bc0617404",
       "path": "scripts/dev-pr-auto-merge.test.mjs",
       "status": "modified"
     },
@@ -231,11 +231,11 @@
     "package-facets",
     "profiles-suites"
   ],
-  "rationale": "The exact-head Warrant controller now enables the existing Conan source-build bootstrap for SDK qualification; this internal release-governance change does not alter the KFX site bundle or any KFX-facing contract.",
+  "rationale": "The exact-head Warrant GitHub adapter now retries only transient network, 429, and server failures for a bounded seven-second window; semantic rejection, source drift, and every native qualification Gate remain fail-closed and no KFX-facing contract or reader journey changes.",
   "attestation": {
     "publicBehaviorUnchanged": true,
     "publicContractUnchanged": true,
     "readerJourneyUnchanged": true
   },
-  "proofRoot": "sha256:d7013e5e467946a30f6ec182f9d63a6854ff62a2009f7bb47de2411526d703e3"
+  "proofRoot": "sha256:e1d8d628b1dc4e3ef01c1e36bb0119fdc0457b7846a59715704c4cdae9603bf7"
 }
