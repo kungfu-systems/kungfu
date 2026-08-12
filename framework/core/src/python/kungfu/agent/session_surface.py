@@ -337,27 +337,28 @@ def _run_worker_preserving_standard_streams(runner, *argv):
             os.set_inheritable(descriptor, inheritable)
 
 
-def _spawn_detached_worker(*argv):
+def _spawn_detached_worker(*argv: str):
     environment = os.environ.copy()
     environment["ELECTRON_RUN_AS_NODE"] = "1"
     environment["KUNGFU_AS_VARIANT"] = "node"
     # The parent TUI pins its own embedded-Node entry. The Agent Session
     # bootstrap supplies a different reviewed argv and must not re-enter TUI.
     environment.pop("KUNGFU_NODE_VARIANT_ENTRY", None)
-    options = {
-        "env": environment,
-        "stdin": subprocess.DEVNULL,
-        "stdout": subprocess.DEVNULL,
-        "stderr": subprocess.PIPE,
-        "text": True,
-    }
+    creationflags = 0
     if sys.platform == "win32":
-        options["creationflags"] = getattr(
-            subprocess, "DETACHED_PROCESS", 0x00000008
-        ) | getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0x00000200)
-    else:
-        options["start_new_session"] = True
-    process = subprocess.Popen(list(argv), **options)
+        creationflags = getattr(subprocess, "DETACHED_PROCESS", 0x00000008) | getattr(
+            subprocess, "CREATE_NEW_PROCESS_GROUP", 0x00000200
+        )
+    process = subprocess.Popen(
+        list(argv),
+        env=environment,
+        stdin=subprocess.DEVNULL,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.PIPE,
+        text=True,
+        creationflags=creationflags,
+        start_new_session=sys.platform != "win32",
+    )
     try:
         _, stderr = process.communicate(timeout=20)
     except subprocess.TimeoutExpired as error:
