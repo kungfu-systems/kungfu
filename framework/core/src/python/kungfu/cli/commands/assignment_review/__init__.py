@@ -15,7 +15,12 @@ from kungfu.workspace import resolve_workspace_target
 
 
 def review_agent_prompt(plan):
-    criteria = "\n".join(f"- {value}" for value in plan["work"]["acceptanceChecks"])
+    acceptance_checks = plan["work"]["acceptanceChecks"]
+    criteria = "\n".join(f"- {value}" for value in acceptance_checks)
+    criterion_fields = "\n".join(
+        f"{index}. criterion must equal {json.dumps(value, ensure_ascii=False)}"
+        for index, value in enumerate(acceptance_checks, start=1)
+    )
     inputs = "\n".join(f"- {row['path']} ({row['root']})" for row in plan["inputs"])
     return (
         "Independently review the retained Project Work evidence. "
@@ -30,8 +35,14 @@ def review_agent_prompt(plan):
         "beginning with KUNGFU_REVIEW_RESULT followed by a JSON object with keys: "
         'verdict ("fit" or "revision-required"), summary (string), criteria '
         "(one object per exact criterion with criterion, passed, evidence), and "
-        "evidenceRequests (array of strings). Do not wrap that final line in a "
-        "code fence. Use fit only when every criterion passes."
+        "evidenceRequests (array of strings). The criteria array must contain "
+        f"exactly {len(acceptance_checks)} objects in the listed order. Preserve "
+        "these criterion fields exactly:\n"
+        f"{criterion_fields}\n"
+        "Set passed to a boolean and evidence to a non-empty source citation for "
+        "every object. A statement in summary does not count as criterion coverage. "
+        "Do not merge or omit criteria. Do not wrap the final line in a code fence. "
+        "Use fit only when every criterion passes."
     )
 
 

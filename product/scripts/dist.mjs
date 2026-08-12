@@ -94,6 +94,8 @@ const DESKTOP_RELEASE_DIR = path.join(RELEASE_DIR, 'desktop');
 const CLI_RELEASE_DIR = path.join(RELEASE_DIR, 'cli');
 const NPM_RELEASE_DIR = path.join(RELEASE_DIR, 'npm');
 const CLI_ARCHIVE_PREFIX = 'kungfu-episodes-cli';
+const AGENT_SESSION_CONTRACT_FILE = 'kungfu-agent-session.contract.json';
+const CODEX_APP_SERVER_CONTRACT_FILE = 'kungfu-codex-app-server.contract.json';
 const CLI_SURFACE_CATALOG = path.join(
   ROOT,
   'framework',
@@ -1226,6 +1228,40 @@ export function stageActionPackage(stageRoot) {
   return target;
 }
 
+function stageAgentSessionContractsForCli(stageRoot) {
+  for (const relative of [
+    AGENT_SESSION_CONTRACT_FILE,
+    CODEX_APP_SERVER_CONTRACT_FILE,
+  ]) {
+    const source = path.join(AGENT_SESSION_DIR, relative);
+    const destination = path.join(stageRoot, relative);
+    assertFile(source, `Agent Session contract ${relative}`);
+    fs.copyFileSync(source, destination);
+  }
+  copyTree(
+    path.join(AGENT_SESSION_DIR, 'schemas'),
+    path.join(stageRoot, 'schemas'),
+  );
+
+  const codexContract = readJson(
+    path.join(stageRoot, CODEX_APP_SERVER_CONTRACT_FILE),
+  );
+  const schemaManifest = codexContract.surfacePin?.schemaManifest;
+  if (
+    typeof schemaManifest !== 'string' ||
+    path.isAbsolute(schemaManifest) ||
+    schemaManifest.split(/[\\/]/u).includes('..')
+  ) {
+    throw new Error(
+      'Codex App Server contract declares an unsafe schema manifest path',
+    );
+  }
+  assertFile(
+    path.join(stageRoot, schemaManifest),
+    'Codex App Server schema manifest',
+  );
+}
+
 function stageDesktopAuthoringRuntime(esbuildRuntime) {
   assertSafeGeneratedDir(DESKTOP_AUTHORING_DIR);
   fs.rmSync(DESKTOP_AUTHORING_DIR, { recursive: true, force: true });
@@ -1305,6 +1341,9 @@ export function writeAuditableDemoBinaryMetadata(
 
 function writeCliManifest(stageRoot, archiveName, layout) {
   const surfaceCatalog = readJson(CLI_SURFACE_CATALOG);
+  const codexAppServerContract = readJson(
+    path.join(stageRoot, CODEX_APP_SERVER_CONTRACT_FILE),
+  );
   const update = fs.existsSync(RELEASE_CHANNEL_TRUST)
     ? {
         channels: {
@@ -1367,6 +1406,10 @@ function writeCliManifest(stageRoot, archiveName, layout) {
           kfdAgentRuntime: `runtime/${isWin ? 'kungfu-kfd-agent-runtime.exe' : 'kungfu-kfd-agent-runtime'}`,
           kfdAgentRuntimeManifest: 'runtime/kfd-agent-runtime.manifest.json',
           tui: 'tui/tui.mjs',
+          agentSessionContract: AGENT_SESSION_CONTRACT_FILE,
+          codexAppServerContract: CODEX_APP_SERVER_CONTRACT_FILE,
+          codexAppServerSchemaManifest:
+            codexAppServerContract.surfacePin.schemaManifest,
           extensions: 'extensions',
           templates: 'templates',
           upgradeManifest: 'upgrade/kungfu-release-manifest.json',
@@ -1680,6 +1723,21 @@ export function smokeCliProductArchive({ archivePath, archiveBase }) {
           'kfdAgentRuntimeManifest',
         );
         const tuiEntry = entryPath(installRoot, manifest.entries, 'tui');
+        const agentSessionContract = entryPath(
+          installRoot,
+          manifest.entries,
+          'agentSessionContract',
+        );
+        const codexAppServerContract = entryPath(
+          installRoot,
+          manifest.entries,
+          'codexAppServerContract',
+        );
+        const codexAppServerSchemaManifest = entryPath(
+          installRoot,
+          manifest.entries,
+          'codexAppServerSchemaManifest',
+        );
         const extensionsRoot = entryPath(
           installRoot,
           manifest.entries,
@@ -1734,6 +1792,26 @@ export function smokeCliProductArchive({ archivePath, archiveBase }) {
           'installed KFD Agent Runtime manifest',
         );
         assertFile(tuiEntry, 'installed TUI entry');
+        assertFile(agentSessionContract, 'installed Agent Session contract');
+        assertFile(
+          codexAppServerContract,
+          'installed Codex App Server contract',
+        );
+        assertFile(
+          codexAppServerSchemaManifest,
+          'installed Codex App Server schema manifest',
+        );
+        const installedCodexContract = readJson(codexAppServerContract);
+        if (
+          path.resolve(
+            installRoot,
+            installedCodexContract.surfacePin?.schemaManifest ?? '',
+          ) !== path.resolve(codexAppServerSchemaManifest)
+        ) {
+          throw new Error(
+            'CLI product manifest Codex schema entry drifted from its contract',
+          );
+        }
         assertDirectory(extensionsRoot, 'installed kfx extensions');
         assertDirectory(templatesRoot, 'installed SDK templates');
 
@@ -1897,6 +1975,7 @@ function buildCliProduct(esbuildRuntime) {
         ),
         path.join(stageRoot, 'tui', 'node_modules', 'node-pty'),
       );
+      stageAgentSessionContractsForCli(stageRoot);
       bundleSdkForCli(stageRoot, esbuildRuntime);
       const bundledUpgradeManifest = buildCliUpgradeManifest({
         stageRoot,

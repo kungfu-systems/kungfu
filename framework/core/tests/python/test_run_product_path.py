@@ -78,6 +78,30 @@ def test_agent_activity_history_projection_keeps_process_success_outside_work():
     assert projection["nextAction"] == "independent-assessment-required"
 
 
+def test_assignment_session_invoker_bounds_provider_writes_beyond_read_probes():
+    calls = []
+
+    class Surface:
+        @staticmethod
+        def ensure(runtime_dir):
+            assert runtime_dir == "/tmp/runtime"
+            return "/tmp/agent-session.sock"
+
+        @staticmethod
+        def invoke(request, *, endpoint, timeout):
+            calls.append((request["operation"], endpoint, timeout))
+            return {"operation": request["operation"]}
+
+    invoke = assignment_lifecycle.session_invoker(Surface, "/tmp/runtime")
+    assert invoke({"operation": "status"}) == {"operation": "status"}
+    assert invoke({"operation": "instruct"}) == {"operation": "instruct"}
+
+    assert calls == [
+        ("status", "/tmp/agent-session.sock", 5.0),
+        ("instruct", "/tmp/agent-session.sock", 30.0),
+    ]
+
+
 def test_next_work_selects_the_only_captured_assignment(tmp_path):
     project = tmp_path / "project"
     project.mkdir()
@@ -1346,6 +1370,82 @@ def test_project_work_session_yields_at_deterministic_attention(tmp_path):
     )
     assert start_input["binding"] == {"kind": "work", "workRef": work}
     assert start_input["workConsoleId"] == ("work:kungfu.work-control:assignment:first")
+
+
+def test_codex_project_work_session_carries_confirmed_workspace_write_policy(tmp_path):
+    calls = []
+    observations = iter(
+        [
+            {
+                "live": True,
+                "interactionState": "ready",
+                "output": {"nextSequence": 1},
+                "controller": {"holderId": "kungfu-project-work"},
+            },
+            {
+                "live": True,
+                "interactionState": "approval-needed",
+                "output": {"nextSequence": 2},
+            },
+        ]
+    )
+
+    def invoke(request):
+        calls.append(request)
+        operation = request["operation"]
+        if operation == "plan-start":
+            return {"root": "sha256:" + "1" * 64}
+        if operation == "start":
+            return {"status": "started"}
+        if operation == "status":
+            return next(observations)
+        if operation == "plan-control":
+            return {"root": "sha256:" + "2" * 64}
+        if operation == "instruct":
+            return {"status": "delivered"}
+        if operation == "snapshot":
+            return {"terminal": {"vt": {"lines": []}}}
+        raise AssertionError(operation)
+
+    work = {
+        "schema": "kungfu.work-ref/v1",
+        "workspaceId": "workspace:test",
+        "profileId": "kungfu.work-control",
+        "profileRoot": "sha256:" + "3" * 64,
+        "entityType": "assignment",
+        "entityId": "first",
+        "entityRoot": "sha256:" + "4" * 64,
+        "purpose": "complete-project-assignment",
+        "systemTimeCut": "sha256:" + "5" * 64,
+    }
+    run_agent.run_session_attempt(
+        invoke=invoke,
+        run_id="agent-codex",
+        selected={
+            "id": "codex.path.test",
+            "provider": "codex",
+            "launch": {"executable": "/usr/bin/codex", "argv": []},
+        },
+        verification={"version": "0.146.0"},
+        work=work,
+        cwd=str(tmp_path),
+        env={"PATH": "/usr/bin"},
+        prompt="perform the confirmed Work",
+        timeout_seconds=1,
+        permission_mode="workspace-write",
+    )
+
+    start_input = next(
+        call["input"] for call in calls if call["operation"] == "plan-start"
+    )
+    assert start_input["structured"] == {
+        "threadStartParams": {
+            "cwd": str(tmp_path),
+            "approvalPolicy": "untrusted",
+            "approvalsReviewer": "user",
+            "sandbox": "workspace-write",
+        }
+    }
 
 
 def test_terminal_mock_scenarios_ignore_ready_echo_until_the_process_ends():
