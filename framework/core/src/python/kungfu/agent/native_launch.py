@@ -7,6 +7,7 @@ from __future__ import annotations
 import json
 import os
 import subprocess
+import sys
 import threading
 import time
 from contextlib import ExitStack, contextmanager
@@ -21,6 +22,22 @@ from kungfu.workspace import (
     load_workspace_registry,
     resolve_workspace_target,
 )
+
+
+_DARWIN_DEFAULT_SSL_CERT_FILE = Path("/etc/ssl/cert.pem")
+
+
+def apply_platform_tls_trust(
+    env: dict[str, str], *, platform: str | None = None
+) -> None:
+    """Retain explicit TLS trust, or use the standard macOS CLI CA bundle."""
+
+    if env.get("SSL_CERT_FILE"):
+        return
+    if (sys.platform if platform is None else platform) != "darwin":
+        return
+    if _DARWIN_DEFAULT_SSL_CERT_FILE.is_file():
+        env["SSL_CERT_FILE"] = str(_DARWIN_DEFAULT_SSL_CERT_FILE)
 
 
 def unbound_work_selection(workspace_id):

@@ -7,6 +7,7 @@ import sys
 import pytest
 from jsonschema import Draft202012Validator
 
+from kungfu.agent import native_launch
 from kungfu.agent import run_agent
 from kungfu.agent import assess_work_advisory
 from kungfu.agent import resources as agent_resources
@@ -74,10 +75,10 @@ def test_managed_agent_environment_preserves_windows_process_coordinates(tmp_pat
 def test_managed_agent_environment_uses_standard_macos_tls_trust(tmp_path, monkeypatch):
     cert_file = tmp_path / "cert.pem"
     cert_file.write_text("test certificate bundle\n", encoding="utf-8")
-    monkeypatch.setattr(run_agent, "_DARWIN_DEFAULT_SSL_CERT_FILE", cert_file)
+    monkeypatch.setattr(native_launch, "_DARWIN_DEFAULT_SSL_CERT_FILE", cert_file)
     env = {}
 
-    run_agent._apply_platform_tls_trust(env, platform="darwin")
+    native_launch.apply_platform_tls_trust(env, platform="darwin")
 
     assert env["SSL_CERT_FILE"] == str(cert_file)
 
