@@ -210,6 +210,10 @@ test('opened Project Work offers an exact-plan Agent path and recoverable sessio
   assert.match(projectWork, /continueRetainedWork/);
   assert.match(
     projectWork,
+    /continueRetainedWork[\s\S]*?projects[\s\S]*?\.refreshRun\(visibleRun\.id\)[\s\S]*?current\.session\?\.live[\s\S]*?projects\.endRun\(current\.id\)/,
+  );
+  assert.match(
+    projectWork,
     /if \(value === '\\r' && retainedAgentReviewable\)[\s\S]*?continueRetainedWork\(\);[\s\S]*?if \(session\?\.controllable === false\) return/,
   );
   assert.match(

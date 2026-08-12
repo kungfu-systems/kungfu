@@ -55,12 +55,12 @@ function input(overrides = {}) {
   };
 }
 
-function runtime({ structured = true } = {}) {
+function runtime({ structured = true, structuredMode = 'product-route' } = {}) {
   return new InProcessAgentSessionProductRuntime({
     pty: { spawn: () => new FakePtyProcess() },
     structuredRuntime: structured
       ? new CodexAppServerProductRuntime({
-          appServerArgv: [provider, 'product-route'],
+          appServerArgv: [provider, structuredMode],
         })
       : null,
   });
@@ -74,6 +74,62 @@ function surface(options = {}) {
     makeId: () => `product-id-${++id}`,
   });
 }
+
+test('structured instruction waits for a response-first turn boundary', async () => {
+  const product = surface({ structuredMode: 'response-first-product-route' });
+  const startPlan = product.invoke({
+    operation: 'plan-start',
+    input: input({ argv: [provider, 'response-first-product-route'] }),
+  });
+  await product.invoke({
+    operation: 'start',
+    client: 'cli',
+    actorId: 'actor-agent',
+    plan: startPlan,
+    expectedPlanRoot: startPlan.root,
+    execution: { env: {} },
+  });
+  const ref = {
+    workConsoleId: startPlan.workConsoleId,
+    sessionAttemptId: startPlan.sessionAttemptId,
+  };
+  const payload = { text: 'response-first instruction' };
+  const instructionPlan = product.invoke({
+    operation: 'plan-control',
+    controlOperation: 'instruct',
+    actorId: 'actor-agent',
+    session: ref,
+    payload,
+  });
+  const startedAt = Date.now();
+  const receipt = await product.invoke({
+    operation: 'instruct',
+    actorId: 'actor-agent',
+    plan: instructionPlan,
+    expectedPlanRoot: instructionPlan.root,
+    payload,
+  });
+  assert.equal(receipt.status, 'delivered');
+  assert.ok(Date.now() - startedAt >= 20);
+  assert.equal(
+    product.invoke({ operation: 'status', session: ref }).interactionState,
+    'ready',
+  );
+  const endPlan = product.invoke({
+    operation: 'plan-control',
+    controlOperation: 'end',
+    actorId: 'actor-agent',
+    session: ref,
+    payload: {},
+  });
+  await product.invoke({
+    operation: 'end',
+    actorId: 'actor-agent',
+    plan: endPlan,
+    expectedPlanRoot: endPlan.root,
+    payload: {},
+  });
+});
 
 async function waitFor(predicate, label, timeoutMs = 2000) {
   const deadline = Date.now() + timeoutMs;

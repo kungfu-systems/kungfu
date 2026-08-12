@@ -897,10 +897,18 @@ def _load_component(
         elif surface == "kungfu.initiative-assignment.assignment":
             assignments.append(record)
         elif surface == "kungfu.initiative-assignment.completion-claim":
+            links = payload.get("links")
+            linked_assignment = (
+                str(links.get("assignment_id") or "")
+                if isinstance(links, Mapping)
+                else ""
+            )
             assignment_id = str(
-                record.get("assignment_id") or record.get("assignment_subject") or ""
+                record.get("assignment_id")
+                or record.get("assignment_subject")
+                or linked_assignment
             ).removeprefix("kungfu:")
-            phase = str(record.get("to_phase") or "")
+            phase = _material_completion_phase(record)
             system_time = int(fact.get("system_time") or 0)
             if (
                 assignment_id
@@ -1003,6 +1011,24 @@ def _material_lifecycle(
         "globally_completed": phase == "continuation-decided",
         "projection": "root-bound-fact-material",
     }
+
+
+def _material_completion_phase(record: Mapping[str, Any]) -> str:
+    """Project the same latest completion-cycle phase as Work Control status."""
+
+    if record.get("claim_type") == "assignment-phase-transition":
+        return str(record.get("to_phase") or "")
+    if record.get("claim_type") == "task-completed":
+        return "completion-claimed"
+    if record.get("review_type") == "independent-completion-review":
+        return "independently-reviewed"
+    if record.get("review_type") == "continuation-decision":
+        return (
+            "stage-ready"
+            if record.get("action") in {"reopen", "request-evidence"}
+            else "continuation-decided"
+        )
+    return ""
 
 
 def _material_relations(

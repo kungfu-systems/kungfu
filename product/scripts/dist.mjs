@@ -1513,13 +1513,6 @@ export function runInstalledKungfuAssignmentAdmissionSmoke({
     ...env,
     HOME: userHome,
     USERPROFILE: userHome,
-    KUNGFU_INSTALL_SOURCE: 'archive',
-    KUNGFU_DIR: installRoot,
-    KUNGFU_UPGRADE_MANIFEST: path.join(
-      installRoot,
-      'upgrade',
-      'kungfu-release-manifest.json',
-    ),
   };
   fs.mkdirSync(workspace, { recursive: true });
   fs.writeFileSync(

@@ -71,6 +71,37 @@ def test_managed_agent_environment_preserves_windows_process_coordinates(tmp_pat
     assert environment_keys == sorted(env)
 
 
+def test_managed_agent_environment_uses_standard_macos_tls_trust(tmp_path, monkeypatch):
+    cert_file = tmp_path / "cert.pem"
+    cert_file.write_text("test certificate bundle\n", encoding="utf-8")
+    monkeypatch.setattr(run_agent, "_DARWIN_DEFAULT_SSL_CERT_FILE", cert_file)
+    env = {}
+
+    run_agent._apply_platform_tls_trust(env, platform="darwin")
+
+    assert env["SSL_CERT_FILE"] == str(cert_file)
+
+
+def test_managed_agent_environment_preserves_explicit_tls_trust(tmp_path):
+    explicit = str(tmp_path / "private-ca.pem")
+    env, environment_keys = run_agent._environment(
+        "codex",
+        runtime_dir=str(tmp_path / "runtime"),
+        run_id="agent-explicit-tls",
+        workspace_root=str(tmp_path / "project"),
+        work_ref=None,
+        continuation=None,
+        source={
+            "HOME": "/Users/test",
+            "PATH": "/usr/bin",
+            "SSL_CERT_FILE": explicit,
+        },
+    )
+
+    assert env["SSL_CERT_FILE"] == explicit
+    assert "SSL_CERT_FILE" in environment_keys
+
+
 def _signals(**overrides):
     value = {
         "taskId": "upgrade-runtime",
