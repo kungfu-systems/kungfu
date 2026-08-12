@@ -48,9 +48,25 @@ def build_skill_runtime_audit(
     for value in dependencies:
         _validate_dependency_document(value)
 
+    scoped_audits = [
+        value
+        for value in audits
+        if _document_matches_scope(value, run_id=run_id, work_ref=work_ref)
+    ]
+    scoped_dependencies = [
+        value
+        for value in dependencies
+        if _document_matches_scope(value, run_id=run_id, work_ref=work_ref)
+    ]
+
     evidence = _registry_evidence(registry, history)
-    evidence.extend(_audit_evidence(audits))
-    evidence.extend(_dependency_evidence(dependencies))
+    evidence.extend(_audit_evidence(scoped_audits))
+    evidence.extend(_dependency_evidence(scoped_dependencies))
+    evidence = [
+        row
+        for row in evidence
+        if _evidence_matches_scope(row, run_id=run_id, work_ref=work_ref)
+    ]
     evidence.sort(key=_evidence_sort_key)
 
     skill_keys = set(registry["entries"])
@@ -60,9 +76,16 @@ def build_skill_runtime_audit(
         for key in sorted(skill_keys)
         if work_ref is None or _skill_matches_work(key, registry, evidence, work_ref)
     ]
-    audit_roots = [_root(value) for value in audits]
+    selected_skill_keys = {str(value["identity"]["key"]) for value in skills}
+    evidence = [
+        row
+        for row in evidence
+        if row.get("skillKey") is None or row.get("skillKey") in selected_skill_keys
+    ]
+    audit_roots = [_root(value) for value in scoped_audits]
     dependency_roots = [
-        str(value.get("receiptRoot") or value.get("planRoot")) for value in dependencies
+        str(value.get("receiptRoot") or value.get("planRoot"))
+        for value in scoped_dependencies
     ]
     base = {
         "schema": RUNTIME_AUDIT_SCHEMA,
@@ -272,6 +295,7 @@ def _audit_evidence(documents: list[dict[str, Any]]) -> list[dict[str, Any]]:
     rows: list[dict[str, Any]] = []
     for document in documents:
         for event in document.get("events") or []:
+            event = _event_with_document_scope(event, document)
             state = _audit_state(event)
             skills = event.get("skills") if state == "advertised" else None
             if skills:
@@ -292,8 +316,8 @@ def _audit_event_row(
     return _evidence_row(
         state=state,
         skill_key=skill_key,
-        work_ref=(event.get("work") or {}).get("workRef") or event.get("work_id"),
-        run_id=event.get("run_id"),
+        work_ref=_work_ref(event),
+        run_id=event.get("runId") or event.get("run_id"),
         source_kind="run-audit-event",
         source_type=event.get("type"),
         roots=roots,
@@ -322,8 +346,8 @@ def _dependency_evidence(documents: list[dict[str, Any]]) -> list[dict[str, Any]
             _evidence_row(
                 state=state,
                 skill_key=(value.get("skill") or {}).get("key"),
-                work_ref=(value.get("work") or {}).get("workRef"),
-                run_id=None,
+                work_ref=_work_ref(value),
+                run_id=value.get("runId") or value.get("run_id"),
                 source_kind="dependency-authority",
                 source_type=value.get("schema"),
                 roots=_roots_from(value),
@@ -450,6 +474,74 @@ def _skill_matches_work(
     ) or any(
         row.get("skillKey") == key and row.get("workRef") == work_ref
         for row in evidence
+    )
+
+
+def _event_with_document_scope(
+    event: Mapping[str, Any], document: Mapping[str, Any]
+) -> dict[str, Any]:
+    result = copy.deepcopy(dict(event))
+    if not result.get("run_id") and not result.get("runId"):
+        result["run_id"] = document.get("run_id") or document.get("runId")
+    if not _work_ref(result):
+        document_work = _work_ref(document)
+        if document_work:
+            result["work_id"] = document_work
+    return result
+
+
+def _document_matches_scope(
+    value: Mapping[str, Any], *, run_id: str | None, work_ref: str | None
+) -> bool:
+    document_run = value.get("runId") or value.get("run_id")
+    document_work = _work_ref(value)
+    events = [
+        _event_with_document_scope(event, value) for event in value.get("events") or []
+    ]
+    if run_id is not None:
+        run_candidates = {
+            str(candidate)
+            for candidate in [
+                document_run,
+                *(event.get("runId") or event.get("run_id") for event in events),
+            ]
+            if candidate
+        }
+        if run_id not in run_candidates:
+            return False
+    if work_ref is not None:
+        work_candidates = {
+            str(candidate)
+            for candidate in [document_work, *(_work_ref(event) for event in events)]
+            if candidate
+        }
+        if work_ref not in work_candidates:
+            return False
+    return True
+
+
+def _evidence_matches_scope(
+    value: Mapping[str, Any], *, run_id: str | None, work_ref: str | None
+) -> bool:
+    source_kind = str((value.get("source") or {}).get("kind") or "")
+    if source_kind in {"registry-event", "lifecycle-receipt"}:
+        return True
+    if run_id is not None and source_kind != "registry-fold":
+        if value.get("runId") != run_id:
+            return False
+    if work_ref is not None:
+        if value.get("workRef") != work_ref:
+            return False
+    return True
+
+
+def _work_ref(value: Mapping[str, Any]) -> Any:
+    work = value.get("work") or {}
+    return (
+        work.get("workRef")
+        or work.get("ref")
+        or value.get("workRef")
+        or value.get("work_id")
     )
 
 

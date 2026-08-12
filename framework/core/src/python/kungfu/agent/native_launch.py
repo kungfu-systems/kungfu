@@ -206,6 +206,7 @@ class NativeLaunchCoordinator:
         interactive_argv: Callable[[Mapping[str, Any]], list[str]],
         semantic_root: Callable[[Any], str],
         heartbeat_observation: Callable[[Mapping[str, Any]], Mapping[str, Any]],
+        finalize_environment: Callable[[Mapping[str, str]], None],
     ) -> None:
         self.verify_profile = verify_profile
         self.resolve_cwd = resolve_cwd
@@ -215,6 +216,7 @@ class NativeLaunchCoordinator:
         self.interactive_argv = interactive_argv
         self.semantic_root = semantic_root
         self.heartbeat_observation = heartbeat_observation
+        self.finalize_environment = finalize_environment
 
     def run(
         self,
@@ -436,23 +438,33 @@ class NativeLaunchCoordinator:
             stop_heartbeat.set()
             if heartbeat_thread is not None:
                 heartbeat_thread.join(timeout=max(1.0, heartbeat_seconds * 2))
-            if registered and session_invoker is not None:
-                session_invoker(
-                    {
-                        "operation": "end-native",
-                        "actorId": actor_id,
-                        "client": "cli",
-                        "session": dict(session_ref),
-                        "processIdentity": process_identity,
-                        "exit": {
-                            "exitCode": (
-                                int(completed.returncode)
-                                if completed is not None
-                                else None
-                            ),
-                            "signal": None,
-                        },
-                    }
-                )
+            finalize_error: Exception | None = None
+            try:
+                self.finalize_environment(env)
+            except Exception as error:  # pragma: no cover - defensive lifecycle path
+                finalize_error = error
+            finally:
+                if registered and session_invoker is not None:
+                    session_invoker(
+                        {
+                            "operation": "end-native",
+                            "actorId": actor_id,
+                            "client": "cli",
+                            "session": dict(session_ref),
+                            "processIdentity": process_identity,
+                            "exit": {
+                                "exitCode": (
+                                    int(completed.returncode)
+                                    if completed is not None
+                                    else None
+                                ),
+                                "signal": None,
+                            },
+                        }
+                    )
+            if finalize_error is not None:
+                raise ValueError(
+                    f"native Agent skill audit finalization failed: {finalize_error}"
+                ) from finalize_error
             if heartbeat_errors and completed is not None:
                 raise ValueError(f"native Agent observer failed: {heartbeat_errors[0]}")

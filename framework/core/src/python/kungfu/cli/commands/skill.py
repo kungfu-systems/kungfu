@@ -161,7 +161,9 @@ def _write_node_envelope_file(ctx, paths, source, profile, agent):
 
 
 def _default_skill_audit_log(ctx):
-    return os.path.join(ctx.runtime_dir, "skill-audit.jsonl")
+    return os.environ.get("KUNGFU_SKILL_AUDIT_FILE") or os.path.join(
+        ctx.runtime_dir, "skill-audit.jsonl"
+    )
 
 
 def _bundle_audit_path(ctx, run_id, bundle_dir=None, audit_file=None):
@@ -1032,7 +1034,8 @@ def read(ctx, key_or_path, paths, run_id, audit_file, no_audit, as_json):
     event = skill_loaded_event(
         parsed,
         markdown,
-        run_id=run_id,
+        run_id=run_id or os.environ.get("KUNGFU_SKILL_RUN_ID"),
+        work_id=os.environ.get("KUNGFU_SKILL_WORK_REF"),
         source="cli",
         manager="python",
     )

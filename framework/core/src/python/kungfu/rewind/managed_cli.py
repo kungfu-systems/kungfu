@@ -39,6 +39,7 @@ from kungfu.workspace import (
     record_workspace_capture,
 )
 from kungfu.skill import (
+    append_audit_event,
     build_skill_runtime_audit,
     build_skill_context,
     context_file_from_env,
@@ -46,6 +47,7 @@ from kungfu.skill import (
     has_context_envelope_info,
     inject_skill_context,
     load_skill_context_file,
+    read_audit_file,
     skill_advertised_event,
     skill_audit_document,
     skill_contract,
@@ -138,6 +140,10 @@ def run_and_report(
     prompt_for_provider = prompt
     envelope = None
     skill_audit_events: list[Any] = []
+    provider_env = {**os.environ, **(skill_context_env or {})}
+    managed_audit_log_path = os.path.join(
+        runtime_dir, "skill-manager", f"managed-run-{run_id}-events.jsonl"
+    )
     if skill_context:
         context_path = skill_context_file or context_file_from_env()
         if context_path:
@@ -181,15 +187,26 @@ def run_and_report(
         if has_context_envelope_info(envelope):
             prompt_for_provider = inject_skill_context(prompt, envelope)
         if has_advertised_skills(envelope):
-            skill_audit_events.append(
-                skill_advertised_event(
-                    envelope,
-                    run_id=run_id,
-                    provider=provider,
-                    work_id=work_id,
-                    context_file=context_path,
-                )
+            advertised_event = skill_advertised_event(
+                envelope,
+                run_id=run_id,
+                provider=provider,
+                work_id=work_id,
+                context_file=context_path,
             )
+            skill_audit_events.append(advertised_event)
+            append_audit_event(managed_audit_log_path, advertised_event)
+        provider_env.update(
+            {
+                "KF_HOME": str(home or runtime_dir),
+                "KF_RUNTIME_DIR": str(runtime_dir),
+                "KUNGFU_SKILL_AUDIT_FILE": managed_audit_log_path,
+                "KUNGFU_SKILL_RUN_ID": run_id,
+                "KUNGFU_SKILL_RUNTIME_AUDIT_FILE": launch_runtime_audit_path,
+            }
+        )
+        if work_id:
+            provider_env["KUNGFU_SKILL_WORK_REF"] = work_id
 
     if not quiet:
         print(f"  prompt  {prompt}")
@@ -232,6 +249,7 @@ def run_and_report(
             emit=emit,
             run_id=run_id,
             work_id=work_id,
+            env=provider_env,
         )
 
         status = RunStatus.Succeeded if result.exit_code == 0 else RunStatus.Failed
@@ -271,6 +289,9 @@ def run_and_report(
         skill_audit_hash = None
         skill_runtime_audit_doc = None
         skill_runtime_audit_path = None
+        if os.path.isfile(managed_audit_log_path):
+            observed_audit = read_audit_file(managed_audit_log_path)
+            skill_audit_events = list(observed_audit.get("events") or [])
         if skill_audit_events:
             skill_audit_path = os.path.join(bundle_dir, "skill-audit.json")
             skill_audit_doc = skill_audit_document(

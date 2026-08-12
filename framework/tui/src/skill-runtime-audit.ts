@@ -11,7 +11,7 @@ export type SkillRuntimeAuditProjection = {
   authority: 'read-only-projection';
 };
 
-type RuntimeAudit = {
+export type TuiSkillRuntimeAudit = {
   schema?: unknown;
   runtimeAuditRoot?: unknown;
   documentRoot?: unknown;
@@ -26,7 +26,7 @@ export function projectTuiSkillRuntimeAudit(
   if (!value || typeof value !== 'object') {
     throw new Error('Kungfu Skill runtime audit must be an object');
   }
-  const document = value as RuntimeAudit;
+  const document = value as TuiSkillRuntimeAudit;
   if (document.schema !== 'kungfu.skill-runtime-audit/v2') {
     throw new Error('Kungfu Skill runtime audit schema is invalid');
   }
@@ -65,6 +65,32 @@ export function projectTuiSkillRuntimeAudit(
     throw new Error('Kungfu Skill TUI projection changed rooted identity');
   }
   return expected;
+}
+
+export function describeTuiSkillRuntimeAudit(value: unknown): string[] {
+  const projection = projectTuiSkillRuntimeAudit(value);
+  const document = value as TuiSkillRuntimeAudit;
+  const skills = Array.isArray(document.skills) ? document.skills : [];
+  const evidence = Array.isArray(document.evidence) ? document.evidence : [];
+  const scope = (document.scope ?? {}) as Record<string, unknown>;
+  const recovery = (document.recovery ?? {}) as Record<string, unknown>;
+  const first = (skills[0] ?? {}) as Record<string, unknown>;
+  const identity = (first.identity ?? {}) as Record<string, unknown>;
+  const bindings = Array.isArray(first.workBindings) ? first.workBindings : [];
+  const states = Array.isArray(first.observedStates)
+    ? first.observedStates.map(String)
+    : [];
+  const rooted = evidence.filter(
+    (row) =>
+      ((row as Record<string, unknown>).proof as Record<string, unknown>)
+        ?.status === 'rooted',
+  ).length;
+  return [
+    `Skill audit ${projection.runtimeAuditRoot} · run ${String(scope.runId ?? '-')} · Work ${String(scope.workRef ?? '-')}`,
+    skills.length > 0
+      ? `${String(identity.key ?? 'unknown')}@${String(identity.revision ?? '?')} · ${String(first.lifecycle ?? 'unproved')} · ${bindings.length} Work binding(s) · states ${states.join(',') || 'unproved'} · evidence ${rooted}/${evidence.length} rooted · recovery ${String(recovery.verdict ?? 'unproved')}`
+      : `no scoped Skill · evidence ${rooted}/${evidence.length} rooted · recovery ${String(recovery.verdict ?? 'unproved')}`,
+  ];
 }
 
 function rootList(value: unknown): string[] {
