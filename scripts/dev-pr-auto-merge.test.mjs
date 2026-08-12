@@ -6,7 +6,10 @@ import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 
-import { runNativeUnderWarrant } from '../framework/dev-delivery/native-under-warrant.mjs';
+import {
+  GitHubNativeStatusClient,
+  runNativeUnderWarrant,
+} from '../framework/dev-delivery/native-under-warrant.mjs';
 
 const workflow = fs.readFileSync(
   '.github/workflows/dev-pr-auto-merge.yml',
@@ -134,6 +137,46 @@ test('Dev auto-merge waits for PR checks and lands through the native queue', ()
     /github-token: \$\{\{ secrets\.KUNGFU_GITHUB_TOKEN \}\}/u,
   );
   assert.doesNotMatch(workflow, /gh pr merge|npm publish|git tag/iu);
+});
+
+test('native Warrant retries transient exact-head reads without retrying writes', async () => {
+  const calls = [];
+  const delays = [];
+  const responses = [
+    new TypeError('fetch failed'),
+    {
+      ok: true,
+      async text() {
+        return JSON.stringify({ head: { sha: '1'.repeat(40) } });
+      },
+    },
+    new TypeError('write fetch failed'),
+  ];
+  const client = new GitHubNativeStatusClient({
+    repository: 'kungfu-systems/kungfu',
+    token: 'test-token',
+    fetchImpl: async (_url, options) => {
+      calls.push(options.method);
+      const response = responses.shift();
+      if (response instanceof Error) throw response;
+      return response;
+    },
+    sleep: async (delayMs) => delays.push(delayMs),
+  });
+
+  const pullRequest = await client.request('/pulls/42');
+  assert.equal(pullRequest.head.sha, '1'.repeat(40));
+  assert.deepEqual(calls, ['GET', 'GET']);
+  assert.deepEqual(delays, [1_000]);
+
+  await assert.rejects(
+    client.request('/statuses/head', {
+      method: 'POST',
+      body: { state: 'success' },
+    }),
+    /write fetch failed/u,
+  );
+  assert.deepEqual(calls, ['GET', 'GET', 'POST']);
 });
 
 test('Dev behind admission produces and forwards an exact Project Cut replay proof', () => {

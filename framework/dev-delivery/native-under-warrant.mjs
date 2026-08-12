@@ -10,6 +10,8 @@ import { pathToFileURL } from 'node:url';
 import { digest } from '../../scripts/affected-native-proof.mjs';
 
 const SHA = /^[0-9a-f]{40}$/u;
+const TRANSIENT_GET_ATTEMPTS = 3;
+const TRANSIENT_GET_DELAY_MS = 1_000;
 
 function flag(args, name, fallback = '') {
   const index = args.indexOf(`--${name}`);
@@ -38,6 +40,7 @@ export class GitHubNativeStatusClient {
     token,
     apiUrl = 'https://api.github.com',
     fetchImpl = globalThis.fetch,
+    sleep = (delayMs) => new Promise((resolve) => setTimeout(resolve, delayMs)),
   }) {
     if (!repository) throw new Error('repository is required');
     if (!token) throw new Error('GITHUB_TOKEN is required');
@@ -45,24 +48,34 @@ export class GitHubNativeStatusClient {
     this.token = token;
     this.apiUrl = apiUrl.replace(/\/+$/u, '');
     this.fetch = fetchImpl;
+    this.sleep = sleep;
   }
 
   async request(requestPath, { method = 'GET', body } = {}) {
-    const response = await this.fetch(`${this.apiUrl}${requestPath}`, {
-      method,
-      headers: {
-        accept: 'application/vnd.github+json',
-        authorization: `Bearer ${this.token}`,
-        'content-type': 'application/json',
-        'x-github-api-version': '2022-11-28',
-      },
-      body: body === undefined ? undefined : JSON.stringify(body),
-    });
-    const raw = await response.text();
-    const data = raw ? JSON.parse(raw) : null;
-    if (!response.ok)
-      throw new Error(data?.message || `${method} ${requestPath} failed`);
-    return data;
+    const attempts = method === 'GET' ? TRANSIENT_GET_ATTEMPTS : 1;
+    for (let attempt = 1; attempt <= attempts; attempt += 1) {
+      try {
+        const response = await this.fetch(`${this.apiUrl}${requestPath}`, {
+          method,
+          headers: {
+            accept: 'application/vnd.github+json',
+            authorization: `Bearer ${this.token}`,
+            'content-type': 'application/json',
+            'x-github-api-version': '2022-11-28',
+          },
+          body: body === undefined ? undefined : JSON.stringify(body),
+        });
+        const raw = await response.text();
+        const data = raw ? JSON.parse(raw) : null;
+        if (!response.ok)
+          throw new Error(data?.message || `${method} ${requestPath} failed`);
+        return data;
+      } catch (error) {
+        if (attempt === attempts) throw error;
+        await this.sleep(TRANSIENT_GET_DELAY_MS * attempt);
+      }
+    }
+    throw new Error(`${method} ${requestPath} exhausted retries`);
   }
 
   async requirePullRequest(number, expectedHead, targetBranch) {
