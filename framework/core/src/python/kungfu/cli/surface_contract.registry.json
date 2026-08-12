@@ -97,7 +97,7 @@
   "overrides": {},
   "aliases": [],
   "migrationDecisions": [
-    {"pair": "source/remote", "decision": "keep-distinct", "evidence": ["source uses kungfu.sources.store for Atlas-style read-only storage imports with range filters", "remote uses kungfu.remote.store for host/home transport and source-scoped mirrors", "handlers, persisted schemas, and side effects differ"]},
+    {"pair": "source/remote", "decision": "keep-distinct", "evidence": ["source uses kungfu.sources.store for read-only storage-source imports with range filters", "remote uses kungfu.remote.store for host/home transport and source-scoped mirrors", "handlers, persisted schemas, and side effects differ"]},
     {"pair": "profile/kfx-profile", "decision": "keep-distinct", "evidence": ["profile authors and executes generic Profile Suite intents and receipts", "kfx manages package installation, native execution, trust, and package schemas", "kfx profile-schema is schema discovery, not a second Profile action handler"]},
     {"pair": "work/agent-work", "decision": "keep-distinct", "evidence": ["work owns the legacy journal work-item lifecycle", "agent work owns the KFD-7 Product Profile Fact/action API", "schemas and mutation authorities are intentionally separate"]},
     {"pair": "developer-top-level/dev", "decision": "split-canonical", "canonical": {"engage": "kungfu dev engage", "env": "kungfu env", "schema": "kungfu dev schema", "sdk": "kungfu sdk"}, "evidence": ["each developer capability has exactly one live path", "env is dispatched by the native installed runtime", "sdk is the public application assembly and KFD/build entrypoint"]}
@@ -113,7 +113,7 @@
   "catalogProjection": {
     "artifact": "kungfu.agent/cli_surface.catalog.json",
     "authority": "runtime-fold",
-    "expectedSurfaceRoot": "sha256:f1ffd86f0565fb1dfb1ba52306cc8f03d28f30630fe628aead67dcb5552e5c8d",
+    "expectedSurfaceRoot": "sha256:1829e14b5de827ea7b58a82060ce36d2791a23ea47f4f5b7f8c529b458de02e8",
     "consumers": {
       "agentCapabilities": "embed-complete",
       "agentCommands": "strict-link",

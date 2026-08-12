@@ -397,6 +397,7 @@ def test_live_registry_and_runtime_are_canonical_only():
     for identifier in forbidden_identifiers:
         assert identifier not in registry_text
         assert identifier not in contract_text
+    assert "-style" not in registry_text.lower()
     assert "aliasDispositionProfiles" not in BASE_REGISTRY
     assert all(row["aliases"] == [] for row in rows)
     assert len(canonical_paths) == len(set(canonical_paths))
