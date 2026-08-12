@@ -482,6 +482,7 @@ function verifyCodexPlanWithoutCodex({
       projectPlan.planRoot,
       '--actor',
       'post-sign-smoke',
+      '--execute',
       '--json',
     ],
     { cwd: temporaryRoot, env },
