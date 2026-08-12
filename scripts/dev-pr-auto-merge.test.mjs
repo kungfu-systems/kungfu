@@ -19,9 +19,13 @@ test('Dev auto-merge admits only explicitly ready reviewed same-repository PRs',
   const reusableRef = workflow.match(
     /uses: kungfu-systems\/buildchain\/\.github\/workflows\/dev-pr-auto-merge\.yml@([0-9a-f]{40})/u,
   )?.[1];
-  assert.equal(reusableRef, '6057d71142dfc6a9d78872e316eca87d9510e176');
+  assert.equal(reusableRef, '5cca9d518133b30ff10aa47b8cf237d548bee25e');
   assert.match(workflow, new RegExp(`buildchain-ref: ${reusableRef}`, 'u'));
   assert.match(workflow, /workflow_run:[\s\S]*Core affected native/u);
+  assert.match(
+    workflow,
+    /repository_dispatch:[\s\S]*buildchain-dev-delivery-wake/u,
+  );
   assert.match(workflow, /pull_request_target:[\s\S]*ready_for_review/u);
   assert.match(workflow, /pull_request_review:[\s\S]*submitted, dismissed/u);
   assert.match(workflow, /cron: "23,53 \* \* \* \*"/u);
@@ -37,6 +41,33 @@ test('Dev auto-merge admits only explicitly ready reviewed same-repository PRs',
   assert.match(workflow, /require-approval: true/u);
   assert.match(workflow, /same-repository-only: true/u);
   assert.match(workflow, /max-merges: 1/u);
+});
+
+test('Warrant wake uses the bounded candidate envelope and resolves source authority independently', () => {
+  assert.match(
+    workflow,
+    /WAKE_TARGET_BRANCH: \$\{\{ github\.event\.client_payload\.candidate\.targetBranch \}\}/u,
+  );
+  assert.match(
+    workflow,
+    /WAKE_PR_NUMBER: \$\{\{ github\.event\.client_payload\.candidate\.pullRequestNumber \}\}/u,
+  );
+  assert.match(
+    workflow,
+    /WAKE_HEAD_SHA: \$\{\{ github\.event\.client_payload\.candidate\.sourceHead \}\}/u,
+  );
+  assert.match(
+    workflow,
+    /EVENT_NAME" = "repository_dispatch"[\s\S]*WAKE_TARGET_BRANCH" != "\$DEFAULT_BRANCH"[\s\S]*actions\/workflows\/affected-native-pr\.yml\/runs[\s\S]*select\(\.head_sha == \$head\)[\s\S]*\.number == \$pullRequest/u,
+  );
+  assert.doesNotMatch(
+    workflow,
+    /github\.event\.client_payload\.(?:targetBranch|pullRequestNumber|sourceHead|sourceWorkflowRunId)/u,
+  );
+  assert.doesNotMatch(
+    workflow,
+    /github\.event\.client_payload\.candidate\.sourceWorkflowRunId/u,
+  );
 });
 
 test('Dev Agent admission binds every targeted run to one exact PR head', () => {
@@ -145,7 +176,7 @@ test('Dev behind admission produces and forwards an exact Project Cut replay pro
   );
   assert.match(
     workflow,
-    /Check out exact Buildchain delivery runtime[\s\S]*ref: 6057d71142dfc6a9d78872e316eca87d9510e176/u,
+    /Check out exact Buildchain delivery runtime[\s\S]*ref: 5cca9d518133b30ff10aa47b8cf237d548bee25e/u,
   );
   assert.match(
     workflow,

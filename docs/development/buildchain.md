@@ -52,6 +52,17 @@ The source workflow also observes the active phase before every legacy hosted
 native lane, so no normal PR event can start those expensive jobs without the
 same provisional or qualified authority.
 
+After an exact release or lease recovery, Buildchain wakes the next retained
+candidate with the `buildchain-dev-delivery-wake` repository event. The complete
+candidate remains nested under one `client_payload.candidate` envelope so the
+GitHub repository-dispatch top-level property limit cannot discard semantic
+proof bindings. Kungfu treats that payload only as a bounded wake coordinate:
+it requires the protected target, exact PR, and immutable head to agree, then
+resolves and verifies the matching source-acceptance run from GitHub before
+calling the pinned controller. A missing or malformed wake therefore leaves
+the queue fail-closed for patrol recovery; it never grants a later PR authority
+to pass the active Warrant.
+
 The integration PR has one bounded bootstrap: it may use the pre-upgrade
 controller only when the protected base lacks the native-under-Warrant marker
 and the exact candidate contains the pinned controller plus Warrant observer.

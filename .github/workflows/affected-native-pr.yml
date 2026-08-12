@@ -533,7 +533,7 @@ jobs:
             "repos/$GITHUB_REPOSITORY/contents/.github/workflows/affected-native-pr.yml" \
             -f ref="$head_sha" > "$head_native"
 
-          runtime_ref=6057d71142dfc6a9d78872e316eca87d9510e176
+          runtime_ref=5cca9d518133b30ff10aa47b8cf237d548bee25e
           if ! grep -Fq 'dev-delivery:native-under-warrant' "$base_controller" && \
              grep -Fq 'dev-delivery:native-under-warrant' "$head_controller" && \
              grep -Fq "dev-pr-auto-merge.yml@$runtime_ref" "$head_controller" && \
@@ -550,7 +550,7 @@ jobs:
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           repository: kungfu-systems/buildchain
-          ref: 6057d71142dfc6a9d78872e316eca87d9510e176
+          ref: 5cca9d518133b30ff10aa47b8cf237d548bee25e
           path: .buildchain/dev-delivery-runtime
           fetch-depth: 1
           persist-credentials: false
@@ -996,7 +996,7 @@ jobs:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           repository: kungfu-systems/buildchain
-          ref: 6057d71142dfc6a9d78872e316eca87d9510e176
+          ref: 5cca9d518133b30ff10aa47b8cf237d548bee25e
           path: .buildchain/dev-delivery-runtime
           persist-credentials: false
       - uses: actions/setup-node@v6.4.0

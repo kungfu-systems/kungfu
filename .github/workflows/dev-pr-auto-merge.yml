@@ -3,6 +3,8 @@
 name: Dev PR Auto Merge
 
 on:
+  repository_dispatch:
+    types: [buildchain-dev-delivery-wake]
   workflow_run:
     workflows:
       - Core affected native
@@ -77,6 +79,9 @@ jobs:
           DISPATCH_HEAD_SHA: ${{ inputs.expected-head-sha }}
           DISPATCH_SOURCE_RUN_ID: ${{ inputs.source-workflow-run-id }}
           DISPATCH_DRY_RUN: ${{ inputs.dry-run }}
+          WAKE_TARGET_BRANCH: ${{ github.event.client_payload.candidate.targetBranch }}
+          WAKE_PR_NUMBER: ${{ github.event.client_payload.candidate.pullRequestNumber }}
+          WAKE_HEAD_SHA: ${{ github.event.client_payload.candidate.sourceHead }}
           EVENT_PR_NUMBER: ${{ github.event.pull_request.number }}
           EVENT_PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
           GH_TOKEN: ${{ github.token }}
@@ -105,6 +110,26 @@ jobs:
           elif [ "$EVENT_NAME" = "pull_request_target" ] || [ "$EVENT_NAME" = "pull_request_review" ]; then
             expected_pr_number="$EVENT_PR_NUMBER"
             expected_head_sha="$EVENT_PR_HEAD_SHA"
+            source_runs="$(gh api --method GET \
+              "repos/$GITHUB_REPOSITORY/actions/workflows/affected-native-pr.yml/runs" \
+              -f head_sha="$expected_head_sha" \
+              -f event=pull_request \
+              -f status=completed \
+              -f per_page=100)"
+            source_workflow_run_id="$(jq -er \
+              --argjson pullRequest "$expected_pr_number" \
+              --arg head "$expected_head_sha" \
+              '[.workflow_runs[]
+                | select(.head_sha == $head)
+                | select(any(.pull_requests[]?; .number == $pullRequest))]
+               | sort_by(.id) | last | .id' <<<"$source_runs")"
+          elif [ "$EVENT_NAME" = "repository_dispatch" ]; then
+            if [ "$WAKE_TARGET_BRANCH" != "$DEFAULT_BRANCH" ]; then
+              echo "wake target branch does not match the protected default branch" >&2
+              exit 1
+            fi
+            expected_pr_number="$WAKE_PR_NUMBER"
+            expected_head_sha="$WAKE_HEAD_SHA"
             source_runs="$(gh api --method GET \
               "repos/$GITHUB_REPOSITORY/actions/workflows/affected-native-pr.yml/runs" \
               -f head_sha="$expected_head_sha" \
@@ -212,7 +237,7 @@ jobs:
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           repository: kungfu-systems/buildchain
-          ref: 6057d71142dfc6a9d78872e316eca87d9510e176
+          ref: 5cca9d518133b30ff10aa47b8cf237d548bee25e
           path: .buildchain/dev-delivery-runtime
           fetch-depth: 1
           persist-credentials: false
@@ -393,9 +418,9 @@ jobs:
       contents: write
       pull-requests: write
       statuses: write
-    uses: kungfu-systems/buildchain/.github/workflows/dev-pr-auto-merge.yml@6057d71142dfc6a9d78872e316eca87d9510e176
+    uses: kungfu-systems/buildchain/.github/workflows/dev-pr-auto-merge.yml@5cca9d518133b30ff10aa47b8cf237d548bee25e
     with:
-      buildchain-ref: 6057d71142dfc6a9d78872e316eca87d9510e176
+      buildchain-ref: 5cca9d518133b30ff10aa47b8cf237d548bee25e
       target-branch: ${{ needs.resolve-target.outputs.target-branch }}
       expected-pr-number: ${{ fromJSON(needs.resolve-target.outputs.expected-pr-number || '0') }}
       expected-head-sha: ${{ needs.resolve-target.outputs.expected-head-sha }}
@@ -403,7 +428,7 @@ jobs:
       handoff-workflow-id: dev-pr-auto-merge.yml
       source-workflow-id: affected-native-pr.yml
       diagnostic-context: Buildchain delivery intent
-      delivery-warrant-mode: ${{ (github.event_name == 'workflow_run' || github.event_name == 'pull_request_target' || github.event_name == 'pull_request_review' || (github.event_name == 'workflow_dispatch' && inputs.dry-run == false)) && 'required' || 'off' }}
+      delivery-warrant-mode: ${{ (github.event_name == 'workflow_run' || github.event_name == 'repository_dispatch' || github.event_name == 'pull_request_target' || github.event_name == 'pull_request_review' || (github.event_name == 'workflow_dispatch' && inputs.dry-run == false)) && 'required' || 'off' }}
       assignment-root: ${{ needs.delivery-contract.outputs.assignment-root }}
       initiative-root: ${{ needs.delivery-contract.outputs.initiative-root }}
       source-identity-root: ${{ needs.delivery-contract.outputs.source-identity-root }}
