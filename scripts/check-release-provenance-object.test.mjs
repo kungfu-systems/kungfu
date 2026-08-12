@@ -21,7 +21,9 @@ test('release provenance is a welded KFR2 semantic contract', () => {
     new Set([
       'derived-from',
       'acknowledges',
+      'has-content',
       'qualified-by',
+      'approved-by',
       'authorized-by',
       'implements-contract',
       'projected-as',
