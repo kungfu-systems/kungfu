@@ -3,7 +3,7 @@
   "contract": "kungfu-buildchain-dev-delivery-warrant-queue",
   "repository": "kungfu-systems/kungfu",
   "protectedBase": "dev/v4/v4.0",
-  "generation": 1394,
+  "generation": 1395,
   "fencingCounter": 342,
   "policy": {
     "agingSeconds": 900,
@@ -15871,6 +15871,6 @@
       ]
     }
   ],
-  "updatedAt": "2026-08-12T13:26:39.848Z",
-  "stateRoot": "sha256:d9fc9e477034935f6293d65ee34e0fef3319809b30d4f8342b94b2368f955af7"
+  "updatedAt": "2026-08-12T13:27:39.372Z",
+  "stateRoot": "sha256:59d7d8dd4d75eeb228ced3b480f7aa5e72d4934e4ef054daa933e0fc519aa567"
 }
