@@ -379,7 +379,12 @@ test('signed runtime receipt root changes with runtime evidence', () => {
 
 test('post-sign Codex planning is credential-free and selects only the fixture profile', () => {
   const source = fs.readFileSync(SCRIPT, 'utf8');
+  const starterCreate = source.slice(
+    source.indexOf("'starter-create'"),
+    source.indexOf('const plan =', source.indexOf("'starter-create'")),
+  );
   assert.match(source, /!\['CODEX_HOME', 'OPENAI_API_KEY'\]\.includes\(key\)/u);
+  assert.match(starterCreate, /'--execute'/u);
   assert.match(source, /agent\.defaultRuntimeProfile/u);
   assert.match(source, /'run',[\s\S]*?'codex',[\s\S]*?'--plan'/u);
   assert.match(source, /realCodexRequired: false/u);
