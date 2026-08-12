@@ -15,9 +15,9 @@ const workflow = fs.readFileSync(
 
 test('Dev auto-merge admits only explicitly ready reviewed same-repository PRs', () => {
   const reusableRef = workflow.match(
-    /uses: kungfu-systems\/buildchain\/\.github\/workflows\/dev-pr-auto-merge\.yml@([0-9a-f]{40})/u,
+    /uses: kungfu-systems\/buildchain\/\.github\/workflows\/dev-pr-auto-merge\.yml@([0-9a-z./-]+)/u,
   )?.[1];
-  assert.equal(reusableRef, '6057d71142dfc6a9d78872e316eca87d9510e176');
+  assert.equal(reusableRef, 'train/v3/v3.0/large-warrant-queue-readback');
   assert.match(workflow, new RegExp(`buildchain-ref: ${reusableRef}`, 'u'));
   assert.match(workflow, /workflow_run:[\s\S]*Core affected native/u);
   assert.match(workflow, /pull_request_target:[\s\S]*ready_for_review/u);
@@ -143,7 +143,7 @@ test('Dev behind admission produces and forwards an exact Project Cut replay pro
   );
   assert.match(
     workflow,
-    /Check out exact Buildchain delivery runtime[\s\S]*ref: 6057d71142dfc6a9d78872e316eca87d9510e176/u,
+    /Check out exact Buildchain delivery runtime[\s\S]*ref: train\/v3\/v3\.0\/large-warrant-queue-readback/u,
   );
   assert.match(
     workflow,

@@ -212,7 +212,7 @@ jobs:
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           repository: kungfu-systems/buildchain
-          ref: 6057d71142dfc6a9d78872e316eca87d9510e176
+          ref: train/v3/v3.0/large-warrant-queue-readback
           path: .buildchain/dev-delivery-runtime
           fetch-depth: 1
           persist-credentials: false
@@ -393,9 +393,9 @@ jobs:
       contents: write
       pull-requests: write
       statuses: write
-    uses: kungfu-systems/buildchain/.github/workflows/dev-pr-auto-merge.yml@6057d71142dfc6a9d78872e316eca87d9510e176
+    uses: kungfu-systems/buildchain/.github/workflows/dev-pr-auto-merge.yml@train/v3/v3.0/large-warrant-queue-readback
     with:
-      buildchain-ref: 6057d71142dfc6a9d78872e316eca87d9510e176
+      buildchain-ref: train/v3/v3.0/large-warrant-queue-readback
       target-branch: ${{ needs.resolve-target.outputs.target-branch }}
       expected-pr-number: ${{ fromJSON(needs.resolve-target.outputs.expected-pr-number || '0') }}
       expected-head-sha: ${{ needs.resolve-target.outputs.expected-head-sha }}
