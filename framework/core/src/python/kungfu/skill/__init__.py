@@ -1,6 +1,16 @@
 # SPDX-License-Identifier: Apache-2.0
 
-from .catalog import build_catalog, catalog_entry
+from .catalog import (
+    SkillAuthoringError,
+    apply_scaffold,
+    authoring_contract,
+    build_catalog,
+    candidate_catalog,
+    catalog_entry,
+    inspect_candidates,
+    plan_scaffold,
+    qualify_draft,
+)
 from .context import build_context_envelope, build_kungfu_environment
 from .dependencies import (
     SkillAuthorityError,
@@ -23,15 +33,6 @@ from .audit import (
     write_audit_document,
 )
 from .parser import SkillError, parse_skill
-from .authoring import (
-    SkillAuthoringError,
-    apply_scaffold,
-    authoring_contract,
-    candidate_catalog,
-    inspect_candidates,
-    plan_scaffold,
-    qualify_draft,
-)
 from .provider import (
     build_skill_context,
     context_file_from_env,
