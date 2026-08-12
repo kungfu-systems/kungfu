@@ -15,10 +15,8 @@ from kungfu import project_template
 from kungfu.project_tour import orchestration as project_tour_runtime
 from kungfu import projects as project_registry
 from kungfu.agent.kfd3 import kfd3_api
-from kungfu.agent import runtime_profiles
 from kungfu.cli.commands import PrioritizedCommandGroup, kfc
 from kungfu.cli.surface_contract import surface as surface
-from kungfu.config import resolve_config
 from kungfu.workspace import resolve_workspace_target
 
 
@@ -147,8 +145,9 @@ def register_advisories(agent, command_context) -> None:
 @kfc.group(
     name="agent-work-lab",
     cls=PrioritizedCommandGroup,
+    invoke_without_command=True,
     help_priority=1,
-    help="inspect startup and qualify local agent continuity",
+    help="learn, try, and verify durable Agent Work continuity",
 )
 @click.help_option("-h", "--help")
 @kfd3_api("kungfu.agent-work-lab")
@@ -156,8 +155,70 @@ def register_advisories(agent, command_context) -> None:
 def agent_work_lab(ctx):
     """The shared, boot-safe Agent Work Lab authority."""
 
+    if ctx.invoked_subcommand is not None:
+        return
+    if _interactive_terminal():
+        return _open_lab(ctx)
+    click.echo(
+        "Agent Work Lab\n\n"
+        "  open    Enter the interactive Lab\n"
+        "  watch   Watch the playback-only continuity demo\n"
+        "  tour    Watch the playback-only Project recovery story\n"
+        "  try     Create a reviewed Starter Project and keep it\n"
+        "  test    Verify continuity with a local Agent\n"
+        "  report  Reopen the latest retained test result\n\n"
+        "Run `kungfu agent-work-lab --help` for options or "
+        "`kungfu agent-work-lab catalog --json` for the complete surface."
+    )
 
-@agent_work_lab.command(help="resolve the boot route without writing state")
+
+def _interactive_terminal():
+    return (
+        click.get_text_stream("stdin").isatty()
+        and click.get_text_stream("stdout").isatty()
+    )
+
+
+def _open_lab(ctx):
+    from kungfu.cli.tui_runtime import run_tui
+
+    return run_tui(ctx, ("--agent-work-lab-open",))
+
+
+@agent_work_lab.command(
+    help="enter the interactive Agent Work Lab",
+    help_priority=1,
+)
+@surface(mutation_class="read")
+@kfd3_api("kungfu.agent-work-lab.open")
+@kfc.pass_context()
+def open(ctx):
+    if not _interactive_terminal():
+        raise click.ClickException(
+            "open requires an interactive terminal; use `watch` or `tour` in a "
+            "terminal, or `test --json` for scripted qualification"
+        )
+    return _open_lab(ctx)
+
+
+@agent_work_lab.command(
+    help="watch the playback-only continuity demo",
+    help_priority=2,
+)
+@surface(mutation_class="read")
+@kfd3_api("kungfu.agent-work-lab.watch")
+@kfc.pass_context()
+def watch(ctx):
+    """Launch playback; it does not test an installed Agent."""
+
+    from kungfu.cli.tui_runtime import run_tui
+
+    return run_tui(ctx, ("--agent-work-lab-autoplay",))
+
+
+@agent_work_lab.command(
+    help="resolve the boot route without writing state", help_priority=-1
+)
 @click.option("--json", "as_json", is_flag=True, help="machine-readable output")
 @kfd3_api("kungfu.agent-work-lab.inspect")
 @kfc.pass_context()
@@ -169,7 +230,10 @@ def inspect(ctx, as_json):
     click.echo(f"{payload['route']}: {payload['message']}")
 
 
-@agent_work_lab.command(help="list canonical Lab actions and startup state")
+@agent_work_lab.command(
+    help="list the complete canonical Lab surface and startup state",
+    help_priority=-1,
+)
 @click.option("--json", "as_json", is_flag=True, help="machine-readable output")
 @kfd3_api("kungfu.agent-work-lab.catalog")
 @kfc.pass_context()
@@ -184,24 +248,44 @@ def catalog(ctx, as_json):
         click.echo(f"  {action['id']} ({action['mutation']})")
 
 
-@agent_work_lab.command(help="discover local agent launchers without credentials")
+@agent_work_lab.command(
+    help="discover local agent launchers without credentials", help_priority=-1
+)
 @click.option("--json", "as_json", is_flag=True, help="machine-readable output")
 @kfd3_api("kungfu.agent-work-lab.agents")
 @kfc.pass_context()
 def agents(ctx, as_json):
-    payload = runtime_profiles.discover_catalog(
-        resolved_config=resolve_config(
-            config_home=ctx.config_home, runtime_home=ctx.home
-        )
+    payload = lab.human_agent_catalog(
+        config_home=ctx.config_home, runtime_home=ctx.home
     )
     if as_json:
         _json(payload)
         return
-    for row in payload["discovered"]:
-        click.echo(f"{row['profile']['id']}  {row['profile']['label']}")
+    if not payload["agents"]:
+        click.echo("No local Agent is available.")
+        click.echo("Next: install an Agent CLI or run `kungfu agent runtime discover`.")
+        return
+    for row in payload["agents"]:
+        markers = [
+            name
+            for name, present in (
+                ("default", row["default"]),
+                ("recommended", row["recommended"]),
+                ("configured", row["configured"]),
+                ("discovered", row["discovered"]),
+            )
+            if present
+        ]
+        version = f" · {row['version']}" if row.get("version") else ""
+        click.echo(
+            f"{row['label']} · {row['provider']}{version} · "
+            f"{'available' if row['available'] else 'unavailable'} "
+            f"[{', '.join(markers)}]"
+        )
+        click.echo(f"  exact id: {row['id']}")
 
 
-@agent_work_lab.command(help="preview the deterministic offline demo")
+@agent_work_lab.command(help="preview the deterministic offline demo", help_priority=-1)
 @click.option("--json", "as_json", is_flag=True, help="machine-readable output")
 @kfd3_api("kungfu.agent-work-lab.plan")
 def plan(as_json):
@@ -212,7 +296,9 @@ def plan(as_json):
     click.echo(f"Agent Work Lab demo plan: {payload['planRoot']}")
 
 
-@agent_work_lab.command(help="run the isolated two-session offline demo")
+@agent_work_lab.command(
+    help="run the isolated two-session offline demo", help_priority=-1
+)
 @click.option(
     "--output",
     type=click.Path(path_type=Path),
@@ -244,8 +330,9 @@ def demo(output, events_json, as_json):
 
 @agent_work_lab.command(
     help="launch the guided offline autoplay in the shipped TUI",
+    help_priority=-1,
 )
-@kfd3_api("kungfu.agent-work-lab")
+@kfd3_api("kungfu.agent-work-lab.autoplay")
 @kfc.pass_context()
 def autoplay(ctx):
     from kungfu.cli.tui_runtime import run_tui
@@ -256,6 +343,7 @@ def autoplay(ctx):
 @agent_work_lab.command(
     name="project-tour",
     help="play a disposable Project Work failure-and-recovery story",
+    help_priority=-1,
 )
 @click.option(
     "--episode",
@@ -274,6 +362,10 @@ def autoplay(ctx):
 @kfd3_api("kungfu.agent-work-lab")
 @kfc.pass_context()
 def project_tour(ctx, episode, speed):
+    return _run_project_tour(ctx, episode, speed)
+
+
+def _run_project_tour(ctx, episode, speed):
     from kungfu.cli.tui_runtime import run_tui
 
     with tempfile.TemporaryDirectory(prefix="kungfu-project-tour-") as temporary:
@@ -289,6 +381,31 @@ def project_tour(ctx, episode, speed):
                 episode,
             ),
         )
+
+
+@agent_work_lab.command(
+    help="watch the playback-only Project recovery story",
+    help_priority=3,
+)
+@click.option(
+    "--episode",
+    type=click.Choice(("1", "2", "all"), case_sensitive=False),
+    default="1",
+    show_default=True,
+)
+@click.option(
+    "--speed",
+    type=click.FloatRange(min=0.25, max=4.0),
+    default=1.0,
+    show_default=True,
+)
+@surface(mutation_class="read")
+@kfd3_api("kungfu.agent-work-lab.tour")
+@kfc.pass_context()
+def tour(ctx, episode, speed):
+    """Launch playback; it creates no Project that is kept afterward."""
+
+    return _run_project_tour(ctx, episode, speed)
 
 
 class _NativeProjectTourOperations:
@@ -548,8 +665,219 @@ def project_tour_run(
 
 
 @agent_work_lab.command(
+    name="try",
+    help="preview or create a persistent Starter Project",
+    help_priority=4,
+)
+@click.option("--destination", type=click.Path(path_type=Path))
+@click.option("--parent", type=click.Path(path_type=Path))
+@click.option("--expected-plan-root")
+@click.option("--actor", default="local-user", show_default=True)
+@click.option(
+    "--execute",
+    is_flag=True,
+    help="create the reviewed Project, select it, and open the TUI",
+)
+@click.option("--json", "as_json", is_flag=True, help="machine-readable output")
+@surface(mutation_class="write")
+@kfd3_api("kungfu.agent-work-lab.try")
+@kfc.pass_context()
+def try_starter(ctx, destination, parent, expected_plan_root, actor, execute, as_json):
+    """Keep the result; unlike tour, this is the user's real Starter Project."""
+
+    try:
+        plan = lab.plan_project_template(
+            lab.DEFAULT_TEMPLATE_ID,
+            destination,
+            parent=parent,
+        )
+    except (OSError, ValueError) as error:
+        raise click.ClickException(str(error)) from error
+    if not execute:
+        if as_json:
+            _json(plan)
+            return
+        click.echo(f"Starter Project: {plan['destination']}")
+        click.echo(f"  reviewed plan: {plan['planRoot']}")
+        click.echo("  no files written")
+        click.echo(
+            "Next: run `kungfu agent-work-lab try "
+            f"--destination {json.dumps(plan['destination'])} "
+            f"--expected-plan-root {plan['planRoot']} --execute`"
+        )
+        return
+    if not _interactive_terminal():
+        raise click.ClickException(
+            "try --execute opens the created Project and requires an interactive "
+            "terminal; scripted callers can use starter-create"
+        )
+    if as_json:
+        raise click.ClickException(
+            "try --json is a plan-only interface; use starter-create for scripted creation"
+        )
+    if not expected_plan_root:
+        raise click.ClickException(
+            "try --execute requires --expected-plan-root from the reviewed preview"
+        )
+    try:
+        receipt = lab.create_project_template(
+            lab.DEFAULT_TEMPLATE_ID,
+            plan["destination"],
+            expected_plan_root=expected_plan_root,
+            actor=actor,
+        )
+        project_registry.select_project(
+            receipt["destination"], config_home=ctx.config_home
+        )
+    except (OSError, ValueError) as error:
+        raise click.ClickException(str(error)) from error
+    if as_json:
+        _json(receipt)
+    click.echo(f"Created Starter Project: {receipt['destination']}")
+    click.echo("Opening the retained Project and its first governed Work.")
+    os.chdir(receipt["destination"])
+    from kungfu.cli.tui_runtime import run_tui
+
+    return run_tui(ctx)
+
+
+@agent_work_lab.command(
+    help="preview or run a same-Agent or cross-Agent continuity test",
+    help_priority=5,
+)
+@click.argument("agent", required=False, default="default")
+@click.option(
+    "--target-agent",
+    help="different Agent label, provider, default/recommended name, or exact id",
+)
+@click.option(
+    "--execute",
+    is_flag=True,
+    help="authorize two fresh local Agent processes in an isolated result directory",
+)
+@click.option("--output", type=click.Path(path_type=Path))
+@click.option(
+    "--timeout",
+    "timeout_seconds",
+    type=click.IntRange(min=1, max=3600),
+    default=300,
+    show_default=True,
+)
+@click.option("--events-json", is_flag=True)
+@click.option("--json", "as_json", is_flag=True, help="machine-readable output")
+@surface(mutation_class="write")
+@kfd3_api("kungfu.agent-work-lab.test")
+@kfc.pass_context()
+def test(
+    ctx,
+    agent,
+    target_agent,
+    execute,
+    output,
+    timeout_seconds,
+    events_json,
+    as_json,
+):
+    try:
+        source_id, catalog = lab.resolve_agent_selector(
+            agent, config_home=ctx.config_home, runtime_home=ctx.home
+        )
+        target_id = None
+        if target_agent:
+            target_id, _ = lab.resolve_agent_selector(
+                target_agent, config_home=ctx.config_home, runtime_home=ctx.home
+            )
+        source_plan = lab.agent_plan(
+            source_id, config_home=ctx.config_home, runtime_home=ctx.home
+        )
+        target_plan = (
+            lab.agent_plan(
+                target_id, config_home=ctx.config_home, runtime_home=ctx.home
+            )
+            if target_id and target_id != source_id
+            else None
+        )
+    except (OSError, ValueError) as error:
+        raise click.ClickException(str(error)) from error
+    preview = {
+        "schema": "kungfu.agent-work-lab.test-plan/v1",
+        "mode": "cross-agent" if target_plan else "same-agent",
+        "source": source_plan,
+        "target": target_plan or source_plan,
+        "selectedBy": {
+            "source": agent,
+            "target": target_agent or agent,
+        },
+        "credentialContentsRead": catalog.get("credentialContentsRead", False),
+        "requiresExecute": True,
+        "writeOccurred": False,
+    }
+    labels = {row["id"]: row["label"] for row in catalog["agents"]}
+    if not execute:
+        if events_json:
+            raise click.UsageError("--events-json requires --execute")
+        if as_json:
+            _json(preview)
+            return
+        click.echo(
+            f"{preview['mode']}: {labels.get(source_id, source_id)} → "
+            f"{labels.get(target_id or source_id, target_id or source_id)}"
+        )
+        click.echo("  two fresh processes; no copied chat; credentials are not read")
+        click.echo("Next: repeat this command with --execute.")
+        return
+    result_dir = output or lab.next_result_directory(ctx.runtime_dir)
+    try:
+        report = lab.run_agent(
+            source_id,
+            target_profile_id=target_id,
+            config_home=ctx.config_home,
+            runtime_home=ctx.home,
+            output_dir=result_dir,
+            timeout_seconds=timeout_seconds,
+            on_event=_event_json if events_json else None,
+        )
+    except (OSError, RuntimeError, ValueError) as error:
+        raise click.ClickException(str(error)) from error
+    if events_json:
+        _event_json(report)
+    elif as_json:
+        _json(report)
+    else:
+        click.echo(f"Agent Work Lab test: {report['status']}")
+        click.echo(f"  report: {Path(report['evidenceDirectory']) / 'report.json'}")
+        click.echo("Next: `kungfu agent-work-lab report`.")
+
+
+@agent_work_lab.command(
+    help="reopen the latest retained test result or one exact report",
+    help_priority=6,
+)
+@click.argument("result", required=False, type=click.Path(path_type=Path))
+@click.option("--json", "as_json", is_flag=True, help="machine-readable output")
+@surface(mutation_class="read")
+@kfd3_api("kungfu.agent-work-lab.report")
+@kfc.pass_context()
+def report(ctx, result, as_json):
+    try:
+        payload = lab.load_report(result, runtime_dir=ctx.runtime_dir)
+    except (OSError, ValueError) as error:
+        raise click.ClickException(str(error)) from error
+    if as_json:
+        _json(payload)
+        return
+    click.echo(f"Agent Work Lab result: {payload['status']}")
+    click.echo(f"  mode: {payload.get('runMode', 'offline-demo')}")
+    click.echo(f"  report root: {payload['reportRoot']}")
+    click.echo(f"  report: {payload['reportPath']}")
+    for check in payload.get("assessment", {}).get("oracleChecks", []):
+        click.echo(f"  {'PASS' if check.get('passed') else 'FAIL'}  {check['id']}")
+
+
+@agent_work_lab.command(
     name="starter-plan",
     help="preview the Agent Work Starter project without writing",
+    help_priority=-1,
 )
 @click.option("--destination", type=click.Path(path_type=Path))
 @click.option("--parent", type=click.Path(path_type=Path))
@@ -575,6 +903,7 @@ def starter_plan(destination, parent, as_json):
 @agent_work_lab.command(
     name="starter-create",
     help="create the exact reviewed Agent Work Starter project",
+    help_priority=-1,
 )
 @click.option(
     "--destination",
@@ -617,6 +946,7 @@ def starter_create(destination, expected_plan_root, actor, execute, as_json):
 @agent_work_lab.command(
     name="starter-resume",
     help="resume one exact retained Agent Work Starter project without writing",
+    help_priority=-1,
 )
 @click.option(
     "--workspace",
@@ -624,6 +954,7 @@ def starter_create(destination, expected_plan_root, actor, execute, as_json):
     type=click.Path(path_type=Path),
 )
 @click.option("--json", "as_json", is_flag=True, help="machine-readable output")
+@surface(mutation_class="read")
 @kfd3_api("kungfu.agent-work-lab.starter-resume")
 def starter_resume(workspace, as_json):
     try:
@@ -637,7 +968,9 @@ def starter_resume(workspace, as_json):
     click.echo(f"  retained Work request: {payload['initialWork']['requestRoot']}")
 
 
-@agent_work_lab.command(name="agent-plan", help="preview one exact local agent run")
+@agent_work_lab.command(
+    name="agent-plan", help="preview one exact local agent run", help_priority=-1
+)
 @click.argument("profile_id")
 @click.option("--json", "as_json", is_flag=True, help="machine-readable output")
 @kfd3_api("kungfu.agent-work-lab.agent-plan")
@@ -661,6 +994,7 @@ def agent_plan(ctx, profile_id, as_json):
 @agent_work_lab.command(
     name="agent-run",
     help="run two fresh sessions of one exact local agent after confirmation",
+    help_priority=-1,
 )
 @click.argument("profile_id")
 @click.option(

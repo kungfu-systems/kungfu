@@ -317,6 +317,16 @@ test('queue lease consumes an atomically qualified two-phase Warrant', () => {
       }),
     /not delivery-ready: merged/u,
   );
+  assert.throws(
+    () =>
+      verifyQueueAdmissionLease({
+        view: queueView(ROOT_A, { status: 'queued' }),
+        pullRequestNumber: 42,
+        sourceHeadSha: SOURCE,
+        now: '2026-08-04T02:30:00.000Z',
+      }),
+    /not delivery-ready: queued/u,
+  );
 });
 
 test('integration input binds merge-group authority and live queue entry', () => {
