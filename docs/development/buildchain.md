@@ -48,9 +48,31 @@ Buildchain classifies a moving dev base against the semantic source, closure,
 dependency, and toolchain roots. Non-overlapping base-only movement reuses the
 native proof; overlap, an unknown comparison graph, a source change, or a
 conflict fails closed into bounded requalification or safe Warrant release.
+Kungfu derives the semantic source root from the canonical changed-path set and
+each path's final Git object, mode, and deletion state. The exact replay tree
+remains delivery-bound, but it is deliberately excluded from the reusable
+qualification identity so an unrelated dev commit cannot rename an otherwise
+identical proof artifact before overlap classification runs.
+Kungfu reconstructs that optional Native Qualification Proof only from the
+exact source workflow run's `core-dev-delivery-source-proof-<head>` artifact.
+The protected caller verifies its Source Proof, PR/head/base coordinate, and
+all semantic roots against its independently projected Warrant input before it
+passes `native-proof-json` to Buildchain. A missing legacy artifact means a
+full native run; malformed or cross-head evidence cannot become reusable.
 The source workflow also observes the active phase before every legacy hosted
 native lane, so no normal PR event can start those expensive jobs without the
 same provisional or qualified authority.
+
+After an exact release or lease recovery, Buildchain wakes the next retained
+candidate with the `buildchain-dev-delivery-wake` repository event. The complete
+candidate remains nested under one `client_payload.candidate` envelope so the
+GitHub repository-dispatch top-level property limit cannot discard semantic
+proof bindings. Kungfu treats that payload only as a bounded wake coordinate:
+it requires the protected target, exact PR, and immutable head to agree, then
+resolves and verifies the matching source-acceptance run from GitHub before
+calling the pinned controller. A missing or malformed wake therefore leaves
+the queue fail-closed for patrol recovery; it never grants a later PR authority
+to pass the active Warrant.
 
 The integration PR has one bounded bootstrap: it may use the pre-upgrade
 controller only when the protected base lacks the native-under-Warrant marker

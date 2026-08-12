@@ -32,6 +32,8 @@ const PULL_REQUEST_CHECKOUT = '5'.repeat(40);
 const ROOT_A = `sha256:${'a'.repeat(64)}`;
 const ROOT_B = `sha256:${'b'.repeat(64)}`;
 const ROOT_C = `sha256:${'c'.repeat(64)}`;
+const ROOT_D = `sha256:${'d'.repeat(64)}`;
+const ROOT_E = `sha256:${'e'.repeat(64)}`;
 const WARRANT = {
   schema: 'kungfu.buildchain.dev-delivery-warrant/v1',
   candidateId: ROOT_C,
@@ -39,6 +41,9 @@ const WARRANT = {
   generation: 7,
   pullRequestNumber: 42,
   sourceHead: SOURCE,
+  phase: 'qualified',
+  nativeProofRoot: ROOT_D,
+  nativeProofReuseRoot: ROOT_E,
   issuedAt: '2026-08-04T02:00:00.000Z',
   expiresAt: '2026-08-04T03:00:00.000Z',
 };
@@ -160,7 +165,7 @@ function queueView(sourceProofRoot, overrides = {}) {
         pullRequestNumber: 42,
         sourceHead: SOURCE,
         sourceProofRoot,
-        status: 'selected',
+        status: 'qualified',
         ...overrides,
       },
     },
@@ -390,7 +395,7 @@ test('workflow consumes exact Buildchain Source and Integration Proofs', () => {
     /Consume Warrant and record exact Integration Delivery Proof[\s\S]*dev warrant observe[\s\S]*affected-native-proof\.mjs queue-lease-verify[\s\S]*affected-native-proof\.mjs integration-input[\s\S]*dev proof integration[\s\S]*--warrant-result/u,
   );
   assert.match(aggregate, /--branch "\$protected_base"/u);
-  assert.match(aggregate, /ref: 6057d71142dfc6a9d78872e316eca87d9510e176/u);
+  assert.match(aggregate, /ref: 5cca9d518133b30ff10aa47b8cf237d548bee25e/u);
   assert.match(
     aggregate,
     /name: Install pinned Buildchain proof runtime[\s\S]*working-directory: \.buildchain\/dev-delivery-runtime[\s\S]*corepack pnpm install --frozen-lockfile --ignore-scripts/u,

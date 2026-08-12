@@ -1,0 +1,14 @@
+{
+  "schema": "kungfu.dev-delivery-warrant-steady-state-canary/v1",
+  "protectedBase": "dev/v4/v4.0",
+  "qualificationClass": "full-native",
+  "runtimeBehaviorChange": false,
+  "requiredInvariants": [
+    "exclusive-provisional-owner",
+    "heartbeat-renews-ttl",
+    "fencing-rejects-stale-owner",
+    "active-warrant-prevents-overtake",
+    "qualified-before-merge-queue",
+    "semantic-proof-reuse-fails-closed-on-overlap"
+  ]
+}
