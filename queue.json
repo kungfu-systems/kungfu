@@ -3,7 +3,7 @@
   "contract": "kungfu-buildchain-dev-delivery-warrant-queue",
   "repository": "kungfu-systems/kungfu",
   "protectedBase": "dev/v4/v4.0",
-  "generation": 1342,
+  "generation": 1343,
   "fencingCounter": 333,
   "policy": {
     "agingSeconds": 900,
@@ -11,45 +11,7 @@
     "leaseSeconds": 3600,
     "emergencyPolicy": "reviewed-explicit-only"
   },
-  "activeWarrant": {
-    "schema": "kungfu.buildchain.dev-delivery-warrant/v1",
-    "repository": "kungfu-systems/kungfu",
-    "protectedBase": "dev/v4/v4.0",
-    "candidateId": "sha256:690184a6085e5909579a9253071d638b9672de287efb4a781d2025bb992f7daf",
-    "pullRequestNumber": 3033,
-    "sourceHead": "3d94fcd285926bd245da465ebe158906217cab40",
-    "assignmentRoot": "sha256:d8920d7a841f835c364bf69842078949dd2010950057c154805114deee6b2d03",
-    "initiativeRoot": "sha256:bfff817933e5a5ad693e4b902a84f6cc3a251235dd7377cb4091d92f805fa7ff",
-    "sourceIdentityRoot": "sha256:fcdd9a7577b1bb249fb2edec5b81864431222a8674149225b17cf38315b64219",
-    "sourcePatchRoot": "sha256:98139eee90f6252c3811d9b1f431b5cd7f34321e4d5220cd626e7cc0b31f70f7",
-    "sourceProofRoot": "sha256:30e000e2ec3f2f4b36f72914720e912c2b18908f0202ad60fc471588d0ed66dd",
-    "planRoot": "sha256:8be2ed2e6bb0415f9afc9f480164f98dcba3072d2df172a57e2e765c7866a8f5",
-    "closureRoot": "sha256:106d175611d8634c988192302b9c464ae8ba3b6d023c2cff9910e401344c9624",
-    "dependencyRoot": "sha256:047521d38a26e5e49cf2765f56ff206b8bc2e28c351b9ca85def46c4b48e9180",
-    "toolchainRoot": "sha256:2ecb07894954a2e0de022615d4561e5ba3ae68376401941ecff77be03cd75a0f",
-    "affectedPaths": [
-      ".xinfa/portable-atlas-classification.json.gz",
-      ".xinfa/product-atlas-bundle.json",
-      "docs/adr/SHIFU-ADR-019f86da-4f90-79a1-bc85-4b542fecf011.md",
-      "docs/shifu/README.md",
-      "docs/shifu/examples/production-graph/native-build-lowering/journal-bazel.fixture.json",
-      "docs/shifu/native-build-lowering-contract.json",
-      "docs/shifu/production-graph-contract.json",
-      "framework/production-graph/check.mjs",
-      "framework/production-graph/native-build-lowering/index.mjs",
-      "framework/production-graph/native-build-lowering/index.test.mjs",
-      "package.json"
-    ],
-    "sourceWorkflowRunId": 0,
-    "deliveryClass": "native-proof-required",
-    "generation": 333,
-    "phase": "provisional",
-    "expectedOldStateRoot": "sha256:8ad169bb282d50cc1bfb72827fd83b577eaba5f6a52169873fc28b7b879eff63",
-    "issuedAt": "2026-08-12T11:40:11.470Z",
-    "expiresAt": "2026-08-12T13:25:44.096Z",
-    "fencingToken": "sha256:7cbe7cd98cc34bd97455aad588e9331b157e0d5b34de7c4a492d9ebc062531f8",
-    "nextAction": "Run or reuse the exact semantic native proof, then atomically qualify this fenced Warrant."
-  },
+  "activeWarrant": null,
   "candidates": [
     {
       "repository": "kungfu-systems/kungfu",
@@ -13993,11 +13955,18 @@
       "sourceWorkflowRunId": 0,
       "priority": "ordinary",
       "enqueuedAt": "2026-08-12T08:36:07.776Z",
-      "updatedAt": "2026-08-12T11:55:44.096Z",
+      "updatedAt": "2026-08-12T11:56:19.556Z",
       "attempts": 1,
       "recoveries": 0,
-      "status": "proving",
-      "terminal": null,
+      "status": "terminal-failure",
+      "terminal": {
+        "outcome": "terminal-failure",
+        "reason": "native command failed with exit 1",
+        "evidenceRoot": "sha256:c1345dec76c4fd1564928acec9bd6b1d5f7a331ca5e74febb7cbd9e922cbb681",
+        "closedAt": "2026-08-12T11:56:19.556Z",
+        "fencingToken": "sha256:7cbe7cd98cc34bd97455aad588e9331b157e0d5b34de7c4a492d9ebc062531f8",
+        "leaseGeneration": 333
+      },
       "affectedPaths": [
         ".xinfa/portable-atlas-classification.json.gz",
         ".xinfa/product-atlas-bundle.json",
@@ -14614,6 +14583,6 @@
       ]
     }
   ],
-  "updatedAt": "2026-08-12T11:55:44.096Z",
-  "stateRoot": "sha256:ea5578f646107580cf6a3c674657c18af22fc3d21fbc6a809961839c17578933"
+  "updatedAt": "2026-08-12T11:56:19.556Z",
+  "stateRoot": "sha256:1827966237deb3f548744c0750eca3b979c48d9149d4db6bdc689be547966eec"
 }
