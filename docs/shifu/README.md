@@ -61,6 +61,18 @@ execution; Shifu owns how the task is executed after source checkout.
   Run
   `./shifu check:production-graph` to emit the exact protected-CI verification
   receipt over the deterministic conformance fixtures.
+  The bounded
+  [`native-build-lowering-contract.json`](native-build-lowering-contract.json)
+  exploration reads that same `journal` node and existing Core authority into
+  one backend-neutral Native Build IR, then lowers it to a non-executable Bazel
+  data fixture. It emits rooted IR, projection, and receipt identities while
+  leaving dependency labels, platform/toolchain constraints, and artifact
+  staging as explicit provider prerequisites. It installs or invokes no Bazel,
+  writes no build file, executes no node, and leaves `./shifu build:core`
+  unchanged. The authority inventory, prerequisites, residual risks, and
+  conditional-go boundary are recorded in the machine contract.
+  Run `./shifu production-graph:native-build-lowering:verify` to print the
+  exact fixture-only receipt.
   Before any node starts, `./shifu production-graph:admit --request REQUEST`
   verifies one exact native `kungfu.work-ref/v1`, Work Control query and run-gate
   roots, external authorization evidence, actor, attempt, executor policy,

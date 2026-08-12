@@ -144,6 +144,21 @@
     "stageExecutorAuthority": "additive-admitted-shadow-only",
     "stageExecutorConcurrency": 1
   },
+  "nativeBuildLoweringExploration": {
+    "contract": "docs/shifu/native-build-lowering-contract.json",
+    "implementation": "framework/production-graph/native-build-lowering/index.mjs",
+    "profile": "journal",
+    "node": "native-build",
+    "backend": "bazel",
+    "verdict": "conditional-go",
+    "fixtureOnly": true,
+    "executable": false,
+    "writesBuildFiles": false,
+    "invokesBackend": false,
+    "nodesExecuted": false,
+    "authoritativeCommand": "./shifu build:core",
+    "cutover": false
+  },
   "buildResult": {
     "command": "./shifu production-graph:build-result",
     "projection": "shifu.production-graph-build-result/v0",
