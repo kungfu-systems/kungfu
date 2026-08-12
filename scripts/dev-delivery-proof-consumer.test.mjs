@@ -296,6 +296,27 @@ test('queue lease readback binds revision, Warrant, fence, and exact source', ()
   );
 });
 
+test('queue lease accepts the exact candidate after native qualification', () => {
+  const receipt = verifyQueueAdmissionLease({
+    view: queueView(ROOT_A, { status: 'qualified' }),
+    pullRequestNumber: 42,
+    sourceHeadSha: SOURCE,
+    now: '2026-08-04T02:30:00.000Z',
+  });
+  assert.equal(receipt.candidateState, 'qualified');
+
+  assert.throws(
+    () =>
+      verifyQueueAdmissionLease({
+        view: queueView(ROOT_A, { status: 'queued' }),
+        pullRequestNumber: 42,
+        sourceHeadSha: SOURCE,
+        now: '2026-08-04T02:30:00.000Z',
+      }),
+    /not delivery-ready: queued/u,
+  );
+});
+
 test('integration input binds merge-group authority and live queue entry', () => {
   const source = sourceFixture();
   const sourceInput = createSourceQualificationInput({
