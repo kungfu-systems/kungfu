@@ -26,7 +26,14 @@
             "type": "string",
             "pattern": "^production-graph:fixture:[a-z0-9]+(?:[-:][a-z0-9]+)*$"
           },
-          { "const": "build:core" }
+          { "const": "build:core" },
+          {
+            "enum": [
+              "core-production-subgraph:artifact-stage",
+              "core-production-subgraph:dependency-bootstrap",
+              "core-production-subgraph:native-build"
+            ]
+          }
         ]
       }
     },
@@ -61,9 +68,47 @@
           }
         },
         "required": ["taskEnvironment"]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "allowedTasks": {
+            "contains": {
+              "enum": [
+                "core-production-subgraph:artifact-stage",
+                "core-production-subgraph:dependency-bootstrap",
+                "core-production-subgraph:native-build"
+              ]
+            }
+          }
+        },
+        "required": ["allowedTasks"]
+      },
+      "then": {
+        "properties": {
+          "allowedTasks": {
+            "const": [
+              "core-production-subgraph:artifact-stage",
+              "core-production-subgraph:dependency-bootstrap",
+              "core-production-subgraph:native-build"
+            ]
+          },
+          "taskEnvironment": {
+            "const": { "KUNGFU_BUILD_PROFILE": "journal" }
+          }
+        },
+        "required": ["taskEnvironment"]
       },
       "else": {
-        "not": { "required": ["taskEnvironment"] }
+        "if": {
+          "properties": {
+            "allowedTasks": {
+              "not": { "contains": { "const": "build:core" } }
+            }
+          }
+        },
+        "then": { "not": { "required": ["taskEnvironment"] } }
       }
     }
   ]
