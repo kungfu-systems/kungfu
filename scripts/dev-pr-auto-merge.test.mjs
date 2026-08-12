@@ -308,6 +308,30 @@ test('two-phase native adapter runs both partitions and seals exact-head success
   );
 });
 
+test('two-phase native adapter bootstraps Conan for SDK Warrant builds', async (t) => {
+  const commands = [];
+  const value = nativeFixture((_cwd, name, args, environment) =>
+    commands.push({ name, args, environment }),
+  );
+  value.dependencies.readPlan = () => ({
+    schema: 'kungfu.core-affected-native-plan/v1',
+    closureComponents: [],
+    sdkQualification: { required: true },
+    devQueueQualification: {
+      shifuWorkspace: { required: false },
+      kfdVerifier: { required: false },
+    },
+  });
+  t.after(() => fs.rmSync(value.cwd, { recursive: true, force: true }));
+
+  await runNativeUnderWarrant(value.options, value.dependencies);
+
+  const sdkBuild = commands.find(
+    ({ name }) => name === 'Build Core SDK artifacts',
+  );
+  assert.equal(sdkBuild.environment.KUNGFU_BUILDCHAIN_SOURCE_BUILD, '1');
+});
+
 test('two-phase native adapter fails closed and replaces pending with failure', async (t) => {
   const value = nativeFixture((_cwd, name) => {
     if (name.includes('partition 0')) throw new Error('native shard failed');
