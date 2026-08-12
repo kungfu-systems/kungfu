@@ -2041,7 +2041,7 @@ test('workflows keep candidate and promotion outside untrusted PR authority', ()
   );
   assert.match(
     candidateJob,
-    /KUNGFU_BUILDCHAIN_SOURCE_BUILD: "1"[\s\S]*Build and seal minimum relocatable Assignment Core candidate[\s\S]*uses: \.\/\.github\/actions\/qualified-core-candidate-build[\s\S]*row: \$\{\{ matrix\.row \}\}[\s\S]*runner-label: \$\{\{ matrix\.runner \}\}[\s\S]*cc: \$\{\{ matrix\.cc \}\}[\s\S]*cxx: \$\{\{ matrix\.cxx \}\}[\s\S]*qualified-assignment-core-candidate-\$\{\{ github\.sha \}\}-\$\{\{ matrix\.row \}\}/u,
+    /KUNGFU_BUILDCHAIN_SOURCE_BUILD: "1"[\s\S]*Build minimum relocatable Assignment Core candidate under the live Warrant[\s\S]*uses: \.\/\.github\/actions\/native-execution-under-warrant[\s\S]*Seal minimum relocatable Assignment Core candidate[\s\S]*uses: \.\/\.github\/actions\/qualified-core-candidate-build[\s\S]*row: \$\{\{ matrix\.row \}\}[\s\S]*runner-label: \$\{\{ matrix\.runner \}\}[\s\S]*cc: \$\{\{ matrix\.cc \}\}[\s\S]*cxx: \$\{\{ matrix\.cxx \}\}[\s\S]*qualified-assignment-core-candidate-\$\{\{ github\.sha \}\}-\$\{\{ matrix\.row \}\}/u,
   );
   assert.doesNotMatch(candidateJob, /pull_request/);
   const candidateAction = fs.readFileSync(
