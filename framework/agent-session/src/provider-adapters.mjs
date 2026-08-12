@@ -3,8 +3,8 @@ import { spawnSync } from 'node:child_process';
 const PROVIDER_PROFILES = {
   codex: {
     adapterVersion: 'codex-tui/v1',
-    supportedVersion: /^0\.(?:144|146|147)\.[0-9]+$/u,
-    testedVersions: ['0.144.3', '0.146.0', '0.147.0'],
+    supportedVersion: /^0\.(?:144|146|147)\.[0-9]+(?:[-+][0-9A-Za-z.-]+)?$/u,
+    testedVersions: ['0.144.3', '0.146.0', '0.147.0', '0.147.0-alpha.1.2'],
     signatures: {
       blocked: [],
       approval: [
@@ -313,9 +313,11 @@ export function createProviderAdapter({ provider, version }) {
   const tested = profile.testedVersions.includes(version);
   const separateInstructionSubmit =
     provider === 'claude' ||
-    (provider === 'codex' && /^0\.147\.[0-9]+$/u.test(version));
+    (provider === 'codex' &&
+      /^0\.147\.[0-9]+(?:[-+][0-9A-Za-z.-]+)?$/u.test(version));
   const acknowledgedInstructionPaste =
-    provider === 'codex' && /^0\.147\.[0-9]+$/u.test(version);
+    provider === 'codex' &&
+    /^0\.147\.[0-9]+(?:[-+][0-9A-Za-z.-]+)?$/u.test(version);
   return Object.freeze({
     schema: 'kungfu.agent-session.provider-adapter/v1',
     provider,
