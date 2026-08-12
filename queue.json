@@ -3,7 +3,7 @@
   "contract": "kungfu-buildchain-dev-delivery-warrant-queue",
   "repository": "kungfu-systems/kungfu",
   "protectedBase": "dev/v4/v4.0",
-  "generation": 1429,
+  "generation": 1430,
   "fencingCounter": 347,
   "policy": {
     "agingSeconds": 900,
@@ -16600,11 +16600,20 @@
       "sourceWorkflowRunId": 0,
       "priority": "ordinary",
       "enqueuedAt": "2026-08-12T13:53:41.088Z",
-      "updatedAt": "2026-08-12T13:53:41.088Z",
+      "updatedAt": "2026-08-12T14:06:50.544Z",
       "attempts": 1,
       "recoveries": 0,
-      "status": "queued",
-      "terminal": null,
+      "status": "cancelled",
+      "terminal": {
+        "outcome": "cancelled",
+        "reason": "Requeue the exact unchanged PR #3029 head as expedited because it repairs the qualified-Warrant merge-queue admission contradiction blocking all current candidates.",
+        "evidenceRoot": "sha256:a6453f700d16f7ae447abf4834ebbb0c51006bf4364fa718e80c6a034864119a",
+        "authority": "queued-candidate-cancellation",
+        "expectedSourceHead": "dbe0fa58ceffb9f118a3fe8c4002f6fb89f9598f",
+        "observedSourceHead": "dbe0fa58ceffb9f118a3fe8c4002f6fb89f9598f",
+        "eventAction": "synchronize",
+        "closedAt": "2026-08-12T14:06:50.544Z"
+      },
       "affectedPaths": [
         ".buildchain/kfd/kfd-2/claims/agent-onboarding-pack.json",
         ".buildchain/kfd/kfd-2/claims/agent-work-state-contract.json",
@@ -16858,6 +16867,6 @@
       ]
     }
   ],
-  "updatedAt": "2026-08-12T14:05:37.856Z",
-  "stateRoot": "sha256:1a0cc5520c37deadcb30dfc0bb0fe9b4f545fe75831946b73910931ea4ce3ef1"
+  "updatedAt": "2026-08-12T14:06:50.544Z",
+  "stateRoot": "sha256:0c3515788e2e7a4b7a2389ac7ec65a45320995ee204fc3c94e9b31e84d60a186"
 }
