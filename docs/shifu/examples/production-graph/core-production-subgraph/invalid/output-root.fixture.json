@@ -1,0 +1,8 @@
+{
+  "mutation": {
+    "operation": "set",
+    "path": ["stages", 0, "outputs", 0, "root"],
+    "value": "sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
+  },
+  "expect": "output-root-mismatch"
+}

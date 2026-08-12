@@ -1,0 +1,149 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://libkungfu.dev/schemas/shifu/core-production-subgraph-compile-request-v0.schema.json",
+  "title": "Shifu Core Production Subgraph compile request v0",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "subgraphId",
+    "source",
+    "bindings",
+    "xinfaVerification",
+    "stages"
+  ],
+  "properties": {
+    "schema": { "const": "shifu.core-production-subgraph-compile-request/v0" },
+    "subgraphId": { "$ref": "#/$defs/id" },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["repository", "revision", "tree", "root"],
+      "properties": {
+        "repository": { "$ref": "#/$defs/nonEmpty" },
+        "revision": { "$ref": "#/$defs/gitObject" },
+        "tree": { "$ref": "#/$defs/gitObject" },
+        "root": { "$ref": "#/$defs/root" }
+      }
+    },
+    "bindings": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "buildProfile",
+        "toolchainRoot",
+        "layersRoot",
+        "buildCapabilitiesRoot",
+        "projectAuthorityRoot",
+        "xinfaSelectionRoot"
+      ],
+      "properties": {
+        "buildProfile": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["id", "root"],
+          "properties": {
+            "id": { "const": "journal" },
+            "root": { "$ref": "#/$defs/root" }
+          }
+        },
+        "toolchainRoot": { "$ref": "#/$defs/root" },
+        "layersRoot": { "$ref": "#/$defs/root" },
+        "buildCapabilitiesRoot": { "$ref": "#/$defs/root" },
+        "projectAuthorityRoot": { "$ref": "#/$defs/root" },
+        "xinfaSelectionRoot": { "$ref": "#/$defs/root" }
+      }
+    },
+    "xinfaVerification": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "owner",
+        "status",
+        "sourceRevision",
+        "selectionRoot",
+        "verificationRoot"
+      ],
+      "properties": {
+        "owner": { "const": "xinfa" },
+        "status": { "const": "verified" },
+        "sourceRevision": { "$ref": "#/$defs/gitObject" },
+        "selectionRoot": { "$ref": "#/$defs/root" },
+        "verificationRoot": { "$ref": "#/$defs/root" }
+      }
+    },
+    "stages": {
+      "type": "array",
+      "minItems": 3,
+      "maxItems": 3,
+      "items": { "$ref": "#/$defs/stage" }
+    }
+  },
+  "$defs": {
+    "nonEmpty": { "type": "string", "minLength": 1 },
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z0-9]+(?:[._-][a-z0-9]+)*$"
+    },
+    "root": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "gitObject": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{40}$"
+    },
+    "rootedIdentity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "kind", "root"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "kind": {
+          "enum": [
+            "source",
+            "toolchain",
+            "build-profile",
+            "authority",
+            "semantic-selection",
+            "stage-output"
+          ]
+        },
+        "root": { "$ref": "#/$defs/root" }
+      }
+    },
+    "stage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "responsibility",
+        "dependencies",
+        "inputs",
+        "outputs"
+      ],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "responsibility": { "$ref": "#/$defs/id" },
+        "dependencies": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/id" }
+        },
+        "inputs": {
+          "type": "array",
+          "minItems": 5,
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/rootedIdentity" }
+        },
+        "outputs": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 1,
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/rootedIdentity" }
+        }
+      }
+    }
+  }
+}

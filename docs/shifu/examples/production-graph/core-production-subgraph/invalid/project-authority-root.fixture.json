@@ -1,0 +1,8 @@
+{
+  "mutation": {
+    "operation": "set",
+    "path": ["bindings", "projectAuthorityRoot"],
+    "value": "sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
+  },
+  "expect": "authority-root-drift"
+}

@@ -204,6 +204,10 @@ test('Production Graph contract emits one source-bound protected-CI receipt', as
   assert.equal(receipt.validFixtureCount, 3);
   assert.equal(receipt.invalidFixtureCount, 8);
   assert.match(receipt.executionAdmissionReceiptRoot, /^sha256:[0-9a-f]{64}$/u);
+  assert.match(
+    receipt.coreProductionSubgraphReceiptRoot,
+    /^sha256:[0-9a-f]{64}$/u,
+  );
   assert.equal(receipt.nodesExecuted, false);
   assert.equal(receipt.protectedGate, './shifu check:source');
   assert.match(receipt.receiptRoot, /^sha256:[0-9a-f]{64}$/u);

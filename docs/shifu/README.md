@@ -49,6 +49,15 @@ execution; Shifu owns how the task is executed after source checkout.
   and a source-matched verified Xinfa selection. Its polyglot fixture retains
   Cargo, pnpm, GYP, uv, Conan, CMake, wheel, freezer, KFX, TUI, GUI, product,
   and Buildchain handoff executor references while keeping execution external.
+  The bounded
+  [`core-production-subgraph-contract.json`](core-production-subgraph-contract.json)
+  specializes that describe-only seam for the `journal` Core profile. It
+  exposes exactly `dependency-bootstrap`, `native-build`, and `artifact-stage`
+  in dependency order, gives each node one responsibility, and binds every
+  source, toolchain, profile, project-authority, Xinfa-selection, and stage
+  output declaration by root. These nodes are not independent commands: the
+  unchanged `./shifu build:core` route remains the only execution owner, and
+  the compiler and verifier start no stage and perform no cutover.
   Run
   `./shifu check:production-graph` to emit the exact protected-CI verification
   receipt over the deterministic conformance fixtures.

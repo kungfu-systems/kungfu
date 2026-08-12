@@ -54,6 +54,14 @@ export const SCHEMA_PATHS = Object.freeze({
     'docs/shifu/schema/production-graph-local-ci-parity-receipt-v0.schema.json',
   localCiParityReport:
     'docs/shifu/schema/production-graph-local-ci-parity-report-v0.schema.json',
+  coreProductionSubgraphCompileRequest:
+    'docs/shifu/schema/core-production-subgraph-compile-request-v0.schema.json',
+  coreProductionSubgraph:
+    'docs/shifu/schema/core-production-subgraph-v0.schema.json',
+  coreProductionSubgraphPlan:
+    'docs/shifu/schema/core-production-subgraph-plan-v0.schema.json',
+  coreProductionSubgraphVerificationReceipt:
+    'docs/shifu/schema/core-production-subgraph-verification-receipt-v0.schema.json',
 });
 
 const readJson = (root, relative) =>

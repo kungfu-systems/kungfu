@@ -1,0 +1,67 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://libkungfu.dev/schemas/shifu/core-production-subgraph-verification-receipt-v0.schema.json",
+  "title": "Shifu Core Production Subgraph verification receipt v0",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "status",
+    "sourceRevision",
+    "sourceTree",
+    "contractRoot",
+    "schemaRoots",
+    "compilerRoot",
+    "subgraphRoot",
+    "planRoot",
+    "authoritativeRouteRoot",
+    "validFixtureRoots",
+    "invalidFixtureRoots",
+    "validFixtureCount",
+    "invalidFixtureCount",
+    "protectedGate",
+    "nodesExecuted",
+    "currentRouteUnchanged",
+    "receiptRoot"
+  ],
+  "properties": {
+    "schema": { "const": "shifu.core-production-subgraph-verification-receipt/v0" },
+    "status": { "const": "qualified" },
+    "sourceRevision": { "$ref": "core-production-subgraph-compile-request-v0.schema.json#/$defs/gitObject" },
+    "sourceTree": { "$ref": "core-production-subgraph-compile-request-v0.schema.json#/$defs/gitObject" },
+    "contractRoot": { "$ref": "core-production-subgraph-compile-request-v0.schema.json#/$defs/root" },
+    "schemaRoots": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["compileRequest", "subgraph", "plan", "verificationReceipt"],
+      "properties": {
+        "compileRequest": { "$ref": "core-production-subgraph-compile-request-v0.schema.json#/$defs/root" },
+        "subgraph": { "$ref": "core-production-subgraph-compile-request-v0.schema.json#/$defs/root" },
+        "plan": { "$ref": "core-production-subgraph-compile-request-v0.schema.json#/$defs/root" },
+        "verificationReceipt": { "$ref": "core-production-subgraph-compile-request-v0.schema.json#/$defs/root" }
+      }
+    },
+    "compilerRoot": { "$ref": "core-production-subgraph-compile-request-v0.schema.json#/$defs/root" },
+    "subgraphRoot": { "$ref": "core-production-subgraph-compile-request-v0.schema.json#/$defs/root" },
+    "planRoot": { "$ref": "core-production-subgraph-compile-request-v0.schema.json#/$defs/root" },
+    "authoritativeRouteRoot": { "$ref": "core-production-subgraph-compile-request-v0.schema.json#/$defs/root" },
+    "validFixtureRoots": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "$ref": "core-production-subgraph-compile-request-v0.schema.json#/$defs/root" }
+    },
+    "invalidFixtureRoots": {
+      "type": "array",
+      "minItems": 5,
+      "uniqueItems": true,
+      "items": { "$ref": "core-production-subgraph-compile-request-v0.schema.json#/$defs/root" }
+    },
+    "validFixtureCount": { "type": "integer", "minimum": 1 },
+    "invalidFixtureCount": { "type": "integer", "minimum": 5 },
+    "protectedGate": { "const": "./shifu check:source" },
+    "nodesExecuted": { "const": false },
+    "currentRouteUnchanged": { "const": true },
+    "receiptRoot": { "$ref": "core-production-subgraph-compile-request-v0.schema.json#/$defs/root" }
+  }
+}
