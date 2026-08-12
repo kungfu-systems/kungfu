@@ -3,7 +3,7 @@
   "contract": "kungfu-buildchain-dev-delivery-warrant-queue",
   "repository": "kungfu-systems/kungfu",
   "protectedBase": "dev/v4/v4.0",
-  "generation": 1365,
+  "generation": 1366,
   "fencingCounter": 336,
   "policy": {
     "agingSeconds": 900,
@@ -11,51 +11,7 @@
     "leaseSeconds": 3600,
     "emergencyPolicy": "reviewed-explicit-only"
   },
-  "activeWarrant": {
-    "schema": "kungfu.buildchain.dev-delivery-warrant/v1",
-    "repository": "kungfu-systems/kungfu",
-    "protectedBase": "dev/v4/v4.0",
-    "candidateId": "sha256:7a978b2f144f0a7162cc90e05ffb11db8f3812751e48599331718c6993c35c7f",
-    "pullRequestNumber": 3039,
-    "sourceHead": "48416d2283f5907f13bb7b2739201367ec4e95a6",
-    "assignmentRoot": "sha256:02c99e2fd2a79353f4664f3da3b075fa285fb006eea57653e395b746c8220cdf",
-    "initiativeRoot": "sha256:bfff817933e5a5ad693e4b902a84f6cc3a251235dd7377cb4091d92f805fa7ff",
-    "sourceIdentityRoot": "sha256:a271c935aabf801cebf4c5095674478eb349c4786f71c96df43dcc5d150d48d1",
-    "sourcePatchRoot": "sha256:a56ca9d3c0d68ed68d5ef2c9c6617503745081b080a3d4629dbc8200a0f741dd",
-    "sourceProofRoot": "sha256:7bbe8cb6a297816937fe2a87dcf5de03d3b2fc57114763dc1a95bd36d6f2b926",
-    "planRoot": "sha256:326784ccca4e0072963ec2556681b829c5f48623b2ed20d0633178be4878319a",
-    "closureRoot": "sha256:106d175611d8634c988192302b9c464ae8ba3b6d023c2cff9910e401344c9624",
-    "dependencyRoot": "sha256:dfb75c9d42fdbf5908977248cbf601adf97cd16a21df998b2fbeabb7a7b66df3",
-    "toolchainRoot": "sha256:2ecb07894954a2e0de022615d4561e5ba3ae68376401941ecff77be03cd75a0f",
-    "affectedPaths": [
-      "config/release/kungfu-release-provenance.contract.json",
-      "docs/adr/KF-ADR-019fe996-1912-7144-8fa5-3fceaa416365.md",
-      "docs/architecture/adr-map.json",
-      "docs/architecture/adr-map.md",
-      "docs/development/version-release-design.md",
-      "docs/development/versioning.md",
-      "docs/qualification/gates/release-and-promotion.md",
-      "framework/core/src/python/kungfu/release_provenance/__init__.py",
-      "framework/core/tests/python/test_release_provenance.py",
-      "framework/dev-delivery/native-under-warrant.mjs",
-      "framework/release/kungfu-release-provenance.contract.json",
-      "scripts/affected-native-proof.mjs",
-      "scripts/check-release-provenance-object.test.mjs",
-      "scripts/dev-delivery-proof-consumer.test.mjs",
-      "scripts/dev-pr-auto-merge.test.mjs",
-      "scripts/release-provenance-object.py",
-      "tests/fixtures/release-provenance-object/cases.json"
-    ],
-    "sourceWorkflowRunId": 0,
-    "deliveryClass": "native-proof-required",
-    "generation": 336,
-    "phase": "provisional",
-    "expectedOldStateRoot": "sha256:f6ce92b482b33142f4c434462e8fabb5c8369f23515def9a08b48b2f213eb880",
-    "issuedAt": "2026-08-12T12:33:49.431Z",
-    "expiresAt": "2026-08-12T14:12:17.887Z",
-    "fencingToken": "sha256:ff0e0a687f885d84fa8b04915a0fc8fa4ca766f8e58ff0d10360c657fdf772f2",
-    "nextAction": "Run or reuse the exact semantic native proof, then atomically qualify this fenced Warrant."
-  },
+  "activeWarrant": null,
   "candidates": [
     {
       "repository": "kungfu-systems/kungfu",
@@ -14352,11 +14308,18 @@
       "sourceWorkflowRunId": 0,
       "priority": "ordinary",
       "enqueuedAt": "2026-08-12T10:14:36.290Z",
-      "updatedAt": "2026-08-12T12:42:17.887Z",
+      "updatedAt": "2026-08-12T12:43:11.541Z",
       "attempts": 1,
       "recoveries": 0,
-      "status": "proving",
-      "terminal": null,
+      "status": "terminal-failure",
+      "terminal": {
+        "outcome": "terminal-failure",
+        "reason": "native command failed with exit 1",
+        "evidenceRoot": "sha256:74018d74f6d138a2b26e4f88b8c27d2363acc79030680ac0a161ddc4930c2dce",
+        "closedAt": "2026-08-12T12:43:11.541Z",
+        "fencingToken": "sha256:ff0e0a687f885d84fa8b04915a0fc8fa4ca766f8e58ff0d10360c657fdf772f2",
+        "leaseGeneration": 336
+      },
       "affectedPaths": [
         "config/release/kungfu-release-provenance.contract.json",
         "docs/adr/KF-ADR-019fe996-1912-7144-8fa5-3fceaa416365.md",
@@ -15400,6 +15363,6 @@
       ]
     }
   ],
-  "updatedAt": "2026-08-12T12:42:17.887Z",
-  "stateRoot": "sha256:f7b46716f481a7a691bb7b7d976fe3e03ea49d409e9fa3c0e12939706f640354"
+  "updatedAt": "2026-08-12T12:43:11.541Z",
+  "stateRoot": "sha256:dfb2b75c2b09843691d6a5ab6b78bac54d8988d9f7feb19352380f33bfa3c9d1"
 }
