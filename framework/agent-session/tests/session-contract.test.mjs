@@ -78,3 +78,32 @@ test('strict writers reject ambiguous or extended values', () => {
   profile.bootstrap.adapter = 'codex';
   assert.throws(() => validateRuntimeProfile(profile), /must match provider/u);
 });
+
+test('Agent Console carries only a bounded read-only Skill runtime pointer', () => {
+  const body = {
+    ...fixture.envelopeBody,
+    skillRuntimeAudit: {
+      schema: 'kungfu.skill-runtime-audit-pointer/v1',
+      path: '/runtime/skill-manager/agent-console-attempt.json',
+      runtimeAuditRoot: `sha256:${'1'.repeat(64)}`,
+      registryStateRoot: `sha256:${'2'.repeat(64)}`,
+      historyRoot: `sha256:${'3'.repeat(64)}`,
+      diagnosisRoot: `sha256:${'4'.repeat(64)}`,
+      authority: 'read-only-projection',
+    },
+  };
+  const envelope = { ...body, envelopeRoot: semanticRoot(body) };
+
+  assert.deepEqual(validateAgentConsoleEnvelope(envelope), envelope);
+  assert.throws(
+    () =>
+      validateAgentConsoleEnvelope({
+        ...envelope,
+        skillRuntimeAudit: {
+          ...envelope.skillRuntimeAudit,
+          authority: 'agent-writer',
+        },
+      }),
+    /read-only-projection/u,
+  );
+});

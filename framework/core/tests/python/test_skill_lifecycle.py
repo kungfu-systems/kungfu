@@ -31,6 +31,8 @@ from kungfu.skill import (
     normalize_package,
     plan_operation,
     plan_dependency_invocation,
+    build_skill_runtime_audit,
+    project_skill_runtime_audit,
     registry_history,
     registry_root,
 )
@@ -218,6 +220,105 @@ def _admitted_kfx_plan(
             ],
         },
     }
+
+
+def test_runtime_audit_projects_one_root_across_every_surface(tmp_path):
+    home = tmp_path / "home"
+    package = _package(tmp_path / "package")
+    work_root = _root({"work": "shared-runtime-audit"})
+    _install_and_select(home, package, "work:shared-runtime-audit", work_root)
+    _apply(home, "load", key="exact-skill")
+    _apply(home, "invoke", key="exact-skill")
+    _apply(home, "retire", key="exact-skill")
+    audit_document = {
+        "schema": "kungfu.skill-audit/v1",
+        "run_id": "run-shared",
+        "events": [
+            {
+                "schema": "kungfu.skill-audit-event/v1",
+                "type": "SkillAdvertised",
+                "run_id": "run-shared",
+                "advertisedSkillsHash": _root({"catalog": "shared"}),
+                "skills": [{"key": "exact-skill"}],
+            },
+            {
+                "schema": "kungfu.skill-audit-event/v1",
+                "type": "SkillTrustRefused",
+                "run_id": "run-shared",
+                "skill": {"key": "exact-skill"},
+                "work": {"workRef": "work:shared-runtime-audit"},
+                "planRoot": _root({"plan": "refused"}),
+                "decision": {"status": "refused", "code": "KF_TEST_REFUSED"},
+            },
+            {
+                "schema": "kungfu.skill-audit-event/v1",
+                "type": "ProviderSelfReport",
+                "run_id": "run-shared",
+                "skill": {"key": "exact-skill"},
+            },
+        ],
+    }
+
+    document = build_skill_runtime_audit(
+        home,
+        audit_documents=[audit_document],
+        run_id="run-shared",
+        work_ref="work:shared-runtime-audit",
+    )
+
+    roots = {
+        project_skill_runtime_audit(document, surface)["runtimeAuditRoot"]
+        for surface in ("agent", "cli", "gui", "tui", "managed-run")
+    }
+    assert roots == {document["runtimeAuditRoot"]}
+    skill = document["skills"][0]
+    assert skill["identity"]["contentRoot"].startswith("sha256:")
+    assert skill["lifecycle"] == "retired"
+    assert skill["workBindings"][0]["workRef"] == "work:shared-runtime-audit"
+    assert {"advertised", "selected", "loaded", "invoked", "blocked", "retired"} <= set(
+        skill["observedStates"]
+    )
+    self_report = next(
+        row
+        for row in document["evidence"]
+        if row["source"]["type"] == "ProviderSelfReport"
+    )
+    assert self_report["state"] == "unproved"
+    assert self_report["proof"] == {"status": "unproved", "roots": []}
+
+
+def test_runtime_audit_retains_removed_skill_identity_and_history(tmp_path):
+    home = tmp_path / "home"
+    package = _package(tmp_path / "package")
+    install_plan, _ = _apply(home, "install", source=package)
+    content_root = install_plan["affected"][0]["contentRoot"]
+    _apply(home, "remove", key="exact-skill")
+
+    document = build_skill_runtime_audit(home)
+
+    skill = document["skills"][0]
+    assert skill["lifecycle"] == "historical"
+    assert skill["identity"]["active"] is False
+    assert skill["identity"]["contentRoot"] == content_root
+    assert skill["historyPreserved"] is True
+
+
+def test_runtime_audit_cli_returns_the_verified_shared_document(tmp_path):
+    home = tmp_path / "home"
+    _apply(home, "install", source=_package(tmp_path / "package"))
+
+    result = CliRunner().invoke(
+        kfc,
+        ["-H", str(home), "skill", "runtime-audit", "--json"],
+    )
+
+    assert result.exit_code == 0, result.output
+    document = json.loads(result.output)
+    assert document["schema"] == "kungfu.skill-runtime-audit/v2"
+    assert (
+        project_skill_runtime_audit(document, "cli")["runtimeAuditRoot"]
+        == document["runtimeAuditRoot"]
+    )
 
 
 def test_complete_closure_rejects_undeclared_payload_and_kfx_body(tmp_path):

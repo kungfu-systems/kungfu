@@ -176,6 +176,15 @@
         "summary": { "$ref": "#/$defs/agentInventoryGlobalSummary" }
       }
     },
+    "runtimeAudit": {
+      "type": "object",
+      "required": ["schema", "runtimeAuditRoot", "surfaceProjections"],
+      "properties": {
+        "schema": { "const": "kungfu.skill-runtime-audit/v2" },
+        "runtimeAuditRoot": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+        "surfaceProjections": { "type": "object" }
+      }
+    },
     "summary": {
       "type": "object",
       "additionalProperties": false,

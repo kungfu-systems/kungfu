@@ -36,7 +36,11 @@ from kungfu.agent.provider_output import (
     public_command_preview as public_command_preview,
 )
 from kungfu.content_hash import compute_content_hash_value
-from kungfu.skill import build_skill_context
+from kungfu.skill import (
+    build_skill_context,
+    build_skill_runtime_audit,
+    write_skill_runtime_audit,
+)
 from kungfu.rewind import (
     ACTION_RUN_BEGIN,
     ACTION_RUN_END,
@@ -650,6 +654,14 @@ def native_environment(
             env=ambient,
             cwd=workspace_root,
         )
+        skill_runtime_audit = build_skill_runtime_audit(runtime_home)
+        skill_runtime_audit_path = os.path.join(
+            runtime_dir,
+            "skill-manager",
+            f"agent-console-{session_ref['sessionAttemptId']}.json",
+        )
+        write_skill_runtime_audit(skill_runtime_audit_path, skill_runtime_audit)
+        agent_skill_projection = skill_runtime_audit["surfaceProjections"]["agent"]
         console_envelope_body = {
             "schema": "kungfu.agent-console-envelope/v1",
             "workspaceId": str(
@@ -684,6 +696,15 @@ def native_environment(
                 "provider exit does not claim Work completion",
                 *(str(value) for value in selected_adapter.get("knownLimits") or []),
             ],
+            "skillRuntimeAudit": {
+                "schema": "kungfu.skill-runtime-audit-pointer/v1",
+                "path": skill_runtime_audit_path,
+                "runtimeAuditRoot": agent_skill_projection["runtimeAuditRoot"],
+                "registryStateRoot": agent_skill_projection["registryStateRoot"],
+                "historyRoot": agent_skill_projection["historyRoot"],
+                "diagnosisRoot": agent_skill_projection["diagnosisRoot"],
+                "authority": agent_skill_projection["authority"],
+            },
             "bootstrap": bootstrap_context,
         }
         console_envelope = {
