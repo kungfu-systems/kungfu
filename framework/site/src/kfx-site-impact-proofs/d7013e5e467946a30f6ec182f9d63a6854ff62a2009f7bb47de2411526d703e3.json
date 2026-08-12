@@ -1,7 +1,7 @@
 {
   "contract": "kungfu.kfx-site-impact-proof/v1",
   "baseRevision": "445b2fd84ec7f613ccbfc3d5f06980a3b07f0690",
-  "changeRoot": "sha256:b9dbb725a99d1cf685262e0ce0aa920eb39a2cae8e1f7d43387254e56136d3b2",
+  "changeRoot": "sha256:ad023e1c505340c97c05f79b19eb2f19bb3e22a5c53405a2cbebd6e74ea9333a",
   "changes": [
     {
       "baseContentRoot": "sha256:a34d83865c144128bce57739af166042aa2abf22273e06e1629370931417e8aa",
@@ -118,6 +118,12 @@
       "status": "modified"
     },
     {
+      "baseContentRoot": "sha256:37b3c9d21464d58e786457c312326d99851f7e24a4179abe14954c19aa825c9a",
+      "contentRoot": "sha256:6be2b45796f428782ebfece35497290c0c6f1ab31f14434aa0435fd8eb75cfc1",
+      "path": "framework/dev-delivery/native-under-warrant.mjs",
+      "status": "modified"
+    },
+    {
       "baseContentRoot": "sha256:93214c5d987239a46f1998e043d4efddd7246219c88f2f37d484cea559380c66",
       "contentRoot": "sha256:6fe81eab5f1c2b3d3d7f5c1aa76791fb068d3e75f2e4b0e30ecdd0ef0f3e0a77",
       "path": "framework/release/buildchain-kfd-runtime.mjs",
@@ -163,6 +169,12 @@
       "baseContentRoot": "sha256:001e2afa654d47f8ece38c57860c9f6592bfe4fef233712123d79061651d1209",
       "contentRoot": "sha256:1c61b5f26e040de3b7ec5778edf7cd05c32a305af04492bd10e22e1b81f2b55f",
       "path": "pnpm-lock.yaml",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:d13785020c7cae3adea3e1834a8d4e577ba8ec41e2f65989b11fd6f14207ae23",
+      "contentRoot": "sha256:47e82d48c1b8bb9a6f6e2a0d2ac83fbb9b340f35be360eb389a1e3126c7d57cc",
+      "path": "scripts/dev-pr-auto-merge.test.mjs",
       "status": "modified"
     },
     {
@@ -219,11 +231,11 @@
     "package-facets",
     "profiles-suites"
   ],
-  "rationale": "The Alpha.2 blocker forward-port and two-phase Delivery Warrant integration change release governance, CI orchestration, and internal qualification evidence only; they do not change KFX public behavior, contracts, or reader journeys.",
+  "rationale": "The exact-head Warrant controller now enables the existing Conan source-build bootstrap for SDK qualification; this internal release-governance change does not alter the KFX site bundle or any KFX-facing contract.",
   "attestation": {
     "publicBehaviorUnchanged": true,
     "publicContractUnchanged": true,
     "readerJourneyUnchanged": true
   },
-  "proofRoot": "sha256:b013efb04df227e6e645328c18ce7003cb2b9101954448c3cca5622f2e95897d"
+  "proofRoot": "sha256:d7013e5e467946a30f6ec182f9d63a6854ff62a2009f7bb47de2411526d703e3"
 }
