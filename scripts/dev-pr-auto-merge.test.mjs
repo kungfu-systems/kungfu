@@ -6,7 +6,10 @@ import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 
-import { runNativeUnderWarrant } from '../framework/dev-delivery/native-under-warrant.mjs';
+import {
+  GitHubNativeStatusClient,
+  runNativeUnderWarrant,
+} from '../framework/dev-delivery/native-under-warrant.mjs';
 
 const workflow = fs.readFileSync(
   '.github/workflows/dev-pr-auto-merge.yml',
@@ -17,7 +20,7 @@ test('Dev auto-merge admits only explicitly ready reviewed same-repository PRs',
   const reusableRef = workflow.match(
     /uses: kungfu-systems\/buildchain\/\.github\/workflows\/dev-pr-auto-merge\.yml@([0-9a-f]{40})/u,
   )?.[1];
-  assert.equal(reusableRef, '6057d71142dfc6a9d78872e316eca87d9510e176');
+  assert.equal(reusableRef, 'fefb02fbb874bf4bc86dc3fd4a707a9468e14718');
   assert.match(workflow, new RegExp(`buildchain-ref: ${reusableRef}`, 'u'));
   assert.match(workflow, /workflow_run:[\s\S]*Core affected native/u);
   assert.match(workflow, /pull_request_target:[\s\S]*ready_for_review/u);
@@ -143,7 +146,7 @@ test('Dev behind admission produces and forwards an exact Project Cut replay pro
   );
   assert.match(
     workflow,
-    /Check out exact Buildchain delivery runtime[\s\S]*ref: 6057d71142dfc6a9d78872e316eca87d9510e176/u,
+    /Check out exact Buildchain delivery runtime[\s\S]*ref: fefb02fbb874bf4bc86dc3fd4a707a9468e14718/u,
   );
   assert.match(
     workflow,
@@ -169,6 +172,81 @@ test('Dev behind admission produces and forwards an exact Project Cut replay pro
     workflow,
     /test "\$current_base" = "\$\(jq -r '\.base\.sha'/u,
   );
+});
+
+function githubResponse(status, body) {
+  return {
+    ok: status >= 200 && status < 300,
+    status,
+    async text() {
+      return JSON.stringify(body);
+    },
+  };
+}
+
+test('native status client retries bounded transient fetch failures', async () => {
+  const delays = [];
+  let attempts = 0;
+  const client = new GitHubNativeStatusClient({
+    repository: 'kungfu-systems/kungfu',
+    token: 'test-token',
+    fetchImpl: async () => {
+      attempts += 1;
+      if (attempts < 3) throw new TypeError('fetch failed');
+      return githubResponse(201, { state: 'success' });
+    },
+    sleepImpl: async (delay) => delays.push(delay),
+  });
+  assert.deepEqual(
+    await client.request('/repos/kungfu-systems/kungfu/statuses/head', {
+      method: 'POST',
+      body: { state: 'success' },
+    }),
+    { state: 'success' },
+  );
+  assert.equal(attempts, 3);
+  assert.deepEqual(delays, [1_000, 2_000]);
+});
+
+test('native status client fails semantic API errors without retrying', async () => {
+  let attempts = 0;
+  const client = new GitHubNativeStatusClient({
+    repository: 'kungfu-systems/kungfu',
+    token: 'test-token',
+    fetchImpl: async () => {
+      attempts += 1;
+      return githubResponse(422, { message: 'Validation Failed' });
+    },
+    sleepImpl: async () => assert.fail('semantic failure must not retry'),
+  });
+  await assert.rejects(
+    client.request('/repos/kungfu-systems/kungfu/statuses/head', {
+      method: 'POST',
+      body: { state: 'success' },
+    }),
+    /Validation Failed/u,
+  );
+  assert.equal(attempts, 1);
+});
+
+test('native status client fails closed after bounded retry exhaustion', async () => {
+  const delays = [];
+  let attempts = 0;
+  const client = new GitHubNativeStatusClient({
+    repository: 'kungfu-systems/kungfu',
+    token: 'test-token',
+    fetchImpl: async () => {
+      attempts += 1;
+      throw new TypeError('fetch failed');
+    },
+    sleepImpl: async (delay) => delays.push(delay),
+  });
+  await assert.rejects(
+    client.request('/repos/kungfu-systems/kungfu/statuses/head'),
+    /fetch failed/u,
+  );
+  assert.equal(attempts, 3);
+  assert.deepEqual(delays, [1_000, 2_000]);
 });
 
 function nativeFixture(runStep = () => {}) {
