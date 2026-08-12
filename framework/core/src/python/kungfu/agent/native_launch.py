@@ -6,7 +6,10 @@ from __future__ import annotations
 
 import json
 import os
+import shlex
+import shutil
 import subprocess
+import sys
 import threading
 import time
 from contextlib import ExitStack, contextmanager
@@ -16,6 +19,15 @@ from typing import Any, Callable, Mapping
 import uuid
 
 from kungfu.agent.work_projection import WorkProjectionPort
+from kungfu.agent import resources as agent_resources
+from kungfu.agent import runtime_profiles
+from kungfu.agent import session_contract
+from kungfu.skill import (
+    build_skill_context,
+    build_skill_runtime_audit,
+    read_audit_file,
+    write_skill_runtime_audit,
+)
 from kungfu.workspace import (
     WorkspaceTargetRequired,
     load_workspace_registry,
@@ -131,6 +143,384 @@ def prepare_native_launch(ctx, workspace_root, provider_name, project_work_bindi
             "this terminal; Kungfu will not answer it for you."
         )
     return target, launch_root, work_ref, work_selection, notices
+
+
+_COMMON_ENV_ALLOWLIST = (
+    "HOME",
+    "PATH",
+    "LANG",
+    "LC_ALL",
+    "LC_CTYPE",
+    "TERM",
+    "COLORTERM",
+    "TERM_PROGRAM",
+    "TERM_PROGRAM_VERSION",
+    "TERMINFO",
+    "TERMINFO_DIRS",
+    "COLORFGBG",
+    "LC_TERMINAL",
+    "LC_TERMINAL_VERSION",
+    "NO_COLOR",
+    "CLICOLOR",
+    "CLICOLOR_FORCE",
+    "VTE_VERSION",
+    "TMPDIR",
+    "SHELL",
+    "XDG_CONFIG_HOME",
+    "XDG_DATA_HOME",
+    "XDG_CACHE_HOME",
+    "SSL_CERT_FILE",
+    "SSL_CERT_DIR",
+    "HTTP_PROXY",
+    "HTTPS_PROXY",
+    "NO_PROXY",
+    "http_proxy",
+    "https_proxy",
+    "no_proxy",
+    "KUNGFU_CLI_BIN",
+    "SYSTEMROOT",
+    "SYSTEMDRIVE",
+    "WINDIR",
+    "COMSPEC",
+    "PATHEXT",
+    "TEMP",
+    "TMP",
+    "PROGRAMDATA",
+    "PROGRAMFILES",
+    "PROGRAMFILES(X86)",
+    "PROGRAMW6432",
+    "ALLUSERSPROFILE",
+    "HOMEDRIVE",
+    "HOMEPATH",
+)
+
+
+def native_provider_adapter(
+    provider: str,
+    *,
+    runtime_dir: str,
+    session_id: str | None = None,
+    resolved_config: Mapping[str, Any] | None = None,
+    config_home: str | None = None,
+    runtime_home: str | None = None,
+) -> dict[str, Any]:
+    """Materialize one session-only Skill adapter for a provider-native UI."""
+
+    return runtime_profiles.materialize_adapter(
+        provider,
+        runtime_dir=runtime_dir,
+        session_id=session_id,
+        resolved_config=resolved_config,
+        config_home=config_home,
+        runtime_home=runtime_home,
+    )
+
+
+def _native_skill_work_ref(work_ref: Mapping[str, Any] | None) -> str | None:
+    if work_ref is None:
+        return None
+    return str(work_ref.get("entityId") or work_ref.get("workspaceId") or "") or None
+
+
+def refresh_native_skill_runtime_audit(env: Mapping[str, str]) -> None:
+    """Refresh the Agent Console pointer after rooted on-demand Skill activity."""
+
+    output_path = env.get("KUNGFU_SKILL_RUNTIME_AUDIT_FINAL_FILE")
+    runtime_home = env.get("KF_HOME")
+    if not output_path or not runtime_home:
+        return
+    audit_documents = []
+    audit_path = env.get("KUNGFU_SKILL_AUDIT_FILE")
+    if audit_path and Path(audit_path).is_file():
+        audit_documents.append(read_audit_file(audit_path))
+    document = build_skill_runtime_audit(
+        runtime_home,
+        audit_documents=audit_documents,
+        run_id=env.get("KUNGFU_SKILL_RUN_ID"),
+        work_ref=env.get("KUNGFU_SKILL_WORK_REF"),
+    )
+    write_skill_runtime_audit(output_path, document)
+
+
+def native_environment(
+    provider: str,
+    *,
+    runtime_dir: str,
+    config_home: str,
+    runtime_home: str,
+    workspace_root: str,
+    work_ref: Mapping[str, Any] | None,
+    work_selection: Mapping[str, Any],
+    profile: Mapping[str, Any] | None = None,
+    session_ref: Mapping[str, str] | None = None,
+    session_endpoint: str | None = None,
+    provider_version: str = "unknown",
+    adapter: Mapping[str, Any] | None = None,
+    source: Mapping[str, str] | None = None,
+    stdio_is_tty: bool | None = None,
+    skill_context_builder: Callable[..., dict[str, Any]] = build_skill_context,
+) -> dict[str, str]:
+    """Return a credential-safe native UI environment with compact Kungfu hints."""
+
+    ambient = os.environ if source is None else source
+    selected_adapter = dict(adapter or {})
+    allowed = (
+        *_COMMON_ENV_ALLOWLIST,
+        *(str(value) for value in selected_adapter.get("credentialEnvironment") or []),
+    )
+    env = {key: str(ambient[key]) for key in allowed if ambient.get(key)}
+    env.update(
+        {
+            str(key): str(value)
+            for key, value in dict(selected_adapter.get("environment") or {}).items()
+        }
+    )
+    terminal_attached = (
+        all(stream.isatty() for stream in (sys.stdin, sys.stdout, sys.stderr))
+        if stdio_is_tty is None
+        else stdio_is_tty
+    )
+    ambient_term = str(ambient.get("TERM") or "").strip()
+    terminal_recovery = terminal_attached and ambient_term.lower() in {"", "dumb"}
+    if terminal_recovery:
+        # A real provider-native terminal must not inherit the non-interactive
+        # TERM=dumb marker used by launchers and automation wrappers.  ``xterm``
+        # is the conservative baseline understood by the supported native UIs;
+        # valid terminal types remain untouched.
+        env["TERM"] = "xterm"
+        env["KUNGFU_AGENT_TERMINAL_RECOVERY"] = f"{ambient_term or 'unset'}->xterm"
+    configured_cli = str(ambient.get("KUNGFU_CLI_BIN") or "").strip()
+    cli_candidate = configured_cli or shutil.which(
+        "kungfu", path=str(ambient.get("PATH") or "")
+    )
+    if configured_cli and not os.path.isabs(os.path.expanduser(configured_cli)):
+        cli_candidate = shutil.which(
+            configured_cli, path=str(ambient.get("PATH") or "")
+        )
+    if cli_candidate:
+        cli_path = Path(cli_candidate).expanduser().absolute()
+        if not cli_path.is_file() or not os.access(cli_path, os.X_OK):
+            raise ValueError(
+                "KUNGFU_CLI_BIN must identify an executable Kungfu front door"
+            )
+        cli_bin = str(cli_path)
+        env["KUNGFU_CLI_BIN"] = cli_bin
+    else:
+        cli_bin = "kungfu"
+    bind_work_entrypoint = [
+        cli_bin,
+        "agent",
+        "console",
+        "bind-work",
+        "--initiative-id",
+        "<id>",
+        "--assignment-id",
+        "<id>",
+        "--json",
+    ]
+    selected = dict(profile or {})
+    profile_id = str(selected.get("id") or f"kungfu.agent-runtime.{provider}")
+    bootstrap_receipt = (
+        agent_resources.native_bootstrap_receipt(
+            provider,
+            profile=selected,
+            adapter=selected_adapter,
+            session_ref=session_ref,
+        )
+        if session_ref is not None
+        else None
+    )
+    bootstrap_context = agent_resources.bootstrap_context(bootstrap_receipt)
+    context = {
+        "schema": "kungfu.native-agent-context/v1",
+        "environment": "native-interactive",
+        "entrypoints": {
+            "context": [cli_bin, "agent", "context", "--json"],
+            "skills": [cli_bin, "skill", "catalog", "--json"],
+            "work": [cli_bin, "work", "status"],
+            "bindWork": bind_work_entrypoint,
+        },
+        "workBinding": {
+            "launchState": "bound" if work_ref is not None else "unbound",
+            "requiredBeforeProjectWrite": True,
+            "bootstrapRequiredBeforeProjectWrite": True,
+            "mutationsAllowed": bootstrap_context["mutationsAllowed"],
+            "conflictCode": "native_work_already_active",
+            "canonicalEntrypoint": "bindWork",
+            "internalSessionOperations": [
+                "plan-native-bind-work",
+                "bind-native-work",
+            ],
+            "internalSessionOperationsAreCliEntrypoints": False,
+        },
+        "bootstrap": bootstrap_context,
+        "workSelection": dict(work_selection),
+        "terminal": {
+            "stdioAttached": terminal_attached,
+            "ambientTerm": ambient_term or None,
+            "effectiveTerm": env.get("TERM") or None,
+            "program": env.get("TERM_PROGRAM") or None,
+            "programVersion": env.get("TERM_PROGRAM_VERSION") or None,
+            "recovered": terminal_recovery,
+        },
+    }
+    env.update(
+        {
+            "KF_CONFIG_HOME": config_home,
+            "KF_HOME": runtime_home,
+            "KF_RUNTIME_DIR": runtime_dir,
+            "KUNGFU_AGENT_RUNTIME_DIR": runtime_dir,
+            "KUNGFU_AGENT_ENVIRONMENT": "native-interactive",
+            "KUNGFU_AGENT_CONTEXT": json.dumps(
+                context, ensure_ascii=False, sort_keys=True, separators=(",", ":")
+            ),
+            "KUNGFU_AGENT_CONTEXT_ENTRYPOINT": (
+                f"{shlex.quote(cli_bin)} agent context --json"
+            ),
+            "KUNGFU_SKILL_CATALOG_ENTRYPOINT": (
+                f"{shlex.quote(cli_bin)} skill catalog --json"
+            ),
+            "KUNGFU_WORK_STATUS_ENTRYPOINT": f"{shlex.quote(cli_bin)} work status",
+            "KUNGFU_WORKSPACE_ROOT": workspace_root,
+            "KUNGFU_PRIOR_TRANSCRIPT_BYTES": "0",
+        }
+    )
+    if session_ref is not None:
+        attempt_id = str(session_ref["sessionAttemptId"])
+        skill_work_ref = _native_skill_work_ref(work_ref)
+        skill_audit_log_path = os.path.join(
+            runtime_dir,
+            "skill-manager",
+            f"agent-console-{attempt_id}-events.jsonl",
+        )
+        skill_context = skill_context_builder(
+            runtime_home,
+            source="cli",
+            manager="python",
+            profile=profile_id,
+            agent=provider,
+            runtime_dir=runtime_dir,
+            env=ambient,
+            cwd=workspace_root,
+        )
+        skill_runtime_audit = build_skill_runtime_audit(
+            runtime_home,
+            run_id=attempt_id,
+            work_ref=skill_work_ref,
+        )
+        skill_runtime_audit_path = os.path.join(
+            runtime_dir,
+            "skill-manager",
+            f"agent-console-{attempt_id}.json",
+        )
+        skill_runtime_audit_final_path = os.path.join(
+            runtime_dir,
+            "skill-manager",
+            f"agent-console-{attempt_id}-final.json",
+        )
+        write_skill_runtime_audit(skill_runtime_audit_path, skill_runtime_audit)
+        agent_skill_projection = skill_runtime_audit["surfaceProjections"]["agent"]
+        console_envelope_body = {
+            "schema": "kungfu.agent-console-envelope/v1",
+            "workspaceId": str(
+                work_ref.get("workspaceId")
+                if work_ref is not None
+                else work_selection.get("workspaceId") or workspace_root
+            ),
+            "consoleId": str(session_ref["workConsoleId"]),
+            "attemptId": str(session_ref["sessionAttemptId"]),
+            "runtimeProfileId": profile_id,
+            "provider": provider,
+            "activeProfiles": (
+                [
+                    {
+                        "id": str(work_ref["profileId"]),
+                        "root": str(work_ref["profileRoot"]),
+                    }
+                ]
+                if work_ref is not None
+                else []
+            ),
+            "workRef": dict(work_ref) if work_ref is not None else None,
+            "entrypoints": {
+                "context": [cli_bin, "agent", "context", "--json"],
+                "capabilities": [cli_bin, "agent", "capabilities", "--json"],
+                "profiles": [cli_bin, "profile", "manager", "--json"],
+                "bindWork": bind_work_entrypoint,
+            },
+            "knownLimits": [
+                "native provider terminal bytes are not captured by Kungfu",
+                "TUI observes Core Work state but cannot control provider input",
+                "provider exit does not claim Work completion",
+                *(str(value) for value in selected_adapter.get("knownLimits") or []),
+            ],
+            "skillRuntimeAudit": {
+                "schema": "kungfu.skill-runtime-audit-pointer/v1",
+                "path": skill_runtime_audit_path,
+                "runtimeAuditRoot": agent_skill_projection["runtimeAuditRoot"],
+                "registryStateRoot": agent_skill_projection["registryStateRoot"],
+                "historyRoot": agent_skill_projection["historyRoot"],
+                "diagnosisRoot": agent_skill_projection["diagnosisRoot"],
+                "authority": agent_skill_projection["authority"],
+            },
+            "bootstrap": bootstrap_context,
+        }
+        console_envelope = {
+            **console_envelope_body,
+            "envelopeRoot": session_contract.semantic_root(console_envelope_body),
+        }
+        session_contract.validate_agent_console_envelope(console_envelope)
+        env.update(
+            {
+                "KUNGFU_AGENT_ATTEMPT_ID": str(session_ref["sessionAttemptId"]),
+                "KUNGFU_AGENT_CONSOLE_ID": str(session_ref["workConsoleId"]),
+                "KUNGFU_AGENT_CONSOLE_ENVELOPE": json.dumps(
+                    console_envelope,
+                    ensure_ascii=False,
+                    sort_keys=True,
+                    separators=(",", ":"),
+                ),
+                "KUNGFU_AGENT_BOOTSTRAP_RECEIPT": json.dumps(
+                    bootstrap_receipt,
+                    ensure_ascii=False,
+                    sort_keys=True,
+                    separators=(",", ":"),
+                ),
+                "KUNGFU_SKILL_CONTEXT": json.dumps(
+                    skill_context,
+                    ensure_ascii=False,
+                    sort_keys=True,
+                    separators=(",", ":"),
+                ),
+                "KUNGFU_SKILL_AUDIT_FILE": skill_audit_log_path,
+                "KUNGFU_SKILL_READ_ENTRYPOINT": (
+                    f"{shlex.quote(cli_bin)} skill read <key-or-path> "
+                    f"--run-id {shlex.quote(attempt_id)} --audit-file "
+                    f"{shlex.quote(skill_audit_log_path)} --json"
+                ),
+                "KUNGFU_SKILL_RUN_ID": attempt_id,
+                "KUNGFU_SKILL_RUNTIME_AUDIT_FILE": skill_runtime_audit_path,
+                "KUNGFU_SKILL_RUNTIME_AUDIT_FINAL_FILE": (
+                    skill_runtime_audit_final_path
+                ),
+                "KUNGFU_AGENT_SESSION_ACTOR": (
+                    f"native:{provider}:{session_ref['sessionAttemptId']}"
+                ),
+                "KUNGFU_AGENT_PROVIDER_VERSION": provider_version,
+            }
+        )
+        if skill_work_ref:
+            env["KUNGFU_SKILL_WORK_REF"] = skill_work_ref
+        if session_endpoint:
+            env["KUNGFU_AGENT_SESSION_ENDPOINT"] = session_endpoint
+    if work_ref is not None:
+        env["KUNGFU_WORK_REF"] = json.dumps(
+            dict(work_ref),
+            ensure_ascii=False,
+            sort_keys=True,
+            separators=(",", ":"),
+        )
+    return env
 
 
 @dataclass(frozen=True)
