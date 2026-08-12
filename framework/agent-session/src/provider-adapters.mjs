@@ -19,7 +19,13 @@ const PROVIDER_PROFILES = {
         ['codex.approval.confirm', /press enter to confirm or esc to cancel/iu],
       ],
       busy: [['codex.busy.interrupt-hint', /esc to interrupt/iu]],
-      ready: [['codex.ready.prompt', /^\s*›(?:\s|$)/mu]],
+      ready: [
+        ['codex.ready.prompt', /^\s*›(?:\s|$)/mu],
+        [
+          'codex.ready.status-line',
+          /^\s*gpt-[0-9][0-9A-Za-z._-]*\s+(?:low|medium|high|xhigh|max|ultra)\s+·\s+\S/mu,
+        ],
+      ],
     },
   },
   claude: {
