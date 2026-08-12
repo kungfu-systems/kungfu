@@ -330,6 +330,49 @@ test('two-phase native adapter runs both partitions and seals exact-head success
   );
 });
 
+test('two-phase native adapter detects the Conan profile before an SDK build', async (t) => {
+  const commands = [];
+  const value = nativeFixture((_cwd, name, args, environment) =>
+    commands.push({ name, args, environment }),
+  );
+  value.dependencies.readPlan = () => ({
+    schema: 'kungfu.core-affected-native-plan/v1',
+    closureComponents: [],
+    sdkQualification: { required: true },
+    devQueueQualification: {
+      shifuWorkspace: { required: false },
+      kfdVerifier: { required: false },
+    },
+  });
+  t.after(() => fs.rmSync(value.cwd, { recursive: true, force: true }));
+
+  await runNativeUnderWarrant(value.options, value.dependencies);
+
+  assert.deepEqual(
+    commands.map(({ name }) => name),
+    [
+      'Plan current affected closure',
+      'Install frozen workspace',
+      'Detect Conan default profile',
+      'Build Core SDK artifacts',
+      'Pack four-language SDK artifacts',
+      'Qualify installed SDK wire contract',
+    ],
+  );
+  assert.deepEqual(commands[2].args, [
+    'exec',
+    'uv',
+    'run',
+    '--frozen',
+    'conan',
+    'profile',
+    'detect',
+    '--force',
+  ]);
+  assert.equal(commands[2].environment.CC, 'gcc-14');
+  assert.equal(commands[2].environment.CXX, 'g++-14');
+});
+
 test('two-phase native adapter fails closed and replaces pending with failure', async (t) => {
   const value = nativeFixture((_cwd, name) => {
     if (name.includes('partition 0')) throw new Error('native shard failed');
