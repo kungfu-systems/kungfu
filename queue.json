@@ -3,7 +3,7 @@
   "contract": "kungfu-buildchain-dev-delivery-warrant-queue",
   "repository": "kungfu-systems/kungfu",
   "protectedBase": "dev/v4/v4.0",
-  "generation": 1315,
+  "generation": 1316,
   "fencingCounter": 331,
   "policy": {
     "agingSeconds": 900,
@@ -14254,11 +14254,20 @@
       "sourceWorkflowRunId": 31565056982,
       "priority": "ordinary",
       "enqueuedAt": "2026-08-12T10:13:11.931Z",
-      "updatedAt": "2026-08-12T10:13:11.931Z",
+      "updatedAt": "2026-08-12T10:17:04.946Z",
       "attempts": 1,
       "recoveries": 0,
-      "status": "queued",
-      "terminal": null,
+      "status": "cancelled",
+      "terminal": {
+        "outcome": "cancelled",
+        "reason": "Replace ordinary recovery attempt with bounded expedited recovery after verified controller fencing race",
+        "evidenceRoot": "sha256:f42223b16a673558ebad9da9ae905bbb5af2b250a52e1bc1b524091f1ca3de46",
+        "authority": "queued-candidate-cancellation",
+        "expectedSourceHead": "f8a74ae4ae5bbb21eed959cb508baf2f07358163",
+        "observedSourceHead": "f8a74ae4ae5bbb21eed959cb508baf2f07358163",
+        "eventAction": "cancelled",
+        "closedAt": "2026-08-12T10:17:04.946Z"
+      },
       "affectedPaths": [
         ".buildchain/kfd/kfd-2/claims/agent-onboarding-pack.json",
         ".buildchain/kfd/kfd-2/claims/agent-work-state-contract.json",
@@ -14352,6 +14361,6 @@
       ]
     }
   ],
-  "updatedAt": "2026-08-12T10:16:54.820Z",
-  "stateRoot": "sha256:639e05ff3f488fcb5f6a7af8ee7d1f5a01ef754798a2087c1d185e185ff73c14"
+  "updatedAt": "2026-08-12T10:17:04.946Z",
+  "stateRoot": "sha256:e00783e1132b168ba7100a4ce189aff68c455d8c87249678bf12956398fcf8a6"
 }
