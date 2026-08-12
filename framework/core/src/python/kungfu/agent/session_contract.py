@@ -45,10 +45,11 @@ _ENVELOPE_FIELDS = {
     "workRef",
     "entrypoints",
     "knownLimits",
+    "skillRuntimeAudit",
     "bootstrap",
     "envelopeRoot",
 }
-_ENVELOPE_REQUIRED_FIELDS = _ENVELOPE_FIELDS - {"bootstrap"}
+_ENVELOPE_REQUIRED_FIELDS = _ENVELOPE_FIELDS - {"bootstrap", "skillRuntimeAudit"}
 
 
 def canonical_json(value: Any) -> str:
@@ -201,6 +202,45 @@ def validate_agent_console_envelope(
         isinstance(item, str) for item in limits
     ):
         raise ValueError("AgentConsoleEnvelope.knownLimits must be a text array")
+    if "skillRuntimeAudit" in result:
+        audit = _object(
+            result.get("skillRuntimeAudit"),
+            "AgentConsoleEnvelope.skillRuntimeAudit",
+        )
+        audit_fields = {
+            "schema",
+            "path",
+            "runtimeAuditRoot",
+            "registryStateRoot",
+            "historyRoot",
+            "diagnosisRoot",
+            "authority",
+        }
+        _exact_fields(
+            audit,
+            allowed=audit_fields,
+            required=audit_fields,
+            label="AgentConsoleEnvelope.skillRuntimeAudit",
+        )
+        if audit.get("schema") != "kungfu.skill-runtime-audit-pointer/v1":
+            raise ValueError(
+                "AgentConsoleEnvelope.skillRuntimeAudit.schema is unsupported"
+            )
+        _text(audit.get("path"), "AgentConsoleEnvelope.skillRuntimeAudit.path")
+        for field in (
+            "runtimeAuditRoot",
+            "registryStateRoot",
+            "historyRoot",
+            "diagnosisRoot",
+        ):
+            if _ROOT.fullmatch(str(audit.get(field) or "")) is None:
+                raise ValueError(
+                    f"AgentConsoleEnvelope.skillRuntimeAudit.{field} must be a sha256 root"
+                )
+        if audit.get("authority") != "read-only-projection":
+            raise ValueError(
+                "AgentConsoleEnvelope.skillRuntimeAudit.authority must be read-only-projection"
+            )
     if "bootstrap" in result:
         bootstrap = _object(result.get("bootstrap"), "AgentConsoleEnvelope.bootstrap")
         bootstrap_fields = {

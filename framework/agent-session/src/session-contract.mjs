@@ -32,6 +32,7 @@ const ENVELOPE_FIELDS = new Set([
   'workRef',
   'entrypoints',
   'knownLimits',
+  'skillRuntimeAudit',
   'envelopeRoot',
 ]);
 
@@ -119,7 +120,10 @@ function validateArgv(value, label) {
 
 export function validateAgentConsoleEnvelope(value) {
   const result = structuredClone(object(value, 'AgentConsoleEnvelope'));
-  exactFields(result, ENVELOPE_FIELDS, ENVELOPE_FIELDS, 'AgentConsoleEnvelope');
+  const required = new Set(
+    [...ENVELOPE_FIELDS].filter((field) => field !== 'skillRuntimeAudit'),
+  );
+  exactFields(result, ENVELOPE_FIELDS, required, 'AgentConsoleEnvelope');
   if (result.schema !== AGENT_CONSOLE_ENVELOPE_SCHEMA)
     fail(
       `AgentConsoleEnvelope.schema must be ${AGENT_CONSOLE_ENVELOPE_SCHEMA}`,
@@ -173,6 +177,45 @@ export function validateAgentConsoleEnvelope(value) {
     !result.knownLimits.every((item) => typeof item === 'string')
   )
     fail('AgentConsoleEnvelope.knownLimits must be a text array');
+  if (Object.hasOwn(result, 'skillRuntimeAudit')) {
+    const audit = object(
+      result.skillRuntimeAudit,
+      'AgentConsoleEnvelope.skillRuntimeAudit',
+    );
+    const fields = new Set([
+      'schema',
+      'path',
+      'runtimeAuditRoot',
+      'registryStateRoot',
+      'historyRoot',
+      'diagnosisRoot',
+      'authority',
+    ]);
+    exactFields(
+      audit,
+      fields,
+      fields,
+      'AgentConsoleEnvelope.skillRuntimeAudit',
+    );
+    if (audit.schema !== 'kungfu.skill-runtime-audit-pointer/v1')
+      fail('AgentConsoleEnvelope.skillRuntimeAudit.schema is unsupported');
+    text(audit.path, 'AgentConsoleEnvelope.skillRuntimeAudit.path');
+    for (const field of [
+      'runtimeAuditRoot',
+      'registryStateRoot',
+      'historyRoot',
+      'diagnosisRoot',
+    ]) {
+      if (!ROOT.test(audit[field]))
+        fail(
+          `AgentConsoleEnvelope.skillRuntimeAudit.${field} must be a sha256 root`,
+        );
+    }
+    if (audit.authority !== 'read-only-projection')
+      fail(
+        'AgentConsoleEnvelope.skillRuntimeAudit.authority must be read-only-projection',
+      );
+  }
   const { envelopeRoot, ...body } = result;
   if (envelopeRoot !== semanticRoot(body))
     fail('AgentConsoleEnvelope.envelopeRoot does not match its canonical body');

@@ -1,0 +1,127 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "kungfu.skill-runtime-audit/v2",
+  "title": "Kungfu Skill Runtime Audit",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "authority",
+    "scope",
+    "roots",
+    "skills",
+    "evidence",
+    "recovery",
+    "runtimeAuditRoot",
+    "surfaceProjections",
+    "documentRoot"
+  ],
+  "properties": {
+    "schema": { "const": "kungfu.skill-runtime-audit/v2" },
+    "authority": {
+      "type": "object",
+      "required": ["registry", "projection", "nonClaims"],
+      "properties": {
+        "registry": { "const": "python-single-writer-skill-registry-fold" },
+        "projection": { "const": "read-only-evidence-join" },
+        "nonClaims": { "type": "array", "items": { "type": "string" } }
+      },
+      "additionalProperties": false
+    },
+    "scope": {
+      "type": "object",
+      "required": ["runId", "workRef"],
+      "properties": {
+        "runId": { "type": ["string", "null"] },
+        "workRef": { "type": ["string", "null"] }
+      },
+      "additionalProperties": false
+    },
+    "roots": { "$ref": "#/$defs/roots" },
+    "skills": { "type": "array", "items": { "type": "object" } },
+    "evidence": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["state", "skillKey", "workRef", "runId", "source", "proof", "detail"],
+        "properties": {
+          "state": {
+            "enum": [
+              "advertised", "installed", "enabled", "selected", "loaded",
+              "resolved", "invoked", "blocked", "degraded", "recovered",
+              "suspended", "retired", "historical", "unproved"
+            ]
+          },
+          "skillKey": { "type": ["string", "null"] },
+          "workRef": { "type": ["string", "null"] },
+          "runId": { "type": ["string", "null"] },
+          "source": { "type": "object" },
+          "proof": { "$ref": "#/$defs/proof" },
+          "detail": { "type": "object" }
+        },
+        "additionalProperties": false
+      }
+    },
+    "recovery": { "type": "object" },
+    "runtimeAuditRoot": { "$ref": "#/$defs/root" },
+    "surfaceProjections": {
+      "type": "object",
+      "required": ["agent", "cli", "gui", "tui", "managed-run"],
+      "properties": {
+        "agent": { "$ref": "#/$defs/surface" },
+        "cli": { "$ref": "#/$defs/surface" },
+        "gui": { "$ref": "#/$defs/surface" },
+        "tui": { "$ref": "#/$defs/surface" },
+        "managed-run": { "$ref": "#/$defs/surface" }
+      },
+      "additionalProperties": false
+    },
+    "documentRoot": { "$ref": "#/$defs/root" }
+  },
+  "$defs": {
+    "root": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+    "roots": {
+      "type": "object",
+      "required": [
+        "registryStateRoot", "registryReportRoot", "historyRoot",
+        "diagnosisRoot", "auditRoots", "dependencyRoots"
+      ],
+      "properties": {
+        "registryStateRoot": { "$ref": "#/$defs/root" },
+        "registryReportRoot": { "$ref": "#/$defs/root" },
+        "historyRoot": { "$ref": "#/$defs/root" },
+        "diagnosisRoot": { "$ref": "#/$defs/root" },
+        "auditRoots": { "type": "array", "items": { "$ref": "#/$defs/root" } },
+        "dependencyRoots": { "type": "array", "items": { "$ref": "#/$defs/root" } }
+      },
+      "additionalProperties": false
+    },
+    "proof": {
+      "type": "object",
+      "required": ["status", "roots"],
+      "properties": {
+        "status": { "enum": ["rooted", "unproved"] },
+        "roots": { "type": "array", "items": { "$ref": "#/$defs/root" } }
+      },
+      "additionalProperties": false
+    },
+    "surface": {
+      "type": "object",
+      "required": [
+        "surface", "runtimeAuditRoot", "registryStateRoot", "historyRoot",
+        "diagnosisRoot", "auditRoots", "dependencyRoots", "authority"
+      ],
+      "properties": {
+        "surface": { "enum": ["agent", "cli", "gui", "tui", "managed-run"] },
+        "runtimeAuditRoot": { "$ref": "#/$defs/root" },
+        "registryStateRoot": { "$ref": "#/$defs/root" },
+        "historyRoot": { "$ref": "#/$defs/root" },
+        "diagnosisRoot": { "$ref": "#/$defs/root" },
+        "auditRoots": { "type": "array", "items": { "$ref": "#/$defs/root" } },
+        "dependencyRoots": { "type": "array", "items": { "$ref": "#/$defs/root" } },
+        "authority": { "const": "read-only-projection" }
+      },
+      "additionalProperties": false
+    }
+  }
+}

@@ -256,7 +256,8 @@
           "dependencyReceiptV2",
           "authoringSpecV1",
           "authoringPlanV1",
-          "authoringReceiptV1"
+          "authoringReceiptV1",
+          "runtimeAuditV2"
         ]
       }
     }
@@ -337,6 +338,11 @@
     "history": "preserve-original-roots-receipts-work-bindings-and-meaning"
   },
   "schemaFiles": {
+    "runtimeAuditV2": {
+      "schema": "kungfu.skill-runtime-audit/v2",
+      "source": "schema/skill-runtime-audit-v2.schema.json",
+      "artifact": "skill/schema/skill-runtime-audit-v2.schema.json"
+    },
     "registryStateV2": {
       "schema": "kungfu.skill-registry-state/v2",
       "source": "schema/skill-registry-state-v2.schema.json",

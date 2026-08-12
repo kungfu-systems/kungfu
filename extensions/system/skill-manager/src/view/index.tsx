@@ -119,6 +119,9 @@ function SkillManagerViewComponent({ shell }: KfxViewProps) {
     );
   }
 
+  const runtimeAudit = view.runtimeAudit;
+  const guiProjection = runtimeAudit?.surfaceProjections.gui;
+
   return (
     <section style={panelStyle}>
       <h2 style={headingStyle}>
@@ -128,6 +131,25 @@ function SkillManagerViewComponent({ shell }: KfxViewProps) {
       <div style={{ ...mono, color: '#6a6a6a', marginBottom: 8 }}>
         registry: {view.registry.root}
       </div>
+      {runtimeAudit ? (
+        <section style={{ marginBottom: 12 }}>
+          <div style={{ ...mono, color: '#4ec9b0' }}>
+            shared runtime audit · {guiProjection.runtimeAuditRoot}
+          </div>
+          <div style={{ ...mono, color: '#858585', marginTop: 4 }}>
+            lifecycle/work/history: {guiProjection.registryStateRoot} ·{' '}
+            {guiProjection.historyRoot}
+          </div>
+          <div style={{ ...mono, color: '#858585', marginTop: 4 }}>
+            evidence: {runtimeAudit.evidence.length} · recovery:{' '}
+            {String(runtimeAudit.recovery.verdict ?? 'unproved')}
+          </div>
+        </section>
+      ) : (
+        <div style={{ ...mono, color: '#858585', marginBottom: 8 }}>
+          runtime audit unavailable · lifecycle/run claims remain unproved
+        </div>
+      )}
       {view.skills.length === 0 ? (
         <div style={{ ...mono, color: '#6a6a6a' }}>no installed skills</div>
       ) : (
