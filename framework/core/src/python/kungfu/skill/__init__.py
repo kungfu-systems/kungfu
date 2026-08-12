@@ -42,6 +42,12 @@ from .provider import (
     inject_skill_context,
     load_skill_context_file,
 )
+from .runtime_audit import (
+    build_skill_runtime_audit,
+    project_skill_runtime_audit,
+    read_skill_runtime_audit,
+    write_skill_runtime_audit,
+)
 from .registry import (
     SkillRegistryError,
     active_payload_bindings,
@@ -78,6 +84,7 @@ __all__ = [
     "build_kungfu_environment",
     "build_skill_dependency_binding",
     "build_skill_context",
+    "build_skill_runtime_audit",
     "catalog_entry",
     "candidate_catalog",
     "context_file_from_env",
@@ -99,7 +106,9 @@ __all__ = [
     "plan_dependency_invocation",
     "plan_scaffold",
     "plan_operation",
+    "project_skill_runtime_audit",
     "read_audit_file",
+    "read_skill_runtime_audit",
     "read_skill_dependency_binding",
     "read_skill_markdown",
     "qualify_draft",
@@ -116,4 +125,5 @@ __all__ = [
     "skill_contract",
     "write_audit_document",
     "write_skill_dependency_binding",
+    "write_skill_runtime_audit",
 ]
