@@ -333,6 +333,7 @@ test('declared discovery routes are zero-write in a cold read-only fixture', (t)
     '.github/actions/upload-qualified-core-matrix/action.yml',
     '.github/workflows/affected-native-cache-promote.yml',
     '.github/workflows/affected-native-pr.yml',
+    '.github/workflows/dev-post-merge-advisory.yml',
     '.github/workflows/aws-us-linux-burst-qualification.yml',
     '.github/workflows/aws-us-windows-burst-qualification.yml',
     '.github/workflows/cancel-dequeued-merge-group.yml',

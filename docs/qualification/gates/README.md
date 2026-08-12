@@ -65,6 +65,27 @@ continue to require their declared three-platform Gate profiles; moving the
 other platform observations off the dev PR event does not weaken those
 policies.
 
+The `Dev post-merge advisory` workflow applies the same separation to the two
+source-bound observations that previously ran at the tail of every
+`affected-native-pr.yml` merge-group run. A successful protected Dev push
+locates the exact successful merge-group authority for that merged SHA, then
+runs Production Graph parity and, when the exact plan contains a native
+closure, the three-platform Qualified Core candidate matrix. Its concurrency
+group keeps at most one running execution and GitHub's one latest pending
+execution per Dev ref; `cancel-in-progress: false` preserves the already
+running exact-source observation while a newer pending push supersedes an
+older pending push. Cancelled, superseded, failed, and unqualified outcomes
+remain visible in the advisory workflow and its promotion summary. They cannot
+relabel or block the merge that already completed.
+
+Qualified Core candidate provenance names the post-merge advisory run and
+workflow. Promotion separately revalidates the original merge-group delivery
+attempt for the same source instead of presenting the advisory producer as
+merge-group authority. The transport remains non-authoritative, and source
+build remains the fallback whenever an exact candidate row is absent. Alpha
+and release workflows, policy profiles, and qualification requirements are
+unchanged.
+
 `local-changed` is intentionally not a qualifying profile. Local diagnosis uses
 `./shifu gate run source.changed-scope` or an explicit list of Gate ids, and the
 result is non-qualifying by contract. Keeping it outside the remote profile
@@ -282,10 +303,13 @@ verdict remains non-qualifying. Rebuild it with:
 Dev admission is intentionally narrower than asynchronous observation. The
 protected branch keeps the source-acceptance check and
 `affected-native / linux` aggregate as its two merge-critical contexts.
-Daily/manual patrol and Core-profile workflows retain macOS, Windows,
+Protected-Dev post-merge advisory, daily/manual patrol, and Core-profile
+workflows retain Production Graph parity, Qualified Core, macOS, Windows,
 full-profile, and fault evidence without placing those optional jobs in front
-of required merge-group work. Alpha and release admission remain cross-platform
-and fail closed according to their own matrix rows.
+of required merge-group work. Advisory duration and runner-minutes are
+measured separately from the required-context critical path. Alpha and release
+admission remain cross-platform and fail closed according to their own matrix
+rows.
 
 The command requires `unzip` plus a read-only GitHub token through `GH_TOKEN` or
 `GITHUB_TOKEN`, or an authenticated `gh` client. It reads pull requests,
