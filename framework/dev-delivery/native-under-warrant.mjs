@@ -218,7 +218,11 @@ export async function runNativeUnderWarrant(options, dependencies = {}) {
     if (anyRequired)
       execute('Install frozen workspace', ['install', '--frozen-lockfile']);
 
-    const toolchainEnvironment = { CC: 'gcc-14', CXX: 'g++-14' };
+    const toolchainEnvironment = {
+      CC: 'gcc-14',
+      CXX: 'g++-14',
+      KUNGFU_BUILDCHAIN_SOURCE_BUILD: '1',
+    };
     if (sdkRequired) {
       const cmakeJs = sdkPath(cwd);
       const sdkEnvironment = {
