@@ -183,6 +183,10 @@ const PRODUCTION_STAGE_IDS = Object.freeze([
   'artifact-stage',
 ]);
 
+/**
+ * @param {string} scope
+ * @param {Set<string>} bindings
+ */
 function validateBuildScope(scope, bindings) {
   const { conanInstall, conanBuild } = require('./run-conan');
   const sdkBuild = scope === 'sdk';
@@ -207,6 +211,11 @@ function validateBuildScope(scope, bindings) {
   return { bindings, conanBuild, conanInstall, sdkBuild };
 }
 
+/**
+ * @param {string} stageId
+ * @param {string} scope
+ * @param {ReturnType<typeof validateBuildScope>} context
+ */
 function executeProductionStage(stageId, scope, context) {
   if (!PRODUCTION_STAGE_IDS.includes(stageId)) {
     throw new Error(`unsupported Core production stage: ${stageId}`);
@@ -292,6 +301,10 @@ function executeProductionStage(stageId, scope, context) {
   if (!sdkBuild) cpVsDependencies();
 }
 
+/**
+ * @param {string} stageId
+ * @param {string} [scope]
+ */
 function runProductionStage(stageId, scope = 'full') {
   executeProductionStage(
     stageId,
