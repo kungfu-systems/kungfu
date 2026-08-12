@@ -178,7 +178,7 @@ test('source Kungfu route projects its built TUI and Product extensions', (t) =>
     'kungfu',
   );
   const tuiEntry = path.join(temp, 'framework', 'tui', 'dist', 'tui.mjs');
-  const extensionRoot = path.join(temp, 'product', 'extensions');
+  const extensionRoot = path.join(temp, 'extensions');
   const template = path.join(
     extensionRoot,
     'agent-work-lab',

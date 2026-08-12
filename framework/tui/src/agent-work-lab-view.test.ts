@@ -766,8 +766,9 @@ test('TUI host streams events and preserves the one-second rhythm', () => {
   assert.match(mainSource, /existingProjectWorkspaceRoot\(process\.cwd\(\)/);
   assert.match(
     mainSource,
-    /initialProductSurface\(\{ playbackMode, firstLaunch, emptyState \}\)/u,
+    /initialProductSurface\(\{ playbackMode, firstLaunch, emptyState, openLab \}\)/u,
   );
+  assert.match(mainSource, /--agent-work-lab-open/u);
   assert.match(mainSource, /shouldShowKungfuOnboarding/);
   assert.match(mainSource, /startupIntroSettled/);
   assert.match(mainSource, /TerminalLoadingScene/);

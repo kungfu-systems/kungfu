@@ -312,7 +312,7 @@ if [ "${1:-}" = "kungfu" ]; then
   _kungfu_checkout_bin="./framework/core/dist/kungfu/kungfu"
   if [ -x "$_kungfu_checkout_bin" ]; then
     [ -n "${KUNGFU_TUI_ENTRY:-}" ] || [ ! -f "./framework/tui/dist/tui.mjs" ] || export KUNGFU_TUI_ENTRY="$PWD/framework/tui/dist/tui.mjs"
-    [ -n "${KF_BUNDLED_EXTENSION_ROOT:-}" ] || [ ! -f "./product/extensions/agent-work-lab/experience/starter-project.json" ] || export KF_BUNDLED_EXTENSION_ROOT="$PWD/product/extensions"
+    [ -n "${KF_BUNDLED_EXTENSION_ROOT:-}" ] || [ ! -f "./extensions/agent-work-lab/experience/starter-project.json" ] || export KF_BUNDLED_EXTENSION_ROOT="$PWD/extensions"
     exec "$_kungfu_checkout_bin" "$@"
   fi
   echo "shifu: kungfu source CLI is not assembled; run ./shifu build:core" >&2

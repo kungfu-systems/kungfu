@@ -6,10 +6,193 @@ from __future__ import annotations
 
 from collections.abc import Callable, Mapping
 import json
+import os
+from pathlib import Path
+import re
 import time
 from typing import Any
 
 from kungfu.agent.session_contract import semantic_root, validate_work_ref
+
+
+STARTUP_SCHEMA = "kungfu.agent-work-lab.startup-route/v1"
+CONTENT_ROOT = re.compile(r"^sha256:[0-9a-f]{64}$")
+MIGRATION_MARKERS = (
+    ".migration-in-progress",
+    ".storage-migration-in-progress",
+    "migration.lock",
+)
+
+
+def _startup_result(
+    runtime_dir: Path,
+    state: str,
+    route: str,
+    code: str,
+    message: str,
+    work_present: bool | None,
+    evidence: list[str] | None = None,
+) -> dict[str, Any]:
+    return {
+        "schema": STARTUP_SCHEMA,
+        "state": state,
+        "route": route,
+        "reasonCode": code,
+        "message": message,
+        "runtimeDir": str(runtime_dir),
+        "workGraphPresent": work_present,
+        "evidence": evidence or [],
+        "writeOccurred": False,
+    }
+
+
+def _startup_diagnostic(
+    runtime_dir: Path, code: str, message: str, *, evidence: list[str] | None = None
+) -> dict[str, Any]:
+    return _startup_result(
+        runtime_dir, "diagnostic", "diagnostic", code, message, None, evidence
+    )
+
+
+def inspect_startup(
+    runtime_dir: str | Path,
+    *,
+    config_home: str | Path | None = None,
+    env: Mapping[str, str] | None = None,
+) -> dict[str, Any]:
+    """Resolve startup from an already-materialized observer snapshot only."""
+
+    del env
+    selected = Path(runtime_dir).expanduser()
+    try:
+        if selected.exists():
+            if selected.is_symlink() or not selected.is_dir():
+                return _startup_diagnostic(
+                    selected.absolute(),
+                    "runtime-home-invalid",
+                    "The Kungfu runtime home is not a regular directory.",
+                )
+            selected = selected.resolve()
+            if not os.access(selected, os.R_OK | os.X_OK):
+                return _startup_diagnostic(
+                    selected,
+                    "runtime-home-permission-denied",
+                    "The Kungfu runtime home cannot be inspected safely.",
+                )
+            markers = [name for name in MIGRATION_MARKERS if (selected / name).exists()]
+            if markers:
+                return _startup_diagnostic(
+                    selected,
+                    "runtime-migration-in-progress",
+                    "Kungfu data is migrating; startup will not classify it as empty.",
+                    evidence=markers,
+                )
+        else:
+            selected = selected.absolute()
+
+        config_root = Path(
+            config_home
+            if config_home is not None
+            else os.environ.get("KF_CONFIG_HOME") or Path.home() / ".config" / "kungfu"
+        ).expanduser()
+        snapshots: list[tuple[int, dict[str, Any], Path]] = []
+        for state_path in (
+            config_root / "tui" / "global-work-observer.json",
+            config_root / "gui" / "global-work-observer.json",
+        ):
+            try:
+                state = json.loads(state_path.read_text(encoding="utf-8"))
+                query = state.get("query") if isinstance(state, Mapping) else None
+                if state.get(
+                    "schema"
+                ) != "kungfu.gui.global-work-observer/v2" or not isinstance(
+                    query, Mapping
+                ):
+                    continue
+                snapshots.append(
+                    (state_path.stat().st_mtime_ns, dict(query), state_path)
+                )
+            except (OSError, TypeError, ValueError, json.JSONDecodeError):
+                continue
+        if not snapshots:
+            return _startup_diagnostic(
+                selected,
+                "global-work-observation-unavailable",
+                "No verified global Work observer snapshot is available yet; "
+                "open All Work to start the bounded observer.",
+            )
+        _, query, state_path = max(snapshots, key=lambda row: row[0])
+        verification = query.get("verification")
+        aggregate = query.get("aggregate")
+        global_work = query.get("global_work")
+        proof = query.get("proof")
+        if (
+            not isinstance(verification, Mapping)
+            or verification.get("ok") is not True
+            or not isinstance(aggregate, Mapping)
+            or aggregate.get("writes") != 0
+            or not isinstance(global_work, Mapping)
+            or global_work.get("writes") != 0
+            or not isinstance(proof, Mapping)
+            or query.get("writes") != []
+        ):
+            return _startup_diagnostic(
+                selected,
+                "global-work-unverified",
+                "The global Work projection is incomplete or cannot be verified.",
+            )
+        canonical_count = global_work.get("canonical_work_count")
+        if (
+            type(canonical_count) is not int
+            or canonical_count < 0
+            or aggregate.get("canonical_work_count") != canonical_count
+        ):
+            return _startup_diagnostic(
+                selected,
+                "global-work-invalid",
+                "The global Work projection has inconsistent canonical counts.",
+            )
+        projection_root = str(global_work.get("projection_root") or "")
+        proof_root = str(proof.get("proof_root") or "")
+        if not CONTENT_ROOT.fullmatch(projection_root) or not CONTENT_ROOT.fullmatch(
+            proof_root
+        ):
+            return _startup_diagnostic(
+                selected,
+                "global-work-invalid",
+                "The global Work projection is missing root-bound evidence.",
+            )
+        evidence = [projection_root, proof_root, str(state_path)]
+        if canonical_count:
+            return _startup_result(
+                selected,
+                "existing-work",
+                "work-graph",
+                "global-work-present",
+                "Canonical local Work graph data is present.",
+                True,
+                evidence,
+            )
+        if aggregate.get("complete") is not True:
+            return _startup_diagnostic(
+                selected,
+                "global-work-unverified",
+                "The global Work projection is incomplete or cannot be verified.",
+            )
+        return _startup_result(
+            selected,
+            "verified-empty",
+            "agent-work-lab",
+            "global-work-verified-empty",
+            "No canonical local Work graph data is present.",
+            False,
+        )
+    except (OSError, RuntimeError, TypeError, ValueError) as error:
+        return _startup_diagnostic(
+            selected.absolute(),
+            "global-work-unreadable",
+            f"The global Work projection cannot be inspected safely: {error}",
+        )
 
 
 class WorkProjectionPort:

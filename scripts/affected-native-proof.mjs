@@ -252,7 +252,9 @@ export function verifyQueueAdmissionLease(input = {}) {
     sourceHeadSha,
   );
   if (
-    !['selected', 'proving', 'waiting', 'blocked'].includes(candidate.status)
+    !['selected', 'proving', 'qualified', 'waiting', 'blocked'].includes(
+      candidate.status,
+    )
   ) {
     throw new Error(
       `active Warrant candidate is not delivery-ready: ${candidate.status}`,

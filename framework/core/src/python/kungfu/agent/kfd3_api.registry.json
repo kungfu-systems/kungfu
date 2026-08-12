@@ -2379,21 +2379,13 @@
         "kfd-3-surfaces"
       ]
     },
-    {
-      "id": "kungfu.agent-work-lab.inspect",
-      "surface": "cli-api-gui",
-      "name": "kungfu agent-work-lab inspect --json",
-      "purpose": "Resolve an empty, existing-Work, or diagnostic startup route without materializing runtime state.",
-      "maturity": "experimental",
-      "visibility": "public-agent",
-      "anchor": {
-        "kind": "catalog"
-      },
-      "projections": [
-        "capabilities-json",
-        "kfd-3-surfaces"
-      ]
-    },
+    {"id":"kungfu.agent-work-lab.open","surface":"cli-api-tui","name":"kungfu agent-work-lab open","purpose":"Enter the interactive Agent Work Lab directly without changing the user's onboarding or Work state.","maturity":"experimental","visibility":"public-human","anchor":{"kind":"catalog"},"projections":["capabilities-json","kfd-3-surfaces"]},
+    {"id":"kungfu.agent-work-lab.watch","surface":"cli-api-tui","name":"kungfu agent-work-lab watch","purpose":"Launch the playback-only continuity demonstration without claiming that an installed Agent was tested.","maturity":"experimental","visibility":"public-human","anchor":{"kind":"catalog"},"projections":["capabilities-json","kfd-3-surfaces"]},
+    {"id":"kungfu.agent-work-lab.tour","surface":"cli-api-tui","name":"kungfu agent-work-lab tour [--episode 1|2|all] [--speed <rate>]","purpose":"Launch the playback-only disposable Project failure, recovery, review, and settlement story.","maturity":"experimental","visibility":"public-human","anchor":{"kind":"catalog"},"projections":["capabilities-json","kfd-3-surfaces"]},
+    {"id":"kungfu.agent-work-lab.try","surface":"cli-api-tui","name":"kungfu agent-work-lab try [--destination <path>] [--expected-plan-root <root> --execute]","purpose":"Preview, then explicitly create and open one retained Starter Project without overwriting an existing path.","maturity":"experimental","visibility":"public-human","anchor":{"kind":"catalog"},"projections":["capabilities-json","kfd-3-surfaces"]},
+    {"id":"kungfu.agent-work-lab.test","surface":"cli-api","name":"kungfu agent-work-lab test [agent] [--target-agent <agent>] [--execute] [--json]","purpose":"Resolve human Agent names to exact profiles, preview the test, and after explicit authorization retain same-Agent or cross-Agent continuity evidence.","maturity":"experimental","visibility":"public-agent","anchor":{"kind":"catalog"},"projections":["capabilities-json","kfd-3-surfaces"]},
+    {"id":"kungfu.agent-work-lab.report","surface":"cli-api","name":"kungfu agent-work-lab report [result] [--json]","purpose":"Reopen and root-verify the latest bounded retained test report or one exact supplied report.","maturity":"experimental","visibility":"public-agent","anchor":{"kind":"catalog"},"projections":["capabilities-json","kfd-3-surfaces"]},
+    {"id":"kungfu.agent-work-lab.inspect","surface":"cli-api-gui","name":"kungfu agent-work-lab inspect --json","purpose":"Resolve an empty, existing-Work, or diagnostic startup route without materializing runtime state.","maturity":"experimental","visibility":"public-agent","anchor":{"kind":"catalog"},"projections":["capabilities-json","kfd-3-surfaces"]},
     {
       "id": "kungfu.agent-work-lab.catalog",
       "surface": "cli-api-gui",
