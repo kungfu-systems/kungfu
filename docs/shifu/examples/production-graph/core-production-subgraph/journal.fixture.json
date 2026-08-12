@@ -1,0 +1,5 @@
+{
+  "subgraphId": "kungfu-core-journal-production",
+  "xinfaSelectionRoot": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+  "xinfaVerificationRoot": "sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+}

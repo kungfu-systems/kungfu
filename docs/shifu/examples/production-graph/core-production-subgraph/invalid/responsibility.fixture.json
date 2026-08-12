@@ -1,0 +1,8 @@
+{
+  "mutation": {
+    "operation": "set",
+    "path": ["stages", 2, "responsibility"],
+    "value": "compile-native-core"
+  },
+  "expect": "responsibility-mismatch"
+}

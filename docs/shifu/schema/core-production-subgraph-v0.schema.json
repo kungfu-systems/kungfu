@@ -1,0 +1,76 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://libkungfu.dev/schemas/shifu/core-production-subgraph-v0.schema.json",
+  "title": "Shifu Core Production Subgraph v0",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "subgraphId",
+    "contractRoot",
+    "source",
+    "bindings",
+    "intent",
+    "executionBoundary",
+    "nodes",
+    "subgraphRoot"
+  ],
+  "properties": {
+    "schema": { "const": "shifu.core-production-subgraph/v0" },
+    "subgraphId": { "$ref": "core-production-subgraph-compile-request-v0.schema.json#/$defs/id" },
+    "contractRoot": { "$ref": "core-production-subgraph-compile-request-v0.schema.json#/$defs/root" },
+    "source": { "$ref": "core-production-subgraph-compile-request-v0.schema.json#/properties/source" },
+    "bindings": { "$ref": "core-production-subgraph-compile-request-v0.schema.json#/properties/bindings" },
+    "intent": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mode", "sideEffects"],
+      "properties": {
+        "mode": { "const": "describe-only" },
+        "sideEffects": { "const": false }
+      }
+    },
+    "executionBoundary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "command",
+        "environment",
+        "executionOwnedBy",
+        "stagesDirectlyInvocable",
+        "compilerExecutesStages",
+        "cutover"
+      ],
+      "properties": {
+        "command": {
+          "type": "array",
+          "prefixItems": [
+            { "const": "./shifu" },
+            { "const": "build:core" }
+          ],
+          "minItems": 2,
+          "maxItems": 2
+        },
+        "environment": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["KUNGFU_BUILD_PROFILE"],
+          "properties": {
+            "KUNGFU_BUILD_PROFILE": { "const": "journal" }
+          }
+        },
+        "executionOwnedBy": { "const": "current-build-core-route" },
+        "stagesDirectlyInvocable": { "const": false },
+        "compilerExecutesStages": { "const": false },
+        "cutover": { "const": false }
+      }
+    },
+    "nodes": {
+      "type": "array",
+      "minItems": 3,
+      "maxItems": 3,
+      "items": { "$ref": "core-production-subgraph-compile-request-v0.schema.json#/$defs/stage" }
+    },
+    "subgraphRoot": { "$ref": "core-production-subgraph-compile-request-v0.schema.json#/$defs/root" }
+  }
+}
