@@ -48,6 +48,11 @@ Buildchain classifies a moving dev base against the semantic source, closure,
 dependency, and toolchain roots. Non-overlapping base-only movement reuses the
 native proof; overlap, an unknown comparison graph, a source change, or a
 conflict fails closed into bounded requalification or safe Warrant release.
+Kungfu derives the semantic source root from the canonical changed-path set and
+each path's final Git object, mode, and deletion state. The exact replay tree
+remains delivery-bound, but it is deliberately excluded from the reusable
+qualification identity so an unrelated dev commit cannot rename an otherwise
+identical proof artifact before overlap classification runs.
 Kungfu reconstructs that optional Native Qualification Proof only from the
 exact source workflow run's `core-dev-delivery-source-proof-<head>` artifact.
 The protected caller verifies its Source Proof, PR/head/base coordinate, and

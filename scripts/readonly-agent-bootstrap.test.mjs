@@ -376,6 +376,7 @@ test('declared discovery routes are zero-write in a cold read-only fixture', (t)
     'config/release/kungfu-temporal-release-admission.contract.json',
     'framework/core/src/python/kungfu/release_provenance/__init__.py',
     'framework/core/tests/python/test_release_provenance.py',
+    'scripts/affected-native-semantic-source.test.mjs',
     'scripts/check-release-provenance-object.test.mjs',
     'scripts/release-provenance-object.py',
     'tests/fixtures/release-provenance-object/cases.json',
