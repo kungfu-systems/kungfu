@@ -55,7 +55,7 @@
           },
           {
             "path": "framework/contract/kungfu-contracts.registry.json",
-            "sha256": "sha256:00ae9385e093fd6bbbe689e686cc8fda5e793b12146467f3deb0b1028ad37124"
+            "sha256": "sha256:680dc6e79475667a2c84a980f7a1089a68de83bab0b3c0ba8aa25248d8420415"
           }
         ]
       },
@@ -102,7 +102,7 @@
         "evidenceRoots": [
           {
             "path": ".buildchain/kfd/kfd-2/release-claims.json",
-            "sha256": "sha256:842fdcb3dda1c96da23f451345efd30f2840f3cfb67faf7740c2394417434b62"
+            "sha256": "sha256:3e835e27c9db369a931a3e7587c9d8cd36e189aeaefb019439d2b7dfe8b813fc"
           },
           {
             "path": "docs/qualification/kfd2-trust-assessment.md",
@@ -152,11 +152,11 @@
         "evidenceRoots": [
           {
             "path": ".buildchain/kfd/kfd-3/surfaces.json",
-            "sha256": "sha256:0b7cd246307a9472bb3100df59cb9e7985bb74bc5af75a0bef8f3141330d9443"
+            "sha256": "sha256:ac88b4b6135e767a7aebd7a3066659ff8ed0e863a5a0bdca3a4bda6235f4cd82"
           },
           {
             "path": ".buildchain/kfd/kfd-3/capability-query.json",
-            "sha256": "sha256:099afa294cc691103de931869ac5aa7737db30970226b60d4497e5b8e9118236"
+            "sha256": "sha256:a5db786f402e7094aa9fb03c11492e7f742545284f08e86b372db427957fda20"
           }
         ]
       },
@@ -258,11 +258,11 @@
         "evidenceRoots": [
           {
             "path": "docs/qualification/evidence/assignment-organization-rollout/7aae2c562a/report.json",
-            "sha256": "sha256:b852b810293452b277edd79033c71adbdea341aba082c0380bdc60e0e90d0ca4"
+            "sha256": "sha256:706ad25c9f48338e6cf9e1c8e017ed5d3c4c29d28fa69e16ecee09e76d12f4a0"
           },
           {
             "path": "framework/core/tests/python/test_assignment_orchestration.py",
-            "sha256": "sha256:362a6b85e1162bb04566e778c03eb511c65ac57035ad794bb893802aa4e6d28c"
+            "sha256": "sha256:8d29eedb973994937fae282b250859145aa1ccd16b18f13c861c283fead989fe"
           },
           {
             "path": "docs/architecture/primitive-management-plane.md",
@@ -270,11 +270,11 @@
           },
           {
             "path": "framework/incubation/incubation-passport.registry.json",
-            "sha256": "sha256:66441c1baa6bdbf9662074019af594bef4a9c08c3292a5387f2c8b3d906ee9c8"
+            "sha256": "sha256:c24e9bdca26ac8ea9e153c6ca6a4de40cb28ea3b8308eb021d894f35adbd192c"
           },
           {
             "path": "framework/primitive/kungfu-primitive-catalog.contract.json",
-            "sha256": "sha256:7a80d30af429064b8e12fc241d46e680c41b977c36d18634f1cfd2200d2c893d"
+            "sha256": "sha256:0b0fa4c06225d63b005197de3b0a361ae60e53ff24dcb9db459709e1a8844c1c"
           }
         ]
       },
@@ -337,7 +337,7 @@
           },
           {
             "path": "framework/project-cut/README.md",
-            "sha256": "sha256:69dad0850b47a8cf21dcb9480ee6abaa1e557466c8b091b153acb542722c337f"
+            "sha256": "sha256:7417396fca1f1be4e390134474fe7217f39f61962bacc0d670d8112f4e10aacd"
           }
         ],
         "missingGates": [
@@ -632,7 +632,7 @@
         "evidenceRoots": [
           {
             "path": "framework/core/src/python/kungfu/assignment_orchestration.py",
-            "sha256": "sha256:5c49399a62d43e478fe6d538c0ccb945296ebfc3dbbf9a9a914c85cd094ad412"
+            "sha256": "sha256:5018b0be21cc71e6b457058c54e88cbe2d35ca163bf77f5d78b2fc91803281a6"
           }
         ]
       },

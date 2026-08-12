@@ -11,7 +11,7 @@
     "version": "4.0.0-alpha.1",
     "channel": "repository-default",
     "tag": "v4.0.0-alpha.1",
-    "sourceSha": "796768c2f48fd581000569d99d0f20ceb9d530e4"
+    "sourceSha": "25b4f5104d83d23bfb321198fcc11b149121bc99"
   },
   "claims": [
     {
@@ -29,7 +29,7 @@
           "pointer": {
             "kind": "file",
             "path": "framework/core/src/python/kungfu/agent/commands.json",
-            "sha256": "21d756f875626fcd2af10125bab48f8ae72f066ad93e3698b109ff938f11eb9e"
+            "sha256": "beea69e0c42b9e3623d1e5133a0ee387469c0557bd2206e345be37b848753011"
           },
           "description": "Machine-readable command catalog and mode maturity metadata."
         },
@@ -38,7 +38,7 @@
           "pointer": {
             "kind": "file",
             "path": "framework/core/src/python/kungfu/agent/cli_surface.catalog.json",
-            "sha256": "39f17787aab091a214bcb1cd5c1b28be077dca3ce1627cd49eda435c2ffb3f3a"
+            "sha256": "14a5ef2ef730747a2c32898d3b061074cd41bfa97c045b6049c7ee7d49e36228"
           },
           "description": "Complete deterministic CLI surface graph shared by offline Agent capabilities and catalog parity checks."
         },
@@ -65,7 +65,7 @@
           "pointer": {
             "kind": "file",
             "path": "framework/core/src/python/kungfu/agent/mode-selection.md",
-            "sha256": "e25fdbe6971bd7aa256e3b817fffa68f7a7010c6581acb69849a5993c26199b3"
+            "sha256": "e1d8bb2b5f1ac2eb7694e3dd861fb6d57c24ab6c2163aa05f1064913643f6972"
           },
           "description": "Human and agent-readable mode selection rules."
         },
@@ -83,7 +83,7 @@
           "pointer": {
             "kind": "file",
             "path": "scripts/verify-agent-pack.mjs",
-            "sha256": "dc436e71ac0ff068c4fd8231cacd13641a7a117e7522cbd1e2259a3cce82ca77"
+            "sha256": "7c234331b93fe3f082560ea125d5ae55a6f54068a376aea72fc55e95a2553b46"
           },
           "description": "Read-only verifier for installed agent pack completeness and command/doc consistency."
         },
@@ -249,7 +249,7 @@
           "pointer": {
             "kind": "file",
             "path": "framework/core/src/python/kungfu/agent/mode-selection.md",
-            "sha256": "e25fdbe6971bd7aa256e3b817fffa68f7a7010c6581acb69849a5993c26199b3"
+            "sha256": "e1d8bb2b5f1ac2eb7694e3dd861fb6d57c24ab6c2163aa05f1064913643f6972"
           },
           "description": "Remote-sync mode rule requiring source-scoped import."
         },
@@ -258,7 +258,7 @@
           "pointer": {
             "kind": "file",
             "path": "framework/core/src/python/kungfu/agent/commands.json",
-            "sha256": "21d756f875626fcd2af10125bab48f8ae72f066ad93e3698b109ff938f11eb9e"
+            "sha256": "beea69e0c42b9e3623d1e5133a0ee387469c0557bd2206e345be37b848753011"
           },
           "description": "Remote add/sync command declarations and mode metadata."
         },
@@ -267,7 +267,7 @@
           "pointer": {
             "kind": "file",
             "path": "framework/core/src/python/kungfu/cli/commands/agent.py",
-            "sha256": "972e4b649ea1740c9608ae53ba10bb505be6af4903d2836430aa8827ba60b3e1"
+            "sha256": "f8a8b87776d51152bb1ed594043a4abd9edeb352a10d919805e2cf998cd18892"
           },
           "description": "Agent command surface including mode selection and bootstrap status."
         }
@@ -303,7 +303,7 @@
       "source": {
         "kind": "file",
         "path": "framework/agent-work/kungfu-agent-work-state.contract.json",
-        "sha256": "381c75e05ed905bb31c4a5a0cedf1a08836c68f143f914522269d323eff46d96"
+        "sha256": "b4396a3eba9e098d32e3f5617710b9332173d9de005287a30b5d0928b4f96f29"
       },
       "evidence": [
         {
@@ -311,7 +311,7 @@
           "pointer": {
             "kind": "file",
             "path": "docs/adr/KF-ADR-019f86da-4f90-786d-aa24-a97705e13917.md",
-            "sha256": "bba457cb767978398eb119c04c7c2f59dd4e6701fcea0d0406db2fc3568e558a"
+            "sha256": "1b9b21b2660105e3c6eba9a5057a8bf91f8d76d40895fdc77b5c7429e9df5aae"
           },
           "description": "Accepted role-separation decision and bounded P17 qualification boundary."
         },
@@ -347,7 +347,7 @@
           "pointer": {
             "kind": "file",
             "path": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json",
-            "sha256": "bd6b9a05e7df2e591fc857015f2828bd53b485ea43dcf1bba9cb864dda66a66a"
+            "sha256": "07c4973ab01368c63bd68e6c24ee1866af06c9154e8014fd39ddf2539d1c89e0"
           },
           "description": "Agent collaboration-interface registration for the work-model query."
         }
@@ -438,7 +438,7 @@
           "pointer": {
             "kind": "file",
             "path": "docs/adr/KF-ADR-019f8c53-6105-71e5-8f34-53f2a81ee61c.md",
-            "sha256": "b12798406a516e9ca4fe45079ce50570022ed8e100be7a9d658cf8c63d281dd6"
+            "sha256": "c369e7a115cb35c3f1cb25571d607dc2cecf87910ea190e49236254e15a6e11a"
           },
           "description": "Accepted one-native-owner and four-language projection decision with explicit non-claims."
         }
