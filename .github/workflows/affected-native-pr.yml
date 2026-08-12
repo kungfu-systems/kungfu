@@ -19,6 +19,12 @@ permissions:
   pull-requests: read
   statuses: read
 
+env:
+  # Public, immutable bootstrap cache. Shifu still verifies the exact official
+  # release digest before extracting the archive.
+  KUNGFU_FNM_DIST_MIRROR: ${{ vars.KUNGFU_FNM_DIST_MIRROR }}
+  KUNGFU_FNM_SHA256: ${{ vars.KUNGFU_FNM_SHA256 }}
+
 jobs:
   dco:
     name: Candidate DCO
