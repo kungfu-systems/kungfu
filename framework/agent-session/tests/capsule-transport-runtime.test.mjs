@@ -1,14 +1,94 @@
 import assert from 'node:assert/strict';
+import { spawn } from 'node:child_process';
+import { once } from 'node:events';
+import { existsSync } from 'node:fs';
 import { mkdtemp, rm, stat } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
+import { setTimeout as delay } from 'node:timers/promises';
+import { fileURLToPath } from 'node:url';
 import {
   CapsuleTransportUnavailableError,
   createCapsuleNodePtyLoader,
 } from '../src/capsule-transport-runtime.mjs';
 import { detachedAgentSessionPaths } from '../src/product-client.mjs';
-import { runAgentSessionProductWorker } from '../src/product-worker.mjs';
+import {
+  createIdleWorkerRetirement,
+  runAgentSessionProductWorker,
+} from '../src/product-worker.mjs';
+
+const PRODUCT_WORKER = fileURLToPath(
+  new URL('../src/product-worker.mjs', import.meta.url),
+);
+
+test('idle worker retirement preserves retained sessions and retires empty workers', async () => {
+  const sessions = [];
+  const scheduled = [];
+  let retirements = 0;
+  const retirement = createIdleWorkerRetirement({
+    runtime: { list: () => sessions },
+    retire: async () => {
+      retirements += 1;
+    },
+    timeoutMs: 100,
+    schedule(callback, timeout) {
+      const timer = { callback, timeout, unref() {} };
+      scheduled.push(timer);
+      return timer;
+    },
+    cancel() {},
+  });
+
+  retirement.touch();
+  assert.equal(scheduled.length, 1);
+  assert.equal(scheduled[0].timeout, 100);
+  sessions.push({ sessionAttemptId: 'attempt:retained' });
+  await scheduled[0].callback();
+  assert.equal(retirements, 0);
+  assert.equal(scheduled.length, 2);
+
+  sessions.length = 0;
+  await scheduled[1].callback();
+  assert.equal(retirements, 1);
+  retirement.touch();
+  assert.equal(scheduled.length, 2);
+});
+
+test('a detached worker with no retained session retires and removes its endpoint', async (t) => {
+  const root = await mkdtemp(path.join(os.tmpdir(), 'kungfu-idle-worker-'));
+  const paths = detachedAgentSessionPaths(root);
+  const child = spawn(process.execPath, [PRODUCT_WORKER], {
+    env: {
+      ...process.env,
+      KUNGFU_AGENT_SESSION_ENDPOINT: paths.endpoint,
+      KUNGFU_AGENT_SESSION_METADATA: paths.metadata,
+      KUNGFU_AGENT_SESSION_REGISTRY: paths.registry,
+      KUNGFU_AGENT_SESSION_NODE_PTY_MODULE: '/definitely/missing/node-pty.js',
+      KUNGFU_AGENT_SESSION_IDLE_RETIREMENT_MS: '100',
+    },
+    stdio: ['ignore', 'ignore', 'pipe'],
+  });
+  const stderr = [];
+  child.stderr.on('data', (chunk) => stderr.push(chunk));
+  t.after(async () => {
+    if (child.exitCode === null) child.kill('SIGTERM');
+    await rm(root, { recursive: true, force: true });
+  });
+
+  const [code, signal] = await Promise.race([
+    once(child, 'exit'),
+    delay(3_000, undefined, { ref: false }).then(() => {
+      throw new Error(
+        'idle Agent Session worker did not retire within 3 seconds',
+      );
+    }),
+  ]);
+  assert.equal(signal, null);
+  assert.equal(code, 0, Buffer.concat(stderr).toString('utf8'));
+  assert.equal(existsSync(paths.endpoint), false);
+  assert.equal(existsSync(paths.metadata), false);
+});
 
 test('Capsule node-pty resolution is lazy and reports an optional capability', () => {
   let resolveCalls = 0;

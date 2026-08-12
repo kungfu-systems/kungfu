@@ -171,6 +171,10 @@ def build_plan(
         except (OSError, RuntimeError, ValueError, json.JSONDecodeError):
             current_phase = "captured"
     continuation_mode, effects, phase_blocked_reason = phase_plan(current_phase)
+    project_trust = provider_project_trust(
+        str(selected["provider"]), target.identity.workspace_root
+    )
+    effects = effects_with_project_trust(effects, project_trust)
     stable_verification = {
         "ok": verification["ok"],
         "available": verification["available"],
@@ -209,6 +213,7 @@ def build_plan(
             "profileRoot": run_agent.canonical_root(selected),
             "selection": selection,
             "verification": stable_verification,
+            "projectTrust": project_trust,
         },
         "workControl": {
             "profileId": work_control["profile"]["id"],
@@ -243,6 +248,43 @@ def build_plan(
         "writeOccurred": False,
     }
     return {**body, "planRoot": orchestration.semantic_root(body)}
+
+
+def provider_project_trust(provider, workspace_root):
+    if provider != "codex":
+        return None
+    return {
+        "schema": "kungfu.agent-project-trust/v1",
+        "provider": "codex",
+        "workspaceRoot": workspace_root,
+        "scope": "single-invocation",
+        "allows": [
+            "project-local-config",
+            "project-local-hooks",
+            "project-local-exec-policies",
+        ],
+        "persistent": False,
+    }
+
+
+def effects_with_project_trust(effects, project_trust):
+    if project_trust is None:
+        return effects
+    trust_effect = {
+        "stage": "project-trust",
+        "label": (
+            "Trust only this exact Project for this Codex invocation: "
+            f"{project_trust['workspaceRoot']} (admits project-local config, "
+            "hooks, and exec policies)"
+        ),
+    }
+    result = list(effects)
+    run_index = next(
+        (index for index, effect in enumerate(result) if effect["stage"] == "run"),
+        len(result),
+    )
+    result.insert(run_index, trust_effect)
+    return result
 
 
 def phase_plan(phase):

@@ -89,12 +89,26 @@ test('production route freezes the exact Codex app-server stdio launch', () => {
   const structured = new CodexAppServerProductRuntime();
   const route = structured.planRoute(input());
   assert.deepEqual(route.argv, ['app-server', '--stdio']);
-  assert.throws(
-    () => structured.planRoute(input({ providerVersion: '0.144.4' })),
-    (error) => error.code === 'provider_version_drift',
+  assert.equal(
+    structured.planRoute(input({ providerVersion: '0.147.0' })),
+    null,
   );
   assert.equal(route.defaultPolicy, 'structured');
   assert.equal(route.rollback, `${CODEX_APP_SERVER_FEATURE_FLAG}=0`);
+});
+
+test('a PTY-qualified Codex version does not inherit structured authority', () => {
+  const product = surface();
+  const plan = product.invoke({
+    operation: 'plan-start',
+    input: input({ providerVersion: '0.147.0' }),
+  });
+  assert.equal(Object.hasOwn(plan, 'transportRoute'), false);
+  assert.deepEqual(plan.effects, [
+    'spawn-provider-in-capsule',
+    'register-session',
+    'attach-presentation',
+  ]);
 });
 
 test('product policy defaults Codex to structured with an explicit PTY rollback', () => {

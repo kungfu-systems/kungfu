@@ -9,6 +9,10 @@ const PROVIDER_PROFILES = {
       blocked: [],
       approval: [
         [
+          'codex.approval.project-trust',
+          /do you trust the contents of this directory\?/iu,
+        ],
+        [
           'codex.approval.run-command',
           /would you like to run (?:this|the) command/iu,
         ],
@@ -307,15 +311,27 @@ export function createProviderAdapter({ provider, version }) {
   }
   const compatible = profile.supportedVersion.test(version);
   const tested = profile.testedVersions.includes(version);
+  const separateInstructionSubmit =
+    provider === 'claude' ||
+    (provider === 'codex' && /^0\.147\.[0-9]+$/u.test(version));
+  const acknowledgedInstructionPaste =
+    provider === 'codex' && /^0\.147\.[0-9]+$/u.test(version);
   return Object.freeze({
     schema: 'kungfu.agent-session.provider-adapter/v1',
     provider,
     providerVersion: version,
     adapterVersion: profile.adapterVersion,
-    instructionSubmitStrategy:
-      provider === 'claude' ? 'separate-enter' : 'inline-enter',
-    instructionSubmitData: provider === 'claude' ? '\r' : null,
-    instructionSubmitDelayMilliseconds: provider === 'claude' ? 50 : 0,
+    instructionSubmitStrategy: separateInstructionSubmit
+      ? 'separate-enter'
+      : 'inline-enter',
+    instructionSubmitData: separateInstructionSubmit ? '\r' : null,
+    instructionSubmitDelayMilliseconds: separateInstructionSubmit ? 50 : 0,
+    instructionPasteAcknowledgement: acknowledgedInstructionPaste
+      ? 'first-line-visible'
+      : null,
+    instructionPasteAcknowledgementPollMilliseconds: 25,
+    instructionPasteAcknowledgementRetryMilliseconds: 250,
+    instructionPasteAcknowledgementAttempts: 16,
     compatible,
     tested,
     knownLimits: [
@@ -405,8 +421,26 @@ export function createProviderAdapter({ provider, version }) {
       if (Buffer.byteLength(text, 'utf8') > 64 * 1024) {
         throw new Error('instruction exceeds the 64 KiB atomic paste limit');
       }
-      const submit = provider === 'claude' ? '' : '\r';
+      const submit = separateInstructionSubmit ? '' : '\r';
       return `\u001b[200~${text}\u001b[201~${submit}`;
+    },
+    acknowledgesInstructionPaste({ lines, text }) {
+      if (!acknowledgedInstructionPaste) return true;
+      const firstLine = String(text).split(/\r?\n/u, 1)[0].trim();
+      const visiblePrefix = [...firstLine].slice(0, 40).join('');
+      const screen = cleanScreen(lines);
+      const pasteLengths = new Set([
+        String(text).length,
+        [...String(text)].length,
+        Buffer.byteLength(String(text), 'utf8'),
+      ]);
+      const collapsedPasteVisible = [...pasteLengths].some((length) =>
+        screen.includes(`[Pasted Content ${String(length)} chars]`),
+      );
+      return (
+        collapsedPasteVisible ||
+        (visiblePrefix.length > 0 && screen.includes(visiblePrefix))
+      );
     },
     encodeKey(key) {
       const sequence = KEY_SEQUENCES[key];

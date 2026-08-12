@@ -74,6 +74,7 @@ import {
   createControlPlaneInputFence,
   directWorkspaceNavigationFromInput,
   initialProductSurface,
+  onboardingContinueSurface,
   quickCommandMatches,
   reduceControlPlaneInput,
   resolveProductStartupSurface,
@@ -128,6 +129,7 @@ import {
   decodeTerminalMouseInput,
   describeCliFailure,
   existingProjectWorkspaceRoot,
+  resolveTuiAgentSessionExecutable,
   resolveTuiAgentSessionPaths,
   resolveTuiCliRuntime,
   resolveTuiProductPaths,
@@ -188,9 +190,15 @@ function ensureTuiAgentSession(runtimeDir: string): Promise<string> {
   process.env.KUNGFU_AGENT_SESSION_WORKER = workerPath;
   process.env.KUNGFU_MOCK_AGENT_SCRIPT = mockPath;
   process.env.KUNGFU_PROJECT_WORK_AGENT_SESSION = '1';
+  const paths = runtimePaths();
   const host = createDetachedAgentSessionHost({
     runtimeDir: resolvedRuntimeDir,
-    executable: process.env.KUNGFU_AGENT_SESSION_EXECUTABLE || process.execPath,
+    executable: resolveTuiAgentSessionExecutable({
+      env: process.env,
+      cliBin: paths.bin,
+      sourceCliFallback: paths.sourceCliFallback,
+      processExecPath: process.execPath,
+    }),
     workerPath,
     env: process.env,
   });
@@ -1472,16 +1480,19 @@ function ProductHost({
           setSurface('all-work'),
         );
       } else {
-        persistOnboarding(finishKungfuOnboarding(onboardingState), () =>
-          setSurface('all-work'),
-        );
+        persistOnboarding(finishKungfuOnboarding(onboardingState), () => {
+          setSurface(onboardingContinueSurface(firstLaunch));
+          setControlNow({ ...CLOSED_CONTROL_PLANE, focus: 'workspace' });
+        });
       }
     },
     [
       agentFirstEntry.prompt,
       dispatchLabAction,
+      firstLaunch,
       onboardingState,
       persistOnboarding,
+      setControlNow,
       setOnboardingNotice,
       setSurface,
     ],
@@ -1955,6 +1966,7 @@ function ProductHost({
         onOpenProject={openProject}
         onOpenLab={() => setSurface('lab')}
         onSearchDocuments={handleProjectDocuments}
+        onInputModeChange={setWorkspaceInputActive}
         onWorkspacePointer={() =>
           setControlNow({ ...CLOSED_CONTROL_PLANE, focus: 'workspace' })
         }
@@ -2233,7 +2245,9 @@ function ProductHost({
               labOpen
                 ? 'LAB CONTROLS'
                 : surface === 'projects'
-                  ? 'PROJECT CONTROLS'
+                  ? workspaceInputActive
+                    ? 'PROJECT INPUT'
+                    : 'PROJECT CONTROLS'
                   : starterOpen || surface === 'project-work'
                     ? openedProject
                       ? workspaceInputActive
@@ -2246,7 +2260,9 @@ function ProductHost({
               labOpen
                 ? 'd Demo · x Same · m Handoff · Tab Focus'
                 : surface === 'projects'
-                  ? 'Enter Open · /new New Project · /open Open Project · d Remove'
+                  ? workspaceInputActive
+                    ? 'Type in the focused panel · Enter Continue · Esc Cancel'
+                    : 'Enter Open · /new New Project · /open Open Project · d Remove'
                   : starterOpen
                     ? 'j/k Work · Enter Open · /new New Work · p Projects'
                     : surface === 'project-work' && openedProject

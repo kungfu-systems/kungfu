@@ -20,26 +20,73 @@ import {
   type TerminalOutput,
   decodeTerminalMouseInput,
   existingProjectWorkspaceRoot,
+  resolveTuiAgentSessionExecutable,
   resolveTuiCoreDir,
   resolveTuiProductPaths,
   tuiChildCliEnvironment,
 } from './terminal-lifecycle.js';
 
-test('child CLI retains the packaged KFX root without recursive libnode selection', () => {
+test('child CLI retains installed authority without recursive libnode selection', () => {
   const parent = {
     KUNGFU_AS_VARIANT: 'node',
+    KUNGFU_NODE_VARIANT_ENTRY: '/product/tui/tui.mjs',
+    KUNGFU_INSTALL_SOURCE: 'archive',
     KUNGFU_DIR: '/product/runtime',
     KUNGFU_KFX_CONTRACT: '/product/runtime/config/kungfu-kfx.contract.json',
+    KUNGFU_UPGRADE_MANIFEST: '/product/upgrade/kungfu-release-manifest.json',
     KF_BUNDLED_EXTENSION_ROOT: '/product/extensions',
   };
 
   const child = tuiChildCliEnvironment(parent);
 
   assert.equal(child.KUNGFU_AS_VARIANT, undefined);
-  assert.equal(child.KUNGFU_DIR, undefined);
-  assert.equal(child.KUNGFU_KFX_CONTRACT, undefined);
+  assert.equal(child.KUNGFU_NODE_VARIANT_ENTRY, undefined);
+  assert.equal(child.KUNGFU_INSTALL_SOURCE, 'archive');
+  assert.equal(child.KUNGFU_DIR, '/product/runtime');
+  assert.equal(
+    child.KUNGFU_KFX_CONTRACT,
+    '/product/runtime/config/kungfu-kfx.contract.json',
+  );
+  assert.equal(
+    child.KUNGFU_UPGRADE_MANIFEST,
+    '/product/upgrade/kungfu-release-manifest.json',
+  );
   assert.equal(child.KF_BUNDLED_EXTENSION_ROOT, '/product/extensions');
   assert.equal(parent.KUNGFU_AS_VARIANT, 'node');
+  assert.equal(parent.KUNGFU_NODE_VARIANT_ENTRY, '/product/tui/tui.mjs');
+});
+
+test('installed Agent Session worker uses the Kungfu front door outside embedded Python', () => {
+  assert.equal(
+    resolveTuiAgentSessionExecutable({
+      env: {},
+      cliBin: '/product/runtime/kungfu',
+      sourceCliFallback: false,
+      processExecPath: '/product/runtime/python/bin/python3',
+    }),
+    '/product/runtime/kungfu',
+  );
+  assert.equal(
+    resolveTuiAgentSessionExecutable({
+      env: { KUNGFU_AGENT_SESSION_EXECUTABLE: '/exact/kungfu' },
+      cliBin: '/product/runtime/kungfu',
+      sourceCliFallback: false,
+      processExecPath: '/product/runtime/python/bin/python3',
+    }),
+    '/exact/kungfu',
+  );
+});
+
+test('source Agent Session worker keeps the active Node executable', () => {
+  assert.equal(
+    resolveTuiAgentSessionExecutable({
+      env: {},
+      cliBin: 'uv',
+      sourceCliFallback: true,
+      processExecPath: '/usr/local/bin/node',
+    }),
+    '/usr/local/bin/node',
+  );
 });
 
 class FakeOutput extends EventEmitter implements TerminalOutput {
