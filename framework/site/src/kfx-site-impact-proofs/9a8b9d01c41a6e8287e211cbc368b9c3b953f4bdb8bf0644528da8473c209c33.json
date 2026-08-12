@@ -1,7 +1,7 @@
 {
   "contract": "kungfu.kfx-site-impact-proof/v1",
   "baseRevision": "93e12817afd31bba7109acd161f1551d2437caf4",
-  "changeRoot": "sha256:1fe2fde3cafa7d777c85fe58f2caf1f8d1648b1ff9e7eb2289978dd12b4f3408",
+  "changeRoot": "sha256:135fa1cf729e3e407e23ad5a131558063c00ede7c53d2b892edf8983e7944c2c",
   "changes": [
     {
       "baseContentRoot": "sha256:c5ce83e5d260fd6a350807981916cce46e92d2b8c84e8e5fd738dc762b5b70a2",
@@ -17,7 +17,7 @@
     },
     {
       "baseContentRoot": "sha256:842fdcb3dda1c96da23f451345efd30f2840f3cfb67faf7740c2394417434b62",
-      "contentRoot": "sha256:1ceb21d2e9b43aaf354f5798ee8f864330e5717b543607370546f5bd9c124053",
+      "contentRoot": "sha256:11431062d81626d0ef62ff9a8f2eb3999b635ce26849ae653a760f9d4d464ffd",
       "path": ".buildchain/kfd/kfd-2/release-claims.json",
       "status": "modified"
     },
@@ -35,7 +35,7 @@
     },
     {
       "baseContentRoot": "sha256:5018f1db5b8f11f6e3e671d8749088612106f13bdf84e56b589b642b19cfa857",
-      "contentRoot": "sha256:6425174d54fb718462f644c4920b79a22c92ecb2e3abe2e69077422c37359081",
+      "contentRoot": "sha256:4075247bb23d740c5f889a6007b0a336cf8314aa3e901120fbd801bc26da5a57",
       "path": ".buildchain/kfd/kfd-3/collaboration-interface.prebuild.json",
       "status": "modified"
     },
@@ -47,7 +47,7 @@
     },
     {
       "baseContentRoot": "sha256:f8ee3878653e7fecdfef622e001269942a53d00605d5fa42e41374f79d0cf332",
-      "contentRoot": "sha256:32c3e6562cb61d8dcea954a4f43595db4a83c2270c15dcacb32be1934398a58e",
+      "contentRoot": "sha256:1ffc1cc92f2275e7c3a66222e06e86a04c836330dbe7100b3ab3eb9cd219e093",
       "path": ".buildchain/kfd/support-matrix.json",
       "status": "modified"
     },
@@ -77,7 +77,7 @@
     },
     {
       "baseContentRoot": "sha256:842fdcb3dda1c96da23f451345efd30f2840f3cfb67faf7740c2394417434b62",
-      "contentRoot": "sha256:1ceb21d2e9b43aaf354f5798ee8f864330e5717b543607370546f5bd9c124053",
+      "contentRoot": "sha256:11431062d81626d0ef62ff9a8f2eb3999b635ce26849ae653a760f9d4d464ffd",
       "path": "developer/sdk/kfd/kfd-2/release-claims.json",
       "status": "modified"
     },
@@ -89,13 +89,13 @@
     },
     {
       "baseContentRoot": "sha256:f8ee3878653e7fecdfef622e001269942a53d00605d5fa42e41374f79d0cf332",
-      "contentRoot": "sha256:32c3e6562cb61d8dcea954a4f43595db4a83c2270c15dcacb32be1934398a58e",
+      "contentRoot": "sha256:1ffc1cc92f2275e7c3a66222e06e86a04c836330dbe7100b3ab3eb9cd219e093",
       "path": "developer/sdk/kfd/support-matrix.json",
       "status": "modified"
     },
     {
       "baseContentRoot": "sha256:816f7041357736bc6acd917f5a79175124f1a2f9a30540dbce11d9152933ed37",
-      "contentRoot": "sha256:c1f4b9fbc76af979c8a180fcfa238bb622576f3cf1aa86b2aa2df7a0e3ac78bd",
+      "contentRoot": "sha256:e26708fc2a6bc287bf3aa75a0596c64e6ed67c969c6d409e103c9c25e27edd2d",
       "path": "docs/document-metadata.registry.json",
       "status": "modified"
     },
@@ -190,13 +190,13 @@
     },
     {
       "baseContentRoot": "sha256:c3abdc327bbc7521667d2c1ae1e43cddb5aa9a10abd2826a260fb2870a5aabc7",
-      "contentRoot": "sha256:c9cca6321460519e8c66e9a5bc047d00fe4505d2b131fdf3d90749b7a5fd12f1",
+      "contentRoot": "sha256:1d235f41b09367c3b07c54fb9cf8c811d0423f7868bd52957a576a2db4954905",
       "path": "framework/tui/src/control-plane-state.ts",
       "status": "modified"
     },
     {
       "baseContentRoot": "sha256:f98f0809e5b8689f1c0d2cdee9ef555b26bfedefc963a1d794d0a00eedaf95c3",
-      "contentRoot": "sha256:15af4eacf5724bef234b495ba484e857584d585d12818f2c71263c12e9bf3b6e",
+      "contentRoot": "sha256:ae99af79f94a3c1c20090d03b08ecca4988a5731890b9c2e7de23ec44888361a",
       "path": "framework/tui/src/main.tsx",
       "status": "modified"
     },
@@ -247,5 +247,5 @@
     "publicContractUnchanged": true,
     "readerJourneyUnchanged": true
   },
-  "proofRoot": "sha256:717c6c00f421786a5aaf0f4f437f93dadeae2e77764de61a0381a4cc2697d8d1"
+  "proofRoot": "sha256:9a8b9d01c41a6e8287e211cbc368b9c3b953f4bdb8bf0644528da8473c209c33"
 }

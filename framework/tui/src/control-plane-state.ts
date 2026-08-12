@@ -28,8 +28,8 @@ export function initialProductSurface({
 }): ProductSurface {
   if (playbackMode) return 'lab';
   if (openLab) return 'lab';
-  if (firstLaunch) return 'onboarding';
-  return emptyState ? 'all-work' : 'loading';
+  if (emptyState) return 'all-work';
+  return firstLaunch ? 'onboarding' : 'loading';
 }
 
 type SearchableQuickCommand = {

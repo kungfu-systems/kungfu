@@ -971,11 +971,7 @@ function ProductHost({
     });
   const [onboardingNotice, setOnboardingNotice] =
     useTransientOnboardingNotice();
-  const firstLaunch =
-    !playbackMode &&
-    !emptyState &&
-    !openLab &&
-    shouldShowKungfuOnboarding(onboardingState);
+  const firstLaunch = !openLab && shouldShowKungfuOnboarding(onboardingState);
   const startupProjectRoot = React.useMemo(
     () =>
       emptyState
