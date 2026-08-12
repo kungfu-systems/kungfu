@@ -3,7 +3,7 @@
   "contract": "kungfu-buildchain-dev-delivery-warrant-queue",
   "repository": "kungfu-systems/kungfu",
   "protectedBase": "dev/v4/v4.0",
-  "generation": 1280,
+  "generation": 1281,
   "fencingCounter": 329,
   "policy": {
     "agingSeconds": 900,
@@ -13970,8 +13970,48 @@
         "tests/qualification/agent-hub-20/responsibility-map.json",
         "tests/qualification/native-agent-ui-acceptance/prepare.mjs"
       ]
+    },
+    {
+      "repository": "kungfu-systems/kungfu",
+      "protectedBase": "dev/v4/v4.0",
+      "pullRequestNumber": 3033,
+      "assignmentRoot": "sha256:d8920d7a841f835c364bf69842078949dd2010950057c154805114deee6b2d03",
+      "initiativeRoot": "sha256:bfff817933e5a5ad693e4b902a84f6cc3a251235dd7377cb4091d92f805fa7ff",
+      "sourceIdentityRoot": "sha256:fcdd9a7577b1bb249fb2edec5b81864431222a8674149225b17cf38315b64219",
+      "deliveryClass": "native-proof-required",
+      "identitySemantics": "chained-attempt-v2",
+      "predecessorCandidateId": "sha256:38e3758c0d108bd0129ffa9add49d657c388d333ae1d6ac93b4aaf38bee1f408",
+      "candidateId": "sha256:690184a6085e5909579a9253071d638b9672de287efb4a781d2025bb992f7daf",
+      "sourceHead": "3d94fcd285926bd245da465ebe158906217cab40",
+      "sourcePatchRoot": "sha256:98139eee90f6252c3811d9b1f431b5cd7f34321e4d5220cd626e7cc0b31f70f7",
+      "sourceProofRoot": "sha256:30e000e2ec3f2f4b36f72914720e912c2b18908f0202ad60fc471588d0ed66dd",
+      "planRoot": "sha256:8be2ed2e6bb0415f9afc9f480164f98dcba3072d2df172a57e2e765c7866a8f5",
+      "closureRoot": "sha256:106d175611d8634c988192302b9c464ae8ba3b6d023c2cff9910e401344c9624",
+      "dependencyRoot": "sha256:047521d38a26e5e49cf2765f56ff206b8bc2e28c351b9ca85def46c4b48e9180",
+      "toolchainRoot": "sha256:2ecb07894954a2e0de022615d4561e5ba3ae68376401941ecff77be03cd75a0f",
+      "sourceWorkflowRunId": 0,
+      "priority": "ordinary",
+      "enqueuedAt": "2026-08-12T08:36:07.776Z",
+      "updatedAt": "2026-08-12T08:36:07.776Z",
+      "attempts": 1,
+      "recoveries": 0,
+      "status": "queued",
+      "terminal": null,
+      "affectedPaths": [
+        ".xinfa/portable-atlas-classification.json.gz",
+        ".xinfa/product-atlas-bundle.json",
+        "docs/adr/SHIFU-ADR-019f86da-4f90-79a1-bc85-4b542fecf011.md",
+        "docs/shifu/README.md",
+        "docs/shifu/examples/production-graph/native-build-lowering/journal-bazel.fixture.json",
+        "docs/shifu/native-build-lowering-contract.json",
+        "docs/shifu/production-graph-contract.json",
+        "framework/production-graph/check.mjs",
+        "framework/production-graph/native-build-lowering/index.mjs",
+        "framework/production-graph/native-build-lowering/index.test.mjs",
+        "package.json"
+      ]
     }
   ],
-  "updatedAt": "2026-08-12T08:34:05.874Z",
-  "stateRoot": "sha256:93ca68e812125e666f338331c03920ae27eef9784e0834a67726b1a88cf660be"
+  "updatedAt": "2026-08-12T08:36:07.776Z",
+  "stateRoot": "sha256:1b019aa293609eed291cd2379c0a29ee4b9cbfd1cce842fd4b0161f6333efac0"
 }
