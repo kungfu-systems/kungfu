@@ -902,7 +902,8 @@ def verify_v2(envelope: Any, expected: dict[str, Any] | None = None) -> dict[str
         return {"ok": False, "issues": ["unknown-schema"]}
     if set(envelope) != required or envelope.get("phase") != "candidate":
         return {"ok": False, "issues": ["invalid-envelope"]}
-    relations = envelope.get("relations") if isinstance(envelope.get("relations"), list) else []
+    raw_relations = envelope.get("relations")
+    relations: list[Any] = raw_relations if isinstance(raw_relations, list) else []
     names = [row.get("record", {}).get("relationId", "").rsplit(":", 1)[-1] for row in relations if isinstance(row, dict)]
     for name in SEMANTIC_RELATIONS_V2:
         count = names.count(name)
