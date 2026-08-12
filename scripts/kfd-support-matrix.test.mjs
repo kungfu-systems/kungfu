@@ -241,7 +241,7 @@ test('source status reports candidate, unsupported, and draft-evidence boundarie
     'KFD-12',
     'KFD-13',
   ]);
-  assert.equal(report.kfd3.declaredSurfaceCount, 193);
+  assert.equal(report.kfd3.declaredSurfaceCount, 199);
   assert.equal(report.kfd3.counts.enforced, 0);
 });
 
