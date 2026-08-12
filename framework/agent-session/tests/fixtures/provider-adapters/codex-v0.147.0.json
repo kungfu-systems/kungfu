@@ -7,9 +7,21 @@
   },
   {
     "id": "codex-busy-redacted",
-    "lines": ["Working (12s • esc to interrupt)"],
+    "lines": [
+      "Working (12s • esc to interrupt)",
+      "gpt-5.6-sol high · /redacted/project"
+    ],
     "expectedState": "busy",
     "signatureId": "codex.busy.interrupt-hint"
+  },
+  {
+    "id": "codex-ready-status-redacted",
+    "lines": [
+      "Independent assessment: the requested check passed.",
+      "gpt-5.6-sol high · /redacted/project"
+    ],
+    "expectedState": "ready",
+    "signatureId": "codex.ready.status-line"
   },
   {
     "id": "codex-approval-redacted",
