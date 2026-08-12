@@ -913,6 +913,8 @@ test('candidate finalization seals one rooted product admission receipt into its
       written.receipt.receiptRoot,
     );
     assert.equal(written.receipt.claims.externalPublication, false);
+    assert.deepEqual(written.receipt.admission.qualificationPlatforms, []);
+    assert.deepEqual(written.receipt.admission.updateCampaigns, []);
     assert.equal(written.receipt.admission.cliArtifacts.length, 4);
     assert.equal(written.receipt.candidate.bundleCount, 5);
     assert.deepEqual(
@@ -933,6 +935,39 @@ test('candidate finalization seals one rooted product admission receipt into its
     });
     assert.equal(verified.receiptRoot, written.receipt.receiptRoot);
     assert.equal(verified.capsuleRoot, written.capsule.capsuleRoot);
+    assert.equal(verified.manifests.length, 3);
+  });
+});
+
+test('candidate finalization admits exact product and CLI bytes without unadvertised updater evidence', () => {
+  withFixture((value) => {
+    for (const platform of Object.values(value.platforms)) {
+      fs.rmSync(platform.evidencePath);
+    }
+    const outputRoot = path.join(value.payloadRoot, 'kungfu-product-admission');
+    const written = writeUpgradePublicationAdmission({
+      payloadRoot: value.payloadRoot,
+      releaseCandidatePassportPath: value.passportPath,
+      expectedVersion: VERSION,
+      outputPath: path.join(
+        outputRoot,
+        PRODUCT_UPGRADE_PUBLICATION_ADMISSION_FILE,
+      ),
+      capsulePath: path.join(
+        outputRoot,
+        PRODUCT_UPGRADE_PUBLICATION_CAPSULE_FILE,
+      ),
+    });
+    assert.deepEqual(written.receipt.admission.qualificationPlatforms, []);
+    assert.deepEqual(written.receipt.admission.evidenceRefs, []);
+    assert.deepEqual(written.receipt.admission.campaignRoots, []);
+    const verified = verifyUpgradePublicationAdmission({
+      payloadRoot: value.payloadRoot,
+      releaseCandidatePassportPath: value.passportPath,
+      expectedVersion: VERSION,
+      expectedSourceSha: SOURCE,
+    });
+    assert.equal(verified.cliArtifacts.length, 4);
     assert.equal(verified.manifests.length, 3);
   });
 });
@@ -1214,7 +1249,7 @@ test('sealed product admission rejects receipt tampering', () => {
   });
 });
 
-test('sealed product admission rejects semantically forged campaign roots after resealing', () => {
+test('sealed product admission rejects a forged qualification platform projection after resealing', () => {
   withFixture((value) => {
     const outputRoot = path.join(value.payloadRoot, 'kungfu-product-admission');
     const outputPath = path.join(
@@ -1233,8 +1268,7 @@ test('sealed product admission rejects semantically forged campaign roots after 
       capsulePath,
     });
     const receipt = JSON.parse(fs.readFileSync(outputPath, 'utf8'));
-    receipt.admission.updateCampaigns[0].targetVersion = '4.0.0-forged';
-    receipt.roots.campaign = contentRoot(receipt.admission.updateCampaigns);
+    receipt.admission.qualificationPlatforms = ['linux'];
     const { receiptRoot: _oldReceiptRoot, ...receiptBody } = receipt;
     receipt.receiptRoot = contentRoot(receiptBody);
     writeJson(outputPath, receipt);
@@ -1251,7 +1285,7 @@ test('sealed product admission rejects semantically forged campaign roots after 
           releaseCandidatePassportPath: value.passportPath,
           expectedVersion: VERSION,
         }),
-      /product admission campaign projection drift/,
+      /product admission qualification platform projection drift/,
     );
   });
 });
