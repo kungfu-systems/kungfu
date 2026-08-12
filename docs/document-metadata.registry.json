@@ -932,6 +932,29 @@
         "invisible_context_boundary": "No Stable release, production support SLA, legal conclusion, hidden model checkpoint, or runtime parameters are claimed"
       }
     },
+    "docs/guides/agent-work-lab.md": {
+      "metadata_schema": "kungfu.document-metadata/v1",
+      "document_status": "active",
+      "doc_type": "public-document",
+      "review_state": "self-reviewed",
+      "sensitivity": "public",
+      "sources": [
+        "executable-probe",
+        "local-files",
+        "user-consensus"
+      ],
+      "period": "ongoing",
+      "theme": "agent-work-lab",
+      "confidence": "high",
+      "evidence_grade": "A",
+      "last_reviewed": "2026-08-12",
+      "ai_provenance": {
+        "model_family": "OpenAI GPT",
+        "product": "Codex",
+        "generated_at": "2026-08-12",
+        "invisible_context_boundary": "The guide is based on this source tree and bounded local command probes; installed release state, provider credentials, private sessions, and hidden model parameters are not claimed"
+      }
+    },
     "docs/guides/choose-your-kungfu.md": {
       "metadata_schema": "kungfu.document-metadata/v1",
       "document_status": "active",

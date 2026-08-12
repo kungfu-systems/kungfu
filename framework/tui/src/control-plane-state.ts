@@ -19,12 +19,15 @@ export function initialProductSurface({
   playbackMode,
   firstLaunch,
   emptyState,
+  openLab = false,
 }: {
   playbackMode: boolean;
   firstLaunch: boolean;
   emptyState: boolean;
+  openLab?: boolean;
 }): ProductSurface {
   if (playbackMode) return 'lab';
+  if (openLab) return 'lab';
   if (firstLaunch) return 'onboarding';
   return emptyState ? 'all-work' : 'loading';
 }

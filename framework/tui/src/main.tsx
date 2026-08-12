@@ -962,6 +962,7 @@ function ProductHost({
 }) {
   const { exit } = useApp();
   const playbackMode = autoDemo || Boolean(projectTourRoot);
+  const openLab = process.argv.includes('--agent-work-lab-open');
   const [size, setSize] = React.useState(dimensions.get());
   const [onboardingState, setOnboardingState] =
     React.useState<KungfuOnboardingState>(() => {
@@ -971,7 +972,10 @@ function ProductHost({
   const [onboardingNotice, setOnboardingNotice] =
     useTransientOnboardingNotice();
   const firstLaunch =
-    !playbackMode && !emptyState && shouldShowKungfuOnboarding(onboardingState);
+    !playbackMode &&
+    !emptyState &&
+    !openLab &&
+    shouldShowKungfuOnboarding(onboardingState);
   const startupProjectRoot = React.useMemo(
     () =>
       emptyState
@@ -983,7 +987,7 @@ function ProductHost({
     AgentWorkLabStartupRoute | undefined
   >(playbackMode ? PENDING_STARTUP : undefined);
   const [surface, setSurfaceState] = React.useState<ProductSurface>(
-    initialProductSurface({ playbackMode, firstLaunch, emptyState }),
+    initialProductSurface({ playbackMode, firstLaunch, emptyState, openLab }),
   );
   const startupSurface = React.useRef(surface).current;
   const startupAnimationEnabled = React.useMemo(

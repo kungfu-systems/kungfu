@@ -18,6 +18,7 @@ import shutil
 import subprocess
 import tempfile
 import threading
+import uuid
 from collections.abc import Callable
 from pathlib import Path, PurePosixPath
 from typing import Any, Mapping
@@ -25,6 +26,7 @@ from typing import Any, Mapping
 import kungfu
 from kungfu import assignment_orchestration as orchestration
 from kungfu.agent import runtime_profiles
+from kungfu.agent.work_projection import STARTUP_SCHEMA, inspect_startup
 from kungfu.rewind import (
     ACTION_RUN_BEGIN,
     ACTION_RUN_END,
@@ -34,11 +36,9 @@ from kungfu.rewind import (
 from kungfu.rewind.fb.RunStatus import RunStatus
 from kungfu.storage import service as storage_service
 from kungfu.storage.episode_lifecycle import RuntimeEpisodeLifecycle
-from kungfu.workspace import inspect_workspace, resolve_workspace_target
-from kungfu.workspace_federation import query_federation
+from kungfu.workspace import resolve_workspace_target
 
 
-STARTUP_SCHEMA = "kungfu.agent-work-lab.startup-route/v1"
 CATALOG_SCHEMA = "kungfu.agent-work-lab.catalog/v1"
 DEMO_PLAN_SCHEMA = "kungfu.agent-work-lab.demo-plan/v1"
 DEMO_REPORT_SCHEMA = "kungfu.agent-work-lab.report/v1"
@@ -51,6 +51,17 @@ PLAN_SCHEMA = "kungfu.project-template.plan/v1"
 RECEIPT_SCHEMA = "kungfu.project-template.creation-receipt/v1"
 DEFAULT_TEMPLATE_ID = "kungfu.agent-work-starter"
 FORBIDDEN_TEMPLATE_ROOTS = {".git", ".kungfu"}
+
+
+def content_root(value: Any) -> str:
+    encoded = json.dumps(
+        value, sort_keys=True, separators=(",", ":"), ensure_ascii=False
+    ).encode("utf-8")
+    return f"sha256:{hashlib.sha256(encoded).hexdigest()}"
+
+
+human_agent_catalog = runtime_profiles.human_agent_catalog
+resolve_agent_selector = runtime_profiles.resolve_human_selector
 
 
 def _suite_catalog_candidates() -> list[Path]:
@@ -123,11 +134,6 @@ PUBLIC_PROGRESS_MESSAGES = {
         "I found Session 1’s partial result and the same Work identity.",
     ),
 }
-MIGRATION_MARKERS = (
-    ".migration-in-progress",
-    ".storage-migration-in-progress",
-    "migration.lock",
-)
 DEMO_AGENT_IDENTITY = {
     "provider": "kungfu-demo-agent",
     "executableDigest": "sha256:" + hashlib.sha256(b"kungfu-demo-agent/v1").hexdigest(),
@@ -139,13 +145,6 @@ DEMO_AGENT_IDENTITY = {
 }
 
 AgentWorkLabEventSink = Callable[[Mapping[str, Any]], None]
-
-
-def content_root(value: Any) -> str:
-    encoded = json.dumps(
-        value, sort_keys=True, separators=(",", ":"), ensure_ascii=False
-    ).encode("utf-8")
-    return f"sha256:{hashlib.sha256(encoded).hexdigest()}"
 
 
 def _work_ref(plan_root: str) -> dict[str, Any]:
@@ -278,153 +277,6 @@ def _publish_event(
         on_event(event)
 
 
-def _diagnostic(
-    runtime_dir: Path, code: str, message: str, *, evidence: list[str] | None = None
-) -> dict[str, Any]:
-    return {
-        "schema": STARTUP_SCHEMA,
-        "state": "diagnostic",
-        "route": "diagnostic",
-        "reasonCode": code,
-        "message": message,
-        "runtimeDir": str(runtime_dir),
-        "workGraphPresent": None,
-        "evidence": evidence or [],
-        "writeOccurred": False,
-    }
-
-
-def _work_graph(runtime_dir: Path, code: str, evidence: list[str]) -> dict[str, Any]:
-    return {
-        "schema": STARTUP_SCHEMA,
-        "state": "existing-work",
-        "route": "work-graph",
-        "reasonCode": code,
-        "message": "Canonical local Work graph data is present.",
-        "runtimeDir": str(runtime_dir),
-        "workGraphPresent": True,
-        "evidence": evidence,
-        "writeOccurred": False,
-    }
-
-
-def _empty(runtime_dir: Path, code: str) -> dict[str, Any]:
-    return {
-        "schema": STARTUP_SCHEMA,
-        "state": "verified-empty",
-        "route": "agent-work-lab",
-        "reasonCode": code,
-        "message": "No canonical local Work graph data is present.",
-        "runtimeDir": str(runtime_dir),
-        "workGraphPresent": False,
-        "evidence": [],
-        "writeOccurred": False,
-    }
-
-
-def inspect_startup(
-    runtime_dir: str | Path,
-    *,
-    config_home: str | Path | None = None,
-    env: Mapping[str, str] | None = None,
-) -> dict[str, Any]:
-    """Resolve the boot route from the verified global Work read model."""
-
-    selected = Path(runtime_dir).expanduser()
-    try:
-        if selected.exists():
-            if selected.is_symlink() or not selected.is_dir():
-                return _diagnostic(
-                    selected.absolute(),
-                    "runtime-home-invalid",
-                    "The Kungfu runtime home is not a regular directory.",
-                )
-            selected = selected.resolve()
-            if not os.access(selected, os.R_OK | os.X_OK):
-                return _diagnostic(
-                    selected,
-                    "runtime-home-permission-denied",
-                    "The Kungfu runtime home cannot be inspected safely.",
-                )
-            markers = [name for name in MIGRATION_MARKERS if (selected / name).exists()]
-            if markers:
-                return _diagnostic(
-                    selected,
-                    "runtime-migration-in-progress",
-                    "Kungfu data is migrating; startup will not classify it as empty.",
-                    evidence=markers,
-                )
-        else:
-            selected = selected.absolute()
-
-        current = inspect_workspace(home=True, env=env)
-        if current is None:
-            raise RuntimeError("Home workspace identity is unavailable")
-        query = query_federation(
-            current,
-            scope="all",
-            config_home=str(config_home) if config_home is not None else None,
-            env=env,
-            max_workers=1,
-        )
-        verification = query.get("verification")
-        aggregate = query.get("aggregate")
-        global_work = query.get("global_work")
-        proof = query.get("proof")
-        if (
-            not isinstance(verification, Mapping)
-            or verification.get("ok") is not True
-            or not isinstance(aggregate, Mapping)
-            or aggregate.get("writes") != 0
-            or not isinstance(global_work, Mapping)
-            or global_work.get("writes") != 0
-            or not isinstance(proof, Mapping)
-            or query.get("writes") != []
-        ):
-            return _diagnostic(
-                selected,
-                "global-work-unverified",
-                "The global Work projection is incomplete or cannot be verified.",
-            )
-        canonical_count = global_work.get("canonical_work_count")
-        if (
-            type(canonical_count) is not int
-            or canonical_count < 0
-            or aggregate.get("canonical_work_count") != canonical_count
-        ):
-            return _diagnostic(
-                selected,
-                "global-work-invalid",
-                "The global Work projection has inconsistent canonical counts.",
-            )
-        projection_root = str(global_work.get("projection_root") or "")
-        proof_root = str(proof.get("proof_root") or "")
-        if not CONTENT_ROOT.fullmatch(projection_root) or not CONTENT_ROOT.fullmatch(
-            proof_root
-        ):
-            return _diagnostic(
-                selected,
-                "global-work-invalid",
-                "The global Work projection is missing root-bound evidence.",
-            )
-        evidence = [projection_root, proof_root]
-        if canonical_count:
-            return _work_graph(selected, "global-work-present", evidence)
-        if aggregate.get("complete") is not True:
-            return _diagnostic(
-                selected,
-                "global-work-unverified",
-                "The global Work projection is incomplete or cannot be verified.",
-            )
-        return _empty(selected, "global-work-verified-empty")
-    except (OSError, RuntimeError, TypeError, ValueError) as error:
-        return _diagnostic(
-            selected.absolute(),
-            "global-work-unreadable",
-            f"The global Work projection cannot be inspected safely: {error}",
-        )
-
-
 def catalog(
     runtime_dir: str | Path,
     *,
@@ -444,6 +296,61 @@ def catalog(
             "oracle": "exact-partial-state-recognized-and-completed",
         },
         "actions": [
+            {
+                "id": "agent-work-lab.open",
+                "mutation": "none",
+                "resultSchema": "interactive-tui",
+            },
+            {
+                "id": "agent-work-lab.watch",
+                "mutation": "isolated-playback-only",
+                "resultSchema": DEMO_REPORT_SCHEMA,
+            },
+            {
+                "id": "agent-work-lab.tour",
+                "mutation": "disposable-project-playback-only",
+                "resultSchema": "kungfu.project-tour.episode-report/v1",
+            },
+            {
+                "id": "agent-work-lab.try.plan",
+                "mutation": "none",
+                "resultSchema": PLAN_SCHEMA,
+            },
+            {
+                "id": "agent-work-lab.try.create",
+                "mutation": "new-reviewed-project-and-captured-work-after-explicit-confirmation",
+                "resultSchema": RECEIPT_SCHEMA,
+            },
+            {
+                "id": "agent-work-lab.test.plan",
+                "mutation": "none",
+                "resultSchema": "kungfu.agent-work-lab.test-plan/v1",
+            },
+            {
+                "id": "agent-work-lab.test.run",
+                "mutation": "isolated-agent-processes-after-explicit-confirmation",
+                "resultSchema": AGENT_REPORT_SCHEMA,
+            },
+            {
+                "id": "agent-work-lab.report.open",
+                "mutation": "none",
+                "resultSchema": "root-verified-agent-work-lab-report",
+            },
+            {
+                "id": "agent-work-lab.agents.discover",
+                "mutation": "none",
+                "resultSchema": "kungfu.agent-runtime-profile-catalog/v1",
+            },
+            {
+                "id": "agent-work-lab.startup.inspect",
+                "mutation": "none",
+                "resultSchema": STARTUP_SCHEMA,
+            },
+            {
+                "id": "agent-work-lab.surface.catalog",
+                "mutation": "none",
+                "resultSchema": CATALOG_SCHEMA,
+            },
             {
                 "id": "agent-work-lab.demo.plan",
                 "mutation": "none",
@@ -473,6 +380,11 @@ def catalog(
                 "id": "agent-work-lab.starter-project.create",
                 "mutation": "new-project-files-and-captured-work-request-after-explicit-confirmation",
                 "resultSchema": "kungfu.project-template.creation-receipt/v1",
+            },
+            {
+                "id": "agent-work-lab.starter-project.resume",
+                "mutation": "none",
+                "resultSchema": "kungfu.project-template.resume/v1",
             },
         ],
         "authority": {
@@ -820,12 +732,14 @@ def _provider_command(profile: Mapping[str, Any], prompt: str) -> list[str]:
         return [
             *command,
             "--print",
-            "--permission-mode",
-            "acceptEdits",
+            "--output-format",
+            "json",
             prompt,
         ]
+    if provider == "amp":
+        return [*command, "--execute", prompt]
     if provider == "opencode":
-        return [*command, "run", prompt]
+        return [*command, "run", "--pure", "--format", "json", prompt]
     raise ValueError(f"Unsupported Agent Runtime Profile provider: {provider}")
 
 
@@ -1415,6 +1329,66 @@ def report_status(
         "stale": current_root != recorded_root,
         "writeOccurred": False,
     }
+
+
+def next_result_directory(runtime_dir: str | Path) -> Path:
+    return (
+        Path(runtime_dir).expanduser().absolute()
+        / "agent-work-lab"
+        / "results"
+        / uuid.uuid4().hex
+    )
+
+
+def load_report(
+    result: str | Path | None, *, runtime_dir: str | Path
+) -> dict[str, Any]:
+    """Load and root-verify one exact report or the latest bounded result."""
+
+    if result is None:
+        parent = (
+            Path(runtime_dir).expanduser().absolute() / "agent-work-lab" / "results"
+        )
+        candidates = []
+        try:
+            for child in parent.iterdir():
+                candidate = child / "report.json"
+                if candidate.is_file():
+                    candidates.append(candidate)
+        except OSError:
+            candidates = []
+        if not candidates:
+            raise ValueError(
+                "no retained Agent Work Lab result is available; run "
+                "`kungfu agent-work-lab test --execute` first, or pass an exact report path"
+            )
+        report_path = max(candidates, key=lambda path: path.stat().st_mtime_ns)
+    else:
+        report_path = Path(result).expanduser().absolute()
+        if report_path.is_dir():
+            report_path = report_path / "report.json"
+    try:
+        report = json.loads(report_path.read_text(encoding="utf-8"))
+    except (OSError, ValueError, json.JSONDecodeError) as error:
+        raise ValueError(
+            f"Agent Work Lab report is unreadable: {report_path}"
+        ) from error
+    if report.get("schema") not in {DEMO_REPORT_SCHEMA, AGENT_REPORT_SCHEMA}:
+        raise ValueError(f"unsupported Agent Work Lab report: {report_path}")
+    semantic = {
+        key: value
+        for key, value in report.items()
+        if key
+        not in {
+            "reportRoot",
+            "evidenceDirectory",
+            "writeOccurred",
+            "credentialContentsRead",
+        }
+    }
+    if report.get("reportRoot") != content_root(semantic):
+        raise ValueError(f"Agent Work Lab report root does not verify: {report_path}")
+    return {**report, "reportPath": str(report_path), "writeOccurred": False}
 
 
 class ProjectTemplateError(ValueError):

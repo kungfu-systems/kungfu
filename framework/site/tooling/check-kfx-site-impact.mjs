@@ -704,7 +704,7 @@ function main() {
       baseDeclaration,
       baseRevision,
       changes,
-      proofs: readProofs(),
+      proofs: options.writeProof ? [] : readProofs(),
     });
     console.log(
       JSON.stringify(

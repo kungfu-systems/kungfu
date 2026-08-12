@@ -203,4 +203,13 @@ test('initial product surface keeps onboarding ahead of routine loading', () => 
     }),
     'lab',
   );
+  assert.equal(
+    initialProductSurface({
+      playbackMode: false,
+      firstLaunch: true,
+      emptyState: false,
+      openLab: true,
+    }),
+    'lab',
+  );
 });

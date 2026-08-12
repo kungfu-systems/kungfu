@@ -655,7 +655,7 @@ export function AgentWorkLabView({
       controls={
         autoplay
           ? `STEP ${autoplay.phase}/4 · ${agentWorkLabAutoplayPhaseLabel(autoplay.phase)}`
-          : 'keyboard [d/x/m/n] run · [j/k] source · [brackets] target · [Tab] focus · [?] explain'
+          : 'keyboard [d/x/m/n] run · [w] Work · [j/k] source · [brackets] target · [Tab] focus · [?] explain'
       }
       controlActions={autoplay ? undefined : AGENT_WORK_LAB_POINTER_ACTIONS}
       help={
