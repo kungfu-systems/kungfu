@@ -3,7 +3,7 @@
   "contract": "kungfu-buildchain-dev-delivery-warrant-queue",
   "repository": "kungfu-systems/kungfu",
   "protectedBase": "dev/v4/v4.0",
-  "generation": 1231,
+  "generation": 1232,
   "fencingCounter": 322,
   "policy": {
     "agingSeconds": 900,
@@ -12445,8 +12445,40 @@
         "scripts/verify-kungfu-release-admission.mjs",
         "scripts/verify-kungfu-release-admission.test.mjs"
       ]
+    },
+    {
+      "repository": "kungfu-systems/kungfu",
+      "protectedBase": "dev/v4/v4.0",
+      "pullRequestNumber": 3037,
+      "assignmentRoot": "sha256:00412b5b2d672b7be24f427bd500ead9a535968978723c80a0ce4b1c3eb05304",
+      "initiativeRoot": "sha256:bfff817933e5a5ad693e4b902a84f6cc3a251235dd7377cb4091d92f805fa7ff",
+      "sourceIdentityRoot": "sha256:baf49f2b6a22853fc2cf41cb8c06955d64a147fcb71dd84e9a307cb3415ad938",
+      "deliveryClass": "native-proof-required",
+      "candidateId": "sha256:980adb223724b8884a3dd9d41f7858d920579049a8067bb872b7a16279e732ba",
+      "sourceHead": "6c79261f997c54d584b8d948b2d778833d669c6f",
+      "sourcePatchRoot": "sha256:fb1d786086b0f49df43ea0ee19a1bb65b07025b4f8bb0d64c2f8d6b7f2148f96",
+      "sourceProofRoot": "sha256:654eaf5ecdb5a01420b8972a10a64a3eb0ed6bc6909ae3e42292e859459f2f7a",
+      "planRoot": "sha256:77f920a23a0a55846ec480970b6c1867d1bab8575eb8a3f6802e5b9abdac590c",
+      "closureRoot": "sha256:106d175611d8634c988192302b9c464ae8ba3b6d023c2cff9910e401344c9624",
+      "dependencyRoot": "sha256:aceb13ee2ee4a11333d7a533d80cd6feaf3d39eccce406641350adcd10c84a1d",
+      "toolchainRoot": "sha256:2ecb07894954a2e0de022615d4561e5ba3ae68376401941ecff77be03cd75a0f",
+      "sourceWorkflowRunId": 0,
+      "priority": "ordinary",
+      "enqueuedAt": "2026-08-12T06:25:10.322Z",
+      "updatedAt": "2026-08-12T06:25:10.322Z",
+      "attempts": 1,
+      "recoveries": 0,
+      "status": "queued",
+      "terminal": null,
+      "affectedPaths": [
+        ".xinfa/portable-atlas-classification.json.gz",
+        ".xinfa/product-atlas-bundle.json",
+        "framework/core/tests/fixtures/dev-delivery-warrant-steady-state.json",
+        "scripts/dev-pr-auto-merge.test.mjs",
+        "scripts/readonly-agent-bootstrap.test.mjs"
+      ]
     }
   ],
-  "updatedAt": "2026-08-12T06:22:11.776Z",
-  "stateRoot": "sha256:a80624cae5a987d366188dc54c3e028a4f1f8808f1c1554a0099c7ed2b54ab2f"
+  "updatedAt": "2026-08-12T06:25:10.322Z",
+  "stateRoot": "sha256:64a09866492d86d8bfbc8383f39edd3df56db11124ca8e5675b4db4e43383c2c"
 }
