@@ -210,7 +210,7 @@ function nativeFixture(runStep = () => {}) {
       readPlan: () => ({
         schema: 'kungfu.core-affected-native-plan/v1',
         closureComponents: ['framework/core'],
-        sdkQualification: { required: false },
+        sdkQualification: { required: true },
         devQueueQualification: {
           shifuWorkspace: { required: true },
           kfdVerifier: { required: false },
@@ -244,6 +244,11 @@ test('two-phase native adapter runs both partitions and seals exact-head success
         ({ environment }) => environment.KUNGFU_AFFECTED_NATIVE_PARTITION_INDEX,
       ),
     ['0', '1'],
+  );
+  assert.equal(
+    commands.find(({ name }) => name === 'Build Core SDK artifacts')
+      ?.environment.KUNGFU_BUILDCHAIN_SOURCE_BUILD,
+    '1',
   );
   assert.equal(
     JSON.parse(fs.readFileSync(path.join(value.cwd, 'evidence/native.json')))
