@@ -400,7 +400,7 @@ test('workflow consumes exact Buildchain Source and Integration Proofs', () => {
   const aggregate = workflow.slice(workflow.indexOf('  affected_native:\n'));
   assert.match(
     aggregate,
-    /Project exact PR qualification into Buildchain Source Proof[\s\S]*affected-native-proof\.mjs source-input[\s\S]*dev-delivery-warrant-input\.mjs[\s\S]*buildchain\.mjs dev proof source[\s\S]*--source-identity-root/u,
+    /Project exact PR qualification into Buildchain Source Proof[\s\S]*affected-native-proof\.mjs source-input[\s\S]*dev-delivery-warrant-input\.mjs[\s\S]*buildchain\.mjs dev proof source[\s\S]*--source-identity-root[\s\S]*--environment-root "\$\(jq -er '\.environmentRoot' "\$output\/warrant-input\.json"\)"/u,
   );
   assert.match(
     aggregate,

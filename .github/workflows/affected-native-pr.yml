@@ -1222,6 +1222,7 @@ jobs:
             --closure-root "$(jq -er '.closureRoot' "$output/warrant-input.json")" \
             --dependency-root "$(jq -er '.dependencyRoot' "$output/warrant-input.json")" \
             --toolchain-root "$(jq -er '.toolchainRoot' "$output/warrant-input.json")" \
+            --environment-root "$(jq -er '.environmentRoot' "$output/warrant-input.json")" \
             --affected-paths-json "$(jq -c '.affectedPaths' "$output/warrant-input.json")" \
             --shard-evidence-roots-json "$(jq -c '.shardEvidenceRoots' "$output/warrant-input.json")" \
             --qualified-at "$(jq -er '.producer.createdAt' "$bundle/proof.json")" \
