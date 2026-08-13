@@ -3,7 +3,7 @@
   "contract": "kungfu-buildchain-dev-delivery-warrant-queue",
   "repository": "kungfu-systems/kungfu",
   "protectedBase": "dev/v4/v4.0",
-  "generation": 1716,
+  "generation": 1717,
   "fencingCounter": 385,
   "policy": {
     "agingSeconds": 900,
@@ -21399,8 +21399,39 @@
         "scripts/verify-kungfu-release-admission.mjs",
         "scripts/verify-kungfu-release-admission.test.mjs"
       ]
+    },
+    {
+      "repository": "kungfu-systems/kungfu",
+      "protectedBase": "dev/v4/v4.0",
+      "pullRequestNumber": 3063,
+      "assignmentRoot": "sha256:49ad9c475f1da42caf00f6a32a5f4fa11a67a27ab15f671f8a120e2d66ba4a87",
+      "initiativeRoot": "sha256:bfff817933e5a5ad693e4b902a84f6cc3a251235dd7377cb4091d92f805fa7ff",
+      "sourceIdentityRoot": "sha256:693e0e1da273db8f31818e874527c9ede0ad1f07361f535b7f2ef74c231d7496",
+      "deliveryClass": "native-proof-required",
+      "candidateId": "sha256:45dca695eb30a720b644751410c4b946b09b9e55078f703475d7353cf2ca5c9e",
+      "sourceHead": "1044c55e3375c8bed8e447a0670571a87982f896",
+      "sourcePatchRoot": "sha256:b849b11b9121f21ca984151a40b34ec5b1a9cbdecd3b50ba0ca0ba101dc8d930",
+      "sourceProofRoot": "sha256:293e25e1d13708b8ba09459625ebbc175d7fde5175326b19675f23e62b15d3de",
+      "planRoot": "sha256:3b5b613293eeb18f8711923da4d8ba29a755d87f5ebb6c4f34cdd6a6957d2c72",
+      "closureRoot": "sha256:106d175611d8634c988192302b9c464ae8ba3b6d023c2cff9910e401344c9624",
+      "dependencyRoot": "sha256:d124d69228a922704c5110a17c2e8ca1ce88f8b0d4c7eae84712b60c597b550d",
+      "toolchainRoot": "sha256:2ecb07894954a2e0de022615d4561e5ba3ae68376401941ecff77be03cd75a0f",
+      "sourceWorkflowRunId": 0,
+      "priority": "ordinary",
+      "enqueuedAt": "2026-08-13T02:53:06.256Z",
+      "updatedAt": "2026-08-13T02:53:06.256Z",
+      "attempts": 1,
+      "recoveries": 0,
+      "status": "queued",
+      "terminal": null,
+      "affectedPaths": [
+        ".github/workflows/dev-post-merge-advisory.yml",
+        "docs/qualification/gates/workflow-authority.json",
+        "framework/release/publication-surfaces.json",
+        "scripts/qualified-assignment-core-artifact.test.mjs"
+      ]
     }
   ],
-  "updatedAt": "2026-08-13T02:29:20.145Z",
-  "stateRoot": "sha256:451219f85d745be8c4f0576306e376ecee9fa363346dca7d3cebb0057e6a2ddf"
+  "updatedAt": "2026-08-13T02:53:06.256Z",
+  "stateRoot": "sha256:b04ec6725a22200bb21996914f2e7b88dfeea850bc8277e84ed23df58f4db044"
 }
