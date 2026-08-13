@@ -44,6 +44,7 @@ from kungfu.agent.provider_output import (
 )
 from kungfu.content_hash import compute_content_hash_value
 from kungfu.skill import build_skill_context
+from kungfu.workspace import resolve_workspace_target
 from kungfu.rewind import (
     ACTION_RUN_BEGIN,
     ACTION_RUN_END,
@@ -66,19 +67,31 @@ def bind_current_native_work(
     assignment_id: str,
     *,
     work_workspace_root: str | None = None,
+    envelope_override: Mapping[str, Any] | None = None,
+    console_workspace_root: str | None = None,
 ) -> dict[str, Any] | None:
     """Atomically bind the current native attempt before it acts on Work."""
 
     raw = os.environ.get("KUNGFU_AGENT_CONSOLE_ENVELOPE", "").strip()
-    if not raw:
+    if not raw and envelope_override is None:
         return None
-    envelope = json.loads(raw)
+    injected = envelope_override is None
+    envelope = (
+        json.loads(raw)
+        if injected
+        else session_contract.validate_agent_console_envelope(
+            dict(envelope_override or {})
+        )
+    )
     from kungfu import assignment_orchestration as orchestration
     from kungfu import profile_sdk
     from kungfu.cli.commands import assignment as work_commands
-    from kungfu.workspace import resolve_workspace_target
 
-    workspace_root = os.environ.get("KUNGFU_WORKSPACE_ROOT", "").strip()
+    workspace_root = (
+        os.environ.get("KUNGFU_WORKSPACE_ROOT", "").strip()
+        if injected
+        else str(console_workspace_root or "").strip()
+    )
     if not workspace_root:
         raise ValueError(
             "native Agent Console is missing its Kungfu Project workspace root"
@@ -92,16 +105,19 @@ def bind_current_native_work(
             "native Agent Console workspace does not match its Kungfu Project"
         )
     project_runtime_dir = str(Path(target.runtime_dir).expanduser().resolve())
-    injected_runtime_dir = os.environ.get("KUNGFU_AGENT_RUNTIME_DIR", "").strip()
-    if not injected_runtime_dir:
-        raise ValueError(
-            "native Agent Console is missing its stable Kungfu Project runtime"
-        )
-    if Path(injected_runtime_dir).expanduser().resolve() != Path(project_runtime_dir):
-        raise ValueError(
-            "native Agent Console runtime does not match its Kungfu Project"
-        )
-    agent_resources.validated_current_bootstrap_receipt(envelope)
+    if injected:
+        injected_runtime_dir = os.environ.get("KUNGFU_AGENT_RUNTIME_DIR", "").strip()
+        if not injected_runtime_dir:
+            raise ValueError(
+                "native Agent Console is missing its stable Kungfu Project runtime"
+            )
+        if Path(injected_runtime_dir).expanduser().resolve() != Path(
+            project_runtime_dir
+        ):
+            raise ValueError(
+                "native Agent Console runtime does not match its Kungfu Project"
+            )
+        agent_resources.validated_current_bootstrap_receipt(envelope)
 
     # ``runtime_dir`` belongs to the CLI invocation context. A packaged CLI may
     # deliberately use ``--home`` while the native attempt is attached to a
@@ -154,7 +170,17 @@ def bind_current_native_work(
         "sessionAttemptId": str(envelope["attemptId"]),
     }
     actor_id = os.environ.get("KUNGFU_AGENT_SESSION_ACTOR", f"cli:{os.getpid()}")
-    plan = session_surface.invoke(
+
+    def invoke_session(request):
+        if injected:
+            return session_surface.invoke(request)
+        return session_surface.invoke_for_project(
+            request,
+            fallback_runtime_dir=project_runtime_dir,
+            cwd=workspace_root,
+        )
+
+    plan = invoke_session(
         {
             "operation": "plan-native-bind-work",
             "client": "kfd3-agent",
@@ -167,7 +193,7 @@ def bind_current_native_work(
             },
         }
     )
-    receipt = session_surface.invoke(
+    receipt = invoke_session(
         {
             "operation": "bind-native-work",
             "client": "kfd3-agent",

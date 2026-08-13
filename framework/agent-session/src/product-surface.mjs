@@ -758,15 +758,6 @@ export class AgentSessionProductSurface {
         'native SessionAttempt is unavailable',
       );
     }
-    if (
-      projection.attempt.bootstrap?.state !== 'verified' ||
-      projection.attempt.bootstrap?.mutationsAllowed !== true
-    ) {
-      throw new AgentSessionSurfaceError(
-        'native_bootstrap_not_verified',
-        'native Agent bootstrap is not verified; Work binding is disabled',
-      );
-    }
     const consoleWorkspaceId = projection.console.workspaceId;
     const declaredSourceWorkspaceId = sourceWorkspaceId ?? consoleWorkspaceId;
     if (declaredSourceWorkspaceId !== consoleWorkspaceId) {
