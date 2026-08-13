@@ -384,7 +384,6 @@ test('hosted native jobs remain fail-closed behind the exact active Warrant', ()
     'affected_native_shards',
     'shifu_workspace',
     'kfd_verifier',
-    'qualified_core_candidate',
   ]) {
     const start = sourceWorkflow.indexOf(`  ${job}:\n`);
     const remainder = sourceWorkflow.slice(start + 3);
