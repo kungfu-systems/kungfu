@@ -212,7 +212,7 @@ jobs:
       closure-root: ${{ steps.contract.outputs.closure-root }}
       dependency-root: ${{ steps.contract.outputs.dependency-root }}
       toolchain-root: ${{ steps.contract.outputs.toolchain-root }}
-      environment-root: ${{ steps.contract.outputs.environment-root }}
+      environment-root: ${{ steps.environment.outputs.environment-root }}
       affected-paths-json: ${{ steps.contract.outputs.affected-paths-json }}
       shard-evidence-roots-json: ${{ steps.contract.outputs.shard-evidence-roots-json }}
       delivery-class: ${{ steps.contract.outputs.delivery-class }}
@@ -331,6 +331,38 @@ jobs:
             --plan .buildchain/dev-delivery-input/plan.json \
             --output .buildchain/dev-delivery-input/warrant-input.json \
             --github-output "$GITHUB_OUTPUT"
+
+      - name: Bind exact hosted native environment
+        id: environment
+        if: steps.contract.outcome == 'success'
+        shell: bash
+        run: |
+          set -euo pipefail
+          # The contract job intentionally keeps the protected consumer checkout.
+          # Derive this independent root from the protected proof descriptor so a
+          # PR that introduces the output can bootstrap without executing PR code.
+          # shifu-entry-contract: allow dependency-free protected descriptor rooting during workflow bootstrap
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          import { digest } from './scripts/affected-native-proof.mjs';
+
+          const descriptor = JSON.parse(
+            fs.readFileSync('.buildchain/dev-delivery-input/descriptor.json', 'utf8'),
+          );
+          const environmentRoot = digest({
+            schema: 'kungfu.github-hosted-native-environment/v1',
+            platformTier: descriptor.identity.platformTier,
+            toolchain: descriptor.identity.toolchain,
+          });
+          if (!/^sha256:[0-9a-f]{64}$/u.test(environmentRoot)) {
+            throw new Error('hosted native environment root is invalid');
+          }
+          fs.appendFileSync(
+            process.env.GITHUB_OUTPUT,
+            `environment-root=${environmentRoot}\n`,
+          );
+          // shifu-entry-contract: allow the dependency-free rooting heredoc terminator
+          NODE
 
       - name: Resolve optional exact native proof artifact
         id: native-proof-artifact
