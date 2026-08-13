@@ -3,7 +3,7 @@
   "contract": "kungfu-buildchain-dev-delivery-warrant-queue",
   "repository": "kungfu-systems/kungfu",
   "protectedBase": "dev/v4/v4.0",
-  "generation": 1734,
+  "generation": 1735,
   "fencingCounter": 388,
   "policy": {
     "agingSeconds": 900,
@@ -21904,11 +21904,20 @@
       "sourceWorkflowRunId": 0,
       "priority": "ordinary",
       "enqueuedAt": "2026-08-13T03:21:58.399Z",
-      "updatedAt": "2026-08-13T03:21:58.399Z",
+      "updatedAt": "2026-08-13T03:30:09.066Z",
       "attempts": 1,
       "recoveries": 0,
-      "status": "queued",
-      "terminal": null,
+      "status": "cancelled",
+      "terminal": {
+        "outcome": "cancelled",
+        "reason": "protected pull request event: synchronize",
+        "evidenceRoot": "sha256:3cacef1ac20ed12db70ff780b2f33fcafa0cc864f297f8056c4bae819f4ae4a9",
+        "authority": "queued-candidate-cancellation",
+        "expectedSourceHead": "1044c55e3375c8bed8e447a0670571a87982f896",
+        "observedSourceHead": "8b01ba21ce8198c8fd0b4dbc590b892ee1575f3b",
+        "eventAction": "synchronize",
+        "closedAt": "2026-08-13T03:30:09.066Z"
+      },
       "affectedPaths": [
         ".github/workflows/dev-post-merge-advisory.yml",
         "docs/qualification/gates/workflow-authority.json",
@@ -22046,6 +22055,6 @@
       ]
     }
   ],
-  "updatedAt": "2026-08-13T03:28:45.945Z",
-  "stateRoot": "sha256:425ebaecf3f0d064691e054a307e4cea38b8be668a486b4f36a86fc266758163"
+  "updatedAt": "2026-08-13T03:30:09.066Z",
+  "stateRoot": "sha256:bc40eb1a40797896f1a8751baea4e9f443120e240ddf0223272be7d9bf723d4a"
 }
