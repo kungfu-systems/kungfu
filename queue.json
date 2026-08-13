@@ -3,15 +3,61 @@
   "contract": "kungfu-buildchain-dev-delivery-warrant-queue",
   "repository": "kungfu-systems/kungfu",
   "protectedBase": "dev/v4/v4.0",
-  "generation": 1690,
-  "fencingCounter": 380,
+  "generation": 1691,
+  "fencingCounter": 381,
   "policy": {
     "agingSeconds": 900,
     "maxPriority": 2,
     "leaseSeconds": 3600,
     "emergencyPolicy": "reviewed-explicit-only"
   },
-  "activeWarrant": null,
+  "activeWarrant": {
+    "schema": "kungfu.buildchain.dev-delivery-warrant/v1",
+    "repository": "kungfu-systems/kungfu",
+    "protectedBase": "dev/v4/v4.0",
+    "candidateId": "sha256:03a36b4a3c7bfa6380ad5c1e5e3879036aacf66e66a5a5d63f9ea7d6adf92a68",
+    "pullRequestNumber": 3053,
+    "sourceHead": "c21dbb0cab1b39c3e02d4d7a727e627c3fdab5e9",
+    "assignmentRoot": "sha256:2f0af5ea797c5a7d4e0307e644047d1e2ecb5bf7fd639eff20584943dee02d3b",
+    "initiativeRoot": "sha256:bfff817933e5a5ad693e4b902a84f6cc3a251235dd7377cb4091d92f805fa7ff",
+    "sourceIdentityRoot": "sha256:ea5f494e9866b564c9d2eebb54e736792a303bb1488c53cb40a25574a5428ff7",
+    "sourcePatchRoot": "sha256:6caca902919a5b67b29f8b70385950a79e238e7c1277cda82aa7e15b4f0e4e95",
+    "sourceProofRoot": "sha256:5d436a8df7989e13fa5842f5ba47c6d3e8317e318ecaf90525c31ab04ee1b3e7",
+    "planRoot": "sha256:99da860ef8c1fbcd760ce8d06e09909faa4e0fd24e98f8b30f55bf2676f618bc",
+    "closureRoot": "sha256:106d175611d8634c988192302b9c464ae8ba3b6d023c2cff9910e401344c9624",
+    "dependencyRoot": "sha256:18f8d5de02f1ce8896edc3f9dc1cd656e295837a9e98522a240a0ffe4e675d31",
+    "toolchainRoot": "sha256:2ecb07894954a2e0de022615d4561e5ba3ae68376401941ecff77be03cd75a0f",
+    "affectedPaths": [
+      ".github/actions/qualified-core-candidate-build/action.yml",
+      ".github/workflows/affected-native-cache-promote.yml",
+      ".github/workflows/affected-native-pr.yml",
+      ".github/workflows/dev-post-merge-advisory.yml",
+      ".xinfa/portable-atlas-classification.json.gz",
+      ".xinfa/product-atlas-bundle.json",
+      "docs/adr/SHIFU-ADR-019f86da-4f90-79a1-bc85-4b542fecf011.md",
+      "docs/architecture/adr-map.json",
+      "docs/architecture/adr-map.md",
+      "docs/qualification/gates/README.md",
+      "docs/qualification/gates/workflow-authority.json",
+      "docs/qualification/gates/workflow-authority.md",
+      "framework/dev-delivery/native-under-warrant.mjs",
+      "framework/release/publication-surfaces.json",
+      "framework/release/qualified-assignment-core-artifact.mjs",
+      "scripts/check-kungfu-gate-catalog.test.mjs",
+      "scripts/dev-pr-auto-merge.test.mjs",
+      "scripts/qualified-assignment-core-artifact.test.mjs",
+      "scripts/readonly-agent-bootstrap.test.mjs"
+    ],
+    "sourceWorkflowRunId": 31650605692,
+    "deliveryClass": "native-proof-required",
+    "generation": 381,
+    "phase": "provisional",
+    "expectedOldStateRoot": "sha256:0b00c802b116cf9c0b31125e677688fbeefc860f94d9d57c9d6ae354a2e276c2",
+    "issuedAt": "2026-08-13T01:09:48.046Z",
+    "expiresAt": "2026-08-13T02:39:48.046Z",
+    "fencingToken": "sha256:9e2985a0564f41d06ab422fb6a482c006af277b1a9a92b0094c8c2cebbe8582d",
+    "nextAction": "Run or reuse the exact semantic native proof, then atomically qualify this fenced Warrant."
+  },
   "candidates": [
     {
       "repository": "kungfu-systems/kungfu",
@@ -20715,10 +20761,10 @@
       "sourceWorkflowRunId": 31650605692,
       "priority": "ordinary",
       "enqueuedAt": "2026-08-12T23:27:46.946Z",
-      "updatedAt": "2026-08-13T00:35:03.609Z",
+      "updatedAt": "2026-08-13T01:09:48.046Z",
       "attempts": 2,
       "recoveries": 0,
-      "status": "queued",
+      "status": "selected",
       "terminal": null,
       "affectedPaths": [
         ".github/actions/qualified-core-candidate-build/action.yml",
@@ -21191,6 +21237,6 @@
       ]
     }
   ],
-  "updatedAt": "2026-08-13T01:09:43.835Z",
-  "stateRoot": "sha256:0b00c802b116cf9c0b31125e677688fbeefc860f94d9d57c9d6ae354a2e276c2"
+  "updatedAt": "2026-08-13T01:09:48.046Z",
+  "stateRoot": "sha256:f261ec72a4e2e3b0c9b4de36adbbd13fdcbad284dceced8d1b423936c4268f80"
 }
