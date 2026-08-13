@@ -244,7 +244,12 @@ class ManagedRunCoordinator:
         lines = list(
             ((snapshot.get("terminal") or {}).get("vt") or {}).get("lines") or []
         )
-        visible = "\n".join(str(line).rstrip() for line in lines).strip()
+        structured_text = snapshot.get("agentText")
+        visible = (
+            structured_text.strip()
+            if isinstance(structured_text, str) and structured_text.strip()
+            else "\n".join(str(line).rstrip() for line in lines).strip()
+        )
         if event_sink is not None:
             for line in visible.splitlines()[-12:]:
                 if line.strip():

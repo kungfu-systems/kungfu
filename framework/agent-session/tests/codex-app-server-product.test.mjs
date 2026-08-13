@@ -115,6 +115,10 @@ test('structured instruction waits for a response-first turn boundary', async ()
     product.invoke({ operation: 'status', session: ref }).interactionState,
     'ready',
   );
+  const snapshot = product.invoke({ operation: 'snapshot', session: ref });
+  assert.equal(snapshot.agentText, 'Structured answer retained.');
+  assert.equal(snapshot.retainedAgentResponse, true);
+  assert.equal(snapshot.retainedTranscript, false);
   const endPlan = product.invoke({
     operation: 'plan-control',
     controlOperation: 'end',
@@ -363,6 +367,16 @@ test('GUI CLI and Agent share one frozen structured route and exact controls', a
       'ready',
     'structured turn did not return to ready',
   );
+  const completedSnapshot = product.invoke({
+    operation: 'snapshot',
+    session: ref,
+  });
+  assert.equal(
+    completedSnapshot.agentText,
+    'Approved structured answer retained.',
+  );
+  assert.equal(completedSnapshot.retainedAgentResponse, true);
+  assert.equal(completedSnapshot.retainedTranscript, false);
 
   assert.throws(
     () =>

@@ -156,7 +156,9 @@ retention, and recovery limits without changing the shared Interaction Port or
 Claude/PTTY authority. Its committed 275-file manifest defines an independently
 recomputable bundle digest. Runtime CLI versions are diagnostic-only and never
 gate launch; incompatible capabilities, methods, required fields, or schema
-bytes fail closed after the actual protocol handshake.
+bytes fail closed after the actual protocol handshake. The product retains one
+bounded final Agent response for Work review, not the private provider
+transcript or raw protocol stream.
 
 Run the credential-free contract and installed-schema drift gates through
 Shifu:

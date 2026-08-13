@@ -1386,6 +1386,78 @@ def test_project_work_session_yields_at_deterministic_attention(tmp_path):
     assert start_input["workConsoleId"] == ("work:kungfu.work-control:assignment:first")
 
 
+def test_structured_session_retains_its_bounded_agent_answer(tmp_path):
+    statuses = iter(
+        [
+            {
+                "live": True,
+                "interactionState": "ready",
+                "output": {"nextSequence": 1},
+                "controller": {"holderId": "kungfu-project-work"},
+            },
+            {
+                "live": True,
+                "interactionState": "busy",
+                "output": {"nextSequence": 2},
+            },
+            {
+                "live": True,
+                "interactionState": "ready",
+                "output": {"nextSequence": 3},
+            },
+        ]
+    )
+
+    def invoke(request):
+        operation = request["operation"]
+        if operation == "plan-start":
+            return {"root": "sha256:" + "1" * 64}
+        if operation == "start":
+            return {"status": "started"}
+        if operation == "status":
+            return next(statuses)
+        if operation == "plan-control":
+            return {"root": "sha256:" + "2" * 64}
+        if operation == "instruct":
+            return {"status": "delivered"}
+        if operation == "snapshot":
+            return {
+                "agentText": "README.md contains exactly one heading.",
+                "retainedAgentResponse": True,
+                "retainedTranscript": False,
+            }
+        raise AssertionError(operation)
+
+    work = {
+        "schema": "kungfu.work-ref/v1",
+        "workspaceId": "workspace:test",
+        "profileId": "kungfu.work-control",
+        "profileRoot": "sha256:" + "3" * 64,
+        "entityType": "assignment",
+        "entityId": "first",
+        "entityRoot": "sha256:" + "4" * 64,
+        "purpose": "complete-project-assignment",
+        "systemTimeCut": "sha256:" + "5" * 64,
+    }
+    result, _session = run_agent.run_session_attempt(
+        invoke=invoke,
+        run_id="agent-codex-structured",
+        selected={
+            "id": "codex.path.test",
+            "provider": "codex",
+            "launch": {"executable": "/usr/bin/codex", "argv": []},
+        },
+        verification={"version": "opaque-future-build"},
+        work=work,
+        cwd=str(tmp_path),
+        env={"PATH": "/usr/bin"},
+        prompt="inspect README",
+        timeout_seconds=1,
+    )
+
+    assert result.stdout == "README.md contains exactly one heading."
+
+
 def test_codex_project_work_session_carries_confirmed_workspace_write_policy(tmp_path):
     calls = []
     observations = iter(

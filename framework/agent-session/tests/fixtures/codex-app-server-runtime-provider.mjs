@@ -79,6 +79,15 @@ lines.on('line', (line) => {
           params: { threadId, turn: turn(threadId, 'turn-authority') },
         });
         send({
+          method: 'item/agentMessage/delta',
+          params: {
+            threadId,
+            turnId: 'turn-authority',
+            itemId: 'message-authority',
+            delta: 'Structured answer retained.',
+          },
+        });
+        send({
           method: 'turn/completed',
           params: {
             threadId,
@@ -125,6 +134,15 @@ lines.on('line', (line) => {
       params: {
         requestId: 'approval-product',
         threadId: 'thread-product',
+      },
+    });
+    send({
+      method: 'item/agentMessage/delta',
+      params: {
+        threadId: 'thread-product',
+        turnId: 'turn-authority',
+        itemId: 'message-product',
+        delta: 'Approved structured answer retained.',
       },
     });
     send({
