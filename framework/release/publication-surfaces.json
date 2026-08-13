@@ -80,7 +80,7 @@
             "product-stable",
             "product-binaries"
           ],
-          "sourceRoot": "sha256:be74c5461894644fce8eac51f6540d9853c2c16857321030f165df788f3b84e7"
+          "sourceRoot": "sha256:fa5e252b943809581a9dc1f6a48417d7859176176b9ac1f38db7c78147d3a077"
         },
         {
           "path": ".github/workflows/dev-post-merge-advisory.yml",
@@ -160,7 +160,7 @@
           "classification": "non-publication",
           "owner": "kungfu-ci",
           "surfaceIds": [],
-          "sourceRoot": "sha256:b7e40520195c4d09be7175d284ce12c1f092c6f408aedc03684944465b076810"
+          "sourceRoot": "sha256:81cad02e4f59f9b32cde0d798204833ab8207c97f0b2ec15ba214325ba403f75"
         },
         {
           "path": ".github/workflows/core-build-profiles.yml",
@@ -191,14 +191,14 @@
           "classification": "non-publication",
           "owner": "kungfu-ci",
           "surfaceIds": [],
-          "sourceRoot": "sha256:277376662d23e87d29c7d3310341e3304f49ddf06e1c23a0248e59eb17f1937a"
+          "sourceRoot": "sha256:3cd93bdc6a4e6ae8007f76e979b9cf460013a95eaacf942e1beba8afc12f0bfb"
         },
         {
           "path": ".github/workflows/dev-pr-auto-merge.yml",
           "classification": "non-publication",
           "owner": "kungfu-ci",
           "surfaceIds": [],
-          "sourceRoot": "sha256:02db4f7281803c25f12efa7383d0ae67933712c06d8d1a40bcc89c6be0ba104d"
+          "sourceRoot": "sha256:a22cfc52c8f818a9875033baf49c1dc8491ad9bb1eea945f0679abffa16b3add"
         },
         {
           "path": ".github/workflows/dev-gate-latency-patrol.yml",
@@ -343,7 +343,7 @@
             "product-stable",
             "product-binaries"
           ],
-          "sourceRoot": "sha256:2a5c89e77c4f843391010493f97a04ca618d5dc88649d7295ce4dccec36cd092"
+          "sourceRoot": "sha256:a84e579bdf33e31a141ed39d75a6a2c6d541414f98411fc8b7d55d986fcc2880"
         },
         {
           "path": ".github/workflows/release-shifu.yml",
@@ -874,5 +874,5 @@
       }
     }
   ],
-  "registryRoot": "sha256:195572f3bee5ed96b5d75e40bbf79d2bdb4190be9666854996d79a99598198fd"
+  "registryRoot": "sha256:c891f11ad1e04694062c124e6620d3612f2e292f2c8e231e0c8b4faae7319fd0"
 }

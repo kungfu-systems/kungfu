@@ -187,8 +187,10 @@ jobs:
       closure-root: ${{ steps.contract.outputs.closure-root }}
       dependency-root: ${{ steps.contract.outputs.dependency-root }}
       toolchain-root: ${{ steps.contract.outputs.toolchain-root }}
+      environment-root: ${{ steps.contract.outputs.environment-root }}
       affected-paths-json: ${{ steps.contract.outputs.affected-paths-json }}
       shard-evidence-roots-json: ${{ steps.contract.outputs.shard-evidence-roots-json }}
+      native-proof-json: ${{ steps.contract.outputs.native-proof-json }}
       delivery-class: ${{ steps.contract.outputs.delivery-class }}
       priority: ${{ steps.contract.outputs.priority }}
       input-root: ${{ steps.contract.outputs.input-root }}
@@ -212,7 +214,7 @@ jobs:
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           repository: kungfu-systems/buildchain
-          ref: 6057d71142dfc6a9d78872e316eca87d9510e176
+          ref: fefb02fbb874bf4bc86dc3fd4a707a9468e14718
           path: .buildchain/dev-delivery-runtime
           fetch-depth: 1
           persist-credentials: false
@@ -290,6 +292,7 @@ jobs:
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
+          SOURCE_RUN_ID: ${{ needs.resolve-target.outputs.source-workflow-run-id }}
           EXPECTED_PR: ${{ needs.resolve-target.outputs.expected-pr-number }}
           EXPECTED_HEAD: ${{ needs.resolve-target.outputs.expected-head-sha }}
         run: |
@@ -304,6 +307,55 @@ jobs:
             --plan .buildchain/dev-delivery-input/plan.json \
             --output .buildchain/dev-delivery-input/warrant-input.json \
             --github-output "$GITHUB_OUTPUT"
+          if [ "$(jq -r '.deliveryClass' .buildchain/dev-delivery-input/warrant-input.json)" != "native-proof-required" ]; then
+            exit 0
+          fi
+          gh run download "$SOURCE_RUN_ID" \
+            --repo "$GITHUB_REPOSITORY" \
+            --name "core-dev-delivery-source-proof-$EXPECTED_HEAD" \
+            --dir .buildchain/dev-delivery-input/source-proof
+          source_proof=.buildchain/dev-delivery-input/source-proof/proof.json
+          native_proof=.buildchain/dev-delivery-input/source-proof/native-proof.json
+          coordinate=.buildchain/dev-delivery-input/source-proof/coordinate.json
+          # shifu-entry-contract: allow invoking the separately checked-out exact Buildchain proof runtime
+          node .buildchain/dev-delivery-runtime/scripts/dev-delivery-proof.mjs verify-source \
+            --source-proof "$source_proof" \
+            --output .buildchain/dev-delivery-input/source-proof-verification.json
+          # shifu-entry-contract: allow invoking the separately checked-out exact Buildchain proof runtime
+          node .buildchain/dev-delivery-runtime/scripts/dev-delivery-proof.mjs verify-native \
+            --source-proof "$native_proof" \
+            --output .buildchain/dev-delivery-input/native-proof-verification.json
+          jq -e '.ok == true and .reason == "exact-source-proof"' \
+            .buildchain/dev-delivery-input/source-proof-verification.json >/dev/null
+          jq -e '.ok == true and .reason == "exact-native-proof"' \
+            .buildchain/dev-delivery-input/native-proof-verification.json >/dev/null
+          environment_root="$(jq -er '.environmentRoot' "$native_proof")"
+          jq -e \
+            --argjson pr "$EXPECTED_PR" \
+            --arg head "$EXPECTED_HEAD" \
+            '.pullRequestNumber == $pr and .sourceHeadSha == $head' \
+            "$coordinate" >/dev/null
+          jq -e --slurpfile input .buildchain/dev-delivery-input/warrant-input.json \
+            --arg environmentRoot "$environment_root" \
+            '.repository == $input[0].repository
+             and .protectedBase == $input[0].protectedBase
+             and .sourceIdentityRoot == $input[0].sourceIdentityRoot
+             and .sourcePatchRoot == $input[0].sourcePatchRoot
+             and .planRoot == $input[0].planRoot
+             and .closureRoot == $input[0].closureRoot
+             and .dependencyRoot == $input[0].dependencyRoot
+             and .toolchainRoot == $input[0].toolchainRoot
+             and .environmentRoot == $environmentRoot
+             and (($input[0].environmentRoot // $environmentRoot) == $environmentRoot)
+             and .affectedPaths == $input[0].affectedPaths
+             and (($input[0].shardEvidenceRoots - .shardEvidenceRoots) | length) == 0' \
+            "$native_proof" >/dev/null
+          {
+            echo "environment-root=$environment_root"
+            echo 'native-proof-json<<BUILDCHAIN_NATIVE_PROOF_EOF'
+            jq -c . "$native_proof"
+            echo 'BUILDCHAIN_NATIVE_PROOF_EOF'
+          } >> "$GITHUB_OUTPUT"
 
       - name: Produce exact Project Cut replay proof
         id: project-cut
@@ -393,9 +445,9 @@ jobs:
       contents: write
       pull-requests: write
       statuses: write
-    uses: kungfu-systems/buildchain/.github/workflows/dev-pr-auto-merge.yml@6057d71142dfc6a9d78872e316eca87d9510e176
+    uses: kungfu-systems/buildchain/.github/workflows/dev-pr-auto-merge.yml@fefb02fbb874bf4bc86dc3fd4a707a9468e14718
     with:
-      buildchain-ref: 6057d71142dfc6a9d78872e316eca87d9510e176
+      buildchain-ref: fefb02fbb874bf4bc86dc3fd4a707a9468e14718
       target-branch: ${{ needs.resolve-target.outputs.target-branch }}
       expected-pr-number: ${{ fromJSON(needs.resolve-target.outputs.expected-pr-number || '0') }}
       expected-head-sha: ${{ needs.resolve-target.outputs.expected-head-sha }}
@@ -413,8 +465,10 @@ jobs:
       closure-root: ${{ needs.delivery-contract.outputs.closure-root }}
       dependency-root: ${{ needs.delivery-contract.outputs.dependency-root }}
       toolchain-root: ${{ needs.delivery-contract.outputs.toolchain-root }}
+      environment-root: ${{ needs.delivery-contract.outputs.environment-root }}
       affected-paths-json: ${{ needs.delivery-contract.outputs.affected-paths-json || '[]' }}
       shard-evidence-roots-json: ${{ needs.delivery-contract.outputs.shard-evidence-roots-json || '[]' }}
+      native-proof-json: ${{ needs.delivery-contract.outputs.native-proof-json }}
       native-command: >-
         ./shifu dev-delivery:native-under-warrant --
         --repository ${{ github.repository }}

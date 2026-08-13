@@ -20,7 +20,7 @@ test('Dev auto-merge admits only explicitly ready reviewed same-repository PRs',
   const reusableRef = workflow.match(
     /uses: kungfu-systems\/buildchain\/\.github\/workflows\/dev-pr-auto-merge\.yml@([0-9a-f]{40})/u,
   )?.[1];
-  assert.equal(reusableRef, '6057d71142dfc6a9d78872e316eca87d9510e176');
+  assert.equal(reusableRef, 'fefb02fbb874bf4bc86dc3fd4a707a9468e14718');
   assert.match(workflow, new RegExp(`buildchain-ref: ${reusableRef}`, 'u'));
   assert.match(workflow, /workflow_run:[\s\S]*Core affected native/u);
   assert.match(workflow, /pull_request_target:[\s\S]*ready_for_review/u);
@@ -95,6 +95,22 @@ test('Dev Agent admission binds every targeted run to one exact PR head', () => 
     /source-workflow-run-id: \$\{\{ fromJSON\(needs\.resolve-target\.outputs\.source-workflow-run-id \|\| '0'\) \}\}/u,
   );
   assert.match(workflow, /handoff-workflow-id: dev-pr-auto-merge\.yml/u);
+  assert.match(
+    workflow,
+    /deliveryClass[\s\S]*native-proof-required[\s\S]*gh run download "\$SOURCE_RUN_ID"[\s\S]*core-dev-delivery-source-proof-\$EXPECTED_HEAD[\s\S]*verify-native[\s\S]*native-proof-json<<BUILDCHAIN_NATIVE_PROOF_EOF/u,
+  );
+  assert.match(
+    workflow,
+    /environment-root: \$\{\{ needs\.delivery-contract\.outputs\.environment-root \}\}/u,
+  );
+  assert.match(
+    workflow,
+    /environment_root="\$\(jq -er '\.environmentRoot' "\$native_proof"\)"[\s\S]*\(\$input\[0\]\.environmentRoot \/\/ \$environmentRoot\)[\s\S]*echo "environment-root=\$environment_root"/u,
+  );
+  assert.match(
+    workflow,
+    /native-proof-json: \$\{\{ needs\.delivery-contract\.outputs\.native-proof-json \}\}/u,
+  );
   assert.match(workflow, /permissions:\n {6}actions: write/u);
   assert.match(workflow, /diagnostic-context: Buildchain delivery intent/u);
   assert.match(
@@ -139,6 +155,46 @@ test('Dev auto-merge waits for PR checks and lands through the native queue', ()
   assert.doesNotMatch(workflow, /gh pr merge|npm publish|git tag/iu);
 });
 
+test('native Warrant retries transient exact-head reads without retrying writes', async () => {
+  const calls = [];
+  const delays = [];
+  const responses = [
+    new TypeError('fetch failed'),
+    {
+      ok: true,
+      async text() {
+        return JSON.stringify({ head: { sha: '1'.repeat(40) } });
+      },
+    },
+    new TypeError('write fetch failed'),
+  ];
+  const client = new GitHubNativeStatusClient({
+    repository: 'kungfu-systems/kungfu',
+    token: 'test-token',
+    fetchImpl: async (_url, options) => {
+      calls.push(options.method);
+      const response = responses.shift();
+      if (response instanceof Error) throw response;
+      return response;
+    },
+    sleepImpl: async (delayMs) => delays.push(delayMs),
+  });
+
+  const pullRequest = await client.request('/pulls/42');
+  assert.equal(pullRequest.head.sha, '1'.repeat(40));
+  assert.deepEqual(calls, ['GET', 'GET']);
+  assert.deepEqual(delays, [1_000]);
+
+  await assert.rejects(
+    client.request('/statuses/head', {
+      method: 'POST',
+      body: { state: 'success' },
+    }),
+    /write fetch failed/u,
+  );
+  assert.deepEqual(calls, ['GET', 'GET', 'POST']);
+});
+
 test('Dev behind admission produces and forwards an exact Project Cut replay proof', () => {
   assert.match(
     workflow,
@@ -146,7 +202,7 @@ test('Dev behind admission produces and forwards an exact Project Cut replay pro
   );
   assert.match(
     workflow,
-    /Check out exact Buildchain delivery runtime[\s\S]*ref: 6057d71142dfc6a9d78872e316eca87d9510e176/u,
+    /Check out exact Buildchain delivery runtime[\s\S]*ref: fefb02fbb874bf4bc86dc3fd4a707a9468e14718/u,
   );
   assert.match(
     workflow,
@@ -213,7 +269,7 @@ function nativeFixture(runStep = () => {}) {
       readPlan: () => ({
         schema: 'kungfu.core-affected-native-plan/v1',
         closureComponents: ['framework/core'],
-        sdkQualification: { required: false },
+        sdkQualification: { required: true },
         devQueueQualification: {
           shifuWorkspace: { required: true },
           kfdVerifier: { required: false },
@@ -247,6 +303,11 @@ test('two-phase native adapter runs both partitions and seals exact-head success
         ({ environment }) => environment.KUNGFU_AFFECTED_NATIVE_PARTITION_INDEX,
       ),
     ['0', '1'],
+  );
+  assert.equal(
+    commands.find(({ name }) => name === 'Build Core SDK artifacts')
+      ?.environment.KUNGFU_BUILDCHAIN_SOURCE_BUILD,
+    '1',
   );
   assert.equal(
     JSON.parse(fs.readFileSync(path.join(value.cwd, 'evidence/native.json')))

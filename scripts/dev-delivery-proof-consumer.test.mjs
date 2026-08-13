@@ -296,24 +296,23 @@ test('queue lease readback binds revision, Warrant, fence, and exact source', ()
   );
 });
 
-test('queue lease accepts the exact candidate after native qualification', () => {
-  const receipt = verifyQueueAdmissionLease({
+test('queue lease accepts the exact qualified Warrant and rejects terminal state', () => {
+  const qualified = verifyQueueAdmissionLease({
     view: queueView(ROOT_A, { status: 'qualified' }),
     pullRequestNumber: 42,
     sourceHeadSha: SOURCE,
     now: '2026-08-04T02:30:00.000Z',
   });
-  assert.equal(receipt.candidateState, 'qualified');
-
+  assert.equal(qualified.candidateState, 'qualified');
   assert.throws(
     () =>
       verifyQueueAdmissionLease({
-        view: queueView(ROOT_A, { status: 'queued' }),
+        view: queueView(ROOT_A, { status: 'dequeued' }),
         pullRequestNumber: 42,
         sourceHeadSha: SOURCE,
         now: '2026-08-04T02:30:00.000Z',
       }),
-    /not delivery-ready: queued/u,
+    /not delivery-ready: dequeued/u,
   );
 });
 
@@ -387,10 +386,14 @@ test('workflow consumes exact Buildchain Source and Integration Proofs', () => {
   );
   assert.match(
     aggregate,
+    /buildchain\.mjs dev proof native[\s\S]*--environment-root[\s\S]*--qualified-base[\s\S]*--shard-evidence-roots-json/u,
+  );
+  assert.match(
+    aggregate,
     /Consume Warrant and record exact Integration Delivery Proof[\s\S]*dev warrant observe[\s\S]*affected-native-proof\.mjs queue-lease-verify[\s\S]*affected-native-proof\.mjs integration-input[\s\S]*dev proof integration[\s\S]*--warrant-result/u,
   );
   assert.match(aggregate, /--branch "\$protected_base"/u);
-  assert.match(aggregate, /ref: 6057d71142dfc6a9d78872e316eca87d9510e176/u);
+  assert.match(aggregate, /ref: fefb02fbb874bf4bc86dc3fd4a707a9468e14718/u);
   assert.match(
     aggregate,
     /name: Install pinned Buildchain proof runtime[\s\S]*working-directory: \.buildchain\/dev-delivery-runtime[\s\S]*corepack pnpm install --frozen-lockfile --ignore-scripts/u,
