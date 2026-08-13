@@ -29,19 +29,17 @@ from kungfu.agent import runtime_profiles
 from kungfu.agent import session_contract
 from kungfu.agent import session_surface
 from kungfu.agent.native_launch import (
+    COMMAND_WRAPPER_SUFFIXES as _WINDOWS_COMMAND_WRAPPER_SUFFIXES,
     NativeLaunchCoordinator,
     apply_platform_tls_trust,
+    encode_wrapper_prompt as _encode_windows_wrapper_prompt,
+    resolve_command_wrapper as _resolve_windows_command_wrapper,
 )
 from kungfu.agent.managed_run import ManagedRunCoordinator
 from kungfu.agent.provider_output import (
     parse_provider_output,
     public_activities_from_provider_line,
     public_command_preview as public_command_preview,
-)
-from kungfu.agent.windows_command_transport import (
-    COMMAND_WRAPPER_SUFFIXES as _WINDOWS_COMMAND_WRAPPER_SUFFIXES,
-    encode_wrapper_prompt as _encode_windows_wrapper_prompt,
-    resolve_command_wrapper as _resolve_windows_command_wrapper,
 )
 from kungfu.content_hash import compute_content_hash_value
 from kungfu.skill import build_skill_context
