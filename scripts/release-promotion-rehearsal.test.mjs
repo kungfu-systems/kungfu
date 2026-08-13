@@ -430,6 +430,28 @@ test('candidate build rejects a committed exact Buildchain runtime pin', () => {
   );
 });
 
+test('candidate build rejects an exact or stable Buildchain workflow shell', () => {
+  const buildPath = CONTRACT.workflows.build;
+  const original = fs.readFileSync(path.join(ROOT, buildPath), 'utf8');
+  for (const workflowShellRef of [
+    '733812ff9405241705f5f267fe2e5ec6351e1a2d',
+    'v3',
+  ]) {
+    const drifted = original.replace(
+      'uses: kungfu-systems/buildchain/.github/workflows/.build.yml@v3-alpha',
+      `uses: kungfu-systems/buildchain/.github/workflows/.build.yml@${workflowShellRef}`,
+    );
+    assert.notEqual(drifted, original);
+    const result = validateWorkflowSources(ROOT, CONTRACT, { build: drifted });
+    assert.equal(result.ok, false);
+    assert.ok(
+      result.findings.some((entry) =>
+        entry.message.includes('workflow contract'),
+      ),
+    );
+  }
+});
+
 test('PR-stage builds reject a premature publish-source lock', () => {
   const buildPath = CONTRACT.workflows.build;
   const original = fs.readFileSync(path.join(ROOT, buildPath), 'utf8');
