@@ -331,7 +331,7 @@ test('provider exit and opaque shell fallback fail closed', () => {
 });
 
 test('adapter version drift is visible and cannot write through a ready-looking screen', () => {
-  const { authority, child, port, screen } = fixture({ version: '0.145.0' });
+  const { authority, child, port, screen } = fixture({ version: '0.143.0' });
   screen('› Ready-looking prompt');
   const receipt = port.instruct(instruction(authority, 'drift'));
   assert.equal(receipt.status, 'held');
