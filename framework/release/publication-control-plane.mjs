@@ -109,7 +109,7 @@ export function validateBuildWorkflowAuthority(
     !buildWorkflow.includes(
       `uses: kungfu-systems/buildchain/.github/workflows/.build.yml@${workflowShellSha}`,
     ) ||
-    !/^\s+buildchain-ref: \$\{\{ inputs\.buildchain-ref \|\| 'v3' \}\}\s*$/mu.test(
+    !/^\s+buildchain-ref: \$\{\{ inputs\.buildchain-ref \|\| 'v3-alpha' \}\}\s*$/mu.test(
       buildWorkflow,
     ) ||
     buildWorkflow.includes(

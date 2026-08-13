@@ -472,7 +472,7 @@ test('workflow contract keeps candidates exact-source, independent, and publish-
   );
   assert.match(
     workflow,
-    /^\s+buildchain-ref: \$\{\{ inputs\.buildchain-ref \|\| 'v3' \}\}$/mu,
+    /^\s+buildchain-ref: \$\{\{ inputs\.buildchain-ref \|\| 'v3-alpha' \}\}$/mu,
   );
   assert.match(
     affectedNativeWorkflow,

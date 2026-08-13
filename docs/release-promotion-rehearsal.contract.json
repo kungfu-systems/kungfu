@@ -6,8 +6,8 @@
     "validation": ".github/workflows/buildchain-validate.yml"
   },
   "buildchain": {
-    "workflow_shell_ref": "v3",
-    "workflow_shell_resolved_sha": "81c49578bff72a9784a1b63ce8698bd9dd23d7bf",
+    "workflow_shell_ref": "v3-alpha",
+    "workflow_shell_resolved_sha": "a60957e3ffc8f9a02f0e9419deebc8d35a3f7198",
     "build_workflow_shell_sha": "dbad2f383a6ab93abd192c4edefb4689c9eebc78",
     "alpha": {
       "workflow_ref": "v3-alpha",

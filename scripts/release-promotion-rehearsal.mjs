@@ -156,7 +156,7 @@ export function validateWorkflowSources(root, contract, overrides = {}) {
       `buildchain-ref: \\$\\{\\{ inputs\\.buildchain-ref \\|\\| '${contract.buildchain.workflow_shell_ref}' \\}\\}`,
     ),
     findings,
-    'candidate builds must default to the production v3 runtime while retaining the trusted manual pass-through',
+    'Alpha candidate builds must default to the v3-alpha runtime while retaining the trusted manual pass-through',
   );
   requirePattern(
     build,
@@ -291,7 +291,7 @@ export function validateWorkflowSources(root, contract, overrides = {}) {
       `uses: kungfu-systems/buildchain/\\.github/workflows/release-candidate-promote\\.yml@${contract.buildchain.workflow_shell_ref}`,
     ),
     findings,
-    'promotion must consume the production v3 floating router contract',
+    'promotion must consume the v3-alpha floating router contract',
   );
   requirePattern(
     promote,

@@ -163,7 +163,7 @@ test('promotion caller grants the write permissions required by Buildchain', () 
   }
 });
 
-test('promotion caller and recovery use the production v3 floating router', () => {
+test('promotion caller and recovery use the v3-alpha floating router', () => {
   const workflow = fs.readFileSync(
     path.join(ROOT, CONTRACT.workflows.promotion),
     'utf8',
@@ -339,7 +339,7 @@ test('promotion rejects an event-scoped Buildchain runtime override', () => {
     promote,
     promote.replace(
       "      buildchain-ref: ${{ startsWith(inputs.target-ref || github.event.pull_request.base.ref, 'alpha/') && 'v3-alpha' || 'v3' }}",
-      "      buildchain-ref: ${{ inputs.buildchain-ref || 'v3' }}",
+      "      buildchain-ref: ${{ inputs.buildchain-ref || 'v3-alpha' }}",
     ),
   );
   assert.notEqual(drifted, original);
@@ -377,10 +377,11 @@ test('promotion rejects a static Buildchain ref that differs from its workflow s
   );
 });
 
-test('manual Buildchain validation retains the v3 default and declared input boundary', () => {
+test('manual Buildchain validation retains the v3-alpha default and declared input boundary', () => {
   const buildPath = CONTRACT.workflows.build;
   const original = fs.readFileSync(path.join(ROOT, buildPath), 'utf8');
-  const binding = "      buildchain-ref: ${{ inputs.buildchain-ref || 'v3' }}";
+  const binding =
+    "      buildchain-ref: ${{ inputs.buildchain-ref || 'v3-alpha' }}";
   const withoutDefault = original.replace(
     binding,
     '      buildchain-ref: ${{ inputs.buildchain-ref }}',
@@ -392,7 +393,7 @@ test('manual Buildchain validation retains the v3 default and declared input bou
   assert.equal(missingDefault.ok, false);
   assert.ok(
     missingDefault.findings.some((entry) =>
-      entry.message.includes('default to the production v3 runtime'),
+      entry.message.includes('default to the v3-alpha runtime'),
     ),
   );
 
@@ -416,7 +417,7 @@ test('candidate build rejects a committed exact Buildchain runtime pin', () => {
   const buildPath = CONTRACT.workflows.build;
   const original = fs.readFileSync(path.join(ROOT, buildPath), 'utf8');
   const drifted = original.replace(
-    "      buildchain-ref: ${{ inputs.buildchain-ref || 'v3' }}",
+    "      buildchain-ref: ${{ inputs.buildchain-ref || 'v3-alpha' }}",
     '      buildchain-ref: 733812ff9405241705f5f267fe2e5ec6351e1a2d',
   );
   assert.notEqual(drifted, original);
@@ -424,7 +425,7 @@ test('candidate build rejects a committed exact Buildchain runtime pin', () => {
   assert.equal(result.ok, false);
   assert.ok(
     result.findings.some((entry) =>
-      entry.message.includes('default to the production v3 runtime'),
+      entry.message.includes('default to the v3-alpha runtime'),
     ),
   );
 });
@@ -433,7 +434,7 @@ test('PR-stage builds reject a premature publish-source lock', () => {
   const buildPath = CONTRACT.workflows.build;
   const original = fs.readFileSync(path.join(ROOT, buildPath), 'utf8');
   const buildchainRef =
-    "      buildchain-ref: ${{ inputs.buildchain-ref || 'v3' }}";
+    "      buildchain-ref: ${{ inputs.buildchain-ref || 'v3-alpha' }}";
   const drifted = original.replace(
     buildchainRef,
     [

@@ -582,11 +582,11 @@ test('patrol, normal Alpha builds and sentinels keep one controller authority', 
   );
   assert.match(
     build,
-    /Verify explicit Release Cut source lock[\s\S]*publish-gate\/anchor[\s\S]*kungfu\.alpha-release-cut-build-lock\/v1[\s\S]*v4\.0\.0-alpha\.2[\s\S]*r17[\s\S]*f9e6b0e34bcdd6407b2a18206ace7982d64de2c8[\s\S]*buildchainRef == "v3"[\s\S]*devMirrorIsBuildInput == false/u,
+    /Verify explicit Release Cut source lock[\s\S]*publish-gate\/anchor[\s\S]*kungfu\.alpha-release-cut-build-lock\/v1[\s\S]*v4\.0\.0-alpha\.2[\s\S]*r17[\s\S]*f9e6b0e34bcdd6407b2a18206ace7982d64de2c8[\s\S]*buildchainRef == "v3-alpha"[\s\S]*devMirrorIsBuildInput == false/u,
   );
   assert.match(
     build,
-    /buildchain-ref: \$\{\{ inputs\.buildchain-ref \|\| 'v3' \}\}[\s\S]*publish-source-ref: \$\{\{ fromJSON\(inputs\.macos-overflow-request-json \|\| '\{\}'\)\.releaseCutSourceRef \|\| '' \}\}[\s\S]*publish-anchor-request-json: \$\{\{ fromJSON\(inputs\.macos-overflow-request-json \|\| '\{\}'\)\.releaseCutSourceRef && toJSON/u,
+    /buildchain-ref: \$\{\{ inputs\.buildchain-ref \|\| 'v3-alpha' \}\}[\s\S]*publish-source-ref: \$\{\{ fromJSON\(inputs\.macos-overflow-request-json \|\| '\{\}'\)\.releaseCutSourceRef \|\| '' \}\}[\s\S]*publish-anchor-request-json: \$\{\{ fromJSON\(inputs\.macos-overflow-request-json \|\| '\{\}'\)\.releaseCutSourceRef && toJSON/u,
   );
   assert.match(
     build,
