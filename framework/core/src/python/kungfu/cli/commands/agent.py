@@ -1081,6 +1081,7 @@ def console_bind_work(ctx, initiative_id, assignment_id, as_json):
             "acquire-control",
             "release-control",
             "instruct",
+            "respond-control",
             "send-key",
             "interrupt",
             "end",

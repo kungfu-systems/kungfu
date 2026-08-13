@@ -156,6 +156,14 @@ test('Dev auto-merge waits for PR checks and lands through the native queue', ()
     workflow,
     /native-command: >-[\s\S]*dev-delivery:native-under-warrant[\s\S]*--status-context 'affected-native \/ linux'/u,
   );
+  assert.match(
+    workflow,
+    /delivery-contract:[\s\S]*KUNGFU_FNM_DIST_MIRROR: \$\{\{ vars\.KUNGFU_FNM_DIST_MIRROR \}\}[\s\S]*KUNGFU_FNM_SHA256: \$\{\{ vars\.KUNGFU_FNM_SHA256 \}\}/u,
+  );
+  assert.match(
+    workflow,
+    /native-command: >-[\s\S]*KUNGFU_FNM_DIST_MIRROR=\$\{\{ vars\.KUNGFU_FNM_DIST_MIRROR \}\}[\s\S]*KUNGFU_FNM_SHA256=\$\{\{ vars\.KUNGFU_FNM_SHA256 \}\}[\s\S]*dev-delivery:native-under-warrant/u,
+  );
   assert.match(workflow, /native-heartbeat-seconds: 300/u);
   assert.match(
     workflow,

@@ -199,6 +199,9 @@ jobs:
     needs: resolve-target
     if: ${{ always() }}
     runs-on: ubuntu-24.04
+    env:
+      KUNGFU_FNM_DIST_MIRROR: ${{ vars.KUNGFU_FNM_DIST_MIRROR }}
+      KUNGFU_FNM_SHA256: ${{ vars.KUNGFU_FNM_SHA256 }}
     permissions:
       actions: read
       contents: read
@@ -595,6 +598,8 @@ jobs:
       shard-evidence-roots-json: ${{ needs.delivery-contract.outputs.shard-evidence-roots-json || '[]' }}
       native-proof-json: ${{ needs.delivery-contract.outputs.native-proof-json }}
       native-command: >-
+        KUNGFU_FNM_DIST_MIRROR=${{ vars.KUNGFU_FNM_DIST_MIRROR }}
+        KUNGFU_FNM_SHA256=${{ vars.KUNGFU_FNM_SHA256 }}
         ./shifu dev-delivery:native-under-warrant --
         --repository ${{ github.repository }}
         --target-branch ${{ needs.resolve-target.outputs.target-branch }}

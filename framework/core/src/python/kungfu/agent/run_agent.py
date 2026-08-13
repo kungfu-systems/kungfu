@@ -28,7 +28,13 @@ from kungfu.agent import resources as agent_resources
 from kungfu.agent import runtime_profiles
 from kungfu.agent import session_contract
 from kungfu.agent import session_surface
-from kungfu.agent.native_launch import NativeLaunchCoordinator
+from kungfu.agent.native_launch import (
+    COMMAND_WRAPPER_SUFFIXES as _WINDOWS_COMMAND_WRAPPER_SUFFIXES,
+    NativeLaunchCoordinator,
+    apply_platform_tls_trust,
+    encode_wrapper_prompt as _encode_windows_wrapper_prompt,
+    resolve_command_wrapper as _resolve_windows_command_wrapper,
+)
 from kungfu.agent.managed_run import ManagedRunCoordinator
 from kungfu.agent.provider_output import (
     parse_provider_output,
@@ -264,10 +270,7 @@ _BOOTSTRAP = (
 )
 
 
-def canonical_root(value: Any) -> str:
-    """Compatibility facade for the canonical Agent Session semantic root."""
-
-    return session_contract.semantic_root(value)
+canonical_root = session_contract.semantic_root
 
 
 def agent_activity_history_projection(
@@ -278,17 +281,6 @@ def agent_activity_history_projection(
     return agent_resources.agent_activity_history_projection(
         validate_work_ref(work_ref), entrypoint=entrypoint
     )
-
-
-def _read_json_object(
-    value: Mapping[str, Any] | None, label: str
-) -> dict[str, Any] | None:
-    if value is None:
-        return None
-    result = dict(value)
-    if not result:
-        raise ValueError(f"{label} must be a non-empty JSON object")
-    return result
 
 
 def validate_work_ref(value: Mapping[str, Any] | None) -> dict[str, Any] | None:
@@ -304,9 +296,11 @@ def validate_work_ref(value: Mapping[str, Any] | None) -> dict[str, Any] | None:
 def validate_continuation(
     value: Mapping[str, Any] | None,
 ) -> dict[str, Any] | None:
-    result = _read_json_object(value, "continuation envelope")
-    if result is None:
+    if value is None:
         return None
+    result = dict(value)
+    if not result:
+        raise ValueError("continuation envelope must be a non-empty JSON object")
     required = {
         "schema",
         "workRef",
@@ -523,6 +517,7 @@ def native_environment(
         *(str(value) for value in selected_adapter.get("credentialEnvironment") or []),
     )
     env = {key: str(ambient[key]) for key in allowed if ambient.get(key)}
+    apply_platform_tls_trust(env)
     env.update(
         {
             str(key): str(value)
@@ -789,6 +784,7 @@ def _environment(
     ambient = os.environ if source is None else source
     allowed = (*_COMMON_ENV_ALLOWLIST, *_PROVIDER_ENV_ALLOWLIST[provider])
     env = {key: str(ambient[key]) for key in allowed if ambient.get(key)}
+    apply_platform_tls_trust(env)
     if provider == "opencode":
         isolated = Path(runtime_dir) / "agent-runs" / run_id / "provider-home"
         env.update(
@@ -909,9 +905,11 @@ def run_session_attempt(
     env: Mapping[str, str],
     prompt: str,
     timeout_seconds: float,
+    permission_mode: str = "workspace-write",
     event_sink: Callable[[Mapping[str, Any]], None] | None = None,
     session_started_callback: Callable[[Mapping[str, str], Mapping[str, Any]], None]
     | None = None,
+    project_trust: Mapping[str, Any] | None = None,
 ) -> tuple[ProcessResult, dict[str, Any]]:
     """Start one Work-bound Session, deliver the first turn, and yield at attention."""
     coordinator = ManagedRunCoordinator(
@@ -931,8 +929,10 @@ def run_session_attempt(
         env=env,
         prompt=prompt,
         timeout_seconds=timeout_seconds,
+        permission_mode=permission_mode,
         event_sink=event_sink,
         session_started=session_started_callback,
+        project_trust=project_trust,
     )
 
 
@@ -944,10 +944,20 @@ def run_process(
     timeout_seconds: float,
     output_sink: Callable[[str, str], None] | None = None,
 ) -> ProcessResult:
+    process_argv = _resolve_windows_command_wrapper(argv, env=env)
+    command_wrapper = (
+        sys.platform == "win32"
+        and bool(process_argv)
+        and Path(str(process_argv[0])).suffix.lower()
+        in _WINDOWS_COMMAND_WRAPPER_SUFFIXES
+    )
+    if command_wrapper:
+        process_argv = _encode_windows_wrapper_prompt(process_argv)
     process = subprocess.Popen(
-        list(argv),
+        process_argv,
         cwd=cwd,
         env=dict(env),
+        shell=command_wrapper,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         text=True,
@@ -1034,6 +1044,7 @@ def execute(
     use_session: bool | None = None,
     session_started_callback: Callable[[Mapping[str, str], Mapping[str, Any]], None]
     | None = None,
+    project_trust: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     from kungfu.storage.episode_lifecycle import RuntimeEpisodeLifecycle
 
@@ -1135,21 +1146,38 @@ def execute(
                 env=env,
                 prompt=argv[-1],
                 timeout_seconds=timeout_seconds,
+                permission_mode=permission_mode,
                 event_sink=event_sink,
                 session_started_callback=session_started_callback,
-            )
-        elif process_runner is run_process:
-            result = process_runner(
-                argv,
-                cwd=cwd,
-                env=env,
-                timeout_seconds=timeout_seconds,
-                output_sink=project_output,
+                project_trust=project_trust,
             )
         else:
-            result = process_runner(
-                argv, cwd=cwd, env=env, timeout_seconds=timeout_seconds
-            )
+            if (
+                session_requested
+                and session_started_callback is not None
+                and work is not None
+            ):
+                # Providers without a managed terminal transport still launch
+                # as one bounded, Work-observing process. Advance native Work
+                # immediately before that process can receive its first
+                # instruction; otherwise a fresh Amp/OpenCode attempt remains
+                # stranded in ``claimed`` and cannot enter independent review.
+                session_started_callback(
+                    _session_ref(work, run_id),
+                    {"status": "started", "transport": "direct-process"},
+                )
+            if process_runner is run_process:
+                result = process_runner(
+                    argv,
+                    cwd=cwd,
+                    env=env,
+                    timeout_seconds=timeout_seconds,
+                    output_sink=project_output,
+                )
+            else:
+                result = process_runner(
+                    argv, cwd=cwd, env=env, timeout_seconds=timeout_seconds
+                )
         status = RunStatus.Succeeded if result.exit_code == 0 else RunStatus.Failed
         episode.record_event(
             ACTION_RUN_END,
@@ -1157,6 +1185,14 @@ def execute(
             run_id=run_id,
         )
         parsed = parse_provider_output(provider, result.stdout)
+        if session_value is not None and parsed.get("text") is None:
+            visible = _ANSI_ESCAPE.sub("", result.stdout).strip()
+            if visible:
+                # Managed Provider UIs expose a credential-safe VT text-grid
+                # snapshot rather than their JSONL process protocol. Retain
+                # that bounded final view so independent review can inspect
+                # the actual answer instead of mistaking it for no answer.
+                parsed["text"] = visible[:128_000]
         if (
             event_sink is not None
             and not streamed_agent_text

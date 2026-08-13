@@ -1,8 +1,7 @@
 const MODES = new Set(['when-ready', 'queue', 'interrupt']);
-const PROVIDER_INPUT_WAIT = new Int32Array(new SharedArrayBuffer(4));
 
 function pauseProviderInput(milliseconds) {
-  Atomics.wait(PROVIDER_INPUT_WAIT, 0, 0, milliseconds);
+  return new Promise((resolve) => setTimeout(resolve, milliseconds));
 }
 
 function required(value, label) {
@@ -161,20 +160,24 @@ export class AgentSessionInteractionPort {
       };
     }
     const request = this.queue.shift();
+    const rejected = (error) => ({
+      schema: 'kungfu.agent-session.interaction-receipt/v1',
+      operation: 'instruct',
+      actionId: request.actionId,
+      inputId: request.inputId,
+      status: 'rejected',
+      reason: error.code ?? 'delivery-failed',
+      queueDepth: this.queue.length,
+      deliveryReceipt: null,
+      ...nullOutcome(),
+    });
     try {
-      return this.#deliverInstruction(request);
+      const result = this.#deliverInstruction(request);
+      return result && typeof result.then === 'function'
+        ? result.catch(rejected)
+        : result;
     } catch (error) {
-      return {
-        schema: 'kungfu.agent-session.interaction-receipt/v1',
-        operation: 'instruct',
-        actionId: request.actionId,
-        inputId: request.inputId,
-        status: 'rejected',
-        reason: error.code ?? 'delivery-failed',
-        queueDepth: this.queue.length,
-        deliveryReceipt: null,
-        ...nullOutcome(),
-      };
+      return rejected(error);
     }
   }
 
@@ -282,17 +285,7 @@ export class AgentSessionInteractionPort {
 
   #deliverInstruction(request) {
     const data = this.adapter.encodeInstruction(request.text);
-    let deliveryReceipt = this.transport.submitInput({ ...request, data });
-    if (this.adapter.instructionSubmitStrategy === 'separate-enter') {
-      this.pause(this.adapter.instructionSubmitDelayMilliseconds);
-      deliveryReceipt = this.transport.submitInput({
-        ...request,
-        actionId: `${request.actionId}:submit`,
-        inputId: `${request.inputId}:submit`,
-        data: this.adapter.instructionSubmitData,
-      });
-    }
-    return {
+    const finish = (deliveryReceipt) => ({
       schema: 'kungfu.agent-session.interaction-receipt/v1',
       operation: 'instruct',
       actionId: request.actionId,
@@ -303,7 +296,69 @@ export class AgentSessionInteractionPort {
       deliveryReceipt,
       deliveredAt: this.now(),
       ...nullOutcome(),
-    };
+    });
+    if (this.adapter.instructionPasteAcknowledgement) {
+      return this.#deliverAcknowledgedInstruction(request, data, finish);
+    }
+    const pasteReceipt = this.transport.submitInput({ ...request, data });
+    if (this.adapter.instructionSubmitStrategy === 'separate-enter') {
+      return Promise.resolve(
+        this.pause(this.adapter.instructionSubmitDelayMilliseconds),
+      ).then(() =>
+        finish(
+          this.transport.submitInput({
+            ...request,
+            actionId: `${request.actionId}:submit`,
+            inputId: `${request.inputId}:submit`,
+            data: this.adapter.instructionSubmitData,
+          }),
+        ),
+      );
+    }
+    return finish(pasteReceipt);
+  }
+
+  async #deliverAcknowledgedInstruction(request, data, finish) {
+    const pollMilliseconds =
+      this.adapter.instructionPasteAcknowledgementPollMilliseconds;
+    const pollsPerAttempt = Math.max(
+      1,
+      Math.ceil(
+        this.adapter.instructionPasteAcknowledgementRetryMilliseconds /
+          pollMilliseconds,
+      ),
+    );
+    const pasteReceipt = this.transport.submitInput({ ...request, data });
+    for (let poll = 0; poll < pollsPerAttempt; poll += 1) {
+      await this.pause(pollMilliseconds);
+      const terminal = this.host.snapshot(
+        this.transport.status().output.earliestSequence,
+      );
+      if (
+        this.adapter.acknowledgesInstructionPaste({
+          lines: terminal.vt.lines,
+          text: request.text,
+        })
+      ) {
+        break;
+      }
+    }
+    const status = this.transport.status();
+    if (
+      status.lifecycleState === 'ended' ||
+      status.inputAdmission === 'closed'
+    ) {
+      return finish(pasteReceipt);
+    }
+    await this.pause(this.adapter.instructionSubmitDelayMilliseconds);
+    return finish(
+      this.transport.submitInput({
+        ...request,
+        actionId: `${request.actionId}:submit`,
+        inputId: `${request.inputId}:submit`,
+        data: this.adapter.instructionSubmitData,
+      }),
+    );
   }
 
   #held(request, reason, operation = 'instruct') {
@@ -317,8 +372,7 @@ export class AgentSessionInteractionPort {
       queued: false,
       queueDepth: this.queue.length,
       deliveryReceipt: null,
-      requiresHuman:
-        /approval-needed|unknown|version-drift|provider-mismatch/u.test(reason),
+      requiresHuman: /approval-needed|unknown|provider-mismatch/u.test(reason),
       ...nullOutcome(),
     };
   }

@@ -121,15 +121,27 @@ function instruction(authority, id, overrides = {}) {
   };
 }
 
-test('ready instruction is one idempotent atomic paste and proves no outcome', () => {
-  const { authority, child, port, screen } = fixture();
+test('ready instruction is one idempotent atomic paste and proves no outcome', async () => {
+  let acknowledgePaste;
+  const { authority, child, port, screen } = fixture({
+    version: 'arbitrary-provider-build',
+    pause: () => {
+      acknowledgePaste?.();
+      acknowledgePaste = null;
+      return Promise.resolve();
+    },
+  });
   screen('› Ask about this workspace');
   const request = instruction(authority, 'ready');
-  const first = port.instruct(request);
-  const duplicate = port.instruct(request);
+  acknowledgePaste = () => screen('› instruction ready');
+  const first = await port.instruct(request);
+  const duplicate = await port.instruct(request);
   assert.equal(first.status, 'written');
   assert.equal(duplicate.status, 'duplicate');
-  assert.deepEqual(child.writes, ['\u001b[200~instruction ready\u001b[201~\r']);
+  assert.deepEqual(child.writes, [
+    '\u001b[200~instruction ready\u001b[201~',
+    '\r',
+  ]);
   assert.equal(
     first.deliveryReceipt.proves,
     'validated-input-written-to-pty-only',
@@ -144,7 +156,7 @@ test('ready instruction is one idempotent atomic paste and proves no outcome', (
   );
 });
 
-test('Claude instruction submits paste and Enter as separately idempotent writes', () => {
+test('Claude instruction submits paste and Enter as separately idempotent writes', async () => {
   const pauses = [];
   const { authority, child, port, screen } = fixture({
     provider: 'claude',
@@ -153,8 +165,8 @@ test('Claude instruction submits paste and Enter as separately idempotent writes
   });
   screen('❯ Ask about this workspace');
   const request = instruction(authority, 'claude-ready');
-  const first = port.instruct(request);
-  const duplicate = port.instruct(request);
+  const first = await port.instruct(request);
+  const duplicate = await port.instruct(request);
   assert.equal(first.status, 'written');
   assert.equal(duplicate.status, 'duplicate');
   assert.deepEqual(child.writes, [
@@ -168,8 +180,113 @@ test('Claude instruction submits paste and Enter as separately idempotent writes
   );
 });
 
-test('busy queue flushes only after a supported ready signature', () => {
-  const { authority, child, port, screen } = fixture();
+test('Codex yields the event loop between paste and Enter for arbitrary versions', async () => {
+  const pauses = [];
+  let acknowledgePaste;
+  const { authority, child, port, screen } = fixture({
+    provider: 'codex',
+    version: 'future-channel-without-semver',
+    pause: (milliseconds) => {
+      pauses.push(milliseconds);
+      acknowledgePaste?.();
+      acknowledgePaste = null;
+      return Promise.resolve();
+    },
+  });
+  screen('› Ask about this workspace');
+  acknowledgePaste = () => screen('› instruction codex-147-ready');
+  const pending = port.instruct(instruction(authority, 'codex-147-ready'));
+  assert.deepEqual(child.writes, [
+    '\u001b[200~instruction codex-147-ready\u001b[201~',
+  ]);
+  const first = await pending;
+  assert.equal(first.status, 'written');
+  assert.deepEqual(child.writes, [
+    '\u001b[200~instruction codex-147-ready\u001b[201~',
+    '\r',
+  ]);
+  assert.deepEqual(pauses, [25, 50]);
+});
+
+test('Codex submits after a bounded best-effort acknowledgement wait without duplicating paste', async () => {
+  let polls = 0;
+  const { authority, child, port, screen } = fixture({
+    provider: 'codex',
+    version: '999.42.7-edge',
+    pause: () => {
+      polls += 1;
+      return Promise.resolve();
+    },
+  });
+  screen('› Ask about this workspace');
+  const result = await port.instruct(instruction(authority, 'codex-retry'));
+  assert.equal(result.status, 'written');
+  assert.deepEqual(child.writes, [
+    '\u001b[200~instruction codex-retry\u001b[201~',
+    '\r',
+  ]);
+  assert.equal(polls, 11);
+});
+
+test('provider exit after paste does not turn the diagnostic Enter into a failed delivery', async () => {
+  let closeAfterPaste;
+  const { authority, child, port, screen } = fixture({
+    provider: 'codex',
+    version: 'opaque-nightly',
+    pause: () => {
+      closeAfterPaste?.();
+      closeAfterPaste = null;
+      return Promise.resolve();
+    },
+  });
+  screen('› Ask about this workspace');
+  closeAfterPaste = () => child.emit('exit', { exitCode: 0, signal: 0 });
+
+  const result = await port.instruct(
+    instruction(authority, 'exit-after-paste'),
+  );
+
+  assert.equal(result.status, 'written');
+  assert.deepEqual(child.writes, [
+    '\u001b[200~instruction exit-after-paste\u001b[201~',
+  ]);
+});
+
+test('Codex accepts its collapsed long-paste acknowledgement regardless of version', async () => {
+  const longInstruction = 'a'.repeat(2248);
+  let acknowledgePaste;
+  const { authority, child, port, screen } = fixture({
+    provider: 'codex',
+    version: 'opaque-nightly',
+    pause: () => {
+      acknowledgePaste?.();
+      acknowledgePaste = null;
+      return Promise.resolve();
+    },
+  });
+  screen('\u203a Ask about this workspace');
+  acknowledgePaste = () => screen('\u203a [Pasted Content 2248 chars]');
+
+  const result = await port.instruct(
+    instruction(authority, 'codex-long-paste', { text: longInstruction }),
+  );
+
+  assert.equal(result.status, 'written');
+  assert.deepEqual(child.writes, [
+    `\u001b[200~${longInstruction}\u001b[201~`,
+    '\r',
+  ]);
+});
+
+test('busy queue flushes only after a supported ready signature', async () => {
+  let acknowledgePaste;
+  const { authority, child, port, screen } = fixture({
+    pause: () => {
+      acknowledgePaste?.();
+      acknowledgePaste = null;
+      return Promise.resolve();
+    },
+  });
   screen('Working (1s • esc to interrupt)');
   const held = port.instruct(
     instruction(authority, 'queued', { mode: 'queue' }),
@@ -179,7 +296,8 @@ test('busy queue flushes only after a supported ready signature', () => {
   assert.deepEqual(child.writes, []);
   assert.equal(port.flushQueued().status, 'held');
   screen('› Ready');
-  assert.equal(port.flushQueued().status, 'written');
+  acknowledgePaste = () => screen('› instruction queued');
+  assert.equal((await port.flushQueued()).status, 'written');
   assert.equal(port.status().queuedInstructions, 0);
 });
 
@@ -202,8 +320,15 @@ test('approval and unknown modal states never auto-deliver or auto-queue', () =>
   assert.deepEqual(child.signals, []);
 });
 
-test('interrupt mode sends one fenced signal then waits for ready before text', () => {
-  const { authority, child, port, screen } = fixture();
+test('interrupt mode sends one fenced signal then waits for ready before text', async () => {
+  let acknowledgePaste;
+  const { authority, child, port, screen } = fixture({
+    pause: () => {
+      acknowledgePaste?.();
+      acknowledgePaste = null;
+      return Promise.resolve();
+    },
+  });
   screen('Working (3s • esc to interrupt)');
   const held = port.instruct(
     instruction(authority, 'interrupt', { mode: 'interrupt' }),
@@ -213,7 +338,8 @@ test('interrupt mode sends one fenced signal then waits for ready before text', 
   assert.deepEqual(child.signals, ['SIGINT']);
   assert.deepEqual(child.writes, []);
   screen('› Ready');
-  assert.equal(port.flushQueued().status, 'written');
+  acknowledgePaste = () => screen('› instruction interrupt');
+  assert.equal((await port.flushQueued()).status, 'written');
   assert.equal(held.controlReceipt.semanticOutcome, null);
 });
 
@@ -254,13 +380,20 @@ test('provider exit and opaque shell fallback fail closed', () => {
   assert.deepEqual(custom.child.writes, []);
 });
 
-test('adapter version drift is visible and cannot write through a ready-looking screen', () => {
-  const { authority, child, port, screen } = fixture({ version: '0.145.0' });
-  screen('› Ready-looking prompt');
-  const receipt = port.instruct(instruction(authority, 'drift'));
+test('unknown layouts fail closed without treating version metadata as incompatible', () => {
+  const { authority, child, port, screen } = fixture({
+    version: '999.42.7-edge',
+  });
+  screen('Future provider layout without a recognized prompt');
+  const receipt = port.instruct(instruction(authority, 'unknown-layout'));
   assert.equal(receipt.status, 'held');
-  assert.equal(receipt.reason, 'adapter-version-drift');
+  assert.equal(receipt.reason, 'automatic-delivery-held-unknown');
   assert.equal(receipt.requiresHuman, true);
+  assert.equal(port.status().providerAdapter.compatible, true);
+  assert.equal(
+    port.status().providerAdapter.reason,
+    'no-supported-state-signature',
+  );
   assert.equal(port.status().providerAdapter.rawHumanFallback, true);
   assert.deepEqual(child.writes, []);
 });

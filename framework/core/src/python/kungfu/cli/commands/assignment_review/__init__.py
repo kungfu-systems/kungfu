@@ -14,24 +14,103 @@ from kungfu.agent import run_agent
 from kungfu.workspace import resolve_workspace_target
 
 
+def review_work_ref(plan):
+    return {
+        "schema": "kungfu.work-ref/v1",
+        "workspaceId": plan["workspace"]["id"],
+        "profileId": "kungfu.work-control",
+        "profileRoot": plan["execution"]["workRef"]["profileRoot"],
+        "entityType": "assignment",
+        "entityId": plan["work"]["assignmentId"],
+        "entityRoot": plan["work"]["assignmentRoot"],
+        "purpose": "independent-completion-review",
+        "systemTimeCut": plan["work"]["queryProofRoot"],
+    }
+
+
+def review_intake_assessment(plan):
+    remaining_obligation = (
+        "Independently assess every exact acceptance criterion against the "
+        "retained Project evidence."
+    )
+    next_action = (
+        "Inspect the retained evidence read-only and return the exact "
+        "KUNGFU_REVIEW_RESULT line."
+    )
+    return {
+        "schema": "kungfu.review-intake-assessment/v1",
+        "state": "independent-review-required",
+        "currentCutRoot": plan["work"]["queryProofRoot"],
+        "priorClaimRoot": plan["execution"]["reportRoot"],
+        "primaryEvidence": dict(plan["deliverable"]),
+        "supportingEvidence": [dict(row) for row in plan["inputs"]],
+        "acceptanceChecks": list(plan["work"]["acceptanceChecks"]),
+        "remainingObligation": remaining_obligation,
+        "nextAction": next_action,
+    }
+
+
+def review_continuation(plan):
+    assessment = review_intake_assessment(plan)
+    return {
+        "schema": run_agent.CONTINUATION_SCHEMA,
+        "workRef": review_work_ref(plan),
+        "currentCutRoot": plan["work"]["queryProofRoot"],
+        "priorClaimRoot": plan["execution"]["reportRoot"],
+        "assessmentRoot": run_agent.canonical_root(assessment),
+        "remainingObligation": assessment["remainingObligation"],
+        "nextAction": assessment["nextAction"],
+    }
+
+
 def review_agent_prompt(plan):
-    criteria = "\n".join(f"- {value}" for value in plan["work"]["acceptanceChecks"])
+    acceptance_checks = plan["work"]["acceptanceChecks"]
+    criteria = "\n".join(f"- {value}" for value in acceptance_checks)
+    criterion_fields = "\n".join(
+        f"{index}. criterion must equal {json.dumps(value, ensure_ascii=False)}"
+        for index, value in enumerate(acceptance_checks, start=1)
+    )
     inputs = "\n".join(f"- {row['path']} ({row['root']})" for row in plan["inputs"])
+    intake_assessment = review_intake_assessment(plan)
+    admission_context = {
+        "schema": "kungfu.review-context/v1",
+        "workRef": review_work_ref(plan),
+        "continuation": review_continuation(plan),
+        "assessment": intake_assessment,
+        "execution": {
+            "mode": "fresh-independent-review",
+            "permissionMode": "read-only",
+            "priorTranscriptBytes": 0,
+        },
+    }
     return (
         "Independently review the retained Project Work evidence. "
         "This is a fresh review process with no prior transcript. Stay read-only: "
         "do not edit, create, delete, rename, or format any project file.\n\n"
+        "Admitted WorkRef and continuation (machine-readable; this prompt is "
+        "self-contained):\n"
+        f"{json.dumps(admission_context, ensure_ascii=False, sort_keys=True)}\n\n"
         f"Primary evidence: {plan['deliverable']['path']} "
         f"({plan['deliverable']['root']})\n"
         f"Supporting evidence:\n{inputs or '- none'}\n\n"
         f"Acceptance criteria:\n{criteria}\n\n"
-        "Read the primary and supporting evidence. Check every criterion "
-        "against exact source evidence. Your final line must be exactly one line "
+        "Read the primary and supporting evidence. Evidence objects with a "
+        "content field already contain the exact root-bound source bytes: assess "
+        "that admitted content directly and do not invoke a workspace command to "
+        "reread its path. Use a workspace tool only for evidence rows that do not "
+        "contain content. Check every criterion against exact source evidence. "
+        "Your final line must be exactly one line "
         "beginning with KUNGFU_REVIEW_RESULT followed by a JSON object with keys: "
         'verdict ("fit" or "revision-required"), summary (string), criteria '
         "(one object per exact criterion with criterion, passed, evidence), and "
-        "evidenceRequests (array of strings). Do not wrap that final line in a "
-        "code fence. Use fit only when every criterion passes."
+        "evidenceRequests (array of strings). The criteria array must contain "
+        f"exactly {len(acceptance_checks)} objects in the listed order. Preserve "
+        "these criterion fields exactly:\n"
+        f"{criterion_fields}\n"
+        "Set passed to a boolean and evidence to a non-empty source citation for "
+        "every object. A statement in summary does not count as criterion coverage. "
+        "Do not merge or omit criteria. Do not wrap the final line in a code fence. "
+        "Use fit only when every criterion passes."
     )
 
 
@@ -171,6 +250,10 @@ def build_plan(
         except (OSError, RuntimeError, ValueError, json.JSONDecodeError):
             current_phase = "captured"
     continuation_mode, effects, phase_blocked_reason = phase_plan(current_phase)
+    project_trust = provider_project_trust(
+        str(selected["provider"]), target.identity.workspace_root
+    )
+    effects = effects_with_project_trust(effects, project_trust)
     stable_verification = {
         "ok": verification["ok"],
         "available": verification["available"],
@@ -209,6 +292,7 @@ def build_plan(
             "profileRoot": run_agent.canonical_root(selected),
             "selection": selection,
             "verification": stable_verification,
+            "projectTrust": project_trust,
         },
         "workControl": {
             "profileId": work_control["profile"]["id"],
@@ -243,6 +327,43 @@ def build_plan(
         "writeOccurred": False,
     }
     return {**body, "planRoot": orchestration.semantic_root(body)}
+
+
+def provider_project_trust(provider, workspace_root):
+    if provider != "codex":
+        return None
+    return {
+        "schema": "kungfu.agent-project-trust/v1",
+        "provider": "codex",
+        "workspaceRoot": workspace_root,
+        "scope": "single-invocation",
+        "allows": [
+            "project-local-config",
+            "project-local-hooks",
+            "project-local-exec-policies",
+        ],
+        "persistent": False,
+    }
+
+
+def effects_with_project_trust(effects, project_trust):
+    if project_trust is None:
+        return effects
+    trust_effect = {
+        "stage": "project-trust",
+        "label": (
+            "Trust only this exact Project for this Codex invocation: "
+            f"{project_trust['workspaceRoot']} (admits project-local config, "
+            "hooks, and exec policies)"
+        ),
+    }
+    result = list(effects)
+    run_index = next(
+        (index for index, effect in enumerate(result) if effect["stage"] == "run"),
+        len(result),
+    )
+    result.insert(run_index, trust_effect)
+    return result
 
 
 def phase_plan(phase):

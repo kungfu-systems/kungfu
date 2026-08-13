@@ -800,6 +800,9 @@ test('Assignment admission smoke isolates the operator Workspace Catalog', (t) =
       path.join(installRoot, '.assignment-admission-user-home'),
     );
     assert.equal(invocation.env.USERPROFILE, invocation.env.HOME);
+    assert.equal(invocation.env.KUNGFU_INSTALL_SOURCE, undefined);
+    assert.equal(invocation.env.KUNGFU_DIR, undefined);
+    assert.equal(invocation.env.KUNGFU_UPGRADE_MANIFEST, undefined);
   }
   const isolatedCatalog = path.join(
     installRoot,

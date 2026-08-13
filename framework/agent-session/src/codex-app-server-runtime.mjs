@@ -5,6 +5,7 @@ import { randomUUID } from 'node:crypto';
 import { EventEmitter } from 'node:events';
 import path from 'node:path';
 import { createCodexAppServerContractGate } from './codex-app-server-contract.mjs';
+import { commandLaunchSpec } from './command-launch.mjs';
 
 const RUNTIME_SCHEMA = 'kungfu.codex-app-server.runtime-host/v1';
 const EVENT_SCHEMA = 'kungfu.codex-app-server.runtime-event/v1';
@@ -98,6 +99,7 @@ export class CodexAppServerRuntimeHost extends EventEmitter {
     initializeTimeoutMs = 10_000,
     now = () => Date.now(),
     uuid = randomUUID,
+    platform = process.platform,
   }) {
     super();
     if (typeof spawn !== 'function') {
@@ -124,6 +126,7 @@ export class CodexAppServerRuntimeHost extends EventEmitter {
     this.initializeTimeoutMs = initializeTimeoutMs;
     this.now = now;
     this.uuid = uuid;
+    this.platform = platform;
     this.state = null;
   }
 
@@ -180,11 +183,18 @@ export class CodexAppServerRuntimeHost extends EventEmitter {
       initializeCapabilities: initializeParams,
     });
 
-    const child = this.spawn(executable, [...spec.argv], {
+    const launch = commandLaunchSpec({
+      executable,
+      argv: spec.argv,
+      env: spec.env,
+      platform: this.platform,
+    });
+    const child = this.spawn(launch.executable, launch.argv, {
       cwd: spec.cwd,
       env: spec.env,
       shell: false,
       stdio: ['pipe', 'pipe', 'pipe'],
+      windowsVerbatimArguments: launch.windowsVerbatimArguments,
     });
     if (
       !child ||

@@ -8,6 +8,8 @@ import { cliLauncherContent } from './cli-launcher.mjs';
 
 test('CLI launchers defer install ownership to the colocated product manifest', () => {
   const posix = cliLauncherContent('linux');
+  assert.match(posix, /KUNGFU_INSTALL_SOURCE=archive/);
+  assert.match(posix, /KUNGFU_DIR="\$here\/runtime"/);
   assert.match(posix, /KUNGFU_PRODUCT_MANIFEST="\$here\/product\.json"/);
   assert.match(posix, /KF_BUNDLED_EXTENSION_ROOT="\$here\/extensions"/);
   assert.match(
@@ -17,10 +19,11 @@ test('CLI launchers defer install ownership to the colocated product manifest', 
   assert.match(posix, /KUNGFU_CONTROLLER_ENTRYPOINT="\$here\/runtime\/kungfu"/);
   assert.match(posix, /while \[ -L "\$target" \]/);
   assert.match(posix, /exec "\$here\/runtime\/kungfu" "\$@"/);
-  assert.doesNotMatch(posix, /KUNGFU_INSTALL_SOURCE/);
   assert.doesNotMatch(posix, /electron/i);
 
   const windows = cliLauncherContent('win32');
+  assert.match(windows, /KUNGFU_INSTALL_SOURCE=archive/);
+  assert.match(windows, /KUNGFU_DIR=%~dp0runtime/);
   assert.match(windows, /%~dp0runtime\\kungfu\.exe/);
   assert.match(windows, /KF_BUNDLED_EXTENSION_ROOT=%~dp0extensions/);
   assert.match(
@@ -37,7 +40,6 @@ test('CLI launchers defer install ownership to the colocated product manifest', 
     windows.indexOf('set "PYTHONIOENCODING=utf-8"') <
       windows.indexOf('"%~dp0runtime\\kungfu.exe" %*'),
   );
-  assert.doesNotMatch(windows, /KUNGFU_INSTALL_SOURCE/);
   assert.doesNotMatch(windows, /electron/i);
 });
 

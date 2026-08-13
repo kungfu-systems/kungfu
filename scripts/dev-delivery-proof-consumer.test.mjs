@@ -301,7 +301,7 @@ test('queue lease readback binds revision, Warrant, fence, and exact source', ()
   );
 });
 
-test('queue lease accepts the exact candidate after native qualification', () => {
+test('queue lease consumes an atomically qualified two-phase Warrant', () => {
   const receipt = verifyQueueAdmissionLease({
     view: queueView(ROOT_A, { status: 'qualified' }),
     pullRequestNumber: 42,
@@ -309,7 +309,19 @@ test('queue lease accepts the exact candidate after native qualification', () =>
     now: '2026-08-04T02:30:00.000Z',
   });
   assert.equal(receipt.candidateState, 'qualified');
-
+  assert.equal(receipt.candidateId, WARRANT.candidateId);
+  assert.equal(receipt.fencingToken, WARRANT.fencingToken);
+  assert.equal(receipt.generation, WARRANT.generation);
+  assert.throws(
+    () =>
+      verifyQueueAdmissionLease({
+        view: queueView(ROOT_A, { status: 'merged' }),
+        pullRequestNumber: 42,
+        sourceHeadSha: SOURCE,
+        now: '2026-08-04T02:30:00.000Z',
+      }),
+    /not delivery-ready: merged/u,
+  );
   assert.throws(
     () =>
       verifyQueueAdmissionLease({

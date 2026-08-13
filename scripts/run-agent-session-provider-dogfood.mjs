@@ -15,6 +15,7 @@ import process from 'node:process';
 import { setTimeout as delay } from 'node:timers/promises';
 import { CODEX_APP_SERVER_FEATURE_FLAG } from '../framework/agent-session/src/codex-app-server-product.mjs';
 import { createDetachedAgentSessionHost } from '../framework/agent-session/src/product-client.mjs';
+import { probeProviderVersion } from '../framework/agent-session/src/provider-adapters.mjs';
 
 const PROFILE_ROOT = `sha256:${'8'.repeat(64)}`;
 const PRIVATE_ENV_NAMES = new Set(['ANTHROPIC_API_KEY', 'OPENAI_API_KEY']);
@@ -346,6 +347,12 @@ const ref = {
 };
 const token = `KUNGFU_AGENT_SESSION_${provider.toUpperCase()}_READY`;
 const startedAt = Date.now();
+const providerVersionProbe = probeProviderVersion({
+  provider,
+  executable: providerExecutable,
+  env: workerEnv,
+});
+const providerVersion = providerVersionProbe.version;
 
 try {
   const env = environment();
@@ -354,7 +361,7 @@ try {
     input: {
       ...ref,
       provider,
-      providerVersion: provider === 'codex' ? '0.146.0' : '2.1.220',
+      providerVersion,
       profileRoot: PROFILE_ROOT,
       executable: providerExecutable,
       argv: providerArguments(provider, { claudeModel, claudeEffort }),
@@ -445,7 +452,7 @@ try {
     input: {
       ...approvalRef,
       provider,
-      providerVersion: provider === 'codex' ? '0.146.0' : '2.1.220',
+      providerVersion,
       profileRoot: PROFILE_ROOT,
       executable: providerExecutable,
       argv: providerArguments(provider, { claudeModel, claudeEffort }),
@@ -608,7 +615,7 @@ try {
     input: {
       ...interruptRef,
       provider,
-      providerVersion: provider === 'codex' ? '0.146.0' : '2.1.220',
+      providerVersion,
       profileRoot: PROFILE_ROOT,
       executable: providerExecutable,
       argv: providerArguments(provider, { claudeModel, claudeEffort }),
@@ -710,6 +717,8 @@ try {
         : 'provider-untrusted-approval',
     qualificationProfile: {
       convergenceTimeoutMilliseconds,
+      versionAdmission: providerVersionProbe.versionAdmission,
+      versionProbeWarning: providerVersionProbe.warning,
       ...(provider === 'claude'
         ? {
             model: claudeModel ?? 'provider-default',

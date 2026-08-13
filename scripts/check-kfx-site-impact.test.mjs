@@ -55,6 +55,7 @@ function evaluate(overrides = {}) {
     baseRevision: overrides.baseRevision || BASE,
     changes: overrides.changes || [],
     proofs: overrides.proofs || [],
+    refreshStaleProofs: overrides.refreshStaleProofs || false,
   });
 }
 
@@ -193,6 +194,34 @@ test('rejects stale proof roots and changed-path omissions', () => {
           proof,
         },
       ],
+    }),
+  );
+});
+
+test('explicit proof refresh replaces stale proof candidates', () => {
+  const changes = [
+    change('framework/core/src/libkungfu/src/runtime/kfx/native_registry.cpp'),
+  ];
+  const facets = [
+    'architecture',
+    'capabilities',
+    'registry-admission-lifecycle',
+  ];
+  const staleChanges = [...changes, change('README.md', 'stale path')];
+  const staleProof = createNoPublicChangeProof(
+    changeBinding(BASE, staleChanges, facets),
+    'The previous refactor preserved public behavior but binds a superseded exact changed-path set.',
+  );
+  assertCode('KFX_SITE_BUNDLE_UPDATE_REQUIRED', () =>
+    evaluate({
+      changes,
+      proofs: [
+        {
+          path: `framework/site/src/kfx-site-impact-proofs/${staleProof.proofRoot.slice(7)}.json`,
+          proof: staleProof,
+        },
+      ],
+      refreshStaleProofs: true,
     }),
   );
 });

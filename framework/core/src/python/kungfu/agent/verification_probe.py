@@ -82,6 +82,7 @@ class VerificationProbe:
         )
         version = None
         error = None
+        warning = None
         if available:
             try:
                 result = self.run(
@@ -99,14 +100,14 @@ class VerificationProbe:
                 )
                 text = (result.stdout or result.stderr or "").strip()
                 if result.returncode != 0:
-                    error = f"version probe exited {result.returncode}"
+                    warning = f"version probe exited {result.returncode}"
                 elif text:
                     first_line = text.splitlines()[0].strip()[:256]
                     version = parse_semantic_version(first_line) or first_line
                 else:
-                    error = "version probe returned no output"
+                    warning = "version probe returned no output"
             except (OSError, subprocess.SubprocessError) as exc:
-                error = str(exc)
+                warning = str(exc)
         else:
             error = "executable is missing or not executable"
         return {
@@ -117,8 +118,10 @@ class VerificationProbe:
             "argv": probe_argv,
             "available": available,
             "version": version,
-            "ok": available and error is None,
+            "ok": available,
             "error": error,
+            "warning": warning,
+            "versionAdmission": "diagnostic-only",
             "observedAt": datetime.now(UTC).isoformat(),
             "privacyBoundary": "bounded declared executable version probe only",
         }

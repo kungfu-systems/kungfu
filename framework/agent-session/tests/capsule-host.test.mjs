@@ -207,6 +207,43 @@ test('Windows termination uses the node-pty kill contract without claiming unsup
   );
 });
 
+test('Windows PTY launch routes any command wrapper through explicit ComSpec', () => {
+  const child = new FakePtyProcess();
+  let invocation = null;
+  const host = new AgentSessionCapsuleHost({
+    pty: {
+      spawn: (executable, argv, options) => {
+        invocation = { executable, argv, options };
+        return child;
+      },
+    },
+    capsuleId: 'capsule-wrapper',
+    runtimeIdentity: 'runtime-wrapper',
+    platform: 'win32',
+  });
+  const status = host.start({
+    workConsoleId: 'console-wrapper',
+    sessionAttemptId: 'attempt-wrapper',
+    capsuleGeneration: '1',
+    sessionStreamEpoch: '1',
+    provider: 'custom',
+    profileRoot: PROFILE_ROOT,
+    executable: '/agent/bin/future-agent.bat',
+    argv: ['--native-console'],
+    env: { COMSPEC: 'C:\\Windows\\System32\\cmd.exe' },
+  });
+  assert.equal(invocation.executable, 'C:\\Windows\\System32\\cmd.exe');
+  assert.deepEqual(invocation.argv, [
+    '/d',
+    '/s',
+    '/v:off',
+    '/c',
+    'call "/agent/bin/future-agent.bat" "--native-console"',
+  ]);
+  assert.equal(status.foreground.executable, '/agent/bin/future-agent.bat');
+  assert.deepEqual(status.foreground.argv, ['--native-console']);
+});
+
 test('PTY readiness failure is exposed before provider spawn', () => {
   const child = new FakePtyProcess();
   const host = new AgentSessionCapsuleHost({

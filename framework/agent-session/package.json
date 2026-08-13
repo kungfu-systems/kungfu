@@ -19,6 +19,7 @@
     "./codex-app-server-product": "./src/codex-app-server-product.mjs",
     "./codex-app-server-recovery": "./src/codex-app-server-recovery.mjs",
     "./codex-app-server-runtime": "./src/codex-app-server-runtime.mjs",
+    "./command-launch": "./src/command-launch.mjs",
     "./peer-transport": "./src/peer-transport.mjs",
     "./product-surface": "./src/product-surface.mjs",
     "./product-runtime": "./src/product-runtime.mjs",

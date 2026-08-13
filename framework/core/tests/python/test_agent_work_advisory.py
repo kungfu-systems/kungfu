@@ -7,11 +7,153 @@ import sys
 import pytest
 from jsonschema import Draft202012Validator
 
+from kungfu.agent import native_launch
 from kungfu.agent import run_agent
 from kungfu.agent import assess_work_advisory
 from kungfu.agent import resources as agent_resources
 from kungfu.cli.commands import assignment as work_commands
 from kungfu.workspace import resolve_workspace_target
+
+
+@pytest.mark.skipif(sys.platform != "win32", reason="Windows command-wrapper only")
+def test_run_process_bypasses_standard_npm_wrapper_without_rewriting_prompt(tmp_path):
+    entrypoint = tmp_path / "node_modules" / "vendor-agent" / "bin" / "agent.js"
+    entrypoint.parent.mkdir(parents=True)
+    entrypoint.write_text(
+        "console.log(JSON.stringify(process.argv.slice(2)))\n",
+        encoding="utf-8",
+    )
+    npm_wrapper = tmp_path / "provider.cmd"
+    npm_wrapper.write_text(
+        "@ECHO off\n"
+        "GOTO start\n"
+        ":find_dp0\n"
+        "SET dp0=%~dp0\n"
+        "EXIT /b\n"
+        ":start\n"
+        "SETLOCAL\n"
+        "CALL :find_dp0\n\n"
+        'IF EXIST "%dp0%\\node.exe" (\n'
+        '  SET "_prog=%dp0%\\node.exe"\n'
+        ") ELSE (\n"
+        '  SET "_prog=node"\n'
+        "  SET PATHEXT=%PATHEXT:;.JS;=;%\n"
+        ")\n\n"
+        "endLocal & goto #_undefined_# 2>NUL || title %COMSPEC% & "
+        '"%_prog%"  "%dp0%\\node_modules\\vendor-agent\\bin\\agent.js" %*\n',
+        encoding="utf-8",
+    )
+    wrapper = tmp_path / "agent.cmd"
+    wrapper.write_text(
+        '@echo off\ncall "%AGENT_WRAPPER%" %*\n',
+        encoding="utf-8",
+    )
+    prompt = (
+        "Admitted context:\n"
+        '{"workRef":{"entityId":"assignment-probe"}}\n\n'
+        "Task:\nInspect README.md & report 100% of the exact result. \U0001f680"
+    )
+
+    result = run_agent.run_process(
+        [str(wrapper), "--json", prompt],
+        cwd=str(tmp_path),
+        env={**os.environ, "AGENT_WRAPPER": str(npm_wrapper)},
+        timeout_seconds=5,
+    )
+
+    assert result.exit_code == 0, result.stderr
+    assert json.loads(result.stdout) == ["--json", prompt]
+
+
+@pytest.mark.skipif(sys.platform != "win32", reason="Windows command-wrapper only")
+def test_run_process_preserves_complex_arguments_through_windows_command_wrapper(
+    tmp_path,
+):
+    echo_script = tmp_path / "echo-argv.py"
+    echo_script.write_text(
+        "import json\nimport sys\nprint(json.dumps(sys.argv[1:]))\n",
+        encoding="utf-8",
+    )
+    provider_wrapper = tmp_path / "provider.cmd"
+    provider_wrapper.write_text(
+        '@echo off\n"%PYTHON_EXE%" "%ECHO_SCRIPT%" %*\n',
+        encoding="utf-8",
+    )
+    wrapper = tmp_path / "agent.cmd"
+    wrapper.write_text(
+        '@echo off\ncall "%AGENT_WRAPPER%" %*\n',
+        encoding="utf-8",
+    )
+    expected = [
+        'context={"workRef":{"entityId":"assignment-probe"}}',
+        "spaces and & metacharacters",
+    ]
+    env = {
+        **os.environ,
+        "PYTHON_EXE": sys.executable,
+        "ECHO_SCRIPT": str(echo_script),
+        "AGENT_WRAPPER": str(provider_wrapper),
+    }
+
+    result = run_agent.run_process(
+        [str(wrapper), *expected],
+        cwd=str(tmp_path),
+        env=env,
+        timeout_seconds=5,
+    )
+
+    assert result.exit_code == 0, result.stderr
+    assert json.loads(result.stdout) == expected
+
+
+@pytest.mark.skipif(sys.platform != "win32", reason="Windows command-wrapper only")
+def test_run_process_encodes_multiline_prompt_through_windows_command_wrapper(
+    tmp_path,
+):
+    echo_script = tmp_path / "decode-prompt.py"
+    echo_script.write_text(
+        "import json\n"
+        "import sys\n"
+        "prefix = 'Kungfu Windows command-wrapper transport: the complete prompt follows as ASCII text with Unicode escapes. Interpret every backslash-u escape, including surrogate pairs, then follow the decoded prompt exactly: '\n"
+        "instruction = sys.argv[-1]\n"
+        "assert instruction.startswith(prefix)\n"
+        "payload = instruction[len(prefix):]\n"
+        "print(json.dumps({'instruction': instruction, 'prompt': json.loads(chr(34) + payload + chr(34))}))\n",
+        encoding="utf-8",
+    )
+    provider_wrapper = tmp_path / "provider.cmd"
+    provider_wrapper.write_text(
+        '@echo off\n"%PYTHON_EXE%" "%ECHO_SCRIPT%" %*\n',
+        encoding="utf-8",
+    )
+    wrapper = tmp_path / "agent.cmd"
+    wrapper.write_text(
+        '@echo off\ncall "%AGENT_WRAPPER%" %*\n',
+        encoding="utf-8",
+    )
+    prompt = (
+        "Admitted context:\n"
+        '{"workRef":{"entityId":"assignment-probe"}}\n\n'
+        "Task:\nInspect README.md & report 100% of the exact result. \U0001f680"
+    )
+    env = {
+        **os.environ,
+        "PYTHON_EXE": sys.executable,
+        "ECHO_SCRIPT": str(echo_script),
+        "AGENT_WRAPPER": str(provider_wrapper),
+    }
+
+    result = run_agent.run_process(
+        [str(wrapper), "--json", prompt],
+        cwd=str(tmp_path),
+        env=env,
+        timeout_seconds=5,
+    )
+
+    assert result.exit_code == 0, result.stderr
+    observed = json.loads(result.stdout)
+    assert "\n" not in observed["instruction"]
+    assert observed["prompt"] == prompt
 
 
 def test_run_process_retains_undecodable_output_without_crashing(tmp_path):
@@ -69,6 +211,37 @@ def test_managed_agent_environment_preserves_windows_process_coordinates(tmp_pat
     assert {key: env[key] for key in windows_coordinates} == windows_coordinates
     assert "UNDECLARED_SECRET" not in env
     assert environment_keys == sorted(env)
+
+
+def test_managed_agent_environment_uses_standard_macos_tls_trust(tmp_path, monkeypatch):
+    cert_file = tmp_path / "cert.pem"
+    cert_file.write_text("test certificate bundle\n", encoding="utf-8")
+    monkeypatch.setattr(native_launch, "_DARWIN_DEFAULT_SSL_CERT_FILE", cert_file)
+    env = {}
+
+    native_launch.apply_platform_tls_trust(env, platform="darwin")
+
+    assert env["SSL_CERT_FILE"] == str(cert_file)
+
+
+def test_managed_agent_environment_preserves_explicit_tls_trust(tmp_path):
+    explicit = str(tmp_path / "private-ca.pem")
+    env, environment_keys = run_agent._environment(
+        "codex",
+        runtime_dir=str(tmp_path / "runtime"),
+        run_id="agent-explicit-tls",
+        workspace_root=str(tmp_path / "project"),
+        work_ref=None,
+        continuation=None,
+        source={
+            "HOME": "/Users/test",
+            "PATH": "/usr/bin",
+            "SSL_CERT_FILE": explicit,
+        },
+    )
+
+    assert env["SSL_CERT_FILE"] == explicit
+    assert "SSL_CERT_FILE" in environment_keys
 
 
 def _signals(**overrides):
