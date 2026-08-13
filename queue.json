@@ -3,7 +3,7 @@
   "contract": "kungfu-buildchain-dev-delivery-warrant-queue",
   "repository": "kungfu-systems/kungfu",
   "protectedBase": "dev/v4/v4.0",
-  "generation": 1708,
+  "generation": 1709,
   "fencingCounter": 382,
   "policy": {
     "agingSeconds": 900,
@@ -11,48 +11,7 @@
     "leaseSeconds": 3600,
     "emergencyPolicy": "reviewed-explicit-only"
   },
-  "activeWarrant": {
-    "schema": "kungfu.buildchain.dev-delivery-warrant/v1",
-    "repository": "kungfu-systems/kungfu",
-    "protectedBase": "dev/v4/v4.0",
-    "candidateId": "sha256:21063a11145aed91216d791bd26586c0ee671ccaae2bdeb6a39b686630149e32",
-    "pullRequestNumber": 3050,
-    "sourceHead": "d37657267983afd62db1945f90fab8429809808e",
-    "assignmentRoot": "sha256:3f5c766b0c9563c0cd796d318b100ff18d77543ede70c9e30e90fbc9a4112b5b",
-    "initiativeRoot": "sha256:bfff817933e5a5ad693e4b902a84f6cc3a251235dd7377cb4091d92f805fa7ff",
-    "sourceIdentityRoot": "sha256:82003d46cb8111ae8aba06e1810b5da31d66d0b6f06cc21bf3e1da9e9257d2c1",
-    "sourcePatchRoot": "sha256:cac0ab69e3d31f427d72171c06771d28ac46cac7e31f7b173ba6bc34d81c9a40",
-    "sourceProofRoot": "sha256:5ef811ebe08152a6459c227974b0249f8a09eb9646b59a13b4be2c61e723e412",
-    "planRoot": "sha256:03872061250ae753bac929516e09830fec469f01ac33e90a0740b96893b023d2",
-    "closureRoot": "sha256:106d175611d8634c988192302b9c464ae8ba3b6d023c2cff9910e401344c9624",
-    "dependencyRoot": "sha256:7f91b7cb9de989e973d2b605612bfac3cd6f471f60d175bbca5fffc83f5370ad",
-    "toolchainRoot": "sha256:2ecb07894954a2e0de022615d4561e5ba3ae68376401941ecff77be03cd75a0f",
-    "affectedPaths": [
-      ".xinfa/portable-atlas-classification.json.gz",
-      ".xinfa/product-atlas-bundle.json",
-      "docs/adr/SHIFU-ADR-019f86da-4f90-79a1-bc85-4b542fecf011.md",
-      "docs/shifu/README.md",
-      "docs/shifu/production-graph-contract.json",
-      "docs/shifu/schema/production-graph-local-executor-policy-v0.schema.json",
-      "docs/shifu/schema/production-graph-v0.schema.json",
-      "framework/core/.gyp/run-build.js",
-      "framework/production-graph/check.mjs",
-      "framework/production-graph/core-subgraph/index.mjs",
-      "framework/production-graph/core-subgraph/index.test.mjs",
-      "framework/production-graph/core-subgraph/stage-executor/index.mjs",
-      "framework/production-graph/executor/index.mjs",
-      "package.json"
-    ],
-    "sourceWorkflowRunId": 0,
-    "deliveryClass": "native-proof-required",
-    "generation": 382,
-    "phase": "provisional",
-    "expectedOldStateRoot": "sha256:4cf4295a4a520353e8dfb346732d66e68f6c56dbbe7a6ee76271d46d8857cb30",
-    "issuedAt": "2026-08-13T02:11:14.672Z",
-    "expiresAt": "2026-08-13T03:41:14.672Z",
-    "fencingToken": "sha256:ca2d53223690dfb6997c2696a93633fb0cfe90aebc4d859126f9656a2f532d97",
-    "nextAction": "Run or reuse the exact semantic native proof, then atomically qualify this fenced Warrant."
-  },
+  "activeWarrant": null,
   "candidates": [
     {
       "repository": "kungfu-systems/kungfu",
@@ -21101,11 +21060,19 @@
       "sourceWorkflowRunId": 0,
       "priority": "ordinary",
       "enqueuedAt": "2026-08-13T00:23:00.789Z",
-      "updatedAt": "2026-08-13T02:11:14.672Z",
+      "updatedAt": "2026-08-13T02:12:50.530Z",
       "attempts": 1,
       "recoveries": 0,
-      "status": "selected",
-      "terminal": null,
+      "status": "terminal-failure",
+      "terminal": {
+        "outcome": "terminal-failure",
+        "terminalClass": "authoritative-failure",
+        "reason": "Project Cut replay repair-required, retryable=false, reasonCodes=merge-conflict; delivery run 31659820171 job 94322116200",
+        "evidenceRoot": "sha256:8ce896a93e9ad6cd3e8b8575a66887fd1c7ceec7d98e0f91e0da3447b3e2edcf",
+        "closedAt": "2026-08-13T02:12:50.530Z",
+        "fencingToken": "sha256:ca2d53223690dfb6997c2696a93633fb0cfe90aebc4d859126f9656a2f532d97",
+        "leaseGeneration": 382
+      },
       "affectedPaths": [
         ".xinfa/portable-atlas-classification.json.gz",
         ".xinfa/product-atlas-bundle.json",
@@ -21410,6 +21377,6 @@
       ]
     }
   ],
-  "updatedAt": "2026-08-13T02:11:14.672Z",
-  "stateRoot": "sha256:0ce70ef1ac52befd3f6def80c46a8774224f2a72c055c1fa8052769674154ab4"
+  "updatedAt": "2026-08-13T02:12:50.530Z",
+  "stateRoot": "sha256:b49df526e27e02cfd9e7d89c1b4554ae01faca5f11624997f99f3cb0b9218436"
 }
