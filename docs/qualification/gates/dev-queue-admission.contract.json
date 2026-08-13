@@ -19,7 +19,7 @@
     "mergeGroup": ".github/workflows/queue-admission-lease.yml",
     "dequeueRevocation": ".github/workflows/cancel-dequeued-merge-group.yml",
     "dequeueControllerSource": "current-protected-pull-request-base-ref",
-    "queueAndWarrant": "kungfu-systems/buildchain@6057d71142dfc6a9d78872e316eca87d9510e176",
+    "queueAndWarrant": "kungfu-systems/buildchain@fefb02fbb874bf4bc86dc3fd4a707a9468e14718",
     "stateRefPattern": "buildchain/dev-delivery-warrant/dev-vN-vN.N"
   },
   "admission": {
@@ -29,6 +29,10 @@
     "leaseAfterReplay": true,
     "exactQueueRevisionRequired": true,
     "exactWarrantFenceRequired": true,
+    "activeWarrantNonPreemptive": true,
+    "transientDequeueNonTerminal": true,
+    "continuousNativeHeartbeat": true,
+    "fenceLossStopsWorker": true,
     "sourceQualificationProofRequired": true,
     "integrationDeliveryProofRequired": true
   },

@@ -1160,7 +1160,7 @@ test('workflow keeps one context while PR proof replaces duplicate queue builds'
   );
   assert.match(
     workflow,
-    /Qualify installed four-language SDK wire contract[\s\S]*steps\.plan\.outputs\.sdk-required == 'true'[\s\S]*matrix\.partition == 0/u,
+    /Run all expensive native qualification under the live Warrant[\s\S]*uses: \.\/\.github\/actions\/native-execution-under-warrant[\s\S]*steps\.plan\.outputs\.sdk-required[\s\S]*matrix\.partition[\s\S]*\.\/shifu layers:qualify:sdk/u,
   );
   assert.match(
     workflow,
@@ -1168,15 +1168,15 @@ test('workflow keeps one context while PR proof replaces duplicate queue builds'
   );
   assert.match(
     workflow,
-    /Prepare SDK build toolchain[\s\S]*Build Core SDK artifacts[\s\S]*Pack four-language SDK artifacts[\s\S]*Qualify installed four-language SDK wire contract/u,
+    /cmake_js_bin[\s\S]*\.\/shifu build:core:sdk[\s\S]*\.\/shifu pack:sdk[\s\S]*\.\/shifu layers:qualify:sdk/u,
   );
   assert.match(
     workflow,
-    /Build Core SDK artifacts[\s\S]*run: \.\/shifu build:core:sdk/u,
+    /native-execution-under-warrant[\s\S]*\.\/shifu build:core:sdk/u,
   );
   assert.match(
     workflow,
-    /Run affected native closure[\s\S]*steps\.plan\.outputs\.native-required == 'true'/u,
+    /steps\.plan\.outputs\.native-required[\s\S]*\.\/shifu gate run source\.changed-scope/u,
   );
   assert.match(workflow, /^\s{2}shifu_workspace:$/mu);
   assert.match(workflow, /^\s{2}kfd_verifier:$/mu);
