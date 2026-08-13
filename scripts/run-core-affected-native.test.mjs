@@ -28,10 +28,27 @@ import {
 import { observeNativeToolchain } from './affected-native-proof.mjs';
 import {
   affectedNativeWorkflowSdkProjection,
+  changedPathsBetween,
   devQueueQualificationImpact,
   planFromChanged,
   sdkQualificationImpact,
 } from './run-core-affected-native.mjs';
+
+test('affected-native planning retains deleted source paths', () => {
+  let observedArgs = [];
+  const changed = changedPathsBetween('base', 'head', (...args) => {
+    observedArgs = args;
+    return 'deleted.cpp\nmodified.cpp\n';
+  });
+
+  assert.deepEqual(observedArgs, [
+    'diff',
+    '--name-only',
+    '--diff-filter=ACDMRTUXB',
+    'base...head',
+  ]);
+  assert.deepEqual(changed, ['deleted.cpp', 'modified.cpp']);
+});
 
 const workflowPath = '.github/workflows/affected-native-pr.yml';
 const architecture = JSON.parse(

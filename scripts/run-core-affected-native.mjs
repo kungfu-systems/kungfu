@@ -845,6 +845,17 @@ function git(...args) {
   return result.stdout.trim();
 }
 
+export function changedPathsBetween(base, head, runGit = git) {
+  return runGit(
+    'diff',
+    '--name-only',
+    '--diff-filter=ACDMRTUXB',
+    `${base}...${head}`,
+  )
+    .split('\n')
+    .filter(Boolean);
+}
+
 function parseArgs(argv) {
   const options = {
     base: process.env.GITHUB_BASE_SHA || devMergeBaseCandidates()[0],
@@ -1912,14 +1923,7 @@ async function main() {
         const head = git('rev-parse', options.head);
         const changedFiles = options.changedFiles.length
           ? options.changedFiles
-          : git(
-              'diff',
-              '--name-only',
-              '--diff-filter=ACMRTUXB',
-              `${base}...${head}`,
-            )
-              .split('\n')
-              .filter(Boolean);
+          : changedPathsBetween(base, head);
         return planFromChanged(
           changedFiles,
           authority,

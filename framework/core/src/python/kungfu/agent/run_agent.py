@@ -1153,18 +1153,33 @@ def execute(
                 session_started_callback=session_started_callback,
                 project_trust=project_trust,
             )
-        elif process_runner is run_process:
-            result = process_runner(
-                argv,
-                cwd=cwd,
-                env=env,
-                timeout_seconds=timeout_seconds,
-                output_sink=project_output,
-            )
         else:
-            result = process_runner(
-                argv, cwd=cwd, env=env, timeout_seconds=timeout_seconds
-            )
+            if (
+                session_requested
+                and session_started_callback is not None
+                and work is not None
+            ):
+                # Providers without a managed terminal transport still launch
+                # as one bounded, Work-observing process. Advance native Work
+                # immediately before that process can receive its first
+                # instruction; otherwise a fresh Amp/OpenCode attempt remains
+                # stranded in ``claimed`` and cannot enter independent review.
+                session_started_callback(
+                    _session_ref(work, run_id),
+                    {"status": "started", "transport": "direct-process"},
+                )
+            if process_runner is run_process:
+                result = process_runner(
+                    argv,
+                    cwd=cwd,
+                    env=env,
+                    timeout_seconds=timeout_seconds,
+                    output_sink=project_output,
+                )
+            else:
+                result = process_runner(
+                    argv, cwd=cwd, env=env, timeout_seconds=timeout_seconds
+                )
         status = RunStatus.Succeeded if result.exit_code == 0 else RunStatus.Failed
         episode.record_event(
             ACTION_RUN_END,

@@ -1703,3 +1703,65 @@ def test_managed_session_retains_its_visible_terminal_answer(tmp_path, monkeypat
 
     response = json.loads(Path(result["episode"]["responsePath"]).read_text())
     assert response["parsed"]["text"] == retained
+
+
+def test_direct_provider_starts_native_work_before_process_launch(
+    tmp_path, monkeypatch
+):
+    order = []
+    work_ref = {
+        "schema": "kungfu.work-ref/v1",
+        "workspaceId": "workspace:test",
+        "profileId": "kungfu.work-control",
+        "profileRoot": "sha256:" + "1" * 64,
+        "entityType": "assignment",
+        "entityId": "first",
+        "initiativeId": "project-work",
+        "entityRoot": "sha256:" + "2" * 64,
+        "purpose": "complete-project-assignment",
+        "systemTimeCut": "sha256:" + "3" * 64,
+    }
+    monkeypatch.setattr(
+        run_agent,
+        "select_profile",
+        lambda *_args, **_kwargs: (
+            {
+                "id": "opencode.test",
+                "provider": "opencode",
+                "cwdPolicy": "workspace-root",
+                "launch": {"executable": "/usr/bin/opencode", "argv": []},
+            },
+            {},
+        ),
+    )
+    monkeypatch.setattr(
+        run_agent.runtime_profiles,
+        "verify_profile",
+        lambda _profile: {"ok": True, "version": "arbitrary-version"},
+    )
+
+    def start_work(ref, started):
+        order.append(("start", dict(ref), dict(started)))
+
+    def run_process(*_args, **_kwargs):
+        order.append(("process",))
+        return run_agent.ProcessResult(0, '{"type":"text"}\n', "", False, False)
+
+    result = run_agent.execute(
+        prompt="inspect README",
+        runtime_dir=str(tmp_path / "runtime"),
+        workspace_root=str(tmp_path),
+        work_ref=work_ref,
+        process_runner=run_process,
+        session_invoker=lambda _request: {},
+        use_session=True,
+        session_started_callback=start_work,
+    )
+
+    assert result["launch"]["exitCode"] == 0
+    assert order[0][0] == "start"
+    assert order[0][1]["workConsoleId"] == (
+        "work:kungfu.work-control:assignment:project-work:first"
+    )
+    assert order[0][2] == {"status": "started", "transport": "direct-process"}
+    assert order[1] == ("process",)
