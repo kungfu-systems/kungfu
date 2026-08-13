@@ -3,7 +3,7 @@
   "contract": "kungfu-buildchain-dev-delivery-warrant-queue",
   "repository": "kungfu-systems/kungfu",
   "protectedBase": "dev/v4/v4.0",
-  "generation": 1743,
+  "generation": 1744,
   "fencingCounter": 388,
   "policy": {
     "agingSeconds": 900,
@@ -22167,8 +22167,50 @@
         "scripts/qualified-assignment-core-artifact.test.mjs",
         "scripts/readonly-agent-bootstrap.test.mjs"
       ]
+    },
+    {
+      "repository": "kungfu-systems/kungfu",
+      "protectedBase": "dev/v4/v4.0",
+      "pullRequestNumber": 3063,
+      "assignmentRoot": "sha256:49ad9c475f1da42caf00f6a32a5f4fa11a67a27ab15f671f8a120e2d66ba4a87",
+      "initiativeRoot": "sha256:bfff817933e5a5ad693e4b902a84f6cc3a251235dd7377cb4091d92f805fa7ff",
+      "sourceIdentityRoot": "sha256:693e0e1da273db8f31818e874527c9ede0ad1f07361f535b7f2ef74c231d7496",
+      "deliveryClass": "native-proof-required",
+      "identitySemantics": "chained-attempt-v2",
+      "predecessorCandidateId": "sha256:579c177cf6f015349b3e3a577f5ced769c7d465587a1afa223201af24b0e0db5",
+      "candidateId": "sha256:ac46e0ba0307b4b8e91de2b6cd53c40c1d19aabc1fd20dcd8c7f8c885dd3a8ff",
+      "sourceHead": "8b01ba21ce8198c8fd0b4dbc590b892ee1575f3b",
+      "sourcePatchRoot": "sha256:c7c03ab3af22269c5c0863a34d1e17f97dc560b52171e0d5c8154f8f0dd2c553",
+      "sourceProofRoot": "sha256:1e10b8b55a6e93839c4c08865d404c4b7a4220070eba688bb5b13cc0bb2e78de",
+      "planRoot": "sha256:1091561b5cb75c23d902f2d040eded57e7f43d54ac894555150b03bb4520c22e",
+      "closureRoot": "sha256:106d175611d8634c988192302b9c464ae8ba3b6d023c2cff9910e401344c9624",
+      "dependencyRoot": "sha256:fd1465b33c782ca158985bf79bd059369cf86bac8dc39143dbba71324f15cd2f",
+      "toolchainRoot": "sha256:2ecb07894954a2e0de022615d4561e5ba3ae68376401941ecff77be03cd75a0f",
+      "sourceWorkflowRunId": 0,
+      "priority": "ordinary",
+      "enqueuedAt": "2026-08-13T03:36:11.470Z",
+      "updatedAt": "2026-08-13T03:36:11.470Z",
+      "attempts": 1,
+      "recoveries": 0,
+      "status": "queued",
+      "terminal": null,
+      "affectedPaths": [
+        ".github/workflows/affected-native-pr.yml",
+        ".github/workflows/dev-delivery-warrant-terminal.yml",
+        ".github/workflows/dev-post-merge-advisory.yml",
+        ".github/workflows/dev-pr-auto-merge.yml",
+        ".github/workflows/queue-admission-lease.yml",
+        "docs/qualification/gates/dev-queue-admission.contract.json",
+        "docs/qualification/gates/workflow-authority.json",
+        "framework/release/publication-surfaces.json",
+        "scripts/dev-delivery-proof-consumer.test.mjs",
+        "scripts/dev-delivery-warrant-input.test.mjs",
+        "scripts/dev-pr-auto-merge.test.mjs",
+        "scripts/qualified-assignment-core-artifact.test.mjs",
+        "scripts/queue-admission-lease.test.mjs"
+      ]
     }
   ],
-  "updatedAt": "2026-08-13T03:34:02.743Z",
-  "stateRoot": "sha256:b48209a9630ce8ff19a5759ae3b0c87f20c75b856ce06df7bb144894b96ccbdc"
+  "updatedAt": "2026-08-13T03:36:11.470Z",
+  "stateRoot": "sha256:02954fd17d36fe11ae1489855261c52cddfff9b76a71c896bce254464835111d"
 }
