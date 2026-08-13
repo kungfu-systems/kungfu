@@ -87,6 +87,32 @@ test('exact observe and heartbeat precede native execution', async () => {
   assert.match(receipt.receiptRoot, /^sha256:[0-9a-f]{64}$/u);
 });
 
+test('queued emergency contender cannot preempt the active Warrant binding', async () => {
+  const active = observation();
+  active.observation.queue = [
+    {
+      candidateId: `sha256:${'8'.repeat(64)}`,
+      pullRequestNumber: 99,
+      sourceHead: '9'.repeat(40),
+      priority: 'emergency',
+      status: 'queued',
+    },
+  ];
+  const value = fixture(active);
+  value.dependencies.heartbeat = async () => active;
+
+  const receipt = await runNativeExecutionUnderWarrant(
+    options(),
+    value.dependencies,
+  );
+
+  assert.equal(value.spawned, true);
+  assert.equal(receipt.pullRequestNumber, 42);
+  assert.equal(receipt.sourceHead, HEAD);
+  assert.equal(receipt.fencingToken, TOKEN);
+  assert.equal(receipt.leaseGeneration, 7);
+});
+
 for (const [label, changed, pattern] of [
   ['missing', null, /exact active Delivery Warrant is missing/u],
   [

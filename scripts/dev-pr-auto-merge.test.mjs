@@ -169,6 +169,18 @@ test('Dev auto-merge waits for PR checks and lands through the native queue', ()
     workflow,
     /native-proof-json: \$\{\{ needs\.delivery-contract\.outputs\.native-proof-json \}\}/u,
   );
+  assert.match(
+    workflow,
+    /environment-root: \$\{\{ steps\.environment\.outputs\.environment-root \}\}/u,
+  );
+  assert.match(
+    workflow,
+    /Bind exact hosted native environment[\s\S]*descriptor\.identity\.platformTier[\s\S]*descriptor\.identity\.toolchain[\s\S]*environment-root=\$\{environmentRoot\}/u,
+  );
+  assert.match(
+    workflow,
+    /environment-root: \$\{\{ needs\.delivery-contract\.outputs\.environment-root \}\}/u,
+  );
   assert.match(workflow, /statuses: write/u);
   assert.match(workflow, /queue-admission-context: Queue admission lease/u);
   assert.match(workflow, /merge-method: rebase/u);

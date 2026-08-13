@@ -84,6 +84,11 @@ export function createDevDeliveryWarrantInput({
     assignmentBinding,
   };
   const sourceTree = requireSha(descriptor.identity.sourceTree, 'source tree');
+  const environmentRoot = digest({
+    schema: 'kungfu.github-hosted-native-environment/v1',
+    platformTier: descriptor.identity.platformTier,
+    toolchain: descriptor.identity.toolchain,
+  });
   const proofIdentityRoot = requireRoot(
     `sha256:${descriptor.proofId}`,
     'affected-native proof identity',
@@ -111,6 +116,7 @@ export function createDevDeliveryWarrantInput({
       'dependency',
     ),
     toolchainRoot: digest(descriptor.identity.toolchain),
+    environmentRoot,
     affectedPaths: uniqueStrings(plan.changedPaths),
     shardEvidenceRoots: uniqueStrings([
       proofIdentityRoot,
@@ -148,6 +154,7 @@ function appendOutputs(file, value, activeLeaseContext = '') {
     'closure-root': value.closureRoot,
     'dependency-root': value.dependencyRoot,
     'toolchain-root': value.toolchainRoot,
+    'environment-root': value.environmentRoot,
     'affected-paths-json': JSON.stringify(value.affectedPaths),
     'shard-evidence-roots-json': JSON.stringify(value.shardEvidenceRoots),
     'delivery-class': value.deliveryClass,

@@ -88,6 +88,14 @@ test('consumer input projects exact base-independent Warrant roots', () => {
   assert.equal(result.deliveryClass, 'native-proof-required');
   assert.deepEqual(result.affectedPaths, ['framework/core/CMakeLists.txt']);
   assert.ok(result.shardEvidenceRoots.includes(`sha256:${descriptor.proofId}`));
+  assert.equal(
+    result.environmentRoot,
+    digest({
+      schema: 'kungfu.github-hosted-native-environment/v1',
+      platformTier: descriptor.identity.platformTier,
+      toolchain: descriptor.identity.toolchain,
+    }),
+  );
   for (const field of [
     'assignmentRoot',
     'initiativeRoot',
@@ -97,6 +105,7 @@ test('consumer input projects exact base-independent Warrant roots', () => {
     'closureRoot',
     'dependencyRoot',
     'toolchainRoot',
+    'environmentRoot',
     'inputRoot',
   ]) {
     assert.match(result[field], /^sha256:[0-9a-f]{64}$/u, field);
