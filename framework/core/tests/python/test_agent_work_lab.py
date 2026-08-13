@@ -8,7 +8,7 @@ from pathlib import Path
 import pytest
 from click.testing import CliRunner
 
-from kungfu import agent_work_lab
+from kungfu import agent_work_lab, assignment_evidence
 from kungfu.agent import runtime_profiles
 from kungfu.cli.commands import kfc
 from kungfu.cli.commands import agent_work_lab as agent_work_lab_commands  # noqa: F401
@@ -75,11 +75,37 @@ def test_generic_project_review_selects_bounded_project_evidence(tmp_path):
     assert evidence["mode"] == "project-files"
     assert evidence["primary"]["path"] == "deliverables/recovery.md"
     assert {row["path"] for row in evidence["supporting"]} == {
+        ".kungfu/runtime/report.json",
         "README.md",
         "inputs/incident.md",
     }
     assert evidence["primary"]["root"].startswith("sha256:")
     assert Path(project / evidence["primary"]["path"]).is_file()
+
+
+def test_generic_project_review_always_retains_the_agent_response_as_evidence(
+    tmp_path,
+):
+    project = tmp_path / "project"
+    project.mkdir()
+    (project / "README.md").write_text("# Project\n", encoding="utf-8")
+    report = project / ".kungfu" / "runtime" / "agent-runs" / "run" / "report.json"
+    report.parent.mkdir(parents=True)
+    report.write_text(
+        '{"providerObservation":{"text":"heading count: 1"}}\n',
+        encoding="utf-8",
+    )
+
+    evidence = _project_review_evidence(project, report, {})
+
+    assert evidence["primary"]["path"] == "README.md"
+    assert evidence["supporting"] == [
+        {
+            "path": ".kungfu/runtime/agent-runs/run/report.json",
+            "root": assignment_evidence.content_root(report),
+            "content": '{"providerObservation":{"text":"heading count: 1"}}\n',
+        }
+    ]
 
 
 def test_generic_project_review_falls_back_to_retained_agent_report(tmp_path):

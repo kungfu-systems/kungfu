@@ -69,6 +69,35 @@ def test_workspace_federation_preserves_extracted_read_model_exports():
     assert federation._compose_global_work is federation_projection._compose_global_work
 
 
+@pytest.mark.parametrize(
+    ("record", "phase"),
+    [
+        (
+            {
+                "claim_type": "assignment-phase-transition",
+                "to_phase": "stage-ready",
+            },
+            "stage-ready",
+        ),
+        ({"claim_type": "task-completed"}, "completion-claimed"),
+        (
+            {"review_type": "independent-completion-review"},
+            "independently-reviewed",
+        ),
+        (
+            {"review_type": "continuation-decision", "action": "close"},
+            "continuation-decided",
+        ),
+        (
+            {"review_type": "continuation-decision", "action": "reopen"},
+            "stage-ready",
+        ),
+    ],
+)
+def test_fact_material_completion_phase_matches_work_control(record, phase):
+    assert federation._material_completion_phase(record) == phase
+
+
 def _qualified_project(tmp_path, name):
     root = tmp_path / name
     root.mkdir()

@@ -28,7 +28,6 @@ import {
 } from './terminal-canvas.js';
 export * from './terminal-canvas.js';
 import type { WorkLoopShellModel } from './work-loop-contribution.js';
-
 export {
   CLOSED_CONTROL_PLANE,
   QUICK_COMMANDS,
@@ -37,6 +36,7 @@ export {
   directWorkspaceNavigationFromInput,
   buildTuiProductSearchDocuments,
   initialProductSurface,
+  onboardingContinueSurface,
   quickCommandMatches,
   reduceControlPlaneInput,
   resolveProductStartupSurface,

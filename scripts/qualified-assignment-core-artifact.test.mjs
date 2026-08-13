@@ -2102,7 +2102,7 @@ test('workflows keep candidate and promotion outside untrusted PR authority', ()
   assert.doesNotMatch(advisoryWorkflow, /^\s{2}(pull_request|merge_group):/mu);
   assert.match(
     advisoryWorkflow,
-    /REF_PROTECTED: \$\{\{ github\.ref_protected \}\}[\s\S]*REF_PROTECTED" != true[\s\S]*affected-native-pr\.yml\/runs[\s\S]*-f event=merge_group[\s\S]*affected-native \/ linux[\s\S]*dev-candidate-plan-\$\{TARGET_SHA\}/u,
+    /REF_PROTECTED: \$\{\{ github\.ref_protected \}\}[\s\S]*REF_PROTECTED" != true[\s\S]*affected-native-pr\.yml\/runs[\s\S]*-f event=merge_group[\s\S]*gh api --method GET[\s\S]*actions\/runs\/\$\{run_id\}\/jobs[\s\S]*affected-native \/ linux[\s\S]*dev-candidate-plan-\$\{TARGET_SHA\}/u,
   );
   assert.match(
     advisoryWorkflow,
@@ -2121,7 +2121,7 @@ test('workflows keep candidate and promotion outside untrusted PR authority', ()
   );
   assert.match(
     candidateAction,
-    /producer-event:[\s\S]*default: merge_group[\s\S]*producer-workflow-path:[\s\S]*default: \.github\/workflows\/affected-native-pr\.yml[\s\S]*runner\.os != 'Windows'[\s\S]*--event "\$\{\{ inputs\.producer-event \}\}"[\s\S]*--workflow-path "\$\{\{ inputs\.producer-workflow-path \}\}"[\s\S]*runner\.os == 'Windows'[\s\S]*--event "\$\{\{ inputs\.producer-event \}\}"[\s\S]*--workflow-path "\$\{\{ inputs\.producer-workflow-path \}\}"/u,
+    /native-already-built:[\s\S]*default: "false"[\s\S]*producer-event:[\s\S]*default: merge_group[\s\S]*producer-workflow-path:[\s\S]*default: \.github\/workflows\/affected-native-pr\.yml[\s\S]*runner\.os != 'Windows'[\s\S]*inputs\.native-already-built[\s\S]*--event "\$\{\{ inputs\.producer-event \}\}"[\s\S]*--workflow-path "\$\{\{ inputs\.producer-workflow-path \}\}"[\s\S]*runner\.os == 'Windows'[\s\S]*inputs\.native-already-built[\s\S]*--event "\$\{\{ inputs\.producer-event \}\}"[\s\S]*--workflow-path "\$\{\{ inputs\.producer-workflow-path \}\}"/u,
   );
 
   const promotionWorkflow = fs.readFileSync(

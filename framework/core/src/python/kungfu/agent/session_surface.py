@@ -7,6 +7,7 @@ import os
 from pathlib import Path
 import shutil
 import socket
+import subprocess
 import sys
 import time
 from typing import Protocol
@@ -336,6 +337,63 @@ def _run_worker_preserving_standard_streams(runner, *argv):
             os.set_inheritable(descriptor, inheritable)
 
 
+def _spawn_detached_worker(*argv: str):
+    environment = os.environ.copy()
+    environment["ELECTRON_RUN_AS_NODE"] = "1"
+    environment["KUNGFU_AS_VARIANT"] = "node"
+    # The parent TUI pins its own embedded-Node entry. The Agent Session
+    # bootstrap supplies a different reviewed argv and must not re-enter TUI.
+    environment.pop("KUNGFU_NODE_VARIANT_ENTRY", None)
+    creationflags = 0
+    if sys.platform == "win32":
+        creationflags = getattr(subprocess, "DETACHED_PROCESS", 0x00000008) | getattr(
+            subprocess, "CREATE_NEW_PROCESS_GROUP", 0x00000200
+        )
+    process = subprocess.Popen(
+        list(argv),
+        env=environment,
+        stdin=subprocess.DEVNULL,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.PIPE,
+        text=True,
+        creationflags=creationflags,
+        start_new_session=sys.platform != "win32",
+    )
+    try:
+        _, stderr = process.communicate(timeout=20)
+    except subprocess.TimeoutExpired as error:
+        process.kill()
+        process.communicate()
+        raise TimeoutError(
+            "native Agent Session bootstrap did not finish within 20 seconds"
+        ) from error
+    if process.returncode != 0:
+        diagnostic = (stderr or "").strip()[-4096:]
+        raise ValueError(
+            diagnostic
+            or f"native Agent Session bootstrap exited with status {process.returncode}"
+        )
+    return 0
+
+
+def _await_surface_capabilities(endpoint, timeout=5.0):
+    deadline = _deadline(timeout)
+    while True:
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            raise TimeoutError(
+                f"Agent Session worker did not become ready at {endpoint}"
+            )
+        try:
+            return invoke(
+                {"operation": "capabilities"},
+                endpoint=endpoint,
+                timeout=min(0.25, remaining),
+            )
+        except (OSError, socket.timeout):
+            time.sleep(min(0.05, remaining))
+
+
 def ensure(runtime_dir, *, runner=None):
     """Ensure and return the runtime-scoped detached Agent Session endpoint."""
 
@@ -360,21 +418,22 @@ def ensure(runtime_dir, *, runner=None):
             "bundle or set KUNGFU_NATIVE_AGENT_SESSION_ENTRY"
         )
     os.environ["KF_RUNTIME_DIR"] = str(Path(runtime_dir).expanduser().resolve())
-    os.environ["KUNGFU_AGENT_SESSION_EXECUTABLE"] = _resolve_worker_executable()
+    worker_executable = _resolve_worker_executable()
+    os.environ["KUNGFU_AGENT_SESSION_EXECUTABLE"] = worker_executable
     if runner is None:
-        import kungfu
-
-        runner = kungfu.__binding__.libnode.run
+        runner = _spawn_detached_worker
     # The embedded Node bootstrap marks inherited descriptors close-on-exec on
     # some platforms. Restore the exact caller flags before a provider-native
     # child is launched; otherwise the first provider process starts without a
     # terminal while later attempts (which reuse the worker) happen to work.
-    exit_code = _run_worker_preserving_standard_streams(runner, sys.argv[0], entry)
+    exit_code = _run_worker_preserving_standard_streams(
+        runner, worker_executable, entry
+    )
     if exit_code not in (None, 0):
         raise ValueError(
             f"native Agent Session bridge exited with status {int(exit_code)}"
         )
-    capabilities = invoke({"operation": "capabilities"}, endpoint=endpoint, timeout=5.0)
+    capabilities = _await_surface_capabilities(endpoint)
     _validate_surface_capabilities(capabilities, endpoint=endpoint)
     return endpoint
 

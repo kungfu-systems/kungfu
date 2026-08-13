@@ -51,24 +51,24 @@ test('Alpha.2 r17 lock verifies the exact Release Cut and fixed runtimes', () =>
   );
 });
 
-test('Alpha.2 r17 keeps the runtime train while pinning the repaired workflow shell', () => {
-  assert.equal(LOCK.buildchain.build.ref, 'v3');
+test('Alpha.2 r17 keeps the Alpha runtime train while pinning the repaired workflow shell', () => {
+  assert.equal(LOCK.buildchain.build.ref, 'v3-alpha');
   assert.equal(
     LOCK.buildchain.build.resolvedSha,
-    'f4ca5182f53fddf76bdf4246be0993afa5a592bc',
+    'a60957e3ffc8f9a02f0e9419deebc8d35a3f7198',
   );
   assert.equal(
     LOCK.buildchain.build.contractDigest,
-    'sha256:52cdb871cb0559534f78548f2487d8f3ceb64bb92e8a587f440a2946f78e7386',
+    'sha256:b47881aae6956ef16b94b0e89c4790fa5c6de94202315756a49bc62b8bff6346',
   );
   assert.equal(LOCK.buildchain.promotion.ref, 'v3-alpha');
   assert.equal(
     LOCK.buildchain.promotion.resolvedSha,
-    '36b08dc7bf417e57bffcc3dc784a2473254fe4c1',
+    'a60957e3ffc8f9a02f0e9419deebc8d35a3f7198',
   );
   assert.equal(
     LOCK.buildchain.promotion.contractDigest,
-    'sha256:8e565f9ac5146d5dceafc3da6b267147fb412937db979bf35a0429966da82197',
+    'sha256:b47881aae6956ef16b94b0e89c4790fa5c6de94202315756a49bc62b8bff6346',
   );
   const build = fs.readFileSync(
     path.join(ROOT, '.github/workflows/build.yml'),
@@ -84,7 +84,7 @@ test('Alpha.2 r17 keeps the runtime train while pinning the repaired workflow sh
   );
   assert.match(
     build,
-    /buildchain-ref: \$\{\{ inputs\.buildchain-ref \|\| 'v3' \}\}/u,
+    /buildchain-ref: \$\{\{ inputs\.buildchain-ref \|\| 'v3-alpha' \}\}/u,
   );
   assert.match(
     promotion,

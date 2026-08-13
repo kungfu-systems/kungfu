@@ -256,13 +256,10 @@ export function createCodexAppServerContractGate({
     );
   }
   const verified = verifyCodexAppServerSchemaManifest(manifest);
-  if (
-    cliVersion !== contract.surfacePin.cliVersion ||
-    manifest.cliVersion !== cliVersion
-  ) {
+  if (manifest.cliVersion !== contract.surfacePin.cliVersion) {
     fail(
-      'cli-version-drift',
-      'Codex CLI version does not match the qualified adapter contract',
+      'qualification-source-version-drift',
+      'Codex schema qualification source does not match the adapter contract',
     );
   }
   if (

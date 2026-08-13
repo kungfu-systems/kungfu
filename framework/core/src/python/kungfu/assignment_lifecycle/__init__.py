@@ -116,7 +116,33 @@ def requires_kickoff(continuation_mode: str) -> bool:
 def session_invoker(surface: Any, runtime_dir: str) -> Callable[..., Mapping[str, Any]]:
     """Bind all Session operations to one runtime-scoped native endpoint."""
     endpoint = surface.ensure(runtime_dir)
-    return lambda request: surface.invoke(request, endpoint=endpoint)
+
+    def invoke(request: Mapping[str, Any]) -> Mapping[str, Any]:
+        # A structured provider may need a cold network round trip before it
+        # acknowledges start or control admission.  The request remains
+        # bounded, but must not inherit the five-second read probe used by
+        # status/capability calls: timing out the caller does not cancel the
+        # provider side effect and would split the retained Work receipt from
+        # the live SessionAttempt.
+        operation = str(request.get("operation") or "")
+        timeout = (
+            30.0
+            if operation
+            in {
+                "start",
+                "acquire-control",
+                "release-control",
+                "instruct",
+                "send-key",
+                "interrupt",
+                "respond-control",
+                "end",
+            }
+            else 5.0
+        )
+        return surface.invoke(request, endpoint=endpoint, timeout=timeout)
+
+    return invoke
 
 
 def emit_run_start(

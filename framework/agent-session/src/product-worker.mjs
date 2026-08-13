@@ -15,6 +15,62 @@ import {
   WorkConsoleRegistry,
 } from './work-console-registry.mjs';
 
+const DEFAULT_IDLE_RETIREMENT_MS = 60_000;
+
+export function createIdleWorkerRetirement({
+  runtime,
+  retire,
+  timeoutMs = DEFAULT_IDLE_RETIREMENT_MS,
+  schedule = setTimeout,
+  cancel = clearTimeout,
+  onError = (error) => {
+    process.stderr.write(
+      `agent-session worker retirement: ${error instanceof Error ? error.message : String(error)}\n`,
+    );
+  },
+} = {}) {
+  if (!runtime || typeof runtime.list !== 'function') {
+    throw new Error('idle worker retirement requires runtime.list()');
+  }
+  if (typeof retire !== 'function') {
+    throw new Error('idle worker retirement requires retire()');
+  }
+  if (!Number.isFinite(timeoutMs) || timeoutMs <= 0) {
+    throw new Error('idle worker retirement requires a positive timeout');
+  }
+  let timer = null;
+  let stopped = false;
+
+  const arm = () => {
+    if (stopped) return;
+    if (timer !== null) cancel(timer);
+    timer = schedule(async () => {
+      timer = null;
+      if (stopped) return;
+      if (runtime.list().length > 0) {
+        arm();
+        return;
+      }
+      stopped = true;
+      try {
+        await retire();
+      } catch (error) {
+        onError(error);
+      }
+    }, timeoutMs);
+    timer?.unref?.();
+  };
+
+  return Object.freeze({
+    touch: arm,
+    stop() {
+      stopped = true;
+      if (timer !== null) cancel(timer);
+      timer = null;
+    },
+  });
+}
+
 export async function runAgentSessionProductWorker({
   endpoint = process.env.KUNGFU_AGENT_SESSION_ENDPOINT,
   metadata = process.env.KUNGFU_AGENT_SESSION_METADATA,
@@ -22,6 +78,10 @@ export async function runAgentSessionProductWorker({
   pty = null,
   ptyModule = process.env.KUNGFU_AGENT_SESSION_NODE_PTY_MODULE,
   baseEnv = process.env,
+  idleRetirementMs = Number(
+    process.env.KUNGFU_AGENT_SESSION_IDLE_RETIREMENT_MS ??
+      DEFAULT_IDLE_RETIREMENT_MS,
+  ),
 } = {}) {
   if (!endpoint || !metadata || !registryPath) {
     throw new Error(
@@ -47,9 +107,13 @@ export async function runAgentSessionProductWorker({
     store: new JsonFileWorkConsoleRegistryStore(registryPath),
   });
   const surface = new AgentSessionProductSurface({ runtime, registry });
+  let idleRetirement = null;
   const server = bindAgentSessionSurfaceRpc({
     endpoint,
-    invoke: (request) => surface.invoke(request),
+    invoke: (request) => {
+      idleRetirement?.touch();
+      return surface.invoke(request);
+    },
   });
   await server.ready;
   const record = {
@@ -72,6 +136,7 @@ export async function runAgentSessionProductWorker({
   const close = async () => {
     if (closing) return;
     closing = true;
+    idleRetirement?.stop();
     runtime.shutdown();
     await server.close();
     for (const candidate of [endpoint, metadata]) {
@@ -80,6 +145,12 @@ export async function runAgentSessionProductWorker({
       } catch {}
     }
   };
+  idleRetirement = createIdleWorkerRetirement({
+    runtime,
+    timeoutMs: idleRetirementMs,
+    retire: () => close().finally(() => process.exit(0)),
+  });
+  idleRetirement.touch();
   process.once('SIGTERM', () => void close().finally(() => process.exit(0)));
   process.once('SIGINT', () => void close().finally(() => process.exit(0)));
   return { runtime, registry, surface, server, record, close };

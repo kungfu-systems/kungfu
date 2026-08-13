@@ -82,8 +82,7 @@ export function validateWorkflowSources(root, contract, overrides = {}) {
   const releaseAdmission = readJson(
     path.join(root, 'docs/qualification/gates/release-admission-policy.json'),
   );
-  const recoveryRuntimeSha =
-    releaseAdmission.buildchain.runtimes.alpha.publicationRuntimeSha;
+  const recoveryRuntimeRef = releaseAdmission.buildchain.runtimes.alpha.ref;
   const productAdmission = extractWorkflowJob(
     build,
     'finalize-upgrade-publication-admission',
@@ -157,7 +156,7 @@ export function validateWorkflowSources(root, contract, overrides = {}) {
       `buildchain-ref: \\$\\{\\{ inputs\\.buildchain-ref \\|\\| '${contract.buildchain.workflow_shell_ref}' \\}\\}`,
     ),
     findings,
-    'candidate builds must default to the production v3 runtime while retaining the trusted manual pass-through',
+    'Alpha candidate builds must default to the v3-alpha runtime while retaining the trusted manual pass-through',
   );
   requirePattern(
     build,
@@ -292,7 +291,7 @@ export function validateWorkflowSources(root, contract, overrides = {}) {
       `uses: kungfu-systems/buildchain/\\.github/workflows/release-candidate-promote\\.yml@${contract.buildchain.workflow_shell_ref}`,
     ),
     findings,
-    'promotion must consume the production v3 floating router contract',
+    'promotion must consume the v3-alpha floating router contract',
   );
   requirePattern(
     promote,
@@ -326,16 +325,16 @@ export function validateWorkflowSources(root, contract, overrides = {}) {
   requirePattern(
     recovery,
     new RegExp(
-      `uses: kungfu-systems/buildchain/\\.github/workflows/release-candidate-promote\\.yml@${escapeRegExp(recoveryRuntimeSha)}`,
+      `uses: kungfu-systems/buildchain/\\.github/workflows/release-candidate-promote\\.yml@${escapeRegExp(recoveryRuntimeRef)}`,
     ),
     findings,
-    'recovery must consume the exact reviewed publication runtime',
+    'recovery must consume the reviewed floating Alpha publication contract',
   );
   requirePattern(
     recovery,
     /^\s+buildchain-channel: auto[\s\S]*^\s+buildchain-ref: \$\{\{ inputs\.resume-buildchain-runtime-sha \}\}$/mu,
     findings,
-    'Alpha recovery must resolve the exact reviewed publication runtime',
+    'Alpha recovery must bind the sealed candidate to its exact resolved publication runtime',
   );
   for (const permission of ['artifact-metadata', 'attestations']) {
     requirePattern(

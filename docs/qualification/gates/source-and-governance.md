@@ -197,10 +197,14 @@ Each section is bound to the registry id by the catalog meta gate.
 - **Durable queue admission lease:** the dev ruleset additionally requires
   `Queue admission lease`. The pull-request delivery controller submits exact
   Source Qualification Proof evidence to the pinned Buildchain Warrant queue;
-  only its active, unexpired Warrant may own replay, proof, waiting and GitHub
-  enqueue. The merge-group-only workflow reads the same durable state ref and
-  refuses revision, source-head, Warrant, fencing-token, generation or expiry
-  drift on the exact synthetic SHA. The affected-native aggregate then binds
+  only its active, unexpired provisional Warrant may own native proof work and
+  waiting. GitHub enqueue and the merge-group-only workflow require that same
+  fenced Warrant to be atomically upgraded to `qualified`, with exact native
+  proof and reuse roots; legacy `selected`, `proving`, `waiting`, or `blocked`
+  states are not merge authority. The merge-group workflow reads the same
+  durable state ref and refuses revision, source-head, Warrant, proof-root,
+  fencing-token, generation or expiry drift on the exact synthetic SHA. The
+  affected-native aggregate then binds
   its reconstructable delivery attempt and the live GitHub queue entry into an
   exact Integration Delivery Proof and records that proof through Buildchain's
   state-ref CAS before protected merge observation. Every non-merged dequeue

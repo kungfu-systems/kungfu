@@ -67,6 +67,10 @@ test('a new main client reconnects to one worker and worker loss never fakes con
     runtimeDir: root,
     executable: process.execPath,
     workerPath: FIXTURE,
+    env: {
+      ...process.env,
+      KUNGFU_NODE_VARIANT_ENTRY: '/product/tui/tui.mjs',
+    },
     spawnProcess,
     unrefWorker: false,
   };
@@ -82,6 +86,7 @@ test('a new main client reconnects to one worker and worker loss never fakes con
     });
     assert.equal(children.length, 1);
     assert.equal(spawnedEnvironments[0].KUNGFU_AS_VARIANT, 'node');
+    assert.equal(spawnedEnvironments[0].KUNGFU_NODE_VARIANT_ENTRY, undefined);
 
     children[0].kill('SIGTERM');
     await new Promise((resolve) => children[0].once('exit', resolve));

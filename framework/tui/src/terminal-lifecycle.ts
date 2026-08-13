@@ -116,11 +116,32 @@ export function tuiChildCliEnvironment(
 ): NodeJS.ProcessEnv {
   const child = { ...env };
   // Re-enter the ordinary CLI instead of recursively selecting embedded
-  // libnode, while retaining the installed KFX authority root.
+  // libnode. Keep the installed runtime and KFX authority roots because the
+  // child CLI needs them to prove that its native binding belongs to the exact
+  // Release Manifest selected by the product launcher.
   child.KUNGFU_AS_VARIANT = undefined;
-  child.KUNGFU_DIR = undefined;
-  child.KUNGFU_KFX_CONTRACT = undefined;
+  // The trunk pins the active embedded-Node entry while the TUI is running.
+  // That pin belongs only to this process: a child CLI must be free to select
+  // its own Agent Session entry instead of recursively entering tui.mjs.
+  child.KUNGFU_NODE_VARIANT_ENTRY = undefined;
   return child;
+}
+
+export function resolveTuiAgentSessionExecutable({
+  env,
+  cliBin,
+  sourceCliFallback,
+  processExecPath,
+}: {
+  env: NodeJS.ProcessEnv;
+  cliBin: string;
+  sourceCliFallback: boolean;
+  processExecPath: string;
+}): string {
+  return (
+    env.KUNGFU_AGENT_SESSION_EXECUTABLE ||
+    (sourceCliFallback ? processExecPath : cliBin)
+  );
 }
 
 export function resolveTuiAgentSessionPaths({

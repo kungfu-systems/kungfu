@@ -752,13 +752,19 @@ export function ProjectWorkHost({
     const receipt = visibleRun?.receipt;
     if (busy || !retainedAgentReviewable || !receipt) return;
     setBusy(true);
-    setMessage('Ending this Agent attempt and opening independent review…');
-    const end =
-      session?.live && session.controllable !== false
-        ? projects.endRun(visibleRun.id)
-        : Promise.resolve(visibleRun);
-    void end
-      .then(() => onContinueRetainedWork(receipt))
+    setMessage('Refreshing the Agent attempt before independent review…');
+    void projects
+      .refreshRun(visibleRun.id)
+      .then(async (refreshed) => {
+        const current = refreshed ?? visibleRun;
+        if (current.session?.live && current.session.controllable !== false) {
+          setMessage(
+            'Ending this Agent attempt and opening independent review…',
+          );
+          await projects.endRun(current.id);
+        }
+        return onContinueRetainedWork(current.receipt ?? receipt);
+      })
       .catch((error) =>
         setMessage(error instanceof Error ? error.message : String(error)),
       )
@@ -768,8 +774,6 @@ export function ProjectWorkHost({
     onContinueRetainedWork,
     projects,
     retainedAgentReviewable,
-    session?.controllable,
-    session?.live,
     visibleRun,
     visibleRun?.receipt,
   ]);
@@ -1012,6 +1016,10 @@ export function ProjectWorkHost({
         return;
       }
       if (value === 'p' || value === '\u001b') return onOpenProjects();
+      if (value === 'v' && retainedAgentReviewable)
+        return continueRetainedWork();
+      if (value === '\r' && retainedAgentReviewable)
+        return continueRetainedWork();
       if (session?.controllable === false) return;
       if (value === 'n') return beginNewWork();
       if (attention?.kind === 'needs-approval' && value === 'y')
@@ -1024,10 +1032,6 @@ export function ProjectWorkHost({
       }
       if (attention?.kind === 'blocked' && value === 'r')
         return retryAgentAttempt();
-      if (value === 'v' && retainedAgentReviewable)
-        return continueRetainedWork();
-      if (value === '\r' && retainedAgentReviewable)
-        return continueRetainedWork();
       if (value === '\r') return beginNewWork();
       if (value === 'r') previewCodex();
     };
@@ -1209,14 +1213,14 @@ export function ProjectWorkHost({
                     </Text>
                     <Text>{attention.message}</Text>
                     <Text bold>
-                      {session?.controllable === false
-                        ? 'Continue in the provider-native terminal; TUI is observer only'
-                        : attention.kind === 'needs-approval'
-                          ? '[y] approve · [n] deny'
-                          : attention.kind === 'needs-answer'
-                            ? '[i] answer · [v/Enter] review changes'
-                            : attention.kind === 'ready-for-review'
-                              ? '[v/Enter] review changes'
+                      {attention.kind === 'ready-for-review'
+                        ? '[v/Enter] review changes'
+                        : session?.controllable === false
+                          ? 'Continue in the provider-native terminal; TUI is observer only'
+                          : attention.kind === 'needs-approval'
+                            ? '[y] approve · [n] deny'
+                            : attention.kind === 'needs-answer'
+                              ? '[i] answer · [v/Enter] review changes'
                               : '[r] end this attempt and plan a fresh attempt'}
                     </Text>
                   </Box>

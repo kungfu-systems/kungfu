@@ -71,6 +71,13 @@ def _work_ref():
     }
 
 
+def test_agent_session_cli_exposes_structured_control_response():
+    result = CliRunner().invoke(kfc, ["agent", "session", "--help"])
+
+    assert result.exit_code == 0
+    assert "respond-control" in result.output
+
+
 def test_agent_session_core_contract_matches_cross_language_golden():
     schema = json.loads(
         (
@@ -569,6 +576,56 @@ def test_third_party_runtime_verification_accepts_bounded_opaque_version(
     assert result["ok"] is True
     assert result["version"] == "termagent edge-build-2026"
     assert result["argv"] == ["version"]
+
+
+@pytest.mark.parametrize("provider", ["codex", "claude", "opencode", "cursor"])
+def test_runtime_version_probe_failure_warns_but_never_blocks_available_agent(
+    monkeypatch, provider
+):
+    monkeypatch.setattr(
+        runtime_profiles.subprocess,
+        "run",
+        lambda *args, **kwargs: SimpleNamespace(
+            returncode=17, stdout="", stderr="version unavailable"
+        ),
+    )
+
+    result = runtime_profiles.verify_profile(
+        {
+            "id": f"{provider}.path.test",
+            "provider": provider,
+            "launch": {"executable": sys.executable},
+        }
+    )
+
+    assert result["available"] is True
+    assert result["ok"] is True
+    assert result["version"] is None
+    assert result["error"] is None
+    assert result["warning"] == "version probe exited 17"
+    assert result["versionAdmission"] == "diagnostic-only"
+
+
+def test_runtime_version_probe_exception_warns_but_never_blocks_available_agent(
+    monkeypatch,
+):
+    def unavailable(*args, **kwargs):
+        raise subprocess.TimeoutExpired(args[0], kwargs["timeout"])
+
+    monkeypatch.setattr(runtime_profiles.subprocess, "run", unavailable)
+    result = runtime_profiles.verify_profile(
+        {
+            "id": "codex.path.test",
+            "provider": "codex",
+            "launch": {"executable": sys.executable},
+        }
+    )
+
+    assert result["available"] is True
+    assert result["ok"] is True
+    assert result["error"] is None
+    assert result["warning"]
+    assert result["versionAdmission"] == "diagnostic-only"
 
 
 def test_runtime_profile_plan_apply_default_and_remove_are_preview_first(
