@@ -238,6 +238,15 @@ test('Windows source Kungfu route projects built TUI Product paths', () => {
   );
 });
 
+test('Windows launcher is checked out with cmd-safe line endings', () => {
+  const result = spawnSync('git', ['check-attr', 'eol', '--', 'shifu.cmd'], {
+    cwd: ROOT,
+    encoding: 'utf8',
+  });
+  assert.equal(result.status, 0, result.stderr);
+  assert.equal(result.stdout.trim(), 'shifu.cmd: eol: crlf');
+});
+
 test('cached pinned uv activates Work after Qualified Core materialization', (t) => {
   if (process.platform === 'win32') {
     t.skip('POSIX launcher contract');
