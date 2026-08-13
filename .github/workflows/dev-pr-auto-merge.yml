@@ -329,12 +329,14 @@ jobs:
             .buildchain/dev-delivery-input/source-proof-verification.json >/dev/null
           jq -e '.ok == true and .reason == "exact-native-proof"' \
             .buildchain/dev-delivery-input/native-proof-verification.json >/dev/null
+          environment_root="$(jq -er '.environmentRoot' "$native_proof")"
           jq -e \
             --argjson pr "$EXPECTED_PR" \
             --arg head "$EXPECTED_HEAD" \
             '.pullRequestNumber == $pr and .sourceHeadSha == $head' \
             "$coordinate" >/dev/null
           jq -e --slurpfile input .buildchain/dev-delivery-input/warrant-input.json \
+            --arg environmentRoot "$environment_root" \
             '.repository == $input[0].repository
              and .protectedBase == $input[0].protectedBase
              and .sourceIdentityRoot == $input[0].sourceIdentityRoot
@@ -343,11 +345,13 @@ jobs:
              and .closureRoot == $input[0].closureRoot
              and .dependencyRoot == $input[0].dependencyRoot
              and .toolchainRoot == $input[0].toolchainRoot
-             and .environmentRoot == $input[0].environmentRoot
+             and .environmentRoot == $environmentRoot
+             and (($input[0].environmentRoot // $environmentRoot) == $environmentRoot)
              and .affectedPaths == $input[0].affectedPaths
              and (($input[0].shardEvidenceRoots - .shardEvidenceRoots) | length) == 0' \
             "$native_proof" >/dev/null
           {
+            echo "environment-root=$environment_root"
             echo 'native-proof-json<<BUILDCHAIN_NATIVE_PROOF_EOF'
             jq -c . "$native_proof"
             echo 'BUILDCHAIN_NATIVE_PROOF_EOF'

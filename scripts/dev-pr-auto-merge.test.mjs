@@ -105,6 +105,10 @@ test('Dev Agent admission binds every targeted run to one exact PR head', () => 
   );
   assert.match(
     workflow,
+    /environment_root="\$\(jq -er '\.environmentRoot' "\$native_proof"\)"[\s\S]*\(\$input\[0\]\.environmentRoot \/\/ \$environmentRoot\)[\s\S]*echo "environment-root=\$environment_root"/u,
+  );
+  assert.match(
+    workflow,
     /native-proof-json: \$\{\{ needs\.delivery-contract\.outputs\.native-proof-json \}\}/u,
   );
   assert.match(workflow, /permissions:\n {6}actions: write/u);
