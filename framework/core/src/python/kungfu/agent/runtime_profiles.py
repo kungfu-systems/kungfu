@@ -1,10 +1,6 @@
 # SPDX-License-Identifier: Apache-2.0
 
-"""Machine-global Agent Runtime Profile catalog.
-
-This module only inspects executable paths and bounded ``--version`` output. It
-never reads provider credentials, sessions, billing state, or private logs.
-"""
+"""Machine-global, credential-blind Agent Runtime Profile catalog."""
 
 from __future__ import annotations
 
@@ -24,7 +20,11 @@ from kungfu.agent.provider_bootstrap import (
     validate_templates as _validate_templates,
 )
 from kungfu.agent.verification_probe import VerificationProbe
-from kungfu.agent.runtime_profile_catalog import RuntimeProfileCatalog
+from kungfu.agent.runtime_profile_catalog import (
+    RuntimeProfileCatalog,
+    human_agent_catalog as human_agent_catalog,
+    resolve_human_selector as resolve_human_selector,
+)
 from kungfu.agent.runtime_profile_store import RuntimeProfileStore
 from kungfu.rewind.cost.discovery import (
     ProviderDiscovery,
@@ -34,105 +34,6 @@ from kungfu.rewind.cost.discovery import (
 
 ADAPTER_SCHEMA = "kungfu.native-provider-adapter/v1"
 BUILTIN_PROVIDERS = ("codex", "claude", "amp", "opencode")
-
-
-def human_agent_catalog(
-    *, config_home: str | None = None, runtime_home: str | None = None
-) -> dict[str, Any]:
-    """Return a deduplicated human projection without reading credentials."""
-
-    payload = discover_catalog(
-        resolved_config=kungfu_config.resolve_config(
-            config_home=config_home, runtime_home=runtime_home
-        )
-    )
-    discovered = {
-        row["profile"]["id"]: row
-        for row in payload.get("discovered", [])
-        if isinstance(row, Mapping)
-        and isinstance(row.get("profile"), Mapping)
-        and row["profile"].get("id")
-    }
-    configured_profiles = payload.get("configured", [])
-    agents: list[dict[str, Any]] = []
-    seen: set[str] = set()
-    for profile in [
-        *configured_profiles,
-        *(row["profile"] for row in payload.get("discovered", [])),
-    ]:
-        profile_id = str(profile.get("id") or "")
-        if not profile_id or profile_id in seen:
-            continue
-        seen.add(profile_id)
-        discovery = discovered.get(profile_id, {})
-        configured = profile in configured_profiles
-        verification: Mapping[str, Any] = {}
-        if configured and profile_id not in discovered:
-            try:
-                verification = verify_profile(profile)
-            except (OSError, RuntimeError, TypeError, ValueError):
-                verification = {"ok": False}
-        agents.append(
-            {
-                "id": profile_id,
-                "label": str(profile.get("label") or profile_id),
-                "provider": str(profile.get("provider") or ""),
-                "source": str(profile.get("source") or "configured"),
-                "configured": configured,
-                "discovered": profile_id in discovered,
-                "available": bool(
-                    discovery.get("available", verification.get("ok", False))
-                ),
-                "version": discovery.get("version") or verification.get("version"),
-                "default": profile_id == payload.get("defaultProfileId"),
-                "recommended": profile_id == payload.get("recommendedProfileId"),
-            }
-        )
-    return {**payload, "agents": agents, "credentialContentsRead": False}
-
-
-def resolve_human_selector(
-    selector: str | None,
-    *,
-    config_home: str | None = None,
-    runtime_home: str | None = None,
-) -> tuple[str, dict[str, Any]]:
-    """Resolve a human selector to one exact Runtime Profile id."""
-
-    catalog = human_agent_catalog(config_home=config_home, runtime_home=runtime_home)
-    agents = list(catalog["agents"])
-    requested = str(selector or "default").strip()
-    folded = requested.casefold()
-    if folded in {"default", "recommended"}:
-        profile_id = (
-            catalog.get("defaultProfileId")
-            if folded == "default"
-            else catalog.get("recommendedProfileId")
-        ) or catalog.get("recommendedProfileId")
-        if profile_id:
-            return str(profile_id), catalog
-        raise ValueError(
-            "no default Agent is available; install an Agent CLI or run "
-            "`kungfu agent runtime discover`"
-        )
-    exact = [row for row in agents if str(row["id"]).casefold() == folded]
-    labels = [row for row in agents if str(row["label"]).casefold() == folded]
-    providers = [row for row in agents if str(row["provider"]).casefold() == folded]
-    matches = exact or list(
-        {str(row["id"]): row for row in [*labels, *providers]}.values()
-    )
-    if len(matches) == 1:
-        return str(matches[0]["id"]), catalog
-    if len(matches) > 1:
-        for preference in ("default", "recommended", "configured"):
-            preferred = [row for row in matches if row.get(preference) is True]
-            if len(preferred) == 1:
-                return str(preferred[0]["id"]), catalog
-        choices = ", ".join(str(row["id"]) for row in matches)
-        raise ValueError(f"Agent selector {requested!r} is ambiguous: {choices}")
-    raise ValueError(
-        f"Agent {requested!r} is unavailable; run `kungfu agent-work-lab agents`"
-    )
 
 
 def policy_payload(runtime_dir, target, mode, enabled=True):

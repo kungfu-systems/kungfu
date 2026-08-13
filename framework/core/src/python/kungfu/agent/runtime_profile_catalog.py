@@ -5,7 +5,10 @@
 from __future__ import annotations
 
 import copy
+from importlib import import_module
 from typing import Any, Callable, Mapping
+
+from kungfu import config as kungfu_config
 
 
 def unavailable_provider_diagnostic(provider: str) -> dict[str, Any]:
@@ -28,6 +31,111 @@ def recommended_profile_id(
     if explicit_default in configured_ids or explicit_default in available_ids:
         return str(explicit_default)
     return available_ids[0] if available_ids else None
+
+
+def _runtime_profiles():
+    return import_module("kungfu.agent.runtime_profiles")
+
+
+def human_agent_catalog(
+    *, config_home: str | None = None, runtime_home: str | None = None
+) -> dict[str, Any]:
+    """Return a deduplicated human projection without reading credentials."""
+
+    payload = _runtime_profiles().discover_catalog(
+        resolved_config=kungfu_config.resolve_config(
+            config_home=config_home, runtime_home=runtime_home
+        )
+    )
+    discovered = {
+        row["profile"]["id"]: row
+        for row in payload.get("discovered", [])
+        if isinstance(row, Mapping)
+        and isinstance(row.get("profile"), Mapping)
+        and row["profile"].get("id")
+    }
+    configured_profiles = payload.get("configured", [])
+    agents: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    for profile in [
+        *configured_profiles,
+        *(row["profile"] for row in payload.get("discovered", [])),
+    ]:
+        profile_id = str(profile.get("id") or "")
+        if not profile_id or profile_id in seen:
+            continue
+        seen.add(profile_id)
+        discovery = discovered.get(profile_id, {})
+        configured = profile in configured_profiles
+        verification: Mapping[str, Any] = {}
+        if configured and profile_id not in discovered:
+            try:
+                verification = _runtime_profiles().verify_profile(profile)
+            except (OSError, RuntimeError, TypeError, ValueError):
+                verification = {"ok": False}
+        agents.append(
+            {
+                "id": profile_id,
+                "label": str(profile.get("label") or profile_id),
+                "provider": str(profile.get("provider") or ""),
+                "source": str(profile.get("source") or "configured"),
+                "configured": configured,
+                "discovered": profile_id in discovered,
+                "available": bool(
+                    discovery.get("available", verification.get("ok", False))
+                ),
+                "version": discovery.get("version") or verification.get("version"),
+                "default": profile_id == payload.get("defaultProfileId"),
+                "recommended": profile_id == payload.get("recommendedProfileId"),
+            }
+        )
+    return {**payload, "agents": agents, "credentialContentsRead": False}
+
+
+def resolve_human_selector(
+    selector: str | None,
+    *,
+    config_home: str | None = None,
+    runtime_home: str | None = None,
+) -> tuple[str, dict[str, Any]]:
+    """Resolve a human selector to one exact Runtime Profile id."""
+
+    catalog = _runtime_profiles().human_agent_catalog(
+        config_home=config_home, runtime_home=runtime_home
+    )
+    agents = list(catalog["agents"])
+    requested = str(selector or "default").strip()
+    folded = requested.casefold()
+    if folded in {"default", "recommended"}:
+        profile_id = (
+            catalog.get("defaultProfileId")
+            if folded == "default"
+            else catalog.get("recommendedProfileId")
+        ) or catalog.get("recommendedProfileId")
+        if profile_id:
+            return str(profile_id), catalog
+        raise ValueError(
+            "no default Agent is available; install an Agent CLI or run "
+            "`kungfu agent runtime discover`"
+        )
+    exact = [row for row in agents if str(row["id"]).casefold() == folded]
+    labels = [row for row in agents if str(row["label"]).casefold() == folded]
+    providers = [row for row in agents if str(row["provider"]).casefold() == folded]
+    matches = exact or list(
+        {str(row["id"]): row for row in [*labels, *providers]}.values()
+    )
+    if len(matches) == 1:
+        return str(matches[0]["id"]), catalog
+    if len(matches) > 1:
+        for preference in ("default", "recommended", "configured"):
+            preferred = [row for row in matches if row.get(preference) is True]
+            if len(preferred) == 1:
+                return str(preferred[0]["id"]), catalog
+        choices = ", ".join(str(row["id"]) for row in matches)
+        raise ValueError(f"Agent selector {requested!r} is ambiguous: {choices}")
+    raise ValueError(
+        f"Agent {requested!r} is unavailable; run `kungfu agent-work-lab agents`"
+    )
 
 
 class RuntimeProfileCatalog:
