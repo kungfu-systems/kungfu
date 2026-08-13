@@ -3,7 +3,7 @@
   "contract": "kungfu-buildchain-dev-delivery-warrant-queue",
   "repository": "kungfu-systems/kungfu",
   "protectedBase": "dev/v4/v4.0",
-  "generation": 1881,
+  "generation": 1882,
   "fencingCounter": 399,
   "policy": {
     "agingSeconds": 900,
@@ -11,49 +11,7 @@
     "leaseSeconds": 3600,
     "emergencyPolicy": "reviewed-explicit-only"
   },
-  "activeWarrant": {
-    "schema": "kungfu.buildchain.dev-delivery-warrant/v1",
-    "repository": "kungfu-systems/kungfu",
-    "protectedBase": "dev/v4/v4.0",
-    "candidateId": "sha256:c8b6ab2dec7b130af15f19d423dd84aa31e5bb1cdcd6be16fcf86556b36974e3",
-    "pullRequestNumber": 3068,
-    "sourceHead": "0d19bf303cc956dc9fcdbf715aa8807a8e8dd364",
-    "assignmentRoot": "sha256:6b3e7eb2955a21e768d03c3bccf9bedcbeb8190dd7178bfb6b1101df2e7413c0",
-    "initiativeRoot": "sha256:bfff817933e5a5ad693e4b902a84f6cc3a251235dd7377cb4091d92f805fa7ff",
-    "sourceIdentityRoot": "sha256:18c0da130bf5cbb0f253a58a8f01a3d87feb600adf29647227be246851bdab97",
-    "sourcePatchRoot": "sha256:f6231036ce0e7b57f127107e396d18a77f3cf112db472153e1b80a5139686b3e",
-    "sourceProofRoot": "sha256:671837e0e104a1a88b3e25e3a5bbe8c4ae2b0a95d58fe2cf2b407b5d2c613b55",
-    "planRoot": "sha256:4e64c40a689703dabcc594c56a9c5e2bd6fb25f05b6c6ce2ee05a2c79cf697f7",
-    "closureRoot": "sha256:106d175611d8634c988192302b9c464ae8ba3b6d023c2cff9910e401344c9624",
-    "dependencyRoot": "sha256:2bfcddcd6f8e0a174fa1d4801240afb2613cf69e9901f329cf1f44aff11bf759",
-    "toolchainRoot": "sha256:2ecb07894954a2e0de022615d4561e5ba3ae68376401941ecff77be03cd75a0f",
-    "affectedPaths": [
-      ".buildchain/alpha-release-cut-lock.json",
-      ".github/workflows/build.yml",
-      ".github/workflows/dev-alpha-candidate-patrol.yml",
-      ".github/workflows/release-new-version.yml",
-      "docs/qualification/gates/workflow-authority.json",
-      "docs/qualification/gates/workflow-bindings.json",
-      "docs/release-promotion-rehearsal.contract.json",
-      "framework/release/publication-control-plane.mjs",
-      "framework/release/publication-surfaces.json",
-      "scripts/alpha-macos-overflow.test.mjs",
-      "scripts/alpha-promotion-preflight.test.mjs",
-      "scripts/kungfu-workflow-authority.mjs",
-      "scripts/release-promotion-rehearsal.mjs",
-      "scripts/release-promotion-rehearsal.test.mjs",
-      "scripts/verify-alpha-release-cut-lock.test.mjs"
-    ],
-    "sourceWorkflowRunId": 0,
-    "deliveryClass": "native-proof-required",
-    "generation": 399,
-    "phase": "provisional",
-    "expectedOldStateRoot": "sha256:6e7ef112bd34d8f2a1a6cda0ebc5b796ef05831b899395242daa576fdfa73e56",
-    "issuedAt": "2026-08-13T11:28:02.205Z",
-    "expiresAt": "2026-08-13T12:58:37.264Z",
-    "fencingToken": "sha256:dc57ebd71dd0fd8da32d979a283ed2081eb44894ec35f434f745122cb0d8e7bd",
-    "nextAction": "Run or reuse the exact semantic native proof, then atomically qualify this fenced Warrant."
-  },
+  "activeWarrant": null,
   "candidates": [
     {
       "repository": "kungfu-systems/kungfu",
@@ -23163,11 +23121,19 @@
       "sourceWorkflowRunId": 0,
       "priority": "ordinary",
       "enqueuedAt": "2026-08-13T11:27:56.793Z",
-      "updatedAt": "2026-08-13T11:28:37.264Z",
+      "updatedAt": "2026-08-13T11:32:32.255Z",
       "attempts": 1,
       "recoveries": 0,
-      "status": "proving",
-      "terminal": null,
+      "status": "cancelled",
+      "terminal": {
+        "outcome": "cancelled",
+        "terminalClass": "authoritative-cancellation",
+        "reason": "protected pull request event: closed",
+        "evidenceRoot": "sha256:1b93e0584f4066fb73b4d165770528f5d2f07fb7b94a39fcc57cfa39437c7698",
+        "closedAt": "2026-08-13T11:32:32.255Z",
+        "fencingToken": "sha256:dc57ebd71dd0fd8da32d979a283ed2081eb44894ec35f434f745122cb0d8e7bd",
+        "leaseGeneration": 399
+      },
       "affectedPaths": [
         ".buildchain/alpha-release-cut-lock.json",
         ".github/workflows/build.yml",
@@ -23187,6 +23153,6 @@
       ]
     }
   ],
-  "updatedAt": "2026-08-13T11:28:37.264Z",
-  "stateRoot": "sha256:1215e41e711d69657c22087d6263619e3800f07125143551cded5d0af6623a42"
+  "updatedAt": "2026-08-13T11:32:32.255Z",
+  "stateRoot": "sha256:5f05301a40ad216425604d788ca452d566d40279cce4bab73fac2d70833f085a"
 }
