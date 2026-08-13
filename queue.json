@@ -3,7 +3,7 @@
   "contract": "kungfu-buildchain-dev-delivery-warrant-queue",
   "repository": "kungfu-systems/kungfu",
   "protectedBase": "dev/v4/v4.0",
-  "generation": 1960,
+  "generation": 1961,
   "fencingCounter": 405,
   "policy": {
     "agingSeconds": 900,
@@ -23546,8 +23546,40 @@
         "scripts/dev-pr-auto-merge.test.mjs",
         "scripts/native-execution-under-warrant.test.mjs"
       ]
+    },
+    {
+      "repository": "kungfu-systems/kungfu",
+      "protectedBase": "dev/v4/v4.0",
+      "pullRequestNumber": 3073,
+      "assignmentRoot": "sha256:792191fda696961244e6b4dd641103040a76b737aa97eff96f477118a85c1a26",
+      "initiativeRoot": "sha256:bfff817933e5a5ad693e4b902a84f6cc3a251235dd7377cb4091d92f805fa7ff",
+      "sourceIdentityRoot": "sha256:4290b6b66d167789e1993d1861092e27afb195379315a2e71dd04a52749d13b2",
+      "deliveryClass": "native-proof-required",
+      "candidateId": "sha256:508c87d5ceab65182941fc24a4c71c9df51edfcdc8bf5e6c08b97c81c5b1c401",
+      "sourceHead": "b0d91f544d79014a68c1d8ecacb117b13f1e37e2",
+      "sourcePatchRoot": "sha256:00fb26165cf9a871b7cb2c480967d5295dc6a82820ad6c5977dc7ef4b308bc6d",
+      "sourceProofRoot": "sha256:a4ee9ea12bc36de65046c92167f4883061279749ea396c87a088214f8bbcad06",
+      "planRoot": "sha256:3b5b613293eeb18f8711923da4d8ba29a755d87f5ebb6c4f34cdd6a6957d2c72",
+      "closureRoot": "sha256:106d175611d8634c988192302b9c464ae8ba3b6d023c2cff9910e401344c9624",
+      "dependencyRoot": "sha256:d90c217da309fc6ccf5849dcf9cf0386b68ceef18b674b8a17030335596ec41f",
+      "toolchainRoot": "sha256:2ecb07894954a2e0de022615d4561e5ba3ae68376401941ecff77be03cd75a0f",
+      "environmentRoot": "sha256:c5f5da5917c6ff93a509a62b18d4b9b69325755c4c7229b553b0016cde83788f",
+      "sourceWorkflowRunId": 0,
+      "priority": "ordinary",
+      "enqueuedAt": "2026-08-13T20:41:10.766Z",
+      "updatedAt": "2026-08-13T20:41:10.766Z",
+      "attempts": 1,
+      "recoveries": 0,
+      "status": "queued",
+      "terminal": null,
+      "affectedPaths": [
+        ".github/workflows/dev-post-merge-advisory.yml",
+        "docs/qualification/gates/workflow-authority.json",
+        "framework/release/publication-surfaces.json",
+        "scripts/qualified-assignment-core-artifact.test.mjs"
+      ]
     }
   ],
-  "updatedAt": "2026-08-13T15:32:25.632Z",
-  "stateRoot": "sha256:835a539d9af323bc17ebd20ab07b567106c5303e66994d5307c9bd5cc85a2e7d"
+  "updatedAt": "2026-08-13T20:41:10.766Z",
+  "stateRoot": "sha256:cb026e9c904b5594204e36a0f7a8a5b2920710ba2fbbd83cc888bc47aca5fa09"
 }
