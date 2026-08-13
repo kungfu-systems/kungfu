@@ -6,7 +6,10 @@ import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 
-import { runNativeUnderWarrant } from '../framework/dev-delivery/native-under-warrant.mjs';
+import {
+  GitHubNativeStatusClient,
+  runNativeUnderWarrant,
+} from '../framework/dev-delivery/native-under-warrant.mjs';
 
 const workflow = fs.readFileSync(
   '.github/workflows/dev-pr-auto-merge.yml',
@@ -347,6 +350,75 @@ test('two-phase native adapter fails closed and replaces pending with failure', 
   );
 });
 
+test('native status client retries bounded transient GitHub failures', async () => {
+  const attempts = [];
+  const delays = [];
+  const client = new GitHubNativeStatusClient({
+    repository: 'kungfu-systems/kungfu',
+    token: 'test-token',
+    retryAttempts: 3,
+    retryDelayMs: 10,
+    sleepImpl: async (milliseconds) => delays.push(milliseconds),
+    fetchImpl: async () => {
+      attempts.push('fetch');
+      if (attempts.length < 3) throw new TypeError('fetch failed');
+      return {
+        ok: true,
+        status: 200,
+        async text() {
+          return '{"ok":true}';
+        },
+      };
+    },
+  });
+
+  assert.deepEqual(await client.request('/repos/test'), { ok: true });
+  assert.equal(attempts.length, 3);
+  assert.deepEqual(delays, [10, 20]);
+});
+
+test('native status client fails closed after bounded retry exhaustion', async () => {
+  let attempts = 0;
+  const client = new GitHubNativeStatusClient({
+    repository: 'kungfu-systems/kungfu',
+    token: 'test-token',
+    retryAttempts: 2,
+    retryDelayMs: 0,
+    sleepImpl: async () => {},
+    fetchImpl: async () => {
+      attempts += 1;
+      throw new TypeError('fetch failed');
+    },
+  });
+
+  await assert.rejects(client.request('/repos/test'), /fetch failed/u);
+  assert.equal(attempts, 2);
+});
+
+test('native status client does not retry authoritative client errors', async () => {
+  let attempts = 0;
+  const client = new GitHubNativeStatusClient({
+    repository: 'kungfu-systems/kungfu',
+    token: 'test-token',
+    retryAttempts: 3,
+    retryDelayMs: 0,
+    sleepImpl: async () => {},
+    fetchImpl: async () => {
+      attempts += 1;
+      return {
+        ok: false,
+        status: 422,
+        async text() {
+          return '{"message":"source head rejected"}';
+        },
+      };
+    },
+  });
+
+  await assert.rejects(client.request('/repos/test'), /source head rejected/u);
+  assert.equal(attempts, 1);
+});
+
 test('hosted native jobs remain fail-closed behind the exact active Warrant', () => {
   const sourceWorkflow = fs.readFileSync(
     '.github/workflows/affected-native-pr.yml',
@@ -360,7 +432,6 @@ test('hosted native jobs remain fail-closed behind the exact active Warrant', ()
     'affected_native_shards',
     'shifu_workspace',
     'kfd_verifier',
-    'qualified_core_candidate',
   ]) {
     const start = sourceWorkflow.indexOf(`  ${job}:\n`);
     const remainder = sourceWorkflow.slice(start + 3);

@@ -10,6 +10,18 @@ import { pathToFileURL } from 'node:url';
 import { digest } from '../../scripts/affected-native-proof.mjs';
 
 const SHA = /^[0-9a-f]{40}$/u;
+const TRANSIENT_GITHUB_STATUSES = new Set([429, 500, 502, 503, 504]);
+
+function defaultSleep(milliseconds) {
+  return new Promise((resolve) => setTimeout(resolve, milliseconds));
+}
+
+function isTransientGitHubFailure(error) {
+  return (
+    error instanceof TypeError ||
+    TRANSIENT_GITHUB_STATUSES.has(Number(error?.status || 0))
+  );
+}
 
 function flag(args, name, fallback = '') {
   const index = args.indexOf(`--${name}`);
@@ -38,6 +50,9 @@ export class GitHubNativeStatusClient {
     token,
     apiUrl = 'https://api.github.com',
     fetchImpl = globalThis.fetch,
+    retryAttempts = 3,
+    retryDelayMs = 1000,
+    sleepImpl = defaultSleep,
   }) {
     if (!repository) throw new Error('repository is required');
     if (!token) throw new Error('GITHUB_TOKEN is required');
@@ -45,24 +60,43 @@ export class GitHubNativeStatusClient {
     this.token = token;
     this.apiUrl = apiUrl.replace(/\/+$/u, '');
     this.fetch = fetchImpl;
+    this.retryAttempts = positiveInteger(retryAttempts, 'retry attempts');
+    this.retryDelayMs = Number(retryDelayMs);
+    this.sleep = sleepImpl;
+    if (!Number.isFinite(this.retryDelayMs) || this.retryDelayMs < 0)
+      throw new Error('retry delay must be a non-negative number');
   }
 
   async request(requestPath, { method = 'GET', body } = {}) {
-    const response = await this.fetch(`${this.apiUrl}${requestPath}`, {
-      method,
-      headers: {
-        accept: 'application/vnd.github+json',
-        authorization: `Bearer ${this.token}`,
-        'content-type': 'application/json',
-        'x-github-api-version': '2022-11-28',
-      },
-      body: body === undefined ? undefined : JSON.stringify(body),
-    });
-    const raw = await response.text();
-    const data = raw ? JSON.parse(raw) : null;
-    if (!response.ok)
-      throw new Error(data?.message || `${method} ${requestPath} failed`);
-    return data;
+    for (let attempt = 1; attempt <= this.retryAttempts; attempt += 1) {
+      try {
+        const response = await this.fetch(`${this.apiUrl}${requestPath}`, {
+          method,
+          headers: {
+            accept: 'application/vnd.github+json',
+            authorization: `Bearer ${this.token}`,
+            'content-type': 'application/json',
+            'x-github-api-version': '2022-11-28',
+          },
+          body: body === undefined ? undefined : JSON.stringify(body),
+        });
+        const raw = await response.text();
+        const data = raw ? JSON.parse(raw) : null;
+        if (!response.ok) {
+          const error = new Error(
+            data?.message || `${method} ${requestPath} failed`,
+          );
+          error.status = response.status;
+          throw error;
+        }
+        return data;
+      } catch (error) {
+        if (attempt === this.retryAttempts || !isTransientGitHubFailure(error))
+          throw error;
+        await this.sleep(this.retryDelayMs * attempt);
+      }
+    }
+    throw new Error(`${method} ${requestPath} exhausted retry attempts`);
   }
 
   async requirePullRequest(number, expectedHead, targetBranch) {

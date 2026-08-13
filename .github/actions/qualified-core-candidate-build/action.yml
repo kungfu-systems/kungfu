@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 name: Build Qualified Core candidate
-description: Build and seal one exact platform row from a merge-group checkout.
+description: Build and seal one exact platform row from a protected source checkout.
 
 inputs:
   row:
@@ -34,6 +34,14 @@ inputs:
     description: Skip native build commands when a live Warrant wrapper already completed them.
     required: false
     default: "false"
+  producer-event:
+    description: GitHub Actions event that owns this candidate transport.
+    required: false
+    default: merge_group
+  producer-workflow-path:
+    description: Repository-relative workflow path that owns this candidate transport.
+    required: false
+    default: .github/workflows/affected-native-pr.yml
 
 runs:
   using: composite
@@ -68,8 +76,8 @@ runs:
           --output-dir product/qualification/qualified-core/candidate \
           --repository "$GITHUB_REPOSITORY" \
           --run-id "$GITHUB_RUN_ID" \
-          --event merge_group \
-          --workflow-path .github/workflows/affected-native-pr.yml \
+          --event "${{ inputs.producer-event }}" \
+          --workflow-path "${{ inputs.producer-workflow-path }}" \
           --platform-row "${{ inputs.row }}" \
           --runner-label "${{ inputs.runner-label }}" \
           --runner-environment github-hosted \
@@ -104,8 +112,8 @@ runs:
           --output-dir product/qualification/qualified-core/candidate `
           --repository "$env:GITHUB_REPOSITORY" `
           --run-id "$env:GITHUB_RUN_ID" `
-          --event merge_group `
-          --workflow-path .github/workflows/affected-native-pr.yml `
+          --event "${{ inputs.producer-event }}" `
+          --workflow-path "${{ inputs.producer-workflow-path }}" `
           --platform-row "${{ inputs.row }}" `
           --runner-label "${{ inputs.runner-label }}" `
           --runner-environment github-hosted `

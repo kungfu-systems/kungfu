@@ -199,6 +199,7 @@ function sealFixture(
   temporary,
   commit = QUEUE_HEAD,
   rowId = 'darwin-arm64-cp313',
+  producerOverrides = {},
 ) {
   const payloadRoot = path.join(temporary, 'dist');
   const candidateRoot = path.join(temporary, 'candidate');
@@ -227,6 +228,7 @@ function sealFixture(
       workflowPath: '.github/workflows/affected-native-pr.yml',
       runner: producerRunner,
       createdAt: '2026-07-29T00:00:00Z',
+      ...producerOverrides,
     },
     toolchain: {
       compiler: 'fixture compiler 17',
@@ -306,6 +308,7 @@ function compatibilityCheckoutFixture(temporary) {
     '.github/actions/upload-qualified-core-matrix/action.yml',
     '.github/workflows/affected-native-cache-promote.yml',
     '.github/workflows/affected-native-pr.yml',
+    '.github/workflows/dev-post-merge-advisory.yml',
     'framework/core',
     '.buildchain/contract-lock.json',
     '.buildchain/buildchain.toml',
@@ -455,6 +458,7 @@ test('platform matrix binds exactly three supported producer rows', (t) => {
       commit: QUEUE_HEAD,
       runId: 42,
       event: 'merge_group',
+      workflowPath: '.github/workflows/affected-native-pr.yml',
       repositoryRoot: ROOT,
     });
   }
@@ -482,6 +486,7 @@ test('producer seals minimum macOS ARM64 bytes and protected promotion', async (
     commit: QUEUE_HEAD,
     runId: 42,
     event: 'merge_group',
+    workflowPath: '.github/workflows/affected-native-pr.yml',
   });
 
   const descriptor = createProofDescriptor(
@@ -564,6 +569,53 @@ test('producer seals minimum macOS ARM64 bytes and protected promotion', async (
   assert.throws(
     () => validateQualifiedCoreCandidate(candidate, candidateRoot),
     /payload drift/u,
+  );
+});
+
+test('post-merge advisory producer provenance stays distinct from merge-group delivery', (t) => {
+  const temporary = fs.mkdtempSync(
+    path.join(os.tmpdir(), 'qualified-core-advisory-producer-'),
+  );
+  t.after(() => fs.rmSync(temporary, { recursive: true, force: true }));
+  const { candidateRoot, candidate } = sealFixture(
+    temporary,
+    QUEUE_HEAD,
+    'darwin-arm64-cp313',
+    {
+      runId: 84,
+      event: 'push',
+      workflowPath: '.github/workflows/dev-post-merge-advisory.yml',
+    },
+  );
+  validateQualifiedCoreCandidate(candidate, candidateRoot, {
+    shared: true,
+    repository: 'kungfu-systems/kungfu',
+    commit: QUEUE_HEAD,
+    runId: 84,
+    event: 'push',
+    workflowPath: '.github/workflows/dev-post-merge-advisory.yml',
+    repositoryRoot: ROOT,
+  });
+  assert.throws(
+    () =>
+      validateQualifiedCoreCandidate(candidate, candidateRoot, {
+        runId: 42,
+      }),
+    /producer run drift/u,
+  );
+  assert.throws(
+    () =>
+      validateQualifiedCoreCandidate(candidate, candidateRoot, {
+        event: 'merge_group',
+      }),
+    /producer event drift/u,
+  );
+  assert.throws(
+    () =>
+      validateQualifiedCoreCandidate(candidate, candidateRoot, {
+        workflowPath: '.github/workflows/affected-native-pr.yml',
+      }),
+    /producer workflow drift/u,
   );
 });
 
@@ -2028,22 +2080,38 @@ test('workflows keep candidate and promotion outside untrusted PR authority', ()
     shifuL2,
     /cmd === 'qualified-core'[\s\S]*runQualifiedCoreUsageStatusCommand/u,
   );
-  const producerWorkflow = fs.readFileSync(
+  const mergeGroupWorkflow = fs.readFileSync(
     path.join(ROOT, '.github/workflows/affected-native-pr.yml'),
     'utf8',
   );
-  const candidateJob = producerWorkflow.slice(
-    producerWorkflow.indexOf('  qualified_core_candidate:\n'),
+  assert.doesNotMatch(mergeGroupWorkflow, /^ {2}qualified_core_candidate:/mu);
+  assert.doesNotMatch(mergeGroupWorkflow, /^ {2}production_graph_parity:/mu);
+  assert.match(
+    mergeGroupWorkflow,
+    /affected_native:[\s\S]*name: affected-native \/ linux/u,
+  );
+
+  const advisoryWorkflow = fs.readFileSync(
+    path.join(ROOT, '.github/workflows/dev-post-merge-advisory.yml'),
+    'utf8',
   );
   assert.match(
-    candidateJob,
-    /always\(\)[\s\S]*github\.event_name == 'merge_group'[\s\S]*native-required == 'true'[\s\S]*needs\.affected_native\.result == 'success'[\s\S]*continue-on-error: true[\s\S]*fail-fast: false[\s\S]*darwin-arm64-cp313[\s\S]*runner: macos-15[\s\S]*linux-x86_64-cp313[\s\S]*runner: ubuntu-24\.04[\s\S]*cc: gcc-14[\s\S]*cxx: g\+\+-14[\s\S]*windows-x86_64-cp313[\s\S]*runner: windows-2022[\s\S]*runs-on: \$\{\{ matrix\.runner \}\}/u,
+    advisoryWorkflow,
+    /name: Dev post-merge advisory[\s\S]*push:[\s\S]*dev\/v\*\/v\*[\s\S]*workflow_dispatch:[\s\S]*dev-post-merge-advisory-\$\{\{ github\.ref \}\}[\s\S]*cancel-in-progress: false/u,
+  );
+  assert.doesNotMatch(advisoryWorkflow, /^\s{2}(pull_request|merge_group):/mu);
+  assert.match(
+    advisoryWorkflow,
+    /REF_PROTECTED: \$\{\{ github\.ref_protected \}\}[\s\S]*REF_PROTECTED" != true[\s\S]*affected-native-pr\.yml\/runs[\s\S]*-f event=merge_group[\s\S]*affected-native \/ linux[\s\S]*dev-candidate-plan-\$\{TARGET_SHA\}/u,
   );
   assert.match(
-    candidateJob,
-    /KUNGFU_BUILDCHAIN_SOURCE_BUILD: "1"[\s\S]*Build minimum relocatable Assignment Core candidate under the live Warrant[\s\S]*uses: \.\/\.github\/actions\/native-execution-under-warrant[\s\S]*Seal minimum relocatable Assignment Core candidate[\s\S]*uses: \.\/\.github\/actions\/qualified-core-candidate-build[\s\S]*row: \$\{\{ matrix\.row \}\}[\s\S]*runner-label: \$\{\{ matrix\.runner \}\}[\s\S]*cc: \$\{\{ matrix\.cc \}\}[\s\S]*cxx: \$\{\{ matrix\.cxx \}\}[\s\S]*qualified-assignment-core-candidate-\$\{\{ github\.sha \}\}-\$\{\{ matrix\.row \}\}/u,
+    advisoryWorkflow,
+    /production_graph_parity:[\s\S]*Production Graph parity advisory \/ linux[\s\S]*qualified_core_candidate:[\s\S]*native-required == 'true'[\s\S]*fail-fast: false[\s\S]*darwin-arm64-cp313[\s\S]*runner: macos-15[\s\S]*linux-x86_64-cp313[\s\S]*runner: ubuntu-24\.04[\s\S]*cc: gcc-14[\s\S]*cxx: g\+\+-14[\s\S]*windows-x86_64-cp313[\s\S]*runner: windows-2022[\s\S]*runs-on: \$\{\{ matrix\.runner \}\}/u,
   );
-  assert.doesNotMatch(candidateJob, /pull_request/);
+  assert.match(
+    advisoryWorkflow,
+    /KUNGFU_BUILDCHAIN_SOURCE_BUILD: "1"[\s\S]*Build and seal minimum relocatable Assignment Core candidate[\s\S]*uses: \.\/\.github\/actions\/qualified-core-candidate-build[\s\S]*producer-event: push[\s\S]*producer-workflow-path: \.github\/workflows\/dev-post-merge-advisory\.yml[\s\S]*qualified-assignment-core-candidate-\$\{\{ needs\.prepare\.outputs\.target-sha \}\}-\$\{\{ matrix\.row \}\}/u,
+  );
   const candidateAction = fs.readFileSync(
     path.join(
       ROOT,
@@ -2053,7 +2121,7 @@ test('workflows keep candidate and promotion outside untrusted PR authority', ()
   );
   assert.match(
     candidateAction,
-    /runner\.os != 'Windows'[\s\S]*RUNNER_OS[\s\S]*RUNNER_ARCH[\s\S]*process\.platform[\s\S]*process\.arch[\s\S]*command -v "\$\{\{ inputs\.cc \}\}"[\s\S]*export CC="\$\{\{ inputs\.cc \}\}"[\s\S]*export CXX="\$\{\{ inputs\.cxx \}\}"[\s\S]*\.\/shifu rebuild:core[\s\S]*qualified-assignment-core-artifact\.mjs seal[\s\S]*--platform-row "\$\{\{ inputs\.row \}\}"[\s\S]*runner\.os == 'Windows'[\s\S]*shifu\.cmd rebuild:core[\s\S]*qualified-assignment-core-artifact\.mjs seal/u,
+    /native-already-built:[\s\S]*default: "false"[\s\S]*producer-event:[\s\S]*default: merge_group[\s\S]*producer-workflow-path:[\s\S]*default: \.github\/workflows\/affected-native-pr\.yml[\s\S]*runner\.os != 'Windows'[\s\S]*inputs\.native-already-built[\s\S]*--event "\$\{\{ inputs\.producer-event \}\}"[\s\S]*--workflow-path "\$\{\{ inputs\.producer-workflow-path \}\}"[\s\S]*runner\.os == 'Windows'[\s\S]*inputs\.native-already-built[\s\S]*--event "\$\{\{ inputs\.producer-event \}\}"[\s\S]*--workflow-path "\$\{\{ inputs\.producer-workflow-path \}\}"/u,
   );
 
   const promotionWorkflow = fs.readFileSync(
@@ -2063,7 +2131,15 @@ test('workflows keep candidate and promotion outside untrusted PR authority', ()
   assert.match(promotionWorkflow, /^\s{2}push\s*:/mu);
   assert.match(
     promotionWorkflow,
-    /promote:[\s\S]*github\.ref_protected == true[\s\S]*TARGET_SHA: \$\{\{ steps\.target\.outputs\.sha \}\}[\s\S]*event=merge_group[\s\S]*head_sha="\$TARGET_SHA"[\s\S]*affected-native \/ linux[\s\S]*Multiple Qualified Core producer authorities[\s\S]*framework\/release\/qualified-assignment-core-artifact\.mjs promote[\s\S]*--target-commit "\$TARGET_SHA"[\s\S]*--protected-ref "\$GITHUB_REF"[\s\S]*--delivery-attempt/u,
+    /promote:[\s\S]*affected-native-pr\.yml\/runs[\s\S]*-f event=merge_group[\s\S]*-f head_sha="\$TARGET_SHA"[\s\S]*affected-native \/ linux/u,
+  );
+  assert.match(
+    promotionWorkflow,
+    /github\.ref_protected == true[\s\S]*dev-post-merge-advisory\.yml\/runs[\s\S]*-f event=push[\s\S]*-f head_sha="\$TARGET_SHA"[\s\S]*Multiple Qualified Core producer authorities/u,
+  );
+  assert.match(
+    promotionWorkflow,
+    /framework\/release\/qualified-assignment-core-artifact\.mjs promote[\s\S]*--target-commit "\$TARGET_SHA"[\s\S]*--protected-ref "\$GITHUB_REF"[\s\S]*--merge-group-run-id "\$\{\{ steps\.producer\.outputs\.run-id \}\}"[\s\S]*--producer-run-id "\$\{\{ steps\.qualified_core_producer\.outputs\.run-id \}\}"[\s\S]*--producer-event push[\s\S]*--producer-workflow-path \.github\/workflows\/dev-post-merge-advisory\.yml[\s\S]*--delivery-attempt/u,
   );
   assert.match(
     promotionWorkflow,
@@ -2095,7 +2171,7 @@ test('workflows keep candidate and promotion outside untrusted PR authority', ()
   );
   assert.match(
     promotionWorkflow,
-    /run_status[\s\S]*delivery_count[\s\S]*delivery_count" -eq 1 \] &&[\s\S]*run_status" = completed[\s\S]*authorities=.*run_id[\s\S]*elif \[ "\$delivery_count" -eq 1 \]; then[\s\S]*pending_run=true[\s\S]*Completed producer run[\s\S]*every matrix row remains unqualified[\s\S]*observed_run[\s\S]*pending_run/u,
+    /run_status[\s\S]*candidate_state[\s\S]*candidate_state" = ambiguous[\s\S]*run_status" != completed[\s\S]*pending_run=true[\s\S]*candidate_state" = available[\s\S]*producers=.*run_id[\s\S]*Completed advisory run[\s\S]*every matrix row remains unqualified[\s\S]*observed_run[\s\S]*pending_run/u,
   );
   const matrixUpload = fs.readFileSync(
     path.join(ROOT, '.github/actions/upload-qualified-core-matrix/action.yml'),
