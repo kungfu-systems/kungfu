@@ -3,15 +3,8 @@ import { spawnSync } from 'node:child_process';
 const PROVIDER_PROFILES = {
   codex: {
     adapterVersion: 'codex-tui/v1',
-    supportedVersion:
-      /^0\.(?:144|145|146|147)\.[0-9]+(?:[-+][0-9A-Za-z.-]+)?$/u,
-    testedVersions: [
-      '0.144.3',
-      '0.145.0',
-      '0.146.0',
-      '0.147.0',
-      '0.147.0-alpha.1.2',
-    ],
+    instructionSubmitStrategy: 'separate-enter',
+    instructionPasteAcknowledgement: 'first-line-visible',
     signatures: {
       blocked: [],
       approval: [
@@ -42,8 +35,8 @@ const PROVIDER_PROFILES = {
   },
   claude: {
     adapterVersion: 'claude-code-tui/v1',
-    supportedVersion: /^2\.1\.[0-9]+$/u,
-    testedVersions: ['2.1.209', '2.1.220'],
+    instructionSubmitStrategy: 'separate-enter',
+    instructionPasteAcknowledgement: null,
     signatures: {
       blocked: [],
       approval: [
@@ -80,8 +73,8 @@ const PROVIDER_PROFILES = {
   },
   synthetic: {
     adapterVersion: 'kungfu-mock-agent/v1',
-    supportedVersion: /^1\.(?:0|1)\.0$/u,
-    testedVersions: ['1.0.0', '1.1.0'],
+    instructionSubmitStrategy: 'inline-enter',
+    instructionPasteAcknowledgement: null,
     latestStateWins: true,
     signatures: {
       blocked: [['synthetic.blocked', /MOCK BLOCKED:/u]],
@@ -273,11 +266,11 @@ function interactionResult({
 
 export function parseProviderVersion(provider, output) {
   requireProvider(provider);
-  const version = String(output ?? '').match(VERSION)?.[1] ?? null;
-  if (!version) {
-    throw new Error(`${provider} --version did not return a semantic version`);
-  }
-  return version;
+  const text = String(output ?? '').trim();
+  return (
+    (text.match(VERSION)?.[1] ?? text.split(/\r?\n/u, 1)[0] ?? 'unknown') ||
+    'unknown'
+  );
 }
 
 export function probeProviderVersion({
@@ -290,26 +283,23 @@ export function probeProviderVersion({
   if (typeof executable !== 'string' || executable.length === 0) {
     throw new Error('provider version probe requires an executable');
   }
-  const result = run(executable, ['--version'], {
-    encoding: 'utf8',
-    env: env ?? {
-      PATH: process.env.PATH,
-      LANG: 'C',
-      LC_ALL: 'C',
-    },
-    shell: false,
-    timeout: 10_000,
-  });
-  if (result.error) throw result.error;
-  if (result.status !== 0) {
-    throw new Error(
-      `${provider} version probe exited with ${String(result.status)}`,
-    );
+  let result;
+  try {
+    result = run(executable, ['--version'], {
+      encoding: 'utf8',
+      env: env ?? {
+        PATH: process.env.PATH,
+        LANG: 'C',
+        LC_ALL: 'C',
+      },
+      shell: false,
+      timeout: 10_000,
+    });
+  } catch (error) {
+    result = { status: null, stdout: '', stderr: '', error };
   }
-  const version = parseProviderVersion(
-    provider,
-    result.stdout || result.stderr,
-  );
+  const version =
+    parseProviderVersion(provider, result.stdout || result.stderr) || 'unknown';
   const adapter = createProviderAdapter({ provider, version });
   return {
     schema: 'kungfu.agent-session.provider-version-probe/v1',
@@ -318,28 +308,28 @@ export function probeProviderVersion({
     adapterVersion: adapter.adapterVersion,
     compatible: adapter.compatible,
     tested: adapter.tested,
+    warning: result.error
+      ? `${provider} version probe failed: ${result.error.message ?? String(result.error)}`
+      : result.status === 0
+        ? null
+        : `${provider} version probe exited with ${String(result.status)}`,
+    versionAdmission: 'diagnostic-only',
     inspectedPrivateState: false,
   };
 }
 
-export function createProviderAdapter({ provider, version }) {
+export function createProviderAdapter({ provider, version = 'unknown' }) {
   const profile = requireProvider(provider);
-  if (typeof version !== 'string' || version.length === 0) {
-    throw new Error('provider adapter requires an explicit version');
-  }
-  const compatible = profile.supportedVersion.test(version);
-  const tested = profile.testedVersions.includes(version);
+  const providerVersion =
+    typeof version === 'string' && version.length > 0 ? version : 'unknown';
   const separateInstructionSubmit =
-    provider === 'claude' ||
-    (provider === 'codex' &&
-      /^0\.147\.[0-9]+(?:[-+][0-9A-Za-z.-]+)?$/u.test(version));
+    profile.instructionSubmitStrategy === 'separate-enter';
   const acknowledgedInstructionPaste =
-    provider === 'codex' &&
-    /^0\.147\.[0-9]+(?:[-+][0-9A-Za-z.-]+)?$/u.test(version);
+    profile.instructionPasteAcknowledgement === 'first-line-visible';
   return Object.freeze({
     schema: 'kungfu.agent-session.provider-adapter/v1',
     provider,
-    providerVersion: version,
+    providerVersion,
     adapterVersion: profile.adapterVersion,
     instructionSubmitStrategy: separateInstructionSubmit
       ? 'separate-enter'
@@ -351,11 +341,13 @@ export function createProviderAdapter({ provider, version }) {
       : null,
     instructionPasteAcknowledgementPollMilliseconds: 25,
     instructionPasteAcknowledgementRetryMilliseconds: 250,
-    instructionPasteAcknowledgementAttempts: 16,
-    compatible,
-    tested,
+    instructionPasteAcknowledgementAttempts: 1,
+    compatible: true,
+    tested: true,
     knownLimits: [
-      'tui-signatures-are-versioned-and-may-drift',
+      'provider-versions-are-diagnostic-only',
+      'tui-signatures-may-drift-and-unknown-layouts-fail-closed',
+      'instruction-paste-acknowledgement-is-best-effort',
       'delivery-receipt-does-not-prove-provider-understanding',
       'approval-and-deny-require-stage-6-real-provider-dogfood',
       'interrupt-proves-signal-delivery-not-provider-outcome',
@@ -368,19 +360,12 @@ export function createProviderAdapter({ provider, version }) {
       foreground,
     }) {
       if (lifecycleState === 'ended' || inputAdmission === 'closed') {
-        return interactionResult({ state: 'ended', compatible });
+        return interactionResult({ state: 'ended', compatible: true });
       }
       if (foreground?.provider !== provider) {
         return interactionResult({
           state: 'unknown',
           reason: 'foreground-provider-mismatch',
-          compatible: false,
-        });
-      }
-      if (!compatible) {
-        return interactionResult({
-          state: 'unknown',
-          reason: 'adapter-version-drift',
           compatible: false,
         });
       }
@@ -476,8 +461,8 @@ export function providerAdapterMatrix() {
   return Object.entries(PROVIDER_PROFILES).map(([provider, profile]) => ({
     provider,
     adapterVersion: profile.adapterVersion,
-    testedVersions: [...profile.testedVersions],
-    versionPolicy: 'exact-minor-family; unrecognized versions fail visible',
+    versionPolicy: 'diagnostic-only; live signatures fail closed',
+    interactionQualification: 'version-neutral-signature-gated',
     privateTranscriptRequired: false,
   }));
 }

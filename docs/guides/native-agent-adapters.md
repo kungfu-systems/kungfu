@@ -8,7 +8,9 @@ Profile then selects the exact executable and interactive arguments.
 
 `versionArgv` must name a bounded non-interactive probe that exits. Its first
 non-empty output line may be a semantic version or an opaque provider build
-identity; Kungfu does not require third-party version text to use `x.y.z`.
+identity. The result is diagnostic metadata only: probe failure may produce a
+warning, but never blocks an available executable from launching. Kungfu does
+not require third-party version text to use `x.y.z`.
 
 The adapter is intentionally not a shell hook. Kungfu launches an exact
 executable-plus-argv vector with inherited stdin, stdout, and stderr. Template
@@ -138,8 +140,8 @@ user.
 
 Before starting Codex, Kungfu names the directory whose trust prompt may
 appear. The prompt reads and writes through the same provider PTY; users do not
-need to start Codex separately. Kungfu also checks the versioned Agent Session
-capability schema and all native lifecycle operations before it registers a
+need to start Codex separately. Kungfu also checks the Agent Session protocol
+schema and all native lifecycle operations before it registers a
 SessionAttempt. An older detached worker therefore fails before
 `plan-native-start` with an actionable protocol-mismatch error. Close the
 running Kungfu processes for that Project and retry; do not delete Project

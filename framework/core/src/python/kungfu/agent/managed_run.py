@@ -141,7 +141,7 @@ class ManagedRunCoordinator:
             **ref,
             "workspaceId": str(work["workspaceId"]),
             "provider": provider,
-            "providerVersion": str(verification["version"]),
+            "providerVersion": str(verification.get("version") or "unknown"),
             "profileRoot": self.semantic_root(selected),
             "executable": str(launch["executable"]),
             "argv": argv,

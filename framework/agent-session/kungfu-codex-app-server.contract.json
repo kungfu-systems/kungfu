@@ -2,7 +2,7 @@
   "schema": "kungfu.codex-app-server.adapter-contract/v1",
   "id": "kungfu-codex-app-server",
   "version": 1,
-  "description": "Exact-version Codex App Server direct-stdio mapping into the provider-neutral Agent Interaction Port.",
+  "description": "Schema-qualified Codex App Server direct-stdio mapping into the provider-neutral Agent Interaction Port; runtime CLI version is diagnostic only.",
   "authority": {
     "provider": "codex",
     "structuredAttempt": "structured-events-are-control-and-lifecycle-authority",
@@ -64,7 +64,7 @@
   "mappingPolicy": {
     "source": "codex-0.146.0-generated-stable-json-schema",
     "officialSource": "https://developers.openai.com/codex/app-server",
-    "admission": "exact-allowlist",
+    "admission": "schema-exact-method-allowlist; runtime-version-diagnostic-only",
     "unknownMethod": "fail-closed-requalification-required",
     "unknownRequiredField": "schema-bundle-drift-fail-closed",
     "messageValidation": "generated-stable-schema-before-normalization",
