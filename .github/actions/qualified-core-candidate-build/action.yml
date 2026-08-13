@@ -30,6 +30,10 @@ inputs:
     description: Optional exact C++ compiler command required by this row.
     required: false
     default: ""
+  native-already-built:
+    description: Skip native build commands when a live Warrant wrapper already completed them.
+    required: false
+    default: "false"
 
 runs:
   using: composite
@@ -51,10 +55,12 @@ runs:
           export CC="${{ inputs.cc }}"
           export CXX="${{ inputs.cxx }}"
         fi
-        ./shifu install --frozen-lockfile
-        ./shifu rebuild:core
-        ./shifu test:node-watcher-runtime-boundary
-        ./shifu test:agent-session-peer-transport:native
+        if [ "${{ inputs.native-already-built }}" != "true" ]; then
+          ./shifu install --frozen-lockfile
+          ./shifu rebuild:core
+          ./shifu test:node-watcher-runtime-boundary
+          ./shifu test:agent-session-peer-transport:native
+        fi
         node framework/release/qualified-assignment-core-artifact.mjs seal \
           --repository-root . \
           --payload-root framework/core/dist/kungfu \
@@ -81,14 +87,16 @@ runs:
         if ($env:RUNNER_ARCH -ne "${{ inputs.runner-arch }}") { throw "runner architecture drift" }
         if ((node -p process.platform) -ne "${{ inputs.node-platform }}") { throw "Node platform drift" }
         if ((node -p process.arch) -ne "${{ inputs.node-arch }}") { throw "Node architecture drift" }
-        .\shifu.cmd install --frozen-lockfile
-        if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-        .\shifu.cmd rebuild:core
-        if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-        .\shifu.cmd test:node-watcher-runtime-boundary
-        if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-        .\shifu.cmd test:agent-session-peer-transport:native
-        if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+        if ("${{ inputs.native-already-built }}" -ne "true") {
+          .\shifu.cmd install --frozen-lockfile
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          .\shifu.cmd rebuild:core
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          .\shifu.cmd test:node-watcher-runtime-boundary
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          .\shifu.cmd test:agent-session-peer-transport:native
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+        }
         node framework/release/qualified-assignment-core-artifact.mjs seal `
           --repository-root . `
           --payload-root framework/core/dist/kungfu `

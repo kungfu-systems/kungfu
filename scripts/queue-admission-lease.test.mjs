@@ -13,7 +13,7 @@ import {
 } from './cancel-dequeued-merge-group-runs.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const WARRANT_RUNTIME_SHA = '5cca9d518133b30ff10aa47b8cf237d548bee25e';
+const WARRANT_RUNTIME_SHA = 'fefb02fbb874bf4bc86dc3fd4a707a9468e14718';
 const SOURCE_HEAD = '2'.repeat(40);
 const CONTRACT = JSON.parse(
   fs.readFileSync(
@@ -127,6 +127,10 @@ test('queue admission lease has distinct PR-head and merge-group authorities', (
   assert.equal(CONTRACT.admission.freshProjectCutReplay, true);
   assert.equal(CONTRACT.admission.exactQueueRevisionRequired, true);
   assert.equal(CONTRACT.admission.exactWarrantFenceRequired, true);
+  assert.equal(CONTRACT.admission.activeWarrantNonPreemptive, true);
+  assert.equal(CONTRACT.admission.transientDequeueNonTerminal, true);
+  assert.equal(CONTRACT.admission.continuousNativeHeartbeat, true);
+  assert.equal(CONTRACT.admission.fenceLossStopsWorker, true);
   assert.equal(CONTRACT.admission.sourceQualificationProofRequired, true);
   assert.equal(CONTRACT.admission.integrationDeliveryProofRequired, true);
   assert.equal(
