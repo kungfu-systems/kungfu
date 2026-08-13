@@ -129,6 +129,7 @@ def project_review_evidence(
                 {
                     "path": report_display_path,
                     "root": content_root(report_path),
+                    "content": report_path.read_text(encoding="utf-8"),
                 }
             )
         return {

@@ -217,6 +217,8 @@ def test_reviewer_prompt_requires_exact_structured_criterion_coverage():
     assert f'"priorClaimRoot": "{report_root}"' in prompt
     assert '"schema": "kungfu.agent-continuation-envelope/v1"' in prompt
     assert '"schema": "kungfu.review-intake-assessment/v1"' in prompt
+    assert "assess that admitted content directly" in prompt
+    assert "only for evidence rows that do not contain content" in prompt
     assert run_agent.validate_continuation(continuation) == continuation
 
 

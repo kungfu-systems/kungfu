@@ -103,6 +103,7 @@ def test_generic_project_review_always_retains_the_agent_response_as_evidence(
         {
             "path": ".kungfu/runtime/agent-runs/run/report.json",
             "root": assignment_evidence.content_root(report),
+            "content": '{"providerObservation":{"text":"heading count: 1"}}\n',
         }
     ]
 
