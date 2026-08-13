@@ -604,10 +604,10 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "diagnostic",
-          "definitionDigest": "sha256:2025ffe8ecc5c7d9560a4089f908ebaefc33e56b63c94c2871b81eb26bfd0294",
+          "definitionDigest": "sha256:bd715e5fd770c361f1d9a8724ec6894b3dbb0ff0817ae8cc48471951fff59094",
           "credentials": {"githubToken":"read","oidc":false,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
           "externalActions": ["actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0","actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02"],
-          "steps": [{"index":1,"label":"name:Check out exact protected Dev head","definitionDigest":"sha256:b745070a53e83fcc41ae641336ed629c7958805551ded69490d91cc96f5561ac"},{"index":2,"label":"id:target","definitionDigest":"sha256:deaf46c701a8d39f71506d2767466aa8352d3667f46dd5f01095564aab927bd5"},{"index":3,"label":"id:source","definitionDigest":"sha256:4d50ccc3c7fddc89c8bea0ebe4782052cf6cc8e026e529f0a486fbc646055190"},{"index":4,"label":"name:Retain exact advisory input","authority":"evidence-publication","definitionDigest":"sha256:aad1bac8a7e20493e6364ac4dab6559ddaa9bf0d12bcfb566155d76b157b8dbb"}]
+          "steps": [{"index":1,"label":"name:Check out exact protected Dev head","definitionDigest":"sha256:b745070a53e83fcc41ae641336ed629c7958805551ded69490d91cc96f5561ac"},{"index":2,"label":"id:target","definitionDigest":"sha256:deaf46c701a8d39f71506d2767466aa8352d3667f46dd5f01095564aab927bd5"},{"index":3,"label":"id:source","definitionDigest":"sha256:4321272d933fb9a24ea7ba438ae76da5136c982ba0874dfdf24fc2d7a200c5e7"},{"index":4,"label":"name:Retain exact advisory input","authority":"evidence-publication","definitionDigest":"sha256:aad1bac8a7e20493e6364ac4dab6559ddaa9bf0d12bcfb566155d76b157b8dbb"}]
         },
         {
           "id": "production_graph_parity",

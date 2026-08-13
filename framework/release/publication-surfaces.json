@@ -87,7 +87,7 @@
           "classification": "non-publication",
           "owner": "kungfu-release",
           "surfaceIds": [],
-          "sourceRoot": "sha256:548fc2506a86e3c6dd1dca142e31c5ad7759f5804dfdd892f761d2d1a2307e66"
+          "sourceRoot": "sha256:257dae15f1a13d4b8584ad364d369c6b535624c0b1b9cd1c1f29c4a5ac77a3cc"
         },
         {
           "path": ".github/workflows/alpha-promotion-preflight.yml",
@@ -874,5 +874,5 @@
       }
     }
   ],
-  "registryRoot": "sha256:4bd9df2d687e419f6f028e7e81bff89116a3c287cfb2a7b0b301d10467d03087"
+  "registryRoot": "sha256:13f2ffc4ea7d5bd96aa1ce7bd9d135bd89808a9ac3eaec39e576e40a92d4ea68"
 }
