@@ -46,11 +46,11 @@ The Stage 4 provider-neutral Interaction Port adds:
 - `status`, `snapshot`, `instruct`, `sendKey`, and `interrupt` over the same
   generation-, epoch-, controller-, and foreground-fenced transport;
 - deterministic `when-ready`, bounded `queue`, and interrupt-then-wait policy;
-- versioned Codex `0.144.x` and Claude Code `2.1.x` redacted TUI signatures for
+- provider-level Codex and Claude Code redacted TUI signatures for
   `ready`, `busy`, `approval-needed`, `ended`, and `unknown`;
 - one atomic bracketed-paste instruction plus one Enter, with duplicate input
   and trailing-Enter rejection; and
-- visible adapter drift and opaque-shell fallback to explicit raw human input.
+- visible unknown-layout and opaque-shell fallback to explicit raw human input.
 
 An automatic instruction is never delivered or queued from
 `approval-needed` or `unknown`. `sendKey` is manual-only. Delivery receipts do
@@ -151,12 +151,12 @@ temporary runtime/workspace paths. The command emits metadata-only JSON and
 fails closed on unknown provider screens.
 
 The Codex App Server structured-hybrid contract is a separate provider adapter
-stage under [KF-ADR-019f86da-4f90-7b50-9cb5-715a82f9e7c4](../../docs/adr/KF-ADR-019f86da-4f90-7b50-9cb5-715a82f9e7c4.md). It pins direct stdio, Codex CLI `0.146.0`, the generated
-non-experimental stable schema bundle, admitted methods, provider identity, raw
+stage under [KF-ADR-019f86da-4f90-7b50-9cb5-715a82f9e7c4](../../docs/adr/KF-ADR-019f86da-4f90-7b50-9cb5-715a82f9e7c4.md). It pins direct stdio, a schema bundle qualified from Codex CLI `0.146.0`, admitted methods, provider identity, raw
 retention, and recovery limits without changing the shared Interaction Port or
 Claude/PTTY authority. Its committed 275-file manifest defines an independently
-recomputable bundle digest; unknown versions, capabilities, methods, required
-fields, or schema bytes fail closed.
+recomputable bundle digest. Runtime CLI versions are diagnostic-only and never
+gate launch; incompatible capabilities, methods, required fields, or schema
+bytes fail closed after the actual protocol handshake.
 
 Run the credential-free contract and installed-schema drift gates through
 Shifu:
@@ -214,8 +214,8 @@ existing Agent Session journal authority behind this append/read seam. The
 Stage 4 source test uses only a deterministic in-memory journal and synthetic
 runtime; it does not read provider credentials or private session state.
 
-The product adapter routes new Codex `0.146.0` attempts through direct stdio by
-default. Set `KUNGFU_AGENT_SESSION_CODEX_APP_SERVER=0` to route a newly created
+The product adapter routes new Codex attempts through direct stdio by default,
+independent of reported version text. Set `KUNGFU_AGENT_SESSION_CODEX_APP_SERVER=0` to route a newly created
 Codex attempt through the retained PTY fallback; the flag never hot-switches an
 existing attempt. Claude retains its PTY plan, authority, and receipt shape.
 GUI, CLI, and KFD-3 use the same product `invoke` seam for structured

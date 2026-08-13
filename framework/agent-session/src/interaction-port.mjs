@@ -328,44 +328,36 @@ export class AgentSessionInteractionPort {
           pollMilliseconds,
       ),
     );
-    for (
-      let attempt = 0;
-      attempt < this.adapter.instructionPasteAcknowledgementAttempts;
-      attempt += 1
-    ) {
-      const suffix = attempt === 0 ? '' : `:retry-${String(attempt)}`;
-      this.transport.submitInput({
-        ...request,
-        actionId: `${request.actionId}${suffix}`,
-        inputId: `${request.inputId}${suffix}`,
-        data,
-      });
-      for (let poll = 0; poll < pollsPerAttempt; poll += 1) {
-        await this.pause(pollMilliseconds);
-        const terminal = this.host.snapshot(
-          this.transport.status().output.earliestSequence,
-        );
-        if (
-          this.adapter.acknowledgesInstructionPaste({
-            lines: terminal.vt.lines,
-            text: request.text,
-          })
-        ) {
-          await this.pause(this.adapter.instructionSubmitDelayMilliseconds);
-          return finish(
-            this.transport.submitInput({
-              ...request,
-              actionId: `${request.actionId}:submit`,
-              inputId: `${request.inputId}:submit`,
-              data: this.adapter.instructionSubmitData,
-            }),
-          );
-        }
+    const pasteReceipt = this.transport.submitInput({ ...request, data });
+    for (let poll = 0; poll < pollsPerAttempt; poll += 1) {
+      await this.pause(pollMilliseconds);
+      const terminal = this.host.snapshot(
+        this.transport.status().output.earliestSequence,
+      );
+      if (
+        this.adapter.acknowledgesInstructionPaste({
+          lines: terminal.vt.lines,
+          text: request.text,
+        })
+      ) {
+        break;
       }
     }
-    throw new InteractionPortError(
-      'instruction_paste_not_acknowledged',
-      'provider did not visibly acknowledge the bounded instruction paste',
+    const status = this.transport.status();
+    if (
+      status.lifecycleState === 'ended' ||
+      status.inputAdmission === 'closed'
+    ) {
+      return finish(pasteReceipt);
+    }
+    await this.pause(this.adapter.instructionSubmitDelayMilliseconds);
+    return finish(
+      this.transport.submitInput({
+        ...request,
+        actionId: `${request.actionId}:submit`,
+        inputId: `${request.inputId}:submit`,
+        data: this.adapter.instructionSubmitData,
+      }),
     );
   }
 
@@ -380,8 +372,7 @@ export class AgentSessionInteractionPort {
       queued: false,
       queueDepth: this.queue.length,
       deliveryReceipt: null,
-      requiresHuman:
-        /approval-needed|unknown|version-drift|provider-mismatch/u.test(reason),
+      requiresHuman: /approval-needed|unknown|provider-mismatch/u.test(reason),
       ...nullOutcome(),
     };
   }

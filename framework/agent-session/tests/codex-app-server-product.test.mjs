@@ -141,27 +141,34 @@ async function waitFor(predicate, label, timeoutMs = 2000) {
   assert.fail(label);
 }
 
-test('production route freezes the exact Codex app-server stdio launch', () => {
+test('production route freezes Codex app-server stdio without version admission', () => {
   const structured = new CodexAppServerProductRuntime();
   const route = structured.planRoute(input());
   assert.deepEqual(route.argv, ['app-server', '--stdio']);
+  assert.deepEqual(
+    structured.planRoute(
+      input({ providerVersion: 'future-channel-without-semver' }),
+    ),
+    route,
+  );
   assert.equal(
-    structured.planRoute(input({ providerVersion: '0.147.0' })),
-    null,
+    structured.capabilities().routes[0].versionAdmission,
+    'diagnostic-only',
   );
   assert.equal(route.defaultPolicy, 'structured');
   assert.equal(route.rollback, `${CODEX_APP_SERVER_FEATURE_FLAG}=0`);
 });
 
-test('a PTY-qualified Codex version does not inherit structured authority', () => {
+test('arbitrary Codex version metadata uses structured capability negotiation', () => {
   const product = surface();
   const plan = product.invoke({
     operation: 'plan-start',
-    input: input({ providerVersion: '0.147.0' }),
+    input: input({ providerVersion: 'opaque-nightly' }),
   });
-  assert.equal(Object.hasOwn(plan, 'transportRoute'), false);
+  assert.equal(plan.transportRoute.kind, 'structured');
   assert.deepEqual(plan.effects, [
-    'spawn-provider-in-capsule',
+    'spawn-codex-app-server-direct-stdio',
+    'start-one-provider-thread',
     'register-session',
     'attach-presentation',
   ]);

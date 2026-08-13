@@ -30,7 +30,7 @@ for (const [provider, version, filename] of [
   ['claude', '2.1.209', 'claude-v2.1.209.json'],
   ['claude', '2.1.220', 'claude-v2.1.220.json'],
 ]) {
-  test(`${provider} adapter classifies only versioned redacted fixtures`, () => {
+  test(`${provider} adapter classifies historical redacted fixtures without version admission`, () => {
     const adapter = createProviderAdapter({ provider, version });
     assert.equal(adapter.compatible, true);
     assert.equal(adapter.tested, true);
@@ -55,14 +55,14 @@ for (const [provider, version, filename] of [
   });
 }
 
-test('Codex 0.145 classifies the redacted Linux onboarding prompt', () => {
+test('Codex classifies a recognized Linux onboarding prompt regardless of version metadata', () => {
   const adapter = createProviderAdapter({
     provider: 'codex',
-    version: '0.145.0',
+    version: 'future-channel-without-semver',
   });
   const result = adapter.inspect({
     lines: [
-      '│ >_ OpenAI Codex (v0.145.0) │',
+      '│ >_ OpenAI Codex (future channel) │',
       '› Improve documentation in @filename',
       'gpt-5.5 high · /workspace',
     ],
@@ -74,8 +74,8 @@ test('Codex 0.145 classifies the redacted Linux onboarding prompt', () => {
   assert.deepEqual(result.signatureIds, ['codex.ready.prompt']);
 });
 
-test('synthetic adapter accepts the current mock provider and its v1 compatibility floor', () => {
-  for (const version of ['1.0.0', '1.1.0']) {
+test('synthetic adapter treats version metadata as diagnostic only', () => {
+  for (const version of ['1.0.0', '999.0.0-next', 'opaque-nightly']) {
     const adapter = createProviderAdapter({ provider: 'synthetic', version });
     assert.equal(adapter.compatible, true, version);
     assert.equal(adapter.tested, true, version);
@@ -92,21 +92,31 @@ test('synthetic adapter accepts the current mock provider and its v1 compatibili
   }
 });
 
-test('version drift and foreground mismatch fail visibly to raw human fallback', () => {
-  const drifted = createProviderAdapter({
+test('future versions use live signatures while foreground mismatch fails visibly', () => {
+  const future = createProviderAdapter({
     provider: 'codex',
-    version: '0.143.0',
+    version: '999.42.7-edge',
   });
-  const result = drifted.inspect({
+  const result = future.inspect({
     lines: ['› prompt'],
     lifecycleState: 'ready',
     inputAdmission: 'open',
     foreground: { provider: 'codex' },
   });
-  assert.equal(result.state, 'unknown');
-  assert.equal(result.compatible, false);
-  assert.equal(result.reason, 'adapter-version-drift');
+  assert.equal(result.state, 'ready');
+  assert.equal(result.compatible, true);
+  assert.equal(result.reason, null);
   assert.equal(result.rawHumanFallback, true);
+
+  const unknown = future.inspect({
+    lines: ['A future layout without a recognized prompt'],
+    lifecycleState: 'ready',
+    inputAdmission: 'open',
+    foreground: { provider: 'codex' },
+  });
+  assert.equal(unknown.state, 'unknown');
+  assert.equal(unknown.compatible, true);
+  assert.equal(unknown.reason, 'no-supported-state-signature');
 
   const adapter = createProviderAdapter({
     provider: 'codex',
@@ -194,15 +204,11 @@ test('Claude current VT grid supersedes erased volatile states', () => {
 test('instruction encoding uses each provider bounded paste submit sequence', () => {
   const codex = createProviderAdapter({
     provider: 'codex',
-    version: '0.144.3',
-  });
-  const codex147 = createProviderAdapter({
-    provider: 'codex',
-    version: '0.147.0-alpha.1.2',
+    version: 'arbitrary-provider-build',
   });
   assert.equal(
     codex.encodeInstruction('inspect the source'),
-    '\u001b[200~inspect the source\u001b[201~\r',
+    '\u001b[200~inspect the source\u001b[201~',
   );
   const claude = createProviderAdapter({
     provider: 'claude',
@@ -215,25 +221,18 @@ test('instruction encoding uses each provider bounded paste submit sequence', ()
   assert.equal(claude.instructionSubmitStrategy, 'separate-enter');
   assert.equal(claude.instructionSubmitData, '\r');
   assert.equal(claude.instructionSubmitDelayMilliseconds, 50);
-  assert.equal(codex.instructionSubmitStrategy, 'inline-enter');
-  assert.equal(codex.instructionSubmitData, null);
-  assert.equal(codex.instructionSubmitDelayMilliseconds, 0);
+  assert.equal(codex.instructionSubmitStrategy, 'separate-enter');
+  assert.equal(codex.instructionSubmitData, '\r');
+  assert.equal(codex.instructionSubmitDelayMilliseconds, 50);
   assert.equal(
-    codex147.encodeInstruction('inspect the source'),
-    '\u001b[200~inspect the source\u001b[201~',
-  );
-  assert.equal(codex147.instructionSubmitStrategy, 'separate-enter');
-  assert.equal(codex147.instructionSubmitData, '\r');
-  assert.equal(codex147.instructionSubmitDelayMilliseconds, 50);
-  assert.equal(
-    codex147.acknowledgesInstructionPaste({
+    codex.acknowledgesInstructionPaste({
       lines: ['› inspect the source'],
       text: 'inspect the source\n\nwith more context',
     }),
     true,
   );
   assert.equal(
-    codex147.acknowledgesInstructionPaste({
+    codex.acknowledgesInstructionPaste({
       lines: ['› Ask about this workspace'],
       text: 'inspect the source\n\nwith more context',
     }),
@@ -274,9 +273,45 @@ test('version probe returns metadata only and never claims private-state inspect
   );
   assert.equal(probe.compatible, true);
   assert.equal(probe.tested, true);
+  assert.equal(probe.warning, null);
+  assert.equal(probe.versionAdmission, 'diagnostic-only');
   assert.equal(probe.inspectedPrivateState, false);
+  assert.equal(
+    parseProviderVersion('codex', 'codex-nightly from source\n'),
+    'codex-nightly from source',
+  );
+  assert.equal(parseProviderVersion('codex', ''), 'unknown');
+  const failedProbe = probeProviderVersion({
+    provider: 'claude',
+    executable: '/test/claude',
+    run: () => ({ status: 17, stdout: '', stderr: '' }),
+  });
+  assert.equal(failedProbe.version, 'unknown');
+  assert.equal(failedProbe.compatible, true);
+  assert.match(failedProbe.warning, /exited with 17/u);
+  const thrownProbe = probeProviderVersion({
+    provider: 'codex',
+    executable: '/test/codex',
+    run: () => {
+      throw new Error('diagnostic unavailable');
+    },
+  });
+  assert.equal(thrownProbe.version, 'unknown');
+  assert.equal(thrownProbe.compatible, true);
+  assert.match(thrownProbe.warning, /diagnostic unavailable/u);
+  const unspecified = createProviderAdapter({ provider: 'codex' });
+  assert.equal(unspecified.providerVersion, 'unknown');
+  assert.equal(unspecified.compatible, true);
   assert.deepEqual(
     providerAdapterMatrix().map((entry) => entry.provider),
     ['codex', 'claude', 'synthetic'],
+  );
+  assert.ok(
+    providerAdapterMatrix().every(
+      (entry) =>
+        entry.versionPolicy ===
+          'diagnostic-only; live signatures fail closed' &&
+        entry.interactionQualification === 'version-neutral-signature-gated',
+    ),
   );
 });

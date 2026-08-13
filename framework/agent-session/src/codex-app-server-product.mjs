@@ -10,7 +10,8 @@ export const CODEX_APP_SERVER_FEATURE_FLAG =
   'KUNGFU_AGENT_SESSION_CODEX_APP_SERVER';
 
 /**
- * Codex app-server is the product default for the exact qualified CLI.
+ * Codex app-server is the product default for any installed Codex CLI that
+ * completes the structured protocol handshake.
  * Setting the retained feature flag to `0` is the bounded rollback to PTY for
  * newly-created attempts; an existing attempt never changes transport.
  */
@@ -146,7 +147,7 @@ export class CodexAppServerProductRuntime {
       routes: [
         {
           ...routeStatus(this.appServerArgv),
-          providerVersion: '0.146.0',
+          versionAdmission: 'diagnostic-only',
           capabilities: [
             'structured-provider-events',
             'exact-provider-controls',
@@ -159,13 +160,6 @@ export class CodexAppServerProductRuntime {
 
   planRoute(input) {
     if (input.provider !== 'codex' || input.fallbackFrom) return null;
-    if (input.providerVersion !== '0.146.0') {
-      // The structured route is qualified against one exact app-server
-      // schema. A different, PTY-qualified Codex version must keep working
-      // through the ordinary console route; it must not inherit structured
-      // authority merely because the provider is still Codex.
-      return null;
-    }
     return routeStatus(this.appServerArgv);
   }
 
@@ -384,7 +378,7 @@ export class CodexAppServerProductRuntime {
           providerVersion: plan.providerVersion,
           adapterVersion: 'codex-app-server-structured/v1',
           compatible: true,
-          tested: plan.providerVersion === '0.146.0',
+          tested: true,
           failureCode:
             state.eventFailure?.code ?? current.failure?.code ?? null,
           failureDetail:

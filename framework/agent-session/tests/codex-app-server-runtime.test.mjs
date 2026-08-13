@@ -344,26 +344,19 @@ test('unexpected provider exit is visible and never claims a terminal outcome', 
   assert.notEqual(status.inputAdmission, 'open');
 });
 
-test('version drift fails before spawn', async () => {
-  let spawned = false;
-  const host = createHost({
-    spawn: () => {
-      spawned = true;
-      throw new Error('must not spawn');
+test('runtime version metadata never blocks a valid structured handshake', async (t) => {
+  const host = createHost();
+  t.after(() => stop(host));
+  const status = await host.start({
+    sessionAttemptId: 'attempt-version-neutral',
+    runtimeGeneration: '1',
+    executable: process.execPath,
+    argv: [provider, 'stderr-redaction'],
+    cliVersion: 'future-channel-without-semver',
+    initializeParams: {
+      clientInfo: { name: 'kungfu-test', version: '4.0.0-alpha.1' },
     },
   });
-  await assert.rejects(
-    host.start({
-      sessionAttemptId: 'attempt-1',
-      runtimeGeneration: '1',
-      executable: process.execPath,
-      argv: [provider],
-      cliVersion: '0.145.0',
-      initializeParams: {
-        clientInfo: { name: 'kungfu-test', version: '4.0.0-alpha.1' },
-      },
-    }),
-    (error) => error.code === 'cli-version-drift',
-  );
-  assert.equal(spawned, false);
+  assert.equal(status.provider.cliVersion, 'future-channel-without-semver');
+  assert.equal(status.lifecycleState, 'ready');
 });

@@ -1538,7 +1538,7 @@ def test_initial_session_wait_ignores_only_the_transient_missing_signature():
                 "interactionState": "unknown",
                 "providerAdapter": {
                     "compatible": False,
-                    "reason": "adapter-version-drift",
+                    "reason": "foreground-provider-mismatch",
                 },
             }
         )
