@@ -10,8 +10,18 @@ import { pathToFileURL } from 'node:url';
 import { digest } from '../../scripts/affected-native-proof.mjs';
 
 const SHA = /^[0-9a-f]{40}$/u;
-const TRANSIENT_GET_ATTEMPTS = 3;
-const TRANSIENT_GET_DELAY_MS = 1_000;
+const TRANSIENT_GITHUB_STATUSES = new Set([429, 500, 502, 503, 504]);
+
+function defaultSleep(milliseconds) {
+  return new Promise((resolve) => setTimeout(resolve, milliseconds));
+}
+
+function isTransientGitHubFailure(error) {
+  return (
+    error instanceof TypeError ||
+    TRANSIENT_GITHUB_STATUSES.has(Number(error?.status || 0))
+  );
+}
 
 function flag(args, name, fallback = '') {
   const index = args.indexOf(`--${name}`);
@@ -40,7 +50,9 @@ export class GitHubNativeStatusClient {
     token,
     apiUrl = 'https://api.github.com',
     fetchImpl = globalThis.fetch,
-    sleep = (delayMs) => new Promise((resolve) => setTimeout(resolve, delayMs)),
+    retryAttempts = 3,
+    retryDelayMs = 1000,
+    sleepImpl = defaultSleep,
   }) {
     if (!repository) throw new Error('repository is required');
     if (!token) throw new Error('GITHUB_TOKEN is required');
@@ -48,11 +60,15 @@ export class GitHubNativeStatusClient {
     this.token = token;
     this.apiUrl = apiUrl.replace(/\/+$/u, '');
     this.fetch = fetchImpl;
-    this.sleep = sleep;
+    this.retryAttempts = positiveInteger(retryAttempts, 'retry attempts');
+    this.retryDelayMs = Number(retryDelayMs);
+    this.sleep = sleepImpl;
+    if (!Number.isFinite(this.retryDelayMs) || this.retryDelayMs < 0)
+      throw new Error('retry delay must be a non-negative number');
   }
 
   async request(requestPath, { method = 'GET', body } = {}) {
-    const attempts = method === 'GET' ? TRANSIENT_GET_ATTEMPTS : 1;
+    const attempts = method === 'GET' ? this.retryAttempts : 1;
     for (let attempt = 1; attempt <= attempts; attempt += 1) {
       try {
         const response = await this.fetch(`${this.apiUrl}${requestPath}`, {
@@ -67,15 +83,21 @@ export class GitHubNativeStatusClient {
         });
         const raw = await response.text();
         const data = raw ? JSON.parse(raw) : null;
-        if (!response.ok)
-          throw new Error(data?.message || `${method} ${requestPath} failed`);
+        if (!response.ok) {
+          const error = new Error(
+            data?.message || `${method} ${requestPath} failed`,
+          );
+          error.status = response.status;
+          throw error;
+        }
         return data;
       } catch (error) {
-        if (attempt === attempts) throw error;
-        await this.sleep(TRANSIENT_GET_DELAY_MS * attempt);
+        if (attempt === attempts || !isTransientGitHubFailure(error))
+          throw error;
+        await this.sleep(this.retryDelayMs * attempt);
       }
     }
-    throw new Error(`${method} ${requestPath} exhausted retries`);
+    throw new Error(`${method} ${requestPath} exhausted retry attempts`);
   }
 
   async requirePullRequest(number, expectedHead, targetBranch) {

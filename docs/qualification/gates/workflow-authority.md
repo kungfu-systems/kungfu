@@ -40,7 +40,7 @@ without changing and refreshing the manifest fails the Gate catalog check.
 | Workflow | Job | Authority | Publication | Receipt | Credentials | Environment | Steps |
 | --- | --- | --- | --- | --- | --- | --- | ---: |
 | `.github/workflows/adr-release-gate.yml` | `adr-release` | qualification | none | diagnostic | token:read | none | 2 |
-| `.github/workflows/affected-native-cache-promote.yml` | `promote` | qualification | none | diagnostic | token:write | none | 24 |
+| `.github/workflows/affected-native-cache-promote.yml` | `promote` | qualification | none | diagnostic | token:write | none | 25 |
 | `.github/workflows/affected-native-cache-promote.yml` | `qualify_windows_x86_64_consumer` | qualification | none | diagnostic | token:read | none | 5 |
 | `.github/workflows/affected-native-pr.yml` | `affected_native` | qualification | none | diagnostic | token:write | none | 20 |
 | `.github/workflows/affected-native-pr.yml` | `affected_native_shards` | qualification | none | diagnostic | token:read | none | 23 |
@@ -49,9 +49,7 @@ without changing and refreshing the manifest fails the Gate catalog check.
 | `.github/workflows/affected-native-pr.yml` | `candidate_preflight` | qualification | none | diagnostic | token:read | none | 7 |
 | `.github/workflows/affected-native-pr.yml` | `dco` | qualification | none | diagnostic | token:read | none | 2 |
 | `.github/workflows/affected-native-pr.yml` | `kfd_verifier` | qualification | none | diagnostic | token:read | none | 4 |
-| `.github/workflows/affected-native-pr.yml` | `production_graph_parity` | qualification | none | diagnostic | token:read | none | 6 |
 | `.github/workflows/affected-native-pr.yml` | `proof_probe` | qualification | none | diagnostic | token:read | none | 10 |
-| `.github/workflows/affected-native-pr.yml` | `qualified_core_candidate` | qualification | none | diagnostic | token:read | none | 5 |
 | `.github/workflows/affected-native-pr.yml` | `shifu_workspace` | qualification | none | diagnostic | token:read | none | 3 |
 | `.github/workflows/affected-native-pr.yml` | `source_acceptance` | qualification | none | diagnostic | token:read | none | 0 |
 | `.github/workflows/affected-native-pr.yml` | `warrant_admission` | qualification | none | diagnostic | token:read | none | 5 |
@@ -89,6 +87,9 @@ without changing and refreshing the manifest fails the Gate catalog check.
 | `.github/workflows/dev-delivery-warrant-terminal.yml` | `prepare` | qualification | none | diagnostic | token:write | none | 2 |
 | `.github/workflows/dev-gate-latency-patrol.yml` | `capture` | diagnostic | evidence | diagnostic | token:read | none | 5 |
 | `.github/workflows/dev-gate-latency-patrol.yml` | `collect` | diagnostic | evidence | diagnostic | token:read | none | 6 |
+| `.github/workflows/dev-post-merge-advisory.yml` | `prepare` | qualification | none | diagnostic | token:read | none | 4 |
+| `.github/workflows/dev-post-merge-advisory.yml` | `production_graph_parity` | qualification | none | diagnostic | token:read | none | 6 |
+| `.github/workflows/dev-post-merge-advisory.yml` | `qualified_core_candidate` | qualification | none | diagnostic | token:read | none | 5 |
 | `.github/workflows/dev-pr-auto-merge.yml` | `admission` | qualification | none | diagnostic | token:write, repo-secret:KUNGFU_GITHUB_TOKEN | none | 0 |
 | `.github/workflows/dev-pr-auto-merge.yml` | `delivery-contract` | qualification | none | diagnostic | token:read | none | 9 |
 | `.github/workflows/dev-pr-auto-merge.yml` | `resolve-target` | qualification | none | diagnostic | token:read | none | 1 |
