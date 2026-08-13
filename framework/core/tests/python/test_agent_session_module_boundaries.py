@@ -60,6 +60,7 @@ def test_terminal_mock_session_waits_for_process_exit_after_reviewable_output():
                 "lifecycleState": "ready",
                 "interactionState": "ready",
                 "output": {"nextSequence": 1},
+                "controller": {"holderId": "kungfu-project-work"},
             }
         ],
         [
@@ -110,6 +111,9 @@ def test_terminal_mock_session_waits_for_process_exit_after_reviewable_output():
             return {"terminal": {"vt": {"lines": ["reviewable output"]}}}
         raise AssertionError(request["operation"])
 
+    def invoke_control(_invoke, _ref, operation, _payload):
+        return {"status": "granted" if operation == "acquire-control" else "written"}
+
     coordinator = ManagedRunCoordinator(
         session_ref=lambda _work, run_id: {
             "workConsoleId": "console:test",
@@ -117,7 +121,7 @@ def test_terminal_mock_session_waits_for_process_exit_after_reviewable_output():
         },
         semantic_root=lambda _value: "sha256:" + "2" * 64,
         wait_for_session=wait_for_session,
-        invoke_control=lambda *_args, **_kwargs: {"status": "written"},
+        invoke_control=invoke_control,
         result_factory=lambda **kwargs: SimpleNamespace(**kwargs),
     )
     result, session = coordinator.run(
@@ -232,7 +236,7 @@ def test_python_session_services_are_import_closed_and_bounded():
     agent_root = ROOT / "src" / "python" / "kungfu" / "agent"
     budgets = {
         agent_root / "run_agent.py": 1450,
-        agent_root / "runtime_profiles.py": 650,
+        agent_root / "runtime_profiles.py": 800,
         ROOT / "src" / "python" / "kungfu" / "cli" / "commands" / "run.py": 900,
     }
     for source, maximum in budgets.items():

@@ -16,7 +16,7 @@
       "id": "KFD-1",
       "label": "KFD-1",
       "title": "Facts must not drift",
-      "revision": 6,
+      "revision": 7,
       "status": "active"
     },
     "schemas": {
@@ -40,7 +40,16 @@
         "agentRuntimeAdapterRequest": "https://kfd.libkungfu.dev/schemas/kfd-agent-runtime/adapter-request.schema.json",
         "agentRuntimeAdapterResponse": "https://kfd.libkungfu.dev/schemas/kfd-agent-runtime/adapter-response.schema.json",
         "agentRuntimeSuite": "https://kfd.libkungfu.dev/schemas/kfd-agent-runtime/suite.schema.json",
-        "agentRuntimeReport": "https://kfd.libkungfu.dev/schemas/kfd-agent-runtime/report.schema.json"
+        "agentRuntimeReport": "https://kfd.libkungfu.dev/schemas/kfd-agent-runtime/report.schema.json",
+        "selfConformanceState": "https://kfd.libkungfu.dev/schemas/kfd-self-conformance/state.schema.json",
+        "selfConformanceBootstrapAnchor": "https://kfd.libkungfu.dev/schemas/kfd-self-conformance/bootstrap-anchor.schema.json",
+        "selfConformanceTransitionBundle": "https://kfd.libkungfu.dev/schemas/kfd-self-conformance/transition-bundle.schema.json",
+        "selfConformanceTransitionReport": "https://kfd.libkungfu.dev/schemas/kfd-self-conformance/transition-report.schema.json",
+        "selfConformancePackageManifest": "https://kfd.libkungfu.dev/schemas/kfd-self-conformance/package-manifest.schema.json",
+        "selfConformanceVectorRegistry": "https://kfd.libkungfu.dev/schemas/kfd-self-conformance/vector-registry.schema.json",
+        "selfConformanceLifecycleGateRequest": "https://kfd.libkungfu.dev/schemas/kfd-self-conformance/lifecycle-gate-request.schema.json",
+        "selfConformanceLifecycleGateReport": "https://kfd.libkungfu.dev/schemas/kfd-self-conformance/lifecycle-gate-report.schema.json",
+        "adopterConformanceManifest": "https://kfd.libkungfu.dev/schemas/kfd-adopter-conformance/manifest.schema.json"
       },
       "paths": {
         "metadata": "schemas/kfd-standards.schema.json",
@@ -62,7 +71,16 @@
         "agentRuntimeAdapterRequest": "schemas/kfd-agent-runtime/adapter-request.schema.json",
         "agentRuntimeAdapterResponse": "schemas/kfd-agent-runtime/adapter-response.schema.json",
         "agentRuntimeSuite": "schemas/kfd-agent-runtime/suite.schema.json",
-        "agentRuntimeReport": "schemas/kfd-agent-runtime/report.schema.json"
+        "agentRuntimeReport": "schemas/kfd-agent-runtime/report.schema.json",
+        "selfConformanceState": "schemas/kfd-self-conformance/state.schema.json",
+        "selfConformanceBootstrapAnchor": "schemas/kfd-self-conformance/bootstrap-anchor.schema.json",
+        "selfConformanceTransitionBundle": "schemas/kfd-self-conformance/transition-bundle.schema.json",
+        "selfConformanceTransitionReport": "schemas/kfd-self-conformance/transition-report.schema.json",
+        "selfConformancePackageManifest": "schemas/kfd-self-conformance/package-manifest.schema.json",
+        "selfConformanceVectorRegistry": "schemas/kfd-self-conformance/vector-registry.schema.json",
+        "selfConformanceLifecycleGateRequest": "schemas/kfd-self-conformance/lifecycle-gate-request.schema.json",
+        "selfConformanceLifecycleGateReport": "schemas/kfd-self-conformance/lifecycle-gate-report.schema.json",
+        "adopterConformanceManifest": "schemas/kfd-adopter-conformance/manifest.schema.json"
       },
       "metadata": {
         "id": "https://kfd.libkungfu.dev/schemas/kfd-standards.schema.json",
@@ -72,7 +90,7 @@
     },
     "package": {
       "name": "@kungfu-tech/kfd",
-      "version": "1.0.0-alpha.53",
+      "version": "1.0.0-alpha.60",
       "repository": "git+https://github.com/kungfu-systems/kfd.git"
     }
   },
@@ -88,7 +106,7 @@
       "standard": "KFD-1",
       "standardKey": "kfd-1",
       "result": "passed",
-      "preBuildWitnessSha256": "cdfc42c782bcfafa248d5948b4129c5faf1ea1d4addad1f9ce87d2b6a965c7b7",
+      "preBuildWitnessSha256": "0e5c06e5b711bdddd9f6af30688a2013507244cb42215a31073793962cb68f5c",
       "sourceHashes": {
         "sha256": "f8b1fbc34fffab3da3eb01c792d6e44d08cededf4ca7658421e3105be91974ee",
         "surfaceCount": 23
@@ -329,7 +347,7 @@
         "metadata": {
           "kfdPackage": {
             "name": "@kungfu-tech/kfd",
-            "version": "1.0.0-alpha.53",
+            "version": "1.0.0-alpha.60",
             "repository": "git+https://github.com/kungfu-systems/kfd.git"
           },
           "schemaIds": {
@@ -352,7 +370,16 @@
             "agentRuntimeAdapterRequest": "https://kfd.libkungfu.dev/schemas/kfd-agent-runtime/adapter-request.schema.json",
             "agentRuntimeAdapterResponse": "https://kfd.libkungfu.dev/schemas/kfd-agent-runtime/adapter-response.schema.json",
             "agentRuntimeSuite": "https://kfd.libkungfu.dev/schemas/kfd-agent-runtime/suite.schema.json",
-            "agentRuntimeReport": "https://kfd.libkungfu.dev/schemas/kfd-agent-runtime/report.schema.json"
+            "agentRuntimeReport": "https://kfd.libkungfu.dev/schemas/kfd-agent-runtime/report.schema.json",
+            "selfConformanceState": "https://kfd.libkungfu.dev/schemas/kfd-self-conformance/state.schema.json",
+            "selfConformanceBootstrapAnchor": "https://kfd.libkungfu.dev/schemas/kfd-self-conformance/bootstrap-anchor.schema.json",
+            "selfConformanceTransitionBundle": "https://kfd.libkungfu.dev/schemas/kfd-self-conformance/transition-bundle.schema.json",
+            "selfConformanceTransitionReport": "https://kfd.libkungfu.dev/schemas/kfd-self-conformance/transition-report.schema.json",
+            "selfConformancePackageManifest": "https://kfd.libkungfu.dev/schemas/kfd-self-conformance/package-manifest.schema.json",
+            "selfConformanceVectorRegistry": "https://kfd.libkungfu.dev/schemas/kfd-self-conformance/vector-registry.schema.json",
+            "selfConformanceLifecycleGateRequest": "https://kfd.libkungfu.dev/schemas/kfd-self-conformance/lifecycle-gate-request.schema.json",
+            "selfConformanceLifecycleGateReport": "https://kfd.libkungfu.dev/schemas/kfd-self-conformance/lifecycle-gate-report.schema.json",
+            "adopterConformanceManifest": "https://kfd.libkungfu.dev/schemas/kfd-adopter-conformance/manifest.schema.json"
           },
           "schemaPaths": {
             "metadata": "schemas/kfd-standards.schema.json",
@@ -374,7 +401,16 @@
             "agentRuntimeAdapterRequest": "schemas/kfd-agent-runtime/adapter-request.schema.json",
             "agentRuntimeAdapterResponse": "schemas/kfd-agent-runtime/adapter-response.schema.json",
             "agentRuntimeSuite": "schemas/kfd-agent-runtime/suite.schema.json",
-            "agentRuntimeReport": "schemas/kfd-agent-runtime/report.schema.json"
+            "agentRuntimeReport": "schemas/kfd-agent-runtime/report.schema.json",
+            "selfConformanceState": "schemas/kfd-self-conformance/state.schema.json",
+            "selfConformanceBootstrapAnchor": "schemas/kfd-self-conformance/bootstrap-anchor.schema.json",
+            "selfConformanceTransitionBundle": "schemas/kfd-self-conformance/transition-bundle.schema.json",
+            "selfConformanceTransitionReport": "schemas/kfd-self-conformance/transition-report.schema.json",
+            "selfConformancePackageManifest": "schemas/kfd-self-conformance/package-manifest.schema.json",
+            "selfConformanceVectorRegistry": "schemas/kfd-self-conformance/vector-registry.schema.json",
+            "selfConformanceLifecycleGateRequest": "schemas/kfd-self-conformance/lifecycle-gate-request.schema.json",
+            "selfConformanceLifecycleGateReport": "schemas/kfd-self-conformance/lifecycle-gate-report.schema.json",
+            "adopterConformanceManifest": "schemas/kfd-adopter-conformance/manifest.schema.json"
           }
         }
       },

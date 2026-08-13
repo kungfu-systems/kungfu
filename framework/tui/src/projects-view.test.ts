@@ -28,6 +28,35 @@ test('Projects exposes only New, Open, and safe removal on the first layer', () 
   );
 });
 
+test('Project modals own terminal input over the global control plane', () => {
+  const projectsSource = readFileSync(
+    new URL('./projects-view/index.tsx', import.meta.url),
+    'utf8',
+  );
+  const mainSource = readFileSync(
+    new URL('./main.tsx', import.meta.url),
+    'utf8',
+  );
+
+  assert.match(
+    projectsSource,
+    /onInputModeChange: \(active: boolean\) => void/,
+  );
+  assert.match(
+    projectsSource,
+    /const inputModeActive =[\s\S]*?importPath !== undefined[\s\S]*?Boolean\(importPlan\)[\s\S]*?Boolean\(removePlan\)[\s\S]*?Boolean\(createPlan\)/,
+  );
+  assert.match(
+    projectsSource,
+    /onInputModeChange\(inputModeActive\)[\s\S]*?onInputModeChange\(false\)/,
+  );
+  assert.match(
+    mainSource,
+    /<ProjectsHost[\s\S]*?onInputModeChange=\{setWorkspaceInputActive\}/,
+  );
+  assert.match(mainSource, /workspaceInputActive[\s\S]*?'PROJECT INPUT'/);
+});
+
 test('ordinary Project selection enters an explicit Project surface', () => {
   const source = readFileSync(new URL('./main.tsx', import.meta.url), 'utf8');
   const openProject = source.slice(
@@ -179,6 +208,18 @@ test('opened Project Work offers an exact-plan Agent path and recoverable sessio
   );
   assert.match(projectWork, /retainedAgentFinished/);
   assert.match(projectWork, /continueRetainedWork/);
+  assert.match(
+    projectWork,
+    /continueRetainedWork[\s\S]*?projects[\s\S]*?\.refreshRun\(visibleRun\.id\)[\s\S]*?current\.session\?\.live[\s\S]*?projects\.endRun\(current\.id\)/,
+  );
+  assert.match(
+    projectWork,
+    /if \(value === '\\r' && retainedAgentReviewable\)[\s\S]*?continueRetainedWork\(\);[\s\S]*?if \(session\?\.controllable === false\) return/,
+  );
+  assert.match(
+    projectWork,
+    /attention\.kind === 'ready-for-review'[\s\S]*?'\[v\/Enter\] review changes'[\s\S]*?session\?\.controllable === false/,
+  );
   assert.doesNotMatch(
     projectWork,
     /'[^']*(?:Initiative|Assignment|Portfolio)[^']*'/,
@@ -192,6 +233,10 @@ test('opened Project Work offers an exact-plan Agent path and recoverable sessio
   );
   assert.match(source, /await projects\.works\(/);
   assert.match(source, /await lab\.resumeProjectWork\(/);
+  assert.match(
+    source,
+    /onContinueRetainedWork=\{async \(receipt\) => \{[\s\S]*?const resumed = await lab\.resumeProjectWork\([\s\S]*?setStarterWorkReceipt\(resumed\.workReceipt \?\? receipt\)/,
+  );
   assert.doesNotMatch(source, /await lab\.resumeStarterProject\(\)/);
 });
 

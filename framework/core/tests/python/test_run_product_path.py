@@ -1,5 +1,6 @@
 # SPDX-License-Identifier: Apache-2.0
 
+import json
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -12,7 +13,7 @@ from kungfu.agent import first_value as onboarding
 from kungfu.agent import managed_run
 from kungfu.agent import native_launch
 from kungfu.agent import run_agent
-from kungfu.cli.commands import assignment, kfc, run
+from kungfu.cli.commands import assignment, assignment_review, kfc, run
 from kungfu.workspace import (
     inspect_workspace,
     resolve_workspace_target,
@@ -75,6 +76,30 @@ def test_agent_activity_history_projection_keeps_process_success_outside_work():
     assert projection["processExitSettlesWork"] is False
     assert projection["selfReportSettlesWork"] is False
     assert projection["nextAction"] == "independent-assessment-required"
+
+
+def test_assignment_session_invoker_bounds_provider_writes_beyond_read_probes():
+    calls = []
+
+    class Surface:
+        @staticmethod
+        def ensure(runtime_dir):
+            assert runtime_dir == "/tmp/runtime"
+            return "/tmp/agent-session.sock"
+
+        @staticmethod
+        def invoke(request, *, endpoint, timeout):
+            calls.append((request["operation"], endpoint, timeout))
+            return {"operation": request["operation"]}
+
+    invoke = assignment_lifecycle.session_invoker(Surface, "/tmp/runtime")
+    assert invoke({"operation": "status"}) == {"operation": "status"}
+    assert invoke({"operation": "instruct"}) == {"operation": "instruct"}
+
+    assert calls == [
+        ("status", "/tmp/agent-session.sock", 5.0),
+        ("instruct", "/tmp/agent-session.sock", 30.0),
+    ]
 
 
 def test_next_work_selects_the_only_captured_assignment(tmp_path):
@@ -167,6 +192,43 @@ def test_work_start_phase_plan_rejects_settled_or_review_work(phase):
     assert mode is None
     assert effects == []
     assert phase in blocked_reason
+
+
+def test_codex_work_start_plan_discloses_exact_invocation_project_trust(tmp_path):
+    effects = [{"stage": "run", "label": "Launch Codex"}]
+    grant = assignment_review.provider_project_trust("codex", str(tmp_path))
+
+    assert grant == {
+        "schema": "kungfu.agent-project-trust/v1",
+        "provider": "codex",
+        "workspaceRoot": str(tmp_path),
+        "scope": "single-invocation",
+        "allows": [
+            "project-local-config",
+            "project-local-hooks",
+            "project-local-exec-policies",
+        ],
+        "persistent": False,
+    }
+    planned = assignment_review.effects_with_project_trust(effects, grant)
+    assert [effect["stage"] for effect in planned] == ["project-trust", "run"]
+    assert str(tmp_path) in planned[0]["label"]
+    assert "project-local config, hooks, and exec policies" in planned[0]["label"]
+    assert assignment_review.provider_project_trust("claude", str(tmp_path)) is None
+
+
+def test_codex_project_trust_is_exact_explicit_and_invocation_scoped(tmp_path):
+    project = tmp_path / "project"
+    project.mkdir()
+    grant = assignment_review.provider_project_trust("codex", str(project))
+
+    assert managed_run._session_argv("codex", {}, str(project), None) == []
+    assert managed_run._session_argv("codex", {}, str(project), grant) == [
+        "-c",
+        f'projects={{{json.dumps(str(project.resolve()))}={{trust_level="trusted"}}}}',
+    ]
+    with pytest.raises(ValueError, match="does not match the exact workspace"):
+        managed_run._session_argv("codex", {}, str(tmp_path), grant)
 
 
 def test_managed_work_start_builds_a_strict_assignment_work_ref():
@@ -1206,6 +1268,20 @@ def test_project_work_session_yields_at_deterministic_attention(tmp_path):
             "live": True,
             "lifecycleState": "ready",
             "interactionState": "ready",
+            "output": {"nextSequence": 20},
+            "controller": {"holderId": "kungfu-project-work"},
+        },
+        {
+            "live": True,
+            "lifecycleState": "running",
+            "interactionState": "busy",
+            "output": {"nextSequence": 30},
+            "controller": {"holderId": "kungfu-project-work"},
+        },
+        {
+            "live": True,
+            "lifecycleState": "ready",
+            "interactionState": "ready",
             "output": {"nextSequence": 42},
             "workAgent": {
                 "attempt": "waiting",
@@ -1230,6 +1306,8 @@ def test_project_work_session_yields_at_deterministic_attention(tmp_path):
             return statuses.pop(0) if len(statuses) > 1 else statuses[0]
         if operation == "plan-control":
             return {"root": "sha256:" + "2" * 64}
+        if operation == "acquire-control":
+            return {"status": "granted"}
         if operation == "instruct":
             return {"status": "written"}
         if operation == "snapshot":
@@ -1294,14 +1372,166 @@ def test_project_work_session_yields_at_deterministic_attention(tmp_path):
             {"status": "started"},
         )
     ]
-    assert calls.index(
-        next(call for call in calls if call["operation"] == "start")
-    ) < calls.index(next(call for call in calls if call["operation"] == "instruct"))
+    assert (
+        calls.index(next(call for call in calls if call["operation"] == "start"))
+        < calls.index(
+            next(call for call in calls if call["operation"] == "acquire-control")
+        )
+        < calls.index(next(call for call in calls if call["operation"] == "instruct"))
+    )
     start_input = next(
         call["input"] for call in calls if call["operation"] == "plan-start"
     )
     assert start_input["binding"] == {"kind": "work", "workRef": work}
     assert start_input["workConsoleId"] == ("work:kungfu.work-control:assignment:first")
+
+
+def test_structured_session_retains_its_bounded_agent_answer(tmp_path):
+    statuses = iter(
+        [
+            {
+                "live": True,
+                "interactionState": "ready",
+                "output": {"nextSequence": 1},
+                "controller": {"holderId": "kungfu-project-work"},
+            },
+            {
+                "live": True,
+                "interactionState": "busy",
+                "output": {"nextSequence": 2},
+            },
+            {
+                "live": True,
+                "interactionState": "ready",
+                "output": {"nextSequence": 3},
+            },
+        ]
+    )
+
+    def invoke(request):
+        operation = request["operation"]
+        if operation == "plan-start":
+            return {"root": "sha256:" + "1" * 64}
+        if operation == "start":
+            return {"status": "started"}
+        if operation == "status":
+            return next(statuses)
+        if operation == "plan-control":
+            return {"root": "sha256:" + "2" * 64}
+        if operation == "instruct":
+            return {"status": "delivered"}
+        if operation == "snapshot":
+            return {
+                "agentText": "README.md contains exactly one heading.",
+                "retainedAgentResponse": True,
+                "retainedTranscript": False,
+            }
+        raise AssertionError(operation)
+
+    work = {
+        "schema": "kungfu.work-ref/v1",
+        "workspaceId": "workspace:test",
+        "profileId": "kungfu.work-control",
+        "profileRoot": "sha256:" + "3" * 64,
+        "entityType": "assignment",
+        "entityId": "first",
+        "entityRoot": "sha256:" + "4" * 64,
+        "purpose": "complete-project-assignment",
+        "systemTimeCut": "sha256:" + "5" * 64,
+    }
+    result, _session = run_agent.run_session_attempt(
+        invoke=invoke,
+        run_id="agent-codex-structured",
+        selected={
+            "id": "codex.path.test",
+            "provider": "codex",
+            "launch": {"executable": "/usr/bin/codex", "argv": []},
+        },
+        verification={"version": "opaque-future-build"},
+        work=work,
+        cwd=str(tmp_path),
+        env={"PATH": "/usr/bin"},
+        prompt="inspect README",
+        timeout_seconds=1,
+    )
+
+    assert result.stdout == "README.md contains exactly one heading."
+
+
+def test_codex_project_work_session_carries_confirmed_workspace_write_policy(tmp_path):
+    calls = []
+    observations = iter(
+        [
+            {
+                "live": True,
+                "interactionState": "ready",
+                "output": {"nextSequence": 1},
+                "controller": {"holderId": "kungfu-project-work"},
+            },
+            {
+                "live": True,
+                "interactionState": "approval-needed",
+                "output": {"nextSequence": 2},
+            },
+        ]
+    )
+
+    def invoke(request):
+        calls.append(request)
+        operation = request["operation"]
+        if operation == "plan-start":
+            return {"root": "sha256:" + "1" * 64}
+        if operation == "start":
+            return {"status": "started"}
+        if operation == "status":
+            return next(observations)
+        if operation == "plan-control":
+            return {"root": "sha256:" + "2" * 64}
+        if operation == "instruct":
+            return {"status": "delivered"}
+        if operation == "snapshot":
+            return {"terminal": {"vt": {"lines": []}}}
+        raise AssertionError(operation)
+
+    work = {
+        "schema": "kungfu.work-ref/v1",
+        "workspaceId": "workspace:test",
+        "profileId": "kungfu.work-control",
+        "profileRoot": "sha256:" + "3" * 64,
+        "entityType": "assignment",
+        "entityId": "first",
+        "entityRoot": "sha256:" + "4" * 64,
+        "purpose": "complete-project-assignment",
+        "systemTimeCut": "sha256:" + "5" * 64,
+    }
+    run_agent.run_session_attempt(
+        invoke=invoke,
+        run_id="agent-codex",
+        selected={
+            "id": "codex.path.test",
+            "provider": "codex",
+            "launch": {"executable": "/usr/bin/codex", "argv": []},
+        },
+        verification={"version": "0.146.0"},
+        work=work,
+        cwd=str(tmp_path),
+        env={"PATH": "/usr/bin"},
+        prompt="perform the confirmed Work",
+        timeout_seconds=1,
+        permission_mode="workspace-write",
+    )
+
+    start_input = next(
+        call["input"] for call in calls if call["operation"] == "plan-start"
+    )
+    assert start_input["structured"] == {
+        "threadStartParams": {
+            "cwd": str(tmp_path),
+            "approvalPolicy": "on-request",
+            "approvalsReviewer": "user",
+            "sandbox": "workspace-write",
+        }
+    }
 
 
 def test_terminal_mock_scenarios_ignore_ready_echo_until_the_process_ends():
@@ -1340,6 +1570,15 @@ def test_terminal_mock_scenarios_ignore_ready_echo_until_the_process_ends():
             before_sequence=10,
             terminal_mock=False,
         )
+        is False
+    )
+    assert (
+        managed_run._session_boundary_reached(
+            ready_after_echo,
+            before_sequence=10,
+            terminal_mock=False,
+            observed_busy=True,
+        )
         is True
     )
     assert (
@@ -1371,7 +1610,7 @@ def test_initial_session_wait_ignores_only_the_transient_missing_signature():
                 "interactionState": "unknown",
                 "providerAdapter": {
                     "compatible": False,
-                    "reason": "adapter-version-drift",
+                    "reason": "foreground-provider-mismatch",
                 },
             }
         )
@@ -1412,3 +1651,55 @@ def test_synthetic_provider_retains_its_explicit_qualification_result():
     parsed = run_agent.parse_provider_output("synthetic", output)
 
     assert parsed["text"] == output.strip()
+
+
+def test_managed_session_retains_its_visible_terminal_answer(tmp_path, monkeypatch):
+    retained = "Independent assessment: README has exactly one heading."
+    monkeypatch.setattr(
+        run_agent,
+        "run_session_attempt",
+        lambda **_kwargs: (
+            run_agent.ProcessResult(0, retained, "", False, False),
+            {"schema": "kungfu.agent-run-session/v1"},
+        ),
+    )
+    monkeypatch.setattr(
+        run_agent,
+        "select_profile",
+        lambda *_args, **_kwargs: (
+            {
+                "id": "codex.test",
+                "provider": "codex",
+                "cwdPolicy": "workspace-root",
+                "launch": {"executable": "/usr/bin/codex", "argv": []},
+            },
+            {},
+        ),
+    )
+    monkeypatch.setattr(
+        run_agent.runtime_profiles,
+        "verify_profile",
+        lambda _profile: {"ok": True, "version": "0.147.0"},
+    )
+
+    result = run_agent.execute(
+        prompt="inspect README",
+        runtime_dir=str(tmp_path / "runtime"),
+        workspace_root=str(tmp_path),
+        work_ref={
+            "schema": "kungfu.work-ref/v1",
+            "workspaceId": "workspace:test",
+            "profileId": "kungfu.work-control",
+            "profileRoot": "sha256:" + "1" * 64,
+            "entityType": "assignment",
+            "entityId": "first",
+            "entityRoot": "sha256:" + "2" * 64,
+            "purpose": "complete-project-assignment",
+            "systemTimeCut": "sha256:" + "3" * 64,
+        },
+        session_invoker=lambda _request: {},
+        use_session=True,
+    )
+
+    response = json.loads(Path(result["episode"]["responsePath"]).read_text())
+    assert response["parsed"]["text"] == retained

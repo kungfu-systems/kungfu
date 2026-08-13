@@ -229,19 +229,24 @@ export function createDetachedAgentSessionHost({
             if (!transientConnection(error)) throw error;
           }
           clearStaleSocket(paths.endpoint);
+          const workerEnv = {
+            ...env,
+            ELECTRON_RUN_AS_NODE: '1',
+            KUNGFU_AS_VARIANT: 'node',
+            KUNGFU_AGENT_SESSION_ENDPOINT: paths.endpoint,
+            KUNGFU_AGENT_SESSION_METADATA: paths.metadata,
+            KUNGFU_AGENT_SESSION_REGISTRY: paths.registry,
+            KUNGFU_AGENT_SESSION_STARTED_AT: String(now()),
+          };
+          // KUNGFU_NODE_VARIANT_ENTRY pins the current embedded-Node program
+          // (for example tui.mjs). It must never override the reviewed worker
+          // argv in a detached child.
+          workerEnv.KUNGFU_NODE_VARIANT_ENTRY = undefined;
           const child = spawnProcess(executable, [workerPath], {
             detached: true,
             stdio: 'ignore',
             windowsHide: true,
-            env: {
-              ...env,
-              ELECTRON_RUN_AS_NODE: '1',
-              KUNGFU_AS_VARIANT: 'node',
-              KUNGFU_AGENT_SESSION_ENDPOINT: paths.endpoint,
-              KUNGFU_AGENT_SESSION_METADATA: paths.metadata,
-              KUNGFU_AGENT_SESSION_REGISTRY: paths.registry,
-              KUNGFU_AGENT_SESSION_STARTED_AT: String(now()),
-            },
+            env: workerEnv,
           });
           if (unrefWorker) child.unref?.();
           const workerDeadline = now() + CONNECT_TIMEOUT_MS;

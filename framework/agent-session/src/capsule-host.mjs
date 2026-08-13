@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import path from 'node:path';
+import { commandLaunchSpec } from './command-launch.mjs';
 import { VtTextGrid } from './vt-snapshot.mjs';
 
 const ALLOWED_SIGNALS = new Set(['SIGINT', 'SIGTERM', 'SIGHUP']);
@@ -124,7 +125,13 @@ export class AgentSessionCapsuleHost {
       spec.sessionStreamEpoch,
       'sessionStreamEpoch',
     );
-    const child = this.pty.spawn(executable, spec.argv, {
+    const launch = commandLaunchSpec({
+      executable,
+      argv: spec.argv,
+      env: spec.env,
+      platform: this.platform,
+    });
+    const child = this.pty.spawn(launch.executable, launch.argv, {
       name: spec.terminalName ?? 'xterm-256color',
       cols,
       rows,

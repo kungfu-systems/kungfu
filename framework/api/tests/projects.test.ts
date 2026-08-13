@@ -1130,6 +1130,7 @@ test('Project Work restores and controls one retained Agent Session through the 
   const operations: string[] = [];
   let interactionState = 'ready';
   let live = true;
+  let controller: { holderId: string } | null = null;
   const ref = {
     workConsoleId: 'work:qualification:assignment:alpha',
     sessionAttemptId: 'attempt:alpha:1',
@@ -1145,6 +1146,10 @@ test('Project Work restores and controls one retained Agent Session through the 
         operations.push(request.operation);
         if (request.operation === 'plan-control') {
           return { root: `sha256:${'9'.repeat(64)}` };
+        }
+        if (request.operation === 'acquire-control') {
+          controller = { holderId: 'kungfu-project-work' };
+          return { status: 'granted' };
         }
         if (request.operation === 'instruct')
           interactionState = 'approval-needed';
@@ -1169,6 +1174,7 @@ test('Project Work restores and controls one retained Agent Session through the 
             live,
             lifecycleState: live ? 'ready' : 'ended',
             interactionState,
+            controller,
             providerAdapter: { provider: 'synthetic' },
             workAgent: {
               attempt: live ? 'waiting' : 'ended',
@@ -1232,9 +1238,9 @@ test('Project Work restores and controls one retained Agent Session through the 
   );
   assert.deepEqual(
     operations.filter((operation) =>
-      ['instruct', 'send-key', 'end'].includes(operation),
+      ['acquire-control', 'instruct', 'send-key', 'end'].includes(operation),
     ),
-    ['instruct', 'send-key', 'send-key', 'end'],
+    ['acquire-control', 'instruct', 'send-key', 'send-key', 'end'],
   );
 });
 

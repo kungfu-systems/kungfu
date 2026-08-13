@@ -198,7 +198,7 @@
           "classification": "non-publication",
           "owner": "kungfu-ci",
           "surfaceIds": [],
-          "sourceRoot": "sha256:96e52e85f2951eac39375e44afd9fb23a964358d4fcc0ff72a581345add087cf"
+          "sourceRoot": "sha256:07fd65196fe0064a2574f62687ef16e77863af7e5267bb957a175ee5a66880aa"
         },
         {
           "path": ".github/workflows/dev-gate-latency-patrol.yml",
@@ -343,7 +343,7 @@
             "product-stable",
             "product-binaries"
           ],
-          "sourceRoot": "sha256:2a5c89e77c4f843391010493f97a04ca618d5dc88649d7295ce4dccec36cd092"
+          "sourceRoot": "sha256:174c590111ff3fd8275851a3afb48a5b737066fcc5ffad67114cc7d42c9ef6e4"
         },
         {
           "path": ".github/workflows/release-shifu.yml",
@@ -378,7 +378,7 @@
     "buildchain": {
       "repository": "kungfu-systems/buildchain",
       "owner": "kungfu-systems/buildchain",
-      "sourceRevision": "36b08dc7bf417e57bffcc3dc784a2473254fe4c1",
+      "sourceRevision": "82701ca66f5366ade6ec694c9950d5d8d6db082d",
       "version": "3.0.7-alpha.1",
       "compatibilityMode": "stable-v3-contract-plus-alpha-v3-contract",
       "stableContractLock": ".buildchain/contract-lock.json",
@@ -874,5 +874,5 @@
       }
     }
   ],
-  "registryRoot": "sha256:2f14fe984ea59988b1fb747a4c3796b77d9ae904412a46a9e1e0f09a0de67f68"
+  "registryRoot": "sha256:7e8c43e22c6d21c5a578c74342ba1fb73e5707ae2ae0e523120e5fe5e995a010"
 }

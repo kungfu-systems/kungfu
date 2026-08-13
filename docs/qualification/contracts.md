@@ -246,12 +246,14 @@ count. The native [KF-ADR-019f86da-4f90-7332-a4cd-c9c9b549a5fb](../adr/KF-ADR-01
 real Coordinator plus separate writer and reader Watcher processes: action
 envelopes traverse the writer's public mmap journal, the existing nng notice
 wakes the reader, and the Coordinator does not proxy payload bytes. Provider
-adapters now implement versioned redacted state classification,
+adapters now implement provider-level redacted state classification,
 when-ready/queue/interrupt policy, atomic bracketed paste, manual-only keys,
 provider-exit closure, opaque-shell fallback, and delivery/outcome separation.
-Local no-private-state version probes match Codex `0.144.3` and Claude Code
-`2.1.209`; they do not prove authenticated interaction, approval outcome, or
-provider semantic response. Product surfaces, machine restart, and real
+Provider version probes are diagnostic-only: semantic, opaque, missing, or
+failed version output cannot block an available executable. Retained Codex
+`0.144.3` and Claude Code `2.1.209` observations are historical evidence, not
+support allowlists; they do not prove authenticated interaction, approval
+outcome, or provider semantic response. Product surfaces, machine restart, and real
 Codex/Claude dogfood remain staged; this contract does not claim those behaviors
 already exist.
 

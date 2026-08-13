@@ -9,8 +9,11 @@ import { InMemoryJournalNoticePort } from './peer-transport.mjs';
 export const CODEX_APP_SERVER_FEATURE_FLAG =
   'KUNGFU_AGENT_SESSION_CODEX_APP_SERVER';
 
+const MAX_RETAINED_AGENT_TEXT = 128_000;
+
 /**
- * Codex app-server is the product default for the exact qualified CLI.
+ * Codex app-server is the product default for any installed Codex CLI that
+ * completes the structured protocol handshake.
  * Setting the retained feature flag to `0` is the bounded rollback to PTY for
  * newly-created attempts; an existing attempt never changes transport.
  */
@@ -146,7 +149,7 @@ export class CodexAppServerProductRuntime {
       routes: [
         {
           ...routeStatus(this.appServerArgv),
-          providerVersion: '0.146.0',
+          versionAdmission: 'diagnostic-only',
           capabilities: [
             'structured-provider-events',
             'exact-provider-controls',
@@ -159,12 +162,6 @@ export class CodexAppServerProductRuntime {
 
   planRoute(input) {
     if (input.provider !== 'codex' || input.fallbackFrom) return null;
-    if (input.providerVersion !== '0.146.0') {
-      throw Object.assign(
-        new Error('structured Codex route requires provider version 0.146.0'),
-        { code: 'provider_version_drift' },
-      );
-    }
     return routeStatus(this.appServerArgv);
   }
 
@@ -229,10 +226,34 @@ export class CodexAppServerProductRuntime {
     const state = {
       providerSessionId: null,
       providerTurnId: null,
+      turnBoundarySequence: 0,
       lastReceiptRoot: null,
       pendingControls: new Map(),
+      agentMessages: new Map(),
       eventFailure: null,
       draining: false,
+    };
+    const retainAgentMessage = (event) => {
+      const params = event.message?.params ?? {};
+      const item = params.item ?? {};
+      const itemId = String(params.itemId ?? item.id ?? 'agent-message');
+      const prior = state.agentMessages.get(itemId) ?? '';
+      let text = null;
+      if (
+        event.providerMethod === 'item/agentMessage/delta' &&
+        typeof params.delta === 'string'
+      ) {
+        text = `${prior}${params.delta}`;
+      } else if (
+        event.providerMethod === 'item/completed' &&
+        ['agentMessage', 'agent_message'].includes(item.type) &&
+        typeof item.text === 'string'
+      ) {
+        text = item.text;
+      }
+      if (text !== null) {
+        state.agentMessages.set(itemId, text.slice(0, MAX_RETAINED_AGENT_TEXT));
+      }
     };
     const applyReceipt = (receipt) => {
       state.lastReceiptRoot = receipt.receiptRoot;
@@ -241,6 +262,12 @@ export class CodexAppServerProductRuntime {
       if (receipt.providerMethod === 'turn/started')
         state.providerTurnId = receipt.providerTurnId;
       if (receipt.providerTerminal) state.providerTurnId = null;
+      if (
+        receipt.providerMethod === 'turn/started' ||
+        receipt.providerMethod === 'turn/completed'
+      ) {
+        state.turnBoundarySequence += 1;
+      }
       if (receipt.receiptKind === 'control-request') {
         state.pendingControls.set(String(receipt.providerRequestId), receipt);
       }
@@ -254,6 +281,7 @@ export class CodexAppServerProductRuntime {
       try {
         for (const event of runtime.takeEvents()) {
           applyReceipt(recovery.recordEvent(event));
+          retainAgentMessage(event);
         }
       } catch (error) {
         state.eventFailure = error;
@@ -322,6 +350,11 @@ export class CodexAppServerProductRuntime {
   #session(context) {
     const { plan, runtime, interaction, recovery, state, drain, transport } =
       context;
+    const retainedAgentText = () =>
+      [...state.agentMessages.values()]
+        .filter(Boolean)
+        .join('\n')
+        .slice(0, MAX_RETAINED_AGENT_TEXT);
     const interactionState = () => {
       if (state.eventFailure || recovery.status().inputAdmission !== 'open')
         return runtime.status().exit ? 'ended' : 'unknown';
@@ -376,7 +409,7 @@ export class CodexAppServerProductRuntime {
           providerVersion: plan.providerVersion,
           adapterVersion: 'codex-app-server-structured/v1',
           compatible: true,
-          tested: plan.providerVersion === '0.146.0',
+          tested: true,
           failureCode:
             state.eventFailure?.code ?? current.failure?.code ?? null,
           failureDetail:
@@ -401,6 +434,7 @@ export class CodexAppServerProductRuntime {
     };
     const execute = async (request, operation, params) => {
       if (state.eventFailure) throw state.eventFailure;
+      const priorTurnBoundarySequence = state.turnBoundarySequence;
       const providerPlan = interaction.planRequest({
         actionId: request.actionId,
         operation,
@@ -412,6 +446,27 @@ export class CodexAppServerProductRuntime {
         plan: providerPlan,
       });
       drain();
+      if (operation === 'instruct') {
+        const deadline = Date.now() + 10_000;
+        while (
+          state.turnBoundarySequence === priorTurnBoundarySequence &&
+          !state.eventFailure &&
+          !runtime.status().exit &&
+          Date.now() < deadline
+        ) {
+          await new Promise((resolve) => setTimeout(resolve, 5));
+          drain();
+        }
+        if (state.eventFailure) throw state.eventFailure;
+        if (state.turnBoundarySequence === priorTurnBoundarySequence) {
+          throw Object.assign(
+            new Error(
+              'Codex turn/start returned before any turn boundary was observed',
+            ),
+            { code: 'missing_turn_boundary' },
+          );
+        }
+      }
       return { status: 'delivered', deliveryReceipt };
     };
     const port = {
@@ -424,6 +479,8 @@ export class CodexAppServerProductRuntime {
         providerTurnId: state.providerTurnId,
         pendingControls: pendingControls(),
         lastReceiptRoot: state.lastReceiptRoot,
+        agentText: retainedAgentText() || null,
+        retainedAgentResponse: retainedAgentText().length > 0,
         retainedTranscript: false,
         semanticOutcome: null,
         workState: null,

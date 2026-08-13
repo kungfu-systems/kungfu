@@ -3,8 +3,7 @@
 import { execFile, execFileSync, spawn } from 'node:child_process';
 import fs from 'node:fs';
 import { createRequire } from 'node:module';
-import { constants as osConstants } from 'node:os';
-import { homedir } from 'node:os';
+import { homedir, constants as osConstants } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
@@ -44,7 +43,6 @@ import {
   createDetachedAgentSessionHost,
   prepareAgentSessionNodePty,
 } from '../../agent-session/src/product-client.mjs';
-
 import {
   AGENT_WORK_LAB_QUICK_COMMANDS,
   AgentFirstOnboardingView,
@@ -65,28 +63,27 @@ import {
   ControlPlaneBar,
   ControlPlaneOverlay,
   type ControlPlaneState,
+  KUNGFU_EMPTY_WORK_NEBULA_PATTERN,
+  KUNGFU_PROJECT_DISCOVERY_PATTERN,
+  KUNGFU_STARTUP_NEBULA_PATTERN,
+  KUNGFU_WORK_DISCOVERY_PATTERN,
   PlaybackBar,
   type ProductSurface,
   QUICK_COMMANDS,
+  TerminalAmbientScene,
   type TerminalDimensions,
+  TerminalLoadingScene,
   buildTuiProductSearchDocuments,
   contextualProjectRestoreCanCommit,
   createControlPlaneInputFence,
   directWorkspaceNavigationFromInput,
   initialProductSurface,
+  onboardingContinueSurface,
   quickCommandMatches,
   reduceControlPlaneInput,
   resolveProductStartupSurface,
   shouldStartContextualProjectRestore,
   splitHorizontalPointerActionAtPoint,
-} from './profile-shell.js';
-import {
-  KUNGFU_EMPTY_WORK_NEBULA_PATTERN,
-  KUNGFU_PROJECT_DISCOVERY_PATTERN,
-  KUNGFU_STARTUP_NEBULA_PATTERN,
-  KUNGFU_WORK_DISCOVERY_PATTERN,
-  TerminalAmbientScene,
-  TerminalLoadingScene,
   terminalAnimationsEnabled,
 } from './profile-shell.js';
 import {
@@ -128,6 +125,7 @@ import {
   decodeTerminalMouseInput,
   describeCliFailure,
   existingProjectWorkspaceRoot,
+  resolveTuiAgentSessionExecutable,
   resolveTuiAgentSessionPaths,
   resolveTuiCliRuntime,
   resolveTuiProductPaths,
@@ -149,13 +147,11 @@ import {
   cycleWorkSort,
   workWindowListContainsPoint,
 } from './work-window/index.js';
-
 const nodeRequire = createRequire(import.meta.url);
 let tuiAgentSessionEndpoint = '';
 let tuiAgentSessionReady: Promise<string> | undefined;
 let tuiAgentSessionHost: ReturnType<typeof createDetachedAgentSessionHost>;
 let tuiAgentSessionRuntimeDir = '';
-
 function ensureTuiAgentSession(runtimeDir: string): Promise<string> {
   const resolvedRuntimeDir = path.resolve(runtimeDir);
   if (tuiAgentSessionReady && tuiAgentSessionRuntimeDir === resolvedRuntimeDir)
@@ -190,7 +186,11 @@ function ensureTuiAgentSession(runtimeDir: string): Promise<string> {
   process.env.KUNGFU_PROJECT_WORK_AGENT_SESSION = '1';
   const host = createDetachedAgentSessionHost({
     runtimeDir: resolvedRuntimeDir,
-    executable: process.env.KUNGFU_AGENT_SESSION_EXECUTABLE || process.execPath,
+    executable: resolveTuiAgentSessionExecutable({
+      ...runtimePaths(),
+      env: process.env,
+      processExecPath: process.execPath,
+    }),
     workerPath,
     env: process.env,
   });
@@ -203,7 +203,6 @@ function ensureTuiAgentSession(runtimeDir: string): Promise<string> {
   ).then(() => host.endpoint);
   return tuiAgentSessionReady;
 }
-
 async function invokeTuiAgentSession(
   request: Record<string, unknown> & { operation: string },
 ) {
@@ -220,11 +219,9 @@ async function invokeTuiAgentSession(
     return host.invoke(request);
   }
 }
-
 function cliEnvironment(): NodeJS.ProcessEnv {
   return tuiChildCliEnvironment(process.env);
 }
-
 function runtimePaths() {
   const { coreDir, kungfuDir, packagedBin } = resolveTuiProductPaths({
     env: process.env,
@@ -249,7 +246,6 @@ function runtimePaths() {
     ...cli,
   };
 }
-
 function tuiCliInvocation(paths: ReturnType<typeof runtimePaths>) {
   const argsPrefix = paths.sourceCliFallback
     ? ['run', '--project', paths.coreDir, '--frozen', 'python', '-m', 'kungfu']
@@ -272,7 +268,6 @@ function tuiCliInvocation(paths: ReturnType<typeof runtimePaths>) {
     args: (values: string[]) => [...argsPrefix, ...values],
   };
 }
-
 type ExitHistoryStatus = {
   ok: boolean;
   state: string;
@@ -280,7 +275,6 @@ type ExitHistoryStatus = {
   lastVerifiedExport: { bundleId: string; packageRoot: string } | null;
   nextActions: string[];
 };
-
 const EXIT_HISTORY_STATUS_FALLBACK: ExitHistoryStatus = {
   ok: false,
   state: 'unavailable',
@@ -288,7 +282,6 @@ const EXIT_HISTORY_STATUS_FALLBACK: ExitHistoryStatus = {
   lastVerifiedExport: null,
   nextActions: ['kungfu exit history status --json'],
 };
-
 async function openTuiAgentWorkLab(projectTour = false): Promise<AgentWorkLab> {
   const paths = runtimePaths();
   const cli = tuiCliInvocation(paths);
@@ -385,7 +378,6 @@ async function openTuiAgentWorkLab(projectTour = false): Promise<AgentWorkLab> {
       }),
   });
 }
-
 function openTuiProjects(useAgentSession = true, allowForeignBinding = false) {
   const paths = runtimePaths();
   const cli = tuiCliInvocation(paths);
@@ -1472,16 +1464,19 @@ function ProductHost({
           setSurface('all-work'),
         );
       } else {
-        persistOnboarding(finishKungfuOnboarding(onboardingState), () =>
-          setSurface('all-work'),
-        );
+        persistOnboarding(finishKungfuOnboarding(onboardingState), () => {
+          setSurface(onboardingContinueSurface(firstLaunch));
+          setControlNow({ ...CLOSED_CONTROL_PLANE, focus: 'workspace' });
+        });
       }
     },
     [
       agentFirstEntry.prompt,
       dispatchLabAction,
+      firstLaunch,
       onboardingState,
       persistOnboarding,
+      setControlNow,
       setOnboardingNotice,
       setSurface,
     ],
@@ -1955,6 +1950,7 @@ function ProductHost({
         onOpenProject={openProject}
         onOpenLab={() => setSurface('lab')}
         onSearchDocuments={handleProjectDocuments}
+        onInputModeChange={setWorkspaceInputActive}
         onWorkspacePointer={() =>
           setControlNow({ ...CLOSED_CONTROL_PLANE, focus: 'workspace' })
         }
@@ -2049,7 +2045,7 @@ function ProductHost({
             },
           });
           setStarterProject({ workspace, work, works: inventory.works });
-          setStarterWorkReceipt(receipt);
+          setStarterWorkReceipt(resumed.workReceipt ?? receipt);
           setStarterReviewReceipt(resumed.reviewReceipt);
           setStarterCloseReceipt(resumed.closeReceipt);
           setSurface('project-assignment');
@@ -2233,7 +2229,9 @@ function ProductHost({
               labOpen
                 ? 'LAB CONTROLS'
                 : surface === 'projects'
-                  ? 'PROJECT CONTROLS'
+                  ? workspaceInputActive
+                    ? 'PROJECT INPUT'
+                    : 'PROJECT CONTROLS'
                   : starterOpen || surface === 'project-work'
                     ? openedProject
                       ? workspaceInputActive
@@ -2246,7 +2244,9 @@ function ProductHost({
               labOpen
                 ? 'd Demo · x Same · m Handoff · Tab Focus'
                 : surface === 'projects'
-                  ? 'Enter Open · /new New Project · /open Open Project · d Remove'
+                  ? workspaceInputActive
+                    ? 'Type in the focused panel · Enter Continue · Esc Cancel'
+                    : 'Enter Open · /new New Project · /open Open Project · d Remove'
                   : starterOpen
                     ? 'j/k Work · Enter Open · /new New Work · p Projects'
                     : surface === 'project-work' && openedProject

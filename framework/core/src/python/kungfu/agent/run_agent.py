@@ -28,7 +28,10 @@ from kungfu.agent import resources as agent_resources
 from kungfu.agent import runtime_profiles
 from kungfu.agent import session_contract
 from kungfu.agent import session_surface
-from kungfu.agent.native_launch import NativeLaunchCoordinator
+from kungfu.agent.native_launch import (
+    NativeLaunchCoordinator,
+    apply_platform_tls_trust,
+)
 from kungfu.agent.managed_run import ManagedRunCoordinator
 from kungfu.agent.provider_output import (
     parse_provider_output,
@@ -523,6 +526,7 @@ def native_environment(
         *(str(value) for value in selected_adapter.get("credentialEnvironment") or []),
     )
     env = {key: str(ambient[key]) for key in allowed if ambient.get(key)}
+    apply_platform_tls_trust(env)
     env.update(
         {
             str(key): str(value)
@@ -789,6 +793,7 @@ def _environment(
     ambient = os.environ if source is None else source
     allowed = (*_COMMON_ENV_ALLOWLIST, *_PROVIDER_ENV_ALLOWLIST[provider])
     env = {key: str(ambient[key]) for key in allowed if ambient.get(key)}
+    apply_platform_tls_trust(env)
     if provider == "opencode":
         isolated = Path(runtime_dir) / "agent-runs" / run_id / "provider-home"
         env.update(
@@ -909,9 +914,11 @@ def run_session_attempt(
     env: Mapping[str, str],
     prompt: str,
     timeout_seconds: float,
+    permission_mode: str = "workspace-write",
     event_sink: Callable[[Mapping[str, Any]], None] | None = None,
     session_started_callback: Callable[[Mapping[str, str], Mapping[str, Any]], None]
     | None = None,
+    project_trust: Mapping[str, Any] | None = None,
 ) -> tuple[ProcessResult, dict[str, Any]]:
     """Start one Work-bound Session, deliver the first turn, and yield at attention."""
     coordinator = ManagedRunCoordinator(
@@ -931,8 +938,10 @@ def run_session_attempt(
         env=env,
         prompt=prompt,
         timeout_seconds=timeout_seconds,
+        permission_mode=permission_mode,
         event_sink=event_sink,
         session_started=session_started_callback,
+        project_trust=project_trust,
     )
 
 
@@ -1034,6 +1043,7 @@ def execute(
     use_session: bool | None = None,
     session_started_callback: Callable[[Mapping[str, str], Mapping[str, Any]], None]
     | None = None,
+    project_trust: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     from kungfu.storage.episode_lifecycle import RuntimeEpisodeLifecycle
 
@@ -1135,8 +1145,10 @@ def execute(
                 env=env,
                 prompt=argv[-1],
                 timeout_seconds=timeout_seconds,
+                permission_mode=permission_mode,
                 event_sink=event_sink,
                 session_started_callback=session_started_callback,
+                project_trust=project_trust,
             )
         elif process_runner is run_process:
             result = process_runner(
@@ -1157,6 +1169,14 @@ def execute(
             run_id=run_id,
         )
         parsed = parse_provider_output(provider, result.stdout)
+        if session_value is not None and parsed.get("text") is None:
+            visible = _ANSI_ESCAPE.sub("", result.stdout).strip()
+            if visible:
+                # Managed Provider UIs expose a credential-safe VT text-grid
+                # snapshot rather than their JSONL process protocol. Retain
+                # that bounded final view so independent review can inspect
+                # the actual answer instead of mistaking it for no answer.
+                parsed["text"] = visible[:128_000]
         if (
             event_sink is not None
             and not streamed_agent_text

@@ -64,7 +64,7 @@ test('build authority pins the workflow shell while retaining runtime routing', 
     /authority drift/u,
   );
 });
-test('promotion authority separates floating release routing from exact recovery runtime', () => {
+test('promotion authority keeps Alpha workflow routing floating and recovery runtime exact', () => {
   const source = fs.readFileSync(
     '.github/workflows/release-new-version.yml',
     'utf8',
@@ -78,7 +78,14 @@ test('promotion authority separates floating release routing from exact recovery
   const runtime = policy.buildchain.runtimes.alpha.publicationRuntimeSha;
   assert.equal(validatePromotionWorkflowAuthority(source, runtime), true);
   assert.throws(
-    () => validatePromotionWorkflowAuthority(source, '0'.repeat(40)),
+    () =>
+      validatePromotionWorkflowAuthority(
+        source.replace(
+          'release-candidate-promote.yml@v3-alpha',
+          `release-candidate-promote.yml@${runtime}`,
+        ),
+        runtime,
+      ),
     /authority drift/u,
   );
   assert.throws(

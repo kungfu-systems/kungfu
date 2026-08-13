@@ -204,7 +204,7 @@
           "evidencePath": "framework/work-profile-conformance/qualification/kfd-7-product-gate.json",
           "evidencePointer": null,
           "authorityPath": ".buildchain/alpha-contract-lock.json",
-          "authorityRoot": "sha256:a34d83865c144128bce57739af166042aa2abf22273e06e1629370931417e8aa"
+          "authorityRoot": "sha256:e36f382e47ec5d4cd9a3e5087fc0110deab6568ac14c7797abf3759de65d5191"
         },
         "workOperationModel": {
           "authority": "existing-work-api",
@@ -431,7 +431,7 @@
           "evidencePath": "framework/work-profile-conformance/qualification/kfd-7-product-gate.json",
           "evidencePointer": null,
           "authorityPath": ".buildchain/alpha-contract-lock.json",
-          "authorityRoot": "sha256:a34d83865c144128bce57739af166042aa2abf22273e06e1629370931417e8aa"
+          "authorityRoot": "sha256:e36f382e47ec5d4cd9a3e5087fc0110deab6568ac14c7797abf3759de65d5191"
         },
         "workOperationModel": {
           "authority": "existing-work-api",
@@ -660,7 +660,7 @@
           "evidencePath": "framework/work-profile-conformance/qualification/kfd-7-product-gate.json",
           "evidencePointer": null,
           "authorityPath": ".buildchain/alpha-contract-lock.json",
-          "authorityRoot": "sha256:a34d83865c144128bce57739af166042aa2abf22273e06e1629370931417e8aa"
+          "authorityRoot": "sha256:e36f382e47ec5d4cd9a3e5087fc0110deab6568ac14c7797abf3759de65d5191"
         },
         "workOperationModel": {
           "authority": "existing-work-api",

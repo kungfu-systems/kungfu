@@ -7,6 +7,7 @@ import sys
 import pytest
 from jsonschema import Draft202012Validator
 
+from kungfu.agent import native_launch
 from kungfu.agent import run_agent
 from kungfu.agent import assess_work_advisory
 from kungfu.agent import resources as agent_resources
@@ -69,6 +70,37 @@ def test_managed_agent_environment_preserves_windows_process_coordinates(tmp_pat
     assert {key: env[key] for key in windows_coordinates} == windows_coordinates
     assert "UNDECLARED_SECRET" not in env
     assert environment_keys == sorted(env)
+
+
+def test_managed_agent_environment_uses_standard_macos_tls_trust(tmp_path, monkeypatch):
+    cert_file = tmp_path / "cert.pem"
+    cert_file.write_text("test certificate bundle\n", encoding="utf-8")
+    monkeypatch.setattr(native_launch, "_DARWIN_DEFAULT_SSL_CERT_FILE", cert_file)
+    env = {}
+
+    native_launch.apply_platform_tls_trust(env, platform="darwin")
+
+    assert env["SSL_CERT_FILE"] == str(cert_file)
+
+
+def test_managed_agent_environment_preserves_explicit_tls_trust(tmp_path):
+    explicit = str(tmp_path / "private-ca.pem")
+    env, environment_keys = run_agent._environment(
+        "codex",
+        runtime_dir=str(tmp_path / "runtime"),
+        run_id="agent-explicit-tls",
+        workspace_root=str(tmp_path / "project"),
+        work_ref=None,
+        continuation=None,
+        source={
+            "HOME": "/Users/test",
+            "PATH": "/usr/bin",
+            "SSL_CERT_FILE": explicit,
+        },
+    )
+
+    assert env["SSL_CERT_FILE"] == explicit
+    assert "SSL_CERT_FILE" in environment_keys
 
 
 def _signals(**overrides):
