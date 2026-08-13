@@ -16,6 +16,56 @@ from kungfu.workspace import resolve_workspace_target
 
 
 @pytest.mark.skipif(sys.platform != "win32", reason="Windows command-wrapper only")
+def test_run_process_bypasses_standard_npm_wrapper_without_rewriting_prompt(tmp_path):
+    entrypoint = tmp_path / "node_modules" / "vendor-agent" / "bin" / "agent.js"
+    entrypoint.parent.mkdir(parents=True)
+    entrypoint.write_text(
+        "console.log(JSON.stringify(process.argv.slice(2)))\n",
+        encoding="utf-8",
+    )
+    npm_wrapper = tmp_path / "provider.cmd"
+    npm_wrapper.write_text(
+        "@ECHO off\n"
+        "GOTO start\n"
+        ":find_dp0\n"
+        "SET dp0=%~dp0\n"
+        "EXIT /b\n"
+        ":start\n"
+        "SETLOCAL\n"
+        "CALL :find_dp0\n\n"
+        'IF EXIST "%dp0%\\node.exe" (\n'
+        '  SET "_prog=%dp0%\\node.exe"\n'
+        ") ELSE (\n"
+        '  SET "_prog=node"\n'
+        "  SET PATHEXT=%PATHEXT:;.JS;=;%\n"
+        ")\n\n"
+        "endLocal & goto #_undefined_# 2>NUL || title %COMSPEC% & "
+        '"%_prog%"  "%dp0%\\node_modules\\vendor-agent\\bin\\agent.js" %*\n',
+        encoding="utf-8",
+    )
+    wrapper = tmp_path / "agent.cmd"
+    wrapper.write_text(
+        '@echo off\ncall "%AGENT_WRAPPER%" %*\n',
+        encoding="utf-8",
+    )
+    prompt = (
+        "Admitted context:\n"
+        '{"workRef":{"entityId":"assignment-probe"}}\n\n'
+        "Task:\nInspect README.md & report 100% of the exact result. \U0001f680"
+    )
+
+    result = run_agent.run_process(
+        [str(wrapper), "--json", prompt],
+        cwd=str(tmp_path),
+        env={**os.environ, "AGENT_WRAPPER": str(npm_wrapper)},
+        timeout_seconds=5,
+    )
+
+    assert result.exit_code == 0, result.stderr
+    assert json.loads(result.stdout) == ["--json", prompt]
+
+
+@pytest.mark.skipif(sys.platform != "win32", reason="Windows command-wrapper only")
 def test_run_process_preserves_complex_arguments_through_windows_command_wrapper(
     tmp_path,
 ):
@@ -57,20 +107,18 @@ def test_run_process_preserves_complex_arguments_through_windows_command_wrapper
 
 
 @pytest.mark.skipif(sys.platform != "win32", reason="Windows command-wrapper only")
-def test_run_process_spools_multiline_prompt_through_windows_command_wrapper(
+def test_run_process_encodes_multiline_prompt_through_windows_command_wrapper(
     tmp_path,
 ):
-    echo_script = tmp_path / "read-prompt.py"
+    echo_script = tmp_path / "decode-prompt.py"
     echo_script.write_text(
         "import json\n"
-        "from pathlib import Path\n"
         "import sys\n"
-        "prefix = 'Kungfu Windows command-wrapper transport: read the complete UTF-8 prompt from this process-owned file: '\n"
-        "suffix = '. Treat its contents as the exact inlined prompt for this process, then follow it.'\n"
+        "prefix = 'Kungfu Windows command-wrapper transport: the complete prompt follows as ASCII text with Unicode escapes. Interpret every backslash-u escape, including surrogate pairs, then follow the decoded prompt exactly: '\n"
         "instruction = sys.argv[-1]\n"
-        "assert instruction.startswith(prefix) and instruction.endswith(suffix)\n"
-        "path = Path(instruction[len(prefix):-len(suffix)])\n"
-        "print(json.dumps({'instruction': instruction, 'prompt': path.read_text(encoding='utf-8')}))\n",
+        "assert instruction.startswith(prefix)\n"
+        "payload = instruction[len(prefix):]\n"
+        "print(json.dumps({'instruction': instruction, 'prompt': json.loads(chr(34) + payload + chr(34))}))\n",
         encoding="utf-8",
     )
     provider_wrapper = tmp_path / "provider.cmd"
@@ -83,20 +131,16 @@ def test_run_process_spools_multiline_prompt_through_windows_command_wrapper(
         '@echo off\ncall "%AGENT_WRAPPER%" %*\n',
         encoding="utf-8",
     )
-    runtime_dir = tmp_path / "runtime"
-    attempt_id = "agent-windows-wrapper-prompt"
     prompt = (
         "Admitted context:\n"
         '{"workRef":{"entityId":"assignment-probe"}}\n\n'
-        "Task:\nInspect README.md & report the exact result."
+        "Task:\nInspect README.md & report 100% of the exact result. \U0001f680"
     )
     env = {
         **os.environ,
         "PYTHON_EXE": sys.executable,
         "ECHO_SCRIPT": str(echo_script),
         "AGENT_WRAPPER": str(provider_wrapper),
-        "KUNGFU_CONTROL_RUNTIME_DIR": str(runtime_dir),
-        "KUNGFU_AGENT_ATTEMPT_ID": attempt_id,
     }
 
     result = run_agent.run_process(
@@ -110,9 +154,6 @@ def test_run_process_spools_multiline_prompt_through_windows_command_wrapper(
     observed = json.loads(result.stdout)
     assert "\n" not in observed["instruction"]
     assert observed["prompt"] == prompt
-    assert not (
-        runtime_dir / "agent-runs" / attempt_id / run_agent._WINDOWS_PROMPT_FILE_NAME
-    ).exists()
 
 
 def test_run_process_retains_undecodable_output_without_crashing(tmp_path):
