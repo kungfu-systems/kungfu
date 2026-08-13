@@ -23,6 +23,7 @@ function fixtures(name) {
 
 for (const [provider, version, filename] of [
   ['codex', '0.144.3', 'codex-v0.144.3.json'],
+  ['codex', '0.145.0', 'codex-v0.146.0.json'],
   ['codex', '0.146.0', 'codex-v0.146.0.json'],
   ['codex', '0.147.0', 'codex-v0.147.0.json'],
   ['codex', '0.147.0-alpha.1.2', 'codex-v0.147.0.json'],
@@ -54,6 +55,25 @@ for (const [provider, version, filename] of [
   });
 }
 
+test('Codex 0.145 classifies the redacted Linux onboarding prompt', () => {
+  const adapter = createProviderAdapter({
+    provider: 'codex',
+    version: '0.145.0',
+  });
+  const result = adapter.inspect({
+    lines: [
+      '│ >_ OpenAI Codex (v0.145.0) │',
+      '› Improve documentation in @filename',
+      'gpt-5.5 high · /workspace',
+    ],
+    lifecycleState: 'ready',
+    inputAdmission: 'open',
+    foreground: { provider: 'codex' },
+  });
+  assert.equal(result.state, 'ready');
+  assert.deepEqual(result.signatureIds, ['codex.ready.prompt']);
+});
+
 test('synthetic adapter accepts the current mock provider and its v1 compatibility floor', () => {
   for (const version of ['1.0.0', '1.1.0']) {
     const adapter = createProviderAdapter({ provider: 'synthetic', version });
@@ -75,7 +95,7 @@ test('synthetic adapter accepts the current mock provider and its v1 compatibili
 test('version drift and foreground mismatch fail visibly to raw human fallback', () => {
   const drifted = createProviderAdapter({
     provider: 'codex',
-    version: '0.145.0',
+    version: '0.143.0',
   });
   const result = drifted.inspect({
     lines: ['› prompt'],
