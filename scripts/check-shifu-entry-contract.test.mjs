@@ -491,7 +491,9 @@ test('Xinfa source entry prefers hash-pinned wasm and preserves native fallback'
 
 test('Xinfa quality uses the source resolver and forwards one Windows mode', () => {
   const posix = fs.readFileSync(path.join(ROOT, 'shifu'), 'utf8');
-  const windows = fs.readFileSync(path.join(ROOT, 'shifu.cmd'), 'utf8');
+  const windows = fs
+    .readFileSync(path.join(ROOT, 'shifu.cmd'), 'utf8')
+    .replaceAll('\r\n', '\n');
   const posixBlock = posix.match(/xinfa:quality\)[\s\S]*?;;/u)?.[0];
   const windowsBlock = windows.match(
     /:xinfaquality[\s\S]*?(?=\r?\n:projectcut\r?\n)/u,
