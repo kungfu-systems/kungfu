@@ -2121,7 +2121,7 @@ test('workflows keep candidate and promotion outside untrusted PR authority', ()
   );
   assert.match(
     candidateAction,
-    /producer-event:[\s\S]*default: merge_group[\s\S]*producer-workflow-path:[\s\S]*default: \.github\/workflows\/affected-native-pr\.yml[\s\S]*runner\.os != 'Windows'[\s\S]*--event "\$\{\{ inputs\.producer-event \}\}"[\s\S]*--workflow-path "\$\{\{ inputs\.producer-workflow-path \}\}"[\s\S]*runner\.os == 'Windows'[\s\S]*--event "\$\{\{ inputs\.producer-event \}\}"[\s\S]*--workflow-path "\$\{\{ inputs\.producer-workflow-path \}\}"/u,
+    /native-already-built:[\s\S]*default: "false"[\s\S]*producer-event:[\s\S]*default: merge_group[\s\S]*producer-workflow-path:[\s\S]*default: \.github\/workflows\/affected-native-pr\.yml[\s\S]*runner\.os != 'Windows'[\s\S]*inputs\.native-already-built[\s\S]*--event "\$\{\{ inputs\.producer-event \}\}"[\s\S]*--workflow-path "\$\{\{ inputs\.producer-workflow-path \}\}"[\s\S]*runner\.os == 'Windows'[\s\S]*inputs\.native-already-built[\s\S]*--event "\$\{\{ inputs\.producer-event \}\}"[\s\S]*--workflow-path "\$\{\{ inputs\.producer-workflow-path \}\}"/u,
   );
 
   const promotionWorkflow = fs.readFileSync(
