@@ -449,6 +449,7 @@ jobs:
              and .closureRoot == $input[0].closureRoot
              and .dependencyRoot == $input[0].dependencyRoot
              and .toolchainRoot == $input[0].toolchainRoot
+             and .environmentRoot == $input[0].environmentRoot
              and .affectedPaths == $input[0].affectedPaths' \
             "$source_proof" >/dev/null
           evidence_roots="$(jq -cn \
@@ -467,6 +468,7 @@ jobs:
             --closure-root "$(jq -er '.closureRoot' "$source_proof")" \
             --dependency-root "$(jq -er '.dependencyRoot' "$source_proof")" \
             --toolchain-root "$(jq -er '.toolchainRoot' "$source_proof")" \
+            --environment-root "$(jq -er '.environmentRoot' "$warrant_input")" \
             --qualified-base "$(jq -er '.sourceBaseSha' "$coordinate")" \
             --affected-paths-json "$(jq -c '.affectedPaths' "$source_proof")" \
             --shard-evidence-roots-json "$evidence_roots" \

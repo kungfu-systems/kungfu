@@ -203,11 +203,11 @@ test('Dev delivery reuses only an exact verified semantic native proof', () => {
   );
   assert.match(
     workflow,
-    /Materialize optional reusable semantic native proof[\s\S]*dev-delivery-proof\.mjs verify-source[\s\S]*sourceIdentityRoot == \$input\[0\]\.sourceIdentityRoot[\s\S]*toolchainRoot == \$input\[0\]\.toolchainRoot[\s\S]*affectedPaths == \$input\[0\]\.affectedPaths/u,
+    /Materialize optional reusable semantic native proof[\s\S]*dev-delivery-proof\.mjs verify-source[\s\S]*sourceIdentityRoot == \$input\[0\]\.sourceIdentityRoot[\s\S]*toolchainRoot == \$input\[0\]\.toolchainRoot[\s\S]*environmentRoot == \$input\[0\]\.environmentRoot[\s\S]*affectedPaths == \$input\[0\]\.affectedPaths/u,
   );
   assert.match(
     workflow,
-    /dev-delivery-proof\.mjs native[\s\S]*--qualified-base[\s\S]*--shard-evidence-roots-json[\s\S]*dev-delivery-proof\.mjs verify-native[\s\S]*native-proof-json<<BUILDCHAIN_NATIVE_PROOF_EOF/u,
+    /dev-delivery-proof\.mjs native[\s\S]*--environment-root "\$\(jq -er '\.environmentRoot' "\$warrant_input"\)"[\s\S]*--qualified-base[\s\S]*--shard-evidence-roots-json[\s\S]*dev-delivery-proof\.mjs verify-native[\s\S]*native-proof-json<<BUILDCHAIN_NATIVE_PROOF_EOF/u,
   );
   assert.match(
     workflow,
