@@ -111,9 +111,11 @@ test('structured instruction waits for a response-first turn boundary', async ()
   });
   assert.equal(receipt.status, 'delivered');
   assert.ok(Date.now() - startedAt >= 20);
-  assert.equal(
-    product.invoke({ operation: 'status', session: ref }).interactionState,
-    'ready',
+  await waitFor(
+    () =>
+      product.invoke({ operation: 'status', session: ref }).interactionState ===
+      'ready',
+    'response-first turn did not reach the ready boundary',
   );
   const snapshot = product.invoke({ operation: 'snapshot', session: ref });
   assert.equal(snapshot.agentText, 'Structured answer retained.');
