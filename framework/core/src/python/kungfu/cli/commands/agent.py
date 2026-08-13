@@ -981,11 +981,34 @@ def console(ctx):
 def console_current(ctx, as_json):
     raw = os.environ.get("KUNGFU_AGENT_CONSOLE_ENVELOPE", "").strip()
     if not raw:
-        payload: dict[str, Any] = {
-            "schema": "kungfu.agent-console-current/v1",
-            "available": False,
-            "reason": "not-running-inside-kungfu-agent-console",
-        }
+        try:
+            current = session_surface.current_native_console(
+                str(ctx.runtime_dir), adopt=False
+            )
+        except (OSError, RuntimeError, ValueError, json.JSONDecodeError) as exc:
+            raise click.ClickException(str(exc)) from exc
+        if current is None:
+            payload: dict[str, Any] = {
+                "schema": "kungfu.agent-console-current/v1",
+                "available": False,
+                "reason": "not-running-inside-kungfu-agent-console",
+            }
+        else:
+            envelope = current["envelope"]
+            status = current["status"] or {}
+            binding = status.get("binding") or {}
+            effective_work_ref = (
+                binding.get("workRef") if binding.get("kind") == "work" else None
+            )
+            payload = {
+                "schema": "kungfu.agent-console-current/v1",
+                "available": True,
+                "envelope": envelope,
+                "bootstrap": (status.get("attempt") or {}).get("bootstrap"),
+                "workBound": effective_work_ref is not None,
+                "workRef": effective_work_ref,
+                "knownLimits": envelope.get("knownLimits", []),
+            }
     else:
         try:
             envelope = json.loads(raw)
@@ -1028,15 +1051,29 @@ def console_current(ctx, as_json):
 @agent_command_context
 def console_bind_work(ctx, initiative_id, assignment_id, as_json):
     raw = os.environ.get("KUNGFU_AGENT_CONSOLE_ENVELOPE", "").strip()
-    if not raw:
-        raise click.ClickException(
-            "bind-work must run inside a native Kungfu Agent Console"
-        )
     try:
-        envelope = json.loads(raw)
+        current = session_surface.current_native_console(
+            str(ctx.runtime_dir), adopt=not bool(raw)
+        )
+        if current is None:
+            raise ValueError(
+                "bind-work requires an injected native Console or an exact "
+                "current Codex process identity"
+            )
+        envelope = current["envelope"]
         kungfu_config.validate_value("agentConsoleEnvelope", envelope)
         binding = run_agent.bind_current_native_work(
-            str(ctx.runtime_dir), initiative_id, assignment_id
+            str(ctx.runtime_dir),
+            initiative_id,
+            assignment_id,
+            **(
+                {}
+                if raw
+                else {
+                    "envelope_override": envelope,
+                    "console_workspace_root": current["workspaceRoot"],
+                }
+            ),
         )
         if binding is None:
             raise ValueError("native Agent Console binding is unavailable")

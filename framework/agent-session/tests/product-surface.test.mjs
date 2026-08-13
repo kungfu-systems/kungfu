@@ -419,7 +419,7 @@ test('native provider UI registers one observer-only attempt in the primary Work
   );
 });
 
-test('native bootstrap state is observable and blocks Work binding until verified', () => {
+test('native bootstrap state is observable but does not authorize Work observation binding', () => {
   const pending = fixture();
   const pendingInput = { ...pending.input, bootstrap: undefined };
   const pendingPlan = pending.clients.cli.planNativeStart(pendingInput);
@@ -431,16 +431,18 @@ test('native bootstrap state is observable and blocks Work binding until verifie
     }).bootstrap.state,
     'pending',
   );
-  assert.throws(
-    () =>
-      pending.clients.cli.planNativeBindWork(
-        {
-          workConsoleId: pendingPlan.workConsoleId,
-          sessionAttemptId: pendingPlan.sessionAttemptId,
-        },
-        pending.input.binding.workRef,
-      ),
-    (error) => error?.code === 'native_bootstrap_not_verified',
+  const bindingPlan = pending.clients.cli.planNativeBindWork(
+    {
+      workConsoleId: pendingPlan.workConsoleId,
+      sessionAttemptId: pendingPlan.sessionAttemptId,
+    },
+    pending.input.binding.workRef,
+  );
+  assert.deepEqual(bindingPlan.workEffects, []);
+  assert.equal(pending.clients.cli.bindNativeWork(bindingPlan).status, 'bound');
+  assert.equal(
+    pending.clients.gui.show(pendingPlan).bootstrap.mutationsAllowed,
+    false,
   );
 
   const degraded = fixture();
