@@ -3,7 +3,7 @@
   "contract": "kungfu-buildchain-dev-delivery-warrant-queue",
   "repository": "kungfu-systems/kungfu",
   "protectedBase": "dev/v4/v4.0",
-  "generation": 1838,
+  "generation": 1839,
   "fencingCounter": 396,
   "policy": {
     "agingSeconds": 900,
@@ -22947,11 +22947,20 @@
       "sourceWorkflowRunId": 0,
       "priority": "ordinary",
       "enqueuedAt": "2026-08-13T08:37:37.870Z",
-      "updatedAt": "2026-08-13T08:37:37.870Z",
+      "updatedAt": "2026-08-13T08:48:52.063Z",
       "attempts": 1,
       "recoveries": 0,
-      "status": "queued",
-      "terminal": null,
+      "status": "cancelled",
+      "terminal": {
+        "outcome": "cancelled",
+        "reason": "No active agent owns PR #3043; its only workflow run was force-cancelled so Alpha.2 PR #3067 remains the sole delivery attempt.",
+        "evidenceRoot": "sha256:eb3e269f6ed95bc03a03752d3eccf88292149c401aff8d27fbe3512486748049",
+        "authority": "queued-candidate-cancellation",
+        "expectedSourceHead": "070a55829de1d508d1c7154585c1977323c0e7a3",
+        "observedSourceHead": "070a55829de1d508d1c7154585c1977323c0e7a3",
+        "eventAction": "cancelled",
+        "closedAt": "2026-08-13T08:48:52.063Z"
+      },
       "affectedPaths": [
         ".buildchain/kfd/kfd-2/release-claims.json",
         ".buildchain/kfd/kfd-3/collaboration-interface.prebuild.json",
@@ -22970,6 +22979,6 @@
       ]
     }
   ],
-  "updatedAt": "2026-08-13T08:45:01.341Z",
-  "stateRoot": "sha256:c626bf0cc235a27d571712601e7cee5e78c2d612bea6f5018d23a81f2caff5c2"
+  "updatedAt": "2026-08-13T08:48:52.063Z",
+  "stateRoot": "sha256:ae26fb3a7fb74f8d57a24e134afa5ad91c3a7749d429ee165d5b844175067c2f"
 }
