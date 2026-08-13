@@ -177,8 +177,17 @@ function withEnvironment(key, value, action) {
 // clean `install` stay a no-op while `build` owns compilation + staging.
 // In-process (not a node subprocess) so process.execPath with spaces —
 // e.g. Windows `C:\Program Files\nodejs\node.exe` — cannot break the call.
-function build(scope = 'full') {
-  const bindings = selectedBuildBindings();
+const PRODUCTION_STAGE_IDS = Object.freeze([
+  'dependency-bootstrap',
+  'native-build',
+  'artifact-stage',
+]);
+
+/**
+ * @param {string} scope
+ * @param {Set<string>} bindings
+ */
+function validateBuildScope(scope, bindings) {
   const { conanInstall, conanBuild } = require('./run-conan');
   const sdkBuild = scope === 'sdk';
   if (sdkBuild) {
@@ -199,67 +208,87 @@ function build(scope = 'full') {
   } else if (scope !== 'full') {
     throw new Error(`unsupported Core build scope: ${scope}`);
   }
-  measureCandidateStageSync(
-    'sdk-core-dependencies',
-    'core-dependency-bootstrap',
-    () =>
-      withEnvironment('KUNGFU_CORE_BUILD_SCOPE', scope, () => conanInstall()),
-    { gateId: 'source.changed-scope' },
-  );
-  measureCandidateStageSync(
-    'sdk-core-native',
-    'core-build',
-    () => withEnvironment('KUNGFU_CORE_BUILD_SCOPE', scope, () => conanBuild()),
-    {
-      gateId: 'source.changed-scope',
-    },
-  );
-  // Colocate the libnode runtime into build/<build_type> before staging, so the
-  // staged dist/kungfu is self-contained: pykungfu links @rpath/libnode.*, and
-  // dist/kungfu is the single runtime surface that kfx and the platform package
-  // both depend on. Require lazily (loads @kungfu-tech/libnode) so non-build
-  // commands stay light.
-  if (
-    !sdkBuild &&
-    [...bindings].some((binding) =>
-      ['python', 'node', 'electron'].includes(binding),
-    )
-  ) {
+  return { bindings, conanBuild, conanInstall, sdkBuild };
+}
+
+/**
+ * @param {string} stageId
+ * @param {string} scope
+ * @param {ReturnType<typeof validateBuildScope>} context
+ */
+function executeProductionStage(stageId, scope, context) {
+  if (!PRODUCTION_STAGE_IDS.includes(stageId)) {
+    throw new Error(`unsupported Core production stage: ${stageId}`);
+  }
+  const { bindings, conanBuild, conanInstall, sdkBuild } = context;
+  if (stageId === 'dependency-bootstrap') {
     measureCandidateStageSync(
-      'sdk-core-link-node',
-      'core-link',
-      () => require('./run-link-node').main(),
+      'sdk-core-dependencies',
+      'core-dependency-bootstrap',
+      () =>
+        withEnvironment('KUNGFU_CORE_BUILD_SCOPE', scope, () => conanInstall()),
       { gateId: 'source.changed-scope' },
     );
+    return;
   }
-  // With libnode colocated above, pykungfu imports — regenerate its .pyi stubs
-  // from the fresh binding so committed stubs/ track the C++ (see gen-stubs.js).
-  if (!sdkBuild && bindings.has('python')) {
+  if (stageId === 'native-build') {
     measureCandidateStageSync(
-      'sdk-core-python-stubs',
-      'sdk-pack-python',
-      () => require('./gen-stubs').main(),
-      { gateId: 'source.changed-scope', language: 'python' },
-    );
-  }
-  // The pykungfu wheel ships in dist/kungfu/wheels — the product install
-  // surface (`kungfu env`) resolves it from there. Build it with the binding
-  // so every build/rebuild leaves a wheel matching the fresh natives; before
-  // this only the gyp kfc chain built it, and the product dist chain shipped
-  // without wheels (run-freeze copyWheel warned but could not fail).
-  // run-wheel.js ends with process.exit, so spawn it instead of requiring.
-  if (!sdkBuild && bindings.has('python')) {
-    measureCandidateStageSync(
-      'sdk-core-python-wheel',
-      'sdk-pack-python',
+      'sdk-core-native',
+      'core-build',
       () =>
-        shell.run(
-          process.execPath,
-          [path.join(__dirname, 'run-wheel.js')],
-          true,
-        ),
-      { gateId: 'source.changed-scope', language: 'python' },
+        withEnvironment('KUNGFU_CORE_BUILD_SCOPE', scope, () => conanBuild()),
+      {
+        gateId: 'source.changed-scope',
+      },
     );
+    // Colocate the libnode runtime into build/<build_type> before staging, so
+    // the staged dist/kungfu is self-contained: pykungfu links
+    // @rpath/libnode.*, and dist/kungfu is the single runtime surface that kfx
+    // and the platform package both depend on. Require lazily (loads
+    // @kungfu-tech/libnode) so non-build commands stay light.
+    if (
+      !sdkBuild &&
+      [...bindings].some((binding) =>
+        ['python', 'node', 'electron'].includes(binding),
+      )
+    ) {
+      measureCandidateStageSync(
+        'sdk-core-link-node',
+        'core-link',
+        () => require('./run-link-node').main(),
+        { gateId: 'source.changed-scope' },
+      );
+    }
+    // With libnode colocated above, pykungfu imports — regenerate its .pyi
+    // stubs from the fresh binding so committed stubs/ track the C++ (see
+    // gen-stubs.js).
+    if (!sdkBuild && bindings.has('python')) {
+      measureCandidateStageSync(
+        'sdk-core-python-stubs',
+        'sdk-pack-python',
+        () => require('./gen-stubs').main(),
+        { gateId: 'source.changed-scope', language: 'python' },
+      );
+      // The pykungfu wheel ships in dist/kungfu/wheels — the product install
+      // surface (`kungfu env`) resolves it from there. Build it with the
+      // binding so every build/rebuild leaves a wheel matching the fresh
+      // natives; before this only the gyp kfc chain built it, and the product
+      // dist chain shipped without wheels (run-freeze copyWheel warned but
+      // could not fail). run-wheel.js ends with process.exit, so spawn it
+      // instead of requiring.
+      measureCandidateStageSync(
+        'sdk-core-python-wheel',
+        'sdk-pack-python',
+        () =>
+          shell.run(
+            process.execPath,
+            [path.join(__dirname, 'run-wheel.js')],
+            true,
+          ),
+        { gateId: 'source.changed-scope', language: 'python' },
+      );
+    }
+    return;
   }
   measureCandidateStageSync(
     'sdk-core-stage',
@@ -270,6 +299,25 @@ function build(scope = 'full') {
     },
   );
   if (!sdkBuild) cpVsDependencies();
+}
+
+/**
+ * @param {string} stageId
+ * @param {string} [scope]
+ */
+function runProductionStage(stageId, scope = 'full') {
+  executeProductionStage(
+    stageId,
+    scope,
+    validateBuildScope(scope, selectedBuildBindings()),
+  );
+}
+
+function build(scope = 'full') {
+  const context = validateBuildScope(scope, selectedBuildBindings());
+  for (const stageId of PRODUCTION_STAGE_IDS) {
+    executeProductionStage(stageId, scope, context);
+  }
 }
 
 function clean() {
@@ -321,7 +369,7 @@ function callPrebuilt(args, check = true) {
   return prebuilt(...buildTypeOpt, ...args);
 }
 
-module.exports = require('../lib/sywac')(
+const cli = require('../lib/sywac')(
   /** @type {NodeModule} */ (module),
   (/** @type {any} */ cli) => {
     cli
@@ -358,3 +406,7 @@ module.exports = require('../lib/sywac')(
       });
   },
 );
+
+module.exports = cli;
+module.exports.PRODUCTION_STAGE_IDS = PRODUCTION_STAGE_IDS;
+module.exports.runProductionStage = runProductionStage;
