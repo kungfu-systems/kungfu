@@ -88,7 +88,8 @@ jobs:
             run_state="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${run_id}" --jq '[.status,.conclusion] | @tsv')"
             [ "$run_state" = $'completed\tsuccess' ] || continue
             required_count="$(
-              gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${run_id}/jobs" \
+              gh api --method GET \
+                "repos/${GITHUB_REPOSITORY}/actions/runs/${run_id}/jobs" \
                 -f filter=latest -f per_page=100 \
                 --jq '[.jobs[] | select(.name == "affected-native / linux" and .status == "completed" and .conclusion == "success")] | length'
             )"

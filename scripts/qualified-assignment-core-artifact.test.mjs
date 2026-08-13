@@ -2102,7 +2102,7 @@ test('workflows keep candidate and promotion outside untrusted PR authority', ()
   assert.doesNotMatch(advisoryWorkflow, /^\s{2}(pull_request|merge_group):/mu);
   assert.match(
     advisoryWorkflow,
-    /REF_PROTECTED: \$\{\{ github\.ref_protected \}\}[\s\S]*REF_PROTECTED" != true[\s\S]*affected-native-pr\.yml\/runs[\s\S]*-f event=merge_group[\s\S]*affected-native \/ linux[\s\S]*dev-candidate-plan-\$\{TARGET_SHA\}/u,
+    /REF_PROTECTED: \$\{\{ github\.ref_protected \}\}[\s\S]*REF_PROTECTED" != true[\s\S]*affected-native-pr\.yml\/runs[\s\S]*-f event=merge_group[\s\S]*gh api --method GET[\s\S]*actions\/runs\/\$\{run_id\}\/jobs[\s\S]*affected-native \/ linux[\s\S]*dev-candidate-plan-\$\{TARGET_SHA\}/u,
   );
   assert.match(
     advisoryWorkflow,
