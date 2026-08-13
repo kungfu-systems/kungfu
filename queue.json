@@ -3,7 +3,7 @@
   "contract": "kungfu-buildchain-dev-delivery-warrant-queue",
   "repository": "kungfu-systems/kungfu",
   "protectedBase": "dev/v4/v4.0",
-  "generation": 1911,
+  "generation": 1912,
   "fencingCounter": 401,
   "policy": {
     "agingSeconds": 900,
@@ -11,56 +11,7 @@
     "leaseSeconds": 3600,
     "emergencyPolicy": "reviewed-explicit-only"
   },
-  "activeWarrant": {
-    "schema": "kungfu.buildchain.dev-delivery-warrant/v1",
-    "repository": "kungfu-systems/kungfu",
-    "protectedBase": "dev/v4/v4.0",
-    "candidateId": "sha256:99edb8f6df8e8b070113349b8462053ee12ccaebec6d823c0c66247e0021db8f",
-    "pullRequestNumber": 3068,
-    "sourceHead": "4b7dd0d999db8afe71e7b7981ce8fb96d36b1d29",
-    "assignmentRoot": "sha256:6b3e7eb2955a21e768d03c3bccf9bedcbeb8190dd7178bfb6b1101df2e7413c0",
-    "initiativeRoot": "sha256:bfff817933e5a5ad693e4b902a84f6cc3a251235dd7377cb4091d92f805fa7ff",
-    "sourceIdentityRoot": "sha256:18c0da130bf5cbb0f253a58a8f01a3d87feb600adf29647227be246851bdab97",
-    "sourcePatchRoot": "sha256:41b4fac57b845e3a177e5766dce978d74f69b37fdd51256b41420767c8289a31",
-    "sourceProofRoot": "sha256:f3b25f9b24535b242cd14204666070861db02b0368e95252d5283f0bc644a086",
-    "planRoot": "sha256:63c6b19ce30be0da151e2835ef891050379ddf3bc699799dcd3a98821338545a",
-    "closureRoot": "sha256:106d175611d8634c988192302b9c464ae8ba3b6d023c2cff9910e401344c9624",
-    "dependencyRoot": "sha256:322a0e1be046d6d181ec8db89b2d36d9bfa5255099c2d2f6ecc1ed5964e0baba",
-    "toolchainRoot": "sha256:2ecb07894954a2e0de022615d4561e5ba3ae68376401941ecff77be03cd75a0f",
-    "environmentRoot": "sha256:c5f5da5917c6ff93a509a62b18d4b9b69325755c4c7229b553b0016cde83788f",
-    "affectedPaths": [
-      ".buildchain/alpha-release-cut-lock.json",
-      ".github/workflows/build.yml",
-      ".github/workflows/dev-alpha-candidate-patrol.yml",
-      ".github/workflows/dev-pr-auto-merge.yml",
-      ".github/workflows/release-new-version.yml",
-      "docs/qualification/gates/workflow-authority.json",
-      "docs/qualification/gates/workflow-authority.md",
-      "docs/qualification/gates/workflow-bindings.json",
-      "docs/release-promotion-rehearsal.contract.json",
-      "framework/release/publication-control-plane.mjs",
-      "framework/release/publication-surfaces.json",
-      "scripts/alpha-macos-overflow.test.mjs",
-      "scripts/alpha-promotion-preflight.test.mjs",
-      "scripts/dev-pr-auto-merge.test.mjs",
-      "scripts/kungfu-workflow-authority.mjs",
-      "scripts/release-promotion-rehearsal.mjs",
-      "scripts/release-promotion-rehearsal.test.mjs",
-      "scripts/verify-alpha-release-cut-lock.test.mjs"
-    ],
-    "sourceWorkflowRunId": 0,
-    "deliveryClass": "native-proof-required",
-    "generation": 401,
-    "phase": "qualified",
-    "expectedOldStateRoot": "sha256:e8cde1ab5e094806cdb621b98373c4811c1230196085f69fe5907ef8ec17d4d5",
-    "issuedAt": "2026-08-13T12:24:40.247Z",
-    "expiresAt": "2026-08-13T14:28:19.792Z",
-    "fencingToken": "sha256:9a8814389a796907d8f0a3b02250a29044f9c4e8fb4f4799cb17f128123212e6",
-    "nextAction": "Enter the GitHub merge queue at the exact fenced PR head; merge_group remains final authority.",
-    "nativeProofRoot": "sha256:b6cbff10e76a7d23cc1030eeea2725da95ed603c63c7a53d0452301478b58763",
-    "nativeProofReuseRoot": "sha256:97f9c6b8f1b1f8ace04a33690b80b74702ae539ae6c6cbc807c8cfda45a15bdc",
-    "qualifiedAt": "2026-08-13T12:41:12.941Z"
-  },
+  "activeWarrant": null,
   "candidates": [
     {
       "repository": "kungfu-systems/kungfu",
@@ -23275,11 +23226,19 @@
       "sourceWorkflowRunId": 0,
       "priority": "ordinary",
       "enqueuedAt": "2026-08-13T12:24:35.270Z",
-      "updatedAt": "2026-08-13T12:58:19.792Z",
+      "updatedAt": "2026-08-13T13:27:53.155Z",
       "attempts": 1,
       "recoveries": 0,
-      "status": "qualified",
-      "terminal": null,
+      "status": "merged",
+      "terminal": {
+        "outcome": "merged",
+        "terminalClass": "authoritative-completion",
+        "reason": "protected pull request event: closed",
+        "evidenceRoot": "sha256:f3d1b803400e80acf9ebe17ab79b3f3afce72bfce4606e0f0cbb405bc5aa93dd",
+        "closedAt": "2026-08-13T13:27:53.155Z",
+        "fencingToken": "sha256:9a8814389a796907d8f0a3b02250a29044f9c4e8fb4f4799cb17f128123212e6",
+        "leaseGeneration": 401
+      },
       "affectedPaths": [
         ".buildchain/alpha-release-cut-lock.json",
         ".github/workflows/build.yml",
@@ -23346,6 +23305,6 @@
       ]
     }
   ],
-  "updatedAt": "2026-08-13T13:21:41.251Z",
-  "stateRoot": "sha256:6b89bdc695f6c5f2c4480da0975e891b35ce61f7682ce1b35a5fade9d4c79285"
+  "updatedAt": "2026-08-13T13:27:53.155Z",
+  "stateRoot": "sha256:a6b2557c8f35507832ace29b42542d71d9b320d30f7aeb536cecff3e6c6ee75f"
 }
