@@ -272,10 +272,7 @@ _BOOTSTRAP = (
 )
 
 
-def canonical_root(value: Any) -> str:
-    """Compatibility facade for the canonical Agent Session semantic root."""
-
-    return session_contract.semantic_root(value)
+canonical_root = session_contract.semantic_root
 
 
 def agent_activity_history_projection(
@@ -286,17 +283,6 @@ def agent_activity_history_projection(
     return agent_resources.agent_activity_history_projection(
         validate_work_ref(work_ref), entrypoint=entrypoint
     )
-
-
-def _read_json_object(
-    value: Mapping[str, Any] | None, label: str
-) -> dict[str, Any] | None:
-    if value is None:
-        return None
-    result = dict(value)
-    if not result:
-        raise ValueError(f"{label} must be a non-empty JSON object")
-    return result
 
 
 def validate_work_ref(value: Mapping[str, Any] | None) -> dict[str, Any] | None:
@@ -312,9 +298,11 @@ def validate_work_ref(value: Mapping[str, Any] | None) -> dict[str, Any] | None:
 def validate_continuation(
     value: Mapping[str, Any] | None,
 ) -> dict[str, Any] | None:
-    result = _read_json_object(value, "continuation envelope")
-    if result is None:
+    if value is None:
         return None
+    result = dict(value)
+    if not result:
+        raise ValueError("continuation envelope must be a non-empty JSON object")
     required = {
         "schema",
         "workRef",
