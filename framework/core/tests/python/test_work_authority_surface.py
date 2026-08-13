@@ -3,10 +3,11 @@
 from datetime import UTC, datetime
 import importlib
 import json
+from types import SimpleNamespace
 
 from click.testing import CliRunner
 
-from kungfu import assignment_close, assignment_evidence
+from kungfu import assignment_close, assignment_evidence, assignment_review_lifecycle
 from kungfu.cli.commands import __registry__  # noqa: F401
 from kungfu.cli.commands import assignment_review
 from kungfu.cli.commands import kfc
@@ -180,18 +181,126 @@ def test_reviewer_result_requires_exact_criterion_coverage():
 
 def test_reviewer_prompt_requires_exact_structured_criterion_coverage():
     checks = ["Names the product", "Reports evidence and unresolved risks"]
-    prompt = assignment_review.review_agent_prompt(
-        {
-            "work": {"acceptanceChecks": checks},
-            "deliverable": {"path": "README.md", "root": f"sha256:{'1' * 64}"},
-            "inputs": [],
-        }
-    )
+    profile_root = f"sha256:{'1' * 64}"
+    assignment_root = f"sha256:{'2' * 64}"
+    query_proof_root = f"sha256:{'3' * 64}"
+    report_root = f"sha256:{'5' * 64}"
+    deliverable_root = f"sha256:{'4' * 64}"
+    plan = {
+        "workspace": {"id": "project:starter"},
+        "work": {
+            "assignmentId": "write-brief",
+            "assignmentRoot": assignment_root,
+            "queryProofRoot": query_proof_root,
+            "acceptanceChecks": checks,
+        },
+        "execution": {
+            "reportRoot": report_root,
+            "workRef": {"profileRoot": profile_root},
+        },
+        "deliverable": {"path": "README.md", "root": deliverable_root},
+        "inputs": [],
+    }
+    prompt = assignment_review.review_agent_prompt(plan)
+    continuation = assignment_review.review_continuation(plan)
 
     assert "criteria array must contain exactly 2 objects" in prompt
     assert '1. criterion must equal "Names the product"' in prompt
     assert '2. criterion must equal "Reports evidence and unresolved risks"' in prompt
     assert "A statement in summary does not count as criterion coverage" in prompt
+    assert '"schema": "kungfu.review-context/v1"' in prompt
+    assert '"schema": "kungfu.work-ref/v1"' in prompt
+    assert '"entityId": "write-brief"' in prompt
+    assert f'"profileRoot": "{profile_root}"' in prompt
+    assert f'"systemTimeCut": "{query_proof_root}"' in prompt
+    assert '"mode": "fresh-independent-review"' in prompt
+    assert f'"priorClaimRoot": "{report_root}"' in prompt
+    assert '"schema": "kungfu.agent-continuation-envelope/v1"' in prompt
+    assert '"schema": "kungfu.review-intake-assessment/v1"' in prompt
+    assert run_agent.validate_continuation(continuation) == continuation
+
+
+def test_fresh_reviewer_receives_the_exact_work_continuation_envelope(
+    tmp_path, monkeypatch
+):
+    def root(marker):
+        return f"sha256:{marker * 64}"
+
+    plan = {
+        "planRoot": root("9"),
+        "workspace": {"id": "project:starter"},
+        "work": {
+            "assignmentId": "write-brief",
+            "assignmentRoot": root("1"),
+            "queryProofRoot": root("2"),
+            "acceptanceChecks": ["Names the product"],
+            "phase": "executing",
+        },
+        "execution": {
+            "reportRoot": root("3"),
+            "workRef": {"profileRoot": root("4")},
+        },
+        "deliverable": {"path": "README.md", "root": root("5")},
+        "inputs": [],
+        "reviewer": {"id": "codex.path", "label": "Codex · PATH CLI"},
+        "reviewExecution": {"mode": "fresh-process"},
+        "executable": True,
+    }
+    observed = {}
+
+    def execute_agent(**kwargs):
+        observed.update(kwargs)
+        return {
+            "launch": {"exitCode": 1},
+            "reportRoot": root("6"),
+        }
+
+    monkeypatch.setattr(assignment_review_lifecycle.run_agent, "execute", execute_agent)
+    services = assignment_review_lifecycle.ReviewServices(
+        plan=lambda **_kwargs: plan,
+        receipt=lambda value: value,
+        runtime=lambda *_args: SimpleNamespace(
+            identity=SimpleNamespace(workspace_root=str(tmp_path)),
+            runtime_dir=str(tmp_path / "runtime"),
+        ),
+        retained_evidence=lambda *_args: None,
+        agent_report_summary=lambda report: report,
+        status=lambda *_args: {},
+        mint_lease=lambda *_args: {},
+        advance=lambda *_args: {},
+        completion_claim_values=lambda *_args: {},
+        profile_action=lambda *_args: {},
+        completion_review_values=lambda *_args: {},
+    )
+    request = assignment_review_lifecycle.ReviewRequest(
+        config_home=tmp_path / "config",
+        runtime_home=tmp_path / "home",
+        agent_report_file=tmp_path / "execution-report.json",
+        workspace_root=str(tmp_path),
+        home=False,
+        initiative_id="starter",
+        assignment_id="write-brief",
+        reviewer_profile_id="codex.path",
+        expected_plan_root=plan["planRoot"],
+        execute=True,
+        allow_foreign_binding=False,
+    )
+
+    receipt = assignment_review_lifecycle.execute(
+        request, services, lambda *_args: None, lambda: 0
+    )
+
+    expected_work_ref = assignment_review.review_work_ref(plan)
+    expected_continuation = assignment_review.review_continuation(plan)
+    assert receipt["status"] == "reviewer-failed"
+    assert observed["work_ref"] == expected_work_ref
+    assert observed["continuation"] == expected_continuation
+    assert observed["permission_mode"] == "read-only"
+    assert (
+        run_agent.validate_continuation(observed["continuation"])
+        == expected_continuation
+    )
+    assert json.dumps(expected_continuation, sort_keys=True) in observed["prompt"]
 
 
 def test_exact_retained_passing_reviewer_evidence_is_reusable(tmp_path):
@@ -208,6 +317,7 @@ def test_exact_retained_passing_reviewer_evidence_is_reusable(tmp_path):
             "initiativeId": "starter",
             "assignmentId": "write-brief",
             "assignmentRoot": f"sha256:{'1' * 64}",
+            "queryProofRoot": f"sha256:{'7' * 64}",
             "acceptanceChecks": checks,
         },
         "deliverable": {
@@ -221,6 +331,7 @@ def test_exact_retained_passing_reviewer_evidence_is_reusable(tmp_path):
             }
         ],
         "execution": {
+            "reportRoot": f"sha256:{'8' * 64}",
             "workRef": {"profileRoot": f"sha256:{'4' * 64}"},
         },
         "reviewer": {

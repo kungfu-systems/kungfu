@@ -14,6 +14,55 @@ from kungfu.agent import run_agent
 from kungfu.workspace import resolve_workspace_target
 
 
+def review_work_ref(plan):
+    return {
+        "schema": "kungfu.work-ref/v1",
+        "workspaceId": plan["workspace"]["id"],
+        "profileId": "kungfu.work-control",
+        "profileRoot": plan["execution"]["workRef"]["profileRoot"],
+        "entityType": "assignment",
+        "entityId": plan["work"]["assignmentId"],
+        "entityRoot": plan["work"]["assignmentRoot"],
+        "purpose": "independent-completion-review",
+        "systemTimeCut": plan["work"]["queryProofRoot"],
+    }
+
+
+def review_intake_assessment(plan):
+    remaining_obligation = (
+        "Independently assess every exact acceptance criterion against the "
+        "retained Project evidence."
+    )
+    next_action = (
+        "Inspect the retained evidence read-only and return the exact "
+        "KUNGFU_REVIEW_RESULT line."
+    )
+    return {
+        "schema": "kungfu.review-intake-assessment/v1",
+        "state": "independent-review-required",
+        "currentCutRoot": plan["work"]["queryProofRoot"],
+        "priorClaimRoot": plan["execution"]["reportRoot"],
+        "primaryEvidence": dict(plan["deliverable"]),
+        "supportingEvidence": [dict(row) for row in plan["inputs"]],
+        "acceptanceChecks": list(plan["work"]["acceptanceChecks"]),
+        "remainingObligation": remaining_obligation,
+        "nextAction": next_action,
+    }
+
+
+def review_continuation(plan):
+    assessment = review_intake_assessment(plan)
+    return {
+        "schema": run_agent.CONTINUATION_SCHEMA,
+        "workRef": review_work_ref(plan),
+        "currentCutRoot": plan["work"]["queryProofRoot"],
+        "priorClaimRoot": plan["execution"]["reportRoot"],
+        "assessmentRoot": run_agent.canonical_root(assessment),
+        "remainingObligation": assessment["remainingObligation"],
+        "nextAction": assessment["nextAction"],
+    }
+
+
 def review_agent_prompt(plan):
     acceptance_checks = plan["work"]["acceptanceChecks"]
     criteria = "\n".join(f"- {value}" for value in acceptance_checks)
@@ -22,10 +71,25 @@ def review_agent_prompt(plan):
         for index, value in enumerate(acceptance_checks, start=1)
     )
     inputs = "\n".join(f"- {row['path']} ({row['root']})" for row in plan["inputs"])
+    intake_assessment = review_intake_assessment(plan)
+    admission_context = {
+        "schema": "kungfu.review-context/v1",
+        "workRef": review_work_ref(plan),
+        "continuation": review_continuation(plan),
+        "assessment": intake_assessment,
+        "execution": {
+            "mode": "fresh-independent-review",
+            "permissionMode": "read-only",
+            "priorTranscriptBytes": 0,
+        },
+    }
     return (
         "Independently review the retained Project Work evidence. "
         "This is a fresh review process with no prior transcript. Stay read-only: "
         "do not edit, create, delete, rename, or format any project file.\n\n"
+        "Admitted WorkRef and continuation (machine-readable; this prompt is "
+        "self-contained):\n"
+        f"{json.dumps(admission_context, ensure_ascii=False, sort_keys=True)}\n\n"
         f"Primary evidence: {plan['deliverable']['path']} "
         f"({plan['deliverable']['root']})\n"
         f"Supporting evidence:\n{inputs or '- none'}\n\n"

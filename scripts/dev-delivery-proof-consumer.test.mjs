@@ -32,6 +32,8 @@ const PULL_REQUEST_CHECKOUT = '5'.repeat(40);
 const ROOT_A = `sha256:${'a'.repeat(64)}`;
 const ROOT_B = `sha256:${'b'.repeat(64)}`;
 const ROOT_C = `sha256:${'c'.repeat(64)}`;
+const ROOT_D = `sha256:${'d'.repeat(64)}`;
+const ROOT_E = `sha256:${'e'.repeat(64)}`;
 const WARRANT = {
   schema: 'kungfu.buildchain.dev-delivery-warrant/v1',
   candidateId: ROOT_C,
@@ -39,6 +41,9 @@ const WARRANT = {
   generation: 7,
   pullRequestNumber: 42,
   sourceHead: SOURCE,
+  phase: 'qualified',
+  nativeProofRoot: ROOT_D,
+  nativeProofReuseRoot: ROOT_E,
   issuedAt: '2026-08-04T02:00:00.000Z',
   expiresAt: '2026-08-04T03:00:00.000Z',
 };
@@ -160,7 +165,7 @@ function queueView(sourceProofRoot, overrides = {}) {
         pullRequestNumber: 42,
         sourceHead: SOURCE,
         sourceProofRoot,
-        status: 'selected',
+        status: 'qualified',
         ...overrides,
       },
     },

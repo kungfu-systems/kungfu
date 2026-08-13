@@ -30,7 +30,7 @@ const LEGACY_PROOF_SCHEMA = 'kungfu.affected-native-proof/v3';
 const LEGACY_DESCRIPTOR_SCHEMA = 'kungfu.affected-native-proof-descriptor/v1';
 export const IDENTITY_SCHEMA = 'kungfu.affected-native-proof-identity/v6';
 export const QUALIFICATION_IDENTITY_SCHEMA =
-  'kungfu.affected-native-qualification-identity/v2';
+  'kungfu.affected-native-qualification-identity/v3';
 export const PROOF_SCHEMA = 'kungfu.affected-native-proof/v6';
 export const DESCRIPTOR_SCHEMA = 'kungfu.affected-native-proof-descriptor/v4';
 export const DELIVERY_BINDING_SCHEMA =
@@ -251,15 +251,13 @@ export function verifyQueueAdmissionLease(input = {}) {
     pullRequestNumber,
     sourceHeadSha,
   );
-  if (
-    !['selected', 'proving', 'qualified', 'waiting', 'blocked'].includes(
-      candidate.status,
-    )
-  ) {
+  if (warrant.phase !== 'qualified' || candidate.status !== 'qualified') {
     throw new Error(
       `active Warrant candidate is not delivery-ready: ${candidate.status}`,
     );
   }
+  for (const field of ['nativeProofRoot', 'nativeProofReuseRoot'])
+    requireRoot(warrant[field], `Warrant ${field}`);
   const observedAt = new Date(input.now || observation.observedAt).getTime();
   if (
     !Number.isFinite(observedAt) ||
@@ -277,6 +275,8 @@ export function verifyQueueAdmissionLease(input = {}) {
     sourceHeadSha,
     candidateId: warrant.candidateId,
     sourceProofRoot: candidate.sourceProofRoot,
+    nativeProofRoot: warrant.nativeProofRoot,
+    nativeProofReuseRoot: warrant.nativeProofReuseRoot,
     fencingToken: warrant.fencingToken,
     generation: warrant.generation,
     candidateState: candidate.status,
@@ -741,13 +741,131 @@ export function planProjection(plan) {
   return projection;
 }
 
+function normalizeChangedPath(value) {
+  const normalized = String(value || '').replace(/^\.\//u, '');
+  if (
+    normalized === '' ||
+    normalized.startsWith('/') ||
+    normalized.split('/').includes('..') ||
+    normalized.includes('\0')
+  ) {
+    throw new Error('affected-native semantic source path is invalid');
+  }
+  return normalized;
+}
+
+export function createSemanticSourceProjection(plan, entries = []) {
+  validatePlan(plan);
+  const changedPaths = sortedUnique(
+    (plan.changedPaths || []).map(normalizeChangedPath),
+  );
+  const records = entries
+    .map((entry) => {
+      const pathName = normalizeChangedPath(entry?.path);
+      if (entry?.state === 'deleted') {
+        return { path: pathName, state: 'deleted' };
+      }
+      if (
+        entry?.state !== 'present' ||
+        !/^(100644|100755|120000|160000)$/u.test(entry.mode || '') ||
+        !['blob', 'commit'].includes(entry.type) ||
+        !/^[0-9a-f]{40}$/u.test(entry.objectId || '')
+      ) {
+        throw new Error(
+          `affected-native semantic source entry is invalid: ${pathName}`,
+        );
+      }
+      return {
+        path: pathName,
+        state: 'present',
+        mode: entry.mode,
+        type: entry.type,
+        objectId: entry.objectId,
+      };
+    })
+    .sort((left, right) => left.path.localeCompare(right.path));
+  if (
+    new Set(records.map(({ path: pathName }) => pathName)).size !==
+      records.length ||
+    stableJson(records.map(({ path: pathName }) => pathName)) !==
+      stableJson(changedPaths)
+  ) {
+    throw new Error(
+      'affected-native semantic source entries do not match changed paths',
+    );
+  }
+  const body = {
+    schema: 'kungfu.affected-native-semantic-source/v1',
+    changedPaths,
+    entries: records,
+  };
+  return { ...body, semanticSourceRoot: digest(body) };
+}
+
+function gitBytes(args, cwd = process.cwd()) {
+  const result = spawnSync('git', args, {
+    cwd,
+    encoding: 'buffer',
+    shell: false,
+  });
+  if (result.status !== 0) {
+    throw new Error(
+      result.stderr.toString('utf8').trim() || `git ${args.join(' ')} failed`,
+    );
+  }
+  return result.stdout;
+}
+
+export function semanticSourceProjectionFromGit(plan, cwd = process.cwd()) {
+  validatePlan(plan);
+  const changedPaths = gitBytes(
+    ['diff', '--name-only', '-z', '--no-renames', plan.base, plan.head],
+    cwd,
+  )
+    .toString('utf8')
+    .split('\0')
+    .filter(Boolean)
+    .map(normalizeChangedPath);
+  const entries = changedPaths.map((pathName) => {
+    const raw = gitBytes(['ls-tree', '-z', plan.head, '--', pathName], cwd)
+      .toString('utf8')
+      .split('\0')
+      .filter(Boolean);
+    if (raw.length === 0) return { path: pathName, state: 'deleted' };
+    if (raw.length !== 1) {
+      throw new Error(
+        `affected-native semantic source tree entry is ambiguous: ${pathName}`,
+      );
+    }
+    const match = raw[0].match(
+      /^([0-7]{6}) (blob|commit) ([0-9a-f]{40})\t([\s\S]+)$/u,
+    );
+    if (!match || normalizeChangedPath(match[4]) !== pathName) {
+      throw new Error(
+        `affected-native semantic source tree entry drift: ${pathName}`,
+      );
+    }
+    return {
+      path: pathName,
+      state: 'present',
+      mode: match[1],
+      type: match[2],
+      objectId: match[3],
+    };
+  });
+  return createSemanticSourceProjection(plan, entries);
+}
+
 function qualificationIdentityFromIdentity(identity) {
   if (identity?.schema !== IDENTITY_SCHEMA) {
     throw new Error('affected-native qualification identity schema drift');
   }
   return {
     schema: QUALIFICATION_IDENTITY_SCHEMA,
-    sourceTree: identity.sourceTree,
+    semanticSourceRoot: requireRoot(
+      identity.semanticSourceRoot,
+      'affected-native semantic source root',
+    ),
     planProjectionDigest: identity.planProjectionDigest,
     partitionCount: identity.partitionCount,
     platformTier: identity.platformTier,
@@ -859,6 +977,7 @@ export function createProofDescriptor(
   partitionCount,
   toolchain,
   deliveryBinding = null,
+  semanticSourceRoot = null,
 ) {
   requireSha(sourceTree, 'affected-native source tree');
   if (
@@ -873,8 +992,17 @@ export function createProofDescriptor(
     plan.platformTier === 'github-hosted-linux-native-pr' &&
     plan.closureComponents.length > 0;
   validateNativeToolchain(toolchain, nativeRequired);
+  const exactSemanticSourceRoot = requireRoot(
+    semanticSourceRoot ||
+      digest({
+        schema: 'kungfu.affected-native-semantic-source-fallback/v1',
+        sourceTree,
+        changedPaths: sortedUnique(plan.changedPaths || []),
+      }),
+    'affected-native semantic source root',
+  );
   const dependencyRoot = digest({
-    sourceTree,
+    semanticSourceRoot: exactSemanticSourceRoot,
     authority: projection.authority,
   });
   const closureRoot = digest({
@@ -885,6 +1013,7 @@ export function createProofDescriptor(
   const sharedIdentity = {
     base: plan.base,
     sourceTree,
+    semanticSourceRoot: exactSemanticSourceRoot,
     planProjectionDigest: digest(projection),
     partitionCount,
     platformTier: plan.platformTier,
@@ -1545,15 +1674,18 @@ async function main() {
     return;
   }
   if (options.command === 'describe') {
+    const plan = readJson(path.resolve(options.plan));
     const deliveryBinding = options['delivery-binding']
       ? readJson(path.resolve(options['delivery-binding']))
       : null;
+    const semanticSource = semanticSourceProjectionFromGit(plan);
     const descriptor = createProofDescriptor(
-      readJson(path.resolve(options.plan)),
+      plan,
       options['source-tree'] || git('rev-parse', 'HEAD^{tree}'),
       Number(options['partition-count'] || 2),
       readJson(path.resolve(options.toolchain)),
       deliveryBinding,
+      semanticSource.semanticSourceRoot,
     );
     writeJson(path.resolve(options.output), descriptor);
     appendGithubOutput(options['github-output'], {

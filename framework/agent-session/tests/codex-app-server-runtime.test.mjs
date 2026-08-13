@@ -161,6 +161,40 @@ test('continuous reader exposes turn identity before a late turn/start response'
   assert.equal(response.status, 'observed');
 });
 
+test('Windows command wrappers use an explicit shell without version coupling', async (t) => {
+  const child = stdoutEndingChild();
+  let invocation = null;
+  const host = createHost({
+    platform: 'win32',
+    spawn: (executable, argv, options) => {
+      invocation = { executable, argv, options };
+      return child;
+    },
+  });
+  await host.start({
+    sessionAttemptId: 'attempt-wrapper',
+    runtimeGeneration: '8',
+    executable: '/agent/bin/codex.CMD',
+    argv: ['app-server', '--stdio'],
+    env: { ComSpec: 'C:\\Windows\\System32\\cmd.exe' },
+    cliVersion: 'opaque-future-build',
+    initializeParams: {
+      clientInfo: { name: 'kungfu-test', version: '4.0.0-alpha.1' },
+    },
+  });
+  t.after(() => stop(host));
+  assert.equal(invocation.executable, 'C:\\Windows\\System32\\cmd.exe');
+  assert.deepEqual(invocation.argv, [
+    '/d',
+    '/s',
+    '/v:off',
+    '/c',
+    'call "/agent/bin/codex.CMD" "app-server" "--stdio"',
+  ]);
+  assert.equal(invocation.options.shell, false);
+  assert.equal(invocation.options.windowsVerbatimArguments, true);
+});
+
 test('malformed and unknown frames fail closed and freeze admission', async (t) => {
   for (const [mode, code] of [
     ['malformed', 'malformed-jsonl'],
