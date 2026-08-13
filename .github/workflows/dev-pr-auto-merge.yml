@@ -212,6 +212,7 @@ jobs:
       closure-root: ${{ steps.contract.outputs.closure-root }}
       dependency-root: ${{ steps.contract.outputs.dependency-root }}
       toolchain-root: ${{ steps.contract.outputs.toolchain-root }}
+      environment-root: ${{ steps.contract.outputs.environment-root }}
       affected-paths-json: ${{ steps.contract.outputs.affected-paths-json }}
       shard-evidence-roots-json: ${{ steps.contract.outputs.shard-evidence-roots-json }}
       delivery-class: ${{ steps.contract.outputs.delivery-class }}
@@ -557,6 +558,7 @@ jobs:
       closure-root: ${{ needs.delivery-contract.outputs.closure-root }}
       dependency-root: ${{ needs.delivery-contract.outputs.dependency-root }}
       toolchain-root: ${{ needs.delivery-contract.outputs.toolchain-root }}
+      environment-root: ${{ needs.delivery-contract.outputs.environment-root }}
       affected-paths-json: ${{ needs.delivery-contract.outputs.affected-paths-json || '[]' }}
       shard-evidence-roots-json: ${{ needs.delivery-contract.outputs.shard-evidence-roots-json || '[]' }}
       native-proof-json: ${{ needs.delivery-contract.outputs.native-proof-json }}
