@@ -32,6 +32,26 @@ First, [install Kungfu and make the `kungfu` command available on your
 `PATH`](docs/guides/installing-cli.md), then choose the entry that matches how
 you already work.
 
+**Try Kungfu before connecting a real Agent.** The built-in deterministic Mock
+Agent lets you experience Project and Work onboarding without provider
+credentials. To see why durable Work matters across failure and recovery, run:
+
+```sh
+KUNGFU_MOCK_AGENT_SCENARIO=recovery-story kungfu
+```
+
+Start the same Work through three consecutive Attempts: a disconnect, a crash,
+then a recovered delivery. For a quicker onboarding check that crosses a
+question, an approval, and a ready-for-review result in one Attempt, run:
+
+```sh
+KUNGFU_MOCK_AGENT_SCENARIO=multi-step kungfu
+```
+
+The Mock Agent covers Work creation and execution. Regular onboarding still
+needs a supported real Agent for independent review, so this is not yet an
+end-to-end zero-external-Agent path.
+
 **Stay in your current Agent.** Paste this sentence into Codex, Claude, OpenCode,
 Amp, or another Agent that can run local commands:
 
