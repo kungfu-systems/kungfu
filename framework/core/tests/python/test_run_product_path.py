@@ -1527,7 +1527,7 @@ def test_codex_project_work_session_carries_confirmed_workspace_write_policy(tmp
     assert start_input["structured"] == {
         "threadStartParams": {
             "cwd": str(tmp_path),
-            "approvalPolicy": "untrusted",
+            "approvalPolicy": "on-request",
             "approvalsReviewer": "user",
             "sandbox": "workspace-write",
         }

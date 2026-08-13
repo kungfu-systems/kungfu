@@ -154,7 +154,7 @@ class ManagedRunCoordinator:
             start_input["structured"] = {
                 "threadStartParams": {
                     "cwd": cwd,
-                    "approvalPolicy": "untrusted",
+                    "approvalPolicy": "on-request",
                     "approvalsReviewer": "user",
                     "sandbox": permission_mode,
                 }

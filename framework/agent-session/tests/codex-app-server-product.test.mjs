@@ -267,7 +267,7 @@ test('GUI CLI and Agent share one frozen structured route and exact controls', a
   assert.deepEqual(guiPlan.argv, [provider, 'product-route']);
   assert.deepEqual(guiPlan.structured.threadStartParams, {
     cwd: here,
-    approvalPolicy: 'untrusted',
+    approvalPolicy: 'on-request',
     approvalsReviewer: 'user',
     sandbox: 'read-only',
   });
