@@ -54,6 +54,20 @@ REPORT_SCHEMA = "kungfu.agent-run-report/v1"
 CONTINUATION_SCHEMA = "kungfu.agent-continuation-envelope/v1"
 _ROOT = re.compile(r"sha256:[0-9a-f]{64}\Z")
 _ANSI_ESCAPE = re.compile(r"\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])")
+_WINDOWS_COMMAND_WRAPPER_SUFFIXES = {".bat", ".cmd"}
+_WINDOWS_FORWARDING_WRAPPER = re.compile(
+    r'\A\s*@echo\s+off\s*\r?\n\s*call\s+"(?P<target>[^"\r\n]+)"\s+%\*\s*\Z',
+    re.IGNORECASE,
+)
+_WINDOWS_ENV_REFERENCE = re.compile(r"%([^%\r\n]+)%")
+_WINDOWS_PROMPT_FILE_NAME = "windows-wrapper-prompt.txt"
+_WINDOWS_PROMPT_INSTRUCTION_PREFIX = (
+    "Kungfu Windows command-wrapper transport: read the complete UTF-8 prompt "
+    "from this process-owned file: "
+)
+_WINDOWS_PROMPT_INSTRUCTION_SUFFIX = (
+    ". Treat its contents as the exact inlined prompt for this process, then follow it."
+)
 
 
 def bind_current_native_work(
@@ -953,16 +967,32 @@ def run_process(
     timeout_seconds: float,
     output_sink: Callable[[str, str], None] | None = None,
 ) -> ProcessResult:
-    process = subprocess.Popen(
-        list(argv),
-        cwd=cwd,
-        env=dict(env),
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        text=True,
-        encoding="utf-8",
-        errors="replace",
+    process_argv = _resolve_windows_forwarding_wrapper(argv, env=env)
+    command_wrapper = (
+        sys.platform == "win32"
+        and bool(process_argv)
+        and Path(str(process_argv[0])).suffix.lower()
+        in _WINDOWS_COMMAND_WRAPPER_SUFFIXES
     )
+    prompt_path: Path | None = None
+    if command_wrapper:
+        process_argv, prompt_path = _spool_windows_wrapper_prompt(process_argv, env=env)
+    try:
+        process = subprocess.Popen(
+            process_argv,
+            cwd=cwd,
+            env=dict(env),
+            shell=command_wrapper,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+        )
+    except BaseException:
+        if prompt_path is not None:
+            prompt_path.unlink(missing_ok=True)
+        raise
     stdout_lines: list[str] = []
     stderr_lines: list[str] = []
     reader_errors: list[Exception] = []
@@ -1016,13 +1046,111 @@ def run_process(
     stderr_thread.join()
     if reader_errors:
         raise RuntimeError(f"Agent output stream failed: {reader_errors[0]}")
-    return ProcessResult(
-        process.returncode or (124 if timed_out else 130 if interrupted else 0),
-        "".join(stdout_lines),
-        "".join(stderr_lines),
-        interrupted,
-        timed_out,
+    try:
+        return ProcessResult(
+            process.returncode or (124 if timed_out else 130 if interrupted else 0),
+            "".join(stdout_lines),
+            "".join(stderr_lines),
+            interrupted,
+            timed_out,
+        )
+    finally:
+        if prompt_path is not None:
+            prompt_path.unlink(missing_ok=True)
+
+
+def _resolve_windows_forwarding_wrapper(
+    argv: Sequence[str], *, env: Mapping[str, str]
+) -> list[str]:
+    """Bypass only exact call TARGET %* shims before Windows shell parsing.
+
+    A forwarding shim adds another call parse pass, which can split a
+    structured prompt even when Python correctly quotes the original argv.
+    Keep arbitrary command scripts intact; unwrap only the single-purpose,
+    provider-neutral forwarding form and only when its exact target exists.
+    """
+
+    resolved = [str(value) for value in argv]
+    if sys.platform != "win32" or not resolved:
+        return resolved
+    environment = {str(key).casefold(): str(value) for key, value in env.items()}
+    observed: set[str] = set()
+    for _ in range(8):
+        wrapper = Path(resolved[0])
+        identity = str(wrapper.resolve(strict=False)).casefold()
+        if (
+            wrapper.suffix.lower() not in _WINDOWS_COMMAND_WRAPPER_SUFFIXES
+            or identity in observed
+        ):
+            break
+        observed.add(identity)
+        try:
+            if wrapper.stat().st_size > 16 * 1024:
+                break
+            content = wrapper.read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            break
+        match = _WINDOWS_FORWARDING_WRAPPER.fullmatch(content)
+        if match is None:
+            break
+
+        missing_environment = False
+
+        def expand_environment(reference: re.Match[str]) -> str:
+            nonlocal missing_environment
+            value = environment.get(reference.group(1).casefold())
+            if value is None:
+                missing_environment = True
+                return reference.group(0)
+            return value
+
+        target_text = _WINDOWS_ENV_REFERENCE.sub(
+            expand_environment, match.group("target")
+        )
+        if missing_environment:
+            break
+        target = Path(target_text)
+        if not target.is_absolute():
+            target = wrapper.parent / target
+        if not target.is_file():
+            break
+        resolved[0] = str(target)
+    return resolved
+
+
+def _spool_windows_wrapper_prompt(
+    argv: Sequence[str], *, env: Mapping[str, str]
+) -> tuple[list[str], Path | None]:
+    """Keep multiline prompts out of ``cmd.exe`` argument re-parsing.
+
+    Standard command wrappers forward arguments through ``%*``. Newlines in a
+    structured prompt do not survive that parse reliably, even though ordinary
+    quoted arguments do. The temporary file is scoped to the current managed
+    run, contains the exact prompt bytes, and is removed as soon as the child
+    exits. This transport depends only on the Windows wrapper shape, not on an
+    Agent provider or version.
+    """
+
+    resolved = [str(value) for value in argv]
+    if not resolved or not any(marker in resolved[-1] for marker in ("\r", "\n")):
+        return resolved, None
+    runtime_dir = str(env.get("KUNGFU_CONTROL_RUNTIME_DIR") or "").strip()
+    attempt_id = str(env.get("KUNGFU_AGENT_ATTEMPT_ID") or "").strip()
+    if not runtime_dir or not attempt_id:
+        raise ValueError(
+            "Windows command-wrapper multiline prompt transport requires the "
+            "managed runtime and attempt coordinates"
+        )
+    prompt_path = (
+        Path(runtime_dir) / "agent-runs" / attempt_id / _WINDOWS_PROMPT_FILE_NAME
     )
+    prompt_path.parent.mkdir(parents=True, exist_ok=True)
+    prompt_path.write_text(resolved[-1], encoding="utf-8", newline="")
+    resolved[-1] = (
+        f"{_WINDOWS_PROMPT_INSTRUCTION_PREFIX}{prompt_path}"
+        f"{_WINDOWS_PROMPT_INSTRUCTION_SUFFIX}"
+    )
+    return resolved, prompt_path
 
 
 def execute(
