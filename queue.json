@@ -3,7 +3,7 @@
   "contract": "kungfu-buildchain-dev-delivery-warrant-queue",
   "repository": "kungfu-systems/kungfu",
   "protectedBase": "dev/v4/v4.0",
-  "generation": 1668,
+  "generation": 1669,
   "fencingCounter": 378,
   "policy": {
     "agingSeconds": 900,
@@ -20748,11 +20748,20 @@
       "sourceWorkflowRunId": 0,
       "priority": "ordinary",
       "enqueuedAt": "2026-08-12T23:38:02.189Z",
-      "updatedAt": "2026-08-12T23:38:02.189Z",
+      "updatedAt": "2026-08-13T00:19:13.740Z",
       "attempts": 1,
       "recoveries": 0,
-      "status": "queued",
-      "terminal": null,
+      "status": "cancelled",
+      "terminal": {
+        "outcome": "cancelled",
+        "reason": "protected pull request event: closed",
+        "evidenceRoot": "sha256:27c7f2bc47f39bfc50f80d417d62f47132928e3574560f69dea0e4f4047f5904",
+        "authority": "queued-candidate-cancellation",
+        "expectedSourceHead": "52373d46b1007f27b99153dbf5cd35f4e8d2af27",
+        "observedSourceHead": "52373d46b1007f27b99153dbf5cd35f4e8d2af27",
+        "eventAction": "closed",
+        "closedAt": "2026-08-13T00:19:13.740Z"
+      },
       "affectedPaths": [
         ".github/workflows/affected-native-pr.yml",
         ".github/workflows/dev-delivery-warrant-terminal.yml",
@@ -20925,6 +20934,6 @@
       ]
     }
   ],
-  "updatedAt": "2026-08-13T00:17:57.422Z",
-  "stateRoot": "sha256:e0f948c9d2914af73d7b49c2fc4315b44d89d8e07b139212196efbfd21ba784f"
+  "updatedAt": "2026-08-13T00:19:13.740Z",
+  "stateRoot": "sha256:9cdc3675e88de5dd224a7d3ebc76ec6231b693eeaa96f12e568b33d71baa64a7"
 }
