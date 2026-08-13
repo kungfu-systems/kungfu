@@ -28,8 +28,11 @@ separately: a graph-known non-overlapping delta reuses the proof, while overlap
 or an unknown graph triggers a bounded fresh native attempt. The merge-group
 workflow independently requires the qualified Warrant and revalidates or reuses
 the exact source-bound proof against its replay. A protected terminal workflow
-closes the Warrant after merge or dequeue; expired or failed generations are
-released by Buildchain fencing and the next deterministic candidate is woken.
+closes the Warrant after an authoritative merge, cancellation, failure, or
+supersession. A transient dequeue cannot close a fresh live holder, and a later
+candidate remains queued. Expired holders are retained behind their exact fence
+until the old worker is proven stopped and that generation is settled; only
+then may the next deterministic candidate be selected.
 
 `workflow_run`, ready-label, and review events recover targeted delivery. An
 executing targeted manual dispatch uses the same required path; dry-run manual
