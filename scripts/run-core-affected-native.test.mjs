@@ -65,6 +65,21 @@ const buildAuthority = JSON.parse(
   ),
 );
 
+test('affected-native pins the configurable fnm bootstrap mirror and digest', () => {
+  const workflow = fs.readFileSync(
+    new URL('../.github/workflows/affected-native-pr.yml', import.meta.url),
+    'utf8',
+  );
+  assert.match(
+    workflow,
+    /KUNGFU_FNM_DIST_MIRROR: \$\{\{ vars\.KUNGFU_FNM_DIST_MIRROR \}\}/u,
+  );
+  assert.match(
+    workflow,
+    /KUNGFU_FNM_SHA256: \$\{\{ vars\.KUNGFU_FNM_SHA256 \}\}/u,
+  );
+});
+
 test('affected-native diagnostics accepts the declarative signing contract', () => {
   const diagnostics = createDiagnosticsArtifact({ cwd: process.cwd() });
   const [cliArtifact] =

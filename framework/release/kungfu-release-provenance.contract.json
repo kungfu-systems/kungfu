@@ -1,44 +1,62 @@
 {
-  "schema": "kungfu.release-provenance-contract/v1",
+  "schema": "kungfu.release-provenance-contract/v2",
   "id": "kungfu-release-provenance",
   "status": "implemented",
   "rootProtocol": "kungfu.fact-root.canonical/v2",
-  "objective": "Represent candidate and promotion history with immutable semantic objects and typed temporal relations while retaining Git topology as a verified transport projection.",
+  "objective": "Represent candidate history with immutable semantic objects and typed temporal relations whose roots are independent of Git topology while retaining exact Git coordinates as non-authoritative evidence projections.",
+  "versions": {
+    "current": "kungfu.release-provenance-envelope/v2",
+    "backwardVerifiable": ["kungfu.release-provenance-envelope/v1"],
+    "backwardVerifiablePhases": ["candidate", "promotion"],
+    "migration": "kungfu.release-provenance-migration/v1"
+  },
   "envelopes": {
-    "schema": "kungfu.release-provenance-envelope/v1",
-    "phases": ["candidate", "promotion"],
+    "schema": "kungfu.release-provenance-envelope/v2",
+    "phases": ["candidate"],
     "objectSchema": "kungfu.fact.provenance-object/v1",
     "relationSchema": "kungfu.fact.temporal-relation/v1",
     "predicateSchema": "kungfu.fact.temporal-predicate/v1",
     "requiredRelations": [
       "derived-from",
       "acknowledges",
+      "has-content",
       "qualified-by",
+      "approved-by",
       "authorized-by",
       "implements-contract",
       "projected-as"
     ]
   },
   "semantics": {
-    "identity": "Candidate and promotion objects are independently rooted even when their Git trees are equal.",
+    "identity": "Candidate identity closes over an algorithm-tagged transport-neutral source content root and explicit semantic relations, never a Git object id.",
     "derivation": "Candidate derivation accepts an explicit semantic dev Cut root independent of Git coordinates; promotion derivation targets the exact candidate provenance object root.",
     "acknowledgement": "Both phases bind an explicit semantic previous-Alpha root through an acknowledges relation without inferring it from Git parentage.",
-    "sourceTree": "The source tree is bound by a semantic digest root on the subject while the Git tree object id remains an exact projection coordinate.",
+    "sourceTree": "Source content is bound by an algorithm-tagged transport-neutral digest record while the Git tree object id remains an exact projection coordinate.",
     "qualification": "Qualification is an explicit rooted relation target and is never inferred from a branch, commit, tree, workflow conclusion, or artifact name.",
     "authority": "Exactly one authorized-by relation is required for each object; zero or plural authority is rejected.",
-    "projection": "Git commit, tree, parent order, and ancestry are exact rooted observations with explicit drift and no semantic authority.",
+    "approval": "Approval and authority are distinct explicit relation targets; neither is inferred from a workflow conclusion, branch, or Git topology.",
+    "projection": "Git commit, tree, parent count, parent order, and ancestry are exact rooted observations attached after the semantic object is rooted and have no semantic authority.",
     "appendOnly": "A later promotion object references but never rewrites the candidate object."
   },
   "projectionPolicy": {
     "candidate": {
-      "failClosedOn": ["candidate-tree-mismatch", "parent-order-mismatch"],
-      "advisoryOverride": ["parent-order-mismatch"]
+      "semanticFailClosedOn": ["content-root-mismatch", "relation-set-mismatch", "ambiguous-authority"],
+      "exactProjectionFailClosedOn": ["candidate-tree-mismatch", "git-projection-root-mismatch"],
+      "topologyTreatment": "observation-only",
+      "supportedObservedParentCounts": "zero-or-more"
     },
     "promotion": {
       "failClosedOn": ["promotion-tree-mismatch"],
       "visibleAdvisoryDrift": ["candidate-not-ancestor"]
     },
-    "forbiddenInference": "Tree equality, ancestry, parent order, merge-queue topology, ff-only delivery, and provider topology never establish semantic derivation or acknowledgement by themselves."
+    "forbiddenInference": "Tree equality, ancestry, parent count, parent order, merge-queue topology, ff-only delivery, flattened delivery, and provider topology never establish candidate identity, derivation, acknowledgement, qualification, approval, or authority."
+  },
+  "migration": {
+    "predecessor": "kungfu.release-provenance-envelope/v1",
+    "successor": "kungfu.release-provenance-envelope/v2",
+    "relation": "successor-succeeds-predecessor",
+    "receipt": "kungfu.release-provenance-migration-receipt/v1",
+    "rule": "The predecessor is copied byte-for-byte into the migration bundle, remains independently verifiable, and is never rewritten or rerooted."
   },
   "dualWrite": {
     "candidateFlow": ".github/workflows/dev-alpha-candidate-patrol.yml",
@@ -67,7 +85,14 @@
     "git-projection-status-mismatch",
     "candidate-tree-mismatch",
     "parent-order-mismatch",
-    "promotion-tree-mismatch"
+    "promotion-tree-mismatch",
+    "invalid-content",
+    "content-root-mismatch",
+    "approved-by-relation-count",
+    "relation-order-mismatch",
+    "projection-semantic-authority",
+    "successor-relation-mismatch",
+    "migration-receipt-mismatch"
   ],
   "falsifiers": [
     {"id": "same-tree-different-history", "expected": "distinct-object-roots"},
@@ -77,6 +102,15 @@
     {"id": "mismatched-tree", "expected": "candidate-tree-mismatch"},
     {"id": "forged-projection-root", "expected": "git-projection-root-mismatch"},
     {"id": "merge-queue-ancestry-drift", "expected": "visible-advisory-drift"}
+  ],
+  "v2Falsifiers": [
+    {"id": "zero-one-two-many-parents", "expected": "same-object-root"},
+    {"id": "reordered-parent-observation", "expected": "same-object-root"},
+    {"id": "flattened-and-ff-only-observation", "expected": "same-object-root"},
+    {"id": "same-tree-different-history", "expected": "distinct-object-roots"},
+    {"id": "identical-semantic-inputs", "expected": "deterministic-object-root"},
+    {"id": "missing-or-conflicting-relation", "expected": "fail-closed"},
+    {"id": "v1-to-v2-successor", "expected": "verified-receipt-with-unchanged-predecessor"}
   ],
   "qualification": {
     "fixture": "tests/fixtures/release-provenance-object/cases.json",
