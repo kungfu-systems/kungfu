@@ -136,19 +136,41 @@
             "type": "array",
             "minItems": 10,
             "uniqueItems": true,
-            "items": {"type": "string"}
+            "items": {
+              "type": "string"
+            }
           },
-          "registryPlanner": {"type": "string"},
-          "registryWriter": {"type": "string"},
-          "dependencyPlanner": {"type": "string"},
-          "dependencyExecutor": {"type": "string"},
-          "requiredGuard": {"const": "expected-plan-root"},
+          "registryPlanner": {
+            "type": "string"
+          },
+          "registryWriter": {
+            "type": "string"
+          },
+          "dependencyPlanner": {
+            "type": "string"
+          },
+          "dependencyExecutor": {
+            "type": "string"
+          },
+          "requiredGuard": {
+            "const": "expected-plan-root"
+          },
           "clients": {
             "type": "object",
-            "additionalProperties": {"const": "read-only-projection"},
-            "required": ["agent", "cli", "gui", "tui", "managed-run"]
+            "additionalProperties": {
+              "const": "read-only-projection"
+            },
+            "required": [
+              "agent",
+              "cli",
+              "gui",
+              "tui",
+              "managed-run"
+            ]
           },
-          "directStoreWrites": {"const": false}
+          "directStoreWrites": {
+            "const": false
+          }
         }
       },
       "authoring": {

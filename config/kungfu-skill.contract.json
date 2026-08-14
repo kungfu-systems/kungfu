@@ -17,6 +17,7 @@
       "contractSchema",
       "resolution",
       "authorityBoundary",
+      "effectfulOperationInventory",
       "authoring",
       "lifecycleVocabulary",
       "compatibility",
@@ -114,6 +115,61 @@
           },
           "definitionAuthority": {
             "const": "content-rooted-instructions-and-orchestration-only"
+          }
+        }
+      },
+      "effectfulOperationInventory": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "lifecycleOperations",
+          "registryPlanner",
+          "registryWriter",
+          "dependencyPlanner",
+          "dependencyExecutor",
+          "requiredGuard",
+          "clients",
+          "directStoreWrites"
+        ],
+        "properties": {
+          "lifecycleOperations": {
+            "type": "array",
+            "minItems": 10,
+            "uniqueItems": true,
+            "items": {
+              "type": "string"
+            }
+          },
+          "registryPlanner": {
+            "type": "string"
+          },
+          "registryWriter": {
+            "type": "string"
+          },
+          "dependencyPlanner": {
+            "type": "string"
+          },
+          "dependencyExecutor": {
+            "type": "string"
+          },
+          "requiredGuard": {
+            "const": "expected-plan-root"
+          },
+          "clients": {
+            "type": "object",
+            "additionalProperties": {
+              "const": "read-only-projection"
+            },
+            "required": [
+              "agent",
+              "cli",
+              "gui",
+              "tui",
+              "managed-run"
+            ]
+          },
+          "directStoreWrites": {
+            "const": false
           }
         }
       },
@@ -279,6 +335,33 @@
     "profileOwner": "admitted-profile-contribution",
     "factEpisodeOwner": "core-fact-episode-runtime",
     "definitionAuthority": "content-rooted-instructions-and-orchestration-only"
+  },
+  "effectfulOperationInventory": {
+    "lifecycleOperations": [
+      "install",
+      "update",
+      "enable",
+      "select",
+      "load",
+      "invoke",
+      "suspend",
+      "retire",
+      "remove",
+      "rollback"
+    ],
+    "registryPlanner": "framework/core/src/python/kungfu/skill/registry.py::plan_operation",
+    "registryWriter": "framework/core/src/python/kungfu/skill/registry.py::apply_plan",
+    "dependencyPlanner": "framework/core/src/python/kungfu/skill/dependencies.py::plan_dependency_invocation",
+    "dependencyExecutor": "framework/core/src/python/kungfu/skill/dependencies.py::invoke_dependency_plan",
+    "requiredGuard": "expected-plan-root",
+    "clients": {
+      "agent": "read-only-projection",
+      "cli": "read-only-projection",
+      "gui": "read-only-projection",
+      "tui": "read-only-projection",
+      "managed-run": "read-only-projection"
+    },
+    "directStoreWrites": false
   },
   "authoring": {
     "mode": "workspace-local-instruction-only",

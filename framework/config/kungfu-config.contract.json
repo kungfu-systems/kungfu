@@ -671,7 +671,10 @@
               "pattern": "^sha256:[a-f0-9]{64}$"
             },
             "workRefRoot": {
-              "type": ["string", "null"],
+              "type": [
+                "string",
+                "null"
+              ],
               "pattern": "^sha256:[a-f0-9]{64}$"
             },
             "kfxDependencyRoots": {
@@ -707,13 +710,55 @@
                 "kfx"
               ],
               "properties": {
-                "catalog": {"type": "array", "minItems": 1, "items": {"type": "string"}},
-                "advise": {"type": "array", "minItems": 1, "items": {"type": "string"}},
-                "read": {"type": "array", "minItems": 1, "items": {"type": "string"}},
-                "audit": {"type": "array", "minItems": 1, "items": {"type": "string"}},
-                "explain": {"type": "array", "minItems": 1, "items": {"type": "string"}},
-                "diagnose": {"type": "array", "minItems": 1, "items": {"type": "string"}},
-                "kfx": {"type": "array", "minItems": 1, "items": {"type": "string"}}
+                "catalog": {
+                  "type": "array",
+                  "minItems": 1,
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "advise": {
+                  "type": "array",
+                  "minItems": 1,
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "read": {
+                  "type": "array",
+                  "minItems": 1,
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "audit": {
+                  "type": "array",
+                  "minItems": 1,
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "explain": {
+                  "type": "array",
+                  "minItems": 1,
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "diagnose": {
+                  "type": "array",
+                  "minItems": 1,
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "kfx": {
+                  "type": "array",
+                  "minItems": 1,
+                  "items": {
+                    "type": "string"
+                  }
+                }
               }
             },
             "authority": {
