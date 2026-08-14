@@ -16,6 +16,15 @@ inputs:
   protected-base:
     description: Exact protected dev branch.
     required: true
+  qualified-base:
+    description: Exact protected base commit used by the native execution.
+    required: true
+  toolchain-root:
+    description: Exact native toolchain contract root.
+    required: true
+  environment-root:
+    description: Exact native execution environment contract root.
+    required: true
   allowed-phases:
     description: Comma-separated Warrant phases admitted for this execution.
     required: true
@@ -55,6 +64,9 @@ runs:
         --branch "${{ inputs.protected-base }}"
         --pull-request "${{ inputs.pull-request }}"
         --source-head "${{ inputs.source-head }}"
+        --qualified-base "${{ inputs.qualified-base }}"
+        --toolchain-root "${{ inputs.toolchain-root }}"
+        --environment-root "${{ inputs.environment-root }}"
         --allowed-phases "${{ inputs.allowed-phases }}"
         --runtime-root .buildchain/dev-delivery-native-runtime
         --heartbeat-seconds 300

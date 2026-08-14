@@ -127,6 +127,13 @@ export async function runNativeExecutionUnderWarrant(
   const repository = String(options.repository || '').trim();
   const branch = String(options.branch || '').trim();
   const sourceHead = exact(options.sourceHead, SHA, 'source head');
+  const qualifiedBase = exact(options.qualifiedBase, SHA, 'qualified base');
+  const toolchainRoot = exact(options.toolchainRoot, ROOT, 'toolchain root');
+  const environmentRoot = exact(
+    options.environmentRoot,
+    ROOT,
+    'environment root',
+  );
   const pullRequestNumber = positiveInteger(
     options.pullRequestNumber,
     'pull request',
@@ -161,7 +168,7 @@ export async function runNativeExecutionUnderWarrant(
     { pullRequestNumber, sourceHead, allowedPhases },
     clock(),
   );
-  const binding = {
+  const warrantBinding = {
     repository,
     branch,
     pullRequestNumber,
@@ -177,16 +184,24 @@ export async function runNativeExecutionUnderWarrant(
         const result = await runtime.heartbeat({
           repository,
           branch,
-          fencingToken: binding.fencingToken,
-          leaseGeneration: binding.leaseGeneration,
+          fencingToken: warrantBinding.fencingToken,
+          leaseGeneration: warrantBinding.leaseGeneration,
           leaseSeconds,
         });
-        assertLiveBinding(result, { ...binding, allowedPhases }, clock());
+        assertLiveBinding(
+          result,
+          { ...warrantBinding, allowedPhases },
+          clock(),
+        );
         return;
       } catch (error) {
         if (!concurrentStateWrite(error) || attempt === 5) throw error;
         const latest = await runtime.observe({ repository, branch });
-        assertLiveBinding(latest, { ...binding, allowedPhases }, clock());
+        assertLiveBinding(
+          latest,
+          { ...warrantBinding, allowedPhases },
+          clock(),
+        );
         await wait(200 * 2 ** (attempt - 1));
       }
     }
@@ -195,7 +210,14 @@ export async function runNativeExecutionUnderWarrant(
     command: options.command,
     cwd,
     heartbeat,
-    executionBinding: binding,
+    executionBinding: {
+      repository,
+      protectedBase: branch,
+      sourceHead,
+      qualifiedBase,
+      toolchainRoot,
+      environmentRoot,
+    },
     intervalMs,
     terminationGraceMs: Number(options.terminationGraceMs || 10_000),
     terminationKillMs: Number(options.terminationKillMs || 5_000),
@@ -207,9 +229,13 @@ export async function runNativeExecutionUnderWarrant(
   const receiptBody = {
     schema: 'kungfu.dev-delivery-native-execution-under-warrant/v1',
     outcome: 'succeeded',
-    ...binding,
+    ...warrantBinding,
+    qualifiedBase,
+    toolchainRoot,
+    environmentRoot,
     commandRoot: digest({ command: options.command }),
     nativeRunReceiptRoot: native.receiptRoot,
+    nativeExecutionReceipt: native,
   };
   const receipt = { ...receiptBody, receiptRoot: digest(receiptBody) };
   if (options.output) {
@@ -227,6 +253,9 @@ async function main() {
     branch: flag(args, 'branch', process.env.GITHUB_BASE_REF),
     pullRequestNumber: flag(args, 'pull-request'),
     sourceHead: flag(args, 'source-head'),
+    qualifiedBase: flag(args, 'qualified-base'),
+    toolchainRoot: flag(args, 'toolchain-root'),
+    environmentRoot: flag(args, 'environment-root'),
     allowedPhases: flag(args, 'allowed-phases'),
     runtimeRoot: flag(args, 'runtime-root'),
     command: process.env.KUNGFU_NATIVE_COMMAND,

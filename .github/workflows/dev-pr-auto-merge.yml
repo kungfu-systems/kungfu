@@ -410,10 +410,12 @@ jobs:
           source_proof="$artifact/proof.json"
           coordinate="$artifact/coordinate.json"
           warrant_input=.buildchain/dev-delivery-input/warrant-input.json
-          native_proof=.buildchain/dev-delivery-input/reusable-native-proof.json
 
-          # Older retained artifacts predate Native Qualification Proof projection.
-          # Their absence is a safe full-native fallback, not reusable evidence.
+          # Source qualification is not native-execution authority. A reusable
+          # Native Qualification Proof v3 must bind the exact environment before
+          # process spawn through a Buildchain native execution receipt. Older
+          # source artifacts cannot supply that receipt, so they fail closed to
+          # the reusable controller's fenced full-native path.
           if [ ! -f "$source_proof" ] || [ ! -f "$coordinate" ]; then
             echo "native-proof-json=" >> "$GITHUB_OUTPUT"
             exit 0
@@ -449,42 +451,9 @@ jobs:
              and .closureRoot == $input[0].closureRoot
              and .dependencyRoot == $input[0].dependencyRoot
              and .toolchainRoot == $input[0].toolchainRoot
-             and .environmentRoot == $input[0].environmentRoot
              and .affectedPaths == $input[0].affectedPaths' \
             "$source_proof" >/dev/null
-          evidence_roots="$(jq -cn \
-            --slurpfile source "$source_proof" \
-            --slurpfile coordinate "$coordinate" \
-            '($source[0].shardEvidenceRoots
-              + [$source[0].proofRoot, $coordinate[0].nativeProofRoot])
-             | unique | sort')"
-          # shifu-entry-contract: allow exact pinned Buildchain Native Proof projection in protected CI
-          node .buildchain/dev-delivery-runtime/scripts/dev-delivery-proof.mjs native \
-            --repository "$GITHUB_REPOSITORY" \
-            --branch "$TARGET_BRANCH" \
-            --source-identity-root "$(jq -er '.sourceIdentityRoot' "$source_proof")" \
-            --source-patch-root "$(jq -er '.sourcePatchRoot' "$source_proof")" \
-            --plan-root "$(jq -er '.planRoot' "$source_proof")" \
-            --closure-root "$(jq -er '.closureRoot' "$source_proof")" \
-            --dependency-root "$(jq -er '.dependencyRoot' "$source_proof")" \
-            --toolchain-root "$(jq -er '.toolchainRoot' "$source_proof")" \
-            --environment-root "$(jq -er '.environmentRoot' "$warrant_input")" \
-            --qualified-base "$(jq -er '.sourceBaseSha' "$coordinate")" \
-            --affected-paths-json "$(jq -c '.affectedPaths' "$source_proof")" \
-            --shard-evidence-roots-json "$evidence_roots" \
-            --qualified-at "$(jq -er '.qualifiedAt' "$source_proof")" \
-            --output "$native_proof"
-          # shifu-entry-contract: allow exact pinned Buildchain Native Proof verification in protected CI
-          node .buildchain/dev-delivery-runtime/scripts/dev-delivery-proof.mjs verify-native \
-            --source-proof "$native_proof" \
-            --output .buildchain/dev-delivery-input/native-proof-verification.json
-          jq -e '.ok == true and .reason == "exact-native-proof"' \
-            .buildchain/dev-delivery-input/native-proof-verification.json >/dev/null
-          {
-            echo 'native-proof-json<<BUILDCHAIN_NATIVE_PROOF_EOF'
-            jq -c . "$native_proof"
-            echo 'BUILDCHAIN_NATIVE_PROOF_EOF'
-          } >> "$GITHUB_OUTPUT"
+          echo "native-proof-json=" >> "$GITHUB_OUTPUT"
 
       - name: Produce exact Project Cut replay proof
         id: project-cut

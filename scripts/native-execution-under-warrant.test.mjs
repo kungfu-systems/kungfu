@@ -8,6 +8,9 @@ import { runNativeExecutionUnderWarrant } from '../framework/dev-delivery/native
 const HEAD = '1'.repeat(40);
 const TOKEN = `sha256:${'2'.repeat(64)}`;
 const CANDIDATE = `sha256:${'3'.repeat(64)}`;
+const TOOLCHAIN = `sha256:${'4'.repeat(64)}`;
+const ENVIRONMENT = `sha256:${'5'.repeat(64)}`;
+const BASE = '6'.repeat(40);
 const NOW = '2026-08-12T00:00:00.000Z';
 
 function observation(overrides = {}) {
@@ -15,6 +18,9 @@ function observation(overrides = {}) {
     candidateId: CANDIDATE,
     pullRequestNumber: 42,
     sourceHead: HEAD,
+    qualifiedBase: BASE,
+    toolchainRoot: TOOLCHAIN,
+    environmentRoot: ENVIRONMENT,
     phase: 'provisional',
     fencingToken: TOKEN,
     generation: 7,
@@ -39,6 +45,9 @@ function options() {
     branch: 'dev/v4/v4.0',
     pullRequestNumber: 42,
     sourceHead: HEAD,
+    qualifiedBase: BASE,
+    toolchainRoot: TOOLCHAIN,
+    environmentRoot: ENVIRONMENT,
     allowedPhases: 'provisional,qualified',
     command: './shifu gate run source.changed-scope',
     heartbeatSeconds: 1,
@@ -66,7 +75,14 @@ function fixture(initial = observation()) {
       runNative: async ({ heartbeat, executionBinding }) => {
         await heartbeat();
         spawned = true;
-        assert.equal(executionBinding.fencingToken, TOKEN);
+        assert.deepEqual(executionBinding, {
+          repository: 'kungfu-systems/kungfu',
+          protectedBase: 'dev/v4/v4.0',
+          sourceHead: HEAD,
+          qualifiedBase: BASE,
+          toolchainRoot: TOOLCHAIN,
+          environmentRoot: ENVIRONMENT,
+        });
         await heartbeat();
         return { receiptRoot: `sha256:${'4'.repeat(64)}` };
       },
@@ -84,6 +100,10 @@ test('exact observe and heartbeat precede native execution', async () => {
   assert.equal(value.heartbeats, 3);
   assert.equal(receipt.fencingToken, TOKEN);
   assert.equal(receipt.leaseGeneration, 7);
+  assert.equal(
+    receipt.nativeExecutionReceipt.receiptRoot,
+    `sha256:${'4'.repeat(64)}`,
+  );
   assert.match(receipt.receiptRoot, /^sha256:[0-9a-f]{64}$/u);
 });
 

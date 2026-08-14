@@ -464,6 +464,9 @@ jobs:
       pull-request: ${{ steps.identity.outputs.pull-request }}
       source-head: ${{ steps.identity.outputs.source-head }}
       protected-base: ${{ steps.identity.outputs.protected-base }}
+      qualified-base: ${{ steps.identity.outputs.qualified-base }}
+      toolchain-root: ${{ steps.identity.outputs.toolchain-root }}
+      environment-root: ${{ steps.identity.outputs.environment-root }}
       allowed-phases: ${{ steps.identity.outputs.allowed-phases }}
     steps:
       - name: Check out exact Buildchain Warrant runtime
@@ -495,6 +498,7 @@ jobs:
               pull_request="$(jq -r '.pull_request.number' "$GITHUB_EVENT_PATH")"
               source_head="$(jq -r '.pull_request.head.sha' "$GITHUB_EVENT_PATH")"
               protected_base="$(jq -r '.pull_request.base.ref' "$GITHUB_EVENT_PATH")"
+              qualified_base="$(jq -r '.pull_request.base.sha' "$GITHUB_EVENT_PATH")"
               allowed_phase='^(provisional|qualified)$'
               ;;
             merge_group)
@@ -502,6 +506,7 @@ jobs:
               test -n "$pull_request"
               source_head="$(gh api "repos/$GITHUB_REPOSITORY/pulls/$pull_request" --jq .head.sha)"
               protected_base="$(jq -r '.merge_group.base_ref' "$GITHUB_EVENT_PATH" | sed 's#^refs/heads/##')"
+              qualified_base="$(jq -r '.merge_group.base_sha' "$GITHUB_EVENT_PATH")"
               allowed_phase='^qualified$'
               ;;
             *)
@@ -521,12 +526,17 @@ jobs:
             --arg allowedPhase "$allowed_phase" \
             '.observation.activeWarrant.pullRequestNumber == $pullRequest
              and .observation.activeWarrant.sourceHead == $sourceHead
+             and (.observation.activeCandidate.toolchainRoot | test("^sha256:[0-9a-f]{64}$"))
+             and (.observation.activeCandidate.environmentRoot | test("^sha256:[0-9a-f]{64}$"))
              and (.observation.activeWarrant.phase | test($allowedPhase))' \
             .buildchain/warrant-observation.json >/dev/null
           {
             echo "pull-request=$pull_request"
             echo "source-head=$source_head"
             echo "protected-base=$protected_base"
+            echo "qualified-base=$qualified_base"
+            echo "toolchain-root=$(jq -er '.observation.activeCandidate.toolchainRoot' .buildchain/warrant-observation.json)"
+            echo "environment-root=$(jq -er '.observation.activeCandidate.environmentRoot' .buildchain/warrant-observation.json)"
             if [ "$GITHUB_EVENT_NAME" = "merge_group" ]; then
               echo "allowed-phases=qualified"
             else
@@ -724,6 +734,9 @@ jobs:
           pull-request: ${{ needs.warrant_admission.outputs.pull-request }}
           source-head: ${{ needs.warrant_admission.outputs.source-head }}
           protected-base: ${{ needs.warrant_admission.outputs.protected-base }}
+          qualified-base: ${{ needs.warrant_admission.outputs.qualified-base }}
+          toolchain-root: ${{ needs.warrant_admission.outputs.toolchain-root }}
+          environment-root: ${{ needs.warrant_admission.outputs.environment-root }}
           allowed-phases: ${{ needs.warrant_admission.outputs.allowed-phases }}
           output: product/qualification/affected-native/warrant-execution-${{ matrix.partition }}.json
           command: |
@@ -857,6 +870,9 @@ jobs:
           pull-request: ${{ needs.warrant_admission.outputs.pull-request }}
           source-head: ${{ needs.warrant_admission.outputs.source-head }}
           protected-base: ${{ needs.warrant_admission.outputs.protected-base }}
+          qualified-base: ${{ needs.warrant_admission.outputs.qualified-base }}
+          toolchain-root: ${{ needs.warrant_admission.outputs.toolchain-root }}
+          environment-root: ${{ needs.warrant_admission.outputs.environment-root }}
           allowed-phases: ${{ needs.warrant_admission.outputs.allowed-phases }}
           output: product/qualification/affected-native/shifu-warrant-execution.json
           command: |
@@ -893,6 +909,9 @@ jobs:
           pull-request: ${{ needs.warrant_admission.outputs.pull-request }}
           source-head: ${{ needs.warrant_admission.outputs.source-head }}
           protected-base: ${{ needs.warrant_admission.outputs.protected-base }}
+          qualified-base: ${{ needs.warrant_admission.outputs.qualified-base }}
+          toolchain-root: ${{ needs.warrant_admission.outputs.toolchain-root }}
+          environment-root: ${{ needs.warrant_admission.outputs.environment-root }}
           allowed-phases: ${{ needs.warrant_admission.outputs.allowed-phases }}
           output: product/qualification/affected-native/kfd-warrant-execution.json
           command: |
@@ -1222,7 +1241,6 @@ jobs:
             --closure-root "$(jq -er '.closureRoot' "$output/warrant-input.json")" \
             --dependency-root "$(jq -er '.dependencyRoot' "$output/warrant-input.json")" \
             --toolchain-root "$(jq -er '.toolchainRoot' "$output/warrant-input.json")" \
-            --environment-root "$(jq -er '.environmentRoot' "$output/warrant-input.json")" \
             --affected-paths-json "$(jq -c '.affectedPaths' "$output/warrant-input.json")" \
             --shard-evidence-roots-json "$(jq -c '.shardEvidenceRoots' "$output/warrant-input.json")" \
             --qualified-at "$(jq -er '.producer.createdAt' "$bundle/proof.json")" \
