@@ -139,6 +139,11 @@ test('candidate patrol is a thin Buildchain caller with exact channel and eviden
   assert.match(source, /name: Verify frozen Alpha Release Cut source lock/u);
   assert.match(source, /lock=\.buildchain\/alpha-release-cut-lock\.json/u);
   assert.match(source, /git show -s --format=%P/u);
+  assert.match(source, /legacy Alpha\.2 parent projection drifted/u);
+  assert.doesNotMatch(
+    source,
+    /test "\$\(git show -s --format=%P "\$candidate_sha"\)"/u,
+  );
   assert.match(
     source,
     /needs\.release-cut-lock\.outputs\.candidate-settlement-authorized == 'true'/u,
