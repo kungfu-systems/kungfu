@@ -19,7 +19,7 @@
       "role": "standard-and-schema-provider",
       "package": {
         "name": "@kungfu-tech/kfd",
-        "version": "1.0.0-alpha.53"
+        "version": "1.0.0-alpha.65"
       },
       "repository": "kungfu-systems/kfd",
       "kfd": {
@@ -34,7 +34,7 @@
         "line": "v1.0",
         "channel": "alpha",
         "npmPackage": "@kungfu-tech/kfd",
-        "npmVersion": "1.0.0-alpha.53",
+        "npmVersion": "1.0.0-alpha.65",
         "source": {
           "repository": "kungfu-systems/kfd",
           "branch": "alpha/v1/v1.0"
@@ -45,16 +45,16 @@
       "assets": [
         {
           "path": "kfd.release.json",
-          "sha256": "sha256:d50e474cf2d158722d765f54188550e30fa126e1728fc9eb748014e220acfc9b",
+          "sha256": "sha256:48feb2424824b9819041e7a359b4d00311168a416b73e0d1c8f592b4df19a569",
           "contract": "kfd-release-anchor"
         },
         {
           "path": "buildchain/kfd-1/contract-world.witness.json",
-          "sha256": "sha256:438ed07bb8971eead5954125709f2e3459d996af815bdf958283806f7dc23428"
+          "sha256": "sha256:9c7e68fee1b7f2cc8f25b67c0d2a92eeff74e43cae86d54f632bfe66e566e8a2"
         },
         {
           "path": "buildchain/kfd-2/public-release-trust.claim.json",
-          "sha256": "sha256:cae28d5fb20c30896abe6de6dc7bc4785e66293cce1337dce69dfb506b5883f1"
+          "sha256": "sha256:92c1ffa04518145c564819523d7142e39169d34a9c210ca93d2ccaa4f3b0b9bd"
         },
         {
           "path": "buildchain/kfd-3/collaboration-interface.json",
@@ -63,7 +63,7 @@
         },
         {
           "path": "standards.json",
-          "sha256": "sha256:65899780779a8e933f1f3a298bfdf2311104ccde84b773a0828ee4c23dd19d5b",
+          "sha256": "sha256:4cc77b8364fa5d4f158933ee3c89640b9ef1e2979c45c2fd9e7d69060258255e",
           "contract": "kfd-standards-metadata"
         }
       ]
@@ -177,7 +177,7 @@
       "status": "candidate",
       "mode": "perspective-product-qualification",
       "source": "docs/qualification/evidence/kfd-4-perspective/d73cab0d69/report.json",
-      "schemaCount": 3,
+      "schemaCount": 4,
       "schemaCommand": "kungfu sdk kfd 4 schema --json",
       "qualificationCommand": "node framework/core/tests/qualification/kfd4-perspective.mjs",
       "qualificationRoot": "sha256:bd0efd4ce44e3347a6185b5b31029dc066de0bad924d33b19548ae753d9fdc4b",
@@ -197,7 +197,7 @@
       "buildchain"
     ],
     "packageVersions": {
-      "kfd": "1.0.0-alpha.53",
+      "kfd": "1.0.0-alpha.65",
       "libnode": "22.22.3-kf.5-alpha.3",
       "buildchain": "3.0.0"
     }
