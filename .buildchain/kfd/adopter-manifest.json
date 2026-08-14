@@ -1,0 +1,725 @@
+{
+  "$schema": "https://kfd.libkungfu.dev/schemas/kfd-adopter-conformance/manifest.schema.json",
+  "schemaVersion": 1,
+  "contract": "kfd.adopter-conformance-manifest/v1",
+  "manifestId": "kungfu-full-cut-7eb0538031b0",
+  "rootAlgorithm": "sha256-kfd-canonical-json-v1",
+  "byteDigestAlgorithm": "sha256-bytes-v1",
+  "adopter": {
+    "id": "kungfu-systems/kungfu",
+    "artifact": {
+      "kind": "git-commit",
+      "coordinate": "kungfu-systems/kungfu@7eb0538031b09ff5ec60824c5e4bbc7432bf0e4a",
+      "root": "sha256:482b12359b8598d1469d741f26c8e576c3ff314101931fd938303357958109bf"
+    },
+    "scope": "Kungfu KFD implementation, product gates, SDK and CLI projections, and release evidence"
+  },
+  "kfdCut": {
+    "package": {
+      "name": "@kungfu-tech/kfd",
+      "version": "1.0.0-alpha.60",
+      "artifactRoot": "sha256:07bea3dacab8cba10901539a5acb958db1ee09738fd424c9933f9baa2187675b"
+    },
+    "registry": {
+      "path": "registry.json",
+      "schemaVersion": 1,
+      "contract": "kfd-registry",
+      "root": "sha256:8ab283dd225e8940a4f9d92eca7d59fff6e8d29e66275c03baa923ad2ff63298"
+    },
+    "standards": {
+      "path": "standards.json",
+      "schemaVersion": 2,
+      "contract": "kfd-standards-metadata",
+      "root": "sha256:37beb576053dd8d75ebb2606974b99c30ae2dbd2bba11b80a1d4468994476ed8"
+    },
+    "schemaSet": [
+      {
+        "path": "schemas/kfd-adopter-conformance/manifest.schema.json",
+        "byteRoot": "sha256:6443189167e6b65c8b6154530af58c38bc2e6471bc3a4d2e7eea1f310fb8d2d6",
+        "schemaId": "https://kfd.libkungfu.dev/schemas/kfd-adopter-conformance/manifest.schema.json"
+      }
+    ],
+    "schemaSetRoot": "sha256:69a9647ccb658460a65e17d5028bbfde5cde1b19b1170fdf44eed656eef5ddd4",
+    "vectorSet": [
+      {
+        "path": "profiles/adopter-conformance/vectors.json",
+        "byteRoot": "sha256:85dbfba06f6286e0a3c4d7b15dbdcc77d01464d5031d925ac1f4f7263f07117d",
+        "contract": "kfd.adopter-conformance-vectors/v1"
+      }
+    ],
+    "vectorSetRoot": "sha256:47ec647e7471037e07c91b2f62223024eb3c3b5ad87309560ab9989b41554b07",
+    "verifierSet": [
+      {
+        "path": "scripts/adopter-conformance-contract.mjs",
+        "byteRoot": "sha256:a98170b011cd22980222fa671c178344314304852372767ec55f5292ca777fbf",
+        "kind": "source"
+      },
+      {
+        "path": "scripts/warrant-evidence-verifier.mjs",
+        "byteRoot": "sha256:d15753d39938aa91cc50eb9bfa91dfc013570565a2395fd35d93d4ddda10adea",
+        "kind": "source"
+      }
+    ],
+    "verifierSetRoot": "sha256:aad9b4193e965b68e465bbe4e648e5a03c3d78a6575dfda1d5e90943404779f4",
+    "decisionSetRoot": "sha256:c22abfcbf92313e2ed94f9d7ec01208726b99bd33f71176652f2ca0956de6c86"
+  },
+  "decisions": [
+    {
+      "id": "KFD-1",
+      "number": 1,
+      "registryStatus": "active",
+      "state": "candidate",
+      "usage": "used",
+      "implementationEvidence": [
+        {
+          "kind": "implementation",
+          "coordinate": "git+https://github.com/kungfu-systems/kungfu.git@7eb0538031b09ff5ec60824c5e4bbc7432bf0e4a#framework/contract/kungfu-contracts.registry.json",
+          "root": "sha256:b15570df99e7115019e6fcc314aec6f2bf6a806a3675e291474e6d0116b27e85",
+          "observedAt": "2026-08-14T06:57:56.604Z",
+          "kfdPackageRoot": "sha256:07bea3dacab8cba10901539a5acb958db1ee09738fd424c9933f9baa2187675b"
+        }
+      ],
+      "verificationEvidence": [
+        {
+          "kind": "verification",
+          "coordinate": "git+https://github.com/kungfu-systems/kungfu.git@7eb0538031b09ff5ec60824c5e4bbc7432bf0e4a#.buildchain/kfd/kfd-1/verify-result.json",
+          "root": "sha256:5c78dfce2dc1eaefb6ad32dd90ad5eff6a59619836f1c3c82859c9683618ed89",
+          "observedAt": "2026-08-14T06:57:56.604Z",
+          "kfdPackageRoot": "sha256:07bea3dacab8cba10901539a5acb958db1ee09738fd424c9933f9baa2187675b"
+        },
+        {
+          "kind": "verification",
+          "coordinate": "git+https://github.com/kungfu-systems/kungfu.git@7eb0538031b09ff5ec60824c5e4bbc7432bf0e4a#framework/contract/kungfu-contracts.registry.json",
+          "root": "sha256:b15570df99e7115019e6fcc314aec6f2bf6a806a3675e291474e6d0116b27e85",
+          "observedAt": "2026-08-14T06:57:56.604Z",
+          "kfdPackageRoot": "sha256:07bea3dacab8cba10901539a5acb958db1ee09738fd424c9933f9baa2187675b"
+        }
+      ],
+      "negativeEvidence": [
+        {
+          "kind": "negative",
+          "coordinate": "git+https://github.com/kungfu-systems/kungfu.git@7eb0538031b09ff5ec60824c5e4bbc7432bf0e4a#scripts/kfd-support-matrix.test.mjs",
+          "root": "sha256:4f10884463652b1aac52e68268e430665c1336ea777e83c1e23867df081a525f",
+          "observedAt": "2026-08-14T06:57:56.604Z",
+          "kfdPackageRoot": "sha256:07bea3dacab8cba10901539a5acb958db1ee09738fd424c9933f9baa2187675b"
+        }
+      ],
+      "reviews": [
+        {
+          "kind": "review",
+          "coordinate": "git+https://github.com/kungfu-systems/kungfu.git@7eb0538031b09ff5ec60824c5e4bbc7432bf0e4a#docs/qualification/alpha-ruleset.contract.json",
+          "root": "sha256:fafba639d47a1ade80eab8c2cc453cac2cdb96a6f762627e474c152834c0deef",
+          "observedAt": "2026-08-14T06:57:56.604Z",
+          "kfdPackageRoot": "sha256:07bea3dacab8cba10901539a5acb958db1ee09738fd424c9933f9baa2187675b"
+        }
+      ],
+      "witnessBindings": [],
+      "releaseBindingIds": [],
+      "claims": [
+        "Kungfu keeps declared facts and generated artifacts in one rooted contract world."
+      ],
+      "gaps": [
+        "This used declaration remains a candidate until decision-specific independent assessment and an exact release binding exist."
+      ]
+    },
+    {
+      "id": "KFD-2",
+      "number": 2,
+      "registryStatus": "active",
+      "state": "candidate",
+      "usage": "used",
+      "implementationEvidence": [
+        {
+          "kind": "implementation",
+          "coordinate": "git+https://github.com/kungfu-systems/kungfu.git@7eb0538031b09ff5ec60824c5e4bbc7432bf0e4a#.buildchain/kfd/kfd-2/release-claims.json",
+          "root": "sha256:3eefe298c0206d69961c7664834dc4dd74a101ff29dbce2591ec04738a926ff4",
+          "observedAt": "2026-08-14T06:57:56.604Z",
+          "kfdPackageRoot": "sha256:07bea3dacab8cba10901539a5acb958db1ee09738fd424c9933f9baa2187675b"
+        },
+        {
+          "kind": "implementation",
+          "coordinate": "git+https://github.com/kungfu-systems/kungfu.git@7eb0538031b09ff5ec60824c5e4bbc7432bf0e4a#docs/qualification/kfd2-trust-assessment.md",
+          "root": "sha256:3545a723795bb2565fc29a92d03d0cb2958b210801ae92110c14ebec8a4fb529",
+          "observedAt": "2026-08-14T06:57:56.604Z",
+          "kfdPackageRoot": "sha256:07bea3dacab8cba10901539a5acb958db1ee09738fd424c9933f9baa2187675b"
+        }
+      ],
+      "verificationEvidence": [
+        {
+          "kind": "verification",
+          "coordinate": "git+https://github.com/kungfu-systems/kungfu.git@7eb0538031b09ff5ec60824c5e4bbc7432bf0e4a#.buildchain/kfd/kfd-2/release-claims.json",
+          "root": "sha256:3eefe298c0206d69961c7664834dc4dd74a101ff29dbce2591ec04738a926ff4",
+          "observedAt": "2026-08-14T06:57:56.604Z",
+          "kfdPackageRoot": "sha256:07bea3dacab8cba10901539a5acb958db1ee09738fd424c9933f9baa2187675b"
+        },
+        {
+          "kind": "verification",
+          "coordinate": "git+https://github.com/kungfu-systems/kungfu.git@7eb0538031b09ff5ec60824c5e4bbc7432bf0e4a#docs/qualification/kfd2-trust-assessment.md",
+          "root": "sha256:3545a723795bb2565fc29a92d03d0cb2958b210801ae92110c14ebec8a4fb529",
+          "observedAt": "2026-08-14T06:57:56.604Z",
+          "kfdPackageRoot": "sha256:07bea3dacab8cba10901539a5acb958db1ee09738fd424c9933f9baa2187675b"
+        }
+      ],
+      "negativeEvidence": [
+        {
+          "kind": "negative",
+          "coordinate": "git+https://github.com/kungfu-systems/kungfu.git@7eb0538031b09ff5ec60824c5e4bbc7432bf0e4a#scripts/verify-kfd2-source-binding.test.mjs",
+          "root": "sha256:ff7c43f0146e125bc3c30c4b10e4258b1948310faa918877a085954726c38da0",
+          "observedAt": "2026-08-14T06:57:56.604Z",
+          "kfdPackageRoot": "sha256:07bea3dacab8cba10901539a5acb958db1ee09738fd424c9933f9baa2187675b"
+        }
+      ],
+      "reviews": [
+        {
+          "kind": "review",
+          "coordinate": "git+https://github.com/kungfu-systems/kungfu.git@7eb0538031b09ff5ec60824c5e4bbc7432bf0e4a#docs/qualification/alpha-ruleset.contract.json",
+          "root": "sha256:fafba639d47a1ade80eab8c2cc453cac2cdb96a6f762627e474c152834c0deef",
+          "observedAt": "2026-08-14T06:57:56.604Z",
+          "kfdPackageRoot": "sha256:07bea3dacab8cba10901539a5acb958db1ee09738fd424c9933f9baa2187675b"
+        }
+      ],
+      "witnessBindings": [],
+      "releaseBindingIds": [],
+      "claims": [
+        "Kungfu release trust begins from explicit package, source, review, and publication facts."
+      ],
+      "gaps": [
+        "This used declaration remains a candidate until decision-specific independent assessment and an exact release binding exist."
+      ]
+    },
+    {
+      "id": "KFD-3",
+      "number": 3,
+      "registryStatus": "active",
+      "state": "candidate",
+      "usage": "used",
+      "implementationEvidence": [
+        {
+          "kind": "implementation",
+          "coordinate": "git+https://github.com/kungfu-systems/kungfu.git@7eb0538031b09ff5ec60824c5e4bbc7432bf0e4a#.buildchain/kfd/kfd-3/surfaces.json",
+          "root": "sha256:f878fff9933338e62ddadb4e09ffdfd80e1b4034b1908560b861c73e5f5e38bb",
+          "observedAt": "2026-08-14T06:57:56.604Z",
+          "kfdPackageRoot": "sha256:07bea3dacab8cba10901539a5acb958db1ee09738fd424c9933f9baa2187675b"
+        }
+      ],
+      "verificationEvidence": [
+        {
+          "kind": "verification",
+          "coordinate": "git+https://github.com/kungfu-systems/kungfu.git@7eb0538031b09ff5ec60824c5e4bbc7432bf0e4a#.buildchain/kfd/kfd-3/capability-query.json",
+          "root": "sha256:9ab37c21113ce15c7869f0ced92683433a77d7a4035fb421e89147ad845982c3",
+          "observedAt": "2026-08-14T06:57:56.604Z",
+          "kfdPackageRoot": "sha256:07bea3dacab8cba10901539a5acb958db1ee09738fd424c9933f9baa2187675b"
+        },
+        {
+          "kind": "verification",
+          "coordinate": "git+https://github.com/kungfu-systems/kungfu.git@7eb0538031b09ff5ec60824c5e4bbc7432bf0e4a#.buildchain/kfd/kfd-3/surfaces.json",
+          "root": "sha256:f878fff9933338e62ddadb4e09ffdfd80e1b4034b1908560b861c73e5f5e38bb",
+          "observedAt": "2026-08-14T06:57:56.604Z",
+          "kfdPackageRoot": "sha256:07bea3dacab8cba10901539a5acb958db1ee09738fd424c9933f9baa2187675b"
+        }
+      ],
+      "negativeEvidence": [
+        {
+          "kind": "negative",
+          "coordinate": "git+https://github.com/kungfu-systems/kungfu.git@7eb0538031b09ff5ec60824c5e4bbc7432bf0e4a#framework/core/tests/fixtures/cli-surface-contract/dangling-kfd3.json",
+          "root": "sha256:f53d002f76bc6944f0219915d7f803c38a5aa4d74ac8ee0e889f87eac4290079",
+          "observedAt": "2026-08-14T06:57:56.604Z",
+          "kfdPackageRoot": "sha256:07bea3dacab8cba10901539a5acb958db1ee09738fd424c9933f9baa2187675b"
+        }
+      ],
+      "reviews": [
+        {
+          "kind": "review",
+          "coordinate": "git+https://github.com/kungfu-systems/kungfu.git@7eb0538031b09ff5ec60824c5e4bbc7432bf0e4a#docs/qualification/alpha-ruleset.contract.json",
+          "root": "sha256:fafba639d47a1ade80eab8c2cc453cac2cdb96a6f762627e474c152834c0deef",
+          "observedAt": "2026-08-14T06:57:56.604Z",
+          "kfdPackageRoot": "sha256:07bea3dacab8cba10901539a5acb958db1ee09738fd424c9933f9baa2187675b"
+        }
+      ],
+      "witnessBindings": [],
+      "releaseBindingIds": [],
+      "claims": [
+        "Kungfu publishes a machine-readable collaboration interface with explicit participant boundaries."
+      ],
+      "gaps": [
+        "This used declaration remains a candidate until decision-specific independent assessment and an exact release binding exist."
+      ]
+    },
+    {
+      "id": "KFD-4",
+      "number": 4,
+      "registryStatus": "active",
+      "state": "candidate",
+      "usage": "used",
+      "implementationEvidence": [
+        {
+          "kind": "implementation",
+          "coordinate": "git+https://github.com/kungfu-systems/kungfu.git@7eb0538031b09ff5ec60824c5e4bbc7432bf0e4a#framework/core/src/python/kungfu/rewind/perspective.py",
+          "root": "sha256:638c21946d445f0497637476891f0255cfae07c4666a76fc32b55e56e28310c8",
+          "observedAt": "2026-08-14T06:57:56.604Z",
+          "kfdPackageRoot": "sha256:07bea3dacab8cba10901539a5acb958db1ee09738fd424c9933f9baa2187675b"
+        },
+        {
+          "kind": "implementation",
+          "coordinate": "git+https://github.com/kungfu-systems/kungfu.git@7eb0538031b09ff5ec60824c5e4bbc7432bf0e4a#framework/core/tests/qualification/kfd4-perspective.mjs",
+          "root": "sha256:14e4a96384a9af8be87c497fe13d7d431fd74e444fd384160440109bcdc85ef5",
+          "observedAt": "2026-08-14T06:57:56.604Z",
+          "kfdPackageRoot": "sha256:07bea3dacab8cba10901539a5acb958db1ee09738fd424c9933f9baa2187675b"
+        }
+      ],
+      "verificationEvidence": [
+        {
+          "kind": "verification",
+          "coordinate": "buildchain-product-gate:kfd-4@sha256:19a4448bae3f7ef0a535ea3c796b58b61741d6a037da73b7641c1b7a7663b95e",
+          "root": "sha256:19a4448bae3f7ef0a535ea3c796b58b61741d6a037da73b7641c1b7a7663b95e",
+          "observedAt": "2026-08-14T06:57:56.604Z",
+          "kfdPackageRoot": "sha256:07bea3dacab8cba10901539a5acb958db1ee09738fd424c9933f9baa2187675b"
+        },
+        {
+          "kind": "verification",
+          "coordinate": "git+https://github.com/kungfu-systems/kungfu.git@7eb0538031b09ff5ec60824c5e4bbc7432bf0e4a#docs/qualification/evidence/kfd-4-perspective/d73cab0d69/report.json",
+          "root": "sha256:c086e9588f3bde00105c91080e4e3e00d558b8ea560486ae0b7df685b967b2e8",
+          "observedAt": "2026-08-14T06:57:56.604Z",
+          "kfdPackageRoot": "sha256:07bea3dacab8cba10901539a5acb958db1ee09738fd424c9933f9baa2187675b"
+        },
+        {
+          "kind": "verification",
+          "coordinate": "git+https://github.com/kungfu-systems/kungfu.git@7eb0538031b09ff5ec60824c5e4bbc7432bf0e4a#framework/core/tests/python/test_kfd4_perspective.py",
+          "root": "sha256:e07a44456d83bed34b83df02ab94e9562c5c5b4cf52b3f7ae3562370a36d3460",
+          "observedAt": "2026-08-14T06:57:56.604Z",
+          "kfdPackageRoot": "sha256:07bea3dacab8cba10901539a5acb958db1ee09738fd424c9933f9baa2187675b"
+        }
+      ],
+      "negativeEvidence": [
+        {
+          "kind": "negative",
+          "coordinate": "buildchain-product-gate:kfd-4@sha256:19a4448bae3f7ef0a535ea3c796b58b61741d6a037da73b7641c1b7a7663b95e#kfd-4-negative",
+          "root": "sha256:c0b00e3e8b78c85a500698e1e41ac910752b2927e2fa5cd734be4b787879a11c",
+          "observedAt": "2026-08-14T06:57:56.604Z",
+          "kfdPackageRoot": "sha256:07bea3dacab8cba10901539a5acb958db1ee09738fd424c9933f9baa2187675b"
+        }
+      ],
+      "reviews": [
+        {
+          "kind": "review",
+          "coordinate": "git+https://github.com/kungfu-systems/kungfu.git@7eb0538031b09ff5ec60824c5e4bbc7432bf0e4a#docs/qualification/alpha-ruleset.contract.json",
+          "root": "sha256:fafba639d47a1ade80eab8c2cc453cac2cdb96a6f762627e474c152834c0deef",
+          "observedAt": "2026-08-14T06:57:56.604Z",
+          "kfdPackageRoot": "sha256:07bea3dacab8cba10901539a5acb958db1ee09738fd424c9933f9baa2187675b"
+        }
+      ],
+      "witnessBindings": [],
+      "releaseBindingIds": [],
+      "claims": [
+        "Kungfu retains one bounded observer-perspective and contrastive-replay candidate profile."
+      ],
+      "gaps": [
+        "This used declaration remains a candidate until decision-specific independent assessment and an exact release binding exist."
+      ]
+    },
+    {
+      "id": "KFD-5",
+      "number": 5,
+      "registryStatus": "active",
+      "state": "candidate",
+      "usage": "evaluating",
+      "implementationEvidence": [
+        {
+          "kind": "implementation",
+          "coordinate": "git+https://github.com/kungfu-systems/kungfu.git@7eb0538031b09ff5ec60824c5e4bbc7432bf0e4a#docs/architecture/primitive-management-plane.md",
+          "root": "sha256:487177ad3247adbfed6fd1ccdecf7c31a7a6c93387bfba98af41cf1256426bcb",
+          "observedAt": "2026-08-14T06:57:56.604Z",
+          "kfdPackageRoot": "sha256:07bea3dacab8cba10901539a5acb958db1ee09738fd424c9933f9baa2187675b"
+        },
+        {
+          "kind": "implementation",
+          "coordinate": "git+https://github.com/kungfu-systems/kungfu.git@7eb0538031b09ff5ec60824c5e4bbc7432bf0e4a#framework/core/src/python/kungfu/assignment_orchestration.py",
+          "root": "sha256:5c49399a62d43e478fe6d538c0ccb945296ebfc3dbbf9a9a914c85cd094ad412",
+          "observedAt": "2026-08-14T06:57:56.604Z",
+          "kfdPackageRoot": "sha256:07bea3dacab8cba10901539a5acb958db1ee09738fd424c9933f9baa2187675b"
+        },
+        {
+          "kind": "implementation",
+          "coordinate": "git+https://github.com/kungfu-systems/kungfu.git@7eb0538031b09ff5ec60824c5e4bbc7432bf0e4a#framework/primitive/kungfu-primitive-catalog.contract.json",
+          "root": "sha256:c766fb19e02ad5a180c5271f40b150d3229d0f15d0e981e4d768737a10206eda",
+          "observedAt": "2026-08-14T06:57:56.604Z",
+          "kfdPackageRoot": "sha256:07bea3dacab8cba10901539a5acb958db1ee09738fd424c9933f9baa2187675b"
+        }
+      ],
+      "verificationEvidence": [
+        {
+          "kind": "verification",
+          "coordinate": "buildchain-product-gate:kfd-5@sha256:96a2a676c00b5e646a443fe1595488e2b23ab10d92a6a7dca2866b6e87f81784",
+          "root": "sha256:96a2a676c00b5e646a443fe1595488e2b23ab10d92a6a7dca2866b6e87f81784",
+          "observedAt": "2026-08-14T06:57:56.604Z",
+          "kfdPackageRoot": "sha256:07bea3dacab8cba10901539a5acb958db1ee09738fd424c9933f9baa2187675b"
+        },
+        {
+          "kind": "verification",
+          "coordinate": "git+https://github.com/kungfu-systems/kungfu.git@7eb0538031b09ff5ec60824c5e4bbc7432bf0e4a#docs/qualification/evidence/assignment-organization-rollout/7aae2c562a/report.json",
+          "root": "sha256:b852b810293452b277edd79033c71adbdea341aba082c0380bdc60e0e90d0ca4",
+          "observedAt": "2026-08-14T06:57:56.604Z",
+          "kfdPackageRoot": "sha256:07bea3dacab8cba10901539a5acb958db1ee09738fd424c9933f9baa2187675b"
+        },
+        {
+          "kind": "verification",
+          "coordinate": "git+https://github.com/kungfu-systems/kungfu.git@7eb0538031b09ff5ec60824c5e4bbc7432bf0e4a#framework/core/tests/python/test_assignment_orchestration.py",
+          "root": "sha256:362a6b85e1162bb04566e778c03eb511c65ac57035ad794bb893802aa4e6d28c",
+          "observedAt": "2026-08-14T06:57:56.604Z",
+          "kfdPackageRoot": "sha256:07bea3dacab8cba10901539a5acb958db1ee09738fd424c9933f9baa2187675b"
+        }
+      ],
+      "negativeEvidence": [
+        {
+          "kind": "negative",
+          "coordinate": "buildchain-product-gate:kfd-5@sha256:96a2a676c00b5e646a443fe1595488e2b23ab10d92a6a7dca2866b6e87f81784#kfd-5-negative",
+          "root": "sha256:971b3886cd15e4343c10aa3e125d9a686c5fced4daebf9f8d6c6de1a37cb052a",
+          "observedAt": "2026-08-14T06:57:56.604Z",
+          "kfdPackageRoot": "sha256:07bea3dacab8cba10901539a5acb958db1ee09738fd424c9933f9baa2187675b"
+        }
+      ],
+      "reviews": [
+        {
+          "kind": "review",
+          "coordinate": "git+https://github.com/kungfu-systems/kungfu.git@7eb0538031b09ff5ec60824c5e4bbc7432bf0e4a#docs/qualification/evidence/assignment-organization-rollout/7aae2c562a/report.json",
+          "root": "sha256:b852b810293452b277edd79033c71adbdea341aba082c0380bdc60e0e90d0ca4",
+          "observedAt": "2026-08-14T06:57:56.604Z",
+          "kfdPackageRoot": "sha256:07bea3dacab8cba10901539a5acb958db1ee09738fd424c9933f9baa2187675b"
+        }
+      ],
+      "witnessBindings": [],
+      "releaseBindingIds": [],
+      "claims": [
+        "Kungfu retains bounded Assignment and Primitive Management adopter evidence without claiming universal primitive need."
+      ],
+      "gaps": [
+        "This used declaration remains a candidate until decision-specific independent assessment and an exact release binding exist."
+      ]
+    },
+    {
+      "id": "KFD-6",
+      "number": 6,
+      "registryStatus": "draft",
+      "state": "unsupported",
+      "usage": "unused",
+      "implementationEvidence": [],
+      "verificationEvidence": [],
+      "negativeEvidence": [],
+      "reviews": [],
+      "witnessBindings": [],
+      "releaseBindingIds": [],
+      "claims": [],
+      "gaps": [
+        "Kungfu has no conforming causal-experience autonomous discovery implementation or verification for this cut."
+      ]
+    },
+    {
+      "id": "KFD-7",
+      "number": 7,
+      "registryStatus": "active",
+      "state": "candidate",
+      "usage": "used",
+      "implementationEvidence": [
+        {
+          "kind": "implementation",
+          "coordinate": "git+https://github.com/kungfu-systems/kungfu.git@7eb0538031b09ff5ec60824c5e4bbc7432bf0e4a#framework/agent-work/kungfu-kfd-7-action-contract.json",
+          "root": "sha256:b3d788344e93518bb4fecac6fea05a6fea87707c6325e50bcf01980492309ce0",
+          "observedAt": "2026-08-14T06:57:56.604Z",
+          "kfdPackageRoot": "sha256:07bea3dacab8cba10901539a5acb958db1ee09738fd424c9933f9baa2187675b"
+        },
+        {
+          "kind": "implementation",
+          "coordinate": "git+https://github.com/kungfu-systems/kungfu.git@7eb0538031b09ff5ec60824c5e4bbc7432bf0e4a#framework/core/architecture/kfd7-release-passport.json",
+          "root": "sha256:2264cec1d9c27fb124c3aaf8b3eb29d8f1833995c3ce6f1675fbccd9c5fefe21",
+          "observedAt": "2026-08-14T06:57:56.604Z",
+          "kfdPackageRoot": "sha256:07bea3dacab8cba10901539a5acb958db1ee09738fd424c9933f9baa2187675b"
+        }
+      ],
+      "verificationEvidence": [
+        {
+          "kind": "verification",
+          "coordinate": "buildchain-product-gate:kfd-7@sha256:936d8b8d256d33d0be6f1cf36ed1e8cb4e3332a43638f74c2ccefc5f5df03837",
+          "root": "sha256:936d8b8d256d33d0be6f1cf36ed1e8cb4e3332a43638f74c2ccefc5f5df03837",
+          "observedAt": "2026-08-14T06:57:56.604Z",
+          "kfdPackageRoot": "sha256:07bea3dacab8cba10901539a5acb958db1ee09738fd424c9933f9baa2187675b"
+        },
+        {
+          "kind": "verification",
+          "coordinate": "git+https://github.com/kungfu-systems/kungfu.git@7eb0538031b09ff5ec60824c5e4bbc7432bf0e4a#framework/agent-work/evidence/kfd-7/kfd-verifier.json",
+          "root": "sha256:dc1742cd0192870c4dd20a0f519ba2b1717149ab66cbd55d1deaacc1e7f3e4d2",
+          "observedAt": "2026-08-14T06:57:56.604Z",
+          "kfdPackageRoot": "sha256:07bea3dacab8cba10901539a5acb958db1ee09738fd424c9933f9baa2187675b"
+        },
+        {
+          "kind": "verification",
+          "coordinate": "git+https://github.com/kungfu-systems/kungfu.git@7eb0538031b09ff5ec60824c5e4bbc7432bf0e4a#framework/agent-work/kungfu-kfd-7-release-gate.json",
+          "root": "sha256:6487665537ca0acde2ef130dbbf76bcc0476acf148253d302d9d6a2fd0abd812",
+          "observedAt": "2026-08-14T06:57:56.604Z",
+          "kfdPackageRoot": "sha256:07bea3dacab8cba10901539a5acb958db1ee09738fd424c9933f9baa2187675b"
+        },
+        {
+          "kind": "verification",
+          "coordinate": "git+https://github.com/kungfu-systems/kungfu.git@7eb0538031b09ff5ec60824c5e4bbc7432bf0e4a#framework/core/architecture/kfd7-release-passport.json",
+          "root": "sha256:2264cec1d9c27fb124c3aaf8b3eb29d8f1833995c3ce6f1675fbccd9c5fefe21",
+          "observedAt": "2026-08-14T06:57:56.604Z",
+          "kfdPackageRoot": "sha256:07bea3dacab8cba10901539a5acb958db1ee09738fd424c9933f9baa2187675b"
+        }
+      ],
+      "negativeEvidence": [
+        {
+          "kind": "negative",
+          "coordinate": "buildchain-product-gate:kfd-7@sha256:936d8b8d256d33d0be6f1cf36ed1e8cb4e3332a43638f74c2ccefc5f5df03837#kfd-7-negative",
+          "root": "sha256:35b79478d10cd601a54b1c6f6156dcb9fe720147f4588c35643798a759fd3f1e",
+          "observedAt": "2026-08-14T06:57:56.604Z",
+          "kfdPackageRoot": "sha256:07bea3dacab8cba10901539a5acb958db1ee09738fd424c9933f9baa2187675b"
+        }
+      ],
+      "reviews": [
+        {
+          "kind": "review",
+          "coordinate": "buildchain-product-gate:kfd-7@sha256:936d8b8d256d33d0be6f1cf36ed1e8cb4e3332a43638f74c2ccefc5f5df03837#independent-review",
+          "root": "sha256:6b3955e075322fa1895d345f5fb4cb06518c846e86cf2cb49163cbbd7a6dc52e",
+          "observedAt": "2026-08-14T06:57:56.604Z",
+          "kfdPackageRoot": "sha256:07bea3dacab8cba10901539a5acb958db1ee09738fd424c9933f9baa2187675b"
+        },
+        {
+          "kind": "review",
+          "coordinate": "git+https://github.com/kungfu-systems/kungfu.git@7eb0538031b09ff5ec60824c5e4bbc7432bf0e4a#framework/agent-work/kungfu-kfd-7-action-contract.json",
+          "root": "sha256:b3d788344e93518bb4fecac6fea05a6fea87707c6325e50bcf01980492309ce0",
+          "observedAt": "2026-08-14T06:57:56.604Z",
+          "kfdPackageRoot": "sha256:07bea3dacab8cba10901539a5acb958db1ee09738fd424c9933f9baa2187675b"
+        }
+      ],
+      "witnessBindings": [],
+      "releaseBindingIds": [],
+      "claims": [
+        "Kungfu retains the reviewed activation record and separate product-profile evidence for KFD-7."
+      ],
+      "gaps": [
+        "This used declaration remains a candidate until decision-specific independent assessment and an exact release binding exist."
+      ]
+    },
+    {
+      "id": "KFD-8",
+      "number": 8,
+      "registryStatus": "draft",
+      "state": "draft-evidence",
+      "usage": "evaluating",
+      "implementationEvidence": [
+        {
+          "kind": "implementation",
+          "coordinate": "git+https://github.com/kungfu-systems/kungfu.git@7eb0538031b09ff5ec60824c5e4bbc7432bf0e4a#framework/agent-work/evidence/kfd-7/atlas-staleness-loss.json",
+          "root": "sha256:df945b2e695457ab021b0d56633086b73c837f71841eb409c6ea70276908e5d1",
+          "observedAt": "2026-08-14T06:57:56.604Z",
+          "kfdPackageRoot": "sha256:07bea3dacab8cba10901539a5acb958db1ee09738fd424c9933f9baa2187675b"
+        }
+      ],
+      "verificationEvidence": [
+        {
+          "kind": "verification",
+          "coordinate": "git+https://github.com/kungfu-systems/kungfu.git@7eb0538031b09ff5ec60824c5e4bbc7432bf0e4a#framework/agent-work/evidence/kfd-7/atlas-staleness-loss.json",
+          "root": "sha256:df945b2e695457ab021b0d56633086b73c837f71841eb409c6ea70276908e5d1",
+          "observedAt": "2026-08-14T06:57:56.604Z",
+          "kfdPackageRoot": "sha256:07bea3dacab8cba10901539a5acb958db1ee09738fd424c9933f9baa2187675b"
+        }
+      ],
+      "negativeEvidence": [],
+      "reviews": [],
+      "witnessBindings": [],
+      "releaseBindingIds": [],
+      "claims": [],
+      "gaps": [
+        "This is design feedback evidence only; it does not activate draft KFD-8 or establish shipped support."
+      ]
+    },
+    {
+      "id": "KFD-9",
+      "number": 9,
+      "registryStatus": "draft",
+      "state": "draft-evidence",
+      "usage": "evaluating",
+      "implementationEvidence": [
+        {
+          "kind": "implementation",
+          "coordinate": "git+https://github.com/kungfu-systems/kungfu.git@7eb0538031b09ff5ec60824c5e4bbc7432bf0e4a#framework/agent-work/evidence/kfd-7/pursuit-continuity-settlement.json",
+          "root": "sha256:7f18af674c5636a515daea74931b4bc7c0372ba38a74c38e1b0bb20b3072bc67",
+          "observedAt": "2026-08-14T06:57:56.604Z",
+          "kfdPackageRoot": "sha256:07bea3dacab8cba10901539a5acb958db1ee09738fd424c9933f9baa2187675b"
+        }
+      ],
+      "verificationEvidence": [
+        {
+          "kind": "verification",
+          "coordinate": "git+https://github.com/kungfu-systems/kungfu.git@7eb0538031b09ff5ec60824c5e4bbc7432bf0e4a#framework/agent-work/evidence/kfd-7/pursuit-continuity-settlement.json",
+          "root": "sha256:7f18af674c5636a515daea74931b4bc7c0372ba38a74c38e1b0bb20b3072bc67",
+          "observedAt": "2026-08-14T06:57:56.604Z",
+          "kfdPackageRoot": "sha256:07bea3dacab8cba10901539a5acb958db1ee09738fd424c9933f9baa2187675b"
+        }
+      ],
+      "negativeEvidence": [],
+      "reviews": [],
+      "witnessBindings": [],
+      "releaseBindingIds": [],
+      "claims": [],
+      "gaps": [
+        "This is design feedback evidence only; it does not activate draft KFD-9 or establish shipped support."
+      ]
+    },
+    {
+      "id": "KFD-10",
+      "number": 10,
+      "registryStatus": "draft",
+      "state": "draft-evidence",
+      "usage": "evaluating",
+      "implementationEvidence": [
+        {
+          "kind": "implementation",
+          "coordinate": "git+https://github.com/kungfu-systems/kungfu.git@7eb0538031b09ff5ec60824c5e4bbc7432bf0e4a#framework/agent-work/evidence/kfd-7/warrant-decay-revocation.json",
+          "root": "sha256:f6d15823561abed00ed00e32dd26a8f05468015eb653092f0e7867f7355c31b8",
+          "observedAt": "2026-08-14T06:57:56.604Z",
+          "kfdPackageRoot": "sha256:07bea3dacab8cba10901539a5acb958db1ee09738fd424c9933f9baa2187675b"
+        }
+      ],
+      "verificationEvidence": [
+        {
+          "kind": "verification",
+          "coordinate": "git+https://github.com/kungfu-systems/kungfu.git@7eb0538031b09ff5ec60824c5e4bbc7432bf0e4a#framework/agent-work/evidence/kfd-7/warrant-decay-revocation.json",
+          "root": "sha256:f6d15823561abed00ed00e32dd26a8f05468015eb653092f0e7867f7355c31b8",
+          "observedAt": "2026-08-14T06:57:56.604Z",
+          "kfdPackageRoot": "sha256:07bea3dacab8cba10901539a5acb958db1ee09738fd424c9933f9baa2187675b"
+        }
+      ],
+      "negativeEvidence": [],
+      "reviews": [],
+      "witnessBindings": [
+        {
+          "decisionId": "KFD-10",
+          "profileId": "kfd-warrant-evidence",
+          "profileManifestPath": "profiles/warrant-evidence/manifest.json",
+          "profileManifestRoot": "sha256:1032006a7435408761916de291abc8ee239594e70d739f28c3b29b60da75a755",
+          "witnessCoordinate": "kungfu-systems/kungfu@7eb0538031b09ff5ec60824c5e4bbc7432bf0e4a#framework/agent-work/evidence/kfd-7/warrant-decay-revocation.json",
+          "witnessRoot": "sha256:f6d15823561abed00ed00e32dd26a8f05468015eb653092f0e7867f7355c31b8",
+          "verifierRoot": "sha256:d15753d39938aa91cc50eb9bfa91dfc013570565a2395fd35d93d4ddda10adea",
+          "kfdPackageRoot": "sha256:07bea3dacab8cba10901539a5acb958db1ee09738fd424c9933f9baa2187675b"
+        }
+      ],
+      "releaseBindingIds": [],
+      "claims": [],
+      "gaps": [
+        "The retained Warrant evidence is partial and non-qualifying; the specialized KFX runtime witness remains a separate successor Assignment."
+      ]
+    },
+    {
+      "id": "KFD-11",
+      "number": 11,
+      "registryStatus": "draft",
+      "state": "draft-evidence",
+      "usage": "evaluating",
+      "implementationEvidence": [
+        {
+          "kind": "implementation",
+          "coordinate": "git+https://github.com/kungfu-systems/kungfu.git@7eb0538031b09ff5ec60824c5e4bbc7432bf0e4a#framework/core/src/python/kungfu/agent/profile-sdk.contract.json",
+          "root": "sha256:ec14e1332412ad219570ad36b5d0df3e27fec82f69985367947735fdd364d823",
+          "observedAt": "2026-08-14T06:57:56.604Z",
+          "kfdPackageRoot": "sha256:07bea3dacab8cba10901539a5acb958db1ee09738fd424c9933f9baa2187675b"
+        }
+      ],
+      "verificationEvidence": [
+        {
+          "kind": "verification",
+          "coordinate": "git+https://github.com/kungfu-systems/kungfu.git@7eb0538031b09ff5ec60824c5e4bbc7432bf0e4a#framework/core/src/python/kungfu/agent/profile-sdk.contract.json",
+          "root": "sha256:ec14e1332412ad219570ad36b5d0df3e27fec82f69985367947735fdd364d823",
+          "observedAt": "2026-08-14T06:57:56.604Z",
+          "kfdPackageRoot": "sha256:07bea3dacab8cba10901539a5acb958db1ee09738fd424c9933f9baa2187675b"
+        }
+      ],
+      "negativeEvidence": [],
+      "reviews": [],
+      "witnessBindings": [],
+      "releaseBindingIds": [],
+      "claims": [],
+      "gaps": [
+        "The upstream activation contract forbids treating this partial interface evidence as activated KFD-11."
+      ]
+    },
+    {
+      "id": "KFD-12",
+      "number": 12,
+      "registryStatus": "draft",
+      "state": "draft-evidence",
+      "usage": "evaluating",
+      "implementationEvidence": [
+        {
+          "kind": "implementation",
+          "coordinate": "git+https://github.com/kungfu-systems/kungfu.git@7eb0538031b09ff5ec60824c5e4bbc7432bf0e4a#framework/core/src/python/kungfu/assignment_orchestration.py",
+          "root": "sha256:5c49399a62d43e478fe6d538c0ccb945296ebfc3dbbf9a9a914c85cd094ad412",
+          "observedAt": "2026-08-14T06:57:56.604Z",
+          "kfdPackageRoot": "sha256:07bea3dacab8cba10901539a5acb958db1ee09738fd424c9933f9baa2187675b"
+        }
+      ],
+      "verificationEvidence": [
+        {
+          "kind": "verification",
+          "coordinate": "git+https://github.com/kungfu-systems/kungfu.git@7eb0538031b09ff5ec60824c5e4bbc7432bf0e4a#framework/core/src/python/kungfu/assignment_orchestration.py",
+          "root": "sha256:5c49399a62d43e478fe6d538c0ccb945296ebfc3dbbf9a9a914c85cd094ad412",
+          "observedAt": "2026-08-14T06:57:56.604Z",
+          "kfdPackageRoot": "sha256:07bea3dacab8cba10901539a5acb958db1ee09738fd424c9933f9baa2187675b"
+        }
+      ],
+      "negativeEvidence": [],
+      "reviews": [],
+      "witnessBindings": [],
+      "releaseBindingIds": [],
+      "claims": [],
+      "gaps": [
+        "The upstream activation contract forbids treating this partial lifecycle evidence as activated KFD-12."
+      ]
+    },
+    {
+      "id": "KFD-13",
+      "number": 13,
+      "registryStatus": "draft",
+      "state": "draft-evidence",
+      "usage": "evaluating",
+      "implementationEvidence": [
+        {
+          "kind": "implementation",
+          "coordinate": "git+https://github.com/kungfu-systems/kungfu.git@7eb0538031b09ff5ec60824c5e4bbc7432bf0e4a#framework/project-cut/project-cut.contract.json",
+          "root": "sha256:593ce64d41e7979cb908e1e52269d3f9ec550ba9ba3182679f91dfa6457824ee",
+          "observedAt": "2026-08-14T06:57:56.604Z",
+          "kfdPackageRoot": "sha256:07bea3dacab8cba10901539a5acb958db1ee09738fd424c9933f9baa2187675b"
+        }
+      ],
+      "verificationEvidence": [
+        {
+          "kind": "verification",
+          "coordinate": "git+https://github.com/kungfu-systems/kungfu.git@7eb0538031b09ff5ec60824c5e4bbc7432bf0e4a#framework/project-cut/project-cut.contract.json",
+          "root": "sha256:593ce64d41e7979cb908e1e52269d3f9ec550ba9ba3182679f91dfa6457824ee",
+          "observedAt": "2026-08-14T06:57:56.604Z",
+          "kfdPackageRoot": "sha256:07bea3dacab8cba10901539a5acb958db1ee09738fd424c9933f9baa2187675b"
+        }
+      ],
+      "negativeEvidence": [],
+      "reviews": [],
+      "witnessBindings": [],
+      "releaseBindingIds": [],
+      "claims": [],
+      "gaps": [
+        "The upstream activation contract forbids treating this partial Project Cut evidence as activated KFD-13."
+      ]
+    }
+  ],
+  "releaseBindings": [],
+  "claimBoundary": {
+    "declarationOnly": true,
+    "runtimePermission": false,
+    "releaseAuthorization": false,
+    "independentlyCertified": false,
+    "semanticTruth": false
+  },
+  "gaps": [
+    "Candidate rows do not claim completed adoption without decision-specific witness and release bindings.",
+    "Draft evidence cannot activate a draft, widen authority, or certify Kungfu.",
+    "KFD-6 remains explicitly unsupported; no support is inferred from precursor work."
+  ]
+}

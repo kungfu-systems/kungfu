@@ -1245,6 +1245,29 @@ jobs:
             --shard-evidence-roots-json "$(jq -c '.shardEvidenceRoots' "$output/warrant-input.json")" \
             --qualified-at "$(jq -er '.producer.createdAt' "$bundle/proof.json")" \
             --output "$output/proof.json"
+          native_evidence_roots="$(jq -cn \
+            --arg proofRoot "$(jq -er '.proofRoot' "$bundle/proof.json")" \
+            --argjson roots "$(jq -c '.shardEvidenceRoots' "$output/warrant-input.json")" \
+            '$roots + [$proofRoot] | unique | sort')"
+          # Project the successful exact-source partitions into Buildchain's
+          # reusable native-proof vocabulary. The protected controller still
+          # classifies current-base movement before accepting this proof.
+          # shifu-entry-contract: allow exact pinned Buildchain native proof creation in CI
+          node .buildchain/dev-delivery-runtime/bin/buildchain.mjs dev proof native \
+            --repository "$GITHUB_REPOSITORY" \
+            --branch "$protected_base" \
+            --source-identity-root "$(jq -er '.sourceIdentityRoot' "$output/warrant-input.json")" \
+            --source-patch-root "$(jq -er '.sourcePatchRoot' "$output/warrant-input.json")" \
+            --plan-root "$(jq -er '.planRoot' "$output/warrant-input.json")" \
+            --closure-root "$(jq -er '.closureRoot' "$output/warrant-input.json")" \
+            --dependency-root "$(jq -er '.dependencyRoot' "$output/warrant-input.json")" \
+            --toolchain-root "$(jq -er '.toolchainRoot' "$output/warrant-input.json")" \
+            --environment-root "$(jq -er '.environmentRoot' "$output/warrant-input.json")" \
+            --qualified-base "$(jq -er '.pull_request.base.sha' "$GITHUB_EVENT_PATH")" \
+            --affected-paths-json "$(jq -c '.affectedPaths' "$output/warrant-input.json")" \
+            --shard-evidence-roots-json "$native_evidence_roots" \
+            --qualified-at "$(jq -er '.producer.createdAt' "$bundle/proof.json")" \
+            --output "$output/native-proof.json"
           jq -n \
             --arg repository "$GITHUB_REPOSITORY" \
             --arg protectedBase "$protected_base" \

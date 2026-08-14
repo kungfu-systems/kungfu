@@ -80,7 +80,7 @@
             "product-stable",
             "product-binaries"
           ],
-          "sourceRoot": "sha256:ab3472d69a4764c1291df6052982898629e730bba96e39362c90646b42df1bb9"
+          "sourceRoot": "sha256:4a928f693f4ba2b5206d4de3a061ca2ff771efd742a0398152bd52f88c7abad3"
         },
         {
           "path": ".github/workflows/dev-post-merge-advisory.yml",
@@ -343,7 +343,7 @@
             "product-stable",
             "product-binaries"
           ],
-          "sourceRoot": "sha256:c9cf6b30e904d074dc67264a6a8392d83966d460eb0ff439ca14ea3e662d0801"
+          "sourceRoot": "sha256:a97ac8b750ee75260e4b19051a57681504812d6a7180aede80efb35bc7b6b842"
         },
         {
           "path": ".github/workflows/release-shifu.yml",
@@ -874,5 +874,5 @@
       }
     }
   ],
-  "registryRoot": "sha256:dbfff51da598c374fdd1d3d91c33c6dbcfd586a85bb8b9f2e1206790233ec92e"
+  "registryRoot": "sha256:2dbb9a7bc253be3e3b6d8b79091f7568f21ac24d9affff7c516e310d117de264"
 }

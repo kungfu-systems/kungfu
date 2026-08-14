@@ -128,6 +128,22 @@ test('Dev Agent admission binds every targeted run to one exact PR head', () => 
     /source-workflow-run-id: \$\{\{ fromJSON\(needs\.resolve-target\.outputs\.source-workflow-run-id \|\| '0'\) \}\}/u,
   );
   assert.match(workflow, /handoff-workflow-id: dev-pr-auto-merge\.yml/u);
+  assert.match(
+    workflow,
+    /deliveryClass[\s\S]*native-proof-required[\s\S]*gh run download "\$SOURCE_RUN_ID"[\s\S]*core-dev-delivery-source-proof-\$EXPECTED_HEAD[\s\S]*verify-native[\s\S]*native-proof-json<<BUILDCHAIN_NATIVE_PROOF_EOF/u,
+  );
+  assert.match(
+    workflow,
+    /environment-root: \$\{\{ needs\.delivery-contract\.outputs\.environment-root \}\}/u,
+  );
+  assert.match(
+    workflow,
+    /environment_root="\$\(jq -er '\.environmentRoot' "\$native_proof"\)"[\s\S]*\(\$input\[0\]\.environmentRoot \/\/ \$environmentRoot\)[\s\S]*echo "environment-root=\$environment_root"/u,
+  );
+  assert.match(
+    workflow,
+    /native-proof-json: \$\{\{ needs\.delivery-contract\.outputs\.native-proof-json \}\}/u,
+  );
   assert.match(workflow, /permissions:\n {6}actions: write/u);
   assert.match(workflow, /diagnostic-context: Buildchain delivery intent/u);
   assert.match(
@@ -289,7 +305,7 @@ function nativeFixture(runStep = () => {}) {
       readPlan: () => ({
         schema: 'kungfu.core-affected-native-plan/v1',
         closureComponents: ['framework/core'],
-        sdkQualification: { required: false },
+        sdkQualification: { required: true },
         devQueueQualification: {
           shifuWorkspace: { required: true },
           kfdVerifier: { required: false },
@@ -323,6 +339,11 @@ test('two-phase native adapter runs both partitions and seals exact-head success
         ({ environment }) => environment.KUNGFU_AFFECTED_NATIVE_PARTITION_INDEX,
       ),
     ['0', '1'],
+  );
+  assert.equal(
+    commands.find(({ name }) => name === 'Build Core SDK artifacts')
+      ?.environment.KUNGFU_BUILDCHAIN_SOURCE_BUILD,
+    '1',
   );
   assert.equal(
     JSON.parse(fs.readFileSync(path.join(value.cwd, 'evidence/native.json')))

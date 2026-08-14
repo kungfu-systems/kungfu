@@ -325,12 +325,12 @@ test('queue lease consumes an atomically qualified two-phase Warrant', () => {
   assert.throws(
     () =>
       verifyQueueAdmissionLease({
-        view: queueView(ROOT_A, { status: 'queued' }),
+        view: queueView(ROOT_A, { status: 'dequeued' }),
         pullRequestNumber: 42,
         sourceHeadSha: SOURCE,
         now: '2026-08-04T02:30:00.000Z',
       }),
-    /not delivery-ready: queued/u,
+    /not delivery-ready: dequeued/u,
   );
 });
 
@@ -401,6 +401,10 @@ test('workflow consumes exact Buildchain Source and Integration Proofs', () => {
   assert.match(
     aggregate,
     /Project exact PR qualification into Buildchain Source Proof[\s\S]*affected-native-proof\.mjs source-input[\s\S]*dev-delivery-warrant-input\.mjs[\s\S]*buildchain\.mjs dev proof source[\s\S]*--source-identity-root[\s\S]*--toolchain-root/u,
+  );
+  assert.match(
+    aggregate,
+    /buildchain\.mjs dev proof native[\s\S]*--environment-root[\s\S]*--qualified-base[\s\S]*--shard-evidence-roots-json/u,
   );
   assert.match(
     aggregate,
