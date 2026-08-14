@@ -4,6 +4,7 @@
 import assert from 'node:assert/strict';
 import { execFileSync, spawnSync } from 'node:child_process';
 import fs from 'node:fs';
+import { createRequire } from 'node:module';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -15,6 +16,15 @@ const KFD_ROOT = path.dirname(
   fileURLToPath(import.meta.resolve('@kungfu-tech/kfd/package.json')),
 );
 const KFD_BIN = path.join(KFD_ROOT, 'bin', 'kfd.mjs');
+const STABLE_BUILDCHAIN_PACKAGE = fileURLToPath(
+  import.meta.resolve('@kungfu-tech/buildchain-stable/package.json'),
+);
+const NATIVE_KFD_ROOT = path.dirname(
+  createRequire(STABLE_BUILDCHAIN_PACKAGE).resolve(
+    '@kungfu-tech/kfd/package.json',
+  ),
+);
+const NATIVE_KFD_BIN = path.join(NATIVE_KFD_ROOT, 'bin', 'kfd.mjs');
 const KFD_ATLAS_FIXTURE = path.join(
   KFD_ROOT,
   'verifier',
@@ -38,10 +48,10 @@ function run(command, args, cwd = ROOT, env = process.env) {
   });
 }
 
-function verify(kind, objectPath) {
+function verify(kind, objectPath, verifier = KFD_BIN) {
   const result = spawnSync(
     process.execPath,
-    [KFD_BIN, 'verify', kind, objectPath, '--json'],
+    [verifier, 'verify', kind, objectPath, '--json'],
     { cwd: ROOT, encoding: 'utf8' },
   );
   const report = JSON.parse(result.stdout);
@@ -113,12 +123,13 @@ try {
   assert.equal(currentManifest.manifest_root, atlasGolden.manifest_root);
   assert.equal(currentReceipt.receipt_root, atlasGolden.receipt_root);
 
-  // Compiler release identity contributes to Pack and Atlas content roots. The
-  // KFD-bundled fixture may therefore represent an earlier Xinfa release, but
-  // it must retain the same release-independent source and semantic closure.
+  // Compiler release identity and schema evolution contribute to Pack and
+  // Atlas content roots. The KFD-bundled fixture may therefore represent a
+  // different Xinfa release and schema set, but it must retain the same
+  // release-independent source and semantic closure. The KFD verification
+  // below independently validates the bundled schema/root pair.
   assert.equal(bundledAtlas.compiler.product, 'xinfa');
   assert.equal(bundledAtlas.roots.cut, atlasGolden.cut_root);
-  assert.equal(bundledAtlas.roots.schema, atlasGolden.schema_root);
   assert.equal(bundledAtlas.roots.semantic, atlasGolden.semantic_root);
   assert.equal(bundledAtlas.roots.provenance, atlasGolden.provenance_root);
   assert.equal(bundledAtlas.roots.verification, atlasGolden.verification_root);
@@ -133,10 +144,10 @@ try {
     'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
   );
   const profiles = {
-    pack: verify('pack', packOutput),
-    atlas: verify('atlas', atlasOutput),
+    pack: verify('pack', packOutput, NATIVE_KFD_BIN),
+    atlas: verify('atlas', atlasOutput, NATIVE_KFD_BIN),
     bundledAtlas: verify('atlas', KFD_ATLAS_FIXTURE),
-    episode: verify('episode', episodeOutput),
+    episode: verify('episode', episodeOutput, NATIVE_KFD_BIN),
   };
   console.log(
     `[kfd-verifier-drift] current Pack, Atlas, Episode, and bundled KFD Atlas accepted: ${JSON.stringify(profiles)}`,
