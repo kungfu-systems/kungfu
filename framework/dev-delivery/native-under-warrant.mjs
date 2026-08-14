@@ -68,7 +68,8 @@ export class GitHubNativeStatusClient {
   }
 
   async request(requestPath, { method = 'GET', body } = {}) {
-    for (let attempt = 1; attempt <= this.retryAttempts; attempt += 1) {
+    const attempts = method === 'GET' ? this.retryAttempts : 1;
+    for (let attempt = 1; attempt <= attempts; attempt += 1) {
       try {
         const response = await this.fetch(`${this.apiUrl}${requestPath}`, {
           method,
@@ -91,7 +92,7 @@ export class GitHubNativeStatusClient {
         }
         return data;
       } catch (error) {
-        if (attempt === this.retryAttempts || !isTransientGitHubFailure(error))
+        if (attempt === attempts || !isTransientGitHubFailure(error))
           throw error;
         await this.sleep(this.retryDelayMs * attempt);
       }
@@ -252,7 +253,11 @@ export async function runNativeUnderWarrant(options, dependencies = {}) {
     if (anyRequired)
       execute('Install frozen workspace', ['install', '--frozen-lockfile']);
 
-    const toolchainEnvironment = { CC: 'gcc-14', CXX: 'g++-14' };
+    const toolchainEnvironment = {
+      CC: 'gcc-14',
+      CXX: 'g++-14',
+      KUNGFU_BUILDCHAIN_SOURCE_BUILD: '1',
+    };
     if (sdkRequired) {
       const cmakeJs = sdkPath(cwd);
       const sdkEnvironment = {
