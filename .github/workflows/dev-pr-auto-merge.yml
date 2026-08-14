@@ -242,7 +242,7 @@ jobs:
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           repository: kungfu-systems/buildchain
-          ref: f4a53d55990c51afae0922ef4c680e66534ddb2f
+          ref: 065c32a242ac0b7552bd8c2b006e4f1482be5f1d
           path: .buildchain/dev-delivery-runtime
           fetch-depth: 1
           persist-credentials: false
@@ -543,9 +543,9 @@ jobs:
       contents: write
       pull-requests: write
       statuses: write
-    uses: kungfu-systems/buildchain/.github/workflows/dev-pr-auto-merge.yml@f4a53d55990c51afae0922ef4c680e66534ddb2f
+    uses: kungfu-systems/buildchain/.github/workflows/dev-pr-auto-merge.yml@065c32a242ac0b7552bd8c2b006e4f1482be5f1d
     with:
-      buildchain-ref: f4a53d55990c51afae0922ef4c680e66534ddb2f
+      buildchain-ref: 065c32a242ac0b7552bd8c2b006e4f1482be5f1d
       target-branch: ${{ needs.resolve-target.outputs.target-branch }}
       expected-pr-number: ${{ fromJSON(needs.resolve-target.outputs.expected-pr-number || '0') }}
       expected-head-sha: ${{ needs.resolve-target.outputs.expected-head-sha }}
