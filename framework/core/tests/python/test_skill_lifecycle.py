@@ -12,6 +12,7 @@ from pathlib import Path
 import pytest
 from click.testing import CliRunner
 
+from kungfu.agent.native_launch import refresh_native_skill_runtime_audit
 from kungfu.canonical_json import canonical_json_bytes
 from kungfu.cli.commands import kfc
 import kungfu.cli.commands.agent as agent_command_module
@@ -356,6 +357,56 @@ def test_runtime_audit_strictly_isolates_run_and_work_evidence(tmp_path):
     ]
     assert document["skills"][0]["observedStates"].count("blocked") == 0
     assert document["roots"]["auditRoots"] == [_root(target)]
+
+
+def test_native_runtime_audit_refresh_roots_loaded_skill_evidence(tmp_path):
+    home = tmp_path / "home"
+    work_ref = "assignment:runtime-audit"
+    install_plan, _ = _apply(home, "install", source=_package(tmp_path / "package"))
+    content_root = install_plan["affected"][0]["contentRoot"]
+    _apply(
+        home,
+        "select",
+        key="exact-skill",
+        work_ref=work_ref,
+        work_root=_root({"work": work_ref}),
+    )
+    audit_path = tmp_path / "runtime" / "skill-audit.jsonl"
+    audit_path.parent.mkdir(parents=True)
+    audit_path.write_text(
+        json.dumps(
+            {
+                "schema": "kungfu.skill-audit-event/v1",
+                "type": "SkillLoaded",
+                "run_id": "attempt:runtime-audit",
+                "work_id": work_ref,
+                "skill": {"key": "exact-skill", "contentHash": content_root},
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    final_path = tmp_path / "runtime" / "skill-runtime-audit-final.json"
+
+    refresh_native_skill_runtime_audit(
+        {
+            "KF_HOME": str(home),
+            "KUNGFU_SKILL_AUDIT_FILE": str(audit_path),
+            "KUNGFU_SKILL_RUN_ID": "attempt:runtime-audit",
+            "KUNGFU_SKILL_WORK_REF": work_ref,
+            "KUNGFU_SKILL_RUNTIME_AUDIT_FINAL_FILE": str(final_path),
+        }
+    )
+
+    document = json.loads(final_path.read_text(encoding="utf-8"))
+    assert document["scope"] == {
+        "runId": "attempt:runtime-audit",
+        "workRef": work_ref,
+    }
+    assert "loaded" in document["skills"][0]["observedStates"]
+    proof = document["evidence"][0]["proof"]
+    assert proof["status"] == "rooted"
+    assert content_root in proof["roots"]
 
 
 def test_runtime_audit_cli_returns_the_verified_shared_document(tmp_path):
