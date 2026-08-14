@@ -2,15 +2,15 @@
   "schema": "kungfu.assignment-delivery-evidence/v1",
   "initiativeId": "2026-08-11-kungfu-skill-agent-native-product-system",
   "assignmentId": "2026-08-11-kungfu-skill-multi-surface-runtime-audit",
-  "baseRevision": "445b2fd84ec7f613ccbfc3d5f06980a3b07f0690",
-  "implementationRevision": "f505e5003bfd05e4ceaab67705037704ab7803d5",
-  "implementationTree": "fb5d427731f3ac1687b9257c4d4cc096fc95990d",
-  "generatedAt": "2026-08-12T20:55:00+08:00",
-  "purpose": "Bound the exact source, qualification, and real-provider dogfood evidence requested by native independent review. This file is evidence routing, not a substitute for the referenced source and receipts.",
+  "baseRevision": "0fbacb3dfd48883d9db222f55ce2f57ebdbd9c1b",
+  "implementationRevision": "7ac6000d6a462f2696ef996d6931baa3caa87780",
+  "implementationTree": "4879b4cfef3abf73a775bc331b0a5e9e8be0a303",
+  "generatedAt": "2026-08-14T13:20:22+08:00",
+  "purpose": "Bind the exact successor implementation, same-root parity, managed-run and Agent Console dogfood, qualification, and recovery evidence requested by native independent review. This file routes evidence and does not replace the referenced source, receipts, protected merge, or native review.",
   "sourceEvidence": {
     "contract": {
       "path": "framework/skill/kungfu-skill.contract.json",
-      "root": "sha256:307934f964f5d084c31594315a7b4de8421ad084120bd956576a24a9565bae8c"
+      "root": "sha256:5b70203d15bbcd6675eefbd8e8ccc666e0f6805cd0658583e618e8570b20a20e"
     },
     "runtimeAuditSchema": {
       "path": "framework/skill/schema/skill-runtime-audit-v2.schema.json",
@@ -20,154 +20,138 @@
       "path": "framework/core/src/python/kungfu/skill/audit.py",
       "root": "sha256:d1be4de4cddc9a0f561af60aabbb2b5227b5810c6b310b098f52dca1b7c2b75c"
     },
-    "planApplyAndDependencies": {
+    "planApply": {
       "path": "framework/core/src/python/kungfu/skill/contract.py",
       "root": "sha256:7c2cef68d9faf6630c04ba6f4a40ad2ed361b1d408bc419caaebcbbd32569503"
     },
+    "dependencies": {
+      "path": "framework/core/src/python/kungfu/skill/dependencies.py",
+      "root": "sha256:fb0984bce7d2dbe6b07bee1d4f6a96604eb3df044596dc49a5327b9b3b783eda"
+    },
     "agentEnvelope": {
       "path": "framework/core/src/python/kungfu/agent/session_contract.py",
-      "root": "sha256:2bbc9bb58ca703515dbdcc1960440cd45b0c710415cb29c9243aae0977a6f774"
+      "root": "sha256:bd28da526266d43c7e3b59b05f918a27c9017162423a013a8de931a03a723c27"
+    },
+    "nativeLaunch": {
+      "path": "framework/core/src/python/kungfu/agent/native_launch.py",
+      "root": "sha256:5aed9bd92890131d582d48f581d81e8481607effaa773fdb771a1a60ae18255c"
     },
     "managedRun": {
-      "path": "framework/core/src/python/kungfu/rewind/managed_cli.py",
-      "root": "sha256:0eb0a3984d61a5a4239d40b1a3b0ae438f6044199170c21943e313dac15a37fb"
+      "path": "framework/core/src/python/kungfu/agent/run_agent.py",
+      "root": "sha256:d2eb980dcfca421b3e7b5c5aef23fd71e16d576929d1c6ef8284fae05e527424"
     },
-    "tuiProjection": {
-      "path": "framework/core/src/python/kungfu/cli/tui_runtime.py",
-      "root": "sha256:dfa2ce30b88a60f2c21cd9c162df3e6521cd2e0022e9b66db1752382bb324d46"
+    "skillInvoke": {
+      "path": "framework/core/src/python/kungfu/cli/commands/skill.py",
+      "root": "sha256:7a9f4dd4aa34aede38f45fa6d7cee7d105338f70ee94cbfeceb080aff3fe10bb"
     },
-    "guiProjection": {
-      "path": "framework/gui/src/main/index.ts",
-      "root": "sha256:969b89253a284780220674ca7675d57932f7a791f4311bc2228327632ec48a8d"
+    "qualificationDefinition": {
+      "path": "framework/skill/fixtures/runtime-audit-qualification/skill-definition.json",
+      "root": "sha256:70342d5216af62073f4fe2e6103d023a2f50491ca37e7f7b5dc8afafb8ccd476"
     },
-    "agentConsoleProjection": {
-      "path": "extensions/system/skill-manager/src/view/index.tsx",
-      "root": "sha256:c46e24bb31a915f29676bfa588e8adf04085104bc7ae0fbb47367e3817cf2c87"
-    },
-    "tuiView": {
-      "path": "framework/tui/src/work-control-contribution.ts",
-      "root": "sha256:4ea3181319f04909eedb41aba839719ea1f6833345da774b760fe142ac384de5"
+    "qualificationSignals": {
+      "path": "framework/skill/fixtures/runtime-audit-advisory-signals.json",
+      "root": "sha256:ca4bc9088b8548fc84a80ae5dd9aa57258ce9930705213d3046c0fdbcb568e7f"
     }
   },
   "qualificationEvidence": [
     {
-      "command": "python -m pytest framework/core/tests/python/test_skill_lifecycle.py framework/core/tests/python/test_profile_composition.py framework/core/tests/python/test_tui_runtime.py",
-      "result": "81 passed",
-      "paths": [
-        "framework/core/tests/python/test_skill_lifecycle.py",
-        "framework/core/tests/python/test_profile_composition.py",
-        "framework/core/tests/python/test_tui_runtime.py"
-      ]
+      "command": "./shifu build:core",
+      "result": "passed"
     },
     {
-      "command": "python -m pytest framework/core/tests/python/test_agent_console_contract.py",
-      "result": "110 passed",
-      "paths": [
-        "framework/core/tests/python/test_agent_console_contract.py"
-      ]
+      "command": "./shifu test:agent-console-contract",
+      "result": "120 passed, 3 skipped; 2 known macOS temporary-directory cleanup warnings"
     },
     {
-      "command": "python -m pytest framework/core/tests/python/test_episode_control.py",
-      "result": "50 passed",
-      "paths": [
-        "framework/core/tests/python/test_episode_control.py"
-      ]
+      "command": "./shifu test:skill-lifecycle",
+      "result": "85 passed; 2 known macOS temporary-directory cleanup warnings"
     },
     {
-      "command": "pnpm exec node --test dist/framework/tui/src/skill-runtime-audit.test.js",
-      "result": "4 passed",
-      "paths": [
-        "framework/tui/src/skill-runtime-audit.test.ts"
-      ]
+      "command": "./shifu test:project-work-runtime",
+      "result": "74 passed; 2 known macOS temporary-directory cleanup warnings"
     },
     {
-      "command": "./shifu check:source",
-      "result": "passed at implementation revision f505e5003bfd05e4ceaab67705037704ab7803d5",
-      "paths": [
-        "scripts/readonly-agent-bootstrap.test.mjs"
-      ]
+      "command": "node --test framework/agent-session/tests/session-contract.test.mjs",
+      "result": "3 passed"
+    },
+    {
+      "command": "git commit -s -m 'fix(skill): close multi-surface runtime evidence gaps'",
+      "result": "complete staged gate passed at implementation revision 7ac6000d6a462f2696ef996d6931baa3caa87780"
     }
   ],
   "realProviderDogfood": {
     "provider": "codex",
-    "executable": "/Applications/ChatGPT.app/Contents/Resources/codex",
+    "providerProfile": "codex.path.d3712054caa3",
     "providerVersion": "0.147.0-alpha.1.2",
-    "attemptId": "native:73b17b78-b1a2-477e-9d6e-c6853a5b9316",
-    "workRef": "2026-08-11-kungfu-skill-multi-surface-runtime-audit",
-    "transcriptRoot": "sha256:03233fbb3e27ede15914523f283c993a553427cc2592aed2b16c2edee39ab38f",
-    "commands": [
-      {
-        "command": "kungfu agent console current --json",
-        "exitCode": 0,
-        "envelopeRoot": "sha256:273b8201d77120362c84b62ad43d2c6a2c459dc6785658fd01739597ddd9d8ac"
-      },
-      {
-        "command": "kungfu skill catalog --path framework/skill/fixtures/minimal --json",
-        "exitCode": 0,
-        "skillKey": "minimal",
-        "sourceRoot": "sha256:46a47055a462c648f52cc915fd1f7c4878043006e9f2c2b1bf76482357651996"
-      },
-      {
-        "command": "kungfu skill read framework/skill/fixtures/minimal --run-id native:73b17b78-b1a2-477e-9d6e-c6853a5b9316 --audit-file <runtime-audit> --json",
-        "exitCode": 0,
-        "eventType": "SkillLoaded",
-        "contentRoot": "sha256:46a47055a462c648f52cc915fd1f7c4878043006e9f2c2b1bf76482357651996"
-      },
-      {
-        "command": "kungfu skill audit --run-id native:73b17b78-b1a2-477e-9d6e-c6853a5b9316 --audit-file <runtime-audit> --json",
-        "exitCode": 0,
-        "eventCount": 1
-      }
-    ],
-    "finalAudit": {
-      "schema": "kungfu.skill-runtime-audit/v2",
-      "runtimeAuditRoot": "sha256:a73273fee1c3ca87ba3be80a6e714cb46c87cce7d289d64518b7c706b22c189c",
-      "registryStateRoot": "sha256:f080aeec6fcc503c1e3010751b926c60442fd79cf355c3566e76056a00f27a9e",
-      "diagnosisRoot": "sha256:e45a405e820d602f99c20c18364de4b280d50bbf886ec4fa693d831ebfc1e176",
-      "historyRoot": "sha256:21818ef7da20dd2417cd2649e8eedb30e4643c46f40aa45e860ae46030ce2e0f",
-      "auditRoot": "sha256:52ceef49d3888d24867ecf8dd4d5e157d2a74936cd2ffff8f8d3b25ef3be7d22",
-      "surfaces": [
-        "agent",
-        "cli",
-        "gui",
-        "managed-run",
-        "tui"
-      ],
-      "surfaceRootsEqual": true,
-      "rootedEvidenceState": "loaded",
-      "recoveryVerdict": "pass",
-      "historyPreserved": true
+    "runId": "agent-13980ef0ca0845578b938016533376f9",
+    "attemptId": "agent-13980ef0ca0845578b938016533376f9",
+    "reportRoot": "sha256:0f50e407f1677b202c493f5a2ceb66954da2381f089d732fd4fed96e3031d092",
+    "exitCode": 0,
+    "console": {
+      "available": true,
+      "envelopeRoot": "sha256:f7c5b7aca8fa3afa3feb8d87072b28ae1627aaa2e3d721e72674564708fd07ec",
+      "advisoryDecisionRoot": "sha256:cef7f93d34d13523c7744359a23eaa7bc8bd88987e47ddc61abd8f0dfdf12cce",
+      "advisoryPolicyRoot": "sha256:dc8ebb873760e55c40ef19b8354ba1e2b91706064a48dec00b1eb8dac0479267"
     },
+    "skill": {
+      "key": "runtime-audit-qualification",
+      "class": "instruction-only",
+      "contentRoot": "sha256:aafb9b1b091b4dc00c7d838fa91f75c507e51c36045f31bccfc864a8532819f8",
+      "definitionRoot": "sha256:ff8cfb5135a0d452c8e9efabf5c1b533f22aa8c0b04da6bc244e0abf88c3bd15",
+      "capabilities": [],
+      "kfxDependencies": []
+    },
+    "intentionalRefusal": {
+      "planRoot": "sha256:0d8cb68dc04f96113a0df618f0b6cea3e25321629147017a98bb6d5feec86cd0",
+      "code": "KF_SKILL_INSTRUCTION_ONLY_INERT",
+      "status": "inert",
+      "executionAllowed": false,
+      "auditIdentityRoot": "sha256:7e8be2698af95219d303e62a5957b18f467173134945d7ebe4e27b787ac0728e",
+      "recovery": "load rooted instructions only; add a new reviewed Skill revision to request execution"
+    },
+    "audit": {
+      "eventCount": 2,
+      "eventTypes": ["SkillLoaded", "SkillTrustRefused"],
+      "refusalEventRoot": "sha256:c71a6c5ba6d4ee998dd1399b25616f358e2537271eeb5102fa85733c8e98d2b2"
+    },
+    "finalRuntimeAudit": {
+      "schema": "kungfu.skill-runtime-audit/v2",
+      "documentRoot": "sha256:71974ffbc767b8a3a6fa8fb57afa7178e090824d94b97bb67884eb98b874c7cb",
+      "runtimeAuditRoot": "sha256:8c958388193df5ece8531e484208186e97f3a20f608c7250810d63bb25058123",
+      "registryStateRoot": "sha256:f28948d0ece779a204aa5ad901a06437560a86642ff838e852b6691fd79c787e",
+      "registryReportRoot": "sha256:fe1ea613eb63e563a5febff4229b362acd0a09bef1f02ddde66f6499a0027fbb",
+      "diagnosisRoot": "sha256:c04aa30d1ff53d47781034438ea4492c53558a5f8917e1dcba9009ee665c940c",
+      "historyRoot": "sha256:3c0a49e6a5e1a2473dd334b261333e2bbf4fe6390cf27801568f5b1f4308180e",
+      "surfaces": ["agent", "cli", "gui", "managed-run", "tui"],
+      "surfaceRootsEqual": true,
+      "admissionProjectionEqual": true,
+      "runtimeProjectionEqual": true,
+      "historyPreserved": true,
+      "recoveryVerdict": "pass"
+    },
+    "productGapClosure": [
+      "The first run truthfully refused a missing KUNGFU_CLI_BIN instead of inventing capability.",
+      "The second run exposed missing Console and audit environment on managed-run; implementation revision 7ac6000d6a462f2696ef996d6931baa3caa87780 reuses the native Console environment and writes the final runtime audit on exit.",
+      "The third run exposed the public skill invoke Click decorator-order failure; the implementation fixes it, and an exact-plan invocation passed with planRoot sha256:db520ba77a1e246d7c1db9acf133f0949477e9dc1d2cd2cd39895a9645d5e349 and receiptRoot sha256:82eff30933840532f220c5b81cfd3659da2c8a3a92bcf8cb534e2a9292e73a55."
+    ],
     "nonClaims": [
       "provider exit does not prove Work completion",
       "dogfood does not replace native independent review",
-      "diagnostic-only bootstrap does not grant Work mutation authority"
+      "Agent Console remains a read-only evidence join and does not gain Work, Profile, Fact, Episode, KFX trust, or completion authority"
     ]
   },
   "acceptanceRouting": [
     {
-      "criterion": 1,
-      "evidence": ["sourceEvidence.sharedAudit", "sourceEvidence.tuiProjection", "sourceEvidence.guiProjection", "sourceEvidence.agentConsoleProjection", "realProviderDogfood.finalAudit"]
+      "criteria": [1, 4, 5],
+      "evidence": ["sourceEvidence.sharedAudit", "realProviderDogfood.finalRuntimeAudit"]
     },
     {
-      "criterion": 2,
-      "evidence": ["sourceEvidence.contract", "sourceEvidence.planApplyAndDependencies", "qualificationEvidence"]
+      "criteria": [2, 6],
+      "evidence": ["sourceEvidence.planApply", "sourceEvidence.dependencies", "realProviderDogfood.intentionalRefusal", "realProviderDogfood.productGapClosure"]
     },
     {
       "criterion": 3,
-      "evidence": ["sourceEvidence.agentEnvelope", "realProviderDogfood.commands[0]"]
-    },
-    {
-      "criterion": 4,
-      "evidence": ["sourceEvidence.runtimeAuditSchema", "sourceEvidence.sharedAudit", "qualificationEvidence"]
-    },
-    {
-      "criterion": 5,
-      "evidence": ["sourceEvidence.runtimeAuditSchema", "sourceEvidence.sharedAudit", "qualificationEvidence[0]"]
-    },
-    {
-      "criterion": 6,
-      "evidence": ["sourceEvidence.planApplyAndDependencies", "realProviderDogfood.commands[1]", "realProviderDogfood.commands[2]"]
+      "evidence": ["sourceEvidence.agentEnvelope", "sourceEvidence.nativeLaunch", "realProviderDogfood.console"]
     },
     {
       "criterion": 7,
@@ -175,7 +159,7 @@
     },
     {
       "criterion": 8,
-      "evidence": ["qualificationEvidence", "native independent-review receipt and protected PR merge are terminal closeout gates and are not pre-claimed here"]
+      "evidence": ["qualificationEvidence", "native independent-review receipt and protected PR merge remain terminal closeout gates and are not pre-claimed here"]
     }
   ],
   "reviewBoundary": {
