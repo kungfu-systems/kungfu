@@ -18,6 +18,11 @@ on:
         required: false
         default: ""
         type: string
+      candidate-provenance-run-id:
+        description: "Optional exact successful candidate-patrol run for a retained legacy provenance object"
+        required: false
+        default: ""
+        type: string
       resume-candidate-repository:
         description: "Exact repository that owns an existing sealed candidate run"
         required: false
@@ -97,6 +102,12 @@ jobs:
       promotion-sha: ${{ steps.candidate.outputs.promotion-sha }}
       promotion-tree: ${{ steps.promotion-tree.outputs.tree }}
       candidate-provenance-root: ${{ steps.candidate-provenance.outputs.object-root }}
+      candidate-content-root: ${{ steps.candidate-provenance.outputs.content-root }}
+      candidate-dev-cut-root: ${{ steps.candidate-provenance.outputs.dev-cut-root }}
+      candidate-previous-alpha-root: ${{ steps.candidate-provenance.outputs.previous-alpha-root }}
+      candidate-qualification-root: ${{ steps.candidate-provenance.outputs.qualification-root }}
+      candidate-approval-root: ${{ steps.candidate-provenance.outputs.approval-root }}
+      candidate-authority-root: ${{ steps.candidate-provenance.outputs.authority-root }}
       promotion-provenance-root: ${{ steps.promotion-provenance.outputs.object-root }}
     steps:
       - name: Resolve immutable Alpha candidate and promotion commits
@@ -132,55 +143,106 @@ jobs:
           source-sha: ${{ steps.candidate.outputs.source-sha }}
           receipt-run-id: ${{ inputs.preflight-run-id || '' }}
 
-      - name: Dual-write immutable candidate provenance
+      - name: Resolve exact candidate provenance evidence
+        id: candidate-provenance-artifact
+        if: ${{ startsWith(inputs.target-ref || github.event.pull_request.base.ref, 'alpha/') }}
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CANDIDATE_SHA: ${{ steps.candidate.outputs.source-sha }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+          REQUESTED_RUN_ID: ${{ inputs.candidate-provenance-run-id || '' }}
+        run: |
+          set -euo pipefail
+          run_id="$REQUESTED_RUN_ID"
+          artifact_name="release-provenance-candidate-$CANDIDATE_SHA"
+          if [ -n "$run_id" ]; then
+            artifact_name="$(
+              gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${run_id}/artifacts?per_page=100" \
+                --jq '[.artifacts[] | select(.expired == false and (.name | startswith("release-provenance-candidate-")))] | if length == 1 then .[0].name else empty end'
+            )"
+          else
+            run_id="$(
+              gh api "repos/${GITHUB_REPOSITORY}/actions/artifacts?name=${artifact_name}&per_page=100" \
+                --jq '[.artifacts[] | select(.expired == false)] | sort_by(.created_at, .id) | last | .workflow_run.id // empty'
+            )"
+          fi
+          test -n "$run_id"
+          test -n "$artifact_name"
+          run_json="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${run_id}")"
+          jq -e \
+            --arg repository "$GITHUB_REPOSITORY" \
+            --arg defaultBranch "$DEFAULT_BRANCH" \
+            '.conclusion == "success" and
+             .path == ".github/workflows/dev-alpha-candidate-patrol.yml" and
+             .head_repository.full_name == $repository and
+             .head_branch == $defaultBranch' \
+            <<<"$run_json" >/dev/null
+          {
+            echo "run-id=$run_id"
+            echo "artifact-name=$artifact_name"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Download exact candidate provenance evidence
+        if: ${{ startsWith(inputs.target-ref || github.event.pull_request.base.ref, 'alpha/') }}
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          run-id: ${{ steps.candidate-provenance-artifact.outputs.run-id }}
+          name: ${{ steps.candidate-provenance-artifact.outputs.artifact-name }}
+          path: ${{ runner.temp }}/release-provenance
+
+      - name: Verify and import immutable candidate provenance
         id: candidate-provenance
         if: ${{ startsWith(inputs.target-ref || github.event.pull_request.base.ref, 'alpha/') }}
         shell: bash
         env:
-          RELEASE_ID: ${{ inputs.target-ref || github.event.pull_request.base.ref }}
           CANDIDATE_SHA: ${{ steps.candidate.outputs.source-sha }}
           CANDIDATE_TREE: ${{ steps.preflight.outputs.source-tree }}
-          PREFLIGHT_RECEIPT_ROOT: ${{ steps.preflight.outputs.receipt-root }}
-          PREFLIGHT_RUN_ID: ${{ steps.preflight.outputs.run-id }}
         run: |
           set -euo pipefail
           output_dir="$RUNNER_TEMP/release-provenance"
-          mkdir -p "$output_dir"
-          read -r -a candidate_parents <<<"$(git show -s --format=%P "$CANDIDATE_SHA")"
-          test "${#candidate_parents[@]}" -eq 2
-          dev_cut_sha="${candidate_parents[0]}"
-          previous_alpha_sha="${candidate_parents[1]}"
-          dev_cut_tree="$(git rev-parse "$dev_cut_sha^{tree}")"
-          previous_alpha_tree="$(git rev-parse "$previous_alpha_sha^{tree}")"
-          jq -n \
-            --arg sourceSha "$CANDIDATE_SHA" \
-            --arg sourceTree "$CANDIDATE_TREE" \
-            --arg preflightRunId "$PREFLIGHT_RUN_ID" \
-            --arg preflightReceiptRoot "$PREFLIGHT_RECEIPT_ROOT" \
-            '{sourceSha: $sourceSha, sourceTree: $sourceTree, preflightRunId: $preflightRunId, preflightReceiptRoot: $preflightReceiptRoot}' \
-            > "$output_dir/promotion-candidate-legacy-projection.json"
-          PYTHONPATH=framework/core/src/python python3 scripts/release-provenance-object.py candidate \
-            --release-id "$RELEASE_ID" \
-            --candidate-id "release-candidate:$RELEASE_ID:$PREFLIGHT_RECEIPT_ROOT" \
-            --candidate-commit "$CANDIDATE_SHA" \
-            --candidate-tree "$CANDIDATE_TREE" \
-            --dev-cut-commit "$dev_cut_sha" \
-            --dev-cut-tree "$dev_cut_tree" \
-            --dev-cut-id "release-cut:$RELEASE_ID:development:$PREFLIGHT_RECEIPT_ROOT" \
-            --previous-alpha-commit "$previous_alpha_sha" \
-            --previous-alpha-tree "$previous_alpha_tree" \
-            --previous-alpha-id "release-cut:$RELEASE_ID:previous-alpha:$PREFLIGHT_RECEIPT_ROOT" \
-            --qualification-root "$PREFLIGHT_RECEIPT_ROOT" \
-            --authority-id "${GITHUB_REPOSITORY}:.github/workflows/release-new-version.yml" \
-            --contract-file framework/release/kungfu-release-provenance.contract.json \
-            --legacy-projection "$output_dir/promotion-candidate-legacy-projection.json" \
-            --observed-parent "$dev_cut_sha" \
-            --observed-parent "$previous_alpha_sha" \
-            --output "$output_dir/candidate.json" \
-            > "$output_dir/candidate-write-receipt.json"
           PYTHONPATH=framework/core/src/python python3 scripts/release-provenance-object.py verify \
             --input "$output_dir/candidate.json"
-          echo "object-root=$(jq -er '.objectRoot' "$output_dir/candidate.json")" >> "$GITHUB_OUTPUT"
+          test "$(git rev-parse "$CANDIDATE_SHA^{tree}")" = "$CANDIDATE_TREE"
+          jq -e \
+            --arg candidate "$CANDIDATE_SHA" \
+            --arg tree "$CANDIDATE_TREE" \
+            '(.schema == "kungfu.release-provenance-envelope/v1" or .schema == "kungfu.release-provenance-envelope/v2") and
+             .gitProjection.candidateCommit == $candidate and
+             .gitProjection.candidateTree == $tree' \
+            "$output_dir/candidate.json" >/dev/null
+          schema="$(jq -er '.schema' "$output_dir/candidate.json")"
+          if [ "$schema" = "kungfu.release-provenance-envelope/v2" ]; then
+            source_content="$(
+              PYTHONPATH=framework/core/src/python python3 scripts/release-provenance-object.py source-content \
+                --repository . \
+                --revision "$CANDIDATE_SHA"
+            )"
+            jq -e \
+              --arg algorithm "$(jq -er '.algorithm' <<<"$source_content")" \
+              --arg digest "$(jq -er '.digest' <<<"$source_content")" \
+              '.sourceContent.record.algorithm == $algorithm and .sourceContent.record.digest == $digest and .gitProjection.semanticAuthority == false' \
+              "$output_dir/candidate.json" >/dev/null
+          else
+            echo "::notice::verified retained v1 candidate provenance projection"
+          fi
+          jq -e '
+            [.identities.derivationRoot, .identities.acknowledgementRoot,
+             .identities.qualificationRoot, .identities.authorityRoot,
+             .identities.contractRoot] |
+            all(.[]; test("^sha256:[0-9a-f]{64}$"))
+          ' "$output_dir/candidate.json" >/dev/null
+          {
+            echo "object-root=$(jq -er '.objectRoot' "$output_dir/candidate.json")"
+            echo "content-root=$(jq -r '.identities.contentRoot // empty' "$output_dir/candidate.json")"
+            echo "dev-cut-root=$(jq -er '.identities.derivationRoot' "$output_dir/candidate.json")"
+            echo "previous-alpha-root=$(jq -er '.identities.acknowledgementRoot' "$output_dir/candidate.json")"
+            echo "qualification-root=$(jq -er '.identities.qualificationRoot' "$output_dir/candidate.json")"
+            echo "approval-root=$(jq -r '.identities.approvalRoot // empty' "$output_dir/candidate.json")"
+            echo "authority-root=$(jq -er '.identities.authorityRoot' "$output_dir/candidate.json")"
+          } >> "$GITHUB_OUTPUT"
 
       - name: Checkout immutable promotion result
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0

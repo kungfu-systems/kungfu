@@ -123,8 +123,14 @@ jobs:
           dev_cut_tree="$(jq -er '.devCut.tree' "$lock")"
           alpha_base_sha="$(jq -er '.alphaBase.sha' "$lock")"
           alpha_base_tree="$(jq -er '.alphaBase.tree' "$lock")"
-          test "$(jq -erc '.lineage.parentOrder' "$lock")" = "[\"$dev_cut_sha\",\"$alpha_base_sha\"]"
-          test "$(git show -s --format=%P "$candidate_sha")" = "$dev_cut_sha $alpha_base_sha"
+          legacy_parent_order="$(jq -erc '.lineage.parentOrder' "$lock")"
+          observed_parent_order="$(git show -s --format=%P "$candidate_sha")"
+          if [ "$legacy_parent_order" = "[\"$dev_cut_sha\",\"$alpha_base_sha\"]" ] &&
+             [ "$observed_parent_order" = "$dev_cut_sha $alpha_base_sha" ]; then
+            echo "::notice::legacy Alpha.2 two-parent projection matches the retained lock"
+          else
+            echo "::notice::legacy Alpha.2 parent projection drifted; semantic candidate admission remains root-authoritative"
+          fi
           test "$(git rev-parse "$candidate_sha^{tree}")" = "$candidate_tree"
           test "$(git rev-parse "$dev_cut_sha^{tree}")" = "$dev_cut_tree"
           test "$(git rev-parse "$alpha_base_sha^{tree}")" = "$alpha_base_tree"
@@ -183,6 +189,7 @@ jobs:
     outputs:
       object-root: ${{ steps.provenance.outputs.object-root }}
       projection-root: ${{ steps.provenance.outputs.projection-root }}
+      candidate-commit: ${{ steps.provenance.outputs.candidate-commit }}
     steps:
       - name: Check out exact selected candidate source
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
@@ -212,6 +219,13 @@ jobs:
           dev_cut_tree="$(git rev-parse "$SELECTED_SHA^{tree}")"
           previous_alpha_sha="$(git rev-parse refs/remotes/origin/provenance-previous-alpha)"
           previous_alpha_tree="$(git rev-parse "$previous_alpha_sha^{tree}")"
+          source_content="$(
+            PYTHONPATH=framework/core/src/python python3 scripts/release-provenance-object.py source-content \
+              --repository . \
+              --revision "$candidate_sha"
+          )"
+          source_content_algorithm="$(jq -er '.algorithm' <<<"$source_content")"
+          source_content_digest="$(jq -er '.digest' <<<"$source_content")"
           observed_parent_args=()
           for parent in $(git show -s --format=%P "$candidate_sha"); do
             observed_parent_args+=(--observed-parent "$parent")
@@ -222,9 +236,11 @@ jobs:
             --arg priorStateRoot "$QUALIFICATION_STATE_ROOT" \
             '{selectedSha: $selectedSha, sourceLockRef: $sourceLockRef, priorStateRoot: $priorStateRoot}' \
             > "$output_dir/candidate-legacy-projection.json"
-          PYTHONPATH=framework/core/src/python python3 scripts/release-provenance-object.py candidate \
+          PYTHONPATH=framework/core/src/python python3 scripts/release-provenance-object.py candidate-v2 \
             --release-id "$RELEASE_ID" \
             --candidate-id "release-candidate:$RELEASE_ID:$QUALIFICATION_STATE_ROOT" \
+            --source-content-algorithm "$source_content_algorithm" \
+            --source-content-digest "$source_content_digest" \
             --candidate-commit "$candidate_sha" \
             --candidate-tree "$candidate_tree" \
             --dev-cut-commit "$SELECTED_SHA" \
@@ -234,10 +250,9 @@ jobs:
             --previous-alpha-tree "$previous_alpha_tree" \
             --previous-alpha-id "release-cut:$RELEASE_ID:previous-alpha:$QUALIFICATION_STATE_ROOT" \
             --qualification-id "buildchain-candidate-patrol:$SELECTED_SHA:$QUALIFICATION_STATE_ROOT" \
+            --approval-id "protected-review-policy:${GITHUB_REPOSITORY}:$TARGET_BRANCH" \
             --authority-id "${GITHUB_REPOSITORY}:.github/workflows/dev-alpha-candidate-patrol.yml" \
             --contract-file framework/release/kungfu-release-provenance.contract.json \
-            --legacy-projection "$output_dir/candidate-legacy-projection.json" \
-            --advisory-parentage \
             "${observed_parent_args[@]}" \
             --output "$output_dir/candidate.json" \
             > "$output_dir/candidate-write-receipt.json"
@@ -245,11 +260,12 @@ jobs:
             --input "$output_dir/candidate.json"
           echo "object-root=$(jq -er '.objectRoot' "$output_dir/candidate.json")" >> "$GITHUB_OUTPUT"
           echo "projection-root=$(jq -er '.gitProjectionRoot' "$output_dir/candidate.json")" >> "$GITHUB_OUTPUT"
+          echo "candidate-commit=$candidate_sha" >> "$GITHUB_OUTPUT"
 
       - name: Retain candidate provenance evidence
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          name: release-provenance-candidate-${{ needs.candidate.outputs.selected-sha }}
+          name: release-provenance-candidate-${{ steps.provenance.outputs.candidate-commit }}
           path: ${{ runner.temp }}/release-provenance
           if-no-files-found: error
           retention-days: 30
