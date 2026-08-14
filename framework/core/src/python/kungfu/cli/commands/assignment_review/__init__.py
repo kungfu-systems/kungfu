@@ -25,6 +25,7 @@ def review_work_ref(plan):
         "entityRoot": plan["work"]["assignmentRoot"],
         "purpose": "independent-completion-review",
         "systemTimeCut": plan["work"]["queryProofRoot"],
+        "initiativeId": plan["work"]["initiativeId"],
     }
 
 
