@@ -1,0 +1,14 @@
+{
+  "schema": "shifu.native-build-lowering-fixture/v0",
+  "profile": "journal",
+  "node": "native-build",
+  "backend": "bazel",
+  "xinfaSelectionRoot": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+  "xinfaVerificationRoot": "sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+  "expectedVerdict": "conditional-go",
+  "expectedPrerequisites": [
+    "artifact-stage-provider",
+    "dependency-label-provider",
+    "platform-toolchain-provider"
+  ]
+}
