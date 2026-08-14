@@ -70,11 +70,16 @@ jobs:
 
   source_acceptance:
     name: Candidate source acceptance
-    uses: kungfu-systems/buildchain/.github/workflows/check.yml@58e48d73ae7fef0dd06ae02baf6d090e4da5487d
+    uses: kungfu-systems/buildchain/.github/workflows/check.yml@a2637a8bb7869faa1d239b04ee6ded3a1c1318b1
     with:
-      buildchain-ref: 58e48d73ae7fef0dd06ae02baf6d090e4da5487d
+      buildchain-ref: a2637a8bb7869faa1d239b04ee6ded3a1c1318b1
       mode: source
       upload-artifacts: true
+      source-proof-reuse: true
+      source-proof-policy-paths-json: '[".github/workflows/affected-native-pr.yml"]'
+      source-proof-closure-paths-json: '[".buildchain/buildchain.toml","shifu","scripts/source-acceptance.mjs","scripts/require-shifu.mjs"]'
+      source-proof-dependency-paths-json: '["package.json","pnpm-lock.yaml"]'
+      source-proof-required-contexts-json: '["Candidate source acceptance / check"]'
 
   cancel_after_source_failure:
     name: Stop selected lanes after source failure

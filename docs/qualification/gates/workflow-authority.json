@@ -146,9 +146,9 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "diagnostic",
-          "definitionDigest": "sha256:959385f0d70ee1a9d092e6a9a0c4884329f73c6f9b270aa333c374bbad1161b0",
+          "definitionDigest": "sha256:5c12fa2cac42c7d5fedd95eb1fef64c86e4c8ccf8c41428629a7165b0af2cb04",
           "credentials": {"githubToken":"read","oidc":false,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
-          "externalActions": ["kungfu-systems/buildchain/.github/workflows/check.yml@58e48d73ae7fef0dd06ae02baf6d090e4da5487d"],
+          "externalActions": ["kungfu-systems/buildchain/.github/workflows/check.yml@a2637a8bb7869faa1d239b04ee6ded3a1c1318b1"],
           "steps": []
         },
         {
