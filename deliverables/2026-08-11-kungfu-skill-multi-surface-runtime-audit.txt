@@ -3,9 +3,9 @@
   "initiativeId": "2026-08-11-kungfu-skill-agent-native-product-system",
   "assignmentId": "2026-08-11-kungfu-skill-multi-surface-runtime-audit",
   "baseRevision": "0fbacb3dfd48883d9db222f55ce2f57ebdbd9c1b",
-  "implementationRevision": "e54e716f8c07cd605f07ac8c517b0b4c960f06fc",
-  "implementationTree": "633179eca233cedb1f03594ac7d48fc4e360acff",
-  "generatedAt": "2026-08-14T13:45:55+08:00",
+  "implementationRevision": "085295a6e0a746f5ac9b0338c3a562f7af077c43",
+  "implementationTree": "daf64243adb62e3b13656c1f96d9633698751418",
+  "generatedAt": "2026-08-14T14:05:20+08:00",
   "purpose": "Bind the exact successor implementation, same-root parity, managed-run and Agent Console dogfood, qualification, and recovery evidence requested by native independent review. This file routes evidence and does not replace the referenced source, receipts, protected merge, or native review.",
   "sourceEvidence": {
     "contract": {
@@ -34,11 +34,11 @@
     },
     "nativeLaunch": {
       "path": "framework/core/src/python/kungfu/agent/native_launch.py",
-      "root": "sha256:3b0727c541fc296f3f305be55ea963cebbd3dfbf776582d0c393ae1763af804b"
+      "root": "sha256:ba721dd02906d25d8e1363f7b644674fccbdfd622b1a866e04b1809182b8bfe6"
     },
-    "nativeCommandTransport": {
-      "path": "framework/core/src/python/kungfu/agent/native_command_transport.py",
-      "root": "sha256:672673cc61cfba2225a7290c8237b023520e17902b83ebbd140a24579c9c24ec"
+    "providerBootstrap": {
+      "path": "framework/core/src/python/kungfu/agent/provider_bootstrap.py",
+      "root": "sha256:af69bff681618436b5b61689d74678699826ac65943cc42de49e265f69d20a15"
     },
     "managedRun": {
       "path": "framework/core/src/python/kungfu/agent/run_agent.py",
@@ -85,6 +85,10 @@
     {
       "command": "git commit -s -m 'refactor(agent): separate native command transport'",
       "result": "complete staged gate passed at implementation revision e54e716f8c07cd605f07ac8c517b0b4c960f06fc; exact-source maintainability projection reported zero blocking issues"
+    },
+    {
+      "command": "git commit -s -m 'refactor(agent): satisfy source complexity ratchet'",
+      "result": "complete staged gate passed at implementation revision 085295a6e0a746f5ac9b0338c3a562f7af077c43; code complexity budget ratchet passed and agent-console remained 120 passed, 3 skipped"
     }
   ],
   "realProviderDogfood": {
