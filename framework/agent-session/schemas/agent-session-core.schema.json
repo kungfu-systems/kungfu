@@ -130,6 +130,23 @@
           "type": "array",
           "items": { "type": "string" }
         },
+        "skillRuntimeAudit": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "schema", "path", "runtimeAuditRoot", "registryStateRoot",
+            "historyRoot", "diagnosisRoot", "authority"
+          ],
+          "properties": {
+            "schema": { "const": "kungfu.skill-runtime-audit-pointer/v1" },
+            "path": { "type": "string", "minLength": 1 },
+            "runtimeAuditRoot": { "$ref": "#/$defs/sha256" },
+            "registryStateRoot": { "$ref": "#/$defs/sha256" },
+            "historyRoot": { "$ref": "#/$defs/sha256" },
+            "diagnosisRoot": { "$ref": "#/$defs/sha256" },
+            "authority": { "const": "read-only-projection" }
+          }
+        },
         "bootstrap": { "$ref": "#/$defs/bootstrapProjection" },
         "envelopeRoot": { "$ref": "#/$defs/sha256" }
       }

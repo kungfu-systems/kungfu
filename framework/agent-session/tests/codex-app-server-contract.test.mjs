@@ -80,7 +80,7 @@ test('pinned stable schema manifest has a self-recomputing deterministic bundle 
   );
 });
 
-test('contract gate pins CLI, stable schema and non-experimental capability shape', () => {
+test('contract gate pins schema provenance while runtime version stays diagnostic', () => {
   const contract = loadCodexAppServerContract();
   const manifest = loadCodexAppServerSchemaManifest(contract);
   const gate = createCodexAppServerContractGate({
@@ -91,25 +91,21 @@ test('contract gate pins CLI, stable schema and non-experimental capability shap
   });
   assert.equal(gate.provider, 'codex');
   assert.equal(gate.experimentalApi, false);
+  assert.equal(gate.cliVersion, '0.146.0');
 
-  expectCode(
-    () =>
-      createCodexAppServerContractGate({
-        contract,
-        manifest,
-        cliVersion: '0.145.0',
-      }),
-    'cli-version-drift',
-  );
-  expectCode(
-    () =>
-      createCodexAppServerContractGate({
-        contract,
-        manifest,
-        cliVersion: '0.147.0',
-      }),
-    'cli-version-drift',
-  );
+  for (const cliVersion of [
+    '0.145.0',
+    '0.147.0',
+    '999.42.7-edge',
+    'opaque-nightly',
+    'unknown',
+  ]) {
+    assert.equal(
+      createCodexAppServerContractGate({ contract, manifest, cliVersion })
+        .cliVersion,
+      cliVersion,
+    );
+  }
   expectCode(
     () =>
       createCodexAppServerContractGate({
@@ -143,6 +139,18 @@ test('contract gate pins CLI, stable schema and non-experimental capability shap
         cliVersion: '0.146.0',
       }),
     'schema-bundle-drift',
+  );
+
+  const driftedManifest = structuredClone(manifest);
+  driftedManifest.cliVersion = 'different-qualification-source';
+  expectCode(
+    () =>
+      createCodexAppServerContractGate({
+        contract,
+        manifest: driftedManifest,
+        cliVersion: 'opaque-nightly',
+      }),
+    'qualification-source-version-drift',
   );
 });
 

@@ -69,7 +69,7 @@
             "product-stable",
             "product-binaries"
           ],
-          "sourceRoot": "sha256:5fb26894efc3f581fbae8b7d7bc9518ea1b414529044b01ee7316be47708d194"
+          "sourceRoot": "sha256:be11ee1fcf80b7f70de7b0cf2f4a6e9e07b029e8a30db2b3ee07b3bf7d8d9858"
         },
         {
           "path": ".github/workflows/affected-native-pr.yml",
@@ -80,7 +80,14 @@
             "product-stable",
             "product-binaries"
           ],
-          "sourceRoot": "sha256:12f5c354ad3771624683001d82212fdf1a26175315f558b5368858c9ac06e3e2"
+          "sourceRoot": "sha256:ab3472d69a4764c1291df6052982898629e730bba96e39362c90646b42df1bb9"
+        },
+        {
+          "path": ".github/workflows/dev-post-merge-advisory.yml",
+          "classification": "non-publication",
+          "owner": "kungfu-release",
+          "surfaceIds": [],
+          "sourceRoot": "sha256:257dae15f1a13d4b8584ad364d369c6b535624c0b1b9cd1c1f29c4a5ac77a3cc"
         },
         {
           "path": ".github/workflows/alpha-promotion-preflight.yml",
@@ -129,7 +136,7 @@
             "product-stable",
             "product-binaries"
           ],
-          "sourceRoot": "sha256:5151741fcc3ff0d0741037d2d6b4003bac02a4d4562f3704d8a1a5c2bac0efe5"
+          "sourceRoot": "sha256:cc77602a38807e04a865bbe4a66ec2f05e428b28d9dc2acd4c14ccbb04a44f6c"
         },
         {
           "path": ".github/workflows/buildchain-validate.yml",
@@ -153,7 +160,7 @@
           "classification": "non-publication",
           "owner": "kungfu-ci",
           "surfaceIds": [],
-          "sourceRoot": "sha256:b7e40520195c4d09be7175d284ce12c1f092c6f408aedc03684944465b076810"
+          "sourceRoot": "sha256:09d7960bd57c5949acaff05253f9398b5f29f0cb80f75888e036a243c78e1c92"
         },
         {
           "path": ".github/workflows/core-build-profiles.yml",
@@ -177,21 +184,21 @@
             "product-alpha",
             "product-binaries"
           ],
-          "sourceRoot": "sha256:d563654f01552dbf52dcb1294f0d87fe627be10457deadb4259f47152ea1a355"
+          "sourceRoot": "sha256:2826dbe5286ad47527e4df2fd904d6b9d0ebc197d8b7a4a53c67e9617eb2118d"
         },
         {
           "path": ".github/workflows/dev-delivery-warrant-terminal.yml",
           "classification": "non-publication",
           "owner": "kungfu-ci",
           "surfaceIds": [],
-          "sourceRoot": "sha256:277376662d23e87d29c7d3310341e3304f49ddf06e1c23a0248e59eb17f1937a"
+          "sourceRoot": "sha256:9eb6a56c859d71c836022291d723f9db503b5b024a84487f690dc3dc09888e80"
         },
         {
           "path": ".github/workflows/dev-pr-auto-merge.yml",
           "classification": "non-publication",
           "owner": "kungfu-ci",
           "surfaceIds": [],
-          "sourceRoot": "sha256:02db4f7281803c25f12efa7383d0ae67933712c06d8d1a40bcc89c6be0ba104d"
+          "sourceRoot": "sha256:50f3812d9f63b3a35ae70b7ddd4cc55b2cf7f8a86ec032daf1e36d637e502888"
         },
         {
           "path": ".github/workflows/dev-gate-latency-patrol.yml",
@@ -336,7 +343,7 @@
             "product-stable",
             "product-binaries"
           ],
-          "sourceRoot": "sha256:2a5c89e77c4f843391010493f97a04ca618d5dc88649d7295ce4dccec36cd092"
+          "sourceRoot": "sha256:c9cf6b30e904d074dc67264a6a8392d83966d460eb0ff439ca14ea3e662d0801"
         },
         {
           "path": ".github/workflows/release-shifu.yml",
@@ -371,7 +378,7 @@
     "buildchain": {
       "repository": "kungfu-systems/buildchain",
       "owner": "kungfu-systems/buildchain",
-      "sourceRevision": "36b08dc7bf417e57bffcc3dc784a2473254fe4c1",
+      "sourceRevision": "82701ca66f5366ade6ec694c9950d5d8d6db082d",
       "version": "3.0.7-alpha.1",
       "compatibilityMode": "stable-v3-contract-plus-alpha-v3-contract",
       "stableContractLock": ".buildchain/contract-lock.json",
@@ -867,5 +874,5 @@
       }
     }
   ],
-  "registryRoot": "sha256:3b8eb3696e117827b49d3e0ea729228ba553e2ccb799e3eb548a0fba871948b4"
+  "registryRoot": "sha256:dbfff51da598c374fdd1d3d91c33c6dbcfd586a85bb8b9f2e1206790233ec92e"
 }

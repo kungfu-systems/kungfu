@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // @ts-check
 
+import { spawnSync } from 'node:child_process';
 import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -12,6 +13,7 @@ import { semanticRoot } from '../project-cut/src/project-cut.mjs';
 import { collectTerminalLiveObservations } from '../terminal-evidence/live-observations.mjs';
 import {
   verifyLiveAssignment,
+  verifyLiveReconciliation,
   verifyLiveRuns,
 } from '../terminal-evidence/live-verification.mjs';
 import {
@@ -27,6 +29,81 @@ const ROOT = path.resolve(
 );
 const MATRIX_PATH = 'framework/maintainability/terminal-evidence-matrix.json';
 const SHA = /^[0-9a-f]{40}$/u;
+const ROOT_PATTERN = /^sha256:[0-9a-f]{64}$/u;
+const EXECUTABLE_INPUTS = [
+  MATRIX_PATH,
+  'framework/maintainability/terminal-evidence.mjs',
+  'framework/terminal-evidence/live-observations.mjs',
+  'framework/terminal-evidence/live-verification.mjs',
+  'framework/terminal-evidence/verification-primitives.mjs',
+];
+
+function command(program, args, cwd = ROOT) {
+  const result = spawnSync(program, args, {
+    cwd,
+    encoding: 'utf8',
+    shell: false,
+    env: process.env,
+    maxBuffer: 32 * 1024 * 1024,
+  });
+  if (result.status !== 0) {
+    throw new Error(
+      `${program} ${args.join(' ')} failed: ${(
+        result.stderr || result.stdout || ''
+      ).trim()}`,
+    );
+  }
+  return result.stdout.trim();
+}
+
+function terminalJson(output, label) {
+  const starts = [...output.matchAll(/(?:^|\n)\s*([\[{])/gu)];
+  for (const match of starts.reverse()) {
+    const start = (match.index || 0) + match[0].lastIndexOf(match[1]);
+    try {
+      return JSON.parse(output.slice(start).trim());
+    } catch {
+      // Earlier command output may contain bracketed log prefixes.
+    }
+  }
+  throw new Error(`${label} did not return terminal JSON`);
+}
+
+function assertHeadBoundInputs() {
+  const diff = spawnSync(
+    'git',
+    ['diff', '--quiet', 'HEAD', '--', ...EXECUTABLE_INPUTS],
+    { cwd: ROOT, shell: false },
+  );
+  if (diff.status !== 0) {
+    throw new Error('terminal evidence executable inputs differ from HEAD');
+  }
+  for (const relative of EXECUTABLE_INPUTS) {
+    const headBytes = command('git', ['show', `HEAD:${relative}`]);
+    const worktreeBytes = fs
+      .readFileSync(path.join(ROOT, relative), 'utf8')
+      .trimEnd();
+    if (headBytes !== worktreeBytes) {
+      throw new Error(`${relative} is not byte-bound to HEAD`);
+    }
+  }
+}
+
+function resolveRetainedPath(base, relative) {
+  if (typeof relative !== 'string' || path.isAbsolute(relative)) {
+    throw new Error('retained object path must be archive-relative');
+  }
+  const canonicalBase = fs.realpathSync(base);
+  const candidate = path.resolve(canonicalBase, relative);
+  const canonical = fs.realpathSync(candidate);
+  if (
+    canonical !== canonicalBase &&
+    !canonical.startsWith(`${canonicalBase}${path.sep}`)
+  ) {
+    throw new Error('retained object path escapes the evidence archive');
+  }
+  return canonical;
+}
 
 function digestBytes(bytes) {
   return `sha256:${crypto.createHash('sha256').update(bytes).digest('hex')}`;
@@ -59,6 +136,7 @@ function verifyRetainedBinding(
   matrix,
   live,
   issues,
+  sealVerification = undefined,
 ) {
   const mismatch = (code, target, actual, expected) =>
     exact(actual, expected, code, target, issues);
@@ -280,11 +358,14 @@ function verifyRetainedBinding(
       }
       break;
     case 'assignment-seal':
+    case 'dependency-seal':
     case 'predecessor-seal': {
       const expectedAssignment =
         object.kind === 'assignment-seal'
           ? matrix.goalId
-          : matrix.predecessor.assignmentId;
+          : object.kind === 'predecessor-seal'
+            ? matrix.predecessor.assignmentId
+            : object.assignmentId;
       mismatch(
         'retained-seal-schema',
         `${object.kind}.schema`,
@@ -297,15 +378,96 @@ function verifyRetainedBinding(
         document?.assignment?.assignment_id,
         expectedAssignment,
       );
+      if (!ROOT_PATTERN.test(document?.query_proof_root || '')) {
+        issues.push(
+          issue(
+            'retained-seal-query-proof-missing',
+            `${object.kind}.query_proof_root`,
+            'sealed Assignment has no exact native query-proof root',
+          ),
+        );
+      }
+      if (!ROOT_PATTERN.test(document?.assignment?.request_root || '')) {
+        issues.push(
+          issue(
+            'retained-seal-request-root-missing',
+            `${object.kind}.assignment.request_root`,
+            'sealed Assignment has no exact request root',
+          ),
+        );
+      }
       if (
-        object.kind === 'assignment-seal' &&
-        document?.phase !== 'continuation-decided'
+        !Array.isArray(document?.assignment?.capture_receipt_roots) ||
+        document.assignment.capture_receipt_roots.length === 0 ||
+        document.assignment.capture_receipt_roots.some(
+          (root) => !ROOT_PATTERN.test(root),
+        )
       ) {
         issues.push(
           issue(
+            'retained-seal-capture-root-missing',
+            `${object.kind}.assignment.capture_receipt_roots`,
+            'sealed Assignment has no exact capture receipt roots',
+          ),
+        );
+      }
+      if (document?.phase !== 'continuation-decided') {
+        issues.push(
+          issue(
             'retained-seal-not-terminal',
-            'assignment.seal.phase',
+            `${object.kind}.phase`,
             `sealed Assignment phase is ${String(document?.phase)}`,
+          ),
+        );
+      }
+      for (const field of [
+        'completion_claims',
+        'independent_reviews',
+        'continuation_decisions',
+      ]) {
+        if (
+          !Number.isInteger(document?.counts?.[field]) ||
+          document.counts[field] < 1
+        ) {
+          issues.push(
+            issue(
+              'retained-seal-terminal-chain-incomplete',
+              `${object.kind}.counts.${field}`,
+              `sealed Assignment has no ${field}`,
+            ),
+          );
+        }
+      }
+      if (sealVerification?.ok !== true) {
+        issues.push(
+          issue(
+            'retained-seal-native-verification-failed',
+            object.path,
+            'exact retained seal did not pass native verify-seal',
+          ),
+        );
+      }
+      mismatch(
+        'retained-seal-native-root-mismatch',
+        `${object.kind}.state_root`,
+        sealVerification?.state_root,
+        object.root,
+      );
+      mismatch(
+        'retained-seal-native-phase-mismatch',
+        `${object.kind}.verified_phase`,
+        sealVerification?.phase,
+        'continuation-decided',
+      );
+      if (
+        !Array.isArray(sealVerification?.next_actions) ||
+        sealVerification.next_actions.length !== 0
+      ) {
+        issues.push(
+          issue(
+            'retained-seal-native-actions-present',
+            `${object.kind}.next_actions`,
+            'native seal verification retains actions or omitted next_actions',
           ),
         );
       }
@@ -367,6 +529,182 @@ function verifyRetainedBinding(
   }
 }
 
+function requiredArray(value, target, issues) {
+  if (!Array.isArray(value)) {
+    issues.push(
+      issue(
+        'required-v4-field-missing',
+        target,
+        `${target} must be an explicit array`,
+      ),
+    );
+    return [];
+  }
+  return value;
+}
+
+function retainedDocument(root, kind, retained, readBytes, issues) {
+  const object = retained.get(root);
+  if (!object || object.kind !== kind) {
+    issues.push(
+      issue(
+        'retained-authority-missing',
+        root || kind,
+        `retained ${kind} authority is missing`,
+      ),
+    );
+    return undefined;
+  }
+  try {
+    const result = retainedRoot(readBytes(object.path), object);
+    if (typeof result === 'string' || result.root !== root) {
+      throw new Error(`${kind} authority root does not match retained bytes`);
+    }
+    return result.document;
+  } catch (error) {
+    issues.push(
+      issue(
+        'retained-authority-unreadable',
+        object.path || root,
+        error instanceof Error ? error.message : String(error),
+      ),
+    );
+    return undefined;
+  }
+}
+
+function verifyDependencyAuthority(
+  matrix,
+  evidence,
+  request,
+  references,
+  issues,
+) {
+  const matrixDependencies = requiredArray(
+    matrix.dependencies,
+    'matrix.dependencies',
+    issues,
+  );
+  const evidenceDependencies = requiredArray(
+    evidence.dependencies,
+    'evidence.dependencies',
+    issues,
+  );
+  const requestDependencies = requiredArray(
+    request?.workDefinition?.dependency_identities,
+    'assignment.request.workDefinition.dependency_identities',
+    issues,
+  );
+  const requestIdentities = [
+    request?.workDefinition?.parent_assignment_identity?.assignment_id,
+    ...requestDependencies.map(({ assignment_id }) => assignment_id),
+  ];
+  if (requestIdentities.some((identity) => !identity)) {
+    issues.push(
+      issue(
+        'request-dependency-identity-missing',
+        'assignment.request.workDefinition',
+        'parent or dependency Assignment identity is absent',
+      ),
+    );
+  }
+  uniqueBy(
+    matrixDependencies,
+    'requiredAssignmentId',
+    'duplicate-required-dependency',
+    issues,
+  );
+  uniqueBy(matrixDependencies, 'assignmentId', 'duplicate-dependency', issues);
+  uniqueBy(
+    matrixDependencies,
+    'sealedStateRoot',
+    'duplicate-dependency-seal',
+    issues,
+  );
+  uniqueBy(
+    evidenceDependencies,
+    'requiredAssignmentId',
+    'duplicate-evidence-required-dependency',
+    issues,
+  );
+  uniqueBy(
+    evidenceDependencies,
+    'assignmentId',
+    'duplicate-evidence-dependency',
+    issues,
+  );
+  uniqueBy(
+    evidenceDependencies,
+    'sealedStateRoot',
+    'duplicate-evidence-dependency-seal',
+    issues,
+  );
+  const authoritySet = [...new Set(requestIdentities)].sort();
+  const matrixAuthoritySet = matrixDependencies
+    .map(({ requiredAssignmentId }) => requiredAssignmentId)
+    .sort();
+  if (JSON.stringify(matrixAuthoritySet) !== JSON.stringify(authoritySet)) {
+    issues.push(
+      issue(
+        'dependency-authority-set-mismatch',
+        'matrix.dependencies',
+        'matrix dependency authority set differs from immutable request',
+      ),
+    );
+  }
+  const declaredDependencies = new Map(
+    evidenceDependencies.map((dependency) => [
+      dependency.requiredAssignmentId,
+      dependency,
+    ]),
+  );
+  for (const dependency of matrixDependencies) {
+    const declared = declaredDependencies.get(dependency.requiredAssignmentId);
+    if (!declared) {
+      issues.push(
+        issue(
+          'missing-dependency',
+          dependency.requiredAssignmentId,
+          'required terminal dependency or declared successor is absent',
+        ),
+      );
+      continue;
+    }
+    for (const field of [
+      'requiredAssignmentId',
+      'assignmentId',
+      'sealedStateRoot',
+    ]) {
+      exact(
+        declared[field],
+        dependency[field],
+        `dependency-${field}-mismatch`,
+        `${dependency.requiredAssignmentId}.${field}`,
+        issues,
+      );
+    }
+    requiredRoot(
+      references,
+      declared.sealedStateRoot,
+      `${dependency.requiredAssignmentId}.sealedStateRoot`,
+      'dependency-seal',
+      issues,
+    );
+  }
+  if (
+    evidenceDependencies.length !== matrixDependencies.length ||
+    matrixDependencies.length !== authoritySet.length
+  ) {
+    issues.push(
+      issue(
+        'dependency-cardinality-mismatch',
+        'dependencies',
+        'request, matrix, and evidence dependency sets differ',
+      ),
+    );
+  }
+}
+
 /**
  * Verify one terminal evidence set against facts observed outside the set.
  *
@@ -378,12 +716,37 @@ export function verifyTerminalEvidence(
   evidence,
   live,
   readBytes = (relative) => fs.readFileSync(path.resolve(relative)),
+  verifySeal = undefined,
 ) {
   const issues = [];
   const references = new Map();
+  const retainedObjects = requiredArray(
+    evidence.retainedObjects,
+    'evidence.retainedObjects',
+    issues,
+  );
+  const retained = new Map(retainedObjects.map((entry) => [entry.root, entry]));
+  const request = retainedDocument(
+    evidence.assignment?.requestRoot,
+    'assignment-request',
+    retained,
+    readBytes,
+    issues,
+  );
+  requiredArray(
+    matrix.terminalEvidence?.runGroups,
+    'matrix.terminalEvidence.runGroups',
+    issues,
+  );
+  requiredArray(evidence.runs, 'evidence.runs', issues);
+  requiredArray(
+    matrix.reconciliation?.pullRequests,
+    'matrix.reconciliation.pullRequests',
+    issues,
+  );
   exact(
     matrix.schema,
-    'kungfu.maintainability-terminal-evidence-matrix/v3',
+    'kungfu.maintainability-terminal-evidence-matrix/v4',
     'matrix-schema',
     'matrix.schema',
     issues,
@@ -449,6 +812,20 @@ export function verifyTerminalEvidence(
     live.source?.protectedTree,
     'protected-tree-mismatch',
     'live.source.protectedTree',
+    issues,
+  );
+  exact(
+    live.source?.protectedCommitEnd,
+    live.source?.protectedCommit,
+    'protected-head-toctou',
+    'live.source.protectedCommitEnd',
+    issues,
+  );
+  exact(
+    live.source?.protectedTreeEnd,
+    live.source?.protectedTree,
+    'protected-tree-toctou',
+    'live.source.protectedTreeEnd',
     issues,
   );
   exact(
@@ -706,6 +1083,8 @@ export function verifyTerminalEvidence(
   );
 
   verifyLiveAssignment(matrix, evidence, live, references, issues);
+  verifyLiveReconciliation(matrix, live, request, issues);
+  verifyDependencyAuthority(matrix, evidence, request, references, issues);
   exact(
     evidence.predecessor?.assignmentId,
     matrix.predecessor.assignmentId,
@@ -730,10 +1109,7 @@ export function verifyTerminalEvidence(
 
   verifyLiveRuns(matrix, evidence, live, references, issues);
 
-  uniqueBy(evidence.retainedObjects, 'root', 'duplicate-retained-root', issues);
-  const retained = new Map(
-    (evidence.retainedObjects || []).map((entry) => [entry.root, entry]),
-  );
+  uniqueBy(retainedObjects, 'root', 'duplicate-retained-root', issues);
   for (const [root, reference] of references) {
     const object = retained.get(root);
     if (!object) {
@@ -765,6 +1141,34 @@ export function verifyTerminalEvidence(
         object.path || root,
         issues,
       );
+      let sealVerification;
+      if (
+        ['assignment-seal', 'dependency-seal', 'predecessor-seal'].includes(
+          object.kind,
+        )
+      ) {
+        if (typeof verifySeal !== 'function') {
+          issues.push(
+            issue(
+              'native-seal-verifier-missing',
+              object.path || root,
+              'native verify-seal callback is required',
+            ),
+          );
+        } else {
+          try {
+            sealVerification = verifySeal(object.path);
+          } catch (error) {
+            issues.push(
+              issue(
+                'native-seal-verification-error',
+                object.path || root,
+                error instanceof Error ? error.message : String(error),
+              ),
+            );
+          }
+        }
+      }
       verifyRetainedBinding(
         object,
         typeof result === 'string' ? undefined : result.document,
@@ -772,6 +1176,7 @@ export function verifyTerminalEvidence(
         matrix,
         live,
         issues,
+        sealVerification,
       );
     } catch (error) {
       issues.push(
@@ -804,14 +1209,15 @@ function parseArgs(argv) {
       options.protectedRef = argv[++index] || '';
     else throw new Error(`unknown argument '${value}'`);
   }
-  if (!options.evidence || !options.delivery) {
-    throw new Error('--evidence and --delivery are required');
+  if (!options.evidence || !options.delivery || !options.protectedRef) {
+    throw new Error('--evidence, --delivery, and --protected-ref are required');
   }
   return options;
 }
 
 function main() {
   const options = parseArgs(process.argv.slice(2));
+  assertHeadBoundInputs();
   const matrix = JSON.parse(
     fs.readFileSync(path.join(ROOT, MATRIX_PATH), 'utf8'),
   );
@@ -824,12 +1230,38 @@ function main() {
     throw new Error('delivery input does not match the retained delivery root');
   }
   const expectedProtectedRef = `refs/remotes/origin/${matrix.sourceBinding.protectedBranch}`;
-  if (options.protectedRef && options.protectedRef !== expectedProtectedRef) {
+  if (options.protectedRef !== expectedProtectedRef) {
     throw new Error(`protected ref must be ${expectedProtectedRef}`);
   }
+  const localProtectedCommit = command('git', [
+    'rev-parse',
+    options.protectedRef,
+  ]);
   const live = collectTerminalLiveObservations(matrix, evidence);
-  const report = verifyTerminalEvidence(matrix, evidence, live, (relative) =>
-    fs.readFileSync(path.resolve(path.dirname(evidencePath), String(relative))),
+  if (
+    localProtectedCommit !== live.source?.protectedCommit ||
+    localProtectedCommit !== live.source?.protectedCommitEnd
+  ) {
+    throw new Error('local and live protected refs do not identify one cut');
+  }
+  const report = verifyTerminalEvidence(
+    matrix,
+    evidence,
+    live,
+    (relative) =>
+      fs.readFileSync(
+        resolveRetainedPath(path.dirname(evidencePath), relative),
+      ),
+    (relative) => {
+      const sealPath = resolveRetainedPath(
+        path.dirname(evidencePath),
+        relative,
+      );
+      return terminalJson(
+        command(path.join(ROOT, 'shifu'), ['work', 'verify-seal', sealPath]),
+        'kungfu work verify-seal',
+      );
+    },
   );
   process.stdout.write(`${JSON.stringify(report, null, 2)}\n`);
   if (report.issues.length) process.exitCode = 1;
@@ -849,4 +1281,4 @@ if (
   }
 }
 
-export { digestBytes };
+export { digestBytes, resolveRetainedPath };

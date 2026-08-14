@@ -48,18 +48,47 @@ Buildchain classifies a moving dev base against the semantic source, closure,
 dependency, and toolchain roots. Non-overlapping base-only movement reuses the
 native proof; overlap, an unknown comparison graph, a source change, or a
 conflict fails closed into bounded requalification or safe Warrant release.
+Kungfu derives the semantic source root from the canonical changed-path set and
+each path's final Git object, mode, and deletion state. The exact replay tree
+remains delivery-bound, but it is deliberately excluded from the reusable
+qualification identity so an unrelated dev commit cannot rename an otherwise
+identical proof artifact before overlap classification runs.
+Kungfu reconstructs that optional Native Qualification Proof only from the
+exact source workflow run's `core-dev-delivery-source-proof-<head>` artifact.
+The protected caller verifies its Source Proof, PR/head/base coordinate, and
+all semantic roots against its independently projected Warrant input before it
+passes `native-proof-json` to Buildchain. A missing legacy artifact means a
+full native run; malformed or cross-head evidence cannot become reusable.
 The source workflow also observes the active phase before every legacy hosted
 native lane, so no normal PR event can start those expensive jobs without the
 same provisional or qualified authority.
 
-The integration PR has one bounded bootstrap: it may use the pre-upgrade
-controller only when the protected base lacks the native-under-Warrant marker
-and the exact candidate contains the pinned controller plus Warrant observer.
-The same exact check covers its PR and merge-group events: the PR must finish
-native qualification, and the merge-group must replay that proof or run the
-closed fallback before landing. Once the marker reaches protected dev, the
-condition is permanently false and all subsequent candidates require the
-active Warrant.
+After an exact release or lease recovery, Buildchain wakes the next retained
+candidate with the `buildchain-dev-delivery-wake` repository event. The complete
+candidate remains nested under one `client_payload.candidate` envelope so the
+GitHub repository-dispatch top-level property limit cannot discard semantic
+proof bindings. Kungfu treats that payload only as a bounded wake coordinate:
+it requires the protected target, exact PR, and immutable head to agree, then
+resolves and verifies the matching source-acceptance run from GitHub before
+calling the pinned controller. A missing or malformed wake therefore leaves
+the queue fail-closed for patrol recovery; it never grants a later PR authority
+to pass the active Warrant.
+
+Every hosted native lane now uses the protected Buildchain Warrant runner in
+the same process that starts the native command. It observes the exact PR,
+source head, phase, generation, and fence; heartbeats before spawn and for the
+full native lifetime; and terminates the process group within a bounded window
+if the fence is lost. PR and merge-group matrices are serialized so concurrent
+workers cannot race state-ref heartbeats. The one-time migration bootstrap was
+retired after the controller reached protected dev, so no current path can
+bypass the exact active Warrant.
+
+A dequeue notification is transient while that exact native holder is still
+live. It neither closes the Warrant nor promotes a waiting candidate. The same
+generation and fencing token remain authoritative across heartbeats; only
+authoritative merge, cancellation, failure, or supersession evidence can settle
+the holder. An expired holder also remains fenced until its worker is proven
+stopped and that exact generation is settled.
 
 ## Source → binary
 

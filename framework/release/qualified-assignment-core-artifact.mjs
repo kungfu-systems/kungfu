@@ -61,6 +61,7 @@ const COMPATIBILITY_POLICY = [
   '.github/actions/upload-qualified-core-matrix/action.yml',
   '.github/workflows/affected-native-cache-promote.yml',
   '.github/workflows/affected-native-pr.yml',
+  '.github/workflows/dev-post-merge-advisory.yml',
   'docs/shifu/artifact-contract.json',
   'docs/shifu/schema/qualified-assignment-core-artifact-v2.schema.json',
   'docs/shifu/schema/qualified-assignment-core-qualification-v2.schema.json',
@@ -564,6 +565,12 @@ export function validateQualifiedCoreCandidate(
   if (expected.event && candidate.producer?.event !== expected.event) {
     throw new Error('qualified Core candidate producer event drift');
   }
+  if (
+    expected.workflowPath &&
+    candidate.producer?.workflowPath !== expected.workflowPath
+  ) {
+    throw new Error('qualified Core candidate producer workflow drift');
+  }
   const entries = candidate.payload?.entries || [];
   const names = entries.map(({ path: entryPath }) => entryPath);
   const rules = payloadRules(row, names);
@@ -1048,6 +1055,9 @@ export async function promoteQualifiedCoreCandidate({
   deliveryAttempt,
   deliveryEvidenceRoot,
   mergeGroupRunId,
+  producerRunId,
+  producerEvent,
+  producerWorkflowPath,
   validFrom,
   validThrough,
   now,
@@ -1069,6 +1079,33 @@ export async function promoteQualifiedCoreCandidate({
     tree: exactTree,
   });
   const shared = !allowLocal;
+  const suppliedProducerCoordinates = [
+    producerRunId,
+    producerEvent,
+    producerWorkflowPath,
+  ].filter((value) => value !== undefined && value !== null && value !== '');
+  if (
+    shared &&
+    suppliedProducerCoordinates.length > 0 &&
+    suppliedProducerCoordinates.length !== 3
+  ) {
+    throw new Error(
+      'qualified Core promotion requires complete producer coordinates',
+    );
+  }
+  const explicitProducer = shared && suppliedProducerCoordinates.length === 3;
+  const expectedProducerRunId = explicitProducer
+    ? requireRunId(producerRunId, 'qualified Core producer run id')
+    : mergeGroupRunId;
+  const expectedProducerEvent = explicitProducer
+    ? requireIdentifier(producerEvent, 'qualified Core producer event')
+    : 'merge_group';
+  const expectedProducerWorkflow = explicitProducer
+    ? requireRelativePath(
+        producerWorkflowPath,
+        'qualified Core producer workflow',
+      )
+    : '.github/workflows/affected-native-pr.yml';
   if (shared) {
     const head = spawnSync('git', ['rev-parse', 'HEAD', 'HEAD^{tree}'], {
       cwd: root,
@@ -1101,8 +1138,10 @@ export async function promoteQualifiedCoreCandidate({
     shared,
     repository: exactRepository,
     repositoryRoot: root,
-    runId: shared ? mergeGroupRunId : undefined,
-    event: shared ? 'merge_group' : undefined,
+    commit: explicitProducer ? exactTargetCommit : undefined,
+    runId: shared ? expectedProducerRunId : undefined,
+    event: shared ? expectedProducerEvent : undefined,
+    workflowPath: shared ? expectedProducerWorkflow : undefined,
   });
   const targetRoots = qualifiedCoreCheckoutRoots(root, candidate);
   if (targetRoots.compatibilityRoot !== candidate.build.compatibilityRoot) {
@@ -1466,6 +1505,9 @@ async function main() {
         : null,
       deliveryEvidenceRoot: options['delivery-evidence-root'],
       mergeGroupRunId: options['merge-group-run-id'],
+      producerRunId: options['producer-run-id'],
+      producerEvent: options['producer-event'],
+      producerWorkflowPath: options['producer-workflow-path'],
       validFrom: options['valid-from'] || now,
       validThrough:
         options['valid-through'] ||

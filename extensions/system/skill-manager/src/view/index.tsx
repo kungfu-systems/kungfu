@@ -55,6 +55,16 @@ function statusColor(status: string) {
   return '#f48771';
 }
 
+function record(value: unknown): Record<string, unknown> {
+  return value && typeof value === 'object'
+    ? (value as Record<string, unknown>)
+    : {};
+}
+
+function compact(value: unknown) {
+  return JSON.stringify(value ?? null);
+}
+
 function shortHome(path: string) {
   const home = (
     window as unknown as { process?: { env?: Record<string, string> } }
@@ -119,6 +129,9 @@ function SkillManagerViewComponent({ shell }: KfxViewProps) {
     );
   }
 
+  const runtimeAudit = view.runtimeAudit;
+  const guiProjection = runtimeAudit?.surfaceProjections.gui;
+
   return (
     <section style={panelStyle}>
       <h2 style={headingStyle}>
@@ -128,6 +141,103 @@ function SkillManagerViewComponent({ shell }: KfxViewProps) {
       <div style={{ ...mono, color: '#6a6a6a', marginBottom: 8 }}>
         registry: {view.registry.root}
       </div>
+      {runtimeAudit ? (
+        <section style={{ marginBottom: 12 }}>
+          <div style={{ ...mono, color: '#4ec9b0' }}>
+            shared runtime audit · {guiProjection.runtimeAuditRoot}
+          </div>
+          <div style={{ ...mono, color: '#858585', marginTop: 4 }}>
+            lifecycle/work/history: {guiProjection.registryStateRoot} ·{' '}
+            {guiProjection.historyRoot}
+          </div>
+          <div style={{ ...mono, color: '#858585', marginTop: 4 }}>
+            evidence: {runtimeAudit.evidence.length} · recovery:{' '}
+            {String(runtimeAudit.recovery.verdict ?? 'unproved')}
+          </div>
+          <div style={{ ...mono, color: '#858585', marginTop: 4 }}>
+            run/work: {String(runtimeAudit.scope.runId ?? '-')} ·{' '}
+            {String(runtimeAudit.scope.workRef ?? '-')}
+          </div>
+          {runtimeAudit.skills.map((value, index) => {
+            const skill = record(value);
+            const identity = record(skill.identity);
+            const proof = record(skill.proof);
+            return (
+              <details
+                key={`${String(identity.key ?? 'skill')}:${index}`}
+                style={{ ...mono, marginTop: 6 }}
+              >
+                <summary style={{ color: '#9cdcfe' }}>
+                  {String(identity.key ?? 'unknown')}@
+                  {String(identity.revision ?? '?')} ·{' '}
+                  {String(skill.lifecycle ?? 'unproved')} ·{' '}
+                  {compact(skill.observedStates)}
+                </summary>
+                <div style={{ color: '#858585', marginLeft: 12 }}>
+                  identity: content={String(identity.contentRoot ?? '-')} ·
+                  definition={String(identity.definitionRoot ?? '-')} · class=
+                  {String(identity.class ?? '-')}
+                </div>
+                <div style={{ color: '#858585', marginLeft: 12 }}>
+                  Work bindings: {compact(skill.workBindings)}
+                </div>
+                <div style={{ color: '#858585', marginLeft: 12 }}>
+                  dependencies/trust/authorization:{' '}
+                  {compact(skill.dependencies)}
+                </div>
+                <div style={{ color: '#858585', marginLeft: 12 }}>
+                  receipts/history proof: {String(proof.status ?? 'unproved')} ·{' '}
+                  {compact(proof.roots)} · preserved=
+                  {String(skill.historyPreserved ?? false)}
+                </div>
+              </details>
+            );
+          })}
+          <details style={{ ...mono, marginTop: 6 }}>
+            <summary style={{ color: '#ce9178' }}>
+              audit, dependency, trust, authorization, and receipt evidence
+            </summary>
+            {runtimeAudit.evidence.map((value) => {
+              const evidence = record(value);
+              const source = record(evidence.source);
+              const proof = record(evidence.proof);
+              return (
+                <div
+                  key={`${String(evidence.runId ?? '-')}:${String(evidence.workRef ?? '-')}:${String(evidence.skillKey ?? '-')}:${String(evidence.state ?? 'unproved')}:${String(source.type ?? '-')}:${compact(proof.roots)}`}
+                  style={{ color: '#858585', marginLeft: 12 }}
+                >
+                  {String(evidence.state ?? 'unproved')} ·{' '}
+                  {String(evidence.skillKey ?? '-')} · run=
+                  {String(evidence.runId ?? '-')} · Work=
+                  {String(evidence.workRef ?? '-')} · source=
+                  {String(source.type ?? '-')} ·{' '}
+                  {String(proof.status ?? 'unproved')}: {compact(proof.roots)} ·{' '}
+                  {compact(evidence.detail)}
+                </div>
+              );
+            })}
+          </details>
+          <details style={{ ...mono, marginTop: 6 }}>
+            <summary style={{ color: '#dcdcaa' }}>recovery and history</summary>
+            <div style={{ color: '#858585', marginLeft: 12 }}>
+              roots: registry={guiProjection.registryStateRoot} · history=
+              {guiProjection.historyRoot} · diagnosis=
+              {guiProjection.diagnosisRoot}
+            </div>
+            <div style={{ color: '#858585', marginLeft: 12 }}>
+              audit={compact(guiProjection.auditRoots)} · dependency=
+              {compact(guiProjection.dependencyRoots)}
+            </div>
+            <div style={{ color: '#858585', marginLeft: 12 }}>
+              recovery: {compact(runtimeAudit.recovery)}
+            </div>
+          </details>
+        </section>
+      ) : (
+        <div style={{ ...mono, color: '#858585', marginBottom: 8 }}>
+          runtime audit unavailable · lifecycle/run claims remain unproved
+        </div>
+      )}
       {view.skills.length === 0 ? (
         <div style={{ ...mono, color: '#6a6a6a' }}>no installed skills</div>
       ) : (

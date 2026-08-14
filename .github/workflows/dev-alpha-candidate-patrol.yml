@@ -112,10 +112,10 @@ jobs:
             .alphaBase.ref == "refs/heads/alpha/v4/v4.0" and
             .alphaBase.sha == "f9e6b0e34bcdd6407b2a18206ace7982d64de2c8" and
             .alphaBase.tree == "67a93b5831596555e7c29104421de3a0b97eb865" and
-            .buildchain.build.resolvedSha == "f4ca5182f53fddf76bdf4246be0993afa5a592bc" and
-            .buildchain.build.contractDigest == "sha256:52cdb871cb0559534f78548f2487d8f3ceb64bb92e8a587f440a2946f78e7386" and
-            .buildchain.promotion.resolvedSha == "36b08dc7bf417e57bffcc3dc784a2473254fe4c1" and
-            .buildchain.promotion.contractDigest == "sha256:8e565f9ac5146d5dceafc3da6b267147fb412937db979bf35a0429966da82197"
+            .buildchain.build.resolvedSha == "a60957e3ffc8f9a02f0e9419deebc8d35a3f7198" and
+            .buildchain.build.contractDigest == "sha256:b47881aae6956ef16b94b0e89c4790fa5c6de94202315756a49bc62b8bff6346" and
+            .buildchain.promotion.resolvedSha == "a60957e3ffc8f9a02f0e9419deebc8d35a3f7198" and
+            .buildchain.promotion.contractDigest == "sha256:b47881aae6956ef16b94b0e89c4790fa5c6de94202315756a49bc62b8bff6346"
           ' "$lock" >/dev/null
           candidate_sha="$(jq -er '.candidate.sha' "$lock")"
           candidate_tree="$(jq -er '.candidate.tree' "$lock")"
@@ -130,7 +130,7 @@ jobs:
           test "$(git rev-parse "$alpha_base_sha^{tree}")" = "$alpha_base_tree"
           test "$candidate_tree" = "$dev_cut_tree"
           test "$(jq -er '.buildchain.sourcePinPolicy' "$lock")" = "floating-contract-with-recorded-resolution"
-          test "$(jq -er '.buildchain.build.ref' "$lock")" = "v3"
+          test "$(jq -er '.buildchain.build.ref' "$lock")" = "v3-alpha"
           test "$(jq -er '.buildchain.promotion.ref' "$lock")" = "v3-alpha"
           jq -e '
             .policy.devMovementInvalidatesCut == false and

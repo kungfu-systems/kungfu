@@ -3,6 +3,8 @@
 name: Dev PR Auto Merge
 
 on:
+  repository_dispatch:
+    types: [buildchain-dev-delivery-wake]
   workflow_run:
     workflows:
       - Core affected native
@@ -77,6 +79,9 @@ jobs:
           DISPATCH_HEAD_SHA: ${{ inputs.expected-head-sha }}
           DISPATCH_SOURCE_RUN_ID: ${{ inputs.source-workflow-run-id }}
           DISPATCH_DRY_RUN: ${{ inputs.dry-run }}
+          WAKE_TARGET_BRANCH: ${{ github.event.client_payload.candidate.targetBranch }}
+          WAKE_PR_NUMBER: ${{ github.event.client_payload.candidate.pullRequestNumber }}
+          WAKE_HEAD_SHA: ${{ github.event.client_payload.candidate.sourceHead }}
           EVENT_PR_NUMBER: ${{ github.event.pull_request.number }}
           EVENT_PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
           GH_TOKEN: ${{ github.token }}
@@ -105,6 +110,26 @@ jobs:
           elif [ "$EVENT_NAME" = "pull_request_target" ] || [ "$EVENT_NAME" = "pull_request_review" ]; then
             expected_pr_number="$EVENT_PR_NUMBER"
             expected_head_sha="$EVENT_PR_HEAD_SHA"
+            source_runs="$(gh api --method GET \
+              "repos/$GITHUB_REPOSITORY/actions/workflows/affected-native-pr.yml/runs" \
+              -f head_sha="$expected_head_sha" \
+              -f event=pull_request \
+              -f status=completed \
+              -f per_page=100)"
+            source_workflow_run_id="$(jq -er \
+              --argjson pullRequest "$expected_pr_number" \
+              --arg head "$expected_head_sha" \
+              '[.workflow_runs[]
+                | select(.head_sha == $head)
+                | select(any(.pull_requests[]?; .number == $pullRequest))]
+               | sort_by(.id) | last | .id' <<<"$source_runs")"
+          elif [ "$EVENT_NAME" = "repository_dispatch" ]; then
+            if [ "$WAKE_TARGET_BRANCH" != "$DEFAULT_BRANCH" ]; then
+              echo "wake target branch does not match the protected default branch" >&2
+              exit 1
+            fi
+            expected_pr_number="$WAKE_PR_NUMBER"
+            expected_head_sha="$WAKE_HEAD_SHA"
             source_runs="$(gh api --method GET \
               "repos/$GITHUB_REPOSITORY/actions/workflows/affected-native-pr.yml/runs" \
               -f head_sha="$expected_head_sha" \
@@ -174,6 +199,9 @@ jobs:
     needs: resolve-target
     if: ${{ always() }}
     runs-on: ubuntu-24.04
+    env:
+      KUNGFU_FNM_DIST_MIRROR: ${{ vars.KUNGFU_FNM_DIST_MIRROR }}
+      KUNGFU_FNM_SHA256: ${{ vars.KUNGFU_FNM_SHA256 }}
     permissions:
       actions: read
       contents: read
@@ -187,6 +215,7 @@ jobs:
       closure-root: ${{ steps.contract.outputs.closure-root }}
       dependency-root: ${{ steps.contract.outputs.dependency-root }}
       toolchain-root: ${{ steps.contract.outputs.toolchain-root }}
+      environment-root: ${{ steps.environment.outputs.environment-root }}
       affected-paths-json: ${{ steps.contract.outputs.affected-paths-json }}
       shard-evidence-roots-json: ${{ steps.contract.outputs.shard-evidence-roots-json }}
       delivery-class: ${{ steps.contract.outputs.delivery-class }}
@@ -194,6 +223,7 @@ jobs:
       input-root: ${{ steps.contract.outputs.input-root }}
       project-cut-proof-json: ${{ steps.project-cut.outputs.project-cut-proof-json }}
       active-lease-context: ${{ steps.contract.outputs.active-lease-context }}
+      native-proof-json: ${{ steps.native-proof.outputs.native-proof-json }}
     steps:
       - name: Check out protected consumer adapter
         if: >-
@@ -212,7 +242,7 @@ jobs:
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           repository: kungfu-systems/buildchain
-          ref: 6057d71142dfc6a9d78872e316eca87d9510e176
+          ref: 065c32a242ac0b7552bd8c2b006e4f1482be5f1d
           path: .buildchain/dev-delivery-runtime
           fetch-depth: 1
           persist-credentials: false
@@ -305,6 +335,126 @@ jobs:
             --output .buildchain/dev-delivery-input/warrant-input.json \
             --github-output "$GITHUB_OUTPUT"
 
+      - name: Bind exact hosted native environment
+        id: environment
+        if: steps.contract.outcome == 'success'
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Derive the environment contract from the protected proof descriptor,
+          # without executing candidate code before Warrant admission.
+          # shifu-entry-contract: allow dependency-free protected descriptor rooting during workflow bootstrap
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          import { digest } from './scripts/affected-native-proof.mjs';
+
+          const descriptor = JSON.parse(
+            fs.readFileSync('.buildchain/dev-delivery-input/descriptor.json', 'utf8'),
+          );
+          const environmentRoot = digest({
+            schema: 'kungfu.github-hosted-native-environment/v1',
+            platformTier: descriptor.identity.platformTier,
+            toolchain: descriptor.identity.toolchain,
+          });
+          if (!/^sha256:[0-9a-f]{64}$/u.test(environmentRoot)) {
+            throw new Error('hosted native environment root is invalid');
+          }
+          fs.appendFileSync(
+            process.env.GITHUB_OUTPUT,
+            `environment-root=${environmentRoot}\n`,
+          );
+          // shifu-entry-contract: allow the dependency-free rooting heredoc terminator
+          NODE
+
+      - name: Resolve optional exact native proof artifact
+        id: native-proof-artifact
+        if: steps.contract.outcome == 'success'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SOURCE_RUN_ID: ${{ needs.resolve-target.outputs.source-workflow-run-id }}
+          EXPECTED_HEAD: ${{ needs.resolve-target.outputs.expected-head-sha }}
+        run: |
+          set -euo pipefail
+          artifact_name="core-dev-delivery-source-proof-$EXPECTED_HEAD"
+          artifacts="$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$SOURCE_RUN_ID/artifacts?per_page=100")"
+          match_count="$(jq --arg name "$artifact_name" \
+            '[.artifacts[] | select(.name == $name and .expired == false)] | length' \
+            <<<"$artifacts")"
+          if [ "$match_count" -gt 1 ]; then
+            echo "multiple exact native proof artifacts found for $EXPECTED_HEAD" >&2
+            exit 1
+          fi
+          if [ "$match_count" = "0" ]; then
+            echo "available=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          mkdir -p .buildchain/dev-delivery-input/source-native-proof
+          gh run download "$SOURCE_RUN_ID" \
+            --repo "$GITHUB_REPOSITORY" \
+            --name "$artifact_name" \
+            --dir .buildchain/dev-delivery-input/source-native-proof
+          echo "available=true" >> "$GITHUB_OUTPUT"
+
+      - name: Materialize optional reusable semantic native proof
+        id: native-proof
+        if: steps.native-proof-artifact.outputs.available == 'true'
+        shell: bash
+        env:
+          EXPECTED_PR: ${{ needs.resolve-target.outputs.expected-pr-number }}
+          EXPECTED_HEAD: ${{ needs.resolve-target.outputs.expected-head-sha }}
+          TARGET_BRANCH: ${{ needs.resolve-target.outputs.target-branch }}
+        run: |
+          set -euo pipefail
+          artifact=.buildchain/dev-delivery-input/source-native-proof
+          source_proof="$artifact/proof.json"
+          coordinate="$artifact/coordinate.json"
+          warrant_input=.buildchain/dev-delivery-input/warrant-input.json
+
+          # Source qualification is not native-execution authority. A reusable
+          # Native Qualification Proof v3 must bind the exact environment before
+          # process spawn through a Buildchain native execution receipt. Older
+          # source artifacts cannot supply that receipt, so they fail closed to
+          # the reusable controller's fenced full-native path.
+          if [ ! -f "$source_proof" ] || [ ! -f "$coordinate" ]; then
+            echo "native-proof-json=" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          jq -e \
+            --arg repository "$GITHUB_REPOSITORY" \
+            --arg branch "$TARGET_BRANCH" \
+            --argjson pullRequest "$EXPECTED_PR" \
+            --arg head "$EXPECTED_HEAD" \
+            '.schema == "kungfu.dev-delivery-source-coordinate/v1"
+             and .repository == $repository
+             and .protectedBase == $branch
+             and .pullRequestNumber == $pullRequest
+             and .sourceHeadSha == $head
+             and (.sourceBaseSha | test("^[0-9a-f]{40}$"))
+             and (.nativeProofRoot | test("^sha256:[0-9a-f]{64}$"))' \
+            "$coordinate" >/dev/null
+          # shifu-entry-contract: allow exact pinned Buildchain Source Proof verification in protected CI
+          node .buildchain/dev-delivery-runtime/scripts/dev-delivery-proof.mjs verify-source \
+            --source-proof "$source_proof" \
+            --output .buildchain/dev-delivery-input/source-proof-verification.json
+          jq -e \
+            --arg repository "$GITHUB_REPOSITORY" \
+            --arg branch "$TARGET_BRANCH" \
+            --arg head "$EXPECTED_HEAD" \
+            --slurpfile input "$warrant_input" \
+            '.repository == $repository
+             and .protectedBase == $branch
+             and .sourceHead == $head
+             and .sourceIdentityRoot == $input[0].sourceIdentityRoot
+             and .sourcePatchRoot == $input[0].sourcePatchRoot
+             and .planRoot == $input[0].planRoot
+             and .closureRoot == $input[0].closureRoot
+             and .dependencyRoot == $input[0].dependencyRoot
+             and .toolchainRoot == $input[0].toolchainRoot
+             and .affectedPaths == $input[0].affectedPaths' \
+            "$source_proof" >/dev/null
+          echo "native-proof-json=" >> "$GITHUB_OUTPUT"
+
       - name: Produce exact Project Cut replay proof
         id: project-cut
         if: steps.contract.outcome == 'success'
@@ -393,9 +543,9 @@ jobs:
       contents: write
       pull-requests: write
       statuses: write
-    uses: kungfu-systems/buildchain/.github/workflows/dev-pr-auto-merge.yml@6057d71142dfc6a9d78872e316eca87d9510e176
+    uses: kungfu-systems/buildchain/.github/workflows/dev-pr-auto-merge.yml@065c32a242ac0b7552bd8c2b006e4f1482be5f1d
     with:
-      buildchain-ref: 6057d71142dfc6a9d78872e316eca87d9510e176
+      buildchain-ref: 065c32a242ac0b7552bd8c2b006e4f1482be5f1d
       target-branch: ${{ needs.resolve-target.outputs.target-branch }}
       expected-pr-number: ${{ fromJSON(needs.resolve-target.outputs.expected-pr-number || '0') }}
       expected-head-sha: ${{ needs.resolve-target.outputs.expected-head-sha }}
@@ -403,7 +553,7 @@ jobs:
       handoff-workflow-id: dev-pr-auto-merge.yml
       source-workflow-id: affected-native-pr.yml
       diagnostic-context: Buildchain delivery intent
-      delivery-warrant-mode: ${{ (github.event_name == 'workflow_run' || github.event_name == 'pull_request_target' || github.event_name == 'pull_request_review' || (github.event_name == 'workflow_dispatch' && inputs.dry-run == false)) && 'required' || 'off' }}
+      delivery-warrant-mode: ${{ (github.event_name == 'workflow_run' || github.event_name == 'repository_dispatch' || github.event_name == 'pull_request_target' || github.event_name == 'pull_request_review' || (github.event_name == 'workflow_dispatch' && inputs.dry-run == false)) && 'required' || 'off' }}
       assignment-root: ${{ needs.delivery-contract.outputs.assignment-root }}
       initiative-root: ${{ needs.delivery-contract.outputs.initiative-root }}
       source-identity-root: ${{ needs.delivery-contract.outputs.source-identity-root }}
@@ -413,9 +563,13 @@ jobs:
       closure-root: ${{ needs.delivery-contract.outputs.closure-root }}
       dependency-root: ${{ needs.delivery-contract.outputs.dependency-root }}
       toolchain-root: ${{ needs.delivery-contract.outputs.toolchain-root }}
+      environment-root: ${{ needs.delivery-contract.outputs.environment-root }}
       affected-paths-json: ${{ needs.delivery-contract.outputs.affected-paths-json || '[]' }}
       shard-evidence-roots-json: ${{ needs.delivery-contract.outputs.shard-evidence-roots-json || '[]' }}
+      native-proof-json: ${{ needs.delivery-contract.outputs.native-proof-json }}
       native-command: >-
+        KUNGFU_FNM_DIST_MIRROR=${{ vars.KUNGFU_FNM_DIST_MIRROR }}
+        KUNGFU_FNM_SHA256=${{ vars.KUNGFU_FNM_SHA256 }}
         ./shifu dev-delivery:native-under-warrant --
         --repository ${{ github.repository }}
         --target-branch ${{ needs.resolve-target.outputs.target-branch }}

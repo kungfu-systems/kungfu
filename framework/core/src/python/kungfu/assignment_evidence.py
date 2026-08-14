@@ -59,6 +59,11 @@ def project_review_evidence(
     work_definition: JsonObject,
 ) -> JsonObject:
     workspace = Path(workspace).resolve()
+    report_path = Path(report_path).resolve()
+    try:
+        report_display_path = report_path.relative_to(workspace).as_posix()
+    except ValueError:
+        report_display_path = str(report_path)
     explicit = work_definition.get("evidence_paths") or []
     if not isinstance(explicit, list) or any(
         not isinstance(value, str) or not value.strip() for value in explicit
@@ -118,6 +123,15 @@ def project_review_evidence(
         total_bytes += size
     if selected:
         primary, *supporting = selected
+        retained_execution = []
+        if report_path not in selected:
+            retained_execution.append(
+                {
+                    "path": report_display_path,
+                    "root": content_root(report_path),
+                    "content": report_path.read_text(encoding="utf-8"),
+                }
+            )
         return {
             "mode": "project-files",
             "primary": {
@@ -125,7 +139,8 @@ def project_review_evidence(
                 "root": content_root(primary),
                 "content": primary.read_text(encoding="utf-8"),
             },
-            "supporting": [
+            "supporting": retained_execution
+            + [
                 {
                     "path": candidate.relative_to(workspace).as_posix(),
                     "root": content_root(candidate),
@@ -133,15 +148,10 @@ def project_review_evidence(
                 for candidate in supporting
             ],
         }
-    report_path = Path(report_path).resolve()
-    try:
-        display_path = report_path.relative_to(workspace).as_posix()
-    except ValueError:
-        display_path = str(report_path)
     return {
         "mode": "execution-report",
         "primary": {
-            "path": display_path,
+            "path": report_display_path,
             "root": content_root(report_path),
             "content": report_path.read_text(encoding="utf-8"),
         },

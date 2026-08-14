@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 name: Build Qualified Core candidate
-description: Build and seal one exact platform row from a merge-group checkout.
+description: Build and seal one exact platform row from a protected source checkout.
 
 inputs:
   row:
@@ -30,6 +30,18 @@ inputs:
     description: Optional exact C++ compiler command required by this row.
     required: false
     default: ""
+  native-already-built:
+    description: Skip native build commands when a live Warrant wrapper already completed them.
+    required: false
+    default: "false"
+  producer-event:
+    description: GitHub Actions event that owns this candidate transport.
+    required: false
+    default: merge_group
+  producer-workflow-path:
+    description: Repository-relative workflow path that owns this candidate transport.
+    required: false
+    default: .github/workflows/affected-native-pr.yml
 
 runs:
   using: composite
@@ -51,10 +63,12 @@ runs:
           export CC="${{ inputs.cc }}"
           export CXX="${{ inputs.cxx }}"
         fi
-        ./shifu install --frozen-lockfile
-        ./shifu rebuild:core
-        ./shifu test:node-watcher-runtime-boundary
-        ./shifu test:agent-session-peer-transport:native
+        if [ "${{ inputs.native-already-built }}" != "true" ]; then
+          ./shifu install --frozen-lockfile
+          ./shifu rebuild:core
+          ./shifu test:node-watcher-runtime-boundary
+          ./shifu test:agent-session-peer-transport:native
+        fi
         node framework/release/qualified-assignment-core-artifact.mjs seal \
           --repository-root . \
           --payload-root framework/core/dist/kungfu \
@@ -62,8 +76,8 @@ runs:
           --output-dir product/qualification/qualified-core/candidate \
           --repository "$GITHUB_REPOSITORY" \
           --run-id "$GITHUB_RUN_ID" \
-          --event merge_group \
-          --workflow-path .github/workflows/affected-native-pr.yml \
+          --event "${{ inputs.producer-event }}" \
+          --workflow-path "${{ inputs.producer-workflow-path }}" \
           --platform-row "${{ inputs.row }}" \
           --runner-label "${{ inputs.runner-label }}" \
           --runner-environment github-hosted \
@@ -81,14 +95,16 @@ runs:
         if ($env:RUNNER_ARCH -ne "${{ inputs.runner-arch }}") { throw "runner architecture drift" }
         if ((node -p process.platform) -ne "${{ inputs.node-platform }}") { throw "Node platform drift" }
         if ((node -p process.arch) -ne "${{ inputs.node-arch }}") { throw "Node architecture drift" }
-        .\shifu.cmd install --frozen-lockfile
-        if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-        .\shifu.cmd rebuild:core
-        if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-        .\shifu.cmd test:node-watcher-runtime-boundary
-        if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-        .\shifu.cmd test:agent-session-peer-transport:native
-        if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+        if ("${{ inputs.native-already-built }}" -ne "true") {
+          .\shifu.cmd install --frozen-lockfile
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          .\shifu.cmd rebuild:core
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          .\shifu.cmd test:node-watcher-runtime-boundary
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          .\shifu.cmd test:agent-session-peer-transport:native
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+        }
         node framework/release/qualified-assignment-core-artifact.mjs seal `
           --repository-root . `
           --payload-root framework/core/dist/kungfu `
@@ -96,8 +112,8 @@ runs:
           --output-dir product/qualification/qualified-core/candidate `
           --repository "$env:GITHUB_REPOSITORY" `
           --run-id "$env:GITHUB_RUN_ID" `
-          --event merge_group `
-          --workflow-path .github/workflows/affected-native-pr.yml `
+          --event "${{ inputs.producer-event }}" `
+          --workflow-path "${{ inputs.producer-workflow-path }}" `
           --platform-row "${{ inputs.row }}" `
           --runner-label "${{ inputs.runner-label }}" `
           --runner-environment github-hosted `

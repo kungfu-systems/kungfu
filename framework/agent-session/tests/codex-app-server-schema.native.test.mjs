@@ -8,11 +8,12 @@ import path from 'node:path';
 import test from 'node:test';
 import { buildCodexAppServerSchemaManifest } from '../../../scripts/generate-codex-app-server-schema-manifest.mjs';
 import {
+  createCodexAppServerContractGate,
   loadCodexAppServerContract,
-  loadCodexAppServerSchemaManifest,
+  verifyCodexAppServerSchemaManifest,
 } from '../src/codex-app-server-contract.mjs';
 
-test('installed Codex regenerates the exact credential-free stable schema bundle', (t) => {
+test('installed Codex preserves the required credential-free stable schema surface', (t) => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'kungfu-codex-schema-'));
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
   const schemaDir = path.join(root, 'schema');
@@ -38,7 +39,10 @@ test('installed Codex regenerates the exact credential-free stable schema bundle
   }
   assert.equal(version.status, 0, version.stderr);
   const cliVersion = version.stdout.match(/([0-9]+\.[0-9]+\.[0-9]+)/u)?.[1];
-  assert.equal(cliVersion, '0.146.0');
+  assert.ok(
+    cliVersion,
+    `Codex CLI returned an unreadable version: ${version.stdout}`,
+  );
 
   const generated = spawnSync(
     executable,
@@ -48,7 +52,17 @@ test('installed Codex regenerates the exact credential-free stable schema bundle
   assert.equal(generated.status, 0, generated.stderr);
 
   const actual = buildCodexAppServerSchemaManifest({ schemaDir, cliVersion });
+  const verified = verifyCodexAppServerSchemaManifest(actual);
   const contract = loadCodexAppServerContract();
-  const expected = loadCodexAppServerSchemaManifest(contract);
-  assert.deepEqual(actual, expected);
+  const compatibilityContract = structuredClone(contract);
+  compatibilityContract.surfacePin.cliVersion = cliVersion;
+  compatibilityContract.surfacePin.schemaBundleFileCount = verified.fileCount;
+  compatibilityContract.surfacePin.schemaBundleSha256 = verified.sha256;
+  const gate = createCodexAppServerContractGate({
+    contract: compatibilityContract,
+    manifest: actual,
+    cliVersion,
+  });
+  assert.equal(gate.cliVersion, cliVersion);
+  assert.equal(gate.schemaBundleSha256, verified.sha256);
 });

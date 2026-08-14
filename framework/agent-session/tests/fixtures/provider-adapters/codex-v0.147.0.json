@@ -7,15 +7,47 @@
   },
   {
     "id": "codex-busy-redacted",
-    "lines": ["Working (12s • esc to interrupt)"],
+    "lines": [
+      "Working (12s • esc to interrupt)",
+      "gpt-5.6-sol high · /redacted/project"
+    ],
     "expectedState": "busy",
     "signatureId": "codex.busy.interrupt-hint"
+  },
+  {
+    "id": "codex-busy-redacted-vt-split",
+    "lines": [
+      "Working l13s • esc to inte rupt)",
+      "gpt-5.6-sol high · /redacted/project"
+    ],
+    "expectedState": "busy",
+    "signatureId": "codex.busy.interrupt-hint"
+  },
+  {
+    "id": "codex-ready-status-redacted",
+    "lines": [
+      "Independent assessment: the requested check passed.",
+      "gpt-5.6-sol high · /redacted/project"
+    ],
+    "expectedState": "ready",
+    "signatureId": "codex.ready.status-line"
   },
   {
     "id": "codex-approval-redacted",
     "lines": ["Would you like to run this command?", "1. Yes", "2. No"],
     "expectedState": "approval-needed",
     "signatureId": "codex.approval.run-command"
+  },
+  {
+    "id": "codex-project-trust-redacted",
+    "lines": [
+      "Do you trust the contents of this directory?",
+      "› 1. Yes, continue",
+      "  2. No, quit",
+      "Press enter to continue"
+    ],
+    "expectedState": "approval-needed",
+    "signatureId": "codex.approval.project-trust"
   },
   {
     "id": "codex-unknown-modal-redacted",

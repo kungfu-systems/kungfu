@@ -139,17 +139,7 @@ def execute(
             )
         runtime = services.runtime(workspace_root, home, "read-only")
         identity, runtime_dir = runtime.identity, runtime.runtime_dir
-        work_ref = {
-            "schema": "kungfu.work-ref/v1",
-            "workspaceId": plan["workspace"]["id"],
-            "profileId": "kungfu.work-control",
-            "profileRoot": plan["execution"]["workRef"]["profileRoot"],
-            "entityType": "assignment",
-            "entityId": assignment_id,
-            "entityRoot": plan["work"]["assignmentRoot"],
-            "purpose": "independent-completion-review",
-            "systemTimeCut": plan["work"]["queryProofRoot"],
-        }
+        work_ref = assignment_review.review_work_ref(plan)
         retained = services.retained_evidence(runtime_dir, plan)
         if plan["reviewExecution"]["mode"] == "retained-evidence":
             if (
@@ -195,6 +185,7 @@ def execute(
                 workspace_root=identity.workspace_root,
                 home=str(request.runtime_home),
                 work_ref=work_ref,
+                continuation=assignment_review.review_continuation(plan),
                 permission_mode="read-only",
                 event_sink=on_agent_activity,
             )

@@ -482,7 +482,7 @@
           }
         },
         "with": {
-          "buildchain-ref": "${{ inputs.buildchain-ref || 'v3' }}",
+        "buildchain-ref": "${{ inputs.buildchain-ref || 'v3-alpha' }}",
           "runner-preset": "custom",
       "platforms-json": "${{ fromJSON(inputs.macos-overflow-request-json || '{}').mode == 'self-hosted' && '[{\"id\":\"macos-arm64\",\"name\":\"macOS ARM64 self-hosted primary\",\"platform\":\"macos\",\"runner\":\"[\\\"self-hosted\\\",\\\"macOS\\\",\\\"ARM64\\\",\\\"kungfu-build-v4-macos-arm64\\\"]\",\"capabilities\":[\"native-toolchain\",\"node\",\"product-artifacts\",\"rust\"]}]' || (fromJSON(inputs.macos-overflow-request-json || '{}').mode == 'github-hosted' && '[{\"id\":\"macos-arm64\",\"name\":\"macOS ARM64 GitHub-hosted overflow\",\"platform\":\"macos\",\"runner\":\"[\\\"macos-15\\\"]\",\"capabilities\":[\"node\",\"native-toolchain\",\"product-artifacts\",\"rust\"]}]' || (inputs.platforms-json || '[{\"id\":\"linux-x64\",\"name\":\"Linux x64\",\"platform\":\"linux\",\"runner\":\"[\\\"ubuntu-24.04\\\"]\",\"capabilities\":[\"node\",\"native-toolchain\",\"product-artifacts\",\"rust\"],\"environment\":{\"CC\":\"gcc-14\",\"CXX\":\"g++-14\"}},{\"id\":\"linux-arm64\",\"name\":\"Linux ARM64\",\"platform\":\"linux\",\"runner\":\"[\\\"ubuntu-24.04-arm\\\"]\",\"capabilities\":[\"node\",\"native-toolchain\",\"product-artifacts\",\"rust\"]},{\"id\":\"macos-arm64\",\"name\":\"macOS ARM64\",\"platform\":\"macos\",\"runner\":\"[\\\"macos-15\\\"]\",\"capabilities\":[\"node\",\"native-toolchain\",\"product-artifacts\",\"rust\"]},{\"id\":\"windows-x64\",\"name\":\"Windows x64\",\"platform\":\"windows\",\"runner\":\"[\\\"windows-2022\\\"]\",\"capabilities\":[\"node\",\"native-toolchain\",\"product-artifacts\",\"rust\"]}]')) }}",
           "self-hosted-offline-fallback": false,
@@ -504,7 +504,7 @@
       "compiler-cache-provider": "${{ github.event_name == 'workflow_dispatch' && inputs.windows-compiler-cache-mode == 'off' && 'none' || 'sccache' }}",
       "compiler-cache-platforms-json": "${{ github.event_name == 'workflow_dispatch' && inputs.windows-compiler-cache-mode == 'off' && '[]' || '[\"windows-x64\"]' }}",
       "compiler-cache-required": "${{ github.event_name != 'workflow_dispatch' || inputs.windows-compiler-cache-mode != 'off' }}",
-          "buildchain-contract-lock-path": ".buildchain/contract-lock.json",
+        "buildchain-contract-lock-path": ".buildchain/alpha-contract-lock.json",
           "buildchain-contract-compatibility-policy": "major-compatible",
       "pre-upload-transport-smoke-scenario-path": ".buildchain/auditable-demo-transport-smoke.json",
           "pre-upload-transport-smoke-artifact-root": "."
@@ -610,7 +610,7 @@
       "adapter": {
         "type": "buildchain-release-admission",
         "kind": "job-uses",
-        "uses": "kungfu-systems/buildchain/.github/workflows/release-candidate-promote.yml@v3",
+        "uses": "kungfu-systems/buildchain/.github/workflows/release-candidate-promote.yml@v3-alpha",
         "job": {
           "needs": "promotion-contract",
           "if": "${{ (github.event_name == 'workflow_dispatch' && inputs.resume-candidate-run-id == '') || github.event.pull_request.merged == true }}"
@@ -655,7 +655,7 @@
       "adapter": {
         "type": "buildchain-release-candidate-recovery",
         "kind": "job-uses",
-        "uses": "kungfu-systems/buildchain/.github/workflows/release-candidate-promote.yml@1d9b35b75e16d492e6d8b18c32504e89f8806855",
+        "uses": "kungfu-systems/buildchain/.github/workflows/release-candidate-promote.yml@v3-alpha",
         "job": {
           "needs": "recovery-preflight",
           "if": "${{ always() && github.event_name == 'workflow_dispatch' && inputs.resume-candidate-run-id != '' && needs.recovery-preflight.result == 'success' }}"

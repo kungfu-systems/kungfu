@@ -151,6 +151,14 @@ if (agentWorkLabOnly) {
       'ruff',
       'format',
       '--check',
+      path.join(
+        root,
+        'framework/core/src/python/kungfu/agent/runtime_profiles.py',
+      ),
+      path.join(
+        root,
+        'framework/core/src/python/kungfu/agent/work_projection.py',
+      ),
       path.join(root, 'framework/core/src/python/kungfu/agent_work_lab.py'),
       path.join(
         root,

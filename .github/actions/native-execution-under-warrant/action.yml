@@ -1,0 +1,74 @@
+# SPDX-License-Identifier: Apache-2.0
+
+name: Run native execution under Delivery Warrant
+description: Observe, heartbeat, and continuously fence one native command with the exact protected Buildchain runtime.
+
+inputs:
+  command:
+    description: Native command executed only while the exact Warrant remains live.
+    required: true
+  pull-request:
+    description: Exact Delivery Warrant pull request number.
+    required: true
+  source-head:
+    description: Exact Delivery Warrant source head.
+    required: true
+  protected-base:
+    description: Exact protected dev branch.
+    required: true
+  qualified-base:
+    description: Exact protected base commit used by the native execution.
+    required: true
+  toolchain-root:
+    description: Exact native toolchain contract root.
+    required: true
+  environment-root:
+    description: Exact native execution environment contract root.
+    required: true
+  allowed-phases:
+    description: Comma-separated Warrant phases admitted for this execution.
+    required: true
+  output:
+    description: Consumer receipt path.
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Check out protected Buildchain Warrant runtime
+      uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      with:
+        repository: kungfu-systems/buildchain
+        ref: 065c32a242ac0b7552bd8c2b006e4f1482be5f1d
+        path: .buildchain/dev-delivery-native-runtime
+        fetch-depth: 1
+        persist-credentials: false
+    - name: Install protected Buildchain Warrant runtime
+      shell: bash
+      working-directory: .buildchain/dev-delivery-native-runtime
+      run: |
+        set -euo pipefail
+        test "$(git rev-parse HEAD)" = 065c32a242ac0b7552bd8c2b006e4f1482be5f1d
+        if [ ! -d node_modules ]; then
+          # shifu-entry-contract: allow exact pinned Buildchain dependency bootstrap before its CLI is runnable
+          corepack pnpm install --frozen-lockfile --ignore-scripts
+        fi
+    - name: Execute only under the live fenced Warrant
+      shell: bash
+      env:
+        GITHUB_TOKEN: ${{ github.token }}
+        KUNGFU_NATIVE_COMMAND: ${{ inputs.command }}
+      run: >-
+        node framework/dev-delivery/native-execution-under-warrant.mjs
+        --repository "$GITHUB_REPOSITORY"
+        --branch "${{ inputs.protected-base }}"
+        --pull-request "${{ inputs.pull-request }}"
+        --source-head "${{ inputs.source-head }}"
+        --qualified-base "${{ inputs.qualified-base }}"
+        --toolchain-root "${{ inputs.toolchain-root }}"
+        --environment-root "${{ inputs.environment-root }}"
+        --allowed-phases "${{ inputs.allowed-phases }}"
+        --runtime-root .buildchain/dev-delivery-native-runtime
+        --heartbeat-seconds 300
+        --lease-seconds 5400
+        --output "${{ inputs.output }}"

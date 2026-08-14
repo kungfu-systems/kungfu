@@ -32,6 +32,8 @@ const PULL_REQUEST_CHECKOUT = '5'.repeat(40);
 const ROOT_A = `sha256:${'a'.repeat(64)}`;
 const ROOT_B = `sha256:${'b'.repeat(64)}`;
 const ROOT_C = `sha256:${'c'.repeat(64)}`;
+const ROOT_D = `sha256:${'d'.repeat(64)}`;
+const ROOT_E = `sha256:${'e'.repeat(64)}`;
 const WARRANT = {
   schema: 'kungfu.buildchain.dev-delivery-warrant/v1',
   candidateId: ROOT_C,
@@ -39,6 +41,9 @@ const WARRANT = {
   generation: 7,
   pullRequestNumber: 42,
   sourceHead: SOURCE,
+  phase: 'qualified',
+  nativeProofRoot: ROOT_D,
+  nativeProofReuseRoot: ROOT_E,
   issuedAt: '2026-08-04T02:00:00.000Z',
   expiresAt: '2026-08-04T03:00:00.000Z',
 };
@@ -160,7 +165,7 @@ function queueView(sourceProofRoot, overrides = {}) {
         pullRequestNumber: 42,
         sourceHead: SOURCE,
         sourceProofRoot,
-        status: 'selected',
+        status: 'qualified',
         ...overrides,
       },
     },
@@ -296,6 +301,39 @@ test('queue lease readback binds revision, Warrant, fence, and exact source', ()
   );
 });
 
+test('queue lease consumes an atomically qualified two-phase Warrant', () => {
+  const receipt = verifyQueueAdmissionLease({
+    view: queueView(ROOT_A, { status: 'qualified' }),
+    pullRequestNumber: 42,
+    sourceHeadSha: SOURCE,
+    now: '2026-08-04T02:30:00.000Z',
+  });
+  assert.equal(receipt.candidateState, 'qualified');
+  assert.equal(receipt.candidateId, WARRANT.candidateId);
+  assert.equal(receipt.fencingToken, WARRANT.fencingToken);
+  assert.equal(receipt.generation, WARRANT.generation);
+  assert.throws(
+    () =>
+      verifyQueueAdmissionLease({
+        view: queueView(ROOT_A, { status: 'merged' }),
+        pullRequestNumber: 42,
+        sourceHeadSha: SOURCE,
+        now: '2026-08-04T02:30:00.000Z',
+      }),
+    /not delivery-ready: merged/u,
+  );
+  assert.throws(
+    () =>
+      verifyQueueAdmissionLease({
+        view: queueView(ROOT_A, { status: 'queued' }),
+        pullRequestNumber: 42,
+        sourceHeadSha: SOURCE,
+        now: '2026-08-04T02:30:00.000Z',
+      }),
+    /not delivery-ready: queued/u,
+  );
+});
+
 test('integration input binds merge-group authority and live queue entry', () => {
   const source = sourceFixture();
   const sourceInput = createSourceQualificationInput({
@@ -362,14 +400,14 @@ test('workflow consumes exact Buildchain Source and Integration Proofs', () => {
   const aggregate = workflow.slice(workflow.indexOf('  affected_native:\n'));
   assert.match(
     aggregate,
-    /Project exact PR qualification into Buildchain Source Proof[\s\S]*affected-native-proof\.mjs source-input[\s\S]*dev-delivery-warrant-input\.mjs[\s\S]*buildchain\.mjs dev proof source[\s\S]*--source-identity-root/u,
+    /Project exact PR qualification into Buildchain Source Proof[\s\S]*affected-native-proof\.mjs source-input[\s\S]*dev-delivery-warrant-input\.mjs[\s\S]*buildchain\.mjs dev proof source[\s\S]*--source-identity-root[\s\S]*--toolchain-root/u,
   );
   assert.match(
     aggregate,
     /Consume Warrant and record exact Integration Delivery Proof[\s\S]*dev warrant observe[\s\S]*affected-native-proof\.mjs queue-lease-verify[\s\S]*affected-native-proof\.mjs integration-input[\s\S]*dev proof integration[\s\S]*--warrant-result/u,
   );
   assert.match(aggregate, /--branch "\$protected_base"/u);
-  assert.match(aggregate, /ref: 6057d71142dfc6a9d78872e316eca87d9510e176/u);
+  assert.match(aggregate, /ref: 065c32a242ac0b7552bd8c2b006e4f1482be5f1d/u);
   assert.match(
     aggregate,
     /name: Install pinned Buildchain proof runtime[\s\S]*working-directory: \.buildchain\/dev-delivery-runtime[\s\S]*corepack pnpm install --frozen-lockfile --ignore-scripts/u,

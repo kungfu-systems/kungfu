@@ -43,7 +43,7 @@
       "pointer": {
         "kind": "file",
         "path": "framework/core/src/python/kungfu/cli/commands/agent.py",
-        "sha256": "972e4b649ea1740c9608ae53ba10bb505be6af4903d2836430aa8827ba60b3e1"
+        "sha256": "8095fdbe2bb97080cd67918b10957796763a282707621f3a6dc3803c2bc46e1e"
       },
       "description": "Agent command surface including mode selection and bootstrap status."
     }
@@ -66,7 +66,7 @@
       },
       {
         "path": "framework/core/src/python/kungfu/cli/commands/agent.py",
-        "sha256": "972e4b649ea1740c9608ae53ba10bb505be6af4903d2836430aa8827ba60b3e1"
+        "sha256": "8095fdbe2bb97080cd67918b10957796763a282707621f3a6dc3803c2bc46e1e"
       }
     ],
     "artifactSha256": [
