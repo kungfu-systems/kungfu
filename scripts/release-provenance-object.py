@@ -6,8 +6,11 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
+import subprocess
 import sys
+import unicodedata
 from pathlib import Path
 from typing import Any
 
@@ -34,6 +37,163 @@ def _write(path: str, value: Any) -> None:
         json.dumps(value, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
         encoding="utf-8",
     )
+
+
+def _git(repository: str, *args: str) -> bytes:
+    result = subprocess.run(
+        ["git", "-C", repository, *args],
+        capture_output=True,
+        check=False,
+    )
+    if result.returncode != 0:
+        raise ReleaseProvenanceError(
+            "source-content-read",
+            result.stderr.decode("utf-8", errors="replace").strip()
+            or f"git {' '.join(args)} failed",
+        )
+    return result.stdout
+
+
+def _git_blob_digests(
+    repository: str, object_ids: list[str]
+) -> dict[str, tuple[int, str]]:
+    unique_ids = list(dict.fromkeys(object_ids))
+    if not unique_ids:
+        return {}
+    process = subprocess.Popen(
+        ["git", "-C", repository, "cat-file", "--batch"],
+        stdin=subprocess.PIPE,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+    assert process.stdin is not None
+    assert process.stdout is not None
+    process.stdin.write("".join(f"{object_id}\n" for object_id in unique_ids).encode())
+    process.stdin.close()
+    digests: dict[str, tuple[int, str]] = {}
+    for expected_id in unique_ids:
+        header = process.stdout.readline().decode("ascii", errors="replace").strip()
+        fields = header.split()
+        if len(fields) != 3 or fields[0] != expected_id or fields[1] != "blob":
+            process.kill()
+            raise ReleaseProvenanceError(
+                "source-content-read", f"unexpected git cat-file header: {header}"
+            )
+        size = int(fields[2])
+        content = process.stdout.read(size)
+        if len(content) != size or process.stdout.read(1) != b"\n":
+            process.kill()
+            raise ReleaseProvenanceError(
+                "source-content-read", f"truncated git blob: {expected_id}"
+            )
+        digests[expected_id] = (size, hashlib.sha256(content).hexdigest())
+    stderr = process.stderr.read() if process.stderr is not None else b""
+    if process.wait() != 0:
+        raise ReleaseProvenanceError(
+            "source-content-read",
+            stderr.decode("utf-8", errors="replace").strip()
+            or "git cat-file --batch failed",
+        )
+    return digests
+
+
+def _source_content(repository: str, revision: str) -> dict[str, Any]:
+    """Hash one revision as a canonical logical file set, not as a Git tree."""
+
+    source_entries: list[tuple[str, str, str, str]] = []
+    listing = _git(repository, "ls-tree", "-rz", "--full-tree", revision)
+    for raw in listing.split(b"\0"):
+        if not raw:
+            continue
+        metadata, separator, path_bytes = raw.partition(b"\t")
+        if not separator:
+            raise ReleaseProvenanceError(
+                "source-content-read", "git ls-tree entry has no path separator"
+            )
+        fields = metadata.decode("ascii").split()
+        if len(fields) != 3:
+            raise ReleaseProvenanceError(
+                "source-content-read", "git ls-tree entry has invalid metadata"
+            )
+        mode, object_type, object_id = fields
+        try:
+            logical_path = path_bytes.decode("utf-8")
+        except UnicodeDecodeError as error:
+            raise ReleaseProvenanceError(
+                "source-content-path", "source path is not valid UTF-8"
+            ) from error
+        if unicodedata.normalize("NFC", logical_path) != logical_path:
+            raise ReleaseProvenanceError(
+                "source-content-path", "source path is not NFC-normalized"
+            )
+        if object_type == "blob":
+            kind = {
+                "100644": "file",
+                "100755": "executable",
+                "120000": "symlink",
+            }.get(mode)
+            if kind is None:
+                raise ReleaseProvenanceError(
+                    "source-content-mode", f"unsupported blob mode: {mode}"
+                )
+        elif object_type == "commit" and mode == "160000":
+            kind = "submodule"
+        else:
+            raise ReleaseProvenanceError(
+                "source-content-mode",
+                f"unsupported source entry: mode={mode} type={object_type}",
+            )
+        source_entries.append((logical_path, kind, object_type, object_id))
+
+    blob_digests = _git_blob_digests(
+        repository,
+        [
+            object_id
+            for _, _, object_type, object_id in source_entries
+            if object_type == "blob"
+        ],
+    )
+    entries: list[dict[str, Any]] = []
+    for logical_path, kind, object_type, object_id in source_entries:
+        if object_type == "blob":
+            size, digest = blob_digests[object_id]
+        else:
+            content = object_id.encode("ascii")
+            size, digest = len(content), hashlib.sha256(content).hexdigest()
+        entries.append(
+            {
+                "bytes": size,
+                "contentSha256": digest,
+                "kind": kind,
+                "path": logical_path,
+            }
+        )
+
+    manifest = {
+        "schema": "kungfu.release-source-content-file-set/v1",
+        "entries": entries,
+    }
+    canonical = json.dumps(
+        manifest,
+        ensure_ascii=False,
+        separators=(",", ":"),
+        sort_keys=True,
+    ).encode("utf-8")
+    algorithm = "sha256-canonical-file-set-v1"
+    digest = hashlib.sha256(canonical).hexdigest()
+    content_record = {
+        "schema": "kungfu.release-source-content/v1",
+        "algorithm": algorithm,
+        "digest": digest,
+    }
+    return {
+        "schema": "kungfu.release-source-content-digest/v1",
+        "algorithm": algorithm,
+        "digest": digest,
+        "contentRoot": semantic_root(content_record),
+        "entryCount": len(entries),
+        "manifestRoot": semantic_root(manifest),
+    }
 
 
 def _root_or_identity(root: str | None, identity: str | None, field: str) -> str:
@@ -154,6 +314,9 @@ def _parser() -> argparse.ArgumentParser:
     migration.add_argument("--output", required=True)
     migration_verification = commands.add_parser("verify-migration")
     migration_verification.add_argument("--input", required=True)
+    source_content = commands.add_parser("source-content")
+    source_content.add_argument("--repository", default=".")
+    source_content.add_argument("--revision", required=True)
     commands.add_parser("admission")
     return parser
 
@@ -185,6 +348,15 @@ def main(argv: list[str] | None = None) -> int:
             report = verify_migration(_json_file(args.input, {}))
             print(json.dumps(report, indent=2, sort_keys=True))
             return 0 if report["ok"] else 1
+        if args.command == "source-content":
+            print(
+                json.dumps(
+                    _source_content(args.repository, args.revision),
+                    indent=2,
+                    sort_keys=True,
+                )
+            )
+            return 0
         if args.command == "migrate-candidate":
             bundle = migrate_candidate_v1(
                 _json_file(args.input, {}),

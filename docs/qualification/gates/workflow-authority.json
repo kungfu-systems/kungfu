@@ -493,20 +493,20 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "diagnostic",
-          "definitionDigest": "sha256:73ec2ac48b58aaa17ffbc6b5854da451a9d09686ff81f2623c193fe3fbb540fb",
+          "definitionDigest": "sha256:93a2c634189f16dbc788e98303e6de96ddcb5528b766ae2ff38410a4ea1349c6",
           "credentials": {"githubToken":"read","oidc":false,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
           "externalActions": ["actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0","actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02"],
-          "steps": [{"index":1,"label":"name:Check out exact selected candidate source","definitionDigest":"sha256:cde048a2506248bd5e78b82f351f2e72cefcb3d17b6b8615a5dc510fe8348031"},{"index":2,"label":"id:provenance","definitionDigest":"sha256:621aba062e78063f2b4431cba167f2baecdb7b043bc08500a39a5b50eeb5e2d0"},{"index":3,"label":"name:Retain candidate provenance evidence","authority":"evidence-publication","definitionDigest":"sha256:6c78e24536d8f5d601ad57dd07fd1153329a14e9da32594385a4293f6159637c"}]
+          "steps": [{"index":1,"label":"name:Check out exact selected candidate source","definitionDigest":"sha256:cde048a2506248bd5e78b82f351f2e72cefcb3d17b6b8615a5dc510fe8348031"},{"index":2,"label":"id:provenance","definitionDigest":"sha256:052a8830cbdaaede0821872d247e6915b739f6e76505db239037310b8e24995f"},{"index":3,"label":"name:Retain candidate provenance evidence","authority":"evidence-publication","definitionDigest":"sha256:ed3601c8fb5c4191c1a2c09e86a8b46e93750fd64be8e0022b39b6cacf26467b"}]
         },
         {
           "id": "release-cut-lock",
           "authority": "qualification",
           "publication": "none",
           "receipt": "diagnostic",
-          "definitionDigest": "sha256:41aa5e2118162c76122e5ef83dc623822672b1278e0623738fd9eea7f711573b",
+          "definitionDigest": "sha256:0fce481e02140aa8c1a8737a2c2cbc767f9929efe2dc5ee9c02afddd9435f2dc",
           "credentials": {"githubToken":"read","oidc":false,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
           "externalActions": ["actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0"],
-          "steps": [{"index":1,"label":"name:Check out the dev mirror verifier","definitionDigest":"sha256:8d92682cf7803f194bf70107c82b9ee6d73e0de0b37f91a3ed75850183e688e3"},{"index":2,"label":"name:Fetch exact frozen Release Cut objects","definitionDigest":"sha256:74cc2b6e4607b8069f49ae903e6992163f007c8fa940342ba28a2efa110d41ce"},{"index":3,"label":"id:lock","definitionDigest":"sha256:967767f31651f4ee94f694f8ddaef3c162467948579258a193bd5d018c337d09"}]
+          "steps": [{"index":1,"label":"name:Check out the dev mirror verifier","definitionDigest":"sha256:8d92682cf7803f194bf70107c82b9ee6d73e0de0b37f91a3ed75850183e688e3"},{"index":2,"label":"name:Fetch exact frozen Release Cut objects","definitionDigest":"sha256:74cc2b6e4607b8069f49ae903e6992163f007c8fa940342ba28a2efa110d41ce"},{"index":3,"label":"id:lock","definitionDigest":"sha256:3bee27f3b1e6c1a6d99fd1472b1df8a65e38b5aa5374e0255e65aad39b19acf1"}]
         },
         {
           "id": "resolve-channels",
@@ -1009,7 +1009,7 @@
     {
       "path": ".github/workflows/release-new-version.yml",
       "authority": "release-control",
-      "definitionDigest": "sha256:26ac5b52d5bf4475c2902d249827466c1c4355deabd05377688795138700c2f6",
+      "definitionDigest": "sha256:a3ccdf2003736088d75defd5e54b5650cb3e74a4b0ec2d22cb7b50d514402aec",
       "jobs": [
         {
           "id": "alpha-timeline",
@@ -1046,10 +1046,10 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "diagnostic",
-          "definitionDigest": "sha256:ab200c0bb8750671821cd1f54eca0e87ba7e1498f1d699935c611920f460e3ad",
+          "definitionDigest": "sha256:67a2e69b940567165564f322a8b939e05f0333bea4fce748593618395456808c",
           "credentials": {"githubToken":"read","oidc":false,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
-          "externalActions": ["actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0","actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e","actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0","actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02"],
-          "steps": [{"index":1,"label":"id:candidate","definitionDigest":"sha256:b26ccd80ef6de735f425e42a2f6bc52b4d0473bf52771cc1d9c2efecb674843a"},{"index":2,"label":"name:Checkout immutable Alpha candidate","definitionDigest":"sha256:8f1ff28917c625d57760451e82ab1239ddf747a611068bf9c6ad1067ad8f6284"},{"index":3,"label":"uses:actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e","definitionDigest":"sha256:a869cc671103a9106dc90b4275a4148de9a5d18cd3578a2642d8ae8076d8dbf0"},{"index":4,"label":"id:preflight","definitionDigest":"sha256:de360134fee9dbf785d19794d87d62f16b07c7bf2872c83ce97be75fa0b8a02f"},{"index":5,"label":"id:candidate-provenance","definitionDigest":"sha256:ff6f25aece19b6b486701d5320b9763aee9abcc71f87b8ed50b3a8252280ee48"},{"index":6,"label":"name:Checkout immutable promotion result","definitionDigest":"sha256:9ff1aa9f5707e1bed64e57983cf9e409bd19fc8146dd5aa1801e1f6d4b8413f4"},{"index":7,"label":"id:promotion-tree","definitionDigest":"sha256:391088f704e8df632f937c4fe9c1265efb3846849c489032170178e871bde248"},{"index":8,"label":"id:promotion-provenance","definitionDigest":"sha256:1030278360fcc0d344b4fff17b0b73e3ec8e5331dbe3a7c4378bdb8924fa4ddf"},{"index":9,"label":"name:Retain candidate and promotion provenance evidence","authority":"evidence-publication","definitionDigest":"sha256:609756f889dac78980de8022367dc8cc8a9c77c5b1d73422e5dd65db0531bcf6"},{"index":10,"label":"name:Rehearse the Kungfu promotion contract for a pull request","definitionDigest":"sha256:0af2d30832fe4041d9997fd0a331f528a62b23fba2e3c9cfc23e45dd8ab38947"},{"index":11,"label":"name:Rehearse the Kungfu promotion contract for a manual dry-run","definitionDigest":"sha256:ac10175c46721c013cdc70ec9c5db82713fabd00be703439cf665365bef6c05d"}]
+          "externalActions": ["actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0","actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e","actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093","actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0","actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02"],
+          "steps": [{"index":1,"label":"id:candidate","definitionDigest":"sha256:b26ccd80ef6de735f425e42a2f6bc52b4d0473bf52771cc1d9c2efecb674843a"},{"index":2,"label":"name:Checkout immutable Alpha candidate","definitionDigest":"sha256:8f1ff28917c625d57760451e82ab1239ddf747a611068bf9c6ad1067ad8f6284"},{"index":3,"label":"uses:actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e","definitionDigest":"sha256:a869cc671103a9106dc90b4275a4148de9a5d18cd3578a2642d8ae8076d8dbf0"},{"index":4,"label":"id:preflight","definitionDigest":"sha256:de360134fee9dbf785d19794d87d62f16b07c7bf2872c83ce97be75fa0b8a02f"},{"index":5,"label":"id:candidate-provenance-artifact","definitionDigest":"sha256:bfee41fd86537856f7cca54c756fa371288d46917f018d91bfc7c24ba28c44cb"},{"index":6,"label":"name:Download exact candidate provenance evidence","authority":"evidence-publication","definitionDigest":"sha256:cb92e9ec40b5afc9f7c4c8240dd26df8aa7c427a0676239eee6958bdb35e0602"},{"index":7,"label":"id:candidate-provenance","definitionDigest":"sha256:c66afa5369b121eece338304ceb91394665fb637c22fa7f4fd42f92ca67eb052"},{"index":8,"label":"name:Checkout immutable promotion result","definitionDigest":"sha256:9ff1aa9f5707e1bed64e57983cf9e409bd19fc8146dd5aa1801e1f6d4b8413f4"},{"index":9,"label":"id:promotion-tree","authority":"evidence-publication","definitionDigest":"sha256:391088f704e8df632f937c4fe9c1265efb3846849c489032170178e871bde248"},{"index":10,"label":"id:promotion-provenance","definitionDigest":"sha256:1030278360fcc0d344b4fff17b0b73e3ec8e5331dbe3a7c4378bdb8924fa4ddf"},{"index":11,"label":"name:Retain candidate and promotion provenance evidence","authority":"evidence-publication","definitionDigest":"sha256:609756f889dac78980de8022367dc8cc8a9c77c5b1d73422e5dd65db0531bcf6"},{"index":12,"label":"name:Rehearse the Kungfu promotion contract for a pull request","definitionDigest":"sha256:0af2d30832fe4041d9997fd0a331f528a62b23fba2e3c9cfc23e45dd8ab38947"},{"index":13,"label":"name:Rehearse the Kungfu promotion contract for a manual dry-run","definitionDigest":"sha256:ac10175c46721c013cdc70ec9c5db82713fabd00be703439cf665365bef6c05d"}]
         },
         {
           "id": "recover",

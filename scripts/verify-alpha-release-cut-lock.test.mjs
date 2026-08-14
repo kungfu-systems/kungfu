@@ -107,6 +107,14 @@ test('candidate patrol verifies the frozen cut without settling from moving dev'
   assert.match(patrol, /git show -s --format=%P/u);
   assert.match(
     patrol,
+    /semantic candidate admission remains root-authoritative/u,
+  );
+  assert.doesNotMatch(
+    patrol,
+    /test "\$\(git show -s --format=%P "\$candidate_sha"\)"/u,
+  );
+  assert.match(
+    patrol,
     /needs\.release-cut-lock\.outputs\.candidate-settlement-authorized == 'true'/u,
   );
 });

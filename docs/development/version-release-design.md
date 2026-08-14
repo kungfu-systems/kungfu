@@ -99,7 +99,13 @@ qualification, approval, and authority Facts. Exact commit, tree, ancestry, pare
 count, and parent order remain independently rooted observations. Merge, linear,
 flattened, reordered-parent, and ff-only delivery therefore cannot silently rewrite
 the declared history. Historical v1 objects retain their original roots and verifier;
-v1-to-v2 migration appends an explicit `succeeds` relation and rooted receipt.
+v1-to-v2 migration appends an explicit `succeeds` relation and rooted receipt. The
+candidate patrol computes the content digest from a canonical logical file set and
+retains the v2 envelope under the exact candidate commit. Promotion imports and
+verifies that envelope, including its content, development Cut, prior Alpha,
+qualification, approval-policy, and authority roots; it never reconstructs those
+meanings from Git parent positions. A manual legacy rehearsal must name the exact
+successful patrol run whose retained v1 envelope is being replayed.
 
 **3. A release tag carries weight = code-freeze ⊗ binary distribution, performed
 atomically.** kungfu ships **prebuilt cross-platform binaries** (node-pre-gyp artifacts via

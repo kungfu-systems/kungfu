@@ -71,8 +71,14 @@ and tree OIDs and any parent sequence are retained in a separately rooted
 The v1 reader remains fail-closed and byte-compatible. Migration never rewrites
 the predecessor: it emits one independently verifiable v2 successor, a rooted
 `succeeds` relation, and a migration receipt binding both object and projection
-roots. This producer/API stage grants no publication or admission-default
-authority and does not change release workflow topology.
+roots. Candidate Patrol now retains the verified v2 envelope in an immutable
+artifact named by the exact candidate commit. `Release - New Version` resolves
+that exact successful patrol run, verifies the candidate commit, Git tree,
+canonical file-set digest, semantic relation roots, and non-authoritative
+projection, then supplies the unchanged envelope to promotion. It never assigns
+development Cut or prior Alpha meaning to parent positions. A manual legacy
+rehearsal may name one exact successful patrol run and remains on the unchanged
+v1 verifier. Neither path grants publication or admission-default authority.
 
 ### Fresh GitHub-hosted functional matrix
 
