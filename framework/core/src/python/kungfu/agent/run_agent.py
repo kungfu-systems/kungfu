@@ -33,9 +33,9 @@ from kungfu.agent.native_launch import (
     encode_wrapper_prompt as _encode_windows_wrapper_prompt,
     native_environment as _native_environment,
     native_provider_adapter,
-    refresh_native_skill_runtime_audit,
     resolve_command_wrapper as _resolve_windows_command_wrapper,
 )
+from kungfu.agent.provider_bootstrap import refresh_native_skill_runtime_audit
 from kungfu.agent.managed_run import ManagedRunCoordinator
 from kungfu.agent.provider_output import (
     parse_provider_output,

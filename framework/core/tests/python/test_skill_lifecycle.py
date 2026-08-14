@@ -12,7 +12,7 @@ from pathlib import Path
 import pytest
 from click.testing import CliRunner
 
-from kungfu.agent.native_launch import refresh_native_skill_runtime_audit
+from kungfu.agent.provider_bootstrap import refresh_native_skill_runtime_audit
 from kungfu.canonical_json import canonical_json_bytes
 from kungfu.cli.commands import kfc
 import kungfu.cli.commands.agent as agent_command_module

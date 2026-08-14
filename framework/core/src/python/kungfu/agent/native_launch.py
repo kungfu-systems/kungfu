@@ -23,12 +23,8 @@ from kungfu.agent.work_projection import WorkProjectionPort
 from kungfu.agent import resources as agent_resources
 from kungfu.agent import runtime_profiles
 from kungfu.agent import session_contract
-from kungfu.skill import (
-    build_skill_context,
-    build_skill_runtime_audit,
-    read_audit_file,
-    write_skill_runtime_audit,
-)
+from kungfu.agent.provider_bootstrap import prepare_native_skill_runtime_audit
+from kungfu.skill import build_skill_context
 from kungfu.workspace import (
     WorkspaceTargetRequired,
     load_workspace_registry,
@@ -378,32 +374,6 @@ def native_provider_adapter(
     )
 
 
-def _native_skill_work_ref(work_ref: Mapping[str, Any] | None) -> str | None:
-    if work_ref is None:
-        return None
-    return str(work_ref.get("entityId") or work_ref.get("workspaceId") or "") or None
-
-
-def refresh_native_skill_runtime_audit(env: Mapping[str, str]) -> None:
-    """Refresh the Agent Console pointer after rooted on-demand Skill activity."""
-
-    output_path = env.get("KUNGFU_SKILL_RUNTIME_AUDIT_FINAL_FILE")
-    runtime_home = env.get("KF_HOME")
-    if not output_path or not runtime_home:
-        return
-    audit_documents = []
-    audit_path = env.get("KUNGFU_SKILL_AUDIT_FILE")
-    if audit_path and Path(audit_path).is_file():
-        audit_documents.append(read_audit_file(audit_path))
-    document = build_skill_runtime_audit(
-        runtime_home,
-        audit_documents=audit_documents,
-        run_id=env.get("KUNGFU_SKILL_RUN_ID"),
-        work_ref=env.get("KUNGFU_SKILL_WORK_REF"),
-    )
-    write_skill_runtime_audit(output_path, document)
-
-
 def native_environment(
     provider: str,
     *,
@@ -549,7 +519,6 @@ def native_environment(
     )
     if session_ref is not None:
         attempt_id = str(session_ref["sessionAttemptId"])
-        skill_work_ref = _native_skill_work_ref(work_ref)
         skill_audit_log_path = os.path.join(
             runtime_dir,
             "skill-manager",
@@ -565,22 +534,17 @@ def native_environment(
             env=ambient,
             cwd=workspace_root,
         )
-        skill_runtime_audit = build_skill_runtime_audit(
+        (
+            skill_work_ref,
+            skill_runtime_audit,
+            skill_runtime_audit_path,
+            skill_runtime_audit_final_path,
+        ) = prepare_native_skill_runtime_audit(
             runtime_home,
-            run_id=attempt_id,
-            work_ref=skill_work_ref,
-        )
-        skill_runtime_audit_path = os.path.join(
             runtime_dir,
-            "skill-manager",
-            f"agent-console-{attempt_id}.json",
+            attempt_id,
+            work_ref,
         )
-        skill_runtime_audit_final_path = os.path.join(
-            runtime_dir,
-            "skill-manager",
-            f"agent-console-{attempt_id}-final.json",
-        )
-        write_skill_runtime_audit(skill_runtime_audit_path, skill_runtime_audit)
         agent_skill_projection = skill_runtime_audit["surfaceProjections"]["agent"]
         console_envelope_body = {
             "schema": "kungfu.agent-console-envelope/v1",
