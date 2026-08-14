@@ -76,9 +76,9 @@ jobs:
 
   source_acceptance:
     name: Candidate source acceptance
-    uses: kungfu-systems/buildchain/.github/workflows/check.yml@4354638200137eb07d3272f4bcbce46131aea74c
+    uses: kungfu-systems/buildchain/.github/workflows/check.yml@fb0ad6d84f10a1f9b872a799e035232d82558bd0
     with:
-      buildchain-ref: 4354638200137eb07d3272f4bcbce46131aea74c
+      buildchain-ref: fb0ad6d84f10a1f9b872a799e035232d82558bd0
       mode: source
       upload-artifacts: true
       source-proof-reuse: true
