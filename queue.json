@@ -3,7 +3,7 @@
   "contract": "kungfu-buildchain-dev-delivery-warrant-queue",
   "repository": "kungfu-systems/kungfu",
   "protectedBase": "dev/v4/v4.0",
-  "generation": 2304,
+  "generation": 2305,
   "fencingCounter": 427,
   "policy": {
     "agingSeconds": 900,
@@ -61,7 +61,7 @@
     "phase": "provisional",
     "expectedOldStateRoot": "sha256:d33aa5d4722dbdca59e5e56a6292127343d43ce48600d489addd1f1bdfedafaa",
     "issuedAt": "2026-08-14T15:26:33.801Z",
-    "expiresAt": "2026-08-14T16:56:33.801Z",
+    "expiresAt": "2026-08-14T16:57:15.744Z",
     "fencingToken": "sha256:6adb22ea505e277c14ec39595ba360632657584c3a9b95d0ef3b5179c9ad6082",
     "nextAction": "Run or reuse the exact semantic native proof, then atomically qualify this fenced Warrant."
   },
@@ -25182,10 +25182,10 @@
       "sourceWorkflowRunId": 31800955332,
       "priority": "ordinary",
       "enqueuedAt": "2026-08-14T13:28:46.848Z",
-      "updatedAt": "2026-08-14T15:26:33.801Z",
+      "updatedAt": "2026-08-14T15:27:15.744Z",
       "attempts": 3,
       "recoveries": 0,
-      "status": "selected",
+      "status": "proving",
       "terminal": null,
       "affectedPaths": [
         ".kungfu/retained-native-evidence/2026-08-11-kungfu-skill-multi-surface-runtime-audit/agent-console/events.jsonl",
@@ -25385,6 +25385,6 @@
       ]
     }
   ],
-  "updatedAt": "2026-08-14T15:26:33.801Z",
-  "stateRoot": "sha256:4da8ff06766b333a806ea385f7c8d5b53cde433648776b6ec9f5b6a159547065"
+  "updatedAt": "2026-08-14T15:27:15.744Z",
+  "stateRoot": "sha256:87badec5126d029fc57277b2b0c626d376fda7fe43183b7914ada64580a8ea9f"
 }
