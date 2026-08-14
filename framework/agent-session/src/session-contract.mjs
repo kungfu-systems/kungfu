@@ -189,6 +189,13 @@ export function validateAgentConsoleEnvelope(value) {
       'registryStateRoot',
       'historyRoot',
       'diagnosisRoot',
+      'catalogRoot',
+      'decisionPolicyRoot',
+      'workRefRoot',
+      'kfxDependencyRoots',
+      'receiptRoots',
+      'recoveryRoot',
+      'entrypoints',
       'authority',
     ]);
     exactFields(
@@ -205,12 +212,57 @@ export function validateAgentConsoleEnvelope(value) {
       'registryStateRoot',
       'historyRoot',
       'diagnosisRoot',
+      'catalogRoot',
+      'decisionPolicyRoot',
+      'recoveryRoot',
     ]) {
       if (!ROOT.test(audit[field]))
         fail(
           `AgentConsoleEnvelope.skillRuntimeAudit.${field} must be a sha256 root`,
         );
     }
+    if (
+      audit.workRefRoot !== null &&
+      !ROOT.test(String(audit.workRefRoot ?? ''))
+    )
+      fail(
+        'AgentConsoleEnvelope.skillRuntimeAudit.workRefRoot must be null or a sha256 root',
+      );
+    for (const field of ['kfxDependencyRoots', 'receiptRoots']) {
+      const roots = audit[field];
+      if (
+        !Array.isArray(roots) ||
+        new Set(roots).size !== roots.length ||
+        roots.some((root) => !ROOT.test(String(root)))
+      )
+        fail(
+          `AgentConsoleEnvelope.skillRuntimeAudit.${field} must be unique sha256 roots`,
+        );
+    }
+    const skillEntrypoints = object(
+      audit.entrypoints,
+      'AgentConsoleEnvelope.skillRuntimeAudit.entrypoints',
+    );
+    const skillEntrypointFields = new Set([
+      'catalog',
+      'advise',
+      'read',
+      'audit',
+      'explain',
+      'diagnose',
+      'kfx',
+    ]);
+    exactFields(
+      skillEntrypoints,
+      skillEntrypointFields,
+      skillEntrypointFields,
+      'AgentConsoleEnvelope.skillRuntimeAudit.entrypoints',
+    );
+    for (const field of skillEntrypointFields)
+      validateArgv(
+        skillEntrypoints[field],
+        `AgentConsoleEnvelope.skillRuntimeAudit.entrypoints.${field}`,
+      );
     if (audit.authority !== 'read-only-projection')
       fail(
         'AgentConsoleEnvelope.skillRuntimeAudit.authority must be read-only-projection',

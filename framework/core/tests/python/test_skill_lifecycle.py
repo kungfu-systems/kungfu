@@ -268,11 +268,27 @@ def test_runtime_audit_projects_one_root_across_every_surface(tmp_path):
         work_ref="work:shared-runtime-audit",
     )
 
-    roots = {
-        project_skill_runtime_audit(document, surface)["runtimeAuditRoot"]
-        for surface in ("agent", "cli", "gui", "tui", "managed-run")
+    surfaces = ("agent", "cli", "gui", "tui", "managed-run")
+    projections = {
+        surface: project_skill_runtime_audit(document, surface) for surface in surfaces
     }
-    assert roots == {document["runtimeAuditRoot"]}
+    shared_fields = {
+        surface: {key: value for key, value in projection.items() if key != "surface"}
+        for surface, projection in projections.items()
+    }
+    assert (
+        len({json.dumps(value, sort_keys=True) for value in shared_fields.values()})
+        == 1
+    )
+    assert next(iter(shared_fields.values())) == {
+        "runtimeAuditRoot": document["runtimeAuditRoot"],
+        "registryStateRoot": document["roots"]["registryStateRoot"],
+        "historyRoot": document["roots"]["historyRoot"],
+        "diagnosisRoot": document["roots"]["diagnosisRoot"],
+        "auditRoots": document["roots"]["auditRoots"],
+        "dependencyRoots": document["roots"]["dependencyRoots"],
+        "authority": "read-only-projection",
+    }
     skill = document["skills"][0]
     assert skill["identity"]["contentRoot"].startswith("sha256:")
     assert skill["lifecycle"] == "retired"
@@ -762,6 +778,77 @@ def test_outer_managers_have_no_authoritative_registry_writer():
     assert "copyFileSync" not in node
 
 
+def test_effectful_operation_inventory_has_one_guarded_writer_boundary():
+    repo = Path(__file__).resolve().parents[4]
+    contract = json.loads(
+        (repo / "framework/skill/kungfu-skill.contract.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    inventory = contract["effectfulOperationInventory"]
+    assert set(inventory["lifecycleOperations"]) == {
+        "install",
+        "update",
+        "enable",
+        "select",
+        "load",
+        "invoke",
+        "suspend",
+        "retire",
+        "remove",
+        "rollback",
+    }
+    assert inventory["requiredGuard"] == "expected-plan-root"
+    assert inventory["directStoreWrites"] is False
+    assert set(inventory["clients"]) == {
+        "agent",
+        "cli",
+        "gui",
+        "tui",
+        "managed-run",
+    }
+    assert set(inventory["clients"].values()) == {"read-only-projection"}
+    assert inventory["registryWriter"].endswith("registry.py::apply_plan")
+    assert inventory["dependencyExecutor"].endswith(
+        "dependencies.py::invoke_dependency_plan"
+    )
+
+
+def test_simple_mutation_cli_applies_exact_invoke_plan(tmp_path):
+    home = tmp_path / "home"
+    _install_and_select(
+        home,
+        _package(tmp_path / "package"),
+        "work:cli-invoke",
+        _root({"work": "cli-invoke"}),
+    )
+    runner = CliRunner()
+
+    preview = runner.invoke(
+        kfc,
+        ["-H", str(home), "skill", "invoke", "exact-skill", "--json"],
+    )
+    assert preview.exit_code == 0, preview.output
+    plan = json.loads(preview.output)
+
+    applied = runner.invoke(
+        kfc,
+        [
+            "-H",
+            str(home),
+            "skill",
+            "invoke",
+            "exact-skill",
+            "--execute",
+            "--expected-plan-root",
+            plan["planRoot"],
+            "--json",
+        ],
+    )
+    assert applied.exit_code == 0, applied.output
+    assert json.loads(applied.output)["operation"] == "invoke"
+
+
 def test_instruction_only_skill_is_inert_and_never_calls_runtime_authority(
     tmp_path, monkeypatch
 ):
@@ -795,6 +882,89 @@ def test_instruction_only_skill_is_inert_and_never_calls_runtime_authority(
             expected_plan_root=plan["planRoot"],
         )
     assert refused.value.code == "KF_SKILL_INSTRUCTION_ONLY_INERT"
+
+
+def test_required_unresolved_kfx_refusal_is_identical_across_five_surfaces(
+    tmp_path, monkeypatch
+):
+    home = tmp_path / "home"
+    runtime = tmp_path / "runtime"
+    work_ref = "kungfu:work:test/unresolved"
+    work_root = "sha256:" + "a" * 64
+    cut_root = "sha256:" + "b" * 64
+    policy_root = "sha256:" + "c" * 64
+    dependency = {
+        "key": "missing-reader",
+        "revision": 7,
+        "root": "sha256:" + "d" * 64,
+        "required": True,
+        "capabilityRequests": ["filesystem.read"],
+    }
+    package = _package(
+        tmp_path / "operational-missing",
+        skill_class="operational",
+        dependencies={"kfx": [dependency], "profiles": []},
+        effects={
+            "mode": "declared",
+            "declarations": [
+                {
+                    "id": "read-input",
+                    "type": "filesystem-read",
+                    "authorityRef": (f"kfx:missing-reader@7#{dependency['root']}"),
+                }
+            ],
+        },
+    )
+    _install_and_select(home, package, work_ref, work_root)
+    monkeypatch.setattr(
+        skill_authority.storage_service,
+        "kfx_registry",
+        lambda *_args, **_kwargs: {
+            "schema": "kungfu.kfx.load-plan/v2",
+            "revision": 7,
+            "planRoot": "sha256:" + "1" * 64,
+            "graphRoot": "sha256:" + "2" * 64,
+            "packages": [],
+            "hostContract": {
+                "admission": {"state": "admitted"},
+                "revision": 7,
+                "generationRoot": "sha256:" + "3" * 64,
+                "runtimeAuthorizations": [],
+            },
+        },
+    )
+
+    plan = plan_dependency_invocation(
+        home,
+        runtime,
+        "exact-skill",
+        work_ref=work_ref,
+        work_root=work_root,
+        cut_root=cut_root,
+        policy_root=policy_root,
+        host="agent",
+        run_id="run-unresolved",
+    )
+
+    assert plan["decision"]["status"] == "refused"
+    assert plan["decision"]["code"] == "KF_SKILL_KFX_MISSING"
+    projections = plan["surfaceProjections"]
+    assert set(projections) == {"agent", "cli", "gui", "tui", "managed-run"}
+    assert {row["planRoot"] for row in projections.values()} == {plan["planRoot"]}
+    assert {row["decisionStatus"] for row in projections.values()} == {"refused"}
+    assert {row["decisionCode"] for row in projections.values()} == {
+        "KF_SKILL_KFX_MISSING"
+    }
+    assert {row["executionAllowed"] for row in projections.values()} == {False}
+    assert len({row["recovery"] for row in projections.values()}) == 1
+    with pytest.raises(SkillAuthorityError) as refused:
+        invoke_dependency_plan(
+            home,
+            runtime,
+            plan,
+            expected_plan_root=plan["planRoot"],
+        )
+    assert refused.value.code == "KF_SKILL_KFX_MISSING"
 
 
 def test_operational_skill_uses_exact_native_kfx_authorization_and_one_surface_root(

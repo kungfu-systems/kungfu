@@ -4,7 +4,7 @@
   "title": "Kungfu Skill dependency invocation receipt",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schema", "planRoot", "skill", "work", "authority", "nativeAuthorizationDecisions", "profileReceipts", "auditIdentityRoot", "status", "kfxInvocationBoundary", "selectionLoadOrInvocationIsCompletion", "receiptRoot", "surfaceProjections"],
+  "required": ["schema", "planRoot", "skill", "work", "authority", "decision", "nativeAuthorizationDecisions", "profileReceipts", "auditIdentityRoot", "status", "kfxInvocationBoundary", "selectionLoadOrInvocationIsCompletion", "receiptRoot", "surfaceProjections"],
   "properties": {
     "schema": {"const": "kungfu.skill-dependency-invocation-receipt/v2"},
     "planRoot": {"$ref": "#/$defs/root"},
@@ -14,6 +14,7 @@
       "type": "object",
       "required": ["skillRegistryRoot", "profileAuthority", "policyRoot", "cutRoot", "host", "trustReportRoots", "capabilityDecisionRoot"]
     },
+    "decision": {"$ref": "#/$defs/decision"},
     "nativeAuthorizationDecisions": {
       "type": "array",
       "items": {
@@ -40,25 +41,41 @@
     "projection": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["surface", "planRoot", "receiptRoot", "capabilityDecisionRoot", "trustReportRoots", "auditIdentityRoot"],
+      "required": ["surface", "planRoot", "receiptRoot", "capabilityDecisionRoot", "trustReportRoots", "auditIdentityRoot", "decisionStatus", "decisionCode", "executionAllowed", "recovery"],
       "properties": {
-        "surface": {"enum": ["agent", "cli", "gui", "tui"]},
+        "surface": {"enum": ["agent", "cli", "gui", "tui", "managed-run"]},
         "planRoot": {"$ref": "#/$defs/root"},
         "receiptRoot": {"$ref": "#/$defs/root"},
         "capabilityDecisionRoot": {"$ref": "#/$defs/root"},
         "trustReportRoots": {"type": "array", "uniqueItems": true, "items": {"$ref": "#/$defs/root"}},
-        "auditIdentityRoot": {"$ref": "#/$defs/root"}
+        "auditIdentityRoot": {"$ref": "#/$defs/root"},
+        "decisionStatus": {"enum": ["inert", "refused", "degraded", "ready"]},
+        "decisionCode": {"type": "string", "pattern": "^KF_SKILL_[A-Z0-9_]+$"},
+        "executionAllowed": {"type": "boolean"},
+        "recovery": {"type": "string", "minLength": 1}
+      }
+    },
+    "decision": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "code", "executionAllowed", "recovery"],
+      "properties": {
+        "status": {"enum": ["inert", "refused", "degraded", "ready"]},
+        "code": {"type": "string", "pattern": "^KF_SKILL_[A-Z0-9_]+$"},
+        "executionAllowed": {"type": "boolean"},
+        "recovery": {"type": "string", "minLength": 1}
       }
     },
     "surfaces": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["agent", "cli", "gui", "tui"],
+      "required": ["agent", "cli", "gui", "tui", "managed-run"],
       "properties": {
         "agent": {"$ref": "#/$defs/projection"},
         "cli": {"$ref": "#/$defs/projection"},
         "gui": {"$ref": "#/$defs/projection"},
-        "tui": {"$ref": "#/$defs/projection"}
+        "tui": {"$ref": "#/$defs/projection"},
+        "managed-run": {"$ref": "#/$defs/projection"}
       }
     }
   }

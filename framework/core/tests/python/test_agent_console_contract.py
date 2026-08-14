@@ -71,6 +71,33 @@ def _work_ref():
     }
 
 
+def _skill_runtime_pointer():
+    return {
+        "schema": "kungfu.skill-runtime-audit-pointer/v1",
+        "path": "/runtime/skill-manager/agent-console-attempt-1.json",
+        "runtimeAuditRoot": ROOT_HASH,
+        "registryStateRoot": ROOT_HASH,
+        "historyRoot": ROOT_HASH,
+        "diagnosisRoot": ROOT_HASH,
+        "catalogRoot": ROOT_HASH,
+        "decisionPolicyRoot": ROOT_HASH,
+        "workRefRoot": ROOT_HASH,
+        "kfxDependencyRoots": [ROOT_HASH],
+        "receiptRoots": [ROOT_HASH],
+        "recoveryRoot": ROOT_HASH,
+        "entrypoints": {
+            "catalog": ["kungfu", "skill", "catalog", "--json"],
+            "advise": ["kungfu", "agent", "skill-advisory", "--json"],
+            "read": ["kungfu", "skill", "read", "<key>", "--json"],
+            "audit": ["kungfu", "skill", "audit", "--json"],
+            "explain": ["kungfu", "skill", "explain", "<key>", "--json"],
+            "diagnose": ["kungfu", "skill", "diagnose", "--json"],
+            "kfx": ["kungfu", "kfx", "native", "status", "--json"],
+        },
+        "authority": "read-only-projection",
+    }
+
+
 def test_agent_session_cli_exposes_structured_control_response():
     result = CliRunner().invoke(kfc, ["agent", "session", "--help"])
 
@@ -379,17 +406,15 @@ def test_agent_console_envelope_binds_work_and_discovery_entrypoints():
         },
         "knownLimits": ["terminal transcript is not proof"],
         "skillRuntimeAudit": {
-            "schema": "kungfu.skill-runtime-audit-pointer/v1",
-            "path": "/runtime/skill-manager/agent-console-attempt-1.json",
-            "runtimeAuditRoot": ROOT_HASH,
-            "registryStateRoot": ROOT_HASH,
-            "historyRoot": ROOT_HASH,
-            "diagnosisRoot": ROOT_HASH,
-            "authority": "read-only-projection",
+            **_skill_runtime_pointer(),
+            "workRefRoot": session_contract.semantic_root(_work_ref()),
         },
         "envelopeRoot": ROOT_HASH,
     }
     config.validate_value("agentConsoleEnvelope", value, contract=_contract())
+    assert value["skillRuntimeAudit"]["workRefRoot"] == session_contract.semantic_root(
+        value["workRef"]
+    )
     value["workRef"]["profileRoot"] = "latest"
     with pytest.raises(ValueError):
         config.validate_value("agentConsoleEnvelope", value, contract=_contract())
@@ -2007,6 +2032,24 @@ def test_native_interactive_runner_reuses_work_console_with_fresh_attempts(
         assert envelope["consoleId"] == plans[0]["workConsoleId"]
         assert envelope["workRef"] == work_ref
         assert skill_context["catalog"] == [{"key": "kungfu-agent"}]
+        skill_pointer = envelope["skillRuntimeAudit"]
+        assert skill_pointer["catalogRoot"] == session_contract.semantic_root(
+            skill_context["catalog"]
+        )
+        assert skill_pointer["decisionPolicyRoot"].startswith("sha256:")
+        assert skill_pointer["workRefRoot"] == session_contract.semantic_root(work_ref)
+        assert skill_pointer["kfxDependencyRoots"] == []
+        assert skill_pointer["receiptRoots"]
+        assert skill_pointer["recoveryRoot"].startswith("sha256:")
+        assert set(skill_pointer["entrypoints"]) == {
+            "catalog",
+            "advise",
+            "read",
+            "audit",
+            "explain",
+            "diagnose",
+            "kfx",
+        }
         assert kwargs["env"]["KUNGFU_PRIOR_TRANSCRIPT_BYTES"] == "0"
         assert "stdin" not in kwargs
         assert "stdout" not in kwargs

@@ -1,0 +1,83 @@
+{
+  "schema": "kungfu.skill-definition/v2",
+  "identity": {
+    "key": "runtime-audit-qualification",
+    "revision": 1,
+    "contentRoot": "sha256:aafb9b1b091b4dc00c7d838fa91f75c507e51c36045f31bccfc864a8532819f8"
+  },
+  "class": "instruction-only",
+  "content": {
+    "algorithm": "sha256-canonical-json",
+    "root": "sha256:aafb9b1b091b4dc00c7d838fa91f75c507e51c36045f31bccfc864a8532819f8",
+    "entrypoint": "SKILL.md",
+    "members": [
+      {
+        "path": "SKILL.md",
+        "root": "sha256:0bc8514b8c2f690a065cd5c0b1b6f12496695c283cc7a796e8ac14f242a081a0",
+        "bytes": 60,
+        "mediaType": "text/markdown"
+      }
+    ]
+  },
+  "provenance": {
+    "sourceKind": "workspace",
+    "sourceRoot": "sha256:4444444444444444444444444444444444444444444444444444444444444444",
+    "sourceRef": "workspace:runtime-audit-qualification@1",
+    "generated": false
+  },
+  "scope": {
+    "distribution": "workspace-local",
+    "appliesTo": ["qualification"],
+    "work": {
+      "binding": "optional",
+      "selectionAuthority": "kungfu-work",
+      "completionAuthority": "kungfu-work"
+    }
+  },
+  "dependencies": {"kfx": [], "profiles": []},
+  "effects": {"mode": "none", "declarations": []},
+  "compatibility": {
+    "contractVersion": 2,
+    "predecessor": null,
+    "requires": [
+      {
+        "surface": "skill",
+        "contractRoot": "sha256:5555555555555555555555555555555555555555555555555555555555555555"
+      }
+    ],
+    "history": "preserve-original-meaning"
+  },
+  "proof": {
+    "requirements": [
+      {
+        "id": "multi-surface-runtime-audit",
+        "kind": "check",
+        "description": "Verify identical rooted projections on all five surfaces."
+      }
+    ],
+    "completion": "work-acceptance-not-skill-output"
+  },
+  "recovery": {
+    "strategy": "disable-and-inspect",
+    "steps": ["Inspect the exact retained root."],
+    "history": "preserve-roots-receipts-and-work-meaning"
+  },
+  "authority": {
+    "capability": "none",
+    "work": "reference-only",
+    "profile": "reference-only",
+    "factEpisode": "reference-only",
+    "kfd": "reference-only",
+    "kfx": "reference-only",
+    "nonClaims": [
+      "skill-prose-is-not-capability",
+      "skill-is-not-work-authority",
+      "skill-is-not-profile-authority",
+      "skill-is-not-fact-or-episode-authority",
+      "skill-is-not-kfd-authority",
+      "skill-is-not-kfx-authority",
+      "selection-load-or-invocation-is-not-completion",
+      "retirement-does-not-reinterpret-history"
+    ]
+  }
+}

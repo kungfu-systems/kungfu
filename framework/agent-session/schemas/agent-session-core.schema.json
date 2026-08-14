@@ -135,7 +135,9 @@
           "additionalProperties": false,
           "required": [
             "schema", "path", "runtimeAuditRoot", "registryStateRoot",
-            "historyRoot", "diagnosisRoot", "authority"
+            "historyRoot", "diagnosisRoot", "catalogRoot",
+            "decisionPolicyRoot", "workRefRoot", "kfxDependencyRoots",
+            "receiptRoots", "recoveryRoot", "entrypoints", "authority"
           ],
           "properties": {
             "schema": { "const": "kungfu.skill-runtime-audit-pointer/v1" },
@@ -144,6 +146,42 @@
             "registryStateRoot": { "$ref": "#/$defs/sha256" },
             "historyRoot": { "$ref": "#/$defs/sha256" },
             "diagnosisRoot": { "$ref": "#/$defs/sha256" },
+            "catalogRoot": { "$ref": "#/$defs/sha256" },
+            "decisionPolicyRoot": { "$ref": "#/$defs/sha256" },
+            "workRefRoot": {
+              "anyOf": [
+                { "$ref": "#/$defs/sha256" },
+                { "type": "null" }
+              ]
+            },
+            "kfxDependencyRoots": {
+              "type": "array",
+              "uniqueItems": true,
+              "items": { "$ref": "#/$defs/sha256" }
+            },
+            "receiptRoots": {
+              "type": "array",
+              "uniqueItems": true,
+              "items": { "$ref": "#/$defs/sha256" }
+            },
+            "recoveryRoot": { "$ref": "#/$defs/sha256" },
+            "entrypoints": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "catalog", "advise", "read", "audit", "explain",
+                "diagnose", "kfx"
+              ],
+              "properties": {
+                "catalog": { "$ref": "#/$defs/argv" },
+                "advise": { "$ref": "#/$defs/argv" },
+                "read": { "$ref": "#/$defs/argv" },
+                "audit": { "$ref": "#/$defs/argv" },
+                "explain": { "$ref": "#/$defs/argv" },
+                "diagnose": { "$ref": "#/$defs/argv" },
+                "kfx": { "$ref": "#/$defs/argv" }
+              }
+            },
             "authority": { "const": "read-only-projection" }
           }
         },

@@ -140,7 +140,7 @@ def _bool(value, default):
 PLAN_SCHEMA = "kungfu.skill-dependency-plan/v2"
 RECEIPT_SCHEMA = "kungfu.skill-dependency-invocation-receipt/v2"
 AUDIT_EVENT_SCHEMA = "kungfu.skill-audit-event/v1"
-SURFACES = ("agent", "cli", "gui", "tui")
+SURFACES = ("agent", "cli", "gui", "tui", "managed-run")
 
 
 class SkillAuthorityError(ValueError):
@@ -479,6 +479,7 @@ def invoke_dependency_plan(
         "skill": copy.deepcopy(plan["skill"]),
         "work": copy.deepcopy(plan["work"]),
         "authority": copy.deepcopy(plan["authority"]),
+        "decision": copy.deepcopy(plan["decision"]),
         "nativeAuthorizationDecisions": native_decisions,
         "profileReceipts": profile_receipts,
         "auditIdentityRoot": plan["auditIdentityRoot"],
@@ -803,6 +804,10 @@ def _surface_projections(value: Mapping[str, Any]) -> dict[str, dict[str, Any]]:
                 "trustReportRoots", []
             ),
             "auditIdentityRoot": value.get("auditIdentityRoot"),
+            "decisionStatus": (value.get("decision") or {}).get("status"),
+            "decisionCode": (value.get("decision") or {}).get("code"),
+            "executionAllowed": (value.get("decision") or {}).get("executionAllowed"),
+            "recovery": (value.get("decision") or {}).get("recovery"),
         }
         for surface in SURFACES
     }

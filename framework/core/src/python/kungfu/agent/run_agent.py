@@ -831,7 +831,7 @@ def execute(
         workspace_root=cwd,
         permission_mode=permission_mode,
     )
-    env, env_keys = _environment(
+    base_env, _base_env_keys = _environment(
         provider,
         runtime_dir=runtime_dir,
         run_id=run_id,
@@ -839,6 +839,49 @@ def execute(
         work_ref=work,
         continuation=continuation_value,
     )
+    runtime_home = str(Path(home or os.path.expanduser("~")).expanduser().resolve())
+    effective_config_home = str(
+        Path(config_home or os.path.join(runtime_home, ".kungfu-config"))
+        .expanduser()
+        .resolve()
+    )
+    workspace_id = str(
+        work.get("workspaceId") if work is not None else cwd or runtime_home
+    )
+    managed_session_ref = (
+        _session_ref(work, run_id)
+        if work is not None
+        else {
+            "workConsoleId": f"assistant:{workspace_id}:{run_id}",
+            "sessionAttemptId": run_id,
+        }
+    )
+    adapter = native_provider_adapter(
+        provider,
+        runtime_dir=runtime_dir,
+        session_id=run_id.removeprefix("agent-"),
+        config_home=effective_config_home,
+        runtime_home=runtime_home,
+    )
+    env = native_environment(
+        provider,
+        runtime_dir=runtime_dir,
+        config_home=effective_config_home,
+        runtime_home=runtime_home,
+        workspace_root=str(cwd or runtime_home),
+        work_ref=work,
+        work_selection={"workspaceId": workspace_id},
+        profile=selected,
+        session_ref=managed_session_ref,
+        provider_version=str(verification.get("version") or "unknown"),
+        adapter=adapter,
+        source=base_env,
+        stdio_is_tty=False,
+    )
+    for key in ("KUNGFU_CONTROL_RUNTIME_DIR", "KUNGFU_AGENT_CONTINUATION"):
+        if key in base_env:
+            env[key] = base_env[key]
+    env_keys = sorted(env)
     run_dir = Path(runtime_dir) / "agent-runs" / run_id
     bundle_dir = run_dir / "bundle"
     bundle_dir.mkdir(parents=True, exist_ok=True)
@@ -932,6 +975,7 @@ def execute(
                 result = process_runner(
                     argv, cwd=cwd, env=env, timeout_seconds=timeout_seconds
                 )
+        refresh_native_skill_runtime_audit(env)
         status = RunStatus.Succeeded if result.exit_code == 0 else RunStatus.Failed
         episode.record_event(
             ACTION_RUN_END,

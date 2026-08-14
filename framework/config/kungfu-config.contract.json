@@ -629,6 +629,13 @@
             "registryStateRoot",
             "historyRoot",
             "diagnosisRoot",
+            "catalogRoot",
+            "decisionPolicyRoot",
+            "workRefRoot",
+            "kfxDependencyRoots",
+            "receiptRoots",
+            "recoveryRoot",
+            "entrypoints",
             "authority"
           ],
           "properties": {
@@ -654,6 +661,60 @@
             "diagnosisRoot": {
               "type": "string",
               "pattern": "^sha256:[a-f0-9]{64}$"
+            },
+            "catalogRoot": {
+              "type": "string",
+              "pattern": "^sha256:[a-f0-9]{64}$"
+            },
+            "decisionPolicyRoot": {
+              "type": "string",
+              "pattern": "^sha256:[a-f0-9]{64}$"
+            },
+            "workRefRoot": {
+              "type": ["string", "null"],
+              "pattern": "^sha256:[a-f0-9]{64}$"
+            },
+            "kfxDependencyRoots": {
+              "type": "array",
+              "uniqueItems": true,
+              "items": {
+                "type": "string",
+                "pattern": "^sha256:[a-f0-9]{64}$"
+              }
+            },
+            "receiptRoots": {
+              "type": "array",
+              "uniqueItems": true,
+              "items": {
+                "type": "string",
+                "pattern": "^sha256:[a-f0-9]{64}$"
+              }
+            },
+            "recoveryRoot": {
+              "type": "string",
+              "pattern": "^sha256:[a-f0-9]{64}$"
+            },
+            "entrypoints": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "catalog",
+                "advise",
+                "read",
+                "audit",
+                "explain",
+                "diagnose",
+                "kfx"
+              ],
+              "properties": {
+                "catalog": {"type": "array", "minItems": 1, "items": {"type": "string"}},
+                "advise": {"type": "array", "minItems": 1, "items": {"type": "string"}},
+                "read": {"type": "array", "minItems": 1, "items": {"type": "string"}},
+                "audit": {"type": "array", "minItems": 1, "items": {"type": "string"}},
+                "explain": {"type": "array", "minItems": 1, "items": {"type": "string"}},
+                "diagnose": {"type": "array", "minItems": 1, "items": {"type": "string"}},
+                "kfx": {"type": "array", "minItems": 1, "items": {"type": "string"}}
+              }
             },
             "authority": {
               "const": "read-only-projection"

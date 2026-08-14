@@ -96,25 +96,30 @@
     "projection": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["surface", "planRoot", "receiptRoot", "capabilityDecisionRoot", "trustReportRoots", "auditIdentityRoot"],
+      "required": ["surface", "planRoot", "receiptRoot", "capabilityDecisionRoot", "trustReportRoots", "auditIdentityRoot", "decisionStatus", "decisionCode", "executionAllowed", "recovery"],
       "properties": {
-        "surface": {"enum": ["agent", "cli", "gui", "tui"]},
+        "surface": {"enum": ["agent", "cli", "gui", "tui", "managed-run"]},
         "planRoot": {"$ref": "#/$defs/root"},
         "receiptRoot": {"type": "null"},
         "capabilityDecisionRoot": {"$ref": "#/$defs/root"},
         "trustReportRoots": {"type": "array", "uniqueItems": true, "items": {"$ref": "#/$defs/root"}},
-        "auditIdentityRoot": {"$ref": "#/$defs/root"}
+        "auditIdentityRoot": {"$ref": "#/$defs/root"},
+        "decisionStatus": {"enum": ["inert", "refused", "degraded", "ready"]},
+        "decisionCode": {"type": "string", "pattern": "^KF_SKILL_[A-Z0-9_]+$"},
+        "executionAllowed": {"type": "boolean"},
+        "recovery": {"type": "string", "minLength": 1}
       }
     },
     "surfaces": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["agent", "cli", "gui", "tui"],
+      "required": ["agent", "cli", "gui", "tui", "managed-run"],
       "properties": {
         "agent": {"$ref": "#/$defs/projection"},
         "cli": {"$ref": "#/$defs/projection"},
         "gui": {"$ref": "#/$defs/projection"},
-        "tui": {"$ref": "#/$defs/projection"}
+        "tui": {"$ref": "#/$defs/projection"},
+        "managed-run": {"$ref": "#/$defs/projection"}
       }
     }
   }

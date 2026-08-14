@@ -592,10 +592,10 @@ def _simple_mutation_command(name, help_text):
         )
 
     command.__name__ = f"{name}_cmd"
-    decorated = skill.command(name=name, help=help_text)(command)
-    decorated = click.argument("key", type=str)(decorated)
+    decorated = skill_command_context(command)
     decorated = _mutation_options(decorated)
-    return skill_command_context(decorated)
+    decorated = click.argument("key", type=str)(decorated)
+    return skill.command(name=name, help=help_text)(decorated)
 
 
 enable_cmd = _simple_mutation_command("enable", "plan or apply Skill enablement")

@@ -546,6 +546,17 @@ def native_environment(
             work_ref,
         )
         agent_skill_projection = skill_runtime_audit["surfaceProjections"]["agent"]
+        skill_runtime_roots = skill_runtime_audit["roots"]
+        receipt_roots = sorted(
+            {
+                str(root)
+                for root in (
+                    bootstrap_context.get("receiptRoot"),
+                    skill_runtime_audit.get("documentRoot"),
+                )
+                if root
+            }
+        )
         console_envelope_body = {
             "schema": "kungfu.agent-console-envelope/v1",
             "workspaceId": str(
@@ -587,6 +598,56 @@ def native_environment(
                 "registryStateRoot": agent_skill_projection["registryStateRoot"],
                 "historyRoot": agent_skill_projection["historyRoot"],
                 "diagnosisRoot": agent_skill_projection["diagnosisRoot"],
+                "catalogRoot": agent_resources.canonical_root(
+                    skill_context.get("catalog") or []
+                ),
+                "decisionPolicyRoot": agent_resources.skill_decision_policy_root(),
+                "workRefRoot": session_contract.semantic_root(
+                    dict(work_ref)
+                    if work_ref is not None
+                    else {
+                        "state": "unbound",
+                        "workspaceId": str(
+                            work_selection.get("workspaceId") or workspace_root
+                        ),
+                    }
+                ),
+                "kfxDependencyRoots": sorted(
+                    str(root) for root in skill_runtime_roots["dependencyRoots"]
+                ),
+                "receiptRoots": receipt_roots,
+                "recoveryRoot": agent_resources.canonical_root(
+                    skill_runtime_audit["recovery"]
+                ),
+                "entrypoints": {
+                    "catalog": [cli_bin, "skill", "catalog", "--json"],
+                    "advise": [
+                        cli_bin,
+                        "agent",
+                        "skill-advisory",
+                        "--signals",
+                        "<signals.json>",
+                        "--json",
+                    ],
+                    "read": [cli_bin, "skill", "read", "<key-or-path>", "--json"],
+                    "audit": [
+                        cli_bin,
+                        "skill",
+                        "audit",
+                        "--audit-file",
+                        skill_audit_log_path,
+                        "--json",
+                    ],
+                    "explain": [
+                        cli_bin,
+                        "skill",
+                        "explain",
+                        "<key-or-path>",
+                        "--json",
+                    ],
+                    "diagnose": [cli_bin, "skill", "diagnose", "--json"],
+                    "kfx": [cli_bin, "kfx", "native", "status", "--json"],
+                },
                 "authority": agent_skill_projection["authority"],
             },
             "bootstrap": bootstrap_context,

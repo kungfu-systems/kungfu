@@ -214,6 +214,13 @@ def validate_agent_console_envelope(
             "registryStateRoot",
             "historyRoot",
             "diagnosisRoot",
+            "catalogRoot",
+            "decisionPolicyRoot",
+            "workRefRoot",
+            "kfxDependencyRoots",
+            "receiptRoots",
+            "recoveryRoot",
+            "entrypoints",
             "authority",
         }
         _exact_fields(
@@ -232,10 +239,57 @@ def validate_agent_console_envelope(
             "registryStateRoot",
             "historyRoot",
             "diagnosisRoot",
+            "catalogRoot",
+            "decisionPolicyRoot",
+            "recoveryRoot",
         ):
             if _ROOT.fullmatch(str(audit.get(field) or "")) is None:
                 raise ValueError(
                     f"AgentConsoleEnvelope.skillRuntimeAudit.{field} must be a sha256 root"
+                )
+        work_ref_root = audit.get("workRefRoot")
+        if work_ref_root is not None and _ROOT.fullmatch(str(work_ref_root)) is None:
+            raise ValueError(
+                "AgentConsoleEnvelope.skillRuntimeAudit.workRefRoot must be null or a sha256 root"
+            )
+        for field in ("kfxDependencyRoots", "receiptRoots"):
+            roots = audit.get(field)
+            if (
+                not isinstance(roots, list)
+                or len(roots) != len(set(roots))
+                or any(_ROOT.fullmatch(str(root)) is None for root in roots)
+            ):
+                raise ValueError(
+                    f"AgentConsoleEnvelope.skillRuntimeAudit.{field} must be unique sha256 roots"
+                )
+        entrypoints = _object(
+            audit.get("entrypoints"),
+            "AgentConsoleEnvelope.skillRuntimeAudit.entrypoints",
+        )
+        entrypoint_fields = {
+            "catalog",
+            "advise",
+            "read",
+            "audit",
+            "explain",
+            "diagnose",
+            "kfx",
+        }
+        _exact_fields(
+            entrypoints,
+            allowed=entrypoint_fields,
+            required=entrypoint_fields,
+            label="AgentConsoleEnvelope.skillRuntimeAudit.entrypoints",
+        )
+        for field in entrypoint_fields:
+            argv = entrypoints[field]
+            if (
+                not isinstance(argv, list)
+                or not argv
+                or not all(isinstance(item, str) and item for item in argv)
+            ):
+                raise ValueError(
+                    f"AgentConsoleEnvelope.skillRuntimeAudit.entrypoints.{field} must be argv"
                 )
         if audit.get("authority") != "read-only-projection":
             raise ValueError(

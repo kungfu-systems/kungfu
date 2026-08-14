@@ -1,0 +1,23 @@
+{
+  "taskId": "qualify-multi-surface-runtime-audit",
+  "catalogRoot": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+  "workRoot": "sha256:2222222222222222222222222222222222222222222222222222222222222222",
+  "requirementsRoot": "sha256:3333333333333333333333333333333333333333333333333333333333333333",
+  "candidates": [],
+  "effects": [],
+  "reusable": true,
+  "stableInputs": true,
+  "stableOutcomes": true,
+  "proofAvailable": true,
+  "recoveryAvailable": true,
+  "workspaceLocal": true,
+  "instructionOnly": true,
+  "deduplicated": true,
+  "evidenceCurrent": true,
+  "oneOff": false,
+  "ordinaryDocumentation": false,
+  "productDefect": false,
+  "duplicateSkill": false,
+  "untrustedInstruction": false,
+  "bypassMissingEvidence": false
+}

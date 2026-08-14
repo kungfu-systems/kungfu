@@ -45,10 +45,10 @@
     {
       "name": "kungfu-config",
       "sourcePath": "framework/config/kungfu-config.contract.json",
-      "sourceSha256": "861f37e2d091680b1a813a41b4d08c10f70fc849260804231bc6e93d0db0e58b",
+      "sourceSha256": "16da7be3d6b845dc93e204b991e3c0efec4b5f4b63a095a6426937aae98ed8e3",
       "artifactPath": "config/kungfu-config.contract.json",
-      "expectedSha256": "861f37e2d091680b1a813a41b4d08c10f70fc849260804231bc6e93d0db0e58b",
-      "byteForByte": true
+      "expectedSha256": "16da7be3d6b845dc93e204b991e3c0efec4b5f4b63a095a6426937aae98ed8e3",
+      "byteForByte": false
     },
     {
       "name": "kungfu-kfx",
@@ -61,10 +61,10 @@
     {
       "name": "kungfu-skill",
       "sourcePath": "framework/skill/kungfu-skill.contract.json",
-      "sourceSha256": "307934f964f5d084c31594315a7b4de8421ad084120bd956576a24a9565bae8c",
+      "sourceSha256": "5b70203d15bbcd6675eefbd8e8ccc666e0f6805cd0658583e618e8570b20a20e",
       "artifactPath": "config/kungfu-skill.contract.json",
-      "expectedSha256": "307934f964f5d084c31594315a7b4de8421ad084120bd956576a24a9565bae8c",
-      "byteForByte": true
+      "expectedSha256": "5b70203d15bbcd6675eefbd8e8ccc666e0f6805cd0658583e618e8570b20a20e",
+      "byteForByte": false
     },
     {
       "name": "kungfu-runtime",

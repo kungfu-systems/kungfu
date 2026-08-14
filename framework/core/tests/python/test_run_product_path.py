@@ -1693,6 +1693,7 @@ def test_managed_session_retains_its_visible_terminal_answer(tmp_path, monkeypat
             "profileRoot": "sha256:" + "1" * 64,
             "entityType": "assignment",
             "entityId": "first",
+            "initiativeId": "project-work",
             "entityRoot": "sha256:" + "2" * 64,
             "purpose": "complete-project-assignment",
             "systemTimeCut": "sha256:" + "3" * 64,
@@ -1744,7 +1745,7 @@ def test_direct_provider_starts_native_work_before_process_launch(
         order.append(("start", dict(ref), dict(started)))
 
     def run_process(*_args, **_kwargs):
-        order.append(("process",))
+        order.append(("process", dict(_kwargs["env"])))
         return run_agent.ProcessResult(0, '{"type":"text"}\n', "", False, False)
 
     result = run_agent.execute(
@@ -1764,4 +1765,14 @@ def test_direct_provider_starts_native_work_before_process_launch(
         "work:kungfu.work-control:assignment:project-work:first"
     )
     assert order[0][2] == {"status": "started", "transport": "direct-process"}
-    assert order[1] == ("process",)
+    assert order[1][0] == "process"
+    managed_env = order[1][1]
+    envelope = json.loads(managed_env["KUNGFU_AGENT_CONSOLE_ENVELOPE"])
+    assert envelope["attemptId"] == managed_env["KUNGFU_SKILL_RUN_ID"]
+    assert envelope["workRef"] == work_ref
+    assert envelope["skillRuntimeAudit"]["workRefRoot"] == run_agent.canonical_root(
+        work_ref
+    )
+    assert managed_env["KUNGFU_SKILL_AUDIT_FILE"].endswith("-events.jsonl")
+    assert Path(managed_env["KUNGFU_SKILL_RUNTIME_AUDIT_FILE"]).is_file()
+    assert Path(managed_env["KUNGFU_SKILL_RUNTIME_AUDIT_FINAL_FILE"]).is_file()
