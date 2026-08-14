@@ -3,9 +3,9 @@
   "initiativeId": "2026-08-11-kungfu-skill-agent-native-product-system",
   "assignmentId": "2026-08-11-kungfu-skill-multi-surface-runtime-audit",
   "baseRevision": "0fbacb3dfd48883d9db222f55ce2f57ebdbd9c1b",
-  "implementationRevision": "7ac6000d6a462f2696ef996d6931baa3caa87780",
-  "implementationTree": "4879b4cfef3abf73a775bc331b0a5e9e8be0a303",
-  "generatedAt": "2026-08-14T13:20:22+08:00",
+  "implementationRevision": "e54e716f8c07cd605f07ac8c517b0b4c960f06fc",
+  "implementationTree": "633179eca233cedb1f03594ac7d48fc4e360acff",
+  "generatedAt": "2026-08-14T13:45:55+08:00",
   "purpose": "Bind the exact successor implementation, same-root parity, managed-run and Agent Console dogfood, qualification, and recovery evidence requested by native independent review. This file routes evidence and does not replace the referenced source, receipts, protected merge, or native review.",
   "sourceEvidence": {
     "contract": {
@@ -34,7 +34,11 @@
     },
     "nativeLaunch": {
       "path": "framework/core/src/python/kungfu/agent/native_launch.py",
-      "root": "sha256:5aed9bd92890131d582d48f581d81e8481607effaa773fdb771a1a60ae18255c"
+      "root": "sha256:3b0727c541fc296f3f305be55ea963cebbd3dfbf776582d0c393ae1763af804b"
+    },
+    "nativeCommandTransport": {
+      "path": "framework/core/src/python/kungfu/agent/native_command_transport.py",
+      "root": "sha256:672673cc61cfba2225a7290c8237b023520e17902b83ebbd140a24579c9c24ec"
     },
     "managedRun": {
       "path": "framework/core/src/python/kungfu/agent/run_agent.py",
@@ -77,6 +81,10 @@
     {
       "command": "git commit -s -m 'fix(skill): close multi-surface runtime evidence gaps'",
       "result": "complete staged gate passed at implementation revision 7ac6000d6a462f2696ef996d6931baa3caa87780"
+    },
+    {
+      "command": "git commit -s -m 'refactor(agent): separate native command transport'",
+      "result": "complete staged gate passed at implementation revision e54e716f8c07cd605f07ac8c517b0b4c960f06fc; exact-source maintainability projection reported zero blocking issues"
     }
   ],
   "realProviderDogfood": {
