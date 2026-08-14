@@ -3,7 +3,7 @@
   "contract": "kungfu-buildchain-dev-delivery-warrant-queue",
   "repository": "kungfu-systems/kungfu",
   "protectedBase": "dev/v4/v4.0",
-  "generation": 2228,
+  "generation": 2229,
   "fencingCounter": 423,
   "policy": {
     "agingSeconds": 900,
@@ -11,55 +11,7 @@
     "leaseSeconds": 3600,
     "emergencyPolicy": "reviewed-explicit-only"
   },
-  "activeWarrant": {
-    "schema": "kungfu.buildchain.dev-delivery-warrant/v1",
-    "repository": "kungfu-systems/kungfu",
-    "protectedBase": "dev/v4/v4.0",
-    "candidateId": "sha256:b75aebbbcb35d422d5b41e78f83fa86b38f865a0ea2d8c0c41d6a184cf0fc701",
-    "pullRequestNumber": 3102,
-    "sourceHead": "3e886dd40cb95d22e6f8622c5d9515a6f4516512",
-    "assignmentRoot": "sha256:90f114cedcbd1317ad3207cea28ce1589645107819224289828495dd4dc2b7ac",
-    "initiativeRoot": "sha256:bfff817933e5a5ad693e4b902a84f6cc3a251235dd7377cb4091d92f805fa7ff",
-    "sourceIdentityRoot": "sha256:8b7d4e893ca4a97b23905f69d84486b87ffdfc73ac180ca7d960f15bad87054f",
-    "sourcePatchRoot": "sha256:b9da01ede3e153312c8555d026740e5749381f063228318b431aeec300f295f8",
-    "sourceProofRoot": "sha256:8947fedd5e350dbcc30465c8fdbbf1b18e8ca57a598f307b8663abe453c46db7",
-    "planRoot": "sha256:0cefe1056cdf5b151d96daa49da4392da815e07b83134437a090768974651c3d",
-    "closureRoot": "sha256:106d175611d8634c988192302b9c464ae8ba3b6d023c2cff9910e401344c9624",
-    "dependencyRoot": "sha256:41980c24b781b7b2b036e7edad075eb8954f1dcfc8e547ebec88b66366c5ae4f",
-    "toolchainRoot": "sha256:2ecb07894954a2e0de022615d4561e5ba3ae68376401941ecff77be03cd75a0f",
-    "environmentRoot": "sha256:c5f5da5917c6ff93a509a62b18d4b9b69325755c4c7229b553b0016cde83788f",
-    "affectedPaths": [
-      ".buildchain/kfd/kfd-2/release-claims.json",
-      ".buildchain/kfd/kfd-3/collaboration-interface.prebuild.json",
-      ".buildchain/kfd/support-matrix.json",
-      ".github/actions/native-execution-under-warrant/action.yml",
-      ".github/workflows/affected-native-pr.yml",
-      ".github/workflows/dev-delivery-warrant-terminal.yml",
-      ".github/workflows/dev-pr-auto-merge.yml",
-      ".github/workflows/queue-admission-lease.yml",
-      "developer/sdk/kfd/kfd-2/release-claims.json",
-      "developer/sdk/kfd/support-matrix.json",
-      "docs/qualification/gates/dev-queue-admission.contract.json",
-      "docs/qualification/gates/workflow-authority.json",
-      "framework/release/publication-surfaces.json",
-      "scripts/dev-delivery-proof-consumer.test.mjs",
-      "scripts/dev-delivery-warrant-input.test.mjs",
-      "scripts/dev-pr-auto-merge.test.mjs",
-      "scripts/queue-admission-lease.test.mjs"
-    ],
-    "sourceWorkflowRunId": 31794064900,
-    "deliveryClass": "native-proof-required",
-    "generation": 423,
-    "phase": "qualified",
-    "expectedOldStateRoot": "sha256:e48ea272502c0dd07a74e6a1d4fb6d2fe839fdf16d776349e9cfd9e0552ecc58",
-    "issuedAt": "2026-08-14T11:35:16.973Z",
-    "expiresAt": "2026-08-14T13:42:25.397Z",
-    "fencingToken": "sha256:3250cc80f135bef4c8597ef994e54fa4d6ca1df268556a6d72db3a41cf1c7589",
-    "nextAction": "Enter the GitHub merge queue at the exact fenced PR head; merge_group remains final authority.",
-    "nativeProofRoot": "sha256:443b9efb5f6dc4febe3834adfb54ce2181705402dc0a5fa61ad9039cb3a81017",
-    "nativeProofReuseRoot": "sha256:cd0d2385786fed370a4f302485b732e1d098f7d4b9cfee3b6e2f873e10cf3cf6",
-    "qualifiedAt": "2026-08-14T12:12:31.039Z"
-  },
+  "activeWarrant": null,
   "candidates": [
     {
       "repository": "kungfu-systems/kungfu",
@@ -24923,11 +24875,20 @@
       "sourceWorkflowRunId": 31794064900,
       "priority": "ordinary",
       "enqueuedAt": "2026-08-14T11:00:24.996Z",
-      "updatedAt": "2026-08-14T12:12:31.039Z",
+      "updatedAt": "2026-08-14T12:15:44.603Z",
       "attempts": 1,
       "recoveries": 0,
-      "status": "qualified",
-      "terminal": null,
+      "status": "terminal-failure",
+      "terminal": {
+        "outcome": "terminal-failure",
+        "terminalClass": "authoritative-failure",
+        "reason": "pre-enqueue-project-cut-base-stale: PR baseRefOid 001a3764 differs from protected dev 25101e70; exact-head controller 31796827898",
+        "evidenceRoot": "sha256:0c3f1bb99ce1d8d7c71508f79628e578a1d632fa608f08b47d1432be9af1f99f",
+        "closedAt": "2026-08-14T12:15:44.603Z",
+        "fencingToken": "sha256:3250cc80f135bef4c8597ef994e54fa4d6ca1df268556a6d72db3a41cf1c7589",
+        "leaseGeneration": 423,
+        "nativeProofRoot": "sha256:443b9efb5f6dc4febe3834adfb54ce2181705402dc0a5fa61ad9039cb3a81017"
+      },
       "affectedPaths": [
         ".buildchain/kfd/kfd-2/release-claims.json",
         ".buildchain/kfd/kfd-3/collaboration-interface.prebuild.json",
@@ -25017,6 +24978,6 @@
       ]
     }
   ],
-  "updatedAt": "2026-08-14T12:12:31.039Z",
-  "stateRoot": "sha256:4299f8b6cc2932195aa78dee90dfad7f6375b32a22318fac6b17f68bdd94f610"
+  "updatedAt": "2026-08-14T12:15:44.603Z",
+  "stateRoot": "sha256:2536dc66d89d9c5fd830ad8eebf044c702c2be484e65853c3186fb81d659b1d9"
 }
