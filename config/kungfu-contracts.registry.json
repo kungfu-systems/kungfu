@@ -76,6 +76,11 @@
       },
       "extraArtifacts": [
         {
+          "label": "skill v2 runtime audit schema",
+          "source": "framework/skill/schema/skill-runtime-audit-v2.schema.json",
+          "artifact": "config/skill/schema/skill-runtime-audit-v2.schema.json"
+        },
+        {
           "label": "skill v2 registry state schema",
           "source": "framework/skill/schema/skill-registry-state-v2.schema.json",
           "artifact": "config/skill/schema/skill-registry-state-v2.schema.json"

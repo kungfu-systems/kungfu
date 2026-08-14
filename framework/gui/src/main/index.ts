@@ -353,6 +353,48 @@ if (
 }
 
 if (
+  !process.env.KF_SKILL_RUNTIME_AUDIT_FILE &&
+  process.env.KF_RUNTIME_DIR &&
+  workspaceRuntimeIsReady()
+) {
+  try {
+    const invocation = resolveGuiKungfuCliInvocation({
+      env: process.env,
+      runtimeDir: process.env.KF_RUNTIME_DIR,
+      platform: process.platform,
+      isPackaged: app.isPackaged,
+      resourcesPath: process.resourcesPath,
+    });
+    if (invocation.source !== 'unavailable') {
+      const outputPath = path.join(
+        process.env.KF_RUNTIME_DIR,
+        'skill-manager',
+        'runtime-audit.json',
+      );
+      execFileSync(
+        invocation.bin,
+        [
+          ...invocation.argsPrefix,
+          'skill',
+          'runtime-audit',
+          '--out',
+          outputPath,
+          '--json',
+        ],
+        {
+          env: { ...process.env, ...invocation.env },
+          timeout: 120_000,
+          maxBuffer: 64 * 1024 * 1024,
+        },
+      );
+      process.env.KF_SKILL_RUNTIME_AUDIT_FILE = outputPath;
+    }
+  } catch (e) {
+    console.log(`KF_SKILL_RUNTIME_AUDIT_FAIL ${(e as Error).message}`);
+  }
+}
+
+if (
   !process.env.KF_SKILL_MANAGER_FILE &&
   process.env.KF_RUNTIME_DIR &&
   workspaceRuntimeIsReady()

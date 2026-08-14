@@ -77,6 +77,15 @@ export interface SkillContextEnvelope {
     advertisedSkillsHash: string;
     [key: string]: unknown;
   };
+  runtimeAudit?: {
+    schema: 'kungfu.skill-runtime-audit-pointer/v1';
+    path: string;
+    runtimeAuditRoot: string;
+    registryStateRoot: string;
+    historyRoot: string;
+    diagnosisRoot: string;
+    authority: 'read-only-projection';
+  };
 }
 
 export interface KungfuEnvironment {
@@ -172,6 +181,110 @@ export interface SkillManagerView {
     kfxKeys: string[];
     unresolvedKfxKeys: string[];
   };
+  runtimeAudit?: SkillRuntimeAudit;
+}
+
+export type SkillRuntimeAuditSurface =
+  | 'agent'
+  | 'cli'
+  | 'gui'
+  | 'tui'
+  | 'managed-run';
+
+export interface SkillRuntimeAuditSurfaceProjection {
+  surface: SkillRuntimeAuditSurface;
+  runtimeAuditRoot: string;
+  registryStateRoot: string;
+  historyRoot: string;
+  diagnosisRoot: string;
+  auditRoots: string[];
+  dependencyRoots: string[];
+  authority: 'read-only-projection';
+}
+
+export interface SkillRuntimeAudit {
+  schema: 'kungfu.skill-runtime-audit/v2';
+  authority: Record<string, unknown>;
+  scope: { runId: string | null; workRef: string | null };
+  roots: Record<string, unknown>;
+  skills: Array<Record<string, unknown>>;
+  evidence: Array<Record<string, unknown>>;
+  recovery: Record<string, unknown>;
+  runtimeAuditRoot: string;
+  surfaceProjections: Record<
+    SkillRuntimeAuditSurface,
+    SkillRuntimeAuditSurfaceProjection
+  >;
+  documentRoot: string;
+}
+
+export function projectSkillRuntimeAudit(
+  document: unknown,
+  surface: SkillRuntimeAuditSurface,
+): SkillRuntimeAuditSurfaceProjection {
+  const root = objectValue(document);
+  if (root?.schema !== 'kungfu.skill-runtime-audit/v2') {
+    throw new Error('Kungfu Skill runtime audit schema is invalid');
+  }
+  const rootless = Object.fromEntries(
+    Object.entries(root).filter(
+      ([key]) =>
+        !['runtimeAuditRoot', 'surfaceProjections', 'documentRoot'].includes(
+          key,
+        ),
+    ),
+  );
+  const runtimeAuditRoot = contentRoot(rootless);
+  if (root.runtimeAuditRoot !== runtimeAuditRoot) {
+    throw new Error('Kungfu Skill runtime audit root mismatch');
+  }
+  const documentRoot = contentRoot(
+    Object.fromEntries(
+      Object.entries(root).filter(([key]) => key !== 'documentRoot'),
+    ),
+  );
+  if (root.documentRoot !== documentRoot) {
+    throw new Error('Kungfu Skill runtime audit document root mismatch');
+  }
+  const roots = objectValue(root.roots);
+  const projection = objectValue(
+    objectValue(root.surfaceProjections)?.[surface],
+  );
+  const expected = {
+    surface,
+    runtimeAuditRoot,
+    registryStateRoot: requiredRoot(
+      roots?.registryStateRoot,
+      'roots.registryStateRoot',
+    ),
+    historyRoot: requiredRoot(roots?.historyRoot, 'roots.historyRoot'),
+    diagnosisRoot: requiredRoot(roots?.diagnosisRoot, 'roots.diagnosisRoot'),
+    auditRoots: (stringArrayValue(roots?.auditRoots) ?? []).map(
+      (value, index) => requiredRoot(value, `roots.auditRoots[${index}]`),
+    ),
+    dependencyRoots: (stringArrayValue(roots?.dependencyRoots) ?? []).map(
+      (value, index) => requiredRoot(value, `roots.dependencyRoots[${index}]`),
+    ),
+    authority: 'read-only-projection' as const,
+  };
+  if (
+    !projection ||
+    stableStringify(projection) !== stableStringify(expected)
+  ) {
+    throw new Error(
+      `Kungfu Skill ${surface} runtime projection changed rooted identity`,
+    );
+  }
+  return expected;
+}
+
+export function readSkillRuntimeAuditFile(
+  path: string,
+  surface: SkillRuntimeAuditSurface,
+): SkillRuntimeAudit {
+  const document = JSON.parse(readFileSync(resolve(path), 'utf8')) as unknown;
+  projectSkillRuntimeAudit(document, surface);
+  return document as SkillRuntimeAudit;
 }
 
 export type SkillDependencySurface = 'agent' | 'cli' | 'gui' | 'tui';
@@ -353,6 +466,7 @@ export interface SkillManagerViewOptions {
   homeDir?: string;
   cwd?: string;
   agentSkillRoots?: AgentSkillInventoryRootInput[];
+  runtimeAuditFile?: string;
 }
 
 export interface SkillManagerViewFileOptions extends SkillManagerViewOptions {
@@ -696,6 +810,11 @@ export function buildSkillManagerView(
     };
   });
   const allRows = skills.flatMap((skill) => skill.dependencies.dependencies);
+  const runtimeAuditFile =
+    options.runtimeAuditFile ?? options.env?.KF_SKILL_RUNTIME_AUDIT_FILE;
+  const runtimeAudit = runtimeAuditFile
+    ? readSkillRuntimeAuditFile(runtimeAuditFile, 'gui')
+    : undefined;
   return {
     schema: 'kungfu.skill-manager/v1',
     registry: {
@@ -724,6 +843,7 @@ export function buildSkillManagerView(
           .map((row) => row.kfxKey),
       ),
     },
+    ...(runtimeAudit ? { runtimeAudit } : {}),
   };
 }
 

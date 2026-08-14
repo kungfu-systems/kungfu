@@ -378,6 +378,15 @@ def test_agent_console_envelope_binds_work_and_discovery_entrypoints():
             "bindWork": ["kungfu", "agent", "console", "bind-work"],
         },
         "knownLimits": ["terminal transcript is not proof"],
+        "skillRuntimeAudit": {
+            "schema": "kungfu.skill-runtime-audit-pointer/v1",
+            "path": "/runtime/skill-manager/agent-console-attempt-1.json",
+            "runtimeAuditRoot": ROOT_HASH,
+            "registryStateRoot": ROOT_HASH,
+            "historyRoot": ROOT_HASH,
+            "diagnosisRoot": ROOT_HASH,
+            "authority": "read-only-projection",
+        },
         "envelopeRoot": ROOT_HASH,
     }
     config.validate_value("agentConsoleEnvelope", value, contract=_contract())
