@@ -22,7 +22,7 @@ test('Dev auto-merge admits only explicitly ready reviewed same-repository PRs',
   const reusableRef = workflow.match(
     /uses: kungfu-systems\/buildchain\/\.github\/workflows\/dev-pr-auto-merge\.yml@([0-9a-f]{40})/u,
   )?.[1];
-  assert.equal(reusableRef, '065c32a242ac0b7552bd8c2b006e4f1482be5f1d');
+  assert.equal(reusableRef, '888e87fec88cad41d225c32615e80a87744d4b6d');
   assert.match(workflow, new RegExp(`buildchain-ref: ${reusableRef}`, 'u'));
   assert.match(workflow, /workflow_run:[\s\S]*Core affected native/u);
   assert.match(
@@ -222,7 +222,7 @@ test('Dev behind admission produces and forwards an exact Project Cut replay pro
   );
   assert.match(
     workflow,
-    /Check out exact Buildchain delivery runtime[\s\S]*ref: 065c32a242ac0b7552bd8c2b006e4f1482be5f1d/u,
+    /Check out exact Buildchain delivery runtime[\s\S]*ref: 888e87fec88cad41d225c32615e80a87744d4b6d/u,
   );
   assert.match(
     workflow,
@@ -483,7 +483,7 @@ test('the completed migration has no bootstrap bypass around Warrant admission',
   assert.match(sourceWorkflow, /Check out exact Buildchain Warrant runtime/u);
   assert.match(
     sourceWorkflow,
-    /ref: 065c32a242ac0b7552bd8c2b006e4f1482be5f1d/u,
+    /ref: 888e87fec88cad41d225c32615e80a87744d4b6d/u,
   );
   assert.doesNotMatch(
     sourceWorkflow,
@@ -496,10 +496,10 @@ test('native execution uses one exact protected runtime and continuous fence wra
     '.github/actions/native-execution-under-warrant/action.yml',
     'utf8',
   );
-  assert.match(action, /ref: 065c32a242ac0b7552bd8c2b006e4f1482be5f1d/u);
+  assert.match(action, /ref: 888e87fec88cad41d225c32615e80a87744d4b6d/u);
   assert.match(
     action,
-    /test "\$\(git rev-parse HEAD\)" = 065c32a242ac0b7552bd8c2b006e4f1482be5f1d/u,
+    /test "\$\(git rev-parse HEAD\)" = 888e87fec88cad41d225c32615e80a87744d4b6d/u,
   );
   assert.match(
     action,

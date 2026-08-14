@@ -1,0 +1,84 @@
+{
+  "spec_version": "0.1",
+  "source": {
+    "root": "/Users/dkr/Worktrees/kungfu/fix/kungfu-skill-runtime-audit-terminal-evidence/.kungfu/child6-terminal-evidence/home/runtime",
+    "mode": "LIVE",
+    "role": "SYSTEM",
+    "namespace": "agent-run",
+    "name": "agent-9841f0a8aa8a4cacadd0737063acf0fc",
+    "dest": 0
+  },
+  "hash_algorithm": "sha256",
+  "schema_bindings": {
+    "rewind.run.begin": {
+      "schema_kind": "flatbuffers",
+      "name": "RunBegin",
+      "schema_version": 4,
+      "schema_hash": "37b9a80a1460b35711afff466f249a43ad0c2eb5c9c02a5b0e7ada66b6b55036"
+    },
+    "rewind.run.end": {
+      "schema_kind": "flatbuffers",
+      "name": "RunEnd",
+      "schema_version": 4,
+      "schema_hash": "37b9a80a1460b35711afff466f249a43ad0c2eb5c9c02a5b0e7ada66b6b55036"
+    },
+    "rewind.model.request": {
+      "schema_kind": "flatbuffers",
+      "name": "ModelRequest",
+      "schema_version": 4,
+      "schema_hash": "37b9a80a1460b35711afff466f249a43ad0c2eb5c9c02a5b0e7ada66b6b55036"
+    },
+    "rewind.model.response": {
+      "schema_kind": "flatbuffers",
+      "name": "ModelResponse",
+      "schema_version": 4,
+      "schema_hash": "37b9a80a1460b35711afff466f249a43ad0c2eb5c9c02a5b0e7ada66b6b55036"
+    },
+    "rewind.tool.call": {
+      "schema_kind": "flatbuffers",
+      "name": "ToolCall",
+      "schema_version": 4,
+      "schema_hash": "37b9a80a1460b35711afff466f249a43ad0c2eb5c9c02a5b0e7ada66b6b55036"
+    },
+    "rewind.tool.result": {
+      "schema_kind": "flatbuffers",
+      "name": "ToolResult",
+      "schema_version": 4,
+      "schema_hash": "37b9a80a1460b35711afff466f249a43ad0c2eb5c9c02a5b0e7ada66b6b55036"
+    },
+    "rewind.retry.marker": {
+      "schema_kind": "flatbuffers",
+      "name": "RetryMarker",
+      "schema_version": 4,
+      "schema_hash": "37b9a80a1460b35711afff466f249a43ad0c2eb5c9c02a5b0e7ada66b6b55036"
+    },
+    "rewind.cost.snapshot": {
+      "schema_kind": "flatbuffers",
+      "name": "CostSnapshot",
+      "schema_version": 4,
+      "schema_hash": "37b9a80a1460b35711afff466f249a43ad0c2eb5c9c02a5b0e7ada66b6b55036"
+    },
+    "rewind.approval.decision": {
+      "schema_kind": "flatbuffers",
+      "name": "ApprovalDecision",
+      "schema_version": 4,
+      "schema_hash": "37b9a80a1460b35711afff466f249a43ad0c2eb5c9c02a5b0e7ada66b6b55036"
+    },
+    "rewind.run.progress": {
+      "schema_kind": "flatbuffers",
+      "name": "RunProgress",
+      "schema_version": 4,
+      "schema_hash": "37b9a80a1460b35711afff466f249a43ad0c2eb5c9c02a5b0e7ada66b6b55036"
+    }
+  },
+  "capture_boundary": "schema bindings cover this run's Rewind capture events only; frames of other action types in the same journal are out of scope for this bundle",
+  "agent_run": {
+    "schema": "kungfu.agent-run-report/v1",
+    "report": "report.json",
+    "reportSha256": "43d63ae4809fbdc2227f97867d3074176050136d1b0ef2263c471365da2ba65f",
+    "profileRoot": "sha256:59ecebb64d4f2c6957e4e0523f63d17e61ff4b3806796f85bae49b578d49f7cd",
+    "workRefRoot": "sha256:b5eb4793b25a3df6a08c19dabdaaa17c2001531c5e4f043db5c4e452ba223669",
+    "continuationRoot": null,
+    "completionAuthority": false
+  }
+}

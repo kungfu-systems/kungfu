@@ -1,0 +1,31 @@
+{
+  "affected": {
+    "identities": [
+      {
+        "contentRoot": "sha256:aafb9b1b091b4dc00c7d838fa91f75c507e51c36045f31bccfc864a8532819f8",
+        "key": "runtime-audit-qualification",
+        "revision": 1,
+        "status": "invoked",
+        "workRef": null
+      }
+    ],
+    "key": "runtime-audit-qualification"
+  },
+  "basis": {
+    "generation": 2,
+    "stateRoot": "sha256:5d67c58c04d7481bd2870b803743a49554b3283f4b96a5d1866ae5d7f5cdb4f0"
+  },
+  "history": "retained",
+  "idempotency": "exact-plan-root",
+  "operation": "invoke",
+  "operationRoot": "sha256:2535302229a3a72ef9dccf7b5f6ef7b3e793b02908134804eb4f4acf4329a5ad",
+  "planRoot": "sha256:a0f9c4745c9626f489cbcf4d96cbd97a5e5d8e1f782321ef2b24bc02de452758",
+  "receiptRoot": "sha256:87426d49811afe16bc677f823f33b3e1c89f737cb6890be73887995eccae0859",
+  "result": {
+    "changed": true,
+    "generation": 3,
+    "recovered": false,
+    "stateRoot": "sha256:f012dacc52e8f36b1834f0baf7ba44eb9c906e012902cfd0f859f891e2e818d1"
+  },
+  "schema": "kungfu.skill-lifecycle-receipt/v2"
+}

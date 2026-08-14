@@ -1,0 +1,62 @@
+{
+  "entries": {
+    "runtime-audit-qualification": {
+      "activeReference": true,
+      "activeRevision": 1,
+      "key": "runtime-audit-qualification",
+      "revisions": {
+        "1": {
+          "class": "instruction-only",
+          "contentRoot": "sha256:aafb9b1b091b4dc00c7d838fa91f75c507e51c36045f31bccfc864a8532819f8",
+          "definitionRef": "definitions/sha256/ff8cfb5135a0d452c8e9efabf5c1b533f22aa8c0b04da6bc244e0abf88c3bd15.json",
+          "definitionRoot": "sha256:ff8cfb5135a0d452c8e9efabf5c1b533f22aa8c0b04da6bc244e0abf88c3bd15",
+          "dependencies": {
+            "kfx": [],
+            "profiles": []
+          },
+          "payloadRef": "payloads/sha256/aafb9b1b091b4dc00c7d838fa91f75c507e51c36045f31bccfc864a8532819f8",
+          "provenance": {
+            "generated": false,
+            "sourceKind": "workspace",
+            "sourceRef": "workspace:runtime-audit-qualification@1",
+            "sourceRoot": "sha256:4444444444444444444444444444444444444444444444444444444444444444"
+          },
+          "revision": 1
+        }
+      },
+      "status": "selected",
+      "workSelections": [
+        {
+          "active": true,
+          "contentRoot": "sha256:aafb9b1b091b4dc00c7d838fa91f75c507e51c36045f31bccfc864a8532819f8",
+          "revision": 1,
+          "workRef": "2026-08-11-kungfu-skill-multi-surface-runtime-audit",
+          "workRoot": "sha256:815b65f22c9697bc539bca7ff84aca9ba23b145a7a6e9b7e905dba39291fc8cf"
+        }
+      ]
+    }
+  },
+  "events": [
+    {
+      "contentRoot": "sha256:aafb9b1b091b4dc00c7d838fa91f75c507e51c36045f31bccfc864a8532819f8",
+      "generation": 1,
+      "key": "runtime-audit-qualification",
+      "operation": "install",
+      "operationRoot": "sha256:52ac9edc887e60699a222bab7fe34d7b5e00bf405f35d4f48e0c2b79f84d505d",
+      "revision": 1,
+      "status": "installed"
+    },
+    {
+      "contentRoot": "sha256:aafb9b1b091b4dc00c7d838fa91f75c507e51c36045f31bccfc864a8532819f8",
+      "generation": 2,
+      "key": "runtime-audit-qualification",
+      "operation": "select",
+      "operationRoot": "sha256:8c5bf9b41faf6f3b668d99e5756d01f8b478ef77fe1235f980483b8a43e4fe20",
+      "revision": 1,
+      "status": "selected"
+    }
+  ],
+  "generation": 2,
+  "schema": "kungfu.skill-registry-state/v2",
+  "stateRoot": "sha256:5d67c58c04d7481bd2870b803743a49554b3283f4b96a5d1866ae5d7f5cdb4f0"
+}

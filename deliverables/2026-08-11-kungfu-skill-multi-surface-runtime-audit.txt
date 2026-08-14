@@ -2,11 +2,11 @@
   "schema": "kungfu.assignment-delivery-evidence/v1",
   "initiativeId": "2026-08-11-kungfu-skill-agent-native-product-system",
   "assignmentId": "2026-08-11-kungfu-skill-multi-surface-runtime-audit",
-  "baseRevision": "0fbacb3dfd48883d9db222f55ce2f57ebdbd9c1b",
-  "implementationRevision": "96b908b1858c56d9cca7f1f856b5dbbe4dee4eb1",
-  "implementationTree": "ab4aea58cc4263f40b857463b4baf7a8978fc8db",
-  "generatedAt": "2026-08-14T14:21:40+08:00",
-  "purpose": "Bind the exact successor implementation, same-root parity, managed-run and Agent Console dogfood, qualification, and recovery evidence requested by native independent review. This file routes evidence and does not replace the referenced source, receipts, protected merge, or native review.",
+  "baseRevision": "001a3764e55191e1430ff21a772f5ecbcdff6d8f",
+  "implementationRevision": "25101e70f7145af61bf4a9736f1b6a95452e173f",
+  "implementationTree": "9429500919c418ab236fea80b7d92a9e293beace",
+  "generatedAt": "2026-08-14T19:38:16+08:00",
+  "purpose": "Bind the protected successor implementation, exact retained managed-run and Agent Console bytes, same-root parity, recovery evidence, and child 7 capture-only state requested by native independent review. This file routes evidence and does not replace native review.",
   "sourceEvidence": {
     "contract": {
       "path": "framework/skill/kungfu-skill.contract.json",
@@ -103,13 +103,19 @@
     "provider": "codex",
     "providerProfile": "codex.path.d3712054caa3",
     "providerVersion": "0.147.0-alpha.1.2",
-    "runId": "agent-13980ef0ca0845578b938016533376f9",
-    "attemptId": "agent-13980ef0ca0845578b938016533376f9",
-    "reportRoot": "sha256:0f50e407f1677b202c493f5a2ceb66954da2381f089d732fd4fed96e3031d092",
+    "runId": "agent-9841f0a8aa8a4cacadd0737063acf0fc",
+    "attemptId": "agent-9841f0a8aa8a4cacadd0737063acf0fc",
+    "reportRoot": "sha256:d1fc58f4ef65ab18044d69e69b9c39595edf5d0bc45ba33938a45ee0397531d6",
     "exitCode": 0,
+    "retainedEvidence": {
+      "path": ".kungfu/retained-native-evidence/2026-08-11-kungfu-skill-multi-surface-runtime-audit",
+      "manifestRoot": "sha256:de816ec3cb0d7dc973b7a0a5a5689443daec7dfa5a6777ece70f3e3140e1d50f",
+      "fileCount": 21,
+      "verification": "python3 .kungfu/retained-native-evidence/2026-08-11-kungfu-skill-multi-surface-runtime-audit/verify.py.txt"
+    },
     "console": {
       "available": true,
-      "envelopeRoot": "sha256:f7c5b7aca8fa3afa3feb8d87072b28ae1627aaa2e3d721e72674564708fd07ec",
+      "envelopeRoot": "sha256:16fd66ba40508c3190ecd73bb4f6f08b779ac397514166025f9ad446da3ed5fb",
       "advisoryDecisionRoot": "sha256:cef7f93d34d13523c7744359a23eaa7bc8bd88987e47ddc61abd8f0dfdf12cce",
       "advisoryPolicyRoot": "sha256:dc8ebb873760e55c40ef19b8354ba1e2b91706064a48dec00b1eb8dac0479267"
     },
@@ -122,26 +128,26 @@
       "kfxDependencies": []
     },
     "intentionalRefusal": {
-      "planRoot": "sha256:0d8cb68dc04f96113a0df618f0b6cea3e25321629147017a98bb6d5feec86cd0",
+      "planRoot": "sha256:3e5f961aa7d31f44eef9cfdd437ba5964eb161564e5fe5fe4c1cbae3c1329d89",
       "code": "KF_SKILL_INSTRUCTION_ONLY_INERT",
       "status": "inert",
       "executionAllowed": false,
-      "auditIdentityRoot": "sha256:7e8be2698af95219d303e62a5957b18f467173134945d7ebe4e27b787ac0728e",
+      "auditIdentityRoot": "sha256:a793c5c9786738114c6450b99e65fc0691aeddb29c56a06de582139e7338dbba",
       "recovery": "load rooted instructions only; add a new reviewed Skill revision to request execution"
     },
     "audit": {
       "eventCount": 2,
       "eventTypes": ["SkillLoaded", "SkillTrustRefused"],
-      "refusalEventRoot": "sha256:c71a6c5ba6d4ee998dd1399b25616f358e2537271eeb5102fa85733c8e98d2b2"
+      "refusalEventRoot": "sha256:48effe643635f0de7fa65781891fdafabd2fde415920a15cb4dce1dd86b11d0a"
     },
     "finalRuntimeAudit": {
       "schema": "kungfu.skill-runtime-audit/v2",
-      "documentRoot": "sha256:71974ffbc767b8a3a6fa8fb57afa7178e090824d94b97bb67884eb98b874c7cb",
-      "runtimeAuditRoot": "sha256:8c958388193df5ece8531e484208186e97f3a20f608c7250810d63bb25058123",
-      "registryStateRoot": "sha256:f28948d0ece779a204aa5ad901a06437560a86642ff838e852b6691fd79c787e",
-      "registryReportRoot": "sha256:fe1ea613eb63e563a5febff4229b362acd0a09bef1f02ddde66f6499a0027fbb",
-      "diagnosisRoot": "sha256:c04aa30d1ff53d47781034438ea4492c53558a5f8917e1dcba9009ee665c940c",
-      "historyRoot": "sha256:3c0a49e6a5e1a2473dd334b261333e2bbf4fe6390cf27801568f5b1f4308180e",
+      "documentRoot": "sha256:22eec574b9fc9c356ceaa41de4450db7f90696b8e65ce6b8f39525bb9481f9fc",
+      "runtimeAuditRoot": "sha256:a609c21878d2974a12503c65bb1a08c8198a7149e84d5a9944152b20eb2c9e73",
+      "registryStateRoot": "sha256:f012dacc52e8f36b1834f0baf7ba44eb9c906e012902cfd0f859f891e2e818d1",
+      "registryReportRoot": "sha256:8ba8a59879e1f812292ad318044210060e1b0651aed28c746cdc8b4bca8a2755",
+      "diagnosisRoot": "sha256:0a91a9e1daca651b149dd1ff6bb544612c1a1e537b68670279c0b98d6f2367ee",
+      "historyRoot": "sha256:3f88fdfc8c08268b03bdacf42f8c5edb7c827ef19c1eb7075c4b01be74e89123",
       "surfaces": ["agent", "cli", "gui", "managed-run", "tui"],
       "surfaceRootsEqual": true,
       "admissionProjectionEqual": true,
@@ -152,13 +158,33 @@
     "productGapClosure": [
       "The first run truthfully refused a missing KUNGFU_CLI_BIN instead of inventing capability.",
       "The second run exposed missing Console and audit environment on managed-run; implementation revision 7ac6000d6a462f2696ef996d6931baa3caa87780 reuses the native Console environment and writes the final runtime audit on exit.",
-      "The third run exposed the public skill invoke Click decorator-order failure; the implementation fixes it, and an exact-plan invocation passed with planRoot sha256:db520ba77a1e246d7c1db9acf133f0949477e9dc1d2cd2cd39895a9645d5e349 and receiptRoot sha256:82eff30933840532f220c5b81cfd3659da2c8a3a92bcf8cb534e2a9292e73a55."
+      "The third run exposed the public skill invoke Click decorator-order failure; the implementation fixes it.",
+      "The retained terminal run independently repeated the exact-plan invocation with planRoot sha256:a0f9c4745c9626f489cbcf4d96cbd97a5e5d8e1f782321ef2b24bc02de452758 and receiptRoot sha256:87426d49811afe16bc677f823f33b3e1c89f737cb6890be73887995eccae0859."
     ],
     "nonClaims": [
       "provider exit does not prove Work completion",
       "dogfood does not replace native independent review",
       "Agent Console remains a read-only evidence join and does not gain Work, Profile, Fact, Episode, KFX trust, or completion authority"
     ]
+  },
+  "protectedDelivery": {
+    "path": ".kungfu/retained-native-evidence/2026-08-11-kungfu-skill-multi-surface-runtime-audit/protected-delivery.json",
+    "pullRequests": [3082, 3097],
+    "mergeCommits": [
+      "001a3764e55191e1430ff21a772f5ecbcdff6d8f",
+      "25101e70f7145af61bf4a9736f1b6a95452e173f"
+    ],
+    "mergeGroupRuns": [31783751400, 31794328669, 31794328729, 31794329085]
+  },
+  "child7Unstarted": {
+    "path": ".kungfu/retained-native-evidence/2026-08-11-kungfu-skill-multi-surface-runtime-audit/child7-unstarted",
+    "requestRoot": "sha256:2c299320be4acfe2e0e3157b479df3723fbc564c4b083d066871f6b2680b926e",
+    "captureReceiptRoot": "sha256:77e3c540df177c207921007fff6820d1fc6ea457d99f07814c63e4babf0a7231",
+    "operationClass": "capture-only",
+    "assignmentAdmissionSkipped": true,
+    "assignmentClaimSkipped": true,
+    "runtimeInitializationSkipped": true,
+    "verdict": "unstarted"
   },
   "acceptanceRouting": [
     {
@@ -179,12 +205,12 @@
     },
     {
       "criterion": 8,
-      "evidence": ["qualificationEvidence", "native independent-review receipt and protected PR merge remain terminal closeout gates and are not pre-claimed here"]
+      "evidence": ["qualificationEvidence", "protectedDelivery", "child7Unstarted"]
     }
   ],
   "reviewBoundary": {
     "independentReview": "required after this evidence is retained",
-    "protectedMerge": "required before Assignment close and child 7 start",
+    "protectedMerge": "PR 3082 and its WorkRef repair PR 3097 are merged; this retained-evidence follow-up must also use protected delivery before Assignment close",
     "child7": "must remain unstarted until both gates are recorded"
   }
 }

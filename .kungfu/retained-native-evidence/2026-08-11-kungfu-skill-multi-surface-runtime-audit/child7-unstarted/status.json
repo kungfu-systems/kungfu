@@ -1,0 +1,40 @@
+{
+  "schema": "kungfu.assignment.child-unstarted-evidence/v1",
+  "initiativeId": "2026-08-11-kungfu-skill-agent-native-product-system",
+  "assignmentId": "2026-08-11-kungfu-skill-product-qualification-and-next-wave",
+  "ordinal": 7,
+  "observedAfterProtectedMerge": "25101e70f7145af61bf4a9736f1b6a95452e173f",
+  "atlasMirror": {
+    "status": "paused",
+    "claim": null,
+    "worktree": null,
+    "branch": null,
+    "externalRepo": null,
+    "workspacePath": ""
+  },
+  "nativeCapture": {
+    "requestRoot": "sha256:2c299320be4acfe2e0e3157b479df3723fbc564c4b083d066871f6b2680b926e",
+    "captureReceiptRoot": "sha256:77e3c540df177c207921007fff6820d1fc6ea457d99f07814c63e4babf0a7231",
+    "operationClass": "capture-only",
+    "skippedEffects": [
+      "initiative-association",
+      "assignment-admission",
+      "assignment-claim",
+      "runtime-initialization",
+      "journal-write",
+      "git-init",
+      "git-stage",
+      "git-commit",
+      "git-push"
+    ]
+  },
+  "dependencyGate": {
+    "dependsOnAssignmentId": "2026-08-11-kungfu-skill-multi-surface-runtime-audit",
+    "requiredStateBeforeResume": "native-terminal-and-protected-delivered"
+  },
+  "evidenceFiles": [
+    "request.json",
+    "capture-receipt.json"
+  ],
+  "verdict": "unstarted"
+}

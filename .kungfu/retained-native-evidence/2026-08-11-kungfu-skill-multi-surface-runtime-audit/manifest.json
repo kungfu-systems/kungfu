@@ -1,0 +1,117 @@
+{
+  "assignmentId": "2026-08-11-kungfu-skill-multi-surface-runtime-audit",
+  "files": [
+    {
+      "bytes": 2501,
+      "path": "agent-console/events.jsonl",
+      "sha256": "sha256:88db1e0b1b546891a2ec528d44867f264c63f27a28cc7fbb15581e328e4f2fca"
+    },
+    {
+      "bytes": 9769,
+      "path": "agent-console/final-runtime-audit.json",
+      "sha256": "sha256:393ca2d3937e6b32be2079ad48fcb14f4a5a4e54c7d9217279ec3ebd91614795"
+    },
+    {
+      "bytes": 7185,
+      "path": "agent-console/launch-runtime-audit.json",
+      "sha256": "sha256:6d64910b8fcd3cb40feb6d45ce45932879ab3736e1408354719941a26bdc38b8"
+    },
+    {
+      "bytes": 848,
+      "path": "child7-unstarted/capture-receipt.json",
+      "sha256": "sha256:c79858c7998dcc9789238e577d617eea67c21609456e2f297405d826a4e36a2b"
+    },
+    {
+      "bytes": 11328,
+      "path": "child7-unstarted/request.json",
+      "sha256": "sha256:faac6b2db753e7c61c7ba5eb7705490deb1e8f3516b0a1601b6a9506459633f1"
+    },
+    {
+      "bytes": 1261,
+      "path": "child7-unstarted/status.json",
+      "sha256": "sha256:4afb85b1194d8a4a27ca59ce42776aa6523a5f22325460af6993f27c6224f6d6"
+    },
+    {
+      "bytes": 3138,
+      "path": "managed-run/manifest.json",
+      "sha256": "sha256:1a5b9f9cc84192892f2f9b1c409f27c586a2e33efe5433fd8ed7782920ceb979"
+    },
+    {
+      "bytes": 42728,
+      "path": "managed-run/report.json",
+      "sha256": "sha256:43d63ae4809fbdc2227f97867d3074176050136d1b0ef2263c471365da2ba65f"
+    },
+    {
+      "bytes": 123761,
+      "path": "managed-run/response.json",
+      "sha256": "sha256:2525f3b839cc89bdd79082eb6743358b4743d291977493dbfb359bf191bcfb0d"
+    },
+    {
+      "bytes": 6688,
+      "path": "managed-run/schemas/37b9a80a1460b35711afff466f249a43ad0c2eb5c9c02a5b0e7ada66b6b55036.bfbs.bin",
+      "sha256": "sha256:37b9a80a1460b35711afff466f249a43ad0c2eb5c9c02a5b0e7ada66b6b55036"
+    },
+    {
+      "bytes": 2872,
+      "path": "protected-delivery.json",
+      "sha256": "sha256:4bef53763ab429b20b850c607df085298d9d67a4a727bdae8a85ad7c57356dec"
+    },
+    {
+      "bytes": 2546,
+      "path": "skill-registry/definitions/sha256/ff8cfb5135a0d452c8e9efabf5c1b533f22aa8c0b04da6bc244e0abf88c3bd15.json",
+      "sha256": "sha256:0ef8e7de6f6d3cdd9a36168216ccc4a13525a697a1817a76c6d81d1031744fc9"
+    },
+    {
+      "bytes": 1667,
+      "path": "skill-registry/history/00000000000000000001-8e17618149b4335fa78381570a249e0972d7af23cb4f6ec55d1867bcbcdf5f1c.json",
+      "sha256": "sha256:35c514df6a2bf0204d81dac3b63c27c494b60d6544eb52a4f843e7b57176b8d4"
+    },
+    {
+      "bytes": 2367,
+      "path": "skill-registry/history/00000000000000000002-5d67c58c04d7481bd2870b803743a49554b3283f4b96a5d1866ae5d7f5cdb4f0.json",
+      "sha256": "sha256:60ede36826b7533d780e7404077ff2b7daeaae557c4ab223292d1bf0369d8140"
+    },
+    {
+      "bytes": 2716,
+      "path": "skill-registry/history/00000000000000000003-f012dacc52e8f36b1834f0baf7ba44eb9c906e012902cfd0f859f891e2e818d1.json",
+      "sha256": "sha256:80ed884afc0201ce7c627925bf10126c44a62efb51e13dd1939efd275e1293ed"
+    },
+    {
+      "bytes": 60,
+      "path": "skill-registry/payloads/sha256/aafb9b1b091b4dc00c7d838fa91f75c507e51c36045f31bccfc864a8532819f8/SKILL.md",
+      "sha256": "sha256:0bc8514b8c2f690a065cd5c0b1b6f12496695c283cc7a796e8ac14f242a081a0"
+    },
+    {
+      "bytes": 1094,
+      "path": "skill-registry/receipts/125d07e507a1c02022217a8d1f346e122d122668fdc8ae0679aa245589382a86.json",
+      "sha256": "sha256:06f1f2f123b39dcef39a97d59001733e156dc06a20c415dd32ca0b5bc83022a8"
+    },
+    {
+      "bytes": 1047,
+      "path": "skill-registry/receipts/79d33b0d6cd5064b6df259bfa7c4344a64bee7b1da3c30faf8300168b7620aa4.json",
+      "sha256": "sha256:0f01a2c7e65781f5be8f6be7985f0f1c2adfe06b2bc47f6b4958018cc9593d7c"
+    },
+    {
+      "bytes": 1044,
+      "path": "skill-registry/receipts/a0f9c4745c9626f489cbcf4d96cbd97a5e5d8e1f782321ef2b24bc02de452758.json",
+      "sha256": "sha256:2dff9f3dda7e018b2905e7418d08ed9ec4dc693b0be959c02e9647edf3ff9bad"
+    },
+    {
+      "bytes": 2716,
+      "path": "skill-registry/state.json",
+      "sha256": "sha256:80ed884afc0201ce7c627925bf10126c44a62efb51e13dd1939efd275e1293ed"
+    },
+    {
+      "bytes": 6946,
+      "path": "verify.py.txt",
+      "sha256": "sha256:cede76cfd662b66564fa96bfbd77fd49ec235a468cfebfa4c63ea64f665006fd"
+    }
+  ],
+  "manifestRoot": "sha256:de816ec3cb0d7dc973b7a0a5a5689443daec7dfa5a6777ece70f3e3140e1d50f",
+  "nonClaims": [
+    "Exact retained bytes do not settle Work.",
+    "Independent native review remains authoritative for acceptance."
+  ],
+  "runId": "agent-9841f0a8aa8a4cacadd0737063acf0fc",
+  "schema": "kungfu.skill-runtime-audit.retained-evidence/v1"
+}

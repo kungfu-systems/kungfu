@@ -1,0 +1,195 @@
+#!/usr/bin/env python3
+
+import argparse
+import hashlib
+import json
+from pathlib import Path
+
+
+ROOT = Path(__file__).resolve().parent
+MANIFEST = ROOT / "manifest.json"
+
+
+def retained_files():
+    return [
+        path
+        for path in sorted(ROOT.rglob("*"))
+        if path.is_file() and path != MANIFEST and path.name != "__pycache__"
+    ]
+
+
+def exact_file(path):
+    content = path.read_bytes()
+    return {
+        "path": path.relative_to(ROOT).as_posix(),
+        "bytes": len(content),
+        "sha256": "sha256:" + hashlib.sha256(content).hexdigest(),
+    }
+
+
+def read_json(relative):
+    return json.loads((ROOT / relative).read_text(encoding="utf-8"))
+
+
+def semantic_root(value):
+    canonical = json.dumps(
+        value, ensure_ascii=False, sort_keys=True, separators=(",", ":")
+    ).encode()
+    return "sha256:" + hashlib.sha256(canonical).hexdigest()
+
+
+def verify_semantics():
+    run_id = "agent-9841f0a8aa8a4cacadd0737063acf0fc"
+    report = read_json("managed-run/report.json")
+    report_body = {key: value for key, value in report.items() if key != "reportRoot"}
+    if report["reportRoot"] != semantic_root(report_body):
+        raise SystemExit("managed-run reportRoot does not match its exact body")
+    if report["runId"] != run_id or report["work"]["settlementStatus"] != "unsettled":
+        raise SystemExit("managed-run identity or Work non-settlement boundary changed")
+
+    response = read_json("managed-run/response.json")
+    if response["runId"] != run_id or response["exitCode"] != 0:
+        raise SystemExit("managed-run response identity or exit evidence changed")
+    labels = {
+        "CONSOLE_ENVELOPE",
+        "CONSOLE_CURRENT",
+        "ADVISORY",
+        "SKILL_READ",
+        "REFUSAL_PLAN",
+        "REFUSAL_EXECUTION",
+        "INVOKE_PLAN",
+        "INVOKE_RECEIPT",
+        "SKILL_AUDIT",
+        "DIAGNOSE",
+        "EXPLAIN",
+        "EXACT_PATHS",
+    }
+    response_text = response["parsed"]["text"]
+    if any(f"### {label}" not in response_text for label in labels):
+        raise SystemExit("provider response no longer retains every required output")
+
+    bundle = read_json("managed-run/manifest.json")
+    report_bytes = (ROOT / "managed-run/report.json").read_bytes()
+    if bundle["agent_run"]["reportSha256"] != hashlib.sha256(report_bytes).hexdigest():
+        raise SystemExit("managed-run bundle does not bind the retained report bytes")
+    if bundle["agent_run"]["completionAuthority"] is not False:
+        raise SystemExit("managed-run bundle unexpectedly claims completion authority")
+
+    audit = read_json("agent-console/final-runtime-audit.json")
+    audit_body = {key: value for key, value in audit.items() if key != "documentRoot"}
+    if audit["documentRoot"] != semantic_root(audit_body):
+        raise SystemExit("final runtime audit documentRoot does not match exact bytes")
+    projections = audit["surfaceProjections"]
+    if set(projections) != {"agent", "cli", "gui", "managed-run", "tui"}:
+        raise SystemExit("final runtime audit does not retain all five surfaces")
+    shared = [
+        {key: value for key, value in projection.items() if key != "surface"}
+        for projection in projections.values()
+    ]
+    if any(value != shared[0] for value in shared[1:]):
+        raise SystemExit("final runtime audit surface projections are not identical")
+    if (
+        shared[0]["runtimeAuditRoot"] != audit["runtimeAuditRoot"]
+        or audit["recovery"]["verdict"] != "pass"
+        or not audit["recovery"]["historyPreserved"]
+    ):
+        raise SystemExit("final runtime audit root or recovery boundary changed")
+
+    event_types = {
+        json.loads(line)["type"]
+        for line in (ROOT / "agent-console/events.jsonl")
+        .read_text(encoding="utf-8")
+        .splitlines()
+        if line
+    }
+    if event_types != {"SkillLoaded", "SkillTrustRefused"}:
+        raise SystemExit("Agent Console audit events changed")
+
+    invoke = read_json(
+        "skill-registry/receipts/"
+        "a0f9c4745c9626f489cbcf4d96cbd97a5e5d8e1f782321ef2b24bc02de452758.json"
+    )
+    if (
+        invoke["planRoot"]
+        != "sha256:a0f9c4745c9626f489cbcf4d96cbd97a5e5d8e1f782321ef2b24bc02de452758"
+        or invoke["receiptRoot"]
+        != "sha256:87426d49811afe16bc677f823f33b3e1c89f737cb6890be73887995eccae0859"
+    ):
+        raise SystemExit("exact Skill invocation receipt changed")
+
+    child7 = read_json("child7-unstarted/capture-receipt.json")
+    required_skips = {
+        "assignment-admission",
+        "assignment-claim",
+        "runtime-initialization",
+    }
+    if child7["operationClass"] != "capture-only" or not required_skips.issubset(
+        child7["skippedEffects"]
+    ):
+        raise SystemExit("child 7 is no longer proved capture-only and unstarted")
+
+    delivery = read_json("protected-delivery.json")
+    if any(row["state"] != "MERGED" for row in delivery["deliveries"]):
+        raise SystemExit("protected delivery evidence is not fully merged")
+    runs = [
+        row["mergeGroupRun"] for row in delivery["deliveries"] if "mergeGroupRun" in row
+    ]
+    runs.extend(
+        run for row in delivery["deliveries"] for run in row.get("mergeGroupRuns", [])
+    )
+    if any(
+        run["event"] != "merge_group"
+        or run["status"] != "completed"
+        or run["conclusion"] != "success"
+        for run in runs
+    ):
+        raise SystemExit("protected merge-group evidence is not successful")
+
+
+def compile_manifest():
+    files = [exact_file(path) for path in retained_files()]
+    body = {
+        "schema": "kungfu.skill-runtime-audit.retained-evidence/v1",
+        "assignmentId": "2026-08-11-kungfu-skill-multi-surface-runtime-audit",
+        "runId": "agent-9841f0a8aa8a4cacadd0737063acf0fc",
+        "files": files,
+        "nonClaims": [
+            "Exact retained bytes do not settle Work.",
+            "Independent native review remains authoritative for acceptance.",
+        ],
+    }
+    canonical = json.dumps(body, sort_keys=True, separators=(",", ":")).encode()
+    return {
+        **body,
+        "manifestRoot": "sha256:" + hashlib.sha256(canonical).hexdigest(),
+    }
+
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--write", action="store_true")
+    args = parser.parse_args()
+    verify_semantics()
+    compiled = compile_manifest()
+    if args.write:
+        MANIFEST.write_text(
+            json.dumps(compiled, indent=2, sort_keys=True) + "\n",
+            encoding="utf-8",
+        )
+    retained = json.loads(MANIFEST.read_text(encoding="utf-8"))
+    if retained != compiled:
+        raise SystemExit("retained evidence manifest does not match exact bytes")
+    print(
+        json.dumps(
+            {
+                "ok": True,
+                "files": len(compiled["files"]),
+                "manifestRoot": compiled["manifestRoot"],
+            },
+            sort_keys=True,
+        )
+    )
+
+
+if __name__ == "__main__":
+    main()

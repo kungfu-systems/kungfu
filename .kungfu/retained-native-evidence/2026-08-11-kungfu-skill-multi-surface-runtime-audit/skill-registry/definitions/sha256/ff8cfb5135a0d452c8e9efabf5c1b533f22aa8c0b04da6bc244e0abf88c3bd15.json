@@ -1,0 +1,93 @@
+{
+  "authority": {
+    "capability": "none",
+    "factEpisode": "reference-only",
+    "kfd": "reference-only",
+    "kfx": "reference-only",
+    "nonClaims": [
+      "skill-prose-is-not-capability",
+      "skill-is-not-work-authority",
+      "skill-is-not-profile-authority",
+      "skill-is-not-fact-or-episode-authority",
+      "skill-is-not-kfd-authority",
+      "skill-is-not-kfx-authority",
+      "selection-load-or-invocation-is-not-completion",
+      "retirement-does-not-reinterpret-history"
+    ],
+    "profile": "reference-only",
+    "work": "reference-only"
+  },
+  "class": "instruction-only",
+  "compatibility": {
+    "contractVersion": 2,
+    "history": "preserve-original-meaning",
+    "predecessor": null,
+    "requires": [
+      {
+        "contractRoot": "sha256:5555555555555555555555555555555555555555555555555555555555555555",
+        "surface": "skill"
+      }
+    ]
+  },
+  "content": {
+    "algorithm": "sha256-canonical-json",
+    "entrypoint": "SKILL.md",
+    "members": [
+      {
+        "bytes": 60,
+        "mediaType": "text/markdown",
+        "path": "SKILL.md",
+        "root": "sha256:0bc8514b8c2f690a065cd5c0b1b6f12496695c283cc7a796e8ac14f242a081a0"
+      }
+    ],
+    "root": "sha256:aafb9b1b091b4dc00c7d838fa91f75c507e51c36045f31bccfc864a8532819f8"
+  },
+  "dependencies": {
+    "kfx": [],
+    "profiles": []
+  },
+  "effects": {
+    "declarations": [],
+    "mode": "none"
+  },
+  "identity": {
+    "contentRoot": "sha256:aafb9b1b091b4dc00c7d838fa91f75c507e51c36045f31bccfc864a8532819f8",
+    "key": "runtime-audit-qualification",
+    "revision": 1
+  },
+  "proof": {
+    "completion": "work-acceptance-not-skill-output",
+    "requirements": [
+      {
+        "description": "Verify identical rooted projections on all five surfaces.",
+        "id": "multi-surface-runtime-audit",
+        "kind": "check"
+      }
+    ]
+  },
+  "provenance": {
+    "generated": false,
+    "sourceKind": "workspace",
+    "sourceRef": "workspace:runtime-audit-qualification@1",
+    "sourceRoot": "sha256:4444444444444444444444444444444444444444444444444444444444444444"
+  },
+  "recovery": {
+    "history": "preserve-roots-receipts-and-work-meaning",
+    "steps": [
+      "Inspect the exact retained root."
+    ],
+    "strategy": "disable-and-inspect"
+  },
+  "schema": "kungfu.skill-definition/v2",
+  "scope": {
+    "appliesTo": [
+      "qualification"
+    ],
+    "distribution": "workspace-local",
+    "work": {
+      "binding": "optional",
+      "completionAuthority": "kungfu-work",
+      "selectionAuthority": "kungfu-work"
+    }
+  }
+}

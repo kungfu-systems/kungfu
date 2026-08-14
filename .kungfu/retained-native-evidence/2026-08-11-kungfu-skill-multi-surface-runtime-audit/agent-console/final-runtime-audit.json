@@ -1,0 +1,268 @@
+{
+  "authority": {
+    "nonClaims": [
+      "work-authority",
+      "profile-authority",
+      "fact-or-episode-authority",
+      "kfx-package-trust-or-capability-authority",
+      "run-or-work-completion-authority"
+    ],
+    "projection": "read-only-evidence-join",
+    "registry": "python-single-writer-skill-registry-fold"
+  },
+  "documentRoot": "sha256:22eec574b9fc9c356ceaa41de4450db7f90696b8e65ce6b8f39525bb9481f9fc",
+  "evidence": [
+    {
+      "detail": {
+        "status": "installed"
+      },
+      "proof": {
+        "roots": [
+          "sha256:52ac9edc887e60699a222bab7fe34d7b5e00bf405f35d4f48e0c2b79f84d505d",
+          "sha256:aafb9b1b091b4dc00c7d838fa91f75c507e51c36045f31bccfc864a8532819f8"
+        ],
+        "status": "rooted"
+      },
+      "runId": null,
+      "skillKey": "runtime-audit-qualification",
+      "source": {
+        "kind": "registry-event",
+        "type": "install"
+      },
+      "state": "installed",
+      "workRef": null
+    },
+    {
+      "detail": {
+        "status": "invoked"
+      },
+      "proof": {
+        "roots": [
+          "sha256:2535302229a3a72ef9dccf7b5f6ef7b3e793b02908134804eb4f4acf4329a5ad",
+          "sha256:aafb9b1b091b4dc00c7d838fa91f75c507e51c36045f31bccfc864a8532819f8"
+        ],
+        "status": "rooted"
+      },
+      "runId": null,
+      "skillKey": "runtime-audit-qualification",
+      "source": {
+        "kind": "registry-event",
+        "type": "invoke"
+      },
+      "state": "invoked",
+      "workRef": null
+    },
+    {
+      "detail": {
+        "status": "selected"
+      },
+      "proof": {
+        "roots": [
+          "sha256:8c5bf9b41faf6f3b668d99e5756d01f8b478ef77fe1235f980483b8a43e4fe20",
+          "sha256:aafb9b1b091b4dc00c7d838fa91f75c507e51c36045f31bccfc864a8532819f8"
+        ],
+        "status": "rooted"
+      },
+      "runId": null,
+      "skillKey": "runtime-audit-qualification",
+      "source": {
+        "kind": "registry-event",
+        "type": "select"
+      },
+      "state": "selected",
+      "workRef": null
+    },
+    {
+      "detail": {
+        "revision": 1
+      },
+      "proof": {
+        "roots": [
+          "sha256:815b65f22c9697bc539bca7ff84aca9ba23b145a7a6e9b7e905dba39291fc8cf",
+          "sha256:aafb9b1b091b4dc00c7d838fa91f75c507e51c36045f31bccfc864a8532819f8",
+          "sha256:f012dacc52e8f36b1834f0baf7ba44eb9c906e012902cfd0f859f891e2e818d1"
+        ],
+        "status": "rooted"
+      },
+      "runId": null,
+      "skillKey": "runtime-audit-qualification",
+      "source": {
+        "kind": "registry-fold",
+        "type": "active-work-selection"
+      },
+      "state": "selected",
+      "workRef": "2026-08-11-kungfu-skill-multi-surface-runtime-audit"
+    },
+    {
+      "detail": {
+        "code": "KF_SKILL_INSTRUCTION_ONLY_INERT",
+        "decision": "inert"
+      },
+      "proof": {
+        "roots": [
+          "sha256:3e5f961aa7d31f44eef9cfdd437ba5964eb161564e5fe5fe4c1cbae3c1329d89",
+          "sha256:48effe643635f0de7fa65781891fdafabd2fde415920a15cb4dce1dd86b11d0a",
+          "sha256:a793c5c9786738114c6450b99e65fc0691aeddb29c56a06de582139e7338dbba",
+          "sha256:aafb9b1b091b4dc00c7d838fa91f75c507e51c36045f31bccfc864a8532819f8",
+          "sha256:ff8cfb5135a0d452c8e9efabf5c1b533f22aa8c0b04da6bc244e0abf88c3bd15"
+        ],
+        "status": "rooted"
+      },
+      "runId": "agent-9841f0a8aa8a4cacadd0737063acf0fc",
+      "skillKey": "runtime-audit-qualification",
+      "source": {
+        "kind": "run-audit-event",
+        "type": "SkillTrustRefused"
+      },
+      "state": "blocked",
+      "workRef": "2026-08-11-kungfu-skill-multi-surface-runtime-audit"
+    },
+    {
+      "detail": {
+        "code": null,
+        "decision": null
+      },
+      "proof": {
+        "roots": [
+          "sha256:0bc8514b8c2f690a065cd5c0b1b6f12496695c283cc7a796e8ac14f242a081a0"
+        ],
+        "status": "rooted"
+      },
+      "runId": "agent-9841f0a8aa8a4cacadd0737063acf0fc",
+      "skillKey": "runtime-audit-qualification",
+      "source": {
+        "kind": "run-audit-event",
+        "type": "SkillLoaded"
+      },
+      "state": "loaded",
+      "workRef": "2026-08-11-kungfu-skill-multi-surface-runtime-audit"
+    }
+  ],
+  "recovery": {
+    "guidance": "remove only unreferenced staging after inspection; immutable roots and history stay retained",
+    "historyPreserved": true,
+    "issues": [],
+    "recoverableStaging": [],
+    "verdict": "pass"
+  },
+  "roots": {
+    "auditRoots": [
+      "sha256:19b1d426d2c3afd201faa1b6086c89b7aca6a7a958bd61ceacc704dd0bd70b01"
+    ],
+    "dependencyRoots": [],
+    "diagnosisRoot": "sha256:0a91a9e1daca651b149dd1ff6bb544612c1a1e537b68670279c0b98d6f2367ee",
+    "historyRoot": "sha256:3f88fdfc8c08268b03bdacf42f8c5edb7c827ef19c1eb7075c4b01be74e89123",
+    "registryReportRoot": "sha256:8ba8a59879e1f812292ad318044210060e1b0651aed28c746cdc8b4bca8a2755",
+    "registryStateRoot": "sha256:f012dacc52e8f36b1834f0baf7ba44eb9c906e012902cfd0f859f891e2e818d1"
+  },
+  "runtimeAuditRoot": "sha256:a609c21878d2974a12503c65bb1a08c8198a7149e84d5a9944152b20eb2c9e73",
+  "schema": "kungfu.skill-runtime-audit/v2",
+  "scope": {
+    "runId": "agent-9841f0a8aa8a4cacadd0737063acf0fc",
+    "workRef": "2026-08-11-kungfu-skill-multi-surface-runtime-audit"
+  },
+  "skills": [
+    {
+      "dependencies": {
+        "kfx": [],
+        "profiles": []
+      },
+      "historyPreserved": true,
+      "identity": {
+        "active": true,
+        "class": "instruction-only",
+        "contentRoot": "sha256:aafb9b1b091b4dc00c7d838fa91f75c507e51c36045f31bccfc864a8532819f8",
+        "definitionRoot": "sha256:ff8cfb5135a0d452c8e9efabf5c1b533f22aa8c0b04da6bc244e0abf88c3bd15",
+        "key": "runtime-audit-qualification",
+        "revision": 1
+      },
+      "lifecycle": "invoked",
+      "observedStates": [
+        "blocked",
+        "installed",
+        "invoked",
+        "loaded",
+        "selected"
+      ],
+      "proof": {
+        "roots": [
+          "sha256:aafb9b1b091b4dc00c7d838fa91f75c507e51c36045f31bccfc864a8532819f8",
+          "sha256:f012dacc52e8f36b1834f0baf7ba44eb9c906e012902cfd0f859f891e2e818d1",
+          "sha256:ff8cfb5135a0d452c8e9efabf5c1b533f22aa8c0b04da6bc244e0abf88c3bd15"
+        ],
+        "status": "rooted"
+      },
+      "workBindings": [
+        {
+          "active": true,
+          "contentRoot": "sha256:aafb9b1b091b4dc00c7d838fa91f75c507e51c36045f31bccfc864a8532819f8",
+          "revision": 1,
+          "workRef": "2026-08-11-kungfu-skill-multi-surface-runtime-audit",
+          "workRoot": "sha256:815b65f22c9697bc539bca7ff84aca9ba23b145a7a6e9b7e905dba39291fc8cf"
+        }
+      ]
+    }
+  ],
+  "surfaceProjections": {
+    "agent": {
+      "auditRoots": [
+        "sha256:19b1d426d2c3afd201faa1b6086c89b7aca6a7a958bd61ceacc704dd0bd70b01"
+      ],
+      "authority": "read-only-projection",
+      "dependencyRoots": [],
+      "diagnosisRoot": "sha256:0a91a9e1daca651b149dd1ff6bb544612c1a1e537b68670279c0b98d6f2367ee",
+      "historyRoot": "sha256:3f88fdfc8c08268b03bdacf42f8c5edb7c827ef19c1eb7075c4b01be74e89123",
+      "registryStateRoot": "sha256:f012dacc52e8f36b1834f0baf7ba44eb9c906e012902cfd0f859f891e2e818d1",
+      "runtimeAuditRoot": "sha256:a609c21878d2974a12503c65bb1a08c8198a7149e84d5a9944152b20eb2c9e73",
+      "surface": "agent"
+    },
+    "cli": {
+      "auditRoots": [
+        "sha256:19b1d426d2c3afd201faa1b6086c89b7aca6a7a958bd61ceacc704dd0bd70b01"
+      ],
+      "authority": "read-only-projection",
+      "dependencyRoots": [],
+      "diagnosisRoot": "sha256:0a91a9e1daca651b149dd1ff6bb544612c1a1e537b68670279c0b98d6f2367ee",
+      "historyRoot": "sha256:3f88fdfc8c08268b03bdacf42f8c5edb7c827ef19c1eb7075c4b01be74e89123",
+      "registryStateRoot": "sha256:f012dacc52e8f36b1834f0baf7ba44eb9c906e012902cfd0f859f891e2e818d1",
+      "runtimeAuditRoot": "sha256:a609c21878d2974a12503c65bb1a08c8198a7149e84d5a9944152b20eb2c9e73",
+      "surface": "cli"
+    },
+    "gui": {
+      "auditRoots": [
+        "sha256:19b1d426d2c3afd201faa1b6086c89b7aca6a7a958bd61ceacc704dd0bd70b01"
+      ],
+      "authority": "read-only-projection",
+      "dependencyRoots": [],
+      "diagnosisRoot": "sha256:0a91a9e1daca651b149dd1ff6bb544612c1a1e537b68670279c0b98d6f2367ee",
+      "historyRoot": "sha256:3f88fdfc8c08268b03bdacf42f8c5edb7c827ef19c1eb7075c4b01be74e89123",
+      "registryStateRoot": "sha256:f012dacc52e8f36b1834f0baf7ba44eb9c906e012902cfd0f859f891e2e818d1",
+      "runtimeAuditRoot": "sha256:a609c21878d2974a12503c65bb1a08c8198a7149e84d5a9944152b20eb2c9e73",
+      "surface": "gui"
+    },
+    "managed-run": {
+      "auditRoots": [
+        "sha256:19b1d426d2c3afd201faa1b6086c89b7aca6a7a958bd61ceacc704dd0bd70b01"
+      ],
+      "authority": "read-only-projection",
+      "dependencyRoots": [],
+      "diagnosisRoot": "sha256:0a91a9e1daca651b149dd1ff6bb544612c1a1e537b68670279c0b98d6f2367ee",
+      "historyRoot": "sha256:3f88fdfc8c08268b03bdacf42f8c5edb7c827ef19c1eb7075c4b01be74e89123",
+      "registryStateRoot": "sha256:f012dacc52e8f36b1834f0baf7ba44eb9c906e012902cfd0f859f891e2e818d1",
+      "runtimeAuditRoot": "sha256:a609c21878d2974a12503c65bb1a08c8198a7149e84d5a9944152b20eb2c9e73",
+      "surface": "managed-run"
+    },
+    "tui": {
+      "auditRoots": [
+        "sha256:19b1d426d2c3afd201faa1b6086c89b7aca6a7a958bd61ceacc704dd0bd70b01"
+      ],
+      "authority": "read-only-projection",
+      "dependencyRoots": [],
+      "diagnosisRoot": "sha256:0a91a9e1daca651b149dd1ff6bb544612c1a1e537b68670279c0b98d6f2367ee",
+      "historyRoot": "sha256:3f88fdfc8c08268b03bdacf42f8c5edb7c827ef19c1eb7075c4b01be74e89123",
+      "registryStateRoot": "sha256:f012dacc52e8f36b1834f0baf7ba44eb9c906e012902cfd0f859f891e2e818d1",
+      "runtimeAuditRoot": "sha256:a609c21878d2974a12503c65bb1a08c8198a7149e84d5a9944152b20eb2c9e73",
+      "surface": "tui"
+    }
+  }
+}

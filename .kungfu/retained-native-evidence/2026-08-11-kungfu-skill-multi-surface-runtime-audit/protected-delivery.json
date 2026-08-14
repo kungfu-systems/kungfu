@@ -1,0 +1,77 @@
+{
+  "schema": "kungfu.skill-runtime-audit.protected-delivery-evidence/v1",
+  "repository": "kungfu-origin/kungfu",
+  "baseRef": "dev\u002fv4\u002fv4.0",
+  "deliveries": [
+    {
+      "pullRequest": 3082,
+      "url": "https://github.com/kungfu-systems/kungfu/pull/3082",
+      "state": "MERGED",
+      "reviewDecision": "APPROVED",
+      "headCommit": "2d69a88e3f5f3673dad2637a6f12796676c59086",
+      "mergedAt": "2026-08-14T08:46:45Z",
+      "mergeCommit": "001a3764e55191e1430ff21a772f5ecbcdff6d8f",
+      "mergeTree": "4a9d15464283f48181da59c909f25a6575bdadf0",
+      "parentCommit": "0c5bc0a6592c852371c14184d9267c124c76cf2f",
+      "mergeGroupRun": {
+        "id": 31783751400,
+        "attempt": 3,
+        "event": "merge_group",
+        "headSha": "001a3764e55191e1430ff21a772f5ecbcdff6d8f",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/kungfu-systems/kungfu/actions/runs/31783751400"
+      }
+    },
+    {
+      "pullRequest": 3097,
+      "url": "https://github.com/kungfu-systems/kungfu/pull/3097",
+      "state": "MERGED",
+      "reviewDecision": "APPROVED",
+      "headCommit": "63ac0684a0dc5caea766e20f01c611c05d454a71",
+      "mergedAt": "2026-08-14T11:03:18Z",
+      "mergeCommit": "25101e70f7145af61bf4a9736f1b6a95452e173f",
+      "mergeTree": "9429500919c418ab236fea80b7d92a9e293beace",
+      "parentCommit": "001a3764e55191e1430ff21a772f5ecbcdff6d8f",
+      "sourceAcceptanceRun": {
+        "id": 31786768216,
+        "attempt": 2,
+        "event": "pull_request",
+        "headSha": "63ac0684a0dc5caea766e20f01c611c05d454a71",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/kungfu-systems/kungfu/actions/runs/31786768216"
+      },
+      "mergeGroupRuns": [
+        {
+          "id": 31794328669,
+          "event": "merge_group",
+          "headSha": "25101e70f7145af61bf4a9736f1b6a95452e173f",
+          "status": "completed",
+          "conclusion": "success",
+          "url": "https://github.com/kungfu-systems/kungfu/actions/runs/31794328669"
+        },
+        {
+          "id": 31794328729,
+          "event": "merge_group",
+          "headSha": "25101e70f7145af61bf4a9736f1b6a95452e173f",
+          "status": "completed",
+          "conclusion": "success",
+          "url": "https://github.com/kungfu-systems/kungfu/actions/runs/31794328729"
+        },
+        {
+          "id": 31794329085,
+          "event": "merge_group",
+          "headSha": "25101e70f7145af61bf4a9736f1b6a95452e173f",
+          "status": "completed",
+          "conclusion": "success",
+          "url": "https://github.com/kungfu-systems/kungfu/actions/runs/31794329085"
+        }
+      ]
+    }
+  ],
+  "nonClaims": [
+    "A protected merge does not replace native independent review.",
+    "A successful provider process exit does not settle Assignment Work."
+  ]
+}
