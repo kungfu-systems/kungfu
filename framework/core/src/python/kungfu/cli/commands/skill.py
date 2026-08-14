@@ -23,6 +23,7 @@ from kungfu.skill import (
     apply_scaffold,
     authoring_contract,
     build_skill_dependency_binding,
+    build_skill_runtime_audit,
     build_catalog,
     build_skill_context,
     candidate_catalog,
@@ -48,6 +49,7 @@ from kungfu.skill import (
     registry_history,
     skill_loaded_event,
     skill_contract,
+    write_skill_runtime_audit,
 )
 
 skill_command_context = kfc.pass_context()
@@ -159,7 +161,9 @@ def _write_node_envelope_file(ctx, paths, source, profile, agent):
 
 
 def _default_skill_audit_log(ctx):
-    return os.path.join(ctx.runtime_dir, "skill-audit.jsonl")
+    return os.environ.get("KUNGFU_SKILL_AUDIT_FILE") or os.path.join(
+        ctx.runtime_dir, "skill-audit.jsonl"
+    )
 
 
 def _bundle_audit_path(ctx, run_id, bundle_dir=None, audit_file=None):
@@ -1030,7 +1034,8 @@ def read(ctx, key_or_path, paths, run_id, audit_file, no_audit, as_json):
     event = skill_loaded_event(
         parsed,
         markdown,
-        run_id=run_id,
+        run_id=run_id or os.environ.get("KUNGFU_SKILL_RUN_ID"),
+        work_id=os.environ.get("KUNGFU_SKILL_WORK_REF"),
         source="cli",
         manager="python",
     )
@@ -1112,6 +1117,61 @@ def audit(ctx, run_id, bundle_dir, audit_file, as_json):
             )
         else:
             click.echo(f"{event.get('type') or 'SkillAuditEvent'} {event}")
+
+
+@skill.command(
+    name="runtime-audit",
+    help="fold shared registry, Work, dependency, and run evidence for all surfaces",
+)
+@click.option(
+    "--audit-file",
+    "audit_files",
+    multiple=True,
+    type=click.Path(exists=True, dir_okay=False),
+    help="Skill audit JSON or JSONL evidence; repeat for multiple runs",
+)
+@click.option(
+    "--dependency-file",
+    "dependency_files",
+    multiple=True,
+    type=click.Path(exists=True, dir_okay=False),
+    help="rooted Skill dependency plan or receipt; repeat as needed",
+)
+@click.option("--run-id", default=None, help="scope the projection to one run")
+@click.option("--work-ref", default=None, help="scope the projection to one Work")
+@click.option(
+    "--out",
+    type=click.Path(dir_okay=False),
+    default=None,
+    help="write the exact shared projection to this path",
+)
+@click.option("--json", "as_json", is_flag=True, help="machine-readable output")
+@skill_command_context
+def runtime_audit(ctx, audit_files, dependency_files, run_id, work_ref, out, as_json):
+    try:
+        audits = [read_audit_file(path) for path in audit_files]
+        dependencies = [_json_file(path) for path in dependency_files]
+        document = build_skill_runtime_audit(
+            ctx.home,
+            audit_documents=audits,
+            dependency_documents=dependencies,
+            run_id=run_id,
+            work_ref=work_ref,
+        )
+        output_path = write_skill_runtime_audit(out, document) if out else None
+    except (OSError, ValueError, SkillRegistryError) as error:
+        click.echo(f"[skill] runtime audit unavailable: {error}", err=True)
+        raise click.exceptions.Exit(1) from error
+    if as_json:
+        _json(document)
+        return
+    click.echo(
+        "Skill runtime audit "
+        f"root={document['runtimeAuditRoot']} "
+        f"skills={len(document['skills'])} evidence={len(document['evidence'])}"
+    )
+    if output_path:
+        click.echo(f"[skill] runtime audit {output_path}")
 
 
 @skill.command(help="inspect declared kfx dependencies and registry bindings")

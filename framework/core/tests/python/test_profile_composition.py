@@ -2,6 +2,8 @@
 
 import hashlib
 import json
+from pathlib import Path
+import time
 
 import pytest
 from click.testing import CliRunner
@@ -10,6 +12,9 @@ from kungfu import profile_composition, profile_sdk
 from kungfu.cli.commands import __registry__  # noqa: F401
 from kungfu.cli.commands import kfc
 from kungfu.storage import service as storage_service
+
+
+DOGFOOD_SOURCE = Path(__file__).resolve().parents[4] / "extensions" / "dogfood"
 
 
 def _brief():
@@ -554,6 +559,38 @@ def test_non_mission_profile_resolves_query_materializes_contract_and_binds_clai
     assert query["profileSuiteRoot"] == assessment["profileSuiteRoot"]
     assert receipt["profileSuiteRoot"] == assessment["profileSuiteRoot"]
     assert receipt["assessment"]["assessment_key"].startswith("sha256:")
+
+
+def test_contract_materialization_keeps_one_world_when_head_clock_lags(
+    tmp_path, monkeypatch
+):
+    runtime = tmp_path / "runtime"
+    _activate(DOGFOOD_SOURCE, runtime)
+    plan = profile_composition.contract_materialization_plan(DOGFOOD_SOURCE, runtime)
+    answer = profile_sdk.answer_decision(plan["decisionCard"], "approve", "test-owner")
+    future = time.time_ns() + 10_000_000_000
+    monkeypatch.setattr(time, "time_ns", lambda: future)
+
+    profile_composition.authorized_contract_materialize(runtime, plan, answer)
+
+    catalog = storage_service.fact_type_list(runtime)
+    world = next(
+        row
+        for row in catalog["contract_worlds"]
+        if row["id"] == "kungfu.dogfood-feedback"
+    )
+    surfaces = [
+        row
+        for row in catalog["fact_types"]
+        if row["id"].startswith("kungfu.dogfood-feedback.")
+    ]
+    assert world["fact_surface_ids"] == [
+        "kungfu.dogfood-feedback.finding",
+        "kungfu.dogfood-feedback.issue",
+        "kungfu.dogfood-feedback.consideration",
+        "kungfu.dogfood-feedback.migration",
+    ]
+    assert {row["contract_world"]["root"] for row in surfaces} == {world["root"]}
 
 
 def test_resolved_query_rejects_binding_and_surface_drift(tmp_path):

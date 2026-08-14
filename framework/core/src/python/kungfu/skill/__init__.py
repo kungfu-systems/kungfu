@@ -25,12 +25,16 @@ from .dependencies import (
 )
 from .audit import (
     append_audit_event,
+    build_skill_runtime_audit,
+    project_skill_runtime_audit,
     read_audit_file,
+    read_skill_runtime_audit,
     skill_advertised_event,
     skill_audit_document,
     skill_dependencies_bound_event,
     skill_loaded_event,
     write_audit_document,
+    write_skill_runtime_audit,
 )
 from .parser import SkillError, parse_skill
 from .provider import (
@@ -78,6 +82,7 @@ __all__ = [
     "build_kungfu_environment",
     "build_skill_dependency_binding",
     "build_skill_context",
+    "build_skill_runtime_audit",
     "catalog_entry",
     "candidate_catalog",
     "context_file_from_env",
@@ -99,7 +104,9 @@ __all__ = [
     "plan_dependency_invocation",
     "plan_scaffold",
     "plan_operation",
+    "project_skill_runtime_audit",
     "read_audit_file",
+    "read_skill_runtime_audit",
     "read_skill_dependency_binding",
     "read_skill_markdown",
     "qualify_draft",
@@ -116,4 +123,5 @@ __all__ = [
     "skill_contract",
     "write_audit_document",
     "write_skill_dependency_binding",
+    "write_skill_runtime_audit",
 ]

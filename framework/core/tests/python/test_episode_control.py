@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 from contextlib import contextmanager
+import json
+from pathlib import Path
 import signal
 from types import SimpleNamespace
 
@@ -11,6 +13,9 @@ import pytest
 from kungfu.rewind import managed_cli
 from kungfu.storage import episode_control
 from kungfu.storage.episode_lifecycle import RuntimeEpisodeLifecycle
+
+
+ROOT_HASH = "sha256:" + "a" * 64
 
 
 def _native_write(**result):
@@ -328,3 +333,106 @@ def test_managed_run_postprocessing_failure_is_inside_episode_guard(
             skill_context=False,
         )
     assert state["aborted"] is True
+
+
+def test_managed_run_retains_provider_skill_activity_in_scoped_runtime_audit(
+    tmp_path, monkeypatch
+):
+    reports = []
+
+    class FakeEpisode:
+        episode_id = 42
+
+        def __init__(self, **_kwargs):
+            pass
+
+        def record_event(self, *_args, **_kwargs):
+            return None
+
+        def attach_payload_ref(self, *_args, **_kwargs):
+            return None
+
+        def close(self, **_kwargs):
+            return None
+
+        @contextmanager
+        def guard(self):
+            yield self
+
+    monkeypatch.setattr(managed_cli, "RuntimeEpisodeLifecycle", FakeEpisode)
+    monkeypatch.setattr(
+        managed_cli,
+        "discover_provider",
+        lambda _provider: SimpleNamespace(
+            found=True,
+            path="/fixture/provider",
+            path_class="fixture",
+            version="1",
+            error=None,
+        ),
+    )
+
+    def run_managed(*_args, **kwargs):
+        env = kwargs["env"]
+        audit_path = Path(env["KUNGFU_SKILL_AUDIT_FILE"])
+        audit_path.parent.mkdir(parents=True, exist_ok=True)
+        audit_path.write_text(
+            json.dumps(
+                {
+                    "schema": "kungfu.skill-audit-event/v1",
+                    "type": "SkillLoaded",
+                    "run_id": env["KUNGFU_SKILL_RUN_ID"],
+                    "work_id": env["KUNGFU_SKILL_WORK_REF"],
+                    "skill": {"key": "exact-skill", "contentHash": ROOT_HASH},
+                }
+            )
+            + "\n",
+            encoding="utf-8",
+        )
+        return SimpleNamespace(
+            exit_code=0,
+            response_text="ok",
+            response_body=json.dumps({"provider": "fixture", "text": "ok"}),
+            response_error=None,
+            snapshot=None,
+            emitted=False,
+        )
+
+    monkeypatch.setattr(managed_cli.managed_run, "run_managed", run_managed)
+    monkeypatch.setattr(
+        managed_cli.bundle,
+        "emit",
+        lambda bundle_dir, *_args, **_kwargs: str(Path(bundle_dir) / "manifest.json"),
+    )
+
+    assert (
+        managed_cli.run_and_report(
+            "fixture",
+            "prompt",
+            runtime_dir=str(tmp_path / "runtime"),
+            home=str(tmp_path / "home"),
+            work_id="work:target",
+            run_id="run-target",
+            report_callback=reports.append,
+            quiet=True,
+        )
+        == 0
+    )
+    audit = json.loads(
+        (
+            tmp_path
+            / "runtime"
+            / "rewind"
+            / "run-target"
+            / "bundle"
+            / "skill-runtime-audit.json"
+        ).read_text(encoding="utf-8")
+    )
+    assert audit["scope"] == {"runId": "run-target", "workRef": "work:target"}
+    evidence = [
+        row for row in audit["evidence"] if row["source"]["kind"] == "run-audit-event"
+    ]
+    assert [(row["state"], row["runId"], row["workRef"]) for row in evidence] == [
+        ("loaded", "run-target", "work:target")
+    ]
+    assert reports[0].skill_audit_doc["event_count"] == 1

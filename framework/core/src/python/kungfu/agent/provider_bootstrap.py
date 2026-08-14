@@ -12,12 +12,63 @@ import re
 from typing import Any, Callable, Mapping
 import uuid
 
+from kungfu.skill import (
+    build_skill_runtime_audit,
+    read_audit_file,
+    write_skill_runtime_audit,
+)
+
 
 _TEMPLATE = re.compile(
     r"\{(skill_file|skill_dir|skills_root|adapter_root|provider_log_dir)(:json)?\}"
 )
 _UNRESOLVED_TEMPLATE = re.compile(r"\{[a-z_]+(?::json)?\}")
 _TMUX_PROCESS_ENVIRONMENT = frozenset({"TMUX", "TMUX_PANE"})
+
+
+def prepare_native_skill_runtime_audit(
+    runtime_home: str,
+    runtime_dir: str,
+    attempt_id: str,
+    work_ref: Mapping[str, Any] | None,
+) -> tuple[str | None, dict[str, Any], str, str]:
+    """Write the launch audit and return its native Console coordinates."""
+
+    skill_work_ref = None
+    if work_ref is not None:
+        skill_work_ref = (
+            str(work_ref.get("entityId") or work_ref.get("workspaceId") or "") or None
+        )
+    document = build_skill_runtime_audit(
+        runtime_home,
+        run_id=attempt_id,
+        work_ref=skill_work_ref,
+    )
+    audit_root = Path(runtime_dir) / "skill-manager"
+    launch_path = str(audit_root / f"agent-console-{attempt_id}.json")
+    final_path = str(audit_root / f"agent-console-{attempt_id}-final.json")
+    write_skill_runtime_audit(launch_path, document)
+    return skill_work_ref, document, launch_path, final_path
+
+
+def refresh_native_skill_runtime_audit(env: Mapping[str, str]) -> None:
+    """Refresh the Agent Console pointer after rooted on-demand Skill activity."""
+
+    output_path = env.get("KUNGFU_SKILL_RUNTIME_AUDIT_FINAL_FILE")
+    runtime_home = env.get("KF_HOME")
+    if not output_path or not runtime_home:
+        return
+    audit_documents = []
+    audit_path = env.get("KUNGFU_SKILL_AUDIT_FILE")
+    if audit_path and Path(audit_path).is_file():
+        audit_documents.append(read_audit_file(audit_path))
+    document = build_skill_runtime_audit(
+        runtime_home,
+        audit_documents=audit_documents,
+        run_id=env.get("KUNGFU_SKILL_RUN_ID"),
+        work_ref=env.get("KUNGFU_SKILL_WORK_REF"),
+    )
+    write_skill_runtime_audit(output_path, document)
 
 
 def native_process_environment(

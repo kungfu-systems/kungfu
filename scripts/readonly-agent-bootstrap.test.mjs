@@ -500,6 +500,7 @@ test('declared discovery routes are zero-write in a cold read-only fixture', (t)
     'config/kungfu-skill.contract.json',
     'config/kungfu-contracts.registry.json',
     'docs/adr/KF-ADR-019f86da-4f90-74c2-9cbb-24f1c34303bf.md',
+    'docs/document-metadata.contract.json',
     'docs/adr/KF-ADR-019fee22-e71d-7da9-8a44-9403c21a5d62.md',
     'docs/architecture/skills.md',
     'framework/skill/README.md',
