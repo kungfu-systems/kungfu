@@ -18,7 +18,7 @@ Each section is bound to the registry id by the catalog meta gate.
 - **Evidence:** unified Gate receipt; no separate artifact is currently required.
 - **Diagnosis:** `./shifu gate explain gate.catalog --profile <profile>`; reproduce with `./shifu gate run gate.catalog` on a capable runner.
 - **Cost:** light; timeout 600 seconds.
-- **Current source:** .github/workflows/affected-native-pr.yml (source_acceptance; every dev pull request and merge-group candidate inside the staged required aggregate); .github/workflows/dev-verify-patrol.yml (verify; daily or manual on dev); .github/workflows/build.yml (build; alpha or release pull request, or a manual exact-source publish-none macOS candidate under the queue-aware overflow controller); .github/workflows/release-new-version.yml (promotion-contract; merged alpha or release pull request, or manual source-locked dry-run measurement); .github/workflows/publish-layer-artifacts.yml (verify-publication; manually executed public layer publication)
+- **Current source:** .github/workflows/affected-native-pr.yml (source_acceptance; every dev pull request and merge-group candidate inside the staged required aggregate; an exact accepted pull-request proof may satisfy merge-group source acceptance only when source, base movement, policy, closure, dependency, runtime, required-context, and controller-receipt predicates all match, otherwise the full source gate runs); .github/workflows/dev-verify-patrol.yml (verify; daily or manual on dev); .github/workflows/build.yml (build; alpha or release pull request, or a manual exact-source publish-none macOS candidate under the queue-aware overflow controller); .github/workflows/release-new-version.yml (promotion-contract; merged alpha or release pull request, or manual source-locked dry-run measurement); .github/workflows/publish-layer-artifacts.yml (verify-publication; manually executed public layer publication)
 - **Retirement:** remove only after every selecting profile and workflow binding is migrated or explicitly replaced, with the registry and matrix changed in the same review.
 <!-- /gate-doc:gate.catalog -->
 
@@ -73,9 +73,18 @@ Each section is bound to the registry id by the catalog meta gate.
 - **Diagnosis:** `./shifu gate explain source.acceptance --profile <profile>`; reproduce with `./shifu gate run source.acceptance` on a capable runner.
 - **Cost:** light; timeout 1800 seconds. This budget covers cold shared-runner
   Project Cut composition while retaining a bounded failure signal.
-- **Current source:** .github/workflows/affected-native-pr.yml (source_acceptance; every dev pull request and merge-group candidate inside the staged required aggregate). The standalone .github/workflows/source-acceptance.yml is manual-only.
+- **Current source:** .github/workflows/affected-native-pr.yml (source_acceptance; every dev pull request and merge-group candidate inside the staged required aggregate; an exact accepted pull-request proof may satisfy merge-group source acceptance only when source, base movement, policy, closure, dependency, runtime, required-context, and controller-receipt predicates all match, otherwise the full source gate runs). The standalone .github/workflows/source-acceptance.yml is manual-only.
 - **Retirement:** remove only after every selecting profile and workflow binding is migrated or explicitly replaced, with the registry and matrix changed in the same review.
 <!-- /gate-doc:source.acceptance -->
+
+The pull-request run seals an exact Buildchain source-qualification proof. A
+merge-group run may reuse it only when the source head, merge composition,
+protected-base movement, source-policy and execution-closure paths, dependency
+inputs, Buildchain runtime, required context, and controller receipt all match.
+The reused lifecycle remains explicit that the source command was not executed
+again. Missing or stale evidence, an unknown base delta, path overlap, or any
+predicate mismatch fails closed to the full `./shifu check:source` path; proof
+reuse does not grant approval, Warrant, queue, merge, or publication authority.
 
 <a id="source-changed-scope"></a>
 <!-- gate-doc:source.changed-scope -->
