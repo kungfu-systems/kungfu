@@ -80,7 +80,7 @@
             "product-stable",
             "product-binaries"
           ],
-          "sourceRoot": "sha256:6cbee8c01121039753b3e81e32d961b54a5ead6624c4c5b60b042e8e25fb2ed8"
+          "sourceRoot": "sha256:698a614c0d65b19b177bdb056f3d9c90c9520266cf5d7f999e82bd5aeed37e20"
         },
         {
           "path": ".github/workflows/dev-post-merge-advisory.yml",
@@ -874,5 +874,5 @@
       }
     }
   ],
-  "registryRoot": "sha256:d51fa73a525c98f7447009f3792b853978df70474220ec507ec7b0002f702390"
+  "registryRoot": "sha256:dc6f0ebca4602520772a633e4941c0cb107cb3fcfcf0cffcfa5206f0ec3073a6"
 }
