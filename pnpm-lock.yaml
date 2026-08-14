@@ -47,8 +47,8 @@ importers:
       '@kungfu-tech/buildchain-alpha': {specifier: 'npm:@kungfu-tech/buildchain@3.0.9-alpha.6', version: '@kungfu-tech/buildchain@3.0.9-alpha.6'}
       '@kungfu-tech/buildchain-stable': {specifier: 'npm:@kungfu-tech/buildchain@3.0.7', version: '@kungfu-tech/buildchain@3.0.7'}
       '@kungfu-tech/kfd':
-        specifier: 1.0.0-alpha.53
-        version: 1.0.0-alpha.53
+        specifier: 1.0.0-alpha.60
+        version: 1.0.0-alpha.60
       '@types/fs-extra':
         specifier: ^11.0.4
         version: 11.0.4

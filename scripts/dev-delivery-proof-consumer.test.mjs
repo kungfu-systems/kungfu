@@ -325,12 +325,12 @@ test('queue lease consumes an atomically qualified two-phase Warrant', () => {
   assert.throws(
     () =>
       verifyQueueAdmissionLease({
-        view: queueView(ROOT_A, { status: 'queued' }),
+        view: queueView(ROOT_A, { status: 'dequeued' }),
         pullRequestNumber: 42,
         sourceHeadSha: SOURCE,
         now: '2026-08-04T02:30:00.000Z',
       }),
-    /not delivery-ready: queued/u,
+    /not delivery-ready: dequeued/u,
   );
 });
 
