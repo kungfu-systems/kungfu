@@ -22,12 +22,12 @@ from kungfu.agent.work_projection import WorkProjectionPort
 from kungfu.agent import resources as agent_resources
 from kungfu.agent import runtime_profiles
 from kungfu.agent import session_contract
-from kungfu.agent.native_command_transport import (
+from kungfu.agent.provider_bootstrap import (
     COMMAND_WRAPPER_SUFFIXES as _COMMAND_WRAPPER_SUFFIXES,
     encode_wrapper_prompt as _encode_wrapper_prompt,
+    prepare_native_skill_runtime_audit,
     resolve_command_wrapper as _resolve_command_wrapper,
 )
-from kungfu.agent.provider_bootstrap import prepare_native_skill_runtime_audit
 from kungfu.skill import build_skill_context
 from kungfu.workspace import (
     WorkspaceTargetRequired,
