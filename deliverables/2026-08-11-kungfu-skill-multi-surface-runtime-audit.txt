@@ -3,14 +3,14 @@
   "initiativeId": "2026-08-11-kungfu-skill-agent-native-product-system",
   "assignmentId": "2026-08-11-kungfu-skill-multi-surface-runtime-audit",
   "baseRevision": "0fbacb3dfd48883d9db222f55ce2f57ebdbd9c1b",
-  "implementationRevision": "085295a6e0a746f5ac9b0338c3a562f7af077c43",
-  "implementationTree": "daf64243adb62e3b13656c1f96d9633698751418",
-  "generatedAt": "2026-08-14T14:05:20+08:00",
+  "implementationRevision": "96b908b1858c56d9cca7f1f856b5dbbe4dee4eb1",
+  "implementationTree": "ab4aea58cc4263f40b857463b4baf7a8978fc8db",
+  "generatedAt": "2026-08-14T14:21:40+08:00",
   "purpose": "Bind the exact successor implementation, same-root parity, managed-run and Agent Console dogfood, qualification, and recovery evidence requested by native independent review. This file routes evidence and does not replace the referenced source, receipts, protected merge, or native review.",
   "sourceEvidence": {
     "contract": {
       "path": "framework/skill/kungfu-skill.contract.json",
-      "root": "sha256:5b70203d15bbcd6675eefbd8e8ccc666e0f6805cd0658583e618e8570b20a20e"
+      "root": "sha256:f677308451f70fb659d8e05d57b22c79e753df0648de8b48345b978010faaad1"
     },
     "runtimeAuditSchema": {
       "path": "framework/skill/schema/skill-runtime-audit-v2.schema.json",
@@ -89,6 +89,14 @@
     {
       "command": "git commit -s -m 'refactor(agent): satisfy source complexity ratchet'",
       "result": "complete staged gate passed at implementation revision 085295a6e0a746f5ac9b0338c3a562f7af077c43; code complexity budget ratchet passed and agent-console remained 120 passed, 3 skipped"
+    },
+    {
+      "command": "git commit -s -m 'fix(skill): synchronize contract evidence projections'",
+      "result": "complete staged gate passed at implementation revision 96b908b1858c56d9cca7f1f856b5dbbe4dee4eb1; canonical config and Skill contracts, KFD witnesses, and support-matrix projections are current"
+    },
+    {
+      "command": "./shifu check:source",
+      "result": "build-free source gate passed with code complexity, Python structure, contract audit, KFD evidence, formatting, lint, type baseline, and zero-write checks"
     }
   ],
   "realProviderDogfood": {
