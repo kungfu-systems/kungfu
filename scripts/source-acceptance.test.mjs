@@ -583,35 +583,32 @@ test('KFD tree-equivalence rejects non-commit Git objects', () => {
   assert.deepEqual(calls, [['cat-file', '-t', sourceSha]]);
 });
 
-test('KFD product gates remain checkable without ignored runtime outputs', () => {
+test('KFD product gates preserve a source-bound committed verification cut', () => {
   const sourceSha = 'a'.repeat(40);
   const commitCheckedAt = '2026-07-31T02:20:37+00:00';
-  assert.equal(
+  const resolve = (
+    retainedGateResults,
+    commitTimestamp = () => commitCheckedAt,
+  ) =>
     resolveKfdProductGateCheckedAt({
       write: false,
-      now: () => {
-        throw new Error('check mode must not use the wall clock');
-      },
-      retainedGateResults: [null, null, null],
+      now: () => assert.fail('check mode must not use the wall clock'),
+      retainedGateResults,
       sourceSha,
-      commitTimestamp: (commit) => {
-        assert.equal(commit, sourceSha);
-        return commitCheckedAt;
-      },
-    }),
-    commitCheckedAt,
+      commitTimestamp,
+    });
+  assert.equal(resolve([null, null, null]), commitCheckedAt);
+  const sealed = {
+    source: { sha: sourceSha },
+    verificationCut: { checkedAt: '2026-07-30T00:00:00Z' },
+  };
+  assert.equal(
+    resolve([sealed], () => assert.fail('the sealed cut is authoritative')),
+    sealed.verificationCut.checkedAt,
   );
   assert.equal(
-    resolveKfdProductGateCheckedAt({
-      write: false,
-      now: () => '',
-      retainedGateResults: [null, { checkedAt: '2026-07-30T00:00:00Z' }],
-      sourceSha,
-      commitTimestamp: () => {
-        throw new Error('retained evidence must preserve its timestamp');
-      },
-    }),
-    '2026-07-30T00:00:00Z',
+    resolve([{ ...sealed, source: { sha: 'b'.repeat(40) } }]),
+    commitCheckedAt,
   );
 });
 
