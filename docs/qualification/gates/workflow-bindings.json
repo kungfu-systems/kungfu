@@ -61,15 +61,20 @@
         "gate.catalog",
         "source.acceptance"
       ],
-      "activation": "every dev pull request and merge-group candidate inside the staged required aggregate",
+      "activation": "every dev pull request and merge-group candidate inside the staged required aggregate; an exact accepted pull-request proof may satisfy merge-group source acceptance only when source, base movement, policy, closure, dependency, runtime, required-context, and controller-receipt predicates all match, otherwise the full source gate runs",
       "adapter": {
         "type": "buildchain-source",
         "kind": "job-uses",
-    "uses": "kungfu-systems/buildchain/.github/workflows/check.yml@58e48d73ae7fef0dd06ae02baf6d090e4da5487d",
-    "with": {
-      "buildchain-ref": "58e48d73ae7fef0dd06ae02baf6d090e4da5487d",
+        "uses": "kungfu-systems/buildchain/.github/workflows/check.yml@4354638200137eb07d3272f4bcbce46131aea74c",
+        "with": {
+          "buildchain-ref": "4354638200137eb07d3272f4bcbce46131aea74c",
           "mode": "source",
-          "upload-artifacts": true
+          "upload-artifacts": true,
+          "source-proof-reuse": true,
+          "source-proof-policy-paths-json": "[\".github/workflows/affected-native-pr.yml\"]",
+          "source-proof-closure-paths-json": "[\".buildchain/buildchain.toml\",\"shifu\",\"scripts/source-acceptance.mjs\",\"scripts/require-shifu.mjs\"]",
+          "source-proof-dependency-paths-json": "[\"package.json\",\"pnpm-lock.yaml\"]",
+          "source-proof-required-contexts-json": "[\"Candidate source acceptance / check\"]"
         }
       }
     },
