@@ -3,7 +3,7 @@
   "contract": "kungfu-buildchain-dev-delivery-warrant-queue",
   "repository": "kungfu-systems/kungfu",
   "protectedBase": "dev/v4/v4.0",
-  "generation": 2155,
+  "generation": 2156,
   "fencingCounter": 413,
   "policy": {
     "agingSeconds": 900,
@@ -24455,8 +24455,37 @@
         "tests/qualification/agent-hub-20/qualification.test.mjs",
         "tests/qualification/agent-hub-20/responsibility-map.json"
       ]
+    },
+    {
+      "repository": "kungfu-systems/kungfu",
+      "protectedBase": "dev/v4/v4.0",
+      "pullRequestNumber": 3096,
+      "assignmentRoot": "sha256:89ea411aeadff92b898da32f080a465eb58b07ed895ee4a34d3b6b3d9f95f35e",
+      "initiativeRoot": "sha256:bfff817933e5a5ad693e4b902a84f6cc3a251235dd7377cb4091d92f805fa7ff",
+      "sourceIdentityRoot": "sha256:372effe3abe0887fd57f4c1b4c8cdba9e36150f651555c94344f14cd57b82a9a",
+      "deliveryClass": "non-native-fast",
+      "candidateId": "sha256:995321173f915cc57e81e669d06f9ce00ef80e166a63f76eabebb8d45bca1fcc",
+      "sourceHead": "b35d92656ae8c9df3a530e3eeaa8f76c9d4fb6ac",
+      "sourcePatchRoot": "sha256:a90aef10f654b0d5721942ceb8cbdee0e80fcd77a7900af0809edfd938c6dde6",
+      "sourceProofRoot": "sha256:7629e2f09ff48c4683350f18fead0492238c5c417c7b008b0e9923b75f02e156",
+      "planRoot": "sha256:99cc4fe00eba48a28c53c3b0c6266331eca644c323b47075659f86e50eea6459",
+      "closureRoot": "sha256:ac6e52dc4778bd7be1e6224c9a526a00dc7fcdd56a84e07165a811b168158f3e",
+      "dependencyRoot": "sha256:c783ff9e73e90e7fbff0e0b720e2aac216ac3addc68ff5b15d7bdb70e168cec0",
+      "toolchainRoot": "sha256:2ecb07894954a2e0de022615d4561e5ba3ae68376401941ecff77be03cd75a0f",
+      "environmentRoot": "sha256:ce8ac018bb38c00cc0f5e954dae39d921eb9437fb11314061e9628f456f39057",
+      "sourceWorkflowRunId": 31784727132,
+      "priority": "ordinary",
+      "enqueuedAt": "2026-08-14T09:00:41.745Z",
+      "updatedAt": "2026-08-14T09:00:41.745Z",
+      "attempts": 1,
+      "recoveries": 0,
+      "status": "queued",
+      "terminal": null,
+      "affectedPaths": [
+        "README.md"
+      ]
     }
   ],
-  "updatedAt": "2026-08-14T08:47:11.630Z",
-  "stateRoot": "sha256:9b3ff83e7e65333168531fa445ac635536192865ea6bc0d0b23464c5bfc48f6d"
+  "updatedAt": "2026-08-14T09:00:41.745Z",
+  "stateRoot": "sha256:b14c09b89236f0c9dec58964a375ce0955ee6a8e696ebfab8818b672b04a6334"
 }
