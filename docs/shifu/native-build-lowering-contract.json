@@ -1,0 +1,109 @@
+{
+  "schema": "shifu.native-build-lowering-contract/v0",
+  "maturity": "exploration",
+  "profile": "journal",
+  "node": "native-build",
+  "verdict": "conditional-go",
+  "ir": {
+    "schema": "shifu.native-build-ir/v0",
+    "backendNeutral": true,
+    "authority": "projection-only",
+    "executionAuthority": false
+  },
+  "provider": {
+    "id": "bazel-data-fixture",
+    "schema": "shifu.native-build-bazel-projection/v0",
+    "writesBuildFiles": false,
+    "invokesBackend": false,
+    "executable": false
+  },
+  "receipt": {
+    "schema": "shifu.native-build-lowering-receipt/v0",
+    "verificationCommand": "./shifu production-graph:native-build-lowering:verify",
+    "rootAlgorithm": "sha256-canonical-json",
+    "nodesExecuted": false,
+    "buildCoreRouteChanged": false
+  },
+  "authorityInventory": [
+    {
+      "classification": "canonical",
+      "paths": [
+        "framework/core/architecture/build-capabilities.json",
+        "framework/core/architecture/layers.json"
+      ],
+      "owns": [
+        "profiles",
+        "component-closure",
+        "dependency-identities",
+        "source-ownership"
+      ]
+    },
+    {
+      "classification": "derived",
+      "paths": [
+        "framework/core/architecture/BUILD_PROFILES.cmake",
+        "framework/core/architecture/TARGETS.cmake"
+      ],
+      "owns": []
+    },
+    {
+      "classification": "executor-specific",
+      "paths": [
+        "package.json",
+        "framework/core/package.json",
+        "framework/core/.gyp/run-build.js",
+        "framework/core/.gyp/run-conan.js",
+        "framework/core/conanfile.py",
+        "framework/core/CMakeLists.txt",
+        "framework/core/src/libyijinjing/CMakeLists.txt"
+      ],
+      "owns": [
+        "current-build-core-route",
+        "conan-and-cmake-execution",
+        "target-compile-semantics",
+        "artifact-staging"
+      ]
+    },
+    {
+      "classification": "duplicate",
+      "paths": [],
+      "owns": []
+    }
+  ],
+  "prerequisites": [
+    {
+      "id": "dependency-label-provider",
+      "ownerRequired": "buildchain-or-core-build-authority",
+      "reason": "No canonical mapping exists from Core dependency identities to Bazel labels."
+    },
+    {
+      "id": "platform-toolchain-provider",
+      "ownerRequired": "buildchain-toolchain-authority",
+      "reason": "No canonical Bazel platform and C++ toolchain constraint mapping exists."
+    },
+    {
+      "id": "artifact-stage-provider",
+      "ownerRequired": "current-build-core-route",
+      "reason": "The current run-build staging closure has no backend-neutral provider contract."
+    }
+  ],
+  "forbiddenEffects": [
+    "bazel-install",
+    "bazel-invocation",
+    "native-build",
+    "build-file-materialization",
+    "build-core-route-change",
+    "production-cutover"
+  ],
+  "conclusion": {
+    "summary": "The journal native-build node can be lowered deterministically without a second build-graph authority only while the Bazel form remains a generated, non-executable projection of existing Core authority.",
+    "existingToolchainRootLimit": "The current Core Production Subgraph toolchain root binds task wrappers but not every CMake, Conan recipe, generated profile, target, and staging input that changes native build semantics; the IR therefore retains an additional content commitment over inventoried existing files without reinterpreting them.",
+    "nextStage": "After all prerequisites have canonical owners, a separately authorized Linux journal shadow may compare an executable Bazel provider against the unchanged ./shifu build:core lane with cutover false."
+  },
+  "residualRisks": [
+    "A later untracked generated source would require an explicit source-authority decision.",
+    "Portable fixture readback does not close platform-specific CMake branches or compiler behavior.",
+    "A deterministic Bazel-shaped record is not evidence that Bazel can compile, link, stage, or reproduce current artifacts.",
+    "Buildchain qualification, Work and Warrant admission, protected merge, signing, publication, and release authorities remain outside this exploration."
+  ]
+}
