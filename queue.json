@@ -3,7 +3,7 @@
   "contract": "kungfu-buildchain-dev-delivery-warrant-queue",
   "repository": "kungfu-systems/kungfu",
   "protectedBase": "dev/v4/v4.0",
-  "generation": 2533,
+  "generation": 2534,
   "fencingCounter": 437,
   "policy": {
     "agingSeconds": 900,
@@ -26758,8 +26758,38 @@
         "tests/qualification/agent-hub-20/qualification.test.mjs",
         "tests/qualification/agent-hub-20/responsibility-map.json"
       ]
+    },
+    {
+      "repository": "kungfu-systems/kungfu",
+      "protectedBase": "dev/v4/v4.0",
+      "pullRequestNumber": 3144,
+      "assignmentRoot": "sha256:d27469df1734a835d16422bd46c7dd93b26582ce672c69e20be9f17153ce96e0",
+      "initiativeRoot": "sha256:bfff817933e5a5ad693e4b902a84f6cc3a251235dd7377cb4091d92f805fa7ff",
+      "sourceIdentityRoot": "sha256:dfddb1deffb54fe53573614a260f356332e70c21b1a46559e0b9f938a9086a2a",
+      "deliveryClass": "non-native-fast",
+      "candidateId": "sha256:c1e35a62c61a1707279a068a049817733d9d3464a57ee7dce13362f797672d81",
+      "sourceHead": "b772b46e568a6901d5e8d5c5bd2c64b35f083fa4",
+      "sourcePatchRoot": "sha256:2c051d8b28281de4d1e8333ce98dfea5382711b95495777bb9bc3c6400f916a1",
+      "sourceProofRoot": "sha256:7152b1fd90d4c3f4ff9f94bb3473a1c7bb0cb950b6431738336425e0bfc0830f",
+      "planRoot": "sha256:d14d9b37c005df84373fefbf2af4ad17a25f7c4e8929bb5d210c6bb59e480f3e",
+      "closureRoot": "sha256:ac6e52dc4778bd7be1e6224c9a526a00dc7fcdd56a84e07165a811b168158f3e",
+      "dependencyRoot": "sha256:728c841053cc41a674fd22ea2a120c78ba2e2cab506b0fb9a386122fe5d64101",
+      "toolchainRoot": "sha256:2ecb07894954a2e0de022615d4561e5ba3ae68376401941ecff77be03cd75a0f",
+      "environmentRoot": "sha256:ce8ac018bb38c00cc0f5e954dae39d921eb9437fb11314061e9628f456f39057",
+      "sourceWorkflowRunId": 31863636295,
+      "priority": "ordinary",
+      "enqueuedAt": "2026-08-15T04:38:08.351Z",
+      "updatedAt": "2026-08-15T04:38:08.351Z",
+      "attempts": 1,
+      "recoveries": 0,
+      "status": "queued",
+      "terminal": null,
+      "affectedPaths": [
+        ".gitattributes",
+        "scripts/check-shifu-entry-contract.test.mjs"
+      ]
     }
   ],
-  "updatedAt": "2026-08-15T04:35:34.328Z",
-  "stateRoot": "sha256:00cedb688ba44faaace8778c247db98ed91f3eb695ca5ab569b49aec79018332"
+  "updatedAt": "2026-08-15T04:38:08.351Z",
+  "stateRoot": "sha256:58f34217e489204ccf7048d5648b4a68156c56d77b3222e8fdcd35aaa17052e9"
 }
