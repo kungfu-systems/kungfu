@@ -823,6 +823,7 @@ export function sourceAcceptancePlan(
               'scripts/source-acceptance.test.mjs',
               'scripts/platform-command.test.mjs',
               'product/scripts/dist.test.mjs',
+              'product/scripts/finalize-macos-release-artifacts.test.mjs',
               'product/scripts/dist-cli-executable-layout.test.mjs',
               'product/scripts/installed-kungfu/index.test.mjs',
               'scripts/opencode-local-model-canary-workflow.test.mjs',

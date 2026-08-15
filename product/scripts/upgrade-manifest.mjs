@@ -8,6 +8,7 @@ import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
+import { pathToFileURL } from 'node:url';
 import {
   loadUpgradeQualificationContract,
   verifyUpgradeQualificationEvidence,
@@ -504,4 +505,358 @@ export function assertUpgradePublicationEligible(
     qualificationOptions,
   );
   return manifest;
+}
+
+const MACOS_FINALIZATION_SCHEMA =
+  'kungfu.macos-release-artifact-finalization-receipt/v1';
+const EXACT_SHA = /^[0-9a-f]{40}$/u;
+const FINAL_MACOS_ARTIFACT = /^Kungfu-Episodes-.+-macos-arm64\.(dmg|zip)$/u;
+const BUILDER_MACOS_ARTIFACT =
+  /^Kungfu Episodes-.+-arm64(?:-mac)?\.(dmg|zip)$/u;
+
+function releaseAssert(condition, message) {
+  if (!condition) throw new Error(message);
+}
+
+function releaseBelow(root, value, label) {
+  const target = path.resolve(root, value);
+  const relative = path.relative(root, target);
+  releaseAssert(
+    relative && !relative.startsWith('..') && !path.isAbsolute(relative),
+    `${label} must resolve below the workspace`,
+  );
+  return target;
+}
+
+function releaseRelative(root, target) {
+  return path.relative(root, target).split(path.sep).join('/');
+}
+
+async function releaseFileDescriptor(root, target, kind) {
+  const stat = fs.statSync(target);
+  releaseAssert(stat.isFile(), `${kind} is not a regular file: ${target}`);
+  releaseAssert(!fs.lstatSync(target).isSymbolicLink(), `${kind} is a symlink`);
+  const hash = createHash('sha256');
+  for await (const chunk of fs.createReadStream(target)) hash.update(chunk);
+  return {
+    kind,
+    path: releaseRelative(root, target),
+    size: stat.size,
+    sha256: `sha256:${hash.digest('hex')}`,
+  };
+}
+
+function oneSigningEvidence(result, predicate, label) {
+  const matches = (result.evidence || []).filter(predicate);
+  releaseAssert(matches.length === 1, `signing result must bind one ${label}`);
+  return matches[0];
+}
+
+export function macosReleaseFinalizationReceiptRoot(receipt) {
+  const { receiptRoot: _receiptRoot, ...subject } = receipt;
+  return contentRoot(subject);
+}
+
+async function signedMacosAuthority({
+  root,
+  sourceSha,
+  releaseRoot,
+  credentialManifestFile,
+  signingResultFile,
+  signingReceiptFile,
+}) {
+  const manifest = readJson(credentialManifestFile);
+  const result = readJson(signingResultFile);
+  const receipt = readJson(signingReceiptFile);
+  releaseAssert(
+    manifest.contract === 'kungfu-buildchain-artifact' &&
+      manifest.lifecycle?.stage === 'credential-island' &&
+      manifest.lifecycle?.executed === true &&
+      manifest.platform?.id === 'macos-arm64-credential' &&
+      manifest.git?.sha === sourceSha &&
+      manifest.expectedArtifacts?.ok === true,
+    'credential manifest is not the accepted macOS credential-island output',
+  );
+  releaseAssert(
+    result.contract === 'kungfu-buildchain-artifact-signing-result/v1' &&
+      result.verification?.status === 'passed' &&
+      result.source?.sha === sourceSha,
+    'Buildchain desktop signing result did not pass for the exact source',
+  );
+  releaseAssert(
+    receipt.contract === 'kungfu-buildchain-artifact-signing-receipt/v1' &&
+      receipt.status === 'passed' &&
+      result.requestDigest === receipt.requestDigest &&
+      result.evidenceDigest === receipt.result?.evidenceDigest,
+    'Buildchain desktop signing result and receipt disagree',
+  );
+  const prefix = `${releaseRelative(root, releaseRoot)}/`;
+  const finalFiles = (manifest.files || []).filter((file) => {
+    const relative = String(file.path || '').slice(prefix.length);
+    return (
+      String(file.path || '').startsWith(prefix) &&
+      !relative.includes('/') &&
+      FINAL_MACOS_ARTIFACT.test(relative)
+    );
+  });
+  releaseAssert(
+    finalFiles.filter((file) => file.path.endsWith('.dmg')).length === 1 &&
+      finalFiles.filter((file) => file.path.endsWith('.zip')).length === 1,
+    'credential manifest must retain exactly one final macOS DMG and ZIP',
+  );
+  const credentialManifest = await releaseFileDescriptor(
+    root,
+    credentialManifestFile,
+    'credential-artifact-manifest',
+  );
+  releaseAssert(
+    oneSigningEvidence(
+      result,
+      (entry) =>
+        entry?.kind === 'credential-artifact-manifest' &&
+        entry?.path === 'credential-artifact/manifest.json',
+      'credential artifact manifest',
+    ).digest === credentialManifest.sha256,
+    'signing result does not bind the exact credential manifest',
+  );
+  const retained = [];
+  for (const file of finalFiles) {
+    const descriptor = await releaseFileDescriptor(
+      root,
+      releaseBelow(root, file.path, 'credential artifact'),
+      file.path.endsWith('.dmg') ? 'installer-dmg' : 'updater-zip',
+    );
+    releaseAssert(
+      descriptor.size === file.size &&
+        descriptor.sha256 === `sha256:${String(file.sha256).toLowerCase()}` &&
+        oneSigningEvidence(
+          result,
+          (entry) => entry?.path === `credential-artifact/${file.path}`,
+          file.path,
+        ).digest === descriptor.sha256,
+      `signed artifact evidence mismatch: ${file.path}`,
+    );
+    retained.push(descriptor);
+  }
+  return {
+    credentialManifestDigest: credentialManifest.sha256,
+    requestDigest: result.requestDigest,
+    evidenceDigest: result.evidenceDigest,
+    retained: retained.sort((left, right) =>
+      left.path.localeCompare(right.path),
+    ),
+  };
+}
+
+export async function finalizeMacosReleaseArtifacts({
+  workspace = process.cwd(),
+  releaseRoot = 'product/release',
+  desktopRoot = 'product/release/desktop',
+  credentialManifest = '.buildchain/artifacts/signing/macos-arm64/kungfu-desktop-macos-arm64/credential-artifact/manifest.json',
+  signingResult = '.buildchain/artifacts/signing/macos-arm64/kungfu-desktop-macos-arm64/result.json',
+  signingReceipt = '.buildchain/artifacts/signing/macos-arm64/kungfu-desktop-macos-arm64/receipt.json',
+  output = 'product/release/qualification/macos-release-artifact-finalization.json',
+  sourceSha = process.env.BUILDCHAIN_SOURCE_SHA || '',
+  sourceTreeSha = process.env.BUILDCHAIN_SOURCE_TREE_SHA || '',
+  runtimeSha = process.env.BUILDCHAIN_RUNTIME_SHA || '',
+} = {}) {
+  const root = path.resolve(workspace);
+  releaseAssert(EXACT_SHA.test(sourceSha), 'exact source commit is required');
+  releaseAssert(EXACT_SHA.test(sourceTreeSha), 'exact source tree is required');
+  releaseAssert(
+    !runtimeSha || EXACT_SHA.test(runtimeSha),
+    'invalid runtime SHA',
+  );
+  const release = releaseBelow(root, releaseRoot, 'release root');
+  const desktop = releaseBelow(root, desktopRoot, 'desktop root');
+  const manifestFile = releaseBelow(
+    root,
+    credentialManifest,
+    'credential manifest',
+  );
+  const resultFile = releaseBelow(root, signingResult, 'signing result');
+  const signingReceiptFile = releaseBelow(
+    root,
+    signingReceipt,
+    'signing receipt',
+  );
+  const outputFile = releaseBelow(root, output, 'finalization receipt');
+  const authority = await signedMacosAuthority({
+    root,
+    sourceSha,
+    releaseRoot: release,
+    credentialManifestFile: manifestFile,
+    signingResultFile: resultFile,
+    signingReceiptFile,
+  });
+  releaseAssert(
+    fs.existsSync(desktop) && fs.statSync(desktop).isDirectory(),
+    `desktop release directory not found: ${desktop}`,
+  );
+  const names = fs
+    .readdirSync(desktop, { withFileTypes: true })
+    .filter((entry) => entry.isFile())
+    .map((entry) => entry.name)
+    .sort();
+  const archives = names.filter((name) => BUILDER_MACOS_ARTIFACT.test(name));
+  const blockmaps = names.filter(
+    (name) =>
+      name.endsWith('.blockmap') && archives.includes(name.slice(0, -9)),
+  );
+  const orphans = names.filter(
+    (name) =>
+      (name.endsWith('.dmg.blockmap') || name.endsWith('.zip.blockmap')) &&
+      !blockmaps.includes(name),
+  );
+  releaseAssert(!orphans.length, `orphan blockmaps: ${orphans.join(', ')}`);
+  if (fs.existsSync(outputFile)) {
+    releaseAssert(
+      !archives.length && !blockmaps.length,
+      'finalization receipt exists while redundant archives are present',
+    );
+    const prior = readJson(outputFile);
+    releaseAssert(
+      prior.schema === MACOS_FINALIZATION_SCHEMA &&
+        prior.status === 'complete' &&
+        prior.source?.sha === sourceSha &&
+        prior.source?.tree === sourceTreeSha &&
+        prior.source?.buildchainRuntimeSha === runtimeSha &&
+        prior.receiptRoot === macosReleaseFinalizationReceiptRoot(prior) &&
+        prior.signing?.credentialManifestDigest ===
+          authority.credentialManifestDigest &&
+        prior.signing?.requestDigest === authority.requestDigest &&
+        prior.signing?.evidenceDigest === authority.evidenceDigest &&
+        contentRoot(prior.retained || []) === contentRoot(authority.retained),
+      'existing macOS artifact finalization receipt is invalid',
+    );
+    for (const retained of authority.retained) {
+      const observed = await releaseFileDescriptor(
+        root,
+        releaseBelow(root, retained.path, 'retained artifact'),
+        retained.kind,
+      );
+      releaseAssert(
+        observed.size === retained.size && observed.sha256 === retained.sha256,
+        `retained artifact drifted: ${retained.path}`,
+      );
+    }
+    for (const metadata of prior.preservedMetadata || []) {
+      const observed = await releaseFileDescriptor(
+        root,
+        releaseBelow(root, metadata.path, 'preserved metadata'),
+        metadata.kind,
+      );
+      releaseAssert(
+        observed.size === metadata.size && observed.sha256 === metadata.sha256,
+        `preserved metadata drifted: ${metadata.path}`,
+      );
+    }
+    for (const removed of prior.removed || [])
+      releaseAssert(
+        !fs.existsSync(releaseBelow(root, removed.path, 'removed artifact')),
+        `removed artifact reappeared: ${removed.path}`,
+      );
+    return { receipt: prior, receiptFile: outputFile, reused: true };
+  }
+  releaseAssert(
+    archives.filter((name) => name.endsWith('.dmg')).length === 1 &&
+      archives.filter((name) => name.endsWith('.zip')).length === 1,
+    `expected one electron-builder DMG and ZIP, found: ${archives.join(', ') || 'none'}`,
+  );
+  releaseAssert(names.includes('latest-mac.yml'), 'latest-mac.yml is missing');
+  const removed = [];
+  for (const name of [...archives, ...blockmaps].sort()) {
+    removed.push(
+      await releaseFileDescriptor(
+        root,
+        path.join(desktop, name),
+        name.endsWith('.blockmap')
+          ? 'electron-builder-blockmap'
+          : 'electron-builder-archive',
+      ),
+    );
+  }
+  const preservedMetadata = [];
+  for (const name of names.filter((entry) =>
+    /\.(?:json|ya?ml)$/u.test(entry),
+  )) {
+    preservedMetadata.push(
+      await releaseFileDescriptor(
+        root,
+        path.join(desktop, name),
+        'desktop-update-metadata',
+      ),
+    );
+  }
+  for (const artifact of removed)
+    fs.rmSync(releaseBelow(root, artifact.path, 'redundant artifact'));
+  const receipt = {
+    schema: MACOS_FINALIZATION_SCHEMA,
+    status: 'complete',
+    platform: 'macos-arm64',
+    source: {
+      sha: sourceSha,
+      tree: sourceTreeSha,
+      buildchainRuntimeSha: runtimeSha,
+    },
+    signing: {
+      credentialManifest: releaseRelative(root, manifestFile),
+      credentialManifestDigest: authority.credentialManifestDigest,
+      requestDigest: authority.requestDigest,
+      evidenceDigest: authority.evidenceDigest,
+    },
+    retained: authority.retained,
+    removed,
+    removedTotalBytes: removed.reduce(
+      (sum, artifact) => sum + artifact.size,
+      0,
+    ),
+    preservedMetadata,
+    claims: {
+      canonicalSignedInstallerRetained: true,
+      canonicalSignedUpdaterZipRetained: true,
+      electronBuilderIntermediatesRemoved: true,
+      updaterMetadataPreserved: true,
+    },
+    nonClaims: [
+      'does-not-create-or-replace-signed-payloads',
+      'does-not-grant-signing-notarization-or-publication-authority',
+      'does-not-change-electron-updater-artifact-selection',
+    ],
+  };
+  receipt.receiptRoot = macosReleaseFinalizationReceiptRoot(receipt);
+  fs.mkdirSync(path.dirname(outputFile), { recursive: true });
+  const temporary = `${outputFile}.tmp-${process.pid}`;
+  try {
+    fs.writeFileSync(temporary, `${JSON.stringify(receipt, null, 2)}\n`);
+    fs.renameSync(temporary, outputFile);
+  } finally {
+    fs.rmSync(temporary, { force: true });
+  }
+  return { receipt, receiptFile: outputFile, reused: false };
+}
+
+async function runMacosFinalizationCli() {
+  const result = await finalizeMacosReleaseArtifacts();
+  process.stdout.write(
+    `${JSON.stringify({
+      schema: MACOS_FINALIZATION_SCHEMA,
+      status: result.receipt.status,
+      reused: result.reused,
+      receiptRoot: result.receipt.receiptRoot,
+      removedTotalBytes: result.receipt.removedTotalBytes,
+      retained: result.receipt.retained.map((artifact) => artifact.path),
+    })}\n`,
+  );
+}
+
+if (
+  process.argv[1] &&
+  import.meta.url === pathToFileURL(process.argv[1]).href &&
+  process.argv[2] === 'finalize-macos-release-artifacts'
+) {
+  runMacosFinalizationCli().catch((error) => {
+    process.stderr.write(`[upgrade-manifest] ${error.message}\n`);
+    process.exitCode = 1;
+  });
 }
