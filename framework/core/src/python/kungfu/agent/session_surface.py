@@ -10,8 +10,10 @@ import socket
 import subprocess
 import sys
 import time
-from typing import Protocol
+from typing import Any, Mapping, Protocol
+import uuid
 
+from kungfu.agent import session_contract
 from kungfu.agent.session_contract import semantic_root
 from kungfu.workspace import WorkspaceTargetRequired, resolve_workspace_target
 
@@ -454,3 +456,253 @@ def invoke(request, endpoint=None, timeout=5.0):
             f"{error.get('message', 'Agent Session action failed')}"
         )
     return decoded["value"]
+
+
+def _process_identity_row(pid: int) -> tuple[int, str, str] | None:
+    """Read bounded public process coordinates for one POSIX process."""
+
+    if os.name != "posix" or pid <= 1:
+        return None
+    completed = subprocess.run(
+        ["ps", "-o", "ppid=", "-o", "lstart=", "-o", "comm=", "-p", str(pid)],
+        stdin=subprocess.DEVNULL,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.DEVNULL,
+        text=True,
+        check=False,
+        timeout=1,
+    )
+    if completed.returncode != 0:
+        return None
+    fields = completed.stdout.strip().split(None, 6)
+    if len(fields) != 7:
+        return None
+    try:
+        parent_pid = int(fields[0])
+    except ValueError:
+        return None
+    return parent_pid, " ".join(fields[1:6]), fields[6]
+
+
+def ambient_codex_process_identity(
+    *,
+    environ: Mapping[str, str] | None = None,
+    row_reader=None,
+) -> dict[str, Any] | None:
+    """Resolve the exact public Codex thread and owning process coordinates."""
+
+    current = os.environ if environ is None else environ
+    thread_id = str(current.get("CODEX_THREAD_ID") or "").strip()
+    if not thread_id:
+        return None
+    try:
+        canonical_thread_id = str(uuid.UUID(thread_id))
+    except ValueError as error:
+        raise ValueError(
+            "CODEX_THREAD_ID is not an exact provider thread id"
+        ) from error
+    read_row = _process_identity_row if row_reader is None else row_reader
+    pid = os.getppid()
+    seen: set[int] = set()
+    for _ in range(32):
+        if pid <= 1 or pid in seen:
+            break
+        seen.add(pid)
+        row = read_row(pid)
+        if row is None:
+            break
+        parent_pid, started_at, executable = row
+        if Path(executable).name == "codex":
+            return {
+                "schema": "kungfu.native-process-identity/v1",
+                "provider": "codex",
+                "providerSessionId": canonical_thread_id,
+                "providerProcessId": pid,
+                "providerProcessStartedAt": started_at,
+            }
+        pid = parent_pid
+    raise ValueError(
+        "CODEX_THREAD_ID is present but no exact live Codex process ancestor was found"
+    )
+
+
+def current_native_console(
+    runtime_dir: str,
+    *,
+    adopt: bool = False,
+    cwd: str | None = None,
+    environ: Mapping[str, str] | None = None,
+    process_identity: Mapping[str, Any] | None = None,
+    session_invoker=None,
+) -> dict[str, Any] | None:
+    """Resolve or adopt the current provider-native Console without PTY ownership."""
+
+    current = os.environ if environ is None else environ
+    raw = str(current.get("KUNGFU_AGENT_CONSOLE_ENVELOPE") or "").strip()
+    if raw:
+        envelope = session_contract.validate_agent_console_envelope(json.loads(raw))
+        return {
+            "source": "injected-native-console",
+            "envelope": envelope,
+            "workspaceRoot": str(current.get("KUNGFU_WORKSPACE_ROOT") or ""),
+            "status": None,
+        }
+
+    identity = (
+        dict(process_identity)
+        if process_identity is not None
+        else ambient_codex_process_identity(environ=current)
+    )
+    if identity is None:
+        return None
+    provider = str(identity.get("provider") or "")
+    if provider != "codex" or not identity.get("providerSessionId"):
+        raise ValueError(
+            "ambient Console adoption requires exact Codex process identity"
+        )
+
+    selected_cwd = str(Path(cwd or os.getcwd()).expanduser().resolve())
+    target = resolve_workspace_target("read-only", cwd=selected_cwd)
+    if (
+        target.identity.workspace_kind != "project"
+        or target.identity.identity_state != "qualified"
+        or not target.identity.workspace_root
+    ):
+        raise ValueError(
+            "ambient Console adoption requires one qualified Kungfu Project workspace"
+        )
+    workspace_root = target.identity.workspace_root
+    workspace_id = target.identity.workspace_id
+    process_identity_root = semantic_root(identity)
+    attempt_suffix = process_identity_root.removeprefix("sha256:")[:24]
+    session = {
+        "workConsoleId": f"assistant:{workspace_id}",
+        "sessionAttemptId": f"native:codex:ambient:{attempt_suffix}",
+    }
+    actor_id = f"native:codex:{attempt_suffix}"
+
+    def invoke_session(request):
+        if session_invoker is not None:
+            return session_invoker(request)
+        return invoke_for_project(
+            request,
+            fallback_runtime_dir=target.runtime_dir or runtime_dir,
+            cwd=workspace_root,
+        )
+
+    status = None
+    try:
+        status = invoke_session({"operation": "show", "session": session})
+    except ValueError as error:
+        if "session_not_found" not in str(error):
+            raise
+    if status is not None:
+        attempt = status.get("attempt") or {}
+        observer = attempt.get("observer") or {}
+        if (
+            attempt.get("provider") != "codex"
+            or observer.get("processIdentityRoot") != process_identity_root
+        ):
+            raise ValueError(
+                "registered ambient Console does not match the current Codex process"
+            )
+    if status is None and not adopt:
+        return None
+
+    lifecycle_state = str((status or {}).get("lifecycleState") or "")
+    if status is None or lifecycle_state in {"ended", "unavailable"}:
+        profile = {
+            "id": "kungfu.agent-runtime.codex.ambient",
+            "provider": "codex",
+            "source": "current-public-process-environment",
+        }
+        plan = invoke_session(
+            {
+                "operation": "plan-native-start",
+                "client": "kfd3-agent",
+                "actorId": actor_id,
+                "input": {
+                    "workspaceId": workspace_id,
+                    **session,
+                    "provider": "codex",
+                    "providerVersion": "current-process",
+                    "profileRoot": semantic_root(profile),
+                    "runtimeProfileId": profile["id"],
+                    "binding": {"kind": "workspace-assistant", "workRef": None},
+                },
+            }
+        )
+        invoke_session(
+            {
+                "operation": "start-native",
+                "client": "kfd3-agent",
+                "actorId": actor_id,
+                "plan": plan,
+                "expectedPlanRoot": plan["root"],
+                "processIdentity": identity,
+            }
+        )
+
+    if adopt:
+        active_binding = (status or {}).get("binding") or {}
+        active_work_ref = (
+            active_binding.get("workRef")
+            if active_binding.get("kind") == "work"
+            else None
+        )
+        invoke_session(
+            {
+                "operation": "heartbeat-native",
+                "client": "kfd3-agent",
+                "actorId": actor_id,
+                "session": session,
+                "processIdentity": identity,
+                "observation": {
+                    "schema": "kungfu.attempt-heartbeat/v1",
+                    "state": "fresh",
+                    "staleAfterMs": 10000,
+                    "workRefRoot": (
+                        semantic_root(active_work_ref)
+                        if active_work_ref is not None
+                        else None
+                    ),
+                    "diagnostic": "current-public-codex-process",
+                },
+            }
+        )
+    status = invoke_session({"operation": "show", "session": session})
+    binding = status.get("binding") or {}
+    work_ref = binding.get("workRef") if binding.get("kind") == "work" else None
+    cli_bin = str(
+        current.get("KUNGFU_CLI_BIN") or shutil.which("kungfu") or sys.argv[0]
+    )
+    body = {
+        "schema": "kungfu.agent-console-envelope/v1",
+        "workspaceId": workspace_id,
+        "consoleId": session["workConsoleId"],
+        "attemptId": session["sessionAttemptId"],
+        "runtimeProfileId": "kungfu.agent-runtime.codex.ambient",
+        "provider": "codex",
+        "activeProfiles": [],
+        "workRef": work_ref,
+        "entrypoints": {
+            "context": [cli_bin, "agent", "context", "--json"],
+            "capabilities": [cli_bin, "agent", "capabilities", "--json"],
+            "profiles": [cli_bin, "profile", "manager", "--json"],
+            "bindWork": [cli_bin, "agent", "console", "bind-work"],
+        },
+        "knownLimits": [
+            "current provider process was adopted without terminal ownership",
+            "native provider terminal bytes are not captured by Kungfu",
+            "Console observation does not grant Work authority",
+        ],
+    }
+    envelope = {**body, "envelopeRoot": semantic_root(body)}
+    session_contract.validate_agent_console_envelope(envelope)
+    return {
+        "source": "ambient-provider-session",
+        "envelope": envelope,
+        "workspaceRoot": workspace_root,
+        "status": status,
+        "processIdentityRoot": process_identity_root,
+    }
