@@ -1934,6 +1934,9 @@ async function main() {
         options['max-age-seconds'] || DEFAULT_MAX_AGE_SECONDS,
       ),
       now: options.now,
+      deltaPlan: options['dev-delta-plan']
+        ? readJson(path.resolve(options['dev-delta-plan']))
+        : null,
     });
     const attempt = createDeliveryAttempt(descriptor, proof, options.decision, {
       repository: options.repository,
