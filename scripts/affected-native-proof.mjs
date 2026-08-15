@@ -1463,6 +1463,7 @@ export function createCachePromotionAuthority(
   proofBundleDir,
   options,
 ) {
+  const deltaPlan = options.deltaPlan || null;
   const target = {
     repository: requireRepository(
       options.targetRepository,
@@ -1492,6 +1493,7 @@ export function createCachePromotionAuthority(
         ? DEFAULT_MAX_AGE_SECONDS
         : Number(options.maxAgeSeconds),
     now: options.now,
+    deltaPlan,
   });
   if (proof.producer.repository !== target.repository) {
     throw new Error('cache promotion producer repository drift');
@@ -1503,6 +1505,7 @@ export function createCachePromotionAuthority(
       proofId: proof.proofId,
       artifactName: proof.artifactName,
       proofRoot: proof.proofRoot,
+      deltaPlan,
     },
     producer: proof.producer,
     partitionCount: descriptor.identity.partitionCount,
@@ -1563,6 +1566,7 @@ export function verifyCachePromotionAuthority(authorityDir, options) {
           ? DEFAULT_MAX_AGE_SECONDS
           : Number(options.maxAgeSeconds),
       now: options.now,
+      deltaPlan: authority.proof?.deltaPlan || null,
     },
   );
   if (
@@ -1831,6 +1835,9 @@ async function main() {
           options['max-age-seconds'] || DEFAULT_MAX_AGE_SECONDS,
         ),
         now: options.now,
+        deltaPlan: options['dev-delta-plan']
+          ? readJson(path.resolve(options['dev-delta-plan']))
+          : null,
       },
     );
     fs.mkdirSync(outputDir, { recursive: true });
