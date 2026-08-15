@@ -1487,6 +1487,7 @@ export function createCachePromotionAuthority(
     producerRunId: options.producerRunId,
     producerEvent: options.producerEvent,
     producerHeadSha: options.producerHeadSha,
+    deltaPlan: options.deltaPlan || null,
     maxAgeSeconds:
       options.maxAgeSeconds === undefined
         ? DEFAULT_MAX_AGE_SECONDS
@@ -1504,6 +1505,7 @@ export function createCachePromotionAuthority(
       artifactName: proof.artifactName,
       proofRoot: proof.proofRoot,
     },
+    devDeltaPlan: options.deltaPlan || null,
     producer: proof.producer,
     partitionCount: descriptor.identity.partitionCount,
     planProjectionDigest: descriptor.identity.planProjectionDigest,
@@ -1516,6 +1518,7 @@ export function createCachePromotionAuthority(
 
 export function verifyCachePromotionAuthority(authorityDir, options) {
   const authority = readJson(path.join(authorityDir, 'authority.json'));
+  const deltaPlan = authority.devDeltaPlan || null;
   const { authorityDigest, ...body } = authority;
   if (
     authority.schema !== CACHE_PROMOTION_AUTHORITY_SCHEMA ||
@@ -1558,6 +1561,7 @@ export function verifyCachePromotionAuthority(authorityDir, options) {
       producerRunId: authority.producer?.runId,
       producerEvent: authority.producer?.event,
       producerHeadSha: authority.producer?.triggerHeadSha,
+      deltaPlan,
       maxAgeSeconds:
         options.maxAgeSeconds === undefined
           ? DEFAULT_MAX_AGE_SECONDS
@@ -1827,6 +1831,9 @@ async function main() {
         producerRunId: options['producer-run-id'],
         producerEvent: options['producer-event'],
         producerHeadSha: options['producer-head-sha'],
+        deltaPlan: options['dev-delta-plan']
+          ? readJson(path.resolve(options['dev-delta-plan']))
+          : null,
         maxAgeSeconds: Number(
           options['max-age-seconds'] || DEFAULT_MAX_AGE_SECONDS,
         ),

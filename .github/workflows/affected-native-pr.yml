@@ -1426,6 +1426,7 @@ jobs:
           node scripts/affected-native-proof.mjs seal-cache-authority \
             --descriptor "$admission/proof-admission/descriptor.json" \
             --bundle "$admission/proof-reuse" \
+            --dev-delta-plan "$admission/proof-admission/dev-delta-plan.json" \
             --output-dir "$admission/cache-promotion-authority" \
             --repository "$GITHUB_REPOSITORY" \
             --target-run-id "$GITHUB_RUN_ID" \

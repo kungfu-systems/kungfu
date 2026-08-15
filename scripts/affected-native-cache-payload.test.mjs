@@ -13,7 +13,14 @@ import {
   createPortableDevCacheReceipt,
 } from '@kungfu-tech/buildchain/portable-dev-cache';
 
-import { deliveryAttemptGithubOutputs } from './affected-native-proof.mjs';
+import {
+  createCachePromotionAuthority,
+  createDeliveryBinding,
+  createProofDescriptor,
+  deliveryAttemptGithubOutputs,
+  sealProof,
+  verifyCachePromotionAuthority,
+} from './affected-native-proof.mjs';
 import { partitionAffectedNativePlan } from './run-core-affected-native.mjs';
 import {
   affectedNativeCompilerPlanDigest,
@@ -43,6 +50,90 @@ function digest(value) {
 function writeJson(file, value) {
   fs.mkdirSync(path.dirname(file), { recursive: true });
   fs.writeFileSync(file, `${JSON.stringify(value, null, 2)}\n`);
+}
+
+const AUTH_BASE = '1'.repeat(40);
+const AUTH_HEAD = '2'.repeat(40);
+const AUTH_DEV_HEAD = '3'.repeat(40);
+const AUTH_TREE = '4'.repeat(40);
+const AUTH_QUEUE_HEAD = '5'.repeat(40);
+const AUTH_TOOLCHAIN = {
+  compiler: 'g++-14 (Ubuntu 14.2.0) 14.2.0',
+  cmake: 'cmake version 3.31.6',
+  ninja: '1.13.2',
+  runner: {
+    environment: 'github-hosted',
+    os: 'Linux',
+    arch: 'X64',
+    imageOS: 'ubuntu24',
+    imageVersion: '20260720.1.0',
+  },
+};
+
+function authorityPlan(base, head, changedPath, affected) {
+  const body = {
+    schema: 'kungfu.core-affected-native-plan/v1',
+    base,
+    head,
+    authority: { layers: 'sha256:layers', buildCapabilities: 'sha256:build' },
+    changedPaths: [changedPath],
+    directComponents: [],
+    closureComponents: affected ? ['core'] : [],
+    targets: affected ? ['kungfu'] : [],
+    tests: [],
+    profile: 'full',
+    platformTier: 'github-hosted-linux-native-pr',
+    reviewRoutes: [],
+    reasons: [{ path: changedPath, kind: 'architecture-or-gate-authority' }],
+  };
+  return { ...body, planDigest: digest(body) };
+}
+
+function authorityReceipt(value) {
+  const lanes = [{ index: 0, targets: value.targets, tests: value.tests }];
+  const partition = {
+    schema: 'kungfu.core-affected-native-partition/v1',
+    index: 0,
+    count: 1,
+    targets: value.targets,
+    tests: value.tests,
+    partitionDigest: digest({
+      planDigest: value.planDigest,
+      index: 0,
+      count: 1,
+      targets: value.targets,
+      tests: value.tests,
+    }),
+    coverageDigest: digest({ planDigest: value.planDigest, count: 1, lanes }),
+  };
+  return {
+    schema: 'kungfu.core-affected-native-receipt/v1',
+    status: 'passed',
+    source: { base: value.base, head: value.head },
+    plan: value,
+    planDigest: value.planDigest,
+    executionPartition: partition,
+    platform: 'linux-x64',
+    toolchain: AUTH_TOOLCHAIN,
+  };
+}
+
+function authorityBinding(devHead, candidateHead) {
+  return createDeliveryBinding({
+    event: 'pull_request',
+    pullRequest: 3150,
+    pullRequestHead: AUTH_HEAD,
+    devHead,
+    candidateHead,
+    candidateTree: AUTH_TREE,
+    pullRequestBody: '',
+    combinedStatus: {},
+    requiredContexts: [
+      'affected-native / linux',
+      'project-cut / queue-admission',
+    ],
+    queueAdmissionContext: 'project-cut / queue-admission',
+  });
 }
 
 test('non-family delivery attempt projects empty family outputs', () => {
@@ -379,7 +470,7 @@ test('PR payload transport requires merge-group reused-proof authority', (t) => 
   );
   assert.match(
     workflow,
-    /name: Seal reused-proof cache promotion authority[\s\S]*?seal-cache-authority/u,
+    /name: Seal reused-proof cache promotion authority[\s\S]*?seal-cache-authority[\s\S]*?--dev-delta-plan "\$admission\/proof-admission\/dev-delta-plan\.json"/u,
   );
   const promotionWorkflow = fs.readFileSync(
     '.github/workflows/affected-native-cache-promote.yml',
@@ -441,5 +532,112 @@ test('cache payload sealing rejects symlinks escaping its cache root', (t) => {
         compilerSymlinkTarget: '../../outside',
       }),
     /escaping symlink/,
+  );
+});
+
+test('cache promotion authority binds unrelated dev delta attribution', (t) => {
+  const sourcePlan = authorityPlan(
+    AUTH_BASE,
+    AUTH_HEAD,
+    'framework/core/CMakeLists.txt',
+    true,
+  );
+  const queuePlan = authorityPlan(
+    AUTH_DEV_HEAD,
+    AUTH_QUEUE_HEAD,
+    'framework/core/CMakeLists.txt',
+    true,
+  );
+  const deltaPlan = authorityPlan(
+    AUTH_BASE,
+    AUTH_DEV_HEAD,
+    'docs/qualification/gates/release-and-promotion.md',
+    false,
+  );
+  const sourceDescriptor = createProofDescriptor(
+    sourcePlan,
+    AUTH_TREE,
+    1,
+    AUTH_TOOLCHAIN,
+    authorityBinding(AUTH_BASE, AUTH_HEAD),
+  );
+  const queueDescriptor = createProofDescriptor(
+    queuePlan,
+    AUTH_TREE,
+    1,
+    AUTH_TOOLCHAIN,
+    authorityBinding(AUTH_DEV_HEAD, AUTH_QUEUE_HEAD),
+  );
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'cache-authority-'));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const inputs = path.join(root, 'inputs');
+  const proofBundle = path.join(root, 'proof-bundle');
+  writeJson(
+    path.join(inputs, 'partition-0', 'receipt.json'),
+    authorityReceipt(sourcePlan),
+  );
+  const proof = sealProof(sourceDescriptor, inputs, {
+    repository: 'kungfu-systems/kungfu',
+    runId: 42,
+    event: 'pull_request',
+    workflowPath: '.github/workflows/affected-native-pr.yml',
+    triggerHeadSha: AUTH_DEV_HEAD,
+    checkoutSha: AUTH_HEAD,
+    createdAt: '2026-07-22T00:00:00Z',
+  });
+  writeJson(path.join(proofBundle, 'proof.json'), proof);
+  fs.copyFileSync(
+    path.join(inputs, 'partition-0', 'receipt.json'),
+    path.join(proofBundle, 'partition-0.receipt.json'),
+  );
+
+  const authority = createCachePromotionAuthority(
+    queueDescriptor,
+    proofBundle,
+    {
+      targetRepository: 'kungfu-systems/kungfu',
+      targetRunId: 84,
+      targetEvent: 'merge_group',
+      targetHeadSha: AUTH_QUEUE_HEAD,
+      targetSourceTree: AUTH_TREE,
+      producerRepository: 'kungfu-systems/kungfu',
+      producerRunId: 42,
+      producerEvent: 'pull_request',
+      producerHeadSha: AUTH_DEV_HEAD,
+      deltaPlan,
+      maxAgeSeconds: 6 * 60 * 60,
+      now: '2026-07-22T01:00:00Z',
+    },
+  );
+  assert.deepEqual(authority.devDeltaPlan, deltaPlan);
+
+  const authorityDir = path.join(root, 'authority');
+  writeJson(path.join(authorityDir, 'descriptor.json'), queueDescriptor);
+  writeJson(path.join(authorityDir, 'authority.json'), authority);
+  fs.cpSync(proofBundle, path.join(authorityDir, 'proof'), { recursive: true });
+  assert.doesNotThrow(() =>
+    verifyCachePromotionAuthority(authorityDir, {
+      targetRepository: 'kungfu-systems/kungfu',
+      targetRunId: 84,
+      targetHeadSha: AUTH_QUEUE_HEAD,
+      targetSourceTree: AUTH_TREE,
+      maxAgeSeconds: 6 * 60 * 60,
+      now: '2026-07-22T01:00:00Z',
+    }),
+  );
+  const tampered = structuredClone(authority);
+  tampered.devDeltaPlan.changedPaths = ['docs/other.md'];
+  writeJson(path.join(authorityDir, 'authority.json'), tampered);
+  assert.throws(
+    () =>
+      verifyCachePromotionAuthority(authorityDir, {
+        targetRepository: 'kungfu-systems/kungfu',
+        targetRunId: 84,
+        targetHeadSha: AUTH_QUEUE_HEAD,
+        targetSourceTree: AUTH_TREE,
+        maxAgeSeconds: 6 * 60 * 60,
+        now: '2026-07-22T01:00:00Z',
+      }),
+    /cache promotion authority digest drift/,
   );
 });
