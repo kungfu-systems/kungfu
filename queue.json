@@ -3,7 +3,7 @@
   "contract": "kungfu-buildchain-dev-delivery-warrant-queue",
   "repository": "kungfu-systems/kungfu",
   "protectedBase": "dev/v4/v4.0",
-  "generation": 2912,
+  "generation": 2913,
   "fencingCounter": 456,
   "policy": {
     "agingSeconds": 900,
@@ -11,40 +11,7 @@
     "leaseSeconds": 3600,
     "emergencyPolicy": "reviewed-explicit-only"
   },
-  "activeWarrant": {
-    "schema": "kungfu.buildchain.dev-delivery-warrant/v1",
-    "repository": "kungfu-systems/kungfu",
-    "protectedBase": "dev/v4/v4.0",
-    "candidateId": "sha256:b766069f4ccd726eb88c1c9cb971de150156c92cf6984d51a491a77258eead58",
-    "pullRequestNumber": 3156,
-    "sourceHead": "73a158e5ebba819f201dbe0775ad01cf952cd022",
-    "assignmentRoot": "sha256:4cfd4d34c0c428d396297bc563b3bdce49963eedec0b98b469b7167fdde827be",
-    "initiativeRoot": "sha256:bfff817933e5a5ad693e4b902a84f6cc3a251235dd7377cb4091d92f805fa7ff",
-    "sourceIdentityRoot": "sha256:ef3d784acd6568a544dcf06315f84f41e89b3b009b0da084c42af4c679346e46",
-    "sourcePatchRoot": "sha256:764352b4668a349fed55564675c570090120e6ea0cadbe192f310a620ec76809",
-    "sourceProofRoot": "sha256:3d3e28ab252c2d65be3969298d4003af65719cf992913c352f11d655335e005d",
-    "planRoot": "sha256:83527e1692495f7f9fa312824b0bc84cba8c32c27475bb771c68893caa35f713",
-    "closureRoot": "sha256:106d175611d8634c988192302b9c464ae8ba3b6d023c2cff9910e401344c9624",
-    "dependencyRoot": "sha256:495aa24873c1478227e8443f6953624157e4045b9ae298055d6606054385399a",
-    "toolchainRoot": "sha256:2ecb07894954a2e0de022615d4561e5ba3ae68376401941ecff77be03cd75a0f",
-    "environmentRoot": "sha256:c5f5da5917c6ff93a509a62b18d4b9b69325755c4c7229b553b0016cde83788f",
-    "affectedPaths": [
-      ".github/workflows/affected-native-pr.yml",
-      "docs/qualification/gates/workflow-authority.json",
-      "framework/release/publication-surfaces.json",
-      "scripts/affected-native-proof.mjs",
-      "scripts/affected-native-semantic-source.test.mjs"
-    ],
-    "sourceWorkflowRunId": 31886560469,
-    "deliveryClass": "native-proof-required",
-    "generation": 456,
-    "phase": "provisional",
-    "expectedOldStateRoot": "sha256:1a4c0b05662daaed48fc45ebc6e069963fddbbd343ac8ab3107f707bd4625cc7",
-    "issuedAt": "2026-08-15T16:16:08.967Z",
-    "expiresAt": "2026-08-15T17:56:49.877Z",
-    "fencingToken": "sha256:13c46d9a0c5d3b5eaad690a2b1de510e753a48d3c515db760c538d2505ba5ab4",
-    "nextAction": "Run or reuse the exact semantic native proof, then atomically qualify this fenced Warrant."
-  },
+  "activeWarrant": null,
   "candidates": [
     {
       "repository": "kungfu-systems/kungfu",
@@ -28251,11 +28218,19 @@
       "sourceWorkflowRunId": 31886560469,
       "priority": "ordinary",
       "enqueuedAt": "2026-08-15T13:36:07.940Z",
-      "updatedAt": "2026-08-15T16:26:49.877Z",
+      "updatedAt": "2026-08-15T16:28:11.687Z",
       "attempts": 3,
       "recoveries": 0,
-      "status": "proving",
-      "terminal": null,
+      "status": "cancelled",
+      "terminal": {
+        "outcome": "cancelled",
+        "terminalClass": "authoritative-cancellation",
+        "reason": "protected pull request event: synchronize",
+        "evidenceRoot": "sha256:eb5cbbb18b1c990dc7157f58cd3b29a74de2881893f9e2260fb60fa800326de2",
+        "closedAt": "2026-08-15T16:28:11.687Z",
+        "fencingToken": "sha256:13c46d9a0c5d3b5eaad690a2b1de510e753a48d3c515db760c538d2505ba5ab4",
+        "leaseGeneration": 456
+      },
       "affectedPaths": [
         ".github/workflows/affected-native-pr.yml",
         "docs/qualification/gates/workflow-authority.json",
@@ -28889,6 +28864,6 @@
       ]
     }
   ],
-  "updatedAt": "2026-08-15T16:26:49.877Z",
-  "stateRoot": "sha256:a14c1f39cdd62ff594b8b3505e2eff4fc3aa61425b1e163aee88e78e284a36bd"
+  "updatedAt": "2026-08-15T16:28:11.687Z",
+  "stateRoot": "sha256:cf3b94b74f1b2fc6c3fcd8df773fdc2022285e2097cdb59f2607739ee6cafec7"
 }
