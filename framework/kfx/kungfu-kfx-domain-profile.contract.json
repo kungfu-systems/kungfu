@@ -17,7 +17,11 @@
     "kungfu.kfx.work",
     "kungfu.kfx.warrant",
     "kungfu.kfx.episode",
-    "kungfu.kfx.settlement"
+    "kungfu.kfx.settlement",
+    "kungfu.kfx.runtime-warrant",
+    "kungfu.kfx.runtime-lease-state",
+    "kungfu.kfx.runtime-warrant-episode",
+    "kungfu.kfx.runtime-warrant-settlement"
   ],
   "relationTypes": [
     "kfx-package-provides",
@@ -26,7 +30,10 @@
     "kfx-work-authorized-by",
     "kfx-work-observed-in",
     "kfx-work-settled-by",
-    "kfx-settlement-updates-package"
+    "kfx-settlement-updates-package",
+    "kfx-runtime-warrant-authorizes-lease",
+    "kfx-runtime-warrant-observed-in",
+    "kfx-runtime-warrant-settled-by"
   ],
   "operations": [
     "install",
@@ -35,8 +42,21 @@
     "enable",
     "disable",
     "activate",
-    "qualify"
+    "qualify",
+    "runtime-warrant-issue",
+    "runtime-warrant-heartbeat",
+    "runtime-warrant-revoke",
+    "runtime-warrant-settle",
+    "runtime-warrant-recover"
   ],
+  "kfd10AdopterWitness": {
+    "standard": "KFD-10",
+    "status": "draft",
+    "revision": 2,
+    "documentRoot": "sha256:a2e1cf278c708eb597bfdc83817c6440d9a8b7a8291d67c447a73548427c89c4",
+    "claimClass": "draft-adopter-evidence",
+    "authority": "KFX Core facts and named Fact cuts; never the KFD support declaration"
+  },
   "perspectives": {
     "desired": "accepted package Fact version at the pinned Cut",
     "observed": "immutable KFX Episode facts",
@@ -47,6 +67,9 @@
     "filesystem discovery and materialization are observations and Actions, not registry authority",
     "package.json and kungfu.kfx.json do not contain runtime lifecycle state",
     "no KFX-specific lifecycle journal or independent generation counter is authoritative",
-    "every accepted mutation advances the named Cut through exact expected-old and revision CAS"
+    "every accepted mutation advances the named Cut through exact expected-old and revision CAS",
+    "Mutation Warrants are one-shot and consumed by settlement; Runtime Warrants are separately addressed leases",
+    "Runtime Warrant generation, fencing, heartbeat, expiry, revocation, recovery, settlement and residual responsibility are Core-owned Facts",
+    "KFD-10 witness output is draft adopter evidence and contributes zero runtime privilege"
   ]
 }

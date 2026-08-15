@@ -261,7 +261,10 @@ public:
                                                object_or_empty(options.operation_options, "document"));
     }
     if (action == "list" || action == "inspect" || action == "resolve" || action == "plan" || action == "status" ||
-        action == "assess" || action == "apply" || action == "authorize-host" || action == "history") {
+        action == "assess" || action == "apply" || action == "authorize-host" || action == "history" ||
+        action == "runtime-warrant-issue" || action == "runtime-warrant-heartbeat" ||
+        action == "runtime-warrant-revoke" || action == "runtime-warrant-settle" ||
+        action == "runtime-warrant-recover" || action == "kfd-10-witness") {
       return kfx::query_native_kfx_registry(action, object_or_empty(options.operation_options, "request"),
                                             options.runtime_dir);
     }

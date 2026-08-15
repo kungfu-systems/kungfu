@@ -69,12 +69,14 @@ nlohmann::json registry_request() {
 
 void require_refusal(const std::string &code, const std::function<void()> &operation) {
   bool refused = false;
+  std::string detail = "no exception";
   try {
     operation();
   } catch (const std::invalid_argument &error) {
-    refused = std::string(error.what()).rfind(code, 0) == 0;
+    detail = error.what();
+    refused = detail.rfind(code, 0) == 0;
   }
-  require(refused, "operation did not fail with stable code " + code);
+  require(refused, "operation did not fail with stable code " + code + ": " + detail);
 }
 
 void write_json(const fs::path &path, const nlohmann::json &value) {
@@ -995,6 +997,175 @@ void test_native_lifecycle_uses_fact_work_and_named_cut_authority() {
   fs::remove_all(home);
 }
 
+void test_kfx_runtime_warrant_is_leased_fenced_recoverable_and_witnessed() {
+  const auto home = temp_root("runtime-warrant");
+  const auto source_root = home / "sources";
+  const auto package_source = source_root / "optional-view";
+  fs::create_directories(source_root);
+  fs::copy(registry_root() / "example-suite" / "members" / "optional-view", package_source,
+           fs::copy_options::recursive);
+  const auto runtime_dir = home / "runtime";
+  const auto source_request = passport_authorized_request(
+      {{"roots", nlohmann::json::array({{{"kind", "user"}, {"path", source_root.string()}}})}}, "optional-view",
+      "install");
+  const auto install_plan = kfx::query_native_kfx_registry("plan", source_request, runtime_dir.string());
+  const auto installed = kfx::query_native_kfx_registry(
+      "apply", mutation_request(source_request, install_plan, "optional-view", "install"), runtime_dir.string());
+  const auto plan = kfx::query_native_kfx_registry("plan", nlohmann::json::object(), runtime_dir.string());
+  const auto &descriptor = plan.at("hostContract");
+  const auto authorization =
+      *std::find_if(descriptor.at("runtimeAuthorizations").begin(), descriptor.at("runtimeAuthorizations").end(),
+                    [](const auto &candidate) { return candidate.at("packageKey") == "optional-view"; });
+  nlohmann::json issue_request = {{"packageKey", "optional-view"},
+                                  {"host", authorization.at("host")},
+                                  {"expectedCutRoot", descriptor.at("cutRoot")},
+                                  {"expectedRevision", descriptor.at("revision")},
+                                  {"expectedGenerationRoot", descriptor.at("generationRoot")},
+                                  {"expectedPackageRoot", authorization.at("packageRoot")},
+                                  {"expectedCapabilityGrantRoot", authorization.at("capabilityGrantRoot")},
+                                  {"expectedAuthorizationRoot", authorization.at("authorizationRoot")},
+                                  {"expectedGrantedCapabilities", authorization.at("grantedCapabilities")},
+                                  {"holder", "worker-a"},
+                                  {"purpose", "run optional KFX view"},
+                                  {"leaseNonce", "generation-1"},
+                                  {"issuedAt", 10},
+                                  {"expiresAt", 50},
+                                  {"heartbeatTtl", 10},
+                                  {"residualResponsibility", "kungfu-core retains recovery and terminal settlement"},
+                                  {"requestedCapabilities", nlohmann::json::array({"domain"})}};
+  auto amplified = issue_request;
+  amplified["requestedCapabilities"].push_back("process");
+  require_refusal("KF_KFX_RUNTIME_AUTHORITY_AMPLIFICATION", [&] {
+    (void)kfx::query_native_kfx_registry("runtime-warrant-issue", amplified, runtime_dir.string());
+  });
+  const auto issued = kfx::query_native_kfx_registry("runtime-warrant-issue", issue_request, runtime_dir.string());
+  const auto &warrant = issued.at("runtimeWarrant");
+  const auto &lease = issued.at("leaseState");
+  require(issued.at("executionAllowed").get<bool>() && lease.at("generation") == 1 && lease.at("state") == "active" &&
+              lease.at("heartbeatDeadline") == 20 && warrant.at("warrantClass") == "leased-runtime" &&
+              warrant.at("warrantRoot") != warrant.at("capabilityGrantRoot") &&
+              warrant.at("warrantRoot") != warrant.at("mutationWarrantRoot") &&
+              installed.at("receipt").at("warrantRoot") == warrant.at("mutationWarrantRoot"),
+          "Runtime Warrant did not remain separate from capability and one-shot Mutation authority");
+  require_refusal("KF_KFX_RUNTIME_WARRANT_ACTIVE", [&] {
+    (void)kfx::query_native_kfx_registry("runtime-warrant-issue", issue_request, runtime_dir.string());
+  });
+
+  nlohmann::json transition = {{"packageKey", "optional-view"},
+                               {"host", authorization.at("host")},
+                               {"holder", "worker-a"},
+                               {"expectedWarrantRoot", warrant.at("warrantRoot")},
+                               {"expectedGeneration", lease.at("generation")},
+                               {"expectedFencingToken", lease.at("fencingToken")},
+                               {"recordedAt", 15}};
+  auto substituted = transition;
+  substituted["expectedWarrantRoot"] = fixture_root('0');
+  require_refusal("KF_KFX_RUNTIME_FENCE_STALE", [&] {
+    (void)kfx::query_native_kfx_registry("runtime-warrant-heartbeat", substituted, runtime_dir.string());
+  });
+  auto stale_holder = transition;
+  stale_holder["holder"] = "worker-b";
+  require_refusal("KF_KFX_RUNTIME_HOLDER_STALE", [&] {
+    (void)kfx::query_native_kfx_registry("runtime-warrant-heartbeat", stale_holder, runtime_dir.string());
+  });
+  const auto heartbeat = kfx::query_native_kfx_registry("runtime-warrant-heartbeat", transition, runtime_dir.string());
+  require(heartbeat.at("leaseState").at("heartbeatAt") == 15 &&
+              heartbeat.at("leaseState").at("heartbeatDeadline") == 25,
+          "Runtime Warrant heartbeat did not renew the bounded freshness window");
+  require_refusal("KF_KFX_RUNTIME_HEARTBEAT_DUPLICATE", [&] {
+    (void)kfx::query_native_kfx_registry("runtime-warrant-heartbeat", transition, runtime_dir.string());
+  });
+  auto stale_heartbeat = transition;
+  stale_heartbeat["recordedAt"] = 26;
+  require_refusal("KF_KFX_RUNTIME_HEARTBEAT_STALE", [&] {
+    (void)kfx::query_native_kfx_registry("runtime-warrant-heartbeat", stale_heartbeat, runtime_dir.string());
+  });
+
+  auto recover = transition;
+  recover.erase("holder");
+  recover["recordedAt"] = 26;
+  const auto recovered = kfx::query_native_kfx_registry("runtime-warrant-recover", recover, runtime_dir.string());
+  require(recovered.at("leaseState").at("state") == "recovered" &&
+              recovered.at("receipt").at("settlementBodyRoot").is_string(),
+          "fresh-process Core recovery did not settle a missed heartbeat with retained responsibility");
+  require_refusal("KF_KFX_RUNTIME_WARRANT_TERMINAL", [&] {
+    (void)kfx::query_native_kfx_registry("runtime-warrant-recover", recover, runtime_dir.string());
+  });
+
+  auto issue_two = issue_request;
+  issue_two["leaseNonce"] = "generation-2";
+  issue_two["issuedAt"] = 30;
+  issue_two["expiresAt"] = 60;
+  const auto issued_two = kfx::query_native_kfx_registry("runtime-warrant-issue", issue_two, runtime_dir.string());
+  require(issued_two.at("leaseState").at("generation") == 2 &&
+              issued_two.at("leaseState").at("fencingToken") != lease.at("fencingToken"),
+          "successor Runtime Warrant did not advance generation and fencing");
+  auto revoke = transition;
+  revoke["expectedWarrantRoot"] = issued_two.at("runtimeWarrant").at("warrantRoot");
+  revoke["expectedGeneration"] = issued_two.at("leaseState").at("generation");
+  revoke["expectedFencingToken"] = issued_two.at("leaseState").at("fencingToken");
+  revoke.erase("holder");
+  revoke["recordedAt"] = 31;
+  revoke["reason"] = "operator stop";
+  revoke["revocationAuthorityRoot"] = "not-a-root";
+  require_refusal("KF_KFX_RUNTIME_REVOCATION_INVALID", [&] {
+    (void)kfx::query_native_kfx_registry("runtime-warrant-revoke", revoke, runtime_dir.string());
+  });
+  revoke["revocationAuthorityRoot"] = fixture_root('a');
+  const auto revoked = kfx::query_native_kfx_registry("runtime-warrant-revoke", revoke, runtime_dir.string());
+  require(revoked.at("leaseState").at("state") == "revoked" &&
+              revoked.at("leaseState").at("revocationRoot").is_string() &&
+              revoked.at("leaseState").at("settlementRoot").is_string() &&
+              revoked.at("receipt").at("settlementBodyRoot").is_string(),
+          "independent revocation did not terminally fence and settle the Runtime Warrant");
+
+  auto issue_three = issue_request;
+  issue_three["leaseNonce"] = "generation-3";
+  issue_three["issuedAt"] = 40;
+  issue_three["expiresAt"] = 70;
+  const auto issued_three = kfx::query_native_kfx_registry("runtime-warrant-issue", issue_three, runtime_dir.string());
+  auto settle = transition;
+  settle["expectedWarrantRoot"] = issued_three.at("runtimeWarrant").at("warrantRoot");
+  settle["expectedGeneration"] = issued_three.at("leaseState").at("generation");
+  settle["expectedFencingToken"] = issued_three.at("leaseState").at("fencingToken");
+  settle["recordedAt"] = 45;
+  settle["outcome"] = "completed";
+  settle["residualResponsibilityDisposition"] = "retained-by-kungfu-core";
+  const auto settled = kfx::query_native_kfx_registry("runtime-warrant-settle", settle, runtime_dir.string());
+  require(settled.at("leaseState").at("state") == "settled" &&
+              settled.at("leaseState").at("settlementRoot").is_string(),
+          "terminal Runtime Warrant settlement was not retained as a distinct Fact");
+  require_refusal("KF_KFX_RUNTIME_WARRANT_TERMINAL", [&] {
+    (void)kfx::query_native_kfx_registry("runtime-warrant-settle", settle, runtime_dir.string());
+  });
+
+  auto issue_four = issue_request;
+  issue_four["leaseNonce"] = "generation-4";
+  issue_four["issuedAt"] = 50;
+  issue_four["expiresAt"] = 55;
+  const auto issued_four = kfx::query_native_kfx_registry("runtime-warrant-issue", issue_four, runtime_dir.string());
+  auto expire = transition;
+  expire["expectedWarrantRoot"] = issued_four.at("runtimeWarrant").at("warrantRoot");
+  expire["expectedGeneration"] = issued_four.at("leaseState").at("generation");
+  expire["expectedFencingToken"] = issued_four.at("leaseState").at("fencingToken");
+  expire.erase("holder");
+  expire["recordedAt"] = 55;
+  const auto expired = kfx::query_native_kfx_registry("runtime-warrant-recover", expire, runtime_dir.string());
+  require(expired.at("event") == "lease-expired" && expired.at("leaseState").at("state") == "recovered",
+          "Core did not fail closed and settle the exact lease-expiry boundary");
+
+  const nlohmann::json witness_request = {{"packageKey", "optional-view"}, {"host", authorization.at("host")}};
+  const auto witness_a = kfx::query_native_kfx_registry("kfd-10-witness", witness_request, runtime_dir.string());
+  const auto witness_b = kfx::query_native_kfx_registry("kfd-10-witness", witness_request, runtime_dir.string());
+  require(witness_a == witness_b && witness_a.at("standard") == "KFD-10" &&
+              witness_a.at("claimClass") == "draft-adopter-evidence" &&
+              witness_a.at("authoritySeparation").at("kfdEvidenceIsNotRuntimePrivilege").get<bool>() &&
+              witness_a.at("mutationLifecycleRoot").is_string() && witness_a.at("runtimeLifecycleRoot").is_string() &&
+              witness_a.at("witnessRoot").is_string(),
+          "KFX did not produce a deterministic authority-separated KFD-10 specialized witness");
+  fs::remove_all(home);
+}
+
 void test_native_adapter_authority_requires_the_current_fact_cut() {
   const auto home = temp_root("adapter-authority");
   const auto source_root = home / "sources";
@@ -1197,6 +1368,7 @@ int main() {
     test_exact_buildchain_attestation_and_operation_admission();
     test_semantic_graph_and_host_contract_are_canonical();
     test_native_lifecycle_uses_fact_work_and_named_cut_authority();
+    test_kfx_runtime_warrant_is_leased_fenced_recoverable_and_witnessed();
     test_native_adapter_authority_requires_the_current_fact_cut();
     test_control_suite_recursively_dogfoods_public_fact_work();
     std::cout << "native KFX contract tests passed\n";

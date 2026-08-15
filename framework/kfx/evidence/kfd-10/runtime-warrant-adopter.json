@@ -1,0 +1,85 @@
+{
+  "schema": "kungfu.kfx.kfd-10-adopter-evidence/v1",
+  "standard": "KFD-10",
+  "claimClass": "draft-adopter-evidence",
+  "adopter": "kungfu-kfx-control-and-runtime",
+  "normative": {
+    "status": "draft",
+    "revision": 2,
+    "documentRoot": "sha256:a2e1cf278c708eb597bfdc83817c6440d9a8b7a8291d67c447a73548427c89c4"
+  },
+  "implementation": {
+    "mutationWarrant": "one-shot Core-issued authority consumed by Fact/Work settlement",
+    "runtimeWarrant": "Core-issued lease with an independent root, holder, purpose, generation, fencing token, heartbeat deadline, expiry, revocation channel, recovery owner and residual responsibility",
+    "authorityStore": "yijinjing Fact kernel with exact named-Cut CAS",
+    "witness": "kungfu.kfx.kfd-10-adopter-witness/v1"
+  },
+  "sourceRoots": [
+    {
+      "path": "framework/core/src/libkungfu/src/runtime/kfx/native_registry.cpp",
+      "sha256": "sha256:6f1dcf997f32cea0b9e9756c6411e78efdf4a40f05ab9422b21ecdd2e41bc2c2"
+    },
+    {
+      "path": "framework/core/src/libkungfu/tests/native_kfx_contract_tests.cpp",
+      "sha256": "sha256:5dcfec95b07ba28280a324d191b26a619d7c01e5dd1494bf8bf1a895d8968cc9"
+    },
+    {
+      "path": "framework/core/src/libkungfu/src/runtime/storage/domain_dispatch.cpp",
+      "sha256": "sha256:29a3cc46a728393f424d533790477d83feb8e3ca3d9fd2c4c72a206e0301d201"
+    },
+    {
+      "path": "framework/core/src/python/kungfu/storage/service.py",
+      "sha256": "sha256:fb0b1c4a524a364fff61d8668b264b894eef11b482272433f3fd94266f2dcd78"
+    },
+    {
+      "path": "framework/kfx/kungfu-kfx-domain-profile.contract.json",
+      "sha256": "sha256:09b57a3c98285c8836b399e7350b8d97db7af7125b62b4f6112905f2ca62f7b1"
+    }
+  ],
+  "qualification": {
+    "command": "ctest --test-dir framework/core/build --build-config Release --output-on-failure --tests-regex ^kungfu_native_kfx_contract_tests$",
+    "test": "test_kfx_runtime_warrant_is_leased_fenced_recoverable_and_witnessed",
+    "positiveCases": [
+      "exact-root issue",
+      "monotonic heartbeat renewal",
+      "fresh-process missed-heartbeat recovery",
+      "lease-expiry recovery",
+      "independent revocation",
+      "terminal settlement",
+      "successor generation and fencing",
+      "deterministic witness replay"
+    ],
+    "failClosedCases": [
+      "authority amplification",
+      "active lease duplication",
+      "warrant root substitution",
+      "stale holder",
+      "stale fencing token",
+      "duplicate heartbeat",
+      "missed heartbeat",
+      "invalid revocation authority root",
+      "expired authority use",
+      "duplicate recovery or settlement"
+    ]
+  },
+  "authoritySeparation": {
+    "capabilityGrantIsNotWarrant": true,
+    "kfdEvidenceIsNotRuntimePrivilege": true,
+    "episodeIsNotRetroactiveAuthority": true,
+    "settlementIsNotWarrant": true,
+    "recoveryOwnedByCore": true
+  },
+  "boundary": {
+    "verificationStatus": "non-conforming-evidence",
+    "buildchainGate": "not-applicable-draft",
+    "releaseQualification": "forbidden-while-draft",
+    "shippedSupport": false
+  },
+  "nonClaims": [
+    "KFD-10 conformance",
+    "KFD-10 activation",
+    "shipped KFD-10 support",
+    "independent certification",
+    "authority from package identity, Release Passport or support claims"
+  ]
+}

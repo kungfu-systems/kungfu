@@ -336,6 +336,63 @@ function validateMatrix(matrix, { verifyInstalledKfd = true } = {}) {
       fail(`${key} may expose only non-conforming draft adopter evidence`);
     }
   }
+  const kfd10 = byKey['kfd-10'];
+  const expectedKfd10Surfaces = [
+    'framework/core/src/libkungfu/src/runtime/kfx/native_registry.cpp',
+    'framework/kfx/kungfu-kfx-domain-profile.contract.json',
+    'framework/core/src/python/kungfu/storage/service.py',
+  ];
+  const expectedKfd10Evidence =
+    'framework/kfx/evidence/kfd-10/runtime-warrant-adopter.json';
+  if (
+    kfd10.implementation.status !== 'implemented-specialized-witness' ||
+    kfd10.implementation.surfaces.join(',') !==
+      expectedKfd10Surfaces.join(',') ||
+    kfd10.verification.status !== 'non-conforming-evidence' ||
+    kfd10.verification.evidenceRoots.length !== 1 ||
+    kfd10.verification.evidenceRoots[0].path !== expectedKfd10Evidence ||
+    kfd10.buildchain.gateStatus !== 'not-applicable-draft' ||
+    kfd10.releaseQualification.status !== 'forbidden-while-draft' ||
+    kfd10.releaseQualification.shippedSupport ||
+    kfd10.exposure.cli !== 'not-product-exposed'
+  ) {
+    fail('KFD-10 specialized witness boundary drifted');
+  }
+  const kfd10Witness = readJson(
+    checkoutFile(expectedKfd10Evidence, 'KFD-10 witness'),
+  );
+  if (
+    kfd10Witness.schema !== 'kungfu.kfx.kfd-10-adopter-evidence/v1' ||
+    kfd10Witness.standard !== 'KFD-10' ||
+    kfd10Witness.claimClass !== 'draft-adopter-evidence' ||
+    kfd10Witness.normative?.status !== 'draft' ||
+    kfd10Witness.normative?.revision !== 2 ||
+    kfd10Witness.normative?.documentRoot !== kfd10.normative.documentSha256 ||
+    kfd10Witness.boundary?.verificationStatus !== 'non-conforming-evidence' ||
+    kfd10Witness.boundary?.buildchainGate !== 'not-applicable-draft' ||
+    kfd10Witness.boundary?.releaseQualification !== 'forbidden-while-draft' ||
+    kfd10Witness.boundary?.shippedSupport !== false ||
+    kfd10Witness.authoritySeparation?.capabilityGrantIsNotWarrant !== true ||
+    kfd10Witness.authoritySeparation?.kfdEvidenceIsNotRuntimePrivilege !==
+      true ||
+    kfd10Witness.authoritySeparation?.episodeIsNotRetroactiveAuthority !==
+      true ||
+    kfd10Witness.authoritySeparation?.settlementIsNotWarrant !== true ||
+    kfd10Witness.authoritySeparation?.recoveryOwnedByCore !== true ||
+    !Array.isArray(kfd10Witness.sourceRoots) ||
+    kfd10Witness.sourceRoots.length !== 5
+  ) {
+    fail('KFD-10 specialized witness is malformed or claim-widened');
+  }
+  for (const source of kfd10Witness.sourceRoots) {
+    const sourcePath = checkoutFile(source.path, 'KFD-10 witness source');
+    if (
+      !fs.existsSync(sourcePath) ||
+      sha256File(sourcePath) !== source.sha256
+    ) {
+      fail(`KFD-10 witness source root drift: ${source.path}`);
+    }
+  }
   return matrix;
 }
 

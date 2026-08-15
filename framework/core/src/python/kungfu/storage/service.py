@@ -888,6 +888,12 @@ def kfx_registry(
         "apply",
         "history",
         "authorize-host",
+        "runtime-warrant-issue",
+        "runtime-warrant-heartbeat",
+        "runtime-warrant-revoke",
+        "runtime-warrant-settle",
+        "runtime-warrant-recover",
+        "kfd-10-witness",
     }:
         raise ValueError(f"unsupported KFX registry action: {action}")
     return dict(
