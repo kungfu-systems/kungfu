@@ -106,6 +106,19 @@ test('validates the exact KFD-1 through KFD-13 authority', (t) => {
     'framework/project-cut/README.md',
   ]);
   assert.equal(kfd6.releaseQualification.shippedSupport, false);
+  const kfd10 = BASE.rows.find((row) => row.key === 'kfd-10');
+  assert.equal(kfd10.supportStatus, 'draft-adopter-evidence');
+  assert.equal(kfd10.implementation.status, 'implemented-specialized-witness');
+  assert.deepEqual(kfd10.implementation.surfaces, [
+    'framework/core/src/libkungfu/src/runtime/kfx/native_registry.cpp',
+    'framework/kfx/kungfu-kfx-domain-profile.contract.json',
+    'framework/core/src/python/kungfu/storage/service.py',
+  ]);
+  assert.deepEqual(
+    kfd10.verification.evidenceRoots.map((entry) => entry.path),
+    ['framework/kfx/evidence/kfd-10/runtime-warrant-adopter.json'],
+  );
+  assert.equal(kfd10.releaseQualification.shippedSupport, false);
 });
 
 test('fails closed when the KFD-5 candidate loses its passed product gate', (t) => {
@@ -180,6 +193,14 @@ test('fails closed when draft evidence becomes shipped support', (t) => {
   const result = validateFixture(t, matrix);
   assert.equal(result.status, 1);
   assert.match(result.stderr, /draft and cannot claim shipped support/);
+});
+
+test('fails closed when the KFD-10 specialized witness widens its boundary', (t) => {
+  const matrix = clone(BASE);
+  matrix.rows[9].exposure.cli = 'released-runtime-authority';
+  const result = validateFixture(t, matrix);
+  assert.equal(result.status, 1);
+  assert.match(result.stderr, /KFD-10 specialized witness boundary drifted/);
 });
 
 test('fails closed when a KFD-4 candidate becomes shipped support', (t) => {
