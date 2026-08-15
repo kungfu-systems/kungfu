@@ -500,6 +500,10 @@ test('delivery workflows preserve exact attempt and cache-promotion bindings', (
     path.join(ROOT, '.github/workflows/affected-native-pr.yml'),
     'utf8',
   );
+  const affectedNativeProof = fs.readFileSync(
+    path.join(ROOT, 'scripts/affected-native-proof.mjs'),
+    'utf8',
+  );
   assert.match(
     affectedNative,
     /Capture exact family delivery binding[\s\S]*rules\/branches\/\$encoded_branch[\s\S]*bind-delivery/,
@@ -507,7 +511,11 @@ test('delivery workflows preserve exact attempt and cache-promotion bindings', (
   assert.match(affectedNative, /--delivery-binding/);
   assert.match(
     affectedNative,
-    /Seal reconstructable family delivery attempt[\s\S]*seal-attempt/,
+    /Seal reconstructable family delivery attempt[\s\S]*delta_args=\(--dev-delta-plan "\$delta_plan"\)[\s\S]*seal-attempt[\s\S]*"\$\{delta_args\[@\]\}"/,
+  );
+  assert.match(
+    affectedNativeProof,
+    /options\.command === 'seal-attempt'[\s\S]*deltaPlan: options\['dev-delta-plan'\][\s\S]*readJson\(path\.resolve\(options\['dev-delta-plan'\]\)\)/,
   );
   assert.match(
     affectedNative,
