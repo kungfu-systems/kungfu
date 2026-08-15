@@ -338,7 +338,7 @@ function validateMatrix(matrix, { verifyInstalledKfd = true } = {}) {
   }
   const kfd10 = byKey['kfd-10'];
   const expectedKfd10Surfaces = [
-    'framework/core/src/libkungfu/src/runtime/kfx/native_registry.cpp',
+    'framework/core/src/libkungfu/src/runtime/kfx/native_authority.cpp',
     'framework/kfx/kungfu-kfx-domain-profile.contract.json',
     'framework/core/src/python/kungfu/storage/kfx_service.py',
   ];
@@ -380,7 +380,7 @@ function validateMatrix(matrix, { verifyInstalledKfd = true } = {}) {
     kfd10Witness.authoritySeparation?.settlementIsNotWarrant !== true ||
     kfd10Witness.authoritySeparation?.recoveryOwnedByCore !== true ||
     !Array.isArray(kfd10Witness.sourceRoots) ||
-    kfd10Witness.sourceRoots.length !== 5
+    kfd10Witness.sourceRoots.length !== 7
   ) {
     fail('KFD-10 specialized witness is malformed or claim-widened');
   }

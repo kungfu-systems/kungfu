@@ -22,6 +22,15 @@ using assessment_fn =
                                   const nlohmann::json &request, const nlohmann::json &load_plan,
                                   const assessment_fn &assess);
 
+[[nodiscard]] nlohmann::json issue_runtime_warrant(const nlohmann::json &descriptor, const nlohmann::json &host_launch,
+                                                   const nlohmann::json &request, const std::string &runtime_dir);
+
+[[nodiscard]] nlohmann::json transition_runtime_warrant(const std::string &action, const nlohmann::json &request,
+                                                        const std::string &runtime_dir);
+
+[[nodiscard]] nlohmann::json kfd10_runtime_witness(const nlohmann::json &request, const std::string &runtime_dir,
+                                                   const nlohmann::json &mutation_history);
+
 } // namespace kungfu::runtime::kfx::authority
 
 #endif // KUNGFU_RUNTIME_KFX_NATIVE_AUTHORITY_H
