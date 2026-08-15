@@ -864,6 +864,11 @@ test('source plan covers representative source-only checks', () => {
     contractTests.args.includes('scripts/check-upgrade-contract.test.mjs'),
   );
   assert.ok(
+    contractTests.args.includes(
+      'scripts/affected-native-delivery-attempt.test.mjs',
+    ),
+  );
+  assert.ok(
     contractTests.args.includes('scripts/affected-native-proof.test.mjs'),
   );
   assert.ok(
