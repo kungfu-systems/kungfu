@@ -1,0 +1,153 @@
+{
+  "schemaVersion": 1,
+  "contract": "kungfu-buildchain-release-candidate-recovery/v1",
+  "action": "reused",
+  "createdAt": "2026-08-15T12:53:46.842Z",
+  "repository": "kungfu-systems/kungfu",
+  "recoveryRunId": "31882034468",
+  "originalCandidate": {
+    "runId": "31851521342",
+    "workflowFile": "build.yml",
+    "workflowName": "Build",
+    "pullRequest": 3069,
+    "sourceSha": "b0cff8236b8b3746f8028b9d519ed3b0e26096c9",
+    "mergeSha": "842be043a25a997bcc8b3b2568bd246aedca95ce",
+    "tree": "b13bf94197ffb017b78dd3745a3ee7d06e5231b7"
+  },
+  "target": {
+    "channel": "alpha",
+    "ref": "alpha/v4/v4.0",
+    "sha": "842be043a25a997bcc8b3b2568bd246aedca95ce",
+    "observedRefSha": "842be043a25a997bcc8b3b2568bd246aedca95ce",
+    "tree": "b13bf94197ffb017b78dd3745a3ee7d06e5231b7",
+    "version": "4.0.0-alpha.2"
+  },
+  "recovered": {
+    "candidateRoot": "sha256:5ce11561314e3fbcafa790db1a32459bf3747a0ca4ba799d5a8df08481bbb5e1",
+    "buildSummaryRoot": "sha256:965062e3302c35892be5e9224147de5d46ddc140723e2501598c20f34086f506",
+    "artifactRoot": "sha256:8f5089d994f882b085e15da7a70f5eea5d0b65270697233f1e4069442170c270",
+    "artifactArchiveRoot": "sha256:a66f282c57b5c2a52737ce95d6df98017f927bf2642d830edfb943239b12351f",
+    "artifactCount": 21,
+    "artifacts": [
+      {
+        "name": "kungfu-alpha-publication-tail-f79a53d6983457788bb3f57fbfcf00fcc00cdd21",
+        "size": 1744,
+        "digest": "sha256:5b43b5ca18fa3551fdad9360a461be07832ded64b9e07249c3e8cf61cef8a62c"
+      },
+      {
+        "name": "kungfu-anchored-version-material-f79a53d6983457788bb3f57fbfcf00fcc00cdd21",
+        "size": 368,
+        "digest": "sha256:2875dd35bcf1786f3d92c572a462be240529195308b20efadfaff05b2c32d6c8"
+      },
+      {
+        "name": "kungfu-controller-plan-f79a53d6983457788bb3f57fbfcf00fcc00cdd21",
+        "size": 3185,
+        "digest": "sha256:d0f427048965708f95cc2a0d56ff6b53c0b4246716279caad0ce948e6305e8fe"
+      },
+      {
+        "name": "kungfu-credential-manifest-macos-b0cff8236b8b3746f8028b9d519ed3b0e26096c9",
+        "size": 882,
+        "digest": "sha256:9d6e217028295e2e1f5714be07fab4df883943b7ccc35aa5cdabf7a56da21d07"
+      },
+      {
+        "name": "kungfu-linux-arm64-b0cff8236b8b3746f8028b9d519ed3b0e26096c9",
+        "size": 286074903,
+        "digest": "sha256:6169d34dbfe16957b5d222011cfea4c50afa128760bcbe42c87f2822fd81882d"
+      },
+      {
+        "name": "kungfu-linux-x64-b0cff8236b8b3746f8028b9d519ed3b0e26096c9",
+        "size": 1278061788,
+        "digest": "sha256:a788595d72398d0b37343d5ac599588e8b5fe636d7d88ed5eed4ba745f2d86cf"
+      },
+      {
+        "name": "kungfu-macos-arm64-b0cff8236b8b3746f8028b9d519ed3b0e26096c9",
+        "size": 2359308916,
+        "digest": "sha256:fb50536ca924e8a06815bfe3862a085342f77e8e94597a7e936855b3fdb32c5a"
+      },
+      {
+        "name": "kungfu-macos-credential-b0cff8236b8b3746f8028b9d519ed3b0e26096c9",
+        "size": 580526466,
+        "digest": "sha256:2ae0157c187dab9f1f394865a670f69aa4eda496e68087f54da0e1e637d49bbb"
+      },
+      {
+        "name": "kungfu-manifest-linux-arm64-b0cff8236b8b3746f8028b9d519ed3b0e26096c9",
+        "size": 11990,
+        "digest": "sha256:f325eb4d6ff7ccc70e8d182a3d2dfa830aeab061ac78f66498565172ea7299bd"
+      },
+      {
+        "name": "kungfu-manifest-linux-x64-b0cff8236b8b3746f8028b9d519ed3b0e26096c9",
+        "size": 228054,
+        "digest": "sha256:3d3ed35cba023dad898902b1509de25faa03fc34ee81142bef8246539efe7c3f"
+      },
+      {
+        "name": "kungfu-manifest-macos-arm64-b0cff8236b8b3746f8028b9d519ed3b0e26096c9",
+        "size": 18272,
+        "digest": "sha256:139a60849232c287baae5ce996c856505df7ae2cadf0b9f3e1585bb8b4452c93"
+      },
+      {
+        "name": "kungfu-manifest-windows-x64-b0cff8236b8b3746f8028b9d519ed3b0e26096c9",
+        "size": 18168,
+        "digest": "sha256:d0497d678eb4677148e127c38035069d42487218c14bcc635a97adafee5c29c7"
+      },
+      {
+        "name": "kungfu-product-upgrade-publication-admission-f79a53d6983457788bb3f57fbfcf00fcc00cdd21",
+        "size": 1605246,
+        "digest": "sha256:ec9ab853fd639eff4077ca22e1b2638d61148015b32096cc706869e28dc5cda9"
+      },
+      {
+        "name": "kungfu-publish-source-f79a53d6983457788bb3f57fbfcf00fcc00cdd21",
+        "size": 483,
+        "digest": "sha256:739b580c82c148cdfffcecf3ad4ca550ce0bcedc93379fffeb7610d8528376d0"
+      },
+      {
+        "name": "kungfu-release-candidate-b0cff8236b8b3746f8028b9d519ed3b0e26096c9",
+        "size": 1648,
+        "digest": "sha256:83abb1e9db9cea81600b7c637d5043a9f4230789fb33f99d83d93d19dc9f806b"
+      },
+      {
+        "name": "kungfu-release-candidate-controller-receipt-b0cff8236b8b3746f8028b9d519ed3b0e26096c9",
+        "size": 1001,
+        "digest": "sha256:6967e36b94547837917ac21814053ff834b0e42411c77790cf49ee14c4ed2ac2"
+      },
+      {
+        "name": "kungfu-runtime-checkout-bootstrap-a99aae7bdc13790a7941608ff42eb7a8020545cb",
+        "size": 37336,
+        "digest": "sha256:eedf272aa53e52ffde9f27e54e3916bf685e4dcb76af30bc6edd7763cdd4252d"
+      },
+      {
+        "name": "kungfu-summary-b0cff8236b8b3746f8028b9d519ed3b0e26096c9",
+        "size": 11657,
+        "digest": "sha256:d5d7acbdeec46c2a168c7d2ac219db7fb84c72ff1f110163bbda1b68f2f941bf"
+      },
+      {
+        "name": "kungfu-tail-reseal-receipt-b0cff8236b8b3746f8028b9d519ed3b0e26096c9",
+        "size": 1690,
+        "digest": "sha256:430a13a11c4b7a62c522b9e6a90bd690d7cb527e1f6fda1d987a0e282c0be5e0"
+      },
+      {
+        "name": "kungfu-tail-reseal-request-b0cff8236b8b3746f8028b9d519ed3b0e26096c9",
+        "size": 1471,
+        "digest": "sha256:c0ba261e3efb462c80b3b4ee57b2cd1bca586a74d3d1cbcd6418d7229b0885f3"
+      },
+      {
+        "name": "kungfu-windows-x64-b0cff8236b8b3746f8028b9d519ed3b0e26096c9",
+        "size": 1589837508,
+        "digest": "sha256:b269be96325b4c8139d9ee6afdcc4cb51886be0c7cb0a06c7a28083ef6635733"
+      }
+    ]
+  },
+  "skippedBuildStages": [
+    "install",
+    "build",
+    "verify",
+    "platform-matrix"
+  ],
+  "payloadBytes": "unchanged",
+  "buildchainToolingSha": "a99aae7bdc13790a7941608ff42eb7a8020545cb",
+  "transaction": {
+    "identity": "e646f75ff49b76442a578d7d3be2616495e8042919694ae3d9706f2619935c2d",
+    "state": "complete",
+    "publicationState": "alpha-complete"
+  },
+  "root": "sha256:78e904daa108ded47a16ebbc5cf543c9726c04aa34ec6e55323cbef56c3ada8a"
+}

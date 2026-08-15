@@ -1,0 +1,192 @@
+{
+  "schemaVersion": 1,
+  "contract": "kungfu-buildchain-artifact-evidence",
+  "repository": "kungfu-systems/kungfu",
+  "release": {
+    "tag": "v4.0.0-alpha.2",
+    "sourceSha": "842be043a25a997bcc8b3b2568bd246aedca95ce"
+  },
+  "generatedAt": "2026-08-15T12:54:26.940Z",
+  "runner": {
+    "kind": "github-hosted",
+    "os": "Linux",
+    "arch": "X64",
+    "labels": [],
+    "image": "ubuntu24"
+  },
+  "workflow": {
+    "name": "Release - New Version",
+    "runId": "31879039132",
+    "runAttempt": "3",
+    "url": "https://github.com/kungfu-systems/kungfu/actions/runs/31879039132"
+  },
+  "artifacts": [
+    {
+      "name": "Kungfu Episodes Setup 4.0.0-alpha.2.exe",
+      "kind": "release-asset",
+      "platform": "",
+      "size": 307492023,
+      "sha256": "2d14ea318dc3554dcf8f139423f3dbd10f11454a32c65f702ba44c59697390cd",
+      "url": "",
+      "githubAssetId": "",
+      "attestation": ""
+    },
+    {
+      "name": "Kungfu Episodes-4.0.0-alpha.2.AppImage",
+      "kind": "release-asset",
+      "platform": "",
+      "size": 311218616,
+      "sha256": "cc11f9bd43600569082f140f1f247c25f9b8d118ada3fe1195ba39a9353b7fb8",
+      "url": "",
+      "githubAssetId": "",
+      "attestation": ""
+    },
+    {
+      "name": "Kungfu-Episodes-4.0.0-alpha.2-macos-arm64.dmg",
+      "kind": "release-asset",
+      "platform": "darwin-arm64",
+      "size": 313130203,
+      "sha256": "6f5c1b0a096a3ac0f88d54458d62d719e0c86253266de4044f6757e3eb767fec",
+      "url": "",
+      "githubAssetId": "",
+      "attestation": ""
+    },
+    {
+      "name": "Kungfu-Episodes-4.0.0-alpha.2-macos-arm64.zip",
+      "kind": "release-asset",
+      "platform": "darwin-arm64",
+      "size": 267389680,
+      "sha256": "72a556a892fd489810520626719a73b828050a79102e7c8083e7736207dabf16",
+      "url": "",
+      "githubAssetId": "",
+      "attestation": ""
+    },
+    {
+      "name": "kungfu-episodes-cli-darwin-arm64.qualification.json",
+      "kind": "release-asset",
+      "platform": "darwin-arm64",
+      "size": 5465,
+      "sha256": "2cc2b175516d3d64fa045475592864b998f140e5e61188cbacbb761e79040b1d",
+      "url": "",
+      "githubAssetId": "",
+      "attestation": ""
+    },
+    {
+      "name": "kungfu-episodes-cli-darwin-arm64.tar.gz",
+      "kind": "release-asset",
+      "platform": "darwin-arm64",
+      "size": 145730301,
+      "sha256": "d5e71be871d8f88e317eded6634bf8717c7006fbc7b10ad93a944384ce6705a8",
+      "url": "",
+      "githubAssetId": "",
+      "attestation": ""
+    },
+    {
+      "name": "kungfu-episodes-cli-linux-arm64.qualification.json",
+      "kind": "release-asset",
+      "platform": "linux-arm64",
+      "size": 3047,
+      "sha256": "c88d4679408c6d36a95d4091d03c543f57ed8038026571e293ad3fc988f3affe",
+      "url": "",
+      "githubAssetId": "",
+      "attestation": ""
+    },
+    {
+      "name": "kungfu-episodes-cli-linux-arm64.tar.gz",
+      "kind": "release-asset",
+      "platform": "linux-arm64",
+      "size": 190133306,
+      "sha256": "4cb96341ef507fc0bd484e3087a98149fe1ed01fc9399168950a480fb3066413",
+      "url": "",
+      "githubAssetId": "",
+      "attestation": ""
+    },
+    {
+      "name": "kungfu-episodes-cli-linux-x64.qualification.json",
+      "kind": "release-asset",
+      "platform": "linux-x64",
+      "size": 3039,
+      "sha256": "c108d6b614d84dd337bd76d86115a67e0f3154a9f45790f8273e9f3f26bb197a",
+      "url": "",
+      "githubAssetId": "",
+      "attestation": ""
+    },
+    {
+      "name": "kungfu-episodes-cli-linux-x64.tar.gz",
+      "kind": "release-asset",
+      "platform": "linux-x64",
+      "size": 205955896,
+      "sha256": "78c8773ae5a33ae21d150b97af9ccbb3a11f8bfd4c740b83f99c04be519daeaa",
+      "url": "",
+      "githubAssetId": "",
+      "attestation": ""
+    },
+    {
+      "name": "kungfu-episodes-cli-windows-x64.qualification.json",
+      "kind": "release-asset",
+      "platform": "windows-x64",
+      "size": 3040,
+      "sha256": "762a9431d868e7bee8b7f7660efd31c440b9dbc18cf1c82e9353c1d3cf75c384",
+      "url": "",
+      "githubAssetId": "",
+      "attestation": ""
+    },
+    {
+      "name": "kungfu-episodes-cli-windows-x64.zip",
+      "kind": "release-asset",
+      "platform": "windows-x64",
+      "size": 1186367915,
+      "sha256": "976aa3b5a7b7ab5525a6d0209dcb6ae77feefa9c68820ffcf4ee18d157c0ed7c",
+      "url": "",
+      "githubAssetId": "",
+      "attestation": ""
+    }
+  ],
+  "kfdAdopter": {
+    "schemaVersion": 1,
+    "contract": "kungfu-buildchain-kfd-adopter-release-binding",
+    "status": "passed",
+    "qualifying": false,
+    "selfCertified": false,
+    "authority": {
+      "manifestPath": "kfd-adopter-manifest.json",
+      "manifestContract": "kfd.adopter-conformance-manifest/v1",
+      "manifestRoot": "sha256:9cd9a0b8e0d3250538de36ce48c084ff13aab0ed9158faed09ae9456613373e3",
+      "gatePath": "kfd-adopter-manifest-gate.json",
+      "gateRoot": "sha256:906f70ac8eb42aea9f65e8ee46dd0d5c54463899c733cc9beda23603cdaea7f2"
+    },
+    "adopter": {
+      "id": "kungfu-systems/kungfu"
+    },
+    "source": {
+      "repository": "kungfu-systems/kungfu",
+      "coordinate": "kungfu-systems/kungfu@842be043a25a997bcc8b3b2568bd246aedca95ce",
+      "sha": "842be043a25a997bcc8b3b2568bd246aedca95ce",
+      "artifactRoot": "sha256:02dbd3577d5f47012c1cab422b59cfc3a8dcf31fd43a37c5d21141de9c065575"
+    },
+    "standardPackage": {
+      "name": "@kungfu-tech/kfd",
+      "version": "1.0.0-alpha.62",
+      "artifactRoot": "sha256:539d68720e26545fa42ad36fa0d716806a83f446d7b2710f0b9b410fa420c08c",
+      "registryRoot": "sha256:8ab283dd225e8940a4f9d92eca7d59fff6e8d29e66275c03baa923ad2ff63298",
+      "verifierSetRoot": "sha256:aad9b4193e965b68e465bbe4e648e5a03c3d78a6575dfda1d5e90943404779f4"
+    },
+    "witness": {
+      "decisionRoot": "sha256:cb3215fdb592107910ce6d9bf9bd8b8e19c2b5b944f0b8462b5d771dae78de9f",
+      "verificationReportRoot": "sha256:ea478aebb47254943655480014d024b56497e0afa313df782a9ed711bac366fc",
+      "bundleRoot": "sha256:745602e152e64662e36c2a7326f5923cd94d61e8f82ef7a266441d6965b31a73"
+    },
+    "legacyProjection": {
+      "path": "kfd-support.json",
+      "contract": "kungfu-kfd-support-matrix",
+      "root": "sha256:e6dd6b75beefe99e5f6ea522fde4866afce7e8ae70d5dc0def52941387223641",
+      "authorityRoot": "sha256:9cd9a0b8e0d3250538de36ce48c084ff13aab0ed9158faed09ae9456613373e3",
+      "gateRoot": "sha256:906f70ac8eb42aea9f65e8ee46dd0d5c54463899c733cc9beda23603cdaea7f2"
+    },
+    "nonClaims": [
+      "This binding proves exact release-envelope consumption, not KFD certification or release authorization.",
+      "The legacy support matrix remains a projection of the standard adopter manifest authority."
+    ],
+    "bindingRoot": "sha256:7b0db3fb42898b4e87420cce2ecad3e11578bc0970622ebe6844770ea76d21df"
+  }
+}
