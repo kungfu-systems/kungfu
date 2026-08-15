@@ -16,10 +16,10 @@
   "state_ref": "buildchain/release-state/4-0-0-alpha-2",
   "state_path": "/home/runner/work/kungfu/kungfu/.buildchain/release-state/v4.0.0-alpha.2.json",
   "evidence_path": "/home/runner/work/kungfu/kungfu/.buildchain/release-evidence/v4.0.0-alpha.2/evidence.json",
-  "state": "finalizing",
-  "previous_state": "published",
+  "state": "complete",
+  "previous_state": "finalizing",
   "actor": "kungfu-origin",
-  "run_id": "31877918489",
+  "run_id": "31879039132",
   "superseded_by": "",
   "failure": "",
   "artifacts": [
@@ -52429,7 +52429,7 @@
     ".buildchain/release-evidence/v4.0.0-alpha.2/dist-tag-evidence.json"
   ],
   "sealed_bundle": null,
-  "publication_state": "package-published",
+  "publication_state": "alpha-complete",
   "milestones": {
     "package_published": {
       "status": "complete",
@@ -52439,5 +52439,5 @@
   },
   "resume_command": "",
   "created_at": "2026-08-15T06:06:02.285Z",
-  "updated_at": "2026-08-15T10:28:01.844Z"
+  "updated_at": "2026-08-15T10:28:12.205Z"
 }
