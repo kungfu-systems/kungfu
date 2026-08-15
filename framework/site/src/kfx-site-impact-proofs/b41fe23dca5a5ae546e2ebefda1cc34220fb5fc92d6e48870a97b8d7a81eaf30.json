@@ -1,0 +1,74 @@
+{
+  "contract": "kungfu.kfx-site-impact-proof/v1",
+  "baseRevision": "f9aa1eacc0dad9c36244f67c9559ab332dbefa05",
+  "changeRoot": "sha256:56079c425bfdea50e7174daa86dce3a288d5d4f4ba4bf1373bf443f100254af6",
+  "changes": [
+    {
+      "baseContentRoot": "sha256:33891d43d99896a9b675a8c989f89f96694c1da2a5c4446ba7086fb97a340ec3",
+      "contentRoot": "sha256:426c618aeb98ac0eba261e04e003a3f29af7fffb499a1512d3e73cffe958a51a",
+      "path": "crates/shifu-core/src/bootstrap.rs",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:1c386dc53576d58c9a60fc1edaf9caa5296d585d0ca6bf2c5b8d8e0ebd12f68d",
+      "contentRoot": "sha256:b44c641d79665dcf6f9fde78acc904e590b0e5d57e2c6e3a0d9c4cea265c973b",
+      "path": "framework/site/src/kfx-site-impact.contract.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:caa977b8f5a7f07754806f966acf6b496d9f44fe31be8ad194defdd13c35ba5c",
+      "contentRoot": "sha256:2bb2b392c48db9cc4b19416cf17e7d6b93472d89571c852b0be7381004ab5078",
+      "path": "scripts/readonly-agent-bootstrap.test.mjs",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:ff9c36a5eae0c7490e416a3541113e1d722beb1089baf3877afd1eb527f717ba",
+      "contentRoot": "sha256:fed38cf7046597b8f1ad4aa9486042d9f6aa413a8b5291229c194d31b319a81d",
+      "path": "tests/fixtures/_harness.mjs",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:5f5eed244b80ffb9dede26bf247b70541fd9af2ef943e28956864336758d17f5",
+      "contentRoot": "sha256:dc43640b781d5693641af8ff2f77bcda2e3652a06ee10a8d8ba4727302b0ca41",
+      "path": "tests/fixtures/atlas-demo-import/check_import.py",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:087172dd5b9e328691e99bc6e6d98f21d33f63dd5fdc82364236b4cd2f6befac",
+      "contentRoot": "sha256:ddcc0f57a7f11af9d53c324e81db918707e5cb0691c7bf8fc3df8e9bdbde041d",
+      "path": "tests/fixtures/atlas-demo-import/run.mjs",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:1df43335bceea463cc42188632a8bbc492bfcea7e6d9b97e5de5667a171c9c9f",
+      "contentRoot": "sha256:dc2340a63736e637378e7b9856fb2069b573a14caa23d830a5c3e85abecc89f7",
+      "path": "tests/fixtures/atlas-demo-import/sample-root/agent-journal/goals/registry/archive/2026-01-01-demo-archived.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:a51a0619f044b67f2441a12b815d95d7119197ca852957c84cc4c70d56c52ac4",
+      "contentRoot": "sha256:0b9dd15c8dd703eb49750c5513c064e21d50077deee3b06d2aaf191124d4d9bc",
+      "path": "tests/fixtures/kfx-demo-atlas-capability/roundtrip.mjs",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:0e34126d8f276ab42fee36be5e35699f73d85392f012a16240535ced7aeeedec",
+      "contentRoot": "sha256:6b1bf01af3ca6c219f513d15a1d35a9be2abbf3818bfffacec151fc03781c7b9",
+      "path": "tests/fixtures/kfx-demo-work-dashboard-atlas-live/render-live.mjs",
+      "status": "modified"
+    }
+  ],
+  "affectedFacets": [
+    "architecture",
+    "capabilities",
+    "qualification-status",
+    "registry-admission-lifecycle"
+  ],
+  "rationale": "Qualify disposable fixture workspaces before profile-backed writes, preserve canonical mission linkage, and verify empty launcher mirror inputs fall back to official distributions.",
+  "attestation": {
+    "publicBehaviorUnchanged": true,
+    "publicContractUnchanged": true,
+    "readerJourneyUnchanged": true
+  },
+  "proofRoot": "sha256:b41fe23dca5a5ae546e2ebefda1cc34220fb5fc92d6e48870a97b8d7a81eaf30"
+}

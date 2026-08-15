@@ -169,9 +169,12 @@
       "disposition": "proof-eligible"
     },
     {
-      "id": "kfx-root-test-fixtures",
+      "id": "root-kfx-test-fixtures",
       "selectors": [
-        { "kind": "prefix", "value": "tests/fixtures/kfx" }
+        {
+          "kind": "prefix",
+          "value": "tests/fixtures/kfx"
+        }
       ],
       "facets": [
         "architecture",
