@@ -15,7 +15,7 @@
 namespace kungfu::yijinjing::storage {
 
 inline constexpr const char *SYNC_ROOT_SCHEMA_V1 = "kungfu.sync-root/v1";
-inline constexpr const char *SYNC_ROOT_SCOPE_ATLAS_IMPORT_MANIFEST = "atlas.import.manifest";
+inline constexpr const char *SYNC_ROOT_SCOPE_SOURCE_IMPORT_MANIFEST = "source.import.manifest";
 inline constexpr const char *SYNC_ROOT_CHAIN_LINK_SCHEMA_V1 = "kungfu.sync-chain-link/v1";
 inline constexpr const char *SYNC_ROOT_PROOF_LINEAR_CHAIN_V1 = "linear-chain-v1";
 inline constexpr const char *SYNC_ROOT_ORDERING_POLICY_MANIFEST_ENTRY_SORT_V1 = "manifest-entry-sort-v1";

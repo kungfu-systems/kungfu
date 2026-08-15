@@ -158,9 +158,12 @@ function fixture() {
       expiresAt: null,
       policy: 'explicit-expiry-retain-bytes-v1',
     },
-    source: { kind: 'atlas-go-card', sourceId: fixtureMatrix.goalId },
+    source: {
+      kind: 'kungfu-assignment',
+      sourceId: fixtureMatrix.assignmentId,
+    },
     workDefinition: {
-      goal_id: fixtureMatrix.goalId,
+      assignment_id: fixtureMatrix.assignmentId,
       parent_assignment_identity: {
         assignment_id: fixtureMatrix.dependencies[0].requiredAssignmentId,
       },
@@ -208,7 +211,7 @@ function fixture() {
     claim_id: `completion-${'d'.repeat(24)}`,
     claim_type: 'task-completed',
     git_commit: HEAD,
-    go_set: [fixtureMatrix.goalId],
+    assignment_set: [fixtureMatrix.assignmentId],
     known_gaps: [],
   };
   const terminalReview = {
@@ -228,7 +231,7 @@ function fixture() {
   );
   const terminalAttestation = {
     schema: 'kungfu.terminal-review-attestation/v1',
-    goalId: fixtureMatrix.goalId,
+    assignmentId: fixtureMatrix.assignmentId,
     commit: HEAD,
     tree: TREE,
     reviewer: 'kungfu-origin',
@@ -264,7 +267,7 @@ function fixture() {
   const assignmentSeal = {
     schema: 'kungfu.assignment-orchestration.sealed-state/v1',
     assignment: {
-      assignment_id: fixtureMatrix.goalId,
+      assignment_id: fixtureMatrix.assignmentId,
       request_root: requestRoot,
       capture_receipt_roots: [captureReceiptRoot],
     },
@@ -330,7 +333,7 @@ function fixture() {
   };
   const evidence = {
     schema: fixtureMatrix.terminalEvidence.schema,
-    goalId: fixtureMatrix.goalId,
+    assignmentId: fixtureMatrix.assignmentId,
     source: {
       repository: fixtureMatrix.sourceBinding.repository,
       protectedBranch: fixtureMatrix.sourceBinding.protectedBranch,
@@ -381,7 +384,7 @@ function fixture() {
     },
     assignment: {
       initiativeId: 'kungfu-technical-stewardship',
-      assignmentId: fixtureMatrix.goalId,
+      assignmentId: fixtureMatrix.assignmentId,
       workspaceIdentityRoot: `sha256:${'f'.repeat(64)}`,
       phase: 'continuation-decided',
       status: 'active',
@@ -486,7 +489,7 @@ function fixture() {
       },
       assignment: {
         initiativeId: 'kungfu-technical-stewardship',
-        assignmentId: fixtureMatrix.goalId,
+        assignmentId: fixtureMatrix.assignmentId,
         workspaceIdentityRoot: `sha256:${'f'.repeat(64)}`,
         phase: 'continuation-decided',
         status: 'active',
@@ -505,7 +508,7 @@ function fixture() {
         decisionAction: 'close',
         sealVerified: true,
         nextActions: [],
-        sealedAssignmentId: fixtureMatrix.goalId,
+        sealedAssignmentId: fixtureMatrix.assignmentId,
         sealedPhase: 'continuation-decided',
         statusCounts: {
           completion_claims: 1,

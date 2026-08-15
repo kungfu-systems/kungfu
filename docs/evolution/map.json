@@ -3,12 +3,12 @@
   "generatedFrom": {
     "authority": "append-only canonical Era and Stage records plus non-authoritative Era Candidate revisions under docs/evolution",
     "semanticGraphAuthority": "Xinfa Atlas; this projection never creates current runtime authority",
-    "sourceRoot": "sha256:ad1f7e787d8105cfe909f40f36cb1f9a1bb978d3c78e3a65cc7368341776b414"
+    "sourceRoot": "sha256:a092fe1ebcccf95ec482163c69260dd48a2452168808c30ae38fd406bdf35292"
   },
   "summary": {
     "eras": 5,
-    "stages": 11,
-    "evidence": 38,
+    "stages": 12,
+    "evidence": 40,
     "authoritySubjects": 11,
     "eraCandidates": 0,
     "unresolvedEraCandidates": 0
@@ -993,6 +993,84 @@
       "amends": [],
       "supersedes": [],
       "file": "docs/evolution/stages/11-temporal-relation-proof.md"
+    },
+    {
+      "schema": "kungfu.evolution-stage/v1",
+      "id": "project-compatibility-zero-residue",
+      "era": "work-control-dogfood",
+      "sequence": 12,
+      "title": "Project compatibility zero residue",
+      "status": "open",
+      "evolutionImpact": "extends",
+      "period": {
+        "start": "2026-08-08",
+        "end": "ongoing"
+      },
+      "buildsOn": [
+        "temporal-relation-proof"
+      ],
+      "pressure": "A complete Kungfu product must expose a self-contained Work vocabulary and runtime instead of inheriting commands, storage readers, fixtures, or documentation routes from one external project.",
+      "priorLimitation": "Historical project integration had leaked names and compatibility surfaces into the product, while immutable Evolution Stages still pointed readers at the retired documents.",
+      "localCapability": "Initiative, Assignment, Work Design, and Work Control now own the useful workflow semantics directly; generic Xinfa Atlas primitives remain independent of every external project.",
+      "compression": "Project-specific adapters, aliases, readers, fixtures, and terminology collapse into native product concepts with no compatibility path.",
+      "authorityTransitions": [
+        {
+          "subject": "work-authority",
+          "before": "one current Work Control identity with an explicit read-only v3 compatibility boundary",
+          "after": "native Initiative, Assignment, Work Design, and Work Control without project-specific compatibility",
+          "authorityRefs": [
+            "docs/profiles/work-control.md",
+            "framework/assignment-runtime/assignment-runtime.contract.json"
+          ]
+        }
+      ],
+      "retiredSurfaces": [
+        "external-project command vocabulary",
+        "project-specific storage readers",
+        "compatibility aliases and bundles",
+        "project fixtures and documentation routes"
+      ],
+      "unlockedCapabilities": [
+        "self-contained Kungfu authoring",
+        "project-independent Work execution",
+        "generic Xinfa Atlas composition"
+      ],
+      "downstreamConsumers": [
+        "Kungfu CLI",
+        "Agent Runtime",
+        "Work Dashboard",
+        "Work Design",
+        "third-party KFX projects"
+      ],
+      "evidence": [
+        {
+          "kind": "document",
+          "ref": "docs/profiles/work-control.md",
+          "label": "Current native Work Control contract"
+        },
+        {
+          "kind": "document",
+          "ref": "framework/assignment-runtime/assignment-runtime.contract.json",
+          "label": "Native Assignment Runtime contract"
+        }
+      ],
+      "readerRoute": {
+        "intent": "Understand Kungfu native work authority without external-project compatibility",
+        "start": "docs/profiles/work-control.md",
+        "deepen": [
+          "framework/assignment-runtime/assignment-runtime.contract.json",
+          "docs/architecture/kfx-topology.md",
+          "docs/architecture/agent-supply-chain.md"
+        ]
+      },
+      "amends": [
+        "profile-suite-composition",
+        "initiative-assignment-portable-work",
+        "native-work-control-recursive-dogfood",
+        "work-control-canonical-name"
+      ],
+      "supersedes": [],
+      "file": "docs/evolution/stages/12-project-compatibility-zero-residue.md"
     }
   ],
   "eraCandidates": [],
@@ -1090,11 +1168,11 @@
     },
     {
       "subject": "work-authority",
-      "authority": "one current Work Control identity with an explicit read-only v3 compatibility boundary",
-      "sinceStage": "work-control-canonical-name",
+      "authority": "native Initiative, Assignment, Work Design, and Work Control without project-specific compatibility",
+      "sinceStage": "project-compatibility-zero-residue",
       "authorityRefs": [
         "docs/profiles/work-control.md",
-        "config/work-control-naming-boundary.json"
+        "framework/assignment-runtime/assignment-runtime.contract.json"
       ]
     }
   ]

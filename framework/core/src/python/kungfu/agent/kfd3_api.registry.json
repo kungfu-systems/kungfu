@@ -451,7 +451,7 @@
       "id": "kungfu.agent.choose-mode",
       "surface": "cli",
       "name": "kungfu agent choose-mode --json",
-      "purpose": "Choose brief, report, atlas-projection, trace, managed-run, or remote-sync from explicit flags.",
+      "purpose": "Choose brief, report, trace, managed-run, or remote-sync from explicit flags.",
       "maturity": "stable",
       "visibility": "public-agent",
       "anchor": {
@@ -1217,38 +1217,6 @@
       ]
     },
     {
-      "id": "kungfu.codex.verify-goal-report",
-      "surface": "cli",
-      "name": "kungfu codex verify-goal-report --receipt <path> --json",
-      "purpose": "Verify a Codex goal report receipt before closeout.",
-      "maturity": "stable",
-      "visibility": "adjacent-agent",
-      "anchor": {
-        "kind": "catalog"
-      },
-      "projections": [
-        "commands.json",
-        "agent-pack-doc",
-        "provider-skill"
-      ]
-    },
-    {
-      "id": "kungfu.atlas.import",
-      "surface": "cli",
-      "name": "kungfu atlas import --repo <atlas-repo> --json",
-      "purpose": "Snapshot an Atlas-style control-plane repo into Kungfu's local read-only projection.",
-      "maturity": "stable",
-      "visibility": "adjacent-agent",
-      "anchor": {
-        "kind": "catalog"
-      },
-      "projections": [
-        "commands.json",
-        "agent-pack-doc",
-        "provider-skill"
-      ]
-    },
-    {
       "id": "kungfu.work.capture",
       "surface": "cli-api-gui",
       "name": "kungfu work capture <request.json>",
@@ -1348,38 +1316,6 @@
         "agent-pack-doc",
         "provider-skill",
         "work-dashboard-gui"
-      ]
-    },
-    {
-      "id": "kungfu.atlas.show.import",
-      "surface": "cli",
-      "name": "kungfu atlas show import --json",
-      "purpose": "Show the latest Atlas projection batch metadata and source repo head.",
-      "maturity": "stable",
-      "visibility": "adjacent-agent",
-      "anchor": {
-        "kind": "catalog"
-      },
-      "projections": [
-        "commands.json",
-        "agent-pack-doc",
-        "provider-skill"
-      ]
-    },
-    {
-      "id": "kungfu.atlas.show.markers",
-      "surface": "cli",
-      "name": "kungfu atlas show markers --json",
-      "purpose": "List imported Atlas worktree-status markers from the latest projection.",
-      "maturity": "stable",
-      "visibility": "adjacent-agent",
-      "anchor": {
-        "kind": "catalog"
-      },
-      "projections": [
-        "commands.json",
-        "agent-pack-doc",
-        "provider-skill"
       ]
     },
     {

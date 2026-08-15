@@ -43,6 +43,7 @@ from kungfu.agent.provider_output import (
     public_command_preview as public_command_preview,
 )
 from kungfu.content_hash import compute_content_hash_value
+from kungfu.initiative_family import canonical as assignment_canonical
 from kungfu.skill import build_skill_context
 from kungfu.workspace import resolve_workspace_target
 from kungfu.rewind import (
@@ -83,7 +84,6 @@ def bind_current_native_work(
             dict(envelope_override or {})
         )
     )
-    from kungfu import assignment_orchestration as orchestration
     from kungfu import profile_sdk
     from kungfu.cli.commands import assignment as work_commands
 
@@ -159,7 +159,7 @@ def bind_current_native_work(
         "profileRoot": work_control["profile_suite_root"],
         "entityType": "assignment",
         "entityId": assignment_id,
-        "entityRoot": orchestration.semantic_root(status["assignment"]),
+        "entityRoot": assignment_canonical.semantic_root(status["assignment"]),
         "purpose": "continue-project-assignment",
         "systemTimeCut": status["query_proof_root"],
         "initiativeId": initiative_id,

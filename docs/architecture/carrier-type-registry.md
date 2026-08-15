@@ -49,7 +49,7 @@ Rules:
   carrier is needed at the journal adapter layer.
 - KFX and first-party features must not allocate a raw carrier merely to name a
   business action. Add an `action_type` and schema binding instead.
-- Rewind, Work, Atlas import, and KFX dynamic events all dispatch business
+- Rewind, Work, journal ingestion, and KFX dynamic events all dispatch business
   semantics through action envelopes.
 - `carrier_type` may appear in fsck/export/debug output as journal metadata.
   GUI/KFX/domain APIs should treat it as implementation metadata.

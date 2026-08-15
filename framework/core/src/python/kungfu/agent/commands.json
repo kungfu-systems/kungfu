@@ -155,7 +155,7 @@
       "apiId": "kungfu.agent.choose-mode",
       "name": "kungfu agent choose-mode --json",
       "maturity": "stable",
-      "purpose": "Choose brief, report, atlas-projection, trace, managed-run, or remote-sync from explicit flags."
+      "purpose": "Choose brief, report, trace, managed-run, or remote-sync from explicit flags."
     },
     {
       "apiId": "kungfu.agent.console.current",
@@ -494,18 +494,6 @@
       "purpose": "Close a reported external run and refresh its manifest."
     },
     {
-      "apiId": "kungfu.codex.verify-goal-report",
-      "name": "kungfu codex verify-goal-report --receipt <path> --json",
-      "maturity": "stable",
-      "purpose": "Verify a Codex goal report receipt before closeout."
-    },
-    {
-      "apiId": "kungfu.atlas.import",
-      "name": "kungfu atlas import --repo <atlas-repo> --json",
-      "maturity": "stable",
-      "purpose": "Snapshot an Atlas-style control-plane repo into Kungfu's local read-only projection."
-    },
-    {
       "apiId": "kungfu.work.capture",
       "name": "kungfu work capture <request.json>",
       "maturity": "experimental",
@@ -540,18 +528,6 @@
       "name": "kungfu work decide <input.json> --workspace <path> --authorized-by <actor>",
       "maturity": "experimental",
       "purpose": "Apply one exact-root continuation decision and materialize only bounded mechanical follow-up Assignment rows while preserving human gates for initiative, authority, privacy, security, public claims, and irreversible changes."
-    },
-    {
-      "apiId": "kungfu.atlas.show.import",
-      "name": "kungfu atlas show import --json",
-      "maturity": "stable",
-      "purpose": "Show the latest Atlas projection batch metadata and source repo head."
-    },
-    {
-      "apiId": "kungfu.atlas.show.markers",
-      "name": "kungfu atlas show markers --json",
-      "maturity": "stable",
-      "purpose": "List imported Atlas worktree-status markers from the latest projection."
     },
     {
       "apiId": "kungfu.health",
@@ -1158,11 +1134,6 @@
       "maturity": "stable",
       "next": "kungfu work --help; read one exact Assignment with kungfu work status and close it through claim-completion, review, and decide.",
       "when": "The useful output is structured work state, decisions, checkpoints, artifacts, or reported external run facts."
-    },
-    "atlas-projection": {
-      "maturity": "stable",
-      "next": "kungfu work --help; inspect exact Initiative and Assignment state with kungfu work status; use the compatibility reader only for retained v3 evidence.",
-      "when": "The user asks to create, import, inspect, assess, visualize, preserve, or transfer Initiative and Assignment facts inside Kungfu."
     },
     "trace": {
       "maturity": "stable",

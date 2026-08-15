@@ -991,18 +991,11 @@ def choose_mode(
     needs_supervision=False,
     has_existing_run=False,
     needs_structured_work=False,
-    needs_atlas_projection=False,
     remote_runtime=False,
 ):
     if remote_runtime:
         mode = "remote-sync"
         reason = "Remote/runtime boundary is the primary constraint."
-    elif needs_atlas_projection:
-        mode = "atlas-projection"
-        reason = (
-            "An Atlas-style control-plane repo should be imported as a local "
-            "read-only projection."
-        )
     elif has_existing_run or command:
         mode = "trace"
         reason = "There is an existing command or run to capture without rewriting it."

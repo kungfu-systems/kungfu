@@ -144,7 +144,7 @@ def test_start_resume_accepts_the_generic_project_work_purpose(tmp_path, monkeyp
     )
 
 
-def test_atlas_bridge_has_no_work_mutation_aliases():
+def test_atlas_primitive_has_no_work_mutation_commands():
     atlas_commands = set(kfc.commands["atlas"].commands)
     assert atlas_commands.isdisjoint(
         {

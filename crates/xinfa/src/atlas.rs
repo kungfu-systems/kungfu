@@ -446,7 +446,7 @@ fn verify_atlas_value(atlas: &Value, diagnostics: &mut Vec<Value>) {
         diagnostics.push(diagnostic(
             "declared-scope",
             "/declared_scope",
-            "declared scope must bind the Atlas project, visibility, and component roots",
+            "declared scope must bind the source project, visibility, and component roots",
         ));
     }
     if atlas.pointer("/compatibility/schema") != Some(&json!("xinfa.context-pack/v1"))
@@ -862,12 +862,12 @@ mod tests {
     #[test]
     fn terminology_keeps_project_and_compiled_primitive_distinct() {
         let contract: Value = serde_json::from_str(include_str!(
-            "../fixtures/terminology/atlas-project-and-primitive-v1.json"
+            "../fixtures/terminology/external-project-and-atlas-primitive-v1.json"
         ))
         .expect("terminology contract");
         assert_eq!(
             contract["canonicalSentence"],
-            "The Atlas project compiles a Xinfa Atlas"
+            "An external project compiles a Xinfa Atlas"
         );
         assert_ne!(contract["projectTerm"], contract["primitiveTerm"]);
         assert_eq!(
