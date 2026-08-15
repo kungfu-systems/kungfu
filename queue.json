@@ -3,7 +3,7 @@
   "contract": "kungfu-buildchain-dev-delivery-warrant-queue",
   "repository": "kungfu-systems/kungfu",
   "protectedBase": "dev/v4/v4.0",
-  "generation": 2443,
+  "generation": 2444,
   "fencingCounter": 434,
   "policy": {
     "agingSeconds": 900,
@@ -26155,11 +26155,20 @@
       "sourceWorkflowRunId": 31850146086,
       "priority": "ordinary",
       "enqueuedAt": "2026-08-14T23:57:27.726Z",
-      "updatedAt": "2026-08-14T23:57:27.726Z",
+      "updatedAt": "2026-08-15T00:23:44.180Z",
       "attempts": 1,
       "recoveries": 0,
-      "status": "queued",
-      "terminal": null,
+      "status": "dequeued",
+      "terminal": {
+        "outcome": "dequeued",
+        "reason": "buildchain-qualification-rejected-pre-enqueue-merge-conflict",
+        "evidenceRoot": "sha256:459867fb440d9f7f8c5b7389d470692d92e4305ab5b66f55a35336e8dbfb9d3f",
+        "authority": "queued-candidate-cancellation",
+        "expectedSourceHead": "074d4efc97a546030fe3f7d4a1bf52f8195719fe",
+        "observedSourceHead": "074d4efc97a546030fe3f7d4a1bf52f8195719fe",
+        "eventAction": "dequeued",
+        "closedAt": "2026-08-15T00:23:44.180Z"
+      },
       "affectedPaths": [
         ".buildchain/kfd/kfd-2/release-claims.json",
         ".buildchain/kfd/kfd-3/collaboration-interface.prebuild.json",
@@ -26257,6 +26266,6 @@
       ]
     }
   ],
-  "updatedAt": "2026-08-15T00:22:28.250Z",
-  "stateRoot": "sha256:6d041333af54647c8ed6fa23e0ffa0acc07b7c6b5115efe13507cc2b4fa02a5f"
+  "updatedAt": "2026-08-15T00:23:44.180Z",
+  "stateRoot": "sha256:edb15f37810ab255088c03c1484ea7c82c902bf502b7c01e1d335d78e6fad44b"
 }
