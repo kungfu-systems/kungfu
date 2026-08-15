@@ -623,6 +623,78 @@ test('exact PR proof survives the synthetic merge-group commit rewrite', () => {
   fs.rmSync(value.root, { recursive: true, force: true });
 });
 
+test('delivery attempt reuse preserves the admitted dev delta attribution', () => {
+  const value = fixture();
+  const { values } = deliveryFixture();
+  const pullDescriptor = createProofDescriptor(
+    value.value,
+    TREE,
+    2,
+    TOOLCHAIN,
+    createDeliveryBinding({
+      ...values,
+      event: 'pull_request',
+      pullRequestBody: '',
+      combinedStatus: {},
+    }),
+  );
+  const queueBinding = createDeliveryBinding(
+    deliveryFixture({
+      cut: { baseCommitOid: OTHER_HEAD },
+      values: { devHead: OTHER_HEAD },
+    }).values,
+  );
+  const queueDescriptor = createProofDescriptor(
+    plan(QUEUE_HEAD, { base: OTHER_HEAD }),
+    TREE,
+    2,
+    TOOLCHAIN,
+    queueBinding,
+  );
+  writeBundle(
+    pullDescriptor,
+    value,
+    producer({
+      event: 'pull_request',
+      triggerHeadSha: OTHER_HEAD,
+      checkoutSha: HEAD,
+    }),
+  );
+  const verification = {
+    repository: 'kungfu-systems/kungfu',
+    producerRunId: 42,
+    producerEvent: 'pull_request',
+    producerHeadSha: OTHER_HEAD,
+    maxAgeSeconds: 6 * 60 * 60,
+    now: '2026-07-22T01:00:00Z',
+  };
+  assert.throws(
+    () => verifyProofBundle(queueDescriptor, value.bundle, verification),
+    /dependency-attribution-unknown/u,
+  );
+  const deltaPlan = plan(OTHER_HEAD, {
+    base: BASE,
+    changedPaths: ['docs/release-notes.md'],
+    directComponents: ['documentation'],
+    closureComponents: ['documentation'],
+    targets: [],
+    tests: [],
+    reasons: [
+      {
+        path: 'docs/release-notes.md',
+        kind: 'documentation',
+      },
+    ],
+  });
+  const proof = verifyProofBundle(queueDescriptor, value.bundle, {
+    ...verification,
+    deltaPlan,
+  });
+  assert.equal(proof.baseDelta.reusable, true);
+  assert.equal(proof.baseDelta.reason, 'unrelated-dev-delta');
+  fs.rmSync(value.root, { recursive: true, force: true });
+});
+
 test('merge-group authority admits exact PR cache payload transport', () => {
   const value = fixture();
   const pullDescriptor = createProofDescriptor(value.value, TREE, 2, TOOLCHAIN);
@@ -1124,6 +1196,10 @@ test('workflow keeps one context while PR proof replaces duplicate queue builds'
     /--producer-event "\$\{\{ steps\.lookup\.outputs\.producer-event \}\}"/u,
   );
   assert.match(workflow, /--head-sha "\$GITHUB_SHA"/u);
+  assert.match(
+    workflow,
+    /name: Seal reconstructable family delivery attempt[\s\S]*delta_args=\(\)[\s\S]*--dev-delta-plan "\$delta_plan"[\s\S]*seal-attempt[\s\S]*"\$\{delta_args\[@\]\}"/u,
+  );
   assert.match(workflow, /needs\.proof_probe\.outputs\.reuse != 'true'/u);
   assert.doesNotMatch(
     workflow,
@@ -1216,5 +1292,9 @@ test('workflow keeps one context while PR proof replaces duplicate queue builds'
   assert.match(
     verifier,
     /stableJson\(nativeToolchainIdentity\(receipt\.toolchain, true\)\) !==\s+stableJson\(descriptor\.identity\.toolchain/u,
+  );
+  assert.match(
+    verifier,
+    /options\.command === 'seal-attempt'[\s\S]*deltaPlan: options\['dev-delta-plan'\]/u,
   );
 });
