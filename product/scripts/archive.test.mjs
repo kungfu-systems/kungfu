@@ -60,6 +60,39 @@ function assertExtracted(targetDir) {
   );
 }
 
+function readZipMethods(archiveFile) {
+  const buffer = fs.readFileSync(archiveFile);
+  const local = [];
+  let offset = 0;
+  while (buffer.readUInt32LE(offset) === 0x04034b50) {
+    const compressedSize = buffer.readUInt32LE(offset + 18);
+    const nameLength = buffer.readUInt16LE(offset + 26);
+    const extraLength = buffer.readUInt16LE(offset + 28);
+    local.push({
+      method: buffer.readUInt16LE(offset + 8),
+      compressedSize,
+      uncompressedSize: buffer.readUInt32LE(offset + 22),
+      name: buffer.toString('utf8', offset + 30, offset + 30 + nameLength),
+    });
+    offset += 30 + nameLength + extraLength + compressedSize;
+  }
+
+  const central = [];
+  while (buffer.readUInt32LE(offset) === 0x02014b50) {
+    const nameLength = buffer.readUInt16LE(offset + 28);
+    const extraLength = buffer.readUInt16LE(offset + 30);
+    const commentLength = buffer.readUInt16LE(offset + 32);
+    central.push({
+      method: buffer.readUInt16LE(offset + 10),
+      compressedSize: buffer.readUInt32LE(offset + 20),
+      uncompressedSize: buffer.readUInt32LE(offset + 24),
+      name: buffer.toString('utf8', offset + 46, offset + 46 + nameLength),
+    });
+    offset += 46 + nameLength + extraLength + commentLength;
+  }
+  return { local, central };
+}
+
 function paxRecord(key, value) {
   const content = `${key}=${value}\n`;
   let length = Buffer.byteLength(content) + 2;
@@ -242,9 +275,27 @@ test('zip archives round-trip the product layout', () => {
     const { sourceDir } = makeFixture(parent);
     const archiveFile = path.join(parent, 'product.zip');
     const targetDir = path.join(parent, 'zip-out');
+    const compressible = path.join(sourceDir, 'kungfu-cli-test', 'payload.txt');
+    fs.writeFileSync(compressible, 'kungfu product payload\n'.repeat(4096));
     writeZip({ sourceDir, outputFile: archiveFile });
+    const methods = readZipMethods(archiveFile);
+    assert.ok(methods.local.length > 0);
+    assert.deepEqual(methods.central, methods.local);
+    assert.ok(methods.local.every((entry) => entry.method === 8));
+    const payload = methods.local.find((entry) =>
+      entry.name.endsWith('/payload.txt'),
+    );
+    assert.ok(payload);
+    assert.ok(payload.compressedSize < payload.uncompressedSize / 100);
     extractZip({ archiveFile, targetDir });
     assertExtracted(targetDir);
+    assert.equal(
+      fs.readFileSync(
+        path.join(targetDir, 'kungfu-cli-test', 'payload.txt'),
+        'utf8',
+      ),
+      'kungfu product payload\n'.repeat(4096),
+    );
   } finally {
     fs.rmSync(parent, { recursive: true, force: true });
   }
