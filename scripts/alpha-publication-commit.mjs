@@ -251,15 +251,6 @@ export function validateExistingPublicationIdentity({
   return bundle;
 }
 
-function replaceableLegacyPassportRef({ bundle, candidateSourceSha }) {
-  const ref = bundle?.identity?.releasePassport?.ref;
-  return (
-    typeof ref === 'string' &&
-    /^buildchain:release-passport\/[a-f0-9]{40}$/u.test(ref) &&
-    ref !== `buildchain:release-passport/${candidateSourceSha}`
-  );
-}
-
 async function fetchReleaseAsset(
   url,
   { fetcher = fetch, optional = false } = {},
@@ -304,34 +295,17 @@ export async function existingPublicationAuthority({
       releaseSha,
       releaseTag,
     });
-  } catch (error) {
-    const legacyPassportRef = replaceableLegacyPassportRef({
-      bundle,
-      candidateSourceSha,
-    });
-    const exactExceptPassportRef = {
-      ...bundle,
-      identity: {
-        ...bundle.identity,
-        releasePassport: {
-          ...bundle.identity?.releasePassport,
-          ref: `buildchain:release-passport/${candidateSourceSha}`,
-        },
-      },
-    };
-    if (!legacyPassportRef) throw error;
-    validateExistingPublicationIdentity({
-      bundle: exactExceptPassportRef,
-      version,
-      candidateSourceSha,
-      releaseSha,
-      releaseTag,
-    });
+  } catch {
     identityDrift = [
       {
-        kind: 'release-passport-ref',
-        expected: `buildchain:release-passport/${candidateSourceSha}`,
-        observed: bundle.identity.releasePassport.ref,
+        kind: 'publication-identity',
+        expected: {
+          version,
+          candidateSourceSha,
+          releaseSha,
+          releaseTag,
+        },
+        observed: bundle.identity || null,
       },
     ];
   }
