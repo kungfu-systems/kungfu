@@ -10,10 +10,19 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
-import { locate, tmpDir, kfc, uvPython, json, sha256, fail } from '../_harness.mjs';
+import {
+  ensureHomeWorkspace,
+  fail,
+  json,
+  kfc,
+  locate,
+  sha256,
+  tmpDir,
+  uvPython,
+} from '../_harness.mjs';
 
 const { fixtureDir, coreDir } = locate(import.meta.url);
-const home = tmpDir('atlas-import-');
+const home = path.join(tmpDir('atlas-import-'), '.kungfu');
 const sampleRoot = path.join(fixtureDir, 'sample-root');
 const missionProfile = path.resolve(
   coreDir,
@@ -53,12 +62,15 @@ const before = fingerprint(sampleRoot);
 
 const k = (args) => kfc(coreDir, home, args);
 
+ensureHomeWorkspace(coreDir, home, 'atlas-import-fixture');
 activateMissionProfile(path.join(home, 'runtime'));
 k(['atlas', 'import', '--repo', sampleRoot]);
 const second = json(k(['atlas', 'import', '--repo', sampleRoot, '--json']));
 const secondId = second.import_id;
 
-const runtimeOverride = path.join(tmpDir('atlas-runtime-dir-'), 'demo-runtime');
+const runtimeOverrideHome = path.join(tmpDir('atlas-runtime-dir-'), '.kungfu');
+const runtimeOverride = path.join(runtimeOverrideHome, 'runtime');
+ensureHomeWorkspace(coreDir, runtimeOverrideHome, 'atlas-runtime-override-fixture');
 activateMissionProfile(runtimeOverride);
 uvPython(
   coreDir,

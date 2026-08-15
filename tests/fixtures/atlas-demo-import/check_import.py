@@ -106,6 +106,10 @@ if projection:
 
     archived = projection["goals"].get("2026-01-01-demo-archived", {})
     check("archived goal folded with flag", archived.get("archived") is True)
+    check(
+        "archived goal mission link folded",
+        archived.get("mission_id") == "demo-platform",
+    )
 
     marker = projection["markers"].get("ai/demo/importer", {})
     check(

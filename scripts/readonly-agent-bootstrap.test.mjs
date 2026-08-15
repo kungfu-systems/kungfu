@@ -811,11 +811,31 @@ test('declared discovery routes are zero-write in a cold read-only fixture', (t)
       .readdirSync(impactProofDirectory, { withFileTypes: true })
       .filter((value) => value.isFile() && value.name.endsWith('.json'))
       .sort((left, right) => left.name.localeCompare(right.name))) {
-      copyFile(
-        ROOT,
-        fixture,
-        `framework/site/src/kfx-site-impact-proofs/${entry.name}`,
+      const proofRelative = `framework/site/src/kfx-site-impact-proofs/${entry.name}`;
+      const proofBytes = fs.readFileSync(path.join(ROOT, proofRelative));
+      const committedProof = spawnSync(
+        git,
+        ['-C', ROOT, 'show', `${exactSourceSha}:${proofRelative}`],
+        { encoding: null },
       );
+      if (
+        committedProof.status !== 0 ||
+        !proofBytes.equals(Buffer.from(committedProof.stdout || ''))
+      ) {
+        const proof = JSON.parse(proofBytes.toString('utf8'));
+        for (const change of proof.changes || []) {
+          const relative = String(change.path || '');
+          assert.equal(path.isAbsolute(relative), false);
+          assert.equal(relative.split(/[\\/]/u).includes('..'), false);
+          const target = path.join(fixture, relative);
+          if (change.status === 'deleted') {
+            fs.rmSync(target, { force: true });
+          } else {
+            copyFile(ROOT, fixture, relative);
+          }
+        }
+      }
+      copyFile(ROOT, fixture, proofRelative);
     }
   }
   fs.rmSync(
