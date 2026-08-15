@@ -1,7 +1,7 @@
 {
   "schema": "kungfu.release-publication-control-plane/v1",
   "status": "active",
-  "versionLineAuthorityRoot": "sha256:8e5a196ab4c194d19efb7c0dd52e885adf0da99af73b660da0d2fa8ccac0213b",
+  "versionLineAuthorityRoot": "sha256:055ff5f28e0eae5a10b0f70c2f2b96d010006e45fef47e2708aef615adbbaa15",
   "protocol": {
     "schema": "kungfu.release-publication-protocol/v1",
     "authority": "adapter-only",
@@ -874,5 +874,5 @@
       }
     }
   ],
-  "registryRoot": "sha256:3bcb9211b58d7fae4402c942b3beefee98cb937b191ae51cb5ab673687828965"
+  "registryRoot": "sha256:ea9ac41b6011f77b3ad5fc01642ebf2f267a7d37876dce672a2698a2d19051bc"
 }
