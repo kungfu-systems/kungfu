@@ -55,7 +55,7 @@ command = "node scripts/run-shifu-lifecycle.mjs cache-apply verify"
 
 [lifecycle.signing-finalization]
 # shifu-entry-contract: allow Buildchain's GitHub-hosted finalizer to rebind consumer qualification to imported signed bytes
-command = "node product/scripts/verify-cli-surface-qualification.mjs --qualification product/release/cli/kungfu-episodes-cli-darwin-arm64.qualification.json --archive product/release/cli/kungfu-episodes-cli-darwin-arm64.tar.gz --platform darwin-arm64 --signing-result .buildchain/artifacts/signing/macos-arm64/kungfu-cli-macos-arm64/result.json --signing-receipt .buildchain/artifacts/signing/macos-arm64/kungfu-cli-macos-arm64/receipt.json --signing-provider-evidence .buildchain/artifacts/signing/macos-arm64/kungfu-cli-macos-arm64/provider-evidence.json"
+command = "node product/scripts/verify-cli-surface-qualification.mjs --qualification product/release/cli/kungfu-episodes-cli-darwin-arm64.qualification.json --archive product/release/cli/kungfu-episodes-cli-darwin-arm64.tar.gz --platform darwin-arm64 --signing-result .buildchain/artifacts/signing/macos-arm64/kungfu-cli-macos-arm64/result.json --signing-receipt .buildchain/artifacts/signing/macos-arm64/kungfu-cli-macos-arm64/receipt.json --signing-provider-evidence .buildchain/artifacts/signing/macos-arm64/kungfu-cli-macos-arm64/provider-evidence.json && node product/scripts/upgrade-manifest.mjs finalize-macos-release-artifacts"
 
 [lifecycle.publish]
 # shifu-entry-contract: allow Buildchain publish adapter bootstraps before repository lifecycle dispatch
