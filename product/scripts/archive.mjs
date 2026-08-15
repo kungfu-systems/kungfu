@@ -8,6 +8,9 @@ import zlib from 'node:zlib';
 
 const TAR_BLOCK = 512;
 const ZIP_EPOCH = new Date('1980-01-01T00:00:00Z');
+const ZIP_METHOD_STORE = 0;
+const ZIP_METHOD_DEFLATE = 8;
+const ZIP_COMPRESSION_LEVEL = 9;
 
 function normalizePath(value) {
   return value.split(path.sep).join('/');
@@ -314,7 +317,7 @@ function dosDateTime(date) {
   };
 }
 
-function localZipHeader({ name, body, stat }) {
+function localZipHeader({ name, body, compressedBody, stat }) {
   const nameBuf = Buffer.from(name);
   const header = Buffer.alloc(30);
   const when = dosDateTime(stat.mtime);
@@ -322,28 +325,36 @@ function localZipHeader({ name, body, stat }) {
   header.writeUInt32LE(0x04034b50, 0);
   header.writeUInt16LE(20, 4);
   header.writeUInt16LE(0, 6);
-  header.writeUInt16LE(0, 8);
+  header.writeUInt16LE(ZIP_METHOD_DEFLATE, 8);
   header.writeUInt16LE(when.time, 10);
   header.writeUInt16LE(when.date, 12);
   header.writeUInt32LE(crc, 14);
-  header.writeUInt32LE(body.length, 18);
+  header.writeUInt32LE(compressedBody.length, 18);
   header.writeUInt32LE(body.length, 22);
   header.writeUInt16LE(nameBuf.length, 26);
   header.writeUInt16LE(0, 28);
   return { header, nameBuf, crc, when };
 }
 
-function centralZipHeader({ nameBuf, body, stat, crc, when, offset }) {
+function centralZipHeader({
+  nameBuf,
+  body,
+  compressedBody,
+  stat,
+  crc,
+  when,
+  offset,
+}) {
   const header = Buffer.alloc(46);
   header.writeUInt32LE(0x02014b50, 0);
   header.writeUInt16LE(20, 4);
   header.writeUInt16LE(20, 6);
   header.writeUInt16LE(0, 8);
-  header.writeUInt16LE(0, 10);
+  header.writeUInt16LE(ZIP_METHOD_DEFLATE, 10);
   header.writeUInt16LE(when.time, 12);
   header.writeUInt16LE(when.date, 14);
   header.writeUInt32LE(crc, 16);
-  header.writeUInt32LE(body.length, 20);
+  header.writeUInt32LE(compressedBody.length, 20);
   header.writeUInt32LE(body.length, 24);
   header.writeUInt16LE(nameBuf.length, 28);
   header.writeUInt16LE(0, 30);
@@ -366,18 +377,28 @@ export function writeZip({ sourceDir, outputFile }) {
       );
     }
     const body = fs.readFileSync(file.full);
-    const entry = localZipHeader({ name: file.rel, body, stat: file.stat });
-    local.push(entry.header, entry.nameBuf, body);
+    const compressedBody = zlib.deflateRawSync(body, {
+      level: ZIP_COMPRESSION_LEVEL,
+    });
+    const entry = localZipHeader({
+      name: file.rel,
+      body,
+      compressedBody,
+      stat: file.stat,
+    });
+    local.push(entry.header, entry.nameBuf, compressedBody);
     central.push(
       centralZipHeader({
         ...entry,
         body,
+        compressedBody,
         stat: file.stat,
         offset,
       }),
       entry.nameBuf,
     );
-    offset += entry.header.length + entry.nameBuf.length + body.length;
+    offset +=
+      entry.header.length + entry.nameBuf.length + compressedBody.length;
   }
   const centralSize = central.reduce((sum, chunk) => sum + chunk.length, 0);
   const footer = Buffer.alloc(22);
@@ -413,12 +434,20 @@ export function extractZip({ archiveFile, targetDir }) {
     const name = buffer.toString('utf8', nameStart, nameStart + nameLength);
     const bodyStart = nameStart + nameLength + extraLength;
     const bodyEnd = bodyStart + compressedSize;
-    if (method !== 0) {
+    if (method !== ZIP_METHOD_STORE && method !== ZIP_METHOD_DEFLATE) {
       throw new Error(
         `unsupported zip compression method ${method} for ${name}`,
       );
     }
-    if (compressedSize !== uncompressedSize) {
+    if (method === ZIP_METHOD_STORE && compressedSize !== uncompressedSize) {
+      throw new Error(`zip entry size mismatch for ${name}`);
+    }
+    const compressedBody = buffer.subarray(bodyStart, bodyEnd);
+    const body =
+      method === ZIP_METHOD_DEFLATE
+        ? zlib.inflateRawSync(compressedBody)
+        : compressedBody;
+    if (body.length !== uncompressedSize) {
       throw new Error(`zip entry size mismatch for ${name}`);
     }
     const target = extractPath(targetDir, name);
@@ -426,7 +455,7 @@ export function extractZip({ archiveFile, targetDir }) {
       fs.mkdirSync(target, { recursive: true });
     } else {
       fs.mkdirSync(path.dirname(target), { recursive: true });
-      fs.writeFileSync(target, buffer.subarray(bodyStart, bodyEnd));
+      fs.writeFileSync(target, body);
     }
     offset = bodyEnd;
   }
