@@ -6,7 +6,7 @@
     "tag": "v4.0.0-alpha.2",
     "sourceSha": "842be043a25a997bcc8b3b2568bd246aedca95ce"
   },
-  "generatedAt": "2026-08-15T20:23:26.095Z",
+  "generatedAt": "2026-08-15T20:44:01.119Z",
   "runner": {
     "kind": "github-hosted",
     "os": "Linux",
@@ -151,9 +151,9 @@
     "authority": {
       "manifestPath": "kfd-adopter-manifest.json",
       "manifestContract": "kfd.adopter-conformance-manifest/v1",
-      "manifestRoot": "sha256:22d3337b936af32bcbd624864ac9014ee408a390a1ed6e1c5b2e3e89b6054aa8",
+      "manifestRoot": "sha256:18393102925b38afbe9a6d92f5ecdc296361106507dd041f847cc812109a424c",
       "gatePath": "kfd-adopter-manifest-gate.json",
-      "gateRoot": "sha256:a708156dc44d081f43c0a3487420a45b4d892923f987821c69fb19113eb1d628"
+      "gateRoot": "sha256:e4f2b92da4dec7eb09dce321a40c802c524b3ff1f79268d29aa31d8eb767e13a"
     },
     "adopter": {
       "id": "kungfu-systems/kungfu"
@@ -172,21 +172,21 @@
       "verifierSetRoot": "sha256:aad9b4193e965b68e465bbe4e648e5a03c3d78a6575dfda1d5e90943404779f4"
     },
     "witness": {
-      "decisionRoot": "sha256:dace794e835f7c8e5e08d70bb8e114c4e38fe19f15af8e057bfff92a7780386e",
+      "decisionRoot": "sha256:59d8db02514fc585336fdd844de0f73e1720e5fe485888a90e4bb061537bb7f0",
       "verificationReportRoot": "sha256:ea478aebb47254943655480014d024b56497e0afa313df782a9ed711bac366fc",
-      "bundleRoot": "sha256:b3b1fca583d6f9b1b0fc774ebf24d657620091f3b3833ddc9a19786f2c1e55e6"
+      "bundleRoot": "sha256:b6edcbfa7a73260ddd28edfd9eab06973cae30201be4d9a65e3085ac31534a35"
     },
     "legacyProjection": {
       "path": "kfd-support.json",
       "contract": "kungfu-kfd-support-matrix",
-      "root": "sha256:62f55433d6620799b5880054919d899bfd073e4d57a846da1bcd34d0a6ba33a4",
-      "authorityRoot": "sha256:22d3337b936af32bcbd624864ac9014ee408a390a1ed6e1c5b2e3e89b6054aa8",
-      "gateRoot": "sha256:a708156dc44d081f43c0a3487420a45b4d892923f987821c69fb19113eb1d628"
+      "root": "sha256:fd6f6de4011d9a0e7ee24aa67baff2512d59ff434f132a39a71bdf12bbf97811",
+      "authorityRoot": "sha256:18393102925b38afbe9a6d92f5ecdc296361106507dd041f847cc812109a424c",
+      "gateRoot": "sha256:e4f2b92da4dec7eb09dce321a40c802c524b3ff1f79268d29aa31d8eb767e13a"
     },
     "nonClaims": [
       "This binding proves exact release-envelope consumption, not KFD certification or release authorization.",
       "The legacy support matrix remains a projection of the standard adopter manifest authority."
     ],
-    "bindingRoot": "sha256:524de61a1255f198f149929896b7958106b3d8a14312d45832419c05bd840a2c"
+    "bindingRoot": "sha256:df0c13cb754b3aee41cd62acda0f1e3301555ec4df5deeebe28de376522c06fb"
   }
 }
