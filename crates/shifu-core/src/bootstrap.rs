@@ -321,8 +321,7 @@ impl Tool {
     }
 
     fn base_url(&self) -> String {
-        env::var(self.mirror_env)
-            .unwrap_or_else(|_| self.default_base.to_string())
+        resolve_nonempty_value(env::var(self.mirror_env).ok().as_deref(), self.default_base)
             .trim_end_matches('/')
             .to_string()
     }
@@ -417,6 +416,12 @@ fn resolve_version(env_val: Option<&str>, file_text: Option<&str>, fallback: &st
         }
     }
     fallback.to_string()
+}
+
+fn resolve_nonempty_value<'a>(value: Option<&'a str>, fallback: &'a str) -> &'a str {
+    value
+        .filter(|candidate| !candidate.trim().is_empty())
+        .unwrap_or(fallback)
 }
 
 /// Resolve a tool without bootstrapping (PATH, then cache). Used where the sh
@@ -844,7 +849,7 @@ fn url_answers(url: &str) -> bool {
 
 #[cfg(test)]
 mod tests {
-    use super::{resolve_version, BUILDCHAIN};
+    use super::{resolve_nonempty_value, resolve_version, BUILDCHAIN};
 
     #[test]
     fn env_beats_pin_file_beats_fallback() {
@@ -864,6 +869,18 @@ mod tests {
             "0.11.23"
         );
         assert_eq!(resolve_version(Some(""), Some("\n"), "0.0.1"), "0.0.1");
+    }
+
+    #[test]
+    fn empty_mirror_values_fall_back_to_the_official_distribution() {
+        let fallback = "https://example.test/releases/download";
+        assert_eq!(resolve_nonempty_value(None, fallback), fallback);
+        assert_eq!(resolve_nonempty_value(Some(""), fallback), fallback);
+        assert_eq!(resolve_nonempty_value(Some("  \t"), fallback), fallback);
+        assert_eq!(
+            resolve_nonempty_value(Some("https://cache.example.test/fnm"), fallback),
+            "https://cache.example.test/fnm"
+        );
     }
 
     #[test]

@@ -169,6 +169,22 @@
       "disposition": "proof-eligible"
     },
     {
+      "id": "root-kfx-test-fixtures",
+      "selectors": [
+        {
+          "kind": "prefix",
+          "value": "tests/fixtures/kfx"
+        }
+      ],
+      "facets": [
+        "architecture",
+        "registry-admission-lifecycle",
+        "capabilities",
+        "qualification-status"
+      ],
+      "disposition": "proof-eligible"
+    },
+    {
       "id": "github-webhook-reference-implementation",
       "selectors": [
         {
