@@ -10,7 +10,7 @@ sensitivity: internal
 evidence_grade: A
 review_state: self-reviewed
 last_reviewed: 2026-07-27
-ai_provenance: GPT-5 via Codex on 2026-07-27; based on the protected complexity policy and local cryptographic qualification; no hidden model checkpoint, unobserved approval, or released guarantee is claimed
+ai_provenance: GPT-5 via Codex on 2026-07-27; based on the protected complexity policy and exact source qualification; no hidden model checkpoint, unobserved approval, or released guarantee is claimed
 ---
 
 # Code-complexity baseline transitions
@@ -23,13 +23,17 @@ requires exactly one
 
 The record binds the protected expected-old measurement root and ref, the
 candidate new measurement root and ref, bounded changed-measurement and
-aggregate-line counts, the requester, reason, retirement/decomposition
-reference, and an independently signed Ed25519 approval receipt. Verification
-uses only keys from the protected policy. A key added by the same candidate
-cannot authorize its transition.
+aggregate-line counts, the requester, reason, and retirement/decomposition
+reference. The source gate recomputes those values and rejects stale roots,
+candidate mutation, multiple matching records, and excess scope or delta.
+
+Independent authorization is attached to the protected exact PR head by the
+required source check and reviewer approval. Delivery remains fenced by the
+Delivery Warrant and `merge_group`; no locally produced authorization artifact
+is required or accepted.
 
 The baseline file, waiver records, and transition records are governance
 metadata rather than measured source. Their integrity is enforced directly by
-exact recomputation, protected expected-old comparison, and signature
-verification; including them in their own line-count baseline would create a
-non-convergent self-reference.
+exact recomputation, protected expected-old comparison, protected delivery
+governance, and merge-queue replay; including them in their own line-count
+baseline would create a non-convergent self-reference.
