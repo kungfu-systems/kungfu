@@ -501,8 +501,8 @@ test('Xinfa quality uses the source resolver and forwards one Windows mode', () 
   const routeIndex = windows.indexOf(
     'if /i "%~1"=="xinfa:quality" goto xinfaquality',
   );
-  const qualityIndex = windows.indexOf('\n:xinfaquality\n');
-  const projectCutIndex = windows.indexOf('\n:projectcut\n');
+  const qualityIndex = windows.search(/\r?\n:xinfaquality\r?\n/u);
+  const projectCutIndex = windows.search(/\r?\n:projectcut\r?\n/u);
   assert.ok(posixBlock, 'POSIX Xinfa quality block is missing');
   assert.ok(windowsBlock, 'Windows Xinfa quality block is missing');
   assert.ok(routeIndex >= 0, 'Windows Xinfa quality route is missing');
