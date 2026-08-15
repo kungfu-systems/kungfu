@@ -4,9 +4,9 @@ doc_type: architecture-decision
 adr_id: KF-ADR-019f86da-4f90-7ef4-b28b-ee1fbaf9e62e
 decision_status: accepted
 implementation_status: implemented
-implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/842, https://github.com/kungfu-systems/kungfu/pull/873, https://github.com/kungfu-systems/kungfu/pull/885, https://github.com/kungfu-systems/kungfu/pull/906, https://github.com/kungfu-systems/kungfu/pull/922, https://github.com/kungfu-systems/kungfu/pull/1704, https://github.com/kungfu-systems/kungfu/pull/1718, https://github.com/kungfu-systems/kungfu/pull/1728, https://github.com/kungfu-systems/kungfu/pull/1744, https://github.com/kungfu-systems/kungfu/pull/1771, https://github.com/kungfu-systems/kungfu/pull/1784]
+implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/842, https://github.com/kungfu-systems/kungfu/pull/873, https://github.com/kungfu-systems/kungfu/pull/885, https://github.com/kungfu-systems/kungfu/pull/906, https://github.com/kungfu-systems/kungfu/pull/922, https://github.com/kungfu-systems/kungfu/pull/1704, https://github.com/kungfu-systems/kungfu/pull/1718, https://github.com/kungfu-systems/kungfu/pull/1728, https://github.com/kungfu-systems/kungfu/pull/1744, https://github.com/kungfu-systems/kungfu/pull/1771, https://github.com/kungfu-systems/kungfu/pull/1784, https://github.com/kungfu-systems/kungfu/pull/3140]
 closure_pr: https://github.com/kungfu-systems/kungfu/pull/1784
-qualification_refs: [framework/kfx/tooling/run-identity-neutral-terminal-qualification.mjs, docs/qualification/kfx-identity-neutral-terminal.md, framework/core/src/libkungfu/tests/native_kfx_contract_tests.cpp]
+qualification_refs: [framework/kfx/tooling/run-identity-neutral-terminal-qualification.mjs, docs/qualification/kfx-identity-neutral-terminal.md, framework/core/src/libkungfu/tests/native_kfx_contract_tests.cpp, framework/core/src/libkungfu/tests/native_kfx_service_host_tests.cpp, framework/kfx/evidence/kfd-10/runtime-warrant-adopter.json]
 review_state: self-reviewed
 sensitivity: public
 sources: [local-files, user-decision]
@@ -14,7 +14,7 @@ period: 2026-07-15
 theme: core-native-multisurface-kfx-runtime
 confidence: high
 evidence_grade: B
-last_reviewed: 2026-07-28
+last_reviewed: 2026-08-15
 ---
 
 # KF-ADR-019f86da-4f90-7ef4-b28b-ee1fbaf9e62e: one Core-native KFX runtime serves GUI, TUI, CLI, and agents
@@ -129,6 +129,13 @@ through GUI, TUI, CLI, and Agent projections. Product System remains inert
 assembly metadata. The retained non-claims are public release publication,
 marketplace operation, universal native-code safety, and independent external
 adoption rather than implementation gaps in this authority contract.
+
+PR #3140 adds the specialized KFD-10 adopter witness for leased Runtime
+Warrants at the same Core-native KFX runtime edge. Core alone issues,
+heartbeats, revokes, recovers, and settles generation- and fencing-bound
+leases; host and Python surfaces remain thin projections. The witness keeps
+one-shot Mutation Warrants distinct and does not let KFD status activate a
+package, grant runtime privilege, or publish a release.
 
 ## Decision
 

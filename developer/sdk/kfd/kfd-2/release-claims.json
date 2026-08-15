@@ -11,7 +11,7 @@
     "version": "4.0.0-alpha.3",
     "channel": "repository-default",
     "tag": "v4.0.0-alpha.3",
-    "sourceSha": "fa693b47b5174ce290b5d67134978f8485748911"
+    "sourceSha": "0714ebd4021498bd44fb442686aa0ca4720a94e1"
   },
   "claims": [
     {
@@ -360,7 +360,7 @@
           "pointer": {
             "kind": "file",
             "path": "docs/adr/KF-ADR-019f8c53-6105-71e5-8f34-53f2a81ee61c.md",
-            "sha256": "c369e7a115cb35c3f1cb25571d607dc2cecf87910ea190e49236254e15a6e11a"
+            "sha256": "413f530bb52a299c481150b18cdaf5b6536934014176c1af8c9aadf60f0d7a9b"
           },
           "description": "Accepted one-native-owner and four-language projection decision with explicit non-claims."
         }

@@ -4,9 +4,9 @@ doc_type: architecture-decision
 adr_id: KF-ADR-019f86da-4f90-72df-add3-948f3ae38c3a
 decision_status: accepted
 implementation_status: implemented
-implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/734, https://github.com/kungfu-systems/kungfu/pull/842, https://github.com/kungfu-systems/kungfu/pull/873, https://github.com/kungfu-systems/kungfu/pull/906, https://github.com/kungfu-systems/kungfu/pull/922, https://github.com/kungfu-systems/kungfu/pull/1137, https://github.com/kungfu-systems/kungfu/pull/1151, https://github.com/kungfu-systems/kungfu/pull/1202, https://github.com/kungfu-systems/kungfu/pull/1704, https://github.com/kungfu-systems/kungfu/pull/1718, https://github.com/kungfu-systems/kungfu/pull/1728, https://github.com/kungfu-systems/kungfu/pull/1744, https://github.com/kungfu-systems/kungfu/pull/1771, https://github.com/kungfu-systems/kungfu/pull/1784]
+implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/734, https://github.com/kungfu-systems/kungfu/pull/842, https://github.com/kungfu-systems/kungfu/pull/873, https://github.com/kungfu-systems/kungfu/pull/906, https://github.com/kungfu-systems/kungfu/pull/922, https://github.com/kungfu-systems/kungfu/pull/1137, https://github.com/kungfu-systems/kungfu/pull/1151, https://github.com/kungfu-systems/kungfu/pull/1202, https://github.com/kungfu-systems/kungfu/pull/1704, https://github.com/kungfu-systems/kungfu/pull/1718, https://github.com/kungfu-systems/kungfu/pull/1728, https://github.com/kungfu-systems/kungfu/pull/1744, https://github.com/kungfu-systems/kungfu/pull/1771, https://github.com/kungfu-systems/kungfu/pull/1784, https://github.com/kungfu-systems/kungfu/pull/3140]
 closure_pr: https://github.com/kungfu-systems/kungfu/pull/1784
-qualification_refs: [framework/kfx/tooling/run-identity-neutral-terminal-qualification.mjs, docs/qualification/kfx-identity-neutral-terminal.md, framework/api/tests/kfx-host.test.ts, framework/gui/src/agent-work-lab.test.ts, framework/tui/src/agent-work-lab-view.test.ts]
+qualification_refs: [framework/kfx/tooling/run-identity-neutral-terminal-qualification.mjs, docs/qualification/kfx-identity-neutral-terminal.md, framework/api/tests/kfx-host.test.ts, framework/gui/src/agent-work-lab.test.ts, framework/tui/src/agent-work-lab-view.test.ts, framework/core/src/libkungfu/tests/native_kfx_service_host_tests.cpp, framework/kfx/evidence/kfd-10/runtime-warrant-adopter.json]
 review_state: self-reviewed
 sensitivity: public
 sources: [local-files, user-decision]
@@ -14,7 +14,7 @@ period: 2026-07-15
 theme: surface-neutral-kfx-contributions-thin-bindings
 confidence: high
 evidence_grade: B
-last_reviewed: 2026-07-28
+last_reviewed: 2026-08-15
 ---
 
 # KF-ADR-019f86da-4f90-72df-add3-948f3ae38c3a: KFX contributes semantics once; GUI, TUI, CLI, and agents project them
@@ -124,6 +124,12 @@ plan, Work/Warrant, capability, host authorization, Episode, Settlement, CAS,
 and receipt identity. Agent Work Lab and every bundled reference KFX use the
 same public manifest and host contract as ecosystem packages; no host has a
 Product/System allowlist or compatibility mutation path.
+
+PR #3140 keeps that projection boundary thin for leased Runtime Warrants.
+Native Core owns issue, heartbeat, revoke, recovery, and settlement, while the
+Python service and host dispatcher only carry exact requests and receipts.
+Neither a surface nor the KFD-10 witness can infer a lease, widen capabilities,
+replace a root, activate an adopter, or publish a release.
 
 ## Decision
 
