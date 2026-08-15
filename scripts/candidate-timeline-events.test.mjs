@@ -511,6 +511,15 @@ test('delivery workflows preserve exact attempt and cache-promotion bindings', (
   );
   assert.match(
     affectedNative,
+    /Seal reconstructable family delivery attempt[\s\S]*--dev-delta-plan "\$admission\/proof-admission\/dev-delta-plan\.json"/,
+  );
+  const proofRuntime = fs.readFileSync(
+    path.join(ROOT, 'scripts/affected-native-proof.mjs'),
+    'utf8',
+  );
+  assert.match(proofRuntime, /options\['dev-delta-plan'\][\s\S]*deltaPlan:/);
+  assert.match(
+    affectedNative,
     /core-affected-native-delivery-attempt-\$\{\{ github\.sha \}\}/,
   );
 
