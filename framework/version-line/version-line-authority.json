@@ -118,11 +118,12 @@
       ".buildchain/runtime/kfd-product-gates/evidence/",
       ".kungfu/episodes/",
       ".kungfu/ledger-publications/",
+      ".kungfu/retained-native-evidence/",
       ".kungfu/runtime/storage/payloads/",
       ".xinfa/baselines/",
       "docs/qualification/evidence/",
       "framework/maintainability/waivers/retired/"
     ]
   },
-  "authorityRoot": "sha256:8e5a196ab4c194d19efb7c0dd52e885adf0da99af73b660da0d2fa8ccac0213b"
+  "authorityRoot": "sha256:055ff5f28e0eae5a10b0f70c2f2b96d010006e45fef47e2708aef615adbbaa15"
 }

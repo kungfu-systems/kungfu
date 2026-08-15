@@ -1,6 +1,6 @@
 {
   "schema": "kungfu.version-line-projections/v1",
-  "authorityRoot": "sha256:8e5a196ab4c194d19efb7c0dd52e885adf0da99af73b660da0d2fa8ccac0213b",
+  "authorityRoot": "sha256:055ff5f28e0eae5a10b0f70c2f2b96d010006e45fef47e2708aef615adbbaa15",
   "activeLine": "4.0",
   "lines": [
     {
@@ -153,5 +153,5 @@
       ]
     }
   },
-  "projectionRoot": "sha256:f1b8553ee0810f5f0ff456825c0390b2f27eec5b3f3ad472dde1922fd9982d72"
+  "projectionRoot": "sha256:a888703b7774a140cb28fe6eedb8cd6bc1a6a75af119e6b790a9ea152fa8c791"
 }
