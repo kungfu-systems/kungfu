@@ -80,7 +80,7 @@
             "product-stable",
             "product-binaries"
           ],
-          "sourceRoot": "sha256:698a614c0d65b19b177bdb056f3d9c90c9520266cf5d7f999e82bd5aeed37e20"
+          "sourceRoot": "sha256:2a29f4a296292e77c53bbc7d3c2536c76f6e4fbbbfd1c547ae6d575c90e23162"
         },
         {
           "path": ".github/workflows/dev-post-merge-advisory.yml",
