@@ -1,11 +1,11 @@
 {
   "schemaVersion": 1,
   "contract": "kungfu-buildchain-kfd-adopter-manifest-gate",
-  "checkedAt": "2026-08-15T19:17:58.745Z",
+  "checkedAt": "2026-08-15T19:42:44.162Z",
   "authority": {
     "path": ".buildchain/kfd/adopter-manifest.json",
     "contract": "kfd.adopter-conformance-manifest/v1",
-    "manifestRoot": "sha256:4d1c864d8270d04a57f5ff5e35eb3bf47d32697f59983ea1daf36cda9c1b4cdd"
+    "manifestRoot": "sha256:2b6b43e4f4251716cd5261c642df3a9737aa137293e8ff5928d204f825517289"
   },
   "adopter": {
     "id": "kungfu-systems/kungfu"
@@ -17,7 +17,7 @@
     "artifactRoot": "sha256:02dbd3577d5f47012c1cab422b59cfc3a8dcf31fd43a37c5d21141de9c065575"
   },
   "verificationCut": {
-    "checkedAt": "2026-08-15T19:17:58.745Z",
+    "checkedAt": "2026-08-15T19:42:44.162Z",
     "maxAgeSeconds": 31536000
   },
   "standardPackage": {
@@ -29,33 +29,33 @@
   },
   "decisionWitness": {
     "rootAlgorithm": "sha256-buildchain-stable-json-v1",
-    "root": "sha256:2cf48009350974d293fa44ce85a3b959d43ccc22fb4aeb0cf64b93ab5a9a35e8"
+    "root": "sha256:0c87abf49cc4988f604bc7e7daa754f965c79f530a3dbeec5704f02a470d643b"
   },
   "gateResults": [
     {
       "standard": "kfd-4",
       "sourceRepository": "kungfu-systems/kungfu",
       "sourceSha": "842be043a25a997bcc8b3b2568bd246aedca95ce",
-      "gateRoot": "sha256:327195ee0e631bb7cb7d111859053e5c86d71af8fa6fe1e76d7fb818af40d312",
+      "gateRoot": "sha256:b7d180e609832027236e443fc488ed4ec1e94552f6f667e7c5576b4f881097a0",
       "status": "passed"
     },
     {
       "standard": "kfd-5",
       "sourceRepository": "kungfu-systems/kungfu",
       "sourceSha": "842be043a25a997bcc8b3b2568bd246aedca95ce",
-      "gateRoot": "sha256:40ead3224d6b5060afc377be4d88d416ab47e191822986d2697b0a706f622911",
+      "gateRoot": "sha256:9dec9b0889b386e7d3bf1db5f0f1d7cffa2ca5a56e85c63f384e03cb94922d2f",
       "status": "passed"
     },
     {
       "standard": "kfd-7",
       "sourceRepository": "kungfu-systems/kungfu",
       "sourceSha": "842be043a25a997bcc8b3b2568bd246aedca95ce",
-      "gateRoot": "sha256:e562d1ddb6e5ee7dda41968a5080fd4c78c8192e40f0ec92c209bf5f89909b55",
+      "gateRoot": "sha256:4815aab396de00a0ce9e55f2d77e9e3f672f9006cba9b9ed23f25a60339439e8",
       "status": "passed"
     }
   ],
   "manifestVerificationReportRoot": "sha256:ea478aebb47254943655480014d024b56497e0afa313df782a9ed711bac366fc",
-  "manifestBundleRoot": "sha256:1301bda5c7ebdedce6ac9c1528409a8b05bcb8ce7640a1980b5dfd7c17c34d85",
+  "manifestBundleRoot": "sha256:de4d18d050240f7f8c1ce83bd1a98b6879147a5c0d009e83b1c4a8a676b6b1c3",
   "status": "passed",
   "qualifying": false,
   "selfCertified": false,
@@ -64,5 +64,5 @@
     "A passing manifest gate does not authorize release, runtime action, activation, or independent certification."
   ],
   "issues": [],
-  "gateRoot": "sha256:f109d35b367d75f246743ffd401c2b42f6cb47a9a0b76e5864c43b6964b298f1"
+  "gateRoot": "sha256:cc98a652e4326bb2b9ed3d38dc56c7ac871ef83357a4d68bf6fc2bb44016a99e"
 }
