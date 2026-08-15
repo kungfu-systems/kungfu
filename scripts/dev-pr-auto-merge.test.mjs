@@ -154,7 +154,7 @@ test('Dev auto-merge waits for PR checks and lands through the native queue', ()
   assert.doesNotMatch(requiredChecks || '', /Queue admission lease/u);
   assert.match(
     workflow,
-    /native-command: >-[\s\S]*dev-delivery:native-under-warrant[\s\S]*--status-context 'affected-native \/ linux'/u,
+    /native-command: >-[\s\S]*dev-delivery:native-under-warrant[\s\S]*--status-context 'Delivery Warrant native proof \/ linux'/u,
   );
   assert.match(
     workflow,

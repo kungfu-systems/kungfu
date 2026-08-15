@@ -1301,6 +1301,11 @@ jobs:
             decision=reused
             bundle="$admission/proof-reuse"
           fi
+          delta_args=()
+          delta_plan="$admission/proof-admission/dev-delta-plan.json"
+          if [ -f "$delta_plan" ]; then
+            delta_args=(--dev-delta-plan "$delta_plan")
+          fi
           # shifu-entry-contract: allow attempt sealing after exact proof admission
           node scripts/affected-native-proof.mjs seal-attempt \
             --descriptor "$admission/proof-admission/descriptor.json" \
@@ -1311,7 +1316,8 @@ jobs:
             --run-id "$GITHUB_RUN_ID" \
             --event "$GITHUB_EVENT_NAME" \
             --trigger-head-sha "$GITHUB_SHA" \
-            --checkout-sha "$(git rev-parse HEAD)"
+            --checkout-sha "$(git rev-parse HEAD)" \
+            "${delta_args[@]}"
       - name: Consume Warrant and record exact Integration Delivery Proof
         if: >-
           ${{
@@ -1421,6 +1427,11 @@ jobs:
         run: |
           set -euo pipefail
           admission=product/qualification/affected-native
+          delta_args=()
+          delta_plan="$admission/proof-admission/dev-delta-plan.json"
+          if [ -f "$delta_plan" ]; then
+            delta_args=(--dev-delta-plan "$delta_plan")
+          fi
           # shifu-entry-contract: allow sealing post-admission cache transport authority
           node scripts/affected-native-proof.mjs seal-cache-authority \
             --descriptor "$admission/proof-admission/descriptor.json" \
@@ -1432,7 +1443,8 @@ jobs:
             --target-source-tree "$(git rev-parse 'HEAD^{tree}')" \
             --producer-run-id "$PRODUCER_RUN_ID" \
             --producer-event "$PRODUCER_EVENT" \
-            --producer-head-sha "$PRODUCER_HEAD_SHA"
+            --producer-head-sha "$PRODUCER_HEAD_SHA" \
+            "${delta_args[@]}"
       - name: Upload authoritative producer proof
         if: ${{ steps.admit.outputs.proof-created == 'true' }}
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
