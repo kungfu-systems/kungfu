@@ -93,9 +93,23 @@
     "receipt": "shifu.production-graph-local-execution-receipt/v0",
     "concurrency": 1,
     "fixtureSafeOnly": false,
-    "boundedRealTasks": ["build:core"],
+    "boundedRealTasks": [
+      "build:core",
+      "core-production-subgraph:dependency-bootstrap",
+      "core-production-subgraph:native-build",
+      "core-production-subgraph:artifact-stage"
+    ],
     "boundedTaskEnvironment": {
-      "build:core": { "KUNGFU_BUILD_PROFILE": "journal" }
+      "build:core": { "KUNGFU_BUILD_PROFILE": "journal" },
+      "core-production-subgraph:dependency-bootstrap": {
+        "KUNGFU_BUILD_PROFILE": "journal"
+      },
+      "core-production-subgraph:native-build": {
+        "KUNGFU_BUILD_PROFILE": "journal"
+      },
+      "core-production-subgraph:artifact-stage": {
+        "KUNGFU_BUILD_PROFILE": "journal"
+      }
     },
     "requiresExactAdmission": true,
     "replayStartsNodes": false,
@@ -125,7 +139,10 @@
     "stagesDirectlyInvocable": false,
     "describeOnly": true,
     "cutover": false,
-    "receipt": "shifu.core-production-subgraph-verification-receipt/v0"
+    "receipt": "shifu.core-production-subgraph-verification-receipt/v0",
+    "stageExecutor": "./shifu core-production-subgraph:execute",
+    "stageExecutorAuthority": "additive-admitted-shadow-only",
+    "stageExecutorConcurrency": 1
   },
   "buildResult": {
     "command": "./shifu production-graph:build-result",

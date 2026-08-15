@@ -155,18 +155,18 @@ test('valid but different execution output is classified and blocks parity', asy
   assert.equal(classifications.has('nondeterminism'), true);
 });
 
-test('protected workflow lane remains single-platform and authority-free', () => {
+test('post-merge advisory lane remains single-platform and authority-free', () => {
   const workflow = fs.readFileSync(
-    path.join(ROOT, '.github/workflows/affected-native-pr.yml'),
+    path.join(ROOT, '.github/workflows/dev-post-merge-advisory.yml'),
     'utf8',
   );
   const job = workflow
     .slice(workflow.indexOf('  production_graph_parity:'))
-    .split('\n  dco:')[0];
+    .split('\n  qualified_core_candidate:')[0];
   assert.match(job, /runs-on: ubuntu-24\.04/u);
-  assert.match(job, /permissions:\n\s+contents: read/u);
+  assert.match(workflow, /permissions:\n\s+actions: read\n\s+contents: read/u);
   assert.match(job, /node-version: "22"/u);
-  assert.match(job, /ref: \$\{\{ github\.sha \}\}/u);
+  assert.match(job, /ref: \$\{\{ needs\.prepare\.outputs\.target-sha \}\}/u);
   assert.doesNotMatch(job, /github\.event\.pull_request/u);
   assert.match(job, /production-graph:local-ci-parity run/u);
   assert.match(job, /production-graph:local-ci-parity verify/u);
