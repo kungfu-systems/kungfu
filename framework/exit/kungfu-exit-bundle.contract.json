@@ -684,7 +684,7 @@
                 "project-cut-v1",
                 "product-release-cut-v1",
                 "fact-library-v1",
-                "initiative-bundle-v1"
+                "mission-control-v2"
               ]
             },
             "requiredForScope": {
@@ -1105,7 +1105,7 @@
         {
           "kind": "clean-runtime-exit",
           "path": "docs/qualification/evidence/exit-clean-runtime/520a61af87/report.json",
-          "reportRoot": "sha256:a9cff1062c4debd0be2104b3a799051958ade835ceb160663f29d621464b28b5",
+          "reportRoot": "sha256:105a912f54720bf5665b8cfd666013b788e423cd841b7a5af8525b9bc11d1726",
           "artifactDigest": "sha256:8c0fcb6ec811c03c11be56b6d10fdd7cea5aed50657bc50979cfcdc805fd5cd3",
           "platform": "darwin-arm64",
           "verdict": "qualified"
@@ -1349,14 +1349,17 @@
       "gap": "No independent domain bundle root; composition must bind every member Episode root and catalog root."
     },
     {
-      "id": "initiative-bundle-v1",
+      "id": "mission-control-v2",
       "schemas": [
-        "kungfu.work-control.initiative-bundle/v1"
+        "kungfu.mission-control.bundle/v2"
       ],
-      "owner": "Work Control Initiative closure over Episode bundles and proof-carrying queries",
-      "source": "extensions/work-control/work-control-actions/domain/initiative_bundle.py",
+      "legacySchemas": [
+        "kungfu.mission-control.bundle/v1"
+      ],
+      "owner": "Work Control compatibility adapter over Episode bundles and proof-carrying queries",
+      "source": "extensions/work-control/work-control-actions/domain/compatibility/mission_control_v3_bundle.py",
       "identityRoot": "bundle_root",
-      "protocol": "work-control-initiative-portability/v1",
+      "protocol": "mission-control-portability/v2",
       "modes": [
         "full",
         "thin"
@@ -1373,7 +1376,7 @@
         "destinationPreflight": "active-Profile-and-member-Episode-preflight"
       },
       "eligibleMember": true,
-      "gap": "Execution requires the exact active Work Control Profile closure."
+      "gap": "v1 remains audit-readable only; v2 execution requires the exact active Profile closure."
     },
     {
       "id": "profile-source-v1",

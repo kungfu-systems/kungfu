@@ -7,7 +7,7 @@ import pytest
 
 from kungfu import assignment_orchestration as orchestration
 from kungfu import profile_composition, profile_sdk, projects
-from kungfu import work_control
+from kungfu.atlas import mission_control
 from kungfu.cli.commands import project as project_commands
 from kungfu.project_template import BLANK_TEMPLATE_ID
 from kungfu.rewind import reporting as rewind_reporting
@@ -41,50 +41,50 @@ def _activate_work_control(runtime):
         )
 
 
-def test_completion_review_supports_equal_project_and_work_ids(tmp_path):
+def test_completion_review_survives_legacy_equal_project_and_work_ids(tmp_path):
     runtime = tmp_path / ".kungfu" / "runtime"
     _activate_work_control(runtime)
-    work_control.create_initiative(
+    mission_control.create_initiative(
         str(runtime),
-        initiative_id="project-work",
-        title="Project Work",
-        intent="Settle Work when Project and Work identities are equal",
+        initiative_id="legacy-project-work",
+        title="Legacy Project Work",
+        intent="Settle Work captured before Project identity prefixes diverged",
         actor="local-user",
     )
-    work_control.create_assignment(
+    mission_control.create_assignment(
         str(runtime),
-        initiative_id="project-work",
-        assignment_id="project-work",
-        title="Project Work",
+        initiative_id="legacy-project-work",
+        assignment_id="legacy-project-work",
+        title="Legacy Project Work",
         objective="Retain an independently reviewed result",
         actor="local-user",
     )
     rewind_reporting.begin_run(
         str(runtime),
-        run_id="project-work-run",
+        run_id="legacy-project-work-run",
         provider="codex",
         cwd=None,
-        work_id="project-work",
+        work_id="legacy-project-work",
     )
     rewind_reporting.end_run(
         str(runtime),
-        run_id="project-work-run",
+        run_id="legacy-project-work-run",
         status="succeeded",
         exit_code=0,
     )
     work_episode = next(
         row
         for row in storage_service.episode_list(runtime)["episodes"]
-        if row["open"]["source"] == "rewind:project-work-run"
+        if row["open"]["source"] == "rewind:legacy-project-work-run"
     )
-    work_control.claim_completion(
+    mission_control.claim_completion(
         str(runtime),
-        initiative_id="project-work",
-        assignment_id="project-work",
+        mission_id="legacy-project-work",
+        goal_id="legacy-project-work",
         statement="The retained result satisfies the Work definition",
         actor="local-user",
         evidence_episode_ids=[int(work_episode["episode_id"])],
-        assignment_set=["project-work"],
+        go_set=["legacy-project-work"],
         acceptance_root="sha256:" + "a" * 64,
         proof_roots=["sha256:" + "b" * 64],
         evidence_availability=[
@@ -95,25 +95,25 @@ def test_completion_review_supports_equal_project_and_work_ids(tmp_path):
             }
         ],
     )
-    state = work_control.query_state(
+    state = mission_control.query_state(
         str(runtime),
-        initiative_id="project-work",
+        mission_id="legacy-project-work",
     )
     assert state["canonical_state"] is True, state["lineage"]
 
-    reviewed = work_control.review_completion(
+    reviewed = mission_control.review_completion(
         str(runtime),
-        initiative_id="project-work",
-        assignment_id="project-work",
+        mission_id="legacy-project-work",
+        goal_id="legacy-project-work",
         reviewer="reviewer-a",
         reviewer_source="independent-session-a",
     )
 
     assert reviewed["review"]["verdict"] == "fit"
-    status = work_control.assignment_orchestration_status(
+    status = mission_control.assignment_orchestration_status(
         str(runtime),
-        initiative_id="project-work",
-        assignment_id="project-work",
+        initiative_id="legacy-project-work",
+        assignment_id="legacy-project-work",
     )
     assert status["phase"] == "independently-reviewed"
 
@@ -396,8 +396,8 @@ def test_project_work_inventory_lists_multiple_captured_work_without_writing(tmp
                 "expiresAt": None,
             },
             "workDefinition": {
-                "assignment_id": f"assignment-example-{index}",
-                "initiative_id": "project-work-example",
+                "goal_id": f"assignment-example-{index}",
+                "mission_id": "project-work-example",
                 "title": f"Example Work {index}",
                 "objective": f"Produce result {index}",
                 "acceptance_criteria": [f"Result {index} is reviewable"],
@@ -439,8 +439,8 @@ def test_project_work_inventory_projects_live_executing_phase(tmp_path):
             "expiresAt": None,
         },
         "workDefinition": {
-            "assignment_id": "assignment-example",
-            "initiative_id": "project-work-example",
+            "goal_id": "assignment-example",
+            "mission_id": "project-work-example",
             "title": "Example Work",
             "objective": "Produce a reviewable result",
             "acceptance_criteria": ["The result is reviewable"],
@@ -449,14 +449,14 @@ def test_project_work_inventory_projects_live_executing_phase(tmp_path):
     orchestration.capture_assignment_request(request, target)
     runtime = project / ".kungfu" / "runtime"
     _activate_work_control(runtime)
-    work_control.create_initiative(
+    mission_control.create_initiative(
         str(runtime),
         initiative_id="project-work-example",
         title="Project Work Example",
         intent="Retain live Work state in the Project view",
         actor="local-user",
     )
-    work_control.create_assignment(
+    mission_control.create_assignment(
         str(runtime),
         initiative_id="project-work-example",
         assignment_id="assignment-example",
@@ -464,7 +464,7 @@ def test_project_work_inventory_projects_live_executing_phase(tmp_path):
         objective="Produce a reviewable result",
         actor="local-user",
     )
-    work_control.claim_assignment_execution(
+    mission_control.claim_assignment_execution(
         str(runtime),
         initiative_id="project-work-example",
         assignment_id="assignment-example",
@@ -475,7 +475,7 @@ def test_project_work_inventory_projects_live_executing_phase(tmp_path):
         lease_expires_at=(datetime.now(timezone.utc) + timedelta(hours=1)).isoformat(),
         authorized_by="local-user",
     )
-    work_control.advance_assignment_phase(
+    mission_control.advance_assignment_phase(
         str(runtime),
         initiative_id="project-work-example",
         assignment_id="assignment-example",

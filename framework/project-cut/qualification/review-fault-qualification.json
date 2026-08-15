@@ -2,7 +2,7 @@
   "schema": "project.cut.review-fault-qualification/v1",
   "qualifiedAt": "2026-07-17",
   "publicShifu": {
-    "command": "./shifu kungfu work review",
+    "command": "./shifu kungfu profile mission-control review-completion",
     "jsonEnvelope": "single-document",
     "sourceCheckoutDispatch": true
   },
@@ -36,7 +36,7 @@
       "project-cut-root-mismatch",
       "post-claim-source-drift"
     ],
-    "test": "framework/core/tests/python/test_assignment_orchestration.py"
+    "test": "framework/core/tests/python/test_atlas_storage.py::test_tracked_completion_evidence_rejects_fault_campaign"
   },
   "qualificationCommands": [
     "node --test scripts/check-project-cut-settlement.test.mjs",

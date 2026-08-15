@@ -271,7 +271,7 @@
       "rule": "Use shifu and artifacts bound to one exact Git commit, tree, and worktree; an installed product cannot substitute for source build or test."
     },
     "hybrid-boundary": {
-      "owner": "kungfu.xinfa",
+      "owner": "kungfu-runtime-surface-composition",
       "rule": "Compose independently rooted installed and source authorities without transferring ownership or hiding either side."
     },
     "capability-negotiated": {
@@ -322,7 +322,7 @@
       ]
     },
     {
-      "id": "xinfa-context-runtime",
+      "id": "atlas-kungfu-hybrid",
       "owner": "kungfu-runtime-surface-composition",
       "surfaceClass": "hybrid-boundary",
       "executableKind": "composed-boundary",
@@ -447,7 +447,7 @@
       "providerPreference": [
         "installed-kungfu",
         "source-shifu",
-        "xinfa-context-runtime"
+        "atlas-kungfu-hybrid"
       ],
       "fallback": {
         "mode": "explicit-qualified",
@@ -470,7 +470,7 @@
       ],
       "selectionMode": "exact",
       "providerPreference": [
-        "xinfa-context-runtime"
+        "atlas-kungfu-hybrid"
       ],
       "fallback": {
         "mode": "forbidden",
@@ -768,6 +768,7 @@
     }
   },
   "authorityBoundaries": {
+    "atlas": "consumer-and-ledger-only",
     "assignmentAndWork": "execution-authority",
     "xinfa": "context-authority",
     "shifu": "source-build-authority",

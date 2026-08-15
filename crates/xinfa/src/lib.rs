@@ -427,7 +427,7 @@ fn normalized(project: &Value) -> Value {
                 "capabilities",
                 "owners",
                 "roles",
-                "initiative_tracks",
+                "mission_tracks",
                 "terms",
             ] {
                 if let Some(values) = route

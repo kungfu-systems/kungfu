@@ -3,179 +3,137 @@ import test from 'node:test';
 
 import type { Profile } from '../../../framework/api/src/capability/profile.ts';
 import {
-  type WorkControlDashboardSnapshot,
+  type AtlasDashboardSnapshot,
   openWorkControlProfile,
 } from '../src/view/work-control-profile.ts';
 
-test('Work Control projection client cannot enter Assignment mutations', async () => {
+test('Work Control Profile compatibility is read-only in the GUI', async () => {
   const source = '/profiles/work-control';
-  const initiativeInput = {
-    initiativeId: 'initiative-a',
-    title: 'Initiative A',
-    intent: 'Use the successor L3 vocabulary',
-    actor: 'test-owner',
-  };
-  const assignmentInput = {
-    initiativeId: 'initiative-a',
-    assignmentId: 'assignment-a',
-    title: 'Assignment A',
-    objective: 'Prove the shared intent surface',
-    actor: 'test-owner',
-  };
-  const executionClaimInput = {
-    initiativeId: 'initiative-a',
-    assignmentId: 'assignment-a',
-    owner: 'test-owner',
-    agent: 'agent-a',
-    slot: 'slot-a',
-    leaseId: 'lease-a',
-    leaseExpiresAt: '2030-01-01T00:00:00Z',
-    authorizedBy: 'test-owner',
-  };
-  const phaseTransitionInput = {
-    initiativeId: 'initiative-a',
-    assignmentId: 'assignment-a',
-    toPhase: 'executing',
-    expectedPhase: 'claimed',
-    actor: 'test-owner',
-    reason: 'begin the bounded execution stage',
-  };
-  const snapshot: WorkControlDashboardSnapshot = {
+  const snapshot = {
     schema: 'kungfu.work-control.dashboard-snapshot/v1',
     cut: { kind: 'system_time', system_time: '42' },
     freshness: { status: 'fresh', basis: 'request-cut' },
     projection_authority: {
-      mode: 'native-fact-projection',
-      source: 'kungfu-facts',
+      mode: 'adapter-projection',
+      source: 'atlas-and-kungfu-facts',
       profileSuiteRoot: 'sha256:profile-root',
       memberRoot: 'sha256:member-root',
       cutSystemTime: '42',
       writableAuthority: false,
     },
+    import_info: null,
     authority: {
       schema: 'kungfu.work-control.authority-status/v1',
-      state: 'native-only',
-      write_authority: 'kungfu-native',
+      state: 'pre-cutover',
+      write_authority: 'atlas-adapter',
+      legacy_mutation_path: 'available',
+      migration_id: '',
+      parity_root: '',
+      transition_count: 0,
     },
-    initiatives: [],
-    assignments: [],
-  };
-  const calls: Array<{ operation: string; input?: unknown }> = [];
+    missions: [],
+    goals: [],
+  } as AtlasDashboardSnapshot;
+  const calls: string[] = [];
   const profile = {
     runtimeDir: '/runtime',
-    discover: (profileId: string) => {
-      assert.equal(profileId, 'kungfu.work-control');
-      return { source };
-    },
+    discover: () => ({ source }),
     memberCallAsync: async (
-      memberSource: string,
-      memberId: string,
+      _source: string,
+      _member: string,
       operation: string,
-      memberInput?: unknown,
     ) => {
-      assert.equal(memberSource, source);
-      assert.equal(memberId, 'work-control-actions');
-      calls.push({ operation, input: memberInput });
+      calls.push(operation);
       return { result: snapshot };
     },
   } as unknown as Profile;
 
-  const workControl = openWorkControlProfile(profile);
-  const projected = await workControl.dashboard();
-  const relationEventInput = {
-    workspaceIdentityRoot: `sha256:${'a'.repeat(64)}`,
-    relation: {
-      schema: 'kungfu.assignment-graph.relation/v1' as const,
-      relation_type: 'related-to',
-      source: {
-        schema: 'kungfu.assignment-graph.work-ref/v1' as const,
-        workspace_identity_root: `sha256:${'a'.repeat(64)}`,
-        object_kind: 'assignment' as const,
-        subject: 'kungfu:assignment-a',
-        version_root: `sha256:${'b'.repeat(64)}`,
-        cut_root: `sha256:${'c'.repeat(64)}`,
-      },
-      target: {
-        schema: 'kungfu.assignment-graph.work-ref/v1' as const,
-        workspace_identity_root: `sha256:${'d'.repeat(64)}`,
-        object_kind: 'assignment' as const,
-        subject: 'kungfu:assignment-b',
-        version_root: `sha256:${'e'.repeat(64)}`,
-        cut_root: `sha256:${'f'.repeat(64)}`,
-      },
-      state: 'accepted' as const,
-      evidence_roots: [],
-      semantics: {},
-      relation_root: `sha256:${'9'.repeat(64)}`,
-    },
-    eventType: 'delegation-offer' as const,
-    actor: 'test-owner',
-  };
+  const compatibility = openWorkControlProfile(profile);
+  assert.equal((await compatibility.dashboard()).schema, snapshot.schema);
   const mutations: Array<[string, () => Promise<unknown>]> = [
+    ['importRepo', () => compatibility.importRepo('/repo')],
+    [
+      'activateWorkControl',
+      () => compatibility.activateWorkControl({ actor: 'test-owner' } as never),
+    ],
+    [
+      'restoreAtlasAuthority',
+      () =>
+        compatibility.restoreAtlasAuthority({ actor: 'test-owner' } as never),
+    ],
+    ['assessMission', () => compatibility.assessMission('initiative-a')],
+    [
+      'assessInitiativeAsync',
+      () => compatibility.assessInitiativeAsync('initiative-a'),
+    ],
     [
       'createInitiative',
       () =>
-        workControl.createInitiative('initiative-a', {
-          title: initiativeInput.title,
-          intent: initiativeInput.intent,
-          actor: initiativeInput.actor,
-        }),
+        compatibility.createInitiative('initiative-a', {
+          actor: 'test-owner',
+        } as never),
     ],
+    [
+      'exportInitiative',
+      () => compatibility.exportInitiative('initiative-a', '/out'),
+    ],
+    ['importInitiative', () => compatibility.importInitiative('/in')],
     [
       'createAssignment',
       () =>
-        workControl.createAssignment('initiative-a', {
-          assignmentId: assignmentInput.assignmentId,
-          title: assignmentInput.title,
-          objective: assignmentInput.objective,
-          actor: assignmentInput.actor,
-        }),
+        compatibility.createAssignment('initiative-a', {
+          actor: 'test-owner',
+        } as never),
     ],
     [
       'appendAssignmentRelationEvent',
-      () => workControl.appendAssignmentRelationEvent(relationEventInput),
+      () =>
+        compatibility.appendAssignmentRelationEvent({
+          actor: 'test-owner',
+        } as never),
     ],
     [
       'claimAssignment',
       () =>
-        workControl.claimAssignment('initiative-a', 'assignment-a', {
-          owner: executionClaimInput.owner,
-          agent: executionClaimInput.agent,
-          slot: executionClaimInput.slot,
-          leaseId: executionClaimInput.leaseId,
-          leaseExpiresAt: executionClaimInput.leaseExpiresAt,
-          authorizedBy: executionClaimInput.authorizedBy,
-        }),
+        compatibility.claimAssignment('initiative-a', 'assignment-a', {
+          authorizedBy: 'test-owner',
+        } as never),
     ],
     [
       'advanceAssignment',
       () =>
-        workControl.advanceAssignment('initiative-a', 'assignment-a', {
-          toPhase: phaseTransitionInput.toPhase,
-          expectedPhase: phaseTransitionInput.expectedPhase,
-          actor: phaseTransitionInput.actor,
-          reason: phaseTransitionInput.reason,
-        }),
+        compatibility.advanceAssignment('initiative-a', 'assignment-a', {
+          actor: 'test-owner',
+        } as never),
+    ],
+    [
+      'claimCompletion',
+      () =>
+        compatibility.claimCompletion('initiative-a', 'assignment-a', {
+          actor: 'test-owner',
+        } as never),
+    ],
+    [
+      'assessCompletion',
+      () => compatibility.assessCompletion('initiative-a', 'assignment-a'),
+    ],
+    [
+      'assessCompletionAsync',
+      () => compatibility.assessCompletionAsync('initiative-a', 'assignment-a'),
     ],
     [
       'reviewCompletion',
       () =>
-        workControl.reviewCompletion('initiative-a', 'assignment-a', {
+        compatibility.reviewCompletion('initiative-a', 'assignment-a', {
           reviewer: 'test-owner',
-          reviewerSource: 'new-review-session',
-        }),
+        } as never),
     ],
     [
       'decideContinuation',
       () =>
-        workControl.decideContinuation('initiative-a', 'assignment-a', {
-          reviewId: 'review-a',
-          expectedReviewRoot: 'sha256:review',
-          expectedPlanRoot: 'sha256:plan-root',
-          action: 'close',
+        compatibility.decideContinuation('initiative-a', 'assignment-a', {
           actor: 'test-owner',
-          reason: 'the exact claim is fit',
-        }),
+        } as never),
     ],
   ];
   for (const [name, mutate] of mutations) {
@@ -183,15 +141,12 @@ test('Work Control projection client cannot enter Assignment mutations', async (
       assert.equal(error.code, 'authority-bypass', name);
       assert.match(
         error.message,
-        /outside the projection client authority.*kungfu\.assignment-runtime\/v1/,
+        /read-only compatibility.*kungfu\.assignment-runtime\/v1/,
       );
       return true;
     });
   }
-
-  assert.equal(projected.projection_authority.writableAuthority, false);
-  assert.equal(workControl.currentDashboard(), projected);
-  assert.deepEqual(calls, [{ operation: 'dashboard', input: {} }]);
+  assert.deepEqual(calls, ['dashboard']);
 });
 
 test('KFD-3 application authority executes an exact verified Profile intent', async () => {

@@ -263,10 +263,10 @@ function seedInstanceProjectIndex(instanceHome, options = {}) {
 
 function nearestExistingWorkspaceHome(cwd) {
   let current = path.resolve(cwd);
-  const globalUserHome = path.join(os.homedir(), '.kungfu');
+  const legacyUserHome = path.join(os.homedir(), '.kungfu');
   for (;;) {
     const candidate = path.join(current, '.kungfu');
-    if (existsSync(candidate) && path.resolve(candidate) !== globalUserHome) {
+    if (existsSync(candidate) && path.resolve(candidate) !== legacyUserHome) {
       return candidate;
     }
     const parent = path.dirname(current);

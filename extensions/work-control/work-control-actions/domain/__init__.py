@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
-"""Kungfu-native Work Control Suite domain."""
+"""Work Control Suite domain with an explicit compatibility package."""
 
-from . import initiative_bundle, native_state, work_control
+from . import compatibility, native_state, work_control
 
-__all__ = ["initiative_bundle", "native_state", "work_control"]
+__all__ = ["compatibility", "native_state", "work_control"]

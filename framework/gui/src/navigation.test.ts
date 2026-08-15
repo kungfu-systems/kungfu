@@ -81,7 +81,7 @@ const entries = [
   },
 ];
 
-const workControl: ProfileManifest = {
+const missionControl: ProfileManifest = {
   id: 'kungfu.work-control',
   title: 'Work Control',
   kfx: ['work-dashboard'],
@@ -90,7 +90,7 @@ const workControl: ProfileManifest = {
 
 test('primary navigation is the four high-frequency product surfaces', () => {
   assert.deepEqual(
-    primaryNavigation(workControl, entries).map(({ id, title, icon }) => ({
+    primaryNavigation(missionControl, entries).map(({ id, title, icon }) => ({
       id,
       title,
       icon,
@@ -107,7 +107,7 @@ test('primary navigation is the four high-frequency product surfaces', () => {
 test('low-frequency views remain accessible without entering primary navigation', () => {
   const accessible = accessibleEntries(entries, state);
   const primary = new Set(
-    primaryNavigation(workControl, accessible).map((item) => item.id),
+    primaryNavigation(missionControl, accessible).map((item) => item.id),
   );
   const secondary = [
     ...navigationForRole(accessible, 'tool'),
@@ -139,7 +139,7 @@ test('a custom Profile supplies its own first screen without shell edits', () =>
 });
 
 test('missing Profile Home falls back visibly to Profiles', () => {
-  const missing = { ...workControl, defaultView: 'missing-dashboard' };
+  const missing = { ...missionControl, defaultView: 'missing-dashboard' };
   assert.equal(profileHomeId(missing, entries), 'kfx-manager');
   assert.deepEqual(primaryNavigation(missing, entries)[0], {
     id: 'kfx-manager',
@@ -155,11 +155,11 @@ test('default focus resolves to the first discovered Profile', () => {
     kfx: ['week-dashboard'],
     defaultView: 'week-dashboard',
   };
-  const profiles = availableProfiles([custom, workControl]);
+  const profiles = availableProfiles([custom, missionControl]);
   assert.equal(focusedProfile(profiles, 'default').id, custom.id);
   assert.equal(
-    focusedProfile(profiles, 'default', workControl.id).id,
-    workControl.id,
+    focusedProfile(profiles, 'default', missionControl.id).id,
+    missionControl.id,
   );
 });
 
@@ -172,7 +172,7 @@ test('empty discovery resolves to the visible Profile Manager fallback', () => {
 
 test('a missing persisted Profile degrades to Profile Manager', () => {
   assert.equal(
-    focusedProfile([workControl], 'missing.profile').id,
+    focusedProfile([missionControl], 'missing.profile').id,
     'system.profile-manager',
   );
 });

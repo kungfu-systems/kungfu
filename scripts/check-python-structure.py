@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 # SPDX-License-Identifier: Apache-2.0
 
 """Build-free, exact-root Python structure governance and report query."""
@@ -14,10 +15,9 @@ import os
 import subprocess
 import sys
 import tarfile
-from collections.abc import Iterable
-from datetime import UTC, date, datetime
+from datetime import date
 from pathlib import Path
-from typing import Any
+from typing import Any, Iterable
 
 ROOT = Path(__file__).resolve().parents[1]
 MANIFEST_PATH = Path("framework/maintainability/abstraction-integrity.manifest.json")
@@ -42,7 +42,7 @@ def digest_bytes(value: bytes) -> str:
 def read_json(relative: Path) -> dict[str, Any]:
     value = json.loads((ROOT / relative).read_text(encoding="utf-8"))
     if not isinstance(value, dict):
-        raise TypeError(f"{relative} must contain an object")
+        raise ValueError(f"{relative} must contain an object")
     return value
 
 
@@ -452,7 +452,7 @@ def exception_issues(manifest: dict[str, Any]) -> list[dict[str, Any]]:
             except ValueError:
                 valid = False
             else:
-                valid = expires > datetime.now(UTC).date()
+                valid = expires > date.today()
         if (
             not valid
             or not identifier

@@ -222,7 +222,7 @@ function verifyRetainedBinding(
       }
       for (const field of [
         'schema',
-        'assignmentId',
+        'goalId',
         'commit',
         'tree',
         'reviewer',
@@ -247,10 +247,16 @@ function verifyRetainedBinding(
         'kungfu.assignment-request/v1',
       );
       mismatch(
+        'retained-request-goal',
+        'assignment.request.goalId',
+        document?.workDefinition?.goal_id,
+        matrix.goalId,
+      );
+      mismatch(
         'retained-request-source',
         'assignment.request.sourceId',
         document?.source?.sourceId,
-        matrix.assignmentId,
+        matrix.goalId,
       );
       break;
     case 'assignment-capture':
@@ -281,13 +287,13 @@ function verifyRetainedBinding(
         live.source?.head,
       );
       if (
-        !Array.isArray(document?.assignment_set) ||
-        !document.assignment_set.includes(matrix.assignmentId)
+        !Array.isArray(document?.go_set) ||
+        !document.go_set.includes(matrix.goalId)
       ) {
         issues.push(
           issue(
             'retained-claim-assignment',
-            'assignment.claim.assignment_set',
+            'assignment.claim.go_set',
             'completion claim does not include the terminal Assignment',
           ),
         );
@@ -356,7 +362,7 @@ function verifyRetainedBinding(
     case 'predecessor-seal': {
       const expectedAssignment =
         object.kind === 'assignment-seal'
-          ? matrix.assignmentId
+          ? matrix.goalId
           : object.kind === 'predecessor-seal'
             ? matrix.predecessor.assignmentId
             : object.assignmentId;
@@ -753,10 +759,10 @@ export function verifyTerminalEvidence(
     issues,
   );
   exact(
-    evidence.assignmentId,
-    matrix.assignmentId,
+    evidence.goalId,
+    matrix.goalId,
     'goal-identity-mismatch',
-    'assignmentId',
+    'goalId',
     issues,
   );
   if ((matrix.exceptions || []).length !== 0) {
@@ -948,10 +954,10 @@ export function verifyTerminalEvidence(
     issues,
   );
   exact(
-    live.terminalReview?.assignmentId,
-    matrix.assignmentId,
+    live.terminalReview?.goalId,
+    matrix.goalId,
     'review-attestation-goal-mismatch',
-    'live.terminalReview.assignmentId',
+    'live.terminalReview.goalId',
     issues,
   );
   exact(

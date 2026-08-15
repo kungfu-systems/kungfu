@@ -30,14 +30,14 @@ fn exact_resolution(value: &Value) -> Result<Value, String> {
         "capabilities",
         "owners",
         "roles",
-        "initiative_tracks",
+        "mission_tracks",
         "terms",
     ]
     .into_iter()
     .collect();
     let observed: BTreeSet<&str> = resolution.keys().map(String::as_str).collect();
     if observed != allowed {
-        return Err("selection route resolution must declare exactly subjects, capabilities, owners, roles, initiative_tracks, and terms".to_owned());
+        return Err("selection route resolution must declare exactly subjects, capabilities, owners, roles, mission_tracks, and terms".to_owned());
     }
     let mut output = Map::new();
     for key in allowed {

@@ -157,7 +157,7 @@ diagnostic receipt on invalid input.
 
 ## Consequences
 
-- A project can organize Week/Day, Task/Job/Action, Initiative/Assignment, or another
+- A project can organize Week/Day, Task/Job/Action, Mission/Go, or another
   domain without adding those concepts to Xinfa core.
 - Human documentation quality and Agent context efficiency can improve
   independently while truth roots stay shared.

@@ -388,6 +388,7 @@ function testShifuDocumentationContract() {
     path.join('scripts', 'shifu-documentation-consumers.test.mjs'),
     path.join('scripts', 'kungfu-xinfa-consumer.test.mjs'),
     path.join('scripts', 'buildchain-documentation-witness.test.mjs'),
+    path.join('scripts', 'backfill-legacy-atlas-roots.test.mjs'),
   ]);
   run('Shifu Documentation material lane', 'node', [
     path.join('scripts', 'run-documentation-material-tests.mjs'),

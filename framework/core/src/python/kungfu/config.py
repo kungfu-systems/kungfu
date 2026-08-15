@@ -130,8 +130,18 @@ def validate_value(
 def _embedded_work_ref_schema(
     schemas: Mapping[str, Any], value_schema_name: str
 ) -> dict[str, Any]:
-    del value_schema_name
-    return copy.deepcopy(schemas["workRef"])
+    canonical = copy.deepcopy(schemas["workRef"])
+    if value_schema_name != "workConsoleRegistry":
+        return canonical
+    legacy = copy.deepcopy(canonical)
+    legacy["properties"].pop("initiativeId", None)
+    legacy.pop("allOf", None)
+    return {
+        "oneOf": [canonical, legacy],
+        "x-kungfu-compatibility": (
+            "legacy WorkRef v1 remains readable only in retained registry data"
+        ),
+    }
 
 
 def raw_default_config(

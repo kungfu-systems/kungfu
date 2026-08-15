@@ -28,7 +28,7 @@ last_reviewed: 2026-07-28
   [KF-ADR-019f86da-4f90-7b3f-9ef3-84f5a878f302](KF-ADR-019f86da-4f90-7b3f-9ef3-84f5a878f302.md),
   [KF-ADR-019f86da-4f90-7b6b-ae6d-76cea57487f2](KF-ADR-019f86da-4f90-7b6b-ae6d-76cea57487f2.md),
   [KF-ADR-019f86da-4f90-712d-b871-24090476e338](KF-ADR-019f86da-4f90-712d-b871-24090476e338.md),
-  and the current native contract
+  and [KF-ADR-019f86da-4f90-79d7-a4b7-044fcf998708](KF-ADR-019f86da-4f90-79d7-a4b7-044fcf998708.md)
 
 ## Context
 

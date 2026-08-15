@@ -157,8 +157,8 @@
           ],
           "detailRoot": "sha256:cc0aa61428283750b5b477be90db9715fd38b8a94309b1490c92fbc33cea4254",
           "kind": "missing",
-          "memberId": "initiative-profile",
-          "omissionId": "thin-material:initiative-profile",
+          "memberId": "mission-profile",
+          "omissionId": "thin-material:mission-profile",
           "requiredForScope": true
         },
         {
@@ -209,8 +209,8 @@
           ],
           "detailRoot": "sha256:9e797423c1c5288840302bdfe95d3b6b1a23da798314ec87fadbd6c54ef3ca43",
           "kind": "missing",
-          "memberId": "initiative-state",
-          "omissionId": "thin-material:initiative-state",
+          "memberId": "mission-state",
+          "omissionId": "thin-material:mission-state",
           "requiredForScope": true
         }
       ],
@@ -246,7 +246,7 @@
       "verdict": "unqualified-no-artifact-evidence"
     }
   ],
-  "reportRoot": "sha256:a9cff1062c4debd0be2104b3a799051958ade835ceb160663f29d621464b28b5",
+  "reportRoot": "sha256:105a912f54720bf5665b8cfd666013b788e423cd841b7a5af8525b9bc11d1726",
   "schema": "kungfu.exit-clean-runtime-qualification/v1",
   "status": "qualified"
 }

@@ -36,7 +36,7 @@ const pythonSdk = read('framework/storage/python/kungfu_sdk/native.py');
 const runtimeAction = read(
   'framework/core/src/libkungfu/src/runtime/action/action_runtime.cpp',
 );
-const operationActions = readJson(
+const missionActions = readJson(
   'extensions/work-control/actions/registry.json',
 );
 
@@ -210,9 +210,7 @@ test('mechanically closes the native ABI and runtime-action operation inventory'
 });
 
 test('binds implemented native and Work Control routes to repository evidence', () => {
-  const operationIds = new Set(
-    operationActions.actions.map((action) => action.id),
-  );
+  const missionIds = new Set(missionActions.actions.map((action) => action.id));
   for (const operation of contract.operations) {
     if (operation.native.interface === 'kf_ledger_action_api_v1') {
       for (const name of operation.native.operations) {
@@ -236,7 +234,7 @@ test('binds implemented native and Work Control routes to repository evidence', 
     }
     if (operation.native.interface === 'work-control-actions') {
       for (const name of operation.native.operations) {
-        assert.equal(operationIds.has(name), true, name);
+        assert.equal(missionIds.has(name), true, name);
       }
     }
   }

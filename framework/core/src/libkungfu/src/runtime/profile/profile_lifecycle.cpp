@@ -380,9 +380,7 @@ nlohmann::json normalize_profile(const nlohmann::json &input) {
   }
 
   const auto &kfd1 = input.at("kfd1");
-  require_exact_keys(kfd1, kfd1.contains("compatibility")
-                               ? std::set<std::string>{"contractWorld", "factSurfaces", "reducers", "compatibility"}
-                               : std::set<std::string>{"contractWorld", "factSurfaces", "reducers"});
+  require_exact_keys(kfd1, {"contractWorld", "factSurfaces", "reducers", "compatibility"});
   const auto &kfd2 = input.at("kfd2");
   require_exact_keys(kfd2, {"claims", "purposes", "policies"});
 
@@ -401,7 +399,8 @@ nlohmann::json normalize_profile(const nlohmann::json &input) {
                                {"kfd1",
                                 {{"contractWorld", normalize_ref(kfd1.at("contractWorld"))},
                                  {"factSurfaces", normalize_refs(kfd1.at("factSurfaces"), "kfd1.factSurfaces", true)},
-                                 {"reducers", normalize_refs(kfd1.at("reducers"), "kfd1.reducers", false)}}},
+                                 {"reducers", normalize_refs(kfd1.at("reducers"), "kfd1.reducers", false)},
+                                 {"compatibility", normalize_ref(kfd1.at("compatibility"))}}},
                                {"kfd2",
                                 {{"claims", normalize_refs(kfd2.at("claims"), "kfd2.claims", true)},
                                  {"purposes", normalize_tokens(kfd2.at("purposes"), "kfd2.purposes", true)},
@@ -411,8 +410,6 @@ nlohmann::json normalize_profile(const nlohmann::json &input) {
                                {"migrations", registry(input.at("migrations"))},
                                {"permissions", registry(input.at("permissions"))},
                                {"qualification", {{"profile", normalize_ref(qualification.at("profile"))}}}};
-  if (kfd1.contains("compatibility"))
-    normalized["kfd1"]["compatibility"] = normalize_ref(kfd1.at("compatibility"));
   if (input.contains("kfd3")) {
     const auto &kfd3 = input.at("kfd3");
     require_exact_keys(kfd3, {"collaboration"});
@@ -465,8 +462,7 @@ std::vector<nlohmann::json> profile_refs(const nlohmann::json &profile) {
     collect_ref(ref, refs);
   for (const auto &ref : profile.at("kfd1").at("reducers"))
     collect_ref(ref, refs);
-  if (profile.at("kfd1").contains("compatibility"))
-    collect_ref(profile.at("kfd1").at("compatibility"), refs);
+  collect_ref(profile.at("kfd1").at("compatibility"), refs);
   for (const auto &ref : profile.at("kfd2").at("claims"))
     collect_ref(ref, refs);
   for (const auto &ref : profile.at("kfd2").at("policies"))
@@ -610,17 +606,15 @@ std::vector<std::string> declared_permissions(const nlohmann::json &inspection) 
 
 nlohmann::json qualify_inspection(const nlohmann::json &inspection, const nlohmann::json &work_conformance) {
   const auto &profile = inspection.at("profile");
-  if (profile.at("kfd1").contains("compatibility")) {
-    const auto compatibility_ref = profile.at("kfd1").at("compatibility");
-    const auto compatibility = parse_bound_json(inspection, required_text(compatibility_ref, "path"));
-    require_exact_keys(compatibility, {"schema", "runtimeContracts"});
-    if (required_text(compatibility, "schema") != "kungfu.profile-compatibility/v1") {
-      throw std::invalid_argument("compatibility artifact must use kungfu.profile-compatibility/v1");
-    }
-    const auto runtime_contracts = normalize_strings(compatibility.at("runtimeContracts"), "runtimeContracts", true);
-    if (!std::binary_search(runtime_contracts.begin(), runtime_contracts.end(), PROFILE_LIFECYCLE_CONTRACT_V1)) {
-      throw std::invalid_argument("Profile does not declare compatibility with kungfu.profile-lifecycle/v1");
-    }
+  const auto compatibility_ref = profile.at("kfd1").at("compatibility");
+  const auto compatibility = parse_bound_json(inspection, required_text(compatibility_ref, "path"));
+  require_exact_keys(compatibility, {"schema", "runtimeContracts"});
+  if (required_text(compatibility, "schema") != "kungfu.profile-compatibility/v1") {
+    throw std::invalid_argument("compatibility artifact must use kungfu.profile-compatibility/v1");
+  }
+  const auto runtime_contracts = normalize_strings(compatibility.at("runtimeContracts"), "runtimeContracts", true);
+  if (!std::binary_search(runtime_contracts.begin(), runtime_contracts.end(), PROFILE_LIFECYCLE_CONTRACT_V1)) {
+    throw std::invalid_argument("Profile does not declare compatibility with kungfu.profile-lifecycle/v1");
   }
 
   const auto qualification_ref = profile.at("qualification").at("profile");

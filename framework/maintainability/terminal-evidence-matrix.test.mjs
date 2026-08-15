@@ -158,8 +158,31 @@ function fixture() {
       expiresAt: null,
       policy: 'explicit-expiry-retain-bytes-v1',
     },
-    source: { kind: 'kungfu-assignment', sourceId: fixtureMatrix.assignmentId },
-    workDefinition: { assignment_id: fixtureMatrix.assignmentId },
+    source: { kind: 'atlas-go-card', sourceId: fixtureMatrix.goalId },
+    workDefinition: {
+      goal_id: fixtureMatrix.goalId,
+      parent_assignment_identity: {
+        assignment_id: fixtureMatrix.dependencies[0].requiredAssignmentId,
+      },
+      // The retained v4 request repeats its parent in dependency_identities.
+      // Authority comparison is set-based, so this must not invent a ninth
+      // dependency or reject the one exact parent/dependency identity.
+      dependency_identities: fixtureMatrix.dependencies.map(
+        ({ requiredAssignmentId }) => ({
+          assignment_id: requiredAssignmentId,
+        }),
+      ),
+      review_baseline: {
+        open_pull_requests_at_review: [
+          '#2235',
+          '#2212',
+          '#2193',
+          '#2173',
+          '#2109',
+          '#1997',
+        ],
+      },
+    },
   };
   const requestRoot = retain(
     'assignment-request',
@@ -185,7 +208,7 @@ function fixture() {
     claim_id: `completion-${'d'.repeat(24)}`,
     claim_type: 'task-completed',
     git_commit: HEAD,
-    assignment_set: [fixtureMatrix.assignmentId],
+    go_set: [fixtureMatrix.goalId],
     known_gaps: [],
   };
   const terminalReview = {
@@ -205,7 +228,7 @@ function fixture() {
   );
   const terminalAttestation = {
     schema: 'kungfu.terminal-review-attestation/v1',
-    assignmentId: fixtureMatrix.assignmentId,
+    goalId: fixtureMatrix.goalId,
     commit: HEAD,
     tree: TREE,
     reviewer: 'kungfu-origin',
@@ -241,7 +264,7 @@ function fixture() {
   const assignmentSeal = {
     schema: 'kungfu.assignment-orchestration.sealed-state/v1',
     assignment: {
-      assignment_id: fixtureMatrix.assignmentId,
+      assignment_id: fixtureMatrix.goalId,
       request_root: requestRoot,
       capture_receipt_roots: [captureReceiptRoot],
     },
@@ -307,7 +330,7 @@ function fixture() {
   };
   const evidence = {
     schema: fixtureMatrix.terminalEvidence.schema,
-    assignmentId: fixtureMatrix.assignmentId,
+    goalId: fixtureMatrix.goalId,
     source: {
       repository: fixtureMatrix.sourceBinding.repository,
       protectedBranch: fixtureMatrix.sourceBinding.protectedBranch,
@@ -358,7 +381,7 @@ function fixture() {
     },
     assignment: {
       initiativeId: 'kungfu-technical-stewardship',
-      assignmentId: fixtureMatrix.assignmentId,
+      assignmentId: fixtureMatrix.goalId,
       workspaceIdentityRoot: `sha256:${'f'.repeat(64)}`,
       phase: 'continuation-decided',
       status: 'active',
@@ -463,7 +486,7 @@ function fixture() {
       },
       assignment: {
         initiativeId: 'kungfu-technical-stewardship',
-        assignmentId: fixtureMatrix.assignmentId,
+        assignmentId: fixtureMatrix.goalId,
         workspaceIdentityRoot: `sha256:${'f'.repeat(64)}`,
         phase: 'continuation-decided',
         status: 'active',
@@ -482,7 +505,7 @@ function fixture() {
         decisionAction: 'close',
         sealVerified: true,
         nextActions: [],
-        sealedAssignmentId: fixtureMatrix.assignmentId,
+        sealedAssignmentId: fixtureMatrix.goalId,
         sealedPhase: 'continuation-decided',
         statusCounts: {
           completion_claims: 1,

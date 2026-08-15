@@ -44,6 +44,38 @@
         "initiativeId": { "type": "string", "minLength": 1 }
       }
     },
+    "legacyWorkRefV1": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema",
+        "workspaceId",
+        "profileId",
+        "profileRoot",
+        "entityType",
+        "entityId",
+        "entityRoot",
+        "purpose",
+        "systemTimeCut"
+      ],
+      "properties": {
+        "schema": { "const": "kungfu.work-ref/v1" },
+        "workspaceId": { "type": "string", "minLength": 1 },
+        "profileId": { "type": "string", "minLength": 1 },
+        "profileRoot": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+        "entityType": { "type": "string", "minLength": 1 },
+        "entityId": { "type": "string", "minLength": 1 },
+        "entityRoot": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+        "purpose": { "type": "string", "minLength": 1 },
+        "systemTimeCut": { "type": "string", "minLength": 1 }
+      }
+    },
+    "readableWorkRef": {
+      "oneOf": [
+        { "$ref": "#/$defs/workRef" },
+        { "$ref": "#/$defs/legacyWorkRefV1" }
+      ]
+    },
     "binding": {
       "oneOf": [
         {
@@ -52,7 +84,7 @@
           "required": ["kind", "workRef"],
           "properties": {
             "kind": { "const": "work" },
-            "workRef": { "$ref": "#/$defs/workRef" }
+            "workRef": { "$ref": "#/$defs/readableWorkRef" }
           }
         },
         {
@@ -312,7 +344,7 @@
         "schema": { "const": "kungfu.active-work-lease/v1" },
         "leaseId": { "type": "string", "minLength": 1 },
         "workKey": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
-        "workRef": { "$ref": "#/$defs/workRef" },
+        "workRef": { "$ref": "#/$defs/readableWorkRef" },
         "workConsoleId": { "type": "string", "minLength": 1 },
         "sessionAttemptId": { "type": "string", "minLength": 1 },
         "provider": { "type": "string", "minLength": 1 },

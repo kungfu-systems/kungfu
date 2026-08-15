@@ -210,7 +210,7 @@ runtime consumers:
 - runtime.coordination.
 
 Adding a capability requires an owner port, readiness rule, negative fixture,
-and a caller that needs it. Product nouns, provider names, Initiative/Assignment semantics,
+and a caller that needs it. Product nouns, provider names, Mission/Go semantics,
 tmux, and GUI presentation do not belong in Core capability ids.
 
 ## Error vocabulary

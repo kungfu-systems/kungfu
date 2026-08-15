@@ -168,11 +168,11 @@ implemented and qualified or explicitly waived for that release.
   are separate algorithm surfaces), and
   [0029](KF-ADR-019f86da-4f90-7a7d-99ba-c5c18088d450.md) (the v2 frame receipt checksum
   algorithm selection and fsck metadata rules), and
-  [0030](the current native contract.md) (the first manifest-scoped
+  [0030](KF-ADR-019f86da-4f90-765c-9723-069718911491.md) (the first manifest-scoped
   sync root that binds payload/action/frame receipt evidence for export/fsck),
   [0031](KF-ADR-019f86da-4f90-764b-a1f8-90375260328c.md) (the v4 greenfield switch of internal
   fast hashes to XXH3_64 / XXH3_128), and
-  [0032](the current native contract.md) (the first generic source
+  [0032](KF-ADR-019f86da-4f90-7111-9165-691b834edbab.md) (the first generic source
   registry, accepted-range, bundle import/export, and fsck service slice), and
   [0033](KF-ADR-019f86da-4f90-791c-9b90-4888cca36327.md) (Episode as the first-class
   causal segment object for storage, sync, fsck, import/export, and timeline
@@ -204,7 +204,10 @@ implemented and qualified or explicitly waived for that release.
   trust-assessment path),
   [0052](KF-ADR-019f86da-4f90-7b3f-9ef3-84f5a878f302.md) (claim-triggered
   assessment jobs, workspace-coordinator coordination, Assessment Episodes, and
-  equivalent process/thread executors),
+  equivalent process/thread executors), and
+  [0059](KF-ADR-019f86da-4f90-71be-a2aa-c8744fa340d8.md) (the
+  Mission/Go responsibility domain, Atlas bridge authority, and Cost/State/Proof
+  profile composition),
   [0060](KF-ADR-019f86da-4f90-7d61-8afa-33d66ca05d36.md) (Desktop
   Home/project workspace selection, global recent-workspace state,
   first-run Agent Work Inbox, and write-intent-bound data-home initialization),
@@ -242,13 +245,13 @@ implemented and qualified or explicitly waived for that release.
   [Initiative and Assignment L3 contract](KF-ADR-019f8759-ab29-7627-bc04-6aba547ea45f.md) names Initiative
   and Assignment as the canonical L3 control-plane records, gives their
   successor contract world an independent identity, preserves legacy
-  Initiative/Assignment evidence as exact read-only history, and leaves KFD-7 Pursuit
+  Mission/Go evidence as exact read-only history, and leaves KFD-7 Pursuit
   unchanged.
   [Build-free Assignment request capture](KF-ADR-019f878c-5480-7890-bc64-9b2aab7e9aa5.md) adds the preceding
   capture boundary: lossless request material may enter a project inbox or
   unassigned Home without creating runtime, journal, Initiative, or Assignment
   authority.
-  the current Assignment orchestration contract
+  [Portable sealed Assignment orchestration state](KF-ADR-019f87cc-bd1f-786d-896d-07ea9245861e.md)
   makes the native phase machine and closeout evidence survive worktree cleanup.
   [Assignment claim owner, agent, slot, and lease](KF-ADR-019f87cc-bd45-7a5c-9b37-1d6b5917928a.md)
   separates accountability, runtime identity, execution placement, and bounded

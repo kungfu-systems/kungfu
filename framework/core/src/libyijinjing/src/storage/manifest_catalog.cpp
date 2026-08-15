@@ -304,7 +304,7 @@ nlohmann::json source_record_edge(const ImportManifestAccepted &record) {
       {"schema", STORAGE_SOURCE_RECORD_SCHEMA_V1},
       {"source_id", fixed_string(record.source_id)},
       {"type", source_type},
-      {"kind", source_type == "adapter" ? "adapter" : "local"},
+      {"kind", source_type == "atlas" ? "adapter" : "local"},
       {"coordinate", fixed_string(record.source_coordinate)},
       {"current_head",
        {

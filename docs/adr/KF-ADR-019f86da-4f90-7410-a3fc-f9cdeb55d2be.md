@@ -134,7 +134,7 @@ is not consulted when resolving semantic parents.
 ## Non-claims
 
 This decision does not walk Git, create a Project Cut file, write a hook, seal
-or qualify an Episode provider, compile Xinfa, move Initiative/Assignment authority, or
+or qualify an Episode provider, compile Xinfa, move Mission/Go authority, or
 claim a release. Optional JSON Schema validation may be unavailable in a
 dependency-free stage-0 checkout; the built-in semantic and root verifier
 remains authoritative for this protocol implementation.

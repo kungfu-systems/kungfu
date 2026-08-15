@@ -318,7 +318,7 @@ test('the machine contract contains no product workflow vocabulary', () => {
   const machineContract = read(
     'framework/fact/kungfu-fact-cut-kernel.contract.json',
   ).toLowerCase();
-  for (const forbidden of ['pursuit', 'warrant'])
+  for (const forbidden of ['pursuit', 'warrant', 'mission', 'goal', 'go-card'])
     assert.equal(
       new RegExp(`\\b${forbidden}\\b`, 'u').test(machineContract),
       false,

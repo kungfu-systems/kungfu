@@ -94,7 +94,7 @@ storage_status_result status_typed_impl(const storage_status_request &request) {
     status.source_record =
         storage_manifest_source_view{status.source_id,
                                      source_type,
-                                     source_type == "adapter" ? "adapter" : "local",
+                                     source_type == "atlas" ? "adapter" : "local",
                                      fixed_string(manifest.source_coordinate),
                                      *status.source_head,
                                      {fixed_string(manifest.range_since), fixed_string(manifest.range_until)},

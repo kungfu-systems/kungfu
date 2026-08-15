@@ -224,7 +224,7 @@ give those facts local meaning.
 | future industrial or device profiles | command, observation, interlock, maintenance action, operator decision | Episode, Fact, Receipt, Claim, Proof, Recovery |
 
 The current Agent Work profile preserves **Pursuit**, **Atlas**, **Warrant**,
-and **Episode**, with Initiative, Assignment, Responsibility State, and Cost/State/Proof as
+and **Episode**, with Mission, Go, Responsibility State, and Cost/State/Proof as
 current product projections. Pursuit, Atlas, and Warrant build on Fact state;
 Episode independently preserves causal experience. Those profile terms do not
 replace the domain-neutral substrates.
@@ -251,7 +251,7 @@ by the current implementation, platform, durability profile, and retained
 qualification evidence. Read [Known Limits](../qualification/known-limits.md) before treating a
 design target as a released guarantee.
 
-## Assignment deeper
+## Go deeper
 
 - [Vocabulary Reference](vocabulary.md) gives canonical definitions and
   relationships for the terms introduced here.

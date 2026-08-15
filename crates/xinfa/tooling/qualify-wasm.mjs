@@ -322,7 +322,7 @@ async function onboardingFixture(temporary) {
           capabilities: ['onboarding'],
           owners: ['project'],
           roles: ['contributor'],
-          initiative_tracks: ['repository-onboarding'],
+          mission_tracks: ['repository-onboarding'],
           terms: ['node'],
         },
       },

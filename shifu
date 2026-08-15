@@ -303,7 +303,7 @@ if [ "${1:-}" = "work" ]; then
   if [ -n "$_kungfu_checkout_binding" ] && [ -f "$_kungfu_checkout_build_info" ] && [ -n "$_kungfu_uv" ]; then
     cd ./framework/core && exec "$_kungfu_uv" run --frozen python .devtools/kungfu_cli.py work "$@"
   fi
-  printf '%s\n' '{"schema":"kungfu.assignment-orchestration.diagnosis/v1","ok":false,"code":"qualified-product-required","message":"Assignment orchestration requires an installed qualified Kungfu product","next_actions":[{"action":"use-installed-product","command":"kungfu work","description":"Run Work through an installed qualified Kungfu product"}]}'
+  printf '%s\n' '{"schema":"kungfu.assignment-orchestration.diagnosis/v1","ok":false,"code":"assignment-current-checkout-binding-missing","message":"Assignment admission requires pykungfu from the current checkout","next_actions":[{"action":"build-core","command":"./shifu build:core","description":"Assemble pykungfu from the current checkout"}]}'
   exit 127
 fi
 # Use the executable assembled from this checkout, never a global `kungfu`.

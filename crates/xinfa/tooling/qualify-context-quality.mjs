@@ -114,10 +114,10 @@ function taskEnvelope(atlas, item) {
     audience: 'agent',
     role: item.role,
     visibility: 'public',
-    work_context: {
-      id: 'kungfu-work-context',
+    mission: {
+      id: 'kungfu-technical-stewardship',
       lens: 'principal-engineer',
-      track: item.initiative_track,
+      track: item.mission_track,
     },
     acceptance: [
       `route ${item.expected_route} includes every declared critical source`,

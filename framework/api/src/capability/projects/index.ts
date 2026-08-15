@@ -475,8 +475,8 @@ export type ProjectWorkCapturePlan = {
       expiresAt: null;
     };
     workDefinition: {
-      assignment_id: string;
-      initiative_id: string;
+      goal_id: string;
+      mission_id: string;
       title: string;
       objective: string;
       acceptance_criteria: string[];
@@ -796,8 +796,8 @@ export function prepareProjectWork(
         expiresAt: null,
       },
       workDefinition: {
-        assignment_id: assignmentId,
-        initiative_id: initiativeId,
+        goal_id: assignmentId,
+        mission_id: initiativeId,
         title,
         objective: normalizedObjective,
         acceptance_criteria: acceptanceChecks,

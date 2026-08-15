@@ -19,7 +19,7 @@ usage: kungfu storage-status [--runtime-dir <dir>] [--provider <name>]
                              [--json]
 
 Summarize native storage state without booting CPython. With no --source the
-whole runtime is inspected; this command has no mutation or consumer-specific status mode.";
+whole runtime is inspected; this command has no mutation or Atlas-status mode.";
 
 #[cfg(feature = "embedding")]
 struct TemporaryContextRoot {
@@ -176,7 +176,7 @@ mod tests {
         assert_eq!(parsed.provider_config_source.as_deref(), Some("explicit"));
         assert_eq!(parsed.source.as_deref(), Some("alpha"));
         assert!(parsed.json);
-        assert!(parse(&s(&["--scope", "project"])).is_err());
+        assert!(parse(&s(&["--scope", "atlas"])).is_err());
         assert!(parse(&s(&["--execute"])).is_err());
     }
 

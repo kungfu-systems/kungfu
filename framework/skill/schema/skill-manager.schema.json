@@ -96,6 +96,7 @@
                     "rootType": {
                       "enum": [
                         "user-home",
+                        "identity-pool",
                         "system",
                         "repo-local",
                         "configured"
@@ -141,6 +142,7 @@
                     "rootType": {
                       "enum": [
                         "user-home",
+                        "identity-pool",
                         "system",
                         "repo-local",
                         "configured"

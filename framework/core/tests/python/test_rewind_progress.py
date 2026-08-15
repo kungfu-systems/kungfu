@@ -26,9 +26,9 @@ def test_agent_console_progress_coordinates_come_from_explicit_env(
                 "workspaceId": "home",
                 "profileId": "kungfu.work-control",
                 "profileRoot": "sha256:profile",
-                "entityType": "assignment",
-                "entityId": "assignment-1",
-                "entityRoot": "sha256:assignment",
+                "entityType": "go",
+                "entityId": "go-1",
+                "entityRoot": "sha256:go",
             }
         ),
     )
@@ -41,16 +41,16 @@ def test_agent_console_progress_coordinates_come_from_explicit_env(
         "workspaceId": "home",
         "profileId": "kungfu.work-control",
         "profileRoot": "sha256:profile",
-        "entityType": "assignment",
-        "entityId": "assignment-1",
-        "entityRoot": "sha256:assignment",
+        "entityType": "go",
+        "entityId": "go-1",
+        "entityRoot": "sha256:go",
     }
 
 
 def test_agent_console_progress_rejects_partial_work_ref(monkeypatch):
     monkeypatch.setenv(
         progress_contract.WORK_REF_ENV,
-        json.dumps({"schema": "kungfu.work-ref/v1", "entityId": "assignment-1"}),
+        json.dumps({"schema": "kungfu.work-ref/v1", "entityId": "go-1"}),
     )
 
     with pytest.raises(ValueError, match="complete kungfu.work-ref/v1"):
@@ -69,9 +69,9 @@ def test_run_progress_flatbuffer_preserves_live_work_ref():
         workspace_id="home",
         profile_id="kungfu.work-control",
         profile_root="sha256:profile",
-        entity_type="assignment",
-        entity_id="assignment-1",
-        entity_root="sha256:assignment",
+        entity_type="go",
+        entity_id="go-1",
+        entity_root="sha256:go",
     )
 
     progress = RunProgress.GetRootAs(payload, 0)
@@ -84,9 +84,9 @@ def test_run_progress_flatbuffer_preserves_live_work_ref():
     assert progress.WorkspaceId() == b"home"
     assert progress.ProfileId() == b"kungfu.work-control"
     assert progress.ProfileRoot() == b"sha256:profile"
-    assert progress.EntityType() == b"assignment"
-    assert progress.EntityId() == b"assignment-1"
-    assert progress.EntityRoot() == b"sha256:assignment"
+    assert progress.EntityType() == b"go"
+    assert progress.EntityId() == b"go-1"
+    assert progress.EntityRoot() == b"sha256:go"
 
 
 def test_native_replay_registers_run_progress():

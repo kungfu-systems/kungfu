@@ -388,16 +388,6 @@ def test_live_registry_and_runtime_are_canonical_only():
     canonical_paths = [row["canonical_path"] for row in rows]
 
     assert BASE_REGISTRY["aliases"] == []
-    forbidden_identifiers = (
-        ".".join(("kungfu", "cli", "commands", "dev", "mission", "control")),
-        ".".join(("kungfu", "cli", "commands", "atlas")) + ".",
-    )
-    registry_text = json.dumps(BASE_REGISTRY, sort_keys=True)
-    contract_text = json.dumps(contract, sort_keys=True)
-    for identifier in forbidden_identifiers:
-        assert identifier not in registry_text
-        assert identifier not in contract_text
-    assert "-style" not in registry_text.lower()
     assert "aliasDispositionProfiles" not in BASE_REGISTRY
     assert all(row["aliases"] == [] for row in rows)
     assert len(canonical_paths) == len(set(canonical_paths))
@@ -454,7 +444,7 @@ def test_python_wheel_does_not_publish_the_kfc_executable_alias():
     assert '"kungfu-exit-verify = kungfu.exit_verifier:main"' in setup_source
 
 
-def test_adr_0118_kungfu_public_families_stay_canonical():
+def test_adr_0118_atlas_primitives_and_non_equivalent_families_stay_canonical():
     pytest.importorskip("pykungfu")
     from kungfu.cli.commands import kfc
     from kungfu.cli.commands import __registry__  # noqa: F401
@@ -463,6 +453,12 @@ def test_adr_0118_kungfu_public_families_stay_canonical():
     rows = contract["surfaces"]
     canonical_paths = {row["canonical_path"] for row in rows}
     for path in (
+        "kungfu atlas capabilities",
+        "kungfu atlas inspect",
+        "kungfu atlas action",
+        "kungfu atlas import",
+        "kungfu atlas verify",
+        "kungfu source",
         "kungfu remote",
         "kungfu profile",
         "kungfu kfx",

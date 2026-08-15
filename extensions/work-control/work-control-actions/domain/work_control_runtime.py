@@ -1,6 +1,14 @@
 # SPDX-License-Identifier: Apache-2.0
 
-"""Work Control facts, queries, authority, and Assignment lifecycle."""
+"""Work Control facts, queries, authority, and Assignment lifecycle.
+
+Atlas remains authoritative for imported observations. Native user and agent
+Initiative/Assignment/claim facts enter the same KF-ADR-019f86da-4f90-7d81-90a0-d144fc27fe03 Fact Library with
+explicit source authority, so query, assessment, GUI, CLI, and portable bundles
+share one truth path. Imported payloads retain their source coordinates and
+sealed Episode. Legacy Mission/Go evidence is projected read-only and never
+rewritten or re-admitted.
+"""
 
 import hashlib
 import json
@@ -17,6 +25,8 @@ from kungfu import profile_composition, profile_sdk
 from kungfu.canonical_json import canonical_json_text
 from kungfu.storage import service as storage_service
 
+from .compatibility import mission_control_v3
+
 CONTRACT_WORLD_ID = "kungfu.initiative-assignment"
 CONTRACT_VERSION = "1"
 INITIATIVE_SURFACE_ID = "kungfu.initiative-assignment.initiative"
@@ -26,8 +36,18 @@ CLAIM_SURFACE_ID = "kungfu.initiative-assignment.completion-claim"
 # append-only claim surface. Reusing that sealed v1 surface avoids silently
 # changing the fact-surface register of the installed contract world.
 RELATION_SURFACE_ID = CLAIM_SURFACE_ID
-# Reviews and continuation decisions are versioned record kinds on the claim surface.
+LEGACY_CONTRACT_WORLD_ID = mission_control_v3.CONTRACT_WORLD_ID
+LEGACY_CONTRACT_VERSION = mission_control_v3.CONTRACT_VERSION
+LEGACY_CONTRACT_VERSIONS = mission_control_v3.CONTRACT_VERSIONS
+LEGACY_MISSION_SURFACE_ID = mission_control_v3.MISSION_SURFACE_ID
+LEGACY_GO_SURFACE_ID = mission_control_v3.GO_SURFACE_ID
+LEGACY_CLAIM_SURFACE_ID = mission_control_v3.CLAIM_SURFACE_ID
+MISSION_SURFACE_ID = INITIATIVE_SURFACE_ID
+GO_SURFACE_ID = ASSIGNMENT_SURFACE_ID
+# Reviews and continuation decisions remain versioned record kinds on the
+# successor claim surface; legacy claim surfaces are read-only evidence.
 REVIEW_SURFACE_ID = CLAIM_SURFACE_ID
+ATLAS_FACT_SOURCE_ID = "atlas-adapter"
 USER_FACT_SOURCE_ID = "kungfu-user"
 AGENT_FACT_SOURCE_ID = "kungfu-agent"
 
@@ -36,7 +56,7 @@ _BOUND_WORK_CONTROL_SOURCE: ContextVar[str] = ContextVar(
     "kungfu_work_control_profile_source", default=""
 )
 
-FACT_SURFACES = (INITIATIVE_SURFACE_ID, ASSIGNMENT_SURFACE_ID, CLAIM_SURFACE_ID)
+FACT_SURFACES = (MISSION_SURFACE_ID, GO_SURFACE_ID, CLAIM_SURFACE_ID)
 PROGRESS_CLAIM = "initiative-progress-is-reasonable"
 PROGRESS_PURPOSE = "operator-review"
 COST_STATE_PROOF_PROFILE_ID = "kungfu.profile.delegated-work-cost-state-proof"
@@ -124,6 +144,8 @@ CONTINUATION_ACTIONS = {
     "close",
     "create-follow-up",
 }
+AUTHORITY_MIGRATION_CLAIM = "mission-go-authority-migration"
+AUTHORITY_SUBJECT_PREFIX = "kungfu:authority:mission-go:"
 ROOT_ID = re.compile(r"^sha256:[0-9a-f]{64}$")
 GIT_OBJECT_ID = re.compile(r"^[0-9a-f]{40}$")
 COMPLETION_POLICY = {
@@ -137,16 +159,35 @@ COMPLETION_POLICY = {
     },
 }
 SURFACE_BY_KIND = {
+    "mission": MISSION_SURFACE_ID,
+    "goal": GO_SURFACE_ID,
     "initiative": INITIATIVE_SURFACE_ID,
     "assignment": ASSIGNMENT_SURFACE_ID,
 }
 SURFACE_AUTHORITIES = {
-    INITIATIVE_SURFACE_ID: [USER_FACT_SOURCE_ID, AGENT_FACT_SOURCE_ID],
-    ASSIGNMENT_SURFACE_ID: [USER_FACT_SOURCE_ID, AGENT_FACT_SOURCE_ID],
+    MISSION_SURFACE_ID: [
+        ATLAS_FACT_SOURCE_ID,
+        USER_FACT_SOURCE_ID,
+        AGENT_FACT_SOURCE_ID,
+    ],
+    GO_SURFACE_ID: [
+        ATLAS_FACT_SOURCE_ID,
+        USER_FACT_SOURCE_ID,
+        AGENT_FACT_SOURCE_ID,
+    ],
     RELATION_SURFACE_ID: [USER_FACT_SOURCE_ID, AGENT_FACT_SOURCE_ID],
     CLAIM_SURFACE_ID: [USER_FACT_SOURCE_ID, AGENT_FACT_SOURCE_ID],
 }
 STABLE_ID = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$")
+LEGACY_COMPATIBILITY_POLICY = (
+    "Legacy roots, bodies, receipts, fixtures, public commands, replay, "
+    "recovery, and object identities retain their original meaning."
+)
+LEGACY_SURFACE_MAP = {
+    LEGACY_MISSION_SURFACE_ID: INITIATIVE_SURFACE_ID,
+    LEGACY_GO_SURFACE_ID: ASSIGNMENT_SURFACE_ID,
+    LEGACY_CLAIM_SURFACE_ID: CLAIM_SURFACE_ID,
+}
 
 
 def _record_schema(kind: str) -> dict[str, Any]:
@@ -194,7 +235,7 @@ def _record_schema(kind: str) -> dict[str, Any]:
 
 
 def capabilities() -> dict[str, Any]:
-    """Describe the native Initiative and Assignment vocabulary."""
+    """Describe the current L3 vocabulary and exact legacy read policy."""
 
     return {
         "schema": "kungfu.initiative-assignment.capabilities/v1",
@@ -209,8 +250,61 @@ def capabilities() -> dict[str, Any]:
             "relation": RELATION_SURFACE_ID,
             "completionClaim": CLAIM_SURFACE_ID,
         },
+        "compatibility": {
+            "mode": "read-only-projection",
+            "contractWorld": {
+                "id": LEGACY_CONTRACT_WORLD_ID,
+                "versions": list(LEGACY_CONTRACT_VERSIONS),
+            },
+            "surfaceMap": dict(LEGACY_SURFACE_MAP),
+            "policy": LEGACY_COMPATIBILITY_POLICY,
+        },
         "unchangedRoles": ["pursuit"],
     }
+
+
+def _initiative_record(record: dict[str, Any]) -> dict[str, Any]:
+    projected = dict(record)
+    translations = {
+        "mission_id": "initiative_id",
+        "goal_id": "assignment_id",
+        "mission_subject": "initiative_subject",
+        "parent_goal_id": "parent_assignment_id",
+    }
+    for legacy, current in translations.items():
+        if current not in projected and legacy in projected:
+            projected[current] = projected[legacy]
+        projected.pop(legacy, None)
+    return projected
+
+
+def _legacy_record(record: dict[str, Any]) -> dict[str, Any]:
+    projected = dict(record)
+    translations = {
+        "initiative_id": "mission_id",
+        "assignment_id": "goal_id",
+        "initiative_subject": "mission_subject",
+        "parent_assignment_id": "parent_goal_id",
+    }
+    for current, legacy in translations.items():
+        if legacy not in projected and current in projected:
+            projected[legacy] = projected[current]
+        projected.pop(current, None)
+    return projected
+
+
+def _legacy_payload_view(payload: dict[str, Any] | None) -> dict[str, Any] | None:
+    if payload is None:
+        return None
+    projected = dict(payload)
+    projected["record"] = _legacy_record(dict(payload.get("record") or {}))
+    links = dict(payload.get("links") or {})
+    if "mission_id" not in links and "initiative_id" in links:
+        links["mission_id"] = links["initiative_id"]
+    if "go_id" not in links and "assignment_id" in links:
+        links["go_id"] = links["assignment_id"]
+    projected["links"] = links
+    return projected
 
 
 def _canonical_json(value: Any) -> str:
@@ -222,7 +316,31 @@ def _sha256_root(value: Any) -> str:
     return "sha256:" + hashlib.sha256(raw.encode("utf-8")).hexdigest()
 
 
-def work_control_profile_source(runtime_dir: str) -> dict[str, Any]:
+def _observation_id(entry: dict[str, Any], storage_source_id: str) -> str:
+    identity = {
+        "adapter": ATLAS_FACT_SOURCE_ID,
+        "storage_source_id": storage_source_id,
+        "kind": str(entry.get("kind") or ""),
+        "source_id": str(entry.get("source_id") or ""),
+        "payload_hash": str(entry.get("payload_hash") or ""),
+    }
+    digest = hashlib.sha256(_canonical_json(identity).encode("utf-8")).hexdigest()
+    return f"atlas-{identity['kind']}-{digest[:24]}"
+
+
+def _source_time_nanos(value: Any, fallback: int) -> int:
+    text = str(value or "").strip()
+    if not text:
+        return fallback
+    if text.endswith("Z"):
+        text = text[:-1] + "+00:00"
+    try:
+        return int(datetime.fromisoformat(text).timestamp() * 1_000_000_000)
+    except ValueError:
+        return fallback
+
+
+def mission_control_profile_source(runtime_dir: str) -> dict[str, Any]:
     bound = _BOUND_WORK_CONTROL_SOURCE.get()
     if bound:
         validated = profile_sdk.validate_source(bound, runtime_dir)
@@ -247,7 +365,7 @@ def _with_profile_source(source: str, operation: Callable[[], _T]) -> _T:
 
 
 def _profile_context(runtime_dir: str) -> dict[str, Any]:
-    discovered = work_control_profile_source(runtime_dir)
+    discovered = mission_control_profile_source(runtime_dir)
     source = discovered["source"]
     composed = profile_composition.catalog(source, runtime_dir, require_active=True)
     materialization = profile_composition.contract_materialization_plan(
@@ -291,6 +409,128 @@ def _episode_root(value: dict[str, Any]) -> str:
     return root
 
 
+def admit_import(
+    runtime_dir: str,
+    *,
+    import_id: str,
+    import_episode_id: int,
+    import_episode_root: str,
+    repo_head: str | None,
+    storage_source_id: str,
+    entries: list[dict[str, Any]],
+) -> dict[str, Any]:
+    """Admit present Mission/Go snapshots and return a bridge receipt."""
+
+    _ensure_atlas_write_allowed(runtime_dir)
+    system_time = time.time_ns()
+    contract = _ensure_contract(runtime_dir, system_time)
+    state = storage_service.fact_state(runtime_dir)
+    existing_ids = {
+        str(row.get("observation_id") or "")
+        for row in state.get("observation_history", [])
+    }
+
+    receipts = []
+    already_present = 0
+    skipped = []
+    next_time = system_time + len(FACT_SURFACES) + 1
+    for entry in entries:
+        kind = str(entry.get("kind") or "")
+        if kind not in SURFACE_BY_KIND:
+            continue
+        if entry.get("payload_state") != "present" or not isinstance(
+            entry.get("payload"), dict
+        ):
+            skipped.append(
+                {
+                    "kind": kind,
+                    "source_id": str(entry.get("source_id") or ""),
+                    "reason": f"payload-{entry.get('payload_state') or 'unavailable'}",
+                }
+            )
+            continue
+        observation_id = _observation_id(entry, storage_source_id)
+        if observation_id in existing_ids:
+            already_present += 1
+            continue
+        source_id = str(entry.get("source_id") or "")
+        subject_key = f"{storage_source_id}:{source_id}"
+        record = _initiative_record(dict(entry["payload"]))
+        raw_mission_id = (
+            source_id if kind == "mission" else str(record.get("initiative_id") or "")
+        )
+        mission_id = f"{storage_source_id}:{raw_mission_id}" if raw_mission_id else ""
+        payload = {
+            "record": record,
+            "source": {
+                "authority_mode": "atlas-bridge",
+                "storage_source_id": storage_source_id,
+                "kind": kind,
+                "source_id": source_id,
+                "source_path": str(entry.get("source_path") or ""),
+                "source_time": str(entry.get("source_time") or ""),
+                "repo_head": str(repo_head or ""),
+                "import_id": import_id,
+                "import_episode_id": str(import_episode_id),
+                "import_episode_root": import_episode_root,
+                "payload_hash": str(entry.get("payload_hash") or ""),
+            },
+            "links": {"initiative_id": mission_id},
+        }
+        receipt = storage_service.fact_material_put(
+            runtime_dir,
+            {
+                "type_id": SURFACE_BY_KIND[kind],
+                "type_version": CONTRACT_VERSION,
+                "source_id": ATLAS_FACT_SOURCE_ID,
+                "subject_key": subject_key,
+                "payload": payload,
+                "observation_id": observation_id,
+                "action": "assert",
+                "valid_from": _source_time_nanos(entry.get("source_time"), next_time),
+                "valid_until": 0,
+            },
+            system_time=next_time,
+        )
+        next_time += 1
+        receipts.append(
+            {
+                "kind": kind,
+                "source_id": source_id,
+                "observation_id": observation_id,
+                "outcome": receipt["receipt"]["admission"]["outcome"],
+                "episode_id": receipt["receipt"]["episode_id"],
+            }
+        )
+        existing_ids.add(observation_id)
+
+    outcomes: dict[str, int] = {}
+    for receipt in receipts:
+        outcome = str(receipt["outcome"])
+        outcomes[outcome] = outcomes.get(outcome, 0) + 1
+    return {
+        "schema": "kungfu.work-control.atlas-admission/v1",
+        "status": "admitted"
+        if not skipped and outcomes.get("admitted", 0) == len(receipts)
+        else "degraded",
+        "authority_mode": "atlas-bridge",
+        "contract_world": {
+            "id": CONTRACT_WORLD_ID,
+            "version": CONTRACT_VERSION,
+        },
+        "fact_surfaces": list(FACT_SURFACES),
+        "contract": contract,
+        "import_id": import_id,
+        "import_episode_id": int(import_episode_id),
+        "import_episode_root": import_episode_root,
+        "admitted": outcomes.get("admitted", 0),
+        "already_present": already_present,
+        "outcomes": outcomes,
+        "skipped": skipped,
+        "receipts": receipts,
+    }
+
+
 def _declaration_refs(runtime_dir: str, cut_system_time: int) -> tuple[dict, list]:
     catalog = storage_service.fact_type_list(
         runtime_dir, cut_system_time=cut_system_time
@@ -301,7 +541,7 @@ def _declaration_refs(runtime_dir: str, cut_system_time: int) -> tuple[dict, lis
         if row.get("id") == CONTRACT_WORLD_ID and row.get("version") == CONTRACT_VERSION
     ]
     if len(worlds) != 1:
-        raise RuntimeError("native Work Control contract world is missing or ambiguous")
+        raise RuntimeError(mission_control_v3.MISSING_CONTRACT_ERROR)
     surfaces = []
     for surface_id in FACT_SURFACES:
         matches = [
@@ -311,7 +551,7 @@ def _declaration_refs(runtime_dir: str, cut_system_time: int) -> tuple[dict, lis
         ]
         if len(matches) != 1:
             raise RuntimeError(
-                f"native Work Control fact surface is missing: {surface_id}"
+                f"{mission_control_v3.MISSING_SURFACE_ERROR}: {surface_id}"
             )
         surfaces.append(
             {
@@ -331,7 +571,7 @@ def _declaration_refs(runtime_dir: str, cut_system_time: int) -> tuple[dict, lis
 def _selected_subjects(
     runtime_dir: str,
     *,
-    initiative_id: str,
+    mission_id: str,
     storage_source_id: str,
     cut_system_time: int,
 ) -> tuple[str, list[str], dict[str, Any]]:
@@ -340,15 +580,15 @@ def _selected_subjects(
     )
     payloads = materials.get("payloads", {})
     requested_subjects = (
-        {initiative_id}
-        if ":" in initiative_id
-        else {f"{storage_source_id}:{initiative_id}", f"kungfu:{initiative_id}"}
+        {mission_id}
+        if ":" in mission_id
+        else {f"{storage_source_id}:{mission_id}", f"kungfu:{mission_id}"}
     )
     canonical_facts = materials.get("state", {}).get("canonical_facts", [])
     admitted_subjects = {
         str(row.get("subject_key") or "")
         for row in canonical_facts
-        if row.get("fact_surface_id") == INITIATIVE_SURFACE_ID
+        if row.get("fact_surface_id") == MISSION_SURFACE_ID
         and row.get("subject_key") in requested_subjects
     }
     if not admitted_subjects:
@@ -360,53 +600,53 @@ def _selected_subjects(
                 or ""
             )
             for row in canonical_facts
-            if row.get("fact_surface_id") == ASSIGNMENT_SURFACE_ID
+            if row.get("fact_surface_id") == GO_SURFACE_ID
         }
         admitted_subjects = external_subjects & requested_subjects
     if not admitted_subjects:
         raise ValueError(
-            f"admitted or externally referenced Initiative not found: {initiative_id}"
+            f"admitted or externally referenced Initiative not found: {mission_id}"
         )
     if len(admitted_subjects) > 1:
         raise ValueError(
-            f"Initiative id is ambiguous across source authorities: {initiative_id}"
+            f"Mission id is ambiguous across source authorities: {mission_id}"
         )
-    initiative_subject = next(iter(admitted_subjects))
-    selected = {initiative_subject}
+    mission_subject = next(iter(admitted_subjects))
+    selected = {mission_subject}
     for row in canonical_facts:
         payload = payloads.get(str(row.get("payload_hash") or ""), {})
-        if row.get("fact_surface_id") == INITIATIVE_SURFACE_ID:
+        if row.get("fact_surface_id") == MISSION_SURFACE_ID:
             continue
         if (
-            row.get("fact_surface_id") == ASSIGNMENT_SURFACE_ID
-            and payload.get("links", {}).get("initiative_id") == initiative_subject
+            row.get("fact_surface_id") == GO_SURFACE_ID
+            and payload.get("links", {}).get("initiative_id") == mission_subject
         ):
             selected.add(str(row["subject_key"]))
         if (
             row.get("fact_surface_id") == CLAIM_SURFACE_ID
             and payload.get("links", {}).get(
-                "initiative_id", payload.get("links", {}).get("initiative_id")
+                "initiative_id", payload.get("links", {}).get("mission_id")
             )
-            == initiative_subject
+            == mission_subject
         ):
             selected.add(str(row["subject_key"]))
-    return initiative_subject, sorted(selected), materials
+    return mission_subject, sorted(selected), materials
 
 
 def build_state_query(
     runtime_dir: str,
     *,
-    initiative_id: str,
-    storage_source_id: str = "kungfu",
+    mission_id: str,
+    storage_source_id: str = "atlas",
     cut_system_time: int = 0,
     limit: int = 256,
 ) -> dict[str, Any]:
     """Build the KF-ADR-019f86da-4f90-7e38-b72f-ef8829e14104 query shared by CLI, API, and GUI."""
 
     _ensure_contract(runtime_dir)
-    initiative_subject, subjects, _ = _selected_subjects(
+    mission_subject, subjects, _ = _selected_subjects(
         runtime_dir,
-        initiative_id=initiative_id,
+        mission_id=mission_id,
         storage_source_id=storage_source_id,
         cut_system_time=cut_system_time,
     )
@@ -441,9 +681,9 @@ def build_state_query(
         "subject_keys": subjects,
         "limit": max(limit, len(subjects)),
         "evidence": "proof",
-        "work_control": {
-            "initiative_subject": initiative_subject,
-            "initiative_id": initiative_id,
+        "mission_control": {
+            "mission_subject": mission_subject,
+            "mission_id": mission_id,
             "storage_source_id": storage_source_id,
             "cut_system_time": cut_system_time,
             "selection": "admitted-payload-links/v1",
@@ -453,14 +693,14 @@ def build_state_query(
 
 def _runtime_query_definition(definition: dict[str, Any]) -> dict[str, Any]:
     query = dict(definition)
-    query.pop("work_control", None)
+    query.pop("mission_control", None)
     return query
 
 
 def _batched_state_query(
     runtime_dir: str, definition: dict[str, Any]
 ) -> dict[str, Any]:
-    """Run one logical Initiative query through bounded KF-ADR-019f86da-4f90-7e38-b72f-ef8829e14104 subqueries."""
+    """Run one logical Mission query through bounded KF-ADR-019f86da-4f90-7e38-b72f-ef8829e14104 subqueries."""
 
     context = _profile_context(runtime_dir)
     subjects = list(definition["subject_keys"])
@@ -475,11 +715,11 @@ def _batched_state_query(
             "schema": "kungfu.profile-query-resolution/v1",
             "familyId": "initiative-state-at-cut",
             "bindings": {
-                "initiativeId": definition["work_control"]["initiative_id"],
-                "storageSourceId": definition["work_control"]["storage_source_id"],
+                "initiativeId": definition["mission_control"]["mission_id"],
+                "storageSourceId": definition["mission_control"]["storage_source_id"],
                 **(
-                    {"cutSystemTime": definition["work_control"]["cut_system_time"]}
-                    if definition["work_control"]["cut_system_time"]
+                    {"cutSystemTime": definition["mission_control"]["cut_system_time"]}
+                    if definition["mission_control"]["cut_system_time"]
                     else {}
                 ),
             },
@@ -527,13 +767,13 @@ def _batched_state_query(
         for result in results
     ]
     composite_definition = {
-        "schema": "kungfu.work-control.batched-state-query/v1",
+        "schema": mission_control_v3.BATCHED_STATE_QUERY_SCHEMA,
         "basis": definition["basis"],
         "object": definition["object"],
         "subject_keys": subjects,
         "evidence": definition["evidence"],
-        "work_control": {
-            **definition["work_control"],
+        "mission_control": {
+            **definition["mission_control"],
             "batch_size": 256,
             "subqueries": subqueries,
         },
@@ -598,15 +838,15 @@ def _batched_state_query(
 def query_state(
     runtime_dir: str,
     *,
-    initiative_id: str,
-    storage_source_id: str = "kungfu",
+    mission_id: str,
+    storage_source_id: str = "atlas",
     cut_system_time: int = 0,
 ) -> dict[str, Any]:
-    """Return one proof-bearing Initiative/Assignment state."""
+    """Return one proof-bearing Mission/Go state from admitted facts."""
 
     definition = build_state_query(
         runtime_dir,
-        initiative_id=initiative_id,
+        mission_id=mission_id,
         storage_source_id=storage_source_id,
         cut_system_time=cut_system_time,
     )
@@ -616,18 +856,18 @@ def query_state(
     )
     payloads = materials.get("payloads", {})
     rows = []
-    initiative = None
-    assignments = []
+    mission = None
+    goals = []
     claims = []
     reviews = []
     for row in result.get("rows", []):
-        body = payloads.get(str(row.get("payload_hash") or ""))
+        body = _legacy_payload_view(payloads.get(str(row.get("payload_hash") or "")))
         resolved = {**row, "payload": body}
         rows.append(resolved)
-        if row.get("fact_surface_id") == INITIATIVE_SURFACE_ID:
-            initiative = resolved
-        elif row.get("fact_surface_id") == ASSIGNMENT_SURFACE_ID:
-            assignments.append(resolved)
+        if row.get("fact_surface_id") == MISSION_SURFACE_ID:
+            mission = resolved
+        elif row.get("fact_surface_id") == GO_SURFACE_ID:
+            goals.append(resolved)
         elif row.get("fact_surface_id") == CLAIM_SURFACE_ID:
             record = (body or {}).get("record", {})
             if record.get("review_type") in {
@@ -637,13 +877,13 @@ def query_state(
                 reviews.append(resolved)
             else:
                 claims.append(resolved)
-    assignments.sort(key=lambda row: str(row.get("subject_key") or ""))
+    goals.sort(key=lambda row: str(row.get("subject_key") or ""))
     claims.sort(key=lambda row: str(row.get("subject_key") or ""))
     reviews.sort(key=lambda row: str(row.get("subject_key") or ""))
     return {
-        "schema": "kungfu.work-control.state/v1",
-        "authority_mode": "kungfu-native",
-        "initiative_subject": definition["work_control"]["initiative_subject"],
+        "schema": mission_control_v3.STATE_SCHEMA,
+        "authority_mode": "atlas-bridge",
+        "mission_subject": definition["mission_control"]["mission_subject"],
         "definition": result["definition"],
         "logical_plan": result["logical_plan"],
         "query_definition_root": result["query_definition_root"],
@@ -655,8 +895,8 @@ def query_state(
         "cut": result["lineage"]["cut"],
         "canonical_state": result["lineage"]["canonical_state"],
         "lineage": result["lineage"],
-        "initiative": initiative,
-        "assignments": assignments,
+        "mission": mission,
+        "goals": goals,
         "claims": claims,
         "reviews": reviews,
         "rows": rows,
@@ -755,9 +995,10 @@ def list_domain_records(
     runtime_dir: str,
     *,
     surface_ids: set[str],
+    vocabulary: str,
     cut_system_time: int = 0,
 ) -> list[dict[str, Any]]:
-    """List native records without mutating evidence."""
+    """List records through a vocabulary projection without mutating evidence."""
 
     materials = storage_service.fact_material_list(
         runtime_dir, cut_system_time=cut_system_time
@@ -792,7 +1033,12 @@ def list_domain_records(
         if surface_id not in surface_ids:
             continue
         payload = payloads.get(str(row.get("payload_hash") or ""), {})
-        record = dict(payload.get("record") or {})
+        raw_record = dict(payload.get("record") or {})
+        record = (
+            _initiative_record(raw_record)
+            if vocabulary == "initiative-assignment"
+            else _legacy_record(raw_record)
+        )
         if not record:
             continue
         record["subject_key"] = str(row.get("subject_key") or "")
@@ -811,10 +1057,37 @@ def list_domain_records(
         }
         records.append(record)
     identity_key = (
-        "initiative_id" if INITIATIVE_SURFACE_ID in surface_ids else "assignment_id"
+        "initiative_id"
+        if vocabulary == "initiative-assignment"
+        and bool(surface_ids & {INITIATIVE_SURFACE_ID, LEGACY_MISSION_SURFACE_ID})
+        else "assignment_id"
+        if vocabulary == "initiative-assignment"
+        else "mission_id"
+        if bool(surface_ids & {INITIATIVE_SURFACE_ID, LEGACY_MISSION_SURFACE_ID})
+        else "goal_id"
     )
     records.sort(key=lambda record: str(record.get(identity_key) or ""))
     return records
+
+
+def list_missions(
+    runtime_dir: str, *, cut_system_time: int = 0
+) -> list[dict[str, Any]]:
+    return list_domain_records(
+        runtime_dir,
+        surface_ids={INITIATIVE_SURFACE_ID, LEGACY_MISSION_SURFACE_ID},
+        vocabulary="mission-go",
+        cut_system_time=cut_system_time,
+    )
+
+
+def list_goals(runtime_dir: str, *, cut_system_time: int = 0) -> list[dict[str, Any]]:
+    return list_domain_records(
+        runtime_dir,
+        surface_ids={ASSIGNMENT_SURFACE_ID, LEGACY_GO_SURFACE_ID},
+        vocabulary="mission-go",
+        cut_system_time=cut_system_time,
+    )
 
 
 def list_initiatives(
@@ -822,7 +1095,8 @@ def list_initiatives(
 ) -> list[dict[str, Any]]:
     return list_domain_records(
         runtime_dir,
-        surface_ids={INITIATIVE_SURFACE_ID},
+        surface_ids={INITIATIVE_SURFACE_ID, LEGACY_MISSION_SURFACE_ID},
+        vocabulary="initiative-assignment",
         cut_system_time=cut_system_time,
     )
 
@@ -832,7 +1106,8 @@ def list_assignments(
 ) -> list[dict[str, Any]]:
     return list_domain_records(
         runtime_dir,
-        surface_ids={ASSIGNMENT_SURFACE_ID},
+        surface_ids={ASSIGNMENT_SURFACE_ID, LEGACY_GO_SURFACE_ID},
+        vocabulary="initiative-assignment",
         cut_system_time=cut_system_time,
     )
 
@@ -846,19 +1121,372 @@ def _root_id(value: str, field: str, *, required: bool = False) -> str:
     return value
 
 
-def authority_status(runtime_dir: str) -> dict[str, Any]:
-    """Return the single native Work Control write authority."""
+def _authority_events(runtime_dir: str) -> list[dict[str, Any]]:
+    materials = storage_service.fact_material_list(runtime_dir)
+    payloads = materials.get("payloads", {})
+    events = []
+    for row in materials.get("state", {}).get("canonical_facts", []):
+        if row.get("fact_surface_id") != CLAIM_SURFACE_ID:
+            continue
+        payload = payloads.get(str(row.get("payload_hash") or ""), {})
+        record = dict(payload.get("record") or {})
+        if record.get("claim_type") != AUTHORITY_MIGRATION_CLAIM:
+            continue
+        events.append(
+            {
+                **record,
+                "subject_key": str(row.get("subject_key") or ""),
+                "observation_id": str(row.get("observation_id") or ""),
+                "system_time": int(row.get("system_time") or 0),
+                "source_authority": str(row.get("source_id") or ""),
+                "source": dict(payload.get("source") or {}),
+            }
+        )
+    events.sort(
+        key=lambda row: (int(row.get("system_time") or 0), row["observation_id"])
+    )
+    return events
 
+
+def authority_status(runtime_dir: str) -> dict[str, Any]:
+    """Return the append-only Mission/Go write-authority decision."""
+
+    events = _authority_events(runtime_dir)
+    if events:
+        current = events[-1]
+        return {
+            "schema": "kungfu.work-control.authority-status/v1",
+            "state": str(current["migration_status"]),
+            "write_authority": str(current["write_authority"]),
+            "legacy_mutation_path": str(current["legacy_mutation_path"]),
+            "migration_id": str(current["migration_id"]),
+            "parity_root": str(current.get("parity_root") or ""),
+            "transition_count": len(events),
+            "latest": current,
+        }
+    materials = storage_service.fact_material_list(runtime_dir)
+    bridge_present = any(
+        row.get("fact_surface_id") in {MISSION_SURFACE_ID, GO_SURFACE_ID}
+        and row.get("source_id") == ATLAS_FACT_SOURCE_ID
+        for row in materials.get("state", {}).get("canonical_facts", [])
+    )
     return {
         "schema": "kungfu.work-control.authority-status/v1",
-        "state": "native-only",
-        "write_authority": "kungfu-native",
+        "state": "pre-cutover" if bridge_present else "native-only",
+        "write_authority": ATLAS_FACT_SOURCE_ID if bridge_present else "kungfu-native",
+        "legacy_mutation_path": "available" if bridge_present else "not-configured",
+        "migration_id": "",
+        "parity_root": "",
         "transition_count": 0,
+        "latest": None,
     }
 
 
 def _ensure_native_write_allowed(runtime_dir: str) -> None:
-    authority_status(runtime_dir)
+    authority = authority_status(runtime_dir)
+    if (
+        authority["transition_count"]
+        and authority["write_authority"] != "kungfu-native"
+    ):
+        raise ValueError(
+            "Kungfu-native Mission/Go mutation is frozen by authority rollback "
+            f"{authority['migration_id']}"
+        )
+
+
+def _ensure_atlas_write_allowed(runtime_dir: str) -> None:
+    authority = authority_status(runtime_dir)
+    if (
+        authority["transition_count"]
+        and authority["write_authority"] == "kungfu-native"
+    ):
+        raise ValueError(
+            "Atlas Mission/Go mutation path is frozen read-only by authority "
+            f"cutover {authority['migration_id']}"
+        )
+
+
+def authority_parity(
+    runtime_dir: str, *, storage_source_id: str = "atlas"
+) -> dict[str, Any]:
+    """Compare the latest Atlas import manifest with admitted bridge facts."""
+
+    from kungfu.atlas import payloads as atlas_payloads
+    from kungfu.atlas import store as atlas_store
+
+    manifest = atlas_payloads.load_latest_manifest(atlas_store.store_dir(runtime_dir))
+    if manifest is None:
+        raise ValueError("authority cutover requires a completed Atlas import manifest")
+    if str(manifest.get("storage_source_id") or "atlas") != storage_source_id:
+        raise ValueError("latest Atlas import belongs to another storage source")
+
+    expected: dict[tuple[str, str], dict[str, str]] = {}
+    unavailable = []
+    for entry in manifest.get("entries", []):
+        kind = str(entry.get("kind") or "")
+        if kind not in SURFACE_BY_KIND:
+            continue
+        key = (kind, str(entry.get("source_id") or ""))
+        if entry.get("payload_state") != "present":
+            unavailable.append(
+                {
+                    "kind": key[0],
+                    "source_id": key[1],
+                    "payload_state": str(entry.get("payload_state") or "unknown"),
+                }
+            )
+            continue
+        expected[key] = {
+            "kind": key[0],
+            "source_id": key[1],
+            "payload_hash": str(entry.get("payload_hash") or ""),
+            "source_path": str(entry.get("source_path") or ""),
+        }
+
+    materials = storage_service.fact_material_list(runtime_dir)
+    payloads = materials.get("payloads", {})
+    admitted: dict[tuple[str, str], dict[str, str]] = {}
+    for row in materials.get("state", {}).get("canonical_facts", []):
+        if row.get("source_id") != ATLAS_FACT_SOURCE_ID:
+            continue
+        payload = payloads.get(str(row.get("payload_hash") or ""), {})
+        source = payload.get("source", {})
+        kind = str(source.get("kind") or "")
+        if kind not in SURFACE_BY_KIND:
+            continue
+        if str(source.get("storage_source_id") or "") != storage_source_id:
+            continue
+        key = (kind, str(source.get("source_id") or ""))
+        admitted[key] = {
+            "kind": key[0],
+            "source_id": key[1],
+            "payload_hash": str(source.get("payload_hash") or ""),
+            "source_path": str(source.get("source_path") or ""),
+        }
+
+    missing = [expected[key] for key in sorted(set(expected) - set(admitted))]
+    extra = [admitted[key] for key in sorted(set(admitted) - set(expected))]
+    hash_mismatch = [
+        {
+            "kind": key[0],
+            "source_id": key[1],
+            "expected": expected[key]["payload_hash"],
+            "actual": admitted[key]["payload_hash"],
+        }
+        for key in sorted(set(expected) & set(admitted))
+        if expected[key]["payload_hash"] != admitted[key]["payload_hash"]
+    ]
+    parity_basis = {
+        "schema": "kungfu.work-control.authority-parity-basis/v1",
+        "storage_source_id": storage_source_id,
+        "atlas_import": {
+            "import_id": str(manifest.get("import_id") or ""),
+            "repo_head": str(manifest.get("repo_head") or ""),
+            "sync_root": str(manifest.get("sync_root") or ""),
+            "episode_id": str(manifest.get("episode_id") or ""),
+        },
+        "expected": [expected[key] for key in sorted(expected)],
+        "admitted": [admitted[key] for key in sorted(admitted)],
+    }
+    parity_root = _sha256_root(parity_basis)
+    return {
+        "schema": "kungfu.work-control.authority-parity/v1",
+        "status": (
+            "matched"
+            if not missing and not extra and not hash_mismatch and not unavailable
+            else "degraded"
+        ),
+        "parity_root": parity_root,
+        "basis": parity_basis,
+        "counts": {
+            "expected": len(expected),
+            "admitted": len(admitted),
+            "missing": len(missing),
+            "extra": len(extra),
+            "hash_mismatch": len(hash_mismatch),
+            "unavailable": len(unavailable),
+        },
+        "missing": missing,
+        "extra": extra,
+        "hash_mismatch": hash_mismatch,
+        "unavailable": unavailable,
+    }
+
+
+def cutover_authority(
+    runtime_dir: str,
+    *,
+    storage_source_id: str,
+    expected_parity_root: str,
+    project_cut_root: str,
+    atlas_root: str,
+    actor: str,
+    actor_type: str = "agent",
+    reason: str,
+    system_time: int = 0,
+) -> dict[str, Any]:
+    """Freeze Atlas writes after an exact parity-bound native cutover."""
+
+    system_time = system_time or time.time_ns()
+    _ensure_contract(runtime_dir, system_time)
+    parity = authority_parity(runtime_dir, storage_source_id=storage_source_id)
+    expected_parity_root = _root_id(
+        expected_parity_root, "expected_parity_root", required=True
+    )
+    project_cut_root = _root_id(project_cut_root, "project_cut_root", required=True)
+    atlas_root = _root_id(atlas_root, "atlas_root", required=True)
+    actor = actor.strip()
+    reason = reason.strip()
+    if not actor or not reason:
+        raise ValueError("actor and reason are required")
+    if parity["status"] != "matched":
+        raise ValueError("Atlas/Kungfu authority parity is degraded")
+    if parity["parity_root"] != expected_parity_root:
+        raise ValueError("authority parity root changed before cutover")
+    current = authority_status(runtime_dir)
+    if current["transition_count"] and current["write_authority"] == "kungfu-native":
+        if current["parity_root"] != expected_parity_root:
+            raise ValueError(
+                "native authority is already active at another parity root"
+            )
+        return {**current, "status": "already-active", "parity": parity}
+
+    migration_basis = {
+        "schema": "kungfu.work-control.authority-migration-basis/v1",
+        "transition": "atlas-to-kungfu-native",
+        "previous_migration_id": current["migration_id"] or None,
+        "storage_source_id": storage_source_id,
+        "parity_root": expected_parity_root,
+        "project_cut_root": project_cut_root,
+        "atlas_root": atlas_root,
+        "actor": actor,
+        "actor_type": actor_type,
+        "reason": reason,
+    }
+    migration_id = f"authority-{_sha256_root(migration_basis)[7:31]}"
+    record = {
+        "claim_id": migration_id,
+        "claim_type": AUTHORITY_MIGRATION_CLAIM,
+        "migration_id": migration_id,
+        "migration_status": "native-active",
+        "write_authority": "kungfu-native",
+        "previous_write_authority": ATLAS_FACT_SOURCE_ID,
+        "previous_migration_id": current["migration_id"] or None,
+        "legacy_mutation_path": "frozen-read-only",
+        "rollback_action": "rollback-authority",
+        "parity_root": expected_parity_root,
+        "project_cut_root": project_cut_root,
+        "atlas_root": atlas_root,
+        "atlas_import": parity["basis"]["atlas_import"],
+        "source_record_count": parity["counts"]["expected"],
+        "reason": reason,
+        "authorized_by": actor,
+        "actor_type": actor_type,
+    }
+    source_id = _native_source(actor_type)
+    payload = {
+        "record": record,
+        "source": {
+            "authority_mode": "kungfu-native",
+            "source_id": source_id,
+            "source_time": "journal-system-time",
+            "payload_hash": _sha256_root(record),
+            "actor": actor,
+        },
+        "links": {},
+    }
+    receipt = _put_native_fact(
+        runtime_dir,
+        kind="authority-migration",
+        surface_id=CLAIM_SURFACE_ID,
+        subject_key=f"{AUTHORITY_SUBJECT_PREFIX}{migration_id}",
+        source_id=source_id,
+        payload=payload,
+        system_time=system_time,
+    )
+    return {
+        "schema": "kungfu.work-control.authority-cutover-receipt/v1",
+        "status": "cutover",
+        "migration": record,
+        "parity": parity,
+        "receipt": receipt,
+    }
+
+
+def rollback_authority(
+    runtime_dir: str,
+    *,
+    expected_migration_id: str,
+    actor: str,
+    actor_type: str = "agent",
+    reason: str,
+    system_time: int = 0,
+) -> dict[str, Any]:
+    """Append an explicit rollback without deleting native facts."""
+
+    system_time = system_time or time.time_ns()
+    _ensure_contract(runtime_dir, system_time)
+    current = authority_status(runtime_dir)
+    if current["write_authority"] != "kungfu-native":
+        raise ValueError("Kungfu-native authority is not active")
+    if current["migration_id"] != expected_migration_id:
+        raise ValueError("authority migration changed before rollback")
+    actor = actor.strip()
+    reason = reason.strip()
+    if not actor or not reason:
+        raise ValueError("actor and reason are required")
+    rollback_basis = {
+        "schema": "kungfu.work-control.authority-rollback-basis/v1",
+        "transition": "kungfu-native-to-atlas",
+        "previous_migration_id": expected_migration_id,
+        "actor": actor,
+        "actor_type": actor_type,
+        "reason": reason,
+    }
+    migration_id = f"authority-{_sha256_root(rollback_basis)[7:31]}"
+    record = {
+        "claim_id": migration_id,
+        "claim_type": AUTHORITY_MIGRATION_CLAIM,
+        "migration_id": migration_id,
+        "migration_status": "rolled-back",
+        "write_authority": ATLAS_FACT_SOURCE_ID,
+        "previous_write_authority": "kungfu-native",
+        "previous_migration_id": expected_migration_id,
+        "legacy_mutation_path": "restored",
+        "native_fact_disposition": "retained-read-only",
+        "rollback_action": "cutover-authority",
+        "parity_root": current["parity_root"],
+        "reason": reason,
+        "authorized_by": actor,
+        "actor_type": actor_type,
+    }
+    source_id = _native_source(actor_type)
+    payload = {
+        "record": record,
+        "source": {
+            "authority_mode": "kungfu-native",
+            "source_id": source_id,
+            "source_time": "journal-system-time",
+            "payload_hash": _sha256_root(record),
+            "actor": actor,
+        },
+        "links": {},
+    }
+    receipt = _put_native_fact(
+        runtime_dir,
+        kind="authority-migration",
+        surface_id=CLAIM_SURFACE_ID,
+        subject_key=f"{AUTHORITY_SUBJECT_PREFIX}{migration_id}",
+        source_id=source_id,
+        payload=payload,
+        system_time=system_time,
+    )
+    return {
+        "schema": "kungfu.work-control.authority-rollback-receipt/v1",
+        "status": "rolled-back",
+        "migration": record,
+        "receipt": receipt,
+    }
 
 
 def create_initiative(
@@ -880,21 +1508,19 @@ def create_initiative(
     system_time = system_time or time.time_ns()
     _ensure_contract(runtime_dir, system_time)
     system_time += len(FACT_SURFACES) + 1
-    initiative_id = _stable_id(initiative_id, "initiative_id")
+    mission_id = _stable_id(initiative_id, "initiative_id")
     existing = [
-        row
-        for row in list_initiatives(runtime_dir)
-        if row.get("initiative_id") == initiative_id
+        row for row in list_missions(runtime_dir) if row.get("mission_id") == mission_id
     ]
-    if any(row.get("subject_key") != f"kungfu:{initiative_id}" for row in existing):
+    if any(row.get("subject_key") != f"kungfu:{mission_id}" for row in existing):
         raise ValueError(
-            f"initiative_id already belongs to another source authority: {initiative_id}"
+            f"initiative_id already belongs to another source authority: {mission_id}"
         )
     if status not in {"proposed", "active", "paused"}:
         raise ValueError("native Initiative status must be proposed, active, or paused")
     source_id = _native_source(actor_type)
     record: dict[str, Any] = {
-        "initiative_id": initiative_id,
+        "initiative_id": mission_id,
         "title": title.strip(),
         "intent": intent.strip(),
         "status": status,
@@ -906,12 +1532,10 @@ def create_initiative(
         raise ValueError("title, intent, and actor are required")
     from . import native_state
 
-    source_identity = native_state.validate_source_identity(
-        source_identity, initiative_id
-    )
+    source_identity = native_state.validate_source_identity(source_identity, mission_id)
     if source_identity:
         record["source_identity"] = source_identity
-    subject_key = f"kungfu:{initiative_id}"
+    subject_key = f"kungfu:{mission_id}"
     payload = {
         "record": record,
         "source": {
@@ -926,7 +1550,7 @@ def create_initiative(
     receipt = _put_native_fact(
         runtime_dir,
         kind="initiative",
-        surface_id=INITIATIVE_SURFACE_ID,
+        surface_id=MISSION_SURFACE_ID,
         subject_key=subject_key,
         source_id=source_id,
         payload=payload,
@@ -955,7 +1579,7 @@ def _local_work_ref(
     matches = [
         row
         for row in records
-        if str(row.get(identity_field) or row.get("assignment_id") or "") == object_id
+        if str(row.get(identity_field) or row.get("goal_id") or "") == object_id
     ]
     if len(matches) != 1:
         raise ValueError(
@@ -1004,7 +1628,7 @@ def create_assignment(
     objective: str,
     actor: str,
     actor_type: str = "agent",
-    storage_source_id: str = "kungfu",
+    storage_source_id: str = "atlas",
     status: str = "active",
     parent_assignment_id: str = "",
     depends_on: list[str] | None = None,
@@ -1028,61 +1652,61 @@ def create_assignment(
     _ensure_native_write_allowed(runtime_dir)
     system_time = system_time or time.time_ns()
     _ensure_contract(runtime_dir, system_time)
+    mission_id = initiative_id
+    goal_id = assignment_id
+    parent_goal_id = parent_assignment_id
     explicit_initiative_ref = _validated_work_ref(
         initiative_ref,
         object_kind="initiative",
         field="initiative_ref",
     )
     if explicit_initiative_ref:
-        initiative_subject = str(explicit_initiative_ref["subject"])
-        declared_initiative_id = initiative_subject.split(":", 1)[-1]
-        if declared_initiative_id != _stable_id(initiative_id, "initiative_id"):
+        mission_subject = str(explicit_initiative_ref["subject"])
+        declared_initiative_id = mission_subject.split(":", 1)[-1]
+        if declared_initiative_id != _stable_id(mission_id, "initiative_id"):
             raise ValueError("initiative_ref subject does not match initiative_id")
         state_for_refs: dict[str, Any] = {}
     else:
-        initiative_subject, _, _ = _selected_subjects(
+        mission_subject, _, _ = _selected_subjects(
             runtime_dir,
-            initiative_id=initiative_id,
+            mission_id=mission_id,
             storage_source_id=storage_source_id,
             cut_system_time=0,
         )
         state_for_refs = query_state(
             runtime_dir,
-            initiative_id=initiative_id,
+            mission_id=mission_id,
             storage_source_id=storage_source_id,
         )
-    assignment_id = _stable_id(assignment_id, "assignment_id")
-    existing_assignments = list_assignments(runtime_dir)
+    goal_id = _stable_id(goal_id, "assignment_id")
+    existing_goals = list_assignments(runtime_dir)
     conflicting = [
         row
-        for row in existing_assignments
-        if row.get("payload", {}).get("record", {}).get("assignment_id")
-        == assignment_id
-        and row.get("subject_key") != f"kungfu:{assignment_id}"
+        for row in existing_goals
+        if row.get("payload", {}).get("record", {}).get("goal_id") == goal_id
+        and row.get("subject_key") != f"kungfu:{goal_id}"
     ]
     if conflicting:
         raise ValueError(
-            f"assignment_id already belongs to another source authority: {assignment_id}"
+            f"assignment_id already belongs to another source authority: {goal_id}"
         )
     if status not in {"proposed", "active", "blocked", "waiting-for-decision"}:
         raise ValueError(
             "native Assignment status is not in the v1 responsibility vocabulary"
         )
-    parent_assignment_id = (
-        _stable_id(parent_assignment_id, "parent_assignment_id")
-        if parent_assignment_id.strip()
-        else ""
+    parent_goal_id = (
+        _stable_id(parent_goal_id, "parent_goal_id") if parent_goal_id.strip() else ""
     )
     dependencies = sorted(
         {_stable_id(str(dependency), "depends_on") for dependency in (depends_on or [])}
     )
-    if assignment_id in dependencies:
+    if goal_id in dependencies:
         raise ValueError("an Assignment cannot depend on itself")
     owning_workspace_identity_root = _root_id(
         owning_workspace_identity_root,
         "owning_workspace_identity_root",
     )
-    if (parent_assignment_id or dependencies) and not owning_workspace_identity_root:
+    if (parent_goal_id or dependencies) and not owning_workspace_identity_root:
         raise ValueError(
             "local parent/dependency shorthand requires owning_workspace_identity_root"
         )
@@ -1093,7 +1717,7 @@ def create_assignment(
                 "schema": "kungfu.assignment-graph.local-cut/v1",
                 "assignment_versions": sorted(
                     str(row.get("sealed_identity", {}).get("payload_hash") or "")
-                    for row in existing_assignments
+                    for row in existing_goals
                 ),
             }
         )
@@ -1104,7 +1728,7 @@ def create_assignment(
             runtime_dir,
             workspace_identity_root=owning_workspace_identity_root,
             object_kind="initiative",
-            object_id=_stable_id(initiative_id, "initiative_id"),
+            object_id=_stable_id(mission_id, "initiative_id"),
             records=list_initiatives(runtime_dir),
             cut_root=workspace_cut_root,
         )
@@ -1113,18 +1737,18 @@ def create_assignment(
         object_kind="assignment",
         field="parent_assignment_ref",
     )
-    if parent_assignment_id and explicit_parent_ref:
+    if parent_goal_id and explicit_parent_ref:
         raise ValueError(
             "pass parent_assignment_id shorthand or parent_assignment_ref, not both"
         )
     resolved_parent_ref = explicit_parent_ref
-    if parent_assignment_id:
+    if parent_goal_id:
         resolved_parent_ref = _local_work_ref(
             runtime_dir,
             workspace_identity_root=owning_workspace_identity_root,
             object_kind="assignment",
-            object_id=parent_assignment_id,
-            records=existing_assignments,
+            object_id=parent_goal_id,
+            records=existing_goals,
             cut_root=workspace_cut_root,
         )
     resolved_dependency_refs = [
@@ -1137,12 +1761,13 @@ def create_assignment(
     ]
     if dependencies and resolved_dependency_refs:
         raise ValueError("pass depends_on shorthand or dependency_refs, not both")
+    unresolved_dependency_ids: list[str] = []
     if dependencies:
         for dependency in dependencies:
             matches = [
                 row
-                for row in existing_assignments
-                if str(row.get("assignment_id") or row.get("assignment_id") or "")
+                for row in existing_goals
+                if str(row.get("assignment_id") or row.get("goal_id") or "")
                 == dependency
             ]
             if len(matches) > 1:
@@ -1150,9 +1775,8 @@ def create_assignment(
                     f"local assignment shorthand resolves more than once: {dependency}"
                 )
             if not matches:
-                raise ValueError(
-                    f"depends_on does not resolve to a current local Assignment: {dependency}"
-                )
+                unresolved_dependency_ids.append(dependency)
+                continue
             resolved_dependency_refs.append(
                 _local_work_ref(
                     runtime_dir,
@@ -1195,7 +1819,7 @@ def create_assignment(
         if set(context_binding) != required_context_fields:
             raise ValueError("context_binding must contain the exact v1 field set")
         if (
-            context_binding.get("schema") != "xinfa.assignment-context-binding/v1"
+            context_binding.get("schema") != "xinfa.go-context-binding/v1"
             or context_binding.get("status") != "complete"
         ):
             raise ValueError("context_binding must be a complete Xinfa v1 binding")
@@ -1238,14 +1862,14 @@ def create_assignment(
     )
     work_definition = dict(work_definition or {})
     source_id = _native_source(actor_type)
-    subject_key = f"kungfu:{assignment_id}"
+    subject_key = f"kungfu:{goal_id}"
     record = {
-        "assignment_id": assignment_id,
+        "assignment_id": goal_id,
         "title": title.strip(),
         "objective": objective.strip(),
         "status": status,
-        "initiative_id": initiative_subject.split(":", 1)[-1],
-        "initiative_subject": initiative_subject,
+        "initiative_id": mission_subject.split(":", 1)[-1],
+        "initiative_subject": mission_subject,
         "initiative_ref": local_initiative_ref,
         "owning_workspace_identity_root": owning_workspace_identity_root,
         "actor": actor.strip(),
@@ -1253,6 +1877,7 @@ def create_assignment(
         "parent_assignment_id": "",
         "parent_assignment_ref": resolved_parent_ref,
         "depends_on": [],
+        "unresolved_dependency_ids": unresolved_dependency_ids,
         "dependency_refs": sorted(
             resolved_dependency_refs,
             key=lambda row: (
@@ -1289,12 +1914,12 @@ def create_assignment(
             "payload_hash": _sha256_root(record),
             "actor": record["actor"],
         },
-        "links": {"initiative_id": initiative_subject},
+        "links": {"initiative_id": mission_subject},
     }
     receipt = _put_native_fact(
         runtime_dir,
         kind="assignment",
-        surface_id=ASSIGNMENT_SURFACE_ID,
+        surface_id=GO_SURFACE_ID,
         subject_key=subject_key,
         source_id=source_id,
         payload=payload,
@@ -1303,7 +1928,7 @@ def create_assignment(
     return {
         "schema": "kungfu.initiative-assignment.assignment-write/v1",
         "authority_mode": "kungfu-native",
-        "initiative_subject": initiative_subject,
+        "initiative_subject": mission_subject,
         "assignment_subject": subject_key,
         "receipt": receipt,
     }
@@ -1321,6 +1946,7 @@ def list_assignment_relation_events(
         for record in list_domain_records(
             runtime_dir,
             surface_ids={RELATION_SURFACE_ID},
+            vocabulary="initiative-assignment",
             cut_system_time=cut_system_time,
         )
         if record.get("claim_type") == ASSIGNMENT_RELATION_EVENT
@@ -1532,10 +2158,11 @@ def claim_assignment_execution(
     attempt_id: str = "",
     grant_scope: str = "assignment-execution",
     actor_type: str = "agent",
-    storage_source_id: str = "kungfu",
+    storage_source_id: str = "atlas",
     system_time: int = 0,
 ) -> dict[str, Any]:
     """Append a bounded execution lease; slot identity never grants authority."""
+
     _ensure_native_write_allowed(runtime_dir)
     from . import native_state
 
@@ -1559,7 +2186,8 @@ def claim_assignment_execution(
         )
     _stable_id(values["lease_id"], "lease_id")
     expiry = native_state.parse_lease_expiry(lease_expires_at)
-    if expiry <= datetime.now(expiry.tzinfo):
+    now = datetime.now(expiry.tzinfo)
+    if expiry <= now:
         raise ValueError("execution lease must expire in the future")
     claim_id = f"execution-{_sha256_root({**values, 'assignment': assignment_id, 'expires': lease_expires_at})[7:31]}"
     record = {
@@ -1612,7 +2240,7 @@ def assignment_orchestration_status(
     *,
     initiative_id: str,
     assignment_id: str,
-    storage_source_id: str = "kungfu",
+    storage_source_id: str = "atlas",
     now: str = "",
 ) -> dict[str, Any]:
     """Fold append-only orchestration facts into one deterministic Assignment phase."""
@@ -1694,7 +2322,7 @@ def advance_assignment_phase(
     reason: str,
     expected_phase: str = "",
     actor_type: str = "agent",
-    storage_source_id: str = "kungfu",
+    storage_source_id: str = "atlas",
     system_time: int = 0,
 ) -> dict[str, Any]:
     """Advance only the explicit pre-completion orchestration states."""
@@ -1786,7 +2414,7 @@ def _verified_episode(runtime_dir: str, episode_id: int) -> dict[str, Any]:
 def _tracked_completion_evidence(
     checkout_path: str,
     state: dict[str, Any],
-    assignment_id: str,
+    goal_id: str,
     claim_record: dict[str, Any],
 ) -> dict[str, Any]:
     """Verify a Completion Claim against one tracked checkout and Project Cut."""
@@ -1833,29 +2461,27 @@ def _tracked_completion_evidence(
             "git-tree-mismatch", "claimed Git tree root differs from the commit tree"
         )
 
-    target_assignment = next(
+    target_goal = next(
         (
             row
-            for row in state.get("assignments", [])
-            if row.get("payload", {}).get("record", {}).get("assignment_id")
-            == assignment_id
-            or row.get("subject_key") in {assignment_id, f"kungfu:{assignment_id}"}
+            for row in state.get("goals", [])
+            if row.get("payload", {}).get("record", {}).get("goal_id") == goal_id
+            or row.get("subject_key") in {goal_id, f"kungfu:{goal_id}"}
         ),
         None,
     )
-    assignment_payload = (target_assignment or {}).get("payload", {})
-    assignment_record = assignment_payload.get("record", {})
-    expected_assignment_set = {assignment_id}
-    expected_assignment_set.update(
+    goal_payload = (target_goal or {}).get("payload", {})
+    goal_record = goal_payload.get("record", {})
+    expected_go_set = {goal_id}
+    expected_go_set.update(
         str(
-            row.get("payload", {}).get("record", {}).get("assignment_id")
+            row.get("payload", {}).get("record", {}).get("goal_id")
             or row.get("payload", {}).get("record", {}).get("assignment_id")
             or ""
         )
-        for row in state.get("assignments", [])
+        for row in state.get("goals", [])
         if (
-            row.get("payload", {}).get("record", {}).get("parent_assignment_id")
-            == assignment_id
+            row.get("payload", {}).get("record", {}).get("parent_goal_id") == goal_id
             or (
                 row.get("payload", {})
                 .get("record", {})
@@ -1866,27 +2492,27 @@ def _tracked_completion_evidence(
                 .get("record", {})
                 .get("parent_assignment_ref", {})
                 .get("subject")
-                in {assignment_id, f"kungfu:{assignment_id}"}
+                in {goal_id, f"kungfu:{goal_id}"}
             )
         )
     )
-    assignment_subject = str((target_assignment or {}).get("subject_key") or "")
+    goal_subject = str((target_goal or {}).get("subject_key") or "")
     owning_workspace_identity_root = str(
-        assignment_record.get("owning_workspace_identity_root") or ""
+        goal_record.get("owning_workspace_identity_root") or ""
     )
-    expected_assignment_set.update(
+    expected_go_set.update(
         str(
-            row.get("payload", {}).get("record", {}).get("assignment_id")
+            row.get("payload", {}).get("record", {}).get("goal_id")
             or row.get("payload", {}).get("record", {}).get("assignment_id")
             or ""
         )
-        for row in state.get("assignments", [])
+        for row in state.get("goals", [])
         if (
             row.get("payload", {})
             .get("record", {})
             .get("parent_assignment_ref", {})
             .get("subject")
-            == assignment_subject
+            == goal_subject
             and row.get("payload", {})
             .get("record", {})
             .get("parent_assignment_ref", {})
@@ -1898,20 +2524,19 @@ def _tracked_completion_evidence(
             == owning_workspace_identity_root
         )
     )
-    expected_assignment_set.discard("")
-    if set(claim_record.get("assignment_set") or []) != expected_assignment_set:
+    expected_go_set.discard("")
+    if set(claim_record.get("go_set") or []) != expected_go_set:
         reject(
-            "incomplete-parent-acceptance",
-            "completion Assignment set omits or adds a child",
+            "incomplete-parent-acceptance", "completion Go set omits or adds a child"
         )
-    request_root = str(assignment_record.get("request_root") or "")
-    work_definition_root = str(assignment_record.get("work_definition_root") or "")
-    work_definition = assignment_record.get("work_definition")
-    source = assignment_payload.get("source", {})
-    valid_assignment = bool(
-        assignment_subject == f"kungfu:{assignment_id}"
-        and assignment_record.get("assignment_id") == assignment_id
-        and (target_assignment or {}).get("source_id")
+    request_root = str(goal_record.get("request_root") or "")
+    work_definition_root = str(goal_record.get("work_definition_root") or "")
+    work_definition = goal_record.get("work_definition")
+    source = goal_payload.get("source", {})
+    native_assignment = bool(
+        goal_subject == f"kungfu:{goal_id}"
+        and goal_record.get("goal_id") == goal_id
+        and (target_goal or {}).get("source_id")
         in {USER_FACT_SOURCE_ID, AGENT_FACT_SOURCE_ID}
         and source.get("authority_mode") == "kungfu-native"
         and request_root
@@ -1920,17 +2545,23 @@ def _tracked_completion_evidence(
         and work_definition
         and work_definition_root == _sha256_root(work_definition)
     )
-    if not valid_assignment:
-        reject(
-            "invalid-assignment-contract",
-            "tracked evidence requires an exact native Assignment request",
-        )
-    if claim_record.get("acceptance_root") != work_definition_root:
-        reject(
-            "acceptance-root-mismatch",
-            "claim acceptance_root differs from the Assignment work definition",
-        )
-    if not claim_record.get("project_cut_root"):
+    if native_assignment:
+        if claim_record.get("acceptance_root") != work_definition_root:
+            reject(
+                "acceptance-root-mismatch",
+                "claim acceptance_root differs from the Assignment work definition",
+            )
+        for claim_key in (
+            "input_atlas_root",
+            "result_atlas_root",
+            "project_cut_root",
+            "project_cut_receipt_root",
+        ):
+            if claim_record.get(claim_key):
+                reject(
+                    "legacy-authority-present",
+                    f"native Assignment claim must not set {claim_key}",
+                )
         diagnostics.sort(key=lambda row: (row["code"], row["detail"]))
         evidence = {
             "schema": "kungfu.work-control.tracked-completion-evidence/v1",
@@ -1947,15 +2578,15 @@ def _tracked_completion_evidence(
         }
         evidence["evidence_root"] = _sha256_root(evidence)
         return evidence
-    for claim_key, assignment_key, code in (
+    for claim_key, goal_key, code in (
         ("acceptance_root", "acceptance_root", "acceptance-root-mismatch"),
-        ("input_atlas_root", "input_atlas_root", "context-root-mismatch"),
+        ("input_atlas_root", "input_atlas_root", "stale-atlas"),
         ("project_cut_root", "project_cut_root", "project-cut-root-mismatch"),
     ):
-        expected = str(assignment_record.get(assignment_key) or "")
+        expected = str(goal_record.get(goal_key) or "")
         actual = str(claim_record.get(claim_key) or "")
         if not expected or actual != expected:
-            reject(code, f"claim {claim_key} differs from the Assignment contract")
+            reject(code, f"claim {claim_key} differs from the Go contract")
 
     project_cut_bin = (
         Path(__file__).resolve().parents[4]
@@ -2034,7 +2665,7 @@ def _tracked_completion_evidence(
                 )
         comparisons = (
             ("cutRoot", "project_cut_root", "project-cut-root-mismatch"),
-            ("atlasRoot", "result_atlas_root", "context-root-mismatch"),
+            ("atlasRoot", "result_atlas_root", "stale-atlas"),
             ("receiptRoot", "project_cut_receipt_root", "receipt-cut-mismatch"),
         )
         for cut_key, claim_key, code in comparisons:
@@ -2079,14 +2710,14 @@ def _tracked_completion_evidence(
 def claim_completion(
     runtime_dir: str,
     *,
-    initiative_id: str,
-    assignment_id: str,
+    mission_id: str,
+    goal_id: str,
     statement: str,
     actor: str,
     actor_type: str = "agent",
-    storage_source_id: str = "kungfu",
+    storage_source_id: str = "atlas",
     evidence_episode_ids: list[int] | None = None,
-    assignment_set: list[str] | None = None,
+    go_set: list[str] | None = None,
     acceptance_root: str = "",
     input_atlas_root: str = "",
     result_atlas_root: str = "",
@@ -2106,36 +2737,33 @@ def claim_completion(
     _ensure_contract(runtime_dir, system_time)
     state = query_state(
         runtime_dir,
-        initiative_id=initiative_id,
+        mission_id=mission_id,
         storage_source_id=storage_source_id,
     )
-    assignment_id = _stable_id(assignment_id, "assignment_id")
-    assignment = next(
+    goal_id = _stable_id(goal_id, "goal_id")
+    goal = next(
         (
             row
-            for row in state["assignments"]
-            if row.get("subject_key") == assignment_id
-            or row.get("subject_key") == f"kungfu:{assignment_id}"
-            or row.get("payload", {}).get("record", {}).get("assignment_id")
-            == assignment_id
+            for row in state["goals"]
+            if row.get("subject_key") == goal_id
+            or row.get("subject_key") == f"kungfu:{goal_id}"
+            or row.get("payload", {}).get("record", {}).get("goal_id") == goal_id
         ),
         None,
     )
-    if assignment is None:
-        raise ValueError(f"Assignment not found under Initiative: {assignment_id}")
+    if goal is None:
+        raise ValueError(f"Go not found under Mission: {goal_id}")
     if not statement.strip() or not actor.strip():
         raise ValueError("statement and actor are required")
     evidence = [
         _verified_episode(runtime_dir, int(episode_id))
         for episode_id in (evidence_episode_ids or [])
     ]
-    assignment_set = [
-        _stable_id(row, "assignment_set") for row in (assignment_set or [assignment_id])
-    ]
-    if assignment_id not in assignment_set:
-        raise ValueError("assignment_set must contain the claimed assignment_id")
-    if len(set(assignment_set)) != len(assignment_set):
-        raise ValueError("assignment_set must not contain duplicates")
+    go_set = [_stable_id(row, "go_set") for row in (go_set or [goal_id])]
+    if goal_id not in go_set:
+        raise ValueError("go_set must contain the claimed goal_id")
+    if len(set(go_set)) != len(go_set):
+        raise ValueError("go_set must not contain duplicates")
     roots = {
         "acceptance_root": _root_id(acceptance_root, "acceptance_root"),
         "input_atlas_root": _root_id(input_atlas_root, "input_atlas_root"),
@@ -2185,12 +2813,12 @@ def claim_completion(
         )
     availability.sort(key=lambda row: (row["acceptance"], row["level"], row["state"]))
     claim_basis = {
-        "initiative_subject": state["initiative_subject"],
-        "assignment_subject": str(assignment["subject_key"]),
+        "mission_subject": state["mission_subject"],
+        "go_subject": str(goal["subject_key"]),
         "statement": statement.strip(),
         "actor": actor.strip(),
         "evidence": evidence,
-        "assignment_set": sorted(assignment_set),
+        "go_set": sorted(go_set),
         "roots": roots,
         "git_commit": git_commit,
         "known_gaps": gaps,
@@ -2207,7 +2835,7 @@ def claim_completion(
         "asserted_by": actor.strip(),
         "actor_type": actor_type,
         "evidence_episodes": evidence,
-        "assignment_set": sorted(assignment_set),
+        "go_set": sorted(go_set),
         **roots,
         "git_commit": git_commit,
         "known_gaps": gaps,
@@ -2223,8 +2851,8 @@ def claim_completion(
             "actor": actor.strip(),
         },
         "links": {
-            "initiative_id": state["initiative_subject"],
-            "assignment_id": str(assignment["subject_key"]),
+            "initiative_id": state["mission_subject"],
+            "assignment_id": str(goal["subject_key"]),
         },
     }
     receipt = _put_native_fact(
@@ -2239,8 +2867,8 @@ def claim_completion(
     return {
         "schema": "kungfu.initiative-assignment.completion-claim-write/v1",
         "authority_mode": "kungfu-native",
-        "initiative_subject": state["initiative_subject"],
-        "assignment_subject": str(assignment["subject_key"]),
+        "mission_subject": state["mission_subject"],
+        "go_subject": str(goal["subject_key"]),
         "claim": record,
         "receipt": receipt,
     }

@@ -16,7 +16,11 @@
       "id": "kungfu.initiative-assignment.initiative",
       "version": "1",
       "contractWorldId": "kungfu.initiative-assignment",
-      "sourceAuthorities": ["kungfu-user", "kungfu-agent"],
+      "sourceAuthorities": [
+        "atlas-adapter",
+        "kungfu-user",
+        "kungfu-agent"
+      ],
       "schema": {
         "$id": "kungfu://initiative-assignment/initiative/v1",
         "type": "object",
@@ -63,7 +67,11 @@
       "id": "kungfu.initiative-assignment.assignment",
       "version": "1",
       "contractWorldId": "kungfu.initiative-assignment",
-      "sourceAuthorities": ["kungfu-user", "kungfu-agent"],
+      "sourceAuthorities": [
+        "atlas-adapter",
+        "kungfu-user",
+        "kungfu-agent"
+      ],
       "schema": {
         "$id": "kungfu://initiative-assignment/assignment/v1",
         "type": "object",

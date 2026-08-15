@@ -38,6 +38,7 @@ const FORBIDDEN_FIRST_LAYER_NOUNS = [
   'Initiative',
   'Assignment',
   'Portfolio',
+  'Mission',
   'Profile',
   'Workspace',
 ];

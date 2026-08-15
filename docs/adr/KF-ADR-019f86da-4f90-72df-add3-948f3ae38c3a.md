@@ -28,7 +28,7 @@ last_reviewed: 2026-07-28
   [KF-ADR-019f86da-4f90-7afa-a1e1-0510f00916be](KF-ADR-019f86da-4f90-7afa-a1e1-0510f00916be.md),
   [KF-ADR-019f86da-4f90-7667-b89e-18b1002e45f8](KF-ADR-019f86da-4f90-7667-b89e-18b1002e45f8.md),
   [KF-ADR-019f86da-4f90-7f46-b195-3af6228d17b1](KF-ADR-019f86da-4f90-7f46-b195-3af6228d17b1.md),
-  and the current native contract
+  and [KF-ADR-019f86da-4f90-79d7-a4b7-044fcf998708](KF-ADR-019f86da-4f90-79d7-a4b7-044fcf998708.md)
 
 ## Context
 
@@ -79,7 +79,7 @@ claiming Linux/Windows qualification, activating unavailable KFX
 contributions, or silently promoting a build into `/Applications`.
 
 PR #1202 adds the first qualified TUI consumer of a public Profile query. Its
-generic shell renders the Work Control contribution at one, two, or three
+generic shell renders the Mission Control contribution at one, two, or three
 columns, while discovery, CLI, TUI, and KFD-3 verification bind the same exact
 Suite, member, query-definition, and proof roots.
 

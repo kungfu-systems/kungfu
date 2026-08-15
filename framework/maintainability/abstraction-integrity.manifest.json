@@ -53,6 +53,7 @@
   "typedSeams": [
     "kungfu.product_release_history.ProductReleaseHistoryPort",
     "kungfu.project_cut_exit.ProjectCutExitPort",
+    "kungfu.initiative_family.typed_v2.InitiativeFamilyV1Port",
     "kungfu.assignment_lifecycle.ports.AssignmentEventSink",
     "kungfu.assignment_lifecycle.ports.AssignmentRuntime",
     "kungfu.assignment_lifecycle.ports.AssignmentRuntimePort",
@@ -119,7 +120,8 @@
       "owner": "core/python-initiative-family",
       "paths": [
         "framework/core/src/python/kungfu/initiative_family/__init__.py",
-        "framework/core/src/python/kungfu/initiative_family/canonical.py"
+        "framework/core/src/python/kungfu/initiative_family/canonical.py",
+        "framework/core/src/python/kungfu/initiative_family/typed_v2.py"
       ]
     },
     {

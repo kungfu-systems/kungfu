@@ -53,6 +53,7 @@ from kungfu.workspace_federation_projection import (
     WORK_OBSERVATION_SCHEMA as WORK_OBSERVATION_SCHEMA,
     _compose_global_work as _compose_global_work,
     _compose_outcome_history as _compose_outcome_history,
+    _retained_state_dominates as _retained_state_dominates,
 )
 
 
@@ -75,13 +76,13 @@ WorkspaceLoader = Callable[[WorkspaceIdentity], dict[str, Any]]
 def _load_parallel_component(identity: WorkspaceIdentity) -> dict[str, Any]:
     """Load one default component in an isolated POSIX reader process."""
 
-    from kungfu import work_control
+    from kungfu.atlas import mission_control
 
     return _safe_component(
         identity,
         lambda workspace: _load_component(
             workspace,
-            relation_loader=work_control.assignment_relations,
+            relation_loader=mission_control.assignment_relations,
         ),
     )
 
@@ -198,9 +199,9 @@ def query_federation(
     else:
         component_loader = loader
         if loader is _load_component:
-            from kungfu import work_control
+            from kungfu.atlas import mission_control
 
-            assignment_relations = work_control.assignment_relations
+            assignment_relations = mission_control.assignment_relations
 
             def load_parallel_component(identity: WorkspaceIdentity) -> dict[str, Any]:
                 return _load_component(identity, relation_loader=assignment_relations)
@@ -262,7 +263,8 @@ def query_federation(
         }
         for component in components
         for problem in component.get("problems") or []
-        if component.get("availability") != "excluded"
+        if problem.get("code") != "unresolved-assignment-dependency"
+        and component.get("availability") != "excluded"
     ]
     catalog_after = load_workspace_catalog(config_home, env=env)
     catalog_changed = catalog_after["catalog_cut"] != catalog["catalog_cut"]
@@ -276,7 +278,7 @@ def query_federation(
                 "next_action": "retry against a fresh Catalog cut",
             }
         )
-    observed_at = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+    observed_at = _now()
     proof = {
         "schema": QUERY_PROOF_SCHEMA,
         "scope": scope,
@@ -734,18 +736,14 @@ def _safe_component(
             **component,
             "workspace": identity.as_dict(),
             "availability": component.get("availability", "available"),
-            "observed_at": datetime.now(timezone.utc)
-            .isoformat()
-            .replace("+00:00", "Z"),
+            "observed_at": _now(),
         }
         return _bind_component_envelope(result)
     except (OSError, RuntimeError, ValueError) as error:
         result = {
             "workspace": identity.as_dict(),
             "availability": "degraded",
-            "observed_at": datetime.now(timezone.utc)
-            .isoformat()
-            .replace("+00:00", "Z"),
+            "observed_at": _now(),
             "stale": True,
             "cut_root": "",
             "query_proof_root": "",
@@ -860,9 +858,9 @@ def _load_component(
     from kungfu.storage import service as storage_service
 
     if relation_loader is None:
-        from kungfu import work_control
+        from kungfu.atlas import mission_control
 
-        relation_loader = work_control.assignment_relations
+        relation_loader = mission_control.assignment_relations
 
     materials = storage_service.fact_material_list(runtime_dir)
     if materials.get("schema") != "kungfu.facts.material-catalog/v1":
@@ -939,7 +937,19 @@ def _load_component(
         "fact_versions": fact_versions,
     }
     root = semantic_root(body)
-    problems: list[dict[str, Any]] = []
+    problems = [
+        {
+            "code": "unresolved-assignment-dependency",
+            "assignment_subject": str(
+                row.get("sealed_identity", {}).get("subject_key")
+                or row.get("subject_key")
+                or ""
+            ),
+            "dependency_id": dependency,
+        }
+        for row in assignments
+        for dependency in row.get("unresolved_dependency_ids", [])
+    ]
     projected_initiatives = [
         _record_projection(identity, "initiative", row, root) for row in initiatives
     ]
@@ -991,7 +1001,7 @@ def _material_lifecycle(
     record: Mapping[str, Any],
     phase_by_assignment: Mapping[str, tuple[int, str]],
 ) -> dict[str, Any]:
-    assignment_id = str(record.get("assignment_id") or "")
+    assignment_id = str(record.get("assignment_id") or record.get("goal_id") or "")
     phase = phase_by_assignment.get(assignment_id, (0, ""))[1] or str(
         record.get("orchestration_phase") or "admitted"
     )
@@ -1232,13 +1242,13 @@ def _assignment_lifecycle(
     runtime_dir: str,
     record: Mapping[str, Any],
 ) -> dict[str, Any]:
-    from kungfu import work_control
+    from kungfu.atlas import mission_control
 
-    status = work_control.assignment_orchestration_status(
+    status = mission_control.assignment_orchestration_status(
         runtime_dir,
         initiative_id=str(record.get("initiative_id") or ""),
-        assignment_id=str(record.get("assignment_id") or ""),
-        storage_source_id="kungfu",
+        assignment_id=str(record.get("assignment_id") or record.get("goal_id") or ""),
+        storage_source_id="atlas",
     )
     return assignment_lifecycle_projection(record, status)
 
@@ -1335,9 +1345,7 @@ def _unavailable_component(entry: Mapping[str, Any]) -> dict[str, Any]:
         {
             "workspace": workspace,
             "availability": "unavailable",
-            "observed_at": datetime.now(timezone.utc)
-            .isoformat()
-            .replace("+00:00", "Z"),
+            "observed_at": _now(),
             "catalog_observed_at": entry.get("observed_at"),
             "stale": True,
             "cut_root": "",
@@ -1373,9 +1381,7 @@ def _excluded_component(entry: Mapping[str, Any]) -> dict[str, Any]:
         {
             "workspace": workspace,
             "availability": "excluded",
-            "observed_at": datetime.now(timezone.utc)
-            .isoformat()
-            .replace("+00:00", "Z"),
+            "observed_at": _now(),
             "catalog_observed_at": entry.get("observed_at"),
             "stale": not bool(entry.get("available")),
             "cut_root": "",
@@ -1393,3 +1399,7 @@ def _excluded_component(entry: Mapping[str, Any]) -> dict[str, Any]:
             ],
         }
     )
+
+
+def _now() -> str:
+    return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")

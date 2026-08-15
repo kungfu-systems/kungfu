@@ -317,7 +317,7 @@ export type KfxProfileSuite = {
     contractWorld: KfxProfileSuiteContentRef;
     factSurfaces: KfxProfileSuiteContentRef[];
     reducers: KfxProfileSuiteContentRef[];
-    compatibility?: KfxProfileSuiteContentRef;
+    compatibility: KfxProfileSuiteContentRef;
   };
   kfd2: {
     claims: KfxProfileSuiteContentRef[];

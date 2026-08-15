@@ -25,8 +25,8 @@ present.
 
 Portfolio keeps three state coordinates separate: the source record's
 `source_status`, the native Assignment `orchestration_phase`, and the derived
-`portfolio_state`. The default active-and-attention view treats source statuses
-`complete`, `completed`, `merged`, `archived`, and `closed` as
+`portfolio_state`. The default active-and-attention view treats compatibility
+statuses `complete`, `completed`, `merged`, `archived`, and `closed` as
 terminal; `--include-settled` retains their exact canonical rows. A
 `stage-ready` Assignment is therefore visible as unfinished until review,
 continuation decision, and Project Cut settlement actually complete it.
@@ -42,12 +42,67 @@ write. The initial observation is then retained with the `test-only` lifecycle
 and excluded from the default Portfolio. Existing active entries are changed
 only through the dry-run-bound `workspace catalog-maintain` transition.
 
-## Assignment Family
+## Assignment Family typed envelope
 
-`kungfu.work-control.initiative-family-state/v1` is the current native bounded
-coordination projection. Its schema, roots, validation, transition, and CLI
-commands form one self-contained contract. Kungfu does not expose an upgrade
-reader or predecessor projection alongside it.
+`kungfu.work-control.initiative-family-state/v1` remains the immutable Wave 0
+coordination projection. Its schemas, roots, validation, and CLI commands are
+unchanged.
+
+Version 2 is an additive typed envelope around that exact v1 projection. It
+does not create another Work Control or settlement authority:
+
+- the Initiative binds caller-supplied Pursuit, Atlas, and acceptance-policy
+  references while remaining an inert parent;
+- every child binds exact Assignment-state, work-definition, Pursuit, Atlas,
+  and active execution-Warrant references;
+- every merged child binds independent Completion Claim, Assessment, Decision,
+  Admission receipt, Episode, Project Cut, and delivery-evidence references;
+  and
+- publication is separately `published`, `pending`, or `failed`. Pending and
+  failed publication must expose the lag start, and a failure must carry a
+  visible typed reference. A projection merge is never reported as completion.
+
+Every typed reference names its semantic kind, stable identity, exact SHA-256
+root, owning fact world, exact cut root, payload schema, and observed status.
+The envelope verifies those coordinates but does not copy, mutate, or
+reinterpret the referenced authority.
+
+The upgrade is deliberately explicit:
+
+```text
+immutable v1 state
+  + caller-supplied typed binding manifest for that exact v1 root
+  -> v2 successor state
+  -> exact v1 compatibility projection
+```
+
+Kungfu never guesses missing Pursuit, Atlas, Warrant, Claim, Assessment,
+Decision, Admission, Episode, Project Cut, or delivery identities. A v2 reader
+reports a valid v1 input as `under-typed-v1`; only an explicit upgrade produces
+a fully typed state. Every v2 transition supplies both an exact v1 transition
+and a complete binding manifest for the successor v1 root.
+
+```text
+kungfu work family-contract-v2
+kungfu work family-upgrade-v2 STATE_V1 BINDINGS_V2 --out STATE_V2
+kungfu work family-transition-v2 STATE_V2 TRANSITION_V2 --out SUCCESSOR_V2
+kungfu work family-verify-v2 STATE_V1_OR_V2
+```
+
+## Atlas boundary
+
+Atlas is an optional source and compatibility adapter, not the native work
+identity authority. Its source fields may be retained inside an Assignment's
+auditable work definition, but an Atlas parent identifier is not automatically
+an Initiative identifier. Admission requires either an exact Initiative
+WorkRef or a content-addressed Initiative admission envelope carrying the
+parent card's identity, title, intent, source authority, and immutable source
+version root. Missing, mutable, or mismatched parents fail visibly.
+
+Historical v3 worlds and receipts remain exact, read-only compatibility
+evidence. They are documented in the
+[compatibility index](compatibility/README.md) so their terminology does not
+define the current product.
 
 ## Product surfaces
 
@@ -60,7 +115,8 @@ kungfu work gate --help
 
 The Work Dashboard opens Portfolio as a live federated view. The TUI renders
 the same Initiative and Assignment model. Native machine receipts use Work
-Control schemas and native source coordinates.
+Control schemas; explicit Atlas or compatibility inspection may retain source
+terminology and sealed source bytes.
 
 The normative decision is
 [KF-ADR-019f9771-4c20-7e2c-8e7c-3f3cb3f1b9bd](../adr/KF-ADR-019f9771-4c20-7e2c-8e7c-3f3cb3f1b9bd.md).

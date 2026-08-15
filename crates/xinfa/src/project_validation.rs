@@ -701,7 +701,7 @@ fn validate_routes(project: &Value, nodes: &Nodes, diagnostics: &mut Vec<Diagnos
                         "capabilities",
                         "owners",
                         "roles",
-                        "initiative_tracks",
+                        "mission_tracks",
                         "terms",
                     ],
                     &[],
@@ -713,7 +713,7 @@ fn validate_routes(project: &Value, nodes: &Nodes, diagnostics: &mut Vec<Diagnos
                     "capabilities",
                     "owners",
                     "roles",
-                    "initiative_tracks",
+                    "mission_tracks",
                     "terms",
                 ] {
                     match resolution.get(key).and_then(Value::as_array) {

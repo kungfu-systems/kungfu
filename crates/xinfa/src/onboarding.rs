@@ -406,7 +406,7 @@ mod qualification_tests {
                     "resolution":{
                         "subjects":["repository"],"capabilities":["onboarding"],
                         "owners":["project"],"roles":["contributor"],
-                        "initiative_tracks":["repository-onboarding"],"terms":[project_id]
+                        "mission_tracks":["repository-onboarding"],"terms":[project_id]
                     }
                 },
                 "existingProject":{"replace":false,"expectedRoot":null}

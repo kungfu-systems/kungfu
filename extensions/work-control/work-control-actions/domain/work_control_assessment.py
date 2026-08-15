@@ -12,6 +12,7 @@ from kungfu.rewind import ACTION_COST_SNAPSHOT
 from kungfu.rewind import replay as rewind_replay
 from kungfu.storage import service as storage_service
 
+from .compatibility import mission_control_v3
 from .work_control_runtime import (
     AGENT_FACT_SOURCE_ID,
     ASSIGNMENT_SURFACE_ID,
@@ -122,7 +123,7 @@ def _assessment_evidence(state: dict[str, Any]) -> dict[str, int]:
 def _responsibility_state(state: dict[str, Any]) -> dict[str, Any]:
     source_statuses = [
         str(row.get("payload", {}).get("record", {}).get("status") or "unknown")
-        for row in state.get("assignments", [])
+        for row in state.get("goals", [])
     ]
     normalized = []
     for status in source_statuses:
@@ -156,20 +157,18 @@ def _responsibility_state(state: dict[str, Any]) -> dict[str, Any]:
         "value": selected,
         "source_statuses": source_statuses,
         "mapping_policy": "kungfu.profile.responsibility-state/v1",
-        "assignment_subjects": [
-            str(row.get("subject_key") or "") for row in state.get("assignments", [])
+        "go_subjects": [
+            str(row.get("subject_key") or "") for row in state.get("goals", [])
         ],
         "completion_claim_count": len(state.get("claims", [])),
     }
 
 
 def _cost_profile(runtime_dir: str, state: dict[str, Any]) -> dict[str, Any]:
-    work_ids = {
-        str(row.get("subject_key") or "") for row in state.get("assignments", [])
-    }
+    work_ids = {str(row.get("subject_key") or "") for row in state.get("goals", [])}
     work_ids.update(
-        str(row.get("payload", {}).get("record", {}).get("assignment_id") or "")
-        for row in state.get("assignments", [])
+        str(row.get("payload", {}).get("record", {}).get("goal_id") or "")
+        for row in state.get("goals", [])
     )
     work_ids.discard("")
     declared_cut = state.get("cut", {}).get("declared", {})
@@ -336,24 +335,23 @@ def build_cost_state_proof_profile(
     *,
     assessment_state: str,
     report_hash: str | None,
-    assignment_subject: str | None = None,
+    go_subject: str | None = None,
 ) -> dict[str, Any]:
     """Compose the first commercial profile without creating new authorities."""
 
     profile_state = state
-    if assignment_subject:
+    if go_subject:
         profile_state = {
             **state,
-            "assignments": [
+            "goals": [
                 row
-                for row in state.get("assignments", [])
-                if row["subject_key"] == assignment_subject
+                for row in state.get("goals", [])
+                if row["subject_key"] == go_subject
             ],
             "claims": [
                 row
                 for row in state.get("claims", [])
-                if row.get("payload", {}).get("links", {}).get("assignment_id")
-                == assignment_subject
+                if row.get("payload", {}).get("links", {}).get("go_id") == go_subject
             ],
         }
     cost = _cost_profile(runtime_dir, profile_state)
@@ -377,8 +375,8 @@ def build_cost_state_proof_profile(
             "id": COST_STATE_PROOF_PROFILE_ID,
             "version": COST_STATE_PROOF_PROFILE_VERSION,
         },
-        "initiative_subject": state["initiative_subject"],
-        "assignment_subject": assignment_subject,
+        "mission_subject": state["mission_subject"],
+        "go_subject": go_subject,
         "cost": cost,
         "state": _responsibility_state(profile_state),
         "proof": proof,
@@ -387,7 +385,7 @@ def build_cost_state_proof_profile(
     return profile
 
 
-def _work_control_answers(
+def _mission_control_answers(
     state: dict[str, Any],
     *,
     fitness: str,
@@ -395,53 +393,47 @@ def _work_control_answers(
     findings: list[str],
     known_limits: list[str],
 ) -> list[dict[str, Any]]:
-    initiative = (state.get("initiative") or {}).get("payload", {}).get("record", {})
-    assignments = [
-        row.get("payload", {}).get("record", {}) for row in state.get("assignments", [])
-    ]
+    mission = (state.get("mission") or {}).get("payload", {}).get("record", {})
+    goals = [row.get("payload", {}).get("record", {}) for row in state.get("goals", [])]
     statuses: dict[str, int] = {}
-    for assignment in assignments:
-        status = str(assignment.get("status") or "unknown")
+    for goal in goals:
+        status = str(goal.get("status") or "unknown")
         statuses[status] = statuses.get(status, 0) + 1
     status_summary = " · ".join(
         f"{status}={statuses[status]}" for status in sorted(statuses)
     )
 
-    intent = "Not yet declared. Create or import a Initiative."
-    if initiative:
-        identity = str(
-            initiative.get("title") or initiative.get("initiative_id") or "Initiative"
-        )
-        intent = f"{identity} — {initiative.get('intent') or 'intent not declared'}"
-        if initiative.get("stage_name"):
-            intent += f" · stage {initiative['stage_name']}"
+    intent = "Not yet declared. Create or import a Mission."
+    if mission:
+        identity = str(mission.get("title") or mission.get("mission_id") or "Mission")
+        intent = f"{identity} — {mission.get('intent') or 'intent not declared'}"
+        if mission.get("stage_name"):
+            intent += f" · stage {mission['stage_name']}"
 
-    actual = "No admitted Assignment activity is visible at this cut."
-    if assignments:
-        actual = f"{len(assignments)} Assignment(s) at this cut"
+    actual = "No admitted Go activity is visible at this cut."
+    if goals:
+        actual = f"{len(goals)} Go(s) at this cut"
         if status_summary:
             actual += f" · {status_summary}"
 
     declared_actions = []
-    for assignment in assignments:
-        if str(assignment.get("next_action") or "").strip():
+    for goal in goals:
+        if str(goal.get("next_action") or "").strip():
             declared_actions.append(
                 {
-                    "actor": str(
-                        assignment.get("owner_agent") or assignment.get("actor") or ""
-                    ),
-                    "subject": str(assignment.get("assignment_id") or ""),
-                    "action": str(assignment["next_action"]),
-                    "source": "assignment.next_action",
+                    "actor": str(goal.get("owner_agent") or goal.get("actor") or ""),
+                    "subject": str(goal.get("goal_id") or ""),
+                    "action": str(goal["next_action"]),
+                    "source": "go.next_action",
                 }
             )
-    if str(initiative.get("next_action") or "").strip():
+    if str(mission.get("next_action") or "").strip():
         declared_actions.append(
             {
-                "actor": str(initiative.get("owner") or ""),
-                "subject": str(initiative.get("initiative_id") or ""),
-                "action": str(initiative["next_action"]),
-                "source": "initiative.next_action",
+                "actor": str(mission.get("owner") or ""),
+                "subject": str(mission.get("mission_id") or ""),
+                "action": str(mission["next_action"]),
+                "source": "mission.next_action",
             }
         )
     if declared_actions:
@@ -463,14 +455,14 @@ def _work_control_answers(
     proof_suffix = str(state.get("query_proof_root") or "")[-12:]
     answers_by_id: dict[str, dict[str, Any]] = {
         "initiative-intent": {
-            "status": "declared" if initiative else "missing",
+            "status": "declared" if mission else "missing",
             "summary": intent,
-            "data": {"initiative": initiative},
+            "data": {"mission": mission},
         },
         "observed-progress": {
-            "status": "observed" if assignments else "missing",
+            "status": "observed" if goals else "missing",
             "summary": actual,
-            "data": {"assignment_count": len(assignments), "status_counts": statuses},
+            "data": {"goal_count": len(goals), "status_counts": statuses},
         },
         "evidence-at-cut": {
             "status": "established" if state.get("canonical_state") else "degraded",
@@ -510,7 +502,7 @@ def _work_control_answers(
     ]
 
 
-def build_work_control_query_profile(
+def build_mission_control_query_profile(
     runtime_dir: str,
     state: dict[str, Any],
     *,
@@ -519,7 +511,7 @@ def build_work_control_query_profile(
     findings: list[str],
     known_limits: list[str],
 ) -> dict[str, Any]:
-    """Reduce one public Profile query receipt into the five Initiative questions."""
+    """Reduce one public Profile query receipt into the five Mission questions."""
 
     definition = _runtime_query_definition(state["definition"])
     if definition.get("schema") != "kungfu.query.definition/v1":
@@ -546,13 +538,13 @@ def build_work_control_query_profile(
             "catalog_root": catalog["catalogRoot"],
             "member_roots": catalog["memberRoots"],
         },
-        "initiative_subject": state["initiative_subject"],
+        "mission_subject": state["mission_subject"],
         "query_definition_root": state["query_definition_root"],
         "query_proof_root": state["query_proof_root"],
         "result_hash": state["result_hash"],
         "query_receipt": state["profile_query_receipt"],
         "views": views,
-        "answers": _work_control_answers(
+        "answers": _mission_control_answers(
             state,
             fitness=fitness,
             assessment_state=assessment_state,
@@ -564,14 +556,14 @@ def build_work_control_query_profile(
     return profile
 
 
-def query_initiative_home(
+def query_mission_home(
     runtime_dir: str,
     *,
-    initiative_id: str,
-    storage_source_id: str = "kungfu",
+    mission_id: str,
+    storage_source_id: str = "atlas",
     cut_system_time: int = 0,
 ) -> dict[str, Any]:
-    """Return the five-question Initiative Home without persisting an assessment.
+    """Return the five-question Mission Home without persisting an assessment.
 
     This is the read-only surface for presentation hosts.  It deliberately
     reuses the exact public state query and Profile reducer used by
@@ -581,17 +573,15 @@ def query_initiative_home(
 
     state = query_state(
         runtime_dir,
-        initiative_id=initiative_id,
+        mission_id=mission_id,
         storage_source_id=storage_source_id,
         cut_system_time=cut_system_time,
     )
     if not state["rows"]:
-        raise ValueError(
-            "Initiative Home requires admitted Initiative or Assignment facts"
-        )
+        raise ValueError("Mission Home requires admitted Mission or Go facts")
     fitness, findings = _progress_fitness(state, "fresh")
     known_limits = ["read-only snapshot; no purpose-bound assessment was executed"]
-    query_profile = build_work_control_query_profile(
+    query_profile = build_mission_control_query_profile(
         runtime_dir,
         state,
         fitness=fitness,
@@ -600,7 +590,7 @@ def query_initiative_home(
         known_limits=known_limits,
     )
     return {
-        "schema": "kungfu.work-control.initiative-home/v1",
+        "schema": mission_control_v3.MISSION_HOME_SCHEMA,
         "mode": "read-only",
         "fitness": fitness,
         "findings": findings,
@@ -627,23 +617,23 @@ def _progress_fitness(
         ]
     if not state.get("canonical_state"):
         return "unverifiable", ["query lineage is not canonical"]
-    if state.get("initiative") is None:
-        return "insufficient", ["Initiative fact is missing"]
-    assignments = state.get("assignments", [])
-    if not assignments:
-        return "insufficient", ["no linked Assignment facts are admitted"]
+    if state.get("mission") is None:
+        return "insufficient", ["Mission fact is missing"]
+    goals = state.get("goals", [])
+    if not goals:
+        return "insufficient", ["no linked Go facts are admitted"]
     statuses = [
         str(row.get("payload", {}).get("record", {}).get("status") or "unknown")
-        for row in assignments
+        for row in goals
     ]
     warning_statuses = set(PROGRESS_POLICY["rules"]["warning_statuses"])
     progress_statuses = set(PROGRESS_POLICY["rules"]["progress_statuses"])
-    findings = [f"linked Assignment statuses: {', '.join(statuses)}"]
+    findings = [f"linked Go statuses: {', '.join(statuses)}"]
     if any(status in warning_statuses for status in statuses):
         return "warning", findings
     if any(status in progress_statuses for status in statuses):
         return "fit", findings
-    return "warning", findings + ["no Assignment carries a recognized progress state"]
+    return "warning", findings + ["no Go carries a recognized progress state"]
 
 
 def _execute_profile_assessment(
@@ -691,23 +681,23 @@ def _execute_profile_assessment(
 def assess_progress(
     runtime_dir: str,
     *,
-    initiative_id: str,
-    storage_source_id: str = "kungfu",
+    mission_id: str,
+    storage_source_id: str = "atlas",
     purpose: str = PROGRESS_PURPOSE,
     cut_system_time: int = 0,
     executor_profile: str = "thread",
     authorized_by: str = "kungfu-work-control",
 ) -> dict[str, Any]:
-    """Persist and expose the first purpose-bound Initiative progress report."""
+    """Persist and expose the first purpose-bound Mission progress report."""
 
     state = query_state(
         runtime_dir,
-        initiative_id=initiative_id,
+        mission_id=mission_id,
         storage_source_id=storage_source_id,
         cut_system_time=cut_system_time,
     )
     if not state["rows"]:
-        raise ValueError("Initiative progress assessment requires admitted facts")
+        raise ValueError("Mission progress assessment requires admitted facts")
     context = _profile_context(runtime_dir)
     work_row = max(state["rows"], key=lambda row: int(row["system_time"]))
     work_episode_id = str(work_row["episode_id"])
@@ -717,16 +707,14 @@ def assess_progress(
     }
     work_episode_root = root_rows.get(work_episode_id, "")
     if not work_episode_root:
-        raise RuntimeError(
-            "selected Initiative/Assignment fact Episode has no verified root"
-        )
+        raise RuntimeError("selected Mission/Go fact Episode has no verified root")
     claim_basis = {
         "claim_type": PROGRESS_CLAIM,
-        "initiative_subject": state["initiative_subject"],
+        "mission_subject": state["mission_subject"],
         "purpose": purpose,
         "query_result_hash": state["result_hash"],
     }
-    claim_instance_id = f"initiative-progress-{_sha256_root(claim_basis)[7:31]}"
+    claim_instance_id = f"mission-progress-{_sha256_root(claim_basis)[7:31]}"
     plan, authorization, receipt = _execute_profile_assessment(
         runtime_dir,
         source=context["source"],
@@ -748,7 +736,7 @@ def assess_progress(
     request = plan["request"]
     fitness, findings = _progress_fitness(state, assessed["state"])
     report_hash = assessed.get("report", {}).get("report_hash")
-    query_profile = build_work_control_query_profile(
+    query_profile = build_mission_control_query_profile(
         runtime_dir,
         state,
         fitness=fitness,
@@ -788,9 +776,9 @@ def assess_progress(
 def assess_completion(
     runtime_dir: str,
     *,
-    initiative_id: str,
-    assignment_id: str,
-    storage_source_id: str = "kungfu",
+    mission_id: str,
+    goal_id: str,
+    storage_source_id: str = "atlas",
     purpose: str = COMPLETION_PURPOSE,
     cut_system_time: int = 0,
     executor_profile: str = "thread",
@@ -800,34 +788,31 @@ def assess_completion(
 
     state = query_state(
         runtime_dir,
-        initiative_id=initiative_id,
+        mission_id=mission_id,
         storage_source_id=storage_source_id,
         cut_system_time=cut_system_time,
     )
-    assignment_id = _stable_id(assignment_id, "assignment_id")
-    assignments = [
+    goal_id = _stable_id(goal_id, "goal_id")
+    goals = [
         row
-        for row in state["assignments"]
-        if row.get("subject_key") == assignment_id
-        or row.get("subject_key") == f"kungfu:{assignment_id}"
-        or row.get("payload", {}).get("record", {}).get("assignment_id")
-        == assignment_id
+        for row in state["goals"]
+        if row.get("subject_key") == goal_id
+        or row.get("subject_key") == f"kungfu:{goal_id}"
+        or row.get("payload", {}).get("record", {}).get("goal_id") == goal_id
     ]
-    if len(assignments) != 1:
-        raise ValueError(
-            f"Assignment is missing or ambiguous under Initiative: {assignment_id}"
-        )
-    assignment_subject = str(assignments[0]["subject_key"])
+    goal_subjects = {str(row.get("subject_key") or "") for row in goals}
+    if len(goal_subjects) != 1 or "" in goal_subjects:
+        raise ValueError(f"Go is missing or ambiguous under Mission: {goal_id}")
+    goal_subject = next(iter(goal_subjects))
     claims = [
         row
         for row in state["claims"]
         if row.get("payload", {}).get("record", {}).get("claim_type")
         == COMPLETION_CLAIM
-        and row.get("payload", {}).get("links", {}).get("assignment_id")
-        == assignment_subject
+        and row.get("payload", {}).get("links", {}).get("go_id") == goal_subject
     ]
     if not claims:
-        raise ValueError(f"completion claim not found for Assignment: {assignment_id}")
+        raise ValueError(f"completion claim not found for Go: {goal_id}")
     context = _profile_context(runtime_dir)
     claim = max(claims, key=lambda row: int(row["system_time"]))
     claim_record = claim["payload"]["record"]
@@ -904,8 +889,10 @@ def assess_completion(
         assessed = assessment_receipt["assessment"]
         request = assessment_plan["request"]
     else:
-        # An explicitly unproved completion claim remains inspectable as an
-        # insufficient state; the Profile never manufactures evidence.
+        # Compatibility projection for an explicitly unproved completion claim.
+        # The public Profile plan correctly refuses to manufacture independent
+        # evidence; Core records the resulting insufficient state so existing
+        # Work Control cuts remain inspectable.
         declared_claim = next(
             row for row in context["catalog"]["claims"] if row["id"] == COMPLETION_CLAIM
         )
@@ -964,7 +951,7 @@ def assess_completion(
             "id": claim_record["claim_id"],
             "type": COMPLETION_CLAIM,
             "purpose": purpose,
-            "assignment_subject": assignment_subject,
+            "go_subject": goal_subject,
         },
         "fitness": fitness,
         "findings": findings,
@@ -984,7 +971,7 @@ def assess_completion(
             state,
             assessment_state=assessed["state"],
             report_hash=report_hash,
-            assignment_subject=assignment_subject,
+            go_subject=goal_subject,
         ),
     }
 
@@ -1046,28 +1033,24 @@ def _continuation_actions(verdict: str) -> list[str]:
 
 def _bounded_followups(rows: list[dict[str, Any]] | None) -> list[dict[str, Any]]:
     if len(rows or []) > 6:
-        raise ValueError(
-            "continuation plans may contain at most six follow-up Assignment rows"
-        )
+        raise ValueError("continuation plans may contain at most six follow-up Go rows")
     result: list[dict[str, Any]] = []
     for row in rows or []:
         if not isinstance(row, dict):
             raise ValueError(  # noqa: TRY004 - stable public validation surface
-                "follow-up Assignment rows must be objects"
+                "follow-up Go rows must be objects"
             )
-        assignment_id = _stable_id(
-            str(row.get("assignment_id") or ""), "followup.assignment_id"
-        )
+        goal_id = _stable_id(str(row.get("goal_id") or ""), "followup.goal_id")
         title = str(row.get("title") or "").strip()
         objective = str(row.get("objective") or "").strip()
         why_created = str(row.get("why_created") or "").strip()
         if not title or not objective or not why_created:
             raise ValueError(
-                "follow-up Assignment title, objective, and why_created are required"
+                "follow-up Go title, objective, and why_created are required"
             )
         result.append(
             {
-                "assignment_id": assignment_id,
+                "goal_id": goal_id,
                 "title": title,
                 "objective": objective,
                 "why_created": why_created,
@@ -1083,9 +1066,9 @@ def _bounded_followups(rows: list[dict[str, Any]] | None) -> list[dict[str, Any]
                 ),
             }
         )
-    if len({row["assignment_id"] for row in result}) != len(result):
-        raise ValueError("continuation plan follow-up assignment ids must be unique")
-    result.sort(key=lambda row: row["assignment_id"])
+    if len({row["goal_id"] for row in result}) != len(result):
+        raise ValueError("continuation plan follow-up goal ids must be unique")
+    result.sort(key=lambda row: row["goal_id"])
     return result
 
 
@@ -1131,11 +1114,11 @@ def _tracked_empty_delta_closes_episode_gap(
 def review_completion(
     runtime_dir: str,
     *,
-    initiative_id: str,
-    assignment_id: str,
+    mission_id: str,
+    goal_id: str,
     reviewer: str,
     reviewer_source: str,
-    storage_source_id: str = "kungfu",
+    storage_source_id: str = "atlas",
     purpose: str = COMPLETION_PURPOSE,
     cut_system_time: int = 0,
     executor_profile: str = "thread",
@@ -1152,8 +1135,8 @@ def review_completion(
         raise ValueError("reviewer and reviewer_source are required")
     report = assess_completion(
         runtime_dir,
-        initiative_id=initiative_id,
-        assignment_id=assignment_id,
+        mission_id=mission_id,
+        goal_id=goal_id,
         storage_source_id=storage_source_id,
         purpose=purpose,
         cut_system_time=cut_system_time,
@@ -1182,7 +1165,7 @@ def review_completion(
     tracked_evidence = None
     if checkout_path.strip():
         tracked_evidence = _tracked_completion_evidence(
-            checkout_path, report["state"], assignment_id, claim_record
+            checkout_path, report["state"], goal_id, claim_record
         )
         findings.extend(
             f"tracked checkout: {row['code']}: {row['detail']}"
@@ -1224,15 +1207,15 @@ def review_completion(
         "evidence_requests": evidence_requests,
         "followups": followups,
         "authority_gate": (
-            "mechanical-only; initiative, authority, privacy, security, public-claim, "
+            "mechanical-only; mission, authority, privacy, security, public-claim, "
             "and irreversible changes require a human actor"
         ),
     }
     plan_root = _sha256_root(plan)
     review_basis = {
         "schema": "kungfu.work-control.independent-review-basis/v1",
-        "initiative_subject": report["state"]["initiative_subject"],
-        "assignment_subject": report["claim"]["assignment_subject"],
+        "mission_subject": report["state"]["mission_subject"],
+        "go_subject": report["claim"]["go_subject"],
         "trust_report_root": trust_report_root,
         "plan_root": plan_root,
     }
@@ -1267,8 +1250,8 @@ def review_completion(
             "actor": reviewer,
         },
         "links": {
-            "initiative_id": report["state"]["initiative_subject"],
-            "assignment_id": report["claim"]["assignment_subject"],
+            "initiative_id": report["state"]["mission_subject"],
+            "assignment_id": report["claim"]["go_subject"],
         },
     }
     receipt = _put_native_fact(
@@ -1293,8 +1276,8 @@ def review_completion(
 def decide_continuation(
     runtime_dir: str,
     *,
-    initiative_id: str,
-    assignment_id: str,
+    mission_id: str,
+    goal_id: str,
     review_id: str,
     expected_review_root: str,
     expected_plan_root: str,
@@ -1302,7 +1285,7 @@ def decide_continuation(
     actor: str,
     actor_type: str = "agent",
     change_class: str = "mechanical",
-    storage_source_id: str = "kungfu",
+    storage_source_id: str = "atlas",
     reason: str = "",
     system_time: int = 0,
 ) -> dict[str, Any]:
@@ -1320,10 +1303,10 @@ def decide_continuation(
         raise ValueError("stop requires a human actor")
     state = query_state(
         runtime_dir,
-        initiative_id=initiative_id,
+        mission_id=mission_id,
         storage_source_id=storage_source_id,
     )
-    assignment_id = _stable_id(assignment_id, "assignment_id")
+    goal_id = _stable_id(goal_id, "goal_id")
     review_id = _stable_id(review_id, "review_id")
     rows = [
         row
@@ -1373,18 +1356,17 @@ def decide_continuation(
         "change_class": change_class,
         "reason": reason,
     }
-    assignment_subject = next(
+    goal_subject = next(
         (
             str(row["subject_key"])
-            for row in state["assignments"]
-            if row.get("subject_key") in {assignment_id, f"kungfu:{assignment_id}"}
-            or row.get("payload", {}).get("record", {}).get("assignment_id")
-            == assignment_id
+            for row in state["goals"]
+            if row.get("subject_key") in {goal_id, f"kungfu:{goal_id}"}
+            or row.get("payload", {}).get("record", {}).get("goal_id") == goal_id
         ),
         "",
     )
-    if not assignment_subject:
-        raise ValueError(f"Assignment not found under Initiative: {assignment_id}")
+    if not goal_subject:
+        raise ValueError(f"Go not found under Mission: {goal_id}")
     source_id = _native_source(actor_type)
     payload = {
         "record": record,
@@ -1396,8 +1378,8 @@ def decide_continuation(
             "actor": actor,
         },
         "links": {
-            "initiative_id": state["initiative_subject"],
-            "assignment_id": assignment_subject,
+            "initiative_id": state["mission_subject"],
+            "assignment_id": goal_subject,
         },
     }
     receipt = _put_native_fact(
@@ -1413,8 +1395,8 @@ def decide_continuation(
     if action == "create-follow-up":
         parent_record = next(
             row["payload"]["record"]
-            for row in state["assignments"]
-            if row.get("subject_key") == assignment_subject
+            for row in state["goals"]
+            if row.get("subject_key") == goal_subject
         )
         owning_workspace_identity_root = str(
             parent_record.get("owning_workspace_identity_root") or ""
@@ -1423,14 +1405,14 @@ def decide_continuation(
             created.append(
                 create_assignment(
                     runtime_dir,
-                    initiative_id=str(state["initiative_subject"]).split(":", 1)[-1],
-                    assignment_id=followup["assignment_id"],
+                    initiative_id=str(state["mission_subject"]).split(":", 1)[-1],
+                    assignment_id=followup["goal_id"],
                     title=followup["title"],
                     objective=followup["objective"],
                     actor=actor,
                     actor_type=actor_type,
                     storage_source_id=storage_source_id,
-                    parent_assignment_id=assignment_id,
+                    parent_assignment_id=goal_id,
                     depends_on=followup["depends_on"],
                     owning_workspace_identity_root=owning_workspace_identity_root,
                     responsibility=followup["why_created"],

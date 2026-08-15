@@ -161,8 +161,8 @@ function deliveryFixture(overrides = {}) {
       ...(overrides.cut || {}),
     },
     {
-      initiativeId: 'assignment-family-native-state-contract',
-      assignmentId: 'assignment-family-proof-evidence-binding',
+      initiativeId: 'go-family-native-state-contract',
+      assignmentId: 'go-family-proof-evidence-binding',
       deliveryClass: 'native-proof-required',
       queueAttempt: 'attempt-one',
       admissionProofRoots: [digest({ work: 'proof-evidence-binding' })],

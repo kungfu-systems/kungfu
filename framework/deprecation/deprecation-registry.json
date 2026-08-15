@@ -281,10 +281,11 @@
         "path": "framework/core/src/python/kungfu/cli/surface_contract.registry.json",
         "symbols": [
           "deprecated developer aliases",
+          "deprecated Mission Control aliases",
           "kfc executable alias"
         ]
       },
-      "replacement": "canonical kungfu dev, kungfu env, kungfu sdk, and kungfu profile work-control paths",
+      "replacement": "canonical kungfu dev, kungfu env, kungfu sdk, kungfu profile work-control, and explicit Atlas bridge paths",
       "migrationGuidance": "docs/development/versioning.md",
       "deprecatedAt": {
         "date": "2026-07-20",

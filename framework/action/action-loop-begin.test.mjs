@@ -13,7 +13,7 @@ import {
   beginActionLoop,
   checkpointActionLoop,
   createCorePublicAdapters,
-  createExplicitAuthorityAdapters,
+  createExplicitCompatibilityAdapters,
   resumeActionLoop,
 } from './action-loop-begin.mjs';
 import { rootStepReceipt } from './action-loop.mjs';
@@ -70,11 +70,7 @@ function request(overrides = {}) {
     },
     pursuit: {
       explicit: true,
-      binding: {
-        id: 'pursuit:assignment',
-        root: root('pursuit'),
-        state: 'active',
-      },
+      binding: { id: 'pursuit:go', root: root('pursuit'), state: 'active' },
     },
     atlas: {
       binding: { id: 'atlas:xinfa', root: root('atlas'), state: 'current' },
@@ -189,7 +185,7 @@ class FileCheckpointStore extends MemoryCheckpointStore {
 }
 
 function adapters({ store = new MemoryCheckpointStore(), source = 'a' } = {}) {
-  const explicit = createExplicitAuthorityAdapters();
+  const explicit = createExplicitCompatibilityAdapters();
   const calls = [];
   return {
     calls,
@@ -454,7 +450,7 @@ test(
       return JSON.parse(child.stdout);
     };
     const native = createCorePublicAdapters(invoke);
-    const ports = { ...createExplicitAuthorityAdapters(), ...native };
+    const ports = { ...createExplicitCompatibilityAdapters(), ...native };
     const value = request({
       factRef: {
         name: 'action-loop/native-begin-resume',

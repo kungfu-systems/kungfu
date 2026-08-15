@@ -84,7 +84,7 @@ fn validate_task_envelope(task: &Value) -> Result<(), String> {
             "audience",
             "role",
             "visibility",
-            "work_context",
+            "mission",
             "acceptance",
             "subjects",
             "claims",
@@ -97,11 +97,7 @@ fn validate_task_envelope(task: &Value) -> Result<(), String> {
             "atlas",
         ],
     )?;
-    exact_object(
-        &task["work_context"],
-        "/work_context",
-        &["id", "lens", "track"],
-    )?;
+    exact_object(&task["mission"], "/mission", &["id", "lens", "track"])?;
     exact_object(&task["atlas"], "/atlas", &["atlas_root", "cut_root"])?;
     for pointer in [
         "/acceptance",
@@ -114,11 +110,7 @@ fn validate_task_envelope(task: &Value) -> Result<(), String> {
     ] {
         string_array(task, pointer)?;
     }
-    for pointer in [
-        "/work_context/id",
-        "/work_context/lens",
-        "/work_context/track",
-    ] {
+    for pointer in ["/mission/id", "/mission/lens", "/mission/track"] {
         required_text(task, pointer)?;
     }
     for pointer in ["/requested_route", "/requested_parity_group"] {
@@ -206,7 +198,7 @@ fn candidate(atlas: &Value, task: &Value, route: &Value) -> Value {
     let route_capabilities = strings(metadata, "/capabilities");
     let route_owners = strings(metadata, "/owners");
     let route_roles = strings(metadata, "/roles");
-    let route_tracks = strings(metadata, "/initiative_tracks");
+    let route_tracks = strings(metadata, "/mission_tracks");
     let task_subjects = strings(task, "/subjects");
     let task_capabilities = strings(task, "/required_capabilities");
     let task_ownership = strings(task, "/ownership");
@@ -217,8 +209,8 @@ fn candidate(atlas: &Value, task: &Value, route: &Value) -> Value {
         .as_str()
         .unwrap_or_default()
         .to_ascii_lowercase();
-    let initiative_track = task
-        .pointer("/work_context/track")
+    let mission_track = task
+        .pointer("/mission/track")
         .and_then(Value::as_str)
         .unwrap_or_default()
         .to_ascii_lowercase();
@@ -288,9 +280,9 @@ fn candidate(atlas: &Value, task: &Value, route: &Value) -> Value {
         structured_score += 25;
         evidence.push(json!({"kind": "dependency", "value": dependency}));
     }
-    if !initiative_track.is_empty() && route_tracks.contains(&initiative_track) {
+    if !mission_track.is_empty() && route_tracks.contains(&mission_track) {
         structured_score += 35;
-        evidence.push(json!({"kind": "work-track", "value": initiative_track}));
+        evidence.push(json!({"kind": "mission-track", "value": mission_track}));
     }
     if route_roles.contains(&role) {
         structured_score += 10;
@@ -457,7 +449,7 @@ pub fn resolve_route_value(atlas: &Value, task: &Value) -> Result<RouteResolutio
         "next_action": if status == "resolved" {
             "create and verify a Task Chart with the selected route"
         } else {
-            "declare exact subjects, capabilities, ownership, work track, required authority, or requested_route; then resolve again"
+            "declare exact subjects, capabilities, ownership, Mission track, required authority, or requested_route; then resolve again"
         },
         "receipt_root": Value::Null
     });
@@ -483,8 +475,8 @@ mod tests {
                 {"id": "kfx.claim.extension", "source": {"path": "docs/kfx/extensions.md"}}
             ]},
             "routes": [
-                {"id":"fixture.core.agent","audience":"agent","parityGroup":"fixture.core","visibility":"public","nodes":["core.claim.storage"],"entrypoints":["docs/core/README.md"],"routeRoot":format!("sha256:{}", "c".repeat(64)),"authorityRoot":format!("sha256:{}", "d".repeat(64)),"status":"current","resolution":{"subjects":["core","storage"],"capabilities":["implementation"],"owners":["core"],"roles":["implementer","reviewer"],"initiative_tracks":["core-runtime"],"terms":["core","storage","存储"]}},
-                {"id":"fixture.kfx.agent","audience":"agent","parityGroup":"fixture.kfx","visibility":"public","nodes":["kfx.claim.extension"],"entrypoints":["docs/kfx/README.md"],"routeRoot":format!("sha256:{}", "e".repeat(64)),"authorityRoot":format!("sha256:{}", "f".repeat(64)),"status":"current","resolution":{"subjects":["kfx","extension"],"capabilities":["implementation"],"owners":["kfx"],"roles":["implementer","reviewer"],"initiative_tracks":["kfx-runtime"],"terms":["kfx","extension","扩展"]}}
+                {"id":"fixture.core.agent","audience":"agent","parityGroup":"fixture.core","visibility":"public","nodes":["core.claim.storage"],"entrypoints":["docs/core/README.md"],"routeRoot":format!("sha256:{}", "c".repeat(64)),"authorityRoot":format!("sha256:{}", "d".repeat(64)),"status":"current","resolution":{"subjects":["core","storage"],"capabilities":["implementation"],"owners":["core"],"roles":["implementer","reviewer"],"mission_tracks":["core-runtime"],"terms":["core","storage","存储"]}},
+                {"id":"fixture.kfx.agent","audience":"agent","parityGroup":"fixture.kfx","visibility":"public","nodes":["kfx.claim.extension"],"entrypoints":["docs/kfx/README.md"],"routeRoot":format!("sha256:{}", "e".repeat(64)),"authorityRoot":format!("sha256:{}", "f".repeat(64)),"status":"current","resolution":{"subjects":["kfx","extension"],"capabilities":["implementation"],"owners":["kfx"],"roles":["implementer","reviewer"],"mission_tracks":["kfx-runtime"],"terms":["kfx","extension","扩展"]}}
             ]
         })
     }
@@ -497,7 +489,7 @@ mod tests {
             "audience": "agent",
             "role": "implementer",
             "visibility": "public",
-            "work_context": {"id":"work_context","lens":"principal-engineer","track":"core-runtime"},
+            "mission": {"id":"mission","lens":"principal-engineer","track":"core-runtime"},
             "acceptance": ["storage evidence remains exact"],
             "subjects": ["core","storage"],
             "claims": ["core.claim.storage"],
@@ -530,7 +522,7 @@ mod tests {
         task["ownership"] = json!([]);
         task["required_authority"] = json!([]);
         task["required_capabilities"] = json!([]);
-        task["work_context"]["track"] = json!("unclassified");
+        task["mission"]["track"] = json!("unclassified");
         let outcome = resolve_route_value(&atlas(), &task).expect("resolution");
         assert!(!outcome.resolved);
         let receipt: Value = serde_json::from_str(&outcome.receipt).expect("receipt JSON");

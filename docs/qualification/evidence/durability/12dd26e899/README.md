@@ -27,7 +27,7 @@ Kungfu source revision
 
 Each report was produced on the named host by the repository-local
 `shifu durability:qualify` command after `shifu build:core` succeeded. The
-temporary execution environment removed the external controller-cache bindings
+temporary execution environment removed the Atlas controller-cache bindings
 and selected an empty `XDG_CONFIG_HOME`, allowing the same Shifu command to
 reuse the host's existing Conan cache without changing persistent
 configuration. No GitHub workflow or self-hosted runner dispatch produced

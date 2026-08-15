@@ -422,8 +422,8 @@ test('settled outcomes compile deterministically with exact metric attribution',
   assert.equal(verifyWorkDesignOutcome(first.outcome).ok, true);
 });
 
-test('missing evidence remains unknown and as_of or attribution inference fails closed', () => {
-  const request = outcomeRequest('missing-evidence');
+test('legacy missing evidence remains unknown and as_of or attribution inference fails closed', () => {
+  const request = outcomeRequest('legacy');
   request.completeness = {
     timing: false,
     rework: false,
@@ -431,16 +431,16 @@ test('missing evidence remains unknown and as_of or attribution inference fails 
     acceptance: false,
   };
   request.work.plannedBudgetSeconds = null;
-  const incomplete = compileWorkDesignOutcome(request);
-  assert.equal(incomplete.ok, true);
-  assert.equal(incomplete.outcome.coverage.complete, false);
-  assert.deepEqual(incomplete.outcome.coverage.unknownMetrics, [
+  const legacy = compileWorkDesignOutcome(request);
+  assert.equal(legacy.ok, true);
+  assert.equal(legacy.outcome.coverage.complete, false);
+  assert.deepEqual(legacy.outcome.coverage.unknownMetrics, [
     'acceptanceFailure',
     'dependencyCorrection',
     'rework',
     'timeout',
   ]);
-  assert.equal(incomplete.outcome.metrics.timeout.exceeded, null);
+  assert.equal(legacy.outcome.metrics.timeout.exceeded, null);
 
   const leaked = outcomeRequest('leaked');
   leaked.acceptanceAssessments[0].observedAt = '2026-08-01T00:00:00Z';

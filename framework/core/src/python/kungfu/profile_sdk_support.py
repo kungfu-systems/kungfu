@@ -38,17 +38,6 @@ _TOKEN = re.compile(r"^[A-Za-z0-9._-]+$")
 _IGNORED_PARTS = {".git", "node_modules", "__pycache__", ".DS_Store"}
 
 
-def _work_profile_conformance_script() -> Path | None:
-    relative = Path("framework/work-profile-conformance/work-profile-conformance.mjs")
-    roots = (*Path(__file__).resolve().parents, *Path.cwd().resolve().parents)
-    candidates = (
-        Path(__file__).resolve().parent
-        / "work_profile_conformance/work-profile-conformance.mjs",
-        *(parent / relative for parent in roots),
-    )
-    return next((candidate for candidate in candidates if candidate.is_file()), None)
-
-
 class ProfileSdkError(ValueError):
     def __init__(self, code: str, message: str, **details: Any):
         self.diagnosis = {

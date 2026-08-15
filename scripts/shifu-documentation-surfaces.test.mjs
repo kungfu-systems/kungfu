@@ -107,7 +107,7 @@ const FIXTURE_RESOLUTION = {
   capabilities: ['repository-navigation'],
   owners: ['fixture-docs'],
   roles: ['implementer'],
-  initiative_tracks: ['fixture'],
+  mission_tracks: ['fixture'],
   terms: ['documentation'],
 };
 

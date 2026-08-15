@@ -5,7 +5,7 @@ This is the v4 product gate for the Project Cut-centered loop accepted by
 what must be demonstrated before Kungfu may claim that ordinary users and
 agents can manage real project work through Project Cuts.
 
-The current Project Cut protocol, Initiative/Assignment authority cutover, Fact/Episode
+The current Project Cut protocol, Mission/Go authority cutover, Fact/Episode
 runtime, and Agent Work contracts are prerequisites. None independently proves
 this product loop.
 

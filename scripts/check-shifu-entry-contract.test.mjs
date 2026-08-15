@@ -79,14 +79,13 @@ test('cold source Work failure remains machine-actionable', (t) => {
   assert.deepEqual(JSON.parse(result.stdout), {
     schema: 'kungfu.assignment-orchestration.diagnosis/v1',
     ok: false,
-    code: 'qualified-product-required',
-    message:
-      'Assignment orchestration requires an installed qualified Kungfu product',
+    code: 'assignment-current-checkout-binding-missing',
+    message: 'Assignment admission requires pykungfu from the current checkout',
     next_actions: [
       {
-        action: 'use-installed-product',
-        command: 'kungfu work',
-        description: 'Run Work through an installed qualified Kungfu product',
+        action: 'build-core',
+        command: './shifu build:core',
+        description: 'Assemble pykungfu from the current checkout',
       },
     ],
   });
@@ -156,7 +155,10 @@ test('partial Core assembly cannot masquerade as Work readiness', (t) => {
   });
   assert.equal(result.status, 127);
   assert.equal(result.stderr, '');
-  assert.equal(JSON.parse(result.stdout).code, 'qualified-product-required');
+  assert.equal(
+    JSON.parse(result.stdout).code,
+    'assignment-current-checkout-binding-missing',
+  );
 });
 
 test('source Kungfu route projects its built TUI and Product extensions', (t) => {
@@ -331,9 +333,12 @@ test('cached pinned uv activates Work after Qualified Core materialization', (t)
 
 test('Windows cold source Work failure carries the same diagnosis', () => {
   const windows = fs.readFileSync(path.join(ROOT, 'shifu.cmd'), 'utf8');
-  assert.match(windows, /"code":"qualified-product-required"/u);
-  assert.match(windows, /"action":"use-installed-product"/u);
-  assert.match(windows, /"command":"kungfu work"/u);
+  assert.match(
+    windows,
+    /"code":"assignment-current-checkout-binding-missing"/u,
+  );
+  assert.match(windows, /"action":"build-core"/u);
+  assert.match(windows, /"command":"shifu\.cmd build:core"/u);
   assert.match(windows, /kungfubuildinfo\.json/u);
   assert.match(
     windows,

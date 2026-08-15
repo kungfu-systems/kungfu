@@ -55,7 +55,6 @@ from kungfu.profile_sdk_support import (
     _sha256 as _sha256,
     _validate_sdk_value as _validate_sdk_value,
     _validate_source_bundle as _validate_source_bundle,
-    _work_profile_conformance_script as _work_profile_conformance_script,
 )
 from kungfu.profile_sdk_source import (
     _collaboration_closure as _collaboration_closure,
@@ -82,6 +81,17 @@ from kungfu.profile_sdk_kfd3 import (
 )
 
 SOURCE_BUNDLE_SCHEMA = "kungfu.profile-source-bundle/v1"
+
+
+def _work_profile_conformance_script() -> Path | None:
+    relative = Path("framework/work-profile-conformance/work-profile-conformance.mjs")
+    roots = (*Path(__file__).resolve().parents, *Path.cwd().resolve().parents)
+    candidates = (
+        Path(__file__).resolve().parent
+        / "work_profile_conformance/work-profile-conformance.mjs",
+        *(parent / relative for parent in roots),
+    )
+    return next((candidate for candidate in candidates if candidate.is_file()), None)
 
 
 def _work_profile_conformance_invocation(
@@ -1175,13 +1185,15 @@ def verify_kfd3(
 def qualify_source(source: str | Path, runtime_dir: str | Path) -> dict[str, Any]:
     validated = validate_source(source, runtime_dir)
     inspection = validated["inspection"]
-    read = _read_ref_json
-    compatibility_ref = inspection["profile"]["kfd1"].get("compatibility")
-    compatibility = read(inspection, compatibility_ref) if compatibility_ref else {}
-    qualification = read(inspection, inspection["profile"]["qualification"]["profile"])
+    compatibility = _read_ref_json(
+        inspection, inspection["profile"]["kfd1"]["compatibility"]
+    )
+    qualification = _read_ref_json(
+        inspection, inspection["profile"]["qualification"]["profile"]
+    )
     contracts = compatibility.get("runtimeContracts", [])
     checks = qualification.get("checks", [])
-    if compatibility_ref and (
+    if (
         contracts != ["kungfu.profile-lifecycle/v1"]
         and "kungfu.profile-lifecycle/v1" not in contracts
     ):

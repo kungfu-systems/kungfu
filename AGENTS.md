@@ -67,9 +67,8 @@ kungfu agent docs --projection agent --json
 ```
 
 Automatic Xinfa admission occurs only when a coordinator invokes the public
-task-envelope and route-resolution contract and binds the returned roots.
-Merely capturing an Assignment request or writing an Episode does not trigger
-Xinfa.
+task-envelope and route-resolution contract and binds the returned roots. A Go
+card or Episode alone does not trigger it.
 
 ## Execute and verify through Shifu
 

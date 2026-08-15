@@ -352,8 +352,8 @@ def _captured_work(candidate: Path) -> dict[str, Any] | None:
         return None
     request = captured["request"]
     work = request.get("workDefinition") or {}
-    initiative_id = str(work.get("initiative_id") or "").strip()
-    assignment_id = str(work.get("assignment_id") or "").strip()
+    initiative_id = str(work.get("mission_id") or "").strip()
+    assignment_id = str(work.get("goal_id") or "").strip()
     title = str(work.get("title") or "").strip()
     objective = str(work.get("objective") or "").strip()
     acceptance_checks = work.get("acceptance_criteria")

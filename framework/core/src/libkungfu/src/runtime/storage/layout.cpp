@@ -69,7 +69,7 @@ storage_layout_result workspace_episode_layout_typed(const storage_layout_reques
   result.paths.skill_manager_dir = (runtime / "skill-manager").string();
   result.paths.agent_session_dir = (runtime / "agent-session").string();
   result.paths.skill_context_dir = (runtime / "skill-context").string();
-  result.paths.project_cut_runtime_dir = (runtime / "project-cut-runtime").string();
+  result.paths.project_cut_runtime_dir = (runtime / "project-cut-go").string();
   result.paths.sources_dir = (runtime / "sources").string();
   result.paths.peers_dir = (runtime / "peers").string();
   result.paths.coordination_dir = (runtime / "coordination").string();
@@ -95,6 +95,7 @@ storage_layout_result workspace_episode_layout_typed(const storage_layout_reques
   result.paths.episode_manifest_journal = (episode_manifest_dir / "*.journal").string();
   result.paths.coordinator_state = (runtime / "coordinator").string();
   result.paths.remote_mirrors = (runtime / "remotes" / "<source-id>" / "runtime").string();
+  result.paths.atlas_store = (runtime / "atlas" / "store").string();
   const auto add_entry = [&result](std::string id, const fs::path &path, std::string persistence,
                                    std::string authority) {
     result.entries.push_back({std::move(id), path.string(), std::move(persistence), std::move(authority)});
@@ -111,7 +112,7 @@ storage_layout_result workspace_episode_layout_typed(const storage_layout_reques
   add_entry("locks", home / "locks", "ephemeral", "workspace advisory locks");
   add_entry("projections", home / "projections", "cache", "rebuildable workspace projections");
   add_entry("contract", home / "contract", "durable", "portable workspace contract input");
-  add_entry("initiatives", home / "initiatives", "durable", "low-frequency workspace Initiative input");
+  add_entry("missions", home / "missions", "durable", "low-frequency workspace mission input");
   add_entry("skills", home / "skills", "durable", "installed workspace skills");
   add_entry("skill-bindings", home / "skill-bindings", "durable", "workspace skill enablement bindings");
   add_entry("sealed-episodes", home / "episodes", "durable", "sealed Git-provider Episode material");
@@ -139,7 +140,7 @@ storage_layout_result workspace_episode_layout_typed(const storage_layout_reques
   add_entry("skill-manager", runtime / "skill-manager", "durable", "skill installation and enablement state");
   add_entry("agent-session", runtime / "agent-session", "durable", "agent session and capsule continuity state");
   add_entry("skill-context", runtime / "skill-context", "cache", "compiled skill context");
-  add_entry("project-cut-runtime", runtime / "project-cut-runtime", "cache", "rebuildable Project Cut coordination");
+  add_entry("project-cut-runtime", runtime / "project-cut-go", "cache", "rebuildable Project Cut coordination");
   add_entry("episode-provider", runtime / "episode-provider", "ephemeral", "live Git Episode provider leases");
   add_entry("full-evidence", runtime / "full-evidence", "durable", "admitted full Episode evidence receipts");
   add_entry("rewind", runtime / "rewind", "durable", "Rewind run bundles and retained evidence");
@@ -174,6 +175,7 @@ storage_layout_result workspace_episode_layout_typed(const storage_layout_reques
   add_entry("storage-backend-authority-lock", storage_dir / "backend-authority.lock", "ephemeral",
             "live provider authority lock");
   add_entry("remote-mirrors", runtime / "remotes", "durable", "accepted source mirrors");
+  add_entry("atlas-store", runtime / "atlas", "durable", "accepted Atlas mirror");
   const std::unordered_set<std::string> declared_paths = [&result] {
     std::unordered_set<std::string> paths;
     for (const auto &entry : result.entries) {

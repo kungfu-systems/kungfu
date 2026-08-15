@@ -117,7 +117,7 @@
         "realm": { "realmId": "home", "realmKind": "local", "generation": "generation-7" },
         "operation": "assignment.get",
         "client": { "clientId": "gui", "kind": "gui", "requestedCapabilities": ["assignment.get.read"] },
-        "payload": { "assignmentId": "assignment-a" }
+        "payload": { "legacyAlias": "go-1" }
       },
       "response": {
         "schema": "kungfu.assignment-runtime.response/v1",
@@ -126,7 +126,7 @@
         "revision": { "value": "revision-42", "root": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "parentRoot": null },
         "capabilities": { "supported": ["assignment.get.read"], "selected": ["assignment.get.read"], "unsupported": [] },
         "status": "error", "result": null, "receipts": [], "diagnostics": [],
-        "error": { "code": "ambiguous-identity", "message": "assignment identity requires one exact Initiative scope", "retryable": false, "details": { "candidateCount": 2 } }
+        "error": { "code": "ambiguous-identity", "message": "legacy alias resolves to more than one canonical identity", "retryable": false, "details": { "candidateCount": 2 } }
       },
       "expected": { "requestValid": true, "responseStatus": "error", "errorCode": "ambiguous-identity" }
     },

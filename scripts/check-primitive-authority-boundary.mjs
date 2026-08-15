@@ -178,7 +178,6 @@ export function primitiveAuthorityBoundaryIssues(entries) {
 export function scanPrimitiveAuthorityBoundary(root = ROOT) {
   const entries = repositoryFiles(root)
     .filter(productionSource)
-    .filter((pathname) => fs.existsSync(path.join(root, pathname)))
     .map((pathname) => ({
       path: pathname,
       content: fs.readFileSync(path.join(root, pathname), 'utf8'),

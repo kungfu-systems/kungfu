@@ -32,8 +32,8 @@ SCHEMA = "kungfu.exit-clean-runtime-qualification/v1"
 HANDOFF_SCHEMA = "kungfu.exit-clean-runtime-handoff/v1"
 EPISODE_ID = 20260720
 WORK_REF = "profiles/kfd-7/exit-clean-runtime"
-INITIATIVE_ID = "exit-clean-runtime"
-ASSIGNMENT_ID = "continue-after-exit"
+MISSION_ID = "exit-clean-runtime"
+GOAL_ID = "continue-after-exit"
 
 
 def _canonical(value: Any) -> bytes:
@@ -241,10 +241,12 @@ def _successor(previous: dict[str, Any], action_id: str) -> dict[str, Any]:
     return request
 
 
-def _activate_work_control_profile(runtime: Path) -> Path:
+def _activate_mission_profile(runtime: Path) -> Path:
     from kungfu import profile_composition, profile_sdk
 
-    source = Path(profile_sdk.discover_source("kungfu.work-control", runtime)["source"])
+    source = Path(
+        profile_sdk.discover_source("kungfu.mission-control", runtime)["source"]
+    )
     for action in ("install", "qualify", "activate"):
         values = {"granted_permissions": ["storage"]} if action == "activate" else {}
         plan = profile_sdk.lifecycle_plan(runtime, action, source, **values)["corePlan"]
@@ -294,7 +296,7 @@ def _request(profile_source: Path, mode: str) -> dict[str, Any]:
         ),
         "members": [
             {
-                "memberId": "work-control-profile",
+                "memberId": "mission-profile",
                 "kind": "profile-source-v1",
                 "requiredForScope": True,
                 "options": {
@@ -321,11 +323,11 @@ def _request(profile_source: Path, mode: str) -> dict[str, Any]:
                 "options": {"episodeId": EPISODE_ID},
             },
             {
-                "memberId": "initiative-state",
-                "kind": "initiative-bundle-v1",
+                "memberId": "mission-state",
+                "kind": "mission-control-v2",
                 "requiredForScope": True,
                 "options": {
-                    "initiativeId": INITIATIVE_ID,
+                    "missionId": MISSION_ID,
                     "purpose": "operator-review",
                 },
             },
@@ -335,12 +337,13 @@ def _request(profile_source: Path, mode: str) -> dict[str, Any]:
 
 def source_phase(args: argparse.Namespace) -> int:
     discovery = _assert_installed(args.product_root)
-    from kungfu import exit_bundle, work_control
+    from kungfu import exit_bundle
     from kungfu.agent import work_profile
+    from kungfu.atlas import mission_control
     from kungfu.storage import service
 
     runtime = args.work_root / "source-runtime"
-    profile_source = _activate_work_control_profile(runtime)
+    profile_source = _activate_mission_profile(runtime)
     created = work_profile.apply_action(runtime, _work_request(), execute=True)
     continued = work_profile.apply_action(
         runtime,
@@ -363,18 +366,18 @@ def source_phase(args: argparse.Namespace) -> int:
         end_time=2,
         reason="sealed representative fixture",
     )
-    work_control.create_initiative(
+    mission_control.create_initiative(
         str(runtime),
-        initiative_id=INITIATIVE_ID,
+        initiative_id=MISSION_ID,
         title="Exit clean-runtime qualification",
         intent="Continue from one exact installed Exit package",
         actor="qualification-owner",
         actor_type="user",
     )
-    work_control.create_assignment(
+    mission_control.create_assignment(
         str(runtime),
-        initiative_id=INITIATIVE_ID,
-        assignment_id=ASSIGNMENT_ID,
+        initiative_id=MISSION_ID,
+        assignment_id=GOAL_ID,
         title="Continue after installed import",
         objective="Perform one bounded continuation without chat context",
         actor="qualification-agent",
@@ -398,13 +401,9 @@ def source_phase(args: argparse.Namespace) -> int:
                 "content_root"
             ]
         ),
-        "initiativeBundleRoot": full["materials"]["initiative-state"]["bundle_root"],
-        "initiativeExpectedState": full["materials"]["initiative-state"][
-            "expected_state"
-        ],
-        "profileSuiteRoot": full["materials"]["work-control-profile"][
-            "profileSuiteRoot"
-        ],
+        "missionBundleRoot": full["materials"]["mission-state"]["bundle_root"],
+        "missionExpectedState": full["materials"]["mission-state"]["expected_state"],
+        "profileSuiteRoot": full["materials"]["mission-profile"]["profileSuiteRoot"],
         "sourceCutRoot": continued["result"]["cutRoot"],
         "sourceRevision": continued["result"]["revision"],
     }
@@ -514,8 +513,9 @@ def _delete_derived_projections(runtime: Path) -> list[str]:
 def destination_phase(args: argparse.Namespace) -> int:
     started = time.monotonic()
     discovery = _assert_installed(args.product_root)
-    from kungfu import exit_bundle, exit_verifier, profile_sdk, work_control
+    from kungfu import exit_bundle, exit_verifier, profile_sdk
     from kungfu.agent import work_profile
+    from kungfu.atlas import mission_control
     from kungfu.storage import service
 
     handoff = _read(args.handoff)
@@ -558,11 +558,11 @@ def destination_phase(args: argparse.Namespace) -> int:
 
     source_state = handoff["sourceState"]
     destination_work = work_profile.inspect(runtime, WORK_REF)
-    destination_profile = profile_sdk.discover_source("kungfu.work-control", runtime)[
-        "source"
-    ]
-    destination_initiative = work_control.query_state(
-        str(runtime), initiative_id=INITIATIVE_ID
+    destination_profile = profile_sdk.discover_source(
+        "kungfu.mission-control", runtime
+    )["source"]
+    destination_mission = mission_control.query_state(
+        str(runtime), mission_id=MISSION_ID
     )
     destination_state = {
         "work": destination_work,
@@ -577,9 +577,9 @@ def destination_phase(args: argparse.Namespace) -> int:
                 "content_root"
             ]
         ),
-        "initiativeBundleRoot": full["materials"]["initiative-state"]["bundle_root"],
-        "initiativeExpectedState": {
-            key: destination_initiative[key]
+        "missionBundleRoot": full["materials"]["mission-state"]["bundle_root"],
+        "missionExpectedState": {
+            key: destination_mission[key]
             for key in (
                 "query_definition_root",
                 "query_proof_root",
@@ -597,8 +597,8 @@ def destination_phase(args: argparse.Namespace) -> int:
         "workAuthorityBundleRoot",
         "factPortableBundleRoot",
         "episodeContentRoot",
-        "initiativeBundleRoot",
-        "initiativeExpectedState",
+        "missionBundleRoot",
+        "missionExpectedState",
         "profileSuiteRoot",
     ):
         if destination_state[field] != source_state[field]:

@@ -1212,8 +1212,10 @@ function terminalUsage({
       pythonAbi: 'cp313',
       artifact: usageArtifact(materialization),
       fallback: {
-        required: false,
-        command: '',
+        required: ['fallback-required', 'rejected'].includes(result),
+        command: ['fallback-required', 'rejected'].includes(result)
+          ? './shifu build:core'
+          : '',
       },
     }),
   );
@@ -1231,7 +1233,7 @@ function terminalResult(error) {
       'unsupported-host',
     ].includes(error.reason)
   ) {
-    return 'artifact-unavailable';
+    return 'fallback-required';
   }
   return 'rejected';
 }
@@ -1466,14 +1468,13 @@ function diagnosis(error) {
     ok: false,
     code: 'qualified-core-reuse-unavailable',
     message:
-      'No exact verified Qualified Core is available; install or supply a qualified product artifact',
+      'No exact verified Qualified Core is reusable for this checkout; assemble Core from current source',
     reason,
     next_actions: [
       {
-        action: 'install-qualified-product',
-        command: '',
-        description:
-          'Install or supply an exact verified Qualified Core product artifact',
+        action: 'build-core',
+        command: './shifu build:core',
+        description: 'Assemble pykungfu from the current checkout',
       },
     ],
   };

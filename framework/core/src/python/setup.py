@@ -96,22 +96,6 @@ class BuildPythonWithExitContract(build_py):
             destination_file.parent.mkdir(parents=True, exist_ok=True)
             shutil.copyfile(source_file, destination_file)
 
-        repository_root = _find_pyproject(_here).parent.parent.parent
-        work_design_runtime = (
-            Path(self.build_lib) / "kungfu" / "work_design_runtime" / "framework"
-        )
-        for relative in (
-            "project-cut/src/project-cut.mjs",
-            "work-history-selector/src/work-history-selector.mjs",
-            "work-design-advisor/src/work-design-advisor.mjs",
-            "work-design-preflight/src/work-design-preflight.mjs",
-            "work-design-preflight/tooling/work-design-preflight.mjs",
-        ):
-            source_file = repository_root / "framework" / relative
-            destination_file = work_design_runtime / relative
-            destination_file.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copyfile(source_file, destination_file)
-
 
 setup(
     name=project["name"],

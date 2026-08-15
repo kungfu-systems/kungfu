@@ -25,7 +25,7 @@ selection paths:
 ```
 
 Select an exact `audience: "agent"` route whose declared subjects,
-capabilities, owners, role, and Initiative track match the task. Then compile the
+capabilities, owners, role, and Mission track match the task. Then compile the
 Task Chart through Shifu's thin Xinfa adapter:
 
 ```sh
@@ -119,10 +119,10 @@ review.
 
 ## Automation boundary
 
-A Work coordinator can automatically invoke this flow because its coordinator creates
+Atlas `go` can automatically invoke this flow because its coordinator creates
 a structured task envelope, resolves one exact route, verifies the chart, and
 binds the roots into Project Cut and completion evidence. That is coordinator
-behavior, not a side effect of Markdown or Episode storage. An Assignment request, an
+behavior, not a side effect of Markdown or Episode storage. A Go card, a
 `.kungfu/episodes` record, `AGENTS.md`, or an installed Skill can instruct an
 Agent to call Xinfa, but none of them alone executes the compiler.
 In other words, storage or instructions alone do not execute Xinfa.

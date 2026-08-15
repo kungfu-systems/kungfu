@@ -193,7 +193,7 @@ def cost(
     "--signal",
     type=click.Choice(["progress", "heartbeat", "blocker", "waiting"]),
     default="progress",
-    help="observation kind; never claims canonical Assignment state",
+    help="observation kind; never claims canonical Go state",
 )
 @click.option("--next-action", type=str, default=None, help="declared next action")
 @click.option(

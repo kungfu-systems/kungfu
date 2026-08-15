@@ -4,7 +4,7 @@
   "title": "Xinfa task envelope v1",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schema", "kind", "objective", "audience", "role", "visibility", "work_context", "acceptance", "subjects", "claims", "ownership", "dependencies", "required_capabilities", "required_authority", "requested_route", "requested_parity_group", "atlas"],
+  "required": ["schema", "kind", "objective", "audience", "role", "visibility", "mission", "acceptance", "subjects", "claims", "ownership", "dependencies", "required_capabilities", "required_authority", "requested_route", "requested_parity_group", "atlas"],
   "properties": {
     "schema": { "const": "xinfa.task-envelope/v1" },
     "kind": { "const": "xinfa.task-envelope/v1" },
@@ -12,7 +12,7 @@
     "audience": { "const": "agent" },
     "role": { "type": "string", "minLength": 1 },
     "visibility": { "enum": ["public", "internal", "private"] },
-    "work_context": {
+    "mission": {
       "type": "object",
       "additionalProperties": false,
       "required": ["id", "lens", "track"],

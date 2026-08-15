@@ -182,6 +182,7 @@ interface StorageLayoutResult {
     episode_manifest_journal: string;
     coordinator_state: string;
     remote_mirrors: string;
+    atlas_store: string;
   };
   episodes: {
     authority: string;

@@ -28,12 +28,9 @@ def _document():
     return {
         "sources": [
             _source(
-                "initiative-assignment",
-                "initiative:technical-stewardship/assignment:fact-kernel",
-                {
-                    "initiative_id": "technical-stewardship",
-                    "assignment_id": "fact-kernel",
-                },
+                "mission-go",
+                "mission:technical-stewardship/go:fact-kernel",
+                {"mission_id": "technical-stewardship", "goal_id": "fact-kernel"},
             ),
             _source(
                 "xinfa-atlas",
@@ -49,14 +46,14 @@ def _document():
         "relations": [
             {
                 "relation_type": "uses-context",
-                "source_id": "initiative:technical-stewardship/assignment:fact-kernel",
+                "source_id": "mission:technical-stewardship/go:fact-kernel",
                 "target_id": "atlas:sha256:fixture",
                 "attributes": {"inheriting": False},
             },
             {
                 "relation_type": "explicitly-authorizes",
                 "source_id": "warrant:fact-kernel-review",
-                "target_id": "initiative:technical-stewardship/assignment:fact-kernel",
+                "target_id": "mission:technical-stewardship/go:fact-kernel",
                 "attributes": {"scope": "fixture-only", "inheriting": False},
             },
         ],
@@ -101,11 +98,7 @@ def test_shadow_comparison_reports_typed_gaps_without_selecting_authority(tmp_pa
 
     missing = deepcopy(document)
     missing["sources"].append(
-        _source(
-            "initiative-assignment",
-            "initiative:missing/assignment:missing",
-            {"status": "missing"},
-        )
+        _source("mission-go", "mission:missing/go:missing", {"status": "missing"})
     )
     missing_result = storage_service.fact_profile_shadow_compare(missing, actual)
     assert missing_result["counts"]["missing"] == 1

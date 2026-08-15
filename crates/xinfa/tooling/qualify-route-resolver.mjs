@@ -68,7 +68,7 @@ function main() {
     fs.readFileSync(/** @type {string} */ (args.get('--corpus')), 'utf8'),
   );
   const atlas = JSON.parse(fs.readFileSync(`${atlasDir}/atlas.json`, 'utf8'));
-  if (corpus.schema !== 'xinfa.assignment-route-corpus/v1')
+  if (corpus.schema !== 'xinfa.go-route-corpus/v1')
     throw new Error('unsupported route corpus');
   const outcomes = [];
   let correct = 0;
@@ -92,10 +92,10 @@ function main() {
       audience: 'agent',
       role: item.role,
       visibility: 'public',
-      work_context: {
-        id: 'kungfu-work-context',
+      mission: {
+        id: 'kungfu-technical-stewardship',
         lens: 'principal-engineer',
-        track: item.initiative_track,
+        track: item.mission_track,
       },
       acceptance: [
         `route ${item.expected_route} is selected without omitted authority`,
@@ -132,7 +132,7 @@ function main() {
     if (!faultRejected) falseGreen += 1;
     outcomes.push({
       id: item.id,
-      assignment_id: item.assignment_id,
+      goal_id: item.goal_id,
       expected_route: item.expected_route,
       selected_route: receipt.selected_route,
       status: receipt.status,
@@ -174,7 +174,7 @@ function main() {
       ? 'pass'
       : 'fail';
   const content = {
-    schema: 'xinfa.assignment-route-qualification/v1',
+    schema: 'xinfa.go-route-qualification/v1',
     actor,
     verdict,
     atlas_root: atlas.atlas_root,

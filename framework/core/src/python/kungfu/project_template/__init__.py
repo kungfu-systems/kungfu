@@ -266,8 +266,8 @@ def _assignment_request(payload: dict[str, Any], template_root: str) -> dict[str
             "expiresAt": None,
         },
         "workDefinition": {
-            "assignment_id": work["assignmentId"],
-            "initiative_id": work["initiativeId"],
+            "goal_id": work["assignmentId"],
+            "mission_id": work["initiativeId"],
             "title": work["title"],
             "objective": work["objective"],
             "acceptance_criteria": work["acceptanceChecks"],
@@ -336,8 +336,8 @@ def _captured_project_work(candidate: Path) -> dict[str, Any] | None:
     ):
         return None
     work = request.get("workDefinition") or {}
-    initiative_id = str(work.get("initiative_id") or "").strip()
-    assignment_id = str(work.get("assignment_id") or "").strip()
+    initiative_id = str(work.get("mission_id") or "").strip()
+    assignment_id = str(work.get("goal_id") or "").strip()
     title = str(work.get("title") or "").strip()
     objective = str(work.get("objective") or "").strip()
     acceptance_checks = work.get("acceptance_criteria")
@@ -462,8 +462,8 @@ def resume_project_template(
             source.get("kind") == "kungfu-project-template"
             and source.get("templateId") == template_id
             and source.get("templateRoot") == template_root
-            and work.get("initiative_id") == payload["initialWork"]["initiativeId"]
-            and work.get("assignment_id") == payload["initialWork"]["assignmentId"]
+            and work.get("mission_id") == payload["initialWork"]["initiativeId"]
+            and work.get("goal_id") == payload["initialWork"]["assignmentId"]
         ):
             request_path = candidate
             request = value

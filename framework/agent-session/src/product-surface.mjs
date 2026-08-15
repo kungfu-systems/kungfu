@@ -505,7 +505,7 @@ export class AgentSessionProductSurface {
       ],
       clients: ['gui', 'cli', 'kfd3-agent'],
       projections: [
-        'assignment',
+        'go-card',
         'assistant-console',
         'console-hub',
         'presentation',

@@ -580,6 +580,7 @@ function parseJsonOutput(output, label) {
     throw new Error(`${label} did not produce JSON output`);
   }
 }
+
 export function listKfxPackages() {
   const packages = [];
   const visit = (dir, depth) => {
@@ -610,6 +611,7 @@ export function listKfxPackages() {
   visit(EXTENSIONS_ROOT, 0);
   return packages.sort((a, b) => a.name.localeCompare(b.name));
 }
+
 function productKfxDeclarations() {
   const pkg = readJson(path.join(PRODUCT_DIR, 'package.json'));
   const dependencies = Object.keys(pkg.dependencies || {}).filter((name) =>
@@ -618,6 +620,7 @@ function productKfxDeclarations() {
   const metadata = pkg.kungfuProduct?.extensionPackages || [];
   return new Set([...dependencies, ...metadata]);
 }
+
 function assertDeclaredKfx(packages) {
   const declared = productKfxDeclarations();
   const actual = new Set(packages.map((pkg) => pkg.name));
@@ -642,6 +645,7 @@ function assertDeclaredKfx(packages) {
     },
   });
 }
+
 function assertSafeGeneratedDir(dir) {
   const resolved = path.resolve(dir);
   const relDir = path.relative(PRODUCT_DIR, resolved);
@@ -655,6 +659,7 @@ function assertSafeGeneratedDir(dir) {
     throw new Error(`refusing to clean unexpected directory: ${resolved}`);
   }
 }
+
 function copyPackageDir(source, target) {
   fs.mkdirSync(path.dirname(target), { recursive: true });
   fs.cpSync(source, target, {
@@ -1518,7 +1523,9 @@ export function runInstalledKungfuAssignmentAdmissionSmoke({
         source: { kind: initiativeId, sourceId: assignmentId },
         retention: { policy: retentionPolicy, expiresAt: null },
         workDefinition: {
+          goal_id: assignmentId,
           assignment_id: assignmentId,
+          mission_id: initiativeId,
           initiative_id: initiativeId,
           title: 'Verify installed Assignment admission',
           objective: 'Prove the packaged Work Control Suite is closed.',
@@ -1843,10 +1850,21 @@ export function smokeCliProductArchive({ archivePath, archiveBase }) {
           KF_BUNDLED_EXTENSION_ROOT: extensionsRoot,
           KUNGFU_ACTION_ENTRY: actionEntry,
         };
-        const cliSmoke = { installRoot, kungfuBin, env: smokeEnv };
-        runInstalledKungfuXinfaSmoke(cliSmoke);
-        runInstalledActionPrimitiveDiscovery(cliSmoke);
-        runInstalledKungfuAssignmentAdmissionSmoke(cliSmoke);
+        runInstalledKungfuXinfaSmoke({
+          installRoot,
+          kungfuBin,
+          env: smokeEnv,
+        });
+        runInstalledActionPrimitiveDiscovery({
+          installRoot,
+          kungfuBin,
+          env: smokeEnv,
+        });
+        runInstalledKungfuAssignmentAdmissionSmoke({
+          installRoot,
+          kungfuBin,
+          env: smokeEnv,
+        });
         runInstalledKungfuActionSmoke({
           installRoot,
           kungfuBin,
@@ -1862,7 +1880,11 @@ export function smokeCliProductArchive({ archivePath, archiveBase }) {
           extensionsRoot,
           env: smokeEnv,
         });
-        runInstalledKungfuAgentHubSmoke(cliSmoke);
+        runInstalledKungfuAgentHubSmoke({
+          installRoot,
+          kungfuBin,
+          env: smokeEnv,
+        });
         runInstalledEmbeddedNodeAddonSmoke({
           installRoot,
           runtimeEntry,

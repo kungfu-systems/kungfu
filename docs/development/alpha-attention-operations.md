@@ -52,7 +52,7 @@ The machine-readable source is
 - Questions, ideas, showcases, and open-ended support use Discussions.
 - Vulnerabilities use private vulnerability reporting.
 - Pull requests contain reviewed code or documentation changes.
-- There is no email, helpdesk, chat, or mirrored external inbox.
+- There is no email, helpdesk, chat, or mirrored Atlas inbox.
 
 Use these equivalent saved queues:
 

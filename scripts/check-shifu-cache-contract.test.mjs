@@ -727,12 +727,12 @@ test('cache use is dry-run by default and manages only its delimited block', asy
   assert.equal(after, "export KEEP_ME='yes'\n");
 });
 
-test('cache use refuses to overwrite an external controller projection', async (t) => {
+test('cache use refuses to overwrite an Atlas controller projection', async (t) => {
   const fixture = shellHarness(t);
   const configFile = path.join(fixture.root, 'build-local.env');
   fs.writeFileSync(
     configFile,
-    '# external-shifu-cache-profile begin\n# external-shifu-cache-profile end\n',
+    '# atlas-shifu-cache-profile begin\n# atlas-shifu-cache-profile end\n',
   );
   assert.equal(
     cacheStatus({

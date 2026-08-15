@@ -41,8 +41,8 @@
         "humanAuthority": {
           "domainIdentity": {
             "status": "human-declared",
-            "statement": "Initiative and Assignment identities remain Work Control judgments.",
-            "authorityRoot": "sha256:401a8e9555dec01e8d67c855fdbf11ee92514b6fdbf8e952e053a69f9f55963e"
+            "statement": "Mission and Assignment identities remain Work Control judgments.",
+            "authorityRoot": "sha256:0c7ede439876322b773816b8c48e89efc44ff10a6ad03a0796acb84623eb19cc"
           },
           "legitimateAuthorization": {
             "status": "human-declared",
@@ -51,8 +51,8 @@
           },
           "successMeaning": {
             "status": "human-declared",
-            "statement": "Initiative success is decided against retained acceptance evidence.",
-            "authorityRoot": "sha256:ed4dcbd34f64aa9d3d6400778e7c569b754b30543ff8b961da52c57ce6e5b570"
+            "statement": "Mission success is decided against retained acceptance evidence.",
+            "authorityRoot": "sha256:4aa60892f8f08039d16b34b54b879b98cb8bed11c11b9108723a68e8c8feb9e2"
           },
           "privacyBoundary": {
             "status": "human-declared",
@@ -74,35 +74,35 @@
           {
             "case": "repeat",
             "status": "passed",
-            "evidenceRoot": "sha256:90aaa8e738a15dd02d041d87316f0084a57096eb0fe59782e4a9763c6a3345ff",
+            "evidenceRoot": "sha256:e391e08a343cb909ff3baa83d2fca97d052d0a8f3137d39a47dc60cd291c2365",
             "evidencePath": "framework/work-profile-conformance/qualification/retained-witnesses.json",
             "evidencePointer": "/actionLoop/repeat"
           },
           {
             "case": "crash",
             "status": "passed",
-            "evidenceRoot": "sha256:ab8722eb7ad3c9b02ad0aba611aab606c401cd9e9918ba095da8c89215edbb86",
+            "evidenceRoot": "sha256:9a3c6fe84eda71b8e49060b6b71a563aa0d8c83143da60877c98e20afcab3dde",
             "evidencePath": "framework/work-profile-conformance/qualification/retained-witnesses.json",
             "evidencePointer": "/actionLoop/crash"
           },
           {
             "case": "interrupted",
             "status": "passed",
-            "evidenceRoot": "sha256:efb16ccd6ccbba99407d87c61e2325a5df592f25bf43f658603d26e592e0e075",
+            "evidenceRoot": "sha256:dd6bb5286b7f7d97acc13b7a92632f7cf57274b0e8270bf89c009d7ede131ba0",
             "evidencePath": "framework/work-profile-conformance/qualification/retained-witnesses.json",
             "evidencePointer": "/actionLoop/interrupted"
           },
           {
             "case": "stale",
             "status": "passed",
-            "evidenceRoot": "sha256:4644afce7f15f0d071ed41b5c30c1b1ad19865247a6ff7d5c81390d81648c51b",
+            "evidenceRoot": "sha256:ed3937043a170b1038390d41d81adeb31bde1f25d05b95b20b70c56690a5d9c3",
             "evidencePath": "framework/work-profile-conformance/qualification/retained-witnesses.json",
             "evidencePointer": "/actionLoop/stale"
           },
           {
             "case": "warrant-revoked",
             "status": "passed",
-            "evidenceRoot": "sha256:ff6ca2ef0e8fd06a892bf41c533cadc11e3015cf5aacec329506310c1dfff325",
+            "evidenceRoot": "sha256:16783aff83f4dd5c59855455b29591b043ac912eb2705ee51eeb8ba9db56c8aa",
             "evidencePath": "framework/work-profile-conformance/qualification/retained-witnesses.json",
             "evidencePointer": "/actionLoop/warrant-revoked"
           },
@@ -123,7 +123,7 @@
           {
             "case": "external-effect",
             "status": "passed",
-            "evidenceRoot": "sha256:5d5f54ac2f63250402da73e24db5b0d0c9f0490c634ed59917b9470a011af89c",
+            "evidenceRoot": "sha256:b9f6a04cbe4cf6d2d6b72532e6e330a8ee20afdff707d0cd854093d6b6c9f1e3",
             "evidencePath": "framework/work-profile-conformance/qualification/retained-witnesses.json",
             "evidencePointer": "/actionLoop/external-effect"
           },
@@ -208,7 +208,7 @@
         },
         "workOperationModel": {
           "authority": "existing-work-api",
-          "authorityRoot": "sha256:819eb262f6b16df9b187d82539f749ed05f1a1ccc45793f774eea4317c1414c9",
+          "authorityRoot": "sha256:3e906d1babcb49b78e2183cbecc800d8161ed1c0353e6563c79217044fbd06de",
           "operations": [
             "inspect",
             "begin",
@@ -301,35 +301,35 @@
           {
             "case": "repeat",
             "status": "passed",
-            "evidenceRoot": "sha256:90aaa8e738a15dd02d041d87316f0084a57096eb0fe59782e4a9763c6a3345ff",
+            "evidenceRoot": "sha256:e391e08a343cb909ff3baa83d2fca97d052d0a8f3137d39a47dc60cd291c2365",
             "evidencePath": "framework/work-profile-conformance/qualification/retained-witnesses.json",
             "evidencePointer": "/actionLoop/repeat"
           },
           {
             "case": "crash",
             "status": "passed",
-            "evidenceRoot": "sha256:ab8722eb7ad3c9b02ad0aba611aab606c401cd9e9918ba095da8c89215edbb86",
+            "evidenceRoot": "sha256:9a3c6fe84eda71b8e49060b6b71a563aa0d8c83143da60877c98e20afcab3dde",
             "evidencePath": "framework/work-profile-conformance/qualification/retained-witnesses.json",
             "evidencePointer": "/actionLoop/crash"
           },
           {
             "case": "interrupted",
             "status": "passed",
-            "evidenceRoot": "sha256:efb16ccd6ccbba99407d87c61e2325a5df592f25bf43f658603d26e592e0e075",
+            "evidenceRoot": "sha256:dd6bb5286b7f7d97acc13b7a92632f7cf57274b0e8270bf89c009d7ede131ba0",
             "evidencePath": "framework/work-profile-conformance/qualification/retained-witnesses.json",
             "evidencePointer": "/actionLoop/interrupted"
           },
           {
             "case": "stale",
             "status": "passed",
-            "evidenceRoot": "sha256:4644afce7f15f0d071ed41b5c30c1b1ad19865247a6ff7d5c81390d81648c51b",
+            "evidenceRoot": "sha256:ed3937043a170b1038390d41d81adeb31bde1f25d05b95b20b70c56690a5d9c3",
             "evidencePath": "framework/work-profile-conformance/qualification/retained-witnesses.json",
             "evidencePointer": "/actionLoop/stale"
           },
           {
             "case": "warrant-revoked",
             "status": "passed",
-            "evidenceRoot": "sha256:ff6ca2ef0e8fd06a892bf41c533cadc11e3015cf5aacec329506310c1dfff325",
+            "evidenceRoot": "sha256:16783aff83f4dd5c59855455b29591b043ac912eb2705ee51eeb8ba9db56c8aa",
             "evidencePath": "framework/work-profile-conformance/qualification/retained-witnesses.json",
             "evidencePointer": "/actionLoop/warrant-revoked"
           },
@@ -350,7 +350,7 @@
           {
             "case": "external-effect",
             "status": "passed",
-            "evidenceRoot": "sha256:5d5f54ac2f63250402da73e24db5b0d0c9f0490c634ed59917b9470a011af89c",
+            "evidenceRoot": "sha256:b9f6a04cbe4cf6d2d6b72532e6e330a8ee20afdff707d0cd854093d6b6c9f1e3",
             "evidencePath": "framework/work-profile-conformance/qualification/retained-witnesses.json",
             "evidencePointer": "/actionLoop/external-effect"
           },
@@ -435,7 +435,7 @@
         },
         "workOperationModel": {
           "authority": "existing-work-api",
-          "authorityRoot": "sha256:819eb262f6b16df9b187d82539f749ed05f1a1ccc45793f774eea4317c1414c9",
+          "authorityRoot": "sha256:3e906d1babcb49b78e2183cbecc800d8161ed1c0353e6563c79217044fbd06de",
           "operations": [
             "inspect",
             "begin",
@@ -530,35 +530,35 @@
           {
             "case": "repeat",
             "status": "passed",
-            "evidenceRoot": "sha256:90aaa8e738a15dd02d041d87316f0084a57096eb0fe59782e4a9763c6a3345ff",
+            "evidenceRoot": "sha256:e391e08a343cb909ff3baa83d2fca97d052d0a8f3137d39a47dc60cd291c2365",
             "evidencePath": "framework/work-profile-conformance/qualification/retained-witnesses.json",
             "evidencePointer": "/actionLoop/repeat"
           },
           {
             "case": "crash",
             "status": "passed",
-            "evidenceRoot": "sha256:ab8722eb7ad3c9b02ad0aba611aab606c401cd9e9918ba095da8c89215edbb86",
+            "evidenceRoot": "sha256:9a3c6fe84eda71b8e49060b6b71a563aa0d8c83143da60877c98e20afcab3dde",
             "evidencePath": "framework/work-profile-conformance/qualification/retained-witnesses.json",
             "evidencePointer": "/actionLoop/crash"
           },
           {
             "case": "interrupted",
             "status": "passed",
-            "evidenceRoot": "sha256:efb16ccd6ccbba99407d87c61e2325a5df592f25bf43f658603d26e592e0e075",
+            "evidenceRoot": "sha256:dd6bb5286b7f7d97acc13b7a92632f7cf57274b0e8270bf89c009d7ede131ba0",
             "evidencePath": "framework/work-profile-conformance/qualification/retained-witnesses.json",
             "evidencePointer": "/actionLoop/interrupted"
           },
           {
             "case": "stale",
             "status": "passed",
-            "evidenceRoot": "sha256:4644afce7f15f0d071ed41b5c30c1b1ad19865247a6ff7d5c81390d81648c51b",
+            "evidenceRoot": "sha256:ed3937043a170b1038390d41d81adeb31bde1f25d05b95b20b70c56690a5d9c3",
             "evidencePath": "framework/work-profile-conformance/qualification/retained-witnesses.json",
             "evidencePointer": "/actionLoop/stale"
           },
           {
             "case": "warrant-revoked",
             "status": "passed",
-            "evidenceRoot": "sha256:ff6ca2ef0e8fd06a892bf41c533cadc11e3015cf5aacec329506310c1dfff325",
+            "evidenceRoot": "sha256:16783aff83f4dd5c59855455b29591b043ac912eb2705ee51eeb8ba9db56c8aa",
             "evidencePath": "framework/work-profile-conformance/qualification/retained-witnesses.json",
             "evidencePointer": "/actionLoop/warrant-revoked"
           },
@@ -579,7 +579,7 @@
           {
             "case": "external-effect",
             "status": "passed",
-            "evidenceRoot": "sha256:5d5f54ac2f63250402da73e24db5b0d0c9f0490c634ed59917b9470a011af89c",
+            "evidenceRoot": "sha256:b9f6a04cbe4cf6d2d6b72532e6e330a8ee20afdff707d0cd854093d6b6c9f1e3",
             "evidencePath": "framework/work-profile-conformance/qualification/retained-witnesses.json",
             "evidencePointer": "/actionLoop/external-effect"
           },
@@ -664,7 +664,7 @@
         },
         "workOperationModel": {
           "authority": "existing-work-api",
-          "authorityRoot": "sha256:819eb262f6b16df9b187d82539f749ed05f1a1ccc45793f774eea4317c1414c9",
+          "authorityRoot": "sha256:3e906d1babcb49b78e2183cbecc800d8161ed1c0353e6563c79217044fbd06de",
           "operations": [
             "inspect",
             "begin",

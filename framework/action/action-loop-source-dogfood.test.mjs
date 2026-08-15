@@ -12,7 +12,7 @@ import {
   pythonSearchPath,
   qualificationExecutorProfile,
   renderQualificationResult,
-  resolveAssignmentAuthority,
+  resolveProjectCutAuthority,
 } from './action-loop-source-dogfood.mjs';
 
 const ROOT = `sha256:${'1'.repeat(64)}`;
@@ -74,53 +74,81 @@ test('native entry loads the exact source adapter before the build binding', () 
   assert.equal(entries[2], inherited);
 });
 
-function assignmentAuthorityState(coordinates) {
-  return {
-    schema: 'kungfu.action-loop.assignment-authority/v0',
-    phase: 'executing',
-    initiativeId: 'initiative-one',
-    assignmentId: 'assignment-one',
-    coordinates,
-    contextBindingRoot: `sha256:${'3'.repeat(64)}`,
-    pursuit: { id: 'kungfu:assignment-one', root: ROOT },
-    atlas: {
-      id: 'xinfa:assignment-one',
-      root: `sha256:${'4'.repeat(64)}`,
-      verification: {
-        valid: true,
-        atlas_root: `sha256:${'4'.repeat(64)}`,
-        diagnostics: [],
-      },
-    },
-    warrant: {
-      id: 'assignment-warrant:assignment-one',
-      root: `sha256:${'2'.repeat(64)}`,
-    },
-  };
-}
-
 test('native entry deterministically selects an available source-build binding', () => {
   const repo = fs.mkdtempSync(path.join(os.tmpdir(), 'kungfu-action-loop-'));
   const bindingDir = path.join(repo, 'framework/core/build/python');
   fs.mkdirSync(bindingDir, { recursive: true });
   fs.writeFileSync(path.join(bindingDir, 'pykungfu.fixture.so'), 'fixture');
-  const state = assignmentAuthorityState({
-    bindingDir: '/opt/kungfu/binding',
-    externalRepoPath: repo,
-  });
+  const state = {
+    phase: 'native-go',
+    goal_id: 'goal-one',
+    coordinates: {
+      binding_dir: '/opt/kungfu/binding',
+      external_repo_path: repo,
+    },
+    native: {
+      mission_id: 'mission-one',
+      go_id: 'goal-one',
+      go_receipt: {
+        go_subject: 'kungfu:goal-one',
+        receipt: { payload_hash: ROOT },
+      },
+    },
+    roots: {
+      acceptance_root: `sha256:${'2'.repeat(64)}`,
+      context_binding_root: `sha256:${'3'.repeat(64)}`,
+      input_atlas_root: `sha256:${'4'.repeat(64)}`,
+    },
+    context: {
+      receipts: {
+        atlas_verify: {
+          valid: true,
+          atlas_root: `sha256:${'4'.repeat(64)}`,
+          diagnostics: [],
+        },
+      },
+    },
+  };
 
-  const authority = resolveAssignmentAuthority(state, {
-    initiativeId: 'initiative-one',
-    assignmentId: 'assignment-one',
+  const authority = resolveProjectCutAuthority(state, {
+    missionId: 'mission-one',
+    goalId: 'goal-one',
   });
   assert.equal(authority.bindingDir, bindingDir);
 });
 
-test('native entry resolves authority from exact Assignment coordinates', () => {
-  const state = assignmentAuthorityState({ bindingDir: '/opt/kungfu/binding' });
-  const authority = resolveAssignmentAuthority(state, {
-    initiativeId: 'initiative-one',
-    assignmentId: 'assignment-one',
+test('native entry resolves authority from stable Project Cut coordinates', () => {
+  const state = {
+    schema: 'atlas.project-cut-go/v1',
+    phase: 'native-go',
+    goal_id: 'goal-one',
+    coordinates: { binding_dir: '/opt/kungfu/binding' },
+    native: {
+      mission_id: 'mission-one',
+      go_id: 'goal-one',
+      go_receipt: {
+        go_subject: 'kungfu:goal-one',
+        receipt: { payload_hash: ROOT },
+      },
+    },
+    roots: {
+      acceptance_root: `sha256:${'2'.repeat(64)}`,
+      context_binding_root: `sha256:${'3'.repeat(64)}`,
+      input_atlas_root: `sha256:${'4'.repeat(64)}`,
+    },
+    context: {
+      receipts: {
+        atlas_verify: {
+          valid: true,
+          atlas_root: `sha256:${'4'.repeat(64)}`,
+          diagnostics: [],
+        },
+      },
+    },
+  };
+  const authority = resolveProjectCutAuthority(state, {
+    missionId: 'mission-one',
+    goalId: 'goal-one',
   });
   const request = beginNativeRequest({ actor: 'agent-one' }, authority, {
     schema: 'kungfu.action-loop.native-authority/v0',
@@ -135,26 +163,26 @@ test('native entry resolves authority from exact Assignment coordinates', () => 
   });
 
   assert.equal(authority.bindingDir, '/opt/kungfu/binding');
-  assert.equal(request.pursuit.binding.id, 'kungfu:assignment-one');
+  assert.equal(request.pursuit.binding.id, 'kungfu:goal-one');
   assert.equal(request.pursuit.binding.root, ROOT);
-  assert.equal(request.atlas.binding.root, state.atlas.root);
-  assert.equal(request.warrant.binding.root, state.warrant.root);
+  assert.equal(request.atlas.binding.root, state.roots.input_atlas_root);
+  assert.equal(request.warrant.binding.root, state.roots.acceptance_root);
   assert.equal(request.nativeAuthority.root, `sha256:${'5'.repeat(64)}`);
-  assert.equal(request.loopRef, 'action-loop/assignment-one');
+  assert.equal(request.loopRef, 'action-loop/goal-one');
   state.phase = 'reviewed';
   assert.equal(
-    resolveAssignmentAuthority(state, {
-      initiativeId: 'initiative-one',
-      assignmentId: 'assignment-one',
-    }).assignmentId,
-    'assignment-one',
+    resolveProjectCutAuthority(state, {
+      missionId: 'mission-one',
+      goalId: 'goal-one',
+    }).goalId,
+    'goal-one',
   );
   assert.throws(
     () =>
-      resolveAssignmentAuthority(state, {
-        initiativeId: 'initiative-one',
-        assignmentId: 'different-assignment',
+      resolveProjectCutAuthority(state, {
+        missionId: 'mission-one',
+        goalId: 'different-goal',
       }),
-    /Assignment authority coordinate does not match/,
+    /goal coordinate does not match/,
   );
 });

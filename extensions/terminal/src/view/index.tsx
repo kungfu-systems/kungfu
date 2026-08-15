@@ -1868,7 +1868,7 @@ function SessionWorkspace({
           attachment: {
             attachmentId,
             presentation: workRef
-              ? 'assignment-side-console'
+              ? 'go-card-side-console'
               : 'assistant-console',
           },
           execution: { env: capsuleEnv, cols: 80, rows: 24 },
@@ -2155,7 +2155,7 @@ function SessionWorkspace({
         profiles={availableAgentRuntimeProfiles(catalog)}
         bindingLabel={
           shell.params?.workEntityId
-            ? `Assignment · ${shell.params.workEntityId}`
+            ? `Go · ${shell.params.workEntityId}`
             : 'Workspace assistant'
         }
         busy={catalogBusy}

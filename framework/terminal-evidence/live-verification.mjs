@@ -17,7 +17,7 @@ export function verifyLiveAssignment(
 ) {
   exact(
     evidence.assignment?.assignmentId,
-    matrix.assignmentId,
+    matrix.goalId,
     'assignment-identity-mismatch',
     'assignment.assignmentId',
     issues,
@@ -83,7 +83,7 @@ export function verifyLiveAssignment(
   );
   exact(
     live.assignment?.sealedAssignmentId,
-    matrix.assignmentId,
+    matrix.goalId,
     'assignment-seal-identity-mismatch',
     'live.assignment.sealedAssignmentId',
     issues,

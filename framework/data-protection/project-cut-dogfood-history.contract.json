@@ -14,7 +14,7 @@
     "assignmentOwner": "Kungfu Native Assignment and Work Control over native Fact and Episode authority",
     "dogfoodOwner": "kungfu.dogfood-feedback Profile over native Fact Library and Episode authority",
     "publicationOwner": "protected Git projection of already settled native evidence",
-    "rule": "The adapter preserves and verifies owner roots; consumer control-plane records, Shifu state, Git refs, caches, and publication coordinates remain rebuildable pointers and never become semantic authority."
+    "rule": "The adapter preserves and verifies owner roots; Atlas cards, Shifu state, Git refs, caches, and publication coordinates remain rebuildable pointers and never become semantic authority."
   },
   "exitComposition": {
     "projectCutMember": {
@@ -56,7 +56,7 @@
   },
   "projectionBoundaries": [
     {
-      "surface": "consumer Assignment records and ready markers",
+      "surface": "Atlas goal cards and ready markers",
       "classification": "observer-projection",
       "rebuildFrom": "native Assignment subject, Work definition root, workspace identity root, sealed Work coordinate, Project Cut root, and protected PR coordinates"
     },
@@ -118,14 +118,14 @@
     ]
   },
   "falsifiers": [
-    "A consumer or Shifu projection claims Assignment, Dogfood, Cut, or publication semantic authority",
+    "Atlas or Shifu projection claims Assignment, Dogfood, Cut, or publication semantic authority",
     "a Project Cut member omits one of the four required roots",
     "a successor does not name the primary Cut as a parent",
     "a mutable branch or pull-request number substitutes for a rooted publication manifest",
     "an unqualified Episode or owner receipt is admitted as protected success",
     "an absolute private path enters the portable member",
     "a thin member materializes or claims continuation",
-    "recovery requires the original worktree, build cache, consumer record, or Shifu runtime projection"
+    "recovery requires the original worktree, build cache, Atlas card, or Shifu runtime projection"
   ],
   "qualification": {
     "gate": "./shifu check:project-cut-dogfood-history",

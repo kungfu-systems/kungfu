@@ -326,7 +326,7 @@
     {
       "context_status": "complete",
       "critical_sources": [
-        "docs/qualification/gui-capability-boundary.md"
+        "docs/adr/KF-ADR-019f86da-4f90-79d7-a4b7-044fcf998708.md"
       ],
       "critical_sources_recalled": 1,
       "expansion_handles": 0,
@@ -520,7 +520,7 @@
     {
       "context_status": "complete",
       "critical_sources": [
-        "docs/qualification/gui-capability-boundary.md"
+        "docs/adr/KF-ADR-019f86da-4f90-79d7-a4b7-044fcf998708.md"
       ],
       "critical_sources_recalled": 1,
       "expansion_handles": 0,

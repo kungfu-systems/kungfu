@@ -15,7 +15,9 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Mapping
 
+from kungfu import initiative_family
 from kungfu.initiative_family import canonical as assignment_canonical
+from kungfu.initiative_family import typed_v2 as initiative_family_v2
 
 REQUEST_SCHEMA = "kungfu.assignment-request/v1"
 CAPTURE_RECEIPT_SCHEMA = "kungfu.assignment-capture.receipt/v1"
@@ -43,6 +45,7 @@ PHASES = (
     "independently-reviewed",
     "continuation-decided",
 )
+# Backward-compatible imports; family behavior is owned by dedicated modules.
 ROOT = assignment_canonical.ROOT
 _ISO_8601 = assignment_canonical._ISO_8601
 _normalized = assignment_canonical._normalized
@@ -52,6 +55,33 @@ _strict_object = assignment_canonical._strict_object
 _sorted_unique_strings = assignment_canonical._sorted_unique_strings
 _timestamp = assignment_canonical._timestamp
 _root = assignment_canonical._root
+
+FAMILY_BLUEPRINT_SCHEMA = initiative_family.FAMILY_BLUEPRINT_SCHEMA
+FAMILY_STATE_SCHEMA = initiative_family.FAMILY_STATE_SCHEMA
+FAMILY_TRANSITION_SCHEMA = initiative_family.FAMILY_TRANSITION_SCHEMA
+FAMILY_DELIVERY_CLASSES = initiative_family.FAMILY_DELIVERY_CLASSES
+FAMILY_TERMINAL_STATES = initiative_family.FAMILY_TERMINAL_STATES
+FAMILY_ACCEPTANCE_STATES = initiative_family.FAMILY_ACCEPTANCE_STATES
+family_contract = initiative_family.family_contract
+validate_family_state = initiative_family.validate_family_state
+create_family_state = initiative_family.create_family_state
+transition_family_state = initiative_family.transition_family_state
+verify_family_state = initiative_family.verify_family_state
+
+FAMILY_CONTRACT_V2_SCHEMA = initiative_family_v2.FAMILY_CONTRACT_V2_SCHEMA
+FAMILY_STATE_V2_SCHEMA = initiative_family_v2.FAMILY_STATE_V2_SCHEMA
+FAMILY_TRANSITION_V2_SCHEMA = initiative_family_v2.FAMILY_TRANSITION_V2_SCHEMA
+FAMILY_BINDING_V2_SCHEMA = initiative_family_v2.FAMILY_BINDING_V2_SCHEMA
+FAMILY_UPGRADE_V2_SCHEMA = initiative_family_v2.FAMILY_UPGRADE_V2_SCHEMA
+FAMILY_V2_REFERENCE_KINDS = initiative_family_v2.FAMILY_V2_REFERENCE_KINDS
+InitiativeFamilyV1Port = initiative_family_v2.InitiativeFamilyV1Port
+family_contract_v2 = initiative_family_v2.family_contract_v2
+validate_family_binding_v2 = initiative_family_v2.validate_family_binding_v2
+validate_family_state_v2 = initiative_family_v2.validate_family_state_v2
+upgrade_family_state_v2 = initiative_family_v2.upgrade_family_state_v2
+transition_family_state_v2 = initiative_family_v2.transition_family_state_v2
+project_family_state_v1 = initiative_family_v2.project_family_state_v1
+verify_family_state_v2 = initiative_family_v2.verify_family_state_v2
 
 
 def source_root(*starts: str | Path) -> Path:
@@ -70,7 +100,7 @@ def source_root(*starts: str | Path) -> Path:
 
 
 def _same_or_descendant(path: Path, root: Path) -> bool:
-    """Accept canonical filesystem identity within the runtime-root boundary."""
+    """Accept filesystem aliases without weakening the runtime-root boundary."""
 
     if path == root or root in path.parents:
         return True
@@ -81,6 +111,12 @@ def _same_or_descendant(path: Path, root: Path) -> bool:
         except OSError:
             continue
     return False
+
+
+def _installed_runtime_entrypoint(binding_file: Path) -> str:
+    """Bind the manifest entrypoint to the packaged native runtime platform."""
+
+    return "kungfu.exe" if binding_file.suffix.lower() == ".pyd" else "kungfu"
 
 
 def binding_provenance(*, allow_foreign: bool = False) -> dict[str, Any]:
@@ -150,7 +186,7 @@ def binding_provenance(*, allow_foreign: bool = False) -> dict[str, Any]:
         and _GIT_REVISION.fullmatch(manifest_revision)
         and manifest_revision == build_revision
         and str(manifest.get("runtimeEntrypoint") or "")
-        == ("kungfu.exe" if binding_file.suffix.lower() == ".pyd" else "kungfu")
+        == _installed_runtime_entrypoint(binding_file)
         and str(manifest.get("runtimeArtifactDigest") or "").startswith(ROOT)
     )
     override = (
@@ -467,7 +503,7 @@ def load_initiative_admission(
     }
 
 
-def assignment_projection(
+def atlas_assignment_projection(
     captured: Mapping[str, Any],
     *,
     initiative_id: str = "",
@@ -491,7 +527,11 @@ def assignment_projection(
     if not isinstance(dependencies, list):
         dependencies = []
     initiative = initiative_id or str(work.get("initiative_id") or "")
-    assignment = assignment_id or str(work.get("assignment_id") or "")
+    assignment = (
+        assignment_id
+        or str(work.get("assignment_id") or "")
+        or str(work.get("goal_id") or "")
+    )
     context_binding = work.get("context_binding") or {}
     if not isinstance(context_binding, dict):
         raise ValueError("workDefinition context_binding must be an object")
@@ -511,7 +551,7 @@ def assignment_projection(
         isinstance(row, dict) for row in dependency_refs
     ):
         raise ValueError("workDefinition.dependency_refs must be an array of objects")
-    if parent_assignment_ref and work.get("parent_assignment_id"):
+    if parent_assignment_ref and work.get("parent_goal"):
         raise ValueError(
             "workDefinition cannot mix parent Assignment ref and local shorthand"
         )
@@ -535,6 +575,14 @@ def assignment_projection(
             raise ValueError(
                 "Initiative source identity does not match requested identity"
             )
+    atlas_request = (
+        isinstance(request_source, dict)
+        and request_source.get("kind") == "atlas-go-card"
+    )
+    if atlas_request and not initiative_ref and not explicit_initiative:
+        raise ValueError(
+            "Atlas admission requires an exact parent Initiative admission or WorkRef"
+        )
     return {
         "initiative_id": initiative,
         "initiative_title": str(
@@ -563,15 +611,18 @@ def assignment_projection(
         # lossless work definition. It is not a workspace-local Assignment
         # shorthand; only an exact parent_assignment_ref may add that edge.
         "parent_assignment_id": (
-            ""
-            if family_initiative_child
-            else str(work.get("parent_assignment_id") or "")
+            "" if family_initiative_child else str(work.get("parent_goal") or "")
         ),
         "depends_on": [str(row) for row in dependencies],
         "initiative_ref": initiative_ref,
         "parent_assignment_ref": parent_assignment_ref,
         "dependency_refs": [dict(row) for row in dependency_refs],
-        "responsibility": str(work.get("objective") or work.get("owner_agent") or ""),
+        "responsibility": str(
+            work.get("mission_why_matters")
+            or work.get("objective")
+            or work.get("owner_agent")
+            or ""
+        ),
         "work_definition": work,
         "context_binding": context_binding,
         "project_cut_root": _root(
@@ -638,6 +689,15 @@ def gate(status: Mapping[str, Any], target: str) -> dict[str, Any]:
         "query_proof_root": status.get("query_proof_root"),
         "next_actions": [] if ok else next_actions(status),
     }
+    response["atlas_compatibility"] = {
+        "schema": "atlas.project-cut-go-gate/v1",
+        "ok": ok,
+        "phase": phase,
+        "policy": "required",
+        "reason": reason,
+        "state_path": "kungfu-native-fact-library",
+        "target": target,
+    }
     return response
 
 
@@ -666,7 +726,7 @@ def _sealed_state_storage(workspace_root: Path) -> tuple[Path, str]:
     common = _git_common_dir(workspace_root)
     if common is not None:
         return common / "kungfu", "git-common-dir"
-    return workspace_root / ".kungfu", "workspace-local"
+    return workspace_root / ".kungfu", "workspace-fallback"
 
 
 def sealed_state_plan(
@@ -801,9 +861,15 @@ def list_sealed_assignment_states(
                 or not re.fullmatch(r"sha256:[0-9a-f]{64}", owning_root)
                 or not re.fullmatch(r"sha256:[0-9a-f]{64}", query_root)
             ):
-                raise ValueError(
-                    "sealed Assignment state lacks a portable work coordinate"
+                unqualified.append(
+                    {
+                        "assignment_subject": subject,
+                        "state_root": verification["state_root"],
+                        "phase": snapshot.get("phase"),
+                        "reason": "legacy-seal-lacks-portable-work-coordinate",
+                    }
                 )
+                continue
             event_counts = dict(snapshot.get("counts") or {})
             assignment_state = {
                 "schema": "kungfu.assignment-orchestration.retained-assignment-state/v1",

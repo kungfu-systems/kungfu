@@ -44,13 +44,6 @@
       "prefixes": ["framework/core/.deps/"],
       "linePatterns": {}
     },
-    "generated-governance-projection": {
-      "paths": [
-        "framework/maintainability/code-complexity-baseline.json"
-      ],
-      "prefixes": [],
-      "linePatterns": {}
-    },
     "mechanically-required-lockfile": {
       "paths": [
         "examples/probe-python/pdm.lock",

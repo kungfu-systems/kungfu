@@ -34,7 +34,7 @@ Historical context: [Profile Suite composition](stages/04-profile-suite.md).
 
 Start current reading at [docs/profiles/profile-authoring.md](../profiles/profile-authoring.md).
 
-Deepen through [docs/architecture/kfx-topology.md](../architecture/kfx-topology.md), [docs/profiles/profile-lifecycle.md](../profiles/profile-lifecycle.md), [docs/profiles/work-control.md](../profiles/work-control.md).
+Deepen through [docs/architecture/kfx-topology.md](../architecture/kfx-topology.md), [docs/profiles/profile-lifecycle.md](../profiles/profile-lifecycle.md), [docs/profiles/mission-control.md](../profiles/mission-control.md).
 
 ## Understand reproducible long-running Agent continuation
 
@@ -56,7 +56,7 @@ Deepen through [docs/qualification/fact-storage-authority.md](../qualification/f
 
 Historical context: [Initiative, Assignment, and portable Work](stages/07-initiative-assignment-work.md).
 
-Start current reading at [docs/profiles/work-control.md](../profiles/work-control.md).
+Start current reading at [docs/profiles/mission-control.md](../profiles/mission-control.md).
 
 Deepen through [framework/project-cut/README.md](../../framework/project-cut/README.md), [docs/concepts/project-cut-product-loop.md](../concepts/project-cut-product-loop.md).
 
@@ -66,15 +66,15 @@ Historical context: [Native Work Control and recursive dogfood](stages/08-native
 
 Start current reading at [docs/architecture/primitive-management-plane.md](../architecture/primitive-management-plane.md).
 
-Deepen through [docs/profiles/work-control.md](../profiles/work-control.md), [docs/architecture/kfx-topology.md](../architecture/kfx-topology.md), [docs/architecture/agent-supply-chain.md](../architecture/agent-supply-chain.md).
+Deepen through [docs/profiles/mission-control.md](../profiles/mission-control.md), [docs/architecture/kfx-topology.md](../architecture/kfx-topology.md), [docs/architecture/agent-supply-chain.md](../architecture/agent-supply-chain.md).
 
-## Understand the sole current Work Control identity
+## Understand the sole current Work Control identity and the bounded retained-data reader
 
 Historical context: [Work Control canonical name](stages/09-work-control-canonical-name.md).
 
 Start current reading at [docs/profiles/work-control.md](../profiles/work-control.md).
 
-Deepen through [docs/architecture/kfx-topology.md](../architecture/kfx-topology.md).
+Deepen through [docs/architecture/kfx-topology.md](../architecture/kfx-topology.md), [docs/profiles/compatibility/README.md](../profiles/compatibility/README.md).
 
 ## Understand exact product identity and how local or public updates move between releases
 

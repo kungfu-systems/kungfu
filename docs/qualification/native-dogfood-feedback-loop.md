@@ -2,7 +2,7 @@
 
 This record qualifies the first-party `kungfu.dogfood-feedback` Domain Profile
 through the desktop Product's bundled `kungfu` executable. It distinguishes
-native fact authority from native Finding and Issue facts and does not treat a
+native fact authority from the retained Atlas JSONL source and does not treat a
 source-only Python invocation as installed-product evidence.
 
 ## Qualified product boundary
@@ -53,6 +53,24 @@ Its release receipt is
 and witness is
 `sha256:2860a9995e4e8a983dec5f7822be0378fbd349fa62d6f97bab2c596c7fffa548`.
 
+## Atlas migration
+
+The bundled CLI planned and executed migration from the retained Atlas
+Dogfood Inbox without modifying or deleting the source:
+
+| Measure | Result |
+| --- | --- |
+| source bytes | 261,561 |
+| source revisions | 197 |
+| current items | 162 |
+| source root | `sha256:ce9dae11ff0a2d831cab385723c024c9c671224897cba569842c678c1844da33` |
+| migration root | `sha256:6e23016b4810075a03e370f87962e06483867d493b6c626658a321ba831fd0b4` |
+| verification root | `sha256:fca9885984aaf8b5ecc6822b6501f07cc41a61f98596095bb41fb9b4bee92cc1` |
+
+Verification returned `197/197`, `source_bytes_retained: true`, and no
+automatic resolution. Repeating the authorized import reused the same
+migration root and every revision write returned `already-present`.
+
 ## Reproduction
 
 Use the bundled Product binary, initialize a disposable workspace with
@@ -62,6 +80,10 @@ and the dispositions bundle used across the four consideration stages. Set
 `KF_RUNTIME_DIR` to that workspace's receipt `runtime_dir` and
 `KF_PROFILE_KFD3_MANIFEST` to the bundled `profile-kfd3.json` before
 `profile kfd3-status`.
+
+The Atlas migration must first run `dogfood import-atlas` without `--execute`,
+then bind the returned `source.source_root` through `--expected-source-root`
+for the authorized execution, and finally run `dogfood export-atlas`.
 
 ## Evidence boundary
 

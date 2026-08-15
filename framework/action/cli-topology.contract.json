@@ -18,6 +18,11 @@
       "engineAuthority": "xinfa",
       "publicExecutable": false
     },
+    "atlas": {
+      "command": "kungfu atlas",
+      "role": "perspective and Fact Cut",
+      "operations": ["capabilities", "inspect", "action"]
+    },
     "pursuit": {
       "command": "kungfu pursuit",
       "role": "intent continuity",

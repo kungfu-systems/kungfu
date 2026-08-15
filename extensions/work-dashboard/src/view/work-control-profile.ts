@@ -7,8 +7,8 @@ import type {
 // Work Control domain client over the public, exact-root Profile surface.
 // Domain types live with this Profile KFX rather than in the generic API.
 
-export type WorkControlInitiative = {
-  initiative_id: string;
+export type AtlasMission = {
+  mission_id: string;
   title?: string;
   intent?: string;
   north_star?: string;
@@ -27,19 +27,19 @@ export type WorkControlInitiative = {
   updated_at?: string;
 };
 
-export type WorkControlAssignment = {
-  assignment_id: string;
+export type AtlasGoal = {
+  goal_id: string;
   status?: string;
   title?: string;
   owner_agent?: string;
-  initiative_id?: string;
+  mission_id?: string;
   lens?: string;
-  initiative_stage?: string;
-  initiative_role?: string;
-  initiative_importance?: string;
-  initiative_track?: string;
-  parent_assignment_id?: string;
-  responsibility?: string;
+  mission_stage?: string;
+  mission_role?: string;
+  mission_importance?: string;
+  mission_track?: string;
+  mission_parent_goal?: string;
+  mission_why_matters?: string;
   source_branch?: string;
   worktree_path?: string;
   external_repo_path?: string;
@@ -53,13 +53,76 @@ export type WorkControlAssignment = {
   archived?: boolean;
 };
 
-export type WorkControlAuthorityState = {
-  schema: 'kungfu.work-control.authority-status/v1';
-  state: 'native-only';
-  write_authority: 'kungfu-native';
+export type AtlasMarker = {
+  branch: string;
+  status?: string;
+  ready?: boolean;
+  ready_scope?: string;
+  keep_source_worktree?: boolean;
+  worktree_path?: string;
+  summary?: string;
+  risk?: string;
+  marker_path?: string;
 };
 
-export type WorkControlDashboardSnapshot = {
+export type AtlasImportResult = {
+  import_id: string;
+  repo_root: string;
+  missions: number;
+  goals: number;
+  markers: number;
+  mission_control?: {
+    status: string;
+    authority_mode: string;
+    admitted?: number;
+    already_present?: number;
+    import_episode_id?: number;
+    import_episode_root?: string;
+  };
+  warnings: string[];
+};
+
+export type AtlasImportInfo = {
+  import_id: string;
+  repo_root: string;
+  repo_head?: string;
+  missions: number;
+  goals: number;
+  markers: number;
+};
+
+export type AtlasAuthorityState = {
+  schema: 'kungfu.work-control.authority-status/v1';
+  state: 'native-only' | 'pre-cutover' | 'native-active' | 'rolled-back';
+  write_authority: 'atlas-adapter' | 'kungfu-native';
+  legacy_mutation_path: string;
+  migration_id: string;
+  parity_root: string;
+  transition_count: number;
+};
+
+export type AtlasAuthorityInspection = {
+  authority: AtlasAuthorityState;
+  parity: {
+    schema: 'kungfu.work-control.authority-parity/v1';
+    status: 'matched' | 'degraded';
+    parity_root: string;
+    counts: Record<string, number>;
+  };
+};
+
+export type AtlasAuthorityTransition = {
+  status: 'cutover' | 'already-active' | 'rolled-back';
+  migration: {
+    migration_id: string;
+    migration_status: 'native-active' | 'rolled-back';
+    write_authority: 'atlas-adapter' | 'kungfu-native';
+    parity_root: string;
+    previous_migration_id?: string | null;
+  };
+};
+
+export type AtlasDashboardSnapshot = {
   schema: 'kungfu.work-control.dashboard-snapshot/v1';
   cut: {
     kind: 'system_time';
@@ -70,21 +133,22 @@ export type WorkControlDashboardSnapshot = {
     basis: 'request-cut';
   };
   projection_authority: {
-    mode: 'native-fact-projection';
-    source: 'kungfu-facts';
+    mode: 'adapter-projection';
+    source: 'atlas-and-kungfu-facts';
     profileSuiteRoot: string;
     memberRoot: string;
     cutSystemTime: string;
     writableAuthority: false;
   };
-  authority: WorkControlAuthorityState;
-  initiatives: WorkControlInitiative[];
-  assignments: WorkControlAssignment[];
+  import_info: AtlasImportInfo | null;
+  authority: AtlasAuthorityState;
+  missions: AtlasMission[];
+  goals: AtlasGoal[];
 };
 
-export type WorkControlInitiativeDetail = {
-  initiative: WorkControlInitiative;
-  assignments: WorkControlAssignment[];
+export type AtlasMissionDetail = {
+  mission: AtlasMission;
+  goals: AtlasGoal[];
 };
 
 export type WorkControlAuthorityReport = {
@@ -107,7 +171,7 @@ export type WorkControlAuthorityReport = {
       catalog_root: string;
       member_roots: Record<string, string>;
     };
-    initiative_subject: string;
+    mission_subject: string;
     query_definition_root: string;
     query_proof_root: string;
     result_hash: string;
@@ -160,8 +224,8 @@ export type WorkControlAuthorityReport = {
     schema: 'kungfu.profile.delegated-work-cost-state-proof/v1';
     profile_hash: string;
     profile: { id: string; version: string };
-    initiative_subject: string;
-    assignment_subject?: string | null;
+    mission_subject: string;
+    go_subject?: string | null;
     cost: {
       status: 'missing' | 'ambiguous' | 'partial' | 'attributed';
       observation_count: number;
@@ -195,7 +259,7 @@ export type WorkControlAuthorityReport = {
       value: string;
       source_statuses: string[];
       mapping_policy: string;
-      assignment_subjects: string[];
+      go_subjects: string[];
     };
     proof: {
       canonical_state: boolean;
@@ -215,14 +279,14 @@ export type WorkControlAuthorityReport = {
     };
   };
   state: {
-    initiative_subject: string;
+    mission_subject: string;
     canonical_state: boolean;
     definition: QueryDefinition;
     profile_suite_root: string;
     catalog_root: string;
     cut: { declared?: unknown; resolved?: unknown };
-    initiative?: { payload?: { record?: WorkControlInitiative } } | null;
-    assignments: Array<{ payload?: { record?: WorkControlAssignment } }>;
+    mission?: { payload?: { record?: AtlasMission } } | null;
+    goals: Array<{ payload?: { record?: AtlasGoal } }>;
     claims?: Array<{
       payload?: {
         record?: {
@@ -239,7 +303,7 @@ export type WorkControlAuthorityReport = {
   };
 };
 
-export type WorkControlInitiativeHome = Pick<
+export type AtlasMissionHome = Pick<
   WorkControlAuthorityReport,
   | 'fitness'
   | 'findings'
@@ -249,15 +313,15 @@ export type WorkControlInitiativeHome = Pick<
   | 'query_proof_root'
   | 'query_profile'
 > & {
-  schema: 'kungfu.work-control.initiative-home/v1';
+  schema: 'kungfu.work-control.mission-home/v1';
   mode: 'read-only';
 };
 
-export type WorkControlAssignmentWrite = {
-  schema: 'kungfu.initiative-assignment.assignment-write/v1';
+export type AtlasGoWrite = {
+  schema: 'kungfu.work-control.go-write/v1';
   authority_mode: 'kungfu-native';
-  initiative_subject: string;
-  assignment_subject: string;
+  mission_subject: string;
+  go_subject: string;
   receipt: {
     status: string;
     reused: boolean;
@@ -266,10 +330,10 @@ export type WorkControlAssignmentWrite = {
   };
 };
 
-export type WorkControlInitiativeWrite = {
-  schema: 'kungfu.work-control.initiative-write/v1';
+export type AtlasMissionWrite = {
+  schema: 'kungfu.work-control.mission-write/v1';
   authority_mode: 'kungfu-native';
-  initiative_subject: string;
+  mission_subject: string;
   receipt: {
     status: string;
     reused: boolean;
@@ -282,7 +346,7 @@ export type InitiativeWrite = {
   schema: 'kungfu.initiative-assignment.initiative-write/v1';
   authority_mode: 'kungfu-native';
   initiative_subject: string;
-  receipt: WorkControlInitiativeWrite['receipt'];
+  receipt: AtlasMissionWrite['receipt'];
 };
 
 export type AssignmentWrite = {
@@ -290,7 +354,7 @@ export type AssignmentWrite = {
   authority_mode: 'kungfu-native';
   initiative_subject: string;
   assignment_subject: string;
-  receipt: WorkControlAssignmentWrite['receipt'];
+  receipt: AtlasGoWrite['receipt'];
 };
 
 export type AssignmentWorkRef = {
@@ -343,24 +407,24 @@ export type AssignmentPhaseTransition = {
   receipt: Record<string, unknown>;
 };
 
-export type WorkControlInitiativeBundleExport = {
+export type AtlasMissionBundleExport = {
   schema: 'kungfu.work-control.bundle-export/v1';
   status: 'portable' | 'degraded';
   mode: 'full' | 'thin';
-  initiative_subject: string;
+  mission_subject: string;
   bundle_id: string;
   bundle_root: string;
   episode_count: number;
   out: string;
 };
 
-export type WorkControlInitiativeBundleImport = {
+export type AtlasMissionBundleImport = {
   schema: 'kungfu.work-control.bundle-import/v1';
   status: 'validated' | 'imported' | 'degraded';
   accepted: boolean;
   materialized: boolean;
   mode: 'full' | 'thin';
-  initiative_subject: string;
+  mission_subject: string;
   bundle_id: string;
   bundle_root: string;
   episode_count: number;
@@ -375,11 +439,11 @@ export type WorkControlInitiativeBundleImport = {
   } | null;
 };
 
-export type WorkControlCompletionClaimWrite = {
+export type AtlasCompletionClaimWrite = {
   schema: 'kungfu.work-control.completion-claim-write/v1';
   authority_mode: 'kungfu-native';
-  initiative_subject: string;
-  assignment_subject: string;
+  mission_subject: string;
+  go_subject: string;
   claim: {
     claim_id: string;
     claim_type: 'task-completed';
@@ -394,7 +458,7 @@ export type WorkControlCompletionClaimWrite = {
   };
 };
 
-export type WorkControlIndependentReview = {
+export type AtlasIndependentReview = {
   schema: 'kungfu.work-control.independent-review/v1';
   review_root: string;
   continuation_plan_root: string;
@@ -421,39 +485,55 @@ export type WorkControlIndependentReview = {
   trust_report: WorkControlAuthorityReport;
 };
 
-export type WorkControlContinuationDecision = {
+export type AtlasContinuationDecision = {
   schema: 'kungfu.work-control.continuation-decision/v1';
   decision: {
     decision_id: string;
     review_id: string;
     action: string;
   };
-  created_followups: WorkControlAssignmentWrite[];
+  created_followups: AtlasGoWrite[];
 };
 
-export type WorkControlAssignmentFilter = {
+export type AtlasGoalFilter = {
   status?: string;
-  initiativeId?: string;
+  missionId?: string;
 };
 
-export type WorkControl = {
+export type Atlas = {
   runtimeDir: string;
   defaultRepoRoot: string;
-  dashboard: () => Promise<WorkControlDashboardSnapshot>;
-  currentDashboard: () => WorkControlDashboardSnapshot | null;
-  authorityStatus: () => Promise<WorkControlAuthorityState>;
-  initiatives: () => WorkControlInitiative[];
-  initiative: (initiativeId: string) => WorkControlInitiativeDetail | null;
-  initiativeHome: (
-    initiativeId: string,
+  dashboard: () => Promise<AtlasDashboardSnapshot>;
+  currentDashboard: () => AtlasDashboardSnapshot | null;
+  importRepo: (repoRoot: string) => Promise<AtlasImportResult>;
+  authorityStatus: () => Promise<AtlasAuthorityInspection>;
+  activateWorkControl: (input: {
+    expectedParityRoot: string;
+    projectCutRoot: string;
+    atlasRoot: string;
+    actor: string;
+    actorType?: 'user' | 'agent';
+    reason: string;
+  }) => Promise<AtlasAuthorityTransition>;
+  restoreAtlasAuthority: (input: {
+    expectedMigrationId: string;
+    actor: string;
+    actorType?: 'user' | 'agent';
+    reason: string;
+  }) => Promise<AtlasAuthorityTransition>;
+  importInfo: () => AtlasImportInfo | null;
+  missions: () => AtlasMission[];
+  mission: (missionId: string) => AtlasMissionDetail | null;
+  missionHome: (
+    missionId: string,
     options?: { source?: string; cutSystemTime?: number },
-  ) => Promise<WorkControlInitiativeHome>;
-  assessInitiative: (
-    initiativeId: string,
+  ) => Promise<AtlasMissionHome>;
+  assessMission: (
+    missionId: string,
     options?: { source?: string; purpose?: string; authorizedBy?: string },
   ) => Promise<WorkControlAuthorityReport>;
   assessInitiativeAsync: (
-    initiativeId: string,
+    missionId: string,
     options?: { source?: string; purpose?: string; authorizedBy?: string },
   ) => Promise<WorkControlAuthorityReport>;
   createInitiative: (
@@ -468,14 +548,14 @@ export type WorkControl = {
     },
   ) => Promise<InitiativeWrite>;
   exportInitiative: (
-    initiativeId: string,
+    missionId: string,
     outPath: string,
     options?: { mode?: 'full' | 'thin'; source?: string; purpose?: string },
-  ) => Promise<WorkControlInitiativeBundleExport>;
+  ) => Promise<AtlasMissionBundleExport>;
   importInitiative: (
     fromPath: string,
     options?: { execute?: boolean },
-  ) => Promise<WorkControlInitiativeBundleImport>;
+  ) => Promise<AtlasMissionBundleImport>;
   createAssignment: (
     initiativeId: string,
     input: {
@@ -543,8 +623,8 @@ export type WorkControl = {
     },
   ) => Promise<AssignmentPhaseTransition>;
   claimCompletion: (
-    initiativeId: string,
-    assignmentId: string,
+    missionId: string,
+    goalId: string,
     input: {
       statement: string;
       actor: string;
@@ -566,20 +646,20 @@ export type WorkControl = {
         state: 'available' | 'unavailable' | 'missing';
       }>;
     },
-  ) => Promise<WorkControlCompletionClaimWrite>;
+  ) => Promise<AtlasCompletionClaimWrite>;
   assessCompletion: (
-    initiativeId: string,
-    assignmentId: string,
+    missionId: string,
+    goalId: string,
     options?: { source?: string; purpose?: string; authorizedBy?: string },
   ) => Promise<WorkControlAuthorityReport>;
   assessCompletionAsync: (
-    initiativeId: string,
-    assignmentId: string,
+    missionId: string,
+    goalId: string,
     options?: { source?: string; purpose?: string; authorizedBy?: string },
   ) => Promise<WorkControlAuthorityReport>;
   reviewCompletion: (
-    initiativeId: string,
-    assignmentId: string,
+    missionId: string,
+    goalId: string,
     input: {
       reviewer: string;
       reviewerSource: string;
@@ -588,10 +668,10 @@ export type WorkControl = {
       purpose?: string;
       proposedFollowups?: Array<Record<string, unknown>>;
     },
-  ) => Promise<WorkControlIndependentReview>;
+  ) => Promise<AtlasIndependentReview>;
   decideContinuation: (
-    initiativeId: string,
-    assignmentId: string,
+    missionId: string,
+    goalId: string,
     input: {
       reviewId: string;
       expectedReviewRoot: string;
@@ -603,11 +683,10 @@ export type WorkControl = {
       source?: string;
       reason: string;
     },
-  ) => Promise<WorkControlContinuationDecision>;
-  assignments: (
-    filter?: WorkControlAssignmentFilter,
-  ) => WorkControlAssignment[];
-  assignment: (assignmentId: string) => WorkControlAssignment | null;
+  ) => Promise<AtlasContinuationDecision>;
+  goals: (filter?: AtlasGoalFilter) => AtlasGoal[];
+  goal: (goalId: string) => AtlasGoal | null;
+  markers: () => AtlasMarker[];
 };
 
 const PROFILE_ID = 'kungfu.work-control';
@@ -626,7 +705,7 @@ type WorkControlProfileOptions = {
 
 function directMutationRejected(intentId: string): Error {
   const error = new Error(
-    `Direct GUI Profile mutation is outside the projection client authority: ${intentId}; use kungfu.assignment-runtime/v1`,
+    `Direct GUI Profile mutation is read-only compatibility: ${intentId}; use kungfu.assignment-runtime/v1`,
   ) as Error & { code?: string };
   error.code = 'authority-bypass';
   return error;
@@ -636,8 +715,8 @@ export function openWorkControlProfile(
   profile: Profile,
   defaultRepoRoot = '',
   options: WorkControlProfileOptions = {},
-): WorkControl {
-  let dashboardSnapshot: WorkControlDashboardSnapshot | null = null;
+): Atlas {
+  let dashboardSnapshot: AtlasDashboardSnapshot | null = null;
   const source = () => profile.discover(PROFILE_ID).source;
   const member = <TResult>(operation: string, input: unknown = {}) =>
     profile.memberCall<TResult>(source(), ADAPTER_MEMBER, operation, input)
@@ -680,38 +759,58 @@ export function openWorkControlProfile(
     defaultRepoRoot,
     dashboard: async () => {
       dashboardSnapshot =
-        await memberAsync<WorkControlDashboardSnapshot>('dashboard');
+        await memberAsync<AtlasDashboardSnapshot>('dashboard');
       return dashboardSnapshot;
     },
     currentDashboard: () => dashboardSnapshot,
+    importRepo: (repoRoot) =>
+      authorize<AtlasImportResult>(
+        'import-atlas',
+        { repo: repoRoot, source: 'atlas' },
+        'work-dashboard',
+      ),
     authorityStatus: () =>
-      memberAsync<WorkControlAuthorityState>('authority-status'),
-    initiatives: () =>
-      member<WorkControlDashboardSnapshot>('dashboard').initiatives,
-    initiative: (initiativeId) =>
-      member<WorkControlInitiativeDetail>('initiative', { initiativeId }),
-    initiativeHome: (initiativeId, options = {}) =>
-      memberAsync<WorkControlInitiativeHome>('initiative-home', {
-        initiativeId,
+      memberAsync<AtlasAuthorityInspection>('authority-status', {
+        source: 'atlas',
+      }),
+    activateWorkControl: (input) =>
+      authorize<AtlasAuthorityTransition>(
+        'activate-work-control',
+        { source: 'atlas', ...input },
+        input.actor,
+      ),
+    restoreAtlasAuthority: (input) =>
+      authorize<AtlasAuthorityTransition>(
+        'restore-atlas-authority',
+        input,
+        input.actor,
+      ),
+    importInfo: () => member<AtlasDashboardSnapshot>('dashboard').import_info,
+    missions: () => member<AtlasDashboardSnapshot>('dashboard').missions,
+    mission: (missionId) =>
+      member<AtlasMissionDetail>('mission', { missionId }),
+    missionHome: (missionId, options = {}) =>
+      memberAsync<AtlasMissionHome>('mission-home', {
+        missionId,
         source: options.source,
         cutSystemTime: options.cutSystemTime,
       }),
-    assessInitiative: (initiativeId, assessment = {}) =>
+    assessMission: (missionId, assessment = {}) =>
       authorize<WorkControlAuthorityReport>(
         'assess-progress',
         {
-          initiativeId: initiativeId,
+          initiativeId: missionId,
           source: assessment.source,
           purpose: assessment.purpose,
           authorizedBy: assessment.authorizedBy,
         },
         assessment.authorizedBy ?? 'work-dashboard',
       ),
-    assessInitiativeAsync: (initiativeId, assessment = {}) =>
+    assessInitiativeAsync: (missionId, assessment = {}) =>
       authorize<WorkControlAuthorityReport>(
         'assess-progress',
         {
-          initiativeId: initiativeId,
+          initiativeId: missionId,
           source: assessment.source,
           purpose: assessment.purpose,
           authorizedBy: assessment.authorizedBy,
@@ -724,14 +823,14 @@ export function openWorkControlProfile(
         { initiativeId, ...input },
         input.actor,
       ),
-    exportInitiative: (initiativeId, outPath, transfer = {}) =>
-      authorize<WorkControlInitiativeBundleExport>(
+    exportInitiative: (missionId, outPath, transfer = {}) =>
+      authorize<AtlasMissionBundleExport>(
         'export-initiative',
-        { initiativeId: initiativeId, out: outPath, ...transfer },
+        { initiativeId: missionId, out: outPath, ...transfer },
         'work-dashboard',
       ),
     importInitiative: (fromPath, transfer = {}) =>
-      authorize<WorkControlInitiativeBundleImport>(
+      authorize<AtlasMissionBundleImport>(
         'import-initiative',
         { from: fromPath, ...transfer },
         'work-dashboard',
@@ -760,56 +859,56 @@ export function openWorkControlProfile(
         { initiativeId, assignmentId, ...input },
         input.actor,
       ),
-    claimCompletion: (initiativeId, assignmentId, input) =>
-      authorize<WorkControlCompletionClaimWrite>(
+    claimCompletion: (missionId, goalId, input) =>
+      authorize<AtlasCompletionClaimWrite>(
         'claim-completion',
-        { initiativeId: initiativeId, assignmentId: assignmentId, ...input },
+        { initiativeId: missionId, assignmentId: goalId, ...input },
         input.actor,
       ),
-    assessCompletion: (initiativeId, assignmentId, assessment = {}) =>
+    assessCompletion: (missionId, goalId, assessment = {}) =>
       authorize<WorkControlAuthorityReport>(
         'assess-progress',
         {
-          initiativeId: initiativeId,
-          assignmentId: assignmentId,
+          initiativeId: missionId,
+          assignmentId: goalId,
           source: assessment.source,
           purpose: assessment.purpose ?? 'handoff',
           authorizedBy: assessment.authorizedBy,
         },
         assessment.authorizedBy ?? 'work-dashboard',
       ),
-    assessCompletionAsync: (initiativeId, assignmentId, assessment = {}) =>
+    assessCompletionAsync: (missionId, goalId, assessment = {}) =>
       authorize<WorkControlAuthorityReport>(
         'assess-progress',
         {
-          initiativeId: initiativeId,
-          assignmentId: assignmentId,
+          initiativeId: missionId,
+          assignmentId: goalId,
           source: assessment.source,
           purpose: assessment.purpose ?? 'handoff',
           authorizedBy: assessment.authorizedBy,
         },
         assessment.authorizedBy ?? 'work-dashboard',
       ),
-    reviewCompletion: (initiativeId, assignmentId, input) =>
-      authorize<WorkControlIndependentReview>(
+    reviewCompletion: (missionId, goalId, input) =>
+      authorize<AtlasIndependentReview>(
         'review-completion',
-        { initiativeId: initiativeId, assignmentId: assignmentId, ...input },
+        { initiativeId: missionId, assignmentId: goalId, ...input },
         input.reviewer,
       ),
-    decideContinuation: (initiativeId, assignmentId, input) =>
-      authorize<WorkControlContinuationDecision>(
+    decideContinuation: (missionId, goalId, input) =>
+      authorize<AtlasContinuationDecision>(
         'decide-continuation',
-        { initiativeId: initiativeId, assignmentId: assignmentId, ...input },
+        { initiativeId: missionId, assignmentId: goalId, ...input },
         input.actor,
       ),
-    assignments: (filter = {}) =>
-      member<WorkControlAssignment[]>('assignments', filter),
-    assignment: (assignmentId) =>
-      member<WorkControlAssignment[]>('assignments').find(
-        (assignment) => assignment.assignment_id === assignmentId,
-      ) ?? null,
+    goals: (filter = {}) => member<AtlasGoal[]>('goals', filter),
+    goal: (goalId) =>
+      member<AtlasGoal[]>('goals').find((goal) => goal.goal_id === goalId) ??
+      null,
+    markers: () => member<AtlasMarker[]>('markers'),
   };
 }
+
 // KFD-3 factory qualification owns this separate, explicitly injected Profile
 // application surface. It is never selected as a fallback by the production
 // Work Dashboard, whose only Assignment authority is openProfileApplication().
@@ -848,6 +947,14 @@ export function openKfd3ProfileApplication(
     decideContinuation: (
       ...args: Parameters<typeof application.decideContinuation>
     ) => application.decideContinuation(...args),
+    importRepo: (...args: Parameters<typeof application.importRepo>) =>
+      application.importRepo(...args),
+    activateWorkControl: (
+      ...args: Parameters<typeof application.activateWorkControl>
+    ) => application.activateWorkControl(...args),
+    restoreAtlasAuthority: (
+      ...args: Parameters<typeof application.restoreAtlasAuthority>
+    ) => application.restoreAtlasAuthority(...args),
     exportInitiative: (
       ...args: Parameters<typeof application.exportInitiative>
     ) => application.exportInitiative(...args),

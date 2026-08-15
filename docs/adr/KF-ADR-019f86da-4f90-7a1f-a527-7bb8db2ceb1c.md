@@ -38,7 +38,7 @@ kernel owns objects, versions, relations, Cuts, named refs, CAS, and receipts;
 Action Geometry owns Pursuit, Atlas, Warrant, and Episode responsibility
 separation; the Agent Work Domain Profile owns its fields, lifecycle vocabulary,
 and transitions; Xinfa owns Atlas compilation and verification; Runtime Episode
-lifecycle owns occurrence; Work Control owns Completion Claim, assessment,
+lifecycle owns occurrence; Mission Control owns Completion Claim, assessment,
 independent review, and continuation; Project Cut owns source settlement.
 
 An Agent still has to compose those surfaces manually. A process can crash
@@ -92,16 +92,16 @@ transaction.
 
 Action MJS owns canonical validation, deterministic recovery classification,
 pure transition planning, and projections. It does not read or write private
-journal/CAS/runtime layouts and cannot mint Fact, Episode, Profile, Initiative,
+journal/CAS/runtime layouts and cannot mint Fact, Episode, Profile, Mission,
 review, continuation, or Project Cut receipts.
 
-Compatibility ports map current Initiative/Assignment, Xinfa, bounded authority material,
-the KFD-7 Work Profile, Runtime Episode lifecycle, Work Control completion,
+Compatibility ports map current Mission/Go, Xinfa, bounded authority material,
+the KFD-7 Work Profile, Runtime Episode lifecycle, Mission Control completion,
 and the Fact kernel into the coordinator. They are replacement seams for future
 native Pursuit, Atlas, and Warrant implementations plus Domain Profiles, not
 new authorities.
 
-The first implementation slice validates explicit Initiative/Assignment Pursuit, verified
+The first implementation slice validates explicit Mission/Go Pursuit, verified
 Xinfa Atlas, and bounded Warrant inputs before mutation. It then requires the
 Work Profile, Episode, and Fact checkpoint ports to return their own accepted
 receipts. Re-entering the same loop ref reuses the persisted envelope; a fresh
@@ -116,7 +116,7 @@ Fact ref CAS. Its command transport is replaceable; it does not expose or write
 private journal, CAS, or Episode layouts.
 
 The settlement slice resumes that durable checkpoint, seals the same Runtime
-Episode, refreshes the verified Atlas binding, consumes an independent Initiative
+Episode, refreshes the verified Atlas binding, consumes an independent Mission
 Control review receipt, and settles the terminal Fact ref with expected-old
 CAS. Each accepted external effect is checkpointed before the next one; unknown
 Episode outcome, pending review, and stale final CAS remain typed recovery
@@ -124,10 +124,10 @@ states. A terminal envelope is recoverable from the final KFD-7 role details
 after the begin-time Warrant has expired.
 
 The source dogfood entry now resolves the exact loaded source-build native
-extension and active Work Control Profile into one `nativeAuthority`
+extension and active Mission Control Profile into one `nativeAuthority`
 binding. It loads the checked-out source adapter ahead of a generated build
 copy, refuses resume or settlement without mutation when either root drifts,
-and roots reused Work Control receipts in their original payload and Episode.
+and roots reused Mission Control receipts in their original payload and Episode.
 The first same-root Atlas refresh creates its receipt; only a later exact replay
 is idempotent, while a conflicting replay is rejected.
 

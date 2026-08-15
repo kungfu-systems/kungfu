@@ -33,6 +33,7 @@ _WORK_REF_FIELDS = {
     "systemTimeCut",
     "initiativeId",
 }
+_LEGACY_WORK_REF_FIELDS = _WORK_REF_FIELDS - {"initiativeId"}
 _ENVELOPE_FIELDS = {
     "schema",
     "workspaceId",
@@ -93,25 +94,36 @@ def _text(value: Any, label: str) -> str:
 @overload
 def validate_work_ref(
     value: None,
+    *,
+    compatibility: bool = False,
 ) -> None: ...
 
 
 @overload
 def validate_work_ref(
     value: Mapping[str, Any],
+    *,
+    compatibility: bool = False,
 ) -> dict[str, Any]: ...
 
 
 def validate_work_ref(
     value: Mapping[str, Any] | None,
+    *,
+    compatibility: bool = False,
 ) -> dict[str, Any] | None:
     if value is None:
         return None
     result = _object(value, "WorkRef")
+    required = (
+        _LEGACY_WORK_REF_FIELDS
+        if compatibility and "initiativeId" not in result
+        else _WORK_REF_FIELDS
+    )
     _exact_fields(
         result,
         allowed=_WORK_REF_FIELDS,
-        required=_WORK_REF_FIELDS,
+        required=required,
         label="WorkRef",
     )
     if result.get("schema") != WORK_REF_SCHEMA:
@@ -129,7 +141,8 @@ def validate_work_ref(
         if _ROOT.fullmatch(str(result.get(field) or "")) is None:
             raise ValueError(f"WorkRef.{field} must be a sha256 root")
     if result["entityType"] == "assignment":
-        _text(result.get("initiativeId"), "WorkRef.initiativeId")
+        if not compatibility or "initiativeId" in result:
+            _text(result.get("initiativeId"), "WorkRef.initiativeId")
     elif "initiativeId" in result:
         raise ValueError("WorkRef.initiativeId is only valid for assignment identity")
     return result

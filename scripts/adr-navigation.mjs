@@ -36,7 +36,7 @@ const DOMAINS = [
     title: 'Agent and work control',
     keywords: [
       'agent',
-      'initiative',
+      'mission',
       'assignment',
       'project-cut',
       'project cut',
@@ -118,6 +118,7 @@ const DOMAINS = [
       'workbench',
       'frontend',
       'product',
+      'mission control',
       'console',
       'user',
     ],

@@ -16,7 +16,8 @@ any GUI, CLI, Agent, or KFX production caller to that client.
 ## Runtime boundary
 
 - Discovery reports `embedded` supported, `loopback` unavailable, and
-  `cluster` out of scope, plus the exact contract capabilities.
+  `cluster` out of scope, plus the exact contract capabilities and
+  compatibility bounds.
 - One realm generation admits one Runtime writer. Startup uses a non-blocking
   same-host named lock and rejects a second writer instead of waiting.
 - Calls within the embedded writer are serialized. CAS revision, generation,
@@ -30,12 +31,13 @@ any GUI, CLI, Agent, or KFX production caller to that client.
   result. An uncertain authority change becomes an explicit manual-recovery
   diagnostic.
 
-## Native boundary and non-claims
+## Compatibility and non-claims
 
-The Local Profile exposes only the current Assignment identities and Work
-Control authority. It has no alias reader, historical-name translation,
-dual-write path, or alternate authority adapter. Existing Profile, GUI, CLI,
-Agent, and KFX writers are not declared Runtime clients in R1.
+The R0 contract and its fixtures remain byte-identical. Current Mission
+Control, Atlas gate, and captured-request readers remain explicit read-only
+compatibility inputs. Existing Profile, GUI, CLI, Agent, and KFX writers are
+not declared Runtime clients and are not removed in R1. Dual write remains
+forbidden.
 
 R1 does not provide a loopback listener, authenticated remote transport,
 PostgreSQL authority, scheduler, multi-host recovery, HA, sharding, capacity

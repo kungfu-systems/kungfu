@@ -42,7 +42,7 @@ be located with three coordinates:
 ```text
 shape:     SQLite
 semantics: Git, but for runs rather than source code
-initiative:   a flight recorder with a qualification layer
+mission:   a flight recorder with a qualification layer
 ```
 
 In one sentence: **Kungfu aims to do for what actually happened during a run
