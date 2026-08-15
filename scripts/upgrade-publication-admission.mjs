@@ -1848,9 +1848,33 @@ export function verifyUpgradePublicationAdmission({
   ) {
     throw new Error('product admission credential projection drift');
   }
+  const verifiedCredentialIsland = verifyCredentialIslandBundle({
+    bundleRoot: path.dirname(credentialManifestPath),
+    expectedVersion: receipt.identity.version,
+    acceptedSources: new Set(sources),
+    policy: credentialIslandPolicy(),
+  });
+  if (!verifiedCredentialIsland) {
+    throw new Error('admitted credential island is not authoritative');
+  }
+  const publicationManifests = qualificationPlatforms.has('darwin')
+    ? manifests
+    : manifests.map((item) =>
+        item.platform === 'darwin'
+          ? reconcileUnadvertisedDarwinManifest({
+              item: {
+                ...item,
+                bundleRoot: path.join(resolvedPayloadRoot, item.bundleName),
+              },
+              credentialIsland: verifiedCredentialIsland,
+              acceptedSources: new Set(sources),
+              policy: credentialIslandPolicy(),
+            })
+          : item,
+      );
   return {
     ...receipt.admission,
-    manifests: manifests.map(
+    manifests: publicationManifests.map(
       ({ platform, architecture, manifestPath, manifest }) => ({
         platform,
         architecture,

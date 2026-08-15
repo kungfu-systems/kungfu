@@ -321,6 +321,65 @@ function platformFixture(root, platform, architecture) {
   };
 }
 
+function finalizeDarwinCliFixture(value) {
+  const platform = value.platforms.darwin;
+  const finalBytes = Buffer.from('signed-notarized-cli-darwin');
+  fs.writeFileSync(platform.cliPath, finalBytes);
+  rewriteCliQualification(platform.cliQualificationPath, (report) => {
+    report.identity.archiveSha256 = `sha256:${sha256(finalBytes)}`;
+  });
+  const providerPath = path.join(
+    platform.bundleRoot,
+    '.buildchain',
+    'artifacts',
+    'signing',
+    'macos-arm64',
+    'kungfu-cli-macos-arm64',
+    'provider-evidence.json',
+  );
+  writeJson(providerPath, {
+    contract: 'kungfu-buildchain-apple-developer-id-evidence/v1',
+    status: 'passed',
+    artifactKind: 'archive',
+    certificateSha1: CERTIFICATE_SHA1,
+    teamId: 'RYNFD6L6DK',
+    notarization: {
+      status: 'Accepted',
+    },
+  });
+  const inventoryPath = path.join(
+    platform.bundleRoot,
+    '.buildchain',
+    'artifacts',
+    'macos-arm64',
+    'manifest.json',
+  );
+  const files = [platform.cliPath, providerPath]
+    .map((filePath) => ({
+      path: path
+        .relative(platform.bundleRoot, filePath)
+        .split(path.sep)
+        .join('/'),
+      size: fs.statSync(filePath).size,
+      sha256: sha256(fs.readFileSync(filePath)),
+    }))
+    .sort((left, right) => left.path.localeCompare(right.path));
+  writeJson(inventoryPath, {
+    schemaVersion: 1,
+    contract: 'kungfu-buildchain-artifact',
+    platform: { id: 'macos-arm64' },
+    git: { sha: SOURCE },
+    expectedArtifacts: { ok: true },
+    files,
+    summary: {
+      fileCount: files.length,
+      totalBytes: files.reduce((total, file) => total + file.size, 0),
+      digest: 'f'.repeat(64),
+    },
+  });
+  return finalBytes;
+}
+
 function credentialManifest(root, bundleRoot, evidencePath, dmgPath, zipPath) {
   const files = [dmgPath, evidencePath, zipPath]
     .map((filePath) => ({
@@ -949,6 +1008,39 @@ test('candidate finalization seals one rooted product admission receipt into its
     assert.equal(verified.receiptRoot, written.receipt.receiptRoot);
     assert.equal(verified.capsuleRoot, written.capsule.capsuleRoot);
     assert.equal(verified.manifests.length, 3);
+  });
+});
+
+test('sealed admission rehydrates finalized Darwin CLI bytes for publication', () => {
+  withFixture((value) => {
+    const finalBytes = finalizeDarwinCliFixture(value);
+    const outputRoot = path.join(value.payloadRoot, 'kungfu-product-admission');
+    writeUpgradePublicationAdmission({
+      payloadRoot: value.payloadRoot,
+      releaseCandidatePassportPath: value.passportPath,
+      expectedVersion: VERSION,
+      outputPath: path.join(
+        outputRoot,
+        PRODUCT_UPGRADE_PUBLICATION_ADMISSION_FILE,
+      ),
+      capsulePath: path.join(
+        outputRoot,
+        PRODUCT_UPGRADE_PUBLICATION_CAPSULE_FILE,
+      ),
+    });
+    const verified = verifyUpgradePublicationAdmission({
+      payloadRoot: value.payloadRoot,
+      releaseCandidatePassportPath: value.passportPath,
+      expectedVersion: VERSION,
+      expectedSourceSha: SOURCE,
+    });
+    const darwin = verified.manifests.find(
+      ({ platform }) => platform === 'darwin',
+    );
+    const cli = darwin.manifest.artifacts.find(({ kind }) => kind === 'cli');
+    assert.equal(cli.size, finalBytes.length);
+    assert.equal(cli.digest, `sha256:${sha256(finalBytes)}`);
+    assert.match(cli.signature, /provider-evidence\.json/u);
   });
 });
 
