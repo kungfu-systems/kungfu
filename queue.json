@@ -3,7 +3,7 @@
   "contract": "kungfu-buildchain-dev-delivery-warrant-queue",
   "repository": "kungfu-systems/kungfu",
   "protectedBase": "dev/v4/v4.0",
-  "generation": 2647,
+  "generation": 2648,
   "fencingCounter": 444,
   "policy": {
     "agingSeconds": 900,
@@ -27698,8 +27698,41 @@
         "tests/qualification/layers/surfaces/run.mjs",
         "tests/qualification/layers/surfaces/run.test.mjs"
       ]
+    },
+    {
+      "repository": "kungfu-systems/kungfu",
+      "protectedBase": "dev/v4/v4.0",
+      "pullRequestNumber": 3155,
+      "assignmentRoot": "sha256:e5787cd469c36d76d1888f3a9190a4ab8a10779bf20fbf953a1396b5994adef5",
+      "initiativeRoot": "sha256:bfff817933e5a5ad693e4b902a84f6cc3a251235dd7377cb4091d92f805fa7ff",
+      "sourceIdentityRoot": "sha256:41e5e90b0c72bb636208675d8a4441b1be1064f37807815f23643038b9766c6a",
+      "deliveryClass": "native-proof-required",
+      "candidateId": "sha256:0cea1fe707ab8709ac40b4d06b231b868db84bafa79287d2726b22db73b8bd13",
+      "sourceHead": "bdd571d861ae5a4c6f441a5a7368188586b27baa",
+      "sourcePatchRoot": "sha256:ffe3e3de703c3ba2ba3d2f843c4400e6367bba53cd7b86bb7092e19188b0e818",
+      "sourceProofRoot": "sha256:95ee1fd2fd4ad5ac27bc899cb520843efa652df655037011c8818fa035995938",
+      "planRoot": "sha256:f76cb9f5ad6a8fabbadfec75d679b2891e170fe688eb9db52ac8649f2377cf91",
+      "closureRoot": "sha256:106d175611d8634c988192302b9c464ae8ba3b6d023c2cff9910e401344c9624",
+      "dependencyRoot": "sha256:4de9e53cf019368eacb4cf931577b136ffa475c2f1ff3244b7b6fe29c48bed14",
+      "toolchainRoot": "sha256:2ecb07894954a2e0de022615d4561e5ba3ae68376401941ecff77be03cd75a0f",
+      "environmentRoot": "sha256:c5f5da5917c6ff93a509a62b18d4b9b69325755c4c7229b553b0016cde83788f",
+      "sourceWorkflowRunId": 31874315122,
+      "priority": "ordinary",
+      "enqueuedAt": "2026-08-15T08:28:23.984Z",
+      "updatedAt": "2026-08-15T08:28:23.984Z",
+      "attempts": 1,
+      "recoveries": 0,
+      "status": "queued",
+      "terminal": null,
+      "affectedPaths": [
+        ".github/workflows/affected-native-pr.yml",
+        "docs/qualification/gates/workflow-authority.json",
+        "framework/release/publication-surfaces.json",
+        "scripts/affected-native-proof.mjs",
+        "scripts/candidate-timeline-events.test.mjs"
+      ]
     }
   ],
-  "updatedAt": "2026-08-15T08:23:42.559Z",
-  "stateRoot": "sha256:7a4e134ac49a0f3b37bc684ab3fba3215d9ef20b852b287cb0899805a49a1499"
+  "updatedAt": "2026-08-15T08:28:23.984Z",
+  "stateRoot": "sha256:464f68d83683d752c1c641c12a573b8aa00f86036afc14627d4f22a96f3f73a6"
 }
