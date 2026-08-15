@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://kungfu.dev/schemas/agent-session-core/v1",
   "title": "Kungfu Agent Session core values",
-  "description": "Canonical cross-language value contract for Agent Session identity and bootstrap metadata. Writers use the strict definitions; compatibility readers may use legacyWorkRefV1 only while migrating retained v1 registry data.",
+  "description": "Canonical cross-language value contract for Agent Session identity and bootstrap metadata.",
   "$defs": {
     "sha256": {
       "type": "string",
@@ -11,32 +11,6 @@
     "identifier": {
       "type": "string",
       "pattern": "^[a-z0-9][a-z0-9._-]{0,127}$"
-    },
-    "legacyWorkRefV1": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "schema",
-        "workspaceId",
-        "profileId",
-        "profileRoot",
-        "entityType",
-        "entityId",
-        "entityRoot",
-        "purpose",
-        "systemTimeCut"
-      ],
-      "properties": {
-        "schema": { "const": "kungfu.work-ref/v1" },
-        "workspaceId": { "type": "string", "minLength": 1 },
-        "profileId": { "type": "string", "minLength": 1 },
-        "profileRoot": { "$ref": "#/$defs/sha256" },
-        "entityType": { "type": "string", "minLength": 1 },
-        "entityId": { "type": "string", "minLength": 1 },
-        "entityRoot": { "$ref": "#/$defs/sha256" },
-        "purpose": { "type": "string", "minLength": 1 },
-        "systemTimeCut": { "type": "string", "minLength": 1 }
-      }
     },
     "workRef": {
       "type": "object",

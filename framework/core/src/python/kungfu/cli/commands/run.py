@@ -59,10 +59,10 @@ def _captured_work(workspace_root):
         try:
             captured = orchestration.load_captured_request(request_path)
             definition = captured["request"].get("workDefinition") or {}
-            projected = orchestration.atlas_assignment_projection(
+            projected = orchestration.assignment_projection(
                 captured,
-                initiative_id=str(definition.get("mission_id") or ""),
-                assignment_id=str(definition.get("goal_id") or ""),
+                initiative_id=str(definition.get("initiative_id") or ""),
+                assignment_id=str(definition.get("assignment_id") or ""),
             )
         except (OSError, ValueError, json.JSONDecodeError):
             continue
@@ -205,8 +205,8 @@ def _capture_task(workspace_root, task):
             "expiresAt": None,
         },
         "workDefinition": {
-            "goal_id": f"{slug}-{suffix}",
-            "mission_id": "project-work",
+            "assignment_id": f"{slug}-{suffix}",
+            "initiative_id": "project-work",
             "title": task,
             "objective": task,
             "acceptance_criteria": [

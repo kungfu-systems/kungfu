@@ -51,15 +51,14 @@ _INTENT_COMMAND_TYPES = {
 
 
 def profile_source() -> Path:
-    """Resolve the packaged Work Control Profile with source compatibility."""
+    """Resolve only the canonical packaged Work Control Profile."""
 
     profiles = Path(orchestration.__file__).resolve().parent / "profiles"
     extensions = orchestration.source_root() / "extensions"
     for root in (profiles, extensions):
-        for name in ("work-control", "mission-control"):
-            source = root / name
-            if source.is_dir():
-                return source
+        source = root / "work-control"
+        if source.is_dir():
+            return source
     raise ValueError("Work Control Profile is absent from this Kungfu product")
 
 

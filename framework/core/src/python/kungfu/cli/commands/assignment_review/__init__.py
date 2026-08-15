@@ -219,7 +219,7 @@ def build_plan(
     status_reader,
 ):
     captured = orchestration.load_captured_request(request_file)
-    projected = orchestration.atlas_assignment_projection(
+    projected = orchestration.assignment_projection(
         captured,
         initiative_id=initiative_id,
         assignment_id=assignment_id,

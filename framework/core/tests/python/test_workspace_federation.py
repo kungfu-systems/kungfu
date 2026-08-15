@@ -20,7 +20,6 @@ from kungfu.workspace import (
 from kungfu.workspace_federation import (
     RELATION_TYPES,
     WorkRef,
-    _retained_state_dominates,
     assignment_lifecycle_projection,
     build_dogfood_gate_receipt,
     build_relation,
@@ -61,10 +60,6 @@ def test_workspace_federation_preserves_extracted_read_model_exports():
     assert (
         federation.traverse_assignment_graph
         is assignment_graph.traverse_assignment_graph
-    )
-    assert (
-        federation._retained_state_dominates
-        is federation_projection._retained_state_dominates
     )
     assert federation._compose_global_work is federation_projection._compose_global_work
 
@@ -653,14 +648,14 @@ def test_initiative_group_preserves_authority_distinct_canonical_roots(tmp_path)
 
 
 @pytest.mark.parametrize("terminal_status", ["complete", "merged"])
-def test_default_portfolio_filter_normalizes_legacy_terminal_statuses(
+def test_default_portfolio_filter_normalizes_source_terminal_statuses(
     tmp_path, terminal_status
 ):
     identity = _qualified_project(tmp_path, terminal_status)
     assignments = {
         identity.identity_root: [
             {
-                "title": f"Legacy {terminal_status}",
+                "title": f"Source {terminal_status}",
                 "status": terminal_status,
                 "updated_at": "2026-07-29T12:34:56Z",
                 "lifecycle": {
@@ -668,7 +663,7 @@ def test_default_portfolio_filter_normalizes_legacy_terminal_statuses(
                     "orchestration_phase": "stage-ready",
                 },
                 "work_ref": _ref(
-                    identity, f"kungfu:legacy-{terminal_status}"
+                    identity, f"kungfu:source-{terminal_status}"
                 ).as_dict(),
             }
         ]
@@ -727,333 +722,6 @@ def test_same_authority_divergent_versions_are_a_strict_conflict(tmp_path):
     assert result["global_work"]["canonical_work"][0]["conflict_reasons"] == [
         "same-authority-divergent-version"
     ]
-
-
-def test_ambiguous_legacy_dependency_has_distinct_fail_closed_reason(tmp_path):
-    source = _qualified_project(tmp_path, "ambiguous-source")
-    left = _qualified_project(tmp_path, "ambiguous-left")
-    right = _qualified_project(tmp_path, "ambiguous-right")
-    config_home = tmp_path / "config"
-    for identity in (source, left, right):
-        observe_workspace_locator(
-            identity,
-            config_home=str(config_home),
-            env={"HOME": str(tmp_path)},
-        )
-    assignments = {
-        source.identity_root: [
-            {
-                "title": "Source",
-                "work_ref": _ref(source, "kungfu:source", ROOT_C, ROOT_D).as_dict(),
-            }
-        ],
-        left.identity_root: [
-            {
-                "title": "Target A",
-                "work_ref": _ref(left, "kungfu:target", ROOT_A, ROOT_D).as_dict(),
-            }
-        ],
-        right.identity_root: [
-            {
-                "title": "Target B",
-                "work_ref": _ref(right, "kungfu:target", ROOT_B, ROOT_D).as_dict(),
-            }
-        ],
-    }
-
-    def loader(identity):
-        component = _component_fixture(identity, assignments)
-        if identity.identity_root == source.identity_root:
-            component["problems"] = [
-                {
-                    "code": "unresolved-assignment-dependency",
-                    "assignment_subject": "kungfu:source",
-                    "dependency_id": "target",
-                }
-            ]
-        return component
-
-    result = query_federation(
-        source,
-        scope="all",
-        config_home=str(config_home),
-        env={"HOME": str(tmp_path)},
-        loader=loader,
-    )
-
-    unresolved = result["global_work"]["reference_resolution"]["unresolved"]
-    assert unresolved[0]["code"] == "ambiguous-reference"
-    assert len(unresolved[0]["candidate_canonical_roots"]) == 2
-    assert result["aggregate"]["complete"] is False
-
-
-def test_stale_required_component_fails_strict_completeness(tmp_path):
-    identity = _qualified_project(tmp_path, "stale-required")
-
-    def loader(current):
-        component = _component_fixture(current, {})
-        component["stale"] = True
-        return component
-
-    result = query_federation(
-        identity,
-        scope="local",
-        config_home=str(tmp_path / "config"),
-        env={"HOME": str(tmp_path)},
-        loader=loader,
-    )
-
-    assert result["aggregate"]["stale_component_count"] == 1
-    assert result["aggregate"]["unknown_component_count"] == 1
-    assert result["aggregate"]["complete"] is False
-
-
-def test_legacy_dependencies_resolve_after_complete_identity_composition(tmp_path):
-    config_home = tmp_path / "config"
-    source = _qualified_project(tmp_path, "dependency-source")
-    target = _qualified_project(tmp_path, "dependency-target")
-    for identity in (target, source):
-        observe_workspace_locator(
-            identity,
-            config_home=str(config_home),
-            env={"HOME": str(tmp_path)},
-        )
-    assignments = {
-        source.identity_root: [
-            {
-                "title": "Source",
-                "work_ref": _ref(source, "kungfu:source", ROOT_A, ROOT_D).as_dict(),
-            }
-        ],
-        target.identity_root: [
-            {
-                "title": "Target",
-                "work_ref": _ref(target, "kungfu:target", ROOT_B, ROOT_D).as_dict(),
-            }
-        ],
-    }
-
-    def loader(identity):
-        component = _component_fixture(identity, assignments)
-        if identity.identity_root == source.identity_root:
-            component["problems"] = [
-                {
-                    "code": "unresolved-assignment-dependency",
-                    "assignment_subject": "kungfu:source",
-                    "dependency_id": "target",
-                }
-            ]
-        return component
-
-    result = query_federation(
-        source,
-        scope="all",
-        config_home=str(config_home),
-        env={"HOME": str(tmp_path)},
-        loader=loader,
-    )
-
-    resolution = result["global_work"]["reference_resolution"]
-    assert resolution["unresolved"] == []
-    assert resolution["resolved"][0]["dependency_subject"] == "kungfu:target"
-    assert result["aggregate"]["complete"] is True
-
-
-def test_retained_sealed_state_closes_deleted_worktree_dependency(tmp_path):
-    source = _qualified_project(tmp_path, "sealed-dependency-source")
-    target_root = "sha256:" + "e" * 64
-    state_root = "sha256:" + "f" * 64
-    assignments = {
-        source.identity_root: [
-            {
-                "title": "Source",
-                "work_ref": _ref(source, "kungfu:source", ROOT_A, ROOT_D).as_dict(),
-            }
-        ]
-    }
-
-    def loader(identity):
-        component = _component_fixture(identity, assignments)
-        component["problems"] = [
-            {
-                "code": "unresolved-assignment-dependency",
-                "assignment_subject": "kungfu:source",
-                "dependency_id": "deleted-target",
-            }
-        ]
-        component["retained_assignment_states"] = [
-            {
-                "schema": "kungfu.assignment-orchestration.sealed-work-coordinate/v1",
-                "assignment_subject": "kungfu:deleted-target",
-                "workspace_identity_root": target_root,
-                "assignment_state_root": ROOT_B,
-                "event_counts": {"completion_claims": 1},
-                "state_root": state_root,
-                "query_proof_root": ROOT_C,
-                "phase": "continuation-decided",
-                "settled": True,
-                "storage_kind": "git-common-dir",
-            }
-        ]
-        return component
-
-    result = query_federation(
-        source,
-        scope="local",
-        config_home=str(tmp_path / "config"),
-        env={"HOME": str(tmp_path)},
-        loader=loader,
-    )
-
-    resolution = result["global_work"]["reference_resolution"]
-    assert resolution["unresolved"] == []
-    assert resolution["resolved"][0]["resolution"] == (
-        "retained-sealed-assignment-state"
-    )
-    assert resolution["resolved"][0]["work_ref"]["workspace_identity_root"] == (
-        target_root
-    )
-    assert result["aggregate"]["retained_assignment_state_count"] == 1
-
-
-def test_equivalent_retained_seals_resolve_one_legacy_dependency(tmp_path):
-    source = _qualified_project(tmp_path, "equivalent-sealed-source")
-    target_root = "sha256:" + "e" * 64
-    assignment_state_root = "sha256:" + "f" * 64
-    state_roots = ["sha256:" + "1" * 64, "sha256:" + "2" * 64]
-    assignments = {
-        source.identity_root: [
-            {
-                "title": "Source",
-                "work_ref": _ref(source, "kungfu:source", ROOT_A, ROOT_D).as_dict(),
-            }
-        ]
-    }
-
-    def loader(identity):
-        component = _component_fixture(identity, assignments)
-        component["problems"] = [
-            {
-                "code": "unresolved-assignment-dependency",
-                "assignment_subject": "kungfu:source",
-                "dependency_id": "settled-target",
-            }
-        ]
-        component["retained_assignment_states"] = [
-            {
-                "schema": "kungfu.assignment-orchestration.sealed-work-coordinate/v1",
-                "assignment_subject": "kungfu:settled-target",
-                "workspace_identity_root": target_root,
-                "assignment_state_root": assignment_state_root,
-                "event_counts": {"completion_claims": 1},
-                "state_root": state_root,
-                "query_proof_root": ROOT_C,
-                "phase": "continuation-decided",
-                "settled": True,
-                "storage_kind": "git-common-dir",
-            }
-            for state_root in state_roots
-        ]
-        return component
-
-    result = query_federation(
-        source,
-        scope="local",
-        config_home=str(tmp_path / "config"),
-        env={"HOME": str(tmp_path)},
-        loader=loader,
-    )
-
-    resolution = result["global_work"]["reference_resolution"]
-    assert resolution["unresolved"] == []
-    assert resolution["resolved"][0]["assignment_state_root"] == (assignment_state_root)
-    assert resolution["resolved"][0]["equivalent_sealed_state_roots"] == state_roots
-    assert result["aggregate"]["complete"] is True
-
-
-def test_dominant_retained_seal_supersedes_earlier_settlement_snapshots(tmp_path):
-    source = _qualified_project(tmp_path, "successor-sealed-source")
-    target_root = "sha256:" + "e" * 64
-    early_state_root = "sha256:" + "1" * 64
-    final_state_root = "sha256:" + "2" * 64
-    assignments = {
-        source.identity_root: [
-            {
-                "title": "Source",
-                "work_ref": _ref(source, "kungfu:source", ROOT_A, ROOT_D).as_dict(),
-            }
-        ]
-    }
-
-    def loader(identity):
-        component = _component_fixture(identity, assignments)
-        component["problems"] = [
-            {
-                "code": "unresolved-assignment-dependency",
-                "assignment_subject": "kungfu:source",
-                "dependency_id": "settled-target",
-            }
-        ]
-        component["retained_assignment_states"] = [
-            {
-                "schema": "kungfu.assignment-orchestration.sealed-work-coordinate/v1",
-                "assignment_subject": "kungfu:settled-target",
-                "workspace_identity_root": target_root,
-                "assignment_state_root": ROOT_A,
-                "event_counts": {
-                    "completion_claims": 1,
-                    "independent_reviews": 1,
-                },
-                "state_root": early_state_root,
-                "query_proof_root": ROOT_C,
-                "phase": "continuation-decided",
-                "settled": True,
-                "storage_kind": "git-common-dir",
-            },
-            {
-                "schema": "kungfu.assignment-orchestration.sealed-work-coordinate/v1",
-                "assignment_subject": "kungfu:settled-target",
-                "workspace_identity_root": target_root,
-                "assignment_state_root": ROOT_B,
-                "event_counts": {
-                    "completion_claims": 2,
-                    "independent_reviews": 2,
-                },
-                "state_root": final_state_root,
-                "query_proof_root": ROOT_D,
-                "phase": "continuation-decided",
-                "settled": True,
-                "storage_kind": "git-common-dir",
-            },
-        ]
-        return component
-
-    result = query_federation(
-        source,
-        scope="local",
-        config_home=str(tmp_path / "config"),
-        env={"HOME": str(tmp_path)},
-        loader=loader,
-    )
-
-    resolution = result["global_work"]["reference_resolution"]
-    assert resolution["unresolved"] == []
-    assert resolution["resolved"][0]["sealed_state_root"] == final_state_root
-    assert resolution["resolved"][0]["superseded_sealed_state_roots"] == [
-        early_state_root
-    ]
-    assert result["aggregate"]["complete"] is True
-
-
-def test_retained_state_dominance_rejects_equal_or_incomparable_histories():
-    earlier = {"event_counts": {"completion_claims": 1, "independent_reviews": 1}}
-    successor = {"event_counts": {"completion_claims": 2, "independent_reviews": 2}}
-    incomparable = {"event_counts": {"completion_claims": 2, "independent_reviews": 0}}
-
-    assert _retained_state_dominates(successor, earlier) is True
-    assert _retained_state_dominates(earlier, earlier) is False
-    assert _retained_state_dominates(incomparable, earlier) is False
-    assert _retained_state_dominates({}, earlier) is False
 
 
 def test_exact_work_ref_resolves_against_retained_sealed_state(tmp_path):
@@ -1622,7 +1290,7 @@ def _outcome_binding(state, marker, complete):
 def test_global_outcome_history_deduplicates_replicas_and_keeps_unknown_explicit():
     complete_state = _retained_state("1", "kungfu:assignment-complete")
     partial_state = _retained_state("2", "kungfu:assignment-partial")
-    unknown_state = _retained_state("3", "kungfu:assignment-legacy")
+    unknown_state = _retained_state("3", "kungfu:assignment-unknown-time")
     complete = _outcome_binding(complete_state, "4", True)
     partial = _outcome_binding(partial_state, "5", False)
     components = [
@@ -1659,7 +1327,7 @@ def test_global_outcome_history_deduplicates_replicas_and_keeps_unknown_explicit
     assert projection["complete_outcome_count"] == 1
 
 
-def test_global_outcome_history_reports_zero_coverage_without_guessing_legacy_time():
+def test_global_outcome_history_reports_zero_coverage_without_guessing_missing_time():
     state = _retained_state("6", "kungfu:assignment-sealed-only")
     projection = federation._compose_global_work(
         [{"retained_assignment_states": [state]}], include_settled=True

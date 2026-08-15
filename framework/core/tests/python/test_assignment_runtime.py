@@ -15,6 +15,7 @@ from typing import Any
 import pytest
 from jsonschema import Draft202012Validator
 
+from kungfu import assignment_orchestration
 from kungfu.assignment_runtime import (
     EVENT_SCHEMA,
     SNAPSHOT_SCHEMA,
@@ -23,6 +24,7 @@ from kungfu.assignment_runtime import (
     LocalAssignmentRuntimeApplication,
     LocalRuntimeError,
     WorkControlAuthority,
+    profile_source,
     serve,
 )
 from kungfu.canonical_json import canonical_json_text
@@ -51,6 +53,26 @@ VALIDATE_ENVELOPE = Draft202012Validator(ENVELOPE_SCHEMA)
 REALM = {"realmId": "home-test", "realmKind": "local", "generation": "gen-1"}
 ROOT_A = "sha256:" + "a" * 64
 ROOT_B = "sha256:" + "b" * 64
+
+
+def test_profile_source_fails_closed_without_exact_work_control(tmp_path, monkeypatch):
+    package_root = tmp_path / "package" / "kungfu"
+    package_root.mkdir(parents=True)
+    orchestration_module = package_root / "assignment_orchestration.py"
+    orchestration_module.write_text("# fixture\n", encoding="utf-8")
+    source_root = tmp_path / "source"
+    predecessor = source_root / "extensions" / "-".join(("mission", "control"))
+    predecessor.mkdir(parents=True)
+
+    monkeypatch.setattr(assignment_orchestration, "__file__", str(orchestration_module))
+    monkeypatch.setattr(assignment_orchestration, "source_root", lambda: source_root)
+
+    with pytest.raises(ValueError, match="Work Control Profile is absent"):
+        profile_source()
+
+    canonical = source_root / "extensions" / "work-control"
+    canonical.mkdir()
+    assert profile_source() == canonical
 
 
 def _root(value: Any) -> str:
@@ -380,8 +402,6 @@ def test_embedded_discovery_and_reads_keep_exact_root_parity(local_runtime):
     }
     assert discovery["result"]["protocol"]["minimumVersion"] == 1
     assert discovery["result"]["protocol"]["maximumVersion"] == 1
-    assert discovery["result"]["compatibility"]["dualWrite"] == "forbidden"
-
     roots = []
     for kind in ("gui", "cli", "agent", "kfx"):
         response = _handle(

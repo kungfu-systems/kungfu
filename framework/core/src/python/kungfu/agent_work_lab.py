@@ -1312,25 +1312,6 @@ def run_agent(
     return report
 
 
-def report_status(
-    report: Mapping[str, Any], identity: Mapping[str, Any]
-) -> dict[str, Any]:
-    current_root = content_root(identity)
-    recorded_root = report.get("identityRoot")
-    return {
-        "schema": "kungfu.agent-work-lab.report-status/v1",
-        "status": (
-            str(report.get("status") or "failed")
-            if current_root == recorded_root
-            else "stale"
-        ),
-        "recordedIdentityRoot": recorded_root,
-        "currentIdentityRoot": current_root,
-        "stale": current_root != recorded_root,
-        "writeOccurred": False,
-    }
-
-
 def next_result_directory(runtime_dir: str | Path) -> Path:
     return (
         Path(runtime_dir).expanduser().absolute()

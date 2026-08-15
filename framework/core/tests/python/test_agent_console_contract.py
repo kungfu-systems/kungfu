@@ -27,6 +27,7 @@ from agent_bootstrap_fixtures import verified_bootstrap_receipt
 
 ROOT = Path(__file__).resolve().parents[4]
 CONTRACT = ROOT / "framework" / "config" / "kungfu-config.contract.json"
+AGENT_SESSION = ROOT / "framework" / "agent-session"
 ROOT_HASH = "sha256:" + "a" * 64
 
 
@@ -84,25 +85,12 @@ def test_agent_session_cli_exposes_structured_control_response():
 
 
 def test_agent_session_core_contract_matches_cross_language_golden():
-    schema = json.loads(
-        (
-            ROOT
-            / "framework"
-            / "agent-session"
-            / "schemas"
-            / "agent-session-core.schema.json"
-        ).read_text(encoding="utf-8")
+    schema_path = AGENT_SESSION / "schemas" / "agent-session-core.schema.json"
+    fixture_path = (
+        AGENT_SESSION / "tests" / "fixtures" / "agent-session-core-golden.json"
     )
-    fixture = json.loads(
-        (
-            ROOT
-            / "framework"
-            / "agent-session"
-            / "tests"
-            / "fixtures"
-            / "agent-session-core-golden.json"
-        ).read_text(encoding="utf-8")
-    )
+    schema = json.loads(schema_path.read_text(encoding="utf-8"))
+    fixture = json.loads(fixture_path.read_text(encoding="utf-8"))
     envelope = {**fixture["envelopeBody"], "envelopeRoot": fixture["envelopeRoot"]}
     definitions = schema["$defs"]
 
@@ -126,12 +114,11 @@ def test_agent_session_core_contract_matches_cross_language_golden():
     assert session_contract.validate_agent_console_envelope(envelope) == envelope
 
 
-def test_agent_session_core_contract_legacy_read_is_explicit():
-    legacy = dict(_work_ref())
-    legacy.pop("initiativeId")
-    assert session_contract.validate_work_ref(legacy, compatibility=True) == legacy
+def test_agent_session_core_contract_rejects_incomplete_work_ref():
+    incomplete = dict(_work_ref())
+    incomplete.pop("initiativeId")
     with pytest.raises(ValueError, match="initiativeId"):
-        session_contract.validate_work_ref(legacy)
+        session_contract.validate_work_ref(incomplete)
     with pytest.raises(ValueError, match="unknown runtimeRouting"):
         envelope = {
             **json.loads(
@@ -293,7 +280,7 @@ def test_registered_third_party_provider_is_a_config_contract_member(tmp_path):
     envelope = {
         "schema": "kungfu.agent-console-envelope/v1",
         "workspaceId": "workspace:test",
-        "consoleId": "console:go-test",
+        "consoleId": "console:assignment-test",
         "attemptId": "attempt:1",
         "runtimeProfileId": "termagent.path.test",
         "provider": "termagent",
@@ -341,7 +328,7 @@ def test_work_console_requires_a_bound_work_ref_for_work_bindings():
         "workspaceId": "workspace:test",
         "consoles": [
             {
-                "consoleId": "console:go-test",
+                "consoleId": "console:assignment-test",
                 "bindingKind": "work",
                 "workRef": _work_ref(),
                 "runtimeProfileId": "codex-app",
@@ -370,7 +357,7 @@ def test_agent_console_envelope_binds_work_and_discovery_entrypoints():
     value = {
         "schema": "kungfu.agent-console-envelope/v1",
         "workspaceId": "workspace:test",
-        "consoleId": "console:go-test",
+        "consoleId": "console:assignment-test",
         "attemptId": "attempt:1",
         "runtimeProfileId": "codex-app",
         "provider": "codex",
@@ -402,7 +389,7 @@ def test_agent_console_envelope_accepts_opencode_provider():
     value = {
         "schema": "kungfu.agent-console-envelope/v1",
         "workspaceId": "workspace:test",
-        "consoleId": "console:go-test",
+        "consoleId": "console:assignment-test",
         "attemptId": "attempt:1",
         "runtimeProfileId": "opencode-free",
         "provider": "opencode",

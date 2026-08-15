@@ -14,8 +14,8 @@
     "nativeMissionControlOnly": true
   },
   "surfaceParity": {
-    "gui": "Work Dashboard Mission Control shared review projection",
-    "cli": "public Shifu Project Cut and Mission Control commands",
+    "gui": "Work Dashboard shared review projection",
+    "cli": "public Shifu Project Cut and Work Control commands",
     "agent": "KFD-3 registry and commands.json",
     "status": "qualified"
   },

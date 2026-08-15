@@ -316,7 +316,7 @@ infrastructure before third-party contract surfaces are published.
 [`kungfu-exit-bundle.contract.json`](../../framework/exit/kungfu-exit-bundle.contract.json)
 defines the top-level scope, member-root, full/thin closure, omission/loss,
 compatibility, equivalence, and verification vocabulary for bounded exit
-artifacts. Fact, Episode, Fact Library, Mission, Profile, source-export, and
+artifacts. Fact, Episode, Fact Library, Initiative, Profile, source-export, and
 recovery-backup contracts retain their own roots, material semantics, import
 rules, and receipts.
 

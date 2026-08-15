@@ -1188,11 +1188,6 @@ def session_action(ctx, operation, input_file, endpoint, as_json):
     help="the useful fact is work state, not process capture",
 )
 @click.option(
-    "--needs-atlas-projection",
-    is_flag=True,
-    help="an Atlas-style control-plane repo should be imported for inspection",
-)
-@click.option(
     "--remote-runtime",
     is_flag=True,
     help="evidence crosses a machine or runtime boundary",
@@ -1206,7 +1201,6 @@ def choose_mode(
     needs_supervision,
     has_existing_run,
     needs_structured_work,
-    needs_atlas_projection,
     remote_runtime,
     as_json,
 ):
@@ -1215,7 +1209,6 @@ def choose_mode(
         needs_supervision=needs_supervision,
         has_existing_run=has_existing_run,
         needs_structured_work=needs_structured_work,
-        needs_atlas_projection=needs_atlas_projection,
         remote_runtime=remote_runtime,
     )
     if as_json:
@@ -1342,9 +1335,7 @@ def status(ctx, target, scope, as_json):
 @click.option(
     "--mode",
     required=True,
-    type=click.Choice(
-        ["brief", "report", "atlas-projection", "trace", "managed-run", "remote-sync"]
-    ),
+    type=click.Choice(["brief", "report", "trace", "managed-run", "remote-sync"]),
     help="initial operating mode",
 )
 @click.option(
@@ -1409,9 +1400,7 @@ def mode(ctx):
     "--mode",
     "mode_name",
     required=True,
-    type=click.Choice(
-        ["brief", "report", "atlas-projection", "trace", "managed-run", "remote-sync"]
-    ),
+    type=click.Choice(["brief", "report", "trace", "managed-run", "remote-sync"]),
     help="new mode",
 )
 @click.option("--execute", is_flag=True, help="write the mode switch")

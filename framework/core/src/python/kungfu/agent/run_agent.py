@@ -297,7 +297,10 @@ _BOOTSTRAP = (
 )
 
 
-canonical_root = session_contract.semantic_root
+def canonical_root(value: Any) -> str:
+    """Return the canonical Agent Session semantic root."""
+
+    return session_contract.semantic_root(value)
 
 
 def agent_activity_history_projection(
@@ -306,18 +309,8 @@ def agent_activity_history_projection(
     entrypoint: str = "managed-run",
 ) -> dict[str, Any]:
     return agent_resources.agent_activity_history_projection(
-        validate_work_ref(work_ref), entrypoint=entrypoint
+        session_contract.validate_work_ref(work_ref), entrypoint=entrypoint
     )
-
-
-def validate_work_ref(value: Mapping[str, Any] | None) -> dict[str, Any] | None:
-    """Read current or retained legacy v1 WorkRef data.
-
-    New Assignment writers use ``session_contract.validate_work_ref`` directly
-    and therefore require the unambiguous Initiative locator.
-    """
-
-    return session_contract.validate_work_ref(value, compatibility=True)
 
 
 def validate_continuation(
@@ -341,7 +334,7 @@ def validate_continuation(
         raise ValueError(
             f"continuation envelope must use the exact {CONTINUATION_SCHEMA} shape"
         )
-    result["workRef"] = validate_work_ref(result.get("workRef"))
+    result["workRef"] = session_contract.validate_work_ref(result.get("workRef"))
     for field in ("currentCutRoot", "priorClaimRoot", "assessmentRoot"):
         if _ROOT.fullmatch(str(result.get(field) or "")) is None:
             raise ValueError(f"continuation envelope {field} must be a sha256 root")
@@ -840,7 +833,7 @@ def execute(
             "Agent Runtime Profile verification failed: "
             f"{verification.get('error') or 'unknown error'}"
         )
-    work = validate_work_ref(work_ref)
+    work = session_contract.validate_work_ref(work_ref)
     continuation_value = validate_continuation(continuation)
     if continuation_value is not None:
         if work is None:

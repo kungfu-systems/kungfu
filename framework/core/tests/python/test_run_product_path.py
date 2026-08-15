@@ -41,8 +41,8 @@ def _capture(project: Path, assignment_id: str):
             "expiresAt": None,
         },
         "workDefinition": {
-            "goal_id": assignment_id,
-            "mission_id": "project-work",
+            "assignment_id": assignment_id,
+            "initiative_id": "project-work",
             "title": assignment_id,
             "objective": f"Complete {assignment_id}",
             "acceptance_criteria": ["Result exists"],

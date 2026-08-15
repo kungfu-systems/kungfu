@@ -1,4 +1,5 @@
 lockfileVersion: '9.0'
+
 settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
@@ -43,12 +44,21 @@ importers:
       '@biomejs/biome':
         specifier: 1.9.4
         version: 1.9.4
-      '@kungfu-tech/buildchain': {specifier: 3.0.9-alpha.6, version: 3.0.9-alpha.6}
-      '@kungfu-tech/buildchain-alpha': {specifier: 'npm:@kungfu-tech/buildchain@3.0.9-alpha.6', version: '@kungfu-tech/buildchain@3.0.9-alpha.6'}
-      '@kungfu-tech/buildchain-stable': {specifier: 'npm:@kungfu-tech/buildchain@3.0.7', version: '@kungfu-tech/buildchain@3.0.7'}
+      '@kungfu-tech/buildchain':
+        specifier: 3.0.9-alpha.6
+        version: 3.0.9-alpha.6
+      '@kungfu-tech/buildchain-alpha':
+        specifier: npm:@kungfu-tech/buildchain@3.0.9-alpha.6
+        version: '@kungfu-tech/buildchain@3.0.9-alpha.6'
+      '@kungfu-tech/buildchain-stable':
+        specifier: npm:@kungfu-tech/buildchain@3.0.7
+        version: '@kungfu-tech/buildchain@3.0.7'
       '@kungfu-tech/kfd':
         specifier: 1.0.0-alpha.53
         version: 1.0.0-alpha.53
+      '@kungfu-tech/kfd-verifier-fixtures':
+        specifier: npm:@kungfu-tech/kfd@1.0.0-alpha.57
+        version: '@kungfu-tech/kfd@1.0.0-alpha.57'
       '@types/fs-extra':
         specifier: ^11.0.4
         version: 11.0.4
@@ -491,8 +501,12 @@ importers:
 
   framework/gui:
     dependencies:
-      '@kungfu-tech/agent-session': {specifier: 'workspace:*', version: 'link:../agent-session'}
-      '@kungfu-tech/api': {specifier: 'workspace:*', version: 'link:../api'}
+      '@kungfu-tech/agent-session':
+        specifier: workspace:*
+        version: link:../agent-session
+      '@kungfu-tech/api':
+        specifier: workspace:*
+        version: link:../api
       '@kungfu-tech/kfx':
         specifier: workspace:*
         version: link:../kfx
@@ -652,7 +666,9 @@ importers:
       '@kungfu-tech/kfx-adapter-langchain':
         specifier: workspace:*
         version: link:../extensions/langchain-adapter
-      '@kungfu-tech/kfx-agent-work-lab-experience': {specifier: 'workspace:*', version: 'link:../extensions/agent-work-lab/experience'}
+      '@kungfu-tech/kfx-agent-work-lab-experience':
+        specifier: workspace:*
+        version: link:../extensions/agent-work-lab/experience
       '@kungfu-tech/kfx-dogfood-actions':
         specifier: workspace:*
         version: link:../extensions/dogfood/dogfood-actions
@@ -662,7 +678,9 @@ importers:
       '@kungfu-tech/kfx-dogfood-contract':
         specifier: workspace:*
         version: link:../extensions/dogfood/dogfood-contract
-      '@kungfu-tech/kfx-suite-agent-work-lab': {specifier: 'workspace:*', version: 'link:../extensions/agent-work-lab'}
+      '@kungfu-tech/kfx-suite-agent-work-lab':
+        specifier: workspace:*
+        version: link:../extensions/agent-work-lab
       '@kungfu-tech/kfx-suite-dogfood-feedback':
         specifier: workspace:*
         version: link:../extensions/dogfood
@@ -1445,8 +1463,15 @@ packages:
     engines: {node: '>=22.14.0'}
     hasBin: true
 
-  '@kungfu-tech/buildchain@3.0.7': {resolution: {integrity: sha512-e3Dl4/x0mcGOJCQq1HRMc8rk0b+CNd/QUP9R0d2PQg/eHZgYFdoov0FwgVxEDkALnpQrUYvTLyo1EbG5SkNKkg==}, engines: {node: '>=22.14.0'}, hasBin: true}
-  '@kungfu-tech/buildchain@3.0.9-alpha.6': {resolution: {integrity: sha512-d71SkmDJXVmDmBssJqYS9rv97h4sxBDjNyE2+m7qhKpu5UaXC63p59vhk9BDA46dmpr8Bfs/l6v1P1Yz69n2Tw==}, engines: {node: '>=22.14.0'}, hasBin: true}
+  '@kungfu-tech/buildchain@3.0.7':
+    resolution: {integrity: sha512-e3Dl4/x0mcGOJCQq1HRMc8rk0b+CNd/QUP9R0d2PQg/eHZgYFdoov0FwgVxEDkALnpQrUYvTLyo1EbG5SkNKkg==}
+    engines: {node: '>=22.14.0'}
+    hasBin: true
+
+  '@kungfu-tech/buildchain@3.0.9-alpha.6':
+    resolution: {integrity: sha512-d71SkmDJXVmDmBssJqYS9rv97h4sxBDjNyE2+m7qhKpu5UaXC63p59vhk9BDA46dmpr8Bfs/l6v1P1Yz69n2Tw==}
+    engines: {node: '>=22.14.0'}
+    hasBin: true
 
   '@kungfu-tech/kfd@1.0.0-alpha.41':
     resolution: {integrity: sha512-e+iIuvsijDLSFotb3gPKqwn649lLGRX3xEWOwn7xfBeu8L8kvw5RPRznJ4xKVM+NYCrfYCRVmUzpJI58k97C+Q==}
@@ -1456,7 +1481,13 @@ packages:
     resolution: {integrity: sha512-t7ZyBXhhfYKNYo+KgBan/SBsBK1UygTf8RaTxQ+toTStwuq4wR5Z85sSAO/kmC2F/oqHeYVaan6nU28e1sVERw==}
     hasBin: true
 
-  '@kungfu-tech/kfd@1.0.0-alpha.60': {resolution: {integrity: sha512-RwJfL2ew/RJskA0D9gQ/uLVYEefXiBbFzWRPuEruYmZjxJlmdlrTwPHGXU84efcu5w38A4xHduCelKcT1NJYmw==}, hasBin: true}
+  '@kungfu-tech/kfd@1.0.0-alpha.57':
+    resolution: {integrity: sha512-eabyBT5LAUFhwekiEfQbT2XlfBIYN/FE2y6lp0o3veansfmSFVRntXEaGOLetCdi4rTmUqPM4UsoYrRswj8mJw==}
+    hasBin: true
+
+  '@kungfu-tech/kfd@1.0.0-alpha.60':
+    resolution: {integrity: sha512-RwJfL2ew/RJskA0D9gQ/uLVYEefXiBbFzWRPuEruYmZjxJlmdlrTwPHGXU84efcu5w38A4xHduCelKcT1NJYmw==}
+    hasBin: true
 
   '@kungfu-tech/libnode-darwin-arm64@22.22.3-kf.5-alpha.3':
     resolution: {integrity: sha512-XnSIM15azszq5xZuNzdqj+EJWu+xvq9JSW/V2JbIfHtfWwxFMTzsEXBRhpMoycHqSx+stb11vYORzYXzhCL+0Q==}
@@ -5805,12 +5836,23 @@ snapshots:
       '@kungfu-tech/kfd': 1.0.0-alpha.41
       smol-toml: 1.7.0
 
-  '@kungfu-tech/buildchain@3.0.7': {dependencies: {'@kungfu-tech/kfd': 1.0.0-alpha.53, ajv: 8.20.0, smol-toml: 1.7.0}}
-  '@kungfu-tech/buildchain@3.0.9-alpha.6': {dependencies: {'@kungfu-tech/kfd': 1.0.0-alpha.60, ajv: 8.20.0, smol-toml: 1.7.0}}
+  '@kungfu-tech/buildchain@3.0.7':
+    dependencies:
+      '@kungfu-tech/kfd': 1.0.0-alpha.53
+      ajv: 8.20.0
+      smol-toml: 1.7.0
+
+  '@kungfu-tech/buildchain@3.0.9-alpha.6':
+    dependencies:
+      '@kungfu-tech/kfd': 1.0.0-alpha.60
+      ajv: 8.20.0
+      smol-toml: 1.7.0
 
   '@kungfu-tech/kfd@1.0.0-alpha.41': {}
 
   '@kungfu-tech/kfd@1.0.0-alpha.53': {}
+
+  '@kungfu-tech/kfd@1.0.0-alpha.57': {}
 
   '@kungfu-tech/kfd@1.0.0-alpha.60': {}
 

@@ -256,7 +256,7 @@ binds the authoring-impact root, inventory root, Atlas root, both projections,
 and the shared parity authority. Implementation drift, an incomplete required
 projection, a one-sided/mismatched parity group, or an authoring violation
 fails closed. Human or mixed obligations produce `review-required`, not a
-self-review: Atlas `go` binds the receipt root into the native Completion Claim
+self-review: A Work coordinator binds the receipt root into the native Completion Claim
 as a proof root, and only the independent exact-claim review may close it.
 Project Cut v1 remains unchanged and never becomes a second documentation
 authority.

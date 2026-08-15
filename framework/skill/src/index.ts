@@ -357,7 +357,6 @@ export type AgentSkillProvider = 'codex' | 'claude';
 
 export type AgentSkillRootType =
   | 'user-home'
-  | 'identity-pool'
   | 'system'
   | 'repo-local'
   | 'configured';
@@ -1463,38 +1462,8 @@ function defaultAgentSkillRoots(
       priority: 5,
     });
   }
-  roots.push(...identityPoolSkillRoots(provider, userHome));
   roots.push(...repoLocalSkillRoots(provider, cwd, userHome));
   return roots;
-}
-
-function identityPoolSkillRoots(
-  provider: AgentSkillProvider,
-  userHome: string,
-): AgentSkillInventoryRootInput[] {
-  const root = join(userHome, '.local', 'share', 'atlas-agent', 'people');
-  const rows: AgentSkillInventoryRootInput[] = [];
-  for (const person of safeDirNames(root)) {
-    const providerRoot = join(root, person, 'identity-pool', provider);
-    for (const slot of safeDirNames(providerRoot)) {
-      const home = join(providerRoot, slot);
-      rows.push({
-        provider,
-        home,
-        rootType: 'identity-pool',
-        path: join(home, 'skills'),
-        priority: 30,
-      });
-      rows.push({
-        provider,
-        home,
-        rootType: 'system',
-        path: join(home, 'skills', '.system'),
-        priority: 10,
-      });
-    }
-  }
-  return rows;
 }
 
 function repoLocalSkillRoots(

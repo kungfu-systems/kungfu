@@ -151,7 +151,9 @@ export function discoverPrimitiveArtifacts(
 ) {
   const artifacts = [];
   for (const relativePath of files) {
-    const contents = fs.readFileSync(path.join(root, relativePath), 'utf8');
+    const absolutePath = path.join(root, relativePath);
+    if (!fs.existsSync(absolutePath)) continue;
+    const contents = fs.readFileSync(absolutePath, 'utf8');
     if (!/"schema"\s*:\s*"kungfu\.primitive(?:[.-])/u.test(contents)) continue;
     const value = JSON.parse(contents);
     const schema = value?.schema;

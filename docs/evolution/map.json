@@ -3,12 +3,12 @@
   "generatedFrom": {
     "authority": "append-only canonical Era and Stage records plus non-authoritative Era Candidate revisions under docs/evolution",
     "semanticGraphAuthority": "Xinfa Atlas; this projection never creates current runtime authority",
-    "sourceRoot": "sha256:ad1f7e787d8105cfe909f40f36cb1f9a1bb978d3c78e3a65cc7368341776b414"
+    "sourceRoot": "sha256:8302b34081db891da8246427db80ce1f21b574734003126e6ea388d22d61a2fc"
   },
   "summary": {
     "eras": 5,
     "stages": 11,
-    "evidence": 38,
+    "evidence": 37,
     "authoritySubjects": 11,
     "eraCandidates": 0,
     "unresolvedEraCandidates": 0
@@ -352,7 +352,7 @@
       ],
       "pressure": "Neutral Fact and Episode primitives needed a reusable way to become domain products without moving domain semantics into the core.",
       "priorLimitation": "Each application integration could become a private bundle of runtime wiring, policy, and UI assumptions.",
-      "localCapability": "The public Profile Suite semantic contract composed reusable KFX surfaces, and Mission Control migrated onto the same runtime.",
+      "localCapability": "The public Profile Suite semantic contract composed reusable KFX surfaces, and Work Control migrated onto the same runtime.",
       "compression": "Domain products became declarative Profile Suites over a neutral core rather than forks of the core.",
       "authorityTransitions": [
         {
@@ -366,7 +366,7 @@
         }
       ],
       "retiredSurfaces": [
-        "Mission Control private suite wiring"
+        "Work Control private suite wiring"
       ],
       "unlockedCapabilities": [
         "third-party Profile authoring",
@@ -374,7 +374,7 @@
         "domain policy outside the neutral core"
       ],
       "downstreamConsumers": [
-        "Mission Control",
+        "Work Control",
         "Dogfood Profile",
         "Work Control Profile",
         "KFX manager"
@@ -388,7 +388,7 @@
         {
           "kind": "pull-request",
           "ref": "https://github.com/kungfu-systems/kungfu/pull/714",
-          "label": "Mission Control migration to public suite runtime"
+          "label": "Work Control migration to public suite runtime"
         }
       ],
       "readerRoute": {
@@ -397,7 +397,7 @@
         "deepen": [
           "docs/architecture/kfx-topology.md",
           "docs/profiles/profile-lifecycle.md",
-          "docs/profiles/mission-control.md"
+          "docs/profiles/work-control.md"
         ]
       },
       "amends": [],
@@ -591,16 +591,16 @@
         "native-fact-action-authority"
       ],
       "pressure": "Agent work needed explicit responsibility, dependency, review, and portability semantics above individual Facts and Episodes.",
-      "priorLimitation": "External mission records could describe intent, but the runtime lacked one portable, Project Cut-bound work object and assignment family.",
+      "priorLimitation": "External work records could describe intent, but the runtime lacked one portable, Project Cut-bound work object and assignment family.",
       "localCapability": "Initiative and Assignment entered the L3 world, and Work became portable across workspaces while retaining its Project Cut boundary.",
       "compression": "Intent, delegation, bounded execution, and completion evidence became first-class Work objects over the existing primitives.",
       "authorityTransitions": [
         {
           "subject": "work-authority",
-          "before": "external mission records",
+          "before": "external work records",
           "after": "Initiative, Assignment, and portable Project Cut-bound Work",
           "authorityRefs": [
-            "docs/profiles/mission-control.md",
+            "docs/profiles/work-control.md",
             "framework/project-cut/README.md"
           ]
         }
@@ -612,7 +612,7 @@
         "portable work continuation",
         "native assignment dependency graphs",
         "completion claims and independent review",
-        "runtime-owned Mission projection"
+        "runtime-owned Initiative projection"
       ],
       "downstreamConsumers": [
         "native Work Control",
@@ -634,7 +634,7 @@
       ],
       "readerRoute": {
         "intent": "Understand how agent intent becomes bounded Work",
-        "start": "docs/profiles/mission-control.md",
+        "start": "docs/profiles/work-control.md",
         "deepen": [
           "framework/project-cut/README.md",
           "docs/concepts/project-cut-product-loop.md"
@@ -669,7 +669,7 @@
           "before": "Initiative, Assignment, and portable Project Cut-bound Work",
           "after": "native Work Control and Assignment family state",
           "authorityRefs": [
-            "docs/profiles/mission-control.md",
+            "docs/profiles/work-control.md",
             "docs/adr/KF-ADR-019f9771-4c20-7e2c-8e7c-3f3cb3f1b9bd.md"
           ]
         },
@@ -693,7 +693,7 @@
         }
       ],
       "retiredSurfaces": [
-        "Atlas projection as intended Work authority",
+        "consumer projection as intended Work authority",
         "unregistered primitive intake",
         "KFX registry projection as source authority"
       ],
@@ -746,7 +746,7 @@
         "intent": "Understand how Kungfu now develops itself with its own primitives",
         "start": "docs/architecture/primitive-management-plane.md",
         "deepen": [
-          "docs/profiles/mission-control.md",
+          "docs/profiles/work-control.md",
           "docs/architecture/kfx-topology.md",
           "docs/architecture/agent-supply-chain.md"
         ]
@@ -761,7 +761,7 @@
       "era": "work-control-dogfood",
       "sequence": 9,
       "title": "Work Control canonical name",
-      "status": "open",
+      "status": "settled",
       "evolutionImpact": "extends",
       "period": {
         "start": "2026-07-29",
@@ -771,17 +771,16 @@
         "native-work-control-recursive-dogfood"
       ],
       "pressure": "The native authority had cut over to Work Control while current product paths, catalogs, documentation, and generated surfaces still presented the retired name as a peer.",
-      "priorLimitation": "Two discoverable names obscured the single writer, made compatibility look current, and let generated Agent and KFD surfaces retain a second apparent action family.",
-      "localCapability": "Work Control and kungfu.work-control are the sole current product identity; retained v3 bytes, readers, migration, rollback, saved views, and bundles are isolated behind an inventoried compatibility boundary.",
-      "compression": "One canonical name now carries the current Profile, package, CLI, GUI, TUI, Agent, documentation, build, and publication surfaces while exact historical evidence remains readable without becoming writable.",
+      "priorLimitation": "Two discoverable names obscured the single writer and let generated Agent and KFD surfaces retain a second apparent action family.",
+      "localCapability": "Work Control and kungfu.work-control are the sole product identity, with native Initiative and Assignment objects and no retired reader or compatibility owner.",
+      "compression": "One canonical name carries the Profile, package, CLI, GUI, TUI, Agent, documentation, build, and publication surfaces.",
       "authorityTransitions": [
         {
           "subject": "work-authority",
           "before": "native Work Control and Assignment family state",
-          "after": "one current Work Control identity with an explicit read-only v3 compatibility boundary",
+          "after": "one native Work Control identity with Initiative and Assignment",
           "authorityRefs": [
-            "docs/profiles/work-control.md",
-            "config/work-control-naming-boundary.json"
+            "docs/profiles/work-control.md"
           ]
         }
       ],
@@ -806,19 +805,13 @@
           "kind": "document",
           "ref": "docs/profiles/work-control.md",
           "label": "Current Work Control product contract"
-        },
-        {
-          "kind": "document",
-          "ref": "config/work-control-naming-boundary.json",
-          "label": "Classified naming boundary and removal gate"
         }
       ],
       "readerRoute": {
-        "intent": "Understand the sole current Work Control identity and the bounded retained-data reader",
+        "intent": "Understand the sole current Work Control identity",
         "start": "docs/profiles/work-control.md",
         "deepen": [
-          "docs/architecture/kfx-topology.md",
-          "docs/profiles/compatibility/README.md"
+          "docs/architecture/kfx-topology.md"
         ]
       },
       "amends": [
@@ -1090,11 +1083,10 @@
     },
     {
       "subject": "work-authority",
-      "authority": "one current Work Control identity with an explicit read-only v3 compatibility boundary",
+      "authority": "one native Work Control identity with Initiative and Assignment",
       "sinceStage": "work-control-canonical-name",
       "authorityRefs": [
-        "docs/profiles/work-control.md",
-        "config/work-control-naming-boundary.json"
+        "docs/profiles/work-control.md"
       ]
     }
   ]

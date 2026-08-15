@@ -1,25 +1,25 @@
 import { mono, panelStyle } from '@kungfu-tech/kfx';
 import React from 'react';
 import type { AgentProgressRow } from './agent-progress';
-import type {
-  AtlasGoal,
-  AtlasMission,
-  WorkControlAuthorityReport,
-} from './work-control-profile';
-import type { GoalCardQuerySpec } from './work-control-query';
 import {
-  type GoalCluster,
-  type GoalSection,
-  MISSION_CONTROL_VISUAL_SPEC,
+  type AssignmentCluster,
+  type AssignmentSection,
   type TrustVisual,
   type VisualTrustState,
+  WORK_CONTROL_VISUAL_SPEC,
+  assignmentStatusGlyph,
   deriveTrustVisual,
-  goalStatusGlyph,
-  missionIntent,
-  missionStage,
-  queryGoalClusters,
+  initiativeIntent,
+  initiativeStage,
+  queryAssignmentClusters,
   responsibilityActions,
 } from './initiative-visual-model';
+import type {
+  WorkControlAssignment,
+  WorkControlAuthorityReport,
+  WorkControlInitiative,
+} from './work-control-profile';
+import type { AssignmentCardQuerySpec } from './work-control-query';
 
 const COLORS = {
   canvas: '#11161d',
@@ -46,7 +46,7 @@ const TRUST_COLORS: Record<VisualTrustState, string> = {
 };
 
 const SECTION_META: Record<
-  GoalSection,
+  AssignmentSection,
   { label: string; glyph: string; color: string }
 > = {
   attention: { label: 'Attention', glyph: '!', color: COLORS.red },
@@ -138,15 +138,15 @@ export function TrustGlyph({
 }
 
 function StageTrajectory({
-  mission,
+  initiative,
   trust,
 }: {
-  mission: AtlasMission;
+  initiative: WorkControlInitiative;
   trust: TrustVisual;
 }) {
-  const stage = missionStage(mission);
+  const stage = initiativeStage(initiative);
   const paused = ['paused', 'waiting', 'reviewing'].includes(
-    mission.status ?? '',
+    initiative.status ?? '',
   );
   const attention = ['attention', 'stale'].includes(trust.state);
   const node = (glyph: string, label: string, color: string, title: string) => (
@@ -195,7 +195,12 @@ function StageTrajectory({
           padding: '8px 2px 2px',
         }}
       >
-        {node('◆', 'Declared', COLORS.green, 'Mission declaration is present')}
+        {node(
+          '◆',
+          'Declared',
+          COLORS.green,
+          'Initiative declaration is present',
+        )}
         <div
           aria-hidden="true"
           style={{
@@ -212,7 +217,7 @@ function StageTrajectory({
           paused ? 'Ⅱ' : '◉',
           stage,
           attention ? COLORS.red : paused ? COLORS.amber : COLORS.cyan,
-          mission.stage_summary || `Current declared stage: ${stage}`,
+          initiative.stage_summary || `Current declared stage: ${stage}`,
         )}
         <div
           aria-hidden="true"
@@ -228,7 +233,7 @@ function StageTrajectory({
           '◇',
           'Open future',
           COLORS.muted,
-          'No later Mission milestone is declared; the UI does not invent one',
+          'No later Initiative milestone is declared; the UI does not invent one',
         )}
       </div>
       {attention && (
@@ -254,20 +259,20 @@ function StageTrajectory({
   );
 }
 
-export function MissionSituationOverview({
-  mission,
+export function InitiativeSituationOverview({
+  initiative,
   report,
   error,
   dashboardCut,
   refreshing,
 }: {
-  mission: AtlasMission | null;
+  initiative: WorkControlInitiative | null;
   report: WorkControlAuthorityReport | null;
   error: string;
   dashboardCut: string;
   refreshing: boolean;
 }) {
-  if (!mission) {
+  if (!initiative) {
     return (
       <section
         style={{
@@ -280,7 +285,7 @@ export function MissionSituationOverview({
         }}
       >
         <div style={{ ...mono, color: COLORS.muted }}>
-          Select a Mission to resolve its situation.
+          Select a Initiative to resolve its situation.
         </div>
       </section>
     );
@@ -289,10 +294,10 @@ export function MissionSituationOverview({
   const actions = responsibilityActions(report);
   const proofCount =
     report?.profile.proof.verified_fact_episode_roots?.length ?? 0;
-  const intent = missionIntent(mission);
+  const intent = initiativeIntent(initiative);
   return (
     <section
-      data-visual-spec={MISSION_CONTROL_VISUAL_SPEC.schema}
+      data-visual-spec={WORK_CONTROL_VISUAL_SPEC.schema}
       style={{
         ...panelStyle,
         padding: 18,
@@ -323,7 +328,7 @@ export function MissionSituationOverview({
               whiteSpace: 'nowrap',
             }}
           >
-            {mission.title || mission.mission_id}
+            {initiative.title || initiative.initiative_id}
           </div>
           {intent && (
             <div
@@ -341,20 +346,21 @@ export function MissionSituationOverview({
         </div>
         <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
           <span
-            title="Mission lifecycle state"
+            title="Initiative lifecycle state"
             style={{
               ...mono,
-              color: mission.status === 'active' ? COLORS.green : COLORS.amber,
+              color:
+                initiative.status === 'active' ? COLORS.green : COLORS.amber,
               border: `1px solid ${COLORS.border}`,
               borderRadius: 999,
               padding: '4px 8px',
             }}
           >
-            ● {mission.status || 'unknown'}
+            ● {initiative.status || 'unknown'}
           </span>
-          {mission.active_lens && (
+          {initiative.active_lens && (
             <span
-              title="Current Mission lens"
+              title="Current Initiative lens"
               style={{
                 ...mono,
                 color: COLORS.blue,
@@ -363,7 +369,7 @@ export function MissionSituationOverview({
                 padding: '4px 8px',
               }}
             >
-              ◇ {mission.active_lens}
+              ◇ {initiative.active_lens}
             </span>
           )}
         </div>
@@ -379,7 +385,7 @@ export function MissionSituationOverview({
           marginTop: 16,
         }}
       >
-        <StageTrajectory mission={mission} trust={trust} />
+        <StageTrajectory initiative={initiative} trust={trust} />
         <div
           style={{
             display: 'grid',
@@ -457,11 +463,11 @@ export function MissionSituationOverview({
   );
 }
 
-function GoalTrustMark({ state }: { state: VisualTrustState }) {
+function AssignmentTrustMark({ state }: { state: VisualTrustState }) {
   return (
     <span
-      title={`Go-level KFD-2: ${state}. Mission trust is not inherited.`}
-      aria-label={`Go-level KFD-2 ${state}`}
+      title={`Assignment-level KFD-2: ${state}. Initiative trust is not inherited.`}
+      aria-label={`Assignment-level KFD-2 ${state}`}
       style={{
         ...mono,
         color: TRUST_COLORS[state],
@@ -476,34 +482,38 @@ function GoalTrustMark({ state }: { state: VisualTrustState }) {
   );
 }
 
-function GoalCard({
+function AssignmentCard({
   cluster,
   expanded,
-  selectedGoalId,
-  trustByGoal,
+  selectedAssignmentId,
+  trustByAssignment,
   onToggle,
-  onSelectGoal,
+  onSelectAssignment,
 }: {
-  cluster: GoalCluster;
+  cluster: AssignmentCluster;
   expanded: boolean;
-  selectedGoalId: string | null;
-  trustByGoal: Readonly<Record<string, VisualTrustState>>;
+  selectedAssignmentId: string | null;
+  trustByAssignment: Readonly<Record<string, VisualTrustState>>;
   onToggle: () => void;
-  onSelectGoal: (goalId: string) => void;
+  onSelectAssignment: (assignmentId: string) => void;
 }) {
   const parent = cluster.parent;
   const children = cluster.members.slice(1);
   const meta = SECTION_META[cluster.section];
-  const parentTrust = trustByGoal[parent.goal_id] ?? 'unknown';
-  const completed = cluster.members.filter(({ goal }) =>
-    ['completed', 'done', 'merged', 'archived'].includes(goal.status ?? ''),
+  const parentTrust = trustByAssignment[parent.assignment_id] ?? 'unknown';
+  const completed = cluster.members.filter(({ assignment }) =>
+    ['completed', 'done', 'merged', 'archived'].includes(
+      assignment.status ?? '',
+    ),
   ).length;
   return (
     <article
       style={{
         minWidth: 0,
         border: `1px solid ${
-          selectedGoalId === parent.goal_id ? COLORS.cyan : COLORS.border
+          selectedAssignmentId === parent.assignment_id
+            ? COLORS.cyan
+            : COLORS.border
         }`,
         borderRadius: 11,
         background: `linear-gradient(145deg, ${COLORS.elevated}, ${COLORS.panel})`,
@@ -513,7 +523,7 @@ function GoalCard({
     >
       <button
         type="button"
-        onClick={() => onSelectGoal(parent.goal_id)}
+        onClick={() => onSelectAssignment(parent.assignment_id)}
         style={{
           display: 'block',
           width: '100%',
@@ -534,9 +544,9 @@ function GoalCard({
           }}
         >
           <span style={{ ...mono, color: meta.color, fontSize: 11 }}>
-            {goalStatusGlyph(parent.status)} {parent.status || 'unknown'}
+            {assignmentStatusGlyph(parent.status)} {parent.status || 'unknown'}
           </span>
-          <GoalTrustMark state={parentTrust} />
+          <AssignmentTrustMark state={parentTrust} />
         </div>
         <div
           style={{
@@ -547,9 +557,9 @@ function GoalCard({
             color: COLORS.text,
           }}
         >
-          {parent.title || parent.goal_id}
+          {parent.title || parent.assignment_id}
         </div>
-        {(parent.mission_why_matters || parent.summary) && (
+        {(parent.responsibility || parent.summary) && (
           <div
             style={{
               marginTop: 6,
@@ -562,7 +572,7 @@ function GoalCard({
               overflow: 'hidden',
             }}
           >
-            {parent.mission_why_matters || parent.summary}
+            {parent.responsibility || parent.summary}
           </div>
         )}
         <div
@@ -576,8 +586,8 @@ function GoalCard({
             marginTop: 10,
           }}
         >
-          {parent.mission_stage && <span>◉ {parent.mission_stage}</span>}
-          {parent.mission_role && <span>◇ {parent.mission_role}</span>}
+          {parent.initiative_stage && <span>◉ {parent.initiative_stage}</span>}
+          {parent.initiative_role && <span>◇ {parent.initiative_role}</span>}
           {parent.owner_agent && <span>◎ {parent.owner_agent}</span>}
         </div>
         {parent.next_action && (
@@ -615,7 +625,7 @@ function GoalCard({
               cursor: 'pointer',
             }}
           >
-            {expanded ? '▾' : '▸'} {children.length} visible child Go
+            {expanded ? '▾' : '▸'} {children.length} visible child Assignment
             {children.length === 1 ? '' : 's'} · {completed}/
             {cluster.members.length} closed
             {cluster.matchCount !== undefined
@@ -624,11 +634,11 @@ function GoalCard({
           </button>
           {expanded && (
             <div style={{ padding: '5px 8px 8px', background: '#121820' }}>
-              {children.map(({ goal, depth }) => (
+              {children.map(({ assignment, depth }) => (
                 <button
-                  key={goal.goal_id}
+                  key={assignment.assignment_id}
                   type="button"
-                  onClick={() => onSelectGoal(goal.goal_id)}
+                  onClick={() => onSelectAssignment(assignment.assignment_id)}
                   style={{
                     ...mono,
                     display: 'grid',
@@ -639,7 +649,7 @@ function GoalCard({
                     border: 0,
                     borderRadius: 6,
                     background:
-                      selectedGoalId === goal.goal_id
+                      selectedAssignmentId === assignment.assignment_id
                         ? '#17313a'
                         : 'transparent',
                     color: COLORS.text,
@@ -649,7 +659,7 @@ function GoalCard({
                   }}
                 >
                   <span style={{ color: SECTION_META[cluster.section].color }}>
-                    {goalStatusGlyph(goal.status)}
+                    {assignmentStatusGlyph(assignment.status)}
                   </span>
                   <span
                     style={{
@@ -658,10 +668,12 @@ function GoalCard({
                       whiteSpace: 'nowrap',
                     }}
                   >
-                    {goal.title || goal.goal_id}
+                    {assignment.title || assignment.assignment_id}
                   </span>
-                  <GoalTrustMark
-                    state={trustByGoal[goal.goal_id] ?? 'unknown'}
+                  <AssignmentTrustMark
+                    state={
+                      trustByAssignment[assignment.assignment_id] ?? 'unknown'
+                    }
                   />
                 </button>
               ))}
@@ -673,59 +685,61 @@ function GoalCard({
   );
 }
 
-export function GoalCardField({
-  goals,
-  selectedGoalId,
-  trustByGoal,
+export function AssignmentCardField({
+  assignments,
+  selectedAssignmentId,
+  trustByAssignment,
   query,
   asOfTime,
   savedViewId,
   saveState,
   onQueryChange,
   onSave,
-  onSelectGoal,
+  onSelectAssignment,
 }: {
-  goals: AtlasGoal[];
-  selectedGoalId: string | null;
-  trustByGoal: Readonly<Record<string, VisualTrustState>>;
-  query: GoalCardQuerySpec;
+  assignments: WorkControlAssignment[];
+  selectedAssignmentId: string | null;
+  trustByAssignment: Readonly<Record<string, VisualTrustState>>;
+  query: AssignmentCardQuerySpec;
   asOfTime: string;
   savedViewId: string;
   saveState: string;
-  onQueryChange: (query: GoalCardQuerySpec) => void;
+  onQueryChange: (query: AssignmentCardQuerySpec) => void;
   onSave: () => void;
-  onSelectGoal: (goalId: string) => void;
+  onSelectAssignment: (assignmentId: string) => void;
 }) {
   const [expanded, setExpanded] = React.useState<Set<string>>(() => new Set());
   const clusters = React.useMemo(
     () =>
-      queryGoalClusters(
-        goals,
+      queryAssignmentClusters(
+        assignments,
         query,
-        trustByGoal,
+        trustByAssignment,
         Date.parse(asOfTime) || Date.now(),
       ),
-    [goals, query, trustByGoal, asOfTime],
+    [assignments, query, trustByAssignment, asOfTime],
   );
   const optionValues = React.useMemo(() => {
-    const values = (field: keyof AtlasGoal) =>
+    const values = (field: keyof WorkControlAssignment) =>
       [
         ...new Set(
-          goals.map((goal) => String(goal[field] ?? '')).filter(Boolean),
+          assignments
+            .map((assignment) => String(assignment[field] ?? ''))
+            .filter(Boolean),
         ),
       ].sort();
     return {
       statuses: values('status'),
       actors: values('owner_agent'),
-      tracks: values('mission_track'),
-      roles: values('mission_role'),
-      importance: values('mission_importance'),
-      stages: values('mission_stage'),
+      tracks: values('initiative_track'),
+      roles: values('initiative_role'),
+      importance: values('initiative_importance'),
+      stages: values('initiative_stage'),
     };
-  }, [goals]);
-  const update = (patch: Partial<GoalCardQuerySpec>) =>
+  }, [assignments]);
+  const update = (patch: Partial<AssignmentCardQuerySpec>) =>
     onQueryChange({ ...query, ...patch });
-  const toggleSection = (section: GoalSection) =>
+  const toggleSection = (section: AssignmentSection) =>
     update({
       sections: query.sections.includes(section)
         ? query.sections.filter((value) => value !== section)
@@ -751,12 +765,12 @@ export function GoalCardField({
     value: string,
   ) =>
     update({ [field]: value ? [value] : [] } as Pick<
-      GoalCardQuerySpec,
+      AssignmentCardQuerySpec,
       typeof field
     >);
   const reset = () =>
     onQueryChange({
-      schema: 'kungfu.work-control.goal-card-query/v1',
+      schema: 'kungfu.work-control.assignment-card-query/v1',
       text: '',
       sections: [],
       statuses: [],
@@ -780,11 +794,11 @@ export function GoalCardField({
       return next;
     });
   };
-  if (!goals.length) {
+  if (!assignments.length) {
     return (
       <section style={{ ...panelStyle, border: `1px dashed ${COLORS.border}` }}>
         <div style={{ ...mono, color: COLORS.muted }}>
-          No admitted Go is attached to this Mission.
+          No admitted Assignment is attached to this Initiative.
         </div>
       </section>
     );
@@ -792,7 +806,7 @@ export function GoalCardField({
   return (
     <div style={{ display: 'grid', gap: 14 }}>
       <section
-        aria-label="Go card query controls"
+        aria-label="Assignment card query controls"
         style={{
           display: 'grid',
           gap: 8,
@@ -811,9 +825,9 @@ export function GoalCardField({
           }}
         >
           <input
-            aria-label="Search Go cards"
+            aria-label="Search Assignment cards"
             value={query.text}
-            placeholder="Search Go cards"
+            placeholder="Search Assignment cards"
             onChange={(event) => update({ text: event.target.value })}
             style={{
               ...mono,
@@ -826,7 +840,7 @@ export function GoalCardField({
               padding: '6px 8px',
             }}
           />
-          {(Object.keys(SECTION_META) as GoalSection[]).map((section) => (
+          {(Object.keys(SECTION_META) as AssignmentSection[]).map((section) => (
             <button
               key={section}
               type="button"
@@ -837,13 +851,13 @@ export function GoalCardField({
             </button>
           ))}
           <select
-            aria-label="Sort Go cards"
+            aria-label="Sort Assignment cards"
             value={query.sort.field}
             onChange={(event) =>
               update({
                 sort: {
                   field: event.target
-                    .value as GoalCardQuerySpec['sort']['field'],
+                    .value as AssignmentCardQuerySpec['sort']['field'],
                   direction: event.target.value === 'name' ? 'asc' : 'desc',
                 },
               })
@@ -950,7 +964,7 @@ export function GoalCardField({
               onChange={(event) =>
                 update({
                   hasChildren: event.target
-                    .value as GoalCardQuerySpec['hasChildren'],
+                    .value as AssignmentCardQuerySpec['hasChildren'],
                 })
               }
               style={{ ...compactButton(), background: COLORS.canvas }}
@@ -960,11 +974,12 @@ export function GoalCardField({
               <option value="no">No children</option>
             </select>
             <select
-              aria-label="Filter closed Go cards"
+              aria-label="Filter closed Assignment cards"
               value={query.closed}
               onChange={(event) =>
                 update({
-                  closed: event.target.value as GoalCardQuerySpec['closed'],
+                  closed: event.target
+                    .value as AssignmentCardQuerySpec['closed'],
                 })
               }
               style={{ ...compactButton(), background: COLORS.canvas }}
@@ -1008,12 +1023,12 @@ export function GoalCardField({
           )}
         </div>
       </section>
-      {(Object.keys(SECTION_META) as GoalSection[]).map((section) => {
+      {(Object.keys(SECTION_META) as AssignmentSection[]).map((section) => {
         const rows = clusters.filter((cluster) => cluster.section === section);
         if (!rows.length) return null;
         const meta = SECTION_META[section];
         return (
-          <section key={section} aria-label={`${meta.label} Go cards`}>
+          <section key={section} aria-label={`${meta.label} Assignment cards`}>
             <div
               style={{
                 ...mono,
@@ -1040,14 +1055,14 @@ export function GoalCardField({
               }}
             >
               {rows.map((cluster) => (
-                <GoalCard
+                <AssignmentCard
                   key={cluster.key}
                   cluster={cluster}
                   expanded={expanded.has(cluster.key)}
-                  selectedGoalId={selectedGoalId}
-                  trustByGoal={trustByGoal}
+                  selectedAssignmentId={selectedAssignmentId}
+                  trustByAssignment={trustByAssignment}
                   onToggle={() => toggle(cluster.key)}
-                  onSelectGoal={onSelectGoal}
+                  onSelectAssignment={onSelectAssignment}
                 />
               ))}
             </div>
@@ -1066,9 +1081,9 @@ type DetailTab =
   | 'evidence'
   | 'relations';
 
-export function GoalDetailDrawer({
-  goal,
-  mission,
+export function AssignmentDetailDrawer({
+  assignment,
+  initiative,
   trust,
   onClose,
   onClaimCompletion,
@@ -1077,8 +1092,8 @@ export function GoalDetailDrawer({
   agentProgressError,
   formatTime,
 }: {
-  goal: AtlasGoal;
-  mission: AtlasMission | null;
+  assignment: WorkControlAssignment;
+  initiative: WorkControlInitiative | null;
   trust: TrustVisual;
   onClose: () => void;
   onClaimCompletion: () => void;
@@ -1116,7 +1131,7 @@ export function GoalDetailDrawer({
     );
   return (
     <aside
-      aria-label={`Go details: ${goal.title || goal.goal_id}`}
+      aria-label={`Assignment details: ${assignment.title || assignment.assignment_id}`}
       style={{
         position: 'absolute',
         zIndex: 30,
@@ -1143,7 +1158,8 @@ export function GoalDetailDrawer({
       >
         <div style={{ minWidth: 0 }}>
           <div style={{ ...mono, color: COLORS.muted, fontSize: 10 }}>
-            {goalStatusGlyph(goal.status)} {goal.status || 'unknown'}
+            {assignmentStatusGlyph(assignment.status)}{' '}
+            {assignment.status || 'unknown'}
           </div>
           <div
             style={{
@@ -1154,7 +1170,7 @@ export function GoalDetailDrawer({
               lineHeight: 1.35,
             }}
           >
-            {goal.title || goal.goal_id}
+            {assignment.title || assignment.assignment_id}
           </div>
         </div>
         <div style={{ display: 'flex', gap: 6 }}>
@@ -1162,7 +1178,7 @@ export function GoalDetailDrawer({
             type="button"
             onClick={onOpenConsole}
             style={compactButton(true)}
-            title="Open an Episode-backed Agent Console for this Go"
+            title="Open an Episode-backed Agent Console for this Assignment"
           >
             ▶ Agent
           </button>
@@ -1173,7 +1189,7 @@ export function GoalDetailDrawer({
       </div>
       <div
         role="tablist"
-        aria-label="Go detail sections"
+        aria-label="Assignment detail sections"
         style={{
           display: 'flex',
           flexWrap: 'wrap',
@@ -1210,14 +1226,14 @@ export function GoalDetailDrawer({
       <div style={{ padding: 16, overflow: 'auto', flex: 1 }}>
         {tab === 'summary' && (
           <>
-            {(goal.mission_why_matters || goal.summary) && (
+            {(assignment.responsibility || assignment.summary) && (
               <div
                 style={{ color: '#bac4d1', lineHeight: 1.5, marginBottom: 16 }}
               >
-                {goal.mission_why_matters || goal.summary}
+                {assignment.responsibility || assignment.summary}
               </div>
             )}
-            {goal.next_action && (
+            {assignment.next_action && (
               <div
                 style={{
                   ...mono,
@@ -1229,7 +1245,7 @@ export function GoalDetailDrawer({
                   marginBottom: 14,
                 }}
               >
-                ↗ {goal.next_action}
+                ↗ {assignment.next_action}
               </div>
             )}
             {agentProgress[0] && (
@@ -1262,18 +1278,18 @@ export function GoalDetailDrawer({
                 </div>
               </button>
             )}
-            {row('goal id', goal.goal_id)}
-            {row('stage', goal.mission_stage)}
-            {row('role', goal.mission_role)}
-            {row('importance', goal.mission_importance)}
-            {row('track', goal.mission_track)}
+            {row('assignment id', assignment.assignment_id)}
+            {row('stage', assignment.initiative_stage)}
+            {row('role', assignment.initiative_role)}
+            {row('importance', assignment.initiative_importance)}
+            {row('track', assignment.initiative_track)}
           </>
         )}
         {tab === 'live' && (
           <div style={{ display: 'grid', gap: 8 }}>
             <div style={{ ...mono, color: COLORS.muted, lineHeight: 1.45 }}>
               Live Agent Console observations from the control runtime. These do
-              not change Go state or prove completion.
+              not change Assignment state or prove completion.
             </div>
             {agentProgressError && (
               <div style={{ ...mono, color: COLORS.red }}>
@@ -1282,7 +1298,7 @@ export function GoalDetailDrawer({
             )}
             {!agentProgressError && agentProgress.length === 0 && (
               <div style={{ ...mono, color: COLORS.muted }}>
-                No progress observation has arrived for this Go yet.
+                No progress observation has arrived for this Assignment yet.
               </div>
             )}
             {agentProgress.map((progress) => (
@@ -1329,10 +1345,10 @@ export function GoalDetailDrawer({
             <div style={{ ...mono, color: COLORS.muted, marginBottom: 12 }}>
               Projection coordinates at the current cut
             </div>
-            {row('updated', goal.updated_at || 'not projected')}
-            {row('status', goal.status)}
-            {row('source branch', goal.source_branch)}
-            {row('latest marker', goal.latest_marker)}
+            {row('updated', assignment.updated_at || 'not projected')}
+            {row('status', assignment.status)}
+            {row('source branch', assignment.source_branch)}
+            {row('latest marker', assignment.latest_marker)}
           </>
         )}
         {tab === 'trust' && (
@@ -1355,24 +1371,24 @@ export function GoalDetailDrawer({
         )}
         {tab === 'evidence' && (
           <>
-            {row('external ref', goal.external_ready_ref)}
-            {row('external head', goal.external_head)}
-            {row('latest marker', goal.latest_marker)}
-            {row('worktree', goal.worktree_path)}
-            {!goal.external_ready_ref && !goal.latest_marker && (
+            {row('external ref', assignment.external_ready_ref)}
+            {row('external head', assignment.external_head)}
+            {row('latest marker', assignment.latest_marker)}
+            {row('worktree', assignment.worktree_path)}
+            {!assignment.external_ready_ref && !assignment.latest_marker && (
               <div style={{ ...mono, color: COLORS.muted }}>
-                No Go-level proof pointer is projected at this cut.
+                No Assignment-level proof pointer is projected at this cut.
               </div>
             )}
           </>
         )}
         {tab === 'relations' && (
           <>
-            {row('mission', mission?.title || goal.mission_id)}
-            {row('parent Go', goal.mission_parent_goal)}
-            {row('owner', goal.owner_agent)}
-            {row('lens', goal.lens)}
-            {row('track', goal.mission_track)}
+            {row('initiative', initiative?.title || assignment.initiative_id)}
+            {row('parent Assignment', assignment.parent_assignment_id)}
+            {row('owner', assignment.owner_agent)}
+            {row('lens', assignment.lens)}
+            {row('track', assignment.initiative_track)}
           </>
         )}
       </div>
