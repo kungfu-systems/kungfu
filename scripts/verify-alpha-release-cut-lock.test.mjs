@@ -51,7 +51,7 @@ test('Alpha.2 r17 lock verifies the exact Release Cut and fixed runtimes', () =>
   );
 });
 
-test('Alpha.2 r17 keeps the Alpha runtime train while pinning the repaired workflow shell', () => {
+test('Alpha.2 r17 keeps the Alpha runtime train and channel-bound workflow shell', () => {
   assert.equal(LOCK.buildchain.build.ref, 'v3-alpha');
   assert.equal(
     LOCK.buildchain.build.resolvedSha,
@@ -80,7 +80,7 @@ test('Alpha.2 r17 keeps the Alpha runtime train while pinning the repaired workf
   );
   assert.match(
     build,
-    /uses: kungfu-systems\/buildchain\/\.github\/workflows\/\.build\.yml@dbad2f383a6ab93abd192c4edefb4689c9eebc78/u,
+    /uses: kungfu-systems\/buildchain\/\.github\/workflows\/\.build\.yml@v3-alpha/u,
   );
   assert.match(
     build,
@@ -90,7 +90,7 @@ test('Alpha.2 r17 keeps the Alpha runtime train while pinning the repaired workf
     promotion,
     /buildchain-ref: \$\{\{ startsWith\(inputs\.target-ref \|\| github\.event\.pull_request\.base\.ref, 'alpha\/'\) && 'v3-alpha' \|\| 'v3' \}\}/u,
   );
-  assert.match(build, /\.github\/workflows\/\.build\.yml@[0-9a-f]{40}/u);
+  assert.match(build, /\.github\/workflows\/\.build\.yml@v3-alpha/u);
 });
 
 test('candidate patrol verifies the frozen cut without settling from moving dev', () => {

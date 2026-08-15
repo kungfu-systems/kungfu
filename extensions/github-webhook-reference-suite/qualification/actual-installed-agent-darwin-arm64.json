@@ -1,0 +1,82 @@
+{
+  "schema": "kungfu.kfx.actual-installed-agent-qualification/v1",
+  "observedOn": "2026-08-10",
+  "platform": "darwin-arm64",
+  "productBoundary": {
+    "extractedInstalledProductOnly": true,
+    "repositoryPresent": false,
+    "hiddenDocumentationPresent": false,
+    "sourceFallback": false,
+    "externalNetworkAllowed": false,
+    "credentialAccessAllowed": false
+  },
+  "goal": "Create, validate, build, qualify, package, and inspect a local signed webhook KFX through the installed product's public Agent interface.",
+  "result": {
+    "qualification": "passed",
+    "invalidSignatureCode": "KF_KFX_WEBHOOK_AUTHENTICATION_FAILED",
+    "replayCode": "KF_KFX_WEBHOOK_REPLAYED",
+    "acceptedEvents": 1,
+    "credentialMaterialRetained": false,
+    "offlineServiceLifecycleFinalState": "uninstalled",
+    "nativePackageInstalled": false,
+    "nativeInstallRefusalReason": "installation authority was not supplied",
+    "nativeRemovalRefusalReason": "removal Warrant was not supplied"
+  },
+  "measuredInterventions": [
+    {
+      "kind": "sandbox-auto-review",
+      "scope": "ephemeral-loopback-bind",
+      "commandRetriedUnchanged": "./kungfu kfx author qualify ./agent-output/local-signed-webhook-build --json",
+      "userIntervention": false
+    },
+    {
+      "kind": "sandbox-auto-review",
+      "scope": "ephemeral-loopback-bind",
+      "commandRetriedUnchanged": "./kungfu kfx author package ./agent-output/local-signed-webhook-build --out ./agent-output/local.signed-webhook-0.1.0.tgz --json",
+      "userIntervention": false
+    }
+  ],
+  "publicCommands": [
+    "./kungfu --help",
+    "./kungfu --help-all",
+    "./kungfu kfx --help",
+    "./kungfu sdk --help",
+    "./kungfu kfx author --help",
+    "./kungfu kfx install --help",
+    "./kungfu kfx remove --help",
+    "./kungfu kfx author capabilities",
+    "./kungfu kfx author scaffold --help",
+    "./kungfu kfx author build --help",
+    "./kungfu kfx author package --help",
+    "./kungfu kfx author qualify --help",
+    "./kungfu kfx author scaffold local.signed-webhook --out ./agent-output/local-signed-webhook --json",
+    "./kungfu kfx author scaffold local.signed-webhook --out ./agent-output/local-signed-webhook --execute --json",
+    "./kungfu kfx author validate ./agent-output/local-signed-webhook --json",
+    "./kungfu kfx author build ./agent-output/local-signed-webhook --out ./agent-output/local-signed-webhook-build --json",
+    "./kungfu kfx author build ./agent-output/local-signed-webhook --out ./agent-output/local-signed-webhook-build --execute --json",
+    "./kungfu kfx author qualify ./agent-output/local-signed-webhook-build --json",
+    "./kungfu trace --help",
+    "./kungfu kfx author package ./agent-output/local-signed-webhook-build --out ./agent-output/local.signed-webhook-0.1.0.tgz --json",
+    "./kungfu kfx author package ./agent-output/local-signed-webhook-build --out ./agent-output/local.signed-webhook-0.1.0.tgz --execute --json",
+    "./kungfu kfx inspect ./agent-output/local.signed-webhook-0.1.0.tgz"
+  ],
+  "roots": {
+    "contractKit": "sha256:16eee9fafca2422a613dcb3217689ca03d8b04d51f26b5666eef9af432df9da2",
+    "sdk": "sha256:8afedffb614388b70d7fcb2744bcb34a4eeb167e2b766f301a8df5a62e3a6c68",
+    "sdkSource": "sha256:75342c374616da7718d306a2c05241cca6d8edc8bac6f007a4e62f905ad8c27a",
+    "webhookTemplate": "sha256:5d9f5ea8cd0b6ec401560e9a2118d0c01e4d807956741f9665cf366db8a2f451",
+    "scaffoldPlan": "sha256:36b05b72feddce475e8ba1ac2e1d73f70fec402fb98acfced8f33a021ecb5cb5",
+    "scaffoldReceipt": "sha256:f021f4a0985f14364c0f1ff15702c3377a446e9e23e509c00e44d55c870247fa",
+    "source": "sha256:5be03fb33467674ce6437f1961f44ebe0be1e32ca26ff060a85f9a0732883405",
+    "inspection": "sha256:a89b523ae9be25d1e5415952322991cf35a983ac4a37a562ce1f1e522117d7d8",
+    "buildPlan": "sha256:7a25fd41ae8c0d6b99b6f2e1e49438b8782fc350fd6b89a367cbd75ef22c7db3",
+    "buildReceipt": "sha256:168647a5c5547e095782701ca58607b13fb185d7dbaec20a232ef57dd7a89aaf",
+    "qualification": "sha256:ac31e2e39d041e791eae59d896870818a579157e572208515b4c4d76aba9c7ad",
+    "acceptedDelivery": "sha256:035be0575405d37addda6347559716e58a5baa27be19e6f013d43daa32d505b6",
+    "sdkProjection": "sha256:460cb9938c8c0596d160fbcd61eb42bcfd9838cf8d154553b2544321af340a11",
+    "packagePlan": "sha256:dbb8641905da0ea90c55c58213d3f1cd8583fc66e2ee021de7be90027eb1df9e",
+    "packageArtifact": "sha256:8074409d82b30b897cccf3d45aa02840e0ab97673b64d858d9f29f9774be75d7",
+    "packageReceipt": "sha256:beb68c551e9a943e36cb89958d8d477d6be6114a15adc3ef3f7b1f312f6c3ad5",
+    "uninstallReceipt": "sha256:89f6b94009c83b335feb9c1f26144c21bd2d0d86bbae43e15ca8bb7e306de51b"
+  }
+}

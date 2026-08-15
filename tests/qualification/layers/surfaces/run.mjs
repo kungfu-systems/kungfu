@@ -24,6 +24,7 @@ import {
   findGuiExecutable,
   guiQualificationArgs,
   installDesktopArtifact,
+  waitForWindowsProcessesUnderRootExit,
 } from './installer.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
@@ -336,6 +337,12 @@ async function exactQualification(options, fixture) {
     const guiColdStartMs = Number(process.hrtime.bigint() - guiStarted) / 1e6;
     if (!guiMemory.stdout.includes('KF_GUI_QUALIFICATION_READY'))
       fail('packaged GUI did not reach qualification-ready state');
+    // The bounded Electron main process can exit before a short-lived packaged
+    // runtime child releases directories below the installed application. On
+    // Windows, traversing that tree in the gap can fail with EPERM even though
+    // the same child would have cleared before the existing NSIS uninstall
+    // wait. Settle the exact install root before measuring it as well.
+    await waitForWindowsProcessesUnderRootExit(desktopInstall.installRoot);
     const installedDesktopBytes = directoryBytes(desktopInstall.installRoot);
     await desktopInstall.uninstall();
     if (fs.existsSync(desktopInstall.installRoot))

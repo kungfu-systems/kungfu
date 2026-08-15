@@ -44,22 +44,22 @@ test('checked registry closes workflows and invariants', () => {
   assert.equal(validateRegistry(v), v);
   assert.equal(status(v).sourceAcceptance, 'passed');
 });
-test('build authority pins the workflow shell while retaining runtime routing', () => {
+test('build authority binds the workflow shell channel while retaining runtime routing', () => {
   const source = fs.readFileSync('.github/workflows/build.yml', 'utf8');
   const contract = JSON.parse(
     fs.readFileSync('docs/release-promotion-rehearsal.contract.json', 'utf8'),
   );
-  const shellSha = contract.buildchain.build_workflow_shell_sha;
-  assert.equal(validateBuildWorkflowAuthority(source, shellSha), true);
+  const shellRef = contract.buildchain.build_workflow_shell_ref;
+  assert.equal(validateBuildWorkflowAuthority(source, shellRef), true);
   assert.throws(
     () => validateBuildWorkflowAuthority(source, '0'.repeat(40)),
-    /authority drift/u,
+    /shell channel is invalid/u,
   );
   assert.throws(
     () =>
       validateBuildWorkflowAuthority(
-        source.replace(`.build.yml@${shellSha}`, '.build.yml@v3'),
-        shellSha,
+        source.replace(`.build.yml@${shellRef}`, '.build.yml@v3'),
+        shellRef,
       ),
     /authority drift/u,
   );

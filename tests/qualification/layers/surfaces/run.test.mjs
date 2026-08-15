@@ -187,3 +187,13 @@ test('bounded GUI qualification avoids display-backed menus and embedded views',
   );
   assert.match(mainSource, /offscreen: qualificationMode/);
 });
+
+test('installed Windows tree traversal waits for packaged runtime children', () => {
+  const source = fs.readFileSync(runner, 'utf8');
+  const wait = source.indexOf(
+    'await waitForWindowsProcessesUnderRootExit(desktopInstall.installRoot)',
+  );
+  const measure = source.indexOf('directoryBytes(desktopInstall.installRoot)');
+  assert.ok(wait >= 0, 'Windows process settlement is missing');
+  assert.ok(measure > wait, 'installed tree is traversed before settlement');
+});

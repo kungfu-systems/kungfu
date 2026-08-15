@@ -82,6 +82,10 @@ function listKfxPackages() {
     if (depth > 2 || !fs.existsSync(dir)) return;
     const pkgPath = path.join(dir, 'package.json');
     const manifestPath = path.join(dir, 'kungfu.kfx.json');
+    if (fs.existsSync(pkgPath)) {
+      const pkg = readJson(pkgPath);
+      if (pkg.kungfuProduct?.assembly === 'reference-only') return;
+    }
     if (fs.existsSync(pkgPath) && fs.existsSync(manifestPath)) {
       const pkg = readJson(pkgPath);
       const manifest = readJson(manifestPath);

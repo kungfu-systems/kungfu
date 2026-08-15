@@ -100,6 +100,24 @@ function formatGenerated(name, contents) {
   return result.stdout;
 }
 
+function projectPublicDeclaration(name, contents) {
+  if (name !== 'types.d.ts') return contents;
+  const internalStorageHelper =
+    / {2}runStorageServiceOperation\?: \(\n(?: {4}.*\n)+? {2}\) => Record<string, unknown>;\n/u;
+  const projected = contents.replace(internalStorageHelper, '');
+  if (projected === contents) {
+    throw new Error(
+      'KFX authoring SDK projection could not remove the internal storage helper',
+    );
+  }
+  if (/runStorageServiceOperation/u.test(projected)) {
+    throw new Error(
+      'KFX authoring SDK projection exposes the internal storage helper',
+    );
+  }
+  return projected;
+}
+
 function compileSdk(destination) {
   const js = mkdtempSync(path.join(os.tmpdir(), 'kungfu-kfx-authoring-js-'));
   const types = mkdtempSync(
@@ -146,12 +164,13 @@ function compileSdk(destination) {
       ),
     );
     for (const name of GENERATED.filter((value) => value.endsWith('.d.ts'))) {
+      const declaration = formatGenerated(
+        name,
+        Buffer.concat([marker, readFileSync(path.join(types, name))]),
+      );
       writeFileSync(
         path.join(destination, name),
-        formatGenerated(
-          name,
-          Buffer.concat([marker, readFileSync(path.join(types, name))]),
-        ),
+        projectPublicDeclaration(name, declaration),
       );
     }
   } finally {

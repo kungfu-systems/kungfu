@@ -26,9 +26,9 @@
       "sandbox-launcher.d.ts": "835fd421f0cf6f23a8da03cf96b0df18b96a39c5fdc2d48938d129c5d5858ffd",
       "service-authz.d.ts": "5760a9c11e4662b9d9579538f26c51bb4f1d7884e892b8af586b2e525c3aa7bf",
       "service-webhook-host.mjs": "460cb9938c8c0596d160fbcd61eb42bcfd9838cf8d154553b2544321af340a11",
-      "types.d.ts": "df3021c6e02edc51fb0d02bc9a9f185e2ef6c5b76ebb934e4e3ab30cddbefe35"
+      "types.d.ts": "1d063701b8e57c21899fb741d2adaee3cd36fcb0895ccf6f71eb1ef8e6bf5a65"
     },
-    "root": "sha256:8afedffb614388b70d7fcb2744bcb34a4eeb167e2b766f301a8df5a62e3a6c68"
+    "root": "sha256:422a4c00c8f42a5aacc0cca8ed80c96ed433bd0e9f56a9ed297f60719264e842"
   },
   "schemas": {
     "packageManifest": "kungfu.kfx.manifest/v1",
@@ -124,8 +124,8 @@
     },
     {
       "path": "sdk/types.d.ts",
-      "sha256": "df3021c6e02edc51fb0d02bc9a9f185e2ef6c5b76ebb934e4e3ab30cddbefe35",
-      "bytes": 6931
+      "sha256": "1d063701b8e57c21899fb741d2adaee3cd36fcb0895ccf6f71eb1ef8e6bf5a65",
+      "bytes": 6780
     },
     {
       "path": "templates/webhook-service/README.md.tmpl",
@@ -158,5 +158,5 @@
       "bytes": 4338
     }
   ],
-  "contractRoot": "sha256:16eee9fafca2422a613dcb3217689ca03d8b04d51f26b5666eef9af432df9da2"
+  "contractRoot": "sha256:819ae3f7ebd4934cadb28ee5b37f346e1feeb8d4fb1de35d290d75c35ed8c62f"
 }

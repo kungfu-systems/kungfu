@@ -1,6 +1,28 @@
-import { headingStyle, mono, panelStyle } from '@kungfu-tech/kfx';
 import React from 'react';
 import { presentGitHubEvidence } from './event-presentation.mjs';
+
+const panelStyle = {
+  background: '#252526',
+  border: '1px solid #3c3c3c',
+  borderRadius: 6,
+  padding: 12,
+  overflow: 'auto',
+  minHeight: 0,
+};
+
+const headingStyle = {
+  fontSize: 'calc(var(--kf-font-size, 14px) - 3px)',
+  fontWeight: 600,
+  textTransform: 'uppercase',
+  letterSpacing: 1,
+  color: '#858585',
+  margin: '0 0 8px 0',
+};
+
+const mono = {
+  fontFamily: 'var(--kf-mono-font-family, SF Mono, Menlo, monospace)',
+  fontSize: 'calc(var(--kf-font-size, 14px) - 2px)',
+};
 
 const sample = JSON.stringify(
   {

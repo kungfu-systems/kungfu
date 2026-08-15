@@ -180,9 +180,9 @@ jobs:
   build:
     needs: [preflight, windows-fast-sentinel, auditable-demo-fast-sentinel]
     if: ${{ always() && needs.preflight.result == 'success' && needs.windows-fast-sentinel.result == 'success' && needs.auditable-demo-fast-sentinel.result == 'success' && !inputs.fast-sentinels-only && fromJSON(inputs.macos-overflow-request-json || '{}').mode != 'control' }}
-    # Pin the workflow shell that routes signed macOS finalization to a native
-    # runner. The v3 tag can lag this fail-closed runtime contract.
-    uses: kungfu-systems/buildchain/.github/workflows/.build.yml@dbad2f383a6ab93abd192c4edefb4689c9eebc78
+    # Use the official Alpha workflow shell so its channel and major identity
+    # are provable alongside the v3-alpha runtime and consumer contract lock.
+    uses: kungfu-systems/buildchain/.github/workflows/.build.yml@v3-alpha
     secrets:
       BUILDCHAIN_PROMOTION_TOKEN: ${{ secrets.KUNGFU_GITHUB_TOKEN }}
       BUILDCHAIN_ARTIFACT_RELAY_S3_ROLE_ARN: ${{ secrets.BUILDCHAIN_ARTIFACT_RELAY_S3_ROLE_ARN }}

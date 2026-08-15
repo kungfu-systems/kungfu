@@ -147,6 +147,21 @@
       "disposition": "proof-eligible"
     },
     {
+      "id": "product-kfx-distribution-tests",
+      "selectors": [
+        {
+          "kind": "exact",
+          "value": "product/scripts/dist-kfx.test.mjs"
+        }
+      ],
+      "facets": [
+        "package-facets",
+        "agent-first-authoring",
+        "qualification-status"
+      ],
+      "disposition": "proof-eligible"
+    },
+    {
       "id": "kfx-test-fixtures",
       "selectors": [
         {

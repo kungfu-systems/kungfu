@@ -155,7 +155,7 @@ function immutableReference(reference) {
 }
 
 const BUILDCHAIN_V3_BUILD_ACTION =
-  'kungfu-systems/buildchain/.github/workflows/.build.yml@dbad2f383a6ab93abd192c4edefb4689c9eebc78';
+  'kungfu-systems/buildchain/.github/workflows/.build.yml@v3-alpha';
 const BUILDCHAIN_V3_PROMOTION_ACTION =
   'kungfu-systems/buildchain/.github/workflows/release-candidate-promote.yml@v3-alpha';
 const BUILDCHAIN_V3_ALPHA_PROMOTION_ACTION =

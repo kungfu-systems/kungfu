@@ -167,64 +167,64 @@
     {
       "id": "package-facets",
       "title": "Packages and facets",
-      "summary": "The versioned KFX manifest declares package identity, facets, requested capabilities, and host inputs.",
+      "summary": "The versioned KFX manifest declares package identity, facets, requested capabilities, and host inputs; retained qualification covers package, install, activation, upgrade, rollback, and removal for the maintained webhook suite.",
       "maturity": "pre-release",
       "status": "implemented",
-      "sourceIds": ["kfx-contract", "extensions-guide"],
+      "sourceIds": ["kfx-contract", "extensions-guide", "github-webhook-qualification"],
       "nonClaim": "A conforming manifest remains inert until native admission."
     },
     {
       "id": "registry-admission-lifecycle",
       "title": "Registry, admission, and lifecycle",
-      "summary": "A pinned Fact cut, Work, Warrant, policy, exact roots, and CAS guard every accepted lifecycle mutation.",
+      "summary": "A pinned Fact cut, Work, Warrant, policy, exact roots, and CAS guard every accepted package, install, activation, upgrade, rollback, and removal mutation.",
       "maturity": "pre-release",
       "status": "staged",
-      "sourceIds": ["kfx-domain-profile", "kfx-topology"],
+      "sourceIds": ["kfx-domain-profile", "kfx-topology", "github-webhook-qualification"],
       "nonClaim": "Filesystem discovery and package metadata are observations, not registry authority."
     },
     {
       "id": "capabilities",
       "title": "Capabilities and confinement",
-      "summary": "Packages request capabilities; Core policy and an explicit exact grant select the allowed subset for one host.",
+      "summary": "Packages request capabilities; Core policy and an explicit exact grant select the allowed subset for one host and preserve that separation across upgrade and rollback.",
       "maturity": "pre-release",
       "status": "implemented",
-      "sourceIds": ["kfx-contract", "capability-ownership", "kfx-topology"],
+      "sourceIds": ["kfx-contract", "capability-ownership", "kfx-topology", "github-webhook-qualification"],
       "nonClaim": "Declaration, KFD success, or package origin does not grant a capability."
     },
     {
       "id": "trust",
       "title": "KFD and Release Passport trust",
-      "summary": "KFD and the exact Release Passport provide conformance and release evidence before Core admission.",
+      "summary": "KFD, the exact Release Passport, and installed-product lifecycle receipts provide bounded conformance evidence before Core admission.",
       "maturity": "pre-release",
       "status": "qualified",
-      "sourceIds": ["kfd7-release-passport", "kfx-topology", "kfx-terminal-qualification"],
-      "nonClaim": "Qualification and release evidence are eligibility inputs, not execution permission."
+      "sourceIds": ["kfd7-release-passport", "kfx-topology", "kfx-terminal-qualification", "github-webhook-qualification"],
+      "nonClaim": "Qualification and release evidence are eligibility inputs, not execution permission or proof that the optional real GitHub canary ran."
     },
     {
       "id": "agent-first-authoring",
       "title": "Installed Agent-first authoring",
-      "summary": "The installed, version-matched kit supports offline scaffold, inspect, validate, build, qualify, and package steps.",
+      "summary": "The installed, version-matched kit supports scaffold, inspect, validate, build, offline qualify, package, install, activate, upgrade, rollback, and remove steps.",
       "maturity": "pre-release",
       "status": "experimental",
-      "sourceIds": ["installed-agent-index", "installed-authoring-brief"],
-      "nonClaim": "Authoring output does not install, authorize, activate, or expose a listener."
+      "sourceIds": ["installed-agent-index", "installed-authoring-brief", "github-webhook-suite-readme"],
+      "nonClaim": "Authoring output remains inert; lifecycle commands require their declared native admission and do not expose a public listener by themselves."
     },
     {
       "id": "sdk-cli",
       "title": "SDK and CLI surfaces",
-      "summary": "The runtime SDK projection and public CLI catalog expose version-matched authoring and native inspection routes.",
+      "summary": "The runtime SDK projection and public CLI catalog expose version-matched authoring, lifecycle, and native inspection routes.",
       "maturity": "pre-release",
       "status": "implemented",
-      "sourceIds": ["installed-authoring-brief", "cli-surface-catalog", "kfx-contract"],
+      "sourceIds": ["installed-authoring-brief", "cli-surface-catalog", "kfx-contract", "github-webhook-suite-readme"],
       "nonClaim": "A visible CLI route does not change its declared mutation or approval policy."
     },
     {
       "id": "profiles-suites",
       "title": "Profiles and Suites",
-      "summary": "Profiles compose domain contracts and qualification; Suites declare required and optional member dependency closure.",
+      "summary": "Profiles compose domain contracts and qualification; Suites declare required and optional member dependency closure, including the maintained webhook ingress, view, and dormant bridge.",
       "maturity": "pre-release",
       "status": "staged",
-      "sourceIds": ["profile-suite-decision", "github-webhook-profile", "github-webhook-suite-manifest"],
+      "sourceIds": ["profile-suite-decision", "github-webhook-profile", "github-webhook-suite-manifest", "github-webhook-suite-readme"],
       "nonClaim": "Dependency closure does not install, activate, or widen a member."
     },
     {
@@ -239,11 +239,11 @@
     {
       "id": "qualification-status",
       "title": "Current qualification status",
-      "summary": "Identity-neutral terminal evidence and the maintained webhook Profile fixture cover the current bounded KFX slice.",
+      "summary": "Identity-neutral terminal evidence and the maintained webhook Profile cover installed-product package, lifecycle, rollback, removal, and local reference-suite qualification.",
       "maturity": "pre-release",
       "status": "qualified",
-      "sourceIds": ["kfx-terminal-qualification", "github-webhook-qualification"],
-      "nonClaim": "Current retained evidence does not establish stable compatibility or downstream Site adoption."
+      "sourceIds": ["kfx-terminal-qualification", "github-webhook-qualification", "github-webhook-suite-readme"],
+      "nonClaim": "Current retained evidence does not establish stable compatibility, downstream Site adoption, or completion of the optional real GitHub/AWS China canary."
     }
   ],
   "humanReadingOrder": ["value", "architecture", "package-facets", "registry-admission-lifecycle", "capabilities", "trust", "agent-first-authoring", "sdk-cli", "profiles-suites", "github-webhook-reference", "qualification-status"],
