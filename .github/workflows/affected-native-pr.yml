@@ -1305,6 +1305,7 @@ jobs:
           node scripts/affected-native-proof.mjs seal-attempt \
             --descriptor "$admission/proof-admission/descriptor.json" \
             --bundle "$bundle" \
+            --dev-delta-plan "$admission/proof-admission/dev-delta-plan.json" \
             --decision "$decision" \
             --output-dir "$admission/delivery-attempt" \
             --repository "$GITHUB_REPOSITORY" \
