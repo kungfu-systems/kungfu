@@ -28,8 +28,8 @@
       "sha256": "sha256:29a3cc46a728393f424d533790477d83feb8e3ca3d9fd2c4c72a206e0301d201"
     },
     {
-      "path": "framework/core/src/python/kungfu/storage/service.py",
-      "sha256": "sha256:fb0b1c4a524a364fff61d8668b264b894eef11b482272433f3fd94266f2dcd78"
+      "path": "framework/core/src/python/kungfu/storage/kfx_service.py",
+      "sha256": "sha256:22784a1f779898c9a36c2c55e47f49484b1a7821ab8386b87311f4847d225724"
     },
     {
       "path": "framework/kfx/kungfu-kfx-domain-profile.contract.json",

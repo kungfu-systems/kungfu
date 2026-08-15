@@ -340,7 +340,7 @@ function validateMatrix(matrix, { verifyInstalledKfd = true } = {}) {
   const expectedKfd10Surfaces = [
     'framework/core/src/libkungfu/src/runtime/kfx/native_registry.cpp',
     'framework/kfx/kungfu-kfx-domain-profile.contract.json',
-    'framework/core/src/python/kungfu/storage/service.py',
+    'framework/core/src/python/kungfu/storage/kfx_service.py',
   ];
   const expectedKfd10Evidence =
     'framework/kfx/evidence/kfd-10/runtime-warrant-adopter.json';
