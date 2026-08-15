@@ -61,6 +61,22 @@ function exactSha(value, label) {
   return normalized;
 }
 
+function releaseCandidateSourceShas(candidatePassportPath) {
+  const passport = readJson(
+    candidatePassportPath,
+    'release-candidate passport',
+  );
+  const sources = [
+    passport.source?.headSha,
+    passport.source?.mergeRefSha,
+    passport.source?.builtSourceSha,
+  ].filter((value) => /^[a-f0-9]{40}$/u.test(value || ''));
+  if (sources.length === 0) {
+    throw new Error('release-candidate passport has no exact source identity');
+  }
+  return [...new Set(sources)].sort();
+}
+
 function readJson(file, label) {
   try {
     return JSON.parse(fs.readFileSync(file, 'utf8'));
@@ -229,13 +245,14 @@ export function validateExistingPublicationIdentity({
   bundle,
   version,
   candidateSourceSha,
+  acceptedSourceShas = [candidateSourceSha],
   releaseSha,
   releaseTag,
 }) {
   if (
     bundle?.identity?.channel !== 'alpha' ||
     bundle.identity.version !== version ||
-    bundle.identity.sourceCommit !== candidateSourceSha ||
+    !acceptedSourceShas.includes(bundle.identity.sourceCommit) ||
     bundle.identity.releaseSha !== releaseSha ||
     bundle.identity.releaseTag !== releaseTag ||
     bundle.identity.releasePassport?.ref !==
@@ -272,6 +289,7 @@ async function fetchReleaseAsset(
 export async function existingPublicationAuthority({
   version,
   candidateSourceSha,
+  acceptedSourceShas,
   releaseSha,
   releaseTag,
   trust,
@@ -292,6 +310,7 @@ export async function existingPublicationAuthority({
       bundle,
       version,
       candidateSourceSha,
+      acceptedSourceShas,
       releaseSha,
       releaseTag,
     });
@@ -512,9 +531,13 @@ export function prepareAlphaPublication({
     expiresAt,
     previousChannelIndex,
   });
-  if (spec.sourceCommit !== sourceSha) {
+  if (
+    !releaseCandidateSourceShas(candidatePassportPath).includes(
+      spec.sourceCommit,
+    )
+  ) {
     throw new Error(
-      'admitted release source does not match publication source',
+      'admitted release source is outside the sealed candidate identity',
     );
   }
   fs.mkdirSync(outputDir, { recursive: true });
@@ -906,8 +929,14 @@ async function main() {
   const trust = releaseChannelTrust(trustDocument, 'alpha');
   const previous = await previousAuthority(trustedKeyMap(trust));
   const releaseAssets = releaseAssetInventory(environment);
+  const candidatePassportPath = path.join(
+    path.dirname(environment.payloadDir),
+    'passport',
+    'release-candidate-passport.json',
+  );
   const existing = await existingPublicationAuthority({
     ...environment,
+    acceptedSourceShas: releaseCandidateSourceShas(candidatePassportPath),
     trust,
     releaseAssets,
   });
@@ -940,11 +969,6 @@ async function main() {
     );
     return;
   }
-  const candidatePassportPath = path.join(
-    path.dirname(environment.payloadDir),
-    'passport',
-    'release-candidate-passport.json',
-  );
   const temporaryRoot = fs.mkdtempSync(
     path.join(os.tmpdir(), 'kungfu-alpha-publication-'),
   );

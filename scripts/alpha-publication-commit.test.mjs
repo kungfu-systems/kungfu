@@ -84,6 +84,7 @@ function releaseBase(releaseTag) {
 
 test('existing publication authority is reusable only for the exact Alpha identity', () => {
   const candidateSourceSha = '1'.repeat(40);
+  const builtSourceSha = '4'.repeat(40);
   const releaseSha = '2'.repeat(40);
   const releaseTag = 'v4.0.0-alpha.1';
   const bundle = {
@@ -111,6 +112,17 @@ test('existing publication authority is reusable only for the exact Alpha identi
     releaseTag,
   };
   assert.equal(validateExistingPublicationIdentity(expected), bundle);
+  assert.equal(
+    validateExistingPublicationIdentity({
+      ...expected,
+      acceptedSourceShas: [candidateSourceSha, builtSourceSha],
+      bundle: {
+        ...bundle,
+        identity: { ...bundle.identity, sourceCommit: builtSourceSha },
+      },
+    }).identity.sourceCommit,
+    builtSourceSha,
+  );
   assert.throws(
     () =>
       validateExistingPublicationIdentity({
