@@ -441,6 +441,11 @@ export function prepareAlphaPublication({
   releasePassportPath,
   version,
   sourceSha,
+  promotionSha,
+  recoveryReceiptPath,
+  publicationGateAggregateJson,
+  expectedControllerRepository,
+  expectedControllerSha,
   privateKeyPem,
   trustDocument,
   outputDir,
@@ -468,6 +473,11 @@ export function prepareAlphaPublication({
     releaseCandidatePassportPath: candidatePassportPath,
     expectedVersion: version,
     expectedSourceSha: sourceSha,
+    expectedPromotionSha: promotionSha,
+    recoveryReceiptPath,
+    publicationGateAggregateJson,
+    expectedControllerRepository,
+    expectedControllerSha,
   });
   const releaseBoundAdmission = releaseAssets
     ? bindPublicationReleaseAssets({
@@ -869,6 +879,18 @@ async function main() {
       process.env.BUILDCHAIN_PUBLICATION_COMMIT_SIGNING_KEY,
       'BUILDCHAIN_PUBLICATION_COMMIT_SIGNING_KEY',
     ),
+    recoveryReceiptPath: process.env
+      .BUILDCHAIN_RELEASE_CANDIDATE_RECOVERY_RECEIPT_PATH
+      ? path.resolve(
+          process.env.BUILDCHAIN_RELEASE_CANDIDATE_RECOVERY_RECEIPT_PATH,
+        )
+      : null,
+    publicationGateAggregateJson:
+      process.env.BUILDCHAIN_PUBLICATION_GATE_AGGREGATE_JSON || '',
+    expectedControllerRepository:
+      process.env.BUILDCHAIN_PUBLICATION_GATE_CONTROLLER_REPOSITORY || '',
+    expectedControllerSha:
+      process.env.BUILDCHAIN_PUBLICATION_GATE_CONTROLLER_SHA || '',
   };
   if (environment.releaseTag !== `v${environment.version}`) {
     throw new Error('publication version and public release tag disagree');
@@ -929,6 +951,7 @@ async function main() {
   const prepared = prepareAlphaPublication({
     ...environment,
     sourceSha: environment.candidateSourceSha,
+    promotionSha: environment.releaseSha,
     candidatePassportPath,
     trustDocument,
     releaseAssets,

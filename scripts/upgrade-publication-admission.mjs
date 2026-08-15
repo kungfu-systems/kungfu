@@ -1546,6 +1546,7 @@ export function verifyUpgradePublicationAdmission({
   releaseCandidatePassportPath,
   expectedVersion,
   expectedSourceSha,
+  expectedPromotionSha,
   recoveryReceiptPath,
   publicationGateAggregateJson,
   expectedControllerRepository,
@@ -1614,11 +1615,14 @@ export function verifyUpgradePublicationAdmission({
   const passportByteRoot = fileRoot(resolvedPassportPath);
   const passport = readJson(resolvedPassportPath, 'release-candidate passport');
   const sources = [...releaseCandidateSources(passport)].sort();
+  const promotionSha = expectedPromotionSha || expectedSourceSha;
   const recoveredPromotion =
-    expectedSourceSha && !sources.includes(expectedSourceSha)
+    recoveryReceiptPath &&
+    (expectedPromotionSha ||
+      (expectedSourceSha && !sources.includes(expectedSourceSha)))
       ? verifyRecoveryPromotionSource({
           recoveryReceiptPath,
-          expectedSourceSha,
+          expectedSourceSha: promotionSha,
           expectedVersion: receipt.identity?.version,
           acceptedSources: new Set(sources),
         })
@@ -1627,7 +1631,7 @@ export function verifyUpgradePublicationAdmission({
     recoveredPromotion &&
     verifyRecoveryController({
       publicationGateAggregateJson,
-      expectedSourceSha,
+      expectedSourceSha: promotionSha,
       expectedControllerRepository,
       expectedControllerSha,
       recovery: recoveredPromotion,

@@ -1148,6 +1148,19 @@ test('sealed product admission accepts a same-tree recovery promotion source', (
     });
     assert.equal(repaired.receiptRoot, receipt.receiptRoot);
 
+    const candidateSourceRepair = verifyUpgradePublicationAdmission({
+      payloadRoot: value.payloadRoot,
+      releaseCandidatePassportPath: value.passportPath,
+      expectedVersion: VERSION,
+      expectedSourceSha: SOURCE,
+      expectedPromotionSha: promotedSource,
+      recoveryReceiptPath,
+      publicationGateAggregateJson: JSON.stringify(gateAggregate),
+      expectedControllerRepository: 'kungfu-systems/kungfu',
+      expectedControllerSha: controllerSha,
+    });
+    assert.equal(candidateSourceRepair.receiptRoot, receipt.receiptRoot);
+
     assert.throws(
       () =>
         verifyUpgradePublicationAdmission({
