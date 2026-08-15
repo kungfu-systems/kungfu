@@ -15,6 +15,7 @@ import {
   downloadHttpArtifact,
   materializeQualifiedCoreBundle,
   resolveShifuCachedTool,
+  verifyMaterializedQualifiedCore,
 } from '../framework/assignment-capture/qualified-assignment-core-consumer.mjs';
 import {
   appendQualifiedCoreUsage,
@@ -861,6 +862,25 @@ test('consumer materializes an exact runtime closure and repeats idempotently', 
   });
   assert.equal(second.status, 'already-materialized');
   assert.equal(second.objectRoot, first.objectRoot);
+  const admissionProof = await verifyMaterializedQualifiedCore({
+    repositoryRoot: ROOT,
+    publicationRoot,
+    checkout: consumerCheckout(),
+    cacheRoot,
+    now: CONSUMER_NOW,
+  });
+  assert.equal(
+    admissionProof.schema,
+    'shifu.qualified-assignment-core-admission-proof/v1',
+  );
+  assert.equal(admissionProof.producerCommit, candidate.source.commit);
+  assert.equal(admissionProof.consumingCommit, consumerCheckout().commit);
+  assert.equal(
+    admissionProof.materializationReceiptRoot,
+    first.receipt.receiptRoot,
+  );
+  assert.match(admissionProof.compatibilityRoot, /^sha256:[0-9a-f]{64}$/u);
+  assert.match(admissionProof.proofRoot, /^sha256:[0-9a-f]{64}$/u);
 
   const concurrentRoot = path.join(temporary, 'concurrent-checkout');
   const concurrentCache = path.join(temporary, 'concurrent-cache');

@@ -1011,7 +1011,36 @@ export async function discoverGithubBundle(
   };
 }
 
-function verifyTarget(target, candidate, objectRoot) {
+function materializationReceiptBody(retained, checkout) {
+  return {
+    schema: retained.verified.verification.compatibilityIdentity
+      ? 'shifu.qualified-assignment-core-materialization/v2'
+      : 'shifu.qualified-assignment-core-materialization/v1',
+    repository: checkout.repository,
+    commit: checkout.commit,
+    ...(retained.verified.verification.compatibilityIdentity
+      ? {
+          producerCommit: retained.verified.candidate.source.commit,
+          qualifiedTargetCommit:
+            retained.verified.qualification.identity.targetCommit,
+          compatibilityRoot:
+            retained.verified.verification.compatibilityIdentity,
+        }
+      : {}),
+    objectRoot: retained.objectRoot,
+    manifestRoot: retained.verified.verification.manifestRoot,
+    artifactRoot: retained.verified.verification.artifactRoot,
+    qualificationReceiptRoot:
+      retained.verified.verification.qualificationReceiptRoot,
+    promotionAuthorityRoot:
+      retained.verified.verification.promotionAuthorityRoot,
+    targetRoot: TARGET_ROOT,
+    complete: true,
+  };
+}
+
+function verifyTarget(target, retained, checkout) {
+  const candidate = retained.verified.candidate;
   const expectedNames = [
     ...candidate.payload.entries.map((entry) => entry.path),
     RECEIPT,
@@ -1027,13 +1056,12 @@ function verifyTarget(target, candidate, objectRoot) {
   }
   const receipt = readJson(path.join(target, RECEIPT));
   const { receiptRoot, ...receiptBody } = receipt;
-  const supportedReceipt = [
-    'shifu.qualified-assignment-core-materialization/v1',
-    'shifu.qualified-assignment-core-materialization/v2',
-  ].includes(receipt.schema);
+  const expectedReceiptBody = materializationReceiptBody(retained, checkout);
   if (
-    !supportedReceipt ||
-    receipt.objectRoot !== objectRoot ||
+    JSON.stringify(Object.keys(receiptBody).sort()) !==
+      JSON.stringify(Object.keys(expectedReceiptBody).sort()) ||
+    qualifiedAssignmentCoreRoot(receiptBody) !==
+      qualifiedAssignmentCoreRoot(expectedReceiptBody) ||
     receiptRoot !== qualifiedAssignmentCoreRoot(receiptBody) ||
     receipt.complete !== true
   ) {
@@ -1069,11 +1097,7 @@ function publishTarget(repositoryRoot, retained, checkout) {
   if (fs.existsSync(target)) {
     return {
       status: 'already-materialized',
-      receipt: verifyTarget(
-        target,
-        retained.verified.candidate,
-        retained.objectRoot,
-      ),
+      receipt: verifyTarget(target, retained, checkout),
     };
   }
   fs.mkdirSync(targetParent, { recursive: true });
@@ -1090,31 +1114,7 @@ function publishTarget(repositoryRoot, retained, checkout) {
         fs.chmodSync(destination, entry.mode === '0755' ? 0o755 : 0o644);
       }
     }
-    const receiptBody = {
-      schema: retained.verified.verification.compatibilityIdentity
-        ? 'shifu.qualified-assignment-core-materialization/v2'
-        : 'shifu.qualified-assignment-core-materialization/v1',
-      repository: checkout.repository,
-      commit: checkout.commit,
-      ...(retained.verified.verification.compatibilityIdentity
-        ? {
-            producerCommit: retained.verified.candidate.source.commit,
-            qualifiedTargetCommit:
-              retained.verified.qualification.identity.targetCommit,
-            compatibilityRoot:
-              retained.verified.verification.compatibilityIdentity,
-          }
-        : {}),
-      objectRoot: retained.objectRoot,
-      manifestRoot: retained.verified.verification.manifestRoot,
-      artifactRoot: retained.verified.verification.artifactRoot,
-      qualificationReceiptRoot:
-        retained.verified.verification.qualificationReceiptRoot,
-      promotionAuthorityRoot:
-        retained.verified.verification.promotionAuthorityRoot,
-      targetRoot: TARGET_ROOT,
-      complete: true,
-    };
+    const receiptBody = materializationReceiptBody(retained, checkout);
     writeJson(path.join(stage, RECEIPT), {
       ...receiptBody,
       receiptRoot: qualifiedAssignmentCoreRoot(receiptBody),
@@ -1123,18 +1123,14 @@ function publishTarget(repositoryRoot, retained, checkout) {
       fs.renameSync(stage, target);
     } catch (error) {
       if (!fs.existsSync(target)) throw error;
-      verifyTarget(target, retained.verified.candidate, retained.objectRoot);
+      verifyTarget(target, retained, checkout);
     }
   } finally {
     fs.rmSync(stage, { recursive: true, force: true });
   }
   return {
     status: 'materialized',
-    receipt: verifyTarget(
-      target,
-      retained.verified.candidate,
-      retained.objectRoot,
-    ),
+    receipt: verifyTarget(target, retained, checkout),
   };
 }
 
@@ -1164,6 +1160,52 @@ export async function materializeQualifiedCoreBundle({
     now,
   });
   return { ...publishTarget(publicationRoot, retained, checkout), ...retained };
+}
+
+export async function verifyMaterializedQualifiedCore({
+  repositoryRoot,
+  publicationRoot = repositoryRoot,
+  cacheRoot = cacheRootFromEnvironment(),
+  now = new Date().toISOString(),
+  checkout: suppliedCheckout = null,
+}) {
+  const checkout =
+    suppliedCheckout || observeQualifiedCoreCheckout(repositoryRoot);
+  const retained = await discoverLocal({
+    cacheRoot,
+    checkout,
+    repositoryRoot,
+    now,
+  });
+  if (!retained) {
+    throw new QualifiedCoreUnavailable('qualified-core-cache-miss');
+  }
+  const receipt = verifyTarget(
+    path.join(publicationRoot, TARGET_ROOT),
+    retained,
+    checkout,
+  );
+  const proof = {
+    schema: 'shifu.qualified-assignment-core-admission-proof/v1',
+    repository: checkout.repository,
+    consumingCommit: checkout.commit,
+    consumingTree: checkout.tree,
+    producerCommit: retained.verified.candidate.source.commit,
+    qualifiedTargetCommit:
+      retained.verified.qualification.identity.targetCommit,
+    compatibilityRoot:
+      retained.verified.verification.compatibilityIdentity || null,
+    objectRoot: retained.objectRoot,
+    manifestRoot: retained.verified.verification.manifestRoot,
+    artifactRoot: retained.verified.verification.artifactRoot,
+    qualificationReceiptRoot:
+      retained.verified.verification.qualificationReceiptRoot,
+    promotionAuthorityRoot:
+      retained.verified.verification.promotionAuthorityRoot,
+    materializationReceiptRoot: receipt.receiptRoot,
+    targetRoot: TARGET_ROOT,
+  };
+  return { ...proof, proofRoot: qualifiedAssignmentCoreRoot(proof) };
 }
 
 function elapsed(start, clock) {
@@ -1488,7 +1530,7 @@ async function main() {
     if (resolved) process.stdout.write(`${resolved}\n`);
     return;
   }
-  if (!['materialize', 'status'].includes(command)) {
+  if (!['materialize', 'status', 'verify-materialization'].includes(command)) {
     throw new QualifiedCoreUnavailable('invalid-command');
   }
   let repositoryRoot = '.';
@@ -1513,6 +1555,19 @@ async function main() {
           repositoryRoot,
           ...(cacheRoot ? ['--cache-root', cacheRoot] : []),
         ]),
+        null,
+        2,
+      ),
+    );
+    return;
+  }
+  if (command === 'verify-materialization') {
+    console.log(
+      JSON.stringify(
+        await verifyMaterializedQualifiedCore({
+          repositoryRoot: path.resolve(repositoryRoot),
+          cacheRoot: cacheRoot ? path.resolve(cacheRoot) : undefined,
+        }),
         null,
         2,
       ),
