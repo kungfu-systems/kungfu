@@ -34,6 +34,14 @@ const BUILD_CORE_TASK = 'build:core';
 const BUILD_CORE_ENVIRONMENT = Object.freeze({
   KUNGFU_BUILD_PROFILE: 'journal',
 });
+const CORE_STAGE_IDS = Object.freeze([
+  'dependency-bootstrap',
+  'native-build',
+  'artifact-stage',
+]);
+const CORE_STAGE_TASKS = Object.freeze(
+  CORE_STAGE_IDS.map((id) => `core-production-subgraph:${id}`),
+);
 
 function readJson(file) {
   return JSON.parse(fs.readFileSync(file, 'utf8'));
@@ -278,9 +286,32 @@ export async function verifyLocalExecutionInput(
       'Production Graph build:core execution is not the bounded journal slice',
     );
   }
-  for (const node of input.graph.nodes) {
+  if (CORE_STAGE_TASKS.some((task) => allowed.has(task))) {
+    const byId = new Map(input.graph.nodes.map((node) => [node.id, node]));
+    const exactStages =
+      input.graph.nodes.length === CORE_STAGE_IDS.length &&
+      CORE_STAGE_IDS.every(
+        (id, index) =>
+          byId.get(id)?.executor.task === CORE_STAGE_TASKS[index] &&
+          canonicalJson(byId.get(id)?.dependencies || []) ===
+            canonicalJson(index === 0 ? [] : [CORE_STAGE_IDS[index - 1]]),
+      );
     if (
-      node.executor.entrypoint !== './shifu' ||
+      !exactStages ||
+      canonicalJson(sortedTasks) !==
+        canonicalJson([...CORE_STAGE_TASKS].sort()) ||
+      canonicalJson(taskEnvironment) !== canonicalJson(BUILD_CORE_ENVIRONMENT)
+    ) {
+      throw new Error(
+        'Production Graph Core stage execution is not the exact journal subgraph slice',
+      );
+    }
+  }
+  for (const node of input.graph.nodes) {
+    const coreStage = CORE_STAGE_TASKS.includes(node.executor.task);
+    if (
+      node.executor.entrypoint !==
+        (coreStage ? './shifu core-production-subgraph:execute' : './shifu') ||
       node.executor.executionOwnedBy !== 'external-orchestrator' ||
       node.executor.invokedByVerifier !== false ||
       !allowed.has(node.executor.task)
@@ -383,7 +414,15 @@ function bufferCollector(limit) {
   };
 }
 
-async function executeNode({ root, node, policy, runDir, signal }) {
+export async function executeBoundedCommand({
+  root,
+  node,
+  policy,
+  runDir,
+  signal,
+  command,
+  environment = {},
+}) {
   const stdout = bufferCollector(policy.maxOutputBytes);
   const stderr = bufferCollector(policy.maxOutputBytes);
   const counterPath = path.join(runDir, `${node.id}.counter`);
@@ -395,12 +434,13 @@ async function executeNode({ root, node, policy, runDir, signal }) {
         SHIFU_PRODUCTION_GRAPH_FIXTURE_COUNTER: counterPath,
       }
     : {};
-  const child = spawn(path.join(root, 'shifu'), [node.executor.task], {
+  const child = spawn(command[0], command.slice(1), {
     cwd: root,
     env: {
       ...process.env,
       ...(policy.taskEnvironment || {}),
       ...fixtureEnvironment,
+      ...environment,
     },
     stdio: ['ignore', 'pipe', 'pipe'],
     shell: false,
@@ -429,6 +469,11 @@ async function executeNode({ root, node, policy, runDir, signal }) {
           stdout: stdout.value(),
           stderr: `${stderr.value()}${error.message}`,
           outputExceeded: stdout.exceeded || stderr.exceeded,
+          command,
+          environment: {
+            ...(policy.taskEnvironment || {}),
+            ...environment,
+          },
         }),
       );
       child.once('close', (exitCode, childSignal) =>
@@ -440,6 +485,11 @@ async function executeNode({ root, node, policy, runDir, signal }) {
           stdout: stdout.value(),
           stderr: stderr.value(),
           outputExceeded: stdout.exceeded || stderr.exceeded,
+          command,
+          environment: {
+            ...(policy.taskEnvironment || {}),
+            ...environment,
+          },
         }),
       );
     });
@@ -447,6 +497,13 @@ async function executeNode({ root, node, policy, runDir, signal }) {
     clearTimeout(timer);
     if (signal) signal.removeEventListener('abort', stop);
   }
+}
+
+async function executeNode(options) {
+  return executeBoundedCommand({
+    ...options,
+    command: [path.join(options.root, 'shifu'), options.node.executor.task],
+  });
 }
 
 function eventFor(admitted, node, sequence, state, outputRoots, failureRoot) {
@@ -669,11 +726,13 @@ export async function runLocalProductionGraph(
       graphRoot: admitted.graph.graphRoot,
       planRoot: admitted.plan.planRoot,
       nodeId: node.id,
-      command: ['./shifu', node.executor.task],
+      command: execution.command || ['./shifu', node.executor.task],
       environment: Object.fromEntries(
-        Object.entries(admitted.executorPolicy.taskEnvironment || {}).sort(
-          ([left], [right]) => left.localeCompare(right),
-        ),
+        Object.entries(
+          execution.environment ||
+            admitted.executorPolicy.taskEnvironment ||
+            {},
+        ).sort(([left], [right]) => left.localeCompare(right)),
       ),
       state,
       exitCode: execution.exitCode,

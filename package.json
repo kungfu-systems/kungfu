@@ -68,6 +68,7 @@
     "production-graph:verify": "node scripts/require-shifu.mjs production-graph:verify && node framework/production-graph/check.mjs",
     "production-graph:admit": "node scripts/require-shifu.mjs production-graph:admit && node framework/production-graph/admission/index.mjs",
     "production-graph:execute": "node scripts/require-shifu.mjs production-graph:execute && node framework/production-graph/executor/index.mjs",
+    "core-production-subgraph:execute": "node scripts/require-shifu.mjs core-production-subgraph:execute && node framework/production-graph/core-subgraph/stage-executor/index.mjs",
     "build:core:graph-shadow": "node scripts/require-shifu.mjs build:core:graph-shadow && node framework/production-graph/shadow-build-core/index.mjs",
     "production-graph:fixture:success": "node scripts/require-shifu.mjs production-graph:fixture:success && node framework/production-graph/executor/index.mjs --fixture success",
     "production-graph:fixture:failure": "node scripts/require-shifu.mjs production-graph:fixture:failure && node framework/production-graph/executor/index.mjs --fixture failure",
