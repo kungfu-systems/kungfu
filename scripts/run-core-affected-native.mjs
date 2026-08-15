@@ -849,6 +849,7 @@ export function changedPathsBetween(base, head, runGit = git) {
   return runGit(
     'diff',
     '--name-only',
+    '--no-renames',
     '--diff-filter=ACDMRTUXB',
     `${base}...${head}`,
   )
