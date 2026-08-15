@@ -2,11 +2,6 @@
 # formatter results and generated evidence independent of core.autocrlf.
 * text=auto eol=lf
 
-# cmd.exe cannot reliably resolve labels across parenthesized block boundaries
-# from LF-only batch files. Keep the canonical Windows launcher checked out
-# with native CRLF bytes on every host while Git continues to normalize it.
-shifu.cmd text eol=crlf
-
 # Canonical contract bytes are hashed and compared byte-for-byte. Keep their
 # line endings independent of the checkout platform.
 framework/config/*.contract.json text eol=lf
