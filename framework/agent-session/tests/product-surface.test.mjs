@@ -962,7 +962,6 @@ test('Terminal WorkRef launch remains Profile-neutral and rejects partial identi
     new URL('../../../extensions/terminal/src/view/index.tsx', import.meta.url),
     'utf8',
   );
-  assert.doesNotMatch(source, /kungfu\.mission-control/u);
   assert.match(
     source,
     /WorkRef launch requires workProfileId, workProfileRoot, and workEntityId/u,

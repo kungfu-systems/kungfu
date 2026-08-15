@@ -1232,60 +1232,6 @@
       "evidence_grade": "B",
       "last_reviewed": "2026-07-20"
     },
-    "docs/profiles/compatibility/mission-control-v3-workspaces.md": {
-      "metadata_schema": "kungfu.document-metadata/v1",
-      "document_status": "draft",
-      "doc_type": "product-design",
-      "review_state": "unreviewed",
-      "sensitivity": "public",
-      "sources": [
-        "local-files",
-        "user-consensus"
-      ],
-      "period": "2026-07-11",
-      "theme": "kungfu-mission-control-workspaces",
-      "confidence": "high",
-      "evidence_grade": "B",
-      "last_reviewed": "2026-07-11"
-    },
-    "docs/profiles/compatibility/mission-control-v3.md": {
-      "metadata_schema": "kungfu.document-metadata/v1",
-      "document_status": "draft",
-      "doc_type": "product-design",
-      "review_state": "unreviewed",
-      "sensitivity": "public",
-      "sources": [
-        "local-files",
-        "user-consensus"
-      ],
-      "period": "2026-07-12",
-      "theme": "kungfu-mission-control",
-      "confidence": "high",
-      "evidence_grade": "B",
-      "last_reviewed": "2026-07-12"
-    },
-    "docs/profiles/compatibility/README.md": {
-      "metadata_schema": "kungfu.document-metadata/v1",
-      "document_status": "active",
-      "doc_type": "public-document",
-      "review_state": "self-reviewed",
-      "sensitivity": "public",
-      "sources": [
-        "local-files",
-        "user-consensus"
-      ],
-      "period": "2026-07-29",
-      "theme": "work-control-compatibility",
-      "confidence": "high",
-      "evidence_grade": "B",
-      "last_reviewed": "2026-07-29",
-      "ai_provenance": {
-        "model_family": "OpenAI GPT-5",
-        "product": "Codex",
-        "generated_at": "2026-07-29",
-        "invisible_context_boundary": "unobserved deployed runtimes and private retained payload bodies are not claimed"
-      }
-    },
     "docs/profiles/cost-state-proof-profile.md": {
       "metadata_schema": "kungfu.document-metadata/v1",
       "document_status": "active",
@@ -1293,7 +1239,7 @@
       "review_state": "unreviewed",
       "sensitivity": "public"
     },
-    "docs/profiles/mission-control-workspaces.md": {
+    "docs/profiles/work-control.md": {
       "metadata_schema": "kungfu.document-metadata/v1",
       "document_status": "active",
       "doc_type": "public-document",
@@ -1303,38 +1249,16 @@
         "local-files",
         "user-consensus"
       ],
-      "period": "2026-07-29",
-      "theme": "work-control-compatibility-redirect",
+      "period": "2026-07-26",
+      "theme": "work-control",
       "confidence": "high",
       "evidence_grade": "B",
-      "last_reviewed": "2026-07-29",
+      "last_reviewed": "2026-07-26",
       "ai_provenance": {
         "model_family": "OpenAI GPT-5",
         "product": "Codex",
-        "generated_at": "2026-07-29",
-        "invisible_context_boundary": "unobserved deployed runtimes and private retained payload bodies are not claimed"
-      }
-    },
-    "docs/profiles/mission-control.md": {
-      "metadata_schema": "kungfu.document-metadata/v1",
-      "document_status": "active",
-      "doc_type": "public-document",
-      "review_state": "self-reviewed",
-      "sensitivity": "public",
-      "sources": [
-        "local-files",
-        "user-consensus"
-      ],
-      "period": "2026-07-29",
-      "theme": "work-control-compatibility-redirect",
-      "confidence": "high",
-      "evidence_grade": "B",
-      "last_reviewed": "2026-07-29",
-      "ai_provenance": {
-        "model_family": "OpenAI GPT-5",
-        "product": "Codex",
-        "generated_at": "2026-07-29",
-        "invisible_context_boundary": "unobserved deployed runtimes and private retained payload bodies are not claimed"
+        "generated_at": "2026-07-26",
+        "invisible_context_boundary": "unobserved deployed runtimes and private Atlas control-plane contents are not claimed"
       }
     },
     "docs/profiles/profile-authoring.md": {
@@ -1379,28 +1303,6 @@
         "product": "Codex",
         "generated_at": "2026-08-03",
         "invisible_context_boundary": "private prompts, runtime secrets, unpublished product state, and unretained execution evidence are not claimed"
-      }
-    },
-    "docs/profiles/work-control.md": {
-      "metadata_schema": "kungfu.document-metadata/v1",
-      "document_status": "active",
-      "doc_type": "public-document",
-      "review_state": "self-reviewed",
-      "sensitivity": "public",
-      "sources": [
-        "local-files",
-        "user-consensus"
-      ],
-      "period": "2026-07-26",
-      "theme": "work-control",
-      "confidence": "high",
-      "evidence_grade": "B",
-      "last_reviewed": "2026-07-26",
-      "ai_provenance": {
-        "model_family": "OpenAI GPT-5",
-        "product": "Codex",
-        "generated_at": "2026-07-26",
-        "invisible_context_boundary": "unobserved deployed runtimes and private Atlas control-plane contents are not claimed"
       }
     },
     "docs/qualification/agent-patrol-agent-121.md": {

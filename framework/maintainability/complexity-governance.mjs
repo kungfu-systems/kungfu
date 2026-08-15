@@ -158,142 +158,6 @@ function baselineIntegrityIssues(committed, recomputed, path) {
   return issues;
 }
 
-function parseInstant(value) {
-  if (typeof value !== 'string' || !value.endsWith('Z')) return Number.NaN;
-  return Date.parse(value);
-}
-
-function authorityFor(receipt, trustPolicy) {
-  return (trustPolicy.waiver.trustedAuthorities || []).find(
-    (authority) =>
-      authority.authority_id === receipt.authority_id &&
-      authority.key_id === receipt.key_id &&
-      authority.algorithm === receipt.algorithm,
-  );
-}
-
-function approvalTimeIssues(receipt, approvalPolicy, path, evaluationTime) {
-  const issues = [];
-  const issuedAt = parseInstant(receipt.issued_at);
-  const approvedAt = parseInstant(receipt.approved_at);
-  const expiresAt = parseInstant(receipt.expires_at);
-  if (
-    !Number.isFinite(issuedAt) ||
-    !Number.isFinite(approvedAt) ||
-    !Number.isFinite(expiresAt) ||
-    issuedAt > approvedAt ||
-    approvedAt > evaluationTime ||
-    evaluationTime >= expiresAt
-  )
-    issues.push({
-      code:
-        Number.isFinite(expiresAt) && evaluationTime >= expiresAt
-          ? 'expired-approval'
-          : 'invalid-approval-timestamp',
-      path,
-      message:
-        'approval timestamps must be valid UTC instants ordered issued <= approved <= evaluation < expiry',
-    });
-  const maxAgeDays = Number(approvalPolicy.maxApprovalAgeDays || 0);
-  if (
-    maxAgeDays > 0 &&
-    Number.isFinite(approvedAt) &&
-    evaluationTime - approvedAt > maxAgeDays * 86_400_000
-  )
-    issues.push({
-      code: 'stale-approval',
-      path,
-      message: `approval is older than ${maxAgeDays} days`,
-    });
-  return issues;
-}
-
-function approvalIssues({
-  receipt,
-  approvalPolicy,
-  trustPolicy,
-  path,
-  evaluationTime,
-  authorizationRoot,
-  requester,
-}) {
-  const issues = [];
-  if (receipt.schema !== approvalPolicy.approvalReceiptSchema)
-    issues.push({
-      code: 'invalid-approval-receipt',
-      path,
-      message: 'approval receipt schema mismatch',
-    });
-  issues.push(
-    ...approvalTimeIssues(receipt, approvalPolicy, path, evaluationTime),
-  );
-  if (receipt.authorization_root !== authorizationRoot)
-    issues.push({
-      code: 'approval-scope-root-mismatch',
-      path,
-      message: 'approval receipt is not bound to the recomputed scope',
-    });
-  const authority = authorityFor(receipt, trustPolicy);
-  if (!authority)
-    issues.push({
-      code: 'unknown-approval-authority',
-      path,
-      message: 'approval authority/key is not in the protected trust set',
-    });
-  else {
-    if (authority.authority_id === requester)
-      issues.push({
-        code: 'same-authority-approval',
-        path,
-        message: 'requester and approval authority must be independent',
-      });
-    if (!verifyApproval(receipt, authority, authorizationRoot))
-      issues.push({
-        code: 'invalid-approval-signature',
-        path,
-        message: 'approval signature does not verify over the exact scope root',
-      });
-  }
-  return issues;
-}
-
-function waiverAuthorization(record, issue, requester) {
-  const waiver = record.value;
-  return {
-    schema: 'kungfu.code-complexity-budget-waiver-authorization/v1',
-    issueRoot: issue.issueRoot,
-    issueKind: issue.issueKind,
-    paths: issue.paths,
-    budgetClasses: issue.budgetClasses,
-    baselineMeasurement: issue.baselineMeasurement,
-    currentMeasurement: issue.currentMeasurement,
-    allowedDelta: waiver.allowed_delta,
-    owner: waiver.owner,
-    requester,
-    responsibilityBoundary: waiver.responsibility_boundary,
-    retirementOrDecompositionRef: waiver.retirement_or_decomposition_ref,
-  };
-}
-
-function verifyApproval(receipt, authority, authorizationRoot) {
-  if (
-    receipt.algorithm !== 'ed25519' ||
-    !authority.public_key_pem ||
-    typeof receipt.signature !== 'string'
-  )
-    return false;
-  try {
-    return crypto.verify(
-      null,
-      Buffer.from(authorizationRoot, 'utf8'),
-      authority.public_key_pem,
-      Buffer.from(receipt.signature, 'base64'),
-    );
-  } catch {
-    return false;
-  }
-}
-
 function waiverIssues(record, policy, context = {}) {
   const issues = [];
   const waiver = record.value;
@@ -328,15 +192,8 @@ function waiverIssues(record, policy, context = {}) {
         'paths_or_scope must be a sorted, unique, non-empty exact path set',
     });
 
-  const receipt = waiver.approval_receipt || {};
-  const evaluationTime =
-    context.evaluationTime instanceof Date
-      ? context.evaluationTime.getTime()
-      : Date.now();
-
   const issue = context.issue;
   const requester = String(context.requester || '');
-  let authorizationRoot = receipt.authorization_root;
   if (issue) {
     for (const [field, expected, actual] of [
       ['issue_root', issue.issueRoot, waiver.issue_root],
@@ -367,37 +224,8 @@ function waiverIssues(record, policy, context = {}) {
         path: record.file,
         message: 'requested_by does not match the candidate commit author',
       });
-    authorizationRoot = digest(
-      waiverAuthorization(record, issue, requester || waiver.requested_by),
-    );
   }
-  issues.push(
-    ...approvalIssues({
-      receipt,
-      approvalPolicy: policy.waiver,
-      trustPolicy: context.trustPolicy || policy,
-      path: record.file,
-      evaluationTime,
-      authorizationRoot,
-      requester: requester || waiver.requested_by,
-    }),
-  );
   return issues;
-}
-
-function baselineTransitionAuthorization(transition) {
-  return {
-    schema: 'kungfu.code-complexity-baseline-transition-authorization/v1',
-    expectedOldMeasurementRoot: transition.expected_old_measurement_root,
-    expectedOldBaselineRef: transition.expected_old_baseline_ref,
-    newMeasurementRoot: transition.new_measurement_root,
-    newBaselineRef: transition.new_baseline_ref,
-    changedMeasurements: transition.changed_measurements,
-    aggregateLineDelta: transition.aggregate_line_delta,
-    requester: transition.requested_by,
-    reason: transition.reason,
-    retirementOrDecompositionRef: transition.retirement_or_decomposition_ref,
-  };
 }
 
 function baselineTransitionIssues(record, context) {
@@ -415,7 +243,6 @@ function baselineTransitionIssues(record, context) {
     'requested_by',
     'reason',
     'retirement_or_decomposition_ref',
-    'approval_receipt',
   ])
     if (
       transition[field] === undefined ||
@@ -468,22 +295,12 @@ function baselineTransitionIssues(record, context) {
       path: record.file,
       message: 'aggregate_line_delta exceeds the bounded transition policy',
     });
-  const authorizationRoot = digest(baselineTransitionAuthorization(transition));
-  const evaluationTime =
-    context.evaluationTime instanceof Date
-      ? context.evaluationTime.getTime()
-      : Date.now();
-  issues.push(
-    ...approvalIssues({
-      receipt: transition.approval_receipt || {},
-      approvalPolicy: context.protectedPolicy.waiver,
-      trustPolicy: context.protectedPolicy,
+  if (context.requester && transition.requested_by !== context.requester)
+    issues.push({
+      code: 'baseline-transition-requester-mismatch',
       path: record.file,
-      evaluationTime,
-      authorizationRoot,
-      requester: transition.requested_by,
-    }),
-  );
+      message: 'requested_by does not match the candidate commit author',
+    });
   return issues;
 }
 
@@ -509,8 +326,8 @@ function protectedBaselineIssues(context) {
       path: context.candidatePolicy.baselinePath,
       message:
         matches.length > 1
-          ? 'multiple valid transition receipts target the candidate baseline'
-          : 'baseline changed without one exact independently signed transition from the protected root',
+          ? 'multiple valid transition records target the candidate baseline'
+          : 'baseline changed without one exact deterministic transition from the protected root',
     },
   ];
 }
@@ -543,7 +360,6 @@ function validWaiverFor(issue, current, waivers, policy, context = {}) {
 }
 
 export {
-  baselineTransitionAuthorization,
   baselineTransitionIssues,
   baselineIntegrityIssues,
   baselineMeasurementRoot,
@@ -554,6 +370,5 @@ export {
   ordered,
   protectedBaselineIssues,
   validWaiverFor,
-  waiverAuthorization,
   waiverIssues,
 };

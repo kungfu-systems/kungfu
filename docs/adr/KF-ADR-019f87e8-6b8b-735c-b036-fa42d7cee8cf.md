@@ -26,7 +26,7 @@ ai_provenance: GPT-5 via Codex on 2026-07-23; based on public Kungfu contracts a
 ## Context
 
 Kungfu already has separate authorities for Fact, Episode, Work journal facts,
-Action Geometry, Mission Control, Xinfa Atlas, and Project Cut settlement. A
+Action Geometry, Work Control, Xinfa Atlas, and Project Cut settlement. A
 user who must manually coordinate every authority cannot use them as one
 recoverable work loop, while a second convenience state machine would hide
 gaps and split authority.
@@ -56,7 +56,7 @@ Qualification is owned by the Work API contract and its Cut/Work facade tests.
 The staged multisurface slices project one operation manifest through CLI and
 Agent, then expose the same public `work capabilities`, `work inspect`, and
 `work recover` JSON through the shared TypeScript `openWorkLoop` adapter. The
-Work Dashboard and Mission Control TUI show the current Cut, Work, confidence,
+Work Dashboard and Work Control TUI show the current Cut, Work, confidence,
 gaps, next actions, and recovery plan. Their transports reject mutating Work
 commands, and a missing project workspace fails visibly without substituting
 the app launch directory. The release contract freezes the target Gate id,

@@ -222,7 +222,7 @@ function verifyRetainedBinding(
       }
       for (const field of [
         'schema',
-        'goalId',
+        'assignmentId',
         'commit',
         'tree',
         'reviewer',
@@ -247,16 +247,16 @@ function verifyRetainedBinding(
         'kungfu.assignment-request/v1',
       );
       mismatch(
-        'retained-request-goal',
-        'assignment.request.goalId',
-        document?.workDefinition?.goal_id,
-        matrix.goalId,
+        'retained-request-assignment',
+        'assignment.request.assignmentId',
+        document?.workDefinition?.assignment_id,
+        matrix.assignmentId,
       );
       mismatch(
         'retained-request-source',
         'assignment.request.sourceId',
         document?.source?.sourceId,
-        matrix.goalId,
+        matrix.assignmentId,
       );
       break;
     case 'assignment-capture':
@@ -287,13 +287,13 @@ function verifyRetainedBinding(
         live.source?.head,
       );
       if (
-        !Array.isArray(document?.go_set) ||
-        !document.go_set.includes(matrix.goalId)
+        !Array.isArray(document?.assignment_set) ||
+        !document.assignment_set.includes(matrix.assignmentId)
       ) {
         issues.push(
           issue(
             'retained-claim-assignment',
-            'assignment.claim.go_set',
+            'assignment.claim.assignment_set',
             'completion claim does not include the terminal Assignment',
           ),
         );
@@ -362,7 +362,7 @@ function verifyRetainedBinding(
     case 'predecessor-seal': {
       const expectedAssignment =
         object.kind === 'assignment-seal'
-          ? matrix.goalId
+          ? matrix.assignmentId
           : object.kind === 'predecessor-seal'
             ? matrix.predecessor.assignmentId
             : object.assignmentId;
@@ -759,10 +759,10 @@ export function verifyTerminalEvidence(
     issues,
   );
   exact(
-    evidence.goalId,
-    matrix.goalId,
-    'goal-identity-mismatch',
-    'goalId',
+    evidence.assignmentId,
+    matrix.assignmentId,
+    'assignment-identity-mismatch',
+    'assignmentId',
     issues,
   );
   if ((matrix.exceptions || []).length !== 0) {
@@ -954,10 +954,10 @@ export function verifyTerminalEvidence(
     issues,
   );
   exact(
-    live.terminalReview?.goalId,
-    matrix.goalId,
-    'review-attestation-goal-mismatch',
-    'live.terminalReview.goalId',
+    live.terminalReview?.assignmentId,
+    matrix.assignmentId,
+    'review-attestation-assignment-mismatch',
+    'live.terminalReview.assignmentId',
     issues,
   );
   exact(

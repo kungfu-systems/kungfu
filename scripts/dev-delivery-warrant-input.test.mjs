@@ -263,4 +263,29 @@ test('protected caller makes the Warrant mandatory for exact delivery', () => {
     workflow,
     /active-lease-context: \$\{\{ needs\.delivery-contract\.outputs\.active-lease-context \}\}/u,
   );
+  assert.match(
+    workflow,
+    /required-status-checks: \|-\n\s+Candidate source acceptance \/ check/u,
+  );
+  assert.match(workflow, /require-approval: true/u);
+  assert.match(workflow, /landing-mode: queue/u);
+  assert.match(
+    workflow,
+    /expected-head-sha: \$\{\{ needs\.resolve-target\.outputs\.expected-head-sha \}\}/u,
+  );
+
+  for (const weakened of [
+    workflow.replace('require-approval: true', 'require-approval: false'),
+    workflow.replaceAll(
+      'Candidate source acceptance / check',
+      'Candidate source acceptance omitted',
+    ),
+  ]) {
+    const protectedBoundary =
+      /require-approval: true/u.test(weakened) &&
+      /required-status-checks: \|-\n\s+Candidate source acceptance \/ check/u.test(
+        weakened,
+      );
+    assert.equal(protectedBoundary, false);
+  }
 });

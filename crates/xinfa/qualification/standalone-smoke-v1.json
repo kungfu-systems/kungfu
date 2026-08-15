@@ -64,7 +64,7 @@
     "fixtures/repository-small/evidence/runtime.json",
     "fixtures/repository-small/project.json",
     "fixtures/repository-small/src/runtime.rs",
-    "fixtures/terminology/atlas-project-and-primitive-v1.json",
+    "fixtures/terminology/external-project-and-atlas-primitive-v1.json",
     "qualification/context-quality-v1.json",
     "qualification/go-route-resolution-v1.json",
     "qualification/repository-onboarding-v1.json",

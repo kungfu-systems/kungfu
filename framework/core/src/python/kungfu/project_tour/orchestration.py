@@ -9,7 +9,7 @@ import os
 import time
 from typing import Any, Callable, Protocol
 
-from kungfu.assignment_orchestration import semantic_root
+from kungfu.initiative_family.canonical import semantic_root
 
 
 EVENT_SCHEMA = "kungfu.project-tour.episode-event/v1"

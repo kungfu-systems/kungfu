@@ -27,6 +27,7 @@ import kungfu
 from kungfu import assignment_orchestration as orchestration
 from kungfu.agent import runtime_profiles
 from kungfu.agent.work_projection import STARTUP_SCHEMA, inspect_startup
+from kungfu.initiative_family import canonical as assignment_canonical
 from kungfu.rewind import (
     ACTION_RUN_BEGIN,
     ACTION_RUN_END,
@@ -1500,7 +1501,7 @@ def load_project_template(
             raise ProjectTemplateError(
                 "project template acceptanceChecks must be non-empty strings"
             )
-        return payload, candidate.resolve(), orchestration.semantic_root(payload)
+        return payload, candidate.resolve(), assignment_canonical.semantic_root(payload)
     raise ProjectTemplateError(
         f"project template is unavailable: {template_id}; install its KFX Suite"
     )
@@ -1582,7 +1583,7 @@ def plan_project_template(
         "confirmationRequired": True,
         "writeOccurred": False,
     }
-    return {**preimage, "planRoot": orchestration.semantic_root(preimage)}
+    return {**preimage, "planRoot": assignment_canonical.semantic_root(preimage)}
 
 
 def _assignment_request(payload: dict[str, Any], template_root: str) -> dict[str, Any]:
@@ -1702,5 +1703,5 @@ def create_project_template(
     }
     return {
         **receipt_preimage,
-        "receiptRoot": orchestration.semantic_root(receipt_preimage),
+        "receiptRoot": assignment_canonical.semantic_root(receipt_preimage),
     }

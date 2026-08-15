@@ -58,15 +58,6 @@ function catalog(changes = {}) {
         maturity: 'stable',
         availability: { state: 'available' },
       },
-      {
-        canonical_path: 'kungfu profile mission-control',
-        aliases: [],
-        owner: 'profile-kfx',
-        maturity: 'experimental',
-        visibility: 'hidden-internal',
-        kfd3_api_ids: [],
-        availability: { state: 'available' },
-      },
     ],
     kfd3Linkage: [
       { state: 'linked', apiIds: ['kungfu.agent.brief'] },

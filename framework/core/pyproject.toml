@@ -171,7 +171,7 @@ mypy_path = "stubs"
 # The stubs are machine-generated from the real binary, so their *types* are
 # accurate; but stubgen emits expression noise (overload dupes, `...` in
 # signatures, forward-ref name-defined). Trust the stub types, do not report the
-# stub's own internal issues. See Atlas goal 2026-07-06-kungfu-pykungfu-stub-typing.
+# stub's own internal issues. Track the remaining pykungfu stub typing work separately.
 [[tool.mypy.overrides]]
 module = "pykungfu.*"
 ignore_errors = true

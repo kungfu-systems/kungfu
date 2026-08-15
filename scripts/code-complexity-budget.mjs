@@ -26,6 +26,34 @@ const POLICY_PATH = 'framework/maintainability/code-complexity-policy.json';
 const GIT_TIMEOUT_MS = Number(
   process.env.KUNGFU_GIT_COMMAND_TIMEOUT_MS || 10_000,
 );
+const RETIRED_COMPLEXITY_SIGNING_MARKERS = [
+  ['ed25519-6688', '12bf28659460'],
+  ['ed25519-9ff2', '1f6e6f64c985'],
+  ['kungfu-origin-complexity-', 'transition-review'],
+  ['kungfu-origin-complexity-', 'transition-review-v2'],
+  ['requiresIndependent', 'SignedReceipt'],
+  ['trusted', 'Authorities'],
+  ['approvalReceipt', 'Schema'],
+  ['kungfu.code-complexity-budget-', 'approval-receipt/v1'],
+  ['baselineTransition', 'Authorization'],
+  ['signedWaiver', 'Fixture'],
+  ['invalid-approval-', 'signature'],
+].map((parts) => parts.join(''));
+const RETIRED_COMPLEXITY_SIGNING_FIELDS = [
+  ['approval', '_receipt'],
+  ['authority', '_id'],
+  ['key', '_id'],
+  ['public', '_key_pem'],
+  ['authorization', '_root'],
+].map((parts) => parts.join(''));
+const COMPLEXITY_GOVERNANCE_PATHS = [
+  'framework/maintainability/baseline-transitions/',
+  'framework/maintainability/code-complexity-policy.json',
+  'framework/maintainability/complexity-governance.mjs',
+  'framework/maintainability/waivers/',
+  'scripts/code-complexity-budget.mjs',
+  'scripts/code-complexity-budget.test.mjs',
+];
 
 function readJson(relative) {
   return JSON.parse(fs.readFileSync(path.join(ROOT, relative), 'utf8'));
@@ -73,6 +101,46 @@ function gitLines(args) {
     .split('\n')
     .map((item) => item.trim())
     .filter(Boolean);
+}
+
+export function complexitySigningResidueAudit(entries) {
+  const findings = [];
+  for (const entry of entries) {
+    const scoped = COMPLEXITY_GOVERNANCE_PATHS.some(
+      (candidate) =>
+        entry.path === candidate || entry.path.startsWith(candidate),
+    );
+    const markers = scoped
+      ? [
+          ...RETIRED_COMPLEXITY_SIGNING_MARKERS,
+          ...RETIRED_COMPLEXITY_SIGNING_FIELDS,
+        ]
+      : RETIRED_COMPLEXITY_SIGNING_MARKERS;
+    for (const marker of markers)
+      if (entry.bytes.includes(Buffer.from(marker)))
+        findings.push({ path: entry.path, marker });
+  }
+  return {
+    schema: 'kungfu.code-complexity-signing-residue-audit/v1',
+    verdict: findings.length ? 'fail' : 'pass',
+    markerCount:
+      RETIRED_COMPLEXITY_SIGNING_MARKERS.length +
+      RETIRED_COMPLEXITY_SIGNING_FIELDS.length,
+    globalMarkers: RETIRED_COMPLEXITY_SIGNING_MARKERS,
+    scopedFields: RETIRED_COMPLEXITY_SIGNING_FIELDS,
+    findings,
+  };
+}
+
+function trackedComplexitySigningResidueAudit() {
+  const entries = String(git(['ls-files', '-z']))
+    .split('\0')
+    .filter(Boolean)
+    .map((pathname) => ({
+      path: pathname,
+      bytes: fs.readFileSync(path.join(ROOT, pathname)),
+    }));
+  return complexitySigningResidueAudit(entries);
 }
 
 function lineCount(bytes) {
@@ -505,6 +573,7 @@ function regressionIssues(
   baseline,
   policy = {},
   renamedFrom = new Map(),
+  candidateAddedPaths = null,
 ) {
   const issues = [];
   const baselineByPath = new Map(
@@ -559,6 +628,7 @@ function regressionIssues(
       });
     if (
       !previous &&
+      (candidateAddedPaths === null || candidateAddedPaths.has(current.path)) &&
       current.class === 'first-party-handwritten-implementation' &&
       current.lines > budget.hard
     )
@@ -604,6 +674,8 @@ function regressionIssues(
   for (const current of files) {
     if (baselinePaths.has(current.path) || renamedFrom.has(current.path))
       continue;
+    if (candidateAddedPaths !== null && !candidateAddedPaths.has(current.path))
+      continue;
     if (current.class === 'first-party-handwritten-implementation') {
       if (!newHandwrittenByOwner.has(current.owner))
         newHandwrittenByOwner.set(current.owner, []);
@@ -636,7 +708,11 @@ function regressionIssues(
   }
   const currentByPath = new Map(files.map((file) => [file.path, file]));
   const renamedSources = new Set(renamedFrom.values());
-  const added = files.filter((file) => !baselinePaths.has(file.path));
+  const added = files.filter(
+    (file) =>
+      !baselinePaths.has(file.path) &&
+      (candidateAddedPaths === null || candidateAddedPaths.has(file.path)),
+  );
   const deleted = baseline.files.filter(
     (file) => !currentByPath.has(file.path) && !renamedSources.has(file.path),
   );
@@ -803,7 +879,40 @@ function currentRenameMap(policy) {
 function checkCurrent(policy, layers, baseline, ownership = []) {
   const files = measureCurrent(policy, layers, ownership);
   const renamedFrom = currentRenameMap(policy);
+  const protectedCandidates = policy.baselineGovernance
+    ? protectedBaselineCandidates(policy)
+    : [];
+  const protectedRef =
+    protectedCandidates.find((candidate) => {
+      const result = spawnSync(
+        'git',
+        ['rev-parse', '--verify', '--quiet', `${candidate}^{commit}`],
+        {
+          cwd: ROOT,
+          encoding: 'utf8',
+        },
+      );
+      return result.status === 0;
+    }) || protectedCandidates[0];
+  const protectedPaths = protectedRef
+    ? new Set(gitLines(['ls-tree', '-r', '--name-only', protectedRef]))
+    : null;
+  const candidateAddedPaths = protectedPaths
+    ? new Set(
+        files
+          .map((file) => file.path)
+          .filter((pathname) => !protectedPaths.has(pathname)),
+      )
+    : null;
   const issues = validateMeasured(files);
+  const residueAudit = trackedComplexitySigningResidueAudit();
+  issues.push(
+    ...residueAudit.findings.map((finding) => ({
+      code: 'retired-complexity-signing-residue',
+      path: finding.path,
+      message: `retired complexity signing marker remains: ${finding.marker}`,
+    })),
+  );
   const recomputedBaseline = buildBaseline(policy, layers, ownership);
   issues.push(
     ...baselineIntegrityIssues(
@@ -824,7 +933,15 @@ function checkCurrent(policy, layers, baseline, ownership = []) {
       path: policy.baselinePath,
       message: 'baseline ref does not match current policy',
     });
-  issues.push(...regressionIssues(files, baseline, policy, renamedFrom));
+  issues.push(
+    ...regressionIssues(
+      files,
+      baseline,
+      policy,
+      renamedFrom,
+      candidateAddedPaths,
+    ),
+  );
   const requester = String(git(['show', '-s', '--format=%ae', 'HEAD'])).trim();
   const evaluationTime = new Date();
   const waivers = loadWaivers(policy);
@@ -845,19 +962,6 @@ function checkCurrent(policy, layers, baseline, ownership = []) {
   const waived = [];
   const blocking = [];
   if (policy.baselineGovernance) {
-    const candidates = protectedBaselineCandidates(policy);
-    const protectedRef =
-      candidates.find((candidate) => {
-        const result = spawnSync(
-          'git',
-          ['rev-parse', '--verify', '--quiet', `${candidate}^{commit}`],
-          {
-            cwd: ROOT,
-            encoding: 'utf8',
-          },
-        );
-        return result.status === 0;
-      }) || candidates[0];
     try {
       const protectedPolicy = readJsonAt(protectedRef, POLICY_PATH);
       const protectedBaseline = readJsonAt(
@@ -883,6 +987,7 @@ function checkCurrent(policy, layers, baseline, ownership = []) {
           candidateBaseline: baseline,
           transitions,
           evaluationTime,
+          requester,
         }).map((issue) => enrichIssue(issue, baseline.files, files)),
       );
     } catch (error) {
@@ -935,6 +1040,7 @@ function checkCurrent(policy, layers, baseline, ownership = []) {
     waived,
     softWarnings: advisory.active,
     resolvedAdvisories: advisory.resolved,
+    residueAudit,
     files,
   };
 }
