@@ -16,12 +16,20 @@
   },
   "sourceRoots": [
     {
+      "path": "framework/core/src/libkungfu/src/runtime/kfx/native_authority.cpp",
+      "sha256": "sha256:17fbf0113e9e163b46581ea31494ba35f87731680c2dae868386f6d21fd39f8c"
+    },
+    {
       "path": "framework/core/src/libkungfu/src/runtime/kfx/native_registry.cpp",
-      "sha256": "sha256:6f1dcf997f32cea0b9e9756c6411e78efdf4a40f05ab9422b21ecdd2e41bc2c2"
+      "sha256": "sha256:2c7d1e445455bd0e327ecb27567081259f42d9ffac074217b8b3778668235c31"
     },
     {
       "path": "framework/core/src/libkungfu/tests/native_kfx_contract_tests.cpp",
-      "sha256": "sha256:5dcfec95b07ba28280a324d191b26a619d7c01e5dd1494bf8bf1a895d8968cc9"
+      "sha256": "sha256:0f352824850318ddddbc30d8ac5c32ac750100d89c8c31af3a26fb5184fd429d"
+    },
+    {
+      "path": "framework/core/src/libkungfu/tests/native_kfx_service_host_tests.cpp",
+      "sha256": "sha256:2ea2e2577823c7629e473360be36f9feca70b8ad16d7e04018c2e97ee872c314"
     },
     {
       "path": "framework/core/src/libkungfu/src/runtime/storage/domain_dispatch.cpp",
@@ -38,7 +46,7 @@
   ],
   "qualification": {
     "command": "ctest --test-dir framework/core/build --build-config Release --output-on-failure --tests-regex ^kungfu_native_kfx_contract_tests$",
-    "test": "test_kfx_runtime_warrant_is_leased_fenced_recoverable_and_witnessed",
+    "test": "test_kfx_runtime_warrant_is_leased_fenced_recoverable_and_witnessed in the dedicated service-host test translation unit",
     "positiveCases": [
       "exact-root issue",
       "monotonic heartbeat renewal",
