@@ -101,19 +101,19 @@ export function validatePromotionWorkflowAuthority(
 }
 export function validateBuildWorkflowAuthority(
   buildWorkflow,
-  workflowShellSha,
+  workflowShellRef,
 ) {
-  if (!/^[0-9a-f]{40}$/u.test(workflowShellSha))
-    throw new Error('Build workflow shell revision is invalid');
+  if (workflowShellRef !== 'v3-alpha')
+    throw new Error('Build workflow shell channel is invalid');
   if (
     !buildWorkflow.includes(
-      `uses: kungfu-systems/buildchain/.github/workflows/.build.yml@${workflowShellSha}`,
+      `uses: kungfu-systems/buildchain/.github/workflows/.build.yml@${workflowShellRef}`,
     ) ||
     !/^\s+buildchain-ref: \$\{\{ inputs\.buildchain-ref \|\| 'v3-alpha' \}\}\s*$/mu.test(
       buildWorkflow,
     ) ||
-    buildWorkflow.includes(
-      'uses: kungfu-systems/buildchain/.github/workflows/.build.yml@v3',
+    /uses: kungfu-systems\/buildchain\/\.github\/workflows\/\.build\.yml@v3\s*$/mu.test(
+      buildWorkflow,
     ) ||
     buildWorkflow.includes('kungfu-trader/workflows@v1')
   )
@@ -303,7 +303,7 @@ export function validateRegistry(r, { root = ROOT } = {}) {
   );
   validateBuildWorkflowAuthority(
     buildWorkflow,
-    promotionRehearsal.buildchain.build_workflow_shell_sha,
+    promotionRehearsal.buildchain.build_workflow_shell_ref,
   );
   const promotionWorkflow = fs.readFileSync(
     path.join(root, '.github/workflows/release-new-version.yml'),
