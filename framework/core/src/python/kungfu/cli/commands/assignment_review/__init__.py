@@ -9,6 +9,7 @@ import os
 from pathlib import Path
 
 from kungfu import assignment_orchestration as orchestration
+from kungfu.initiative_family.canonical import semantic_root
 from kungfu import profile_sdk
 from kungfu.agent import run_agent
 from kungfu.workspace import resolve_workspace_target
@@ -219,7 +220,7 @@ def build_plan(
     status_reader,
 ):
     captured = orchestration.load_captured_request(request_file)
-    projected = orchestration.atlas_assignment_projection(
+    projected = orchestration.assignment_projection(
         captured,
         initiative_id=initiative_id,
         assignment_id=assignment_id,
@@ -327,7 +328,7 @@ def build_plan(
         ),
         "writeOccurred": False,
     }
-    return {**body, "planRoot": orchestration.semantic_root(body)}
+    return {**body, "planRoot": semantic_root(body)}
 
 
 def provider_project_trust(provider, workspace_root):
@@ -495,7 +496,7 @@ def project_prompt(plan):
 
 
 def receipt(body):
-    return {**body, "receiptRoot": orchestration.semantic_root(body)}
+    return {**body, "receiptRoot": semantic_root(body)}
 
 
 def native_receipt_root(payload):

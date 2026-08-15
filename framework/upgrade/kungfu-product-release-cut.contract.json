@@ -63,7 +63,7 @@
       "source checkout",
       "Git command",
       "Xinfa compiler",
-      "Atlas repository",
+      "external control-plane repository",
       "mutable Shifu cache",
       "network after download"
     ]

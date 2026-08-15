@@ -76,13 +76,13 @@ WorkspaceLoader = Callable[[WorkspaceIdentity], dict[str, Any]]
 def _load_parallel_component(identity: WorkspaceIdentity) -> dict[str, Any]:
     """Load one default component in an isolated POSIX reader process."""
 
-    from kungfu.atlas import mission_control
+    from kungfu import work_control
 
     return _safe_component(
         identity,
         lambda workspace: _load_component(
             workspace,
-            relation_loader=mission_control.assignment_relations,
+            relation_loader=work_control.assignment_relations,
         ),
     )
 
@@ -199,9 +199,9 @@ def query_federation(
     else:
         component_loader = loader
         if loader is _load_component:
-            from kungfu.atlas import mission_control
+            from kungfu import work_control
 
-            assignment_relations = mission_control.assignment_relations
+            assignment_relations = work_control.assignment_relations
 
             def load_parallel_component(identity: WorkspaceIdentity) -> dict[str, Any]:
                 return _load_component(identity, relation_loader=assignment_relations)
@@ -858,9 +858,9 @@ def _load_component(
     from kungfu.storage import service as storage_service
 
     if relation_loader is None:
-        from kungfu.atlas import mission_control
+        from kungfu import work_control
 
-        relation_loader = mission_control.assignment_relations
+        relation_loader = work_control.assignment_relations
 
     materials = storage_service.fact_material_list(runtime_dir)
     if materials.get("schema") != "kungfu.facts.material-catalog/v1":
@@ -1001,7 +1001,7 @@ def _material_lifecycle(
     record: Mapping[str, Any],
     phase_by_assignment: Mapping[str, tuple[int, str]],
 ) -> dict[str, Any]:
-    assignment_id = str(record.get("assignment_id") or record.get("goal_id") or "")
+    assignment_id = str(record.get("assignment_id") or "")
     phase = phase_by_assignment.get(assignment_id, (0, ""))[1] or str(
         record.get("orchestration_phase") or "admitted"
     )
@@ -1242,12 +1242,12 @@ def _assignment_lifecycle(
     runtime_dir: str,
     record: Mapping[str, Any],
 ) -> dict[str, Any]:
-    from kungfu.atlas import mission_control
+    from kungfu import work_control
 
-    status = mission_control.assignment_orchestration_status(
+    status = work_control.assignment_orchestration_status(
         runtime_dir,
         initiative_id=str(record.get("initiative_id") or ""),
-        assignment_id=str(record.get("assignment_id") or record.get("goal_id") or ""),
+        assignment_id=str(record.get("assignment_id") or ""),
         storage_source_id="atlas",
     )
     return assignment_lifecycle_projection(record, status)

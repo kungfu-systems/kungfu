@@ -1,0 +1,10 @@
+{
+  "schema": "xinfa.terminology-contract/v1",
+  "projectTerm": "external project",
+  "primitiveTerm": "Xinfa Atlas",
+  "canonicalSentence": "An external project compiles a Xinfa Atlas",
+  "forbiddenEquivalences": [
+    ["external project", "Xinfa Atlas"],
+    ["source repository", "xinfa.atlas/v1"]
+  ]
+}

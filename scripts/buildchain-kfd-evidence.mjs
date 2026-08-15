@@ -1406,7 +1406,7 @@ function kfd5GateInput({ workspace, sourceSha, checkedAt, standards }) {
       'assignment-minimum-closure',
       'minimum-closure',
       repoPath(
-        'framework/assignment-capture/fixtures/atlas-go-card-roundtrip-v1.json',
+        'framework/assignment-capture/fixtures/assignment-request-roundtrip-v1.json',
       ),
     ),
     gateEvidence(

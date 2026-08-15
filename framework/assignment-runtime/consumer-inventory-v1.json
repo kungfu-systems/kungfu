@@ -61,21 +61,6 @@
       "mutation": "single-realm-writer"
     },
     {
-      "id": "cli-atlas-bridge",
-      "kind": "cli",
-      "visibility": "public-and-hidden-compatibility",
-      "paths": [
-        "kungfu atlas import",
-        "kungfu profile mission-control authority-cutover",
-        "kungfu profile mission-control authority-rollback",
-        "kungfu profile mission-control import-mission",
-        "kungfu profile mission-control assess-completion"
-      ],
-      "operations": ["command.submit"],
-      "disposition": "runtime-writer-with-read-only-compatibility",
-      "mutation": "runtime-only"
-    },
-    {
       "id": "agent-action-loop",
       "kind": "agent",
       "visibility": "provider-runtime",
@@ -118,12 +103,6 @@
   ],
   "boundedCompatibility": [
     {
-      "id": "atlas-profile-reads",
-      "source": "framework/core/src/python/kungfu/cli/commands/atlas.py#_profile_read",
-      "mode": "read-only",
-      "deletionGate": "retained-v3-read-import-migration-rollback-bundle-qualification-and-zero-installed-observations"
-    },
-    {
       "id": "work-dashboard-profile-reads",
       "source": "extensions/work-dashboard/src/view/work-control-profile.ts#openWorkControlProfile",
       "mode": "read-only-production",
@@ -157,11 +136,6 @@
     {
       "path": "framework/core/src/python/kungfu/cli/commands/assignment.py",
       "required": ["LocalAssignmentRuntimeApplication", ".status(", ".authorize("],
-      "forbidden": ["profile_sdk.intent_apply("]
-    },
-    {
-      "path": "framework/core/src/python/kungfu/cli/commands/atlas.py",
-      "required": ["LocalAssignmentRuntimeApplication", "def _profile_read(", ".authorize("],
       "forbidden": ["profile_sdk.intent_apply("]
     },
     {

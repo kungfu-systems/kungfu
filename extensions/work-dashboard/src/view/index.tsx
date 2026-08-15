@@ -60,7 +60,7 @@ import {
 } from './project-work-run';
 // The GUI application surface is the versioned Runtime Client.  Domain-specific
 // Profile reads remain in work-control-profile.ts only as an explicit read-only
-// compatibility seam; no GUI transition can enter there.
+// native client seam; no GUI transition can enter there.
 export function openProfileApplication(runtime: AssignmentRuntime) {
   return runtime;
 }

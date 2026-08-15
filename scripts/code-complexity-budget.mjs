@@ -573,6 +573,7 @@ function regressionIssues(
   baseline,
   policy = {},
   renamedFrom = new Map(),
+  candidateAddedPaths = null,
 ) {
   const issues = [];
   const baselineByPath = new Map(
@@ -627,6 +628,7 @@ function regressionIssues(
       });
     if (
       !previous &&
+      (candidateAddedPaths === null || candidateAddedPaths.has(current.path)) &&
       current.class === 'first-party-handwritten-implementation' &&
       current.lines > budget.hard
     )
@@ -672,6 +674,8 @@ function regressionIssues(
   for (const current of files) {
     if (baselinePaths.has(current.path) || renamedFrom.has(current.path))
       continue;
+    if (candidateAddedPaths !== null && !candidateAddedPaths.has(current.path))
+      continue;
     if (current.class === 'first-party-handwritten-implementation') {
       if (!newHandwrittenByOwner.has(current.owner))
         newHandwrittenByOwner.set(current.owner, []);
@@ -704,7 +708,11 @@ function regressionIssues(
   }
   const currentByPath = new Map(files.map((file) => [file.path, file]));
   const renamedSources = new Set(renamedFrom.values());
-  const added = files.filter((file) => !baselinePaths.has(file.path));
+  const added = files.filter(
+    (file) =>
+      !baselinePaths.has(file.path) &&
+      (candidateAddedPaths === null || candidateAddedPaths.has(file.path)),
+  );
   const deleted = baseline.files.filter(
     (file) => !currentByPath.has(file.path) && !renamedSources.has(file.path),
   );
@@ -871,6 +879,31 @@ function currentRenameMap(policy) {
 function checkCurrent(policy, layers, baseline, ownership = []) {
   const files = measureCurrent(policy, layers, ownership);
   const renamedFrom = currentRenameMap(policy);
+  const protectedCandidates = policy.baselineGovernance
+    ? protectedBaselineCandidates(policy)
+    : [];
+  const protectedRef =
+    protectedCandidates.find((candidate) => {
+      const result = spawnSync(
+        'git',
+        ['rev-parse', '--verify', '--quiet', `${candidate}^{commit}`],
+        {
+          cwd: ROOT,
+          encoding: 'utf8',
+        },
+      );
+      return result.status === 0;
+    }) || protectedCandidates[0];
+  const protectedPaths = protectedRef
+    ? new Set(gitLines(['ls-tree', '-r', '--name-only', protectedRef]))
+    : null;
+  const candidateAddedPaths = protectedPaths
+    ? new Set(
+        files
+          .map((file) => file.path)
+          .filter((pathname) => !protectedPaths.has(pathname)),
+      )
+    : null;
   const issues = validateMeasured(files);
   const residueAudit = trackedComplexitySigningResidueAudit();
   issues.push(
@@ -900,7 +933,15 @@ function checkCurrent(policy, layers, baseline, ownership = []) {
       path: policy.baselinePath,
       message: 'baseline ref does not match current policy',
     });
-  issues.push(...regressionIssues(files, baseline, policy, renamedFrom));
+  issues.push(
+    ...regressionIssues(
+      files,
+      baseline,
+      policy,
+      renamedFrom,
+      candidateAddedPaths,
+    ),
+  );
   const requester = String(git(['show', '-s', '--format=%ae', 'HEAD'])).trim();
   const evaluationTime = new Date();
   const waivers = loadWaivers(policy);
@@ -921,19 +962,6 @@ function checkCurrent(policy, layers, baseline, ownership = []) {
   const waived = [];
   const blocking = [];
   if (policy.baselineGovernance) {
-    const candidates = protectedBaselineCandidates(policy);
-    const protectedRef =
-      candidates.find((candidate) => {
-        const result = spawnSync(
-          'git',
-          ['rev-parse', '--verify', '--quiet', `${candidate}^{commit}`],
-          {
-            cwd: ROOT,
-            encoding: 'utf8',
-          },
-        );
-        return result.status === 0;
-      }) || candidates[0];
     try {
       const protectedPolicy = readJsonAt(protectedRef, POLICY_PATH);
       const protectedBaseline = readJsonAt(

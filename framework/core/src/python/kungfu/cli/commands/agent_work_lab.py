@@ -582,8 +582,8 @@ class _NativeProjectTourOperations:
                 "expiresAt": None,
             },
             "workDefinition": {
-                "goal_id": assignment_id,
-                "mission_id": "project-work-tour-next",
+                "assignment_id": assignment_id,
+                "initiative_id": "project-work-tour-next",
                 "title": "Prepare the launch handoff for the next operator",
                 "objective": "Prepare the launch handoff for the next operator",
                 "acceptance_criteria": [

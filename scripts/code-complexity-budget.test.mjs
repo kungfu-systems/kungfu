@@ -341,6 +341,42 @@ test('anti-gaming rejects relabeling, responsibility splits, and re-added debt',
   assert.ok(readdedCodes.includes('grandfathered-file-grew'));
 });
 
+test('new-file anti-gaming ignores helpers already present on the protected base', () => {
+  const deleted = handwritten('scripts/legacy-hotspot.mjs', 120);
+  const protectedHelpers = [
+    handwritten('scripts/existing-reader.mjs', 5000),
+    handwritten('scripts/existing-writer.mjs', 50),
+    handwritten('scripts/existing-index.mjs', 20),
+    handwritten('scripts/existing-query.mjs', 20),
+  ];
+  const issues = regressionIssues(
+    protectedHelpers,
+    { groups, files: [deleted] },
+    {
+      antiGaming: {
+        maxNewHandwrittenFilesPerOwner: 3,
+        newGeneratedProjectionRequiresProvenance: true,
+      },
+    },
+    new Map(),
+    new Set(),
+  );
+  assert.equal(
+    issues.some((issue) => issue.code === 'responsibility-preserving-split'),
+    false,
+  );
+  assert.equal(
+    issues.some((issue) => issue.code === 'new-helper-proliferation'),
+    false,
+  );
+  assert.equal(
+    issues.some(
+      (issue) => issue.code === 'new-handwritten-file-over-hard-budget',
+    ),
+    false,
+  );
+});
+
 test('one-to-one Git renames preserve the old budget without becoming helper splits', () => {
   const deleted = handwritten('scripts/legacy-lab.mjs', 120);
   const renamed = handwritten('scripts/current-lab.mjs', 121);

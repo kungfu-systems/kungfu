@@ -326,7 +326,7 @@ function observeTerminalReview(matrix, pullRequest, head, headTree) {
       ({ comment, document }) =>
         comment?.user?.login === rule.reviewer &&
         document?.schema === rule.attestationSchema &&
-        document?.goalId === matrix.goalId &&
+        document?.assignmentId === matrix.assignmentId &&
         document?.commit === head &&
         document?.tree === headTree &&
         document?.reviewer === rule.reviewer &&
