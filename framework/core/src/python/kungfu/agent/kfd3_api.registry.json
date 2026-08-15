@@ -500,8 +500,8 @@
     {
       "id": "kungfu.agent.console.bind-work",
       "surface": "cli-api-gui",
-      "name": "kungfu agent console bind-work --initiative-id <id> --assignment-id <id> --json",
-      "purpose": "Atomically bind the current native SessionAttempt to one exact Assignment and reject a second active writer with actionable recovery guidance.",
+      "name": "kungfu agent console bind-work --initiative-id <id> --assignment-id <id> [--workspace <path>] --json",
+      "purpose": "Atomically bind the current native SessionAttempt to one exact Assignment in its same or explicitly selected Project and reject a second active writer with actionable recovery guidance.",
       "maturity": "experimental",
       "visibility": "public-agent",
       "anchor": {

@@ -1046,10 +1046,16 @@ def console_current(ctx, as_json):
 )
 @click.option("--initiative-id", required=True)
 @click.option("--assignment-id", required=True)
+@click.option(
+    "--workspace",
+    "workspace_root",
+    type=click.Path(file_okay=False),
+    help="exact Project workspace that owns the Assignment",
+)
 @click.option("--json", "as_json", is_flag=True, help="machine-readable output")
 @kfd3_api("kungfu.agent.console.bind-work")
 @agent_command_context
-def console_bind_work(ctx, initiative_id, assignment_id, as_json):
+def console_bind_work(ctx, initiative_id, assignment_id, workspace_root, as_json):
     raw = os.environ.get("KUNGFU_AGENT_CONSOLE_ENVELOPE", "").strip()
     try:
         current = session_surface.current_native_console(
@@ -1066,6 +1072,7 @@ def console_bind_work(ctx, initiative_id, assignment_id, as_json):
             str(ctx.runtime_dir),
             initiative_id,
             assignment_id,
+            work_workspace_root=workspace_root,
             **(
                 {}
                 if raw
