@@ -251,6 +251,15 @@ export function validateExistingPublicationIdentity({
   return bundle;
 }
 
+function replaceableLegacyPassportRef({ bundle, candidateSourceSha }) {
+  const ref = bundle?.identity?.releasePassport?.ref;
+  return (
+    typeof ref === 'string' &&
+    /^buildchain:release-passport\/[a-f0-9]{40}$/u.test(ref) &&
+    ref !== `buildchain:release-passport/${candidateSourceSha}`
+  );
+}
+
 async function fetchReleaseAsset(
   url,
   { fetcher = fetch, optional = false } = {},
@@ -285,13 +294,47 @@ export async function existingPublicationAuthority({
     optional: true,
   });
   if (!manifestBytes) return null;
-  const bundle = validateExistingPublicationIdentity({
-    bundle: JSON.parse(manifestBytes),
-    version,
-    candidateSourceSha,
-    releaseSha,
-    releaseTag,
-  });
+  const bundle = JSON.parse(manifestBytes);
+  let identityDrift = [];
+  try {
+    validateExistingPublicationIdentity({
+      bundle,
+      version,
+      candidateSourceSha,
+      releaseSha,
+      releaseTag,
+    });
+  } catch (error) {
+    const legacyPassportRef = replaceableLegacyPassportRef({
+      bundle,
+      candidateSourceSha,
+    });
+    const exactExceptPassportRef = {
+      ...bundle,
+      identity: {
+        ...bundle.identity,
+        releasePassport: {
+          ...bundle.identity?.releasePassport,
+          ref: `buildchain:release-passport/${candidateSourceSha}`,
+        },
+      },
+    };
+    if (!legacyPassportRef) throw error;
+    validateExistingPublicationIdentity({
+      bundle: exactExceptPassportRef,
+      version,
+      candidateSourceSha,
+      releaseSha,
+      releaseTag,
+    });
+    identityDrift = [
+      {
+        kind: 'release-passport-ref',
+        expected: `buildchain:release-passport/${candidateSourceSha}`,
+        observed: bundle.identity.releasePassport.ref,
+      },
+    ];
+  }
   const canonicalManifest = Buffer.from(`${JSON.stringify(bundle, null, 2)}\n`);
   if (!manifestBytes.equals(canonicalManifest)) {
     throw new Error(
@@ -305,7 +348,7 @@ export async function existingPublicationAuthority({
     fs.writeFileSync(path.join(temporaryRoot, 'bundle.json'), manifestBytes, {
       flag: 'wx',
     });
-    const releaseAssets = new Map();
+    const downloadedAssets = new Map();
     for (const asset of bundle.assets) {
       const expectedUrl = `${baseUrl}/${asset.releaseAsset}`;
       if (asset.releaseUrl !== expectedUrl) {
@@ -313,15 +356,15 @@ export async function existingPublicationAuthority({
           `existing installer publication asset URL drifted: ${asset.path}`,
         );
       }
-      if (!releaseAssets.has(asset.releaseAsset)) {
-        releaseAssets.set(
+      if (!downloadedAssets.has(asset.releaseAsset)) {
+        downloadedAssets.set(
           asset.releaseAsset,
           await fetchReleaseAsset(expectedUrl, { fetcher }),
         );
       }
       const destination = bundleAssetDestination(temporaryRoot, asset.path);
       fs.mkdirSync(path.dirname(destination), { recursive: true });
-      fs.writeFileSync(destination, releaseAssets.get(asset.releaseAsset), {
+      fs.writeFileSync(destination, downloadedAssets.get(asset.releaseAsset), {
         flag: 'wx',
       });
     }
@@ -352,7 +395,7 @@ export async function existingPublicationAuthority({
       : [];
     return {
       bundle,
-      artifactDrift,
+      artifactDrift: [...identityDrift, ...artifactDrift],
       manifestDigest: sha256(manifestBytes),
       manifestUrl,
     };
