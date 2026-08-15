@@ -106,8 +106,20 @@ def test_native_kfx_python_binding_is_a_thin_core_edge(tmp_path):
         )
 
 
-def test_native_kfx_registry_python_edge_forwards_host_authorization(
-    tmp_path, monkeypatch
+@pytest.mark.parametrize(
+    "action",
+    [
+        "authorize-host",
+        "runtime-warrant-issue",
+        "runtime-warrant-heartbeat",
+        "runtime-warrant-revoke",
+        "runtime-warrant-settle",
+        "runtime-warrant-recover",
+        "kfd-10-witness",
+    ],
+)
+def test_native_kfx_registry_python_edge_forwards_authority_actions(
+    tmp_path, monkeypatch, action
 ):
     calls = []
 
@@ -124,14 +136,14 @@ def test_native_kfx_registry_python_edge_forwards_host_authorization(
         "expectedAuthorizationRoot": f"sha256:{'a' * 64}",
     }
 
-    assert storage_service.kfx_registry("authorize-host", request, tmp_path) == {
+    assert storage_service.kfx_registry(action, request, tmp_path) == {
         "executionAllowed": False
     }
     assert calls == [
         (
             "kfx_runtime",
             str(tmp_path),
-            {"action": "authorize-host", "request": request},
+            {"action": action, "request": request},
         )
     ]
 

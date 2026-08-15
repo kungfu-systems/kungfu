@@ -530,17 +530,19 @@
         "documentSha256": "sha256:a2e1cf278c708eb597bfdc83817c6440d9a8b7a8291d67c447a73548427c89c4"
       },
       "implementation": {
-        "status": "partial",
+        "status": "implemented-specialized-witness",
         "surfaces": [
-          "framework/agent-work/evidence/kfd-7/warrant-decay-revocation.json"
+          "framework/core/src/libkungfu/src/runtime/kfx/native_registry.cpp",
+          "framework/kfx/kungfu-kfx-domain-profile.contract.json",
+          "framework/core/src/python/kungfu/storage/service.py"
         ]
       },
       "verification": {
         "status": "non-conforming-evidence",
         "evidenceRoots": [
           {
-            "path": "framework/agent-work/evidence/kfd-7/warrant-decay-revocation.json",
-            "sha256": "sha256:f6d15823561abed00ed00e32dd26a8f05468015eb653092f0e7867f7355c31b8"
+            "path": "framework/kfx/evidence/kfd-10/runtime-warrant-adopter.json",
+            "sha256": "sha256:46714aef4004b6b40def4881b9d7d4d5e2c8f1b40fe93b9bc140bb911bcfab88"
           }
         ]
       },
@@ -549,8 +551,8 @@
         "protocol": "none"
       },
       "exposure": {
-        "sdk": "status-schema",
-        "cli": "status-schema",
+        "sdk": "native-kfx-storage-service",
+        "cli": "not-product-exposed",
         "docs": "support-matrix"
       },
       "releaseQualification": {
@@ -560,9 +562,10 @@
       },
       "claimClass": "draft-adopter-evidence",
       "knownLimitations": [
-        "This is adopter evidence for design feedback, not KFD-10 conformance or shipped support."
+        "This is first-party specialized adopter evidence for design feedback, not KFD-10 conformance, activation, independent certification or shipped support.",
+        "The Core API is source-qualified; product host adapters do not yet consume leased Runtime Warrants by default."
       ],
-      "owner": "kungfu-agent-work",
+      "owner": "kungfu-kfx-control",
       "nextGate": "Keep evidence non-conforming until KFD-10 activation and an adopter qualification contract exist."
     },
     {
