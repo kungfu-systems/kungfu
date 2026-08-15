@@ -6,6 +6,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
+import { fileURLToPath } from 'node:url';
 
 import {
   createDeliveryBinding,
@@ -31,6 +32,26 @@ const TOOLCHAIN = {
     imageVersion: '20260720.1.0',
   },
 };
+const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+
+test('delivery attempt sealing preserves the verified dev delta plan', () => {
+  const workflow = fs.readFileSync(
+    path.join(ROOT, '.github/workflows/affected-native-pr.yml'),
+    'utf8',
+  );
+  assert.match(
+    workflow,
+    /name: Seal reconstructable family delivery attempt[\s\S]*delta_args=\(\)[\s\S]*--dev-delta-plan "\$delta_plan"[\s\S]*affected-native-proof\.mjs seal-attempt[\s\S]*"\$\{delta_args\[@\]\}"/u,
+  );
+  const proofSource = fs.readFileSync(
+    path.join(ROOT, 'scripts/affected-native-proof.mjs'),
+    'utf8',
+  );
+  assert.match(
+    proofSource,
+    /options\.command === 'seal-attempt'[\s\S]*deltaPlan: options\['dev-delta-plan'\][\s\S]*readJson\(path\.resolve\(options\['dev-delta-plan'\]\)\)/u,
+  );
+});
 
 function plan(head = HEAD, overrides = {}) {
   const body = {
