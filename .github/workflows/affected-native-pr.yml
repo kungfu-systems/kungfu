@@ -76,9 +76,9 @@ jobs:
 
   source_acceptance:
     name: Candidate source acceptance
-    uses: kungfu-systems/buildchain/.github/workflows/check.yml@fb0ad6d84f10a1f9b872a799e035232d82558bd0
+    uses: kungfu-systems/buildchain/.github/workflows/check.yml@0ef9b58e12f5982e374cc2669a3d55dd009992e5
     with:
-      buildchain-ref: fb0ad6d84f10a1f9b872a799e035232d82558bd0
+      buildchain-ref: 0ef9b58e12f5982e374cc2669a3d55dd009992e5
       mode: source
       upload-artifacts: true
       source-proof-reuse: true
@@ -1305,6 +1305,7 @@ jobs:
           node scripts/affected-native-proof.mjs seal-attempt \
             --descriptor "$admission/proof-admission/descriptor.json" \
             --bundle "$bundle" \
+            --dev-delta-plan "$admission/proof-admission/dev-delta-plan.json" \
             --decision "$decision" \
             --output-dir "$admission/delivery-attempt" \
             --repository "$GITHUB_REPOSITORY" \
@@ -1425,6 +1426,7 @@ jobs:
           node scripts/affected-native-proof.mjs seal-cache-authority \
             --descriptor "$admission/proof-admission/descriptor.json" \
             --bundle "$admission/proof-reuse" \
+            --dev-delta-plan "$admission/proof-admission/dev-delta-plan.json" \
             --output-dir "$admission/cache-promotion-authority" \
             --repository "$GITHUB_REPOSITORY" \
             --target-run-id "$GITHUB_RUN_ID" \
