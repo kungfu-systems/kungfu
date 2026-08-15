@@ -6,12 +6,15 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
+import { fileURLToPath } from 'node:url';
 
 import {
+  createCachePromotionAuthority,
   createDeliveryBinding,
   createProofDescriptor,
   createSemanticSourceProjection,
   digest,
+  sealProof,
   semanticSourceProjectionFromGit,
 } from './affected-native-proof.mjs';
 
@@ -31,6 +34,34 @@ const TOOLCHAIN = {
     imageVersion: '20260720.1.0',
   },
 };
+const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+
+test('delivery attempt sealing preserves the verified dev delta plan', () => {
+  const workflow = fs.readFileSync(
+    path.join(ROOT, '.github/workflows/affected-native-pr.yml'),
+    'utf8',
+  );
+  assert.match(
+    workflow,
+    /name: Seal reconstructable family delivery attempt[\s\S]*delta_args=\(\)[\s\S]*--dev-delta-plan "\$delta_plan"[\s\S]*affected-native-proof\.mjs seal-attempt[\s\S]*"\$\{delta_args\[@\]\}"/u,
+  );
+  const proofSource = fs.readFileSync(
+    path.join(ROOT, 'scripts/affected-native-proof.mjs'),
+    'utf8',
+  );
+  assert.match(
+    proofSource,
+    /options\.command === 'seal-attempt'[\s\S]*deltaPlan: options\['dev-delta-plan'\][\s\S]*readJson\(path\.resolve\(options\['dev-delta-plan'\]\)\)/u,
+  );
+  assert.match(
+    workflow,
+    /name: Seal reused-proof cache promotion authority[\s\S]*delta_args=\(\)[\s\S]*--dev-delta-plan "\$delta_plan"[\s\S]*affected-native-proof\.mjs seal-cache-authority[\s\S]*"\$\{delta_args\[@\]\}"/u,
+  );
+  assert.match(
+    proofSource,
+    /verifyCachePromotionAuthority[\s\S]*deltaPlan: authority\.proof\?\.deltaPlan[\s\S]*options\.command === 'seal-cache-authority'[\s\S]*deltaPlan: options\['dev-delta-plan'\][\s\S]*readJson\(path\.resolve\(options\['dev-delta-plan'\]\)\)/u,
+  );
+});
 
 function plan(head = HEAD, overrides = {}) {
   const body = {
@@ -61,6 +92,118 @@ function sourceBinding(sourceHead) {
     queueAdmissionContext: 'project-cut / queue-admission',
   });
 }
+
+function proofFixture(value) {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'affected-proof-delta-'));
+  const inputs = path.join(root, 'inputs');
+  const bundle = path.join(root, 'bundle');
+  const targets = value.targets;
+  const tests = value.tests;
+  const partition = {
+    schema: 'kungfu.core-affected-native-partition/v1',
+    index: 0,
+    count: 1,
+    targets,
+    tests,
+    partitionDigest: digest({
+      planDigest: value.planDigest,
+      index: 0,
+      count: 1,
+      targets,
+      tests,
+    }),
+    coverageDigest: digest({
+      planDigest: value.planDigest,
+      count: 1,
+      lanes: [{ index: 0, targets, tests }],
+    }),
+  };
+  fs.mkdirSync(path.join(inputs, 'partition-0'), { recursive: true });
+  fs.writeFileSync(
+    path.join(inputs, 'partition-0', 'receipt.json'),
+    `${JSON.stringify(
+      {
+        schema: 'kungfu.core-affected-native-receipt/v1',
+        status: 'passed',
+        source: { base: value.base, head: value.head },
+        plan: value,
+        planDigest: value.planDigest,
+        executionPartition: partition,
+        platform: 'linux-x64',
+        toolchain: TOOLCHAIN,
+      },
+      null,
+      2,
+    )}\n`,
+  );
+  return { root, inputs, bundle };
+}
+
+test('cache authority carries unrelated dev attribution into proof reuse', () => {
+  const sourcePlan = plan();
+  const value = proofFixture(sourcePlan);
+  try {
+    const pullDescriptor = createProofDescriptor(
+      sourcePlan,
+      TREE,
+      1,
+      TOOLCHAIN,
+      sourceBinding(HEAD),
+    );
+    const queueDescriptor = createProofDescriptor(
+      plan('5'.repeat(40), { base: OTHER_HEAD }),
+      TREE,
+      1,
+      TOOLCHAIN,
+      sourceBinding('5'.repeat(40)),
+    );
+    const deltaPlan = plan(OTHER_HEAD, {
+      changedPaths: ['docs/readme.md'],
+      directComponents: [],
+      closureComponents: [],
+      targets: [],
+      reasons: [{ path: 'docs/readme.md', kind: 'outside-core' }],
+    });
+    const proof = sealProof(pullDescriptor, value.inputs, {
+      repository: 'kungfu-systems/kungfu',
+      runId: 42,
+      event: 'pull_request',
+      workflowPath: '.github/workflows/affected-native-pr.yml',
+      triggerHeadSha: HEAD,
+      checkoutSha: HEAD,
+      createdAt: '2026-08-15T00:00:00Z',
+    });
+    fs.mkdirSync(value.bundle, { recursive: true });
+    fs.writeFileSync(
+      path.join(value.bundle, 'proof.json'),
+      `${JSON.stringify(proof, null, 2)}\n`,
+    );
+    fs.copyFileSync(
+      path.join(value.inputs, 'partition-0', 'receipt.json'),
+      path.join(value.bundle, 'partition-0.receipt.json'),
+    );
+    const authority = createCachePromotionAuthority(
+      queueDescriptor,
+      value.bundle,
+      {
+        targetRepository: 'kungfu-systems/kungfu',
+        targetRunId: 84,
+        targetEvent: 'merge_group',
+        targetHeadSha: '5'.repeat(40),
+        targetSourceTree: TREE,
+        producerRepository: 'kungfu-systems/kungfu',
+        producerRunId: 42,
+        producerEvent: 'pull_request',
+        producerHeadSha: HEAD,
+        now: '2026-08-15T01:00:00Z',
+        deltaPlan,
+      },
+    );
+    assert.equal(authority.proof.deltaPlan.planDigest, deltaPlan.planDigest);
+  } finally {
+    fs.rmSync(value.root, { recursive: true, force: true });
+  }
+});
 
 function runGit(repository, args) {
   return execFileSync('git', args, {
