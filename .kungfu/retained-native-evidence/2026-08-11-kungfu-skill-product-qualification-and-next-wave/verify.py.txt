@@ -1,0 +1,81 @@
+#!/usr/bin/env python3
+
+import hashlib
+import json
+import subprocess
+from pathlib import Path
+
+
+ROOT = Path(__file__).resolve().parent
+MANIFEST = ROOT / "manifest.json"
+
+
+def semantic_root(value):
+    canonical = json.dumps(
+        value, ensure_ascii=False, sort_keys=True, separators=(",", ":")
+    ).encode()
+    return "sha256:" + hashlib.sha256(canonical).hexdigest()
+
+
+def require_ancestor(commit, descendant):
+    result = subprocess.run(
+        ["git", "merge-base", "--is-ancestor", commit, descendant],
+        cwd=ROOT,
+        check=False,
+    )
+    if result.returncode != 0:
+        raise SystemExit(f"{commit} is not an ancestor of {descendant}")
+
+
+def main():
+    manifest = json.loads(MANIFEST.read_text(encoding="utf-8"))
+    body = {key: value for key, value in manifest.items() if key != "manifestRoot"}
+    if manifest["manifestRoot"] != semantic_root(body):
+        raise SystemExit("manifestRoot does not match the exact manifest body")
+
+    cut = manifest["qualifiedCut"]["sourceCommit"]
+    if cut != "df271a2e6fac2c7efdf6f54b13d4c836d4325b33":
+        raise SystemExit("qualified protected cut changed")
+    for child_merge in (
+        "b4a10ea2a165f0d8eb1010b6d913069b1f17f39f",
+        "52230bcb2ed98cd83e4da4d6d30974f69e480f7f",
+        "734a311f345d0bd19a5e1aa14154b6f9350b99fa",
+        "ff6d923ba2ad16ec4b0272df807ba7f926e389f9",
+        "93e12817afd31bba7109acd161f1551d2437caf4",
+        "df271a2e6fac2c7efdf6f54b13d4c836d4325b33",
+    ):
+        require_ancestor(child_merge, cut)
+
+    if manifest["decisionProtocol"]["outcomes"] != [
+        "auto-draft",
+        "auto-use-existing",
+        "none",
+        "plan-only",
+        "suggest-create",
+        "suggest-existing",
+    ]:
+        raise SystemExit("six-outcome decision set changed")
+    if set(manifest["runtimeAudit"]["surfaces"]) != {
+        "agent",
+        "cli",
+        "gui",
+        "managed-run",
+        "tui",
+    }:
+        raise SystemExit("runtime audit surface set changed")
+    if manifest["runtimeAudit"]["recoveryVerdict"] != "pass":
+        raise SystemExit("runtime recovery no longer passes")
+    if manifest["judgment"]["materialResiduals"]:
+        raise SystemExit("terminal judgment contains an owned residual")
+    if manifest["judgment"]["nextWaveRequired"]:
+        raise SystemExit("terminal judgment unexpectedly requires a successor wave")
+    if not any("Linux" in row for row in manifest["nonClaims"]):
+        raise SystemExit("Linux non-claim is missing")
+    if not any("Windows" in row for row in manifest["nonClaims"]):
+        raise SystemExit("Windows non-claim is missing")
+
+    print(json.dumps({"ok": True, "manifestRoot": manifest["manifestRoot"]}, sort_keys=True))
+
+
+if __name__ == "__main__":
+    main()

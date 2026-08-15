@@ -1,0 +1,110 @@
+{
+  "schema": "kungfu.skill-product-terminal-qualification/v1",
+  "initiativeId": "2026-08-11-kungfu-skill-agent-native-product-system",
+  "assignmentId": "2026-08-11-kungfu-skill-product-qualification-and-next-wave",
+  "workDefinitionRoot": "sha256:02ac51f609f87b4e24db0388a7abb3fb43da8fbb837bee10ca3bf52f7544d19d",
+  "requestRoot": "sha256:2c299320be4acfe2e0e3157b479df3723fbc564c4b083d066871f6b2680b926e",
+  "qualifiedCut": {
+    "repository": "kungfu-systems/kungfu",
+    "protectedBranch": "dev/v4/v4.0",
+    "sourceCommit": "df271a2e6fac2c7efdf6f54b13d4c836d4325b33",
+    "sourceTree": "c2044047ca2f7bb342059e6aa97cbebff24885d7",
+    "containsAllSixProtectedMerges": true,
+    "child6PullRequest": 3109
+  },
+  "sourceQualification": {
+    "command": "./shifu test:skill-lifecycle",
+    "result": "passed",
+    "pythonTests": 85,
+    "negativeCases": 10,
+    "contractRoot": "sha256:43ac9f0eb2e3e1a4db4217be5501c0a67a7e7431a5a69ec50a376981c8e61700",
+    "knownWarnings": ["two macOS temporary-directory cleanup warnings; assertions and exit status passed"]
+  },
+  "installedProduct": {
+    "command": "./shifu dist:cli",
+    "platform": "darwin-arm64",
+    "archive": "kungfu-episodes-cli-darwin-arm64.tar.gz",
+    "archiveSha256": "sha256:a97eab5267dad539f4a2d37e688547132532d5c2fea69b7604d7a2114412af9a",
+    "qualificationRoot": "sha256:49c9b8241b7bd23bf297c30b4e026061e1cd036460bdf41a62644e4a5a8d8c2e",
+    "version": "4.0.0-alpha.1",
+    "briefRoot": "sha256:f96490b1832290084aa366bd0f40a079a14273dc0df85b504b9a0b73ac1b14f8",
+    "temporaryHome": true,
+    "temporaryWorkspace": true,
+    "sourceCheckoutRequiredForReadback": false
+  },
+  "decisionProtocol": {
+    "outcomes": ["auto-draft", "auto-use-existing", "none", "plan-only", "suggest-create", "suggest-existing"],
+    "decisionRoot": "sha256:cef7f93d34d13523c7744359a23eaa7bc8bd88987e47ddc61abd8f0dfdf12cce",
+    "policyRoot": "sha256:dc8ebb873760e55c40ef19b8354ba1e2b91706064a48dec00b1eb8dac0479267",
+    "effectfulSemantics": ["authority", "capability", "credential", "destructive", "external-write", "historical", "identity", "kfx", "network", "privacy", "profile", "publication", "shared-install"],
+    "effectfulOutcome": "plan-only",
+    "autoDraftInstalls": false,
+    "autoDraftActivates": false,
+    "privateSignalFieldsRejected": ["credentials", "hiddenPrompt", "rawTranscript"]
+  },
+  "skillClasses": {
+    "instructionOnly": {"status": "inert", "executionAllowed": false, "decisionCode": "KF_SKILL_INSTRUCTION_ONLY_INERT", "planRoot": "sha256:a7bbdeb520c4e6b78c8672e39fda8c3ccbb4ced9f63751da051ee3a6a5b8a76a", "auditIdentityRoot": "sha256:d4d26bcb10faa1e832831e00a0366044cc5490c9c58b94acbc2ad47a27e356af"},
+    "operational": {"authority": "exact Core-native KFX authorization", "crossSurfaceRootEquality": true},
+    "domain": {"authority": "exact active Profile contribution", "crossSurfaceRootEquality": true}
+  },
+  "installedLifecycle": {
+    "install": {"planRoot": "sha256:409fefee4634c48624e2f46b3b21aae0da66ba6cea3d6bfb8b5a6f0a2d086036", "receiptRoot": "sha256:9e1f62dd275b41c5cb5641a2be3aac07a3ac62cd7df097645207a03713b41385"},
+    "enable": {"planRoot": "sha256:8adeace34ae139840465abeea410b0d5571d6e0290159c45031ea030c2406284", "receiptRoot": "sha256:54966a57acb0c888c86997ab26add22e6769451e991178830b74cb314760ac41"},
+    "select": {"planRoot": "sha256:0a5f9f4db0c7282c40aec3c1760ec3bf6d5c8c0afdd2ea6eb12d0199f83afcb7", "receiptRoot": "sha256:e924930ae4f810671eea68d65df2df30de04eeb078813ba3b6ac00c682c4e4f6"},
+    "load": {"planRoot": "sha256:362b6241e85795e8474a9906958b67e24afc6ac916a36a9b1146e1e6db0cb61b", "receiptRoot": "sha256:971f1512459ae99ec5f803f76a624cdd929a4d1550332ad2ecc66b8f717f0a27"},
+    "invoke": {"planRoot": "sha256:bd8278c9220524ee014438ca7e22e056ddba89322c932eab381a678f365ed214", "receiptRoot": "sha256:20562709205cbbcfad4c88515849f32394ce68a645fd497ff51d15274f24d874"},
+    "selectedStateRoot": "sha256:de30e75545c346f7f69a8d6194bb379d3ec528e69e2f3033aadd294ec4836874",
+    "finalStateRoot": "sha256:af72f344dede6575c2d7db33788274d10c0ac0aee0431e2faebc26cf51a11647"
+  },
+  "runtimeAudit": {
+    "registryStateRoot": "sha256:af72f344dede6575c2d7db33788274d10c0ac0aee0431e2faebc26cf51a11647",
+    "diagnosisRoot": "sha256:260021f6e162f6f731cdba0cc7e7d4e8792bc0d5b972089a37613e543fe031ae",
+    "historyRoot": "sha256:150dd441e87db42670d911f44fa71ba8300bb3244ce49ecf1a5d074e55f85912",
+    "scopedInstalledRuntimeAuditRoot": "sha256:7536b94c54ff9356636032de5da8852db86c184b27dec639781c26f556403e4d",
+    "scopedInstalledDocumentRoot": "sha256:b3a60f554cc7bbbb52c162b11b9ce5af7b0de524942b4b868a87b3a1c6da67c7",
+    "unscopedInstalledRuntimeAuditRoot": "sha256:090393f6dd8946bc3336adf785cedb6dfa0eb0a3d1723d48432fb2af89389c57",
+    "unscopedInstalledDocumentRoot": "sha256:69d836823e8bc4c4515d177cca78775a933e23f6d4240dee0bacb018e00352d5",
+    "surfaces": ["agent", "cli", "gui", "managed-run", "tui"],
+    "surfaceRootsEqual": true,
+    "historyPreserved": true,
+    "recoveryVerdict": "pass"
+  },
+  "faultCampaign": {
+    "verdict": "pass",
+    "covered": ["class-boundary", "concurrent-writer", "crash-after-payload", "crash-after-state", "duplicate-catalog", "historical-replay", "identity-collision", "missing-kfx", "path-collision", "prompt-injection", "provider-parity", "removal-history", "revoked-or-untrusted-kfx", "rollback-and-recovery", "stale-plan", "untrusted-source", "work-selection"],
+    "evidence": ["framework/core/tests/python/test_agent_skill_advisory.py", "framework/core/tests/python/test_skill_authoring.py", "framework/core/tests/python/test_skill_lifecycle.py"]
+  },
+  "family": {
+    "wave1StateRoot": "sha256:d3a414d16ac001e0317a5c6044eb5b5d33f1e0797f2f0c5dc66f2b9b6985682b",
+    "wave1ReconciliationRoot": "sha256:0eccafc8f670a994d2d94bdce1a802e68641981aeb50797c3d8a91a1db12b9de",
+    "wave1ExactEvidenceValid": true,
+    "wave1MergedChildren": 6,
+    "wave2HistoricalStateRoot": "sha256:b6b9306efff6ec81623454049a8cd998b2d13f02ceb3164a3e6cdce783cff3ea",
+    "legacyDisposition": "deferred-as-superseded; archive only after child7 closes",
+    "kfxFoundationDisposition": "deferred-as-retained-conversion-ready-evidence; PR 1624 remains unpromoted"
+  },
+  "nativeRecovery": {
+    "observedFailure": "Work Control authority unavailable after protected-cut rebase changed the exact Profile root",
+    "failureMode": "fail-closed",
+    "recoveryCommand": "./shifu work resume-prepare --workspace <exact-worktree> --actor codex/pro-8180/root --execute",
+    "previousProfileSuiteRoot": "sha256:91a8d4b8c5241bda91e2531fb329a314e1af8e635a86d56127a7f2c9cf1befe0",
+    "activeProfileSuiteRoot": "sha256:8be46ac241299a4b30fbf58d3acf5c61a74b71bbba2b8a084ea54a83af642b41",
+    "statusRecovered": true,
+    "nextAction": "stage"
+  },
+  "judgment": {
+    "verdict": "qualified-with-bounded-nonclaims",
+    "materialResiduals": [],
+    "nextWaveRequired": false,
+    "publicReleaseQualified": false
+  },
+  "nonClaims": [
+    "Linux is not qualified by this evidence.",
+    "Windows is not qualified by this evidence.",
+    "The local development archive is not a public release artifact.",
+    "GUI and TUI claims are exact shared-document projection parity, not separate packaged visual-session qualification.",
+    "The intentionally unpromoted KFX PR 1624 is not represented as merged.",
+    "NAS exact-publish evidence is deferred by user direction and is not part of this qualification claim."
+  ],
+  "manifestRoot": "sha256:b462ac5b256289876aa4ddbbc517a86234be8983456ba0dd276d36c4030288f8"
+}
