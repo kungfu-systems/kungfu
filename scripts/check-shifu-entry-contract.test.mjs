@@ -238,6 +238,15 @@ test('Windows source Kungfu route projects built TUI Product paths', () => {
   );
 });
 
+test('Windows launcher is checked out with cmd-safe line endings', () => {
+  const result = spawnSync('git', ['check-attr', 'eol', '--', 'shifu.cmd'], {
+    cwd: ROOT,
+    encoding: 'utf8',
+  });
+  assert.equal(result.status, 0, result.stderr);
+  assert.equal(result.stdout.trim(), 'shifu.cmd: eol: crlf');
+});
+
 test('cached pinned uv activates Work after Qualified Core materialization', (t) => {
   if (process.platform === 'win32') {
     t.skip('POSIX launcher contract');
@@ -482,7 +491,9 @@ test('Xinfa source entry prefers hash-pinned wasm and preserves native fallback'
 
 test('Xinfa quality uses the source resolver and forwards one Windows mode', () => {
   const posix = fs.readFileSync(path.join(ROOT, 'shifu'), 'utf8');
-  const windows = fs.readFileSync(path.join(ROOT, 'shifu.cmd'), 'utf8');
+  const windows = fs
+    .readFileSync(path.join(ROOT, 'shifu.cmd'), 'utf8')
+    .replaceAll('\r\n', '\n');
   const posixBlock = posix.match(/xinfa:quality\)[\s\S]*?;;/u)?.[0];
   const windowsBlock = windows.match(
     /:xinfaquality[\s\S]*?(?=\r?\n:projectcut\r?\n)/u,

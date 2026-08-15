@@ -856,6 +856,7 @@ export function sourceAcceptancePlan(
               'scripts/kungfu-xinfa-consumer.test.mjs',
               'scripts/check-kungfu-gate-catalog.test.mjs',
               'scripts/linux-arm64-alpha-qualification-workflow.test.mjs',
+              'scripts/affected-native-delivery-attempt.test.mjs',
               'scripts/affected-native-proof.test.mjs',
               'scripts/affected-native-semantic-source.test.mjs',
               'scripts/qualified-assignment-core-artifact.test.mjs',
