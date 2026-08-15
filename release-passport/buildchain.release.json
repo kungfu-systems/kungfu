@@ -1,10 +1,10 @@
 {
   "schemaVersion": 1,
   "contract": "kungfu-buildchain-release-passport",
-  "generatedAt": "2026-08-15T19:42:43.673Z",
+  "generatedAt": "2026-08-15T20:23:19.955Z",
   "surfaceTimestampPolicy": {
-    "generatedAt": "2026-08-15T19:42:43.673Z",
-    "publishedAt": "2026-08-15T19:42:43.673Z",
+    "generatedAt": "2026-08-15T20:23:19.955Z",
+    "publishedAt": "2026-08-15T20:23:19.955Z",
     "reproducible": true,
     "timestampPolicy": "ci-injected",
     "deterministicInputs": [
@@ -62,7 +62,7 @@
     "treeEquivalent": true,
     "publishToolingSha": "842be043a25a997bcc8b3b2568bd246aedca95ce",
     "releaseStateRef": "refs/heads/buildchain/release-state/4-0-0-alpha-2",
-    "releaseStateSha": "cdfa228d5954d329d05b1b571a5a52b9de79ad6d",
+    "releaseStateSha": "",
     "package": {
       "name": "@kungfu-tech/buildchain",
       "version": "4.0.0-alpha.2"
@@ -92,7 +92,7 @@
     "statePath": "/home/runner/work/kungfu/kungfu/.buildchain/release-state/v4.0.0-alpha.2.json",
     "stateSha": "",
     "evidencePath": "/home/runner/work/kungfu/kungfu/.buildchain/release-evidence/v4.0.0-alpha.2/evidence.json",
-    "updatedAt": "2026-08-15T19:42:32.465Z",
+    "updatedAt": "2026-08-15T20:23:09.482Z",
     "result": {
       "command": "finalize",
       "validation": {
@@ -111,7 +111,7 @@
     "shell": {
       "channel": "alpha",
       "ref": "train/v3/v3.0/consumer-equivalent-self-dogfood",
-      "sha": "000871e89f3ec8c8f6a412d2f38d17936a018a54"
+      "sha": "2f70b588058df5b6b2db75b9a33394bc052d9500"
     },
     "runtime": {
       "requestedRef": "a99aae7bdc13790a7941608ff42eb7a8020545cb",
@@ -73046,7 +73046,7 @@
         },
         "sourceVerification": {
           "status": "passed",
-          "verifiedAt": "2026-08-15T19:42:49.723Z",
+          "verifiedAt": "2026-08-15T20:23:26.096Z",
           "required": true,
           "surfaces": [
             {
@@ -73237,7 +73237,7 @@
         },
         "artifactVerification": {
           "status": "passed",
-          "verifiedAt": "2026-08-15T19:42:49.723Z",
+          "verifiedAt": "2026-08-15T20:23:26.096Z",
           "surfaces": [
             {
               "name": "kungfu-config",
@@ -73665,7 +73665,7 @@
         },
         "sourceVerification": {
           "status": "passed",
-          "verifiedAt": "2026-08-15T19:42:49.723Z",
+          "verifiedAt": "2026-08-15T20:23:26.096Z",
           "required": false,
           "surfaces": [
             {
@@ -73704,7 +73704,7 @@
         },
         "artifactVerification": {
           "status": "passed",
-          "verifiedAt": "2026-08-15T19:42:49.723Z",
+          "verifiedAt": "2026-08-15T20:23:26.096Z",
           "surfaces": [
             {
               "name": "documentation-atlas",
@@ -73759,7 +73759,7 @@
     "schemaVersion": 1,
     "contract": "kungfu-buildchain-kfd-2-release-trust-passport-audit",
     "status": "downgraded",
-    "verifiedAt": "2026-08-15T19:42:49.827Z",
+    "verifiedAt": "2026-08-15T20:23:26.202Z",
     "auditBoundary": {
       "scope": "public release claims visible to humans or agents",
       "policy": "public claims must bind declared sources, machine-readable evidence, hashes, artifact coordinates, verification results, audit boundaries, responsibility state, and residual risk"
@@ -91390,7 +91390,7 @@
         },
         "comparison": {
           "status": "passed",
-          "verifiedAt": "2026-08-15T19:42:49.800Z",
+          "verifiedAt": "2026-08-15T20:23:26.174Z",
           "supportLevel": "release",
           "declaredPublicSurfaceCount": 398,
           "declaredShippedPublicSurfaceCount": 398,
@@ -91411,9 +91411,9 @@
     "authority": {
       "manifestPath": "kfd-adopter-manifest.json",
       "manifestContract": "kfd.adopter-conformance-manifest/v1",
-      "manifestRoot": "sha256:2b6b43e4f4251716cd5261c642df3a9737aa137293e8ff5928d204f825517289",
+      "manifestRoot": "sha256:22d3337b936af32bcbd624864ac9014ee408a390a1ed6e1c5b2e3e89b6054aa8",
       "gatePath": "kfd-adopter-manifest-gate.json",
-      "gateRoot": "sha256:cc98a652e4326bb2b9ed3d38dc56c7ac871ef83357a4d68bf6fc2bb44016a99e"
+      "gateRoot": "sha256:a708156dc44d081f43c0a3487420a45b4d892923f987821c69fb19113eb1d628"
     },
     "adopter": {
       "id": "kungfu-systems/kungfu"
@@ -91432,22 +91432,22 @@
       "verifierSetRoot": "sha256:aad9b4193e965b68e465bbe4e648e5a03c3d78a6575dfda1d5e90943404779f4"
     },
     "witness": {
-      "decisionRoot": "sha256:0c87abf49cc4988f604bc7e7daa754f965c79f530a3dbeec5704f02a470d643b",
+      "decisionRoot": "sha256:dace794e835f7c8e5e08d70bb8e114c4e38fe19f15af8e057bfff92a7780386e",
       "verificationReportRoot": "sha256:ea478aebb47254943655480014d024b56497e0afa313df782a9ed711bac366fc",
-      "bundleRoot": "sha256:de4d18d050240f7f8c1ce83bd1a98b6879147a5c0d009e83b1c4a8a676b6b1c3"
+      "bundleRoot": "sha256:b3b1fca583d6f9b1b0fc774ebf24d657620091f3b3833ddc9a19786f2c1e55e6"
     },
     "legacyProjection": {
       "path": "kfd-support.json",
       "contract": "kungfu-kfd-support-matrix",
-      "root": "sha256:50ac6f402133066708b42705785023785cffb87a5ffe35843911cd3d68a94a0c",
-      "authorityRoot": "sha256:2b6b43e4f4251716cd5261c642df3a9737aa137293e8ff5928d204f825517289",
-      "gateRoot": "sha256:cc98a652e4326bb2b9ed3d38dc56c7ac871ef83357a4d68bf6fc2bb44016a99e"
+      "root": "sha256:62f55433d6620799b5880054919d899bfd073e4d57a846da1bcd34d0a6ba33a4",
+      "authorityRoot": "sha256:22d3337b936af32bcbd624864ac9014ee408a390a1ed6e1c5b2e3e89b6054aa8",
+      "gateRoot": "sha256:a708156dc44d081f43c0a3487420a45b4d892923f987821c69fb19113eb1d628"
     },
     "nonClaims": [
       "This binding proves exact release-envelope consumption, not KFD certification or release authorization.",
       "The legacy support matrix remains a projection of the standard adopter manifest authority."
     ],
-    "bindingRoot": "sha256:8acc8c68f81b93342c5dd5be63d6461a768f8696466a4b13f6ac6c21a73ef3a7"
+    "bindingRoot": "sha256:524de61a1255f198f149929896b7958106b3d8a14312d45832419c05bd840a2c"
   },
   "kfdSupport": {
     "schemaVersion": 1,
@@ -91455,8 +91455,8 @@
     "authority": {
       "path": ".buildchain/kfd/adopter-manifest.json",
       "contract": "kfd.adopter-conformance-manifest/v1",
-      "root": "sha256:2b6b43e4f4251716cd5261c642df3a9737aa137293e8ff5928d204f825517289",
-      "gateRoot": "sha256:cc98a652e4326bb2b9ed3d38dc56c7ac871ef83357a4d68bf6fc2bb44016a99e",
+      "root": "sha256:22d3337b936af32bcbd624864ac9014ee408a390a1ed6e1c5b2e3e89b6054aa8",
+      "gateRoot": "sha256:a708156dc44d081f43c0a3487420a45b4d892923f987821c69fb19113eb1d628",
       "adopterId": "kungfu-systems/kungfu",
       "sourceRepository": "kungfu-systems/kungfu",
       "sourceSha": "842be043a25a997bcc8b3b2568bd246aedca95ce"
@@ -91603,7 +91603,7 @@
         "declaration": {
           "state": "candidate",
           "usage": "used",
-          "root": "sha256:a430f3a90fac7864a15f63628ec445a4895d1e0b310ef7999841f991670bd7f7"
+          "root": "sha256:7eb51244690621e18423e37bf6447fdf62b8d081e2e8d5253a76dd6c2fcb4df5"
         }
       },
       {
@@ -91637,7 +91637,7 @@
         "declaration": {
           "state": "candidate",
           "usage": "evaluating",
-          "root": "sha256:491fa8e04444e649e2d5e82648e7beaca52e71725b91b27d946f8c7a5e5590ff"
+          "root": "sha256:4e3e33c6369425920b3039319a44bd4d577c537880fa0465a300aeaf0099bcd1"
         }
       },
       {
@@ -91705,7 +91705,7 @@
         "declaration": {
           "state": "candidate",
           "usage": "used",
-          "root": "sha256:9f1a254476b3c84211a23cdf59cb968d152efac1455985f7be2c00773f46e6c2"
+          "root": "sha256:8dd1a281c7de0279b4036889f0b523d2b9b6ec4e9ef71551996b51f388e50908"
         }
       },
       {
@@ -91920,7 +91920,7 @@
     "passports": [
       {
         "path": "",
-        "sha256": "1f304fb7b451d0809b172c41d0cced0228cb71816e65b9c54ff638a6c8fb57c9",
+        "sha256": "61b7243f41756008226b30e8cacc4f6d5659245ac84b423a7fda60925448b51c",
         "schema": "kungfu.invariant-passport/v1",
         "product": "Kungfu",
         "passportRoot": "sha256:2d6fd4eaa68716ed98bbc57d0d3dc28deaf58621618d091f7a428333334cc2b4",
