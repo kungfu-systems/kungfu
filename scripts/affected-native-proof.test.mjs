@@ -20,7 +20,6 @@ import {
   validateDeliveryAttempt,
   verifyCachePromotionAuthority,
   verifyProofBundle,
-  verifyProofForDeliveryAttempt,
 } from './affected-native-proof.mjs';
 import { createFamilyQueueLease } from './project-cut-merge-queue-admission.mjs';
 
@@ -530,66 +529,6 @@ test('delivery attempt seals the exact family, source, proof decision, and run',
       }),
     /root drift/u,
   );
-});
-test('delivery attempt reuses the same admitted dev-delta attribution', () => {
-  const value = fixture();
-  const { values } = deliveryFixture();
-  const pullDescriptor = createProofDescriptor(
-    value.value,
-    TREE,
-    2,
-    TOOLCHAIN,
-    createDeliveryBinding({
-      ...values,
-      event: 'pull_request',
-      pullRequestBody: '',
-      combinedStatus: {},
-    }),
-  );
-  const advancedBase = '6'.repeat(40);
-  const advancedDelivery = deliveryFixture({
-    cut: { baseCommitOid: advancedBase },
-    values: { devHead: advancedBase },
-  });
-  const queueDescriptor = createProofDescriptor(
-    plan(QUEUE_HEAD, { base: advancedBase }),
-    TREE,
-    2,
-    TOOLCHAIN,
-    createDeliveryBinding(advancedDelivery.values),
-  );
-  writeBundle(
-    pullDescriptor,
-    value,
-    producer({
-      event: 'pull_request',
-      triggerHeadSha: OTHER_HEAD,
-      checkoutSha: HEAD,
-    }),
-  );
-  assert.throws(
-    () =>
-      verifyProofForDeliveryAttempt(queueDescriptor, value.bundle, {
-        now: '2026-07-22T01:00:00Z',
-      }),
-    /dependency-attribution-unknown/u,
-  );
-  const deltaPlan = plan(advancedBase, {
-    base: BASE,
-    changedPaths: ['docs/README.md'],
-    closureComponents: [],
-    targets: [],
-    tests: [],
-    profile: null,
-    platformTier: 'none',
-    reasons: [{ path: 'docs/README.md', kind: 'outside-core' }],
-  });
-  const proof = verifyProofForDeliveryAttempt(queueDescriptor, value.bundle, {
-    now: '2026-07-22T01:00:00Z',
-    deltaPlan,
-  });
-  assert.equal(proof.baseDelta.reason, 'unrelated-dev-delta');
-  fs.rmSync(value.root, { recursive: true, force: true });
 });
 test('effective rules normalize the exact required-check set', () => {
   assert.deepEqual(

@@ -1309,23 +1309,6 @@ export function verifyProofBundle(descriptor, bundleDir, options) {
   return { ...proof, baseDelta };
 }
 
-export function verifyProofForDeliveryAttempt(
-  descriptor,
-  bundleDir,
-  options = {},
-) {
-  const untrustedProof = readJson(path.join(bundleDir, 'proof.json'));
-  return verifyProofBundle(descriptor, bundleDir, {
-    repository: untrustedProof.producer?.repository,
-    producerRunId: untrustedProof.producer?.runId,
-    producerEvent: untrustedProof.producer?.event,
-    producerHeadSha: untrustedProof.producer?.triggerHeadSha,
-    maxAgeSeconds: Number(options.maxAgeSeconds || DEFAULT_MAX_AGE_SECONDS),
-    now: options.now,
-    deltaPlan: options.deltaPlan || null,
-  });
-}
-
 export function createDeliveryAttempt(descriptor, proof, decision, producer) {
   if (!['fresh', 'reused'].includes(decision)) {
     throw new Error('affected-native proof decision is invalid');
@@ -1941,8 +1924,15 @@ async function main() {
   if (options.command === 'seal-attempt') {
     const descriptor = readJson(path.resolve(options.descriptor));
     const bundle = path.resolve(options.bundle);
-    const proof = verifyProofForDeliveryAttempt(descriptor, bundle, {
-      maxAgeSeconds: options['max-age-seconds'],
+    const untrustedProof = readJson(path.join(bundle, 'proof.json'));
+    const proof = verifyProofBundle(descriptor, bundle, {
+      repository: untrustedProof.producer?.repository,
+      producerRunId: untrustedProof.producer?.runId,
+      producerEvent: untrustedProof.producer?.event,
+      producerHeadSha: untrustedProof.producer?.triggerHeadSha,
+      maxAgeSeconds: Number(
+        options['max-age-seconds'] || DEFAULT_MAX_AGE_SECONDS,
+      ),
       now: options.now,
       deltaPlan: options['dev-delta-plan']
         ? readJson(path.resolve(options['dev-delta-plan']))
