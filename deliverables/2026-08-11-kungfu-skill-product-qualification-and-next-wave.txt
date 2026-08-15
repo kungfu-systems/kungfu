@@ -1,0 +1,35 @@
+Kungfu Skill Agent-native product system — bounded terminal judgment
+
+Verdict: QUALIFIED WITH BOUNDED NON-CLAIMS
+
+The exact protected source cut is df271a2e6fac2c7efdf6f54b13d4c836d4325b33
+(tree c2044047ca2f7bb342059e6aa97cbebff24885d7). It contains all six protected
+child merges. Source qualification passed 85 Python lifecycle tests plus the
+v2 contract, golden fixtures, and 10 negative cases. The installed darwin-arm64
+CLI archive is bound to sha256:a97eab5267dad539f4a2d37e688547132532d5c2fea69b7604d7a2114412af9a
+and qualification root sha256:49c9b8241b7bd23bf297c30b4e026061e1cd036460bdf41a62644e4a5a8d8c2e.
+
+The result proves:
+- instruction-only, operational, and domain class/authority boundaries;
+- six deterministic Agent decisions and plan-only handling of material effects;
+- install/enable/select/load/invoke plan-receipt separation and history;
+- same-root Agent/CLI/GUI/managed-run/TUI audit projection;
+- stale/concurrent writer refusal, atomic crash recovery, prompt-injection and
+  untrusted-source refusal, KFX/Profile exact-root gates, removal/history replay,
+  authoring deduplication, and private-signal rejection;
+- Wave 1 exact reconciliation (6/6 merged and proved) and Wave 2 truthful
+  historical dispositions for the superseded legacy card and unpromoted KFX PR.
+
+No material in-scope residual remains, so no residual successor wave is needed.
+The native Work still requires stage, fresh-context independent review,
+protected evidence-only delivery, close, seal, and final Atlas reconciliation.
+
+Non-claims:
+- Linux and Windows are unqualified.
+- The local development archive is not a public release.
+- GUI/TUI evidence proves shared-document parity, not a separate packaged visual session.
+- KFX PR #1624 remains intentionally unpromoted and is not called merged.
+- NAS exact-publish evidence is deferred by user direction and excluded here.
+
+Machine-readable evidence:
+.kungfu/retained-native-evidence/2026-08-11-kungfu-skill-product-qualification-and-next-wave/manifest.json

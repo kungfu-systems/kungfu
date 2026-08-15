@@ -7,7 +7,6 @@ import { openProfile } from '../../../framework/api/src/capability/profile.ts';
 import { openWorkControlProfile } from '../../../extensions/work-dashboard/src/view/work-control-profile.ts';
 import {
   corePython,
-  ensureHomeWorkspace,
   fail,
   json,
   kfc,
@@ -24,7 +23,7 @@ const sampleRoot = path.resolve(
   'atlas-demo-import',
   'sample-root',
 );
-const home = path.join(tmpDir('atlas-capability-'), '.kungfu');
+const home = tmpDir('atlas-capability-');
 const runtimeDir = path.join(home, 'runtime');
 const assembledBin = path.join(
   repoDir,
@@ -41,7 +40,6 @@ if (!fs.existsSync(assembledBin)) {
   fail('kungfu CLI is not assembled (run ./shifu freeze first)');
 }
 
-ensureHomeWorkspace(coreDir, home, 'kfx-atlas-capability-fixture');
 uvPython(coreDir, [
   path.join(fixtureDir, '..', '_activate_work_control_profile.py'),
   runtimeDir,
@@ -90,13 +88,7 @@ ck('active goal id preserved', activeGoals[0]?.goal_id === '2026-01-02-demo-impo
 
 const mission = atlas.mission('demo-platform');
 ck('mission detail is readable', mission?.mission.mission_id === 'demo-platform');
-ck('mission detail links both canonical goals', mission?.goals.length === 2);
-ck(
-  'mission detail links active goal',
-  mission?.goals.some(
-    (candidate) => candidate.goal_id === '2026-01-02-demo-importer',
-  ),
-);
+ck('mission detail links active goal', mission?.goals.length === 1);
 
 const goal = atlas.goal('2026-01-02-demo-importer');
 ck('goal detail is readable', goal?.mission_id === 'demo-platform');

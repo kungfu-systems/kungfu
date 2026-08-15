@@ -147,43 +147,6 @@ export function kfc(coreDir, home, args, opts = {}) {
   );
 }
 
-/** Initialize one disposable Home Workspace before Profile-backed writes. */
-export function ensureHomeWorkspace(coreDir, home, reason) {
-  const osHome = path.dirname(home);
-  const python = corePython(coreDir);
-  const receipt = json(
-    run(
-      python,
-      [
-        '.devtools/kungfu_cli.py',
-        '-H',
-        home,
-        'workspace',
-        'ensure',
-        '--home',
-        '--reason',
-        reason,
-        '--json',
-      ],
-      {
-        cwd: coreDir,
-        env: {
-          ...runtimeEnv(coreDir),
-          HOME: osHome,
-          USERPROFILE: osHome,
-        },
-      },
-    ),
-  );
-  if (
-    fs.realpathSync(receipt.data_home) !== fs.realpathSync(home) ||
-    !receipt.workspace_identity_root?.startsWith('sha256:')
-  ) {
-    fail('workspace ensure did not qualify the disposable Home');
-  }
-  return receipt;
-}
-
 /** Parse the single JSON object a `--json` command prints to stdout. */
 export function json(result) {
   try {

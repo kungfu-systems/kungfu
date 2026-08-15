@@ -138,6 +138,20 @@ test('a new unclassified narrow operational source fails closed', () => {
   ]);
 });
 
+test('retained native evidence may preserve an exact historical version line', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'kungfu-version-line-'));
+  const evidence = path.join(
+    root,
+    '.kungfu/retained-native-evidence/exact-cut/manifest.json',
+  );
+  fs.mkdirSync(path.dirname(evidence), { recursive: true });
+  fs.writeFileSync(evidence, '{"protectedBase":"dev/v9/v9.0"}\n');
+  const scan = scanNarrowBindings(root, {
+    immutableEvidencePrefixes: ['.kungfu/retained-native-evidence/'],
+  });
+  assert.deepEqual(scan, { admitted: [], violations: [] });
+});
+
 test('an admitted projection file rejects a narrow value absent from authority data', () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'kungfu-version-line-'));
   fs.mkdirSync(path.join(root, 'scripts'), { recursive: true });
