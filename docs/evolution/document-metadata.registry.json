@@ -241,6 +241,23 @@
         "invisible_context_boundary": "external release projections and unobserved runtime state are not claimed"
       }
     },
+    "docs/evolution/stages/12-project-compatibility-zero-residue.md": {
+      "metadata_schema": "kungfu.document-metadata/v1",
+      "document_status": "active",
+      "doc_type": "evolution-stage",
+      "review_state": "self-reviewed",
+      "sensitivity": "public",
+      "sources": [
+        "architecture-decisions",
+        "local-files",
+        "user-decision"
+      ],
+      "period": "2026-08-08",
+      "theme": "project-compatibility-zero-residue",
+      "confidence": "high",
+      "evidence_grade": "B",
+      "last_reviewed": "2026-08-10"
+    },
     "docs/evolution/timeline.md": {
       "metadata_schema": "kungfu.document-metadata/v1",
       "document_status": "active",

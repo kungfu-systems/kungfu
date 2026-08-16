@@ -31,11 +31,6 @@
       "id": "core-adapter",
       "target": "Core public authority adapter",
       "status": "bootstrapped-role-projection-only"
-    },
-    {
-      "id": "compatibility-delete-candidates",
-      "target": "Rust Xinfa and current authority surfaces",
-      "status": "retained-no-delete"
     }
   ]
 }

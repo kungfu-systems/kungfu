@@ -102,22 +102,6 @@
         "guiMember": "work-dashboard",
         "guiMethod": "intentPlan"
       }
-    },
-    {
-      "id": "import-atlas-jsonl",
-      "title": "Import append-only Atlas dogfood history",
-      "actionId": "import-atlas-jsonl",
-      "inspectViewId": "dogfood-inbox",
-      "verifyViewId": "dogfood-inbox",
-      "requiredAuthority": "dogfood-migration-operator",
-      "requiredCapabilities": ["storage"],
-      "material": true,
-      "protocol": {
-        "mode": "shared-api",
-        "apiId": "kungfu.profile.application",
-        "guiMember": "work-dashboard",
-        "guiMethod": "intentPlan"
-      }
     }
   ],
   "constraints": [
@@ -131,7 +115,7 @@
       "id": "bounded-evidence",
       "description": "Secrets, raw private prompts, credentials, and signed URLs are rejected from admitted records.",
       "enforcement": "runtime",
-      "appliesTo": ["capture-finding", "import-atlas-jsonl"]
+      "appliesTo": ["capture-finding"]
     }
   ],
   "knownLimits": [

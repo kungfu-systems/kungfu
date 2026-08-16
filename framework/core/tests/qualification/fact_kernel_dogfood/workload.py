@@ -2,7 +2,7 @@
 
 """Three-process qualification for the generic Fact kernel.
 
-The retained work item is the real generic Fact kernel Atlas goal.  Each actor
+The retained work item is the real generic Fact kernel Assignment. Each actor
 receives only filesystem artifacts and exact roots; no actor receives chat or
 in-memory state from its predecessor.
 """

@@ -1,14 +1,5 @@
 {
   "schema": "kungfu.profile-migrations/v1",
   "mode": "additive",
-  "migrations": [
-    {
-      "id": "atlas-dogfood-jsonl-v1",
-      "sourceSchema": "atlas.dogfood-inbox.jsonl",
-      "targetSchema": "kungfu.dogfood-feedback.migration/v1",
-      "authority": "source-bytes-retained-read-only",
-      "deduplication": "candidate-clusters-only",
-      "resolution": "never-inferred"
-    }
-  ]
+  "migrations": []
 }

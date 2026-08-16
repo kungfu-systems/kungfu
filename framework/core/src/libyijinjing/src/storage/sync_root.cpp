@@ -69,7 +69,7 @@ nlohmann::json compute_linear_sync_root_from_leaves(const std::vector<std::strin
 
   return {
       {"schema", SYNC_ROOT_SCHEMA_V1},
-      {"scope", SYNC_ROOT_SCOPE_ATLAS_IMPORT_MANIFEST},
+      {"scope", SYNC_ROOT_SCOPE_SOURCE_IMPORT_MANIFEST},
       {"proof", SYNC_ROOT_PROOF_LINEAR_CHAIN_V1},
       {"algorithm", CONTENT_HASH_ALGORITHM_SHA256},
       {"value", previous},

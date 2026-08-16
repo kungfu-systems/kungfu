@@ -60,7 +60,7 @@
   },
   "thresholdSemantics": {
     "advisory": "calibration.soft; always reported and never presented as protected-mainline admission",
-    "protectedMainline": "calibration.hard; crossing is blocking unless an exact independently signed waiver passes",
+    "protectedMainline": "calibration.hard; crossing is blocking unless an exact author-bound waiver passes protected review and delivery",
     "retainedAdvisoryReview": "Every retained advisory crossing requires exact-head independent cohesion review in terminal evidence"
   },
   "advisoryDispositions": {
@@ -137,34 +137,23 @@
     ]
   },
   "baselineGovernance": {
-    "schema": "kungfu.code-complexity-baseline-governance/v1",
+    "schema": "kungfu.code-complexity-baseline-governance/v2",
     "protectedRef": "origin/HEAD",
     "protectedRefEnv": "KUNGFU_COMPLEXITY_PROTECTED_REF",
     "transitionDirectory": "framework/maintainability/baseline-transitions",
-    "transitionSchema": "kungfu.code-complexity-baseline-transition/v1",
+    "transitionSchema": "kungfu.code-complexity-baseline-transition/v2",
     "requiresExpectedOldRoot": true,
-    "requiresIndependentSignedReceipt": true,
+    "approvalBoundary": "protected-exact-head-review",
+    "requiredCheck": "Candidate source acceptance / check",
+    "deliveryBoundary": "delivery-warrant-and-merge-group",
     "maxChangedMeasurements": 256,
     "maxAggregateLineDelta": 20000
   },
   "waiver": {
-    "schema": "kungfu.code-complexity-budget-waiver/v2",
-    "approvalReceiptSchema": "kungfu.code-complexity-budget-approval-receipt/v1",
-    "maxApprovalAgeDays": 30,
-    "trustedAuthorities": [
-      {
-        "authority_id": "kungfu-origin-complexity-transition-review",
-        "key_id": "ed25519-668812bf28659460",
-        "algorithm": "ed25519",
-        "public_key_pem": "-----BEGIN PUBLIC KEY-----\nMCowBQYDK2VwAyEAgAti4fLF9HdgLlDoAiGXaKln9GZVGcYCFJG2eJ1/45Q=\n-----END PUBLIC KEY-----\n"
-      },
-      {
-        "authority_id": "kungfu-origin-complexity-transition-review-v2",
-        "key_id": "ed25519-9ff21f6e6f64c985",
-        "algorithm": "ed25519",
-        "public_key_pem": "-----BEGIN PUBLIC KEY-----\nMCowBQYDK2VwAyEAhihl4wBSlb08qstTTlwPBHUUWbspgENqsZz5X3jnLzE=\n-----END PUBLIC KEY-----\n"
-      }
-    ],
+    "schema": "kungfu.code-complexity-budget-waiver/v3",
+    "approvalBoundary": "protected-exact-head-review",
+    "requiredCheck": "Candidate source acceptance / check",
+    "deliveryBoundary": "delivery-warrant-and-merge-group",
     "requiredFields": [
       "schema",
       "issue_root",
@@ -180,7 +169,6 @@
       "rejected_split_alternatives",
       "affected_tests_and_qualification",
       "requested_by",
-      "approval_receipt",
       "retirement_or_decomposition_ref"
     ],
     "independentApproval": true,
