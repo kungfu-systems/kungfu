@@ -7,6 +7,17 @@ import fs from 'node:fs';
 import { createRequire } from 'node:module';
 import path from 'node:path';
 
+import {
+  ADOPTER_DELIVERY_GATE_REQUEST_CONTRACT,
+  createAdopterDeliveryGate,
+  createGitCommitArtifactProfile,
+} from '@kungfu-tech/buildchain/adopter-delivery-gate';
+import {
+  KFD_ADOPTER_CATEGORY_PROTOCOL_ID,
+  KFD_ADOPTER_CATEGORY_PROTOCOL_VERSION,
+  createKfdAdopterCategoryProtocolDriver,
+} from '@kungfu-tech/buildchain/kfd-adopter-category-driver';
+
 const require = createRequire(import.meta.url);
 const SUPPORTED = Object.freeze(['kfd-4', 'kfd-5', 'kfd-7']);
 const SUPPORTED_SET = new Set(SUPPORTED);
@@ -709,4 +720,65 @@ export function checkColdBuildchainKfd(root) {
     projectionPairs: pairs.length,
     kfd3Surfaces: registry.surfaces.length,
   };
+}
+
+export const KUNGFU_KFD_PRODUCT_RUNTIME_CATEGORY_GATE =
+  'kungfu-kfd-product-runtime-category-gate/v1';
+
+const GIT_COMMIT_PROFILE = Object.freeze({
+  id: 'buildchain.artifact/git-commit',
+  version: '1.0.0',
+});
+
+const productRuntimeCategoryGate = createAdopterDeliveryGate({
+  drivers: [createKfdAdopterCategoryProtocolDriver()],
+  artifactProfiles: [createGitCommitArtifactProfile(GIT_COMMIT_PROFILE)],
+});
+
+function requireCategoryObject(value, label) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    throw new TypeError(`${label} must be a JSON object`);
+  }
+  return value;
+}
+
+export function createKungfuKfdProductRuntimeCategoryRequest(instanceManifest) {
+  const instance = requireCategoryObject(instanceManifest, 'category instance');
+  const project = requireCategoryObject(
+    instance.project,
+    'category instance project',
+  );
+  return {
+    schemaVersion: 1,
+    contract: ADOPTER_DELIVERY_GATE_REQUEST_CONTRACT,
+    protocol: {
+      id: KFD_ADOPTER_CATEGORY_PROTOCOL_ID,
+      version: KFD_ADOPTER_CATEGORY_PROTOCOL_VERSION,
+    },
+    artifactProfile: GIT_COMMIT_PROFILE,
+    project: {
+      instanceId: instance.instanceId,
+      adopterId: project.adopterId,
+    },
+    artifact: structuredClone(project.artifact),
+    declaration: structuredClone(instance),
+  };
+}
+
+export function evaluateKungfuKfdProductRuntimeCategory({
+  instanceManifest,
+  adopterManifest,
+  verifiedAt,
+  maxAgeSeconds,
+} = {}) {
+  return productRuntimeCategoryGate.evaluate(
+    createKungfuKfdProductRuntimeCategoryRequest(instanceManifest),
+    {
+      adopterManifest: structuredClone(
+        requireCategoryObject(adopterManifest, 'full-cut adopter manifest'),
+      ),
+      verifiedAt,
+      maxAgeSeconds,
+    },
+  );
 }

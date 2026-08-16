@@ -27,7 +27,7 @@ test('the product adapter is a thin command forwarder, not a Hub 20 rule table',
 
 test('the exact KFD alpha package and all fixed roots match the retained lock', () => {
   const { lock, observed } = validateKfdPackage(kfdRoot);
-  assert.equal(lock.version, '1.0.0-alpha.53');
+  assert.equal(lock.version, '1.0.0-alpha.65');
   assert.equal(
     observed.suiteVectorRoot,
     'sha256:f1be3a10121fbd5389204b6e1ca70ea3920d9ba13ad20bb9f83fac078339c6b2',
@@ -84,7 +84,7 @@ test('the first honest baseline is retained, complete, failing, and isolated', (
 });
 
 function passingGateFixture() {
-  const lock = { package: '@kungfu-tech/kfd', version: '1.0.0-alpha.53' };
+  const lock = { package: '@kungfu-tech/kfd', version: '1.0.0-alpha.65' };
   const observed = { suiteVectorRoot: `sha256:${'a'.repeat(64)}` };
   const adapterDigest = `sha256:${'b'.repeat(64)}`;
   const product = {
