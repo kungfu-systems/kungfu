@@ -11,7 +11,7 @@
     "version": "4.0.0-alpha.3",
     "channel": "repository-default",
     "tag": "v4.0.0-alpha.3",
-    "sourceSha": "5acee65ef43978e9e40e6ad2b82a685ffb270e01"
+    "sourceSha": "bafc0afd02c3486b9ab5a2536706c29792d0c2b6"
   },
   "claims": [
     {
@@ -29,7 +29,7 @@
           "pointer": {
             "kind": "file",
             "path": "framework/core/src/python/kungfu/agent/commands.json",
-            "sha256": "21d756f875626fcd2af10125bab48f8ae72f066ad93e3698b109ff938f11eb9e"
+            "sha256": "7f80da4abae356e095ad13e88cfc6e656eb9ddd3661128d5a23ba0eef219f4aa"
           },
           "description": "Machine-readable command catalog and mode maturity metadata."
         },
@@ -38,7 +38,7 @@
           "pointer": {
             "kind": "file",
             "path": "framework/core/src/python/kungfu/agent/cli_surface.catalog.json",
-            "sha256": "4cab005460d4090f53c2936c48a840e4d7a98c2cdbd8c15c79d744b947d2902e"
+            "sha256": "65aa5e28e53de2bdea5d36bf8d0b5f6a72fb4ca24e59c9f9f18cf50d17b25dad"
           },
           "description": "Complete deterministic CLI surface graph shared by offline Agent capabilities and catalog parity checks."
         },
@@ -258,7 +258,7 @@
           "pointer": {
             "kind": "file",
             "path": "framework/core/src/python/kungfu/agent/commands.json",
-            "sha256": "21d756f875626fcd2af10125bab48f8ae72f066ad93e3698b109ff938f11eb9e"
+            "sha256": "7f80da4abae356e095ad13e88cfc6e656eb9ddd3661128d5a23ba0eef219f4aa"
           },
           "description": "Remote add/sync command declarations and mode metadata."
         },
@@ -267,7 +267,7 @@
           "pointer": {
             "kind": "file",
             "path": "framework/core/src/python/kungfu/cli/commands/agent.py",
-            "sha256": "965ab82162f33624d9a74575f9fd98678e16c9c932d0f3ef7725775076c5e50a"
+            "sha256": "bb980fc1a1de42b00e34576dc34894e6fd070938b0a39f1c02afd321ef9d2b78"
           },
           "description": "Agent command surface including mode selection and bootstrap status."
         }
@@ -347,7 +347,7 @@
           "pointer": {
             "kind": "file",
             "path": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json",
-            "sha256": "a6f2429c8f99367478150ba28966c92dec4e9d8797f8ce365b90c719dcb874a9"
+            "sha256": "e26602d6e7f297d62dcaa3b801e81f2c0b194821dc7e8de9f1a3eeb2d5944dd8"
           },
           "description": "Agent collaboration-interface registration for the work-model query."
         }

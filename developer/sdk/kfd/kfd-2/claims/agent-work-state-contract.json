@@ -52,7 +52,7 @@
       "pointer": {
         "kind": "file",
         "path": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json",
-        "sha256": "a6f2429c8f99367478150ba28966c92dec4e9d8797f8ce365b90c719dcb874a9"
+        "sha256": "e26602d6e7f297d62dcaa3b801e81f2c0b194821dc7e8de9f1a3eeb2d5944dd8"
       },
       "description": "Agent collaboration-interface registration for the work-model query."
     }
@@ -79,7 +79,7 @@
       },
       {
         "path": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json",
-        "sha256": "a6f2429c8f99367478150ba28966c92dec4e9d8797f8ce365b90c719dcb874a9"
+        "sha256": "e26602d6e7f297d62dcaa3b801e81f2c0b194821dc7e8de9f1a3eeb2d5944dd8"
       }
     ],
     "artifactSha256": [

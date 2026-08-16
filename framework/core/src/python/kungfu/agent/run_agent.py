@@ -140,10 +140,6 @@ def bind_current_native_work(
         exact_work_runtime_dir = str(
             Path(work_target.runtime_dir).expanduser().resolve()
         )
-        if Path(runtime_dir).expanduser().resolve() != Path(exact_work_runtime_dir):
-            raise ValueError(
-                "native Work binding runtime does not match the explicit Project"
-            )
         work_runtime_dir = exact_work_runtime_dir
         work_workspace_id = work_target.identity.workspace_id
         if work_workspace_id != str(envelope["workspaceId"]):
