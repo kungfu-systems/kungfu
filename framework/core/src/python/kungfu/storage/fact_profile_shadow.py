@@ -16,7 +16,7 @@ from collections.abc import Iterable, Mapping
 from pathlib import Path
 from typing import Any
 
-PROFILE_KINDS = frozenset({"mission-go", "xinfa-atlas", "authority-receipt"})
+PROFILE_KINDS = frozenset({"initiative-assignment", "xinfa-atlas", "authority-receipt"})
 MANIFEST_SCHEMA = "kungfu.fact-profile-shadow.manifest/v1"
 BUNDLE_SCHEMA = "kungfu.fact-profile-shadow.bundle/v1"
 COMPARISON_SCHEMA = "kungfu.fact-profile-shadow.comparison/v1"

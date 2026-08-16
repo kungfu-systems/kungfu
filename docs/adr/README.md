@@ -205,9 +205,6 @@ implemented and qualified or explicitly waived for that release.
   [0052](KF-ADR-019f86da-4f90-7b3f-9ef3-84f5a878f302.md) (claim-triggered
   assessment jobs, workspace-coordinator coordination, Assessment Episodes, and
   equivalent process/thread executors), and
-  [0059](KF-ADR-019f86da-4f90-71be-a2aa-c8744fa340d8.md) (the
-  Mission/Go responsibility domain, Atlas bridge authority, and Cost/State/Proof
-  profile composition),
   [0060](KF-ADR-019f86da-4f90-7d61-8afa-33d66ca05d36.md) (Desktop
   Home/project workspace selection, global recent-workspace state,
   first-run Agent Work Inbox, and write-intent-bound data-home initialization),

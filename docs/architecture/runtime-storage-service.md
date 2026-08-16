@@ -10,7 +10,7 @@ must be inspectable and maintainable in the same way a user expects from a
 serious local database.
 
 This document ties together the existing fact-ledger format direction, current
-journal maintenance commands, Atlas import, source sync, remote sync, and the
+journal maintenance commands, journal ingestion, source sync, remote sync, and the
 missing storage operations such as `fsck`, import/export, garbage collection,
 and compaction.
 
@@ -58,7 +58,7 @@ The lower-level contract already exists in pieces:
   classes.
 - The runtime already has native `location` and `channel` concepts for
   cross-process identity and source/destination communication.
-- `kungfu atlas import` is currently a read-only projection of Atlas
+- `kungfu journal ingestion` is currently a read-only projection of Atlas
   control-plane data, not an authority migration.
 - Remote sync currently mirrors source-scoped runtime directories; it is not yet
   a range/hash/session delta protocol.
@@ -278,7 +278,7 @@ not valid payload or manifest hashes.
 
 The first trust-proof surface is the manifest-scoped sync root from
 [`KF-ADR-019f86da-4f90-765c-9723-069718911491`](../adr/KF-ADR-019f86da-4f90-765c-9723-069718911491.md).
-For Atlas imports, `fsck` recomputes `kungfu.sync-root/v1` from the manifest's
+For journal ingestions, `fsck` recomputes `kungfu.sync-root/v1` from the manifest's
 ordered entries and reports missing or mismatched root data as a storage
 failure. This root binds payload references, source coordinates, action
 envelopes, and frame receipt metadata for the accepted segment. It is local
@@ -424,52 +424,6 @@ For each imported object, Kungfu should eventually record:
 This lets a one-way adapter remain safe while still exercising the same payload,
 manifest, fsck, export, and rebuild mechanisms required for future remote sync
 and authority migration.
-
-### Atlas Import First Slice
-
-Atlas import is the first high-value adapter for this service.
-
-Initial authority boundary:
-
-```text
-Atlas remains source of truth.
-Kungfu imports and verifies a local projection.
-```
-
-The implemented Atlas adapter slice is:
-
-```sh
-kungfu atlas import --repo <atlas-repo> --json
-kungfu storage status --scope atlas --json
-kungfu storage fsck --scope atlas --json
-kungfu storage export --scope atlas --format jsonl --out atlas.jsonl --json
-kungfu atlas verify --repo <atlas-repo> --json
-```
-
-Range-limited Atlas imports preserve the control-plane context needed to make
-the selected records meaningful. For example, if a goal updated inside
-`--from` references a mission whose own card was last updated before that
-window, the import includes that mission as context. `storage export --scope
-atlas` applies the same closure rule: a range export keeps those context
-records instead of re-filtering them away. To export the exact latest imported
-batch, omit range flags; to export a subrange from the latest import, pass
-`--since` / `--from` / `--until` and expect a JSONL stream containing the
-selected records plus required context records.
-
-Acceptance covered by that slice:
-
-- large Atlas JSON bodies are stored outside mmap frames as hash-addressed
-  payloads;
-- import writes a manifest with source head, object count, payload inventory,
-  hash algorithm, frame checksum algorithm, and projection watermark;
-- `fsck` detects missing payloads, hash mismatches, malformed payload JSON, and
-  projection drift against the current Atlas projection;
-- `storage export` emits a canonical JSONL record per imported Atlas payload;
-- `atlas verify` recomputes source hashes from the Atlas repo and compares them
-  with the latest imported payload manifest.
-
-The first slice deliberately does not claim generic storage compaction, range
-sync, schema repair, or a complete rebuild-index command yet.
 
 ### Generic Source Service First Slice
 

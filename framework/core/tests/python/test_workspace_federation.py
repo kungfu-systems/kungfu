@@ -49,6 +49,14 @@ CONTRACT = (
     / "workspace-federation"
     / "workspace-federation.contract.json"
 )
+WORK_CONTROL_SOURCE = (
+    Path(__file__).resolve().parents[4] / "extensions" / "work-control"
+)
+
+
+@pytest.fixture(autouse=True)
+def _bind_work_control_profile(monkeypatch):
+    monkeypatch.setenv("KF_EXTENSION_PATH", str(WORK_CONTROL_SOURCE.parent))
 
 
 def test_workspace_federation_preserves_extracted_read_model_exports():

@@ -79,7 +79,7 @@ claiming Linux/Windows qualification, activating unavailable KFX
 contributions, or silently promoting a build into `/Applications`.
 
 PR #1202 adds the first qualified TUI consumer of a public Profile query. Its
-generic shell renders the Mission Control contribution at one, two, or three
+generic shell renders the Work Control contribution at one, two, or three
 columns, while discovery, CLI, TUI, and KFD-3 verification bind the same exact
 Suite, member, query-definition, and proof roots.
 

@@ -14,7 +14,7 @@
     "assignmentOwner": "Kungfu Native Assignment and Work Control over native Fact and Episode authority",
     "dogfoodOwner": "kungfu.dogfood-feedback Profile over native Fact Library and Episode authority",
     "publicationOwner": "protected Git projection of already settled native evidence",
-    "rule": "The adapter preserves and verifies owner roots; Atlas cards, Shifu state, Git refs, caches, and publication coordinates remain rebuildable pointers and never become semantic authority."
+    "rule": "The composition preserves and verifies owner roots; external coordinator records, Shifu state, Git refs, caches, and publication coordinates remain rebuildable pointers and never become semantic authority."
   },
   "exitComposition": {
     "projectCutMember": {
@@ -55,11 +55,6 @@
     "loss": "Project Cut omissions, conflicts, and unknowns are retained exactly; a thin member remains inventory-only and degraded."
   },
   "projectionBoundaries": [
-    {
-      "surface": "Atlas goal cards and ready markers",
-      "classification": "observer-projection",
-      "rebuildFrom": "native Assignment subject, Work definition root, workspace identity root, sealed Work coordinate, Project Cut root, and protected PR coordinates"
-    },
     {
       "surface": "Shifu Assignment state and publication runtime state",
       "classification": "observer-projection",

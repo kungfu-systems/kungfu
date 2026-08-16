@@ -4,11 +4,11 @@
 import fs from 'node:fs';
 
 import {
-  buildOpenCardHistorySelectionRequest,
-  buildOpenCardHistorySource,
-  buildOpenCardOutcomeHistory,
-  runOpenCardPreflight,
-  verifyOpenCardPreflight,
+  buildAssignmentHistorySelectionRequest,
+  buildAssignmentHistorySource,
+  buildAssignmentOutcomeHistory,
+  runAssignmentPreflight,
+  verifyAssignmentPreflight,
 } from '../src/work-design-preflight.mjs';
 
 function inputPath(argv) {
@@ -32,23 +32,23 @@ try {
     const query = JSON.parse(fs.readFileSync(historyPath, 'utf8'));
     const targetCohortRoot = request.adviceRequest?.targetCohortRoot;
     if (targetCohortRoot) {
-      request.outcomeHistory = buildOpenCardOutcomeHistory({
+      request.outcomeHistory = buildAssignmentOutcomeHistory({
         query,
         asOf: request.adviceRequest?.asOf,
         targetCohortRoot,
       });
     }
-    request.selectionRequest = buildOpenCardHistorySelectionRequest({
+    request.selectionRequest = buildAssignmentHistorySelectionRequest({
       query,
       objectiveRoot: request.humanWorkDefinitionRoot,
       xinfaRoot: request.adviceRequest?.xinfaRoot,
       asOf: request.adviceRequest?.asOf,
       outcomeHistory: request.outcomeHistory ?? null,
     });
-    request.historySource = buildOpenCardHistorySource(query);
+    request.historySource = buildAssignmentHistorySource(query);
   }
-  const result = runOpenCardPreflight(request);
-  const verification = verifyOpenCardPreflight(result);
+  const result = runAssignmentPreflight(request);
+  const verification = verifyAssignmentPreflight(result);
   if (!verification.ok)
     throw new Error(`preflight verification failed: ${verification.reason}`);
   console.log(JSON.stringify(result, null, 2));

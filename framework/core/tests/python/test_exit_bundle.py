@@ -12,14 +12,14 @@ from kungfu import dogfood as dogfood_api
 from kungfu import exit_bundle, exit_verifier, profile_composition, profile_sdk
 from kungfu import project_cut_exit
 from kungfu.agent import work_profile
-from kungfu.atlas import mission_control
+from kungfu import work_control
 from kungfu.cli.commands import __registry__  # noqa: F401
 from kungfu.cli.commands import kfc
 from kungfu.storage import fact_profile_shadow
 from kungfu.storage import service as storage_service
 
 
-MISSION_PROFILE_SOURCE = (
+WORK_CONTROL_PROFILE_SOURCE = (
     Path(__file__).resolve().parents[4] / "extensions" / "work-control"
 )
 DOGFOOD_PROFILE_SOURCE = Path(__file__).resolve().parents[4] / "extensions" / "dogfood"
@@ -34,17 +34,17 @@ PROJECT_CUT_PUBLICATION_ROOTS = (
 )
 
 
-def _activate_mission_profile(runtime_dir):
+def _activate_work_control_profile(runtime_dir):
     for action in ("install", "qualify", "activate"):
         plan = profile_sdk.lifecycle_plan(
             runtime_dir,
             action,
-            MISSION_PROFILE_SOURCE,
+            WORK_CONTROL_PROFILE_SOURCE,
             **({"granted_permissions": ["storage"]} if action == "activate" else {}),
         )["corePlan"]
         profile_sdk.lifecycle_apply(runtime_dir, plan, f"exit-test:{action}")
     contract = profile_composition.contract_materialization_plan(
-        MISSION_PROFILE_SOURCE, runtime_dir
+        WORK_CONTROL_PROFILE_SOURCE, runtime_dir
     )
     if contract["operations"]:
         profile_composition.authorized_contract_materialize(
@@ -510,52 +510,52 @@ def test_exit_history_projection_rebuild_is_bounded_and_authorized(tmp_path):
     assert error.value.code == "authorization-actor-required"
 
 
-def test_profile_and_mission_exit_package_replays_into_clean_runtime(tmp_path):
+def test_profile_and_initiative_exit_package_replays_into_clean_runtime(tmp_path):
     source = tmp_path / "source" / "runtime"
     destination = tmp_path / "destination" / "runtime"
-    _activate_mission_profile(source)
-    mission_control.create_initiative(
+    _activate_work_control_profile(source)
+    work_control.create_initiative(
         str(source),
-        initiative_id="exit-mission",
-        title="Exit Mission",
-        intent="Prove Profile and Mission closure on a clean runtime",
+        initiative_id="exit-initiative",
+        title="Exit Initiative",
+        intent="Prove Profile and Initiative closure on a clean runtime",
         actor="test-owner",
         actor_type="user",
     )
-    mission_control.create_assignment(
+    work_control.create_assignment(
         str(source),
-        initiative_id="exit-mission",
+        initiative_id="exit-initiative",
         assignment_id="exit-go",
         title="Exit Go",
-        objective="Rehydrate the exact Mission state",
+        objective="Rehydrate the exact Initiative state",
         actor="test-agent",
         actor_type="agent",
     )
     request = {
         "schema": "kungfu.exit-bundle-request/v1",
-        "bundleId": "exit:mission-profile",
+        "bundleId": "exit:work-control-profile",
         "mode": "full",
         "scope": {
-            "id": "mission/exit-mission",
-            "authority": "Mission Control Profile domain",
-            "schema": "kungfu.mission-control.bundle/v2",
-            "protocol": "mission-control-portability/v2",
+            "id": "initiative/exit-initiative",
+            "authority": "Initiative Control Profile domain",
+            "schema": "kungfu.initiative-control.bundle/v2",
+            "protocol": "initiative-control-portability/v2",
         },
         "members": [
             {
-                "memberId": "mission-profile",
+                "memberId": "work-control-profile",
                 "kind": "profile-source-v1",
                 "requiredForScope": True,
                 "options": {
-                    "source": str(MISSION_PROFILE_SOURCE),
+                    "source": str(WORK_CONTROL_PROFILE_SOURCE),
                     "grantedPermissions": ["storage"],
                 },
             },
             {
-                "memberId": "mission-state",
-                "kind": "mission-control-v2",
+                "memberId": "initiative-state",
+                "kind": "initiative-bundle-v1",
                 "requiredForScope": True,
-                "options": {"missionId": "exit-mission"},
+                "options": {"initiativeId": "exit-initiative"},
             },
         ],
     }
@@ -570,18 +570,23 @@ def test_profile_and_mission_exit_package_replays_into_clean_runtime(tmp_path):
 
     assert imported["ok"] is True, imported
     assert imported["status"] == "imported"
-    assert imported["writtenMembers"] == ["mission-profile", "mission-state"]
+    assert imported["writtenMembers"] == ["work-control-profile", "initiative-state"]
     assert repeated["ok"] is True, repeated
     assert repeated["status"] == "already_present"
-    assert repeated["alreadyPresent"] == ["mission-profile", "mission-state"]
-    mission = mission_control.query_state(str(destination), mission_id="exit-mission")
-    assert mission["mission"]["payload"]["record"]["mission_id"] == "exit-mission"
-    assert [row["payload"]["record"]["goal_id"] for row in mission["goals"]] == [
-        "exit-go"
-    ]
+    assert repeated["alreadyPresent"] == ["work-control-profile", "initiative-state"]
+    initiative = work_control.query_state(
+        str(destination), initiative_id="exit-initiative"
+    )
     assert (
-        mission["profile_suite_root"]
-        == package["execution"]["mission-profile"]["profileSuiteRoot"]
+        initiative["initiative"]["payload"]["record"]["initiative_id"]
+        == "exit-initiative"
+    )
+    assert [
+        row["payload"]["record"]["assignment_id"] for row in initiative["assignments"]
+    ] == ["exit-go"]
+    assert (
+        initiative["profile_suite_root"]
+        == package["execution"]["work-control-profile"]["profileSuiteRoot"]
     )
 
 
@@ -598,7 +603,7 @@ def test_all_remaining_member_adapters_roundtrip_idempotently(tmp_path):
         {
             "sources": [
                 {
-                    "profile": "mission-go",
+                    "profile": "initiative-assignment",
                     "source_id": "exit:fixture",
                     "source_cut_root": _root("source-cut"),
                     "last_accepted_head": _root("source-head"),

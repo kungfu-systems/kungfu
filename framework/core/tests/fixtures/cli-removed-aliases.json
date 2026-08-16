@@ -10,22 +10,6 @@
     {"removed": "kungfu dev env", "canonical": "kungfu env"},
     {"removed": "kungfu schema", "canonical": "kungfu dev schema"},
     {"removed": "kungfu schema compile", "canonical": "kungfu dev schema compile"},
-    {"removed": "kungfu dev sdk", "canonical": "kungfu sdk"},
-    {"removed": "kungfu atlas authority-status", "canonical": "kungfu profile mission-control authority-status"},
-    {"removed": "kungfu atlas authority-cutover", "canonical": "kungfu profile mission-control authority-cutover"},
-    {"removed": "kungfu atlas authority-rollback", "canonical": "kungfu profile mission-control authority-rollback"},
-    {"removed": "kungfu atlas create-mission", "canonical": "kungfu work admit"},
-    {"removed": "kungfu atlas export-mission", "canonical": "kungfu profile mission-control export-mission"},
-    {"removed": "kungfu atlas import-mission", "canonical": "kungfu profile mission-control import-mission"},
-    {"removed": "kungfu atlas create-go", "canonical": "kungfu work admit"},
-    {"removed": "kungfu atlas claim-completion", "canonical": "kungfu work claim-completion"},
-    {"removed": "kungfu atlas assess-completion", "canonical": "kungfu profile mission-control assess-completion"},
-    {"removed": "kungfu atlas review-completion", "canonical": "kungfu work review"},
-    {"removed": "kungfu atlas decide-continuation", "canonical": "kungfu work decide"},
-    {"removed": "kungfu atlas show missions", "canonical": "kungfu work"},
-    {"removed": "kungfu atlas show goals", "canonical": "kungfu work"},
-    {"removed": "kungfu atlas show dashboard", "canonical": "kungfu work"},
-    {"removed": "kungfu atlas show goal", "canonical": "kungfu work status"},
-    {"removed": "kungfu atlas show mission", "canonical": "kungfu work"}
+    {"removed": "kungfu dev sdk", "canonical": "kungfu sdk"}
   ]
 }

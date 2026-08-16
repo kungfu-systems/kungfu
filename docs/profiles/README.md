@@ -17,5 +17,3 @@ clear.
 - [Agent Work State](agent-work-state.md)
 - [Cost/State/Proof Profile](cost-state-proof-profile.md)
 - [Work Control](work-control.md)
-- [Compatibility history](compatibility/README.md) — retained protocols and
-  design evidence, excluded from current product discovery.

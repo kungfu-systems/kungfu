@@ -10,6 +10,7 @@ import path from 'node:path';
 import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
 
+import { portableClassificationPaths } from './portable-atlas-bundle.mjs';
 import { sourceMergeBase } from './source-acceptance.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -21,6 +22,51 @@ function copyFile(sourceRoot, targetRoot, relative) {
   const target = path.join(targetRoot, relative);
   fs.mkdirSync(path.dirname(target), { recursive: true });
   fs.copyFileSync(path.join(sourceRoot, relative), target);
+}
+
+function syncChangedWorktree(sourceRoot, targetRoot, git) {
+  const paths = new Set();
+  for (const args of [
+    ['diff', '--name-only', '--no-renames', '-z', 'HEAD', '--'],
+    ['ls-files', '--others', '--exclude-standard', '-z'],
+  ]) {
+    const result = spawnSync(git, ['-C', sourceRoot, ...args], {
+      encoding: 'utf8',
+    });
+    if (result.status !== 0)
+      throw new Error(result.stderr || `git ${args.join(' ')} failed`);
+    for (const relative of result.stdout.split('\0'))
+      if (relative) paths.add(relative);
+  }
+  for (const relative of [...paths].sort()) {
+    const source = path.join(sourceRoot, relative);
+    const target = path.join(targetRoot, relative);
+    if (!fs.existsSync(source)) {
+      fs.rmSync(target, { force: true, recursive: true });
+      continue;
+    }
+    fs.mkdirSync(path.dirname(target), { recursive: true });
+    fs.copyFileSync(source, target);
+  }
+}
+
+function worktreeInventory(root, git) {
+  const result = spawnSync(
+    git,
+    [
+      '-C',
+      root,
+      'ls-files',
+      '--cached',
+      '--others',
+      '--exclude-standard',
+      '-z',
+    ],
+    { encoding: 'utf8' },
+  );
+  if (result.status !== 0)
+    throw new Error(result.stderr || 'git ls-files inventory failed');
+  return result.stdout.split('\0').filter(Boolean).sort();
 }
 
 function semanticAmplificationFixturePaths(manifest) {
@@ -317,7 +363,6 @@ test('declared discovery routes are zero-write in a cold read-only fixture', (t)
     '.buildchain/kfd/kfd-1/documentation-consumers.witness.json',
     '.buildchain/kfd/kfd-1/documentation-pack.witness.json',
     '.buildchain/kfd/kfd-2/claims/agent-work-state-contract.json',
-    '.buildchain/kfd/kfd-2/claims/codex-report-receipts.json',
     '.buildchain/kfd/kfd-2/claims/cross-language-authority-membrane.json',
     '.buildchain/kfd/kfd-2/claims/remote-fact-boundary.json',
     '.buildchain/kfd/kfd-3/surfaces.json',
@@ -645,7 +690,6 @@ test('declared discovery routes are zero-write in a cold read-only fixture', (t)
     'developer/sdk/kfd/kfd-2/release-claims.json',
     'developer/sdk/kfd/kfd-2/claims/agent-onboarding-pack.json',
     'developer/sdk/kfd/kfd-2/claims/agent-work-state-contract.json',
-    'developer/sdk/kfd/kfd-2/claims/codex-report-receipts.json',
     'developer/sdk/kfd/kfd-2/claims/cross-language-authority-membrane.json',
     'developer/sdk/kfd/kfd-2/claims/remote-fact-boundary.json',
     'developer/sdk/src/sdk.js',
@@ -901,6 +945,7 @@ test('declared discovery routes are zero-write in a cold read-only fixture', (t)
     'node_modules/@kungfu-tech/buildchain/dist/site/publication-authority-registry.json',
   ])
     copyFile(ROOT, fixture, relative);
+  syncChangedWorktree(ROOT, fixture, git);
   fs.chmodSync(path.join(fixture, 'shifu'), 0o755);
 
   fs.symlinkSync(git, path.join(tools, 'git'));
@@ -948,6 +993,26 @@ test('declared discovery routes are zero-write in a cold read-only fixture', (t)
     });
     assert.equal(result.status, 0, result.stderr);
   }
+  const sourceClassificationPaths = portableClassificationPaths(
+    worktreeInventory(ROOT, git),
+  );
+  const fixtureClassificationPaths = portableClassificationPaths(
+    worktreeInventory(fixture, git),
+  );
+  const sourceClassificationSet = new Set(sourceClassificationPaths);
+  const fixtureClassificationSet = new Set(fixtureClassificationPaths);
+  assert.deepEqual(
+    {
+      onlyFixture: fixtureClassificationPaths.filter(
+        (relative) => !sourceClassificationSet.has(relative),
+      ),
+      onlySource: sourceClassificationPaths.filter(
+        (relative) => !fixtureClassificationSet.has(relative),
+      ),
+    },
+    { onlyFixture: [], onlySource: [] },
+    'read-only fixture classification inventory must match the source worktree',
+  );
 
   const before = snapshotSource(fixture);
   const beforeAuditRoot = sourceAuditRoot(before);
