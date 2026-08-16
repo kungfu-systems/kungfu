@@ -3,7 +3,7 @@
   "contract": "kungfu-buildchain-dev-delivery-warrant-queue",
   "repository": "kungfu-systems/kungfu",
   "protectedBase": "dev/v4/v4.0",
-  "generation": 3680,
+  "generation": 3681,
   "fencingCounter": 503,
   "policy": {
     "agingSeconds": 900,
@@ -35755,8 +35755,38 @@
         "tests/fixtures/rewind-demo-codex-goal-report/run.mjs",
         "tests/qualification/native-agent-ui-acceptance/prepare.mjs"
       ]
+    },
+    {
+      "repository": "kungfu-systems/kungfu",
+      "protectedBase": "dev/v4/v4.0",
+      "pullRequestNumber": 3250,
+      "assignmentRoot": "sha256:68174c9a5c8e86eda48b071f010a5ff9c0dac76b0ca3f4cfb9ec538f1ba961e2",
+      "initiativeRoot": "sha256:bfff817933e5a5ad693e4b902a84f6cc3a251235dd7377cb4091d92f805fa7ff",
+      "sourceIdentityRoot": "sha256:6fcb3d28ebb9f2767f4e461ad68f095f9b58864ba03ba0fa9c4ed02ce69903ae",
+      "deliveryClass": "non-native-fast",
+      "candidateId": "sha256:ff408c7ef5f65ef881d883d30a639d948adb11889f670ebbe558f17a1fc3461c",
+      "sourceHead": "e3d4791bf536748e7e4473d5cfce7158942323a4",
+      "sourcePatchRoot": "sha256:4ed20764afeca3db20de430a2efcbac820727a467c969ad8c3223667f0ee988d",
+      "sourceProofRoot": "sha256:5444f90135558bb89ab61caee319b3dce551477a64c83668d77a270ce74ceaea",
+      "planRoot": "sha256:1214d178b25aacff96268b8185430466d26eab20abfa1f36b95bbaa69d297eee",
+      "closureRoot": "sha256:ac6e52dc4778bd7be1e6224c9a526a00dc7fcdd56a84e07165a811b168158f3e",
+      "dependencyRoot": "sha256:a57cb6cd5784da0e366ce7e6edc41c7f91424b0ea7d8cbf23e49477fd9ce1586",
+      "toolchainRoot": "sha256:2ecb07894954a2e0de022615d4561e5ba3ae68376401941ecff77be03cd75a0f",
+      "environmentRoot": "sha256:ce8ac018bb38c00cc0f5e954dae39d921eb9437fb11314061e9628f456f39057",
+      "sourceWorkflowRunId": 31979429499,
+      "priority": "ordinary",
+      "enqueuedAt": "2026-08-16T23:39:58.370Z",
+      "updatedAt": "2026-08-16T23:39:58.370Z",
+      "attempts": 1,
+      "recoveries": 0,
+      "status": "queued",
+      "terminal": null,
+      "affectedPaths": [
+        "framework/tui/src/terminal-lifecycle.test.ts",
+        "framework/tui/src/terminal-lifecycle.ts"
+      ]
     }
   ],
-  "updatedAt": "2026-08-16T23:37:45.556Z",
-  "stateRoot": "sha256:a8e4115662f866736c87fd60d16d2756425d557390c925b2350cb470e234240e"
+  "updatedAt": "2026-08-16T23:39:58.370Z",
+  "stateRoot": "sha256:3e8459e17dcc503522c2a04dc5f917a966a845cac32fb4497bd73fa39160085a"
 }
