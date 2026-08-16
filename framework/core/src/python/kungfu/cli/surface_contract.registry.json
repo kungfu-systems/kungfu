@@ -93,32 +93,12 @@
       "stage", "stop", "transition", "update", "upsert"
     ]
   },
-  "overrides": {
-    "kungfu.cli.commands.dev.mission.control": {"owner": "profile-kfx"},
-    "kungfu.cli.commands.atlas.authority.status.cmd": {"owner": "profile-kfx"},
-    "kungfu.cli.commands.atlas.authority.cutover.cmd": {"owner": "profile-kfx"},
-    "kungfu.cli.commands.atlas.authority.rollback.cmd": {"owner": "profile-kfx"},
-    "kungfu.cli.commands.atlas.assess.mission": {"owner": "profile-kfx"},
-    "kungfu.cli.commands.atlas.create.mission.cmd": {"owner": "profile-kfx"},
-    "kungfu.cli.commands.atlas.export.mission.cmd": {"owner": "profile-kfx"},
-    "kungfu.cli.commands.atlas.import.mission.cmd": {"owner": "profile-kfx"},
-    "kungfu.cli.commands.atlas.create.go.cmd": {"owner": "profile-kfx"},
-    "kungfu.cli.commands.atlas.claim.completion.cmd": {"owner": "profile-kfx"},
-    "kungfu.cli.commands.atlas.assess.completion.cmd": {"owner": "profile-kfx"},
-    "kungfu.cli.commands.atlas.review.completion.cmd": {"owner": "profile-kfx"},
-    "kungfu.cli.commands.atlas.decide.continuation.cmd": {"owner": "profile-kfx"},
-    "kungfu.cli.commands.atlas.missions": {"owner": "profile-kfx"},
-    "kungfu.cli.commands.atlas.goals": {"owner": "profile-kfx"},
-    "kungfu.cli.commands.atlas.dashboard": {"owner": "profile-kfx"},
-    "kungfu.cli.commands.atlas.goal": {"owner": "profile-kfx"},
-    "kungfu.cli.commands.atlas.mission": {"owner": "profile-kfx"}
-  },
+  "overrides": {},
   "aliases": [],
   "migrationDecisions": [
     {"pair": "source/remote", "decision": "keep-distinct", "evidence": ["source uses kungfu.sources.store for Atlas-style read-only storage imports with range filters", "remote uses kungfu.remote.store for host/home transport and source-scoped mirrors", "handlers, persisted schemas, and side effects differ"]},
     {"pair": "profile/kfx-profile", "decision": "keep-distinct", "evidence": ["profile authors and executes generic Profile Suite intents and receipts", "kfx manages package installation, native execution, trust, and package schemas", "kfx profile-schema is schema discovery, not a second Profile action handler"]},
     {"pair": "work/agent-work", "decision": "keep-distinct", "evidence": ["work owns the legacy journal work-item lifecycle", "agent work owns the KFD-7 Product Profile Fact/action API", "schemas and mutation authorities are intentionally separate"]},
-    {"pair": "atlas/profile-mission-control-v3-compatibility", "decision": "split-canonical", "canonical": {"current-work": "kungfu work", "atlas-bridge": "kungfu atlas"}, "evidence": ["kungfu profile mission-control is hidden compatibility-only and has no KFD-3 API identity", "its removal gate is the retained v3 read/import/migration/rollback/bundle qualification plus zero installed retained-v3 observations", "Atlas bridge import/verify and KF-ADR-019f86da-4f90-710c-a3b6-5e0cb5a28ad0 capabilities/inspect/action remain only under kungfu atlas"]},
     {"pair": "developer-top-level/dev", "decision": "split-canonical", "canonical": {"engage": "kungfu dev engage", "env": "kungfu env", "schema": "kungfu dev schema", "sdk": "kungfu sdk"}, "evidence": ["each developer capability has exactly one live path", "env is dispatched by the native installed runtime", "sdk is the public application assembly and KFD/build entrypoint"]}
   ],
   "contributions": [],
@@ -132,7 +112,7 @@
   "catalogProjection": {
     "artifact": "kungfu.agent/cli_surface.catalog.json",
     "authority": "runtime-fold",
-    "expectedSurfaceRoot": "sha256:5b1dced285cb74e1575e266a2b5ba2ed49e5cb5adf4c3f0987f2e8a201f12363",
+    "expectedSurfaceRoot": "sha256:93849bc9a689c62c0dcd51e92c25b8d1209534e186b5317d1177baaedf717289",
     "consumers": {
       "agentCapabilities": "embed-complete",
       "agentCommands": "strict-link",
