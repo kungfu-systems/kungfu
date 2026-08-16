@@ -3,7 +3,7 @@
   "contract": "kungfu-buildchain-dev-delivery-warrant-queue",
   "repository": "kungfu-systems/kungfu",
   "protectedBase": "dev/v4/v4.0",
-  "generation": 3111,
+  "generation": 3112,
   "fencingCounter": 466,
   "policy": {
     "agingSeconds": 900,
@@ -11,51 +11,7 @@
     "leaseSeconds": 3600,
     "emergencyPolicy": "reviewed-explicit-only"
   },
-  "activeWarrant": {
-    "schema": "kungfu.buildchain.dev-delivery-warrant/v1",
-    "repository": "kungfu-systems/kungfu",
-    "protectedBase": "dev/v4/v4.0",
-    "candidateId": "sha256:1a54d4c6943cc94a5b19346c16ebf3b614397f31a74dc55fad0ec7273c8dd4b5",
-    "pullRequestNumber": 3178,
-    "sourceHead": "cc485daa55c488a47712eb6c9430decf23798d69",
-    "assignmentRoot": "sha256:1ebd4ba8bf22e1ffbda04b6ca94411253a32f09b74f6f3f5480cff974cce7518",
-    "initiativeRoot": "sha256:bfff817933e5a5ad693e4b902a84f6cc3a251235dd7377cb4091d92f805fa7ff",
-    "sourceIdentityRoot": "sha256:3f44b14eea489fcbc8f475636426a0d7dd78b9af1496b7d54e92835947d64162",
-    "sourcePatchRoot": "sha256:7878e5008ad7fe2039d50698e75c7e436e6777b4fbbab8cfdede57b6bfe26c39",
-    "sourceProofRoot": "sha256:b8cc83a7877c1779f3be7177077e783a7b64f7b497048247534d94dac536bd16",
-    "planRoot": "sha256:01d92ee52cd5f276dfef3ebd5eaa5970868f47d091a2f75f41c7888c13243c85",
-    "closureRoot": "sha256:106d175611d8634c988192302b9c464ae8ba3b6d023c2cff9910e401344c9624",
-    "dependencyRoot": "sha256:74db5139cf31308adb319b2b8a71189bf0af611bf3d4ec33b7c6e3f344f2b6cb",
-    "toolchainRoot": "sha256:2ecb07894954a2e0de022615d4561e5ba3ae68376401941ecff77be03cd75a0f",
-    "environmentRoot": "sha256:c5f5da5917c6ff93a509a62b18d4b9b69325755c4c7229b553b0016cde83788f",
-    "affectedPaths": [
-      ".buildchain/kfd/kfd-2/release-claims.json",
-      ".buildchain/kfd/kfd-3/collaboration-interface.prebuild.json",
-      ".buildchain/kfd/support-matrix.json",
-      ".github/workflows/affected-native-pr.yml",
-      ".github/workflows/dev-pr-auto-merge.yml",
-      "developer/sdk/kfd/kfd-2/release-claims.json",
-      "developer/sdk/kfd/support-matrix.json",
-      "docs/qualification/gates/workflow-authority.json",
-      "docs/qualification/stable-release-continuation.contract.json",
-      "framework/release/publication-surfaces.json",
-      "scripts/affected-native-proof.mjs",
-      "scripts/affected-native-semantic-source.test.mjs",
-      "scripts/dev-pr-auto-merge.test.mjs"
-    ],
-    "sourceWorkflowRunId": 31914272740,
-    "deliveryClass": "native-proof-required",
-    "generation": 466,
-    "phase": "qualified",
-    "expectedOldStateRoot": "sha256:3ce0dba57eae86d00078d2ff3a5334318b9ac31df281dabbba75b2422f8f81c8",
-    "issuedAt": "2026-08-15T23:23:04.115Z",
-    "expiresAt": "2026-08-16T01:39:21.362Z",
-    "fencingToken": "sha256:b97a9651545fb9eec2c935cb17a930c3677f7ff3b0756b6dc4110aa2d522008e",
-    "nextAction": "Enter the GitHub merge queue at the exact fenced PR head; merge_group remains final authority.",
-    "nativeProofRoot": "sha256:034029350290c86a333369fb2f6e51e9d9a6b409b6b8fcfb33eda942c6cc2280",
-    "nativeProofReuseRoot": "sha256:aa33bbacece0661efb7322ad80b0588dbc96464f9229d8c0425cd7c54be6b818",
-    "qualifiedAt": "2026-08-15T23:59:27.678Z"
-  },
+  "activeWarrant": null,
   "candidates": [
     {
       "repository": "kungfu-systems/kungfu",
@@ -29541,11 +29497,20 @@
       "sourceWorkflowRunId": 31914272740,
       "priority": "ordinary",
       "enqueuedAt": "2026-08-15T23:23:00.481Z",
-      "updatedAt": "2026-08-16T00:09:21.362Z",
+      "updatedAt": "2026-08-16T00:22:05.680Z",
       "attempts": 1,
       "recoveries": 0,
-      "status": "qualified",
-      "terminal": null,
+      "status": "cancelled",
+      "terminal": {
+        "outcome": "cancelled",
+        "terminalClass": "authoritative-cancellation",
+        "reason": "protected pull request event: closed",
+        "evidenceRoot": "sha256:86bb86cb8e1781700a262a224530aa678f9269bfac71ea8dc8b0b6cc1d18477d",
+        "closedAt": "2026-08-16T00:22:05.680Z",
+        "fencingToken": "sha256:b97a9651545fb9eec2c935cb17a930c3677f7ff3b0756b6dc4110aa2d522008e",
+        "leaseGeneration": 466,
+        "nativeProofRoot": "sha256:034029350290c86a333369fb2f6e51e9d9a6b409b6b8fcfb33eda942c6cc2280"
+      },
       "affectedPaths": [
         ".buildchain/kfd/kfd-2/release-claims.json",
         ".buildchain/kfd/kfd-3/collaboration-interface.prebuild.json",
@@ -29594,6 +29559,6 @@
       ]
     }
   ],
-  "updatedAt": "2026-08-16T00:20:21.328Z",
-  "stateRoot": "sha256:a6080f4ff67ae8dd192c3a21f3b947cc05b6fe81dbc7eca394ea608ed82aa098"
+  "updatedAt": "2026-08-16T00:22:05.680Z",
+  "stateRoot": "sha256:1f015645bcc6889096e2a74c0453b2200e26b3735d47f1ef828d7449468d260b"
 }
