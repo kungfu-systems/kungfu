@@ -154,7 +154,7 @@ test('Dev auto-merge waits for PR checks and lands through the native queue', ()
   assert.doesNotMatch(requiredChecks || '', /Queue admission lease/u);
   assert.match(
     workflow,
-    /native-command: >-[\s\S]*dev-delivery:native-under-warrant[\s\S]*--status-context 'Delivery Warrant native proof \/ linux'/u,
+    /native-command: >-[\s\S]*dev-delivery:native-under-warrant[\s\S]*--status-context 'affected-native \/ linux'/u,
   );
   assert.match(
     workflow,
@@ -473,6 +473,19 @@ test('hosted native jobs remain fail-closed behind the exact active Warrant', ()
     sourceWorkflow,
     /merge_group\)[\s\S]*allowed_phase='\^qualified\$'/u,
   );
+});
+
+test('qualified Warrant native proof satisfies the protected native context', () => {
+  const workflow = fs.readFileSync(
+    '.github/workflows/dev-pr-auto-merge.yml',
+    'utf8',
+  );
+  assert.match(workflow, /--status-context 'affected-native \/ linux'/u);
+  assert.doesNotMatch(
+    workflow,
+    /--status-context 'Delivery Warrant native proof \/ linux'/u,
+  );
+  assert.match(workflow, /queue-admission-context: Queue admission lease/u);
 });
 
 test('the completed migration has no bootstrap bypass around Warrant admission', () => {

@@ -198,7 +198,7 @@
           "classification": "non-publication",
           "owner": "kungfu-ci",
           "surfaceIds": [],
-          "sourceRoot": "sha256:0a84fa459f95841d21c610540770b0efc7bf9e63abe05de4f885f687ef303ced"
+          "sourceRoot": "sha256:36ddba1b87ac20e7a6a4bba73c5092ed756827ce9991c0752d05bc3f5f854bee"
         },
         {
           "path": ".github/workflows/dev-gate-latency-patrol.yml",
@@ -318,7 +318,7 @@
             "portable-format",
             "site-package"
           ],
-          "sourceRoot": "sha256:1700c2c52b5ff4b09016013b2cf643fc570560a31c805434153d524a83e2f073"
+          "sourceRoot": "sha256:4cf6a87163b141a7dc77e65c13579767d510b93ba6cf90bc273eadc1fb8c02bd"
         },
         {
           "path": ".github/workflows/python-structure.yml",
@@ -343,7 +343,7 @@
             "product-stable",
             "product-binaries"
           ],
-          "sourceRoot": "sha256:c9cf6b30e904d074dc67264a6a8392d83966d460eb0ff439ca14ea3e662d0801"
+          "sourceRoot": "sha256:76987ffbc91cf2a38eaaaa86d07ea0c068c7e1836cb46211c3f8afac4968bf14"
         },
         {
           "path": ".github/workflows/release-shifu.yml",
@@ -353,7 +353,7 @@
             "shifu-launcher",
             "xinfa-compiler"
           ],
-          "sourceRoot": "sha256:21b1abce53f87b1e1bdb9f20e143ebc997f5bb6511f11c639978abdeac71f85a"
+          "sourceRoot": "sha256:d314d4329ea0c02aba506adc1d819949bdcc9b8476f192485d71f82c7794825c"
         },
         {
           "path": ".github/workflows/shifu-ci.yml",
@@ -874,5 +874,5 @@
       }
     }
   ],
-  "registryRoot": "sha256:91dccffea430dc91c46f008b942885ff036ba038c19101f455991501f4bdef1c"
+  "registryRoot": "sha256:7eaeacd0eeb7adb13016f5b782525f2bcc810352486dd81afb566ce3453798e0"
 }

@@ -47,6 +47,31 @@ judgment is hidden inside an action the developer already performs** (advancing 
 next channel). No changeset files, no commit-message conventions, no manual `version`
 command.
 
+### Product maturity and GitHub discovery are separate axes
+
+Three independent values must not be collapsed into one boolean:
+
+1. **Product maturity and prerelease channel** come from the SemVer tag (for
+   example `v4.0.0-alpha.2`), the protected `alpha` channel, catalog entries,
+   Release Passport, compatibility promises, support matrix, and public risk
+   documentation. An Alpha remains an Alpha at all of those authorities.
+2. **GitHub `prerelease` metadata** is a repository-host presentation field.
+   Every public Kungfu product release, including an Alpha, is deliberately
+   published with `draft=false` and `prerelease=false`. This value is not a
+   maturity claim and does not weaken an Alpha warning or support boundary.
+3. **GitHub Latest** is the discovery pointer used by `/releases/latest` and
+   `/releases/latest/download/...`. Every Kungfu product publication explicitly
+   sets `make_latest=true`. Native component tags such as `shifu-v*` and
+   `xinfa-v*` explicitly set `make_latest=false`; they are independently
+   installable components, not the repository's product discovery authority.
+
+The publication tail normalizes Alpha product metadata inside the same final
+publication-commit command that binds the public authority. A read-only gate
+then requires `/releases/latest` to name the newest public Kungfu product and
+requires `/releases/latest/download/buildchain.release.json` to resolve to that
+release's exact Publication Bundle. A component release, a missing bundle, a
+redirect to another tag, or mismatched product/tag/channel fields fails closed.
+
 **The pipeline is asymmetric by design.** `dev` remains the fast integration
 zone: it runs a lightweight source and ADR-delivery gate rather than the full
 release build across three full-product platforms plus a bounded Linux ARM64

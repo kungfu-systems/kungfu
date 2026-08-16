@@ -487,6 +487,13 @@ function testTestManifest() {
   ]);
 }
 
+function testGithubReleasePolicy() {
+  run('GitHub Release metadata policy tests', 'node', [
+    '--test',
+    path.join('scripts', 'github-release-policy.test.mjs'),
+  ]);
+}
+
 function checkKungfuGateCatalog() {
   run('Kungfu Gate catalog gate', 'node', [
     path.join('scripts', 'check-kungfu-gate-catalog.mjs'),
@@ -896,6 +903,7 @@ function checkStaged() {
 function checkShared() {
   checkTestManifest();
   testTestManifest();
+  testGithubReleasePolicy();
   testShifuEntryContract();
   testShifuCacheContract();
   testShifuProductionGraphContract();

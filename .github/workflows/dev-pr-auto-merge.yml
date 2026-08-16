@@ -575,7 +575,7 @@ jobs:
         --target-branch ${{ needs.resolve-target.outputs.target-branch }}
         --pull-request ${{ needs.resolve-target.outputs.expected-pr-number }}
         --expected-head ${{ needs.resolve-target.outputs.expected-head-sha }}
-        --status-context 'Delivery Warrant native proof / linux'
+        --status-context 'affected-native / linux'
         --output ../dev-delivery/kungfu-native-receipt.json
       native-heartbeat-seconds: 300
       delivery-class: ${{ needs.delivery-contract.outputs.delivery-class || 'native-proof-required' }}
