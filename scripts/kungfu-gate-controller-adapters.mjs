@@ -100,6 +100,9 @@ function uniqueIdentities(bindings) {
   return [...identities.values()];
 }
 
+const BUILDCHAIN_BUILD_WORKFLOW =
+  /^kungfu-systems\/buildchain\/\.github\/workflows\/\.build\.yml@\S+$/u;
+
 function controllerFact(workflow, job, source, adapter, actual, jobNode) {
   return {
     workflow,
@@ -119,7 +122,34 @@ function controllerFact(workflow, job, source, adapter, actual, jobNode) {
 
 export function controllerFactsForJob(workflow, jobId, job, bindings) {
   const facts = [];
-  for (const adapter of uniqueIdentities(bindings)) {
+  const adapters = uniqueIdentities(bindings);
+  const governedBuildWorkflow = bindings.some(
+    (binding) =>
+      binding.execution === 'controller' &&
+      binding.workflow === workflow &&
+      binding.adapter?.kind === 'job-uses' &&
+      BUILDCHAIN_BUILD_WORKFLOW.test(binding.adapter.uses),
+  );
+  if (
+    governedBuildWorkflow &&
+    typeof job.uses === 'string' &&
+    BUILDCHAIN_BUILD_WORKFLOW.test(job.uses) &&
+    !adapters.some(
+      (adapter) => adapter.kind === 'job-uses' && adapter.uses === job.uses,
+    )
+  ) {
+    facts.push(
+      controllerFact(
+        workflow,
+        jobId,
+        'uses',
+        { kind: 'job-uses', uses: job.uses },
+        job,
+        job,
+      ),
+    );
+  }
+  for (const adapter of adapters) {
     if (adapter.kind === 'job-uses' && job.uses === adapter.uses) {
       facts.push(controllerFact(workflow, jobId, 'uses', adapter, job, job));
     }

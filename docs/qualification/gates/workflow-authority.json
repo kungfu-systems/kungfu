@@ -254,9 +254,9 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "diagnostic",
-          "definitionDigest": "sha256:b63e99818b70697a66f0569dfe74c8a2a733dd6aff3c2963b4ffcc970607d677",
+          "definitionDigest": "sha256:a053c0325dbd7178df34ee7c8a2400e00fabe20ca35ca99066ad82df8827c9ea",
           "credentials": {"githubToken":"write","oidc":true,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
-          "externalActions": ["kungfu-systems/buildchain/.github/workflows/.build.yml@v3"],
+          "externalActions": ["kungfu-systems/buildchain/.github/workflows/.build.yml@9baf025baad5faa2d9c2339af06f73adbe4b84a0"],
           "steps": []
         }
       ]
@@ -311,7 +311,7 @@
     {
       "path": ".github/workflows/build.yml",
       "authority": "product-publication",
-      "definitionDigest": "sha256:056b44876cde428b8eb6df8905bd41c0fa890990cab2003b70b3e91fd8990efe",
+      "definitionDigest": "sha256:c61111052b0bd4bdf81cf1608b700edfe880207cd6ef4e5bcf35cb12ae9b48ee",
       "jobs": [
         {
           "id": "auditable-demo-fast-sentinel",
@@ -328,9 +328,9 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "qualifying",
-          "definitionDigest": "sha256:eb62b8b7d5754de5d5e4169892724fdda360b5dfa2f1a5ef1221b5adbdf50b20",
+          "definitionDigest": "sha256:2393cc59a2cf6421a976ebeea6cc871a016df02a9a3f1b9273dfefebaa0ce9e3",
           "credentials": {"githubToken":"write","oidc":true,"repositorySecrets":["BUILDCHAIN_ARTIFACT_RELAY_S3_DOWNLOAD_ROLE_ARN","BUILDCHAIN_ARTIFACT_RELAY_S3_ROLE_ARN","BUILDCHAIN_ARTIFACT_RELAY_S3_UPLOAD_ROLE_ARN","KUNGFU_GITHUB_TOKEN"],"inheritedSecrets":false,"environment":null},
-          "externalActions": ["kungfu-systems/buildchain/.github/workflows/.build.yml@v3-alpha"],
+          "externalActions": ["kungfu-systems/buildchain/.github/workflows/.build.yml@9baf025baad5faa2d9c2339af06f73adbe4b84a0"],
           "steps": []
         },
         {
