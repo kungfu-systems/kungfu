@@ -192,7 +192,16 @@ jobs:
           TAG: ${{ inputs.release-tag }}
           VERSION: ${{ needs.prepare.outputs.version }}
         run: |
-          gh release view "$TAG" >/dev/null 2>&1 || gh release create "$TAG" --target "${{ needs.prepare.outputs.source-sha }}" --title "Kungfu Episodes ${VERSION}" --notes "KF-ADR-019f86da-4f90-7c91-9cc2-6dbd18d68dff qualified release ${VERSION}"
+          gh release view "$TAG" >/dev/null 2>&1 || gh release create "$TAG" \
+            --target "${{ needs.prepare.outputs.source-sha }}" \
+            --title "Kungfu Episodes ${VERSION}" \
+            --notes "KF-ADR-019f86da-4f90-7c91-9cc2-6dbd18d68dff qualified release ${VERSION}" \
+            --draft=false \
+            --prerelease=false \
+            --latest
+          ./shifu release:github:metadata:apply -- \
+            --repository "$GITHUB_REPOSITORY" \
+            --tag "$TAG"
           gh release upload "$TAG" publication-set/publication/github/*
       - name: Preserve exact PyPI wheels for isolated publisher job
         if: ${{ inputs.publication-scope == 'full-layers' }}
