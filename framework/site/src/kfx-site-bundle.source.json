@@ -89,6 +89,14 @@
       "nonClaim": "Scaffold, build, and qualification commands do not install or activate a package."
     },
     {
+      "id": "installed-authoring-contract",
+      "path": "framework/core/src/python/kungfu/kfx_authoring_assets/contract.json",
+      "role": "machine-contract",
+      "maturity": "pre-release",
+      "status": "implemented",
+      "nonClaim": "A version-matched authoring contract describes inert authoring assets; it does not install or activate an extension."
+    },
+    {
       "id": "cli-surface-catalog",
       "path": "framework/core/src/python/kungfu/agent/cli_surface.catalog.json",
       "role": "cli-catalog",
@@ -170,7 +178,7 @@
       "summary": "The 4.0.0-alpha.3 KFX manifest declares package identity, facets, requested capabilities, and host inputs; retained qualification covers package, install, activation, upgrade, rollback, and removal for the maintained webhook suite.",
       "maturity": "pre-release",
       "status": "implemented",
-      "sourceIds": ["kfx-contract", "extensions-guide", "github-webhook-qualification"],
+      "sourceIds": ["kfx-contract", "extensions-guide", "installed-authoring-contract", "github-webhook-qualification"],
       "nonClaim": "A conforming manifest remains inert until native admission."
     },
     {
@@ -179,7 +187,7 @@
       "summary": "On the 4.0.0-alpha.3 development line, a pinned Fact cut, Work, Warrant, policy, exact roots, and CAS guard every accepted package, install, activation, upgrade, rollback, and removal mutation.",
       "maturity": "pre-release",
       "status": "staged",
-      "sourceIds": ["kfx-domain-profile", "kfx-topology", "github-webhook-qualification"],
+      "sourceIds": ["kfx-domain-profile", "kfx-topology", "installed-authoring-contract", "github-webhook-qualification"],
       "nonClaim": "Filesystem discovery and package metadata are observations, not registry authority."
     },
     {
@@ -188,7 +196,7 @@
       "summary": "On the 4.0.0-alpha.3 development line, packages request capabilities while Core policy and an explicit exact grant select the allowed subset for one host and preserve that separation across rollback.",
       "maturity": "pre-release",
       "status": "implemented",
-      "sourceIds": ["kfx-contract", "capability-ownership", "kfx-topology", "github-webhook-qualification"],
+      "sourceIds": ["kfx-contract", "capability-ownership", "kfx-topology", "installed-authoring-contract", "github-webhook-qualification"],
       "nonClaim": "Declaration, KFD success, or package origin does not grant a capability."
     },
     {
@@ -206,7 +214,7 @@
       "summary": "The installed 4.0.0-alpha.3-matched kit supports scaffold, inspect, validate, build, offline qualify, package, install, activate, upgrade, rollback, and remove steps.",
       "maturity": "pre-release",
       "status": "experimental",
-      "sourceIds": ["installed-agent-index", "installed-authoring-brief", "github-webhook-suite-readme"],
+      "sourceIds": ["installed-agent-index", "installed-authoring-brief", "installed-authoring-contract", "github-webhook-suite-readme"],
       "nonClaim": "Authoring output remains inert; lifecycle commands require their declared native admission and do not expose a public listener by themselves."
     },
     {
@@ -215,7 +223,7 @@
       "summary": "The 4.0.0-alpha.3 runtime SDK projection and public CLI catalog expose version-matched authoring, lifecycle, and native inspection routes.",
       "maturity": "pre-release",
       "status": "implemented",
-      "sourceIds": ["installed-authoring-brief", "cli-surface-catalog", "kfx-contract", "github-webhook-suite-readme"],
+      "sourceIds": ["installed-authoring-brief", "installed-authoring-contract", "cli-surface-catalog", "kfx-contract", "github-webhook-suite-readme"],
       "nonClaim": "A visible CLI route does not change its declared mutation or approval policy."
     },
     {
@@ -242,7 +250,7 @@
       "summary": "For the 4.0.0-alpha.3 development line, identity-neutral terminal evidence and the maintained webhook Profile cover installed-product package, lifecycle, rollback, removal, and local reference-suite qualification.",
       "maturity": "pre-release",
       "status": "qualified",
-      "sourceIds": ["kfx-terminal-qualification", "github-webhook-qualification", "github-webhook-suite-readme"],
+      "sourceIds": ["kfx-terminal-qualification", "installed-authoring-contract", "github-webhook-qualification", "github-webhook-suite-readme"],
       "nonClaim": "Current retained evidence does not establish stable compatibility, downstream Site adoption, or completion of the optional real GitHub/AWS China canary."
     }
   ],
