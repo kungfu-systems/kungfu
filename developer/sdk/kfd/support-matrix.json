@@ -10,11 +10,11 @@
   },
   "upstream": {
     "package": "@kungfu-tech/kfd",
-    "version": "1.0.0-alpha.53",
+    "version": "1.0.0-alpha.62",
     "line": "v1.0",
     "channel": "alpha",
-    "standardsSha256": "sha256:65899780779a8e933f1f3a298bfdf2311104ccde84b773a0828ee4c23dd19d5b",
-    "releaseAnchorSha256": "sha256:d50e474cf2d158722d765f54188550e30fa126e1728fc9eb748014e220acfc9b"
+    "standardsSha256": "sha256:4cc77b8364fa5d4f158933ee3c89640b9ef1e2979c45c2fd9e7d69060258255e",
+    "releaseAnchorSha256": "sha256:a08858f0a21ca53bc2a77952450b14c395c6fa82539064d99659f513aac56585"
   },
   "projections": {
     "sdk": "developer/sdk/kfd/support-matrix.json",
@@ -37,7 +37,7 @@
       "supportStatus": "source-supported",
       "normative": {
         "status": "active",
-        "revision": 6,
+        "revision": 7,
         "documentSha256": "sha256:f504d02736a50006786103c31843ab759e54d160056f756780aeb9b7da1a914a"
       },
       "implementation": {
@@ -102,7 +102,7 @@
         "evidenceRoots": [
           {
             "path": ".buildchain/kfd/kfd-2/release-claims.json",
-            "sha256": "sha256:af392cb353df2f87f5cb553aee38a1706a8df23992e50ca96c63fd38ef3e8dff"
+            "sha256": "sha256:76bcba656fcbf67dd77079f2e8763baac80bd604691581eb1b195e3cea1d5cf2"
           },
           {
             "path": "docs/qualification/kfd2-trust-assessment.md",
@@ -176,7 +176,7 @@
       },
       "claimClass": "release-qualified-support",
       "knownLimitations": [
-        "Support covers the 186 product-declared surfaces accepted by the exact Buildchain registry audit."
+        "Support covers the 199 product-declared surfaces accepted by the exact Buildchain registry audit."
       ],
       "owner": "buildchain",
       "nextGate": "Retain and verify the exact product-declared registry audit and artifact closure in every claimed Alpha release passport."
