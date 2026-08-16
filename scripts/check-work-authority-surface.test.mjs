@@ -48,16 +48,10 @@ test('the only public Work mutation family is kungfu work', () => {
   assert.doesNotMatch(workControl, /^def create_mission\(/mu);
   assert.doesNotMatch(workControl, /^def create_go\(/mu);
 
-  const atlas = read('framework/core/src/python/kungfu/cli/commands/atlas.py');
-  for (const alias of [
-    'create-mission',
-    'create-go',
-    'claim-completion',
-    'review-completion',
-    'decide-continuation',
-  ]) {
-    assert.equal(atlas.includes(`name="${alias}"`), false, alias);
-  }
+  assert.equal(
+    fs.existsSync('framework/core/src/python/kungfu/cli/commands/atlas.py'),
+    false,
+  );
 });
 
 test('agent catalogs cannot advertise a retired Work mutation authority', () => {

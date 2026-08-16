@@ -2,38 +2,18 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import type { Profile } from '../../../framework/api/src/capability/profile.ts';
-import {
-  type AtlasDashboardSnapshot,
-  openWorkControlProfile,
-} from '../src/view/work-control-profile.ts';
+import { openWorkControlProfile } from '../src/view/work-control-profile.ts';
 
-test('Work Control Profile compatibility is read-only in the GUI', async () => {
+test('Work Control Profile nativeClient is read-only in the GUI', async () => {
   const source = '/profiles/work-control';
-  const snapshot = {
-    schema: 'kungfu.work-control.dashboard-snapshot/v1',
-    cut: { kind: 'system_time', system_time: '42' },
-    freshness: { status: 'fresh', basis: 'request-cut' },
-    projection_authority: {
-      mode: 'adapter-projection',
-      source: 'atlas-and-kungfu-facts',
-      profileSuiteRoot: 'sha256:profile-root',
-      memberRoot: 'sha256:member-root',
-      cutSystemTime: '42',
-      writableAuthority: false,
-    },
-    import_info: null,
+  const inspection = {
     authority: {
       schema: 'kungfu.work-control.authority-status/v1',
-      state: 'pre-cutover',
-      write_authority: 'atlas-adapter',
-      legacy_mutation_path: 'available',
-      migration_id: '',
-      parity_root: '',
+      state: 'native-only',
+      write_authority: 'kungfu-native',
       transition_count: 0,
     },
-    missions: [],
-    goals: [],
-  } as AtlasDashboardSnapshot;
+  };
   const calls: string[] = [];
   const profile = {
     runtimeDir: '/runtime',
@@ -44,94 +24,87 @@ test('Work Control Profile compatibility is read-only in the GUI', async () => {
       operation: string,
     ) => {
       calls.push(operation);
-      return { result: snapshot };
+      return { result: inspection };
     },
   } as unknown as Profile;
 
-  const compatibility = openWorkControlProfile(profile);
-  assert.equal((await compatibility.dashboard()).schema, snapshot.schema);
+  const nativeClient = openWorkControlProfile(profile);
+  assert.equal(
+    (await nativeClient.authorityStatus()).authority.write_authority,
+    'kungfu-native',
+  );
   const mutations: Array<[string, () => Promise<unknown>]> = [
-    ['importRepo', () => compatibility.importRepo('/repo')],
-    [
-      'activateWorkControl',
-      () => compatibility.activateWorkControl({ actor: 'test-owner' } as never),
-    ],
-    [
-      'restoreAtlasAuthority',
-      () =>
-        compatibility.restoreAtlasAuthority({ actor: 'test-owner' } as never),
-    ],
-    ['assessMission', () => compatibility.assessMission('initiative-a')],
+    ['assessInitiative', () => nativeClient.assessInitiative('initiative-a')],
     [
       'assessInitiativeAsync',
-      () => compatibility.assessInitiativeAsync('initiative-a'),
+      () => nativeClient.assessInitiativeAsync('initiative-a'),
     ],
     [
       'createInitiative',
       () =>
-        compatibility.createInitiative('initiative-a', {
+        nativeClient.createInitiative('initiative-a', {
           actor: 'test-owner',
         } as never),
     ],
     [
       'exportInitiative',
-      () => compatibility.exportInitiative('initiative-a', '/out'),
+      () => nativeClient.exportInitiative('initiative-a', '/out'),
     ],
-    ['importInitiative', () => compatibility.importInitiative('/in')],
+    ['importInitiative', () => nativeClient.importInitiative('/in')],
     [
       'createAssignment',
       () =>
-        compatibility.createAssignment('initiative-a', {
+        nativeClient.createAssignment('initiative-a', {
           actor: 'test-owner',
         } as never),
     ],
     [
       'appendAssignmentRelationEvent',
       () =>
-        compatibility.appendAssignmentRelationEvent({
+        nativeClient.appendAssignmentRelationEvent({
           actor: 'test-owner',
         } as never),
     ],
     [
       'claimAssignment',
       () =>
-        compatibility.claimAssignment('initiative-a', 'assignment-a', {
+        nativeClient.claimAssignment('initiative-a', 'assignment-a', {
           authorizedBy: 'test-owner',
         } as never),
     ],
     [
       'advanceAssignment',
       () =>
-        compatibility.advanceAssignment('initiative-a', 'assignment-a', {
+        nativeClient.advanceAssignment('initiative-a', 'assignment-a', {
           actor: 'test-owner',
         } as never),
     ],
     [
       'claimCompletion',
       () =>
-        compatibility.claimCompletion('initiative-a', 'assignment-a', {
+        nativeClient.claimCompletion('initiative-a', 'assignment-a', {
           actor: 'test-owner',
         } as never),
     ],
     [
       'assessCompletion',
-      () => compatibility.assessCompletion('initiative-a', 'assignment-a'),
+      () => nativeClient.assessCompletion('initiative-a', 'assignment-a'),
     ],
     [
       'assessCompletionAsync',
-      () => compatibility.assessCompletionAsync('initiative-a', 'assignment-a'),
+      () => nativeClient.assessCompletionAsync('initiative-a', 'assignment-a'),
     ],
     [
       'reviewCompletion',
       () =>
-        compatibility.reviewCompletion('initiative-a', 'assignment-a', {
+        nativeClient.reviewCompletion('initiative-a', 'assignment-a', {
           reviewer: 'test-owner',
         } as never),
     ],
     [
       'decideContinuation',
       () =>
-        compatibility.decideContinuation('initiative-a', 'assignment-a', {
+        nativeClient.decideContinuation('initiative-a', 'assignment-a', {
           actor: 'test-owner',
         } as never),
     ],
@@ -141,12 +114,12 @@ test('Work Control Profile compatibility is read-only in the GUI', async () => {
       assert.equal(error.code, 'authority-bypass', name);
       assert.match(
         error.message,
-        /read-only compatibility.*kungfu\.assignment-runtime\/v1/,
+        /read-only native client.*kungfu\.assignment-runtime\/v1/,
       );
       return true;
     });
   }
-  assert.deepEqual(calls, ['dashboard']);
+  assert.deepEqual(calls, ['authority-status']);
 });
 
 test('KFD-3 application authority executes an exact verified Profile intent', async () => {

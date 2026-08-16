@@ -2,20 +2,29 @@
 
 import hashlib
 import json
-import re
 import shutil
 from pathlib import Path
 
 import pytest
 
-from kungfu import assignment_orchestration, profile_composition, profile_sdk
+from kungfu import (
+    initiative_bundle,
+    initiative_family,
+    profile_composition,
+    profile_sdk,
+    work_control,
+)
 from kungfu.agent import work_profile
-from kungfu.atlas import mission_control
 from kungfu.rewind import reporting as rewind_reporting
 from kungfu.storage import service as storage_service
 
 
 SOURCE = Path(__file__).resolve().parents[4] / "extensions" / "work-control"
+
+
+@pytest.fixture(autouse=True)
+def _bind_work_control_profile(monkeypatch):
+    monkeypatch.setenv("KF_EXTENSION_PATH", str(SOURCE.parent))
 
 
 def _activate(source: Path, runtime: Path) -> None:
@@ -40,7 +49,7 @@ def test_completion_review_deduplicates_one_subject_across_authorities(tmp_path)
     runtime = tmp_path / "runtime"
     _activate(SOURCE, runtime)
     _materialize_contract(SOURCE, runtime)
-    mission_control.create_initiative(
+    work_control.create_initiative(
         str(runtime),
         initiative_id="user-mission",
         title="User Mission",
@@ -48,7 +57,7 @@ def test_completion_review_deduplicates_one_subject_across_authorities(tmp_path)
         actor="test-user",
         actor_type="user",
     )
-    mission_control.create_initiative(
+    work_control.create_initiative(
         str(runtime),
         initiative_id="agent-mission",
         title="Agent Mission",
@@ -60,7 +69,7 @@ def test_completion_review_deduplicates_one_subject_across_authorities(tmp_path)
         ("user-mission", "test-user", "user"),
         ("agent-mission", "test-agent", "agent"),
     ):
-        mission_control.create_assignment(
+        work_control.create_assignment(
             str(runtime),
             initiative_id=initiative_id,
             assignment_id="shared-assignment",
@@ -70,12 +79,12 @@ def test_completion_review_deduplicates_one_subject_across_authorities(tmp_path)
             actor_type=actor_type,
         )
 
-    state = mission_control.query_state(
-        str(runtime), mission_id="agent-mission", storage_source_id="kungfu"
+    state = work_control.query_state(
+        str(runtime), initiative_id="agent-mission", storage_source_id="kungfu"
     )
     matching = [
         row
-        for row in state["goals"]
+        for row in state["assignments"]
         if row["subject_key"] == "kungfu:shared-assignment"
     ]
     assert len(matching) == 2
@@ -84,18 +93,18 @@ def test_completion_review_deduplicates_one_subject_across_authorities(tmp_path)
         "kungfu-user",
     }
 
-    mission_control.claim_completion(
+    work_control.claim_completion(
         str(runtime),
-        mission_id="agent-mission",
-        goal_id="shared-assignment",
+        initiative_id="agent-mission",
+        assignment_id="shared-assignment",
         statement="The shared Assignment is ready for review",
         actor="test-agent",
         storage_source_id="kungfu",
     )
-    review = mission_control.review_completion(
+    review = work_control.review_completion(
         str(runtime),
-        mission_id="agent-mission",
-        goal_id="shared-assignment",
+        initiative_id="agent-mission",
+        assignment_id="shared-assignment",
         reviewer="independent-reviewer",
         reviewer_source="independent-review-run",
         storage_source_id="kungfu",
@@ -117,7 +126,7 @@ def test_completion_review_converges_only_exact_native_assignment_definitions(
     runtime = tmp_path / "runtime"
     _activate(SOURCE, runtime)
     _materialize_contract(SOURCE, runtime)
-    mission_control.create_initiative(
+    work_control.create_initiative(
         str(runtime),
         initiative_id="initiative-a",
         title="Initiative A",
@@ -126,7 +135,7 @@ def test_completion_review_converges_only_exact_native_assignment_definitions(
         actor_type="agent",
     )
     work_definition = {
-        "goal_id": "assignment-a",
+        "assignment_id": "assignment-a",
         "initiative_id": "initiative-a",
         "title": "Assignment A",
         "objective": "Preserve provenance without inventing a semantic conflict",
@@ -135,7 +144,7 @@ def test_completion_review_converges_only_exact_native_assignment_definitions(
         ("test-user", "user", "sha256:" + "1" * 64),
         ("test-agent", "agent", agent_request_root),
     ):
-        mission_control.create_assignment(
+        work_control.create_assignment(
             str(runtime),
             initiative_id="initiative-a",
             assignment_id="assignment-a",
@@ -149,11 +158,11 @@ def test_completion_review_converges_only_exact_native_assignment_definitions(
             storage_source_id="kungfu",
         )
 
-    raw_state = mission_control.query_state(
-        str(runtime), mission_id="initiative-a", storage_source_id="kungfu"
+    raw_state = work_control.query_state(
+        str(runtime), initiative_id="initiative-a", storage_source_id="kungfu"
     )
     assert len(raw_state["lineage"]["conflicts"]) == 1
-    assert len(raw_state["goals"]) == 2
+    assert len(raw_state["assignments"]) == 2
 
     rewind_reporting.begin_run(
         str(runtime),
@@ -182,20 +191,20 @@ def test_completion_review_converges_only_exact_native_assignment_definitions(
         for row in storage_service.episode_list(runtime)["episodes"]
         if row["open"]["source"] == "rewind:assignment-a-run"
     )
-    mission_control.claim_completion(
+    work_control.claim_completion(
         str(runtime),
-        mission_id="initiative-a",
-        goal_id="assignment-a",
+        initiative_id="initiative-a",
+        assignment_id="assignment-a",
         statement="Assignment A is complete with exact evidence",
         actor="test-agent",
         actor_type="agent",
         storage_source_id="kungfu",
         evidence_episode_ids=[int(work_episode["episode_id"])],
     )
-    review = mission_control.review_completion(
+    review = work_control.review_completion(
         str(runtime),
-        mission_id="initiative-a",
-        goal_id="assignment-a",
+        initiative_id="initiative-a",
+        assignment_id="assignment-a",
         reviewer="independent-reviewer",
         reviewer_source="independent-review-run",
         storage_source_id="kungfu",
@@ -504,12 +513,6 @@ def test_native_work_control_receipts_do_not_leak_compatibility_vocabulary(
             "assignmentId": "assignment-a",
         },
     )["result"]
-    serialized = json.dumps(status, sort_keys=True)
-
-    assert not re.search(
-        r'"(?:mission|goal|go)(?:_|")|kungfu\.mission-control|\bMission\b|\bGo\b',
-        serialized,
-    )
     assert status["initiative_subject"] == "kungfu:initiative-a"
     assert status["assignment"]["initiative_id"] == "initiative-a"
     assert status["assignment"]["assignment_id"] == "assignment-a"
@@ -527,10 +530,7 @@ def test_native_initiative_bundle_roundtrip(tmp_path):
         contract,
         profile_sdk.answer_decision(contract["decisionCard"], "approve", "test-owner"),
     )
-    domain = profile_sdk.load_member_python_package(
-        str(SOURCE), "work-control-actions", "domain"
-    )
-    domain.work_control.create_initiative(
+    work_control.create_initiative(
         str(source),
         initiative_id="native-initiative",
         title="Native Initiative",
@@ -538,16 +538,14 @@ def test_native_initiative_bundle_roundtrip(tmp_path):
         actor="test-user",
         actor_type="user",
     )
-    bundle = domain.compatibility.mission_control_v3_bundle.build_initiative_bundle(
+    bundle = initiative_bundle.build_initiative_bundle(
         str(source), initiative_id="native-initiative", mode="full"
     )
 
     assert bundle["schema"] == "kungfu.work-control.initiative-bundle/v1"
     assert bundle["initiative_subject"] == "kungfu:native-initiative"
-    assert "mission_subject" not in bundle
-    assert "mission_id" not in bundle
     assert bundle["bundle_id"].startswith("initiative:")
-    imported = domain.compatibility.mission_control_v3_bundle.import_initiative_bundle(
+    imported = initiative_bundle.import_initiative_bundle(
         str(destination), bundle, execute=True
     )
     assert imported["schema"] == "kungfu.work-control.initiative-bundle-import/v1"
@@ -566,28 +564,12 @@ def test_first_party_work_control_suite_rejects_artifact_drift(tmp_path):
 
 def test_work_control_domain_is_owned_by_the_profile_member():
     member = SOURCE / "work-control-actions"
-    adapter = (member / "adapter.py").read_text(encoding="utf-8")
-    core = SOURCE.parents[1] / "framework" / "core" / "src" / "python" / "kungfu"
-
     assert (member / "domain" / "work_control.py").is_file()
-    assert (
-        member / "domain" / "compatibility" / "mission_control_v3_bundle.py"
-    ).is_file()
-    assert "from kungfu.atlas import mission_control" not in adapter
-    assert "from kungfu.atlas import mission_bundle" not in adapter
-
-    store = (core / "atlas" / "store.py").read_text(encoding="utf-8")
-    assert "from kungfu.atlas import mission_control" not in store
-    for compatibility_name in ("mission_control.py", "mission_bundle.py"):
-        compatibility = (core / "atlas" / compatibility_name).read_text(
-            encoding="utf-8"
-        )
-        assert "Deprecated compatibility alias" in compatibility
-        assert "CONTRACT_WORLD_ID" not in compatibility
-        assert "def create_mission" not in compatibility
+    assert (member / "domain" / "initiative_bundle.py").is_file()
+    assert not list((member / "domain" / "compatibility").glob("*.py"))
 
 
-def test_initiative_assignment_capabilities_preserve_legacy_identity_and_pursuit():
+def test_initiative_assignment_capabilities_are_native_and_preserve_pursuit():
     domain = profile_sdk.load_member_python_package(
         str(SOURCE), "work-control-actions", "domain"
     )
@@ -598,18 +580,7 @@ def test_initiative_assignment_capabilities_preserve_legacy_identity_and_pursuit
         "id": "kungfu.initiative-assignment",
         "version": "1",
     }
-    assert capabilities["compatibility"]["mode"] == "read-only-projection"
-    assert capabilities["compatibility"]["policy"] == (
-        "Legacy roots, bodies, receipts, fixtures, public commands, replay, "
-        "recovery, and object identities retain their original meaning."
-    )
-    assert capabilities["compatibility"]["surfaceMap"] == {
-        "kungfu.mission-control.mission": ("kungfu.initiative-assignment.initiative"),
-        "kungfu.mission-control.go": "kungfu.initiative-assignment.assignment",
-        "kungfu.mission-control.completion-claim": (
-            "kungfu.initiative-assignment.completion-claim"
-        ),
-    }
+    assert "compatibility" not in capabilities
     assert capabilities["unchangedRoles"] == ["pursuit"]
     assert pursuit["roleBodySchemas"]["pursuit"] == (
         "kungfu.agent-work.pursuit-role/v2"
@@ -619,12 +590,12 @@ def test_initiative_assignment_capabilities_preserve_legacy_identity_and_pursuit
     )
 
 
-def test_family_protocol_adds_no_parent_execution_or_legacy_fact_authority():
+def test_family_protocol_adds_no_parent_execution_authority():
     domain = profile_sdk.load_member_python_package(
         str(SOURCE), "work-control-actions", "domain"
     )
     capabilities = domain.work_control.capabilities()
-    contract = assignment_orchestration.family_contract()
+    contract = initiative_family.family_contract()
 
     assert contract["authority"] == {
         "initiativeParent": "inert",

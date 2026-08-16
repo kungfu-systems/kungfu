@@ -1,42 +1,5 @@
 {
   "schema": "kungfu.profile-migrations/v1",
   "mode": "additive",
-  "migrations": [
-    {
-      "id": "mission-control-v3-reader",
-      "from": "kungfu.mission-control/v3",
-      "to": "kungfu.mission-control/v3+profile",
-      "factRewrite": false,
-      "activation": "explicit"
-    },
-    {
-      "id": "mission-control-saved-view-profile-envelope",
-      "from": "kungfu.query.saved-view/v1#mission-control",
-      "to": "kungfu.query.saved-view/v1#profile-envelope",
-      "factRewrite": false,
-      "activation": "explicit-on-save"
-    },
-    {
-      "id": "mission-control-atlas-to-native-authority",
-      "from": "kungfu.mission-control/v3#atlas-bridge",
-      "to": "kungfu.mission-control/v3#kungfu-native",
-      "factRewrite": false,
-      "activation": "explicit-parity-gated-action",
-      "receiptSchema": "kungfu.mission-control.authority-cutover-receipt/v1",
-      "rollbackAction": "rollback-authority",
-      "legacyHistory": "retained-read-only",
-      "singleWriteAuthority": true
-    },
-    {
-      "id": "work-control-v4-profile-identity",
-      "from": "kungfu.mission-control/v3.1#profile",
-      "to": "kungfu.work-control/v4#profile",
-      "factRewrite": false,
-      "activation": "explicit-profile-upgrade",
-      "legacyHistory": "retained-read-only",
-      "legacyCommands": "explicit-compatibility-only",
-      "rollbackProfile": "kungfu.mission-control/v3.1",
-      "singleWriteAuthority": true
-    }
-  ]
+  "migrations": []
 }

@@ -8,7 +8,7 @@
     "kungfu.project-cut.history-bundle/v1",
     "kungfu.product-release-cut.history-bundle/v1",
     "kungfu.facts.library-bundle/v1",
-    "kungfu.mission-control.bundle/v2",
+    "kungfu.work-control.initiative-bundle/v1",
     "kungfu.profile-source-bundle/v1"
   ],
   "supportedMemberProtocols": [
@@ -18,7 +18,7 @@
     "fact-kernel.integrity-root/v1",
     "project-cut-history-portability/v1",
     "declared-facts-v1",
-    "mission-control-portability/v2",
+    "work-control-initiative-portability/v1",
     "profile-source-closure/v1"
   ],
   "base": {

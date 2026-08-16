@@ -15,7 +15,7 @@
     "manifest-scoped-sync-root/v1",
     "episode-sealed-content-root/v1",
     "declared-facts-v1",
-    "mission-control-portability/v2"
+    "initiative-bundle-portability/v1"
   ],
   "bounds": {
     "maximumPackageBytes": 67108864,
