@@ -28,7 +28,7 @@
       "service-webhook-host.mjs": "460cb9938c8c0596d160fbcd61eb42bcfd9838cf8d154553b2544321af340a11",
       "types.d.ts": "1d063701b8e57c21899fb741d2adaee3cd36fcb0895ccf6f71eb1ef8e6bf5a65"
     },
-    "root": "sha256:422a4c00c8f42a5aacc0cca8ed80c96ed433bd0e9f56a9ed297f60719264e842"
+    "root": "sha256:cf8e0fde840b21408ff4fc8308d26b4a184306bd85ebd68c20a8ed998ce35d8f"
   },
   "schemas": {
     "packageManifest": "kungfu.kfx.manifest/v1",
@@ -158,5 +158,5 @@
       "bytes": 4338
     }
   ],
-  "contractRoot": "sha256:819ae3f7ebd4934cadb28ee5b37f346e1feeb8d4fb1de35d290d75c35ed8c62f"
+  "contractRoot": "sha256:2ede5c87eca5f4433a276722705882df6d70ab54cd45b1232b3a58d076340569"
 }
