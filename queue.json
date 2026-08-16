@@ -3,7 +3,7 @@
   "contract": "kungfu-buildchain-dev-delivery-warrant-queue",
   "repository": "kungfu-systems/kungfu",
   "protectedBase": "dev/v4/v4.0",
-  "generation": 3126,
+  "generation": 3127,
   "fencingCounter": 467,
   "policy": {
     "agingSeconds": 900,
@@ -11,41 +11,7 @@
     "leaseSeconds": 3600,
     "emergencyPolicy": "reviewed-explicit-only"
   },
-  "activeWarrant": {
-    "schema": "kungfu.buildchain.dev-delivery-warrant/v1",
-    "repository": "kungfu-systems/kungfu",
-    "protectedBase": "dev/v4/v4.0",
-    "candidateId": "sha256:0f299fc4346c9d3cc03c2ac17f0a0f8655c26ab987afedba0a659a381fb09b5d",
-    "pullRequestNumber": 3179,
-    "sourceHead": "15880b746481eab06cb30d95222f164166225269",
-    "assignmentRoot": "sha256:645db81c6039c64c8311c6336d38a9b8569b123cb5bd183cab20d9c2882fe411",
-    "initiativeRoot": "sha256:bfff817933e5a5ad693e4b902a84f6cc3a251235dd7377cb4091d92f805fa7ff",
-    "sourceIdentityRoot": "sha256:5b2a123e81588042265d18b88ed2fab90c8f2e1296091c68d2e5c175d1b436d3",
-    "sourcePatchRoot": "sha256:f1831e6ff45c6e98c8ae26be482b0c1bfd864b6867464b0ba1d5ea9bdb785c67",
-    "sourceProofRoot": "sha256:c282a3831c89fbea71efc4efd93031608ae97a6f62812530c2c7b3072309afc1",
-    "planRoot": "sha256:36aca5961f25a0f0e656cbfb7f8213b94d01ee4c0f94782f4b469f3eb59edf92",
-    "closureRoot": "sha256:ac6e52dc4778bd7be1e6224c9a526a00dc7fcdd56a84e07165a811b168158f3e",
-    "dependencyRoot": "sha256:b3be5099bab218c6aac7e1de4d5822ce43b46cb710001108f73d8c041e5ce2cf",
-    "toolchainRoot": "sha256:2ecb07894954a2e0de022615d4561e5ba3ae68376401941ecff77be03cd75a0f",
-    "environmentRoot": "sha256:ce8ac018bb38c00cc0f5e954dae39d921eb9437fb11314061e9628f456f39057",
-    "affectedPaths": [
-      ".gitattributes",
-      "docs/adr/KF-ADR-019f9f8a-9f40-7d6e-a4d2-5a334a9ab201.md",
-      "scripts/check-shifu-entry-contract.test.mjs"
-    ],
-    "sourceWorkflowRunId": 31914797270,
-    "deliveryClass": "non-native-fast",
-    "generation": 467,
-    "phase": "qualified",
-    "expectedOldStateRoot": "sha256:8f71446db7e28159c9a1dd7c141f2898d55e309db6c49b0a0538f7b42d62e15e",
-    "issuedAt": "2026-08-16T00:25:59.780Z",
-    "expiresAt": "2026-08-16T02:01:40.396Z",
-    "fencingToken": "sha256:bbdf07c01920bed6461aa51de4de708e67c111598e77b6c7b9b2a29ebc2d76a9",
-    "nextAction": "Enter the GitHub merge queue at the exact fenced PR head; merge_group remains final authority.",
-    "nativeProofRoot": "sha256:6bdc843f5c4e13314019ac158deab0aba1bdc5ff73f78acf28a0828c62ddca11",
-    "nativeProofReuseRoot": "sha256:217997378b4558180a5ed481b5c7b4f7a18c90c1f4fff22b226a39dffb9f4748",
-    "qualifiedAt": "2026-08-16T00:28:29.909Z"
-  },
+  "activeWarrant": null,
   "candidates": [
     {
       "repository": "kungfu-systems/kungfu",
@@ -29581,11 +29547,20 @@
       "sourceWorkflowRunId": 31914797270,
       "priority": "ordinary",
       "enqueuedAt": "2026-08-16T00:04:43.971Z",
-      "updatedAt": "2026-08-16T00:31:40.396Z",
+      "updatedAt": "2026-08-16T01:17:23.920Z",
       "attempts": 1,
       "recoveries": 0,
-      "status": "qualified",
-      "terminal": null,
+      "status": "cancelled",
+      "terminal": {
+        "outcome": "cancelled",
+        "terminalClass": "authoritative-cancellation",
+        "reason": "protected pull request event: closed",
+        "evidenceRoot": "sha256:4838fb774446a00be8e857458f1ad0a3c46ac7574379d6698ba8e7ae02d93948",
+        "closedAt": "2026-08-16T01:17:23.920Z",
+        "fencingToken": "sha256:bbdf07c01920bed6461aa51de4de708e67c111598e77b6c7b9b2a29ebc2d76a9",
+        "leaseGeneration": 467,
+        "nativeProofRoot": "sha256:6bdc843f5c4e13314019ac158deab0aba1bdc5ff73f78acf28a0828c62ddca11"
+      },
       "affectedPaths": [
         ".gitattributes",
         "docs/adr/KF-ADR-019f9f8a-9f40-7d6e-a4d2-5a334a9ab201.md",
@@ -29638,6 +29613,6 @@
       ]
     }
   ],
-  "updatedAt": "2026-08-16T01:13:15.576Z",
-  "stateRoot": "sha256:badc62fb27d9ce48cd20a7bac70ac400b558b08bcef0543e4e252b64cbf89882"
+  "updatedAt": "2026-08-16T01:17:23.920Z",
+  "stateRoot": "sha256:18d355c3411a22bd1a471b8c39519d6e7bad01b57f76590e7cd5c966cee6796a"
 }
