@@ -30,7 +30,6 @@ function run(label, command, args, options = {}) {
 run('coordinator and native entry contracts', process.execPath, [
   '--test',
   'framework/action/action-loop-begin.test.mjs',
-  'framework/action/action-loop-source-dogfood.test.mjs',
 ]);
 
 const hasNativeBinding =
@@ -49,7 +48,7 @@ const pythonPath = [
   .join(path.delimiter);
 
 run(
-  'fresh and reused Work Control authority receipts',
+  'native Work Control authority and portable evidence',
   'uv',
   [
     'run',
@@ -64,16 +63,16 @@ run(
       'core',
       'tests',
       'python',
-      'test_atlas_storage.py',
+      'test_work_control_profile.py',
     ),
     '-k',
-    'mission_control_native_go_completion_claim_fails_closed_then_passes',
+    'native_work_control_receipts_do_not_leak_compatibility_vocabulary or native_initiative_bundle_roundtrip',
   ],
   { env: { ...process.env, PYTHONPATH: pythonPath } },
 );
 
 run(
-  'same-root first Atlas refresh and exact replay',
+  'same-root action-loop refresh and exact replay',
   'uv',
   [
     'run',

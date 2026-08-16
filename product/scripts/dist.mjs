@@ -1546,9 +1546,7 @@ export function runInstalledKungfuAssignmentAdmissionSmoke({
         source: { kind: initiativeId, sourceId: assignmentId },
         retention: { policy: retentionPolicy, expiresAt: null },
         workDefinition: {
-          goal_id: assignmentId,
           assignment_id: assignmentId,
-          mission_id: initiativeId,
           initiative_id: initiativeId,
           title: 'Verify installed Assignment admission',
           objective: 'Prove the packaged Work Control Suite is closed.',

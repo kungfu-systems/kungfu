@@ -14,10 +14,10 @@ import {
 } from '../framework/work-design-advisor/src/work-design-advisor.mjs';
 import {
   WORK_DESIGN_PREFLIGHT_SCHEMA,
-  buildOpenCardHistorySelectionRequest,
-  buildOpenCardOutcomeHistory,
-  runOpenCardPreflight,
-  verifyOpenCardPreflight,
+  buildAssignmentHistorySelectionRequest,
+  buildAssignmentOutcomeHistory,
+  runAssignmentPreflight,
+  verifyAssignmentPreflight,
 } from '../framework/work-design-preflight/src/work-design-preflight.mjs';
 import {
   buildWorkHistoryCandidate,
@@ -37,7 +37,7 @@ const { authority, humanOverride } = workDesignAdvisoryBoundary();
 
 function workDefinition(seed = 'future-work') {
   return {
-    goal_id: seed,
+    assignment_id: seed,
     objective: 'Human-authorized final work definition',
     scope: { included: ['bounded-change'], excluded: ['automatic-execution'] },
     acceptance_criteria: ['capture remains paused and unclaimed'],
@@ -196,7 +196,7 @@ function request(action, overrides = {}) {
 }
 
 function assertCaptureBoundary(result) {
-  assert.equal(verifyOpenCardPreflight(result).ok, true);
+  assert.equal(verifyAssignmentPreflight(result).ok, true);
   assert.deepEqual(result.operation, {
     phase: 'pre-capture',
     mutates: false,
@@ -385,14 +385,14 @@ function outcomeInformedRequest({ outcomeCount, partialCount = 0 }) {
   const query = globalWorkQuery({ outcomeCount, partialCount });
   const targetCohortRoot =
     query.global_work.outcome_history.bindings[0].outcome.cohort.cohortRoot;
-  const outcomeHistory = buildOpenCardOutcomeHistory({
+  const outcomeHistory = buildAssignmentOutcomeHistory({
     query,
     asOf: AS_OF,
     targetCohortRoot,
   });
   const input = request();
   input.outcomeHistory = outcomeHistory;
-  input.selectionRequest = buildOpenCardHistorySelectionRequest({
+  input.selectionRequest = buildAssignmentHistorySelectionRequest({
     query,
     objectiveRoot: input.humanWorkDefinitionRoot,
     xinfaRoot: XINFA_ROOT,
@@ -403,7 +403,7 @@ function outcomeInformedRequest({ outcomeCount, partialCount = 0 }) {
 }
 
 test('native global Work query compiles settled sealed coordinates into selector input', () => {
-  const selectionRequest = buildOpenCardHistorySelectionRequest({
+  const selectionRequest = buildAssignmentHistorySelectionRequest({
     query: globalWorkQuery(),
     objectiveRoot: semanticRoot(workDefinition()),
     xinfaRoot: XINFA_ROOT,
@@ -430,7 +430,7 @@ test('history compilation deduplicates replica observations by sealed state root
     ...structuredClone(query.components[0]),
     observed_at: '2026-07-30T07:59:40Z',
   });
-  const selectionRequest = buildOpenCardHistorySelectionRequest({
+  const selectionRequest = buildAssignmentHistorySelectionRequest({
     query,
     objectiveRoot: semanticRoot(workDefinition()),
     xinfaRoot: XINFA_ROOT,
@@ -448,7 +448,7 @@ test('work-design invokes rooted outcome estimation before preserving human auth
     outcomeCount: 10,
     partialCount: 1,
   });
-  const result = runOpenCardPreflight(input);
+  const result = runAssignmentPreflight(input);
   assertCaptureBoundary(result);
   assert.equal(result.outcome, 'advisory-auto-adopted');
   assert.equal(
@@ -486,7 +486,7 @@ for (const [count, phase, budget] of [
 ]) {
   test(`${count} rooted outcomes retain the exact advisory promotion boundary`, () => {
     const { input } = outcomeInformedRequest({ outcomeCount: count });
-    const result = runOpenCardPreflight(input);
+    const result = runAssignmentPreflight(input);
     assertCaptureBoundary(result);
     const estimate = result.advice.estimation.estimate;
     assert.equal(estimate.comparability.qualifiedSampleCount, count);
@@ -527,7 +527,7 @@ test('outcome root mismatch explicitly falls back to manual capture', () => {
     semanticRoot(historyPreimage);
   const targetCohortRoot =
     query.global_work.outcome_history.bindings[0].outcome.cohort.cohortRoot;
-  const outcomeHistory = buildOpenCardOutcomeHistory({
+  const outcomeHistory = buildAssignmentOutcomeHistory({
     query,
     asOf: AS_OF,
     targetCohortRoot,
@@ -536,14 +536,14 @@ test('outcome root mismatch explicitly falls back to manual capture', () => {
   assert.equal(outcomeHistory.issues[0].code, 'outcome-record-unqualified');
   const input = request('accepted');
   input.outcomeHistory = outcomeHistory;
-  input.selectionRequest = buildOpenCardHistorySelectionRequest({
+  input.selectionRequest = buildAssignmentHistorySelectionRequest({
     query,
     objectiveRoot: input.humanWorkDefinitionRoot,
     xinfaRoot: XINFA_ROOT,
     asOf: AS_OF,
     outcomeHistory,
   });
-  const result = runOpenCardPreflight(input);
+  const result = runAssignmentPreflight(input);
   assertCaptureBoundary(result);
   assert.equal(result.outcome, 'manual-capture');
   assert.equal(result.fallback.reason, 'outcome-history-unqualified');
@@ -557,7 +557,7 @@ test('history compilation fails closed when the installed Work proof is invalid'
   query.verification.ok = false;
   assert.throws(
     () =>
-      buildOpenCardHistorySelectionRequest({
+      buildAssignmentHistorySelectionRequest({
         query,
         objectiveRoot: semanticRoot(workDefinition()),
         xinfaRoot: XINFA_ROOT,
@@ -578,13 +578,7 @@ test('Shifu dispatches work-design preflight without package lifecycle bootstrap
   fs.writeFileSync(history, `${JSON.stringify(globalWorkQuery())}\n`);
   const result = spawnSync(
     path.resolve('shifu'),
-    [
-      'work-design:preflight',
-      '--input',
-      input,
-      '--history-query',
-      history,
-    ],
+    ['work-design:preflight', '--input', input, '--history-query', history],
     { cwd: path.resolve('.'), encoding: 'utf8' },
   );
   assert.equal(result.status, 0, result.stderr || result.stdout);
@@ -600,7 +594,7 @@ test('Shifu dispatches work-design preflight without package lifecycle bootstrap
 
 test('verified bounded advice auto-adopts without a human disposition', () => {
   const input = request();
-  const result = runOpenCardPreflight(input);
+  const result = runAssignmentPreflight(input);
   assertCaptureBoundary(result);
   assert.equal(result.outcome, 'advisory-auto-adopted');
   assert.equal(result.disposition.action, 'policy-accepted');
@@ -617,7 +611,7 @@ test('verified bounded advice auto-adopts without a human disposition', () => {
 for (const action of ['accepted', 'adapted', 'overridden']) {
   test(`${action} preserves the human disposition and exact advice root`, () => {
     const input = request(action);
-    const result = runOpenCardPreflight(input);
+    const result = runAssignmentPreflight(input);
     assertCaptureBoundary(result);
     assert.equal(result.disposition.action, action);
     assert.equal(
@@ -638,7 +632,7 @@ for (const action of ['accepted', 'adapted', 'overridden']) {
 
 test('insufficient-history records the human disposition and permits manual capture', () => {
   const input = request('insufficient-history', { insufficient: true });
-  const result = runOpenCardPreflight(input);
+  const result = runAssignmentPreflight(input);
   assertCaptureBoundary(result);
   assert.equal(result.disposition.action, 'insufficient-history');
   assert.equal(result.disposition.adviceRoot, result.advice.advice.adviceRoot);
@@ -648,7 +642,7 @@ test('insufficient-history records the human disposition and permits manual capt
 });
 
 test('insufficient history requires a human decision when no disposition exists', () => {
-  const result = runOpenCardPreflight(
+  const result = runAssignmentPreflight(
     request(undefined, { insufficient: true }),
   );
   assertCaptureBoundary(result);
@@ -663,7 +657,7 @@ test('insufficient history requires a human decision when no disposition exists'
 });
 
 test('low-confidence advice requires a human decision', () => {
-  const result = runOpenCardPreflight(
+  const result = runAssignmentPreflight(
     request(undefined, { confidence: 'low' }),
   );
   assertCaptureBoundary(result);
@@ -672,7 +666,7 @@ test('low-confidence advice requires a human decision', () => {
 });
 
 test('an unapproved advice gap requires a human decision', () => {
-  const result = runOpenCardPreflight(
+  const result = runAssignmentPreflight(
     request(undefined, { gapIds: ['requires-human-judgment'] }),
   );
   assertCaptureBoundary(result);
@@ -683,9 +677,9 @@ test('an unapproved advice gap requires a human decision', () => {
 });
 
 test('policy disposition tampering fails preflight verification', () => {
-  const result = runOpenCardPreflight(request());
+  const result = runAssignmentPreflight(request());
   result.disposition.evaluation.selectedCount += 1;
-  assert.deepEqual(verifyOpenCardPreflight(result), {
+  assert.deepEqual(verifyAssignmentPreflight(result), {
     ok: false,
     reason: 'preflight-root-mismatch',
   });
@@ -696,7 +690,7 @@ test('stale-manifest explicitly falls back without invoking unsafe advice', () =
     capturedAt: '2026-07-29T01:00:00Z',
     sourceCutRoot: SOURCE_CUT_ROOT,
   });
-  const result = runOpenCardPreflight(
+  const result = runAssignmentPreflight(
     request('accepted', { indexSnapshot: stale }),
   );
   assertCaptureBoundary(result);
@@ -707,7 +701,7 @@ test('stale-manifest explicitly falls back without invoking unsafe advice', () =
 });
 
 test('root-mismatch explicitly rejects adoption and preserves manual capture', () => {
-  const result = runOpenCardPreflight(
+  const result = runAssignmentPreflight(
     request('accepted', {
       expectedAdviceRoot: semanticRoot({ advice: 'different' }),
     }),
@@ -719,7 +713,7 @@ test('root-mismatch explicitly rejects adoption and preserves manual capture', (
 });
 
 test('advisor-unavailable explicitly falls back without silent adoption', () => {
-  const result = runOpenCardPreflight(
+  const result = runAssignmentPreflight(
     request('accepted', { advisor: 'unavailable' }),
   );
   assertCaptureBoundary(result);

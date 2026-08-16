@@ -8,6 +8,7 @@ from pathlib import Path
 import click
 
 from kungfu import assignment_orchestration as orchestration
+from kungfu.initiative_family.canonical import semantic_root
 from kungfu.agent import run_agent
 from kungfu.agent import first_value as onboarding
 from kungfu.agent import native_launch
@@ -59,10 +60,10 @@ def _captured_work(workspace_root):
         try:
             captured = orchestration.load_captured_request(request_path)
             definition = captured["request"].get("workDefinition") or {}
-            projected = orchestration.atlas_assignment_projection(
+            projected = orchestration.assignment_projection(
                 captured,
-                initiative_id=str(definition.get("mission_id") or ""),
-                assignment_id=str(definition.get("goal_id") or ""),
+                initiative_id=str(definition.get("initiative_id") or ""),
+                assignment_id=str(definition.get("assignment_id") or ""),
             )
         except (OSError, ValueError, json.JSONDecodeError):
             continue
@@ -196,7 +197,7 @@ def _capture_task(workspace_root, task):
         "capture-only", workspace_root, cwd=workspace_root
     )
     slug = re.sub(r"[^a-z0-9]+", "-", task.lower()).strip("-")[:48] or "agent-task"
-    suffix = orchestration.semantic_root({"task": task})[-8:]
+    suffix = semantic_root({"task": task})[-8:]
     request = {
         "schema": "kungfu.assignment-request/v1",
         "source": {"kind": "kungfu-run", "command": "run"},
@@ -205,8 +206,8 @@ def _capture_task(workspace_root, task):
             "expiresAt": None,
         },
         "workDefinition": {
-            "goal_id": f"{slug}-{suffix}",
-            "mission_id": "project-work",
+            "assignment_id": f"{slug}-{suffix}",
+            "initiative_id": "project-work",
             "title": task,
             "objective": task,
             "acceptance_criteria": [

@@ -2,6 +2,7 @@
 
 from datetime import datetime, timedelta, timezone
 import importlib
+import inspect
 import json
 from pathlib import Path
 import shutil
@@ -12,8 +13,15 @@ import kungfu
 import pytest
 from click.testing import CliRunner
 
-from kungfu import assignment_orchestration, profile_composition, profile_sdk
-from kungfu.atlas import mission_control
+from kungfu import (
+    assignment_orchestration,
+    initiative_family,
+    profile_composition,
+    profile_sdk,
+)
+from kungfu.initiative_family import canonical as assignment_canonical
+from kungfu.initiative_family import typed_v2 as initiative_family_v2
+from kungfu import work_control
 from kungfu.cli.commands import kfc
 from kungfu.workspace import (
     ensure_workspace_data_home,
@@ -29,6 +37,11 @@ from kungfu.workspace_federation import (
 
 SOURCE = Path(__file__).resolve().parents[4] / "extensions" / "work-control"
 ASSIGNMENT_CLI = importlib.import_module("kungfu.cli.commands.assignment")
+
+
+@pytest.fixture(autouse=True)
+def _bind_work_control_profile(monkeypatch):
+    monkeypatch.setenv("KF_EXTENSION_PATH", str(SOURCE.parent))
 
 
 def _sha256(marker):
@@ -65,17 +78,23 @@ def test_assignment_admit_defers_request_path_validation_to_orchestration():
     assert request_argument.type.convert(str(request_path), None, None) == request_path
 
 
+def test_assignment_admit_omits_retired_atlas_root():
+    source = inspect.getsource(ASSIGNMENT_CLI._admit_captured_assignment)
+
+    assert '"atlasRoot"' not in source
+
+
 def test_captured_request_reads_all_paths_through_filesystem_namespace(
     tmp_path, monkeypatch
 ):
     request = {
         "schema": "kungfu.assignment-request/v1",
-        "source": {"kind": "atlas-go-card"},
+        "source": {"kind": "assignment-request"},
         "retention": {
             "policy": "explicit-expiry-retain-bytes-v1",
             "expiresAt": None,
         },
-        "workDefinition": {"goal_id": "filesystem-namespace-read"},
+        "workDefinition": {"assignment_id": "filesystem-namespace-read"},
     }
     target = resolve_workspace_target(
         "capture-only", str(tmp_path), cwd=str(tmp_path), env={"HOME": str(tmp_path)}
@@ -133,21 +152,21 @@ def _initiative_admission(
         "intent": intent,
         "source": {
             "schema": assignment_orchestration.INITIATIVE_SOURCE_SCHEMA,
-            "authority": "atlas",
-            "kind": "go-card",
+            "authority": "kungfu",
+            "kind": "initiative-admission",
             "sourceId": initiative_id,
             "versionRoot": "sha256:" + "c" * 64,
         },
     }
     return {
         **body,
-        "admissionRoot": assignment_orchestration.semantic_root(body),
+        "admissionRoot": assignment_canonical.semantic_root(body),
     }
 
 
 def _family_blueprint():
     return {
-        "schema": assignment_orchestration.FAMILY_BLUEPRINT_SCHEMA,
+        "schema": initiative_family.FAMILY_BLUEPRINT_SCHEMA,
         "initiative": {
             "initiativeId": "initiative-family-a",
             "versionRoot": _sha256("1"),
@@ -199,7 +218,7 @@ def _merged_terminal(marker="a"):
 
 def _transition(state, terminal_updates=None, acceptance_updates=None):
     return {
-        "schema": assignment_orchestration.FAMILY_TRANSITION_SCHEMA,
+        "schema": initiative_family.FAMILY_TRANSITION_SCHEMA,
         "expectedStateRoot": state["stateRoot"],
         "terminalUpdates": terminal_updates or [],
         "acceptanceUpdates": acceptance_updates or [],
@@ -312,7 +331,7 @@ def _settlement(
 
 def _seal_binding_manifest(manifest):
     manifest.pop("bindingRoot", None)
-    manifest["bindingRoot"] = assignment_orchestration.semantic_root(manifest)
+    manifest["bindingRoot"] = assignment_canonical.semantic_root(manifest)
     return manifest
 
 
@@ -378,7 +397,7 @@ def _family_binding_manifest(state, publication_state="published"):
             }
         )
     manifest = {
-        "schema": assignment_orchestration.FAMILY_BINDING_V2_SCHEMA,
+        "schema": initiative_family_v2.FAMILY_BINDING_V2_SCHEMA,
         "v1StateRoot": state["stateRoot"],
         "factWorld": fact_world,
         "factCutRoot": cut_root,
@@ -412,10 +431,10 @@ def _family_binding_manifest(state, publication_state="published"):
 
 
 def test_initiative_family_state_is_rooted_bounded_and_parent_inert():
-    state = assignment_orchestration.create_family_state(_family_blueprint())
-    verification = assignment_orchestration.verify_family_state(state)
+    state = initiative_family.create_family_state(_family_blueprint())
+    verification = initiative_family.verify_family_state(state)
 
-    assert state["schema"] == assignment_orchestration.FAMILY_STATE_SCHEMA
+    assert state["schema"] == initiative_family.FAMILY_STATE_SCHEMA
     assert state["initiative"]["role"] == "inert-parent"
     assert set(state["initiative"]) == {"initiativeId", "versionRoot", "role"}
     assert state["wave"]["gateState"] == "terminal"
@@ -423,14 +442,14 @@ def test_initiative_family_state_is_rooted_bounded_and_parent_inert():
     assert verification["waveGateTerminal"] is True
     assert verification["childCount"] == 3
     assert verification["waveDrained"] is False
-    assert assignment_orchestration.family_contract()["waveChildBounds"] == {
+    assert initiative_family.family_contract()["waveChildBounds"] == {
         "minimum": 3,
         "maximum": 6,
     }
     blueprint = _family_blueprint()
     blueprint["initiative"]["executionClaim"] = "forbidden"
     with pytest.raises(ValueError, match="invalid field set"):
-        assignment_orchestration.create_family_state(blueprint)
+        initiative_family.create_family_state(blueprint)
 
 
 def test_retained_wave_0_v1_fixture_preserves_exact_bytes_and_root():
@@ -442,13 +461,13 @@ def test_retained_wave_0_v1_fixture_preserves_exact_bytes_and_root():
     exact_bytes = fixture.read_bytes()
     state = json.loads(exact_bytes)
 
-    assert exact_bytes == (
-        assignment_orchestration.canonical_json(state) + "\n"
-    ).encode("utf-8")
+    assert exact_bytes == (assignment_canonical.canonical_json(state) + "\n").encode(
+        "utf-8"
+    )
     assert state["stateRoot"] == (
         "sha256:15b306c3c3ce52b4caf4a0fa0419f191d36e3a51e1cfdc54ebb2110e4aa3163a"
     )
-    assert assignment_orchestration.validate_family_state(state) == state
+    assert initiative_family.validate_family_state(state) == state
 
 
 @pytest.mark.parametrize(
@@ -485,12 +504,12 @@ def test_initiative_family_rejects_invalid_membership_and_dependencies(
     mutation(blueprint)
 
     with pytest.raises(ValueError, match=message):
-        assignment_orchestration.create_family_state(blueprint)
+        initiative_family.create_family_state(blueprint)
 
 
 def test_family_transitions_bind_terminal_evidence_and_residual_only_successor():
-    initial = assignment_orchestration.create_family_state(_family_blueprint())
-    merged = assignment_orchestration.transition_family_state(
+    initial = initiative_family.create_family_state(_family_blueprint())
+    merged = initiative_family.transition_family_state(
         initial,
         _transition(
             initial,
@@ -521,7 +540,7 @@ def test_family_transitions_bind_terminal_evidence_and_residual_only_successor()
             "responsibilitySlices": ["tests"],
         },
     }
-    continued = assignment_orchestration.transition_family_state(
+    continued = initiative_family.transition_family_state(
         merged,
         _transition(
             merged,
@@ -530,7 +549,7 @@ def test_family_transitions_bind_terminal_evidence_and_residual_only_successor()
             ],
         ),
     )
-    failed = assignment_orchestration.transition_family_state(
+    failed = initiative_family.transition_family_state(
         continued,
         _transition(
             continued,
@@ -563,7 +582,7 @@ def test_family_transitions_bind_terminal_evidence_and_residual_only_successor()
     assert merged["previousStateRoot"] == initial["stateRoot"]
     assert continued["previousStateRoot"] == merged["stateRoot"]
     assert continued["children"][1]["terminal"] == continued_terminal
-    verification = assignment_orchestration.verify_family_state(failed)
+    verification = initiative_family.verify_family_state(failed)
     assert verification["waveDrained"] is True
     assert verification["terminalCounts"] == {
         "merged": 1,
@@ -574,8 +593,8 @@ def test_family_transitions_bind_terminal_evidence_and_residual_only_successor()
 
 
 def test_family_transition_fails_closed_on_scope_growth_and_invalid_coverage():
-    initial = assignment_orchestration.create_family_state(_family_blueprint())
-    merged = assignment_orchestration.transition_family_state(
+    initial = initiative_family.create_family_state(_family_blueprint())
+    merged = initiative_family.transition_family_state(
         initial,
         _transition(
             initial,
@@ -608,7 +627,7 @@ def test_family_transition_fails_closed_on_scope_growth_and_invalid_coverage():
     }
 
     with pytest.raises(ValueError, match="exactly the uncompleted responsibility"):
-        assignment_orchestration.transition_family_state(
+        initiative_family.transition_family_state(
             merged,
             _transition(
                 merged,
@@ -616,7 +635,7 @@ def test_family_transition_fails_closed_on_scope_growth_and_invalid_coverage():
             ),
         )
     with pytest.raises(ValueError, match="coverage transition is invalid"):
-        assignment_orchestration.transition_family_state(
+        initiative_family.transition_family_state(
             merged,
             _transition(
                 merged,
@@ -636,7 +655,7 @@ def test_family_transition_fails_closed_on_scope_growth_and_invalid_coverage():
             "responsibilitySlices": ["tests"],
         }
         late["recordedAt"] = "2026-07-28T03:05:01Z"
-        assignment_orchestration.transition_family_state(
+        initiative_family.transition_family_state(
             merged,
             _transition(
                 merged,
@@ -646,7 +665,7 @@ def test_family_transition_fails_closed_on_scope_growth_and_invalid_coverage():
     with pytest.raises(ValueError, match="invalid field set"):
         incomplete = _merged_terminal()
         incomplete.pop("proofRoot")
-        assignment_orchestration.transition_family_state(
+        initiative_family.transition_family_state(
             initial,
             _transition(
                 initial,
@@ -659,15 +678,15 @@ def test_family_transition_fails_closed_on_scope_growth_and_invalid_coverage():
         "evidenceRoots": [_sha256("a")],
     }
     with pytest.raises(ValueError, match="no semantic change"):
-        assignment_orchestration.transition_family_state(
+        initiative_family.transition_family_state(
             merged,
             _transition(merged, acceptance_updates=[unchanged]),
         )
 
 
 def test_family_deferred_terminal_requires_an_exact_decision_root():
-    initial = assignment_orchestration.create_family_state(_family_blueprint())
-    deferred = assignment_orchestration.transition_family_state(
+    initial = initiative_family.create_family_state(_family_blueprint())
+    deferred = initiative_family.transition_family_state(
         initial,
         _transition(
             initial,
@@ -734,36 +753,36 @@ def test_family_cli_writes_successor_without_overwriting_prior_state(tmp_path):
 
 
 def test_family_v2_upgrade_is_explicit_and_projects_exact_v1_state():
-    v1_state = assignment_orchestration.create_family_state(_family_blueprint())
-    v1_bytes = assignment_orchestration.canonical_json(v1_state)
+    v1_state = initiative_family.create_family_state(_family_blueprint())
+    v1_bytes = assignment_canonical.canonical_json(v1_state)
     manifest = _family_binding_manifest(v1_state)
 
-    upgrade = assignment_orchestration.upgrade_family_state_v2(v1_state, manifest)
+    upgrade = initiative_family_v2.upgrade_family_state_v2(v1_state, manifest)
     successor = upgrade["successorState"]
-    verification = assignment_orchestration.verify_family_state_v2(successor)
-    under_typed = assignment_orchestration.verify_family_state_v2(v1_state)
+    verification = initiative_family_v2.verify_family_state_v2(successor)
+    under_typed = initiative_family_v2.verify_family_state_v2(v1_state)
 
     assert upgrade["predecessorStateRoot"] == v1_state["stateRoot"]
     assert upgrade["v1ProjectionRoot"] == v1_state["stateRoot"]
     assert upgrade["typedBindingRoot"] == manifest["bindingRoot"]
     assert upgrade["successorStateRoot"] == successor["stateRoot"]
-    assert assignment_orchestration.project_family_state_v1(successor) == v1_state
-    assert assignment_orchestration.canonical_json(v1_state) == v1_bytes
+    assert initiative_family_v2.project_family_state_v1(successor) == v1_state
+    assert assignment_canonical.canonical_json(v1_state) == v1_bytes
     assert verification["typingState"] == "fully-typed-v2"
     assert verification["projectionMergeIsCompletion"] is False
     assert under_typed["typingState"] == "under-typed-v1"
     assert under_typed["fullyTyped"] is False
     assert "work-definition" in under_typed["missingSemanticBindings"]
-    assert assignment_orchestration.family_contract()["schema"].endswith("/v1")
+    assert initiative_family.family_contract()["schema"].endswith("/v1")
     assert (
-        assignment_orchestration.family_contract_v2()["predecessorContractRoot"]
-        == assignment_orchestration.family_contract()["contractRoot"]
+        initiative_family_v2.family_contract_v2()["predecessorContractRoot"]
+        == initiative_family.family_contract()["contractRoot"]
     )
 
 
 def test_family_v2_cli_upgrade_writes_only_the_successor_state(tmp_path):
     runner = CliRunner()
-    v1_state = assignment_orchestration.create_family_state(_family_blueprint())
+    v1_state = initiative_family.create_family_state(_family_blueprint())
     state_path = tmp_path / "state-v1.json"
     binding_path = tmp_path / "bindings-v2.json"
     successor_path = tmp_path / "state-v2.json"
@@ -786,25 +805,25 @@ def test_family_v2_cli_upgrade_writes_only_the_successor_state(tmp_path):
 
     assert result.exit_code == 0, result.output
     successor = json.loads(successor_path.read_text(encoding="utf-8"))
-    assert successor["schema"] == assignment_orchestration.FAMILY_STATE_V2_SCHEMA
+    assert successor["schema"] == initiative_family_v2.FAMILY_STATE_V2_SCHEMA
     assert successor["v1ProjectionRoot"] == v1_state["stateRoot"]
     assert json.loads(state_path.read_text(encoding="utf-8")) == v1_state
 
 
 def test_family_v2_transition_requires_typed_settlement_and_exposes_publication_lag():
-    v1_state = assignment_orchestration.create_family_state(_family_blueprint())
-    v2_state = assignment_orchestration.upgrade_family_state_v2(
+    v1_state = initiative_family.create_family_state(_family_blueprint())
+    v2_state = initiative_family_v2.upgrade_family_state_v2(
         v1_state, _family_binding_manifest(v1_state)
     )["successorState"]
     v1_transition = _transition(
         v1_state,
         terminal_updates=[{"assignmentId": "child-a", "terminal": _merged_terminal()}],
     )
-    successor_projection = assignment_orchestration.transition_family_state(
+    successor_projection = initiative_family.transition_family_state(
         v1_state, v1_transition
     )
     transition = {
-        "schema": assignment_orchestration.FAMILY_TRANSITION_V2_SCHEMA,
+        "schema": initiative_family_v2.FAMILY_TRANSITION_V2_SCHEMA,
         "expectedStateRoot": v2_state["stateRoot"],
         "v1Transition": v1_transition,
         "typedBindingManifest": _family_binding_manifest(
@@ -812,10 +831,8 @@ def test_family_v2_transition_requires_typed_settlement_and_exposes_publication_
         ),
     }
 
-    successor = assignment_orchestration.transition_family_state_v2(
-        v2_state, transition
-    )
-    verification = assignment_orchestration.verify_family_state_v2(successor)
+    successor = initiative_family_v2.transition_family_state_v2(v2_state, transition)
+    verification = initiative_family_v2.verify_family_state_v2(successor)
     settlement = successor["typedBindings"]["children"][0]["settlement"]["value"]
 
     assert successor["previousStateRoot"] == v2_state["stateRoot"]
@@ -831,8 +848,8 @@ def test_family_v2_transition_requires_typed_settlement_and_exposes_publication_
 
 
 def test_family_v2_completion_requires_all_merged_accepted_and_published():
-    initial = assignment_orchestration.create_family_state(_family_blueprint())
-    settled = assignment_orchestration.transition_family_state(
+    initial = initiative_family.create_family_state(_family_blueprint())
+    settled = initiative_family.transition_family_state(
         initial,
         _transition(
             initial,
@@ -853,11 +870,11 @@ def test_family_v2_completion_requires_all_merged_accepted_and_published():
             ],
         ),
     )
-    typed = assignment_orchestration.upgrade_family_state_v2(
+    typed = initiative_family_v2.upgrade_family_state_v2(
         settled, _family_binding_manifest(settled, publication_state="published")
     )["successorState"]
 
-    verification = assignment_orchestration.verify_family_state_v2(typed)
+    verification = initiative_family_v2.verify_family_state_v2(typed)
 
     assert verification["waveDrained"] is True
     assert verification["mergedSettlementCount"] == len(initial["children"])
@@ -868,19 +885,19 @@ def test_family_v2_completion_requires_all_merged_accepted_and_published():
 
 @pytest.mark.parametrize("warrant_status", ["stale", "revoked"])
 def test_family_v2_rejects_stale_or_revoked_warrant(warrant_status):
-    state = assignment_orchestration.create_family_state(_family_blueprint())
+    state = initiative_family.create_family_state(_family_blueprint())
     manifest = _family_binding_manifest(state)
     manifest["children"][0]["executionWarrant"]["status"] = warrant_status
     _seal_binding_manifest(manifest)
 
     with pytest.raises(ValueError, match="active, not stale or revoked"):
-        assignment_orchestration.upgrade_family_state_v2(state, manifest)
+        initiative_family_v2.upgrade_family_state_v2(state, manifest)
 
 
 @pytest.mark.parametrize("missing_field", ["decision", "admissionReceipt"])
 def test_family_v2_merged_settlement_requires_decision_and_admission(missing_field):
-    initial = assignment_orchestration.create_family_state(_family_blueprint())
-    merged = assignment_orchestration.transition_family_state(
+    initial = initiative_family.create_family_state(_family_blueprint())
+    merged = initiative_family.transition_family_state(
         initial,
         _transition(
             initial,
@@ -895,7 +912,7 @@ def test_family_v2_merged_settlement_requires_decision_and_admission(missing_fie
     _seal_binding_manifest(manifest)
 
     with pytest.raises(ValueError, match="invalid field set"):
-        assignment_orchestration.upgrade_family_state_v2(merged, manifest)
+        initiative_family_v2.upgrade_family_state_v2(merged, manifest)
 
 
 @pytest.mark.parametrize(
@@ -908,8 +925,8 @@ def test_family_v2_merged_settlement_requires_decision_and_admission(missing_fie
 def test_family_v2_rejects_self_consistent_settlement_from_another_cut(
     coordinate, wrong_value
 ):
-    initial = assignment_orchestration.create_family_state(_family_blueprint())
-    merged = assignment_orchestration.transition_family_state(
+    initial = initiative_family.create_family_state(_family_blueprint())
+    merged = initiative_family.transition_family_state(
         initial,
         _transition(
             initial,
@@ -927,7 +944,7 @@ def test_family_v2_rejects_self_consistent_settlement_from_another_cut(
     _seal_binding_manifest(manifest)
 
     with pytest.raises(ValueError, match="does not match the family binding"):
-        assignment_orchestration.upgrade_family_state_v2(merged, manifest)
+        initiative_family_v2.upgrade_family_state_v2(merged, manifest)
 
 
 @pytest.mark.parametrize(
@@ -944,8 +961,8 @@ def test_family_v2_rejects_self_consistent_settlement_from_another_cut(
 def test_family_v2_settlement_requires_exact_authority_status(
     field, wrong_status, expected_status
 ):
-    initial = assignment_orchestration.create_family_state(_family_blueprint())
-    merged = assignment_orchestration.transition_family_state(
+    initial = initiative_family.create_family_state(_family_blueprint())
+    merged = initiative_family.transition_family_state(
         initial,
         _transition(
             initial,
@@ -960,21 +977,21 @@ def test_family_v2_settlement_requires_exact_authority_status(
     _seal_binding_manifest(manifest)
 
     with pytest.raises(ValueError, match=rf"status must be {expected_status}"):
-        assignment_orchestration.upgrade_family_state_v2(merged, manifest)
+        initiative_family_v2.upgrade_family_state_v2(merged, manifest)
 
 
 def test_family_v2_assignment_state_status_must_match_v1_lifecycle():
-    state = assignment_orchestration.create_family_state(_family_blueprint())
+    state = initiative_family.create_family_state(_family_blueprint())
     manifest = _family_binding_manifest(state)
     manifest["children"][0]["assignmentState"]["status"] = "terminal"
     _seal_binding_manifest(manifest)
 
     with pytest.raises(ValueError, match=r"assignmentState\.status must be active"):
-        assignment_orchestration.upgrade_family_state_v2(state, manifest)
+        initiative_family_v2.upgrade_family_state_v2(state, manifest)
 
 
 def test_family_v2_work_definition_identity_must_match_child():
-    state = assignment_orchestration.create_family_state(_family_blueprint())
+    state = initiative_family.create_family_state(_family_blueprint())
     manifest = _family_binding_manifest(state)
     manifest["children"][0]["workDefinition"]["identity"] = "child-b:work-definition"
     _seal_binding_manifest(manifest)
@@ -982,7 +999,7 @@ def test_family_v2_work_definition_identity_must_match_child():
     with pytest.raises(
         ValueError, match="work-definition reference identity does not match child"
     ):
-        assignment_orchestration.upgrade_family_state_v2(state, manifest)
+        initiative_family_v2.upgrade_family_state_v2(state, manifest)
 
 
 @pytest.mark.parametrize(
@@ -1016,18 +1033,18 @@ def test_family_v2_work_definition_identity_must_match_child():
     ],
 )
 def test_family_v2_rejects_swapped_or_misbound_semantic_references(mutation, message):
-    state = assignment_orchestration.create_family_state(_family_blueprint())
+    state = initiative_family.create_family_state(_family_blueprint())
     manifest = _family_binding_manifest(state)
     mutation(manifest)
     _seal_binding_manifest(manifest)
 
     with pytest.raises(ValueError, match=message):
-        assignment_orchestration.upgrade_family_state_v2(state, manifest)
+        initiative_family_v2.upgrade_family_state_v2(state, manifest)
 
 
 def test_family_v2_rejects_hidden_publication_lag():
-    initial = assignment_orchestration.create_family_state(_family_blueprint())
-    merged = assignment_orchestration.transition_family_state(
+    initial = initiative_family.create_family_state(_family_blueprint())
+    merged = initiative_family.transition_family_state(
         initial,
         _transition(
             initial,
@@ -1042,7 +1059,7 @@ def test_family_v2_rejects_hidden_publication_lag():
     _seal_binding_manifest(manifest)
 
     with pytest.raises(ValueError, match="must be an ISO-8601 timestamp"):
-        assignment_orchestration.upgrade_family_state_v2(merged, manifest)
+        initiative_family_v2.upgrade_family_state_v2(merged, manifest)
 
 
 def test_cli_run_preserves_an_intentional_machine_readable_exit(monkeypatch):
@@ -1081,7 +1098,7 @@ def test_exact_initiative_identity_uses_the_open_record_without_schema_drift(
         "admissionRoot": admission["admissionRoot"],
     }
 
-    mission_control.create_initiative(
+    work_control.create_initiative(
         str(runtime),
         initiative_id=admission["initiativeId"],
         title=admission["title"],
@@ -1090,7 +1107,7 @@ def test_exact_initiative_identity_uses_the_open_record_without_schema_drift(
         actor_type="agent",
         source_identity=source_identity,
     )
-    initiatives = mission_control.list_initiatives(str(runtime))
+    initiatives = work_control.list_initiatives(str(runtime))
 
     assert initiatives[0]["source_identity"] == source_identity
 
@@ -1211,12 +1228,12 @@ def test_installed_runtime_accepts_a_filesystem_alias_root(monkeypatch):
 def test_installed_capture_matches_source_contract_without_runtime(tmp_path):
     request = {
         "schema": "kungfu.assignment-request/v1",
-        "source": {"kind": "atlas-go-card"},
+        "source": {"kind": "assignment-request"},
         "retention": {
             "policy": "explicit-expiry-retain-bytes-v1",
             "expiresAt": None,
         },
-        "workDefinition": {"goal_id": "installed-capture"},
+        "workDefinition": {"assignment_id": "installed-capture"},
     }
     target = resolve_workspace_target(
         "capture-only", str(tmp_path), cwd=str(tmp_path), env={"HOME": str(tmp_path)}
@@ -1238,66 +1255,11 @@ def test_installed_capture_matches_source_contract_without_runtime(tmp_path):
     )
 
 
-def test_atlas_mission_parent_goal_stays_advisory_at_assignment_admission():
-    work_definition = {
-        "goal_id": "child-assignment",
-        "mission_id": "initiative-a",
-        "mission_parent_goal": "remote-parent-go-card",
-        "objective": "Admit without inventing a workspace-local parent",
-    }
-    captured = {
-        "request": {"workDefinition": work_definition},
-        "request_root": "sha256:" + "a" * 64,
-        "capture_receipt_roots": ["sha256:" + "b" * 64],
-    }
-
-    projected = assignment_orchestration.atlas_assignment_projection(
-        captured, initiative_id="initiative-a"
-    )
-
-    assert projected["parent_assignment_id"] == ""
-    assert projected["parent_assignment_ref"] == {}
-    assert projected["work_definition"]["mission_parent_goal"] == (
-        "remote-parent-go-card"
-    )
-
-
-def test_atlas_mission_parent_goal_can_accompany_an_exact_parent_work_ref():
-    parent_ref = {
-        "schema": "kungfu.assignment-graph.work-ref/v1",
-        "workspace_identity_root": "sha256:" + "c" * 64,
-        "object_kind": "assignment",
-        "subject": "kungfu:parent-assignment",
-        "version_root": "sha256:" + "d" * 64,
-        "component_cut_root": "sha256:" + "e" * 64,
-    }
-    captured = {
-        "request": {
-            "workDefinition": {
-                "goal_id": "child-assignment",
-                "mission_id": "initiative-a",
-                "mission_parent_goal": "remote-parent-go-card",
-                "parent_assignment_ref": parent_ref,
-                "objective": "Use only the exact cross-workspace parent edge",
-            }
-        },
-        "request_root": "sha256:" + "f" * 64,
-        "capture_receipt_roots": ["sha256:" + "1" * 64],
-    }
-
-    projected = assignment_orchestration.atlas_assignment_projection(
-        captured, initiative_id="initiative-a"
-    )
-
-    assert projected["parent_assignment_id"] == ""
-    assert projected["parent_assignment_ref"] == parent_ref
-
-
 def test_family_initiative_child_parent_stays_advisory_at_assignment_admission():
     work_definition = {
-        "goal_id": "family-child",
+        "assignment_id": "family-child",
         "initiative_id": "family-initiative",
-        "parent_goal": "family-initiative",
+        "parent_assignment_id": "family-initiative",
         "depends_on": ["prior-child"],
         "hierarchy": {
             "role": "initiative-child",
@@ -1314,7 +1276,7 @@ def test_family_initiative_child_parent_stays_advisory_at_assignment_admission()
         "capture_receipt_roots": ["sha256:" + "b" * 64],
     }
 
-    projected = assignment_orchestration.atlas_assignment_projection(captured)
+    projected = assignment_orchestration.assignment_projection(captured)
 
     assert projected["parent_assignment_id"] == ""
     assert projected["parent_assignment_ref"] == {}
@@ -1325,24 +1287,24 @@ def test_family_initiative_child_parent_stays_advisory_at_assignment_admission()
 def test_captured_request_admits_losslessly_and_drives_bounded_execution(tmp_path):
     request = {
         "schema": "kungfu.assignment-request/v1",
-        "source": {"kind": "atlas-go-card"},
+        "source": {"kind": "assignment-request"},
         "retention": {
             "policy": "explicit-expiry-retain-bytes-v1",
             "expiresAt": None,
         },
         "workDefinition": {
-            "goal_id": "assignment-a",
-            "mission_id": "initiative-a",
+            "assignment_id": "assignment-a",
+            "initiative_id": "initiative-a",
             "title": "Assignment A",
             "objective": "Prove the native state machine",
-            "parent_goal": "parent-assignment",
+            "parent_assignment_id": "parent-assignment",
             "context_binding": {"root": "sha256:" + "c" * 64},
             "project_cut_root": "sha256:" + "d" * 64,
             "evidence_episode_roots": ["sha256:" + "e" * 64],
             "unknown_source_field": {"must": "survive"},
         },
     }
-    request_root = assignment_orchestration.semantic_root(request)
+    request_root = assignment_canonical.semantic_root(request)
     directory = (
         tmp_path
         / ".kungfu"
@@ -1355,23 +1317,23 @@ def test_captured_request_admits_losslessly_and_drives_bounded_execution(tmp_pat
     directory.mkdir(parents=True)
     request_file = directory / "request.json"
     request_file.write_text(
-        assignment_orchestration.canonical_json(request) + "\n", encoding="utf-8"
+        assignment_canonical.canonical_json(request) + "\n", encoding="utf-8"
     )
     receipt = {
         "schema": "kungfu.assignment-capture.receipt/v1",
         "requestRoot": request_root,
         "requestPath": "inbox/example/request.json",
     }
-    receipt_root = assignment_orchestration.semantic_root(receipt)
+    receipt_root = assignment_canonical.semantic_root(receipt)
     receipt["receiptRoot"] = receipt_root
     receipt_dir = directory / "receipts" / "sha256"
     receipt_dir.mkdir(parents=True)
     (receipt_dir / f"{receipt_root[7:]}.json").write_text(
-        assignment_orchestration.canonical_json(receipt) + "\n", encoding="utf-8"
+        assignment_canonical.canonical_json(receipt) + "\n", encoding="utf-8"
     )
 
     captured = assignment_orchestration.load_captured_request(request_file)
-    projected = assignment_orchestration.atlas_assignment_projection(
+    projected = assignment_orchestration.assignment_projection(
         captured,
         initiative_id="initiative-a",
         initiative_admission=_initiative_admission(),
@@ -1384,7 +1346,7 @@ def test_captured_request_admits_losslessly_and_drives_bounded_execution(tmp_pat
 
     runtime = tmp_path / ".kungfu" / "runtime"
     _activate(runtime)
-    mission_control.create_initiative(
+    work_control.create_initiative(
         str(runtime),
         initiative_id="initiative-a",
         title="Initiative A",
@@ -1392,7 +1354,7 @@ def test_captured_request_admits_losslessly_and_drives_bounded_execution(tmp_pat
         actor="owner-a",
         actor_type="user",
     )
-    mission_control.create_assignment(
+    work_control.create_assignment(
         str(runtime),
         initiative_id="initiative-a",
         assignment_id="assignment-a",
@@ -1403,14 +1365,14 @@ def test_captured_request_admits_losslessly_and_drives_bounded_execution(tmp_pat
         capture_receipt_roots=[receipt_root],
         work_definition=projected["work_definition"],
     )
-    status = mission_control.assignment_orchestration_status(
+    status = work_control.assignment_orchestration_status(
         str(runtime), initiative_id="initiative-a", assignment_id="assignment-a"
     )
     assert status["phase"] == "admitted"
     assert status["assignment"]["work_definition"] == request["workDefinition"]
 
     expiry = datetime.now(timezone.utc) + timedelta(hours=2)
-    mission_control.claim_assignment_execution(
+    work_control.claim_assignment_execution(
         str(runtime),
         initiative_id="initiative-a",
         assignment_id="assignment-a",
@@ -1421,7 +1383,7 @@ def test_captured_request_admits_losslessly_and_drives_bounded_execution(tmp_pat
         lease_expires_at=expiry.isoformat(),
         authorized_by="owner-a",
     )
-    claimed = mission_control.assignment_orchestration_status(
+    claimed = work_control.assignment_orchestration_status(
         str(runtime), initiative_id="initiative-a", assignment_id="assignment-a"
     )
     assert claimed["phase"] == "claimed"
@@ -1430,7 +1392,7 @@ def test_captured_request_admits_losslessly_and_drives_bounded_execution(tmp_pat
     )
     assert assignment_orchestration.gate(claimed, "run")["ok"] is True
 
-    mission_control.advance_assignment_phase(
+    work_control.advance_assignment_phase(
         str(runtime),
         initiative_id="initiative-a",
         assignment_id="assignment-a",
@@ -1438,11 +1400,11 @@ def test_captured_request_admits_losslessly_and_drives_bounded_execution(tmp_pat
         actor="agent-a",
         reason="begin exact admitted work",
     )
-    executing = mission_control.assignment_orchestration_status(
+    executing = work_control.assignment_orchestration_status(
         str(runtime), initiative_id="initiative-a", assignment_id="assignment-a"
     )
     assert executing["phase"] == "executing"
-    mission_control.advance_assignment_phase(
+    work_control.advance_assignment_phase(
         str(runtime),
         initiative_id="initiative-a",
         assignment_id="assignment-a",
@@ -1450,62 +1412,17 @@ def test_captured_request_admits_losslessly_and_drives_bounded_execution(tmp_pat
         actor="agent-a",
         reason="bounded stage is ready",
     )
-    staged = mission_control.assignment_orchestration_status(
+    staged = work_control.assignment_orchestration_status(
         str(runtime), initiative_id="initiative-a", assignment_id="assignment-a"
     )
     assert staged["phase"] == "stage-ready"
-    expired = mission_control.assignment_orchestration_status(
+    expired = work_control.assignment_orchestration_status(
         str(runtime),
         initiative_id="initiative-a",
         assignment_id="assignment-a",
         now=(expiry + timedelta(seconds=1)).isoformat(),
     )
     assert assignment_orchestration.gate(expired, "run")["ok"] is False
-
-
-def test_atlas_mission_id_is_source_context_not_implicit_initiative_identity():
-    captured = {
-        "request": {
-            "source": {"kind": "atlas-go-card"},
-            "workDefinition": {
-                "goal_id": "assignment-a",
-                "mission_id": "atlas-mission-context",
-                "objective": "Require an explicit Initiative promotion",
-            },
-        },
-        "request_root": "sha256:" + "a" * 64,
-        "capture_receipt_roots": ["sha256:" + "b" * 64],
-    }
-
-    with pytest.raises(
-        ValueError, match="admission requires initiative and assignment identities"
-    ):
-        assignment_orchestration.atlas_assignment_projection(captured)
-
-    with pytest.raises(ValueError, match="exact parent Initiative admission"):
-        assignment_orchestration.atlas_assignment_projection(
-            captured, initiative_id="promoted-parent-card"
-        )
-
-    admission = _initiative_admission(
-        "promoted-parent-card",
-        "Parent card title",
-        "Parent card objective",
-    )
-    projected = assignment_orchestration.atlas_assignment_projection(
-        captured,
-        initiative_id="promoted-parent-card",
-        initiative_admission=admission,
-    )
-
-    assert projected["initiative_id"] == "promoted-parent-card"
-    assert projected["initiative_title"] == "Parent card title"
-    assert projected["initiative_intent"] == "Parent card objective"
-    assert projected["initiative_source_identity"]["sourceId"] == (
-        "promoted-parent-card"
-    )
-    assert projected["assignment_id"] == "assignment-a"
-    assert projected["work_definition"]["mission_id"] == "atlas-mission-context"
 
 
 def test_work_resume_prepare_rebinds_stale_profile_without_losing_assignment(
@@ -1543,14 +1460,14 @@ def test_work_resume_prepare_rebinds_stale_profile_without_losing_assignment(
                 "test-owner",
             ),
         )
-    mission_control.create_initiative(
+    work_control.create_initiative(
         str(runtime),
         initiative_id="retained-project",
         title="Retained Project",
         intent="Keep Work readable across a product Profile upgrade",
         actor="local-user",
     )
-    mission_control.create_assignment(
+    work_control.create_assignment(
         str(runtime),
         initiative_id="retained-project",
         assignment_id="retained-assignment",
@@ -1571,7 +1488,7 @@ def test_work_resume_prepare_rebinds_stale_profile_without_losing_assignment(
         "profile_suite_root"
     ]
     assert desired_root != previous_root
-    monkeypatch.setattr(ASSIGNMENT_CLI, "_profile_source", lambda: source)
+    monkeypatch.setattr(ASSIGNMENT_CLI, "profile_source", lambda: source)
 
     with pytest.raises(
         profile_sdk.ProfileSdkError,
@@ -1616,14 +1533,14 @@ def test_nonterminal_continuation_decision_starts_a_new_completion_cycle(
 ):
     runtime = tmp_path / ".kungfu" / "runtime"
     _activate(runtime)
-    mission_control.create_initiative(
+    work_control.create_initiative(
         str(runtime),
         initiative_id="initiative-a",
         title="Initiative A",
         intent="Keep failed review cycles open",
         actor="owner-a",
     )
-    mission_control.create_assignment(
+    work_control.create_assignment(
         str(runtime),
         initiative_id="initiative-a",
         assignment_id="assignment-a",
@@ -1631,26 +1548,26 @@ def test_nonterminal_continuation_decision_starts_a_new_completion_cycle(
         objective="Require a new claim after a nonterminal decision",
         actor="agent-a",
     )
-    first_claim = mission_control.claim_completion(
+    first_claim = work_control.claim_completion(
         str(runtime),
-        mission_id="initiative-a",
-        goal_id="assignment-a",
+        initiative_id="initiative-a",
+        assignment_id="assignment-a",
         statement="The first claim is intentionally missing independent evidence",
         actor="agent-a",
     )
-    first_review = mission_control.review_completion(
+    first_review = work_control.review_completion(
         str(runtime),
-        mission_id="initiative-a",
-        goal_id="assignment-a",
+        initiative_id="initiative-a",
+        assignment_id="assignment-a",
         reviewer="reviewer-a",
         reviewer_source="independent-session-a",
     )
     assert action in first_review["review"]["continuation_plan"]["allowed_actions"]
 
-    mission_control.decide_continuation(
+    work_control.decide_continuation(
         str(runtime),
-        mission_id="initiative-a",
-        goal_id="assignment-a",
+        initiative_id="initiative-a",
+        assignment_id="assignment-a",
         review_id=first_review["review"]["review_id"],
         expected_review_root=first_review["review_root"],
         expected_plan_root=first_review["continuation_plan_root"],
@@ -1658,7 +1575,7 @@ def test_nonterminal_continuation_decision_starts_a_new_completion_cycle(
         actor="agent-b",
         reason="return the Assignment to an evidence-bearing completion cycle",
     )
-    reopened = mission_control.assignment_orchestration_status(
+    reopened = work_control.assignment_orchestration_status(
         str(runtime), initiative_id="initiative-a", assignment_id="assignment-a"
     )
     assert reopened["phase"] == "stage-ready"
@@ -1667,26 +1584,26 @@ def test_nonterminal_continuation_decision_starts_a_new_completion_cycle(
         "claim-completion"
     )
 
-    second_claim = mission_control.claim_completion(
+    second_claim = work_control.claim_completion(
         str(runtime),
-        mission_id="initiative-a",
-        goal_id="assignment-a",
+        initiative_id="initiative-a",
+        assignment_id="assignment-a",
         statement="A later claim begins a new completion cycle",
         actor="agent-a",
     )
     assert second_claim["claim"]["claim_id"] != first_claim["claim"]["claim_id"]
-    claimed = mission_control.assignment_orchestration_status(
+    claimed = work_control.assignment_orchestration_status(
         str(runtime), initiative_id="initiative-a", assignment_id="assignment-a"
     )
     assert claimed["phase"] == "completion-claimed"
-    second_review = mission_control.review_completion(
+    second_review = work_control.review_completion(
         str(runtime),
-        mission_id="initiative-a",
-        goal_id="assignment-a",
+        initiative_id="initiative-a",
+        assignment_id="assignment-a",
         reviewer="reviewer-a",
         reviewer_source="independent-session-a",
     )
-    reviewed = mission_control.assignment_orchestration_status(
+    reviewed = work_control.assignment_orchestration_status(
         str(runtime), initiative_id="initiative-a", assignment_id="assignment-a"
     )
     assert reviewed["phase"] == "independently-reviewed"
@@ -1712,15 +1629,7 @@ def test_gate_field_equivalence_and_runtime_independent_seal(tmp_path):
         "continuation_decision_count": 1,
     }
     closed = assignment_orchestration.gate(status, "closeout")
-    assert set(closed["atlas_compatibility"]) == {
-        "schema",
-        "ok",
-        "phase",
-        "policy",
-        "reason",
-        "state_path",
-        "target",
-    }
+    assert "atlas_compatibility" not in closed
     assert closed["ok"] is True
 
     runtime = tmp_path / ".kungfu" / "runtime"
@@ -1800,7 +1709,7 @@ def test_sealed_state_index_retains_exact_work_coordinate(tmp_path):
             "schema": "kungfu.assignment-orchestration.sealed-work-coordinate/v1",
             "assignment_subject": "kungfu:assignment-a",
             "workspace_identity_root": owning_root,
-            "assignment_state_root": assignment_orchestration.semantic_root(
+            "assignment_state_root": assignment_canonical.semantic_root(
                 {
                     "schema": "kungfu.assignment-orchestration.retained-assignment-state/v1",
                     "workspace": {},
@@ -1863,7 +1772,7 @@ def test_assignment_relation_handshake_is_workspace_routed_and_fact_backed(
     )
     relation = build_relation("delegates-to", source_ref, destination_ref)
 
-    offer = mission_control.append_assignment_relation_event(
+    offer = work_control.append_assignment_relation_event(
         str(source_runtime),
         workspace_identity_root=source_identity.identity_root,
         relation=relation,
@@ -1871,7 +1780,7 @@ def test_assignment_relation_handshake_is_workspace_routed_and_fact_backed(
         actor="source-agent",
     )
     assert offer["next_action"] == "destination-acceptance"
-    assert mission_control.assignment_relations(str(source_runtime)) == [relation]
+    assert work_control.assignment_relations(str(source_runtime)) == [relation]
     other_ref = build_work_ref(
         source_identity,
         object_kind="assignment",
@@ -1880,7 +1789,7 @@ def test_assignment_relation_handshake_is_workspace_routed_and_fact_backed(
         cut_root="sha256:" + "f" * 64,
     )
     other_relation = build_relation("delegates-to", source_ref, other_ref)
-    repeated = mission_control.append_assignment_relation_event(
+    repeated = work_control.append_assignment_relation_event(
         str(source_runtime),
         workspace_identity_root=source_identity.identity_root,
         relation=relation,
@@ -1903,7 +1812,7 @@ def test_assignment_relation_handshake_is_workspace_routed_and_fact_backed(
     }
 
     with pytest.raises(ValueError, match="wrong owning workspace"):
-        mission_control.append_assignment_relation_event(
+        work_control.append_assignment_relation_event(
             str(source_runtime),
             workspace_identity_root=source_identity.identity_root,
             relation=relation,
@@ -1912,7 +1821,7 @@ def test_assignment_relation_handshake_is_workspace_routed_and_fact_backed(
             predecessor_event_roots=[offer["event"]["event_root"]],
         )
 
-    accepted = mission_control.append_assignment_relation_event(
+    accepted = work_control.append_assignment_relation_event(
         str(destination_runtime),
         workspace_identity_root=destination_identity.identity_root,
         relation=relation,
@@ -1933,7 +1842,7 @@ def test_external_initiative_ref_owns_no_duplicate_project_initiative(tmp_path):
     ensure_workspace_data_home(home, "create-initiative")
     home_runtime = tmp_path / ".kungfu" / "runtime"
     _activate(home_runtime)
-    mission_control.create_initiative(
+    work_control.create_initiative(
         str(home_runtime),
         initiative_id="portfolio",
         title="Portfolio",
@@ -1971,7 +1880,7 @@ def test_external_initiative_ref_owns_no_duplicate_project_initiative(tmp_path):
         project_identities.append(identity)
         runtime = root / ".kungfu" / "runtime"
         _activate(runtime)
-        written = mission_control.create_assignment(
+        written = work_control.create_assignment(
             str(runtime),
             initiative_id="portfolio",
             assignment_id="duplicate-local-id",
@@ -1983,8 +1892,8 @@ def test_external_initiative_ref_owns_no_duplicate_project_initiative(tmp_path):
             initiative_ref=initiative_ref,
         )
         assert written["initiative_subject"] == initiative_ref["subject"]
-        assert mission_control.list_initiatives(str(runtime)) == []
-        status = mission_control.assignment_orchestration_status(
+        assert work_control.list_initiatives(str(runtime)) == []
+        status = work_control.assignment_orchestration_status(
             str(runtime),
             initiative_id="portfolio",
             assignment_id="duplicate-local-id",
@@ -2035,14 +1944,14 @@ def test_local_parent_shorthand_is_frozen_as_workspace_qualified_ref(tmp_path):
     assert identity is not None
     runtime = root / ".kungfu" / "runtime"
     _activate(runtime)
-    mission_control.create_initiative(
+    work_control.create_initiative(
         str(runtime),
         initiative_id="initiative",
         title="Initiative",
         intent="Resolve local shorthand before admission",
         actor="owner",
     )
-    mission_control.create_assignment(
+    work_control.create_assignment(
         str(runtime),
         initiative_id="initiative",
         assignment_id="parent",
@@ -2052,7 +1961,7 @@ def test_local_parent_shorthand_is_frozen_as_workspace_qualified_ref(tmp_path):
         storage_source_id="kungfu",
         owning_workspace_identity_root=identity.identity_root,
     )
-    mission_control.create_assignment(
+    work_control.create_assignment(
         str(runtime),
         initiative_id="initiative",
         assignment_id="child",
@@ -2065,7 +1974,7 @@ def test_local_parent_shorthand_is_frozen_as_workspace_qualified_ref(tmp_path):
     )
     child = next(
         row
-        for row in mission_control.list_assignments(str(runtime))
+        for row in work_control.list_assignments(str(runtime))
         if row["assignment_id"] == "child"
     )
     assert child["parent_assignment_id"] == ""
@@ -2075,7 +1984,7 @@ def test_local_parent_shorthand_is_frozen_as_workspace_qualified_ref(tmp_path):
     assert child["parent_assignment_ref"]["subject"] == "kungfu:parent"
 
     with pytest.raises(ValueError, match="resolve exactly once"):
-        mission_control.create_assignment(
+        work_control.create_assignment(
             str(runtime),
             initiative_id="initiative",
             assignment_id="bad-child",
@@ -2101,14 +2010,14 @@ def test_unresolved_dependency_shorthand_remains_visible_without_fake_work_ref(
     assert identity is not None
     runtime = root / ".kungfu" / "runtime"
     _activate(runtime)
-    mission_control.create_initiative(
+    work_control.create_initiative(
         str(runtime),
         initiative_id="initiative",
         title="Initiative",
         intent="Keep unavailable dependencies explicit",
         actor="owner",
     )
-    mission_control.create_assignment(
+    work_control.create_assignment(
         str(runtime),
         initiative_id="initiative",
         assignment_id="current",
@@ -2122,7 +2031,7 @@ def test_unresolved_dependency_shorthand_remains_visible_without_fake_work_ref(
 
     current = next(
         row
-        for row in mission_control.list_assignments(str(runtime))
+        for row in work_control.list_assignments(str(runtime))
         if row["assignment_id"] == "current"
     )
     assert current["depends_on"] == []
@@ -2211,7 +2120,7 @@ def test_home_sealed_state_uses_home_storage_without_embedding_its_path(tmp_path
         "workspace_id": "home",
         "workspace_kind": "home",
     }
-    assert str(home) not in assignment_orchestration.canonical_json(plan["snapshot"])
+    assert str(home) not in assignment_canonical.canonical_json(plan["snapshot"])
 
 
 def _binding_endpoint_fixture(workspace_id, workspace_kind, assignment_id, marker):
@@ -2251,7 +2160,7 @@ def test_cross_workspace_binding_has_two_local_receipts_and_verifies_offline(tmp
         child_status,
     )
     assert binding["relationshipType"] == "parent-child"
-    assert "path" not in assignment_orchestration.canonical_json(binding).lower()
+    assert "path" not in assignment_canonical.canonical_json(binding).lower()
 
     home = tmp_path / "home" / ".kungfu"
     parent_plan = assignment_orchestration.cross_workspace_binding_plan(

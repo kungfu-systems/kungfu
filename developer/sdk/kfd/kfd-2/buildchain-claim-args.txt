@@ -1,5 +1,4 @@
 --kfd-2-claim-json developer/sdk/kfd/kfd-2/claims/agent-onboarding-pack.json
---kfd-2-claim-json developer/sdk/kfd/kfd-2/claims/codex-report-receipts.json
 --kfd-2-claim-json developer/sdk/kfd/kfd-2/claims/remote-fact-boundary.json
 --kfd-2-claim-json developer/sdk/kfd/kfd-2/claims/agent-work-state-contract.json
 --kfd-2-claim-json developer/sdk/kfd/kfd-2/claims/cross-language-authority-membrane.json

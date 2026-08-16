@@ -34,7 +34,7 @@ test('covers every declared entrypoint with one owner-authority route', () => {
       'native-agent',
       'managed-agent',
       'skill-kfd',
-      'atlas-dogfood',
+      'project-cut-dogfood',
       'shifu',
       'project-cut',
       'product-release-cut',

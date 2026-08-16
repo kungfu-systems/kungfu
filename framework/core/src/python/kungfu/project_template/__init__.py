@@ -17,6 +17,7 @@ from pathlib import Path, PurePosixPath
 from typing import Any
 
 from kungfu import assignment_orchestration as orchestration
+from kungfu.initiative_family.canonical import semantic_root
 from kungfu.workspace import resolve_workspace_target
 
 TEMPLATE_SCHEMA = "kungfu.project-template/v1"
@@ -118,7 +119,7 @@ def load_project_template(
                 )
         initial_work = payload.get("initialWork")
         if initial_work is None:
-            return payload, candidate.resolve(), orchestration.semantic_root(payload)
+            return payload, candidate.resolve(), semantic_root(payload)
         required_work = {
             "initiativeId",
             "assignmentId",
@@ -142,7 +143,7 @@ def load_project_template(
             raise ProjectTemplateError(
                 "project template acceptanceChecks must be non-empty strings"
             )
-        return payload, candidate.resolve(), orchestration.semantic_root(payload)
+        return payload, candidate.resolve(), semantic_root(payload)
     raise ProjectTemplateError(
         f"project template is unavailable: {template_id}; install its KFX Suite"
     )
@@ -208,7 +209,7 @@ def _project_plan(
         "confirmationRequired": True,
         "writeOccurred": False,
     }
-    return {**preimage, "planRoot": orchestration.semantic_root(preimage)}
+    return {**preimage, "planRoot": semantic_root(preimage)}
 
 
 def default_project_destination(
@@ -266,8 +267,8 @@ def _assignment_request(payload: dict[str, Any], template_root: str) -> dict[str
             "expiresAt": None,
         },
         "workDefinition": {
-            "goal_id": work["assignmentId"],
-            "mission_id": work["initiativeId"],
+            "assignment_id": work["assignmentId"],
+            "initiative_id": work["initiativeId"],
             "title": work["title"],
             "objective": work["objective"],
             "acceptance_criteria": work["acceptanceChecks"],
@@ -336,8 +337,8 @@ def _captured_project_work(candidate: Path) -> dict[str, Any] | None:
     ):
         return None
     work = request.get("workDefinition") or {}
-    initiative_id = str(work.get("mission_id") or "").strip()
-    assignment_id = str(work.get("goal_id") or "").strip()
+    initiative_id = str(work.get("initiative_id") or "").strip()
+    assignment_id = str(work.get("assignment_id") or "").strip()
     title = str(work.get("title") or "").strip()
     objective = str(work.get("objective") or "").strip()
     acceptance_checks = work.get("acceptance_criteria")
@@ -462,8 +463,8 @@ def resume_project_template(
             source.get("kind") == "kungfu-project-template"
             and source.get("templateId") == template_id
             and source.get("templateRoot") == template_root
-            and work.get("mission_id") == payload["initialWork"]["initiativeId"]
-            and work.get("goal_id") == payload["initialWork"]["assignmentId"]
+            and work.get("initiative_id") == payload["initialWork"]["initiativeId"]
+            and work.get("assignment_id") == payload["initialWork"]["assignmentId"]
         ):
             request_path = candidate
             request = value
@@ -472,7 +473,7 @@ def resume_project_template(
         raise ProjectTemplateError(
             f"workspace is not the exact {template_id} Starter Project"
         )
-    request_root = orchestration.semantic_root(request)
+    request_root = semantic_root(request)
     if request_path.parent.name != request_root.removeprefix("sha256:"):
         raise ProjectTemplateError(
             "Starter Project request root does not match its path"
@@ -494,7 +495,7 @@ def resume_project_template(
     if capture_receipt is None or capture_receipt_path is None:
         raise ProjectTemplateError("Starter Project capture receipt is unavailable")
     receipt_root = capture_receipt.get("receiptRoot")
-    expected_receipt_root = orchestration.semantic_root(
+    expected_receipt_root = semantic_root(
         {key: value for key, value in capture_receipt.items() if key != "receiptRoot"}
     )
     if receipt_root != expected_receipt_root or capture_receipt_path.stem != str(
@@ -557,7 +558,7 @@ def resume_project_template(
     }
     return {
         **receipt_preimage,
-        "receiptRoot": orchestration.semantic_root(receipt_preimage),
+        "receiptRoot": semantic_root(receipt_preimage),
     }
 
 
@@ -637,5 +638,5 @@ def create_project_template(
     }
     return {
         **receipt_preimage,
-        "receiptRoot": orchestration.semantic_root(receipt_preimage),
+        "receiptRoot": semantic_root(receipt_preimage),
     }

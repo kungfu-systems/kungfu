@@ -455,12 +455,6 @@ class EmbeddedLocalAssignmentRuntime:
                 "eventRetention": self.event_retention,
                 "idempotencyRetention": "realm-generation",
             },
-            "compatibility": {
-                "mode": "read-only-where-declared",
-                "readers": list(self.contract["compatibility"]["legacyReaders"]),
-                "dualWrite": self.contract["compatibility"]["dualWrite"],
-                "removalGate": self.contract["compatibility"]["deletionGate"],
-            },
             "authority": authority,
         }
 
