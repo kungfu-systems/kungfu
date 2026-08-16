@@ -32,7 +32,6 @@ import {
   verifyAlphaPublicationTailPlan,
 } from './alpha-publication-tail-plan.mjs';
 import { applyProductReleaseMetadata } from './github-release-policy.mjs';
-import { verifyUpgradePublicationAdmission } from './upgrade-publication-admission.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const PRODUCT_ROOT = process.env.BUILDCHAIN_PUBLICATION_COMMIT_PRODUCT_ROOT
