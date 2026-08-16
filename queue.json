@@ -3,7 +3,7 @@
   "contract": "kungfu-buildchain-dev-delivery-warrant-queue",
   "repository": "kungfu-systems/kungfu",
   "protectedBase": "dev/v4/v4.0",
-  "generation": 3214,
+  "generation": 3215,
   "fencingCounter": 473,
   "policy": {
     "agingSeconds": 900,
@@ -34,12 +34,15 @@
     "sourceWorkflowRunId": 31925689474,
     "deliveryClass": "non-native-fast",
     "generation": 473,
-    "phase": "provisional",
+    "phase": "qualified",
     "expectedOldStateRoot": "sha256:486c686da8f593e9229ddef0ad5c6783b489e53fbbfb274b620fde615c48481e",
     "issuedAt": "2026-08-16T04:57:35.716Z",
     "expiresAt": "2026-08-16T06:32:18.494Z",
     "fencingToken": "sha256:fce01431e76332842b4f36ea8642e8ae06f1ecc2b8400cb519ab940d1d8579e7",
-    "nextAction": "Run or reuse the exact semantic native proof, then atomically qualify this fenced Warrant."
+    "nextAction": "Enter the GitHub merge queue at the exact fenced PR head; merge_group remains final authority.",
+    "nativeProofRoot": "sha256:b31ab67b21f3b9241398518737de5655531aaebbc1e8d99e811bcea777416e88",
+    "nativeProofReuseRoot": "sha256:3436ae4e0090d56f1570625069dfeb3030b584a8360a2458837d988617cbf6ba",
+    "qualifiedAt": "2026-08-16T05:02:24.591Z"
   },
   "candidates": [
     {
@@ -30241,10 +30244,10 @@
       "sourceWorkflowRunId": 31925689474,
       "priority": "ordinary",
       "enqueuedAt": "2026-08-16T04:09:43.174Z",
-      "updatedAt": "2026-08-16T05:02:18.494Z",
+      "updatedAt": "2026-08-16T05:02:24.591Z",
       "attempts": 3,
       "recoveries": 0,
-      "status": "proving",
+      "status": "qualified",
       "terminal": null,
       "affectedPaths": [
         "README.md"
@@ -30803,6 +30806,6 @@
       ]
     }
   ],
-  "updatedAt": "2026-08-16T05:02:18.494Z",
-  "stateRoot": "sha256:76731776abb8d0fea87b6f59a4b1cdb78432aa03368cd4cd50eff2d555c76065"
+  "updatedAt": "2026-08-16T05:02:24.591Z",
+  "stateRoot": "sha256:0a79fe1acff9d1e2cbdb4bc149048bd395b3f2977299331d8ceff4ca5ef0672f"
 }
