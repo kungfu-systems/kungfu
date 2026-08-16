@@ -3,7 +3,7 @@
   "contract": "kungfu-buildchain-dev-delivery-warrant-queue",
   "repository": "kungfu-systems/kungfu",
   "protectedBase": "dev/v4/v4.0",
-  "generation": 3202,
+  "generation": 3203,
   "fencingCounter": 472,
   "policy": {
     "agingSeconds": 900,
@@ -30712,8 +30712,54 @@
         "framework/release/publication-surfaces.json",
         "scripts/alpha-macos-overflow.test.mjs"
       ]
+    },
+    {
+      "repository": "kungfu-systems/kungfu",
+      "protectedBase": "dev/v4/v4.0",
+      "pullRequestNumber": 3186,
+      "assignmentRoot": "sha256:feadacd8484d57010cade762049355566d46060884afe46e2ac7d0bc93fb7138",
+      "initiativeRoot": "sha256:bfff817933e5a5ad693e4b902a84f6cc3a251235dd7377cb4091d92f805fa7ff",
+      "sourceIdentityRoot": "sha256:0c26be3ae7845755277063fb7c75c705c146e7483db758b1034835309d9df514",
+      "deliveryClass": "native-proof-required",
+      "candidateId": "sha256:33091f8e302a34a862d588e8a844107500916c1570d4fa16d93d7611c074becd",
+      "sourceHead": "19a5da46122eb4e85f7e312f0696cec0c64ac2f1",
+      "sourcePatchRoot": "sha256:a0cd8c083831423dfeec1fd29f2413ee7f3309436547a31d811f5c0674994c3c",
+      "sourceProofRoot": "sha256:d2dcf193e88d64fce75817bb146b0f7c9051516cc2c35dfaf2130b19d4747db7",
+      "planRoot": "sha256:40e9504b123b9d43564f08732d5c19454170a49fb30fe2a34f4d94294924ab9e",
+      "closureRoot": "sha256:106d175611d8634c988192302b9c464ae8ba3b6d023c2cff9910e401344c9624",
+      "dependencyRoot": "sha256:7e97ab733bb51c055afa1df724872c8e577bc0ba8625bb676f7da7b30f2bbbcc",
+      "toolchainRoot": "sha256:2ecb07894954a2e0de022615d4561e5ba3ae68376401941ecff77be03cd75a0f",
+      "environmentRoot": "sha256:c5f5da5917c6ff93a509a62b18d4b9b69325755c4c7229b553b0016cde83788f",
+      "sourceWorkflowRunId": 31926764613,
+      "priority": "ordinary",
+      "enqueuedAt": "2026-08-16T04:50:33.204Z",
+      "updatedAt": "2026-08-16T04:50:33.204Z",
+      "attempts": 1,
+      "recoveries": 0,
+      "status": "queued",
+      "terminal": null,
+      "affectedPaths": [
+        ".github/workflows/publish-layer-artifacts.yml",
+        ".github/workflows/release-new-version.yml",
+        ".github/workflows/release-shifu.yml",
+        ".xinfa/portable-atlas-classification.json.gz",
+        ".xinfa/product-atlas-bundle.json",
+        "docs/development/buildchain.md",
+        "docs/development/version-release-design.md",
+        "docs/qualification/gates/release-and-promotion.md",
+        "docs/qualification/gates/workflow-authority.json",
+        "docs/qualification/gates/workflow-authority.md",
+        "framework/maintainability/abstraction-integrity.manifest.json",
+        "framework/release/publication-surfaces.json",
+        "package.json",
+        "scripts/alpha-publication-commit.mjs",
+        "scripts/check.mjs",
+        "scripts/github-release-policy.mjs",
+        "scripts/github-release-policy.test.mjs",
+        "scripts/kungfu-workflow-authority.mjs"
+      ]
     }
   ],
-  "updatedAt": "2026-08-16T04:48:14.270Z",
-  "stateRoot": "sha256:dbcceda66f6de65b9b9c1f6d7206337c965e1dbba743c4b7b5388903ecf7358f"
+  "updatedAt": "2026-08-16T04:50:33.204Z",
+  "stateRoot": "sha256:7d19022dfcc6e6f66e66d56d2b9576c4653e305de11a62d28dec2dac0b1d8190"
 }
