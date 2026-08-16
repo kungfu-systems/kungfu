@@ -97,7 +97,7 @@
             "product-alpha",
             "product-binaries"
           ],
-          "sourceRoot": "sha256:2205b495b9433c6efa110c3999ea3b09de16af02d7a2fb859ad8db5086c9399f"
+          "sourceRoot": "sha256:348ecf908098f852fb56a45412d70689a1854af16a5ce499616c1ddcc38850b1"
         },
         {
           "path": ".github/workflows/auditable-demo.yml",
@@ -136,7 +136,7 @@
             "product-stable",
             "product-binaries"
           ],
-          "sourceRoot": "sha256:a96b5b960733b122edd50520d4eb9cdcc76b4af84b19a40d5318684835d5947d"
+          "sourceRoot": "sha256:684044f9ad1f3f7bbbfddeef941ef1ce6863c5d8feb5c6a249f37a0ad412fd19"
         },
         {
           "path": ".github/workflows/buildchain-validate.yml",
@@ -877,5 +877,5 @@
       }
     }
   ],
-  "registryRoot": "sha256:28a7876c7ce26f12d8871006d672f922df074a2a975c4440434adecbd65906d1"
+  "registryRoot": "sha256:6a56ec7b48fe2cd79fb37841cea66dbc25eecc941bad2ba53711ab91f611e990"
 }
