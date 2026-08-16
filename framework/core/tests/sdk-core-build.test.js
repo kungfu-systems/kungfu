@@ -64,6 +64,9 @@ test('SDK Core build plan drives both orchestrators and the queue workflow', () 
   const compiler = read('framework/core/.cmake/compiler.cmake');
   const libwasm = read('framework/core/src/libwasm/CMakeLists.txt');
   const workflow = read('.github/workflows/affected-native-pr.yml');
+  const warrantedExecution = read(
+    '.github/actions/native-execution-under-warrant/action.yml',
+  );
 
   assert.equal(
     rootPackage.scripts['build:core:sdk'],
@@ -106,10 +109,14 @@ test('SDK Core build plan drives both orchestrators and the queue workflow', () 
   );
   assert.match(
     workflow,
-    /name: Build Core SDK artifacts[\s\S]*run: \.\/shifu build:core:sdk/,
+    /uses: \.\/\.github\/actions\/native-execution-under-warrant[\s\S]*command: \|[\s\S]*\.\/shifu build:core:sdk/,
   );
   assert.doesNotMatch(
     workflow,
-    /name: Build Core SDK artifacts[\s\S]{0,300}run: \.\/shifu build:core(?:\s|$)/,
+    /uses: \.\/\.github\/actions\/native-execution-under-warrant[\s\S]*command: \|[\s\S]*\.\/shifu build:core(?:\s|$)/,
+  );
+  assert.match(
+    warrantedExecution,
+    /KUNGFU_NATIVE_COMMAND: \$\{\{ inputs\.command \}\}[\s\S]*native-execution-under-warrant\.mjs/,
   );
 });
