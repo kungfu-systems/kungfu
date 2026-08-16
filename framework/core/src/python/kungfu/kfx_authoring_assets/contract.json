@@ -1,7 +1,7 @@
 {
   "schema": "kungfu.kfx-authoring-kit/v1",
   "version": 1,
-  "productVersion": "4.0.0-alpha.1",
+  "productVersion": "4.0.0-alpha.3",
   "nativeKfx": {
     "contractVersion": 14,
     "serviceHostSchema": "kungfu.kfx.service-host/v1",
@@ -9,9 +9,9 @@
   },
   "sdk": {
     "schema": "kungfu.kfx-authoring-sdk-projection/v1",
-    "productVersion": "4.0.0-alpha.1",
-    "apiVersion": "4.0.0-alpha.1",
-    "kfxVersion": "4.0.0-alpha.1",
+    "productVersion": "4.0.0-alpha.3",
+    "apiVersion": "4.0.0-alpha.3",
+    "kfxVersion": "4.0.0-alpha.3",
     "source": "framework/api/src/capability/service-authz.ts",
     "sourceRoot": "sha256:75342c374616da7718d306a2c05241cca6d8edc8bac6f007a4e62f905ad8c27a",
     "files": [

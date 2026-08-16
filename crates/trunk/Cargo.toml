@@ -14,7 +14,7 @@
 
 [package]
 name = "kungfu-trunk"
-version = "4.0.0-alpha.1"
+version = "4.0.0-alpha.3"
 description = "kungfu product trunk (stage 1): pinned-toolchain bootstrap and the kungfu-owned package/env surface"
 publish = false
 edition.workspace = true

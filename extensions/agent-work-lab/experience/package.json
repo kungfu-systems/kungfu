@@ -1,6 +1,6 @@
 {
   "name": "@kungfu-tech/kfx-agent-work-lab-experience",
-  "version": "4.0.0-alpha.1",
+  "version": "4.0.0-alpha.3",
   "description": "Agent Work Lab Suite catalog and cross-host experience semantics",
   "license": "Apache-2.0",
   "private": true,

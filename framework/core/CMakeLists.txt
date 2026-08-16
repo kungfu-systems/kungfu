@@ -3,7 +3,7 @@
 cmake_minimum_required(VERSION 3.28)
 project(kungfu LANGUAGES C CXX)
 
-set(KUNGFU_SDK_VERSION "4.0.0-alpha.1" CACHE STRING "Installed Kungfu SDK version")
+set(KUNGFU_SDK_VERSION "4.0.0-alpha.3" CACHE STRING "Installed Kungfu SDK version")
 
 ##########################################################################
 

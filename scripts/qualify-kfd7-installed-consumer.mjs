@@ -157,7 +157,7 @@ try {
     assert.equal(report.abi, 1);
     assert.equal(report.interfaces, 4);
     assert.equal(report.runtime, 'libkungfu');
-    assert.equal(report.version, '4.0.0-alpha.1');
+    assert.equal(report.version, '4.0.0-alpha.3');
   }
   assert.equal(
     reports[0].binding_root,

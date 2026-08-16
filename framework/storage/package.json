@@ -1,6 +1,6 @@
 {
   "name": "@kungfu-tech/storage",
-  "version": "4.0.0-alpha.1",
+  "version": "4.0.0-alpha.3",
   "description": "Kungfu Node storage SDK over the versioned libkungfu contract",
   "license": "Apache-2.0",
   "author": {

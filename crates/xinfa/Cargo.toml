@@ -1,6 +1,6 @@
 [package]
 name = "xinfa"
-version = "4.0.0-alpha.1"
+version = "4.0.0-alpha.3"
 edition = "2021"
 license-file = "LICENSE"
 description = "The verified context compiler for human-agent software development"

@@ -1,6 +1,6 @@
 {
   "name": "@kungfu-tech/opencode-kungfu",
-  "version": "0.1.0-alpha.1",
+  "version": "4.0.0-alpha.3",
   "description": "Reference OpenCode plugin that retains lifecycle evidence in libkungfu without taking over the vendor shell",
   "license": "Apache-2.0",
   "private": true,

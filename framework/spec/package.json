@@ -4,7 +4,7 @@
     "name": "Kungfu",
     "email": "info@kungfu.link"
   },
-  "version": "4.0.0-alpha.1",
+  "version": "4.0.0-alpha.3",
   "description": "Kungfu portable fact-ledger format spec: the manifest contract and aggregation package that publishes the versioned spec bundle",
   "license": "Apache-2.0",
   "repository": {

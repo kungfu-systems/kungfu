@@ -1,6 +1,6 @@
 {
   "name": "@kungfu-tech/kfx-adapter-langchain",
-  "version": "0.1.0",
+  "version": "4.0.0-alpha.3",
   "description": "Capture unmodified LangChain agent runs under kungfu trace.",
   "private": true,
   "files": [

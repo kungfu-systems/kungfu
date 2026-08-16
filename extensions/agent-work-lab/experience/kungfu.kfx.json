@@ -1,7 +1,7 @@
 {
   "schema": "kungfu.kfx.manifest/v1",
   "name": "@kungfu-tech/kfx-agent-work-lab-experience",
-  "version": "4.0.0-alpha.1",
+  "version": "4.0.0-alpha.3",
   "kungfuConfig": {
     "key": "agent-work-lab-experience",
     "name": "Agent Work Lab Experience",

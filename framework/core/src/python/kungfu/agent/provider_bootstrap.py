@@ -10,6 +10,7 @@ import os
 from pathlib import Path
 import re
 import shutil
+import subprocess
 import sys
 from typing import Any, Callable, Mapping, Sequence
 import uuid
@@ -113,6 +114,113 @@ def resolve_command_wrapper(
             break
         resolved[0] = str(target)
     return resolved
+
+
+def _runtime_health_base(
+    profile: Mapping[str, Any], effective_platform: str
+) -> dict[str, Any]:
+    return {
+        "schema": "kungfu.native-provider-runtime-health/v1",
+        "provider": str(profile.get("provider") or ""),
+        "executable": str((profile.get("launch") or {}).get("executable") or ""),
+        "platform": effective_platform,
+        "probe": "codex-windows-sandbox-smoke",
+        "modelInvoked": False,
+        "networkRequired": False,
+        "permissionsWidened": False,
+    }
+
+
+def provider_runtime_health(
+    profile: Mapping[str, Any],
+    *,
+    cwd: str,
+    env: Mapping[str, str] | None = None,
+    platform: str | None = None,
+    run: Callable[..., Any] = subprocess.run,
+    timeout_seconds: float = 20.0,
+) -> dict[str, Any]:
+    """Probe a provider-owned runtime boundary before starting its native UI."""
+
+    effective_platform = sys.platform if platform is None else platform
+    base = _runtime_health_base(profile, effective_platform)
+    if effective_platform != "win32" or base["provider"] != "codex":
+        return {**base, "status": "not-applicable", "ok": True, "warning": None}
+
+    ambient = dict(os.environ if env is None else env)
+    command = resolve_command_wrapper(
+        [base["executable"]], env=ambient, platform=effective_platform
+    )
+    try:
+        help_result = run(
+            [*command, "--help"],
+            cwd=cwd,
+            env=ambient,
+            capture_output=True,
+            encoding="utf-8",
+            errors="replace",
+            timeout=timeout_seconds,
+            check=False,
+        )
+    except (OSError, subprocess.SubprocessError) as error:
+        return {
+            **base,
+            "status": "capability-unverified",
+            "ok": True,
+            "warning": f"Codex capability probe was unavailable: {error}",
+        }
+    help_text = f"{help_result.stdout or ''}\n{help_result.stderr or ''}"
+    if (
+        help_result.returncode != 0
+        or re.search(r"(?im)^\s*sandbox\s+.*sandbox", help_text) is None
+    ):
+        return {
+            **base,
+            "status": "capability-unverified",
+            "ok": True,
+            "warning": (
+                "Codex does not advertise the model-free Windows sandbox helper; "
+                "continuing without a version-based admission rule"
+            ),
+        }
+
+    try:
+        result = run(
+            [
+                *command,
+                "sandbox",
+                "windows",
+                "--",
+                "cmd.exe",
+                "/d",
+                "/c",
+                "exit",
+                "0",
+            ],
+            cwd=cwd,
+            env=ambient,
+            capture_output=True,
+            encoding="utf-8",
+            errors="replace",
+            timeout=timeout_seconds,
+            check=False,
+        )
+    except (OSError, subprocess.SubprocessError) as error:
+        return {
+            **base,
+            "status": "unavailable",
+            "ok": False,
+            "warning": None,
+            "diagnostic": str(error)[:512],
+        }
+    diagnostic = (result.stderr or result.stdout or "").strip().splitlines()
+    return {
+        **base,
+        "status": "ready" if result.returncode == 0 else "unavailable",
+        "ok": result.returncode == 0,
+        "warning": None,
+        "diagnostic": diagnostic[0][:512] if diagnostic else None,
+    }
 
 
 def _resolve_npm_wrapper(

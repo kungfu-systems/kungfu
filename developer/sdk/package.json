@@ -4,7 +4,7 @@
     "name": "Kungfu",
     "email": "info@kungfu.link"
   },
-  "version": "4.0.0-alpha.1",
+  "version": "4.0.0-alpha.3",
   "description": "SDK for assembling Kungfu applications — scaffold a complete app on the platform stack",
   "license": "Apache-2.0",
   "type": "module",

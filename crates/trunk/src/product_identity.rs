@@ -13,9 +13,9 @@ mod tests {
 
     #[test]
     fn version_banner_preserves_the_version_first_line() {
-        let banner = version_banner("4.0.0-alpha.1");
+        let banner = version_banner("4.0.0-alpha.3");
         let mut lines = banner.lines();
-        assert_eq!(lines.next(), Some("4.0.0-alpha.1"));
+        assert_eq!(lines.next(), Some("4.0.0-alpha.3"));
         assert_eq!(
             lines.next(),
             Some("Kungfu UNGFU™ · Never Guess. Facts Unfold.")

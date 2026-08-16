@@ -64,7 +64,7 @@ checksum = "8f42a60cbdf9a97f5d2305f08a87dc4e09308d1276d28c869c684d7777685682"
 
 [[package]]
 name = "kungfu-embedding"
-version = "4.0.0-alpha.1"
+version = "4.0.0-alpha.3"
 dependencies = [
  "kungfu-sdk",
  "serde_json",
@@ -72,14 +72,14 @@ dependencies = [
 
 [[package]]
 name = "kungfu-sdk"
-version = "4.0.0-alpha.1"
+version = "4.0.0-alpha.3"
 dependencies = [
  "serde_json",
 ]
 
 [[package]]
 name = "kungfu-trunk"
-version = "4.0.0-alpha.1"
+version = "4.0.0-alpha.3"
 dependencies = [
  "kungfu-embedding",
  "serde_json",
@@ -173,7 +173,7 @@ dependencies = [
 
 [[package]]
 name = "shifu"
-version = "4.0.0-alpha.1"
+version = "4.0.0-alpha.3"
 dependencies = [
  "shifu-core",
 ]
@@ -213,7 +213,7 @@ checksum = "0b928f33d975fc6ad9f86c8f283853ad26bdd5b10b7f1542aa2fa15e2289105a"
 
 [[package]]
 name = "xinfa"
-version = "4.0.0-alpha.1"
+version = "4.0.0-alpha.3"
 dependencies = [
  "serde_json",
  "sha2",

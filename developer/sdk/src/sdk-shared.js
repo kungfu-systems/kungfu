@@ -323,7 +323,7 @@ function createApp(directory, options) {
     __APP_NAME__: productName,
     __APP_PACKAGE__: packageName,
     __APP_ID__: toAppId(productName),
-    __KF_DEP_VERSION__: options.workspace ? 'workspace:*' : '^4.0.0-alpha.1',
+    __KF_DEP_VERSION__: options.workspace ? 'workspace:*' : '^4.0.0-alpha.3',
   });
   process.stdout.write(
     [
@@ -355,7 +355,7 @@ function createExtension(directory, options) {
   scaffold('extension', targetDir, {
     __EXT_NAME__: extName,
     __EXT_KEY__: extKey,
-    __KF_DEP_VERSION__: options.workspace ? 'workspace:*' : '^4.0.0-alpha.1',
+    __KF_DEP_VERSION__: options.workspace ? 'workspace:*' : '^4.0.0-alpha.3',
   });
   process.stdout.write(
     [

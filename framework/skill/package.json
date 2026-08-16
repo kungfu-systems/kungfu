@@ -4,7 +4,7 @@
     "name": "Kungfu",
     "email": "info@kungfu.link"
   },
-  "version": "4.0.0-alpha.1",
+  "version": "4.0.0-alpha.3",
   "description": "Kungfu Skill schemas and catalog/context helpers",
   "license": "Apache-2.0",
   "type": "module",
@@ -17,7 +17,13 @@
     "registry": "https://registry.npmjs.org/",
     "access": "public"
   },
-  "files": ["src", "schema", "fixtures", "README.md", "kungfu-skill.contract.json"],
+  "files": [
+    "src",
+    "schema",
+    "fixtures",
+    "README.md",
+    "kungfu-skill.contract.json"
+  ],
   "dependencies": {
     "ajv": "^8.20.0"
   },

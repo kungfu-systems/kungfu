@@ -397,7 +397,7 @@ mod tests {
 
     const SAMPLE: &str = "\
 # kungfu help manifest (generated; do not edit)
-VERSION\t4.0.0-alpha.1
+VERSION\t4.0.0-alpha.3
 PROJECTION\tkungfu.cli-help-projection/v1\tsha256:projection\tsha256:contract\tsha256:registry
 OPT\t-H, --home <path>\tkungfu runtime home folder
 OPT\t--help-all\texpand every governed command family and exit
@@ -446,7 +446,7 @@ ROOTOPT\tenv_verify_location\t0\tKF_VERIFY_LOCATION\t-ENV-verify-location\t
     #[test]
     fn renders_version_options_and_sorted_commands() {
         let out = render_from(SAMPLE, NATIVE);
-        assert!(out.contains("kungfu 4.0.0-alpha.1"));
+        assert!(out.contains("kungfu 4.0.0-alpha.3"));
         assert!(out.contains("usage: kungfu [options] <command>"));
         assert!(out.contains("product model: Project → Work → Agent"));
         assert!(!out.contains("-H, --home <path>"));

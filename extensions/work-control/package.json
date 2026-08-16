@@ -1,6 +1,6 @@
 {
   "name": "@kungfu-tech/kfx-suite-work-control",
-  "version": "4.0.0-alpha.1",
+  "version": "4.0.0-alpha.3",
   "description": "First-party Work Control semantic Profile Suite",
   "license": "Apache-2.0",
   "private": true,

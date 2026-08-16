@@ -17,7 +17,7 @@
 
 [package]
 name = "shifu"
-version = "4.0.0-alpha.1"
+version = "4.0.0-alpha.3"
 description = "kungfu development/build launcher — pinned-toolchain entrypoint as a single self-contained binary"
 edition.workspace = true
 license.workspace = true

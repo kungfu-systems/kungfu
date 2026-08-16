@@ -8,7 +8,7 @@
       "dependencies": [
         {
           "provider": "kungfu.dogfood-feedback",
-          "version": "4.0.0-alpha.1",
+          "version": "4.0.0-alpha.3",
           "mode": "uses-if-present",
           "capabilities": ["dogfood.finding.capture"],
           "admissionGrades": ["kfd-attested"]

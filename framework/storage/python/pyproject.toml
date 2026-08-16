@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "kungfu-storage"
-version = "4.0.0a1"
+version = "4.0.0a3"
 description = "Python SDK over the versioned libkungfu storage contract"
 requires-python = ">=3.13,<3.14"
 license = "Apache-2.0"

@@ -4,7 +4,7 @@
   "spec_version": "0.1",
   "package": {
     "name": "@kungfu-tech/spec",
-    "version": "4.0.0-alpha.1"
+    "version": "4.0.0-alpha.3"
   },
   "normative": {
     "status": "pre-release",
@@ -30,7 +30,7 @@
     "non_claims": ["The standalone portable format is not declared stable."]
   },
   "provenance": {
-    "kungfu_version": "4.0.0-alpha.1",
+    "kungfu_version": "4.0.0-alpha.3",
     "git_commit": "0000000000000000000000000000000000000000"
   },
   "docs_url_base": "https://libkungfu.dev/spec/0.1/",
@@ -67,9 +67,9 @@
     "conformance_map": { "path": "compatibility.json", "source_package": "framework/format", "status": "current", "schema": "kungfu.spec.compatibility-map/v1", "protocol": "sha256:opaque-bytes/v1", "media_type": "application/json", "byte_length": 1, "artifact_root": "sha256:0000000000000000000000000000000000000000000000000000000000000000", "source_roots": [{ "path": "framework/format/kungfu-format-migration.contract.json", "root": "sha256:0000000000000000000000000000000000000000000000000000000000000000" }] }
   },
   "handbooks": {
-    "kungfu": { "path": "handbooks/cli/", "binding_version": "4.0.0-alpha.1", "docs_url": "https://libkungfu.dev/spec/0.1/handbooks/cli/", "api_ref_source": "developer/toolchain", "status": "non-normative-binding-guide" },
-    "pypi": { "path": "handbooks/python/", "binding_version": "4.0.0-alpha.1", "docs_url": "https://libkungfu.dev/spec/0.1/handbooks/python/", "api_ref_source": "framework/core", "status": "non-normative-binding-guide" },
-    "npm": { "path": "handbooks/node/", "binding_version": "4.0.0-alpha.1", "docs_url": "https://libkungfu.dev/spec/0.1/handbooks/node/", "api_ref_source": "framework/api", "status": "non-normative-binding-guide" }
+    "kungfu": { "path": "handbooks/cli/", "binding_version": "4.0.0-alpha.3", "docs_url": "https://libkungfu.dev/spec/0.1/handbooks/cli/", "api_ref_source": "developer/toolchain", "status": "non-normative-binding-guide" },
+    "pypi": { "path": "handbooks/python/", "binding_version": "4.0.0-alpha.3", "docs_url": "https://libkungfu.dev/spec/0.1/handbooks/python/", "api_ref_source": "framework/core", "status": "non-normative-binding-guide" },
+    "npm": { "path": "handbooks/node/", "binding_version": "4.0.0-alpha.3", "docs_url": "https://libkungfu.dev/spec/0.1/handbooks/node/", "api_ref_source": "framework/api", "status": "non-normative-binding-guide" }
   },
   "history": {
     "spec_0_1_draft": { "path": "history/spec-0.1-draft.md", "status": "historical-non-normative" },

@@ -482,7 +482,7 @@ dependencies = [
 
 [[package]]
 name = "kungfu-libwasm-wasmtime"
-version = "4.0.0-alpha.1"
+version = "4.0.0-alpha.3"
 dependencies = [
  "sha2",
  "wasmparser 0.240.0",

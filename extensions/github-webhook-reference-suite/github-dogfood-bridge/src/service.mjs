@@ -9,7 +9,7 @@ import {
 export const packageIdentity = Object.freeze({
   key: 'github-dogfood-bridge',
   version: '0.1.0',
-  productVersion: '4.0.0-alpha.1',
+  productVersion: '4.0.0-alpha.3',
   kitRoot:
     'sha256:819ae3f7ebd4934cadb28ee5b37f346e1feeb8d4fb1de35d290d75c35ed8c62f',
   sdkRoot:
@@ -17,7 +17,7 @@ export const packageIdentity = Object.freeze({
 });
 
 export const DOGFOOD_PROVIDER = 'kungfu.dogfood-feedback';
-export const DOGFOOD_VERSION = '4.0.0-alpha.1';
+export const DOGFOOD_VERSION = '4.0.0-alpha.3';
 export const FINDING_CAPABILITY = 'dogfood.finding.capture';
 
 export const declaration = Object.freeze({

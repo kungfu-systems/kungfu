@@ -1,7 +1,7 @@
 {
   "name": "@kungfu-tech/examples-probe-python",
   "author": "kungfu",
-  "version": "4.0.0-alpha.1",
+  "version": "4.0.0-alpha.3",
   "description": "Python AOT dogfood coverage probe: exercises engage pdm (install a dependency) + engage nuitka (--module AOT compile) into a native module.",
   "license": "Apache-2.0",
   "private": true,

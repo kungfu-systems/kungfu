@@ -1,0 +1,28 @@
+{
+  "schema": "kungfu.deprecation-extension-warrant-evidence/v1",
+  "release": "4.0.0-alpha.3",
+  "issuedAt": "2026-08-16",
+  "expiresOn": "2026-09-15",
+  "nonRenewing": true,
+  "reason": "Alpha.2 shipped before these source-compatibility adapters received qualified removal and migration evidence; retain only their existing bounded surface through the alpha.3 development line.",
+  "entries": [
+    {
+      "entryId": "core.yijinjing.boolean-mmap-adapters",
+      "authorizedBy": "kungfu-release",
+      "scope": "Retain the existing deprecated boolean mmap adapters through 4.0.0-alpha.3 only.",
+      "retirement": "Remove after zero-reference and migration qualification are retained for the successor Alpha."
+    },
+    {
+      "entryId": "core.yijinjing.journal-open-policy-adapters",
+      "authorizedBy": "kungfu-release",
+      "scope": "Retain the existing deprecated journal and reader boolean constructors through 4.0.0-alpha.3 only.",
+      "retirement": "Remove after zero-reference and migration qualification are retained for the successor Alpha."
+    },
+    {
+      "entryId": "core.yijinjing.page-open-policy-adapters",
+      "authorizedBy": "kungfu-release",
+      "scope": "Retain the existing deprecated page boolean policy adapters through 4.0.0-alpha.3 only.",
+      "retirement": "Remove after zero-reference and migration qualification are retained for the successor Alpha."
+    }
+  ]
+}

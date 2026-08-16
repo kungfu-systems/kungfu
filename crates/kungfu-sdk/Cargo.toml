@@ -2,7 +2,7 @@
 
 [package]
 name = "kungfu-sdk"
-version = "4.0.0-alpha.1"
+version = "4.0.0-alpha.3"
 description = "Rust SDK for the versioned libkungfu native storage contract"
 edition.workspace = true
 license.workspace = true

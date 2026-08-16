@@ -1,7 +1,7 @@
 {
   "name": "@kungfu-tech/examples-probe-cpp",
   "author": "kungfu",
-  "version": "4.0.0-alpha.1",
+  "version": "4.0.0-alpha.3",
   "description": "C++ dogfood coverage probe: compiles against libkungfu and its FlatBuffers data structures into a native module, exercising the C++ kfx build path.",
   "license": "Apache-2.0",
   "private": true,

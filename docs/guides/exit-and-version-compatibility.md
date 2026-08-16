@@ -94,7 +94,7 @@ retained release evidence.
 
 ## Current v4 pre-release boundary
 
-The current source line is `4.0.0-alpha.1`, so the stable same-minor promise has
+The current source line is `4.0.0-alpha.3`, so the stable same-minor promise has
 not started. Two retained qualification slices currently name the same exact
 official `darwin-arm64` CLI archive:
 

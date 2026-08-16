@@ -1,6 +1,6 @@
 {
   "name": "@kungfu-tech/kfx-suite-dogfood-feedback",
-  "version": "4.0.0-alpha.1",
+  "version": "4.0.0-alpha.3",
   "description": "First-party Dogfood Finding, Issue, and consideration Domain Profile",
   "license": "Apache-2.0",
   "private": true,

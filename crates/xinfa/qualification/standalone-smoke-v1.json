@@ -5,13 +5,18 @@
   "physicalBoundary": "linked-rust-component",
   "productEntrypoint": "kungfu-trunk xinfa",
   "extractedDevelopmentBinaryParity": true,
-  "version": "xinfa 4.0.0-alpha.1",
+  "version": "xinfa 4.0.0-alpha.3",
   "extractedFiles": [
     "ARCHITECTURE.md",
     "Cargo.lock",
     "Cargo.toml",
     "LICENSE",
     "README.md",
+    "agent/brief.md",
+    "agent/capabilities.json",
+    "agent/intent-map.json",
+    "agent/kfd3_api.registry.json",
+    "agent/kfd3_api.schema.json",
     "boundary.contract.json",
     "contract/route-root-authority-v1.json",
     "contract/xinfa-product-v1.json",
@@ -96,6 +101,7 @@
     "schema/semantic-project-v1.schema.json",
     "schema/task-chart-v1.schema.json",
     "schema/task-envelope-v1.schema.json",
+    "src/agent.rs",
     "src/atlas.rs",
     "src/cli.rs",
     "src/command.rs",
@@ -135,11 +141,11 @@
   "authorityRoot": "sha256:35736500a0563783dc394374d5e08ea91207ae5e33f3c84acbc0b18fe017735a",
   "canonicalizationDeterministic": true,
   "dualReaderParity": true,
-  "repositoryPackRoot": "sha256:927b26f160f615e89623513dbe5f8164ed1d0872753d2f7a20160332e6b91dec",
+  "repositoryPackRoot": "sha256:605a805cf2af47bba377f45c68db5451759f7feb26ad0b9be4c6bc5d996ce40e",
   "repositoryPackDeterministic": true,
   "repositoryPackOfflineVerify": true,
   "repositoryPackImpact": true,
-  "xinfaAtlasRoot": "sha256:b0fe5fcd8bfaebe9b80a8fb021977e8128319c1b87cba6783a6cbabf2e559ac9",
+  "xinfaAtlasRoot": "sha256:d9ffc9748d767d4f82148eaf23dff448ca3383caeb85b30c980fbb286c3fc8ea",
   "xinfaAtlasDeterministic": true,
   "xinfaAtlasOfflineVerify": true,
   "xinfaAtlasDiff": true,
@@ -179,5 +185,5 @@
     "KUNGFU_",
     "SHIFU_"
   ],
-  "scrubbedEnvironmentVariables": 14
+  "scrubbedEnvironmentVariables": 15
 }

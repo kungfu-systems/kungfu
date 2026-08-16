@@ -842,7 +842,7 @@ dependencies = [
 
 [[package]]
 name = "kungfu-libwasm-wasmer"
-version = "4.0.0-alpha.1"
+version = "4.0.0-alpha.3"
 dependencies = [
  "sha2 0.10.9",
  "wasmer",

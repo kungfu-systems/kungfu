@@ -3,7 +3,7 @@
   "maturity": "pre-release",
   "value": {
     "title": "KFX developer platform",
-    "summary": "KFX lets developers add inspectable views, adapters, services, Profiles, and Suites without turning package identity into runtime authority.",
+    "summary": "The 4.0.0-alpha.3 development line lets developers add inspectable KFX views, adapters, services, Profiles, and Suites without turning package identity into runtime authority.",
     "firstValue": "Use the installed Agent-first authoring kit to scaffold, validate, build, and qualify an inert extension before native admission.",
     "authorityBoundary": "This bundle is a documentation projection. Core KFX, KFD, Work, Warrant, capability, lifecycle, and Release Passport sources retain authority."
   },
@@ -158,7 +158,7 @@
     {
       "id": "architecture",
       "title": "Architecture and hosts",
-      "summary": "Views, adapters, and services have distinct physical hosts and preserve one Core descriptor.",
+      "summary": "The 4.0.0-alpha.3 development line keeps views, adapters, and services in distinct physical hosts while preserving one Core descriptor.",
       "maturity": "pre-release",
       "status": "implemented",
       "sourceIds": ["kfx-topology", "surface-neutral-contributions"],
@@ -167,7 +167,7 @@
     {
       "id": "package-facets",
       "title": "Packages and facets",
-      "summary": "The versioned KFX manifest declares package identity, facets, requested capabilities, and host inputs; retained qualification covers package, install, activation, upgrade, rollback, and removal for the maintained webhook suite.",
+      "summary": "The 4.0.0-alpha.3 KFX manifest declares package identity, facets, requested capabilities, and host inputs; retained qualification covers package, install, activation, upgrade, rollback, and removal for the maintained webhook suite.",
       "maturity": "pre-release",
       "status": "implemented",
       "sourceIds": ["kfx-contract", "extensions-guide", "github-webhook-qualification"],
@@ -176,7 +176,7 @@
     {
       "id": "registry-admission-lifecycle",
       "title": "Registry, admission, and lifecycle",
-      "summary": "A pinned Fact cut, Work, Warrant, policy, exact roots, and CAS guard every accepted package, install, activation, upgrade, rollback, and removal mutation.",
+      "summary": "On the 4.0.0-alpha.3 development line, a pinned Fact cut, Work, Warrant, policy, exact roots, and CAS guard every accepted package, install, activation, upgrade, rollback, and removal mutation.",
       "maturity": "pre-release",
       "status": "staged",
       "sourceIds": ["kfx-domain-profile", "kfx-topology", "github-webhook-qualification"],
@@ -185,7 +185,7 @@
     {
       "id": "capabilities",
       "title": "Capabilities and confinement",
-      "summary": "Packages request capabilities; Core policy and an explicit exact grant select the allowed subset for one host and preserve that separation across upgrade and rollback.",
+      "summary": "On the 4.0.0-alpha.3 development line, packages request capabilities while Core policy and an explicit exact grant select the allowed subset for one host and preserve that separation across rollback.",
       "maturity": "pre-release",
       "status": "implemented",
       "sourceIds": ["kfx-contract", "capability-ownership", "kfx-topology", "github-webhook-qualification"],
@@ -203,7 +203,7 @@
     {
       "id": "agent-first-authoring",
       "title": "Installed Agent-first authoring",
-      "summary": "The installed, version-matched kit supports scaffold, inspect, validate, build, offline qualify, package, install, activate, upgrade, rollback, and remove steps.",
+      "summary": "The installed 4.0.0-alpha.3-matched kit supports scaffold, inspect, validate, build, offline qualify, package, install, activate, upgrade, rollback, and remove steps.",
       "maturity": "pre-release",
       "status": "experimental",
       "sourceIds": ["installed-agent-index", "installed-authoring-brief", "github-webhook-suite-readme"],
@@ -212,7 +212,7 @@
     {
       "id": "sdk-cli",
       "title": "SDK and CLI surfaces",
-      "summary": "The runtime SDK projection and public CLI catalog expose version-matched authoring, lifecycle, and native inspection routes.",
+      "summary": "The 4.0.0-alpha.3 runtime SDK projection and public CLI catalog expose version-matched authoring, lifecycle, and native inspection routes.",
       "maturity": "pre-release",
       "status": "implemented",
       "sourceIds": ["installed-authoring-brief", "cli-surface-catalog", "kfx-contract", "github-webhook-suite-readme"],
@@ -221,7 +221,7 @@
     {
       "id": "profiles-suites",
       "title": "Profiles and Suites",
-      "summary": "Profiles compose domain contracts and qualification; Suites declare required and optional member dependency closure, including the maintained webhook ingress, view, and dormant bridge.",
+      "summary": "The 4.0.0-alpha.3 development line keeps Profiles compositional and Suites explicit about required and optional member closure, including the maintained webhook ingress, view, and dormant bridge.",
       "maturity": "pre-release",
       "status": "staged",
       "sourceIds": ["profile-suite-decision", "github-webhook-profile", "github-webhook-suite-manifest", "github-webhook-suite-readme"],
@@ -230,7 +230,7 @@
     {
       "id": "github-webhook-reference",
       "title": "GitHub Webhook reference suite",
-      "summary": "A maintained service/view/optional-bridge suite demonstrates authenticated intake, inspectable evidence, and dormant optional integration.",
+      "summary": "The 4.0.0-alpha.3 development line retains a service/view/optional-bridge suite demonstrating authenticated intake, inspectable evidence, and dormant optional integration.",
       "maturity": "pre-release",
       "status": "qualified",
       "sourceIds": ["service-webhook-host", "github-webhook-suite-readme", "github-webhook-suite-manifest", "github-webhook-profile", "github-webhook-qualification"],
@@ -239,7 +239,7 @@
     {
       "id": "qualification-status",
       "title": "Current qualification status",
-      "summary": "Identity-neutral terminal evidence and the maintained webhook Profile cover installed-product package, lifecycle, rollback, removal, and local reference-suite qualification.",
+      "summary": "For the 4.0.0-alpha.3 development line, identity-neutral terminal evidence and the maintained webhook Profile cover installed-product package, lifecycle, rollback, removal, and local reference-suite qualification.",
       "maturity": "pre-release",
       "status": "qualified",
       "sourceIds": ["kfx-terminal-qualification", "github-webhook-qualification", "github-webhook-suite-readme"],
