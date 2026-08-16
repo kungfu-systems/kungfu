@@ -3,7 +3,7 @@
   "contract": "kungfu-buildchain-dev-delivery-warrant-queue",
   "repository": "kungfu-systems/kungfu",
   "protectedBase": "dev/v4/v4.0",
-  "generation": 3358,
+  "generation": 3359,
   "fencingCounter": 482,
   "policy": {
     "agingSeconds": 900,
@@ -32075,8 +32075,52 @@
         "scripts/release-publication-control-plane.test.mjs",
         "scripts/verify-alpha-release-cut-lock.test.mjs"
       ]
+    },
+    {
+      "repository": "kungfu-systems/kungfu",
+      "protectedBase": "dev/v4/v4.0",
+      "pullRequestNumber": 3200,
+      "assignmentRoot": "sha256:c5d7fb7b797c3609834657ed96c868460d9662b6e4dce6df4235a86fbb6bf84b",
+      "initiativeRoot": "sha256:bfff817933e5a5ad693e4b902a84f6cc3a251235dd7377cb4091d92f805fa7ff",
+      "sourceIdentityRoot": "sha256:3ebbe007a7b4815be26d40d82bd18b4fd6a9e6544c08d18ed0aa96846f0eb126",
+      "deliveryClass": "native-proof-required",
+      "candidateId": "sha256:2a3d077a0c74a4508a01cb26ab9974edc1e83f2b570d373db05224e0f573960b",
+      "sourceHead": "37771e727fcb4d03ad61c1e7f880e8f261f26c80",
+      "sourcePatchRoot": "sha256:24153fe2b6c0b54705f1c6ab2c8ce71b1ba3350906f1529d7c33f8ccf0a5c6af",
+      "sourceProofRoot": "sha256:ee2ac920b130f1ea9971e1e5a7fd094cb9da0b2876ae2d22dd436131fe3e9435",
+      "planRoot": "sha256:8892e2a22298b305ae3c9d684381a02f1dc8045d28365d4ce8eaadb692b60926",
+      "closureRoot": "sha256:106d175611d8634c988192302b9c464ae8ba3b6d023c2cff9910e401344c9624",
+      "dependencyRoot": "sha256:e194c2073fec4c745fae0d7b15c0ba9f607c0f37a43abea878861c20f6594c0a",
+      "toolchainRoot": "sha256:2ecb07894954a2e0de022615d4561e5ba3ae68376401941ecff77be03cd75a0f",
+      "environmentRoot": "sha256:c5f5da5917c6ff93a509a62b18d4b9b69325755c4c7229b553b0016cde83788f",
+      "sourceWorkflowRunId": 31940858016,
+      "priority": "ordinary",
+      "enqueuedAt": "2026-08-16T10:14:52.180Z",
+      "updatedAt": "2026-08-16T10:14:52.180Z",
+      "attempts": 1,
+      "recoveries": 0,
+      "status": "queued",
+      "terminal": null,
+      "affectedPaths": [
+        ".buildchain/kfd/kfd-2/release-claims.json",
+        ".buildchain/kfd/kfd-3/collaboration-interface.prebuild.json",
+        ".buildchain/kfd/support-matrix.json",
+        ".xinfa/portable-atlas-classification.json.gz",
+        ".xinfa/product-atlas-bundle.json",
+        "developer/sdk/kfd/kfd-2/release-claims.json",
+        "developer/sdk/kfd/support-matrix.json",
+        "docs/adr/SHIFU-ADR-019f86da-4f90-79a1-bc85-4b542fecf011.md",
+        "docs/shifu/README.md",
+        "docs/shifu/examples/production-graph/native-build-lowering/journal-bazel.fixture.json",
+        "docs/shifu/native-build-lowering-contract.json",
+        "docs/shifu/production-graph-contract.json",
+        "framework/production-graph/check.mjs",
+        "framework/production-graph/native-build-lowering/index.mjs",
+        "framework/production-graph/native-build-lowering/index.test.mjs",
+        "package.json"
+      ]
     }
   ],
-  "updatedAt": "2026-08-16T10:12:22.521Z",
-  "stateRoot": "sha256:8d247b58ad51eeb6278d6049be8ed509fe607518afd84f46f17045325c4ef43a"
+  "updatedAt": "2026-08-16T10:14:52.180Z",
+  "stateRoot": "sha256:b2d1f2c5e3e0bd0389aeb496c500be92ac010efe30ab7e7c1da482db0768160c"
 }
