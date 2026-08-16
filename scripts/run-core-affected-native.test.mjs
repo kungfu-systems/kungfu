@@ -44,6 +44,7 @@ test('affected-native planning retains deleted source paths', () => {
   assert.deepEqual(observedArgs, [
     'diff',
     '--name-only',
+    '--no-renames',
     '--diff-filter=ACDMRTUXB',
     'base...head',
   ]);

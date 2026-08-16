@@ -1940,7 +1940,7 @@ nlohmann::json render_storage_compact_plan_result(const storage_compact_plan_res
                                   {"entries", manifest.entries},
                                   {"sync_root",
                                    {{"schema", yy_storage::SYNC_ROOT_SCHEMA_V1},
-                                    {"scope", yy_storage::SYNC_ROOT_SCOPE_ATLAS_IMPORT_MANIFEST},
+                                    {"scope", yy_storage::SYNC_ROOT_SCOPE_SOURCE_IMPORT_MANIFEST},
                                     {"proof", yy_storage::SYNC_ROOT_PROOF_LINEAR_CHAIN_V1},
                                     {"algorithm", manifest.sync_root.algorithm},
                                     {"value", manifest.sync_root.value},
@@ -1990,7 +1990,7 @@ nlohmann::json render_storage_status_result(const storage_status_result &result)
   const auto proof_root_json = [&sync_root_json](const storage_sync_root_view &root, uint64_t entry_count) {
     auto rendered = sync_root_json(root);
     rendered["schema"] = yy_storage::SYNC_ROOT_SCHEMA_V1;
-    rendered["scope"] = yy_storage::SYNC_ROOT_SCOPE_ATLAS_IMPORT_MANIFEST;
+    rendered["scope"] = yy_storage::SYNC_ROOT_SCOPE_SOURCE_IMPORT_MANIFEST;
     rendered["proof"] = yy_storage::SYNC_ROOT_PROOF_LINEAR_CHAIN_V1;
     rendered["entry_count"] = entry_count;
     rendered["initial"] = yy_storage::SYNC_ROOT_INITIAL_SHA256;

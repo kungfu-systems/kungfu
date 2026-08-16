@@ -126,10 +126,12 @@ export function classifyDarwinX64Repository(root = ROOT) {
   const policy = JSON.parse(
     fs.readFileSync(path.join(root, DARWIN_X64_POLICY_PATH), 'utf8'),
   );
-  const entries = repositoryFiles(root).map((relative) => ({
-    path: relative,
-    content: fs.readFileSync(path.join(root, relative), 'utf8'),
-  }));
+  const entries = repositoryFiles(root)
+    .filter((relative) => fs.existsSync(path.join(root, relative)))
+    .map((relative) => ({
+      path: relative,
+      content: fs.readFileSync(path.join(root, relative), 'utf8'),
+    }));
   return classifyDarwinX64Residuals(entries, policy);
 }
 

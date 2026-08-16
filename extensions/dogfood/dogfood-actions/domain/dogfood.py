@@ -10,8 +10,6 @@ each query exposes independent component cuts.
 
 from __future__ import annotations
 
-import hashlib
-import json
 import re
 import time
 from collections.abc import Iterable, Mapping
@@ -29,14 +27,11 @@ CONTRACT_VERSION = "1"
 FINDING_SURFACE_ID = "kungfu.dogfood-feedback.finding"
 ISSUE_SURFACE_ID = "kungfu.dogfood-feedback.issue"
 CONSIDERATION_SURFACE_ID = "kungfu.dogfood-feedback.consideration"
-MIGRATION_SURFACE_ID = "kungfu.dogfood-feedback.migration"
 SOURCE_ID = "kungfu-agent"
-MIGRATION_SOURCE_ID = "atlas-migration"
 
 FINDING_SCHEMA = "kungfu.dogfood-feedback.finding/v1"
 ISSUE_SCHEMA = "kungfu.dogfood-feedback.issue/v1"
 CONSIDERATION_SCHEMA = "kungfu.dogfood-feedback.consideration/v1"
-MIGRATION_SCHEMA = "kungfu.dogfood-feedback.migration/v1"
 QUERY_SCHEMA = "kungfu.dogfood-feedback.query/v1"
 LOOKUP_SCHEMA = "kungfu.dogfood-feedback.lookup/v1"
 ISSUE_PROPOSAL_SCHEMA = "kungfu.dogfood-feedback.issue-proposal/v1"
@@ -44,8 +39,6 @@ RECONCILIATION_SCHEMA = "kungfu.dogfood-feedback.issue-reconciliation/v1"
 HEALTH_SCHEMA = "kungfu.dogfood-feedback.health/v1"
 GATE_SCHEMA = "kungfu.dogfood-feedback.consideration-gate/v1"
 STARVATION_SCHEMA = "kungfu.dogfood-feedback.starvation/v1"
-MIGRATION_PLAN_SCHEMA = "kungfu.dogfood-feedback.migration-plan/v1"
-MIGRATION_VERIFY_SCHEMA = "kungfu.dogfood-feedback.migration-verification/v1"
 
 POLICY_VERSION = "dogfood-policy/v2"
 CANONICAL_IMPACTS = ("blocker", "high_friction", "medium", "low", "polish")
@@ -133,7 +126,6 @@ def capabilities() -> dict[str, Any]:
             "finding": FINDING_SURFACE_ID,
             "issue": ISSUE_SURFACE_ID,
             "consideration": CONSIDERATION_SURFACE_ID,
-            "migration": MIGRATION_SURFACE_ID,
         },
         "finding": {
             "immutable": True,
@@ -702,15 +694,11 @@ def local_projection(runtime_dir: str, *, cut_system_time: int = 0) -> dict[str,
     considerations = _records(
         runtime_dir, CONSIDERATION_SURFACE_ID, cut_system_time=cut_system_time
     )
-    migrations = _records(
-        runtime_dir, MIGRATION_SURFACE_ID, cut_system_time=cut_system_time
-    )
     histories = {}
     for name, surface_id in (
         ("finding", FINDING_SURFACE_ID),
         ("issue", ISSUE_SURFACE_ID),
         ("consideration", CONSIDERATION_SURFACE_ID),
-        ("migration", MIGRATION_SURFACE_ID),
     ):
         material = storage_service.fact_material_list(
             runtime_dir,
@@ -731,9 +719,6 @@ def local_projection(runtime_dir: str, *, cut_system_time: int = 0) -> dict[str,
         "consideration_versions": sorted(
             row["sealed_identity"]["payload_hash"] for row in considerations
         ),
-        "migration_versions": sorted(
-            row["sealed_identity"]["payload_hash"] for row in migrations
-        ),
         "observation_payloads": {
             name: sorted(
                 {
@@ -752,7 +737,6 @@ def local_projection(runtime_dir: str, *, cut_system_time: int = 0) -> dict[str,
         "findings": findings,
         "issues": issues,
         "considerations": considerations,
-        "migrations": migrations,
         "observation_counts": {
             name: len(rows) for name, rows in sorted(histories.items())
         },
@@ -777,12 +761,10 @@ def _component(identity: WorkspaceIdentity) -> dict[str, Any]:
             "findings": [],
             "issues": [],
             "considerations": [],
-            "migrations": [],
             "observation_counts": {
                 "finding": 0,
                 "issue": 0,
                 "consideration": 0,
-                "migration": 0,
             },
             "initiatives": [],
             "assignments": [],
@@ -839,7 +821,6 @@ def local_lookup(runtime_dir: str, identity: str) -> dict[str, Any]:
         ("finding", "findings"),
         ("issue", "issues"),
         ("consideration", "considerations"),
-        ("migration", "migrations"),
     ):
         for row in projection[field]:
             record = row["record"]
@@ -849,7 +830,6 @@ def local_lookup(runtime_dir: str, identity: str) -> dict[str, Any]:
                 str(record.get("issue_id") or ""),
                 str(record.get("issue_root") or ""),
                 str(record.get("receipt_root") or ""),
-                str(record.get("migration_root") or ""),
             }
             if identity in identities:
                 matches.append({"kind": kind, **row})
@@ -1593,7 +1573,7 @@ def record_consideration(
         assignment.get("work_definition_root"), "work_definition_root"
     )
     assignment_id = _stable_id(
-        assignment.get("assignment_id") or assignment.get("goal_id"),
+        assignment.get("assignment_id"),
         "assignment_id",
     )
     relevance = relevance_query(
@@ -2040,316 +2020,3 @@ def starvation_projection(
             else []
         ),
     }
-
-
-def _atlas_lines(
-    source_path: str | Path,
-) -> tuple[bytes, list[dict[str, Any]], list[str]]:
-    path = Path(source_path).expanduser().resolve()
-    raw = path.read_bytes()
-    revisions = []
-    line_roots = []
-    for line_number, raw_line in enumerate(raw.splitlines(keepends=True), 1):
-        if not raw_line.strip():
-            continue
-        try:
-            value = json.loads(raw_line)
-        except json.JSONDecodeError as error:
-            raise ValueError(f"invalid JSONL at line {line_number}: {error}") from error
-        if not isinstance(value, Mapping):
-            raise TypeError(f"Atlas JSONL line {line_number} must be an object")
-        _privacy_safe(value, f"line[{line_number}]")
-        revisions.append(dict(value))
-        line_roots.append("sha256:" + hashlib.sha256(raw_line).hexdigest())
-    return raw, revisions, line_roots
-
-
-def _title_fingerprint(value: Any) -> str:
-    tokens = re.findall(r"[a-z0-9]+", str(value or "").lower())
-    return "-".join(tokens)
-
-
-def atlas_migration_plan(source_path: str | Path) -> dict[str, Any]:
-    path = Path(source_path).expanduser().resolve()
-    raw, revisions, line_roots = _atlas_lines(path)
-    current = {}
-    for index, revision in enumerate(revisions, 1):
-        item_id = _stable_id(revision.get("id"), f"line {index} id")
-        current[item_id] = {**revision, "_source_line": index}
-    clusters: dict[str, list[str]] = {}
-    for item_id, revision in current.items():
-        fingerprint = _title_fingerprint(revision.get("title"))
-        if fingerprint:
-            clusters.setdefault(fingerprint, []).append(item_id)
-    candidates = [
-        {"fingerprint": key, "item_ids": sorted(values)}
-        for key, values in sorted(clusters.items())
-        if len(values) > 1
-    ]
-    body = {
-        "schema": MIGRATION_PLAN_SCHEMA,
-        "source": {
-            "kind": "atlas-dogfood-jsonl",
-            "path": str(path),
-            "byte_count": len(raw),
-            "revision_count": len(revisions),
-            "source_root": "sha256:" + hashlib.sha256(raw).hexdigest(),
-            "line_roots": line_roots,
-        },
-        "current_item_count": len(current),
-        "current_states": {
-            key: sum(
-                1 for row in current.values() if str(row.get("status") or "") == key
-            )
-            for key in sorted(
-                {str(row.get("status") or "") for row in current.values()}
-            )
-        },
-        "candidate_duplicate_clusters": candidates,
-        "automatic_deduplication": False,
-        "automatic_resolution": False,
-        "source_authority_after_import": "retained-read-only",
-        "writes": [
-            {
-                "surface": FINDING_SURFACE_ID,
-                "count": len(revisions),
-                "mode": "one-immutable-source-revision-per-fact",
-            },
-            {"surface": MIGRATION_SURFACE_ID, "count": 1},
-        ],
-    }
-    return {**body, "plan_root": _content_root(body)}
-
-
-def import_atlas_jsonl(
-    runtime_dir: str,
-    *,
-    source_path: str | Path,
-    expected_source_root: str,
-    actor: str,
-    imported_at: str = "",
-    system_time: int = 0,
-) -> dict[str, Any]:
-    plan = atlas_migration_plan(source_path)
-    source = plan["source"]
-    if _root(expected_source_root, "expected_source_root") != source["source_root"]:
-        raise ValueError("Atlas source root changed after migration planning")
-    raw, revisions, line_roots = _atlas_lines(source_path)
-    existing_migration = next(
-        (
-            row["record"]
-            for row in _records(runtime_dir, MIGRATION_SURFACE_ID)
-            if row["record"].get("source", {}).get("source_root")
-            == source["source_root"]
-        ),
-        None,
-    )
-    at = (
-        imported_at
-        or str((existing_migration or {}).get("imported_at") or "")
-        or _utc_now()
-    )
-    _parse_time(at, "imported_at")
-    writes = []
-    next_time = int(system_time or time.time_ns())
-    current_roots = {}
-    for index, (revision, line_root) in enumerate(
-        zip(revisions, line_roots, strict=True), 1
-    ):
-        item_id = _stable_id(revision.get("id"), f"line {index} id")
-        revision_number = int(revision.get("revision") or index)
-        body = {
-            "schema": FINDING_SCHEMA,
-            "finding_id": f"atlas:{item_id}:r{revision_number}",
-            "title": _text(revision.get("title"), f"line {index} title"),
-            "summary": str(
-                revision.get("notes")
-                or revision.get("actual_behavior")
-                or revision.get("title")
-            ).strip(),
-            "episode_root": line_root,
-            "evidence_roots": [line_root],
-            "dimensions": _dimension_map(
-                {
-                    "repository": ["kungfu"],
-                    "component": [revision.get("category") or "unknown"],
-                    "path": [],
-                    "capability": [],
-                    "schema": [],
-                    "contract": [],
-                    "command": [],
-                    "error": [],
-                    "build": [],
-                    "platform": [],
-                    "tag": [
-                        revision.get("status") or "captured",
-                        _normalize_impact(revision.get("impact") or "medium"),
-                    ],
-                    "history": [item_id],
-                    "evidence": [line_root],
-                }
-            ),
-            "privacy": (
-                "private-metadata-only"
-                if revision.get("privacy_class") == "private"
-                else "internal"
-            ),
-            "impact": _normalize_impact(revision.get("impact") or "medium"),
-            "hard_class": "",
-            "recurrence": 1,
-            "observed_at": str(
-                revision.get("updated_at") or revision.get("created_at") or at
-            ),
-            "state": "recorded",
-            "immutable": True,
-            "migration": {
-                "source_root": source["source_root"],
-                "source_line": index,
-                "source_line_root": line_root,
-                "source_item_id": item_id,
-                "source_revision": revision_number,
-                "source_status": str(revision.get("status") or ""),
-                "source_record_root": _content_root(revision),
-            },
-        }
-        finding_root = _content_root(body)
-        record = {**body, "finding_root": finding_root}
-        payload = {
-            "record": record,
-            "source": {
-                "authority_mode": "atlas-migration",
-                "actor": _text(actor, "actor"),
-                "recorded_at": at,
-                "payload_root": finding_root,
-                "source_root": source["source_root"],
-                "source_line_root": line_root,
-            },
-            "links": {"source_item_id": item_id, "source_line_root": line_root},
-        }
-        write = _put(
-            runtime_dir,
-            kind="atlas-revision",
-            surface_id=FINDING_SURFACE_ID,
-            subject=f"atlas-revision:{index}:{line_root}",
-            payload=payload,
-            source_id=MIGRATION_SOURCE_ID,
-            system_time=next_time + index,
-        )
-        writes.append(write)
-        current_roots[item_id] = finding_root
-    manifest_body = {
-        "schema": MIGRATION_SCHEMA,
-        "migration_id": f"atlas-jsonl:{source['source_root']}",
-        "source": source,
-        "plan_root": plan["plan_root"],
-        "imported_at": at,
-        "revision_count": len(revisions),
-        "current_item_count": plan["current_item_count"],
-        "current_finding_roots": dict(sorted(current_roots.items())),
-        "candidate_duplicate_clusters": plan["candidate_duplicate_clusters"],
-        "automatic_deduplication": False,
-        "automatic_resolution": False,
-        "source_authority": "retained-read-only",
-        "rollback": {
-            "authority_bytes_path": source["path"],
-            "expected_source_root": source["source_root"],
-            "native_records_are_additive": True,
-        },
-    }
-    migration_root = _content_root(manifest_body)
-    manifest = {**manifest_body, "migration_root": migration_root}
-    manifest_payload = {
-        "record": manifest,
-        "source": {
-            "authority_mode": "atlas-migration",
-            "actor": _text(actor, "actor"),
-            "recorded_at": at,
-            "payload_root": migration_root,
-            "source_root": source["source_root"],
-        },
-        "links": {"finding_roots": sorted(current_roots.values())},
-    }
-    manifest_write = _put(
-        runtime_dir,
-        kind="migration",
-        surface_id=MIGRATION_SURFACE_ID,
-        subject=f"migration:{source['source_root']}",
-        payload=manifest_payload,
-        source_id=MIGRATION_SOURCE_ID,
-        system_time=next_time + len(revisions) + 1,
-    )
-    admitted = sum(
-        1 for write in writes if write["status"] in {"admitted", "already-present"}
-    )
-    return {
-        "schema": "kungfu.dogfood-feedback.migration-receipt/v1",
-        "status": "imported" if admitted == len(revisions) else "degraded",
-        "source_root": source["source_root"],
-        "source_byte_count": len(raw),
-        "source_revision_count": len(revisions),
-        "admitted_revision_count": admitted,
-        "migration": manifest,
-        "migration_write": manifest_write,
-        "writes": writes,
-    }
-
-
-def verify_atlas_migration(
-    runtime_dir: str, *, source_path: str | Path
-) -> dict[str, Any]:
-    plan = atlas_migration_plan(source_path)
-    source_root = plan["source"]["source_root"]
-    matches = [
-        row["record"]
-        for row in _records(runtime_dir, MIGRATION_SURFACE_ID)
-        if row["record"].get("source", {}).get("source_root") == source_root
-    ]
-    blockers = []
-    if len(matches) != 1:
-        blockers.append(
-            {
-                "code": "migration-manifest-count",
-                "expected": 1,
-                "actual": len(matches),
-            }
-        )
-    manifest = matches[0] if len(matches) == 1 else {}
-    for field, expected in (
-        ("revision_count", plan["source"]["revision_count"]),
-        ("current_item_count", plan["current_item_count"]),
-    ):
-        if manifest.get(field) != expected:
-            blockers.append(
-                {
-                    "code": "migration-count-mismatch",
-                    "field": field,
-                    "expected": expected,
-                    "actual": manifest.get(field),
-                }
-            )
-    imported_lines = {
-        row["record"].get("migration", {}).get("source_line_root")
-        for row in _records(runtime_dir, FINDING_SURFACE_ID)
-        if row["record"].get("migration", {}).get("source_root") == source_root
-    }
-    expected_lines = set(plan["source"]["line_roots"])
-    if imported_lines != expected_lines:
-        blockers.append(
-            {
-                "code": "migration-revision-roots-mismatch",
-                "missing": sorted(expected_lines - imported_lines),
-                "extra": sorted(imported_lines - expected_lines),
-            }
-        )
-    body = {
-        "schema": MIGRATION_VERIFY_SCHEMA,
-        "source_root": source_root,
-        "source_path": plan["source"]["path"],
-        "source_bytes_retained": True,
-        "revision_count": plan["source"]["revision_count"],
-        "imported_revision_count": len(imported_lines),
-        "candidate_duplicate_clusters": plan["candidate_duplicate_clusters"],
-        "automatic_resolution": False,
-        "blockers": blockers,
-    }
-    return {**body, "ok": not blockers, "verification_root": _content_root(body)}

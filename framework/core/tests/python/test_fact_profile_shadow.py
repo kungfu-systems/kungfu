@@ -28,9 +28,12 @@ def _document():
     return {
         "sources": [
             _source(
-                "mission-go",
-                "mission:technical-stewardship/go:fact-kernel",
-                {"mission_id": "technical-stewardship", "goal_id": "fact-kernel"},
+                "initiative-assignment",
+                "initiative:technical-stewardship/assignment:fact-kernel",
+                {
+                    "initiative_id": "technical-stewardship",
+                    "assignment_id": "fact-kernel",
+                },
             ),
             _source(
                 "xinfa-atlas",
@@ -46,7 +49,7 @@ def _document():
         "relations": [
             {
                 "relation_type": "uses-context",
-                "source_id": "mission:technical-stewardship/go:fact-kernel",
+                "source_id": "initiative:technical-stewardship/assignment:fact-kernel",
                 "target_id": "atlas:sha256:fixture",
                 "attributes": {"inheriting": False},
             },

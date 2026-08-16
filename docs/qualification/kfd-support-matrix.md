@@ -23,7 +23,7 @@ Source implementation is not the same as released support. Verification, Buildch
 ## Claim boundary
 
 - KFD-1, KFD-2, KFD-3, and KFD-7 are the bounded shipped-support set for the current Alpha release declaration.
-- KFD-3 uses Buildchain's product-declared registry audit directly. It currently has 199 declared surfaces and 0 release-Gate-enforced surfaces. Declaration is discoverability; it is not enforcement.
+- KFD-3 uses Buildchain's product-declared registry audit directly. It currently has 195 declared surfaces and 0 release-Gate-enforced surfaces. Declaration is discoverability; it is not enforcement.
 - KFD-4 passes one bounded observer/contrastive-replay product gate but remains a non-shipped adoption candidate.
 - KFD-5 passes the bounded Assignment adopter gate and now binds the Primitive Management Plane, sole-intake incubation passports, and derived nine-entry catalog. It remains a non-shipped candidate; Buildchain does not self-qualify or activate it.
 - KFD-6 remains explicitly unsupported. The matrix retains bounded, non-conforming Work Design precursor evidence while keeping implementation, verification, activation, and shipment claims false.
