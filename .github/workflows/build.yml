@@ -12,10 +12,6 @@ on:
   # Manual runs validate lifecycle changes without waiting for an alpha PR.
   workflow_dispatch:
     inputs:
-      buildchain-ref:
-        description: "Temporary Buildchain train or exact SHA for trusted manual validation"
-        required: false
-        default: ""
       platforms-json:
         description: "Optional custom platform matrix for isolated qualification reruns; ignored by a full auditable-demo refresh"
         required: false
@@ -180,19 +176,18 @@ jobs:
   build:
     needs: [preflight, windows-fast-sentinel, auditable-demo-fast-sentinel]
     if: ${{ always() && needs.preflight.result == 'success' && needs.windows-fast-sentinel.result == 'success' && needs.auditable-demo-fast-sentinel.result == 'success' && !inputs.fast-sentinels-only && fromJSON(inputs.macos-overflow-request-json || '{}').mode != 'control' }}
-    # Use the official Alpha workflow shell so its channel and major identity
-    # are provable alongside the v3-alpha runtime and consumer contract lock.
-    uses: kungfu-systems/buildchain/.github/workflows/.build.yml@v3-alpha
+    # Execute one reviewed Buildchain revision for both the reusable workflow
+    # shell and its runtime. Channel and major remain contract metadata only.
+    uses: kungfu-systems/buildchain/.github/workflows/.build.yml@9baf025baad5faa2d9c2339af06f73adbe4b84a0
     secrets:
       BUILDCHAIN_PROMOTION_TOKEN: ${{ secrets.KUNGFU_GITHUB_TOKEN }}
       BUILDCHAIN_ARTIFACT_RELAY_S3_ROLE_ARN: ${{ secrets.BUILDCHAIN_ARTIFACT_RELAY_S3_ROLE_ARN }}
       BUILDCHAIN_ARTIFACT_RELAY_S3_UPLOAD_ROLE_ARN: ${{ secrets.BUILDCHAIN_ARTIFACT_RELAY_S3_UPLOAD_ROLE_ARN }}
       BUILDCHAIN_ARTIFACT_RELAY_S3_DOWNLOAD_ROLE_ARN: ${{ secrets.BUILDCHAIN_ARTIFACT_RELAY_S3_DOWNLOAD_ROLE_ARN }}
     with:
-      # Alpha candidates consume only the v3-alpha floating contract. Buildchain
-      # admits train/exact-SHA overrides only for a trusted manual diagnostic
-      # and records the resolved immutable runtime.
-      buildchain-ref: ${{ inputs.buildchain-ref || 'v3-alpha' }}
+      # Privileged candidate builds never execute a movable channel or a
+      # workflow_dispatch override. Channel and major are metadata only.
+      buildchain-ref: 9baf025baad5faa2d9c2339af06f73adbe4b84a0
       publish-source-ref: ${{ fromJSON(inputs.macos-overflow-request-json || '{}').releaseCutSourceRef || '' }}
       publish-anchor-request-json: ${{ fromJSON(inputs.macos-overflow-request-json || '{}').releaseCutSourceRef && toJSON(fromJSON(inputs.macos-overflow-request-json || '{}').releaseCutAnchorRequest) || '' }}
       runner-preset: custom

@@ -20,6 +20,17 @@ import { gateDefinitionDigest, gateDigest } from './shifu-gate-runtime.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
+function readJson(root, relative) {
+  return JSON.parse(fs.readFileSync(path.join(root, relative), 'utf8'));
+}
+
+function copyFixturePath(root, relative) {
+  const target = path.join(root, relative);
+  if (fs.existsSync(target)) return;
+  fs.mkdirSync(path.dirname(target), { recursive: true });
+  fs.cpSync(path.join(ROOT, relative), target, { recursive: true });
+}
+
 function fixture() {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'kungfu-gates-'));
   for (const relative of [
@@ -46,39 +57,18 @@ function fixture() {
     'docs/qualification/evidence/gate-measurements/e90b0fb2b/windows/receipt.json',
     'framework/core/tests/qualification/episode/profiles',
   ]) {
-    const source = path.join(ROOT, relative);
-    const target = path.join(root, relative);
-    fs.mkdirSync(path.dirname(target), { recursive: true });
-    fs.cpSync(source, target, { recursive: true });
+    copyFixturePath(root, relative);
   }
-  const coverage = JSON.parse(
-    fs.readFileSync(
-      path.join(ROOT, 'docs/qualification/gates/measurement-coverage.json'),
-      'utf8',
-    ),
+  const coverage = readJson(
+    ROOT,
+    'docs/qualification/gates/measurement-coverage.json',
   );
   for (const relative of new Set(
     coverage.measurements.flatMap((record) =>
       record.observations.map((observation) => observation.receipt),
     ),
   )) {
-    const source = path.join(ROOT, relative);
-    const target = path.join(root, relative);
-    if (fs.existsSync(target)) continue;
-    fs.mkdirSync(path.dirname(target), { recursive: true });
-    fs.copyFileSync(source, target);
-  }
-  const bindings = JSON.parse(
-    fs.readFileSync(
-      path.join(root, 'docs/qualification/gates/workflow-bindings.json'),
-      'utf8',
-    ),
-  );
-  for (const binding of bindings.bindings) {
-    const source = path.join(ROOT, binding.workflow);
-    const target = path.join(root, binding.workflow);
-    fs.mkdirSync(path.dirname(target), { recursive: true });
-    fs.copyFileSync(source, target);
+    copyFixturePath(root, relative);
   }
   return root;
 }
@@ -168,12 +158,7 @@ test('Initiative-family queue lease is exact-head and dequeue-released', () => {
 });
 
 function readMeasurementCoverage(root) {
-  return JSON.parse(
-    fs.readFileSync(
-      path.join(root, 'docs/qualification/gates/measurement-coverage.json'),
-      'utf8',
-    ),
-  );
+  return readJson(root, 'docs/qualification/gates/measurement-coverage.json');
 }
 
 function writeMeasurementCoverage(root, document) {
@@ -234,7 +219,7 @@ test('current Kungfu catalog, docs, matrix, actions, and workflows align', () =>
   const controllers = result.workflowFacts.filter(
     (fact) => fact.execution === 'controller',
   );
-  assert.equal(controllers.length, 11);
+  assert.equal(controllers.length, 12);
   assert.ok(controllers.every((fact) => fact.gates.length > 0));
   assert.equal(result.workflowAuthority.workflows.length, 38);
   const agentPatrol = result.workflowAuthority.workflows.find(
@@ -872,18 +857,29 @@ test('every controller class has a structured adapter and input drift fails clos
 });
 
 test('rogue, duplicate, missing, and invalid controller adapters fail closed', () => {
-  const rogueRoot = fixture();
-  fs.writeFileSync(
-    path.join(rogueRoot, '.github/workflows/rogue-controller.yml'),
-    'name: Rogue controller\njobs:\n  source-copy:\n    uses: kungfu-systems/buildchain/.github/workflows/check.yml@9e904de2c85dbea7c799780ee166510b3336d812\n    with:\n      buildchain-ref: v3\n      mode: source\n      upload-artifacts: true\n',
-  );
-  assert.ok(
-    checkKungfuGateCatalog(rogueRoot).issues.some((issue) =>
-      issue.includes(
-        '.github/workflows/rogue-controller.yml#source-copy:job-uses:kungfu-systems/buildchain/.github/workflows/check.yml@9e904de2c85dbea7c799780ee166510b3336d812: invocation has no matching binding',
+  for (const revision of [
+    '9e904de2c85dbea7c799780ee166510b3336d812',
+    '0000000000000000000000000000000000000000',
+    'v3-alpha',
+  ]) {
+    const rogueRoot = fixture();
+    const uses = `kungfu-systems/buildchain/.github/workflows/.build.yml@${revision}`;
+    fs.appendFileSync(
+      path.join(
+        rogueRoot,
+        '.github/workflows/aws-us-macos-burst-qualification.yml',
       ),
-    ),
-  );
+      `\n  rogue-qualify:\n    uses: ${uses}\n    with:\n      buildchain-ref: ${revision}\n`,
+    );
+    assert.ok(
+      checkKungfuGateCatalog(rogueRoot).issues.some((issue) =>
+        issue.includes(
+          `.github/workflows/aws-us-macos-burst-qualification.yml#rogue-qualify:job-uses:${uses}: invocation has no matching binding`,
+        ),
+      ),
+      revision,
+    );
+  }
 
   const duplicateRoot = fixture();
   const duplicateWorkflow = path.join(

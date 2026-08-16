@@ -374,64 +374,99 @@ test('promotion rejects a static Buildchain ref that differs from its workflow s
   );
 });
 
-test('manual Buildchain validation retains the v3-alpha default and declared input boundary', () => {
+test('privileged candidate build rejects movable runtime routing and manual overrides', () => {
   const buildPath = CONTRACT.workflows.build;
   const original = fs.readFileSync(path.join(ROOT, buildPath), 'utf8');
-  const binding =
-    "      buildchain-ref: ${{ inputs.buildchain-ref || 'v3-alpha' }}";
-  const withoutDefault = original.replace(
+  const runtimeSha = CONTRACT.buildchain.build_runtime_resolved_sha;
+  const binding = `      buildchain-ref: ${runtimeSha}`;
+  const movableRuntime = original.replace(
     binding,
-    '      buildchain-ref: ${{ inputs.buildchain-ref }}',
+    '      buildchain-ref: v3-alpha',
   );
-  assert.notEqual(withoutDefault, original);
-  const missingDefault = validateWorkflowSources(ROOT, CONTRACT, {
-    build: withoutDefault,
+  assert.notEqual(movableRuntime, original);
+  const movableResult = validateWorkflowSources(ROOT, CONTRACT, {
+    build: movableRuntime,
   });
-  assert.equal(missingDefault.ok, false);
+  assert.equal(movableResult.ok, false);
   assert.ok(
-    missingDefault.findings.some((entry) =>
-      entry.message.includes('default to the v3-alpha runtime'),
+    movableResult.findings.some((entry) =>
+      entry.message.includes('same immutable reviewed workflow and runtime'),
     ),
   );
 
-  const withoutInput = original.replace(
-    / {6}buildchain-ref:\n {8}description: "Temporary Buildchain train or exact SHA for trusted manual validation"\n {8}required: false\n {8}default: ""\n/u,
-    '',
-  );
-  assert.notEqual(withoutInput, original);
-  const missingInput = validateWorkflowSources(ROOT, CONTRACT, {
-    build: withoutInput,
+  const manualOverride = original
+    .replace(
+      '    inputs:\n',
+      '    inputs:\n      buildchain-ref:\n        required: false\n        default: ""\n',
+    )
+    .replace(binding, '      buildchain-ref: ${{ inputs.buildchain-ref }}');
+  assert.notEqual(manualOverride, original);
+  const manualResult = validateWorkflowSources(ROOT, CONTRACT, {
+    build: manualOverride,
   });
-  assert.equal(missingInput.ok, false);
+  assert.equal(manualResult.ok, false);
   assert.ok(
-    missingInput.findings.some((entry) =>
-      entry.message.includes('optional empty-default workflow_dispatch input'),
+    manualResult.findings.some((entry) =>
+      entry.message.includes('must not expose a movable Buildchain runtime'),
     ),
   );
 });
 
-test('candidate build rejects a committed exact Buildchain runtime pin', () => {
+test('candidate build rejects a runtime revision different from its workflow shell', () => {
   const buildPath = CONTRACT.workflows.build;
   const original = fs.readFileSync(path.join(ROOT, buildPath), 'utf8');
+  const runtimeSha = CONTRACT.buildchain.build_runtime_resolved_sha;
   const drifted = original.replace(
-    "      buildchain-ref: ${{ inputs.buildchain-ref || 'v3-alpha' }}",
-    '      buildchain-ref: 733812ff9405241705f5f267fe2e5ec6351e1a2d',
+    `      buildchain-ref: ${runtimeSha}`,
+    '      buildchain-ref: 0000000000000000000000000000000000000000',
   );
   assert.notEqual(drifted, original);
   const result = validateWorkflowSources(ROOT, CONTRACT, { build: drifted });
   assert.equal(result.ok, false);
   assert.ok(
     result.findings.some((entry) =>
-      entry.message.includes('default to the v3-alpha runtime'),
+      entry.message.includes('same immutable reviewed workflow and runtime'),
     ),
   );
+});
+
+test('candidate build rejects duplicate shell calls and runtime bindings', () => {
+  const buildPath = CONTRACT.workflows.build;
+  const original = fs.readFileSync(path.join(ROOT, buildPath), 'utf8');
+  const shellSha = CONTRACT.buildchain.build_workflow_shell_resolved_sha;
+  for (const extra of [
+    `\n  duplicate-build:\n    uses: kungfu-systems/buildchain/.github/workflows/.build.yml@${shellSha}\n`,
+    '\n  duplicate-build:\n    uses: kungfu-systems/buildchain/.github/workflows/.build.yml@0000000000000000000000000000000000000000\n',
+    `\n  duplicate-runtime:\n    with:\n      buildchain-ref: ${shellSha}\n`,
+    '\n  duplicate-runtime:\n    with:\n      buildchain-ref: 0000000000000000000000000000000000000000\n',
+  ]) {
+    const result = validateWorkflowSources(ROOT, CONTRACT, {
+      build: `${original}${extra}`,
+    });
+    assert.equal(result.ok, false);
+  }
+  for (const missing of [
+    original.replace(
+      `    uses: kungfu-systems/buildchain/.github/workflows/.build.yml@${shellSha}`,
+      '    # reusable Buildchain workflow intentionally removed',
+    ),
+    original.replace(
+      `      buildchain-ref: ${shellSha}`,
+      '      # Buildchain runtime binding intentionally removed',
+    ),
+  ]) {
+    assert.notEqual(missing, original);
+    assert.equal(
+      validateWorkflowSources(ROOT, CONTRACT, { build: missing }).ok,
+      false,
+    );
+  }
 });
 
 test('PR-stage builds reject a premature publish-source lock', () => {
   const buildPath = CONTRACT.workflows.build;
   const original = fs.readFileSync(path.join(ROOT, buildPath), 'utf8');
-  const buildchainRef =
-    "      buildchain-ref: ${{ inputs.buildchain-ref || 'v3-alpha' }}";
+  const buildchainRef = `      buildchain-ref: ${CONTRACT.buildchain.build_runtime_resolved_sha}`;
   const drifted = original.replace(
     buildchainRef,
     [
