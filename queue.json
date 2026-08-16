@@ -3,7 +3,7 @@
   "contract": "kungfu-buildchain-dev-delivery-warrant-queue",
   "repository": "kungfu-systems/kungfu",
   "protectedBase": "dev/v4/v4.0",
-  "generation": 3102,
+  "generation": 3103,
   "fencingCounter": 466,
   "policy": {
     "agingSeconds": 900,
@@ -29561,8 +29561,39 @@
         "scripts/affected-native-semantic-source.test.mjs",
         "scripts/dev-pr-auto-merge.test.mjs"
       ]
+    },
+    {
+      "repository": "kungfu-systems/kungfu",
+      "protectedBase": "dev/v4/v4.0",
+      "pullRequestNumber": 3179,
+      "assignmentRoot": "sha256:645db81c6039c64c8311c6336d38a9b8569b123cb5bd183cab20d9c2882fe411",
+      "initiativeRoot": "sha256:bfff817933e5a5ad693e4b902a84f6cc3a251235dd7377cb4091d92f805fa7ff",
+      "sourceIdentityRoot": "sha256:5b2a123e81588042265d18b88ed2fab90c8f2e1296091c68d2e5c175d1b436d3",
+      "deliveryClass": "non-native-fast",
+      "candidateId": "sha256:0f299fc4346c9d3cc03c2ac17f0a0f8655c26ab987afedba0a659a381fb09b5d",
+      "sourceHead": "15880b746481eab06cb30d95222f164166225269",
+      "sourcePatchRoot": "sha256:f1831e6ff45c6e98c8ae26be482b0c1bfd864b6867464b0ba1d5ea9bdb785c67",
+      "sourceProofRoot": "sha256:c282a3831c89fbea71efc4efd93031608ae97a6f62812530c2c7b3072309afc1",
+      "planRoot": "sha256:36aca5961f25a0f0e656cbfb7f8213b94d01ee4c0f94782f4b469f3eb59edf92",
+      "closureRoot": "sha256:ac6e52dc4778bd7be1e6224c9a526a00dc7fcdd56a84e07165a811b168158f3e",
+      "dependencyRoot": "sha256:b3be5099bab218c6aac7e1de4d5822ce43b46cb710001108f73d8c041e5ce2cf",
+      "toolchainRoot": "sha256:2ecb07894954a2e0de022615d4561e5ba3ae68376401941ecff77be03cd75a0f",
+      "environmentRoot": "sha256:ce8ac018bb38c00cc0f5e954dae39d921eb9437fb11314061e9628f456f39057",
+      "sourceWorkflowRunId": 31914797270,
+      "priority": "ordinary",
+      "enqueuedAt": "2026-08-16T00:04:43.971Z",
+      "updatedAt": "2026-08-16T00:04:43.971Z",
+      "attempts": 1,
+      "recoveries": 0,
+      "status": "queued",
+      "terminal": null,
+      "affectedPaths": [
+        ".gitattributes",
+        "docs/adr/KF-ADR-019f9f8a-9f40-7d6e-a4d2-5a334a9ab201.md",
+        "scripts/check-shifu-entry-contract.test.mjs"
+      ]
     }
   ],
-  "updatedAt": "2026-08-16T00:04:08.320Z",
-  "stateRoot": "sha256:f531f6d5764e0ae59a00180ba1be98ce5bdc7230a6565bf5ca124e59898ec0b7"
+  "updatedAt": "2026-08-16T00:04:43.971Z",
+  "stateRoot": "sha256:48adaba4466cd0d31df2cbb36aa33d481d7abcde390960f0f8d965a4401163de"
 }
