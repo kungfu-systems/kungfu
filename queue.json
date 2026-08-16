@@ -3,7 +3,7 @@
   "contract": "kungfu-buildchain-dev-delivery-warrant-queue",
   "repository": "kungfu-systems/kungfu",
   "protectedBase": "dev/v4/v4.0",
-  "generation": 3410,
+  "generation": 3411,
   "fencingCounter": 485,
   "policy": {
     "agingSeconds": 900,
@@ -32107,11 +32107,20 @@
       "sourceWorkflowRunId": 31940858016,
       "priority": "ordinary",
       "enqueuedAt": "2026-08-16T10:14:52.180Z",
-      "updatedAt": "2026-08-16T10:14:52.180Z",
+      "updatedAt": "2026-08-16T11:45:22.101Z",
       "attempts": 1,
       "recoveries": 0,
-      "status": "queued",
-      "terminal": null,
+      "status": "cancelled",
+      "terminal": {
+        "outcome": "cancelled",
+        "reason": "protected pull request event: closed",
+        "evidenceRoot": "sha256:4d4ebab6c745d4d0097e71058a898938245940188434ea2a322a8fc170806bde",
+        "authority": "queued-candidate-cancellation",
+        "expectedSourceHead": "37771e727fcb4d03ad61c1e7f880e8f261f26c80",
+        "observedSourceHead": "37771e727fcb4d03ad61c1e7f880e8f261f26c80",
+        "eventAction": "closed",
+        "closedAt": "2026-08-16T11:45:22.101Z"
+      },
       "affectedPaths": [
         ".buildchain/kfd/kfd-2/release-claims.json",
         ".buildchain/kfd/kfd-3/collaboration-interface.prebuild.json",
@@ -32286,6 +32295,6 @@
       ]
     }
   ],
-  "updatedAt": "2026-08-16T11:41:50.166Z",
-  "stateRoot": "sha256:c231a104f25ef51cbee70e16d1bb05753891801ea976d50288c66843f52ed716"
+  "updatedAt": "2026-08-16T11:45:22.101Z",
+  "stateRoot": "sha256:98284793abed07df075f2471cb7cb8485dc20bbf59e903a19e8e330af2b96881"
 }
