@@ -14,8 +14,7 @@ same Work across Codex, Claude, OpenCode, Amp, or your own execution surface.
 
 ## See one Work survive failure
 
-Kungfu is currently Alpha. On macOS or Linux, install the CLI with the reviewed
-per-user installer:
+Kungfu is currently Alpha. On macOS or Linux, install Kungfu and make the `kungfu` command available with the reviewed per-user installer:
 
 ```sh
 curl -fsSL https://kungfu.tech/install.sh | sh
