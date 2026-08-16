@@ -91,18 +91,10 @@ kungfu work family-verify-v2 STATE_V1_OR_V2
 
 ## Atlas boundary
 
-Atlas is an optional source and compatibility adapter, not the native work
-identity authority. Its source fields may be retained inside an Assignment's
-auditable work definition, but an Atlas parent identifier is not automatically
-an Initiative identifier. Admission requires either an exact Initiative
-WorkRef or a content-addressed Initiative admission envelope carrying the
-parent card's identity, title, intent, source authority, and immutable source
-version root. Missing, mutable, or mismatched parents fail visibly.
-
-Historical v3 worlds and receipts remain exact, read-only compatibility
-evidence. They are documented in the
-[compatibility index](compatibility/README.md) so their terminology does not
-define the current product.
+Admission requires either an exact Initiative WorkRef or a content-addressed
+Initiative admission envelope carrying the parent identity, title, intent,
+source authority, and immutable source version root. Missing, mutable, or
+mismatched parents fail visibly.
 
 ## Product surfaces
 

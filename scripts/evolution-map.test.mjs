@@ -248,6 +248,50 @@ test('builds deterministic timeline, authority, and route projections', () => {
   ]);
 });
 
+test('a settled Stage may retire reader targets only through a later amendment', () => {
+  const historical = stage({
+    readerRoute: {
+      intent: 'Understand the historical integration',
+      start: 'missing-project-document.md',
+      deepen: ['missing-project-route.md'],
+    },
+  });
+  assert.throws(
+    () => buildEvolutionMap([era()], [historical], contract),
+    /without an explicit amendment/,
+  );
+  const amendment = stage({
+    id: 'native-work-amendment',
+    sequence: 2,
+    buildsOn: [historical.id],
+    amends: [historical.id],
+    status: 'open',
+    evolutionImpact: 'extends',
+    readerRoute: {
+      intent: 'Understand native work authority',
+      start: 'package.json',
+      deepen: ['docs/README.md'],
+    },
+    authorityTransitions: [
+      {
+        subject: 'execution-history',
+        before: 'yijinjing append-only journal',
+        after: 'native work authority',
+        authorityRefs: ['package.json'],
+      },
+    ],
+    file: 'docs/evolution/stages/native-work-amendment.md',
+  });
+  const projection = buildEvolutionMap(
+    [era()],
+    [historical, amendment],
+    contract,
+  );
+  const routes = renderReaderRoutes(projection);
+  assert.doesNotMatch(routes, /missing-project/);
+  assert.match(routes, /docs\/README\.md/);
+});
+
 test('keeps candidate revisions outside canonical Era sequence and authority', () => {
   assert.throws(
     () =>

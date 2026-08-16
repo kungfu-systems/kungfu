@@ -38,7 +38,7 @@ test('freezes one backend-neutral Assignment Runtime contract', () => {
   assert.deepEqual(validateContract(), { ok: true, errors: [] });
   assert.equal(contract.protocol.id, 'kungfu.assignment-runtime/v1');
   assert.equal(contract.authority.writer, 'realm-runtime');
-  assert.equal(contract.compatibility.dualWrite, 'forbidden');
+  assert.equal(Object.hasOwn(contract, 'compatibility'), false);
   assert.equal(contract.localRuntimeProfile.publicPathContract, false);
   assert.equal(contract.implementationStatus.localRuntime, 'deferred-r1');
   assert.equal(
@@ -84,15 +84,11 @@ test('pins the current Assignment authority and client-path audit', () => {
     ],
     [
       'framework/core/src/python/kungfu/cli/commands/assignment.py',
-      [
-        'def _runtime(',
-        'def _profile_action(',
-        'LocalAssignmentRuntimeApplication',
-      ],
+      ['def _runtime(', 'def _profile_action('],
     ],
     [
       'framework/core/src/python/kungfu/assignment_runtime/__init__.py',
-      ['for name in ("work-control", "mission-control")', 'runtime-host'],
+      ['KF_EXTENSION_PATH does not name', 'runtime-host'],
     ],
     [
       'framework/core/src/python/kungfu/assignment_orchestration.py',
@@ -131,85 +127,29 @@ test('pins the current Assignment authority and client-path audit', () => {
   }
 });
 
-test('R3 CLI and Agent writers compose through the Runtime application edge', () => {
-  const writers = [
-    [
-      'framework/core/src/python/kungfu/cli/commands/assignment.py',
-      'def _profile_action(',
-    ],
-    [
-      'framework/core/src/python/kungfu/cli/commands/atlas.py',
-      'def _profile_action(',
-    ],
-    [
-      'framework/core/src/python/kungfu/agent/action_loop.py',
-      'def _mission_action(',
-    ],
+test('zero-residue blockers fail closed across runtime, tests, and CLI registry', () => {
+  const runtime = readRepo(
+    'framework/core/src/python/kungfu/assignment_runtime/__init__.py',
+  );
+  const predecessorProfile = ['mission', 'control'].join('-');
+  const removedPackage = ['kungfu', 'atlas'].join('.');
+  const removedCliPrefixes = [
+    ['kungfu', 'cli', 'commands', 'dev', 'mission', 'control'].join('.'),
+    `${['kungfu', 'cli', 'commands', 'atlas'].join('.')}.`,
   ];
-  for (const [file, start] of writers) {
-    const text = readRepo(file);
-    const body = text.slice(
-      text.indexOf(start),
-      text.indexOf('\n\ndef ', text.indexOf(start) + 1),
-    );
-    assert.ok(
-      body.includes('LocalAssignmentRuntimeApplication'),
-      `${file} must use the Runtime application edge`,
-    );
-    assert.equal(
-      body.includes('profile_sdk.intent_apply'),
-      false,
-      `${file} must not retain a direct Profile writer fallback`,
-    );
-  }
-});
+  const profileTest = readRepo(
+    'framework/core/tests/python/test_work_control_profile.py',
+  );
+  const registry = readRepoJson(
+    'framework/core/src/python/kungfu/cli/surface_contract.registry.json',
+  );
+  const registryText = canonicalJson(registry);
 
-test('retains a closed R3 CLI, Agent, and KFX consumer inventory', () => {
-  const inventory = readRepoJson(
-    'framework/assignment-runtime/consumer-inventory-v1.json',
-  );
-  const contractOperations = contract.operations.map((row) => row.id);
-  assert.equal(
-    inventory.schema,
-    'kungfu.assignment-runtime.consumer-inventory/v1',
-  );
-  assert.equal(inventory.protocol, contract.protocol.id);
-  assert.equal(inventory.mutableAuthority, contract.authority.writer);
-  assert.equal(inventory.clusterRuntime, 'not-started-out-of-scope');
-  assert.deepEqual(inventory.operations, contractOperations);
-  assert.deepEqual(inventory.consumers.map((row) => row.id).sort(), [
-    'agent-action-loop',
-    'cli-atlas-bridge',
-    'cli-runtime-host',
-    'cli-work',
-    'kfx-work-control-compatibility',
-    'kfx-work-dashboard',
-  ]);
-  assert.equal(
-    inventory.consumers.filter((row) => row.mutation === 'runtime-only').length,
-    4,
-  );
-  assert.equal(
-    inventory.boundedCompatibility.every(
-      (row) =>
-        row.mode.includes('read-only') || row.mode === 'factory-only-injected',
-    ),
-    true,
-  );
-  for (const assertion of inventory.sourceAssertions) {
-    const source = readRepo(assertion.path);
-    for (const witness of assertion.required)
-      assert.ok(
-        source.includes(witness),
-        `${assertion.path} must retain ${witness}`,
-      );
-    for (const forbidden of assertion.forbidden)
-      assert.equal(
-        source.includes(forbidden),
-        false,
-        `${assertion.path} retains shadow authority ${forbidden}`,
-      );
-  }
+  assert.equal(runtime.includes(predecessorProfile), false);
+  assert.match(runtime, /KF_EXTENSION_PATH does not name/u);
+  assert.equal(profileTest.includes(removedPackage), false);
+  for (const prefix of removedCliPrefixes)
+    assert.equal(registryText.includes(prefix), false);
 });
 
 for (const fixture of fixtures.cases) {

@@ -380,6 +380,7 @@ function validateReference(
   contract,
   root,
   evidenceKinds = contract.evidenceKinds,
+  requireLocalTarget = true,
 ) {
   invariant(ref && typeof ref === 'object', `${label} must be an object`);
   invariant(evidenceKinds.includes(ref.kind), `${label}.kind is not supported`);
@@ -402,10 +403,11 @@ function validateReference(
       !path.isAbsolute(ref.ref) && !ref.ref.includes('..'),
       `${label}.ref must be repository-relative`,
     );
-    invariant(
-      fs.existsSync(path.join(root, ref.ref)),
-      `${label}.ref does not exist: ${ref.ref}`,
-    );
+    if (requireLocalTarget)
+      invariant(
+        fs.existsSync(path.join(root, ref.ref)),
+        `${label}.ref does not exist: ${ref.ref}`,
+      );
   }
   if (['assignment', 'fact', 'episode', 'warrant'].includes(ref.kind))
     invariant(
@@ -491,18 +493,20 @@ function validateStage(stage, file, contract, root) {
     nonEmptyText(transition.before, `${label}.before`);
     nonEmptyText(transition.after, `${label}.after`);
     textArray(transition.authorityRefs, `${label}.authorityRefs`);
-    for (const ref of transition.authorityRefs)
-      invariant(
-        fs.existsSync(path.join(root, ref)),
-        `${label} authority ref does not exist: ${ref}`,
-      );
   }
   invariant(
     Array.isArray(stage.evidence) && stage.evidence.length > 0,
     `${file}.evidence must not be empty`,
   );
   stage.evidence.forEach((ref, index) =>
-    validateReference(ref, `${file}.evidence[${index}]`, contract, root),
+    validateReference(
+      ref,
+      `${file}.evidence[${index}]`,
+      contract,
+      root,
+      contract.evidenceKinds,
+      false,
+    ),
   );
   invariant(
     stage.readerRoute && typeof stage.readerRoute === 'object',
@@ -510,16 +514,35 @@ function validateStage(stage, file, contract, root) {
   );
   nonEmptyText(stage.readerRoute.intent, `${file}.readerRoute.intent`);
   nonEmptyText(stage.readerRoute.start, `${file}.readerRoute.start`);
-  invariant(
-    fs.existsSync(path.join(root, stage.readerRoute.start)),
-    `${file}.readerRoute.start does not exist`,
-  );
   textArray(stage.readerRoute.deepen, `${file}.readerRoute.deepen`);
-  for (const ref of stage.readerRoute.deepen)
-    invariant(
-      fs.existsSync(path.join(root, ref)),
-      `${file}.readerRoute.deepen ref does not exist: ${ref}`,
-    );
+}
+
+function readerRouteMissingRefs(stage, root) {
+  return [stage.readerRoute.start, ...stage.readerRoute.deepen].filter(
+    (ref) => !fs.existsSync(path.join(root, ref)),
+  );
+}
+
+function authorityMissingRefs(stage, root) {
+  return stage.authorityTransitions
+    .flatMap((transition) => transition.authorityRefs)
+    .filter((ref) => !fs.existsSync(path.join(root, ref)));
+}
+
+function evidenceMissingRefs(stage, root) {
+  return stage.evidence
+    .filter((ref) =>
+      ['adr', 'document', 'contract', 'qualification'].includes(ref.kind),
+    )
+    .map((ref) => ref.ref)
+    .filter((ref) => !fs.existsSync(path.join(root, ref)));
+}
+
+function effectiveReaderRoute(stage, stages) {
+  let effective = stage;
+  for (const candidate of stages)
+    if (candidate.amends.includes(effective.id)) effective = candidate;
+  return effective.readerRoute;
 }
 
 const CANDIDATE_FIELDS = [
@@ -995,6 +1018,18 @@ export function buildEvolutionMap(
     stages.length > 0,
     'the evolution corpus must contain at least one stage',
   );
+  const amendedStageIds = new Set(stages.flatMap((stage) => stage.amends));
+  for (const stage of stages) {
+    const missingRefs = [
+      ...authorityMissingRefs(stage, root),
+      ...evidenceMissingRefs(stage, root),
+      ...readerRouteMissingRefs(stage, root),
+    ];
+    invariant(
+      missingRefs.length === 0 || amendedStageIds.has(stage.id),
+      `${stage.file} historical ref does not exist without an explicit amendment: ${missingRefs.join(', ')}`,
+    );
+  }
 
   const currentAuthority = [...authority.values()].sort((left, right) =>
     left.subject.localeCompare(right.subject),
@@ -1129,14 +1164,15 @@ export function renderReaderRoutes(projection) {
     '',
   ];
   for (const stage of projection.stages) {
+    const readerRoute = effectiveReaderRoute(stage, projection.stages);
     lines.push(
-      `## ${stage.readerRoute.intent}`,
+      `## ${readerRoute.intent}`,
       '',
       `Historical context: ${markdownLink(OUTPUTS.routes, stage.file, stage.title)}.`,
       '',
-      `Start current reading at ${markdownLink(OUTPUTS.routes, stage.readerRoute.start)}.`,
+      `Start current reading at ${markdownLink(OUTPUTS.routes, readerRoute.start)}.`,
       '',
-      `Deepen through ${stage.readerRoute.deepen.map((ref) => markdownLink(OUTPUTS.routes, ref)).join(', ')}.`,
+      `Deepen through ${readerRoute.deepen.map((ref) => markdownLink(OUTPUTS.routes, ref)).join(', ')}.`,
       '',
     );
   }

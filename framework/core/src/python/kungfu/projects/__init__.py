@@ -17,6 +17,7 @@ from pathlib import Path
 from typing import Any
 
 from kungfu import assignment_orchestration as orchestration
+from kungfu.initiative_family.canonical import semantic_root
 from kungfu.project_template import (
     BLANK_TEMPLATE_ID,
     DEFAULT_TEMPLATE_ID,
@@ -44,7 +45,7 @@ WORK_INVENTORY_SCHEMA = "kungfu.project-work.inventory/v1"
 
 
 def _root(value: Any) -> str:
-    return orchestration.semantic_root(value)
+    return semantic_root(value)
 
 
 def _now() -> str:
@@ -352,8 +353,8 @@ def _captured_work(candidate: Path) -> dict[str, Any] | None:
         return None
     request = captured["request"]
     work = request.get("workDefinition") or {}
-    initiative_id = str(work.get("mission_id") or "").strip()
-    assignment_id = str(work.get("goal_id") or "").strip()
+    initiative_id = str(work.get("initiative_id") or "").strip()
+    assignment_id = str(work.get("assignment_id") or "").strip()
     title = str(work.get("title") or "").strip()
     objective = str(work.get("objective") or "").strip()
     acceptance_checks = work.get("acceptance_criteria")

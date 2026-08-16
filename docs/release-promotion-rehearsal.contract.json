@@ -49,7 +49,6 @@
     ],
     "kfd_2_claims": [
       ".buildchain/kfd/kfd-2/claims/agent-onboarding-pack.json",
-      ".buildchain/kfd/kfd-2/claims/codex-report-receipts.json",
       ".buildchain/kfd/kfd-2/claims/remote-fact-boundary.json"
     ],
     "kfd_3_prebuild_witnesses": [
