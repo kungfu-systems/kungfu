@@ -3,7 +3,7 @@
   "contract": "kungfu-buildchain-dev-delivery-warrant-queue",
   "repository": "kungfu-systems/kungfu",
   "protectedBase": "dev/v4/v4.0",
-  "generation": 3183,
+  "generation": 3184,
   "fencingCounter": 470,
   "policy": {
     "agingSeconds": 900,
@@ -30214,8 +30214,37 @@
         "docs/adr/KF-ADR-019f9f8a-9f40-7d6e-a4d2-5a334a9ab201.md",
         "scripts/check-shifu-entry-contract.test.mjs"
       ]
+    },
+    {
+      "repository": "kungfu-systems/kungfu",
+      "protectedBase": "dev/v4/v4.0",
+      "pullRequestNumber": 3185,
+      "assignmentRoot": "sha256:37773ae0200854b2ea044b9fa5f43fdfa3fb97a34a46bd84783adc02644ab7c5",
+      "initiativeRoot": "sha256:bfff817933e5a5ad693e4b902a84f6cc3a251235dd7377cb4091d92f805fa7ff",
+      "sourceIdentityRoot": "sha256:7473cf96fa01141b60fee53f89138fa94f3edc1a2208c239af2935399c3e1d02",
+      "deliveryClass": "non-native-fast",
+      "candidateId": "sha256:ea236cc453c6503e2a9869c48b78e8144eb55c4f769f0262bc540469b5b91422",
+      "sourceHead": "6232a56e1b97a9ee3e18c0ed4657a105533191fa",
+      "sourcePatchRoot": "sha256:871db694573ed8cea69ba620cef12d057a888d370c61f410e3bf8ca672e26f7e",
+      "sourceProofRoot": "sha256:706250b558fc5369844a6c77dd1fd5eb19dfc608ee57181703895cd0cadc5282",
+      "planRoot": "sha256:99cc4fe00eba48a28c53c3b0c6266331eca644c323b47075659f86e50eea6459",
+      "closureRoot": "sha256:ac6e52dc4778bd7be1e6224c9a526a00dc7fcdd56a84e07165a811b168158f3e",
+      "dependencyRoot": "sha256:b64150ab2b6191af2818090be8e7a300e064e81036ddc32cc77d65efdecc9821",
+      "toolchainRoot": "sha256:2ecb07894954a2e0de022615d4561e5ba3ae68376401941ecff77be03cd75a0f",
+      "environmentRoot": "sha256:ce8ac018bb38c00cc0f5e954dae39d921eb9437fb11314061e9628f456f39057",
+      "sourceWorkflowRunId": 31925689474,
+      "priority": "ordinary",
+      "enqueuedAt": "2026-08-16T04:09:43.174Z",
+      "updatedAt": "2026-08-16T04:09:43.174Z",
+      "attempts": 1,
+      "recoveries": 0,
+      "status": "queued",
+      "terminal": null,
+      "affectedPaths": [
+        "README.md"
+      ]
     }
   ],
-  "updatedAt": "2026-08-16T03:49:04.494Z",
-  "stateRoot": "sha256:ec18f956cd1ad2b4bcba787cce98bf836904df8eb4369cbc31eecd9e171280c4"
+  "updatedAt": "2026-08-16T04:09:43.174Z",
+  "stateRoot": "sha256:0a7f73d6c90961f0c3b215cc786663a66017962f0e2050f5b1b270967b19b705"
 }
