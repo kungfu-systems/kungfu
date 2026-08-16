@@ -1,0 +1,223 @@
+{
+  "contract": "kungfu.kfx-site-impact-proof/v1",
+  "baseRevision": "ebe9e04d41096dc2e3fb2cd65bb68602ee7db5a3",
+  "changeRoot": "sha256:3c2b0c6f2756d1648b26f7d558db2ef8fe930405c2d645ba86161da0eaeab4b9",
+  "changes": [
+    {
+      "baseContentRoot": "sha256:e36f382e47ec5d4cd9a3e5087fc0110deab6568ac14c7797abf3759de65d5191",
+      "contentRoot": "sha256:a937f67a7c0493bbbef2e1a9175dd29ca48d3858b1a3f0b9e460d2252f96b6bb",
+      "path": ".buildchain/alpha-contract-lock.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:b1cce59b7e5baa3f083cb6d0776be4ad8750e02b36448d3235aeaaa28f3ec5e7",
+      "contentRoot": "sha256:a691ffcfd66b491b6baa54a48b7417b1d1069b65ff0f8d4d589b80a350d4c03c",
+      "path": ".buildchain/kfd/kfd-1/release-gate.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:d33babb601b3a7efa10cb994d26f030b669095de232b444edefa29fd6c88f2be",
+      "contentRoot": "sha256:b79e003cec4b6f680a1fdb17e0a4dac5ed4fc094bf481634ba44c171b391b624",
+      "path": ".buildchain/kfd/kfd-2/release-claims.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:7067f4aa2b0d3c03d76042a8c9b10b307756ae9ae8f209cbbcdff4a1e586859c",
+      "contentRoot": "sha256:bd842d49a3e84bc1bf70e15dbd84925b6a7da794f2b7e853bc05861a68d5a92c",
+      "path": ".buildchain/kfd/kfd-3/collaboration-interface.artifact.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:febf259193eb012ebf92b667f9a3efac08d33db8c979babd2c8cf975b9845f72",
+      "contentRoot": "sha256:10bcec0c7bfb86b4440c1c47b2123b0c62430eb2ed389144d8e516d0a9e8763c",
+      "path": ".buildchain/kfd/kfd-3/collaboration-interface.prebuild.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:722397dd2b0295994c75d87a6df43992312048144ad5569d27da5f35653befc2",
+      "contentRoot": "sha256:4c818cb6380b210c631e864f0bebddb58349e06d52348e63a3b66610cffcb8b6",
+      "path": ".buildchain/kfd/kfd-3/surfaces.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:98aad729d6b7116776af95c428f034f63aa1094a3cdc83cbcb39627d393fa179",
+      "contentRoot": "sha256:954078fecbb18dd048dddb4c92f7be3e1c6438cf476bd5bd603c7ccb4b7f3ea6",
+      "path": ".buildchain/kfd/support-matrix.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:b1cce59b7e5baa3f083cb6d0776be4ad8750e02b36448d3235aeaaa28f3ec5e7",
+      "contentRoot": "sha256:a691ffcfd66b491b6baa54a48b7417b1d1069b65ff0f8d4d589b80a350d4c03c",
+      "path": "developer/sdk/kfd/kfd-1/release-gate.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:d33babb601b3a7efa10cb994d26f030b669095de232b444edefa29fd6c88f2be",
+      "contentRoot": "sha256:b79e003cec4b6f680a1fdb17e0a4dac5ed4fc094bf481634ba44c171b391b624",
+      "path": "developer/sdk/kfd/kfd-2/release-claims.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:722397dd2b0295994c75d87a6df43992312048144ad5569d27da5f35653befc2",
+      "contentRoot": "sha256:4c818cb6380b210c631e864f0bebddb58349e06d52348e63a3b66610cffcb8b6",
+      "path": "developer/sdk/kfd/kfd-3-surfaces.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:ff1ab1b89ac91a7a60be4b4de1295ffcfedcf4e20a9dd6e7ce44b64d730e7a53",
+      "contentRoot": "sha256:0cd0d7a972aab20d4a0e59c4f7619c4514848b2d23f12184d50bbb123fb0034e",
+      "path": "developer/sdk/kfd/support-matrix.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:5b1f29bd212be3a4c0e14f3de5b6c1dc7b20b46ac2689b31df805302d5f7cb03",
+      "contentRoot": "sha256:23096539bfe5fa3c9a5d126768df94141482d698a05e14c0915d179dd79dd1ec",
+      "path": "developer/sdk/kfd/upstream-aggregate.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:c62eb8eb4c2eef3d99d2afca157fb4ff63bd574c9e4cdf2991f00d81af10fe90",
+      "contentRoot": "sha256:755fb55381c6d23743dac56e89eb9fbbd2faebccf16f558edca98a40bdaef300",
+      "path": "developer/sdk/package.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:bf169ec852c402d3f6bc0a71edf75dab30cd80510766f1c992c1ecfab08861e3",
+      "contentRoot": "sha256:4ac12e9c054debc660ea70cdc9ac3b254409eb4b18e72540a3635351f91b294b",
+      "path": "docs/adr/KF-ADR-019f86da-4f90-77c0-827b-fe1a3aa43e2b.md",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:81b31a33593a007d561008d984bebf039345d6ad63dda2e8b1ad947c68597987",
+      "contentRoot": "sha256:d9e5477d11e4cc35e7e7eca237b29fba68b3993846ae5cfbf9407f08b4763540",
+      "path": "docs/qualification/evidence/kungfu-temporal-provenance-cutover.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:29d1fa5a1a54bcd72fee126998ad141bea629d6673dd20a9f962a5a71e2e6785",
+      "contentRoot": "sha256:8bf89f563006509cdac965559db38ea4e810034908e6c52e23fd0e9dae500b7b",
+      "path": "docs/qualification/evidence/kungfu-temporal-release-admission-facts.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:f7f252c3aec609f53110689e9f8296c3a35e6a1c397b92599ce61c2a2903b730",
+      "contentRoot": "sha256:7512892430520039ad06f3c298dce644365ffc82b2f05b28c4bd1b3d407d708b",
+      "path": "docs/qualification/gates/release-admission-policy.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:ffe223e8a33116e2f59d37b268d96913ae005c83651c169069d6dcf628c1ccf1",
+      "contentRoot": "sha256:821ab875ce3c637a6cc668544445f55f9af0bbc1209db2896184ee297632ae5d",
+      "path": "docs/qualification/gates/release-admission.md",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:b0a389ed47c13b8c1fb9921bc71148d152f29008bbd30200910c1a07ca4570c7",
+      "contentRoot": "sha256:573f73cce7ec20e496357c013ac19a733f1b8e7b7c5b1ce9f7500898d70a319f",
+      "path": "docs/release-promotion-rehearsal.contract.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:8b33be3274a1789f04ac1efa7728f6c7034d1cf88572c19d0b5e0d370c5cddf4",
+      "contentRoot": "sha256:10424cb1fd5ce7f20b32ec704097777089cfe0e0396d50ec3b9371e46d646d74",
+      "path": "extensions/work-control/profile.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:1b9fa9f92041ac9f34fd93b5871c3a67ec10d8ddf32d87995d02de8913a4eeb9",
+      "contentRoot": "sha256:bcb5c648a643905713ebe96ef5dbcdf10327a30b0b35c6aefa9ce277a5ab9065",
+      "path": "extensions/work-control/qualification/work-profile-conformance.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:246bb304450e2ea0b7cfb22f84d939cae7302030075f7747091d25f28fd10042",
+      "contentRoot": "sha256:0d89ec7625f1a521d1f0b182896d5c09cf05914f70633371ae193ad965b4a86a",
+      "path": "framework/core/tests/python/test_temporal_release_admission.py",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:6fe81eab5f1c2b3d3d7f5c1aa76791fb068d3e75f2e4b0e30ecdd0ef0f3e0a77",
+      "contentRoot": "sha256:85cb0e74aa4343be138b4c264d267c09e7a76279089d1ecc9f1ba7b2662339c1",
+      "path": "framework/release/buildchain-kfd-runtime.mjs",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:11c273b3a4ce5d944d34a72e8a773ff0ecf2b34e5e9c845d5a55973eb9d973ca",
+      "contentRoot": "sha256:149f79034277ebb9f4fb74cba558bc8860443038510323076d05f13fab929aa1",
+      "path": "framework/release/publication-surfaces.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:48591a3951e86cf178e72e59b2d4816310acd3a9a57b6256f12ee8b3166efef7",
+      "contentRoot": "sha256:692bab2cdfd0f8a158a78ac65c72012c3805ee412c96add0a45cedd52c73ad89",
+      "path": "framework/work-profile-conformance/authority-manifest.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:27ba318ddc3e6df0ff313ff8da42e1b404eb03006e73a16b7ec66b79328dedcc",
+      "contentRoot": "sha256:60962e34f4ab9245d9e179ad41e69a81e2a9e3952c36e157cc525c35661f109f",
+      "path": "framework/work-profile-conformance/qualification/negative-witnesses.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:d73fa7a1c6721a15fb854a04399abb0f7689ff9a7151e2607ce66036279c8ea6",
+      "contentRoot": "sha256:8fbc2e8eb220293fc223670a893387a1d33411ce6a6f672e812a0cb6decc8742",
+      "path": "framework/work-profile-conformance/qualification/reference-scenarios.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:be65812c3d01d81a72abddada14b016849aadc1e69584ec7d15ff1cd3e0d7192",
+      "contentRoot": "sha256:8477c6a7aadd8dbbb1563ddb9a35f67c8e1f963df1eb916704f40a6eacb1cbab",
+      "path": "package.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:5c70e7e5869007e839a47e6e5c2dbe760de88a0163395c507c74cd1d00d1e7b0",
+      "contentRoot": "sha256:a5323c7682fc6cb382738eb701980b10f97d1bffe447ca150696fea6d65bbb7c",
+      "path": "pnpm-lock.yaml",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:c0151b293b4dc4e28ee32b12221560636fe4acd83f69e0c4ac17594b61490990",
+      "contentRoot": "sha256:35421249268d9602e7c83f539f3b759e6fa8d4151022f9adb7bdb563ca39a196",
+      "path": "scripts/readonly-agent-bootstrap.test.mjs",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:b015a95a8eedf71185a762a3e6e119f07a0c427853cb2229917ba084befc8a2e",
+      "contentRoot": "sha256:9ac4672ac6f2f646810e499d5ad761f840aa0ceb49d5202fd53616fbd52c237e",
+      "path": "scripts/verify-kungfu-release-admission.test.mjs",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:a205e5c2c630e80f3c1bdbcbd15b20bfa45aab13bda3c98f5eaa33faff14bcec",
+      "contentRoot": "sha256:247d264f2fefaa7c1c85060f2fcae403b9ce17c9ebf04d3f3cd16cd0bc97de24",
+      "path": "tests/qualification/agent-hub-20/kfd-lock.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:4b4f525dd3ee666f758514c5d45932dbc8ea10f5ab0a95e430ea9a6c4a5cc424",
+      "contentRoot": "sha256:d20c3080ccf5e85759dd447bf345e5b80a54d3a72e716671bca65075e5c703d8",
+      "path": "tests/qualification/agent-hub-20/qualification.test.mjs",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:3d28d13b8db43736700b717f52d917c28cdef4a0d714b8a408096568966907dc",
+      "contentRoot": "sha256:6fede750e00db9b6c4c2a349650c0e0cc0f416e5ecfecbeb8da76fdc32c14505",
+      "path": "tests/qualification/agent-hub-20/responsibility-map.json",
+      "status": "modified"
+    }
+  ],
+  "affectedFacets": [
+    "capabilities",
+    "package-facets",
+    "profiles-suites"
+  ],
+  "rationale": "The r21 successor preserves the established public KFX bundle while rebinding internal KFD product-runtime category and universal delivery gate evidence onto the current protected base.",
+  "attestation": {
+    "publicBehaviorUnchanged": true,
+    "publicContractUnchanged": true,
+    "readerJourneyUnchanged": true
+  },
+  "proofRoot": "sha256:c1c3ae682161e28f467df1d5976dff91e43650734436c50b04cd6fa99774d537"
+}
