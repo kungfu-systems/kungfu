@@ -97,7 +97,7 @@
             "product-alpha",
             "product-binaries"
           ],
-          "sourceRoot": "sha256:348ecf908098f852fb56a45412d70689a1854af16a5ce499616c1ddcc38850b1"
+          "sourceRoot": "sha256:2205b495b9433c6efa110c3999ea3b09de16af02d7a2fb859ad8db5086c9399f"
         },
         {
           "path": ".github/workflows/auditable-demo.yml",
@@ -136,7 +136,7 @@
             "product-stable",
             "product-binaries"
           ],
-          "sourceRoot": "sha256:684044f9ad1f3f7bbbfddeef941ef1ce6863c5d8feb5c6a249f37a0ad412fd19"
+          "sourceRoot": "sha256:a96b5b960733b122edd50520d4eb9cdcc76b4af84b19a40d5318684835d5947d"
         },
         {
           "path": ".github/workflows/buildchain-validate.yml",
@@ -378,12 +378,12 @@
     "buildchain": {
       "repository": "kungfu-systems/buildchain",
       "owner": "kungfu-systems/buildchain",
-      "sourceRevision": "82701ca66f5366ade6ec694c9950d5d8d6db082d",
-      "version": "3.0.7-alpha.1",
+      "sourceRevision": "a5f43da50ea4ad5138ccf901135b89a711a1780c",
+      "version": "3.0.9-alpha.17",
       "compatibilityMode": "stable-v3-contract-plus-alpha-v3-contract",
       "stableContractLock": ".buildchain/contract-lock.json",
       "runtimeContractLock": ".buildchain/alpha-contract-lock.json",
-      "workflowInventoryRoot": "sha256:18c8418a96df4c01f0505ed8c5e8c892b944f3385ab844febe540590e4c96bdf",
+      "workflowInventoryRoot": "sha256:b25ac4ebf480cc547e0581d3a8be267c0047e3bb279b882afe762fb450f5b90b",
       "workflowDiscoveryPattern": "(release|publish|publication|promotion|stable-candidate|alpha-self-dogfood|candidate-lab|auditable-demo|binary-distribution|web-surface|wheel|bump-minor)",
       "workflowInventory": [
         ".github/workflows/.auditable-demo.yml",
@@ -401,6 +401,8 @@
         ".github/workflows/.web-surface.yml",
         ".github/workflows/.wheel-release.yml",
         ".github/workflows/.wheel-verify.yml",
+        ".github/workflows/auditable-demo-media-profile-qualification.yml",
+        ".github/workflows/auditable-demo.yml",
         ".github/workflows/binary-distribution.yml",
         ".github/workflows/binary-release-assets.yml",
         ".github/workflows/buildchain-alpha-self-dogfood.yml",
@@ -417,6 +419,7 @@
         ".github/workflows/release-line-bootstrap.yml",
         ".github/workflows/release-new-version.yml",
         ".github/workflows/release-propagation.yml",
+        ".github/workflows/release-tail.yml",
         ".github/workflows/release-verify.yml",
         ".github/workflows/stable-candidate-patrol.yml"
       ],
@@ -874,5 +877,5 @@
       }
     }
   ],
-  "registryRoot": "sha256:91dccffea430dc91c46f008b942885ff036ba038c19101f455991501f4bdef1c"
+  "registryRoot": "sha256:28a7876c7ce26f12d8871006d672f922df074a2a975c4440434adecbd65906d1"
 }
