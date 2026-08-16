@@ -362,7 +362,6 @@ def _admit_captured_assignment(
             "dependencyRefs": projected["dependency_refs"],
             "responsibility": projected["responsibility"],
             "acceptanceRoot": "",
-            "atlasRoot": "",
             "contextBinding": projected["context_binding"],
             "projectCutRoot": projected["project_cut_root"],
             "evidenceEpisodeRoots": projected["evidence_episode_roots"],

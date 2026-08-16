@@ -102,7 +102,7 @@
         "evidenceRoots": [
           {
             "path": ".buildchain/kfd/kfd-2/release-claims.json",
-            "sha256": "sha256:073f07018646a9b31500ea4526f9af95032b0ffa7ba0dccb972fdf0bba86be21"
+            "sha256": "sha256:be84c24b22a18355aded5473a396809b5a4e7bec68671ddbaa9c96b4806c2954"
           },
           {
             "path": "docs/qualification/kfd2-trust-assessment.md",
@@ -262,7 +262,7 @@
           },
           {
             "path": "framework/core/tests/python/test_assignment_orchestration.py",
-            "sha256": "sha256:05b4b75b3c44fb88d4d102c38e767aa949db409f2579b0d518126a59c64d3c1c"
+            "sha256": "sha256:5326cafbad68977abb9ff3359192e457ac429ff79c2a526bd3ca5b40c8b05536"
           },
           {
             "path": "docs/architecture/primitive-management-plane.md",
