@@ -10,8 +10,8 @@
   "release": {
     "version": "4.0.0-alpha.3",
     "channel": "repository-default",
-    "tag": "v4.0.0-alpha.1",
-    "sourceSha": "242fc6178a31a7594ee861cc27bc0eb1a014bf3d"
+    "tag": "v4.0.0-alpha.3",
+    "sourceSha": "07f999080a7d92043b3df5040dc1703bb9d14404"
   },
   "claims": [
     {
