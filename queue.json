@@ -3,7 +3,7 @@
   "contract": "kungfu-buildchain-dev-delivery-warrant-queue",
   "repository": "kungfu-systems/kungfu",
   "protectedBase": "dev/v4/v4.0",
-  "generation": 3292,
+  "generation": 3293,
   "fencingCounter": 476,
   "policy": {
     "agingSeconds": 900,
@@ -11,53 +11,7 @@
     "leaseSeconds": 3600,
     "emergencyPolicy": "reviewed-explicit-only"
   },
-  "activeWarrant": {
-    "schema": "kungfu.buildchain.dev-delivery-warrant/v1",
-    "repository": "kungfu-systems/kungfu",
-    "protectedBase": "dev/v4/v4.0",
-    "candidateId": "sha256:33091f8e302a34a862d588e8a844107500916c1570d4fa16d93d7611c074becd",
-    "pullRequestNumber": 3186,
-    "sourceHead": "19a5da46122eb4e85f7e312f0696cec0c64ac2f1",
-    "assignmentRoot": "sha256:feadacd8484d57010cade762049355566d46060884afe46e2ac7d0bc93fb7138",
-    "initiativeRoot": "sha256:bfff817933e5a5ad693e4b902a84f6cc3a251235dd7377cb4091d92f805fa7ff",
-    "sourceIdentityRoot": "sha256:0c26be3ae7845755277063fb7c75c705c146e7483db758b1034835309d9df514",
-    "sourcePatchRoot": "sha256:a0cd8c083831423dfeec1fd29f2413ee7f3309436547a31d811f5c0674994c3c",
-    "sourceProofRoot": "sha256:d2dcf193e88d64fce75817bb146b0f7c9051516cc2c35dfaf2130b19d4747db7",
-    "planRoot": "sha256:40e9504b123b9d43564f08732d5c19454170a49fb30fe2a34f4d94294924ab9e",
-    "closureRoot": "sha256:106d175611d8634c988192302b9c464ae8ba3b6d023c2cff9910e401344c9624",
-    "dependencyRoot": "sha256:7e97ab733bb51c055afa1df724872c8e577bc0ba8625bb676f7da7b30f2bbbcc",
-    "toolchainRoot": "sha256:2ecb07894954a2e0de022615d4561e5ba3ae68376401941ecff77be03cd75a0f",
-    "environmentRoot": "sha256:c5f5da5917c6ff93a509a62b18d4b9b69325755c4c7229b553b0016cde83788f",
-    "affectedPaths": [
-      ".github/workflows/publish-layer-artifacts.yml",
-      ".github/workflows/release-new-version.yml",
-      ".github/workflows/release-shifu.yml",
-      ".xinfa/portable-atlas-classification.json.gz",
-      ".xinfa/product-atlas-bundle.json",
-      "docs/development/buildchain.md",
-      "docs/development/version-release-design.md",
-      "docs/qualification/gates/release-and-promotion.md",
-      "docs/qualification/gates/workflow-authority.json",
-      "docs/qualification/gates/workflow-authority.md",
-      "framework/maintainability/abstraction-integrity.manifest.json",
-      "framework/release/publication-surfaces.json",
-      "package.json",
-      "scripts/alpha-publication-commit.mjs",
-      "scripts/check.mjs",
-      "scripts/github-release-policy.mjs",
-      "scripts/github-release-policy.test.mjs",
-      "scripts/kungfu-workflow-authority.mjs"
-    ],
-    "sourceWorkflowRunId": 31926764613,
-    "deliveryClass": "native-proof-required",
-    "generation": 476,
-    "phase": "provisional",
-    "expectedOldStateRoot": "sha256:9df9e9333c8971a38791e6811ae707eb873199a4612759a3b3d638818285de07",
-    "issuedAt": "2026-08-16T07:11:53.516Z",
-    "expiresAt": "2026-08-16T08:49:58.538Z",
-    "fencingToken": "sha256:392d19a29d6f3d1fb056d8f284c49640a7dbfe31e65dd1a389c8de047934f157",
-    "nextAction": "Run or reuse the exact semantic native proof, then atomically qualify this fenced Warrant."
-  },
+  "activeWarrant": null,
   "candidates": [
     {
       "repository": "kungfu-systems/kungfu",
@@ -30790,11 +30744,19 @@
       "sourceWorkflowRunId": 31926764613,
       "priority": "ordinary",
       "enqueuedAt": "2026-08-16T04:50:33.204Z",
-      "updatedAt": "2026-08-16T07:19:58.538Z",
+      "updatedAt": "2026-08-16T07:20:56.343Z",
       "attempts": 1,
       "recoveries": 0,
-      "status": "proving",
-      "terminal": null,
+      "status": "cancelled",
+      "terminal": {
+        "outcome": "cancelled",
+        "terminalClass": "authoritative-cancellation",
+        "reason": "protected pull request event: closed",
+        "evidenceRoot": "sha256:0445408164e035a46fe5a46a638f13f104b5a42fc0099199cfd68e03a6332e86",
+        "closedAt": "2026-08-16T07:20:56.343Z",
+        "fencingToken": "sha256:392d19a29d6f3d1fb056d8f284c49640a7dbfe31e65dd1a389c8de047934f157",
+        "leaseGeneration": 476
+      },
       "affectedPaths": [
         ".github/workflows/publish-layer-artifacts.yml",
         ".github/workflows/release-new-version.yml",
@@ -31567,6 +31529,6 @@
       ]
     }
   ],
-  "updatedAt": "2026-08-16T07:19:58.538Z",
-  "stateRoot": "sha256:02422759bc2ffbda100e90c24ab2bf84156542d1c666a8c629ca374d4ac05e6a"
+  "updatedAt": "2026-08-16T07:20:56.343Z",
+  "stateRoot": "sha256:ee6777a67e166ea0a8c36b717327a04479b59cdfe141a8b6ce2426980dae7883"
 }
