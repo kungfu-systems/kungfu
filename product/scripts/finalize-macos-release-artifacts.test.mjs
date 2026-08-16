@@ -39,7 +39,7 @@ function json(root, relative, value) {
   return write(root, relative, `${JSON.stringify(value, null, 2)}\n`);
 }
 
-function signingFixture() {
+function signingFixture({ updateMetadata = 'latest-mac.yml' } = {}) {
   const root = fs.mkdtempSync(
     path.join(os.tmpdir(), 'kungfu-macos-release-finalization-'),
   );
@@ -78,7 +78,7 @@ function signingFixture() {
     write(root, artifact.path, artifact.bytes);
   write(
     root,
-    'product/release/desktop/latest-mac.yml',
+    `product/release/desktop/${updateMetadata}`,
     'version: 4.0.0-alpha.2\npath: retained-updater.zip\n',
   );
   json(root, 'product/release/desktop/update-info.json', { retained: true });
@@ -235,6 +235,57 @@ test('finalization is idempotent for the same signed source and artifact bytes',
     assert.equal(fs.readFileSync(first.receiptFile).compare(receiptBytes), 0);
   } finally {
     cleanup(fixture);
+  }
+});
+
+test('finalization preserves Alpha channel macOS update metadata', async () => {
+  const fixture = signingFixture({ updateMetadata: 'alpha-mac.yml' });
+  try {
+    const result = await finalizeMacosReleaseArtifacts(options(fixture.root));
+    assert.equal(result.reused, false);
+    assert.ok(
+      result.receipt.preservedMetadata.some(
+        ({ path: retainedPath }) =>
+          retainedPath === 'product/release/desktop/alpha-mac.yml',
+      ),
+    );
+    assert.equal(
+      fs.existsSync(
+        path.join(fixture.root, 'product/release/desktop/alpha-mac.yml'),
+      ),
+      true,
+    );
+  } finally {
+    cleanup(fixture);
+  }
+});
+
+test('finalization rejects missing or ambiguous macOS update metadata before deletion', async () => {
+  for (const variant of ['missing', 'ambiguous']) {
+    const fixture = signingFixture();
+    try {
+      if (variant === 'missing')
+        fs.rmSync(
+          path.join(fixture.root, 'product/release/desktop/latest-mac.yml'),
+        );
+      else
+        write(
+          fixture.root,
+          'product/release/desktop/alpha-mac.yml',
+          'version: 4.0.0-alpha.2\npath: retained-updater.zip\n',
+        );
+      await assert.rejects(
+        finalizeMacosReleaseArtifacts(options(fixture.root)),
+        /expected one electron-builder macOS update metadata file/u,
+      );
+      for (const artifact of fixture.intermediateArtifacts)
+        assert.equal(
+          fs.existsSync(path.join(fixture.root, artifact.path)),
+          true,
+        );
+    } finally {
+      cleanup(fixture);
+    }
   }
 });
 
