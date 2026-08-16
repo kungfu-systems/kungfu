@@ -7,7 +7,11 @@ import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { pipeline } from 'node:stream/promises';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+import { createGunzip, createGzip } from 'node:zlib';
+
+import tar from 'tar-stream';
 
 import {
   platformCommand,
@@ -28,6 +32,120 @@ function fail(message) {
 
 function sha256(file) {
   return createHash('sha256').update(fs.readFileSync(file)).digest('hex');
+}
+
+function canonicalJson(value) {
+  if (Array.isArray(value)) return value.map(canonicalJson);
+  if (!value || typeof value !== 'object') return value;
+  return Object.fromEntries(
+    Object.keys(value)
+      .sort()
+      .map((key) => [key, canonicalJson(value[key])]),
+  );
+}
+
+async function readPackedEntries(archive) {
+  const extract = tar.extract();
+  const entries = [];
+  extract.on('entry', (header, stream, next) => {
+    const chunks = [];
+    stream.on('data', (chunk) => chunks.push(chunk));
+    stream.on('end', () => {
+      entries.push({ header, body: Buffer.concat(chunks) });
+      next();
+    });
+    stream.resume();
+  });
+  await pipeline(fs.createReadStream(archive), createGunzip(), extract);
+  return entries;
+}
+
+function canonicalTarHeader(header, body) {
+  return Object.fromEntries(
+    Object.entries({
+      name: header.name,
+      mode: header.mode,
+      uid: 0,
+      gid: 0,
+      size: body.length,
+      mtime: new Date(0),
+      type: header.type,
+      linkname: header.linkname,
+      uname: '',
+      gname: '',
+      devmajor: header.devmajor,
+      devminor: header.devminor,
+    }).filter(([, value]) => value !== undefined),
+  );
+}
+
+function normalizeGzipHeader(archive) {
+  const descriptor = fs.openSync(archive, 'r+');
+  try {
+    const header = Buffer.alloc(10);
+    if (fs.readSync(descriptor, header, 0, header.length, 0) !== header.length)
+      fail(`canonical npm archive is truncated: ${archive}`);
+    if (header[0] !== 0x1f || header[1] !== 0x8b)
+      fail(`canonical npm archive has an invalid gzip header: ${archive}`);
+    header.fill(0, 4, 8);
+    header[9] = 0xff;
+    fs.writeSync(descriptor, header, 0, header.length, 0);
+  } finally {
+    fs.closeSync(descriptor);
+  }
+}
+
+export async function canonicalizePackedArchive(archive) {
+  const entries = await readPackedEntries(archive);
+  const names = new Set();
+  for (const entry of entries) {
+    if (names.has(entry.header.name))
+      fail(`npm archive contains duplicate entry: ${entry.header.name}`);
+    names.add(entry.header.name);
+    if (entry.header.name === 'package/package.json') {
+      const manifest = JSON.parse(entry.body.toString('utf8'));
+      entry.body = Buffer.from(
+        `${JSON.stringify(canonicalJson(manifest), null, 2)}\n`,
+      );
+    }
+  }
+  if (!names.has('package/package.json'))
+    fail(`npm archive is missing package/package.json: ${archive}`);
+  entries.sort((left, right) =>
+    left.header.name < right.header.name
+      ? -1
+      : left.header.name > right.header.name
+        ? 1
+        : 0,
+  );
+
+  const temporary = fs.mkdtempSync(
+    path.join(os.tmpdir(), 'kungfu-npm-canonical-'),
+  );
+  const output = path.join(temporary, path.basename(archive));
+  try {
+    const pack = tar.pack();
+    const write = pipeline(
+      pack,
+      createGzip({ level: 9 }),
+      fs.createWriteStream(output),
+    );
+    for (const entry of entries) {
+      await new Promise((resolve, reject) => {
+        pack.entry(
+          canonicalTarHeader(entry.header, entry.body),
+          entry.body,
+          (error) => (error ? reject(error) : resolve()),
+        );
+      });
+    }
+    pack.finalize();
+    await write;
+    normalizeGzipHeader(output);
+    fs.copyFileSync(output, archive);
+  } finally {
+    fs.rmSync(temporary, { recursive: true, force: true });
+  }
 }
 
 export function npmArchiveName(packageName, version) {
@@ -152,7 +270,7 @@ function runPack(packageRoot, outputRoot) {
   console.log(`[npm-release] packed ${path.relative(ROOT, packageRoot)}`);
 }
 
-export function packPortableWorkspacePackages({
+export async function packPortableWorkspacePackages({
   root = ROOT,
   registry = JSON.parse(fs.readFileSync(REGISTRY_PATH, 'utf8')),
   output = path.join(ROOT, 'product', 'release', 'npm'),
@@ -176,6 +294,7 @@ export function packPortableWorkspacePackages({
       const source = path.join(temporary, archive);
       if (!fs.existsSync(source))
         fail(`${entry.name} did not produce ${archive}`);
+      await canonicalizePackedArchive(source);
       const target = path.join(output, archive);
       if (fs.existsSync(target) && sha256(target) !== sha256(source))
         fail(`${entry.name} conflicts with an existing staged archive`);
@@ -205,7 +324,7 @@ export function packPortableWorkspacePackages({
   return receipt;
 }
 
-function main(argv = process.argv.slice(2)) {
+async function main(argv = process.argv.slice(2)) {
   const distTagIndex = argv.indexOf('--dist-tag');
   if (distTagIndex >= 0) {
     const version = argv[distTagIndex + 1];
@@ -233,19 +352,17 @@ function main(argv = process.argv.slice(2)) {
     outputIndex >= 0
       ? path.resolve(outputValue)
       : path.join(ROOT, 'product', 'release', 'npm');
-  packPortableWorkspacePackages({ registry, output });
+  await packPortableWorkspacePackages({ registry, output });
 }
 
 if (
   process.argv[1] &&
   import.meta.url === pathToFileURL(process.argv[1]).href
 ) {
-  try {
-    main();
-  } catch (error) {
+  main().catch((error) => {
     console.error(
       `[npm-release] failed: ${error instanceof Error ? error.message : String(error)}`,
     );
-    process.exit(1);
-  }
+    process.exitCode = 1;
+  });
 }

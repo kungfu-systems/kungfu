@@ -1,14 +1,20 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { pipeline } from 'node:stream/promises';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
+import { createGzip } from 'node:zlib';
+
+import tar from 'tar-stream';
 
 import {
   bulkWorkspaceEntries,
+  canonicalizePackedArchive,
   collectPublishabilityIssues,
   npmArchiveName,
   npmDistributionTag,
@@ -25,6 +31,43 @@ const registry = JSON.parse(
 const version = JSON.parse(
   fs.readFileSync(path.join(root, 'lerna.json')),
 ).version;
+
+function sha256(file) {
+  return createHash('sha256').update(fs.readFileSync(file)).digest('hex');
+}
+
+async function writePackedFixture(file, manifest, body = 'same') {
+  const pack = tar.pack();
+  const write = pipeline(pack, createGzip(), fs.createWriteStream(file));
+  await new Promise((resolve, reject) => {
+    pack.entry(
+      {
+        name: 'package/package.json',
+        mode: 0o644,
+        uid: 501,
+        gid: 20,
+        mtime: new Date(),
+      },
+      Buffer.from(`${JSON.stringify(manifest, null, 2)}\n`),
+      (error) => (error ? reject(error) : resolve()),
+    );
+  });
+  await new Promise((resolve, reject) => {
+    pack.entry(
+      {
+        name: 'package/index.js',
+        mode: 0o644,
+        uid: 501,
+        gid: 20,
+        mtime: new Date(),
+      },
+      Buffer.from(body),
+      (error) => (error ? reject(error) : resolve()),
+    );
+  });
+  pack.finalize();
+  await write;
+}
 
 test('all 29 packages are public and exactly 19 use portable workspace packing', () => {
   assert.deepEqual(collectPublishabilityIssues({ root, registry }), []);
@@ -90,4 +133,36 @@ test('npm distribution tags are deterministic and prereleases never become lates
   assert.equal(npmDistributionTag('4.0.0-rc.3'), 'next');
   assert.equal(npmDistributionTag('4.0.0'), 'latest');
   assert.throws(() => npmDistributionTag('4.0.0-preview.1'), /unsupported/u);
+});
+
+test('packed workspace manifests are byte-stable without hiding content drift', async (t) => {
+  const temporary = fs.mkdtempSync(
+    path.join(os.tmpdir(), 'kungfu-npm-canonical-test-'),
+  );
+  t.after(() => fs.rmSync(temporary, { recursive: true, force: true }));
+  const first = path.join(temporary, 'first.tgz');
+  const reordered = path.join(temporary, 'reordered.tgz');
+  const changed = path.join(temporary, 'changed.tgz');
+  await writePackedFixture(first, {
+    name: '@kungfu-tech/example',
+    dependencies: { beta: '1.0.0', alpha: '1.0.0' },
+  });
+  await writePackedFixture(reordered, {
+    dependencies: { alpha: '1.0.0', beta: '1.0.0' },
+    name: '@kungfu-tech/example',
+  });
+  await writePackedFixture(
+    changed,
+    {
+      dependencies: { alpha: '1.0.0', beta: '1.0.0' },
+      name: '@kungfu-tech/example',
+    },
+    'changed',
+  );
+
+  await canonicalizePackedArchive(first);
+  await canonicalizePackedArchive(reordered);
+  await canonicalizePackedArchive(changed);
+  assert.equal(sha256(first), sha256(reordered));
+  assert.notEqual(sha256(first), sha256(changed));
 });

@@ -33,6 +33,7 @@ from kungfu.agent.native_launch import (
     encode_wrapper_prompt as _encode_windows_wrapper_prompt,
     native_environment as _native_environment,
     native_provider_adapter,
+    provider_runtime_health as _provider_runtime_health,
     resolve_command_wrapper as _resolve_windows_command_wrapper,
 )
 from kungfu.agent.provider_bootstrap import refresh_native_skill_runtime_audit
@@ -533,6 +534,7 @@ def run_native_interactive(
         semantic_root=canonical_root,
         heartbeat_observation=session_surface.native_heartbeat_observation,
         finalize_environment=refresh_native_skill_runtime_audit,
+        provider_health=_provider_runtime_health,
     )
     return coordinator.run(
         profile,

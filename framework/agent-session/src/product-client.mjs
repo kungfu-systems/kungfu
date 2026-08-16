@@ -11,7 +11,6 @@ import {
   writeFileSync,
 } from 'node:fs';
 import { createRequire } from 'node:module';
-import os from 'node:os';
 import path from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 import { fileURLToPath } from 'node:url';
@@ -107,7 +106,7 @@ export function detachedAgentSessionPaths(runtimeDir) {
     process.platform === 'win32'
       ? null
       : path.join(
-          process.platform === 'darwin' ? '/tmp' : os.tmpdir(),
+          '/tmp',
           `kungfu-agent-session-${process.getuid?.() ?? 'user'}`,
         );
   return {

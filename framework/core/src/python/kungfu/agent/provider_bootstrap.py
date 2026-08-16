@@ -54,12 +54,15 @@ _PROMPT_SAFE_CHARACTERS = frozenset(" .,:;/_-")
 
 
 def resolve_command_wrapper(
-    argv: Sequence[str], *, env: Mapping[str, str]
+    argv: Sequence[str],
+    *,
+    env: Mapping[str, str],
+    platform: str | None = None,
 ) -> list[str]:
     """Resolve exact forwarding and standard npm wrappers before shell parsing."""
 
     resolved = [str(value) for value in argv]
-    if sys.platform != "win32" or not resolved:
+    if (sys.platform if platform is None else platform) != "win32" or not resolved:
         return resolved
     environment = {str(key).casefold(): str(value) for key, value in env.items()}
     observed: set[str] = set()

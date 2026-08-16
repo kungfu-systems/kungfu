@@ -31,6 +31,12 @@ test('detached endpoint is stable per runtime root and derived only from it', ()
       ? `\\\\.\\pipe\\kungfu-agent-session-${expectedScope}`
       : path.join(first.socketDirectory, `${expectedScope}.sock`),
   );
+  if (process.platform !== 'win32') {
+    assert.equal(
+      first.socketDirectory,
+      path.join('/tmp', `kungfu-agent-session-${process.getuid?.() ?? 'user'}`),
+    );
+  }
 });
 
 test('filesystem aliases resolve to one detached endpoint', async () => {

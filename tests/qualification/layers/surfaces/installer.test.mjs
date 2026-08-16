@@ -9,6 +9,7 @@ import { fileURLToPath } from 'node:url';
 import {
   copyMacApplication,
   findOne,
+  installNsisArtifact,
   installerKind,
   nsisUninstallArgs,
   pathRemovalDiagnostics,
@@ -30,6 +31,66 @@ test('NSIS uninstall keeps the standard temporary-copy behavior', () => {
     nsisUninstallArgs().some((arg) => arg.startsWith('_?=')),
     false,
   );
+});
+
+test('NSIS install retries one empty timeout and retains the exact target', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'kungfu-nsis-retry-'));
+  const installRoot = path.join(root, 'installed');
+  const calls = [];
+  try {
+    installNsisArtifact('Kungfu Setup.exe', installRoot, {
+      timeoutMs: 42,
+      runCommand(command, args, options) {
+        calls.push({ command, args, options });
+        fs.mkdirSync(installRoot, { recursive: true });
+        if (calls.length === 1) {
+          const error = new Error('timed out');
+          error.code = 'ETIMEDOUT';
+          throw error;
+        }
+        fs.writeFileSync(path.join(installRoot, 'Kungfu Episodes.exe'), 'ok');
+      },
+    });
+    assert.equal(calls.length, 2);
+    assert.deepEqual(calls[0], {
+      command: 'Kungfu Setup.exe',
+      args: ['/S', `/D=${installRoot}`],
+      options: { timeout: 42 },
+    });
+    assert.equal(
+      fs.readFileSync(path.join(installRoot, 'Kungfu Episodes.exe'), 'utf8'),
+      'ok',
+    );
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('NSIS install never retries a partial timed-out installation', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'kungfu-nsis-partial-'));
+  const installRoot = path.join(root, 'installed');
+  let calls = 0;
+  try {
+    assert.throws(
+      () =>
+        installNsisArtifact('Kungfu Setup.exe', installRoot, {
+          timeoutMs: 42,
+          runCommand() {
+            calls += 1;
+            fs.mkdirSync(installRoot, { recursive: true });
+            fs.writeFileSync(path.join(installRoot, 'partial.bin'), 'partial');
+            const error = new Error('timed out');
+            error.code = 'ETIMEDOUT';
+            throw error;
+          },
+        }),
+      /timed out after partially installing.*refusing to retry/,
+    );
+    assert.equal(calls, 1);
+    assert.equal(fs.existsSync(path.join(installRoot, 'partial.bin')), true);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
 });
 
 test('waits for packaged Windows runtime children before starting NSIS', async () => {

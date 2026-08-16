@@ -19,6 +19,7 @@ import {
   parseReleaseQualificationOptions,
   prepareReleaseQualificationHistory,
   prepareReleaseQualificationOutput,
+  qualificationHostTemporary,
   releaseQualificationEnvironment,
   releaseQualificationExecutionGroups,
   releaseQualificationStages,
@@ -144,7 +145,7 @@ test('qualification temp state is repository scoped on every platform', () => {
     assert.equal(env.TMPDIR, expected);
     assert.equal(env.TEMP, expected);
     assert.equal(env.TMP, expected);
-    assert.equal(env.KUNGFU_QUALIFICATION_HOST_TEMP, '/host/temp');
+    assert.equal(env.KUNGFU_QUALIFICATION_HOST_TEMP, '/tmp');
     assert.match(env.KF_UPGRADE_QUALIFICATION_REF, /^buildchain-retained:/);
     assert.match(env.KF_RUNTIME_ARTIFACT_SIGNATURE, /#runtime$/);
     assert.match(env.KF_DESKTOP_ARTIFACT_SIGNATURE, /#desktop$/);
@@ -153,6 +154,23 @@ test('qualification temp state is repository scoped on every platform', () => {
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
   }
+});
+
+test('qualification host temp remains short on POSIX and preserves Windows runner temp', () => {
+  assert.equal(
+    qualificationHostTemporary(
+      { TMPDIR: '/very/long/repository/scoped/build/temp' },
+      'linux',
+    ),
+    '/tmp',
+  );
+  assert.equal(
+    qualificationHostTemporary(
+      { RUNNER_TEMP: 'D:\\a\\_temp', TEMP: 'D:\\long\\checkout\\tmp' },
+      'win32',
+    ),
+    'D:\\a\\_temp',
+  );
 });
 
 test('each qualification run replaces only its generated evidence root', () => {

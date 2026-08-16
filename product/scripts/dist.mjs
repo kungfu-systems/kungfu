@@ -922,6 +922,17 @@ function assertCoreAssembled() {
 // env/package surface) ships next to the assembled product, together with its
 // runtime-pins manifest. UV_VERSION in the manifest must equal the repo's
 // .uv-version so the product and the dev launcher pull the same pinned uv.
+export function stageProductTrunkEntrypoints(
+  trunkBin,
+  runtimeRoot,
+  platform = process.platform,
+) {
+  const suffix = platform === 'win32' ? '.exe' : '';
+  for (const name of ['kungfu-trunk', 'kungfu']) {
+    fs.copyFileSync(trunkBin, path.join(runtimeRoot, `${name}${suffix}`));
+  }
+}
+
 function stageTrunk(runtimePinSnapshot) {
   // KF-ADR-019f86da-4f90-73ff-9543-f0a4f0beef05 stage 3 productionization: link the embedding membrane and ship the
   // real embedding-backed doctor on every platform. POSIX links the SHARED
@@ -960,7 +971,7 @@ function stageTrunk(runtimePinSnapshot) {
   if (!fs.existsSync(trunkBin)) {
     throw new Error(`cargo did not produce ${rel(trunkBin)}`);
   }
-  fs.copyFileSync(trunkBin, path.join(CORE_DIST, path.basename(trunkBin)));
+  stageProductTrunkEntrypoints(trunkBin, CORE_DIST);
   fs.writeFileSync(
     path.join(CORE_DIST, 'runtime-pins.env'),
     runtimePinSnapshot.runtimePins,

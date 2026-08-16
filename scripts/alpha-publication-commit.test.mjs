@@ -8,7 +8,9 @@ import path from 'node:path';
 import { test } from 'node:test';
 
 import {
+  bindPublicationReleaseAssets,
   existingReleaseAssetIsWinner,
+  publicationArtifactDrift,
   publicationCommitEvidence,
   publicationTimestamp,
   signingIdentity,
@@ -16,8 +18,73 @@ import {
   validateExistingPublicationIdentity,
 } from './alpha-publication-commit.mjs';
 
+test('publication binds channel URLs to exact uploaded release bytes', () => {
+  const releaseTag = 'v4.0.0-alpha.2';
+  const digest = `sha256:${'a'.repeat(64)}`;
+  const admission = {
+    manifests: [
+      {
+        platform: 'darwin',
+        architecture: 'arm64',
+        manifest: {
+          artifacts: [
+            {
+              kind: 'runtime',
+              url: 'app-resource://kungfu',
+              size: 1,
+              digest: `sha256:${'b'.repeat(64)}`,
+            },
+            {
+              kind: 'cli',
+              url: `${releaseBase(releaseTag)}/Kungfu%20CLI.tar.gz`,
+              size: 42,
+              digest,
+            },
+          ],
+        },
+      },
+    ],
+  };
+  const releaseAssets = [
+    {
+      name: 'Kungfu.CLI.tar.gz',
+      state: 'uploaded',
+      size: 42,
+      digest,
+    },
+  ];
+  const bound = bindPublicationReleaseAssets({
+    admission,
+    releaseAssets,
+    releaseTag,
+  });
+  const cli = bound.manifests[0].manifest.artifacts[1];
+  assert.equal(cli.url, `${releaseBase(releaseTag)}/Kungfu.CLI.tar.gz`);
+  assert.deepEqual(
+    publicationArtifactDrift({
+      channelIndex: {
+        entries: [
+          {
+            platform: 'darwin',
+            architecture: 'arm64',
+            manifest: bound.manifests[0].manifest,
+          },
+        ],
+      },
+      releaseAssets,
+      releaseTag,
+    }),
+    [],
+  );
+});
+
+function releaseBase(releaseTag) {
+  return `https://github.com/kungfu-systems/kungfu/releases/download/${releaseTag}`;
+}
+
 test('existing publication authority is reusable only for the exact Alpha identity', () => {
   const candidateSourceSha = '1'.repeat(40);
+  const builtSourceSha = '4'.repeat(40);
   const releaseSha = '2'.repeat(40);
   const releaseTag = 'v4.0.0-alpha.1';
   const bundle = {
@@ -45,6 +112,17 @@ test('existing publication authority is reusable only for the exact Alpha identi
     releaseTag,
   };
   assert.equal(validateExistingPublicationIdentity(expected), bundle);
+  assert.equal(
+    validateExistingPublicationIdentity({
+      ...expected,
+      acceptedSourceShas: [candidateSourceSha, builtSourceSha],
+      bundle: {
+        ...bundle,
+        identity: { ...bundle.identity, sourceCommit: builtSourceSha },
+      },
+    }).identity.sourceCommit,
+    builtSourceSha,
+  );
   assert.throws(
     () =>
       validateExistingPublicationIdentity({

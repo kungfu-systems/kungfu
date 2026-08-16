@@ -75,11 +75,33 @@ function surface(options = {}) {
   });
 }
 
-test('structured instruction waits for a response-first turn boundary', async () => {
+test('structured instruction waits for a response-first turn boundary', async (t) => {
   const product = surface({ structuredMode: 'response-first-product-route' });
   const startPlan = product.invoke({
     operation: 'plan-start',
     input: input({ argv: [provider, 'response-first-product-route'] }),
+  });
+  let started = false;
+  let ended = false;
+  t.after(async () => {
+    if (!started || ended) return;
+    const cleanupPlan = product.invoke({
+      operation: 'plan-control',
+      controlOperation: 'end',
+      actorId: 'actor-agent',
+      session: {
+        workConsoleId: startPlan.workConsoleId,
+        sessionAttemptId: startPlan.sessionAttemptId,
+      },
+      payload: {},
+    });
+    await product.invoke({
+      operation: 'end',
+      actorId: 'actor-agent',
+      plan: cleanupPlan,
+      expectedPlanRoot: cleanupPlan.root,
+      payload: {},
+    });
   });
   await product.invoke({
     operation: 'start',
@@ -89,6 +111,7 @@ test('structured instruction waits for a response-first turn boundary', async ()
     expectedPlanRoot: startPlan.root,
     execution: { env: {} },
   });
+  started = true;
   const ref = {
     workConsoleId: startPlan.workConsoleId,
     sessionAttemptId: startPlan.sessionAttemptId,
@@ -115,7 +138,7 @@ test('structured instruction waits for a response-first turn boundary', async ()
     () =>
       product.invoke({ operation: 'status', session: ref }).interactionState ===
       'ready',
-    'response-first turn did not reach the ready boundary',
+    'response-first structured turn did not reach its terminal boundary',
   );
   const snapshot = product.invoke({ operation: 'snapshot', session: ref });
   assert.equal(snapshot.agentText, 'Structured answer retained.');
@@ -135,6 +158,7 @@ test('structured instruction waits for a response-first turn boundary', async ()
     expectedPlanRoot: endPlan.root,
     payload: {},
   });
+  ended = true;
 });
 
 async function waitFor(predicate, label, timeoutMs = 2000) {

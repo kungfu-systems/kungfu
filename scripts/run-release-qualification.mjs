@@ -4,6 +4,7 @@
 import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
@@ -239,12 +240,7 @@ export function releaseQualificationEnvironment(
       ),
     ),
   ];
-  const hostTemporary =
-    inherited.RUNNER_TEMP ||
-    inherited.TEMP ||
-    inherited.TMP ||
-    inherited.TMPDIR ||
-    temporary;
+  const hostTemporary = qualificationHostTemporary(inherited);
   fs.mkdirSync(temporary, { recursive: true });
   return lifecycleEnvironment(
     {
@@ -268,6 +264,15 @@ export function releaseQualificationEnvironment(
     },
     'dist',
   );
+}
+
+export function qualificationHostTemporary(
+  inherited = process.env,
+  platform = process.platform,
+) {
+  if (inherited.RUNNER_TEMP) return inherited.RUNNER_TEMP;
+  if (platform !== 'win32') return '/tmp';
+  return inherited.TEMP || inherited.TMP || inherited.TMPDIR || os.tmpdir();
 }
 
 export function releaseQualificationStages(

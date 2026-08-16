@@ -1016,6 +1016,147 @@ def test_native_interactive_argv_is_distinct_from_managed_argv():
     ]
 
 
+def test_windows_codex_runtime_health_uses_capability_not_version():
+    calls = []
+
+    def probe(argv, **kwargs):
+        calls.append((argv, kwargs))
+        if argv[-1] == "--help":
+            return subprocess.CompletedProcess(
+                argv, 0, stdout="  sandbox  Run commands within a sandbox\n", stderr=""
+            )
+        return subprocess.CompletedProcess(argv, 0, stdout="", stderr="")
+
+    result = native_launch.provider_runtime_health(
+        {
+            "provider": "codex",
+            "launch": {"executable": "C:\\Agent\\codex.exe"},
+        },
+        cwd="C:\\project",
+        env={"PATH": "C:\\Windows\\System32"},
+        platform="win32",
+        run=probe,
+    )
+
+    assert result["ok"] is True
+    assert result["status"] == "ready"
+    assert result["modelInvoked"] is False
+    assert calls[1][0][-8:] == [
+        "sandbox",
+        "windows",
+        "--",
+        "cmd.exe",
+        "/d",
+        "/c",
+        "exit",
+        "0",
+    ]
+
+
+def test_windows_codex_runtime_health_fails_closed_before_model_launch():
+    def probe(argv, **_kwargs):
+        if argv[-1] == "--help":
+            return subprocess.CompletedProcess(
+                argv, 0, stdout="  sandbox  Run commands within a sandbox\n", stderr=""
+            )
+        return subprocess.CompletedProcess(
+            argv,
+            1,
+            stdout="",
+            stderr=(
+                "windows sandbox failed: timed out after 15000ms connecting "
+                "runner pipe-in\n"
+            ),
+        )
+
+    result = native_launch.provider_runtime_health(
+        {
+            "provider": "codex",
+            "launch": {"executable": "C:\\Agent\\codex.exe"},
+        },
+        cwd="C:\\project",
+        env={"PATH": "C:\\Windows\\System32"},
+        platform="win32",
+        run=probe,
+    )
+
+    assert result["ok"] is False
+    assert result["status"] == "unavailable"
+    assert "runner pipe-in" in result["diagnostic"]
+    assert result["permissionsWidened"] is False
+
+
+def test_windows_codex_without_sandbox_helper_is_not_version_blocked():
+    result = native_launch.provider_runtime_health(
+        {
+            "provider": "codex",
+            "launch": {"executable": "C:\\Agent\\codex.exe"},
+        },
+        cwd="C:\\project",
+        env={"PATH": "C:\\Windows\\System32"},
+        platform="win32",
+        run=lambda argv, **_kwargs: subprocess.CompletedProcess(
+            argv, 0, stdout="Codex legacy help\n", stderr=""
+        ),
+    )
+
+    assert result["ok"] is True
+    assert result["status"] == "capability-unverified"
+    assert "version-based" in result["warning"]
+
+
+def test_broken_windows_codex_sandbox_blocks_before_session_or_provider(
+    monkeypatch, tmp_path
+):
+    profile = {
+        "id": "kungfu.agent-runtime.codex.windows-broken",
+        "provider": "codex",
+        "cwdPolicy": "workspace-root",
+        "launch": {
+            "executable": "C:\\Agent\\codex.exe",
+            "interactiveArgv": [],
+            "shellMode": False,
+        },
+        "bootstrap": {"adapter": "codex", "envelope": "required"},
+    }
+    monkeypatch.setattr(
+        runtime_profiles,
+        "verify_profile",
+        lambda _profile: {"ok": True, "error": None, "version": "arbitrary"},
+    )
+    monkeypatch.setattr(
+        run_agent,
+        "_provider_runtime_health",
+        lambda _profile, **_kwargs: {
+            "ok": False,
+            "diagnostic": (
+                "windows sandbox failed: timed out connecting runner pipe-in"
+            ),
+        },
+    )
+    launches = []
+    session_requests = []
+
+    with pytest.raises(ValueError, match="did not launch the Agent"):
+        run_agent.run_native_interactive(
+            profile,
+            runtime_dir=str(tmp_path / "runtime"),
+            config_home=str(tmp_path / "config"),
+            runtime_home=str(tmp_path / "home"),
+            workspace_root=str(tmp_path),
+            work_ref=None,
+            work_selection={
+                "schema": "kungfu.native-work-selection/v1",
+                "state": "none",
+            },
+            process_runner=lambda *args, **kwargs: launches.append((args, kwargs)),
+            session_invoker=lambda request: session_requests.append(request),
+        )
+
+    assert launches == []
+    assert session_requests == []
+
+
 @pytest.mark.parametrize("provider", ["codex", "claude", "amp", "opencode"])
 def test_native_provider_adapter_advertises_session_skill_without_provider_writes(
     tmp_path, provider
@@ -1139,6 +1280,10 @@ def test_native_environment_publishes_exact_cli_and_canonical_bind_argv(tmp_path
     cli_bin.parent.mkdir()
     cli_bin.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
     cli_bin.chmod(0o700)
+    stale_cli = tmp_path / "stale-bin" / "kungfu"
+    stale_cli.parent.mkdir()
+    stale_cli.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
+    stale_cli.chmod(0o700)
     runtime_dir = tmp_path / "project" / ".kungfu" / "runtime"
 
     env = run_agent.native_environment(
@@ -1149,7 +1294,7 @@ def test_native_environment_publishes_exact_cli_and_canonical_bind_argv(tmp_path
         workspace_root=str(tmp_path / "project"),
         work_ref=None,
         work_selection={"schema": "kungfu.native-work-selection/v1", "state": "none"},
-        source={"PATH": "/usr/bin", "KUNGFU_CLI_BIN": str(cli_bin)},
+        source={"PATH": str(stale_cli.parent), "KUNGFU_CLI_BIN": str(cli_bin)},
     )
 
     context = json.loads(env["KUNGFU_AGENT_CONTEXT"])

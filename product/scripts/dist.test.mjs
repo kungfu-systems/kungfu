@@ -28,6 +28,7 @@ import {
   runInstalledKungfuCommand,
   runInstalledTuiBootstrapSmoke,
   stageNodePtyForCli,
+  stageProductTrunkEntrypoints,
   stageXinfaContract,
   verifyProductObservabilityEvents,
   writeAuditableDemoBinaryMetadata,
@@ -54,6 +55,27 @@ const {
   esmEntrypointArgs,
   toEsmEntrypointSpecifier,
 } = require('../../framework/gui/scripts/before-pack.cjs');
+
+test('product trunk staging refreshes both Windows runtime entry aliases', (t) => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'kungfu-trunk-stage-'));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const source = path.join(root, 'rebuilt-kungfu-trunk.exe');
+  const runtime = path.join(root, 'runtime');
+  fs.mkdirSync(runtime);
+  fs.writeFileSync(source, 'rebuilt Windows Rust trunk');
+  fs.writeFileSync(path.join(runtime, 'kungfu.exe'), 'stale first build');
+
+  stageProductTrunkEntrypoints(source, runtime, 'win32');
+
+  assert.deepEqual(
+    fs.readFileSync(path.join(runtime, 'kungfu.exe')),
+    fs.readFileSync(source),
+  );
+  assert.deepEqual(
+    fs.readFileSync(path.join(runtime, 'kungfu-trunk.exe')),
+    fs.readFileSync(source),
+  );
+});
 
 test('reference-only KFX suites stay outside product assembly', () => {
   const packageNames = listKfxPackages().map((pkg) => pkg.name);

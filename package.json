@@ -423,6 +423,7 @@
     "github-slugger": "2.0.0",
     "markdown-it": "14.2.0",
     "markdownlint-cli2": "0.22.1",
+    "tar-stream": "2.2.0",
     "typescript": "^5.6.0",
     "yaml": "2.9.0"
   }

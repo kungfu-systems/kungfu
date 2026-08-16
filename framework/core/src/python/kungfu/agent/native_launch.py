@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import shlex
 import shutil
 import subprocess
@@ -40,6 +41,110 @@ _DARWIN_DEFAULT_SSL_CERT_FILE = Path("/etc/ssl/cert.pem")
 COMMAND_WRAPPER_SUFFIXES = _COMMAND_WRAPPER_SUFFIXES
 encode_wrapper_prompt = _encode_wrapper_prompt
 resolve_command_wrapper = _resolve_command_wrapper
+
+
+def provider_runtime_health(
+    profile: Mapping[str, Any],
+    *,
+    cwd: str,
+    env: Mapping[str, str] | None = None,
+    platform: str | None = None,
+    run: Callable[..., Any] = subprocess.run,
+    timeout_seconds: float = 20.0,
+) -> dict[str, Any]:
+    """Probe a provider-owned runtime boundary before starting its native UI."""
+
+    effective_platform = sys.platform if platform is None else platform
+    provider = str(profile.get("provider") or "")
+    executable = str((profile.get("launch") or {}).get("executable") or "")
+    base = {
+        "schema": "kungfu.native-provider-runtime-health/v1",
+        "provider": provider,
+        "executable": executable,
+        "platform": effective_platform,
+        "probe": "codex-windows-sandbox-smoke",
+        "modelInvoked": False,
+        "networkRequired": False,
+        "permissionsWidened": False,
+    }
+    if effective_platform != "win32" or provider != "codex":
+        return {**base, "status": "not-applicable", "ok": True, "warning": None}
+
+    ambient = dict(os.environ if env is None else env)
+    command = resolve_command_wrapper(
+        [executable], env=ambient, platform=effective_platform
+    )
+    try:
+        help_result = run(
+            [*command, "--help"],
+            cwd=cwd,
+            env=ambient,
+            capture_output=True,
+            encoding="utf-8",
+            errors="replace",
+            timeout=timeout_seconds,
+            check=False,
+        )
+    except (OSError, subprocess.SubprocessError) as error:
+        return {
+            **base,
+            "status": "capability-unverified",
+            "ok": True,
+            "warning": f"Codex capability probe was unavailable: {error}",
+        }
+    help_text = f"{help_result.stdout or ''}\n{help_result.stderr or ''}"
+    if (
+        help_result.returncode != 0
+        or re.search(r"(?im)^\s*sandbox\s+.*sandbox", help_text) is None
+    ):
+        return {
+            **base,
+            "status": "capability-unverified",
+            "ok": True,
+            "warning": (
+                "Codex does not advertise the model-free Windows sandbox helper; "
+                "continuing without a version-based admission rule"
+            ),
+        }
+
+    probe_argv = [
+        *command,
+        "sandbox",
+        "windows",
+        "--",
+        "cmd.exe",
+        "/d",
+        "/c",
+        "exit",
+        "0",
+    ]
+    try:
+        result = run(
+            probe_argv,
+            cwd=cwd,
+            env=ambient,
+            capture_output=True,
+            encoding="utf-8",
+            errors="replace",
+            timeout=timeout_seconds,
+            check=False,
+        )
+    except (OSError, subprocess.SubprocessError) as error:
+        return {
+            **base,
+            "status": "unavailable",
+            "ok": False,
+            "warning": None,
+            "diagnostic": str(error)[:512],
+        }
+    diagnostic = (result.stderr or result.stdout or "").strip().splitlines()
+    return {
+        **base,
+        "status": "ready" if result.returncode == 0 else "unavailable",
+        "ok": result.returncode == 0,
+        "warning": None,
+        "diagnostic": diagnostic[0][:512] if diagnostic else None,
+    }
 
 
 def apply_platform_tls_trust(
@@ -646,6 +751,7 @@ class NativeLaunchCoordinator:
         semantic_root: Callable[[Any], str],
         heartbeat_observation: Callable[[Mapping[str, Any]], Mapping[str, Any]],
         finalize_environment: Callable[[Mapping[str, str]], None],
+        provider_health: Callable[..., Mapping[str, Any]] | None = None,
     ) -> None:
         self.verify_profile = verify_profile
         self.resolve_cwd = resolve_cwd
@@ -656,6 +762,7 @@ class NativeLaunchCoordinator:
         self.semantic_root = semantic_root
         self.heartbeat_observation = heartbeat_observation
         self.finalize_environment = finalize_environment
+        self.provider_health = provider_health
 
     def run(
         self,
@@ -685,6 +792,19 @@ class NativeLaunchCoordinator:
             profile, workspace_root=workspace_root, home=runtime_home
         )
         provider = str(profile["provider"])
+        if self.provider_health is not None:
+            health = self.provider_health(profile, cwd=cwd)
+            if health.get("ok") is not True:
+                diagnostic = str(
+                    health.get("diagnostic") or "provider runtime probe failed"
+                )
+                raise ValueError(
+                    "Codex Windows sandbox is unavailable: "
+                    f"{diagnostic}. Kungfu did not launch the Agent or disable "
+                    "sandboxing. Run Codex directly from a local Windows terminal, "
+                    "use `/setup-default-sandbox`, and retry; use the deterministic "
+                    "Mock Agent onboarding while the provider sandbox is unavailable."
+                )
         adapter_id = str((profile.get("bootstrap") or {}).get("adapter") or provider)
         if adapter_id != provider:
             raise ValueError(
