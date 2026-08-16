@@ -2,6 +2,7 @@
 
 from datetime import datetime, timedelta, timezone
 import importlib
+import inspect
 import json
 from pathlib import Path
 import shutil
@@ -75,6 +76,12 @@ def test_assignment_admit_defers_request_path_validation_to_orchestration():
 
     assert request_argument.type.exists is False
     assert request_argument.type.convert(str(request_path), None, None) == request_path
+
+
+def test_assignment_admit_omits_retired_atlas_root():
+    source = inspect.getsource(ASSIGNMENT_CLI._admit_captured_assignment)
+
+    assert '"atlasRoot"' not in source
 
 
 def test_captured_request_reads_all_paths_through_filesystem_namespace(
