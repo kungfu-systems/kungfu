@@ -188,6 +188,16 @@ publication workflows consume the rehydrated exact artifacts. Missing relay
 roles or a failed upload/download is therefore a failed build, never permission
 to fall back to an unrecorded direct transfer path.
 
+Buildchain's `alpha` channel remains an Alpha maturity input, but Kungfu owns
+its repository-specific GitHub discovery policy. During the final Alpha
+publication commit Kungfu rewrites the product Release to `draft=false`,
+`prerelease=false`, and `make_latest=true`; the stable publication tail
+explicitly applies the same values. A following read-only check proves that
+GitHub Latest and its `buildchain.release.json` download resolve to the newest
+Kungfu product Publication Bundle. Component workflows explicitly use
+`make_latest=false`, so Shifu or Xinfa publication cannot replace the product
+discovery pointer.
+
 ### Linux x64 Core package budget preflight
 
 Before writing the Linux x64 Core npm tarball, the packer performs a dry-run
