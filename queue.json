@@ -3,7 +3,7 @@
   "contract": "kungfu-buildchain-dev-delivery-warrant-queue",
   "repository": "kungfu-systems/kungfu",
   "protectedBase": "dev/v4/v4.0",
-  "generation": 3289,
+  "generation": 3290,
   "fencingCounter": 476,
   "policy": {
     "agingSeconds": 900,
@@ -54,7 +54,7 @@
     "phase": "provisional",
     "expectedOldStateRoot": "sha256:9df9e9333c8971a38791e6811ae707eb873199a4612759a3b3d638818285de07",
     "issuedAt": "2026-08-16T07:11:53.516Z",
-    "expiresAt": "2026-08-16T08:41:53.516Z",
+    "expiresAt": "2026-08-16T08:44:53.544Z",
     "fencingToken": "sha256:392d19a29d6f3d1fb056d8f284c49640a7dbfe31e65dd1a389c8de047934f157",
     "nextAction": "Run or reuse the exact semantic native proof, then atomically qualify this fenced Warrant."
   },
@@ -30790,10 +30790,10 @@
       "sourceWorkflowRunId": 31926764613,
       "priority": "ordinary",
       "enqueuedAt": "2026-08-16T04:50:33.204Z",
-      "updatedAt": "2026-08-16T07:11:53.516Z",
+      "updatedAt": "2026-08-16T07:14:53.544Z",
       "attempts": 1,
       "recoveries": 0,
-      "status": "selected",
+      "status": "proving",
       "terminal": null,
       "affectedPaths": [
         ".github/workflows/publish-layer-artifacts.yml",
@@ -31558,6 +31558,6 @@
       ]
     }
   ],
-  "updatedAt": "2026-08-16T07:13:58.783Z",
-  "stateRoot": "sha256:557ce8606e1ea825ee70d5388170a7953c0866eba49629915d0c5b942688b559"
+  "updatedAt": "2026-08-16T07:14:53.544Z",
+  "stateRoot": "sha256:d4e70c89d5b75c777895271f7f2867c8aead1ce9d527d0d643a0413dbbfc9dd8"
 }
