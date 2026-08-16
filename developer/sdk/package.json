@@ -29,7 +29,7 @@
     "@kungfu-tech/buildchain": "3.0.0",
     "@kungfu-tech/core": "workspace:*",
     "@kungfu-tech/gui": "workspace:*",
-    "@kungfu-tech/kfd": "1.0.0-alpha.53",
+    "@kungfu-tech/kfd": "1.0.0-alpha.65",
     "@kungfu-tech/kfx": "workspace:*",
     "@kungfu-tech/tui": "workspace:*",
     "ajv": "^8.20.0",
