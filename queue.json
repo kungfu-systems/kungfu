@@ -3,7 +3,7 @@
   "contract": "kungfu-buildchain-dev-delivery-warrant-queue",
   "repository": "kungfu-systems/kungfu",
   "protectedBase": "dev/v4/v4.0",
-  "generation": 3349,
+  "generation": 3350,
   "fencingCounter": 482,
   "policy": {
     "agingSeconds": 900,
@@ -38,7 +38,7 @@
     "phase": "provisional",
     "expectedOldStateRoot": "sha256:392ced3adbe34e4c2260ecccf70a6e92fcf8d9cec925bc87c9a628e38f9ec40c",
     "issuedAt": "2026-08-16T09:46:51.265Z",
-    "expiresAt": "2026-08-16T11:16:51.265Z",
+    "expiresAt": "2026-08-16T11:19:52.189Z",
     "fencingToken": "sha256:7cf472a384dad3025febfc20fd217d2d77b16aaeccc11cb5cea44fb33f74f279",
     "nextAction": "Run or reuse the exact semantic native proof, then atomically qualify this fenced Warrant."
   },
@@ -31667,10 +31667,10 @@
       "sourceWorkflowRunId": 31935517949,
       "priority": "ordinary",
       "enqueuedAt": "2026-08-16T08:11:25.977Z",
-      "updatedAt": "2026-08-16T09:46:51.265Z",
+      "updatedAt": "2026-08-16T09:49:52.189Z",
       "attempts": 6,
       "recoveries": 0,
-      "status": "selected",
+      "status": "proving",
       "terminal": null,
       "affectedPaths": [
         "product/scripts/finalize-macos-release-artifacts.test.mjs",
@@ -31961,6 +31961,6 @@
       ]
     }
   ],
-  "updatedAt": "2026-08-16T09:48:59.487Z",
-  "stateRoot": "sha256:c0c77ef4d613f99f9f55cafbb61b71f03343d2cb149833cfe643692b24d9f58d"
+  "updatedAt": "2026-08-16T09:49:52.189Z",
+  "stateRoot": "sha256:d51dad140f9958afecf157e9e6ef74cb516768805ece8b45dc74f6d80db7822a"
 }
