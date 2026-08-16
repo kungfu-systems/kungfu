@@ -10,11 +10,11 @@
   },
   "upstream": {
     "package": "@kungfu-tech/kfd",
-    "version": "1.0.0-alpha.62",
+    "version": "1.0.0-alpha.65",
     "line": "v1.0",
     "channel": "alpha",
     "standardsSha256": "sha256:4cc77b8364fa5d4f158933ee3c89640b9ef1e2979c45c2fd9e7d69060258255e",
-    "releaseAnchorSha256": "sha256:a08858f0a21ca53bc2a77952450b14c395c6fa82539064d99659f513aac56585"
+    "releaseAnchorSha256": "sha256:48feb2424824b9819041e7a359b4d00311168a416b73e0d1c8f592b4df19a569"
   },
   "projections": {
     "sdk": "developer/sdk/kfd/support-matrix.json",
@@ -102,7 +102,7 @@
         "evidenceRoots": [
           {
             "path": ".buildchain/kfd/kfd-2/release-claims.json",
-            "sha256": "sha256:d33babb601b3a7efa10cb994d26f030b669095de232b444edefa29fd6c88f2be"
+            "sha256": "sha256:a9be7d78846dcc1df18f7291a421074031ee9d1953eb9b0d14057f38a2eb29c0"
           },
           {
             "path": "docs/qualification/kfd2-trust-assessment.md",
@@ -152,7 +152,7 @@
         "evidenceRoots": [
           {
             "path": ".buildchain/kfd/kfd-3/surfaces.json",
-            "sha256": "sha256:722397dd2b0295994c75d87a6df43992312048144ad5569d27da5f35653befc2"
+            "sha256": "sha256:4c818cb6380b210c631e864f0bebddb58349e06d52348e63a3b66610cffcb8b6"
           },
           {
             "path": ".buildchain/kfd/kfd-3/capability-query.json",

@@ -378,12 +378,12 @@
     "buildchain": {
       "repository": "kungfu-systems/buildchain",
       "owner": "kungfu-systems/buildchain",
-      "sourceRevision": "82701ca66f5366ade6ec694c9950d5d8d6db082d",
-      "version": "3.0.7-alpha.1",
+      "sourceRevision": "a5f43da50ea4ad5138ccf901135b89a711a1780c",
+      "version": "3.0.9-alpha.17",
       "compatibilityMode": "stable-v3-contract-plus-alpha-v3-contract",
       "stableContractLock": ".buildchain/contract-lock.json",
       "runtimeContractLock": ".buildchain/alpha-contract-lock.json",
-      "workflowInventoryRoot": "sha256:18c8418a96df4c01f0505ed8c5e8c892b944f3385ab844febe540590e4c96bdf",
+      "workflowInventoryRoot": "sha256:b25ac4ebf480cc547e0581d3a8be267c0047e3bb279b882afe762fb450f5b90b",
       "workflowDiscoveryPattern": "(release|publish|publication|promotion|stable-candidate|alpha-self-dogfood|candidate-lab|auditable-demo|binary-distribution|web-surface|wheel|bump-minor)",
       "workflowInventory": [
         ".github/workflows/.auditable-demo.yml",
@@ -401,6 +401,8 @@
         ".github/workflows/.web-surface.yml",
         ".github/workflows/.wheel-release.yml",
         ".github/workflows/.wheel-verify.yml",
+        ".github/workflows/auditable-demo-media-profile-qualification.yml",
+        ".github/workflows/auditable-demo.yml",
         ".github/workflows/binary-distribution.yml",
         ".github/workflows/binary-release-assets.yml",
         ".github/workflows/buildchain-alpha-self-dogfood.yml",
@@ -417,6 +419,7 @@
         ".github/workflows/release-line-bootstrap.yml",
         ".github/workflows/release-new-version.yml",
         ".github/workflows/release-propagation.yml",
+        ".github/workflows/release-tail.yml",
         ".github/workflows/release-verify.yml",
         ".github/workflows/stable-candidate-patrol.yml"
       ],
@@ -874,5 +877,5 @@
       }
     }
   ],
-  "registryRoot": "sha256:5d9e792b041bd4cd0ed69d1af54f7ffa37690f78ec492758b87601bb7b679057"
+  "registryRoot": "sha256:2d8447516b2f1e6f1dc8e2b01020565d5f6e935c1a38c71ddffe8c1e6511d031"
 }

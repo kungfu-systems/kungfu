@@ -22,15 +22,15 @@
     "runtimes": {
       "alpha": {
         "ref": "v3-alpha",
-        "packageVersion": "3.0.9-alpha.16",
-        "packageContractDigest": "sha256:ee1ae2589f8006fb5cc18734ad5adc6c3d69e2cd0747467808c15248111c6d39",
+        "packageVersion": "3.0.9-alpha.17",
+        "packageContractDigest": "sha256:29f1218350d3cf49423ffc1b78e3328c3af554c21e8c3ffd31928ea9db51a404",
         "registry": "node_modules/@kungfu-tech/buildchain/dist/site/publication-authority-registry.json",
         "authorityRegistryDigest": "26e5356238677038bda4efe2b91dbf3939270b31c65ff8a36bbdf0d3e5227913",
-        "runtimeSha": "82701ca66f5366ade6ec694c9950d5d8d6db082d",
-        "publicationRuntimeSha": "82701ca66f5366ade6ec694c9950d5d8d6db082d",
-        "contractDigest": "sha256:521394028d66ab5985da4c43f4fed46cdb04b838a3b403d3712073dd59858b78",
+        "runtimeSha": "a5f43da50ea4ad5138ccf901135b89a711a1780c",
+        "publicationRuntimeSha": "a5f43da50ea4ad5138ccf901135b89a711a1780c",
+        "contractDigest": "sha256:29f1218350d3cf49423ffc1b78e3328c3af554c21e8c3ffd31928ea9db51a404",
         "publicationContractDigests": [
-          "sha256:521394028d66ab5985da4c43f4fed46cdb04b838a3b403d3712073dd59858b78",
+          "sha256:29f1218350d3cf49423ffc1b78e3328c3af554c21e8c3ffd31928ea9db51a404",
           "sha256:13c4679c4ac8764c85e29693bfb59099e21e9786cc6082552198d39393467490"
         ],
         "contractLock": ".buildchain/alpha-contract-lock.json"
