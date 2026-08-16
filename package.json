@@ -416,10 +416,10 @@
   },
   "devDependencies": {
     "@biomejs/biome": "1.9.4",
-    "@kungfu-tech/buildchain": "3.0.9-alpha.6",
-    "@kungfu-tech/buildchain-alpha": "npm:@kungfu-tech/buildchain@3.0.9-alpha.6",
+    "@kungfu-tech/buildchain": "3.0.9-alpha.17",
+    "@kungfu-tech/buildchain-alpha": "npm:@kungfu-tech/buildchain@3.0.9-alpha.17",
     "@kungfu-tech/buildchain-stable": "npm:@kungfu-tech/buildchain@3.0.7",
-    "@kungfu-tech/kfd": "1.0.0-alpha.53",
+    "@kungfu-tech/kfd": "1.0.0-alpha.65",
     "@types/fs-extra": "^11.0.4",
     "@types/markdown-it": "14.1.2",
     "@types/node": "^22.0.0",
