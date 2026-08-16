@@ -76,9 +76,11 @@ jobs:
 
   source_acceptance:
     name: Candidate source acceptance
-    uses: kungfu-systems/buildchain/.github/workflows/check.yml@fb0ad6d84f10a1f9b872a799e035232d82558bd0
+    # Protected Buildchain merge #2815 admits only exact tree-equivalent
+    # linear merge-queue replays while retaining the legacy two-parent path.
+    uses: kungfu-systems/buildchain/.github/workflows/check.yml@0ef9b58e12f5982e374cc2669a3d55dd009992e5
     with:
-      buildchain-ref: fb0ad6d84f10a1f9b872a799e035232d82558bd0
+      buildchain-ref: 0ef9b58e12f5982e374cc2669a3d55dd009992e5
       mode: source
       upload-artifacts: true
       source-proof-reuse: true
