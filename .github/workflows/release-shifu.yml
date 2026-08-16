@@ -163,4 +163,7 @@ jobs:
             --repo "$GITHUB_REPOSITORY" \
             --title "$GITHUB_REF_NAME" \
             --verify-tag \
+            --draft=false \
+            --prerelease=false \
+            --latest=false \
             --notes "Native component binaries for macOS arm64, Linux x64 static/musl, and Windows x64. Verify SHA256SUMS and GitHub build provenance with \`gh attestation verify <asset> --repo $GITHUB_REPOSITORY\`. Kungfu embeds the same crate source in-process; standalone executables remain GitHub-only products."
