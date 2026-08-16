@@ -184,6 +184,21 @@
       "disposition": "proof-eligible"
     },
     {
+      "id": "python-kfx-authoring-tests",
+      "selectors": [
+        {
+          "kind": "exact",
+          "value": "framework/core/tests/python/test_kfx_authoring.py"
+        }
+      ],
+      "facets": [
+        "agent-first-authoring",
+        "sdk-cli",
+        "qualification-status"
+      ],
+      "disposition": "proof-eligible"
+    },
+    {
       "id": "root-kfx-test-fixtures",
       "selectors": [
         {
