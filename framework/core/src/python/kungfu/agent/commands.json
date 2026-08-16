@@ -165,9 +165,9 @@
     },
     {
       "apiId": "kungfu.agent.console.bind-work",
-      "name": "kungfu agent console bind-work --initiative-id <id> --assignment-id <id> --json",
+      "name": "kungfu agent console bind-work --initiative-id <id> --assignment-id <id> [--workspace <path>] --json",
       "maturity": "experimental",
-      "purpose": "Bind this native terminal session to one exact Assignment, atomically rejecting a second active Agent before it can write."
+      "purpose": "Bind this native terminal session to one exact Assignment in its same or explicitly selected Project, atomically rejecting a second active Agent before it can write."
     },
     {
       "apiId": "kungfu.agent.session",
