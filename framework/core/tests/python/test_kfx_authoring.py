@@ -25,9 +25,13 @@ def scaffold(tmp_path: Path, key: str = "ordinary-webhook") -> Path:
 
 def test_capabilities_bind_exact_installed_sdk_and_authority_boundary():
     capabilities = kfx_authoring.capabilities()
+    repository_root = Path(__file__).resolve().parents[4]
+    kfx_package = json.loads(
+        (repository_root / "framework/kfx/package.json").read_text(encoding="utf-8")
+    )
 
     assert capabilities["status"] == "available"
-    assert capabilities["productVersion"] == "4.0.0-alpha.1"
+    assert capabilities["productVersion"] == kfx_package["version"]
     assert capabilities["sdk"]["source"].endswith("service-authz.ts")
     assert capabilities["sdk"]["root"].startswith("sha256:")
     assert capabilities["lifecycle"][:6] == [
