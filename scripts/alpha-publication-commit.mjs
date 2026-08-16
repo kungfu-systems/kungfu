@@ -31,6 +31,7 @@ import {
   findAlphaPublicationTailPlan,
   verifyAlphaPublicationTailPlan,
 } from './alpha-publication-tail-plan.mjs';
+import { applyProductReleaseMetadata } from './github-release-policy.mjs';
 import { verifyUpgradePublicationAdmission } from './upgrade-publication-admission.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -729,6 +730,11 @@ async function main() {
   });
   if (existing) {
     ensureLauncherTag(environment);
+    await applyProductReleaseMetadata({
+      repository: 'kungfu-systems/kungfu',
+      tag: environment.releaseTag,
+      token: environment.token,
+    });
     const evidence = publicationCommitEvidence({
       ...environment,
       payloadRoot: existing.bundle.identity.channelPayloadRoot,
@@ -795,6 +801,11 @@ async function main() {
     expectedBundleRoot: bundle.bundleRoot,
   });
   publishReleaseAssets({ ...environment, bundleRoot, bundle });
+  await applyProductReleaseMetadata({
+    repository: 'kungfu-systems/kungfu',
+    tag: environment.releaseTag,
+    token: environment.token,
+  });
   const readback = await waitForBundleReadback(bundle);
   const evidence = publicationCommitEvidence({
     ...environment,

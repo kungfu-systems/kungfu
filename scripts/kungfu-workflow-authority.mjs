@@ -204,6 +204,8 @@ function initialJobPolicy(workflowPath, jobId) {
   if (workflowPath.endsWith('/release-new-version.yml')) {
     if (['promote', 'recover'].includes(jobId))
       return ['release-control', 'channel', 'qualifying'];
+    if (jobId === 'github-release-latest')
+      return ['release-control', 'product', 'qualifying'];
   }
   if (workflowPath.endsWith('/release-shifu.yml') && jobId === 'release')
     return ['product-publication', 'product', 'none'];
