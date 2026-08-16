@@ -1,7 +1,5 @@
 import type { ProfileQueryViewSpec } from '@kungfu-tech/kfx';
 
-import { projectMissionControlV3GoalCardView } from './compatibility/mission-control-v3-query.ts';
-
 export type GoalCardQuerySpec = {
   schema: 'kungfu.work-control.goal-card-query/v1';
   text: string;
@@ -181,8 +179,6 @@ export function goalCardQueryFromView(
 ): GoalCardQuerySpec | null {
   const view = objectValue(value);
   if (!view) return null;
-  const compatibility = projectMissionControlV3GoalCardView(value);
-  if (compatibility) return parseGoalCardQuerySpec(compatibility);
   if (view.profileId !== 'kungfu.work-control') return null;
   if (view.kind === 'profile') {
     if (

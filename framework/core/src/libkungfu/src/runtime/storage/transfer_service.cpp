@@ -50,7 +50,7 @@ nlohmann::json render_manifest_entry_view(const yy_storage::manifest_entry_view 
 
 nlohmann::json render_sync_root(const yy_storage::manifest_sync_root_view &root) {
   return {{"schema", yy_storage::SYNC_ROOT_SCHEMA_V1},
-          {"scope", yy_storage::SYNC_ROOT_SCOPE_ATLAS_IMPORT_MANIFEST},
+          {"scope", yy_storage::SYNC_ROOT_SCOPE_SOURCE_IMPORT_MANIFEST},
           {"proof", yy_storage::SYNC_ROOT_PROOF_LINEAR_CHAIN_V1},
           {"algorithm", root.algorithm},
           {"value", root.value},

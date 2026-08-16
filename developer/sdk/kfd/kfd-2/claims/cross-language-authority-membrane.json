@@ -61,13 +61,13 @@
       "pointer": {
         "kind": "file",
         "path": "docs/adr/KF-ADR-019f8c53-6105-71e5-8f34-53f2a81ee61c.md",
-        "sha256": "b12798406a516e9ca4fe45079ce50570022ed8e100be7a9d658cf8c63d281dd6"
+        "sha256": "c369e7a115cb35c3f1cb25571d607dc2cecf87910ea190e49236254e15a6e11a"
       },
       "description": "Accepted one-native-owner and four-language projection decision with explicit non-claims."
     }
   ],
   "hashes": {
-    "registrySha256": "1365d3a445e1587000175cdbc7f50ed83dfe6ebf4190c73f5d18f0bb41c35e15",
+    "registrySha256": "a2155d2077a01efe2cded78dcdeb7f7533f7cbc9c945ae5b7bab85b178af9cb1",
     "sourceSha256": "3feacc972ba83311045dd5f6b219fd92827a50c8d6f5240f13cb127908965063",
     "evidenceSha256": [
       {
@@ -92,7 +92,7 @@
       },
       {
         "path": "docs/adr/KF-ADR-019f8c53-6105-71e5-8f34-53f2a81ee61c.md",
-        "sha256": "b12798406a516e9ca4fe45079ce50570022ed8e100be7a9d658cf8c63d281dd6"
+        "sha256": "c369e7a115cb35c3f1cb25571d607dc2cecf87910ea190e49236254e15a6e11a"
       }
     ],
     "artifactSha256": [

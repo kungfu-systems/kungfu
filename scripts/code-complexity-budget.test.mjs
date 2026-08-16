@@ -2,20 +2,18 @@
 // @ts-check
 
 import assert from 'node:assert/strict';
-import { generateKeyPairSync, sign } from 'node:crypto';
 import test from 'node:test';
 
 import {
   baselineIntegrityIssues,
   baselineMeasurementRoot,
-  baselineTransitionAuthorization,
   digest,
   enrichIssue,
   protectedBaselineIssues,
-  waiverAuthorization,
 } from '../framework/maintainability/complexity-governance.mjs';
 import {
   classify,
+  complexitySigningResidueAudit,
   composeRenameEvidence,
   dispositionSoftWarnings,
   git,
@@ -47,6 +45,33 @@ const groups = {
   },
   'generated-projection:javascript-typescript': { hard: 100 },
 };
+
+test('retired complexity signing residues fail closed with exact identifiers', () => {
+  const retiredKey = ['ed25519-9ff2', '1f6e6f64c985'].join('');
+  const retiredField = ['approval', '_receipt'].join('');
+  const audit = complexitySigningResidueAudit([
+    { path: 'docs/history.md', bytes: bytes(retiredKey) },
+    {
+      path: 'framework/maintainability/code-complexity-policy.json',
+      bytes: bytes(retiredField),
+    },
+  ]);
+  assert.equal(audit.verdict, 'fail');
+  assert.deepEqual(
+    audit.findings.map(({ marker }) => marker),
+    [retiredKey, retiredField],
+  );
+  assert.ok(
+    audit.globalMarkers.includes(['ed25519-6688', '12bf28659460'].join('')),
+  );
+  assert.ok(audit.globalMarkers.includes(retiredKey));
+  assert.equal(
+    complexitySigningResidueAudit([
+      { path: 'unrelated.json', bytes: bytes(retiredField) },
+    ]).verdict,
+    'pass',
+  );
+});
 
 test('git probes fail fast with a precise timeout', () => {
   assert.throws(
@@ -316,6 +341,42 @@ test('anti-gaming rejects relabeling, responsibility splits, and re-added debt',
   assert.ok(readdedCodes.includes('grandfathered-file-grew'));
 });
 
+test('new-file anti-gaming ignores helpers already present on the protected base', () => {
+  const deleted = handwritten('scripts/legacy-hotspot.mjs', 120);
+  const protectedHelpers = [
+    handwritten('scripts/existing-reader.mjs', 5000),
+    handwritten('scripts/existing-writer.mjs', 50),
+    handwritten('scripts/existing-index.mjs', 20),
+    handwritten('scripts/existing-query.mjs', 20),
+  ];
+  const issues = regressionIssues(
+    protectedHelpers,
+    { groups, files: [deleted] },
+    {
+      antiGaming: {
+        maxNewHandwrittenFilesPerOwner: 3,
+        newGeneratedProjectionRequiresProvenance: true,
+      },
+    },
+    new Map(),
+    new Set(),
+  );
+  assert.equal(
+    issues.some((issue) => issue.code === 'responsibility-preserving-split'),
+    false,
+  );
+  assert.equal(
+    issues.some((issue) => issue.code === 'new-helper-proliferation'),
+    false,
+  );
+  assert.equal(
+    issues.some(
+      (issue) => issue.code === 'new-handwritten-file-over-hard-budget',
+    ),
+    false,
+  );
+});
+
 test('one-to-one Git renames preserve the old budget without becoming helper splits', () => {
   const deleted = handwritten('scripts/legacy-lab.mjs', 120);
   const renamed = handwritten('scripts/current-lab.mjs', 121);
@@ -434,9 +495,7 @@ test('unknown classification or owner fails closed', () => {
   );
 });
 
-function signedWaiverFixture() {
-  const { privateKey, publicKey } = generateKeyPairSync('ed25519');
-  const publicKeyPem = publicKey.export({ type: 'spki', format: 'pem' });
+function waiverFixture() {
   const requiredFields = [
     'schema',
     'issue_root',
@@ -452,24 +511,12 @@ function signedWaiverFixture() {
     'rejected_split_alternatives',
     'affected_tests_and_qualification',
     'requested_by',
-    'approval_receipt',
     'retirement_or_decomposition_ref',
   ];
   const policy = {
     status: 'p1-trusted-governance',
     waiver: {
-      schema: 'kungfu.code-complexity-budget-waiver/v2',
-      approvalReceiptSchema:
-        'kungfu.code-complexity-budget-approval-receipt/v1',
-      maxApprovalAgeDays: 30,
-      trustedAuthorities: [
-        {
-          authority_id: 'independent-reviewer',
-          key_id: 'review-key-1',
-          algorithm: 'ed25519',
-          public_key_pem: publicKeyPem,
-        },
-      ],
+      schema: 'kungfu.code-complexity-budget-waiver/v3',
       requiredFields,
     },
   };
@@ -500,42 +547,20 @@ function signedWaiverFixture() {
     affected_tests_and_qualification: ['scripts/debt.test.mjs'],
     requested_by: 'author@example.com',
     retirement_or_decomposition_ref: 'issue-123',
-    approval_receipt: {
-      schema: policy.waiver.approvalReceiptSchema,
-      authority_id: 'independent-reviewer',
-      key_id: 'review-key-1',
-      algorithm: 'ed25519',
-      issued_at: '2026-07-26T00:00:00Z',
-      approved_at: '2026-07-26T00:01:00Z',
-      expires_at: '2026-08-01T00:00:00Z',
-      authorization_root: '',
-      signature: '',
-    },
   };
   const record = { file: 'waiver.json', value };
-  value.approval_receipt.authorization_root = digest(
-    waiverAuthorization(record, issue, value.requested_by),
-  );
-  value.approval_receipt.signature = sign(
-    null,
-    Buffer.from(value.approval_receipt.authorization_root),
-    privateKey,
-  ).toString('base64');
   return {
-    privateKey,
     policy,
     baseline,
     current,
     issue,
     record,
-    evaluationTime: new Date('2026-07-27T00:00:00Z'),
   };
 }
 
-test('waivers require independent signed exact non-reusable approval', () => {
-  const fixture = signedWaiverFixture();
+test('waivers require an exact, author-bound, non-reusable scope', () => {
+  const fixture = waiverFixture();
   const context = {
-    evaluationTime: fixture.evaluationTime,
     requester: fixture.record.value.requested_by,
     issue: fixture.issue,
   };
@@ -578,41 +603,23 @@ test('waivers require independent signed exact non-reusable approval', () => {
   );
 });
 
-test('waiver approval rejects fabricated, unknown, same-authority, and stale receipts', () => {
-  const fixture = signedWaiverFixture();
+test('waivers reject candidate-author drift and stale measurements', () => {
+  const fixture = waiverFixture();
   const context = {
-    evaluationTime: fixture.evaluationTime,
     requester: fixture.record.value.requested_by,
     issue: fixture.issue,
   };
-  const codes = (record, policy = fixture.policy, localContext = context) =>
-    waiverIssues(record, policy, localContext).map((item) => item.code);
-  const fabricated = structuredClone(fixture.record);
-  fabricated.value.approval_receipt.signature = 'AA==';
-  assert.ok(codes(fabricated).includes('invalid-approval-signature'));
-  const unknown = structuredClone(fixture.record);
-  unknown.value.approval_receipt.key_id = 'unknown';
-  assert.ok(codes(unknown).includes('unknown-approval-authority'));
-  const samePolicy = structuredClone(fixture.policy);
-  samePolicy.waiver.trustedAuthorities[0].authority_id =
-    fixture.record.value.requested_by;
-  const same = structuredClone(fixture.record);
-  same.value.approval_receipt.authority_id = fixture.record.value.requested_by;
-  assert.ok(codes(same, samePolicy).includes('same-authority-approval'));
-  const stale = structuredClone(fixture.record);
-  stale.value.approval_receipt.issued_at = '2026-05-01T00:00:00Z';
-  stale.value.approval_receipt.approved_at = '2026-05-01T00:01:00Z';
-  stale.value.approval_receipt.expires_at = '2026-08-01T00:00:00Z';
-  assert.ok(codes(stale).includes('stale-approval'));
+  const codes = (record, localContext = context) =>
+    waiverIssues(record, fixture.policy, localContext).map((item) => item.code);
   assert.ok(
-    codes(fixture.record, fixture.policy, {
+    codes(fixture.record, {
       ...context,
-      evaluationTime: new Date(
-        fixture.record.value.approval_receipt.expires_at,
-      ),
-    }).includes('expired-approval'),
-    'an approval is expired at its exact expires_at boundary',
+      requester: 'other@example.com',
+    }).includes('forged-waiver-requester'),
   );
+  const stale = structuredClone(fixture.record);
+  stale.value.current_measurement[0].lines -= 1;
+  assert.ok(codes(stale).includes('waiver-scope-mismatch'));
 });
 
 test('baseline integrity rejects forged measurements and artifact fields', () => {
@@ -641,8 +648,7 @@ test('baseline integrity rejects forged measurements and artifact fields', () =>
   assert.ok(codes.includes('forged-baseline-artifact'));
 });
 
-test('protected baseline refresh requires one exact protected signed transition', () => {
-  const fixture = signedWaiverFixture();
+test('protected baseline refresh requires one exact deterministic transition', () => {
   const protectedBaseline = {
     measurementRoot: `sha256:${'1'.repeat(64)}`,
     baselineRef: 'a'.repeat(40),
@@ -652,10 +658,9 @@ test('protected baseline refresh requires one exact protected signed transition'
     baselineRef: 'b'.repeat(40),
   };
   const protectedPolicy = {
-    ...fixture.policy,
     status: 'p1-trusted-governance',
     baselineGovernance: {
-      transitionSchema: 'kungfu.code-complexity-baseline-transition/v1',
+      transitionSchema: 'kungfu.code-complexity-baseline-transition/v2',
       maxChangedMeasurements: 10,
       maxAggregateLineDelta: 100,
     },
@@ -675,32 +680,13 @@ test('protected baseline refresh requires one exact protected signed transition'
     requested_by: 'author@example.com',
     reason: 'advance the frozen exact source cut',
     retirement_or_decomposition_ref: 'issue-456',
-    approval_receipt: {
-      schema: protectedPolicy.waiver.approvalReceiptSchema,
-      authority_id: 'independent-reviewer',
-      key_id: 'review-key-1',
-      algorithm: 'ed25519',
-      issued_at: '2026-07-26T00:00:00Z',
-      approved_at: '2026-07-26T00:01:00Z',
-      expires_at: '2026-08-01T00:00:00Z',
-      authorization_root: '',
-      signature: '',
-    },
   };
-  value.approval_receipt.authorization_root = digest(
-    baselineTransitionAuthorization(value),
-  );
-  value.approval_receipt.signature = sign(
-    null,
-    Buffer.from(value.approval_receipt.authorization_root),
-    fixture.privateKey,
-  ).toString('base64');
   const context = {
     protectedPolicy,
     protectedBaseline,
     candidatePolicy,
     candidateBaseline,
-    evaluationTime: fixture.evaluationTime,
+    requester: value.requested_by,
     transitions: [{ file: 'transition.json', value }],
   };
   assert.deepEqual(protectedBaselineIssues(context), []);
@@ -712,6 +698,25 @@ test('protected baseline refresh requires one exact protected signed transition'
   forged.value.new_baseline_ref = 'c'.repeat(40);
   assert.equal(
     protectedBaselineIssues({ ...context, transitions: [forged] })[0].code,
+    'unauthorized-baseline-transition',
+  );
+  const wrongRequester = structuredClone(context.transitions[0]);
+  wrongRequester.value.requested_by = 'other@example.com';
+  assert.equal(
+    protectedBaselineIssues({
+      ...context,
+      transitions: [wrongRequester],
+    })[0].code,
+    'unauthorized-baseline-transition',
+  );
+  assert.equal(
+    protectedBaselineIssues({
+      ...context,
+      transitions: [
+        context.transitions[0],
+        structuredClone(context.transitions[0]),
+      ],
+    })[0].code,
     'unauthorized-baseline-transition',
   );
 });

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import importlib
 import os
 from typing import TYPE_CHECKING, Any
 
@@ -141,6 +142,8 @@ def __getattr__(name: str) -> Any:
         return _load_build_info()
     if name == "__version__":
         return _load_build_info()["version"]
+    if name in {"initiative_bundle", "work_control"}:
+        return importlib.import_module("kungfu.assignment_runtime").profile_domain(name)
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 

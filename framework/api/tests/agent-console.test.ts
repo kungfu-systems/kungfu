@@ -50,19 +50,19 @@ test('TypeScript canonical roots match the Agent Session golden fixture', async 
 
 test('Console envelope binds exact work and launch identity', async () => {
   const workRef = await buildWorkRef({
-    workspaceId: 'atlas',
+    workspaceId: 'project-alpha',
     profileId: 'kungfu.work-control',
     profileRoot: `sha256:${'a'.repeat(64)}`,
     entityType: 'assignment',
-    entityId: 'goal-1',
-    entity: { goal_id: 'goal-1', status: 'active' },
-    purpose: 'finish the goal',
+    entityId: 'assignment-1',
+    entity: { assignment_id: 'assignment-1', status: 'active' },
+    purpose: 'finish the assignment',
     systemTimeCut: '123',
     initiativeId: 'initiative-1',
   });
   const envelope = await buildAgentConsoleEnvelope({
-    workspaceId: 'atlas',
-    consoleId: 'work:goal-1',
+    workspaceId: 'project-alpha',
+    consoleId: 'work:assignment-1',
     attemptId: 'attempt:1',
     runtimeProfile: profile,
     workRef,

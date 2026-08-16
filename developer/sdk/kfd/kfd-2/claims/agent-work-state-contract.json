@@ -7,7 +7,7 @@
       "role": "claim-source",
       "kind": "file",
       "path": "framework/agent-work/kungfu-agent-work-state.contract.json",
-      "sha256": "381c75e05ed905bb31c4a5a0cedf1a08836c68f143f914522269d323eff46d96"
+      "sha256": "799d9f4471350cbb6a3d9249243f00c34411a99377bc00f4b4005602b8f6a4aa"
     }
   ],
   "machineEvidence": [
@@ -16,7 +16,7 @@
       "pointer": {
         "kind": "file",
         "path": "docs/adr/KF-ADR-019f86da-4f90-786d-aa24-a97705e13917.md",
-        "sha256": "bba457cb767978398eb119c04c7c2f59dd4e6701fcea0d0406db2fc3568e558a"
+        "sha256": "f686ca8c1ec7fb1796c4df5f105da8c274b3b5618a4e128896b665d47839db4c"
       },
       "description": "Accepted role-separation decision and bounded P17 qualification boundary."
     },
@@ -52,18 +52,18 @@
       "pointer": {
         "kind": "file",
         "path": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json",
-        "sha256": "a6f2429c8f99367478150ba28966c92dec4e9d8797f8ce365b90c719dcb874a9"
+        "sha256": "28adf9664817358d4a9c4d72d2aafc5b7311de5a71a262529783b3c3c40277fd"
       },
       "description": "Agent collaboration-interface registration for the work-model query."
     }
   ],
   "hashes": {
-    "registrySha256": "1365d3a445e1587000175cdbc7f50ed83dfe6ebf4190c73f5d18f0bb41c35e15",
-    "sourceSha256": "381c75e05ed905bb31c4a5a0cedf1a08836c68f143f914522269d323eff46d96",
+    "registrySha256": "a2155d2077a01efe2cded78dcdeb7f7533f7cbc9c945ae5b7bab85b178af9cb1",
+    "sourceSha256": "799d9f4471350cbb6a3d9249243f00c34411a99377bc00f4b4005602b8f6a4aa",
     "evidenceSha256": [
       {
         "path": "docs/adr/KF-ADR-019f86da-4f90-786d-aa24-a97705e13917.md",
-        "sha256": "bba457cb767978398eb119c04c7c2f59dd4e6701fcea0d0406db2fc3568e558a"
+        "sha256": "f686ca8c1ec7fb1796c4df5f105da8c274b3b5618a4e128896b665d47839db4c"
       },
       {
         "path": "scripts/check-agent-work-state-contract.test.mjs",
@@ -79,13 +79,13 @@
       },
       {
         "path": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json",
-        "sha256": "a6f2429c8f99367478150ba28966c92dec4e9d8797f8ce365b90c719dcb874a9"
+        "sha256": "28adf9664817358d4a9c4d72d2aafc5b7311de5a71a262529783b3c3c40277fd"
       }
     ],
     "artifactSha256": [
       {
         "path": "framework/agent-work/kungfu-agent-work-state.contract.json",
-        "sha256": "381c75e05ed905bb31c4a5a0cedf1a08836c68f143f914522269d323eff46d96"
+        "sha256": "799d9f4471350cbb6a3d9249243f00c34411a99377bc00f4b4005602b8f6a4aa"
       }
     ]
   },
@@ -93,7 +93,7 @@
     {
       "name": "agent-work-state-contract",
       "path": "framework/agent-work/kungfu-agent-work-state.contract.json",
-      "sha256": "381c75e05ed905bb31c4a5a0cedf1a08836c68f143f914522269d323eff46d96",
+      "sha256": "799d9f4471350cbb6a3d9249243f00c34411a99377bc00f4b4005602b8f6a4aa",
       "expectedPackagePath": "config/kungfu-agent-work-state.contract.json"
     }
   ],
