@@ -196,7 +196,7 @@ test('AWS CodeBuild qualification rejects static and release credentials', () =>
   }
 });
 
-test('reactivated AWS burst workflows use reviewed bounded Buildchain v3 sources', () => {
+test('reactivated AWS burst workflows use reviewed bounded Buildchain sources', () => {
   const retirement = JSON.parse(
     fs.readFileSync(
       path.join(
@@ -280,6 +280,22 @@ test('reactivated AWS burst workflows use reviewed bounded Buildchain v3 sources
     retirement.evidence.macosValidationTrainHead,
     '6b39d6f72224a8b2fa93c1bb997ed72cbed6cdf4',
   );
+  const promotion = JSON.parse(
+    fs.readFileSync(
+      path.join(
+        repositoryRoot,
+        'docs/release-promotion-rehearsal.contract.json',
+      ),
+      'utf8',
+    ),
+  );
+  const macosImmutableBuildSource =
+    promotion.buildchain.build_workflow_shell_resolved_sha;
+  assert.match(macosImmutableBuildSource, /^[0-9a-f]{40}$/);
+  assert.equal(
+    promotion.buildchain.build_runtime_resolved_sha,
+    macosImmutableBuildSource,
+  );
 
   for (const name of [
     'aws-us-linux-burst-qualification.yml',
@@ -294,11 +310,11 @@ test('reactivated AWS burst workflows use reviewed bounded Buildchain v3 sources
       name === 'aws-us-windows-burst-qualification.yml'
         ? windowsUsd80PhaseCapSource
         : name === 'aws-us-macos-burst-qualification.yml'
-          ? retirement.evidence.macosValidationWorkflowShell
+          ? macosImmutableBuildSource
           : buildchainSource;
     const expectedBuildchainSource =
       name === 'aws-us-macos-burst-qualification.yml'
-        ? retirement.evidence.macosValidationTrain
+        ? macosImmutableBuildSource
         : expectedWorkflowShell;
     assert.match(workflow, /workflow_dispatch:/);
     assert.doesNotMatch(workflow, /\n {2}pull_request:|\n {2}push:/);

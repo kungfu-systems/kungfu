@@ -468,12 +468,13 @@ test('workflow contract keeps candidates exact-source, independent, and publish-
   );
   assert.match(
     workflow,
-    /uses: kungfu-systems\/buildchain\/\.github\/workflows\/\.build\.yml@v3-alpha/u,
+    /uses: kungfu-systems\/buildchain\/\.github\/workflows\/\.build\.yml@9baf025baad5faa2d9c2339af06f73adbe4b84a0/u,
   );
   assert.match(
     workflow,
-    /^\s+buildchain-ref: \$\{\{ inputs\.buildchain-ref \|\| 'v3-alpha' \}\}$/mu,
+    /^\s+buildchain-ref: 9baf025baad5faa2d9c2339af06f73adbe4b84a0$/mu,
   );
+  assert.doesNotMatch(workflow, /inputs\.buildchain-ref/u);
   assert.match(
     affectedNativeWorkflow,
     /source_acceptance:[\s\S]*uses: kungfu-systems\/buildchain\/\.github\/workflows\/check\.yml@fb0ad6d84f10a1f9b872a799e035232d82558bd0[\s\S]*buildchain-ref: fb0ad6d84f10a1f9b872a799e035232d82558bd0[\s\S]*source-proof-reuse: true[\s\S]*source-proof-policy-paths-json: '\["\.github\/workflows\/affected-native-pr\.yml"\]'[\s\S]*source-proof-closure-paths-json: '\["\.buildchain\/buildchain\.toml","shifu","scripts\/source-acceptance\.mjs","scripts\/require-shifu\.mjs"\]'[\s\S]*source-proof-dependency-paths-json: '\["package\.json","pnpm-lock\.yaml"\]'[\s\S]*source-proof-required-contexts-json: '\["Candidate source acceptance \/ check"\]'/u,

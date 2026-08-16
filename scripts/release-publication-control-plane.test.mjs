@@ -44,25 +44,107 @@ test('checked registry closes workflows and invariants', () => {
   assert.equal(validateRegistry(v), v);
   assert.equal(status(v).sourceAcceptance, 'passed');
 });
-test('build authority binds the workflow shell channel while retaining runtime routing', () => {
+test('build authority pins workflow and runtime bytes while recording channel identity', () => {
   const source = fs.readFileSync('.github/workflows/build.yml', 'utf8');
   const contract = JSON.parse(
     fs.readFileSync('docs/release-promotion-rehearsal.contract.json', 'utf8'),
   );
-  const shellRef = contract.buildchain.build_workflow_shell_ref;
-  assert.equal(validateBuildWorkflowAuthority(source, shellRef), true);
+  const buildchainContract = contract.buildchain;
+  const shellSha = buildchainContract.build_workflow_shell_resolved_sha;
+  assert.equal(
+    validateBuildWorkflowAuthority(source, buildchainContract),
+    true,
+  );
   assert.throws(
-    () => validateBuildWorkflowAuthority(source, '0'.repeat(40)),
-    /shell channel is invalid/u,
+    () =>
+      validateBuildWorkflowAuthority(source, {
+        ...buildchainContract,
+        build_channel_ref: 'v3',
+      }),
+    /channel or major is invalid/u,
   );
   assert.throws(
     () =>
       validateBuildWorkflowAuthority(
-        source.replace(`.build.yml@${shellRef}`, '.build.yml@v3'),
-        shellRef,
+        source.replace(`.build.yml@${shellSha}`, '.build.yml@v3-alpha'),
+        buildchainContract,
       ),
     /authority drift/u,
   );
+  assert.throws(
+    () =>
+      validateBuildWorkflowAuthority(source, {
+        ...buildchainContract,
+        build_workflow_shell_resolved_sha: 'v3-alpha',
+      }),
+    /shell or runtime revision is invalid/u,
+  );
+  assert.throws(
+    () =>
+      validateBuildWorkflowAuthority(source, {
+        ...buildchainContract,
+        build_runtime_resolved_sha: '0'.repeat(40),
+      }),
+    /shell or runtime revision is invalid/u,
+  );
+  assert.throws(
+    () =>
+      validateBuildWorkflowAuthority(source, {
+        ...buildchainContract,
+        build_major: 'v4',
+      }),
+    /channel or major is invalid/u,
+  );
+  assert.throws(
+    () =>
+      validateBuildWorkflowAuthority(
+        source.replace(
+          `buildchain-ref: ${shellSha}`,
+          'buildchain-ref: v3-alpha',
+        ),
+        buildchainContract,
+      ),
+    /authority drift/u,
+  );
+  assert.throws(
+    () =>
+      validateBuildWorkflowAuthority(
+        source.replace(
+          `buildchain-ref: ${shellSha}`,
+          "buildchain-ref: ${{ inputs.buildchain-ref || 'v3-alpha' }}",
+        ),
+        buildchainContract,
+      ),
+    /authority drift/u,
+  );
+  for (const extra of [
+    `\n  duplicate-build:\n    uses: kungfu-systems/buildchain/.github/workflows/.build.yml@${shellSha}\n`,
+    '\n  duplicate-build:\n    uses: kungfu-systems/buildchain/.github/workflows/.build.yml@0000000000000000000000000000000000000000\n',
+    `\n  duplicate-runtime:\n    with:\n      buildchain-ref: ${shellSha}\n`,
+    '\n  duplicate-runtime:\n    with:\n      buildchain-ref: 0000000000000000000000000000000000000000\n',
+  ]) {
+    assert.throws(
+      () =>
+        validateBuildWorkflowAuthority(`${source}${extra}`, buildchainContract),
+      /authority drift/u,
+    );
+  }
+  for (const missing of [
+    source.replace(
+      `    uses: kungfu-systems/buildchain/.github/workflows/.build.yml@${shellSha}`,
+      '    # reusable Buildchain workflow intentionally removed',
+    ),
+    source.replace(
+      `      buildchain-ref: ${shellSha}`,
+      '      # Buildchain runtime binding intentionally removed',
+    ),
+  ]) {
+    assert.notEqual(missing, source);
+    assert.throws(
+      () => validateBuildWorkflowAuthority(missing, buildchainContract),
+      /authority drift/u,
+    );
+  }
 });
 test('promotion authority keeps Alpha workflow routing floating and recovery runtime exact', () => {
   const source = fs.readFileSync(

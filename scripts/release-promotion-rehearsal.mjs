@@ -89,6 +89,32 @@ export function validateWorkflowSources(root, contract, overrides = {}) {
   );
   const rehearsal = extractWorkflowJob(validation, 'promotion-rehearsal');
   const attestation = contract.buildchain.artifact_attestation;
+  const buildShellRef = contract.buildchain.build_channel_ref;
+  const buildShellMajor = contract.buildchain.build_major;
+  const buildShellSha = contract.buildchain.build_workflow_shell_resolved_sha;
+  const buildRuntimeSha = contract.buildchain.build_runtime_resolved_sha;
+
+  if (
+    buildShellRef !== 'v3-alpha' ||
+    buildShellMajor !== 'v3' ||
+    buildShellRef !== `${buildShellMajor}-alpha` ||
+    contract.buildchain.workflow_shell_ref !== buildShellRef
+  )
+    findings.push(
+      finding(
+        'release-candidate build workflow shell channel or major drifted',
+      ),
+    );
+  if (
+    !/^[0-9a-f]{40}$/u.test(buildShellSha || '') ||
+    !/^[0-9a-f]{40}$/u.test(buildRuntimeSha || '') ||
+    buildShellSha !== buildRuntimeSha
+  )
+    findings.push(
+      finding(
+        'release-candidate build workflow shell or runtime revision is not one immutable source',
+      ),
+    );
 
   for (const [label, job] of [
     ['primary promotion', promote],
@@ -142,28 +168,39 @@ export function validateWorkflowSources(root, contract, overrides = {}) {
     );
   }
 
-  requirePattern(
-    build,
-    new RegExp(
-      `uses: kungfu-systems/buildchain/\\.github/workflows/\\.build\\.yml@${contract.buildchain.build_workflow_shell_ref}`,
+  const candidateBuildShellCalls = [
+    ...build.matchAll(
+      /^\s+uses:\s+kungfu-systems\/buildchain\/\.github\/workflows\/\.build\.yml@(\S+)\s*$/gmu,
     ),
-    findings,
-    'release-candidate build must consume the channel-bound native-finalization workflow contract',
-  );
+  ];
+  if (
+    candidateBuildShellCalls.length !== 1 ||
+    candidateBuildShellCalls[0][1] !== buildShellSha
+  )
+    findings.push(
+      finding(
+        'release-candidate build must contain exactly one immutable channel-bound native-finalization workflow call',
+      ),
+    );
   requirePattern(
     build,
-    new RegExp(
-      `buildchain-ref: \\$\\{\\{ inputs\\.buildchain-ref \\|\\| '${contract.buildchain.workflow_shell_ref}' \\}\\}`,
-    ),
+    new RegExp(`^\\s+buildchain-ref: ${buildRuntimeSha}\\s*$`, 'mu'),
     findings,
-    'Alpha candidate builds must default to the v3-alpha runtime while retaining the trusted manual pass-through',
+    'Alpha candidate builds must execute the same immutable reviewed workflow and runtime revision',
   );
-  requirePattern(
-    build,
-    /workflow_dispatch:[\s\S]*?inputs:[\s\S]*?buildchain-ref:[\s\S]*?required: false[\s\S]*?default: ""/u,
-    findings,
-    'manual Buildchain runtime validation must remain an optional empty-default workflow_dispatch input',
-  );
+  const candidateBuildchainRefLines =
+    build.match(/^\s+buildchain-ref:\s*.+$/gmu) || [];
+  if (
+    candidateBuildchainRefLines.length !== 1 ||
+    candidateBuildchainRefLines[0].trim() !==
+      `buildchain-ref: ${buildRuntimeSha}` ||
+    build.includes('inputs.buildchain-ref')
+  )
+    findings.push(
+      finding(
+        'privileged candidate builds must not expose a movable Buildchain runtime override',
+      ),
+    );
   requirePattern(
     build,
     /^\s+publish-source-ref: \$\{\{ fromJSON\(inputs\.macos-overflow-request-json \|\| '\{\}'\)\.releaseCutSourceRef \|\| '' \}\}$/m,
