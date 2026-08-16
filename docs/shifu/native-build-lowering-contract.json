@@ -28,10 +28,12 @@
     {
       "classification": "canonical",
       "paths": [
+        "toolchain.contract.json",
         "framework/core/architecture/build-capabilities.json",
         "framework/core/architecture/layers.json"
       ],
       "owns": [
+        "toolchain-policy",
         "profiles",
         "component-closure",
         "dependency-identities",
@@ -54,6 +56,8 @@
         "framework/core/.gyp/run-build.js",
         "framework/core/.gyp/run-conan.js",
         "framework/core/conanfile.py",
+        "framework/core/.cmake/compiler.cmake",
+        "framework/core/.cmake/toolchain-contract.cmake",
         "framework/core/CMakeLists.txt",
         "framework/core/src/libyijinjing/CMakeLists.txt"
       ],

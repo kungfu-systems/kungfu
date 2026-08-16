@@ -29,6 +29,11 @@ test('journal native-build lowers deterministically to a non-executable Bazel da
     first.target.dependencies.map(({ id }) => id),
     ['fmt', 'nlohmann-json', 'spdlog', 'xxhash'],
   );
+  assert.equal(first.target.compileRequirements.languageStandard, 'c++23');
+  assert.equal(
+    first.target.compileRequirements.targetMinimumFeature,
+    'cxx_std_20',
+  );
 
   const projection = lowerNativeBuildIr(first, { root: ROOT });
   assert.equal(projection.provider.id, 'bazel-data-fixture');
@@ -49,6 +54,22 @@ test('authority drift is rejected before provider lowering', async () => {
   const { irRoot: originalRoot, ...body } = changed;
   assert.match(originalRoot, /^sha256:/u);
   body.authorityBindings.layersRoot = `sha256:${'e'.repeat(64)}`;
+  const ir = rooted(body, 'irRoot');
+  assert.throws(
+    () => lowerNativeBuildIr(ir, { root: ROOT }),
+    (error) =>
+      error instanceof NativeBuildLoweringError &&
+      error.code === 'authority-drift',
+  );
+});
+
+test('inventoried native-build authority drift is rejected before provider lowering', async () => {
+  const fixture = loadFixture(ROOT, FIXTURE_PATH);
+  const original = await compileNativeBuildIr(fixture, { root: ROOT });
+  const changed = structuredClone(original);
+  const { irRoot: originalRoot, ...body } = changed;
+  assert.match(originalRoot, /^sha256:/u);
+  body.authorityBindings.nativeBuildAuthorityRoot = `sha256:${'d'.repeat(64)}`;
   const ir = rooted(body, 'irRoot');
   assert.throws(
     () => lowerNativeBuildIr(ir, { root: ROOT }),

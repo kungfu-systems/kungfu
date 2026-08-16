@@ -29,6 +29,7 @@ const ROOT = path.resolve(
 const CONTRACT_PATH = 'docs/shifu/native-build-lowering-contract.json';
 const FIXTURE_PATH =
   'docs/shifu/examples/production-graph/native-build-lowering/journal-bazel.fixture.json';
+const TOOLCHAIN_CONTRACT_PATH = 'toolchain.contract.json';
 const CAPABILITIES_PATH = 'framework/core/architecture/build-capabilities.json';
 const LAYERS_PATH = 'framework/core/architecture/layers.json';
 const BUILD_PROFILES_PATH = 'framework/core/architecture/BUILD_PROFILES.cmake';
@@ -130,6 +131,7 @@ function verifyRooted(value, field) {
 }
 
 function selectedJournalAuthority(root) {
+  const toolchain = loadFixture(root, TOOLCHAIN_CONTRACT_PATH);
   const capabilities = loadFixture(root, CAPABILITIES_PATH);
   const layers = loadFixture(root, LAYERS_PATH);
   const profile = capabilities.profiles.find(({ id }) => id === 'journal');
@@ -163,7 +165,19 @@ function selectedJournalAuthority(root) {
   if (dependencies.length !== component.dependencies.length) {
     fail('dependency-authority-mismatch', 'journal dependency is missing');
   }
+  const projectCppStandard = toolchain.policy?.project_cpp_standard;
+  const publicYijinjingCppStandard =
+    toolchain.policy?.public_yijinjing_cpp_standard;
+  if (
+    !Number.isInteger(projectCppStandard) ||
+    !Number.isInteger(publicYijinjingCppStandard)
+  ) {
+    fail('toolchain-authority-mismatch', 'C++ standard policy is unavailable');
+  }
   return {
+    toolchain,
+    projectCppStandard,
+    publicYijinjingCppStandard,
     capabilities,
     layers,
     profile,
@@ -265,6 +279,33 @@ function verifyDerivedReadback(root, authority) {
       'Core CMake route no longer consumes the derived profile',
     );
   }
+  const compilerCmake = fs.readFileSync(
+    path.join(root, 'framework/core/.cmake/compiler.cmake'),
+    'utf8',
+  );
+  const toolchainCmake = fs.readFileSync(
+    path.join(root, 'framework/core/.cmake/toolchain-contract.cmake'),
+    'utf8',
+  );
+  if (
+    !compilerCmake.includes(
+      `set(CMAKE_CXX_STANDARD ${authority.projectCppStandard})`,
+    ) ||
+    !compilerCmake.includes(
+      `target_compile_features(kungfu_compile_contract INTERFACE cxx_std_${authority.projectCppStandard})`,
+    ) ||
+    !toolchainCmake.includes(
+      'kungfu_contract_get(KUNGFU_PROJECT_CXX_STANDARD policy project_cpp_standard)',
+    ) ||
+    !toolchainCmake.includes(
+      'kungfu_contract_get(KUNGFU_PUBLIC_YIJINJING_CXX_STANDARD policy public_yijinjing_cpp_standard)',
+    )
+  ) {
+    fail(
+      'toolchain-authority-mismatch',
+      'Core CMake route no longer consumes the canonical C++ standard policy',
+    );
+  }
 }
 
 export async function compileNativeBuildIr(fixture, { root = ROOT } = {}) {
@@ -346,8 +387,8 @@ export async function compileNativeBuildIr(fixture, { root = ROOT } = {}) {
           cmakeTarget: dependency.cmake_target,
         })),
         compileRequirements: {
-          languageStandard: 'c++23',
-          targetMinimumFeature: 'cxx_std_20',
+          languageStandard: `c++${authority.projectCppStandard}`,
+          targetMinimumFeature: `cxx_std_${authority.publicYijinjingCppStandard}`,
           positionIndependentCode: true,
           definitions: [
             'HAVE_USLEEP=1',
@@ -378,6 +419,9 @@ export function lowerNativeBuildIr(ir, { root = ROOT } = {}) {
   verifyRooted(ir, 'irRoot');
   const contract = loadFixture(root, CONTRACT_PATH);
   const observed = observeCoreProductionBindings(root);
+  const nativeBuildAuthorityRoot = semanticRoot(
+    nativeAuthorityFiles(root, contract),
+  );
   if (
     ir.source.revision !== observed.source.revision ||
     ir.source.tree !== observed.source.tree ||
@@ -386,7 +430,8 @@ export function lowerNativeBuildIr(ir, { root = ROOT } = {}) {
     ir.authorityBindings.layersRoot !== observed.layersRoot ||
     ir.authorityBindings.projectAuthorityRoot !==
       observed.projectAuthorityRoot ||
-    ir.authorityBindings.existingToolchainRoot !== observed.toolchainRoot
+    ir.authorityBindings.existingToolchainRoot !== observed.toolchainRoot ||
+    ir.authorityBindings.nativeBuildAuthorityRoot !== nativeBuildAuthorityRoot
   ) {
     fail('authority-drift', 'IR no longer matches the observed authority cut');
   }
