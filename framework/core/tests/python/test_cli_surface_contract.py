@@ -444,7 +444,7 @@ def test_python_wheel_does_not_publish_the_kfc_executable_alias():
     assert '"kungfu-exit-verify = kungfu.exit_verifier:main"' in setup_source
 
 
-def test_adr_0118_atlas_primitives_and_non_equivalent_families_stay_canonical():
+def test_native_primitives_and_non_equivalent_families_stay_canonical():
     pytest.importorskip("pykungfu")
     from kungfu.cli.commands import kfc
     from kungfu.cli.commands import __registry__  # noqa: F401
@@ -456,9 +456,6 @@ def test_adr_0118_atlas_primitives_and_non_equivalent_families_stay_canonical():
         "kungfu atlas capabilities",
         "kungfu atlas inspect",
         "kungfu atlas action",
-        "kungfu atlas import",
-        "kungfu atlas verify",
-        "kungfu source",
         "kungfu remote",
         "kungfu profile",
         "kungfu kfx",

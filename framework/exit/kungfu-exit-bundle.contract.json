@@ -684,7 +684,7 @@
                 "project-cut-v1",
                 "product-release-cut-v1",
                 "fact-library-v1",
-                "mission-control-v2"
+                "initiative-bundle-v1"
               ]
             },
             "requiredForScope": {
@@ -1349,17 +1349,15 @@
       "gap": "No independent domain bundle root; composition must bind every member Episode root and catalog root."
     },
     {
-      "id": "mission-control-v2",
+      "id": "initiative-bundle-v1",
       "schemas": [
-        "kungfu.mission-control.bundle/v2"
+        "kungfu.work-control.initiative-bundle/v1"
       ],
-      "legacySchemas": [
-        "kungfu.mission-control.bundle/v1"
-      ],
-      "owner": "Work Control compatibility adapter over Episode bundles and proof-carrying queries",
-      "source": "extensions/work-control/work-control-actions/domain/compatibility/mission_control_v3_bundle.py",
+      "legacySchemas": [],
+      "owner": "Native Work Control over Episode bundles and proof-carrying queries",
+      "source": "extensions/work-control/work-control-actions/domain/initiative_bundle.py",
       "identityRoot": "bundle_root",
-      "protocol": "mission-control-portability/v2",
+      "protocol": "work-control-initiative-portability/v1",
       "modes": [
         "full",
         "thin"

@@ -382,6 +382,7 @@ export function sourceCheckoutSnapshot(root) {
   const rows = (kind, paths) =>
     paths.sort().map((relative) => {
       const absolute = path.join(root, relative);
+      if (!fs.existsSync(absolute)) return `${kind}:missing:${relative}`;
       const stat = fs.lstatSync(absolute);
       const bytes = stat.isSymbolicLink()
         ? Buffer.from(fs.readlinkSync(absolute))

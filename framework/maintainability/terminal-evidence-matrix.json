@@ -1,6 +1,6 @@
 {
   "schema": "kungfu.maintainability-terminal-evidence-matrix/v4",
-  "goalId": "2026-08-08-kungfu-terminal-review-freeze-and-evidence-closure-v4",
+  "assignmentId": "2026-08-08-kungfu-terminal-review-freeze-and-evidence-closure-v4",
   "predecessor": {
     "assignmentId": "2026-07-27-kungfu-maintainability-terminal-closure",
     "sealedStateRoot": "sha256:41449544ae9f64f6a6e6e7ae69f24c0fd9049e38beef4bba2bbed3e3e730e98c"

@@ -400,13 +400,13 @@
       },
       "source": {
         "path": "framework/agent-work/kungfu-agent-work-state.contract.json",
-        "sha256": "sha256:381c75e05ed905bb31c4a5a0cedf1a08836c68f143f914522269d323eff46d96",
-        "renderedSha256": "sha256:381c75e05ed905bb31c4a5a0cedf1a08836c68f143f914522269d323eff46d96",
+        "sha256": "sha256:799d9f4471350cbb6a3d9249243f00c34411a99377bc00f4b4005602b8f6a4aa",
+        "renderedSha256": "sha256:799d9f4471350cbb6a3d9249243f00c34411a99377bc00f4b4005602b8f6a4aa",
         "byteForByte": true
       },
       "artifact": {
         "path": "config/kungfu-agent-work-state.contract.json",
-        "expectedSha256": "sha256:381c75e05ed905bb31c4a5a0cedf1a08836c68f143f914522269d323eff46d96"
+        "expectedSha256": "sha256:799d9f4471350cbb6a3d9249243f00c34411a99377bc00f4b4005602b8f6a4aa"
       }
     },
     {
@@ -476,13 +476,13 @@
       },
       "source": {
         "path": "framework/exit/kungfu-exit-bundle.contract.json",
-        "sha256": "sha256:d53745f3c33fd4bc3683faa6472358e15e880eab73508e7bc00367fe5daafe74",
-        "renderedSha256": "sha256:d53745f3c33fd4bc3683faa6472358e15e880eab73508e7bc00367fe5daafe74",
+        "sha256": "sha256:13c4767fd42d82760ad3372f6f017d1e767d67e4bb6e16adc98938552326a8a0",
+        "renderedSha256": "sha256:13c4767fd42d82760ad3372f6f017d1e767d67e4bb6e16adc98938552326a8a0",
         "byteForByte": true
       },
       "artifact": {
         "path": "config/kungfu-exit-bundle.contract.json",
-        "expectedSha256": "sha256:d53745f3c33fd4bc3683faa6472358e15e880eab73508e7bc00367fe5daafe74"
+        "expectedSha256": "sha256:13c4767fd42d82760ad3372f6f017d1e767d67e4bb6e16adc98938552326a8a0"
       }
     },
     {
@@ -552,13 +552,13 @@
       },
       "source": {
         "path": "framework/assignment-runtime/assignment-runtime.contract.json",
-        "sha256": "sha256:a2f54cdba88272474cd19ad29271a2743651c872ec17f83f3a41e246754b9bab",
-        "renderedSha256": "sha256:a2f54cdba88272474cd19ad29271a2743651c872ec17f83f3a41e246754b9bab",
+        "sha256": "sha256:73435e422a0288123f5a9d056b81411c078e8a5a2da0a667925add37e8dea405",
+        "renderedSha256": "sha256:73435e422a0288123f5a9d056b81411c078e8a5a2da0a667925add37e8dea405",
         "byteForByte": true
       },
       "artifact": {
         "path": "config/assignment-runtime/kungfu-assignment-runtime.contract.json",
-        "expectedSha256": "sha256:a2f54cdba88272474cd19ad29271a2743651c872ec17f83f3a41e246754b9bab"
+        "expectedSha256": "sha256:73435e422a0288123f5a9d056b81411c078e8a5a2da0a667925add37e8dea405"
       }
     },
     {
@@ -571,13 +571,13 @@
       },
       "source": {
         "path": "framework/primitive/kungfu-primitive-catalog.contract.json",
-        "sha256": "sha256:f9455fd552907cf0369a93d947e0b49ec85400b3663bfffbcac3e7ecceb68711",
-        "renderedSha256": "sha256:f9455fd552907cf0369a93d947e0b49ec85400b3663bfffbcac3e7ecceb68711",
+        "sha256": "sha256:efa503edf6a4a50d4c031112b5cc78498e0171fe5d2e96ab5d2590e685cb0fe3",
+        "renderedSha256": "sha256:efa503edf6a4a50d4c031112b5cc78498e0171fe5d2e96ab5d2590e685cb0fe3",
         "byteForByte": true
       },
       "artifact": {
         "path": "config/primitive/kungfu-primitive-catalog.contract.json",
-        "expectedSha256": "sha256:f9455fd552907cf0369a93d947e0b49ec85400b3663bfffbcac3e7ecceb68711"
+        "expectedSha256": "sha256:efa503edf6a4a50d4c031112b5cc78498e0171fe5d2e96ab5d2590e685cb0fe3"
       }
     }
   ]

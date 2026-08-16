@@ -224,7 +224,7 @@ test('Shifu separates the immediate human verdict from stable agent JSON', () =>
   });
   assert.equal(human.status, 0, human.stderr);
   assert.match(human.stdout, /BOUNDED SUPPORT/);
-  assert.match(human.stdout, /199 declared, 0 enforced/);
+  assert.match(human.stdout, /195 declared, 0 enforced/);
   assert.doesNotMatch(human.stdout, /^\s*\{/u);
 
   const agent = spawnSync(SHIFU, ['kfd', 'status', '--json'], {
@@ -241,7 +241,7 @@ test('Shifu separates the immediate human verdict from stable agent JSON', () =>
     'KFD-3',
     'KFD-7',
   ]);
-  assert.equal(report.kfd3.enforcement.declaredSurfaceCount, 199);
+  assert.equal(report.kfd3.enforcement.declaredSurfaceCount, 195);
   assert.equal(report.kfd3.enforcement.enforcedSurfaceCount, 0);
 });
 
