@@ -763,7 +763,11 @@ export async function finalizeMacosReleaseArtifacts({
       archives.filter((name) => name.endsWith('.zip')).length === 1,
     `expected one electron-builder DMG and ZIP, found: ${archives.join(', ') || 'none'}`,
   );
-  releaseAssert(names.includes('latest-mac.yml'), 'latest-mac.yml is missing');
+  const updateMetadata = names.filter((name) => name.endsWith('-mac.yml'));
+  releaseAssert(
+    updateMetadata.length === 1,
+    `expected one electron-builder macOS update metadata file, found: ${updateMetadata.join(', ') || 'none'}`,
+  );
   const removed = [];
   for (const name of [...archives, ...blockmaps].sort()) {
     removed.push(
