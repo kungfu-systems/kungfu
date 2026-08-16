@@ -3,7 +3,7 @@
   "contract": "kungfu-buildchain-dev-delivery-warrant-queue",
   "repository": "kungfu-systems/kungfu",
   "protectedBase": "dev/v4/v4.0",
-  "generation": 3184,
+  "generation": 3185,
   "fencingCounter": 470,
   "policy": {
     "agingSeconds": 900,
@@ -11,55 +11,7 @@
     "leaseSeconds": 3600,
     "emergencyPolicy": "reviewed-explicit-only"
   },
-  "activeWarrant": {
-    "schema": "kungfu.buildchain.dev-delivery-warrant/v1",
-    "repository": "kungfu-systems/kungfu",
-    "protectedBase": "dev/v4/v4.0",
-    "candidateId": "sha256:02fc9be16e1d9c1eead9e75679bdd6ad126ea39e85294e8f90a7c15d7bab73ae",
-    "pullRequestNumber": 3180,
-    "sourceHead": "101bc155e36ff5dc12bf87e23a80e3c4dd67ea6c",
-    "assignmentRoot": "sha256:859c676982e9f9b2215a010648d1cbbb2c4bef5bfd8e481850dd2670f7853367",
-    "initiativeRoot": "sha256:bfff817933e5a5ad693e4b902a84f6cc3a251235dd7377cb4091d92f805fa7ff",
-    "sourceIdentityRoot": "sha256:f7bd13af77df8cec7ac4ec38792182fdd93bb8bc75e0c443c90396920c4934f6",
-    "sourcePatchRoot": "sha256:d97ca1fb0d0c27c39f0547000ce6a1bcb5b2a1ef1cd6f5b98291fd29ab283ffe",
-    "sourceProofRoot": "sha256:9412c7dc51bdcff660ee34c096ef31544b91a71a6f66e4e3dd2619deffd59a4d",
-    "planRoot": "sha256:9482fbdaa3478adfedd134f3171e29509136b87923a5dcd132edfcbb20981ba0",
-    "closureRoot": "sha256:106d175611d8634c988192302b9c464ae8ba3b6d023c2cff9910e401344c9624",
-    "dependencyRoot": "sha256:a4b6c24134225346730cd7677ff20785da21ff7f71b0194b7f5a67027d351a3c",
-    "toolchainRoot": "sha256:2ecb07894954a2e0de022615d4561e5ba3ae68376401941ecff77be03cd75a0f",
-    "environmentRoot": "sha256:c5f5da5917c6ff93a509a62b18d4b9b69325755c4c7229b553b0016cde83788f",
-    "affectedPaths": [
-      ".github/workflows/aws-us-macos-burst-qualification.yml",
-      ".github/workflows/build.yml",
-      "docs/qualification/gates/release-admission.md",
-      "docs/qualification/gates/workflow-authority.json",
-      "docs/qualification/gates/workflow-bindings.json",
-      "docs/qualification/stable-release-continuation.contract.json",
-      "docs/release-promotion-rehearsal.contract.json",
-      "framework/release/publication-control-plane.mjs",
-      "framework/release/publication-surfaces.json",
-      "scripts/alpha-macos-overflow.test.mjs",
-      "scripts/alpha-promotion-preflight.test.mjs",
-      "scripts/buildchain-install.test.mjs",
-      "scripts/check-kungfu-gate-catalog.test.mjs",
-      "scripts/kungfu-gate-controller-adapters.mjs",
-      "scripts/kungfu-workflow-authority.mjs",
-      "scripts/readonly-agent-bootstrap.test.mjs",
-      "scripts/release-promotion-rehearsal.mjs",
-      "scripts/release-promotion-rehearsal.test.mjs",
-      "scripts/release-publication-control-plane.test.mjs",
-      "scripts/verify-alpha-release-cut-lock.test.mjs"
-    ],
-    "sourceWorkflowRunId": 31923214638,
-    "deliveryClass": "native-proof-required",
-    "generation": 470,
-    "phase": "provisional",
-    "expectedOldStateRoot": "sha256:9ebb6facb94b7b6eac51d1b1c3e083b96a788c684f0284ce2a27aa883b3b9fd9",
-    "issuedAt": "2026-08-16T03:49:04.494Z",
-    "expiresAt": "2026-08-16T05:19:04.494Z",
-    "fencingToken": "sha256:5b20ef5152de0d08a061f56fc1f08a99a515c9de47637d12e5a36eb9153f890d",
-    "nextAction": "Run or reuse the exact semantic native proof, then atomically qualify this fenced Warrant."
-  },
+  "activeWarrant": null,
   "candidates": [
     {
       "repository": "kungfu-systems/kungfu",
@@ -29789,11 +29741,19 @@
       "sourceWorkflowRunId": 31923214638,
       "priority": "ordinary",
       "enqueuedAt": "2026-08-16T03:30:47.772Z",
-      "updatedAt": "2026-08-16T03:49:04.494Z",
+      "updatedAt": "2026-08-16T04:15:42.247Z",
       "attempts": 1,
       "recoveries": 0,
-      "status": "selected",
-      "terminal": null,
+      "status": "cancelled",
+      "terminal": {
+        "outcome": "cancelled",
+        "terminalClass": "authoritative-cancellation",
+        "reason": "protected pull request event: synchronize",
+        "evidenceRoot": "sha256:54ef9db4b659fc9476e46e991d6403ea738012de1e64f730a102c78b16fc94dc",
+        "closedAt": "2026-08-16T04:15:42.247Z",
+        "fencingToken": "sha256:5b20ef5152de0d08a061f56fc1f08a99a515c9de47637d12e5a36eb9153f890d",
+        "leaseGeneration": 470
+      },
       "affectedPaths": [
         ".github/workflows/aws-us-macos-burst-qualification.yml",
         ".github/workflows/build.yml",
@@ -30245,6 +30205,6 @@
       ]
     }
   ],
-  "updatedAt": "2026-08-16T04:09:43.174Z",
-  "stateRoot": "sha256:0a7f73d6c90961f0c3b215cc786663a66017962f0e2050f5b1b270967b19b705"
+  "updatedAt": "2026-08-16T04:15:42.247Z",
+  "stateRoot": "sha256:df2952330e22ae46a394ea94e1b207c5f959062fdb7cdb3d2dafffb702ce0ccd"
 }
