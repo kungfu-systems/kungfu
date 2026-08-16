@@ -216,9 +216,9 @@ design target into a production guarantee.
 - [Versioning](development/versioning.md) and
   [Version/Release Design](development/version-release-design.md) — welded surfaces,
   channel intent, and release mechanics.
-- [Product Upgrade Publication Admission](development/publication-admission.md) —
-  exact candidate qualification, rooted receipt/capsule production, and local
-  Buildchain rehearsal.
+- [Product Publication Closure](development/publication-closure.md) —
+  sealed-candidate consumption, exact product closure checks, and local
+  Buildchain rehearsal without a second release authority.
 - [Upgrade Compatibility Reference](development/upgrade-compatibility.md) — release
   identity, protocol/schema windows, Core plans, reason messages, and non-claims.
 - [Shifu Documentation](shifu/README.md) — development/build execution and

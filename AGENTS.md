@@ -15,7 +15,7 @@ case."
 | Use or operate an installed Kungfu | Read the curated [`docs/README.md`](docs/README.md); run `kungfu agent brief`, then `kungfu agent choose-mode --json`. |
 | Explain or evaluate Kungfu as a whole | Follow the [`Agent Architecture Analysis Protocol`](docs/architecture/agent-analysis-protocol.md), then use the [`Evolution Map`](docs/evolution/README.md) to enter current authority. |
 | Change one bounded component, behavior, or document | Read [`CONTRIBUTING.md`](CONTRIBUTING.md), then compile the verified task context below. |
-| Promote or publish a release | Load the [version and release design](docs/development/version-release-design.md) and [publication admission](docs/development/publication-admission.md) before acting. |
+| Promote or publish a release | Load the [version and release design](docs/development/version-release-design.md) and [publication closure](docs/development/publication-closure.md) before acting. |
 
 Use the exhaustive [`docs/MAP.md`](docs/MAP.md) only to ground a specific claim
 or locate authority not resolved by the selected route. Expand context when a
@@ -100,7 +100,7 @@ Use the narrowest applicable route:
 | A Primitive definition or admission | [Primitive Management Plane](docs/architecture/primitive-management-plane.md); begin with its incubation passport and `./shifu primitive:new`. |
 | Fact or Episode invariants | [Invariant Verification](docs/qualification/invariant-verification.md); discover the registry with `./shifu invariant:verify -- --list --json`. |
 | An ADR or load-bearing architecture decision | [`docs/adr/`](docs/adr/README.md) and the [metadata contract](docs/development/document-metadata.md); use `./shifu adr:audit -- --json`. |
-| A release, promotion, or upgrade publication | [Version and Release Design](docs/development/version-release-design.md) plus [Publication Admission](docs/development/publication-admission.md); consume rooted candidate evidence rather than rebuilding conclusions at the tail. |
+| A release, promotion, or upgrade publication | [Version and Release Design](docs/development/version-release-design.md) plus [Publication Closure](docs/development/publication-closure.md); consume rooted candidate evidence rather than rebuilding conclusions at the tail. |
 | Public branding, hosted use, or provider integration | [`TRADEMARK.md`](TRADEMARK.md), [`ACCEPTABLE_USE.md`](ACCEPTABLE_USE.md), and [`PROVIDER_COMPLIANCE.md`](PROVIDER_COMPLIANCE.md). |
 
 ## Completion and contribution boundary

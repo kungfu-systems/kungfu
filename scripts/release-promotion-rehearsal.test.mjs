@@ -35,26 +35,23 @@ test('the committed Buildchain promotion consumer contract is coherent', () => {
   assert.equal(result.ok, true, JSON.stringify(result.findings, null, 2));
 });
 
-test('candidate finalization owns product qualification and release tails only verify its seal', () => {
+test('release tails consume Buildchain results without a product-specific admission stage', () => {
   const build = fs.readFileSync(
     path.join(ROOT, CONTRACT.workflows.build),
     'utf8',
   );
-  const finalization = extractWorkflowJob(
+  assert.doesNotMatch(
     build,
-    'finalize-upgrade-publication-admission',
+    /finalize-upgrade-publication-admission|upgrade-publication-admission\.mjs/u,
   );
-  assert.match(finalization, /upgrade-publication-admission\.mjs write/u);
-  assert.match(finalization, /product-upgrade-publication-capsule\.json/u);
   for (const relativePath of [
     'scripts/buildchain-custom-publish-evidence.mjs',
     'scripts/alpha-publication-commit.mjs',
   ]) {
     const source = fs.readFileSync(path.join(ROOT, relativePath), 'utf8');
-    assert.match(source, /verifyUpgradePublicationAdmission/u, relativePath);
     assert.doesNotMatch(
       source,
-      /verifyUpgradePublicationPayloads/u,
+      /UpgradePublicationAdmission|upgrade-publication-admission/u,
       relativePath,
     );
   }

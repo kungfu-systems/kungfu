@@ -84,8 +84,7 @@ jobs:
           node --test \
             scripts/alpha-promotion-preflight.test.mjs \
             product/scripts/cli-surface-qualification.test.mjs \
-            scripts/check-upgrade-qualification.test.mjs \
-            scripts/upgrade-publication-admission.test.mjs
+            scripts/check-upgrade-qualification.test.mjs
 
       - name: Verify ADR cutover history is locally available
         if: ${{ runner.os == 'Linux' }}

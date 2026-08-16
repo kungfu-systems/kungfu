@@ -151,8 +151,9 @@ test('early source contracts bypass the platform-specific Shifu bootstrap', () =
   assert.doesNotMatch(workflow, /scripts\/require-shifu\.mjs/u);
   assert.match(
     workflow,
-    /if: \$\{\{ matrix\.platform == 'linux-x64' \}\}[\s\S]*node --test[\s\S]*scripts\/alpha-promotion-preflight\.test\.mjs[\s\S]*product\/scripts\/cli-surface-qualification\.test\.mjs[\s\S]*scripts\/check-upgrade-qualification\.test\.mjs[\s\S]*scripts\/upgrade-publication-admission\.test\.mjs/u,
+    /if: \$\{\{ matrix\.platform == 'linux-x64' \}\}[\s\S]*node --test[\s\S]*scripts\/alpha-promotion-preflight\.test\.mjs[\s\S]*product\/scripts\/cli-surface-qualification\.test\.mjs[\s\S]*scripts\/check-upgrade-qualification\.test\.mjs/u,
   );
+  assert.doesNotMatch(workflow, /upgrade-publication-admission/u);
   assert.equal(
     workflow.match(/scripts\/check-upgrade-qualification\.test\.mjs/gu)?.length,
     1,

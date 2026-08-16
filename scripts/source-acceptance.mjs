@@ -878,7 +878,6 @@ export function sourceAcceptancePlan(
               'scripts/check-upgrade-contract.test.mjs',
               'scripts/probe-cpp-cmake-contract.test.mjs',
               'scripts/check-upgrade-qualification.test.mjs',
-              'scripts/upgrade-publication-admission.test.mjs',
               'scripts/check-agent-session-contract.test.mjs',
               'scripts/check-cli-catalog-parity.test.mjs',
               'scripts/check-kfx-site-impact.test.mjs',

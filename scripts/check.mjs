@@ -670,7 +670,6 @@ function testUpgradeControlPlane() {
   run('product upgrade qualification tests', 'node', [
     '--test',
     path.join('scripts', 'check-upgrade-qualification.test.mjs'),
-    path.join('scripts', 'upgrade-publication-admission.test.mjs'),
   ]);
 }
 

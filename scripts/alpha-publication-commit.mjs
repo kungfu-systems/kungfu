@@ -31,7 +31,6 @@ import {
   findAlphaPublicationTailPlan,
   verifyAlphaPublicationTailPlan,
 } from './alpha-publication-tail-plan.mjs';
-import { verifyUpgradePublicationAdmission } from './upgrade-publication-admission.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const PRODUCT_ROOT = process.env.BUILDCHAIN_PUBLICATION_COMMIT_PRODUCT_ROOT
@@ -45,6 +44,8 @@ const TRUST_PATH = path.join(
 const CHANNEL_URL = 'https://kungfu.tech/.well-known/kungfu/alpha.json';
 const CANONICAL_BASE_URL = 'https://kungfu.tech';
 const BUNDLE_MANIFEST_ASSET = 'kungfu-installer-publication-bundle.json';
+const RELEASE_MANIFEST_SCHEMA = 'kungfu.product-upgrade.manifest/v1';
+const EXPECTED_RELEASE_MANIFESTS = ['darwin-arm64', 'linux-x64', 'win32-x64'];
 
 function required(value, label) {
   if (typeof value !== 'string' || value.trim() === '') {
@@ -91,6 +92,121 @@ function readJson(file, label) {
 
 function sha256(bytes) {
   return `sha256:${createHash('sha256').update(bytes).digest('hex')}`;
+}
+
+function canonical(value) {
+  if (Array.isArray(value)) return value.map(canonical);
+  if (value && typeof value === 'object') {
+    return Object.fromEntries(
+      Object.entries(value)
+        .sort(([left], [right]) => left.localeCompare(right))
+        .map(([key, item]) => [key, canonical(item)]),
+    );
+  }
+  return value;
+}
+
+function publicationManifestFiles(root) {
+  if (!fs.existsSync(root) || !fs.statSync(root).isDirectory()) {
+    throw new Error(`release-candidate payload root is missing: ${root}`);
+  }
+  const matches = [];
+  const visit = (directory) => {
+    for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
+      const file = path.join(directory, entry.name);
+      if (entry.isDirectory()) visit(file);
+      else if (
+        entry.isFile() &&
+        /^kungfu-upgrade-.+-(darwin|linux|win32)-(arm64|x64)\.json$/u.test(
+          entry.name,
+        )
+      ) {
+        matches.push(file);
+      }
+    }
+  };
+  visit(root);
+  return matches.sort((left, right) => left.localeCompare(right));
+}
+
+export function publicationManifestSet({
+  payloadRoot,
+  candidatePassportPath,
+  version,
+  sourceSha,
+}) {
+  const acceptedSources = new Set(
+    releaseCandidateSourceShas(candidatePassportPath),
+  );
+  if (!acceptedSources.has(sourceSha)) {
+    throw new Error('publication source is outside the sealed candidate');
+  }
+  const byIdentity = new Map();
+  for (const manifestPath of publicationManifestFiles(payloadRoot)) {
+    const manifest = readJson(manifestPath, 'release publication manifest');
+    if (manifest.schema !== RELEASE_MANIFEST_SCHEMA) continue;
+    const identity = `${manifest.platform}-${manifest.architecture}`;
+    const copies = byIdentity.get(identity) || [];
+    copies.push({ manifestPath, manifest });
+    byIdentity.set(identity, copies);
+  }
+  const identities = [...byIdentity.keys()].sort();
+  if (
+    identities.join('\0') !== [...EXPECTED_RELEASE_MANIFESTS].sort().join('\0')
+  ) {
+    throw new Error(
+      `release publication manifests must contain exactly ${EXPECTED_RELEASE_MANIFESTS.join(', ')}; found ${identities.join(', ') || '<none>'}`,
+    );
+  }
+  const manifests = [];
+  for (const identity of identities) {
+    const copies = byIdentity.get(identity);
+    const expected = JSON.stringify(canonical(copies[0].manifest));
+    if (
+      copies.some(
+        ({ manifest }) => JSON.stringify(canonical(manifest)) !== expected,
+      )
+    ) {
+      throw new Error(
+        `release publication manifest copies drifted: ${identity}`,
+      );
+    }
+    const { manifest, manifestPath } = copies[0];
+    if (manifest.productVersion !== version) {
+      throw new Error(
+        `release publication manifest version drifted: ${identity}`,
+      );
+    }
+    if (!acceptedSources.has(manifest.sourceCommit)) {
+      throw new Error(
+        `release publication manifest source is outside the sealed candidate: ${identity}`,
+      );
+    }
+    if (!Array.isArray(manifest.artifacts) || manifest.artifacts.length === 0) {
+      throw new Error(
+        `release publication manifest has no artifacts: ${identity}`,
+      );
+    }
+    for (const artifact of manifest.artifacts) {
+      if (
+        typeof artifact.url !== 'string' ||
+        !Number.isSafeInteger(artifact.size) ||
+        artifact.size < 0 ||
+        !/^sha256:[a-f0-9]{64}$/u.test(artifact.digest || '')
+      ) {
+        throw new Error(
+          `release publication manifest has an invalid artifact: ${identity}`,
+        );
+      }
+    }
+    manifests.push({
+      platform: manifest.platform,
+      architecture: manifest.architecture,
+      manifestPath,
+      manifest,
+    });
+  }
+  return { manifests };
 }
 
 function releaseBaseUrl(releaseTag) {
@@ -460,11 +576,6 @@ export function prepareAlphaPublication({
   releasePassportPath,
   version,
   sourceSha,
-  promotionSha,
-  recoveryReceiptPath,
-  publicationGateAggregateJson,
-  expectedControllerRepository,
-  expectedControllerSha,
   privateKeyPem,
   trustDocument,
   outputDir,
@@ -487,24 +598,19 @@ export function prepareAlphaPublication({
       'publication signing key does not match the committed active trust key',
     );
   }
-  const admission = verifyUpgradePublicationAdmission({
+  const manifestSet = publicationManifestSet({
     payloadRoot: payloadDir,
-    releaseCandidatePassportPath: candidatePassportPath,
-    expectedVersion: version,
-    expectedSourceSha: sourceSha,
-    expectedPromotionSha: promotionSha,
-    recoveryReceiptPath,
-    publicationGateAggregateJson,
-    expectedControllerRepository,
-    expectedControllerSha,
+    candidatePassportPath,
+    version,
+    sourceSha,
   });
   const releaseBoundAdmission = releaseAssets
     ? bindPublicationReleaseAssets({
-        admission,
+        admission: manifestSet,
         releaseAssets,
         releaseTag: `v${version}`,
       })
-    : admission;
+    : manifestSet;
   const publicAdmission = {
     ...releaseBoundAdmission,
     manifests: releaseBoundAdmission.manifests.map((entry) => ({
@@ -902,18 +1008,6 @@ async function main() {
       process.env.BUILDCHAIN_PUBLICATION_COMMIT_SIGNING_KEY,
       'BUILDCHAIN_PUBLICATION_COMMIT_SIGNING_KEY',
     ),
-    recoveryReceiptPath: process.env
-      .BUILDCHAIN_RELEASE_CANDIDATE_RECOVERY_RECEIPT_PATH
-      ? path.resolve(
-          process.env.BUILDCHAIN_RELEASE_CANDIDATE_RECOVERY_RECEIPT_PATH,
-        )
-      : null,
-    publicationGateAggregateJson:
-      process.env.BUILDCHAIN_PUBLICATION_GATE_AGGREGATE_JSON || '',
-    expectedControllerRepository:
-      process.env.BUILDCHAIN_PUBLICATION_GATE_CONTROLLER_REPOSITORY || '',
-    expectedControllerSha:
-      process.env.BUILDCHAIN_PUBLICATION_GATE_CONTROLLER_SHA || '',
   };
   if (environment.releaseTag !== `v${environment.version}`) {
     throw new Error('publication version and public release tag disagree');
@@ -975,7 +1069,6 @@ async function main() {
   const prepared = prepareAlphaPublication({
     ...environment,
     sourceSha: environment.candidateSourceSha,
-    promotionSha: environment.releaseSha,
     candidatePassportPath,
     trustDocument,
     releaseAssets,

@@ -301,65 +301,6 @@ jobs:
       buildchain-contract-compatibility-policy: major-compatible
       buildchain-contract-drift-issue-mode: compatible-and-breaking
 
-  finalize-upgrade-publication-admission:
-    name: Finalize product upgrade publication admission
-    needs: build
-    if: ${{ needs.build.result == 'success' && github.event_name == 'pull_request' && (startsWith(github.base_ref, 'alpha/') || startsWith(github.base_ref, 'release/')) }}
-    runs-on: ubuntu-24.04
-    timeout-minutes: 20
-    permissions:
-      actions: read
-      contents: read
-    steps:
-      - name: Check out exact qualified source
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
-        with:
-          ref: ${{ needs.build.outputs.publish-source-sha }}
-          fetch-depth: 1
-          persist-credentials: false
-
-      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
-        with:
-          node-version-file: .node-version
-          check-latest: false
-
-      - name: Restore exact release-candidate Passport
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
-        with:
-          name: ${{ needs.build.outputs.release-candidate-passport-artifact }}
-          path: .buildchain/product-admission/passport
-
-      - name: Restore exact candidate payload artifacts
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
-        with:
-          pattern: kungfu-*
-          path: .buildchain/product-admission/payloads
-
-      - name: Qualify exact product bytes and seal admission receipt
-        env:
-          VERSION: ${{ needs.build.outputs.publish-source-consumer-version }}
-        run: |
-          set -euo pipefail
-          mapfile -t passports < <(find .buildchain/product-admission/passport -type f -name release-candidate-passport.json)
-          test "${#passports[@]}" -eq 1
-          output_dir=".buildchain/product-admission/payloads/kungfu-product-upgrade-publication-admission-${{ needs.build.outputs.publish-source-sha }}"
-          ./shifu node scripts/upgrade-publication-admission.mjs write \
-            --payload-root .buildchain/product-admission/payloads \
-            --passport "${passports[0]}" \
-            --version "$VERSION" \
-            --output "$output_dir/product-upgrade-publication-admission.json" \
-            --capsule "$output_dir/product-upgrade-publication-capsule.json"
-
-      - name: Upload sealed product admission capsule
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: kungfu-product-upgrade-publication-admission-${{ needs.build.outputs.publish-source-sha }}
-          path: .buildchain/product-admission/payloads/kungfu-product-upgrade-publication-admission-${{ needs.build.outputs.publish-source-sha }}
-          if-no-files-found: error
-          retention-days: 14
-          compression-level: 0
-          overwrite: false
-
   precompute-alpha-publication-tail:
     name: Precompute non-secret Alpha publication tail
     needs: build

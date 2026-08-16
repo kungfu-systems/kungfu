@@ -6,8 +6,6 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { verifyUpgradePublicationAdmission } from './upgrade-publication-admission.mjs';
-
 const SCRIPT_DIR = path.dirname(fileURLToPath(import.meta.url));
 
 function requireEnv(name) {
@@ -70,32 +68,6 @@ function generateKfdEvidence() {
 function main() {
   const evidencePath = requireEnv('BUILDCHAIN_PUBLISH_EVIDENCE');
   const version = requireEnv('BUILDCHAIN_VERSION');
-  const releaseCandidateRoot = path.join(
-    process.cwd(),
-    '.buildchain',
-    'release-candidate',
-  );
-  const upgradeAdmission = verifyUpgradePublicationAdmission({
-    payloadRoot:
-      process.env.KF_UPGRADE_PUBLISH_PAYLOAD_ROOT ||
-      process.env.BUILDCHAIN_RELEASE_CANDIDATE_PAYLOAD_ROOT ||
-      path.join(releaseCandidateRoot, 'payloads'),
-    releaseCandidatePassportPath:
-      process.env.KF_UPGRADE_RELEASE_CANDIDATE_PASSPORT ||
-      path.join(
-        releaseCandidateRoot,
-        'passport',
-        'release-candidate-passport.json',
-      ),
-    expectedVersion: version,
-    expectedSourceSha: requireEnv('BUILDCHAIN_SOURCE_SHA'),
-  });
-  console.log(
-    `buildchain custom publish verified sealed upgrade admission ${upgradeAdmission.receiptRoot} for ${upgradeAdmission.platforms.join(', ')}`,
-  );
-  console.log(
-    `buildchain custom publish admitted ${upgradeAdmission.credentialIsland.platformId} credential evidence from runtime ${upgradeAdmission.credentialIsland.runtimeSha}`,
-  );
   generateKfdEvidence();
   const requiredArtifactsPath =
     process.env.BUILDCHAIN_PUBLISH_REQUIRED_ARTIFACTS_PATH ||
@@ -125,17 +97,6 @@ function main() {
     release_material_sha: requireEnv('BUILDCHAIN_RELEASE_MATERIAL_SHA'),
     publish_tooling_sha: requireEnv('BUILDCHAIN_PUBLISH_TOOLING_SHA'),
     artifacts: requiredArtifacts.map(normalizeArtifact),
-    upgrade_qualification: {
-      schema: 'kungfu.product-update.release-passport-evidence/v1',
-      admission_receipt_root: upgradeAdmission.receiptRoot,
-      candidate_capsule_root: upgradeAdmission.capsuleRoot,
-      candidate_root: upgradeAdmission.candidateRoot,
-      artifact_root: upgradeAdmission.artifactRoot,
-      release_passport_root: upgradeAdmission.releasePassportRoot,
-      channel_index_roots: upgradeAdmission.channelIndexRoots,
-      campaign_roots: upgradeAdmission.campaignRoots,
-      campaigns: upgradeAdmission.updateCampaigns,
-    },
   };
 
   fs.mkdirSync(path.dirname(evidencePath), { recursive: true });

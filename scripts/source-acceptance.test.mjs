@@ -873,8 +873,8 @@ test('source plan covers representative source-only checks', () => {
     contractTests.args.includes('scripts/check-upgrade-qualification.test.mjs'),
   );
   assert.ok(
-    contractTests.args.includes(
-      'scripts/upgrade-publication-admission.test.mjs',
+    !contractTests.args.some((entry) =>
+      entry.includes('upgrade-publication-admission'),
     ),
   );
   assert.ok(

@@ -299,10 +299,11 @@ are in the
 
 ### Side-effect-free promotion rehearsal
 
-The product-specific pre-publication boundary is documented in
-[`publication-admission.md`](publication-admission.md). It seals exact upgrade
-payload qualification into the candidate before this release tail begins; the
-tail validates roots and never repeats the product predicates.
+The product-specific tail boundary is documented in
+[`publication-closure.md`](publication-closure.md). Buildchain supplies the
+sealed candidate and owns the publication transaction; Kungfu checks its exact
+manifest, asset, channel, installer, and KFD closure without minting a second
+upgrade admission authority.
 
 Kungfu does not need to publish an alpha or stable release to test its side of
 the promotion contract. `./shifu release:promotion:rehearse` executes committed
