@@ -122,6 +122,16 @@ require both `Candidate source acceptance / check` and the stable
 `affected-native / linux` aggregate. A ruleset change without the matching
 baseline transition therefore fails closed before samples are collected.
 
+The hosted source-proof canary must exercise a real, disjoint protected-base
+advance rather than replaying the pull request against its original base. First
+qualify the target pull-request head, then merge an independently reviewed
+predecessor that does not change the target's source-proof predicates, and only
+then admit the unchanged target head to the merge queue. The merge-group source
+job qualifies the canary only when its rooted receipt reports proof reuse and
+finishes in under 60 seconds without entering the install or check lifecycle.
+Any head mutation, merge conflict, predicate drift, missing receipt, or full
+qualification fallback invalidates that attempt and requires a fresh canary.
+
 The report uses the current source planner to classify samples as `native`,
 `non-native`, or `unknown`, and reports nearest-rank P50/P95 for every stratum.
 Planner failures remain unknown instead of becoming non-native. For each native
