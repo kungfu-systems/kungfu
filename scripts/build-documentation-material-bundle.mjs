@@ -79,6 +79,11 @@ let receipt;
 let readArtifact;
 
 if (parsed.source) {
+  const originTree = execFileSync(
+    'git',
+    ['rev-parse', `${parsed.originCommit}^{tree}`],
+    { cwd: ROOT, encoding: 'utf8' },
+  ).trim();
   manifest = JSON.parse(
     fs.readFileSync(path.join(parsed.source, 'manifest.json'), 'utf8'),
   );
@@ -96,6 +101,7 @@ if (parsed.source) {
     materialSource: {
       kind: 'tracked-gzip',
       originCommit: parsed.originCommit,
+      originTree,
       bundleRoot: `.xinfa/material-bundles/sha256/${atlasDigest}`,
     },
   };
@@ -128,20 +134,18 @@ verifyCompileRecords(manifest, receipt);
 
 const atlasDigest = String(selector.atlasRoot || '').slice('sha256:'.length);
 const sourceCommit = String(selector.materialSource?.originCommit || '');
+const sourceTree = String(selector.materialSource?.originTree || '');
 const bundleRelative = String(selector.materialSource?.bundleRoot || '');
 const expectedBundle = `.xinfa/material-bundles/sha256/${atlasDigest}`;
 if (
   selector.materialSource?.kind !== 'tracked-gzip' ||
   !/^[0-9a-f]{64}$/.test(atlasDigest) ||
   !/^[0-9a-f]{40}$/.test(sourceCommit) ||
+  !/^[0-9a-f]{40}$/.test(sourceTree) ||
   bundleRelative !== expectedBundle
 ) {
   throw new Error('invalid tracked-gzip Documentation Atlas selector');
 }
-execFileSync('git', ['cat-file', '-e', `${sourceCommit}^{commit}`], {
-  cwd: ROOT,
-  stdio: 'ignore',
-});
 const baselineRelative = `.xinfa/baselines/sha256/${atlasDigest}`;
 const baseline = path.join(ROOT, baselineRelative);
 fs.mkdirSync(baseline, { recursive: true });

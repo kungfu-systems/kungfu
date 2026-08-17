@@ -16,6 +16,14 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
 test('portable bundle closes classifications, routes, and bounded bytes', () => {
   const manifest = compilePortableBundle();
+  const selector = JSON.parse(
+    fs.readFileSync(
+      path.join(ROOT, '.xinfa/product-documentation-pack.json'),
+      'utf8',
+    ),
+  );
+  assert.equal(manifest.sourceCut.commit, selector.materialSource.originCommit);
+  assert.equal(manifest.sourceCut.tree, selector.materialSource.originTree);
   assert.equal(manifest.classification.unknown, 0);
   assert.equal(manifest.classification.silentOmissions, 0);
   assert.equal(manifest.routes.incompleteRoutes, 0);
