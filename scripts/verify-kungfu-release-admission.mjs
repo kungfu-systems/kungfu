@@ -98,6 +98,7 @@ export function temporalAdmissionFactProjection(root, policy) {
   )
     throw new Error('temporal release admission contains orphan proof entries');
   const channels = {};
+  const proofRoots = {};
   for (const proofRoot of active) {
     const record = byRoot.get(proofRoot);
     if (record?.status !== 'active')
@@ -109,10 +110,48 @@ export function temporalAdmissionFactProjection(root, policy) {
     )}`;
     channels[channel] ||= [];
     channels[channel].push(digest);
+    proofRoots[channel] ||= {};
+    if (proofRoots[channel][digest])
+      throw new Error('temporal release admission binding is ambiguous');
+    proofRoots[channel][digest] = proofRoot;
   }
   for (const channel of Object.keys(channels))
     channels[channel] = [...new Set(channels[channel])].sort();
-  return { factSetRoot, channels };
+  return { factSetRoot, channels, proofRoots };
+}
+
+function validateContractProjection(runtime, channel, temporalProjection) {
+  const projection = runtime.contractProjection;
+  exactKeys(
+    projection,
+    ['schema', 'authority', 'sourceFactSetRoot', 'entries', 'projectionRoot'],
+    `buildchain.runtimes.${channel}.contractProjection`,
+  );
+  if (
+    projection.schema !==
+      'kungfu.temporal-release-admission-digest-projection/v1' ||
+    projection.authority !== 'non-authoritative' ||
+    projection.sourceFactSetRoot !== temporalProjection.factSetRoot
+  )
+    throw new Error(
+      `Buildchain ${channel} contract projection is not a non-authoritative Fact projection`,
+    );
+  if (!Array.isArray(projection.entries) || projection.entries.length === 0)
+    throw new Error(`Buildchain ${channel} contract projection is empty`);
+  const expectedEntries = (temporalProjection.channels[channel] || []).map(
+    (contractDigest) => ({
+      contractDigest,
+      sourceProofRoot: temporalProjection.proofRoots[channel]?.[contractDigest],
+    }),
+  );
+  if (stableJson(projection.entries) !== stableJson(expectedEntries))
+    throw new Error(
+      `Buildchain ${channel} contract projection differs from active admission Facts`,
+    );
+  const { projectionRoot, ...body } = projection;
+  if (projectionRoot !== contentRoot(body))
+    throw new Error(`Buildchain ${channel} contract projection root mismatch`);
+  return projection;
 }
 
 function publicationAuthorityDigest(value) {
@@ -194,7 +233,7 @@ function validatePolicy(root, policy) {
     [
       'contract',
       'admissionFacts',
-      'proofProjection',
+      'compatibilityFacts',
       'releaseProvenanceContract',
     ],
     'temporalAdmission',
@@ -247,7 +286,7 @@ function validatePolicy(root, policy) {
         'publicationRuntimeSha',
         'contractDigest',
         'packageContractDigest',
-        'publicationContractDigests',
+        'contractProjection',
         'contractLock',
         'packageVersion',
         'registry',
@@ -264,14 +303,7 @@ function validatePolicy(root, policy) {
       throw new Error(
         `Buildchain ${channel} runtime differs from its contract lock`,
       );
-    const generated = temporalProjection.channels[channel] || [];
-    if (
-      generated.join('\0') !==
-      [...runtime.publicationContractDigests].sort().join('\0')
-    )
-      throw new Error(
-        `Buildchain ${channel} rollback digests differ from active temporal proofs`,
-      );
+    validateContractProjection(runtime, channel, temporalProjection);
   }
 }
 
@@ -286,14 +318,18 @@ export function verifyTemporalReleaseAdmission({
 } = {}) {
   if (!temporalAdmission?.releaseProvenance)
     throw new Error('temporal release admission provenance object is required');
+  if ('KUNGFU_TEMPORAL_RELEASE_ADMISSION_MODE' in process.env)
+    throw new Error(
+      'temporal release admission mode cannot be selected from the environment',
+    );
   const contract = readJson(root, policy.temporalAdmission.contract);
   const admissionFacts = readJson(
     root,
     policy.temporalAdmission.admissionFacts,
   );
-  const proofProjection = readJson(
+  const compatibilityFacts = readJson(
     root,
-    policy.temporalAdmission.proofProjection,
+    policy.temporalAdmission.compatibilityFacts,
   );
   const releaseProvenanceContract = readJson(
     root,
@@ -302,15 +338,12 @@ export function verifyTemporalReleaseAdmission({
   const request = {
     contract,
     admissionFacts,
-    proofProjection,
+    compatibilityFacts,
     releaseProvenanceContract,
     releaseProvenance: temporalAdmission.releaseProvenance,
     currentContractLock: readJson(root, runtime.contractLock),
-    legacyContractDigests: runtime.publicationContractDigests,
     currentContractDigest: runtime.contractDigest,
-    mode:
-      process.env.KUNGFU_TEMPORAL_RELEASE_ADMISSION_MODE ||
-      contract.defaultMode,
+    mode: contract.defaultMode,
     bindings: {
       repository: expected.repository,
       channel: expected.channel,

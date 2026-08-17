@@ -334,9 +334,9 @@ def qualify(root: Path, artifact_root: Path, reconstruction: Path) -> dict[str, 
         for row in facts["proofs"]
         if row["record"]["proofId"] == "alpha-sealed-candidate-historical-contract"
     )
-    proof_projection = _read_json(
-        root / policy["temporalAdmission"]["proofProjection"],
-        "compatibility proof projection",
+    compatibility_facts = _read_json(
+        root / policy["temporalAdmission"]["compatibilityFacts"],
+        "Buildchain compatibility Fact projection",
     )
     provenance_contract = _read_json(
         root / policy["temporalAdmission"]["releaseProvenanceContract"],
@@ -347,13 +347,12 @@ def qualify(root: Path, artifact_root: Path, reconstruction: Path) -> dict[str, 
     admission = verify_admission(
         contract=contract,
         admission_facts=facts,
-        proof_projection=proof_projection,
+        compatibility_facts=compatibility_facts,
         release_provenance_contract=provenance_contract,
         release_provenance=provenance["promotion"],
         current_contract_lock=_read_json(
             root / runtime["contractLock"], "Alpha contract lock"
         ),
-        legacy_contract_digests=runtime["publicationContractDigests"],
         current_contract_digest=runtime["contractDigest"],
         bindings={
             "repository": "kungfu-systems/kungfu",
@@ -400,11 +399,16 @@ def qualify(root: Path, artifact_root: Path, reconstruction: Path) -> dict[str, 
         "candidateAncestryObserved": False,
         "ancestrySemanticAuthority": False,
         "admissionFactSetRoot": admission["receipt"]["admissionFactSetRoot"],
+        "admissionProofRoot": admission["receipt"]["admissionProofRoot"],
+        "factProjectionRoot": admission["receipt"]["factProjectionRoot"],
         "admissionReceiptRoot": admission["receipt"]["receiptRoot"],
         "admissionPathReceiptRoot": admission["receipt"]["pathReceiptRoot"],
         "acceptedContractDigest": HISTORICAL_CONTRACT,
         "currentContractDigest": runtime["contractDigest"],
-        "buildchainProofRoots": admission["receipt"]["buildchainProofRoots"],
+        "buildchainFactRoots": admission["receipt"]["buildchainFactRoots"],
+        "compatibilityPathReceiptRoots": admission["receipt"][
+            "compatibilityPathReceiptRoots"
+        ],
         "inputUnchanged": True,
         "heavyRebuildPerformed": False,
         "externalPublicationClaimed": False,
