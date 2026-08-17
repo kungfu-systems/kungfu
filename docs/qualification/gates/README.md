@@ -166,10 +166,13 @@ keeps PR and queue attempts separate and computes wall-clock critical paths per
 attempt; interval unions prevent nested steps or parallel jobs from being
 double-counted. Aggregate admission and post-build merge finalization have
 separate phases, while skipped or dependency-blocked jobs remain explicit
-non-executions without invented timestamps. GitHub runner wait remains
-explicitly unknown because the Jobs API does not expose a job `queued_at`
-timestamp. Historical artifacts without the new internal event stream likewise
-retain explicit unknown stages. The compact report ranks actionable spans,
+non-executions without invented timestamps. GitHub still does not expose a job
+`queued_at` timestamp, so the report does not claim an exact runner wait.
+Instead it records the conservative interval from workflow `created_at` to job
+`started_at` as a scheduler-and-dependency wait upper bound, requires complete
+job evidence, and applies a 30-minute maximum upper-bound budget. Historical
+artifacts without the new internal event stream likewise retain explicit
+unknown stages. The compact report ranks actionable spans,
 reports execution-lane skew and cache outcomes, and names one falsifiable next
 optimization target for a repeat of the same source-bound cohort.
 
@@ -209,11 +212,23 @@ PR `merged_at`, with P50/P90 targets of 15/30 minutes. The dequeue cohort also
 keeps PRs that have left the queue but have not yet merged: GraphQL
 `RemovedFromMergeQueueEvent.reason` supplies the reason, while Core
 `merge_group` workflow branches bind Actions runs to the PR and queue round.
-This exposes entry/dequeue counts, additional Core validations after the first,
-total job runner time spent on non-merged rounds, and the portion that continued
-after dequeue. Runner time is the sum of job execution durations, so parallel
-jobs intentionally represent consumed runner-minutes rather than wall-clock
-latency.
+This exposes entry/dequeue counts, the separate merge-conflict dequeue rate,
+additional Core validations after the first, total job runner time spent on
+non-merged rounds, and the portion that continued after dequeue. A validation
+repeated once after an authoritative non-merged queue round is attributed to
+that dequeue reason; a duplicate of the same workflow inside one queue round
+remains unexplained and prevents qualification. Runner time is the sum of job
+execution durations, so parallel jobs intentionally represent consumed
+runner-minutes rather than wall-clock latency. Qualification requires overall
+dequeue below 10%, merge-conflict dequeue below 5%, zero unexplained repeated
+validation, and complete runner-wait upper-bound evidence within 30 minutes.
+
+The report also joins exact-head `Dev post-merge advisory` push runs to each
+merge commit. Their workflow duration and merge-to-completion tail remain fully
+visible in `postMergeAdvisory`, but every advisory event declares
+`criticalPathEligible: false` and `mergeCriticalMetricImpact: excluded`.
+Neither required Gate latency nor merge-queue delivery percentiles include that
+post-merge tail.
 
 The queue cohort covers Core `merge_group` runs created since the oldest PR in
 the selected merged-PR window, plus those selected merged PRs themselves. It

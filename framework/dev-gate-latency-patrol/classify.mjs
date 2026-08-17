@@ -147,13 +147,19 @@ export function classifyLatencyReport(report, { repository, branch }) {
     report.collection?.nativeArtifacts === 'skipped';
   const attributionIncomplete =
     unknown.sampleCount > 0 || (!latencyOnly && report.cache?.unknownCount > 0);
+  const runnerWaitEvidenceCount = queue.runnerWait?.evidenceObservedCount ?? 0;
+  const unexplainedRepeatedValidationCount =
+    queue.unexplainedRepeatedValidationCount ??
+    queue.repeatedValidationCount ??
+    0;
 
   if (
     !enoughRequired ||
     !enoughQueue ||
     queue.incompleteCount > 0 ||
     queue.notObservedCount > 0 ||
-    queue.runnerEvidenceObservedCount < queue.queueObservedCount
+    queue.runnerEvidenceObservedCount < queue.queueObservedCount ||
+    runnerWaitEvidenceCount < queue.queueObservedCount
   )
     categories.push('insufficient-evidence');
   if (attributionIncomplete) categories.push('unknown-attribution');
@@ -168,7 +174,7 @@ export function classifyLatencyReport(report, { repository, branch }) {
     categories.push('merge-queue-delivery-slo');
   if (queue.dequeue?.pullRequestCount > 0)
     categories.push('merge-queue-dequeue');
-  if (queue.repeatedValidationCount > 0)
+  if (unexplainedRepeatedValidationCount > 0)
     categories.push('merge-queue-revalidation');
   if (queue.wastedRunnerMs > 0 || queue.postDequeueRunnerMs > 0)
     categories.push('merge-queue-waste');

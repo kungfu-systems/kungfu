@@ -19,6 +19,7 @@ import {
   mergeQueueEvidence,
   nativeEvidenceFromMembers,
   nearestRank,
+  postMergeAdvisoryEvidence,
   report,
   requiredContextsFromEffectiveRules,
   requiredMergeQueueWindow,
@@ -27,6 +28,7 @@ import {
   summarize,
   summarizeMergeQueueDelivery,
   summarizeNativeAttribution,
+  summarizePostMergeAdvisory,
 } from './measure-dev-required-latency.mjs';
 import { partitionAffectedNativePlan } from './run-core-affected-native.mjs';
 
@@ -242,6 +244,7 @@ test('merge queue evidence preserves failed dequeue and wasted runner time', () 
     [
       {
         id: 101,
+        workflow_id: 77,
         head_sha: 'failed-round',
         created_at: '2026-07-22T13:01:00Z',
         updated_at: '2026-07-22T13:15:00Z',
@@ -250,6 +253,7 @@ test('merge queue evidence preserves failed dequeue and wasted runner time', () 
       },
       {
         id: 102,
+        workflow_id: 77,
         head_sha: 'merged-round',
         created_at: '2026-07-22T13:21:00Z',
         updated_at: '2026-07-22T13:29:00Z',
@@ -260,12 +264,24 @@ test('merge queue evidence preserves failed dequeue and wasted runner time', () 
     {
       101: [
         {
+          id: 1001,
+          name: 'check',
           started_at: '2026-07-22T13:02:00Z',
           completed_at: '2026-07-22T13:12:00Z',
         },
         {
+          id: 1002,
+          name: 'affected-native / linux',
           started_at: '2026-07-22T13:05:00Z',
           completed_at: '2026-07-22T13:15:00Z',
+        },
+      ],
+      102: [
+        {
+          id: 1003,
+          name: 'check',
+          started_at: '2026-07-22T13:22:00Z',
+          completed_at: '2026-07-22T13:28:00Z',
         },
       ],
     },
@@ -278,6 +294,11 @@ test('merge queue evidence preserves failed dequeue and wasted runner time', () 
   assert.deepEqual(value.dequeueReasons, { failed_checks: 1 });
   assert.equal(value.mergeGroupRunCount, 2);
   assert.equal(value.repeatedValidationCount, 1);
+  assert.equal(value.explainedRepeatedValidationCount, 1);
+  assert.equal(value.unexplainedRepeatedValidationCount, 0);
+  assert.deepEqual(value.repeatedValidationExplanations, { failed_checks: 1 });
+  assert.equal(value.runnerWaitEvidenceComplete, true);
+  assert.equal(value.runnerWaitUpperBoundMs, 4 * 60 * 1000);
   assert.equal(value.wastedRunnerMs, 20 * 60 * 1000);
   assert.equal(value.postDequeueRunnerMs, 7 * 60 * 1000);
   assert.equal(value.rounds[0].mergeGroupRuns[0].jobs.length, 2);
@@ -529,6 +550,18 @@ test('candidate timeline input correlates provider and internal events without m
         },
       ],
     },
+    postMergeAdvisory: {
+      attempts: [
+        {
+          workflowRunId: 91,
+          status: 'observed',
+          conclusion: 'success',
+          createdAt: '2026-07-23T00:31:00Z',
+          completedAt: '2026-07-23T00:41:00Z',
+          tailDurationMs: 11 * 60 * 1000,
+        },
+      ],
+    },
     nativeEvidence: {
       candidateEvents: [
         {
@@ -632,6 +665,11 @@ test('candidate timeline input correlates provider and internal events without m
     input.events.find(({ category }) => category === 'cache-evidence').cache,
     { layer: 'compiler', outcome: 'miss' },
   );
+  const advisory = input.events.find(
+    ({ phase }) => phase === 'post-merge-advisory',
+  );
+  assert.equal(advisory.criticalPathEligible, false);
+  assert.equal(advisory.attributes.mergeCriticalMetricImpact, 'excluded');
   const timeline = createCandidateTimeline(input);
   assert.equal(timeline.contract, 'buildchain.candidate-timeline/v1');
   assert.deepEqual(
@@ -731,6 +769,8 @@ test('paired closed queue attempts remain observed without merge-group runs', ()
   assert.equal(value.dequeueCount, 2);
   assert.deepEqual(value.dequeueReasons, { merge_conflict: 2 });
   assert.equal(value.mergeGroupRunCount, 0);
+  assert.equal(value.runnerWaitEvidenceComplete, true);
+  assert.equal(value.runnerWaitUpperBoundMs, 0);
   assert.equal(value.runnerEvidenceComplete, true);
   assert.equal(value.wastedRunnerMs, 0);
   assert.equal(value.postDequeueRunnerMs, 0);
@@ -744,6 +784,10 @@ test('merge queue delivery summary reports tail, dequeues, and waste', () => {
     dequeueCount: 0,
     dequeueReasons: {},
     repeatedValidationCount: 0,
+    explainedRepeatedValidationCount: 0,
+    unexplainedRepeatedValidationCount: 0,
+    runnerWaitEvidenceComplete: true,
+    runnerWaitUpperBoundMs: 2 * 60 * 1000,
     runnerEvidenceComplete: true,
     wastedRunnerMs: 0,
     postDequeueRunnerMs: 0,
@@ -757,6 +801,7 @@ test('merge queue delivery summary reports tail, dequeues, and waste', () => {
             dequeueCount: 1,
             dequeueReasons: { failed_checks: 1 },
             repeatedValidationCount: 1,
+            explainedRepeatedValidationCount: 1,
             wastedRunnerMs: 8 * 60 * 1000,
             postDequeueRunnerMs: 2 * 60 * 1000,
           }
@@ -768,10 +813,64 @@ test('merge queue delivery summary reports tail, dequeues, and waste', () => {
   assert.equal(value.statistics.p90Ms, 10 * 60 * 1000);
   assert.equal(value.dequeue.rate, 0.05);
   assert.deepEqual(value.dequeue.reasons, { failed_checks: 1 });
+  assert.equal(value.dequeue.mergeConflict.rate, 0);
   assert.equal(value.repeatedValidationCount, 1);
+  assert.equal(value.explainedRepeatedValidationCount, 1);
+  assert.equal(value.unexplainedRepeatedValidationCount, 0);
+  assert.equal(value.runnerWait.qualified, true);
   assert.equal(value.wastedRunnerMs, 8 * 60 * 1000);
   assert.equal(value.postDequeueRunnerMs, 2 * 60 * 1000);
   assert.equal(value.verdict.qualified, true);
+});
+
+test('queue delivery fails strict conflict, unexplained repeat, and runner wait budgets', () => {
+  const samples = Array.from({ length: 20 }, (_, index) => ({
+    mergeQueue: {
+      queueStatus: 'observed',
+      status: 'observed',
+      deliveryDurationMs: 10 * 60 * 1000,
+      dequeueCount: index === 0 ? 1 : 0,
+      dequeueReasons: index === 0 ? { merge_conflict: 1 } : {},
+      repeatedValidationCount: index === 0 ? 1 : 0,
+      explainedRepeatedValidationCount: 0,
+      unexplainedRepeatedValidationCount: index === 0 ? 1 : 0,
+      runnerWaitEvidenceComplete: true,
+      runnerWaitUpperBoundMs: index === 0 ? 31 * 60 * 1000 : 2 * 60 * 1000,
+      runnerEvidenceComplete: true,
+      wastedRunnerMs: 0,
+      postDequeueRunnerMs: 0,
+    },
+  }));
+  const value = summarizeMergeQueueDelivery(samples);
+  assert.equal(value.dequeue.mergeConflict.rate, 0.05);
+  assert.equal(value.unexplainedRepeatedValidationCount, 1);
+  assert.equal(value.runnerWait.qualified, false);
+  assert.equal(value.verdict.qualified, false);
+});
+
+test('post-merge advisory tail stays visible and outside merge-critical timing', () => {
+  const pull = {
+    merge_commit_sha: 'a'.repeat(40),
+    merged_at: '2026-08-17T01:00:00Z',
+  };
+  const evidence = postMergeAdvisoryEvidence(pull, [
+    {
+      id: 91,
+      head_sha: 'a'.repeat(40),
+      status: 'completed',
+      conclusion: 'success',
+      created_at: '2026-08-17T01:01:00Z',
+      updated_at: '2026-08-17T01:11:00Z',
+    },
+  ]);
+  assert.equal(evidence.status, 'observed');
+  assert.equal(evidence.criticalPathEligible, false);
+  assert.equal(evidence.mergeCriticalMetricImpact, 'excluded');
+  assert.equal(evidence.tailDurationMs, 11 * 60 * 1000);
+  const summary = summarizePostMergeAdvisory([{ postMergeAdvisory: evidence }]);
+  assert.equal(summary.observedCount, 1);
+  assert.equal(summary.statistics.p95Ms, 11 * 60 * 1000);
+  assert.equal(summary.criticalPathEligible, false);
 });
 
 test('queue summary retains dequeued work before eventual merge', () => {

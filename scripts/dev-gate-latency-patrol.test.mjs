@@ -29,10 +29,15 @@ function report(overrides = {}) {
     cache: { unknownCount: 0 },
     verdict: { qualified: true },
     mergeQueueDelivery: {
+      queueObservedCount: 30,
       statistics: { sampleCount: 30, p50Ms: 240_000, p90Ms: 300_000 },
       incompleteCount: 0,
+      notObservedCount: 0,
+      runnerEvidenceObservedCount: 30,
       dequeue: { pullRequestCount: 0, rate: 0 },
       repeatedValidationCount: 0,
+      unexplainedRepeatedValidationCount: 0,
+      runnerWait: { evidenceObservedCount: 30, qualified: true },
       wastedRunnerMs: 0,
       postDequeueRunnerMs: 0,
       verdict: { qualified: true },
@@ -121,6 +126,7 @@ test('required latency and merge delivery regressions classify separately', () =
   value.mergeQueueDelivery.verdict.qualified = false;
   value.mergeQueueDelivery.dequeue.pullRequestCount = 2;
   value.mergeQueueDelivery.repeatedValidationCount = 3;
+  value.mergeQueueDelivery.unexplainedRepeatedValidationCount = 3;
   value.mergeQueueDelivery.wastedRunnerMs = 1000;
   const result = classifyLatencyReport(value, {
     repository: value.repository,
