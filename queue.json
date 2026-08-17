@@ -3,7 +3,7 @@
   "contract": "kungfu-buildchain-dev-delivery-warrant-queue",
   "repository": "kungfu-systems/kungfu",
   "protectedBase": "dev/v4/v4.0",
-  "generation": 3795,
+  "generation": 3796,
   "fencingCounter": 509,
   "policy": {
     "agingSeconds": 900,
@@ -11,40 +11,7 @@
     "leaseSeconds": 3600,
     "emergencyPolicy": "reviewed-explicit-only"
   },
-  "activeWarrant": {
-    "schema": "kungfu.buildchain.dev-delivery-warrant/v1",
-    "repository": "kungfu-systems/kungfu",
-    "protectedBase": "dev/v4/v4.0",
-    "candidateId": "sha256:e67d74f3cb7108cb3265426d1b001e0dbac07bce87003ac23390a67d4cbc83a7",
-    "pullRequestNumber": 3256,
-    "sourceHead": "1603f7a01be3164566326f9df184ce5eedda9f77",
-    "assignmentRoot": "sha256:a1984fca2674dd221c0e37d9ac41b22ac64e346ceff87a7a7a5e356be127f8aa",
-    "initiativeRoot": "sha256:bfff817933e5a5ad693e4b902a84f6cc3a251235dd7377cb4091d92f805fa7ff",
-    "sourceIdentityRoot": "sha256:8e01d7784d9c35a9e346762eca2e7c3cf3c270bc0d15fc137b23e7e4e833dc80",
-    "sourcePatchRoot": "sha256:a76ce15e06f6d03c07fc9ad4cc4121bac91d33621d6ce8ef84f5d1cfc7ebe770",
-    "sourceProofRoot": "sha256:58cb90ddcdfc2692a7040d2f979a1081ba9b2ee75f27e4390774f2c8ef6969bf",
-    "planRoot": "sha256:1214d178b25aacff96268b8185430466d26eab20abfa1f36b95bbaa69d297eee",
-    "closureRoot": "sha256:ac6e52dc4778bd7be1e6224c9a526a00dc7fcdd56a84e07165a811b168158f3e",
-    "dependencyRoot": "sha256:7eec80733804b81cdb9e4f23b2378ce81b09f07465dae4a3a9c1c53559a2e9f3",
-    "toolchainRoot": "sha256:2ecb07894954a2e0de022615d4561e5ba3ae68376401941ecff77be03cd75a0f",
-    "environmentRoot": "sha256:ce8ac018bb38c00cc0f5e954dae39d921eb9437fb11314061e9628f456f39057",
-    "affectedPaths": [
-      "framework/tui/src/terminal-lifecycle.test.ts",
-      "framework/tui/src/terminal-lifecycle.ts"
-    ],
-    "sourceWorkflowRunId": 31989956267,
-    "deliveryClass": "non-native-fast",
-    "generation": 509,
-    "phase": "qualified",
-    "expectedOldStateRoot": "sha256:9c9a62a07e493115c6f61076a4c2c1d4c7c35a46eda50a10cf7c7acc557f75b0",
-    "issuedAt": "2026-08-17T03:58:12.414Z",
-    "expiresAt": "2026-08-17T05:29:50.066Z",
-    "fencingToken": "sha256:1c2c5986d5e0aba14c49d1fa665f638e612d7eb0e302572fa993ef92b26f90d6",
-    "nextAction": "Enter the GitHub merge queue at the exact fenced PR head; merge_group remains final authority.",
-    "nativeProofRoot": "sha256:cd935c5a204759c9d885a1c32f0c04c6568d389bce2e06afa9228325376e6072",
-    "nativeProofReuseRoot": "sha256:742abb220843a029fd0b00b0cb6f29fc9badd31dc09ce42365b61de49c7957b7",
-    "qualifiedAt": "2026-08-17T03:59:55.309Z"
-  },
+  "activeWarrant": null,
   "candidates": [
     {
       "repository": "kungfu-systems/kungfu",
@@ -36255,11 +36222,20 @@
       "sourceWorkflowRunId": 31989956267,
       "priority": "ordinary",
       "enqueuedAt": "2026-08-17T03:11:48.443Z",
-      "updatedAt": "2026-08-17T03:59:55.309Z",
+      "updatedAt": "2026-08-17T04:25:06.351Z",
       "attempts": 4,
       "recoveries": 0,
-      "status": "qualified",
-      "terminal": null,
+      "status": "cancelled",
+      "terminal": {
+        "outcome": "cancelled",
+        "terminalClass": "authoritative-cancellation",
+        "reason": "protected pull request event: synchronize",
+        "evidenceRoot": "sha256:36e39b69d3cd189264dd8e2a28a6af43728ed31215714b0090c78a207dc7c2d6",
+        "closedAt": "2026-08-17T04:25:06.351Z",
+        "fencingToken": "sha256:1c2c5986d5e0aba14c49d1fa665f638e612d7eb0e302572fa993ef92b26f90d6",
+        "leaseGeneration": 509,
+        "nativeProofRoot": "sha256:cd935c5a204759c9d885a1c32f0c04c6568d389bce2e06afa9228325376e6072"
+      },
       "affectedPaths": [
         "framework/tui/src/terminal-lifecycle.test.ts",
         "framework/tui/src/terminal-lifecycle.ts"
@@ -36674,6 +36650,6 @@
       ]
     }
   ],
-  "updatedAt": "2026-08-17T04:23:23.420Z",
-  "stateRoot": "sha256:a5621664ddd50bd56c01f6bdcc06e177dba888238676bcd7d2509768e2846f9f"
+  "updatedAt": "2026-08-17T04:25:06.351Z",
+  "stateRoot": "sha256:df57fa12802758740bb69380f4f3162ce2c5bfc07d9dd7a6ec93271642c63509"
 }
