@@ -3,7 +3,7 @@
   "contract": "kungfu-buildchain-dev-delivery-warrant-queue",
   "repository": "kungfu-systems/kungfu",
   "protectedBase": "dev/v4/v4.0",
-  "generation": 3805,
+  "generation": 3806,
   "fencingCounter": 510,
   "policy": {
     "agingSeconds": 900,
@@ -37003,11 +37003,20 @@
       "sourceWorkflowRunId": 31993424094,
       "priority": "ordinary",
       "enqueuedAt": "2026-08-17T04:20:53.615Z",
-      "updatedAt": "2026-08-17T04:20:53.615Z",
+      "updatedAt": "2026-08-17T05:02:58.569Z",
       "attempts": 1,
       "recoveries": 0,
-      "status": "queued",
-      "terminal": null,
+      "status": "cancelled",
+      "terminal": {
+        "outcome": "cancelled",
+        "reason": "protected pull request event: closed",
+        "evidenceRoot": "sha256:6a11fd83cfadf79b34e7e439dec9fc15471ec13172d558637e52b26c0652dafa",
+        "authority": "queued-candidate-cancellation",
+        "expectedSourceHead": "7676160dde766f0fe56d4c37992933a3c2411706",
+        "observedSourceHead": "7676160dde766f0fe56d4c37992933a3c2411706",
+        "eventAction": "closed",
+        "closedAt": "2026-08-17T05:02:58.569Z"
+      },
       "affectedPaths": [
         ".github/workflows/aws-us-macos-burst-qualification.yml",
         ".github/workflows/build.yml",
@@ -37021,6 +37030,6 @@
       ]
     }
   ],
-  "updatedAt": "2026-08-17T05:00:32.942Z",
-  "stateRoot": "sha256:4fabb78765ba6c34d4fcba407dec1b9c6648f44759c77665095b6d8a33900381"
+  "updatedAt": "2026-08-17T05:02:58.569Z",
+  "stateRoot": "sha256:060d86c96481611aeb85bf26cea07b4d531d382533892f25665af58a8182e530"
 }
