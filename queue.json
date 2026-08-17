@@ -3,7 +3,7 @@
   "contract": "kungfu-buildchain-dev-delivery-warrant-queue",
   "repository": "kungfu-systems/kungfu",
   "protectedBase": "dev/v4/v4.0",
-  "generation": 3849,
+  "generation": 3850,
   "fencingCounter": 512,
   "policy": {
     "agingSeconds": 900,
@@ -36819,7 +36819,7 @@
       "candidateId": "sha256:95fde86e70b8c776cfd1757ebabfe0b51e78f99580e5f32f001928d90d55fb59",
       "sourceHead": "ed7a759764703def90dd273de778183ec7c8554e",
       "sourcePatchRoot": "sha256:eb3f60ee2444e9a40581e11be351543a8aa80639c9206a599cb079ca01919e74",
-      "sourceProofRoot": "sha256:7aefb1882aecd52e840d86db22c14517676e2d27166f17ecca39a8a5957fc065",
+      "sourceProofRoot": "sha256:d9b665f11baeb3d1ae0bd6f55ad62ec92078f9b0b76c88741229ae400dcfec52",
       "planRoot": "sha256:b8e8904e8ca8bbc06849669e0beed932cb2576366297603920411b8e467cadae",
       "closureRoot": "sha256:106d175611d8634c988192302b9c464ae8ba3b6d023c2cff9910e401344c9624",
       "dependencyRoot": "sha256:938fe7249aaa90712b1faa4543fbca3777b4b3baf30457e2c1c989595952db1f",
@@ -36828,8 +36828,8 @@
       "sourceWorkflowRunId": 31997209485,
       "priority": "ordinary",
       "enqueuedAt": "2026-08-17T05:22:19.145Z",
-      "updatedAt": "2026-08-17T05:22:19.145Z",
-      "attempts": 1,
+      "updatedAt": "2026-08-17T07:25:50.035Z",
+      "attempts": 2,
       "recoveries": 0,
       "status": "queued",
       "terminal": null,
@@ -36885,6 +36885,6 @@
       ]
     }
   ],
-  "updatedAt": "2026-08-17T07:17:03.363Z",
-  "stateRoot": "sha256:2bcdf10f6708b730c2ad4f2ed705d6c7a5a2c7d8b8ce382237885b9d5e636171"
+  "updatedAt": "2026-08-17T07:25:50.035Z",
+  "stateRoot": "sha256:06744c10c98c1a2513f8379d28bf5d045f107ede09fb6faabf29d2cb4ee88301"
 }
