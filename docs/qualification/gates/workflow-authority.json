@@ -254,7 +254,7 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "diagnostic",
-          "definitionDigest": "sha256:210cf7b8616ecd1ddc00f3027662c0d3ad57807199ff41184fbf3b2aefd0b1d3",
+          "definitionDigest": "sha256:ea931acfdfd1b834638b707f769e880cd13bef72d36f0a5cd0caf8e276868735",
           "credentials": {"githubToken":"write","oidc":true,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
           "externalActions": ["kungfu-systems/buildchain/.github/workflows/.build.yml@675b4f2a51af7e5f2aac58011c7ede0313b2b105"],
           "steps": []
@@ -328,7 +328,7 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "qualifying",
-          "definitionDigest": "sha256:ace627b308136dd4a51ff51a83c74422493db585b5089bcb5fc928af339dea61",
+          "definitionDigest": "sha256:15b09f4cf46b1e4ce4c929f7d9565b0ec4ba3ba60d18ba7dddaeab311916cdee",
           "credentials": {"githubToken":"write","oidc":true,"repositorySecrets":["BUILDCHAIN_ARTIFACT_RELAY_S3_DOWNLOAD_ROLE_ARN","BUILDCHAIN_ARTIFACT_RELAY_S3_ROLE_ARN","BUILDCHAIN_ARTIFACT_RELAY_S3_UPLOAD_ROLE_ARN","KUNGFU_GITHUB_TOKEN"],"inheritedSecrets":false,"environment":null},
           "externalActions": ["kungfu-systems/buildchain/.github/workflows/.build.yml@675b4f2a51af7e5f2aac58011c7ede0313b2b105"],
           "steps": []

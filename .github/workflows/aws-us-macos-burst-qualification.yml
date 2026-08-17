@@ -51,7 +51,7 @@ jobs:
     uses: kungfu-systems/buildchain/.github/workflows/.build.yml@675b4f2a51af7e5f2aac58011c7ede0313b2b105
     with:
       buildchain-ref: 675b4f2a51af7e5f2aac58011c7ede0313b2b105
-      buildchain-contract-expected-channel: v3-alpha
+      buildchain-contract-expected-channel: alpha
       buildchain-contract-expected-major: v3
       runner-preset: aws-us-ec2-macos-jit
       aws-ec2-macos-runner-label: ${{ inputs.runner-label }}
