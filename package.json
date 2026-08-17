@@ -308,6 +308,7 @@
     "pack:core-platform": "node scripts/require-shifu.mjs pack:core-platform && pnpm --filter @kungfu-tech/core run pack-platform",
     "release:qualify:core-platform": "node scripts/require-shifu.mjs release:qualify:core-platform && node scripts/run-release-qualification.mjs --core-platform-only",
     "test:npm-core-platform-distribution": "node scripts/require-shifu.mjs test:npm-core-platform-distribution && node --test framework/core/tests/core-platform-package.test.js scripts/alpha-cache-evidence.test.mjs scripts/alpha-promotion-preflight.test.mjs scripts/check-npm-package-registry.test.mjs scripts/collect-layer-publication.test.mjs scripts/npm-release-inventory.test.mjs scripts/run-release-qualification.test.mjs scripts/run-shifu-lifecycle.test.mjs scripts/verify-kungfu-release-admission.test.mjs tests/qualification/layers/release/run.test.mjs",
+    "test:domain-product-adopter": "node scripts/require-shifu.mjs test:domain-product-adopter && node --test tests/qualification/domain-product-adopter/run.test.mjs",
     "dist": "node scripts/require-shifu.mjs dist && pnpm --filter @kungfu-tech/product-kungfu run dist",
     "dist:desktop": "node scripts/require-shifu.mjs dist:desktop && pnpm --filter @kungfu-tech/product-kungfu run dist:desktop",
     "dist:cli": "node scripts/require-shifu.mjs dist:cli && pnpm --filter @kungfu-tech/product-kungfu run dist:cli",
