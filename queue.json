@@ -3,7 +3,7 @@
   "contract": "kungfu-buildchain-dev-delivery-warrant-queue",
   "repository": "kungfu-systems/kungfu",
   "protectedBase": "dev/v4/v4.0",
-  "generation": 3911,
+  "generation": 3912,
   "fencingCounter": 516,
   "policy": {
     "agingSeconds": 900,
@@ -37172,8 +37172,56 @@
         "tests/qualification/agent-hub-20/qualification.test.mjs",
         "tests/qualification/agent-hub-20/responsibility-map.json"
       ]
+    },
+    {
+      "repository": "kungfu-systems/kungfu",
+      "protectedBase": "dev/v4/v4.0",
+      "pullRequestNumber": 3256,
+      "assignmentRoot": "sha256:a1984fca2674dd221c0e37d9ac41b22ac64e346ceff87a7a7a5e356be127f8aa",
+      "initiativeRoot": "sha256:bfff817933e5a5ad693e4b902a84f6cc3a251235dd7377cb4091d92f805fa7ff",
+      "sourceIdentityRoot": "sha256:8e01d7784d9c35a9e346762eca2e7c3cf3c270bc0d15fc137b23e7e4e833dc80",
+      "deliveryClass": "native-proof-required",
+      "identitySemantics": "chained-attempt-v2",
+      "predecessorCandidateId": "sha256:80ffa91c9886a2d7b3e3d3df3cfa94d141be9583ae8c548f7f8b28089e401b39",
+      "candidateId": "sha256:2c73457fbaa3d966c26378043c0fd32b5214d3ec988ab51ba9c0c4d8c6d4f74c",
+      "sourceHead": "10da5f86655ae9b760a4b226ead438566c175fdd",
+      "sourcePatchRoot": "sha256:e1176f823d137853a901917dcdcdbd6c34dc2596b74dbfd4679c9b81e0135c0a",
+      "sourceProofRoot": "sha256:5e81b32998088aa94e6495314f2baca71ed1c5c15ba3215beaf87bf5df7da5be",
+      "planRoot": "sha256:d636d545262763d06402da25072679f99fa2af6ee5f80be0e7fbb691ad03dc0f",
+      "closureRoot": "sha256:106d175611d8634c988192302b9c464ae8ba3b6d023c2cff9910e401344c9624",
+      "dependencyRoot": "sha256:e6c10cdf5fead1d980d7912c92a3c269a1c54e3fa4f13f97deadeeadb319082b",
+      "toolchainRoot": "sha256:2ecb07894954a2e0de022615d4561e5ba3ae68376401941ecff77be03cd75a0f",
+      "environmentRoot": "sha256:c5f5da5917c6ff93a509a62b18d4b9b69325755c4c7229b553b0016cde83788f",
+      "sourceWorkflowRunId": 32019019859,
+      "priority": "ordinary",
+      "enqueuedAt": "2026-08-17T10:26:07.154Z",
+      "updatedAt": "2026-08-17T10:26:07.154Z",
+      "attempts": 1,
+      "recoveries": 0,
+      "status": "queued",
+      "terminal": null,
+      "affectedPaths": [
+        ".github/workflows/dev-alpha-candidate-patrol.yml",
+        ".github/workflows/release-new-version.yml",
+        "docs/adr/KF-ADR-019fe996-1912-7144-8fa5-3fceaa416365.md",
+        "docs/development/version-release-design.md",
+        "docs/qualification/gates/release-and-promotion.md",
+        "docs/qualification/gates/workflow-authority.json",
+        "docs/qualification/gates/workflow-authority.md",
+        "framework/release/publication-surfaces.json",
+        "framework/tui/src/terminal-lifecycle.test.ts",
+        "framework/tui/src/terminal-lifecycle.ts",
+        "scripts/check-release-provenance-object.test.mjs",
+        "scripts/check-shifu-documentation-contract.mjs",
+        "scripts/dev-alpha-candidate-patrol.test.mjs",
+        "scripts/release-provenance-object.py",
+        "scripts/shifu-documentation-runtime.test.mjs",
+        "scripts/source-acceptance-git.test.mjs",
+        "scripts/source-acceptance.mjs",
+        "scripts/verify-alpha-release-cut-lock.test.mjs"
+      ]
     }
   ],
-  "updatedAt": "2026-08-17T10:25:57.783Z",
-  "stateRoot": "sha256:331798a190af1bd54f8814842ecb4069d20753f891c4f039d327d662fcf77e87"
+  "updatedAt": "2026-08-17T10:26:07.154Z",
+  "stateRoot": "sha256:41bf0fc297b0a675bc6e71e02f8432a840e2321eb1bbe2aa257173511e5e1a09"
 }
