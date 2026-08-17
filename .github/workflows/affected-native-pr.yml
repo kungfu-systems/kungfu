@@ -76,11 +76,12 @@ jobs:
 
   source_acceptance:
     name: Candidate source acceptance
-    # Protected Buildchain merge #2872 admits exact proof reuse across a
-    # bounded, tree-equivalent base advance while retaining fail-closed replay.
-    uses: kungfu-systems/buildchain/.github/workflows/check.yml@8e9ce32ddd931fb294ab1a9a2a40e89ba743391a
+    # Protected Buildchain merge 675b4f2 admits exact proof reuse across a
+    # bounded, tree-equivalent base advance and preserves the merge-group base
+    # history required by the fail-closed source lifecycle.
+    uses: kungfu-systems/buildchain/.github/workflows/check.yml@675b4f2a51af7e5f2aac58011c7ede0313b2b105
     with:
-      buildchain-ref: 8e9ce32ddd931fb294ab1a9a2a40e89ba743391a
+      buildchain-ref: 675b4f2a51af7e5f2aac58011c7ede0313b2b105
       mode: source
       upload-artifacts: true
       source-proof-reuse: true
