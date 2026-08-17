@@ -413,6 +413,7 @@ test('freeze restores an ignored product Atlas body from a tracked gzip bundle w
       materialSource: {
         kind: 'tracked-gzip',
         originCommit: '19915bafad261d8d9357149b53ff584c9db56bcf',
+        originTree: '2'.repeat(40),
         bundleRoot: bundleRelative,
       },
     })}\n`,

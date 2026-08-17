@@ -233,6 +233,16 @@ function walk(directory) {
 /** @param {{installerBytes?:number, releasePassportRoot?:string}} [options] */
 export function compilePortableBundle(options = {}) {
   const selector = readJson(SELECTOR);
+  const sourceCommit = String(selector.materialSource?.originCommit || '');
+  const sourceTree = String(selector.materialSource?.originTree || '');
+  if (
+    !/^[0-9a-f]{40}$/.test(sourceCommit) ||
+    !/^[0-9a-f]{40}$/.test(sourceTree)
+  ) {
+    throw new Error(
+      'portable Documentation Atlas selector requires exact origin commit and tree',
+    );
+  }
   const atlasDigest = selector.atlasRoot.slice('sha256:'.length);
   const materialBase = `.xinfa/material-bundles/sha256/${atlasDigest}`;
   const atlas = gzJson(`${materialBase}/atlas.json`);
@@ -407,11 +417,6 @@ export function compilePortableBundle(options = {}) {
     classification: classificationCovers(files, classificationPaths),
   };
   const witnessBytes = fs.readFileSync(path.join(ROOT, WITNESS));
-  const sourceTree = execFileSync(
-    'git',
-    ['rev-parse', `${selector.materialSource.originCommit}^{tree}`],
-    { cwd: ROOT, encoding: 'utf8' },
-  ).trim();
   const classification = {
     schema: classificationCore.schema,
     counts,
@@ -449,7 +454,7 @@ export function compilePortableBundle(options = {}) {
     },
     sourceCut: {
       repository: 'https://github.com/kungfu-systems/kungfu.git',
-      commit: selector.materialSource.originCommit,
+      commit: sourceCommit,
       tree: sourceTree,
     },
     releasePassportBinding: {
