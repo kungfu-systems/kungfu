@@ -3,7 +3,7 @@
   "contract": "kungfu-buildchain-dev-delivery-warrant-queue",
   "repository": "kungfu-systems/kungfu",
   "protectedBase": "dev/v4/v4.0",
-  "generation": 4003,
+  "generation": 4004,
   "fencingCounter": 521,
   "policy": {
     "agingSeconds": 900,
@@ -60,7 +60,7 @@
     "phase": "provisional",
     "expectedOldStateRoot": "sha256:3ee4d835f2f75f744f18860f452784af572060d5c0ef3347a54165537f49eadd",
     "issuedAt": "2026-08-17T17:36:02.502Z",
-    "expiresAt": "2026-08-17T19:06:02.502Z",
+    "expiresAt": "2026-08-17T19:20:36.271Z",
     "fencingToken": "sha256:344daf278350151703893a1eb19526b72c7e320cf24125dd35fb591e1d4c20ea",
     "nextAction": "Run or reuse the exact semantic native proof, then atomically qualify this fenced Warrant."
   },
@@ -37516,10 +37516,10 @@
       "sourceWorkflowRunId": 32035776098,
       "priority": "ordinary",
       "enqueuedAt": "2026-08-17T14:32:39.134Z",
-      "updatedAt": "2026-08-17T17:36:02.502Z",
+      "updatedAt": "2026-08-17T17:50:36.271Z",
       "attempts": 1,
       "recoveries": 0,
-      "status": "selected",
+      "status": "proving",
       "terminal": null,
       "affectedPaths": [
         ".xinfa/portable-atlas-classification.json.gz",
@@ -37646,6 +37646,6 @@
       ]
     }
   ],
-  "updatedAt": "2026-08-17T17:49:53.287Z",
-  "stateRoot": "sha256:e1bdb77daf771934b9d04effcbfb8e9af87499daa2995fde008f52aaa012a5e4"
+  "updatedAt": "2026-08-17T17:50:36.271Z",
+  "stateRoot": "sha256:9d4c33125af4d3e7c4692c21521f168b8e70fe2c713400c0fd3aca3d698c9328"
 }
