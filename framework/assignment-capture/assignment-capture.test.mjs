@@ -21,7 +21,11 @@ import {
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.resolve(HERE, '..', '..');
-const FIXTURE = path.join(HERE, 'fixtures', 'atlas-go-card-roundtrip-v1.json');
+const FIXTURE = path.join(
+  HERE,
+  'fixtures',
+  'assignment-request-roundtrip-v1.json',
+);
 
 function temporary() {
   return fs.mkdtempSync(path.join(os.tmpdir(), 'kungfu-assignment-capture-'));
@@ -30,13 +34,13 @@ function temporary() {
 function request(workDefinition, expiresAt = null) {
   return {
     schema: ASSIGNMENT_REQUEST_SCHEMA,
-    source: { kind: 'atlas-go-card' },
+    source: { kind: 'external-work-coordinator' },
     retention: { policy: RETENTION_POLICY, expiresAt },
     workDefinition,
   };
 }
 
-test('capture round-trips the complete historical Atlas card field set', () => {
+test('capture round-trips a complete external Assignment definition', () => {
   const root = temporary();
   try {
     const fixture = JSON.parse(fs.readFileSync(FIXTURE, 'utf8'));
@@ -175,7 +179,7 @@ test('expiry cleanup is dry-run-first and retains captured bytes', () => {
   const root = temporary();
   try {
     const response = captureAssignmentRequest(
-      request({ goal_id: 'expired' }, '2026-01-01T00:00:00Z'),
+      request({ assignment_id: 'expired' }, '2026-01-01T00:00:00Z'),
       {
         workspaceRoot: root,
         cwd: root,
@@ -234,7 +238,7 @@ test('cleanup fails closed for request material without a valid receipt', () => 
   const root = temporary();
   try {
     const response = captureAssignmentRequest(
-      request({ goal_id: 'incomplete' }, '2026-01-01T00:00:00Z'),
+      request({ assignment_id: 'incomplete' }, '2026-01-01T00:00:00Z'),
       {
         workspaceRoot: root,
         cwd: root,
@@ -266,7 +270,7 @@ test('Shifu source entry captures without compiled Kungfu artifacts', () => {
     const requestPath = path.join(root, 'request.json');
     fs.writeFileSync(
       requestPath,
-      `${JSON.stringify(request({ goal_id: 'source-entry' }))}\n`,
+      `${JSON.stringify(request({ assignment_id: 'source-entry' }))}\n`,
     );
     const args = [
       'work',

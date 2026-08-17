@@ -25,7 +25,7 @@
       "pointer": {
         "kind": "file",
         "path": "framework/core/src/python/kungfu/agent/mode-selection.md",
-        "sha256": "e25fdbe6971bd7aa256e3b817fffa68f7a7010c6581acb69849a5993c26199b3"
+        "sha256": "1b002c9befa4dea4334941e64457ee239352ce985c5140939fdb554a619ed302"
       },
       "description": "Remote-sync mode rule requiring source-scoped import."
     },
@@ -34,7 +34,7 @@
       "pointer": {
         "kind": "file",
         "path": "framework/core/src/python/kungfu/agent/commands.json",
-        "sha256": "7f80da4abae356e095ad13e88cfc6e656eb9ddd3661128d5a23ba0eef219f4aa"
+        "sha256": "7b54b0c450764369c3c39db17d0398550d18135b395852985dfc9021a7dbfbcc"
       },
       "description": "Remote add/sync command declarations and mode metadata."
     },
@@ -43,13 +43,13 @@
       "pointer": {
         "kind": "file",
         "path": "framework/core/src/python/kungfu/cli/commands/agent.py",
-        "sha256": "bb980fc1a1de42b00e34576dc34894e6fd070938b0a39f1c02afd321ef9d2b78"
+        "sha256": "6bc00a87038895d9107f2bb8a65f461ae8b67a8172923b1e8a5f719544139cbe"
       },
       "description": "Agent command surface including mode selection and bootstrap status."
     }
   ],
   "hashes": {
-    "registrySha256": "1365d3a445e1587000175cdbc7f50ed83dfe6ebf4190c73f5d18f0bb41c35e15",
+    "registrySha256": "a2155d2077a01efe2cded78dcdeb7f7533f7cbc9c945ae5b7bab85b178af9cb1",
     "sourceSha256": "7d79f580d229ff16821568b5200746cc17abd68fa7ec533ca8ff2c49b7e7e8c7",
     "evidenceSha256": [
       {
@@ -58,15 +58,15 @@
       },
       {
         "path": "framework/core/src/python/kungfu/agent/mode-selection.md",
-        "sha256": "e25fdbe6971bd7aa256e3b817fffa68f7a7010c6581acb69849a5993c26199b3"
+        "sha256": "1b002c9befa4dea4334941e64457ee239352ce985c5140939fdb554a619ed302"
       },
       {
         "path": "framework/core/src/python/kungfu/agent/commands.json",
-        "sha256": "7f80da4abae356e095ad13e88cfc6e656eb9ddd3661128d5a23ba0eef219f4aa"
+        "sha256": "7b54b0c450764369c3c39db17d0398550d18135b395852985dfc9021a7dbfbcc"
       },
       {
         "path": "framework/core/src/python/kungfu/cli/commands/agent.py",
-        "sha256": "bb980fc1a1de42b00e34576dc34894e6fd070938b0a39f1c02afd321ef9d2b78"
+        "sha256": "6bc00a87038895d9107f2bb8a65f461ae8b67a8172923b1e8a5f719544139cbe"
       }
     ],
     "artifactSha256": [
@@ -76,7 +76,7 @@
       },
       {
         "path": "framework/core/src/python/kungfu/agent/mode-selection.md",
-        "sha256": "e25fdbe6971bd7aa256e3b817fffa68f7a7010c6581acb69849a5993c26199b3"
+        "sha256": "1b002c9befa4dea4334941e64457ee239352ce985c5140939fdb554a619ed302"
       }
     ]
   },
@@ -90,7 +90,7 @@
     {
       "name": "agent-mode-selection-doc",
       "path": "framework/core/src/python/kungfu/agent/mode-selection.md",
-      "sha256": "e25fdbe6971bd7aa256e3b817fffa68f7a7010c6581acb69849a5993c26199b3",
+      "sha256": "1b002c9befa4dea4334941e64457ee239352ce985c5140939fdb554a619ed302",
       "expectedPackagePath": "kungfu/agent/mode-selection.md"
     }
   ],

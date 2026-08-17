@@ -11,6 +11,8 @@ import click
 
 from kungfu import contract as contract_runtime
 from kungfu.cli.commands import PrioritizedCommandGroup, kfc
+from kungfu.cli.commands.primitive_role import register_role_commands
+from kungfu.cli.surface_contract import surface
 from kungfu.primitive_management import availability_report
 
 
@@ -171,3 +173,19 @@ def primitive_availability(
     _emit(payload) if as_json else click.echo(
         json.dumps(payload, indent=2, sort_keys=True)
     )
+
+
+@kfc.group(
+    name="atlas",
+    cls=PrioritizedCommandGroup,
+    help_priority=2,
+    help="operate proof-backed state through the Atlas primitive",
+)
+@click.help_option("-h", "--help")
+@kfc.pass_context()
+@surface(id="kungfu.atlas")
+def atlas(ctx):
+    del ctx
+
+
+register_role_commands(atlas, "atlas")

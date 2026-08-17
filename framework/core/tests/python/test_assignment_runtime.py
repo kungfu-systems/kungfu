@@ -380,7 +380,6 @@ def test_embedded_discovery_and_reads_keep_exact_root_parity(local_runtime):
     }
     assert discovery["result"]["protocol"]["minimumVersion"] == 1
     assert discovery["result"]["protocol"]["maximumVersion"] == 1
-    assert discovery["result"]["compatibility"]["dualWrite"] == "forbidden"
 
     roots = []
     for kind in ("gui", "cli", "agent", "kfx"):

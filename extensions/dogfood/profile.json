@@ -16,12 +16,12 @@
   "kfd1": {
     "contractWorld": {
       "path": "contracts/world.json",
-      "sha256": "6ead9f6163e3ce05c72b9465411f1c1561aa8f505a2c73ed9028d0c4cb99a7ca"
+      "sha256": "58b58168a9933036f435414405ec020e16170902fa6ecb2c1a28936d13ccd24e"
     },
     "factSurfaces": [
       {
         "path": "contracts/facts.json",
-        "sha256": "ab3b638c462abf676de8a2e1226d4bbe427b20109143d9c81976f03f4c24be12"
+        "sha256": "33c46b133948984977e023ac026562b0ff072f37051c4b726e4f03aa6a2cc064"
       }
     ],
     "reducers": [],
@@ -52,13 +52,13 @@
   "kfd3": {
     "collaboration": {
       "path": "collaboration/interface.json",
-      "sha256": "081e05ca0e646327b566de8dde04b0f909e6182bfb087b07678c188ccf5913ba"
+      "sha256": "af1e54b7fe48858607b7a014ece3b526c2fba9635741dac4a9ab44e10276f9ae"
     }
   },
   "actions": {
     "registry": {
       "path": "actions/registry.json",
-      "sha256": "cbefcd2deed7c73f04f363d60af2192c1f18eb1ca95e54d5a2855996c9b97298"
+      "sha256": "f00ddaf8b7e99050540d654c46acfc6bd4dc0d4c1ac2b004328d4e525db7c86a"
     }
   },
   "views": {
@@ -70,7 +70,7 @@
   "migrations": {
     "registry": {
       "path": "migrations/registry.json",
-      "sha256": "8481cfee4e529a5a3d3c3ab5004fdce7618a22c5373a318b2734626eb9c7291a"
+      "sha256": "440c1dd01fc89f137dd3636a262a7e00b21b9d38d4c030330e5ccfc7e21675a8"
     }
   },
   "permissions": {

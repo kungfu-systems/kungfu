@@ -17,6 +17,7 @@ from kungfu import assignment_close
 from kungfu import assignment_evidence
 from kungfu import assignment_review_lifecycle
 from kungfu import assignment_start
+from kungfu import initiative_family
 from kungfu.assignment_runtime import (
     LocalAssignmentRuntimeApplication,
     create_runtime_host_command,
@@ -33,6 +34,7 @@ from kungfu.cli.commands import (
 from kungfu.cli.commands import assignment_review
 from kungfu.cli.commands import assignment_session
 from kungfu.cli.surface_contract import surface
+from kungfu.initiative_family import typed_v2 as initiative_family_v2
 from kungfu.storage import service as storage_service
 from kungfu.workspace import prepare_workspace_write, resolve_workspace_target
 from kungfu.assignment_lifecycle.ports import AssignmentRuntime
@@ -74,7 +76,7 @@ def _write_immutable_json(path, value):
     if path is None:
         return None
     output = path.expanduser().resolve()
-    content = (orchestration.canonical_json(value) + "\n").encode("utf-8")
+    content = (initiative_family.canonical_json(value) + "\n").encode("utf-8")
     if output.exists() and output.read_bytes() != content:
         raise ValueError("immutable output exists with different bytes")
     output.parent.mkdir(parents=True, exist_ok=True)
@@ -83,25 +85,21 @@ def _write_immutable_json(path, value):
     return str(output)
 
 
-def _failure(code, error, next_actions=None):
-    _emit(
-        {
-            "schema": "kungfu.assignment-orchestration.diagnosis/v1",
-            "ok": False,
-            "code": code,
-            "message": str(error),
-            "next_actions": next_actions or [],
-        }
-    )
-
-
 def _run(operation):
     try:
         return operation()
     except click.exceptions.Exit:
         raise
     except (OSError, RuntimeError, ValueError, json.JSONDecodeError) as error:
-        _failure("assignment-operation-failed", error)
+        _emit(
+            {
+                "schema": "kungfu.assignment-orchestration.diagnosis/v1",
+                "ok": False,
+                "code": "assignment-operation-failed",
+                "message": str(error),
+                "next_actions": [],
+            }
+        )
         raise click.exceptions.Exit(2) from error
 
 
@@ -318,7 +316,7 @@ def _admit_captured_assignment(
         promoted = orchestration.load_initiative_admission(
             initiative_admission, stdin_text=initiative_admission_stdin
         )
-    projected = orchestration.atlas_assignment_projection(
+    projected = orchestration.assignment_projection(
         captured,
         initiative_id=initiative_id,
         assignment_id=assignment_id,
@@ -366,7 +364,6 @@ def _admit_captured_assignment(
             "dependencyRefs": projected["dependency_refs"],
             "responsibility": projected["responsibility"],
             "acceptanceRoot": "",
-            "atlasRoot": "",
             "contextBinding": projected["context_binding"],
             "projectCutRoot": projected["project_cut_root"],
             "evidenceEpisodeRoots": projected["evidence_episode_roots"],
@@ -842,7 +839,9 @@ def _work_review_plan(
             "assignmentId": assignment_id,
             "phase": status_value["phase"],
             "queryProofRoot": status_value["query_proof_root"],
-            "assignmentRoot": orchestration.semantic_root(status_value["assignment"]),
+            "assignmentRoot": initiative_family.semantic_root(
+                status_value["assignment"]
+            ),
             "workDefinitionRoot": status_value["assignment"]["work_definition_root"],
             "acceptanceChecks": acceptance_checks,
         },
@@ -895,7 +894,7 @@ def _work_review_plan(
             "runId": retained["report"]["runId"],
             "episodeId": retained["report"]["episode"]["episodeId"],
             "reviewCut": retained["report"]["work"]["workRef"]["systemTimeCut"],
-            "assessmentRoot": orchestration.semantic_root(retained["assessment"]),
+            "assessmentRoot": initiative_family.semantic_root(retained["assessment"]),
         }
         if retained is not None
         else {
@@ -957,7 +956,7 @@ def _work_review_plan(
         }
     )
     body["effects"] = effects
-    return {**body, "planRoot": orchestration.semantic_root(body)}
+    return {**body, "planRoot": initiative_family.semantic_root(body)}
 
 
 def _find_retained_reviewer_evidence(runtime_dir, plan):
@@ -1562,7 +1561,7 @@ def status(ctx, workspace_root, home, initiative_id, assignment_id, now):
 )
 @assignment_context
 def family_contract_command(ctx):
-    _emit(orchestration.family_contract())
+    _emit(initiative_family.family_contract())
 
 
 @assignment.command(
@@ -1578,13 +1577,13 @@ def family_contract_command(ctx):
 def family_create(ctx, blueprint_file, out):
     def operation():
         blueprint = json.loads(blueprint_file.read_text(encoding="utf-8"))
-        state = orchestration.create_family_state(blueprint)
+        state = initiative_family.create_family_state(blueprint)
         return {
             "schema": "kungfu.work-control.initiative-family-create/v1",
             "state": state,
             "stateRoot": state["stateRoot"],
             "outputPath": _write_immutable_json(out, state),
-            "verification": orchestration.verify_family_state(state),
+            "verification": initiative_family.verify_family_state(state),
         }
 
     _emit(_run(operation))
@@ -1608,14 +1607,14 @@ def family_transition(ctx, state_file, transition_file, out):
     def operation():
         state = json.loads(state_file.read_text(encoding="utf-8"))
         transition = json.loads(transition_file.read_text(encoding="utf-8"))
-        successor = orchestration.transition_family_state(state, transition)
+        successor = initiative_family.transition_family_state(state, transition)
         return {
             "schema": "kungfu.work-control.initiative-family-transition-result/v1",
             "state": successor,
             "stateRoot": successor["stateRoot"],
             "previousStateRoot": successor["previousStateRoot"],
             "outputPath": _write_immutable_json(out, successor),
-            "verification": orchestration.verify_family_state(successor),
+            "verification": initiative_family.verify_family_state(successor),
         }
 
     _emit(_run(operation))
@@ -1633,7 +1632,7 @@ def family_transition(ctx, state_file, transition_file, out):
 def family_verify(ctx, state_file):
     def operation():
         state = json.loads(state_file.read_text(encoding="utf-8"))
-        return orchestration.verify_family_state(state)
+        return initiative_family.verify_family_state(state)
 
     _emit(_run(operation))
 
@@ -1644,7 +1643,7 @@ def family_verify(ctx, state_file):
 )
 @assignment_context
 def family_contract_v2_command(ctx):
-    _emit(orchestration.family_contract_v2())
+    _emit(initiative_family_v2.family_contract_v2())
 
 
 @assignment.command(
@@ -1665,12 +1664,12 @@ def family_upgrade_v2(ctx, state_file, binding_file, out):
     def operation():
         state = json.loads(state_file.read_text(encoding="utf-8"))
         bindings = json.loads(binding_file.read_text(encoding="utf-8"))
-        upgrade = orchestration.upgrade_family_state_v2(state, bindings)
+        upgrade = initiative_family_v2.upgrade_family_state_v2(state, bindings)
         successor = upgrade["successorState"]
         return {
             **upgrade,
             "outputPath": _write_immutable_json(out, successor),
-            "verification": orchestration.verify_family_state_v2(successor),
+            "verification": initiative_family_v2.verify_family_state_v2(successor),
         }
 
     _emit(_run(operation))
@@ -1694,7 +1693,7 @@ def family_transition_v2(ctx, state_file, transition_file, out):
     def operation():
         state = json.loads(state_file.read_text(encoding="utf-8"))
         transition = json.loads(transition_file.read_text(encoding="utf-8"))
-        successor = orchestration.transition_family_state_v2(state, transition)
+        successor = initiative_family_v2.transition_family_state_v2(state, transition)
         return {
             "schema": "kungfu.work-control.initiative-family-transition-result/v2",
             "state": successor,
@@ -1703,7 +1702,7 @@ def family_transition_v2(ctx, state_file, transition_file, out):
             "v1ProjectionRoot": successor["v1ProjectionRoot"],
             "typedBindingRoot": successor["typedBindingRoot"],
             "outputPath": _write_immutable_json(out, successor),
-            "verification": orchestration.verify_family_state_v2(successor),
+            "verification": initiative_family_v2.verify_family_state_v2(successor),
         }
 
     _emit(_run(operation))
@@ -1721,7 +1720,7 @@ def family_transition_v2(ctx, state_file, transition_file, out):
 def family_verify_v2(ctx, state_file):
     def operation():
         state = json.loads(state_file.read_text(encoding="utf-8"))
-        return orchestration.verify_family_state_v2(state)
+        return initiative_family_v2.verify_family_state_v2(state)
 
     _emit(_run(operation))
 
@@ -1849,7 +1848,7 @@ def binding_create(
         output_path = None
         if out is not None:
             output_path = out.expanduser().resolve()
-            content = (orchestration.canonical_json(binding) + "\n").encode("utf-8")
+            content = (initiative_family.canonical_json(binding) + "\n").encode("utf-8")
             if output_path.exists() and output_path.read_bytes() != content:
                 raise ValueError("binding output exists with different bytes")
             output_path.parent.mkdir(parents=True, exist_ok=True)

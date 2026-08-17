@@ -11,7 +11,7 @@
     "version": "4.0.0-alpha.3",
     "channel": "repository-default",
     "tag": "v4.0.0-alpha.3",
-    "sourceSha": "bccb3d4cd6299f66c7803911a1a53b71af961ffb"
+    "sourceSha": "c0abdecb4b28c570596c97c311212af2608261f3"
   },
   "claims": [
     {
@@ -29,7 +29,7 @@
           "pointer": {
             "kind": "file",
             "path": "framework/core/src/python/kungfu/agent/commands.json",
-            "sha256": "7f80da4abae356e095ad13e88cfc6e656eb9ddd3661128d5a23ba0eef219f4aa"
+            "sha256": "7b54b0c450764369c3c39db17d0398550d18135b395852985dfc9021a7dbfbcc"
           },
           "description": "Machine-readable command catalog and mode maturity metadata."
         },
@@ -38,7 +38,7 @@
           "pointer": {
             "kind": "file",
             "path": "framework/core/src/python/kungfu/agent/cli_surface.catalog.json",
-            "sha256": "64bda4ac0053929628337948b08ce72d58aabb87db2fb84a25c5decaf5d75170"
+            "sha256": "f922f18f7a449d9af13933c4779dda7f7b433401731ab898437225d474ca8f52"
           },
           "description": "Complete deterministic CLI surface graph shared by offline Agent capabilities and catalog parity checks."
         },
@@ -65,7 +65,7 @@
           "pointer": {
             "kind": "file",
             "path": "framework/core/src/python/kungfu/agent/mode-selection.md",
-            "sha256": "e25fdbe6971bd7aa256e3b817fffa68f7a7010c6581acb69849a5993c26199b3"
+            "sha256": "1b002c9befa4dea4334941e64457ee239352ce985c5140939fdb554a619ed302"
           },
           "description": "Human and agent-readable mode selection rules."
         },
@@ -83,7 +83,7 @@
           "pointer": {
             "kind": "file",
             "path": "scripts/verify-agent-pack.mjs",
-            "sha256": "dc436e71ac0ff068c4fd8231cacd13641a7a117e7522cbd1e2259a3cce82ca77"
+            "sha256": "7c234331b93fe3f082560ea125d5ae55a6f54068a376aea72fc55e95a2553b46"
           },
           "description": "Read-only verifier for installed agent pack completeness and command/doc consistency."
         },
@@ -148,84 +148,6 @@
       "status": "audited"
     },
     {
-      "id": "codex-report-receipts",
-      "statement": "Kungfu report mode exposes a native Codex goal adapter with a verifiable receipt path, and token-only or unknown cost is represented as unknown rather than fabricated zero-dollar cost.",
-      "category": "kfd-2",
-      "source": {
-        "kind": "file",
-        "path": "framework/core/src/python/kungfu/cli/commands/codex.py",
-        "sha256": "50efcd1f66507e05c06db4a4b78e43b0fce404ba6745d8eecd66108d147e4816"
-      },
-      "evidence": [
-        {
-          "type": "file",
-          "pointer": {
-            "kind": "file",
-            "path": "framework/core/src/python/kungfu/cli/commands/codex.py",
-            "sha256": "50efcd1f66507e05c06db4a4b78e43b0fce404ba6745d8eecd66108d147e4816"
-          },
-          "description": "Codex goal report adapter and receipt verifier CLI implementation."
-        },
-        {
-          "type": "file",
-          "pointer": {
-            "kind": "file",
-            "path": "framework/core/src/python/kungfu/rewind/cost/codex.py",
-            "sha256": "859526f1e21f9596d064388b365019858436026aad9628706cabd1d6fe078699"
-          },
-          "description": "Codex cost adapter: tokens are reported, dollar cost remains unknown when not provided by the provider."
-        },
-        {
-          "type": "file",
-          "pointer": {
-            "kind": "file",
-            "path": "framework/core/src/python/kungfu/rewind/cost_wire.py",
-            "sha256": "76887d0ba61675be4fd9e7f11cabce1d1be952f07370a156095b0423d01aba2c"
-          },
-          "description": "Cost wire model preserving known/unknown cost distinction."
-        },
-        {
-          "type": "file",
-          "pointer": {
-            "kind": "file",
-            "path": "framework/core/src/python/kungfu/agent/examples/report-mode.md",
-            "sha256": "228b02f232edeeea47ec90c669201087a5ca1fc78d9a0e290b65a19361bac949"
-          },
-          "description": "Report-mode user and agent procedure including Codex receipt verification."
-        },
-        {
-          "type": "file",
-          "pointer": {
-            "kind": "file",
-            "path": "framework/core/src/python/kungfu/agent/skills/codex/SKILL.md",
-            "sha256": "366833e2a2cc1533b30af926f6d646279190d2d5dea0a12133d219e008326211"
-          },
-          "description": "Codex-side report closeout gate instructions shipped in the agent pack."
-        }
-      ],
-      "verification": {
-        "command": "node scripts/verify-agent-pack.mjs && pnpm exec buildchain kfd 2 product-claims check",
-        "expectedResult": "pass"
-      },
-      "auditBoundary": {
-        "scope": "The committed Codex report adapter, receipt verifier, cost wire model, report-mode docs, and shipped Codex skill instructions listed in this claim.",
-        "enumerability": "closed-world",
-        "exclusions": [
-          "Provider-side billing pages or private sessions",
-          "Future Codex API fields not emitted to the user or agent",
-          "Human-entered cost overrides outside the receipt verifier"
-        ]
-      },
-      "residualRisk": [],
-      "responsibility": {
-        "sourceOwner": "kungfu",
-        "verificationOwner": "kungfu verify",
-        "releaseDecisionOwner": "kungfu release maintainer",
-        "escalation": "Downgrade the claim if receipt verification stops binding the run id, work id, goal id, status, and reported usage fields."
-      },
-      "status": "audited"
-    },
-    {
       "id": "remote-fact-boundary",
       "statement": "Kungfu distinguishes local observed facts from reported, imported, and remote facts in the agent pack and remote-sync command surface instead of silently promoting remote evidence into local truth.",
       "category": "kfd-2",
@@ -249,7 +171,7 @@
           "pointer": {
             "kind": "file",
             "path": "framework/core/src/python/kungfu/agent/mode-selection.md",
-            "sha256": "e25fdbe6971bd7aa256e3b817fffa68f7a7010c6581acb69849a5993c26199b3"
+            "sha256": "1b002c9befa4dea4334941e64457ee239352ce985c5140939fdb554a619ed302"
           },
           "description": "Remote-sync mode rule requiring source-scoped import."
         },
@@ -258,7 +180,7 @@
           "pointer": {
             "kind": "file",
             "path": "framework/core/src/python/kungfu/agent/commands.json",
-            "sha256": "7f80da4abae356e095ad13e88cfc6e656eb9ddd3661128d5a23ba0eef219f4aa"
+            "sha256": "7b54b0c450764369c3c39db17d0398550d18135b395852985dfc9021a7dbfbcc"
           },
           "description": "Remote add/sync command declarations and mode metadata."
         },
@@ -267,7 +189,7 @@
           "pointer": {
             "kind": "file",
             "path": "framework/core/src/python/kungfu/cli/commands/agent.py",
-            "sha256": "bb980fc1a1de42b00e34576dc34894e6fd070938b0a39f1c02afd321ef9d2b78"
+            "sha256": "6bc00a87038895d9107f2bb8a65f461ae8b67a8172923b1e8a5f719544139cbe"
           },
           "description": "Agent command surface including mode selection and bootstrap status."
         }
@@ -303,7 +225,7 @@
       "source": {
         "kind": "file",
         "path": "framework/agent-work/kungfu-agent-work-state.contract.json",
-        "sha256": "381c75e05ed905bb31c4a5a0cedf1a08836c68f143f914522269d323eff46d96"
+        "sha256": "799d9f4471350cbb6a3d9249243f00c34411a99377bc00f4b4005602b8f6a4aa"
       },
       "evidence": [
         {
@@ -311,7 +233,7 @@
           "pointer": {
             "kind": "file",
             "path": "docs/adr/KF-ADR-019f86da-4f90-786d-aa24-a97705e13917.md",
-            "sha256": "bba457cb767978398eb119c04c7c2f59dd4e6701fcea0d0406db2fc3568e558a"
+            "sha256": "f686ca8c1ec7fb1796c4df5f105da8c274b3b5618a4e128896b665d47839db4c"
           },
           "description": "Accepted role-separation decision and bounded P17 qualification boundary."
         },
@@ -347,7 +269,7 @@
           "pointer": {
             "kind": "file",
             "path": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json",
-            "sha256": "e26602d6e7f297d62dcaa3b801e81f2c0b194821dc7e8de9f1a3eeb2d5944dd8"
+            "sha256": "2f265c8ea298f293f56f416c9a5886470374a7f5561dd34f9b9d7f3a3eb7c385"
           },
           "description": "Agent collaboration-interface registration for the work-model query."
         }
@@ -438,7 +360,7 @@
           "pointer": {
             "kind": "file",
             "path": "docs/adr/KF-ADR-019f8c53-6105-71e5-8f34-53f2a81ee61c.md",
-            "sha256": "b12798406a516e9ca4fe45079ce50570022ed8e100be7a9d658cf8c63d281dd6"
+            "sha256": "c369e7a115cb35c3f1cb25571d607dc2cecf87910ea190e49236254e15a6e11a"
           },
           "description": "Accepted one-native-owner and four-language projection decision with explicit non-claims."
         }

@@ -21,8 +21,7 @@ import {
 
 export const WORK_DESIGN_PREFLIGHT_REQUEST_SCHEMA =
   'kungfu.work-design.preflight-request/v1';
-export const WORK_DESIGN_PREFLIGHT_SCHEMA =
-  'kungfu.work-design.preflight/v1';
+export const WORK_DESIGN_PREFLIGHT_SCHEMA = 'kungfu.work-design.preflight/v1';
 
 const ACTIONS = new Set([
   'accepted',
@@ -38,13 +37,11 @@ const SEALED_WORK_SCHEMA =
   'kungfu.assignment-orchestration.sealed-work-coordinate/v1';
 const FEDERATED_SOURCE_ID = 'kungfu.workspace-federation.sealed-work-index';
 const HISTORY_SOURCE_SCHEMA = 'kungfu.work-design.history-source/v1';
-const OUTCOME_HISTORY_SCHEMA =
-  'kungfu.work-design.outcome-history/v1';
+const OUTCOME_HISTORY_SCHEMA = 'kungfu.work-design.outcome-history/v1';
 const OUTCOME_BINDING_SCHEMA =
   'kungfu.assignment-orchestration.work-design-outcome-binding/v1';
 const OUTCOME_SCHEMA = 'kungfu.work-design.outcome/v1';
-const POLICY_DISPOSITION_SCHEMA =
-  'kungfu.work-design.policy-disposition/v1';
+const POLICY_DISPOSITION_SCHEMA = 'kungfu.work-design.policy-disposition/v1';
 
 const AUTO_ADOPTION_POLICY_PREIMAGE = Object.freeze({
   schema: 'kungfu.work-design.auto-adoption-policy/v1',
@@ -212,7 +209,11 @@ function outcomeRecord(binding, asOf) {
   return { ...preimage, recordRoot: semanticRoot(preimage) };
 }
 
-export function buildOpenCardOutcomeHistory({ query, asOf, targetCohortRoot }) {
+export function buildAssignmentOutcomeHistory({
+  query,
+  asOf,
+  targetCohortRoot,
+}) {
   if (!isObject(query) || query.schema !== FEDERATED_QUERY_SCHEMA)
     throw new Error(`history query must use ${FEDERATED_QUERY_SCHEMA}`);
   if (query.verification?.ok !== true || query.aggregate?.proof_ok !== true)
@@ -298,7 +299,7 @@ export function buildOpenCardOutcomeHistory({ query, asOf, targetCohortRoot }) {
  * The compiler never reads Assignment payload bodies and never infers success
  * from mutable labels: only portable, settled sealed-work coordinates enter.
  */
-export function buildOpenCardHistorySelectionRequest({
+export function buildAssignmentHistorySelectionRequest({
   query,
   objectiveRoot,
   xinfaRoot,
@@ -483,7 +484,7 @@ export function buildOpenCardHistorySelectionRequest({
   };
 }
 
-export function buildOpenCardHistorySource(query) {
+export function buildAssignmentHistorySource(query) {
   if (!isObject(query) || query.schema !== FEDERATED_QUERY_SCHEMA)
     throw new Error(`history query must use ${FEDERATED_QUERY_SCHEMA}`);
   const preimage = {
@@ -795,7 +796,7 @@ function validateEnvelope(request) {
   return diagnostics;
 }
 
-export function runOpenCardPreflight(request) {
+export function runAssignmentPreflight(request) {
   const envelopeDiagnostics = validateEnvelope(request);
   if (envelopeDiagnostics.length > 0)
     return fallback(request, 'protocol-invalid', envelopeDiagnostics);
@@ -1054,7 +1055,7 @@ export function runOpenCardPreflight(request) {
   return { ...preimage, preflightRoot: semanticRoot(preimage) };
 }
 
-export function verifyOpenCardPreflight(result) {
+export function verifyAssignmentPreflight(result) {
   if (!isObject(result) || result.schema !== WORK_DESIGN_PREFLIGHT_SCHEMA)
     return { ok: false, reason: 'unsupported-preflight-schema' };
   const { preflightRoot, ...preimage } = result;

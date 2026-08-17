@@ -17,7 +17,6 @@
       "version": "1",
       "contractWorldId": "kungfu.initiative-assignment",
       "sourceAuthorities": [
-        "atlas-adapter",
         "kungfu-user",
         "kungfu-agent"
       ],
@@ -68,7 +67,6 @@
       "version": "1",
       "contractWorldId": "kungfu.initiative-assignment",
       "sourceAuthorities": [
-        "atlas-adapter",
         "kungfu-user",
         "kungfu-agent"
       ],

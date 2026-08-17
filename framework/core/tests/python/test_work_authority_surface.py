@@ -268,7 +268,7 @@ def test_session_finalization_rejects_unretained_structured_agent_output():
     )
 
 
-def test_atlas_bridge_has_no_work_mutation_aliases():
+def test_atlas_primitive_has_no_work_mutation_commands():
     atlas_commands = set(kfc.commands["atlas"].commands)
     assert atlas_commands.isdisjoint(
         {
