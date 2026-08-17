@@ -3,7 +3,7 @@
   "contract": "kungfu-buildchain-dev-delivery-warrant-queue",
   "repository": "kungfu-systems/kungfu",
   "protectedBase": "dev/v4/v4.0",
-  "generation": 3831,
+  "generation": 3832,
   "fencingCounter": 510,
   "policy": {
     "agingSeconds": 900,
@@ -37167,8 +37167,46 @@
         "scripts/alpha-promotion-preflight.test.mjs",
         "scripts/verify-alpha-release-cut-lock.test.mjs"
       ]
+    },
+    {
+      "repository": "kungfu-systems/kungfu",
+      "protectedBase": "dev/v4/v4.0",
+      "pullRequestNumber": 3262,
+      "assignmentRoot": "sha256:52b29ffe68f6518cb73cd8c1a55952359c2bafd37ebb320911e6c39bdbbdbbb3",
+      "initiativeRoot": "sha256:bfff817933e5a5ad693e4b902a84f6cc3a251235dd7377cb4091d92f805fa7ff",
+      "sourceIdentityRoot": "sha256:26bc24d772ba8d51497c8f168e9b2590c9b7ef925689fbc667390721b1fb34f2",
+      "deliveryClass": "native-proof-required",
+      "candidateId": "sha256:cb276ca92738d9c1212ccf7a1da05bee870225a42c70c6d456513bc83742400e",
+      "sourceHead": "c7ed318a340e379b56f3ddcc0251aeac82354b3d",
+      "sourcePatchRoot": "sha256:9755ff95e0005de00efc377fd63a4cce6e189a1869cb75ed8bfa88a58c3728bc",
+      "sourceProofRoot": "sha256:c3184a2fad59a827e44c7260ee3c6fe83660a7597eb52471b1dc4258877b3cd0",
+      "planRoot": "sha256:3e939598ef6dfeb47e07250121a83241a3ceeee9889e66d8a9c2587d01b8ad6d",
+      "closureRoot": "sha256:106d175611d8634c988192302b9c464ae8ba3b6d023c2cff9910e401344c9624",
+      "dependencyRoot": "sha256:11112616610775b99f03d86f5087aa5d0510050341408f0d6074f26892fed843",
+      "toolchainRoot": "sha256:2ecb07894954a2e0de022615d4561e5ba3ae68376401941ecff77be03cd75a0f",
+      "environmentRoot": "sha256:c5f5da5917c6ff93a509a62b18d4b9b69325755c4c7229b553b0016cde83788f",
+      "sourceWorkflowRunId": 31999234018,
+      "priority": "ordinary",
+      "enqueuedAt": "2026-08-17T06:01:16.184Z",
+      "updatedAt": "2026-08-17T06:01:16.184Z",
+      "attempts": 1,
+      "recoveries": 0,
+      "status": "queued",
+      "terminal": null,
+      "affectedPaths": [
+        ".xinfa/portable-atlas-classification.json.gz",
+        ".xinfa/product-atlas-bundle.json",
+        "docs/qualification/gates/README.md",
+        "framework/dev-delivery/dev-gate-queue-evidence.mjs",
+        "framework/dev-gate-latency-patrol/classify.mjs",
+        "package.json",
+        "scripts/dev-gate-latency-patrol.test.mjs",
+        "scripts/dev-gate-queue-evidence.test.mjs",
+        "scripts/measure-dev-required-latency.mjs",
+        "scripts/measure-dev-required-latency.test.mjs"
+      ]
     }
   ],
-  "updatedAt": "2026-08-17T06:00:20.616Z",
-  "stateRoot": "sha256:ab5b7ed8721ea763492da0a016ca843ee27475239fb07020666842e43c11ab25"
+  "updatedAt": "2026-08-17T06:01:16.184Z",
+  "stateRoot": "sha256:ed022a103e8fec2c02869a1ff1a6eda6e1211c8e66d8324ce7c93daf36b02261"
 }
