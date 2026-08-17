@@ -7,13 +7,13 @@
     "mergeCommit": "1e57f6a7637225082fe3f6eeef5b98b55c2a5f38"
   },
   "activeProofRoots": [
-    "sha256:00800584b5b778f4f2aff8c3a14d1a4a0edb2d82fa8f00dc516f5c8e54d33ea3",
-    "sha256:42180719ce2c25253483b8d7663fc3967c0dadfd5ef334fb7b1c0728fe505b11",
-    "sha256:81fbac43eb88ea6fef86bf752213126f9c3954e50d8c64ca8d3894d2cb486ba9"
+    "sha256:12eed392ce3899eca7b995eaa3ef48a226040668b2da54212117f82372e22007",
+    "sha256:27073cb22644c89d8996ad578bca65d195d9b9969b9a32ca4e10f992220b7b21",
+    "sha256:b6a1a19c1d819171a90a7111ce69c371c72a94205db8b1bcfb925aac0c48c3af"
   ],
   "proofs": [
     {
-      "proofRoot": "sha256:00800584b5b778f4f2aff8c3a14d1a4a0edb2d82fa8f00dc516f5c8e54d33ea3",
+      "proofRoot": "sha256:12eed392ce3899eca7b995eaa3ef48a226040668b2da54212117f82372e22007",
       "record": {
         "schema": "kungfu.temporal-release-admission-proof/v1",
         "proofId": "alpha-sealed-candidate-historical-contract",
@@ -22,11 +22,6 @@
         "acceptedContractDigest": "sha256:13c4679c4ac8764c85e29693bfb59099e21e9786cc6082552198d39393467490",
         "currentContractDigest": "sha256:29f1218350d3cf49423ffc1b78e3328c3af554c21e8c3ffd31928ea9db51a404",
         "pathKind": "composed",
-        "buildchainProofRoots": [
-          "sha256:36c85ba487be1528e85776d2bc5f766a971d42ac238aec30071945f7d60d9fc5",
-          "sha256:cb642b68aaf60e9c0eb93d46a2a1fc482810142201c7340ad7efe824b1683921",
-          "sha256:e6f93f44a6613a9d6de776ebe8f29b1779b0cd18a24bdf126ec6c1a07770fa75"
-        ],
         "reason": "The sealed 4.0.0-alpha.1 candidate retains one bounded historical contract through three explicit Buildchain compatibility proofs and exact candidate bytes.",
         "scope": {
           "repository": "kungfu-systems/kungfu",
@@ -47,11 +42,13 @@
           "candidateInputRoot": "sha256:46169f7d385e5cc296352578cafd29f66762d73b6301f3180ce59560d9f5eef3",
           "candidateInventoryRoot": "sha256:02c630ec99189e1aedcb13b0794f5a17d951c196c75131ed7805c7a9b5dee67f",
           "capsuleRoot": "sha256:8bbc2c4439a99970760cd4f62bb76e55a1323923fa2951aa1985865ab8010dd4",
-          "compatibilityProjectionRoot": "sha256:96f48e17a9d7bbbc20393c7fc6663ebcec6ba29cdc5739430eea5cef482ca6ab",
-          "buildchainSourceCommit": "913b5d3fc486e225cf19f6e677129434db4850a6",
-          "buildchainMergeCommit": "10745d50aa93192c06b13f76942c4c291b482518"
+          "buildchainFactProjectionRoot": "sha256:b275910c8047541ff2e0292a4ba7611ca8cd7905934eb7e05d3aa44db1e0bba6",
+          "buildchainFactRegistryRoot": "sha256:232fd556a2372b29db586bbc2acbdfce6464a68c93902797ff527f75f7816c42",
+          "buildchainFactCutRoot": "sha256:f61b975d4a96c921cc4bd37fb3ed9a0596b47004fe34dc7219979d697e3707f9",
+          "buildchainSourceCommit": "d5fca430e1f15e0285ccf52dedfde476aeae759b",
+          "buildchainMergeCommit": "6b96bdad8d9f8ccf9275f27d9370a226a9c78465"
         },
-        "evidenceRoot": "sha256:a66795b1f4121d7d26067e32de588b1fcf3ca9f2d5c9da6af45502a3be7774dc",
+        "evidenceRoot": "sha256:e30673621be7ecdd33d0b3a6f49af1f4cd8cba1d1419648067075e901396b632",
         "authority": {
           "kind": "protected-release-admission-authority",
           "repository": "kungfu-systems/kungfu",
@@ -64,11 +61,16 @@
           "protectedBase": "dev/v4/v4.0",
           "commit": "1e57f6a7637225082fe3f6eeef5b98b55c2a5f38"
         },
-        "cutRoot": "sha256:cd8426c6843fd9870b2345ed78e2d1ae569218a5ba2d40738f407f04c993e41f"
+        "cutRoot": "sha256:cd8426c6843fd9870b2345ed78e2d1ae569218a5ba2d40738f407f04c993e41f",
+        "buildchainFactRoots": [
+          "sha256:50e5b6e644493ac00d5b1d83a0ec6009f9faaae1bee15e88ee8386c9ec8a775d",
+          "sha256:5664da2363bed0b45497215b60763c3be627e568eb3182af5891c23ae3875fbe",
+          "sha256:ec1c70ff70cca52ac276fab344b1c2d00c9581a8efec6d6fa37d56cb11632af1"
+        ]
       }
     },
     {
-      "proofRoot": "sha256:81fbac43eb88ea6fef86bf752213126f9c3954e50d8c64ca8d3894d2cb486ba9",
+      "proofRoot": "sha256:b6a1a19c1d819171a90a7111ce69c371c72a94205db8b1bcfb925aac0c48c3af",
       "record": {
         "schema": "kungfu.temporal-release-admission-proof/v1",
         "proofId": "release-current-contract",
@@ -77,7 +79,6 @@
         "acceptedContractDigest": "sha256:8e9a161653c40611ffd76aa878ae348fc215506c1caa88347111fb122cfe7c12",
         "currentContractDigest": "sha256:8e9a161653c40611ffd76aa878ae348fc215506c1caa88347111fb122cfe7c12",
         "pathKind": "direct",
-        "buildchainProofRoots": [],
         "reason": "The stable release contract lock is accepted only as the exact current release contract at the protected temporal admission cut.",
         "scope": {
           "repository": "kungfu-systems/kungfu",
@@ -106,11 +107,12 @@
           "protectedBase": "dev/v4/v4.0",
           "commit": "1e57f6a7637225082fe3f6eeef5b98b55c2a5f38"
         },
-        "cutRoot": "sha256:cd8426c6843fd9870b2345ed78e2d1ae569218a5ba2d40738f407f04c993e41f"
+        "cutRoot": "sha256:cd8426c6843fd9870b2345ed78e2d1ae569218a5ba2d40738f407f04c993e41f",
+        "buildchainFactRoots": []
       }
     },
     {
-      "proofRoot": "sha256:42180719ce2c25253483b8d7663fc3967c0dadfd5ef334fb7b1c0728fe505b11",
+      "proofRoot": "sha256:27073cb22644c89d8996ad578bca65d195d9b9969b9a32ca4e10f992220b7b21",
       "record": {
         "schema": "kungfu.temporal-release-admission-proof/v1",
         "proofId": "alpha-current-contract",
@@ -119,7 +121,6 @@
         "acceptedContractDigest": "sha256:29f1218350d3cf49423ffc1b78e3328c3af554c21e8c3ffd31928ea9db51a404",
         "currentContractDigest": "sha256:29f1218350d3cf49423ffc1b78e3328c3af554c21e8c3ffd31928ea9db51a404",
         "pathKind": "direct",
-        "buildchainProofRoots": [],
         "reason": "The current Alpha contract lock is accepted only as the exact current contract at the protected temporal admission cut.",
         "scope": {
           "repository": "kungfu-systems/kungfu",
@@ -148,9 +149,10 @@
           "protectedBase": "dev/v4/v4.0",
           "commit": "1e57f6a7637225082fe3f6eeef5b98b55c2a5f38"
         },
-        "cutRoot": "sha256:cd8426c6843fd9870b2345ed78e2d1ae569218a5ba2d40738f407f04c993e41f"
+        "cutRoot": "sha256:cd8426c6843fd9870b2345ed78e2d1ae569218a5ba2d40738f407f04c993e41f",
+        "buildchainFactRoots": []
       }
     }
   ],
-  "factSetRoot": "sha256:504da3e9c9d220470791b0730b165c0c4db74b49ec9f0092a4e8cf7adafed130"
+  "factSetRoot": "sha256:e23a07bee54985f1d0b8f7cba7908313dea86b6b18997099adcb0fa9e84b5871"
 }

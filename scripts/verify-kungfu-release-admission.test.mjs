@@ -66,7 +66,7 @@ const CONTRACT_DIGEST =
     '',
   );
 const RECOVERED_CONTRACT_DIGEST =
-  RELEASE_POLICY.buildchain.runtimes.alpha.publicationContractDigests[1].replace(
+  RELEASE_POLICY.buildchain.runtimes.alpha.contractProjection.entries[0].contractDigest.replace(
     /^sha256:/u,
     '',
   );
@@ -85,7 +85,7 @@ function readJson(relative) {
   return JSON.parse(fs.readFileSync(path.join(ROOT, relative), 'utf8'));
 }
 
-test('temporal release admission has exact legacy/proof parity and protected proof evidence', () => {
+test('temporal release admission is Fact-only with non-authoritative digest projections', () => {
   const contract = readJson(
     'framework/release/kungfu-temporal-release-admission.contract.json',
   );
@@ -93,17 +93,19 @@ test('temporal release admission has exact legacy/proof parity and protected pro
   for (const channel of RELEASE_POLICY.publication.channels) {
     assert.deepEqual(
       factProjection.channels[channel],
-      [
-        ...RELEASE_POLICY.buildchain.runtimes[channel]
-          .publicationContractDigests,
-      ].sort(),
+      RELEASE_POLICY.buildchain.runtimes[
+        channel
+      ].contractProjection.entries.map((entry) => entry.contractDigest),
     );
   }
   const projection = readJson(
-    'docs/qualification/evidence/buildchain-compatibility-proof-projection.json',
+    'docs/qualification/evidence/buildchain-compatibility-fact-projection.json',
   );
   assert.equal(contract.maximumPathDepth, 2);
-  assert.equal(contract.rollbackMode, 'legacy-exact');
+  assert.equal(contract.defaultMode, 'fact-only');
+  assert.deepEqual(contract.normalModes, ['fact-only']);
+  assert.equal('rollbackMode' in contract, false);
+  assert.equal('dualRead' in contract, false);
   assert.equal(
     contract.factAuthority.admittedDigests,
     'derived-from-active-proof-records',
@@ -111,14 +113,14 @@ test('temporal release admission has exact legacy/proof parity and protected pro
   assert.equal(contract.safety.realPublicationRequired, false);
   assert.equal(
     projection.source.sourceCommit,
-    '913b5d3fc486e225cf19f6e677129434db4850a6',
+    'd5fca430e1f15e0285ccf52dedfde476aeae759b',
   );
   assert.equal(
     projection.source.mergeCommit,
-    '10745d50aa93192c06b13f76942c4c291b482518',
+    '6b96bdad8d9f8ccf9275f27d9370a226a9c78465',
   );
-  assert.equal(projection.proofs.length, 3);
-  assert.equal(new Set(projection.registry.proofRoots).size, 5);
+  assert.equal(projection.facts.length, 9);
+  assert.equal(new Set(projection.selectedFactRoots).size, 3);
 });
 
 test('release admission denies promoted primitive without complete receipts', () => {
@@ -758,7 +760,7 @@ test('Kungfu consumer qualification seals only an exact current handoff', async 
         createDecision: createConsumerPublicationDecision,
         now: input.now,
       }),
-    /Buildchain contract digest policy mismatch/,
+    /Buildchain contract Fact selection rejected:.*temporal-contract-not-admitted/,
   );
 
   const receipt = createPublicationQualificationReceipt({

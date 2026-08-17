@@ -24,7 +24,11 @@ from kungfu.release_provenance import (
     verify,
     verify_migration,
 )
-from kungfu.temporal_release_admission import verify_admission
+from kungfu.temporal_release_admission import (
+    verify_admission,
+    verify_contract_selection,
+    verify_rollback,
+)
 
 
 def _json_file(path: str | None, default: Any) -> Any:
@@ -318,6 +322,9 @@ def _parser() -> argparse.ArgumentParser:
     source_content.add_argument("--repository", default=".")
     source_content.add_argument("--revision", required=True)
     commands.add_parser("admission")
+    commands.add_parser("fact-selection")
+    rollback_admission = commands.add_parser("rollback-admission")
+    rollback_admission.add_argument("--request", required=True)
     return parser
 
 
@@ -329,14 +336,63 @@ def main(argv: list[str] | None = None) -> int:
             report = verify_admission(
                 contract=request["contract"],
                 admission_facts=request["admissionFacts"],
-                proof_projection=request["proofProjection"],
+                compatibility_facts=request["compatibilityFacts"],
                 release_provenance_contract=request["releaseProvenanceContract"],
                 release_provenance=request["releaseProvenance"],
                 current_contract_lock=request["currentContractLock"],
-                legacy_contract_digests=request["legacyContractDigests"],
                 current_contract_digest=request["currentContractDigest"],
                 bindings=request["bindings"],
-                mode=request.get("mode", "dual-read"),
+                mode=request.get("mode", "fact-only"),
+            )
+            print(json.dumps(report, sort_keys=True))
+            return 0 if report["ok"] else 1
+        if args.command == "fact-selection":
+            request = json.load(sys.stdin)
+            report = verify_contract_selection(
+                contract=request["contract"],
+                admission_facts=request["admissionFacts"],
+                compatibility_facts=request["compatibilityFacts"],
+                current_contract_lock=request["currentContractLock"],
+                channel=request["channel"],
+                accepted_contract_digest=request["acceptedContractDigest"],
+                current_contract_digest=request["currentContractDigest"],
+            )
+            print(json.dumps(report, sort_keys=True))
+            return 0 if report["ok"] else 1
+        if args.command == "rollback-admission":
+            request = _json_file(args.request, {})
+            root = Path(__file__).resolve().parents[1]
+            report = verify_rollback(
+                rollback_contract=_json_file(
+                    str(
+                        root
+                        / "framework/release/kungfu-temporal-release-rollback.contract.json"
+                    ),
+                    {},
+                ),
+                admission_contract=_json_file(
+                    str(
+                        root
+                        / "framework/release/kungfu-temporal-release-admission.contract.json"
+                    ),
+                    {},
+                ),
+                admission_facts=_json_file(
+                    str(
+                        root
+                        / "docs/qualification/evidence/kungfu-temporal-release-admission-facts.json"
+                    ),
+                    {},
+                ),
+                release_provenance_contract=_json_file(
+                    str(
+                        root
+                        / "framework/release/kungfu-release-provenance.contract.json"
+                    ),
+                    {},
+                ),
+                release_provenance=request["releaseProvenance"],
+                bindings=request["bindings"],
             )
             print(json.dumps(report, sort_keys=True))
             return 0 if report["ok"] else 1
