@@ -3,7 +3,7 @@
   "contract": "kungfu-buildchain-dev-delivery-warrant-queue",
   "repository": "kungfu-systems/kungfu",
   "protectedBase": "dev/v4/v4.0",
-  "generation": 3733,
+  "generation": 3734,
   "fencingCounter": 505,
   "policy": {
     "agingSeconds": 900,
@@ -11,40 +11,7 @@
     "leaseSeconds": 3600,
     "emergencyPolicy": "reviewed-explicit-only"
   },
-  "activeWarrant": {
-    "schema": "kungfu.buildchain.dev-delivery-warrant/v1",
-    "repository": "kungfu-systems/kungfu",
-    "protectedBase": "dev/v4/v4.0",
-    "candidateId": "sha256:ff408c7ef5f65ef881d883d30a639d948adb11889f670ebbe558f17a1fc3461c",
-    "pullRequestNumber": 3250,
-    "sourceHead": "e3d4791bf536748e7e4473d5cfce7158942323a4",
-    "assignmentRoot": "sha256:68174c9a5c8e86eda48b071f010a5ff9c0dac76b0ca3f4cfb9ec538f1ba961e2",
-    "initiativeRoot": "sha256:bfff817933e5a5ad693e4b902a84f6cc3a251235dd7377cb4091d92f805fa7ff",
-    "sourceIdentityRoot": "sha256:6fcb3d28ebb9f2767f4e461ad68f095f9b58864ba03ba0fa9c4ed02ce69903ae",
-    "sourcePatchRoot": "sha256:4ed20764afeca3db20de430a2efcbac820727a467c969ad8c3223667f0ee988d",
-    "sourceProofRoot": "sha256:23046a643d032b67ffd83b95ee5282af57fe35f6cf75ba72d939c87bfeb083d7",
-    "planRoot": "sha256:1214d178b25aacff96268b8185430466d26eab20abfa1f36b95bbaa69d297eee",
-    "closureRoot": "sha256:ac6e52dc4778bd7be1e6224c9a526a00dc7fcdd56a84e07165a811b168158f3e",
-    "dependencyRoot": "sha256:a57cb6cd5784da0e366ce7e6edc41c7f91424b0ea7d8cbf23e49477fd9ce1586",
-    "toolchainRoot": "sha256:2ecb07894954a2e0de022615d4561e5ba3ae68376401941ecff77be03cd75a0f",
-    "environmentRoot": "sha256:ce8ac018bb38c00cc0f5e954dae39d921eb9437fb11314061e9628f456f39057",
-    "affectedPaths": [
-      "framework/tui/src/terminal-lifecycle.test.ts",
-      "framework/tui/src/terminal-lifecycle.ts"
-    ],
-    "sourceWorkflowRunId": 31979429499,
-    "deliveryClass": "non-native-fast",
-    "generation": 505,
-    "phase": "qualified",
-    "expectedOldStateRoot": "sha256:36bd4c8fc4f87a858781f75c4662144dd68eff1a71be4443d99b6177b35caee4",
-    "issuedAt": "2026-08-17T01:44:40.317Z",
-    "expiresAt": "2026-08-17T03:16:26.773Z",
-    "fencingToken": "sha256:3d0207443a48892e0330cfb4b6153210a7900dd99858b8702ad8ef2a31e88e13",
-    "nextAction": "Enter the GitHub merge queue at the exact fenced PR head; merge_group remains final authority.",
-    "nativeProofRoot": "sha256:a0f9fac625e897248680ebcd52522c43300d333b79fcb2127aa59b36b75c8e49",
-    "nativeProofReuseRoot": "sha256:e0f94a982d6f199fa51087604363cdbf0e019b18a4b86028c610328f11c1dd42",
-    "qualifiedAt": "2026-08-17T01:46:33.258Z"
-  },
+  "activeWarrant": null,
   "candidates": [
     {
       "repository": "kungfu-systems/kungfu",
@@ -35705,11 +35672,20 @@
       "sourceWorkflowRunId": 31979429499,
       "priority": "ordinary",
       "enqueuedAt": "2026-08-16T23:39:58.370Z",
-      "updatedAt": "2026-08-17T01:46:33.258Z",
+      "updatedAt": "2026-08-17T02:05:09.737Z",
       "attempts": 3,
       "recoveries": 0,
-      "status": "qualified",
-      "terminal": null,
+      "status": "terminal-failure",
+      "terminal": {
+        "outcome": "terminal-failure",
+        "terminalClass": "authoritative-failure",
+        "reason": "Exact merge-group source qualification failed twice: merge-group-source-patch-mismatch required full qualification, then protected-base ref was unavailable in the shallow merge-group checkout (run 31986528349, job 95262398925).",
+        "evidenceRoot": "sha256:71793069d143212c222f5ceaa47ce611157b8fe4740cda62f56dff2ad4edf075",
+        "closedAt": "2026-08-17T02:05:09.737Z",
+        "fencingToken": "sha256:3d0207443a48892e0330cfb4b6153210a7900dd99858b8702ad8ef2a31e88e13",
+        "leaseGeneration": 505,
+        "nativeProofRoot": "sha256:a0f9fac625e897248680ebcd52522c43300d333b79fcb2127aa59b36b75c8e49"
+      },
       "affectedPaths": [
         "framework/tui/src/terminal-lifecycle.test.ts",
         "framework/tui/src/terminal-lifecycle.ts"
@@ -36202,6 +36178,6 @@
       ]
     }
   ],
-  "updatedAt": "2026-08-17T01:57:36.671Z",
-  "stateRoot": "sha256:09bf30d7845d22098aa4f667aee383a421c7ce142c412834f383af41346b8cb2"
+  "updatedAt": "2026-08-17T02:05:09.737Z",
+  "stateRoot": "sha256:773b2cc92fec1289682acc0e49681a0b2b89d3a5ea9e985b52fc671378a0cb88"
 }
