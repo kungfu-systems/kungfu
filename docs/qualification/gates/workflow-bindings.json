@@ -464,9 +464,11 @@
       "adapter": {
         "type": "buildchain-aws-macos-burst",
         "kind": "job-uses",
-        "uses": "kungfu-systems/buildchain/.github/workflows/.build.yml@9baf025baad5faa2d9c2339af06f73adbe4b84a0",
+        "uses": "kungfu-systems/buildchain/.github/workflows/.build.yml@675b4f2a51af7e5f2aac58011c7ede0313b2b105",
         "with": {
-          "buildchain-ref": "9baf025baad5faa2d9c2339af06f73adbe4b84a0",
+          "buildchain-ref": "675b4f2a51af7e5f2aac58011c7ede0313b2b105",
+          "buildchain-contract-expected-channel": "v3-alpha",
+          "buildchain-contract-expected-major": "v3",
           "runner-preset": "aws-us-ec2-macos-jit",
           "aws-ec2-macos-runner-label": "${{ inputs.runner-label }}",
           "require-build": true,
@@ -505,7 +507,7 @@
       "adapter": {
         "type": "buildchain-heavy-build",
         "kind": "job-uses",
-        "uses": "kungfu-systems/buildchain/.github/workflows/.build.yml@9baf025baad5faa2d9c2339af06f73adbe4b84a0",
+        "uses": "kungfu-systems/buildchain/.github/workflows/.build.yml@675b4f2a51af7e5f2aac58011c7ede0313b2b105",
         "job": {
       "needs": [
         "preflight",
@@ -520,7 +522,9 @@
           }
         },
         "with": {
-        "buildchain-ref": "9baf025baad5faa2d9c2339af06f73adbe4b84a0",
+        "buildchain-ref": "675b4f2a51af7e5f2aac58011c7ede0313b2b105",
+          "buildchain-contract-expected-channel": "v3-alpha",
+          "buildchain-contract-expected-major": "v3",
           "runner-preset": "custom",
       "platforms-json": "${{ fromJSON(inputs.macos-overflow-request-json || '{}').mode == 'self-hosted' && '[{\"id\":\"macos-arm64\",\"name\":\"macOS ARM64 self-hosted primary\",\"platform\":\"macos\",\"runner\":\"[\\\"self-hosted\\\",\\\"macOS\\\",\\\"ARM64\\\",\\\"kungfu-build-v4-macos-arm64\\\"]\",\"capabilities\":[\"native-toolchain\",\"node\",\"product-artifacts\",\"rust\"]}]' || (fromJSON(inputs.macos-overflow-request-json || '{}').mode == 'github-hosted' && '[{\"id\":\"macos-arm64\",\"name\":\"macOS ARM64 GitHub-hosted overflow\",\"platform\":\"macos\",\"runner\":\"[\\\"macos-15\\\"]\",\"capabilities\":[\"node\",\"native-toolchain\",\"product-artifacts\",\"rust\"]}]' || (inputs.platforms-json || '[{\"id\":\"linux-x64\",\"name\":\"Linux x64\",\"platform\":\"linux\",\"runner\":\"[\\\"ubuntu-24.04\\\"]\",\"capabilities\":[\"node\",\"native-toolchain\",\"product-artifacts\",\"rust\"],\"environment\":{\"CC\":\"gcc-14\",\"CXX\":\"g++-14\"}},{\"id\":\"linux-arm64\",\"name\":\"Linux ARM64\",\"platform\":\"linux\",\"runner\":\"[\\\"ubuntu-24.04-arm\\\"]\",\"capabilities\":[\"node\",\"native-toolchain\",\"product-artifacts\",\"rust\"]},{\"id\":\"macos-arm64\",\"name\":\"macOS ARM64\",\"platform\":\"macos\",\"runner\":\"[\\\"macos-15\\\"]\",\"capabilities\":[\"node\",\"native-toolchain\",\"product-artifacts\",\"rust\"]},{\"id\":\"windows-x64\",\"name\":\"Windows x64\",\"platform\":\"windows\",\"runner\":\"[\\\"windows-2022\\\"]\",\"capabilities\":[\"node\",\"native-toolchain\",\"product-artifacts\",\"rust\"]}]')) }}",
           "self-hosted-offline-fallback": false,
