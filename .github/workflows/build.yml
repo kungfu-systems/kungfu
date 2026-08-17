@@ -178,7 +178,7 @@ jobs:
     if: ${{ always() && needs.preflight.result == 'success' && needs.windows-fast-sentinel.result == 'success' && needs.auditable-demo-fast-sentinel.result == 'success' && !inputs.fast-sentinels-only && fromJSON(inputs.macos-overflow-request-json || '{}').mode != 'control' }}
     # Execute one reviewed Buildchain revision for both the reusable workflow
     # shell and its runtime. Channel and major remain contract metadata only.
-    uses: kungfu-systems/buildchain/.github/workflows/.build.yml@9baf025baad5faa2d9c2339af06f73adbe4b84a0
+    uses: kungfu-systems/buildchain/.github/workflows/.build.yml@675b4f2a51af7e5f2aac58011c7ede0313b2b105
     secrets:
       BUILDCHAIN_PROMOTION_TOKEN: ${{ secrets.KUNGFU_GITHUB_TOKEN }}
       BUILDCHAIN_ARTIFACT_RELAY_S3_ROLE_ARN: ${{ secrets.BUILDCHAIN_ARTIFACT_RELAY_S3_ROLE_ARN }}
@@ -187,7 +187,9 @@ jobs:
     with:
       # Privileged candidate builds never execute a movable channel or a
       # workflow_dispatch override. Channel and major are metadata only.
-      buildchain-ref: 9baf025baad5faa2d9c2339af06f73adbe4b84a0
+      buildchain-ref: 675b4f2a51af7e5f2aac58011c7ede0313b2b105
+      buildchain-contract-expected-channel: v3-alpha
+      buildchain-contract-expected-major: v3
       publish-source-ref: ${{ fromJSON(inputs.macos-overflow-request-json || '{}').releaseCutSourceRef || '' }}
       publish-anchor-request-json: ${{ fromJSON(inputs.macos-overflow-request-json || '{}').releaseCutSourceRef && toJSON(fromJSON(inputs.macos-overflow-request-json || '{}').releaseCutAnchorRequest) || '' }}
       runner-preset: custom

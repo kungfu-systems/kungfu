@@ -80,7 +80,7 @@
             "product-stable",
             "product-binaries"
           ],
-          "sourceRoot": "sha256:e6a1091cafe27e20a4904aaeb2dc722f24978e136270fbff7c49df38e7b62e97"
+          "sourceRoot": "sha256:5555e74806d60b7dd3f528805aedf571ff35167b5c0ba578a9d194e4475c7769"
         },
         {
           "path": ".github/workflows/dev-post-merge-advisory.yml",
@@ -118,7 +118,7 @@
           "classification": "non-publication",
           "owner": "kungfu-ci",
           "surfaceIds": [],
-          "sourceRoot": "sha256:56fe6356f87e82f4c70fd993eed2b229b3408144b169aa8484c1307b9ec196a3"
+          "sourceRoot": "sha256:37524c81dd39c8b08315e7fe631f75b397a572a1d0894a15faa75b4b5a6da52e"
         },
         {
           "path": ".github/workflows/aws-us-windows-burst-qualification.yml",
@@ -136,7 +136,7 @@
             "product-stable",
             "product-binaries"
           ],
-          "sourceRoot": "sha256:140984307dd4b63d38116e36afe6ba31436236b63d0964801e9b86f79e0b0685"
+          "sourceRoot": "sha256:c58e5621abf6fcf282054a08ae47fde24f2cc2ccd6146dab1e36946054b7aa26"
         },
         {
           "path": ".github/workflows/buildchain-validate.yml",
@@ -874,5 +874,5 @@
       }
     }
   ],
-  "registryRoot": "sha256:fb0da7b8c112a93311b35d344806f5ea17fa0365d4faa1571951acbe3f80cff9"
+  "registryRoot": "sha256:40589805231f5a0533bfa239a60405a2f1d597925c6d4f58cf5883f3037ac638"
 }

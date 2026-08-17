@@ -468,16 +468,21 @@ test('workflow contract keeps candidates exact-source, independent, and publish-
   );
   assert.match(
     workflow,
-    /uses: kungfu-systems\/buildchain\/\.github\/workflows\/\.build\.yml@9baf025baad5faa2d9c2339af06f73adbe4b84a0/u,
+    /uses: kungfu-systems\/buildchain\/\.github\/workflows\/\.build\.yml@675b4f2a51af7e5f2aac58011c7ede0313b2b105/u,
   );
   assert.match(
     workflow,
-    /^\s+buildchain-ref: 9baf025baad5faa2d9c2339af06f73adbe4b84a0$/mu,
+    /^\s+buildchain-ref: 675b4f2a51af7e5f2aac58011c7ede0313b2b105$/mu,
   );
+  assert.match(
+    workflow,
+    /^\s+buildchain-contract-expected-channel: v3-alpha$/mu,
+  );
+  assert.match(workflow, /^\s+buildchain-contract-expected-major: v3$/mu);
   assert.doesNotMatch(workflow, /inputs\.buildchain-ref/u);
   assert.match(
     affectedNativeWorkflow,
-    /source_acceptance:[\s\S]*uses: kungfu-systems\/buildchain\/\.github\/workflows\/check\.yml@8e9ce32ddd931fb294ab1a9a2a40e89ba743391a[\s\S]*buildchain-ref: 8e9ce32ddd931fb294ab1a9a2a40e89ba743391a[\s\S]*source-proof-reuse: true[\s\S]*source-proof-policy-paths-json: '\["\.github\/workflows\/affected-native-pr\.yml"\]'[\s\S]*source-proof-closure-paths-json: '\["\.buildchain\/buildchain\.toml","shifu","scripts\/source-acceptance\.mjs","scripts\/require-shifu\.mjs"\]'[\s\S]*source-proof-dependency-paths-json: '\["package\.json","pnpm-lock\.yaml"\]'[\s\S]*source-proof-required-contexts-json: '\["Candidate source acceptance \/ check"\]'/u,
+    /source_acceptance:[\s\S]*uses: kungfu-systems\/buildchain\/\.github\/workflows\/check\.yml@675b4f2a51af7e5f2aac58011c7ede0313b2b105[\s\S]*buildchain-ref: 675b4f2a51af7e5f2aac58011c7ede0313b2b105[\s\S]*source-proof-reuse: true[\s\S]*source-proof-policy-paths-json: '\["\.github\/workflows\/affected-native-pr\.yml"\]'[\s\S]*source-proof-closure-paths-json: '\["\.buildchain\/buildchain\.toml","shifu","scripts\/source-acceptance\.mjs","scripts\/require-shifu\.mjs"\]'[\s\S]*source-proof-dependency-paths-json: '\["package\.json","pnpm-lock\.yaml"\]'[\s\S]*source-proof-required-contexts-json: '\["Candidate source acceptance \/ check"\]'/u,
   );
   assert.match(
     affectedNativeWorkflow,
