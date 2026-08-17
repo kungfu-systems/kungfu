@@ -161,6 +161,69 @@ test('structured instruction waits for a response-first turn boundary', async (t
   ended = true;
 });
 
+test('structured instruction yields at turn start before a slow terminal', async () => {
+  const structuredMode = 'response-first-slow-terminal-product-route';
+  const product = surface({ structuredMode });
+  const startPlan = product.invoke({
+    operation: 'plan-start',
+    input: input({ argv: [provider, structuredMode] }),
+  });
+  await product.invoke({
+    operation: 'start',
+    client: 'cli',
+    actorId: 'actor-agent',
+    plan: startPlan,
+    expectedPlanRoot: startPlan.root,
+    execution: { env: {} },
+  });
+  const ref = {
+    workConsoleId: startPlan.workConsoleId,
+    sessionAttemptId: startPlan.sessionAttemptId,
+  };
+  const payload = { text: 'slow terminal instruction' };
+  const instructionPlan = product.invoke({
+    operation: 'plan-control',
+    controlOperation: 'instruct',
+    actorId: 'actor-agent',
+    session: ref,
+    payload,
+  });
+  const receipt = await product.invoke({
+    operation: 'instruct',
+    actorId: 'actor-agent',
+    plan: instructionPlan,
+    expectedPlanRoot: instructionPlan.root,
+    payload,
+  });
+  assert.equal(receipt.status, 'delivered');
+  assert.equal(
+    product.invoke({ operation: 'status', session: ref }).interactionState,
+    'busy',
+  );
+  await waitFor(
+    () =>
+      product.invoke({ operation: 'status', session: ref }).interactionState ===
+      'ready',
+    'slow structured turn did not reach its terminal boundary',
+  );
+  const snapshot = product.invoke({ operation: 'snapshot', session: ref });
+  assert.equal(snapshot.agentText, 'Structured answer retained.');
+  const endPlan = product.invoke({
+    operation: 'plan-control',
+    controlOperation: 'end',
+    actorId: 'actor-agent',
+    session: ref,
+    payload: {},
+  });
+  await product.invoke({
+    operation: 'end',
+    actorId: 'actor-agent',
+    plan: endPlan,
+    expectedPlanRoot: endPlan.root,
+    payload: {},
+  });
+});
+
 async function waitFor(predicate, label, timeoutMs = 2000) {
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {

@@ -87,7 +87,8 @@
       "owner": "core/python-assignment-close-evidence",
       "paths": [
         "framework/core/src/python/kungfu/assignment_close.py",
-        "framework/core/src/python/kungfu/assignment_evidence.py"
+        "framework/core/src/python/kungfu/assignment_evidence.py",
+        "framework/core/src/python/kungfu/cli/commands/assignment_session.py"
       ]
     },
     {
@@ -209,7 +210,8 @@
     {
       "owner": "core/python-agent-session-contract",
       "paths": [
-        "framework/core/src/python/kungfu/agent/session_contract.py"
+        "framework/core/src/python/kungfu/agent/session_contract.py",
+        "framework/core/src/python/kungfu/agent/session_evidence.py"
       ]
     },
     {

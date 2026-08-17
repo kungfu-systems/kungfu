@@ -127,6 +127,23 @@ export function tuiChildCliEnvironment(
   return child;
 }
 
+export function bindTuiMockAgentEnvironment({
+  env,
+  packagedBin,
+  mockPath,
+}: {
+  env: NodeJS.ProcessEnv;
+  packagedBin: string;
+  mockPath: string;
+}): NodeJS.ProcessEnv {
+  return {
+    ...env,
+    KUNGFU_MOCK_AGENT_EXECUTABLE:
+      env.KUNGFU_MOCK_AGENT_EXECUTABLE || packagedBin,
+    KUNGFU_MOCK_AGENT_SCRIPT: env.KUNGFU_MOCK_AGENT_SCRIPT || mockPath,
+  };
+}
+
 export function resolveTuiAgentSessionExecutable({
   env,
   cliBin,

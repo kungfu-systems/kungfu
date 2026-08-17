@@ -99,6 +99,19 @@
     "expectedSemantic": "usage-updated"
   },
   {
+    "id": "turn-diff-is-non-authoritative-metadata",
+    "direction": "server-notification",
+    "message": {
+      "method": "turn/diff/updated",
+      "params": {
+        "threadId": "thread-1",
+        "turnId": "turn-1",
+        "diff": "redacted unified diff"
+      }
+    },
+    "expectedSemantic": "turn-diff-observed"
+  },
+  {
     "id": "turn-completed-is-single-terminal-boundary",
     "direction": "server-notification",
     "message": {

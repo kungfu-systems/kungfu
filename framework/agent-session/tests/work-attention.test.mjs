@@ -82,6 +82,22 @@ test('ended and unrecoverable attempts lead to review or recovery without claimi
   });
   assert.equal(crashed.attention.kind, 'blocked');
 
+  const controlledWindowsExit = projectWorkAgentState({
+    live: false,
+    lifecycleState: 'ended',
+    attempt: { status: 'exited' },
+    exit: {
+      exitCode: 1,
+      signal: 0,
+      controlRequest: { operation: 'end', signal: 'SIGTERM' },
+    },
+  });
+  assert.equal(controlledWindowsExit.attention.kind, 'ready-for-review');
+  assert.equal(
+    controlledWindowsExit.attention.reason,
+    'agent-attempt-ended-by-controller',
+  );
+
   const lost = projectWorkAgentState({
     live: false,
     attempt: { status: 'unrecoverable' },

@@ -23,6 +23,46 @@ export const MOCK_DELIVERABLE_PATH =
   'deliverables/mock-agent-recovery-report.md';
 export const MOCK_RECOVERY_STORY_DELIVERABLE_PATH =
   'deliverables/launch-brief.md';
+
+export function mockRecoveryStoryDeliverable() {
+  return [
+    '# Kungfu launch brief',
+    '',
+    '## Who it is for',
+    '',
+    'Kungfu is for developers coordinating long-running coding-agent work.',
+    '',
+    '## Why it matters',
+    '',
+    'Kungfu keeps durable local Work across agent sessions so developers can recover the current Work after an interrupted session and require independent review before completion.',
+    '',
+    '## Confirmed benefits',
+    '',
+    '- Developers can recover the current Work after an interrupted session.',
+    '- Completion requires independent review.',
+    '',
+    '## Open questions',
+    '',
+    '- Public release date',
+    '- Pricing',
+    '- Supported integrations',
+    '',
+    '## Validation evidence',
+    '',
+    '- Audience and durable-work claims: `inputs/product-notes.md`.',
+    '- Confirmed recovery and independent-review benefits: `inputs/customer-feedback.md`.',
+    '- Release date, pricing, and integrations remain open: `inputs/release-facts.md`.',
+    '',
+    '## Unresolved risks',
+    '',
+    '- Publication remains blocked until the launch owner resolves the release date, pricing, and supported integrations.',
+    '',
+    '## Next action',
+    '',
+    'Ask the launch owner to review this brief and resolve the release date, pricing, and integration questions before publication.',
+    '',
+  ].join('\n');
+}
 const ESCAPE = String.fromCharCode(27);
 const BRACKETED_PASTE_START = `${ESCAPE}[200~`;
 const BRACKETED_PASTE_END = `${ESCAPE}[201~`;
@@ -45,6 +85,46 @@ function cleanInput(raw) {
     .replaceAll(BRACKETED_PASTE_START, '')
     .replaceAll(BRACKETED_PASTE_END, '')
     .trim();
+}
+
+export function createMockAgentInputFramer(onInput) {
+  if (typeof onInput !== 'function') {
+    throw new Error('Mock Agent input framer requires an input handler');
+  }
+  let pending = '';
+  const consumeTerminator = (offset) => {
+    if (pending.startsWith('\r\n', offset)) return offset + 2;
+    if (pending[offset] === '\r' || pending[offset] === '\n') return offset + 1;
+    return -1;
+  };
+  return Object.freeze({
+    push(data) {
+      pending += String(data);
+      while (pending.length > 0) {
+        const pasteStart = pending.indexOf(BRACKETED_PASTE_START);
+        if (pasteStart >= 0) {
+          const pasteEnd = pending.indexOf(
+            BRACKETED_PASTE_END,
+            pasteStart + BRACKETED_PASTE_START.length,
+          );
+          if (pasteEnd < 0) return;
+          const frameEnd = pasteEnd + BRACKETED_PASTE_END.length;
+          const nextOffset = consumeTerminator(frameEnd);
+          if (nextOffset < 0) return;
+          const frame = pending.slice(pasteStart, frameEnd);
+          pending = pending.slice(nextOffset);
+          onInput(frame);
+          continue;
+        }
+        const terminator = pending.search(/[\r\n]/u);
+        if (terminator < 0) return;
+        const nextOffset = consumeTerminator(terminator);
+        const frame = pending.slice(0, terminator);
+        pending = pending.slice(nextOffset);
+        onInput(frame);
+      }
+    },
+  });
 }
 
 function reviewRequest(prompt) {
@@ -109,7 +189,15 @@ export function createMockAgentMachine({
   const ready = (message) => result([message, 'mock› '], phase);
   const review = () => {
     phase = 'ready-for-review';
-    return ready('MOCK READY FOR REVIEW: deterministic changes are available.');
+    return result(
+      [
+        'MOCK VALIDATION: the deterministic fixture completed after the retained answer and explicit approval.',
+        'MOCK UNRESOLVED RISKS: none inside this bounded qualification scenario.',
+        'MOCK READY FOR REVIEW: deterministic changes are available.',
+        'mock› ',
+      ],
+      phase,
+    );
   };
   const work = (label) => [
     `MOCK WORKING: ${label}`,
@@ -350,34 +438,7 @@ function workspaceEffects(env) {
       mkdirSync(path.dirname(target), { recursive: true });
       const content =
         relativePath === MOCK_RECOVERY_STORY_DELIVERABLE_PATH
-          ? [
-              '# Northstar Notes launch brief',
-              '',
-              '## Who it is for',
-              '',
-              'Northstar Notes is for small product teams coordinating launches across several agent sessions.',
-              '',
-              '## Why it matters',
-              '',
-              'Teams lose context when work continues from chat alone. Northstar Notes keeps decisions reviewable by linking summaries to their source notes and leaving unresolved questions visible.',
-              '',
-              '## Confirmed benefits',
-              '',
-              '- Each summary item can retain a link to its source note.',
-              '- Open questions remain visible until they are explicitly resolved.',
-              '- Teams can review a concise launch brief as a normal project file instead of reconstructing context from chat.',
-              '',
-              '## Open questions',
-              '',
-              '- Public release date',
-              '- Pricing',
-              '- Supported integrations',
-              '',
-              '## Next action',
-              '',
-              'Ask the launch owner to review this brief and resolve the release date, pricing, and integration questions before publication.',
-              '',
-            ]
+          ? mockRecoveryStoryDeliverable().split('\n')
           : [
               '# Mock Agent recovery report',
               '',
@@ -471,7 +532,10 @@ export async function runMockAgent({
     emit(transition);
     return transition.exitCode ?? 0;
   }
-  stdin.on('data', (data) => emit(machine.input(data)));
+  const input = createMockAgentInputFramer((frame) =>
+    emit(machine.input(frame)),
+  );
+  stdin.on('data', (data) => input.push(data));
   return null;
 }
 

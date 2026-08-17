@@ -738,6 +738,14 @@ export type Projects = {
   endRun: (runId: string) => Promise<ProjectWorkRunSnapshot>;
 };
 
+type ProjectAgentSessionFinalization = {
+  schema: 'kungfu.work-start.agent-session-finalization/v1';
+  status: 'agent-finished';
+  reportPath: string;
+  agentReport: Record<string, unknown>;
+  writeOccurred: true;
+};
+
 function parse<T>(raw: string, schema: string): T {
   const payload = JSON.parse(raw) as { schema?: string };
   if (payload.schema !== schema) {
@@ -1952,6 +1960,68 @@ export function openProjects(options: ProjectCommandOptions): Projects {
       await controlRun(runId, 'send-key', { key: approved ? 'y' : 'n' }, false);
       return controlRun(runId, 'send-key', { key: 'Enter' }, false);
     },
-    endRun: (runId) => controlRun(runId, 'end', {}, false),
+    endRun: async (runId) => {
+      const ended = await controlRun(runId, 'end', {}, false);
+      const receipt = ended.receipt;
+      const report = receipt?.agentReport as
+        | { episode?: { reportPath?: unknown } }
+        | undefined;
+      const work = receipt?.work;
+      const workspace = receipt?.workspace?.workspace_root;
+      if (
+        !receipt ||
+        typeof report?.episode?.reportPath !== 'string' ||
+        !report.episode.reportPath ||
+        !workspace ||
+        !work?.initiativeId ||
+        !work.assignmentId
+      ) {
+        return ended;
+      }
+      const finalized = await invoke<ProjectAgentSessionFinalization>(
+        [
+          'work',
+          'finalize-agent-session',
+          report.episode.reportPath,
+          '--workspace',
+          workspace,
+          '--initiative-id',
+          work.initiativeId,
+          '--assignment-id',
+          work.assignmentId,
+        ],
+        'kungfu.work-start.agent-session-finalization/v1',
+      );
+      const resumed = await invoke<{
+        schema: 'kungfu.work-start.resume/v1';
+        status: 'retained-agent-run' | 'no-retained-agent-run';
+        workReceipt: ProjectWorkResume['workReceipt'] | null;
+        writeOccurred: false;
+      }>(
+        [
+          'work',
+          'start-resume',
+          '--workspace',
+          workspace,
+          '--initiative-id',
+          work.initiativeId,
+          '--assignment-id',
+          work.assignmentId,
+        ],
+        'kungfu.work-start.resume/v1',
+      );
+      if (!resumed.workReceipt) {
+        throw new Error(
+          `Kungfu finalized ${finalized.reportPath} but did not return a canonical Work receipt`,
+        );
+      }
+      const canonicalReceipt = resumed.workReceipt;
+      updateRun(runId, (current) => ({
+        ...current,
+        lastEventAt: Date.now(),
+        receipt: canonicalReceipt,
+      }));
+      return retainedRuns.find((candidate) => candidate.id === runId) ?? ended;
+    },
   };
 }

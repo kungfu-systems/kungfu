@@ -866,10 +866,14 @@ episode_manifest_fold fold_episode_manifest_records_until(const std::vector<epis
 
 episode_manifest_store::episode_manifest_store(std::string runtime_dir) : runtime_dir_(std::move(runtime_dir)) {}
 
+uint64_t episode_manifest_store::resolve_episode_id(const episode_begin_options &options) {
+  return options.episode_id == 0 ? generated_episode_id(options) : options.episode_id;
+}
+
 EpisodeOpen episode_manifest_store::begin(const episode_begin_options &options) const {
   EpisodeOpen record{};
   record.schema_version = EPISODE_MANIFEST_SCHEMA_VERSION;
-  record.episode_id = options.episode_id == 0 ? generated_episode_id(options) : options.episode_id;
+  record.episode_id = resolve_episode_id(options);
   record.parent_episode_id = options.parent_episode_id;
   record.root_trigger_frame_uid = options.root_trigger_frame_uid;
   record.location_uid = options.location_uid == 0 ? manifest_location(runtime_dir_)->uid : options.location_uid;
@@ -944,6 +948,119 @@ EpisodeRefAttached episode_manifest_store::attach_ref(const episode_ref_attach_o
   auto writer = make_writer(runtime_dir_);
   writer.write_at(record.update_time, 0, record);
   return record;
+}
+
+episode_append_result episode_manifest_store::append(const episode_append_options &options) const {
+  episode_append_result result{};
+  auto &open = result.open;
+  open.schema_version = EPISODE_MANIFEST_SCHEMA_VERSION;
+  open.episode_id = resolve_episode_id(options.begin);
+  open.parent_episode_id = options.begin.parent_episode_id;
+  open.root_trigger_frame_uid = options.begin.root_trigger_frame_uid;
+  open.location_uid =
+      options.begin.location_uid == 0 ? manifest_location(runtime_dir_)->uid : options.begin.location_uid;
+  open.begin_time = options.begin.begin_time == 0 ? time::now_in_nano() : options.begin.begin_time;
+  set_fixed_string(open.title, options.begin.title);
+  set_fixed_string(open.actor, options.begin.actor);
+  set_fixed_string(open.source, options.begin.source);
+
+  if (options.frames.empty()) {
+    throw std::invalid_argument("complete Episode append requires at least one frame");
+  }
+  if (options.close.episode_id != 0 && options.close.episode_id != open.episode_id) {
+    throw std::invalid_argument("Episode close does not match appended Episode");
+  }
+  if (options.close.frame_count != options.frames.size() ||
+      options.close.last_frame_uid != options.frames.back().frame_uid) {
+    throw std::invalid_argument("Episode close does not cover appended frames");
+  }
+  if (options.close.status == EpisodeStatus::Open) {
+    throw std::invalid_argument("complete Episode append requires a terminal status");
+  }
+  for (const auto &frame : options.frames) {
+    if ((frame.episode_id != 0 && frame.episode_id != open.episode_id) || frame.frame_uid == 0) {
+      throw std::invalid_argument("Episode frame does not match appended Episode");
+    }
+  }
+  for (const auto &ref : options.refs) {
+    if (ref.episode_id != 0 && ref.episode_id != open.episode_id) {
+      throw std::invalid_argument("Episode ref does not match appended Episode");
+    }
+  }
+
+  const auto guard = acquire_writer_guard(runtime_dir_);
+  const auto existing = fold_typed_records();
+  if (existing.episodes.contains(open.episode_id)) {
+    throw std::invalid_argument("Episode already exists");
+  }
+  auto writer = make_writer(runtime_dir_);
+  episode_manifest_fold appended{};
+  const auto write_and_fold = [&writer, &appended](int64_t gen_time, const auto &record) {
+    writer.write_at(gen_time, 0, record);
+    episode_manifest_record row{};
+    row.body = record;
+    fold_into(appended, row);
+  };
+
+  write_and_fold(open.begin_time, open);
+  for (const auto &frame_options : options.frames) {
+    EpisodeFrameAttached frame{};
+    frame.schema_version = EPISODE_MANIFEST_SCHEMA_VERSION;
+    frame.episode_id = open.episode_id;
+    frame.location_uid = frame_options.location_uid == 0 ? open.location_uid : frame_options.location_uid;
+    frame.frame_uid = frame_options.frame_uid;
+    frame.trigger_frame_uid = frame_options.trigger_frame_uid;
+    frame.stream_id = frame_options.stream_id;
+    frame.gen_time = frame_options.gen_time == 0 ? time::now_in_nano() : frame_options.gen_time;
+    frame.trigger_time = frame_options.trigger_time;
+    frame.carrier_type = frame_options.carrier_type;
+    frame.source = frame_options.source;
+    frame.dest = frame_options.dest;
+    frame.data_length = frame_options.data_length;
+    frame.integrity_version = frame_options.integrity_version;
+    frame.payload_checksum = frame_options.payload_checksum;
+    frame.frame_checksum = frame_options.frame_checksum;
+    write_and_fold(frame.gen_time, frame);
+    result.frames.push_back(frame);
+  }
+  for (const auto &ref_options : options.refs) {
+    EpisodeRefAttached ref{};
+    ref.schema_version = EPISODE_MANIFEST_SCHEMA_VERSION;
+    ref.episode_id = open.episode_id;
+    ref.location_uid = ref_options.location_uid == 0 ? open.location_uid : ref_options.location_uid;
+    ref.ref_kind = ref_options.ref_kind;
+    ref.ref_uid = ref_options.ref_uid;
+    ref.update_time = ref_options.update_time == 0 ? time::now_in_nano() : ref_options.update_time;
+    set_fixed_string(ref.ref_id, ref_options.ref_id);
+    set_fixed_string(ref.ref_hash, ref_options.ref_hash);
+    write_and_fold(ref.update_time, ref);
+    result.refs.push_back(ref);
+  }
+
+  auto &close_result = result.close;
+  auto &close = close_result.close;
+  close.schema_version = EPISODE_MANIFEST_SCHEMA_VERSION;
+  close.episode_id = open.episode_id;
+  close.location_uid = options.close.location_uid == 0 ? open.location_uid : options.close.location_uid;
+  close.status = options.close.status;
+  close.end_time = options.close.end_time == 0 ? time::now_in_nano() : options.close.end_time;
+  close.last_frame_uid = options.close.last_frame_uid;
+  close.frame_count = options.close.frame_count;
+  set_fixed_string(close.reason, options.close.reason);
+  write_and_fold(close.end_time, close);
+
+  const auto root = compute_episode_content_root(appended.episodes.at(open.episode_id));
+  EpisodeRootCommitted root_record{};
+  root_record.schema_version = EPISODE_MANIFEST_SCHEMA_VERSION;
+  root_record.episode_id = open.episode_id;
+  root_record.location_uid = close.location_uid;
+  root_record.commit_time = close.end_time;
+  root_record.covered_record_count = root.covered_record_count;
+  set_fixed_string(root_record.algorithm, root.algorithm);
+  set_fixed_string(root_record.root_value, root.value);
+  writer.write_at(root_record.commit_time, 0, root_record);
+  close_result.content_root = root_record;
+  return result;
 }
 
 episode_close_write_result episode_manifest_store::end(const episode_close_options &options) const {

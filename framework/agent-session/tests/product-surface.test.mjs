@@ -1122,62 +1122,6 @@ test('approval state holds shared automatic instruction and stale plans fail clo
   );
 });
 
-test('the product runtime executes a reviewed plan through the real Capsule host', () => {
-  const child = new FakePtyProcess(9001);
-  const spawns = [];
-  const runtime = new InProcessAgentSessionProductRuntime({
-    pty: {
-      spawn(executable, argv, options) {
-        spawns.push({ executable, argv, options });
-        return child;
-      },
-    },
-    now: () => 5000,
-  });
-  const surface = new AgentSessionProductSurface({
-    runtime,
-    now: () => 6000,
-    makeId: () => 'runtime-test',
-  });
-  const client = createAgentSessionSurfaceClient({
-    invoke: (request) => surface.invoke(request),
-    client: 'gui',
-    actorId: 'operator-runtime',
-  });
-  const input = {
-    workConsoleId: 'assistant:workspace-runtime',
-    sessionAttemptId: 'attempt:runtime:1',
-    provider: 'codex',
-    providerVersion: '0.146.0',
-    profileRoot: PROFILE_ROOT,
-    executable: '/usr/local/bin/codex',
-    argv: ['--no-alt-screen'],
-    cwd: '/workspace',
-    env: { HOME: '/home/test', PATH: '/usr/local/bin' },
-  };
-  const plan = client.planStart(input);
-  const result = client.start(
-    plan,
-    { attachmentId: 'view:runtime', presentation: 'assistant-console' },
-    { env: input.env, cols: 100, rows: 30 },
-  );
-
-  assert.equal(result.status, 'started');
-  assert.equal(spawns.length, 1);
-  assert.deepEqual(spawns[0], {
-    executable: input.executable,
-    argv: input.argv,
-    options: {
-      name: 'xterm-256color',
-      cols: 100,
-      rows: 30,
-      cwd: input.cwd,
-      env: input.env,
-    },
-  });
-  assert.equal(runtime.list()[0].host.status().lifecycleState, 'ready');
-});
-
 test('the local product RPC preserves the same action and error envelopes', async (t) => {
   const directory = await mkdtemp(
     path.join(

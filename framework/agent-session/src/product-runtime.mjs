@@ -157,12 +157,29 @@ export class InProcessAgentSessionProductRuntime {
           processStartIdentity: started.foreground.processStartIdentity,
         };
       },
-      end(request) {
-        const controlReceipt = transport.submitSignal({
-          ...request,
-          signal: 'SIGTERM',
-        });
-        return { status: controlReceipt.status, controlReceipt };
+      waitForStatusChange(afterChangeSequence) {
+        return host.waitForChange(afterChangeSequence);
+      },
+      endControl: null,
+      async end(request) {
+        const controlRequest = { operation: 'end', signal: 'SIGTERM' };
+        session.endControl = controlRequest;
+        let controlReceipt;
+        try {
+          controlReceipt = transport.submitSignal({
+            ...request,
+            signal: controlRequest.signal,
+          });
+        } catch (error) {
+          session.endControl = null;
+          throw error;
+        }
+        const boundaryStatus = await host.waitForExit();
+        return {
+          status: controlReceipt.status,
+          controlReceipt,
+          boundaryStatus,
+        };
       },
     };
     this.sessions.set(plan.sessionAttemptId, session);

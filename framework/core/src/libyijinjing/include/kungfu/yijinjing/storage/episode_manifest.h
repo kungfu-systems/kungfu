@@ -71,6 +71,14 @@ public:
 
   [[nodiscard]] yijinjing::types::EpisodeRefAttached attach_ref(const episode_ref_attach_options &options) const;
 
+  // Append one complete Episode with one guard and one physical writer. This
+  // is the authority path for producers that already own all frame receipts;
+  // it prevents tail-slot loss caused by reopening the manifest writer between
+  // records of the same Episode.
+  [[nodiscard]] episode_append_result append(const episode_append_options &options) const;
+
+  [[nodiscard]] static uint64_t resolve_episode_id(const episode_begin_options &options);
+
   [[nodiscard]] episode_close_write_result end(const episode_close_options &options) const;
 
   [[nodiscard]] episode_close_write_result abort(const episode_close_options &options) const;

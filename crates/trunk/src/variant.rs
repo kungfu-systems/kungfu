@@ -27,6 +27,10 @@ use std::ffi::OsStr;
 const ENV_VARIANT_KEY: &str = "KUNGFU_AS_VARIANT";
 /// Optional exact argv[1] that owns one internal Node-variant invocation.
 const ENV_VARIANT_ENTRY_KEY: &str = "KUNGFU_NODE_VARIANT_ENTRY";
+/// Node sets this private descriptor only for a child created through
+/// `child_process.fork`. Such a child is another Node module invocation even
+/// when argv[1] differs from the parent worker's scoped entry.
+const ENV_NODE_CHANNEL_FD_KEY: &str = "NODE_CHANNEL_FD";
 
 /// The standalone node-host library the product ships next to this binary; it
 /// exports the C entry `kungfu_node_run` (a thin wrapper over node::Start).
@@ -67,9 +71,10 @@ pub fn native_node_available() -> bool {
 pub fn dispatch() -> Option<i32> {
     match env::var(ENV_VARIANT_KEY).ok().as_deref() {
         Some("node")
-            if scoped_entry_matches(
+            if node_variant_entry_matches(
                 env::var_os(ENV_VARIANT_ENTRY_KEY).as_deref(),
                 env::args_os().nth(1).as_deref(),
+                env::var_os(ENV_NODE_CHANNEL_FD_KEY).as_deref(),
             ) =>
         {
             // This fast path bypasses the normal product launch functions, so
@@ -95,6 +100,14 @@ pub fn dispatch() -> Option<i32> {
 
 fn scoped_entry_matches(expected: Option<&OsStr>, actual: Option<&OsStr>) -> bool {
     expected.is_none() || expected == actual
+}
+
+fn node_variant_entry_matches(
+    expected: Option<&OsStr>,
+    actual: Option<&OsStr>,
+    node_channel_fd: Option<&OsStr>,
+) -> bool {
+    scoped_entry_matches(expected, actual) || node_channel_fd.is_some()
 }
 
 /// The C entry the node-host exports: `int kungfu_node_run(int argc, char **argv)`.
@@ -281,6 +294,18 @@ mod tests {
         assert!(!scoped_entry_matches(
             Some(OsStr::new("/exact/runner.mjs")),
             Some(OsStr::new("agent")),
+        ));
+        assert!(node_variant_entry_matches(
+            Some(OsStr::new("C:\\product\\tui\\agent-session-worker.mjs")),
+            Some(OsStr::new(
+                "C:\\product\\tui\\node_modules\\node-pty\\lib\\conpty_console_list_agent"
+            )),
+            Some(OsStr::new("3")),
+        ));
+        assert!(!node_variant_entry_matches(
+            Some(OsStr::new("C:\\product\\tui\\agent-session-worker.mjs")),
+            Some(OsStr::new("C:\\product\\runtime\\public-adapter.mjs")),
+            None,
         ));
 
         // No variant requested → fall through.

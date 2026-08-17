@@ -113,9 +113,15 @@ def requires_kickoff(continuation_mode: str) -> bool:
     }
 
 
-def session_invoker(surface: Any, runtime_dir: str) -> Callable[..., Mapping[str, Any]]:
+def session_invoker(
+    surface: Any, runtime_dir: str, *, event_driven: bool = False
+) -> Callable[..., Mapping[str, Any]]:
     """Bind all Session operations to one runtime-scoped native endpoint."""
-    endpoint = surface.ensure(runtime_dir)
+    endpoint = (
+        surface.ensure(runtime_dir, timeout=None)
+        if event_driven
+        else surface.ensure(runtime_dir)
+    )
 
     def invoke(request: Mapping[str, Any]) -> Mapping[str, Any]:
         # A structured provider may need a cold network round trip before it
@@ -126,7 +132,9 @@ def session_invoker(surface: Any, runtime_dir: str) -> Callable[..., Mapping[str
         # the live SessionAttempt.
         operation = str(request.get("operation") or "")
         timeout = (
-            30.0
+            None
+            if event_driven or operation == "wait-status-change"
+            else 30.0
             if operation
             in {
                 "start",

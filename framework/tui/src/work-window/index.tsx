@@ -614,13 +614,13 @@ export function ProjectWorkHost({
     const timeout = setTimeout(() => setCopyNotice(undefined), 3500);
     return () => clearTimeout(timeout);
   }, [copyNotice]);
-  const composerActive = Boolean(composer);
+  const workspaceInputActive = Boolean(composer) || agentReply !== undefined;
   React.useEffect(() => {
-    onInputModeChange(composerActive);
+    onInputModeChange(workspaceInputActive);
     return () => {
-      if (composerActive) onInputModeChange(false);
+      if (workspaceInputActive) onInputModeChange(false);
     };
-  }, [composerActive, onInputModeChange]);
+  }, [onInputModeChange, workspaceInputActive]);
 
   const {
     visibleRun,
@@ -1020,6 +1020,8 @@ export function ProjectWorkHost({
         return continueRetainedWork();
       if (value === '\r' && retainedAgentReviewable)
         return continueRetainedWork();
+      if (attention?.kind === 'blocked' && value === 'r')
+        return retryAgentAttempt();
       if (session?.controllable === false) return;
       if (value === 'n') return beginNewWork();
       if (attention?.kind === 'needs-approval' && value === 'y')
@@ -1030,8 +1032,6 @@ export function ProjectWorkHost({
         setAgentReply('');
         return;
       }
-      if (attention?.kind === 'blocked' && value === 'r')
-        return retryAgentAttempt();
       if (value === '\r') return beginNewWork();
       if (value === 'r') previewCodex();
     };
@@ -1215,13 +1215,15 @@ export function ProjectWorkHost({
                     <Text bold>
                       {attention.kind === 'ready-for-review'
                         ? '[v/Enter] review changes'
-                        : session?.controllable === false
-                          ? 'Continue in the provider-native terminal; TUI is observer only'
-                          : attention.kind === 'needs-approval'
-                            ? '[y] approve · [n] deny'
-                            : attention.kind === 'needs-answer'
-                              ? '[i] answer · [v/Enter] review changes'
-                              : '[r] end this attempt and plan a fresh attempt'}
+                        : attention.kind === 'blocked'
+                          ? '[r] end this attempt and plan a fresh attempt'
+                          : session?.controllable === false
+                            ? 'Continue in the provider-native terminal; TUI is observer only'
+                            : attention.kind === 'needs-approval'
+                              ? '[y] approve · [n] deny'
+                              : attention.kind === 'needs-answer'
+                                ? '[i] answer · [v/Enter] review changes'
+                                : 'Inspect the Agent Session state'}
                     </Text>
                   </Box>
                 ) : null}

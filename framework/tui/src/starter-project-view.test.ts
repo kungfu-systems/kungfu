@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import test from 'node:test';
 import type {
   ProjectTemplateCreationReceipt,
@@ -14,6 +15,7 @@ import { renderProfileShellSnapshot } from './profile-shell.js';
 import {
   agentProfileSourceLabel,
   deterministicMockAgentSelection,
+  deterministicMockSelectionForStage,
   openedProjectWorkReference,
   openedProjectWorks,
   projectSectionNavigationAtPoint,
@@ -217,6 +219,33 @@ test('independent review state remains distinct from Agent exit', () => {
   assert.equal(
     starterProjectOverviewEnterStage(workReceipt, reviewReceipt),
     'review-result',
+  );
+});
+
+test('a failed independent review returns Work to a fresh Agent attempt', () => {
+  const reviewReceipt = {
+    schema: 'kungfu.work-review.receipt/v1',
+    ok: false,
+    status: 'revision-required',
+    workPhase: 'executing',
+  } as WorkReviewReceipt;
+
+  assert.equal(
+    starterProjectOverviewEnterStage(undefined, reviewReceipt),
+    'detail',
+  );
+});
+
+test('Review Work exposes a durable fresh-Agent revision route', () => {
+  const source = readFileSync(
+    new URL('./starter-project-view/index.tsx', import.meta.url),
+    'utf8',
+  );
+
+  assert.match(source, /\[a\] revise with fresh Agent/u);
+  assert.match(
+    source,
+    /stage === 'review'[\s\S]*?input === 'a'[\s\S]*?setStage\('detail'\)/u,
   );
 });
 
@@ -470,6 +499,61 @@ test('deterministic Mock Agent selection binds the requested scenario', () => {
   assert.equal(profile.source, 'qualification');
 });
 
+test('deterministic Mock onboarding owns execution and review stages', () => {
+  const execution = deterministicMockSelectionForStage(
+    'recovery-story',
+    'agents',
+  );
+  const review = deterministicMockSelectionForStage(
+    'recovery-story',
+    'review-agents',
+  );
+
+  assert.equal(execution?.id, 'kungfu.mock-agent.recovery-story');
+  assert.equal(execution?.label, 'Mock Agent · recovery-story');
+  assert.equal(review?.id, 'kungfu.mock-agent.review-fit');
+  assert.equal(review?.label, 'Mock Reviewer · deterministic-fit');
+  assert.equal(deterministicMockSelectionForStage('  ', 'agents'), null);
+  assert.equal(deterministicMockSelectionForStage(undefined, 'agents'), null);
+});
+
+test('deterministic Mock onboarding bypasses external Agent discovery', () => {
+  const source = readFileSync(
+    new URL('./starter-project-view/index.tsx', import.meta.url),
+    'utf8',
+  );
+  const host = source.slice(
+    source.indexOf('export function StarterProjectHost'),
+  );
+  const deterministicBranch = host.indexOf(
+    'const deterministicMock = deterministicMockSelectionForStage',
+  );
+  const externalDiscovery = host.indexOf('.discoverAgents()');
+
+  assert.ok(deterministicBranch >= 0);
+  assert.ok(externalDiscovery > deterministicBranch);
+  assert.match(
+    host.slice(deterministicBranch, externalDiscovery),
+    /if \(deterministicMock\)[\s\S]*?setProfiles\(\[deterministicMock\]\)[\s\S]*?return;/u,
+  );
+});
+
+test('Starter onboarding stabilizes the Agent Session before binding the Work start plan', () => {
+  const source = readFileSync(
+    new URL('./starter-project-view/index.tsx', import.meta.url),
+    'utf8',
+  );
+  const preview = source.slice(
+    source.indexOf('const preview = React.useCallback'),
+    source.indexOf('const start = React.useCallback'),
+  );
+
+  assert.match(
+    preview,
+    /ensureAgentSession\(project\.workspace\.selected\.runtime_dir\)[\s\S]*?\.then\(\(\) => lab\.planStarterWork\(workReference, profile\.id\)\)/u,
+  );
+});
+
 test('retained Agent Session receipts route back to the interactive Project surface', () => {
   const retained = {
     schema: 'kungfu.work-start.receipt/v1',
@@ -495,6 +579,48 @@ test('retained Agent Session receipts route back to the interactive Project surf
       agentReport: undefined,
     } as unknown as WorkStartReceipt),
     false,
+  );
+});
+
+test('Starter Project starts Work through its exact runtime-scoped Agent Session', () => {
+  const source = readFileSync(
+    new URL('./starter-project-view/index.tsx', import.meta.url),
+    'utf8',
+  );
+  const host = source.slice(
+    source.indexOf('export function StarterProjectHost'),
+  );
+
+  assert.match(
+    host,
+    /ensureAgentSession\(project\.workspace\.selected\.runtime_dir\)/u,
+  );
+  assert.ok(
+    host.indexOf('ensureAgentSession(project.workspace.selected.runtime_dir)') <
+      host.indexOf('lab.startStarterWork'),
+    'the exact Project Agent Session must exist before Work start',
+  );
+});
+
+test('Project Work keeps Agent answer text out of the global control bar', () => {
+  const source = readFileSync(
+    new URL('./work-window/index.tsx', import.meta.url),
+    'utf8',
+  );
+
+  assert.match(source, /Boolean\(composer\) \|\| agentReply !== undefined/u);
+  assert.match(source, /onInputModeChange\(workspaceInputActive\)/u);
+});
+
+test('ended failed Agent attempts remain retryable when the old Session is observer-only', () => {
+  const source = readFileSync(
+    new URL('./work-window/index.tsx', import.meta.url),
+    'utf8',
+  );
+
+  assert.ok(
+    source.indexOf("attention?.kind === 'blocked' && value === 'r'") <
+      source.indexOf('session?.controllable === false'),
   );
 });
 

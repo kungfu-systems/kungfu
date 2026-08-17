@@ -11,14 +11,17 @@ from __future__ import annotations
 
 import hashlib
 import base64
+import copy
 import importlib.util
 import json
 import os
 import shutil
 import subprocess
 import sys
+from contextlib import contextmanager
+from contextvars import ContextVar
 from pathlib import Path
-from typing import Any, Mapping
+from typing import Any, Iterator, Mapping
 
 from kungfu import agent as agent_pack
 from kungfu import runtime_broker
@@ -81,6 +84,32 @@ from kungfu.profile_sdk_kfd3 import (
 )
 
 SOURCE_BUNDLE_SCHEMA = "kungfu.profile-source-bundle/v1"
+
+_VALIDATION_SCOPE: ContextVar[dict[tuple[str, str], dict[str, Any]] | None] = (
+    ContextVar("kungfu_profile_validation_scope", default=None)
+)
+
+
+@contextmanager
+def validation_scope() -> Iterator[None]:
+    """Reuse exact source validation inside one bounded product transaction.
+
+    Profile source packages are immutable inputs for the duration of this
+    scope. Runtime lifecycle and Fact state may still change: callers that need
+    those folds continue to read them from their owning services. Nested scopes
+    deliberately share one cache, while every later command starts from an
+    empty scope and therefore revalidates source bytes and conformance.
+    """
+
+    current = _VALIDATION_SCOPE.get()
+    if current is not None:
+        yield
+        return
+    token = _VALIDATION_SCOPE.set({})
+    try:
+        yield
+    finally:
+        _VALIDATION_SCOPE.reset(token)
 
 
 def _work_profile_conformance_script() -> Path | None:
@@ -795,6 +824,13 @@ def load_member_python_package(source: str | Path, member_id: str, package: str)
 
 
 def validate_source(source: str | Path, runtime_dir: str | Path) -> dict[str, Any]:
+    scoped = _VALIDATION_SCOPE.get()
+    cache_key = (
+        str(Path(source).expanduser().resolve()),
+        str(Path(runtime_dir).expanduser().resolve()),
+    )
+    if scoped is not None and cache_key in scoped:
+        return copy.deepcopy(scoped[cache_key])
     resolved = resolve_source(source)
     inspection = storage_service.profile_lifecycle(
         runtime_dir,
@@ -804,7 +840,7 @@ def validate_source(source: str | Path, runtime_dir: str | Path) -> dict[str, An
     )
     collaboration = _collaboration_closure(inspection)
     work_conformance = _work_profile_conformance(inspection, "validate")
-    return {
+    result = {
         "schema": "kungfu.profile-validation/v1",
         "source": resolved,
         "inspection": inspection,
@@ -812,6 +848,9 @@ def validate_source(source: str | Path, runtime_dir: str | Path) -> dict[str, An
         "workConformance": work_conformance,
         "ok": True,
     }
+    if scoped is not None:
+        scoped[cache_key] = copy.deepcopy(result)
+    return result
 
 
 def collaboration(source: str | Path, runtime_dir: str | Path) -> dict[str, Any]:

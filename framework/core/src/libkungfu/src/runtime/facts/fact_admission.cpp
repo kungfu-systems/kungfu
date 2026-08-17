@@ -276,8 +276,10 @@ recorded_episode append_episode(action::action_recorder &recorder, const std::st
   begin_options.title = title;
   begin_options.actor = "libkungfu";
   begin_options.source = "adr-0051-fact-admission";
-  const auto opened = episodes.begin(begin_options);
-  const auto episode_id = opened.episode_id;
+  const auto episode_id = yy_storage::episode_manifest_store::resolve_episode_id(begin_options);
+  begin_options.episode_id = episode_id;
+  yy_storage::episode_append_options manifest{};
+  manifest.begin = begin_options;
 
   recorded_episode result;
   result.episode_id = episode_id;
@@ -303,7 +305,7 @@ recorded_episode append_episode(action::action_recorder &recorder, const std::st
     attached.integrity_version = receipt.integrity_version;
     attached.payload_checksum = receipt.payload_checksum;
     attached.frame_checksum = receipt.frame_checksum;
-    (void)episodes.attach_frame(attached);
+    manifest.frames.push_back(attached);
     result.events.push_back(event);
     result.receipts.push_back(receipt);
   }
@@ -315,7 +317,7 @@ recorded_episode append_episode(action::action_recorder &recorder, const std::st
   schema_ref.update_time = system_time;
   schema_ref.ref_id = DOMAIN_FACT_EVENT_SCHEMA_V1;
   schema_ref.ref_hash = domain_schema().root;
-  (void)episodes.attach_ref(schema_ref);
+  manifest.refs.push_back(schema_ref);
 
   for (const auto &ref : owned_refs) {
     yy_storage::episode_ref_attach_options content_ref{};
@@ -325,7 +327,7 @@ recorded_episode append_episode(action::action_recorder &recorder, const std::st
     content_ref.update_time = system_time;
     content_ref.ref_id = ref.id;
     content_ref.ref_hash = ref.hash;
-    (void)episodes.attach_ref(content_ref);
+    manifest.refs.push_back(content_ref);
   }
 
   yy_storage::episode_close_options close_options{};
@@ -336,7 +338,8 @@ recorded_episode append_episode(action::action_recorder &recorder, const std::st
   close_options.last_frame_uid = result.receipts.back().frame_uid;
   close_options.frame_count = result.receipts.size();
   close_options.reason = "fact admission recorded";
-  (void)episodes.end(close_options);
+  manifest.close = close_options;
+  (void)episodes.append(manifest);
   return result;
 }
 

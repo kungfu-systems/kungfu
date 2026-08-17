@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: Apache-2.0
 
-"""Bounded executable verification probes for Agent Runtime Profiles."""
+"""Executable verification probes for Agent Runtime Profiles."""
 
 from __future__ import annotations
 
@@ -22,14 +22,14 @@ def parse_semantic_version(output: str) -> str | None:
 
 
 class VerificationProbe:
-    """Inspect only one declared executable with a bounded version command."""
+    """Inspect only one declared executable with its version command."""
 
     def __init__(
         self,
         *,
         schema: str,
         default_timeout_seconds: float = 5.0,
-        provider_timeouts: Mapping[str, float] | None = None,
+        provider_timeouts: Mapping[str, float | None] | None = None,
         run: Callable[..., Any] = subprocess.run,
     ) -> None:
         self.schema = schema
@@ -37,7 +37,7 @@ class VerificationProbe:
         self.provider_timeouts = dict(provider_timeouts or {})
         self.run = run
 
-    def timeout(self, provider: str) -> float:
+    def timeout(self, provider: str) -> float | None:
         return self.provider_timeouts.get(provider, self.default_timeout_seconds)
 
     def raw_version(

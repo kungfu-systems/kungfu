@@ -166,6 +166,33 @@ test('positive fixtures map only typed provider events without retaining raw pay
   }
 });
 
+test('unknown provider notifications stay diagnostic across arbitrary runtime versions', () => {
+  for (const [cliVersion, method] of [
+    ['0.146.0', 'skills/changed'],
+    ['opaque-future-build', 'future/provider-diagnostic'],
+  ]) {
+    const gate = createCodexAppServerContractGate({ cliVersion });
+    const plan = gate.classify({
+      direction: 'server-notification',
+      message: { method, params: { futurePayload: 'not-public' } },
+    });
+    assert.deepEqual(plan, {
+      schema: 'kungfu.codex-app-server.normalization-plan/v1',
+      provider: 'codex',
+      providerMethod: method,
+      providerSchemaFile: null,
+      direction: 'server-notification',
+      normalizedSemantic: 'provider-notification-unclassified',
+      interactionOperation: null,
+      rawRetention: 'metadata-only',
+      authority: 'provider-diagnostic-not-work-fact',
+      rawPointerRequired: true,
+    });
+    assert.ok(!Object.hasOwn(plan, 'message'));
+    assert.ok(!Object.hasOwn(plan, 'params'));
+  }
+});
+
 test('negative fixtures fail closed on method, direction, envelope and identity drift', () => {
   const gate = createCodexAppServerContractGate({ cliVersion: '0.146.0' });
   for (const entry of fixture('negative-cases.json')) {

@@ -7,6 +7,8 @@ from types import SimpleNamespace
 
 from kungfu import config
 from kungfu import workspace_guidance
+from kungfu.agent import run_agent
+from kungfu.agent import runtime_profiles
 from kungfu.agent.managed_run import ManagedRunCoordinator
 from kungfu.agent.native_launch import NativeLaunchCoordinator
 from kungfu.agent.provider_bootstrap import ProviderBootstrapAdapter
@@ -33,6 +35,97 @@ def test_verification_probe_replaces_invalid_utf8_from_provider():
     assert probe.raw_version(sys.executable, _invalid_utf8_version_command()) == (
         "provider � 1.2.3"
     )
+
+
+def test_mock_runtime_verification_has_no_time_based_admission(monkeypatch):
+    observed = {}
+
+    def probe(*args, **kwargs):
+        observed["timeout"] = kwargs["timeout"]
+        return SimpleNamespace(returncode=0, stdout="1.1.0\n", stderr="")
+
+    monkeypatch.setattr(runtime_profiles.subprocess, "run", probe)
+    result = runtime_profiles.verify_profile(
+        {
+            "id": "kungfu.mock-agent.complete",
+            "provider": "synthetic",
+            "launch": {"executable": sys.executable},
+        }
+    )
+
+    assert result["ok"] is True
+    assert observed["timeout"] is None
+
+
+def test_codex_direct_process_uses_stdin_without_version_assumptions():
+    prompt = "bounded task " + ("evidence " * 10_000)
+    argv = ["/usr/bin/codex", "exec", "--json", prompt]
+
+    process_argv, stdin_text = run_agent._direct_process_transport("codex", argv)
+
+    assert process_argv == ["/usr/bin/codex", "exec", "--json", "-"]
+    assert stdin_text == prompt
+    assert prompt not in process_argv
+    assert run_agent._direct_process_transport("claude", argv) == (argv, None)
+
+
+def test_deterministic_mock_direct_process_keeps_large_prompt_out_of_argv():
+    prompt = "bounded review\n" + ("evidence\n" * 10_000)
+    argv = [
+        "/opt/kungfu/runtime/kungfu",
+        "/opt/kungfu/tui/mock-agent.mjs",
+        "--scenario",
+        "review-fit",
+        prompt,
+    ]
+
+    process_argv, stdin_text = run_agent._direct_process_transport("synthetic", argv)
+
+    assert process_argv == argv[:-1]
+    assert prompt not in process_argv
+    assert stdin_text == f"\x1b[200~{prompt}\x1b[201~\r"
+
+
+def test_deterministic_mock_waits_for_session_events_without_a_deadline(monkeypatch):
+    ref = {
+        "workConsoleId": "work:mock",
+        "sessionAttemptId": "attempt:mock:1",
+    }
+    requests = []
+
+    def invoke(request):
+        requests.append(request)
+        if request["operation"] == "status":
+            return {**ref, "changeSequence": 7, "interactionState": "busy"}
+        if request["operation"] == "wait-status-change":
+            assert request["afterChangeSequence"] == 7
+            return {**ref, "changeSequence": 8, "interactionState": "ended"}
+        raise AssertionError(request)
+
+    monkeypatch.setattr(
+        run_agent.time,
+        "monotonic",
+        lambda: (_ for _ in ()).throw(AssertionError("deadline is forbidden")),
+    )
+    monkeypatch.setattr(
+        run_agent.time,
+        "sleep",
+        lambda _seconds: (_ for _ in ()).throw(AssertionError("polling is forbidden")),
+    )
+
+    result = run_agent._wait_for_session(
+        invoke,
+        ref,
+        lambda status: status["interactionState"] == "ended",
+        timeout_seconds=None,
+        event_driven=True,
+    )
+
+    assert result["changeSequence"] == 8
+    assert [request["operation"] for request in requests] == [
+        "status",
+        "wait-status-change",
+    ]
 
 
 def test_verification_probe_keeps_version_after_invalid_utf8():
@@ -94,8 +187,11 @@ def test_terminal_mock_session_waits_for_process_exit_after_reviewable_output():
     ]
     inspected = []
 
-    def wait_for_session(_invoke, _ref, predicate, *, timeout_seconds):
-        assert timeout_seconds > 0
+    def wait_for_session(
+        _invoke, _ref, predicate, *, timeout_seconds, event_driven=False
+    ):
+        assert timeout_seconds is None
+        assert event_driven is True
         for status in observations.pop(0):
             inspected.append(status["interactionState"])
             if predicate(status):

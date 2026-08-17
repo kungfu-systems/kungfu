@@ -467,3 +467,6 @@ def test_fact_cli_queues_real_multi_process_material_writers(tmp_path):
     assert {
         row["observation_id"] for row in catalog["state"]["observation_history"]
     } == {f"obs-{index}" for index in range(writer_count)}
+    for result in results:
+        episode_id = int(result["receipt"]["episode_id"])
+        assert service.fsck(runtime_dir, episode_id=episode_id)["ok"]

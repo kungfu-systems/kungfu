@@ -4,7 +4,9 @@ import {
   MOCK_AGENT_SCENARIOS,
   MOCK_AGENT_VERSION,
   MOCK_RECOVERY_STORY_DELIVERABLE_PATH,
+  createMockAgentInputFramer,
   createMockAgentMachine,
+  mockRecoveryStoryDeliverable,
 } from '../src/mock-provider.mjs';
 import { createProviderAdapter } from '../src/provider-adapters.mjs';
 
@@ -62,7 +64,28 @@ test('multi-step scenario deterministically crosses answer, approval, and review
   const review = machine.input('y');
   assert.equal(machine.state(), 'ready-for-review');
   assert.equal(inspect(review.lines).state, 'ready');
+  assert.match(review.lines.join('\n'), /MOCK VALIDATION/u);
+  assert.match(review.lines.join('\n'), /MOCK UNRESOLVED RISKS/u);
   assert.match(review.lines.join('\n'), /READY FOR REVIEW/u);
+});
+
+test('Mock Agent frames split bracketed paste and raw key input at terminal submission boundaries', () => {
+  const frames = [];
+  const input = createMockAgentInputFramer((frame) => frames.push(frame));
+  const escapeCode = String.fromCharCode(27);
+
+  input.push(`${escapeCode}[200~first line\n`);
+  input.push(`second line${escapeCode}[201~`);
+  assert.deepEqual(frames, []);
+  input.push('\r');
+  input.push('y');
+  assert.equal(frames.length, 1);
+  input.push('\r');
+
+  assert.deepEqual(frames, [
+    `${escapeCode}[200~first line\nsecond line${escapeCode}[201~`,
+    'y',
+  ]);
 });
 
 test('blocked and crash scenarios are explicit and stable', () => {
@@ -164,6 +187,15 @@ test('recovery-story keeps the original business objective in natural Agent lang
   assert.match(crash, /without relying on prior chat/u);
   assert.match(completed, /deliverables\/launch-brief\.md/u);
   assert.match(completed, /does not approve its own Work/u);
+  const deliverable = mockRecoveryStoryDeliverable();
+  assert.match(
+    deliverable,
+    /developers coordinating long-running coding-agent work/u,
+  );
+  assert.doesNotMatch(deliverable, /Northstar Notes|small product teams/u);
+  assert.match(deliverable, /## Validation evidence/u);
+  assert.match(deliverable, /inputs\/product-notes\.md/u);
+  assert.match(deliverable, /## Unresolved risks/u);
 });
 
 test('recovery-delivery isolates the reviewable launch brief without inventing failed Attempts', () => {

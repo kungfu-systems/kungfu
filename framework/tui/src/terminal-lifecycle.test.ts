@@ -18,6 +18,7 @@ import {
   type TerminalInput,
   TerminalLifecycle,
   type TerminalOutput,
+  bindTuiMockAgentEnvironment,
   decodeTerminalMouseInput,
   existingProjectWorkspaceRoot,
   resolveTuiAgentSessionExecutable,
@@ -25,6 +26,73 @@ import {
   resolveTuiProductPaths,
   tuiChildCliEnvironment,
 } from './terminal-lifecycle.js';
+
+test('Project CLI receives installed Mock Agent paths without replacing explicit overrides', () => {
+  assert.deepEqual(
+    bindTuiMockAgentEnvironment({
+      env: { KUNGFU_INSTALL_SOURCE: 'archive' },
+      packagedBin: '/product/runtime/kungfu',
+      mockPath: '/product/tui/mock-agent.mjs',
+    }),
+    {
+      KUNGFU_INSTALL_SOURCE: 'archive',
+      KUNGFU_MOCK_AGENT_EXECUTABLE: '/product/runtime/kungfu',
+      KUNGFU_MOCK_AGENT_SCRIPT: '/product/tui/mock-agent.mjs',
+    },
+  );
+  assert.deepEqual(
+    bindTuiMockAgentEnvironment({
+      env: {
+        KUNGFU_MOCK_AGENT_EXECUTABLE: '/qualification/node',
+        KUNGFU_MOCK_AGENT_SCRIPT: '/qualification/mock.mjs',
+      },
+      packagedBin: '/product/runtime/kungfu',
+      mockPath: '/product/tui/mock-agent.mjs',
+    }),
+    {
+      KUNGFU_MOCK_AGENT_EXECUTABLE: '/qualification/node',
+      KUNGFU_MOCK_AGENT_SCRIPT: '/qualification/mock.mjs',
+    },
+  );
+});
+
+test('cached Agent Session readiness is revalidated before reuse', () => {
+  const source = fs.readFileSync(
+    new URL('./main.tsx', import.meta.url),
+    'utf8',
+  );
+  const ensureSession = source.slice(
+    source.indexOf('function ensureTuiAgentSession'),
+    source.indexOf('async function invokeTuiAgentSession'),
+  );
+
+  assert.match(
+    ensureSession,
+    /tuiAgentSessionReady = tuiAgentSessionReady\.then\(async \(\) => \{/u,
+  );
+  assert.match(
+    ensureSession,
+    /await host\.invoke\(\{ operation: 'capabilities' \}\)/u,
+  );
+});
+
+test('deterministic Mock onboarding owns an attached Session host', () => {
+  const source = fs.readFileSync(
+    new URL('./main.tsx', import.meta.url),
+    'utf8',
+  );
+  const ensureSession = source.slice(
+    source.indexOf('function ensureTuiAgentSession'),
+    source.indexOf('async function invokeTuiAgentSession'),
+  );
+
+  assert.match(
+    ensureSession,
+    /KUNGFU_MOCK_AGENT_SCENARIO[\s\S]*createAttachedAgentSessionHost/u,
+  );
+  assert.match(ensureSession, /async function closeTuiAgentSession/u);
+  assert.match(source, /finally \{\s*await closeTuiAgentSession\(\);\s*\}/u);
+});
 
 test('child CLI retains installed authority without recursive libnode selection', () => {
   const parent = {

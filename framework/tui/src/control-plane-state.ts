@@ -131,6 +131,69 @@ export type ControlPlaneState = {
   detail?: ProductSearchDocument;
 };
 
+export type ControlPlaneBarModel = {
+  acceptsText: boolean;
+  glyph: '◆' | '›' | '◇';
+  hint: string;
+  inputFocused: boolean;
+  modeLabel: string;
+  prompt: string;
+  tone: 'cyan' | 'gray';
+};
+
+export function controlPlaneBarModel({
+  state,
+  resultCount,
+  controlsLabel,
+  controlsHint,
+  workspaceInputActive,
+}: {
+  state: ControlPlaneState;
+  resultCount: number;
+  controlsLabel: string;
+  controlsHint: string;
+  workspaceInputActive: boolean;
+}): ControlPlaneBarModel {
+  const modalOpen = state.mode !== 'closed';
+  const inputFocused =
+    !workspaceInputActive && (modalOpen || state.focus === 'input');
+  const value =
+    state.mode === 'commands' || state.mode === 'search' || !modalOpen
+      ? state.query
+      : '';
+  const prompt = workspaceInputActive
+    ? 'Focused panel accepts text'
+    : state.mode === 'help'
+      ? 'Help open'
+      : state.mode === 'detail'
+        ? 'Details open'
+        : value || (!modalOpen && !inputFocused ? 'Press i to type' : '');
+  const hint = workspaceInputActive
+    ? controlsHint
+    : (state.notice ??
+      (state.mode === 'commands'
+        ? `${resultCount} action${resultCount === 1 ? '' : 's'} · Enter Run · Esc Close`
+        : state.mode === 'search'
+          ? `${resultCount} result${resultCount === 1 ? '' : 's'} · Enter Open · Esc Close`
+          : state.mode === 'help' || state.mode === 'detail'
+            ? 'Esc Back'
+            : state.focus === 'workspace'
+              ? `${controlsHint} · i Input`
+              : 'Esc Controls · ? Help · / Actions · Ctrl+K Search'));
+  return {
+    acceptsText:
+      state.mode === 'closed' ||
+      state.mode === 'commands' ||
+      state.mode === 'search',
+    glyph: workspaceInputActive ? '◆' : inputFocused ? '›' : '◇',
+    hint,
+    inputFocused,
+    modeLabel: modalOpen ? state.mode.toUpperCase() : controlsLabel,
+    prompt,
+    tone: inputFocused || workspaceInputActive ? 'cyan' : 'gray',
+  };
+}
+
 export type ControlPlaneUpdate = {
   handled: boolean;
   state: ControlPlaneState;
@@ -315,6 +378,19 @@ export function directWorkspaceNavigationFromInput(
     return 'projects';
   }
   return null;
+}
+
+export function projectWorkOwnsInput(
+  current: ControlPlaneState,
+  input: string,
+  surface: string,
+): boolean {
+  return (
+    surface === 'project-work' &&
+    current.mode === 'closed' &&
+    current.focus === 'workspace' &&
+    input === 'i'
+  );
 }
 
 export function quickCommandMatches(

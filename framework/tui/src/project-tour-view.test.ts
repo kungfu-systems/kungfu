@@ -37,7 +37,7 @@ import {
   updateProjectTourStream,
 } from './starter-project-view/index.js';
 
-test('Project tour awaits the shared Agent Session before rendering', () => {
+test('Project Work awaits the shared Agent Session before rendering', () => {
   const source = readFileSync(new URL('./main.tsx', import.meta.url), 'utf8');
   const main = source.slice(source.indexOf('async function main()'));
   assert.match(
@@ -56,7 +56,16 @@ test('Project tour awaits the shared Agent Session before rendering', () => {
     /const endpoint = await ensureTuiAgentSession\(paths\.runtimeDir\)/u,
   );
   assert.match(lab, /cli\.env\.KUNGFU_AGENT_SESSION_ENDPOINT = endpoint/u);
-  assert.match(lab, /KUNGFU_MOCK_AGENT_EXECUTABLE \|\|= paths\.packagedBin/u);
+  assert.match(
+    lab,
+    /execFileEvents: async[\s\S]*?await ensureTuiAgentSession\(tuiAgentSessionRuntimeDir\)/u,
+  );
+  assert.match(lab, /bindTuiMockAgentEnvironment\(\{/u);
+  assert.ok(
+    lab.indexOf('bindTuiMockAgentEnvironment') <
+      lab.indexOf('if (projectTour)'),
+    'installed Mock Agent paths must be bound outside Project Tour mode',
+  );
   assert.doesNotMatch(
     source,
     /KUNGFU_MOCK_AGENT_EXECUTABLE\s*=\s*process\.execPath/u,

@@ -182,6 +182,36 @@ def test_run_process_retains_undecodable_output_without_crashing(tmp_path):
     }
 
 
+def test_run_process_transports_long_unicode_prompt_over_stdin(tmp_path):
+    script = tmp_path / "read-stdin.py"
+    script.write_text(
+        "import os\n"
+        "import json\n"
+        "import sys\n"
+        "payload = sys.stdin.read()\n"
+        "print(json.dumps({'argv': sys.argv[1:], 'bytes': len(payload.encode('utf-8')), 'payload': payload, "
+        "'python_utf8': os.environ.get('PYTHONUTF8'), 'python_io_encoding': os.environ.get('PYTHONIOENCODING')}))\n",
+        encoding="utf-8",
+    )
+    prompt = ("确定性证据 🚀\n" * 5_000) + "complete"
+
+    result = run_agent.run_process(
+        [sys.executable, str(script), "-"],
+        cwd=str(tmp_path),
+        env=os.environ,
+        timeout_seconds=None,
+        stdin_text=prompt,
+    )
+
+    assert result.exit_code == 0, result.stderr
+    observed = json.loads(result.stdout)
+    assert observed["argv"] == ["-"]
+    assert observed["bytes"] == len(prompt.encode("utf-8"))
+    assert observed["payload"] == prompt
+    assert observed["python_utf8"] == "1"
+    assert observed["python_io_encoding"] == "utf-8"
+
+
 def test_managed_agent_environment_preserves_windows_process_coordinates(tmp_path):
     windows_coordinates = {
         "APPDATA": r"C:\\Users\\test\\AppData\\Roaming",

@@ -92,5 +92,5 @@ def test_run_progress_flatbuffer_preserves_live_work_ref():
 def test_native_replay_registers_run_progress():
     replay_source = (
         Path(__file__).parents[2] / "src/python/kungfu/rewind/replay.py"
-    ).read_text()
+    ).read_text(encoding="utf-8")
     assert '"RunProgress": RunProgress.RunProgress' in replay_source

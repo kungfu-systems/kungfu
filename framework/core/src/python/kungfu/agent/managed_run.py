@@ -90,10 +90,13 @@ def _session_boundary_reached(
         return interaction == "ended" and status.get("live") is not True
     if interaction in {"approval-needed", "unknown", "ended"}:
         return True
+    attention_kind = str(
+        ((status.get("workAgent") or {}).get("attention") or {}).get("kind") or ""
+    )
     return (
         interaction == "ready"
-        and observed_busy
         and int((status.get("output") or {}).get("nextSequence") or 0) > before_sequence
+        and (observed_busy or attention_kind in {"needs-answer", "ready-for-review"})
     )
 
 
@@ -187,7 +190,10 @@ class ManagedRunCoordinator:
             invoke,
             ref,
             _initial_session_boundary_reached,
-            timeout_seconds=min(timeout_seconds, 30.0),
+            timeout_seconds=(
+                None if provider == "synthetic" else min(timeout_seconds, 30.0)
+            ),
+            event_driven=provider == "synthetic",
         )
         if ready.get("interactionState") != "ready":
             raise ValueError(
@@ -236,7 +242,8 @@ class ManagedRunCoordinator:
             invoke,
             ref,
             completed_turn,
-            timeout_seconds=timeout_seconds,
+            timeout_seconds=None if provider == "synthetic" else timeout_seconds,
+            event_driven=provider == "synthetic",
         )
         snapshot = invoke(
             {"operation": "snapshot", "session": dict(ref), "requestedSequence": 0}
