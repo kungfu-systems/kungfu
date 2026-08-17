@@ -3,7 +3,7 @@
   "contract": "kungfu-buildchain-dev-delivery-warrant-queue",
   "repository": "kungfu-systems/kungfu",
   "protectedBase": "dev/v4/v4.0",
-  "generation": 3818,
+  "generation": 3819,
   "fencingCounter": 510,
   "policy": {
     "agingSeconds": 900,
@@ -37095,8 +37095,42 @@
         "tests/qualification/agent-hub-20/qualification.test.mjs",
         "tests/qualification/agent-hub-20/responsibility-map.json"
       ]
+    },
+    {
+      "repository": "kungfu-systems/kungfu",
+      "protectedBase": "dev/v4/v4.0",
+      "pullRequestNumber": 3256,
+      "assignmentRoot": "sha256:a1984fca2674dd221c0e37d9ac41b22ac64e346ceff87a7a7a5e356be127f8aa",
+      "initiativeRoot": "sha256:bfff817933e5a5ad693e4b902a84f6cc3a251235dd7377cb4091d92f805fa7ff",
+      "sourceIdentityRoot": "sha256:8e01d7784d9c35a9e346762eca2e7c3cf3c270bc0d15fc137b23e7e4e833dc80",
+      "deliveryClass": "non-native-fast",
+      "identitySemantics": "chained-attempt-v2",
+      "predecessorCandidateId": "sha256:e67d74f3cb7108cb3265426d1b001e0dbac07bce87003ac23390a67d4cbc83a7",
+      "candidateId": "sha256:9c9ffec602c59111007082b927bf58199a8046aeb7f17541bf072477f7193052",
+      "sourceHead": "e532176e2e3a0456c46571db8d2438bc1230f819",
+      "sourcePatchRoot": "sha256:b231835534b4a32eb44f1914676fd7ef9401a72973d6bfe775cf2b3eafd56448",
+      "sourceProofRoot": "sha256:73a9457ac4f4722528a5e0986d6685c2825f9ab7cc80716cb9814ea2a1ae5b18",
+      "planRoot": "sha256:1a772df3c69054d1997badb747baea0042fba8cae39cec5b4f52c4d514b74f04",
+      "closureRoot": "sha256:ac6e52dc4778bd7be1e6224c9a526a00dc7fcdd56a84e07165a811b168158f3e",
+      "dependencyRoot": "sha256:556b61e3b2be4beddf5fd9474cf65fac6bd342673decc4118b31da49f256f2b0",
+      "toolchainRoot": "sha256:2ecb07894954a2e0de022615d4561e5ba3ae68376401941ecff77be03cd75a0f",
+      "environmentRoot": "sha256:ce8ac018bb38c00cc0f5e954dae39d921eb9437fb11314061e9628f456f39057",
+      "sourceWorkflowRunId": 31995829699,
+      "priority": "ordinary",
+      "enqueuedAt": "2026-08-17T05:18:49.036Z",
+      "updatedAt": "2026-08-17T05:18:49.036Z",
+      "attempts": 1,
+      "recoveries": 0,
+      "status": "queued",
+      "terminal": null,
+      "affectedPaths": [
+        "framework/tui/src/terminal-lifecycle.test.ts",
+        "framework/tui/src/terminal-lifecycle.ts",
+        "scripts/source-acceptance-git.test.mjs",
+        "scripts/source-acceptance.mjs"
+      ]
     }
   ],
-  "updatedAt": "2026-08-17T05:16:33.127Z",
-  "stateRoot": "sha256:56da927747f4081ed222240405949280511580fabe6668550f08758d4adf79f0"
+  "updatedAt": "2026-08-17T05:18:49.036Z",
+  "stateRoot": "sha256:93b836aee3fd697d7753315586cbcef744e0fbdffffe7b76ad007f879f02566b"
 }
