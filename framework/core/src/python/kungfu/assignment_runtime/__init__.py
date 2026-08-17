@@ -97,12 +97,16 @@ def profile_source() -> Path:
 
     roots: list[str | Path] = [
         Path(value).expanduser()
-        for value in os.environ.get("KF_EXTENSION_PATH", "").split(os.pathsep)
+        for value in [
+            os.environ.get("KF_BUNDLED_EXTENSION_ROOT", ""),
+            *os.environ.get("KF_EXTENSION_PATH", "").split(os.pathsep),
+        ]
         if value
     ]
     if not roots:
         raise ValueError(
-            "KF_EXTENSION_PATH does not name an installed Work Control Profile"
+            "KF_BUNDLED_EXTENSION_ROOT or KF_EXTENSION_PATH does not name an "
+            "installed Work Control Profile"
         )
     discovered = profile_sdk.discover_source("kungfu.work-control", search_roots=roots)
     return Path(discovered["source"])

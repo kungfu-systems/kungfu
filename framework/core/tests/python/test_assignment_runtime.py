@@ -6,6 +6,7 @@ import copy
 import hashlib
 import importlib.util
 import json
+import os
 from concurrent.futures import ThreadPoolExecutor
 from datetime import UTC, datetime, timedelta
 from io import StringIO
@@ -15,6 +16,7 @@ from typing import Any
 import pytest
 from jsonschema import Draft202012Validator
 
+from kungfu import profile_sdk
 from kungfu.assignment_runtime import (
     EVENT_SCHEMA,
     SNAPSHOT_SCHEMA,
@@ -23,6 +25,7 @@ from kungfu.assignment_runtime import (
     LocalAssignmentRuntimeApplication,
     LocalRuntimeError,
     WorkControlAuthority,
+    profile_source,
     serve,
 )
 from kungfu.canonical_json import canonical_json_text
@@ -51,6 +54,50 @@ VALIDATE_ENVELOPE = Draft202012Validator(ENVELOPE_SCHEMA)
 REALM = {"realmId": "home-test", "realmKind": "local", "generation": "gen-1"}
 ROOT_A = "sha256:" + "a" * 64
 ROOT_B = "sha256:" + "b" * 64
+
+
+def test_profile_source_resolves_installed_bundled_root(monkeypatch, tmp_path):
+    bundled = tmp_path / "installed" / "extensions"
+    source = bundled / "work-control"
+    observed = []
+    monkeypatch.setenv("KF_BUNDLED_EXTENSION_ROOT", str(bundled))
+    monkeypatch.delenv("KF_EXTENSION_PATH", raising=False)
+    monkeypatch.setattr(
+        profile_sdk,
+        "discover_source",
+        lambda profile_id, *, search_roots: (
+            observed.append((profile_id, search_roots)) or {"source": str(source)}
+        ),
+    )
+
+    assert profile_source() == source
+    assert observed == [("kungfu.work-control", [bundled])]
+
+
+def test_profile_source_prefers_bundled_root_before_dev_overrides(
+    monkeypatch, tmp_path
+):
+    bundled = tmp_path / "installed" / "extensions"
+    dev_one = tmp_path / "dev-one"
+    dev_two = tmp_path / "dev-two"
+    observed = []
+    monkeypatch.setenv("KF_BUNDLED_EXTENSION_ROOT", str(bundled))
+    monkeypatch.setenv(
+        "KF_EXTENSION_PATH", os.pathsep.join([str(dev_one), str(dev_two)])
+    )
+    monkeypatch.setattr(
+        profile_sdk,
+        "discover_source",
+        lambda profile_id, *, search_roots: (
+            observed.append((profile_id, search_roots))
+            or {"source": str(bundled / "work-control")}
+        ),
+    )
+
+    assert profile_source() == bundled / "work-control"
+    assert observed == [
+        ("kungfu.work-control", [bundled, dev_one, dev_two]),
+    ]
 
 
 def _root(value: Any) -> str:
