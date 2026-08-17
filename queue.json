@@ -3,7 +3,7 @@
   "contract": "kungfu-buildchain-dev-delivery-warrant-queue",
   "repository": "kungfu-systems/kungfu",
   "protectedBase": "dev/v4/v4.0",
-  "generation": 3820,
+  "generation": 3821,
   "fencingCounter": 510,
   "policy": {
     "agingSeconds": 900,
@@ -37129,8 +37129,46 @@
         "scripts/source-acceptance-git.test.mjs",
         "scripts/source-acceptance.mjs"
       ]
+    },
+    {
+      "repository": "kungfu-systems/kungfu",
+      "protectedBase": "dev/v4/v4.0",
+      "pullRequestNumber": 3261,
+      "assignmentRoot": "sha256:0de5bd68b9cbe160690b2ef5d9c7d48ab2897d4405e6f5b023a96371a25c32b1",
+      "initiativeRoot": "sha256:bfff817933e5a5ad693e4b902a84f6cc3a251235dd7377cb4091d92f805fa7ff",
+      "sourceIdentityRoot": "sha256:c90ff3c70b316264ea5293fd38f420035fffc3a41b6f107ef8efe93250dbcbd4",
+      "deliveryClass": "native-proof-required",
+      "candidateId": "sha256:95fde86e70b8c776cfd1757ebabfe0b51e78f99580e5f32f001928d90d55fb59",
+      "sourceHead": "ed7a759764703def90dd273de778183ec7c8554e",
+      "sourcePatchRoot": "sha256:eb3f60ee2444e9a40581e11be351543a8aa80639c9206a599cb079ca01919e74",
+      "sourceProofRoot": "sha256:7aefb1882aecd52e840d86db22c14517676e2d27166f17ecca39a8a5957fc065",
+      "planRoot": "sha256:b8e8904e8ca8bbc06849669e0beed932cb2576366297603920411b8e467cadae",
+      "closureRoot": "sha256:106d175611d8634c988192302b9c464ae8ba3b6d023c2cff9910e401344c9624",
+      "dependencyRoot": "sha256:938fe7249aaa90712b1faa4543fbca3777b4b3baf30457e2c1c989595952db1f",
+      "toolchainRoot": "sha256:2ecb07894954a2e0de022615d4561e5ba3ae68376401941ecff77be03cd75a0f",
+      "environmentRoot": "sha256:c5f5da5917c6ff93a509a62b18d4b9b69325755c4c7229b553b0016cde83788f",
+      "sourceWorkflowRunId": 31997209485,
+      "priority": "ordinary",
+      "enqueuedAt": "2026-08-17T05:22:19.145Z",
+      "updatedAt": "2026-08-17T05:22:19.145Z",
+      "attempts": 1,
+      "recoveries": 0,
+      "status": "queued",
+      "terminal": null,
+      "affectedPaths": [
+        ".github/workflows/affected-native-pr.yml",
+        ".github/workflows/aws-us-macos-burst-qualification.yml",
+        ".github/workflows/build.yml",
+        "docs/qualification/gates/workflow-authority.json",
+        "docs/qualification/gates/workflow-bindings.json",
+        "docs/release-promotion-rehearsal.contract.json",
+        "framework/release/publication-surfaces.json",
+        "scripts/alpha-macos-overflow.test.mjs",
+        "scripts/alpha-promotion-preflight.test.mjs",
+        "scripts/verify-alpha-release-cut-lock.test.mjs"
+      ]
     }
   ],
-  "updatedAt": "2026-08-17T05:20:27.964Z",
-  "stateRoot": "sha256:6640db2ce33fd2f2efd82300744c3deb2aa27ccbb53108316a296e8788cfbd3d"
+  "updatedAt": "2026-08-17T05:22:19.145Z",
+  "stateRoot": "sha256:052c87283e1f7db6a851fa70bd2c396fbeafed460312458607b9b7ada8c5ffbd"
 }
