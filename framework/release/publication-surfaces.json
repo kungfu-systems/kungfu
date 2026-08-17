@@ -118,7 +118,7 @@
           "classification": "non-publication",
           "owner": "kungfu-ci",
           "surfaceIds": [],
-          "sourceRoot": "sha256:56fe6356f87e82f4c70fd993eed2b229b3408144b169aa8484c1307b9ec196a3"
+          "sourceRoot": "sha256:37524c81dd39c8b08315e7fe631f75b397a572a1d0894a15faa75b4b5a6da52e"
         },
         {
           "path": ".github/workflows/aws-us-windows-burst-qualification.yml",
@@ -136,7 +136,7 @@
             "product-stable",
             "product-binaries"
           ],
-          "sourceRoot": "sha256:140984307dd4b63d38116e36afe6ba31436236b63d0964801e9b86f79e0b0685"
+          "sourceRoot": "sha256:c58e5621abf6fcf282054a08ae47fde24f2cc2ccd6146dab1e36946054b7aa26"
         },
         {
           "path": ".github/workflows/buildchain-validate.yml",
@@ -877,5 +877,5 @@
       }
     }
   ],
-  "registryRoot": "sha256:9164cd7b6ee90fb5d8f11c49c37e68c6a8a83fd94a1a24d5345803a8c9b8a451"
+  "registryRoot": "sha256:9cd66789826ab4bc03f1a7701dbeb11c1fdd1302fb91847f5906f93e62510eec"
 }

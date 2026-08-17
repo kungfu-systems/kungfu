@@ -80,12 +80,14 @@ test('Alpha.2 r17 keeps its historical channel lock while builds execute one imm
   );
   assert.match(
     build,
-    /uses: kungfu-systems\/buildchain\/\.github\/workflows\/\.build\.yml@9baf025baad5faa2d9c2339af06f73adbe4b84a0/u,
+    /uses: kungfu-systems\/buildchain\/\.github\/workflows\/\.build\.yml@675b4f2a51af7e5f2aac58011c7ede0313b2b105/u,
   );
   assert.match(
     build,
-    /buildchain-ref: 9baf025baad5faa2d9c2339af06f73adbe4b84a0/u,
+    /buildchain-ref: 675b4f2a51af7e5f2aac58011c7ede0313b2b105/u,
   );
+  assert.match(build, /buildchain-contract-expected-channel: v3-alpha/u);
+  assert.match(build, /buildchain-contract-expected-major: v3/u);
   assert.doesNotMatch(build, /inputs\.buildchain-ref/u);
   assert.match(
     promotion,
