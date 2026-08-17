@@ -58,6 +58,13 @@ def _protected_dev_base(value: Any) -> bool:
     return bool(match and match.group(1) == match.group(2) and int(match.group(1)) >= 4)
 
 
+def _protected_buildchain_base(value: Any) -> bool:
+    if not isinstance(value, str):
+        return False
+    match = _DEV_BASE.fullmatch(value)
+    return bool(match and match.group(1) == match.group(2) and int(match.group(1)) >= 3)
+
+
 def _proof_body(proof: dict[str, Any]) -> dict[str, Any]:
     return {key: value for key, value in proof.items() if key != "proofRoot"}
 
@@ -106,7 +113,7 @@ def _verify_buildchain_facts(
     if (
         set(source) != {"repository", "protectedBase", "sourceCommit", "mergeCommit"}
         or source.get("repository") != "kungfu-systems/buildchain"
-        or source.get("protectedBase") != "dev/v3/v3.0"
+        or not _protected_buildchain_base(source.get("protectedBase"))
     ):
         issues.append("buildchain-fact-source-mismatch")
     _sha(source.get("sourceCommit"), "buildchainFacts.sourceCommit", issues)
