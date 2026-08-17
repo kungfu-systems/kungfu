@@ -10,11 +10,11 @@
   },
   "upstream": {
     "package": "@kungfu-tech/kfd",
-    "version": "1.0.0-alpha.53",
+    "version": "1.0.0-alpha.62",
     "line": "v1.0",
     "channel": "alpha",
-    "standardsSha256": "sha256:65899780779a8e933f1f3a298bfdf2311104ccde84b773a0828ee4c23dd19d5b",
-    "releaseAnchorSha256": "sha256:d50e474cf2d158722d765f54188550e30fa126e1728fc9eb748014e220acfc9b"
+    "standardsSha256": "sha256:4cc77b8364fa5d4f158933ee3c89640b9ef1e2979c45c2fd9e7d69060258255e",
+    "releaseAnchorSha256": "sha256:a08858f0a21ca53bc2a77952450b14c395c6fa82539064d99659f513aac56585"
   },
   "projections": {
     "sdk": "developer/sdk/kfd/support-matrix.json",
@@ -37,7 +37,7 @@
       "supportStatus": "source-supported",
       "normative": {
         "status": "active",
-        "revision": 6,
+        "revision": 7,
         "documentSha256": "sha256:f504d02736a50006786103c31843ab759e54d160056f756780aeb9b7da1a914a"
       },
       "implementation": {
@@ -55,7 +55,7 @@
           },
           {
             "path": "framework/contract/kungfu-contracts.registry.json",
-          "sha256": "sha256:a06f3d96294cfc80aa3f9ada818d46e53db5c00e4874c3e71fbc4757e4d2d7b7"
+            "sha256": "sha256:a06f3d96294cfc80aa3f9ada818d46e53db5c00e4874c3e71fbc4757e4d2d7b7"
           }
         ]
       },
@@ -102,7 +102,7 @@
         "evidenceRoots": [
           {
             "path": ".buildchain/kfd/kfd-2/release-claims.json",
-            "sha256": "sha256:08e964b4ade59e07270738033090bc391e1585ac35a883b0ffb17d1fe4b1832f"
+            "sha256": "sha256:a3c8c828a32e344a95dfe020b0f2fe9aed2aa92f1c02a5cad136a665be5e90fe"
           },
           {
             "path": "docs/qualification/kfd2-trust-assessment.md",
@@ -152,11 +152,11 @@
         "evidenceRoots": [
           {
             "path": ".buildchain/kfd/kfd-3/surfaces.json",
-          "sha256": "sha256:e7d4f099dd65bbd996cf018a7bb01df11548d7a92a258942c67f6603260ee5f2"
+            "sha256": "sha256:e7d4f099dd65bbd996cf018a7bb01df11548d7a92a258942c67f6603260ee5f2"
           },
           {
             "path": ".buildchain/kfd/kfd-3/capability-query.json",
-          "sha256": "sha256:afb1faf5b52c929774cf34c45918ba1986b07e6df20e2bce19890c7e559b5bef"
+            "sha256": "sha256:afb1faf5b52c929774cf34c45918ba1986b07e6df20e2bce19890c7e559b5bef"
           }
         ]
       },
@@ -176,7 +176,7 @@
       },
       "claimClass": "release-qualified-support",
       "knownLimitations": [
-        "Support covers the 186 product-declared surfaces accepted by the exact Buildchain registry audit."
+        "Support covers the 199 product-declared surfaces accepted by the exact Buildchain registry audit."
       ],
       "owner": "buildchain",
       "nextGate": "Retain and verify the exact product-declared registry audit and artifact closure in every claimed Alpha release passport."
@@ -262,7 +262,7 @@
           },
           {
             "path": "framework/core/tests/python/test_assignment_orchestration.py",
-          "sha256": "sha256:5326cafbad68977abb9ff3359192e457ac429ff79c2a526bd3ca5b40c8b05536"
+            "sha256": "sha256:5326cafbad68977abb9ff3359192e457ac429ff79c2a526bd3ca5b40c8b05536"
           },
           {
             "path": "docs/architecture/primitive-management-plane.md",
@@ -270,11 +270,11 @@
           },
           {
             "path": "framework/incubation/incubation-passport.registry.json",
-          "sha256": "sha256:828407bf65c6adb72a467622c69236d675a1fa6b3f0586f43c6429d2317f7a9c"
+            "sha256": "sha256:828407bf65c6adb72a467622c69236d675a1fa6b3f0586f43c6429d2317f7a9c"
           },
           {
             "path": "framework/primitive/kungfu-primitive-catalog.contract.json",
-          "sha256": "sha256:efa503edf6a4a50d4c031112b5cc78498e0171fe5d2e96ab5d2590e685cb0fe3"
+            "sha256": "sha256:efa503edf6a4a50d4c031112b5cc78498e0171fe5d2e96ab5d2590e685cb0fe3"
           }
         ]
       },
@@ -401,7 +401,7 @@
           },
           {
             "path": "framework/core/architecture/kfd7-release-passport.json",
-          "sha256": "sha256:ab751c0914a11e258899cd8a514af021c366bd1ee84e4aa11ded4ec3f7bd5a22"
+            "sha256": "sha256:ab751c0914a11e258899cd8a514af021c366bd1ee84e4aa11ded4ec3f7bd5a22"
           }
         ]
       },
@@ -632,7 +632,7 @@
         "evidenceRoots": [
           {
             "path": "framework/core/src/python/kungfu/assignment_orchestration.py",
-          "sha256": "sha256:1e0162e5b07030fdce6bc8f7d6348fef86230b01f147dca8653f6023e5879bcd"
+            "sha256": "sha256:1e0162e5b07030fdce6bc8f7d6348fef86230b01f147dca8653f6023e5879bcd"
           }
         ]
       },

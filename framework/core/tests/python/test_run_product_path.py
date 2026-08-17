@@ -102,6 +102,37 @@ def test_assignment_session_invoker_bounds_provider_writes_beyond_read_probes():
     ]
 
 
+def test_deterministic_mock_session_invoker_has_no_clock_cutoff():
+    calls = []
+
+    class Surface:
+        @staticmethod
+        def ensure(runtime_dir, *, timeout):
+            calls.append(("ensure", runtime_dir, timeout))
+            return "/tmp/agent-session.sock"
+
+        @staticmethod
+        def invoke(request, *, endpoint, timeout):
+            calls.append((request["operation"], endpoint, timeout))
+            return {"operation": request["operation"]}
+
+    invoke = assignment_lifecycle.session_invoker(
+        Surface, "/tmp/runtime", event_driven=True
+    )
+    assert invoke({"operation": "status"}) == {"operation": "status"}
+    assert invoke({"operation": "start"}) == {"operation": "start"}
+    assert invoke({"operation": "wait-status-change"}) == {
+        "operation": "wait-status-change"
+    }
+
+    assert calls == [
+        ("ensure", "/tmp/runtime", None),
+        ("status", "/tmp/agent-session.sock", None),
+        ("start", "/tmp/agent-session.sock", None),
+        ("wait-status-change", "/tmp/agent-session.sock", None),
+    ]
+
+
 def test_next_work_selects_the_only_captured_assignment(tmp_path):
     project = tmp_path / "project"
     project.mkdir()
@@ -337,7 +368,7 @@ def test_resumed_authority_writes_remain_visible_when_run_gate_fails(
     monkeypatch.setattr(
         assignment.run_agent.session_surface,
         "ensure",
-        lambda *_args: "session-endpoint",
+        lambda *_args, **_kwargs: "session-endpoint",
     )
 
     def start_bound_session(**kwargs):
@@ -1253,18 +1284,21 @@ def test_project_work_session_yields_at_deterministic_attention(tmp_path):
     started_callbacks = []
     statuses = [
         {
+            "changeSequence": 0,
             "live": True,
             "lifecycleState": "starting",
             "interactionState": "unknown",
             "output": {"nextSequence": 0},
         },
         {
+            "changeSequence": 1,
             "live": True,
             "lifecycleState": "ready",
             "interactionState": "ready",
             "output": {"nextSequence": 10},
         },
         {
+            "changeSequence": 2,
             "live": True,
             "lifecycleState": "ready",
             "interactionState": "ready",
@@ -1272,6 +1306,7 @@ def test_project_work_session_yields_at_deterministic_attention(tmp_path):
             "controller": {"holderId": "kungfu-project-work"},
         },
         {
+            "changeSequence": 3,
             "live": True,
             "lifecycleState": "running",
             "interactionState": "busy",
@@ -1279,6 +1314,7 @@ def test_project_work_session_yields_at_deterministic_attention(tmp_path):
             "controller": {"holderId": "kungfu-project-work"},
         },
         {
+            "changeSequence": 4,
             "live": True,
             "lifecycleState": "ready",
             "interactionState": "ready",
@@ -1302,7 +1338,7 @@ def test_project_work_session_yields_at_deterministic_attention(tmp_path):
             return {"root": "sha256:" + "1" * 64}
         if operation == "start":
             return {"status": "started"}
-        if operation == "status":
+        if operation in {"status", "wait-status-change"}:
             return statuses.pop(0) if len(statuses) > 1 else statuses[0]
         if operation == "plan-control":
             return {"root": "sha256:" + "2" * 64}
@@ -1581,6 +1617,41 @@ def test_terminal_mock_scenarios_ignore_ready_echo_until_the_process_ends():
         )
         is True
     )
+    ready_after_fast_turn = {
+        **ready_after_echo,
+        "workAgent": {"attention": {"kind": "ready-for-review"}},
+    }
+    assert (
+        managed_run._session_boundary_reached(
+            ready_after_fast_turn,
+            before_sequence=10,
+            terminal_mock=False,
+        )
+        is True
+    )
+    needs_answer_after_fast_turn = {
+        **ready_after_echo,
+        "workAgent": {"attention": {"kind": "needs-answer"}},
+    }
+    assert (
+        managed_run._session_boundary_reached(
+            needs_answer_after_fast_turn,
+            before_sequence=10,
+            terminal_mock=False,
+        )
+        is True
+    )
+    assert (
+        managed_run._session_boundary_reached(
+            {
+                **ready_after_echo,
+                "workAgent": {"attention": {"kind": "needs-answer"}},
+            },
+            before_sequence=10,
+            terminal_mock=False,
+        )
+        is True
+    )
     assert (
         managed_run._session_boundary_reached(
             ended,
@@ -1638,6 +1709,10 @@ def test_mock_profile_probes_the_deterministic_provider_version():
     profile = run_agent.runtime_profiles.deterministic_mock_profile("approval")
     verification = run_agent.runtime_profiles.verify_profile(profile)
 
+    reviewer = run_agent.runtime_profiles.deterministic_mock_profile("review-fit")
+
+    assert profile["label"] == "Mock Agent · approval"
+    assert reviewer["label"] == "Mock Reviewer · deterministic-fit"
     assert verification["ok"] is True
     assert verification["version"] == "1.1.0"
     assert verification["argv"][-3:] == ["--scenario", "approval", "--version"]

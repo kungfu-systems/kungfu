@@ -195,10 +195,27 @@ test('Windows command wrappers use an explicit shell without version coupling', 
   assert.equal(invocation.options.windowsVerbatimArguments, true);
 });
 
-test('malformed and unknown frames fail closed and freeze admission', async (t) => {
+test('unknown provider notifications remain diagnostic and keep admission open', async (t) => {
+  const host = await start('unknown-method');
+  t.after(() => stop(host));
+  await waitUntil(
+    () => host.status().queue.depth >= 2,
+    'unknown provider notification was not retained as a diagnostic event',
+  );
+  const event = host
+    .takeEvents()
+    .find((candidate) => candidate.providerMethod === 'provider/unknown');
+  assert.equal(event.providerMethod, 'provider/unknown');
+  assert.equal(event.normalizedSemantic, 'provider-notification-unclassified');
+  assert.equal(event.authority, 'provider-diagnostic-not-work-fact');
+  assert.equal(host.status().failure, null);
+  assert.equal(host.status().inputAdmission, 'open');
+});
+
+test('malformed frames and unknown requests fail closed and freeze admission', async (t) => {
   for (const [mode, code] of [
     ['malformed', 'malformed-jsonl'],
-    ['unknown-method', 'unknown-method'],
+    ['unknown-request', 'unknown-method'],
   ]) {
     const host = await start(mode);
     t.after(() => stop(host, `shutdown-${mode}`));

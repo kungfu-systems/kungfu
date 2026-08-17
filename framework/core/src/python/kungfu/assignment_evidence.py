@@ -13,7 +13,11 @@ from typing import Any, Callable
 
 from kungfu.initiative_family.canonical import semantic_root
 from kungfu.assignment_lifecycle.ports import AssignmentRuntimePort
-from kungfu.agent import run_agent
+from kungfu.agent.session_evidence import (
+    _final_observation_text as _final_observation_text,
+    finalize_session_agent_report as finalize_session_agent_report,
+    load_execution_agent_report as load_execution_agent_report,
+)
 
 JsonObject = dict[str, Any]
 
@@ -157,37 +161,6 @@ def project_review_evidence(
         },
         "supporting": [],
     }
-
-
-def load_execution_agent_report(
-    path: str | Path,
-    runtime_dir: str | Path,
-    initiative_id: str,
-    assignment_id: str,
-    *,
-    require_success: bool = True,
-) -> tuple[Path, JsonObject]:
-    report_path = Path(path).expanduser().resolve()
-    allowed_root = (Path(runtime_dir) / "agent-runs").resolve()
-    if report_path != allowed_root and allowed_root not in report_path.parents:
-        raise ValueError("Agent report must belong to this workspace runtime")
-    report = json.loads(report_path.read_text(encoding="utf-8"))
-    if report.get("schema") != run_agent.REPORT_SCHEMA:
-        raise ValueError("Agent report schema is not supported")
-    expected_root = run_agent.canonical_root(
-        {key: value for key, value in report.items() if key != "reportRoot"}
-    )
-    if report.get("reportRoot") != expected_root:
-        raise ValueError("Agent report root does not match its content")
-    work_ref = (report.get("work") or {}).get("workRef") or {}
-    if (
-        work_ref.get("entityType") != "assignment"
-        or work_ref.get("entityId") != assignment_id
-    ):
-        raise ValueError("Agent report is not bound to this Assignment")
-    if require_success and report.get("launch", {}).get("exitCode") != 0:
-        raise ValueError("Agent report does not contain a successful execution")
-    return report_path, report
 
 
 def latest_starter_agent_report(

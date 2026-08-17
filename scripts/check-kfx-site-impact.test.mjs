@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import assert from 'node:assert/strict';
+import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { test } from 'node:test';
@@ -11,6 +12,7 @@ import {
   changeBinding,
   createNoPublicChangeProof,
   evaluateKfxSiteImpact,
+  repositoryChanges,
   validateImpactContract,
 } from '../framework/site/tooling/check-kfx-site-impact.mjs';
 import { sourceAcceptancePlan } from './source-acceptance.mjs';
@@ -74,6 +76,18 @@ function updateFacets(ids) {
   }
   return current;
 }
+
+test('repository changes ignore net-zero paths from union inventories', () => {
+  const exactSource = execFileSync('git', ['rev-parse', 'HEAD'], {
+    cwd: ROOT,
+    encoding: 'utf8',
+  }).trim();
+  assert.deepEqual(repositoryChanges(exactSource, ['AGENTS.md']), []);
+  assert.deepEqual(
+    repositoryChanges(exactSource, ['.nonexistent-kfx-union-path']),
+    [],
+  );
+});
 
 test('ignores changes outside KFX ownership', () => {
   assert.equal(

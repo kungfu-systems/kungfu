@@ -64,8 +64,8 @@
   "mappingPolicy": {
     "source": "codex-0.146.0-generated-stable-json-schema",
     "officialSource": "https://developers.openai.com/codex/app-server",
-    "admission": "schema-exact-method-allowlist; runtime-version-diagnostic-only",
-    "unknownMethod": "fail-closed-requalification-required",
+    "admission": "schema-exact-method-allowlist; runtime-version-diagnostic-only; unknown-server-notification-diagnostic-only",
+    "unknownMethod": "server-notification-metadata-only-no-authority; request-response-and-client-directions-fail-closed-requalification-required",
     "unknownRequiredField": "schema-bundle-drift-fail-closed",
     "messageValidation": "generated-stable-schema-before-normalization",
     "unmappedStableMethod": "provider-extension-not-admitted",
@@ -294,6 +294,16 @@
       "requiredPaths": ["/params/threadId", "/params/turnId", "/params/tokenUsage"],
       "rawRetention": "typed-summary",
       "authority": "usage-observation"
+    },
+    {
+      "direction": "server-notification",
+      "method": "turn/diff/updated",
+      "schemaFile": "v2/TurnDiffUpdatedNotification.json",
+      "normalizedSemantic": "turn-diff-observed",
+      "interactionOperation": "status",
+      "requiredPaths": ["/params/threadId", "/params/turnId", "/params/diff"],
+      "rawRetention": "metadata-only",
+      "authority": "turn-diff-observation-not-work-fact"
     },
     {
       "direction": "server-notification",

@@ -109,11 +109,11 @@ function listKfxPackages() {
 
 function productKfxDependencies() {
   const pkg = readJson(path.join(ROOT, 'product', 'package.json'));
-  return new Set(
-    Object.keys(pkg.dependencies || {}).filter((name) =>
-      name.startsWith('@kungfu-tech/kfx-'),
-    ),
+  const dependencies = Object.keys(pkg.dependencies || {}).filter((name) =>
+    name.startsWith('@kungfu-tech/kfx-'),
   );
+  const metadata = pkg.kungfuProduct?.extensionPackages || [];
+  return new Set([...dependencies, ...metadata]);
 }
 
 function assertDeclaredKfx(packages) {

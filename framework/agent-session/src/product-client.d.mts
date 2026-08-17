@@ -14,6 +14,13 @@ export type DetachedAgentSessionHost = Readonly<{
   ) => Promise<Record<string, unknown>>;
 }>;
 
+export type AttachedAgentSessionHost = Readonly<
+  DetachedAgentSessionHost & {
+    ready: Promise<unknown>;
+    close: () => Promise<void>;
+  }
+>;
+
 export function detachedAgentSessionPaths(runtimeDir: string): Omit<
   DetachedAgentSessionHost,
   'invoke'
@@ -32,3 +39,10 @@ export function createDetachedAgentSessionHost(options: {
   unrefWorker?: boolean;
   now?: () => number;
 }): DetachedAgentSessionHost;
+
+export function createAttachedAgentSessionHost(options: {
+  runtimeDir: string;
+  pty?: unknown;
+  ptyModule?: string;
+  env?: NodeJS.ProcessEnv;
+}): AttachedAgentSessionHost;

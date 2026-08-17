@@ -391,6 +391,20 @@ export function createCodexAppServerContractGate({
       }
       const mapping = mappingByKey.get(`${direction}:${message.method}`);
       if (!mapping) {
+        if (direction === 'server-notification') {
+          return Object.freeze({
+            schema: 'kungfu.codex-app-server.normalization-plan/v1',
+            provider: 'codex',
+            providerMethod: message.method,
+            providerSchemaFile: null,
+            direction,
+            normalizedSemantic: 'provider-notification-unclassified',
+            interactionOperation: null,
+            rawRetention: 'metadata-only',
+            authority: 'provider-diagnostic-not-work-fact',
+            rawPointerRequired: true,
+          });
+        }
         fail(
           'unknown-method',
           `Codex App Server method is not admitted: ${direction}:${message.method}`,

@@ -282,5 +282,11 @@ test('Project Session discovery follows the current runtime host after Project r
     openProjects,
     /ensureTuiAgentSession\(paths\.runtimeDir\)/,
   );
+  assert.match(openProjects, /bindTuiMockAgentEnvironment\(\{/);
+  assert.ok(
+    openProjects.indexOf('bindTuiMockAgentEnvironment') <
+      openProjects.indexOf('if (!useAgentSession)'),
+    'installed Mock Agent paths must be bound for normal Project Agent Session use',
+  );
   assert.match(source, /return tuiChildCliEnvironment\(process\.env\)/);
 });

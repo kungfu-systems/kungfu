@@ -80,6 +80,13 @@ struct episode_ref_attach_options {
   std::string ref_hash = {};
 };
 
+struct episode_append_options {
+  episode_begin_options begin = {};
+  std::vector<episode_frame_attach_options> frames = {};
+  std::vector<episode_ref_attach_options> refs = {};
+  episode_close_options close = {};
+};
+
 struct episode_recover_options {
   uint64_t episode_id = 0;
   uint32_t location_uid = 0;
@@ -255,6 +262,13 @@ struct episode_inspect_result {
 struct episode_close_write_result {
   yijinjing::types::EpisodeClosed close = {};
   std::optional<yijinjing::types::EpisodeRootCommitted> content_root = {};
+};
+
+struct episode_append_result {
+  yijinjing::types::EpisodeOpen open = {};
+  std::vector<yijinjing::types::EpisodeFrameAttached> frames = {};
+  std::vector<yijinjing::types::EpisodeRefAttached> refs = {};
+  episode_close_write_result close = {};
 };
 
 struct episode_recover_skipped_open {

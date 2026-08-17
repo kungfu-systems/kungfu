@@ -48,6 +48,7 @@ def test_work_family_contains_only_profile_backed_orchestration_commands():
         "family-upgrade-v2",
         "family-verify",
         "family-verify-v2",
+        "finalize-agent-session",
         "gate",
         "kickoff",
         "relation-event",
@@ -133,7 +134,6 @@ def test_start_resume_accepts_the_generic_project_work_purpose(tmp_path, monkeyp
         "load_execution_agent_report",
         lambda *_args, **_kwargs: (report_path, report),
     )
-
     assert (
         assignment_evidence.latest_starter_agent_report(
             tmp_path,
@@ -141,6 +141,130 @@ def test_start_resume_accepts_the_generic_project_work_purpose(tmp_path, monkeyp
             "create-launch-brief",
         )
         == report
+    )
+
+
+def test_session_finalization_retains_a_new_exact_root_without_rewriting_source(
+    tmp_path,
+):
+    runtime_dir = tmp_path / "runtime"
+    workspace = tmp_path / "project"
+    workspace.mkdir()
+    source_path = runtime_dir / "agent-runs" / "agent-1" / "bundle" / "report.json"
+    source_path.parent.mkdir(parents=True)
+    work_ref = {
+        "workspaceId": "project:test",
+        "profileId": "kungfu.work-control",
+        "profileRoot": f"sha256:{'1' * 64}",
+        "entityType": "assignment",
+        "entityId": "assignment-1",
+        "initiativeId": "initiative-1",
+        "entityRoot": f"sha256:{'2' * 64}",
+        "purpose": "complete-project-assignment",
+        "systemTimeCut": f"sha256:{'3' * 64}",
+    }
+    source_body = {
+        "schema": run_agent.REPORT_SCHEMA,
+        "runId": "agent-1",
+        "attemptId": "agent-1",
+        "runtimeProfile": {
+            "id": "kungfu.mock-agent.multi-step",
+            "root": f"sha256:{'4' * 64}",
+        },
+        "launch": {"exitCode": 0},
+        "providerObservation": {"text": "MOCK NEEDS ANSWER"},
+        "session": {
+            "workConsoleId": "work:assignment-1",
+            "sessionAttemptId": "agent-1",
+            "live": True,
+        },
+        "work": {"workRef": work_ref},
+        "episode": {
+            "episodeId": "42",
+            "responsePath": str(source_path.parent / "response.json"),
+            "manifestPath": str(source_path.parent / "manifest.json"),
+            "reportPath": str(source_path),
+        },
+    }
+    source = {
+        **source_body,
+        "reportRoot": run_agent.canonical_root(source_body),
+    }
+    source_bytes = (json.dumps(source, indent=2) + "\n").encode()
+    source_path.write_bytes(source_bytes)
+    requests = []
+
+    def invoke(request):
+        requests.append(request["operation"])
+        if request["operation"] == "status":
+            return {
+                "workConsoleId": "work:assignment-1",
+                "sessionAttemptId": "agent-1",
+                "live": False,
+                "lifecycleState": "ended",
+                "workAgent": {
+                    "attention": {"kind": "ready-for-review"},
+                },
+            }
+        return {
+            "terminal": {
+                "earliestSequence": 0,
+                "nextSequence": 3,
+                "vt": {
+                    "lines": [
+                        "MOCK ANSWER RECEIVED: alpha",
+                        "y",
+                        "MOCK VALIDATION: passed",
+                    ]
+                },
+            }
+        }
+
+    final_path, final = assignment_evidence.finalize_session_agent_report(
+        source_path,
+        runtime_dir,
+        "initiative-1",
+        "assignment-1",
+        workspace_root=workspace,
+        session_invoke=invoke,
+    )
+
+    assert requests == ["status", "snapshot"]
+    assert source_path.read_bytes() == source_bytes
+    assert final_path != source_path
+    assert final["reportRoot"] != source["reportRoot"]
+    assert final["session"]["live"] is False
+    assert "MOCK ANSWER RECEIVED: alpha" in final["providerObservation"]["text"]
+    assert final["sessionFinalization"]["sourceReportRoot"] == source["reportRoot"]
+    assert final_path.is_file()
+    assert (final_path.parent / "manifest.json").is_file()
+
+
+def test_session_finalization_accepts_retained_structured_agent_output():
+    assert (
+        assignment_evidence._final_observation_text(
+            {
+                "schema": "kungfu.agent-session.structured-snapshot/v1",
+                "agentText": "  structured Codex result  ",
+                "retainedAgentResponse": True,
+                "retainedTranscript": False,
+            }
+        )
+        == "structured Codex result"
+    )
+
+
+def test_session_finalization_rejects_unretained_structured_agent_output():
+    assert (
+        assignment_evidence._final_observation_text(
+            {
+                "schema": "kungfu.agent-session.structured-snapshot/v1",
+                "agentText": "not retained",
+                "retainedAgentResponse": False,
+                "retainedTranscript": False,
+            }
+        )
+        == ""
     )
 
 

@@ -294,7 +294,9 @@ def execute(
             bound_session.require_run_gate(last_status)
 
         invoke_session = bound_session.session_invoker(
-            run_agent.session_surface, runtime_dir
+            run_agent.session_surface,
+            runtime_dir,
+            event_driven=plan["agent"]["provider"] == "synthetic",
         )
 
         def on_session_started(_session_ref, _started):

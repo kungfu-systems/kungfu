@@ -7,9 +7,11 @@ import path from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 import {
+  createAttachedAgentSessionHost,
   createDetachedAgentSessionHost,
   detachedAgentSessionPaths,
 } from '../src/product-client.mjs';
+import { invokeAgentSessionSurfaceRpc } from '../src/product-rpc.mjs';
 
 const FIXTURE = fileURLToPath(
   new URL('./fixtures/product-worker-fixture.mjs', import.meta.url),
@@ -36,6 +38,34 @@ test('detached endpoint is stable per runtime root and derived only from it', ()
       first.socketDirectory,
       path.join('/tmp', `kungfu-agent-session-${process.getuid?.() ?? 'user'}`),
     );
+  }
+});
+
+test('attached host readiness and retirement follow its owner lifecycle', async () => {
+  const root = await mkdtemp(
+    path.join(os.tmpdir(), 'kungfu-session-attached-'),
+  );
+  const host = createAttachedAgentSessionHost({
+    runtimeDir: root,
+    ptyModule: '/not-loaded-for-capabilities.js',
+  });
+  try {
+    assert.equal(
+      (await host.invoke({ operation: 'capabilities' })).schema,
+      'kungfu.agent-session.surface-capabilities/v1',
+    );
+    assert.equal(
+      (
+        await invokeAgentSessionSurfaceRpc({
+          endpoint: host.endpoint,
+          request: { operation: 'capabilities' },
+        })
+      ).schema,
+      'kungfu.agent-session.surface-capabilities/v1',
+    );
+  } finally {
+    await host.close();
+    await rm(root, { recursive: true, force: true });
   }
 });
 

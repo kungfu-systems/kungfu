@@ -32,6 +32,7 @@ from kungfu.cli.commands import (
     kfc,
 )
 from kungfu.cli.commands import assignment_review
+from kungfu.cli.commands import assignment_session
 from kungfu.cli.surface_contract import surface
 from kungfu.initiative_family import typed_v2 as initiative_family_v2
 from kungfu.storage import service as storage_service
@@ -279,6 +280,7 @@ def _status(runtime_dir, initiative_id, assignment_id, now=""):
     return result
 
 
+@profile_sdk.validation_scope()
 def _admit_captured_assignment(
     *,
     request_file,
@@ -540,6 +542,16 @@ _EVIDENCE_SERVICES = assignment_evidence.EvidenceServices(
     runtime=_assignment_runtime,
     status=_status,
     receipt=_work_start_receipt,
+    agent_report_summary=_agent_report_summary,
+)
+
+
+assignment_session.register_finalize_agent_session_command(
+    assignment,
+    assignment_context=assignment_context,
+    runtime=_runtime,
+    emit=_emit,
+    run_operation=_run,
     agent_report_summary=_agent_report_summary,
 )
 

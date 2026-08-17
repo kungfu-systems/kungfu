@@ -615,7 +615,7 @@ function gitJson(revision, relativePath, optional = false) {
 }
 
 export function repositoryChanges(baseRevision, changedFiles) {
-  return uniqueSorted(changedFiles).map((relativePath) => {
+  return uniqueSorted(changedFiles).flatMap((relativePath) => {
     const baseBytes = git(['show', `${baseRevision}:${relativePath}`], {
       optional: true,
     });
@@ -623,18 +623,28 @@ export function repositoryChanges(baseRevision, changedFiles) {
     const currentBytes = fs.existsSync(currentPath)
       ? fs.readFileSync(currentPath)
       : null;
+    if (
+      (baseBytes === null && currentBytes === null) ||
+      (baseBytes !== null &&
+        currentBytes !== null &&
+        baseBytes.equals(currentBytes))
+    ) {
+      return [];
+    }
     const status =
       baseBytes === null
         ? 'added'
         : currentBytes === null
           ? 'deleted'
           : 'modified';
-    return {
-      path: relativePath,
-      status,
-      ...(baseBytes === null ? {} : { baseContentRoot: sha256(baseBytes) }),
-      ...(currentBytes === null ? {} : { contentRoot: sha256(currentBytes) }),
-    };
+    return [
+      {
+        path: relativePath,
+        status,
+        ...(baseBytes === null ? {} : { baseContentRoot: sha256(baseBytes) }),
+        ...(currentBytes === null ? {} : { contentRoot: sha256(currentBytes) }),
+      },
+    ];
   });
 }
 

@@ -40,6 +40,7 @@ import {
 import { Box, Text, render, useApp } from 'ink';
 import React from 'react';
 import {
+  createAttachedAgentSessionHost,
   createDetachedAgentSessionHost,
   prepareAgentSessionNodePty,
 } from '../../agent-session/src/product-client.mjs';
@@ -79,6 +80,7 @@ import {
   directWorkspaceNavigationFromInput,
   initialProductSurface,
   onboardingContinueSurface,
+  projectWorkOwnsInput,
   quickCommandMatches,
   reduceControlPlaneInput,
   resolveProductStartupSurface,
@@ -122,6 +124,7 @@ import {
 } from './terminal-canvas.js';
 import {
   TerminalLifecycle,
+  bindTuiMockAgentEnvironment,
   decodeTerminalMouseInput,
   describeCliFailure,
   existingProjectWorkspaceRoot,
@@ -150,31 +153,44 @@ import {
 const nodeRequire = createRequire(import.meta.url);
 let tuiAgentSessionEndpoint = '';
 let tuiAgentSessionReady: Promise<string> | undefined;
-let tuiAgentSessionHost: ReturnType<typeof createDetachedAgentSessionHost>;
+type TuiAgentSessionHost = ReturnType<typeof createAttachedAgentSessionHost>;
+let tuiAgentSessionHost: TuiAgentSessionHost | undefined;
 let tuiAgentSessionRuntimeDir = '';
+function tuiAgentSessionEnvironment(
+  env: NodeJS.ProcessEnv,
+  optional = false,
+): NodeJS.ProcessEnv {
+  if (optional && !tuiAgentSessionEndpoint) return { ...env };
+  return {
+    ...env,
+    KF_RUNTIME_DIR: tuiAgentSessionRuntimeDir,
+    KUNGFU_AGENT_SESSION_ENDPOINT: tuiAgentSessionEndpoint,
+    KUNGFU_PROJECT_WORK_AGENT_SESSION: '1',
+  };
+}
 function ensureTuiAgentSession(runtimeDir: string): Promise<string> {
   const resolvedRuntimeDir = path.resolve(runtimeDir);
-  if (tuiAgentSessionReady && tuiAgentSessionRuntimeDir === resolvedRuntimeDir)
+  if (
+    tuiAgentSessionReady &&
+    tuiAgentSessionRuntimeDir === resolvedRuntimeDir &&
+    tuiAgentSessionHost
+  ) {
+    const host = tuiAgentSessionHost;
+    tuiAgentSessionReady = tuiAgentSessionReady.then(async () => {
+      await host.invoke({ operation: 'capabilities' });
+      return host.endpoint;
+    });
     return tuiAgentSessionReady;
+  }
   const { packageRoot, workerPath, mockPath } = resolveTuiAgentSessionPaths({
     env: process.env,
     argvEntry: process.argv[1],
     modulePath: fileURLToPath(import.meta.url),
   });
-  const packagedPty = path.join(
-    path.dirname(workerPath),
-    'node_modules',
-    'node-pty',
-    'lib',
-    'index.js',
-  );
-  const sourcePty = path.join(
-    packageRoot,
-    'node_modules',
-    'node-pty',
-    'lib',
-    'index.js',
-  );
+  const ptyModule = (root: string) =>
+    path.join(root, 'node_modules', 'node-pty', 'lib', 'index.js');
+  const packagedPty = ptyModule(path.dirname(workerPath));
+  const sourcePty = ptyModule(packageRoot);
   process.env.KUNGFU_AGENT_SESSION_NODE_PTY_MODULE = prepareAgentSessionNodePty(
     {
       runtimeDir: resolvedRuntimeDir,
@@ -184,16 +200,26 @@ function ensureTuiAgentSession(runtimeDir: string): Promise<string> {
   process.env.KUNGFU_AGENT_SESSION_WORKER = workerPath;
   process.env.KUNGFU_MOCK_AGENT_SCRIPT = mockPath;
   process.env.KUNGFU_PROJECT_WORK_AGENT_SESSION = '1';
-  const host = createDetachedAgentSessionHost({
-    runtimeDir: resolvedRuntimeDir,
-    executable: resolveTuiAgentSessionExecutable({
-      ...runtimePaths(),
-      env: process.env,
-      processExecPath: process.execPath,
-    }),
-    workerPath,
-    env: process.env,
-  });
+  const paths = runtimePaths();
+  const mockScenario = process.env.KUNGFU_MOCK_AGENT_SCENARIO;
+  const deterministicMock = Boolean(mockScenario?.trim());
+  const host = deterministicMock
+    ? createAttachedAgentSessionHost({
+        runtimeDir: resolvedRuntimeDir,
+        ptyModule: process.env.KUNGFU_AGENT_SESSION_NODE_PTY_MODULE,
+        env: process.env,
+      })
+    : createDetachedAgentSessionHost({
+        runtimeDir: resolvedRuntimeDir,
+        executable: resolveTuiAgentSessionExecutable({
+          env: process.env,
+          cliBin: paths.bin,
+          sourceCliFallback: paths.sourceCliFallback,
+          processExecPath: process.execPath,
+        }),
+        workerPath,
+        env: process.env,
+      });
   tuiAgentSessionHost = host;
   tuiAgentSessionRuntimeDir = resolvedRuntimeDir;
   tuiAgentSessionEndpoint = host.endpoint;
@@ -202,6 +228,13 @@ function ensureTuiAgentSession(runtimeDir: string): Promise<string> {
     host.invoke({ operation: 'capabilities' }),
   ).then(() => host.endpoint);
   return tuiAgentSessionReady;
+}
+async function closeTuiAgentSession() {
+  const host = tuiAgentSessionHost;
+  tuiAgentSessionHost = undefined;
+  tuiAgentSessionReady = undefined;
+  tuiAgentSessionEndpoint = tuiAgentSessionRuntimeDir = '';
+  if (host && 'close' in host) await host.close();
 }
 async function invokeTuiAgentSession(
   request: Record<string, unknown> & { operation: string },
@@ -268,6 +301,95 @@ function tuiCliInvocation(paths: ReturnType<typeof runtimePaths>) {
     args: (values: string[]) => [...argsPrefix, ...values],
   };
 }
+function bindMockAgentEnvironment(
+  cli: ReturnType<typeof tuiCliInvocation>,
+  paths: ReturnType<typeof runtimePaths>,
+) {
+  const { mockPath } = resolveTuiAgentSessionPaths({
+    env: process.env,
+    argvEntry: process.argv[1],
+    modulePath: fileURLToPath(import.meta.url),
+  });
+  cli.env = bindTuiMockAgentEnvironment({
+    env: cli.env,
+    packagedBin: paths.packagedBin,
+    mockPath,
+  });
+}
+function streamCliEvents({
+  file,
+  args,
+  env,
+  maxBuffer,
+  onLine,
+  label,
+}: {
+  file: string;
+  args: string[];
+  env: NodeJS.ProcessEnv;
+  maxBuffer: number;
+  onLine: (line: string) => void;
+  label: string;
+}): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const child = spawn(file, args, {
+      env,
+      stdio: ['ignore', 'pipe', 'pipe'],
+    });
+    let stdoutBuffer = '';
+    const stderrChunks: unknown[] = [];
+    let outputSize = 0;
+    let settled = false;
+    const fail = (error: Error) => {
+      if (settled) return;
+      settled = true;
+      child.kill();
+      reject(error);
+    };
+    const emitLine = (line: string) => {
+      if (!line.trim()) return true;
+      try {
+        onLine(line);
+        return true;
+      } catch (reason) {
+        fail(
+          reason instanceof Error
+            ? reason
+            : new Error(`invalid ${label} event: ${String(reason)}`),
+        );
+        return false;
+      }
+    };
+    child.stdout.on('data', (chunk) => {
+      const text = String(chunk);
+      outputSize += text.length;
+      if (outputSize > maxBuffer) {
+        fail(new Error(`${label} event stream exceeded maxBuffer`));
+        return;
+      }
+      stdoutBuffer += text;
+      const lines = stdoutBuffer.split(/\r?\n/u);
+      stdoutBuffer = lines.pop() ?? '';
+      for (const line of lines) if (!emitLine(line)) return;
+    });
+    child.stderr.on('data', stderrChunks.push.bind(stderrChunks));
+    child.once('error', fail);
+    child.once('close', (code, signal) => {
+      if (settled || !emitLine(stdoutBuffer)) return;
+      if (code !== 0) {
+        fail(
+          new Error(
+            stderrChunks.join('').trim() ||
+              `${label} event stream exited ${code ?? signal ?? 'unknown'}`,
+          ),
+        );
+        return;
+      }
+      settled = true;
+      resolve();
+    });
+  });
+}
 type ExitHistoryStatus = {
   ok: boolean;
   state: string;
@@ -285,16 +407,10 @@ const EXIT_HISTORY_STATUS_FALLBACK: ExitHistoryStatus = {
 async function openTuiAgentWorkLab(projectTour = false): Promise<AgentWorkLab> {
   const paths = runtimePaths();
   const cli = tuiCliInvocation(paths);
+  bindMockAgentEnvironment(cli, paths);
   if (projectTour) {
     const endpoint = await ensureTuiAgentSession(paths.runtimeDir);
-    const { mockPath } = resolveTuiAgentSessionPaths({
-      env: process.env,
-      argvEntry: process.argv[1],
-      modulePath: fileURLToPath(import.meta.url),
-    });
     cli.env.KUNGFU_AGENT_SESSION_ENDPOINT = endpoint;
-    cli.env.KUNGFU_MOCK_AGENT_EXECUTABLE ||= paths.packagedBin;
-    cli.env.KUNGFU_MOCK_AGENT_SCRIPT ||= mockPath;
     cli.env.KUNGFU_ASSIGNMENT_ADMIT_ALLOW_FOREIGN_BINDING = '1';
   }
   return openAgentWorkLab({
@@ -312,85 +428,28 @@ async function openTuiAgentWorkLab(projectTour = false): Promise<AgentWorkLab> {
           else resolve(stdout);
         });
       }),
-    execFileEvents: (file, values, options, onLine) =>
-      new Promise<void>((resolve, reject) => {
-        const child = spawn(file, cli.args(values), {
-          env: options.env,
-          stdio: ['ignore', 'pipe', 'pipe'],
-        });
-        let stdoutBuffer = '';
-        let stderr = '';
-        let outputSize = 0;
-        let settled = false;
-        const fail = (error: Error) => {
-          if (settled) return;
-          settled = true;
-          child.kill();
-          reject(error);
-        };
-        const emitLine = (line: string) => {
-          if (!line.trim()) return true;
-          try {
-            onLine(line);
-            return true;
-          } catch (reason) {
-            fail(
-              reason instanceof Error
-                ? reason
-                : new Error(`invalid qualification event: ${String(reason)}`),
-            );
-            return false;
-          }
-        };
-        child.stdout.on('data', (chunk) => {
-          const text = String(chunk);
-          outputSize += text.length;
-          if (outputSize > options.maxBuffer) {
-            fail(new Error('qualification event stream exceeded maxBuffer'));
-            return;
-          }
-          stdoutBuffer += text;
-          const lines = stdoutBuffer.split(/\r?\n/);
-          stdoutBuffer = lines.pop() ?? '';
-          for (const line of lines) {
-            if (!emitLine(line)) return;
-          }
-        });
-        child.stderr.on('data', (chunk) => {
-          stderr += String(chunk);
-        });
-        child.once('error', fail);
-        child.once('close', (code, signal) => {
-          if (settled) return;
-          if (!emitLine(stdoutBuffer)) return;
-          if (code !== 0) {
-            fail(
-              new Error(
-                stderr.trim() ||
-                  `qualification event stream exited ${code ?? signal ?? 'unknown'}`,
-              ),
-            );
-            return;
-          }
-          settled = true;
-          resolve();
-        });
-      }),
+    execFileEvents: async (file, values, options, onLine) => {
+      if (tuiAgentSessionReady) {
+        await ensureTuiAgentSession(tuiAgentSessionRuntimeDir);
+      }
+      return streamCliEvents({
+        file,
+        args: cli.args(values),
+        env: tuiAgentSessionEnvironment(options.env, true),
+        maxBuffer: options.maxBuffer,
+        onLine,
+        label: 'qualification',
+      });
+    },
   });
 }
 function openTuiProjects(useAgentSession = true, allowForeignBinding = false) {
   const paths = runtimePaths();
   const cli = tuiCliInvocation(paths);
+  bindMockAgentEnvironment(cli, paths);
   if (!useAgentSession) {
     cli.env.KUNGFU_PROJECT_WORK_AGENT_SESSION = undefined;
     cli.env.KUNGFU_AGENT_SESSION_ENDPOINT = undefined;
-    const { mockPath } = resolveTuiAgentSessionPaths({
-      env: process.env,
-      argvEntry: process.argv[1],
-      modulePath: fileURLToPath(import.meta.url),
-    });
-    cli.env.KUNGFU_MOCK_AGENT_EXECUTABLE ||= paths.packagedBin;
-    cli.env.KUNGFU_MOCK_AGENT_SCRIPT ||= mockPath;
   }
   if (allowForeignBinding) {
     cli.env.KUNGFU_ASSIGNMENT_ADMIT_ALLOW_FOREIGN_BINDING = '1';
@@ -417,11 +476,7 @@ function openTuiProjects(useAgentSession = true, allowForeignBinding = false) {
           cli.args(values),
           {
             ...options,
-            env: {
-              ...options.env,
-              KF_RUNTIME_DIR: tuiAgentSessionRuntimeDir,
-              KUNGFU_AGENT_SESSION_ENDPOINT: tuiAgentSessionEndpoint,
-            },
+            env: tuiAgentSessionEnvironment(options.env),
           },
           (error, stdout, stderr) => {
             if (error)
@@ -433,11 +488,7 @@ function openTuiProjects(useAgentSession = true, allowForeignBinding = false) {
     execFileInput: (file, values, input, options) =>
       new Promise<string>((resolve, reject) => {
         const child = spawn(file, cli.args(values), {
-          env: {
-            ...options.env,
-            KF_RUNTIME_DIR: tuiAgentSessionRuntimeDir,
-            KUNGFU_AGENT_SESSION_ENDPOINT: tuiAgentSessionEndpoint,
-          },
+          env: tuiAgentSessionEnvironment(options.env),
           stdio: ['pipe', 'pipe', 'pipe'],
         });
         let stdout = '';
@@ -484,72 +535,13 @@ function openTuiProjects(useAgentSession = true, allowForeignBinding = false) {
       }),
     execFileEvents: async (file, values, options, onLine) => {
       if (tuiAgentSessionReady) await tuiAgentSessionReady;
-      return new Promise<void>((resolve, reject) => {
-        const child = spawn(file, cli.args(values), {
-          env: {
-            ...options.env,
-            KF_RUNTIME_DIR: tuiAgentSessionRuntimeDir,
-            KUNGFU_AGENT_SESSION_ENDPOINT: tuiAgentSessionEndpoint,
-          },
-          stdio: ['ignore', 'pipe', 'pipe'],
-        });
-        let stdoutBuffer = '';
-        let stderr = '';
-        let outputSize = 0;
-        let settled = false;
-        const fail = (error: Error) => {
-          if (settled) return;
-          settled = true;
-          child.kill();
-          reject(error);
-        };
-        const emitLine = (line: string) => {
-          if (!line.trim()) return true;
-          try {
-            onLine(line);
-            return true;
-          } catch (reason) {
-            fail(
-              reason instanceof Error
-                ? reason
-                : new Error(`invalid Work event: ${String(reason)}`),
-            );
-            return false;
-          }
-        };
-        child.stdout.on('data', (chunk) => {
-          const text = String(chunk);
-          outputSize += text.length;
-          if (outputSize > options.maxBuffer) {
-            fail(new Error('Work event stream exceeded maxBuffer'));
-            return;
-          }
-          stdoutBuffer += text;
-          const lines = stdoutBuffer.split(/\r?\n/u);
-          stdoutBuffer = lines.pop() ?? '';
-          for (const line of lines) {
-            if (!emitLine(line)) return;
-          }
-        });
-        child.stderr.on('data', (chunk) => {
-          stderr += String(chunk);
-        });
-        child.once('error', fail);
-        child.once('close', (code, signal) => {
-          if (settled) return;
-          if (!emitLine(stdoutBuffer)) return;
-          if (code !== 0) {
-            fail(
-              new Error(
-                stderr.trim() ||
-                  `Work event stream exited ${code ?? signal ?? 'unknown'}`,
-              ),
-            );
-            return;
-          }
-          settled = true;
-          resolve();
-        });
+      return streamCliEvents({
+        file,
+        args: cli.args(values),
+        env: tuiAgentSessionEnvironment(options.env),
+        maxBuffer: options.maxBuffer,
+        onLine,
+        label: 'Work',
       });
     },
   });
@@ -1806,6 +1798,9 @@ function ProductHost({
         return;
       }
       const current = controlRef.current;
+      if (projectWorkOwnsInput(current, String(chunk), surfaceRef.current)) {
+        return;
+      }
       const directNavigation = directWorkspaceNavigationFromInput(
         current,
         String(chunk),
@@ -1911,6 +1906,7 @@ function ProductHost({
       <StarterProjectHost
         project={starterProject}
         lab={lab}
+        ensureAgentSession={ensureTuiAgentSession}
         dimensions={contentDimensions}
         isInputCaptured={isInputCaptured}
         onOpenLab={() => setSurface('lab')}
@@ -2132,7 +2128,6 @@ function ProductHost({
       />
     );
   }
-
   const resultCount =
     control.mode === 'commands'
       ? quickCommands.length
@@ -2225,6 +2220,7 @@ function ProductHost({
             dimensions={size}
             state={control}
             resultCount={resultCount}
+            workspaceInputActive={workspaceInputActive}
             controlsLabel={
               labOpen
                 ? 'LAB CONTROLS'
@@ -2325,48 +2321,52 @@ async function main(): Promise<void> {
   let projectTourResult: ProjectTourResult | undefined;
   let playbackQuit = false;
   let terminating = false;
-  await lifecycle.run(
-    {
-      onExit: (signal) => {
-        terminating = true;
-        if (signal) process.exitCode = 128 + osConstants.signals[signal];
-        instance?.unmount();
-      },
-      onResize: (size) => dimensions.update(size),
-    },
-    async () => {
-      if (terminating) return;
-      instance = render(
-        <ProductHost
-          lab={lab}
-          dimensions={dimensions}
-          autoDemo={autoDemo}
-          projectTourRoot={projectTourRoot}
-          projectTourSpeed={projectTourSpeed}
-          projectTourEpisode={projectTourEpisode}
-          emptyState={emptyState}
-          onAutoDemoSettled={(result) => {
-            autoDemoResult = result;
-          }}
-          onProjectTourSettled={(result) => {
-            projectTourResult = result;
-          }}
-          onPlaybackQuit={() => {
-            playbackQuit = true;
-          }}
-        />,
-        {
-          stdin: process.stdin,
-          stdout: terminalOutput as unknown as NodeJS.WriteStream,
-          stderr: process.stderr,
-          exitOnCtrlC: false,
-          patchConsole: false,
-          debug: true,
+  try {
+    await lifecycle.run(
+      {
+        onExit: (signal) => {
+          terminating = true;
+          if (signal) process.exitCode = 128 + osConstants.signals[signal];
+          instance?.unmount();
         },
-      );
-      await instance.waitUntilExit();
-    },
-  );
+        onResize: (size) => dimensions.update(size),
+      },
+      async () => {
+        if (terminating) return;
+        instance = render(
+          <ProductHost
+            lab={lab}
+            dimensions={dimensions}
+            autoDemo={autoDemo}
+            projectTourRoot={projectTourRoot}
+            projectTourSpeed={projectTourSpeed}
+            projectTourEpisode={projectTourEpisode}
+            emptyState={emptyState}
+            onAutoDemoSettled={(result) => {
+              autoDemoResult = result;
+            }}
+            onProjectTourSettled={(result) => {
+              projectTourResult = result;
+            }}
+            onPlaybackQuit={() => {
+              playbackQuit = true;
+            }}
+          />,
+          {
+            stdin: process.stdin,
+            stdout: terminalOutput as unknown as NodeJS.WriteStream,
+            stderr: process.stderr,
+            exitOnCtrlC: false,
+            patchConsole: false,
+            debug: true,
+          },
+        );
+        await instance.waitUntilExit();
+      },
+    );
+  } finally {
+    await closeTuiAgentSession();
+  }
   if (autoDemo && !playbackQuit) {
     if (!autoDemoResult) {
       throw new Error('Agent Work Lab autoplay exited without a result');

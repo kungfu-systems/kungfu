@@ -246,6 +246,7 @@ function validatePolicy(root, policy) {
         'runtimeSha',
         'publicationRuntimeSha',
         'contractDigest',
+        'packageContractDigest',
         'publicationContractDigests',
         'contractLock',
         'packageVersion',
@@ -391,7 +392,10 @@ function currentBuildchain(root, policy, channel) {
     root,
     `node_modules/${packageName}/dist/site/buildchain-contract.json`,
   );
-  if (contract.contractDigest !== releaseRuntime.contractDigest)
+  if (
+    contract.contractDigest !==
+    (releaseRuntime.packageContractDigest || releaseRuntime.contractDigest)
+  )
     throw new Error(
       'installed Buildchain contract digest differs from release admission policy',
     );

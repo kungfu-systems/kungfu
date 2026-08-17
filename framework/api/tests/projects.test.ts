@@ -1131,6 +1131,7 @@ test('Project Work restores and controls one retained Agent Session through the 
   let interactionState = 'ready';
   let live = true;
   let controller: { holderId: string } | null = null;
+  const cliCalls: string[][] = [];
   const ref = {
     workConsoleId: 'work:qualification:assignment:alpha',
     sessionAttemptId: 'attempt:alpha:1',
@@ -1138,8 +1139,56 @@ test('Project Work restores and controls one retained Agent Session through the 
   const projects = openProjects({
     bin: 'kungfu',
     env: {},
-    execFile: async () => {
-      throw new Error('no CLI call expected');
+    execFile: async (_file, args) => {
+      cliCalls.push(args);
+      if (args[1] === 'start-resume') {
+        return JSON.stringify({
+          schema: 'kungfu.work-start.resume/v1',
+          status: 'retained-agent-run',
+          workReceipt: {
+            schema: 'kungfu.work-start.receipt/v1',
+            ok: true,
+            status: 'agent-finished',
+            planRoot: `sha256:${'3'.repeat(64)}`,
+            receiptRoot: `sha256:${'4'.repeat(64)}`,
+            workPhase: 'executing',
+            work: {
+              initiativeId: 'initiative-alpha',
+              assignmentId: 'alpha',
+              title: 'Alpha',
+              objective: 'Exercise controls',
+              acceptanceChecks: ['all states observed'],
+            },
+            agent: { provider: 'synthetic' },
+            workspace: { workspace_root: '/project' },
+            agentReport: {
+              runId: 'attempt:alpha:1',
+              reportRoot: `sha256:${'8'.repeat(64)}`,
+              session: { ...ref, live: false },
+              episode: {
+                reportPath: '/project/.kungfu/runtime/final/report.json',
+              },
+            },
+            nextActions: ['run-independent-review'],
+            writeOccurred: true,
+          },
+          writeOccurred: false,
+        });
+      }
+      return JSON.stringify({
+        schema: 'kungfu.work-start.agent-session-finalization/v1',
+        status: 'agent-finished',
+        reportPath: '/project/.kungfu/runtime/final/report.json',
+        agentReport: {
+          runId: 'attempt:alpha:1',
+          reportRoot: `sha256:${'8'.repeat(64)}`,
+          session: { ...ref, live: false },
+          episode: {
+            reportPath: '/project/.kungfu/runtime/final/report.json',
+          },
+        },
+        writeOccurred: true,
+      });
     },
     agentSession: {
       invoke: async (request) => {
@@ -1160,6 +1209,7 @@ test('Project Work restores and controls one retained Agent Session through the 
           interactionState = 'ready';
         }
         if (request.operation === 'end') {
+          await Promise.resolve();
           live = false;
           interactionState = 'ended';
         }
@@ -1209,13 +1259,19 @@ test('Project Work restores and controls one retained Agent Session through the 
     receiptRoot: `sha256:${'2'.repeat(64)}`,
     workPhase: 'executing',
     work: {
+      initiativeId: 'initiative-alpha',
       assignmentId: 'alpha',
       title: 'Alpha',
       objective: 'Exercise controls',
       acceptanceChecks: ['all states observed'],
     },
     agent: { provider: 'synthetic' },
-    agentReport: { runId: 'attempt:alpha:1', session: ref },
+    workspace: { workspace_root: '/project' },
+    agentReport: {
+      runId: 'attempt:alpha:1',
+      session: ref,
+      episode: { reportPath: '/project/.kungfu/runtime/initial/report.json' },
+    },
     nextActions: ['reply'],
     writeOccurred: true,
   };
@@ -1236,6 +1292,35 @@ test('Project Work restores and controls one retained Agent Session through the 
     projects.runs()[0]?.session?.attention?.kind,
     'ready-for-review',
   );
+  assert.equal(projects.runs()[0]?.receipt?.status, 'agent-finished');
+  assert.equal(
+    (projects.runs()[0]?.receipt?.agentReport as { reportRoot?: string })
+      .reportRoot,
+    `sha256:${'8'.repeat(64)}`,
+  );
+  assert.deepEqual(cliCalls, [
+    [
+      'work',
+      'finalize-agent-session',
+      '/project/.kungfu/runtime/initial/report.json',
+      '--workspace',
+      '/project',
+      '--initiative-id',
+      'initiative-alpha',
+      '--assignment-id',
+      'alpha',
+    ],
+    [
+      'work',
+      'start-resume',
+      '--workspace',
+      '/project',
+      '--initiative-id',
+      'initiative-alpha',
+      '--assignment-id',
+      'alpha',
+    ],
+  ]);
   assert.deepEqual(
     operations.filter((operation) =>
       ['acquire-control', 'instruct', 'send-key', 'end'].includes(operation),

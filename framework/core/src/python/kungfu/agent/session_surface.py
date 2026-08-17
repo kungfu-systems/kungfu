@@ -35,12 +35,16 @@ _REQUIRED_NATIVE_OPERATIONS = frozenset(
 
 
 def _deadline(timeout):
+    if timeout is None:
+        return None
     if timeout <= 0:
         raise ValueError("Agent Session timeout must be positive")
     return time.monotonic() + timeout
 
 
 def _remaining_milliseconds(deadline, operation):
+    if deadline is None:
+        return 0xFFFFFFFF
     remaining = deadline - time.monotonic()
     if remaining <= 0:
         raise TimeoutError(f"Agent Session {operation} timed out")
@@ -100,7 +104,7 @@ def _open_named_pipe(target, deadline, api):
         except OSError as error:
             if getattr(error, "winerror", None) not in retryable:
                 raise
-            if time.monotonic() >= deadline:
+            if deadline is not None and time.monotonic() >= deadline:
                 raise TimeoutError(
                     "Agent Session named-pipe connect timed out"
                 ) from error
@@ -380,6 +384,8 @@ def _spawn_detached_worker(*argv: str):
 
 def _await_surface_capabilities(endpoint, timeout=5.0):
     deadline = _deadline(timeout)
+    if deadline is None:
+        return invoke({"operation": "capabilities"}, endpoint=endpoint, timeout=None)
     while True:
         remaining = deadline - time.monotonic()
         if remaining <= 0:
@@ -396,7 +402,7 @@ def _await_surface_capabilities(endpoint, timeout=5.0):
             time.sleep(min(0.05, remaining))
 
 
-def ensure(runtime_dir, *, runner=None):
+def ensure(runtime_dir, *, runner=None, timeout=5.0):
     """Ensure and return the runtime-scoped detached Agent Session endpoint."""
 
     explicit_endpoint = os.environ.get("KUNGFU_AGENT_SESSION_ENDPOINT")
@@ -405,7 +411,9 @@ def ensure(runtime_dir, *, runner=None):
         os.environ["KUNGFU_AGENT_SESSION_ENDPOINT"] = endpoint
     try:
         capabilities = invoke(
-            {"operation": "capabilities"}, endpoint=endpoint, timeout=0.25
+            {"operation": "capabilities"},
+            endpoint=endpoint,
+            timeout=None if timeout is None else min(0.25, timeout),
         )
         _validate_surface_capabilities(capabilities, endpoint=endpoint)
         return endpoint
@@ -435,7 +443,7 @@ def ensure(runtime_dir, *, runner=None):
         raise ValueError(
             f"native Agent Session bridge exited with status {int(exit_code)}"
         )
-    capabilities = _await_surface_capabilities(endpoint)
+    capabilities = _await_surface_capabilities(endpoint, timeout=timeout)
     _validate_surface_capabilities(capabilities, endpoint=endpoint)
     return endpoint
 

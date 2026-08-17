@@ -28,6 +28,7 @@ export function projectWorkAgentState(session = {}) {
   const interaction = session.interactionState ?? '';
   const attemptStatus = session.attempt?.status ?? session.attemptStatus ?? '';
   const exitCode = session.exit?.exitCode ?? session.exit?.code ?? null;
+  const controlledEnd = session.exit?.controlRequest?.operation === 'end';
   const interactionReason =
     session.providerAdapter?.reason ?? session.interactionReason ?? null;
   const interactionSignatures = Array.isArray(
@@ -58,7 +59,7 @@ export function projectWorkAgentState(session = {}) {
     attemptStatus === 'ended' ||
     attemptStatus === 'exited'
   ) {
-    if (exitCode !== null && exitCode !== 0) {
+    if (exitCode !== null && exitCode !== 0 && !controlledEnd) {
       return {
         schema: 'kungfu.project-work-agent-state/v1',
         attempt: 'ended',
@@ -74,8 +75,12 @@ export function projectWorkAgentState(session = {}) {
       attempt: 'ended',
       attention: attention(
         'ready-for-review',
-        'agent-attempt-ended',
-        'The Agent attempt ended. Review the project changes before completing Work.',
+        controlledEnd
+          ? 'agent-attempt-ended-by-controller'
+          : 'agent-attempt-ended',
+        controlledEnd
+          ? 'The Agent attempt was ended for review. Review the project changes before completing Work.'
+          : 'The Agent attempt ended. Review the project changes before completing Work.',
       ),
     };
   }

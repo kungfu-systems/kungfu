@@ -1,8 +1,8 @@
 [
   {
-    "id": "unknown-method-fails-closed",
-    "direction": "server-notification",
-    "message": {"method": "future/event", "params": {}},
+    "id": "unknown-server-request-fails-closed",
+    "direction": "server-request",
+    "message": {"id": "future-request-1", "method": "future/event", "params": {}},
     "expectedCode": "unknown-method"
   },
   {

@@ -138,6 +138,10 @@ export class AgentSessionCapsuleHost {
       cwd: spec.cwd,
       env: spec.env,
     });
+    let resolveExit;
+    const exitPromise = new Promise((resolve) => {
+      resolveExit = resolve;
+    });
     const startedAt = this.now();
     const session = {
       workConsoleId: requireString(spec.workConsoleId, 'workConsoleId'),
@@ -170,6 +174,10 @@ export class AgentSessionCapsuleHost {
       inputReceipts: new Map(),
       inputOffset: 0,
       lifecycle: [],
+      changeSequence: 0,
+      changeWaiters: new Set(),
+      exitPromise,
+      resolveExit,
     };
     this.session = session;
     this.#recordLifecycle('started');
@@ -185,8 +193,31 @@ export class AgentSessionCapsuleHost {
       session.exitCode = exitCode;
       session.exitSignal = signal ?? null;
       this.#recordLifecycle('exit', { exitCode, signal: signal ?? null });
+      this.#notifyChange();
+      session.resolveExit(this.status());
     });
     return this.status();
+  }
+
+  waitForExit() {
+    const session = this.#requireSession();
+    if (session.inputAdmission === 'closed') {
+      return Promise.resolve(this.status());
+    }
+    return session.exitPromise;
+  }
+
+  waitForChange(afterChangeSequence) {
+    const session = this.#requireSession();
+    if (!Number.isSafeInteger(afterChangeSequence) || afterChangeSequence < 0) {
+      throw new Error(
+        'afterChangeSequence must be a non-negative safe integer',
+      );
+    }
+    if (session.changeSequence !== afterChangeSequence) {
+      return Promise.resolve(this.status());
+    }
+    return new Promise((resolve) => session.changeWaiters.add(resolve));
   }
 
   status() {
@@ -199,6 +230,7 @@ export class AgentSessionCapsuleHost {
       sessionAttemptId: session.sessionAttemptId,
       capsuleGeneration: session.capsuleGeneration,
       sessionStreamEpoch: session.sessionStreamEpoch,
+      changeSequence: session.changeSequence,
       lifecycleState: session.lifecycleState,
       interactionState: session.interactionState,
       inputAdmission: session.inputAdmission,
@@ -385,6 +417,15 @@ export class AgentSessionCapsuleHost {
     }
     session.earliestSequence =
       session.output[0]?.startSequence ?? session.nextSequence;
+    this.#notifyChange();
+  }
+
+  #notifyChange() {
+    const session = this.#requireSession();
+    session.changeSequence += 1;
+    const status = this.status();
+    for (const resolve of session.changeWaiters) resolve(status);
+    session.changeWaiters.clear();
   }
 
   #recordLifecycle(event, detail = {}) {

@@ -476,6 +476,29 @@ def launch_argv(
     return [executable, *prefix, effective_prompt]
 
 
+def _direct_process_transport(
+    provider: str, argv: Sequence[str]
+) -> tuple[list[str], str | None]:
+    """Select a portable direct-process prompt transport.
+
+    Codex accepts ``-`` as the prompt argument and then reads the complete
+    instruction from stdin.  The deterministic Mock Agent accepts the same
+    content as one bracketed-paste frame.  Keeping both prompts out of argv
+    avoids the Windows command-line length limit without binding Kungfu to any
+    Agent version.  Other providers retain their native argv contract.
+    """
+
+    values = [str(value) for value in argv]
+    if provider not in {"codex", "synthetic"}:
+        return values, None
+    if not values:
+        raise ValueError("direct-process launch argv is required")
+    if provider == "synthetic":
+        prompt = values[-1]
+        return values[:-1], f"\x1b[200~{prompt}\x1b[201~\r"
+    return [*values[:-1], "-"], values[-1]
+
+
 def interactive_launch_argv(profile: Mapping[str, Any]) -> list[str]:
     """Build the provider-native argv without managed-run prompt flags."""
 
@@ -659,8 +682,30 @@ def _wait_for_session(
     ref: Mapping[str, str],
     predicate: Callable[[Mapping[str, Any]], bool],
     *,
-    timeout_seconds: float,
+    timeout_seconds: float | None,
+    event_driven: bool = False,
 ) -> Mapping[str, Any]:
+    if event_driven:
+        while True:
+            event_status = invoke({"operation": "status", "session": dict(ref)})
+            if predicate(event_status):
+                return event_status
+            change_sequence = event_status.get("changeSequence")
+            if not isinstance(change_sequence, int) or change_sequence < 0:
+                raise ValueError(
+                    "Deterministic Mock Agent requires event-driven Session status"
+                )
+            event_status = invoke(
+                {
+                    "operation": "wait-status-change",
+                    "session": dict(ref),
+                    "afterChangeSequence": change_sequence,
+                }
+            )
+            if predicate(event_status):
+                return event_status
+    if timeout_seconds is None:
+        raise ValueError("Non-Mock Agent Session wait requires a timeout")
     deadline = time.monotonic() + timeout_seconds
     latest: Mapping[str, Any] | None = None
     while time.monotonic() < deadline:
@@ -719,10 +764,14 @@ def run_process(
     *,
     cwd: str | None,
     env: Mapping[str, str],
-    timeout_seconds: float,
+    timeout_seconds: float | None,
+    stdin_text: str | None = None,
     output_sink: Callable[[str, str], None] | None = None,
 ) -> ProcessResult:
     process_argv = _resolve_windows_command_wrapper(argv, env=env)
+    process_env = dict(env)
+    process_env.setdefault("PYTHONUTF8", "1")
+    process_env.setdefault("PYTHONIOENCODING", "utf-8")
     command_wrapper = (
         sys.platform == "win32"
         and bool(process_argv)
@@ -734,8 +783,9 @@ def run_process(
     process = subprocess.Popen(
         process_argv,
         cwd=cwd,
-        env=dict(env),
+        env=process_env,
         shell=command_wrapper,
+        stdin=subprocess.PIPE if stdin_text is not None else None,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         text=True,
@@ -769,6 +819,17 @@ def run_process(
     )
     stdout_thread.start()
     stderr_thread.start()
+    if stdin_text is not None:
+        assert process.stdin is not None
+        try:
+            process.stdin.write(stdin_text)
+        except BrokenPipeError:
+            pass
+        finally:
+            try:
+                process.stdin.close()
+            except BrokenPipeError:
+                pass
     try:
         process.wait(timeout=timeout_seconds)
         interrupted = False
@@ -988,11 +1049,15 @@ def execute(
                     {"status": "started", "transport": "direct-process"},
                 )
             if process_runner is run_process:
+                process_argv, stdin_text = _direct_process_transport(provider, argv)
                 result = process_runner(
-                    argv,
+                    process_argv,
                     cwd=cwd,
                     env=env,
-                    timeout_seconds=timeout_seconds,
+                    timeout_seconds=(
+                        None if provider == "synthetic" else timeout_seconds
+                    ),
+                    stdin_text=stdin_text,
                     output_sink=project_output,
                 )
             else:

@@ -6,7 +6,7 @@ Source implementation is not the same as released support. Verification, Buildch
 
 | Standard | Normative | Product status | Implementation | Verification | Buildchain | Release qualification | Shipped | Next gate |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| KFD-1 | active r6 | source-supported | implemented | passed | passed | alpha-release-passport | yes | Retain and verify the exact Alpha release passport for every claimed release. |
+| KFD-1 | active r7 | source-supported | implemented | passed | passed | alpha-release-passport | yes | Retain and verify the exact Alpha release passport for every claimed release. |
 | KFD-2 | active r3 | source-supported | implemented | passed | passed | alpha-release-passport | yes | Retain and verify all KFD-2 claim evaluations in every claimed Alpha release passport. |
 | KFD-3 | active r5 | source-supported | implemented | passed | passed | alpha-release-passport | yes | Retain and verify the exact product-declared registry audit and artifact closure in every claimed Alpha release passport. |
 | KFD-4 | active r10 | candidate | implemented-candidate-profile | passed | passed | not-qualified | no | Retain the exact-source gate and release passport, then obtain independent adopter evidence and an explicit release decision before changing shipped support. |

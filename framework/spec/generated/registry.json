@@ -33,7 +33,7 @@
       "protocol_id": "kungfu.episode.manifest/v1",
       "source": "framework/core/src/libyijinjing/include/kungfu/yijinjing/storage/episode_manifest_types.h",
       "source_role": "append-only-Episode-manifest-record-family",
-      "source_root": "sha256:6db18e8085a8a52947a6e155983c4ef8e019168239075add187b11fdf0130047",
+      "source_root": "sha256:220564965ea4eaa5989ca1fb00147297ee8b8df874dd4bd7d01c3451d55c3e92",
       "version_axis": "Episode manifest record schema_version"
     },
     {
@@ -129,7 +129,7 @@
       },
       {
         "path": "framework/core/src/libyijinjing/include/kungfu/yijinjing/storage/episode_manifest_types.h",
-        "root": "sha256:6db18e8085a8a52947a6e155983c4ef8e019168239075add187b11fdf0130047"
+        "root": "sha256:220564965ea4eaa5989ca1fb00147297ee8b8df874dd4bd7d01c3451d55c3e92"
       },
       {
         "path": "framework/core/src/libyijinjing/include/kungfu/yijinjing/storage/manifest_catalog_types.h",

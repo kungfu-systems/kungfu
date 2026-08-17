@@ -20,6 +20,7 @@ import {
   contextualProjectRestoreCanCommit,
   createControlPlaneInputFence,
   directWorkspaceNavigationFromInput,
+  projectWorkOwnsInput,
   quickCommandMatches,
   reduceControlPlaneInput,
   resolveProductStartupSurface,
@@ -71,6 +72,18 @@ test('p opens Projects directly from an empty Project input prompt', () => {
     ),
     null,
   );
+});
+
+test('Project Work owns the answer shortcut before the global input bar', () => {
+  const workspace = { ...CLOSED_CONTROL_PLANE, focus: 'workspace' as const };
+
+  assert.equal(projectWorkOwnsInput(workspace, 'i', 'project-work'), true);
+  assert.equal(projectWorkOwnsInput(workspace, 'i', 'projects'), false);
+  assert.equal(
+    projectWorkOwnsInput(CLOSED_CONTROL_PLANE, 'i', 'project-work'),
+    false,
+  );
+  assert.equal(projectWorkOwnsInput(workspace, 'j', 'project-work'), false);
 });
 
 const globalWorkSnapshot = {
@@ -793,6 +806,38 @@ test('the idle bar makes Lab controls visually explicit', async () => {
   assert.match(frame, /d Demo · x Same · m Handoff · Tab Focus/);
   assert.match(frame, /i Input/);
   assert.match(frame, /◇ Press i to type/);
+});
+
+test('a focused workspace modal does not tell the user to type a literal i', async () => {
+  const output = new CaptureOutput();
+  const instance = render(
+    React.createElement(
+      Box,
+      { width: 80, height: 23, flexDirection: 'column' },
+      React.createElement(ControlPlaneBar, {
+        dimensions: { columns: 80, rows: 24 },
+        state: { ...CLOSED_CONTROL_PLANE, focus: 'workspace' },
+        resultCount: 0,
+        controlsLabel: 'NEW WORK INPUT',
+        controlsHint: 'Type in the focused panel · Enter Continue · Esc Cancel',
+        workspaceInputActive: true,
+      }),
+    ),
+    {
+      stdout: output as unknown as NodeJS.WriteStream,
+      exitOnCtrlC: false,
+      patchConsole: false,
+      debug: true,
+    },
+  );
+  await new Promise<void>((resolve) => setTimeout(resolve, 80));
+  const frame = output.chunks.join('');
+  instance.unmount();
+  instance.cleanup();
+
+  assert.match(frame, /NEW WORK INPUT/);
+  assert.match(frame, /Focused panel accepts text/);
+  assert.doesNotMatch(frame, /i Input|Press i to type/);
 });
 
 test('search keeps the selected result visible beyond the first viewport', async () => {

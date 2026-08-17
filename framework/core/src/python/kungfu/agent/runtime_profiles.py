@@ -274,10 +274,10 @@ MOCK_SCENARIOS = (
 BACKENDS = ("tmux", "direct")
 CWD_POLICIES = ("workspace-root", "home", "inherit")
 _VERSION_TIMEOUT_SECONDS = 5.0
-_PROVIDER_VERSION_TIMEOUT_SECONDS = {"amp": 15.0}
+_PROVIDER_VERSION_TIMEOUT_SECONDS = {"amp": 15.0, "synthetic": None}
 
 
-def _version_timeout_seconds(provider: str) -> float:
+def _version_timeout_seconds(provider: str) -> float | None:
     return _PROVIDER_VERSION_TIMEOUT_SECONDS.get(provider, _VERSION_TIMEOUT_SECONDS)
 
 
@@ -371,7 +371,11 @@ def deterministic_mock_profile(
         raise ValueError(f"Mock Agent script is unavailable: {script_value}")
     return _profile(
         profile_id=f"kungfu.mock-agent.{scenario}",
-        label=f"Mock Agent · {scenario}",
+        label=(
+            "Mock Reviewer · deterministic-fit"
+            if scenario == "review-fit"
+            else f"Mock Agent · {scenario}"
+        ),
         provider="synthetic",
         executable=os.path.abspath(executable_value),
         argv=[os.path.abspath(script_value), "--scenario", scenario],
@@ -488,7 +492,7 @@ def _probe_version(
     executable: str,
     version_argv: list[str],
     *,
-    timeout_seconds: float = _VERSION_TIMEOUT_SECONDS,
+    timeout_seconds: float | None = _VERSION_TIMEOUT_SECONDS,
 ) -> str | None:
     return VerificationProbe(
         schema=VERIFY_SCHEMA,

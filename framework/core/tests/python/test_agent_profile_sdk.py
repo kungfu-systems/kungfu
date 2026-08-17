@@ -398,6 +398,36 @@ def test_resolver_computes_exact_member_roots_and_core_verifies_closure(tmp_path
     )
 
 
+def test_validation_scope_reuses_exact_result_without_leaking_mutation(
+    tmp_path, monkeypatch
+):
+    source, _ = create_source(tmp_path)
+    runtime = tmp_path / "runtime"
+    calls = 0
+    original = profile_sdk._work_profile_conformance
+
+    def observed(inspection, surface):
+        nonlocal calls
+        calls += 1
+        return original(inspection, surface)
+
+    monkeypatch.setattr(profile_sdk, "_work_profile_conformance", observed)
+
+    with profile_sdk.validation_scope():
+        first = profile_sdk.validate_source(source, runtime)
+        first["source"]["memberRoots"].clear()
+        second = profile_sdk.validate_source(source, runtime)
+        with profile_sdk.validation_scope():
+            third = profile_sdk.validate_source(source, runtime)
+
+    assert calls == 1
+    assert second == third
+    assert second["source"]["memberRoots"]
+
+    profile_sdk.validate_source(source, runtime)
+    assert calls == 2
+
+
 def test_collaboration_closure_binds_dual_first_actions_views_and_limits(tmp_path):
     source, _ = create_source(tmp_path)
     add_collaboration(source)

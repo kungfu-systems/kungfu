@@ -524,6 +524,7 @@ export function starterProjectOverviewEnterStage(
 ): 'detail' | 'result' | 'review' | 'review-result' | 'close-result' {
   if (closeReceipt) return 'close-result';
   if (reviewReceiptCanResume(reviewReceipt)) return 'review';
+  if (reviewReceipt?.status === 'revision-required') return 'detail';
   if (reviewReceipt) return 'review-result';
   if (workReceipt?.status === 'agent-finished') return 'review';
   return workReceipt ? 'result' : 'detail';
@@ -552,10 +553,13 @@ export function agentProfileSourceLabel(
 export function deterministicMockAgentSelection(
   scenario: string,
 ): SelectableAgentProfile {
+  const reviewer = scenario === 'review-fit';
   return {
     schema: 'kungfu.agent-runtime-profile/v1',
     id: `kungfu.mock-agent.${scenario}`,
-    label: `Mock Agent · ${scenario}`,
+    label: reviewer
+      ? 'Mock Reviewer · deterministic-fit'
+      : `Mock Agent · ${scenario}`,
     provider: 'synthetic',
     launch: {
       executable: process.env.KUNGFU_MOCK_AGENT_EXECUTABLE ?? process.execPath,
@@ -570,6 +574,17 @@ export function deterministicMockAgentSelection(
     source: 'qualification',
     lastVerified: null,
   };
+}
+
+export function deterministicMockSelectionForStage(
+  scenario: string | undefined,
+  stage: 'agents' | 'review-agents',
+): SelectableAgentProfile | null {
+  const normalized = scenario?.trim();
+  if (!normalized) return null;
+  return deterministicMockAgentSelection(
+    stage === 'review-agents' ? 'review-fit' : normalized,
+  );
 }
 
 export function projectSectionNavigationAtPoint({
@@ -637,6 +652,7 @@ function StarterWorkPanel({
 export function StarterProjectHost({
   project,
   lab,
+  ensureAgentSession,
   dimensions,
   isInputCaptured,
   onOpenLab,
@@ -650,6 +666,7 @@ export function StarterProjectHost({
 }: {
   project: OpenedStarterProject;
   lab: AgentWorkLab;
+  ensureAgentSession: (runtimeDir: string) => Promise<string>;
   dimensions: DimensionSource;
   isInputCaptured: () => boolean;
   onOpenLab: () => void;
@@ -792,6 +809,21 @@ export function StarterProjectHost({
   );
   const loadAgents = React.useCallback(
     (nextStage: 'agents' | 'review-agents') => {
+      const deterministicMock = deterministicMockSelectionForStage(
+        process.env.KUNGFU_MOCK_AGENT_SCENARIO,
+        nextStage,
+      );
+      if (deterministicMock) {
+        setProfiles([deterministicMock]);
+        setSelectedProfile(0);
+        setProfileSources({
+          [deterministicMock.id]: agentProfileSourceLabel('qualification'),
+        });
+        setError('');
+        setBusy('');
+        setStage(nextStage);
+        return;
+      }
       setBusy('discovering verified Agents');
       setError('');
       void lab
@@ -799,15 +831,6 @@ export function StarterProjectHost({
         .then((catalog) => {
           const available = new Map<string, SelectableAgentProfile>();
           const sources: Record<string, string> = {};
-          const mockScenario =
-            nextStage === 'agents'
-              ? process.env.KUNGFU_MOCK_AGENT_SCENARIO?.trim()
-              : '';
-          if (mockScenario) {
-            const mock = deterministicMockAgentSelection(mockScenario);
-            available.set(mock.id, mock);
-            sources[mock.id] = agentProfileSourceLabel('qualification');
-          }
           for (const row of catalog.discovered) {
             if (row.available) {
               available.set(row.profile.id, row.profile);
@@ -827,9 +850,8 @@ export function StarterProjectHost({
               'No supported Agent is available. Run `kungfu agent runtime discover`.',
             );
           }
-          const preferred = mockScenario
-            ? `kungfu.mock-agent.${mockScenario}`
-            : (catalog.defaultProfileId ?? catalog.recommendedProfileId ?? '');
+          const preferred =
+            catalog.defaultProfileId ?? catalog.recommendedProfileId ?? '';
           setProfiles(values);
           setSelectedProfile(
             Math.max(
@@ -860,8 +882,8 @@ export function StarterProjectHost({
     if (!profile) return;
     setBusy('verifying exact Work start plan');
     setError('');
-    void lab
-      .planStarterWork(workReference, profile.id)
+    void ensureAgentSession(project.workspace.selected.runtime_dir)
+      .then(() => lab.planStarterWork(workReference, profile.id))
       .then((value) => {
         setPlan(value);
         setStage('preview');
@@ -870,7 +892,14 @@ export function StarterProjectHost({
         setError(reason instanceof Error ? reason.message : String(reason)),
       )
       .finally(() => setBusy(''));
-  }, [lab, profiles, selectedProfile, workReference]);
+  }, [
+    ensureAgentSession,
+    lab,
+    profiles,
+    project,
+    selectedProfile,
+    workReference,
+  ]);
   const start = React.useCallback(() => {
     if (!plan) return;
     setEvents([]);
@@ -878,9 +907,11 @@ export function StarterProjectHost({
     setError('');
     setBusy('starting governed Work');
     setStage('running');
-    void lab
-      .startStarterWork(plan, (event) =>
-        setEvents((current) => [...current, event]),
+    void ensureAgentSession(project.workspace.selected.runtime_dir)
+      .then(() =>
+        lab.startStarterWork(plan, (event) =>
+          setEvents((current) => [...current, event]),
+        ),
       )
       .then((receipt) => {
         setWorkReceipt(receipt);
@@ -895,7 +926,7 @@ export function StarterProjectHost({
         setStage('result');
       })
       .finally(() => setBusy(''));
-  }, [lab, onRetainedAgentSession, plan]);
+  }, [ensureAgentSession, lab, onRetainedAgentSession, plan, project]);
   const previewReview = React.useCallback(() => {
     const profile = profiles[selectedProfile];
     if (!profile || !workReceipt) return;
@@ -1021,6 +1052,12 @@ export function StarterProjectHost({
         return;
       }
       if (stage === 'review') {
+        if (input === 'a') {
+          setReviewPlan(undefined);
+          setReviewReceipt(undefined);
+          setError('');
+          return setStage('detail');
+        }
         if (enter || input === 'r') return openReviewAgents();
         if (back) {
           setError('');
@@ -1060,6 +1097,12 @@ export function StarterProjectHost({
         }
         if (enter && reviewReceipt?.status === 'review-passed') {
           return previewClose();
+        }
+        if (enter && reviewReceipt?.status === 'revision-required') {
+          setReviewPlan(undefined);
+          setReviewReceipt(undefined);
+          setError('');
+          return setStage('detail');
         }
         if (enter || back) {
           setError('');
@@ -1397,8 +1440,8 @@ export function StarterProjectHost({
         }
         footer={
           resuming
-            ? '[Enter/r] verify retained reviewer · [Esc/b] project overview · [q] quit'
-            : '[Enter/r] choose a fresh reviewer · [Esc/b] project overview · [q] quit'
+            ? '[Enter/r] verify retained reviewer · [a] revise with fresh Agent · [Esc/b] project overview · [q] quit'
+            : '[Enter/r] choose a fresh reviewer · [a] revise with fresh Agent · [Esc/b] project overview · [q] quit'
         }
       >
         <Box
