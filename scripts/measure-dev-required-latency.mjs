@@ -12,6 +12,7 @@ import {
   createCandidateTimeline,
   formatCandidateTimelineReport,
 } from '@kungfu-tech/buildchain-alpha/candidate-timeline';
+import * as queueEvidence from '../framework/dev-delivery/dev-gate-queue-evidence.mjs';
 import { latencyBaselineForDevBranch } from '../framework/version-line/version-line-authority.mjs';
 import {
   affectedNativeClassification,
@@ -42,14 +43,18 @@ import {
 import { planAffectedPaths } from './run-core-affected-native.mjs';
 export { requiredMergeQueueWindow };
 export {
+  postMergeAdvisoryEvidence,
+  summarizeMergeQueueDelivery,
+  summarizePostMergeAdvisory,
+} from '../framework/dev-delivery/dev-gate-queue-evidence.mjs';
+export {
   affectedNativeEvidenceBinding,
   deliveryAttemptEvidenceFromMembers,
   finalDevAncestryFromCompare,
   reconstructDeliveryEvidence,
 } from './cancel-dequeued-merge-group-runs.mjs';
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const MINIMUM_SAMPLE_COUNT = 20;
-const MINIMUM_NATIVE_SAMPLE_COUNT = 10;
+const [MINIMUM_SAMPLE_COUNT, MINIMUM_NATIVE_SAMPLE_COUNT] = [20, 10];
 const QUEUE_ADMISSION_CONTRACT_PATH = path.join(
   ROOT,
   'docs/qualification/gates/dev-queue-admission.contract.json',
@@ -299,6 +304,7 @@ export function mergeQueueEvidence(events, runs, jobsByRun, mergedAt) {
       beforeCommit: event.beforeCommit?.oid || null,
       mergeGroupRuns: roundRuns.map((run) => ({
         id: run.id,
+        workflowIdentity: queueEvidence.workflowIdentity(run),
         headSha: run.head_sha,
         createdAt: run.created_at,
         completedAt: run.updated_at,
@@ -322,6 +328,7 @@ export function mergeQueueEvidence(events, runs, jobsByRun, mergedAt) {
   if (unassignedRuns.length) diagnostics.push('merge-group-run-outside-round');
 
   const exitedRounds = rounds.filter(({ reason }) => reason !== 'merged');
+  const allRuns = rounds.flatMap(({ mergeGroupRuns }) => mergeGroupRuns);
   const wastedRuns = exitedRounds.flatMap(({ removedAt, mergeGroupRuns }) =>
     mergeGroupRuns.map((run) => ({ ...run, removedAt })),
   );
@@ -330,6 +337,34 @@ export function mergeQueueEvidence(events, runs, jobsByRun, mergedAt) {
   );
   let wastedRunnerMs = 0;
   let postDequeueRunnerMs = 0;
+  const runnerWaitUpperBounds = [];
+  let runnerWaitEvidenceComplete = allRuns.every(
+    ({ id, createdAt }) =>
+      Boolean(createdAt) &&
+      Array.isArray(jobsByRun[String(id)]) &&
+      jobsByRun[String(id)].length > 0,
+  );
+  for (const run of allRuns) {
+    for (const job of jobsByRun[String(run.id)] || []) {
+      if (!run.createdAt || !job.started_at) {
+        runnerWaitEvidenceComplete = false;
+        continue;
+      }
+      const upperBoundMs = milliseconds(run.createdAt, job.started_at);
+      if (!Number.isFinite(upperBoundMs) || upperBoundMs < 0) {
+        runnerWaitEvidenceComplete = false;
+        continue;
+      }
+      runnerWaitUpperBounds.push({
+        workflowRunId: run.id,
+        jobId: job.id,
+        jobName: job.name,
+        upperBoundMs,
+        authority:
+          'github-actions-workflow-created_at-to-job-started_at-upper-bound',
+      });
+    }
+  }
   if (runnerEvidenceComplete) {
     for (const run of wastedRuns) {
       for (const job of jobsByRun[String(run.id)]) {
@@ -383,6 +418,7 @@ export function mergeQueueEvidence(events, runs, jobsByRun, mergedAt) {
         exitedRounds.filter((round) => round.reason === reason).length,
       ]),
   );
+  const validationRepeats = queueEvidence.validationRepeatEvidence(rounds);
   return {
     queueStatus,
     status: deliveryComplete ? 'observed' : 'incomplete',
@@ -397,104 +433,24 @@ export function mergeQueueEvidence(events, runs, jobsByRun, mergedAt) {
     dequeueCount: exitedRounds.length,
     dequeueReasons: reasonCounts,
     mergeGroupRunCount: assignedRunIds.size,
-    repeatedValidationCount:
-      assignedRunIds.size -
-      new Set(
-        orderedRuns
-          .filter(({ id }) => assignedRunIds.has(Number(id)))
-          .map((run) => run.workflow_id || run.path || run.name || null),
-      ).size,
+    repeatedValidationCount: validationRepeats.repeated,
+    explainedRepeatedValidationCount: validationRepeats.explained,
+    unexplainedRepeatedValidationCount: validationRepeats.unexplained,
+    repeatedValidationExplanations: validationRepeats.explanations,
+    runnerWaitEvidenceComplete,
+    runnerWaitUpperBoundMs: runnerWaitEvidenceComplete
+      ? runnerWaitUpperBounds.length
+        ? Math.max(
+            ...runnerWaitUpperBounds.map(({ upperBoundMs }) => upperBoundMs),
+          )
+        : 0
+      : null,
+    runnerWaitUpperBounds,
     runnerEvidenceComplete,
     wastedRunnerMs: runnerEvidenceComplete ? wastedRunnerMs : null,
     postDequeueRunnerMs: runnerEvidenceComplete ? postDequeueRunnerMs : null,
     rounds,
     diagnostics,
-  };
-}
-
-export function summarizeMergeQueueDelivery(samples) {
-  const queueObserved = samples.filter(
-    ({ mergeQueue }) => mergeQueue?.queueStatus === 'observed',
-  );
-  const deliveryObserved = queueObserved.filter(
-    ({ mergeQueue }) => mergeQueue?.status === 'observed',
-  );
-  const runnerObserved = queueObserved.filter(
-    ({ mergeQueue }) => mergeQueue.runnerEvidenceComplete,
-  );
-  const durations = deliveryObserved.map(
-    ({ mergeQueue }) => mergeQueue.deliveryDurationMs,
-  );
-  const dequeuePrCount = queueObserved.filter(
-    ({ mergeQueue }) => mergeQueue.dequeueCount > 0,
-  ).length;
-  const reasons = {};
-  for (const { mergeQueue } of queueObserved) {
-    for (const [reason, count] of Object.entries(
-      mergeQueue.dequeueReasons || {},
-    )) {
-      reasons[reason] = (reasons[reason] || 0) + count;
-    }
-  }
-  const enoughSamples = deliveryObserved.length >= MINIMUM_SAMPLE_COUNT;
-  const p50Ms = nearestRank(durations, 0.5);
-  const p90Ms = nearestRank(durations, 0.9);
-  const dequeueRate = queueObserved.length
-    ? dequeuePrCount / queueObserved.length
-    : null;
-  const meetsTarget =
-    p50Ms !== null &&
-    p50Ms <= 15 * 60 * 1000 &&
-    p90Ms !== null &&
-    p90Ms <= 30 * 60 * 1000 &&
-    dequeueRate < 0.1;
-  return {
-    queueObservedCount: queueObserved.length,
-    deliveryObservedCount: deliveryObserved.length,
-    incompleteCount: samples.filter(
-      ({ mergeQueue }) => mergeQueue?.queueStatus === 'incomplete',
-    ).length,
-    notObservedCount: samples.filter(
-      ({ mergeQueue }) => mergeQueue?.queueStatus === 'not-observed',
-    ).length,
-    runnerEvidenceObservedCount: runnerObserved.length,
-    statistics: {
-      sampleCount: deliveryObserved.length,
-      p50Ms,
-      p90Ms,
-      maxMs: durations.length ? Math.max(...durations) : null,
-    },
-    dequeue: {
-      pullRequestCount: dequeuePrCount,
-      rate: dequeueRate,
-      exitCount: queueObserved.reduce(
-        (total, { mergeQueue }) => total + mergeQueue.dequeueCount,
-        0,
-      ),
-      reasons,
-    },
-    repeatedValidationCount: queueObserved.reduce(
-      (total, { mergeQueue }) => total + mergeQueue.repeatedValidationCount,
-      0,
-    ),
-    wastedRunnerMs: runnerObserved.reduce(
-      (total, { mergeQueue }) => total + mergeQueue.wastedRunnerMs,
-      0,
-    ),
-    postDequeueRunnerMs: runnerObserved.reduce(
-      (total, { mergeQueue }) => total + mergeQueue.postDequeueRunnerMs,
-      0,
-    ),
-    verdict: {
-      qualified: enoughSamples && meetsTarget,
-      reason: !deliveryObserved.length
-        ? 'no observed merge queue samples'
-        : !enoughSamples
-          ? 'insufficient merge queue sample count'
-          : !meetsTarget
-            ? 'merge queue delivery sample exceeds target'
-            : 'merge queue delivery sample meets target',
-    },
   };
 }
 
@@ -1274,6 +1230,12 @@ async function collectMergeQueueEvidence(
       dequeueReasons: {},
       mergeGroupRunCount: 0,
       repeatedValidationCount: 0,
+      explainedRepeatedValidationCount: 0,
+      unexplainedRepeatedValidationCount: 0,
+      repeatedValidationExplanations: {},
+      runnerWaitEvidenceComplete: false,
+      runnerWaitUpperBoundMs: null,
+      runnerWaitUpperBounds: [],
       runnerEvidenceComplete: false,
       wastedRunnerMs: null,
       postDequeueRunnerMs: null,
@@ -1288,6 +1250,7 @@ async function collectSample(
   pull,
   requiredContexts,
   mergeQueue,
+  postMergeAdvisory,
   token,
   finalDev,
   latencyOnly = false,
@@ -1341,6 +1304,7 @@ async function collectSample(
       requiredWindow,
       checks,
       mergeQueue,
+      postMergeAdvisory,
     };
   }
   const affectedNativeContext = requiredWindow.contexts.find(
@@ -1388,6 +1352,7 @@ async function collectSample(
     checkAuthority: 'pull-request-head-diagnostic-only',
     checks,
     mergeQueue,
+    postMergeAdvisory,
   };
 }
 
@@ -1708,6 +1673,32 @@ export function candidateTimelineInput(repository, branch, sample) {
     ? roundAttempt(sample.pullRequest, rounds.at(-1))
     : null;
   if (finalAttempt) {
+    for (const advisory of sample.postMergeAdvisory?.attempts || []) {
+      events.push({
+        id: `${finalAttempt.id}:post-merge-advisory:${advisory.workflowRunId}`,
+        attempt: finalAttempt,
+        phase: 'post-merge-advisory',
+        category: 'advisory',
+        status: providerStatus(
+          advisory.conclusion,
+          advisory.status === 'observed',
+        ),
+        timing: providerTiming(
+          advisory.createdAt,
+          advisory.completedAt,
+          'github-actions-dev-post-merge-advisory-workflow-run',
+        ),
+        criticalPathEligible: false,
+        attributes: {
+          sourceSha,
+          workflowRunId: advisory.workflowRunId,
+          tailDurationMs: advisory.tailDurationMs,
+          mergeCriticalMetricImpact: 'excluded',
+        },
+      });
+    }
+  }
+  if (finalAttempt) {
     for (const [index, layer] of (sample.cache?.layers || []).entries()) {
       events.push({
         id: `${finalAttempt.id}:cache:${layer.partitionIndex ?? 'none'}:${layer.layer}:${index}`,
@@ -1865,7 +1856,11 @@ export function report(
   cache.warmRatio = cacheObserved ? cache.warmCount / cacheObserved : null;
   cache.coldRatio = cacheObserved ? cache.coldCount / cacheObserved : null;
   const queueRecords = cohort.mergeQueueRecords;
-  const mergeQueueDelivery = summarizeMergeQueueDelivery(queueRecords);
+  const mergeQueueDelivery =
+    queueEvidence.summarizeMergeQueueDelivery(queueRecords);
+  const postMergeAdvisory = queueEvidence.summarizePostMergeAdvisory(
+    cohort.records,
+  );
   const deliveryEvidence = summarizeDeliveryEvidence(samples);
   const generatedAt = new Date().toISOString();
   const candidateTimelines = samples.map((sample) =>
@@ -1906,7 +1901,9 @@ export function report(
         dequeue:
           'every non-merged RemovedFromMergeQueueEvent using the authoritative GraphQL reason',
         repeatedValidation:
-          'additional merge_group runs for the same workflow after its first run for the pull request',
+          'additional merge_group runs split into dequeue-explained retries and unexplained same-round duplicates',
+        runnerWait:
+          'workflow created_at to job started_at is a conservative scheduler and dependency wait upper bound',
         wastedRunner:
           'sum of Actions job execution time for non-merged queue rounds',
         postDequeueRunner:
@@ -1915,12 +1912,16 @@ export function report(
           p50Ms: 15 * 60 * 1000,
           p90Ms: 30 * 60 * 1000,
           dequeueRateExclusiveMax: 0.1,
+          mergeConflictDequeueRateExclusiveMax: 0.05,
+          unexplainedRepeatedValidationCount: 0,
+          runnerWaitUpperBoundMaxMs: 30 * 60 * 1000,
         },
         minimumSamples: MINIMUM_SAMPLE_COUNT,
       },
       ...mergeQueueDelivery,
       samples: queueRecords,
     },
+    postMergeAdvisory,
     deliveryEvidence,
     cache,
     nativeAttribution: summarizeNativeAttribution(samples),
@@ -2001,12 +2002,18 @@ async function main() {
     .map(({ created_at: createdAt }) => createdAt)
     .filter(Boolean)
     .sort()[0];
-  const mergeGroupRuns = earliestPullCreatedAt
-    ? await githubWorkflowRuns(
-        `/repos/${repository}/actions/runs?event=merge_group&created=${encodeURIComponent(`>=${earliestPullCreatedAt}`)}`,
-        token,
-      )
-    : [];
+  const [mergeGroupRuns, postMergeAdvisoryRuns] = earliestPullCreatedAt
+    ? await Promise.all([
+        githubWorkflowRuns(
+          `/repos/${repository}/actions/runs?event=merge_group&created=${encodeURIComponent(`>=${earliestPullCreatedAt}`)}`,
+          token,
+        ),
+        githubWorkflowRuns(
+          `/repos/${repository}/actions/workflows/dev-post-merge-advisory.yml/runs?event=push&branch=${encodeURIComponent(options.branch)}&created=${encodeURIComponent(`>=${earliestPullCreatedAt}`)}`,
+          token,
+        ),
+      ])
+    : [[], []];
   const selectedPullNumbers = new Set(merged.map(({ number }) => number));
   const mergeGroupPullNumbers = new Set(
     mergeGroupRuns.map(mergeGroupPullNumber).filter(Number.isInteger),
@@ -2050,6 +2057,7 @@ async function main() {
         pull,
         requiredContexts,
         mergeQueueByPull.get(pull.number),
+        queueEvidence.postMergeAdvisoryEvidence(pull, postMergeAdvisoryRuns),
         token,
         finalDevByPull.get(pull.number),
         options.latencyOnly,
