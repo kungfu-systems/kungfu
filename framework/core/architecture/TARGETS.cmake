@@ -93,6 +93,7 @@ set(KUNGFU_EXTENSION_SERVICES_SOURCE_FILES
   "${PROJECT_SOURCE_DIR}/src/runtime/kfx/native_authority.cpp"
   "${PROJECT_SOURCE_DIR}/src/runtime/kfx/native_contract.cpp"
   "${PROJECT_SOURCE_DIR}/src/runtime/kfx/native_registry.cpp"
+  "${PROJECT_SOURCE_DIR}/src/runtime/profile/initiative_assignment_service.cpp"
   "${PROJECT_SOURCE_DIR}/src/runtime/profile/profile_lifecycle.cpp"
   "${PROJECT_SOURCE_DIR}/src/runtime/trust/assessment_runtime.cpp"
 )

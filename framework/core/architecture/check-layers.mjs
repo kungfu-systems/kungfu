@@ -1002,7 +1002,7 @@ function renderPublicContractsCmake(contract, ownership) {
       0,
       `  set(KUNGFU_PUBLIC_${cmakeVariable(rule.id)}_PROFILES "${eligible.join(';')}")`,
     );
-    lines.push(`    set(${sourceVariable})`);
+    const sources = [];
     const headers = publicHeaders
       .filter((header) => ruleOwns(rule, header))
       .sort();
@@ -1013,11 +1013,10 @@ function renderPublicContractsCmake(contract, ownership) {
       );
       const language = rule.level === 'stable' ? 'c' : 'cpp';
       const source = `\${KUNGFU_PUBLIC_HEADER_GENERATED_DIR}/${rule.id}-${index}.${language}`;
-      lines.push(
-        `    file(WRITE "${source}" "#include <${includeName}>\\n")`,
-        `    list(APPEND ${sourceVariable} "${source}")`,
-      );
+      lines.push(`    file(WRITE "${source}" "#include <${includeName}>\\n")`);
+      sources.push(`"${source}"`);
     });
+    lines.push(`    set(${sourceVariable} ${sources.join(' ')})`);
     lines.push(
       `    add_library(${target} OBJECT \${${sourceVariable}})`,
       `    target_link_libraries(${target} PRIVATE ${

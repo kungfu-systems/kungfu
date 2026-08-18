@@ -42,12 +42,12 @@ The production graph is budgeted to 6-12 bounded components.
 | --- | --- | --- | ---: | --- | --- | --- |
 | `yijinjing-schema` | `schema-values` | `core/schema` | 5 | `yijinjing` | `yijinjing_content_hash_tests` | `src/libyijinjing/include/kungfu/yijinjing/schema/core.h` |
 | `yijinjing-kernel` | `journal-kernel` | `core/yijinjing` | 49 | `yijinjing` | `yijinjing_mmap_tests`<br>`yijinjing_fact_ledger_tests`<br>`yijinjing_custom_provider_qualification` | `src/libyijinjing/include/kungfu/yijinjing/journal/journal.h`<br>`src/libyijinjing/include/kungfu/yijinjing/storage.h`<br>`src/libyijinjing/include/kungfu/yijinjing/storage/fact_ledger.h` |
-| `libkungfu-contracts` | `ports-contracts` | `core/runtime-contracts` | 65 | `yijinjing`<br>`kungfu_contracts`<br>`kungfu` | `kungfu_runtime_error_tests`<br>`kungfu_durability_contract_tests` | `src/libkungfu/include/kungfu/runtime/common.h`<br>`src/libkungfu/include/kungfu/runtime/storage/service.h` |
+| `libkungfu-contracts` | `ports-contracts` | `core/runtime-contracts` | 67 | `yijinjing`<br>`kungfu_contracts`<br>`kungfu` | `kungfu_runtime_error_tests`<br>`kungfu_durability_contract_tests` | `src/libkungfu/include/kungfu/runtime/common.h`<br>`src/libkungfu/include/kungfu/runtime/storage/service.h` |
 | `runtime-ledger-services` | `application-services` | `core/runtime-ledger` | 10 | `kungfu_ledger_services`<br>`kungfu` | `kungfu_durable_ingest_tests`<br>`kungfu_crash_recovery_tests` | `src/libkungfu/src/runtime/durable_ingest.cpp`<br>`src/libkungfu/src/runtime/facts/fact_admission.cpp` |
 | `runtime-state-query-services` | `application-services` | `core/runtime-state-query` | 7 | `kungfu_state_query_services`<br>`kungfu_state_cache_services`<br>`kungfu` | `kungfu_state_service_contract_tests`<br>`kungfu_bounded_sql_parser_tests` | `src/libkungfu/src/runtime/state_service.cpp`<br>`src/libkungfu/src/runtime/query/fact_query.cpp` |
 | `runtime-live-services` | `application-services` | `core/runtime-live` | 6 | `kungfu_live_services`<br>`kungfu` | `kungfu_peer_continuity_tests` | `src/libkungfu/src/runtime/live/reactor.cpp`<br>`src/libkungfu/src/runtime/live/coordinator.cpp` |
 | `runtime-storage-services` | `application-services` | `core/runtime-storage` | 29 | `kungfu_storage_services`<br>`kungfu` | `kungfu_durability_contract_tests`<br>`kungfu_fact_authority_contract_tests`<br>`kungfu_offhost_backup_fixture` | `src/libkungfu/src/runtime/storage/service.cpp`<br>`src/libkungfu/src/runtime/storage/maintenance_service.cpp` |
-| `runtime-extension-services` | `application-services` | `core/runtime-extension` | 12 | `kungfu_extension_services`<br>`kungfu` | `kungfu_native_kfx_contract_tests`<br>`kungfu_profile_lifecycle_tests`<br>`kungfu_action_geometry_tests`<br>`kungfu_domain_profile_tests`<br>`kungfu_profile_action_tests`<br>`kungfu_action_runtime_tests` | `src/libkungfu/src/runtime/kfx/native_registry.cpp`<br>`src/libkungfu/src/runtime/trust/assessment_runtime.cpp` |
+| `runtime-extension-services` | `application-services` | `core/runtime-extension` | 13 | `kungfu_extension_services`<br>`kungfu` | `kungfu_native_kfx_contract_tests`<br>`kungfu_profile_lifecycle_tests`<br>`kungfu_action_geometry_tests`<br>`kungfu_domain_profile_tests`<br>`kungfu_profile_action_tests`<br>`kungfu_action_runtime_tests` | `src/libkungfu/src/runtime/kfx/native_registry.cpp`<br>`src/libkungfu/src/runtime/trust/assessment_runtime.cpp` |
 | `runtime-storage-adapters` | `adapters` | `core/runtime-storage-adapters` | 7 | `kungfu_storage_adapters`<br>`kungfu` | `kungfu_durability_contract_tests` | `src/libkungfu/src/runtime/storage/provider.cpp` |
 | `runtime-platform-adapters` | `adapters` | `core/runtime-platform-adapters` | 10 | `kungfu_view_adapters`<br>`kungfu_platform_adapters`<br>`kungfu` | `kungfu_view_component_link_tests` | `src/libkungfu/src/view/schema.cpp`<br>`src/libkungfu/src/runtime/io/io.cpp` |
 | `core-composition-bindings` | `composition-bindings` | `core/bindings` | 48 | `kungfu_abi_exports`<br>`kungfu_composition`<br>`kungfu`<br>`kungfu_abi`<br>`kungfu-kfd-agent-runtime`<br>`kungfu_wasm_host`<br>`kungfu_node`<br>`kungfu_electron`<br>`drone`<br>`kungfu_kfc`<br>`kungfu_node_host`<br>`pykungfu` | `kungfu_projection_bootstrap_tests`<br>`kungfu_api_contract_tests` | `src/bindings/node/binding/kungfu_node.cpp`<br>`src/bindings/python/binding/pykungfu.cpp`<br>`src/kfd-agent-runtime/main.cpp`<br>`src/libkungfu/src/runtime/api.cpp` |
@@ -67,7 +67,7 @@ from the same authority as this map.
 | `kungfu_state_cache_services` | `OBJECT` | `runtime-state-query-services` | `kungfu_contracts` | 3 |
 | `kungfu_live_services` | `OBJECT` | `runtime-live-services` | `kungfu_contracts` | 6 |
 | `kungfu_storage_services` | `OBJECT` | `runtime-storage-services` | `kungfu_contracts` | 24 |
-| `kungfu_extension_services` | `OBJECT` | `runtime-extension-services` | `kungfu_contracts` | 11 |
+| `kungfu_extension_services` | `OBJECT` | `runtime-extension-services` | `kungfu_contracts` | 12 |
 | `kungfu_storage_adapters` | `OBJECT` | `runtime-storage-adapters` | `kungfu_storage_services`<br>`kungfu_contracts` | 6 |
 | `kungfu_view_adapters` | `OBJECT` | `runtime-platform-adapters` | `kungfu_contracts` | 2 |
 | `kungfu_platform_adapters` | `OBJECT` | `runtime-platform-adapters` | `kungfu_contracts` | 7 |
@@ -100,8 +100,8 @@ toolchain ABI; source-embedding-only does not promise a shared library.
 
 | Rule | Level | Minimum profile | Headers | Consumers |
 | --- | --- | --- | ---: | --- |
-| `stable-versioned-c-abi` | `stable` | `embedded-sqlite` | 1 | native C/C++ embedders<br>Node/Electron hosts<br>Python hosts |
-| `libkungfu-cxx-source-surface` | `experimental` | `embedded-sqlite` | 64 | libkungfu<br>in-repository C++ bindings and applications |
+| `stable-versioned-c-abi` | `stable` | `embedded-sqlite` | 2 | native C/C++ embedders<br>Node/Electron hosts<br>Python hosts |
+| `libkungfu-cxx-source-surface` | `experimental` | `embedded-sqlite` | 65 | libkungfu<br>in-repository C++ bindings and applications |
 | `libyijinjing-source-embedding-surface` | `source-embedding-only` | `journal` | 31 | yijinjing static target embedders<br>libkungfu |
 
 ### Stable link-visible symbols
