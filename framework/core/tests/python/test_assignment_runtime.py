@@ -1017,6 +1017,86 @@ def test_restart_deterministically_recovers_durable_interrupted_commands(
         recovered.close()
 
 
+def test_invalid_assessment_executor_is_rejected_before_pending_write(tmp_path):
+    runtime_dir = tmp_path / "invalid-executor" / ".kungfu" / "runtime"
+    authority = FakeAuthority(runtime_dir)
+    with EmbeddedLocalAssignmentRuntime(
+        runtime_dir,
+        realm_id=REALM["realmId"],
+        generation=REALM["generation"],
+        authority=authority,
+        contract=ASSIGNMENT_RUNTIME_CONTRACT,
+        request_schema=ENVELOPE_SCHEMA,
+    ) as runtime:
+        snapshot = _handle(
+            runtime, _request("assignment.snapshot", "assignment.snapshot.read")
+        )
+        command = _command(
+            snapshot["revision"],
+            command_type="assignment.completion.review",
+        )
+        command["arguments"] = {"executorProfile": "github-protected-review"}
+        rejected = _handle(
+            runtime,
+            _request(
+                "command.submit",
+                "assignment.command.submit",
+                payload=command,
+            ),
+        )
+
+        assert rejected["error"]["code"] == "invalid-command"
+        assert runtime._state["pending"] is None
+        assert authority._read()["effects"] == []
+
+
+def test_restart_rejects_legacy_invalid_executor_pending_before_authority(tmp_path):
+    runtime_dir = tmp_path / "legacy-invalid-executor" / ".kungfu" / "runtime"
+    authority = FakeAuthority(runtime_dir)
+    runtime = EmbeddedLocalAssignmentRuntime(
+        runtime_dir,
+        realm_id=REALM["realmId"],
+        generation=REALM["generation"],
+        authority=authority,
+        contract=ASSIGNMENT_RUNTIME_CONTRACT,
+        request_schema=ENVELOPE_SCHEMA,
+    ).start()
+    snapshot = _handle(
+        runtime, _request("assignment.snapshot", "assignment.snapshot.read")
+    )
+    command = _command(
+        snapshot["revision"],
+        command_type="assignment.completion.review",
+    )
+    command["arguments"] = {"executorProfile": "github-protected-review"}
+    runtime._state["pending"] = {
+        "commandRoot": _root(command),
+        "command": command,
+        "beforeRevision": snapshot["revision"],
+        "requestId": "legacy.invalid.executor",
+    }
+    runtime._save_state()
+    runtime.close()
+
+    recovered = EmbeddedLocalAssignmentRuntime(
+        runtime_dir,
+        realm_id=REALM["realmId"],
+        generation=REALM["generation"],
+        authority=authority,
+        contract=ASSIGNMENT_RUNTIME_CONTRACT,
+        request_schema=ENVELOPE_SCHEMA,
+    ).start()
+    try:
+        assert recovered._state["pending"] is None
+        assert authority._read()["effects"] == []
+        assert recovered._state["events"][-1]["kind"] == "command-rejected"
+        assert recovered._state["diagnostics"][-1]["code"] == (
+            "interrupted-command-rejected"
+        )
+    finally:
+        recovered.close()
+
+
 def test_interrupted_authority_write_without_result_is_fail_visible(tmp_path):
     runtime_dir = tmp_path / "ambiguous-crash" / ".kungfu" / "runtime"
     authority = FakeAuthority(runtime_dir)

@@ -76,6 +76,7 @@ _COMMAND_OPERATIONS = {
     "initiative.bundle.import": "import-initiative",
 }
 _LEASE_COMMANDS = {"assignment.claim", "assignment.stage"}
+_ASSESSMENT_EXECUTOR_PROFILES = {"inline", "thread", "process"}
 _PROCESS_WRITERS: set[str] = set()
 _PROCESS_WRITERS_GUARD = threading.Lock()
 

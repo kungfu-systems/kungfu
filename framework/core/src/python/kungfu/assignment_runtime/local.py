@@ -26,6 +26,7 @@ from .authority import (
     SNAPSHOT_SCHEMA,
     STATE_SCHEMA,
     STREAM_ID,
+    _ASSESSMENT_EXECUTOR_PROFILES,
     _COMMAND_OPERATIONS,
     _ERROR_RETRYABLE,
     _LEASE_COMMANDS,
@@ -305,6 +306,14 @@ class EmbeddedLocalAssignmentRuntime:
         pending = self._state.get("pending")
         if not isinstance(pending, Mapping):
             return
+        command = dict(pending["command"])
+        try:
+            self._validate_command_arguments(command)
+        except LocalRuntimeError as error:
+            if error.code != "invalid-command":
+                raise
+            self._reject_pending_before_authority(pending, error)
+            return
         if isinstance(pending.get("authorityResult"), Mapping):
             snapshot, revision = self._observe_snapshot(record_event=False)
             self._finalize_pending(dict(pending), snapshot, revision, recovered=True)
@@ -329,6 +338,44 @@ class EmbeddedLocalAssignmentRuntime:
         if diagnostic not in diagnostics:
             diagnostics.append(diagnostic)
         self._state["diagnostics"] = diagnostics
+        self._save_state()
+
+    def _reject_pending_before_authority(
+        self, pending: Mapping[str, Any], error: LocalRuntimeError
+    ) -> None:
+        command = dict(pending["command"])
+        revision = dict(
+            pending.get("beforeRevision") or self._state.get("revision") or {}
+        )
+        diagnostic = {
+            "code": "interrupted-command-rejected",
+            "message": (
+                "An interrupted command failed deterministic validation before "
+                "authority execution"
+            ),
+            "severity": "warning",
+            "recovery": [],
+            "details": {
+                "commandId": str(command.get("commandId") or ""),
+                "commandRoot": str(pending.get("commandRoot") or ""),
+                "errorCode": error.code,
+                **dict(error.details),
+            },
+        }
+        diagnostics = list(self._state.get("diagnostics") or [])
+        if diagnostic not in diagnostics:
+            diagnostics.append(diagnostic)
+        self._state["diagnostics"] = diagnostics
+        self._state["pending"] = None
+        self._append_event(
+            "command-rejected",
+            revision,
+            {
+                "commandId": str(command.get("commandId") or ""),
+                "commandRoot": str(pending.get("commandRoot") or ""),
+                "errorCode": error.code,
+            },
+        )
         self._save_state()
 
     def handle(self, request: Mapping[str, Any]) -> dict[str, Any]:
@@ -580,6 +627,7 @@ class EmbeddedLocalAssignmentRuntime:
                 "Caller attempted to name or mutate backend implementation state",
                 details={"field": forbidden},
             )
+        self._validate_command_arguments(command)
         attempt = command.get("attempt")
         lease = command.get("lease")
         warrant = command.get("warrant")
@@ -632,6 +680,19 @@ class EmbeddedLocalAssignmentRuntime:
                 raise LocalRuntimeError(
                     "warrant-invalid", "Command Warrant scope is insufficient"
                 )
+
+    @staticmethod
+    def _validate_command_arguments(command: Mapping[str, Any]) -> None:
+        arguments = command.get("arguments")
+        if not isinstance(arguments, Mapping):
+            return
+        executor_profile = str(arguments.get("executorProfile") or "")
+        if executor_profile and executor_profile not in _ASSESSMENT_EXECUTOR_PROFILES:
+            raise LocalRuntimeError(
+                "invalid-command",
+                "Assessment executor profile must be inline, thread, or process",
+                details={"field": "executorProfile"},
+            )
 
     def _submit(
         self, request: Mapping[str, Any], selected: list[str]
