@@ -611,9 +611,9 @@
           "framework/core/src/libkungfu/src/runtime/action/action_canonical_json.cpp"
         ],
         "startedOn": "2026-07-21",
-        "deadline": "2026-08-17",
+        "deadline": "2026-08-31",
         "admissionTrigger": "The reusable L5 admission harness proves a native service, versioned C ABI, journal replay, and exact shared Root vectors.",
-        "currentBoundary": "The Python Domain Profile is the admitted L3 writer surface; it may not become a second persistence authority. Its compatibility-preserving Python identity preimage and libkungfu's conservative Action preimage are explicitly distinct protocols governed by one contract and vector corpus; full Initiative/Assignment Root admission remains pending. The original 2026-08-15 deadline was missed; this passport remains incubating under a bounded recovery deadline of 2026-08-17 without changing its admission trigger or non-claims."
+        "currentBoundary": "The Python Domain Profile is the admitted L3 writer surface; it may not become a second persistence authority. Its compatibility-preserving Python identity preimage and libkungfu's conservative Action preimage are explicitly distinct protocols governed by one contract and vector corpus; full Initiative/Assignment Root admission remains pending. The original 2026-08-15 deadline and its 2026-08-17 bounded recovery deadline were both missed; this passport remains incubating under a final recovery deadline of 2026-08-31 without changing its admission trigger, removal condition, or non-claims."
       },
       "schemaOwnership": {
         "class": "profile-contract-world",
