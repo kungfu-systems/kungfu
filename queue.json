@@ -3,15 +3,59 @@
   "contract": "kungfu-buildchain-dev-delivery-warrant-queue",
   "repository": "kungfu-systems/kungfu",
   "protectedBase": "dev/v4/v4.0",
-  "generation": 4093,
-  "fencingCounter": 525,
+  "generation": 4094,
+  "fencingCounter": 526,
   "policy": {
     "agingSeconds": 900,
     "maxPriority": 2,
     "leaseSeconds": 3600,
     "emergencyPolicy": "reviewed-explicit-only"
   },
-  "activeWarrant": null,
+  "activeWarrant": {
+    "schema": "kungfu.buildchain.dev-delivery-warrant/v1",
+    "repository": "kungfu-systems/kungfu",
+    "protectedBase": "dev/v4/v4.0",
+    "candidateId": "sha256:000c275db6b971186cce573185e0cee23d620a0a034d9cadee82f2712c3c5816",
+    "pullRequestNumber": 3282,
+    "sourceHead": "cb2c6f98d353ed3917efa9e6c29709fc7e9fbdbb",
+    "assignmentRoot": "sha256:56a35d9e71c22cc4a62fe616a10447e06b0ae6eadad300c0ee9095f4f436ee01",
+    "initiativeRoot": "sha256:bfff817933e5a5ad693e4b902a84f6cc3a251235dd7377cb4091d92f805fa7ff",
+    "sourceIdentityRoot": "sha256:d5423407231eb4d819171ecdfba32a004d5213094753ef98172b520ecb920617",
+    "sourcePatchRoot": "sha256:5a45136c48469e2d557428a19849b224b2a0bbc2d14d4b8f9b92bc8126783ed6",
+    "sourceProofRoot": "sha256:aeb94df4b86d12c22adbb306f41058d99db2babd3a1f23533939066a654fd659",
+    "planRoot": "sha256:1e0ed16f3236a3c85c7e6ef1edfb76287468ad23aeea6aa5bdb99573fe6b7fb2",
+    "closureRoot": "sha256:d7d1f6e21982dd50b0274d17bbeddb1e355e7a330e1c377427b59ed1014e8f7e",
+    "dependencyRoot": "sha256:7397d97abd8c724ca0b8a475bc27c70968879deadf940938155b43880dca5a65",
+    "toolchainRoot": "sha256:2ecb07894954a2e0de022615d4561e5ba3ae68376401941ecff77be03cd75a0f",
+    "environmentRoot": "sha256:c5f5da5917c6ff93a509a62b18d4b9b69325755c4c7229b553b0016cde83788f",
+    "affectedPaths": [
+      ".buildchain/kfd/kfd-1/contract-world.witness.json",
+      ".buildchain/kfd/kfd-1/release-gate.json",
+      ".buildchain/kfd/kfd-2/release-claims.json",
+      ".buildchain/kfd/kfd-3/collaboration-interface.prebuild.json",
+      ".buildchain/kfd/support-matrix.json",
+      "config/kungfu-agent-first-canonical-policy.json",
+      "config/primitive/kungfu-primitive-catalog.contract.json",
+      "developer/sdk/kfd/kfd-1/contract-world.witness.json",
+      "developer/sdk/kfd/kfd-1/release-gate.json",
+      "developer/sdk/kfd/kfd-2/release-claims.json",
+      "developer/sdk/kfd/support-matrix.json",
+      "framework/contract/kungfu-agent-first-canonical-policy.json",
+      "framework/core/src/libkungfu/include/kungfu/sdk/generated/primitive_catalog_v2.hpp",
+      "framework/incubation/incubation-passport.baseline.json",
+      "framework/incubation/incubation-passport.registry.json",
+      "framework/primitive/kungfu-primitive-catalog.contract.json"
+    ],
+    "sourceWorkflowRunId": 32086956945,
+    "deliveryClass": "native-proof-required",
+    "generation": 526,
+    "phase": "provisional",
+    "expectedOldStateRoot": "sha256:79ee9088832f4b2110de2163895d3b0771408c0151a59ba1a11f2ba819c09975",
+    "issuedAt": "2026-08-18T01:12:24.549Z",
+    "expiresAt": "2026-08-18T02:42:24.549Z",
+    "fencingToken": "sha256:ee7ff383eeca426c0aba6fa5846e6036bf77ce9477d1bd0223b55b370163e4c8",
+    "nextAction": "Run or reuse the exact semantic native proof, then atomically qualify this fenced Warrant."
+  },
   "candidates": [
     {
       "repository": "kungfu-systems/kungfu",
@@ -37757,10 +37801,10 @@
       "sourceWorkflowRunId": 32086956945,
       "priority": "ordinary",
       "enqueuedAt": "2026-08-18T01:12:20.713Z",
-      "updatedAt": "2026-08-18T01:12:20.713Z",
+      "updatedAt": "2026-08-18T01:12:24.549Z",
       "attempts": 1,
       "recoveries": 0,
-      "status": "queued",
+      "status": "selected",
       "terminal": null,
       "affectedPaths": [
         ".buildchain/kfd/kfd-1/contract-world.witness.json",
@@ -37782,6 +37826,6 @@
       ]
     }
   ],
-  "updatedAt": "2026-08-18T01:12:20.713Z",
-  "stateRoot": "sha256:79ee9088832f4b2110de2163895d3b0771408c0151a59ba1a11f2ba819c09975"
+  "updatedAt": "2026-08-18T01:12:24.549Z",
+  "stateRoot": "sha256:62c8369087f415a29c878672acdc390c8d583d3722a4e69825c5dc687db63756"
 }
