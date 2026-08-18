@@ -36,11 +36,9 @@ void require_evidence(const json &actual, const json &expected, const std::strin
 } // namespace
 
 void check_initiative_assignment_root_vectors() {
-  auto root = std::filesystem::path(__FILE__);
-  for (int depth = 0; depth < 6; ++depth)
-    root = root.parent_path();
-  const auto corpus =
-      json::parse(read_file((root / "tests/fixtures/initiative-assignment-root/vectors.json").string()));
+  const auto fixture =
+      std::filesystem::path(KUNGFU_REPO_ROOT) / "tests/fixtures/initiative-assignment-root/vectors.json";
+  const auto corpus = json::parse(read_file(fixture.string()));
   std::map<std::string, json> accepted;
   for (const auto &vector : corpus.at("accepted")) {
     const auto id = vector.at("id").get<std::string>();
