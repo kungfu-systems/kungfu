@@ -3,7 +3,7 @@
   "contract": "kungfu-buildchain-dev-delivery-warrant-queue",
   "repository": "kungfu-systems/kungfu",
   "protectedBase": "dev/v4/v4.0",
-  "generation": 4157,
+  "generation": 4158,
   "fencingCounter": 530,
   "policy": {
     "agingSeconds": 900,
@@ -51,7 +51,7 @@
     "phase": "provisional",
     "expectedOldStateRoot": "sha256:18fd05a80b88c2bebf166a2796e4f8514e671f900107c83601fb8887fc5049ee",
     "issuedAt": "2026-08-18T04:35:27.869Z",
-    "expiresAt": "2026-08-18T06:31:19.233Z",
+    "expiresAt": "2026-08-18T06:36:19.318Z",
     "fencingToken": "sha256:01a2b55a79fb7df4a8a37e2583451e6dc6d2300354efb9ec318616c58f3b602b",
     "nextAction": "Run or reuse the exact semantic native proof, then atomically qualify this fenced Warrant."
   },
@@ -37980,7 +37980,7 @@
       "sourceWorkflowRunId": 32098479294,
       "priority": "ordinary",
       "enqueuedAt": "2026-08-18T04:23:41.107Z",
-      "updatedAt": "2026-08-18T05:01:19.233Z",
+      "updatedAt": "2026-08-18T05:06:19.318Z",
       "attempts": 1,
       "recoveries": 0,
       "status": "proving",
@@ -38004,6 +38004,6 @@
       ]
     }
   ],
-  "updatedAt": "2026-08-18T05:01:19.233Z",
-  "stateRoot": "sha256:ae90180d610dd7c9a60ac0eb03de6eb664fd8b58448da32992a8e90447d4d476"
+  "updatedAt": "2026-08-18T05:06:19.318Z",
+  "stateRoot": "sha256:d3f133800bda8b880a3b6179d8c9a09baaadecd7676cac6fc41b0ceab918a515"
 }
