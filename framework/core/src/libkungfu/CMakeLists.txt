@@ -154,8 +154,7 @@ if(KUNGFU_WITH_CORE_TESTS)
   add_test(NAME kungfu_runtime_error_tests COMMAND kungfu_runtime_error_tests)
 
   add_executable(kungfu_api_contract_tests tests/api_contract_tests.cpp)
-  target_include_directories(kungfu_api_contract_tests PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src/runtime"
-                                                              "${CMAKE_CURRENT_SOURCE_DIR}/../libyijinjing/include")
+  target_include_directories(kungfu_api_contract_tests PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src/runtime" "${CMAKE_CURRENT_SOURCE_DIR}/../libyijinjing/include")
   target_link_libraries(kungfu_api_contract_tests PRIVATE ${KUNGFU_PUBLIC_ABI_TARGET} kungfu_compile_contract
                                                           ${LIBKUNGFU_NAME}
                                                           nlohmann_json::nlohmann_json)
@@ -209,12 +208,13 @@ if(KUNGFU_WITH_CORE_TESTS)
   target_compile_features(kungfu_crash_recovery_tests PRIVATE cxx_std_20)
   add_test(NAME kungfu_crash_recovery_tests COMMAND kungfu_crash_recovery_tests)
 
-  add_executable(kungfu_profile_lifecycle_tests tests/profile_lifecycle_tests.cpp)
+  get_filename_component(KUNGFU_REPO_ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../../../.." ABSOLUTE)
+  add_executable(kungfu_profile_lifecycle_tests tests/profile_lifecycle_tests.cpp tests/initiative_assignment_root_tests.cpp)
   target_link_libraries(kungfu_profile_lifecycle_tests PRIVATE ${LIBKUNGFU_NAME} kungfu_compile_contract Threads::Threads)
   target_compile_features(kungfu_profile_lifecycle_tests PRIVATE cxx_std_20)
+  target_compile_definitions(kungfu_profile_lifecycle_tests PRIVATE KUNGFU_REPO_ROOT="${KUNGFU_REPO_ROOT_DIR}")
   add_test(NAME kungfu_profile_lifecycle_tests COMMAND kungfu_profile_lifecycle_tests)
 
-  get_filename_component(KUNGFU_REPO_ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../../../.." ABSOLUTE)
   add_executable(kungfu_action_geometry_tests tests/action_geometry_tests.cpp)
   target_link_libraries(kungfu_action_geometry_tests PRIVATE ${LIBKUNGFU_NAME} kungfu_compile_contract)
   target_compile_features(kungfu_action_geometry_tests PRIVATE cxx_std_20)

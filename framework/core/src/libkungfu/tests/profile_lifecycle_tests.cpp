@@ -17,6 +17,8 @@ namespace fs = std::filesystem;
 namespace profile = kungfu::runtime::profile;
 namespace storage = kungfu::yijinjing::storage;
 
+void check_initiative_assignment_root_vectors();
+
 namespace {
 
 void require(bool condition, const std::string &message) {
@@ -578,6 +580,7 @@ int run_tests() {
        test_incompatible_runtime_and_unsupported_qualification_fail_closed},
       {"Work-capable native lifecycle requires exact conformance",
        test_work_capable_profile_requires_native_conformance_receipt},
+      {"Initiative and Assignment Roots match shared vectors", check_initiative_assignment_root_vectors},
   };
   int failed = 0;
   for (const auto &[name, test] : tests) {

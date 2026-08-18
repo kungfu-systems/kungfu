@@ -76,12 +76,11 @@ jobs:
 
   source_acceptance:
     name: Candidate source acceptance
-    # Protected Buildchain merge 675b4f2 admits exact proof reuse across a
-    # bounded, tree-equivalent base advance and preserves the merge-group base
-    # history required by the fail-closed source lifecycle.
-    uses: kungfu-systems/buildchain/.github/workflows/check.yml@675b4f2a51af7e5f2aac58011c7ede0313b2b105
+    # Protected Buildchain merge 1342b7d preserves exact proof reuse when
+    # GitHub omits a PR backlink while retaining every rooted source binding.
+    uses: kungfu-systems/buildchain/.github/workflows/check.yml@1342b7d68936ab3c31b58b255df1de49c234bc02
     with:
-      buildchain-ref: 675b4f2a51af7e5f2aac58011c7ede0313b2b105
+      buildchain-ref: 1342b7d68936ab3c31b58b255df1de49c234bc02
       mode: source
       upload-artifacts: true
       source-proof-reuse: true
@@ -487,7 +486,7 @@ jobs:
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           repository: kungfu-systems/buildchain
-          ref: 888e87fec88cad41d225c32615e80a87744d4b6d
+          ref: 1342b7d68936ab3c31b58b255df1de49c234bc02
           path: .buildchain/dev-delivery-runtime
           fetch-depth: 1
           persist-credentials: false
@@ -967,7 +966,7 @@ jobs:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           repository: kungfu-systems/buildchain
-          ref: 888e87fec88cad41d225c32615e80a87744d4b6d
+          ref: 1342b7d68936ab3c31b58b255df1de49c234bc02
           path: .buildchain/dev-delivery-runtime
           persist-credentials: false
       - uses: actions/setup-node@v6.4.0
