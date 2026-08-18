@@ -3,7 +3,7 @@
   "contract": "kungfu-buildchain-dev-delivery-warrant-queue",
   "repository": "kungfu-systems/kungfu",
   "protectedBase": "dev/v4/v4.0",
-  "generation": 4323,
+  "generation": 4324,
   "fencingCounter": 538,
   "policy": {
     "agingSeconds": 900,
@@ -11,40 +11,7 @@
     "leaseSeconds": 3600,
     "emergencyPolicy": "reviewed-explicit-only"
   },
-  "activeWarrant": {
-    "schema": "kungfu.buildchain.dev-delivery-warrant/v1",
-    "repository": "kungfu-systems/kungfu",
-    "protectedBase": "dev/v4/v4.0",
-    "candidateId": "sha256:27ff51fcab426258532c1b1789526ae4821deb2123a7dd90a7f645ef36d9c7d1",
-    "pullRequestNumber": 3296,
-    "sourceHead": "4d040283866628a03a555046a62f366da4d140a1",
-    "assignmentRoot": "sha256:7c0ce2b216937dbaaead773e4e18eeaccb34c90d0299c5a8f69921c4461ed2f9",
-    "initiativeRoot": "sha256:bfff817933e5a5ad693e4b902a84f6cc3a251235dd7377cb4091d92f805fa7ff",
-    "sourceIdentityRoot": "sha256:4edfe056228932c72139a87953719c8b7f5a7cd0122f2697bc54bfc42a9e8997",
-    "sourcePatchRoot": "sha256:77c516bbbffd45eeccdb4e8beae616d5fe2aee8b0efd20fc7cf4ced78485192b",
-    "sourceProofRoot": "sha256:f4b5478d388847b0457c8daab5fdf5a67bce97cecabed078a4ebbf47b122f1aa",
-    "planRoot": "sha256:a3135ab4dc762060ab2f00c3cec10c5622110f64e6129e343e8295e08af6869c",
-    "closureRoot": "sha256:ac6e52dc4778bd7be1e6224c9a526a00dc7fcdd56a84e07165a811b168158f3e",
-    "dependencyRoot": "sha256:ced9fb225392428faa76bae47781eb629383a4b21637c55dac72893b6222d8bd",
-    "toolchainRoot": "sha256:2ecb07894954a2e0de022615d4561e5ba3ae68376401941ecff77be03cd75a0f",
-    "environmentRoot": "sha256:ce8ac018bb38c00cc0f5e954dae39d921eb9437fb11314061e9628f456f39057",
-    "affectedPaths": [
-      "product/scripts/cli-surface-qualification.mjs",
-      "product/scripts/cli-surface-qualification.test.mjs"
-    ],
-    "sourceWorkflowRunId": 32124680860,
-    "deliveryClass": "non-native-fast",
-    "generation": 538,
-    "phase": "qualified",
-    "expectedOldStateRoot": "sha256:f5899711c7a3022dc44f8dd89e9e3108520e741ddf994c4140c4cd582103997d",
-    "issuedAt": "2026-08-18T12:00:12.040Z",
-    "expiresAt": "2026-08-18T13:31:45.581Z",
-    "fencingToken": "sha256:c9a0c37a00a927727cb587de7cfab1816582bd63207e7809f87535c31f8b1d50",
-    "nextAction": "Enter the GitHub merge queue at the exact fenced PR head; merge_group remains final authority.",
-    "nativeProofRoot": "sha256:4a11c7973766b316893c3bb90a82f2a65ecb8d00d579d2017f9bdd7bd614f6e9",
-    "nativeProofReuseRoot": "sha256:2cf57b934451edfd8a7ccc08896eee1238efb198c6c520f3a710336d5c4c1774",
-    "qualifiedAt": "2026-08-18T12:01:51.275Z"
-  },
+  "activeWarrant": null,
   "candidates": [
     {
       "repository": "kungfu-systems/kungfu",
@@ -38486,11 +38453,20 @@
       "sourceWorkflowRunId": 32124680860,
       "priority": "ordinary",
       "enqueuedAt": "2026-08-18T10:11:22.115Z",
-      "updatedAt": "2026-08-18T12:01:51.275Z",
+      "updatedAt": "2026-08-18T12:14:11.644Z",
       "attempts": 3,
       "recoveries": 0,
-      "status": "qualified",
-      "terminal": null,
+      "status": "merged",
+      "terminal": {
+        "outcome": "merged",
+        "terminalClass": "authoritative-completion",
+        "reason": "protected pull request event: closed",
+        "evidenceRoot": "sha256:6d1de27c3384615c3a16422bb08743a251a0f779e712502bbd572210a622ab1f",
+        "closedAt": "2026-08-18T12:14:11.644Z",
+        "fencingToken": "sha256:c9a0c37a00a927727cb587de7cfab1816582bd63207e7809f87535c31f8b1d50",
+        "leaseGeneration": 538,
+        "nativeProofRoot": "sha256:4a11c7973766b316893c3bb90a82f2a65ecb8d00d579d2017f9bdd7bd614f6e9"
+      },
       "affectedPaths": [
         "product/scripts/cli-surface-qualification.mjs",
         "product/scripts/cli-surface-qualification.test.mjs"
@@ -38646,6 +38622,6 @@
       ]
     }
   ],
-  "updatedAt": "2026-08-18T12:07:58.987Z",
-  "stateRoot": "sha256:ff1b6af6b7fb321786d4bb7a73c6e8ab18c767d499288ad41295efa6febc6ab7"
+  "updatedAt": "2026-08-18T12:14:11.644Z",
+  "stateRoot": "sha256:53fefb7e09be830dc5dec3b2ab572e404644da83e37c1b2c27ac4d7b3bdb02e0"
 }
