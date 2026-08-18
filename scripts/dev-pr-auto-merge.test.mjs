@@ -496,7 +496,7 @@ test('the completed migration has no bootstrap bypass around Warrant admission',
   assert.match(sourceWorkflow, /Check out exact Buildchain Warrant runtime/u);
   assert.match(
     sourceWorkflow,
-    /ref: 888e87fec88cad41d225c32615e80a87744d4b6d/u,
+    /ref: 0f4004d0d2b2474c2135a3e88d29d9c85bc37834/u,
   );
   assert.doesNotMatch(
     sourceWorkflow,
