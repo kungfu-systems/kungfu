@@ -111,6 +111,56 @@ export function resolveTuiCliRuntime({
   };
 }
 
+export function resolveTuiCliProcess({
+  bin,
+  argsPrefix = [],
+  platform = process.platform,
+  comspec = process.env.ComSpec,
+}: {
+  bin: string;
+  argsPrefix?: string[];
+  platform?: NodeJS.Platform;
+  comspec?: string;
+}): { bin: string; argsPrefix: string[] } {
+  if (platform !== 'win32' || !/\.(?:cmd|bat)$/iu.test(bin)) {
+    return { bin, argsPrefix };
+  }
+  return {
+    bin: comspec || 'cmd.exe',
+    argsPrefix: ['/d', '/s', '/c', 'call', bin, ...argsPrefix],
+  };
+}
+
+export function resolveTuiCliInvocation(
+  paths: { coreDir: string; bin: string; sourceCliFallback: boolean },
+  parentEnv: NodeJS.ProcessEnv,
+) {
+  const argsPrefix = paths.sourceCliFallback
+    ? ['run', '--project', paths.coreDir, '--frozen', 'python', '-m', 'kungfu']
+    : [];
+  const processInvocation = resolveTuiCliProcess({
+    bin: paths.sourceCliFallback ? 'uv' : paths.bin,
+    argsPrefix,
+  });
+  const env = tuiChildCliEnvironment(parentEnv);
+  if (paths.sourceCliFallback) {
+    env.PYTHONPATH = [
+      path.join(paths.coreDir, 'src', 'python'),
+      parentEnv.KUNGFU_NATIVE_PATH ||
+        path.join(paths.coreDir, 'build', 'Release'),
+      env.PYTHONPATH,
+    ]
+      .filter(Boolean)
+      .join(path.delimiter);
+  }
+  return {
+    bin: processInvocation.bin,
+    env,
+    argsPrefix: processInvocation.argsPrefix,
+    args: (values: string[]) => [...processInvocation.argsPrefix, ...values],
+  };
+}
+
 export function tuiChildCliEnvironment(
   env: NodeJS.ProcessEnv,
 ): NodeJS.ProcessEnv {
