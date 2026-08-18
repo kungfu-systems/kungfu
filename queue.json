@@ -3,7 +3,7 @@
   "contract": "kungfu-buildchain-dev-delivery-warrant-queue",
   "repository": "kungfu-systems/kungfu",
   "protectedBase": "dev/v4/v4.0",
-  "generation": 4336,
+  "generation": 4337,
   "fencingCounter": 540,
   "policy": {
     "agingSeconds": 900,
@@ -38692,11 +38692,20 @@
       "sourceWorkflowRunId": 32130079188,
       "priority": "ordinary",
       "enqueuedAt": "2026-08-18T12:26:46.087Z",
-      "updatedAt": "2026-08-18T12:26:46.087Z",
+      "updatedAt": "2026-08-18T12:35:57.298Z",
       "attempts": 1,
       "recoveries": 0,
-      "status": "queued",
-      "terminal": null,
+      "status": "cancelled",
+      "terminal": {
+        "outcome": "cancelled",
+        "reason": "protected pull request event: synchronize",
+        "evidenceRoot": "sha256:e1d0a3cdaa1e9be8718b7ffd4c75a5a7c1acbfe14e4e2a227932de8240b38afb",
+        "authority": "queued-candidate-cancellation",
+        "expectedSourceHead": "f3442f595ce4c6f09dd76d7d8db9408b25b92c94",
+        "observedSourceHead": "7c7f457dc04744057b4eaddc326451f484ac9f2f",
+        "eventAction": "synchronize",
+        "closedAt": "2026-08-18T12:35:57.298Z"
+      },
       "affectedPaths": [
         "framework/tui/src/main.tsx",
         "framework/tui/src/terminal-lifecycle.test.ts",
@@ -38704,6 +38713,6 @@
       ]
     }
   ],
-  "updatedAt": "2026-08-18T12:35:00.661Z",
-  "stateRoot": "sha256:f07d9e1e2f7dd93aac1f42bad0c6323a75b93b0537e049268e3472ab33c8a0ce"
+  "updatedAt": "2026-08-18T12:35:57.298Z",
+  "stateRoot": "sha256:a7abbb61890049896f2e24395bbb65cef28304a343373a0151a86b97c665165b"
 }
