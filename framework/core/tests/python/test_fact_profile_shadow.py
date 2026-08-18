@@ -56,7 +56,7 @@ def _document():
             {
                 "relation_type": "explicitly-authorizes",
                 "source_id": "warrant:fact-kernel-review",
-                "target_id": "mission:technical-stewardship/go:fact-kernel",
+                "target_id": "initiative:technical-stewardship/assignment:fact-kernel",
                 "attributes": {"scope": "fixture-only", "inheriting": False},
             },
         ],
@@ -101,7 +101,11 @@ def test_shadow_comparison_reports_typed_gaps_without_selecting_authority(tmp_pa
 
     missing = deepcopy(document)
     missing["sources"].append(
-        _source("mission-go", "mission:missing/go:missing", {"status": "missing"})
+        _source(
+            "initiative-assignment",
+            "initiative:missing/assignment:missing",
+            {"status": "missing"},
+        )
     )
     missing_result = storage_service.fact_profile_shadow_compare(missing, actual)
     assert missing_result["counts"]["missing"] == 1

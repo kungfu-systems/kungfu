@@ -30,13 +30,16 @@ def _source(profile: str, source_id: str) -> dict:
 def _fixture(runtime_dir: Path) -> dict:
     document = {
         "sources": [
-            _source("mission-go", "mission:fixture/go:integrity"),
+            _source(
+                "initiative-assignment",
+                "initiative:fixture/assignment:integrity",
+            ),
             _source("xinfa-atlas", "atlas:fixture"),
         ],
         "relations": [
             {
                 "relation_type": "uses-context",
-                "source_id": "mission:fixture/go:integrity",
+                "source_id": "initiative:fixture/assignment:integrity",
                 "target_id": "atlas:fixture",
                 "attributes": {"inheriting": False},
             }

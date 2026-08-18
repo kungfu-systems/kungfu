@@ -6,7 +6,7 @@
       "protocol_id": "kungfu.fact-cut-kernel.contract/v1",
       "source": "framework/fact/kungfu-fact-cut-kernel.contract.json",
       "source_role": "fact-object-cut-and-admission-semantics",
-      "source_root": "sha256:63736a25cac825216749f971d672ab8e5ab98d2015bd1d50bc91ddf68775f8b1",
+      "source_root": "sha256:3072bfb66115e6fad01d0426ebc6633cf22d4fe06b9c81905fdadcfd2ac003dd",
       "version_axis": "Fact record schema and Cut protocol"
     },
     {
@@ -15,7 +15,7 @@
       "protocol_id": "kungfu.fact-root.canonical/v2",
       "source": "framework/fact/kungfu-fact-cut-kernel.contract.json",
       "source_role": "portable-canonical-Fact-root-preimage",
-      "source_root": "sha256:63736a25cac825216749f971d672ab8e5ab98d2015bd1d50bc91ddf68775f8b1",
+      "source_root": "sha256:3072bfb66115e6fad01d0426ebc6633cf22d4fe06b9c81905fdadcfd2ac003dd",
       "version_axis": "Fact root canonicalization protocol"
     },
     {
@@ -78,7 +78,7 @@
       "protocol_id": "kungfu.layered-api-encoding-boundary.contract/v1",
       "source": "framework/core/architecture/layered-api-encoding-boundary.contract.json",
       "source_role": "Hana-POD-versus-FlatBuffers-payload-schema-ownership",
-      "source_root": "sha256:44f182fa7def13375d074ba525b57e1dd93f8529366ee4a1a172fd93528f956f",
+      "source_root": "sha256:5d57d352c43d5ab8cfcef545437d68ad4150109494d98ac3874ffda7da6071eb",
       "version_axis": "payload schema owner and protocol-selected encoding"
     },
     {
@@ -121,7 +121,7 @@
       },
       {
         "path": "framework/fact/kungfu-fact-cut-kernel.contract.json",
-        "root": "sha256:63736a25cac825216749f971d672ab8e5ab98d2015bd1d50bc91ddf68775f8b1"
+        "root": "sha256:3072bfb66115e6fad01d0426ebc6633cf22d4fe06b9c81905fdadcfd2ac003dd"
       },
       {
         "path": "framework/episode/kungfu-episode-invariants.contract.json",
@@ -149,7 +149,7 @@
       },
       {
         "path": "framework/core/architecture/layered-api-encoding-boundary.contract.json",
-        "root": "sha256:44f182fa7def13375d074ba525b57e1dd93f8529366ee4a1a172fd93528f956f"
+        "root": "sha256:5d57d352c43d5ab8cfcef545437d68ad4150109494d98ac3874ffda7da6071eb"
       },
       {
         "path": "framework/spec/schema/manifest.schema.json",
