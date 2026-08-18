@@ -1,11 +1,13 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #include <kungfu/api.h>
+#include <kungfu/initiative_assignment_api.h>
 
 #include "stream_cancellation.h"
 
 #include <kungfu/runtime/action/action_runtime.h>
 #include <kungfu/runtime/io.h>
+#include <kungfu/runtime/profile/initiative_assignment_service.h>
 #include <kungfu/runtime/storage/json_edge.h>
 #include <kungfu/yijinjing/storage/content_hash.h>
 
@@ -32,10 +34,13 @@ namespace {
 namespace yy = kungfu::yijinjing;
 
 constexpr uint64_t API_CAPABILITIES = KF_CAP_DISCOVERY | KF_CAP_STREAM | KF_CAP_LEDGER_ACTION | KF_CAP_MAINTENANCE |
-                                      KF_CAP_RUNTIME_ACTION | KF_CAP_CANCELLATION | KF_CAP_EXPLICIT_PROTOCOL_CURRENCY;
+                                      KF_CAP_RUNTIME_ACTION | KF_CAP_CANCELLATION | KF_CAP_EXPLICIT_PROTOCOL_CURRENCY |
+                                      KF_CAP_INITIATIVE_ASSIGNMENT;
 constexpr uint64_t DISCOVERY_CAPABILITIES = KF_CAP_DISCOVERY | KF_CAP_EXPLICIT_PROTOCOL_CURRENCY;
 constexpr uint64_t STREAM_CAPABILITIES = KF_CAP_STREAM;
 constexpr uint64_t RUNTIME_ACTION_CAPABILITIES = KF_CAP_RUNTIME_ACTION | KF_CAP_EXPLICIT_PROTOCOL_CURRENCY;
+constexpr uint64_t INITIATIVE_ASSIGNMENT_CAPABILITIES =
+    KF_CAP_INITIATIVE_ASSIGNMENT | KF_CAP_EXPLICIT_PROTOCOL_CURRENCY;
 constexpr uint32_t MAX_STREAM_BATCH_FRAMES = 4096;
 constexpr uint8_t MAX_MODE = 3;
 constexpr uint8_t MAX_LOCATION_ROLE = 4;
@@ -63,6 +68,8 @@ constexpr interface_descriptor INTERFACES[] = {
     {KF_INTERFACE_MAINTENANCE, "maintenance", KF_MAINTENANCE_ABI_V1, KF_MAINTENANCE_ABI_V1, MAINTENANCE_CAPABILITIES},
     {KF_INTERFACE_RUNTIME_ACTION, "runtime-action", KF_RUNTIME_ACTION_ABI_V1, KF_RUNTIME_ACTION_ABI_V1,
      RUNTIME_ACTION_CAPABILITIES},
+    {KF_INTERFACE_INITIATIVE_ASSIGNMENT, "initiative-assignment", KF_INITIATIVE_ASSIGNMENT_ABI_V1,
+     KF_INITIATIVE_ASSIGNMENT_ABI_V1, INITIATIVE_ASSIGNMENT_CAPABILITIES},
 };
 
 struct error_descriptor {
@@ -149,7 +156,6 @@ struct kf_context {
   uint32_t active_readers = 0;
   uint32_t active_bindings = 0;
 };
-
 struct kf_stream_reader {
   kf_context *owner = nullptr;
   std::thread::id owner_thread;
@@ -161,7 +167,6 @@ struct kf_stream_reader {
   uint64_t outstanding_token = 0;
   bool live = true;
 };
-
 struct kf_action_binding {
   kf_context *owner = nullptr;
   std::thread::id owner_thread;
@@ -175,13 +180,10 @@ struct kf_action_binding {
   std::string resources_root;
   bool live = true;
 };
-
 namespace {
-
 bool owner_thread(const kf_context *context) {
   return context != nullptr && context->owner_thread == std::this_thread::get_id();
 }
-
 void set_error(kf_context *context, std::string message) noexcept {
   if (context == nullptr) {
     return;
@@ -192,7 +194,6 @@ void set_error(kf_context *context, std::string message) noexcept {
     context->last_error.clear();
   }
 }
-
 template <typename F> int32_t contain_context_exceptions(kf_context *context, F &&operation) noexcept {
   try {
     return operation();
@@ -210,7 +211,6 @@ template <typename F> int32_t contain_context_exceptions(kf_context *context, F 
     return KF_CORE_ERROR;
   }
 }
-
 int32_t check_context(kf_context *context) {
   if (context == nullptr) {
     return KF_INVALID_ARGUMENT;
@@ -224,7 +224,6 @@ int32_t check_context(kf_context *context) {
   }
   return KF_OK;
 }
-
 int32_t check_result_slot(kf_context *context, kf_owned_message_v1 *out_result) {
   if (out_result == nullptr || out_result->struct_size < sizeof(*out_result)) {
     return KF_INVALID_ARGUMENT;
@@ -235,7 +234,6 @@ int32_t check_result_slot(kf_context *context, kf_owned_message_v1 *out_result) 
   }
   return KF_OK;
 }
-
 int32_t publish_result(kf_context *context, std::string protocol, uint32_t protocol_version, std::string schema,
                        std::string encoding, std::string bytes, kf_owned_message_v1 *out_result) {
   const auto slot_status = check_result_slot(context, out_result);
@@ -263,7 +261,6 @@ int32_t publish_result(kf_context *context, std::string protocol, uint32_t proto
   out_result->token = context->outstanding_result_token;
   return KF_OK;
 }
-
 int32_t KF_CALL result_release(kf_context *context, uint64_t token) noexcept {
   if (context == nullptr || !owner_thread(context)) {
     return context == nullptr ? KF_INVALID_ARGUMENT : KF_WRONG_THREAD;
@@ -279,7 +276,6 @@ int32_t KF_CALL result_release(kf_context *context, uint64_t token) noexcept {
   context->outstanding_result_token = 0;
   return KF_OK;
 }
-
 int32_t validate_json_edge_message(kf_context *context, const kf_semantic_message_v1 *request,
                                    std::string_view expected_protocol, std::string_view expected_schema) {
   if (request == nullptr || request->struct_size < sizeof(*request) || request->protocol_id == nullptr ||
@@ -306,7 +302,6 @@ int32_t validate_json_edge_message(kf_context *context, const kf_semantic_messag
   }
   return KF_OK;
 }
-
 nlohmann::json parse_json_message(const kf_semantic_message_v1 *request) {
   if (request->byte_size == 0) {
     return nlohmann::json::object();
@@ -318,7 +313,6 @@ nlohmann::json parse_json_message(const kf_semantic_message_v1 *request) {
   }
   return value;
 }
-
 int32_t KF_CALL context_open(const kf_context_config_v1 *config, kf_context **out_context) noexcept {
   return contain_exceptions([&]() -> int32_t {
     if (config == nullptr || out_context == nullptr || config->struct_size < sizeof(*config) ||
@@ -346,7 +340,6 @@ int32_t KF_CALL context_open(const kf_context_config_v1 *config, kf_context **ou
     return KF_OK;
   });
 }
-
 int32_t KF_CALL context_capabilities(const kf_context *context, uint64_t *out_capabilities) noexcept {
   if (context == nullptr || out_capabilities == nullptr) {
     return KF_INVALID_ARGUMENT;
@@ -357,7 +350,6 @@ int32_t KF_CALL context_capabilities(const kf_context *context, uint64_t *out_ca
   *out_capabilities = API_CAPABILITIES;
   return KF_OK;
 }
-
 int32_t KF_CALL context_last_error(const kf_context *context, const char **out_data, uint64_t *out_size) noexcept {
   if (context == nullptr || out_data == nullptr || out_size == nullptr) {
     return KF_INVALID_ARGUMENT;
@@ -369,7 +361,6 @@ int32_t KF_CALL context_last_error(const kf_context *context, const char **out_d
   *out_size = context->last_error.size();
   return KF_OK;
 }
-
 int32_t KF_CALL context_request_cancel(kf_context *context) noexcept {
   if (context == nullptr) {
     return KF_INVALID_ARGUMENT;
@@ -377,7 +368,6 @@ int32_t KF_CALL context_request_cancel(kf_context *context) noexcept {
   context->cancelled.store(true, std::memory_order_release);
   return KF_OK;
 }
-
 int32_t KF_CALL context_reset_cancel(kf_context *context) noexcept {
   if (context == nullptr) {
     return KF_INVALID_ARGUMENT;
@@ -388,7 +378,6 @@ int32_t KF_CALL context_reset_cancel(kf_context *context) noexcept {
   context->cancelled.store(false, std::memory_order_release);
   return KF_OK;
 }
-
 int32_t KF_CALL context_close(kf_context *context) noexcept {
   if (context == nullptr) {
     return KF_INVALID_ARGUMENT;
@@ -403,7 +392,6 @@ int32_t KF_CALL context_close(kf_context *context) noexcept {
   delete context;
   return KF_OK;
 }
-
 int32_t KF_CALL discovery_runtime_info(kf_context *context, kf_runtime_info_v1 *out_info) noexcept {
   const auto status = check_context(context);
   if (status != KF_OK) {
@@ -421,7 +409,6 @@ int32_t KF_CALL discovery_runtime_info(kf_context *context, kf_runtime_info_v1 *
   out_info->reserved = 0;
   return KF_OK;
 }
-
 int32_t KF_CALL discovery_interface_info(kf_context *context, uint32_t index, kf_interface_info_v1 *out_info) noexcept {
   const auto status = check_context(context);
   if (status != KF_OK) {
@@ -441,7 +428,6 @@ int32_t KF_CALL discovery_interface_info(kf_context *context, uint32_t index, kf
   out_info->name = entry.name;
   return KF_OK;
 }
-
 int32_t KF_CALL discovery_error_info(kf_context *context, int32_t status, kf_error_info_v1 *out_info) noexcept {
   const auto context_status = check_context(context);
   if (context_status != KF_OK) {
@@ -460,7 +446,6 @@ int32_t KF_CALL discovery_error_info(kf_context *context, int32_t status, kf_err
   out_info->meaning = entry->meaning;
   return KF_OK;
 }
-
 nlohmann::json interface_registry_document() {
   auto interfaces = nlohmann::json::array();
   for (const auto &entry : INTERFACES) {
@@ -489,7 +474,8 @@ nlohmann::json interface_registry_document() {
         {"request_schemas",
          {{"ledger_action", KF_SCHEMA_LEDGER_ACTION_REQUEST_V1},
           {"maintenance", KF_SCHEMA_MAINTENANCE_REQUEST_V1},
-          {"runtime_action", KF_SCHEMA_RUNTIME_ACTION_REQUEST_V1}}}}},
+          {"runtime_action", KF_SCHEMA_RUNTIME_ACTION_REQUEST_V1},
+          {"initiative_assignment", KF_SCHEMA_INITIATIVE_ASSIGNMENT_REQUEST_V1}}}}},
       {"action_binding",
        {{"schema", "kungfu.action-binding/v1"},
         {"required_roots", nlohmann::json::array({"fact_cut", "pursuit", "atlas", "warrant", "candidate_action",
@@ -513,7 +499,6 @@ nlohmann::json interface_registry_document() {
         {"discardable_unit", "worker-process"}}},
   };
 }
-
 int32_t KF_CALL discovery_contract_get(kf_context *context, const kf_semantic_message_v1 *request,
                                        kf_owned_message_v1 *out_result) noexcept {
   return contain_exceptions([&]() -> int32_t {
@@ -544,7 +529,6 @@ int32_t KF_CALL discovery_contract_get(kf_context *context, const kf_semantic_me
                           interface_registry_document().dump(), out_result);
   });
 }
-
 int32_t KF_CALL stream_reader_open(kf_context *context, const kf_stream_location_v1 *location,
                                    kf_stream_reader **out_reader) noexcept {
   return contain_exceptions([&]() -> int32_t {
@@ -577,7 +561,6 @@ int32_t KF_CALL stream_reader_open(kf_context *context, const kf_stream_location
     return KF_OK;
   });
 }
-
 int32_t KF_CALL stream_reader_read(kf_stream_reader *reader, uint32_t max_frames,
                                    kf_stream_batch_v1 *out_batch) noexcept {
   if (reader == nullptr || !reader->live || reader->owner == nullptr) {
@@ -597,7 +580,6 @@ int32_t KF_CALL stream_reader_read(kf_stream_reader *reader, uint32_t max_frames
   if (reader->outstanding_token != 0) {
     return KF_BUSY;
   }
-
   reader->frames.clear();
   reader->held_pages.clear();
   reader->frames.reserve(max_frames);
@@ -639,7 +621,6 @@ int32_t KF_CALL stream_reader_read(kf_stream_reader *reader, uint32_t max_frames
     reader->frames.emplace_back(view);
     reader->journal->next();
   }
-
   out_batch->frame_count = static_cast<uint32_t>(reader->frames.size());
   out_batch->frames = reader->frames.empty() ? nullptr : reader->frames.data();
   out_batch->payload_bytes = payload_bytes;
@@ -654,7 +635,6 @@ int32_t KF_CALL stream_reader_read(kf_stream_reader *reader, uint32_t max_frames
   }
   return KF_OK;
 }
-
 int32_t KF_CALL stream_reader_release(kf_stream_reader *reader, uint64_t token) noexcept {
   if (reader == nullptr || !reader->live || reader->owner == nullptr) {
     return KF_STALE_HANDLE;
@@ -671,7 +651,6 @@ int32_t KF_CALL stream_reader_release(kf_stream_reader *reader, uint64_t token) 
   reader->reader->release_page();
   return KF_OK;
 }
-
 int32_t KF_CALL stream_reader_close(kf_stream_reader *reader) noexcept {
   if (reader == nullptr || !reader->live || reader->owner == nullptr) {
     return KF_STALE_HANDLE;
@@ -687,12 +666,10 @@ int32_t KF_CALL stream_reader_close(kf_stream_reader *reader) noexcept {
   delete reader;
   return KF_OK;
 }
-
 std::string binding_root(const nlohmann::json &document) {
   namespace yy_storage = kungfu::yijinjing::storage;
   return yy_storage::format_content_hash(yy_storage::compute_content_hash(document.dump()));
 }
-
 int32_t KF_CALL action_binding_open(kf_context *context, const kf_action_binding_config_v1 *config,
                                     kf_action_binding **out_binding) noexcept {
   return contain_exceptions([&]() -> int32_t {
@@ -742,7 +719,6 @@ int32_t KF_CALL action_binding_open(kf_context *context, const kf_action_binding
     return KF_OK;
   });
 }
-
 int32_t KF_CALL action_binding_info(const kf_action_binding *binding, kf_action_binding_info_v1 *out_info) noexcept {
   if (binding == nullptr || !binding->live || binding->owner == nullptr) {
     return KF_STALE_HANDLE;
@@ -764,7 +740,6 @@ int32_t KF_CALL action_binding_info(const kf_action_binding *binding, kf_action_
   out_info->resources_root = binding->resources_root.c_str();
   return KF_OK;
 }
-
 int32_t KF_CALL action_binding_close(kf_action_binding *binding) noexcept {
   if (binding == nullptr || !binding->live || binding->owner == nullptr) {
     return KF_STALE_HANDLE;
@@ -777,7 +752,6 @@ int32_t KF_CALL action_binding_close(kf_action_binding *binding) noexcept {
   delete binding;
   return KF_OK;
 }
-
 const char *ledger_operation_name(uint32_t operation) {
   switch (operation) {
   case KF_LEDGER_ACTION_FACT_KERNEL:
@@ -851,7 +825,6 @@ const char *ledger_operation_name(uint32_t operation) {
     return nullptr;
   }
 }
-
 const char *ledger_stage(uint32_t operation) {
   switch (operation) {
   case KF_LEDGER_ACTION_EPISODE_BEGIN:
@@ -1038,6 +1011,30 @@ int32_t KF_CALL maintenance_execute(kf_context *context, uint32_t operation, con
   });
 }
 
+int32_t KF_CALL initiative_assignment_execute(kf_context *context, uint32_t operation,
+                                              const kf_semantic_message_v1 *request,
+                                              kf_owned_message_v1 *out_result) noexcept {
+  return contain_context_exceptions(context, [&]() -> int32_t {
+    const auto status = check_context(context);
+    if (status != KF_OK)
+      return status;
+    set_error(context, {});
+    const auto slot_status = check_result_slot(context, out_result);
+    if (slot_status != KF_OK)
+      return slot_status;
+    const auto message_status = validate_json_edge_message(context, request, KF_PROTOCOL_INITIATIVE_ASSIGNMENT_NATIVE,
+                                                           KF_SCHEMA_INITIATIVE_ASSIGNMENT_REQUEST_V1);
+    if (message_status != KF_OK)
+      return message_status;
+    const auto result = kungfu::runtime::profile::run_initiative_assignment_native_service(
+        context->runtime_dir, operation, parse_json_message(request));
+    const nlohmann::json response = {
+        {"schema", KF_SCHEMA_INITIATIVE_ASSIGNMENT_RESULT_V1}, {"operation", operation}, {"result", result}};
+    return publish_result(context, KF_PROTOCOL_INITIATIVE_ASSIGNMENT_NATIVE, 1,
+                          KF_SCHEMA_INITIATIVE_ASSIGNMENT_RESULT_V1, KF_ENCODING_JSON, response.dump(), out_result);
+  });
+}
+
 const kf_discovery_api_v1 DISCOVERY_API_V1 = {
     KF_DISCOVERY_ABI_V1,      sizeof(kf_discovery_api_v1), DISCOVERY_CAPABILITIES, discovery_runtime_info,
     discovery_interface_info, discovery_error_info,        discovery_contract_get, result_release};
@@ -1057,6 +1054,10 @@ const kf_runtime_action_api_v1 RUNTIME_ACTION_API_V1 = {KF_RUNTIME_ACTION_ABI_V1
 
 const kf_maintenance_api_v1 MAINTENANCE_API_V1 = {KF_MAINTENANCE_ABI_V1, sizeof(kf_maintenance_api_v1),
                                                   MAINTENANCE_CAPABILITIES, maintenance_execute, result_release};
+
+const kf_initiative_assignment_api_v1 INITIATIVE_ASSIGNMENT_API_V1 = {
+    KF_INITIATIVE_ASSIGNMENT_ABI_V1, sizeof(kf_initiative_assignment_api_v1), INITIATIVE_ASSIGNMENT_CAPABILITIES,
+    initiative_assignment_execute, result_release};
 
 template <typename T>
 int32_t copy_interface(uint32_t requested_version, uint32_t expected_version, uint32_t caller_struct_size,
@@ -1091,6 +1092,9 @@ int32_t KF_CALL interface_get(kf_context *context, uint32_t interface_id, uint32
   case KF_INTERFACE_RUNTIME_ACTION:
     return copy_interface(requested_version, KF_RUNTIME_ACTION_ABI_V1, caller_struct_size, out_interface,
                           RUNTIME_ACTION_API_V1);
+  case KF_INTERFACE_INITIATIVE_ASSIGNMENT:
+    return copy_interface(requested_version, KF_INITIATIVE_ASSIGNMENT_ABI_V1, caller_struct_size, out_interface,
+                          INITIATIVE_ASSIGNMENT_API_V1);
   default:
     return KF_UNSUPPORTED_INTERFACE;
   }

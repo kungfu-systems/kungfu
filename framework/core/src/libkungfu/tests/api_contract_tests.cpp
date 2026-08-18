@@ -152,7 +152,7 @@ int main() {
   kf_runtime_info_v1 runtime_info{};
   runtime_info.struct_size = sizeof(runtime_info);
   if (!require(discovery.runtime_info(context, &runtime_info) == KF_OK, "runtime discovery failed") ||
-      !require(runtime_info.interface_count == 5, "responsibility interface count drifted")) {
+      !require(runtime_info.interface_count == 6, "responsibility interface count drifted")) {
     return 1;
   }
   int32_t wrong_thread_status = KF_OK;

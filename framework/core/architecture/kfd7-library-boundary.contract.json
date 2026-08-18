@@ -163,6 +163,14 @@
         "owns": ["action-geometry-evaluation", "domain-profile-evaluation", "profile-action-orchestration"],
         "authority": "libkungfu/runtime/action",
         "encoding": "named-json-edge-v1"
+      },
+      {
+        "id": "initiative-assignment",
+        "version": 1,
+        "status": "staged-local",
+        "owns": ["root-computation", "native-journal-admission", "restart-replay", "admission-receipt"],
+        "authority": "libkungfu/runtime/profile/initiative-assignment-service",
+        "encoding": "named-json-edge-v1"
       }
     ],
     "semanticCurrency": {

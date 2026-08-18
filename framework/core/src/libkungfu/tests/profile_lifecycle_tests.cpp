@@ -18,6 +18,7 @@ namespace profile = kungfu::runtime::profile;
 namespace storage = kungfu::yijinjing::storage;
 
 void check_initiative_assignment_root_vectors();
+void check_initiative_assignment_native_admission();
 
 namespace {
 
@@ -581,6 +582,7 @@ int run_tests() {
       {"Work-capable native lifecycle requires exact conformance",
        test_work_capable_profile_requires_native_conformance_receipt},
       {"Initiative and Assignment Roots match shared vectors", check_initiative_assignment_root_vectors},
+      {"Initiative and Assignment admission survives native restart", check_initiative_assignment_native_admission},
   };
   int failed = 0;
   for (const auto &[name, test] : tests) {

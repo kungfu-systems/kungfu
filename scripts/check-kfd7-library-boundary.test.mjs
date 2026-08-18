@@ -425,7 +425,14 @@ assert.deepEqual(
 
 assert.deepEqual(
   contract.successorAbi.interfaces.map((entry) => entry.id),
-  ['discovery', 'stream', 'ledger-action', 'maintenance', 'runtime-action'],
+  [
+    'discovery',
+    'stream',
+    'ledger-action',
+    'maintenance',
+    'runtime-action',
+    'initiative-assignment',
+  ],
 );
 assert.deepEqual(
   contract.dependencies.map((entry) => entry.statusAtInventory),

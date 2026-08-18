@@ -59,6 +59,13 @@ function catalog(changes = {}) {
         availability: { state: 'available' },
       },
       {
+        canonical_path: 'kungfu dogfood',
+        aliases: [],
+        owner: 'profile-kfx',
+        maturity: 'stable',
+        availability: { state: 'available' },
+      },
+      {
         canonical_path: 'kungfu profile mission-control',
         aliases: [],
         owner: 'profile-kfx',
@@ -224,6 +231,55 @@ test('qualification accepts presentation-only alignment drift in bare help', () 
     },
   });
   assert.equal(report.qualified, true);
+});
+
+test('qualification accepts complete removal of the v3 compatibility reader', () => {
+  const zeroResidueCatalog = catalog();
+  zeroResidueCatalog.surfaces = zeroResidueCatalog.surfaces.filter(
+    (row) => !row.canonical_path.startsWith('kungfu profile mission-control'),
+  );
+  const report = qualifyCliSurface({
+    cli: '/fixture/kungfu',
+    expectedCatalog: zeroResidueCatalog,
+    runCommand: runner(zeroResidueCatalog),
+  });
+  assert.equal(report.qualified, true);
+});
+
+test('qualification rejects discoverable v3 compatibility residue', () => {
+  const discoverableCatalog = catalog();
+  discoverableCatalog.surfaces = discoverableCatalog.surfaces.map((row) =>
+    row.canonical_path.startsWith('kungfu profile mission-control')
+      ? { ...row, visibility: 'public' }
+      : row,
+  );
+  assert.throws(
+    () =>
+      qualifyCliSurface({
+        cli: '/fixture/kungfu',
+        expectedCatalog: discoverableCatalog,
+        runCommand: runner(discoverableCatalog),
+      }),
+    /installed CLI retained removed path kungfu profile mission-control/u,
+  );
+});
+
+test('qualification rejects v3 compatibility residue with a KFD identity', () => {
+  const kfdOwningCatalog = catalog();
+  kfdOwningCatalog.surfaces = kfdOwningCatalog.surfaces.map((row) =>
+    row.canonical_path.startsWith('kungfu profile mission-control')
+      ? { ...row, kfd3_api_ids: ['kungfu.legacy.mission-control'] }
+      : row,
+  );
+  assert.throws(
+    () =>
+      qualifyCliSurface({
+        cli: '/fixture/kungfu',
+        expectedCatalog: kfdOwningCatalog,
+        runCommand: runner(kfdOwningCatalog),
+      }),
+    /installed v3 compatibility reader is discoverable or owns a KFD identity/u,
+  );
 });
 
 test('verification binds the qualification to the exact archive digest', () => {

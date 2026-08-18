@@ -456,7 +456,8 @@
       {
         "id": "stable-versioned-c-abi",
         "include_files": [
-          "src/libkungfu/include/kungfu/api.h"
+          "src/libkungfu/include/kungfu/api.h",
+          "src/libkungfu/include/kungfu/initiative_assignment_api.h"
         ],
         "level": "stable",
         "minimum_profile": "embedded-sqlite",
@@ -473,7 +474,8 @@
           "src/libkungfu/include/"
         ],
         "exclude_files": [
-          "src/libkungfu/include/kungfu/api.h"
+          "src/libkungfu/include/kungfu/api.h",
+          "src/libkungfu/include/kungfu/initiative_assignment_api.h"
         ],
         "level": "experimental",
         "minimum_profile": "embedded-sqlite",

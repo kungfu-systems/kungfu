@@ -26,7 +26,7 @@ int main(int argc, char **argv) {
     context.close();
     std::cout << "{\"consumer\":\"cpp\",\"abi\":" << KF_ABI_V1 << ",\"interfaces\":" << info.interface_count
               << ",\"runtime\":\"" << info.runtime_name << "\",\"version\":\"" << info.runtime_version << "\"}\n";
-    return info.interface_count == 5 ? 0 : 1;
+    return info.interface_count == 6 ? 0 : 1;
   } catch (const std::exception &error) {
     std::cerr << error.what() << "\n";
     return 1;

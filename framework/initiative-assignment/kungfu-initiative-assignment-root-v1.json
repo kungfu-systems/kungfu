@@ -97,11 +97,30 @@
     "rule": "Every Root sealed before native admission remains byte-for-byte authoritative. This protocol is additive and MUST NOT recalculate, migrate, alias, or replace a retained legacy Root.",
     "readerRule": "Readers select the protocol from retained evidence or an explicit versioned field; absence means the legacy protocol, never an inferred upgrade."
   },
+  "nativeAdmission": {
+    "interface": {
+      "id": 6,
+      "name": "initiative-assignment",
+      "version": 1,
+      "header": "framework/core/src/libkungfu/include/kungfu/initiative_assignment_api.h"
+    },
+    "serviceContract": "kungfu.initiative-assignment.native-service-contract/v1",
+    "journal": {
+      "owner": "libkungfu/action-recorder",
+      "namespace": "initiative-assignment",
+      "name": "admission"
+    },
+    "receipt": {
+      "schema": "kungfu.incubation-passport.admission-receipt/v1",
+      "rule": "The journal write is not a receipt. A receipt is issued only after a restarted native context replays and revalidates the exact event, binding, source, protocol, implementation, platform, and no-rewrite evidence Roots."
+    }
+  },
   "conformance": {
     "vectors": "tests/fixtures/initiative-assignment-root/vectors.json",
     "implementations": [
       "framework/core/src/python/kungfu/initiative_family/canonical.py",
-      "framework/core/src/libkungfu/src/runtime/profile/profile_lifecycle.cpp"
+      "framework/core/src/libkungfu/src/runtime/profile/profile_lifecycle.cpp",
+      "framework/core/src/libkungfu/src/runtime/profile/initiative_assignment_service.cpp"
     ]
   }
 }
