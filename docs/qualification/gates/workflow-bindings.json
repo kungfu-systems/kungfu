@@ -65,9 +65,9 @@
       "adapter": {
         "type": "buildchain-source",
         "kind": "job-uses",
-        "uses": "kungfu-systems/buildchain/.github/workflows/check.yml@675b4f2a51af7e5f2aac58011c7ede0313b2b105",
+        "uses": "kungfu-systems/buildchain/.github/workflows/check.yml@1342b7d68936ab3c31b58b255df1de49c234bc02",
         "with": {
-          "buildchain-ref": "675b4f2a51af7e5f2aac58011c7ede0313b2b105",
+          "buildchain-ref": "1342b7d68936ab3c31b58b255df1de49c234bc02",
           "mode": "source",
           "upload-artifacts": true,
           "source-proof-reuse": true,
