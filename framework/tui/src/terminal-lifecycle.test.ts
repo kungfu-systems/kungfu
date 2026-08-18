@@ -109,6 +109,8 @@ test('child CLI retains installed authority without recursive libnode selection'
 
   assert.equal(child.KUNGFU_AS_VARIANT, undefined);
   assert.equal(child.KUNGFU_NODE_VARIANT_ENTRY, undefined);
+  assert.equal(Object.hasOwn(child, 'KUNGFU_AS_VARIANT'), false);
+  assert.equal(Object.hasOwn(child, 'KUNGFU_NODE_VARIANT_ENTRY'), false);
   assert.equal(child.KUNGFU_INSTALL_SOURCE, 'archive');
   assert.equal(child.KUNGFU_DIR, '/product/runtime');
   assert.equal(

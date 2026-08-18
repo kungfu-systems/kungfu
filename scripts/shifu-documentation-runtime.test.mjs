@@ -8,7 +8,10 @@ import path from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 
-import { checkShifuDocumentationContract } from './check-shifu-documentation-contract.mjs';
+import {
+  checkShifuDocumentationContract,
+  ensurePinnedCommitAvailable,
+} from './check-shifu-documentation-contract.mjs';
 import {
   canonicalizeDocumentationSubmission,
   validateDocumentationSubmission,
@@ -29,6 +32,58 @@ const NATIVE_XINFA_TEST = {
 const SUBMISSION = JSON.parse(
   fs.readFileSync(path.join(ROOT, 'shifu.documentation.json'), 'utf8'),
 );
+
+test('documentation contract hydrates an absent pinned source commit in a shallow checkout', () => {
+  const commit = 'a'.repeat(40);
+  const calls = [];
+  let available = false;
+  const result = ensurePinnedCommitAvailable(ROOT, commit, (command, args) => {
+    calls.push([command, args]);
+    if (args[0] === 'fetch') available = true;
+    return { status: args[0] === 'cat-file' && !available ? 1 : 0 };
+  });
+  assert.deepEqual(result, { fetched: true });
+  assert.deepEqual(calls, [
+    ['git', ['cat-file', '-e', `${commit}^{commit}`]],
+    [
+      'git',
+      [
+        'fetch',
+        '--no-tags',
+        '--no-write-fetch-head',
+        '--filter=tree:0',
+        '--depth=1',
+        'origin',
+        commit,
+      ],
+    ],
+    ['git', ['cat-file', '-e', `${commit}^{commit}`]],
+  ]);
+});
+
+test('documentation contract does not fetch an available pinned source commit', () => {
+  const calls = [];
+  const result = ensurePinnedCommitAvailable(
+    ROOT,
+    'b'.repeat(40),
+    (command, args) => {
+      calls.push([command, args]);
+      return { status: 0 };
+    },
+  );
+  assert.deepEqual(result, { fetched: false });
+  assert.equal(calls.length, 1);
+});
+
+test('documentation contract fails closed when hydration cannot materialize the commit', () => {
+  assert.throws(
+    () =>
+      ensurePinnedCommitAvailable(ROOT, 'c'.repeat(40), () => ({
+        status: 1,
+      })),
+    /unable to hydrate pinned source commit/u,
+  );
+});
 
 function docs(args, options = {}) {
   return spawnSync(process.execPath, [SHIFU_MJS, 'docs', ...args], {

@@ -148,7 +148,9 @@ export function sourceClangFormatCommand(
 }
 
 export function sourceMergeBase() {
-  const candidates = devMergeBaseCandidates();
+  const mergeGroupBase = sourceMergeGroupBase();
+  if (mergeGroupBase) return mergeGroupBase;
+  const candidates = sourceAcceptanceMergeBaseCandidates();
   for (const ref of candidates) {
     const sha = gitMaybe(['merge-base', ref, 'HEAD']);
     if (sha) return { ref, sha };
@@ -158,8 +160,69 @@ export function sourceMergeBase() {
   );
 }
 
+export function sourceAcceptanceMergeBaseCandidates(
+  devCandidates = devMergeBaseCandidates(),
+) {
+  return [...devCandidates, 'refs/buildchain/source-proof/current-base'];
+}
+
+export function fetchSourceAcceptanceCommit(commit, spawn = spawnSync) {
+  const result = spawn(
+    'git',
+    [
+      'fetch',
+      '--no-tags',
+      '--no-write-fetch-head',
+      '--filter=blob:none',
+      '--depth=1',
+      'origin',
+      commit,
+    ],
+    {
+      cwd: ROOT,
+      encoding: 'utf8',
+      maxBuffer: SOURCE_ACCEPTANCE_GIT_MAX_BUFFER_BYTES,
+    },
+  );
+  if (result.status !== 0) {
+    throw new Error(
+      `cannot fetch source-acceptance merge-group base ${commit}: ${(result.stderr || '').trim()}`,
+    );
+  }
+}
+
+export function sourceMergeGroupBase({
+  env = process.env,
+  readFile = fs.readFileSync,
+  gitRead = gitMaybe,
+  fetchCommit = fetchSourceAcceptanceCommit,
+} = {}) {
+  const coordinates = githubMergeGroupCoordinates(env, readFile);
+  if (!coordinates) return null;
+  const observedHead = gitRead(['rev-parse', 'HEAD']);
+  if (observedHead !== coordinates.headSha) {
+    throw new Error(
+      `merge-group event head ${coordinates.headSha} does not match source checkout ${observedHead || 'unavailable'}`,
+    );
+  }
+  if (gitRead(['cat-file', '-t', coordinates.baseSha]) !== 'commit') {
+    fetchCommit(coordinates.baseSha);
+  }
+  if (gitRead(['cat-file', '-t', coordinates.baseSha]) !== 'commit') {
+    throw new Error(
+      `source-acceptance merge-group base is unavailable after fetch: ${coordinates.baseSha}`,
+    );
+  }
+  return {
+    ref: 'github.merge_group.base_sha',
+    sha: coordinates.baseSha,
+    diffOperator: '..',
+  };
+}
+
 export function sourceChangedFiles() {
   const base = sourceMergeBase();
+  const revisionRange = `${base.sha}${base.diffOperator || '...'}HEAD`;
   /** @type {Set<string>} */
   const files = new Set();
   for (const args of [
@@ -168,7 +231,7 @@ export function sourceChangedFiles() {
       '--name-only',
       '--no-renames',
       '--diff-filter=ACDMR',
-      `${base.sha}...HEAD`,
+      revisionRange,
     ],
     ['diff', '--name-only', '--no-renames', '--diff-filter=ACDMR'],
     ['diff', '--cached', '--name-only', '--no-renames', '--diff-filter=ACDMR'],
@@ -798,9 +861,16 @@ export function sourceAcceptancePlan(
       command: process.execPath,
       args,
       env:
-        label === 'documentation contracts' && evidenceBaseCommit
+        evidenceBaseCommit &&
+        (label === 'documentation contracts' ||
+          label === 'code complexity budget ratchet')
           ? {
-              KUNGFU_ADR_EVIDENCE_BASE_SHA: evidenceBaseCommit,
+              ...(label === 'documentation contracts'
+                ? { KUNGFU_ADR_EVIDENCE_BASE_SHA: evidenceBaseCommit }
+                : {}),
+              ...(label === 'code complexity budget ratchet'
+                ? { KUNGFU_COMPLEXITY_PROTECTED_REF: evidenceBaseCommit }
+                : {}),
             }
           : undefined,
     })),

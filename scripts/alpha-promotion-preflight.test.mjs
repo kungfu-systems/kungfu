@@ -587,7 +587,7 @@ test('patrol, normal Alpha builds and sentinels keep one controller authority', 
   );
   assert.match(
     build,
-    /buildchain-ref: 675b4f2a51af7e5f2aac58011c7ede0313b2b105[\s\S]*buildchain-contract-expected-channel: v3-alpha[\s\S]*buildchain-contract-expected-major: v3[\s\S]*publish-source-ref: \$\{\{ fromJSON\(inputs\.macos-overflow-request-json \|\| '\{\}'\)\.releaseCutSourceRef \|\| '' \}\}[\s\S]*publish-anchor-request-json: \$\{\{ fromJSON\(inputs\.macos-overflow-request-json \|\| '\{\}'\)\.releaseCutSourceRef && toJSON/u,
+    /buildchain-ref: 675b4f2a51af7e5f2aac58011c7ede0313b2b105[\s\S]*buildchain-contract-expected-channel: alpha[\s\S]*buildchain-contract-expected-major: v3[\s\S]*publish-source-ref: \$\{\{ fromJSON\(inputs\.macos-overflow-request-json \|\| '\{\}'\)\.releaseCutSourceRef \|\| '' \}\}[\s\S]*publish-anchor-request-json: \$\{\{ fromJSON\(inputs\.macos-overflow-request-json \|\| '\{\}'\)\.releaseCutSourceRef && toJSON/u,
   );
   assert.doesNotMatch(build, /inputs\.buildchain-ref/u);
   assert.match(

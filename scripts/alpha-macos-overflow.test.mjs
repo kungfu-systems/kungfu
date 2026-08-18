@@ -474,10 +474,7 @@ test('workflow contract keeps candidates exact-source, independent, and publish-
     workflow,
     /^\s+buildchain-ref: 675b4f2a51af7e5f2aac58011c7ede0313b2b105$/mu,
   );
-  assert.match(
-    workflow,
-    /^\s+buildchain-contract-expected-channel: v3-alpha$/mu,
-  );
+  assert.match(workflow, /^\s+buildchain-contract-expected-channel: alpha$/mu);
   assert.match(workflow, /^\s+buildchain-contract-expected-major: v3$/mu);
   assert.doesNotMatch(workflow, /inputs\.buildchain-ref/u);
   assert.match(

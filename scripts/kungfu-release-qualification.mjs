@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // @ts-check
 
+import childProcess from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -68,36 +69,84 @@ export function kungfuBuildchainRuntimePolicy(policy, channel) {
       `Kungfu Buildchain publication runtime SHA is invalid for ${channel}`,
     );
   normalizeDigest(runtime.contractDigest, `${channel} contract digest`);
+  const projection = runtime.contractProjection;
   if (
-    !Array.isArray(runtime.publicationContractDigests) ||
-    runtime.publicationContractDigests.length === 0
+    projection?.schema !==
+      'kungfu.temporal-release-admission-digest-projection/v1' ||
+    projection?.authority !== 'non-authoritative' ||
+    !Array.isArray(projection?.entries) ||
+    projection.entries.length === 0 ||
+    !/^sha256:[0-9a-f]{64}$/.test(
+      String(projection?.sourceFactSetRoot || ''),
+    ) ||
+    !/^sha256:[0-9a-f]{64}$/.test(String(projection?.projectionRoot || ''))
   )
     throw new Error(
-      `Kungfu Buildchain publication contract digests are missing for ${channel}`,
-    );
-  const publicationContractDigests = runtime.publicationContractDigests.map(
-    (value) => normalizeDigest(value, `${channel} publication contract digest`),
-  );
-  if (
-    new Set(publicationContractDigests).size !==
-    publicationContractDigests.length
-  )
-    throw new Error(
-      `Kungfu Buildchain publication contract digests contain duplicates for ${channel}`,
-    );
-  if (
-    !publicationContractDigests.includes(
-      normalizeDigest(runtime.contractDigest, `${channel} contract digest`),
-    )
-  )
-    throw new Error(
-      `Kungfu Buildchain publication contract digests omit the current ${channel} contract`,
+      `Kungfu Buildchain contract projection is invalid for ${channel}`,
     );
   if (!runtime.ref || !runtime.contractLock)
     throw new Error(
       `Kungfu Buildchain runtime metadata is incomplete for ${channel}`,
     );
   return runtime;
+}
+
+function verifyContractFactSelection(root, policy, runtime, capability) {
+  const request = {
+    contract: readJson(path.resolve(root, policy.temporalAdmission.contract)),
+    admissionFacts: readJson(
+      path.resolve(root, policy.temporalAdmission.admissionFacts),
+    ),
+    compatibilityFacts: readJson(
+      path.resolve(root, policy.temporalAdmission.compatibilityFacts),
+    ),
+    currentContractLock: readJson(path.resolve(root, runtime.contractLock)),
+    channel: capability?.channel,
+    acceptedContractDigest: `sha256:${normalizeDigest(
+      capability?.contractDigest,
+      'capability.contractDigest',
+    )}`,
+    currentContractDigest: runtime.contractDigest,
+  };
+  const pythonPath = path.join(root, 'framework/core/src/python');
+  const result = childProcess.spawnSync(
+    process.env.PYTHON || 'python3',
+    [path.join(root, 'scripts/release-provenance-object.py'), 'fact-selection'],
+    {
+      cwd: root,
+      encoding: 'utf8',
+      input: JSON.stringify(request),
+      maxBuffer: 4 * 1024 * 1024,
+      env: {
+        ...process.env,
+        PYTHONPATH: process.env.PYTHONPATH
+          ? `${pythonPath}${path.delimiter}${process.env.PYTHONPATH}`
+          : pythonPath,
+      },
+    },
+  );
+  let report;
+  try {
+    report = JSON.parse(result.stdout || '{}');
+  } catch {
+    throw new Error(
+      `contract Fact selection returned invalid JSON: ${String(result.stderr || '').trim()}`,
+    );
+  }
+  if (result.status !== 0 || report.ok !== true)
+    throw new Error(
+      `Buildchain contract Fact selection rejected: ${report.receipt?.reasonCodes?.join(', ') || 'unknown'}`,
+    );
+  if (
+    report.receipt?.schema !==
+      'kungfu.temporal-release-admission-fact-selection-receipt/v1' ||
+    report.receipt?.status !== 'accepted' ||
+    report.receipt?.containsPrivatePayload !== false
+  )
+    throw new Error(
+      'Buildchain contract Fact selection receipt is not qualifying',
+    );
+  return report.receipt;
 }
 
 export function validateKungfuGateAggregate(root, aggregate, policy) {
@@ -221,19 +270,6 @@ export async function createKungfuConsumerPublicationDecision({
   exact(capability?.product, policy.publication.product, 'product');
   exact(capability?.target, policy.publication.target, 'target');
   exact(capability?.runtimeSha, runtime.publicationRuntimeSha, 'runtime SHA');
-  if (
-    !runtime.publicationContractDigests
-      .map((value) =>
-        normalizeDigest(value, 'policy.publicationContractDigests'),
-      )
-      .includes(
-        normalizeDigest(
-          capability?.contractDigest,
-          'capability.contractDigest',
-        ),
-      )
-  )
-    throw new Error('Buildchain contract digest policy mismatch');
   if (!policy.publication.channels.includes(capability?.channel))
     throw new Error('Kungfu release admission channel is not allowed');
   exact(capability?.sourceSha, gateAggregate.sourceSha, 'Gate source SHA');
@@ -252,6 +288,12 @@ export async function createKungfuConsumerPublicationDecision({
   exact(predicateId, KUNGFU_PUBLICATION_PREDICATE_ID, 'predicate id');
   if (typeof createDecision !== 'function')
     throw new Error('Buildchain consumer decision factory is required');
+  const contractFactSelection = verifyContractFactSelection(
+    root,
+    policy,
+    runtime,
+    capability,
+  );
 
   return createDecision({
     capability,
@@ -268,6 +310,7 @@ export async function createKungfuConsumerPublicationDecision({
       gateMatrixDigest: gateAggregate.matrixDigest,
       gateCount: plan.groups.flatMap((group) => group.gates).length,
       receiptCount: gateAggregate.receipts.length,
+      contractFactSelection,
     },
   });
 }

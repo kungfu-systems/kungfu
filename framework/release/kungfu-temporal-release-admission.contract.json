@@ -2,10 +2,10 @@
   "schema": "kungfu.temporal-release-admission-contract/v1",
   "id": "kungfu-temporal-release-admission",
   "status": "implemented",
-  "objective": "Admit a release only through one exact bounded path joining Buildchain compatibility proofs, Kungfu release provenance, qualification, approval, and authority.",
+  "objective": "Admit a release only through one exact bounded path joining Buildchain compatibility Facts, Kungfu release provenance, qualification, approval, and authority.",
   "maximumPathDepth": 2,
-  "defaultMode": "dual-read",
-  "rollbackMode": "legacy-exact",
+  "defaultMode": "fact-only",
+  "normalModes": ["fact-only"],
   "releaseAuthorityIdentity": "kungfu-systems/kungfu:.github/workflows/release-new-version.yml",
   "requiredReleaseSurfaces": [
     "advanced-release-candidate-promote",
@@ -26,20 +26,20 @@
     "authorityRoot"
   ],
   "factAuthority": {
-    "projection": "docs/qualification/evidence/kungfu-temporal-release-admission-facts.json",
+    "admissionFacts": "docs/qualification/evidence/kungfu-temporal-release-admission-facts.json",
+    "buildchainFacts": "docs/qualification/evidence/buildchain-compatibility-fact-projection.json",
+    "buildchainFactRegistryRoot": "sha256:232fd556a2372b29db586bbc2acbdfce6464a68c93902797ff527f75f7816c42",
+    "buildchainFactCutRoot": "sha256:f61b975d4a96c921cc4bd37fb3ed9a0596b47004fe34dc7219979d697e3707f9",
+    "buildchainFactProjectionRoot": "sha256:b275910c8047541ff2e0292a4ba7611ca8cd7905934eb7e05d3aa44db1e0bba6",
     "activeSelection": "activeProofRoots",
     "admittedDigests": "derived-from-active-proof-records",
-    "orphanPolicy": "reject"
-  },
-  "dualRead": {
-    "legacyField": "publicationContractDigests",
-    "parity": "generated-exact-set-from-active-proof-roots",
-    "mismatch": "fail-closed"
+    "orphanPolicy": "reject",
+    "pathAuthority": "exact-buildchain-Fact-roots-and-receipts"
   },
   "rollback": {
-    "switch": "KUNGFU_TEMPORAL_RELEASE_ADMISSION_MODE=legacy-exact",
-    "scope": "prior exact contract whitelist only",
-    "historicalMutation": false
+    "contract": "framework/release/kungfu-temporal-release-rollback.contract.json",
+    "normalAdmissionEligible": false,
+    "invocation": "offline-explicit-only"
   },
   "receipt": {
     "schema": "kungfu.temporal-release-admission-receipt/v1",

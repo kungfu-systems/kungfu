@@ -1057,6 +1057,8 @@ test('declared discovery routes are zero-write in a cold read-only fixture', (t)
     KUNGFU_COMPLEXITY_PROTECTED_REF: protectedRef,
     PATH: `${tools}:/usr/bin:/bin`,
   };
+  env.GITHUB_EVENT_NAME = undefined;
+  env.GITHUB_EVENT_PATH = undefined;
   env.NODE_TEST_CONTEXT = undefined;
   const cases = [
     [

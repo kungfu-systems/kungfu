@@ -110,6 +110,17 @@ test('build authority pins workflow and runtime bytes while recording channel id
     () =>
       validateBuildWorkflowAuthority(
         source.replace(
+          'buildchain-contract-expected-channel: alpha',
+          'buildchain-contract-expected-channel: v3-alpha',
+        ),
+        buildchainContract,
+      ),
+    /authority drift/u,
+  );
+  assert.throws(
+    () =>
+      validateBuildWorkflowAuthority(
+        source.replace(
           `buildchain-ref: ${shellSha}`,
           "buildchain-ref: ${{ inputs.buildchain-ref || 'v3-alpha' }}",
         ),

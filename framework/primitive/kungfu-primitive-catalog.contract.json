@@ -23,7 +23,7 @@
     },
     "incubationPassports": {
       "path": "framework/incubation/incubation-passport.registry.json",
-      "root": "sha256:828407bf65c6adb72a467622c69236d675a1fa6b3f0586f43c6429d2317f7a9c"
+      "root": "sha256:663502b6747878c2ab52adc2e6c141910ef2dbc7b0d15bbc1a0200edd293ecba"
     },
     "kfd1Contracts": {
       "path": "framework/contract/kungfu-contracts.registry.json",
@@ -1721,5 +1721,5 @@
       "artifacts": []
     }
   ],
-  "catalogRoot": "sha256:3b21be9d0303b5b0ba4e0ff2803ead74bb1cd47ffe18d4c840f43a9c77c86dad"
+  "catalogRoot": "sha256:4a9815d3be47674139c1a07002520811292e9a15148a6d951bd39bb87aee4d53"
 }

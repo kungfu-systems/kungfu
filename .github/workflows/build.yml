@@ -188,7 +188,7 @@ jobs:
       # Privileged candidate builds never execute a movable channel or a
       # workflow_dispatch override. Channel and major are metadata only.
       buildchain-ref: 675b4f2a51af7e5f2aac58011c7ede0313b2b105
-      buildchain-contract-expected-channel: v3-alpha
+      buildchain-contract-expected-channel: alpha
       buildchain-contract-expected-major: v3
       publish-source-ref: ${{ fromJSON(inputs.macos-overflow-request-json || '{}').releaseCutSourceRef || '' }}
       publish-anchor-request-json: ${{ fromJSON(inputs.macos-overflow-request-json || '{}').releaseCutSourceRef && toJSON(fromJSON(inputs.macos-overflow-request-json || '{}').releaseCutAnchorRequest) || '' }}

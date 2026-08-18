@@ -3,6 +3,7 @@
 // @ts-check
 
 import assert from 'node:assert/strict';
+import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -20,6 +21,41 @@ import { buildHumanSurfaceInventory } from './shifu-documentation-surfaces.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const readJson = (file) => JSON.parse(fs.readFileSync(file, 'utf8'));
+
+export function ensurePinnedCommitAvailable(root, commit, spawn = spawnSync) {
+  assert.match(commit, /^[0-9a-f]{40}$/u, 'invalid pinned source commit');
+  const hasCommit = () =>
+    spawn('git', ['cat-file', '-e', `${commit}^{commit}`], {
+      cwd: root,
+      stdio: 'ignore',
+    }).status === 0;
+  if (hasCommit()) return { fetched: false };
+
+  const fetched = spawn(
+    'git',
+    [
+      'fetch',
+      '--no-tags',
+      '--no-write-fetch-head',
+      '--filter=tree:0',
+      '--depth=1',
+      'origin',
+      commit,
+    ],
+    { cwd: root, encoding: 'utf8' },
+  );
+  assert.equal(
+    fetched.status,
+    0,
+    `unable to hydrate pinned source commit ${commit}`,
+  );
+  assert.equal(
+    hasCommit(),
+    true,
+    `hydration did not materialize pinned source commit ${commit}`,
+  );
+  return { fetched: true };
+}
 
 async function loadAjv2020() {
   try {
@@ -129,6 +165,13 @@ export async function checkShifuDocumentationContract(root = ROOT) {
   assert.deepEqual(validateQualificationMatrix(qualificationMatrix), []);
   const portableManifest = readJson(
     path.join(root, '.xinfa/product-atlas-bundle.json'),
+  );
+  const portableSelector = readJson(
+    path.join(root, '.xinfa/product-documentation-pack.json'),
+  );
+  ensurePinnedCommitAvailable(
+    root,
+    portableSelector.materialSource.originCommit,
   );
   assert.deepEqual(portableManifest, compilePortableBundle());
   assert.equal(verifyPortableBundle(portableManifest).valid, true);

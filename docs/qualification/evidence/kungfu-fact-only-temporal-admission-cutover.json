@@ -1,0 +1,32 @@
+{
+  "schema": "kungfu.fact-only-temporal-admission-cutover-qualification/v1",
+  "status": "passed",
+  "normalAdmissionMode": "fact-only",
+  "acceptedContractDigest": "sha256:13c4679c4ac8764c85e29693bfb59099e21e9786cc6082552198d39393467490",
+  "currentContractDigest": "sha256:29f1218350d3cf49423ffc1b78e3328c3af554c21e8c3ffd31928ea9db51a404",
+  "sourceQualificationRoot": "sha256:3b25e6437af014f29280837804124be1e0e3280b0b3fd63e83ab1f1956ced6bc",
+  "sourceAdmissionFactSetRoot": "sha256:504da3e9c9d220470791b0730b165c0c4db74b49ec9f0092a4e8cf7adafed130",
+  "sourceAdmissionReceiptRoot": "sha256:3087ee3a4e476773bec759d58ac533a9452cb652006ebccdf11957f602b18d51",
+  "sourceAdmissionPathReceiptRoot": "sha256:b82b7f44fe4493cbd1d2dbf000e86536858d405b134188da7eb33ebc567c8a0a",
+  "admissionFactSetRoot": "sha256:e23a07bee54985f1d0b8f7cba7908313dea86b6b18997099adcb0fa9e84b5871",
+  "admissionProofRoot": "sha256:12eed392ce3899eca7b995eaa3ef48a226040668b2da54212117f82372e22007",
+  "factProjectionRoot": "sha256:b275910c8047541ff2e0292a4ba7611ca8cd7905934eb7e05d3aa44db1e0bba6",
+  "factRegistryRoot": "sha256:232fd556a2372b29db586bbc2acbdfce6464a68c93902797ff527f75f7816c42",
+  "factCutRoot": "sha256:f61b975d4a96c921cc4bd37fb3ed9a0596b47004fe34dc7219979d697e3707f9",
+  "contractFactSelectionReceiptRoot": "sha256:3ac3f51601c3ffae83085fc5db7a50b0571492116b523d728e17907731e3d113",
+  "buildchainFactRoots": [
+    "sha256:50e5b6e644493ac00d5b1d83a0ec6009f9faaae1bee15e88ee8386c9ec8a775d",
+    "sha256:5664da2363bed0b45497215b60763c3be627e568eb3182af5891c23ae3875fbe",
+    "sha256:ec1c70ff70cca52ac276fab344b1c2d00c9581a8efec6d6fa37d56cb11632af1"
+  ],
+  "compatibilityPathReceiptRoots": [
+    "sha256:1867bd47991843706ed67b1277a0ad60d428d4f0e540ed6a6c35a72c8c8292e9",
+    "sha256:59a6b2bf76b76e9835b220336bc339cb72d3f7ac92c0862b7b7ea9bac811e16a",
+    "sha256:a91ecf9e0168cb7ad185c7409b887c89580a4a362a071b466aa515ed8f201f85"
+  ],
+  "digestProjectionAuthority": "non-authoritative",
+  "rollbackSealRoot": "sha256:e8de0b7a102241aa47c9273b84b65b02dd889f92fdd7b8b1295e1454f7416112",
+  "rollbackNormalAdmissionEligible": false,
+  "externalPublicationClaimed": false,
+  "qualificationRoot": "sha256:44ff0f87fe032b1e2680e547f17308b73733a39fa6813842cc5e8c4ba2a41cfc"
+}

@@ -1,0 +1,51 @@
+{
+  "schema": "kungfu.temporal-release-admission-rollback/v1",
+  "status": "sealed",
+  "normalAdmissionEligible": false,
+  "sourceFactSetRoot": "sha256:e23a07bee54985f1d0b8f7cba7908313dea86b6b18997099adcb0fa9e84b5871",
+  "invocation": {
+    "command": "./shifu rollback:temporal-release-admission --request <request.json>",
+    "mode": "offline-explicit",
+    "environmentSelection": "forbidden"
+  },
+  "scope": {
+    "decision": "verify-retained-exact-contract-inputs",
+    "publicationAuthority": false,
+    "historicalMutation": false
+  },
+  "retirement": {
+    "decision": "retain-until-v4-stable-plus-one-release-line-review",
+    "reviewAfter": "2027-08-15"
+  },
+  "digestProjections": {
+    "alpha": {
+      "schema": "kungfu.temporal-release-admission-digest-projection/v1",
+      "authority": "non-authoritative",
+      "sourceFactSetRoot": "sha256:e23a07bee54985f1d0b8f7cba7908313dea86b6b18997099adcb0fa9e84b5871",
+      "entries": [
+        {
+          "contractDigest": "sha256:13c4679c4ac8764c85e29693bfb59099e21e9786cc6082552198d39393467490",
+          "sourceProofRoot": "sha256:12eed392ce3899eca7b995eaa3ef48a226040668b2da54212117f82372e22007"
+        },
+        {
+          "contractDigest": "sha256:29f1218350d3cf49423ffc1b78e3328c3af554c21e8c3ffd31928ea9db51a404",
+          "sourceProofRoot": "sha256:27073cb22644c89d8996ad578bca65d195d9b9969b9a32ca4e10f992220b7b21"
+        }
+      ],
+      "projectionRoot": "sha256:598448c40cc084fe789e3a0cadd3fd9fc5f75a39a6208334c04530b384aa01ce"
+    },
+    "release": {
+      "schema": "kungfu.temporal-release-admission-digest-projection/v1",
+      "authority": "non-authoritative",
+      "sourceFactSetRoot": "sha256:e23a07bee54985f1d0b8f7cba7908313dea86b6b18997099adcb0fa9e84b5871",
+      "entries": [
+        {
+          "contractDigest": "sha256:8e9a161653c40611ffd76aa878ae348fc215506c1caa88347111fb122cfe7c12",
+          "sourceProofRoot": "sha256:b6a1a19c1d819171a90a7111ce69c371c72a94205db8b1bcfb925aac0c48c3af"
+        }
+      ],
+      "projectionRoot": "sha256:bf39df6594090878919e76ebff120f8a9a36af424f72e86dfa2a2f7ea93e1e03"
+    }
+  },
+  "sealRoot": "sha256:e8de0b7a102241aa47c9273b84b65b02dd889f92fdd7b8b1295e1454f7416112"
+}

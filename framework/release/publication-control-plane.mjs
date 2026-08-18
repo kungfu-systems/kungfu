@@ -127,11 +127,22 @@ export function validateBuildWorkflowAuthority(
   ];
   const buildchainRefLines =
     buildWorkflow.match(/^\s+buildchain-ref:\s*.+$/gmu) || [];
+  const expectedChannelLines =
+    buildWorkflow.match(/^\s+buildchain-contract-expected-channel:\s*.+$/gmu) ||
+    [];
+  const expectedMajorLines =
+    buildWorkflow.match(/^\s+buildchain-contract-expected-major:\s*.+$/gmu) ||
+    [];
   if (
     buildShellCalls.length !== 1 ||
     buildShellCalls[0][1] !== workflowShellSha ||
     buildchainRefLines.length !== 1 ||
     buildchainRefLines[0].trim() !== `buildchain-ref: ${runtimeSha}` ||
+    expectedChannelLines.length !== 1 ||
+    expectedChannelLines[0].trim() !==
+      'buildchain-contract-expected-channel: alpha' ||
+    expectedMajorLines.length !== 1 ||
+    expectedMajorLines[0].trim() !== 'buildchain-contract-expected-major: v3' ||
     buildWorkflow.includes('inputs.buildchain-ref') ||
     buildWorkflow.includes('kungfu-trader/workflows@v1')
   )

@@ -1748,7 +1748,7 @@
       "theme": "sealed-release-admission",
       "confidence": "high",
       "evidence_grade": "B",
-      "last_reviewed": "2026-07-15"
+      "last_reviewed": "2026-08-15"
     },
     "docs/qualification/gates/release-and-promotion.md": {
       "metadata_schema": "kungfu.document-metadata/v1",

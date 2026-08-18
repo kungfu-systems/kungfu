@@ -9,12 +9,16 @@ import sys
 
 from kungfu.release_provenance import build_candidate, build_promotion, semantic_root
 from kungfu.canonical_json import canonical_json_bytes
-from kungfu.temporal_release_admission import verify_admission
+from kungfu.temporal_release_admission import (
+    verify_admission,
+    verify_contract_selection,
+    verify_rollback,
+)
 
 ROOT = Path(__file__).resolve().parents[4]
 CONTRACT = ROOT / "framework/release/kungfu-temporal-release-admission.contract.json"
-PROOF_PROJECTION = (
-    ROOT / "docs/qualification/evidence/buildchain-compatibility-proof-projection.json"
+COMPATIBILITY_FACTS = (
+    ROOT / "docs/qualification/evidence/buildchain-compatibility-fact-projection.json"
 )
 ADMISSION_FACTS = (
     ROOT / "docs/qualification/evidence/kungfu-temporal-release-admission-facts.json"
@@ -22,6 +26,9 @@ ADMISSION_FACTS = (
 PROVENANCE_CONTRACT = ROOT / "framework/release/kungfu-release-provenance.contract.json"
 PROVENANCE_FIXTURE = ROOT / "tests/fixtures/release-provenance-object/cases.json"
 ALPHA_LOCK = ROOT / ".buildchain/alpha-contract-lock.json"
+ROLLBACK_CONTRACT = (
+    ROOT / "framework/release/kungfu-temporal-release-rollback.contract.json"
+)
 
 CURRENT = "sha256:29f1218350d3cf49423ffc1b78e3328c3af554c21e8c3ffd31928ea9db51a404"
 HISTORICAL = "sha256:13c4679c4ac8764c85e29693bfb59099e21e9786cc6082552198d39393467490"
@@ -133,11 +140,10 @@ def _case(contract_digest=CURRENT):
     return {
         "contract": _json(CONTRACT),
         "admission_facts": _json(ADMISSION_FACTS),
-        "proof_projection": _json(PROOF_PROJECTION),
+        "compatibility_facts": _json(COMPATIBILITY_FACTS),
         "release_provenance_contract": provenance_contract,
         "release_provenance": promotion,
         "current_contract_lock": _json(ALPHA_LOCK),
-        "legacy_contract_digests": [CURRENT, HISTORICAL],
         "current_contract_digest": CURRENT,
         "bindings": {
             "repository": "kungfu-systems/kungfu",
@@ -170,16 +176,14 @@ def test_direct_and_composed_paths_emit_deterministic_rooted_receipts():
     assert first["ok"], first["receipt"]["reasonCodes"]
     assert first["receipt"]["pathKind"] == "composed"
     assert first["receipt"]["pathReceipt"]["status"] == "accepted"
-    assert len(first["receipt"]["buildchainProofRoots"]) == 3
+    assert first["receipt"]["mode"] == "fact-only"
+    assert len(first["receipt"]["buildchainFactRoots"]) == 3
+    assert len(first["receipt"]["compatibilityPathReceiptRoots"]) == 3
     assert first["receipt"]["receiptRoot"].startswith("sha256:")
 
 
-def test_dual_read_mismatch_orphan_sha_and_provenance_drift_fail_closed():
+def test_fact_drift_orphan_sha_and_provenance_drift_fail_closed():
     cases = []
-    parity = _case(HISTORICAL)
-    parity["legacy_contract_digests"] = [CURRENT]
-    cases.append((parity, "legacy-generated-projection-mismatch"))
-
     orphan = _case(HISTORICAL)
     orphan["bindings"]["sourceSha"] = "not-a-sha"
     cases.append((orphan, "orphan-sha:sourceSha"))
@@ -227,10 +231,14 @@ def test_dual_read_mismatch_orphan_sha_and_provenance_drift_fail_closed():
     cases.append((ancestry, "release-provenance:git-projection-root-mismatch"))
 
     projection = _case(HISTORICAL)
-    projection["proof_projection"]["proofs"][0]["target"]["breakingDigest"] = (
-        "sha256:" + "d" * 64
-    )
-    cases.append((projection, "compatibility-proof-root-mismatch"))
+    projection["compatibility_facts"]["facts"][0]["proof"]["target"][
+        "breakingDigest"
+    ] = "sha256:" + "d" * 64
+    cases.append((projection, "buildchain-proof-root-mismatch"))
+
+    malformed_projection = _case(HISTORICAL)
+    malformed_projection["compatibility_facts"]["source"] = None
+    cases.append((malformed_projection, "buildchain-fact-source-mismatch"))
 
     proof = _case(HISTORICAL)
     proof["admission_facts"]["proofs"][0]["record"]["reason"] = "altered"
@@ -256,21 +264,102 @@ def test_dual_read_mismatch_orphan_sha_and_provenance_drift_fail_closed():
         assert report["receipt"]["receiptRoot"].startswith("sha256:")
 
 
-def test_legacy_exact_rollback_preserves_all_historical_inputs():
+def test_sealed_rollback_is_explicit_and_never_normal_admission(tmp_path):
     request = _case(HISTORICAL)
     provenance_before = deepcopy(request["release_provenance"])
-    projection_before = deepcopy(request["proof_projection"])
-    facts_before = deepcopy(request["admission_facts"])
-    request["mode"] = "legacy-exact"
-    report = verify_admission(**request)
+    rollback_before = _json(ROLLBACK_CONTRACT)
+    report = verify_rollback(
+        rollback_contract=deepcopy(rollback_before),
+        admission_contract=request["contract"],
+        admission_facts=request["admission_facts"],
+        release_provenance_contract=request["release_provenance_contract"],
+        release_provenance=request["release_provenance"],
+        bindings=request["bindings"],
+    )
     assert report["ok"]
-    assert report["receipt"]["mode"] == "legacy-exact"
-    assert report["receipt"]["pathKind"] == "direct"
-    assert report["receipt"]["buildchainProofRoots"] == []
-    assert report["receipt"]["admissionFactSetRoot"] == facts_before["factSetRoot"]
+    assert report["receipt"]["mode"] == "offline-explicit"
+    assert report["receipt"]["normalAdmissionEligible"] is False
+    assert report["receipt"]["externalPublicationClaimed"] is False
     assert request["release_provenance"] == provenance_before
-    assert request["proof_projection"] == projection_before
-    assert request["admission_facts"] == facts_before
+    assert _json(ROLLBACK_CONTRACT) == rollback_before
+
+    rollback_request = {
+        "releaseProvenance": request["release_provenance"],
+        "bindings": request["bindings"],
+    }
+    request_path = tmp_path / "rollback-request.json"
+    request_path.write_text(json.dumps(rollback_request))
+    cli = subprocess.run(
+        [
+            sys.executable,
+            ROOT / "scripts/release-provenance-object.py",
+            "rollback-admission",
+            "--request",
+            request_path,
+        ],
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert cli.returncode == 0, cli.stderr
+    assert json.loads(cli.stdout)["receipt"]["normalAdmissionEligible"] is False
+
+    normal = _case(HISTORICAL)
+    normal["mode"] = "offline-explicit"
+    rejected = verify_admission(**normal)
+    assert not rejected["ok"]
+    assert "unsupported-admission-mode" in rejected["receipt"]["reasonCodes"]
+
+
+def test_contract_selection_uses_active_admission_fact_and_buildchain_fact_paths():
+    request = _case(HISTORICAL)
+    report = verify_contract_selection(
+        contract=request["contract"],
+        admission_facts=request["admission_facts"],
+        compatibility_facts=request["compatibility_facts"],
+        current_contract_lock=request["current_contract_lock"],
+        channel=request["bindings"]["channel"],
+        accepted_contract_digest=request["bindings"]["acceptedContractDigest"],
+        current_contract_digest=request["current_contract_digest"],
+    )
+    assert report["ok"], report["receipt"]["reasonCodes"]
+    assert report["receipt"]["pathKind"] == "composed"
+    assert len(report["receipt"]["buildchainFactRoots"]) == 3
+    assert len(report["receipt"]["compatibilityPathReceiptRoots"]) == 3
+
+    drift = _case(HISTORICAL)
+    historical = next(
+        row
+        for row in drift["admission_facts"]["proofs"]
+        if row["record"]["proofId"] == "alpha-sealed-candidate-historical-contract"
+    )
+    historical["record"]["buildchainFactRoots"][0] = drift["compatibility_facts"][
+        "facts"
+    ][0]["factRoot"]
+    old_root = historical["proofRoot"]
+    historical["proofRoot"] = _content_root(historical["record"])
+    drift["admission_facts"]["activeProofRoots"] = sorted(
+        historical["proofRoot"] if root == old_root else root
+        for root in drift["admission_facts"]["activeProofRoots"]
+    )
+    body = {
+        key: value
+        for key, value in drift["admission_facts"].items()
+        if key != "factSetRoot"
+    }
+    drift["admission_facts"]["factSetRoot"] = _content_root(body)
+    rejected = verify_contract_selection(
+        contract=drift["contract"],
+        admission_facts=drift["admission_facts"],
+        compatibility_facts=drift["compatibility_facts"],
+        current_contract_lock=drift["current_contract_lock"],
+        channel=drift["bindings"]["channel"],
+        accepted_contract_digest=drift["bindings"]["acceptedContractDigest"],
+        current_contract_digest=drift["current_contract_digest"],
+    )
+    assert not rejected["ok"]
+    assert "unselected-compatibility-fact" in rejected["receipt"]["reasonCodes"]
 
 
 def test_release_consumer_python_bridge_accepts_the_exact_json_protocol():
@@ -278,11 +367,10 @@ def test_release_consumer_python_bridge_accepts_the_exact_json_protocol():
     payload = {
         "contract": request["contract"],
         "admissionFacts": request["admission_facts"],
-        "proofProjection": request["proof_projection"],
+        "compatibilityFacts": request["compatibility_facts"],
         "releaseProvenanceContract": request["release_provenance_contract"],
         "releaseProvenance": request["release_provenance"],
         "currentContractLock": request["current_contract_lock"],
-        "legacyContractDigests": request["legacy_contract_digests"],
         "currentContractDigest": request["current_contract_digest"],
         "bindings": request["bindings"],
     }
@@ -301,8 +389,8 @@ def test_release_consumer_python_bridge_accepts_the_exact_json_protocol():
     assert report["receipt"]["containsPrivatePayload"] is False
 
 
-def test_projection_contract_is_mirrored_and_bound_to_protected_buildchain_evidence():
-    projection = _json(PROOF_PROJECTION)
+def test_fact_contract_is_mirrored_and_bound_to_protected_buildchain_evidence():
+    projection = _json(COMPATIBILITY_FACTS)
     facts = _json(ADMISSION_FACTS)
     contract = _json(CONTRACT)
     mirror = _json(
@@ -311,12 +399,19 @@ def test_projection_contract_is_mirrored_and_bound_to_protected_buildchain_evide
     assert projection["source"] == {
         "repository": "kungfu-systems/buildchain",
         "protectedBase": "dev/v3/v3.0",
-        "sourceCommit": "913b5d3fc486e225cf19f6e677129434db4850a6",
-        "mergeCommit": "10745d50aa93192c06b13f76942c4c291b482518",
+        "sourceCommit": "d5fca430e1f15e0285ccf52dedfde476aeae759b",
+        "mergeCommit": "6b96bdad8d9f8ccf9275f27d9370a226a9c78465",
     }
     assert contract["maximumPathDepth"] == 2
     assert mirror == contract
-    assert contract["factAuthority"]["projection"] == str(
+    assert contract["defaultMode"] == "fact-only"
+    assert "dualRead" not in contract
+    assert "rollbackMode" not in contract
+    assert contract["factAuthority"]["admissionFacts"] == str(
         ADMISSION_FACTS.relative_to(ROOT)
     )
+    assert contract["factAuthority"]["buildchainFacts"] == str(
+        COMPATIBILITY_FACTS.relative_to(ROOT)
+    )
     assert len(facts["activeProofRoots"]) == len(facts["proofs"]) == 3
+    assert len(projection["selectedFactRoots"]) == 3
