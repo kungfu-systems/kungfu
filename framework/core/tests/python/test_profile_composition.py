@@ -588,7 +588,6 @@ def test_contract_materialization_keeps_one_world_when_head_clock_lags(
         "kungfu.dogfood-feedback.finding",
         "kungfu.dogfood-feedback.issue",
         "kungfu.dogfood-feedback.consideration",
-        "kungfu.dogfood-feedback.migration",
     ]
     assert {row["contract_world"]["root"] for row in surfaces} == {world["root"]}
 
