@@ -61,24 +61,20 @@ all platform lanes running.
 
 ### Topology-independent candidate provenance
 
-The candidate provenance v2 object accepts zero or more observed Git parents.
-Its semantic root binds an algorithm-tagged transport-neutral content root and
-explicit `derived-from`, `acknowledges`, `has-content`, `qualified-by`,
-`approved-by`, `authorized-by`, and `implements-contract` relations. Git commit
-and tree OIDs and any parent sequence are retained in a separately rooted
-`projected-as` observation; they cannot supply or override those semantic roots.
+The production authority is the local immutable Fact/Cut chain under
+`release-provenance/`. Alpha.1 and Alpha.2 are retained as exact semantic
+bodies, Versions, an explicit `acknowledges` relation, historical Cuts, and
+durable refs. Export, clean-host import, fsck, pinned-Cut replay, and rollback
+produce the same semantic roots without a repository, GitHub API, branch,
+commit ancestry, or parent order.
 
-The v1 reader remains fail-closed and byte-compatible. Migration never rewrites
-the predecessor: it emits one independently verifiable v2 successor, a rooted
-`succeeds` relation, and a migration receipt binding both object and projection
-roots. Candidate Patrol now retains the verified v2 envelope in an immutable
-artifact named by the exact candidate commit. `Release - New Version` resolves
-that exact successful patrol run, verifies the candidate commit, Git tree,
-canonical file-set digest, semantic relation roots, and non-authoritative
-projection, then supplies the unchanged envelope to promotion. It never assigns
-development Cut or prior Alpha meaning to parent positions. A manual legacy
-rehearsal may name one exact successful patrol run and remains on the unchanged
-v1 verifier. Neither path grants publication or admission-default authority.
+Candidate Patrol, Build preflight, and `Release - New Version` verify the
+checked-in portable authority before proceeding. Git SHA and tree remain exact
+transport coordinates for source checkout and binary construction; they do not
+supply historical semantics. The former candidate/promotion provenance
+dual-write and dual-read jobs are retired. Their v1/v2 contracts, objects, and
+the Alpha.2 source-lock file remain unchanged as offline historical evidence,
+not an active release route or fallback.
 
 ### Fresh GitHub-hosted functional matrix
 

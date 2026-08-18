@@ -597,10 +597,10 @@
       "destinedAuthority": {
         "layer": "L5 native runtime",
         "owner": "native journal service plus Initiative/Assignment Domain Profile",
-        "admissionAssignment": "future:kungfu-initiative-assignment-native-admission"
+        "admissionAssignment": "2026-08-16-kungfu-initiative-assignment-l5-root-admission"
       },
       "incubation": {
-        "state": "incubating",
+        "state": "admitted",
         "implementationPaths": [
           "extensions/work-control/work-control-actions/domain/work_control.py",
           "extensions/work-control/work-control-actions/domain/work_control_runtime.py",
@@ -608,12 +608,18 @@
           "extensions/work-control/contracts/world.json",
           "framework/action/action-canonical-json-v1.json",
           "framework/core/src/python/kungfu/canonical_json.py",
-          "framework/core/src/libkungfu/src/runtime/action/action_canonical_json.cpp"
+          "framework/core/src/libkungfu/src/runtime/action/action_canonical_json.cpp",
+          "framework/initiative-assignment/kungfu-initiative-assignment-root-v1.json",
+          "tests/fixtures/initiative-assignment-root/vectors.json",
+          "framework/core/src/python/kungfu/initiative_family/canonical.py",
+          "framework/core/src/libkungfu/include/kungfu/initiative_assignment_api.h",
+          "framework/core/src/libkungfu/src/runtime/profile/profile_lifecycle.cpp",
+          "framework/core/src/libkungfu/src/runtime/profile/initiative_assignment_service.cpp"
         ],
         "startedOn": "2026-07-21",
-        "deadline": "2026-08-31",
+        "deadline": null,
         "admissionTrigger": "The reusable L5 admission harness proves a native service, versioned C ABI, journal replay, and exact shared Root vectors.",
-        "currentBoundary": "The Python Domain Profile is the admitted L3 writer surface; it may not become a second persistence authority. Its compatibility-preserving Python identity preimage and libkungfu's conservative Action preimage are explicitly distinct protocols governed by one contract and vector corpus; full Initiative/Assignment Root admission remains pending. The original 2026-08-15 deadline and its 2026-08-17 bounded recovery deadline were both missed; this passport remains incubating under a final recovery deadline of 2026-08-31 without changing its admission trigger, removal condition, or non-claims."
+        "currentBoundary": "The Python Domain Profile remains the admitted L3 rules, validation, fold, and projection writer and is not a persistence authority. The L5 native service owns additive Initiative/Assignment Root admission through its versioned C ABI and native journal restart/replay receipt. Retained legacy evidence keeps its original bytes, protocol selection, and Roots without migration, recalculation, or aliasing."
       },
       "schemaOwnership": {
         "class": "profile-contract-world",
@@ -632,13 +638,18 @@
         "implementations": [
           {
             "language": "python",
-            "path": "extensions/work-control/work-control-actions/domain/work_control_runtime.py"
+            "path": "framework/core/src/python/kungfu/initiative_family/canonical.py"
+          },
+          {
+            "language": "c++",
+            "path": "framework/core/src/libkungfu/src/runtime/profile/profile_lifecycle.cpp"
           }
         ],
         "vectors": [
-          "tests/fixtures/canonical-json/vectors.json"
+          "tests/fixtures/initiative-assignment-root/vectors.json"
         ],
-        "goldenFixturePolicy": "Native admission requires a second language implementation and shared exact-Root vectors without rewriting sealed L3 evidence."
+        "admissionReceipt": "framework/incubation/fixtures/work-control-l3-admission.json",
+        "goldenFixturePolicy": "The admitted Python and C++ implementations reproduce the shared exact-Root vectors. The protected native replay receipt binds the exact source, Assignment, material bytes, platform proof, and retained historical no-rewrite evidence."
       }
     }
   ]

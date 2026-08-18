@@ -251,6 +251,7 @@
               "type": "array",
               "items": { "$ref": "#/$defs/path" }
             },
+            "admissionReceipt": { "$ref": "#/$defs/path" },
             "goldenFixturePolicy": { "type": "string", "minLength": 1 }
           }
         }

@@ -202,15 +202,16 @@ nlohmann::json execute_mutation_under_guard(const std::string &runtime_dir, cons
                                             const std::string &root_protocol) {
   const auto requested_action = text_or(input, "action", "capabilities");
   try {
-    reject_environment_identity(input);
-    auto parsed = parse_mutation_request(input, requested_action);
+    const auto admitted_input = apply_default_durable_ref_cas_admission(input);
+    reject_environment_identity(admitted_input);
+    auto parsed = parse_mutation_request(admitted_input, requested_action);
     if (const auto *rejection = std::get_if<action_failure>(&parsed)) {
       return serialize_failure(requested_action, *rejection);
     }
     auto request = std::get<mutation_request>(std::move(parsed));
     const auto action = action_name(request);
-    if (action == "ref-cas" && input.contains("durability")) {
-      validate_durable_ref_cas_admission(runtime_dir, input);
+    if (action == "ref-cas" && admitted_input.contains("durability")) {
+      validate_durable_ref_cas_admission(runtime_dir, admitted_input);
     }
     auto state = fold_kernel(runtime_dir);
     if (state.unknown_records != 0) {
@@ -219,7 +220,7 @@ nlohmann::json execute_mutation_under_guard(const std::string &runtime_dir, cons
     }
     // Request identity is committed by the receipt. Rejected requests do not
     // materialize an orphan content-store object or append a journal frame.
-    const auto request_root = metadata_root("fact-operation-request/v1", input, root_protocol);
+    const auto request_root = metadata_root("fact-operation-request/v1", admitted_input, root_protocol);
     const auto operation_id = request_id(request_root);
     const auto replay = state.receipts.find(operation_id);
     if (replay != state.receipts.end()) {
@@ -234,8 +235,8 @@ nlohmann::json execute_mutation_under_guard(const std::string &runtime_dir, cons
                                      {"write_occurred", false},
                                      {"result", {{"record_root", replay->second.record_root}}},
                                      {"receipt", operation_receipt_json(replay->second)}};
-      if (action == "ref-cas" && input.contains("durability")) {
-        const auto transition_id = required_text(input, "transition_id");
+      if (action == "ref-cas" && admitted_input.contains("durability")) {
+        const auto transition_id = required_text(admitted_input, "transition_id");
         const auto transition = state.transitions.find(transition_id);
         if (transition == state.transitions.end()) {
           return failure(action, "backend-failure", "accepted ref transition is missing during durable replay");
@@ -247,7 +248,7 @@ nlohmann::json execute_mutation_under_guard(const std::string &runtime_dir, cons
                               {"current_cut_root", transition->second.new_cut_root},
                               {"prior_revision", transition->second.expected_old_revision},
                               {"current_revision", transition->second.revision}};
-        return durably_admit_ref_cas(runtime_dir, input, response);
+        return durably_admit_ref_cas(runtime_dir, admitted_input, response);
       }
       return response;
     }
@@ -273,8 +274,8 @@ nlohmann::json execute_mutation_under_guard(const std::string &runtime_dir, cons
                                             commit.result, record, root_protocol);
         },
         commit.record);
-    if (action == "ref-cas" && input.contains("durability")) {
-      return durably_admit_ref_cas(runtime_dir, input, response);
+    if (action == "ref-cas" && admitted_input.contains("durability")) {
+      return durably_admit_ref_cas(runtime_dir, admitted_input, response);
     }
     return response;
   } catch (const fact_request_error &error) {

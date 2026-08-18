@@ -23,7 +23,7 @@
     },
     "incubationPassports": {
       "path": "framework/incubation/incubation-passport.registry.json",
-      "root": "sha256:663502b6747878c2ab52adc2e6c141910ef2dbc7b0d15bbc1a0200edd293ecba"
+      "root": "sha256:8ae1dc223e1f8b050f8f5872c9d2839dd1c6a86089314a74ca59acb209281271"
     },
     "kfd1Contracts": {
       "path": "framework/contract/kungfu-contracts.registry.json",
@@ -74,7 +74,7 @@
         "layerBoundary": "coordinate-to-semantic-substrate",
         "authority": {
           "path": "framework/fact/kungfu-fact-cut-kernel.contract.json",
-          "root": "sha256:63736a25cac825216749f971d672ab8e5ab98d2015bd1d50bc91ddf68775f8b1"
+          "root": "sha256:3072bfb66115e6fad01d0426ebc6633cf22d4fe06b9c81905fdadcfd2ac003dd"
         }
       },
       {
@@ -499,7 +499,7 @@
         "semantics": {
           "authority": {
             "path": "framework/fact/kungfu-fact-cut-kernel.contract.json",
-            "root": "sha256:63736a25cac825216749f971d672ab8e5ab98d2015bd1d50bc91ddf68775f8b1"
+            "root": "sha256:3072bfb66115e6fad01d0426ebc6633cf22d4fe06b9c81905fdadcfd2ac003dd"
           },
           "invariants": [
             {
@@ -524,7 +524,7 @@
             "refs": [
               {
                 "path": "framework/fact/kungfu-fact-cut-kernel.contract.json",
-                "root": "sha256:63736a25cac825216749f971d672ab8e5ab98d2015bd1d50bc91ddf68775f8b1"
+                "root": "sha256:3072bfb66115e6fad01d0426ebc6633cf22d4fe06b9c81905fdadcfd2ac003dd"
               },
               {
                 "path": "framework/invariant/kungfu-invariant.registry.json",
@@ -562,7 +562,7 @@
             "refs": [
               {
                 "path": "framework/fact/kungfu-fact-cut-kernel.contract.json",
-                "root": "sha256:63736a25cac825216749f971d672ab8e5ab98d2015bd1d50bc91ddf68775f8b1"
+                "root": "sha256:3072bfb66115e6fad01d0426ebc6633cf22d4fe06b9c81905fdadcfd2ac003dd"
               },
               {
                 "path": "framework/invariant/kungfu-invariant.registry.json",
@@ -629,7 +629,7 @@
             "refs": [
               {
                 "path": "framework/fact/kungfu-fact-cut-kernel.contract.json",
-                "root": "sha256:63736a25cac825216749f971d672ab8e5ab98d2015bd1d50bc91ddf68775f8b1"
+                "root": "sha256:3072bfb66115e6fad01d0426ebc6633cf22d4fe06b9c81905fdadcfd2ac003dd"
               }
             ]
           },
@@ -1033,7 +1033,7 @@
         "semantics": {
           "authority": {
             "path": "framework/fact/kungfu-fact-cut-kernel.contract.json",
-            "root": "sha256:63736a25cac825216749f971d672ab8e5ab98d2015bd1d50bc91ddf68775f8b1"
+            "root": "sha256:3072bfb66115e6fad01d0426ebc6633cf22d4fe06b9c81905fdadcfd2ac003dd"
           },
           "invariants": [
             {
@@ -1058,7 +1058,7 @@
             "refs": [
               {
                 "path": "framework/fact/kungfu-fact-cut-kernel.contract.json",
-                "root": "sha256:63736a25cac825216749f971d672ab8e5ab98d2015bd1d50bc91ddf68775f8b1"
+                "root": "sha256:3072bfb66115e6fad01d0426ebc6633cf22d4fe06b9c81905fdadcfd2ac003dd"
               },
               {
                 "path": "framework/invariant/kungfu-invariant.registry.json",
@@ -1105,7 +1105,7 @@
             "refs": [
               {
                 "path": "framework/fact/kungfu-fact-cut-kernel.contract.json",
-                "root": "sha256:63736a25cac825216749f971d672ab8e5ab98d2015bd1d50bc91ddf68775f8b1"
+                "root": "sha256:3072bfb66115e6fad01d0426ebc6633cf22d4fe06b9c81905fdadcfd2ac003dd"
               },
               {
                 "path": "tests/fixtures/fact-root-canonical/vectors.json",
@@ -1186,7 +1186,7 @@
             "refs": [
               {
                 "path": "framework/fact/kungfu-fact-cut-kernel.contract.json",
-                "root": "sha256:63736a25cac825216749f971d672ab8e5ab98d2015bd1d50bc91ddf68775f8b1"
+                "root": "sha256:3072bfb66115e6fad01d0426ebc6633cf22d4fe06b9c81905fdadcfd2ac003dd"
               }
             ]
           },
@@ -1721,5 +1721,5 @@
       "artifacts": []
     }
   ],
-  "catalogRoot": "sha256:4a9815d3be47674139c1a07002520811292e9a15148a6d951bd39bb87aee4d53"
+  "catalogRoot": "sha256:506d7957bb07db82521f3df5ad5bf647618ae752fabda783f06955ff9dcbfdb1"
 }

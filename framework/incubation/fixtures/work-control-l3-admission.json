@@ -1,0 +1,156 @@
+{
+  "schema": "kungfu.incubation-passport.admission-fixture/v1",
+  "passportId": "kungfu.work-control-l3",
+  "protectedSource": {
+    "repository": "kungfu-systems/kungfu",
+    "branch": "dev/v4/v4.0",
+    "head": "b1fcf00ce6df6c2452e69eeda1741de7b9ff9591",
+    "tree": "ec7674527cc8e0b7e1d2acb0c5d738826d481959",
+    "pullRequest": 3294,
+    "mergedAt": "2026-08-18T11:29:17Z"
+  },
+  "materials": {
+    "contract": {
+      "path": "framework/initiative-assignment/kungfu-initiative-assignment-root-v1.json",
+      "root": "sha256:a47ac871f99d49199edb33010e5c1e754766cd0df1d6c3128bd8ad49c972ce2d"
+    },
+    "vectors": {
+      "path": "tests/fixtures/initiative-assignment-root/vectors.json",
+      "root": "sha256:70f4d526c09cf3e981a094971d809e6a4550934446c65cb2512bfad1dd389711",
+      "acceptedId": "initiative-native-minimum"
+    },
+    "implementations": [
+      {
+        "language": "c++",
+        "path": "framework/core/src/libkungfu/src/runtime/profile/profile_lifecycle.cpp",
+        "root": "sha256:cfaace4238fb3f0146c649db0bc7c908852bda02b92aaa16eaa762293a89abeb"
+      },
+      {
+        "language": "python",
+        "path": "framework/core/src/python/kungfu/initiative_family/canonical.py",
+        "root": "sha256:a944fef5068cb344a8ee72f4dcd2c3b5c15d7cdbd2c90dc4e39df6e9605c25f3"
+      }
+    ],
+    "serviceContractRoot": "sha256:8c77c582060c4b3d0ab164ca90653116acef964faf5adb9fd4b091629e477a88",
+    "history": {
+      "schema": "kungfu.incubation-passport.historical-no-rewrite-evidence/v1",
+      "fixture": {
+        "path": "framework/core/tests/fixtures/assignment-family-wave-0-state-v1.json",
+        "bytesRoot": "sha256:415bd0d152123b9128e41455282f51dd46dba9c3bc6035a77427c2bf0d5d8f47",
+        "semanticRoot": "sha256:15b306c3c3ce52b4caf4a0fa0419f191d36e3a51e1cfdc54ebb2110e4aa3163a"
+      },
+      "root": "sha256:1c8b55b1dc4964887e8fb454fc31d980ba0523be854fc5ccef7df95b7f5a9109"
+    },
+    "platform": {
+      "schema": "kungfu.incubation-passport.platform-evidence/v1",
+      "repository": "kungfu-systems/kungfu",
+      "source": {
+        "head": "b1fcf00ce6df6c2452e69eeda1741de7b9ff9591",
+        "tree": "ec7674527cc8e0b7e1d2acb0c5d738826d481959"
+      },
+      "mergeGroup": {
+        "workflowRun": 32126612532,
+        "shardJobs": [
+          95679019991,
+          95679020015
+        ],
+        "aggregateJob": 95694223939,
+        "conclusion": "success"
+      },
+      "delivery": {
+        "pullRequest": 3294,
+        "mergedAt": "2026-08-18T11:29:17Z",
+        "integrationProofRoot": "sha256:95c8d59c3aa86c696b098b93aa42c24388fe29dfaaa5cc1b62d8ed2706c403f3",
+        "closeReceiptRoot": "sha256:3948ad0c626cd3efb6975633525de227ad8f41c9297954d11844fa631276e68d",
+        "finalStateRoot": "sha256:c5e3a67d64e19a44c133a62d6f2b1145d82113376cf56636ea64968225e3d768"
+      },
+      "root": "sha256:558904a5130b26210c79f47ea82547eff9128da70e30242f0a217f88c5696746"
+    },
+    "replay": {
+      "schema": "kungfu.incubation-passport.native-replay-proof/v1",
+      "provenance": {
+        "schema": "kungfu.incubation-passport.native-replay-capture-provenance/v1",
+        "captureKind": "local-exact-source",
+        "captureMethod": "public-c-abi-one-shot-harness",
+        "journalGeneratedAt": "2026-08-18T11:58:19.172351542Z",
+        "environment": {
+          "operatingSystem": "darwin",
+          "architecture": "arm64"
+        },
+        "source": {
+          "head": "b1fcf00ce6df6c2452e69eeda1741de7b9ff9591",
+          "tree": "ec7674527cc8e0b7e1d2acb0c5d738826d481959"
+        },
+        "ciExecution": null
+      },
+      "recorded": {
+        "assignmentId": "2026-08-16-kungfu-initiative-assignment-l5-root-admission",
+        "bindingRoot": "sha256:e44123a929700a9c680ac2aff8272045b3945610ed90bf5a18fefedf980870cf",
+        "computedRoot": "sha256:45e19884936d203da919bfd6ae6ac4d03cd4088c3e649a10db726c8070933f73",
+        "eventRoot": "sha256:3127c8585a4add0f41719700495b896ee24acc4875a23c918cdb17eb85582671",
+        "journal": {
+          "frameUid": 4294967296,
+          "name": "admission",
+          "namespace": "initiative-assignment"
+        },
+        "receiptIssued": false,
+        "schema": "kungfu.initiative-assignment.native-admission-record/v1",
+        "status": "recorded-awaiting-restart-replay"
+      },
+      "evidence": {
+        "assignmentId": "2026-08-16-kungfu-initiative-assignment-l5-root-admission",
+        "bindingRoot": "sha256:e44123a929700a9c680ac2aff8272045b3945610ed90bf5a18fefedf980870cf",
+        "computedRoot": "sha256:45e19884936d203da919bfd6ae6ac4d03cd4088c3e649a10db726c8070933f73",
+        "eventRoot": "sha256:3127c8585a4add0f41719700495b896ee24acc4875a23c918cdb17eb85582671",
+        "journal": {
+          "dest": 0,
+          "frameUid": 4294967296,
+          "genTimeDecimal": "1787054299172351542",
+          "name": "admission",
+          "namespace": "initiative-assignment",
+          "source": 3530105584
+        },
+        "matchedEventCount": 1,
+        "replayEvidenceRoot": "sha256:b16e200a65364670d7c97a9c0da29fdca6b48a50040d35ee4bca4148a0ded93a",
+        "schema": "kungfu.initiative-assignment.native-replay-evidence/v1"
+      },
+      "assertions": [
+        "protected CI platform evidence is independent from this local replay capture",
+        "local exact-source public C ABI harness writes the native journal before receipt",
+        "restarted context replays one exact event",
+        "receipt binds replay evidence Root"
+      ],
+      "root": "sha256:312ee353ddffb101562c2c5f3533a3e58b4223d32f3318775aa2d829407296e6"
+    }
+  },
+  "receipt": {
+    "assignmentId": "2026-08-16-kungfu-initiative-assignment-l5-root-admission",
+    "historicalNoRewriteRoot": "sha256:1c8b55b1dc4964887e8fb454fc31d980ba0523be854fc5ccef7df95b7f5a9109",
+    "implementations": {
+      "languages": [
+        "c++",
+        "python"
+      ],
+      "nativeRoot": "sha256:cfaace4238fb3f0146c649db0bc7c908852bda02b92aaa16eaa762293a89abeb",
+      "pythonRoot": "sha256:a944fef5068cb344a8ee72f4dcd2c3b5c15d7cdbd2c90dc4e39df6e9605c25f3"
+    },
+    "journal": {
+      "bindingRoot": "sha256:e44123a929700a9c680ac2aff8272045b3945610ed90bf5a18fefedf980870cf",
+      "eventRoot": "sha256:3127c8585a4add0f41719700495b896ee24acc4875a23c918cdb17eb85582671",
+      "replayEvidenceRoot": "sha256:b16e200a65364670d7c97a9c0da29fdca6b48a50040d35ee4bca4148a0ded93a"
+    },
+    "platformEvidenceRoot": "sha256:558904a5130b26210c79f47ea82547eff9128da70e30242f0a217f88c5696746",
+    "rootProtocol": {
+      "contractRoot": "sha256:a47ac871f99d49199edb33010e5c1e754766cd0df1d6c3128bd8ad49c972ce2d",
+      "root": "sha256:45e19884936d203da919bfd6ae6ac4d03cd4088c3e649a10db726c8070933f73",
+      "vectorRoot": "sha256:70f4d526c09cf3e981a094971d809e6a4550934446c65cb2512bfad1dd389711"
+    },
+    "schema": "kungfu.incubation-passport.admission-receipt/v1",
+    "serviceContractRoot": "sha256:8c77c582060c4b3d0ab164ca90653116acef964faf5adb9fd4b091629e477a88",
+    "source": {
+      "head": "b1fcf00ce6df6c2452e69eeda1741de7b9ff9591",
+      "tree": "ec7674527cc8e0b7e1d2acb0c5d738826d481959"
+    },
+    "receiptRoot": "sha256:7f2e7a309eb2007d78ad963e1a1900c29dbd6fcd5e8971a91534d816da67abb2"
+  }
+}

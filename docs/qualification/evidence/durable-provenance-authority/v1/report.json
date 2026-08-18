@@ -1,0 +1,185 @@
+{
+  "authority": {
+    "admissionRoot": "sha256:bf5688680413375d0517bcc209db6464158bd6533409cb34093393e486cae911",
+    "declarationRoot": "sha256:a5068884a64fa2b919e013176d6c3c3cfa407cdfee7e6fd790a11aa343cc6a43",
+    "releases": [
+      {
+        "cutRoot": "sha256:08727da9a69a28f46786bf195c30084f6c574cc69b65eab18287417a9a193e42",
+        "durabilityReceiptRoot": "sha256:adc03d9183cb7484df37e61f585136578343d99fe4de3efbfcae7660a6c02773",
+        "kernelReceiptRoot": "sha256:068ab99e448900b6452e2ee5948742c994e21d5768c078ce5d04792da02bca3d",
+        "objectId": "fact:f4563095b1a14077edc7dab5ec6a7759",
+        "refName": "release-provenance/v4.0.0-alpha.1",
+        "refTransitionRoot": "sha256:73733fcc27412e66a5b53a628ec265a72987791afbdf6924bf33b4f67f53757f",
+        "relationRoot": null,
+        "releaseId": "v4.0.0-alpha.1",
+        "semanticBodyRoot": "sha256:fbd442fb6d8d67f9ba2349afc03fcb908ddaabf6a3123d44a29b07d254f891fd",
+        "versionRoot": "sha256:e24a260d0239f840597bf75525fa6d1f9049204c41e917922302e601c1e49571"
+      },
+      {
+        "cutRoot": "sha256:b4e9981c43a64e471b4ba63dfd4fe915cbeeb67939f668cb48e3e9d149a1b9d6",
+        "durabilityReceiptRoot": "sha256:3f3543d86142eb997d8b4b20e19a3241891062620c193dd0e79b3b589dfa0df5",
+        "kernelReceiptRoot": "sha256:ef710cf7f5ddedfc07086528195e67380b9f7dca188992e7146f48966872e5c5",
+        "objectId": "fact:8c1705e96209b79344b1722dea6905b1",
+        "refName": "release-provenance/v4.0.0-alpha.2",
+        "refTransitionRoot": "sha256:6e41eec8ec5bdcf45106071a686b98cc783e44f5f8366a161b411e1c6d355ea3",
+        "relationRoot": "sha256:1998a20195446a62c7e47e3e99fd546418f92c3a7b6f25e5a0bfbea06cf38e3e",
+        "releaseId": "v4.0.0-alpha.2",
+        "semanticBodyRoot": "sha256:0d130dd39cd62b78bfd7fc74eba5a1c6e109a606a450fc76773d1696a9c47c4a",
+        "versionRoot": "sha256:02f71d038f24fc482f5b9a62cc794695b7da46118e3e348654f2510d12da2bf3"
+      }
+    ]
+  },
+  "contractRoot": "sha256:3b0ad61c24055b48125015d6ec78d4275db451fd2ec80a2f576e819471af7be2",
+  "defaultEnabled": true,
+  "nativeArtifact": {
+    "name": "pykungfu.cpython-313-darwin.so",
+    "root": "sha256:a1cd0dde980aac994aa55810aff28740199498f714d92e6513f583de1bb6d1fb"
+  },
+  "nonClaims": [
+    "general mutable key-value production eligibility",
+    "cross-machine consensus",
+    "high availability or replication",
+    "malicious-administrator resistance",
+    "real public release or installer activation"
+  ],
+  "portableBundle": {
+    "bundleRoot": "sha256:77b1051e5f8b99ab0137913b4ce8c16e89da09b130f44b5de4b4b36b924de2e9",
+    "copyBased": true,
+    "loss": [],
+    "path": "docs/qualification/evidence/durable-provenance-authority/v1/authority-bundle.json"
+  },
+  "predecessorEvidence": {
+    "faultCases": 11,
+    "profile": "fact-durable-admission/current-hardware-candidate-v1",
+    "reportRoot": "sha256:6c689deff4fcd0ea33abaef7b35480c45ab21349dcf4dc3cb8839200ff5b9e0c",
+    "status": "retained-input-not-active-mode"
+  },
+  "productionEligible": true,
+  "projection": {
+    "authority": "non-authoritative",
+    "projectionRoot": "sha256:45907fcbcfd00565bfbe0074958c2c0e7928a942dd3a70d99e9570fb47b64352",
+    "releases": [
+      {
+        "authority": "non-authoritative",
+        "buildRunId": "31051528142",
+        "candidateCommit": "ad7c7db6df076f969c5939728bcbe70ccd4771b3",
+        "candidateTree": "67a93b5831596555e7c29104421de3a0b97eb865",
+        "observedParents": [
+          "f9e6b0e34bcdd6407b2a18206ace7982d64de2c8",
+          "5a3aea2d8f883b6ead343d43f2d34c574c08dc9e"
+        ],
+        "releaseId": "v4.0.0-alpha.1"
+      },
+      {
+        "authority": "non-authoritative",
+        "candidateCommit": "77a66f7141143e524484a548dbba76a1ae1ecc38",
+        "candidateTree": "6f3a82c10712ec344ecefbf30d11a580aeb4f22b",
+        "observedParents": [
+          "c3938d8fc5e71578c960cc8137a853a8817b09ca",
+          "f9e6b0e34bcdd6407b2a18206ace7982d64de2c8"
+        ],
+        "releaseId": "v4.0.0-alpha.2",
+        "sourceEquivalentCommit": "c3938d8fc5e71578c960cc8137a853a8817b09ca",
+        "sourceEquivalentTree": "6f3a82c10712ec344ecefbf30d11a580aeb4f22b"
+      }
+    ],
+    "schema": "kungfu.durable-provenance-git-projection/v1"
+  },
+  "qualification": {
+    "dryRunImport": true,
+    "failureCampaigns": [
+      {
+        "error": "Fact portable bundle root mismatch",
+        "id": "tampered-root",
+        "status": "passed"
+      },
+      {
+        "error": "bundle body missing: sha256:0d130dd39cd62b78bfd7fc74eba5a1c6e109a606a450fc76773d1696a9c47c4a",
+        "id": "missing-payload",
+        "status": "passed"
+      },
+      {
+        "error": "bundle Cut graph is not closed or acyclic",
+        "id": "incomplete-backfill",
+        "status": "passed"
+      }
+    ],
+    "gitOrGitHubReads": 0,
+    "historicalCutCount": 2,
+    "normalProtectedNonPublicReleaseRehearsal": {
+      "gate": "governance.promotion-rehearsal",
+      "handMaintainedAllowlist": false,
+      "mode": "normal-protected-non-public",
+      "prooflessFallback": false,
+      "publication": false,
+      "specialPromotionRoute": false,
+      "topologyRequirement": "none"
+    },
+    "restoredCutRoot": "sha256:b4e9981c43a64e471b4ba63dfd4fe915cbeeb67939f668cb48e3e9d149a1b9d6",
+    "restoredFsckRoot": "sha256:d004eb075a80e2b9a11f894453f6bd36aa9598f7a47d9cd9052e00f2120f148b",
+    "rollback": {
+      "durable": "durable_sync",
+      "pinnedFinalCutStillQueryable": true,
+      "selectedCutRoot": "sha256:08727da9a69a28f46786bf195c30084f6c574cc69b65eab18287417a9a193e42",
+      "status": "accepted"
+    },
+    "sameTreeDifferentHistory": {
+      "flattenedProjectionPreservesSemanticRoot": true,
+      "releaseCutRootsDistinct": true,
+      "sourceContentRootsEqual": true
+    },
+    "semanticReplayEqual": true,
+    "sourceFsckRoot": "sha256:d004eb075a80e2b9a11f894453f6bd36aa9598f7a47d9cd9052e00f2120f148b"
+  },
+  "qualificationRoot": "sha256:6909d960cd054841cc734378986a0f7df096ff65293c7039b15f767035daa986",
+  "retirement": {
+    "activeModes": {
+      "dualRead": "retired",
+      "dualWrite": "retired",
+      "handMaintainedAllowlist": "retired",
+      "prooflessLegacy": "retired",
+      "topologySemantic": "retired"
+    },
+    "retainedOfflineOnly": [
+      ".buildchain/alpha-release-cut-lock.json",
+      "docs/qualification/evidence/kungfu-temporal-provenance-cutover.json",
+      "framework/release/kungfu-temporal-release-rollback.contract.json"
+    ]
+  },
+  "schema": "kungfu.durable-provenance-authority-qualification/v1",
+  "scope": "release-provenance-fact-cut-authority",
+  "source": {
+    "files": [
+      {
+        "path": "framework/release/kungfu-durable-provenance-authority.contract.json",
+        "root": "sha256:26adbbf448a1206a671fe7d6a9855edc5349e2db1fc43ce0462364c5b62faa4e"
+      },
+      {
+        "path": "docs/qualification/evidence/fact-durable-admission/current-hardware-candidate-v1/report.json",
+        "root": "sha256:4a18a41b71250cf57835016b86fb987e98bf428569eeba1034113aa2b7e64665"
+      },
+      {
+        "path": "framework/core/src/libkungfu/src/runtime/storage/fact_commit.cpp",
+        "root": "sha256:a2f1e45697311cd17ab6d1ce5a24818d87f7da29a1b8abe71f278669007de072"
+      },
+      {
+        "path": "framework/core/src/libkungfu/src/runtime/storage/fact_durable_admission.cpp",
+        "root": "sha256:b2c33fc321abf7af642030b0f130c0e5e981ccccbf85ca9cfb6bc8ce4a74e159"
+      },
+      {
+        "path": "framework/core/src/libkungfu/src/runtime/storage/fact_query.cpp",
+        "root": "sha256:12c40a801ebbb9b05f11b9055d0b46d1b5bfd431889435d84830b6ff598bfe3e"
+      },
+      {
+        "path": "framework/core/src/python/kungfu/storage/fact_kernel_integrity.py",
+        "root": "sha256:8fb9d8c314c802c7f873647c57eea25122f70368197dc160962b8e18d9c49bf8"
+      },
+      {
+        "path": "scripts/qualify-durable-provenance-authority.py",
+        "root": "sha256:476873105eb7ceae6a186888af78c8b52aa40e31a393d7bc1d29a350e95071f1"
+      }
+    ],
+    "sourceSetRoot": "sha256:7f15dea61e6fc7a2bc5188b9ebd6ceaeca4bb3ac319a68b923b506a795b4a687"
+  },
+  "status": "production-qualified"
+}

@@ -201,7 +201,7 @@
         "local-files",
         "user-consensus"
       ],
-      "period": "2026-07-20",
+      "period": "2026-08-18",
       "theme": "fact-episode-action-runtime",
       "confidence": "medium",
       "evidence_grade": "C",
@@ -287,8 +287,8 @@
       "period": "2026-07-20",
       "theme": "invariant-verification-system",
       "confidence": "high",
-      "evidence_grade": "B",
-      "last_reviewed": "2026-07-20",
+      "evidence_grade": "A",
+      "last_reviewed": "2026-08-18",
       "ai_provenance": {
         "model_family": "OpenAI GPT-5",
         "product": "Codex",
@@ -1661,8 +1661,8 @@
       "ai_provenance": {
         "model_family": "OpenAI GPT-5",
         "product": "Codex",
-        "generated_at": "2026-07-20",
-        "invisible_context_boundary": "physical power loss, independent failure domains, hidden system state, and unpublished execution evidence are not claimed"
+        "generated_at": "2026-08-18",
+        "invisible_context_boundary": "exact hidden model checkpoint, physical power loss, independent failure domains, hidden system state, and unpublished execution evidence are not claimed"
       }
     },
     "docs/qualification/fact-storage-authority.md": {
@@ -1677,16 +1677,16 @@
         "local-files",
         "official-upstream"
       ],
-      "period": "2026-07-18",
+      "period": "2026-08-18",
       "theme": "fact-storage-authority",
       "confidence": "high",
-      "evidence_grade": "B",
-      "last_reviewed": "2026-07-18",
+      "evidence_grade": "A",
+      "last_reviewed": "2026-08-18",
       "ai_provenance": {
         "model_family": "OpenAI GPT-5",
         "product": "Codex",
-        "generated_at": "2026-07-18",
-        "invisible_context_boundary": "exact internal checkpoint, hidden system state, and private production evidence are not claimed"
+        "generated_at": "2026-08-18",
+        "invisible_context_boundary": "exact hidden model checkpoint, physical power-loss behavior, distributed behavior, hidden system state, and private production evidence are not claimed"
       }
     },
     "docs/qualification/gates/build-and-runtime.md": {

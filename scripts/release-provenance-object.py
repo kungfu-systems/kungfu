@@ -64,39 +64,46 @@ def _git_blob_digests(
     unique_ids = list(dict.fromkeys(object_ids))
     if not unique_ids:
         return {}
-    process = subprocess.Popen(
+    result = subprocess.run(
         ["git", "-C", repository, "cat-file", "--batch"],
-        stdin=subprocess.PIPE,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
+        input="".join(f"{object_id}\n" for object_id in unique_ids).encode(),
+        capture_output=True,
+        check=False,
     )
-    assert process.stdin is not None
-    assert process.stdout is not None
-    process.stdin.write("".join(f"{object_id}\n" for object_id in unique_ids).encode())
-    process.stdin.close()
+    if result.returncode != 0:
+        raise ReleaseProvenanceError(
+            "source-content-read",
+            result.stderr.decode("utf-8", errors="replace").strip()
+            or "git cat-file --batch failed",
+        )
     digests: dict[str, tuple[int, str]] = {}
+    output = result.stdout
+    cursor = 0
     for expected_id in unique_ids:
-        header = process.stdout.readline().decode("ascii", errors="replace").strip()
+        header_end = output.find(b"\n", cursor)
+        if header_end < 0:
+            raise ReleaseProvenanceError(
+                "source-content-read", f"truncated git cat-file header: {expected_id}"
+            )
+        header = output[cursor:header_end].decode("ascii", errors="replace").strip()
+        cursor = header_end + 1
         fields = header.split()
         if len(fields) != 3 or fields[0] != expected_id or fields[1] != "blob":
-            process.kill()
             raise ReleaseProvenanceError(
                 "source-content-read", f"unexpected git cat-file header: {header}"
             )
         size = int(fields[2])
-        content = process.stdout.read(size)
-        if len(content) != size or process.stdout.read(1) != b"\n":
-            process.kill()
+        content = output[cursor : cursor + size]
+        cursor += size
+        if len(content) != size or output[cursor : cursor + 1] != b"\n":
             raise ReleaseProvenanceError(
                 "source-content-read", f"truncated git blob: {expected_id}"
             )
+        cursor += 1
         digests[expected_id] = (size, hashlib.sha256(content).hexdigest())
-    stderr = process.stderr.read() if process.stderr is not None else b""
-    if process.wait() != 0:
+    if cursor != len(output):
         raise ReleaseProvenanceError(
-            "source-content-read",
-            stderr.decode("utf-8", errors="replace").strip()
-            or "git cat-file --batch failed",
+            "source-content-read", "git cat-file returned unexpected trailing bytes"
         )
     return digests
 

@@ -627,10 +627,19 @@
   },
   "durableAdmission": {
     "schema": "kungfu.fact.durable-admission-contract/v1",
-    "profile": "fact-durable-admission/current-hardware-candidate-v1",
-    "activation": "explicit-ref-cas-only",
-    "defaultEnabled": false,
-    "productionEligible": false,
+    "profile": "fact-durable-admission/release-provenance-v1",
+    "activation": "default-for-release-provenance-refs",
+    "defaultRefPrefix": "release-provenance/",
+    "defaultEnabled": true,
+    "productionEligible": true,
+    "productionEligibilityScope": "release-provenance-fact-cut-authority",
+    "predecessor": {
+      "profile": "fact-durable-admission/current-hardware-candidate-v1",
+      "status": "retained-evidence-only",
+      "report": "docs/qualification/evidence/fact-durable-admission/current-hardware-candidate-v1/report.json",
+      "defaultEnabled": false,
+      "productionEligible": false
+    },
     "profiles": {
       "requested": [
         "durable_group",
@@ -713,8 +722,8 @@
     "releaseGate": {
       "gateId": "durability.contracts",
       "task": "test:durability-contract",
-      "report": "docs/qualification/evidence/fact-durable-admission/current-hardware-candidate-v1/report.json",
-      "rule": "Fail closed when contract, source, report, provider profile, qualification envelope, or fresh-reopen fault evidence drifts."
+      "report": "docs/qualification/evidence/durable-provenance-authority/v1/report.json",
+      "rule": "Fail closed when the durable provenance contract, retained bundle, source closure, provider profile, qualification envelope, clean-runtime replay, or fault evidence drifts."
     }
   },
   "ownership": {

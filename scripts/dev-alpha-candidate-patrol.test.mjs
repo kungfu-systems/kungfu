@@ -136,14 +136,14 @@ test('candidate patrol is a thin Buildchain caller with exact channel and eviden
   );
   assert.match(source, /auto-merge: true/u);
   assert.match(source, /merge-method: rebase/u);
-  assert.match(source, /name: Verify frozen Alpha Release Cut source lock/u);
-  assert.match(source, /lock=\.buildchain\/alpha-release-cut-lock\.json/u);
-  assert.match(source, /git show -s --format=%P/u);
-  assert.match(source, /legacy Alpha\.2 parent projection drifted/u);
+  assert.match(source, /name: Verify durable provenance Fact authority/u);
+  assert.match(source, /\.\/shifu check:durable-provenance-authority/u);
   assert.doesNotMatch(
     source,
-    /test "\$\(git show -s --format=%P "\$candidate_sha"\)"/u,
+    /lock=\.buildchain\/alpha-release-cut-lock\.json/u,
   );
+  assert.doesNotMatch(source, /git show -s --format=%P/u);
+  assert.doesNotMatch(source, /candidate-provenance:/u);
   assert.match(
     source,
     /needs\.release-cut-lock\.outputs\.candidate-settlement-authorized == 'true'/u,

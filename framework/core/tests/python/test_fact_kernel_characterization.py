@@ -236,7 +236,7 @@ def _durable_ref_request(
 ) -> dict:
     durability = {
         "requested_profile": requested_profile,
-        "admission_profile": "fact-durable-admission/current-hardware-candidate-v1",
+        "admission_profile": "fact-durable-admission/release-provenance-v1",
     }
     if fault is not None:
         durability["qualification_fault"] = {
@@ -261,11 +261,10 @@ def test_fact_kernel_ref_cas_durable_admission_closes_and_reconciles(
 ):
     runtime = tmp_path / "runtime"
     capability = service.fact_kernel(runtime, "capabilities")["durable_admission"]
-    assert (
-        capability["profile"] == "fact-durable-admission/current-hardware-candidate-v1"
-    )
-    assert capability["default_enabled"] is False
-    assert capability["production_eligible"] is False
+    assert capability["profile"] == "fact-durable-admission/release-provenance-v1"
+    assert capability["default_enabled"] is True
+    assert capability["production_eligible"] is True
+    assert capability["default_ref_prefix"] == "release-provenance/"
     assert capability["release_gate"] == "durability.contracts"
     cut_root = _durable_fact_cut(runtime)
     request = _durable_ref_request(
@@ -282,7 +281,11 @@ def test_fact_kernel_ref_cas_durable_admission_closes_and_reconciles(
     assert durability["achieved_profile"] == requested_profile
     assert durability["content_provider"]["profile"] == "yijinjing-file/v1"
     assert durability["content_provider"]["durability"] == "fsync-on-publish"
-    assert durability["evidence"]["production_eligible"] is False
+    assert durability["evidence"]["production_eligible"] is True
+    assert (
+        durability["evidence"]["production_eligibility_scope"]
+        == "release-provenance-fact-cut-authority"
+    )
     assert durability["content_closure_root"].startswith("sha256:")
     assert durability["authority_bundle_root"].startswith("sha256:")
     assert durability["content_closure"]["target_cut_root"] == cut_root
@@ -326,6 +329,34 @@ def test_fact_kernel_ref_cas_durable_admission_closes_and_reconciles(
     assert reconciled["status"] == "reconciled"
     assert reconciled["receipt"] == accepted["receipt"]
     assert reconciled["durability"]["achieved_profile"] == requested_profile
+
+
+def test_release_provenance_ref_defaults_to_production_durable_sync(tmp_path):
+    runtime = tmp_path / "runtime"
+    cut_root = _durable_fact_cut(runtime)
+    request = _durable_ref_request(cut_root, "alpha-2-production-default")
+    request["ref_name"] = "release-provenance/v4.0.0-alpha.2"
+    request.pop("durability")
+
+    accepted = _accepted(service.fact_kernel(runtime, "ref-cas", request))
+
+    assert accepted["durability"]["requested_profile"] == "durable_sync"
+    assert (
+        accepted["durability"]["admission_profile"]
+        == "fact-durable-admission/release-provenance-v1"
+    )
+    assert accepted["durability"]["evidence"]["production_eligible"] is True
+
+
+def test_non_provenance_ref_preserves_explicit_durability_boundary(tmp_path):
+    runtime = tmp_path / "runtime"
+    cut_root = _durable_fact_cut(runtime)
+    request = _durable_ref_request(cut_root, "ordinary-visible-ref")
+    request.pop("durability")
+
+    accepted = _accepted(service.fact_kernel(runtime, "ref-cas", request))
+
+    assert "durability" not in accepted
 
 
 def test_fact_kernel_ref_cas_rejects_unqualified_durability_before_write(tmp_path):

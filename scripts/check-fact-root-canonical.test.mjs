@@ -273,7 +273,11 @@ test('Fact mutation requests have an exact closed-field projection', () => {
   );
   assert.match(
     commitSource,
-    /parse_mutation_request\(input, requested_action\)/,
+    /const auto admitted_input = apply_default_durable_ref_cas_admission\(input\)/,
+  );
+  assert.match(
+    commitSource,
+    /parse_mutation_request\(admitted_input, requested_action\)/,
   );
   assert.match(
     commitSource,

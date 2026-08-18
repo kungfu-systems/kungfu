@@ -14,9 +14,13 @@ RocksDB is an optional runtime provider, not a kernel dependency. Python and
 Node expose thin bindings over the same C++ surface. Typed source and manifest
 catalog journals remain authority; SQLite is rebuildable projection state.
 
-This does **not** qualify a fleet storage service, sharding, object-store cold
-tiering, a general mutable KV contract, destructive retention/GC, distributed
-query, PB capacity, physical-power-loss durability, or production eligibility.
+The local immutable Fact/Cut chain is now default-enabled and production
+eligible for the narrow `release-provenance-fact-cut-authority` scope. Its
+retained bundle restores and replays Alpha history without Git or GitHub
+topology. This does **not** qualify a fleet storage service, sharding,
+object-store cold tiering, a general mutable KV contract, destructive
+retention/GC, distributed query, PB capacity, physical-power-loss durability,
+or general-purpose Fact production eligibility.
 
 ## Authority and reachability matrix
 
@@ -33,7 +37,7 @@ query, PB capacity, physical-power-loss durability, or production eligibility.
 | Fact admission | KFD-1 declaration plus journaled admission history | Initial declaration, observation, admission, correction/retraction, and historical query path implemented | [KF-ADR-019f86da-4f90-7d81-90a0-d144fc27fe03](../adr/KF-ADR-019f86da-4f90-7d81-90a0-d144fc27fe03.md); `fact_admission.h`; `test_fact_kernel_integrity.py` | Admission is not universal external truth |
 | Fact query | C++ query basis, logical plan, authority scan, and lineage | Implemented staged query surface over pinned declarations and cuts | `fact_query.h`; [KF-ADR-019f86da-4f90-7e38-b72f-ef8829e14104](../adr/KF-ADR-019f86da-4f90-7e38-b72f-ef8829e14104.md) tests | Broader SQL/distributed query qualification is separate |
 | Integrity and portability | Journal/catalog authority plus content hashes and manifests | Local fsck, bundle import/export, provider round trips, and Episode payload resolution implemented | storage and Episode tests | Not arbitrary journal repair or remote range/hash sync |
-| Durability | Typed facts and named [KF-ADR-019f86da-4f90-7ec5-a83c-99cfaee56aca](../adr/KF-ADR-019f86da-4f90-7ec5-a83c-99cfaee56aca.md) profiles | Default-off current-hardware candidate evidence exists | durability qualification and retained evidence | Physical power loss and production eligibility remain false |
+| Durability | Typed facts and named [KF-ADR-019f86da-4f90-7ec5-a83c-99cfaee56aca](../adr/KF-ADR-019f86da-4f90-7ec5-a83c-99cfaee56aca.md) profiles | `release-provenance/` refs receive default durable admission; clean-host portable replay is production-qualified for the named scope | [Fact durable admission qualification](fact-durable-admission.md); retained authority bundle and report | Physical power loss, independent failure domain, and general Fact production eligibility remain unqualified |
 
 Paths in the table are relative to `framework/core/src/libyijinjing/include/kungfu/yijinjing/`,
 `framework/core/src/libkungfu/src/`, or `framework/core/tests/` as applicable.
@@ -148,8 +152,10 @@ the other CI hosts ran.
   evidence is recorded only after review and mainline merge.
 - [KF-ADR-019f86da-4f90-7d81-90a0-d144fc27fe03](../adr/KF-ADR-019f86da-4f90-7d81-90a0-d144fc27fe03.md) is `accepted` and `implemented` for the initial KFD-1 declaration and
   admission path; broader domain scaffolding remains incremental.
-- [KF-ADR-019f86da-4f90-7ec5-a83c-99cfaee56aca](../adr/KF-ADR-019f86da-4f90-7ec5-a83c-99cfaee56aca.md) remains `accepted` and `staged`; its evidence boundary is authoritative
-  for durability claims and is not widened by content-store release inclusion.
+- [KF-ADR-019f86da-4f90-7ec5-a83c-99cfaee56aca](../adr/KF-ADR-019f86da-4f90-7ec5-a83c-99cfaee56aca.md) remains the evidence boundary for general durability claims. The
+  release-provenance successor profile adds only a scoped production
+  qualification; it does not claim physical power-loss qualification or widen
+  the underlying single-host capability.
 
 ## Reproduction
 
@@ -165,6 +171,7 @@ python -m pytest framework/core/tests/python/test_content_store_facade.py framew
 node --test framework/core/tests/storage-node-binding.test.js
 ./shifu build:core
 ./shifu test:advisory-file-lock
+./shifu check:durable-provenance-authority
 ./shifu adr:audit -- --json
 ./shifu docs:check
 ./shifu check:source
