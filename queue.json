@@ -3,7 +3,7 @@
   "contract": "kungfu-buildchain-dev-delivery-warrant-queue",
   "repository": "kungfu-systems/kungfu",
   "protectedBase": "dev/v4/v4.0",
-  "generation": 4282,
+  "generation": 4283,
   "fencingCounter": 536,
   "policy": {
     "agingSeconds": 900,
@@ -38462,8 +38462,38 @@
         "scripts/measure-dev-required-latency.mjs",
         "scripts/measure-dev-required-latency.test.mjs"
       ]
+    },
+    {
+      "repository": "kungfu-systems/kungfu",
+      "protectedBase": "dev/v4/v4.0",
+      "pullRequestNumber": 3296,
+      "assignmentRoot": "sha256:7c0ce2b216937dbaaead773e4e18eeaccb34c90d0299c5a8f69921c4461ed2f9",
+      "initiativeRoot": "sha256:bfff817933e5a5ad693e4b902a84f6cc3a251235dd7377cb4091d92f805fa7ff",
+      "sourceIdentityRoot": "sha256:4edfe056228932c72139a87953719c8b7f5a7cd0122f2697bc54bfc42a9e8997",
+      "deliveryClass": "non-native-fast",
+      "candidateId": "sha256:27ff51fcab426258532c1b1789526ae4821deb2123a7dd90a7f645ef36d9c7d1",
+      "sourceHead": "4d040283866628a03a555046a62f366da4d140a1",
+      "sourcePatchRoot": "sha256:77c516bbbffd45eeccdb4e8beae616d5fe2aee8b0efd20fc7cf4ced78485192b",
+      "sourceProofRoot": "sha256:113e75bb8ca6460a3be3d4f0a4479234363f63076eabd771322a57533e7424bf",
+      "planRoot": "sha256:a3135ab4dc762060ab2f00c3cec10c5622110f64e6129e343e8295e08af6869c",
+      "closureRoot": "sha256:ac6e52dc4778bd7be1e6224c9a526a00dc7fcdd56a84e07165a811b168158f3e",
+      "dependencyRoot": "sha256:ced9fb225392428faa76bae47781eb629383a4b21637c55dac72893b6222d8bd",
+      "toolchainRoot": "sha256:2ecb07894954a2e0de022615d4561e5ba3ae68376401941ecff77be03cd75a0f",
+      "environmentRoot": "sha256:ce8ac018bb38c00cc0f5e954dae39d921eb9437fb11314061e9628f456f39057",
+      "sourceWorkflowRunId": 32124680860,
+      "priority": "ordinary",
+      "enqueuedAt": "2026-08-18T10:11:22.115Z",
+      "updatedAt": "2026-08-18T10:11:22.115Z",
+      "attempts": 1,
+      "recoveries": 0,
+      "status": "queued",
+      "terminal": null,
+      "affectedPaths": [
+        "product/scripts/cli-surface-qualification.mjs",
+        "product/scripts/cli-surface-qualification.test.mjs"
+      ]
     }
   ],
-  "updatedAt": "2026-08-18T10:10:03.262Z",
-  "stateRoot": "sha256:94b95b8e277b0f78dbac9a2167664cbc7051d5c1f6e6e85375a873d3a693221d"
+  "updatedAt": "2026-08-18T10:11:22.115Z",
+  "stateRoot": "sha256:bf78d49379fe7201267a67f25ef6fcaf1ba2c6c03969cba7dc3a990aaaeb1f1c"
 }
