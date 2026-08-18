@@ -3,6 +3,7 @@
 // @ts-check
 
 import { spawnSync } from 'node:child_process';
+import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -12,6 +13,27 @@ const ROOT = path.resolve(HERE, '..');
 const CONTRACT_PATH = 'framework/incubation/incubation-passport.contract.json';
 const CONTRACT_SCHEMA_PATH =
   'framework/incubation/schema/incubation-passport-contract-v1.schema.json';
+const SHA256_ROOT_PATTERN = /^sha256:[0-9a-f]{64}$/u;
+const GIT_OBJECT_PATTERN = /^[0-9a-f]{40}$/u;
+const ADMISSION_FIXTURE_SCHEMA =
+  'kungfu.incubation-passport.admission-fixture/v1';
+const ADMISSION_RECEIPT_SCHEMA =
+  'kungfu.incubation-passport.admission-receipt/v1';
+const NATIVE_ADMISSION_SCHEMA =
+  'kungfu.initiative-assignment.native-admission/v1';
+const NATIVE_EVENT_SCHEMA =
+  'kungfu.initiative-assignment.native-admission-event/v1';
+const NATIVE_REPLAY_EVIDENCE_SCHEMA =
+  'kungfu.initiative-assignment.native-replay-evidence/v1';
+const NATIVE_SERVICE_CONTRACT_SCHEMA =
+  'kungfu.initiative-assignment.native-service-contract/v1';
+const HISTORY_EVIDENCE_SCHEMA =
+  'kungfu.incubation-passport.historical-no-rewrite-evidence/v1';
+const PLATFORM_EVIDENCE_SCHEMA =
+  'kungfu.incubation-passport.platform-evidence/v1';
+const REPLAY_PROOF_SCHEMA = 'kungfu.incubation-passport.native-replay-proof/v1';
+const REPLAY_CAPTURE_PROVENANCE_SCHEMA =
+  'kungfu.incubation-passport.native-replay-capture-provenance/v1';
 
 function loadJson(root, relativePath) {
   return JSON.parse(fs.readFileSync(path.join(root, relativePath), 'utf8'));
@@ -30,6 +52,648 @@ function pathExists(root, relativePath) {
     typeof relativePath === 'string' &&
     fs.existsSync(path.join(root, relativePath))
   );
+}
+
+function checkoutFile(root, relativePath) {
+  if (
+    typeof relativePath !== 'string' ||
+    relativePath.length === 0 ||
+    path.isAbsolute(relativePath)
+  )
+    return null;
+  const checkoutRoot = fs.realpathSync(root);
+  const candidate = path.resolve(checkoutRoot, relativePath);
+  if (!candidate.startsWith(`${checkoutRoot}${path.sep}`)) return null;
+  if (
+    fs.existsSync(candidate) &&
+    !fs.realpathSync(candidate).startsWith(`${checkoutRoot}${path.sep}`)
+  )
+    return null;
+  return candidate;
+}
+
+function exactKeys(value, expected) {
+  return (
+    value !== null &&
+    typeof value === 'object' &&
+    !Array.isArray(value) &&
+    Object.keys(value).sort().join('\0') === [...expected].sort().join('\0')
+  );
+}
+
+function canonicalJson(value) {
+  if (value === null || typeof value !== 'object') {
+    if (typeof value === 'number' && !Number.isSafeInteger(value)) {
+      throw new Error(
+        'canonical admission evidence only permits safe integers',
+      );
+    }
+    return JSON.stringify(value);
+  }
+  if (Array.isArray(value)) {
+    return `[${value.map((entry) => canonicalJson(entry)).join(',')}]`;
+  }
+  return `{${Object.keys(value)
+    .sort()
+    .map((key) => `${JSON.stringify(key)}:${canonicalJson(value[key])}`)
+    .join(',')}}`;
+}
+
+function protocolRoot(protocol, value) {
+  return `sha256:${crypto
+    .createHash('sha256')
+    .update(protocol)
+    .update(Buffer.from([0]))
+    .update(canonicalJson(value))
+    .digest('hex')}`;
+}
+
+function nativeServiceContractRoot() {
+  const contract = {
+    schema: NATIVE_SERVICE_CONTRACT_SCHEMA,
+    abi: { interfaceId: 6, version: 1 },
+    operations: ['contract', 'compute-root', 'admit', 'replay'],
+    journal: {
+      namespace: 'initiative-assignment',
+      name: 'admission',
+      owner: 'libkungfu/action-recorder',
+    },
+    admission: {
+      recordIsReceipt: false,
+      receiptRequiresRestartReplay: true,
+    },
+    receipt: {
+      schema: ADMISSION_RECEIPT_SCHEMA,
+      requiredBindings: [
+        'assignment',
+        'source-head',
+        'source-tree',
+        'root-protocol-contract',
+        'service-contract',
+        'vectors',
+        'python-implementation',
+        'native-implementation',
+        'platform-evidence',
+        'journal-replay',
+        'historical-no-rewrite',
+      ],
+    },
+    authorityBoundary:
+      'Python remains the L3 rules/projection writer; this service owns only L5 native Root admission.',
+  };
+  return protocolRoot(NATIVE_SERVICE_CONTRACT_SCHEMA, contract);
+}
+
+function nativeReplayEvidenceRoot(evidence) {
+  const journal = evidence?.journal;
+  const genTime = journal?.genTimeDecimal;
+  if (!/^-?(?:0|[1-9][0-9]*)$/u.test(genTime || '')) return null;
+  try {
+    const value = BigInt(genTime);
+    if (value < -(2n ** 63n) || value > 2n ** 63n - 1n) return null;
+  } catch {
+    return null;
+  }
+  const preimage =
+    `{\"assignmentId\":${canonicalJson(evidence.assignmentId)}` +
+    `,\"bindingRoot\":${canonicalJson(evidence.bindingRoot)}` +
+    `,\"computedRoot\":${canonicalJson(evidence.computedRoot)}` +
+    `,\"eventRoot\":${canonicalJson(evidence.eventRoot)}` +
+    `,\"journal\":{\"dest\":${canonicalJson(journal.dest)}` +
+    `,\"frameUid\":${canonicalJson(journal.frameUid)}` +
+    `,\"genTime\":${genTime}` +
+    `,\"name\":${canonicalJson(journal.name)}` +
+    `,\"namespace\":${canonicalJson(journal.namespace)}` +
+    `,\"source\":${canonicalJson(journal.source)}}` +
+    `,\"matchedEventCount\":${canonicalJson(evidence.matchedEventCount)}` +
+    `,\"schema\":${canonicalJson(evidence.schema)}}`;
+  return `sha256:${crypto
+    .createHash('sha256')
+    .update(NATIVE_REPLAY_EVIDENCE_SCHEMA)
+    .update(Buffer.from([0]))
+    .update(preimage)
+    .digest('hex')}`;
+}
+
+function nativeGenTimeIso(genTime) {
+  if (!/^(?:0|[1-9][0-9]*)$/u.test(genTime || '')) return null;
+  try {
+    const value = BigInt(genTime);
+    if (value > 2n ** 63n - 1n) return null;
+    const seconds = value / 1_000_000_000n;
+    const nanoseconds = value % 1_000_000_000n;
+    const date = new Date(Number(seconds) * 1000);
+    if (Number.isNaN(date.valueOf())) return null;
+    return `${date.toISOString().slice(0, -5)}.${nanoseconds
+      .toString()
+      .padStart(9, '0')}Z`;
+  } catch {
+    return null;
+  }
+}
+
+function bytesRoot(bytes) {
+  return `sha256:${crypto.createHash('sha256').update(bytes).digest('hex')}`;
+}
+
+function rootedDocumentRoot(value, field = 'root') {
+  const body = { ...value };
+  delete body[field];
+  return protocolRoot(value.schema, body);
+}
+
+function git(root, args) {
+  return spawnSync('git', args, { cwd: root, encoding: 'utf8' });
+}
+
+export function validateAdmissionFixture({ root = ROOT, passport, fixture }) {
+  const errors = [];
+  const invalid = (message) => errors.push(message);
+  const requireExact = (value, fields, label) => {
+    if (!exactKeys(value, fields)) invalid(`${label} has an invalid field set`);
+  };
+  const requireRoot = (value, label) => {
+    if (!SHA256_ROOT_PATTERN.test(value || ''))
+      invalid(`${label} is not a canonical sha256 Root`);
+  };
+  const requireFileRoot = (material, label) => {
+    const file = checkoutFile(root, material?.path);
+    if (!file || !fs.existsSync(file)) {
+      invalid(`${label} path is missing or escapes the checkout`);
+      return;
+    }
+    const actual = bytesRoot(fs.readFileSync(file));
+    if (material.root !== actual) invalid(`${label} byte Root drifted`);
+  };
+
+  requireExact(
+    fixture,
+    ['schema', 'passportId', 'protectedSource', 'materials', 'receipt'],
+    'admission fixture',
+  );
+  if (fixture?.schema !== ADMISSION_FIXTURE_SCHEMA)
+    invalid('admission fixture schema is invalid');
+  if (fixture?.passportId !== passport.id)
+    invalid('admission fixture passport id does not match');
+
+  const protectedSource = fixture?.protectedSource;
+  requireExact(
+    protectedSource,
+    ['repository', 'branch', 'head', 'tree', 'pullRequest', 'mergedAt'],
+    'protected source',
+  );
+  if (!GIT_OBJECT_PATTERN.test(protectedSource?.head || ''))
+    invalid('protected source head is not an exact Git object id');
+  if (!GIT_OBJECT_PATTERN.test(protectedSource?.tree || ''))
+    invalid('protected source tree is not an exact Git object id');
+  if (
+    !Number.isSafeInteger(protectedSource?.pullRequest) ||
+    protectedSource.pullRequest <= 0
+  )
+    invalid('protected source pull request is invalid');
+  if (
+    !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/u.test(
+      protectedSource?.mergedAt || '',
+    )
+  )
+    invalid('protected source merge time is invalid');
+
+  if (GIT_OBJECT_PATTERN.test(protectedSource?.head || '')) {
+    const tree = git(root, [
+      'rev-parse',
+      '--verify',
+      `${protectedSource.head}^{tree}`,
+    ]);
+    if (tree.status !== 0) invalid('protected source head is unavailable');
+    else if (tree.stdout.trim() !== protectedSource.tree)
+      invalid('protected source tree does not match its head');
+    const ancestry = git(root, [
+      'merge-base',
+      '--is-ancestor',
+      protectedSource.head,
+      'HEAD',
+    ]);
+    if (ancestry.status !== 0)
+      invalid('protected source head is not retained by the candidate');
+  }
+
+  const materials = fixture?.materials;
+  requireExact(
+    materials,
+    [
+      'contract',
+      'vectors',
+      'implementations',
+      'serviceContractRoot',
+      'history',
+      'platform',
+      'replay',
+    ],
+    'admission materials',
+  );
+  requireExact(materials?.contract, ['path', 'root'], 'contract material');
+  requireExact(
+    materials?.vectors,
+    ['path', 'root', 'acceptedId'],
+    'vector material',
+  );
+  requireFileRoot(materials?.contract, 'contract material');
+  requireFileRoot(materials?.vectors, 'vector material');
+  requireRoot(materials?.serviceContractRoot, 'service contract Root');
+  if (materials?.serviceContractRoot !== nativeServiceContractRoot())
+    invalid('native service contract Root is invalid');
+
+  const implementations = materials?.implementations;
+  if (!Array.isArray(implementations) || implementations.length !== 2) {
+    invalid('admission fixture requires exactly two implementation materials');
+  } else {
+    for (const entry of implementations) {
+      requireExact(
+        entry,
+        ['language', 'path', 'root'],
+        'implementation material',
+      );
+      requireFileRoot(entry, `${entry.language || 'unknown'} implementation`);
+    }
+    const fixtureBindings = implementations
+      .map((entry) => `${entry.language}\0${entry.path}`)
+      .sort();
+    const passportBindings = (passport.identityProtocol?.implementations || [])
+      .map((entry) => `${entry.language}\0${entry.path}`)
+      .sort();
+    if (fixtureBindings.join('\n') !== passportBindings.join('\n'))
+      invalid('implementation materials do not match the passport');
+  }
+  if (
+    materials?.vectors?.path !== passport.identityProtocol?.vectors?.[0] ||
+    passport.identityProtocol?.vectors?.length !== 1
+  )
+    invalid('vector material does not match the passport');
+
+  const history = materials?.history;
+  requireExact(history, ['schema', 'fixture', 'root'], 'history material');
+  if (history?.schema !== HISTORY_EVIDENCE_SCHEMA)
+    invalid('history evidence schema is invalid');
+  requireExact(
+    history?.fixture,
+    ['path', 'bytesRoot', 'semanticRoot'],
+    'history fixture',
+  );
+  requireRoot(history?.fixture?.bytesRoot, 'history byte Root');
+  requireRoot(history?.fixture?.semanticRoot, 'history semantic Root');
+  const historyFile = checkoutFile(root, history?.fixture?.path);
+  if (!historyFile || !fs.existsSync(historyFile)) {
+    invalid('history fixture path is missing or escapes the checkout');
+  } else {
+    const historyBytes = fs.readFileSync(historyFile);
+    if (bytesRoot(historyBytes) !== history.fixture.bytesRoot)
+      invalid('history fixture bytes were rewritten');
+    try {
+      const retained = JSON.parse(historyBytes.toString('utf8'));
+      if (retained.stateRoot !== history.fixture.semanticRoot)
+        invalid('history fixture semantic Root drifted');
+    } catch {
+      invalid('history fixture is not valid JSON');
+    }
+  }
+  if (history?.root !== rootedDocumentRoot(history || {}))
+    invalid('history no-rewrite Root is invalid');
+
+  const platform = materials?.platform;
+  requireExact(
+    platform,
+    ['schema', 'repository', 'source', 'mergeGroup', 'delivery', 'root'],
+    'platform evidence',
+  );
+  if (platform?.schema !== PLATFORM_EVIDENCE_SCHEMA)
+    invalid('platform evidence schema is invalid');
+  requireExact(platform?.source, ['head', 'tree'], 'platform source');
+  requireExact(
+    platform?.mergeGroup,
+    ['workflowRun', 'shardJobs', 'aggregateJob', 'conclusion'],
+    'merge-group evidence',
+  );
+  requireExact(
+    platform?.delivery,
+    [
+      'pullRequest',
+      'mergedAt',
+      'integrationProofRoot',
+      'closeReceiptRoot',
+      'finalStateRoot',
+    ],
+    'delivery evidence',
+  );
+  for (const field of [
+    'integrationProofRoot',
+    'closeReceiptRoot',
+    'finalStateRoot',
+  ])
+    requireRoot(platform?.delivery?.[field], `delivery ${field}`);
+  if (platform?.mergeGroup?.conclusion !== 'success')
+    invalid('merge-group evidence is not successful');
+  if (
+    !Number.isSafeInteger(platform?.mergeGroup?.workflowRun) ||
+    !Array.isArray(platform?.mergeGroup?.shardJobs) ||
+    platform.mergeGroup.shardJobs.length !== 2 ||
+    platform.mergeGroup.shardJobs.some(
+      (job) => !Number.isSafeInteger(job) || job <= 0,
+    ) ||
+    !Number.isSafeInteger(platform?.mergeGroup?.aggregateJob) ||
+    platform.mergeGroup.aggregateJob <= 0
+  )
+    invalid('merge-group coordinates are invalid');
+  if (
+    platform?.repository !== protectedSource?.repository ||
+    canonicalJson(platform?.source) !==
+      canonicalJson({
+        head: protectedSource?.head,
+        tree: protectedSource?.tree,
+      }) ||
+    platform?.delivery?.pullRequest !== protectedSource?.pullRequest ||
+    platform?.delivery?.mergedAt !== protectedSource?.mergedAt
+  )
+    invalid('platform evidence is detached from the protected source');
+  if (platform?.root !== rootedDocumentRoot(platform || {}))
+    invalid('platform evidence Root is invalid');
+
+  const replay = materials?.replay;
+  requireExact(
+    replay,
+    ['schema', 'provenance', 'recorded', 'evidence', 'assertions', 'root'],
+    'replay evidence',
+  );
+  if (replay?.schema !== REPLAY_PROOF_SCHEMA)
+    invalid('replay proof schema is invalid');
+  const replayProvenance = replay?.provenance;
+  requireExact(
+    replayProvenance,
+    [
+      'schema',
+      'captureKind',
+      'captureMethod',
+      'journalGeneratedAt',
+      'environment',
+      'source',
+      'ciExecution',
+    ],
+    'native replay capture provenance',
+  );
+  requireExact(
+    replayProvenance?.environment,
+    ['operatingSystem', 'architecture'],
+    'native replay capture environment',
+  );
+  requireExact(
+    replayProvenance?.source,
+    ['head', 'tree'],
+    'native replay capture source',
+  );
+  if (
+    replayProvenance?.schema !== REPLAY_CAPTURE_PROVENANCE_SCHEMA ||
+    replayProvenance?.captureKind !== 'local-exact-source' ||
+    replayProvenance?.captureMethod !== 'public-c-abi-one-shot-harness' ||
+    replayProvenance?.environment?.operatingSystem !== 'darwin' ||
+    replayProvenance?.environment?.architecture !== 'arm64'
+  )
+    invalid('native replay capture provenance is invalid');
+  if (replayProvenance?.ciExecution !== null)
+    invalid('local replay capture cannot claim CI execution coordinates');
+  if (
+    canonicalJson(replayProvenance?.source) !==
+    canonicalJson({
+      head: protectedSource?.head,
+      tree: protectedSource?.tree,
+    })
+  )
+    invalid('native replay capture is detached from the protected source');
+  const recorded = replay?.recorded;
+  requireExact(
+    recorded,
+    [
+      'assignmentId',
+      'bindingRoot',
+      'computedRoot',
+      'eventRoot',
+      'journal',
+      'receiptIssued',
+      'schema',
+      'status',
+    ],
+    'native admission record',
+  );
+  requireExact(
+    recorded?.journal,
+    ['frameUid', 'name', 'namespace'],
+    'native admission journal record',
+  );
+  for (const [label, value] of [
+    ['recorded binding Root', recorded?.bindingRoot],
+    ['recorded computed Root', recorded?.computedRoot],
+    ['recorded event Root', recorded?.eventRoot],
+  ])
+    requireRoot(value, label);
+  if (
+    recorded?.schema !==
+      'kungfu.initiative-assignment.native-admission-record/v1' ||
+    recorded?.status !== 'recorded-awaiting-restart-replay' ||
+    recorded?.receiptIssued !== false
+  )
+    invalid('native admission record claimed a receipt before replay');
+
+  const replayEvidence = replay?.evidence;
+  requireExact(
+    replayEvidence,
+    [
+      'assignmentId',
+      'bindingRoot',
+      'computedRoot',
+      'eventRoot',
+      'journal',
+      'matchedEventCount',
+      'replayEvidenceRoot',
+      'schema',
+    ],
+    'native replay evidence',
+  );
+  requireExact(
+    replayEvidence?.journal,
+    ['dest', 'frameUid', 'genTimeDecimal', 'name', 'namespace', 'source'],
+    'native replay journal evidence',
+  );
+  for (const [label, value] of [
+    ['replay binding Root', replayEvidence?.bindingRoot],
+    ['replay computed Root', replayEvidence?.computedRoot],
+    ['replay event Root', replayEvidence?.eventRoot],
+    ['native replay evidence Root', replayEvidence?.replayEvidenceRoot],
+  ])
+    requireRoot(value, label);
+  if (
+    replayEvidence?.schema !== NATIVE_REPLAY_EVIDENCE_SCHEMA ||
+    replayEvidence?.matchedEventCount !== 1 ||
+    replayEvidence?.replayEvidenceRoot !==
+      nativeReplayEvidenceRoot(replayEvidence)
+  )
+    invalid('native replay evidence Root is invalid');
+  if (
+    replayProvenance?.journalGeneratedAt !==
+    nativeGenTimeIso(replayEvidence?.journal?.genTimeDecimal)
+  )
+    invalid('native replay provenance time does not match journal genTime');
+  if (
+    recorded?.journal?.frameUid !== replayEvidence?.journal?.frameUid ||
+    recorded?.journal?.name !== replayEvidence?.journal?.name ||
+    recorded?.journal?.namespace !== replayEvidence?.journal?.namespace
+  )
+    invalid('native replay evidence is detached from the recorded frame');
+  if (!Array.isArray(replay?.assertions) || replay.assertions.length < 3)
+    invalid('replay evidence assertions are incomplete');
+  if (replay?.root !== rootedDocumentRoot(replay || {}))
+    invalid('replay evidence Root is invalid');
+
+  const receipt = fixture?.receipt;
+  requireExact(
+    receipt,
+    [
+      'assignmentId',
+      'historicalNoRewriteRoot',
+      'implementations',
+      'journal',
+      'platformEvidenceRoot',
+      'rootProtocol',
+      'schema',
+      'serviceContractRoot',
+      'source',
+      'receiptRoot',
+    ],
+    'admission receipt',
+  );
+  requireExact(
+    receipt?.implementations,
+    ['languages', 'nativeRoot', 'pythonRoot'],
+    'receipt implementations',
+  );
+  requireExact(
+    receipt?.journal,
+    ['bindingRoot', 'eventRoot', 'replayEvidenceRoot'],
+    'receipt journal',
+  );
+  requireExact(
+    receipt?.rootProtocol,
+    ['contractRoot', 'root', 'vectorRoot'],
+    'receipt Root protocol',
+  );
+  requireExact(receipt?.source, ['head', 'tree'], 'receipt source');
+  if (receipt?.schema !== ADMISSION_RECEIPT_SCHEMA)
+    invalid('admission receipt schema is invalid');
+  for (const [label, value] of [
+    ['receipt Root', receipt?.receiptRoot],
+    ['receipt historical Root', receipt?.historicalNoRewriteRoot],
+    [
+      'receipt native implementation Root',
+      receipt?.implementations?.nativeRoot,
+    ],
+    [
+      'receipt Python implementation Root',
+      receipt?.implementations?.pythonRoot,
+    ],
+    ['receipt binding Root', receipt?.journal?.bindingRoot],
+    ['receipt event Root', receipt?.journal?.eventRoot],
+    ['receipt replay Root', receipt?.journal?.replayEvidenceRoot],
+    ['receipt platform Root', receipt?.platformEvidenceRoot],
+    ['receipt contract Root', receipt?.rootProtocol?.contractRoot],
+    ['receipt identity Root', receipt?.rootProtocol?.root],
+    ['receipt vector Root', receipt?.rootProtocol?.vectorRoot],
+    ['receipt service contract Root', receipt?.serviceContractRoot],
+  ])
+    requireRoot(value, label);
+
+  if (receipt?.assignmentId !== passport.destinedAuthority?.admissionAssignment)
+    invalid('receipt Assignment does not match the passport authority');
+  if (
+    canonicalJson(receipt?.source) !==
+    canonicalJson({ head: protectedSource?.head, tree: protectedSource?.tree })
+  )
+    invalid('receipt source is detached from the protected source');
+  const byLanguage = new Map(
+    (implementations || []).map((entry) => [entry.language, entry.root]),
+  );
+  if (
+    canonicalJson(receipt?.implementations?.languages) !==
+      canonicalJson(['c++', 'python']) ||
+    receipt?.implementations?.nativeRoot !== byLanguage.get('c++') ||
+    receipt?.implementations?.pythonRoot !== byLanguage.get('python')
+  )
+    invalid('receipt implementation bindings are invalid');
+  if (
+    receipt?.historicalNoRewriteRoot !== history?.root ||
+    receipt?.platformEvidenceRoot !== platform?.root ||
+    receipt?.journal?.replayEvidenceRoot !==
+      replayEvidence?.replayEvidenceRoot ||
+    receipt?.rootProtocol?.contractRoot !== materials?.contract?.root ||
+    receipt?.rootProtocol?.vectorRoot !== materials?.vectors?.root ||
+    receipt?.serviceContractRoot !== materials?.serviceContractRoot
+  )
+    invalid('receipt material Roots do not match the admission fixture');
+
+  const vectorFile = checkoutFile(root, materials?.vectors?.path);
+  if (vectorFile && fs.existsSync(vectorFile)) {
+    try {
+      const vectors = JSON.parse(fs.readFileSync(vectorFile, 'utf8'));
+      const vector = (vectors.accepted || []).find(
+        (entry) => entry.id === materials.vectors.acceptedId,
+      );
+      if (!vector) invalid('admission vector id is absent');
+      else {
+        if (receipt?.rootProtocol?.root !== vector.expected?.root)
+          invalid('receipt identity Root does not match its vector');
+        const admission = {
+          schema: NATIVE_ADMISSION_SCHEMA,
+          assignmentId: receipt?.assignmentId,
+          rootInput: vector.input,
+          expectedRoot: vector.expected?.root,
+          serviceContractRoot: receipt?.serviceContractRoot,
+          source: receipt?.source,
+          evidence: {
+            rootProtocolContractRoot: materials?.contract?.root,
+            vectorRoot: materials?.vectors?.root,
+            pythonImplementationRoot: byLanguage.get('python'),
+            nativeImplementationRoot: byLanguage.get('c++'),
+            platformEvidenceRoot: platform?.root,
+            historicalNoRewriteRoot: history?.root,
+          },
+        };
+        const bindingRoot = protocolRoot(NATIVE_ADMISSION_SCHEMA, admission);
+        const event = {
+          admission,
+          assignmentId: receipt?.assignmentId,
+          bindingRoot,
+          computedRoot: vector.expected?.root,
+          schema: NATIVE_EVENT_SCHEMA,
+        };
+        if (
+          receipt?.journal?.bindingRoot !== bindingRoot ||
+          receipt?.journal?.eventRoot !==
+            protocolRoot(NATIVE_EVENT_SCHEMA, event) ||
+          recorded?.assignmentId !== receipt?.assignmentId ||
+          recorded?.bindingRoot !== bindingRoot ||
+          recorded?.computedRoot !== vector.expected?.root ||
+          recorded?.eventRoot !== protocolRoot(NATIVE_EVENT_SCHEMA, event) ||
+          replayEvidence?.assignmentId !== receipt?.assignmentId ||
+          replayEvidence?.bindingRoot !== bindingRoot ||
+          replayEvidence?.computedRoot !== vector.expected?.root ||
+          replayEvidence?.eventRoot !== protocolRoot(NATIVE_EVENT_SCHEMA, event)
+        )
+          invalid('native admission or event binding Root is invalid');
+      }
+    } catch {
+      invalid('admission vector corpus is invalid JSON');
+    }
+  }
+
+  if (receipt?.receiptRoot !== rootedDocumentRoot(receipt || {}, 'receiptRoot'))
+    invalid('admission receipt Root is invalid');
+  return errors;
 }
 
 function registeredSchemaPaths(authority) {
@@ -111,6 +775,7 @@ export function collectIssues({
         (entry) => entry.path,
       ),
       ...(passport.identityProtocol?.vectors || []),
+      passport.identityProtocol?.admissionReceipt,
     ];
     for (const referencedPath of new Set(referencedPaths)) {
       if (referencedPath && !pathExists(root, referencedPath)) {
@@ -198,6 +863,51 @@ export function collectIssues({
             `${passport.id} requires two implementation languages and existing golden vectors`,
           ),
         );
+      }
+      if (
+        passport.incubation?.state === 'admitted' &&
+        passport.destinedAuthority?.admissionAssignment !== null
+      ) {
+        if (passport.incubation.deadline !== null) {
+          issues.push(
+            issue(
+              `admitted-passport-deadline:${passport.id}`,
+              `${passport.id} admitted state requires deadline null`,
+            ),
+          );
+        }
+        const receiptPath = passport.identityProtocol.admissionReceipt;
+        if (!receiptPath || !pathExists(root, receiptPath)) {
+          issues.push(
+            issue(
+              `admission-receipt-invalid:${passport.id}`,
+              `${passport.id} admitted state requires an admission receipt fixture`,
+            ),
+          );
+        } else {
+          try {
+            const fixtureErrors = validateAdmissionFixture({
+              root,
+              passport,
+              fixture: loadJson(root, receiptPath),
+            });
+            if (fixtureErrors.length > 0) {
+              issues.push(
+                issue(
+                  `admission-receipt-invalid:${passport.id}`,
+                  fixtureErrors.join('; '),
+                ),
+              );
+            }
+          } catch (error) {
+            issues.push(
+              issue(
+                `admission-receipt-invalid:${passport.id}`,
+                `${passport.id} receipt could not be read: ${error.message}`,
+              ),
+            );
+          }
+        }
       }
     }
   }

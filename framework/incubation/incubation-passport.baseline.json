@@ -36,13 +36,6 @@
       "rationale": "The Rewind demo fixture is not a production fact schema and predates passport governance.",
       "expiresOn": "2026-12-31",
       "removalCondition": "Declare a fixture authority class for the Rewind demo or remove the fixture."
-    },
-    {
-      "key": "identity-protocol-conformance-missing:kungfu.work-control-l3",
-      "owner": "kungfu-core",
-      "rationale": "The admitted L3 Python Domain Profile predates the reusable native admission harness and shared Root vectors. The original 2026-08-15 deadline and its 2026-08-17 bounded recovery deadline were both missed; this exact issue remains visible only through the final 2026-08-31 recovery window.",
-      "expiresOn": "2026-08-31",
-      "removalCondition": "Qualify the native L5 admission harness with a second-language implementation and exact shared vectors, then remove this entry."
     }
   ]
 }
