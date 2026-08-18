@@ -3,7 +3,7 @@
   "contract": "kungfu-buildchain-dev-delivery-warrant-queue",
   "repository": "kungfu-systems/kungfu",
   "protectedBase": "dev/v4/v4.0",
-  "generation": 4162,
+  "generation": 4163,
   "fencingCounter": 530,
   "policy": {
     "agingSeconds": 900,
@@ -38005,8 +38005,39 @@
         "framework/initiative-assignment/kungfu-initiative-assignment-root-v1.json",
         "tests/fixtures/initiative-assignment-root/vectors.json"
       ]
+    },
+    {
+      "repository": "kungfu-systems/kungfu",
+      "protectedBase": "dev/v4/v4.0",
+      "pullRequestNumber": 3290,
+      "assignmentRoot": "sha256:429eecf85922d49cafeab5e2214f1b9a28b3f451ffcd814065b66cdad5f6f05d",
+      "initiativeRoot": "sha256:bfff817933e5a5ad693e4b902a84f6cc3a251235dd7377cb4091d92f805fa7ff",
+      "sourceIdentityRoot": "sha256:edfeb668a4d0dfc664292cfba5529569a837c05a93e45f181015e4f59bc1d257",
+      "deliveryClass": "native-proof-required",
+      "candidateId": "sha256:accfbc198f07d92661fbb62a74b68e98bc4045145a7aa5e697b89f7e2b1ea22c",
+      "sourceHead": "e92e563fca640ff665762ae9e1f10c879f90e2a3",
+      "sourcePatchRoot": "sha256:99841dcbe353af243a56f44e18019e367e580e5b5a9dd44a06e3863d551641d7",
+      "sourceProofRoot": "sha256:71c6c03e103dea7ac5c0b5c4aeb7925c38da7e6fae325652bb9fbd96343b146d",
+      "planRoot": "sha256:f49663f87c138d4a7c0b1e58ab1208d29a43590e5bcbc7f502a221ad19b4b9ea",
+      "closureRoot": "sha256:106d175611d8634c988192302b9c464ae8ba3b6d023c2cff9910e401344c9624",
+      "dependencyRoot": "sha256:7da172580effee518ca892fd86410fe4b1f9179526302fa3129843546aae48bd",
+      "toolchainRoot": "sha256:2ecb07894954a2e0de022615d4561e5ba3ae68376401941ecff77be03cd75a0f",
+      "environmentRoot": "sha256:c5f5da5917c6ff93a509a62b18d4b9b69325755c4c7229b553b0016cde83788f",
+      "sourceWorkflowRunId": 32099601616,
+      "priority": "ordinary",
+      "enqueuedAt": "2026-08-18T05:18:15.120Z",
+      "updatedAt": "2026-08-18T05:18:15.120Z",
+      "attempts": 1,
+      "recoveries": 0,
+      "status": "queued",
+      "terminal": null,
+      "affectedPaths": [
+        "framework/core/src/python/kungfu/cli/commands/storage.py",
+        "framework/core/src/python/kungfu/storage/__init__.py",
+        "framework/core/tests/python/test_query_cli.py"
+      ]
     }
   ],
-  "updatedAt": "2026-08-18T05:17:52.228Z",
-  "stateRoot": "sha256:7b3708279099073cccedb2cf0d86958f9108dcc85f4c35ab9686a590dc741091"
+  "updatedAt": "2026-08-18T05:18:15.120Z",
+  "stateRoot": "sha256:9f765776c9d642b83da150b6818f746b4c704e867a8844ceadcb90961656a14f"
 }
