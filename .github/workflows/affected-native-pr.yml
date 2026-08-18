@@ -671,11 +671,33 @@ jobs:
       - name: Ensure compiler cache tool
         if: ${{ steps.plan.outputs.required == 'true' }}
         shell: bash
+        timeout-minutes: 6
         run: |
           set -euo pipefail
           if ! command -v ccache >/dev/null 2>&1; then
-            sudo apt-get update -qq
-            sudo apt-get install -y ccache
+            installed=false
+            for attempt in 1 2; do
+              if sudo timeout --signal=TERM 120s apt-get \
+                   -o Acquire::Retries=2 \
+                   -o Acquire::http::Timeout=30 \
+                   -o Acquire::https::Timeout=30 \
+                   -o DPkg::Lock::Timeout=30 \
+                   update -qq \
+                 && sudo timeout --signal=TERM 120s apt-get \
+                   -o Acquire::Retries=2 \
+                   -o Acquire::http::Timeout=30 \
+                   -o Acquire::https::Timeout=30 \
+                   -o DPkg::Lock::Timeout=30 \
+                   install -y ccache; then
+                installed=true
+                break
+              fi
+              echo "ccache installation attempt ${attempt} failed" >&2
+            done
+            if [ "$installed" != true ]; then
+              echo "ccache installation failed after two bounded attempts" >&2
+              exit 1
+            fi
           fi
           ccache --version
       - name: Write portable cache manifests
