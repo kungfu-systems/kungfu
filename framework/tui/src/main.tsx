@@ -130,10 +130,10 @@ import {
   existingProjectWorkspaceRoot,
   resolveTuiAgentSessionExecutable,
   resolveTuiAgentSessionPaths,
+  resolveTuiCliInvocation,
   resolveTuiCliRuntime,
   resolveTuiProductPaths,
   resolveTuiRuntimeDir,
-  tuiChildCliEnvironment,
 } from './terminal-lifecycle.js';
 import {
   globalWorkContribution,
@@ -252,9 +252,6 @@ async function invokeTuiAgentSession(
     return host.invoke(request);
   }
 }
-function cliEnvironment(): NodeJS.ProcessEnv {
-  return tuiChildCliEnvironment(process.env);
-}
 function runtimePaths() {
   const { coreDir, kungfuDir, packagedBin } = resolveTuiProductPaths({
     env: process.env,
@@ -280,26 +277,7 @@ function runtimePaths() {
   };
 }
 function tuiCliInvocation(paths: ReturnType<typeof runtimePaths>) {
-  const argsPrefix = paths.sourceCliFallback
-    ? ['run', '--project', paths.coreDir, '--frozen', 'python', '-m', 'kungfu']
-    : [];
-  const env = cliEnvironment();
-  if (paths.sourceCliFallback) {
-    env.PYTHONPATH = [
-      path.join(paths.coreDir, 'src', 'python'),
-      process.env.KUNGFU_NATIVE_PATH ||
-        path.join(paths.coreDir, 'build', 'Release'),
-      env.PYTHONPATH,
-    ]
-      .filter(Boolean)
-      .join(path.delimiter);
-  }
-  return {
-    bin: paths.sourceCliFallback ? 'uv' : paths.bin,
-    env,
-    argsPrefix,
-    args: (values: string[]) => [...argsPrefix, ...values],
-  };
+  return resolveTuiCliInvocation(paths, process.env);
 }
 function bindMockAgentEnvironment(
   cli: ReturnType<typeof tuiCliInvocation>,
@@ -1067,7 +1045,7 @@ function ProductHost({
     const invocation = tuiCliInvocation(paths);
     let active = true;
     execFile(
-      paths.bin,
+      invocation.bin,
       invocation.args(['exit', 'history', 'status', '--json']),
       {
         encoding: 'utf8',
@@ -1107,16 +1085,22 @@ function ProductHost({
       return;
     let active = true;
     const paths = runtimePaths();
+    const invocation = tuiCliInvocation(paths);
     void loadCliHelpSearchDocuments({
-      bin: paths.bin,
-      env: cliEnvironment() as Record<string, string | undefined>,
+      bin: invocation.bin,
+      env: invocation.env as Record<string, string | undefined>,
       execFile: (file, args, options) =>
         new Promise<string>((resolve, reject) => {
-          execFile(file, args, options, (error, stdout, stderr) => {
-            if (error)
-              reject(new Error(describeCliFailure(error, stdout, stderr)));
-            else resolve(stdout);
-          });
+          execFile(
+            file,
+            invocation.args(args),
+            options,
+            (error, stdout, stderr) => {
+              if (error)
+                reject(new Error(describeCliFailure(error, stdout, stderr)));
+              else resolve(stdout);
+            },
+          );
         }),
     })
       .then((documents) => {
