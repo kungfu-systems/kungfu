@@ -744,6 +744,7 @@ test('merge queue delivery summary reports tail, dequeues, and waste', () => {
     dequeueCount: 0,
     dequeueReasons: {},
     repeatedValidationCount: 0,
+    ...{ runnerWaitEvidenceComplete: true, runnerWaitUpperBoundMs: 120_000 },
     runnerEvidenceComplete: true,
     wastedRunnerMs: 0,
     postDequeueRunnerMs: 0,
