@@ -24,6 +24,56 @@ def test_storage_layout_lazy_context_keeps_all_runtime_paths(tmp_path):
     assert layout["runtime_dir"] == str(home / "runtime")
 
 
+def test_storage_query_does_not_depend_on_retired_source_compatibility(tmp_path):
+    result = CliRunner().invoke(
+        kfc,
+        [
+            "--home",
+            str(tmp_path / "home"),
+            "storage",
+            "query",
+            "--table",
+            "episodes",
+            "--scope",
+            "all",
+            "--json",
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert json.loads(result.output)["row_count"] == 0
+
+
+def test_storage_query_preserves_explicit_range_filter(tmp_path, monkeypatch):
+    captured = {}
+
+    def capture_query(runtime_dir, **request):
+        captured.update(request)
+        return {"ok": True, "row_count": 0, "rows": []}
+
+    monkeypatch.setattr(storage_service, "query_projection", capture_query)
+    result = CliRunner().invoke(
+        kfc,
+        [
+            "--home",
+            str(tmp_path / "home"),
+            "storage",
+            "query",
+            "--from",
+            "2026-08-17T00:00:00Z",
+            "--until",
+            "2026-08-18T00:00:00Z",
+            "--json",
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert captured["range_filter"] == {
+        "since": "2026-08-17T00:00:00Z",
+        "until": "2026-08-18T00:00:00Z",
+    }
+
+
 def test_facts_cli_exposes_the_libkungfu_owned_contract(tmp_path):
     result = CliRunner().invoke(
         kfc, ["--home", str(tmp_path / "home"), "facts", "capabilities"]

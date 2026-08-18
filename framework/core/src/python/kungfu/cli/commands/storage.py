@@ -29,7 +29,7 @@ def _require_source(source_id):
 
 
 def _range_filter(since, from_time, until):
-    from kungfu.sources.store import build_range_filter
+    from kungfu.storage import build_range_filter
 
     try:
         return build_range_filter(since=since, from_time=from_time, until=until)
