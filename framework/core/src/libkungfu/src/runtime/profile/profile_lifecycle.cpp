@@ -2,6 +2,7 @@
 
 #include <kungfu/runtime/profile/profile_lifecycle.h>
 
+#include <kungfu/runtime/action/action_canonical_json.h>
 #include <kungfu/runtime/action_recorder.h>
 #include <kungfu/runtime/profile/profile_lifecycle_schema.h>
 #include <kungfu/runtime/profile/profile_source_contract.h>
@@ -28,6 +29,7 @@
 namespace kungfu::runtime::profile {
 
 namespace fs = std::filesystem;
+namespace action = kungfu::runtime::action;
 namespace yy = kungfu::yijinjing;
 namespace yy_storage = kungfu::yijinjing::storage;
 
@@ -920,6 +922,127 @@ nlohmann::json inspection_for_root(const profile_state &state, const std::string
 }
 
 } // namespace
+
+namespace {
+
+[[noreturn]] void root_fail(const std::string &code, const std::string &message) {
+  throw initiative_assignment_root_error(code, message);
+}
+
+bool exact_root_fields(const nlohmann::json &value, const std::set<std::string> &expected) {
+  if (!value.is_object() || value.size() != expected.size())
+    return false;
+  return std::all_of(expected.begin(), expected.end(), [&value](const auto &field) { return value.contains(field); });
+}
+
+bool root_nonempty_text(const nlohmann::json &value, const char *field) {
+  return value.contains(field) && value.at(field).is_string() && !value.at(field).get<std::string>().empty();
+}
+
+std::string root_hex(const std::string &bytes) {
+  static constexpr char digits[] = "0123456789abcdef";
+  std::string result;
+  result.reserve(bytes.size() * 2);
+  for (const auto byte : bytes) {
+    const auto value = static_cast<unsigned char>(byte);
+    result.push_back(digits[value >> 4U]);
+    result.push_back(digits[value & 0x0fU]);
+  }
+  return result;
+}
+
+void validate_root_input(const nlohmann::json &input) {
+  if (!exact_root_fields(input, {"payload", "protocolId", "subjectKey", "surfaceId"}))
+    root_fail("protocol-field-set", "Root input has an invalid field set");
+  if (!input.at("protocolId").is_string() || input.at("protocolId").get<std::string>() != INITIATIVE_ASSIGNMENT_ROOT_V1)
+    root_fail("unsupported-protocol", "Root protocol id is unsupported");
+  if (!input.at("surfaceId").is_string())
+    root_fail("invalid-domain", "Root surface is not Initiative or Assignment");
+  const auto surface = input.at("surfaceId").get<std::string>();
+  if (surface != INITIATIVE_SURFACE_V1 && surface != ASSIGNMENT_SURFACE_V1)
+    root_fail("invalid-domain", "Root surface is not Initiative or Assignment");
+  if (!input.at("subjectKey").is_string() || input.at("subjectKey").get<std::string>().empty())
+    root_fail("invalid-subject", "subjectKey must be a non-empty string");
+
+  const auto &payload = input.at("payload");
+  if (!exact_root_fields(payload, {"links", "record", "source"}))
+    root_fail("invalid-payload-field-set", "payload has an invalid field set");
+  const auto &record = payload.at("record");
+  if (!record.is_object())
+    root_fail("invalid-record", "payload.record must be an object");
+  const auto identity_field = surface == INITIATIVE_SURFACE_V1 ? "initiative_id" : "assignment_id";
+  if (!root_nonempty_text(record, identity_field) ||
+      (surface == ASSIGNMENT_SURFACE_V1 && !root_nonempty_text(record, "initiative_id")))
+    root_fail("invalid-record", "record identity fields must be non-empty strings");
+  const auto subject = input.at("subjectKey").get<std::string>();
+  if (subject != "kungfu:" + record.at(identity_field).get<std::string>())
+    root_fail("invalid-subject", "subjectKey does not match the record identity");
+
+  const auto &source = payload.at("source");
+  const std::set<std::string> required_source = {"authority_mode", "payload_hash", "source_id", "source_time"};
+  const std::set<std::string> allowed_source = {
+      "actor",        "authority_mode", "import_episode_id", "import_episode_root", "import_id",   "kind",
+      "payload_hash", "repo_head",      "source_id",         "source_path",         "source_time", "storage_source_id"};
+  if (!source.is_object() || !std::all_of(required_source.begin(), required_source.end(),
+                                          [&source](const auto &field) { return source.contains(field); }))
+    root_fail("invalid-source-field-set", "payload.source has an invalid field set");
+  for (const auto &[key, item] : source.items()) {
+    if (!allowed_source.contains(key))
+      root_fail("invalid-source-field-set", "payload.source has an invalid field set");
+    if (!item.is_string())
+      root_fail("invalid-source", "source fields must be strings");
+  }
+  if (!std::all_of(required_source.begin(), required_source.end(),
+                   [&source](const auto &field) { return root_nonempty_text(source, field.c_str()); }))
+    root_fail("invalid-source", "required source fields must be non-empty strings");
+  static const std::regex root_pattern("sha256:[0-9a-f]{64}");
+  if (!std::regex_match(source.at("payload_hash").get<std::string>(), root_pattern))
+    root_fail("invalid-source", "source.payload_hash must be a sha256 Root");
+
+  const auto &links = payload.at("links");
+  if (!links.is_object() || !links.contains("initiative_id") || links.empty() || links.size() > 2)
+    root_fail("invalid-links-field-set", "payload.links has an invalid field set");
+  for (const auto &[key, item] : links.items()) {
+    if (key != "initiative_id" && key != "assignment_id")
+      root_fail("invalid-links-field-set", "payload.links has an invalid field set");
+    if (!item.is_string() || item.get<std::string>().empty())
+      root_fail("invalid-links", "link fields must be non-empty strings");
+  }
+  if (links.at("initiative_id").get<std::string>() != "kungfu:" + record.at("initiative_id").get<std::string>())
+    root_fail("invalid-links", "initiative link does not match the record");
+  if (links.contains("assignment_id") && links.at("assignment_id").get<std::string>() != subject)
+    root_fail("invalid-links", "assignment link does not match subjectKey");
+}
+
+} // namespace
+
+nlohmann::json compute_initiative_assignment_root(const nlohmann::json &input) {
+  validate_root_input(input);
+  std::string canonical;
+  try {
+    canonical = action::action_canonical_json({{"payload", input.at("payload")},
+                                               {"subjectKey", input.at("subjectKey")},
+                                               {"surfaceId", input.at("surfaceId")}});
+  } catch (const action::canonical_json_error &error) {
+    throw initiative_assignment_root_error(error.code(), error.what());
+  }
+  std::string preimage(INITIATIVE_ASSIGNMENT_ROOT_V1);
+  preimage.push_back('\0');
+  preimage += canonical;
+  return {{"canonicalHex", root_hex(canonical)}, {"preimageHex", root_hex(preimage)}, {"root", content_root(preimage)}};
+}
+
+nlohmann::json verify_initiative_assignment_root(const nlohmann::json &input, const std::string &canonical_hex,
+                                                 const std::string &preimage_hex, const std::string &root) {
+  const auto evidence = compute_initiative_assignment_root(input);
+  if (canonical_hex != evidence.at("canonicalHex").get<std::string>())
+    root_fail("canonical-byte-mismatch", "claimed canonical bytes do not match");
+  if (preimage_hex != evidence.at("preimageHex").get<std::string>())
+    root_fail("preimage-byte-mismatch", "claimed preimage bytes do not match");
+  if (root != evidence.at("root").get<std::string>())
+    root_fail("root-mismatch", "claimed Root does not match");
+  return evidence;
+}
 
 nlohmann::json profile_lifecycle_contract() {
   return {{"schema", PROFILE_LIFECYCLE_CONTRACT_V1},

@@ -1,0 +1,107 @@
+{
+  "schema": "kungfu.root-protocol.contract/v1",
+  "protocolId": "kungfu.initiative-assignment.root/v1",
+  "rootAlgorithm": "sha256",
+  "rootFormat": "sha256:<64-lowercase-hex>",
+  "canonicalJsonProtocol": "kungfu.action.canonical-json/v1",
+  "inputFields": [
+    "protocolId",
+    "surfaceId",
+    "subjectKey",
+    "payload"
+  ],
+  "preimage": {
+    "segments": [
+      "UTF-8(protocolId)",
+      "00",
+      "UTF-8(ActionCanonicalJson({payload,subjectKey,surfaceId}))"
+    ],
+    "objectFields": [
+      "payload",
+      "subjectKey",
+      "surfaceId"
+    ],
+    "domainSeparation": "The versioned protocol id and NUL byte separate this Root from every unversioned L3 hash; surfaceId separates Initiative from Assignment within the protocol."
+  },
+  "surfaces": {
+    "kungfu.initiative-assignment.initiative": {
+      "recordIdentityField": "initiative_id",
+      "requiredRecordFields": [
+        "initiative_id"
+      ],
+      "requiredLinkFields": [
+        "initiative_id"
+      ],
+      "subjectRule": "subjectKey == 'kungfu:' + payload.record.initiative_id"
+    },
+    "kungfu.initiative-assignment.assignment": {
+      "recordIdentityField": "assignment_id",
+      "requiredRecordFields": [
+        "assignment_id",
+        "initiative_id"
+      ],
+      "requiredLinkFields": [
+        "initiative_id"
+      ],
+      "subjectRule": "subjectKey == 'kungfu:' + payload.record.assignment_id"
+    }
+  },
+  "payload": {
+    "fields": [
+      "record",
+      "source",
+      "links"
+    ],
+    "sourceRequiredFields": [
+      "authority_mode",
+      "source_id",
+      "source_time",
+      "payload_hash"
+    ],
+    "sourceOptionalFields": [
+      "storage_source_id",
+      "kind",
+      "source_path",
+      "repo_head",
+      "import_id",
+      "import_episode_id",
+      "import_episode_root",
+      "actor"
+    ],
+    "linkFields": [
+      "initiative_id",
+      "assignment_id"
+    ]
+  },
+  "errors": [
+    "protocol-field-set",
+    "unsupported-protocol",
+    "invalid-domain",
+    "invalid-subject",
+    "invalid-payload-field-set",
+    "invalid-record",
+    "invalid-source-field-set",
+    "invalid-source",
+    "invalid-links-field-set",
+    "invalid-links",
+    "canonical-float-unsupported",
+    "canonical-integer-range",
+    "canonical-invalid-unicode",
+    "canonical-byte-mismatch",
+    "preimage-byte-mismatch",
+    "root-mismatch"
+  ],
+  "historyBoundary": {
+    "legacyProtocol": "kungfu.python-identity.canonical-json/v1 plus unprefixed SHA-256",
+    "legacyAuthority": "extensions/work-control/work-control-actions/domain/work_control_runtime.py",
+    "rule": "Every Root sealed before native admission remains byte-for-byte authoritative. This protocol is additive and MUST NOT recalculate, migrate, alias, or replace a retained legacy Root.",
+    "readerRule": "Readers select the protocol from retained evidence or an explicit versioned field; absence means the legacy protocol, never an inferred upgrade."
+  },
+  "conformance": {
+    "vectors": "tests/fixtures/initiative-assignment-root/vectors.json",
+    "implementations": [
+      "framework/core/src/python/kungfu/initiative_family/canonical.py",
+      "framework/core/src/libkungfu/src/runtime/profile/profile_lifecycle.cpp"
+    ]
+  }
+}

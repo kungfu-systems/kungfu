@@ -209,7 +209,7 @@ if(KUNGFU_WITH_CORE_TESTS)
   target_compile_features(kungfu_crash_recovery_tests PRIVATE cxx_std_20)
   add_test(NAME kungfu_crash_recovery_tests COMMAND kungfu_crash_recovery_tests)
 
-  add_executable(kungfu_profile_lifecycle_tests tests/profile_lifecycle_tests.cpp)
+  add_executable(kungfu_profile_lifecycle_tests tests/profile_lifecycle_tests.cpp tests/initiative_assignment_root_tests.cpp)
   target_link_libraries(kungfu_profile_lifecycle_tests PRIVATE ${LIBKUNGFU_NAME} kungfu_compile_contract Threads::Threads)
   target_compile_features(kungfu_profile_lifecycle_tests PRIVATE cxx_std_20)
   add_test(NAME kungfu_profile_lifecycle_tests COMMAND kungfu_profile_lifecycle_tests)
