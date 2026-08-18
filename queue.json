@@ -3,7 +3,7 @@
   "contract": "kungfu-buildchain-dev-delivery-warrant-queue",
   "repository": "kungfu-systems/kungfu",
   "protectedBase": "dev/v4/v4.0",
-  "generation": 4445,
+  "generation": 4446,
   "fencingCounter": 545,
   "policy": {
     "agingSeconds": 900,
@@ -39330,8 +39330,43 @@
         "scripts/source-acceptance.mjs",
         "scripts/verify-alpha-release-cut-lock.test.mjs"
       ]
+    },
+    {
+      "repository": "kungfu-systems/kungfu",
+      "protectedBase": "dev/v4/v4.0",
+      "pullRequestNumber": 3304,
+      "assignmentRoot": "sha256:46ea46048666f8a4d0a9b481d8e87c98ce1d4f36b7e73d91b08737724b7fc72d",
+      "initiativeRoot": "sha256:bfff817933e5a5ad693e4b902a84f6cc3a251235dd7377cb4091d92f805fa7ff",
+      "sourceIdentityRoot": "sha256:f021a56d1e82a59f04bfa345a4f6105625a6e5aa62c225da961228421d5ad0b8",
+      "deliveryClass": "native-proof-required",
+      "identitySemantics": "chained-attempt-v2",
+      "predecessorCandidateId": "sha256:a2eba361e4d92198025fa4deee4068a0089abe2025ac280aa057795e4d6b0a92",
+      "candidateId": "sha256:e39947b8134d8b19d056acc4eb99a7946fbe5e59f41e05b500b4c38ace839f95",
+      "sourceHead": "f35c6c74320d2274da25e165586bd5c1f8d5df2b",
+      "sourcePatchRoot": "sha256:964fa1cb2ecf48ee2640b97505fa2dd766d4e611dceca144664b2e86974c49b8",
+      "sourceProofRoot": "sha256:e71d4c1ca23f9f3b5872ecc3def73fd7d6417c72f5f328f91272b2a42c0e87a1",
+      "planRoot": "sha256:42990c55a507b53b86c686dcbfbf5d1e2e4c60cb1cf31089becfa084033d990a",
+      "closureRoot": "sha256:106d175611d8634c988192302b9c464ae8ba3b6d023c2cff9910e401344c9624",
+      "dependencyRoot": "sha256:61ba52c31e4bc04f99f5dd04a2b9c5f3f895aebfe40aa7c6f04e40f34eefad16",
+      "toolchainRoot": "sha256:2ecb07894954a2e0de022615d4561e5ba3ae68376401941ecff77be03cd75a0f",
+      "environmentRoot": "sha256:c5f5da5917c6ff93a509a62b18d4b9b69325755c4c7229b553b0016cde83788f",
+      "sourceWorkflowRunId": 32165583761,
+      "priority": "ordinary",
+      "enqueuedAt": "2026-08-18T18:21:26.822Z",
+      "updatedAt": "2026-08-18T18:21:26.822Z",
+      "attempts": 1,
+      "recoveries": 0,
+      "status": "queued",
+      "terminal": null,
+      "affectedPaths": [
+        ".github/workflows/affected-native-pr.yml",
+        "docs/qualification/gates/workflow-authority.json",
+        "framework/core/tests/python/test_agent_profile_sdk.py",
+        "framework/core/tests/python/test_profile_composition.py",
+        "framework/release/publication-surfaces.json"
+      ]
     }
   ],
-  "updatedAt": "2026-08-18T18:14:59.399Z",
-  "stateRoot": "sha256:8f73de9e14de6605707fe41376b3e2c250d3dceb0a558ae1d93130ae7d11d754"
+  "updatedAt": "2026-08-18T18:21:26.822Z",
+  "stateRoot": "sha256:94bb27d1c5820234c2e11e13cbc7fdb5ce9b4f160c4fcb468a7836d99c59b7a5"
 }
