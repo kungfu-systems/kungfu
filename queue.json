@@ -3,7 +3,7 @@
   "contract": "kungfu-buildchain-dev-delivery-warrant-queue",
   "repository": "kungfu-systems/kungfu",
   "protectedBase": "dev/v4/v4.0",
-  "generation": 4540,
+  "generation": 4541,
   "fencingCounter": 551,
   "policy": {
     "agingSeconds": 900,
@@ -39517,8 +39517,39 @@
         "framework/core/src/python/kungfu/assignment_runtime/local.py",
         "framework/core/tests/python/test_assignment_runtime.py"
       ]
+    },
+    {
+      "repository": "kungfu-systems/kungfu",
+      "protectedBase": "dev/v4/v4.0",
+      "pullRequestNumber": 3312,
+      "assignmentRoot": "sha256:66950c4efb8c191851a7553e9b0c7a534699a021b53d401fdaefff8eacc7a239",
+      "initiativeRoot": "sha256:bfff817933e5a5ad693e4b902a84f6cc3a251235dd7377cb4091d92f805fa7ff",
+      "sourceIdentityRoot": "sha256:f507d6c22d57da85b3399f096a0fe8ec4317981952c45eca158bbede295d8966",
+      "deliveryClass": "native-proof-required",
+      "candidateId": "sha256:f7f3fc3a59be19590c90f53e7a6146971650e5125cea2debb3b09ad307aef135",
+      "sourceHead": "2858c800169dfc12fdc3e1e387dbbe945193bed3",
+      "sourcePatchRoot": "sha256:6ea4729efb2a28ba1c20222ac6daf9ca6b91f197a7da293874301fd03882a5a9",
+      "sourceProofRoot": "sha256:3f9adb62e6ac4c457561b0d64d89981a4eb6e4b7d7164021edea72285c82fc28",
+      "planRoot": "sha256:5c67bdb91821e93c62ce3099f9a978916df17e183a544fc94e6cb6d7586241ae",
+      "closureRoot": "sha256:106d175611d8634c988192302b9c464ae8ba3b6d023c2cff9910e401344c9624",
+      "dependencyRoot": "sha256:082057cd23efd9b07d8d1588a0c35ea677e709c2c96220e98fe269fc4262bb19",
+      "toolchainRoot": "sha256:2ecb07894954a2e0de022615d4561e5ba3ae68376401941ecff77be03cd75a0f",
+      "environmentRoot": "sha256:c5f5da5917c6ff93a509a62b18d4b9b69325755c4c7229b553b0016cde83788f",
+      "sourceWorkflowRunId": 32196859337,
+      "priority": "ordinary",
+      "enqueuedAt": "2026-08-18T23:29:55.188Z",
+      "updatedAt": "2026-08-18T23:29:55.188Z",
+      "attempts": 1,
+      "recoveries": 0,
+      "status": "queued",
+      "terminal": null,
+      "affectedPaths": [
+        "framework/core/tests/python/test_fact_kernel_integrity.py",
+        "framework/core/tests/python/test_fact_profile_shadow.py",
+        "framework/spec/generated/registry.json"
+      ]
     }
   ],
-  "updatedAt": "2026-08-18T22:02:23.339Z",
-  "stateRoot": "sha256:a0c8034be9dda5a974b2c7d53a4671175bd2206bb25a88ec440de18f11c9b0c1"
+  "updatedAt": "2026-08-18T23:29:55.188Z",
+  "stateRoot": "sha256:15505cf64149cd6087554f6da258c64ceff45eed76615ffcf8deac6102de4b7b"
 }
