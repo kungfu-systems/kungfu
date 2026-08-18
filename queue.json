@@ -3,7 +3,7 @@
   "contract": "kungfu-buildchain-dev-delivery-warrant-queue",
   "repository": "kungfu-systems/kungfu",
   "protectedBase": "dev/v4/v4.0",
-  "generation": 4179,
+  "generation": 4180,
   "fencingCounter": 531,
   "policy": {
     "agingSeconds": 900,
@@ -38033,8 +38033,53 @@
         "framework/core/src/python/kungfu/storage/__init__.py",
         "framework/core/tests/python/test_query_cli.py"
       ]
+    },
+    {
+      "repository": "kungfu-systems/kungfu",
+      "protectedBase": "dev/v4/v4.0",
+      "pullRequestNumber": 3288,
+      "assignmentRoot": "sha256:ddcf93d3660c5be23c22967ea22affed1202f658a847384e276c1c6efd393a7f",
+      "initiativeRoot": "sha256:bfff817933e5a5ad693e4b902a84f6cc3a251235dd7377cb4091d92f805fa7ff",
+      "sourceIdentityRoot": "sha256:a22ce45fba2e8b8b0dc9b64c0d85ec61a2178cd828192fe58b46d5aff018baeb",
+      "deliveryClass": "native-proof-required",
+      "identitySemantics": "chained-attempt-v2",
+      "predecessorCandidateId": "sha256:75bb943eebe335874e0f9422f010f0c6aaaecbaee00f87c239805a04d8bfea8b",
+      "candidateId": "sha256:1f379c36581e879e306ebcb5517135bc23b3fe4bb87e0415b2a05d54a48eab31",
+      "sourceHead": "80fc14c2cda836d563d0af42aba44f6f1ca860e1",
+      "sourcePatchRoot": "sha256:564cdb367ea7dd966be6ecc536f0ad452ee8192c115b80c3f55ec02d9ea73ed5",
+      "sourceProofRoot": "sha256:4a9cc55c100f148ac09bae3dcf4744a261c4d08be273c695daed6d906a1f0e55",
+      "planRoot": "sha256:76c24f039ec1d24e7d5aa1b7ec35ed27ed2294a0d57e0ad3719040ff6e3b9669",
+      "closureRoot": "sha256:cccac6fb74fb3ab2478aa3e56cda7b47e6e301be63519f0ee992aeb3fea2eea6",
+      "dependencyRoot": "sha256:8917137cf3c33da72844e1e85ad2a07c773ed82638096b9a9100615b83418c18",
+      "toolchainRoot": "sha256:2ecb07894954a2e0de022615d4561e5ba3ae68376401941ecff77be03cd75a0f",
+      "environmentRoot": "sha256:c5f5da5917c6ff93a509a62b18d4b9b69325755c4c7229b553b0016cde83788f",
+      "sourceWorkflowRunId": 32103482319,
+      "priority": "ordinary",
+      "enqueuedAt": "2026-08-18T05:54:53.217Z",
+      "updatedAt": "2026-08-18T05:54:53.217Z",
+      "attempts": 1,
+      "recoveries": 0,
+      "status": "queued",
+      "terminal": null,
+      "affectedPaths": [
+        ".xinfa/portable-atlas-classification.json.gz",
+        ".xinfa/product-atlas-bundle.json",
+        "docs/adr/KF-ADR-019f8759-ab29-7627-bc04-6aba547ea45f.md",
+        "docs/architecture/adr-map.json",
+        "docs/architecture/adr-map.md",
+        "framework/core/architecture/LAYERS.md",
+        "framework/core/src/libkungfu/CMakeLists.txt",
+        "framework/core/src/libkungfu/include/kungfu/runtime/profile/profile_lifecycle.h",
+        "framework/core/src/libkungfu/src/runtime/profile/profile_lifecycle.cpp",
+        "framework/core/src/libkungfu/tests/initiative_assignment_root_tests.cpp",
+        "framework/core/src/libkungfu/tests/profile_lifecycle_tests.cpp",
+        "framework/core/src/python/kungfu/initiative_family/canonical.py",
+        "framework/core/tests/python/test_initiative_assignment_root.py",
+        "framework/initiative-assignment/kungfu-initiative-assignment-root-v1.json",
+        "tests/fixtures/initiative-assignment-root/vectors.json"
+      ]
     }
   ],
-  "updatedAt": "2026-08-18T05:52:02.707Z",
-  "stateRoot": "sha256:d0db2f0f3fe51e7aa61fb66f8f49c5a7bacccb2a97ee27756e3f5928a3fb50c0"
+  "updatedAt": "2026-08-18T05:54:53.217Z",
+  "stateRoot": "sha256:ef754213a977d150e6176e39d0676a025a325eb3217ef0b349415b5c79b1e56c"
 }
