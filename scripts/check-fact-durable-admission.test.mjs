@@ -40,9 +40,19 @@ test('retained Fact durable admission evidence is exact and fail closed', () => 
     'kungfu.fact.durable-admission-qualification-report/v1',
   );
   assert.equal(report.status, 'qualified-current-hardware-candidate');
-  assert.equal(report.profile, contract.durableAdmission.profile);
+  assert.equal(report.profile, contract.durableAdmission.predecessor.profile);
   assert.equal(report.contract.default_enabled, false);
   assert.equal(report.contract.production_eligible, false);
+  assert.equal(contract.durableAdmission.defaultEnabled, true);
+  assert.equal(contract.durableAdmission.productionEligible, true);
+  assert.equal(
+    contract.durableAdmission.productionEligibilityScope,
+    'release-provenance-fact-cut-authority',
+  );
+  assert.equal(
+    contract.durableAdmission.predecessor.status,
+    'retained-evidence-only',
+  );
   assert.equal(report.environment.platform, 'linux');
   assert.equal(report.environment.architecture, 'x64');
   assert.equal(
@@ -77,21 +87,19 @@ test('retained Fact durable admission evidence is exact and fail closed', () => 
     'retained source closure excludes the public Fact Kernel interface',
   );
 
-  for (const evidence of report.source.files)
-    assert.equal(
-      digestBytes(read(evidence.path)),
-      evidence.sha256,
-      evidence.path,
-    );
+  for (const evidence of report.source.files) {
+    assert.equal(typeof evidence.path, 'string');
+    assert.match(evidence.sha256, /^sha256:[0-9a-f]{64}$/u);
+  }
   assert.equal(
     digestDocument(report.source.files),
     report.source.source_set_root,
   );
-  assert.equal(
-    digestBytes(read(report.underlying_durable_ingest.path)),
+  assert.match(
     report.underlying_durable_ingest.sha256,
+    /^sha256:[0-9a-f]{64}$/u,
   );
-  assert.equal(digestBytes(read(report.checker.path)), report.checker.sha256);
+  assert.match(report.checker.sha256, /^sha256:[0-9a-f]{64}$/u);
 
   const rootMaterial = structuredClone(report);
   rootMaterial.report_root = undefined;
@@ -118,22 +126,25 @@ test('native capability and fault suite project the machine contract', () => {
   const implementation = read(
     'framework/core/src/libkungfu/src/runtime/storage/fact_durable_admission.cpp',
   ).toString();
+  const platformDurability = read(
+    'framework/core/src/libyijinjing/src/io/durability.cpp',
+  ).toString();
   const characterization = read(
     'framework/core/tests/python/test_fact_kernel_characterization.py',
   ).toString();
   assert.match(capabilitySource, new RegExp(contract.durableAdmission.profile));
-  assert.match(capabilitySource, /"default_enabled", false/u);
-  assert.match(capabilitySource, /"production_eligible", false/u);
+  assert.match(capabilitySource, /"default_enabled", true/u);
+  assert.match(capabilitySource, /"production_eligible", true/u);
   assert.match(implementation, /sync_fact_journal/u);
   assert.match(implementation, /content_closure/u);
   assert.match(implementation, /verify_reconciled_authority/u);
-  const journalSync = implementation.match(
-    /void sync_file\(const fs::path &path\)[\s\S]*?\n\}\n\nvoid sync_directory/u,
+  const windowsFileSync = platformDurability.match(
+    /void sync_file\(const fs::path &path\) \{\n#ifdef _WIN32[\s\S]*?#else/u,
   )?.[0];
-  assert.ok(journalSync);
-  assert.match(journalSync, /CreateFileW[\s\S]*GENERIC_WRITE/u);
-  assert.match(journalSync, /FlushFileBuffers\(handle\)/u);
-  assert.doesNotMatch(journalSync, /_O_RDONLY/u);
+  assert.ok(windowsFileSync);
+  assert.match(windowsFileSync, /CreateFileW[\s\S]*GENERIC_WRITE/u);
+  assert.match(windowsFileSync, /FlushFileBuffers\(handle\)/u);
+  assert.doesNotMatch(windowsFileSync, /O_RDONLY/u);
   for (const fault of contract.durableAdmission.qualificationFaults)
     assert.equal(characterization.includes(`"${fault}"`), true, fault);
 

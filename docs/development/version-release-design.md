@@ -93,19 +93,20 @@ state is frozen and committed to." The version string inside `package.json` is m
 npm-ecosystem projection; if it drifts it is a cosmetic mismatch, not a functional fault.
 
 The tag is also a transport coordinate, not the semantic identity of candidate
-history. The versioned release-provenance contract roots source content with an
-explicit algorithm and relates the candidate to its development Cut, prior Alpha,
-qualification, approval, and authority Facts. Exact commit, tree, ancestry, parent
-count, and parent order remain independently rooted observations. Merge, linear,
-flattened, reordered-parent, and ff-only delivery therefore cannot silently rewrite
-the declared history. Historical v1 objects retain their original roots and verifier;
-v1-to-v2 migration appends an explicit `succeeds` relation and rooted receipt. The
-candidate patrol computes the content digest from a canonical logical file set and
-retains the v2 envelope under the exact candidate commit. Promotion imports and
-verifies that envelope, including its content, development Cut, prior Alpha,
-qualification, approval-policy, and authority roots; it never reconstructs those
-meanings from Git parent positions. A manual legacy rehearsal must name the exact
-successful patrol run whose retained v1 envelope is being replayed.
+history. The production authority is the durable local Fact/Cut chain: exact
+release semantic bodies become Versions, Alpha succession is an explicit
+`acknowledges` relation, and historical states are pinned Cuts under durable
+`release-provenance/` refs. Exact commit, tree, ancestry, parent count, and
+parent order remain non-authoritative projections. Merge, linear, flattened,
+reordered-parent, and ff-only delivery therefore cannot silently rewrite the
+declared history.
+
+Candidate, Build, and promotion workflows verify the checked-in portable
+authority and never reconstruct Alpha meaning from Git parent positions.
+Export, clean-host import, fsck, pinned-Cut replay, and rollback are qualified
+without Git or GitHub reads. Historical v1/v2 provenance envelopes and the
+Alpha.2 source-lock remain byte-preserved offline evidence; their dual-write,
+dual-read, manual legacy route, and proofless fallback are retired.
 
 **3. A release tag carries weight = code-freeze ⊗ binary distribution, performed
 atomically.** kungfu ships **prebuilt cross-platform binaries** (node-pre-gyp artifacts via

@@ -1,0 +1,144 @@
+{
+  "schema": "kungfu.durable-provenance-authority.contract/v1",
+  "status": "production",
+  "authority": {
+    "kind": "local-immutable-fact-cut-chain",
+    "owner": "libkungfu",
+    "refPrefix": "release-provenance/",
+    "durabilityProfile": "fact-durable-admission/release-provenance-v1",
+    "requestedProfile": "durable_sync",
+    "defaultEnabled": true,
+    "productionEligible": true,
+    "productionEligibilityScope": "release-provenance-fact-cut-authority",
+    "semanticAuthority": "native-fact-objects-versions-relations-cuts-and-refs",
+    "projectionRule": "Git commits, Git trees, Git parents, refs, and GitHub artifacts are retained observations or replicas only; absence or re-layout cannot change a semantic Fact or Cut root."
+  },
+  "history": {
+    "schema": "kungfu.durable-provenance-history-input/v1",
+    "releases": [
+      {
+        "releaseId": "v4.0.0-alpha.1",
+        "sourceContent": {
+          "algorithm": "sha256-canonical-file-set-v1",
+          "contentRoot": "sha256:3a44ed9f2b85e9bf68a5878f45d9168de4b7299acdb1bfe318662c00fcb03356",
+          "manifestRoot": "sha256:44fcd926d7a80f476ae20e19ed60bfcf703b945242cb01143abb8e037a60002c",
+          "entryCount": 6280
+        },
+        "sealedCandidateRoot": "sha256:46169f7d385e5cc296352578cafd29f66762d73b6301f3180ce59560d9f5eef3",
+        "candidateInventoryRoot": "sha256:02c630ec99189e1aedcb13b0794f5a17d951c196c75131ed7805c7a9b5dee67f",
+        "candidateProvenanceRoot": "sha256:eac7fb65b542a951dda314b736fc27fafd86b6d819344510a7ce1802f0a82cdd",
+        "qualificationRoots": [
+          "sha256:3b25e6437af014f29280837804124be1e0e3280b0b3fd63e83ab1f1956ced6bc",
+          "sha256:3087ee3a4e476773bec759d58ac533a9452cb652006ebccdf11957f602b18d51"
+        ],
+        "contractRoots": [
+          "sha256:13c4679c4ac8764c85e29693bfb59099e21e9786cc6082552198d39393467490"
+        ],
+        "projection": {
+          "authority": "non-authoritative",
+          "candidateCommit": "ad7c7db6df076f969c5939728bcbe70ccd4771b3",
+          "candidateTree": "67a93b5831596555e7c29104421de3a0b97eb865",
+          "observedParents": [
+            "f9e6b0e34bcdd6407b2a18206ace7982d64de2c8",
+            "5a3aea2d8f883b6ead343d43f2d34c574c08dc9e"
+          ],
+          "buildRunId": "31051528142"
+        }
+      },
+      {
+        "releaseId": "v4.0.0-alpha.2",
+        "sourceContent": {
+          "algorithm": "sha256-canonical-file-set-v1",
+          "contentRoot": "sha256:39eec4c64db9438c5acf716dbe04529df12babef9770648360a119735a8ba061",
+          "manifestRoot": "sha256:288f3d2b7d7f954a0f83f3c0c1929edb8d8a22f7fc8339df8d971ea5fd50c5de",
+          "entryCount": 6446
+        },
+        "sealedCandidateRoot": "sha256:1cc074a7b4344eeddef03e863c609aae2d3763f68116ff7642241f487206a0e7",
+        "candidateInventoryRoot": "sha256:39eec4c64db9438c5acf716dbe04529df12babef9770648360a119735a8ba061",
+        "candidateProvenanceRoot": "sha256:1cc074a7b4344eeddef03e863c609aae2d3763f68116ff7642241f487206a0e7",
+        "qualificationRoots": [
+          "sha256:b7194b811e4d3af2df4390bc4d1731e16a86215bd64ee18cb630dd5492f4fb63"
+        ],
+        "contractRoots": [
+          "sha256:29f1218350d3cf49423ffc1b78e3328c3af554c21e8c3ffd31928ea9db51a404"
+        ],
+        "projection": {
+          "authority": "non-authoritative",
+          "candidateCommit": "77a66f7141143e524484a548dbba76a1ae1ecc38",
+          "candidateTree": "6f3a82c10712ec344ecefbf30d11a580aeb4f22b",
+          "observedParents": [
+            "c3938d8fc5e71578c960cc8137a853a8817b09ca",
+            "f9e6b0e34bcdd6407b2a18206ace7982d64de2c8"
+          ],
+          "sourceEquivalentCommit": "c3938d8fc5e71578c960cc8137a853a8817b09ca",
+          "sourceEquivalentTree": "6f3a82c10712ec344ecefbf30d11a580aeb4f22b"
+        }
+      }
+    ]
+  },
+  "portability": {
+    "bundleSchema": "kungfu.fact-kernel.portable-bundle/v1",
+    "backupMode": "copy-only-content-addressed-bundle",
+    "requiredProofs": [
+      "export",
+      "bundle-root-verification",
+      "clean-runtime-dry-run-import",
+      "clean-runtime-import",
+      "fsck",
+      "historical-pinned-cut-query",
+      "semantic-root-replay",
+      "projection-free-replay"
+    ],
+    "forbiddenDependencies": [
+      "Git object database",
+      "Git parent order",
+      "Git branch or tag",
+      "GitHub API",
+      "GitHub Actions artifact",
+      "warm cache"
+    ]
+  },
+  "failurePolicy": {
+    "failClosed": [
+      "partial-write",
+      "missing-payload",
+      "tampered-root",
+      "incomplete-backfill",
+      "expired-artifact",
+      "unavailable-git",
+      "revoked-relation-active",
+      "rollback-root-mismatch"
+    ],
+    "recovery": "preserve authority, restore an exact copy, fsck, query the pinned Cut, and retry with the same semantic inputs"
+  },
+  "releaseRehearsal": {
+    "mode": "normal-protected-non-public",
+    "gate": "governance.promotion-rehearsal",
+    "publication": false,
+    "topologyRequirement": "none",
+    "specialPromotionRoute": false,
+    "handMaintainedAllowlist": false,
+    "prooflessFallback": false
+  },
+  "retirement": {
+    "activeModes": {
+      "dualWrite": "retired",
+      "dualRead": "retired",
+      "prooflessLegacy": "retired",
+      "topologySemantic": "retired",
+      "handMaintainedAllowlist": "retired"
+    },
+    "retainedOfflineOnly": [
+      ".buildchain/alpha-release-cut-lock.json",
+      "docs/qualification/evidence/kungfu-temporal-provenance-cutover.json",
+      "framework/release/kungfu-temporal-release-rollback.contract.json"
+    ]
+  },
+  "nonClaims": [
+    "general mutable key-value production eligibility",
+    "cross-machine consensus",
+    "high availability or replication",
+    "malicious-administrator resistance",
+    "real public release or installer activation"
+  ]
+}

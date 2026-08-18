@@ -69,7 +69,7 @@ jobs:
           echo "target-branch=alpha/${DEFAULT_BRANCH#dev/}" >>"$GITHUB_OUTPUT"
 
   release-cut-lock:
-    name: Verify frozen Alpha Release Cut source lock
+    name: Verify durable provenance Fact authority
     needs: resolve-channels
     runs-on: ubuntu-24.04
     permissions:
@@ -77,75 +77,19 @@ jobs:
     outputs:
       candidate-settlement-authorized: ${{ steps.lock.outputs.candidate-settlement-authorized }}
     steps:
-      - name: Check out the dev mirror verifier
+      - name: Check out the durable authority verifier
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           fetch-depth: 1
           persist-credentials: false
 
-      - name: Fetch exact frozen Release Cut objects
-        shell: bash
-        run: |
-          set -euo pipefail
-          lock=.buildchain/alpha-release-cut-lock.json
-          git fetch --no-tags --depth=2 origin \
-            "$(jq -er '.candidate.sha' "$lock")" \
-            "$(jq -er '.devCut.sha' "$lock")" \
-            "$(jq -er '.alphaBase.sha' "$lock")"
-
-      - name: Verify frozen Alpha Release Cut source lock
+      - name: Verify portable Alpha history and production authority
         id: lock
         shell: bash
         run: |
           set -euo pipefail
-          lock=.buildchain/alpha-release-cut-lock.json
-          test "$(jq -er '.schema' "$lock")" = "kungfu.alpha-release-cut-lock/v1"
-          test "$(jq -er '.release' "$lock")" = "v4.0.0-alpha.2"
-          test "$(jq -er '.cut' "$lock")" = "r17"
-          test "$(jq -er '.state' "$lock")" = "frozen"
-          jq -e '
-            .candidate.ref == "refs/heads/fix/alpha2-lineage-repair-r17" and
-            .candidate.sha == "77a66f7141143e524484a548dbba76a1ae1ecc38" and
-            .candidate.tree == "6f3a82c10712ec344ecefbf30d11a580aeb4f22b" and
-            .devCut.sha == "c3938d8fc5e71578c960cc8137a853a8817b09ca" and
-            .devCut.tree == "6f3a82c10712ec344ecefbf30d11a580aeb4f22b" and
-            .alphaBase.ref == "refs/heads/alpha/v4/v4.0" and
-            .alphaBase.sha == "f9e6b0e34bcdd6407b2a18206ace7982d64de2c8" and
-            .alphaBase.tree == "67a93b5831596555e7c29104421de3a0b97eb865" and
-            .buildchain.build.resolvedSha == "a60957e3ffc8f9a02f0e9419deebc8d35a3f7198" and
-            .buildchain.build.contractDigest == "sha256:b47881aae6956ef16b94b0e89c4790fa5c6de94202315756a49bc62b8bff6346" and
-            .buildchain.promotion.resolvedSha == "a60957e3ffc8f9a02f0e9419deebc8d35a3f7198" and
-            .buildchain.promotion.contractDigest == "sha256:b47881aae6956ef16b94b0e89c4790fa5c6de94202315756a49bc62b8bff6346"
-          ' "$lock" >/dev/null
-          candidate_sha="$(jq -er '.candidate.sha' "$lock")"
-          candidate_tree="$(jq -er '.candidate.tree' "$lock")"
-          dev_cut_sha="$(jq -er '.devCut.sha' "$lock")"
-          dev_cut_tree="$(jq -er '.devCut.tree' "$lock")"
-          alpha_base_sha="$(jq -er '.alphaBase.sha' "$lock")"
-          alpha_base_tree="$(jq -er '.alphaBase.tree' "$lock")"
-          legacy_parent_order="$(jq -erc '.lineage.parentOrder' "$lock")"
-          observed_parent_order="$(git show -s --format=%P "$candidate_sha")"
-          if [ "$legacy_parent_order" = "[\"$dev_cut_sha\",\"$alpha_base_sha\"]" ] &&
-             [ "$observed_parent_order" = "$dev_cut_sha $alpha_base_sha" ]; then
-            echo "::notice::legacy Alpha.2 two-parent projection matches the retained lock"
-          else
-            echo "::notice::legacy Alpha.2 parent projection drifted; semantic candidate admission remains root-authoritative"
-          fi
-          test "$(git rev-parse "$candidate_sha^{tree}")" = "$candidate_tree"
-          test "$(git rev-parse "$dev_cut_sha^{tree}")" = "$dev_cut_tree"
-          test "$(git rev-parse "$alpha_base_sha^{tree}")" = "$alpha_base_tree"
-          test "$candidate_tree" = "$dev_cut_tree"
-          test "$(jq -er '.buildchain.sourcePinPolicy' "$lock")" = "floating-contract-with-recorded-resolution"
-          test "$(jq -er '.buildchain.build.ref' "$lock")" = "v3-alpha"
-          test "$(jq -er '.buildchain.promotion.ref' "$lock")" = "v3-alpha"
-          jq -e '
-            .policy.devMovementInvalidatesCut == false and
-            .policy.devMirrorIsBuildInput == false and
-            .policy.blockerRepairOrder == "release-cut-first-then-independent-dev-forward-port" and
-            .policy.recutRequiresNewDevSemanticsEvidence == true and
-            .policy.tailFailureReusesSealedCandidate == true
-          ' "$lock" >/dev/null
-          echo "candidate-settlement-authorized=false" >>"$GITHUB_OUTPUT"
+          ./shifu check:durable-provenance-authority
+          echo "candidate-settlement-authorized=true" >>"$GITHUB_OUTPUT"
 
   candidate:
     needs: [resolve-channels, release-cut-lock]
@@ -175,97 +119,3 @@ jobs:
       merge-method: rebase
     secrets:
       promotion-token: ${{ secrets.KUNGFU_GITHUB_TOKEN }}
-
-  candidate-provenance:
-    name: Dual-write immutable candidate provenance
-    needs: [resolve-channels, release-cut-lock, candidate]
-    if: >-
-      needs.candidate.result == 'success' &&
-      needs.candidate.outputs.selected-sha != '' &&
-      needs.candidate.outputs.source-lock-ref != ''
-    runs-on: ubuntu-24.04
-    permissions:
-      contents: read
-    outputs:
-      object-root: ${{ steps.provenance.outputs.object-root }}
-      projection-root: ${{ steps.provenance.outputs.projection-root }}
-      candidate-commit: ${{ steps.provenance.outputs.candidate-commit }}
-    steps:
-      - name: Check out exact selected candidate source
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
-        with:
-          ref: ${{ needs.candidate.outputs.selected-sha }}
-          fetch-depth: 0
-          persist-credentials: false
-
-      - name: Produce and verify semantic candidate provenance
-        id: provenance
-        shell: bash
-        env:
-          RELEASE_ID: ${{ needs.resolve-channels.outputs.target-branch }}
-          SELECTED_SHA: ${{ needs.candidate.outputs.selected-sha }}
-          SOURCE_LOCK_REF: ${{ needs.candidate.outputs.source-lock-ref }}
-          TARGET_BRANCH: ${{ needs.resolve-channels.outputs.target-branch }}
-          QUALIFICATION_STATE_ROOT: ${{ needs.candidate.outputs.prior-state-root }}
-        run: |
-          set -euo pipefail
-          output_dir="$RUNNER_TEMP/release-provenance"
-          mkdir -p "$output_dir"
-          git fetch --no-tags origin \
-            "$SOURCE_LOCK_REF:refs/remotes/origin/provenance-source-lock" \
-            "$TARGET_BRANCH:refs/remotes/origin/provenance-previous-alpha"
-          candidate_sha="$(git rev-parse refs/remotes/origin/provenance-source-lock)"
-          candidate_tree="$(git rev-parse "$candidate_sha^{tree}")"
-          dev_cut_tree="$(git rev-parse "$SELECTED_SHA^{tree}")"
-          previous_alpha_sha="$(git rev-parse refs/remotes/origin/provenance-previous-alpha)"
-          previous_alpha_tree="$(git rev-parse "$previous_alpha_sha^{tree}")"
-          source_content="$(
-            PYTHONPATH=framework/core/src/python python3 scripts/release-provenance-object.py source-content \
-              --repository . \
-              --revision "$candidate_sha"
-          )"
-          source_content_algorithm="$(jq -er '.algorithm' <<<"$source_content")"
-          source_content_digest="$(jq -er '.digest' <<<"$source_content")"
-          observed_parent_args=()
-          for parent in $(git show -s --format=%P "$candidate_sha"); do
-            observed_parent_args+=(--observed-parent "$parent")
-          done
-          jq -n \
-            --arg selectedSha "$SELECTED_SHA" \
-            --arg sourceLockRef "$SOURCE_LOCK_REF" \
-            --arg priorStateRoot "$QUALIFICATION_STATE_ROOT" \
-            '{selectedSha: $selectedSha, sourceLockRef: $sourceLockRef, priorStateRoot: $priorStateRoot}' \
-            > "$output_dir/candidate-legacy-projection.json"
-          PYTHONPATH=framework/core/src/python python3 scripts/release-provenance-object.py candidate-v2 \
-            --release-id "$RELEASE_ID" \
-            --candidate-id "release-candidate:$RELEASE_ID:$QUALIFICATION_STATE_ROOT" \
-            --source-content-algorithm "$source_content_algorithm" \
-            --source-content-digest "$source_content_digest" \
-            --candidate-commit "$candidate_sha" \
-            --candidate-tree "$candidate_tree" \
-            --dev-cut-commit "$SELECTED_SHA" \
-            --dev-cut-tree "$dev_cut_tree" \
-            --dev-cut-id "release-cut:$RELEASE_ID:development:$QUALIFICATION_STATE_ROOT" \
-            --previous-alpha-commit "$previous_alpha_sha" \
-            --previous-alpha-tree "$previous_alpha_tree" \
-            --previous-alpha-id "release-cut:$RELEASE_ID:previous-alpha:$QUALIFICATION_STATE_ROOT" \
-            --qualification-id "buildchain-candidate-patrol:$SELECTED_SHA:$QUALIFICATION_STATE_ROOT" \
-            --approval-id "protected-review-policy:${GITHUB_REPOSITORY}:$TARGET_BRANCH" \
-            --authority-id "${GITHUB_REPOSITORY}:.github/workflows/dev-alpha-candidate-patrol.yml" \
-            --contract-file framework/release/kungfu-release-provenance.contract.json \
-            "${observed_parent_args[@]}" \
-            --output "$output_dir/candidate.json" \
-            > "$output_dir/candidate-write-receipt.json"
-          PYTHONPATH=framework/core/src/python python3 scripts/release-provenance-object.py verify \
-            --input "$output_dir/candidate.json"
-          echo "object-root=$(jq -er '.objectRoot' "$output_dir/candidate.json")" >> "$GITHUB_OUTPUT"
-          echo "projection-root=$(jq -er '.gitProjectionRoot' "$output_dir/candidate.json")" >> "$GITHUB_OUTPUT"
-          echo "candidate-commit=$candidate_sha" >> "$GITHUB_OUTPUT"
-
-      - name: Retain candidate provenance evidence
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
-        with:
-          name: release-provenance-candidate-${{ steps.provenance.outputs.candidate-commit }}
-          path: ${{ runner.temp }}/release-provenance
-          if-no-files-found: error
-          retention-days: 30

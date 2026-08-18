@@ -79,31 +79,11 @@ jobs:
           fetch-depth: 1
           persist-credentials: false
 
-      - name: Verify explicit Release Cut source lock
+      - name: Verify durable release provenance authority
         shell: bash
-        env:
-          RELEASE_CUT_SOURCE_REF: ${{ fromJSON(inputs.macos-overflow-request-json || '{}').releaseCutSourceRef || '' }}
-          RELEASE_CUT_SOURCE_SHA: ${{ fromJSON(inputs.macos-overflow-request-json || '{}').sourceSha || '' }}
-          RELEASE_CUT_ANCHOR_REQUEST_JSON: ${{ toJSON(fromJSON(inputs.macos-overflow-request-json || '{}').releaseCutAnchorRequest) }}
         run: |
           set -euo pipefail
-          if [[ -z "$RELEASE_CUT_SOURCE_REF" ]]; then
-            exit 0
-          fi
-          test "$RELEASE_CUT_SOURCE_REF" = "publish-gate/anchor"
-          [[ "$RELEASE_CUT_SOURCE_SHA" =~ ^[0-9a-f]{40}$ ]]
-          test "$(git rev-parse HEAD)" = "$RELEASE_CUT_SOURCE_SHA"
-          test "$(git ls-remote origin "refs/heads/$RELEASE_CUT_SOURCE_REF" | awk '{print $1}')" = "$RELEASE_CUT_SOURCE_SHA"
-          jq -e \
-            --arg source "$RELEASE_CUT_SOURCE_SHA" \
-            '.schema == "kungfu.alpha-release-cut-build-lock/v1" and
-             .release == "v4.0.0-alpha.2" and
-             .cut == "r17" and
-             .candidateSha == $source and
-             .alphaBaseSha == "f9e6b0e34bcdd6407b2a18206ace7982d64de2c8" and
-             .buildchainRef == "v3-alpha" and
-             .devMirrorIsBuildInput == false' \
-            <<<"$RELEASE_CUT_ANCHOR_REQUEST_JSON" >/dev/null
+          ./shifu check:durable-provenance-authority
 
       - name: Admit reusable source and platform probes
         id: receipt
