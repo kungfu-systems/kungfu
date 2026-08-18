@@ -486,7 +486,9 @@ jobs:
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           repository: kungfu-systems/buildchain
-          ref: 1342b7d68936ab3c31b58b255df1de49c234bc02
+          # Keep Warrant observation schema-aligned with the protected
+          # dev-pr-auto-merge scheduler until that adapter migrates in full.
+          ref: 888e87fec88cad41d225c32615e80a87744d4b6d
           path: .buildchain/dev-delivery-runtime
           fetch-depth: 1
           persist-credentials: false
@@ -966,7 +968,9 @@ jobs:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           repository: kungfu-systems/buildchain
-          ref: 1342b7d68936ab3c31b58b255df1de49c234bc02
+          # Keep Warrant consumption schema-aligned with the scheduler that
+          # materialized the active candidate.
+          ref: 888e87fec88cad41d225c32615e80a87744d4b6d
           path: .buildchain/dev-delivery-runtime
           persist-credentials: false
       - uses: actions/setup-node@v6.4.0
