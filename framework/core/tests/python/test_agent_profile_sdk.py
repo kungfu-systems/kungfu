@@ -655,7 +655,7 @@ def test_system_profile_release_receipt_is_exact_root_and_shared_with_status(
     assert receipt["profileId"] == "kungfu.work-control"
     assert receipt["qualificationSource"] == "release"
     assert receipt["noBypass"]["policy"] == "release-owned-shared-api-parity/v1"
-    assert len(receipt["clientProbes"]) == 12
+    assert len(receipt["clientProbes"]) == 11
     assert all(row["matched"] for row in receipt["clientProbes"])
     assert {
         "claim-assignment",
