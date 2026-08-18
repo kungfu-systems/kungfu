@@ -154,8 +154,7 @@ if(KUNGFU_WITH_CORE_TESTS)
   add_test(NAME kungfu_runtime_error_tests COMMAND kungfu_runtime_error_tests)
 
   add_executable(kungfu_api_contract_tests tests/api_contract_tests.cpp)
-  target_include_directories(kungfu_api_contract_tests PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src/runtime"
-                                                              "${CMAKE_CURRENT_SOURCE_DIR}/../libyijinjing/include")
+  target_include_directories(kungfu_api_contract_tests PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src/runtime" "${CMAKE_CURRENT_SOURCE_DIR}/../libyijinjing/include")
   target_link_libraries(kungfu_api_contract_tests PRIVATE ${KUNGFU_PUBLIC_ABI_TARGET} kungfu_compile_contract
                                                           ${LIBKUNGFU_NAME}
                                                           nlohmann_json::nlohmann_json)
