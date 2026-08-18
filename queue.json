@@ -3,7 +3,7 @@
   "contract": "kungfu-buildchain-dev-delivery-warrant-queue",
   "repository": "kungfu-systems/kungfu",
   "protectedBase": "dev/v4/v4.0",
-  "generation": 4398,
+  "generation": 4399,
   "fencingCounter": 543,
   "policy": {
     "agingSeconds": 900,
@@ -39132,8 +39132,38 @@
         "scripts/measure-dev-required-latency.test.mjs",
         "scripts/queue-admission-lease.test.mjs"
       ]
+    },
+    {
+      "repository": "kungfu-systems/kungfu",
+      "protectedBase": "dev/v4/v4.0",
+      "pullRequestNumber": 3304,
+      "assignmentRoot": "sha256:46ea46048666f8a4d0a9b481d8e87c98ce1d4f36b7e73d91b08737724b7fc72d",
+      "initiativeRoot": "sha256:bfff817933e5a5ad693e4b902a84f6cc3a251235dd7377cb4091d92f805fa7ff",
+      "sourceIdentityRoot": "sha256:f021a56d1e82a59f04bfa345a4f6105625a6e5aa62c225da961228421d5ad0b8",
+      "deliveryClass": "native-proof-required",
+      "candidateId": "sha256:a2eba361e4d92198025fa4deee4068a0089abe2025ac280aa057795e4d6b0a92",
+      "sourceHead": "cef8653ae3454924c6d58039c9997fe20e709b20",
+      "sourcePatchRoot": "sha256:83213f425ae4e09ff1bc95db2c7b54f4a0654796a83cc474970663a48e0cdada",
+      "sourceProofRoot": "sha256:df69a629fa13c72d84285e6314550a64306ba4dbf31517d7dc902138cdf46c35",
+      "planRoot": "sha256:e2774e53923ca8b0a34eaa5f813dec2d2ff0dc61025097ec7a647d9f2dd25b16",
+      "closureRoot": "sha256:106d175611d8634c988192302b9c464ae8ba3b6d023c2cff9910e401344c9624",
+      "dependencyRoot": "sha256:47ce8338207ff3f44a61705d8cb3695c14b2749cea08fc962bd312b2636644d1",
+      "toolchainRoot": "sha256:2ecb07894954a2e0de022615d4561e5ba3ae68376401941ecff77be03cd75a0f",
+      "environmentRoot": "sha256:c5f5da5917c6ff93a509a62b18d4b9b69325755c4c7229b553b0016cde83788f",
+      "sourceWorkflowRunId": 32157725857,
+      "priority": "ordinary",
+      "enqueuedAt": "2026-08-18T16:19:59.263Z",
+      "updatedAt": "2026-08-18T16:19:59.263Z",
+      "attempts": 1,
+      "recoveries": 0,
+      "status": "queued",
+      "terminal": null,
+      "affectedPaths": [
+        "framework/core/tests/python/test_agent_profile_sdk.py",
+        "framework/core/tests/python/test_profile_composition.py"
+      ]
     }
   ],
-  "updatedAt": "2026-08-18T16:16:34.956Z",
-  "stateRoot": "sha256:e3a55d0c263e249fc628c825500e28197732cf7dc49b306575b0b826d6f78e16"
+  "updatedAt": "2026-08-18T16:19:59.263Z",
+  "stateRoot": "sha256:ed85402addb2c2a5fe60d8af4e896b1473cd44f1f37aa6afa39f1ed9338f7735"
 }
