@@ -99,22 +99,19 @@ test('Alpha.2 r17 keeps its historical channel lock while builds execute one imm
   );
 });
 
-test('candidate patrol verifies the frozen cut without settling from moving dev', () => {
+test('candidate patrol verifies portable authority without Git topology', () => {
   const patrol = fs.readFileSync(
     path.join(ROOT, '.github/workflows/dev-alpha-candidate-patrol.yml'),
     'utf8',
   );
-  assert.match(patrol, /name: Verify frozen Alpha Release Cut source lock/u);
-  assert.match(patrol, /lock=\.buildchain\/alpha-release-cut-lock\.json/u);
-  assert.match(patrol, /git show -s --format=%P/u);
-  assert.match(
-    patrol,
-    /semantic candidate admission remains root-authoritative/u,
-  );
+  assert.match(patrol, /name: Verify durable provenance Fact authority/u);
+  assert.match(patrol, /\.\/shifu check:durable-provenance-authority/u);
   assert.doesNotMatch(
     patrol,
-    /test "\$\(git show -s --format=%P "\$candidate_sha"\)"/u,
+    /lock=\.buildchain\/alpha-release-cut-lock\.json/u,
   );
+  assert.doesNotMatch(patrol, /git show -s --format=%P/u);
+  assert.doesNotMatch(patrol, /candidate-provenance:/u);
   assert.match(
     patrol,
     /needs\.release-cut-lock\.outputs\.candidate-settlement-authorized == 'true'/u,

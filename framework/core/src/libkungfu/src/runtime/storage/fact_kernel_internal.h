@@ -174,6 +174,7 @@ nlohmann::json export_authority(const std::string &);
 nlohmann::json import_authority(const std::string &, const nlohmann::json &);
 nlohmann::json authority_bundle(const std::string &, const kernel_state &);
 void validate_durable_ref_cas_admission(const std::string &, const nlohmann::json &);
+nlohmann::json apply_default_durable_ref_cas_admission(const nlohmann::json &);
 nlohmann::json durably_admit_ref_cas(const std::string &, const nlohmann::json &, const nlohmann::json &);
 nlohmann::json reconcile_durable_ref_cas(const std::string &, const nlohmann::json &);
 std::string response_record_root(const std::string &, const nlohmann::json &);

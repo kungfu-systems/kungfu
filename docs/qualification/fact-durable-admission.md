@@ -2,11 +2,15 @@
 
 The normative source is
 [`kungfu-fact-cut-kernel.contract.json`](../../framework/fact/kungfu-fact-cut-kernel.contract.json),
-under `durableAdmission`. The first profile is
-`fact-durable-admission/current-hardware-candidate-v1`.
+under `durableAdmission`. The active profile is
+`fact-durable-admission/release-provenance-v1`. It is default-enabled only for
+`ref-cas` names under `release-provenance/` and is production eligible only for
+the `release-provenance-fact-cut-authority` scope. Ordinary refs and all other
+Fact mutations preserve their explicit durability behavior.
 
-It is explicit, default-off, and not production eligible. It applies only to
-`ref-cas`. Ordinary Fact mutation behavior is unchanged.
+The predecessor `fact-durable-admission/current-hardware-candidate-v1` report
+is retained unchanged as an input. It remains default-off and non-production;
+the new scoped qualification does not retroactively widen that report.
 
 ## Success frontier
 
@@ -40,7 +44,33 @@ checkpoint-covered content closure, exact adjacent journal pair, ref Cut, and
 revision. Missing checkpoint evidence remains unknown. It is never guessed as
 failure or success.
 
-## Qualification and release gate
+## Portable authority qualification
+
+The retained production report and portable bundle are
+[`report.json`](evidence/durable-provenance-authority/v1/report.json) and
+[`authority-bundle.json`](evidence/durable-provenance-authority/v1/authority-bundle.json).
+They bind exact Alpha.1 and Alpha.2 semantic bodies, Versions, their
+`acknowledges` relation, historical Cuts, durable refs, source closure, and the
+native artifact used for qualification. Git commit, tree, parent, and branch
+values are separately rooted projections and are not replay inputs.
+
+Qualification exports from a fresh source runtime, verifies fsck, performs
+dry-run and real import into a clean temporary runtime, verifies fsck again,
+and compares pinned-Cut query roots. It then rehearses a durable rollback while
+proving the newer Cut remains directly queryable. Tampered target roots,
+missing bodies, and incomplete historical Cuts must all fail closed.
+
+Generate the retained evidence explicitly:
+
+```bash
+./shifu durable-provenance-authority:qualify
+./shifu check:durable-provenance-authority
+```
+
+The qualifier performs no Git or GitHub reads. Copy-based restoration never
+mutates the source authority.
+
+## Predecessor qualification and release gate
 
 The retained report is
 [`report.json`](evidence/fact-durable-admission/current-hardware-candidate-v1/report.json).
@@ -73,9 +103,11 @@ must reuse an exact native `Release` binding built in another worktree on the
 same qualification host. The report retains the conventional repository
 artifact path and hashes the bytes from that explicit read-only directory.
 
-Buildchain Release Passport consumes this through the existing
-`durability.contracts` Gate. The checker fails closed on contract, source,
-report, provider, environment, fault-set, or Gate drift.
+Buildchain Release Passport continues to consume the general durability
+contract through `durability.contracts`. Kungfu candidate, build, and promotion
+workflows additionally execute `check:durable-provenance-authority`; none of
+those active paths reconstruct historical meaning from Git ancestry or consume
+the retired provenance dual-write artifacts.
 
 ## Known limits
 
@@ -83,7 +115,9 @@ report, provider, environment, fault-set, or Gate drift.
 - The current report does not establish an independent failure domain.
 - RocksDB `wal-os-buffered` is not admitted.
 - Replication, high availability, consensus, malicious-administrator
-  resistance, and production eligibility are not provided.
+  resistance, and general-purpose Fact production eligibility are not
+  provided. Production eligibility is limited to the named release-provenance
+  Fact/Cut authority scope.
 - External declaration, admission, schema, Episode, omission, and conflict
   roots are bound as declared dependencies; they are not falsely represented as
   locally stored content.

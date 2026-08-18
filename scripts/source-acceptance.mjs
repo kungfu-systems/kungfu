@@ -953,6 +953,7 @@ export function sourceAcceptancePlan(
               'scripts/check-release-provenance-object.test.mjs',
               'scripts/check-data-protection-contract.test.mjs',
               'scripts/check-durable-history-qualification.test.mjs',
+              'scripts/check-durable-provenance-authority.test.mjs',
               'scripts/check-work-agent-history-continuity.test.mjs',
               'scripts/check-project-cut-dogfood-history.test.mjs',
               'scripts/check-exit-bundle-contract.test.mjs',

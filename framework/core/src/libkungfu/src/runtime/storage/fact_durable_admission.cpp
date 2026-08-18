@@ -37,7 +37,8 @@ namespace {
 
 inline constexpr const char *FACT_DURABLE_ADMISSION_SCHEMA_V1 = "kungfu.fact.durable-admission/v1";
 inline constexpr const char *FACT_DURABLE_RECONCILIATION_SCHEMA_V1 = "kungfu.fact.durable-reconciliation/v1";
-inline constexpr const char *FACT_DURABLE_ADMISSION_PROFILE = "fact-durable-admission/current-hardware-candidate-v1";
+inline constexpr const char *FACT_DURABLE_ADMISSION_PROFILE = "fact-durable-admission/release-provenance-v1";
+inline constexpr const char *FACT_DURABLE_PROVENANCE_REF_PREFIX = "release-provenance/";
 inline constexpr const char *FACT_DURABLE_INGEST_QUALIFICATION = "candidate/fact-durable-admission-current-hardware/v1";
 inline constexpr uint64_t FACT_DURABLE_STREAM_ID = 0x66616374ULL;
 inline constexpr uint64_t FACT_DURABLE_CONTAINER_EPOCH = 1;
@@ -203,7 +204,9 @@ nlohmann::json admitted_evidence() {
           {"qualified_envelope", capability.qualified_envelope},
           {"evidence_path", capability.admission.evidence_path},
           {"evidence_sha256", capability.admission.evidence_sha256},
-          {"production_eligible", false},
+          {"production_eligible", true},
+          {"production_eligibility_scope", "release-provenance-fact-cut-authority"},
+          {"retained_qualification", "docs/qualification/evidence/durable-provenance-authority/v1/report.json"},
           {"physical_power_loss_qualified", capability.admission.physical_power_loss_qualified},
           {"independent_failure_domain_qualified", capability.admission.independent_failure_domain_qualified}};
 }
@@ -505,6 +508,20 @@ void verify_reconciled_authority(const std::string &runtime_dir, const nlohmann:
 }
 
 } // namespace
+
+nlohmann::json apply_default_durable_ref_cas_admission(const nlohmann::json &input) {
+  auto admitted = input;
+  if (text_or(admitted, "action") != "ref-cas" || admitted.contains("durability")) {
+    return admitted;
+  }
+  const auto ref_name = text_or(admitted, "ref_name");
+  if (!ref_name.starts_with(FACT_DURABLE_PROVENANCE_REF_PREFIX)) {
+    return admitted;
+  }
+  admitted["durability"] = {{"requested_profile", "durable_sync"},
+                            {"admission_profile", FACT_DURABLE_ADMISSION_PROFILE}};
+  return admitted;
+}
 
 void validate_durable_ref_cas_admission(const std::string &runtime_dir, const nlohmann::json &input) {
   (void)prepare_durable_admission(runtime_dir, input);

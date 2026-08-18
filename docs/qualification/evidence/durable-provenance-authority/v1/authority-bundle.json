@@ -1,0 +1,178 @@
+{
+  "bodies": {
+    "sha256:0d130dd39cd62b78bfd7fc74eba5a1c6e109a606a450fc76773d1696a9c47c4a": "{\"acknowledgesCutRoot\":\"sha256:08727da9a69a28f46786bf195c30084f6c574cc69b65eab18287417a9a193e42\",\"candidateInventoryRoot\":\"sha256:39eec4c64db9438c5acf716dbe04529df12babef9770648360a119735a8ba061\",\"candidateProvenanceRoot\":\"sha256:1cc074a7b4344eeddef03e863c609aae2d3763f68116ff7642241f487206a0e7\",\"contractRoots\":[\"sha256:29f1218350d3cf49423ffc1b78e3328c3af554c21e8c3ffd31928ea9db51a404\"],\"qualificationRoots\":[\"sha256:b7194b811e4d3af2df4390bc4d1731e16a86215bd64ee18cb630dd5492f4fb63\"],\"releaseId\":\"v4.0.0-alpha.2\",\"schema\":\"kungfu.release-provenance-authority-fact/v1\",\"sealedCandidateRoot\":\"sha256:1cc074a7b4344eeddef03e863c609aae2d3763f68116ff7642241f487206a0e7\",\"sourceContent\":{\"algorithm\":\"sha256-canonical-file-set-v1\",\"contentRoot\":\"sha256:39eec4c64db9438c5acf716dbe04529df12babef9770648360a119735a8ba061\",\"entryCount\":6446,\"manifestRoot\":\"sha256:288f3d2b7d7f954a0f83f3c0c1929edb8d8a22f7fc8339df8d971ea5fd50c5de\"}}",
+    "sha256:fbd442fb6d8d67f9ba2349afc03fcb908ddaabf6a3123d44a29b07d254f891fd": "{\"acknowledgesCutRoot\":null,\"candidateInventoryRoot\":\"sha256:02c630ec99189e1aedcb13b0794f5a17d951c196c75131ed7805c7a9b5dee67f\",\"candidateProvenanceRoot\":\"sha256:eac7fb65b542a951dda314b736fc27fafd86b6d819344510a7ce1802f0a82cdd\",\"contractRoots\":[\"sha256:13c4679c4ac8764c85e29693bfb59099e21e9786cc6082552198d39393467490\"],\"qualificationRoots\":[\"sha256:3b25e6437af014f29280837804124be1e0e3280b0b3fd63e83ab1f1956ced6bc\",\"sha256:3087ee3a4e476773bec759d58ac533a9452cb652006ebccdf11957f602b18d51\"],\"releaseId\":\"v4.0.0-alpha.1\",\"schema\":\"kungfu.release-provenance-authority-fact/v1\",\"sealedCandidateRoot\":\"sha256:46169f7d385e5cc296352578cafd29f66762d73b6301f3180ce59560d9f5eef3\",\"sourceContent\":{\"algorithm\":\"sha256-canonical-file-set-v1\",\"contentRoot\":\"sha256:3a44ed9f2b85e9bf68a5878f45d9168de4b7299acdb1bfe318662c00fcb03356\",\"entryCount\":6280,\"manifestRoot\":\"sha256:44fcd926d7a80f476ae20e19ed60bfcf703b945242cb01143abb8e037a60002c\"}}"
+  },
+  "bundle_root": "sha256:77b1051e5f8b99ab0137913b4ce8c16e89da09b130f44b5de4b4b36b924de2e9",
+  "capabilities": {
+    "bodies": "included",
+    "cuts": "exact",
+    "identities": "exact",
+    "refs": "reachable-transition-chain",
+    "relations": "active-closure"
+  },
+  "loss": [],
+  "records": {
+    "cuts": [
+      {
+        "cut_root": "sha256:08727da9a69a28f46786bf195c30084f6c574cc69b65eab18287417a9a193e42",
+        "document": {
+          "activeRelationRoots": [],
+          "admissionRoots": [
+            "sha256:bf5688680413375d0517bcc209db6464158bd6533409cb34093393e486cae911"
+          ],
+          "conflictRoots": [],
+          "declarationRoots": [
+            "sha256:a5068884a64fa2b919e013176d6c3c3cfa407cdfee7e6fd790a11aa343cc6a43"
+          ],
+          "episodeFrontier": [],
+          "objectVersions": [
+            [
+              "fact:f4563095b1a14077edc7dab5ec6a7759",
+              "sha256:e24a260d0239f840597bf75525fa6d1f9049204c41e917922302e601c1e49571"
+            ]
+          ],
+          "omissionRoots": [],
+          "parentCutRoots": [],
+          "schema": "kungfu.fact.cut/v1"
+        }
+      },
+      {
+        "cut_root": "sha256:b4e9981c43a64e471b4ba63dfd4fe915cbeeb67939f668cb48e3e9d149a1b9d6",
+        "document": {
+          "activeRelationRoots": [
+            "sha256:1998a20195446a62c7e47e3e99fd546418f92c3a7b6f25e5a0bfbea06cf38e3e"
+          ],
+          "admissionRoots": [
+            "sha256:bf5688680413375d0517bcc209db6464158bd6533409cb34093393e486cae911"
+          ],
+          "conflictRoots": [],
+          "declarationRoots": [
+            "sha256:a5068884a64fa2b919e013176d6c3c3cfa407cdfee7e6fd790a11aa343cc6a43"
+          ],
+          "episodeFrontier": [],
+          "objectVersions": [
+            [
+              "fact:8c1705e96209b79344b1722dea6905b1",
+              "sha256:02f71d038f24fc482f5b9a62cc794695b7da46118e3e348654f2510d12da2bf3"
+            ],
+            [
+              "fact:f4563095b1a14077edc7dab5ec6a7759",
+              "sha256:e24a260d0239f840597bf75525fa6d1f9049204c41e917922302e601c1e49571"
+            ]
+          ],
+          "omissionRoots": [],
+          "parentCutRoots": [
+            "sha256:08727da9a69a28f46786bf195c30084f6c574cc69b65eab18287417a9a193e42"
+          ],
+          "schema": "kungfu.fact.cut/v1"
+        }
+      }
+    ],
+    "objects": [
+      {
+        "createdByReceiptRoot": "sha256:bf5688680413375d0517bcc209db6464158bd6533409cb34093393e486cae911",
+        "objectId": "fact:8c1705e96209b79344b1722dea6905b1",
+        "objectType": "release-provenance",
+        "schema": "kungfu.fact.object/v1"
+      },
+      {
+        "createdByReceiptRoot": "sha256:bf5688680413375d0517bcc209db6464158bd6533409cb34093393e486cae911",
+        "objectId": "fact:f4563095b1a14077edc7dab5ec6a7759",
+        "objectType": "release-provenance",
+        "schema": "kungfu.fact.object/v1"
+      }
+    ],
+    "relations": [
+      {
+        "document": {
+          "admissionRoots": [
+            "sha256:bf5688680413375d0517bcc209db6464158bd6533409cb34093393e486cae911"
+          ],
+          "attributesRoot": "sha256:67e191a4516ba4afb92264659a18a7e10af711e34aeb3a363b733a7898556161",
+          "relationId": "fact:ad0cc5fc1888b7b08aa01284caac2d37",
+          "relationType": "acknowledges",
+          "schema": "kungfu.fact.relation-add/v1",
+          "source": {
+            "id": "sha256:02f71d038f24fc482f5b9a62cc794695b7da46118e3e348654f2510d12da2bf3",
+            "kind": "pinned-version"
+          },
+          "target": {
+            "id": "sha256:e24a260d0239f840597bf75525fa6d1f9049204c41e917922302e601c1e49571",
+            "kind": "pinned-version"
+          }
+        },
+        "relation_root": "sha256:1998a20195446a62c7e47e3e99fd546418f92c3a7b6f25e5a0bfbea06cf38e3e"
+      }
+    ],
+    "transitions": [
+      {
+        "expectedOldCutRoot": "",
+        "expectedOldRevision": 0,
+        "kind": "create",
+        "newCutRoot": "sha256:08727da9a69a28f46786bf195c30084f6c574cc69b65eab18287417a9a193e42",
+        "reasonRoot": "sha256:6dfdf3c0ac98b3410d2573a831dfd81ca698d12c58f7be9256373a74172578fe",
+        "refName": "release-provenance/v4.0.0-alpha.1",
+        "revision": 1,
+        "schema": "kungfu.fact.ref-transition/v1",
+        "transitionId": "release-provenance-v4.0.0-alpha.1",
+        "transition_root": "sha256:73733fcc27412e66a5b53a628ec265a72987791afbdf6924bf33b4f67f53757f"
+      },
+      {
+        "expectedOldCutRoot": "",
+        "expectedOldRevision": 0,
+        "kind": "create",
+        "newCutRoot": "sha256:b4e9981c43a64e471b4ba63dfd4fe915cbeeb67939f668cb48e3e9d149a1b9d6",
+        "reasonRoot": "sha256:74cf9d8200a6e8f4aa4660a0c4f6c9d60c6c6eeceeaf16ca8735bfc00672dbce",
+        "refName": "release-provenance/v4.0.0-alpha.2",
+        "revision": 1,
+        "schema": "kungfu.fact.ref-transition/v1",
+        "transitionId": "release-provenance-v4.0.0-alpha.2",
+        "transition_root": "sha256:6e41eec8ec5bdcf45106071a686b98cc783e44f5f8366a161b411e1c6d355ea3"
+      }
+    ],
+    "versions": [
+      {
+        "document": {
+          "admissionRoots": [
+            "sha256:b7194b811e4d3af2df4390bc4d1731e16a86215bd64ee18cb630dd5492f4fb63",
+            "sha256:bf5688680413375d0517bcc209db6464158bd6533409cb34093393e486cae911"
+          ],
+          "bodyRoot": "sha256:0d130dd39cd62b78bfd7fc74eba5a1c6e109a606a450fc76773d1696a9c47c4a",
+          "declarationRoots": [
+            "sha256:a5068884a64fa2b919e013176d6c3c3cfa407cdfee7e6fd790a11aa343cc6a43"
+          ],
+          "objectId": "fact:8c1705e96209b79344b1722dea6905b1",
+          "parentVersionRoots": [],
+          "schema": "kungfu.fact.version/v1",
+          "schemaRoot": "sha256:ed073b36d3c8c232cc4dc4808568d13bb36ab5ab00f3b22ef5eeb5a239668a88"
+        },
+        "version_root": "sha256:02f71d038f24fc482f5b9a62cc794695b7da46118e3e348654f2510d12da2bf3"
+      },
+      {
+        "document": {
+          "admissionRoots": [
+            "sha256:3087ee3a4e476773bec759d58ac533a9452cb652006ebccdf11957f602b18d51",
+            "sha256:3b25e6437af014f29280837804124be1e0e3280b0b3fd63e83ab1f1956ced6bc",
+            "sha256:bf5688680413375d0517bcc209db6464158bd6533409cb34093393e486cae911"
+          ],
+          "bodyRoot": "sha256:fbd442fb6d8d67f9ba2349afc03fcb908ddaabf6a3123d44a29b07d254f891fd",
+          "declarationRoots": [
+            "sha256:a5068884a64fa2b919e013176d6c3c3cfa407cdfee7e6fd790a11aa343cc6a43"
+          ],
+          "objectId": "fact:f4563095b1a14077edc7dab5ec6a7759",
+          "parentVersionRoots": [],
+          "schema": "kungfu.fact.version/v1",
+          "schemaRoot": "sha256:ed073b36d3c8c232cc4dc4808568d13bb36ab5ab00f3b22ef5eeb5a239668a88"
+        },
+        "version_root": "sha256:e24a260d0239f840597bf75525fa6d1f9049204c41e917922302e601c1e49571"
+      }
+    ]
+  },
+  "schema": "kungfu.fact-kernel.portable-bundle/v1",
+  "source_fsck_root": "sha256:cf24d2b671cdc5abee2ca6216ab540c333118b2cf4207a1c3d6d83670e5cc76c",
+  "target": {
+    "cut_root": "sha256:b4e9981c43a64e471b4ba63dfd4fe915cbeeb67939f668cb48e3e9d149a1b9d6",
+    "ref_name": "release-provenance/v4.0.0-alpha.2"
+  }
+}
