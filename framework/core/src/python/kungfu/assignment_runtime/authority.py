@@ -144,6 +144,41 @@ class LocalRuntimeError(RuntimeError):
         self.diagnostics = list(diagnostics or [])
 
 
+def _validate_command_arguments(command: Mapping[str, Any]) -> None:
+    arguments = command.get("arguments")
+    if not isinstance(arguments, Mapping):
+        return
+    executor_profile = str(arguments.get("executorProfile") or "")
+    if executor_profile and executor_profile not in _ASSESSMENT_EXECUTOR_PROFILES:
+        raise LocalRuntimeError(
+            "invalid-command",
+            "Assessment executor profile must be inline, thread, or process",
+            details={"field": "executorProfile"},
+        )
+
+
+def _interrupted_command_rejection(
+    pending: Mapping[str, Any], error: LocalRuntimeError
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    command = dict(pending["command"])
+    details = {
+        "commandId": str(command.get("commandId") or ""),
+        "commandRoot": str(pending.get("commandRoot") or ""),
+        "errorCode": error.code,
+    }
+    diagnostic = {
+        "code": "interrupted-command-rejected",
+        "message": (
+            "An interrupted command failed deterministic validation before "
+            "authority execution"
+        ),
+        "severity": "warning",
+        "recovery": [],
+        "details": {**details, **dict(error.details)},
+    }
+    return diagnostic, details
+
+
 class AssignmentAuthority(Protocol):
     """Private adapter boundary to the one native transition authority."""
 
