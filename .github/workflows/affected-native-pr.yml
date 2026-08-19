@@ -669,11 +669,13 @@ jobs:
         # shifu-entry-contract: allow source-tool bootstrap before Gate dependencies are runnable
         run: node scripts/buildchain-install.mjs
       - name: Ensure compiler cache tool
+        id: compiler-cache-tool
         if: ${{ steps.plan.outputs.required == 'true' }}
         shell: bash
         timeout-minutes: 6
         run: |
           set -euo pipefail
+          available=true
           if ! command -v ccache >/dev/null 2>&1; then
             installed=false
             for attempt in 1 2; do
@@ -695,11 +697,15 @@ jobs:
               echo "ccache installation attempt ${attempt} failed" >&2
             done
             if [ "$installed" != true ]; then
-              echo "ccache installation failed after two bounded attempts" >&2
-              exit 1
+              available=false
+              echo "::warning::ccache installation failed after two bounded attempts; the native Gate remains the cold authority"
             fi
           fi
-          ccache --version
+          mkdir -p "$HOME/.cache/ccache"
+          echo "available=${available}" >> "$GITHUB_OUTPUT"
+          if [ "$available" = true ]; then
+            ccache --version
+          fi
       - name: Write portable cache manifests
         if: ${{ steps.plan.outputs.native-required == 'true' }}
         shell: bash
@@ -735,7 +741,11 @@ jobs:
           --output product/qualification/affected-native/cache/compiler.plan.json
           --github-output "$GITHUB_OUTPUT"
       - name: Restore compiler cache
-        if: ${{ steps.plan.outputs.native-required == 'true' }}
+        if: >-
+          ${{
+            steps.plan.outputs.native-required == 'true' &&
+            steps.compiler-cache-tool.outputs.available == 'true'
+          }}
         id: compiler-cache
         uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
@@ -743,24 +753,28 @@ jobs:
           key: ${{ steps.compiler-plan.outputs.cache-key }}
           restore-keys: ${{ steps.compiler-plan.outputs.restore-keys }}
       - name: Enable compiler cache when available
-        if: ${{ steps.plan.outputs.required == 'true' }}
+        if: >-
+          ${{
+            steps.plan.outputs.required == 'true' &&
+            steps.compiler-cache-tool.outputs.available == 'true'
+          }}
         shell: bash
         run: |
           set -euo pipefail
-          if command -v ccache >/dev/null 2>&1; then
-            {
-              echo "CMAKE_C_COMPILER_LAUNCHER=ccache"
-              echo "CMAKE_CXX_COMPILER_LAUNCHER=ccache"
-              echo "CCACHE_BASEDIR=${GITHUB_WORKSPACE}"
-              echo "CCACHE_NOHASHDIR=true"
-              echo "CCACHE_COMPRESS=true"
-              echo "CCACHE_MAXSIZE=1G"
-            } >> "$GITHUB_ENV"
-          else
-            echo "ccache unavailable; the current build remains the cold authority"
-          fi
+          {
+            echo "CMAKE_C_COMPILER_LAUNCHER=ccache"
+            echo "CMAKE_CXX_COMPILER_LAUNCHER=ccache"
+            echo "CCACHE_BASEDIR=${GITHUB_WORKSPACE}"
+            echo "CCACHE_NOHASHDIR=true"
+            echo "CCACHE_COMPRESS=true"
+            echo "CCACHE_MAXSIZE=1G"
+          } >> "$GITHUB_ENV"
       - name: Reset compiler cache statistics
-        if: ${{ steps.plan.outputs.required == 'true' }}
+        if: >-
+          ${{
+            steps.plan.outputs.required == 'true' &&
+            steps.compiler-cache-tool.outputs.available == 'true'
+          }}
         shell: bash
         run: ccache --zero-stats
       - name: Run all expensive native qualification under the live Warrant
@@ -798,7 +812,12 @@ jobs:
               ./shifu gate run source.changed-scope --omit-dependency source.acceptance --capability native-toolchain
             fi
       - name: Record compiler cache statistics
-        if: ${{ always() && steps.plan.outputs.native-required == 'true' }}
+        if: >-
+          ${{
+            always() &&
+            steps.plan.outputs.native-required == 'true' &&
+            steps.compiler-cache-tool.outputs.available == 'true'
+          }}
         shell: bash
         run: |
           set -euo pipefail
