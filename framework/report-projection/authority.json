@@ -10,6 +10,11 @@
     "mutableLatestPointerIsAuthority": false,
     "missingArtifactRecovery": "check out the receipt sourceRevision and run ./shifu maintainability:reports generate --output <directory>"
   },
+  "currentNavigation": {
+    "command": "./shifu maintainability:function-risk --json",
+    "authority": "regenerate from the checked-out source and the exact policy baseline; use an immutable generated-report receipt when citing another revision",
+    "legacyRule": "tracked abstraction-integrity and semantic-amplification reports are historical compatibility snapshots only"
+  },
   "reports": [
     {
       "id": "abstraction-integrity",
@@ -46,6 +51,38 @@
         "artifactRoot": "sha256:e09a2793ad524e24c1038b35662af358964122cae92412945ffe81974d6a44fb",
         "disposition": "read-only compatibility snapshot; not current authority and never required in an ordinary pull request"
       }
+    },
+    {
+      "id": "function-risk",
+      "reportSchema": "kungfu.function-risk-report/v1",
+      "generator": {
+        "path": "framework/maintainability/function-risk.mjs",
+        "command": "function-risk"
+      },
+      "generatorDependencyPaths": [
+        "scripts/code-complexity-budget.mjs"
+      ],
+      "policyPaths": [
+        "framework/maintainability/function-risk-policy.json"
+      ],
+      "baseline": {
+        "kind": "git-revision",
+        "manifestField": "baselineRef"
+      },
+      "sourceRoots": [
+        "tracked first-party Python, JavaScript/TypeScript, Rust, and C/C++ source selected by the declared policy"
+      ],
+      "consumers": [
+        "./shifu maintainability:function-risk --json",
+        "generated-report-authority bundle"
+      ],
+      "triggers": [
+        "pull_request",
+        "merge_group",
+        "push:protected-development",
+        "workflow_dispatch"
+      ],
+      "legacyProjection": null
     },
     {
       "id": "semantic-amplification",

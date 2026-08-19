@@ -1093,7 +1093,7 @@
     {
       "path": ".github/workflows/report-projection.yml",
       "authority": "qualification",
-      "definitionDigest": "sha256:7e494520e31692ff68ee48bbb9a4e4d8f942def043526ab1fdab6f1311c4e4da",
+      "definitionDigest": "sha256:92f0992178e7ec6606a1af367b096c6d23cd86c58c8320228aaef069d150c64a",
       "jobs": [
         {
           "id": "exact-source-projection",

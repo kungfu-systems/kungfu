@@ -119,6 +119,15 @@
       "dependencyInstallation": false
     },
     {
+      "id": "function-risk-query",
+      "command": "./shifu maintainability:function-risk --json",
+      "classification": "read-only-source",
+      "implementation": "framework/maintainability/function-risk.mjs",
+      "transitiveWriters": [],
+      "network": false,
+      "dependencyInstallation": false
+    },
+    {
       "id": "amplification-query",
       "command": "./shifu maintainability:amplification",
       "classification": "read-only-source",

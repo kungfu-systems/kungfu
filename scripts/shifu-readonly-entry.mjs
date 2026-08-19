@@ -18,6 +18,7 @@ const READONLY_SOURCE_COMMANDS = [
   'core:architecture:health',
   'invariant:verify --list',
   'maintainability:complexity',
+  'maintainability:function-risk',
   'maintainability:python-structure',
   'maintainability:amplification',
   'maintainability:query',
@@ -49,6 +50,8 @@ function route(command, args) {
     return ['scripts/kungfu-invariant-discovery.mjs', args];
   if (command === 'maintainability:complexity')
     return ['scripts/code-complexity-budget.mjs', args];
+  if (command === 'maintainability:function-risk')
+    return ['framework/maintainability/function-risk.mjs', args];
   if (command === 'maintainability:python-structure')
     return ['scripts/check-code-complexity.mjs', args];
   if (

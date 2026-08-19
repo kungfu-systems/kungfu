@@ -212,7 +212,7 @@ export SHIFU_ENTRYPOINT=1
 # Build-free routes read checked-in authorities with Node built-ins only.
 case "${1:-} ${2:-} ${3:-}" in
   kfd\ status*|kfd\ query*|kfd\ check*|kfd:query\ *|kfd:support-matrix:check\ *|core:architecture\ *|core:architecture:health\ *|invariant:verify\ --list*|invariant:verify\ --\ --list*|\
-  maintainability:complexity\ *|maintainability:amplification\ *|maintainability:query\ *|work-design:preflight\ *|work-design:feedback\ *)
+  maintainability:complexity\ *|maintainability:function-risk\ *|maintainability:python-structure\ *|maintainability:amplification\ *|maintainability:query\ *|work-design:preflight\ *|work-design:feedback\ *)
     if command -v node >/dev/null 2>&1; then
       exec node ./scripts/shifu-readonly-entry.mjs "$@"
     fi
