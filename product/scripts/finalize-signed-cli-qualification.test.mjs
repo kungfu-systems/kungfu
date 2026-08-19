@@ -385,7 +385,10 @@ test('post-sign Codex planning is credential-free and selects only the fixture p
     source,
     /'starter-create',[\s\S]*?'--expected-plan-root',[\s\S]*?'--execute',[\s\S]*?'--json'/u,
   );
-  assert.match(source, /'run',[\s\S]*?'codex',[\s\S]*?'--plan'/u);
+  assert.match(
+    source,
+    /'run',[\s\S]*?'codex',[\s\S]*?projectPlan\.initialWork\.title,[\s\S]*?'--workspace',[\s\S]*?'--plan'/u,
+  );
   assert.match(source, /realCodexRequired: false/u);
   assert.match(source, /providerCredentialsRead: false/u);
 });

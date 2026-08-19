@@ -471,6 +471,10 @@ function verifyCodexPlanWithoutCodex({
     'Agent Work Starter plan',
   );
   assert(projectPlan.planRoot, 'Agent Work Starter plan omitted planRoot');
+  assert(
+    projectPlan.initialWork?.title,
+    'Agent Work Starter plan omitted initial Work title',
+  );
   runKungfu(
     kungfu,
     [
@@ -490,15 +494,23 @@ function verifyCodexPlanWithoutCodex({
   const plan = parseJsonOutput(
     runKungfu(
       kungfu,
-      ['run', 'codex', '--workspace', project, '--plan', '--json'],
+      [
+        'run',
+        'codex',
+        projectPlan.initialWork.title,
+        '--workspace',
+        project,
+        '--plan',
+        '--json',
+      ],
       { cwd: temporaryRoot, env },
     ).stdout,
-    'kungfu run codex --plan',
+    'kungfu run codex <task> --plan',
   );
   assert(
     /^sha256:[0-9a-f]{64}$/u.test(plan.planRoot || '') &&
       plan.agent?.provider === 'codex',
-    'kungfu run codex --plan did not bind the fixture provider and exact plan',
+    'kungfu run codex <task> --plan did not bind the fixture provider and exact plan',
   );
   return {
     fixtureOnly: true,
