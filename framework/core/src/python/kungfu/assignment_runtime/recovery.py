@@ -22,6 +22,63 @@ from .authority import (
 class AssignmentRuntimeRecoveryMixin:
     """Recovery operations shared by the embedded Local Runtime writer."""
 
+    _state: dict[str, Any]
+    realm: dict[str, str]
+
+    def _observe_snapshot(
+        self, *, record_event: bool
+    ) -> tuple[dict[str, Any], dict[str, Any]]:
+        raise NotImplementedError
+
+    def _finalize_pending(
+        self,
+        pending: Mapping[str, Any],
+        snapshot: Mapping[str, Any],
+        revision: Mapping[str, Any],
+        *,
+        recovered: bool,
+    ) -> dict[str, Any]:
+        raise NotImplementedError
+
+    def _command_response(
+        self,
+        request_id: str,
+        selected: list[str],
+        record: Mapping[str, Any],
+        *,
+        disposition: str = "applied",
+    ) -> dict[str, Any]:
+        raise NotImplementedError
+
+    def _append_event(
+        self,
+        kind: str,
+        revision: Mapping[str, Any],
+        payload: Mapping[str, Any],
+    ) -> dict[str, Any]:
+        raise NotImplementedError
+
+    def _save_state(self, state: Mapping[str, Any] | None = None) -> None:
+        raise NotImplementedError
+
+    def _ok(
+        self,
+        request_id: str,
+        revision: Mapping[str, Any],
+        selected: list[str],
+        result: Mapping[str, Any],
+        *,
+        attempt: Any = None,
+        lease: Any = None,
+        warrant: Any = None,
+        fact_refs: list[dict[str, Any]] | None = None,
+        episode_refs: list[dict[str, Any]] | None = None,
+        receipts: list[dict[str, Any]] | None = None,
+        diagnostics: list[dict[str, Any]] | None = None,
+        cursor: Mapping[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        raise NotImplementedError
+
     def _recovery_plan(
         self, request: Mapping[str, Any], selected: list[str]
     ) -> dict[str, Any]:
@@ -30,7 +87,7 @@ class AssignmentRuntimeRecoveryMixin:
         if isinstance(pending, Mapping):
             automatic = isinstance(pending.get("authorityResult"), Mapping)
             basis = self._recovery_basis(pending, revision, automatic=automatic)
-            result = {
+            result: dict[str, Any] = {
                 "planId": f"recovery-{_root(basis)[7:31]}",
                 "status": "executable" if automatic else "manual-review-required",
                 "automatic": automatic,
