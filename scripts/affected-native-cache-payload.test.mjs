@@ -443,3 +443,37 @@ test('cache payload sealing rejects symlinks escaping its cache root', (t) => {
     /escaping symlink/,
   );
 });
+
+test('native qualification keeps ccache optional without weakening the cold Gate', () => {
+  const workflow = fs.readFileSync(
+    '.github/workflows/affected-native-pr.yml',
+    'utf8',
+  );
+  assert.match(
+    workflow,
+    /name: Ensure compiler cache tool\n\s+id: compiler-cache-tool[\s\S]*?available=false[\s\S]*?native Gate remains the cold authority[\s\S]*?echo "available=\$\{available\}" >> "\$GITHUB_OUTPUT"/u,
+  );
+  assert.doesNotMatch(
+    workflow,
+    /ccache installation failed after two bounded attempts" >&2\n\s+exit 1/u,
+  );
+  for (const step of [
+    'Restore compiler cache',
+    'Enable compiler cache when available',
+    'Reset compiler cache statistics',
+    'Record compiler cache statistics',
+  ]) {
+    const escaped = step.replace(/[.*+?^${}()|[\]\\]/gu, '\\$&');
+    assert.match(
+      workflow,
+      new RegExp(
+        `name: ${escaped}[\\s\\S]*?steps\\.compiler-cache-tool\\.outputs\\.available == 'true'`,
+        'u',
+      ),
+    );
+  }
+  assert.match(
+    workflow,
+    /name: Run all expensive native qualification under the live Warrant[\s\S]*?\.\/shifu gate run source\.changed-scope/u,
+  );
+});
