@@ -332,7 +332,7 @@
           "classification": "non-publication",
           "owner": "framework-report-projection",
           "surfaceIds": [],
-          "sourceRoot": "sha256:ddcca714991e9e8d5d8dde326b6d22804989cdab1d6af8d603a1b4ac7e08ea49"
+          "sourceRoot": "sha256:0edf7af02a2b350e7e102955a8b556009d5d393837d5de85b34ead66ae04363a"
         },
         {
           "path": ".github/workflows/release-new-version.yml",
@@ -877,5 +877,5 @@
       }
     }
   ],
-  "registryRoot": "sha256:09de55e35f9ec14c2fa5bcfc90440268f0194a7a4cde4d86a809faff38da7387"
+  "registryRoot": "sha256:ca3741ec4dcf034b276b3db9c1404a50d959c300b0f74d5c4c1fb8a00d7b2517"
 }

@@ -211,12 +211,27 @@ test('tracked projections are explicitly historical and ordinary PRs do not upda
   );
   assert.deepEqual(
     inventory.reports.map(({ id }) => id),
-    ['abstraction-integrity', 'semantic-amplification'],
+    ['abstraction-integrity', 'function-risk', 'semantic-amplification'],
   );
   for (const report of inventory.reports) {
-    assert.match(report.legacyProjection.sourceRevision, /^[0-9a-f]{40}$/);
-    assert.match(report.legacyProjection.artifactRoot, /^sha256:[0-9a-f]{64}$/);
+    if (report.legacyProjection) {
+      assert.match(report.legacyProjection.sourceRevision, /^[0-9a-f]{40}$/);
+      assert.match(
+        report.legacyProjection.artifactRoot,
+        /^sha256:[0-9a-f]{64}$/,
+      );
+      assert.match(
+        report.legacyProjection.disposition,
+        /historical|compatibility/u,
+      );
+    } else {
+      assert.equal(report.id, 'function-risk');
+    }
   }
+  assert.equal(
+    inventory.currentNavigation.command,
+    './shifu maintainability:function-risk --json',
+  );
 });
 
 test('PR 2337 report-only conflict replays as source-only work without a heavy rerun', () => {

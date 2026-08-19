@@ -1,0 +1,88 @@
+{
+  "schema": "kungfu.function-risk-policy/v1",
+  "status": "advisory-observation",
+  "baselineRef": "c8fd32f901b3af15532a11599c9b34af0b0f42bc",
+  "languageFamilies": {
+    "c-cpp": [".c", ".cc", ".cpp", ".cxx", ".h", ".hh", ".hpp", ".hxx"],
+    "javascript-typescript": [".cjs", ".js", ".mjs", ".ts", ".tsx"],
+    "python": [".py"],
+    "rust": [".rs"]
+  },
+  "includedClasses": [
+    "first-party-handwritten-implementation",
+    "public-header-or-entrypoint"
+  ],
+  "excludedClasses": [
+    "declarative-schema-or-table",
+    "generated-projection",
+    "retained-evidence",
+    "test-or-fixture",
+    "vendored-source"
+  ],
+  "metricSemantics": {
+    "cyclomatic": "one plus lexical decision points inside the extracted function",
+    "cognitive": "lexical decision points weighted by deterministic structural nesting",
+    "changeRisk": "cyclomatic plus twice cognitive plus size, change, and movement weights",
+    "enforcement": "advisory-only; findings never change a required-check conclusion or an existing line, owner, or architecture budget"
+  },
+  "antiGaming": {
+    "complexityDropForWrapperSignal": 3,
+    "preserveRiskAcrossFileRename": true,
+    "preserveRiskAcrossLanguageMove": true,
+    "rejectGeneratedOrVendorRelabeling": true
+  },
+  "entrypointMapping": {
+    "packageScriptSelector": "^(?:check:python-structure|maintainability:|test:generated-report-authority$)",
+    "packageScripts": {
+      "check:python-structure": {
+        "disposition": "canonical-gate",
+        "gate": "source.acceptance",
+        "mode": "required-existing-budget"
+      },
+      "maintainability:complexity": {
+        "disposition": "canonical-gate",
+        "gate": "source.acceptance",
+        "mode": "required-existing-budget"
+      },
+      "maintainability:function-risk": {
+        "disposition": "canonical-gate",
+        "gate": "source.acceptance",
+        "mode": "advisory-report"
+      },
+      "maintainability:python-structure": {
+        "disposition": "canonical-gate",
+        "gate": "source.acceptance",
+        "mode": "required-existing-budget"
+      },
+      "maintainability:reports": {
+        "disposition": "retained-exception",
+        "reason": "materializes immutable diagnostic artifacts; it is not a protected required context"
+      },
+      "test:generated-report-authority": {
+        "disposition": "canonical-gate",
+        "gate": "source.acceptance",
+        "mode": "contract-test"
+      }
+    },
+    "workflowSelector": "maintainability:reports|check:python-structure",
+    "workflows": {
+      ".github/workflows/python-structure.yml": {
+        "disposition": "retained-exception",
+        "profile": "dev-pr",
+        "reason": "cross-platform diagnostic mirror of the existing source.acceptance budget; not a required context"
+      },
+      ".github/workflows/report-projection.yml": {
+        "disposition": "retained-exception",
+        "profile": "dev-pr",
+        "reason": "coalesced immutable report publication; contents:read and not a required context"
+      }
+    },
+    "readonlyRoutes": [
+      "maintainability:amplification",
+      "maintainability:complexity",
+      "maintainability:function-risk",
+      "maintainability:python-structure",
+      "maintainability:query"
+    ]
+  }
+}
