@@ -113,6 +113,13 @@ function generateRawReport(id) {
         '--json',
       ]),
     );
+  if (id === 'function-risk')
+    return JSON.parse(
+      run(process.execPath, [
+        'framework/maintainability/function-risk.mjs',
+        '--json',
+      ]),
+    );
   throw new Error(`unsupported generated report '${id}'`);
 }
 

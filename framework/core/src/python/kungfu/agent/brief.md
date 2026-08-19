@@ -105,7 +105,7 @@ credentials, external services, release, signing, and protected branches retain
 their own authorization gates.
 
 ## Source-checkout boundary
-For source implementation, read repository rules and obtain the verified route:
+For source implementation, read repository rules and obtain the verified route; use `./shifu maintainability:function-risk --json` for current rooted advisory risk. Tracked reports are historical snapshots.
 
 ```sh
 ./shifu docs inventory --json

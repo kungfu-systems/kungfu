@@ -647,6 +647,11 @@ export function sourceAcceptancePlan(
       '--self-test',
     ],
     ['code complexity budget ratchet', 'scripts/code-complexity-budget.mjs'],
+    [
+      'advisory function-level risk projection',
+      'framework/maintainability/function-risk.mjs',
+      '--check',
+    ],
     ...(coldReadOnlySourceAcceptance
       ? []
       : [
@@ -897,6 +902,7 @@ export function sourceAcceptancePlan(
               'scripts/code-complexity-budget.test.mjs',
               'scripts/check-code-complexity.test.mjs',
               'framework/report-projection/authority.test.mjs',
+              'framework/maintainability/function-risk.test.mjs',
               'framework/maintainability/semantic-amplification.test.mjs',
               'framework/maintainability/terminal-evidence-matrix.test.mjs',
               ...(coldReadOnlySourceAcceptance
