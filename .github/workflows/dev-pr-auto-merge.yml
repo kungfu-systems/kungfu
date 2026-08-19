@@ -242,7 +242,7 @@ jobs:
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           repository: kungfu-systems/buildchain
-          ref: 888e87fec88cad41d225c32615e80a87744d4b6d
+          ref: 4dabecd7056e168f7345d460e3729465a932db9c
           path: .buildchain/dev-delivery-runtime
           fetch-depth: 1
           persist-credentials: false
@@ -543,9 +543,9 @@ jobs:
       contents: write
       pull-requests: write
       statuses: write
-    uses: kungfu-systems/buildchain/.github/workflows/dev-pr-auto-merge.yml@888e87fec88cad41d225c32615e80a87744d4b6d
+    uses: kungfu-systems/buildchain/.github/workflows/dev-pr-auto-merge.yml@4dabecd7056e168f7345d460e3729465a932db9c
     with:
-      buildchain-ref: 888e87fec88cad41d225c32615e80a87744d4b6d
+      buildchain-ref: 4dabecd7056e168f7345d460e3729465a932db9c
       target-branch: ${{ needs.resolve-target.outputs.target-branch }}
       expected-pr-number: ${{ fromJSON(needs.resolve-target.outputs.expected-pr-number || '0') }}
       expected-head-sha: ${{ needs.resolve-target.outputs.expected-head-sha }}
@@ -593,6 +593,223 @@ jobs:
       max-merges: 1
       merge-method: rebase
       landing-mode: queue
-      dry-run: ${{ github.event_name == 'workflow_dispatch' && inputs.dry-run }}
+      # Qualification must finish before the GitHub Actions-owned native
+      # CheckRun can become successful. The second reusable call below owns
+      # landing only after that exact qualified-Warrant bridge is read back.
+      defer-landing: true
+      dry-run: false
+    secrets:
+      github-token: ${{ secrets.KUNGFU_GITHUB_TOKEN }}
+
+  native-check-bridge:
+    name: Publish qualified native CheckRun
+    needs:
+      - resolve-target
+      - admission
+    if: >-
+      needs.admission.result == 'success' &&
+      needs.resolve-target.outputs.expected-pr-number != '' &&
+      (github.event_name != 'workflow_dispatch' || inputs.dry-run == false)
+    runs-on: ubuntu-24.04
+    permissions:
+      actions: read
+      checks: write
+      contents: read
+      pull-requests: read
+    outputs:
+      check-run-id: ${{ steps.publish.outputs.check-run-id }}
+      receipt-root: ${{ steps.publish.outputs.receipt-root }}
+    steps:
+      - name: Download exact qualified Warrant evidence
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          pattern: buildchain-dev-delivery-warrant-*-${{ needs.resolve-target.outputs.expected-pr-number }}
+          path: .buildchain/native-check-bridge/warrant
+          merge-multiple: true
+
+      - name: Publish exact GitHub Actions native CheckRun
+        id: publish
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EXPECTED_PR: ${{ needs.resolve-target.outputs.expected-pr-number }}
+          EXPECTED_HEAD: ${{ needs.resolve-target.outputs.expected-head-sha }}
+          SOURCE_RUN_ID: ${{ needs.resolve-target.outputs.source-workflow-run-id }}
+          TARGET_BRANCH: ${{ needs.resolve-target.outputs.target-branch }}
+        run: |
+          set -euo pipefail
+          evidence=.buildchain/native-check-bridge/warrant
+          warrant="$evidence/warrant.json"
+          test -f "$warrant"
+
+          live_pr="$evidence/live-pr.json"
+          gh api "repos/$GITHUB_REPOSITORY/pulls/$EXPECTED_PR" > "$live_pr"
+          jq -e \
+            --arg repository "$GITHUB_REPOSITORY" \
+            --arg branch "$TARGET_BRANCH" \
+            --argjson pullRequest "$EXPECTED_PR" \
+            --arg head "$EXPECTED_HEAD" \
+            --argjson sourceRun "$SOURCE_RUN_ID" \
+            '.schema == "kungfu.buildchain.dev-delivery-command-result/v1"
+             and .mode == "execute"
+             and (.after.commitSha | test("^[0-9a-f]{40}$"))
+             and (.after.stateRoot | test("^sha256:[0-9a-f]{64}$"))
+             and .after.stateRoot == .observation.stateRoot
+             and .warrant == .observation.activeWarrant
+             and .observation.activeCandidate.candidateId == .warrant.candidateId
+             and .warrant.schema == "kungfu.buildchain.dev-delivery-warrant/v1"
+             and .warrant.repository == $repository
+             and .warrant.protectedBase == $branch
+             and .warrant.pullRequestNumber == $pullRequest
+             and .warrant.sourceHead == $head
+             and .warrant.sourceWorkflowRunId == $sourceRun
+             and .warrant.phase == "qualified"
+             and (.warrant.fencingToken | test("^sha256:[0-9a-f]{64}$"))
+             and (.warrant.nativeProofRoot | test("^sha256:[0-9a-f]{64}$"))
+             and (.warrant.nativeProofReuseRoot | test("^sha256:[0-9a-f]{64}$"))
+             and (.receiptRoot | test("^sha256:[0-9a-f]{64}$"))
+             and (.warrant.expiresAt | sub("\\.[0-9]+Z$"; "Z") | fromdateiso8601) > now' \
+            "$warrant" >/dev/null
+          jq -e \
+            --arg repository "$GITHUB_REPOSITORY" \
+            --arg branch "$TARGET_BRANCH" \
+            --arg head "$EXPECTED_HEAD" \
+            '.head.repo.full_name == $repository
+             and .head.sha == $head
+             and .base.ref == $branch
+             and .state == "open"' \
+            "$live_pr" >/dev/null
+
+          native_root="$(jq -er '.warrant.nativeProofRoot' "$warrant")"
+          qualification_root="$(jq -er '.receiptRoot' "$warrant")"
+          state_root="$(jq -er '.after.stateRoot' "$warrant")"
+          state_commit="$(jq -er '.after.commitSha' "$warrant")"
+          run_url="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+          summary="Qualified Warrant $qualification_root binds native proof $native_root and durable state $state_root at $state_commit."
+          payload="$(jq -n \
+            --arg head "$EXPECTED_HEAD" \
+            --arg externalId "kungfu-qualified-warrant:$qualification_root" \
+            --arg detailsUrl "$run_url" \
+            --arg summary "$summary" \
+            '{name:"affected-native / linux",head_sha:$head,status:"completed",conclusion:"success",external_id:$externalId,details_url:$detailsUrl,output:{title:"Exact qualified native Warrant",summary:$summary}}')"
+          response="$evidence/check-run.json"
+          gh api --method POST \
+            -H 'Accept: application/vnd.github+json' \
+            "repos/$GITHUB_REPOSITORY/check-runs" \
+            --input - <<<"$payload" > "$response"
+          jq -e \
+            --arg head "$EXPECTED_HEAD" \
+            --arg externalId "kungfu-qualified-warrant:$qualification_root" \
+            '.name == "affected-native / linux"
+             and .head_sha == $head
+             and .status == "completed"
+             and .conclusion == "success"
+             and .external_id == $externalId
+             and .app.id == 15368
+             and (.id | type == "number")' \
+            "$response" >/dev/null
+
+          generated_at="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          receipt="$evidence/receipt.json"
+          jq -nS \
+            --arg repository "$GITHUB_REPOSITORY" \
+            --arg branch "$TARGET_BRANCH" \
+            --argjson pullRequest "$EXPECTED_PR" \
+            --arg head "$EXPECTED_HEAD" \
+            --argjson sourceWorkflowRunId "$SOURCE_RUN_ID" \
+            --argjson producerWorkflowRunId "$GITHUB_RUN_ID" \
+            --argjson producerRunAttempt "$GITHUB_RUN_ATTEMPT" \
+            --arg nativeProofRoot "$native_root" \
+            --arg qualificationReceiptRoot "$qualification_root" \
+            --arg warrantStateRoot "$state_root" \
+            --arg warrantStateCommit "$state_commit" \
+            --arg generatedAt "$generated_at" \
+            --slurpfile checkRun "$response" \
+            '{schema:"kungfu.dev-delivery-native-check-bridge/v1",repository:$repository,protectedBase:$branch,pullRequestNumber:$pullRequest,sourceHead:$head,sourceWorkflowRunId:$sourceWorkflowRunId,producerWorkflowRunId:$producerWorkflowRunId,producerRunAttempt:$producerRunAttempt,nativeProofRoot:$nativeProofRoot,qualificationReceiptRoot:$qualificationReceiptRoot,warrantStateRoot:$warrantStateRoot,warrantStateCommit:$warrantStateCommit,generatedAt:$generatedAt,checkRun:{id:$checkRun[0].id,nodeId:$checkRun[0].node_id,name:$checkRun[0].name,headSha:$checkRun[0].head_sha,status:$checkRun[0].status,conclusion:$checkRun[0].conclusion,appId:$checkRun[0].app.id,startedAt:$checkRun[0].started_at,completedAt:$checkRun[0].completed_at}}' \
+            > "$receipt.body.json"
+          receipt_root="sha256:$(sha256sum "$receipt.body.json" | cut -d' ' -f1)"
+          jq --arg receiptRoot "$receipt_root" '. + {receiptRoot:$receiptRoot}' \
+            "$receipt.body.json" > "$receipt"
+          rm "$receipt.body.json"
+          {
+            echo "check-run-id=$(jq -er '.id' "$response")"
+            echo "receipt-root=$receipt_root"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Upload exact native CheckRun bridge receipt
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: dev-delivery-native-check-bridge-${{ needs.resolve-target.outputs.expected-head-sha }}
+          path: .buildchain/native-check-bridge/warrant/receipt.json
+          if-no-files-found: error
+          retention-days: 30
+
+  landing:
+    needs:
+      - resolve-target
+      - delivery-contract
+      - admission
+      - native-check-bridge
+    if: >-
+      needs.admission.result == 'success' &&
+      needs.native-check-bridge.result == 'success'
+    permissions:
+      actions: write
+      checks: read
+      contents: write
+      pull-requests: write
+      statuses: write
+    uses: kungfu-systems/buildchain/.github/workflows/dev-pr-auto-merge.yml@4dabecd7056e168f7345d460e3729465a932db9c
+    with:
+      buildchain-ref: 4dabecd7056e168f7345d460e3729465a932db9c
+      target-branch: ${{ needs.resolve-target.outputs.target-branch }}
+      expected-pr-number: ${{ fromJSON(needs.resolve-target.outputs.expected-pr-number) }}
+      expected-head-sha: ${{ needs.resolve-target.outputs.expected-head-sha }}
+      source-workflow-run-id: ${{ fromJSON(needs.resolve-target.outputs.source-workflow-run-id) }}
+      handoff-workflow-id: dev-pr-auto-merge.yml
+      source-workflow-id: affected-native-pr.yml
+      diagnostic-context: Buildchain delivery intent
+      delivery-warrant-mode: required
+      assignment-root: ${{ needs.delivery-contract.outputs.assignment-root }}
+      initiative-root: ${{ needs.delivery-contract.outputs.initiative-root }}
+      source-identity-root: ${{ needs.delivery-contract.outputs.source-identity-root }}
+      source-patch-root: ${{ needs.delivery-contract.outputs.source-patch-root }}
+      project-cut-proof-json: ${{ needs.delivery-contract.outputs.project-cut-proof-json }}
+      plan-root: ${{ needs.delivery-contract.outputs.plan-root }}
+      closure-root: ${{ needs.delivery-contract.outputs.closure-root }}
+      dependency-root: ${{ needs.delivery-contract.outputs.dependency-root }}
+      toolchain-root: ${{ needs.delivery-contract.outputs.toolchain-root }}
+      environment-root: ${{ needs.delivery-contract.outputs.environment-root }}
+      affected-paths-json: ${{ needs.delivery-contract.outputs.affected-paths-json || '[]' }}
+      shard-evidence-roots-json: ${{ needs.delivery-contract.outputs.shard-evidence-roots-json || '[]' }}
+      native-proof-json: ${{ needs.delivery-contract.outputs.native-proof-json }}
+      native-command: >-
+        KUNGFU_FNM_DIST_MIRROR=${{ vars.KUNGFU_FNM_DIST_MIRROR }}
+        KUNGFU_FNM_SHA256=${{ vars.KUNGFU_FNM_SHA256 }}
+        ./shifu dev-delivery:native-under-warrant --
+        --repository ${{ github.repository }}
+        --target-branch ${{ needs.resolve-target.outputs.target-branch }}
+        --pull-request ${{ needs.resolve-target.outputs.expected-pr-number }}
+        --expected-head ${{ needs.resolve-target.outputs.expected-head-sha }}
+        --status-context 'affected-native / linux'
+        --output ../dev-delivery/kungfu-native-receipt.json
+      native-heartbeat-seconds: 300
+      delivery-class: ${{ needs.delivery-contract.outputs.delivery-class || 'native-proof-required' }}
+      delivery-priority: ${{ needs.delivery-contract.outputs.priority || 'ordinary' }}
+      warrant-lease-seconds: 5400
+      required-status-checks: |-
+        Candidate source acceptance / check
+      queue-admission-context: Queue admission lease
+      active-lease-context: ${{ needs.delivery-contract.outputs.active-lease-context }}
+      ready-label: state/ready
+      block-labels: state/blocked,blocked,do-not-merge,work-in-progress
+      allowed-head-prefixes: feature/,fix/,chore/,docs/,ci/,refactor/
+      require-approval: true
+      same-repository-only: true
+      max-merges: 1
+      merge-method: rebase
+      landing-mode: queue
+      defer-landing: false
+      dry-run: false
     secrets:
       github-token: ${{ secrets.KUNGFU_GITHUB_TOKEN }}
