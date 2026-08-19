@@ -59,6 +59,40 @@ test('repository matches the exact known-issue baseline', async () => {
   assert.equal(result.acceptedIssueCount, 5);
 });
 
+test('repository baseline lifecycle fails before expiry with an actionable continuation', async () => {
+  const results = new Map();
+  for (const fixture of FIXTURES.clockCases) {
+    const result = await validateRepository(ROOT, fixture.today);
+    results.set(fixture.name, result);
+    assert.equal(result.ok, fixture.expectedOk, fixture.name);
+    assert.equal(
+      result.expiringBaseline.length,
+      fixture.expectedExpiring,
+      fixture.name,
+    );
+    assert.equal(
+      result.expiredBaseline.length,
+      fixture.expectedExpired,
+      fixture.name,
+    );
+  }
+
+  const nearExpiry = results.get('near-expiry');
+  assert.ok(
+    nearExpiry.expiringBaseline.every(
+      (entry) => entry.owner && entry.removalCondition,
+    ),
+  );
+});
+
+test('repository baseline lifecycle fails closed for an impossible clock date', async () => {
+  const result = await validateRepository(ROOT, '2026-02-31');
+  assert.equal(result.ok, false);
+  assert.ok(
+    result.structuralErrors.some((entry) => entry.includes('real UTC date')),
+  );
+});
+
 test('admitted native receipt rejects stale and incomplete evidence', () => {
   const registry = JSON.parse(
     fs.readFileSync(
@@ -267,5 +301,6 @@ test('baseline comparison rejects new, stale, expired, and malformed entries', (
     comparison.expiredBaseline.map((entry) => entry.key),
     ['known'],
   );
+  assert.deepEqual(comparison.expiringBaseline, []);
   assert.deepEqual(comparison.malformedBaseline, ['malformed']);
 });

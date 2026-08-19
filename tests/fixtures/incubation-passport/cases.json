@@ -13,5 +13,35 @@
       "name": "overdue runtime incubation",
       "expectedIssue": "overdue-runtime-incubation:example.runtime"
     }
+  ],
+  "clockCases": [
+    {
+      "name": "current",
+      "today": "2026-11-30",
+      "expectedOk": true,
+      "expectedExpiring": 0,
+      "expectedExpired": 0
+    },
+    {
+      "name": "near-expiry",
+      "today": "2026-12-01",
+      "expectedOk": false,
+      "expectedExpiring": 5,
+      "expectedExpired": 0
+    },
+    {
+      "name": "expiry-boundary",
+      "today": "2026-12-31",
+      "expectedOk": false,
+      "expectedExpiring": 5,
+      "expectedExpired": 0
+    },
+    {
+      "name": "post-boundary",
+      "today": "2027-01-01",
+      "expectedOk": false,
+      "expectedExpiring": 0,
+      "expectedExpired": 5
+    }
   ]
 }

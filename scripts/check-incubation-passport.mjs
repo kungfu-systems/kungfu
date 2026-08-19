@@ -43,6 +43,14 @@ function utcDate() {
   return new Date().toISOString().slice(0, 10);
 }
 
+function utcDay(date) {
+  if (!/^\d{4}-\d{2}-\d{2}$/u.test(date || '')) return null;
+  const value = Date.parse(`${date}T00:00:00Z`);
+  if (Number.isNaN(value)) return null;
+  if (new Date(value).toISOString().slice(0, 10) !== date) return null;
+  return Math.floor(value / 86_400_000);
+}
+
 function issue(key, detail) {
   return { key, detail };
 }
@@ -915,17 +923,24 @@ export function collectIssues({
   return issues.sort((left, right) => left.key.localeCompare(right.key));
 }
 
-export function compareBaseline(issues, baseline, today = utcDate()) {
+export function compareBaseline(
+  issues,
+  baseline,
+  today = utcDate(),
+  expiryLeadDays = 30,
+) {
   const currentByKey = new Map(issues.map((entry) => [entry.key, entry]));
   const baselineByKey = new Map();
   const malformedBaseline = [];
+  const todayDay = utcDay(today);
   for (const entry of baseline.issues || []) {
     if (
       !entry.key ||
       !entry.owner ||
       !entry.rationale ||
       !entry.expiresOn ||
-      !entry.removalCondition
+      !entry.removalCondition ||
+      utcDay(entry.expiresOn) === null
     ) {
       malformedBaseline.push(entry.key || '<missing-key>');
       continue;
@@ -933,6 +948,16 @@ export function compareBaseline(issues, baseline, today = utcDate()) {
     if (baselineByKey.has(entry.key)) malformedBaseline.push(entry.key);
     baselineByKey.set(entry.key, entry);
   }
+
+  const expiringBaseline = [...baselineByKey.values()].filter((entry) => {
+    const expiryDay = utcDay(entry.expiresOn);
+    return (
+      todayDay !== null &&
+      expiryDay !== null &&
+      expiryDay >= todayDay &&
+      expiryDay - todayDay <= expiryLeadDays
+    );
+  });
 
   return {
     newIssues: issues.filter((entry) => !baselineByKey.has(entry.key)),
@@ -942,6 +967,7 @@ export function compareBaseline(issues, baseline, today = utcDate()) {
     expiredBaseline: [...baselineByKey.values()].filter(
       (entry) => entry.expiresOn < today,
     ),
+    expiringBaseline,
     malformedBaseline,
   };
 }
@@ -970,6 +996,11 @@ export async function validateRepository(root = ROOT, today = utcDate()) {
   const authority = loadJson(root, contract.schemaAuthority);
 
   const structuralErrors = [];
+  if (utcDay(today) === null) {
+    structuralErrors.push(
+      `today must be a real UTC date, got ${today || '<missing>'}`,
+    );
+  }
   const Ajv2020 = await loadAjv2020();
   let schemaValidation = 'skipped';
   if (Ajv2020) {
@@ -1010,17 +1041,20 @@ export async function validateRepository(root = ROOT, today = utcDate()) {
     schemas: trackedSchemas(root),
     today,
   });
-  const comparison = compareBaseline(issues, baseline, today);
+  const expiryLeadDays = contract.baselinePolicy.expiryLeadDays;
+  const comparison = compareBaseline(issues, baseline, today, expiryLeadDays);
   const ok =
     structuralErrors.length === 0 &&
     comparison.newIssues.length === 0 &&
     comparison.staleBaseline.length === 0 &&
     comparison.expiredBaseline.length === 0 &&
+    comparison.expiringBaseline.length === 0 &&
     comparison.malformedBaseline.length === 0;
   return {
     schema: 'kungfu.incubation-passport.check/v1',
     ok,
     today,
+    expiryLeadDays,
     currentIssueCount: issues.length,
     acceptedIssueCount: issues.length - comparison.newIssues.length,
     schemaValidation,
@@ -1039,6 +1073,11 @@ function renderFailure(result) {
     lines.push(`  stale-baseline: ${entry.key}`);
   for (const entry of result.expiredBaseline)
     lines.push(`  expired-baseline: ${entry.key} (${entry.expiresOn})`);
+  for (const entry of result.expiringBaseline)
+    lines.push(
+      `  near-expiry-baseline: ${entry.key} (${entry.expiresOn}; ` +
+        `owner=${entry.owner}; continuation=${entry.removalCondition})`,
+    );
   for (const entry of result.malformedBaseline)
     lines.push(`  malformed-baseline: ${entry}`);
   return lines.join('\n');
@@ -1051,8 +1090,10 @@ if (invoked) {
   const json = process.argv.includes('--json');
   const todayIndex = process.argv.indexOf('--today');
   const today = todayIndex >= 0 ? process.argv[todayIndex + 1] : utcDate();
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(today || '')) {
-    console.error('[incubation-passport] --today requires YYYY-MM-DD');
+  if (utcDay(today) === null) {
+    console.error(
+      '[incubation-passport] --today requires a real YYYY-MM-DD UTC date',
+    );
     process.exit(2);
   }
   const result = await validateRepository(ROOT, today);

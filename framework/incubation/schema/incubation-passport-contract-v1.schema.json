@@ -35,7 +35,8 @@
         "identityProtocol",
         "admissionReceipt",
         "deadline",
-        "history"
+        "history",
+        "baselineLifecycle"
       ],
       "properties": {
         "birthDecision": { "type": "string", "minLength": 1 },
@@ -44,7 +45,8 @@
         "identityProtocol": { "type": "string", "minLength": 1 },
         "admissionReceipt": { "type": "string", "minLength": 1 },
         "deadline": { "type": "string", "minLength": 1 },
-        "history": { "type": "string", "minLength": 1 }
+        "history": { "type": "string", "minLength": 1 },
+        "baselineLifecycle": { "type": "string", "minLength": 1 }
       }
     },
     "baselinePolicy": {
@@ -55,7 +57,9 @@
         "requiredFields",
         "newIssue",
         "staleEntry",
-        "expiredEntry"
+        "expiredEntry",
+        "nearExpiryEntry",
+        "expiryLeadDays"
       ],
       "properties": {
         "mode": { "const": "exact-known-issues" },
@@ -71,7 +75,11 @@
         },
         "newIssue": { "const": "fail" },
         "staleEntry": { "const": "fail" },
-        "expiredEntry": { "const": "fail" }
+        "expiredEntry": { "const": "fail" },
+        "nearExpiryEntry": {
+          "const": "fail-with-owner-and-removal-condition"
+        },
+        "expiryLeadDays": { "type": "integer", "minimum": 1 }
       }
     }
   }

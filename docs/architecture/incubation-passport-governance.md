@@ -65,8 +65,15 @@ Run:
 The checker scans every tracked `.fbs` and `.bfbs`, resolves registered schema
 owners, validates all referenced paths, checks Root protocol conformance, and
 rejects overdue runtime incubation. The baseline is an exact set: a new issue,
-an expired waiver, or a stale entry all fail. This keeps current debt visible
-without granting an open-ended exception to future files.
+a stale entry, or an entry within the contract's 30-day expiry lead window all
+fail. A near-expiry failure names the owner and removal condition, forcing an
+explicit renewal, retirement, or removal decision before merge instead of
+letting a previously green protected head decay after the expiry date.
+
+`scripts/check-incubation-passport.mjs --today YYYY-MM-DD` is the disposable
+clock used by regression fixtures. The fixtures cover a current date, the
+near-expiry lead boundary, the expiry date, and the post-expiry date without
+changing the machine clock or extending a waiver.
 
 ## Current boundary
 

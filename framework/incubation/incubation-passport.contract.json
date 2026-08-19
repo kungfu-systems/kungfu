@@ -14,7 +14,8 @@
     "identityProtocol": "Any object that mints a durable Root or identity preimage provides two independent implementation languages and shared golden vectors before admission.",
     "admissionReceipt": "An admitted native owner emits a fail-closed kungfu.incubation-passport.admission-receipt/v1 binding candidate, Assignment, source tree, fixtures, implementation languages, platform evidence, exact schema bytes, and no-rewrite evidence.",
     "deadline": "An incubating runtime object past its declared deadline is a gate failure.",
-    "history": "Registration and admission are additive. They never migrate, reinterpret, recalculate, or alias sealed evidence."
+    "history": "Registration and admission are additive. They never migrate, reinterpret, recalculate, or alias sealed evidence.",
+    "baselineLifecycle": "An accepted issue fails source admission before its expiry date enters the configured lead window; the failure names the owner and removal condition so renewal, retirement, or removal is decided before merge."
   },
   "baselinePolicy": {
     "mode": "exact-known-issues",
@@ -27,6 +28,8 @@
     ],
     "newIssue": "fail",
     "staleEntry": "fail",
-    "expiredEntry": "fail"
+    "expiredEntry": "fail",
+    "nearExpiryEntry": "fail-with-owner-and-removal-condition",
+    "expiryLeadDays": 30
   }
 }
