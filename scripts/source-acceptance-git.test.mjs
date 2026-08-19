@@ -6,6 +6,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { test } from 'node:test';
 
+import { resolveCompositionBase } from './check-project-cut-composition-gate.mjs';
 import {
   fetchSourceAcceptanceCommit,
   readSourceAcceptanceGit,
@@ -13,6 +14,43 @@ import {
   sourceAcceptancePlan,
   sourceMergeGroupBase,
 } from './source-acceptance.mjs';
+
+test('Project Cut composition uses the exact merge-group base without ancestry', () => {
+  const baseSha = 'a'.repeat(40);
+  assert.equal(
+    resolveCompositionBase({
+      mergeGroupBase: () => ({
+        ref: 'github.merge_group.base_sha',
+        sha: baseSha,
+        diffOperator: '..',
+      }),
+      candidates: () => assert.fail('merge-group base must be authoritative'),
+      gitRead: () =>
+        assert.fail('merge-group base must not require merge-base'),
+    }),
+    baseSha,
+  );
+});
+
+test('Project Cut composition retains branch merge-base fallback', () => {
+  const baseSha = 'b'.repeat(40);
+  const calls = [];
+  assert.equal(
+    resolveCompositionBase({
+      mergeGroupBase: () => null,
+      candidates: () => ['origin/dev/v4/v4.0', 'dev/v4/v4.0'],
+      gitRead: (args) => {
+        calls.push(args);
+        return args[1] === 'dev/v4/v4.0' ? baseSha : '';
+      },
+    }),
+    baseSha,
+  );
+  assert.deepEqual(calls, [
+    ['merge-base', 'origin/dev/v4/v4.0', 'HEAD'],
+    ['merge-base', 'dev/v4/v4.0', 'HEAD'],
+  ]);
+});
 
 test('source acceptance fetches only merge-group base trees', () => {
   const commit = 'a'.repeat(40);
