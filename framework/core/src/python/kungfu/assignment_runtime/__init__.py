@@ -337,6 +337,9 @@ class EmbeddedAssignmentRuntimeClient:
     def recovery_execute(self, plan: Mapping[str, Any]) -> dict[str, Any]:
         return self.invoke("recovery.execute", payload=plan)
 
+    def recovery_resolve(self, resolution: Mapping[str, Any]) -> dict[str, Any]:
+        return self.invoke("recovery.execute", payload=resolution)
+
 
 def _workspace_realm(runtime_dir: str | Path) -> tuple[str, str]:
     runtime_path = Path(runtime_dir).expanduser().resolve()
@@ -435,6 +438,44 @@ class LocalAssignmentRuntimeApplication:
                 "Assignment Runtime snapshot omitted the lifecycle projection",
             )
         return _copy_json(lifecycle)
+
+    def recovery_plan(self) -> dict[str, Any]:
+        with self._runtime() as runtime:
+            client = EmbeddedAssignmentRuntimeClient(
+                runtime, client_id=self.client_id, kind=self.kind
+            )
+            return _copy_json(_runtime_result(client.recovery_plan()))
+
+    def resolve_interrupted(
+        self,
+        *,
+        plan: Mapping[str, Any],
+        expected_basis_root: str,
+        authorized_by: str,
+        reason: str,
+        evidence_roots: list[str],
+    ) -> dict[str, Any]:
+        with self._runtime() as runtime:
+            client = EmbeddedAssignmentRuntimeClient(
+                runtime, client_id=self.client_id, kind=self.kind
+            )
+            resolution = dict(plan.get("operatorResolution") or {})
+            if plan.get("basisRoot") != expected_basis_root or not resolution:
+                raise LocalRuntimeError(
+                    "stale-revision", "Recovery plan basis is stale"
+                )
+            payload = {
+                "resolution": resolution["resolution"],
+                "expectedBasisRoot": expected_basis_root,
+                "expectedCommandRoot": resolution["commandRoot"],
+                "expectedRevision": resolution["currentRevision"],
+                "authorizedBy": authorized_by,
+                "reason": reason,
+                "evidenceRoots": sorted(set(evidence_roots)),
+            }
+            payload["idempotencyKey"] = f"idempotency:recovery:{_root(payload)[7:]}"
+            response = client.recovery_resolve(payload)
+            return _copy_json(_runtime_result(response))
 
     def authorize(
         self,

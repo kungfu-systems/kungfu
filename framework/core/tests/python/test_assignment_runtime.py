@@ -1117,12 +1117,13 @@ def test_interrupted_authority_write_without_result_is_fail_visible(tmp_path):
     snapshot = _handle(
         crashed, _request("assignment.snapshot", "assignment.snapshot.read")
     )
+    command = _command(snapshot["revision"])
     with pytest.raises(RuntimeError, match="authority crash window"):
         crashed.handle(
             _request(
                 "command.submit",
                 "assignment.command.submit",
-                payload=_command(snapshot["revision"]),
+                payload=command,
             )
         )
     crashed.close()
@@ -1148,14 +1149,134 @@ def test_interrupted_authority_write_without_result_is_fail_visible(tmp_path):
             _request("recovery.plan", "assignment.recovery.plan"),
         )
         assert plan["result"]["status"] == "manual-review-required"
+        resolution = plan["result"]["operatorResolution"]
+        assert resolution["authorityOutcome"] == "unknown"
+        assert resolution["commandRoot"] == _root(command)
         blocked = restarted.handle(
             _request("assignment.snapshot", "assignment.snapshot.read")
         )
         assert blocked["error"]["code"] == "backend-unavailable"
         assert authority._read()["phase"] == "claimed"
         assert len(authority._read()["effects"]) == 1
+
+        payload = {
+            "resolution": "abandon-local-pending",
+            "expectedBasisRoot": plan["result"]["basisRoot"],
+            "expectedCommandRoot": resolution["commandRoot"],
+            "expectedRevision": resolution["currentRevision"],
+            "idempotencyKey": "idempotency:recovery:ambiguous-command-a",
+            "authorizedBy": "operator-a",
+            "reason": "authority inspection confirms the current state is canonical",
+            "evidenceRoots": [ROOT_A],
+        }
+        stale = copy.deepcopy(payload)
+        stale["expectedBasisRoot"] = ROOT_B
+        refused = _handle(
+            restarted,
+            _request(
+                "recovery.execute",
+                "assignment.recovery.execute",
+                payload=stale,
+            ),
+        )
+        assert refused["error"]["code"] == "stale-revision"
+        assert restarted._state["pending"] is not None
+
+        wrong_command = copy.deepcopy(payload)
+        wrong_command["expectedCommandRoot"] = ROOT_B
+        refused = _handle(
+            restarted,
+            _request(
+                "recovery.execute",
+                "assignment.recovery.execute",
+                payload=wrong_command,
+            ),
+        )
+        assert refused["error"]["code"] == "idempotency-conflict"
+        assert restarted._state["pending"] is not None
+
+        resolved = _handle(
+            restarted,
+            _request(
+                "recovery.execute",
+                "assignment.recovery.execute",
+                payload=payload,
+            ),
+        )
+        assert resolved["result"]["resolution"]["authorityOutcome"] == "unknown"
+        assert resolved["result"]["resolution"]["localDisposition"] == (
+            "local-pending-abandoned"
+        )
+        assert resolved["result"]["resolution"]["disposition"] == "applied"
+        assert resolved["receipts"][0]["kind"] == "recovery-resolution"
+        assert restarted._state["pending"] is None
+        assert restarted._state["events"][-1]["kind"] == (
+            "command-outcome-unknown-resolved"
+        )
+        assert authority._read()["phase"] == "claimed"
+        assert len(authority._read()["effects"]) == 1
+
+        missing_evidence = copy.deepcopy(payload)
+        missing_evidence.pop("evidenceRoots")
+        invalid_request = _request(
+            "recovery.execute",
+            "assignment.recovery.execute",
+            payload=missing_evidence,
+        )
+        assert list(VALIDATE_ENVELOPE.iter_errors(invalid_request))
+
+        observed = _handle(
+            restarted,
+            _request("assignment.snapshot", "assignment.snapshot.read"),
+        )
+        assert observed["status"] == "ok"
+        inspected = _handle(
+            restarted,
+            _request(
+                "command.get",
+                "assignment.command.inspect",
+                payload={"commandId": command["commandId"]},
+            ),
+        )
+        assert inspected["result"]["command"]["disposition"] == (
+            "authority-outcome-unknown"
+        )
+        replay = _handle(
+            restarted,
+            _request(
+                "command.submit",
+                "assignment.command.submit",
+                payload=command,
+            ),
+        )
+        assert replay["error"]["code"] == "unknown-outcome"
+        assert replay["error"]["retryable"] is False
+        assert len(authority._read()["effects"]) == 1
     finally:
         restarted.close()
+
+    replayed = EmbeddedLocalAssignmentRuntime(
+        runtime_dir,
+        realm_id=REALM["realmId"],
+        generation=REALM["generation"],
+        authority=authority,
+        contract=ASSIGNMENT_RUNTIME_CONTRACT,
+        request_schema=ENVELOPE_SCHEMA,
+    ).start()
+    try:
+        replay = _handle(
+            replayed,
+            _request(
+                "recovery.execute",
+                "assignment.recovery.execute",
+                payload=payload,
+            ),
+        )
+        assert replay["result"]["resolution"]["disposition"] == "replayed"
+        assert replay["receipts"] == resolved["receipts"]
+        assert len(authority._read()["effects"]) == 1
+    finally:
+        replayed.close()
 
 
 @pytest.mark.skipif(
