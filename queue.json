@@ -3,7 +3,7 @@
   "contract": "kungfu-buildchain-dev-delivery-warrant-queue",
   "repository": "kungfu-systems/kungfu",
   "protectedBase": "dev/v4/v4.0",
-  "generation": 4607,
+  "generation": 4608,
   "fencingCounter": 555,
   "policy": {
     "agingSeconds": 900,
@@ -39714,8 +39714,42 @@
         "framework/core/src/python/kungfu/cli/commands/assignment_runtime_recovery.py",
         "framework/core/tests/python/test_assignment_runtime.py"
       ]
+    },
+    {
+      "repository": "kungfu-systems/kungfu",
+      "protectedBase": "dev/v4/v4.0",
+      "pullRequestNumber": 3316,
+      "assignmentRoot": "sha256:7ee3119ae2bb010eded9ca50763eab1ef0ab4020082daf5097ab2d027f6e7418",
+      "initiativeRoot": "sha256:bfff817933e5a5ad693e4b902a84f6cc3a251235dd7377cb4091d92f805fa7ff",
+      "sourceIdentityRoot": "sha256:5aa538e0bde05b99cf179e72b5fd96188589147026d0208c0edd1be6ae3d6e65",
+      "deliveryClass": "non-native-fast",
+      "candidateId": "sha256:c3b01ba7fbe67d31b2ebf80ffe55f55469242d588dec92aa98d75e19f46bd667",
+      "sourceHead": "7190b1cd88713f15558a1672a298eb70497ccf76",
+      "sourcePatchRoot": "sha256:cba47a49685661d67e35f22c7e9b1d7ee37dd9662a4c2cc8cacd127519678b11",
+      "sourceProofRoot": "sha256:f0c26b0b2726738338048b2f4e3eb1f5bd577e5882535cde2fdf05990c0aec93",
+      "planRoot": "sha256:41db51a974d693f2ffd031c068a9951b83b9249119d3b4daf9e638bc6e2c54d2",
+      "closureRoot": "sha256:ac6e52dc4778bd7be1e6224c9a526a00dc7fcdd56a84e07165a811b168158f3e",
+      "dependencyRoot": "sha256:8429322bd5007a999ef7db004e6f9e2c9d2839963d82ead1753ad46ea7af0ea6",
+      "toolchainRoot": "sha256:2ecb07894954a2e0de022615d4561e5ba3ae68376401941ecff77be03cd75a0f",
+      "environmentRoot": "sha256:ce8ac018bb38c00cc0f5e954dae39d921eb9437fb11314061e9628f456f39057",
+      "sourceWorkflowRunId": 32239684263,
+      "priority": "ordinary",
+      "enqueuedAt": "2026-08-19T10:00:02.883Z",
+      "updatedAt": "2026-08-19T10:00:02.883Z",
+      "attempts": 1,
+      "recoveries": 0,
+      "status": "queued",
+      "terminal": null,
+      "affectedPaths": [
+        "docs/architecture/incubation-passport-governance.md",
+        "framework/incubation/incubation-passport.contract.json",
+        "framework/incubation/schema/incubation-passport-contract-v1.schema.json",
+        "scripts/check-incubation-passport.mjs",
+        "scripts/check-incubation-passport.test.mjs",
+        "tests/fixtures/incubation-passport/cases.json"
+      ]
     }
   ],
-  "updatedAt": "2026-08-19T08:22:56.285Z",
-  "stateRoot": "sha256:281ad269347309f4e0b7723e1b82f8fd9fe076fad797345855cad96c2adfd825"
+  "updatedAt": "2026-08-19T10:00:02.883Z",
+  "stateRoot": "sha256:237d9394c800869aa693539bb4b78831e7e28402d97b4ee35425987a40ed9c32"
 }
