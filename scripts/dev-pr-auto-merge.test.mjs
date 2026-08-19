@@ -22,7 +22,7 @@ test('Dev auto-merge admits only explicitly ready reviewed same-repository PRs',
   const reusableRef = workflow.match(
     /uses: kungfu-systems\/buildchain\/\.github\/workflows\/dev-pr-auto-merge\.yml@([0-9a-f]{40})/u,
   )?.[1];
-  assert.equal(reusableRef, '888e87fec88cad41d225c32615e80a87744d4b6d');
+  assert.equal(reusableRef, '4dabecd7056e168f7345d460e3729465a932db9c');
   assert.match(workflow, new RegExp(`buildchain-ref: ${reusableRef}`, 'u'));
   assert.match(workflow, /workflow_run:[\s\S]*Core affected native/u);
   assert.match(
@@ -185,15 +185,71 @@ test('Dev auto-merge waits for PR checks and lands through the native queue', ()
   assert.match(workflow, /queue-admission-context: Queue admission lease/u);
   assert.match(workflow, /merge-method: rebase/u);
   assert.match(workflow, /landing-mode: queue/u);
-  assert.match(
-    workflow,
-    /dry-run: \$\{\{ github\.event_name == 'workflow_dispatch' && inputs\.dry-run \}\}/u,
+  const qualification = workflow.slice(
+    workflow.indexOf('  admission:\n'),
+    workflow.indexOf('  native-check-bridge:\n'),
   );
+  const landing = workflow.slice(workflow.indexOf('  landing:\n'));
+  assert.match(qualification, /defer-landing: true/u);
+  assert.match(qualification, /dry-run: false/u);
+  assert.match(landing, /delivery-warrant-mode: required/u);
+  assert.match(landing, /defer-landing: false/u);
+  assert.match(landing, /dry-run: false/u);
   assert.match(
     workflow,
     /github-token: \$\{\{ secrets\.KUNGFU_GITHUB_TOKEN \}\}/u,
   );
   assert.doesNotMatch(workflow, /gh pr merge|npm publish|git tag/iu);
+});
+
+test('Qualified native proof bridges to an exact GitHub Actions CheckRun before landing', () => {
+  const bridge = workflow.slice(
+    workflow.indexOf('  native-check-bridge:\n'),
+    workflow.indexOf('  landing:\n'),
+  );
+  const landing = workflow.slice(workflow.indexOf('  landing:\n'));
+
+  assert.match(bridge, /needs\.admission\.result == 'success'/u);
+  assert.match(bridge, /checks: write/u);
+  assert.match(
+    bridge,
+    /pattern: buildchain-dev-delivery-warrant-\*-\$\{\{ needs\.resolve-target\.outputs\.expected-pr-number \}\}/u,
+  );
+  assert.match(
+    bridge,
+    /\.after\.stateRoot == \.observation\.stateRoot[\s\S]*\.warrant == \.observation\.activeWarrant[\s\S]*\.warrant\.sourceWorkflowRunId == \$sourceRun[\s\S]*\.warrant\.phase == "qualified"[\s\S]*\.warrant\.nativeProofRoot/u,
+  );
+  assert.match(
+    bridge,
+    /\.head\.repo\.full_name == \$repository[\s\S]*\.head\.sha == \$head[\s\S]*\.base\.ref == \$branch[\s\S]*\.state == "open"/u,
+  );
+  assert.match(
+    bridge,
+    /name:"affected-native \/ linux"[\s\S]*conclusion:"success"/u,
+  );
+  assert.match(bridge, /repos\/\$GITHUB_REPOSITORY\/check-runs/u);
+  assert.match(
+    bridge,
+    /\.external_id == \$externalId[\s\S]*\.app\.id == 15368/u,
+  );
+  assert.match(
+    bridge,
+    /schema:"kungfu\.dev-delivery-native-check-bridge\/v1"[\s\S]*sourceWorkflowRunId:\$sourceWorkflowRunId[\s\S]*producerWorkflowRunId:\$producerWorkflowRunId[\s\S]*producerRunAttempt:\$producerRunAttempt[\s\S]*generatedAt:\$generatedAt[\s\S]*appId:\$checkRun\[0\]\.app\.id/u,
+  );
+  assert.match(
+    bridge,
+    /receipt_root="sha256:\$\(sha256sum "\$receipt\.body\.json"/u,
+  );
+  assert.match(
+    landing,
+    /- native-check-bridge[\s\S]*needs\.native-check-bridge\.result == 'success'/u,
+  );
+  assert.match(
+    landing,
+    /uses: kungfu-systems\/buildchain\/\.github\/workflows\/dev-pr-auto-merge\.yml@4dabecd7056e168f7345d460e3729465a932db9c/u,
+  );
+  assert.match(landing, /queue-admission-context: Queue admission lease/u);
+  assert.match(landing, /landing-mode: queue[\s\S]*dry-run: false/u);
 });
 
 test('Dev delivery fails closed to fenced native execution without a v3 receipt', () => {
@@ -222,7 +278,7 @@ test('Dev behind admission produces and forwards an exact Project Cut replay pro
   );
   assert.match(
     workflow,
-    /Check out exact Buildchain delivery runtime[\s\S]*ref: 888e87fec88cad41d225c32615e80a87744d4b6d/u,
+    /Check out exact Buildchain delivery runtime[\s\S]*ref: 4dabecd7056e168f7345d460e3729465a932db9c/u,
   );
   assert.match(
     workflow,
@@ -509,10 +565,10 @@ test('native execution uses one exact protected runtime and continuous fence wra
     '.github/actions/native-execution-under-warrant/action.yml',
     'utf8',
   );
-  assert.match(action, /ref: 888e87fec88cad41d225c32615e80a87744d4b6d/u);
+  assert.match(action, /ref: 4dabecd7056e168f7345d460e3729465a932db9c/u);
   assert.match(
     action,
-    /test "\$\(git rev-parse HEAD\)" = 888e87fec88cad41d225c32615e80a87744d4b6d/u,
+    /test "\$\(git rev-parse HEAD\)" = 4dabecd7056e168f7345d460e3729465a932db9c/u,
   );
   assert.match(
     action,

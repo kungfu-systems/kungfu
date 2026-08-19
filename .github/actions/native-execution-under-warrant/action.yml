@@ -39,7 +39,7 @@ runs:
       uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
       with:
         repository: kungfu-systems/buildchain
-        ref: 888e87fec88cad41d225c32615e80a87744d4b6d
+        ref: 4dabecd7056e168f7345d460e3729465a932db9c
         path: .buildchain/dev-delivery-native-runtime
         fetch-depth: 1
         persist-credentials: false
@@ -48,7 +48,7 @@ runs:
       working-directory: .buildchain/dev-delivery-native-runtime
       run: |
         set -euo pipefail
-        test "$(git rev-parse HEAD)" = 888e87fec88cad41d225c32615e80a87744d4b6d
+        test "$(git rev-parse HEAD)" = 4dabecd7056e168f7345d460e3729465a932db9c
         if [ ! -d node_modules ]; then
           # shifu-entry-contract: allow exact pinned Buildchain dependency bootstrap before its CLI is runnable
           corepack pnpm install --frozen-lockfile --ignore-scripts
