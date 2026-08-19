@@ -238,11 +238,11 @@ test('terminal consumer executes only protected event and Buildchain authority',
   assert.match(workflow, /GITHUB_TOKEN: \$\{\{ github\.token \}\}/u);
   assert.match(
     workflow,
-    /dev-delivery-warrant-close\.yml@888e87fec88cad41d225c32615e80a87744d4b6d/u,
+    /dev-delivery-warrant-close\.yml@4dabecd7056e168f7345d460e3729465a932db9c/u,
   );
   assert.match(
     workflow,
-    /dev-delivery-warrant-cancel\.yml@888e87fec88cad41d225c32615e80a87744d4b6d/u,
+    /dev-delivery-warrant-cancel\.yml@4dabecd7056e168f7345d460e3729465a932db9c/u,
   );
   assert.doesNotMatch(workflow, /github\.event\.pull_request\.head\.ref/u);
   assert.doesNotMatch(workflow, /checkout[^\n]*pull_request\.head/u);
@@ -275,7 +275,7 @@ test('protected caller makes the Warrant mandatory for exact delivery', () => {
   );
 
   for (const weakened of [
-    workflow.replace('require-approval: true', 'require-approval: false'),
+    workflow.replaceAll('require-approval: true', 'require-approval: false'),
     workflow.replaceAll(
       'Candidate source acceptance / check',
       'Candidate source acceptance omitted',

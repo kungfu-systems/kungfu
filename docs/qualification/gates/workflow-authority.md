@@ -90,6 +90,8 @@ without changing and refreshing the manifest fails the Gate catalog check.
 | `.github/workflows/dev-post-merge-advisory.yml` | `qualified_core_candidate` | qualification | none | diagnostic | token:read | none | 5 |
 | `.github/workflows/dev-pr-auto-merge.yml` | `admission` | qualification | none | diagnostic | token:write, repo-secret:KUNGFU_GITHUB_TOKEN | none | 0 |
 | `.github/workflows/dev-pr-auto-merge.yml` | `delivery-contract` | qualification | none | diagnostic | token:read | none | 12 |
+| `.github/workflows/dev-pr-auto-merge.yml` | `landing` | qualification | none | diagnostic | token:write, repo-secret:KUNGFU_GITHUB_TOKEN | none | 0 |
+| `.github/workflows/dev-pr-auto-merge.yml` | `native-check-bridge` | qualification | none | qualifying | token:write | none | 3 |
 | `.github/workflows/dev-pr-auto-merge.yml` | `resolve-target` | qualification | none | diagnostic | token:read | none | 1 |
 | `.github/workflows/dev-qualification-patrol.yml` | `patrol` | qualification | none | diagnostic | token:write, repo-secret:KUNGFU_GITHUB_TOKEN | none | 0 |
 | `.github/workflows/dev-verify-patrol.yml` | `bind-source` | qualification | none | diagnostic | token:read | none | 1 |
