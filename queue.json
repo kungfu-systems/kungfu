@@ -3,7 +3,7 @@
   "contract": "kungfu-buildchain-dev-delivery-warrant-queue",
   "repository": "kungfu-systems/kungfu",
   "protectedBase": "dev/v4/v4.0",
-  "generation": 4620,
+  "generation": 4621,
   "fencingCounter": 556,
   "policy": {
     "agingSeconds": 900,
@@ -39757,8 +39757,39 @@
         "scripts/check-incubation-passport.test.mjs",
         "tests/fixtures/incubation-passport/cases.json"
       ]
+    },
+    {
+      "repository": "kungfu-systems/kungfu",
+      "protectedBase": "dev/v4/v4.0",
+      "pullRequestNumber": 3317,
+      "assignmentRoot": "sha256:e3758f1629fdba91c93dd3d30509a643186cae988e27bdda841276d9614d7019",
+      "initiativeRoot": "sha256:bfff817933e5a5ad693e4b902a84f6cc3a251235dd7377cb4091d92f805fa7ff",
+      "sourceIdentityRoot": "sha256:7c06bcedeb9cd1b325102773dd62e421446dc187d59ccd17d86c3bf3facd61a1",
+      "deliveryClass": "native-proof-required",
+      "candidateId": "sha256:10c55278bf98d03bde00d802bb4ea5f72611127a18fd6908e759bafaad305681",
+      "sourceHead": "465de6009f5c6023d769a59d9af50eebced4e241",
+      "sourcePatchRoot": "sha256:cd4efc5f224329a3a21ad42d1eeb4cfb7d2abeb026ce6f39276540854cbc64ef",
+      "sourceProofRoot": "sha256:a5e7c44bd3ca3e414cb365c623c7921256d430e1f3aa589e2bd0fc587370238f",
+      "planRoot": "sha256:6fd88967ef5aab6db956320693aa9995975bedcf8a966ca13d9e2d58b81c4c18",
+      "closureRoot": "sha256:106d175611d8634c988192302b9c464ae8ba3b6d023c2cff9910e401344c9624",
+      "dependencyRoot": "sha256:8ad20d510ce7cd6c1490b9a3221cd0199b7eff0ee61f1ff9914ea6dbc6cdf06b",
+      "toolchainRoot": "sha256:2ecb07894954a2e0de022615d4561e5ba3ae68376401941ecff77be03cd75a0f",
+      "environmentRoot": "sha256:c5f5da5917c6ff93a509a62b18d4b9b69325755c4c7229b553b0016cde83788f",
+      "sourceWorkflowRunId": 32252280182,
+      "priority": "ordinary",
+      "enqueuedAt": "2026-08-19T12:29:39.435Z",
+      "updatedAt": "2026-08-19T12:29:39.435Z",
+      "attempts": 1,
+      "recoveries": 0,
+      "status": "queued",
+      "terminal": null,
+      "affectedPaths": [
+        ".github/workflows/dev-qualification-patrol.yml",
+        "docs/qualification/gates/workflow-authority.json",
+        "framework/release/publication-surfaces.json"
+      ]
     }
   ],
-  "updatedAt": "2026-08-19T10:17:09.100Z",
-  "stateRoot": "sha256:b011b9d560aa4ab118faf4ea73a51799b32a1b61b675c4b9d3940ce4ea4a71df"
+  "updatedAt": "2026-08-19T12:29:39.435Z",
+  "stateRoot": "sha256:d2bd3d2b2d1923317da4d3f71fcfd7643be9989ff7f1165277ccb2dda8e32b3a"
 }
