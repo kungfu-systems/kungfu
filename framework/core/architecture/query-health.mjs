@@ -322,10 +322,51 @@ function lineCount(relative) {
     .length;
 }
 
-function churnByComponent(layers) {
+function retainedChurnByComponent(layers, healthBaseline) {
+  const retained = healthBaseline?.detail?.churn;
+  const componentIds = layers.components
+    .map((component) => component.id)
+    .sort();
+  if (
+    !retained ||
+    JSON.stringify(Object.keys(retained).sort()) !==
+      JSON.stringify(componentIds) ||
+    Object.values(retained).some(
+      (value) => !Number.isInteger(value) || value < 0,
+    ) ||
+    Math.max(...Object.values(retained)) !==
+      healthBaseline?.values?.maximum_component_churn
+  )
+    throw new Error(
+      'architecture health baseline must retain exact per-component churn',
+    );
+  return Object.fromEntries(
+    Object.entries(retained).sort(([left], [right]) =>
+      left.localeCompare(right),
+    ),
+  );
+}
+
+function churnByComponent(layers, healthBaseline) {
+  const historyHead = healthBaseline?.sourceSha;
+  if (!/^[0-9a-f]{40}$/.test(historyHead || ''))
+    throw new Error(
+      'architecture health baseline sourceSha must be an exact lowercase Git SHA',
+    );
+  const retained = retainedChurnByComponent(layers, healthBaseline);
+  const available = spawnSync(
+    'git',
+    ['cat-file', '-e', `${historyHead}^{commit}`],
+    {
+      cwd: root,
+      encoding: 'utf8',
+    },
+  );
+  if (available.status !== 0) return retained;
   const window = layers.health_policy.churn_window;
   const files = gitLines([
     'log',
+    historyHead,
     '--format=',
     '--name-only',
     `--since=${window.since}T00:00:00Z`,
@@ -344,10 +385,15 @@ function churnByComponent(layers) {
     const owner = layers.components.find((component) => owns(component, file));
     if (owner) counts.set(owner.id, (counts.get(owner.id) || 0) + 1);
   }
-  return Object.fromEntries([...counts.entries()].sort());
+  const observed = Object.fromEntries([...counts.entries()].sort());
+  if (JSON.stringify(observed) !== JSON.stringify(retained))
+    throw new Error(
+      'architecture health baseline churn does not match its exact sourceSha',
+    );
+  return observed;
 }
 
-function health(layers, build, affectedBaseline) {
+function health(layers, build, affectedBaseline, healthBaseline) {
   const files = trackedFiles(layers);
   const ownershipCounts = Object.fromEntries(
     layers.components.map((component) => [
@@ -364,7 +410,7 @@ function health(layers, build, affectedBaseline) {
     component: component.id,
     consumers: reverseClosureSize(layers.components, component.id),
   }));
-  const churn = churnByComponent(layers);
+  const churn = churnByComponent(layers, healthBaseline);
   const durations = (affectedBaseline.measurements || [])
     .filter((measurement) => measurement.status === 'passed')
     .map((measurement) => measurement.durationMs);
@@ -506,7 +552,7 @@ function validateAuthority(layers, build) {
   return problems;
 }
 
-function selfTest(layers, build) {
+function selfTest(layers, build, healthBaseline) {
   const canonicalAdr = 'KF-ADR-019f86da-4f90-7f8a-9bff-e4f7683da35f';
   const adrPathScenarios = [
     [canonicalAdr, `docs/adr/${canonicalAdr}.md`, true],
@@ -586,6 +632,35 @@ function selfTest(layers, build) {
   )
     throw new Error('advisory regression blocked development');
   console.log('  ok: advisory regression stays visible without blocking');
+  let implicitHistoryRejected = false;
+  try {
+    churnByComponent(layers, { ...healthBaseline, sourceSha: 'HEAD' });
+  } catch (error) {
+    implicitHistoryRejected = error.message.includes('exact lowercase Git SHA');
+  }
+  if (!implicitHistoryRejected)
+    throw new Error('architecture churn accepted an implicit history head');
+  const pinnedChurn = churnByComponent(layers, healthBaseline);
+  if (
+    Math.max(...Object.values(pinnedChurn)) !==
+    healthBaseline?.values?.maximum_component_churn
+  )
+    throw new Error('baseline-pinned architecture churn drifted');
+  const incompleteChurn = structuredClone(healthBaseline);
+  delete incompleteChurn.detail.churn[layers.components[0].id];
+  let incompleteChurnRejected = false;
+  try {
+    retainedChurnByComponent(layers, incompleteChurn);
+  } catch (error) {
+    incompleteChurnRejected = error.message.includes('per-component churn');
+  }
+  if (!incompleteChurnRejected)
+    throw new Error(
+      'incomplete retained architecture churn did not fail closed',
+    );
+  console.log(
+    '  ok: architecture churn is pinned to the exact baseline history',
+  );
 }
 
 function main() {
@@ -593,9 +668,12 @@ function main() {
   const layers = readJson(layersPath);
   const build = readJson(buildPath);
   const affectedBaseline = readJson(affectedBaselinePath);
+  const healthBaseline = fs.existsSync(healthBaselinePath)
+    ? readJson(healthBaselinePath)
+    : null;
   const problems = validateAuthority(layers, build);
   if (problems.length) throw new Error(problems.join('\n'));
-  if (options.selfTest) return selfTest(layers, build);
+  if (options.selfTest) return selfTest(layers, build, healthBaseline);
   if (options.selector) {
     const result = query(layers, build, options.selector, options.value);
     if (options.json) console.log(JSON.stringify(result, null, 2));
@@ -619,10 +697,8 @@ function main() {
     }
     return;
   }
-  const report = health(layers, build, affectedBaseline);
-  const baseline = fs.existsSync(healthBaselinePath)
-    ? readJson(healthBaselinePath)
-    : null;
+  const report = health(layers, build, affectedBaseline, healthBaseline);
+  const baseline = healthBaseline;
   const observations = baseline
     ? healthFindings(report, layers, baseline)
     : ['architecture health baseline is missing'];

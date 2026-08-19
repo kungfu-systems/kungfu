@@ -12,5 +12,21 @@
     "affected_native_duration_ms": 610610,
     "binary_size_bytes": null,
     "external_dependency_closure": 8
+  },
+  "detail": {
+    "churn": {
+      "core-composition-bindings": 290,
+      "core-native-qualification": 240,
+      "libkungfu-contracts": 319,
+      "runtime-extension-services": 10,
+      "runtime-ledger-services": 54,
+      "runtime-live-services": 26,
+      "runtime-platform-adapters": 43,
+      "runtime-state-query-services": 26,
+      "runtime-storage-adapters": 19,
+      "runtime-storage-services": 76,
+      "yijinjing-kernel": 262,
+      "yijinjing-schema": 39
+    }
   }
 }
