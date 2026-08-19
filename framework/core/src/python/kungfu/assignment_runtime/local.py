@@ -41,9 +41,10 @@ from .authority import (
     _stable,
     _validate_command_arguments,
 )
+from .recovery import AssignmentRuntimeRecoveryMixin
 
 
-class EmbeddedLocalAssignmentRuntime:
+class EmbeddedLocalAssignmentRuntime(AssignmentRuntimeRecoveryMixin):
     """One embedded Runtime writer for one logical realm generation."""
 
     def __init__(
@@ -179,6 +180,7 @@ class EmbeddedLocalAssignmentRuntime:
             "realm": dict(self.realm),
             "revision": None,
             "commands": {},
+            "recoveryResolutions": {},
             "events": [],
             "pending": None,
             "diagnostics": [],
@@ -374,6 +376,7 @@ class EmbeddedLocalAssignmentRuntime:
             if self._state.get("pending") and operation not in {
                 "diagnostics.get",
                 "recovery.plan",
+                "recovery.execute",
             }:
                 raise LocalRuntimeError(
                     "backend-unavailable",
@@ -674,6 +677,15 @@ class EmbeddedLocalAssignmentRuntime:
                     "idempotency-conflict",
                     "Idempotency key was already used for another command body",
                 )
+            if previous.get("authorityOutcome") == "unknown":
+                raise LocalRuntimeError(
+                    "unknown-outcome",
+                    "The original command authority outcome is unknown and cannot be replayed",
+                    details={
+                        "commandRoot": command_root,
+                        "resolutionReceiptRoot": previous.get("resolutionReceiptRoot"),
+                    },
+                )
             return self._replay(str(request["requestId"]), selected, dict(previous))
         if any(
             record.get("commandId") == command.get("commandId")
@@ -824,6 +836,27 @@ class EmbeddedLocalAssignmentRuntime:
                 "ambiguous-identity", "Command identity does not resolve exactly once"
             )
         record = matches[0]
+        if record.get("authorityOutcome") == "unknown":
+            return self._ok(
+                str(request["requestId"]),
+                dict(record["revision"]),
+                selected,
+                {
+                    "command": {
+                        "commandId": record["commandId"],
+                        "commandRoot": record["commandRoot"],
+                        "disposition": "authority-outcome-unknown",
+                        "resolutionReceiptRoot": record["resolutionReceiptRoot"],
+                    },
+                    "authorityReceipt": {},
+                },
+                receipts=[
+                    {
+                        "receiptRoot": record["resolutionReceiptRoot"],
+                        "kind": "recovery-resolution",
+                    }
+                ],
+            )
         return self._ok(
             str(request["requestId"]),
             dict(record["revision"]),
@@ -856,62 +889,6 @@ class EmbeddedLocalAssignmentRuntime:
                 "diagnostics": diagnostics,
             },
             diagnostics=diagnostics,
-        )
-
-    def _recovery_plan(
-        self, request: Mapping[str, Any], selected: list[str]
-    ) -> dict[str, Any]:
-        _snapshot, revision = self._observe_snapshot(record_event=True)
-        pending = self._state.get("pending")
-        if isinstance(pending, Mapping):
-            automatic = isinstance(pending.get("authorityResult"), Mapping)
-            basis = {
-                "commandRoot": pending.get("commandRoot"),
-                "beforeRevision": pending.get("beforeRevision"),
-                "currentRevision": revision,
-                "automatic": automatic,
-            }
-            result = {
-                "planId": f"recovery-{_root(basis)[7:31]}",
-                "status": "executable" if automatic else "manual-review-required",
-                "automatic": automatic,
-                "basisRoot": _root(basis),
-            }
-        else:
-            basis = {"revision": revision, "pending": False}
-            result = {
-                "planId": f"recovery-{_root(basis)[7:31]}",
-                "status": "not-required",
-                "automatic": False,
-                "basisRoot": _root(basis),
-            }
-        return self._ok(str(request["requestId"]), revision, selected, result)
-
-    def _recovery_execute(
-        self, request: Mapping[str, Any], selected: list[str]
-    ) -> dict[str, Any]:
-        payload = dict(request.get("payload") or {})
-        pending = self._state.get("pending")
-        if not isinstance(pending, Mapping) or not isinstance(
-            pending.get("authorityResult"), Mapping
-        ):
-            raise LocalRuntimeError(
-                "backend-unavailable",
-                "No deterministic automatic recovery is available",
-                diagnostics=list(self._state.get("diagnostics") or []),
-            )
-        _snapshot, current = self._observe_snapshot(record_event=False)
-        if payload.get("expectedRevision") != current:
-            raise LocalRuntimeError("stale-revision", "Recovery plan revision is stale")
-        command = dict(pending["command"])
-        if payload.get("idempotencyKey") != command.get("idempotencyKey"):
-            raise LocalRuntimeError(
-                "idempotency-conflict", "Recovery key does not match pending command"
-            )
-        snapshot, revision = self._observe_snapshot(record_event=False)
-        record = self._finalize_pending(pending, snapshot, revision, recovered=True)
-        return self._command_response(
-            str(request["requestId"]), selected, record, disposition="recovered"
         )
 
     def _capability_envelope(self, selected: list[str]) -> dict[str, list[str]]:

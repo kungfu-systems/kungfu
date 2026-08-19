@@ -29,6 +29,7 @@ from kungfu.agent import run_agent
 from kungfu.agent import resources as agent_resources
 from kungfu.cli.commands import (
     PrioritizedCommandGroup,
+    assignment_runtime_recovery,
     kfc,
 )
 from kungfu.cli.commands import assignment_review
@@ -150,6 +151,12 @@ def _assignment_runtime(workspace_root, home, operation_class):
 
 
 assignment.add_command(create_runtime_host_command(_runtime))
+for (
+    runtime_recovery_command
+) in assignment_runtime_recovery.create_runtime_recovery_commands(
+    _runtime, _emit, _run, _write_immutable_json
+):
+    assignment.add_command(runtime_recovery_command)
 
 
 def _ensure_profile(runtime_dir, authorized_by):

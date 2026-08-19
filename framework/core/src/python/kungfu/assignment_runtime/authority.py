@@ -29,6 +29,7 @@ RESPONSE_SCHEMA = "kungfu.assignment-runtime.response/v1"
 SNAPSHOT_SCHEMA = "kungfu.assignment-runtime.snapshot/v1"
 EVENT_SCHEMA = "kungfu.assignment-runtime.event/v1"
 RECEIPT_SCHEMA = "kungfu.assignment-runtime.receipt/v1"
+RECOVERY_RESOLUTION_SCHEMA = "kungfu.assignment-runtime.recovery-resolution/v1"
 DISCOVERY_SCHEMA = "kungfu.assignment-runtime.discovery/v1"
 STREAM_ID = "assignment-events"
 
@@ -57,6 +58,7 @@ _ERROR_RETRYABLE = {
     "warrant-invalid": False,
     "unauthorized": False,
     "invalid-command": False,
+    "unknown-outcome": False,
     "internal": True,
 }
 _COMMAND_OPERATIONS = {

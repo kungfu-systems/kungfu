@@ -265,6 +265,7 @@
     ],
     "sameKeySameBody": "Return the original command and receipt roots with disposition=replayed and perform no second mutation.",
     "sameKeyDifferentBody": "Fail with idempotency-conflict and perform no mutation.",
+    "unknownOutcome": "An operator may abandon only the local pending projection under exact command, plan, revision, actor, reason, and evidence roots; the authority outcome remains unknown and the original command identity can never be replayed.",
     "retention": "The realm advertises the bounded replay window through capability discovery."
   },
   "events": {
@@ -329,6 +330,10 @@
     },
     {
       "code": "invalid-command",
+      "retryable": false
+    },
+    {
+      "code": "unknown-outcome",
       "retryable": false
     },
     {

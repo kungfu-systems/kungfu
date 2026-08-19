@@ -136,6 +136,39 @@
         "arguments": { "type": "object" }
       }
     },
+    "recoveryExecution": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["expectedRevision", "idempotencyKey"],
+          "properties": {
+            "expectedRevision": { "$ref": "#/$defs/revision" },
+            "idempotencyKey": { "$ref": "#/$defs/stableId" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["resolution", "expectedBasisRoot", "expectedCommandRoot", "expectedRevision", "idempotencyKey", "authorizedBy", "reason", "evidenceRoots"],
+          "properties": {
+            "resolution": { "const": "abandon-local-pending" },
+            "expectedBasisRoot": { "$ref": "#/$defs/root" },
+            "expectedCommandRoot": { "$ref": "#/$defs/root" },
+            "expectedRevision": { "$ref": "#/$defs/revision" },
+            "idempotencyKey": { "$ref": "#/$defs/stableId" },
+            "authorizedBy": { "$ref": "#/$defs/stableId" },
+            "reason": { "type": "string", "minLength": 1 },
+            "evidenceRoots": {
+              "type": "array",
+              "minItems": 1,
+              "uniqueItems": true,
+              "items": { "$ref": "#/$defs/root" }
+            }
+          }
+        }
+      ]
+    },
     "diagnostic": {
       "type": "object",
       "additionalProperties": false,
@@ -180,6 +213,10 @@
         {
           "if": { "properties": { "operation": { "const": "events.watch" } }, "required": ["operation"] },
           "then": { "required": ["cursor"] }
+        },
+        {
+          "if": { "properties": { "operation": { "const": "recovery.execute" } }, "required": ["operation"] },
+          "then": { "properties": { "payload": { "$ref": "#/$defs/recoveryExecution" } } }
         }
       ]
     },
