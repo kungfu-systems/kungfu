@@ -388,14 +388,21 @@ function baselineBytes(ref, pathname, changed) {
   return Buffer.from(git(['show', `${ref}:${pathname}`], { binary: true }));
 }
 
+function baselineChangedPaths(ref, readLines = gitLines) {
+  return new Set(
+    readLines(['diff', '--no-renames', '--name-only', ref, '--']).concat(
+      readLines(['ls-files', '--others', '--exclude-standard']),
+    ),
+  );
+}
+
 function measureBaseline(policy, layers, ownership = []) {
   const ref = policy.baselineRef;
   const paths = gitLines(['ls-tree', '-r', '--name-only', ref]);
-  const changed = new Set(
-    gitLines(['diff', '--name-only', ref, '--']).concat(
-      gitLines(['ls-files', '--others', '--exclude-standard']),
-    ),
-  );
+  // The budget needs a path inventory, not similarity scores. Disabling rename
+  // detection keeps partial merge-group history from hydrating deleted,
+  // ineligible blobs while still exposing both sides of every rename.
+  const changed = baselineChangedPaths(ref);
   return paths
     .filter((pathname) => isEligible(pathname, policy))
     .map((pathname) => {
@@ -1115,6 +1122,7 @@ if (
 }
 
 export {
+  baselineChangedPaths,
   buildBaseline,
   checkCurrent,
   classify,
