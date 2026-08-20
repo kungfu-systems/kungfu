@@ -9,6 +9,7 @@ import { fileURLToPath } from 'node:url';
 import {
   collectIssues,
   compareBaseline,
+  protectedSourceRetained,
   validateAdmissionFixture,
   validateRepository,
 } from './check-incubation-passport.mjs';
@@ -215,6 +216,101 @@ test('admitted native receipt rejects stale and incomplete evidence', () => {
       passport,
       fixture: escapingMaterial,
     }).some((entry) => entry.includes('escapes the checkout')),
+  );
+});
+
+test('protected source accepts ordinary retained ancestry without recovery', () => {
+  const sourceSha = 'a'.repeat(40);
+  assert.equal(
+    protectedSourceRetained({
+      sourceSha,
+      gitIsAncestor: (ancestor, descendant) => {
+        assert.equal(ancestor, sourceSha);
+        assert.equal(descendant, 'HEAD');
+        return true;
+      },
+      gitRead: () => assert.fail('ordinary ancestry must not inspect an event'),
+      hydrateMergeGroupBase: () =>
+        assert.fail('ordinary ancestry must not hydrate history'),
+    }),
+    true,
+  );
+});
+
+test('protected source recovers ancestry from the exact merge-group base', () => {
+  const sourceSha = 'a'.repeat(40);
+  const baseSha = 'b'.repeat(40);
+  const headSha = 'c'.repeat(40);
+  const ancestryCalls = [];
+  const hydrated = [];
+  assert.equal(
+    protectedSourceRetained({
+      sourceSha,
+      env: {
+        GITHUB_EVENT_NAME: 'merge_group',
+        GITHUB_EVENT_PATH: '/event.json',
+      },
+      readFile: () =>
+        JSON.stringify({
+          merge_group: { base_sha: baseSha, head_sha: headSha },
+        }),
+      gitIsAncestor: (ancestor, descendant) => {
+        ancestryCalls.push([ancestor, descendant]);
+        return descendant === baseSha;
+      },
+      gitRead: (args) => {
+        assert.deepEqual(args, ['rev-parse', 'HEAD']);
+        return headSha;
+      },
+      hydrateMergeGroupBase: (sha) => {
+        hydrated.push(sha);
+        return true;
+      },
+    }),
+    true,
+  );
+  assert.deepEqual(ancestryCalls, [
+    [sourceSha, 'HEAD'],
+    [sourceSha, baseSha],
+  ]);
+  assert.deepEqual(hydrated, [baseSha]);
+});
+
+test('protected source rejects mismatched or unretained merge-group evidence', () => {
+  const sourceSha = 'a'.repeat(40);
+  const baseSha = 'b'.repeat(40);
+  const headSha = 'c'.repeat(40);
+  const event = {
+    GITHUB_EVENT_NAME: 'merge_group',
+    GITHUB_EVENT_PATH: '/event.json',
+  };
+  const readFile = () =>
+    JSON.stringify({
+      merge_group: { base_sha: baseSha, head_sha: headSha },
+    });
+
+  assert.equal(
+    protectedSourceRetained({
+      sourceSha,
+      env: event,
+      readFile,
+      gitIsAncestor: () => false,
+      gitRead: () => 'd'.repeat(40),
+      hydrateMergeGroupBase: () =>
+        assert.fail('mismatched event must not hydrate history'),
+    }),
+    false,
+  );
+  assert.equal(
+    protectedSourceRetained({
+      sourceSha,
+      env: event,
+      readFile,
+      gitIsAncestor: () => false,
+      gitRead: () => headSha,
+      hydrateMergeGroupBase: () => true,
+    }),
+    false,
   );
 });
 
