@@ -18,6 +18,7 @@ import {
   renderCandidates,
   renderReaderRoutes,
   renderTimeline,
+  resolveMergeGroupHistoricalBase,
   writeCandidate,
 } from './evolution-map/index.mjs';
 
@@ -98,6 +99,31 @@ function candidateOpenInput() {
     reason: 'Capture the hypothesis before broadening authority.',
   };
 }
+
+test('materializes the exact merge-group base in a shallow checkout', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'kungfu-evolution-base-'));
+  temporaryRoots.push(root);
+  const eventPath = path.join(root, 'event.json');
+  const expected = 'a'.repeat(40);
+  fs.writeFileSync(
+    eventPath,
+    `${JSON.stringify({ merge_group: { base_sha: expected } })}\n`,
+  );
+  let present = false;
+  const fetched = [];
+
+  const actual = resolveMergeGroupHistoricalBase({
+    env: { GITHUB_EVENT_PATH: eventPath },
+    hasObject: (revision) => revision === expected && present,
+    fetchBase: (revision) => {
+      fetched.push(revision);
+      present = true;
+    },
+  });
+
+  assert.equal(actual, expected);
+  assert.deepEqual(fetched, [expected]);
+});
 
 function era(overrides = {}) {
   return {
