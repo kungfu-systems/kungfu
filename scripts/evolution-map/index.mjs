@@ -1273,9 +1273,50 @@ function runGit(args, { allowFailure = false } = {}) {
   return result.status === 0 ? result.stdout.trim() : '';
 }
 
+function readMergeGroupBase(env = process.env) {
+  if (!env.GITHUB_EVENT_PATH) return '';
+  try {
+    const event = JSON.parse(fs.readFileSync(env.GITHUB_EVENT_PATH, 'utf8'));
+    const base = event.merge_group?.base_sha;
+    return typeof base === 'string' && /^[0-9a-f]{40,64}$/u.test(base)
+      ? base
+      : '';
+  } catch {
+    return '';
+  }
+}
+
+export function resolveMergeGroupHistoricalBase({
+  env = process.env,
+  hasObject = (revision) =>
+    spawnSync('git', ['cat-file', '-e', `${revision}^{commit}`], {
+      cwd: ROOT,
+      stdio: 'ignore',
+    }).status === 0,
+  fetchBase = (revision) =>
+    runGit([
+      'fetch',
+      '--no-tags',
+      '--no-recurse-submodules',
+      '--depth=1',
+      'origin',
+      revision,
+    ]),
+} = {}) {
+  const base = readMergeGroupBase(env);
+  if (!base) return '';
+  if (!hasObject(base)) fetchBase(base);
+  invariant(
+    hasObject(base),
+    `cannot materialize exact merge-group base ${base}`,
+  );
+  return base;
+}
+
 function checkHistoricalIntegrity() {
   const base =
     process.env.KUNGFU_EVOLUTION_BASE ||
+    resolveMergeGroupHistoricalBase() ||
     devMergeBaseCandidates()
       .map((ref) =>
         runGit(['merge-base', ref, 'HEAD'], {
