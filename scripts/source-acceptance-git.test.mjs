@@ -150,7 +150,10 @@ test('source plan binds protected ratchets to the exact evidence base', () => {
   );
   assert.deepEqual(
     plan.find((step) => step.label === 'documentation contracts').env,
-    { KUNGFU_ADR_EVIDENCE_BASE_SHA: evidenceBaseCommit },
+    {
+      KUNGFU_ADR_EVIDENCE_BASE_SHA: evidenceBaseCommit,
+      KUNGFU_EVOLUTION_BASE: evidenceBaseCommit,
+    },
   );
 });
 
