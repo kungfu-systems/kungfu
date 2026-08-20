@@ -685,22 +685,52 @@ jobs:
           state_root="$(jq -er '.after.stateRoot' "$warrant")"
           state_commit="$(jq -er '.after.commitSha' "$warrant")"
           run_url="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+          source_run_url="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$SOURCE_RUN_ID/job/"
           summary="Qualified Warrant $qualification_root binds native proof $native_root and durable state $state_root at $state_commit."
-          payload="$(jq -n \
+          source_checks="$evidence/source-check-runs.json"
+          gh api \
+            -H 'Accept: application/vnd.github+json' \
+            "repos/$GITHUB_REPOSITORY/commits/$EXPECTED_HEAD/check-runs?check_name=affected-native%20%2F%20linux&filter=all&per_page=100" \
+            > "$source_checks"
+          source_check="$evidence/source-check-run.json"
+          jq -e \
             --arg head "$EXPECTED_HEAD" \
+            --arg sourceRunUrl "$source_run_url" \
+            '[.check_runs[]
+              | select(.name == "affected-native / linux")
+              | select(.head_sha == $head)
+              | select(.app.id == 15368)
+              | select(.details_url | startswith($sourceRunUrl))]
+             | select(length == 1)
+             | .[0]
+             | select(.status == "completed")
+             | select(.conclusion == "failure"
+                      or .conclusion == "cancelled"
+                      or .conclusion == "timed_out"
+                      or .conclusion == "action_required"
+                      or .conclusion == "stale"
+                      or .conclusion == "neutral"
+                      or .conclusion == "success")' \
+            "$source_checks" > "$source_check"
+          source_check_run_id="$(jq -er '.id' "$source_check")"
+          prior_conclusion="$(jq -er '.conclusion' "$source_check")"
+          prior_details_url="$(jq -er '.details_url' "$source_check")"
+          payload="$(jq -n \
             --arg externalId "kungfu-qualified-warrant:$qualification_root" \
             --arg detailsUrl "$run_url" \
             --arg summary "$summary" \
-            '{name:"affected-native / linux",head_sha:$head,status:"completed",conclusion:"success",external_id:$externalId,details_url:$detailsUrl,output:{title:"Exact qualified native Warrant",summary:$summary}}')"
+            '{status:"completed",conclusion:"success",external_id:$externalId,details_url:$detailsUrl,output:{title:"Exact qualified native Warrant",summary:$summary}}')"
           response="$evidence/check-run.json"
-          gh api --method POST \
+          gh api --method PATCH \
             -H 'Accept: application/vnd.github+json' \
-            "repos/$GITHUB_REPOSITORY/check-runs" \
+            "repos/$GITHUB_REPOSITORY/check-runs/$source_check_run_id" \
             --input - <<<"$payload" > "$response"
           jq -e \
             --arg head "$EXPECTED_HEAD" \
             --arg externalId "kungfu-qualified-warrant:$qualification_root" \
+            --argjson sourceCheckRunId "$source_check_run_id" \
             '.name == "affected-native / linux"
+             and .id == $sourceCheckRunId
              and .head_sha == $head
              and .status == "completed"
              and .conclusion == "success"
@@ -724,8 +754,10 @@ jobs:
             --arg warrantStateRoot "$state_root" \
             --arg warrantStateCommit "$state_commit" \
             --arg generatedAt "$generated_at" \
+            --arg priorConclusion "$prior_conclusion" \
+            --arg priorDetailsUrl "$prior_details_url" \
             --slurpfile checkRun "$response" \
-            '{schema:"kungfu.dev-delivery-native-check-bridge/v1",repository:$repository,protectedBase:$branch,pullRequestNumber:$pullRequest,sourceHead:$head,sourceWorkflowRunId:$sourceWorkflowRunId,producerWorkflowRunId:$producerWorkflowRunId,producerRunAttempt:$producerRunAttempt,nativeProofRoot:$nativeProofRoot,qualificationReceiptRoot:$qualificationReceiptRoot,warrantStateRoot:$warrantStateRoot,warrantStateCommit:$warrantStateCommit,generatedAt:$generatedAt,checkRun:{id:$checkRun[0].id,nodeId:$checkRun[0].node_id,name:$checkRun[0].name,headSha:$checkRun[0].head_sha,status:$checkRun[0].status,conclusion:$checkRun[0].conclusion,appId:$checkRun[0].app.id,startedAt:$checkRun[0].started_at,completedAt:$checkRun[0].completed_at}}' \
+            '{schema:"kungfu.dev-delivery-native-check-bridge/v1",repository:$repository,protectedBase:$branch,pullRequestNumber:$pullRequest,sourceHead:$head,sourceWorkflowRunId:$sourceWorkflowRunId,producerWorkflowRunId:$producerWorkflowRunId,producerRunAttempt:$producerRunAttempt,nativeProofRoot:$nativeProofRoot,qualificationReceiptRoot:$qualificationReceiptRoot,warrantStateRoot:$warrantStateRoot,warrantStateCommit:$warrantStateCommit,generatedAt:$generatedAt,sourceCheckRunPrior:{id:$checkRun[0].id,conclusion:$priorConclusion,detailsUrl:$priorDetailsUrl},checkRun:{id:$checkRun[0].id,nodeId:$checkRun[0].node_id,name:$checkRun[0].name,headSha:$checkRun[0].head_sha,status:$checkRun[0].status,conclusion:$checkRun[0].conclusion,appId:$checkRun[0].app.id,startedAt:$checkRun[0].started_at,completedAt:$checkRun[0].completed_at}}' \
             > "$receipt.body.json"
           receipt_root="sha256:$(sha256sum "$receipt.body.json" | cut -d' ' -f1)"
           jq --arg receiptRoot "$receipt_root" '. + {receiptRoot:$receiptRoot}' \
