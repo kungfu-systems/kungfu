@@ -5,6 +5,7 @@
 import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
@@ -592,9 +593,14 @@ export function evaluateKfxSiteImpact({
   };
 }
 
-function git(args, { optional = false } = {}) {
+function git(
+  args,
+  { optional = false, root = ROOT, env = process.env, input } = {},
+) {
   const result = spawnSync('git', args, {
-    cwd: ROOT,
+    cwd: root,
+    env,
+    input,
     encoding: null,
     maxBuffer: 64 * 1024 * 1024,
   });
@@ -614,38 +620,67 @@ function gitJson(revision, relativePath, optional = false) {
   return JSON.parse(bytes.toString('utf8'));
 }
 
-export function repositoryChanges(baseRevision, changedFiles) {
-  return uniqueSorted(changedFiles).flatMap((relativePath) => {
-    const baseBytes = git(['show', `${baseRevision}:${relativePath}`], {
-      optional: true,
+export function repositoryChanges(baseRevision, changedFiles, root = ROOT) {
+  const objectDirectory = fs.mkdtempSync(
+    path.join(os.tmpdir(), 'kungfu-kfx-canonical-'),
+  );
+  const canonicalEnv = {
+    ...process.env,
+    GIT_OBJECT_DIRECTORY: objectDirectory,
+  };
+  try {
+    return uniqueSorted(changedFiles).flatMap((relativePath) => {
+      const baseBytes = git(['show', `${baseRevision}:${relativePath}`], {
+        optional: true,
+        root,
+      });
+      const currentPath = path.join(root, relativePath);
+      const worktreeBytes = fs.existsSync(currentPath)
+        ? fs.readFileSync(currentPath)
+        : null;
+      const currentBytes =
+        worktreeBytes === null
+          ? null
+          : (() => {
+              const oid = git(
+                ['hash-object', '-w', `--path=${relativePath}`, '--stdin'],
+                { env: canonicalEnv, input: worktreeBytes, root },
+              )
+                .toString('utf8')
+                .trim();
+              return git(['cat-file', 'blob', oid], {
+                env: canonicalEnv,
+                root,
+              });
+            })();
+      if (
+        (baseBytes === null && currentBytes === null) ||
+        (baseBytes !== null &&
+          currentBytes !== null &&
+          baseBytes.equals(currentBytes))
+      ) {
+        return [];
+      }
+      const status =
+        baseBytes === null
+          ? 'added'
+          : currentBytes === null
+            ? 'deleted'
+            : 'modified';
+      return [
+        {
+          path: relativePath,
+          status,
+          ...(baseBytes === null ? {} : { baseContentRoot: sha256(baseBytes) }),
+          ...(currentBytes === null
+            ? {}
+            : { contentRoot: sha256(currentBytes) }),
+        },
+      ];
     });
-    const currentPath = path.join(ROOT, relativePath);
-    const currentBytes = fs.existsSync(currentPath)
-      ? fs.readFileSync(currentPath)
-      : null;
-    if (
-      (baseBytes === null && currentBytes === null) ||
-      (baseBytes !== null &&
-        currentBytes !== null &&
-        baseBytes.equals(currentBytes))
-    ) {
-      return [];
-    }
-    const status =
-      baseBytes === null
-        ? 'added'
-        : currentBytes === null
-          ? 'deleted'
-          : 'modified';
-    return [
-      {
-        path: relativePath,
-        status,
-        ...(baseBytes === null ? {} : { baseContentRoot: sha256(baseBytes) }),
-        ...(currentBytes === null ? {} : { contentRoot: sha256(currentBytes) }),
-      },
-    ];
-  });
+  } finally {
+    fs.rmSync(objectDirectory, { force: true, recursive: true });
+  }
 }
 
 function readProofs() {
