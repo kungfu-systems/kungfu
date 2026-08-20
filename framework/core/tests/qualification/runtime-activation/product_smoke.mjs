@@ -8,6 +8,8 @@ import path from 'node:path';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
 
+import { semanticRoot } from '../../../../project-cut/src/project-cut.mjs';
+
 const ROOT = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
   '..',
@@ -204,6 +206,37 @@ function main() {
   const configHome = path.join(temporary, 'config');
   let stop = null;
   try {
+    const humanWorkDefinition = {
+      objective: 'qualify installed neutral Work Design preflight',
+    };
+    const humanWorkDefinitionRoot = semanticRoot(humanWorkDefinition);
+    const workDesignRequest = path.join(temporary, 'work-design-request.json');
+    fs.writeFileSync(
+      workDesignRequest,
+      `${JSON.stringify({
+        schema: 'kungfu.work-design.preflight-request/v1',
+        humanWorkDefinition,
+        humanWorkDefinitionRoot,
+        selectionRequest: { objectiveRoot: humanWorkDefinitionRoot },
+        adviceRequest: {},
+        availability: { selector: 'unavailable', advisor: 'unavailable' },
+      })}\n`,
+    );
+    const workDesign = invoke(home, configHome, [
+      'work-design',
+      'preflight',
+      '--input',
+      workDesignRequest,
+    ]);
+    if (
+      workDesign.payload.schema !== 'kungfu.work-design.preflight/v1' ||
+      workDesign.payload.outcome !== 'manual-capture' ||
+      workDesign.payload.fallback?.reason !== 'selector-unavailable' ||
+      workDesign.payload.operation?.mutates !== false
+    ) {
+      throw new Error('installed Work Design preflight contract drifted');
+    }
+
     const daemonless = invoke(home, configHome, [
       'runtime',
       'plan',
@@ -255,6 +288,8 @@ function main() {
           envelope: 'temporary-product-workspace-process-live-v1',
           productLayout,
           outcomes: {
+            workDesignSchema: workDesign.payload.schema,
+            workDesignOutcome: workDesign.payload.outcome,
             daemonlessStatus: before.payload.product,
             coldChanged: cold.payload.changed,
             coldRunning: runtimeReady(coldStatus.payload),
@@ -273,6 +308,7 @@ function main() {
             restart: restart.durationUs,
             restartReadyProbe: restartStatus.durationUs,
             stop: stop.durationUs,
+            workDesignPreflight: workDesign.durationUs,
           },
           nonClaims: [
             'universal performance SLO',

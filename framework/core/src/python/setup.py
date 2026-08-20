@@ -64,7 +64,7 @@ class BinaryDistribution(Distribution):
 
 
 class BuildPythonWithExitContract(build_py):
-    """Ship normative contracts and the Work conformance checker."""
+    """Ship normative contracts and installed Work read-only runtimes."""
 
     def run(self):
         super().run()
@@ -93,6 +93,21 @@ class BuildPythonWithExitContract(build_py):
             if not source_file.is_relative_to(repository_root.resolve()):
                 raise ValueError(f"invalid Work conformance authority path: {relative}")
             destination_file = conformance_destination / "authority" / relative
+            destination_file.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(source_file, destination_file)
+
+        work_design_runtime = (
+            Path(self.build_lib) / "kungfu" / "work_design_runtime" / "framework"
+        )
+        for relative in (
+            "project-cut/src/project-cut.mjs",
+            "work-history-selector/src/work-history-selector.mjs",
+            "work-design-advisor/src/work-design-advisor.mjs",
+            "work-design-preflight/src/work-design-preflight.mjs",
+            "work-design-preflight/tooling/work-design-preflight.mjs",
+        ):
+            source_file = repository_root / "framework" / relative
+            destination_file = work_design_runtime / relative
             destination_file.parent.mkdir(parents=True, exist_ok=True)
             shutil.copyfile(source_file, destination_file)
 

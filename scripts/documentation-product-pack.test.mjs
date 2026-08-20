@@ -16,6 +16,7 @@ const require = createRequire(import.meta.url);
 const {
   assemblySelector,
   copyFirstPartyProfile,
+  copyWorkDesignRuntime,
   copyWorkProfileConformance,
   documentationAtlasSource,
   firstPartyProfileFilter,
@@ -169,6 +170,31 @@ test('freeze assembly stages the complete Work conformance checker closure', (t)
         .digest('hex')}`,
       coordinate.sha256,
       coordinate.path,
+    );
+  }
+});
+
+test('freeze assembly stages the installed Work Design runtime closure', (t) => {
+  const temporary = fs.mkdtempSync(
+    path.join(os.tmpdir(), 'kungfu-work-design-pack-'),
+  );
+  t.after(() => fs.rmSync(temporary, { recursive: true, force: true }));
+  copyWorkDesignRuntime(temporary, ROOT);
+
+  for (const relative of [
+    'project-cut/src/project-cut.mjs',
+    'work-history-selector/src/work-history-selector.mjs',
+    'work-design-advisor/src/work-design-advisor.mjs',
+    'work-design-preflight/src/work-design-preflight.mjs',
+    'work-design-preflight/tooling/work-design-preflight.mjs',
+  ]) {
+    const source = path.join(ROOT, 'framework', relative);
+    const installed = path.join(temporary, 'framework', relative);
+    assert.equal(fs.existsSync(installed), true, relative);
+    assert.deepEqual(
+      fs.readFileSync(installed),
+      fs.readFileSync(source),
+      relative,
     );
   }
 });

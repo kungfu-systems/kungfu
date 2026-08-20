@@ -64,6 +64,7 @@
     "config": {"audience": ["human", "agent", "operator"], "visibility": "advanced", "section": "system-maintenance"},
     "lock": {"audience": ["agent", "developer", "operator"], "visibility": "advanced", "section": "system-maintenance"},
     "work": {"visibility": "advanced", "section": "advanced"},
+    "work-design": {"audience": ["human", "agent"], "maturity": "preview", "visibility": "public", "section": "action-model", "owner": "core"},
     "action": {"audience": ["agent", "developer"], "visibility": "advanced", "section": "advanced"},
     "managed-run": {"audience": ["agent", "developer", "operator"], "visibility": "advanced", "section": "advanced"},
     "report": {"audience": ["agent", "developer"], "visibility": "advanced", "section": "advanced"},
@@ -112,7 +113,7 @@
   "catalogProjection": {
     "artifact": "kungfu.agent/cli_surface.catalog.json",
     "authority": "runtime-fold",
-    "expectedSurfaceRoot": "sha256:71e8638face71cefb8b331d04fcb0369b975f901a5b5115f843bd738e0d9a4f2",
+    "expectedSurfaceRoot": "sha256:46031f89424e30ed1fba360157aabe7d3f1c05f306333f4dcc9f5c8c2ccc0dfd",
     "consumers": {
       "agentCapabilities": "embed-complete",
       "agentCommands": "strict-link",

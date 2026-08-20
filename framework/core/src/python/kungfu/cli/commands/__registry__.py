@@ -42,6 +42,7 @@ from . import release
 from . import recover
 from . import exit
 from . import dev
+from . import work_design
 
 kfx_authoring.register_authoring_commands(kfx.kfx, kfx.kfx_command_context)
 
@@ -88,4 +89,5 @@ __all__ = [
     "recover",
     "exit",
     "dev",
+    "work_design",
 ]

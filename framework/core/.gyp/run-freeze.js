@@ -340,6 +340,32 @@ function copyWorkProfileConformance(
 }
 
 /**
+ * Stage the product-owned Work Design runtime used by the installed CLI.
+ * Keep the authored module layout so its relative ESM imports remain exact.
+ *
+ * @param {string} destination
+ * @param {string} repositoryRoot
+ */
+function copyWorkDesignRuntime(
+  destination,
+  repositoryRoot = path.resolve(CORE, '..', '..'),
+) {
+  const files = [
+    'project-cut/src/project-cut.mjs',
+    'work-history-selector/src/work-history-selector.mjs',
+    'work-design-advisor/src/work-design-advisor.mjs',
+    'work-design-preflight/src/work-design-preflight.mjs',
+    'work-design-preflight/tooling/work-design-preflight.mjs',
+  ];
+  for (const relative of files) {
+    const source = path.join(repositoryRoot, 'framework', relative);
+    const target = path.join(destination, 'framework', relative);
+    fs.mkdirSync(path.dirname(target), { recursive: true });
+    fs.copyFileSync(source, target);
+  }
+}
+
+/**
  * A hoisted pnpm install can satisfy a Suite dependency only from the
  * repository root, leaving the Suite's own node_modules absent.  Installed
  * Profiles cannot depend on that build-worktree layout, so copy every declared
@@ -939,6 +965,9 @@ function assembleTree(bt) {
   copyWorkProfileConformance(
     path.join(layout.sitePackages, 'kungfu', 'work_profile_conformance'),
   );
+  copyWorkDesignRuntime(
+    path.join(layout.sitePackages, 'kungfu', 'work_design_runtime'),
+  );
   const documentationDestination = path.join(
     layout.sitePackages,
     'kungfu',
@@ -1139,6 +1168,7 @@ if (require.main === module) main();
 module.exports = {
   assemblySelector,
   copyFirstPartyProfile,
+  copyWorkDesignRuntime,
   copyWorkProfileConformance,
   documentationAtlasSource,
   firstPartyProfileFilter,
