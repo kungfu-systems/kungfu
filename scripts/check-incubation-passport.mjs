@@ -8,6 +8,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { githubMergeGroupCoordinates } from './source-acceptance.mjs';
+
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(HERE, '..');
 const CONTRACT_PATH = 'framework/incubation/incubation-passport.contract.json';
@@ -214,6 +216,47 @@ function git(root, args) {
   return spawnSync('git', args, { cwd: root, encoding: 'utf8' });
 }
 
+const MERGE_GROUP_PROTECTED_HISTORY_DEPTH = 64;
+
+export function protectedSourceRetained({
+  root = ROOT,
+  sourceSha,
+  headSha = 'HEAD',
+  env = process.env,
+  readFile = fs.readFileSync,
+  gitIsAncestor = (ancestor, descendant) =>
+    git(root, ['merge-base', '--is-ancestor', ancestor, descendant]).status ===
+    0,
+  gitRead = (args) => {
+    const result = git(root, args);
+    return result.status === 0 ? result.stdout.trim() : '';
+  },
+  hydrateMergeGroupBase = (baseSha) =>
+    git(root, [
+      'fetch',
+      '--no-tags',
+      '--no-write-fetch-head',
+      '--filter=blob:none',
+      `--depth=${MERGE_GROUP_PROTECTED_HISTORY_DEPTH}`,
+      'origin',
+      baseSha,
+    ]).status === 0,
+} = {}) {
+  if (!GIT_OBJECT_PATTERN.test(sourceSha || '')) return false;
+  if (gitIsAncestor(sourceSha, headSha)) return true;
+
+  // The reusable source job intentionally uses a depth-one checkout. Git then
+  // reports false for ancestry that the protected merge-group base actually
+  // retains. Only an authenticated event for this exact checkout may recover
+  // that proof, and the bounded fetch remains fail closed if the source falls
+  // outside the retained protected history.
+  const mergeGroup = githubMergeGroupCoordinates(env, readFile);
+  if (!mergeGroup || gitRead(['rev-parse', headSha]) !== mergeGroup.headSha)
+    return false;
+  if (!hydrateMergeGroupBase(mergeGroup.baseSha)) return false;
+  return gitIsAncestor(sourceSha, mergeGroup.baseSha);
+}
+
 export function validateAdmissionFixture({ root = ROOT, passport, fixture }) {
   const errors = [];
   const invalid = (message) => errors.push(message);
@@ -275,13 +318,7 @@ export function validateAdmissionFixture({ root = ROOT, passport, fixture }) {
     if (tree.status !== 0) invalid('protected source head is unavailable');
     else if (tree.stdout.trim() !== protectedSource.tree)
       invalid('protected source tree does not match its head');
-    const ancestry = git(root, [
-      'merge-base',
-      '--is-ancestor',
-      protectedSource.head,
-      'HEAD',
-    ]);
-    if (ancestry.status !== 0)
+    if (!protectedSourceRetained({ root, sourceSha: protectedSource.head }))
       invalid('protected source head is not retained by the candidate');
   }
 
