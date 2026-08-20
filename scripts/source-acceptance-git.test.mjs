@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import assert from 'node:assert/strict';
+import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -52,24 +53,95 @@ test('Project Cut composition retains branch merge-base fallback', () => {
   ]);
 });
 
-test('source acceptance fetches only merge-group base trees', () => {
+test('source acceptance fetches exact merge-group base ancestry without blobs', () => {
   const commit = 'a'.repeat(40);
   const calls = [];
   fetchSourceAcceptanceCommit(commit, (command, args, options) => {
     calls.push({ command, args, options });
-    return { status: 0, stderr: '' };
+    return calls.length === 1
+      ? { status: 0, stdout: 'true\n', stderr: '' }
+      : { status: 0, stdout: '', stderr: '' };
   });
   assert.deepEqual(calls[0].command, 'git');
-  assert.deepEqual(calls[0].args, [
+  assert.deepEqual(calls[0].args, ['rev-parse', '--is-shallow-repository']);
+  assert.deepEqual(calls[1].args, [
     'fetch',
     '--no-tags',
     '--no-write-fetch-head',
     '--filter=blob:none',
-    '--depth=1',
+    '--unshallow',
     'origin',
     commit,
   ]);
-  assert.equal(calls[0].options.encoding, 'utf8');
+  assert.equal(calls[1].options.encoding, 'utf8');
+});
+
+test('source acceptance does not unshallow a complete repository', () => {
+  const commit = 'a'.repeat(40);
+  const calls = [];
+  fetchSourceAcceptanceCommit(commit, (command, args, options) => {
+    calls.push({ command, args, options });
+    return calls.length === 1
+      ? { status: 0, stdout: 'false\n', stderr: '' }
+      : { status: 0, stdout: '', stderr: '' };
+  });
+  assert.deepEqual(calls[1].args, [
+    'fetch',
+    '--no-tags',
+    '--no-write-fetch-head',
+    '--filter=blob:none',
+    'origin',
+    commit,
+  ]);
+});
+
+test('source acceptance exact-base fetch repairs a depth-one history walk', (t) => {
+  const root = fs.mkdtempSync(
+    path.join(os.tmpdir(), 'kungfu-source-acceptance-shallow-history-'),
+  );
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const origin = path.join(root, 'origin');
+  const checkout = path.join(root, 'checkout');
+  const git = (cwd, args) => readSourceAcceptanceGit(args, { cwd });
+
+  fs.mkdirSync(origin);
+  git(origin, ['init', '--quiet']);
+  git(origin, ['config', 'user.name', 'KFD Fixture']);
+  git(origin, ['config', 'user.email', 'kfd-fixture@kungfu.invalid']);
+  fs.writeFileSync(path.join(origin, 'history.txt'), 'baseline\n');
+  git(origin, ['add', 'history.txt']);
+  git(origin, ['commit', '--quiet', '-m', 'baseline']);
+  const baselineSha = git(origin, ['rev-parse', 'HEAD']);
+  fs.appendFileSync(path.join(origin, 'history.txt'), 'base\n');
+  git(origin, ['commit', '--quiet', '-am', 'base']);
+  const baseSha = git(origin, ['rev-parse', 'HEAD']);
+  fs.appendFileSync(path.join(origin, 'history.txt'), 'head\n');
+  git(origin, ['commit', '--quiet', '-am', 'head']);
+
+  const cloned = spawnSync(
+    'git',
+    ['clone', '--quiet', '--depth=1', `file://${origin}`, checkout],
+    { encoding: 'utf8' },
+  );
+  assert.equal(cloned.status, 0, cloned.stderr);
+  assert.notEqual(
+    spawnSync('git', ['cat-file', '-e', `${baselineSha}^{commit}`], {
+      cwd: checkout,
+      encoding: 'utf8',
+    }).status,
+    0,
+    'depth-one fixture must begin without the historical baseline',
+  );
+
+  fetchSourceAcceptanceCommit(baseSha, (command, args, options) =>
+    spawnSync(command, args, { ...options, cwd: checkout }),
+  );
+  assert.equal(git(checkout, ['cat-file', '-t', baselineSha]), 'commit');
+  assert.equal(
+    git(checkout, ['log', '--format=%H', `${baselineSha}..HEAD`]).split('\n')
+      .length,
+    2,
+  );
 });
 
 test('source acceptance falls back to the verified merge-group base ref', () => {

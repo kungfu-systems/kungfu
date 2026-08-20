@@ -12,6 +12,7 @@ import {
   assertInstalledBootstrapExports,
   extractKfApiExportSymbols,
 } from './libkungfu-bootstrap-admission.mjs';
+import { sourceMergeBase } from './source-acceptance.mjs';
 
 const read = (path) => fs.readFileSync(path, 'utf8');
 const readJson = (path) => JSON.parse(read(path));
@@ -58,6 +59,7 @@ const retiredSymbols = [
 
 function baseSymbolPolicy() {
   const candidates = [
+    sourceMergeBase().sha,
     process.env.GITHUB_BASE_REF
       ? `origin/${process.env.GITHUB_BASE_REF}`
       : null,
