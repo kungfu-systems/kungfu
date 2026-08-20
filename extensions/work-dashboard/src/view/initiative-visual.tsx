@@ -1,12 +1,6 @@
 import { mono, panelStyle } from '@kungfu-tech/kfx';
 import React from 'react';
 import type { AgentProgressRow } from './agent-progress';
-import type {
-  AtlasGoal,
-  AtlasMission,
-  WorkControlAuthorityReport,
-} from './work-control-profile';
-import type { GoalCardQuerySpec } from './work-control-query';
 import {
   type GoalCluster,
   type GoalSection,
@@ -20,6 +14,12 @@ import {
   queryGoalClusters,
   responsibilityActions,
 } from './initiative-visual-model';
+import type {
+  AtlasGoal,
+  AtlasMission,
+  WorkControlAuthorityReport,
+} from './work-control-profile';
+import type { GoalCardQuerySpec } from './work-control-query';
 
 const COLORS = {
   canvas: '#11161d',

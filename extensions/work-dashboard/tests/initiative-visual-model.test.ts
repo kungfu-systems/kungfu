@@ -1,11 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import type {
-  AtlasGoal,
-  WorkControlAuthorityReport,
-} from '../src/view/work-control-profile.ts';
-import { DEFAULT_GOAL_CARD_QUERY } from '../src/view/work-control-query.ts';
 import {
   MISSION_CONTROL_VISUAL_SPEC,
   buildGoalClusters,
@@ -13,6 +8,11 @@ import {
   queryGoalClusters,
   responsibilityActions,
 } from '../src/view/initiative-visual-model.ts';
+import type {
+  AtlasGoal,
+  WorkControlAuthorityReport,
+} from '../src/view/work-control-profile.ts';
+import { DEFAULT_GOAL_CARD_QUERY } from '../src/view/work-control-query.ts';
 
 const goal = (goalId: string, fields: Partial<AtlasGoal> = {}): AtlasGoal => ({
   goal_id: goalId,
