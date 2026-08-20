@@ -1,0 +1,268 @@
+{
+  "contract": "kungfu.kfx-site-impact-proof/v1",
+  "baseRevision": "c8fd32f901b3af15532a11599c9b34af0b0f42bc",
+  "changeRoot": "sha256:1cfd6349710f43fe9c016ec585944975af9ed9d7b47f109420745eef842df5f1",
+  "changes": [
+    {
+      "baseContentRoot": "sha256:1b0074ab46c856ac3887cf17428900ce70830559b2fe2f4e868c1ad3e3172120",
+      "contentRoot": "sha256:c6de3cf15ddf79a30c35c24938bc95dfffa49adec7dc3248e8d8f65a4c55767a",
+      "path": ".github/actions/native-execution-under-warrant/action.yml",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:c2e7c9d0752f3a581d0521a0b7b32de8b09f540a92d6baa8573496906e139996",
+      "contentRoot": "sha256:44ad67e24681538aa7570a71afd4ce36fde7a4a8707354e57dff3e37201a735e",
+      "path": ".github/workflows/affected-native-pr.yml",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:4d298bb512d858bad52fa2617aa303853e096f3d717e6d49e9711e1a7371d6ab",
+      "contentRoot": "sha256:d50fea17f3704289e58afa11ccc5155dbc22aff86f6edd01e6c111f3326bb46f",
+      "path": ".github/workflows/dev-delivery-warrant-terminal.yml",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:36ddba1b87ac20e7a6a4bba73c5092ed756827ce9991c0752d05bc3f5f854bee",
+      "contentRoot": "sha256:f24821f68ce4eaa4a4ca724e986852abffb1c4d59bdf369d0454ba525e7a4cfe",
+      "path": ".github/workflows/dev-pr-auto-merge.yml",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:e0334f83c15a4cf55c5e571390c4f889146572d999573e21bfca3538255ce522",
+      "contentRoot": "sha256:a5c5c5d1bc13b03e2d2956a1ac2d02c1dc6c6c0767776a55618ff57f845b268d",
+      "path": ".github/workflows/queue-admission-lease.yml",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:ddcca714991e9e8d5d8dde326b6d22804989cdab1d6af8d603a1b4ac7e08ea49",
+      "contentRoot": "sha256:0edf7af02a2b350e7e102955a8b556009d5d393837d5de85b34ead66ae04363a",
+      "path": ".github/workflows/report-projection.yml",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:3db62049463eb09380532bc7f24a7ffddad2c05493e47cb17a805ba8aa3055c8",
+      "contentRoot": "sha256:eb285d38dc881019e76da1882171c4a1f496822072846a1bf16117beb4c02796",
+      "path": ".xinfa/portable-atlas-classification.json.gz",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:2fa9e1a1cb3a483fbb7ac5c107ba8e81fb678bb7f56d40d4ed3ca5ae12dc8f74",
+      "contentRoot": "sha256:7f35a2f18789dd68f1b06806acc0d1673d97fcde2337ebeef03818cc6d24d97c",
+      "path": ".xinfa/product-atlas-bundle.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:55d7b09e35f2c87b67ead76da912a568d8ccc659c3722f407e5b68da5a542f4e",
+      "contentRoot": "sha256:e5b866dfc3e61828989c20043fc06cb87e215bfdd1c20e58e5f01c9a51e54f37",
+      "path": "docs/qualification/gates/dev-queue-admission.contract.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:a568495256478786528d88e628fccdb7ed0facc2655479ee25cef7a2eccdabf2",
+      "contentRoot": "sha256:abea3b5f9d6fb60b573229e8a157eb05fb3ef6abaede8b853a23a9496701fb45",
+      "path": "docs/qualification/gates/workflow-authority.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:90a0aed9ea04451eab64172d8483040dc041df5ca746040d0ba446208cd515fb",
+      "contentRoot": "sha256:4e3107c4b80f03624968714d27c407c7377b9c7b3a3e9897e0cb05fc0fa82e75",
+      "path": "docs/qualification/gates/workflow-authority.md",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:90761bb51752ef32de47d08fcc17f9e7d7d1faf00ec1eeb2c0e2913beca37ea3",
+      "contentRoot": "sha256:92289db086746044c437af6cf94cf6debd26d9deca357c535e54a1e055c7f04f",
+      "path": "extensions/work-dashboard/src/view/initiative-visual.tsx",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:88b0585911f6e036bd0e18da0f68027321d5859ff9a494cacc78cbe9ddd77d58",
+      "contentRoot": "sha256:dddb193f264f0bc17986da214fdeae21e4b8e799c0ca3448d7e1925e88aed5d2",
+      "path": "extensions/work-dashboard/tests/initiative-visual-model.test.ts",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:2b7a30b2841bdd1c935a929f4e19d3a691e0d5749f9c2c9ce9310ac9ea7c118a",
+      "contentRoot": "sha256:b940710677023b2161a8bb86a129f194a68ec94d851330d230c6ba8e0618d944",
+      "path": "framework/core/architecture/architecture-health-baseline.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:8da916acdf0294bff0a39947d1c9a8a5341e2c150be75afdb1125dcb39f01a5c",
+      "contentRoot": "sha256:70c316f2f545199def8fb88ef4b97dba78b60123d965b565781ce646e9f6466a",
+      "path": "framework/core/architecture/query-health.mjs",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:f96490b1832290084aa366bd0f40a079a14273dc0df85b504b9a0b73ac1b14f8",
+      "contentRoot": "sha256:39222c6ef5955080cefaa4c4574e9a8c51782da3650190102640379cd38eb40a",
+      "path": "framework/core/src/python/kungfu/agent/brief.md",
+      "status": "modified"
+    },
+    {
+      "contentRoot": "sha256:cc7bb72a2088e5b6b1d8a37ad7b7479418953928223ae069d4825b2931020752",
+      "path": "framework/maintainability/function-risk-policy.json",
+      "status": "added"
+    },
+    {
+      "contentRoot": "sha256:d732b229e28db24a584bd11618c7fe945983eb126663d2aa8cff7e120f36ded7",
+      "path": "framework/maintainability/function-risk.mjs",
+      "status": "added"
+    },
+    {
+      "contentRoot": "sha256:ce7fd306d7c1b17502ee335b93b5249c7ce86f691ca19c7ce211a1429d1fead2",
+      "path": "framework/maintainability/function-risk.test.mjs",
+      "status": "added"
+    },
+    {
+      "baseContentRoot": "sha256:3cbb360242e537b6e3bc6e368483fc01f320e5479e3fd8361158df002753ca61",
+      "contentRoot": "sha256:27699129ada959e5b3a03a655313c8aabc6ff44ce8c7e1bb5feecf95fba6dd2b",
+      "path": "framework/maintainability/readonly-source-routes.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:fd3b7cfb84a920c05db52ae92a4b2d3ef0179e48ae6f665f59df084360f3baee",
+      "contentRoot": "sha256:11eb650ef5f84e4760c2822c256c6a956d7504ba1a2641d401bb8f4cee2c0bb2",
+      "path": "framework/release/publication-surfaces.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:1f1d995a8ca7174ee0843251062212ebd22b2396fb0e63e3143276aa872c3d96",
+      "contentRoot": "sha256:da1bd8df47959db2643ec15477dffbc1652096beb4611b7bc2835c2e9b483d3e",
+      "path": "framework/report-projection/authority.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:1156a45d625b1bc6322e42dbf13f1b3267369547518efc6d00f9202cab3810f1",
+      "contentRoot": "sha256:f380c6c4ca3c41a9242d96bb0a96e157906c2ab7a4db221f43150d7bb1d1ad9c",
+      "path": "framework/report-projection/authority.mjs",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:fcb29a162f069ffc3be878118864c5b86ebc1732bd0c3d471eb43eea58ce6aaf",
+      "contentRoot": "sha256:d8282f99123873b311e6b9228324d4c47edd6cafcadf99e0a9d82fea54a53c76",
+      "path": "framework/report-projection/authority.test.mjs",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:98dddc9c441ed1e281df0d93c76e5ee7652238e36f6a54e19be876e2c3ca642e",
+      "contentRoot": "sha256:7294f677091b44bf9e9a559bd7c0cfd40c751b0b875955024067378f4e269c30",
+      "path": "package.json",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:fcae73d851c29f541a986cd5c3f6a0e8e42237c93c34df08c6122efed4a0cffb",
+      "contentRoot": "sha256:c10b96e712357b87d053d6764d5088a03ace35895dbe89f86f511d9605c2fad0",
+      "path": "scripts/affected-native-cache-payload.test.mjs",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:5ca322e47cf3e185d076a25904fdc011e61fb8bdb9fa4498ff550afdf101f9f8",
+      "contentRoot": "sha256:0108d5435e1b98aea03ecb40b98dc326ee9c4807b6b5c13697056c795ebad109",
+      "path": "scripts/check-incubation-passport.mjs",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:c549b85abb07f6499831a10f07b04e6a5eab93a42f39c7eefe5d898e6931102c",
+      "contentRoot": "sha256:e22defcae01387ace5a262599047fd395294c8b5e8d693cabe8f193189cdf3a5",
+      "path": "scripts/check-incubation-passport.test.mjs",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:268e8e17bb214e34146532b75cf82103d6a0e46fec2d2b24bcca7cee48199c84",
+      "contentRoot": "sha256:b561047e526fbb18f2aeffae1f9c4aaf38ef7f2fd424a2f4ec529685c3010d77",
+      "path": "scripts/check-kfd7-library-boundary.test.mjs",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:739d1c3f707e696a5a7fbff3e9ebc85f13470f754035ce9f307398c827bb60ca",
+      "contentRoot": "sha256:850f7d4fe7cdb7583dda1047744f7dc1bae8fc07b82adb3f7661b5ebd210f27c",
+      "path": "scripts/check-project-cut-composition-gate.mjs",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:9cf476a7b83cbd9d4feb2a06fba61b08e1eecaaa04d14ddc7283c72386e03ddf",
+      "contentRoot": "sha256:a4ef4ff4c722e68c6b658aa6838cae60214885b2e5c02fe06a3a90ce04274925",
+      "path": "scripts/code-complexity-budget.mjs",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:46f604e181373e00ab3eb0e32a7e7ae95bfb47d2211a73b240aaf32e735089e2",
+      "contentRoot": "sha256:85d8ddff7a27233b171e37abd3ac9346abbe86f6b12e1b33d90f83c5d7c178f8",
+      "path": "scripts/code-complexity-budget.test.mjs",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:22594ab7495313d8d9836a61b5e15b2f18e8ccc10a2bae2bfe0cd1d79497d6e0",
+      "contentRoot": "sha256:3a62677aeb115caa7886bb6f2d4270c0b26361fb394b402e0757cab0e1aea0e6",
+      "path": "scripts/dev-delivery-warrant-input.test.mjs",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:05187fa3acc1792125d6c2c5623f4912942c286119f5c9cf85cf62f15aa94b77",
+      "contentRoot": "sha256:a7c0b8a2f7d94002afabfeb78d94cec119cc02ed366510393af608382d60fe18",
+      "path": "scripts/dev-pr-auto-merge.test.mjs",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:ff6d4e7e84ecd1369a9c8c726e1737c9f5ea6ac9424bb5a8492e90f36d248984",
+      "contentRoot": "sha256:b788554f587b4bc5a9eca1e873a2a3d3b24a4edf6c4be4e7f03051c2d38689f6",
+      "path": "scripts/evolution-map.test.mjs",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:b8d045c81f04c3ef7af7dd450dd261d90d6954d6f026b82fe9589663ef78aa2d",
+      "contentRoot": "sha256:aeee47e801e6d423e84ac512e1004631cc422adff558c422d237ff44657b6bd1",
+      "path": "scripts/evolution-map/index.mjs",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:c62206d80c14b0c5619a7fd1a5e2b53a47827b4afc1adbc0d6d35e3b0eb30334",
+      "contentRoot": "sha256:2edfb15fa209e37c24deae9e994c8c10e99bec874e96f12aecfde5b7cb5b10ee",
+      "path": "scripts/queue-admission-lease.test.mjs",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:62621f27adfdd165cbb53482ea04fe15ab86ce9f3c68daaecd54948c3d171b07",
+      "contentRoot": "sha256:e8626ac7122007a9b1305726a08f9ac47e927d0ad71d50642cc454f4bb6d0eea",
+      "path": "scripts/shifu-readonly-entry.mjs",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:27382e01206c35774ba2c3793df0fc1048a051c40da8e0867f5e8d2ec3bd0a0b",
+      "contentRoot": "sha256:1ce6fa481d0bde07b1eee8457497af8d9c39df7789b002bbe16da4ae2ddddd0c",
+      "path": "scripts/source-acceptance-git.test.mjs",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:55cf6a16bdbb6fbe01f9af388091fa69afc1c3e33cab4e23d7cc826b41a871d5",
+      "contentRoot": "sha256:aeee90475d7414f9243521d22312ced7b0784877682efe82b0b569505db0baf2",
+      "path": "scripts/source-acceptance.mjs",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:ce97de4cdc0567dd115ff3d4111763a594f5ca13d256ae0893b8506cdba12cd2",
+      "contentRoot": "sha256:1d4bdf5316f4c4bf2e76bba9aab1c3b1524decc423d43a69effb15deb8d656b4",
+      "path": "shifu",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:194ba70ffea2442c2b7a9845c2d464e7a0e4e545b1ce6b481dd581f4dfd67dfe",
+      "contentRoot": "sha256:08819f3ab55c3e29b20f1532e1f1cf4920454de12e37730959229fc86ddd4833",
+      "path": "shifu.cmd",
+      "status": "modified"
+    }
+  ],
+  "affectedFacets": [
+    "capabilities",
+    "package-facets",
+    "profiles-suites"
+  ],
+  "rationale": "The combined CI-only source admission repair changes merge-group history and gate logic without altering the KFX Site Bundle runtime or product facets.",
+  "attestation": {
+    "publicBehaviorUnchanged": true,
+    "publicContractUnchanged": true,
+    "readerJourneyUnchanged": true
+  },
+  "proofRoot": "sha256:6b9d79c4fc91908f5aaabb3d6cd4e7dda6d9c6e0a5b8fc9c85914aad1c3b040b"
+}

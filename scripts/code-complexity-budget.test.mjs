@@ -12,6 +12,7 @@ import {
   protectedBaselineIssues,
 } from '../framework/maintainability/complexity-governance.mjs';
 import {
+  baselineChangedPaths,
   classify,
   complexitySigningResidueAudit,
   composeRenameEvidence,
@@ -82,6 +83,25 @@ test('git probes fail fast with a precise timeout', () => {
       })),
     /timed out after 10000ms/,
   );
+});
+
+test('baseline path inventory avoids historical blob reads for rename scoring', () => {
+  const calls = [];
+  const changed = baselineChangedPaths('protected-base', (args) => {
+    calls.push(args);
+    return args[0] === 'diff'
+      ? ['deleted.md', 'replacement.md']
+      : ['untracked.mjs'];
+  });
+
+  assert.deepEqual(
+    [...changed],
+    ['deleted.md', 'replacement.md', 'untracked.mjs'],
+  );
+  assert.deepEqual(calls, [
+    ['diff', '--no-renames', '--name-only', 'protected-base', '--'],
+    ['ls-files', '--others', '--exclude-standard'],
+  ]);
 });
 
 test('classification order covers every declared source class', () => {
