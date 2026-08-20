@@ -1,7 +1,7 @@
 {
   "contract": "kungfu.kfx-site-impact-proof/v1",
   "baseRevision": "c8fd32f901b3af15532a11599c9b34af0b0f42bc",
-  "changeRoot": "sha256:fd997b688c89e1c8c30c41bbd9e4dfbbe2620a603b75eee9fca6449eec70908b",
+  "changeRoot": "sha256:0d4b12bbf53b944a4e3f733500458857ad285064d369b30d2dc7e22da83a767a",
   "changes": [
     {
       "baseContentRoot": "sha256:1b0074ab46c856ac3887cf17428900ce70830559b2fe2f4e868c1ad3e3172120",
@@ -145,6 +145,12 @@
       "status": "modified"
     },
     {
+      "baseContentRoot": "sha256:0dbba6f92b332b9ac2c4af296b00ff086b9480fdcbd275619b9594ac155ab720",
+      "contentRoot": "sha256:c3035a76d0373fb91905cf82e22c2dea46597b2302ff100d0ba92eeb43f91c42",
+      "path": "framework/site/tooling/check-kfx-site-impact.mjs",
+      "status": "modified"
+    },
+    {
       "baseContentRoot": "sha256:98dddc9c441ed1e281df0d93c76e5ee7652238e36f6a54e19be876e2c3ca642e",
       "contentRoot": "sha256:7294f677091b44bf9e9a559bd7c0cfd40c751b0b875955024067378f4e269c30",
       "path": "package.json",
@@ -172,6 +178,12 @@
       "baseContentRoot": "sha256:268e8e17bb214e34146532b75cf82103d6a0e46fec2d2b24bcca7cee48199c84",
       "contentRoot": "sha256:b561047e526fbb18f2aeffae1f9c4aaf38ef7f2fd424a2f4ec529685c3010d77",
       "path": "scripts/check-kfd7-library-boundary.test.mjs",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:6699d8fd993708a11760459e27ada435e366121bb57335fab3596dd068202078",
+      "contentRoot": "sha256:e60a283032351fe772eec85710cc0fd07a0fa3cd096132c68d5b5d8c14d31998",
+      "path": "scripts/check-kfx-site-impact.test.mjs",
       "status": "modified"
     },
     {
@@ -248,7 +260,7 @@
     },
     {
       "baseContentRoot": "sha256:194ba70ffea2442c2b7a9845c2d464e7a0e4e545b1ce6b481dd581f4dfd67dfe",
-      "contentRoot": "sha256:7863974a71ec71547b222814dcfd8ac9b1775bba410f87ebf41cb5ec59e3c3e6",
+      "contentRoot": "sha256:e9a106e5973a4df978122026d39ab237b50121aa2f1e1d3706d2fcdf2dcde14c",
       "path": "shifu.cmd",
       "status": "modified"
     }
@@ -258,11 +270,11 @@
     "package-facets",
     "profiles-suites"
   ],
-  "rationale": "Child 3 maintainability, Agent Work dashboard, merge-group history, and complexity path-inventory changes preserve KFX Site public behavior, contracts, rendered content, navigation, and reader journeys.",
+  "rationale": "Child 3 maintainability, Agent Work dashboard, and merge-group repairs preserve KFX Site public behavior, contracts, and reader journeys; canonical Git-byte hashing only removes checkout EOL variance from the immutable proof.",
   "attestation": {
     "publicBehaviorUnchanged": true,
     "publicContractUnchanged": true,
     "readerJourneyUnchanged": true
   },
-  "proofRoot": "sha256:066a68733825472673c928de8634f2628a686938c745578e62f3b5c57145f39b"
+  "proofRoot": "sha256:6c939e8a94f5ac69e8e1c0a4722fe5baaf5e17d639d7bacb998331ba17e061a8"
 }

@@ -2,7 +2,9 @@
 
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import { test } from 'node:test';
 
@@ -87,6 +89,61 @@ test('repository changes ignore net-zero paths from union inventories', () => {
     repositoryChanges(exactSource, ['.nonexistent-kfx-union-path']),
     [],
   );
+});
+
+test('repository changes bind canonical Git bytes across checkout EOLs', () => {
+  const repository = fs.mkdtempSync(
+    path.join(os.tmpdir(), 'kungfu-kfx-eol-fixture-'),
+  );
+  const contentRoot = (bytes) =>
+    `sha256:${createHash('sha256').update(bytes).digest('hex')}`;
+  try {
+    execFileSync('git', ['init', '--quiet'], { cwd: repository });
+    fs.writeFileSync(
+      path.join(repository, '.gitattributes'),
+      '*.cmd text eol=crlf\n',
+    );
+    fs.writeFileSync(path.join(repository, 'launcher.cmd'), '@echo base\n');
+    execFileSync('git', ['add', '.gitattributes', 'launcher.cmd'], {
+      cwd: repository,
+    });
+    execFileSync(
+      'git',
+      [
+        '-c',
+        'user.name=KFX fixture',
+        '-c',
+        'user.email=kfx-fixture@kungfu.invalid',
+        'commit',
+        '--quiet',
+        '-m',
+        'fixture',
+      ],
+      { cwd: repository },
+    );
+    const base = execFileSync('git', ['rev-parse', 'HEAD'], {
+      cwd: repository,
+      encoding: 'utf8',
+    }).trim();
+
+    fs.writeFileSync(path.join(repository, 'launcher.cmd'), '@echo base\r\n');
+    assert.deepEqual(repositoryChanges(base, ['launcher.cmd'], repository), []);
+
+    fs.writeFileSync(
+      path.join(repository, 'launcher.cmd'),
+      '@echo changed\r\n',
+    );
+    assert.deepEqual(repositoryChanges(base, ['launcher.cmd'], repository), [
+      {
+        path: 'launcher.cmd',
+        status: 'modified',
+        baseContentRoot: contentRoot('@echo base\n'),
+        contentRoot: contentRoot('@echo changed\n'),
+      },
+    ]);
+  } finally {
+    fs.rmSync(repository, { force: true, recursive: true });
+  }
 });
 
 test('ignores changes outside KFX ownership', () => {
