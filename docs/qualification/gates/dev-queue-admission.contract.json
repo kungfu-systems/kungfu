@@ -54,6 +54,12 @@
     },
     "providerConstraint": "GitHub merge queue rulesets reject wildcard ref targets. The repository default branch is the moving authority pointer, and resolveDevBranch admits it only when it belongs to the v4+ dev family.",
     "expectedSource": "any",
+    "reviewAuthority": {
+      "requireCodeOwnerReview": true,
+      "requireLastPushApproval": true,
+      "emptyCommitIsReviewablePush": false,
+      "reason": "GitHub evaluates the most recent reviewable push. A tree-identical empty commit does not transfer that push boundary or make the prior pusher eligible to approve it."
+    },
     "reason": "The pull-request lease is a user-authored commit status while the merge-group continuation is a GitHub Actions check."
   },
   "threatBoundary": "Prevents inadvertent direct queue admission and stale-controller continuation. The named status alone is insufficient: merge-group continuation reads the exact Buildchain state-ref revision, active Warrant, fencing token, generation and source head, while affected-native records the exact Integration Delivery Proof before protected merge observation."

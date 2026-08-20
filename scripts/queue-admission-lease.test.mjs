@@ -177,6 +177,13 @@ test('queue admission lease has distinct PR-head and merge-group authorities', (
     /reject wildcard ref targets/u,
   );
   assert.equal(CONTRACT.rulesetActivation.expectedSource, 'any');
+  assert.deepEqual(CONTRACT.rulesetActivation.reviewAuthority, {
+    requireCodeOwnerReview: true,
+    requireLastPushApproval: true,
+    emptyCommitIsReviewablePush: false,
+    reason:
+      'GitHub evaluates the most recent reviewable push. A tree-identical empty commit does not transfer that push boundary or make the prior pusher eligible to approve it.',
+  });
 });
 
 test('merge-group continuation consumes the exact durable Warrant lease', () => {
@@ -292,7 +299,14 @@ test('queue admission contract authorizes only one explicit required context', (
     queueAdmissionRequiredContexts({
       schema: 'kungfu.dev-queue-admission/v1',
       requiredContext: 'Queue admission lease',
-      rulesetActivation: { required: true },
+      rulesetActivation: {
+        required: true,
+        reviewAuthority: {
+          requireCodeOwnerReview: true,
+          requireLastPushApproval: true,
+          emptyCommitIsReviewablePush: false,
+        },
+      },
     }),
     ['Queue admission lease'],
   );
@@ -305,4 +319,32 @@ test('queue admission contract authorizes only one explicit required context', (
       }),
     /must require ruleset activation/,
   );
+  for (const reviewAuthority of [
+    undefined,
+    {
+      requireCodeOwnerReview: false,
+      requireLastPushApproval: true,
+      emptyCommitIsReviewablePush: false,
+    },
+    {
+      requireCodeOwnerReview: true,
+      requireLastPushApproval: false,
+      emptyCommitIsReviewablePush: false,
+    },
+    {
+      requireCodeOwnerReview: true,
+      requireLastPushApproval: true,
+      emptyCommitIsReviewablePush: true,
+    },
+  ]) {
+    assert.throws(
+      () =>
+        queueAdmissionRequiredContexts({
+          schema: 'kungfu.dev-queue-admission/v1',
+          requiredContext: 'Queue admission lease',
+          rulesetActivation: { required: true, reviewAuthority },
+        }),
+      /must preserve fail-closed reviewable-push authority/,
+    );
+  }
 });
