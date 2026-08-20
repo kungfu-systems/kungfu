@@ -225,16 +225,24 @@ test('Qualified native proof bridges to an exact GitHub Actions CheckRun before 
   );
   assert.match(
     bridge,
-    /name:"affected-native \/ linux"[\s\S]*conclusion:"success"/u,
-  );
-  assert.match(bridge, /repos\/\$GITHUB_REPOSITORY\/check-runs/u);
-  assert.match(
-    bridge,
-    /\.external_id == \$externalId[\s\S]*\.app\.id == 15368/u,
+    /check_name=affected-native%20%2F%20linux&filter=all&per_page=100/u,
   );
   assert.match(
     bridge,
-    /schema:"kungfu\.dev-delivery-native-check-bridge\/v1"[\s\S]*sourceWorkflowRunId:\$sourceWorkflowRunId[\s\S]*producerWorkflowRunId:\$producerWorkflowRunId[\s\S]*producerRunAttempt:\$producerRunAttempt[\s\S]*generatedAt:\$generatedAt[\s\S]*appId:\$checkRun\[0\]\.app\.id/u,
+    /select\(\.name == "affected-native \/ linux"\)[\s\S]*select\(\.head_sha == \$head\)[\s\S]*select\(\.app\.id == 15368\)[\s\S]*select\(\.details_url \| startswith\(\$sourceRunUrl\)\)[\s\S]*select\(length == 1\)/u,
+  );
+  assert.match(
+    bridge,
+    /source_check_run_id="\$\(jq -er '\.id' "\$source_check"\)"[\s\S]*gh api --method PATCH[\s\S]*repos\/\$GITHUB_REPOSITORY\/check-runs\/\$source_check_run_id/u,
+  );
+  assert.doesNotMatch(bridge, /gh api --method POST[\s\S]*check-runs/u);
+  assert.match(
+    bridge,
+    /\.id == \$sourceCheckRunId[\s\S]*\.external_id == \$externalId[\s\S]*\.app\.id == 15368/u,
+  );
+  assert.match(
+    bridge,
+    /schema:"kungfu\.dev-delivery-native-check-bridge\/v1"[\s\S]*sourceWorkflowRunId:\$sourceWorkflowRunId[\s\S]*producerWorkflowRunId:\$producerWorkflowRunId[\s\S]*producerRunAttempt:\$producerRunAttempt[\s\S]*generatedAt:\$generatedAt[\s\S]*sourceCheckRunPrior:\{id:\$checkRun\[0\]\.id,conclusion:\$priorConclusion,detailsUrl:\$priorDetailsUrl\}[\s\S]*appId:\$checkRun\[0\]\.app\.id/u,
   );
   assert.match(
     bridge,
