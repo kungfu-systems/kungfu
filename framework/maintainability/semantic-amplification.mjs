@@ -212,11 +212,12 @@ function currentBytes(relative) {
   return fs.readFileSync(path.join(ROOT, relative));
 }
 
-function changedPaths(ref) {
-  return new Set([
-    ...gitLines(['diff', '--name-only', ref, '--']),
-    ...gitLines(['ls-files', '--others', '--exclude-standard']),
-  ]);
+function baselineChangedPaths(ref, readLines = gitLines) {
+  return new Set(
+    readLines(['diff', '--no-renames', '--name-only', ref, 'HEAD', '--'])
+      .concat(readLines(['diff', '--no-renames', '--name-only', 'HEAD', '--']))
+      .concat(readLines(['ls-files', '--others', '--exclude-standard'])),
+  );
 }
 
 function allFamilyPaths(family) {
@@ -872,7 +873,7 @@ function validateManifest(
 }
 
 function buildReport(manifest, layers) {
-  const changed = changedPaths(manifest.baselineRef);
+  const changed = baselineChangedPaths(manifest.baselineRef);
   const terminalMatrix = readJson(TERMINAL_MATRIX_PATH);
   const issues = validateManifest(manifest, layers, changed, terminalMatrix);
   const integrity = evaluateIntegrity(manifest.integrityPolicy);
@@ -1177,6 +1178,7 @@ if (
 }
 
 export {
+  baselineChangedPaths,
   buildReport,
   checkElectronBuilderProjections,
   ELECTRON_BUILDER_PROJECTION_PATHS as electronBuilderProjectionPaths,

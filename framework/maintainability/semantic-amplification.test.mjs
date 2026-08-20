@@ -6,6 +6,7 @@ import test from 'node:test';
 
 import fs from 'node:fs';
 import {
+  baselineChangedPaths,
   buildReport,
   evaluateIntegrity,
   queryTaskGraph,
@@ -37,6 +38,29 @@ const integrityFixtures = JSON.parse(
   ),
 );
 const clone = (value) => JSON.parse(JSON.stringify(value));
+
+test('baseline changed paths conserve tree, worktree, and untracked inputs without rename reads', () => {
+  const calls = [];
+  const changed = baselineChangedPaths('protected-base', (args) => {
+    calls.push(args);
+    if (args[0] === 'ls-files') return ['untracked-only.cpp', 'shared-path.ts'];
+    if (args.includes('protected-base'))
+      return ['tree-only.py', 'shared-path.ts'];
+    return ['worktree-only.rs', 'shared-path.ts'];
+  });
+
+  assert.deepEqual(calls, [
+    ['diff', '--no-renames', '--name-only', 'protected-base', 'HEAD', '--'],
+    ['diff', '--no-renames', '--name-only', 'HEAD', '--'],
+    ['ls-files', '--others', '--exclude-standard'],
+  ]);
+  assert.deepEqual([...changed].sort(), [
+    'shared-path.ts',
+    'tree-only.py',
+    'untracked-only.cpp',
+    'worktree-only.rs',
+  ]);
+});
 
 test('current semantic amplification projection has one route per family', () => {
   const report = buildReport(manifest, layers);
