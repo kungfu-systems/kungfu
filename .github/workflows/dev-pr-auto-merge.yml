@@ -593,16 +593,16 @@ jobs:
       max-merges: 1
       merge-method: rebase
       landing-mode: queue
-      # Qualification must finish before the GitHub Actions-owned native
-      # CheckRun can become successful. The second reusable call below owns
-      # landing only after that exact qualified-Warrant bridge is read back.
+      # Qualification must finish before the GitHub Actions-owned source run
+      # can be retried under its exact active Warrant. The second reusable call
+      # below owns landing only after that native retry is read back.
       defer-landing: true
       dry-run: false
     secrets:
       github-token: ${{ secrets.KUNGFU_GITHUB_TOKEN }}
 
   native-check-bridge:
-    name: Publish qualified native CheckRun
+    name: Requalify source CheckRun under Warrant
     needs:
       - resolve-target
       - admission
@@ -611,14 +611,16 @@ jobs:
       needs.resolve-target.outputs.expected-pr-number != '' &&
       (github.event_name != 'workflow_dispatch' || inputs.dry-run == false)
     runs-on: ubuntu-24.04
+    timeout-minutes: 55
     permissions:
-      actions: read
-      checks: write
+      actions: write
+      checks: read
       contents: read
       pull-requests: read
     outputs:
       check-run-id: ${{ steps.publish.outputs.check-run-id }}
       receipt-root: ${{ steps.publish.outputs.receipt-root }}
+      source-run-attempt: ${{ steps.publish.outputs.source-run-attempt }}
     steps:
       - name: Download exact qualified Warrant evidence
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
@@ -627,7 +629,7 @@ jobs:
           path: .buildchain/native-check-bridge/warrant
           merge-multiple: true
 
-      - name: Publish exact GitHub Actions native CheckRun
+      - name: Re-run failed source jobs under the qualified Warrant
         id: publish
         shell: bash
         env:
@@ -684,13 +686,119 @@ jobs:
           qualification_root="$(jq -er '.receiptRoot' "$warrant")"
           state_root="$(jq -er '.after.stateRoot' "$warrant")"
           state_commit="$(jq -er '.after.commitSha' "$warrant")"
-          run_url="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
           source_run_url="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$SOURCE_RUN_ID/job/"
-          summary="Qualified Warrant $qualification_root binds native proof $native_root and durable state $state_root at $state_commit."
+          source_run_prior="$evidence/source-workflow-run-prior.json"
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/$SOURCE_RUN_ID" > "$source_run_prior"
+          jq -e \
+            --arg repository "$GITHUB_REPOSITORY" \
+            --arg head "$EXPECTED_HEAD" \
+            --argjson sourceRun "$SOURCE_RUN_ID" \
+            '.id == $sourceRun
+             and .name == "Core affected native"
+             and .path == ".github/workflows/affected-native-pr.yml"
+             and .event == "pull_request"
+             and .head_repository.full_name == $repository
+             and .head_sha == $head
+             and .status == "completed"
+             and (.conclusion == "failure" or .conclusion == "success")
+             and (.run_attempt | type == "number" and . >= 1)' \
+            "$source_run_prior" >/dev/null
+
           source_checks="$evidence/source-check-runs.json"
           gh api \
             -H 'Accept: application/vnd.github+json' \
-            "repos/$GITHUB_REPOSITORY/commits/$EXPECTED_HEAD/check-runs?check_name=affected-native%20%2F%20linux&filter=all&per_page=100" \
+            "repos/$GITHUB_REPOSITORY/commits/$EXPECTED_HEAD/check-runs?check_name=affected-native%20%2F%20linux&filter=latest&per_page=100" \
+            > "$source_checks"
+          source_check_prior="$evidence/source-check-run-prior.json"
+          jq -e \
+            --arg head "$EXPECTED_HEAD" \
+            --arg sourceRunUrl "$source_run_url" \
+            '[.check_runs[]
+              | select(.name == "affected-native / linux")
+              | select(.head_sha == $head)
+              | select(.app.id == 15368)
+              | select(.details_url | startswith($sourceRunUrl))]
+             | select(length == 1)
+             | .[0]
+             | select(.status == "completed")
+             | select(.conclusion == "failure" or .conclusion == "success")' \
+            "$source_checks" > "$source_check_prior"
+
+          prior_attempt="$(jq -er '.run_attempt' "$source_run_prior")"
+          prior_run_conclusion="$(jq -er '.conclusion' "$source_run_prior")"
+          prior_check_run_id="$(jq -er '.id' "$source_check_prior")"
+          prior_check_conclusion="$(jq -er '.conclusion' "$source_check_prior")"
+          rerun_triggered=false
+          expected_attempt="$prior_attempt"
+          source_run="$source_run_prior"
+          if [ "$prior_run_conclusion" = "failure" ]; then
+            if [ "$prior_check_conclusion" != "failure" ]; then
+              echo "failed source run does not expose the expected failed native CheckRun" >&2
+              exit 1
+            fi
+            gh api --method POST \
+              "repos/$GITHUB_REPOSITORY/actions/runs/$SOURCE_RUN_ID/rerun-failed-jobs" \
+              >/dev/null
+            rerun_triggered=true
+            expected_attempt="$((prior_attempt + 1))"
+            source_run="$evidence/source-workflow-run.json"
+            completed=false
+            for _ in $(seq 1 100); do
+              gh api "repos/$GITHUB_REPOSITORY/actions/runs/$SOURCE_RUN_ID" > "$source_run"
+              observed_attempt="$(jq -er '.run_attempt' "$source_run")"
+              observed_status="$(jq -er '.status' "$source_run")"
+              if [ "$observed_attempt" -gt "$expected_attempt" ]; then
+                echo "source workflow advanced beyond the single authorized retry" >&2
+                exit 1
+              fi
+              if [ "$observed_attempt" = "$expected_attempt" ] && [ "$observed_status" = "completed" ]; then
+                completed=true
+                break
+              fi
+              sleep 30
+            done
+            if [ "$completed" != "true" ]; then
+              echo "source workflow retry did not complete within the bounded wait" >&2
+              exit 1
+            fi
+          fi
+
+          jq -e \
+            --arg repository "$GITHUB_REPOSITORY" \
+            --arg head "$EXPECTED_HEAD" \
+            --argjson sourceRun "$SOURCE_RUN_ID" \
+            --argjson expectedAttempt "$expected_attempt" \
+            '.id == $sourceRun
+             and .name == "Core affected native"
+             and .path == ".github/workflows/affected-native-pr.yml"
+             and .event == "pull_request"
+             and .head_repository.full_name == $repository
+             and .head_sha == $head
+             and .run_attempt == $expectedAttempt
+             and .status == "completed"
+             and .conclusion == "success"' \
+            "$source_run" >/dev/null
+
+          source_jobs="$evidence/source-workflow-jobs.json"
+          gh api \
+            "repos/$GITHUB_REPOSITORY/actions/runs/$SOURCE_RUN_ID/jobs?filter=latest&per_page=100" \
+            > "$source_jobs"
+          jq -e \
+            '[.jobs[] | select(.name == "Provisional Delivery Warrant admission / linux")]
+             | select(length == 1)
+             | .[0]
+             | select(.status == "completed" and .conclusion == "success")' \
+            "$source_jobs" >/dev/null
+          jq -e \
+            '[.jobs[] | select(.name == "affected-native / linux")]
+             | select(length == 1)
+             | .[0]
+             | select(.status == "completed" and .conclusion == "success")' \
+            "$source_jobs" >/dev/null
+
+          gh api \
+            -H 'Accept: application/vnd.github+json' \
+            "repos/$GITHUB_REPOSITORY/commits/$EXPECTED_HEAD/check-runs?check_name=affected-native%20%2F%20linux&filter=latest&per_page=100" \
             > "$source_checks"
           source_check="$evidence/source-check-run.json"
           jq -e \
@@ -703,42 +811,8 @@ jobs:
               | select(.details_url | startswith($sourceRunUrl))]
              | select(length == 1)
              | .[0]
-             | select(.status == "completed")
-             | select(.conclusion == "failure"
-                      or .conclusion == "cancelled"
-                      or .conclusion == "timed_out"
-                      or .conclusion == "action_required"
-                      or .conclusion == "stale"
-                      or .conclusion == "neutral"
-                      or .conclusion == "success")' \
+             | select(.status == "completed" and .conclusion == "success")' \
             "$source_checks" > "$source_check"
-          source_check_run_id="$(jq -er '.id' "$source_check")"
-          prior_conclusion="$(jq -er '.conclusion' "$source_check")"
-          prior_details_url="$(jq -er '.details_url' "$source_check")"
-          payload="$(jq -n \
-            --arg externalId "kungfu-qualified-warrant:$qualification_root" \
-            --arg detailsUrl "$run_url" \
-            --arg summary "$summary" \
-            '{status:"completed",conclusion:"success",external_id:$externalId,details_url:$detailsUrl,output:{title:"Exact qualified native Warrant",summary:$summary}}')"
-          response="$evidence/check-run.json"
-          gh api --method PATCH \
-            -H 'Accept: application/vnd.github+json' \
-            "repos/$GITHUB_REPOSITORY/check-runs/$source_check_run_id" \
-            --input - <<<"$payload" > "$response"
-          jq -e \
-            --arg head "$EXPECTED_HEAD" \
-            --arg externalId "kungfu-qualified-warrant:$qualification_root" \
-            --argjson sourceCheckRunId "$source_check_run_id" \
-            '.name == "affected-native / linux"
-             and .id == $sourceCheckRunId
-             and .head_sha == $head
-             and .status == "completed"
-             and .conclusion == "success"
-             and .external_id == $externalId
-             and .app.id == 15368
-             and (.id | type == "number")' \
-            "$response" >/dev/null
-
           generated_at="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
           receipt="$evidence/receipt.json"
           jq -nS \
@@ -754,18 +828,23 @@ jobs:
             --arg warrantStateRoot "$state_root" \
             --arg warrantStateCommit "$state_commit" \
             --arg generatedAt "$generated_at" \
-            --arg priorConclusion "$prior_conclusion" \
-            --arg priorDetailsUrl "$prior_details_url" \
-            --slurpfile checkRun "$response" \
-            '{schema:"kungfu.dev-delivery-native-check-bridge/v1",repository:$repository,protectedBase:$branch,pullRequestNumber:$pullRequest,sourceHead:$head,sourceWorkflowRunId:$sourceWorkflowRunId,producerWorkflowRunId:$producerWorkflowRunId,producerRunAttempt:$producerRunAttempt,nativeProofRoot:$nativeProofRoot,qualificationReceiptRoot:$qualificationReceiptRoot,warrantStateRoot:$warrantStateRoot,warrantStateCommit:$warrantStateCommit,generatedAt:$generatedAt,sourceCheckRunPrior:{id:$checkRun[0].id,conclusion:$priorConclusion,detailsUrl:$priorDetailsUrl},checkRun:{id:$checkRun[0].id,nodeId:$checkRun[0].node_id,name:$checkRun[0].name,headSha:$checkRun[0].head_sha,status:$checkRun[0].status,conclusion:$checkRun[0].conclusion,appId:$checkRun[0].app.id,startedAt:$checkRun[0].started_at,completedAt:$checkRun[0].completed_at}}' \
+            --argjson sourceWorkflowRunPriorAttempt "$prior_attempt" \
+            --arg priorRunConclusion "$prior_run_conclusion" \
+            --argjson sourceWorkflowRunAttempt "$expected_attempt" \
+            --argjson rerunTriggered "$rerun_triggered" \
+            --argjson priorCheckRunId "$prior_check_run_id" \
+            --arg priorCheckConclusion "$prior_check_conclusion" \
+            --slurpfile checkRun "$source_check" \
+            '{schema:"kungfu.dev-delivery-native-check-rerun/v1",repository:$repository,protectedBase:$branch,pullRequestNumber:$pullRequest,sourceHead:$head,sourceWorkflowRunId:$sourceWorkflowRunId,sourceWorkflowRunPriorAttempt:$sourceWorkflowRunPriorAttempt,sourceWorkflowRunPriorConclusion:$priorRunConclusion,sourceWorkflowRunAttempt:$sourceWorkflowRunAttempt,rerunTriggered:$rerunTriggered,producerWorkflowRunId:$producerWorkflowRunId,producerRunAttempt:$producerRunAttempt,nativeProofRoot:$nativeProofRoot,qualificationReceiptRoot:$qualificationReceiptRoot,warrantStateRoot:$warrantStateRoot,warrantStateCommit:$warrantStateCommit,generatedAt:$generatedAt,sourceCheckRunPrior:{id:$priorCheckRunId,conclusion:$priorCheckConclusion},checkRun:{id:$checkRun[0].id,nodeId:$checkRun[0].node_id,name:$checkRun[0].name,headSha:$checkRun[0].head_sha,status:$checkRun[0].status,conclusion:$checkRun[0].conclusion,appId:$checkRun[0].app.id,detailsUrl:$checkRun[0].details_url,startedAt:$checkRun[0].started_at,completedAt:$checkRun[0].completed_at}}' \
             > "$receipt.body.json"
           receipt_root="sha256:$(sha256sum "$receipt.body.json" | cut -d' ' -f1)"
           jq --arg receiptRoot "$receipt_root" '. + {receiptRoot:$receiptRoot}' \
             "$receipt.body.json" > "$receipt"
           rm "$receipt.body.json"
           {
-            echo "check-run-id=$(jq -er '.id' "$response")"
+            echo "check-run-id=$(jq -er '.id' "$source_check")"
             echo "receipt-root=$receipt_root"
+            echo "source-run-attempt=$expected_attempt"
           } >> "$GITHUB_OUTPUT"
 
       - name: Upload exact native CheckRun bridge receipt
