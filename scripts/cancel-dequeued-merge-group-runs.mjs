@@ -482,6 +482,16 @@ export function queueAdmissionRequiredContexts(contract) {
       'dev queue admission contract must require ruleset activation',
     );
   }
+  const reviewAuthority = contract.rulesetActivation?.reviewAuthority;
+  if (
+    reviewAuthority?.requireCodeOwnerReview !== true ||
+    reviewAuthority?.requireLastPushApproval !== true ||
+    reviewAuthority?.emptyCommitIsReviewablePush !== false
+  ) {
+    throw new Error(
+      'dev queue admission contract must preserve fail-closed reviewable-push authority',
+    );
+  }
   const context = String(contract.requiredContext || '');
   if (!/^[A-Za-z0-9][A-Za-z0-9 ._/-]{0,99}$/u.test(context)) {
     throw new Error('dev queue admission required context is invalid');
