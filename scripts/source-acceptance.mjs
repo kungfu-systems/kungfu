@@ -871,7 +871,10 @@ export function sourceAcceptancePlan(
           label === 'code complexity budget ratchet')
           ? {
               ...(label === 'documentation contracts'
-                ? { KUNGFU_ADR_EVIDENCE_BASE_SHA: evidenceBaseCommit }
+                ? {
+                    KUNGFU_ADR_EVIDENCE_BASE_SHA: evidenceBaseCommit,
+                    KUNGFU_EVOLUTION_BASE: evidenceBaseCommit,
+                  }
                 : {}),
               ...(label === 'code complexity budget ratchet'
                 ? { KUNGFU_COMPLEXITY_PROTECTED_REF: evidenceBaseCommit }
