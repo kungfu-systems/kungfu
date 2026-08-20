@@ -167,23 +167,32 @@ export function sourceAcceptanceMergeBaseCandidates(
 }
 
 export function fetchSourceAcceptanceCommit(commit, spawn = spawnSync) {
-  const result = spawn(
+  const options = {
+    cwd: ROOT,
+    encoding: 'utf8',
+    maxBuffer: SOURCE_ACCEPTANCE_GIT_MAX_BUFFER_BYTES,
+  };
+  const shallowProbe = spawn(
     'git',
-    [
-      'fetch',
-      '--no-tags',
-      '--no-write-fetch-head',
-      '--filter=blob:none',
-      '--depth=1',
-      'origin',
-      commit,
-    ],
-    {
-      cwd: ROOT,
-      encoding: 'utf8',
-      maxBuffer: SOURCE_ACCEPTANCE_GIT_MAX_BUFFER_BYTES,
-    },
+    ['rev-parse', '--is-shallow-repository'],
+    options,
   );
+  if (shallowProbe.status !== 0) {
+    throw new Error(
+      `cannot inspect source-acceptance checkout depth: ${(shallowProbe.stderr || '').trim()}`,
+    );
+  }
+  const fetchArgs = [
+    'fetch',
+    '--no-tags',
+    '--no-write-fetch-head',
+    '--filter=blob:none',
+  ];
+  if ((shallowProbe.stdout || '').trim() === 'true') {
+    fetchArgs.push('--unshallow');
+  }
+  fetchArgs.push('origin', commit);
+  const result = spawn('git', fetchArgs, options);
   if (result.status !== 0) {
     throw new Error(
       `cannot fetch source-acceptance merge-group base ${commit}: ${(result.stderr || '').trim()}`,
