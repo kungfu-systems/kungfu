@@ -390,9 +390,9 @@ function baselineBytes(ref, pathname, changed) {
 
 function baselineChangedPaths(ref, readLines = gitLines) {
   return new Set(
-    readLines(['diff', '--no-renames', '--name-only', ref, '--']).concat(
-      readLines(['ls-files', '--others', '--exclude-standard']),
-    ),
+    readLines(['diff', '--no-renames', '--name-only', ref, 'HEAD', '--'])
+      .concat(readLines(['diff', '--no-renames', '--name-only', 'HEAD', '--']))
+      .concat(readLines(['ls-files', '--others', '--exclude-standard'])),
   );
 }
 

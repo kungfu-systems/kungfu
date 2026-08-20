@@ -85,21 +85,30 @@ test('git probes fail fast with a precise timeout', () => {
   );
 });
 
-test('baseline path inventory avoids historical blob reads for rename scoring', () => {
+test('baseline path inventory conserves tree, worktree, and untracked changes', () => {
   const calls = [];
   const changed = baselineChangedPaths('protected-base', (args) => {
     calls.push(args);
-    return args[0] === 'diff'
-      ? ['deleted.md', 'replacement.md']
-      : ['untracked.mjs'];
+    if (args[0] === 'ls-files') return ['untracked.mjs'];
+    if (args.includes('protected-base'))
+      return ['deleted.md', 'replacement.md', 'shared.md'];
+    return ['staged.md', 'unstaged.md', 'shared.md'];
   });
 
   assert.deepEqual(
     [...changed],
-    ['deleted.md', 'replacement.md', 'untracked.mjs'],
+    [
+      'deleted.md',
+      'replacement.md',
+      'shared.md',
+      'staged.md',
+      'unstaged.md',
+      'untracked.mjs',
+    ],
   );
   assert.deepEqual(calls, [
-    ['diff', '--no-renames', '--name-only', 'protected-base', '--'],
+    ['diff', '--no-renames', '--name-only', 'protected-base', 'HEAD', '--'],
+    ['diff', '--no-renames', '--name-only', 'HEAD', '--'],
     ['ls-files', '--others', '--exclude-standard'],
   ]);
 });
