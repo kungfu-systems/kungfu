@@ -202,7 +202,7 @@ test('Dev auto-merge waits for PR checks and lands through the native queue', ()
   assert.doesNotMatch(workflow, /gh pr merge|npm publish|git tag/iu);
 });
 
-test('Qualified native proof bridges to an exact GitHub Actions CheckRun before landing', () => {
+test('Qualified native proof re-runs the exact failed source jobs before landing', () => {
   const bridge = workflow.slice(
     workflow.indexOf('  native-check-bridge:\n'),
     workflow.indexOf('  landing:\n'),
@@ -210,7 +210,9 @@ test('Qualified native proof bridges to an exact GitHub Actions CheckRun before 
   const landing = workflow.slice(workflow.indexOf('  landing:\n'));
 
   assert.match(bridge, /needs\.admission\.result == 'success'/u);
-  assert.match(bridge, /checks: write/u);
+  assert.match(bridge, /actions: write/u);
+  assert.match(bridge, /checks: read/u);
+  assert.doesNotMatch(bridge, /checks: write/u);
   assert.match(
     bridge,
     /pattern: buildchain-dev-delivery-warrant-\*-\$\{\{ needs\.resolve-target\.outputs\.expected-pr-number \}\}/u,
@@ -225,7 +227,7 @@ test('Qualified native proof bridges to an exact GitHub Actions CheckRun before 
   );
   assert.match(
     bridge,
-    /check_name=affected-native%20%2F%20linux&filter=all&per_page=100/u,
+    /check_name=affected-native%20%2F%20linux&filter=latest&per_page=100/u,
   );
   assert.match(
     bridge,
@@ -233,16 +235,28 @@ test('Qualified native proof bridges to an exact GitHub Actions CheckRun before 
   );
   assert.match(
     bridge,
-    /source_check_run_id="\$\(jq -er '\.id' "\$source_check"\)"[\s\S]*gh api --method PATCH[\s\S]*repos\/\$GITHUB_REPOSITORY\/check-runs\/\$source_check_run_id/u,
-  );
-  assert.doesNotMatch(bridge, /gh api --method POST[\s\S]*check-runs/u);
-  assert.match(
-    bridge,
-    /\.id == \$sourceCheckRunId[\s\S]*\.external_id == \$externalId[\s\S]*\.app\.id == 15368/u,
+    /\.conclusion == "failure" or \.conclusion == "success"[\s\S]*prior_attempt="\$\(jq -er '\.run_attempt'[\s\S]*prior_check_conclusion="\$\(jq -er '\.conclusion'/u,
   );
   assert.match(
     bridge,
-    /schema:"kungfu\.dev-delivery-native-check-bridge\/v1"[\s\S]*sourceWorkflowRunId:\$sourceWorkflowRunId[\s\S]*producerWorkflowRunId:\$producerWorkflowRunId[\s\S]*producerRunAttempt:\$producerRunAttempt[\s\S]*generatedAt:\$generatedAt[\s\S]*sourceCheckRunPrior:\{id:\$checkRun\[0\]\.id,conclusion:\$priorConclusion,detailsUrl:\$priorDetailsUrl\}[\s\S]*appId:\$checkRun\[0\]\.app\.id/u,
+    /gh api --method POST[\s\S]*actions\/runs\/\$SOURCE_RUN_ID\/rerun-failed-jobs[\s\S]*expected_attempt="\$\(\(prior_attempt \+ 1\)\)"/u,
+  );
+  assert.doesNotMatch(bridge, /check-runs\/\$[A-Za-z_]/u);
+  assert.match(
+    bridge,
+    /for _ in \$\(seq 1 100\)[\s\S]*observed_attempt" -gt "\$expected_attempt[\s\S]*source workflow advanced beyond the single authorized retry[\s\S]*source workflow retry did not complete within the bounded wait/u,
+  );
+  assert.match(
+    bridge,
+    /\.run_attempt == \$expectedAttempt[\s\S]*\.status == "completed"[\s\S]*\.conclusion == "success"/u,
+  );
+  assert.match(
+    bridge,
+    /actions\/runs\/\$SOURCE_RUN_ID\/jobs\?filter=latest&per_page=100[\s\S]*Provisional Delivery Warrant admission \/ linux[\s\S]*affected-native \/ linux/u,
+  );
+  assert.match(
+    bridge,
+    /schema:"kungfu\.dev-delivery-native-check-rerun\/v1"[\s\S]*sourceWorkflowRunId:\$sourceWorkflowRunId[\s\S]*sourceWorkflowRunPriorAttempt:\$sourceWorkflowRunPriorAttempt[\s\S]*sourceWorkflowRunAttempt:\$sourceWorkflowRunAttempt[\s\S]*rerunTriggered:\$rerunTriggered[\s\S]*producerWorkflowRunId:\$producerWorkflowRunId[\s\S]*producerRunAttempt:\$producerRunAttempt[\s\S]*generatedAt:\$generatedAt[\s\S]*sourceCheckRunPrior:\{id:\$priorCheckRunId,conclusion:\$priorCheckConclusion\}[\s\S]*appId:\$checkRun\[0\]\.app\.id/u,
   );
   assert.match(
     bridge,
