@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 const crypto = require('node:crypto');
-const { spawn } = require('node:child_process');
+const { spawn, spawnSync } = require('node:child_process');
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
@@ -18,6 +18,13 @@ const watcher = new binding.Watcher(
   true,
   2,
 );
+const reconnectDeadlines = Object.freeze({
+  coordinatorStartup: process.platform === 'win32' ? 30_000 : 15_000,
+  watcherConnect: process.platform === 'win32' ? 30_000 : 8_000,
+  watcherDisconnect: process.platform === 'win32' ? 30_000 : 8_000,
+  watcherReconnect: process.platform === 'win32' ? 30_000 : 10_000,
+  watcherStop: process.platform === 'win32' ? 15_000 : 5_000,
+});
 
 function printableStats() {
   return Object.fromEntries(
@@ -33,7 +40,7 @@ function fail(message) {
   process.exit(2);
 }
 
-function waitFor(predicate, timeoutMs, message) {
+function waitFor(predicate, timeoutMs, message, context = () => ({})) {
   return new Promise((resolve, reject) => {
     const deadline = Date.now() + timeoutMs;
     const poll = setInterval(() => {
@@ -42,7 +49,11 @@ function waitFor(predicate, timeoutMs, message) {
         resolve();
       } else if (Date.now() > deadline) {
         clearInterval(poll);
-        reject(new Error(message));
+        reject(
+          new Error(
+            `${message}: ${JSON.stringify({ timeoutMs, ...context() })}`,
+          ),
+        );
       }
     }, 20);
   });
@@ -77,11 +88,38 @@ function startCoordinator() {
       path.join(home, 'runtime'),
       '--low-latency',
     ],
-    { cwd: coreDir, env: environment, stdio: ['ignore', output, output] },
+    {
+      cwd: coreDir,
+      env: environment,
+      stdio: ['ignore', output, output],
+      detached: process.platform !== 'win32',
+    },
   );
   fs.closeSync(output);
   child.coordinatorLogOffset = logOffset;
   return child;
+}
+
+function coordinatorLogTail(child) {
+  const outputPath = path.join(home, 'coordinator.out');
+  const output = fs.existsSync(outputPath)
+    ? fs.readFileSync(outputPath, 'utf8').slice(child.coordinatorLogOffset)
+    : '';
+  return output.slice(-4_000);
+}
+
+function reconnectContext(child, stage) {
+  return {
+    stage,
+    platform: process.platform,
+    coordinator: {
+      pid: child?.pid ?? null,
+      exitCode: child?.exitCode ?? null,
+      signalCode: child?.signalCode ?? null,
+      logTail: child ? coordinatorLogTail(child) : '',
+    },
+    watcher: printableStats(),
+  };
 }
 
 function coordinatorReady(child) {
@@ -113,9 +151,29 @@ function waitForExitWithin(child, timeoutMs) {
 
 async function stopCoordinator(child) {
   if (child.exitCode !== null || child.signalCode !== null) return;
-  child.kill('SIGTERM');
+  if (process.platform === 'win32') {
+    const terminated = spawnSync(
+      'taskkill',
+      ['/pid', String(child.pid), '/T', '/F'],
+      { encoding: 'utf8', windowsHide: true },
+    );
+    if (terminated.error) {
+      throw new Error(`taskkill failed to launch: ${terminated.error.message}`);
+    }
+    if (terminated.status !== 0 && child.exitCode === null) {
+      throw new Error(
+        `taskkill failed (${terminated.status}): ${terminated.stderr.trim()}`,
+      );
+    }
+  } else {
+    process.kill(-child.pid, 'SIGTERM');
+  }
   if (await waitForExitWithin(child, 3_000)) return;
-  child.kill('SIGKILL');
+  if (process.platform === 'win32') {
+    child.kill();
+  } else {
+    process.kill(-child.pid, 'SIGKILL');
+  }
   if (!(await waitForExitWithin(child, 3_000))) {
     throw new Error('coordinator did not exit after SIGKILL');
   }
@@ -154,23 +212,29 @@ async function reconnectProbe() {
         coordinatorReady(coordinator) ||
         coordinator.exitCode !== null ||
         coordinator.signalCode !== null,
-      15_000,
+      reconnectDeadlines.coordinatorStartup,
       'coordinator startup did not reach a terminal state',
+      () => reconnectContext(coordinator, 'initial-coordinator-startup'),
     );
     if (coordinator.exitCode !== null || coordinator.signalCode !== null) {
       throw new Error(
-        `coordinator exited during startup: ${fs.readFileSync(path.join(home, 'coordinator.out'), 'utf8').trim()}`,
+        `coordinator exited during startup: ${JSON.stringify(reconnectContext(coordinator, 'initial-coordinator-startup'))}`,
       );
     }
     watcher.start();
-    await waitFor(() => watcher.isLive(), 8_000, 'watcher did not connect');
+    await waitFor(
+      () => watcher.isLive(),
+      reconnectDeadlines.watcherConnect,
+      'watcher did not connect',
+      () => reconnectContext(coordinator, 'initial-watcher-connect'),
+    );
 
-    coordinator.kill();
-    await waitForExit(coordinator);
+    await stopCoordinator(coordinator);
     await waitFor(
       () => !watcher.isLive(),
-      8_000,
+      reconnectDeadlines.watcherDisconnect,
       'watcher did not observe coordinator exit',
+      () => reconnectContext(coordinator, 'watcher-disconnect'),
     );
 
     coordinator = startCoordinator();
@@ -179,22 +243,27 @@ async function reconnectProbe() {
         coordinatorReady(coordinator) ||
         coordinator.exitCode !== null ||
         coordinator.signalCode !== null,
-      15_000,
+      reconnectDeadlines.coordinatorStartup,
       'replacement coordinator startup did not reach a terminal state',
+      () => reconnectContext(coordinator, 'replacement-coordinator-startup'),
     );
     if (coordinator.exitCode !== null || coordinator.signalCode !== null) {
-      throw new Error('replacement coordinator exited during startup');
+      throw new Error(
+        `replacement coordinator exited during startup: ${JSON.stringify(reconnectContext(coordinator, 'replacement-coordinator-startup'))}`,
+      );
     }
     await waitFor(
       () => watcher.isLive(),
-      10_000,
+      reconnectDeadlines.watcherReconnect,
       'watcher did not reconnect to the restarted coordinator',
+      () => reconnectContext(coordinator, 'watcher-reconnect'),
     );
     watcher.quit();
     await waitFor(
       () => !watcher.runtimeStats().running,
-      5_000,
+      reconnectDeadlines.watcherStop,
       'watcher did not stop after reconnect',
+      () => reconnectContext(coordinator, 'watcher-stop'),
     );
     result = { mode, reconnected: true, stats: printableStats() };
   } finally {
@@ -249,6 +318,13 @@ if (mode === 'pool') {
   setTimeout(() => process.exit(0), 25);
 } else if (mode === 'reconnect') {
   reconnectProbe().catch((error) => fail(error.message));
+} else if (mode === 'deadline-failure') {
+  waitFor(
+    () => false,
+    25,
+    'synthetic watcher deadline',
+    () => reconnectContext(null, 'synthetic-deadline'),
+  ).catch((error) => fail(error.message));
 } else {
   fail(`unknown probe mode: ${mode}`);
 }

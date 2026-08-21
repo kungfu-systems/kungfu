@@ -24,6 +24,7 @@ const watcherBenchDriver = path.join(
   'bench',
   'dispatch_bench_watcher.mjs',
 );
+const watcherProbeSource = fs.readFileSync(probe, 'utf8');
 const nativeTest = {
   skip: fs.existsSync(bindingPath)
     ? false
@@ -35,7 +36,12 @@ function runProbe(mode, environment = {}) {
     cwd: path.resolve(coreDir, '..', '..'),
     env: { ...process.env, ...environment },
     encoding: 'utf8',
-    timeout: mode === 'reconnect' ? 35_000 : 10_000,
+    timeout:
+      mode === 'reconnect' && process.platform === 'win32'
+        ? 150_000
+        : mode === 'reconnect'
+          ? 55_000
+          : 10_000,
   });
   assert.equal(
     result.error,
@@ -50,6 +56,18 @@ function runProbe(mode, environment = {}) {
   return result.stdout.trim()
     ? JSON.parse(result.stdout.trim().split('\n').at(-1))
     : null;
+}
+
+function runFailingProbe(mode) {
+  const result = spawnSync(process.execPath, [probe, mode], {
+    cwd: path.resolve(coreDir, '..', '..'),
+    env: process.env,
+    encoding: 'utf8',
+    timeout: 10_000,
+  });
+  assert.equal(result.error, undefined);
+  assert.equal(result.status, 2, `${mode} must fail closed: ${result.stderr}`);
+  return JSON.parse(result.stderr.trim().split('\n').at(-1));
 }
 
 test('watcher source does not reserve a libuv worker-pool job', () => {
@@ -75,6 +93,22 @@ test('watcher dispatch bench follows and proves the load peer carrier', () => {
   assert.match(driver, /watcher observed \$\{observed\} requested carrier/);
   assert.match(driver, /if \(observed < count\)/);
   assert.match(driver, /coordinator\.kill\(\)/);
+});
+
+test('watcher reconnect fixture owns process trees and bounds Windows transitions', () => {
+  assert.match(
+    watcherProbeSource,
+    /watcherConnect: process\.platform === 'win32' \? 30_000 : 8_000/,
+  );
+  assert.match(
+    watcherProbeSource,
+    /watcherReconnect: process\.platform === 'win32' \? 30_000 : 10_000/,
+  );
+  assert.match(
+    watcherProbeSource,
+    /\['\/pid', String\(child\.pid\), '\/T', '\/F'\]/,
+  );
+  assert.match(watcherProbeSource, /process\.kill\(-child\.pid, 'SIGTERM'\)/);
 });
 
 test(
@@ -133,5 +167,18 @@ test(
     assert.equal(result.stats.running, false);
     assert.equal(result.stats.stopRequested, true);
     assert.equal(result.stats.bridgeFailures, '0');
+  },
+);
+
+test(
+  'watcher transition deadlines fail closed with actionable diagnostics',
+  nativeTest,
+  () => {
+    const result = runFailingProbe('deadline-failure');
+    assert.equal(result.mode, 'deadline-failure');
+    assert.match(result.error, /synthetic watcher deadline/);
+    assert.match(result.error, /"stage":"synthetic-deadline"/);
+    assert.match(result.error, /"platform":"[^"]+"/);
+    assert.match(result.error, /"watcher":\{/);
   },
 );
