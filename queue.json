@@ -3,7 +3,7 @@
   "contract": "kungfu-buildchain-dev-delivery-warrant-queue",
   "repository": "kungfu-systems/kungfu",
   "protectedBase": "dev/v4/v4.0",
-  "generation": 5292,
+  "generation": 5293,
   "fencingCounter": 588,
   "policy": {
     "agingSeconds": 900,
@@ -42420,8 +42420,38 @@
         "framework/format/kungfu-portable-format-authority.contract.json",
         "framework/production-graph/compiler/polyglot.fixture.mjs"
       ]
+    },
+    {
+      "repository": "kungfu-systems/kungfu",
+      "protectedBase": "dev/v4/v4.0",
+      "pullRequestNumber": 3340,
+      "assignmentRoot": "sha256:a7a29b28e866291a214050bb2b4e5e602fdb8744123349c252a94edf0c641c32",
+      "initiativeRoot": "sha256:bfff817933e5a5ad693e4b902a84f6cc3a251235dd7377cb4091d92f805fa7ff",
+      "sourceIdentityRoot": "sha256:28f2960ae753b4e07a7fed10bad11c25e69c220119fc9a6f7faf659a0623ea5a",
+      "deliveryClass": "native-proof-required",
+      "candidateId": "sha256:37e0cabf2fee999d70e30be41fbbeb641896616dd5b41d87565a7266a5c37ac7",
+      "sourceHead": "5b35409b1cd4329fc012d7a7c98cc90d5dc2666f",
+      "sourcePatchRoot": "sha256:9057e152fb0a0fc535ac403443aa2e35bf55433f156aa472b6b98168aff7f1c5",
+      "sourceProofRoot": "sha256:66649c614a500f9abe50b4c12e844f7f343e68ef8fcca208746eb0c871e76320",
+      "planRoot": "sha256:ae2b22e4e918878e3b3a1803aae63d46ca05b001be65351b37b4fc678f2b46be",
+      "closureRoot": "sha256:106d175611d8634c988192302b9c464ae8ba3b6d023c2cff9910e401344c9624",
+      "dependencyRoot": "sha256:426054b3e99fbe85b3540d99d9366b3b92785b5158470f628925180893d4d6f6",
+      "toolchainRoot": "sha256:2ecb07894954a2e0de022615d4561e5ba3ae68376401941ecff77be03cd75a0f",
+      "environmentRoot": "sha256:c5f5da5917c6ff93a509a62b18d4b9b69325755c4c7229b553b0016cde83788f",
+      "sourceWorkflowRunId": 32534731165,
+      "priority": "ordinary",
+      "enqueuedAt": "2026-08-21T22:59:14.686Z",
+      "updatedAt": "2026-08-21T22:59:14.686Z",
+      "attempts": 1,
+      "recoveries": 0,
+      "status": "queued",
+      "terminal": null,
+      "affectedPaths": [
+        "framework/core/tests/fixtures/watcher-runtime-probe.js",
+        "framework/core/tests/watcher-runtime-boundary.test.js"
+      ]
     }
   ],
-  "updatedAt": "2026-08-21T20:22:02.515Z",
-  "stateRoot": "sha256:f79ceaf879493f9ea2d20ff068603b3090f99dc8627bec959514f7bd4570bfa5"
+  "updatedAt": "2026-08-21T22:59:14.686Z",
+  "stateRoot": "sha256:fd5a4a800b2f981ccf18e878f3e338ac200b07a3c5b7044362bb296daabb3ee9"
 }
