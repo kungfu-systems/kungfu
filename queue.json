@@ -3,7 +3,7 @@
   "contract": "kungfu-buildchain-dev-delivery-warrant-queue",
   "repository": "kungfu-systems/kungfu",
   "protectedBase": "dev/v4/v4.0",
-  "generation": 5284,
+  "generation": 5285,
   "fencingCounter": 588,
   "policy": {
     "agingSeconds": 900,
@@ -68,7 +68,7 @@
     "phase": "qualified",
     "expectedOldStateRoot": "sha256:5e7a83f44c1149de672d00f3e919848a71730522d0deb8b2960a51814db16388",
     "issuedAt": "2026-08-21T18:40:48.755Z",
-    "expiresAt": "2026-08-21T21:30:53.469Z",
+    "expiresAt": "2026-08-21T21:32:21.207Z",
     "fencingToken": "sha256:00fe28f4732094012403aa357da8c5afa07f9d8b5fb6e55cabac6c79500cc329",
     "nextAction": "Enter the GitHub merge queue at the exact fenced PR head; merge_group remains final authority.",
     "nativeProofRoot": "sha256:4f2dd646220ab1e90a2cf952a013c14151f6c3734d0d497f978cbacb497bf99d",
@@ -42435,7 +42435,7 @@
       "sourceWorkflowRunId": 32514019415,
       "priority": "ordinary",
       "enqueuedAt": "2026-08-21T18:40:44.686Z",
-      "updatedAt": "2026-08-21T20:00:53.469Z",
+      "updatedAt": "2026-08-21T20:02:21.207Z",
       "attempts": 1,
       "recoveries": 0,
       "status": "qualified",
@@ -42476,6 +42476,6 @@
       ]
     }
   ],
-  "updatedAt": "2026-08-21T20:00:53.469Z",
-  "stateRoot": "sha256:6223c1f14b1bf2999625b4ab9b29463fa5397b561da0bc4893285a3065f80bd5"
+  "updatedAt": "2026-08-21T20:02:21.207Z",
+  "stateRoot": "sha256:467b108d13bdce3a75687e522107b9e2baf7ef57272190a0322a394513c3b1ea"
 }
