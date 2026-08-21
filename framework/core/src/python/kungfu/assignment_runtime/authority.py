@@ -350,7 +350,7 @@ class WorkControlAuthority:
             )
         )
         fact_refs.sort(key=lambda row: (str(row["surfaceId"]), str(row["subjectKey"])))
-        authority_receipt = self._invoke("authority-status", {})
+        authority_receipt = self._invoke("runtime-authority-status", {})
         authority = dict(authority_receipt.get("result") or {}).get("authority") or {}
         write_authority = str(authority.get("write_authority") or "")
         if write_authority != "kungfu-native":

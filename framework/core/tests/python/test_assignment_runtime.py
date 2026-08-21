@@ -639,6 +639,44 @@ def test_work_control_authority_strips_runtime_only_routing_ids(tmp_path, monkey
     assert result["authorityReceipt"]["result"]["coreReceipt"]["status"] == "imported"
 
 
+def test_work_control_authority_snapshot_avoids_atlas_parity(tmp_path, monkeypatch):
+    authority = WorkControlAuthority(tmp_path, source=PROFILE_SOURCE)
+    operations = []
+
+    def invoke(operation, values, *, write=False):
+        operations.append((operation, values, write))
+        if operation == "portfolio":
+            return {
+                "result": {"assignments": []},
+                "profileSuiteRoot": "sha256:" + "1" * 64,
+                "memberRoot": "sha256:" + "2" * 64,
+            }
+        assert operation == "runtime-authority-status"
+        return {
+            "result": {
+                "authority": {
+                    "state": "native-only",
+                    "write_authority": "kungfu-native",
+                }
+            }
+        }
+
+    monkeypatch.setattr(authority, "_invoke", invoke)
+    snapshot = authority.inspect()
+
+    assert operations == [
+        ("portfolio", {}, False),
+        ("runtime-authority-status", {}, False),
+    ]
+    assert snapshot["authority"] == {
+        "profileId": "kungfu.work-control",
+        "profileSuiteRoot": "sha256:" + "1" * 64,
+        "memberRoot": "sha256:" + "2" * 64,
+        "state": "native-only",
+        "writeAuthority": "kungfu-native",
+    }
+
+
 def test_command_cas_idempotency_attempt_lease_warrant_and_receipts(local_runtime):
     runtime, authority, _runtime_dir = local_runtime
     snapshot = _handle(

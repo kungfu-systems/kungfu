@@ -542,7 +542,7 @@ def _invoke(
             storage_source_id=str(values.get("source") or "kungfu"),
             cut_system_time=int(values.get("cutSystemTime") or 0),
         )
-    if operation == "authority-status":
+    if operation in {"authority-status", "runtime-authority-status"}:
         _only(values, set(), operation)
         return {"authority": domain.work_control.authority_status(runtime_dir)}
     if operation == "assignment-status":
