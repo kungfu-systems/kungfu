@@ -1,0 +1,37 @@
+{
+  "contract": "kungfu.kfx-site-impact-proof/v1",
+  "baseRevision": "20788f7c038d9618f1f949500981ade5e4f88097",
+  "changeRoot": "sha256:c85f71e3c0f2393e01fbbcb7f453050e45facfd8aee3874011f6478e4a8f045e",
+  "changes": [
+    {
+      "baseContentRoot": "sha256:2f2d17d3f572b11f66c05b7b99e1f17b1c1abb1a497636b3c87a98374d67bacd",
+      "contentRoot": "sha256:1ab49ed6cabb3856607b8543769fdfd7a16668957855b815bdd52e58a894ae87",
+      "path": "extensions/work-control/work-control-actions/adapter.py",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:dfae1f811a144531c7b90787d80a1ca27803b17c5ff7713ea355492d00c3ab33",
+      "contentRoot": "sha256:2344eef97fb8cf6ce32dd2f6367762243b5b96c35fc86a449ad4f4a371d779df",
+      "path": "framework/core/src/python/kungfu/assignment_runtime/authority.py",
+      "status": "modified"
+    },
+    {
+      "baseContentRoot": "sha256:8c1331480bfa8dac1d66f9f013e83c5b31ceafcccb57fc36cc92aa4835664de5",
+      "contentRoot": "sha256:7eec80352628858c9ffe0c3c7c577498f9103489cfc968744fd0c62a51b5ed4e",
+      "path": "framework/core/tests/python/test_assignment_runtime.py",
+      "status": "modified"
+    }
+  ],
+  "affectedFacets": [
+    "capabilities",
+    "package-facets",
+    "profiles-suites"
+  ],
+  "rationale": "Internal Assignment Runtime authority routing and focused tests do not change the KFX Site Bundle public sources, generated content, or rendered facets.",
+  "attestation": {
+    "publicBehaviorUnchanged": true,
+    "publicContractUnchanged": true,
+    "readerJourneyUnchanged": true
+  },
+  "proofRoot": "sha256:df77669a1b3dc3dacd821cf2dbb8604e6b5fa2a2fb77f1546c33fd113f9e56fe"
+}
