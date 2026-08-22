@@ -7,6 +7,10 @@
 #ifndef KUNGFU_IO_H
 #define KUNGFU_IO_H
 
+#include <atomic>
+#include <condition_variable>
+#include <mutex>
+
 #include <kungfu/runtime/common.h>
 
 #include <kungfu/runtime/nanomsg/socket.h>
@@ -63,6 +67,8 @@ public:
     bool orc = observer_->setup();
     return prc && orc;
   }
+
+  virtual void cancel_usability_probe() {}
 
   [[nodiscard]] const data::locator_ptr &get_locator() const { return home_->locator; }
 
@@ -132,6 +138,15 @@ public:
   bool is_usable() override;
 
   bool setup() override;
+
+  void cancel_usability_probe() override;
+
+private:
+  std::atomic<bool> usability_probe_cancelled_{false};
+  std::mutex usability_probe_mutex_;
+  std::condition_variable usability_probe_condition_;
+  publisher_ptr usability_probe_publisher_;
+  observer_ptr usability_probe_observer_;
 };
 
 DECLARE_PTR(io_device_peer)

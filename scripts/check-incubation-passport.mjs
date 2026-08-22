@@ -216,7 +216,58 @@ function git(root, args) {
   return spawnSync('git', args, { cwd: root, encoding: 'utf8' });
 }
 
-const MERGE_GROUP_PROTECTED_HISTORY_DEPTH = 64;
+const MERGE_GROUP_PROTECTED_HISTORY_FAST_DEPTH = 128;
+
+export function recoverMergeGroupProtectedSource({
+  root = ROOT,
+  baseSha,
+  sourceSha,
+  gitIsAncestor = (ancestor, descendant) =>
+    git(root, ['merge-base', '--is-ancestor', ancestor, descendant]).status ===
+    0,
+  gitRead = (args) => {
+    const result = git(root, args);
+    return result.status === 0 ? result.stdout.trim() : '';
+  },
+  gitRun = (args) => git(root, args),
+} = {}) {
+  if (
+    !GIT_OBJECT_PATTERN.test(baseSha || '') ||
+    !GIT_OBJECT_PATTERN.test(sourceSha || '')
+  )
+    return false;
+
+  const fastFetch = gitRun([
+    'fetch',
+    '--no-tags',
+    '--no-write-fetch-head',
+    '--filter=blob:none',
+    `--depth=${MERGE_GROUP_PROTECTED_HISTORY_FAST_DEPTH}`,
+    'origin',
+    baseSha,
+  ]);
+  if (fastFetch.status !== 0) return false;
+  if (gitIsAncestor(sourceSha, baseSha)) return true;
+
+  // The fast depth is only an optimization. A retained protected source must
+  // not become invalid merely because the protected branch gains commits.
+  // Complete the commit graph without historical blobs, then prove ancestry
+  // against the authenticated merge-group base. A complete non-ancestor still
+  // fails closed.
+  if (gitRead(['rev-parse', '--is-shallow-repository']) !== 'true')
+    return false;
+  const completeFetch = gitRun([
+    'fetch',
+    '--no-tags',
+    '--no-write-fetch-head',
+    '--filter=blob:none',
+    '--unshallow',
+    'origin',
+    baseSha,
+  ]);
+  if (completeFetch.status !== 0) return false;
+  return gitIsAncestor(sourceSha, baseSha);
+}
 
 export function protectedSourceRetained({
   root = ROOT,
@@ -231,16 +282,8 @@ export function protectedSourceRetained({
     const result = git(root, args);
     return result.status === 0 ? result.stdout.trim() : '';
   },
-  hydrateMergeGroupBase = (baseSha) =>
-    git(root, [
-      'fetch',
-      '--no-tags',
-      '--no-write-fetch-head',
-      '--filter=blob:none',
-      `--depth=${MERGE_GROUP_PROTECTED_HISTORY_DEPTH}`,
-      'origin',
-      baseSha,
-    ]).status === 0,
+  recoverMergeGroupAncestry = ({ baseSha, sourceSha }) =>
+    recoverMergeGroupProtectedSource({ root, baseSha, sourceSha }),
 } = {}) {
   if (!GIT_OBJECT_PATTERN.test(sourceSha || '')) return false;
   if (gitIsAncestor(sourceSha, headSha)) return true;
@@ -248,13 +291,15 @@ export function protectedSourceRetained({
   // The reusable source job intentionally uses a depth-one checkout. Git then
   // reports false for ancestry that the protected merge-group base actually
   // retains. Only an authenticated event for this exact checkout may recover
-  // that proof, and the bounded fetch remains fail closed if the source falls
-  // outside the retained protected history.
+  // that proof, and the recovered commit graph remains fail closed when the
+  // source is not an ancestor of the protected base.
   const mergeGroup = githubMergeGroupCoordinates(env, readFile);
   if (!mergeGroup || gitRead(['rev-parse', headSha]) !== mergeGroup.headSha)
     return false;
-  if (!hydrateMergeGroupBase(mergeGroup.baseSha)) return false;
-  return gitIsAncestor(sourceSha, mergeGroup.baseSha);
+  return recoverMergeGroupAncestry({
+    baseSha: mergeGroup.baseSha,
+    sourceSha,
+  });
 }
 
 export function validateAdmissionFixture({ root = ROOT, passport, fixture }) {

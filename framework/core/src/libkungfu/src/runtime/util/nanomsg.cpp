@@ -115,10 +115,14 @@ int socket::listen(const std::string &path, int flags) {
   return rc;
 }
 
-int socket::dial(const std::string &path, int flags) {
+int socket::dial(const std::string &path, int flags) { return dial_impl(path, flags, false); }
+
+int socket::dial_quietly(const std::string &path, int flags) { return dial_impl(path, flags, true); }
+
+int socket::dial_impl(const std::string &path, int flags, bool quiet_error) {
   url_ = "ipc://" + path;
   int rc = nng_dial(sock_, url_.c_str(), NULL, flags);
-  if (rc != 0) {
+  if (rc != 0 && not quiet_error) {
     SPDLOG_WARN("can not dial to {}, error [{}] {}", url_, rc, nng_strerror(rc));
   }
   return rc;

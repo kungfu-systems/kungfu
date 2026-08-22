@@ -10,6 +10,7 @@ import {
   collectIssues,
   compareBaseline,
   protectedSourceRetained,
+  recoverMergeGroupProtectedSource,
   validateAdmissionFixture,
   validateRepository,
 } from './check-incubation-passport.mjs';
@@ -230,7 +231,7 @@ test('protected source accepts ordinary retained ancestry without recovery', () 
         return true;
       },
       gitRead: () => assert.fail('ordinary ancestry must not inspect an event'),
-      hydrateMergeGroupBase: () =>
+      recoverMergeGroupAncestry: () =>
         assert.fail('ordinary ancestry must not hydrate history'),
     }),
     true,
@@ -241,8 +242,7 @@ test('protected source recovers ancestry from the exact merge-group base', () =>
   const sourceSha = 'a'.repeat(40);
   const baseSha = 'b'.repeat(40);
   const headSha = 'c'.repeat(40);
-  const ancestryCalls = [];
-  const hydrated = [];
+  const recovered = [];
   assert.equal(
     protectedSourceRetained({
       sourceSha,
@@ -254,26 +254,19 @@ test('protected source recovers ancestry from the exact merge-group base', () =>
         JSON.stringify({
           merge_group: { base_sha: baseSha, head_sha: headSha },
         }),
-      gitIsAncestor: (ancestor, descendant) => {
-        ancestryCalls.push([ancestor, descendant]);
-        return descendant === baseSha;
-      },
+      gitIsAncestor: () => false,
       gitRead: (args) => {
         assert.deepEqual(args, ['rev-parse', 'HEAD']);
         return headSha;
       },
-      hydrateMergeGroupBase: (sha) => {
-        hydrated.push(sha);
+      recoverMergeGroupAncestry: (coordinates) => {
+        recovered.push(coordinates);
         return true;
       },
     }),
     true,
   );
-  assert.deepEqual(ancestryCalls, [
-    [sourceSha, 'HEAD'],
-    [sourceSha, baseSha],
-  ]);
-  assert.deepEqual(hydrated, [baseSha]);
+  assert.deepEqual(recovered, [{ baseSha, sourceSha }]);
 });
 
 test('protected source rejects mismatched or unretained merge-group evidence', () => {
@@ -296,7 +289,7 @@ test('protected source rejects mismatched or unretained merge-group evidence', (
       readFile,
       gitIsAncestor: () => false,
       gitRead: () => 'd'.repeat(40),
-      hydrateMergeGroupBase: () =>
+      recoverMergeGroupAncestry: () =>
         assert.fail('mismatched event must not hydrate history'),
     }),
     false,
@@ -308,10 +301,76 @@ test('protected source rejects mismatched or unretained merge-group evidence', (
       readFile,
       gitIsAncestor: () => false,
       gitRead: () => headSha,
-      hydrateMergeGroupBase: () => true,
+      recoverMergeGroupAncestry: () => false,
     }),
     false,
   );
+});
+
+test('merge-group recovery treats shallow depth as an optimization only', () => {
+  const sourceSha = 'a'.repeat(40);
+  const baseSha = 'b'.repeat(40);
+  const gitCalls = [];
+  let ancestryChecks = 0;
+  assert.equal(
+    recoverMergeGroupProtectedSource({
+      sourceSha,
+      baseSha,
+      gitRun: (args) => {
+        gitCalls.push(args);
+        return { status: 0 };
+      },
+      gitRead: (args) => {
+        assert.deepEqual(args, ['rev-parse', '--is-shallow-repository']);
+        return 'true';
+      },
+      gitIsAncestor: (ancestor, descendant) => {
+        assert.equal(ancestor, sourceSha);
+        assert.equal(descendant, baseSha);
+        ancestryChecks += 1;
+        return ancestryChecks === 2;
+      },
+    }),
+    true,
+  );
+  assert.deepEqual(gitCalls, [
+    [
+      'fetch',
+      '--no-tags',
+      '--no-write-fetch-head',
+      '--filter=blob:none',
+      '--depth=128',
+      'origin',
+      baseSha,
+    ],
+    [
+      'fetch',
+      '--no-tags',
+      '--no-write-fetch-head',
+      '--filter=blob:none',
+      '--unshallow',
+      'origin',
+      baseSha,
+    ],
+  ]);
+});
+
+test('merge-group recovery rejects a complete non-ancestor without refetching', () => {
+  const gitCalls = [];
+  assert.equal(
+    recoverMergeGroupProtectedSource({
+      sourceSha: 'a'.repeat(40),
+      baseSha: 'b'.repeat(40),
+      gitRun: (args) => {
+        gitCalls.push(args);
+        return { status: 0 };
+      },
+      gitRead: () => 'false',
+      gitIsAncestor: () => false,
+    }),
+    false,
+  );
+  assert.equal(gitCalls.length, 1);
 });
 
 test('a new tracked schema fails closed', () => {
