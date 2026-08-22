@@ -320,6 +320,57 @@ def _set_work_item_authorities(source, authorities):
     profile_path.write_text(json.dumps(profile, indent=2, sort_keys=True) + "\n")
 
 
+def _set_retired_fact_surface(source, *, present):
+    profile_path = source / "profile.json"
+    profile = json.loads(profile_path.read_text())
+    facts_path = source / "contracts" / "facts.json"
+    facts = json.loads(facts_path.read_text())
+    world_path = source / "contracts" / "world.json"
+    world = json.loads(world_path.read_text())
+    surface_id = "retired-item"
+    facts["surfaces"] = [row for row in facts["surfaces"] if row["id"] != surface_id]
+    world["contractWorld"]["factSurfaceIds"] = [
+        item for item in world["contractWorld"]["factSurfaceIds"] if item != surface_id
+    ]
+    world["factSurfaces"] = [
+        row for row in world["factSurfaces"] if row["id"] != surface_id
+    ]
+    if present:
+        facts["surfaces"].append(
+            {"id": surface_id, "schema": "example.retired-item/v1"}
+        )
+        world["contractWorld"]["factSurfaceIds"].append(surface_id)
+        world["factSurfaces"].append(
+            {
+                "id": surface_id,
+                "version": "1",
+                "contractWorldId": "example.week-day",
+                "sourceAuthorities": ["workspace-owner"],
+                "schema": {
+                    "type": "object",
+                    "properties": {"status": {"type": "string"}},
+                    "required": ["status"],
+                    "additionalProperties": False,
+                },
+            }
+        )
+    _write_artifact(
+        source,
+        profile,
+        "contracts/facts.json",
+        facts,
+        profile["kfd1"]["factSurfaces"][0],
+    )
+    _write_artifact(
+        source,
+        profile,
+        "contracts/world.json",
+        world,
+        profile["kfd1"]["contractWorld"],
+    )
+    profile_path.write_text(json.dumps(profile, indent=2, sort_keys=True) + "\n")
+
+
 def test_catalog_joins_exact_profile_artifacts_without_new_authority(tmp_path):
     source = _source(tmp_path)
     result = profile_composition.catalog(source, tmp_path / "runtime")
@@ -977,3 +1028,80 @@ def test_contract_rejects_authority_narrowing_with_retired_source_facts(tmp_path
         "fact-surface-authority-migration-required"
     )
     assert raised.value.diagnosis["admittedSourceAuthorities"] == ["retired-owner"]
+
+
+def test_contract_accepts_surface_narrowing_without_retired_surface_facts(tmp_path):
+    source = _dynamic_source(tmp_path)
+    runtime = tmp_path / "runtime"
+    _set_retired_fact_surface(source, present=True)
+    _activate(source, runtime)
+    contract = profile_composition.contract_materialization_plan(source, runtime)
+    profile_composition.authorized_contract_materialize(
+        runtime,
+        contract,
+        profile_sdk.answer_decision(contract["decisionCard"], "approve", "test-owner"),
+    )
+
+    _set_retired_fact_surface(source, present=False)
+    _upgrade(source, runtime)
+
+    assert (
+        profile_composition.contract_materialization_plan(source, runtime)["operations"]
+        == []
+    )
+
+
+def test_contract_rejects_surface_register_expansion(tmp_path):
+    source = _dynamic_source(tmp_path)
+    runtime = tmp_path / "runtime"
+    _activate(source, runtime)
+    contract = profile_composition.contract_materialization_plan(source, runtime)
+    profile_composition.authorized_contract_materialize(
+        runtime,
+        contract,
+        profile_sdk.answer_decision(contract["decisionCard"], "approve", "test-owner"),
+    )
+
+    _set_retired_fact_surface(source, present=True)
+    _upgrade(source, runtime)
+
+    with pytest.raises(profile_sdk.ProfileSdkError) as raised:
+        profile_composition.contract_materialization_plan(source, runtime)
+    assert raised.value.diagnosis["code"] == "contract-world-incompatible"
+
+
+def test_contract_rejects_surface_narrowing_with_retired_surface_facts(tmp_path):
+    source = _dynamic_source(tmp_path)
+    runtime = tmp_path / "runtime"
+    _set_retired_fact_surface(source, present=True)
+    _activate(source, runtime)
+    contract = profile_composition.contract_materialization_plan(source, runtime)
+    profile_composition.authorized_contract_materialize(
+        runtime,
+        contract,
+        profile_sdk.answer_decision(contract["decisionCard"], "approve", "test-owner"),
+    )
+    written = storage_service.fact_material_put(
+        runtime,
+        {
+            "type_id": "retired-item",
+            "type_version": "1",
+            "source_id": "workspace-owner",
+            "subject_key": "retired-1",
+            "payload": {"status": "retained"},
+            "observation_id": "retired-1-retained",
+            "action": "assert",
+            "valid_until": 0,
+        },
+    )
+    assert written["receipt"]["admission"]["outcome"] == "admitted"
+
+    _set_retired_fact_surface(source, present=False)
+    _upgrade(source, runtime)
+
+    with pytest.raises(profile_sdk.ProfileSdkError) as raised:
+        profile_composition.contract_materialization_plan(source, runtime)
+    assert raised.value.diagnosis["code"] == (
+        "contract-world-surface-migration-required"
+    )
+    assert raised.value.diagnosis["admittedFactSurfaces"] == ["retired-item"]

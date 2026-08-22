@@ -61,6 +61,14 @@ test('desktop companion delegates bytecode cache ownership to the native trunk',
     launcher,
     /export KF_BUNDLED_EXTENSION_ROOT="\$here\/\.\.\/extensions"/u,
   );
+  assert.match(
+    launcher,
+    /export KUNGFU_AGENT_SESSION_EXECUTABLE="\$runtime\/kungfu"/u,
+  );
+  assert.match(
+    launcher,
+    /export KUNGFU_NATIVE_AGENT_SESSION_ENTRY="\$here\/\.\.\/tui\/native-agent-session\.mjs"/u,
+  );
   assert.ok(
     launcher.indexOf('export KUNGFU_UPGRADE_MANIFEST=') <
       launcher.indexOf('exec "$runtime/kungfu" "$@"'),

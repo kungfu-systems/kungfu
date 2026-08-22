@@ -27,4 +27,6 @@ export KUNGFU_DIR="$runtime"
 export KUNGFU_INSTALL_SOURCE=desktop-companion
 export KUNGFU_UPGRADE_MANIFEST="$here/../upgrade/kungfu-release-manifest.json"
 export KF_BUNDLED_EXTENSION_ROOT="$here/../extensions"
+export KUNGFU_AGENT_SESSION_EXECUTABLE="$runtime/kungfu"
+export KUNGFU_NATIVE_AGENT_SESSION_ENTRY="$here/../tui/native-agent-session.mjs"
 exec "$runtime/kungfu" "$@"

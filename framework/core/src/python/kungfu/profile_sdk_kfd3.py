@@ -810,13 +810,32 @@ def contract_operations(
             existingVersions=sorted(str(row.get("version")) for row in other_world),
             requestedVersion=world["version"],
         )
-    if same_world and set(same_world[0].get("fact_surface_ids") or []) != set(
-        world["factSurfaceIds"]
-    ):
-        fail(
-            "contract-world-incompatible",
-            "existing contract world has another fact-surface register",
-        )
+    if same_world:
+        existing_surface_ids = set(same_world[0].get("fact_surface_ids") or [])
+        declared_surface_ids = set(world["factSurfaceIds"])
+        if existing_surface_ids != declared_surface_ids:
+            # Contract-world declarations are immutable evidence. A later
+            # Profile may retire a surface that never admitted a fact, but it
+            # must not expand or replace the durable register in place.
+            if not declared_surface_ids < existing_surface_ids:
+                fail(
+                    "contract-world-incompatible",
+                    "existing contract world has another fact-surface register",
+                )
+            retired_with_facts = sorted(
+                surface_id
+                for surface_id in existing_surface_ids - declared_surface_ids
+                if any(
+                    key[0] == surface_id and key[2] == world["id"] and sources
+                    for key, sources in admitted_sources.items()
+                )
+            )
+            if retired_with_facts:
+                fail(
+                    "contract-world-surface-migration-required",
+                    "removed fact surfaces retain admitted facts and require an explicit migration",
+                    admittedFactSurfaces=retired_with_facts,
+                )
     operations = []
     if not same_world:
         operations.append(
