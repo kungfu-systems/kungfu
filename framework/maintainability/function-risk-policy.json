@@ -38,14 +38,14 @@
     "python-storage-responsibility-convergence": {
       "assignmentId": "2026-08-22-kungfu-python-storage-responsibility-convergence",
       "exactRevision": "c019142e10150ff472a509d319e24d17860be4b0",
-      "status": "baseline-frozen",
+      "status": "converged",
       "ownerScope": {
         "facades": [
           "framework/core/src/python/kungfu/storage/service.py",
           "framework/core/src/python/kungfu/cli/commands/storage.py"
         ],
         "extractedOwners": [
-          "framework/core/src/python/kungfu/cli/commands/storage_projection.py"
+          "framework/core/src/python/kungfu/storage/transfer.py"
         ]
       },
       "measurement": {
@@ -53,11 +53,28 @@
         "responsibilities": 145,
         "functionRisk": {"functions": 132, "total": 861, "maximum": 44}
       },
+      "currentMeasurement": {
+        "physicalLines": 3136,
+        "responsibilities": 142,
+        "functionRisk": {"functions": 131, "total": 858, "maximum": 44},
+        "delta": {
+          "physicalLines": 31,
+          "responsibilities": -3,
+          "functions": -1,
+          "functionRisk": -3,
+          "maximumRisk": 0
+        }
+      },
       "sourceRoots": {
         "service": "sha256:0dd3ceeb5e6aef4dcd72e793df8e8384ca6a3159aa9eee2ec1d86429bce0e1a1",
         "commands": "sha256:0e4497f6d11fd5bdcb6801e9048fe54f23d708b0f2b93ef94b8f3cd3cfad3308",
         "publicPackage": "sha256:69c128552179b63871ae57fcb2572aedeb059c8d1c1f3577df64caeebaca9582",
         "nodeContract": "sha256:187ca5846ef808eb41ab15e9b04f78c2c9db65840732a5db0e1d7868e02ba054"
+      },
+      "currentSourceRoots": {
+        "service": "sha256:761f0e7a519e6e02cf96107be697a7d797c41bfe1f734497743df7c7e776bfe6",
+        "commands": "sha256:0e4497f6d11fd5bdcb6801e9048fe54f23d708b0f2b93ef94b8f3cd3cfad3308",
+        "transferOwner": "sha256:ec04bee7fa05a3a9497a2bf68b744ac891ee4beda564b699d6fcda56701e417d"
       },
       "invariants": {
         "publicImports": [
@@ -121,10 +138,13 @@
           ]
         }
       },
-      "plannedSeam": {
-        "owner": "kungfu.cli.commands.storage_projection.StorageCommandProjection",
-        "responsibility": "Click-only JSON, text, error, and source-scope projection",
-        "nonAuthority": "Receives native results; never selects a provider, folds facts, or changes protocol bytes.",
+      "implementedSeam": {
+        "owner": "kungfu.storage.transfer.StorageTransfer",
+        "responsibility": "JSONL persistence plus source and Episode bundle import/export edge shaping",
+        "nonAuthority": "Calls the native storage service; never selects a provider, validates or materializes a bundle, folds facts, or changes protocol bytes.",
+        "compatibilityFacade": "kungfu.storage.service retains five public transfer callables as exact aliases with unchanged signatures; export_records remains the direct native shim required by the greenfield binding contract.",
+        "modificationSurface": "Transfer format changes now have one cohesive owner instead of editing the 1611-line mixed service facade; CLI and native binding sources are unchanged.",
+        "wrapperOnly": false,
         "acceptance": "Facade plus owner aggregate responsibilities below 145 and function risk below 861 without wrapper-only extraction."
       },
       "excluded": [
