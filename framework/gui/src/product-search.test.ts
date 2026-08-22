@@ -6,6 +6,7 @@ import test from 'node:test';
 import {
   createShellNavigationHandler,
   initialShellSurface,
+  projectSearchSurface,
   shellSurfaceActiveViewId,
   shellSurfaceFlags,
   shellSurfaceTitle,
@@ -167,6 +168,11 @@ test('shell navigation dispatches each request through one typed route', () => {
   navigate({}, { target: 'profile-home' });
   navigate({}, { target: 'view', kfxId: 'work' });
   navigate({}, { target: 'unknown' } as unknown as ShellNavigateRequest);
+  navigate({}, { target: '__proto__' } as unknown as ShellNavigateRequest);
+  navigate({}, { target: 'constructor' } as unknown as ShellNavigateRequest);
+  navigate({}, null as unknown as ShellNavigateRequest);
+  navigate({}, undefined as unknown as ShellNavigateRequest);
+  navigate({}, {} as ShellNavigateRequest);
   assert.deepEqual(calls, [
     'settings',
     'onboarding',
@@ -313,6 +319,15 @@ test('Project navigation preserves the current Project while the catalog is expl
     source,
     /onOpenProjects=\{\(\) => \{[\s\S]*setFocusedProjectPath\(''\)[\s\S]*setShellSurface\('projects'\)/,
   );
+});
+
+test('cached Project search preserves onboarding priority', () => {
+  assert.equal(projectSearchSurface('onboarding'), 'onboarding');
+  assert.equal(projectSearchSurface('projects'), 'projects');
+  assert.equal(projectSearchSurface('core-work'), 'projects');
+  assert.equal(projectSearchSurface('agent-work-lab'), 'projects');
+  assert.equal(projectSearchSurface('kfx'), 'projects');
+  assert.match(source, /setShellSurface\(projectSearchSurface\)/);
 });
 
 test('Lab and workspace transitions select one shell surface explicitly', () => {

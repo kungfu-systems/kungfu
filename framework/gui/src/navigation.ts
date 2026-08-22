@@ -25,15 +25,47 @@ export type ShellSurfaceFlags = {
 
 export type CoreShellSurface = 'projects' | 'agent-work-lab' | 'core-work';
 
+const CORE_SURFACE: Partial<Record<ShellSurface, CoreShellSurface>> = {
+  projects: 'projects',
+  'agent-work-lab': 'agent-work-lab',
+  'core-work': 'core-work',
+};
+
+const PROJECT_SEARCH_SURFACE: Record<ShellSurface, ShellSurface> = {
+  onboarding: 'onboarding',
+  projects: 'projects',
+  'agent-work-lab': 'projects',
+  'core-work': 'projects',
+  kfx: 'projects',
+};
+
+const FIXED_SURFACE_TITLE: Partial<Record<ShellSurface, string>> = {
+  onboarding: 'Getting Started',
+  projects: 'Projects',
+  'agent-work-lab': 'Agent Work Lab',
+};
+
+const FIXED_SURFACE_VIEW_ID: Partial<Record<ShellSurface, string>> = {
+  onboarding: 'onboarding',
+  projects: 'projects',
+  'agent-work-lab': 'agent-work-lab',
+};
+
 export type ShellNavigationActions = Record<
   ShellNavigateRequest['target'],
   (request: ShellNavigateRequest) => void
 >;
 
 export function createShellNavigationHandler(actions: ShellNavigationActions) {
-  return (_event: unknown, request: ShellNavigateRequest) => {
-    const action = actions[request.target];
-    action?.(request);
+  const routes = Object.assign(
+    Object.create(null) as ShellNavigationActions,
+    actions,
+  );
+  return (_event: unknown, request: unknown) => {
+    const target = Reflect.get(Object(request), 'target');
+    if (typeof target !== 'string') return;
+    const action = routes[target as ShellNavigateRequest['target']];
+    if (typeof action === 'function') action(request as ShellNavigateRequest);
   };
 }
 
@@ -66,8 +98,11 @@ export function shellSurfaceFlags(surface: ShellSurface): ShellSurfaceFlags {
 export function visibleCoreSurface(
   surface: ShellSurface,
 ): CoreShellSurface | undefined {
-  if (surface === 'projects' || surface === 'agent-work-lab') return surface;
-  return surface === 'core-work' ? surface : undefined;
+  return CORE_SURFACE[surface];
+}
+
+export function projectSearchSurface(surface: ShellSurface): ShellSurface {
+  return PROJECT_SEARCH_SURFACE[surface];
 }
 
 export function shellSurfaceTitle({
@@ -81,10 +116,9 @@ export function shellSurfaceTitle({
   currentProjectDisplayName: string;
   activeKfxTitle?: string;
 }): string {
-  if (surface === 'onboarding') return 'Getting Started';
-  if (surface === 'agent-work-lab') return 'Agent Work Lab';
-  if (surface === 'projects') return 'Projects';
-  if (surface !== 'core-work') return activeKfxTitle ?? 'Kungfu Episodes';
+  const fixedTitle = FIXED_SURFACE_TITLE[surface];
+  if (fixedTitle) return fixedTitle;
+  if (surface === 'kfx') return activeKfxTitle ?? 'Kungfu Episodes';
   return projectWorkOpen
     ? `Project · ${currentProjectDisplayName}`
     : 'All Work';
@@ -101,9 +135,8 @@ export function shellSurfaceActiveViewId({
   activeKfxId?: string;
   workEntryId?: string;
 }): string | undefined {
-  if (surface === 'onboarding') return 'onboarding';
-  if (surface === 'agent-work-lab') return 'agent-work-lab';
-  if (surface === 'projects') return 'projects';
+  const fixedViewId = FIXED_SURFACE_VIEW_ID[surface];
+  if (fixedViewId) return fixedViewId;
   if (projectWorkOpen) return 'current-project';
   if (surface === 'core-work' || activeKfxId === workEntryId)
     return 'core-work';

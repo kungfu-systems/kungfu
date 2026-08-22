@@ -50,6 +50,7 @@ import {
   primaryNavigation,
   productRoleEntry,
   profileHomeId,
+  projectSearchSurface,
   shellSurfaceActiveViewId,
   shellSurfaceFlags,
   shellSurfaceTitle,
@@ -1813,7 +1814,7 @@ function App() {
         openWorkSurface({ workId: result.action.workId });
       } else if (result.action.kind === 'open-project') {
         setFocusedProjectPath(result.action.projectPath);
-        setShellSurface('projects');
+        setShellSurface(projectSearchSurface);
       } else {
         showNotification({
           level: 'info',
