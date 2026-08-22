@@ -168,13 +168,53 @@
           "Python remains a lossless client of the existing native Work lifecycle and storage interfaces.",
           "No C++ runtime, Node binding implementation, generated Work lifecycle SDK, watcher, GUI, or TUI path is in the allowed change surface."
         ],
+        "generatedProjections": {
+          "authority": "The primitive catalog and KFD generators remain the sole writers of these derived projections.",
+          "invariant": "Only source, catalog, witness, artifact, and release roots may change; primitive semantics, surface and claim cardinality, C++ symbols, runtime behavior, and binding interfaces remain unchanged.",
+          "canonicalPolicy": [
+            "framework/contract/kungfu-agent-first-canonical-policy.json",
+            "config/kungfu-agent-first-canonical-policy.json"
+          ],
+          "primitiveCatalog": [
+            "config/primitive/kungfu-primitive-catalog.contract.json",
+            "framework/primitive/kungfu-primitive-catalog.contract.json",
+            "framework/core/src/libkungfu/include/kungfu/sdk/generated/primitive_catalog_v2.hpp"
+          ],
+          "kfdWitnesses": [
+            ".buildchain/kfd/kfd-1/contract-world.witness.json",
+            ".buildchain/kfd/kfd-1/release-gate.json",
+            ".buildchain/kfd/kfd-2/release-claims.json",
+            ".buildchain/kfd/kfd-3/collaboration-interface.prebuild.json",
+            "developer/sdk/kfd/kfd-1/contract-world.witness.json",
+            "developer/sdk/kfd/kfd-1/release-gate.json",
+            "developer/sdk/kfd/kfd-2/release-claims.json"
+          ],
+          "supportMatrix": [
+            ".buildchain/kfd/support-matrix.json",
+            "developer/sdk/kfd/support-matrix.json"
+          ]
+        },
         "allowedChangeSurface": [
+          ".buildchain/kfd/kfd-1/contract-world.witness.json",
+          ".buildchain/kfd/kfd-1/release-gate.json",
+          ".buildchain/kfd/kfd-2/release-claims.json",
+          ".buildchain/kfd/kfd-3/collaboration-interface.prebuild.json",
+          ".buildchain/kfd/support-matrix.json",
           ".xinfa/portable-atlas-classification.json.gz",
           ".xinfa/product-atlas-bundle.json",
+          "config/kungfu-agent-first-canonical-policy.json",
+          "config/primitive/kungfu-primitive-catalog.contract.json",
+          "developer/sdk/kfd/kfd-1/contract-world.witness.json",
+          "developer/sdk/kfd/kfd-1/release-gate.json",
+          "developer/sdk/kfd/kfd-2/release-claims.json",
+          "developer/sdk/kfd/support-matrix.json",
+          "framework/contract/kungfu-agent-first-canonical-policy.json",
+          "framework/core/src/libkungfu/include/kungfu/sdk/generated/primitive_catalog_v2.hpp",
           "framework/core/src/python/kungfu/assignment_orchestration.py",
           "framework/core/src/python/kungfu/assignment_outcome.py",
           "framework/core/tests/python/test_work_design_outcome_history.py",
           "framework/maintainability/agent-python-responsibility-map.json",
+          "framework/primitive/kungfu-primitive-catalog.contract.json",
           "scripts/check-agent-python-responsibility-map.py",
           "package.json"
         ],
