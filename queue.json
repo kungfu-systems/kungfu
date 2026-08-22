@@ -3,7 +3,7 @@
   "contract": "kungfu-buildchain-dev-delivery-warrant-queue",
   "repository": "kungfu-systems/kungfu",
   "protectedBase": "dev/v4/v4.0",
-  "generation": 5485,
+  "generation": 5486,
   "fencingCounter": 599,
   "policy": {
     "agingSeconds": 900,
@@ -43103,8 +43103,38 @@
         "scripts/source-acceptance.mjs",
         "scripts/source-acceptance.test.mjs"
       ]
+    },
+    {
+      "repository": "kungfu-systems/kungfu",
+      "protectedBase": "dev/v4/v4.0",
+      "pullRequestNumber": 3360,
+      "assignmentRoot": "sha256:2566d31894ea560512e5cc5581f4e7ff00f9eaae44ffe0b1d6b10a182420b0af",
+      "initiativeRoot": "sha256:bfff817933e5a5ad693e4b902a84f6cc3a251235dd7377cb4091d92f805fa7ff",
+      "sourceIdentityRoot": "sha256:9d6d0ba324a0cde6300113b285a59a9703156d7d4cc42c85ee10c3d344154568",
+      "deliveryClass": "non-native-fast",
+      "candidateId": "sha256:5a6646886583e2b10f78a219499bb770d3a9cfbbf4ae4254cb16d2f914015c46",
+      "sourceHead": "e18090084db367d2d9913ff98a04f5de6f08908d",
+      "sourcePatchRoot": "sha256:9298b6a73c398cdcbf126fe27a3fc47858b9a90cbc4d502fefdbaa8f3c83e89b",
+      "sourceProofRoot": "sha256:87ac046b887d080deb77ceed782fe2580a925a66493a424501c48036af18add8",
+      "planRoot": "sha256:3fa583a46d84175a3dcc65afbde03070e0e05d0bf93dee79e494b8bd64e9335c",
+      "closureRoot": "sha256:ac6e52dc4778bd7be1e6224c9a526a00dc7fcdd56a84e07165a811b168158f3e",
+      "dependencyRoot": "sha256:5b598002302c3c255ae584df1412f0ff63456312bc46b314d4bc17e9e5197707",
+      "toolchainRoot": "sha256:2ecb07894954a2e0de022615d4561e5ba3ae68376401941ecff77be03cd75a0f",
+      "environmentRoot": "sha256:ce8ac018bb38c00cc0f5e954dae39d921eb9437fb11314061e9628f456f39057",
+      "sourceWorkflowRunId": 32567687652,
+      "priority": "ordinary",
+      "enqueuedAt": "2026-08-22T10:35:09.948Z",
+      "updatedAt": "2026-08-22T10:35:09.948Z",
+      "attempts": 1,
+      "recoveries": 0,
+      "status": "queued",
+      "terminal": null,
+      "affectedPaths": [
+        "scripts/check-incubation-passport.mjs",
+        "scripts/check-incubation-passport.test.mjs"
+      ]
     }
   ],
-  "updatedAt": "2026-08-22T10:34:08.048Z",
-  "stateRoot": "sha256:ee2b9e4fccf70f4d5ed4969aaf64d3f5c656ec52fec00dcebe9b77281252fba1"
+  "updatedAt": "2026-08-22T10:35:09.948Z",
+  "stateRoot": "sha256:49285263177e3efc5ce743361ef246ea799a3eab09ef0d3245bd8159a57309ef"
 }
