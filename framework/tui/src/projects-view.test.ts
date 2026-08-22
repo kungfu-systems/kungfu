@@ -4,6 +4,45 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
 
+import { resolveProjectsInput } from './projects-view/index.js';
+
+test('Projects input resolves browse aliases and gives modals precedence', () => {
+  const cases = [
+    ['q', 'browse', 'quit'],
+    ['\u0003', 'browse', 'quit'],
+    ['j', 'browse', 'move-down'],
+    ['\u001b[B', 'browse', 'move-down'],
+    ['k', 'browse', 'move-up'],
+    ['\u001b[A', 'browse', 'move-up'],
+    ['\r', 'browse', 'open-project'],
+    ['y', 'confirmation', 'confirm'],
+    ['n', 'confirmation', 'cancel'],
+    ['\u001b', 'confirmation', 'cancel'],
+    ['\r', 'confirmation', 'confirm'],
+    ['project path', 'import-path', 'append:project path'],
+    ['\u007f', 'import-path', 'delete'],
+    ['\b', 'import-path', 'delete'],
+    ['\r', 'import-path', 'confirm'],
+    ['\u001b', 'import-path', 'cancel'],
+  ] as const;
+  for (const [value, mode, expected] of cases)
+    assert.equal(resolveProjectsInput(value, mode), expected);
+});
+
+test('Projects actions retain cancellation copy and refresh settlement order', () => {
+  const source = readFileSync(
+    new URL('./projects-view/index.tsx', import.meta.url),
+    'utf8',
+  );
+  assert.match(source, /Project removal cancelled; no locator changed\./);
+  assert.match(source, /Project creation cancelled; no files were written\./);
+  assert.match(source, /Open Project cancelled; nothing changed\./);
+  assert.match(
+    source,
+    /async \(\) => \{[\s\S]*?setRemovePlan\(undefined\);[\s\S]*?await refresh\(\);[\s\S]*?\},/,
+  );
+});
+
 test('Projects exposes only New, Open, and safe removal on the first layer', () => {
   const source = readFileSync(
     new URL('./projects-view/index.tsx', import.meta.url),

@@ -126,6 +126,48 @@ export type ProjectsActionRequest = {
   action: ProjectsQuickAction;
 };
 
+type ProjectsInputMode = 'browse' | 'confirmation' | 'import-path';
+
+const BROWSE_PROJECTS_INPUT = new Map<string, string>([
+  ['q', 'quit'],
+  ['\u0003', 'quit'],
+  ['a', 'open-lab'],
+  ['r', 'refresh'],
+  ['j', 'move-down'],
+  ['\u001b[B', 'move-down'],
+  ['k', 'move-up'],
+  ['\u001b[A', 'move-up'],
+  ['n', 'plan-create'],
+  ['o', 'begin-import'],
+  ['d', 'plan-remove'],
+  ['\r', 'open-project'],
+]);
+const CONFIRMATION_PROJECTS_INPUT = new Map<string, string>([
+  ['y', 'confirm'],
+  ['\r', 'confirm'],
+  ['n', 'cancel'],
+  ['\u001b', 'cancel'],
+]);
+const IMPORT_PATH_PROJECTS_INPUT = new Map<string, string>([
+  ['\u001b', 'cancel'],
+  ['\r', 'confirm'],
+  ['\u007f', 'delete'],
+  ['\b', 'delete'],
+]);
+const PROJECTS_INPUT_BY_MODE = {
+  browse: BROWSE_PROJECTS_INPUT,
+  confirmation: CONFIRMATION_PROJECTS_INPUT,
+  'import-path': IMPORT_PATH_PROJECTS_INPUT,
+} satisfies Record<ProjectsInputMode, Map<string, string>>;
+
+export function resolveProjectsInput(value: string, mode: ProjectsInputMode) {
+  const action = PROJECTS_INPUT_BY_MODE[mode].get(value);
+  if (action) return action;
+  if (mode === 'import-path' && /^[\x20-\x7e]+$/u.test(value))
+    return `append:${value}`;
+  return 'none';
+}
+
 export function ProjectsHost({
   projects,
   dimensions,
@@ -171,12 +213,28 @@ export function ProjectsHost({
     onSearchDocumentsRef.current = onSearchDocuments;
   }, [onSearchDocuments]);
 
+  const runProjectAction = React.useCallback(
+    <Result,>(
+      message: string,
+      operation: () => Promise<Result>,
+      onSuccess: (result: Result) => void | Promise<void>,
+    ) => {
+      setBusy(true);
+      setMessage(message);
+      return operation()
+        .then(onSuccess)
+        .catch((error) =>
+          setMessage(error instanceof Error ? error.message : String(error)),
+        )
+        .finally(() => setBusy(false));
+    },
+    [],
+  );
   const refresh = React.useCallback(() => {
-    setBusy(true);
-    setMessage('Refreshing machine-local project locators…');
-    return projects
-      .list()
-      .then((result) => {
+    return runProjectAction(
+      'Refreshing machine-local project locators…',
+      () => projects.list(),
+      (result) => {
         setCatalog(result);
         onSearchDocumentsRef.current(result);
         setSelected((current) =>
@@ -189,12 +247,9 @@ export function ProjectsHost({
               } available`
             : 'No Projects yet · create one or open an existing directory',
         );
-      })
-      .catch((error) =>
-        setMessage(error instanceof Error ? error.message : String(error)),
-      )
-      .finally(() => setBusy(false));
-  }, [projects]);
+      },
+    );
+  }, [projects, runProjectAction]);
 
   React.useEffect(() => dimensions.subscribe(setSize), [dimensions]);
   React.useEffect(() => {
@@ -210,16 +265,12 @@ export function ProjectsHost({
     return () => onInputModeChange(false);
   }, [inputModeActive, onInputModeChange]);
   const planProject = React.useCallback(() => {
-    setBusy(true);
-    setMessage('Planning a new Project under ~/Documents/Kungfu…');
-    void projects
-      .planCreate(undefined, 'kungfu.blank-project')
-      .then((plan) => setCreatePlan(plan as unknown as CreatePlan))
-      .catch((error) =>
-        setMessage(error instanceof Error ? error.message : String(error)),
-      )
-      .finally(() => setBusy(false));
-  }, [projects]);
+    void runProjectAction(
+      'Planning a new Project under ~/Documents/Kungfu…',
+      () => projects.planCreate(undefined, 'kungfu.blank-project'),
+      (plan) => setCreatePlan(plan as unknown as CreatePlan),
+    );
+  }, [projects, runProjectAction]);
   const beginImport = React.useCallback(() => {
     setImportPath('');
     setMessage('Type an existing project directory and press Enter.');
@@ -230,16 +281,12 @@ export function ProjectsHost({
       setMessage('Select a Project before removing it from Kungfu.');
       return;
     }
-    setBusy(true);
-    setMessage(`Planning removal of ${project.name} from Kungfu…`);
-    void projects
-      .planRemove(project.id)
-      .then(setRemovePlan)
-      .catch((error) =>
-        setMessage(error instanceof Error ? error.message : String(error)),
-      )
-      .finally(() => setBusy(false));
-  }, [catalog, projects, selected]);
+    void runProjectAction(
+      `Planning removal of ${project.name} from Kungfu…`,
+      () => projects.planRemove(project.id),
+      setRemovePlan,
+    );
+  }, [catalog, projects, runProjectAction, selected]);
   React.useEffect(() => {
     if (!actionRequest) return;
     if (actionRequest.action === 'project-new') {
@@ -258,16 +305,11 @@ export function ProjectsHost({
     planSelectedRemoval,
   ]);
   React.useEffect(() => {
-    const onData = (chunk: Buffer | string) => {
+    const handleProjectsInput = (chunk: Buffer | string) => {
       const value = String(chunk);
       const mouseEvents = decodeTerminalMouseInput(value);
       if (mouseEvents.length > 0) {
-        if (
-          importPath === undefined &&
-          !importPlan &&
-          !removePlan &&
-          !createPlan
-        ) {
+        if (!inputModeActive) {
           for (const event of mouseEvents) {
             if (
               event.kind !== 'wheel' ||
@@ -292,159 +334,121 @@ export function ProjectsHost({
         return;
       }
       if (isInputCaptured()) return;
-      if (importPath !== undefined) {
-        if (value === '\u001b') {
-          setImportPath(undefined);
-          setMessage('Open Project cancelled; nothing changed.');
-        } else if (value === '\r') {
-          if (!importPath.trim()) return;
-          setBusy(true);
-          setMessage('Inspecting the existing project without changing it…');
-          void projects
-            .planImport(importPath.trim())
-            .then((plan) => {
-              setImportPath(undefined);
-              setImportPlan(plan);
-            })
-            .catch((error) =>
-              setMessage(
-                error instanceof Error ? error.message : String(error),
-              ),
-            )
-            .finally(() => setBusy(false));
-        } else if (value === '\u007f' || value === '\b') {
-          setImportPath((current) => current?.slice(0, -1) ?? '');
-        } else if (/^[\x20-\x7e]+$/u.test(value)) {
-          setImportPath((current) => `${current ?? ''}${value}`);
-        }
+      const mode: ProjectsInputMode =
+        importPath !== undefined
+          ? 'import-path'
+          : importPlan || removePlan || createPlan
+            ? 'confirmation'
+            : 'browse';
+      const intent = resolveProjectsInput(value, mode);
+      if (intent === 'none') return;
+      if (intent === 'cancel') {
+        if (importPath !== undefined) setImportPath(undefined);
+        else if (importPlan) setImportPlan(undefined);
+        else if (removePlan) setRemovePlan(undefined);
+        else setCreatePlan(undefined);
+        setMessage(
+          importPath !== undefined || importPlan
+            ? 'Open Project cancelled; nothing changed.'
+            : removePlan
+              ? 'Project removal cancelled; no locator changed.'
+              : createPlan
+                ? 'Project creation cancelled; no files were written.'
+                : 'Open Project cancelled; nothing changed.',
+        );
         return;
       }
-      if (importPlan) {
-        if (value === 'y' || value === '\r') {
-          setBusy(true);
-          setMessage('Retaining the machine-local project locator…');
-          void projects
-            .importProject(importPlan.project.path, importPlan.planRoot)
-            .then((receipt) => {
+      if (intent === 'delete')
+        return setImportPath((current) => current?.slice(0, -1) ?? '');
+      if (intent.startsWith('append:'))
+        return setImportPath((current) => `${current ?? ''}${intent.slice(7)}`);
+      if (intent === 'confirm') {
+        const path = importPath?.trim();
+        if (importPath !== undefined) {
+          if (!path) return;
+          return runProjectAction(
+            'Inspecting the existing project without changing it…',
+            () => projects.planImport(path),
+            (plan) => {
+              setImportPath(undefined);
+              setImportPlan(plan);
+            },
+          );
+        }
+        if (importPlan)
+          return runProjectAction(
+            'Retaining the machine-local project locator…',
+            () =>
+              projects.importProject(
+                importPlan.project.path,
+                importPlan.planRoot,
+              ),
+            (receipt) => {
               setImportPlan(undefined);
               onOpenProject(
                 (receipt as unknown as ProjectSelectionReceipt).workspace,
               );
-            })
-            .catch((error) =>
-              setMessage(
-                error instanceof Error ? error.message : String(error),
-              ),
-            )
-            .finally(() => setBusy(false));
-        } else if (value === 'n' || value === '\u001b') {
-          setImportPlan(undefined);
-          setMessage('Open Project cancelled; nothing changed.');
-        }
-        return;
-      }
-      if (removePlan) {
-        if (value === 'y' || value === '\r') {
-          setBusy(true);
-          setMessage(`Removing ${removePlan.project.name} from Kungfu…`);
-          void projects
-            .remove(removePlan.project.id, removePlan.planRoot)
-            .then(() => {
+            },
+          );
+        if (removePlan)
+          return runProjectAction(
+            `Removing ${removePlan.project.name} from Kungfu…`,
+            () => projects.remove(removePlan.project.id, removePlan.planRoot),
+            async () => {
               setRemovePlan(undefined);
               setMessage(
                 `${removePlan.project.name} was removed from Kungfu. Its files remain untouched.`,
               );
-              return refresh();
-            })
-            .catch((error) =>
-              setMessage(
-                error instanceof Error ? error.message : String(error),
-              ),
-            )
-            .finally(() => setBusy(false));
-        } else if (value === 'n' || value === '\u001b') {
-          setRemovePlan(undefined);
-          setMessage('Project removal cancelled; no locator changed.');
-        }
-        return;
-      }
-      if (createPlan) {
-        if (value === 'y' || value === '\r') {
-          setBusy(true);
-          setMessage('Creating the Project and its local Kungfu instructions…');
-          void projects
-            .create(
+              await refresh();
+            },
+          );
+        if (!createPlan) return;
+        return runProjectAction(
+          'Creating the Project and its local Kungfu instructions…',
+          () =>
+            projects.create(
               createPlan.destination,
               createPlan.planRoot,
               createPlan.templateId,
-            )
-            .then((receipt) => {
-              const selectedReceipt = receipt as ProjectSelectionReceipt;
-              setCreatePlan(undefined);
-              onOpenProject(selectedReceipt.workspace);
-            })
-            .catch((error) =>
-              setMessage(
-                error instanceof Error ? error.message : String(error),
-              ),
-            )
-            .finally(() => setBusy(false));
-        } else if (value === 'n' || value === '\u001b') {
-          setCreatePlan(undefined);
-          setMessage('Project creation cancelled; no files were written.');
-        }
-        return;
-      }
-      if (value === 'q' || value === '\u0003') return exit();
-      if (value === 'a') return onOpenLab();
-      if (value === 'r') return refresh();
-      if (value === 'j' || value === '\u001b[B') {
-        setSelected((current) =>
-          boundedIndex(current, 1, catalog?.projects.length ?? 0),
+            ),
+          (receipt) => {
+            setCreatePlan(undefined);
+            onOpenProject((receipt as ProjectSelectionReceipt).workspace);
+          },
         );
-        return;
       }
-      if (value === 'k' || value === '\u001b[A') {
-        setSelected((current) =>
-          boundedIndex(current, -1, catalog?.projects.length ?? 0),
+      if (intent === 'quit') return exit();
+      if (intent === 'open-lab') return onOpenLab();
+      if (intent === 'refresh') return refresh();
+      if (intent === 'move-down' || intent === 'move-up')
+        return setSelected((current) =>
+          boundedIndex(
+            current,
+            intent === 'move-down' ? 1 : -1,
+            catalog?.projects.length ?? 0,
+          ),
         );
-        return;
-      }
-      if (value === 'n') {
-        planProject();
-        return;
-      }
-      if (value === 'o') {
-        beginImport();
-        return;
-      }
-      if (value === 'd') {
-        planSelectedRemoval();
-        return;
-      }
-      if (value !== '\r') return;
+      if (intent === 'plan-create') return planProject();
+      if (intent === 'begin-import') return beginImport();
+      if (intent === 'plan-remove') return planSelectedRemoval();
       const project = catalog?.projects[selected];
       if (!project?.available) {
         setMessage('This project is unavailable on this machine.');
         return;
       }
-      setBusy(true);
-      setMessage(`Opening ${project.name}…`);
-      void projects
-        .select(project.path)
-        .then((receipt) => {
+      runProjectAction(
+        `Opening ${project.name}…`,
+        () => projects.select(project.path),
+        (receipt) => {
           const workspace = (receipt as ProjectSelectionReceipt).workspace;
           setMessage(`${project.name} is open. Loading its Work…`);
           onOpenProject(workspace);
-        })
-        .catch((error) =>
-          setMessage(error instanceof Error ? error.message : String(error)),
-        )
-        .finally(() => setBusy(false));
+        },
+      );
     };
-    process.stdin.on('data', onData);
+    process.stdin.on('data', handleProjectsInput);
     return () => {
-      process.stdin.off('data', onData);
+      process.stdin.off('data', handleProjectsInput);
     };
   }, [
     catalog,
@@ -453,6 +457,7 @@ export function ProjectsHost({
     exit,
     importPath,
     importPlan,
+    inputModeActive,
     isInputCaptured,
     onOpenLab,
     onOpenProject,
@@ -462,6 +467,7 @@ export function ProjectsHost({
     projects,
     refresh,
     removePlan,
+    runProjectAction,
     selected,
     size,
   ]);
