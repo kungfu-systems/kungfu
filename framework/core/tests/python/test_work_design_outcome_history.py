@@ -1,5 +1,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
+import inspect
+
 import pytest
 
 from kungfu import assignment_orchestration
@@ -104,6 +106,72 @@ def _settled_coordinate(state_root, query_root):
         "settled": True,
         "storage_kind": "git-common-dir",
     }
+
+
+def test_outcome_facade_keeps_public_call_contract_and_schema_authority():
+    assert assignment_orchestration.OUTCOME_SCHEMA == "kungfu.work-design.outcome/v1"
+    assert assignment_orchestration.OUTCOME_BINDING_SCHEMA == (
+        "kungfu.assignment-orchestration.work-design-outcome-binding/v1"
+    )
+    assert assignment_orchestration.OUTCOME_INDEX_SCHEMA == (
+        "kungfu.assignment-orchestration.work-design-outcome-index/v1"
+    )
+    assert (
+        str(inspect.signature(assignment_orchestration._validate_outcome_artifact))
+        == "(value: 'Any') -> 'dict[str, Any]'"
+    )
+    assert str(inspect.signature(assignment_orchestration.outcome_binding_plan)) == (
+        "(workspace_root: 'str | Path', sealed_state: 'Mapping[str, Any]', "
+        "outcome: 'Any', *, opening_estimate_root: 'str | None' = None, "
+        "published_at: 'str') -> 'dict[str, Any]'"
+    )
+    assert str(inspect.signature(assignment_orchestration.verify_outcome_binding)) == (
+        "(value: 'Any') -> 'dict[str, Any]'"
+    )
+    assert str(inspect.signature(assignment_orchestration.apply_outcome_binding)) == (
+        "(plan: 'Mapping[str, Any]', expected_binding_root: 'str') -> 'dict[str, Any]'"
+    )
+    assert str(inspect.signature(assignment_orchestration.list_outcome_bindings)) == (
+        "(workspace_root: 'str | Path') -> 'dict[str, Any]'"
+    )
+
+
+@pytest.mark.parametrize(
+    ("mutate", "message"),
+    [
+        (
+            lambda outcome: outcome["coverage"].update(complete=False),
+            "complete contradicts unknown metrics",
+        ),
+        (
+            lambda outcome: outcome["metrics"]["rework"].update(count=-1),
+            "rework count is invalid",
+        ),
+        (
+            lambda outcome: outcome["authority"].update(mayMutate=True),
+            "authority boundary is invalid",
+        ),
+        (
+            lambda outcome: outcome["window"].update(settledAt="2026-07-31T23:59:59Z"),
+            "settledAt precedes admittedAt",
+        ),
+    ],
+)
+def test_outcome_validation_remains_fail_closed_at_every_separated_rule(
+    mutate, message
+):
+    outcome = _work_design_outcome(_sha256("5"), _sha256("6"))
+    mutate(outcome)
+    coverage = outcome["coverage"]
+    coverage["coverageRoot"] = assignment_canonical.semantic_root(
+        {key: value for key, value in coverage.items() if key != "coverageRoot"}
+    )
+    outcome["outcomeRoot"] = assignment_canonical.semantic_root(
+        {key: value for key, value in outcome.items() if key != "outcomeRoot"}
+    )
+
+    with pytest.raises(ValueError, match=message):
+        assignment_orchestration._validate_outcome_artifact(outcome)
 
 
 def test_outcome_binding_is_additive_immutable_and_deduplicated(tmp_path):
