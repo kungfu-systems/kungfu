@@ -1,8 +1,11 @@
 # SPDX-License-Identifier: Apache-2.0
 
+import inspect
+import pickle
+
 import pytest
 
-from kungfu import assignment_orchestration
+from kungfu import assignment_orchestration, assignment_outcome
 from kungfu.initiative_family import canonical as assignment_canonical
 
 
@@ -104,6 +107,168 @@ def _settled_coordinate(state_root, query_root):
         "settled": True,
         "storage_kind": "git-common-dir",
     }
+
+
+def test_outcome_facade_keeps_public_call_contract_and_schema_authority():
+    assert assignment_orchestration.OUTCOME_SCHEMA == "kungfu.work-design.outcome/v1"
+    assert assignment_orchestration.OUTCOME_BINDING_SCHEMA == (
+        "kungfu.assignment-orchestration.work-design-outcome-binding/v1"
+    )
+    assert assignment_orchestration.OUTCOME_INDEX_SCHEMA == (
+        "kungfu.assignment-orchestration.work-design-outcome-index/v1"
+    )
+    assert (
+        str(inspect.signature(assignment_orchestration._validate_outcome_artifact))
+        == "(value: 'Any') -> 'dict[str, Any]'"
+    )
+    assert str(inspect.signature(assignment_orchestration.outcome_binding_plan)) == (
+        "(workspace_root: 'str | Path', sealed_state: 'Mapping[str, Any]', "
+        "outcome: 'Any', *, opening_estimate_root: 'str | None' = None, "
+        "published_at: 'str') -> 'dict[str, Any]'"
+    )
+    assert str(inspect.signature(assignment_orchestration.verify_outcome_binding)) == (
+        "(value: 'Any') -> 'dict[str, Any]'"
+    )
+    assert str(inspect.signature(assignment_orchestration.apply_outcome_binding)) == (
+        "(plan: 'Mapping[str, Any]', expected_binding_root: 'str') -> 'dict[str, Any]'"
+    )
+    assert str(inspect.signature(assignment_orchestration.list_outcome_bindings)) == (
+        "(workspace_root: 'str | Path') -> 'dict[str, Any]'"
+    )
+
+
+def test_outcome_facade_keeps_function_identity_docs_and_pickle_contract():
+    expected_docs = {
+        "_validate_outcome_artifact": None,
+        "outcome_binding_plan": (
+            "Plan an additive immutable outcome binding beside portable Work seals."
+        ),
+        "verify_outcome_binding": None,
+        "apply_outcome_binding": None,
+        "list_outcome_bindings": (
+            "Read and fail closed over additive rooted outcome bindings."
+        ),
+    }
+    owner_names = {
+        "_validate_outcome_artifact": "validate_artifact",
+        "outcome_binding_plan": "plan",
+        "verify_outcome_binding": "verify",
+        "apply_outcome_binding": "apply",
+        "list_outcome_bindings": "list",
+    }
+    for name, expected_doc in expected_docs.items():
+        function = getattr(assignment_orchestration, name)
+        owner_name = owner_names[name]
+        descriptor = assignment_outcome.OutcomeBindings.__dict__[owner_name]
+        assert inspect.isfunction(function)
+        assert isinstance(descriptor, staticmethod)
+        assert descriptor.__func__ is function
+        assert getattr(assignment_outcome.OutcomeBindings, owner_name) is function
+        assert function.__name__ == name
+        assert function.__qualname__ == name
+        assert function.__module__ == "kungfu.assignment_orchestration"
+        assert function.__doc__ == expected_doc
+        assert pickle.loads(pickle.dumps(function)) is function
+    private_helpers = {
+        name
+        for name in assignment_outcome.OutcomeBindings.__dict__
+        if name.startswith("_") and not name.startswith("__")
+    }
+    assert private_helpers
+    assert all(
+        isinstance(assignment_outcome.OutcomeBindings.__dict__[name], staticmethod)
+        for name in private_helpers
+    )
+
+
+def test_outcome_facade_resolves_storage_after_monkeypatch(tmp_path, monkeypatch):
+    storage_root = tmp_path / "resolved-late"
+    monkeypatch.setattr(
+        assignment_orchestration,
+        "_sealed_state_storage",
+        lambda _root: (storage_root, "late-bound-test"),
+    )
+
+    result = assignment_orchestration.list_outcome_bindings(tmp_path)
+
+    assert result["storage_kind"] == "late-bound-test"
+
+
+def test_outcome_validation_contract_constants_resist_runtime_mutation():
+    fields = assignment_outcome.OutcomeBindings.OUTCOME_FIELDS
+    metric_rows = assignment_outcome.OutcomeBindings.METRIC_FIELD_ROWS
+    authority = assignment_outcome.OutcomeBindings.EXPECTED_AUTHORITY_ITEMS
+    assert isinstance(fields, str) and all(
+        isinstance(row_fields, str) for _, row_fields in metric_rows
+    )
+    for immutable in (fields, metric_rows, authority):
+        with pytest.raises(AttributeError):
+            getattr(immutable, "add")("injected")
+    outcome = _work_design_outcome(_sha256("5"), _sha256("6"))
+    assert assignment_orchestration._validate_outcome_artifact(outcome) == outcome
+
+
+@pytest.mark.parametrize(
+    ("mutate", "message"),
+    [
+        (
+            lambda outcome: outcome["coverage"].update(complete=False),
+            "complete contradicts unknown metrics",
+        ),
+        (
+            lambda outcome: outcome["metrics"]["rework"].update(count=-1),
+            "rework count is invalid",
+        ),
+        (
+            lambda outcome: outcome["authority"].update(mayMutate=True),
+            "authority boundary is invalid",
+        ),
+        (
+            lambda outcome: outcome["window"].update(settledAt="2026-07-31T23:59:59Z"),
+            "settledAt precedes admittedAt",
+        ),
+    ],
+)
+def test_outcome_validation_remains_fail_closed_at_every_separated_rule(
+    mutate, message
+):
+    outcome = _work_design_outcome(_sha256("5"), _sha256("6"))
+    mutate(outcome)
+    coverage = outcome["coverage"]
+    coverage["coverageRoot"] = assignment_canonical.semantic_root(
+        {key: value for key, value in coverage.items() if key != "coverageRoot"}
+    )
+    outcome["outcomeRoot"] = assignment_canonical.semantic_root(
+        {key: value for key, value in outcome.items() if key != "outcomeRoot"}
+    )
+
+    with pytest.raises(ValueError, match=message):
+        assignment_orchestration._validate_outcome_artifact(outcome)
+
+
+def test_outcome_validation_preserves_schema_before_root_error_order():
+    outcome = _work_design_outcome(_sha256("5"), _sha256("6"))
+    outcome["schema"] = "kungfu.work-design.outcome/unsupported"
+
+    with pytest.raises(ValueError, match="^unsupported Work Design outcome schema$"):
+        assignment_orchestration._validate_outcome_artifact(outcome)
+
+
+def test_outcome_validation_preserves_binding_input_error_order():
+    outcome = _work_design_outcome(_sha256("5"), _sha256("6"))
+    outcome["bindings"] = {
+        "policyRoot": "invalid-policy-root",
+        "workDefinitionRoot": "invalid-work-definition-root",
+        "adviceRoot": _sha256("2"),
+    }
+    outcome["outcomeRoot"] = assignment_canonical.semantic_root(
+        {key: value for key, value in outcome.items() if key != "outcomeRoot"}
+    )
+
+    with pytest.raises(
+        ValueError, match=r"^Work Design outcome bindings\.policyRoot is invalid$"
+    ):
+        assignment_orchestration._validate_outcome_artifact(outcome)
 
 
 def test_outcome_binding_is_additive_immutable_and_deduplicated(tmp_path):
