@@ -232,6 +232,14 @@ def test_outcome_validation_remains_fail_closed_at_every_separated_rule(
         assignment_orchestration._validate_outcome_artifact(outcome)
 
 
+def test_outcome_validation_preserves_schema_before_root_error_order():
+    outcome = _work_design_outcome(_sha256("5"), _sha256("6"))
+    outcome["schema"] = "kungfu.work-design.outcome/unsupported"
+
+    with pytest.raises(ValueError, match="^unsupported Work Design outcome schema$"):
+        assignment_orchestration._validate_outcome_artifact(outcome)
+
+
 def test_outcome_binding_is_additive_immutable_and_deduplicated(tmp_path):
     (tmp_path / ".git").mkdir()
     state_root = _sha256("5")

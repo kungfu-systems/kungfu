@@ -38,6 +38,8 @@ class OutcomeBindings:
         root_field: str,
     ) -> dict[str, Any]:
         document = _canonical._strict_object(value, fields, label)
+        if "schema" in document and document["schema"] != _Owner.OUTCOME_SCHEMA:
+            raise ValueError("unsupported Work Design outcome schema")
         preimage = {key: item for key, item in document.items() if key != root_field}
         if _canonical.semantic_root(preimage) != document.get(root_field):
             raise ValueError(f"{label} root mismatch")
@@ -231,8 +233,6 @@ class OutcomeBindings:
             "Work Design outcome",
             "outcomeRoot",
         )
-        if outcome.get("schema") != _Owner.OUTCOME_SCHEMA:
-            raise ValueError("unsupported Work Design outcome schema")
         _Owner._validate_bindings(outcome.get("bindings"))
         _Owner._rooted_object(
             outcome.get("cohort"),

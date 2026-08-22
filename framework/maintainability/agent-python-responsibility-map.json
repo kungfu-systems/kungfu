@@ -233,7 +233,7 @@
           },
           {
             "path": "framework/core/src/python/kungfu/assignment_outcome.py",
-          "sha256": "62f359ea9c70c97a5c58fb12bbaa9baa5a64c5b5ea7190dc416fac4e5769d1d4"
+            "sha256": "8608c01edfa25239f7cd3ce2dfa3a8bbda5a6d44ecf85b5ff826b3441addd4cf"
           },
           {
             "path": "framework/core/src/python/kungfu/cli/commands/assignment.py",
@@ -263,8 +263,8 @@
             "responsibilities": 97,
             "functionRisk": {
               "functions": 112,
-            "baseRisk": 1895,
-            "changeRisk": 2256,
+              "baseRisk": 1890,
+              "changeRisk": 2251,
               "maximum": 254
             }
           }
@@ -277,7 +277,7 @@
           },
           "current": {
             "outcomeOwnerPath": "framework/core/src/python/kungfu/assignment_outcome.py",
-          "ownerPhysicalLines": 477,
+            "ownerPhysicalLines": 477,
             "ownerResponsibilities": 1
           },
           "cohesiveExtraction": {
