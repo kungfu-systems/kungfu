@@ -5,7 +5,7 @@ import pickle
 
 import pytest
 
-from kungfu import assignment_orchestration
+from kungfu import assignment_orchestration, assignment_outcome
 from kungfu.initiative_family import canonical as assignment_canonical
 
 
@@ -149,14 +149,36 @@ def test_outcome_facade_keeps_function_identity_docs_and_pickle_contract():
             "Read and fail closed over additive rooted outcome bindings."
         ),
     }
+    owner_names = {
+        "_validate_outcome_artifact": "validate_artifact",
+        "outcome_binding_plan": "plan",
+        "verify_outcome_binding": "verify",
+        "apply_outcome_binding": "apply",
+        "list_outcome_bindings": "list",
+    }
     for name, expected_doc in expected_docs.items():
         function = getattr(assignment_orchestration, name)
+        owner_name = owner_names[name]
+        descriptor = assignment_outcome.OutcomeBindings.__dict__[owner_name]
         assert inspect.isfunction(function)
+        assert isinstance(descriptor, staticmethod)
+        assert descriptor.__func__ is function
+        assert getattr(assignment_outcome.OutcomeBindings, owner_name) is function
         assert function.__name__ == name
         assert function.__qualname__ == name
         assert function.__module__ == "kungfu.assignment_orchestration"
         assert function.__doc__ == expected_doc
         assert pickle.loads(pickle.dumps(function)) is function
+    private_helpers = {
+        name
+        for name in assignment_outcome.OutcomeBindings.__dict__
+        if name.startswith("_") and not name.startswith("__")
+    }
+    assert private_helpers
+    assert all(
+        isinstance(assignment_outcome.OutcomeBindings.__dict__[name], staticmethod)
+        for name in private_helpers
+    )
 
 
 def test_outcome_facade_resolves_storage_after_monkeypatch(tmp_path, monkeypatch):

@@ -153,6 +153,59 @@ def function_node_counts(source: str, pathname: str) -> dict[str, int]:
     }
 
 
+def owner_method_node_counts(
+    source: str,
+    pathname: str,
+    class_name: str,
+) -> dict[str, int]:
+    tree = ast.parse(source, filename=pathname)
+    owner = next(
+        (
+            node
+            for node in tree.body
+            if isinstance(node, ast.ClassDef) and node.name == class_name
+        ),
+        None,
+    )
+    assert owner is not None, (pathname, class_name)
+    methods: dict[str, int] = {}
+    for node in owner.body:
+        if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            continue
+        positional = [*node.args.posonlyargs, *node.args.args]
+        assert not positional or positional[0].arg not in {"self", "cls"}, (
+            pathname,
+            class_name,
+            node.name,
+        )
+        assert any(
+            isinstance(decorator, ast.Name) and decorator.id == "staticmethod"
+            for decorator in node.decorator_list
+        ), (pathname, class_name, node.name)
+        methods[node.name] = sum(1 for child in ast.walk(node) if child is not node)
+    return methods
+
+
+def qualified_assignment_targets(source: str, pathname: str) -> dict[str, str]:
+    tree = ast.parse(source, filename=pathname)
+    result: dict[str, str] = {}
+    for node in tree.body:
+        if not isinstance(node, ast.Assign) or len(node.targets) != 1:
+            continue
+        target = node.targets[0]
+        if not isinstance(target, ast.Name):
+            continue
+        parts: list[str] = []
+        value: ast.expr = node.value
+        while isinstance(value, ast.Attribute):
+            parts.append(value.attr)
+            value = value.value
+        if isinstance(value, ast.Name):
+            parts.append(value.id)
+            result[target.id] = ".".join(reversed(parts))
+    return result
+
+
 def sha256_bytes(source: bytes) -> str:
     return hashlib.sha256(source).hexdigest()
 
@@ -269,12 +322,30 @@ def main() -> None:
                 < surface["baseline"]["ownerPhysicalLines"]
             )
             cohesive = surface["cohesiveExtraction"]
-            function_nodes = function_node_counts(
-                (ROOT / current_owner["outcomeOwnerPath"]).read_text(encoding="utf-8"),
-                current_owner["outcomeOwnerPath"],
+            owner_source = (ROOT / current_owner["outcomeOwnerPath"]).read_text(
+                encoding="utf-8"
+            )
+            owner_class = cohesive.get("ownerClass")
+            function_nodes = (
+                owner_method_node_counts(
+                    owner_source,
+                    current_owner["outcomeOwnerPath"],
+                    owner_class,
+                )
+                if owner_class
+                else function_node_counts(
+                    owner_source,
+                    current_owner["outcomeOwnerPath"],
+                )
             )
             assert set(cohesive["ownerFunctions"]) <= set(function_nodes)
             assert all(function_nodes[name] > 10 for name in cohesive["ownerFunctions"])
+            facade_aliases = cohesive.get("facadeAliases", {})
+            assignments = qualified_assignment_targets(current_source, pathname)
+            for facade, owner_function in facade_aliases.items():
+                assert assignments.get(facade) == (
+                    f"assignment_outcome.{owner_class}.{owner_function}"
+                ), (pathname, facade)
 
 
 if __name__ == "__main__":
