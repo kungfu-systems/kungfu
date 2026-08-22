@@ -3,7 +3,7 @@
   "contract": "kungfu-buildchain-dev-delivery-warrant-queue",
   "repository": "kungfu-systems/kungfu",
   "protectedBase": "dev/v4/v4.0",
-  "generation": 5596,
+  "generation": 5597,
   "fencingCounter": 605,
   "policy": {
     "agingSeconds": 900,
@@ -43482,8 +43482,38 @@
         "scripts/source-acceptance.mjs",
         "scripts/source-acceptance.test.mjs"
       ]
+    },
+    {
+      "repository": "kungfu-systems/kungfu",
+      "protectedBase": "dev/v4/v4.0",
+      "pullRequestNumber": 3363,
+      "assignmentRoot": "sha256:21a9a9d0167036ee9789e52ddee91b6f856b8f6f96a0ff4515f12c66ec3e2ed7",
+      "initiativeRoot": "sha256:bfff817933e5a5ad693e4b902a84f6cc3a251235dd7377cb4091d92f805fa7ff",
+      "sourceIdentityRoot": "sha256:410c111b8b4d3adc4ae58721e58485d7b8e5fccec6c457045b8982f078da8f8e",
+      "deliveryClass": "non-native-fast",
+      "candidateId": "sha256:6d6defa0c3603a1851750656e7aadfe8d78f318130de06c9f4d298886f6ddf82",
+      "sourceHead": "d54ccac3b533f018db4fabde094fad16223968ea",
+      "sourcePatchRoot": "sha256:e3951c59b3c8d1ae418161fa633f465ec042c735abc210dea6e47e7c859403f5",
+      "sourceProofRoot": "sha256:04b904edd2c2cd763f04a609c741126eb1c2fd21187e69043fdb8fce8ceda2f0",
+      "planRoot": "sha256:6c9c75fb83c32702de360e0dae3071df2c64651138973a2744f8f7192b0c7de6",
+      "closureRoot": "sha256:ac6e52dc4778bd7be1e6224c9a526a00dc7fcdd56a84e07165a811b168158f3e",
+      "dependencyRoot": "sha256:7a32028fa77a3c5bd23550531b3ad373d4a368f392f05b0965a7d7b176c7b805",
+      "toolchainRoot": "sha256:2ecb07894954a2e0de022615d4561e5ba3ae68376401941ecff77be03cd75a0f",
+      "environmentRoot": "sha256:ce8ac018bb38c00cc0f5e954dae39d921eb9437fb11314061e9628f456f39057",
+      "sourceWorkflowRunId": 32579455563,
+      "priority": "ordinary",
+      "enqueuedAt": "2026-08-22T14:51:52.400Z",
+      "updatedAt": "2026-08-22T14:51:52.400Z",
+      "attempts": 1,
+      "recoveries": 0,
+      "status": "queued",
+      "terminal": null,
+      "affectedPaths": [
+        "framework/tui/src/projects-view.test.ts",
+        "framework/tui/src/projects-view/index.tsx"
+      ]
     }
   ],
-  "updatedAt": "2026-08-22T14:49:29.843Z",
-  "stateRoot": "sha256:58a91b2c88066e95c79ac6b8ebe902bf15bb06683fa625e81b0527ff6a57fe45"
+  "updatedAt": "2026-08-22T14:51:52.400Z",
+  "stateRoot": "sha256:402b9b23f00497b9086924620ae0b79f50f5339330c8867943d7c4b4fba1d429"
 }
