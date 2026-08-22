@@ -21,6 +21,58 @@ EXPECTED_TARGETS = {
     "framework/core/src/python/kungfu/cli/commands/assignment.py",
     "framework/core/src/python/kungfu/profile_sdk.py",
 }
+FUNCTION_RISK_MEASUREMENT = r"""
+import fs from 'node:fs';
+import {
+  functionSnapshot,
+  readJson,
+  trackedCurrentFiles,
+  trackedFilesAt,
+} from './framework/maintainability/source-analysis-kernel.mjs';
+import { analyzeTransition } from './framework/maintainability/function-risk.mjs';
+
+const request = JSON.parse(fs.readFileSync(0, 'utf8'));
+const policy = readJson('framework/maintainability/function-risk-policy.json');
+const layers = readJson('framework/core/architecture/layers.json');
+const ownership = readJson(
+  'framework/maintainability/abstraction-integrity.manifest.json',
+).ownership;
+const riskBaseline = functionSnapshot(
+  trackedFilesAt(policy.baselineRef),
+  policy,
+  layers,
+  ownership,
+);
+
+function measure(files, paths) {
+  const snapshot = functionSnapshot(files, policy, layers, ownership);
+  const transition = analyzeTransition(
+    snapshot.functions,
+    riskBaseline.functions,
+    snapshot.files,
+    riskBaseline.files,
+    policy,
+  );
+  const selectedPaths = new Set(paths);
+  const functions = transition.functions.filter(({ path }) =>
+    selectedPaths.has(path),
+  );
+  return {
+    functions: functions.length,
+    baseRisk: functions.reduce((sum, item) => sum + item.baseRisk, 0),
+    changeRisk: functions.reduce((sum, item) => sum + item.changeRisk, 0),
+    maximum: Math.max(...functions.map(({ changeRisk }) => changeRisk)),
+  };
+}
+
+process.stdout.write(JSON.stringify({
+  baseline: measure(
+    trackedFilesAt(request.exactBase),
+    request.baselinePaths,
+  ),
+  current: measure(trackedCurrentFiles(), request.currentPaths),
+}));
+"""
 
 
 def source_bytes_at(revision: str, pathname: str) -> bytes:
@@ -92,24 +144,38 @@ def top_level_symbols(source: str, pathname: str) -> set[str]:
     return symbols
 
 
-def class_method_node_counts(
-    source: str, pathname: str, class_name: str
-) -> dict[str, int]:
+def function_node_counts(source: str, pathname: str) -> dict[str, int]:
     tree = ast.parse(source, filename=pathname)
-    owner = next(
-        node
-        for node in tree.body
-        if isinstance(node, ast.ClassDef) and node.name == class_name
-    )
     return {
         node.name: sum(1 for child in ast.walk(node) if child is not node)
-        for node in owner.body
+        for node in tree.body
         if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
     }
 
 
 def sha256_bytes(source: bytes) -> str:
     return hashlib.sha256(source).hexdigest()
+
+
+def owner_function_risk(
+    exact_base: str, baseline_paths: list[str], current_paths: list[str]
+) -> dict[str, dict[str, int]]:
+    completed = subprocess.run(
+        ["node", "--input-type=module", "--eval", FUNCTION_RISK_MEASUREMENT],
+        cwd=ROOT,
+        input=json.dumps(
+            {
+                "exactBase": exact_base,
+                "baselinePaths": baseline_paths,
+                "currentPaths": current_paths,
+            }
+        ),
+        text=True,
+        capture_output=True,
+        check=True,
+        env=None,
+    )
+    return json.loads(completed.stdout)
 
 
 def main() -> None:
@@ -175,6 +241,13 @@ def main() -> None:
             )
             assert measured == aggregate["current"]["responsibilities"]
             assert measured < aggregate["baseline"]["responsibilities"]
+            function_risk = owner_function_risk(
+                exact_base,
+                aggregate["baseline"]["paths"],
+                aggregate["current"]["paths"],
+            )
+            assert function_risk["baseline"] == aggregate["baseline"]["functionRisk"]
+            assert function_risk["current"] == aggregate["current"]["functionRisk"]
             for metric in ("baseRisk", "changeRisk", "maximum"):
                 assert (
                     aggregate["current"]["functionRisk"][metric]
@@ -196,13 +269,12 @@ def main() -> None:
                 < surface["baseline"]["ownerPhysicalLines"]
             )
             cohesive = surface["cohesiveExtraction"]
-            method_nodes = class_method_node_counts(
+            function_nodes = function_node_counts(
                 (ROOT / current_owner["outcomeOwnerPath"]).read_text(encoding="utf-8"),
                 current_owner["outcomeOwnerPath"],
-                cohesive["ownerClass"],
             )
-            assert set(cohesive["ownedMethods"]) <= set(method_nodes)
-            assert all(method_nodes[name] > 10 for name in cohesive["ownedMethods"])
+            assert set(cohesive["ownerFunctions"]) <= set(function_nodes)
+            assert all(function_nodes[name] > 10 for name in cohesive["ownerFunctions"])
 
 
 if __name__ == "__main__":

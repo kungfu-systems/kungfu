@@ -24,9 +24,9 @@ INITIATIVE_ADMISSION_SCHEMA = "kungfu.work-control.initiative-admission/v1"
 INITIATIVE_SOURCE_SCHEMA = "kungfu.work-control.exact-source/v1"
 RETENTION_POLICY = "explicit-expiry-retain-bytes-v1"
 STATE_SCHEMA = "kungfu.assignment-orchestration.sealed-state/v1"
-OUTCOME_SCHEMA = assignment_outcome.OutcomeBindings.OUTCOME_SCHEMA
-OUTCOME_BINDING_SCHEMA = assignment_outcome.OutcomeBindings.BINDING_SCHEMA
-OUTCOME_INDEX_SCHEMA = assignment_outcome.OutcomeBindings.INDEX_SCHEMA
+OUTCOME_SCHEMA = assignment_outcome.OUTCOME_SCHEMA
+OUTCOME_BINDING_SCHEMA = assignment_outcome.OUTCOME_BINDING_SCHEMA
+OUTCOME_INDEX_SCHEMA = assignment_outcome.OUTCOME_INDEX_SCHEMA
 CROSS_WORKSPACE_BINDING_SCHEMA = (
     "kungfu.assignment-orchestration.cross-workspace-binding/v1"
 )
@@ -156,53 +156,54 @@ def validate_assignment_request(value: Any) -> dict[str, Any]:
     return value
 
 
-def _filesystem_path(path: Path, *, platform: str = os.name) -> str:
-    value = os.fspath(path)
-    if platform != "nt":
-        return value
-    absolute = os.path.abspath(value) if os.name == "nt" else ntpath.abspath(value)
-    if absolute.startswith("\\\\?\\"):
-        return absolute
-    if absolute.startswith("\\\\"):
-        return "\\\\?\\UNC\\" + absolute[2:]
-    return "\\\\?\\" + absolute
+class _CaptureFilesystem:
+    @staticmethod
+    def _filesystem_path(path: Path, *, platform: str = os.name) -> str:
+        value = os.fspath(path)
+        if platform != "nt":
+            return value
+        absolute = os.path.abspath(value) if os.name == "nt" else ntpath.abspath(value)
+        if absolute.startswith("\\\\?\\"):
+            return absolute
+        if absolute.startswith("\\\\"):
+            return "\\\\?\\UNC\\" + absolute[2:]
+        return "\\\\?\\" + absolute
 
-
-def _write_exact(path: Path, content: bytes) -> bool:
-    filesystem_path = _filesystem_path(path)
-    if os.path.exists(filesystem_path):
-        with open(filesystem_path, "rb") as source:
-            existing = source.read()
-        if existing != content:
-            raise ValueError(f"content-addressed file differs: {path}")
-        return False
-    parent = os.path.dirname(filesystem_path)
-    os.makedirs(parent, exist_ok=True)
-    descriptor, temporary_value = tempfile.mkstemp(
-        prefix=f".{path.name}.", suffix=".tmp", dir=parent
-    )
-    try:
-        with os.fdopen(descriptor, "wb") as output:
-            output.write(content)
-        try:
-            os.link(temporary_value, filesystem_path)
-        except FileExistsError:
+    @staticmethod
+    def _write_exact(path: Path, content: bytes) -> bool:
+        filesystem_path = _filesystem_path(path)
+        if os.path.exists(filesystem_path):
             with open(filesystem_path, "rb") as source:
                 existing = source.read()
             if existing != content:
                 raise ValueError(f"content-addressed file differs: {path}")
             return False
-        return True
-    finally:
+        parent = os.path.dirname(filesystem_path)
+        os.makedirs(parent, exist_ok=True)
+        descriptor, temporary_value = tempfile.mkstemp(
+            prefix=f".{path.name}.", suffix=".tmp", dir=parent
+        )
         try:
-            os.unlink(temporary_value)
-        except FileNotFoundError:
-            pass
+            with os.fdopen(descriptor, "wb") as output:
+                output.write(content)
+            try:
+                os.link(temporary_value, filesystem_path)
+            except FileExistsError:
+                with open(filesystem_path, "rb") as source:
+                    existing = source.read()
+                if existing != content:
+                    raise ValueError(f"content-addressed file differs: {path}")
+                return False
+            return True
+        finally:
+            try:
+                os.unlink(temporary_value)
+            except FileNotFoundError:
+                pass
 
 
-def _read_text_exact(path: Path) -> str:
-    with open(_filesystem_path(path), encoding="utf-8") as source:
-        return source.read()
+_filesystem_path = _CaptureFilesystem._filesystem_path
+_write_exact = _CaptureFilesystem._write_exact
 
 
 def capture_assignment_request(request: Any, target: Any) -> dict[str, Any]:
@@ -286,7 +287,8 @@ def capture_assignment_request(request: Any, target: Any) -> dict[str, Any]:
 
 def load_captured_request(request_file: str | Path) -> dict[str, Any]:
     path = Path(request_file).expanduser().resolve()
-    request = json.loads(_read_text_exact(path))
+    with open(_filesystem_path(path), encoding="utf-8") as source:
+        request = json.loads(source.read())
     if not isinstance(request, dict) or request.get("schema") != REQUEST_SCHEMA:
         raise ValueError(f"request must use {REQUEST_SCHEMA}")
     if set(request) != {"schema", "source", "retention", "workDefinition"}:
@@ -309,7 +311,8 @@ def load_captured_request(request_file: str | Path) -> dict[str, Any]:
     )
     for receipt_name in receipt_names:
         receipt_path = receipt_dir / receipt_name
-        receipt = json.loads(_read_text_exact(receipt_path))
+        with open(_filesystem_path(receipt_path), encoding="utf-8") as source:
+            receipt = json.loads(source.read())
         declared = str(receipt.pop("receiptRoot", ""))
         if (
             receipt.get("schema") != CAPTURE_RECEIPT_SCHEMA
@@ -794,14 +797,24 @@ def list_sealed_assignment_states(
     return {**body, "index_root": assignment_canonical.semantic_root(body)}
 
 
-_outcome_bindings = assignment_outcome.OutcomeBindings(
-    assignment_canonical, _sealed_state_storage
-)
-_validate_outcome_artifact = _outcome_bindings.validate_artifact
-outcome_binding_plan = _outcome_bindings.plan
-verify_outcome_binding = _outcome_bindings.verify
-apply_outcome_binding = _outcome_bindings.apply
-list_outcome_bindings = _outcome_bindings.list
+assignment_outcome._canonical = assignment_canonical
+assignment_outcome._storage_resolver = lambda root: _sealed_state_storage(root)
+_validate_outcome_artifact = assignment_outcome.validate_artifact
+outcome_binding_plan = assignment_outcome.plan
+verify_outcome_binding = assignment_outcome.verify
+apply_outcome_binding = assignment_outcome.apply
+list_outcome_bindings = assignment_outcome.list_bindings
+
+for _public_name, _public_function in (
+    ("_validate_outcome_artifact", _validate_outcome_artifact),
+    ("outcome_binding_plan", outcome_binding_plan),
+    ("verify_outcome_binding", verify_outcome_binding),
+    ("apply_outcome_binding", apply_outcome_binding),
+    ("list_outcome_bindings", list_outcome_bindings),
+):
+    _public_function.__name__ = _public_name
+    _public_function.__qualname__ = _public_name
+    _public_function.__module__ = __name__
 
 
 def _binding_endpoint(

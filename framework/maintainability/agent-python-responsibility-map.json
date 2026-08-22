@@ -98,11 +98,11 @@
         }
       },
       "current": {
-        "physicalLines": 1059,
-        "responsibilities": 29,
+        "physicalLines": 1072,
+        "responsibilities": 27,
         "functionRisk": {
-          "functions": 26,
-          "total": 628,
+          "functions": 25,
+          "total": 642,
           "maximum": 108
         }
       },
@@ -113,7 +113,11 @@
       "ownedDefinitions": [
         "inspect_binding",
         "installed_runtime_entrypoint",
-        "OutcomeBindings"
+        "validate_artifact",
+        "plan",
+        "verify",
+        "apply",
+        "list_bindings"
       ],
       "facadeSymbols": [
         "binding_provenance",
@@ -229,11 +233,11 @@
         "currentSources": [
           {
             "path": "framework/core/src/python/kungfu/assignment_orchestration.py",
-            "sha256": "a10a5951201573d365e259c36e18eb9514727bde97cbfa30e2809f8fe08da72d"
+            "sha256": "c6edfa980dd768100eef6d4041b2ca0fe3b88fd99dcf719ed1b7c9ceceea7899"
           },
           {
             "path": "framework/core/src/python/kungfu/assignment_outcome.py",
-            "sha256": "43a8210fcaeb85151215d0d44f3ca2f4cb6d293d710ca20928c78c44f9be66ff"
+            "sha256": "1c47cdf54f608aadef24479a29b8f100833baa7a1cc03504e1c998705eb4a203"
           },
           {
             "path": "framework/core/src/python/kungfu/cli/commands/assignment.py",
@@ -260,12 +264,12 @@
               "framework/core/src/python/kungfu/assignment_outcome.py",
               "framework/core/src/python/kungfu/cli/commands/assignment.py"
             ],
-            "responsibilities": 97,
+            "responsibilities": 99,
             "functionRisk": {
-              "functions": 113,
-              "baseRisk": 1864,
-              "changeRisk": 2228,
-              "maximum": 254
+              "functions": 100,
+              "baseRisk": 1906,
+              "changeRisk": 2240,
+              "maximum": 255
             }
           }
         },
@@ -277,23 +281,22 @@
           },
           "current": {
             "outcomeOwnerPath": "framework/core/src/python/kungfu/assignment_outcome.py",
-            "ownerPhysicalLines": 483,
-            "ownerResponsibilities": 1
+            "ownerPhysicalLines": 431,
+            "ownerResponsibilities": 5
           },
           "cohesiveExtraction": {
-            "ownerClass": "OutcomeBindings",
-            "ownedMethods": [
+            "ownerFunctions": [
               "validate_artifact",
               "plan",
               "verify",
               "apply",
-              "list"
+              "list_bindings"
             ],
             "sharedAuthorities": [
               "assignment_canonical canonical-byte and schema validation",
               "the existing _sealed_state_storage resolver"
             ],
-            "evidence": "The extracted owner decomposes the retired 325-risk validator and owns validation, settled-coordinate binding, immutable collision checks, verification, and conflict-aware indexing. The facade preserves imports with bound callables but contains no duplicate outcome implementation or writer."
+            "evidence": "The extracted module-level owner materially simplifies the retired 325-risk validator to 252 base risk and owns validation, settled-coordinate binding, immutable collision checks, verification, and conflict-aware indexing. The facade preserves exact callable metadata with aliases to those real owner functions and contains no duplicate outcome implementation or writer."
           },
           "semanticAmplification": "No new authority, topology, policy, persistence format, generated surface, or platform branch."
         }

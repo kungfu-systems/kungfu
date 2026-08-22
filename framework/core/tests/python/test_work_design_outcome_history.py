@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 import inspect
+import pickle
 
 import pytest
 
@@ -134,6 +135,41 @@ def test_outcome_facade_keeps_public_call_contract_and_schema_authority():
     assert str(inspect.signature(assignment_orchestration.list_outcome_bindings)) == (
         "(workspace_root: 'str | Path') -> 'dict[str, Any]'"
     )
+
+
+def test_outcome_facade_keeps_function_identity_docs_and_pickle_contract():
+    expected_docs = {
+        "_validate_outcome_artifact": None,
+        "outcome_binding_plan": (
+            "Plan an additive immutable outcome binding beside portable Work seals."
+        ),
+        "verify_outcome_binding": None,
+        "apply_outcome_binding": None,
+        "list_outcome_bindings": (
+            "Read and fail closed over additive rooted outcome bindings."
+        ),
+    }
+    for name, expected_doc in expected_docs.items():
+        function = getattr(assignment_orchestration, name)
+        assert inspect.isfunction(function)
+        assert function.__name__ == name
+        assert function.__qualname__ == name
+        assert function.__module__ == "kungfu.assignment_orchestration"
+        assert function.__doc__ == expected_doc
+        assert pickle.loads(pickle.dumps(function)) is function
+
+
+def test_outcome_facade_resolves_storage_after_monkeypatch(tmp_path, monkeypatch):
+    storage_root = tmp_path / "resolved-late"
+    monkeypatch.setattr(
+        assignment_orchestration,
+        "_sealed_state_storage",
+        lambda _root: (storage_root, "late-bound-test"),
+    )
+
+    result = assignment_orchestration.list_outcome_bindings(tmp_path)
+
+    assert result["storage_kind"] == "late-bound-test"
 
 
 @pytest.mark.parametrize(
