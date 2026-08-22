@@ -33,6 +33,15 @@ const ioSource = path.join(
   'io',
   'io.cpp',
 );
+const ioHeader = path.join(
+  coreDir,
+  'src',
+  'libkungfu',
+  'include',
+  'kungfu',
+  'runtime',
+  'io.h',
+);
 const watcherProbeSource = fs.readFileSync(probe, 'utf8');
 const reconnectProbeSource = watcherProbeSource.slice(
   watcherProbeSource.indexOf('async function reconnectProbe()'),
@@ -121,7 +130,20 @@ test('watcher reconnect fixture sequences readiness, owns process trees, and bou
     watcherProbeSource,
     /\['\/pid', String\(child\.pid\), '\/T', '\/F'\]/,
   );
-  assert.match(watcherProbeSource, /process\.kill\(-child\.pid, 'SIGTERM'\)/);
+  assert.match(
+    watcherProbeSource,
+    /signalPosixProcessTree\(child, 'SIGTERM'\)/,
+  );
+  assert.match(
+    watcherProbeSource,
+    /signalPosixProcessTree\(child, 'SIGKILL'\)/,
+  );
+  const posixSignalSource = watcherProbeSource.slice(
+    watcherProbeSource.indexOf('function signalPosixProcessTree('),
+    watcherProbeSource.indexOf('async function stopCoordinator('),
+  );
+  assert.match(posixSignalSource, /process\.kill\(-child\.pid, signal\)/);
+  assert.match(posixSignalSource, /child\.kill\(signal\)/);
   const coordinatorReady = reconnectProbeSource.indexOf(
     "'initial-coordinator-startup'",
   );
@@ -157,8 +179,10 @@ test('watcher reconnect fixture sequences readiness, owns process trees, and bou
   assert.match(exitWaitSource, /let settled = false;/);
 });
 
-test('peer usability keeps one bounded handshake across slow-joiner retries', () => {
+test('peer usability persists one bounded handshake across slow-joiner retries', () => {
   const source = fs.readFileSync(ioSource, 'utf8');
+  const header = fs.readFileSync(ioHeader, 'utf8');
+  const watcher = fs.readFileSync(watcherSource, 'utf8');
   const peerUsabilitySource = source.slice(
     source.indexOf('bool io_device_peer::is_usable()'),
     source.indexOf('bool io_device_peer::setup()'),
@@ -166,16 +190,50 @@ test('peer usability keeps one bounded handshake across slow-joiner retries', ()
   assert.match(source, /constexpr int USABILITY_PROBE_ATTEMPTS = 5;/);
   assert.match(
     peerUsabilitySource,
-    /if \(not publisher\.setup\(\) or not observer\.setup\(\)\)/,
+    /std::unique_lock<std::mutex> guard\(usability_probe_mutex_\)/,
+  );
+  assert.match(
+    peerUsabilitySource,
+    /if \(not usability_probe_publisher_ or not usability_probe_observer_\)/,
+  );
+  assert.match(
+    peerUsabilitySource,
+    /if \(not observer->setup\(\) or not publisher->setup\(\)\)/,
+  );
+  assert.match(peerUsabilitySource, /usability_probe_condition_\.wait_for\(/);
+  assert.match(
+    peerUsabilitySource,
+    /make_shared<nanomsg_observer_peer>\(\*this, false, true\)/,
+  );
+  assert.match(
+    peerUsabilitySource,
+    /make_shared<nanomsg_publisher_peer>\(\*this, false, true\)/,
   );
   assert.match(
     peerUsabilitySource,
     /for \(int attempt = 0; attempt < USABILITY_PROBE_ATTEMPTS; \+\+attempt\)/,
   );
   assert.equal(
-    peerUsabilitySource.match(/nanomsg_observer_peer observer/g)?.length,
+    peerUsabilitySource.match(/make_shared<nanomsg_observer_peer>/g)?.length,
     1,
     'the SUB socket must not be recreated inside the retry loop',
+  );
+  assert.match(
+    peerUsabilitySource,
+    /usability_probe_publisher_->is_usable\(\) and usability_probe_observer_->is_usable\(\)/,
+  );
+  assert.match(header, /std::mutex usability_probe_mutex_;/);
+  assert.match(
+    header,
+    /std::atomic<bool> usability_probe_cancelled_\{false\};/,
+  );
+  assert.match(header, /std::condition_variable usability_probe_condition_;/);
+  assert.match(header, /publisher_ptr usability_probe_publisher_;/);
+  assert.match(header, /observer_ptr usability_probe_observer_;/);
+  assert.equal(
+    watcher.match(/get_io_device\(\)->cancel_usability_probe\(\);/g)?.length,
+    2,
+    'quit and environment cleanup must both cancel an in-flight readiness probe',
   );
 });
 
@@ -222,7 +280,9 @@ test(
   'environment cleanup stops and joins a live watcher during addon exit',
   nativeTest,
   () => {
-    assert.equal(runProbe('addon-exit'), null);
+    for (let attempt = 0; attempt < 6; attempt += 1) {
+      assert.equal(runProbe('addon-exit'), null);
+    }
   },
 );
 

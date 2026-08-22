@@ -76,15 +76,7 @@ WorkspaceLoader = Callable[[WorkspaceIdentity], dict[str, Any]]
 def _load_parallel_component(identity: WorkspaceIdentity) -> dict[str, Any]:
     """Load one default component in an isolated POSIX reader process."""
 
-    from kungfu import work_control
-
-    return _safe_component(
-        identity,
-        lambda workspace: _load_component(
-            workspace,
-            relation_loader=work_control.assignment_relations,
-        ),
-    )
+    return _safe_component(identity, _load_component)
 
 
 def query_federation(
@@ -198,15 +190,6 @@ def query_federation(
             )
     else:
         component_loader = loader
-        if loader is _load_component:
-            from kungfu import work_control
-
-            assignment_relations = work_control.assignment_relations
-
-            def load_parallel_component(identity: WorkspaceIdentity) -> dict[str, Any]:
-                return _load_component(identity, relation_loader=assignment_relations)
-
-            component_loader = load_parallel_component
         with ThreadPoolExecutor(max_workers=max_workers) as component_executor:
             components = list(
                 component_executor.map(
@@ -755,11 +738,7 @@ def _safe_component(
         return _bind_component_envelope(result)
 
 
-def _load_component(
-    identity: WorkspaceIdentity,
-    *,
-    relation_loader: Callable[[str], list[dict[str, Any]]] | None = None,
-) -> dict[str, Any]:
+def _load_component(identity: WorkspaceIdentity) -> dict[str, Any]:
     """Read one component through the root-bound Fact material protocol.
 
     Work Control's high-level query correctly requires its exact active
@@ -857,11 +836,6 @@ def _load_component(
 
     from kungfu.storage import service as storage_service
 
-    if relation_loader is None:
-        from kungfu import work_control
-
-        relation_loader = work_control.assignment_relations
-
     materials = storage_service.fact_material_list(runtime_dir)
     if materials.get("schema") != "kungfu.facts.material-catalog/v1":
         raise ValueError("unsupported Fact material catalog")
@@ -871,6 +845,7 @@ def _load_component(
         raise ValueError("Fact material payload map is absent")
     initiatives: list[dict[str, Any]] = []
     assignments: list[dict[str, Any]] = []
+    stored_relations: dict[str, dict[str, Any]] = {}
     phase_by_assignment: dict[str, tuple[int, str]] = {}
     for fact in canonical_facts:
         surface = str(fact.get("fact_surface_id") or "")
@@ -897,6 +872,9 @@ def _load_component(
         elif surface == "kungfu.initiative-assignment.assignment":
             assignments.append(record)
         elif surface == "kungfu.initiative-assignment.completion-claim":
+            stored_relation = _material_relation(record)
+            if stored_relation is not None:
+                stored_relations[stored_relation["relation_root"]] = stored_relation
             links = payload.get("links")
             linked_assignment = (
                 str(links.get("assignment_id") or "")
@@ -963,11 +941,10 @@ def _load_component(
         )
         for row in assignments
     ]
-    stored_relations = relation_loader(runtime_dir)
     derived_relations = _material_relations(projected_assignments)
     relations = {
         str(row.get("relation_root") or ""): row
-        for row in [*stored_relations, *derived_relations]
+        for row in [*stored_relations.values(), *derived_relations]
         if row.get("relation_root")
     }
     profile_binding = _fact_profile_binding(materials)
@@ -1011,6 +988,29 @@ def _material_lifecycle(
         "globally_completed": phase == "continuation-decided",
         "projection": "root-bound-fact-material",
     }
+
+
+def _material_relation(record: Mapping[str, Any]) -> dict[str, Any] | None:
+    """Verify one relation event directly from root-bound Fact material."""
+
+    if record.get("claim_type") != "assignment-relation-event":
+        return None
+    relation = record.get("relation")
+    if not isinstance(relation, Mapping):
+        return None
+    verified = build_relation(
+        str(relation.get("relation_type") or ""),
+        relation.get("source") or {},
+        relation.get("target") or {},
+        evidence_roots=relation.get("evidence_roots") or [],
+        state=cast(
+            Literal["proposed", "accepted", "revoked"],
+            str(relation.get("state") or "accepted"),
+        ),
+    )
+    if verified["relation_root"] != relation.get("relation_root"):
+        raise ValueError("stored Assignment relation root does not verify")
+    return verified
 
 
 def _material_completion_phase(record: Mapping[str, Any]) -> str:

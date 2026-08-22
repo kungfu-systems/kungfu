@@ -794,6 +794,7 @@ void Watcher::SyncSnapshot() {
 void Watcher::StopAndJoinForCleanup() {
   environment_closing_ = true;
   worker_live_ = false;
+  get_io_device()->cancel_usability_probe();
   if (worker_thread_.joinable()) {
     worker_thread_.join();
   }
@@ -840,6 +841,7 @@ void Watcher::Quit(const Napi::CallbackInfo &info) {
   RequestDeregister();
   quit_ = true;
   worker_live_ = false;
+  get_io_device()->cancel_usability_probe();
 }
 
 void Watcher::RequestDeregister() {

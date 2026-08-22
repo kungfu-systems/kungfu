@@ -117,6 +117,8 @@ public:
 
   int dial(const std::string &path, int flags = 0);
 
+  int dial_quietly(const std::string &path, int flags = 0);
+
   void close();
 
   // Send policy changed to flag = 0 at app register, then notify with flag = NNG_FLAG_NONBLOCK
@@ -137,6 +139,8 @@ public:
   [[nodiscard]] const std::string &last_message() const { return message_; };
 
 private:
+  int dial_impl(const std::string &path, int flags, bool quiet_error);
+
   nng_socket sock_ = NNG_SOCKET_INITIALIZER;
   protocol protocol_;
   std::string url_;

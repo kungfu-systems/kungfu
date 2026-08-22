@@ -1,6 +1,5 @@
 # SPDX-License-Identifier: Apache-2.0
 
-import json
 import time
 from pathlib import Path
 from typing import Any
@@ -8,6 +7,7 @@ from typing import Any
 import kungfu
 
 from kungfu.action_envelope import canonical_json_bytes, payload_hash
+from kungfu.storage.transfer import StorageTransfer, _binding_json, _u64
 
 PAYLOAD_STATE_PRESENT = "present"
 PAYLOAD_STATES = ("present", "redacted", "absent", "missing")
@@ -22,20 +22,6 @@ RUNTIME_STORAGE_SERVICE_SCHEMA = "kungfu.runtime.storage-service/v1"
 
 def _runtime():
     return kungfu.__binding__.runtime
-
-
-def _u64(value: int | None) -> str:
-    return str(value or 0)
-
-
-def _binding_json(value: Any) -> Any:
-    if isinstance(value, dict):
-        return {key: _binding_json(item) for key, item in value.items()}
-    if isinstance(value, list):
-        return [_binding_json(item) for item in value]
-    if isinstance(value, int) and not isinstance(value, bool) and value > 2**63 - 1:
-        return str(value)
-    return value
 
 
 def service_capabilities() -> dict[str, Any]:
@@ -89,14 +75,6 @@ def verify_import_manifest(manifest: dict[str, Any]) -> list[dict[str, Any]]:
     return [
         dict(issue) for issue in _runtime().verify_storage_import_manifest(manifest)
     ]
-
-
-def _write_json(path: Path, data: dict[str, Any]) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(
-        json.dumps(data, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
-        encoding="utf-8",
-    )
 
 
 def accept_manifest(
@@ -1503,15 +1481,7 @@ def episode_projection_rebuild(runtime_dir: str | Path) -> dict[str, Any]:
     return dict(_runtime().storage_episode_projection_rebuild_typed(str(runtime_dir)))
 
 
-def write_jsonl(records: list[dict[str, Any]], out_path: str | Path) -> None:
-    with open(out_path, "w", encoding="utf-8") as f:
-        for record in records:
-            f.write(
-                json.dumps(
-                    record, ensure_ascii=False, sort_keys=True, separators=(",", ":")
-                )
-                + "\n"
-            )
+write_jsonl = StorageTransfer.write_jsonl
 
 
 def export_records(
@@ -1523,121 +1493,15 @@ def export_records(
     return [
         dict(row)
         for row in _runtime().export_storage_records(
-            str(runtime_dir),
-            source_id,
-            range_filter or {},
+            str(runtime_dir), source_id, range_filter or {}
         )
     ]
 
 
-def export_jsonl(
-    runtime_dir: str | Path,
-    out_path: str | Path,
-    *,
-    source_id: str,
-    range_filter: dict[str, Any] | None = None,
-) -> dict[str, Any]:
-    manifest = load_latest_manifest(runtime_dir, source_id)
-    if manifest is None:
-        raise FileNotFoundError(f"no accepted manifest for source: {source_id}")
-    records = export_records(
-        runtime_dir, source_id=source_id, range_filter=range_filter
-    )
-    write_jsonl(records, out_path)
-    return {
-        "ok": True,
-        "scope": "source",
-        "source_id": source_id,
-        "range": range_filter,
-        "sync_root": manifest.get("sync_root"),
-        "format": "jsonl",
-        "out": str(Path(out_path).resolve()),
-        "records": len(records),
-    }
-
-
-def export_bundle_json(
-    runtime_dir: str | Path,
-    out_path: str | Path,
-    *,
-    source_id: str | None = None,
-    episode_id: int | None = None,
-    range_filter: dict[str, Any] | None = None,
-    thin: bool = False,
-) -> dict[str, Any]:
-    bundle = build_export_bundle(
-        runtime_dir,
-        source_id=source_id,
-        episode_id=episode_id,
-        range_filter=range_filter,
-        thin=thin,
-    )
-    _write_json(Path(out_path), bundle)
-    scope = "episode" if episode_id else "source"
-    return {
-        "ok": True,
-        "scope": scope,
-        "source_id": source_id,
-        "episode_id": episode_id,
-        "range": range_filter,
-        "sync_root": bundle.get("manifest", {}).get("sync_root"),
-        "format": "bundle-json",
-        "out": str(Path(out_path).resolve()),
-        "records": len(bundle.get("records", [])),
-    }
-
-
-def build_export_bundle(
-    runtime_dir: str | Path,
-    *,
-    source_id: str | None = None,
-    episode_id: int | None = None,
-    range_filter: dict[str, Any] | None = None,
-    thin: bool = False,
-) -> dict[str, Any]:
-    scope = "episode" if episode_id else "source"
-    return dict(
-        _runtime().run_storage_service_operation(
-            "export_bundle",
-            str(runtime_dir),
-            {
-                "scope": scope,
-                "source_id": source_id,
-                "episode_id": _u64(episode_id),
-                "range": range_filter or {},
-                "thin": thin,
-            },
-        )
-    )
-
-
-def import_bundle(
-    runtime_dir: str | Path,
-    bundle: dict[str, Any],
-    *,
-    verify: bool = True,
-    execute: bool = False,
-) -> dict[str, Any]:
-    source_id = str(bundle.get("source_id") or "")
-    scope = (
-        "episode"
-        if bundle.get("schema") == "kungfu.storage.episode-bundle/v1"
-        else "source"
-    )
-    return dict(
-        _runtime().run_storage_service_operation(
-            "import_bundle",
-            str(runtime_dir),
-            {
-                "scope": scope if source_id or scope == "episode" else "all",
-                "source_id": source_id or None,
-                "episode_id": _u64(bundle.get("episode_id")),
-                "verify": verify,
-                "dry_run": not execute,
-                "bundle": _binding_json(bundle),
-            },
-        )
-    )
+export_jsonl = StorageTransfer.export_jsonl
+export_bundle_json = StorageTransfer.export_bundle_json
+build_export_bundle = StorageTransfer.build_export_bundle
+import_bundle = StorageTransfer.import_bundle
 
 
 def episode_admission(

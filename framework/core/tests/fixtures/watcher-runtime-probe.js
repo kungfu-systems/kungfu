@@ -162,6 +162,34 @@ function waitForExitWithin(child, timeoutMs) {
   });
 }
 
+function signalPosixProcessTree(child, signal) {
+  let groupError = null;
+  try {
+    process.kill(-child.pid, signal);
+  } catch (error) {
+    if (error.code !== 'ESRCH') groupError = error;
+  }
+
+  let childSignalled = false;
+  if (child.exitCode === null && child.signalCode === null) {
+    try {
+      childSignalled = child.kill(signal);
+    } catch (error) {
+      if (error.code !== 'ESRCH' && groupError === null) groupError = error;
+    }
+  }
+  if (
+    groupError !== null &&
+    !childSignalled &&
+    child.exitCode === null &&
+    child.signalCode === null
+  ) {
+    throw new Error(
+      `failed to signal coordinator process tree with ${signal}: ${groupError.message}`,
+    );
+  }
+}
+
 async function stopCoordinator(child) {
   if (child.exitCode !== null || child.signalCode !== null) return;
   if (process.platform === 'win32') {
@@ -179,13 +207,13 @@ async function stopCoordinator(child) {
       );
     }
   } else {
-    process.kill(-child.pid, 'SIGTERM');
+    signalPosixProcessTree(child, 'SIGTERM');
   }
   if (await waitForExitWithin(child, 3_000)) return;
   if (process.platform === 'win32') {
     child.kill();
   } else {
-    process.kill(-child.pid, 'SIGKILL');
+    signalPosixProcessTree(child, 'SIGKILL');
   }
   if (!(await waitForExitWithin(child, 3_000))) {
     throw new Error('coordinator did not exit after SIGKILL');

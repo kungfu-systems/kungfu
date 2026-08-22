@@ -83,12 +83,12 @@ public:
 
 class nanomsg_publisher_peer : public nanomsg_publisher {
 public:
-  nanomsg_publisher_peer(const io_device &io_device, bool low_latency)
-      : nanomsg_publisher(io_device, low_latency, protocol::PUSH) {}
+  nanomsg_publisher_peer(const io_device &io_device, bool low_latency, bool quiet_setup_error = false)
+      : nanomsg_publisher(io_device, low_latency, protocol::PUSH), quiet_setup_error_(quiet_setup_error) {}
 
   bool setup() override {
     socket_.setsockopt_ms(NNG_OPT_SENDTIMEO, DEFAULT_NOTICE_TIMEOUT);
-    return socket_.dial(dial_path_) == 0;
+    return (quiet_setup_error_ ? socket_.dial_quietly(dial_path_) : socket_.dial(dial_path_)) == 0;
   }
 
   bool is_usable() override {
@@ -101,6 +101,9 @@ public:
     ping["data"] = "";
     return publish(ping.dump()) == 0;
   }
+
+private:
+  const bool quiet_setup_error_;
 };
 
 class nanomsg_observer : public observer, protected nanomsg_resource {
@@ -144,16 +147,19 @@ public:
 
 class nanomsg_observer_peer : public nanomsg_observer {
 public:
-  nanomsg_observer_peer(const io_device &io_device, bool low_latency)
-      : nanomsg_observer(io_device, low_latency, protocol::SUBSCRIBE) {}
+  nanomsg_observer_peer(const io_device &io_device, bool low_latency, bool quiet_setup_error = false)
+      : nanomsg_observer(io_device, low_latency, protocol::SUBSCRIBE), quiet_setup_error_(quiet_setup_error) {}
 
   bool setup() override {
     socket_.setsockopt_str(NNG_OPT_SUB_SUBSCRIBE, "");
     socket_.setsockopt_ms(NNG_OPT_RECVTIMEO, DEFAULT_RECV_TIMEOUT);
-    return socket_.dial(dial_path_) == 0;
+    return (quiet_setup_error_ ? socket_.dial_quietly(dial_path_) : socket_.dial(dial_path_)) == 0;
   }
 
   bool is_usable() override { return socket_.recv(NNG_FLAG_ALLOC) == 0; }
+
+private:
+  const bool quiet_setup_error_;
 };
 
 namespace {
@@ -252,24 +258,54 @@ io_device_peer::io_device_peer(data::location_ptr home, bool low_latency)
     : io_device(std::move(home), low_latency, io_mapping_policy::peer()) {}
 
 bool io_device_peer::is_usable() {
-  nanomsg_publisher_peer publisher(*this, false);
-  nanomsg_observer_peer observer(*this, false);
-  if (not publisher.setup() or not observer.setup()) {
+  std::unique_lock<std::mutex> guard(usability_probe_mutex_);
+  if (usability_probe_cancelled_.load()) {
     return false;
   }
-  // Keep the same sockets across this bounded handshake. Recreating the SUB
-  // socket after every missed pong repeats the NNG slow-joiner window on
-  // Windows and can prevent a healthy coordinator from ever becoming usable.
+  if (not usability_probe_publisher_ or not usability_probe_observer_) {
+    // Probe failures are an expected readiness state. Keep them silent so an
+    // addon cleanup hook can cancel an in-flight probe without racing a logger
+    // whose process-exit teardown has already begun.
+    auto observer = std::make_shared<nanomsg_observer_peer>(*this, false, true);
+    auto publisher = std::make_shared<nanomsg_publisher_peer>(*this, false, true);
+    if (not observer->setup() or not publisher->setup()) {
+      return false;
+    }
+    usability_probe_observer_ = std::move(observer);
+    usability_probe_publisher_ = std::move(publisher);
+  }
+  // Keep the same sockets across bounded calls. A single call must stay short
+  // because Watcher construction performs this check on the Node thread, while
+  // retaining the pair lets the dedicated worker survive Windows' NNG
+  // slow-joiner window instead of restarting it after every missed pong.
   for (int attempt = 0; attempt < USABILITY_PROBE_ATTEMPTS; ++attempt) {
-    std::this_thread::sleep_for(std::chrono::milliseconds(TEST_USABLE_TIMEOUT));
-    if (publisher.is_usable() and observer.is_usable()) {
+    if (usability_probe_condition_.wait_for(guard, std::chrono::milliseconds(TEST_USABLE_TIMEOUT),
+                                            [this] { return usability_probe_cancelled_.load(); })) {
+      return false;
+    }
+    if (usability_probe_publisher_->is_usable() and usability_probe_observer_->is_usable()) {
+      usability_probe_observer_.reset();
+      usability_probe_publisher_.reset();
       return true;
     }
   }
   return false;
 }
 
+void io_device_peer::cancel_usability_probe() {
+  usability_probe_cancelled_ = true;
+  usability_probe_condition_.notify_all();
+  std::lock_guard<std::mutex> guard(usability_probe_mutex_);
+  usability_probe_observer_.reset();
+  usability_probe_publisher_.reset();
+}
+
 bool io_device_peer::setup() {
+  {
+    std::lock_guard<std::mutex> guard(usability_probe_mutex_);
+    usability_probe_observer_.reset();
+    usability_probe_publisher_.reset();
+  }
   publisher_ = std::make_shared<nanomsg_publisher_peer>(*this, is_low_latency());
   observer_ = std::make_shared<nanomsg_observer_peer>(*this, is_low_latency());
   auto is_live_mode = get_home()->mode == mode::LIVE;

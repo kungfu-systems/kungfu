@@ -67,9 +67,9 @@
       "compatibility_owner": "libkungfu",
       "identity_domain": "workspace-relative storage role, not semantic object identity",
       "protocol_id": "kungfu.workspace.episode-layout/v1",
-      "source": "framework/core/src/libkungfu/include/kungfu/runtime/storage/service.h",
+      "source": "framework/core/src/libkungfu/include/kungfu/runtime/storage/service_layout.h",
       "source_role": "workspace-path-and-persistence-class-inventory",
-      "source_root": "sha256:0494977ad8ee1b2526282d5c23aac16092c5ec1e932393df652df18c74f7ed85",
+      "source_root": "sha256:2b56f80027ee3e407544f657f177eb10853a6e992ab30a54e2ce9eb06d1a7e42",
       "version_axis": "workspace layout version"
     },
     {
@@ -117,7 +117,7 @@
     "sources": [
       {
         "path": "framework/format/kungfu-portable-format-authority.contract.json",
-        "root": "sha256:d6be3712e8f3a191024d3742120927e12186dd1a5ca6a7b8c72f95498512c975"
+        "root": "sha256:382655b514b0d5a0e60dcc70d70e7356ab5a3c752e6130055638b9dda23541f4"
       },
       {
         "path": "framework/fact/kungfu-fact-cut-kernel.contract.json",
@@ -144,8 +144,8 @@
         "root": "sha256:a4654f4b61ccc3527e3f61da4369c126bf5ccbe398b8c78913c5907abdf08037"
       },
       {
-        "path": "framework/core/src/libkungfu/include/kungfu/runtime/storage/service.h",
-        "root": "sha256:0494977ad8ee1b2526282d5c23aac16092c5ec1e932393df652df18c74f7ed85"
+        "path": "framework/core/src/libkungfu/include/kungfu/runtime/storage/service_layout.h",
+        "root": "sha256:2b56f80027ee3e407544f657f177eb10853a6e992ab30a54e2ce9eb06d1a7e42"
       },
       {
         "path": "framework/core/architecture/layered-api-encoding-boundary.contract.json",
