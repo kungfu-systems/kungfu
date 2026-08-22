@@ -3,7 +3,7 @@
   "contract": "kungfu-buildchain-dev-delivery-warrant-queue",
   "repository": "kungfu-systems/kungfu",
   "protectedBase": "dev/v4/v4.0",
-  "generation": 5417,
+  "generation": 5418,
   "fencingCounter": 596,
   "policy": {
     "agingSeconds": 900,
@@ -42825,8 +42825,43 @@
         "framework/tui/src/projects-view.test.ts",
         "framework/tui/src/projects-view/index.tsx"
       ]
+    },
+    {
+      "repository": "kungfu-systems/kungfu",
+      "protectedBase": "dev/v4/v4.0",
+      "pullRequestNumber": 3354,
+      "assignmentRoot": "sha256:753b02f6c80008ce5aca3d67785a9e6ec877daeaba2af6622a17f95475c5d30e",
+      "initiativeRoot": "sha256:bfff817933e5a5ad693e4b902a84f6cc3a251235dd7377cb4091d92f805fa7ff",
+      "sourceIdentityRoot": "sha256:a1e5772d4f3338a5202a519e3a9e5fd515117bc983d3d53eed89e3cb68b7d89e",
+      "deliveryClass": "native-proof-required",
+      "candidateId": "sha256:62f90fd2cf65ac41c82ae0b9ad6c81e34c6b09a74818142c080124f73877f480",
+      "sourceHead": "13f5c55037a49e606452a1cc1578bc2e6fa0787f",
+      "sourcePatchRoot": "sha256:e72f54d178e91e843ed898feea2385d8fba484cfe8b66ba8a5bcb84bf12d92c1",
+      "sourceProofRoot": "sha256:1d7714d69f78c49f0c1f5f2489c17d12bcd6871051419890ac8d0235def999f4",
+      "planRoot": "sha256:dca6578acd910e4ea96729de7f2e188e49d8e294503474afbd1096d9c36c723b",
+      "closureRoot": "sha256:cccac6fb74fb3ab2478aa3e56cda7b47e6e301be63519f0ee992aeb3fea2eea6",
+      "dependencyRoot": "sha256:5eeb4038354aee16981ae9282e507a7f154c452006874eb1f13a29f43fe480aa",
+      "toolchainRoot": "sha256:2ecb07894954a2e0de022615d4561e5ba3ae68376401941ecff77be03cd75a0f",
+      "environmentRoot": "sha256:c5f5da5917c6ff93a509a62b18d4b9b69325755c4c7229b553b0016cde83788f",
+      "sourceWorkflowRunId": 32557118442,
+      "priority": "ordinary",
+      "enqueuedAt": "2026-08-22T07:16:07.596Z",
+      "updatedAt": "2026-08-22T07:16:07.596Z",
+      "attempts": 1,
+      "recoveries": 0,
+      "status": "queued",
+      "terminal": null,
+      "affectedPaths": [
+        "framework/core/src/bindings/node/binding/watcher.cpp",
+        "framework/core/src/libkungfu/include/kungfu/runtime/io.h",
+        "framework/core/src/libkungfu/include/kungfu/runtime/nanomsg/socket.h",
+        "framework/core/src/libkungfu/src/runtime/io/io.cpp",
+        "framework/core/src/libkungfu/src/runtime/util/nanomsg.cpp",
+        "framework/core/tests/fixtures/watcher-runtime-probe.js",
+        "framework/core/tests/watcher-runtime-boundary.test.js"
+      ]
     }
   ],
-  "updatedAt": "2026-08-22T07:12:29.644Z",
-  "stateRoot": "sha256:23e3deccca97b30038035fcf2bfd08fafe5c6db8ed9644fd75c3056d9bd1f09a"
+  "updatedAt": "2026-08-22T07:16:07.596Z",
+  "stateRoot": "sha256:4320c4fb89fe03f19a6c929ead6760cce958f83c2bc9c7adcb2cb98aa848292a"
 }
