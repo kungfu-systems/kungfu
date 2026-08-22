@@ -563,7 +563,26 @@ def contract_materialization_plan(
     )
     _validate_contract_material(inspection["profile"], composed, artifact)
     current = storage_service.fact_type_list(runtime_dir)
-    operations = contract_operations(artifact, current, fail=_fail, root=_root)
+    fact_state = storage_service.fact_state(runtime_dir)
+    admitted_sources: dict[tuple[str, str, str], set[str]] = {}
+    for row in fact_state.get("observation_history") or []:
+        if row.get("outcome") != "admitted":
+            continue
+        key = (
+            str(row.get("fact_surface_id") or ""),
+            str(row.get("schema_owner_root") or ""),
+            str(row.get("contract_world_id") or ""),
+        )
+        source_id = str(row.get("source_id") or "")
+        if all(key) and source_id:
+            admitted_sources.setdefault(key, set()).add(source_id)
+    operations = contract_operations(
+        artifact,
+        current,
+        fail=_fail,
+        root=_root,
+        admitted_sources=admitted_sources,
+    )
     identity = {
         "source": str(Path(source).resolve()),
         "catalogRoot": composed["catalogRoot"],
