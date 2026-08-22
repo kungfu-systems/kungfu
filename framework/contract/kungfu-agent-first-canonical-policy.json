@@ -362,13 +362,13 @@
       },
       "source": {
         "path": "framework/upgrade/kungfu-upgrade.contract.json",
-        "sha256": "sha256:fc47eb7b4c40efddcae878ba94d35f5396ebc173333587c82e145d7591d0e70f",
-        "renderedSha256": "sha256:fc47eb7b4c40efddcae878ba94d35f5396ebc173333587c82e145d7591d0e70f",
+        "sha256": "sha256:efd9c36e2e0a0fa79c8b7b0e8264e2570400c61ee99c075bf9d0d77e556c06c8",
+        "renderedSha256": "sha256:efd9c36e2e0a0fa79c8b7b0e8264e2570400c61ee99c075bf9d0d77e556c06c8",
         "byteForByte": true
       },
       "artifact": {
         "path": "config/kungfu-upgrade.contract.json",
-        "expectedSha256": "sha256:fc47eb7b4c40efddcae878ba94d35f5396ebc173333587c82e145d7591d0e70f"
+        "expectedSha256": "sha256:efd9c36e2e0a0fa79c8b7b0e8264e2570400c61ee99c075bf9d0d77e556c06c8"
       }
     },
     {

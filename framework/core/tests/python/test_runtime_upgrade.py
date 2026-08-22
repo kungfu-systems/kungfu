@@ -140,6 +140,39 @@ def _reference(build_id: str, state: str = "active") -> dict:
     }
 
 
+def test_release_manifest_accepts_named_artifacts_without_weakening_schema(
+    tmp_path,
+):
+    source = _source(tmp_path, "runtime-named-artifacts")
+    manifest = _manifest(source, "runtime-named-artifacts")
+    manifest["artifacts"].extend(
+        [
+            {
+                "name": "Kungfu.Episodes.Setup.4.0.0-alpha.2.exe",
+                "kind": "desktop",
+                "url": "https://example.invalid/Kungfu.Episodes.Setup.4.0.0-alpha.2.exe",
+                "size": 2,
+                "digest": f"sha256:{'2' * 64}",
+                "signature": "sigstore:desktop-fixture",
+            },
+            {
+                "name": "kungfu-episodes-cli-windows-x64.zip",
+                "kind": "cli",
+                "url": "https://example.invalid/kungfu-episodes-cli-windows-x64.zip",
+                "size": 3,
+                "digest": f"sha256:{'3' * 64}",
+                "signature": "sigstore:cli-fixture",
+            },
+        ]
+    )
+
+    assert runtime_upgrade.validate_manifest(manifest) == manifest
+
+    manifest["artifacts"][1]["unexpected"] = "not-authority"
+    with pytest.raises(ValueError, match="Additional properties are not allowed"):
+        runtime_upgrade.validate_manifest(manifest)
+
+
 def test_user_message_answers_product_questions_and_links_exact_reason() -> None:
     message = runtime_upgrade.user_message(
         "active-work-incompatible",

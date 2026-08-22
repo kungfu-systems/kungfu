@@ -807,6 +807,7 @@ def test_bootstrap_verifier_binds_staged_archive_product_and_channel(
                 "signature": "sigstore:fixture",
             },
             {
+                "name": "kungfu-episodes-cli-linux-x64.tar.gz",
                 "kind": "cli",
                 "url": "https://releases.kungfu.invalid/kungfu-cli-linux-x64.tar.gz",
                 "size": archive.stat().st_size,
